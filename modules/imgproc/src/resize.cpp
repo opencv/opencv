@@ -3020,7 +3020,7 @@ struct DecimateAlpha
 
 
 namespace inter_area {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 inline void saturate_store(const float* src, uchar* dst) {
     const v_int32 tmp0 = v_round(vx_load(src + 0 * v_float32::nlanes));
     const v_int32 tmp1 = v_round(vx_load(src + 1 * v_float32::nlanes));
@@ -3048,16 +3048,16 @@ struct VArea {};
 
 template <>
 struct VArea<float> {
-    using v_WT = v_float32;
+    static const int nlanes = v_float32::nlanes;
 };
 #endif
 
-#if CV_SIMD128_64F
+#if (CV_SIMD128_64F || CV_SIMD_SCALABLE_64F)
 static inline v_float64 vx_setall(double coeff) { return vx_setall_f64(coeff); }
 
 template <>
 struct VArea<double> {
-    using v_WT = v_float64;
+    static const int nlanes = v_float64::nlanes;
 };
 
 #else
@@ -3077,8 +3077,8 @@ inline void muladd(const double* buf, int width, double beta, double* sum) {
 template <typename T, typename WT>
 inline void saturate_store(const WT* sum, int width, T* D) {
     int dx = 0;
-#if CV_SIMD
-    constexpr int step = VArea<WT>::v_WT::nlanes * sizeof(WT) / sizeof(T);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    constexpr int step = VArea<WT>::nlanes * sizeof(WT) / sizeof(T);
     for (; dx + step < width; dx += step) {
         saturate_store(sum + dx, D + dx);
     }
@@ -3097,8 +3097,8 @@ inline void saturate_store(const WT* sum, int width, WT* D) {
 template <typename WT>
 inline void mul(const WT* buf, int width, WT beta, WT* sum) {
     int dx = 0;
-#if CV_SIMD
-    constexpr int step = VArea<WT>::v_WT::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    constexpr int step = VArea<WT>::nlanes;
     for (; dx + step < width; dx += step) {
         vx_store(sum + dx, vx_setall(beta) * vx_load(buf + dx));
     }
@@ -3111,8 +3111,8 @@ inline void mul(const WT* buf, int width, WT beta, WT* sum) {
 template <typename WT>
 inline void muladd(const WT* buf, int width, WT beta, WT* sum) {
     int dx = 0;
-#if CV_SIMD
-    constexpr int step = VArea<WT>::v_WT::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    constexpr int step = VArea<WT>::nlanes;
     for (; dx + step < width; dx += step) {
         vx_store(sum + dx, vx_load(sum + dx) + vx_setall(beta) * vx_load(buf + dx));
     }
