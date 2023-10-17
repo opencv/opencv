@@ -1591,9 +1591,9 @@ bool QRCodeDecoder::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
     std::vector<uint8_t> syndromes(numSyndromes, codewords[0]);
     for (size_t i = 0; i < syndromes.size(); ++i) {
         for (size_t j = 1; j < codewords.size(); ++j) {
-            syndromes[i] = gfMul(syndromes[i], gfPow(2, i)) ^ codewords[j];
+            syndromes[i] = gfMul(syndromes[i], gfPow(2, static_cast<int>(i))) ^ codewords[j];
         }
-        hasError |= syndromes[i];
+        hasError |= syndromes[i] != 0;
     }
     if (!hasError) {
         // Trim error correction codewords
@@ -1639,16 +1639,16 @@ bool QRCodeDecoder::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
     }
 
     // There is an error at i-th position if i is a root of locator poly
-    std::vector<uint8_t> errLocs;
+    std::vector<size_t> errLocs;
     errLocs.reserve(L);
     for (size_t i = 0; i < codewords.size(); ++i) {
         uint8_t val = 1;
-        uint8_t pos = gfPow(2, i);
+        uint8_t pos = gfPow(2, static_cast<int>(i));
         for (size_t j = 1; j <= L; ++j) {
             val = gfMul(val, pos) ^ C[j];
         }
         if (val == 0) {
-            errLocs.push_back(codewords.size() - 1 - i);
+            errLocs.push_back(static_cast<int>(codewords.size() - 1 - i));
         }
     }
 
@@ -1662,7 +1662,7 @@ bool QRCodeDecoder::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
 
     for (size_t i = 0; i < errLocs.size(); ++i) {
         uint8_t numenator = 0, denominator = 0;
-        uint8_t X = gfPow(2, codewords.size() - 1 - errLocs[i]);
+        uint8_t X = gfPow(2, static_cast<int>(codewords.size() - 1 - errLocs[i]));
         uint8_t inv_X = gfDiv(1, X);
 
         for (size_t j = 0; j < L; ++j) {
@@ -1675,7 +1675,7 @@ bool QRCodeDecoder::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
         for (size_t j = 0; j < errLocs.size(); ++j) {
             if (i == j)
                 continue;
-            uint8_t Xj = gfPow(2, codewords.size() - 1 - errLocs[j]);
+            uint8_t Xj = gfPow(2, static_cast<int>(codewords.size() - 1 - errLocs[j]));
             denominator = gfMul(denominator, 1 ^ gfMul(inv_X, Xj));
         }
 
@@ -1796,9 +1796,9 @@ void QRCodeDecoder::decodeNumeric(String& result) {
     int numDigits = bitstream.next(version <= 9 ? 10 : (version <= 26 ? 12 : 14));
     for (int i = 0; i < numDigits / 3; ++i) {
         int triple = bitstream.next(10);
-        result += '0' + triple / 100;
-        result += '0' + (triple / 10) % 10;
-        result += '0' + triple % 10;
+        result += static_cast<char>('0' + triple / 100);
+        result += static_cast<char>('0' + (triple / 10) % 10);
+        result += static_cast<char>('0' + triple % 10);
     }
     int remainingDigits = numDigits % 3;
     if (remainingDigits) {
@@ -1831,7 +1831,7 @@ void QRCodeDecoder::decodeAlpha(String& result) {
 void QRCodeDecoder::decodeByte(String& result) {
     int num = bitstream.next(version <= 9 ? 8 : 16);
     for (int i = 0; i < num; ++i) {
-        result += bitstream.next(8);
+        result += static_cast<char>(bitstream.next(8));
     }
 }
 
