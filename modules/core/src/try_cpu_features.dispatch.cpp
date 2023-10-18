@@ -26,17 +26,29 @@ bool haveCpuFeatureNeon()
 
 bool haveCpuFeatureDotProd()
 {
+#ifdef CV_CPU_DISPATCH_COMPILE_NEON_DOTPROD
     return CV_CPU_ARM_NEON_ONLY(opt_NEON_DOTPROD::haveCpuFeatureDotProd_(), false);
+#else
+    return false;
+#endif
 }
 
 bool haveCpuFeatureFp16SIMD()
 {
+#ifdef CV_CPU_DISPATCH_COMPILE_FP16_SIMD
     return CV_CPU_ARM_NEON_ONLY(opt_FP16_SIMD::haveCpuFeatureFp16SIMD_(), false);
+#else
+    return false;
+#endif
 }
 
 bool haveCpuFeatureBf16SIMD()
 {
+#ifdef CV_CPU_DISPATCH_COMPILE_BF16_SIMD
     return CV_CPU_ARM_NEON_ONLY(opt_BF16_SIMD::haveCpuFeatureBf16SIMD_(), false);
+#else
+    return false;
+#endif
 }
 
 }
