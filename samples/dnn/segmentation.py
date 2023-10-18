@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                     help='An optional path to file with preprocessing parameters.')
 parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet'],
+parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet', 'onnx'],
                     help='Optional name of an origin framework of the model. '
                          'Detect it automatically if it does not set.')
 parser.add_argument('--colors', help='Optional path to a text file with colors for an every class. '
@@ -102,7 +102,8 @@ while cv.waitKey(1) < 0:
     inpWidth = args.width if args.width else frameWidth
     inpHeight = args.height if args.height else frameHeight
     blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
-
+    blob[0] /= np.asarray(args.std, dtype=np.float32).reshape(3, 1, 1)
+    
     # Run a model
     net.setInput(blob)
     score = net.forward()

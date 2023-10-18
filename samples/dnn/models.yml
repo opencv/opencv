@@ -178,3 +178,18 @@ fcn8s:
   height: 500
   rgb: false
   sample: "segmentation"
+
+fcnresnet101:
+  load_info:
+    url: "https://github.com/richard28039/fcnresnet101_onnx_model/raw/main/fcn_resnet101.onnx?download="
+    sha1: "1242104e22c9eb0b320d7ae36b11cdd1fda40857"
+  model: "fcn_resnet101.onnx"
+  mean: [103.5, 116.2, 123.6]
+  std : [0.225, 0.224, 0.229]
+  scale: 0.00392
+  width: 500
+  height: 500
+  rgb: false
+  classes: "pascal-voc-classes.txt"
+  color : "pascal-color.txt"
+  sample: "segmentation"
