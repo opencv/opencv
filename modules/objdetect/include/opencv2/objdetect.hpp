@@ -729,7 +729,8 @@ public:
     };
 
     enum ECIEncodings {
-        ECI_UTF8 = 26
+        ECI_SHIFT_JIS = 20,
+        ECI_UTF8 = 26,
     };
 
     /** @brief QR code encoder parameters. */

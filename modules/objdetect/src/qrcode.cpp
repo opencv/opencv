@@ -2905,7 +2905,7 @@ bool QRDecode::decodingProcess()
             return true;
         case QRCodeEncoder::EncodeMode::MODE_KANJI:
             // FIXIT BUG: we must return UTF-8 compatible string
-            CV_LOG_WARNING(NULL, "QR: Kanji is not supported properly");
+            eci = QRCodeEncoder::ECIEncodings::ECI_SHIFT_JIS;
             result_info.assign((const char*)payload, payload_len);
             return true;
         case QRCodeEncoder::EncodeMode::MODE_ECI:
@@ -2976,7 +2976,7 @@ std::string ImplContour::decode(InputArray in, InputArray points, OutputArray st
         alignmentMarkers = {qrdec.alignment_coords};
         updateQrCorners = qrdec.getOriginalPoints();
     }
-    encodings.resize(1, qrdec.encoding);
+    encodings.resize(1, qrdec.eci);
     return ok ? decoded_info : std::string();
 }
 
@@ -3010,7 +3010,7 @@ String ImplContour::decodeCurved(InputArray in, InputArray points, OutputArray s
     {
         qrdec.getStraightBarcode().convertTo(straight_qrcode, CV_8UC1);
     }
-    encodings.resize(1, qrdec.encoding);
+    encodings.resize(1, qrdec.eci);
 
     return ok ? decoded_info : std::string();
 }
