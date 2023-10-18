@@ -58,6 +58,7 @@ if(TIMVX_FOUND AND TIMVX_VIV_FOUND)
     message(STATUS "TIM-VX: Found TIM-VX library: ${TIMVX_LIB}")
     set(TIMVX_LIBRARY   ${TIMVX_LIB})
     set(TIMVX_INCLUDE_DIR   ${TIMVX_INC_DIR})
+    ocv_add_external_target(timvx "${TIMVX_INC_DIR}" "${TIMVX_LIBRARY}" "HAVE_TIMVX")
 
     message(STATUS "TIM-VX: Found VIVANTE SDK libraries: ${VIVANTE_SDK_DIR}/lib")
     link_directories(${VIVANTE_SDK_DIR}/lib)
