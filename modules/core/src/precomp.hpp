@@ -407,7 +407,6 @@ CV_EXPORTS void releaseTlsStorageThread();
 
 int cv_snprintf(char* buf, int len, const char* fmt, ...);
 int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
-
 }
 
 #endif  // BUILD_PLUGIN
