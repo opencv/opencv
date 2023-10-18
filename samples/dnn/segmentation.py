@@ -102,7 +102,6 @@ while cv.waitKey(1) < 0:
     inpWidth = args.width if args.width else frameWidth
     inpHeight = args.height if args.height else frameHeight
     blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
-    blob[0] /= np.asarray(args.std, dtype=np.float32).reshape(3, 1, 1)
     
     # Run a model
     net.setInput(blob)
