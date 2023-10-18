@@ -23,7 +23,7 @@ bool haveCpuFeatureBf16SIMD_();
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 #if defined __ARM_NEON || \
-    defined __ARM_FEATURE_FP16_SCALAR_ARITHMETIC || \
+    defined __ARM_FP16_FORMAT_IEEE || \
     defined __ARM_FEATURE_FP16_VECTOR_ARITHMETIC || \
     defined __ARM_FEATURE_BF16_VECTOR_ARITHMETIC || \
     defined __ARM_FEATURE_DOTPROD
@@ -72,7 +72,7 @@ bool haveCpuFeatureNeon_()
 }
 #endif
 
-#ifdef __ARM_FEATURE_FP16_SCALAR_ARITHMETIC
+#ifdef __ARM_FP16_FORMAT_IEEE
 static jmp_buf haveFp16Catch;
 
 static void noFp16Handler(int) {
@@ -81,10 +81,14 @@ static void noFp16Handler(int) {
 
 static int tryFp16() {
     int16_t xbuf[] = {0, 1, 2, 3, 4, 5, 6, 7, (int16_t)rand()};
-    __fp16 s = (__fp16)0.f;
-    for (int i = 0; i < 8; i++)
-        s += (__fp16)xbuf[i];
-    return (int)s;
+    int16x8_t x = vld1q_s16(xbuf);
+    float16x8_t xf = vcvtq_f16_s16(x);
+    float32x4_t y0 = vcvt_f32_f16(vget_low_f16(xf));
+    float32x4_t y1 = vcvt_f32_f16(vget_high_f16(xf));
+    y0 = vaddq_f32(y0, y1);
+    float ybuf[4];
+    vst1q_f32(ybuf, y0);
+    return (int)(ybuf[0] + ybuf[1] + ybuf[2] + ybuf[3]);
 }
 
 bool haveCpuFeatureFp16_()

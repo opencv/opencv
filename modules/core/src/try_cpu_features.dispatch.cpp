@@ -21,7 +21,11 @@ bool haveCpuFeatureFp16()
 
 bool haveCpuFeatureNeon()
 {
+#ifdef __ARM_NEON
     return CV_CPU_ARM_NEON_ONLY(opt_NEON::haveCpuFeatureNeon_(), false);
+#else
+    return false;
+#endif
 }
 
 bool haveCpuFeatureDotProd()
