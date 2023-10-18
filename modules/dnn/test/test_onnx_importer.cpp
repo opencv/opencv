@@ -782,6 +782,11 @@ TEST_P(Test_ONNX_layers, Concatenation)
     testONNXModels("concat_const_blobs");
 }
 
+TEST_P(Test_ONNX_layers, CumSumExclusiveInplace)
+{
+    testONNXModels("cumsum_exclusive_inplace");
+}
+
 TEST_P(Test_ONNX_layers, Eltwise3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
