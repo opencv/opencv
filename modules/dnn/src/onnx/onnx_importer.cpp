@@ -179,6 +179,7 @@ private:
     void parseCast                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstantFill         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGather               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGatherElements       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -383,7 +384,7 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
     {
         inpShapes[i] = shape(inputs[i]);
         if (i > 0 && ddepth != inputs[i].depth())
-            CV_Error(Error::StsNotImplemented, "Mixed input data types.");
+            CV_Error(Error::StsNotImplemented, cv::format("Mixed input data types. Required type: %d, actual type: %d", ddepth, inputs[i].depth()));
 
         // Quantize and Dequantize layer have different output type than input.
         if (params.type != "Quantize" && params.type != "Dequantize")
@@ -2553,6 +2554,53 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter::parseGatherElements(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_CheckEQ(node_proto.input_size(), 2, "GatherElements: two inputs are required");
+
+    size_t num_const = 0;
+    for (size_t i = 0; i < node_proto.input_size(); ++i){
+        if (constBlobs.find(node_proto.input(i)) != constBlobs.end())
+            ++num_const;
+    }
+
+    if (num_const == node_proto.input_size())
+    {
+        std::vector<Mat> inputs, output;
+        for (size_t i = 0; i < node_proto.input_size(); i++) {
+            Mat blob = getBlob(node_proto, i);
+            if (i == 1) { // indices, from int32/int64 to float32 for compatibility
+                blob.convertTo(blob, CV_32F);
+            }
+            inputs.push_back(blob);
+        }
+        runLayer(layerParams, inputs, output);
+        CV_Assert(output.size() == 1);
+        addConstant(node_proto.output(0), output[0]);
+        return;
+    } else if (num_const > 0) {
+        for (size_t i = 0; i < node_proto.input_size(); i++) {
+            if (constBlobs.find(node_proto.input(i)) != constBlobs.end()) {
+                Mat blob = getBlob(node_proto, i);
+                if (i == 1) { // indices, from int32/int64 to float32 for compatibility
+                    blob.convertTo(blob, CV_32F);
+                }
+
+                LayerParams constParams;
+                constParams.name = node_proto.input(i);
+                constParams.type = "Const";
+                constParams.blobs.push_back(blob);
+
+                opencv_onnx::NodeProto proto;
+                proto.add_output(constParams.name);
+                addLayer(constParams, proto);
+            }
+        }
+    }
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     bool hasVariableInps = false;
@@ -3901,6 +3949,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Cast"] = &ONNXImporter::parseCast;
     dispatch["ConstantFill"] = dispatch["ConstantOfShape"] = &ONNXImporter::parseConstantFill;
     dispatch["Gather"] = &ONNXImporter::parseGather;
+    dispatch["GatherElements"] = &ONNXImporter::parseGatherElements;
     dispatch["Concat"] = &ONNXImporter::parseConcat;
     dispatch["Resize"] = &ONNXImporter::parseResize;
     dispatch["Upsample"] = &ONNXImporter::parseUpsample;
