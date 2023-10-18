@@ -3022,22 +3022,22 @@ struct DecimateAlpha
 namespace inter_area {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 inline void saturate_store(const float* src, uchar* dst) {
-    const v_int32 tmp0 = v_round(vx_load(src + 0 * v_float32::nlanes));
-    const v_int32 tmp1 = v_round(vx_load(src + 1 * v_float32::nlanes));
-    const v_int32 tmp2 = v_round(vx_load(src + 2 * v_float32::nlanes));
-    const v_int32 tmp3 = v_round(vx_load(src + 3 * v_float32::nlanes));
+    const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp2 = v_round(vx_load(src + 2 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp3 = v_round(vx_load(src + 3 * VTraits<v_float32>::vlanes()));
     v_store(dst, v_pack(v_pack_u(tmp0, tmp1), v_pack_u(tmp2, tmp3)));
 }
 
 inline void saturate_store(const float* src, ushort* dst) {
-    const v_int32 tmp0 = v_round(vx_load(src + 0 * v_float32::nlanes));
-    const v_int32 tmp1 = v_round(vx_load(src + 1 * v_float32::nlanes));
+    const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
     v_store(dst, v_pack_u(tmp0, tmp1));
 }
 
 inline void saturate_store(const float* src, short* dst) {
-    const v_int32 tmp0 = v_round(vx_load(src + 0 * v_float32::nlanes));
-    const v_int32 tmp1 = v_round(vx_load(src + 1 * v_float32::nlanes));
+    const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
     v_store(dst, v_pack(tmp0, tmp1));
 }
 
