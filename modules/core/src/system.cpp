@@ -406,11 +406,10 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_5124VNNIW] = "AVX5124VNNIW";
         g_hwFeatureNames[CPU_AVX_5124FMAPS] = "AVX5124FMAPS";
         
-        g_hwFeatureNames[CPU_FP16_SIMD] = "FP16_SIMD";
-        g_hwFeatureNames[CPU_BF16_SIMD] = "BF16_SIMD";
-
         g_hwFeatureNames[CPU_NEON] = "NEON";
         g_hwFeatureNames[CPU_NEON_DOTPROD] = "NEON_DOTPROD";
+        g_hwFeatureNames[CPU_NEON_FP16] = "NEON_FP16";
+        g_hwFeatureNames[CPU_NEON_BF16] = "NEON_BF16";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
@@ -556,14 +555,106 @@ struct HWFeatures
         }
     #endif // CV_CPUID_X86
 
-    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNX__ || defined __APPLE__    
-        have[CV_CPU_FP16] = haveCpuFeatureFp16();
-        have[CV_CPU_NEON] = haveCpuFeatureNeon();
-        have[CV_CPU_NEON_DOTPROD] = haveCpuFeatureDotProd();
-        have[CV_CPU_FP16_SIMD] = haveCpuFeatureFp16SIMD();
-        have[CV_CPU_BF16_SIMD] = haveCpuFeatureBf16SIMD();
-    #endif
+    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNX__
+    #ifdef __aarch64__
+        have[CV_CPU_NEON] = true;
+        have[CV_CPU_FP16] = true;
+        int cpufile = open("/proc/self/auxv", O_RDONLY);
 
+        if (cpufile >= 0)
+        {
+            Elf64_auxv_t auxv;
+            const size_t size_auxv_t = sizeof(auxv);
+
+            while ((size_t)read(cpufile, &auxv, size_auxv_t) == size_auxv_t)
+            {
+                // see https://elixir.bootlin.com/linux/latest/source/arch/arm64/include/uapi/asm/hwcap.h
+                if (auxv.a_type == AT_HWCAP)
+                {
+                    have[CV_CPU_NEON_DOTPROD] = (auxv.a_un.a_val & (1 << 20)) != 0; // HWCAP_ASIMDDP
+                    have[CV_CPU_NEON_FP16] = (auxv.a_un.a_val & (1 << 10)) != 0; // HWCAP_ASIMDHP
+                }
+                else if (auxv.a_type == AT_HWCAP2)
+                {
+                    have[CV_CPU_NEON_BF16] = (auxv.a_un.a_val & (1 << 14)) != 0; // HWCAP2_BF16
+                }
+            }
+
+            close(cpufile);
+        }
+    #elif defined __arm__ && defined __ANDROID__
+      #if defined HAVE_CPUFEATURES
+        CV_LOG_INFO(NULL, "calling android_getCpuFeatures() ...");
+        uint64_t features = android_getCpuFeatures();
+        CV_LOG_INFO(NULL, cv::format("calling android_getCpuFeatures() ... Done (%llx)", (long long)features));
+        have[CV_CPU_NEON] = (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
+        have[CV_CPU_FP16] = (features & ANDROID_CPU_ARM_FEATURE_VFP_FP16) != 0;
+      #else
+        CV_LOG_INFO(NULL, "cpufeatures library is not available for CPU detection");
+        #if CV_NEON
+        CV_LOG_INFO(NULL, "- NEON instructions is enabled via build flags");
+        have[CV_CPU_NEON] = true;
+        #else
+        CV_LOG_INFO(NULL, "- NEON instructions is NOT enabled via build flags");
+        #endif
+        #if CV_FP16
+        CV_LOG_INFO(NULL, "- FP16 instructions is enabled via build flags");
+        have[CV_CPU_FP16] = true;
+        #else
+        CV_LOG_INFO(NULL, "- FP16 instructions is NOT enabled via build flags");
+        #endif
+      #endif
+    #elif defined __arm__ && !defined __FreeBSD__
+        int cpufile = open("/proc/self/auxv", O_RDONLY);
+
+        if (cpufile >= 0)
+        {
+            Elf32_auxv_t auxv;
+            const size_t size_auxv_t = sizeof(auxv);
+
+            while ((size_t)read(cpufile, &auxv, size_auxv_t) == size_auxv_t)
+            {
+                if (auxv.a_type == AT_HWCAP)
+                {
+                    have[CV_CPU_NEON] = (auxv.a_un.a_val & 4096) != 0;
+                    have[CV_CPU_FP16] = (auxv.a_un.a_val & 2) != 0;
+                    break;
+                }
+            }
+
+            close(cpufile);
+        }
+    #endif
+    #elif (defined __APPLE__)
+    #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
+        have[CV_CPU_NEON] = true;
+    #endif
+    #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
+        have[CV_CPU_FP16] = have[CV_CPU_NEON_FP16] = true;
+    #endif
+    // system.cpp may be compiled w/o special -march=armv8...+dotprod, -march=armv8...+bf16 etc.,
+    // so we check for the features in any case, no mater what are the compile flags.
+    // We check the real hardware capabilities here.
+    int has_feat_dotprod = 0;
+    size_t has_feat_dotprod_size = sizeof(has_feat_dotprod);
+    sysctlbyname("hw.optional.arm.FEAT_DotProd", &has_feat_dotprod, &has_feat_dotprod_size, NULL, 0);
+    if (has_feat_dotprod) {
+        have[CV_CPU_NEON_DOTPROD] = true;
+    }
+    int has_feat_bf16 = 0;
+    size_t has_feat_bf16_size = sizeof(has_feat_bf16);
+    sysctlbyname("hw.optional.arm.FEAT_BF16", &has_feat_bf16, &has_feat_bf16_size, NULL, 0);
+    if (has_feat_bf16) {
+        have[CV_CPU_NEON_BF16] = true;
+    }
+    #elif (defined __clang__)
+    #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
+        have[CV_CPU_NEON] = true;
+        #if (defined __ARM_FP  && ((__ARM_FP & 0x2) != 0))
+        have[CV_CPU_FP16] = true;
+        #endif
+    #endif
+    #endif
     #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
         have[CV_CPU_NEON] = true;
     #endif
