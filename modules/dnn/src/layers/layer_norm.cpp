@@ -59,7 +59,7 @@ public:
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
-        
+
         const auto input_shape = shape(inputs[0]);
         axis = normalize_axis(axis, static_cast<int>(input_shape.size()));
     }

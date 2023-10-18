@@ -131,4 +131,3 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
 }
 
 }} // cv::dnn
- 
