@@ -72,7 +72,7 @@ bool haveCpuFeatureNeon_()
 }
 #endif
 
-#ifdef __ARM_FP16_FORMAT_IEEE
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 static jmp_buf haveFp16Catch;
 
 static void noFp16Handler(int) {
