@@ -323,27 +323,9 @@ public:
 
         if (fuse_batch_norm) { // channel-wise scale/bias of shape (C)
             CV_CheckTrue(normVariance, "DNN/MVN: not supported");
-
-            const auto input_shape = shape(input);
-            CV_CheckGE(input_shape.size(), static_cast<size_t>(3), "DNN/MVN: input dimension >= 3 is needed");
-
-            size_t C = scale.total();
-            CV_CheckEQ(C, static_cast<size_t>(input_shape[1]), "DNN/MVN: invalid channel");
-            MatShape base_shape(input_shape.size() - 1, 1);
-            base_shape[0] = C; // (C, 1, 1, ..., 1)
-
-            Mat broadcast_scale(base_shape, CV_32F, scale.ptr<void>());
-            Mat broadcast_bias(base_shape, CV_32F, shift.ptr<void>());
-
-            // broadcast scale and bias if needed
-            MatShape broadcast_shape{input_shape.begin() + 1, input_shape.end()}; // (C, D1, D2, ..., Dn)
-            broadcast(broadcast_scale, broadcast_shape, broadcast_scale);
-            broadcast(broadcast_bias, broadcast_shape, broadcast_bias);
-
-            int axis = 2;
-            fastNorm(input, broadcast_scale, broadcast_bias, outputs[0], eps, axis);
+            fastNormChannel(input, scale, shift, outputs[0], eps);
         } else {
-            int axis = acrossChannels ? 1 : 2;
+            size_t axis = acrossChannels ? 1 : 2;
             fastNorm(input, outputs[0], eps, axis, normVariance);
         }
     }

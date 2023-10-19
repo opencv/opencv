@@ -85,9 +85,9 @@ public:
 
         if (inputs.size() == 3) {
             const auto &bias = inputs[2];
-            fastNorm(input, scale, bias, output, epsilon, axis);
+            fastNorm(input, scale, bias, output, epsilon, static_cast<size_t>(axis));
         } else {
-            fastNorm(input, scale, output, epsilon, axis);
+            fastNorm(input, scale, output, epsilon, static_cast<size_t>(axis));
         }
     }
 };
