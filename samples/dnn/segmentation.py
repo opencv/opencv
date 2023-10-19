@@ -102,7 +102,7 @@ while cv.waitKey(1) < 0:
     inpWidth = args.width if args.width else frameWidth
     inpHeight = args.height if args.height else frameHeight
     blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
-    
+
     # Run a model
     net.setInput(blob)
     score = net.forward()
