@@ -3019,6 +3019,111 @@ struct DecimateAlpha
 };
 
 
+namespace inter_area {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+inline void saturate_store(const float* src, uchar* dst) {
+    const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp2 = v_round(vx_load(src + 2 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp3 = v_round(vx_load(src + 3 * VTraits<v_float32>::vlanes()));
+    v_store(dst, v_pack(v_pack_u(tmp0, tmp1), v_pack_u(tmp2, tmp3)));
+}
+
+inline void saturate_store(const float* src, ushort* dst) {
+    const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
+    v_store(dst, v_pack_u(tmp0, tmp1));
+}
+
+inline void saturate_store(const float* src, short* dst) {
+    const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
+    v_store(dst, v_pack(tmp0, tmp1));
+}
+
+static inline v_float32 vx_setall(float coeff) { return vx_setall_f32(coeff); }
+
+template <typename T>
+struct VArea {};
+
+template <>
+struct VArea<float> {
+    typedef v_float32 vWT;
+};
+#endif
+
+#if (CV_SIMD128_64F || CV_SIMD_SCALABLE_64F)
+static inline v_float64 vx_setall(double coeff) { return vx_setall_f64(coeff); }
+
+template <>
+struct VArea<double> {
+    typedef v_float64 vWT;
+};
+
+#else
+inline void mul(const double* buf, int width, double beta, double* sum) {
+    for (int dx = 0; dx < width; ++dx) {
+        sum[dx] = beta * buf[dx];
+    }
+}
+
+inline void muladd(const double* buf, int width, double beta, double* sum) {
+    for (int dx = 0; dx < width; ++dx) {
+        sum[dx] += beta * buf[dx];
+    }
+}
+#endif
+
+template <typename T, typename WT>
+inline void saturate_store(const WT* sum, int width, T* D) {
+    int dx = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int step = VTraits<typename VArea<WT>::vWT>::vlanes() * sizeof(WT) / sizeof(T);
+    for (; dx + step < width; dx += step) {
+        saturate_store(sum + dx, D + dx);
+    }
+#endif
+    for (; dx < width; ++dx) {
+        D[dx] = saturate_cast<T>(sum[dx]);
+    }
+}
+
+// Optimization when T == WT.
+template <typename WT>
+inline void saturate_store(const WT* sum, int width, WT* D) {
+    std::copy(sum, sum + width, D);
+}
+
+template <typename WT>
+inline void mul(const WT* buf, int width, WT beta, WT* sum) {
+    int dx = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int step = VTraits<typename VArea<WT>::vWT>::vlanes();
+    for (; dx + step < width; dx += step) {
+        vx_store(sum + dx, v_mul(vx_setall(beta), vx_load(buf + dx)));
+    }
+#endif
+    for (; dx < width; ++dx) {
+        sum[dx] = beta * buf[dx];
+    }
+}
+
+template <typename WT>
+inline void muladd(const WT* buf, int width, WT beta, WT* sum) {
+    int dx = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int step = VTraits<typename VArea<WT>::vWT>::vlanes();
+    for (; dx + step < width; dx += step) {
+        vx_store(sum + dx, v_add(vx_load(sum + dx), v_mul(vx_setall(beta), vx_load(buf + dx))));
+    }
+#endif
+    for (; dx < width; ++dx) {
+        sum[dx] += beta * buf[dx];
+    }
+}
+
+}  // namespace inter_area
+
 template<typename T, typename WT> class ResizeArea_Invoker :
     public ParallelLoopBody
 {
@@ -3120,27 +3225,17 @@ public:
 
             if( dy != prev_dy )
             {
-                T* D = dst->template ptr<T>(prev_dy);
-
-                for( dx = 0; dx < dsize.width; dx++ )
-                {
-                    D[dx] = saturate_cast<T>(sum[dx]);
-                    sum[dx] = beta*buf[dx];
-                }
+                inter_area::saturate_store(sum, dsize.width, dst->template ptr<T>(prev_dy));
+                inter_area::mul(buf, dsize.width, beta, sum);
                 prev_dy = dy;
             }
             else
             {
-                for( dx = 0; dx < dsize.width; dx++ )
-                    sum[dx] += beta*buf[dx];
+                inter_area::muladd(buf, dsize.width, beta, sum);
             }
         }
 
-        {
-        T* D = dst->template ptr<T>(prev_dy);
-        for( dx = 0; dx < dsize.width; dx++ )
-            D[dx] = saturate_cast<T>(sum[dx]);
-        }
+        inter_area::saturate_store(sum, dsize.width, dst->template ptr<T>(prev_dy));
     }
 
 private:
