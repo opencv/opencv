@@ -3100,7 +3100,7 @@ inline void mul(const WT* buf, int width, WT beta, WT* sum) {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int step = VTraits<typename VArea<WT>::vWT>::vlanes();
     for (; dx + step < width; dx += step) {
-        vx_store(sum + dx, vx_setall(beta) * vx_load(buf + dx));
+        vx_store(sum + dx, v_mul(vx_setall(beta), vx_load(buf + dx)));
     }
 #endif
     for (; dx < width; ++dx) {
@@ -3114,7 +3114,7 @@ inline void muladd(const WT* buf, int width, WT beta, WT* sum) {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int step = VTraits<typename VArea<WT>::vWT>::vlanes();
     for (; dx + step < width; dx += step) {
-        vx_store(sum + dx, vx_load(sum + dx) + vx_setall(beta) * vx_load(buf + dx));
+        vx_store(sum + dx, v_add(vx_load(sum + dx), v_mul(vx_setall(beta), vx_load(buf + dx))));
     }
 #endif
     for (; dx < width; ++dx) {
