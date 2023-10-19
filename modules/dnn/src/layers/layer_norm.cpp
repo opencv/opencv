@@ -81,7 +81,6 @@ public:
 
         const auto &input = inputs[0];
         const auto &scale = inputs[1];
-        const auto scale_shape = shape(scale);
         auto &output = outputs[0];
 
         if (inputs.size() == 3) {
