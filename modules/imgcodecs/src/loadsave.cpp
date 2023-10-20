@@ -636,21 +636,19 @@ Mat imread( const String& filename, int flags )
 /**
  * Read an image
  *
- *  This function merely calls the actual implementation above and returns itself.
+ *  This function merely calls the actual implementation above.
  *
  * @param[in] filename File to load
  * @param[in] img object in which the image will be loaded
  * @param[in] flags Flags you wish to set.
 */
-Mat imread( const String& filename, Mat & img, int flags )
+void imread( const String& filename, Mat & img, int flags )
 {
     CV_TRACE_FUNCTION();
 
     /// load the data
     imread_( filename, flags, img );
 
-    /// return a reference to the data
-    return img;
 }
 
 /**

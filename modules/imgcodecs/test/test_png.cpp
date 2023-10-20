@@ -7,6 +7,19 @@ namespace opencv_test { namespace {
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
 
+TEST(imRead, passing_Mat)
+{
+  Mat img = Mat::zeros(1000, 1000, CV_8UC3);
+  Mat subImg = img.rowRange(0, 512).colRange(0, 512);
+  imread("../cv/shared/lena.png", subImg);
+  Mat ori = imread("../cv/shared/lena.png");
+  Mat diff;
+  absdiff(ori, subImg, diff);
+  EXPECT_EQ(0, sum(diff)[0]);
+  EXPECT_EQ(0, sum(img.rowRange(0, 1000).colRange(512, 1000))[0]);
+  EXPECT_EQ(0, sum(img.rowRange(0, 512).colRange(0, 512))[0]);
+}
+
 TEST(Imgcodecs_Png, write_big)
 {
     const string root = cvtest::TS::ptr()->get_data_path();

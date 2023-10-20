@@ -230,14 +230,14 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
 /** @brief Loads an image from a file.
 
-This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts.
+This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts and the return value.
 @param filename Name of file to be loaded.
 @param img object in which the image will be loaded.
 @param flags Flag that can take values of cv::ImreadModes
 @note
 The image passing trought the img parameter can be pre-allocated. The memory is reused if the shape and the type match with the load image.
  */
-CV_EXPORTS_W Mat imread( const String& filename, Mat & img, int flags = IMREAD_COLOR );
+CV_EXPORTS_W void imread( const String& filename, Mat & img, int flags = IMREAD_COLOR );
 
 
 /** @brief Loads a multi-page image from a file.
