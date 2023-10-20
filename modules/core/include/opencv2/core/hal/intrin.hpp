@@ -723,7 +723,7 @@ namespace CV__SIMD_NAMESPACE {
     /** @brief SIMD processing state cleanup call */
     inline void vx_cleanup() { VXPREFIX(_cleanup)(); }
 
-#if !CV_SIMD_SCALABLE
+#if !CV_SIMD_SCALABLE && !(CV_NEON && !defined(CV_FORCE_SIMD128_CPP))
     // Compatibility layer
 
     template<typename T> struct VTraits {
@@ -1147,6 +1147,74 @@ namespace CV__SIMD_NAMESPACE {
     #endif
 
 #endif //!CV_SIMD_SCALABLE
+
+#if (CV_NEON /* || CV_others */) && !defined(CV_FORCE_SIMD128_CPP)
+// Compatibility layer for the backend that cleaned up.
+    #define OPENCV_HAL_WRAP_BIN_OP_ADDSUB(_Tpvec) \
+    template<typename... Args> \
+    inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
+        return v_add(v_add(f1, f2), vf...); \
+    }
+
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint16)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint32)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint64)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int8)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int16)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32)
+    #if CV_SIMD_64F
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64)
+    #endif
+
+    #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
+    template<typename... Args> \
+    inline _Tpvec v_mul(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
+        return v_mul(v_mul(f1, f2), vf...); \
+    }
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int8)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint16)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint32)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int16)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int32)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_float32)
+    #if CV_SIMD_64F
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_float64)
+    #endif
+
+    #define OPENCV_HAL_WRAP_EXTRACT(_Tpvec) \
+    inline typename VTraits<_Tpvec>::lane_type v_extract_highest(const _Tpvec& v) \
+    { \
+        return v_extract_n<VTraits<_Tpvec>::nlanes-1>(v); \
+    }
+
+    OPENCV_HAL_WRAP_EXTRACT(v_uint8)
+    OPENCV_HAL_WRAP_EXTRACT(v_int8)
+    OPENCV_HAL_WRAP_EXTRACT(v_uint16)
+    OPENCV_HAL_WRAP_EXTRACT(v_int16)
+    OPENCV_HAL_WRAP_EXTRACT(v_uint32)
+    OPENCV_HAL_WRAP_EXTRACT(v_int32)
+    OPENCV_HAL_WRAP_EXTRACT(v_uint64)
+    OPENCV_HAL_WRAP_EXTRACT(v_int64)
+    OPENCV_HAL_WRAP_EXTRACT(v_float32)
+    #if CV_SIMD_64F
+    OPENCV_HAL_WRAP_EXTRACT(v_float64)
+    #endif
+
+    #define OPENCV_HAL_WRAP_BROADCAST(_Tpvec) \
+    inline _Tpvec v_broadcast_highest(const _Tpvec& v) \
+    { \
+        return v_broadcast_element<VTraits<_Tpvec>::nlanes-1>(v); \
+    }
+
+    OPENCV_HAL_WRAP_BROADCAST(v_uint32)
+    OPENCV_HAL_WRAP_BROADCAST(v_int32)
+    OPENCV_HAL_WRAP_BROADCAST(v_float32)
+
+#endif //CV_NEON
 
 //! @cond IGNORED
 
