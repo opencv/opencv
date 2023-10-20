@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
+#include "npy_blob.hpp"
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/opencl/ocl_defs.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
@@ -869,6 +870,35 @@ TEST_P(Test_Model_Optimizer, flexible_inputs)
     net1.setInput(input0);
     out = net1.forward();
     normAssert(ref, out, 0, 0);
+}
+
+TEST_P(Test_Model_Optimizer, readONNX)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
+
+    const std::string& model = findDataFile("dnn/onnx/models/convolution.onnx");
+
+    std::vector<Net> nets = {
+        // Old API
+        readNetFromModelOptimizer(model, ""),
+        readNet("", model, "dldt"),
+        // New API
+        readNetFromModelOptimizer(model),
+        readNet(model, "", "openvino")
+    };
+
+    Mat inp = blobFromNPY(findDataFile("dnn/onnx/data/input_convolution.npy"));
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_convolution.npy"));
+
+    for (int i = 0; i < nets.size(); ++i) {
+        nets[i].setPreferableTarget(targetId);
+        nets[i].setInput(inp);
+        Mat out = nets[i].forward();
+        normAssert(out, ref, format("Index: %d", i).c_str());
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model_Optimizer,
