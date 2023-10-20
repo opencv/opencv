@@ -631,17 +631,17 @@ public:
                                                  (int)srcData[index + stride_w*10], (int)srcData[index + stride_w*11]);
                                     v_int32x4 v3((int)srcData[index + stride_w*12], (int)srcData[index + stride_w*13],
                                                  (int)srcData[index + stride_w*14], (int)srcData[index + stride_w*15]);
-                                    sum_val0 += v0;
-                                    sum_val1 += v1;
-                                    sum_val2 += v2;
-                                    sum_val3 += v3;
+                                    sum_val0 = v_add(sum_val0, v0);
+                                    sum_val1 = v_add(sum_val1, v1);
+                                    sum_val2 = v_add(sum_val2, v2);
+                                    sum_val3 = v_add(sum_val3, v3);
                                 }
                             }
 
-                            sum_val0 = v_round(v_cvt_f32(sum_val0)*ikarea) + voutzp;
-                            sum_val1 = v_round(v_cvt_f32(sum_val1)*ikarea) + voutzp;
-                            sum_val2 = v_round(v_cvt_f32(sum_val2)*ikarea) + voutzp;
-                            sum_val3 = v_round(v_cvt_f32(sum_val3)*ikarea) + voutzp;
+                            sum_val0 = v_add(v_round(v_mul(v_cvt_f32(sum_val0), ikarea)), voutzp);
+                            sum_val1 = v_add(v_round(v_mul(v_cvt_f32(sum_val1), ikarea)), voutzp);
+                            sum_val2 = v_add(v_round(v_mul(v_cvt_f32(sum_val2), ikarea)), voutzp);
+                            sum_val3 = v_add(v_round(v_mul(v_cvt_f32(sum_val3), ikarea)), voutzp);
 
                             v_store(dstData + x0, v_pack(v_pack(sum_val0, sum_val1), v_pack(sum_val2, sum_val3)));
                             x0 += 15;

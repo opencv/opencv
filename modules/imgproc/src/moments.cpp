@@ -236,12 +236,12 @@ struct MomentsInTile_SIMD<uchar, int, int>
                 v_int16x8 p = v_reinterpret_as_s16(v_load_expand(ptr + x));
                 v_int16x8 sx = v_mul_wrap(qx, qx);
 
-                qx0 += v_reinterpret_as_u32(p);
+                qx0 = v_add(qx0, v_reinterpret_as_u32(p));
                 qx1 = v_reinterpret_as_u32(v_dotprod(p, qx, v_reinterpret_as_s32(qx1)));
                 qx2 = v_reinterpret_as_u32(v_dotprod(p, sx, v_reinterpret_as_s32(qx2)));
                 qx3 = v_reinterpret_as_u32(v_dotprod(v_mul_wrap(p, qx), sx, v_reinterpret_as_s32(qx3)));
 
-                qx += dx;
+                qx = v_add(qx, dx);
             }
 
             x0 = v_reduce_sum(qx0);
@@ -276,19 +276,19 @@ struct MomentsInTile_SIMD<ushort, int, int64>
             {
                 v_int32x4 v_src = v_reinterpret_as_s32(v_load_expand(ptr + x));
 
-                v_x0 += v_reinterpret_as_u32(v_src);
-                v_x1 += v_reinterpret_as_u32(v_src * v_ix0);
+                v_x0 = v_add(v_x0, v_reinterpret_as_u32(v_src));
+                v_x1 = v_add(v_x1, v_reinterpret_as_u32(v_mul(v_src, v_ix0)));
 
-                v_int32x4 v_ix1 = v_ix0 * v_ix0;
-                v_x2 += v_reinterpret_as_u32(v_src * v_ix1);
+                v_int32x4 v_ix1 = v_mul(v_ix0, v_ix0);
+                v_x2 = v_add(v_x2, v_reinterpret_as_u32(v_mul(v_src, v_ix1)));
 
-                v_ix1 = v_ix0 * v_ix1;
-                v_src = v_src * v_ix1;
+                v_ix1 = v_mul(v_ix0, v_ix1);
+                v_src = v_mul(v_src, v_ix1);
                 v_uint64x2 v_lo, v_hi;
                 v_expand(v_reinterpret_as_u32(v_src), v_lo, v_hi);
-                v_x3 += v_lo + v_hi;
+                v_x3 = v_add(v_x3, v_add(v_lo, v_hi));
 
-                v_ix0 += v_delta;
+                v_ix0 = v_add(v_ix0, v_delta);
             }
 
             x0 = v_reduce_sum(v_x0);
