@@ -102,12 +102,21 @@ public:
             return 0;
         }
         CV_CheckEQ(input_image.size(), Size(inputW, inputH), "Size does not match. Call setInputSize(size) if input size does not match the preset size");
-        // Pad input_image with divisor 32
-        Mat pad_image = padWithDivisor(input_image);
 
-        // Build blob from input image
-        Mat input_blob = dnn::blobFromImage(pad_image);
-
+        Mat input_blob;
+        if(input_image.kind() == _InputArray::UMAT) {
+            // Pad input_image with divisor 32
+            UMat pad_image;
+            padWithDivisor(input_image, pad_image);
+            // Build blob from input image
+            input_blob = dnn::blobFromImage(pad_image);
+        } else {
+            // Pad input_image with divisor 32
+            Mat pad_image;
+            padWithDivisor(input_image, pad_image);
+            // Build blob from input image
+            input_blob = dnn::blobFromImage(pad_image);
+        }
         // Forward
         std::vector<String> output_names = { "cls_8", "cls_16", "cls_32", "obj_8", "obj_16", "obj_32", "bbox_8", "bbox_16", "bbox_32", "kps_8", "kps_16", "kps_32" };
         std::vector<Mat> output_blobs;
@@ -217,13 +226,11 @@ private:
         }
     }
 
-    Mat padWithDivisor(InputArray& input_image)
+    void padWithDivisor(InputArray input_image, OutputArray pad_image)
     {
         int bottom = padH - inputH;
         int right = padW - inputW;
-        Mat pad_image;
         copyMakeBorder(input_image, pad_image, 0, bottom, 0, right, BORDER_CONSTANT, 0);
-        return pad_image;
     }
 private:
     dnn::Net net;
