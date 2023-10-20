@@ -172,6 +172,11 @@
 #  define CV_MSA 1
 #endif
 
+#ifdef CV_CPU_COMPILE_LSX
+#  include <lsxintrin.h>
+#  define CV_LSX 1
+#endif
+
 #ifdef CV_CPU_COMPILE_LASX
 #  include <lasxintrin.h>
 #  define CV_LASX 1
@@ -374,6 +379,10 @@ struct VZeroUpperGuard {
 
 #ifndef CV_RVV
 #  define CV_RVV 0
+#endif
+
+#ifndef CV_LSX
+#  define CV_LSX 0
 #endif
 
 #ifndef CV_LASX

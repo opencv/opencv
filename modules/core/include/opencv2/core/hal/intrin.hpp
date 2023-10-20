@@ -206,7 +206,7 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #   undef CV_RVV
 #endif
 
-#if (CV_SSE2 || CV_NEON || CV_VSX || CV_MSA || CV_WASM_SIMD || CV_RVV071) && !defined(CV_FORCE_SIMD128_CPP)
+#if (CV_SSE2 || CV_NEON || CV_VSX || CV_MSA || CV_WASM_SIMD || CV_RVV071 || CV_LSX) && !defined(CV_FORCE_SIMD128_CPP)
 #define CV__SIMD_FORWARD 128
 #include "opencv2/core/hal/intrin_forward.hpp"
 #endif
@@ -241,6 +241,10 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #else
 #include "opencv2/core/hal/intrin_rvv.hpp"
 #endif
+
+#elif CV_LSX && !defined(CV_FORCE_SIMD128_CPP)
+
+#include "opencv2/core/hal/intrin_lsx.hpp"
 
 #elif CV_LASX
     #if !defined(CV_FORCE_SIMD128_CPP)

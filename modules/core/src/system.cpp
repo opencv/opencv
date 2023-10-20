@@ -427,6 +427,7 @@ struct HWFeatures
 
         g_hwFeatureNames[CPU_RVV] = "RVV";
 
+        g_hwFeatureNames[CPU_LSX]  = "LSX";
         g_hwFeatureNames[CPU_LASX] = "LASX";
     }
 
@@ -701,6 +702,10 @@ struct HWFeatures
 
     #if defined __riscv && defined __riscv_vector
         have[CV_CPU_RVV] = true;
+    #endif
+
+    #if defined __loongarch_sx
+        have[CV_CPU_LSX] = true;
     #endif
 
     #if defined __loongarch_asx
