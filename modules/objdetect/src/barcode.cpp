@@ -343,11 +343,11 @@ BarcodeDetector::BarcodeDetector(const string &prototxt_path, const string &mode
 {
     Ptr<BarcodeImpl> p_ = new BarcodeImpl();
     p = p_;
+    p_->sr = make_shared<SuperScale>();
     if (!prototxt_path.empty() && !model_path.empty())
     {
         CV_Assert(utils::fs::exists(prototxt_path));
         CV_Assert(utils::fs::exists(model_path));
-        p_->sr = make_shared<SuperScale>();
         int res = p_->sr->init(prototxt_path, model_path);
         CV_Assert(res == 0);
         p_->use_nn_sr = true;
