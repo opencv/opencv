@@ -301,6 +301,13 @@ if(TARGET ocv.3rdparty.cann AND OPENCV_TEST_DNN_CANN)
   endif()
 endif()
 
+ocv_option(OPENCV_TEST_DNN_TIMVX "Build test with TIM-VX" (HAVE_TIMVX))
+if(OPENCV_TEST_DNN_TIMVX)
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "HAVE_TIMVX=1")
+  endif()
+endif()
+
 ocv_option(OPENCV_TEST_DNN_TFLITE "Build test with TFLite" (OPENCV_DNN_TFLITE))
 if(OPENCV_TEST_DNN_TFLITE)
   if(TARGET opencv_test_dnn)
