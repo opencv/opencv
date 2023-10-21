@@ -296,12 +296,7 @@ bool QRCodeEncoderImpl::estimateVersion(const int input_length, EncodeMode mode,
 
     for (; version > 0; --version)
     {
-        const auto &ecc_params = version_info_database[version].ecc[ecc_level];
-
-        const auto data_codewords = ecc_params.data_codewords_in_G1 * ecc_params.num_blocks_in_G1 +
-                                    ecc_params.data_codewords_in_G2 * ecc_params.num_blocks_in_G2;
-
-        if (input_length > data_codewords) {
+        if (input_length > version_capacity_database[version].ec_level[ecc_level].encoding_modes[mode_index[mode]]) {
             break;
         }
     }
