@@ -339,7 +339,7 @@ See cv::imreadmulti for the list of supported formats and flags description.
 @param mats A vector of Mat objects holding each page, if more than one.
 @param range A continuous selection of pages.
 */
-CV_EXPORTS_W bool imdecodemulti(InputArray buf, int flags, CV_OUT std::vector<Mat>& mats, cv::Range range = Range::all());
+CV_EXPORTS_W bool imdecodemulti(InputArray buf, int flags, CV_OUT std::vector<Mat>& mats, const cv::Range& range = Range::all());
 
 /** @brief Encodes an image into a memory buffer.
 

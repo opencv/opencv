@@ -1095,7 +1095,7 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
     return !mats.empty();
 }
 
-bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, Range range)
+bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, const Range& range)
 {
     CV_TRACE_FUNCTION();
 
