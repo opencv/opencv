@@ -1106,8 +1106,8 @@ bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, co
     }
     else
     {
-        CV_Assert( range.start >= 0 );
-        CV_Assert( range.size() > 0 );
+        CV_CheckGE( range.start, 0, "range start cannot be negative" );
+        CV_CheckGT( range.size(), 0, "range cannot be empty" );
         return imdecodemulti_(buf, flags, mats, range.start, range.size());
     }
 }
