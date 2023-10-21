@@ -370,10 +370,10 @@ struct ReLUFunctor : public BaseFunctor
                 v_float32x4 x1 = v_load(srcptr + i + 4);
                 v_float32x4 x2 = v_load(srcptr + i + 8);
                 v_float32x4 x3 = v_load(srcptr + i + 12);
-                x0 = v_select(x0 >= z, x0, x0*s4);
-                x1 = v_select(x1 >= z, x1, x1*s4);
-                x2 = v_select(x2 >= z, x2, x2*s4);
-                x3 = v_select(x3 >= z, x3, x3*s4);
+                x0 = v_select(v_ge(x0, z), x0, v_mul(x0, s4));
+                x1 = v_select(v_ge(x1, z), x1, v_mul(x1, s4));
+                x2 = v_select(v_ge(x2, z), x2, v_mul(x2, s4));
+                x3 = v_select(v_ge(x3, z), x3, v_mul(x3, s4));
                 v_store(dstptr + i, x0);
                 v_store(dstptr + i + 4, x1);
                 v_store(dstptr + i + 8, x2);
@@ -1076,13 +1076,7 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
-        float one = 1.0f;
-        auto constant = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &one);
-        auto exp_node = std::make_shared<ngraph::op::v0::Exp>(node);
-        auto sum = std::make_shared<ngraph::op::v1::Add>(constant, exp_node, ngraph::op::AutoBroadcastType::NUMPY);
-        auto log_node = std::make_shared<ngraph::op::v0::Log>(sum);
-        auto tanh_node = std::make_shared<ngraph::op::Tanh>(log_node);
-        return std::make_shared<ngraph::op::v1::Multiply>(node, tanh_node);
+        return std::make_shared<ngraph::op::v4::Mish>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1309,10 +1303,7 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
-        float coeff = -0.999999f;
-        // float coeff = preferableTarget == DNN_TARGET_MYRIAD ? -0.999f : -0.999999f;
-        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeff);
-        return std::make_shared<ngraph::op::PRelu>(node, slope);
+        return std::make_shared<ngraph::op::Abs>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -2502,10 +2493,10 @@ struct ChannelsPReLUFunctor : public BaseFunctor
                 v_float32x4 x1 = v_load(srcptr + i + 4);
                 v_float32x4 x2 = v_load(srcptr + i + 8);
                 v_float32x4 x3 = v_load(srcptr + i + 12);
-                x0 = v_select(x0 >= z, x0, x0*s4);
-                x1 = v_select(x1 >= z, x1, x1*s4);
-                x2 = v_select(x2 >= z, x2, x2*s4);
-                x3 = v_select(x3 >= z, x3, x3*s4);
+                x0 = v_select(v_ge(x0, z), x0, v_mul(x0, s4));
+                x1 = v_select(v_ge(x1, z), x1, v_mul(x1, s4));
+                x2 = v_select(v_ge(x2, z), x2, v_mul(x2, s4));
+                x3 = v_select(v_ge(x3, z), x3, v_mul(x3, s4));
                 v_store(dstptr + i, x0);
                 v_store(dstptr + i + 4, x1);
                 v_store(dstptr + i + 8, x2);
@@ -2658,10 +2649,10 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
                 v_float32x4 s1 = v_load(scaleptr + i + 4);
                 v_float32x4 s2 = v_load(scaleptr + i + 8);
                 v_float32x4 s3 = v_load(scaleptr + i + 12);
-                x0 = v_select(x0 >= z, x0, x0*s0);
-                x1 = v_select(x1 >= z, x1, x1*s1);
-                x2 = v_select(x2 >= z, x2, x2*s2);
-                x3 = v_select(x3 >= z, x3, x3*s3);
+                x0 = v_select(v_ge(x0, z), x0, v_mul(x0, s0));
+                x1 = v_select(v_ge(x1, z), x1, v_mul(x1, s1));
+                x2 = v_select(v_ge(x2, z), x2, v_mul(x2, s2));
+                x3 = v_select(v_ge(x3, z), x3, v_mul(x3, s3));
                 v_store(dstptr + i, x0);
                 v_store(dstptr + i + 4, x1);
                 v_store(dstptr + i + 8, x2);
@@ -2775,11 +2766,6 @@ struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
 
 template<>
 const char* const ReciprocalFunctor::BaseDefaultFunctor<ReciprocalFunctor>::ocl_kernel_name = "ReciprocalForward";
-
-
-#define ACTIVATION_CREATOR_FOR(_Layer, _Functor, ...) \
-Ptr<_Layer> _Layer::create() { \
-    return return Ptr<_Layer>( new ElementWiseLayer<_Functor>(_Functor()) ); }
 
 
 Ptr<ReLULayer> ReLULayer::create(const LayerParams& params)

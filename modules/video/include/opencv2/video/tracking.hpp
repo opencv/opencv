@@ -167,7 +167,7 @@ performance boost.
 The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See
 @cite Bouguet00 . The function is parallelized with the TBB library.
 
-@note
+@note Some examples:
 
 -   An example using the Lucas-Kanade optical flow algorithm can be found at
     opencv_source_code/samples/cpp/lkdemo.cpp
@@ -214,7 +214,7 @@ The function finds an optical flow for each prev pixel using the @cite Farneback
 
 \f[\texttt{prev} (y,x)  \sim \texttt{next} ( y + \texttt{flow} (y,x)[1],  x + \texttt{flow} (y,x)[0])\f]
 
-@note
+@note Some examples:
 
 -   An example using the optical flow algorithm described by Gunnar Farneback can be found at
     opencv_source_code/samples/cpp/fback.cpp

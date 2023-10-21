@@ -26,7 +26,7 @@ template<size_t num_channels> class IntegralCalculator;
 template<size_t num_channels>
 class IntegralCalculator  {
 public:
-    IntegralCalculator() {};
+    IntegralCalculator() {}
 
 
     void calculate_integral_avx512(const uchar *src, size_t _srcstep,

@@ -343,6 +343,22 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GatherLayer> create(const LayerParams& params);
     };
 
+    /** @brief GatherElements layer
+    * GatherElements takes two inputs data and indices of the same rank r >= 1 and an optional attribute axis and works such that:
+    *   output[i][j][k] = data[index[i][j][k]][j][k] if axis = 0 and r = 3
+    *   output[i][j][k] = data[i][index[i][j][k]][k] if axis = 1 and r = 3
+    *   output[i][j][k] = data[i][j][index[i][j][k]] if axis = 2 and r = 3
+    *
+    * Gather, on the other hand, takes a data tensor of rank r >= 1, and indices tensor of rank q, and works such that:
+    *   it gathers the enteries along axis dimension of the input data indexed by indices and concatenates them in an output tensor of rank q + (r - 1)
+    *   e.g. If axis = 0, let k = indices[i_{0}, ..., i_{q-1}] then output[i_{0}, ..., i_{q-1}, j_{0}, ..., j_{r-2}] = input[k , j_{0}, ..., j_{r-2}]:
+     **/
+    class CV_EXPORTS GatherElementsLayer : public Layer
+    {
+    public:
+        static Ptr<GatherElementsLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS PoolingLayer : public Layer
     {
     public:
@@ -588,11 +604,11 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         virtual void forwardSlice(const float* src, float* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {};
+                                  size_t outPlaneSize, int cn0, int cn1) const {}
         virtual void forwardSlice(const int* src, const int* lut, int* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {};
+                                  size_t outPlaneSize, int cn0, int cn1) const {}
         virtual void forwardSlice(const int8_t* src, const int8_t* lut, int8_t* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {};
+                                  size_t outPlaneSize, int cn0, int cn1) const {}
     };
 
     class CV_EXPORTS ReLULayer : public ActivationLayer
@@ -1142,6 +1158,12 @@ CV__DNN_INLINE_NS_BEGIN
         float beta;
 
         static Ptr<GemmLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS ExpandLayer : public Layer
+    {
+    public:
+        static Ptr<ExpandLayer> create(const LayerParams &params);
     };
 
 //! @}
