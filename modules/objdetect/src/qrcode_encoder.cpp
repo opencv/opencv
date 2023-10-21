@@ -675,6 +675,8 @@ bool QRCodeEncoderImpl::encodeAuto(const std::string& input, vector<uint8_t>& ou
 {
     const auto selected_mode = autoEncodeMode(input);
 
+    CV_Assert(selected_mode != EncodeMode::MODE_AUTO);
+
     switch (selected_mode)
     {
         case EncodeMode::MODE_NUMERIC:
@@ -682,6 +684,9 @@ bool QRCodeEncoderImpl::encodeAuto(const std::string& input, vector<uint8_t>& ou
             break;
         case EncodeMode::MODE_ALPHANUMERIC:
             encodeAlpha(input, output);
+            break;
+        case EncodeMode::MODE_STRUCTURED_APPEND:
+            encodeByte(input, output);
             break;
         case EncodeMode::MODE_BYTE:
             encodeByte(input, output);
@@ -691,6 +696,8 @@ bool QRCodeEncoderImpl::encodeAuto(const std::string& input, vector<uint8_t>& ou
             break;
         case EncodeMode::MODE_ECI:
             encodeECI(input, output);
+            break;
+        default:
             break;
     }
 
