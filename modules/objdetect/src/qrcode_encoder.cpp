@@ -691,6 +691,12 @@ bool QRCodeEncoderImpl::encodeAuto(const std::string& input, vector<uint8_t>& ou
         case EncodeMode::MODE_BYTE:
             encodeByte(input, output);
             break;
+        case EncodeMode::MODE_KANJI:
+            encodeKanji(input, output);
+            break;
+        case EncodeMode::MODE_ECI:
+            encodeECI(input, output);
+            break;
     }
 
     if (mode != nullptr)
