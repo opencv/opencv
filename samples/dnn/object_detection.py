@@ -54,6 +54,8 @@ parser.add_argument('--async', type=int, default=0,
                     dest='asyncN',
                     help='Number of asynchronous forwards at the same time. '
                          'Choose 0 for synchronous mode')
+parser.add_argument('--postprocessing', choices=['yolo', 'ssd', 'faster_rcnn', 'yolov8'],
+                    help='Optional name of AI algo. ')
 args, _ = parser.parse_known_args()
 add_preproc_args(args.zoo, parser, 'object_detection')
 parser = argparse.ArgumentParser(parents=[parser],
@@ -63,7 +65,7 @@ args = parser.parse_args()
 
 args.model = findFile(args.model)
 model_length = len(args.model)
-if args.model[model_length-5:model_length] != '.onnx':
+if args.postprocess != 'yolov8':
     args.config = findFile(args.config)
     args.classes = findFile(args.classes)
 
@@ -88,7 +90,7 @@ if args.model[model_length-5:model_length] != '.onnx':
 
     # Load a network
     net = cv.dnn.readNet(cv.samples.findFile(args.model), cv.samples.findFile(args.config), args.framework)
-# onnx
+# onnx_yolov8
 else:
     classes = None
     if args.classes:
@@ -308,7 +310,7 @@ def processingThreadBody():
 
 
         if not frame is None:
-            if args.model[model_length-14:model_length] == 'yolov8net.onnx':
+            if args.postprocessing == 'yolov8':
                 frame = cv.resize(frame, (args.height, args.width))
             frameHeight = frame.shape[0]
             frameWidth = frame.shape[1]
