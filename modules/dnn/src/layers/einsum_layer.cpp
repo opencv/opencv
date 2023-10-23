@@ -224,25 +224,18 @@ Mat DiagonalDataAssignment(Mat input) {
     // Compute total number of higher-dimensional slices
     int total_slices = input.size[0];
 
-    // Create the output matrix (keeping the original dimensions but changing the size of the last dimension to 1)
-    std::vector<int> output_dims(input.dims);
-    for (int i = 0; i < input.dims - 1; ++i) {
-        output_dims[i] = input.size[i];
-    }
-    output_dims.back() = 1;
-    Mat output = Mat(output_dims, input.type());
+    original_dims[rank - 1] = 1;  // Set the last dimension to 1, as we have extracted the diagonal
+    Mat output = Mat(original_dims, input.type());
 
     int inner_stride = input.size[input.dims - 1];
+    auto inputPtr = input.ptr<T>();
+    auto outputPtr = output.ptr<T>();
     for (int slice = 0; slice < total_slices; ++slice) {
         for (int j = 0; j < inner_stride; ++j) {
-            // Extract diagonal elements
-            output.at<T>(slice, j, 0) = input.at<T>(slice, j, j);
+            // Direct memory access using raw pointers
+            outputPtr[slice * inner_stride + j] = inputPtr[slice * inner_stride * inner_stride + j * inner_stride + j];
         }
     }
-
-    // Reshape output back to original shape
-    original_dims[rank - 1] = 1;  // Set the last dimension to 1, as we have extracted the diagonal
-    output = output.reshape(1, original_dims);
     return output;
 }
 
@@ -271,19 +264,11 @@ Mat DiagonalInnermostDims(const Mat& input, bool preserve_innermost_dim_val) {
     CV_CheckEQ(input.size[rank - 1], input.size[rank - 2],
         "innermost dims should have the same dim value to parse the diagonal elements");
 
-    MatShape output_dims;
-    output_dims.reserve(rank);
-
-    for (size_t i = 0; i < rank - 2; ++i) {
-        output_dims.push_back(input_dims[i]);
-    }
-
+    MatShape output_dims = input_dims;  // Copy the original dims
     if (preserve_innermost_dim_val) {
-        output_dims.push_back(1);
-        output_dims.push_back(input_dims[rank - 1]);
+        output_dims[rank - 2] = 1;
     } else {
-        output_dims.push_back(input_dims[rank - 1]);
-        output_dims.push_back(1);
+        output_dims[rank - 1] = 1;
     }
 
     // TODO: hande different types
