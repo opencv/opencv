@@ -27,7 +27,7 @@ parser.add_argument('--out_tf_graph', default='graph.pbtxt',
                     help='For models from TensorFlow Object Detection API, you may '
                          'pass a .config file which was used for training through --config '
                          'argument. This way an additional .pbtxt file with TensorFlow graph will be created.')
-parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet', 'dldt'],
+parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet', 'dldt', 'onnx'],
                     help='Optional name of an origin framework of the model. '
                          'Detect it automatically if it does not set.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
@@ -62,31 +62,40 @@ parser = argparse.ArgumentParser(parents=[parser],
 args = parser.parse_args()
 
 args.model = findFile(args.model)
-args.config = findFile(args.config)
-args.classes = findFile(args.classes)
+model_length = len(args.model)
+if args.model[model_length-5:model_length] != '.onnx':
+    args.config = findFile(args.config)
+    args.classes = findFile(args.classes)
 
-# If config specified, try to load it as TensorFlow Object Detection API's pipeline.
-config = readTextMessage(args.config)
-if 'model' in config:
-    print('TensorFlow Object Detection API config detected')
-    if 'ssd' in config['model'][0]:
-        print('Preparing text graph representation for SSD model: ' + args.out_tf_graph)
-        createSSDGraph(args.model, args.config, args.out_tf_graph)
-        args.config = args.out_tf_graph
-    elif 'faster_rcnn' in config['model'][0]:
-        print('Preparing text graph representation for Faster-RCNN model: ' + args.out_tf_graph)
-        createFasterRCNNGraph(args.model, args.config, args.out_tf_graph)
-        args.config = args.out_tf_graph
+    # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
+    config = readTextMessage(args.config)
+    if 'model' in config:
+        print('TensorFlow Object Detection API config detected')
+        if 'ssd' in config['model'][0]:
+            print('Preparing text graph representation for SSD model: ' + args.out_tf_graph)
+            createSSDGraph(args.model, args.config, args.out_tf_graph)
+            args.config = args.out_tf_graph
+        elif 'faster_rcnn' in config['model'][0]:
+            print('Preparing text graph representation for Faster-RCNN model: ' + args.out_tf_graph)
+            createFasterRCNNGraph(args.model, args.config, args.out_tf_graph)
+            args.config = args.out_tf_graph
 
+    # Load names of classes
+    classes = None
+    if args.classes:
+        with open(args.classes, 'rt') as f:
+            classes = f.read().rstrip('\n').split('\n')
 
-# Load names of classes
-classes = None
-if args.classes:
-    with open(args.classes, 'rt') as f:
-        classes = f.read().rstrip('\n').split('\n')
-
-# Load a network
-net = cv.dnn.readNet(cv.samples.findFile(args.model), cv.samples.findFile(args.config), args.framework)
+    # Load a network
+    net = cv.dnn.readNet(cv.samples.findFile(args.model), cv.samples.findFile(args.config), args.framework)
+# onnx
+else:
+    classes = None
+    if args.classes:
+        with open(args.classes, 'rt') as f:
+            classes = f.read().rstrip('\n').split('\n')
+    net = cv.dnn.readNetFromONNX(args.model)
+###
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 outNames = net.getUnconnectedOutLayersNames()
@@ -164,6 +173,24 @@ def postprocess(frame, outs):
                     classIds.append(classId)
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
+    # yolov8
+    elif lastLayer.type == 'Identity':
+        out = np.array([cv.transpose(outs[0, 0])])
+        box_scale = max(np.array(frame.shape[:2]) / 640.0)
+        for i in range(out.shape[1]):
+            bbox, scores = out[0][i][:4], out[0][i][4:]
+            (minScore, confidence, minClassLoc,
+             (x, ClassId)) = cv.minMaxLoc(scores)
+            if confidence > confThreshold:
+                left = round((bbox[0] - (bbox[2]/2))*box_scale)
+                top = round((bbox[1] - (bbox[3]/2))*box_scale)
+                width = round(bbox[2]*box_scale)
+                height = round(bbox[3]*box_scale)
+                # Skip background label
+                classIds.append(ClassId)
+                confidences.append(float(confidence))
+                boxes.append([left, top, width, height])
+    ###
     else:
         print('Unknown output layer type: ' + lastLayer.type)
         exit()
@@ -183,6 +210,24 @@ def postprocess(frame, outs):
             nms_indices = cv.dnn.NMSBoxes(box, conf, confThreshold, nmsThreshold)
             nms_indices = nms_indices[:, 0] if len(nms_indices) else []
             indices.extend(class_indices[nms_indices])
+    # yolov8 NMS
+    elif len(outNames) > 1 or lastLayer.type == 'Identity':
+        indices = []
+        nms_boxes = []
+        nms_classIds = []
+        nms_confidences = []
+        nms_indices = cv.dnn.NMSBoxes(
+            boxes, confidences, confThreshold, 0.45, 0.5)
+        for i in range(len(nms_indices)):
+            index = nms_indices[i]
+            nms_boxes.append(boxes[index])
+            nms_classIds.append(classIds[index])
+            nms_confidences.append(confidences[index])
+            indices.append(i)
+        boxes = nms_boxes
+        classIds = nms_classIds
+        confidences = nms_confidences
+    ###
     else:
         indices = np.arange(0, len(classIds))
 
@@ -263,6 +308,8 @@ def processingThreadBody():
 
 
         if not frame is None:
+            if args.model[model_length-14:model_length] == 'yolov8net.onnx':
+                frame = cv.resize(frame, (args.height, args.width))
             frameHeight = frame.shape[0]
             frameWidth = frame.shape[1]
 
