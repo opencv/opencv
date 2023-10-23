@@ -1634,8 +1634,8 @@ void patchNaNs( InputOutputArray _a, double _val )
             int *tptr = ptrs[0];
             size_t j = 0;
 
-#if CV_SIMD
-            size_t cWidth = (size_t)VTraits<v_int32>::vlanes();;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            size_t cWidth = (size_t)VTraits<v_int32>::vlanes();
             for (; j + cWidth <= len; j += cWidth)
             {
                 v_int32 v_src = vx_load(tptr + j);
@@ -1656,7 +1656,7 @@ void patchNaNs( InputOutputArray _a, double _val )
         Cv64suf val;
         val.f = _val;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         v_int64 v_mnt_mask = vx_setall_s64(0x000FFFFFFFFFFFFF), v_exp_mask = vx_setall_s64(0x7FF0000000000000);
         v_int64 v_val = vx_setall_s64(val.i);
 #endif
@@ -1666,18 +1666,17 @@ void patchNaNs( InputOutputArray _a, double _val )
             int64* tptr = (int64*)ptrs[0];
             size_t j = 0;
 
-#if CV_SIMD
-            size_t cWidth = (size_t)v_int64::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            size_t cWidth = (size_t)VTraits<v_int64>::vlanes();
             for (; j + cWidth <= len; j += cWidth)
             {
                 v_int64 v_src = vx_load(tptr + j);
-                v_int64 vande = v_src & v_exp_mask;
-                v_int64 vandm = v_src & v_mnt_mask;
+                v_int64 vande = v_and(v_src, v_exp_mask);
+                v_int64 vandm = v_and(v_src, v_mnt_mask);
                 v_int64 ve, vm;
 
-                //TODO: this
-                ve = vande == v_exp_mask;
-                vm = vandm != vx_setzero_s64();
+                ve = v_eq(vande, v_exp_mask);
+                vm = v_ne(vandm, vx_setzero_s64());
 
                 v_int64 v_isnan = v_and(ve, vm);
                 v_int64 v_dst = v_or(v_and(v_isnan, v_val), v_and(v_not(v_isnan), v_src));
