@@ -149,10 +149,11 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
                             std::vector<size_t>& strides, cv::String &padMode)
 {
     bool is_global = params.get<bool>("global_pooling", false);
-    globalPooling.reserve(3);
-    globalPooling[0] = params.get<bool>("global_pooling_d", is_global);
-    globalPooling[1] = params.get<bool>("global_pooling_h", is_global);
-    globalPooling[2] = params.get<bool>("global_pooling_w", is_global);
+    globalPooling.assign({
+        params.get<bool>("global_pooling_d", is_global),
+        params.get<bool>("global_pooling_h", is_global),
+        params.get<bool>("global_pooling_w", is_global)
+    });
 
     if (globalPooling[0] || globalPooling[1] || globalPooling[2])
     {
