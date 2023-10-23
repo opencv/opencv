@@ -96,7 +96,7 @@ else:
     if args.classes:
         with open(args.classes, 'rt') as f:
             classes = f.read().rstrip('\n').split('\n')
-    net = cv.dnn.readNetFromONNX(args.model)
+    net = cv.dnn.readNet(args.model)
 ###
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
@@ -176,7 +176,7 @@ def postprocess(frame, outs):
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
     # yolov8
-    elif lastLayer.type == 'Identity':
+    elif args.postprocessing == 'yolov8':
         out = np.array([cv.transpose(outs[0, 0])])
         box_scale = max(np.array(frame.shape[:2]) / 640.0)
         for i in range(out.shape[1]):
@@ -213,7 +213,7 @@ def postprocess(frame, outs):
             nms_indices = nms_indices[:, 0] if len(nms_indices) else []
             indices.extend(class_indices[nms_indices])
     # yolov8 NMS
-    elif len(outNames) > 1 or lastLayer.type == 'Identity':
+    elif len(outNames) > 1 or args.postprocessing == 'yolov8':
         indices = []
         nms_boxes = []
         nms_classIds = []
