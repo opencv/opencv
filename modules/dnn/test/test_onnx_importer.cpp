@@ -675,6 +675,9 @@ TEST_P(Test_ONNX_layers, Compare_GT)
 
     testONNXModels("greater");
 }
+TEST_P(Test_ONNX_layers, Greater_input_dtype_int64) {
+    testONNXModels("greater_input_dtype_int64");
+}
 
 TEST_P(Test_ONNX_layers, Compare_LT)
 {
@@ -1057,10 +1060,12 @@ TEST_P(Test_ONNX_layers, ResizeUnfused)
 
 TEST_P(Test_ONNX_layers, ResizeUnfusedTwoInputs)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     testONNXModels("upsample_unfused_two_inputs_opset9_torch1.4", npy, 0, 0, false, true, 2);
     testONNXModels("upsample_unfused_two_inputs_opset11_torch1.4", npy, 0, 0, false, true, 2);
 }
@@ -1164,10 +1169,12 @@ TEST_P(Test_ONNX_layers, ReduceL2)
 
 TEST_P(Test_ONNX_layers, Split)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     testONNXModels("split_0");
     testONNXModels("split_1");
     testONNXModels("split_2");
@@ -1243,10 +1250,12 @@ TEST_P(Test_ONNX_layers, Softmax)
 
 TEST_P(Test_ONNX_layers, Split_EltwiseMax)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     testONNXModels("split_max");
 }
 
@@ -2669,37 +2678,37 @@ TEST_P(Test_ONNX_layers, where_node)
     testONNXModels("where_layer");
 }
 
-TEST_P(Test_ONNX_layers, Conformance_Gemm_all_attributes) {
+TEST_P(Test_ONNX_layers, Gemm_all_attributes) {
     testONNXModels("test_gemm_all_attributes", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Conformance_Gemm_alpha) {
+TEST_P(Test_ONNX_layers, Gemm_alpha) {
     testONNXModels("test_gemm_alpha", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Conformance_Gemm_beta) {
+TEST_P(Test_ONNX_layers, Gemm_beta) {
     testONNXModels("test_gemm_beta", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Conformance_Gemm_default_matrix_bias) {
+TEST_P(Test_ONNX_layers, Gemm_default_matrix_bias) {
     testONNXModels("test_gemm_default_matrix_bias", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Conformance_Gemm_default_no_bias) {
+TEST_P(Test_ONNX_layers, Gemm_default_no_bias) {
     testONNXModels("test_gemm_default_no_bias", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Conformance_Gemm_default_scalar_bias) {
+TEST_P(Test_ONNX_layers, Gemm_default_scalar_bias) {
     testONNXModels("test_gemm_default_scalar_bias", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Conformance_Gemm_default_single_elem_vector_bias) {
+TEST_P(Test_ONNX_layers, Gemm_default_single_elem_vector_bias) {
     testONNXModels("test_gemm_default_single_elem_vector_bias", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Conformance_Gemm_default_vector_bias) {
+TEST_P(Test_ONNX_layers, Gemm_default_vector_bias) {
     testONNXModels("test_gemm_default_vector_bias", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Conformance_Gemm_default_zero_bias) {
+TEST_P(Test_ONNX_layers, Gemm_default_zero_bias) {
     testONNXModels("test_gemm_default_zero_bias", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Conformance_Gemm_transposeA) {
+TEST_P(Test_ONNX_layers, Gemm_transposeA) {
     testONNXModels("test_gemm_transposeA", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Conformance_Gemm_transposeB) {
+TEST_P(Test_ONNX_layers, Gemm_transposeB) {
     testONNXModels("test_gemm_transposeB", pb, 0, 0, false, true, 2);
 }
 

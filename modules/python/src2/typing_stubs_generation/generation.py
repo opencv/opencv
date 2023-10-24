@@ -444,7 +444,7 @@ def _generate_function_stub(function_node: FunctionNode,
     elif function_node.is_static:
         decorators.append(" " * indent + "@staticmethod")
     if len(function_node.overloads) > 1:
-        decorators.append(" " * indent + "@typing.overload")
+        decorators.append(" " * indent + "@_typing.overload")
 
     function_module = get_enclosing_namespace(function_node)
     function_module_name = function_module.full_export_name
@@ -578,7 +578,7 @@ def _collect_required_imports(root: NamespaceNode) -> Collection[str]:
     for cls in for_each_class(root):
         if not has_overload and check_overload_presence(cls):
             has_overload = True
-            required_imports.add("import typing")
+            required_imports.add("import typing as _typing")
         # Add required imports for class properties
         for prop in cls.properties:
             _add_required_usage_imports(prop.type_node, required_imports)
@@ -593,7 +593,7 @@ def _collect_required_imports(root: NamespaceNode) -> Collection[str]:
             has_protocol = True
 
     if has_overload:
-        required_imports.add("import typing")
+        required_imports.add("import typing as _typing")
     # Importing modules required to resolve functions arguments
     for overload in for_each_function_overload(root):
         for arg in filter(lambda a: a.type_node is not None,
@@ -633,6 +633,8 @@ def _populate_reexported_symbols(root: NamespaceNode) -> None:
             _reexport_submodule(submodule)
 
     _reexport_submodule(root)
+
+    root.reexported_submodules.append("typing")
 
     # Special cases, symbols defined in possible pure Python submodules
     # should be
@@ -735,10 +737,10 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         )
         return ConditionalAliasTypeNode(
             enum_export_name,
-            "typing.TYPE_CHECKING",
+            "_typing.TYPE_CHECKING",
             positive_branch_type=enum_node_alias,
             negative_branch_type=PrimitiveTypeNode.int_(enum_export_name),
-            condition_required_imports=("import typing", )
+            condition_required_imports=("import typing as _typing", )
         )
 
     def register_alias(alias_node: AliasTypeNode) -> None:

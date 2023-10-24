@@ -20,7 +20,7 @@ model download link: https://github.com/opencv/opencv_zoo/tree/master/models/fac
 class CV_EXPORTS_W FaceDetectorYN
 {
 public:
-    virtual ~FaceDetectorYN() {};
+    virtual ~FaceDetectorYN() {}
 
     /** @brief Set the size for the network input, which overwrites the input size of creating model. Call this method when the size of input image does not match the input size when creating model
      *
@@ -99,7 +99,7 @@ model download link: https://github.com/opencv/opencv_zoo/tree/master/models/fac
 class CV_EXPORTS_W FaceRecognizerSF
 {
 public:
-    virtual ~FaceRecognizerSF() {};
+    virtual ~FaceRecognizerSF() {}
 
     /** @brief Definition of distance used for calculating the distance between two face features
      */
