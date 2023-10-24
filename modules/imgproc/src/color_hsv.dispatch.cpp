@@ -274,13 +274,13 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
 
     if(_src.depth() == CV_8U)
     {
-        static UMat sdiv_data;
-        static UMat hdiv_data180;
-        static UMat hdiv_data256;
-        static int sdiv_table[256];
-        static int hdiv_table180[256];
-        static int hdiv_table256[256];
-        static volatile bool initialized180 = false, initialized256 = false;
+        static thread_local UMat sdiv_data;
+        static thread_local UMat hdiv_data180;
+        static thread_local UMat hdiv_data256;
+        static thread_local int sdiv_table[256];
+        static thread_local int hdiv_table180[256];
+        static thread_local int hdiv_table256[256];
+        static thread_local volatile bool initialized180 = false, initialized256 = false;
         volatile bool & initialized = hrange == 180 ? initialized180 : initialized256;
 
         if (!initialized)
