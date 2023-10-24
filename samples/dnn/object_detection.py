@@ -62,42 +62,35 @@ parser = argparse.ArgumentParser(parents=[parser],
                                  description='Use this script to run object detection deep learning networks using OpenCV.',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 args = parser.parse_args()
-
 args.model = findFile(args.model)
-model_length = len(args.model)
-if args.postprocess != 'yolov8':
+if args.config != None:
     args.config = findFile(args.config)
-    args.classes = findFile(args.classes)
+args.classes = findFile(args.classes)
 
-    # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
-    config = readTextMessage(args.config)
-    if 'model' in config:
-        print('TensorFlow Object Detection API config detected')
-        if 'ssd' in config['model'][0]:
-            print('Preparing text graph representation for SSD model: ' + args.out_tf_graph)
-            createSSDGraph(args.model, args.config, args.out_tf_graph)
-            args.config = args.out_tf_graph
-        elif 'faster_rcnn' in config['model'][0]:
-            print('Preparing text graph representation for Faster-RCNN model: ' + args.out_tf_graph)
-            createFasterRCNNGraph(args.model, args.config, args.out_tf_graph)
-            args.config = args.out_tf_graph
+# If config specified, try to load it as TensorFlow Object Detection API's pipeline.
+config = readTextMessage(args.config)
+if 'model' in config:
+    print('TensorFlow Object Detection API config detected')
+    if 'ssd' in config['model'][0]:
+        print('Preparing text graph representation for SSD model: ' + args.out_tf_graph)
+        createSSDGraph(args.model, args.config, args.out_tf_graph)
+        args.config = args.out_tf_graph
+    elif 'faster_rcnn' in config['model'][0]:
+        print('Preparing text graph representation for Faster-RCNN model: ' + args.out_tf_graph)
+        createFasterRCNNGraph(args.model, args.config, args.out_tf_graph)
+        args.config = args.out_tf_graph
 
-    # Load names of classes
-    classes = None
-    if args.classes:
-        with open(args.classes, 'rt') as f:
-            classes = f.read().rstrip('\n').split('\n')
+# Load names of classes
+classes = None
+if args.classes:
+    with open(args.classes, 'rt') as f:
+        classes = f.read().rstrip('\n').split('\n')
 
-    # Load a network
+# Load a network
+if args.config != None:
     net = cv.dnn.readNet(cv.samples.findFile(args.model), cv.samples.findFile(args.config), args.framework)
-# onnx_yolov8
 else:
-    classes = None
-    if args.classes:
-        with open(args.classes, 'rt') as f:
-            classes = f.read().rstrip('\n').split('\n')
-    net = cv.dnn.readNet(args.model)
-###
+    net = cv.dnn.readNet(cv.samples.findFile(args.model), '', args.framework)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 outNames = net.getUnconnectedOutLayersNames()
@@ -310,15 +303,19 @@ def processingThreadBody():
 
 
         if not frame is None:
-            if args.postprocessing == 'yolov8':
-                frame = cv.resize(frame, (args.height, args.width))
             frameHeight = frame.shape[0]
             frameWidth = frame.shape[1]
 
             # Create a 4D blob from a frame.
             inpWidth = args.width if args.width else frameWidth
             inpHeight = args.height if args.height else frameHeight
-            blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_8U)
+            if args.postprocessing == 'yolov8':
+                length = max(frameHeight, frameWidth)
+                padding_img = np.zeros((length, length, 3), np.uint8)
+                padding_img[0: frameHeight, 0:frameWidth] = frame
+                blob = cv.dnn.blobFromImage(padding_img, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_8U)
+            else:
+                blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_8U)
             processedFramesQueue.put(frame)
 
             # Run a model
