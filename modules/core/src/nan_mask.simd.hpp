@@ -88,12 +88,8 @@ static void patchNaNs_64f(uchar* ptr, size_t len, double newVal)
 
 PatchNanFunc getPatchNanFunc(bool isDouble)
 {
-    static PatchNanFunc tab[] =
-    {
-        (PatchNanFunc)GET_OPTIMIZED(patchNaNs_32f), (PatchNanFunc)GET_OPTIMIZED(patchNaNs_64f)
-    };
-
-    return tab[isDouble ? 1 : 0];
+    return isDouble ? (PatchNanFunc)GET_OPTIMIZED(patchNaNs_64f)
+                    : (PatchNanFunc)GET_OPTIMIZED(patchNaNs_32f);
 }
 
 ////// finiteMask //////
