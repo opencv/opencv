@@ -463,7 +463,7 @@ template<> int PyrDownVecV<int, uchar>(int** src, uchar* dst, int width)
     }
     #if CV_SIMD128
     typedef int CV_DECL_ALIGNED(1) unaligned_int;
-    for ( ; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
+    for ( ; x <= width - VTraits<v_int32x4>::vlanes(); x += VTraits<v_int32x4>::vlanes())
     {
         v_int32x4 r0, r1, r2, r3, r4, t0;
         r0 = v_load(row0 + x);
@@ -473,7 +473,7 @@ template<> int PyrDownVecV<int, uchar>(int** src, uchar* dst, int width)
         r4 = v_load(row4 + x);
         t0 = v_add(v_add(v_add(r0, r4), v_add(r2, r2)), v_shl<2>(v_add(v_add(r1, r3), r2)));
 
-        *((unaligned_int*) (dst + x)) = v_reinterpret_as_s32(v_rshr_pack<8>(v_pack_u(t0, t0), v_setzero_u16())).get0();
+        *((unaligned_int*) (dst + x)) = v_get0(v_reinterpret_as_s32(v_rshr_pack<8>(v_pack_u(t0, t0), v_setzero_u16())));
     }
     #else
     for (; x <= width - 1; x += 1)
@@ -615,15 +615,15 @@ template <> int PyrUpVecV<int, uchar>(int** src, uchar** dst, int width)
     }
     #if CV_SIMD128
     typedef int CV_DECL_ALIGNED(1) unaligned_int;
-    for (; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
+    for (; x <= width - VTraits<v_int32x4>::vlanes(); x += VTraits<v_int32x4>::vlanes())
     {
         v_int32 v_r00 = vx_load(row0 + x),
                 v_r10 = vx_load(row1 + x),
                 v_r20 = vx_load(row2 + x);
         v_int32 v_2r10 = v_add(v_r10, v_r10);
         v_int16 d = v_pack(v_add(v_add(v_r00, v_r20), v_add(v_add(v_2r10, v_2r10), v_2r10)), v_shl<2>(v_add(v_r10, v_r20)));
-        *(unaligned_int*)(dst0 + x) = v_reinterpret_as_s32(v_rshr_pack_u<6>(d, vx_setzero_s16())).get0();
-        *(unaligned_int*)(dst1 + x) = v_reinterpret_as_s32(v_rshr_pack_u<6>(v_combine_high(d, d), vx_setzero_s16())).get0();
+        *(unaligned_int*)(dst0 + x) = v_get0(v_reinterpret_as_s32(v_rshr_pack_u<6>(d, vx_setzero_s16())));
+        *(unaligned_int*)(dst1 + x) = v_get0(v_reinterpret_as_s32(v_rshr_pack_u<6>(v_combine_high(d, d), vx_setzero_s16())));
     }
     #else
     for (; x <= width - 1; x += 1)
@@ -754,14 +754,14 @@ template <> int PyrUpVecVOneRow<int, uchar>(int** src, uchar* dst, int width)
     }
     #if CV_SIMD128
     typedef int CV_DECL_ALIGNED(1) unaligned_int;
-    for (; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
+    for (; x <= width - VTraits<v_int32x4>::vlanes(); x += VTraits<v_int32x4>::vlanes())
     {
         v_int32 v_r00 = vx_load(row0 + x),
                 v_r10 = vx_load(row1 + x),
                 v_r20 = vx_load(row2 + x);
         v_int32 v_2r10 = v_add(v_r10, v_r10);
         v_int16 d = v_pack(v_add(v_add(v_r00, v_r20), v_add(v_add(v_2r10, v_2r10), v_2r10)), v_shl<2>(v_add(v_r10, v_r20)));
-        *(unaligned_int*)(dst + x) = v_reinterpret_as_s32(v_rshr_pack_u<6>(d, vx_setzero_s16())).get0();
+        *(unaligned_int*)(dst + x) = v_get0(v_reinterpret_as_s32(v_rshr_pack_u<6>(d, vx_setzero_s16())));
     }
     #else
     for (; x <= width - 1; x += 1)

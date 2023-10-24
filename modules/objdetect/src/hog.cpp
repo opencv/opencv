@@ -268,13 +268,13 @@ void HOGDescriptor::computeGradient(InputArray _img, InputOutputArray _grad, Inp
         for ( i = 0; i < 256; i += 4)
         {
             v_store(_data + i, v_sqrt(idx));
-            idx += ifour;
+            idx = v_add(idx, ifour);
         }
     else
         for ( i = 0; i < 256; i += 4)
         {
             v_store(_data + i, idx);
-            idx += ifour;
+            idx = v_add(idx, ifour);
         }
 #else
     if( gammaCorrection )
@@ -320,7 +320,7 @@ void HOGDescriptor::computeGradient(InputArray _img, InputOutputArray _grad, Inp
         for ( ; x <= end - 4; x += 4)
         {
             v_int32x4 mul_res = v_load(xmap + x);
-            mul_res += mul_res + mul_res;
+            mul_res = v_add(mul_res, v_add(mul_res, mul_res));
             v_store(xmap + x, mul_res);
         }
 #endif
@@ -444,34 +444,34 @@ void HOGDescriptor::computeGradient(InputArray _img, InputOutputArray _grad, Inp
             {
                 int x0 = xmap[x], x1 = xmap[x+1], x2 = xmap[x+2], x3 = xmap[x+3];
 
-                v_float32x4 _dx0 = v_load(lutCurr+x+widthP2*0+2) - v_load(lutCurr+x+widthP2*0);
-                v_float32x4 _dx1 = v_load(lutCurr+x+widthP2*1+2) - v_load(lutCurr+x+widthP2*1);
-                v_float32x4 _dx2 = v_load(lutCurr+x+widthP2*2+2) - v_load(lutCurr+x+widthP2*2);
+                v_float32x4 _dx0 = v_sub(v_load(lutCurr + x + widthP2 * 0 + 2), v_load(lutCurr + x + widthP2 * 0));
+                v_float32x4 _dx1 = v_sub(v_load(lutCurr + x + widthP2 * 1 + 2), v_load(lutCurr + x + widthP2 * 1));
+                v_float32x4 _dx2 = v_sub(v_load(lutCurr + x + widthP2 * 2 + 2), v_load(lutCurr + x + widthP2 * 2));
 
                 v_float32x4 _dy00 = v_float32x4(lut[nextPtr[x0+0]], lut[nextPtr[x1+0]], lut[nextPtr[x2+0]], lut[nextPtr[x3+0]]);
-                v_float32x4 _dy0 = _dy00 - v_load(lutPrev+x+widthP2*0+1);
+                v_float32x4 _dy0 = v_sub(_dy00, v_load(lutPrev + x + widthP2 * 0 + 1));
 
                 v_store(lutNext+x+widthP2*0+1, _dy00);
 
                 v_float32x4 _dy10 = v_float32x4(lut[nextPtr[x0+1]], lut[nextPtr[x1+1]], lut[nextPtr[x2+1]], lut[nextPtr[x3+1]]);
-                v_float32x4 _dy1 = _dy10 - v_load(lutPrev+x+widthP2*1+1);
+                v_float32x4 _dy1 = v_sub(_dy10, v_load(lutPrev + x + widthP2 * 1 + 1));
 
                 v_store(lutNext+x+widthP2*1+1, _dy10);
 
                 v_float32x4 _dy20 = v_float32x4(lut[nextPtr[x0+2]], lut[nextPtr[x1+2]], lut[nextPtr[x2+2]], lut[nextPtr[x3+2]]);
-                v_float32x4 _dy2 = _dy20 - v_load(lutPrev+x+widthP2*2+1);
+                v_float32x4 _dy2 = v_sub(_dy20, v_load(lutPrev + x + widthP2 * 2 + 1));
 
                 v_store(lutNext+x+widthP2*2+1, _dy20);
 
-                v_float32x4 _mag0 = (_dx0 * _dx0) + (_dy0 * _dy0);
-                v_float32x4 _mag1 = (_dx1 * _dx1) + (_dy1 * _dy1);
-                v_float32x4 _mag2 = (_dx2 * _dx2) + (_dy2 * _dy2);
+                v_float32x4 _mag0 = v_add(v_mul(_dx0, _dx0), v_mul(_dy0, _dy0));
+                v_float32x4 _mag1 = v_add(v_mul(_dx1, _dx1), v_mul(_dy1, _dy1));
+                v_float32x4 _mag2 = v_add(v_mul(_dx2, _dx2), v_mul(_dy2, _dy2));
 
-                v_float32x4 mask = v_reinterpret_as_f32(_mag2 > _mag1);
+                v_float32x4 mask = v_reinterpret_as_f32(v_gt(_mag2, _mag1));
                 _dx2 = v_select(mask, _dx2, _dx1);
                 _dy2 = v_select(mask, _dy2, _dy1);
 
-                mask = v_reinterpret_as_f32(v_max(_mag2, _mag1) > _mag0);
+                mask = v_reinterpret_as_f32(v_gt(v_max(_mag2, _mag1), _mag0));
                 _dx2 = v_select(mask, _dx2, _dx0);
                 _dy2 = v_select(mask, _dy2, _dy0);
 
@@ -537,25 +537,25 @@ void HOGDescriptor::computeGradient(InputArray _img, InputOutputArray _grad, Inp
             int x2 = x << 1;
             v_float32x4 _mag = v_load(dbuf + x + (width << 1));
             v_float32x4 _angle = v_load(dbuf + x + width * 3);
-            _angle = (_angleScale * _angle) - fhalf;
+            _angle = v_sub(v_mul(_angleScale, _angle), fhalf);
 
             v_int32x4 _hidx = v_floor(_angle);
-            _angle -= v_cvt_f32(_hidx);
+            _angle = v_sub(_angle, v_cvt_f32(_hidx));
 
-            v_float32x4 ft0 = _mag * (fone - _angle);
-            v_float32x4 ft1 = _mag * _angle;
+            v_float32x4 ft0 = v_mul(_mag, v_sub(fone, _angle));
+            v_float32x4 ft1 = v_mul(_mag, _angle);
 
             v_store_interleave(gradPtr + x2, ft0, ft1);
 
-            v_int32x4 mask0 = _hidx >> 31;
-            v_int32x4 it0 = mask0 & _nbins;
-            mask0 = (_hidx >= _nbins);
-            v_int32x4 it1 = mask0 & _nbins;
-            _hidx += (it0 - it1);
+            v_int32x4 mask0 = v_shr<31>(_hidx);
+            v_int32x4 it0 = v_and(mask0, _nbins);
+            mask0 = (v_ge(_hidx, _nbins));
+            v_int32x4 it1 = v_and(mask0, _nbins);
+            _hidx = v_add(_hidx, v_sub(it0, it1));
 
             it0 = v_reinterpret_as_s32(v_pack(v_pack(_hidx, izero), v_reinterpret_as_s16(izero)));
-            _hidx += ione;
-            _hidx &= (_hidx < _nbins);
+            _hidx = v_add(_hidx, ione);
+            _hidx = v_and(_hidx, v_lt(_hidx, _nbins));
             it1 = v_reinterpret_as_s32(v_pack(v_pack(_hidx, izero), v_reinterpret_as_s16(izero)));
             v_uint8x16 it2, it3;
             v_zip(v_reinterpret_as_u8(it0), v_reinterpret_as_u8(it1), it2, it3);
@@ -707,9 +707,9 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
 
         for (; i <= blockSize.height - 4; i += 4)
         {
-            v_float32x4 t = idx - _bh;
-            t *= t;
-            idx += ifour;
+            v_float32x4 t = v_sub(idx, _bh);
+            t = v_mul(t, t);
+            idx = v_add(idx, ifour);
             v_store(_di + i, t);
         }
     #endif
@@ -725,9 +725,9 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
 
         for (; j <= blockSize.height - 4; j += 4)
         {
-            v_float32x4 t = idx - _bw;
-            t *= t;
-            idx += ifour;
+            v_float32x4 t = v_sub(idx, _bw);
+            t = v_mul(t, t);
+            idx = v_add(idx, ifour);
             v_store(_dj + j, t);
         }
     #endif
@@ -936,8 +936,8 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         int h0 = h[0], h1 = h[1];
 
         v_float32x4 _a0 = v_setall_f32(a[0]), _a1 = v_setall_f32(a[1]);
-        v_float32x4 w = v_setall_f32(pk.gradWeight) * v_load(pk.histWeights);
-        v_float32x4 _t0 = _a0 * w, _t1 = _a1 * w;
+        v_float32x4 w = v_mul(v_setall_f32(pk.gradWeight), v_load(pk.histWeights));
+        v_float32x4 _t0 = v_mul(_a0, w), _t1 = v_mul(_a1, w);
 
         v_store(hist0, _t0);
         v_store(hist1, _t1);
@@ -984,8 +984,8 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         int h0 = h[0], h1 = h[1];
 
         v_float32x4 _a0 = v_setall_f32(a[0]), _a1 = v_setall_f32(a[1]);
-        v_float32x4 w = v_setall_f32(pk.gradWeight) * v_load(pk.histWeights);
-        v_float32x4 _t0 = _a0 * w, _t1 = _a1 * w;
+        v_float32x4 w = v_mul(v_setall_f32(pk.gradWeight), v_load(pk.histWeights));
+        v_float32x4 _t0 = v_mul(_a0, w), _t1 = v_mul(_a1, w);
 
         v_store(hist0, _t0);
         v_store(hist1, _t1);
@@ -1057,12 +1057,12 @@ void HOGCache::normalizeBlockHistogram(float* _hist) const
 
 #if CV_SIMD128
     v_float32x4 p0 = v_load(hist);
-    v_float32x4 s = p0 * p0;
+    v_float32x4 s = v_mul(p0, p0);
 
     for (i = 4; i <= sz - 4; i += 4)
     {
         p0 = v_load(hist + i);
-        s += p0 * p0;
+        s = v_add(s, v_mul(p0, p0));
     }
     v_store(partSum, s);
 #else
@@ -1091,17 +1091,17 @@ void HOGCache::normalizeBlockHistogram(float* _hist) const
     v_float32x4 _scale = v_setall_f32(scale);
     static v_float32x4 _threshold = v_setall_f32(thresh);
 
-    v_float32x4 p = _scale * v_load(hist);
+    v_float32x4 p = v_mul(_scale, v_load(hist));
     p = v_min(p, _threshold);
-    s = p * p;
+    s = v_mul(p, p);
     v_store(hist, p);
 
     for(i = 4 ; i <= sz - 4; i += 4)
     {
         p = v_load(hist + i);
-        p *= _scale;
+        p = v_mul(p, _scale);
         p = v_min(p, _threshold);
-        s += p * p;
+        s = v_add(s, v_mul(p, p));
         v_store(hist + i, p);
     }
 
@@ -1137,7 +1137,7 @@ void HOGCache::normalizeBlockHistogram(float* _hist) const
     v_float32x4 _scale2 = v_setall_f32(scale);
     for ( ; i <= sz - 4; i += 4)
     {
-        v_float32x4 t = _scale2 * v_load(hist + i);
+        v_float32x4 t = v_mul(_scale2, v_load(hist + i));
         v_store(hist + i, t);
     }
 #endif
@@ -1593,14 +1593,14 @@ void HOGDescriptor::detect(InputArray _img,
 #if CV_SIMD128
             v_float32x4 _vec = v_load(vec);
             v_float32x4 _svmVec = v_load(svmVec);
-            v_float32x4 sum = _svmVec * _vec;
+            v_float32x4 sum = v_mul(_svmVec, _vec);
 
             for( k = 4; k <= blockHistogramSize - 4; k += 4 )
             {
                 _vec = v_load(vec + k);
                 _svmVec = v_load(svmVec + k);
 
-                sum += _vec * _svmVec;
+                sum = v_add(sum, v_mul(_vec, _svmVec));
             }
 
             v_store(partSum, sum);
@@ -3392,14 +3392,14 @@ void HOGDescriptor::detectROI(InputArray _img, const std::vector<cv::Point> &loc
 #if CV_SIMD128
             v_float32x4 _vec = v_load(vec);
             v_float32x4 _svmVec = v_load(svmVec);
-            v_float32x4 sum = _svmVec * _vec;
+            v_float32x4 sum = v_mul(_svmVec, _vec);
 
             for( k = 4; k <= blockHistogramSize - 4; k += 4 )
             {
                 _vec = v_load(vec + k);
                 _svmVec = v_load(svmVec + k);
 
-                sum += _vec * _svmVec;
+                sum = v_add(sum, v_mul(_vec, _svmVec));
             }
 
             v_store(partSum, sum);
