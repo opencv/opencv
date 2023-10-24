@@ -320,7 +320,7 @@ TEST_P(videoio_encapsulate, write)
 
 const videoio_encapsulate_params_t videoio_encapsulate_params[] =
 {
-    videoio_encapsulate_params_t("video/big_buck_bunny.h264", "mp4", 125, 125),
+    videoio_encapsulate_params_t("video/big_buck_bunny.h264", "avi", 125, 125),
     videoio_encapsulate_params_t("video/big_buck_bunny.h265", "mp4", 125, 125),
     videoio_encapsulate_params_t("video/big_buck_bunny.wmv", "wmv", 12, 13),
     videoio_encapsulate_params_t("video/big_buck_bunny.mp4", "mp4", 12, 13),
@@ -336,13 +336,14 @@ const videoio_encapsulate_params_t videoio_encapsulate_params[] =
     videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libxvid.mp4", "mp4", 3, 4),
     videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.mpeg2video.mp4", "mp4", 12, 13),
     videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.mjpeg.mp4", "mp4", 0, 5),
-    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libx264.mp4", "mp4", 15, 15),
-    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libx265.mp4", "mp4", 15, 15),
-    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libx264.mp4", ".mp4", 15, 15),
-    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", "mp4", 15, 15),
+    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libx264.mp4", "avi", 15, 15),
     videoio_encapsulate_params_t("../cv/tracking/faceocc2/data/faceocc2.webm", "webm", 128, 129),
     videoio_encapsulate_params_t("../cv/video/1920x1080.avi", "mp4", 12, 13),
-    videoio_encapsulate_params_t("../cv/video/768x576.avi", "mp4", 15, 16)
+    videoio_encapsulate_params_t("../cv/video/768x576.avi", "avi", 15, 16)
+    // Not supported by with FFmpeg:
+    //videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libx265.mp4", "mp4", 15, 15),
+    //videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", "mp4", 15, 15),
+
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_encapsulate, testing::ValuesIn(videoio_encapsulate_params));
