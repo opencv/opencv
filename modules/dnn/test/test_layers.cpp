@@ -1917,7 +1917,7 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
     Mat inp(10, 10, CV_8U);
     randu(inp, 0, 255);
 
-    Mat maxValues(5, 5, CV_32F, Scalar(-1)), indices(5, 5, CV_32F, Scalar(-1));
+    Mat maxValues(5, 5, CV_32F, Scalar(-1)), indices(5, 5, CV_64S, Scalar(-1));
     for (int y = 0; y < 10; ++y)
     {
         int dstY = y / 2;
@@ -1928,7 +1928,7 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
             if ((float)inp.at<uint8_t>(y, x) > maxValues.at<float>(dstY, dstX))
             {
                 maxValues.at<float>(dstY, dstX) = val;
-                indices.at<float>(dstY, dstX) = y * 10 + x;
+                indices.at<int64_t>(dstY, dstX) = y * 10 + x;
             }
         }
     }

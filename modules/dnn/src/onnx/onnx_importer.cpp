@@ -381,27 +381,25 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
     CV_Assert((bool)layer);
 
     std::vector<MatShape> inpShapes(inputs.size());
+    std::vector<MatType> inpTypes(inputs.size());
     int ddepth = params.get<int>("depth", CV_32F);
     for (size_t i = 0; i < inputs.size(); ++i)
     {
         inpShapes[i] = shape(inputs[i]);
-        if (i > 0 && ddepth != inputs[i].depth())
-            CV_Error(Error::StsNotImplemented, cv::format("Mixed input data types. Required type: %d, actual type: %d", ddepth, inputs[i].depth()));
-
-        // Quantize and Dequantize layer have different output type than input.
-        if (params.type != "Quantize" && params.type != "Dequantize")
-            ddepth = inputs[i].depth();
+        inpTypes[i] = inputs[i].type();
     }
 
     std::vector<MatShape> outShapes, internalShapes;
+    std::vector<MatType> outTypes, internalTypes;
     layer->getMemoryShapes(inpShapes, 0, outShapes, internalShapes);
+    layer->getTypes(inpTypes, outShapes.size(), internalShapes.size(), outTypes, internalTypes);
 
     std::vector<Mat> internals(internalShapes.size());
     outputs.resize(outShapes.size());
     for (size_t i = 0; i < outShapes.size(); ++i)
-        outputs[i].create(outShapes[i], ddepth);
+        outputs[i].create(outShapes[i], outTypes[i]);
     for (size_t i = 0; i < internalShapes.size(); ++i)
-        internals[i].create(internalShapes[i], ddepth);
+        internals[i].create(internalShapes[i], internalTypes[i]);
 
     layer->finalize(inputs, outputs);
     layer->forward(inputs, outputs, internals);
@@ -2506,7 +2504,6 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
             inputs.push_back(input);
 
             Mat indices = getBlob(node_proto, 1);
-            indices.convertTo(indices, CV_32FC1);
             inputs.push_back(indices);
 
             runLayer(layerParams, inputs, output);
@@ -2525,10 +2522,6 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
             constParams.name = node_proto.input(i);
             constParams.type = "Const";
             Mat blob = getBlob(node_proto, i);
-            if (i == 1)
-            {
-                blob.convertTo(blob, CV_32FC1);
-            }
             constParams.blobs.push_back(blob);
 
             opencv_onnx::NodeProto proto;
@@ -3037,8 +3030,6 @@ void ONNXImporter::parseScatter(LayerParams& layerParams, const opencv_onnx::Nod
         for (size_t i = 0; i < node_proto.input_size(); i++)
         {
             Mat blob = getBlob(node_proto, i);
-            if (i == 1) // indices
-                blob.convertTo(blob, CV_32F);
             inputs.push_back(blob);
         }
         runLayer(layerParams, inputs, output);

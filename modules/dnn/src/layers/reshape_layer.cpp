@@ -259,6 +259,25 @@ public:
         return true;
     }
 
+    void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16
+                || preferableTarget == DNN_TARGET_CPU_FP16
+                || preferableTarget == DNN_TARGET_CUDA_FP16)
+                CV_Assert(input == CV_16S || input == CV_8S || input == CV_32S || input == CV_64S);
+            else
+                CV_Assert(input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S);
+
+        outputs.assign(requiredOutputs, inputs[0]);
+    }
+
+
     bool updateMemoryShapes(const std::vector<MatShape> &inputs) CV_OVERRIDE
     {
         if (hasDynamicShapes)
@@ -312,7 +331,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && inputs_arr.depth() != CV_32S && inputs_arr.depth() != CV_64S,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         std::vector<Mat> inputs, outputs;

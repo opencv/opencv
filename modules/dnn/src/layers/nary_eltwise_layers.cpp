@@ -349,6 +349,25 @@ public:
         return false;
     }
 
+    void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16
+                || preferableTarget == DNN_TARGET_CPU_FP16
+                || preferableTarget == DNN_TARGET_CUDA_FP16)
+                CV_Assert(input == CV_16S || input == CV_8S || input == CV_32S);
+            else
+                CV_Assert(input == CV_32F || input == CV_8S || input == CV_32S);
+
+        outputs.assign(requiredOutputs, inputs[0]);
+    }
+
+
     template <typename T, typename Functor>
     void binary_forward_impl(
             int ndims, const std::vector<int>& shape,
