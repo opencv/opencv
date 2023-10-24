@@ -1456,6 +1456,11 @@ TEST_P(Test_ONNX_layers, Einsum_2D)
     testONNXModels("einsum_2d", npy, 0, 0, false, false, 2);
 }
 
+TEST_P(Test_ONNX_layers, Einsum_2D_Ellipses)
+{
+    testONNXModels("einsum_2d_ellipses", npy, 0, 0, false, false, 2);
+}
+
 TEST_P(Test_ONNX_layers, Einsum_3D)
 {
     testONNXModels("einsum_3d", npy, 0, 0, false, false, 2);
@@ -1481,7 +1486,7 @@ TEST_P(Test_ONNX_layers, DISABLED_Einsum_HadamardProduct)
     testONNXModels("einsum_hadamard", npy, 0, 0, false, false, 2);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_Einsum_Batch_Diagonal)
+TEST_P(Test_ONNX_layers, Einsum_Batch_Diagonal)
 {
     testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
 }
