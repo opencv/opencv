@@ -8,6 +8,7 @@
 
 #include <avif/avif.h>
 #include <fstream>
+#include <memory>
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include "opencv2/imgproc.hpp"
@@ -159,16 +160,16 @@ size_t AvifDecoder::signatureLength() const { return kAvifSignatureSize; }
   }
 
 bool AvifDecoder::checkSignature(const String &signature) const {
-  avifDecoder *decoder = avifDecoderCreate();
+  std::unique_ptr<avifDecoder, decltype(&avifDecoderDestroy)> decoder(
+      avifDecoderCreate(), avifDecoderDestroy);
   if (!decoder) return false;
   OPENCV_AVIF_CHECK_STATUS(
       avifDecoderSetIOMemory(
-          decoder, reinterpret_cast<const uint8_t *>(signature.c_str()),
+          decoder.get(), reinterpret_cast<const uint8_t *>(signature.c_str()),
           signature.size()),
       decoder);
   decoder->io->sizeHint = 1e9;
-  const avifResult status = avifDecoderParse(decoder);
-  avifDecoderDestroy(decoder);
+  const avifResult status = avifDecoderParse(decoder.get());
   return (status == AVIF_RESULT_OK || status == AVIF_RESULT_TRUNCATED_DATA);
 }
 
