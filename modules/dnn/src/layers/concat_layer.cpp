@@ -115,6 +115,19 @@ public:
         return false;
     }
 
+    virtual  void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (int i = 1; i < inputs.size(); i++)
+            CV_Assert(inputs[i] == inputs[0]);
+        outputs.assign(1, inputs[0]);
+    }
+
+
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_TIMVX
@@ -273,7 +286,7 @@ public:
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   inputs_arr.depth() != CV_8S,
+                   (inputs_arr.depth() == CV_32F || inputs_arr.depth() == CV_16S),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         std::vector<Mat> inputs, outputs;
@@ -286,7 +299,7 @@ public:
         if (padding)
             outMat.setTo(paddingValue);
 
-        if( cAxis == 1 && outMat.dims == 4 && !padding)
+        if(cAxis == 1 && outMat.dims == 4 && !padding && (inputs[0].depth() == CV_32F || inputs[0].depth() == CV_8S))
         {
             int nstripes = getNumThreads();
             if (outMat.type() == CV_8S)

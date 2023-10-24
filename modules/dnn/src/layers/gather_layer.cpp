@@ -40,6 +40,19 @@ public:
         return false;
     }
 
+    virtual  void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() == 2);
+        CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_16S);
+        CV_Assert(inputs[1] == CV_64S || inputs[1] == CV_32S);
+        outputs.assign(1, inputs[0]);
+    }
+
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -57,17 +70,15 @@ public:
         const Mat& inp = inputs[0];
 
         int indicesType = inputs[1].type();
-        CV_CheckType(indicesType, indicesType == CV_32FC1 || indicesType == CV_16FC1, "");
+        CV_CheckType(indicesType, indicesType == CV_32SC1 || indicesType == CV_64SC1, "");
         Mat indices32S;
-        if (indicesType == CV_16F/*FP16*/)
+        if (indicesType == CV_64SC1)
         {
-            Mat indicesF32;
-            inputs[1].convertTo(indicesF32, CV_32F);
-            indicesF32.convertTo(indices32S, CV_32S);
+            inputs[1].convertTo(indices32S, CV_32S);
         }
         else
         {
-            inputs[1].convertTo(indices32S, CV_32S);
+            indices32S = inputs[1];
         }
         const size_t indices_total = indices32S.total();
         indices32S = indices32S.reshape(1, indices_total);

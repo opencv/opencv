@@ -68,16 +68,23 @@ public:
         return false;
     }
 
+    virtual void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const
+    {
+        CV_Assert(inputs.size() >= 2);
+        CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_16S);
+        CV_Assert(inputs[1] == CV_64S || inputs[1] == CV_32S);
+        outputs.assign(1, inputs[0]);
+    }
+
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        if (inputs_arr.depth() == CV_16F)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
@@ -87,6 +94,19 @@ public:
         Mat& input = inputs[0];
         Mat& indices = inputs[1];
 
+        if (input.type() == CV_32F && indices.type() == CV_32S)
+            run<float, int32_t>(input, indices, outputs);
+        else if (input.type() == CV_32F && indices.type() == CV_64S)
+            run<float, int64_t>(input, indices, outputs);
+        else if (input.type() == CV_16S && indices.type() == CV_32S)
+            run<int16_t, int32_t>(input, indices, outputs);
+        else if (input.type() == CV_16S && indices.type() == CV_64S)
+            run<int16_t, int64_t>(input, indices, outputs);
+    }
+
+    template<typename T, typename INDEX_TYPE>
+    void run(cv::Mat& input, cv::Mat& indices, std::vector<cv::Mat>& outputs)
+    {
         CV_Assert(input.total() == indices.total());
         CV_Assert(input.size[0] == 1);
         CV_Assert(input.isContinuous());
@@ -102,9 +122,9 @@ public:
             {
                 Mat outPlane = getPlane(outBlob, 0, i_c);
                 int wh_area = input.size[2]*input.size[3];
-                const float* inptr = input.ptr<float>(0, i_c);
-                const float* idxptr = indices.ptr<float>(0, i_c);
-                float* outptr = outPlane.ptr<float>();
+                const T* inptr = input.ptr<T>(0, i_c);
+                const INDEX_TYPE* idxptr = indices.ptr<INDEX_TYPE>(0, i_c);
+                T* outptr = outPlane.ptr<T>();
 
                 for(int i_wh = 0; i_wh < wh_area; i_wh++)
                 {
@@ -124,6 +144,7 @@ public:
             }
         }
     }
+
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(

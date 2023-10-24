@@ -320,11 +320,25 @@ public:
         CV_Assert_N(inputs.size() == 1, !outputs.empty(), !computeMaxIdx || outputs.size() == 2);
         UMat& inpMat = inputs[0];
         UMat& outMat = outputs[0];
-        UMat maskMat = computeMaxIdx ? outputs[1] : UMat();
+        UMat maskMat;
+        if (computeMaxIdx)
+            maskMat.create(shape(outputs[1]), use_half ? CV_16S : CV_32F);
 
         CV_Assert(inpMat.offset == 0 && outMat.offset == 0);
 
-        return poolOp->Forward(inpMat, outMat, maskMat);
+        bool result = poolOp->Forward(inpMat, outMat, maskMat);
+
+        if (computeMaxIdx) {
+            if (use_half) {
+                UMat maskMat32F;
+                convertFp16(maskMat, maskMat32F);
+                maskMat32F.convertTo(outputs[1], CV_64S);
+            }
+            else
+                maskMat.convertTo(outputs[1], CV_64S);
+        }
+
+        return result;
     }
 #endif
 
@@ -353,8 +367,12 @@ public:
             case MAX:
             {
                 CV_Assert_N(inputs.size() == 1, !computeMaxIdx || outputs.size() == 2);
-                Mat mask = computeMaxIdx ? outputs[1] : Mat();
+                Mat mask;
+                if (computeMaxIdx)
+                    mask.create(shape(outputs[1]), CV_32F);
                 maxPooling(inputs[0], outputs[0], mask);
+                if (computeMaxIdx)
+                    mask.convertTo(outputs[1], CV_64S);
                 break;
             }
             case AVE: case SUM:
@@ -1249,6 +1267,26 @@ public:
         outputs.assign(numOutputs, outShape);
 
         return false;
+    }
+
+    virtual void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16
+            || preferableTarget == DNN_TARGET_CPU_FP16
+            || preferableTarget == DNN_TARGET_CUDA_FP16)
+            CV_Assert(inputs[0] == CV_16S || inputs[0] == CV_8S);
+        else
+            CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_8S);
+
+        outputs.push_back(inputs[0]);
+        if (type == MAX && requiredOutputs == 2) {
+            outputs.push_back(CV_64S);
+        }
     }
 
     bool updateMemoryShapes(const std::vector<MatShape> &inputs) CV_OVERRIDE

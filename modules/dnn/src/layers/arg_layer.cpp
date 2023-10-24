@@ -72,6 +72,15 @@ public:
         return false;
     }
 
+    virtual void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const
+    {
+        outputs.assign(1, CV_64S);
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -98,7 +107,7 @@ public:
         }
 
         output = output.reshape(1, outShape);
-        output.convertTo(outputs[0], CV_32FC1);
+        output.convertTo(outputs[0], CV_64SC1);
     }
 
 private:
