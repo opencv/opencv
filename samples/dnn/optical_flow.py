@@ -1,15 +1,3 @@
-#!/usr/bin/env python
-'''
-This sample using FlowNet v2 model to calculate optical flow.
-Original paper: https://arxiv.org/abs/1612.01925.
-Original repo:  https://github.com/lmb-freiburg/flownet2.
-
-Download the converted .caffemodel model from https://drive.google.com/open?id=16qvE9VNmU39NttpZwZs81Ga8VYQJDaWZ
-and .prototxt from https://drive.google.com/file/d/1RyNIUsan1ZOh2hpYIH36A-jofAvJlT6a/view?usp=sharing.
-Otherwise download original model from https://lmb.informatik.uni-freiburg.de/resources/binaries/flownet2/flownet2-models.tar.gz,
-convert .h5 model to .caffemodel and modify original .prototxt using .prototxt from link above.
-'''
-
 import argparse
 import os.path
 import numpy as np
@@ -59,17 +47,17 @@ class OpticalFlow(object):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Use this script to calculate optical flow using FlowNetv2',
+    parser = argparse.ArgumentParser(description='Use this script to calculate optical flow using RAFT',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-input', '-i', required=True, help='Path to input video file. Skip this argument to capture frames from a camera.')
     parser.add_argument('--height', default=320, type=int, help='Input height')
     parser.add_argument('--width', default=448, type=int, help='Input width')
-    parser.add_argument('--proto', '-p', default='FlowNet2_deploy_anysize.prototxt', help='Path to prototxt.')
-    parser.add_argument('--model', '-m', default='FlowNet2_weights.caffemodel', help='Path to caffemodel.')
+    parser.add_argument('--proto', '-p', default='RAFT_deploy.prototxt', help='Path to prototxt.')
+    parser.add_argument('--model', '-m', default='raft_weights.caffemodel', help='Path to caffemodel.')
     args, _ = parser.parse_known_args()
 
     if not os.path.isfile(args.model) or not os.path.isfile(args.proto):
-        raise OSError("Prototxt or caffemodel not exist")
+        raise OSError("Prototxt or caffemodel does not exist")
 
     winName = 'Calculation optical flow in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_NORMAL)
