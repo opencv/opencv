@@ -1,4 +1,5 @@
 #include "perf_precomp.hpp"
+#include "opencv2/core/softfloat.hpp"
 #include <numeric>
 
 namespace opencv_test
@@ -450,5 +451,137 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOpTest,
         testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1)
     )
 );
+
+
+///////////// PatchNaNs ////////////////////////
+
+template<typename _Tp>
+_Tp randomNan(int seed);
+
+template<>
+float randomNan(int seed)
+{
+    uint32_t r = RNG(seed).next();
+    Cv32suf v;
+    v.u = r;
+    // exp & set a bit to avoid zero mantissa
+    v.u = v.u | 0x7f800001;
+    return v.f;
+}
+
+template<>
+double randomNan(int seed)
+{
+    uint32_t r0 = RNG(seed).next();
+    uint32_t r1 = RNG(seed).next();
+    Cv64suf v;
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // exp &set a bit to avoid zero mantissa
+    v.u = v.u | 0x7ff0000000000001;
+    return v.f;
+}
+
+typedef Size_MatType PatchNaNsFixture;
+
+PERF_TEST_P_(PatchNaNsFixture, PatchNaNs)
+{
+    const Size_MatType_t params = GetParam();
+    Size srcSize = get<0>(params);
+    const int type = get<1>(params), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+
+    Mat src(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(src);
+
+    // generating NaNs
+    {
+        srcSize.width *= cn;
+        for (int y = 0; y < srcSize.height; ++y)
+        {
+            float  *const ptrf = src.ptr<float>(y);
+            double *const ptrd = src.ptr<double>(y);
+            for (int x = 0; x < srcSize.width; ++x)
+            {
+                int fseed = (x << 16) + y;
+                if (depth == CV_32F)
+                {
+                    ptrf[x] = (x + y) % 2 == 0 ? randomNan<float >(fseed) : ptrf[x];
+                }
+                else if (depth == CV_64F)
+                {
+                    ptrd[x] = (x + y) % 2 == 0 ? randomNan<double>(fseed) : ptrd[x];
+                }
+            }
+        }
+    }
+
+    TEST_CYCLE() cv::patchNaNs(src, 17.7);
+
+    SANITY_CHECK(src);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , PatchNaNsFixture,
+    testing::Combine(
+        testing::Values(szVGA, sz720p, sz1080p, sz2160p),
+        testing::Values(CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC2, CV_64FC3, CV_64FC4)
+    )
+);
+
+
+////////////// finiteMask ////////////////////////
+
+typedef Size_MatType FiniteMaskFixture;
+
+PERF_TEST_P_(FiniteMaskFixture, FiniteMask)
+{
+    const Size_MatType_t params = GetParam();
+    Size srcSize = get<0>(params);
+    const int type = get<1>(params), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+
+    UMat src(srcSize, type);
+    UMat mask(srcSize, CV_8UC1);
+    declare.in(src, WARMUP_RNG).out(mask);
+
+    // generating NaNs
+    {
+        Mat src_ = src.getMat(ACCESS_RW);
+        srcSize.width *= cn;
+        const softfloat  fpinf = softfloat ::inf();
+        const softfloat  fninf = softfloat ::inf().setSign(true);
+        const softdouble dpinf = softdouble::inf();
+        const softdouble dninf = softdouble::inf().setSign(true);
+        for (int y = 0; y < srcSize.height; ++y)
+        {
+            float  *const ptrf = src_.ptr<float>(y);
+            double *const ptrd = src_.ptr<double>(y);
+            for (int x = 0; x < srcSize.width; ++x)
+            {
+                int fseed = (x << 16) + y;
+                int rem = (x + y) % 10;
+                if (depth == CV_32F)
+                {
+                    ptrf[x] = rem <  4 ? randomNan<float >(fseed) :
+                              rem == 5 ? (float )((x + y)%2 ? fpinf : fninf) : ptrf[x];
+                }
+                else if (depth == CV_64F)
+                {
+                    ptrd[x] = rem <  4 ? randomNan<double>(fseed) :
+                              rem == 5 ? (double)((x + y)%2 ? dpinf : dninf) : ptrd[x];
+                }
+            }
+        }
+    }
+
+    TEST_CYCLE() cv::finiteMask(src, mask);
+
+    SANITY_CHECK(mask);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , FiniteMaskFixture,
+    testing::Combine(
+        testing::Values(szVGA, sz720p, sz1080p, sz2160p),
+        testing::Values(CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC2, CV_64FC3, CV_64FC4)
+    )
+);
+
 
 } // namespace
