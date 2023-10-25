@@ -242,7 +242,7 @@ TEST_P(videoio_encapsulate, write)
 {
 #ifdef _WIN32
     throw SkipTestException("Test disabled until PR for raw video encapsulation is merged and windows dll is updated");
-#endif
+#else
     const VideoCaptureAPIs api = CAP_FFMPEG;
     if (!videoio_registry::hasBackend(api))
         throw SkipTestException("FFmpeg backend was not found");
@@ -316,6 +316,7 @@ TEST_P(videoio_encapsulate, write)
     }
 
     ASSERT_EQ(0, remove(fileNameOut.c_str()));
+#endif
 }
 
 const videoio_encapsulate_params_t videoio_encapsulate_params[] =
