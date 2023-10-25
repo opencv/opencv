@@ -198,7 +198,11 @@ public:
         return ffmpegWriter->getProperty(propId);
     }
 
-    virtual bool setProperty(int, double) CV_OVERRIDE { return false; }
+    virtual bool setProperty(int propId, double value) CV_OVERRIDE {
+        if (!ffmpegWriter)
+            return 0;
+        return ffmpegWriter->setProperty(propId, value);
+    }
     virtual bool isOpened() const CV_OVERRIDE { return ffmpegWriter != 0; }
 
 protected:
