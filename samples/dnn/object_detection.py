@@ -55,7 +55,7 @@ parser.add_argument('--async', type=int, default=0,
                     help='Number of asynchronous forwards at the same time. '
                          'Choose 0 for synchronous mode')
 parser.add_argument('--postprocessing', choices=['yolo', 'ssd', 'faster_rcnn', 'yolov8'],
-                    help='Optional name of AI algo. ')
+                    help='Detection results post-processing kind depends on model topology.')
 args, _ = parser.parse_known_args()
 add_preproc_args(args.zoo, parser, 'object_detection')
 parser = argparse.ArgumentParser(parents=[parser],
@@ -63,8 +63,7 @@ parser = argparse.ArgumentParser(parents=[parser],
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 args = parser.parse_args()
 args.model = findFile(args.model)
-if args.config != None:
-    args.config = findFile(args.config)
+args.config = findFile(args.config)  if args.config is None else ""
 args.classes = findFile(args.classes)
 
 # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
@@ -87,10 +86,7 @@ if args.classes:
         classes = f.read().rstrip('\n').split('\n')
 
 # Load a network
-if args.config != None:
-    net = cv.dnn.readNet(cv.samples.findFile(args.model), cv.samples.findFile(args.config), args.framework)
-else:
-    net = cv.dnn.readNet(cv.samples.findFile(args.model), '', args.framework)
+net = cv.dnn.readNet(args.model, args.config, args.framework)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 outNames = net.getUnconnectedOutLayersNames()
@@ -107,7 +103,6 @@ def postprocess(frame, outs):
         cv.rectangle(frame, (left, top), (right, bottom), (0, 255, 0))
 
         label = '%.2f' % conf
-
         # Print a label of class.
         if classes:
             assert(classId < len(classes))
@@ -192,7 +187,7 @@ def postprocess(frame, outs):
 
     # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     # or NMS is required if number of outputs > 1
-    if len(outNames) > 1 or lastLayer.type == 'Region' and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+    if len(outNames) > 1 or (lastLayer.type == 'Region' or args.postprocessing == 'yolov8')and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
         indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)
@@ -203,26 +198,8 @@ def postprocess(frame, outs):
             conf = confidences[class_indices]
             box  = boxes[class_indices].tolist()
             nms_indices = cv.dnn.NMSBoxes(box, conf, confThreshold, nmsThreshold)
-            nms_indices = nms_indices[:, 0] if len(nms_indices) else []
+            nms_indices = nms_indices[:, 0] if len(nms_indices) and args.postprocessing != 'yolov8' else nms_indices if len(nms_indices) and args.postprocessing == 'yolov8' else []
             indices.extend(class_indices[nms_indices])
-    # yolov8 NMS
-    elif len(outNames) > 1 or args.postprocessing == 'yolov8':
-        indices = []
-        nms_boxes = []
-        nms_classIds = []
-        nms_confidences = []
-        nms_indices = cv.dnn.NMSBoxes(
-            boxes, confidences, confThreshold, 0.45, 0.5)
-        for i in range(len(nms_indices)):
-            index = nms_indices[i]
-            nms_boxes.append(boxes[index])
-            nms_classIds.append(classIds[index])
-            nms_confidences.append(confidences[index])
-            indices.append(i)
-        boxes = nms_boxes
-        classIds = nms_classIds
-        confidences = nms_confidences
-    ###
     else:
         indices = np.arange(0, len(classIds))
 
