@@ -36,10 +36,10 @@ macro(add_backend backend_id cond_var)
   endif()
 endmacro()
 
+add_backend("gtk" WITH_GTK)
 add_backend("win32ui" WITH_WIN32UI)
 add_backend("wayland" WITH_WAYLAND)
 # TODO cocoa
-# TODO gtk
 # TODO qt
 # TODO opengl
 
