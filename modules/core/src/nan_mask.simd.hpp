@@ -291,7 +291,7 @@ template <>
 int finiteMaskSIMD_<double, 3>(const double *fsrc, uchar *dst, size_t total)
 {
     const uint64_t* src = (const uint64_t*)fsrc;
-    const int npixels = VTraits<v_float64>::vlanes();
+    const int npixels = VTraits<v_uint64>::vlanes();
     v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
     v_uint64 z = vx_setzero_u64();
 
