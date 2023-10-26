@@ -145,6 +145,7 @@ int finiteMaskSIMD_<float, 2>(const float *fsrc, uchar *dst, size_t total)
     const uint32_t* src = (const uint32_t*)fsrc;
     const int size8 = VTraits<v_uint8>::vlanes();
     v_uint32 vmaskExp = vx_setall_u32(0x7f800000);
+    v_uint16 vmaskBoth = vx_setall_u16(0xffff);
 
     int i = 0;
     for(; i <= (int)total - (size8 / 2); i += (size8 / 2) )
@@ -155,7 +156,6 @@ int finiteMaskSIMD_<float, 2>(const float *fsrc, uchar *dst, size_t total)
         vv2 = v_ne(v_and(vx_load(src + i*2 + 2*(size8 / 4)), vmaskExp), vmaskExp);
         vv3 = v_ne(v_and(vx_load(src + i*2 + 3*(size8 / 4)), vmaskExp), vmaskExp);
         v_uint8 velems = v_pack_b(vv0, vv1, vv2, vv3);
-        v_uint16 vmaskBoth = vx_setall_u16(0xffff);
         v_uint16 vfinite = v_eq(v_reinterpret_as_u16(velems), vmaskBoth);
 
         // 2nd argument in vfinite is useless
