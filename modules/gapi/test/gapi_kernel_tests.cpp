@@ -215,7 +215,7 @@ TEST(KernelPackage, RemoveBackend)
     EXPECT_FALSE(pkg.includes<J::Foo>());
     EXPECT_FALSE(pkg.includes<J::Bar>());
     EXPECT_TRUE(pkg.includes<S::Baz>());
-};
+}
 
 TEST(KernelPackage, RemoveAPI)
 {
@@ -228,7 +228,7 @@ TEST(KernelPackage, RemoveAPI)
     pkg.remove<I::Foo>();
     EXPECT_TRUE(pkg.includes<J::Bar>());
     EXPECT_FALSE(pkg.includes<J::Foo>());
-};
+}
 
 TEST(KernelPackage, CreateHetero)
 {

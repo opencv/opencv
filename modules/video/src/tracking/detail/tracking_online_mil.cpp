@@ -29,7 +29,7 @@ public:
     bool operator<(SortableElementRev<T>& b)
     {
         return (_val < b._val);
-    };
+    }
 };
 
 static bool CompareSortableElementRev(const SortableElementRev<float>& i, const SortableElementRev<float>& j)
@@ -57,7 +57,7 @@ void sort_order_des(std::vector<T>& v, std::vector<int>& order)
         order[i] = v2[i]._ind;
         v[i] = v2[i]._val;
     }
-};
+}
 
 //implementations for strong classifier
 

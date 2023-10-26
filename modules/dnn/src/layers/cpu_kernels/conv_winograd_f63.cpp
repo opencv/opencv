@@ -430,32 +430,32 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
         /* Y[0] = [1.f, 0.f, -5.25f, 0.f, 5.25f, 0.f, -1.f, 0.f]*X */
         /* Y[7] = [0.f, -1.f, 0.f, 5.25f, 0.f, -5.25f, 0.f, 1.f]*X */
         v_float32x4 q5_25 = v_setall_f32(5.25f), t00, t01, t10, t11;
-        t00 = x40 - x20;
-        t01 = x41 - x21;
-        t10 = x30 - x50;
-        t11 = x31 - x51;
-        v_float32x4 y00 = v_fma(t00, q5_25, x00 - x60);
-        v_float32x4 y01 = v_fma(t01, q5_25, x01 - x61);
-        v_float32x4 y70 = v_fma(t10, q5_25, x70 - x10);
-        v_float32x4 y71 = v_fma(t11, q5_25, x71 - x11);
+        t00 = v_sub(x40, x20);
+        t01 = v_sub(x41, x21);
+        t10 = v_sub(x30, x50);
+        t11 = v_sub(x31, x51);
+        v_float32x4 y00 = v_fma(t00, q5_25, v_sub(x00, x60));
+        v_float32x4 y01 = v_fma(t01, q5_25, v_sub(x01, x61));
+        v_float32x4 y70 = v_fma(t10, q5_25, v_sub(x70, x10));
+        v_float32x4 y71 = v_fma(t11, q5_25, v_sub(x71, x11));
 
         /* Y[1] = [0.f, 1.f, 1.f, -4.25f, -4.25f, 1.f, 1.f, 0.f]*X */
         /* Y[2] = [0.f, -1.f, 1.f, 4.25f, -4.25f, -1.f, 1.f, 0.f]*X */
         v_float32x4 qm4_25 = v_setall_f32(-4.25f);
-        t00 = v_fma(x30, qm4_25, x10 + x50);
-        t01 = v_fma(x31, qm4_25, x11 + x51);
-        t10 = v_fma(x40, qm4_25, x20 + x60);
-        t11 = v_fma(x41, qm4_25, x21 + x61);
+        t00 = v_fma(x30, qm4_25, v_add(x10, x50));
+        t01 = v_fma(x31, qm4_25, v_add(x11, x51));
+        t10 = v_fma(x40, qm4_25, v_add(x20, x60));
+        t11 = v_fma(x41, qm4_25, v_add(x21, x61));
 
-        v_float32x4 y10 = t00 + t10, y11 = t01 + t11;
-        v_float32x4 y20 = t10 - t00, y21 = t11 - t01;
+        v_float32x4 y10 = v_add(t00, t10), y11 = v_add(t01, t11);
+        v_float32x4 y20 = v_sub(t10, t00), y21 = v_sub(t11, t01);
 
         /* Y[3] = [0.f, 0.5f, 0.25f, -2.5f, -1.25f, 2.f, 1.f, 0.f]*X */
         /* Y[4] = [0.f, -0.5f, 0.25f, 2.5f, -1.25f, -2.f, 1.f, 0.f]*X */
         v_float32x4 q0_5 = v_setall_f32(0.5f), q0_25 = v_setall_f32(0.25f);
         v_float32x4 qm2_5 = v_setall_f32(-2.5f), qm1_25 = v_setall_f32(-1.25f);
-        t00 = v_fma(x10, q0_5, x50 + x50);
-        t01 = v_fma(x11, q0_5, x51 + x51);
+        t00 = v_fma(x10, q0_5, v_add(x50, x50));
+        t01 = v_fma(x11, q0_5, v_add(x51, x51));
         t10 = v_fma(x20, q0_25, x60);
         t11 = v_fma(x21, q0_25, x61);
         t00 = v_fma(x30, qm2_5, t00);
@@ -463,14 +463,14 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
         t10 = v_fma(x40, qm1_25, t10);
         t11 = v_fma(x41, qm1_25, t11);
 
-        v_float32x4 y30 = t00 + t10, y31 = t01 + t11;
-        v_float32x4 y40 = t10 - t00, y41 = t11 - t01;
+        v_float32x4 y30 = v_add(t00, t10), y31 = v_add(t01, t11);
+        v_float32x4 y40 = v_sub(t10, t00), y41 = v_sub(t11, t01);
 
         /* Y[5] = [0.f, 2.f, 4.f, -2.5f, -5.f, 0.5f, 1.f, 0.f]*X */
         /* Y[6] = [0.f, -2.f, 4.f, 2.5f, -5.f, -0.5f, 1.f, 0.f]*X */
         v_float32x4 q4 = v_setall_f32(4.f), qm5 = v_setall_f32(-5.f);
-        t00 = v_fma(x50, q0_5, x10 + x10);
-        t01 = v_fma(x51, q0_5, x11 + x11);
+        t00 = v_fma(x50, q0_5, v_add(x10, x10));
+        t01 = v_fma(x51, q0_5, v_add(x11, x11));
         t10 = v_fma(x20, q4   , x60);
         t11 = v_fma(x21, q4   , x61);
         t00 = v_fma(x30, qm2_5, t00);
@@ -478,8 +478,8 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
         t10 = v_fma(x40, qm5  , t10);
         t11 = v_fma(x41, qm5  , t11);
 
-        v_float32x4 y50 = t00 + t10, y51 = t01 + t11;
-        v_float32x4 y60 = t10 - t00, y61 = t11 - t01;
+        v_float32x4 y50 = v_add(t00, t10), y51 = v_add(t01, t11);
+        v_float32x4 y60 = v_sub(t10, t00), y61 = v_sub(t11, t01);
 
         /* transpose 8x8 matrix with v_transpose4x4 */
 
@@ -491,29 +491,29 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
 
         /* Z[0] = [1.f, 0.f, -5.25f, 0.f, 5.25f, 0.f, -1.f, 0.f]*Y */
         /* Z[7] = [0.f, -1.f, 0.f, 5.25f, 0.f, -5.25f, 0.f, 1.f]*Y */
-        t00 = y010 - y200;
-        t01 = y410 - y600;
-        t10 = y300 - y110;
-        t11 = y700 - y510;
-        z00 = v_fma(t00, q5_25, y000 - y210);
-        z01 = v_fma(t01, q5_25, y400 - y610);
-        z70 = v_fma(t10, q5_25, y310 - y100);
-        z71 = v_fma(t11, q5_25, y710 - y500);
+        t00 = v_sub(y010, y200);
+        t01 = v_sub(y410, y600);
+        t10 = v_sub(y300, y110);
+        t11 = v_sub(y700, y510);
+        z00 = v_fma(t00, q5_25, v_sub(y000, y210));
+        z01 = v_fma(t01, q5_25, v_sub(y400, y610));
+        z70 = v_fma(t10, q5_25, v_sub(y310, y100));
+        z71 = v_fma(t11, q5_25, v_sub(y710, y500));
 
         /* Z[1] = [0.f, 1.f, 1.f, -4.25f, -4.25f, 1.f, 1.f, 0.f]*Y */
         /* Z[2] = [0.f, -1.f, 1.f, 4.25f, -4.25f, -1.f, 1.f, 0.f]*Y */
-        t00 = v_fma(y300, qm4_25, y100 + y110);
-        t01 = v_fma(y700, qm4_25, y500 + y510);
-        t10 = v_fma(y010, qm4_25, y200 + y210);
-        t11 = v_fma(y410, qm4_25, y600 + y610);
+        t00 = v_fma(y300, qm4_25, v_add(y100, y110));
+        t01 = v_fma(y700, qm4_25, v_add(y500, y510));
+        t10 = v_fma(y010, qm4_25, v_add(y200, y210));
+        t11 = v_fma(y410, qm4_25, v_add(y600, y610));
 
-        z10 = t00 + t10; z11 = t01 + t11;
-        z20 = t10 - t00; z21 = t11 - t01;
+        z10 = v_add(t00, t10); z11 = v_add(t01, t11);
+        z20 = v_sub(t10, t00); z21 = v_sub(t11, t01);
 
         /* Z[3] = [0.f, 0.5f, 0.25f, -2.5f, -1.25f, 2.f, 1.f, 0.f]*Y */
         /* Z[4] = [0.f, -0.5f, 0.25f, 2.5f, -1.25f, -2.f, 1.f, 0.f]*Y */
-        t00 = v_fma(y100, q0_5, y110 + y110);
-        t01 = v_fma(y500, q0_5, y510 + y510);
+        t00 = v_fma(y100, q0_5, v_add(y110, y110));
+        t01 = v_fma(y500, q0_5, v_add(y510, y510));
         t10 = v_fma(y200, q0_25, y210);
         t11 = v_fma(y600, q0_25, y610);
         t00 = v_fma(y300, qm2_5, t00);
@@ -521,13 +521,13 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
         t10 = v_fma(y010, qm1_25, t10);
         t11 = v_fma(y410, qm1_25, t11);
 
-        z30 = t00 + t10; z31 = t01 + t11;
-        z40 = t10 - t00; z41 = t11 - t01;
+        z30 = v_add(t00, t10); z31 = v_add(t01, t11);
+        z40 = v_sub(t10, t00); z41 = v_sub(t11, t01);
 
         /* Z[5] = [0.f, 2.f, 4.f, -2.5f, -5.f, 0.5f, 1.f, 0.f]*Y */
         /* Z[6] = [0.f, -2.f, 4.f, 2.5f, -5.f, -0.5f, 1.f, 0.f]*Y */
-        t00 = v_fma(y110, q0_5, y100 + y100);
-        t01 = v_fma(y510, q0_5, y500 + y500);
+        t00 = v_fma(y110, q0_5, v_add(y100, y100));
+        t01 = v_fma(y510, q0_5, v_add(y500, y500));
         t10 = v_fma(y200, q4, y210);
         t11 = v_fma(y600, q4, y610);
         t00 = v_fma(y300, qm2_5, t00);
@@ -535,8 +535,8 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
         t10 = v_fma(y010, qm5, t10);
         t11 = v_fma(y410, qm5, t11);
 
-        z50 = t00 + t10; z51 = t01 + t11;
-        z60 = t10 - t00; z61 = t11 - t01;
+        z50 = v_add(t00, t10); z51 = v_add(t01, t11);
+        z60 = v_sub(t10, t00); z61 = v_sub(t11, t01);
     }
 
     const int outstep = winoIblock*winoAtomF32*Cg;
@@ -601,12 +601,12 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
 
     {
         v_float32x4 s12_0, s12_1, s34_0, s34_1, s56_0, s56_1;
-        s12_0 = x10 + x20; s12_1 = x11 + x21;
-        s34_0 = x30 + x40; s34_1 = x31 + x41;
-        s56_0 = x50 + x60; s56_1 = x51 + x61;
+        s12_0 = v_add(x10, x20); s12_1 = v_add(x11, x21);
+        s34_0 = v_add(x30, x40); s34_1 = v_add(x31, x41);
+        s56_0 = v_add(x50, x60); s56_1 = v_add(x51, x61);
 
-        v_float32x4 y00 = x00 + s12_0 + s34_0 + s56_0;
-        v_float32x4 y01 = x01 + s12_1 + s34_1 + s56_1;
+        v_float32x4 y00 = v_add(v_add(v_add(x00, s12_0), s34_0), s56_0);
+        v_float32x4 y01 = v_add(v_add(v_add(x01, s12_1), s34_1), s56_1);
 
         v_float32x4 a0 = v_setall_f32(0.25f), a1 = v_setall_f32(4.0f);
         v_float32x4 y20 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
@@ -616,13 +616,13 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
         v_float32x4 y40 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
         v_float32x4 y41 = v_fma(s56_1, a0, v_fma(s34_1, a1, s12_1));
 
-        s12_0 = x10 - x20; s12_1 = x11 - x21;
-        s34_0 = x30 - x40; s34_1 = x31 - x41;
-        s56_0 = x50 - x60; s56_1 = x51 - x61;
+        s12_0 = v_sub(x10, x20); s12_1 = v_sub(x11, x21);
+        s34_0 = v_sub(x30, x40); s34_1 = v_sub(x31, x41);
+        s56_0 = v_sub(x50, x60); s56_1 = v_sub(x51, x61);
 
         a0 = v_setall_f32(1.f/32), a1 = v_setall_f32(32.f);
-        v_float32x4 y50 = v_fma(s56_0, a0, v_fma(s34_0, a1, x70 + s12_0));
-        v_float32x4 y51 = v_fma(s56_1, a0, v_fma(s34_1, a1, x71 + s12_1));
+        v_float32x4 y50 = v_fma(s56_0, a0, v_fma(s34_0, a1, v_add(x70, s12_0)));
+        v_float32x4 y51 = v_fma(s56_1, a0, v_fma(s34_1, a1, v_add(x71, s12_1)));
 
         a0 = v_setall_f32(0.5f), a1 = v_setall_f32(2.f);
         v_float32x4 y10 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
@@ -642,12 +642,12 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
         v_transpose4x4(y40, y50, y60, y70, y400, y500, y600, y700);
         v_transpose4x4(y41, y51, y61, y71, y410, y510, y610, y710);
 
-        s12_0 = y100 + y200; s12_1 = y500 + y600;
-        s34_0 = y300 + y010; s34_1 = y700 + y410;
-        s56_0 = y110 + y210; s56_1 = y510 + y610;
+        s12_0 = v_add(y100, y200); s12_1 = v_add(y500, y600);
+        s34_0 = v_add(y300, y010); s34_1 = v_add(y700, y410);
+        s56_0 = v_add(y110, y210); s56_1 = v_add(y510, y610);
 
-        z00 = y000 + s12_0 + s34_0 + s56_0;
-        z01 = y400 + s12_1 + s34_1 + s56_1;
+        z00 = v_add(v_add(v_add(y000, s12_0), s34_0), s56_0);
+        z01 = v_add(v_add(v_add(y400, s12_1), s34_1), s56_1);
 
         a0 = v_setall_f32(0.25f), a1 = v_setall_f32(4.0f);
         z20 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
@@ -657,13 +657,13 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
         z40 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
         z41 = v_fma(s56_1, a0, v_fma(s34_1, a1, s12_1));
 
-        s12_0 = y100 - y200; s12_1 = y500 - y600;
-        s34_0 = y300 - y010; s34_1 = y700 - y410;
-        s56_0 = y110 - y210; s56_1 = y510 - y610;
+        s12_0 = v_sub(y100, y200); s12_1 = v_sub(y500, y600);
+        s34_0 = v_sub(y300, y010); s34_1 = v_sub(y700, y410);
+        s56_0 = v_sub(y110, y210); s56_1 = v_sub(y510, y610);
 
         a0 = v_setall_f32(1.f/32), a1 = v_setall_f32(32.0f);
-        z50 = v_fma(s56_0, a0, v_fma(s34_0, a1, y310 + s12_0));
-        z51 = v_fma(s56_1, a0, v_fma(s34_1, a1, y710 + s12_1));
+        z50 = v_fma(s56_0, a0, v_fma(s34_0, a1, v_add(y310, s12_0)));
+        z51 = v_fma(s56_1, a0, v_fma(s34_1, a1, v_add(y710, s12_1)));
         a0 = v_setall_f32(0.5f), a1 = v_setall_f32(2.0f);
         z10 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
         z11 = v_fma(s56_1, a0, v_fma(s34_1, a1, s12_1));
@@ -673,34 +673,34 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
         z31 = v_fma(s56_1, a0, v_fma(s34_1, a1, s12_1));
 
         v_float32x4 vbias = v_setall_f32(bias);
-        z00 += vbias;
-        z01 += vbias;
-        z10 += vbias;
-        z11 += vbias;
-        z20 += vbias;
-        z21 += vbias;
-        z30 += vbias;
-        z31 += vbias;
-        z40 += vbias;
-        z41 += vbias;
-        z50 += vbias;
-        z51 += vbias;
+        z00 = v_add(z00, vbias);
+        z01 = v_add(z01, vbias);
+        z10 = v_add(z10, vbias);
+        z11 = v_add(z11, vbias);
+        z20 = v_add(z20, vbias);
+        z21 = v_add(z21, vbias);
+        z30 = v_add(z30, vbias);
+        z31 = v_add(z31, vbias);
+        z40 = v_add(z40, vbias);
+        z41 = v_add(z41, vbias);
+        z50 = v_add(z50, vbias);
+        z51 = v_add(z51, vbias);
     }
 
     if (bpptr)
     {
-        z00 += v_load(bpptr);
-        z01 += v_load_low(bpptr + 4);
-        z10 += v_load(bpptr + bpstep);
-        z11 += v_load_low(bpptr + bpstep + 4);
-        z20 += v_load(bpptr + bpstep*2);
-        z21 += v_load_low(bpptr + bpstep*2 + 4);
-        z30 += v_load(bpptr + bpstep*3);
-        z31 += v_load_low(bpptr + bpstep*3 + 4);
-        z40 += v_load(bpptr + bpstep*4);
-        z41 += v_load_low(bpptr + bpstep*4 + 4);
-        z50 += v_load(bpptr + bpstep*5);
-        z51 += v_load_low(bpptr + bpstep*5 + 4);
+        z00 = v_add(z00, v_load(bpptr));
+        z01 = v_add(z01, v_load_low(bpptr + 4));
+        z10 = v_add(z10, v_load(bpptr + bpstep));
+        z11 = v_add(z11, v_load_low(bpptr + bpstep + 4));
+        z20 = v_add(z20, v_load(bpptr + bpstep * 2));
+        z21 = v_add(z21, v_load_low(bpptr + bpstep * 2 + 4));
+        z30 = v_add(z30, v_load(bpptr + bpstep * 3));
+        z31 = v_add(z31, v_load_low(bpptr + bpstep * 3 + 4));
+        z40 = v_add(z40, v_load(bpptr + bpstep * 4));
+        z41 = v_add(z41, v_load_low(bpptr + bpstep * 4 + 4));
+        z50 = v_add(z50, v_load(bpptr + bpstep * 5));
+        z51 = v_add(z51, v_load_low(bpptr + bpstep * 5 + 4));
     }
 
     if (ifMinMaxAct)

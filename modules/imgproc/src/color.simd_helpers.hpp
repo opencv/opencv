@@ -76,7 +76,7 @@ struct Set<i0, -1, -1>
 
 enum SizePolicy
 {
-    TO_YUV, FROM_YUV, FROM_UYVY, NONE
+    TO_YUV, FROM_YUV, FROM_UYVY, TO_UYVY, NONE
 };
 
 template< typename VScn, typename VDcn, typename VDepth, SizePolicy sizePolicy = NONE >
@@ -109,6 +109,7 @@ struct CvtHelper
             dstSz = Size(sz.width, sz.height * 2 / 3);
             break;
         case FROM_UYVY:
+        case TO_UYVY:
             CV_Assert( sz.width % 2 == 0);
             dstSz = sz;
             break;
