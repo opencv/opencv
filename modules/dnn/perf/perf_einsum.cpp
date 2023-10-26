@@ -21,19 +21,21 @@ struct EinsumParams {
 };
 
 static inline void PrintTo(const EinsumParams& params, ::std::ostream* os) {
-     (*os) << "\nEqiation: \t" << params.equation << "\n"
-        << "InputSize: \t" << params.inputSize << "\n"
-        << "OutputSize: \t" << params.outputSize << "\n";
+     (*os) << "Eqiation=" << params.equation << ", "
+        << "InputSize=" << params.inputSize << ", "
+        << "OutputSize=" << params.outputSize << ", ";
 
+        (*os) << "InputShape={";
         for(int i = 0; i < params.einsumInpShapes.size(); i++)
         {
-            (*os) << "InputShape " << i << ": \t";
+            (*os) << "{";
             for(int j = 0; j < params.einsumInpShapes[i].size(); j++)
             {
-                (*os) << params.einsumInpShapes[i][j] << " ";
+                (*os) << params.einsumInpShapes[i][j] << ((j < params.einsumInpShapes[i].size() - 1) ?  ", " : "");
             }
-            (*os) << std::endl;
+            (*os) << ((i < params.einsumInpShapes.size() - 1) ? "}, " : "}");
         }
+        (*os) << "}";
 }
 
 // test cases
@@ -41,19 +43,24 @@ static const EinsumParams testEinsumConfigs[] = {
     // TODO: Add tests with one input after ellips merge
     {"ij, jk -> ik", 2, 1,  {{2, 3}, {3, 2}}},
     {"ij, jk -> ik", 2, 1,  {{20, 30}, {30, 20}}},
+    {"ij, jk -> ik", 2, 1,  {{113, 127}, {127, 113}}},
     {"ij, jk -> ik", 2, 1,  {{200, 300}, {300, 200}}},
 
     {"imkj, injs -> imnks", 2, 1,  {{1, 4, 7, 9}, {1, 5, 9, 8}}},
     {"imkj, injs -> imnks", 2, 1,  {{1, 4, 70, 90}, {1, 5, 90, 80}}},
+    {"imkj, injs -> imnks", 2, 1,  {{1, 4, 73, 91}, {1, 5, 91, 57}}},
     {"imkj, injs -> imnks", 2, 1,  {{1, 4, 700, 900}, {1, 5, 900, 800}}},
 
     {"ij -> i", 1, 1, {{30, 40}}},
+    {"ij -> i", 1, 1, {{113, 374}}},
     {"ij -> i", 1, 1, {{300, 400}}},
 
     {"...ij -> ...i", 1, 1, {{30, 40}}},
+    {"...ij -> ...i", 1, 1, {{113, 374}}},
     {"...ij -> ...i", 1, 1, {{300, 400}}},
 
     {"...ij, ...jk -> ...ik", 2, 1, {{40, 50}, {50, 80}}},
+    {"...ij, ...jk -> ...ik", 2, 1, {{47, 51}, {51, 83}}},
     {"...ij, ...jk -> ...ik", 2, 1, {{400, 500}, {500, 800}}}
 };
 
