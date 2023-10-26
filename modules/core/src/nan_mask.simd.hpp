@@ -197,6 +197,7 @@ int finiteMaskSIMD_<float, 3>(const float *fsrc, uchar *dst, size_t total)
             vres3 = v_extract<3>(vres3, vres3);
         }
     }
+    vx_cleanup();
 
     return i;
 }
@@ -337,6 +338,7 @@ int finiteMaskSIMD_<double, 3>(const double *fsrc, uchar *dst, size_t total)
             vres3 = v_extract<3>(vres3, vres3);
         }
     }
+    vx_cleanup();
 
     return i;
 }
