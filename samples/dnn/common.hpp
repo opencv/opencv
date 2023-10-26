@@ -77,7 +77,7 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
 {
     return genArgument("model", "Path to a binary file of model contains trained weights. "
                                 "It could be a file with extensions .caffemodel (Caffe), "
-                                ".pb (TensorFlow), .t7 or .net (Torch), .weights (Darknet), .bin (OpenVINO).",
+                                ".pb (TensorFlow), .weights (Darknet), .bin (OpenVINO).",
                        modelName, zooFile, 'm') +
            genArgument("config", "Path to a text file of model contains network configuration. "
                                  "It could be a file with extensions .prototxt (Caffe), .pbtxt (TensorFlow), .cfg (Darknet), .xml (OpenVINO).",

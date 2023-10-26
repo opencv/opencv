@@ -151,21 +151,6 @@ googlenet:
 # Semantic segmentation models.
 ################################################################################
 
-# ENet road scene segmentation network from https://github.com/e-lab/ENet-training
-# Works fine for different input sizes.
-enet:
-  load_info:
-    url: "https://www.dropbox.com/s/tdde0mawbi5dugq/Enet-model-best.net?dl=1"
-    sha1: "b4123a73bf464b9ebe9cfc4ab9c2d5c72b161315"
-  model: "Enet-model-best.net"
-  mean: [0, 0, 0]
-  scale: 0.00392
-  width: 512
-  height: 256
-  rgb: true
-  classes: "enet-classes.txt"
-  sample: "segmentation"
-
 fcn8s:
   load_info:
     url: "http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel"

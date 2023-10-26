@@ -24,7 +24,7 @@ parser.add_argument('--out_tf_graph', default='graph.pbtxt',
                     help='For models from TensorFlow Object Detection API, you may '
                          'pass a .config file which was used for training through --config '
                          'argument. This way an additional .pbtxt file with TensorFlow graph will be created.')
-parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet', 'dldt'],
+parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'darknet', 'dldt'],
                     help='Optional name of an origin framework of the model. '
                          'Detect it automatically if it does not set.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
