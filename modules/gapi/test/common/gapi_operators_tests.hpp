@@ -34,7 +34,7 @@ inline std::ostream& operator<<(std::ostream& os, operation op)
         CASE(GTR); CASE(LTR); CASE(GER); CASE(LER); CASE(EQR); CASE(NER);
         CASE(AND);  CASE(OR);  CASE(XOR);
         CASE(ANDR); CASE(ORR); CASE(XORR);
-        default: GAPI_Assert(false && "unknown operation value");
+        default: GAPI_Error("unknown operation value");
     }
 #undef CASE
     return os;
@@ -187,7 +187,7 @@ struct g_api_ocv_pair_mat_scalar {
             CASE(GTR); CASE(LTR); CASE(GER); CASE(LER); CASE(EQR); CASE(NER);
             CASE(AND);  CASE(OR);  CASE(XOR);
             CASE(ANDR); CASE(ORR); CASE(XORR);
-            default: GAPI_Assert(false && "unknown operation value");
+            default: GAPI_Error("unknown operation value");
         }
     }
 #undef CASE
@@ -214,7 +214,7 @@ struct g_api_ocv_pair_mat_mat {
             CASE(ADD);  CASE(SUB);  CASE(DIV);
             CASE(GT); CASE(LT); CASE(GE); CASE(LE); CASE(EQ); CASE(NE);
             CASE(AND); CASE(OR); CASE(XOR);
-            default: GAPI_Assert(false && "unknown operation value");
+            default: GAPI_Error("unknown operation value");
         }
     }
 #undef CASE

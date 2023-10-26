@@ -132,6 +132,10 @@ struct ImageCodecInitializer
     */
     ImageCodecInitializer()
     {
+#ifdef HAVE_AVIF
+        decoders.push_back(makePtr<AvifDecoder>());
+        encoders.push_back(makePtr<AvifEncoder>());
+#endif
         /// BMP Support
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
@@ -433,12 +437,12 @@ imread_( const String& filename, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imread_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read header: " << e.what());
         return 0;
     }
     catch (...)
     {
-        std::cerr << "imread_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read header: unknown exception");
         return 0;
     }
 
@@ -471,11 +475,11 @@ imread_( const String& filename, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read data: " << e.what());
     }
     catch (...)
     {
-        std::cerr << "imread_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read data: unknown exception");
     }
     if (!success)
     {
@@ -538,12 +542,12 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: " << e.what());
         return 0;
     }
     catch (...)
     {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: unknown exception");
         return 0;
     }
 
@@ -587,11 +591,11 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
         }
         catch (const cv::Exception& e)
         {
-            std::cerr << "imreadmulti_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+            CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: " << e.what());
         }
         catch (...)
         {
-            std::cerr << "imreadmulti_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+            CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: unknown exception");
         }
         if (!success)
             break;
@@ -668,7 +672,7 @@ size_t imcount_(const String& filename, int flags)
         return collection.size();
     } catch(cv::Exception const& e) {
         // Reading header or finding decoder for the filename is failed
-        std::cerr << "imcount_('" << filename << "'): can't read header or can't find decoder: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imcount_('" << filename << "'): can't read header or can't find decoder: " << e.what());
     }
     return 0;
 }
@@ -682,7 +686,7 @@ size_t imcount(const String& filename, int flags)
 
 
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
-                      const std::vector<int>& params, bool flipv )
+                      const std::vector<int>& params_, bool flipv )
 {
     bool isMultiImg = img_vec.size() > 1;
     std::vector<Mat> write_vec;
@@ -716,7 +720,27 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     }
 
     encoder->setDestination( filename );
-    CV_Assert(params.size() <= CV_IO_MAX_IMAGE_PARAMS*2);
+#if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
+    bool fixed = false;
+    std::vector<int> params_pair(2);
+    if (dynamic_cast<HdrEncoder*>(encoder.get()))
+    {
+        if (params_.size() == 1)
+        {
+            CV_LOG_WARNING(NULL, "imwrite() accepts key-value pair of parameters, but single value is passed. "
+                                 "HDR encoder behavior has been changed, please use IMWRITE_HDR_COMPRESSION key.");
+            params_pair[0] = IMWRITE_HDR_COMPRESSION;
+            params_pair[1] = params_[0];
+            fixed = true;
+        }
+    }
+    const std::vector<int>& params = fixed ? params_pair : params_;
+#else
+    const std::vector<int>& params = params_;
+#endif
+
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
     bool code = false;
     try
     {
@@ -744,14 +768,13 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imwrite_('" << filename << "'): can't write data: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: " << e.what());
     }
     catch (...)
     {
-        std::cerr << "imwrite_('" << filename << "'): can't write data: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: unknown exception");
     }
 
-    //    CV_Assert( code );
     return code;
 }
 
@@ -827,11 +850,11 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imdecode_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read header: " << e.what());
     }
     catch (...)
     {
-        std::cerr << "imdecode_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read header: unknown exception");
     }
     if (!success)
     {
@@ -840,7 +863,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
         {
             if (0 != remove(filename.c_str()))
             {
-                std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+                CV_LOG_WARNING(NULL, "unable to remove temporary file:" << filename);
             }
         }
         return 0;
@@ -872,18 +895,18 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imdecode_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read data: " << e.what());
     }
     catch (...)
     {
-        std::cerr << "imdecode_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read data: unknown exception");
     }
 
     if (!filename.empty())
     {
         if (0 != remove(filename.c_str()))
         {
-            std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+            CV_LOG_WARNING(NULL, "unable to remove temporary file: " << filename);
         }
     }
 
@@ -976,11 +999,11 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: " << e.what());
     }
     catch (...)
     {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: unknown exception");
     }
 
     int current = start;
@@ -1001,7 +1024,7 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
         {
             if (0 != remove(filename.c_str()))
             {
-                std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+                CV_LOG_WARNING(NULL, "unable to remove temporary file: " << filename);
             }
         }
         return 0;
@@ -1036,11 +1059,11 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
         }
         catch (const cv::Exception& e)
         {
-            std::cerr << "imreadmulti_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+            CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: " << e.what());
         }
         catch (...)
         {
-            std::cerr << "imreadmulti_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+            CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: unknown exception");
         }
         if (!success)
             break;
@@ -1063,7 +1086,7 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
     {
         if (0 != remove(filename.c_str()))
         {
-            std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+            CV_LOG_WARNING(NULL, "unable to remove temporary file: " << filename);
         }
     }
 
@@ -1081,7 +1104,7 @@ bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats)
 }
 
 bool imencode( const String& ext, InputArray _image,
-               std::vector<uchar>& buf, const std::vector<int>& params )
+               std::vector<uchar>& buf, const std::vector<int>& params_ )
 {
     CV_TRACE_FUNCTION();
 
@@ -1102,6 +1125,28 @@ bool imencode( const String& ext, InputArray _image,
         image.convertTo(temp, CV_8U);
         image = temp;
     }
+
+#if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
+    bool fixed = false;
+    std::vector<int> params_pair(2);
+    if (dynamic_cast<HdrEncoder*>(encoder.get()))
+    {
+        if (params_.size() == 1)
+        {
+            CV_LOG_WARNING(NULL, "imwrite() accepts key-value pair of parameters, but single value is passed. "
+                                 "HDR encoder behavior has been changed, please use IMWRITE_HDR_COMPRESSION key.");
+            params_pair[0] = IMWRITE_HDR_COMPRESSION;
+            params_pair[1] = params_[0];
+            fixed = true;
+        }
+    }
+    const std::vector<int>& params = fixed ? params_pair : params_;
+#else
+    const std::vector<int>& params = params_;
+#endif
+
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
 
     bool code;
     if( encoder->setDestination(buf) )
@@ -1271,10 +1316,10 @@ Mat ImageCollection::Impl::readData() {
             success = true;
     }
     catch (const cv::Exception &e) {
-        std::cerr << "ImageCollection class: can't read data: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "ImageCollection class: can't read data: " << e.what());
     }
     catch (...) {
-        std::cerr << "ImageCollection class:: can't read data: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "ImageCollection class:: can't read data: unknown exception");
     }
     if (!success)
         return cv::Mat();

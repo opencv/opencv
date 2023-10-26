@@ -19,7 +19,7 @@ namespace cv
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD128 1
-#define CV_SIMD128_64F 1
+#define CV_SIMD128_64F 0
 //////////// Types ////////////
 struct v_uint8x16
 {
@@ -291,14 +291,14 @@ OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint16x8, vsaddu_vv_u16m1, 8)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint16x8, vssubu_vv_u16m1, 8)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int16x8, vsadd_vv_i16m1, 8)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int16x8, vssub_vv_i16m1, 8)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int32x4, vsadd_vv_i32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int32x4, vssub_vv_i32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int32x4, vadd_vv_i32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int32x4, vsub_vv_i32m1, 4)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_int32x4, vmul_vv_i32m1, 4)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint32x4, vadd_vv_u32m1, 4)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint32x4, vsub_vv_u32m1, 4)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_uint32x4, vmul_vv_u32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int64x2, vsadd_vv_i64m1, 2)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int64x2, vssub_vv_i64m1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int64x2, vadd_vv_i64m1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int64x2, vsub_vv_i64m1, 2)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint64x2, vadd_vv_u64m1, 2)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint64x2, vsub_vv_u64m1, 2)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_float32x4, vfadd_vv_f32m1, 4)
@@ -1909,14 +1909,14 @@ else return trailingZeros32(val); }
 inline bool v_check_all(const v_##_Tpvec& a) \
 { \
     suffix##m1_t v0 = vsrl_vx_##_T(vnot_v_##_T(a.val, num), shift, num); \
-    vuint64m1_t v1 = vuint64m1_t(v0); \
-    return (v1[0] | v1[1]) == 0; \
+    vuint32m1_t v1 = vuint32m1_t(v0); \
+    return (v1[0] | v1[1] | v1[2] | v1[3]) == 0; \
 } \
 inline bool v_check_any(const v_##_Tpvec& a) \
 { \
     suffix##m1_t v0 = vsrl_vx_##_T(a.val, shift, num); \
-    vuint64m1_t v1 = vuint64m1_t(v0); \
-    return (v1[0] | v1[1]) != 0; \
+    vuint32m1_t v1 = vuint32m1_t(v0); \
+    return (v1[0] | v1[1] | v1[2] | v1[3]) != 0; \
 }
 
 OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(uint8x16, vuint8,  u8m1, 7, 16)
@@ -2021,23 +2021,18 @@ inline v_int32x4 v_load_expand_q(const schar* ptr)
     c = vwadd_vv_i32m2(vget_i16m2_i16m1(b, 0), vmv_v_x_i16m1(0, 4), 4);    \
     return v_int32x4(vget_i32m2_i32m1(c, 0));
 }
-#define VITL_16 (vuint64m2_t){0x1303120211011000, 0x1707160615051404, 0x1B0B1A0A19091808, 0x1F0F1E0E1D0D1C0C}
-#define VITL_8 (vuint64m2_t){0x0009000100080000, 0x000B0003000A0002, 0x000D0005000C0004, 0x000F0007000E0006}
-#define VITL_4 (vuint64m2_t){0x0000000400000000, 0x0000000500000001, 0x0000000600000002, 0x0000000700000003}
-#define VITL_2 (vuint64m2_t){0, 2, 1, 3}
-#define LOW_4  0x0000000100000000, 0x0000000500000004
-#define LOW_8  0x0003000200010000, 0x000B000A00090008
-#define LOW_16 0x0706050403020100, 0x1716151413121110
-#define HIGH_4  0x0000000300000002, 0x0000000700000006
-#define HIGH_8  0x0007000600050004, 0x000F000E000D000C
-#define HIGH_16 0x0F0E0D0C0B0A0908,  0x1F1E1D1C1B1A1918
+#define VITL_16 (vuint32m2_t){0x11011000, 0x13031202, 0x15051404, 0x17071606, 0x19091808, 0x1B0B1A0A, 0x1D0D1C0C, 0x1F0F1E0E}
+#define VITL_8 (vuint32m2_t){0x00080000, 0x00090001, 0x000A0002, 0x000B0003, 0x000C0004, 0x000D0005, 0x000E0006, 0x000F0007}
+#define VITL_4 (vuint32m2_t){0x00000000, 0x00000004, 0x00000001, 0x00000005, 0x00000002, 0x00000006, 0x00000003, 0x00000007}
+#define VITL_2 (vuint32m2_t){0, 0, 2, 0, 1, 0, 3, 0}
+
 #define OPENCV_HAL_IMPL_RISCVV_UNPACKS(_Tpvec, _Tp, _T, _UTp, _UT, num, num2, len, numh) \
 inline void v_zip(const v_##_Tpvec& a0, const v_##_Tpvec& a1, v_##_Tpvec& b0, v_##_Tpvec& b1) \
 { \
     v##_Tp##m2_t tmp = vundefined_##_T##m2();\
     tmp = vset_##_T##m2(tmp, 0, a0.val); \
     tmp = vset_##_T##m2(tmp, 1, a1.val); \
-    vuint64m2_t mask = VITL_##num;    \
+    vuint32m2_t mask = VITL_##num;    \
     tmp = (v##_Tp##m2_t)vrgather_vv_##_T##m2((v##_Tp##m2_t)tmp, (v##_UTp##m2_t)mask, num2);    \
     b0.val = vget_##_T##m2_##_T##m1(tmp, 0); \
     b1.val = vget_##_T##m2_##_T##m1(tmp, 1); \

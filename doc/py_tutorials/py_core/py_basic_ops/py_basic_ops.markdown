@@ -25,6 +25,7 @@ Let's load a color image first:
 >>> import cv2 as cv
 
 >>> img = cv.imread('messi5.jpg')
+>>> assert img is not None, "file could not be read, check with os.path.exists()"
 @endcode
 You can access a pixel value by its row and column coordinates. For BGR image, it returns an array
 of Blue, Green, Red values. For grayscale image, just corresponding intensity is returned.
@@ -173,6 +174,7 @@ from matplotlib import pyplot as plt
 BLUE = [255,0,0]
 
 img1 = cv.imread('opencv-logo.png')
+assert img1 is not None, "file could not be read, check with os.path.exists()"
 
 replicate = cv.copyMakeBorder(img1,10,10,10,10,cv.BORDER_REPLICATE)
 reflect = cv.copyMakeBorder(img1,10,10,10,10,cv.BORDER_REFLECT)

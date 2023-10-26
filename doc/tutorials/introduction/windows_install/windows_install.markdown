@@ -26,7 +26,7 @@ Installation by Using the Pre-built Libraries {#tutorial_windows_install_prebuil
 =============================================
 
 -#  Launch a web browser of choice and go to our [page on
-    Sourceforge](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/).
+    Sourceforge](http://sourceforge.net/projects/opencvlibrary/files/).
 -#  Choose a build you want to use and download it.
 -#  Make sure you have admin rights. Unpack the self-extracting archive.
 -#  You can check the installation at the chosen path as you can see below.
@@ -370,18 +370,18 @@ Set the OpenCV environment variable and add it to the systems path {#tutorial_wi
 First, we set an environment variable to make our work easier. This will hold the build directory of
 our OpenCV library that we use in our projects. Start up a command window and enter:
 @code
-    setx -m OPENCV_DIR D:\OpenCV\Build\x86\vc11     (suggested for Visual Studio 2012 - 32 bit Windows)
-    setx -m OPENCV_DIR D:\OpenCV\Build\x64\vc11     (suggested for Visual Studio 2012 - 64 bit Windows)
+    setx OpenCV_DIR D:\OpenCV\build\x64\vc14     (suggested for Visual Studio 2015 - 64 bit Windows)
+    setx OpenCV_DIR D:\OpenCV\build\x86\vc14     (suggested for Visual Studio 2015 - 32 bit Windows)
 
-    setx -m OPENCV_DIR D:\OpenCV\Build\x86\vc12     (suggested for Visual Studio 2013 - 32 bit Windows)
-    setx -m OPENCV_DIR D:\OpenCV\Build\x64\vc12     (suggested for Visual Studio 2013 - 64 bit Windows)
+    setx OpenCV_DIR D:\OpenCV\build\x64\vc15     (suggested for Visual Studio 2017 - 64 bit Windows)
+    setx OpenCV_DIR D:\OpenCV\build\x86\vc15     (suggested for Visual Studio 2017 - 32 bit Windows)
 
-    setx -m OPENCV_DIR D:\OpenCV\Build\x64\vc14     (suggested for Visual Studio 2015 - 64 bit Windows)
+    setx OpenCV_DIR D:\OpenCV\build\x64\vc16     (suggested for Visual Studio 2019 - 64 bit Windows)
+    setx OpenCV_DIR D:\OpenCV\build\x86\vc16     (suggested for Visual Studio 2019 - 32 bit Windows)
 @endcode
 Here the directory is where you have your OpenCV binaries (*extracted* or *built*). You can have
 different platform (e.g. x64 instead of x86) or compiler type, so substitute appropriate value.
-Inside this, you should have two folders called *lib* and *bin*. The -m should be added if you wish
-to make the settings computer wise, instead of user wise.
+Inside this, you should have two folders called *lib* and *bin*.
 
 If you built static libraries then you are done. Otherwise, you need to add the *bin* folders path
 to the systems path. This is because you will use the OpenCV library in form of *"Dynamic-link

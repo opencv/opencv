@@ -230,7 +230,8 @@ enum KmeansFlags {
 enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/columns of the matrix.
                    REDUCE_AVG = 1, //!< the output is the mean vector of all rows/columns of the matrix.
                    REDUCE_MAX = 2, //!< the output is the maximum (column/row-wise) of all rows/columns of the matrix.
-                   REDUCE_MIN = 3  //!< the output is the minimum (column/row-wise) of all rows/columns of the matrix.
+                   REDUCE_MIN = 3,  //!< the output is the minimum (column/row-wise) of all rows/columns of the matrix.
+                   REDUCE_SUM2 = 4  //!< the output is the sum of all squared rows/columns of the matrix.
                  };
 
 //! @} core_array
@@ -348,6 +349,9 @@ be set to the default -1. In this case, the output array will have the same dept
 array, be it src1, src2 or both.
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
+`add(src,X)` means `add(src,(X,X,X,X))`.
+`add(src,(X,))` means `add(src,(X,0,0,0))`.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and number of channels as the input array(s); the
@@ -389,6 +393,9 @@ in the first case, when src1.depth() == src2.depth(), dtype can be set to the de
 case the output array will have the same depth as the input array, be it src1, src2 or both.
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
+`subtract(src,X)` means `subtract(src,(X,X,X,X))`.
+`subtract(src,(X,))` means `subtract(src,(X,0,0,0))`.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array of the same size and the same number of channels as the input array.
@@ -414,6 +421,9 @@ For a not-per-element matrix product, see gemm .
 @note Saturation is not applied when the output array has the depth
 CV_32S. You may even get result of an incorrect sign in the case of
 overflow.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
+`multiply(src,X)` means `multiply(src,(X,X,X,X))`.
+`multiply(src,(X,))` means `multiply(src,(X,0,0,0))`.
 @param src1 first input array.
 @param src2 second input array of the same size and the same type as src1.
 @param dst output array of the same size and type as src1.
@@ -442,6 +452,9 @@ Expect correct IEEE-754 behaviour for floating-point data (with NaN, Inf result 
 
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
+`divide(src,X)` means `divide(src,(X,X,X,X))`.
+`divide(src,(X,))` means `divide(src,(X,0,0,0))`.
 @param src1 first input array.
 @param src2 second input array of the same size and type as src1.
 @param scale scalar factor.
@@ -570,6 +583,14 @@ independently for each channel.
 @sa  countNonZero, mean, meanStdDev, norm, minMaxLoc, reduce
 */
 CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
+
+/** @brief Checks for the presence of at least one non-zero array element.
+
+The function returns whether there are non-zero elements in src
+@param src single-channel array.
+@sa  mean, meanStdDev, norm, minMaxLoc, calcCovarMatrix
+*/
+CV_EXPORTS_W bool hasNonZero( InputArray src );
 
 /** @brief Counts non-zero array elements.
 
@@ -903,7 +924,7 @@ The function #reduce reduces the matrix to a vector by treating the matrix rows/
 1D vectors and performing the specified operation on the vectors until a single row/column is
 obtained. For example, the function can be used to compute horizontal and vertical projections of a
 raster image. In case of #REDUCE_MAX and #REDUCE_MIN , the output image should have the same type as the source one.
-In case of #REDUCE_SUM and #REDUCE_AVG , the output may have a larger element bit-depth to preserve accuracy.
+In case of #REDUCE_SUM, #REDUCE_SUM2 and #REDUCE_AVG , the output may have a larger element bit-depth to preserve accuracy.
 And multi-channel arrays are also supported in these two reduction modes.
 
 The following code demonstrates its usage for a single channel matrix.
@@ -1101,6 +1122,20 @@ around both axes.
 @sa transpose , repeat , completeSymm
 */
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
+
+/** @brief Flips a n-dimensional at given axis
+ *  @param src input array
+ *  @param dst output array that has the same shape of src
+ *  @param axis axis that performs a flip on. 0 <= axis < src.dims.
+ */
+CV_EXPORTS_W void flipND(InputArray src, OutputArray dst, int axis);
+
+/** @brief Broadcast the given Mat to the given shape.
+ * @param src input array
+ * @param shape target shape. Should be a list of CV_32S numbers. Note that negative values are not supported.
+ * @param dst output array that has the given shape
+ */
+CV_EXPORTS_W void broadcast(InputArray src, InputArray shape, OutputArray dst);
 
 enum RotateFlags {
     ROTATE_90_CLOCKWISE = 0, //!<Rotate 90 degrees clockwise
@@ -1389,6 +1424,9 @@ The function cv::absdiff calculates:
     multi-channel arrays, each channel is processed independently.
 @note Saturation is not applied when the arrays have the depth CV_32S.
 You may even get a negative value in the case of overflow.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
+`absdiff(src,X)` means `absdiff(src,(X,X,X,X))`.
+`absdiff(src,(X,))` means `absdiff(src,(X,0,0,0))`.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and type as input arrays.
@@ -3142,12 +3180,16 @@ public:
 
     /** @brief Stores algorithm parameters in a file storage
     */
-    virtual void write(FileStorage& fs) const { CV_UNUSED(fs); }
+    CV_WRAP virtual void write(FileStorage& fs) const { CV_UNUSED(fs); }
 
-    /** @brief simplified API for language bindings
+    /**
     * @overload
     */
-    CV_WRAP void write(const Ptr<FileStorage>& fs, const String& name = String()) const;
+    CV_WRAP void write(FileStorage& fs, const String& name) const;
+#if CV_VERSION_MAJOR < 5
+    /** @deprecated */
+    void write(const Ptr<FileStorage>& fs, const String& name = String()) const;
+#endif
 
     /** @brief Reads algorithm parameters from a file storage
     */

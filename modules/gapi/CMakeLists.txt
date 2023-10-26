@@ -41,6 +41,9 @@ if(MSVC)
     # and IE deprecated code warning C4996
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503 /wd4996)
   endif()
+  if(MSVC_VERSION LESS 1920)  # MSVS 2015/2017
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)  # 'unreachable code'
+  endif()
 endif()
 
 file(GLOB gapi_ext_hdrs
@@ -153,8 +156,13 @@ set(gapi_srcs
     src/backends/ie/giebackend.cpp
     src/backends/ie/giebackend/giewrapper.cpp
 
+    # OV Backend. FIXME: should be included by CMake
+    # if and only if OV support is enabled
+    src/backends/ov/govbackend.cpp
+
     # ONNX backend
     src/backends/onnx/gonnxbackend.cpp
+    src/backends/onnx/dml_ep.cpp
 
     # Render backend
     src/backends/render/grenderocv.cpp
@@ -179,7 +187,11 @@ set(gapi_srcs
     # Python bridge
     src/backends/ie/bindings_ie.cpp
     src/backends/onnx/bindings_onnx.cpp
+    src/backends/ov/bindings_ov.cpp
     src/backends/python/gpythonbackend.cpp
+
+    # Queue Streaming source
+    src/streaming/queue_source.cpp
 
     # OpenVPL Streaming source
     src/streaming/onevpl/source.cpp
@@ -246,6 +258,7 @@ ocv_target_link_libraries(${the_module} PRIVATE ade)
 
 if(TARGET ocv.3rdparty.openvino AND OPENCV_GAPI_WITH_OPENVINO)
   ocv_target_link_libraries(${the_module} PRIVATE ocv.3rdparty.openvino)
+  ocv_install_used_external_targets(ocv.3rdparty.openvino)
 endif()
 
 if(HAVE_TBB)
@@ -357,6 +370,9 @@ endif()
 if(HAVE_ONNX)
   ocv_target_link_libraries(${the_module} PRIVATE ${ONNX_LIBRARY})
   ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ONNX=1)
+  if(HAVE_ONNX_DML)
+    ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ONNX_DML=1)
+  endif()
   if(TARGET opencv_test_gapi)
     ocv_target_compile_definitions(opencv_test_gapi PRIVATE HAVE_ONNX=1)
     ocv_target_link_libraries(opencv_test_gapi PRIVATE ${ONNX_LIBRARY})
@@ -379,7 +395,7 @@ if(TARGET example_gapi_onevpl_infer_with_advanced_device_selection)
     ocv_target_include_directories(example_gapi_onevpl_infer_with_advanced_device_selection SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()
   if(UNIX AND HAVE_VA)
-    message ("GAPI VPL samples with VAAPI")
+    message(STATUS "GAPI VPL samples with VAAPI")
     ocv_target_include_directories(example_gapi_onevpl_infer_with_advanced_device_selection SYSTEM PRIVATE ${VA_INCLUDE_DIR})
     ocv_target_link_libraries(example_gapi_onevpl_infer_with_advanced_device_selection PRIVATE ${VA_LIBRARIES})
   endif()

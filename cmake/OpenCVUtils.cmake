@@ -868,6 +868,7 @@ macro(ocv_check_modules define)
           list(APPEND _libs_paths ${CMAKE_MATCH_1})
         elseif(IS_ABSOLUTE "${flag}"
             OR flag STREQUAL "-lstdc++"
+            OR flag STREQUAL "-latomic"
         )
           list(APPEND _libs "${flag}")
         elseif(flag MATCHES "^-l(.*)")
@@ -1631,6 +1632,23 @@ function(ocv_add_external_target name inc link def)
   endif()
 endfunction()
 
+set(__OPENCV_EXPORTED_EXTERNAL_TARGETS "" CACHE INTERNAL "")
+function(ocv_install_used_external_targets)
+  if(NOT BUILD_SHARED_LIBS
+      AND NOT (CMAKE_VERSION VERSION_LESS "3.13.0")  # upgrade CMake: https://gitlab.kitware.com/cmake/cmake/-/merge_requests/2152
+  )
+    foreach(tgt in ${ARGN})
+      if(tgt MATCHES "^ocv\.3rdparty\.")
+        list(FIND __OPENCV_EXPORTED_EXTERNAL_TARGETS "${tgt}" _found)
+        if(_found EQUAL -1)  # don't export target twice
+          install(TARGETS ${tgt} EXPORT OpenCVModules)
+          list(APPEND __OPENCV_EXPORTED_EXTERNAL_TARGETS "${tgt}")
+          set(__OPENCV_EXPORTED_EXTERNAL_TARGETS "${__OPENCV_EXPORTED_EXTERNAL_TARGETS}" CACHE INTERNAL "")
+        endif()
+      endif()
+    endforeach()
+  endif()
+endfunction()
 
 # Returns the first non-interface target
 function(ocv_get_imported_target imported interface)

@@ -41,7 +41,6 @@ namespace onevpl {
 std::shared_ptr<IDeviceSelector> getDefaultDeviceSelector(const std::vector<CfgParam>&) {
     std::cerr << "Cannot utilize getDefaultVPLDeviceAndCtx without HAVE_ONEVPL enabled" << std::endl;
     util::throw_error(std::logic_error("Cannot utilize getDefaultVPLDeviceAndCtx without HAVE_ONEVPL enabled"));
-    return nullptr;
 }
 
 } // namespace onevpl

@@ -69,12 +69,6 @@ const double DEG_TO_RADS = CV_PI / 180;
 
 #define log_gamma(x) ((x)>15.0?log_gamma_windschitl(x):log_gamma_lanczos(x))
 
-struct edge
-{
-    cv::Point p;
-    bool taken;
-};
-
 /////////////////////////////////////////////////////////////////////////////////////////
 
 inline double distSq(const double x1, const double y1,
@@ -120,10 +114,20 @@ inline bool double_equal(const double& a, const double& b)
     return (abs_diff / abs_max) <= (RELATIVE_ERROR_FACTOR * DBL_EPSILON);
 }
 
-inline bool AsmallerB_XoverY(const edge& a, const edge& b)
-{
-    if (a.p.x == b.p.x) return a.p.y < b.p.y;
-    else return a.p.x < b.p.x;
+// function to sort points by y and then by x
+inline bool AsmallerB_YoverX(const cv::Point2d &a, const cv::Point2d &b) {
+    if (a.y == b.y) return a.x < b.x;
+    else return a.y < b.y;
+}
+
+// function to get the slope of the rectangle for a specific row
+inline double get_slope(cv::Point2d p1, cv::Point2d p2) {
+    return ((int) ceil(p2.y) != (int) ceil(p1.y)) ? (p2.x - p1.x) / (p2.y - p1.y) : 0;
+}
+
+// function to get the limit of the rectangle for a specific row
+inline double get_limit(cv::Point2d p, int row, double slope) {
+    return p.x + (row - p.y) * slope;
 }
 
 /**
@@ -210,7 +214,7 @@ public:
 /**
  * Draw lines on the given canvas.
  *
- * @param image     The image, where lines will be drawn.
+ * @param _image    The image, where lines will be drawn.
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
  */
@@ -222,7 +226,7 @@ public:
  * @param size      The size of the image, where lines1 and lines2 were found.
  * @param lines1    The first lines that need to be drawn. Color - Blue.
  * @param lines2    The second lines that need to be drawn. Color - Red.
- * @param image     An optional image, where lines will be drawn.
+ * @param _image    An optional image, where lines will be drawn.
  *                  Should have the size of the image, where the lines were found
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
@@ -304,8 +308,6 @@ private:
  *
  * @param threshold      The minimum value of the angle that is considered defined, otherwise NOTDEF
  * @param n_bins         The number of bins with which gradients are ordered by, using bucket sort.
- * @param ordered_points Return: Vector of coordinate points that are pseudo ordered by magnitude.
- *                       Pixels would be ordered by norm value, up to a precision given by max_grad/n_bins.
  */
     void ll_angle(const double& threshold, const unsigned int& n_bins);
 
@@ -588,8 +590,8 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
         }
     }
 
-    // Sort
-    std::sort(ordered_points.begin(), ordered_points.end(), compare_norm);
+    // Use stable sort to ensure deterministic region growing and thus overall LSD result determinism.
+    std::stable_sort(ordered_points.begin(), ordered_points.end(), compare_norm);
 }
 
 void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPoint>& reg,
@@ -945,105 +947,53 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     double dyhw = rec.dy * half_width;
     double dxhw = rec.dx * half_width;
 
-    edge ordered_x[4];
-    edge* min_y = &ordered_x[0];
-    edge* max_y = &ordered_x[0]; // Will be used for loop range
+    cv::Point2d v_tmp[4];
+    v_tmp[0] = cv::Point2d(rec.x1 - dyhw, rec.y1 + dxhw);
+    v_tmp[1] = cv::Point2d(rec.x2 - dyhw, rec.y2 + dxhw);
+    v_tmp[2] = cv::Point2d(rec.x2 + dyhw, rec.y2 - dxhw);
+    v_tmp[3] = cv::Point2d(rec.x1 + dyhw, rec.y1 - dxhw);
 
-    ordered_x[0].p.x = int(rec.x1 - dyhw); ordered_x[0].p.y = int(rec.y1 + dxhw); ordered_x[0].taken = false;
-    ordered_x[1].p.x = int(rec.x2 - dyhw); ordered_x[1].p.y = int(rec.y2 + dxhw); ordered_x[1].taken = false;
-    ordered_x[2].p.x = int(rec.x2 + dyhw); ordered_x[2].p.y = int(rec.y2 - dxhw); ordered_x[2].taken = false;
-    ordered_x[3].p.x = int(rec.x1 + dyhw); ordered_x[3].p.y = int(rec.y1 - dxhw); ordered_x[3].taken = false;
-
-    std::sort(ordered_x, ordered_x + 4, AsmallerB_XoverY);
-
-    // Find min y. And mark as taken. find max y.
-    for(unsigned int i = 1; i < 4; ++i)
-    {
-        if(min_y->p.y > ordered_x[i].p.y) {min_y = &ordered_x[i]; }
-        if(max_y->p.y < ordered_x[i].p.y) {max_y = &ordered_x[i]; }
-    }
-    min_y->taken = true;
-
-    // Find leftmost untaken point;
-    edge* leftmost = 0;
-    for(unsigned int i = 0; i < 4; ++i)
-    {
-        if(!ordered_x[i].taken)
-        {
-            if(!leftmost) // if uninitialized
-            {
-                leftmost = &ordered_x[i];
-            }
-            else if (leftmost->p.x > ordered_x[i].p.x)
-            {
-                leftmost = &ordered_x[i];
-            }
+    // Find the vertex with the smallest y coordinate (or the smallest x if there is a tie).
+    int offset = 0;
+    for (int i = 1; i < 4; ++i) {
+        if (AsmallerB_YoverX(v_tmp[i], v_tmp[offset])){
+            offset = i;
         }
     }
-    CV_Assert(leftmost != NULL);
-    leftmost->taken = true;
 
-    // Find rightmost untaken point;
-    edge* rightmost = 0;
-    for(unsigned int i = 0; i < 4; ++i)
-    {
-        if(!ordered_x[i].taken)
-        {
-            if(!rightmost) // if uninitialized
-            {
-                rightmost = &ordered_x[i];
-            }
-            else if (rightmost->p.x < ordered_x[i].p.x)
-            {
-                rightmost = &ordered_x[i];
-            }
-        }
+    // Rotate the vertices so that the first one is the one with the smallest y coordinate (or the smallest x if there is a tie).
+    // The rest will be then ordered counterclockwise.
+    cv::Point2d ordered_y[4];
+    for (int i = 0; i < 4; ++i) {
+        ordered_y[i] = v_tmp[(i + offset) % 4];
     }
-    CV_Assert(rightmost != NULL);
-    rightmost->taken = true;
 
-    // Find last untaken point;
-    edge* tailp = 0;
-    for(unsigned int i = 0; i < 4; ++i)
-    {
-        if(!ordered_x[i].taken)
-        {
-            if(!tailp) // if uninitialized
-            {
-                tailp = &ordered_x[i];
-            }
-            else if (tailp->p.x > ordered_x[i].p.x)
-            {
-                tailp = &ordered_x[i];
-            }
-        }
-    }
-    CV_Assert(tailp != NULL);
-    tailp->taken = true;
+    double flstep = get_slope(ordered_y[0], ordered_y[1]); //first left step
+    double slstep = get_slope(ordered_y[1], ordered_y[2]); //second left step
 
-    double flstep = (min_y->p.y != leftmost->p.y) ?
-                    (min_y->p.x - leftmost->p.x) / (min_y->p.y - leftmost->p.y) : 0; //first left step
-    double slstep = (leftmost->p.y != tailp->p.x) ?
-                    (leftmost->p.x - tailp->p.x) / (leftmost->p.y - tailp->p.x) : 0; //second left step
+    double frstep = get_slope(ordered_y[0], ordered_y[3]); //first right step
+    double srstep = get_slope(ordered_y[3], ordered_y[2]); //second right step
 
-    double frstep = (min_y->p.y != rightmost->p.y) ?
-                    (min_y->p.x - rightmost->p.x) / (min_y->p.y - rightmost->p.y) : 0; //first right step
-    double srstep = (rightmost->p.y != tailp->p.x) ?
-                    (rightmost->p.x - tailp->p.x) / (rightmost->p.y - tailp->p.x) : 0; //second right step
-
-    double lstep = flstep, rstep = frstep;
-
-    double left_x = min_y->p.x, right_x = min_y->p.x;
+    double top_y = ordered_y[0].y, bottom_y = ordered_y[2].y;
 
     // Loop around all points in the region and count those that are aligned.
-    int min_iter = min_y->p.y;
-    int max_iter = max_y->p.y;
-    for(int y = min_iter; y <= max_iter; ++y)
+    std::vector<cv::Point> points;
+    double left_limit, right_limit;
+    for(int y = (int) ceil(top_y); y <= (int) ceil(bottom_y); ++y)
     {
         if (y < 0 || y >= img_height) continue;
 
-        for(int x = int(left_x); x <= int(right_x); ++x)
-        {
+        if(y <= int(ceil(ordered_y[1].y)))
+            left_limit = get_limit(ordered_y[0], y, flstep);
+        else
+            left_limit = get_limit(ordered_y[1], y, slstep);
+
+        if(y < int(ceil(ordered_y[3].y)))
+            right_limit = get_limit(ordered_y[0], y, frstep);
+        else
+            right_limit = get_limit(ordered_y[3], y, srstep);
+
+        for(int x = (int) ceil(left_limit); x <= (int)(right_limit); ++x) {
             if (x < 0 || x >= img_width) continue;
 
             ++total_pts;
@@ -1052,12 +1002,6 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
                 ++alg_pts;
             }
         }
-
-        if(y >= leftmost->p.y) { lstep = slstep; }
-        if(y >= rightmost->p.y) { rstep = srstep; }
-
-        left_x += lstep;
-        right_x += rstep;
     }
 
     return nfa(total_pts, alg_pts, rec.p);
@@ -1071,7 +1015,7 @@ double LineSegmentDetectorImpl::nfa(const int& n, const int& k, const double& p)
 
     double p_term = p / (1 - p);
 
-    double log1term = (double(n) + 1) - log_gamma(double(k) + 1)
+    double log1term = log_gamma(double(n) + 1) - log_gamma(double(k) + 1)
                 - log_gamma(double(n-k) + 1)
                 + double(k) * log(p) + double(n-k) * log(1.0 - p);
     double term = exp(log1term);

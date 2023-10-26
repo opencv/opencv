@@ -6,7 +6,7 @@ using namespace cv;
 int main( int argc, char** argv )
 {
     Mat src, hsv;
-    if( argc != 2 || !(src=imread(argv[1], 1)).data )
+    if( argc != 2 || !(src=imread(argv[1], IMREAD_COLOR)).data )
         return -1;
 
     cvtColor(src, hsv, COLOR_BGR2HSV);

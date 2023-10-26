@@ -63,15 +63,13 @@ using namespace tiff_dummy_namespace;
 namespace cv
 {
 
+// to extend cvtColor() to support CV_8S, CV_16S, CV_32S and CV_64F.
+static void extend_cvtColor( InputArray _src, OutputArray _dst, int code );
+
 #define CV_TIFF_CHECK_CALL(call) \
     if (0 == (call)) { \
         CV_LOG_WARNING(NULL, "OpenCV TIFF(line " << __LINE__ << "): failed " #call); \
         CV_Error(Error::StsError, "OpenCV TIFF: failed " #call); \
-    }
-
-#define CV_TIFF_CHECK_CALL_INFO(call) \
-    if (0 == (call)) { \
-        CV_LOG_INFO(NULL, "OpenCV TIFF(line " << __LINE__ << "): failed optional call: " #call ", ignoring"); \
     }
 
 #define CV_TIFF_CHECK_CALL_DEBUG(call) \
@@ -242,7 +240,7 @@ bool TiffDecoder::readHeader()
     if (!tif)
     {
         // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
-        // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+        // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
         if ( !m_buf.empty() )
         {
             m_buf_pos = 0;
@@ -1039,9 +1037,9 @@ bool  TiffDecoder::readData( Mat& img )
                             Rect roi_tile(0, 0, tile_width, tile_height);
                             Rect roi_img(x, img_y, tile_width, tile_height);
                             if (!m_hdr && ncn == 3)
-                                cvtColor(m_tile(roi_tile), img(roi_img), COLOR_RGB2BGR);
+                                extend_cvtColor(m_tile(roi_tile), img(roi_img), COLOR_RGB2BGR);
                             else if (!m_hdr && ncn == 4)
-                                cvtColor(m_tile(roi_tile), img(roi_img), COLOR_RGBA2BGRA);
+                                extend_cvtColor(m_tile(roi_tile), img(roi_img), COLOR_RGBA2BGRA);
                             else
                                 m_tile(roi_tile).copyTo(img(roi_img));
                             break;
@@ -1115,7 +1113,7 @@ public:
     TIFF* open ()
     {
         // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
-        // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+        // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
         return TIFFClientOpen( "", "w", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
                                &TiffEncoderBufHelper::write, &TiffEncoderBufHelper::seek,
                                &TiffEncoderBufHelper::close, &TiffEncoderBufHelper::size,
@@ -1197,7 +1195,7 @@ static bool readParam(const std::vector<int>& params, int key, int& value)
 bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params)
 {
     // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
-    // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+    // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
     TIFF* tif = NULL;
 
     TiffEncoderBufHelper buf_helper(m_buf);
@@ -1279,13 +1277,17 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 break;
             }
 
-            case CV_32F:
-                sample_format = SAMPLEFORMAT_IEEEFP;
-                /* FALLTHRU */
             case CV_32S:
             {
                 bitsPerChannel = 32;
+                sample_format = SAMPLEFORMAT_INT;
+                break;
+            }
+            case CV_32F:
+            {
+                bitsPerChannel = 32;
                 page_compression = COMPRESSION_NONE;
+                sample_format = SAMPLEFORMAT_IEEEFP;
                 break;
             }
             case CV_64F:
@@ -1356,13 +1358,13 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 
                 case 3:
                 {
-                    cvtColor(img(Rect(0, y, width, 1)), (const Mat&)m_buffer, COLOR_BGR2RGB);
+                    extend_cvtColor(img(Rect(0, y, width, 1)), (const Mat&)m_buffer, COLOR_BGR2RGB);
                     break;
                 }
 
                 case 4:
                 {
-                    cvtColor(img(Rect(0, y, width, 1)), (const Mat&)m_buffer, COLOR_BGRA2RGBA);
+                    extend_cvtColor(img(Rect(0, y, width, 1)), (const Mat&)m_buffer, COLOR_BGRA2RGBA);
                     break;
                 }
 
@@ -1422,6 +1424,57 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
     std::vector<Mat> img_vec;
     img_vec.push_back(img);
     return writeLibTiff(img_vec, params);
+}
+
+static void extend_cvtColor( InputArray _src, OutputArray _dst, int code )
+{
+    CV_Assert( !_src.empty() );
+    CV_Assert( _src.dims() == 2 );
+
+    // This function extend_cvtColor reorders the src channels with only thg limited condition.
+    // Otherwise, it calls cvtColor.
+
+    const int stype = _src.type();
+    if(!
+        (
+            (
+                ( stype == CV_8SC3  ) || ( stype == CV_8SC4  ) ||
+                ( stype == CV_16SC3 ) || ( stype == CV_16SC4 ) ||
+                ( stype == CV_32SC3 ) || ( stype == CV_32SC4 ) ||
+                ( stype == CV_64FC3 ) || ( stype == CV_64FC4 )
+            )
+            &&
+            (
+                ( code == COLOR_BGR2RGB ) || ( code == COLOR_BGRA2RGBA )
+            )
+        )
+    )
+    {
+        cvtColor( _src, _dst, code );
+        return;
+    }
+
+    Mat src = _src.getMat();
+
+    // cv::mixChannels requires the output arrays to be pre-allocated before calling the function.
+    _dst.create( _src.size(), stype );
+    Mat dst = _dst.getMat();
+
+    // BGR to RGB or BGRA to RGBA
+    //   src[0] -> dst[2]
+    //   src[1] -> dst[1]
+    //   src[2] -> dst[0]
+    //   src[3] -> dst[3] if src has alpha channel.
+    std::vector<int> fromTo;
+    fromTo.push_back(0); fromTo.push_back(2);
+    fromTo.push_back(1); fromTo.push_back(1);
+    fromTo.push_back(2); fromTo.push_back(0);
+    if ( code == COLOR_BGRA2RGBA )
+    {
+        fromTo.push_back(3); fromTo.push_back(3);
+    }
+
+    cv::mixChannels( src, dst, fromTo );
 }
 
 } // namespace

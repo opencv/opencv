@@ -86,8 +86,11 @@ void Net::Impl::initCUDABackend(const std::vector<LayerPin>& blobsToKeep_)
         auto node = layerInstance->initCUDA(&context, ld.inputBlobsWrappers, ld.outputBlobsWrappers);
         ld.backendNodes[DNN_BACKEND_CUDA] = node;
 
-        auto cudaNode = node.dynamicCast<CUDABackendNode>();
-        cudaInfo->workspace.require(cudaNode->get_workspace_memory_in_bytes());
+        if(!node.empty())
+        {
+            auto cudaNode = node.dynamicCast<CUDABackendNode>();
+            cudaInfo->workspace.require(cudaNode->get_workspace_memory_in_bytes());
+        }
     }
 
     if (blobsToKeep_.size() > 1)

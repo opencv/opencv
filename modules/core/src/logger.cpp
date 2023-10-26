@@ -233,24 +233,42 @@ void writeLogMessage(LogLevel logLevel, const char* message)
         (*out) << std::flush;
 }
 
+static const char* stripSourceFilePathPrefix(const char* file)
+{
+    CV_Assert(file);
+    const char* pos = file;
+    const char* strip_pos = NULL;
+    char ch = 0;
+    while ((ch = pos[0]) != 0)
+    {
+        ++pos;
+        if (ch == '/' || ch == '\\')
+            strip_pos = pos;
+    }
+    if (strip_pos == NULL || strip_pos == pos/*eos*/)
+        return file;
+    return strip_pos;
+}
+
 void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message)
 {
     std::ostringstream strm;
     if (tag)
     {
-        strm << tag << " ";
+        strm << tag << ' ';
     }
     if (file)
     {
-        strm << file << " ";
-    }
-    if (line > 0)
-    {
-        strm << "(" << line << ") ";
+        strm << stripSourceFilePathPrefix(file);
+        if (line > 0)
+        {
+            strm << ':' << line;
+        }
+        strm << ' ';
     }
     if (func)
     {
-        strm << func << " ";
+        strm << func << ' ';
     }
     strm << message;
     writeLogMessage(logLevel, strm.str().c_str());

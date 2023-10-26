@@ -84,8 +84,13 @@ namespace cv
 Select preferred API for a capture object.
 To be used in the VideoCapture::VideoCapture() constructor or VideoCapture::open()
 
-@note Backends are available only if they have been built with your OpenCV binaries.
+@note
+-   Backends are available only if they have been built with your OpenCV binaries.
 See @ref videoio_overview for more information.
+-   Microsoft Media Foundation backend tries to use hardware accelerated transformations
+if possible. Environment flag "OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS" set to 0
+disables it and may improve initialization time. More details:
+https://learn.microsoft.com/en-us/windows/win32/medfound/mf-readwrite-enable-hardware-transforms
 */
 enum VideoCaptureAPIs {
        CAP_ANY          = 0,            //!< Auto detect == 0
@@ -107,7 +112,7 @@ enum VideoCaptureAPIs {
        CAP_XIAPI        = 1100,         //!< XIMEA Camera API
        CAP_AVFOUNDATION = 1200,         //!< AVFoundation framework for iOS (OS X Lion will have the same API)
        CAP_GIGANETIX    = 1300,         //!< Smartek Giganetix GigEVisionSDK
-       CAP_MSMF         = 1400,         //!< Microsoft Media Foundation (via videoInput)
+       CAP_MSMF         = 1400,         //!< Microsoft Media Foundation (via videoInput). See platform specific notes above.
        CAP_WINRT        = 1410,         //!< Microsoft Windows Runtime using Media Foundation
        CAP_INTELPERC    = 1500,         //!< RealSense (former Intel Perceptual Computing SDK)
        CAP_REALSENSE    = 1500,         //!< Synonym for CAP_INTELPERC
@@ -126,6 +131,7 @@ enum VideoCaptureAPIs {
        CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto)
      };
 
+
 /** @brief cv::VideoCapture generic properties identifier.
 
  Reading / writing properties involves many layers. Some unexpected result might happens along this chain.
@@ -134,7 +140,7 @@ enum VideoCaptureAPIs {
 */
 enum VideoCaptureProperties {
        CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in milliseconds.
-       CAP_PROP_POS_FRAMES     =1, //!< 0-based index of the frame to be decoded/captured next.
+       CAP_PROP_POS_FRAMES     =1, //!< 0-based index of the frame to be decoded/captured next. When the index i is set in RAW mode (CAP_PROP_FORMAT == -1) this will seek to the key frame k, where k <= i.
        CAP_PROP_POS_AVI_RATIO  =2, //!< Relative position of the video file: 0=start of the film, 1=end of the film.
        CAP_PROP_FRAME_WIDTH    =3, //!< Width of the frames in the video stream.
        CAP_PROP_FRAME_HEIGHT   =4, //!< Height of the frames in the video stream.
@@ -182,14 +188,14 @@ enum VideoCaptureProperties {
        CAP_PROP_WB_TEMPERATURE=45, //!< white-balance color temperature
        CAP_PROP_CODEC_PIXEL_FORMAT =46,    //!< (read-only) codec's pixel format. 4-character code - see VideoWriter::fourcc . Subset of [AV_PIX_FMT_*](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/raw.c) or -1 if unknown
        CAP_PROP_BITRATE       =47, //!< (read-only) Video bitrate in kbits/s
-       CAP_PROP_ORIENTATION_META=48, //!< (read-only) Frame rotation defined by stream meta (applicable for FFmpeg back-end only)
-       CAP_PROP_ORIENTATION_AUTO=49, //!< if true - rotates output frames of CvCapture considering video file's metadata  (applicable for FFmpeg back-end only) (https://github.com/opencv/opencv/issues/15499)
+       CAP_PROP_ORIENTATION_META=48, //!< (read-only) Frame rotation defined by stream meta (applicable for FFmpeg and AVFoundation back-ends only)
+       CAP_PROP_ORIENTATION_AUTO=49, //!< if true - rotates output frames of CvCapture considering video file's metadata  (applicable for FFmpeg and AVFoundation back-ends only) (https://github.com/opencv/opencv/issues/15499)
        CAP_PROP_HW_ACCELERATION=50, //!< (**open-only**) Hardware acceleration type (see #VideoAccelerationType). Setting supported only via `params` parameter in cv::VideoCapture constructor / .open() method. Default value is backend-specific.
        CAP_PROP_HW_DEVICE      =51, //!< (**open-only**) Hardware device index (select GPU if multiple available). Device enumeration is acceleration type specific.
        CAP_PROP_HW_ACCELERATION_USE_OPENCL=52, //!< (**open-only**) If non-zero, create new OpenCL context and bind it to current thread. The OpenCL context created with Video Acceleration context attached it (if not attached yet) for optimized GPU data copy between HW accelerated decoder and cv::UMat.
-       CAP_PROP_OPEN_TIMEOUT_MSEC=53, //!< (**open-only**) timeout in milliseconds for opening a video capture (applicable for FFmpeg back-end only)
-       CAP_PROP_READ_TIMEOUT_MSEC=54, //!< (**open-only**) timeout in milliseconds for reading from a video capture (applicable for FFmpeg back-end only)
-       CAP_PROP_STREAM_OPEN_TIME_USEC =55, //<! (read-only) time in microseconds since Jan 1 1970 when stream was opened. Applicable for FFmpeg backend only. Useful for RTSP and other live streams
+       CAP_PROP_OPEN_TIMEOUT_MSEC=53, //!< (**open-only**) timeout in milliseconds for opening a video capture (applicable for FFmpeg and GStreamer back-ends only)
+       CAP_PROP_READ_TIMEOUT_MSEC=54, //!< (**open-only**) timeout in milliseconds for reading from a video capture (applicable for FFmpeg and GStreamer back-ends only)
+       CAP_PROP_STREAM_OPEN_TIME_USEC =55, //!< (read-only) time in microseconds since Jan 1 1970 when stream was opened. Applicable for FFmpeg backend only. Useful for RTSP and other live streams
        CAP_PROP_VIDEO_TOTAL_CHANNELS = 56, //!< (read-only) Number of video channels
        CAP_PROP_VIDEO_STREAM = 57, //!< (**open-only**) Specify video stream, 0-based index. Use -1 to disable video stream from file or IP cameras. Default value is 0.
        CAP_PROP_AUDIO_STREAM = 58, //!< (**open-only**) Specify stream in multi-language media files, -1 - disable audio processing or microphone. Default value is -1.
@@ -219,10 +225,13 @@ enum VideoWriterProperties {
   VIDEOWRITER_PROP_NSTRIPES = 3,   //!< Number of stripes for parallel encoding. -1 for auto detection.
   VIDEOWRITER_PROP_IS_COLOR = 4,   //!< If it is not zero, the encoder will expect and encode color frames, otherwise it
                                    //!< will work with grayscale frames.
-  VIDEOWRITER_PROP_DEPTH = 5,      //!< Defaults to CV_8U.
+  VIDEOWRITER_PROP_DEPTH = 5,      //!< Defaults to \ref CV_8U.
   VIDEOWRITER_PROP_HW_ACCELERATION = 6, //!< (**open-only**) Hardware acceleration type (see #VideoAccelerationType). Setting supported only via `params` parameter in VideoWriter constructor / .open() method. Default value is backend-specific.
   VIDEOWRITER_PROP_HW_DEVICE       = 7, //!< (**open-only**) Hardware device index (select GPU if multiple available). Device enumeration is acceleration type specific.
   VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL= 8, //!< (**open-only**) If non-zero, create new OpenCL context and bind it to current thread. The OpenCL context created with Video Acceleration context attached it (if not attached yet) for optimized GPU data copy between cv::UMat and HW accelerated encoder.
+  VIDEOWRITER_PROP_RAW_VIDEO = 9, //!< (**open-only**) Set to non-zero to enable encapsulation of an encoded raw video stream. Each raw encoded video frame should be passed to VideoWriter::write() as single row or column of a \ref CV_8UC1 Mat. \note If the key frame interval is not 1 then it must be manually specified by the user. This can either be performed during initialization passing \ref VIDEOWRITER_PROP_KEY_INTERVAL as one of the extra encoder params  to \ref VideoWriter::VideoWriter(const String &, int, double, const Size &, const std::vector< int > &params) or afterwards by setting the \ref VIDEOWRITER_PROP_KEY_FLAG with \ref VideoWriter::set() before writing each frame. FFMpeg backend only.
+  VIDEOWRITER_PROP_KEY_INTERVAL = 10, //!< (**open-only**) Set the key frame interval using raw video encapsulation (\ref VIDEOWRITER_PROP_RAW_VIDEO != 0). Defaults to 1 when not set. FFMpeg backend only.
+  VIDEOWRITER_PROP_KEY_FLAG = 11, //!< Set to non-zero to signal that the following frames are key frames or zero if not, when encapsulating raw video (\ref VIDEOWRITER_PROP_RAW_VIDEO != 0). FFMpeg backend only.
 #ifndef CV_DOXYGEN
   CV__VIDEOWRITER_PROP_LATEST
 #endif
@@ -305,6 +314,10 @@ enum { CAP_PROP_OPENNI_OUTPUT_MODE       = 100,
        CAP_PROP_OPENNI2_MIRROR           = 111
      };
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable: 5054 )
+#endif
 //! OpenNI shortcuts
 enum { CAP_OPENNI_IMAGE_GENERATOR_PRESENT         = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_GENERATOR_PRESENT,
        CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE     = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_OUTPUT_MODE,
@@ -315,6 +328,9 @@ enum { CAP_OPENNI_IMAGE_GENERATOR_PRESENT         = CAP_OPENNI_IMAGE_GENERATOR +
        CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION_ON = CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION,
        CAP_OPENNI_IR_GENERATOR_PRESENT            = CAP_OPENNI_IR_GENERATOR + CAP_PROP_OPENNI_GENERATOR_PRESENT,
      };
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
 
 //! OpenNI data given from depth generator
 enum { CAP_OPENNI_DEPTH_MAP         = 0, //!< Depth values in mm (CV_16UC1)
@@ -961,7 +977,7 @@ public:
 
     After this call use VideoCapture::retrieve() to decode and fetch frame data.
     */
-    static /*CV_WRAP*/
+    CV_WRAP static
     bool waitAny(
             const std::vector<VideoCapture>& streams,
             CV_OUT std::vector<int>& readyIndex,
@@ -1023,6 +1039,9 @@ public:
     - Most codecs are lossy. If you want lossless video file you need to use a lossless codecs
       (eg. FFMPEG FFV1, Huffman HFYU, Lagarith LAGS, etc...)
     - If FFMPEG is enabled, using `codec=0; fps=0;` you can create an uncompressed (raw) video file.
+    - If FFMPEG is used, we allow frames of odd width or height, but in this case we truncate
+      the rightmost column/the bottom row. Probably, this should be handled more elegantly,
+      but some internal functions inside FFMPEG swscale require even width/height.
     */
     CV_WRAP VideoWriter(const String& filename, int fourcc, double fps,
                 Size frameSize, bool isColor = true);

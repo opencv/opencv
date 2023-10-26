@@ -216,7 +216,7 @@ if(NOT ${found})
           message(STATUS "  PYTHON3_NUMPY_INCLUDE_DIRS")
         else()
           # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
-          execute_process(COMMAND "${_executable}" -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print(os.pathsep.join(numpy.distutils.misc_util.get_numpy_include_dirs()))"
+          execute_process(COMMAND "${_executable}" -c "import numpy; print(numpy.get_include())"
                           RESULT_VARIABLE _numpy_process
                           OUTPUT_VARIABLE _numpy_include_dirs
                           OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -258,7 +258,7 @@ if(NOT ${found})
   set(${include_path} "${_include_path}" CACHE INTERNAL "")
   set(${include_dir} "${_include_dir}" CACHE PATH "Python include dir")
   set(${include_dir2} "${_include_dir2}" CACHE PATH "Python include dir 2")
-  set(${packages_path} "${_packages_path}" CACHE PATH "Where to install the python packages.")
+  set(${packages_path} "${_packages_path}" CACHE STRING "Where to install the python packages.")
   set(${numpy_include_dirs} ${_numpy_include_dirs} CACHE PATH "Path to numpy headers")
   set(${numpy_version} "${_numpy_version}" CACHE INTERNAL "")
 endif()
@@ -296,4 +296,11 @@ elseif(PYTHON3_EXECUTABLE AND PYTHON3INTERP_FOUND)
     # Use Python 3 as fallback Python interpreter (if there is no Python 2)
     set(PYTHON_DEFAULT_AVAILABLE "TRUE")
     set(PYTHON_DEFAULT_EXECUTABLE "${PYTHON3_EXECUTABLE}")
+endif()
+
+if(PYTHON_DEFAULT_AVAILABLE)
+  execute_process(COMMAND ${PYTHON_DEFAULT_EXECUTABLE} --version
+                  OUTPUT_VARIABLE PYTHON_DEFAULT_VERSION
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" PYTHON_DEFAULT_VERSION "${PYTHON_DEFAULT_VERSION}")
 endif()

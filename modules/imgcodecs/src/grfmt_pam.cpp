@@ -695,14 +695,14 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
 
     /* write header */
     tmp = 0;
-    tmp += sprintf( buffer, "P7\n");
-    tmp += sprintf( buffer + tmp, "WIDTH %d\n", width);
-    tmp += sprintf( buffer + tmp, "HEIGHT %d\n", height);
-    tmp += sprintf( buffer + tmp, "DEPTH %d\n", img.channels());
-    tmp += sprintf( buffer + tmp, "MAXVAL %d\n", (1 << img.elemSize1()*8) - 1);
+    tmp += snprintf( buffer, bufsize, "P7\n");
+    tmp += snprintf( buffer + tmp, bufsize - tmp, "WIDTH %d\n", width);
+    tmp += snprintf( buffer + tmp, bufsize - tmp, "HEIGHT %d\n", height);
+    tmp += snprintf( buffer + tmp, bufsize - tmp, "DEPTH %d\n", img.channels());
+    tmp += snprintf( buffer + tmp, bufsize - tmp, "MAXVAL %d\n", (1 << img.elemSize1()*8) - 1);
     if (fmt)
-        tmp += sprintf( buffer + tmp, "TUPLTYPE %s\n", fmt->name );
-    sprintf( buffer + tmp, "ENDHDR\n" );
+        tmp += snprintf( buffer + tmp, bufsize - tmp, "TUPLTYPE %s\n", fmt->name );
+    snprintf( buffer + tmp, bufsize - tmp, "ENDHDR\n" );
 
     strm.putBytes( buffer, (int)strlen(buffer) );
     /* write data */

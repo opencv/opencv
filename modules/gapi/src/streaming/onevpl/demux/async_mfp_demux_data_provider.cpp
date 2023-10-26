@@ -745,7 +745,7 @@ bool MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfx_bitstre
             GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
                                       "cannot find appropriate dmux buffer by key: " <<
                                       static_cast<void*>(out_bitsream->Data));
-            GAPI_Assert(false && "invalid bitstream key");
+            GAPI_Error("invalid bitstream key");
         }
         if (it->second) {
             it->second->Unlock();
@@ -788,20 +788,20 @@ bool MFPAsyncDemuxDataProvider::empty() const {
 #else // _WIN32
 
 MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string&) {
-    GAPI_Assert(false && "Unsupported: Microsoft Media Foundation is not available");
+    GAPI_Error("Unsupported: Microsoft Media Foundation is not available");
 }
 IDataProvider::mfx_codec_id_type MFPAsyncDemuxDataProvider::get_mfx_codec_id() const {
-    GAPI_Assert(false && "Unsupported: Microsoft Media Foundation is not available");
+    GAPI_Error("Unsupported: Microsoft Media Foundation is not available");
     return std::numeric_limits<mfx_codec_id_type>::max();
 }
 
 bool MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &) {
-    GAPI_Assert(false && "Unsupported: Microsoft Media Foundation is not available");
+    GAPI_Error("Unsupported: Microsoft Media Foundation is not available");
     return false;
 }
 
 bool MFPAsyncDemuxDataProvider::empty() const {
-    GAPI_Assert(false && "Unsupported: Microsoft Media Foundation is not available");
+    GAPI_Error("Unsupported: Microsoft Media Foundation is not available");
     return true;
 }
 #endif // _WIN32

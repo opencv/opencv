@@ -368,6 +368,29 @@ macro(ocv_glob_modules main_root)
   # resolve dependencies
   __ocv_resolve_dependencies()
 
+  # optionally configure delay load
+  if(MSVC AND BUILD_SHARED_LIBS AND ENABLE_DELAYLOAD AND NOT BUILD_opencv_world)
+    if(${CMAKE_SHARED_LINKER_FLAGS} MATCHES "delayimp.lib")
+      set(DELAYFLAGS "")
+    else()
+      set(DELAYFLAGS "delayimp.lib")
+    endif()
+
+    foreach(mod ${OPENCV_MODULES_BUILD})
+      if(NOT ${mod} STREQUAL "opencv_core" AND NOT ${mod} MATCHES "bindings_generator|python")
+        set(DELAYFLAGS "${DELAYFLAGS} /DELAYLOAD:${mod}${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}.dll")
+      endif()
+    endforeach()
+
+    if(NOT ${CMAKE_SHARED_LINKER_FLAGS} MATCHES "/IGNORE:4199")
+      set(DELAYFLAGS "${DELAYFLAGS} /IGNORE:4199")
+    endif()
+
+    set(CMAKE_EXE_LINKER_FLAGS       "${CMAKE_EXE_LINKER_FLAGS} ${DELAYFLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${DELAYFLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${DELAYFLAGS}")
+  endif()
+
   # create modules
   set(OPENCV_INITIAL_PASS OFF)
   ocv_cmake_hook(PRE_MODULES_CREATE)

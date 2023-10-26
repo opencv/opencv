@@ -11,6 +11,7 @@
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
+#include "op_cann.hpp"
 
 #include "halide_scheduler.hpp"
 
@@ -60,6 +61,11 @@ private:
         }
 #endif
 
+        bool haveBackendCPU_FP16 = false;
+#if defined(__arm64__) && __arm64__
+        haveBackendCPU_FP16 = true;
+#endif
+
         if (haveBackendOpenVINO && openvino::checkTarget(DNN_TARGET_CPU))
         {
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_CPU));
@@ -103,6 +109,9 @@ private:
 
         backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
 
+        if (haveBackendCPU_FP16)
+            backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU_FP16));
+
 #ifdef HAVE_VULKAN
         if (haveVulkan())
             backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
@@ -121,6 +130,10 @@ private:
         {
             backends.push_back(std::make_pair(DNN_BACKEND_TIMVX, DNN_TARGET_NPU));
         }
+#endif
+
+#ifdef HAVE_CANN
+        backends.push_back(std::make_pair(DNN_BACKEND_CANN, DNN_TARGET_NPU));
 #endif
     }
 

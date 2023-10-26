@@ -1418,7 +1418,7 @@ types.
  */
 GAPI_EXPORTS_W GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int type);
 /** @overload
-This function applicable for all threshold types except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
+This function applicable for all threshold types except cv::THRESH_OTSU and cv::THRESH_TRIANGLE
 @note Function textual ID is "org.opencv.core.matrixop.thresholdOT"
 */
 GAPI_EXPORTS_W std::tuple<GMat, GScalar> threshold(const GMat& src, const GScalar& maxval, int type);

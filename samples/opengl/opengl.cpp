@@ -50,12 +50,12 @@ int main(int argc, char* argv[])
     if (argc < 2)
     {
         cout << "Usage: " << argv[0] << " image" << endl;
-        filename = "../data/lena.jpg";
+        filename = "lena.jpg";
     }
     else
         filename = argv[1];
 
-    Mat img = imread(filename);
+    Mat img = imread(samples::findFile(filename));
     if (img.empty())
     {
         cerr << "Can't open image " << filename << endl;

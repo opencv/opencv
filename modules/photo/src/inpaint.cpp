@@ -735,17 +735,13 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
       }\
    }
 
-namespace cv {
-template<> struct DefaultDeleter<IplConvKernel>{ void operator ()(IplConvKernel* obj) const { cvReleaseStructuringElement(&obj); } };
-}
-
 static void
 icvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_img,
            double inpaintRange, int flags )
 {
     cv::Ptr<CvMat> mask, band, f, t, out;
     cv::Ptr<CvPriorityQueueFloat> Heap, Out;
-    cv::Ptr<IplConvKernel> el_cross, el_range;
+    cv::Mat el_range, el_cross; // structuring elements for dilate
 
     CvMat input_hdr, mask_hdr, output_hdr;
     CvMat* input_img, *inpaint_mask, *output_img;
@@ -780,7 +776,7 @@ icvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_
     t.reset(cvCreateMat(erows, ecols, CV_32FC1));
     band.reset(cvCreateMat(erows, ecols, CV_8UC1));
     mask.reset(cvCreateMat(erows, ecols, CV_8UC1));
-    el_cross.reset(cvCreateStructuringElementEx(3,3,1,1,CV_SHAPE_CROSS,NULL));
+    el_cross = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3), cv::Point(1, 1));
 
     cvCopy( input_img, output_img );
     cvSet(mask,cvScalar(KNOWN,0,0,0));
@@ -788,7 +784,7 @@ icvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_
     SET_BORDER1_C1(mask,uchar,0);
     cvSet(f,cvScalar(KNOWN,0,0,0));
     cvSet(t,cvScalar(1.0e6f,0,0,0));
-    cvDilate(mask,band,el_cross,1);   // image with narrow band
+    cv::dilate(cv::cvarrToMat(mask), cv::cvarrToMat(band), el_cross, cv::Point(1, 1));
     Heap=cv::makePtr<CvPriorityQueueFloat>();
     if (!Heap->Init(band))
         return;
@@ -803,9 +799,8 @@ icvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_
     if( flags == cv::INPAINT_TELEA )
     {
         out.reset(cvCreateMat(erows, ecols, CV_8UC1));
-        el_range.reset(cvCreateStructuringElementEx(2*range+1,2*range+1,
-            range,range,CV_SHAPE_RECT,NULL));
-        cvDilate(mask,out,el_range,1);
+        el_range = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(2 * range + 1, 2 * range + 1));
+        cv::dilate(cv::cvarrToMat(mask), cv::cvarrToMat(out), el_range);
         cvSub(out,mask,out,NULL);
         Out=cv::makePtr<CvPriorityQueueFloat>();
         if (!Out->Init(out))

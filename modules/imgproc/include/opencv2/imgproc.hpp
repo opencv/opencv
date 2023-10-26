@@ -842,7 +842,41 @@ enum ColorConversionCodes {
     COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA, //!< equivalent to BGGR Bayer pattern
     COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_COLORCVT_MAX  = 143
+    //! RGB to YUV 4:2:2 family
+
+    COLOR_RGB2YUV_UYVY = 143,
+    COLOR_BGR2YUV_UYVY = 144,
+    COLOR_RGB2YUV_Y422 = COLOR_RGB2YUV_UYVY,
+    COLOR_BGR2YUV_Y422 = COLOR_BGR2YUV_UYVY,
+    COLOR_RGB2YUV_UYNV = COLOR_RGB2YUV_UYVY,
+    COLOR_BGR2YUV_UYNV = COLOR_BGR2YUV_UYVY,
+
+    COLOR_RGBA2YUV_UYVY = 145,
+    COLOR_BGRA2YUV_UYVY = 146,
+    COLOR_RGBA2YUV_Y422 = COLOR_RGBA2YUV_UYVY,
+    COLOR_BGRA2YUV_Y422 = COLOR_BGRA2YUV_UYVY,
+    COLOR_RGBA2YUV_UYNV = COLOR_RGBA2YUV_UYVY,
+    COLOR_BGRA2YUV_UYNV = COLOR_BGRA2YUV_UYVY,
+
+    COLOR_RGB2YUV_YUY2 = 147,
+    COLOR_BGR2YUV_YUY2 = 148,
+    COLOR_RGB2YUV_YVYU = 149,
+    COLOR_BGR2YUV_YVYU = 150,
+    COLOR_RGB2YUV_YUYV = COLOR_RGB2YUV_YUY2,
+    COLOR_BGR2YUV_YUYV = COLOR_BGR2YUV_YUY2,
+    COLOR_RGB2YUV_YUNV = COLOR_RGB2YUV_YUY2,
+    COLOR_BGR2YUV_YUNV = COLOR_BGR2YUV_YUY2,
+
+    COLOR_RGBA2YUV_YUY2 = 151,
+    COLOR_BGRA2YUV_YUY2 = 152,
+    COLOR_RGBA2YUV_YVYU = 153,
+    COLOR_BGRA2YUV_YVYU = 154,
+    COLOR_RGBA2YUV_YUYV = COLOR_RGBA2YUV_YUY2,
+    COLOR_BGRA2YUV_YUYV = COLOR_BGRA2YUV_YUY2,
+    COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2,
+    COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2,
+
+    COLOR_COLORCVT_MAX  = 155
 };
 
 //! @addtogroup imgproc_shape
@@ -3699,10 +3733,10 @@ stored in two planes.
 
 This function only supports YUV420 to RGB conversion as of now.
 
-@param src1: 8-bit image (#CV_8U) of the Y plane.
-@param src2: image containing interleaved U/V plane.
-@param dst: output image.
-@param code: Specifies the type of conversion. It can take any of the following values:
+@param src1 8-bit image (#CV_8U) of the Y plane.
+@param src2 image containing interleaved U/V plane.
+@param dst output image.
+@param code Specifies the type of conversion. It can take any of the following values:
 - #COLOR_YUV2BGR_NV12
 - #COLOR_YUV2RGB_NV12
 - #COLOR_YUV2BGRA_NV12
@@ -4086,7 +4120,7 @@ The function finds the four vertices of a rotated rectangle. This function is us
 rectangle. In C++, instead of using this function, you can directly use RotatedRect::points method. Please
 visit the @ref tutorial_bounding_rotated_ellipses "tutorial on Creating Bounding rotated boxes and ellipses for contours" for more information.
 
-@param box The input rotated rectangle. It may be the output of
+@param box The input rotated rectangle. It may be the output of @ref minAreaRect.
 @param points The output array of four vertices of rectangles.
  */
 CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);

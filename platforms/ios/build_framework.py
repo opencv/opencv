@@ -115,7 +115,7 @@ class Builder:
             if xcode_ver >= 7 and target[1] == 'Catalyst':
                 sdk_path = check_output(["xcodebuild", "-version", "-sdk", "macosx", "Path"]).decode('utf-8').rstrip()
                 c_flags = [
-                    "-target %s-apple-ios13.0-macabi" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
+                    "-target %s-apple-ios14.0-macabi" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
                     "-isysroot %s" % sdk_path,
                     "-iframework %s/System/iOSSupport/System/Library/Frameworks" % sdk_path,
                     "-isystem %s/System/iOSSupport/usr/include" % sdk_path,
@@ -358,7 +358,7 @@ class Builder:
             link_target = target[:target.find("-")] + "-apple-ios" + os.environ['IPHONEOS_DEPLOYMENT_TARGET'] + ("-simulator" if target.endswith("simulator") else "")
         else:
             if target_platform == "catalyst":
-                link_target = "%s-apple-ios13.0-macabi" % target[:target.find("-")]
+                link_target = "%s-apple-ios14.0-macabi" % target[:target.find("-")]
             else:
                 link_target = "%s-apple-darwin" % target[:target.find("-")]
         bitcode_flags = ["-fembed-bitcode", "-Xlinker", "-bitcode_verify"] if is_device and not self.bitcodedisabled else []

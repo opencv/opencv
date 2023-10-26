@@ -179,7 +179,7 @@ static VP8StatusCode ParseOptionalChunks(const uint8_t** const data,
       return VP8_STATUS_BITSTREAM_ERROR;          // Not a valid chunk size.
     }
     // For odd-sized chunk-payload, there's one byte padding at the end.
-    disk_chunk_size = (CHUNK_HEADER_SIZE + chunk_size + 1) & ~1;
+    disk_chunk_size = (CHUNK_HEADER_SIZE + chunk_size + 1) & ~1u;
     total_size += disk_chunk_size;
 
     // Check that total bytes skipped so far does not exceed riff_size.
@@ -658,19 +658,26 @@ uint8_t* WebPDecodeBGRA(const uint8_t* data, size_t data_size,
 uint8_t* WebPDecodeYUV(const uint8_t* data, size_t data_size,
                        int* width, int* height, uint8_t** u, uint8_t** v,
                        int* stride, int* uv_stride) {
-  WebPDecBuffer output;   // only to preserve the side-infos
-  uint8_t* const out = Decode(MODE_YUV, data, data_size,
-                              width, height, &output);
-
-  if (out != NULL) {
-    const WebPYUVABuffer* const buf = &output.u.YUVA;
-    *u = buf->u;
-    *v = buf->v;
-    *stride = buf->y_stride;
-    *uv_stride = buf->u_stride;
-    assert(buf->u_stride == buf->v_stride);
+  // data, width and height are checked by Decode().
+  if (u == NULL || v == NULL || stride == NULL || uv_stride == NULL) {
+    return NULL;
   }
-  return out;
+
+  {
+    WebPDecBuffer output;   // only to preserve the side-infos
+    uint8_t* const out = Decode(MODE_YUV, data, data_size,
+                                width, height, &output);
+
+    if (out != NULL) {
+      const WebPYUVABuffer* const buf = &output.u.YUVA;
+      *u = buf->u;
+      *v = buf->v;
+      *stride = buf->y_stride;
+      *uv_stride = buf->u_stride;
+      assert(buf->u_stride == buf->v_stride);
+    }
+    return out;
+  }
 }
 
 static void DefaultFeatures(WebPBitstreamFeatures* const features) {
@@ -785,6 +792,13 @@ VP8StatusCode WebPDecode(const uint8_t* data, size_t data_size,
 //------------------------------------------------------------------------------
 // Cropping and rescaling.
 
+int WebPCheckCropDimensions(int image_width, int image_height,
+                            int x, int y, int w, int h) {
+  return !(x < 0 || y < 0 || w <= 0 || h <= 0 ||
+           x >= image_width || w > image_width || w > image_width - x ||
+           y >= image_height || h > image_height || h > image_height - y);
+}
+
 int WebPIoInitFromOptions(const WebPDecoderOptions* const options,
                           VP8Io* const io, WEBP_CSP_MODE src_colorspace) {
   const int W = io->width;
@@ -792,7 +806,7 @@ int WebPIoInitFromOptions(const WebPDecoderOptions* const options,
   int x = 0, y = 0, w = W, h = H;
 
   // Cropping
-  io->use_cropping = (options != NULL) && (options->use_cropping > 0);
+  io->use_cropping = (options != NULL) && options->use_cropping;
   if (io->use_cropping) {
     w = options->crop_width;
     h = options->crop_height;
@@ -802,7 +816,7 @@ int WebPIoInitFromOptions(const WebPDecoderOptions* const options,
       x &= ~1;
       y &= ~1;
     }
-    if (x < 0 || y < 0 || w <= 0 || h <= 0 || x + w > W || y + h > H) {
+    if (!WebPCheckCropDimensions(W, H, x, y, w, h)) {
       return 0;  // out of frame boundary error
     }
   }
@@ -814,7 +828,7 @@ int WebPIoInitFromOptions(const WebPDecoderOptions* const options,
   io->mb_h = h;
 
   // Scaling
-  io->use_scaling = (options != NULL) && (options->use_scaling > 0);
+  io->use_scaling = (options != NULL) && options->use_scaling;
   if (io->use_scaling) {
     int scaled_width = options->scaled_width;
     int scaled_height = options->scaled_height;
@@ -835,8 +849,8 @@ int WebPIoInitFromOptions(const WebPDecoderOptions* const options,
 
   if (io->use_scaling) {
     // disable filter (only for large downscaling ratio).
-    io->bypass_filtering = (io->scaled_width < W * 3 / 4) &&
-                           (io->scaled_height < H * 3 / 4);
+    io->bypass_filtering |= (io->scaled_width < W * 3 / 4) &&
+                            (io->scaled_height < H * 3 / 4);
     io->fancy_upsampling = 0;
   }
   return 1;

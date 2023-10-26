@@ -152,6 +152,15 @@ TEST_F(fisheyeTest, distortUndistortPoints)
 
 TEST_F(fisheyeTest, undistortImage)
 {
+    // we use it to reduce patch size for images in testdata
+    auto throwAwayHalf = [](Mat img)
+    {
+        int whalf = img.cols / 2, hhalf = img.rows / 2;
+        Rect tl(0, 0, whalf, hhalf), br(whalf, hhalf, whalf, hhalf);
+        img(tl) = 0;
+        img(br) = 0;
+    };
+
     cv::Matx33d theK = this->K;
     cv::Mat theD = cv::Mat(this->D);
     std::string file = combine(datasets_repository_path, "/calib-3_stereo_from_JY/left/stereo_pair_014.jpg");
@@ -161,32 +170,41 @@ TEST_F(fisheyeTest, undistortImage)
         newK(0, 0) = 100;
         newK(1, 1) = 100;
         cv::fisheye::undistortImage(distorted, undistorted, theK, theD, newK);
-        cv::Mat correct = cv::imread(combine(datasets_repository_path, "new_f_100.png"));
-        if (correct.empty())
-            CV_Assert(cv::imwrite(combine(datasets_repository_path, "new_f_100.png"), undistorted));
-        else
-            EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
+        std::string imageFilename = combine(datasets_repository_path, "new_f_100.png");
+        cv::Mat correct = cv::imread(imageFilename);
+        ASSERT_FALSE(correct.empty()) << "Correct image " << imageFilename.c_str() << " can not be read" << std::endl;
+
+        throwAwayHalf(correct);
+        throwAwayHalf(undistorted);
+
+        EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
     }
     {
         double balance = 1.0;
         cv::fisheye::estimateNewCameraMatrixForUndistortRectify(theK, theD, distorted.size(), cv::noArray(), newK, balance);
         cv::fisheye::undistortImage(distorted, undistorted, theK, theD, newK);
-        cv::Mat correct = cv::imread(combine(datasets_repository_path, "balance_1.0.png"));
-        if (correct.empty())
-            CV_Assert(cv::imwrite(combine(datasets_repository_path, "balance_1.0.png"), undistorted));
-        else
-            EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
+        std::string imageFilename = combine(datasets_repository_path, "balance_1.0.png");
+        cv::Mat correct = cv::imread(imageFilename);
+        ASSERT_FALSE(correct.empty()) << "Correct image " << imageFilename.c_str() << " can not be read" << std::endl;
+
+        throwAwayHalf(correct);
+        throwAwayHalf(undistorted);
+
+        EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
     }
 
     {
         double balance = 0.0;
         cv::fisheye::estimateNewCameraMatrixForUndistortRectify(theK, theD, distorted.size(), cv::noArray(), newK, balance);
         cv::fisheye::undistortImage(distorted, undistorted, theK, theD, newK);
-        cv::Mat correct = cv::imread(combine(datasets_repository_path, "balance_0.0.png"));
-        if (correct.empty())
-            CV_Assert(cv::imwrite(combine(datasets_repository_path, "balance_0.0.png"), undistorted));
-        else
-            EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
+        std::string imageFilename = combine(datasets_repository_path, "balance_0.0.png");
+        cv::Mat correct = cv::imread(imageFilename);
+        ASSERT_FALSE(correct.empty()) << "Correct image " << imageFilename.c_str() << " can not be read" << std::endl;
+
+        throwAwayHalf(correct);
+        throwAwayHalf(undistorted);
+
+        EXPECT_MAT_NEAR(correct, undistorted, 1e-10);
     }
 }
 
@@ -288,7 +306,9 @@ TEST_F(fisheyeTest, undistortAndDistortImage)
     EXPECT_MAT_NEAR(dist_point_4, dist_point_4_gt, 1e-2);
     EXPECT_MAT_NEAR(dist_point_5, dist_point_5_gt, 1e-2);
 
-    CV_Assert(cv::imwrite(combine(datasets_repository_path, "new_distortion.png"), image_projected));
+    // Add the "--test_debug" to arguments for file output
+    if (cvtest::debugLevel > 0)
+        cv::imwrite(combine(datasets_repository_path, "new_distortion.png"), image_projected);
 }
 
 TEST_F(fisheyeTest, jacobians)
@@ -577,9 +597,9 @@ TEST_F(fisheyeTest, EstimateUncertainties)
     cv::internal::EstimateUncertainties(objectPoints, imagePoints, param,  rvec, tvec,
                                         errors, err_std, thresh_cond, check_cond, rms);
 
-    EXPECT_MAT_NEAR(errors.f, cv::Vec2d(1.29837104202046,  1.31565641071524), 1e-10);
-    EXPECT_MAT_NEAR(errors.c, cv::Vec2d(0.890439368129246, 0.816096854937896), 1e-10);
-    EXPECT_MAT_NEAR(errors.k, cv::Vec4d(0.00516248605191506, 0.0168181467500934, 0.0213118690274604, 0.00916010877545648), 1e-10);
+    EXPECT_MAT_NEAR(errors.f, cv::Vec2d(1.34250246865020720, 1.36037536429654530), 1e-10);
+    EXPECT_MAT_NEAR(errors.c, cv::Vec2d(0.92070526160049848, 0.84383585812851514), 1e-10);
+    EXPECT_MAT_NEAR(errors.k, cv::Vec4d(0.0053379581373996041, 0.017389792901700545, 0.022036256089491224, 0.0094714594258908952), 1e-10);
     EXPECT_MAT_NEAR(err_std, cv::Vec2d(0.187475975266883, 0.185678953263995), 1e-10);
     CV_Assert(fabs(rms - 0.263782587133546) < 1e-10);
     CV_Assert(errors.alpha == 0);
@@ -619,19 +639,19 @@ TEST_F(fisheyeTest, stereoRectify)
         0.002076471801477729, 0.006463478587068991, 0.9999769555891836
     );
     cv::Matx34d P1_ref(
-        420.8551870450913, 0, 586.501617798451, 0,
-        0, 420.8551870450913, 374.7667511986098, 0,
+        420.9684016542647, 0, 586.3059567784627, 0,
+        0, 420.9684016542647, 374.8571836462291, 0,
         0, 0, 1, 0
     );
     cv::Matx34d P2_ref(
-        420.8551870450913, 0, 586.501617798451, -41.77758076597302,
-        0, 420.8551870450913, 374.7667511986098, 0,
+        420.9684016542647, 0, 586.3059567784627, -41.78881938824554,
+        0, 420.9684016542647, 374.8571836462291, 0,
         0, 0, 1, 0
     );
     cv::Matx44d Q_ref(
-        1, 0, 0, -586.501617798451,
-        0, 1, 0, -374.7667511986098,
-        0, 0, 0, 420.8551870450913,
+        1, 0, 0, -586.3059567784627,
+        0, 1, 0, -374.8571836462291,
+        0, 0, 0, 420.9684016542647,
         0, 0, 10.07370889670733, -0
     );
 
@@ -686,7 +706,9 @@ TEST_F(fisheyeTest, stereoRectify)
         cv::Mat rectification;
         merge4(l, r, lundist, rundist, rectification);
 
-        cv::imwrite(cv::format("fisheye_rectification_AB_%03d.png", i), rectification);
+        // Add the "--test_debug" to arguments for file output
+        if (cvtest::debugLevel > 0)
+            cv::imwrite(cv::format("fisheye_rectification_AB_%03d.png", i), rectification);
     }
 }
 
@@ -906,7 +928,7 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
 
     std::vector<cv::Point2d> reprojectedImgPts[2] = {std::vector<cv::Point2d>(n_images), std::vector<cv::Point2d>(n_images)};
     size_t totalPoints = 0;
-    float totalMSError[2] = { 0, 0 }, viewMSError[2];
+    double totalMSError[2] = { 0, 0 };
     for( size_t i = 0; i < n_images; i++ )
     {
         cv::Matx33d viewRotMat1, viewRotMat2;
@@ -929,8 +951,10 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
         cv::fisheye::projectPoints(objectPoints[i], reprojectedImgPts[0], viewRotVec1, viewT1, K1, D1, alpha1);
         cv::fisheye::projectPoints(objectPoints[i], reprojectedImgPts[1], viewRotVec2, viewT2, K2, D2, alpha2);
 
-        viewMSError[0] = cv::norm(leftPoints[i], reprojectedImgPts[0], cv::NORM_L2SQR);
-        viewMSError[1] = cv::norm(rightPoints[i], reprojectedImgPts[1], cv::NORM_L2SQR);
+        double viewMSError[2] = {
+            cv::norm(leftPoints[i], reprojectedImgPts[0], cv::NORM_L2SQR),
+            cv::norm(rightPoints[i], reprojectedImgPts[1], cv::NORM_L2SQR)
+        };
 
         size_t n = objectPoints[i].size();
         totalMSError[0] += viewMSError[0];
@@ -985,13 +1009,13 @@ TEST_F(fisheyeTest, estimateNewCameraMatrixForUndistortRectify)
 
     cv::Mat K_new_truth(3, 3, cv::DataType<double>::type);
 
-    K_new_truth.at<double>(0, 0) = 387.4809086880343;
+    K_new_truth.at<double>(0, 0) = 387.5118215642316;
     K_new_truth.at<double>(0, 1) = 0.0;
-    K_new_truth.at<double>(0, 2) = 1036.669802754649;
+    K_new_truth.at<double>(0, 2) = 1033.936556777084;
 
     K_new_truth.at<double>(1, 0) = 0.0;
-    K_new_truth.at<double>(1, 1) = 373.6375700303157;
-    K_new_truth.at<double>(1, 2) = 538.8373261247601;
+    K_new_truth.at<double>(1, 1) = 373.6673784974842;
+    K_new_truth.at<double>(1, 2) = 538.794152656429;
 
     K_new_truth.at<double>(2, 0) = 0.0;
     K_new_truth.at<double>(2, 1) = 0.0;

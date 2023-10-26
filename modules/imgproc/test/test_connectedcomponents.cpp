@@ -81,7 +81,7 @@ void CV_ConnectedComponentsTest::run(int /* start_from */)
     int ccltype[] = { cv::CCL_DEFAULT, cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
 
     string exp_path = string(ts->get_data_path()) + "connectedcomponents/ccomp_exp.png";
-    Mat exp = imread(exp_path, 0);
+    Mat exp = imread(exp_path, IMREAD_GRAYSCALE);
     Mat orig = imread(string(ts->get_data_path()) + "connectedcomponents/concentric_circles.png", 0);
 
     if (orig.empty())

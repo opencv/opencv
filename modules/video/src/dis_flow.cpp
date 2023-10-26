@@ -520,16 +520,16 @@ DISOpticalFlowImpl::PatchInverseSearch_ParBody::PatchInverseSearch_ParBody(DISOp
     v_expand(I0_row_8, I0_row_4_left, I0_row_4_right);                                                                 \
                                                                                                                        \
     /* Compute diffs between I0 and bilinearly interpolated I1: */                                                     \
-    I_diff_left = w00v * v_cvt_f32(v_reinterpret_as_s32(I1_row_4_left)) +                                              \
-                  w01v * v_cvt_f32(v_reinterpret_as_s32(I1_row_shifted_4_left)) +                                      \
-                  w10v * v_cvt_f32(v_reinterpret_as_s32(I1_row_next_4_left)) +                                         \
-                  w11v * v_cvt_f32(v_reinterpret_as_s32(I1_row_next_shifted_4_left)) -                                 \
-                  v_cvt_f32(v_reinterpret_as_s32(I0_row_4_left));                                                      \
-    I_diff_right = w00v * v_cvt_f32(v_reinterpret_as_s32(I1_row_4_right)) +                                            \
-                   w01v * v_cvt_f32(v_reinterpret_as_s32(I1_row_shifted_4_right)) +                                    \
-                   w10v * v_cvt_f32(v_reinterpret_as_s32(I1_row_next_4_right)) +                                       \
-                   w11v * v_cvt_f32(v_reinterpret_as_s32(I1_row_next_shifted_4_right)) -                               \
-                   v_cvt_f32(v_reinterpret_as_s32(I0_row_4_right));
+    I_diff_left = v_sub(v_add(v_mul(w00v, v_cvt_f32(v_reinterpret_as_s32(I1_row_4_left))),                             \
+                  v_mul(w01v, v_cvt_f32(v_reinterpret_as_s32(I1_row_shifted_4_left))),                                 \
+                  v_mul(w10v, v_cvt_f32(v_reinterpret_as_s32(I1_row_next_4_left))),                                    \
+                  v_mul(w11v, v_cvt_f32(v_reinterpret_as_s32(I1_row_next_shifted_4_left)))),                           \
+                  v_cvt_f32(v_reinterpret_as_s32(I0_row_4_left)));                                                     \
+    I_diff_right = v_sub(v_add(v_mul(w00v, v_cvt_f32(v_reinterpret_as_s32(I1_row_4_right))),                           \
+                   v_mul(w01v, v_cvt_f32(v_reinterpret_as_s32(I1_row_shifted_4_right))),                               \
+                   v_mul(w10v, v_cvt_f32(v_reinterpret_as_s32(I1_row_next_4_right))),                                  \
+                   v_mul(w11v, v_cvt_f32(v_reinterpret_as_s32(I1_row_next_shifted_4_right)))),                         \
+                   v_cvt_f32(v_reinterpret_as_s32(I0_row_4_right)));
 
 #define HAL_BILINEAR_8x8_PATCH_EXTRACTION_NEXT_ROW                                                                     \
     I0_ptr += I0_stride;                                                                                               \
@@ -572,9 +572,9 @@ inline float processPatch(float &dst_dUx, float &dst_dUy, uchar *I0_ptr, uchar *
             v_expand(I0y_row, I0y_row_4_left, I0y_row_4_right);
 
             /* Update the sums: */
-            Ux_vec += I_diff_left * v_cvt_f32(I0x_row_4_left) + I_diff_right * v_cvt_f32(I0x_row_4_right);
-            Uy_vec += I_diff_left * v_cvt_f32(I0y_row_4_left) + I_diff_right * v_cvt_f32(I0y_row_4_right);
-            SSD_vec += I_diff_left * I_diff_left + I_diff_right * I_diff_right;
+            Ux_vec = v_add(Ux_vec, v_add(v_mul(I_diff_left, v_cvt_f32(I0x_row_4_left)), v_mul(I_diff_right, v_cvt_f32(I0x_row_4_right))));
+            Uy_vec = v_add(Uy_vec, v_add(v_mul(I_diff_left, v_cvt_f32(I0y_row_4_left)), v_mul(I_diff_right, v_cvt_f32(I0y_row_4_right))));
+            SSD_vec = v_add(SSD_vec, v_add(v_mul(I_diff_left, I_diff_left), v_mul(I_diff_right, I_diff_right)));
 
             I0x_ptr += I0_stride;
             I0y_ptr += I0_stride;
@@ -640,10 +640,10 @@ inline float processPatchMeanNorm(float &dst_dUx, float &dst_dUy, uchar *I0_ptr,
             v_expand(I0y_row, I0y_row_4_left, I0y_row_4_right);
 
             /* Update the sums: */
-            sum_I0x_mul_vec += I_diff_left * v_cvt_f32(I0x_row_4_left) + I_diff_right * v_cvt_f32(I0x_row_4_right);
-            sum_I0y_mul_vec += I_diff_left * v_cvt_f32(I0y_row_4_left) + I_diff_right * v_cvt_f32(I0y_row_4_right);
-            sum_diff_sq_vec += I_diff_left * I_diff_left + I_diff_right * I_diff_right;
-            sum_diff_vec += I_diff_left + I_diff_right;
+            sum_I0x_mul_vec = v_add(sum_I0x_mul_vec, v_add(v_mul(I_diff_left, v_cvt_f32(I0x_row_4_left)), v_mul(I_diff_right, v_cvt_f32(I0x_row_4_right))));
+            sum_I0y_mul_vec = v_add(sum_I0y_mul_vec, v_add(v_mul(I_diff_left, v_cvt_f32(I0y_row_4_left)), v_mul(I_diff_right, v_cvt_f32(I0y_row_4_right))));
+            sum_diff_sq_vec = v_add(sum_diff_sq_vec, v_add(v_mul(I_diff_left, I_diff_left), v_mul(I_diff_right, I_diff_right)));
+            sum_diff_vec = v_add(sum_diff_vec, v_add(I_diff_left, I_diff_right));
 
             I0x_ptr += I0_stride;
             I0y_ptr += I0_stride;
@@ -692,7 +692,7 @@ inline float computeSSD(uchar *I0_ptr, uchar *I1_ptr, int I0_stride, int I1_stri
         for (int row = 0; row < 8; row++)
         {
             HAL_PROCESS_BILINEAR_8x8_PATCH_EXTRACTION;
-            SSD_vec += I_diff_left * I_diff_left + I_diff_right * I_diff_right;
+            SSD_vec = v_add(SSD_vec, v_add(v_mul(I_diff_left, I_diff_left), v_mul(I_diff_right, I_diff_right)));
             HAL_BILINEAR_8x8_PATCH_EXTRACTION_NEXT_ROW;
         }
         SSD = v_reduce_sum(SSD_vec);
@@ -728,8 +728,8 @@ inline float computeSSDMeanNorm(uchar *I0_ptr, uchar *I1_ptr, int I0_stride, int
         for (int row = 0; row < 8; row++)
         {
             HAL_PROCESS_BILINEAR_8x8_PATCH_EXTRACTION;
-            sum_diff_sq_vec += I_diff_left * I_diff_left + I_diff_right * I_diff_right;
-            sum_diff_vec += I_diff_left + I_diff_right;
+            sum_diff_sq_vec = v_add(sum_diff_sq_vec, v_add(v_mul(I_diff_left, I_diff_left), v_mul(I_diff_right, I_diff_right)));
+            sum_diff_vec = v_add(sum_diff_vec, v_add(I_diff_left, I_diff_right));
             HAL_BILINEAR_8x8_PATCH_EXTRACTION_NEXT_ROW;
         }
         sum_diff = v_reduce_sum(sum_diff_vec);

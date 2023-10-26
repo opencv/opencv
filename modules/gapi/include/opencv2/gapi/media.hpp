@@ -33,6 +33,7 @@ namespace cv {
  * @brief Extra G-API data structures used to pass input/output data
  * to the graph for processing.
  */
+
 /**
  * @brief cv::MediaFrame class represents an image/media frame
  * obtained from an external source.
@@ -242,11 +243,11 @@ public:
     // The default implementation does nothing
     virtual cv::util::any blobParams() const;
     virtual void serialize(cv::gapi::s11n::IOStream&) {
-        GAPI_Assert(false && "Generic serialize method of MediaFrame::IAdapter does nothing by default. "
+        GAPI_Error("Generic serialize method of MediaFrame::IAdapter does nothing by default. "
                              "Please, implement it in derived class to properly serialize the object.");
     }
     virtual void deserialize(cv::gapi::s11n::IIStream&) {
-        GAPI_Assert(false && "Generic deserialize method of MediaFrame::IAdapter does nothing by default. "
+        GAPI_Error("Generic deserialize method of MediaFrame::IAdapter does nothing by default. "
                              "Please, implement it in derived class to properly deserialize the object.");
     }
 };

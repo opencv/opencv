@@ -150,7 +150,7 @@ void eltwise_op(const Stream& stream, TensorSpan<T> output, TensorView<T> x, Ten
          */
         for (int r = 0; r < output.rank(); r++)
         {
-            while (x.get_axis_size(r) == 1 && y.get_axis_size(r) == 1) {
+            while (x.rank() > r && y.rank() > r && x.get_axis_size(r) == 1 && y.get_axis_size(r) == 1) {
                 CV_Assert(output.get_axis_size(r) == 1);
 
                 x.squeeze(r);
@@ -183,6 +183,9 @@ void eltwise_op(const Stream& stream, TensorSpan<T> output, TensorView<T> x, Ten
                     auto new_size = inShape1[i] * inShape1[j];
                     inShape1[i] = new_size;
                     inShape2[i] = new_size;
+                    // outShape should be changed after merged
+                    auto output_new_size = outShape[i] * outShape[j];
+                    outShape[i] = output_new_size;
 
                     /* delete axis `j` */
                     inShape1.erase(std::begin(inShape1) + j);

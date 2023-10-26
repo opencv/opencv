@@ -60,7 +60,7 @@ private:
         return ret;
     }
     mfxVariant create_impl(const std::string&, const std::string&) {
-        GAPI_Assert(false && "Something wrong: you should not create mfxVariant "
+        GAPI_Error("Something wrong: you should not create mfxVariant "
                              "from string directly - native type is lost in this case");
     }
 };
@@ -173,7 +173,7 @@ void extract_optional_param_by_name(const std::string &name,
             [&out_param](int64_t value)   { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
             [&out_param](float_t value)   { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
             [&out_param](double_t value)  { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
-            [&out_param](void*)     { GAPI_Assert(false && "`void*` is unsupported type");  },
+            [&out_param](void*)     { GAPI_Error("`void*` is unsupported type");  },
             [&out_param](const std::string& value) {
                 out_param = cv::util::make_optional(strtoull_or_throw(value.c_str()));
             }),
@@ -189,7 +189,7 @@ unsigned long strtoul_or_throw(const char* str) {
         ((ret == ULONG_MAX) && errno == ERANGE)) {
             // nothing parsed from the string, handle errors or exit
         GAPI_LOG_WARNING(nullptr, "strtoul failed for: " << str);
-        GAPI_Assert(false && "strtoul_or_throw");
+        GAPI_Error("strtoul_or_throw");
     }
     return ret;
 }
@@ -202,7 +202,7 @@ size_t strtoull_or_throw(const char* str) {
         ((ret == ULLONG_MAX) && errno == ERANGE)) {
             // nothing parsed from the string, handle errors or exit
         GAPI_LOG_WARNING(nullptr, "strtoull failed for: " << str);
-        GAPI_Assert(false && "strtoull_or_throw");
+        GAPI_Error("strtoull_or_throw");
     }
     return ret;
 }
@@ -215,7 +215,7 @@ int64_t strtoll_or_throw(const char* str) {
         ((ret == LONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
             // nothing parsed from the string, handle errors or exit
         GAPI_LOG_WARNING(nullptr, "strtoll failed for: " << str);
-        GAPI_Assert(false && "strtoll_or_throw");
+        GAPI_Error("strtoll_or_throw");
     }
     return ret;
 }

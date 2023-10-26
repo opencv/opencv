@@ -34,7 +34,7 @@
 #include <errno.h>
 #include <io.h>
 #include <stdio.h>
-#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__ || defined __GNU__
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -343,7 +343,7 @@ private:
     Impl& operator=(const Impl&); // disabled
 };
 
-#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__ || defined __GNU__
 
 struct FileLock::Impl
 {
@@ -457,7 +457,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             default_cache_path = "/tmp/";
             CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
         }
-#elif defined __linux__ || defined __HAIKU__ || defined __FreeBSD__
+#elif defined __linux__ || defined __HAIKU__ || defined __FreeBSD__ || defined __GNU__
         // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
         if (default_cache_path.empty())
         {
@@ -503,7 +503,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             if (utils::fs::isDirectory(default_cache_path))
             {
                 cv::String default_cache_path_base = utils::fs::join(default_cache_path, "opencv");
-                default_cache_path = utils::fs::join(default_cache_path_base, CVAUX_STR(CV_VERSION_MAJOR) "." CVAUX_STR(CV_VERSION_MINOR) CV_VERSION_STATUS);
+                default_cache_path = utils::fs::join(default_cache_path_base, "4.x" CV_VERSION_STATUS);
                 if (utils::getConfigurationParameterBool("OPENCV_CACHE_SHOW_CLEANUP_MESSAGE", true)
                     && !utils::fs::isDirectory(default_cache_path))
                 {
