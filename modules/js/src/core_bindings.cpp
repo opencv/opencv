@@ -70,24 +70,26 @@
 
 #include <emscripten/bind.h>
 
-@INCLUDES@
+@INCLUDES @
 #include "../../../modules/core/src/parallel_impl.hpp"
 
 #ifdef TEST_WASM_INTRIN
 #include "../../../modules/core/include/opencv2/core/hal/intrin.hpp"
 #include "../../../modules/core/include/opencv2/core/utils/trace.hpp"
 #include "../../../modules/ts/include/opencv2/ts/ts_gtest.h"
-namespace cv {
-namespace hal {
+    namespace cv
+{
+    namespace hal
+    {
 #include "../../../modules/core/test/test_intrin_utils.hpp"
-}
+    }
 }
 #endif
 
 using namespace emscripten;
 using namespace cv;
 
-using namespace cv::segmentation;  // FIXIT
+using namespace cv::segmentation; // FIXIT
 
 #ifdef HAVE_OPENCV_OBJDETECT
 using namespace cv::aruco;
@@ -108,49 +110,51 @@ typedef std::string string;
 
 namespace binding_utils
 {
-    template<typename classT, typename enumT>
-    static inline typename std::underlying_type<enumT>::type classT::* underlying_ptr(enumT classT::* enum_ptr)
+    template <typename classT, typename enumT>
+    static inline typename std::underlying_type<enumT>::type classT::*underlying_ptr(enumT classT::*enum_ptr)
     {
         return reinterpret_cast<typename std::underlying_type<enumT>::type classT::*>(enum_ptr);
     }
 
-    template<typename T>
-    emscripten::val matData(const cv::Mat& mat)
+    template <typename T>
+    emscripten::val matData(const cv::Mat &mat)
     {
-        return emscripten::val(emscripten::memory_view<T>((mat.total()*mat.elemSize())/sizeof(T),
-                               (T*)mat.data));
+        return emscripten::val(emscripten::memory_view<T>((mat.total() * mat.elemSize()) / sizeof(T),
+                                                          (T *)mat.data));
     }
 
-    template<typename T>
-    emscripten::val matPtr(const cv::Mat& mat, int i)
+    template <typename T>
+    emscripten::val matPtr(const cv::Mat &mat, int i)
     {
         return emscripten::val(emscripten::memory_view<T>(mat.step1(0), mat.ptr<T>(i)));
     }
 
-    template<typename T>
-    emscripten::val matPtr(const cv::Mat& mat, int i, int j)
+    template <typename T>
+    emscripten::val matPtr(const cv::Mat &mat, int i, int j)
     {
-        return emscripten::val(emscripten::memory_view<T>(mat.step1(1), mat.ptr<T>(i,j)));
+        return emscripten::val(emscripten::memory_view<T>(mat.step1(1), mat.ptr<T>(i, j)));
     }
 
-    cv::Mat* createMat(int rows, int cols, int type, intptr_t data, size_t step)
+    cv::Mat *createMat(int rows, int cols, int type, intptr_t data, size_t step)
     {
-        return new cv::Mat(rows, cols, type, reinterpret_cast<void*>(data), step);
+        return new cv::Mat(rows, cols, type, reinterpret_cast<void *>(data), step);
     }
 
-    static emscripten::val getMatSize(const cv::Mat& mat)
+    static emscripten::val getMatSize(const cv::Mat &mat)
     {
         emscripten::val size = emscripten::val::array();
-        for (int i = 0; i < mat.dims; i++) {
+        for (int i = 0; i < mat.dims; i++)
+        {
             size.call<void>("push", mat.size[i]);
         }
         return size;
     }
 
-    static emscripten::val getMatStep(const cv::Mat& mat)
+    static emscripten::val getMatStep(const cv::Mat &mat)
     {
         emscripten::val step = emscripten::val::array();
-        for (int i = 0; i < mat.dims; i++) {
+        for (int i = 0; i < mat.dims; i++)
+        {
             step.call<void>("push", mat.step[i]);
         }
         return step;
@@ -166,22 +170,22 @@ namespace binding_utils
         return Mat(cv::Mat::eye(size, type));
     }
 
-    void convertTo(const Mat& obj, Mat& m, int rtype, double alpha, double beta)
+    void convertTo(const Mat &obj, Mat &m, int rtype, double alpha, double beta)
     {
         obj.convertTo(m, rtype, alpha, beta);
     }
 
-    void convertTo(const Mat& obj, Mat& m, int rtype)
+    void convertTo(const Mat &obj, Mat &m, int rtype)
     {
         obj.convertTo(m, rtype);
     }
 
-    void convertTo(const Mat& obj, Mat& m, int rtype, double alpha)
+    void convertTo(const Mat &obj, Mat &m, int rtype, double alpha)
     {
         obj.convertTo(m, rtype, alpha);
     }
 
-    Size matSize(const cv::Mat& mat)
+    Size matSize(const cv::Mat &mat)
     {
         return mat.size();
     }
@@ -193,7 +197,7 @@ namespace binding_utils
 
     cv::Mat matZeros(cv::Size arg0, int arg1)
     {
-        return cv::Mat::zeros(arg0,arg1);
+        return cv::Mat::zeros(arg0, arg1);
     }
 
     cv::Mat matOnes(int arg0, int arg1, int arg2)
@@ -206,73 +210,74 @@ namespace binding_utils
         return cv::Mat::ones(arg0, arg1);
     }
 
-    double matDot(const cv::Mat& obj, const Mat& mat)
+    double matDot(const cv::Mat &obj, const Mat &mat)
     {
-        return  obj.dot(mat);
+        return obj.dot(mat);
     }
 
-    Mat matMul(const cv::Mat& obj, const Mat& mat, double scale)
+    Mat matMul(const cv::Mat &obj, const Mat &mat, double scale)
     {
-        return  Mat(obj.mul(mat, scale));
+        return Mat(obj.mul(mat, scale));
     }
 
-    Mat matT(const cv::Mat& obj)
+    Mat matT(const cv::Mat &obj)
     {
-        return  Mat(obj.t());
+        return Mat(obj.t());
     }
 
-    Mat matInv(const cv::Mat& obj, int type)
+    Mat matInv(const cv::Mat &obj, int type)
     {
-        return  Mat(obj.inv(type));
+        return Mat(obj.inv(type));
     }
 
-    void matCopyTo(const cv::Mat& obj, cv::Mat& mat)
+    void matCopyTo(const cv::Mat &obj, cv::Mat &mat)
     {
         return obj.copyTo(mat);
     }
 
-    void matCopyTo(const cv::Mat& obj, cv::Mat& mat, const cv::Mat& mask)
+    void matCopyTo(const cv::Mat &obj, cv::Mat &mat, const cv::Mat &mask)
     {
         return obj.copyTo(mat, mask);
     }
 
-    Mat matDiag(const cv::Mat& obj, int d)
+    Mat matDiag(const cv::Mat &obj, int d)
     {
         return obj.diag(d);
     }
 
-    Mat matDiag(const cv::Mat& obj)
+    Mat matDiag(const cv::Mat &obj)
     {
         return obj.diag();
     }
 
-    void matSetTo(cv::Mat& obj, const cv::Scalar& s)
+    void matSetTo(cv::Mat &obj, const cv::Scalar &s)
     {
         obj.setTo(s);
     }
 
-    void matSetTo(cv::Mat& obj, const cv::Scalar& s, const cv::Mat& mask)
+    void matSetTo(cv::Mat &obj, const cv::Scalar &s, const cv::Mat &mask)
     {
         obj.setTo(s, mask);
     }
 
-    emscripten::val rotatedRectPoints(const cv::RotatedRect& obj)
+    emscripten::val rotatedRectPoints(const cv::RotatedRect &obj)
     {
         cv::Point2f points[4];
         obj.points(points);
         emscripten::val pointsArray = emscripten::val::array();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; i++)
+        {
             pointsArray.call<void>("push", points[i]);
         }
         return pointsArray;
     }
 
-    Rect rotatedRectBoundingRect(const cv::RotatedRect& obj)
+    Rect rotatedRectBoundingRect(const cv::RotatedRect &obj)
     {
         return obj.boundingRect();
     }
 
-    Rect2f rotatedRectBoundingRect2f(const cv::RotatedRect& obj)
+    Rect2f rotatedRectBoundingRect2f(const cv::RotatedRect &obj)
     {
         return obj.boundingRect2f();
     }
@@ -291,14 +296,14 @@ namespace binding_utils
         Point maxLoc;
     };
 
-    MinMaxLoc minMaxLoc(const cv::Mat& src, const cv::Mat& mask)
+    MinMaxLoc minMaxLoc(const cv::Mat &src, const cv::Mat &mask)
     {
         MinMaxLoc result;
         cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc, mask);
         return result;
     }
 
-    MinMaxLoc minMaxLoc_1(const cv::Mat& src)
+    MinMaxLoc minMaxLoc_1(const cv::Mat &src)
     {
         MinMaxLoc result;
         cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc);
@@ -313,14 +318,14 @@ namespace binding_utils
     };
 
 #ifdef HAVE_OPENCV_IMGPROC
-    Circle minEnclosingCircle(const cv::Mat& points)
+    Circle minEnclosingCircle(const cv::Mat &points)
     {
         Circle circle;
         cv::minEnclosingCircle(points, circle.center, circle.radius);
         return circle;
     }
 
-    int floodFill_withRect_helper(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6 = Scalar(), Scalar arg7 = Scalar(), int arg8 = 4)
+    int floodFill_withRect_helper(cv::Mat &arg1, cv::Mat &arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6 = Scalar(), Scalar arg7 = Scalar(), int arg8 = 4)
     {
         cv::Rect rect;
 
@@ -334,29 +339,34 @@ namespace binding_utils
         return rc;
     }
 
-    int floodFill_wrapper(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6, Scalar arg7, int arg8) {
+    int floodFill_wrapper(cv::Mat &arg1, cv::Mat &arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6, Scalar arg7, int arg8)
+    {
         return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
 
-    int floodFill_wrapper_1(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6, Scalar arg7) {
+    int floodFill_wrapper_1(cv::Mat &arg1, cv::Mat &arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6, Scalar arg7)
+    {
         return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
 
-    int floodFill_wrapper_2(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6) {
+    int floodFill_wrapper_2(cv::Mat &arg1, cv::Mat &arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6)
+    {
         return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5, arg6);
     }
 
-    int floodFill_wrapper_3(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5) {
+    int floodFill_wrapper_3(cv::Mat &arg1, cv::Mat &arg2, Point arg3, Scalar arg4, emscripten::val arg5)
+    {
         return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5);
     }
 
-    int floodFill_wrapper_4(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4) {
+    int floodFill_wrapper_4(cv::Mat &arg1, cv::Mat &arg2, Point arg3, Scalar arg4)
+    {
         return cv::floodFill(arg1, arg2, arg3, arg4);
     }
 #endif
 
 #ifdef HAVE_OPENCV_VIDEO
-    emscripten::val CamShiftWrapper(const cv::Mat& arg1, Rect& arg2, TermCriteria arg3)
+    emscripten::val CamShiftWrapper(const cv::Mat &arg1, Rect &arg2, TermCriteria arg3)
     {
         RotatedRect rotatedRect = cv::CamShift(arg1, arg2, arg3);
         emscripten::val result = emscripten::val::array();
@@ -365,7 +375,7 @@ namespace binding_utils
         return result;
     }
 
-    emscripten::val meanShiftWrapper(const cv::Mat& arg1, Rect& arg2, TermCriteria arg3)
+    emscripten::val meanShiftWrapper(const cv::Mat &arg1, Rect &arg2, TermCriteria arg3)
     {
         int n = cv::meanShift(arg1, arg2, arg3);
         emscripten::val result = emscripten::val::array();
@@ -374,13 +384,12 @@ namespace binding_utils
         return result;
     }
 
-
-    void Tracker_init_wrapper(cv::Tracker& arg0, const cv::Mat& arg1, const Rect& arg2)
+    void Tracker_init_wrapper(cv::Tracker &arg0, const cv::Mat &arg1, const Rect &arg2)
     {
         return arg0.init(arg1, arg2);
     }
 
-    emscripten::val Tracker_update_wrapper(cv::Tracker& arg0, const cv::Mat& arg1)
+    emscripten::val Tracker_update_wrapper(cv::Tracker &arg0, const cv::Mat &arg1)
     {
         Rect rect;
         bool update = arg0.update(arg1, rect);
@@ -390,57 +399,72 @@ namespace binding_utils
         result.call<void>("push", rect);
         return result;
     }
-#endif  // HAVE_OPENCV_VIDEO
+#endif // HAVE_OPENCV_VIDEO
 
-    std::string getExceptionMsg(const cv::Exception& e) {
+    std::string getExceptionMsg(const cv::Exception &e)
+    {
         return e.msg;
     }
 
-    void setExceptionMsg(cv::Exception& e, std::string msg) {
+    void setExceptionMsg(cv::Exception &e, std::string msg)
+    {
         e.msg = msg;
         return;
     }
 
-    cv::Exception exceptionFromPtr(intptr_t ptr) {
-        return *reinterpret_cast<cv::Exception*>(ptr);
+    cv::Exception exceptionFromPtr(intptr_t ptr)
+    {
+        return *reinterpret_cast<cv::Exception *>(ptr);
     }
 
-    std::string getBuildInformation() {
+    std::string getBuildInformation()
+    {
         return cv::getBuildInformation();
     }
 
 #ifdef TEST_WASM_INTRIN
-    void test_hal_intrin_uint8() {
+    void test_hal_intrin_uint8()
+    {
         cv::hal::test_hal_intrin_uint8();
     }
-    void test_hal_intrin_int8() {
+    void test_hal_intrin_int8()
+    {
         cv::hal::test_hal_intrin_int8();
     }
-    void test_hal_intrin_uint16() {
+    void test_hal_intrin_uint16()
+    {
         cv::hal::test_hal_intrin_uint16();
     }
-    void test_hal_intrin_int16() {
+    void test_hal_intrin_int16()
+    {
         cv::hal::test_hal_intrin_int16();
     }
-    void test_hal_intrin_uint32() {
+    void test_hal_intrin_uint32()
+    {
         cv::hal::test_hal_intrin_uint32();
     }
-    void test_hal_intrin_int32() {
+    void test_hal_intrin_int32()
+    {
         cv::hal::test_hal_intrin_int32();
     }
-    void test_hal_intrin_uint64() {
+    void test_hal_intrin_uint64()
+    {
         cv::hal::test_hal_intrin_uint64();
     }
-    void test_hal_intrin_int64() {
+    void test_hal_intrin_int64()
+    {
         cv::hal::test_hal_intrin_int64();
     }
-    void test_hal_intrin_float32() {
+    void test_hal_intrin_float32()
+    {
         cv::hal::test_hal_intrin_float32();
     }
-    void test_hal_intrin_float64() {
+    void test_hal_intrin_float64()
+    {
         cv::hal::test_hal_intrin_float64();
     }
-    void test_hal_intrin_all() {
+    void test_hal_intrin_all()
+    {
         cv::hal::test_hal_intrin_uint8();
         cv::hal::test_hal_intrin_int8();
         cv::hal::test_hal_intrin_uint16();
@@ -460,7 +484,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<int>("IntVector");
     register_vector<char>("CharVector");
     register_vector<float>("FloatVector");
-    register_vector<double>("DoubleVector"); 
+    register_vector<double>("DoubleVector");
     register_vector<std::string>("StringVector");
     register_vector<cv::Point>("PointVector");
     register_vector<cv::Mat>("MatVector");
@@ -469,13 +493,12 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<cv::DMatch>("DMatchVector");
     register_vector<std::vector<cv::DMatch>>("DMatchVectorVector");
 
-
     emscripten::class_<cv::Mat>("Mat")
         .constructor<>()
-        .constructor<const Mat&>()
+        .constructor<const Mat &>()
         .constructor<Size, int>()
         .constructor<int, int, int>()
-        .constructor<int, int, int, const Scalar&>()
+        .constructor<int, int, int, const Scalar &>()
         .constructor(&binding_utils::createMat, allow_raw_pointers())
 
         .class_function("eye", select_overload<Mat(Size, int)>(&binding_utils::matEye))
@@ -497,78 +520,78 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .property("data32F", &binding_utils::matData<float>)
         .property("data64F", &binding_utils::matData<double>)
 
-        .function("elemSize", select_overload<size_t()const>(&cv::Mat::elemSize))
-        .function("elemSize1", select_overload<size_t()const>(&cv::Mat::elemSize1))
-        .function("channels", select_overload<int()const>(&cv::Mat::channels))
-        .function("convertTo", select_overload<void(const Mat&, Mat&, int, double, double)>(&binding_utils::convertTo))
-        .function("convertTo", select_overload<void(const Mat&, Mat&, int)>(&binding_utils::convertTo))
-        .function("convertTo", select_overload<void(const Mat&, Mat&, int, double)>(&binding_utils::convertTo))
-        .function("total", select_overload<size_t()const>(&cv::Mat::total))
-        .function("row", select_overload<Mat(int)const>(&cv::Mat::row))
+        .function("elemSize", select_overload<size_t() const>(&cv::Mat::elemSize))
+        .function("elemSize1", select_overload<size_t() const>(&cv::Mat::elemSize1))
+        .function("channels", select_overload<int() const>(&cv::Mat::channels))
+        .function("convertTo", select_overload<void(const Mat &, Mat &, int, double, double)>(&binding_utils::convertTo))
+        .function("convertTo", select_overload<void(const Mat &, Mat &, int)>(&binding_utils::convertTo))
+        .function("convertTo", select_overload<void(const Mat &, Mat &, int, double)>(&binding_utils::convertTo))
+        .function("total", select_overload<size_t() const>(&cv::Mat::total))
+        .function("row", select_overload<Mat(int) const>(&cv::Mat::row))
         .function("create", select_overload<void(int, int, int)>(&cv::Mat::create))
         .function("create", select_overload<void(Size, int)>(&cv::Mat::create))
-        .function("rowRange", select_overload<Mat(int, int)const>(&cv::Mat::rowRange))
-        .function("rowRange", select_overload<Mat(const Range&)const>(&cv::Mat::rowRange))
-        .function("copyTo", select_overload<void(const Mat&, Mat&)>(&binding_utils::matCopyTo))
-        .function("copyTo", select_overload<void(const Mat&, Mat&, const Mat&)>(&binding_utils::matCopyTo))
-        .function("type", select_overload<int()const>(&cv::Mat::type))
-        .function("empty", select_overload<bool()const>(&cv::Mat::empty))
-        .function("colRange", select_overload<Mat(int, int)const>(&cv::Mat::colRange))
-        .function("colRange", select_overload<Mat(const Range&)const>(&cv::Mat::colRange))
-        .function("step1", select_overload<size_t(int)const>(&cv::Mat::step1))
-        .function("clone", select_overload<Mat()const>(&cv::Mat::clone))
-        .function("depth", select_overload<int()const>(&cv::Mat::depth))
-        .function("col", select_overload<Mat(int)const>(&cv::Mat::col))
-        .function("dot", select_overload<double(const Mat&, const Mat&)>(&binding_utils::matDot))
-        .function("mul", select_overload<Mat(const Mat&, const Mat&, double)>(&binding_utils::matMul))
-        .function("inv", select_overload<Mat(const Mat&, int)>(&binding_utils::matInv))
-        .function("t", select_overload<Mat(const Mat&)>(&binding_utils::matT))
-        .function("roi", select_overload<Mat(const Rect&)const>(&cv::Mat::operator()))
-        .function("diag", select_overload<Mat(const Mat&, int)>(&binding_utils::matDiag))
-        .function("diag", select_overload<Mat(const Mat&)>(&binding_utils::matDiag))
-        .function("isContinuous", select_overload<bool()const>(&cv::Mat::isContinuous))
-        .function("setTo", select_overload<void(Mat&, const Scalar&)>(&binding_utils::matSetTo))
-        .function("setTo", select_overload<void(Mat&, const Scalar&, const Mat&)>(&binding_utils::matSetTo))
-        .function("size", select_overload<Size(const Mat&)>(&binding_utils::matSize))
+        .function("rowRange", select_overload<Mat(int, int) const>(&cv::Mat::rowRange))
+        .function("rowRange", select_overload<Mat(const Range &) const>(&cv::Mat::rowRange))
+        .function("copyTo", select_overload<void(const Mat &, Mat &)>(&binding_utils::matCopyTo))
+        .function("copyTo", select_overload<void(const Mat &, Mat &, const Mat &)>(&binding_utils::matCopyTo))
+        .function("type", select_overload<int() const>(&cv::Mat::type))
+        .function("empty", select_overload<bool() const>(&cv::Mat::empty))
+        .function("colRange", select_overload<Mat(int, int) const>(&cv::Mat::colRange))
+        .function("colRange", select_overload<Mat(const Range &) const>(&cv::Mat::colRange))
+        .function("step1", select_overload<size_t(int) const>(&cv::Mat::step1))
+        .function("clone", select_overload<Mat() const>(&cv::Mat::clone))
+        .function("depth", select_overload<int() const>(&cv::Mat::depth))
+        .function("col", select_overload<Mat(int) const>(&cv::Mat::col))
+        .function("dot", select_overload<double(const Mat &, const Mat &)>(&binding_utils::matDot))
+        .function("mul", select_overload<Mat(const Mat &, const Mat &, double)>(&binding_utils::matMul))
+        .function("inv", select_overload<Mat(const Mat &, int)>(&binding_utils::matInv))
+        .function("t", select_overload<Mat(const Mat &)>(&binding_utils::matT))
+        .function("roi", select_overload<Mat(const Rect &) const>(&cv::Mat::operator()))
+        .function("diag", select_overload<Mat(const Mat &, int)>(&binding_utils::matDiag))
+        .function("diag", select_overload<Mat(const Mat &)>(&binding_utils::matDiag))
+        .function("isContinuous", select_overload<bool() const>(&cv::Mat::isContinuous))
+        .function("setTo", select_overload<void(Mat &, const Scalar &)>(&binding_utils::matSetTo))
+        .function("setTo", select_overload<void(Mat &, const Scalar &, const Mat &)>(&binding_utils::matSetTo))
+        .function("size", select_overload<Size(const Mat &)>(&binding_utils::matSize))
 
-        .function("ptr", select_overload<val(const Mat&, int)>(&binding_utils::matPtr<unsigned char>))
-        .function("ptr", select_overload<val(const Mat&, int, int)>(&binding_utils::matPtr<unsigned char>))
-        .function("ucharPtr", select_overload<val(const Mat&, int)>(&binding_utils::matPtr<unsigned char>))
-        .function("ucharPtr", select_overload<val(const Mat&, int, int)>(&binding_utils::matPtr<unsigned char>))
-        .function("charPtr", select_overload<val(const Mat&, int)>(&binding_utils::matPtr<char>))
-        .function("charPtr", select_overload<val(const Mat&, int, int)>(&binding_utils::matPtr<char>))
-        .function("shortPtr", select_overload<val(const Mat&, int)>(&binding_utils::matPtr<short>))
-        .function("shortPtr", select_overload<val(const Mat&, int, int)>(&binding_utils::matPtr<short>))
-        .function("ushortPtr", select_overload<val(const Mat&, int)>(&binding_utils::matPtr<unsigned short>))
-        .function("ushortPtr", select_overload<val(const Mat&, int, int)>(&binding_utils::matPtr<unsigned short>))
-        .function("intPtr", select_overload<val(const Mat&, int)>(&binding_utils::matPtr<int>))
-        .function("intPtr", select_overload<val(const Mat&, int, int)>(&binding_utils::matPtr<int>))
-        .function("floatPtr", select_overload<val(const Mat&, int)>(&binding_utils::matPtr<float>))
-        .function("floatPtr", select_overload<val(const Mat&, int, int)>(&binding_utils::matPtr<float>))
-        .function("doublePtr", select_overload<val(const Mat&, int)>(&binding_utils::matPtr<double>))
-        .function("doublePtr", select_overload<val(const Mat&, int, int)>(&binding_utils::matPtr<double>))
+        .function("ptr", select_overload<val(const Mat &, int)>(&binding_utils::matPtr<unsigned char>))
+        .function("ptr", select_overload<val(const Mat &, int, int)>(&binding_utils::matPtr<unsigned char>))
+        .function("ucharPtr", select_overload<val(const Mat &, int)>(&binding_utils::matPtr<unsigned char>))
+        .function("ucharPtr", select_overload<val(const Mat &, int, int)>(&binding_utils::matPtr<unsigned char>))
+        .function("charPtr", select_overload<val(const Mat &, int)>(&binding_utils::matPtr<char>))
+        .function("charPtr", select_overload<val(const Mat &, int, int)>(&binding_utils::matPtr<char>))
+        .function("shortPtr", select_overload<val(const Mat &, int)>(&binding_utils::matPtr<short>))
+        .function("shortPtr", select_overload<val(const Mat &, int, int)>(&binding_utils::matPtr<short>))
+        .function("ushortPtr", select_overload<val(const Mat &, int)>(&binding_utils::matPtr<unsigned short>))
+        .function("ushortPtr", select_overload<val(const Mat &, int, int)>(&binding_utils::matPtr<unsigned short>))
+        .function("intPtr", select_overload<val(const Mat &, int)>(&binding_utils::matPtr<int>))
+        .function("intPtr", select_overload<val(const Mat &, int, int)>(&binding_utils::matPtr<int>))
+        .function("floatPtr", select_overload<val(const Mat &, int)>(&binding_utils::matPtr<float>))
+        .function("floatPtr", select_overload<val(const Mat &, int, int)>(&binding_utils::matPtr<float>))
+        .function("doublePtr", select_overload<val(const Mat &, int)>(&binding_utils::matPtr<double>))
+        .function("doublePtr", select_overload<val(const Mat &, int, int)>(&binding_utils::matPtr<double>))
 
-        .function("charAt", select_overload<char&(int)>(&cv::Mat::at<char>))
-        .function("charAt", select_overload<char&(int, int)>(&cv::Mat::at<char>))
-        .function("charAt", select_overload<char&(int, int, int)>(&cv::Mat::at<char>))
-        .function("ucharAt", select_overload<unsigned char&(int)>(&cv::Mat::at<unsigned char>))
-        .function("ucharAt", select_overload<unsigned char&(int, int)>(&cv::Mat::at<unsigned char>))
-        .function("ucharAt", select_overload<unsigned char&(int, int, int)>(&cv::Mat::at<unsigned char>))
-        .function("shortAt", select_overload<short&(int)>(&cv::Mat::at<short>))
-        .function("shortAt", select_overload<short&(int, int)>(&cv::Mat::at<short>))
-        .function("shortAt", select_overload<short&(int, int, int)>(&cv::Mat::at<short>))
-        .function("ushortAt", select_overload<unsigned short&(int)>(&cv::Mat::at<unsigned short>))
-        .function("ushortAt", select_overload<unsigned short&(int, int)>(&cv::Mat::at<unsigned short>))
-        .function("ushortAt", select_overload<unsigned short&(int, int, int)>(&cv::Mat::at<unsigned short>))
-        .function("intAt", select_overload<int&(int)>(&cv::Mat::at<int>) )
-        .function("intAt", select_overload<int&(int, int)>(&cv::Mat::at<int>) )
-        .function("intAt", select_overload<int&(int, int, int)>(&cv::Mat::at<int>) )
-        .function("floatAt", select_overload<float&(int)>(&cv::Mat::at<float>))
-        .function("floatAt", select_overload<float&(int, int)>(&cv::Mat::at<float>))
-        .function("floatAt", select_overload<float&(int, int, int)>(&cv::Mat::at<float>))
-        .function("doubleAt", select_overload<double&(int, int, int)>(&cv::Mat::at<double>))
-        .function("doubleAt", select_overload<double&(int)>(&cv::Mat::at<double>))
-        .function("doubleAt", select_overload<double&(int, int)>(&cv::Mat::at<double>));
+        .function("charAt", select_overload<char &(int)>(&cv::Mat::at<char>))
+        .function("charAt", select_overload<char &(int, int)>(&cv::Mat::at<char>))
+        .function("charAt", select_overload<char &(int, int, int)>(&cv::Mat::at<char>))
+        .function("ucharAt", select_overload<unsigned char &(int)>(&cv::Mat::at<unsigned char>))
+        .function("ucharAt", select_overload<unsigned char &(int, int)>(&cv::Mat::at<unsigned char>))
+        .function("ucharAt", select_overload<unsigned char &(int, int, int)>(&cv::Mat::at<unsigned char>))
+        .function("shortAt", select_overload<short &(int)>(&cv::Mat::at<short>))
+        .function("shortAt", select_overload<short &(int, int)>(&cv::Mat::at<short>))
+        .function("shortAt", select_overload<short &(int, int, int)>(&cv::Mat::at<short>))
+        .function("ushortAt", select_overload<unsigned short &(int)>(&cv::Mat::at<unsigned short>))
+        .function("ushortAt", select_overload<unsigned short &(int, int)>(&cv::Mat::at<unsigned short>))
+        .function("ushortAt", select_overload<unsigned short &(int, int, int)>(&cv::Mat::at<unsigned short>))
+        .function("intAt", select_overload<int &(int)>(&cv::Mat::at<int>))
+        .function("intAt", select_overload<int &(int, int)>(&cv::Mat::at<int>))
+        .function("intAt", select_overload<int &(int, int, int)>(&cv::Mat::at<int>))
+        .function("floatAt", select_overload<float &(int)>(&cv::Mat::at<float>))
+        .function("floatAt", select_overload<float &(int, int)>(&cv::Mat::at<float>))
+        .function("floatAt", select_overload<float &(int, int, int)>(&cv::Mat::at<float>))
+        .function("doubleAt", select_overload<double &(int, int, int)>(&cv::Mat::at<double>))
+        .function("doubleAt", select_overload<double &(int)>(&cv::Mat::at<double>))
+        .function("doubleAt", select_overload<double &(int, int)>(&cv::Mat::at<double>));
 
     emscripten::value_object<cv::Range>("Range")
         .field("start", &cv::Range::start)
@@ -579,27 +602,27 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("maxCount", &cv::TermCriteria::maxCount)
         .field("epsilon", &cv::TermCriteria::epsilon);
 
-#define EMSCRIPTEN_CV_SIZE(type) \
+#define EMSCRIPTEN_CV_SIZE(type)            \
     emscripten::value_object<type>("#type") \
-        .field("width", &type::width) \
+        .field("width", &type::width)       \
         .field("height", &type::height);
 
     EMSCRIPTEN_CV_SIZE(Size)
     EMSCRIPTEN_CV_SIZE(Size2f)
 
-#define EMSCRIPTEN_CV_POINT(type) \
+#define EMSCRIPTEN_CV_POINT(type)           \
     emscripten::value_object<type>("#type") \
-        .field("x", &type::x) \
-        .field("y", &type::y); \
+        .field("x", &type::x)               \
+        .field("y", &type::y);
 
     EMSCRIPTEN_CV_POINT(Point)
     EMSCRIPTEN_CV_POINT(Point2f)
 
-#define EMSCRIPTEN_CV_RECT(type, name) \
-    emscripten::value_object<cv::Rect_<type>> (name) \
-        .field("x", &cv::Rect_<type>::x) \
-        .field("y", &cv::Rect_<type>::y) \
-        .field("width", &cv::Rect_<type>::width) \
+#define EMSCRIPTEN_CV_RECT(type, name)              \
+    emscripten::value_object<cv::Rect_<type>>(name) \
+        .field("x", &cv::Rect_<type>::x)            \
+        .field("y", &cv::Rect_<type>::y)            \
+        .field("width", &cv::Rect_<type>::width)    \
         .field("height", &cv::Rect_<type>::height);
 
     EMSCRIPTEN_CV_RECT(int, "Rect")
@@ -610,9 +633,9 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("size", &cv::RotatedRect::size)
         .field("angle", &cv::RotatedRect::angle);
 
-    function("rotatedRectPoints", select_overload<emscripten::val(const cv::RotatedRect&)>(&binding_utils::rotatedRectPoints));
-    function("rotatedRectBoundingRect", select_overload<Rect(const cv::RotatedRect&)>(&binding_utils::rotatedRectBoundingRect));
-    function("rotatedRectBoundingRect2f", select_overload<Rect2f(const cv::RotatedRect&)>(&binding_utils::rotatedRectBoundingRect2f));
+    function("rotatedRectPoints", select_overload<emscripten::val(const cv::RotatedRect &)>(&binding_utils::rotatedRectPoints));
+    function("rotatedRectBoundingRect", select_overload<Rect(const cv::RotatedRect &)>(&binding_utils::rotatedRectBoundingRect));
+    function("rotatedRectBoundingRect2f", select_overload<Rect2f(const cv::RotatedRect &)>(&binding_utils::rotatedRectBoundingRect2f));
 
     emscripten::value_object<cv::KeyPoint>("KeyPoint")
         .field("angle", &cv::KeyPoint::angle)
@@ -628,7 +651,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("imgIdx", &cv::DMatch::imgIdx)
         .field("distance", &cv::DMatch::distance);
 
-    emscripten::value_array<cv::Scalar_<double>> ("Scalar")
+    emscripten::value_array<cv::Scalar_<double>>("Scalar")
         .element(emscripten::index<0>())
         .element(emscripten::index<1>())
         .element(emscripten::index<2>())
@@ -644,7 +667,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("center", &binding_utils::Circle::center)
         .field("radius", &binding_utils::Circle::radius);
 
-    emscripten::value_object<cv::Moments >("Moments")
+    emscripten::value_object<cv::Moments>("Moments")
         .field("m00", &cv::Moments::m00)
         .field("m10", &cv::Moments::m10)
         .field("m01", &cv::Moments::m01)
@@ -677,22 +700,22 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     function("exceptionFromPtr", &binding_utils::exceptionFromPtr, allow_raw_pointers());
 
 #ifdef HAVE_OPENCV_IMGPROC
-    function("minEnclosingCircle", select_overload<binding_utils::Circle(const cv::Mat&)>(&binding_utils::minEnclosingCircle));
+    function("minEnclosingCircle", select_overload<binding_utils::Circle(const cv::Mat &)>(&binding_utils::minEnclosingCircle));
 
-    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar, Scalar, int)>(&binding_utils::floodFill_wrapper));
+    function("floodFill", select_overload<int(cv::Mat &, cv::Mat &, Point, Scalar, emscripten::val, Scalar, Scalar, int)>(&binding_utils::floodFill_wrapper));
 
-    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar, Scalar)>(&binding_utils::floodFill_wrapper_1));
+    function("floodFill", select_overload<int(cv::Mat &, cv::Mat &, Point, Scalar, emscripten::val, Scalar, Scalar)>(&binding_utils::floodFill_wrapper_1));
 
-    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar)>(&binding_utils::floodFill_wrapper_2));
+    function("floodFill", select_overload<int(cv::Mat &, cv::Mat &, Point, Scalar, emscripten::val, Scalar)>(&binding_utils::floodFill_wrapper_2));
 
-    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val)>(&binding_utils::floodFill_wrapper_3));
+    function("floodFill", select_overload<int(cv::Mat &, cv::Mat &, Point, Scalar, emscripten::val)>(&binding_utils::floodFill_wrapper_3));
 
-    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar)>(&binding_utils::floodFill_wrapper_4));
+    function("floodFill", select_overload<int(cv::Mat &, cv::Mat &, Point, Scalar)>(&binding_utils::floodFill_wrapper_4));
 #endif
 
-    function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat&, const cv::Mat&)>(&binding_utils::minMaxLoc));
+    function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat &, const cv::Mat &)>(&binding_utils::minMaxLoc));
 
-    function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat&)>(&binding_utils::minMaxLoc_1));
+    function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat &)>(&binding_utils::minMaxLoc_1));
 
 #ifdef HAVE_OPENCV_IMGPROC
     function("morphologyDefaultBorderValue", &cv::morphologyDefaultBorderValue);
@@ -701,13 +724,13 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     function("CV_MAT_DEPTH", &binding_utils::cvMatDepth);
 
 #ifdef HAVE_OPENCV_VIDEO
-    function("CamShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::CamShiftWrapper));
+    function("CamShift", select_overload<emscripten::val(const cv::Mat &, Rect &, TermCriteria)>(&binding_utils::CamShiftWrapper));
 
-    function("meanShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::meanShiftWrapper));
+    function("meanShift", select_overload<emscripten::val(const cv::Mat &, Rect &, TermCriteria)>(&binding_utils::meanShiftWrapper));
 
-    emscripten::class_<cv::Tracker >("Tracker")
-        .function("init", select_overload<void(cv::Tracker&,const cv::Mat&,const Rect&)>(&binding_utils::Tracker_init_wrapper), pure_virtual())
-        .function("update", select_overload<emscripten::val(cv::Tracker&,const cv::Mat&)>(&binding_utils::Tracker_update_wrapper), pure_virtual());
+    emscripten::class_<cv::Tracker>("Tracker")
+        .function("init", select_overload<void(cv::Tracker &, const cv::Mat &, const Rect &)>(&binding_utils::Tracker_init_wrapper), pure_virtual())
+        .function("update", select_overload<emscripten::val(cv::Tracker &, const cv::Mat &)>(&binding_utils::Tracker_update_wrapper), pure_virtual());
 
 #endif
 
@@ -771,7 +794,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     constant("CV_8S", CV_8S);
     constant("CV_16U", CV_16U);
     constant("CV_16S", CV_16S);
-    constant("CV_32S",  CV_32S);
+    constant("CV_32S", CV_32S);
     constant("CV_32F", CV_32F);
     constant("CV_64F", CV_64F);
 
