@@ -156,7 +156,7 @@ class ObjectDetectorYXImpl : public ObjectDetectorYX
                 boxes_xyxy.rowRange(idx, idx + 1).copyTo(candidates(Rect(0, row, 4, 1)));
                 if (float(maxScoreIdx[idx]) >= objThreshold)
                 {
-                    candidates.at<float>(row, 4) = idx;
+                    candidates.at<float>(row, 4) = float(idx);
                     candidates.at<float>(row, 5) = float(maxScoreIdx[idx]);
                     row++;
                 }

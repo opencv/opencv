@@ -59,6 +59,7 @@ std::string keys =
 "{ input i          |                                               | Path to input image or video file. Skip this argument to capture frames from a camera.}"
 "{ confidence c     | 0.5                                           | Class confidence }"
 "{ nms              | 0.5                                           | Enter nms IOU threshold }"
+"{ obj              | 0.5                                           | Object  threshold }"
 "{ vis v            | 1                                             | Specify to open a window for result visualization. This flag is invalid when using camera. }"
 "{ backend bt       | 0                                             | Choose one of computation backends: "
 "0: (default) OpenCV implementation + CPU, "
@@ -69,7 +70,7 @@ std::string keys =
 
 pair<Mat, double> letterBox(Mat srcimg, Size targetSize = Size(640, 640));
 Mat unLetterBox(Mat bbox, double letterboxScale);
-Mat visualize(Mat dets, Mat srcimg, double letterbox_scale, double fps = -1);
+Mat visualize(Mat dets, Mat srcimg, double letterbox_scale, double fps = -1, bool vis = true);
 
 pair<Mat, double> letterBox(Mat srcimg, Size targetSize)
 {
@@ -87,7 +88,7 @@ Mat unLetterBox(Mat bbox, double letterboxScale)
     return bbox / letterboxScale;
 }
 
-Mat visualize(Mat dets, Mat srcimg, double letterboxScale, double fps, bool vis=true)
+Mat visualize(Mat dets, Mat srcimg, double letterboxScale, double fps, bool vis)
 {
     Mat resImg = srcimg.clone();
 
@@ -142,6 +143,7 @@ int main(int argc, char** argv)
     string model = parser.get<String>("model");
     float confThreshold = parser.get<float>("confidence");
     float nmsThreshold = parser.get<float>("nms");
+    float objThreshold = parser.get<float>("obj");
     bool vis = parser.get<bool>("vis");
     int backendTargetid = parser.get<int>("backend");
 
@@ -150,7 +152,7 @@ int main(int argc, char** argv)
         CV_Error(Error::StsError, "Model file " + model + " not found");
     }
 
-    Ptr<ObjectDetectorYX> detector = ObjectDetectorYX::create(model, confThreshold, nmsThreshold, backendTargetPairs[backendTargetid].first, backendTargetPairs[backendTargetid].second);
+    Ptr<ObjectDetectorYX> detector = ObjectDetectorYX::create(model, confThreshold, nmsThreshold, objThreshold, backendTargetPairs[backendTargetid].first, backendTargetPairs[backendTargetid].second);
     //! [Open a video file or an image file or a camera stream]
     VideoCapture cap;
     if (parser.has("input"))
