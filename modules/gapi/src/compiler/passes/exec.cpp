@@ -142,6 +142,11 @@ namespace
         std::unordered_set<CycleCausers, CycleHasher> cycle_causers;
     };
 
+#if defined(__GNUC__) && (__GNUC__ == 13)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdangling-reference"
+#endif
+
     bool canMerge(const GIslandModel::Graph &g,
                   const ade::NodeHandle &a_nh,
                   const ade::NodeHandle &slot_nh,
@@ -190,6 +195,10 @@ namespace
         }
         return true;
     }
+
+#if defined(__GNUC__) && (__GNUC__ == 13)
+#pragma GCC diagnostic pop
+#endif
 
     inline bool isProducedBy(const ade::NodeHandle &slot,
                              const ade::NodeHandle &island)
