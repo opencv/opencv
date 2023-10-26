@@ -29,8 +29,10 @@ FINAL_REPO_PATH = "outputs/maven_repo"
 
 def main(sdk_dir, opencv_version):
     print("Preparing Android project...")
+    # ANDROID_PROJECT_TEMPLATE_DIR contains an Android project template that creates AAR
     shutil.copytree(ANDROID_PROJECT_TEMPLATE_DIR, ANDROID_PROJECT_DIR)
 
+    # Configuring the Android project to Java + shared C++ lib version
     shutil.rmtree(path.join(ANDROID_PROJECT_DIR, "OpenCV/src/main/cpp/include"))
 
     fill_template(path.join(ANDROID_PROJECT_DIR, "OpenCV/build.gradle.template"),
@@ -40,16 +42,21 @@ def main(sdk_dir, opencv_version):
                   path.join(ANDROID_PROJECT_DIR, "OpenCV/src/main/cpp/CMakeLists.txt"),
                   {"LIB_NAME": "opencv_java4", "LIB_TYPE": "SHARED"})
 
+    # Copying Java code and C++ public headers from SDK to the Android project
     for src, dst in COPY_FROM_SDK_TO_ANDROID_PROJECT:
         shutil.copytree(path.join(sdk_dir, src),
                         path.join(ANDROID_PROJECT_DIR, dst))
 
     print("Running gradle assembleRelease...")
+    # Running gradle to build the Android project
     subprocess.run(["gradlew", "assembleRelease"],
                 shell=True,
                 cwd=ANDROID_PROJECT_DIR)
 
     print("Adding libs to AAR...")
+    # The created AAR package doesn't contain C++ shared libs.
+    # We need to add them manually.
+    # AAR package is just a zip archive.
     shutil.unpack_archive(COMPILED_AAR_PATH, AAR_UNZIPPED_DIR, "zip")
 
     for abi in ABIS:
@@ -59,6 +66,7 @@ def main(sdk_dir, opencv_version):
             shutil.copy(path.join(sdk_dir, src),
                 path.join(AAR_UNZIPPED_DIR, dst))
 
+    # Creating final AAR zip archive
     os.makedirs("outputs", exist_ok=True)
     shutil.make_archive(FINAL_AAR_PATH, "zip", AAR_UNZIPPED_DIR, ".")
     os.rename(FINAL_AAR_PATH + ".zip", FINAL_AAR_PATH)
