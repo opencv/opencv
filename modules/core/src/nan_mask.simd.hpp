@@ -91,29 +91,8 @@ PatchNanFunc getPatchNanFunc(bool isDouble)
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
-//TODO: make true SIMD code instead for the rest
 template <typename _Tp, int cn>
-int finiteMaskSIMD_(const _Tp *src, uchar *dst, size_t total)
-{
-    const int osize = 8;
-    int i = 0;
-    for (; i <= (int)total - osize; i += osize)
-    {
-        for (int j = 0; j < osize; j++)
-        {
-            bool finite = true;
-            for (int c = 0; c < cn; c++)
-            {
-                _Tp val = src[i * cn + j * cn + c];
-                finite = finite && !cvIsNaN(val) && !cvIsInf(val);
-            }
-            dst[i + j] = finite ? 255 : 0;
-        }
-    }
-
-    return i;
-}
-
+int finiteMaskSIMD_(const _Tp *src, uchar *dst, size_t total);
 
 template <>
 int finiteMaskSIMD_<float, 1>(const float *fsrc, uchar *dst, size_t total)
