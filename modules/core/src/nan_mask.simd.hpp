@@ -170,7 +170,43 @@ int finiteMaskSIMD_<float, 2>(const float *fsrc, uchar *dst, size_t total)
 
 
 template <>
-int finiteMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total)
+int finiteMaskSIMD_<float, 3>(const float *fsrc, uchar *dst, size_t total)
+{
+    const uint32_t* src = (const uint32_t*)fsrc;
+    const int npixels = VTraits<v_float32>::vlanes();
+    v_uint32 vmaskPos = vx_setall_u32(0x7fffffff);
+    v_uint32 vmaskExp = vx_setall_u32(0x7f800000);
+    v_uint32 z = vx_setzero_u32();
+
+    int i = 0;
+    for (; i <= (int)total - npixels; i += npixels)
+    {
+        v_uint32 vv0, vv1, vv2;
+        vv0 = v_lt(v_and(vx_load(src + i*3            ), vmaskPos), vmaskExp);
+        vv1 = v_lt(v_and(vx_load(src + i*3 +   npixels), vmaskPos), vmaskExp);
+        vv2 = v_lt(v_and(vx_load(src + i*3 + 2*npixels), vmaskPos), vmaskExp);
+
+        v_uint8 velems = v_pack_b(vv0, vv1, vv2, z);
+
+        // 2nd arg is useless
+        v_uint8 vsh1 = v_extract<1>(velems, velems);
+        v_uint8 vsh2 = v_extract<2>(velems, velems);
+
+        v_uint8 vres3 = v_and(v_and(velems, vsh1), vsh2);
+        for (int j = 0; j < npixels; j++)
+        {
+            dst[i + j] = v_get0(vres3);
+            // 2nd arg is useless
+            vres3 = v_extract<3>(vres3, vres3);
+        }
+    }
+
+    return i;
+}
+
+
+template <>
+int finiteMaskSIMD_<double, 1>(const double *dsrc, uchar *dst, size_t total)
 {
     const uint64_t* src = (const uint64_t*)dsrc;
     const int size8 = VTraits<v_uint8>::vlanes();
