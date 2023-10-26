@@ -211,6 +211,7 @@ int finiteMaskSIMD_<float, 4>(const float *fsrc, uchar *dst, size_t total)
 
     v_uint32 vmaskExp = vx_setall_u32(0x7f800000);
     v_uint32 z = vx_setzero_u32();
+    v_uint32 vmaskAll4 = vx_setall_u32(0xFFFFFFFF);
 
     int i = 0;
     for(; i <= (int)total - npixels; i += npixels )
@@ -218,12 +219,9 @@ int finiteMaskSIMD_<float, 4>(const float *fsrc, uchar *dst, size_t total)
         v_uint32 vv = v_ne(v_and(vx_load(src + i*4), vmaskExp), vmaskExp);
         v_uint8 velems = v_pack_b(vv, z, z, z);
 
-        v_uint32 vmaskAll4 = vx_setall_u32(0xFFFFFFFF);
-
         v_uint32 vresWide = v_eq(v_reinterpret_as_u32(velems), vmaskAll4);
 
         v_uint8 vres = v_pack_b(vresWide, z, z, z);
-
         if (npixels == 1) // 128 bit wide
         {
             dst[i] = v_get0(vres);
