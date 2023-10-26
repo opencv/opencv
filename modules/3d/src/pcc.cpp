@@ -603,17 +603,13 @@ void traverse(OctreeNode &root, std::vector<unsigned char> &serializedVectorOut)
         OctreeNode &node = *(nodeQueue.front());
         nodeQueue.pop();
 
-        // Stop at last leaf level, no need to encode leaf node
-        if (node.isLeaf) {
-            break;
-        }
-
         // Push OctreeNode occupancy code
-        serializedVectorOut.push_back(OctreeKey::getBitPattern(node));
+        serializedVectorOut.push_back(node.occupancy);
 
         // Further branching
-        for (unsigned char i = 0; i < 8; ++i) {
-            if (!node.children[i].empty()) {
+        unsigned char mask = 1;
+        for (unsigned char i = 0; i < 8; ++i, mask <<= 1) {
+            if ((node.occupancy & mask) && !node.children[i]->isLeaf) {
                 nodeQueue.push(node.children[i]);
             }
         }
@@ -661,6 +657,7 @@ void restore(OctreeNode &root, const std::vector<unsigned char> &serializedVecto
 void OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute,
                              std::vector<unsigned char> &serializedVector, double resolution, std::ostream &outputStream) {
     // create octree by pointCloud & colorAttribute
+
     this->octree->create(pointCloud, colorAttribute, resolution);
 
     // set file header.
@@ -697,6 +694,8 @@ PointCloudCompression::PointCloudCompression(): p(new Impl)
 void PointCloudCompression::compress(const std::vector<Point3f> &pointCloud, double resolution,
                                      std::ostream &outputStream, const std::vector<Point3f> &colorAttribute, double qStep) {
     std::vector<unsigned char> serializedVector;
+    serializedVector.clear();
+    serializedVector.reserve(pointCloud.size());
 
     // refresh coder
     this->p->_coder = OctreeSerializeCoder();

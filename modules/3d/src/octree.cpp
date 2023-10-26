@@ -20,7 +20,7 @@ static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node,OctreeK
 
 static bool _isPointInBound(const Point3f& _point, const Point3f& _origin, double _size);
 static bool insertPointRecurse( Ptr<OctreeNode>& node, const Point3f& point, const Point3f &color, size_t maxDepth
-        ,const OctreeKey &key, size_t depthMask);
+        ,const OctreeKey &key, size_t depthMask, std::vector<OctreeNode*> &lastPath);
 bool deletePointRecurse( Ptr<OctreeNode>& node);
 
 // For Nearest neighbor search.
@@ -31,14 +31,14 @@ static void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, 
                              float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint);
 
 OctreeNode::OctreeNode():children(OCTREE_CHILD_NUM, nullptr), depth(0), size(0), origin(0,0,0),
-                                    pointNum(0),neigh(OCTREE_NEIGH_SIZE, nullptr),parentIndex(-1)
+                                    pointNum(0),neigh(OCTREE_NEIGH_SIZE, nullptr),parentIndex(-1), occupancy(0)
 {
 }
 
 OctreeNode::OctreeNode(size_t _depth, double _size, const Point3f &_origin, const Point3f &_color,
                        int _parentIndex, int _pointNum) : children(OCTREE_CHILD_NUM), depth(_depth),
                                                           size(_size), origin(_origin),color(_color),pointNum(_pointNum),
-                                                          neigh(OCTREE_NEIGH_SIZE),parentIndex(_parentIndex)
+                                                          neigh(OCTREE_NEIGH_SIZE),parentIndex(_parentIndex), occupancy(0)
                                                           {
 }
 
@@ -127,7 +127,6 @@ bool Octree::insertPoint(const Point3f& point){
 bool Octree::insertPoint(const Point3f& point,const Point3f &color)
 {
     double resolution=p->resolution;
-    size_t depthMask=(size_t)1 << (p->maxDepth - 1);
     if(p->rootNode.empty())
     {
         p->rootNode = new OctreeNode( 0, p->size, p->origin,  color, -1, 0);
@@ -141,14 +140,43 @@ bool Octree::insertPoint(const Point3f& point,const Point3f &color)
                   (size_t)floor((point.y - this->p->origin.y) / resolution),
                   (size_t)floor((point.z - this->p->origin.z) / resolution));
 
-    bool result = insertPointRecurse(p->rootNode, point, color, p->maxDepth, key, depthMask);
+    size_t depthMask = (size_t)1 << (p->maxDepth - 1);
+    bool result = false;
+
+    if (p->lastPath.size() == 0) {
+        result = insertPointRecurse(p->rootNode, point, color, p->maxDepth, key, depthMask, p->lastPath);
+    }
+    else {
+        // compare with lastPath buffer, start from nearest common ancestor
+#include <intrin.h>
+        unsigned long index;  // 用于存储最高位的索引
+        // 0 to maxDepth
+        size_t commonAncestorIndex;
+
+        if (_BitScanReverse(&index, (p->lastKey.x_key ^ key.x_key)
+                & (p->lastKey.y_key ^ key.y_key)
+                & (p->lastKey.z_key ^ key.z_key))) {
+            commonAncestorIndex = p->maxDepth - index - 1;
+        } else {
+            commonAncestorIndex = p->maxDepth;
+        }
+
+        if (commonAncestorIndex + 1 < p->lastPath.size()) {
+            p->lastPath.resize(commonAncestorIndex + 1);
+        }
+
+        Ptr <OctreeNode> startNode = p->lastPath[commonAncestorIndex];
+        depthMask >>= commonAncestorIndex;
+        result = insertPointRecurse(startNode, point, color, p->maxDepth, key, depthMask, p->lastPath);
+    }
+
+    p->lastKey = key;
     return result;
 }
 
 
 bool Octree::create(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute, double resolution)
 {
-
     if (resolution > 0) {
         p->resolution = resolution;
     }
@@ -183,6 +211,7 @@ bool Octree::create(const std::vector<Point3f> &pointCloud, const std::vector<Po
                               float(floor(minBound.z / resolution) * resolution));
 
     p->hasColor = !colorAttribute.empty();
+
 
     // Insert every point in PointCloud data.
     for (size_t idx = 0; idx < pointCloud.size(); idx++) {
@@ -354,9 +383,14 @@ bool deletePointRecurse(Ptr<OctreeNode>& _node)
 }
 
 bool insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point,const Point3f &color, size_t maxDepth,const OctreeKey &key,
-                         size_t depthMask)
+                         size_t depthMask, std::vector<OctreeNode*> &lastPath)
 {
     OctreeNode &node = *_node;
+    // push curr node to lastPath
+    if (lastPath.size() - 1 < maxDepth) {
+        lastPath.push_back(&node);
+    }
+
     //add point to the leaf node.
     if (node.depth == maxDepth) {
         node.isLeaf = true;
@@ -366,21 +400,26 @@ bool insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point,const Poi
         return true;
     }
 
-    double childSize = node.size * 0.5;
+    // double childSize = node.size * 0.5;
     //calculate the index and the origin of child.
     size_t childIndex = key.findChildIdxByMask(depthMask);
-    size_t xIndex = childIndex&1?1:0;
-    size_t yIndex = childIndex&2?1:0;
-    size_t zIndex = childIndex&4?1:0;
-    Point3f childOrigin = node.origin + Point3f(xIndex * float(childSize), yIndex * float(childSize), zIndex * float(childSize));
+    // size_t xIndex = childIndex&1?1:0;
+    // size_t yIndex = childIndex&2?1:0;
+    // size_t zIndex = childIndex&4?1:0;
+    // Point3f childOrigin = node.origin + Point3f(xIndex * float(childSize), yIndex * float(childSize), zIndex * float(childSize));
 
-    if (node.children[childIndex].empty()) {
-        node.children[childIndex] = new OctreeNode(node.depth + 1, childSize, childOrigin, Point3f(0, 0, 0),
+    // if child at childIndex doesn't exist
+    if (!(node.occupancy & (1 << childIndex))) {
+        // only leaf nodes hold color, so set Point3f(0, 0, 0) here.
+        // pointNum will be returned by backward recursive, so set 0 here.
+        // TODO: DEBUG childSize and childOrigin need not calculate for compression
+        node.children[childIndex] = new OctreeNode(node.depth + 1, -1, Point3f(0, 0, 0), Point3f(0, 0, 0),
                                                    int(childIndex), 0);
         node.children[childIndex]->parent = _node;
+        node.occupancy |= (1 << childIndex);
     }
 
-    bool result = insertPointRecurse(node.children[childIndex], point, color, maxDepth, key, depthMask >> 1);
+    bool result = insertPointRecurse(node.children[childIndex], point, color, maxDepth, key, depthMask >> 1, lastPath);
     node.pointNum += result;
     return result;
 }

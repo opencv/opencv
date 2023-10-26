@@ -72,6 +72,8 @@ public:
 
     //! Contains 8 pointers to its 8 children.
     std::vector< Ptr<OctreeNode> > children;
+    //! 8bit to indicate 8 children's existence.
+    unsigned char occupancy;
 
     //! Point to the parent node of the current node. The root node has no parent node and the value is NULL.
     Ptr<OctreeNode> parent = nullptr;
@@ -153,21 +155,6 @@ public:
     inline unsigned char findChildIdxByMask(size_t mask) const{
         return static_cast<unsigned char>((!!(z_key&mask))<<2)|((!!(y_key&mask))<<1)|(!!(x_key&mask));
     }
-
-    /** @brief get occupancy code from node.
-    *
-    * The occupancy code type is unsigned char that represents whether the eight child nodes of the octree node exist
-    * If a octree node has 3 child which indexes are 0,1,7, then the occupancy code of this node is 1000_0011
-    * @param node The octree node.
-    * @return the occupancy code(0000_0000-1111_1111)
-    */
-    static inline unsigned char getBitPattern(OctreeNode &node) {
-        unsigned char res=0;
-        for (unsigned char i=0; i<node.children.size();i++){
-            res|=static_cast<unsigned char>((!node.children[i].empty()) << i);
-        }
-        return res;
-    }
 };
 
 struct Octree::Impl{
@@ -189,6 +176,11 @@ struct Octree::Impl{
     double resolution;
     //! Whether the point cloud has a color attribute.
     bool hasColor{};
+
+    //! A buffer of Path for last point operation(insert, delete(not impl)).
+    //! the Path means the Node from root to the leaf that point lives in.
+    std::vector<OctreeNode*> lastPath;
+    OctreeKey lastKey;
 };
 }
 #endif //OPENCV_3D_SRC_OCTREE_HPP
