@@ -59,23 +59,18 @@ static void patchNaNs_64f(uchar* ptr, size_t len, double newVal)
     size_t j = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    v_int64 v_mnt_mask = vx_setall_s64(0x000FFFFFFFFFFFFF);
     v_int64 v_exp_mask = vx_setall_s64(0x7FF0000000000000);
+    v_int64 v_pos_mask = vx_setall_s64(0x7FFFFFFFFFFFFFFF);
     v_int64 v_val = vx_setall_s64(val.i);
 
     size_t cWidth = (size_t)VTraits<v_int64>::vlanes();
     for (; j + cWidth <= len; j += cWidth)
     {
         v_int64 v_src = vx_load(tptr + j);
-        v_int64 vande = v_and(v_src, v_exp_mask);
-        v_int64 vandm = v_and(v_src, v_mnt_mask);
-        v_int64 ve, vm;
-
-        ve = v_eq(vande, v_exp_mask);
-        vm = v_ne(vandm, vx_setzero_s64());
-
-        v_int64 v_isnan = v_and(ve, vm);
-        v_int64 v_dst = v_or(v_and(v_isnan, v_val), v_and(v_not(v_isnan), v_src));
+        
+        v_int64 v_cmp_mask = v_lt(v_exp_mask, v_and(v_src, v_pos_mask));
+        // v_select is not available for v_int64, emulating it
+        v_int64 v_dst = v_or(v_and(v_cmp_mask, v_val), v_and(v_not(v_cmp_mask), v_src));
         v_store(tptr + j, v_dst);
     }
     vx_cleanup();
