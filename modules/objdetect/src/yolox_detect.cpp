@@ -41,8 +41,9 @@ class ObjectDetectorYXImpl : public ObjectDetectorYX
         ObjectDetectorYXImpl(const std::string& modelFilePath,
             float confThresh,
             float nmsThresh,
+            float objThresh,
             dnn::Backend backId,
-            dnn::Target tgtId):modelPath(modelFilePath), confThreshold(confThresh), nmsThreshold(nmsThresh), backendId(backId), targetId(tgtId)
+            dnn::Target tgtId):modelPath(modelFilePath), confThreshold(confThresh), nmsThreshold(nmsThresh), objThreshold(objThresh), backendId(backId), targetId(tgtId)
         {
             this->num_classes = int(labelYolox.size());
             this->net = dnn::readNet(samples::findFile(modelPath));
@@ -153,9 +154,12 @@ class ObjectDetectorYXImpl : public ObjectDetectorYX
             for (auto idx : keep)
             {
                 boxes_xyxy.rowRange(idx, idx + 1).copyTo(candidates(Rect(0, row, 4, 1)));
-                candidates.at<float>(row, 4) = maxScores[idx];
-                candidates.at<float>(row, 5) = float(maxScoreIdx[idx]);
-                row++;
+                if (float(maxScoreIdx[idx]) >= objThreshold)
+                {
+                    candidates.at<float>(row, 4) = idx;
+                    candidates.at<float>(row, 5) = float(maxScoreIdx[idx]);
+                    row++;
+                }
             }
             if (keep.size() == 0)
                 return Mat();
@@ -216,6 +220,7 @@ class ObjectDetectorYXImpl : public ObjectDetectorYX
         Size inputSize;
         float confThreshold;
         float nmsThreshold;
+        float objThreshold;
         dnn::Backend backendId;
         dnn::Target targetId;
         int num_classes;
@@ -225,10 +230,10 @@ class ObjectDetectorYXImpl : public ObjectDetectorYX
     };
 #endif
 
-Ptr<ObjectDetectorYX> ObjectDetectorYX::create(std::string modelPath, float confThresh, float nmsThresh, dnn::Backend bId , dnn::Target tId)
+Ptr<ObjectDetectorYX> ObjectDetectorYX::create(std::string modelPath, float confThresh, float nmsThresh, float objThresh, dnn::Backend bId , dnn::Target tId)
 {
 #ifdef HAVE_OPENCV_DNN
-    return makePtr<ObjectDetectorYXImpl>(modelPath, confThresh, nmsThresh, bId, tId);
+    return makePtr<ObjectDetectorYXImpl>(modelPath, confThresh, nmsThresh, objThresh, bId, tId);
 #else
     CV_UNUSED(modelPath); CV_UNUSED(confThresh); CV_UNUSED(nmsThresh); CV_UNUSED(bId); CV_UNUSED(tId);
     CV_Error(cv::Error::StsNotImplemented, "cv::ObjectDetectorYX requires enabled 'dnn' module.");

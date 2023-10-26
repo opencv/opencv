@@ -59,7 +59,7 @@ public:
      *  @param bId the id of backend
      *  @param tId the id of target device
      */
-    CV_WRAP static Ptr<ObjectDetectorYX> create( std::string modelPath, float confThresh = 0.35f, float nmsThresh = 0.5f,
+    CV_WRAP static Ptr<ObjectDetectorYX> create( std::string modelPath, float confThresh = 0.35f, float nmsThresh = 0.5f, float objThresh = 0.5f,
                                                  dnn::Backend bId = dnn::DNN_BACKEND_DEFAULT, dnn::Target tId = dnn::DNN_TARGET_CPU);
 };
 
