@@ -67,7 +67,7 @@ static void patchNaNs_64f(uchar* ptr, size_t len, double newVal)
     for (; j + cWidth <= len; j += cWidth)
     {
         v_int64 v_src = vx_load(tptr + j);
-        
+
         v_int64 v_cmp_mask = v_lt(v_exp_mask, v_and(v_src, v_pos_mask));
         // v_select is not available for v_int64, emulating it
         v_int64 v_dst = v_or(v_and(v_cmp_mask, v_val), v_and(v_not(v_cmp_mask), v_src));
@@ -234,7 +234,7 @@ int finiteMaskSIMD_<double, 1>(const double *dsrc, uchar *dst, size_t total)
 
     v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
     v_uint64 z = vx_setzero_u64();
-    
+
     for(; i <= (int)total - (size8 / 2); i += (size8 / 2) )
     {
         v_uint64 vv0, vv1, vv2, vv3;
