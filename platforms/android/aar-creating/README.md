@@ -15,6 +15,7 @@ python build_java_shared_aar.py "~/opencv-4.7.0-android-sdk/OpenCV-android-sdk" 
 ```
 python build_static_aar.py "~/opencv-4.7.0-android-sdk/OpenCV-android-sdk" "4.7.0"
 ```
+The AAR libraries and the local Maven repository will be created in the **outputs** directory
 ### Technical details
 The scripts consist of 5 steps:
 1. Preparing Android AAR library project template
