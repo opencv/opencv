@@ -230,19 +230,18 @@ int finiteMaskSIMD_<double, 1>(const double *dsrc, uchar *dst, size_t total)
 }
 
 template <>
-int finiteMaskSIMD_<double, 2>(const double *src, uchar *dst, size_t total)
+int finiteMaskSIMD_<double, 2>(const double *dsrc, uchar *dst, size_t total)
 {
+    const uint64_t* src = (const uint64_t*)dsrc;
     const int size8 = VTraits<v_uint8>::vlanes();
     const int npixels = size8 / 16;
+    v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
+    v_uint64 z = vx_setzero_u64();
+
     int i = 0;
     for(; i <= (int)total - npixels; i += npixels )
     {
-        v_uint64 vu = vx_load((const uint64_t*)src + i*2);
-
-        v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
-        v_uint64 z = vx_setzero_u64();
-
-        v_uint64 vv = v_ne(v_and(vu, vmaskExp), vmaskExp);
+        v_uint64 vv = v_ne(v_and(vx_load(src + i*2), vmaskExp), vmaskExp);
 
         v_uint8 velems = v_pack_b(vv, z, z, z, z, z, z, z);
 
