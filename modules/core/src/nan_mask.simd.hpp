@@ -120,17 +120,16 @@ int finiteMaskSIMD_<float, 1>(const float *fsrc, uchar *dst, size_t total)
 {
     const uint32_t* src = (const uint32_t*)fsrc;
     const int osize = VTraits<v_uint8>::vlanes();
-    v_uint32 vmaskPos = vx_setall_u32(0x7fffffff);
     v_uint32 vmaskExp = vx_setall_u32(0x7f800000);
 
     int i = 0;
     for(; i <= (int)total - osize; i += osize )
     {
         v_uint32 vv0, vv1, vv2, vv3;
-        vv0 = v_lt(v_and(vx_load(src + i              ), vmaskPos), vmaskExp);
-        vv1 = v_lt(v_and(vx_load(src + i +   (osize/4)), vmaskPos), vmaskExp);
-        vv2 = v_lt(v_and(vx_load(src + i + 2*(osize/4)), vmaskPos), vmaskExp);
-        vv3 = v_lt(v_and(vx_load(src + i + 3*(osize/4)), vmaskPos), vmaskExp);
+        vv0 = v_ne(v_and(vx_load(src + i              ), vmaskExp), vmaskExp);
+        vv1 = v_ne(v_and(vx_load(src + i +   (osize/4)), vmaskExp), vmaskExp);
+        vv2 = v_ne(v_and(vx_load(src + i + 2*(osize/4)), vmaskExp), vmaskExp);
+        vv3 = v_ne(v_and(vx_load(src + i + 3*(osize/4)), vmaskExp), vmaskExp);
 
         v_store(dst + i, v_pack_b(vv0, vv1, vv2, vv3));
     }
@@ -145,17 +144,16 @@ int finiteMaskSIMD_<float, 2>(const float *fsrc, uchar *dst, size_t total)
 {
     const uint32_t* src = (const uint32_t*)fsrc;
     const int size8 = VTraits<v_uint8>::vlanes();
-    v_uint32 vmaskPos = vx_setall_u32(0x7fffffff);
     v_uint32 vmaskExp = vx_setall_u32(0x7f800000);
 
     int i = 0;
     for(; i <= (int)total - (size8 / 2); i += (size8 / 2) )
     {
         v_uint32 vv0, vv1, vv2, vv3;
-        vv0 = v_lt(v_and(vx_load(src + i*2                ), vmaskPos), vmaskExp);
-        vv1 = v_lt(v_and(vx_load(src + i*2 +   (size8 / 4)), vmaskPos), vmaskExp);
-        vv2 = v_lt(v_and(vx_load(src + i*2 + 2*(size8 / 4)), vmaskPos), vmaskExp);
-        vv3 = v_lt(v_and(vx_load(src + i*2 + 3*(size8 / 4)), vmaskPos), vmaskExp);
+        vv0 = v_ne(v_and(vx_load(src + i*2                ), vmaskExp), vmaskExp);
+        vv1 = v_ne(v_and(vx_load(src + i*2 +   (size8 / 4)), vmaskExp), vmaskExp);
+        vv2 = v_ne(v_and(vx_load(src + i*2 + 2*(size8 / 4)), vmaskExp), vmaskExp);
+        vv3 = v_ne(v_and(vx_load(src + i*2 + 3*(size8 / 4)), vmaskExp), vmaskExp);
         v_uint8 velems = v_pack_b(vv0, vv1, vv2, vv3);
         v_uint16 vmaskBoth = vx_setall_u16(0xffff);
         v_uint16 vfinite = v_eq(v_reinterpret_as_u16(velems), vmaskBoth);
@@ -174,7 +172,6 @@ int finiteMaskSIMD_<float, 3>(const float *fsrc, uchar *dst, size_t total)
 {
     const uint32_t* src = (const uint32_t*)fsrc;
     const int npixels = VTraits<v_float32>::vlanes();
-    v_uint32 vmaskPos = vx_setall_u32(0x7fffffff);
     v_uint32 vmaskExp = vx_setall_u32(0x7f800000);
     v_uint32 z = vx_setzero_u32();
 
@@ -182,9 +179,9 @@ int finiteMaskSIMD_<float, 3>(const float *fsrc, uchar *dst, size_t total)
     for (; i <= (int)total - npixels; i += npixels)
     {
         v_uint32 vv0, vv1, vv2;
-        vv0 = v_lt(v_and(vx_load(src + i*3            ), vmaskPos), vmaskExp);
-        vv1 = v_lt(v_and(vx_load(src + i*3 +   npixels), vmaskPos), vmaskExp);
-        vv2 = v_lt(v_and(vx_load(src + i*3 + 2*npixels), vmaskPos), vmaskExp);
+        vv0 = v_ne(v_and(vx_load(src + i*3            ), vmaskExp), vmaskExp);
+        vv1 = v_ne(v_and(vx_load(src + i*3 +   npixels), vmaskExp), vmaskExp);
+        vv2 = v_ne(v_and(vx_load(src + i*3 + 2*npixels), vmaskExp), vmaskExp);
 
         v_uint8 velems = v_pack_b(vv0, vv1, vv2, z);
 
