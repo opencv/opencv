@@ -19,11 +19,11 @@ The AAR libraries and the local Maven repository will be created in the **output
 ### Technical details
 The scripts consist of 5 steps:
 1. Preparing Android AAR library project template
-2. Adding Java code to the project
+2. Adding Java code to the project. Adding C++ public headers for shared version to the project.
 3. Compiling the project to build an AAR package
-4. Adding C++ binary libraries to the AAR package
+4. Adding C++ binary libraries to the AAR package. Adding C++ public headers for static version to the AAR package.
 5. Creating Maven repository with the AAR package
 
 There are a few minor limitations:
-1. Due to the AAR design the Java + shared C++ AAR package contains duplicates of C++ binary libraries, but the final user's Android appllication contains only one library instance.
+1. Due to the AAR design the Java + shared C++ AAR package contains duplicates of C++ binary libraries, but the final user's Android application contains only one library instance.
 2. The compile definitions from cmake configs are skipped, but it shouldn't affect the library because the script uses precompiled C++ binaries from SDK.
