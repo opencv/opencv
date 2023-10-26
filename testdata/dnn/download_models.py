@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from __future__ import print_function
 import hashlib
@@ -233,11 +233,6 @@ models = [
         sha='c8a5a000ee8d8dd75886f152a50a9c5b53d726a5',
         filename='tensorflow_inception_graph.pb'),
     Model(
-        name='Enet',  # https://github.com/e-lab/ENet-training
-        url='https://www.dropbox.com/s/tdde0mawbi5dugq/Enet-model-best.net?dl=1',
-        sha='b4123a73bf464b9ebe9cfc4ab9c2d5c72b161315',
-        filename='Enet-model-best.net'),
-    Model(
         name='Fcn',
         url='http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel',
         sha='c449ea74dd7d83751d1357d6a8c323fcf4038962',
@@ -268,11 +263,6 @@ models = [
         sha='50cf80235a8fcccc641bf9f8efc803edbf21c615',
         filename='MobileNetSSD_deploy_19e3ec3.prototxt'),
     Model(
-        name='OpenFace',  # https://github.com/cmusatyalab/openface
-        url='https://storage.cmusatyalab.org/openface-models/nn4.small2.v1.t7',
-        sha='ac8161a4376fb5a79ceec55d85bbb57ef81da9fe',
-        filename='openface_nn4.small2.v1.t7'),
-    Model(
         name='YoloV2voc',  # https://pjreddie.com/darknet/yolo/
         url='https://pjreddie.com/media/files/yolo-voc.weights',
         sha='1cc1a7f8ad12d563d85b76e9de025dc28ac397bb',
@@ -293,15 +283,10 @@ models = [
         sha='4922099342af5993d9d09f63081c8a392f3c1cc6',
         filename='DenseNet_121.prototxt'),
     Model(
-        name='Fast-Neural-Style (starry night)',
-        url='http://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/starry_night.t7',
-        sha='5b5e115253197b84d6c6ece1dafe6c15d7105ca6',
-        filename='fast_neural_style_eccv16_starry_night.t7'),
-    Model(
-        name='Fast-Neural-Style (feathers)',
-        url='http://cs.stanford.edu/people/jcjohns/fast-neural-style/models/instance_norm/feathers.t7',
-        sha='9838007df750d483b5b5e90b92d76e8ada5a31c0',
-        filename='fast_neural_style_instance_norm_feathers.t7'),
+        name='Fast-Neural-Style',
+        url='https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/mosaic-9.onnx',
+        sha='dc3ef19f7f8a5d906c97c84cd4dd2732bb73960a',
+        filename='mosaic-9.onnx'),
     Model(
         name='MobileNet-SSD (TensorFlow)',
         url='http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz',
