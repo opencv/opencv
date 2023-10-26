@@ -537,13 +537,12 @@ PERF_TEST_P_(FiniteMaskFixture, FiniteMask)
     Size srcSize = get<0>(params);
     const int type = get<1>(params), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
 
-    UMat src(srcSize, type);
-    UMat mask(srcSize, CV_8UC1);
+    Mat src(srcSize, type);
+    Mat mask(srcSize, CV_8UC1);
     declare.in(src, WARMUP_RNG).out(mask);
 
     // generating NaNs
     {
-        Mat src_ = src.getMat(ACCESS_RW);
         srcSize.width *= cn;
         const softfloat  fpinf = softfloat ::inf();
         const softfloat  fninf = softfloat ::inf().setSign(true);
@@ -551,8 +550,8 @@ PERF_TEST_P_(FiniteMaskFixture, FiniteMask)
         const softdouble dninf = softdouble::inf().setSign(true);
         for (int y = 0; y < srcSize.height; ++y)
         {
-            float  *const ptrf = src_.ptr<float>(y);
-            double *const ptrd = src_.ptr<double>(y);
+            float  *const ptrf = src.ptr<float>(y);
+            double *const ptrd = src.ptr<double>(y);
             for (int x = 0; x < srcSize.width; ++x)
             {
                 int fseed = (x << 16) + y;
