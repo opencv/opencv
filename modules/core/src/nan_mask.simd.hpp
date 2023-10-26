@@ -341,6 +341,52 @@ int finiteMaskSIMD_<double, 3>(const double *fsrc, uchar *dst, size_t total)
     return i;
 }
 
+template <>
+int finiteMaskSIMD_<double, 4>(const double *dsrc, uchar *dst, size_t total)
+{
+    const uint64_t* src = (const uint64_t*)dsrc;
+    CV_StaticAssert(VTraits<v_uint8>::max_nlanes*8 <= 1024, "SIMD registers should be not more than 1024 bit wide");
+    // number of pixels in 2 vector registers
+    const int npixels = VTraits<v_uint64>::vlanes()/2;
+
+    v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
+    v_uint64 z = vx_setzero_u64();
+    v_uint32 vmaskAll4 = vx_setall_u32(0xFFFFFFFF);
+    v_uint32 z32 = vx_setzero_u32();
+
+    int i = 0;
+    for(; i <= (int)total - npixels; i += npixels )
+    {
+        v_uint64 vv0, vv1;
+        vv0 = v_ne(v_and(vx_load(src + i*4            ), vmaskExp), vmaskExp);
+        vv1 = v_ne(v_and(vx_load(src + i*4 + npixels*2), vmaskExp), vmaskExp);
+
+        v_uint8 velems = v_pack_b(vv0, vv1, z, z, z, z, z, z);
+        v_uint32 vresWide = v_eq(v_reinterpret_as_u32(velems), vmaskAll4);
+
+        v_uint8 vres = v_pack_b(vresWide, z32, z32, z32);
+        if (npixels == 1) // 2x128 bit
+        {
+            dst[i] = v_get0(vres);
+        }
+        else if (npixels == 2) // 2x256 bit
+        {
+            *((uint16_t*)(dst + i)) = v_get0(v_reinterpret_as_u16(vres));
+        }
+        else if (npixels == 4) // 2x512 bit
+        {
+            *((uint32_t*)(dst + i)) = v_get0(v_reinterpret_as_u32(vres));
+        }
+        else if (npixels == 8) // 2x1024 bit wide
+        {
+            *((uint64_t*)(dst + i)) = v_get0(v_reinterpret_as_u64(vres));
+        }
+    }
+    vx_cleanup();
+
+    return i;
+}
+
 #endif
 
 
