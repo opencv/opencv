@@ -1,12 +1,34 @@
 //
-//  Range.m
+//  Range.mm
 //
 //  Created by Giles Payne on 2019/10/08.
 //
 
 #import "Range.h"
 
-@implementation Range
+@implementation Range {
+    cv::Range native;
+}
+
+- (int)start {
+    return native.start;
+}
+
+- (void)setStart:(int)val {
+    native.start = val;
+}
+
+- (int)end {
+    return native.end;
+}
+
+- (void)setEnd:(int)val {
+    native.end = val;
+}
+
+- (cv::Range&)nativeRef {
+    return native;
+}
 
 - (instancetype)init {
     return [self initWithStart:0 end: 0];
@@ -27,6 +49,10 @@
         [self set:vals];
     }
     return self;
+}
+
++ (instancetype)fromNative:(cv::Range&)range {
+    return [[Range alloc] initWithStart:range.start end:range.end];
 }
 
 - (void)set:(NSArray<NSNumber*>*)vals {
