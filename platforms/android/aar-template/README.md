@@ -9,11 +9,11 @@ export ANDROID_HOME=~/Android/SDK
 2. Download OpenCV SDK for Android
 3. Run build script for version with Java and a shared C++ library:
 ```
-python build_java_shared_aar.py "~/opencv-4.7.0-android-sdk/OpenCV-android-sdk" "4.7.0"
+python build_java_shared_aar.py "~/opencv-4.7.0-android-sdk/OpenCV-android-sdk"
 ```
 4. Run build script for version with static C++ libraries:
 ```
-python build_static_aar.py "~/opencv-4.7.0-android-sdk/OpenCV-android-sdk" "4.7.0"
+python build_static_aar.py "~/opencv-4.7.0-android-sdk/OpenCV-android-sdk"
 ```
 The AAR libraries and the local Maven repository will be created in the **outputs** directory
 ### Technical details

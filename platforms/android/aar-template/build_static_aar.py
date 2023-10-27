@@ -5,7 +5,7 @@ import os
 import shutil
 import subprocess
 
-from build_java_shared_aar import fill_template, get_compiled_aar_path
+from build_java_shared_aar import fill_template, get_compiled_aar_path, get_opencv_version
 
 
 ABIS = ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"] # if you want to change it, you also need to change Android project template
@@ -201,7 +201,6 @@ def main(sdk_dir, opencv_version):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Builds AAR with static C++ libs from OpenCV SDK")
     parser.add_argument('opencv_sdk_path')
-    parser.add_argument('opencv_version')
     args = parser.parse_args()
 
-    main(args.opencv_sdk_path, args.opencv_version)
+    main(args.opencv_sdk_path, get_opencv_version(args.opencv_sdk_path))

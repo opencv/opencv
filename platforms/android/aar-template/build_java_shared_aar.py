@@ -1,6 +1,7 @@
 import argparse
 from os import path
 import os
+import re
 import shutil
 import string
 import subprocess
@@ -34,6 +35,15 @@ def fill_template(src_path, dst_path, args_dict):
     text = template.safe_substitute(args_dict)
     with open(dst_path, "w") as f:
         f.write(text)
+
+def get_opencv_version(opencv_sdk_path):
+    version_hpp_path = path.join(opencv_sdk_path, "sdk/native/jni/include/opencv2/core/version.hpp")
+    with open(version_hpp_path, "rt") as f:
+        data = f.read()
+        major = re.search(r'^#define\W+CV_VERSION_MAJOR\W+(\d+)$', data, re.MULTILINE).group(1)
+        minor = re.search(r'^#define\W+CV_VERSION_MINOR\W+(\d+)$', data, re.MULTILINE).group(1)
+        revision = re.search(r'^#define\W+CV_VERSION_REVISION\W+(\d+)$', data, re.MULTILINE).group(1)
+        return "%(major)s.%(minor)s.%(revision)s" % locals()
 
 def get_compiled_aar_path(path1, path2):
     if path.exists(path1):
@@ -105,7 +115,6 @@ def main(sdk_dir, opencv_version):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Builds AAR with Java and shared C++ libs from OpenCV SDK")
     parser.add_argument('opencv_sdk_path')
-    parser.add_argument('opencv_version')
     args = parser.parse_args()
 
-    main(args.opencv_sdk_path, args.opencv_version)
+    main(args.opencv_sdk_path, get_opencv_version(args.opencv_sdk_path))
