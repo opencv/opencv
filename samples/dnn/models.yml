@@ -79,7 +79,7 @@ tiny-yolo-voc:
 
 yolov8:
   load_info:
-    url: "https://github.com/JasonLin1110/ultralytics_yolov8_onnx_model/yolov8net.onnx"
+    url: "https://github.com/JasonLin1110/ultralytics_yolov8_onnx_model/blob/main/yolov8net.onnx"
     sha1: "67144099b4d8c40fa2d1f8cd17b2a6c6bb81ce90"
   model: "yolov8net.onnx"
   mean: [0, 0, 0]
@@ -87,7 +87,7 @@ yolov8:
   width: 640
   height: 640
   rgb: true
-  classes: "object_detection_classes_yolov8.txt"
+  classes: "object_detection_classes_yolov4.txt"
   sample: "object_detection"
 
 # Caffe implementation of SSD model from https://github.com/chuanqi305/MobileNet-SSD
