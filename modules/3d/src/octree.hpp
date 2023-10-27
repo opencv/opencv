@@ -87,10 +87,9 @@ public:
     //! Absolute coordinates of the smallest point of the cube.
     //! And the center of cube is `center = origin + Point3f(size/2, size/2, size/2)`.
     Point3f origin;
-
-    //! color attribute of octree node.
+    //! RGB color attribute of octree node.
     Point3f color;
-    //! RAHTCoefficient of octree node, used for color attribute compression.
+    //! RAHTCoefficient of octree node for attribute compression.
     Point3f RAHTCoefficient=Point3f(0,0,0);
     //! Number of point cloud in this node.
     int pointNum;

@@ -310,9 +310,18 @@ void Haar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients, s
         return;
     if (node->isLeaf) {
         // convert RGB to YUV
-        node->RAHTCoefficient.x = 0.2126f * node->color.x + 0.7152f * node->color.y + 0.0722f * node->color.z;
-        node->RAHTCoefficient.y = (node->color.z - node->RAHTCoefficient.x) / 1.85563f;
-        node->RAHTCoefficient.z = (node->color.x - node->RAHTCoefficient.x) / 1.57480f;
+        int r, g, b, y, u, v;
+        r = (int)node->color.x;
+        g = (int)node->color.y;
+        b = (int)node->color.z;
+
+        y = ((66 * r + 129 * g + 25 * b + 128) >> 8) + 16;
+        u = ((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128;
+        v = ((112 * r - 94 * g - 18 * b + 128) >> 8) + 128;
+
+        node->RAHTCoefficient.x = (float)(y > 235 ? 235 : y < 16 ? 16 : y);
+        node->RAHTCoefficient.y = (float)(u > 240 ? 240 : u < 16 ? 16 : u);
+        node->RAHTCoefficient.z = (float)(v > 240 ? 240 : v < 16 ? 16 : v);
         return;
     }
 
@@ -359,8 +368,8 @@ void Haar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients, s
                 auto w1 = (float) node1->pointNum;
                 auto w2 = (float) node2->pointNum;
                 float w = w1 + w2;
-                float a1 = sqrt(w1) / sqrt(w);
-                float a2 = sqrt(w2) / sqrt(w);
+                float a1 = sqrt(w1 / w);
+                float a2 = sqrt(w2 / w);
 
                 currCube[x / stepSize]->pointNum = (int) w;
 
@@ -405,60 +414,54 @@ void invHaar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients
         return;
     if (node->isLeaf) {
         // restore leaf nodes' RGB color
-        float y, u, v, r, g, b;
-        y = node->RAHTCoefficient.x + 0.5f;
-        u = node->RAHTCoefficient.y;
-        v = node->RAHTCoefficient.z;
+        int c, d, e, r, g, b;
 
-        r = y + 1.5748f * v;
-        g = y - 0.18733f * u - 0.46813f * v;
-        b = y + 1.85563f * u;
+        c = (int)node->RAHTCoefficient.x - 16;
+        d = (int)node->RAHTCoefficient.y - 128;
+        e = (int)node->RAHTCoefficient.z - 128;
 
-        // Clipping from 0 to 255
-        r = (r < 0.0f) ? 0.0f : ((r > 255.0f) ? 255.0f : r);
-        g = (g < 0.0f) ? 0.0f : ((g > 255.0f) ? 255.0f : g);
-        b = (b < 0.0f) ? 0.0f : ((b > 255.0f) ? 255.0f : b);
+        r = (298 * c + 409 * e + 128) >> 8;
+        g = (298 * c - 100 * d - 208 * e + 128) >> 8;
+        b = (298 * c + 516 * d + 128) >> 8;
 
-        node->color = Point3f(r, g, b);
+        r = r > 255 ? 255 : r < 0 ? 0 : r;
+        g = g > 255 ? 255 : g < 0 ? 0 : g;
+        b = b > 255 ? 255 : b < 0 ? 0 : b;
+
+        node->color = Point3f((float)r, (float)g, (float)b);
         return;
     }
 
+    // init vector with the input node
+    cubes[0]->RAHTCoefficient = node->RAHTCoefficient;
+
     // actual size of currCube in the loop
-    size_t iterSize = 2;
-
-    std::vector<OctreeNode *> prevCube(8);
-    std::vector<OctreeNode *> currCube(8);
-
-    for (size_t idx = 0; idx < node->children.size(); ++idx) {
-        prevCube[idx] = cubes[idx];
-        currCube[idx] = cubes[node->children.size() + idx];
-    }
-
-    // node expansion: 1 -> 2 -> 4 -> 8 child nodes
-    // first set prev = node, then insert weight values into currCube by traversing children
-    // then update currCube's HaarCoefficients using node's low-pass and high-pass coefficients from input
-    // set prev = curr, then enter next loop
-
-    prevCube[0]->RAHTCoefficient = node->RAHTCoefficient;
-    prevCube[0]->pointNum = node->pointNum;
+    int stepSize, iterSize = 8;
 
     while (true) {
-        // sum stepSize number of nodes' pointNum values for currCube
-        size_t stepSize = 8 / iterSize;
+        stepSize = iterSize >> 1;
 
-        // 1st loop: i = 0, 1   j = i*stepSize, j+1, ... , i+1 * stepSize
-        for (size_t i = 0; i < iterSize; ++i) {
-            currCube[i] = new OctreeNode;
-            for (size_t j = i * stepSize; j < i * stepSize + stepSize; ++j) {
+        // transformation order:  Octree is abstracted to binary tree
+        // 0                      First we have the input node
+        // 0       4              Then we fill in weight for its two sub-nodes
+        // 0   2   4   6          After that transformation is performed
+        // 0 1 2 3 4 5 6 7 8
+
+        // sum weight for the produced temp nodes
+        for (int i = 0; i < 8; i += stepSize) {
+            cubes[i]->pointNum = 0;
+            for (int j = i; j < i + stepSize; ++j) {
                 if (node->children[j])
-                    currCube[i]->pointNum += node->children[j]->pointNum;
+                    cubes[i]->pointNum += node->children[j]->pointNum;
             }
         }
 
-        for (int i = (int) iterSize - 2; i >= 0; i -= 2) {
-            OctreeNode *fatherNode = prevCube[i / 2];
-            OctreeNode *node1 = currCube[i];
-            OctreeNode *node2 = currCube[i + 1];
+
+        for (int i = 8 - iterSize; i >= 0; i -= iterSize) {
+            Point3f lowPass = cubes[i]->RAHTCoefficient;
+
+            OctreeNode *node1 = cubes[i];
+            OctreeNode *node2 = cubes[i + stepSize];
 
             if (!node1->pointNum && !node2->pointNum)
                 continue;
@@ -467,34 +470,28 @@ void invHaar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients
                 auto w2 = static_cast<float>(node2->pointNum);
                 float w = w1 + w2;
 
-                float a1 = sqrt(w1) / sqrt(w);
-                float a2 = sqrt(w2) / sqrt(w);
+                float a1 = sqrt(w1 / w);
+                float a2 = sqrt(w2 / w);
 
                 // get coefficients from input array
-                Point3f lowPassCoefficient = fatherNode->RAHTCoefficient;
                 Point3f highPassCoefficient = haarCoefficients[N--];
 
                 // get YUV color
-                node1->RAHTCoefficient = a1 * lowPassCoefficient - a2 * highPassCoefficient;
-                node2->RAHTCoefficient = a1 * highPassCoefficient + a2 * lowPassCoefficient;
+                node1->RAHTCoefficient = a1 * lowPass - a2 * highPassCoefficient;
+                node2->RAHTCoefficient = a1 * highPassCoefficient + a2 * lowPass;
                 continue;
             }
-            node1->RAHTCoefficient = fatherNode->RAHTCoefficient;
-            node2->RAHTCoefficient = fatherNode->RAHTCoefficient;
+            node1->RAHTCoefficient = lowPass;
+            node2->RAHTCoefficient = lowPass;
         }
-        iterSize <<= 1;
-        if (iterSize > 8)
+        iterSize >>= 1;
+        if (iterSize == 1)
             break;
-
-        for (size_t k = 0; k < prevCube.size(); ++k) {
-            prevCube[k]->pointNum = currCube[k]->pointNum;
-            prevCube[k]->RAHTCoefficient = currCube[k]->RAHTCoefficient;
-        }
     }
 
     for (int i = 0; i < 8; ++i)
         if (node->children[i])
-            node->children[i]->RAHTCoefficient = currCube[i]->RAHTCoefficient;
+            node->children[i]->RAHTCoefficient = cubes[i]->RAHTCoefficient;
 
     for (int i = 7; i >= 0; --i)
         invHaar3DRecursive(node->children[i], haarCoefficients, cubes, N);
@@ -565,27 +562,26 @@ void OctreeSerializeCoder::decodeColor(float qStep, const std::vector<unsigned c
     std::vector<int32_t> qCoeffs(colorNum);
     // decode uchar vector
     for (i = 0, j = 0; i < colorNum; ++i) {
-        int32_t dVal = 0;
-        dVal |= static_cast<::int32_t>(colorCode[j++]);
-        dVal |= (static_cast<::int32_t>(colorCode[j++]) << 8);
-        dVal |= (static_cast<::int32_t>(colorCode[j++]) << 16);
-        dVal |= (static_cast<::int32_t>(colorCode[j++]) << 24);
+        int32_t dVal = *reinterpret_cast<const int32_t*>(&colorCode[j]);
+        j += 4;
+
         // unsigned to signed
-        qCoeffs[i] = dVal & 0x1 ? -(dVal >> 1) - 1 : (dVal >> 1);
+        qCoeffs[i] = (dVal & 0x1) ? -(dVal >> 1) - 1 : (dVal >> 1);
     }
 
     // de-quantization
     std::vector<Point3f> haarCoeffs(pointNum);
-    for (i = 0, j = i + pointNum, k = j + pointNum; i < pointNum; ++i) {
+    for (i = 0, j = i + pointNum, k = j + pointNum; i < pointNum; ++i, ++j, ++k) {
         haarCoeffs[i].x = static_cast<float>(qCoeffs[i]) * qStep;
-        haarCoeffs[i].y = static_cast<float>(qCoeffs[j++]) * qStep;
-        haarCoeffs[i].z = static_cast<float>(qCoeffs[k++]) * qStep;
+        haarCoeffs[i].y = static_cast<float>(qCoeffs[j]) * qStep;
+        haarCoeffs[i].z = static_cast<float>(qCoeffs[k]) * qStep;
     }
 
     size_t N = haarCoeffs.size() - 1;
     root.RAHTCoefficient = haarCoeffs[N--];
 
-    std::vector<OctreeNode *> cubes(root.children.size() << 1);
+    // temp vector for decompression
+    std::vector<OctreeNode *> cubes(root.children.size());
     for (auto &cube: cubes)
         cube = new OctreeNode;
 
