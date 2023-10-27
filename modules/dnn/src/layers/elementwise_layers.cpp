@@ -1891,8 +1891,8 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-	       backendId == DNN_BACKEND_CUDA   ||
-	       backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CUDA   ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
