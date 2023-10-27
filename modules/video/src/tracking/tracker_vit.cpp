@@ -45,6 +45,9 @@ public:
     {
         net = dnn::readNet(params.net);
         CV_Assert(!net.empty());
+
+        net.setPreferableBackend(params.backend);
+        net.setPreferableTarget(params.target);
     }
 
     void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
