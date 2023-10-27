@@ -1042,6 +1042,11 @@ TEST_P(Test_Darknet_layers, avgpool_softmax)
     testDarknetLayer("avgpool_softmax");
 }
 
+TEST_P(Test_Darknet_layers, crop)
+{
+    testDarknetLayer("crop");
+}
+
 TEST_P(Test_Darknet_layers, region)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
