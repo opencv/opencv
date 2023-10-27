@@ -3,26 +3,21 @@ import json
 from os import path
 import os
 import shutil
-import string
 import subprocess
+
+from build_java_shared_aar import fill_template, get_compiled_aar_path
 
 
 ABIS = ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"] # if you want to change it, you also need to change Android project template
 
-ANDROID_PROJECT_TEMPLATE_DIR = "OpenCVAndroidProject"
+ANDROID_PROJECT_TEMPLATE_DIR = path.join(path.dirname(__file__), "OpenCVAndroidProject")
 ANDROID_PROJECT_DIR = "build_static/AndroidProject"
-COMPILED_AAR_PATH = path.join(ANDROID_PROJECT_DIR, "OpenCV/build/outputs/aar/opencv-release.aar")
+COMPILED_AAR_PATH_1 = path.join(ANDROID_PROJECT_DIR, "OpenCV/build/outputs/aar/OpenCV-release.aar") # original package name
+COMPILED_AAR_PATH_2 = path.join(ANDROID_PROJECT_DIR, "OpenCV/build/outputs/aar/opencv-release.aar") # lower case package name
 AAR_UNZIPPED_DIR = "build_static/aar_unzipped"
 FINAL_AAR_PATH = "outputs/opencv_static.aar"
 FINAL_REPO_PATH = "outputs/maven_repo"
 
-def fill_template(src_path, dst_path, args_dict):
-    with open(src_path, "r") as f:
-        template_text = f.read()
-    template = string.Template(template_text)
-    text = template.safe_substitute(args_dict)
-    with open(dst_path, "w") as f:
-        f.write(text)
 
 def get_list_of_opencv_libs(sdk_dir):
     files = os.listdir(path.join(sdk_dir, "sdk/native/staticlibs/arm64-v8a"))
@@ -116,7 +111,7 @@ def main(sdk_dir, opencv_version):
     fill_template(path.join(ANDROID_PROJECT_DIR, "OpenCV/src/main/cpp/CMakeLists.txt.template"),
                   path.join(ANDROID_PROJECT_DIR, "OpenCV/src/main/cpp/CMakeLists.txt"),
                   {"LIB_NAME": "templib", "LIB_TYPE": "STATIC"})
-        
+
     opencv_libs = get_list_of_opencv_libs(sdk_dir)
     external_libs = get_list_of_3rdparty_libs(sdk_dir)
 
@@ -124,15 +119,16 @@ def main(sdk_dir, opencv_version):
 
     print("Running gradle assembleRelease...")
     # Running gradle to build the Android project
-    subprocess.run(["gradlew", "assembleRelease"],
-                   shell=True,
+    subprocess.run(["sh", "gradlew", "assembleRelease"],
+                   shell=False,
                    cwd=ANDROID_PROJECT_DIR,
                    check=True)
 
     # The created AAR package contains only one empty libtemplib.a library.
     # We need to add OpenCV libraries manually.
     # AAR package is just a zip archive
-    shutil.unpack_archive(COMPILED_AAR_PATH, AAR_UNZIPPED_DIR, "zip")
+    complied_aar_path = get_compiled_aar_path(COMPILED_AAR_PATH_1, COMPILED_AAR_PATH_2) # two possible paths
+    shutil.unpack_archive(complied_aar_path, AAR_UNZIPPED_DIR, "zip")
 
     print("Adding libs to AAR...")
 
@@ -191,11 +187,11 @@ def main(sdk_dir, opencv_version):
 
     shutil.copy(FINAL_AAR_PATH, path.join(ANDROID_PROJECT_DIR, "OpenCV/opencv-release.aar"))
 
-    subprocess.run(["gradlew", "publishReleasePublicationToMyrepoRepository"],
-            shell=True,
+    subprocess.run(["sh", "gradlew", "publishReleasePublicationToMyrepoRepository"],
+            shell=False,
             cwd=ANDROID_PROJECT_DIR,
             check=True)
-    
+
     os.makedirs(path.join(FINAL_REPO_PATH, "org/opencv"), exist_ok=True)
     shutil.move(path.join(ANDROID_PROJECT_DIR, "OpenCV/build/repo/org/opencv/opencv-static"),
                 path.join(FINAL_REPO_PATH, "org/opencv/opencv-static"))

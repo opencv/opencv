@@ -2,9 +2,8 @@ import argparse
 from os import path
 import os
 import shutil
+import string
 import subprocess
-
-from build_static_aar import fill_template
 
 
 COPY_FROM_SDK_TO_ANDROID_PROJECT = [
@@ -20,12 +19,29 @@ COPY_FROM_SDK_TO_APK = [
     ["sdk/native/libs/<ABI>/libopencv_java4.so", "prefab/modules/opencv_java4/libs/android.<ABI>/libopencv_java4.so"],
 ]
 
-ANDROID_PROJECT_TEMPLATE_DIR = "OpenCVAndroidProject"
+ANDROID_PROJECT_TEMPLATE_DIR = path.join(path.dirname(__file__), "OpenCVAndroidProject")
 ANDROID_PROJECT_DIR = "build_java_shared/AndroidProject"
-COMPILED_AAR_PATH = path.join(ANDROID_PROJECT_DIR, "OpenCV/build/outputs/aar/opencv-release.aar")
+COMPILED_AAR_PATH_1 = path.join(ANDROID_PROJECT_DIR, "OpenCV/build/outputs/aar/OpenCV-release.aar") # original package name
+COMPILED_AAR_PATH_2 = path.join(ANDROID_PROJECT_DIR, "OpenCV/build/outputs/aar/opencv-release.aar") # lower case package name
 AAR_UNZIPPED_DIR = "build_java_shared/aar_unzipped"
 FINAL_AAR_PATH = "outputs/opencv_java_shared.aar"
 FINAL_REPO_PATH = "outputs/maven_repo"
+
+def fill_template(src_path, dst_path, args_dict):
+    with open(src_path, "r") as f:
+        template_text = f.read()
+    template = string.Template(template_text)
+    text = template.safe_substitute(args_dict)
+    with open(dst_path, "w") as f:
+        f.write(text)
+
+def get_compiled_aar_path(path1, path2):
+    if path.exists(path1):
+        return path1
+    elif path.exists(path2):
+        return path2
+    else:
+        raise Exception("Can't find compiled AAR path in [" + path1 + ", " + path2 + "]")
 
 def main(sdk_dir, opencv_version):
     print("Preparing Android project...")
@@ -49,15 +65,17 @@ def main(sdk_dir, opencv_version):
 
     print("Running gradle assembleRelease...")
     # Running gradle to build the Android project
-    subprocess.run(["gradlew", "assembleRelease"],
-                shell=True,
-                cwd=ANDROID_PROJECT_DIR)
+    subprocess.run(["sh", "gradlew", "assembleRelease"],
+                shell=False,
+                cwd=ANDROID_PROJECT_DIR,
+                check=True)
 
     print("Adding libs to AAR...")
     # The created AAR package doesn't contain C++ shared libs.
     # We need to add them manually.
     # AAR package is just a zip archive.
-    shutil.unpack_archive(COMPILED_AAR_PATH, AAR_UNZIPPED_DIR, "zip")
+    complied_aar_path = get_compiled_aar_path(COMPILED_AAR_PATH_1, COMPILED_AAR_PATH_2) # two possible paths
+    shutil.unpack_archive(complied_aar_path, AAR_UNZIPPED_DIR, "zip")
 
     for abi in ABIS:
         for src, dst in COPY_FROM_SDK_TO_APK:
@@ -74,9 +92,10 @@ def main(sdk_dir, opencv_version):
     print("Creating local maven repo...")
 
     shutil.copy(FINAL_AAR_PATH, path.join(ANDROID_PROJECT_DIR, "OpenCV/opencv-release.aar"))
-    subprocess.run(["gradlew", "publishReleasePublicationToMyrepoRepository"],
-            shell=True,
-            cwd=ANDROID_PROJECT_DIR)
+    subprocess.run(["sh", "gradlew", "publishReleasePublicationToMyrepoRepository"],
+            shell=False,
+            cwd=ANDROID_PROJECT_DIR,
+            check=True)
 
     os.makedirs(path.join(FINAL_REPO_PATH, "org/opencv"), exist_ok=True)
     shutil.move(path.join(ANDROID_PROJECT_DIR, "OpenCV/build/repo/org/opencv/opencv"),
