@@ -41,6 +41,9 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
         return false;
     }
     std::getline(file, s);
+    if (!s.empty() && s.back() == '\r') {
+        s.pop_back();
+    }
     auto splitArr = split(s, ' ');
     if (splitArr[0] != "format")
     {
@@ -68,6 +71,9 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
     bool onVertexRead = false;
     while (std::getline(file, s))
     {
+        if (s.back() == '\r') {
+            s.pop_back();
+        }
         if (startsWith(s, "element"))
         {
             auto splitArrElem = split(s, ' ');

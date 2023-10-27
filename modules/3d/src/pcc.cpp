@@ -697,17 +697,18 @@ void PointCloudCompression::compress(const std::vector<Point3f> &pointCloud, dou
     // refresh coder
     this->p->_coder = OctreeSerializeCoder();
 
+    // check if color attribute exists.
+    if (qStep > 0 && colorAttribute.empty()) {
+        CV_LOG_WARNING(NULL, "Input pointcloud has no detected color attribute, setting QStep to -1");
+        qStep = -1;
+    }
+
     // set file header.
     outputStream << "resolution " << resolution << "\n";
     outputStream << "qstep " << qStep << "\n";
 
     this->p->_coder.encode(pointCloud, colorAttribute, serializedVector, resolution, outputStream);
     this->p->_entropyCoder.encodeCharVectorToStream(serializedVector, outputStream);
-
-    // check if color attribute exists.
-    if (colorAttribute.empty()) {
-        qStep = -1;
-    }
 
     // encode color if it has color attribute.
     if (qStep > 0) {
