@@ -80,20 +80,18 @@ else:
 func_table = {}
 
 # Ignore these functions due to Embind limitations for now
-ignore_list = [
-    "locate",  # int&
-    "minEnclosingCircle",  # float&
-    "checkRange",
-    "minMaxLoc",  # double*
-    "floodFill",  # special case, implemented in core_bindings.cpp
-    "phaseCorrelate",
-    "randShuffle",
-    "calibrationMatrixValues",  # double&
-    "undistortPoints",  # global redefinition
-    "CamShift",  # Rect&
-    "meanShift",  # Rect&
-]
-
+ignore_list = ['locate',  #int&
+               'minEnclosingCircle',  #float&
+               'checkRange',
+               'minMaxLoc',   #double*
+               'floodFill', # special case, implemented in core_bindings.cpp
+               'phaseCorrelate',
+               'randShuffle',
+               'calibrationMatrixValues', #double&
+               'undistortPoints', # global redefinition
+               'CamShift', #Rect&
+               'meanShift' #Rect&
+               ]
 
 def makeWhiteList(module_list):
     wl = {}
@@ -105,11 +103,10 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-
 white_list = None
 namespace_prefix_override = {
-    "dnn": "",
-    "aruco": "",
+    'dnn' : '',
+    'aruco' : '',
 }
 
 # Features to be exported
@@ -121,16 +118,15 @@ with_vec_from_js_array = True
 
 wrapper_namespace = "Wrappers"
 type_dict = {
-    "InputArray": "const cv::Mat&",
-    "OutputArray": "cv::Mat&",
-    "InputOutputArray": "cv::Mat&",
-    "InputArrayOfArrays": "const std::vector<cv::Mat>&",
-    "OutputArrayOfArrays": "std::vector<cv::Mat>&",
-    "string": "std::string",
-    "String": "std::string",
-    "const String&": "const std::string&",
+    'InputArray': 'const cv::Mat&',
+    'OutputArray': 'cv::Mat&',
+    'InputOutputArray': 'cv::Mat&',
+    'InputArrayOfArrays': 'const std::vector<cv::Mat>&',
+    'OutputArrayOfArrays': 'std::vector<cv::Mat>&',
+    'string': 'std::string',
+    'String': 'std::string',
+    'const String&':'const std::string&'
 }
-
 
 def normalize_class_name(name):
     return re.sub(r"^cv\.", "", name).replace(".", "_")
@@ -187,15 +183,14 @@ class ClassInfo(object):
 
 
 def handle_ptr(tp):
-    if tp.startswith("Ptr_"):
-        tp = "Ptr<" + "::".join(tp.split("_")[1:]) + ">"
+    if tp.startswith('Ptr_'):
+        tp = 'Ptr<' + "::".join(tp.split('_')[1:]) + '>'
     return tp
 
-
 def handle_vector(tp):
-    if tp.startswith("vector_"):
-        tp = handle_vector(tp[tp.find("_") + 1 :])
-        tp = "std::vector<" + "::".join(tp.split("_")) + ">"
+    if tp.startswith('vector_'):
+        tp = handle_vector(tp[tp.find('_') + 1:])
+        tp = 'std::vector<' + "::".join(tp.split('_')) + '>'
     return tp
 
 
@@ -249,21 +244,8 @@ class ArgInfo(object):
         self.py_inputarg = False
         self.py_outputarg = False
 
-
 class FuncVariant(object):
-    def __init__(
-        self,
-        class_name,
-        name,
-        decl,
-        is_constructor,
-        is_class_method,
-        is_const,
-        is_virtual,
-        is_pure_virtual,
-        ref_return,
-        const_return,
-    ):
+    def __init__(self, class_name, name, decl, is_constructor, is_class_method, is_const, is_virtual, is_pure_virtual, ref_return, const_return):
         self.class_name = class_name
         self.name = self.wname = name
         self.is_constructor = is_constructor
@@ -293,9 +275,7 @@ class FuncVariant(object):
 
 class FuncInfo(object):
     def __init__(self, class_name, name, cname, namespace, isconstructor):
-        self.name_id = "_".join(
-            [namespace] + ([class_name] if class_name else []) + [name]
-        )  # unique id for dict key
+        self.name_id = '_'.join([namespace] + ([class_name] if class_name else []) + [name])  # unique id for dict key
 
         self.class_name = class_name
         self.name = name
@@ -317,6 +297,7 @@ class Namespace(object):
 
 class JSWrapperGenerator(object):
     def __init__(self):
+
         self.bindings = []
         self.wrapper_funcs = []
 
@@ -333,31 +314,28 @@ class JSWrapperGenerator(object):
         self.class_idx += 1
 
         if class_info.name in self.classes:
-            print(
-                "Generator error: class %s (cpp_name=%s) already exists"
-                % (class_info.name, class_info.cname)
-            )
+            print("Generator error: class %s (cpp_name=%s) already exists" \
+                  % (class_info.name, class_info.cname))
             sys.exit(-1)
         self.classes[class_info.name] = class_info
 
     def resolve_class_inheritance(self):
         new_classes = {}
         for name, class_info in self.classes.items():
-            if not hasattr(class_info, "bases"):
+
+            if not hasattr(class_info, 'bases'):
                 new_classes[name] = class_info
-                continue  # not class
+                continue # not class
 
             if class_info.bases:
-                chunks = class_info.bases[0].split("::")
-                base = "_".join(chunks)
+                chunks = class_info.bases[0].split('::')
+                base = '_'.join(chunks)
                 while base not in self.classes and len(chunks) > 1:
                     del chunks[-2]
-                    base = "_".join(chunks)
+                    base = '_'.join(chunks)
                 if base not in self.classes:
-                    print(
-                        "Generator error: unable to resolve base %s for %s"
-                        % (class_info.bases[0], class_info.name)
-                    )
+                    print("Generator error: unable to resolve base %s for %s"
+                        % (class_info.bases[0], class_info.name))
                     sys.exit(-1)
                 else:
                     class_info.bases[0] = "::".join(chunks)
@@ -368,20 +346,19 @@ class JSWrapperGenerator(object):
         self.classes = new_classes
 
     def split_decl_name(self, name):
-        chunks = name.split(".")
+        chunks = name.split('.')
         namespace = chunks[:-1]
         classes = []
-        while namespace and ".".join(namespace) not in self.parser.namespaces:
+        while namespace and '.'.join(namespace) not in self.parser.namespaces:
             classes.insert(0, namespace.pop())
         return namespace, classes, chunks[-1]
 
     def add_enum(self, decl):
         name = decl[0].rsplit(" ", 1)[1]
         namespace, classes, val = self.split_decl_name(name)
-        namespace = ".".join(namespace)
+        namespace = '.'.join(namespace)
         ns = self.namespaces.setdefault(namespace, Namespace())
-        if len(name) == 0:
-            name = "<unnamed>"
+        if len(name) == 0: name = "<unnamed>"
         if name.endswith("<unnamed>"):
             i = 0
             while True:
@@ -389,13 +366,12 @@ class JSWrapperGenerator(object):
                 candidate_name = name.replace("<unnamed>", "unnamed_%u" % i)
                 if candidate_name not in ns.enums:
                     name = candidate_name
-                    break
-        cname = name.replace(".", "::")
+                    break;
+        cname = name.replace('.', '::')
         type_dict[normalize_class_name(name)] = cname
         if name in ns.enums:
-            print(
-                "Generator warning: enum %s (cname=%s) already exists" % (name, cname)
-            )
+            print("Generator warning: enum %s (cname=%s) already exists" \
+                  % (name, cname))
             # sys.exit(-1)
         else:
             ns.enums[name] = []
@@ -409,15 +385,14 @@ class JSWrapperGenerator(object):
             self.add_const(name.replace("const ", "").strip(), decl)
 
     def add_const(self, name, decl):
-        cname = name.replace(".", "::")
+        cname = name.replace('.','::')
         namespace, classes, name = self.split_decl_name(name)
-        namespace = ".".join(namespace)
-        name = "_".join(classes + [name])
+        namespace = '.'.join(namespace)
+        name = '_'.join(classes+[name])
         ns = self.namespaces.setdefault(namespace, Namespace())
         if name in ns.consts:
-            print(
-                "Generator error: constant %s (cname=%s) already exists" % (name, cname)
-            )
+            print("Generator error: constant %s (cname=%s) already exists" \
+                % (name, cname))
             sys.exit(-1)
         ns.consts[name] = cname
 
@@ -425,12 +400,12 @@ class JSWrapperGenerator(object):
         namespace, classes, barename = self.split_decl_name(decl[0])
         cpp_name = "::".join(namespace + classes + [barename])
         name = barename
-        class_name = ""
-        bare_class_name = ""
+        class_name = ''
+        bare_class_name = ''
         if classes:
-            class_name = normalize_class_name(".".join(namespace + classes))
+            class_name = normalize_class_name('.'.join(namespace + classes))
             bare_class_name = classes[-1]
-        namespace = ".".join(namespace)
+        namespace = '.'.join(namespace)
 
         is_constructor = name == bare_class_name
         is_class_method = False
@@ -465,18 +440,8 @@ class JSWrapperGenerator(object):
         fi = FuncInfo(class_name, name, cpp_name, namespace, is_constructor)
         func = func_map.setdefault(fi.name_id, fi)
 
-        variant = FuncVariant(
-            class_name,
-            name,
-            decl,
-            is_constructor,
-            is_class_method,
-            is_const_method,
-            is_virtual_method,
-            is_pure_virtual_method,
-            ref_return,
-            const_return,
-        )
+        variant = FuncVariant(class_name, name, decl, is_constructor, is_class_method, is_const_method,
+                        is_virtual_method, is_pure_virtual_method, ref_return, const_return)
         func.add_variant(variant)
 
     def save(self, path, name, buf):
@@ -485,6 +450,7 @@ class JSWrapperGenerator(object):
         f.close()
 
     def gen_function_binding_with_wrapper(self, func, ns_name, class_info):
+
         binding_text = None
         wrapper_func_text = None
 
@@ -492,37 +458,31 @@ class JSWrapperGenerator(object):
         wrappers = []
 
         for index, variant in enumerate(func.variants):
+
             factory = False
-            if class_info and "Ptr<" in variant.rettype:
+            if class_info and 'Ptr<' in variant.rettype:
+
                 factory = True
                 base_class_name = variant.rettype
-                base_class_name = (
-                    base_class_name.replace("Ptr<", "").replace(">", "").strip()
-                )
+                base_class_name = base_class_name.replace("Ptr<","").replace(">","").strip()
                 if base_class_name in self.classes:
                     self.classes[base_class_name].has_smart_ptr = True
                 else:
-                    print(
-                        base_class_name,
-                        " not found in classes for registering smart pointer using ",
-                        class_info.name,
-                        "instead",
-                    )
+                    print(base_class_name, ' not found in classes for registering smart pointer using ', class_info.name, 'instead')
                     self.classes[class_info.name].has_smart_ptr = True
 
             def_args = []
             has_def_param = False
 
             # Return type
-            ret_type = "void" if variant.rettype.strip() == "" else variant.rettype
-            if ret_type.startswith("Ptr"):  # smart pointer
-                ptr_type = ret_type.replace("Ptr<", "").replace(">", "")
+            ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
+            if ret_type.startswith('Ptr'): #smart pointer
+                ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
                     ret_type = type_dict[ptr_type]
             for key in type_dict:
                 if key in ret_type:
                     ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
-
             arg_types = []
             unwrapped_arg_types = []
             for arg in variant.args:
@@ -532,18 +492,19 @@ class JSWrapperGenerator(object):
                 else:
                     arg_type = arg.tp
                 # Add default value
-                if with_default_params and arg.defval != "":
-                    def_args.append(arg.defval)
+                if with_default_params and arg.defval != '':
+                    def_args.append(arg.defval);
                 arg_types.append(arg_type)
                 unwrapped_arg_types.append(arg_type)
 
             # Function attribute
-            func_attribs = ""
-            if "*" in "".join(arg_types):
-                func_attribs += ", allow_raw_pointers()"
+            func_attribs = ''
+            if '*' in ''.join(arg_types):
+                func_attribs += ', allow_raw_pointers()'
 
             if variant.is_pure_virtual:
-                func_attribs += ", pure_virtual()"
+                func_attribs += ', pure_virtual()'
+
 
             # Wrapper function
             if ns_name != None and ns_name != "cv":
@@ -551,19 +512,17 @@ class JSWrapperGenerator(object):
                 if ns_parts[0] == "cv":
                     ns_parts = ns_parts[1:]
                 ns_part = "_".join(ns_parts) + "_"
-                ns_id = "_".join(ns_parts)
+                ns_id = '_'.join(ns_parts)
                 ns_prefix = namespace_prefix_override.get(ns_id, ns_id)
                 if ns_prefix:
-                    ns_prefix = ns_prefix + "_"
+                    ns_prefix = ns_prefix + '_'
             else:
-                ns_prefix = ""
+                ns_prefix = ''
             if class_info == None:
                 js_func_name = ns_prefix + func.name
                 wrap_func_name = js_func_name + "_wrapper"
             else:
-                wrap_func_name = (
-                    ns_prefix + func.class_name + "_" + func.name + "_wrapper"
-                )
+                wrap_func_name = ns_prefix + func.class_name + "_" + func.name + "_wrapper"
                 js_func_name = func.name
 
             # TODO: Name functions based wrap directives or based on arguments list
@@ -571,10 +530,10 @@ class JSWrapperGenerator(object):
                 wrap_func_name += str(index)
                 js_func_name += str(index)
 
-            c_func_name = "Wrappers::" + wrap_func_name
+            c_func_name = 'Wrappers::' + wrap_func_name
 
             # Binding template-
-            raw_arg_names = ["arg" + str(i + 1) for i in range(0, len(variant.args))]
+            raw_arg_names = ['arg' + str(i + 1) for i in range(0, len(variant.args))]
             arg_names = []
             w_signature = []
             casted_arg_types = []
@@ -582,77 +541,53 @@ class JSWrapperGenerator(object):
                 casted_arg_name = arg_name
                 if with_vec_from_js_array:
                     # Only support const vector reference as input parameter
-                    match = re.search(r"const std::vector<(.*)>&", arg_type)
+                    match = re.search(r'const std::vector<(.*)>&', arg_type)
                     if match:
                         type_in_vect = match.group(1)
-                        if type_in_vect in [
-                            "int",
-                            "float",
-                            "double",
-                            "char",
-                            "uchar",
-                            "String",
-                            "std::string",
-                        ]:
-                            casted_arg_name = (
-                                "emscripten::vecFromJSArray<"
-                                + type_in_vect
-                                + ">("
-                                + arg_name
-                                + ")"
-                            )
-                            arg_type = re.sub(
-                                r"std::vector<(.*)>", "emscripten::val", arg_type
-                            )
-                w_signature.append(arg_type + " " + arg_name)
+                        if type_in_vect in ['int', 'float', 'double', 'char', 'uchar', 'String', 'std::string']:
+                            casted_arg_name = 'emscripten::vecFromJSArray<' + type_in_vect + '>(' + arg_name + ')'
+                            arg_type = re.sub(r'std::vector<(.*)>', 'emscripten::val', arg_type)
+                w_signature.append(arg_type + ' ' + arg_name)
                 arg_names.append(casted_arg_name)
                 casted_arg_types.append(arg_type)
 
             arg_types = casted_arg_types
 
             # Argument list, signature
-            arg_names_casted = [
-                c if a == b else c + ".as<" + a + ">()"
-                for a, b, c in zip(unwrapped_arg_types, arg_types, arg_names)
-            ]
+            arg_names_casted = [c if a == b else c + '.as<' + a + '>()' for a, b, c in
+                                zip(unwrapped_arg_types, arg_types, arg_names)]
 
             # Add self object to the parameters
-            if class_info and not factory:
-                arg_types = [class_info.cname + "&"] + arg_types
-                w_signature = [class_info.cname + "& arg0 "] + w_signature
+            if class_info and not  factory:
+                arg_types = [class_info.cname + '&'] + arg_types
+                w_signature = [class_info.cname + '& arg0 '] + w_signature
 
             for j in range(0, len(def_args) + 1):
-                postfix = ""
+                postfix = ''
                 if j > 0:
-                    postfix = "_" + str(j)
+                    postfix = '_' + str(j);
 
                 ###################################
                 # Wrapper
-                if factory:  # TODO or static
-                    name = class_info.cname + "::" if variant.class_name else ""
-                    cpp_call_text = static_class_call_template.substitute(
-                        scope=name,
-                        func=func.cname,
-                        args=", ".join(arg_names[: len(arg_names) - j]),
-                    )
+                if factory: # TODO or static
+                    name = class_info.cname+'::' if variant.class_name else ""
+                    cpp_call_text = static_class_call_template.substitute(scope=name,
+                                                                   func=func.cname,
+                                                                   args=', '.join(arg_names[:len(arg_names)-j]))
                 elif class_info:
-                    cpp_call_text = class_call_template.substitute(
-                        obj="arg0",
-                        func=func.cname,
-                        args=", ".join(arg_names[: len(arg_names) - j]),
-                    )
+                    cpp_call_text = class_call_template.substitute(obj='arg0',
+                                                                   func=func.cname,
+                                                                   args=', '.join(arg_names[:len(arg_names)-j]))
                 else:
-                    cpp_call_text = call_template.substitute(
-                        func=func.cname, args=", ".join(arg_names[: len(arg_names) - j])
-                    )
+                    cpp_call_text = call_template.substitute(func=func.cname,
+                                                             args=', '.join(arg_names[:len(arg_names)-j]))
 
-                wrapper_func_text = wrapper_function_template.substitute(
-                    ret_val=ret_type,
-                    func=wrap_func_name + postfix,
-                    signature=", ".join(w_signature[: len(w_signature) - j]),
-                    cpp_call=cpp_call_text,
-                    const="" if variant.is_const else "",
-                )
+
+                wrapper_func_text = wrapper_function_template.substitute(ret_val=ret_type,
+                                                                             func=wrap_func_name+postfix,
+                                                                             signature=', '.join(w_signature[:len(w_signature)-j]),
+                                                                             cpp_call=cpp_call_text,
+                                                                             const='' if variant.is_const else '')
 
                 ###################################
                 # Binding
@@ -670,46 +605,39 @@ class JSWrapperGenerator(object):
                             # e.g. DescriptorMatcher
                             continue
                         class_info.constructor_arg_num.add(args_num)
-                        binding_text = ctr_template.substitute(
-                            const="const" if variant.is_const else "",
-                            cpp_name=c_func_name + postfix,
-                            ret=ret_type,
-                            args=",".join(arg_types[: len(arg_types) - j]),
-                            optional=func_attribs,
-                        )
+                        binding_text = ctr_template.substitute(const='const' if variant.is_const else '',
+                                                           cpp_name=c_func_name+postfix,
+                                                           ret=ret_type,
+                                                           args=','.join(arg_types[:len(arg_types)-j]),
+                                                           optional=func_attribs)
                     else:
-                        binding_template = (
-                            overload_class_static_function_template
-                            if variant.is_class_method
-                            else overload_class_function_template
-                        )
-                        binding_text = binding_template.substitute(
-                            js_name=js_func_name,
-                            const="" if variant.is_const else "",
-                            cpp_name=c_func_name + postfix,
-                            ret=ret_type,
-                            args=",".join(arg_types[: len(arg_types) - j]),
-                            optional=func_attribs,
-                        )
+                        binding_template = overload_class_static_function_template if variant.is_class_method else \
+                            overload_class_function_template
+                        binding_text = binding_template.substitute(js_name=js_func_name,
+                                                           const='' if variant.is_const else '',
+                                                           cpp_name=c_func_name+postfix,
+                                                           ret=ret_type,
+                                                           args=','.join(arg_types[:len(arg_types)-j]),
+                                                           optional=func_attribs)
                 else:
-                    binding_text = overload_function_template.substitute(
-                        js_name=js_func_name,
-                        cpp_name=c_func_name + postfix,
-                        const="const" if variant.is_const else "",
-                        ret=ret_type,
-                        args=", ".join(arg_types[: len(arg_types) - j]),
-                        optional=func_attribs,
-                    )
+                    binding_text = overload_function_template.substitute(js_name=js_func_name,
+                                                       cpp_name=c_func_name+postfix,
+                                                       const='const' if variant.is_const else '',
+                                                       ret=ret_type,
+                                                       args=', '.join(arg_types[:len(arg_types)-j]),
+                                                       optional=func_attribs)
 
                 bindings.append(binding_text)
                 wrappers.append(wrapper_func_text)
 
         return [bindings, wrappers]
 
+
     def gen_function_binding(self, func, class_info):
-        if not class_info == None:
-            func_name = class_info.cname + "::" + func.cname
-        else:
+
+        if not class_info == None :
+            func_name = class_info.cname+'::'+func.cname
+        else :
             func_name = func.cname
 
         binding_text = None
@@ -717,34 +645,24 @@ class JSWrapperGenerator(object):
 
         for index, variant in enumerate(func.variants):
             factory = False
-            # TODO if variant.is_class_method and variant.rettype == ('Ptr<' + class_info.name + '>'):
-            if (
-                (not class_info == None)
-                and variant.rettype == ("Ptr<" + class_info.name + ">")
-                or (func.name.startswith("create") and variant.rettype)
-            ):
+            #TODO if variant.is_class_method and variant.rettype == ('Ptr<' + class_info.name + '>'):
+            if (not class_info == None) and variant.rettype == ('Ptr<' + class_info.name + '>') or (func.name.startswith("create") and variant.rettype):
                 factory = True
                 base_class_name = variant.rettype
-                base_class_name = (
-                    base_class_name.replace("Ptr<", "").replace(">", "").strip()
-                )
+                base_class_name = base_class_name.replace("Ptr<","").replace(">","").strip()
                 if base_class_name in self.classes:
                     self.classes[base_class_name].has_smart_ptr = True
                 else:
-                    print(
-                        base_class_name,
-                        " not found in classes for registering smart pointer using ",
-                        class_info.name,
-                        "instead",
-                    )
+                    print(base_class_name, ' not found in classes for registering smart pointer using ', class_info.name, 'instead')
                     self.classes[class_info.name].has_smart_ptr = True
 
+
             # Return type
-            ret_type = "void" if variant.rettype.strip() == "" else variant.rettype
+            ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
 
             ret_type = ret_type.strip()
-            if ret_type.startswith("Ptr"):  # smart pointer
-                ptr_type = ret_type.replace("Ptr<", "").replace(">", "")
+            if ret_type.startswith('Ptr'): #smart pointer
+                ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
                     ret_type = type_dict[ptr_type]
             for key in type_dict:
@@ -753,10 +671,10 @@ class JSWrapperGenerator(object):
                     # expression to exclude false matches.
                     # See https://github.com/opencv/opencv/issues/15514
                     ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
-            if variant.constret and ret_type.startswith("const") == False:
-                ret_type = "const " + ret_type
-            if variant.refret and ret_type.endswith("&") == False:
-                ret_type += "&"
+            if variant.constret and ret_type.startswith('const') == False:
+                ret_type = 'const ' + ret_type
+            if variant.refret and ret_type.endswith('&') == False:
+                ret_type += '&'
 
             arg_types = []
             orig_arg_types = []
@@ -767,61 +685,50 @@ class JSWrapperGenerator(object):
                 else:
                     arg_type = arg.tp
 
-                # if arg.outputarg:
+                #if arg.outputarg:
                 #    arg_type += '&'
                 orig_arg_types.append(arg_type)
-                if with_default_params and arg.defval != "":
+                if with_default_params and arg.defval != '':
                     def_args.append(arg.defval)
                 arg_types.append(orig_arg_types[-1])
 
             # Function attribute
-            func_attribs = ""
-            if "*" in "".join(orig_arg_types):
-                func_attribs += ", allow_raw_pointers()"
+            func_attribs = ''
+            if '*' in ''.join(orig_arg_types):
+                func_attribs += ', allow_raw_pointers()'
 
             if variant.is_pure_virtual:
-                func_attribs += ", pure_virtual()"
+                func_attribs += ', pure_virtual()'
 
-            # TODO better naming
-            # if variant.name in self.jsfunctions:
-            # else
+            #TODO better naming
+            #if variant.name in self.jsfunctions:
+            #else
             js_func_name = variant.name
 
-            c_func_name = (
-                func.cname
-                if (factory and variant.is_class_method == False)
-                else func_name
-            )
+
+            c_func_name = func.cname if (factory and variant.is_class_method == False) else func_name
+
 
             ################################### Binding
             for j in range(0, len(def_args) + 1):
-                postfix = ""
+                postfix = ''
                 if j > 0:
-                    postfix = "_" + str(j)
+                    postfix = '_' + str(j);
                 if factory:
-                    binding_text = ctr_template.substitute(
-                        const="const" if variant.is_const else "",
-                        cpp_name=c_func_name + postfix,
-                        ret=ret_type,
-                        args=",".join(arg_types[: len(arg_types) - j]),
-                        optional=func_attribs,
-                    )
+                    binding_text = ctr_template.substitute(const='const' if variant.is_const else '',
+                                                           cpp_name=c_func_name+postfix,
+                                                           ret=ret_type,
+                                                           args=','.join(arg_types[:len(arg_types)-j]),
+                                                           optional=func_attribs)
                 else:
-                    binding_template = (
-                        overload_class_static_function_template
-                        if variant.is_class_method
-                        else overload_function_template
-                        if class_info == None
-                        else overload_class_function_template
-                    )
-                    binding_text = binding_template.substitute(
-                        js_name=js_func_name,
-                        const="const" if variant.is_const else "",
-                        cpp_name=c_func_name + postfix,
-                        ret=ret_type,
-                        args=",".join(arg_types[: len(arg_types) - 1]),
-                        optional=func_attribs,
-                    )
+                    binding_template = overload_class_static_function_template if variant.is_class_method else \
+                            overload_function_template if class_info == None else overload_class_function_template
+                    binding_text = binding_template.substitute(js_name=js_func_name,
+                                                               const='const' if variant.is_const else '',
+                                                               cpp_name=c_func_name+postfix,
+                                                               ret=ret_type,
+                                                               args=','.join(arg_types[:len(arg_types)-1]),
+                                                               optional=func_attribs)
 
                 binding_text_list.append(binding_text)
 
@@ -849,12 +756,12 @@ class JSWrapperGenerator(object):
             # self.print_decls(decls);
             if len(decls) == 0:
                 continue
-            headers.append(hdr[hdr.rindex("opencv2/") :])
+            headers.append(hdr[hdr.rindex('opencv2/'):])
             for decl in decls:
                 name = decl[0]
-                type = name[: name.find(" ")]
+                type = name[:name.find(" ")]
                 if type == "struct" or type == "class":  # class/structure case
-                    name = name[name.find(" ") + 1 :].strip()
+                    name = name[name.find(" ") + 1:].strip()
                     self.add_class(type, name, decl)
                 elif name.startswith("enum"):  # enumerations
                     self.add_enum(decl)
@@ -869,33 +776,32 @@ class JSWrapperGenerator(object):
         # step 2: generate bindings
         # Global functions
         for ns_name, ns in sorted(self.namespaces.items()):
-            ns_parts = ns_name.split(".")
-            if ns_parts[0] != "cv":
-                print("Ignore namespace: {}".format(ns_name))
+            ns_parts = ns_name.split('.')
+            if ns_parts[0] != 'cv':
+                print('Ignore namespace: {}'.format(ns_name))
                 continue
             else:
                 ns_parts = ns_parts[1:]
-            ns_id = "_".join(ns_parts)
+            ns_id = '_'.join(ns_parts)
             ns_prefix = namespace_prefix_override.get(ns_id, ns_id)
             for name_id, func in sorted(ns.funcs.items()):
                 name = func.name
                 if ns_prefix:
-                    name = ns_prefix + "_" + name
+                    name = ns_prefix + '_' + name
                 if name in ignore_list:
                     continue
-                if not name in white_list[""]:
-                    # print('Not in whitelist: "{}" from ns={}'.format(name, ns_name))
+                if not name in white_list['']:
+                    #print('Not in whitelist: "{}" from ns={}'.format(name, ns_name))
                     continue
 
                 ext_cnst = False
                 # Check if the method is an external constructor
                 for variant in func.variants:
                     if "Ptr<" in variant.rettype:
+
                         # Register the smart pointer
                         base_class_name = variant.rettype
-                        base_class_name = (
-                            base_class_name.replace("Ptr<", "").replace(">", "").strip()
-                        )
+                        base_class_name = base_class_name.replace("Ptr<","").replace(">","").strip()
                         self.classes[base_class_name].has_smart_ptr = True
 
                         # Adds the external constructor
@@ -909,20 +815,18 @@ class JSWrapperGenerator(object):
                     continue
 
                 if with_wrapped_functions:
-                    binding, wrapper = self.gen_function_binding_with_wrapper(
-                        func, ns_name, class_info=None
-                    )
+                    binding, wrapper = self.gen_function_binding_with_wrapper(func, ns_name, class_info=None)
                     self.bindings += binding
                     self.wrapper_funcs += wrapper
                 else:
                     binding = self.gen_function_binding(func, class_info=None)
-                    self.bindings += binding
+                    self.bindings+=binding
 
         # generate code for the classes and their methods
         for name, class_info in sorted(self.classes.items()):
             class_bindings = []
             if not name in white_list:
-                # print('Not in whitelist: "{}" from ns={}'.format(name, ns_name))
+                #print('Not in whitelist: "{}" from ns={}'.format(name, ns_name))
                 continue
 
             # Generate bindings for methods
@@ -935,131 +839,94 @@ class JSWrapperGenerator(object):
                     for variant in method.variants:
                         args = []
                         for arg in variant.args:
-                            arg_type = (
-                                type_dict[arg.tp] if arg.tp in type_dict else arg.tp
-                            )
+                            arg_type = type_dict[arg.tp] if arg.tp in type_dict else arg.tp
                             args.append(arg_type)
                         # print('Constructor: ', class_info.name, len(variant.args))
                         args_num = len(variant.args)
                         if args_num in class_info.constructor_arg_num:
                             continue
                         class_info.constructor_arg_num.add(args_num)
-                        class_bindings.append(
-                            constructor_template.substitute(signature=", ".join(args))
-                        )
+                        class_bindings.append(constructor_template.substitute(signature=', '.join(args)))
                 else:
-                    if with_wrapped_functions and (
-                        len(method.variants) > 1
-                        or len(method.variants[0].args) > 0
-                        or "String" in method.variants[0].rettype
-                    ):
-                        binding, wrapper = self.gen_function_binding_with_wrapper(
-                            method, None, class_info=class_info
-                        )
+                    if with_wrapped_functions and (len(method.variants) > 1 or len(method.variants[0].args)>0 or "String" in method.variants[0].rettype):
+                        binding, wrapper = self.gen_function_binding_with_wrapper(method, None, class_info=class_info)
                         self.wrapper_funcs = self.wrapper_funcs + wrapper
                         class_bindings = class_bindings + binding
                     else:
-                        binding = self.gen_function_binding(
-                            method, class_info=class_info
-                        )
+                        binding = self.gen_function_binding(method, class_info=class_info)
                         class_bindings = class_bindings + binding
 
             # Regiseter Smart pointer
             if class_info.has_smart_ptr:
-                class_bindings.append(
-                    smart_ptr_reg_template.substitute(
-                        cname=class_info.cname, name=class_info.name
-                    )
-                )
+                class_bindings.append(smart_ptr_reg_template.substitute(cname=class_info.cname, name=class_info.name))
 
             # Attach external constructors
             # for method_name, method in class_info.ext_constructors.items():
-            # print("ext constructor", method_name)
-            # if class_info.ext_constructors:
+                # print("ext constructor", method_name)
+            #if class_info.ext_constructors:
+
+
 
             # Generate bindings for properties
             for property in class_info.props:
-                _class_property = (
-                    class_property_enum_template
-                    if property.tp in type_dict
-                    else class_property_template
-                )
-                class_bindings.append(
-                    _class_property.substitute(
-                        js_name=property.name,
-                        cpp_name="::".join([class_info.cname, property.name]),
-                    )
-                )
+                _class_property = class_property_enum_template if property.tp in type_dict else class_property_template
+                class_bindings.append(_class_property.substitute(js_name=property.name, cpp_name='::'.join(
+                    [class_info.cname, property.name])))
 
-            dv = ""
+            dv = ''
             base = Template("""base<$base>""")
 
-            assert len(class_info.bases) <= 1, "multiple inheritance not supported"
+            assert len(class_info.bases) <= 1 , "multiple inheritance not supported"
 
             if len(class_info.bases) == 1:
-                dv = "," + base.substitute(base=", ".join(class_info.bases))
+                dv = "," + base.substitute(base=', '.join(class_info.bases))
 
-            self.bindings.append(
-                class_template.substitute(
-                    cpp_name=class_info.cname,
-                    js_name=name,
-                    class_templates="".join(class_bindings),
-                    derivation=dv,
-                )
-            )
+            self.bindings.append(class_template.substitute(cpp_name=class_info.cname,
+                                                           js_name=name,
+                                                           class_templates=''.join(class_bindings),
+                                                           derivation=dv))
 
         if export_enums:
             # step 4: generate bindings for enums
             # TODO anonymous enums are ignored for now.
             for ns_name, ns in sorted(self.namespaces.items()):
-                if ns_name.split(".")[0] != "cv":
+                if ns_name.split('.')[0] != 'cv':
                     continue
                 for name, enum in sorted(ns.enums.items()):
-                    if not name.endswith(".anonymous"):
+                    if not name.endswith('.anonymous'):
                         name = name.replace("cv.", "")
                         enum_values = []
                         for enum_val in enum:
-                            value = enum_val[0][enum_val[0].rfind(".") + 1 :]
-                            enum_values.append(
-                                enum_item_template.substitute(
-                                    val=value,
-                                    cpp_val=name.replace(".", "::") + "::" + value,
-                                )
-                            )
+                            value = enum_val[0][enum_val[0].rfind(".")+1:]
+                            enum_values.append(enum_item_template.substitute(val=value,
+                                                                             cpp_val=name.replace('.', '::')+'::'+value))
 
-                        self.bindings.append(
-                            enum_template.substitute(
-                                cpp_name=name.replace(".", "::"),
-                                js_name=name.replace(".", "_"),
-                                enum_items="".join(enum_values),
-                            )
-                        )
+                        self.bindings.append(enum_template.substitute(cpp_name=name.replace(".", "::"),
+                                                                      js_name=name.replace(".", "_"),
+                                                                      enum_items=''.join(enum_values)))
                     else:
                         print(name)
-                        # TODO: represent anonymous enums with constants
+                        #TODO: represent anonymous enums with constants
 
         if export_consts:
             # step 5: generate bindings for consts
             for ns_name, ns in sorted(self.namespaces.items()):
-                if ns_name.split(".")[0] != "cv":
+                if ns_name.split('.')[0] != 'cv':
                     continue
                 for name, const in sorted(ns.consts.items()):
                     # print("Gen consts: ", name, const)
-                    self.bindings.append(
-                        const_template.substitute(js_name=name, value=const)
-                    )
+                    self.bindings.append(const_template.substitute(js_name=name, value=const))
 
         with open(core_bindings) as f:
             ret = f.read()
 
-        header_includes = "\n".join(['#include "{}"'.format(hdr) for hdr in headers])
-        ret = ret.replace("@INCLUDES@", header_includes)
+        header_includes = '\n'.join(['#include "{}"'.format(hdr) for hdr in headers])
+        ret = ret.replace('@INCLUDES@', header_includes)
 
-        defis = "\n".join(self.wrapper_funcs)
+        defis = '\n'.join(self.wrapper_funcs)
         ret += wrapper_codes_template.substitute(ns=wrapper_namespace, defs=defis)
-        ret += emscripten_binding_template.substitute(
-            binding_name="testBinding", bindings="".join(self.bindings)
-        )
+        ret += emscripten_binding_template.substitute(binding_name='testBinding', bindings=''.join(self.bindings))
+
 
         # print(ret)
         text_file = open(dst_file, "w")
@@ -1069,12 +936,10 @@ class JSWrapperGenerator(object):
 
 if __name__ == "__main__":
     if len(sys.argv) < 5:
-        print(
-            "Usage:\n",
-            os.path.basename(sys.argv[0]),
-            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp> <opencv_js.config.py>",
-        )
-        print("Current args are: ", ", ".join(["'" + a + "'" for a in sys.argv]))
+        print("Usage:\n", \
+            os.path.basename(sys.argv[0]), \
+            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp> <opencv_js.config.py>")
+        print("Current args are: ", ", ".join(["'"+a+"'" for a in sys.argv]))
         exit(0)
 
     dstdir = "."
@@ -1085,11 +950,11 @@ if __name__ == "__main__":
     import hdr_parser
 
     bindingsCpp = sys.argv[2]
-    headers = open(sys.argv[3], "r").read().split(";")
+    headers = open(sys.argv[3], 'r').read().split(';')
     coreBindings = sys.argv[4]
     whiteListFile = sys.argv[5]
     exec(open(whiteListFile).read())
-    assert white_list
+    assert(white_list)
 
     generator = JSWrapperGenerator()
     generator.gen(bindingsCpp, headers, coreBindings)
