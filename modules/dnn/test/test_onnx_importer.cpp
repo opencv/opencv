@@ -9,6 +9,7 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <numeric>
 namespace opencv_test { namespace {
 
 template<typename TString>
@@ -785,6 +786,11 @@ TEST_P(Test_ONNX_layers, Concatenation)
     testONNXModels("concat_const_blobs");
 }
 
+TEST_P(Test_ONNX_layers, CumSumExclusiveInplace)
+{
+    testONNXModels("cumsum_exclusive_inplace");
+}
+
 TEST_P(Test_ONNX_layers, Eltwise3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
@@ -1450,6 +1456,11 @@ TEST_P(Test_ONNX_layers, Einsum_2D)
     testONNXModels("einsum_2d", npy, 0, 0, false, false, 2);
 }
 
+TEST_P(Test_ONNX_layers, Einsum_2D_Ellipses)
+{
+    testONNXModels("einsum_2d_ellipses", npy, 0, 0, false, false, 2);
+}
+
 TEST_P(Test_ONNX_layers, Einsum_3D)
 {
     testONNXModels("einsum_3d", npy, 0, 0, false, false, 2);
@@ -1475,7 +1486,7 @@ TEST_P(Test_ONNX_layers, DISABLED_Einsum_HadamardProduct)
     testONNXModels("einsum_hadamard", npy, 0, 0, false, false, 2);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_Einsum_Batch_Diagonal)
+TEST_P(Test_ONNX_layers, Einsum_Batch_Diagonal)
 {
     testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
 }
@@ -2127,6 +2138,34 @@ TEST_P(Test_ONNX_nets, Alexnet)
 
     normAssert(out, ref, "", default_l1,  default_lInf);
     expectNoFallbacksFromIE(net);
+}
+
+TEST_P(Test_ONNX_nets, RAFT)
+{
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG, CV_TEST_TAG_MEMORY_2GB);
+
+    std::string weight_path = _tf("models/optical_flow_estimation_raft_2023aug.onnx", false);
+    std::string img0_path = findDataFile(std::string("gpu/opticalflow/frame0.png"));
+    std::string img1_path = findDataFile(std::string("gpu/opticalflow/frame1.png"));
+
+    Size target_size{480, 360};
+    auto img0 = imread(img0_path);
+    auto img1 = imread(img1_path);
+    auto blob0 = blobFromImage(img0, 1.0, target_size, 0, true);
+    auto blob1 = blobFromImage(img1, 1.0, target_size, 0, true);
+
+    auto net = readNet(weight_path);
+    net.setInput(blob0, "0");
+    net.setInput(blob1, "1");
+    std::vector<std::string> outnames{"12007", "12006"};
+    std::vector<Mat> outs;
+    net.forward(outs, outnames);
+
+    // output 12006 is not checked to save space in opencv_extra since its ref is > 1MB,
+    // and output 12006 is calculated from 12007 so checking 12007 is sufficient.
+    std::string ref_12700_path = _tf("data/output_optical_flow_estimation_raft_2023aug.npy");
+    auto ref0 = blobFromNPY(ref_12700_path);
+    normAssert(ref0, outs[0], "", 1e-5, 1.8e-4);
 }
 
 TEST_P(Test_ONNX_nets, Squeezenet)

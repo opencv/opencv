@@ -335,7 +335,7 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
             // divide and calculate s according to above feature
             v_uint32x4 ss[4];
 
-            v_uint32x4 vadd = v_setall_u32(1) << (hsv_shift - 1);
+            v_uint32x4 vadd = v_shl(v_setall_u32(1), (hsv_shift - 1));
 
             v_uint32x4 v_diff_exp[4];
             v_diff_exp[0] = v_reinterpret_as_u32(v_and(v_reinterpret_as_u8(v_diff), mask1));
@@ -406,16 +406,16 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
             // start computing H-ch
             //h = (_vr & (g - b)) + (~_vr & ((_vg & (b - r + 2 * diff)) + ((~_vg) & (r - g + 4 * diff))));
             v_int32x4 hh[4];
-            hh[0] = v_reinterpret_as_s32(v_select(e[0], v_reinterpret_as_s32(gg[0] - bb[0]),
+            hh[0] = v_reinterpret_as_s32(v_select(e[0], v_reinterpret_as_s32(v_sub(gg[0], bb[0])),
                                          v_select(p[0], v_reinterpret_as_s32(v_add(v_sub(bb[0], rr[0]), v_mul(v_setall_u32(2), vdd[0]))),
                                                         v_reinterpret_as_s32(v_add(v_sub(rr[0], gg[0]), v_mul(v_setall_u32(4), vdd[0]))))));
-            hh[1] = v_reinterpret_as_s32(v_select(e[1], v_reinterpret_as_s32(gg[1] - bb[1]),
+            hh[1] = v_reinterpret_as_s32(v_select(e[1], v_reinterpret_as_s32(v_sub(gg[1], bb[1])),
                                          v_select(p[1], v_reinterpret_as_s32(v_add(v_sub(bb[1], rr[1]), v_mul(v_setall_u32(2), vdd[1]))),
                                                         v_reinterpret_as_s32(v_add(v_sub(rr[1], gg[1]), v_mul(v_setall_u32(4), vdd[1]))))));
-            hh[2] = v_reinterpret_as_s32(v_select(e[2], v_reinterpret_as_s32(gg[2] - bb[2]),
+            hh[2] = v_reinterpret_as_s32(v_select(e[2], v_reinterpret_as_s32(v_sub(gg[2], bb[2])),
                                          v_select(p[2], v_reinterpret_as_s32(v_add(v_sub(bb[2], rr[2]), v_mul(v_setall_u32(2), vdd[2]))),
                                                         v_reinterpret_as_s32(v_add(v_sub(rr[2], gg[2]), v_mul(v_setall_u32(4), vdd[2]))))));
-            hh[3] = v_reinterpret_as_s32(v_select(e[3], v_reinterpret_as_s32(gg[3] - bb[3]),
+            hh[3] = v_reinterpret_as_s32(v_select(e[3], v_reinterpret_as_s32(v_sub(gg[3], bb[3])),
                                          v_select(p[3], v_reinterpret_as_s32(v_add(v_sub(bb[3], rr[3]), v_mul(v_setall_u32(2), vdd[3]))),
                                                         v_reinterpret_as_s32(v_add(v_sub(rr[3], gg[3]), v_mul(v_setall_u32(4), vdd[3]))))));
 
@@ -433,16 +433,16 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
 
             // check for negative H
             v_int32x4 v_h_less_0[4];
-            v_h_less_0[0] = (hh[0] < v_setall_s32(0));
-            v_h_less_0[1] = (hh[1] < v_setall_s32(0));
-            v_h_less_0[2] = (hh[2] < v_setall_s32(0));
-            v_h_less_0[3] = (hh[3] < v_setall_s32(0));
+            v_h_less_0[0] = (v_lt(hh[0], v_setall_s32(0)));
+            v_h_less_0[1] = (v_lt(hh[1], v_setall_s32(0)));
+            v_h_less_0[2] = (v_lt(hh[2], v_setall_s32(0)));
+            v_h_less_0[3] = (v_lt(hh[3], v_setall_s32(0)));
 
             v_int32x4 v_h_180[4];
-            v_h_180[0] = hh[0] + v_setall_s32(180);
-            v_h_180[1] = hh[1] + v_setall_s32(180);
-            v_h_180[2] = hh[2] + v_setall_s32(180);
-            v_h_180[3] = hh[3] + v_setall_s32(180);
+            v_h_180[0] = v_add(hh[0], v_setall_s32(180));
+            v_h_180[1] = v_add(hh[1], v_setall_s32(180));
+            v_h_180[2] = v_add(hh[2], v_setall_s32(180));
+            v_h_180[3] = v_add(hh[3], v_setall_s32(180));
 
             hh[0] = v_select(v_h_less_0[0], v_h_180[0], hh[0]);
             hh[1] = v_select(v_h_less_0[1], v_h_180[1], hh[1]);
