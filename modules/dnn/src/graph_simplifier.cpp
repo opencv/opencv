@@ -208,14 +208,17 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
     // Collect reference counts for every node
     std::vector<int> refcounts(net->getNumNodes(), 0);
     std::map<std::string, int> nodeIds;
+
+    // Register node outputs.
+    // Every usage of one of the node's outputs should be counted.
     for (int nodeId = 0; nodeId < refcounts.size(); ++nodeId) {
-        // Register node outputs.
-        // Every usage of one of the node's outputs should be counted.
         for (int i = 0; i < net->getNumOutputs(nodeId); ++i) {
             std::string name = net->getOutputName(nodeId, i);
             nodeIds[name] = nodeId;
         }
+    }
 
+    for (int nodeId = 0; nodeId < refcounts.size(); ++nodeId) {
         // Increase counters for node's inputs
         auto node = net->getNode(nodeId);
         for (int i = 0; i < node->getNumInputs(); ++i) {
