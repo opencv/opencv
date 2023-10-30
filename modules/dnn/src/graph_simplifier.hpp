@@ -43,9 +43,6 @@ public:
 
     virtual std::string getOutputName(int nodeId, int outId) const = 0;
 
-    // Decrease references counter and return a new number of consumers
-    virtual int decRefCount(int nodeId) = 0;
-
     virtual void removeNode(int idx) = 0;
 };
 

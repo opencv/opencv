@@ -66,33 +66,6 @@ public:
     {
         numInputs = net.input_size();
         numInitializers = net.initializer_size();
-        const int numNodes = net.node_size();
-
-        // Collect number of consumers for each node.
-        refcounts.resize(numInputs + numInitializers + numNodes, 0);
-
-        std::map<std::string, int> nodeIds;
-        for (int i = 0; i < numInputs; ++i) {
-            nodeIds[net.input(i).name()] = i;
-        }
-        for (int i = 0; i < numInitializers; ++i) {
-            nodeIds[net.initializer(i).name()] = numInputs + i;
-        }
-
-        for (int i = 0; i < numNodes; ++i) {
-            auto node = net.node(i);
-
-            // Node may have multiple outputs. All references should be considered
-            for (int j = 0; j < node.output_size(); ++j) {
-                nodeIds[node.output(j)] = numInputs + numInitializers + i;
-            }
-
-            // Increare counters for inputs
-            for (int j = 0; j < node.input_size(); ++j) {
-                CV_Assert(nodeIds.find(node.input(j)) != nodeIds.end());
-                refcounts[nodeIds[node.input(j)]] += 1;
-            }
-        }
     }
 
     virtual Ptr<ImportNodeWrapper> getNode(int idx) const CV_OVERRIDE
@@ -156,16 +129,9 @@ public:
         net.mutable_node()->DeleteSubrange(idx - numInputs - numInitializers, 1);
     }
 
-    virtual int decRefCount(int nodeId) CV_OVERRIDE
-    {
-        refcounts[nodeId] -= 1;
-        return refcounts[nodeId];
-    }
-
 private:
     int numInputs, numInitializers;
     opencv_onnx::GraphProto& net;
-    std::vector<int> refcounts;
 };
 
 /*  Fusion for Gelu.
