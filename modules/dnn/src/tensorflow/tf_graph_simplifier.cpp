@@ -93,6 +93,11 @@ public:
         return net.node(nodeId).name();
     }
 
+    virtual int decRefCount(int nodeId) CV_OVERRIDE
+    {
+        return -1;
+    }
+
     virtual void removeNode(int idx) CV_OVERRIDE
     {
         net.mutable_node()->DeleteSubrange(idx, 1);

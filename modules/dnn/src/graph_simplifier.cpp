@@ -188,7 +188,7 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
 {
     int numNodes = net->getNumNodes();
     std::vector<int> matchedNodesIds, targetNodesIds;
-    std::set<int> nodesToRemove;
+    std::vector<int> nodesToRemove;
     for (int j = 0; j < patterns.size(); ++j)
     {
         for (int i = 0; i < numNodes; ++i)
@@ -197,16 +197,16 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
             {
                 patterns[j]->replace(net, matchedNodesIds, targetNodesIds);
                 // Remove matched nodes except the last one.
-                nodesToRemove.insert(matchedNodesIds.begin(), matchedNodesIds.end() - 1);
+                nodesToRemove.insert(nodesToRemove.end(), matchedNodesIds.begin(), matchedNodesIds.end() - 1);
             }
         }
     }
 
     // Remove all fused nodes. Indices expected to be in descending order.
-    std::vector<int> sortedNodes(nodesToRemove.begin(), nodesToRemove.end());
-    std::sort(sortedNodes.begin(), sortedNodes.end(), [](int a, int b) { return a > b; });
-    for (int nodeId : sortedNodes) {
-        net->removeNode(nodeId);
+    std::sort(nodesToRemove.begin(), nodesToRemove.end(), [](int a, int b) { return a > b; });
+    for (int nodeId : nodesToRemove) {
+        if (net->decRefCount(nodeId) == 0)
+            net->removeNode(nodeId);
     }
 }
 
