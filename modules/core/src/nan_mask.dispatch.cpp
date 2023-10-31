@@ -97,25 +97,25 @@ static FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn)
     CV_CPU_DISPATCH(getFiniteMaskFunc, (isDouble, cn), CV_CPU_DISPATCH_MODES_ALL);
 }
 
-void finiteMask(InputArray _img, OutputArray _mask)
+void finiteMask(InputArray _src, OutputArray _mask)
 {
     CV_INSTRUMENT_REGION();
 
-    int channels = _img.channels();
-    int depth = _img.depth();
+    int channels = _src.channels();
+    int depth = _src.depth();
     CV_Assert( channels > 0 && channels <= 4);
     CV_Assert( depth == CV_32F || depth == CV_64F );
-    std::vector<int> vsz(_img.dims());
-    _img.sizend(vsz.data());
-    _mask.create(_img.dims(), vsz.data(), CV_8UC1);
+    std::vector<int> vsz(_src.dims());
+    _src.sizend(vsz.data());
+    _mask.create(_src.dims(), vsz.data(), CV_8UC1);
 
-    CV_OCL_RUN(_img.isUMat() && _mask.isUMat() && _img.dims() <= 2,
-               ocl_finiteMask(_img.getUMat(), _mask.getUMat()));
+    CV_OCL_RUN(_src.isUMat() && _mask.isUMat() && _src.dims() <= 2,
+               ocl_finiteMask(_src.getUMat(), _mask.getUMat()));
 
-    Mat img = _img.getMat();
+    Mat src = _src.getMat();
     Mat mask = _mask.getMat();
 
-    const Mat *arrays[]={&img, &mask, 0};
+    const Mat *arrays[]={&src, &mask, 0};
     Mat planes[2];
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
