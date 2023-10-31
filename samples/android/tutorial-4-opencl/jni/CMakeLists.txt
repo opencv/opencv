@@ -3,7 +3,12 @@ cmake_minimum_required(VERSION 3.6)
 set(target JNIpart)
 project(${target} CXX)
 
-set(ANDROID_OPENCV_COMPONENTS "opencv_java" CACHE STRING "")
+if (OPENCV_FROM_SDK)
+  set(ANDROID_OPENCV_COMPONENTS "opencv_java" CACHE STRING "")
+else()
+  set(ANDROID_OPENCV_COMPONENTS "OpenCV::opencv_java4" CACHE STRING "")
+endif()
+
 message(STATUS "ANDROID_ABI=${ANDROID_ABI}")
 find_package(OpenCV REQUIRED COMPONENTS ${ANDROID_OPENCV_COMPONENTS})
 

@@ -129,13 +129,12 @@ gradle.ext {
 
 if (gradle.opencv_source == "maven_local") {
     gradle.ext {
-        opencv_maven_path = '../maven_repo'
+        opencv_maven_path = '/<path_to_maven_repo>'
     }
 }
 
 if (gradle.opencv_source == "sdk_path") {
-    def opencvsdk = "../"
-    //def opencvsdk='/<path to OpenCV-android-sdk>'
+    def opencvsdk='/<path to OpenCV-android-sdk>'
     include ':opencv'
     project(':opencv').projectDir = new File(opencvsdk + '/sdk')
 }
