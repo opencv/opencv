@@ -62,8 +62,9 @@ parser = argparse.ArgumentParser(parents=[parser],
                                  description='Use this script to run object detection deep learning networks using OpenCV.',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 args = parser.parse_args()
+
 args.model = findFile(args.model)
-args.config = findFile(args.config)  if args.config is None else ""
+args.config = findFile(args.config)
 args.classes = findFile(args.classes)
 
 # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
@@ -78,6 +79,7 @@ if 'model' in config:
         print('Preparing text graph representation for Faster-RCNN model: ' + args.out_tf_graph)
         createFasterRCNNGraph(args.model, args.config, args.out_tf_graph)
         args.config = args.out_tf_graph
+
 
 # Load names of classes
 classes = None
@@ -103,6 +105,7 @@ def postprocess(frame, outs):
         cv.rectangle(frame, (left, top), (right, bottom), (0, 255, 0))
 
         label = '%.2f' % conf
+
         # Print a label of class.
         if classes:
             assert(classId < len(classes))
@@ -163,31 +166,29 @@ def postprocess(frame, outs):
                     classIds.append(classId)
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
-    # yolov8
     elif args.postprocessing == 'yolov8':
         out = np.array([cv.transpose(outs[0, 0])])
         box_scale = max(np.array(frame.shape[:2]) / 640.0)
         for i in range(out.shape[1]):
             bbox, scores = out[0][i][:4], out[0][i][4:]
             (minScore, confidence, minClassLoc,
-             (x, ClassId)) = cv.minMaxLoc(scores)
+             (x, classId)) = cv.minMaxLoc(scores)
             if confidence > confThreshold:
                 left = round((bbox[0] - (bbox[2]/2))*box_scale)
                 top = round((bbox[1] - (bbox[3]/2))*box_scale)
                 width = round(bbox[2]*box_scale)
                 height = round(bbox[3]*box_scale)
                 # Skip background label
-                classIds.append(ClassId)
+                classIds.append(classId)
                 confidences.append(float(confidence))
                 boxes.append([left, top, width, height])
-    ###
     else:
         print('Unknown output layer type: ' + lastLayer.type)
         exit()
 
     # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     # or NMS is required if number of outputs > 1
-    if len(outNames) > 1 or (lastLayer.type == 'Region' or args.postprocessing == 'yolov8')and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+    if len(outNames) > 1 or (lastLayer.type == 'Region' or args.postprocessing == 'yolov8') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
         indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)

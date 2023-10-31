@@ -87,6 +87,7 @@ yolov8:
   width: 640
   height: 640
   rgb: true
+  postprocessing: "yolov8"
   classes: "object_detection_classes_yolov4.txt"
   sample: "object_detection"
 
