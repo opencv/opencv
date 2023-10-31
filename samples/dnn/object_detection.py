@@ -171,8 +171,7 @@ def postprocess(frame, outs):
         box_scale = max(np.array(frame.shape[:2]) / 640.0)
         for i in range(out.shape[1]):
             bbox, scores = out[0][i][:4], out[0][i][4:]
-            (minScore, confidence, minClassLoc,
-             (x, classId)) = cv.minMaxLoc(scores)
+            (_, confidence, _, (_, classId)) = cv.minMaxLoc(scores)
             if confidence > confThreshold:
                 left = round((bbox[0] - (bbox[2]/2))*box_scale)
                 top = round((bbox[1] - (bbox[3]/2))*box_scale)
