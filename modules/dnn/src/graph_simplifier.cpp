@@ -76,6 +76,11 @@ int Subgraph::getInputNodeId(const Ptr<ImportGraphWrapper>& net,
     CV_Error(Error::StsParseError, "Input node with name " + name + " not found");
 }
 
+static inline bool isCommutativeOp(const std::string& type)
+{
+    return type == "Mul" || type == "Add" || type == "Equal" || type == "Max"|| type == "Min";
+}
+
 bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                      std::vector<int>& matchedNodesIds,
                      std::vector<int>& targetNodesIds)
@@ -100,29 +105,44 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
 
         const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
         if (node->getType() != nodes[targetNodeId])
-            return false;
+            continue;
 
         std::vector<int>& inputNodes = inputs[targetNodeId];
         if (inputNodes.size() != node->getNumInputs())
-            return false;
+            continue;
+
+        bool isCommutative = isCommutativeOp(node->getType());
 
         for (int j = 0; j < inputNodes.size(); ++j)
         {
-            if (nodes[inputNodes[j]].empty() || node->getInputName(j).empty())  // Unknown input node type.
+            if (node->getInputName(j).empty())  // Unknown input node type.
                 continue;
             nodeId = getInputNodeId(net, node, j);
             const Ptr<ImportNodeWrapper> inpNode = net->getNode(nodeId);
-            if (inpNode->getType() != "Const" && inpNode->getType() != "Constant")
+            if (isCommutative)
             {
+                for (int i = 0; i < inputNodes.size(); ++i)
+                {
+                    if (nodes[inputNodes[i]].empty())
+                        continue;
+                    nodesToMatch.push(nodeId);
+                    targetNodes.push(inputNodes[i]);
+                }
+            }
+            else
+            {
+                if (nodes[inputNodes[j]].empty())
+                    continue;
                 nodesToMatch.push(nodeId);
                 targetNodes.push(inputNodes[j]);
             }
-            else if (nodes[inputNodes[j]] != "Const" && nodes[inputNodes[j]] != "Constant")
-                return false;
         }
         matchedNodesIds.push_back(nodeToMatch);
         targetNodesIds.push_back(targetNodeId);
     }
+
+    if (matchedNodesIds.size() != nodes.size() - 1)
+        return false;
 
     const int n = matchedNodesIds.size();
     std::vector<std::pair<int, int> > elements(n);

@@ -979,7 +979,7 @@ public:
         int input = addNodeToMatch("");
         int softplus = addNodeToMatch("Softplus", input);
         int tanh = addNodeToMatch("Tanh", softplus);
-        addNodeToMatch("Mul", input, tanh);
+        addNodeToMatch("Mul", tanh, input);
         setFusedNode("Mish", input);
     }
 };
