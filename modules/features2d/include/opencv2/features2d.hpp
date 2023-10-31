@@ -1544,8 +1544,8 @@ public:
     @param dmatcher Descriptor matcher that is used to find the nearest word of the trained vocabulary
     for each keypoint descriptor of the image.
      */
-    CV_WRAP BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
-                               const Ptr<DescriptorMatcher>& dmatcher );
+    CV_WRAP BOWImgDescriptorExtractor( const Ptr<Feature2D>& dextractor,
+                                       const Ptr<DescriptorMatcher>& dmatcher );
     /** @overload */
     BOWImgDescriptorExtractor( const Ptr<DescriptorMatcher>& dmatcher );
     virtual ~BOWImgDescriptorExtractor();
