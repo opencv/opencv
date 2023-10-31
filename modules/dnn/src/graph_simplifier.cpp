@@ -234,13 +234,14 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
     std::sort(nodesToRemove.begin(), nodesToRemove.end(), [](int a, int b) { return a > b; });
     for (int nodeId : nodesToRemove) {
         if (refcounts[nodeId] == 0) {
-            // Decrease references to node's inputs
+            // Decrease references to node's inputs and remove node itself
             auto node = net->getNode(nodeId);
             for (int i = 0; i < node->getNumInputs(); ++i) {
                 std::string inpName = node->getInputName(i);
                 refcounts[nodeIds[inpName]] -= 1;
             }
             net->removeNode(nodeId);
+            refcounts[nodeId] = -1;  // Same node cannot be removed twice
         }
     }
 }
