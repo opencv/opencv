@@ -1040,12 +1040,12 @@ OCL_PERF_TEST_P(ConvertScaleAbsFixture, ConvertScaleAbs,
 ///////////// PatchNaNs ////////////////////////
 
 template<typename _Tp>
-_Tp randomNan(int seed);
+_Tp randomNan(RNG& rng);
 
 template<>
-float randomNan(int seed)
+float randomNan(RNG& rng)
 {
-    uint32_t r = RNG(seed).next();
+    uint32_t r = rng.next();
     Cv32suf v;
     v.u = r;
     // exp & set a bit to avoid zero mantissa
@@ -1054,10 +1054,10 @@ float randomNan(int seed)
 }
 
 template<>
-double randomNan(int seed)
+double randomNan(RNG& rng)
 {
-    uint32_t r0 = RNG(seed).next();
-    uint32_t r1 = RNG(seed).next();
+    uint32_t r0 = rng.next();
+    uint32_t r1 = rng.next();
     Cv64suf v;
     v.u = (uint64_t(r0) << 32) | uint64_t(r1);
     // exp &set a bit to avoid zero mantissa
@@ -1083,20 +1083,20 @@ OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
     {
         Mat src_ = src.getMat(ACCESS_RW);
         srcSize.width *= cn;
+        RNG rng(0);
         for (int y = 0; y < srcSize.height; ++y)
         {
             float  *const ptrf = src_.ptr<float>(y);
             double *const ptrd = src_.ptr<double>(y);
             for (int x = 0; x < srcSize.width; ++x)
             {
-                int fseed = (x << 16) + y;
                 if (depth == CV_32F)
                 {
-                    ptrf[x] = (x + y) % 2 == 0 ? randomNan<float >(fseed) : ptrf[x];
+                    ptrf[x] = (x + y) % 2 == 0 ? randomNan<float >(rng) : ptrf[x];
                 }
                 else if (depth == CV_64F)
                 {
-                    ptrd[x] = (x + y) % 2 == 0 ? randomNan<double>(fseed) : ptrd[x];
+                    ptrd[x] = (x + y) % 2 == 0 ? randomNan<double>(rng) : ptrd[x];
                 }
             }
         }
@@ -1132,22 +1132,22 @@ OCL_PERF_TEST_P(FiniteMaskFixture, FiniteMask,
         const softfloat  fninf = softfloat ::inf().setSign(true);
         const softdouble dpinf = softdouble::inf();
         const softdouble dninf = softdouble::inf().setSign(true);
+        RNG rng(0);
         for (int y = 0; y < srcSize.height; ++y)
         {
             float  *const ptrf = src_.ptr<float>(y);
             double *const ptrd = src_.ptr<double>(y);
             for (int x = 0; x < srcSize.width; ++x)
             {
-                int fseed = (x << 16) + y;
                 int rem = (x + y) % 10;
                 if (depth == CV_32F)
                 {
-                    ptrf[x] = rem <  4 ? randomNan<float >(fseed) :
+                    ptrf[x] = rem <  4 ? randomNan<float >(rng) :
                               rem == 5 ? (float )((x + y)%2 ? fpinf : fninf) : ptrf[x];
                 }
                 else if (depth == CV_64F)
                 {
-                    ptrd[x] = rem <  4 ? randomNan<double>(fseed) :
+                    ptrd[x] = rem <  4 ? randomNan<double>(rng) :
                               rem == 5 ? (double)((x + y)%2 ? dpinf : dninf) : ptrd[x];
                 }
             }

@@ -1700,12 +1700,12 @@ OCL_TEST_P(ScaleAdd, Mat)
 //////////////////////////////// PatchNans ////////////////////////////////////////////////
 
 template<typename _Tp>
-_Tp randomNan(int seed);
+_Tp randomNan(RNG& rng);
 
 template<>
-float randomNan(int seed)
+float randomNan(RNG& rng)
 {
-    uint32_t r = RNG(seed).next();
+    uint32_t r = rng.next();
     Cv32suf v;
     v.u = r;
     // exp & set a bit to avoid zero mantissa
@@ -1714,10 +1714,10 @@ float randomNan(int seed)
 }
 
 template<>
-double randomNan(int seed)
+double randomNan(RNG& rng)
 {
-    uint32_t r0 = RNG(seed).next();
-    uint32_t r1 = RNG(seed).next();
+    uint32_t r0 = rng.next();
+    uint32_t r1 = rng.next();
     Cv64suf v;
     v.u = (uint64_t(r0) << 32) | uint64_t(r1);
     // exp &set a bit to avoid zero mantissa
@@ -1758,14 +1758,13 @@ PARAM_TEST_CASE(PatchNaNs, MatDepth, Channels, bool)
             double *const ptrd = src_roi.ptr<double>(y);
             for (int x = 0; x < roiSize.width; ++x)
             {
-                int fseed = (x << 16) + y;
                 if (ftype == CV_32F)
                 {
-                    ptrf[x] = randomInt(-1, 1) == 0 ? randomNan<float >(fseed) : ptrf[x];
+                    ptrf[x] = randomInt(-1, 1) == 0 ? randomNan<float >(rng) : ptrf[x];
                 }
                 else if (ftype == CV_64F)
                 {
-                    ptrd[x] = randomInt(-1, 1) == 0 ? randomNan<double>(fseed) : ptrd[x];
+                    ptrd[x] = randomInt(-1, 1) == 0 ? randomNan<double>(rng) : ptrd[x];
                 }
             }
         }
@@ -1834,16 +1833,15 @@ PARAM_TEST_CASE(FiniteMask, MatDepth, Channels, bool)
             double *const ptrd = src_roi.ptr<double>(y);
             for (int x = 0; x < roiSize.width * cn; ++x)
             {
-                int fseed = (x << 16) + y;
                 int rem = randomInt(0, 10);
                 if (ftype == CV_32F)
                 {
-                    ptrf[x] = rem <  4 ? randomNan<float >(fseed) :
+                    ptrf[x] = rem <  4 ? randomNan<float >(rng) :
                               rem == 5 ? (float )((x + y)%2 ? fpinf : fninf) : ptrf[x];
                 }
                 else if (ftype == CV_64F)
                 {
-                    ptrd[x] = rem <  4 ? randomNan<double>(fseed) :
+                    ptrd[x] = rem <  4 ? randomNan<double>(rng) :
                               rem == 5 ? (double)((x + y)%2 ? dpinf : dninf) : ptrd[x];
                 }
             }
