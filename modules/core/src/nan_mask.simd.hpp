@@ -17,20 +17,21 @@ FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-static void patchNaNs_32f(uchar* ptr, size_t len, double newVal)
+static void patchNaNs_32f(uchar* ptr, size_t ulen, double newVal)
 {
     int32_t* tptr = (int32_t*)ptr;
     Cv32suf val;
     val.f = (float)newVal;
 
-    size_t j = 0;
+    int j = 0;
+    int len = (int)ulen;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     v_int32 v_pos_mask = vx_setall_s32(0x7fffffff), v_exp_mask = vx_setall_s32(0x7f800000);
     v_int32 v_val = vx_setall_s32(val.i);
 
-    size_t cWidth = (size_t)VTraits<v_int32>::vlanes();
-    for (; j + cWidth*2 <= len; j += cWidth*2)
+    int cWidth = VTraits<v_int32>::vlanes();
+    for (; j < len - cWidth*2 + 1; j += cWidth*2)
     {
         v_int32 v_src0 = vx_load(tptr + j);
         v_int32 v_src1 = vx_load(tptr + j + cWidth);
@@ -60,21 +61,22 @@ static void patchNaNs_32f(uchar* ptr, size_t len, double newVal)
 }
 
 
-static void patchNaNs_64f(uchar* ptr, size_t len, double newVal)
+static void patchNaNs_64f(uchar* ptr, size_t ulen, double newVal)
 {
     int64_t* tptr = (int64_t*)ptr;
     Cv64suf val;
     val.f = newVal;
 
-    size_t j = 0;
+    int j = 0;
+    int len = (int)ulen;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     v_int64 v_exp_mask = vx_setall_s64(0x7FF0000000000000);
     v_int64 v_pos_mask = vx_setall_s64(0x7FFFFFFFFFFFFFFF);
     v_int64 v_val = vx_setall_s64(val.i);
 
-    size_t cWidth = (size_t)VTraits<v_int64>::vlanes();
-    for (; j + cWidth*2 <= len; j += cWidth*2)
+    int cWidth = VTraits<v_int64>::vlanes();
+    for (; j < len - cWidth * 2 + 1; j += cWidth*2)
     {
         v_int64 v_src0 = vx_load(tptr + j);
         v_int64 v_src1 = vx_load(tptr + j + cWidth);
@@ -114,14 +116,15 @@ template <typename _Tp, int cn>
 int finiteMaskSIMD_(const _Tp *src, uchar *dst, size_t total);
 
 template <>
-int finiteMaskSIMD_<float, 1>(const float *fsrc, uchar *dst, size_t total)
+int finiteMaskSIMD_<float, 1>(const float *fsrc, uchar *dst, size_t utotal)
 {
     const uint32_t* src = (const uint32_t*)fsrc;
     const int osize = VTraits<v_uint8>::vlanes();
     v_uint32 vmaskExp = vx_setall_u32(0x7f800000);
 
     int i = 0;
-    for(; i <= (int)total - osize; i += osize )
+    int total = (int)utotal;
+    for(; i < total - osize + 1; i += osize )
     {
         v_uint32 vv0, vv1, vv2, vv3;
         vv0 = v_ne(v_and(vx_load(src + i              ), vmaskExp), vmaskExp);
@@ -138,7 +141,7 @@ int finiteMaskSIMD_<float, 1>(const float *fsrc, uchar *dst, size_t total)
 
 
 template <>
-int finiteMaskSIMD_<float, 2>(const float *fsrc, uchar *dst, size_t total)
+int finiteMaskSIMD_<float, 2>(const float *fsrc, uchar *dst, size_t utotal)
 {
     const uint32_t* src = (const uint32_t*)fsrc;
     const int size8 = VTraits<v_uint8>::vlanes();
@@ -146,7 +149,8 @@ int finiteMaskSIMD_<float, 2>(const float *fsrc, uchar *dst, size_t total)
     v_uint16 vmaskBoth = vx_setall_u16(0xffff);
 
     int i = 0;
-    for(; i <= (int)total - (size8 / 2); i += (size8 / 2) )
+    int total = (int)utotal;
+    for(; i < total - (size8 / 2) + 1; i += (size8 / 2) )
     {
         v_uint32 vv0, vv1, vv2, vv3;
         vv0 = v_ne(v_and(vx_load(src + i*2                ), vmaskExp), vmaskExp);
@@ -166,7 +170,7 @@ int finiteMaskSIMD_<float, 2>(const float *fsrc, uchar *dst, size_t total)
 
 
 template <>
-int finiteMaskSIMD_<float, 3>(const float *fsrc, uchar *dst, size_t total)
+int finiteMaskSIMD_<float, 3>(const float *fsrc, uchar *dst, size_t utotal)
 {
     const uint32_t* src = (const uint32_t*)fsrc;
     const int npixels = VTraits<v_float32>::vlanes();
@@ -174,7 +178,8 @@ int finiteMaskSIMD_<float, 3>(const float *fsrc, uchar *dst, size_t total)
     v_uint32 z = vx_setzero_u32();
 
     int i = 0;
-    for (; i <= (int)total - npixels; i += npixels)
+    int total = (int)utotal;
+    for (; i < total - npixels + 1; i += npixels)
     {
         v_uint32 vv0, vv1, vv2;
         vv0 = v_ne(v_and(vx_load(src + i*3            ), vmaskExp), vmaskExp);
@@ -202,7 +207,7 @@ int finiteMaskSIMD_<float, 3>(const float *fsrc, uchar *dst, size_t total)
 
 
 template <>
-int finiteMaskSIMD_<float, 4>(const float *fsrc, uchar *dst, size_t total)
+int finiteMaskSIMD_<float, 4>(const float *fsrc, uchar *dst, size_t utotal)
 {
     const uint32_t* src = (const uint32_t*)fsrc;
     CV_StaticAssert(VTraits<v_uint8>::max_nlanes*8 <= 1024, "SIMD registers should be not more than 1024 bit wide");
@@ -213,7 +218,8 @@ int finiteMaskSIMD_<float, 4>(const float *fsrc, uchar *dst, size_t total)
     v_uint32 vmaskAll4 = vx_setall_u32(0xFFFFFFFF);
 
     int i = 0;
-    for(; i <= (int)total - npixels; i += npixels )
+    int total = (int)utotal;
+    for(; i < total - npixels + 1; i += npixels )
     {
         v_uint32 vv = v_ne(v_and(vx_load(src + i*4), vmaskExp), vmaskExp);
         v_uint8 velems = v_pack_b(vv, z, z, z);
@@ -245,16 +251,17 @@ int finiteMaskSIMD_<float, 4>(const float *fsrc, uchar *dst, size_t total)
 
 
 template <>
-int finiteMaskSIMD_<double, 1>(const double *dsrc, uchar *dst, size_t total)
+int finiteMaskSIMD_<double, 1>(const double *dsrc, uchar *dst, size_t utotal)
 {
     const uint64_t* src = (const uint64_t*)dsrc;
     const int size8 = VTraits<v_uint8>::vlanes();
     int i = 0;
+    int total = (int)utotal;
 
     v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
     v_uint64 z = vx_setzero_u64();
 
-    for(; i <= (int)total - (size8 / 2); i += (size8 / 2) )
+    for(; i < total - (size8 / 2) + 1; i += (size8 / 2) )
     {
         v_uint64 vv0, vv1, vv2, vv3;
         vv0 = v_ne(v_and(vx_load(src + i                ), vmaskExp), vmaskExp);
@@ -272,7 +279,7 @@ int finiteMaskSIMD_<double, 1>(const double *dsrc, uchar *dst, size_t total)
 }
 
 template <>
-int finiteMaskSIMD_<double, 2>(const double *dsrc, uchar *dst, size_t total)
+int finiteMaskSIMD_<double, 2>(const double *dsrc, uchar *dst, size_t utotal)
 {
     const uint64_t* src = (const uint64_t*)dsrc;
     const int size8 = VTraits<v_uint8>::vlanes();
@@ -281,7 +288,8 @@ int finiteMaskSIMD_<double, 2>(const double *dsrc, uchar *dst, size_t total)
     v_uint64 z = vx_setzero_u64();
 
     int i = 0;
-    for(; i <= (int)total - npixels; i += npixels )
+    int total = (int)utotal;
+    for(; i < total - npixels + 1; i += npixels )
     {
         v_uint64 vv = v_ne(v_and(vx_load(src + i*2), vmaskExp), vmaskExp);
 
@@ -307,7 +315,7 @@ int finiteMaskSIMD_<double, 2>(const double *dsrc, uchar *dst, size_t total)
 
 
 template <>
-int finiteMaskSIMD_<double, 3>(const double *fsrc, uchar *dst, size_t total)
+int finiteMaskSIMD_<double, 3>(const double *fsrc, uchar *dst, size_t utotal)
 {
     const uint64_t* src = (const uint64_t*)fsrc;
     const int npixels = VTraits<v_uint64>::vlanes();
@@ -315,7 +323,8 @@ int finiteMaskSIMD_<double, 3>(const double *fsrc, uchar *dst, size_t total)
     v_uint64 z = vx_setzero_u64();
 
     int i = 0;
-    for (; i <= (int)total - npixels; i += npixels)
+    int total = (int)utotal;
+    for (; i < total - npixels + 1; i += npixels)
     {
         v_uint64 vv0, vv1, vv2;
         vv0 = v_ne(v_and(vx_load(src + i*3            ), vmaskExp), vmaskExp);
@@ -342,7 +351,7 @@ int finiteMaskSIMD_<double, 3>(const double *fsrc, uchar *dst, size_t total)
 }
 
 template <>
-int finiteMaskSIMD_<double, 4>(const double *dsrc, uchar *dst, size_t total)
+int finiteMaskSIMD_<double, 4>(const double *dsrc, uchar *dst, size_t utotal)
 {
     const uint64_t* src = (const uint64_t*)dsrc;
     CV_StaticAssert(VTraits<v_uint8>::max_nlanes*8 <= 1024, "SIMD registers should be not more than 1024 bit wide");
@@ -355,7 +364,8 @@ int finiteMaskSIMD_<double, 4>(const double *dsrc, uchar *dst, size_t total)
     v_uint32 z32 = vx_setzero_u32();
 
     int i = 0;
-    for(; i <= (int)total - npixels; i += npixels )
+    int total = (int)utotal;
+    for(; i < total - npixels + 1; i += npixels )
     {
         v_uint64 vv0, vv1;
         vv0 = v_ne(v_and(vx_load(src + i*4            ), vmaskExp), vmaskExp);
