@@ -548,7 +548,7 @@ PERF_TEST_P_(FiniteMaskFixture, FiniteMask)
         const softfloat  fninf = softfloat ::inf().setSign(true);
         const softdouble dpinf = softdouble::inf();
         const softdouble dninf = softdouble::inf().setSign(true);
-        RNG rng(0);
+        RNG& rng = theRNG();
         for (int y = 0; y < srcSize.height; ++y)
         {
             float  *const ptrf = src.ptr<float>(y);
