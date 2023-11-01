@@ -115,6 +115,12 @@ if(NOT OPENCV_SKIP_ANDROID_FORCE_CMAKE)
 endif()
 
 file(WRITE "${ANDROID_BUILD_BASE_DIR}/settings.gradle" "
+gradle.ext {
+    //opencv_source = 'maven_central'
+    //opencv_source = 'maven_local'
+    opencv_source = 'sdk_path'
+}
+
 include ':opencv'
 ")
 
