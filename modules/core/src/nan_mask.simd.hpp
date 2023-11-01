@@ -19,6 +19,8 @@ FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn);
 
 static void patchNaNs_32f(uchar* ptr, size_t ulen, double newVal)
 {
+    CV_INSTRUMENT_REGION();
+
     int32_t* tptr = (int32_t*)ptr;
     Cv32suf val;
     val.f = (float)newVal;
@@ -48,7 +50,6 @@ static void patchNaNs_32f(uchar* ptr, size_t ulen, double newVal)
             v_store(tptr + j + cWidth, v_dst1);
         }
     }
-    vx_cleanup();
 #endif
 
     for (; j < len; j++)
@@ -63,6 +64,8 @@ static void patchNaNs_32f(uchar* ptr, size_t ulen, double newVal)
 
 static void patchNaNs_64f(uchar* ptr, size_t ulen, double newVal)
 {
+    CV_INSTRUMENT_REGION();
+
     int64_t* tptr = (int64_t*)ptr;
     Cv64suf val;
     val.f = newVal;
@@ -94,7 +97,6 @@ static void patchNaNs_64f(uchar* ptr, size_t ulen, double newVal)
             v_store(tptr + j + cWidth, v_dst1);
         }
     }
-    vx_cleanup();
 #endif
 
     for (; j < len; j++)
@@ -134,7 +136,6 @@ int finiteMaskSIMD_<float, 1>(const float *fsrc, uchar *dst, size_t utotal)
 
         v_store(dst + i, v_pack_b(vv0, vv1, vv2, vv3));
     }
-    vx_cleanup();
 
     return i;
 }
@@ -163,7 +164,6 @@ int finiteMaskSIMD_<float, 2>(const float *fsrc, uchar *dst, size_t utotal)
         // 2nd argument in vfinite is useless
         v_store_low(dst + i, v_pack(vfinite, vfinite));
     }
-    vx_cleanup();
 
     return i;
 }
@@ -200,7 +200,6 @@ int finiteMaskSIMD_<float, 3>(const float *fsrc, uchar *dst, size_t utotal)
             vres3 = v_extract<3>(vres3, vres3);
         }
     }
-    vx_cleanup();
 
     return i;
 }
@@ -244,7 +243,6 @@ int finiteMaskSIMD_<float, 4>(const float *fsrc, uchar *dst, size_t utotal)
             *((uint64_t*)(dst + i)) = v_get0(v_reinterpret_as_u64(vres));
         }
     }
-    vx_cleanup();
 
     return i;
 }
@@ -273,7 +271,6 @@ int finiteMaskSIMD_<double, 1>(const double *dsrc, uchar *dst, size_t utotal)
 
         v_store_low(dst + i, v);
     }
-    vx_cleanup();
 
     return i;
 }
@@ -308,7 +305,6 @@ int finiteMaskSIMD_<double, 2>(const double *dsrc, uchar *dst, size_t utotal)
             vres = v_extract<1>(vres, vres);
         }
     }
-    vx_cleanup();
 
     return i;
 }
@@ -345,7 +341,6 @@ int finiteMaskSIMD_<double, 3>(const double *fsrc, uchar *dst, size_t utotal)
             vres3 = v_extract<3>(vres3, vres3);
         }
     }
-    vx_cleanup();
 
     return i;
 }
@@ -392,7 +387,6 @@ int finiteMaskSIMD_<double, 4>(const double *dsrc, uchar *dst, size_t utotal)
             *((uint64_t*)(dst + i)) = v_get0(v_reinterpret_as_u64(vres));
         }
     }
-    vx_cleanup();
 
     return i;
 }
