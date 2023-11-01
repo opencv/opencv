@@ -1143,7 +1143,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS LayerNormLayer : public Layer
     {
     public:
-        bool hasBias;
+        CV_DEPRECATED_EXTERNAL bool hasBias; // Deprecated, preserve for compatibility
         int axis;
         float epsilon;
 
