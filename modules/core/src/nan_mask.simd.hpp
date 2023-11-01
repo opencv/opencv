@@ -398,6 +398,7 @@ int finiteMaskSIMD_<double, 4>(const double *dsrc, uchar *dst, size_t utotal)
 template <typename _Tp, int cn>
 void finiteMask_(const uchar *src, uchar *dst, size_t total)
 {
+    CV_INSTRUMENT_REGION();
     size_t i = 0;
     const _Tp* tsrc = (const _Tp*) src;
 
