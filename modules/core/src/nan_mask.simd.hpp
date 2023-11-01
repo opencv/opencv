@@ -38,7 +38,7 @@ static void patchNaNs_32f(uchar* ptr, size_t len, double newVal)
         v_int32 v_cmp_mask0 = v_lt(v_exp_mask, v_and(v_src0, v_pos_mask));
         v_int32 v_cmp_mask1 = v_lt(v_exp_mask, v_and(v_src1, v_pos_mask));
 
-        if (v_check_any(v_cmp_mask0) || v_check_any(v_cmp_mask1))
+        if (v_check_any(v_or(v_cmp_mask0, v_cmp_mask1)))
         {
             v_int32 v_dst0 = v_select(v_cmp_mask0, v_val, v_src0);
             v_int32 v_dst1 = v_select(v_cmp_mask1, v_val, v_src1);
