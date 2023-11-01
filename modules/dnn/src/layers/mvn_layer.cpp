@@ -46,6 +46,8 @@
 #include "../ie_ngraph.hpp"
 #include "../op_cuda.hpp"
 
+#include "./cpu_kernels/fast_norm.hpp"
+
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
@@ -69,9 +71,12 @@ public:
     MVNLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
+
+        // Caffe params
         normVariance = params.get<bool>("normalize_variance", true);
         acrossChannels = params.get<bool>("across_channels", false);
         eps = params.get<double>("eps", 1e-9);
+
         fuse_batch_norm = false;
         fuse_relu = false;
         relu_slope = 0.f;
@@ -310,73 +315,18 @@ public:
             return;
         }
 
-        std::vector<Mat> inputs, outputs, internals;
-        inputs_arr.getMatVector(inputs);
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs); // assume only one input
         outputs_arr.getMatVector(outputs);
-        internals_arr.getMatVector(internals);
 
-        for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
-        {
-            Mat &inpBlob = inputs[inpIdx];
-            Mat &outBlob = outputs[inpIdx];
+        const auto &input = inputs[0];
 
-            int splitDim = (acrossChannels) ? 1 : 2;
-            int i, newRows = 1;
-            for( i = 0; i < splitDim; i++ )
-                newRows *= inpBlob.size[i];
-
-            Mat inpMat = inpBlob.reshape(1, newRows);
-            Mat outMat = outBlob.reshape(1, newRows);
-
-            if ( inpBlob.total() == newRows )
-            {
-                // MVN is applied to single values at an every row.
-                if (shift.empty())
-                {
-                    outBlob.setTo(0);
-                }
-                else
-                {
-                    for ( i = 0; i < newRows; i++ )
-                    {
-                        outMat.row(i).setTo(((float*)shift.data)[i]);
-                    }
-                }
-                return;
-            }
-
-            Scalar mean, dev;
-            for ( i = 0; i < newRows; i++)
-            {
-                Mat inpRow = inpMat.row(i);
-                Mat outRow = outMat.row(i);
-                float weight = 1.f;
-                float bias = 0.f;
-                if (fuse_batch_norm)
-                {
-                    weight = i < scale.cols ? ((float*)scale.data)[i] : weight;
-                    bias = i < shift.cols ? ((float*)shift.data)[i] : bias;
-                }
-                cv::meanStdDev(inpRow, mean, (normVariance) ? dev : noArray());
-                double alpha = 1;
-                if (normVariance)
-                {
-                    alpha = 1 / std::sqrt(eps + dev[0]*dev[0]);
-                }
-                double normalizationScale = 1.0;
-                double normalizationShift = 0.0;
-                if (fuse_batch_norm)
-                {
-                    normalizationScale = alpha * weight;
-                    normalizationShift = -mean[0] * normalizationScale + bias;
-                }
-                else
-                {
-                    normalizationScale = alpha;
-                    normalizationShift = -mean[0] * alpha;
-                }
-                inpRow.convertTo(outRow, outRow.type(), normalizationScale, normalizationShift);
-            }
+        if (fuse_batch_norm) { // channel-wise scale/bias of shape (C)
+            CV_CheckTrue(normVariance, "DNN/MVN: not supported");
+            fastNormChannel(input, scale, shift, outputs[0], eps);
+        } else {
+            size_t axis = acrossChannels ? 1 : 2;
+            fastNorm(input, outputs[0], eps, axis, normVariance);
         }
     }
 
