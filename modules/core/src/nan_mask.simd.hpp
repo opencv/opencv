@@ -90,8 +90,9 @@ static void patchNaNs_64f(uchar* ptr, size_t ulen, double newVal)
         if (v_check_any(v_cmp_mask0) || v_check_any(v_cmp_mask1))
         {
             // v_select is not available for v_int64, emulating it
-            v_int64 v_dst0 = v_or(v_and(v_cmp_mask0, v_val), v_and(v_not(v_cmp_mask0), v_src0));
-            v_int64 v_dst1 = v_or(v_and(v_cmp_mask1, v_val), v_and(v_not(v_cmp_mask1), v_src1));
+            v_int32 val32 = v_reinterpret_as_s32(v_val);
+            v_int64 v_dst0 = v_reinterpret_as_s64(v_select(v_reinterpret_as_s32(v_cmp_mask0), val32, v_reinterpret_as_s32(v_src0)));
+            v_int64 v_dst1 = v_reinterpret_as_s64(v_select(v_reinterpret_as_s32(v_cmp_mask1), val32, v_reinterpret_as_s32(v_src1)));
 
             v_store(tptr + j, v_dst0);
             v_store(tptr + j + cWidth, v_dst1);
