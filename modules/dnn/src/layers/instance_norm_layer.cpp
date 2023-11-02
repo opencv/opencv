@@ -94,7 +94,9 @@ public:
 
         // instance norm = scale * mvn + bias
         auto scale = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-        auto shared_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{1, -1, 1, 1});
+        std::vector<int64_t> shared_shape_v(input_shape.size(), 1);
+        shared_shape_v[1] = -1;
+        auto shared_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{shared_shape_v.size()}, shared_shape_v.data());
         scale  = std::make_shared<ngraph::op::v1::Reshape>(scale, shared_shape, true);
         result = std::make_shared<ngraph::op::v1::Multiply>(mvn, scale);
         auto bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
