@@ -630,7 +630,7 @@ protected:
 class NormalizeSubgraphBase : public Subgraph
 {
 public:
-    NormalizeSubgraphBase(int _normNodeOrder = 0) : axis(1), normNodeOrder(_normNodeOrder) {}
+    NormalizeSubgraphBase(int _normNodeOrder = 1) : axis(1), normNodeOrder(_normNodeOrder) {}
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                        std::vector<int>& matchedNodesIds,
