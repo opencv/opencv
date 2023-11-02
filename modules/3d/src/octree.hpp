@@ -167,7 +167,7 @@ struct Octree::Impl{
     Ptr <OctreeNode> rootNode = nullptr;
     //! Max depth of the Octree. And depth must be greater than zero
     size_t maxDepth;
-    //! The size of the cube of the .
+    //! The size of the cube of the root.
     double size;
     //! The origin coordinate of root node.
     Point3f origin;

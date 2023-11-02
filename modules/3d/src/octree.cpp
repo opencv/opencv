@@ -129,7 +129,7 @@ bool Octree::insertPoint(const Point3f& point,const Point3f &color)
     double resolution=p->resolution;
     if(p->rootNode.empty())
     {
-        p->rootNode = new OctreeNode( 0, p->size, p->origin,  color, -1, 0);
+        p->rootNode = new OctreeNode( 0, p->size, p->origin, Point3f(0,0,0), -1, 0);
     }
     bool pointInBoundFlag = p->rootNode->isPointInBound(point, p->rootNode->origin, p->rootNode->size);
     if(p->rootNode->depth==0 && !pointInBoundFlag)
@@ -400,20 +400,19 @@ bool insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point,const Poi
         return true;
     }
 
-    // double childSize = node.size * 0.5;
-    //calculate the index and the origin of child.
+    double childSize = node.size * 0.5;
+    // calculate the index and the origin of child.
     size_t childIndex = key.findChildIdxByMask(depthMask);
-    // size_t xIndex = childIndex&1?1:0;
-    // size_t yIndex = childIndex&2?1:0;
-    // size_t zIndex = childIndex&4?1:0;
-    // Point3f childOrigin = node.origin + Point3f(xIndex * float(childSize), yIndex * float(childSize), zIndex * float(childSize));
+    size_t xIndex = childIndex&1?1:0;
+    size_t yIndex = childIndex&2?1:0;
+    size_t zIndex = childIndex&4?1:0;
+    Point3f childOrigin = node.origin + Point3f(xIndex * float(childSize), yIndex * float(childSize), zIndex * float(childSize));
 
     // if child at childIndex doesn't exist
     if (!(node.occupancy & (1 << childIndex))) {
         // only leaf nodes hold color, so set Point3f(0, 0, 0) here.
         // pointNum will be returned by backward recursive, so set 0 here.
-        // TODO: DEBUG childSize and childOrigin need not calculate for compression
-        node.children[childIndex] = new OctreeNode(node.depth + 1, -1, Point3f(0, 0, 0), Point3f(0, 0, 0),
+        node.children[childIndex] = new OctreeNode(node.depth + 1, childSize, childOrigin, Point3f(0, 0, 0),
                                                    int(childIndex), 0);
         node.children[childIndex]->parent = _node;
         node.occupancy |= (1 << childIndex);

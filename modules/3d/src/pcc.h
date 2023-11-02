@@ -58,8 +58,9 @@ public:
     * @param serializedVector The serialized char vector.
     * @param resolution The size of the Octree leaf node.
     * @param origin The vertex of the cube represented by the octree root node.
+    * @param maxDepth The depth of the Octree leaf node.
     */
-    void decode(const std::vector<unsigned char> &serializedVector, double resolution, Point3f &origin);
+    void decode(const std::vector<unsigned char> &serializedVector, std::vector<Point3f> &pointCloud, double resolution, Point3f &origin, size_t maxDepth);
 
     /** @brief encode color data to serialized char vector
     *
@@ -75,7 +76,7 @@ public:
     * @param qStep Parameter for quantization.
     * @param colorCode The input serialized char vector for color attribute.
     */
-    void decodeColor(float qStep, const std::vector<unsigned char> &colorCode);
+    void decodeColor(float qStep, const std::vector<unsigned char> &colorCode, std::vector<Point3f> &colorAttribute);
 
     /** @brief get the octree instance **/
     Octree *getOctree() const { return octree; };
@@ -151,7 +152,7 @@ void Haar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients, s
  * @param N The index.
 */
 void invHaar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients, std::vector<OctreeNode *> &cubes,
-                            size_t &N);
+                            size_t &N, std::vector<Point3f> &colorAttribute);
 
 }
 

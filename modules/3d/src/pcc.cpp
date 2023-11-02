@@ -409,7 +409,7 @@ void Haar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients, s
 }
 
 void invHaar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients, std::vector<OctreeNode *> &cubes,
-                        size_t &N) {
+                        size_t &N, std::vector<Point3f> &colorAttribute) {
     if (!node)
         return;
     if (node->isLeaf) {
@@ -429,6 +429,7 @@ void invHaar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients
         b = b > 255 ? 255 : b < 0 ? 0 : b;
 
         node->color = Point3f((float)r, (float)g, (float)b);
+        colorAttribute.emplace_back((float)r,(float)g,(float)b);
         return;
     }
 
@@ -494,7 +495,7 @@ void invHaar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients
             node->children[i]->RAHTCoefficient = cubes[i]->RAHTCoefficient;
 
     for (int i = 7; i >= 0; --i)
-        invHaar3DRecursive(node->children[i], haarCoefficients, cubes, N);
+        invHaar3DRecursive(node->children[i], haarCoefficients, cubes, N, colorAttribute);
 }
 
 
@@ -549,7 +550,7 @@ void OctreeSerializeCoder::encodeColor(float qStep, std::vector<unsigned char> &
         delete p;
 }
 
-void OctreeSerializeCoder::decodeColor(float qStep, const std::vector<unsigned char> &colorCode) {
+void OctreeSerializeCoder::decodeColor(float qStep, const std::vector<unsigned char> &colorCode, std::vector<Point3f> &colorAttribute) {
     // set octree has color
     if (qStep > 0) {
         this->octree->p->hasColor = true;
@@ -585,7 +586,9 @@ void OctreeSerializeCoder::decodeColor(float qStep, const std::vector<unsigned c
     for (auto &cube: cubes)
         cube = new OctreeNode;
 
-    invHaar3DRecursive(&root, haarCoeffs, cubes, N);
+    invHaar3DRecursive(&root, haarCoeffs, cubes, N, colorAttribute);
+
+    std::reverse(colorAttribute.begin(), colorAttribute.end());
 
     for (auto &cube: cubes)
         delete cube;
@@ -612,7 +615,7 @@ void traverse(OctreeNode &root, std::vector<unsigned char> &serializedVectorOut)
     }
 }
 
-void restore(OctreeNode &root, const std::vector<unsigned char> &serializedVectorIn) {
+void restore(OctreeNode &root, const std::vector<unsigned char> &serializedVectorIn, std::vector<Point3f> &pointCloud) {
     std::queue<OctreeNode *> nodeQueue;
     nodeQueue.push(&root);
 
@@ -633,15 +636,27 @@ void restore(OctreeNode &root, const std::vector<unsigned char> &serializedVecto
                 ++(pNode->pointNum);
                 pNode = pNode->parent;
             }
+            // output pointcloud
+            pointCloud.emplace_back(
+                    (float) (node.origin.x) + (float) (node.size * 0.5),
+                    (float) (node.origin.y) + (float) (node.size * 0.5),
+                    (float) (node.origin.z) + (float) (node.size * 0.5)
+                    );
             continue;
         }
         unsigned char mask = 1;
         unsigned char occup_code = serializedVectorIn[index++];
 
+        double childSize = node.size * 0.5;
         for (unsigned char i = 0; i < 8; i++) {
-            if (!!(occup_code & mask)) {
-                node.children[i] = new OctreeNode(node.depth + 1, 0, Point3f(0, 0, 0),
-                                                  Point3f(0, 0, 0), int(i), 0);
+            if (occup_code & mask) {
+                // calculate the index and the origin of child.
+                size_t xIndex = i&1?1:0;
+                size_t yIndex = i&2?1:0;
+                size_t zIndex = i&4?1:0;
+                Point3f childOrigin = node.origin + Point3f(xIndex * float(childSize), yIndex * float(childSize), zIndex * float(childSize));
+                node.children[i] = new OctreeNode(node.depth + 1, childSize,
+                                                  childOrigin, Point3f(0,0,0), int(i), 0);
                 node.children[i]->parent = &node;
                 nodeQueue.push(node.children[i]);
             }
@@ -661,16 +676,20 @@ void OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud, const 
     outputStream << " " << this->octree->p->origin.y;
     outputStream << " " << this->octree->p->origin.z << "\n";
 
+    outputStream << "maxDepth " << this->octree->p->maxDepth << "\n";
+
     // encode octree by traverse its occupancy code in BFS order.
     traverse(*(this->octree->p->rootNode), serializedVector);
 }
 
-void OctreeSerializeCoder::decode(const std::vector<unsigned char> &serializedVector, double resolution, Point3f &origin) {
+void OctreeSerializeCoder::decode(const std::vector<unsigned char> &serializedVector, std::vector<Point3f> &pointCloud, double resolution, Point3f &origin, size_t maxDepth) {
     this->octree->clear();
     this->octree->p->origin = origin;
     this->octree->p->resolution = resolution;
-    this->octree->p->rootNode = new OctreeNode();
-    restore(*this->octree->p->rootNode, serializedVector);
+    this->octree->p->maxDepth = maxDepth;
+    double rootSize = (1<<maxDepth)*resolution;
+    this->octree->p->rootNode = new OctreeNode( 0, rootSize, origin, Point3f(0,0,0), -1, 0);
+    restore(*this->octree->p->rootNode, serializedVector, pointCloud);
 }
 
 struct PointCloudCompression::Impl{
@@ -727,24 +746,26 @@ void PointCloudCompression::decompress(std::istream &inputStream, std::vector<Po
     std::string tmp;
     double resolution, qStep;
     inputStream >> tmp >> resolution;
-    inputStream >> tmp >> qStep >> tmp;
+    inputStream >> tmp >> qStep;
     float ori_x, ori_y, ori_z;
-    inputStream >> ori_x >> ori_y >> ori_z;
+    inputStream >> tmp >> ori_x >> ori_y >> ori_z;
     Point3f origin(ori_x, ori_y, ori_z);
+    size_t maxDepth;
+    inputStream >> tmp >> maxDepth;
     inputStream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
 
     this->p->_entropyCoder.decodeStreamToCharVector(inputStream, outputCharVector);
-    this->p->_coder.decode(outputCharVector, resolution, origin);
+    this->p->_coder.decode(outputCharVector, pointCloud, resolution, origin, maxDepth);
     outputCharVector.clear();
 
     // decode color if it has color attribute.
     if (qStep > 0) {
         this->p->_entropyCoder.decodeStreamToCharVector(inputStream, outputCharVector);
-        this->p->_coder.decodeColor((float)qStep, outputCharVector);
+        this->p->_coder.decodeColor((float)qStep, outputCharVector, colorAttribute);
     }
 
-    this->p->_coder.getOctree()->getPointCloudByOctree(pointCloud, colorAttribute);
+    // this->p->_coder.getOctree()->getPointCloudByOctree(pointCloud, colorAttribute);
 }
 }
 
