@@ -232,9 +232,9 @@ public:
         int axis = normalize_axis(axisRaw, src.dims);
 
         if(logSoftMax)
-            logSoftmax(src, dst, axis);
+            logSoftmax(dst, src, axis);
         else
-            softmax(src, dst, axis);
+            softmax(dst, src, axis);
     }
 
 #ifdef HAVE_CUDA

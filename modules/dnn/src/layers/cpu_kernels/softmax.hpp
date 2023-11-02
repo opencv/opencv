@@ -17,9 +17,11 @@
 
 namespace cv { namespace dnn {
 
-void softmax(const Mat &src, Mat &dst, int axis);
+void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep);
 
-void logSoftmax(const Mat &src, Mat &dst, int axis);
+void softmax(Mat &dst, const Mat &src, int axis);
+
+void logSoftmax(Mat &dst, const Mat &src, int axis);
 
 }} // cv::dnn
 

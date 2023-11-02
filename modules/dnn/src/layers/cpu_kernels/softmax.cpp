@@ -53,15 +53,14 @@
 
 namespace cv { namespace dnn {
 
-void softmax(const Mat &src, Mat &dst, int axis) {
+void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
     CV_Assert(src.type() == CV_32F);
     CV_Assert(src.isContinuous() && dst.isContinuous());
     CV_Assert(src.size == dst.size);
     axis = normalize_axis(axis, src.dims);
 
     size_t outerSize = src.total(0, axis),
-            channels = src.size[axis],
-            innerSize = src.total(axis + 1);
+           innerSize = src.total(axis + 1);
 
     const float *srcPtr = src.ptr<float>();
     float *dstPtr = dst.ptr<float>();
@@ -73,12 +72,12 @@ void softmax(const Mat &src, Mat &dst, int axis) {
     size_t totalTasks = outerSize * innerSize;
     double nstripes = (double) totalTasks / 1024.0;
     // make the channel axis to be multiple of 8
-    size_t channelAxis = (channels + 7) & -8;
+    size_t channelAxis = (axisStep + 7) & -8;
 
 #if CV_SIMD
     size_t nlanes = v_float32::nlanes;
     // the number of redundant dimension
-    size_t redundantDim = nlanes - channels % nlanes;
+    size_t redundantDim = nlanes - axisStep % nlanes;
 #endif
 
     parallel_for_(Range(0, (int) totalTasks), [&](const Range &range) {
@@ -90,20 +89,20 @@ void softmax(const Mat &src, Mat &dst, int axis) {
             size_t innerDim = i % innerSize;
             size_t srcOffset = outerDim * outerStep + innerDim;
             // copy data from src to buf along axis, since the data may not be continuous
-            for (size_t cnDim = 0; cnDim < channels; cnDim++)
-                axisBuf[cnDim] = srcPtr[srcOffset + cnDim * cnStep];
+            for (size_t cnDim = 0; cnDim < axisStep; cnDim++)
+                axisBuf[cnDim] = srcPtr[axisBias + srcOffset + cnDim * cnStep];
 
             float s = 0.f;
 #if CV_SIMD
             _VEXP_INIT();
             // make the value of the redundant dimension to be -FLT_MAX
             if (redundantDim != nlanes) {
-                for (size_t j = channels; j < channels + redundantDim; j++)
+                for (size_t j = axisStep; j < axisStep + redundantDim; j++)
                     axisBuf[j] = -FLT_MAX;
             }
             // calculate the max value along the axis
             v_float32 vmax = vx_load(axisBuf);
-            for (size_t cnDim = nlanes; cnDim < channels; cnDim += nlanes) {
+            for (size_t cnDim = nlanes; cnDim < axisStep; cnDim += nlanes) {
                 v_float32 val = vx_load(axisBuf + cnDim);
                 vmax = v_max(vmax, val);
             }
@@ -113,7 +112,7 @@ void softmax(const Mat &src, Mat &dst, int axis) {
             v_float32 vs = vx_setzero_f32();
             vmax = vx_setall_f32(maxVal);
             v_float32 val;
-            for (size_t cnDim = 0; cnDim < channels; cnDim += nlanes) {
+            for (size_t cnDim = 0; cnDim < axisStep; cnDim += nlanes) {
                 val = vx_load(axisBuf + cnDim);
                 val = v_sub(val, vmax);
                 _VEXP_COMPUTE(val, val);
@@ -142,15 +141,19 @@ void softmax(const Mat &src, Mat &dst, int axis) {
             s = 1.f / s;
 
             // copy back the result to src
-            for (size_t j = 0; j < channels; j++) {
-                dstPtr[srcOffset + j * cnStep] = axisBuf[j] * s;
+            for (size_t j = 0; j < axisStep; j++) {
+                dstPtr[axisBias + srcOffset + j * cnStep] = axisBuf[j] * s;
             }
         }
     }, nstripes);
 }
 
-void logSoftmax(const Mat &src, Mat &dst, int axis) {
-    softmax(src, dst, axis);
+void softmax(Mat &dst, const Mat &src, int axis) {
+    softmax(dst, src, axis, 0, src.size[axis]);
+}
+
+void logSoftmax(Mat &dst, const Mat &src, int axis) {
+    softmax(dst, src, axis);
     log(dst, dst);
 }
 
