@@ -72,8 +72,8 @@ namespace raw {
         for (auto idx : grid_stride_range(output.size())) {
             const index_type outer_idx = idx / inner_size;
             const index_type c = outer_idx % C;
-            auto s = scale[c];
-            auto b = bias[c];
+            auto s = static_cast<float>(scale[c]);
+            auto b = static_cast<float>(bias[c]);
             output[idx] = (static_cast<float>(input[idx]) - means[outer_idx]) * s / stdev[outer_idx] + b;
         }
     }
