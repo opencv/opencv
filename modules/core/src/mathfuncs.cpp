@@ -1610,7 +1610,7 @@ void patchNaNs( InputOutputArray _a, double _val )
     const Mat* arrays[] = {&a, 0};
     int* ptrs[1] = {};
     NAryMatIterator it(arrays, (uchar**)ptrs);
-    int len = it.size*a.channels();
+    int len = (int)(it.size*a.channels());
     Cv32suf val;
     val.f = (float)_val;
 
