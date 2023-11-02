@@ -82,14 +82,14 @@ public:
         // https://docs.openvino.ai/2021.4/api/ngraph_python_api/_autosummary/ngraph.opset3.mvn.html?highlight=mvn#ngraph.opset3.mvn
         bool across_channels = false;
         bool normalize_variance = true;
-        auto mvn = std::make_shared<ngraph::op::MVN>(ieInpNode, across_channels, normalize_variance, epsilon);
+        mvn = std::make_shared<ngraph::op::MVN>(ieInpNode, across_channels, normalize_variance, epsilon);
 #else
         // https://docs.openvino.ai/2023.1/openvino_docs_ops_normalization_MVN_6.html
         std::vector<int64_t> axes_v(input_shape.size() - 2);
         std::iota(axes_v.begin(), axes_v.end(), 2); // {2, 3, ...} for nd input tensor, n>=3
         auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_v.size()}, axes_v.data());
         bool normalize_variance = true;
-        auto mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normalize_variance, eps, ngraph::op::MVNEpsMode::INSIDE_SQRT);
+        mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normalize_variance, eps, ngraph::op::MVNEpsMode::INSIDE_SQRT);
 #endif
 
         // instance norm = scale * mvn + bias
