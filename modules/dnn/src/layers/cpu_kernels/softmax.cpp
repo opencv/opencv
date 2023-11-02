@@ -130,10 +130,10 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
             }
 #else
             float maxVal = axisBuf[0];
-            for (size_t cnDim = 1; cnDim < channels; cnDim++) {
+            for (size_t cnDim = 1; cnDim < axisStep; cnDim++) {
                 maxVal = std::max(maxVal, axisBuf[cnDim]);
             }
-            for (size_t j = 0; j < channels; j++) {
+            for (size_t j = 0; j < axisStep; j++) {
                 axisBuf[j] = expf(axisBuf[j] - maxVal);
                 s += axisBuf[j];
             }
