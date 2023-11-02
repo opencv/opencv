@@ -148,9 +148,9 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
             float inv_stdev = 1.f / mean_square;
 
             size_t c = i % C;
-            float s = scale_data[c], b = bias_data[c];
+            float s = scale_data[c] * inv_stdev, b = bias_data[c];
             for (size_t j = 0; j < norm_size; j++) {
-                y[j] = s * (x[j] - mean) * inv_stdev + b;
+                y[j] = s * (x[j] - mean) + b;
             }
         }
     };
