@@ -29,10 +29,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
         InstanceNormOp(csl::Stream stream_, float epsilon_, size_t loops)
-            : stream(stream_), epsilon(epsilon_) {
+            : stream(std::move(stream_)), epsilon(epsilon_) {
             csl::WorkspaceBuilder builder;
             builder.require<float>(2 * loops);
             scratch_mem_in_bytes = builder.required_workspace_size();
+            std::cout << "scratch_mem_in_bytes=" << scratch_mem_in_bytes << std::endl;
         }
 
         void forward(const std::vector<cv::Ptr<BackendWrapper>>& inputs,
@@ -60,9 +61,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto ws_allocator = csl::WorkspaceAllocator(workspace);
 
                 auto means = ws_allocator.get_span<float>(loops);
+                std::cout << "Get means success" << std::endl;
                 kernels::fill<float>(stream, means, 0.f);
 
                 auto stdev = ws_allocator.get_span<float>(loops);
+                std::cout << "Get stdev success" << std::endl;
                 kernels::fill<float>(stream, stdev, 0.f);
 
                 kernels::reduce_mean_sqr_sum<T>(stream, means, stdev, input, norm_size);
