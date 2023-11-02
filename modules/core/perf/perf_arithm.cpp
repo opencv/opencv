@@ -495,7 +495,7 @@ PERF_TEST_P_(PatchNaNsFixture, PatchNaNs)
     // generating NaNs
     {
         srcSize.width *= cn;
-        RNG rng(0);
+        RNG& rng = theRNG();
         for (int y = 0; y < srcSize.height; ++y)
         {
             float  *const ptrf = src.ptr<float>(y);

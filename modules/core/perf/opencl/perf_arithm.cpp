@@ -1083,7 +1083,7 @@ OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
     {
         Mat src_ = src.getMat(ACCESS_RW);
         srcSize.width *= cn;
-        RNG rng(0);
+        RNG& rng = theRNG();
         for (int y = 0; y < srcSize.height; ++y)
         {
             float  *const ptrf = src_.ptr<float>(y);
