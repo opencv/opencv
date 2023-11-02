@@ -123,7 +123,6 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
     CV_CheckEQ(scale.total(), C, "fastNormChannel: scale should be a 1d tensor and match the channel of input");
     CV_CheckGE(input.dims, 3, "fastNormChannel: input dimension >= 3");
 
-    
     size_t loops = N * C,
            norm_size = static_cast<size_t>(total(input_shape, 2));
     float inv_norm_size = 1.0 / norm_size;
