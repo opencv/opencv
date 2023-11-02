@@ -12,7 +12,7 @@
 // CUDA backend
 #include "../op_cuda.hpp"
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/primitives/mvn.hpp"
+#include "../cuda4dnn/primitives/instance_norm.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
