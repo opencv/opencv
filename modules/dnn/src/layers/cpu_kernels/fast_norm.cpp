@@ -118,10 +118,12 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
 
 void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon) {
     const auto input_shape = shape(input);
+    size_t N = input_shape[0], C = input_shape[1];
     CV_CheckEQ(scale.total(), bias.total(), "fastNormChannel: scale and bias should have the same shape");
+    CV_CheckEQ(scale.total(), C, "fastNormChannel: scale should be a 1d tensor and match the channel of input");
     CV_CheckGE(input.dims, 3, "fastNormChannel: input dimension >= 3");
 
-    size_t N = input_shape[0], C = input_shape[1];
+    
     size_t loops = N * C,
            norm_size = static_cast<size_t>(total(input_shape, 2));
     float inv_norm_size = 1.0 / norm_size;

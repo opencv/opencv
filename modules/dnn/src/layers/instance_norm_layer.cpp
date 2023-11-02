@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include "./cpu_kernels/fast_norm.hpp"
 
 namespace cv { namespace dnn {
 
@@ -24,6 +25,17 @@ public:
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE {
+        const auto &input = inputs[0];
+        const auto &scale = inputs[1];
+        const auto &bias = inputs[2];
+        CV_CheckGE(input.size(), static_cast<size_t>(3), "DNN/InstanceNorm: input dimension >= 3 is required");
+
+        int C = input[1];
+        int scale_dim = std::accumulate(scale.begin(), scale.end(), 1, std::multiplies<int>());
+        CV_CheckEQ(scale_dim, C, "DNN/InstanceNorm: scale must be a 1d tensor and match the channel of input");
+        int bias_dim = std::accumulate(bias.begin(), bias.end(), 1, std::multiplies<int>());
+        CV_CheckEQ(bias_dim, C, "DNN/InstanceNorm: bias must be a 1d tensor and match the channel of input");
+
         outputs.assign(1, inputs[0]);
         return false;
     }
@@ -46,44 +58,7 @@ public:
         const auto &scale = inputs[1];
         const auto &bias = inputs[2];
 
-        const auto input_shape = shape(input);
-        CV_CheckGE(input_shape.size(), static_cast<size_t>(3), "InstanceNorm: input data should be at least three dimensional");
-        size_t N = static_cast<size_t>(input_shape[0]),
-               C = static_cast<size_t>(input_shape[1]);
-        CV_CheckEQ(scale.total(), C, "InstanceNorm: scale should be a 1d tensor and match the channel of input data");
-        CV_CheckEQ(bias.total(), C, "InstanceNorm: bias should be a 1d tensor and match the channel of input data");
-
-        // This implementation assumes [N, C, D1, D2, ..., Dn], where N is the batch size and C is the channel.
-        size_t loops = N * C, step = static_cast<size_t>(total(input_shape, 2));
-        auto compute_squared_norm = [step] (const float *data, float mean) {
-            float sum = 0.f;
-            for (size_t i = 0; i < step; i++) {
-                float d = data[i] - mean;
-                sum +=  d * d;
-            }
-            return sum / step;
-        };
-        auto fn = [&](const Range &r) {
-            const auto *input_data = input.ptr<const float>();
-            const auto *scale_data = scale.ptr<const float>();
-            const auto *bias_data = bias.ptr<const float>();
-            auto *output_data = outputs[0].ptr<float>();
-            for (int i = r.start; i < r.end; i++) {
-                const auto *x = input_data + step * i;
-                auto *y = output_data + step * i;
-
-                float mean = std::accumulate(x, x + step, 0.f) / step;
-                float inv_stdev = 1.f / std::sqrt(compute_squared_norm(x, mean) + epsilon);
-
-                size_t c = i % C;
-                float s = scale_data[c], b = bias_data[c];
-                for (size_t j = 0; j < step; j++) {
-                    y[j] = s * (x[j] - mean) * inv_stdev + b;
-                }
-            }
-        };
-        double nstripes = loops * step * (1 / 1024.0);
-        parallel_for_(Range(0, loops), fn, nstripes);
+        fastNormChannel(input, scale, bias, outputs[0], epsilon);
     }
 };
 
