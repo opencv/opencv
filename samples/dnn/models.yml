@@ -189,5 +189,4 @@ fcnresnet101:
   width: 500
   height: 500
   rgb: false
-  classes: "object_detection_classes_pascal_voc.txt"
   sample: "segmentation"
