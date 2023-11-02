@@ -175,11 +175,6 @@ struct Octree::Impl{
     double resolution;
     //! Whether the point cloud has a color attribute.
     bool hasColor{};
-
-    //! A buffer of Path for last point operation(insert, delete(not impl)).
-    //! the Path means the Node from root to the leaf that point lives in.
-    std::vector<OctreeNode*> lastPath;
-    OctreeKey lastKey;
 };
 }
 #endif //OPENCV_3D_SRC_OCTREE_HPP
