@@ -638,7 +638,8 @@ public:
     {
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
         {
-            Ptr<ImportNodeWrapper> norm = net->getNode(matchedNodesIds[normNodeOrder]);
+            int idx = std::find(targetNodesIds.begin(), targetNodesIds.end(), normNodeOrder) - targetNodesIds.begin();
+            Ptr<ImportNodeWrapper> norm = net->getNode(matchedNodesIds[idx]);
             opencv_onnx::NodeProto* node = norm.dynamicCast<ONNXNodeWrapper>()->node;
 
             for (int i = 0; i < node->attribute_size(); i++)
@@ -725,7 +726,7 @@ public:
 class NormalizeSubgraph3 : public NormalizeSubgraphBase
 {
 public:
-    NormalizeSubgraph3() : NormalizeSubgraphBase(1)
+    NormalizeSubgraph3() : NormalizeSubgraphBase(3)
     {
         int input = addNodeToMatch("");
         int power = addNodeToMatch("Constant");
@@ -743,7 +744,7 @@ public:
 class NormalizeSubgraph4 : public NormalizeSubgraphBase
 {
 public:
-    NormalizeSubgraph4() : NormalizeSubgraphBase(1)
+    NormalizeSubgraph4() : NormalizeSubgraphBase(2)
     {
         int input = addNodeToMatch("");
         int mul = addNodeToMatch("Mul", input, input);
@@ -760,7 +761,7 @@ public:
 class NormalizeSubgraph5 : public NormalizeSubgraphBase
 {
 public:
-    NormalizeSubgraph5() : NormalizeSubgraphBase(1)
+    NormalizeSubgraph5() : NormalizeSubgraphBase(2)
     {
         int input = addNodeToMatch("");
         int mul = addNodeToMatch("Mul", input, input);
@@ -900,25 +901,29 @@ public:
                        std::vector<int>& targetNodesIds) CV_OVERRIDE {
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds)) {
             int64_t value_ConstantOfShape;
-            if (!extractValue(net, matchedNodesIds[0], value_ConstantOfShape)) {
+            // Get index of the node that corresponds to "ConstantOfShape"
+            int idx = std::find(targetNodesIds.begin(), targetNodesIds.end(), 2) - targetNodesIds.begin();
+            if (!extractValue(net, matchedNodesIds[idx], value_ConstantOfShape)) {
                 return false;
             }
-            std::vector<int64_t> input_ConstantOfShape = extractConstant(net, matchedNodesIds[0], 0);
+            std::vector<int64_t> input_ConstantOfShape = extractConstant(net, matchedNodesIds[idx], 0);
             if (input_ConstantOfShape.size() != static_cast<size_t>(1)) {
                 return false;
             }
-
-            auto B_Mul = extractConstant(net, matchedNodesIds[1], 1);
+            idx = std::find(targetNodesIds.begin(), targetNodesIds.end(), 4) - targetNodesIds.begin();
+            auto B_Mul = extractConstant(net, matchedNodesIds[idx], 1);
             if (B_Mul.size() != static_cast<size_t>(1)) {
                 return false;
             }
 
-            auto A_Equal = extractConstant(net, matchedNodesIds[2], 0);
+            idx = std::find(targetNodesIds.begin(), targetNodesIds.end(), 6) - targetNodesIds.begin();
+            auto A_Equal = extractConstant(net, matchedNodesIds[idx], 0);
             if (A_Equal.size() != static_cast<size_t>(input_ConstantOfShape[0])) {
                 return false;
             }
 
-            auto Y_Where = extractConstant(net, matchedNodesIds[3], 2);
+            idx = std::find(targetNodesIds.begin(), targetNodesIds.end(), 8) - targetNodesIds.begin();
+            auto Y_Where = extractConstant(net, matchedNodesIds[idx], 2);
             if (Y_Where.size() != A_Equal.size()) {
                 return false;
             }
