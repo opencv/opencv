@@ -1614,17 +1614,15 @@ void patchNaNs( InputOutputArray _a, double _val )
     Cv32suf val;
     val.f = (float)_val;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    v_int32 v_pos_mask = vx_setall_s32(0x7fffffff), v_exp_mask = vx_setall_s32(0x7f800000);
-    v_int32 v_val = vx_setall_s32(val.i);
-#endif
-
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         int* tptr = ptrs[0];
         int j = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        v_int32 v_pos_mask = vx_setall_s32(0x7fffffff), v_exp_mask = vx_setall_s32(0x7f800000);
+        v_int32 v_val = vx_setall_s32(val.i);
+
         int cWidth = VTraits<v_int32>::vlanes();
         for (; j < len - cWidth * 2 + 1; j += cWidth * 2)
         {
