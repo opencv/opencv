@@ -13,7 +13,7 @@
 #include "softmax.hpp"
 
 #ifdef CV_SIMD
-#define _VEXP_INIT_DEFAULT() \
+#define _VEXP_INIT() \
     v_float32 _vexp_lo = vx_setall_f32(-88.3762626647949f); \
     v_float32 _vexp_hi = vx_setall_f32(88.3762626647949f); \
     v_float32 _vexp_half = vx_setall_f32(0.5f); \
@@ -28,7 +28,7 @@
     v_float32 _vexp_p4 = vx_setall_f32(1.6666665459E-1f); \
     v_float32 _vexp_p5 = vx_setall_f32(5.0000001201E-1f)
 
-#define _VEXP_COMPUTE_DEFAULT(x, y) { \
+#define _VEXP_COMPUTE(x, y) { \
     v_float32 _vexp_, _vexp_x, _vexp_y, _vexp_z; \
     _vexp_x = v_min(x, _vexp_hi); \
     _vexp_x = v_max(_vexp_x, _vexp_lo); \
@@ -74,9 +74,12 @@ void softmax(const Mat &src, Mat &dst, int axis) {
     double nstripes = (double) totalTasks / 1024.0;
     // make the channel axis to be multiple of 8
     size_t channelAxis = (channels + 7) & -8;
+
+#if CV_SIMD
     size_t nlanes = v_float32::nlanes;
     // the number of redundant dimension
     size_t redundantDim = nlanes - channels % nlanes;
+#endif
 
     parallel_for_(Range(0, (int) totalTasks), [&](const Range &range) {
         AutoBuffer<float> axisBuf_(channelAxis);
@@ -92,7 +95,7 @@ void softmax(const Mat &src, Mat &dst, int axis) {
 
             float s = 0.f;
 #if CV_SIMD
-            _VEXP_INIT_DEFAULT();
+            _VEXP_INIT();
             // make the value of the redundant dimension to be -FLT_MAX
             if (redundantDim != nlanes) {
                 for (size_t j = channels; j < channels + redundantDim; j++)
@@ -113,7 +116,7 @@ void softmax(const Mat &src, Mat &dst, int axis) {
             for (size_t cnDim = 0; cnDim < channels; cnDim += nlanes) {
                 val = vx_load(axisBuf + cnDim);
                 val = v_sub(val, vmax);
-                _VEXP_COMPUTE_DEFAULT(val, val);
+                _VEXP_COMPUTE(val, val);
                 vs = v_add(vs, val);
                 v_store(axisBuf + cnDim, val);
             }
