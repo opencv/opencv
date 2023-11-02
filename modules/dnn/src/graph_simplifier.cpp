@@ -141,7 +141,11 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
         targetNodesIds.push_back(targetNodeId);
     }
 
-    if (matchedNodesIds.size() != nodes.size() - 1)
+    int numPlaceholders = 0;
+    for (int i = 0; i < nodes.size(); ++i) {
+        numPlaceholders += (int)nodes[i].empty();
+    }
+    if (matchedNodesIds.size() != nodes.size() - numPlaceholders)
         return false;
 
     const int n = matchedNodesIds.size();
