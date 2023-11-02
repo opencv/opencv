@@ -323,8 +323,8 @@ public:
                             vs3 = v_dotprod_expand_fast(v, v_load_aligned(wptr + wstep*3 + k), vs3);
                         }
 
-                        s += v_int32x4(v_reduce_sum(vs0), v_reduce_sum(vs1), v_reduce_sum(vs2), v_reduce_sum(vs3));
-                        v_int32x4 out = outzp + v_round(v_cvt_f32(s)*mult);
+                        s = v_add(s, v_int32x4(v_reduce_sum(vs0), v_reduce_sum(vs1), v_reduce_sum(vs2), v_reduce_sum(vs3)));
+                        v_int32x4 out = v_add(outzp, v_round(v_mul(v_cvt_f32(s), mult)));
                         v_store(dptr + i, v_min(v_max(out, outmin), outmax));
                     }
             #endif

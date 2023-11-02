@@ -630,15 +630,15 @@ inline float interpolate(float tx, float ty, float tz, float vx[8])
     v_float32x4 v0246, v1357;
     v_load_deinterleave(vx, v0246, v1357);
 
-    v_float32x4 vxx = v0246 + v_setall_f32(tz) * (v1357 - v0246);
+    v_float32x4 vxx = v_add(v0246, v_mul(v_setall_f32(tz), v_sub(v1357, v0246)));
 
     v_float32x4 v00_10 = vxx;
     v_float32x4 v01_11 = v_reinterpret_as_f32(v_rotate_right<1>(v_reinterpret_as_u32(vxx)));
 
-    v_float32x4 v0_1 = v00_10 + v_setall_f32(ty) * (v01_11 - v00_10);
-    float v0 = v0_1.get0();
+    v_float32x4 v0_1 = v_add(v00_10, v_mul(v_setall_f32(ty), v_sub(v01_11, v00_10)));
+    float v0 = v_get0(v0_1);
     v0_1 = v_reinterpret_as_f32(v_rotate_right<2>(v_reinterpret_as_u32(v0_1)));
-    float v1 = v0_1.get0();
+    float v1 = v_get0(v0_1);
 
     return v0 + tx * (v1 - v0);
 }
@@ -816,9 +816,9 @@ Point3f getNormalVoxel(
     v_float32x4 czp0 = v_lut(vals, idxzp + 0); v_float32x4 czp1 = v_lut(vals, idxzp + 4);
     v_float32x4 czn0 = v_lut(vals, idxzn + 0); v_float32x4 czn1 = v_lut(vals, idxzn + 4);
 
-    v_float32x4 cxv0 = cxn0 - cxp0; v_float32x4 cxv1 = cxn1 - cxp1;
-    v_float32x4 cyv0 = cyn0 - cyp0; v_float32x4 cyv1 = cyn1 - cyp1;
-    v_float32x4 czv0 = czn0 - czp0; v_float32x4 czv1 = czn1 - czp1;
+    v_float32x4 cxv0 = v_sub(cxn0, cxp0); v_float32x4 cxv1 = v_sub(cxn1, cxp1);
+    v_float32x4 cyv0 = v_sub(cyn0, cyp0); v_float32x4 cyv1 = v_sub(cyn1, cyp1);
+    v_float32x4 czv0 = v_sub(czn0, czp0); v_float32x4 czv1 = v_sub(czn1, czp1);
 
     v_store(cxv + 0, cxv0); v_store(cxv + 4, cxv1);
     v_store(cyv + 0, cyv0); v_store(cyv + 4, cyv1);
@@ -959,9 +959,9 @@ Point3f ocl_getNormalVoxel(
     v_float32x4 czp0 = v_lut(vals, idxzp + 0); v_float32x4 czp1 = v_lut(vals, idxzp + 4);
     v_float32x4 czn0 = v_lut(vals, idxzn + 0); v_float32x4 czn1 = v_lut(vals, idxzn + 4);
 
-    v_float32x4 cxv0 = cxn0 - cxp0; v_float32x4 cxv1 = cxn1 - cxp1;
-    v_float32x4 cyv0 = cyn0 - cyp0; v_float32x4 cyv1 = cyn1 - cyp1;
-    v_float32x4 czv0 = czn0 - czp0; v_float32x4 czv1 = czn1 - czp1;
+    v_float32x4 cxv0 = v_sub(cxn0, cxp0); v_float32x4 cxv1 = v_sub(cxn1, cxp1);
+    v_float32x4 cyv0 = v_sub(cyn0, cyp0); v_float32x4 cyv1 = v_sub(cyn1, cyp1);
+    v_float32x4 czv0 = v_sub(czn0, czp0); v_float32x4 czv1 = v_sub(czn1, czp1);
 
     v_store(cxv + 0, cxv0); v_store(cxv + 4, cxv1);
     v_store(cyv + 0, cyv0); v_store(cyv + 4, cyv1);

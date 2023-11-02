@@ -873,25 +873,25 @@ public:
                                 v_float32x4 max_idx0 = v_setall_f32(-1.f);
                                 v_float32x4 max_idx1 = max_idx0;
                                 int index0 = ystart * inp_width + xstart;
-                                v_float32x4 idx0 = idx00 + v_setall_f32((float)index0);
-                                v_float32x4 idx1 = idx0 + v_setall_f32((float)(stride_w*4));
+                                v_float32x4 idx0 = v_add(idx00, v_setall_f32((float)index0));
+                                v_float32x4 idx1 = v_add(idx0, v_setall_f32((float)(stride_w * 4)));
 
                                 for (int y = ystart; y < yend; ++y)
                                 {
-                                    for (int x = xstart; x < xend; ++x, idx0 += ones, idx1 += ones)
+                                    for (int x = xstart; x < xend; ++x, idx0 = v_add(idx0, ones), idx1 = v_add(idx1, ones))
                                     {
                                         const int index = y * inp_width + x;
                                         v_float32x4 v0(srcData[index], srcData[index + stride_w],
                                                        srcData[index + stride_w*2], srcData[index + stride_w*3]);
                                         v_float32x4 v1(srcData[index + stride_w*4], srcData[index + stride_w*5],
                                                        srcData[index + stride_w*6], srcData[index + stride_w*7]);
-                                        max_idx0 = v_select(v0 > max_val0, idx0, max_idx0);
-                                        max_idx1 = v_select(v1 > max_val1, idx1, max_idx1);
+                                        max_idx0 = v_select(v_gt(v0, max_val0), idx0, max_idx0);
+                                        max_idx1 = v_select(v_gt(v1, max_val1), idx1, max_idx1);
                                         max_val0 = v_max(max_val0, v0);
                                         max_val1 = v_max(max_val1, v1);
                                     }
-                                    idx0 += idx_delta;
-                                    idx1 += idx_delta;
+                                    idx0 = v_add(idx0, idx_delta);
+                                    idx1 = v_add(idx1, idx_delta);
                                 }
                                 v_store(dstData + x0, max_val0);
                                 v_store(dstData + x0 + 4, max_val1);
@@ -1044,12 +1044,12 @@ public:
                                                    srcData[index + stride_w*2], srcData[index + stride_w*3]);
                                     v_float32x4 v1(srcData[index + stride_w*4], srcData[index + stride_w*5],
                                                    srcData[index + stride_w*6], srcData[index + stride_w*7]);
-                                    sum_val0 += v0;
-                                    sum_val1 += v1;
+                                    sum_val0 = v_add(sum_val0, v0);
+                                    sum_val1 = v_add(sum_val1, v1);
                                 }
                             }
-                            v_store(dstData + x0, sum_val0*ikarea);
-                            v_store(dstData + x0 + 4, sum_val1*ikarea);
+                            v_store(dstData + x0, v_mul(sum_val0, ikarea));
+                            v_store(dstData + x0 + 4, v_mul(sum_val1, ikarea));
                             x0 += 7;
                         }
                         else

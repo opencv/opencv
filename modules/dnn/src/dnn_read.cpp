@@ -39,9 +39,11 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
             std::swap(model, config);
         return readNetFromDarknet(config, model);
     }
-    if (framework == "dldt" || modelExt == "bin" || configExt == "bin" || modelExt == "xml" || configExt == "xml")
+    if (framework == "dldt" || framework == "openvino" ||
+        modelExt == "bin" || configExt == "bin" ||
+        modelExt == "xml" || configExt == "xml")
     {
-        if (modelExt == "xml" || configExt == "bin")
+        if (modelExt == "xml" || configExt == "bin" || modelExt == "onnx")
             std::swap(model, config);
         return readNetFromModelOptimizer(config, model);
     }
@@ -62,7 +64,7 @@ Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
         return readNetFromTensorflow(bufferModel, bufferConfig);
     else if (framework == "darknet")
         return readNetFromDarknet(bufferConfig, bufferModel);
-    else if (framework == "dldt")
+    else if (framework == "dldt" || framework == "openvino")
         return readNetFromModelOptimizer(bufferConfig, bufferModel);
     else if (framework == "tflite")
         return readNetFromTFLite(bufferModel);

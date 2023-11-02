@@ -306,7 +306,7 @@ public:
                         }
 
                         v_float32x4 s = v_reduce_sum4(vs0, vs1, vs2, vs3);
-                        s += v_load(biasptr + i);
+                        s = v_add(s, v_load(biasptr + i));
                         v_store(dptr + i, s);
                     }
             #endif

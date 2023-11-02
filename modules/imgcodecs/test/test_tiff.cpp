@@ -965,7 +965,7 @@ TEST_P(Imgcodecs_Tiff_Modes, decode_multipage)
     }
 }
 
-TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer)
+TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer_all_pages)
 {
     const int mode = GetParam();
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -984,13 +984,14 @@ TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer)
     FILE* fp = fopen(filename.c_str(), "rb");
     ASSERT_TRUE(fp != NULL);
     fseek(fp, 0, SEEK_END);
-    long pos = ftell(fp);
-
-    std::vector<uchar> buf;
-    buf.resize((size_t)pos);
+    const size_t file_size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    buf.resize(fread(&buf[0], 1, buf.size(), fp));
+
+    std::vector<uchar> buf(file_size);
+    const size_t actual_read = fread(&buf[0], 1, file_size, fp);
     fclose(fp);
+    ASSERT_EQ(file_size, actual_read);
+    ASSERT_EQ(file_size, static_cast<size_t>(buf.size()));
 
     bool res = imdecodemulti(buf, mode, pages);
     ASSERT_TRUE(res == true);
@@ -999,6 +1000,60 @@ TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer)
     {
         const Mat page = imread(root + page_files[i], mode);
         EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), page, pages[i]);
+    }
+}
+
+TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer_selected_pages)
+{
+    const int mode = GetParam();
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/multipage.tif";
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
+
+    FILE* fp = fopen(filename.c_str(), "rb");
+    ASSERT_TRUE(fp != NULL);
+    fseek(fp, 0, SEEK_END);
+    const size_t file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    std::vector<uchar> buf(file_size);
+    const size_t actual_read = fread(&buf[0], 1, file_size, fp);
+    fclose(fp);
+    ASSERT_EQ(file_size, actual_read);
+    ASSERT_EQ(file_size, static_cast<size_t>(buf.size()));
+
+    const Range range(1, page_count - 1);
+    ASSERT_GE(range.size(), 1);
+
+    vector<Mat> middle_pages_from_imread;
+    for (int page_i = range.start; page_i < range.end; page_i++)
+    {
+        const Mat page = imread(root + page_files[page_i], mode);
+        middle_pages_from_imread.push_back(page);
+    }
+    ASSERT_EQ(
+        static_cast<size_t>(range.size()),
+        static_cast<size_t>(middle_pages_from_imread.size())
+    );
+
+    vector<Mat> middle_pages_from_imdecodemulti;
+    const bool res = imdecodemulti(buf, mode, middle_pages_from_imdecodemulti, range);
+    ASSERT_TRUE(res == true);
+    EXPECT_EQ(middle_pages_from_imread.size(), middle_pages_from_imdecodemulti.size());
+
+    for (int i = 0, e = range.size(); i < e; i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0),
+            middle_pages_from_imread[i],
+            middle_pages_from_imdecodemulti[i]);
     }
 }
 

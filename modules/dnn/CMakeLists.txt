@@ -240,6 +240,12 @@ ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
 
+if(NOT BUILD_PROTOBUF)
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "OPENCV_DNN_EXTERNAL_PROTOBUF=1")
+  endif()
+endif()
+
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
 file(GLOB_RECURSE perf_hdrs "${perf_path}/*.hpp" "${perf_path}/*.h")
@@ -292,6 +298,13 @@ ocv_option(OPENCV_TEST_DNN_CANN "Build test with CANN" (TARGET ocv.3rdparty.cann
 if(TARGET ocv.3rdparty.cann AND OPENCV_TEST_DNN_CANN)
   if(TARGET opencv_test_dnn)
     ocv_target_link_libraries(opencv_test_dnn ocv.3rdparty.cann)
+  endif()
+endif()
+
+ocv_option(OPENCV_TEST_DNN_TIMVX "Build test with TIM-VX" (HAVE_TIMVX))
+if(OPENCV_TEST_DNN_TIMVX)
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "HAVE_TIMVX=1")
   endif()
 endif()
 

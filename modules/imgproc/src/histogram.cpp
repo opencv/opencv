@@ -2106,7 +2106,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             v_float32 v_s11 = vx_setzero_f32();
             v_float32 v_s12 = vx_setzero_f32();
             v_float32 v_s22 = vx_setzero_f32();
-            for (; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            for (; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
             {
                 v_float32 v_a = vx_load(h1 + j);
                 v_float32 v_b = vx_load(h2 + j);
@@ -2147,10 +2147,10 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             result += v_reduce_sum(v_result);
 #elif CV_SIMD
             v_float32 v_result = vx_setzero_f32();
-            for (; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            for (; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
             {
                 v_float32 v_src = v_min(vx_load(h1 + j), vx_load(h2 + j));
-                v_result += v_src;
+                v_result = v_add(v_result, v_src);
             }
             result += v_reduce_sum(v_result);
 #endif
@@ -2187,7 +2187,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             v_float32 v_s1 = vx_setzero_f32();
             v_float32 v_s2 = vx_setzero_f32();
             v_float32 v_result = vx_setzero_f32();
-            for (; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            for (; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
             {
                 v_float32 v_a = vx_load(h1 + j);
                 v_float32 v_b = vx_load(h2 + j);

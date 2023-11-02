@@ -645,11 +645,11 @@ public:
         v_float32 v_d = vx_setall_f32(d);
 
         float* errors_cache_ptr = errors_cache.data();
-        for (; i <= pts_cnt - v_float32::nlanes; i += v_float32::nlanes)
+        for (; i <= pts_cnt - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes())
         {
-            v_float32 v_error = v_a * vx_load(pts_ptr_x + i) + v_b * vx_load(pts_ptr_y + i)
-                    + v_c * vx_load(pts_ptr_z + i) + v_d;
-            v_store(errors_cache_ptr + i, v_error * v_error);
+            v_float32 v_error = v_add(v_add(v_mul(v_a, vx_load(pts_ptr_x + i)), v_mul(v_b, vx_load(pts_ptr_y + i))),
+                                      v_add(v_mul(v_c, vx_load(pts_ptr_z + i)), v_d));
+            v_store(errors_cache_ptr + i, v_mul(v_error, v_error));
         }
 #endif
         for (; i < pts_cnt; ++i) {
@@ -725,16 +725,16 @@ public:
         v_float32 v_radius = vx_setall_f32(radius);
 
         float* errors_cache_ptr = errors_cache.data();
-        for (; i <= pts_cnt - v_float32::nlanes; i += v_float32::nlanes)
+        for (; i <= pts_cnt - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes())
         {
-            v_float32 v_diff_x = v_center_x - vx_load(pts_ptr_x + i);
-            v_float32 v_diff_y = v_center_y - vx_load(pts_ptr_y + i);
-            v_float32 v_diff_z = v_center_z - vx_load(pts_ptr_z + i);
+            v_float32 v_diff_x = v_sub(v_center_x, vx_load(pts_ptr_x + i));
+            v_float32 v_diff_y = v_sub(v_center_y, vx_load(pts_ptr_y + i));
+            v_float32 v_diff_z = v_sub(v_center_z, vx_load(pts_ptr_z + i));
 
-            v_float32 v_distance_from_center = v_sqrt(v_diff_x * v_diff_x +
-                    v_diff_y * v_diff_y + v_diff_z * v_diff_z);
-            v_float32 v_diff_dist = v_distance_from_center - v_radius;
-            v_store(errors_cache_ptr + i, v_diff_dist * v_diff_dist);
+            v_float32 v_distance_from_center = v_sqrt(v_add(v_add(v_mul(v_diff_x, v_diff_x),
+                    v_mul(v_diff_y, v_diff_y)), v_mul(v_diff_z, v_diff_z)));
+            v_float32 v_diff_dist = v_sub(v_distance_from_center, v_radius);
+            v_store(errors_cache_ptr + i, v_mul(v_diff_dist, v_diff_dist));
         }
 #endif
         for (; i < pts_cnt; ++i)
