@@ -73,7 +73,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
         // onnx to openvino convertion: https://github.com/openvinotoolkit/openvino/blob/2023.1.0/src/frontends/onnx/frontend/src/op/instance_norm.cpp
 
-        auto &ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         const auto &input_shape = ieInpNode.get_shape();
         std::shared_ptr<ngraph::Node> mvn, result;
 
@@ -93,9 +93,12 @@ public:
 #endif
 
         // instance norm = scale * mvn + bias
-        auto &scale = nodes[1].dynamicCast<InfEngineNgraphNode>()->node; // WARNING: possible size mismatch, for example [C, 1]
+        auto scale = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto shared_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, {1, -1});
+        scale  = std::make_shared<ngraph::op::v1::Reshape>(scale, shared_shape, true);
         result = std::make_shared<ngraph::op::v1::Multiply>(mvn, scale);
-        auto &bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node; // WARNING: possible size mismatch, for example [C, 1]
+        auto bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+        bias  = std::make_shared<ngraph::op::v1::Reshape>(bias, shared_shape, true);
         result = std::make_shared<ngraph::op::v1::Add>(result, bias);
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(result));
