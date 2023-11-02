@@ -1608,7 +1608,7 @@ void patchNaNs( InputOutputArray _a, double _val )
 
     Mat a = _a.getMat();
     const Mat* arrays[] = {&a, 0};
-    int* ptrs[1] = {};
+    int32_t* ptrs[1] = {};
     NAryMatIterator it(arrays, (uchar**)ptrs);
     int len = it.size*a.channels();
     Cv32suf val;
@@ -1616,7 +1616,7 @@ void patchNaNs( InputOutputArray _a, double _val )
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        int* tptr = ptrs[0];
+        int32_t* tptr = ptrs[0];
         int j = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
