@@ -2871,6 +2871,13 @@ void ONNXImporter::parseUpsample(LayerParams& layerParams, const opencv_onnx::No
 void ONNXImporter::parseSoftMax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     const std::string& layer_type = node_proto.op_type();
+    int axis;
+    if (layerParams.has("opset") && layerParams.get<int>("opset") > 11) {
+        axis = layerParams.get<int>("axis", -1);
+    } else {
+        axis = layerParams.get<int>("axis", 1);
+    }
+    layerParams.set<int>("axis", axis);
     layerParams.type = "Softmax";
     layerParams.set("log_softmax", layer_type == "LogSoftmax");
     addLayer(layerParams, node_proto);
