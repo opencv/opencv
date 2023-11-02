@@ -89,7 +89,7 @@ public:
         std::iota(axes_v.begin(), axes_v.end(), 2); // {2, 3, ...} for nd input tensor, n>=3
         auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_v.size()}, axes_v.data());
         bool normalize_variance = true;
-        mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normalize_variance, eps, ngraph::op::MVNEpsMode::INSIDE_SQRT);
+        mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normalize_variance, epsilon, ngraph::op::MVNEpsMode::INSIDE_SQRT);
 #endif
 
         // instance norm = scale * mvn + bias
