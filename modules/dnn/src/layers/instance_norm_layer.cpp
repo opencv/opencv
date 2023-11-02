@@ -6,6 +6,9 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include "./cpu_kernels/fast_norm.hpp"
 
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
 namespace cv { namespace dnn {
 
 // https://github.com/onnx/onnx/blob/main/docs/Operators.md#InstanceNormalization
