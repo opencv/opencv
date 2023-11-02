@@ -31,7 +31,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         InstanceNormOp(csl::Stream stream_, float epsilon_, size_t loops)
             : stream(std::move(stream_)), epsilon(epsilon_) {
             csl::WorkspaceBuilder builder;
-            builder.require<float>(2 * loops);
+            builder.require<float>(loops);
+            builder.require<float>(loops);
             scratch_mem_in_bytes = builder.required_workspace_size();
             std::cout << "scratch_mem_in_bytes=" << scratch_mem_in_bytes << std::endl;
         }
