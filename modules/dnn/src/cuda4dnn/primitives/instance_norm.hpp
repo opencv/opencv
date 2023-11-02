@@ -28,10 +28,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
      public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        InstanceNormOp(csl::Stream stream_, float epsilon_, size_t num_workers)
+        InstanceNormOp(csl::Stream stream_, float epsilon_, size_t loops)
             : stream(stream_), epsilon(epsilon_) {
             csl::WorkspaceBuilder builder;
-            builder.require<float>(2 * num_workers);
+            builder.require<float>(2 * loops);
             scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
@@ -51,6 +51,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto C = input.size_range(1, 2);
             auto loops = input.size_range(0, 2);
+            std::cout << "InstanceNormOp forward: loops=" << loops << std::endl;
             auto norm_size = input.size_range(2, input.rank());
             if (norm_size == 1) {
                 kernels::fill<T>(stream, output, 0.f);

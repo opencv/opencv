@@ -126,9 +126,10 @@ public:
 
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
-        size_t num_workers = static_cast<size_t>(total(input_shape, 0, 2));
+        size_t loops = static_cast<size_t>(total(input_shape, 0, 2));
+        std::cout << "initCUDA: loops=" << loops << std::endl;
 
-        return make_cuda_node<cuda4dnn::InstanceNormOp>(preferableTarget, std::move(context->stream), epsilon, num_workers);
+        return make_cuda_node<cuda4dnn::InstanceNormOp>(preferableTarget, std::move(context->stream), epsilon, loops);
     }
 #endif
 
