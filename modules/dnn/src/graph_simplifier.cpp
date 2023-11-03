@@ -76,14 +76,6 @@ int Subgraph::getInputNodeId(const Ptr<ImportGraphWrapper>& net,
     CV_Error(Error::StsParseError, "Input node with name " + name + " not found");
 }
 
-static inline bool isCommutativeOp(const std::string& type)
-{
-    return type == "Mul" || type == "Prod" || type == "SquaredDifference" ||
-           type == "Add" || type == "Sum" || type == "Equal" ||
-           type == "Max" || type == "Maximum"||
-           type == "Min" || type == "Minimum";
-}
-
 bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                      std::vector<int>& matchedNodesIds)
 {
@@ -120,7 +112,7 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
         if (inputNodes.size() != node->getNumInputs())
             continue;
 
-        bool isCommutative = isCommutativeOp(node->getType());
+        bool isCommutative = net->isCommutativeOp(node->getType());
 
         for (int j = 0; j < inputNodes.size(); ++j)
         {

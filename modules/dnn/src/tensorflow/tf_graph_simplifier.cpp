@@ -98,6 +98,14 @@ public:
         net.mutable_node()->DeleteSubrange(idx, 1);
     }
 
+    virtual inline bool isCommutativeOp(const std::string& type) const CV_OVERRIDE
+    {
+        return type == "Add" || type == "Sum" ||
+               type == "Mul" || type == "Prod" ||
+               type == "Max" || type == "Maximum" || type == "Minimum" ||
+               type == "Mean" || type == "SquaredDifference";
+    }
+
     tensorflow::GraphDef& net;
 };
 

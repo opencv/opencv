@@ -129,6 +129,11 @@ public:
             net.mutable_node()->DeleteSubrange(idx - numInputs - numInitializers, 1);
     }
 
+    virtual inline bool isCommutativeOp(const std::string& type) const CV_OVERRIDE
+    {
+        return type == "Add" || type == "Mul" || type == "Equal" || type == "Max";
+    }
+
 private:
     int numInputs, numInitializers;
     opencv_onnx::GraphProto& net;
