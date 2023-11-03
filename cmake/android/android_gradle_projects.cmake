@@ -1,5 +1,3 @@
-set (OPENCV_VERSION "4.8.0")
-
 # https://developer.android.com/studio/releases/gradle-plugin
 set(ANDROID_GRADLE_PLUGIN_VERSION "3.2.1" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
