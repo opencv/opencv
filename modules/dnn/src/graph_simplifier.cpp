@@ -78,7 +78,10 @@ int Subgraph::getInputNodeId(const Ptr<ImportGraphWrapper>& net,
 
 static inline bool isCommutativeOp(const std::string& type)
 {
-    return type == "Mul" || type == "Add" || type == "Equal" || type == "Max"|| type == "Min";
+    return type == "Mul" || type == "Prod" || type == "SquaredDifference" ||
+           type == "Add" || type == "Sum" || type == "Equal" ||
+           type == "Max" || type == "Maximum"||
+           type == "Min" || type == "Minimum";
 }
 
 bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
