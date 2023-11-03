@@ -165,10 +165,7 @@ void Subgraph::replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int
         inputsNames[i] = inpName;
     }
 
-    // Remove matched nodes except the last one. Indices in ascending order are expected.
     Ptr<ImportNodeWrapper> node = net->getNode(matchedNodesIds.back());
-    for (int i = matchedNodesIds.size() - 2; i >= 0; --i)
-        net->removeNode(matchedNodesIds[i]);
 
     // Modify the last node to be a fused one.
     node->setType(fusedNodeOp);
@@ -191,6 +188,7 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
 {
     int numNodes = net->getNumNodes();
     std::vector<int> matchedNodesIds, targetNodesIds;
+    std::vector<int> nodesToRemove;
     for (int j = 0; j < patterns.size(); ++j)
     {
         for (int i = 0; i < numNodes; ++i)
@@ -198,8 +196,52 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
             if (patterns[j]->match(net, i, matchedNodesIds, targetNodesIds))
             {
                 patterns[j]->replace(net, matchedNodesIds, targetNodesIds);
-                numNodes -= matchedNodesIds.size() - 1;  // #matchedNodes removed and one added.
+                // Remove matched nodes except the last one.
+                nodesToRemove.insert(nodesToRemove.end(), matchedNodesIds.begin(), matchedNodesIds.end() - 1);
             }
+        }
+    }
+
+    if (nodesToRemove.empty())
+        return;
+
+    // Collect reference counts for every node
+    std::vector<int> refcounts(net->getNumNodes(), 0);
+    std::map<std::string, int> nodeIds;
+
+    // Register node outputs.
+    // Every usage of one of the node's outputs should be counted.
+    for (int nodeId = 0; nodeId < refcounts.size(); ++nodeId) {
+        for (int i = 0; i < net->getNumOutputs(nodeId); ++i) {
+            std::string name = net->getOutputName(nodeId, i);
+            nodeIds[name] = nodeId;
+        }
+    }
+
+    for (int nodeId = 0; nodeId < refcounts.size(); ++nodeId) {
+        // Increase counters for node's inputs
+        auto node = net->getNode(nodeId);
+        for (int i = 0; i < node->getNumInputs(); ++i) {
+            std::string inpName = node->getInputName(i);
+            if (inpName.empty())
+                continue;
+            CV_Assert(nodeIds.find(inpName) != nodeIds.end());
+            refcounts[nodeIds[inpName]] += 1;
+        }
+    }
+
+    // Remove all fused nodes. Indices expected to be in descending order.
+    std::sort(nodesToRemove.begin(), nodesToRemove.end(), [](int a, int b) { return a > b; });
+    for (int nodeId : nodesToRemove) {
+        if (refcounts[nodeId] == 0) {
+            // Decrease references to node's inputs and remove node itself
+            auto node = net->getNode(nodeId);
+            for (int i = 0; i < node->getNumInputs(); ++i) {
+                std::string inpName = node->getInputName(i);
+                refcounts[nodeIds[inpName]] -= 1;
+            }
+            net->removeNode(nodeId);
+            refcounts[nodeId] = -1;  // Same node cannot be removed twice
         }
     }
 }
