@@ -498,8 +498,8 @@ public:
     HardSwishSubgraph()
     {
         int input = addNodeToMatch("");
-        int hardSigmoid = addNodeToMatch("HardSigmoid", input);
-        addNodeToMatch("Mul", input, hardSigmoid);
+        hardSigmoidId = addNodeToMatch("HardSigmoid", input);
+        addNodeToMatch("Mul", input, hardSigmoidId);
         setFusedNode("HardSwish", input);
     }
 
@@ -509,7 +509,7 @@ public:
     {
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
         {
-            Ptr<ImportNodeWrapper> hardSigmoid = net->getNode(matchedNodesIds[0]);
+            Ptr<ImportNodeWrapper> hardSigmoid = net->getNode(matchedNodesIds[hardSigmoidId]);
             opencv_onnx::NodeProto* node = hardSigmoid.dynamicCast<ONNXNodeWrapper>()->node;
 
             uint8_t matched = 0;
@@ -526,6 +526,9 @@ public:
         }
         return false;
     }
+
+private:
+    int hardSigmoidId;
 };
 
 class CeluSubgraph : public Subgraph
@@ -534,9 +537,9 @@ public:
     CeluSubgraph() : alpha(1.f)
     {
         int input = addNodeToMatch("");
-        int div = addNodeToMatch("Div", input, addNodeToMatch(""));
-        int elu = addNodeToMatch("Elu", div);
-        addNodeToMatch("Mul", addNodeToMatch(""), elu);
+        div = addNodeToMatch("Div", input, addNodeToMatch(""));
+        elu = addNodeToMatch("Elu", div);
+        mul = addNodeToMatch("Mul", addNodeToMatch(""), elu);
         setFusedNode("Celu", input);
     }
 
@@ -557,11 +560,11 @@ public:
     {
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
         {
-            float alpha_div = extractAlpha(net, matchedNodesIds[0], 1);
-            float alpha_mul = extractAlpha(net, matchedNodesIds[2], 0);
+            float alpha_div = extractAlpha(net, matchedNodesIds[div], 1);
+            float alpha_mul = extractAlpha(net, matchedNodesIds[mul], 0);
             float alpha_elu = 1.f;
 
-            Ptr<ImportNodeWrapper> elu_ptr = net->getNode(matchedNodesIds[1]);
+            Ptr<ImportNodeWrapper> elu_ptr = net->getNode(matchedNodesIds[elu]);
             opencv_onnx::NodeProto* elu_node = elu_ptr.dynamicCast<ONNXNodeWrapper>()->node;
 
             for (int i = 0; i < elu_node->attribute_size(); i++)
@@ -590,6 +593,7 @@ public:
 
 protected:
     float alpha;
+    int div, mul, elu;
 };
 
 class NormalizeSubgraphBase : public Subgraph
@@ -603,8 +607,7 @@ public:
     {
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
         {
-            int idx = std::find(targetNodesIds.begin(), targetNodesIds.end(), normNodeOrder) - targetNodesIds.begin();
-            Ptr<ImportNodeWrapper> norm = net->getNode(matchedNodesIds[idx]);
+            Ptr<ImportNodeWrapper> norm = net->getNode(matchedNodesIds[normNodeOrder]);
             opencv_onnx::NodeProto* node = norm.dynamicCast<ONNXNodeWrapper>()->node;
 
             for (int i = 0; i < node->attribute_size(); i++)
@@ -747,8 +750,8 @@ public:
     {
         int input = addNodeToMatch("");
         int index = addNodeToMatch("Constant");
-        int gather = addNodeToMatch("Gather", input, index);
-        addNodeToMatch("Cast", gather);
+        gather = addNodeToMatch("Gather", input, index);
+        cast = addNodeToMatch("Cast", gather);
         setFusedNode("Gather", input, index);
     }
 
@@ -762,10 +765,10 @@ public:
         if (!retVal || matchedNodesNum < 2)
             return retVal;
         else {
-            int nodeToMatch = matchedNodesIds[matchedNodesNum - 1];
+            int nodeToMatch = matchedNodesIds[cast];
             const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
             if (node->getType() == "Cast") {
-                int inpNodeId = matchedNodesIds[matchedNodesNum - 2];
+                int inpNodeId = matchedNodesIds[gather];
                 const Ptr<ImportNodeWrapper> inpNode = net->getNode(inpNodeId);
                 if (inpNode->getType() == "Gather") {
                     int numNodes = net->getNumNodes();
@@ -785,6 +788,9 @@ public:
         }
         return retVal;
     }
+
+private:
+    int cast, gather;
 };
 
 /*  Constant folding shape for Expand.

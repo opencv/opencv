@@ -1064,10 +1064,10 @@ TEST_P(Test_ONNX_layers, ResizeUnfused)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("upsample_unfused_torch1.2");
-    // testONNXModels("upsample_unfused_opset9_torch1.4");
-    // testONNXModels("resize_nearest_unfused_opset11_torch1.4");
-    // testONNXModels("resize_nearest_unfused_opset11_torch1.3");
-    // testONNXModels("resize_bilinear_unfused_opset11_torch1.4");
+    testONNXModels("upsample_unfused_opset9_torch1.4");
+    testONNXModels("resize_nearest_unfused_opset11_torch1.4");
+    testONNXModels("resize_nearest_unfused_opset11_torch1.3");
+    testONNXModels("resize_bilinear_unfused_opset11_torch1.4");
 }
 
 TEST_P(Test_ONNX_layers, ResizeUnfusedTwoInputs)
@@ -2778,13 +2778,13 @@ TEST_P(Test_ONNX_layers, Expand_shape_model4) {
     testONNXModels("test_expand_shape_model4", pb, 0, 0, false, true, 1);
 }
 
-TEST_P(Test_ONNX_layers, hard_swish_fusion) {
+INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
+
+TEST(Test_ONNX_importer, commutative_fusion) {
     Net net = readNet(_tf("models/mish.onnx"));
     std::vector<std::string> layerTypes;
     net.getLayerTypes(layerTypes);
     ASSERT_TRUE(std::find(layerTypes.begin(), layerTypes.end(), "Mish") != layerTypes.end());
 }
-
-INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

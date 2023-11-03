@@ -88,11 +88,6 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
     matchedNodesIds.clear();
     targetNodesIds.clear();
 
-    // Empty nodes placeholders match with any type
-    std::vector<bool> nodeMatched(nodes.size());
-    for (int i = 0; i < nodes.size(); ++i)
-        nodeMatched[i] = nodes[i].empty();
-
     std::queue<int> nodesToMatch;
     std::queue<int> targetNodes;
     nodesToMatch.push(nodeId);
@@ -104,16 +99,9 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
         nodesToMatch.pop();
         targetNodes.pop();
 
-        // if (std::find(matchedNodesIds.begin(), matchedNodesIds.end(), nodeToMatch) !=
-        //     matchedNodesIds.end()) {
-        //     nodeMatched[targetNodeId] = true;
-        //     continue;
-        // }
         if (std::find(targetNodesIds.begin(), targetNodesIds.end(), targetNodeId) !=
-            targetNodesIds.end()) {
-            nodeMatched[targetNodeId] = true;
+            targetNodesIds.end())
             continue;
-        }
 
         if (nodes[targetNodeId].empty()) {
             matchedNodesIds.push_back(nodeToMatch);
@@ -132,7 +120,6 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
         if (inputNodes.size() != node->getNumInputs())
             continue;
 
-        nodeMatched[targetNodeId] = true;
         bool isCommutative = isCommutativeOp(node->getType());
 
         for (int j = 0; j < inputNodes.size(); ++j)
@@ -146,16 +133,12 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
             {
                 for (int i = 0; i < inputNodes.size(); ++i)
                 {
-                    // if (nodes[inputNodes[i]].empty())
-                    //     continue;
                     nodesToMatch.push(nodeId);
                     targetNodes.push(inputNodes[i]);
                 }
             }
             else
             {
-                // if (nodes[inputNodes[j]].empty())
-                //     continue;
                 nodesToMatch.push(nodeId);
                 targetNodes.push(inputNodes[j]);
             }
@@ -164,8 +147,6 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
         targetNodesIds.push_back(targetNodeId);
     }
     if (targetNodesIds.size() != nodes.size())
-        return false;
-    if (std::find(nodeMatched.begin(), nodeMatched.end(), false) != nodeMatched.end())
         return false;
 
     const int n = matchedNodesIds.size();
