@@ -5,11 +5,11 @@ plugins {
 
 android {
     namespace 'org.opencv'
-    compileSdk 33
+    compileSdk ${COMPILE_SDK}
 
     defaultConfig {
-        minSdk 21
-        targetSdk 33
+        minSdk ${MIN_SDK}
+        targetSdk ${TARGET_SDK}
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -17,6 +17,9 @@ android {
                 cppFlags ""
                 arguments "-DANDROID_STL=${LIB_TYPE}"
             }
+        }
+        ndk {
+            abiFilters ${ABI_FILTERS}
         }
     }
 
@@ -27,13 +30,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_${JAVA_VERSION}
+        targetCompatibility JavaVersion.VERSION_${JAVA_VERSION}
     }
     externalNativeBuild {
         cmake {
             path file('src/main/cpp/CMakeLists.txt')
-            version '3.22.1'
         }
     }
     buildFeatures {
@@ -83,9 +85,4 @@ publishing {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.9.0'
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
