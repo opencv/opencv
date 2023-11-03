@@ -54,7 +54,8 @@ public:
 
     void testONNXModels(const String& basename, const Extension ext = npy,
                         double l1 = 0, double lInf = 0, const bool useSoftmax = false,
-                        bool checkNoFallbacks = true, int numInps = 1)
+                        bool checkNoFallbacks = true, int numInps = 1,
+                        bool testShapes = true)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
         std::vector<Mat> inps(numInps);
@@ -76,7 +77,8 @@ public:
         Net net = readNetFromONNX(onnxmodel);
         ASSERT_FALSE(net.empty());
 
-        testInputShapes(net, inps);
+        if (testShapes)
+            testInputShapes(net, inps);
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
@@ -246,6 +248,10 @@ TEST_P(Test_ONNX_layers, GatherMulti)
 
 TEST_P(Test_ONNX_layers, Gather_shared_indices) {
     testONNXModels("gather_shared_indices", npy, 0, 0, false, false, 1);
+}
+
+TEST_P(Test_ONNX_layers, Two_resizes_with_shared_subgraphs) {
+    testONNXModels("two_resizes_with_shared_subgraphs", npy, 0, 0, false, false, 3, /*testShapes*/ false);
 }
 
 TEST_P(Test_ONNX_layers, Convolution3D)
