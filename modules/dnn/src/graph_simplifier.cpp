@@ -104,11 +104,25 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
         nodesToMatch.pop();
         targetNodes.pop();
 
-        if (std::find(matchedNodesIds.begin(), matchedNodesIds.end(), nodeToMatch) !=
-            matchedNodesIds.end()) {
+        // if (std::find(matchedNodesIds.begin(), matchedNodesIds.end(), nodeToMatch) !=
+        //     matchedNodesIds.end()) {
+        //     nodeMatched[targetNodeId] = true;
+        //     continue;
+        // }
+        if (std::find(targetNodesIds.begin(), targetNodesIds.end(), targetNodeId) !=
+            targetNodesIds.end()) {
             nodeMatched[targetNodeId] = true;
             continue;
         }
+
+        if (nodes[targetNodeId].empty()) {
+            matchedNodesIds.push_back(nodeToMatch);
+            targetNodesIds.push_back(targetNodeId);
+            // Empty placeholder matches with any input type
+            continue;
+        }
+
+        // CV_Assert(!nodes[targetNodeId].empty());
 
         const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
         if (node->getType() != nodes[targetNodeId])
@@ -123,24 +137,25 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
 
         for (int j = 0; j < inputNodes.size(); ++j)
         {
-            if (node->getInputName(j).empty())  // Unknown input node type.
-                continue;
+            // if (node->getInputName(j).empty())  // Unknown input node type.
+            //     continue;
+            // std::cout << net->getOutputName(nodeToMatch, 0) << " " << j << std::endl;
             nodeId = getInputNodeId(net, node, j);
             const Ptr<ImportNodeWrapper> inpNode = net->getNode(nodeId);
             if (isCommutative)
             {
                 for (int i = 0; i < inputNodes.size(); ++i)
                 {
-                    if (nodes[inputNodes[i]].empty())
-                        continue;
+                    // if (nodes[inputNodes[i]].empty())
+                    //     continue;
                     nodesToMatch.push(nodeId);
                     targetNodes.push(inputNodes[i]);
                 }
             }
             else
             {
-                if (nodes[inputNodes[j]].empty())
-                    continue;
+                // if (nodes[inputNodes[j]].empty())
+                //     continue;
                 nodesToMatch.push(nodeId);
                 targetNodes.push(inputNodes[j]);
             }
@@ -148,18 +163,22 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
         matchedNodesIds.push_back(nodeToMatch);
         targetNodesIds.push_back(targetNodeId);
     }
+    // std::cout << matchedNodesIds << std::endl;
+    // std::cout << targetNodesIds << std::endl;
+    if (targetNodesIds.size() != nodes.size())
+        return false;
     if (std::find(nodeMatched.begin(), nodeMatched.end(), false) != nodeMatched.end())
         return false;
 
     const int n = matchedNodesIds.size();
     std::vector<std::pair<int, int> > elements(n);
     for (int i = 0; i < n; ++i)
-        elements[i] = std::make_pair(matchedNodesIds[i], targetNodesIds[i]);
+        elements[i] = std::make_pair(targetNodesIds[i], matchedNodesIds[i]);
     std::sort(elements.begin(), elements.end());
     for (int i = 0; i < n; ++i)
     {
-        matchedNodesIds[i] = elements[i].first;
-        targetNodesIds[i] = elements[i].second;
+        targetNodesIds[i] = elements[i].first;
+        matchedNodesIds[i] = elements[i].second;
     }
     return true;
 }
@@ -167,6 +186,11 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
 void Subgraph::replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int>& matchedNodesIds,
                        const std::vector<int>& targetNodesIds)
 {
+    // TODO: remove targetNodesIds at all
+    for (int i = 0; i < targetNodesIds.size(); ++i) {
+        CV_Assert(targetNodesIds[i] == i);
+    }
+
     // Extract names of input nodes.
     std::vector<std::string> inputsNames(fusedNodeInputs.size());
     for (int i = 0; i < fusedNodeInputs.size(); ++i)
@@ -178,7 +202,7 @@ void Subgraph::replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int
             Ptr<ImportNodeWrapper> node = net->getNode(matchedNodesIds[j]);
             std::vector<int>& inpIndices = inputs[targetNodesIds[j]];
 
-            CV_Assert(node->getNumInputs() == inpIndices.size());
+            CV_Assert(inpIndices.empty() || node->getNumInputs() == inpIndices.size());
             for (int k = 0; k < inpIndices.size(); ++k)
             {
                 if (inpIndices[k] == fusedNodeInputs[i])
@@ -222,7 +246,13 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
         {
             if (patterns[j]->match(net, i, matchedNodesIds, targetNodesIds))
             {
+            // std::cout << matchedNodesIds << std::endl;
+            // std::cout << targetNodesIds << std::endl;
+
                 patterns[j]->replace(net, matchedNodesIds, targetNodesIds);
+                // std::cout << "replaced" << std::endl;
+                // std::cout << matchedNodesIds << std::endl;
+                // std::cout << targetNodesIds << std::endl;
                 // Remove matched nodes except the last one.
                 nodesToRemove.insert(nodesToRemove.end(), matchedNodesIds.begin(), matchedNodesIds.end() - 1);
             }

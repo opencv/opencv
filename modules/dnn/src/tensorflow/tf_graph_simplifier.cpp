@@ -282,9 +282,9 @@ public:
     {
         int input = addNodeToMatch("");
         int relu = addNodeToMatch("Relu", input);
-        int maxValue = addNodeToMatch("Const");
+        maxValueId = addNodeToMatch("Const");
         int clipValue = addNodeToMatch("Const");
-        int minimum = addNodeToMatch("Minimum", relu, maxValue);
+        int minimum = addNodeToMatch("Minimum", relu, maxValueId);
         addNodeToMatch("Maximum", minimum, clipValue);
 
         setFusedNode("Relu6", input);
@@ -296,10 +296,13 @@ public:
     {
         if (!Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
             return false;
-        tensorflow::NodeDef* node = net->getNode(matchedNodesIds.front() + 1).dynamicCast<TFNodeWrapper>()->node;
+        tensorflow::NodeDef* node = net->getNode(matchedNodesIds[maxValueId]).dynamicCast<TFNodeWrapper>()->node;
         Mat maxValue = getTensorContent(node->attr().at("value").tensor());
         return maxValue.type() == CV_32FC1 && maxValue.total() == 1 && maxValue.at<float>(0) == 6;
     }
+
+private:
+    int maxValueId;
 };
 
 // Keras' reshape stores output shape in separate Const nodes by one value.

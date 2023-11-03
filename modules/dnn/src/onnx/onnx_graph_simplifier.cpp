@@ -125,14 +125,35 @@ public:
 
     virtual void removeNode(int idx) CV_OVERRIDE
     {
-        CV_Assert(idx >= numInputs + numInitializers);
-        net.mutable_node()->DeleteSubrange(idx - numInputs - numInitializers, 1);
+        if (idx >= numInputs + numInitializers)
+            net.mutable_node()->DeleteSubrange(idx - numInputs - numInitializers, 1);
     }
 
 private:
     int numInputs, numInitializers;
     opencv_onnx::GraphProto& net;
 };
+
+static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
+{
+    auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+    int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
+    if (initializer_id != -1)
+    {
+        Mat const_mat = onnx_net->getMatFromInitializer(initializer_id);
+        return *const_mat.ptr<float>();
+    }
+    else
+    {
+        const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
+        int constant_id = Subgraph::getInputNodeId(net, node, input_id);
+        Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
+        opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+        opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
+        Mat constant_mat = getMatFromTensor(constant_proto);
+        return *constant_mat.ptr<float>();
+    }
+}
 
 /*  Fusion for Gelu.
 
@@ -151,34 +172,13 @@ public:
     GeluSubGraph()
     {
         int input = addNodeToMatch("");
-        int div = addNodeToMatch("Div", input, addNodeToMatch("") /* B=sqrt(2) */ );
+        div = addNodeToMatch("Div", input, addNodeToMatch("") /* B=sqrt(2) */ );
         int erf = addNodeToMatch("Erf", div);
-        int add = addNodeToMatch("Add", erf, addNodeToMatch("") /* B=1 */ );
+        add = addNodeToMatch("Add", erf, addNodeToMatch("") /* B=1 */ );
         int mul = addNodeToMatch("Mul", input, add);
-        addNodeToMatch("Mul", mul, addNodeToMatch("") /* B=0.5 */) ;
+        mul2 = addNodeToMatch("Mul", mul, addNodeToMatch("") /* B=0.5 */) ;
 
         setFusedNode("Gelu", input);
-    }
-
-    static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
-    {
-        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
-        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
-        if (initializer_id != -1)
-        {
-            Mat const_mat = onnx_net->getMatFromInitializer(initializer_id);
-            return *const_mat.ptr<float>();
-        }
-        else
-        {
-            const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
-            int constant_id = getInputNodeId(net, node, input_id);
-            Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
-            opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
-            opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
-            Mat constant_mat = getMatFromTensor(constant_proto);
-            return *constant_mat.ptr<float>();
-        }
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
@@ -188,17 +188,17 @@ public:
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
         {
             // Check Div[B=sqrt(2)]
-            float divisor = extractConstant(net, matchedNodesIds[0], 1);
+            float divisor = extractConstant(net, matchedNodesIds[div], 1);
             if (std::fabs(divisor - M_SQRT2) >= std::numeric_limits<float>::epsilon())
                 return false;
 
             // Check Add[B=1]
-            float add_const = extractConstant(net, matchedNodesIds[2], 1);
+            float add_const = extractConstant(net, matchedNodesIds[add], 1);
             if (std::fabs(add_const - 1.f) >= std::numeric_limits<float>::epsilon())
                 return false;
 
             // Check Mul[B=0.5]
-            float mul_const = extractConstant(net, matchedNodesIds[4], 1);
+            float mul_const = extractConstant(net, matchedNodesIds[mul2], 1);
             if (std::fabs(mul_const - 0.5f) >= std::numeric_limits<float>::epsilon())
                 return false;
 
@@ -206,6 +206,9 @@ public:
         }
         return false;
     }
+
+private:
+    int div, add, mul2;
 };
 
 /*  Fusion for GeluApproximation.
@@ -229,36 +232,15 @@ public:
         int input = addNodeToMatch("");
         int mul0 = addNodeToMatch("Mul", input, input);
         int mul1 = addNodeToMatch("Mul", input, mul0);
-        int mul2 = addNodeToMatch("Mul", addNodeToMatch("") /* A=0.044714998453855515 */, mul1);
+        mul2 = addNodeToMatch("Mul", addNodeToMatch("") /* A=0.044714998453855515 */, mul1);
         int add0 = addNodeToMatch("Add", input, mul2);
-        int mul3 = addNodeToMatch("Mul", addNodeToMatch("") /* A=sqrt(2/pie) */, add0);
+        mul3 = addNodeToMatch("Mul", addNodeToMatch("") /* A=sqrt(2/pie) */, add0);
         int tanh = addNodeToMatch("Tanh", mul3);
-        int add1 = addNodeToMatch("Add", addNodeToMatch("") /* A=1 */, tanh);
+        add1 = addNodeToMatch("Add", addNodeToMatch("") /* A=1 */, tanh);
         int mul4 = addNodeToMatch("Mul", input, add1);
-        addNodeToMatch("Mul", addNodeToMatch("") /* A=0.5 */, mul4);
+        mul5 = addNodeToMatch("Mul", addNodeToMatch("") /* A=0.5 */, mul4);
 
         setFusedNode("GeluApproximation", input);
-    }
-
-    static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
-    {
-        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
-        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
-        if (initializer_id != -1)
-        {
-            Mat const_mat = onnx_net->getMatFromInitializer(initializer_id);
-            return *const_mat.ptr<float>();
-        }
-        else
-        {
-            const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
-            int constant_id = getInputNodeId(net, node, input_id);
-            Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
-            opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
-            opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
-            Mat constant_mat = getMatFromTensor(constant_proto);
-            return *constant_mat.ptr<float>();
-        }
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
@@ -268,22 +250,22 @@ public:
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
         {
             // Check Mul[A=0.044714998453855515]
-            float coef = extractConstant(net, matchedNodesIds[2], 0);
+            float coef = extractConstant(net, matchedNodesIds[mul2], 0);
             if (coef - 0.044714998453855515 >= 1e-6)
                 return false;
 
             // Check Mul[A=sqrt(2/pie)]
-            float sqrt_2_pie = extractConstant(net, matchedNodesIds[4], 0);
+            float sqrt_2_pie = extractConstant(net, matchedNodesIds[mul3], 0);
             if (sqrt_2_pie - 0.7978845834732056 >= 1e-6)
                 return false;
 
             // Check Add[A=1]
-            float add_const = extractConstant(net, matchedNodesIds[6], 0);
+            float add_const = extractConstant(net, matchedNodesIds[add1], 0);
             if (add_const - 1.f >= 1e-6)
                 return false;
 
             // Check Mul[A=0.5]
-            float mul_const = extractConstant(net, matchedNodesIds[8], 0);
+            float mul_const = extractConstant(net, matchedNodesIds[mul5], 0);
             if (mul_const - 0.5f >= 1e-6)
                 return false;
 
@@ -291,6 +273,9 @@ public:
         }
         return false;
     }
+
+private:
+    int mul2, mul3, add1, mul5;
 };
 
 /*  Fusion for LayerNormalization.
@@ -313,41 +298,20 @@ public:
     LayerNormSubGraph() : axis(-1), epsilon(1e-5)
     {
         int input = addNodeToMatch("");
-        int mean = addNodeToMatch("ReduceMean", input);
+        mean = addNodeToMatch("ReduceMean", input);
 
         int sub = addNodeToMatch("Sub", input, mean);
 
-        int pow = addNodeToMatch("Pow", sub, addNodeToMatch(""));
-        int mean1 = addNodeToMatch("ReduceMean", pow);
-        int add = addNodeToMatch("Add", mean1, addNodeToMatch(""));
+        pow = addNodeToMatch("Pow", sub, addNodeToMatch(""));
+        mean1 = addNodeToMatch("ReduceMean", pow);
+        add = addNodeToMatch("Add", mean1, addNodeToMatch(""));
         int sqrt = addNodeToMatch("Sqrt", add);
 
         int div = addNodeToMatch("Div", sub, sqrt);
-        int mul = addNodeToMatch("Mul", div, addNodeToMatch(""));
-        addNodeToMatch("Add", mul, addNodeToMatch(""));
+        mul = addNodeToMatch("Mul", div, addNodeToMatch(""));
+        bias = addNodeToMatch("Add", mul, addNodeToMatch(""));
 
         setFusedNode("LayerNormalization", input);
-    }
-
-    static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
-    {
-        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
-        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
-        if (initializer_id != -1) // initializer
-        {
-            Mat const_mat = onnx_net->getMatFromInitializer(initializer_id);
-            return *const_mat.ptr<float>();
-        }
-        else
-        {
-            const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
-            int constant_id = getInputNodeId(net, node, input_id);
-            Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
-            opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
-            opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
-            Mat constant_mat = getMatFromTensor(constant_proto);
-            return *constant_mat.ptr<float>();
-        }
     }
 
     static float extractAxis(const Ptr<ImportGraphWrapper>& net, int node_id)
@@ -386,20 +350,20 @@ public:
     {
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
         {
-            float pow_exp = extractConstant(net, matchedNodesIds[2], 1);
+            float pow_exp = extractConstant(net, matchedNodesIds[pow], 1);
             if (pow_exp - 2 > 1e-5) // not pow(2)
                 return false;
 
-            int axis_mean1 = extractAxis(net, matchedNodesIds[0]);
-            int axis_mean2 = extractAxis(net, matchedNodesIds[3]);
+            int axis_mean1 = extractAxis(net, matchedNodesIds[mean]);
+            int axis_mean2 = extractAxis(net, matchedNodesIds[mean1]);
             if (axis_mean1 != axis_mean2)
                 return false;
             axis = axis_mean1;
 
-            epsilon = extractConstant(net, matchedNodesIds[4], 1);
+            epsilon = extractConstant(net, matchedNodesIds[add], 1);
 
-            weight_name = getInputName(net, matchedNodesIds[7], 1);
-            bias_name = getInputName(net, matchedNodesIds[8], 1);
+            weight_name = getInputName(net, matchedNodesIds[mul], 1);
+            bias_name = getInputName(net, matchedNodesIds[bias], 1);
 
             return true;
         }
@@ -429,6 +393,7 @@ protected:
     float epsilon;
     std::string weight_name;
     std::string bias_name;
+    int pow, mean, mean1, add, mul, bias;
 };
 
 class SoftMaxSubgraphBase : public Subgraph
@@ -485,7 +450,7 @@ public:
         int inpExp = addNodeToMatch("Exp", input);
 
         int sum = addNodeToMatch("ReduceSum", inpExp);
-        id = 1;
+        id = sum;
 
         addNodeToMatch("Div", inpExp, sum);
         setFusedNode("Softmax", input);
@@ -498,7 +463,7 @@ public:
         int input = addNodeToMatch("");
 
         int reducemax = addNodeToMatch("ReduceMax", input);
-        id = 0;
+        id = reducemax;
 
         int sub = addNodeToMatch("Sub", input, reducemax);
         int exp = addNodeToMatch("Exp", sub);
@@ -516,7 +481,7 @@ public:
         int input = addNodeToMatch("");
 
         int reducemax = addNodeToMatch("ReduceMax", input);
-        id = 0;
+        id = reducemax;
 
         int sub_1 = addNodeToMatch("Sub", input, reducemax);
         int exp = addNodeToMatch("Exp", sub_1);
@@ -839,12 +804,12 @@ public:
     {
         int input = addNodeToMatch("");
         int values = addNodeToMatch("");
-        int init = addNodeToMatch("ConstantOfShape", values);
+        init = addNodeToMatch("ConstantOfShape", values);
         int coeff = addNodeToMatch("Constant");
-        int mul = addNodeToMatch("Mul", init, coeff);
+        mul = addNodeToMatch("Mul", init, coeff);
         int shape = addNodeToMatch("Constant");
-        int condition = addNodeToMatch("Equal", shape, mul);
-        int where = addNodeToMatch("Where", condition, init, addNodeToMatch("Constant"));
+        condition = addNodeToMatch("Equal", shape, mul);
+        where = addNodeToMatch("Where", condition, init, addNodeToMatch("Constant"));
         addNodeToMatch("Expand", input, where);
         setFusedNode("Expand", input, shape);
     }
@@ -902,28 +867,24 @@ public:
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds)) {
             int64_t value_ConstantOfShape;
             // Get index of the node that corresponds to "ConstantOfShape"
-            int idx = std::find(targetNodesIds.begin(), targetNodesIds.end(), 2) - targetNodesIds.begin();
-            if (!extractValue(net, matchedNodesIds[idx], value_ConstantOfShape)) {
+            if (!extractValue(net, matchedNodesIds[init], value_ConstantOfShape)) {
                 return false;
             }
-            std::vector<int64_t> input_ConstantOfShape = extractConstant(net, matchedNodesIds[idx], 0);
+            std::vector<int64_t> input_ConstantOfShape = extractConstant(net, matchedNodesIds[init], 0);
             if (input_ConstantOfShape.size() != static_cast<size_t>(1)) {
                 return false;
             }
-            idx = std::find(targetNodesIds.begin(), targetNodesIds.end(), 4) - targetNodesIds.begin();
-            auto B_Mul = extractConstant(net, matchedNodesIds[idx], 1);
+            auto B_Mul = extractConstant(net, matchedNodesIds[mul], 1);
             if (B_Mul.size() != static_cast<size_t>(1)) {
                 return false;
             }
 
-            idx = std::find(targetNodesIds.begin(), targetNodesIds.end(), 6) - targetNodesIds.begin();
-            auto A_Equal = extractConstant(net, matchedNodesIds[idx], 0);
+            auto A_Equal = extractConstant(net, matchedNodesIds[condition], 0);
             if (A_Equal.size() != static_cast<size_t>(input_ConstantOfShape[0])) {
                 return false;
             }
 
-            idx = std::find(targetNodesIds.begin(), targetNodesIds.end(), 8) - targetNodesIds.begin();
-            auto Y_Where = extractConstant(net, matchedNodesIds[idx], 2);
+            auto Y_Where = extractConstant(net, matchedNodesIds[where], 2);
             if (Y_Where.size() != A_Equal.size()) {
                 return false;
             }
@@ -974,6 +935,9 @@ public:
 
 protected:
     std::vector<int64_t> shape;
+
+private:
+    int init, mul, condition, where;
 };
 
 class MishSubgraph : public Subgraph
