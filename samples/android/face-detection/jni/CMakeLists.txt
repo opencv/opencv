@@ -6,7 +6,7 @@ project(${target} CXX)
 if (OPENCV_FROM_SDK)
   set(ANDROID_OPENCV_COMPONENTS "opencv_java" CACHE STRING "")
 else()
-  set(ANDROID_OPENCV_COMPONENTS "OpenCV::opencv_java4" CACHE STRING "")
+  set(ANDROID_OPENCV_COMPONENTS "OpenCV::opencv_java${OPENCV_VERSION_MAJOR}" CACHE STRING "")
 endif()
 
 message(STATUS "ANDROID_ABI=${ANDROID_ABI}")

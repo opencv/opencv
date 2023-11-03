@@ -17,7 +17,8 @@ android {
                               "-DOPENCV_FROM_SDK=TRUE"@OPENCV_ANDROID_CMAKE_EXTRA_ARGS@
 
                 } else {
-                    arguments "-DOPENCV_FROM_SDK=FALSE"@OPENCV_ANDROID_CMAKE_EXTRA_ARGS@
+                    arguments "-DOPENCV_VERSION_MAJOR=@OPENCV_VERSION_MAJOR@",
+                              "-DOPENCV_FROM_SDK=FALSE"@OPENCV_ANDROID_CMAKE_EXTRA_ARGS@
                 }
                 targets "detection_based_tracker"
             }
