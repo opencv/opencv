@@ -75,12 +75,10 @@ public:
     // Match TensorFlow subgraph starting from <nodeId> with a set of nodes to be fused.
     // Const nodes are skipped during matching. Returns true if nodes are matched and can be fused.
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds);
+                       std::vector<int>& matchedNodesIds);
 
     // Fuse matched subgraph.
-    void replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int>& matchedNodesIds,
-                 const std::vector<int>& targetNodesIds);
+    void replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int>& matchedNodesIds);
 
     virtual void finalize(const Ptr<ImportGraphWrapper>& net,
                           const Ptr<ImportNodeWrapper>& fusedNode,

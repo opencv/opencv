@@ -182,10 +182,9 @@ public:
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
-        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        if (Subgraph::match(net, nodeId, matchedNodesIds))
         {
             // Check Div[B=sqrt(2)]
             float divisor = extractConstant(net, matchedNodesIds[div], 1);
@@ -244,10 +243,9 @@ public:
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
-        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        if (Subgraph::match(net, nodeId, matchedNodesIds))
         {
             // Check Mul[A=0.044714998453855515]
             float coef = extractConstant(net, matchedNodesIds[mul2], 0);
@@ -345,10 +343,9 @@ public:
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
-        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        if (Subgraph::match(net, nodeId, matchedNodesIds))
         {
             float pow_exp = extractConstant(net, matchedNodesIds[pow], 1);
             if (pow_exp - 2 > 1e-5) // not pow(2)
@@ -402,10 +399,9 @@ public:
     SoftMaxSubgraphBase() : axis(1), id(-1) {}
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
-        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        if (Subgraph::match(net, nodeId, matchedNodesIds))
         {
             CV_Assert(id >= 0 && id < matchedNodesIds.size());
             Ptr<ImportNodeWrapper> sum = net->getNode(matchedNodesIds[id]);
@@ -504,10 +500,9 @@ public:
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
-        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        if (Subgraph::match(net, nodeId, matchedNodesIds))
         {
             Ptr<ImportNodeWrapper> hardSigmoid = net->getNode(matchedNodesIds[hardSigmoidId]);
             opencv_onnx::NodeProto* node = hardSigmoid.dynamicCast<ONNXNodeWrapper>()->node;
@@ -555,10 +550,9 @@ public:
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
-        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        if (Subgraph::match(net, nodeId, matchedNodesIds))
         {
             float alpha_div = extractAlpha(net, matchedNodesIds[div], 1);
             float alpha_mul = extractAlpha(net, matchedNodesIds[mul], 0);
@@ -602,10 +596,9 @@ public:
     NormalizeSubgraphBase(int _normNodeOrder = 1) : axis(1), normNodeOrder(_normNodeOrder) {}
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
-        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        if (Subgraph::match(net, nodeId, matchedNodesIds))
         {
             Ptr<ImportNodeWrapper> norm = net->getNode(matchedNodesIds[normNodeOrder]);
             opencv_onnx::NodeProto* node = norm.dynamicCast<ONNXNodeWrapper>()->node;
@@ -756,10 +749,9 @@ public:
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
-        bool retVal = Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds);
+        bool retVal = Subgraph::match(net, nodeId, matchedNodesIds);
         size_t matchedNodesNum = matchedNodesIds.size();
         // Now we check if merging can be made for these Gather and Cast nodes
         if (!retVal || matchedNodesNum < 2)
@@ -868,11 +860,9 @@ public:
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE {
-        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds)) {
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE {
+        if (Subgraph::match(net, nodeId, matchedNodesIds)) {
             int64_t value_ConstantOfShape;
-            // Get index of the node that corresponds to "ConstantOfShape"
             if (!extractValue(net, matchedNodesIds[init], value_ConstantOfShape)) {
                 return false;
             }

@@ -82,14 +82,14 @@ static inline bool isCommutativeOp(const std::string& type)
 }
 
 bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                     std::vector<int>& matchedNodesIds,
-                     std::vector<int>& targetNodesIds)
+                     std::vector<int>& matchedNodesIds)
 {
     matchedNodesIds.clear();
-    targetNodesIds.clear();
 
     std::queue<int> nodesToMatch;
     std::queue<int> targetNodes;
+    std::vector<std::pair<int, int> > matchings;
+    matchings.reserve(nodes.size());
     nodesToMatch.push(nodeId);
     targetNodes.push(nodes.size() - 1);
     while (!nodesToMatch.empty())
@@ -99,18 +99,15 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
         nodesToMatch.pop();
         targetNodes.pop();
 
-        if (std::find(targetNodesIds.begin(), targetNodesIds.end(), targetNodeId) !=
-            targetNodesIds.end())
+        if (std::find_if(matchings.begin(), matchings.end(), [&](const std::pair<int, int>& match){ return match.first == targetNodeId; }) !=
+            matchings.end())
             continue;
 
+        // Empty placeholder matches with any input type
         if (nodes[targetNodeId].empty()) {
-            matchedNodesIds.push_back(nodeToMatch);
-            targetNodesIds.push_back(targetNodeId);
-            // Empty placeholder matches with any input type
+            matchings.push_back({targetNodeId, nodeToMatch});
             continue;
         }
-
-        // CV_Assert(!nodes[targetNodeId].empty());
 
         const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
         if (node->getType() != nodes[targetNodeId])
@@ -143,33 +140,23 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                 targetNodes.push(inputNodes[j]);
             }
         }
-        matchedNodesIds.push_back(nodeToMatch);
-        targetNodesIds.push_back(targetNodeId);
+        matchings.push_back({targetNodeId, nodeToMatch});
     }
-    if (targetNodesIds.size() != nodes.size())
+    if (matchings.size() != nodes.size())
         return false;
 
-    const int n = matchedNodesIds.size();
-    std::vector<std::pair<int, int> > elements(n);
-    for (int i = 0; i < n; ++i)
-        elements[i] = std::make_pair(targetNodesIds[i], matchedNodesIds[i]);
-    std::sort(elements.begin(), elements.end());
-    for (int i = 0; i < n; ++i)
+    // Sort matched by pattern nodes order.
+    std::sort(matchings.begin(), matchings.end());
+    matchedNodesIds.resize(matchings.size());
+    for (int i = 0; i < matchings.size(); ++i)
     {
-        targetNodesIds[i] = elements[i].first;
-        matchedNodesIds[i] = elements[i].second;
+        matchedNodesIds[i] = matchings[i].second;
     }
     return true;
 }
 
-void Subgraph::replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int>& matchedNodesIds,
-                       const std::vector<int>& targetNodesIds)
+void Subgraph::replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int>& matchedNodesIds)
 {
-    // TODO: remove targetNodesIds at all
-    for (int i = 0; i < targetNodesIds.size(); ++i) {
-        CV_Assert(targetNodesIds[i] == i);
-    }
-
     // Extract names of input nodes.
     std::vector<std::string> inputsNames(fusedNodeInputs.size());
     for (int i = 0; i < fusedNodeInputs.size(); ++i)
@@ -179,7 +166,7 @@ void Subgraph::replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int
         for (int j = 0; j < matchedNodesIds.size() && inpName.empty(); ++j)
         {
             Ptr<ImportNodeWrapper> node = net->getNode(matchedNodesIds[j]);
-            std::vector<int>& inpIndices = inputs[targetNodesIds[j]];
+            std::vector<int>& inpIndices = inputs[j];
 
             CV_Assert(inpIndices.empty() || node->getNumInputs() == inpIndices.size());
             for (int k = 0; k < inpIndices.size(); ++k)
@@ -217,15 +204,15 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
                        const std::vector<Ptr<Subgraph> >& patterns)
 {
     int numNodes = net->getNumNodes();
-    std::vector<int> matchedNodesIds, targetNodesIds;
+    std::vector<int> matchedNodesIds;
     std::vector<int> nodesToRemove;
     for (int j = 0; j < patterns.size(); ++j)
     {
         for (int i = 0; i < numNodes; ++i)
         {
-            if (patterns[j]->match(net, i, matchedNodesIds, targetNodesIds))
+            if (patterns[j]->match(net, i, matchedNodesIds))
             {
-                patterns[j]->replace(net, matchedNodesIds, targetNodesIds);
+                patterns[j]->replace(net, matchedNodesIds);
                 // Remove matched nodes except the last one.
                 nodesToRemove.insert(nodesToRemove.end(), matchedNodesIds.begin(), matchedNodesIds.end() - 1);
             }

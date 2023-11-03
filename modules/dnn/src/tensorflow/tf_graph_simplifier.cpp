@@ -291,10 +291,9 @@ public:
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
-        if (!Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        if (!Subgraph::match(net, nodeId, matchedNodesIds))
             return false;
         tensorflow::NodeDef* node = net->getNode(matchedNodesIds[maxValueId]).dynamicCast<TFNodeWrapper>()->node;
         Mat maxValue = getTensorContent(node->attr().at("value").tensor());
@@ -331,15 +330,14 @@ public:
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
     {
         Ptr<ImportNodeWrapper> node = net->getNode(nodeId);
         if (node->getNumInputs() == 0)
             return false;
 
         inpName = node->getInputName(0);
-        return Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds);
+        return Subgraph::match(net, nodeId, matchedNodesIds);
     }
 
 
