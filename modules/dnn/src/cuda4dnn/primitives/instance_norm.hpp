@@ -34,7 +34,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             builder.require<float>(loops);
             builder.require<float>(loops);
             scratch_mem_in_bytes = builder.required_workspace_size();
-            std::cout << "scratch_mem_in_bytes=" << scratch_mem_in_bytes << std::endl;
         }
 
         void forward(const std::vector<cv::Ptr<BackendWrapper>>& inputs,
@@ -51,9 +50,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
-            auto C = input.size_range(1, 2);
+            auto C = input.get_axis_size(1);
             auto loops = input.size_range(0, 2);
-            std::cout << "InstanceNormOp forward: loops=" << loops << std::endl;
             auto norm_size = input.size_range(2, input.rank());
             if (norm_size == 1) {
                 kernels::fill<T>(stream, output, 0.f);
@@ -61,17 +59,15 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             } else {
                 auto ws_allocator = csl::WorkspaceAllocator(workspace);
 
-                auto means = ws_allocator.get_span<float>(loops);
-                std::cout << "Get means success" << std::endl;
-                kernels::fill<float>(stream, means, 0.f);
+                auto mean = ws_allocator.get_span<float>(loops);
+                kernels::fill<float>(stream, mean, 0.f);
 
                 auto stdev = ws_allocator.get_span<float>(loops);
-                std::cout << "Get stdev success" << std::endl;
                 kernels::fill<float>(stream, stdev, 0.f);
 
-                kernels::reduce_mean_sqr_sum<T>(stream, means, stdev, input, norm_size);
-                kernels::compute_normalization_scale(stream, stdev, means, stdev, norm_size, epsilon);
-                kernels::normalize_mean_variance_channelwise<T>(stream, output, input, scale, bias, means, stdev, norm_size, C);
+                kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size);
+                kernels::compute_normalization_scale(stream, stdev, mean, stdev, norm_size, epsilon);
+                kernels::normalize_mean_variance_channelwise<T>(stream, output, input, scale, bias, mean, stdev, norm_size, C);
             }
         }
 
