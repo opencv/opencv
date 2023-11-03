@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 from os import path
 import os
@@ -105,7 +107,6 @@ def main(args):
 
     print("Running gradle assembleRelease...")
     # Running gradle to build the Android project
-    os.chmod(path.join(ANDROID_PROJECT_DIR, "gradlew"), 0o755)
     subprocess.run(["./gradlew", "assembleRelease"],
                 shell=False,
                 cwd=ANDROID_PROJECT_DIR,
