@@ -31,6 +31,6 @@ dependencies {
     if (gradle.opencv_source == "sdk_path") {
         implementation project(':opencv')
     } else if (gradle.opencv_source == "maven_local" || gradle.opencv_source == "maven_cenral") {
-        implementation 'org.opencv:opencv:@OPENCV_VERSION@'
+        implementation 'org.opencv:opencv:@OPENCV_VERSION_PLAIN@'
     }
 }

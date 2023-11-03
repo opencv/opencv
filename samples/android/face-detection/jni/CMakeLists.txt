@@ -17,5 +17,5 @@ file(GLOB hdrs *.hpp *.h)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}")
 add_library(${target} SHARED ${srcs} ${hdrs})
-find_library(log-lib log)
-target_link_libraries(${target} ${ANDROID_OPENCV_COMPONENTS} ${log-lib})
+find_library(log_lib log)
+target_link_libraries(${target} ${ANDROID_OPENCV_COMPONENTS} ${log_lib})
