@@ -178,3 +178,15 @@ fcn8s:
   height: 500
   rgb: false
   sample: "segmentation"
+
+fcnresnet101:
+  load_info:
+    url: "https://github.com/onnx/models/raw/fb8271d5d5d9b90dbb1eb5e8e40f8f580fb248b3/vision/object_detection_segmentation/fcn/model/fcn-resnet101-11.onnx"
+    sha1: "e7e76474bf6b73334ab32c4be1374c9e605f5aed"
+  model: "fcn-resnet101-11.onnx"
+  mean: [103.5, 116.2, 123.6]
+  scale: 0.019
+  width: 500
+  height: 500
+  rgb: false
+  sample: "segmentation"
