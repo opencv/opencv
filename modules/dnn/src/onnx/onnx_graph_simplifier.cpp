@@ -1136,6 +1136,33 @@ public:
     }
 };
 
+class ResizeSubgraph3 : public Subgraph
+{
+public:
+    ResizeSubgraph3() : Subgraph()
+    {
+        int shapeSrc = addNodeToMatch("");
+        int input = addNodeToMatch("");
+
+        int shape_h = addNodeToMatch("Shape", shapeSrc);
+        int shape_w = addNodeToMatch("Shape", shapeSrc);
+        int gather_h = addNodeToMatch("Gather", shape_h, addNodeToMatch("Constant"));
+        int gather_w = addNodeToMatch("Gather", shape_w, addNodeToMatch("Constant"));
+        int unsqueeze_h = addNodeToMatch("Unsqueeze", gather_h);
+        int unsqueeze_w = addNodeToMatch("Unsqueeze", gather_w);
+        int concat1 = addNodeToMatch("Concat", unsqueeze_h, unsqueeze_w);
+        int cast = addNodeToMatch("Cast", concat1);
+
+        int shape2 = addNodeToMatch("Shape", input);
+        int slice = addNodeToMatch("Slice", shape2, addNodeToMatch("Constant"), addNodeToMatch("Constant"), addNodeToMatch("Constant"));
+        int concat2 = addNodeToMatch("Concat", slice, cast);
+        addNodeToMatch("Resize", input, addNodeToMatch("Constant"), addNodeToMatch("Constant"), concat2);
+
+        setFusedNode("Upsample", input, shapeSrc);
+    }
+};
+
+
 class BatchNormalizationSubgraphBase : public Subgraph
 {
 public:
@@ -1207,6 +1234,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<UpsampleSubgraph>());
     subgraphs.push_back(makePtr<ResizeSubgraph1>());
     subgraphs.push_back(makePtr<ResizeSubgraph2>());
+    subgraphs.push_back(makePtr<ResizeSubgraph3>());
     subgraphs.push_back(makePtr<SoftMaxSubgraph>());
     subgraphs.push_back(makePtr<SoftMaxSubgraph2>());
     subgraphs.push_back(makePtr<LogSoftMaxSubgraph>());
