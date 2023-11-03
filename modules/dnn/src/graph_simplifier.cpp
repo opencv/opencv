@@ -137,9 +137,9 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
 
         for (int j = 0; j < inputNodes.size(); ++j)
         {
-            // if (node->getInputName(j).empty())  // Unknown input node type.
-            //     continue;
-            // std::cout << net->getOutputName(nodeToMatch, 0) << " " << j << std::endl;
+            // Sometimes, ONNX may have input but it's empty (see Clip layer from reduceL2_subgraph2_2 testcase)
+            if (node->getInputName(j).empty())
+                continue;
             nodeId = getInputNodeId(net, node, j);
             const Ptr<ImportNodeWrapper> inpNode = net->getNode(nodeId);
             if (isCommutative)
@@ -163,8 +163,6 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
         matchedNodesIds.push_back(nodeToMatch);
         targetNodesIds.push_back(targetNodeId);
     }
-    // std::cout << matchedNodesIds << std::endl;
-    // std::cout << targetNodesIds << std::endl;
     if (targetNodesIds.size() != nodes.size())
         return false;
     if (std::find(nodeMatched.begin(), nodeMatched.end(), false) != nodeMatched.end())
@@ -246,13 +244,7 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
         {
             if (patterns[j]->match(net, i, matchedNodesIds, targetNodesIds))
             {
-            // std::cout << matchedNodesIds << std::endl;
-            // std::cout << targetNodesIds << std::endl;
-
                 patterns[j]->replace(net, matchedNodesIds, targetNodesIds);
-                // std::cout << "replaced" << std::endl;
-                // std::cout << matchedNodesIds << std::endl;
-                // std::cout << targetNodesIds << std::endl;
                 // Remove matched nodes except the last one.
                 nodesToRemove.insert(nodesToRemove.end(), matchedNodesIds.begin(), matchedNodesIds.end() - 1);
             }
