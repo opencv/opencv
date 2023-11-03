@@ -1610,30 +1610,37 @@ void patchNaNs( InputOutputArray _a, double _val )
     const Mat* arrays[] = {&a, 0};
     int* ptrs[1] = {};
     NAryMatIterator it(arrays, (uchar**)ptrs);
-    size_t len = it.size*a.channels();
+    int len = (int)(it.size*a.channels());
     Cv32suf val;
     val.f = (float)_val;
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    v_int32 v_mask1 = vx_setall_s32(0x7fffffff), v_mask2 = vx_setall_s32(0x7f800000);
-    v_int32 v_val = vx_setall_s32(val.i);
-#endif
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         int* tptr = ptrs[0];
-        size_t j = 0;
+        int j = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        size_t cWidth = (size_t)VTraits<v_int32>::vlanes();
-        for ( ; j + cWidth <= len; j += cWidth)
+        v_int32 v_pos_mask = vx_setall_s32(0x7fffffff), v_exp_mask = vx_setall_s32(0x7f800000);
+        v_int32 v_val = vx_setall_s32(val.i);
+
+        int cWidth = VTraits<v_int32>::vlanes();
+        for (; j < len - cWidth * 2 + 1; j += cWidth * 2)
         {
-            v_int32 v_src = vx_load(tptr + j);
-            v_int32 v_cmp_mask = v_lt(v_mask2, v_and(v_src, v_mask1));
-            v_int32 v_dst = v_select(v_cmp_mask, v_val, v_src);
-            v_store(tptr + j, v_dst);
+            v_int32 v_src0 = vx_load(tptr + j);
+            v_int32 v_src1 = vx_load(tptr + j + cWidth);
+
+            v_int32 v_cmp_mask0 = v_lt(v_exp_mask, v_and(v_src0, v_pos_mask));
+            v_int32 v_cmp_mask1 = v_lt(v_exp_mask, v_and(v_src1, v_pos_mask));
+
+            if (v_check_any(v_or(v_cmp_mask0, v_cmp_mask1)))
+            {
+                v_int32 v_dst0 = v_select(v_cmp_mask0, v_val, v_src0);
+                v_int32 v_dst1 = v_select(v_cmp_mask1, v_val, v_src1);
+
+                v_store(tptr + j, v_dst0);
+                v_store(tptr + j + cWidth, v_dst1);
+            }
         }
-        vx_cleanup();
 #endif
 
         for( ; j < len; j++ )

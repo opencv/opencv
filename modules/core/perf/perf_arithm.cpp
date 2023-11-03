@@ -1,5 +1,6 @@
 #include "perf_precomp.hpp"
 #include <numeric>
+#include "opencv2/core/softfloat.hpp"
 
 namespace opencv_test
 {
@@ -448,6 +449,71 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOpTest,
     testing::Combine(
         testing::Values(szVGA, sz720p, sz1080p),
         testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1)
+    )
+);
+
+///////////// PatchNaNs ////////////////////////
+
+template<typename _Tp>
+_Tp randomNan(RNG& rng);
+
+template<>
+float randomNan(RNG& rng)
+{
+    uint32_t r = rng.next();
+    Cv32suf v;
+    v.u = r;
+    // exp & set a bit to avoid zero mantissa
+    v.u = v.u | 0x7f800001;
+    return v.f;
+}
+
+template<>
+double randomNan(RNG& rng)
+{
+    uint32_t r0 = rng.next();
+    uint32_t r1 = rng.next();
+    Cv64suf v;
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // exp &set a bit to avoid zero mantissa
+    v.u = v.u | 0x7ff0000000000001;
+    return v.f;
+}
+
+typedef Size_MatType PatchNaNsFixture;
+
+PERF_TEST_P_(PatchNaNsFixture, PatchNaNs)
+{
+    const Size_MatType_t params = GetParam();
+    Size srcSize = get<0>(params);
+    const int type = get<1>(params), cn = CV_MAT_CN(type);
+
+    Mat src(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(src);
+
+    // generating NaNs
+    {
+        srcSize.width *= cn;
+        RNG& rng = theRNG();
+        for (int y = 0; y < srcSize.height; ++y)
+        {
+            float  *const ptrf = src.ptr<float>(y);
+            for (int x = 0; x < srcSize.width; ++x)
+            {
+                ptrf[x] = (x + y) % 2 == 0 ? randomNan<float >(rng) : ptrf[x];
+            }
+        }
+    }
+
+    TEST_CYCLE() cv::patchNaNs(src, 17.7);
+
+    SANITY_CHECK(src);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , PatchNaNsFixture,
+    testing::Combine(
+        testing::Values(szVGA, sz720p, sz1080p, sz2160p),
+        testing::Values(CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4)
     )
 );
 
