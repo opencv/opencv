@@ -8,7 +8,7 @@ import subprocess
 from build_java_shared_aar import cleanup, fill_template, get_compiled_aar_path, get_opencv_version
 
 
-ANDROID_PROJECT_TEMPLATE_DIR = path.join(path.dirname(__file__), "OpenCVAndroidProject")
+ANDROID_PROJECT_TEMPLATE_DIR = path.join(path.dirname(__file__), "aar-template")
 TEMP_DIR = "build_static"
 ANDROID_PROJECT_DIR = path.join(TEMP_DIR, "AndroidProject")
 COMPILED_AAR_PATH_1 = path.join(ANDROID_PROJECT_DIR, "OpenCV/build/outputs/aar/OpenCV-release.aar") # original package name

@@ -18,7 +18,7 @@ COPY_FROM_SDK_TO_APK = [
     ["sdk/native/libs/<ABI>/lib<LIB_NAME>.so", "prefab/modules/<LIB_NAME>/libs/android.<ABI>/lib<LIB_NAME>.so"],
 ]
 
-ANDROID_PROJECT_TEMPLATE_DIR = path.join(path.dirname(__file__), "OpenCVAndroidProject")
+ANDROID_PROJECT_TEMPLATE_DIR = path.join(path.dirname(__file__), "aar-template")
 TEMP_DIR = "build_java_shared"
 ANDROID_PROJECT_DIR = path.join(TEMP_DIR, "AndroidProject")
 COMPILED_AAR_PATH_1 = path.join(ANDROID_PROJECT_DIR, "OpenCV/build/outputs/aar/OpenCV-release.aar") # original package name
