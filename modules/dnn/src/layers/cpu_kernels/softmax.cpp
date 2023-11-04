@@ -12,45 +12,6 @@
 #include "../../precomp.hpp"
 #include "softmax.hpp"
 
-#ifdef CV_SIMD
-#define _VEXP_INIT() \
-    v_float32 _vexp_lo = vx_setall_f32(-88.3762626647949f); \
-    v_float32 _vexp_hi = vx_setall_f32(88.3762626647949f); \
-    v_float32 _vexp_half = vx_setall_f32(0.5f); \
-    v_float32 _vexp_one = vx_setall_f32(1.f); \
-    v_float32 _vexp_LOG2EF = vx_setall_f32(1.44269504088896341f); \
-    v_float32 _vexp_C1 = vx_setall_f32(-0.693359375f); \
-    v_float32 _vexp_C2 = vx_setall_f32(2.12194440e-4f); \
-    v_float32 _vexp_p0 = vx_setall_f32(1.9875691500E-4f); \
-    v_float32 _vexp_p1 = vx_setall_f32(1.3981999507E-3f); \
-    v_float32 _vexp_p2 = vx_setall_f32(8.3334519073E-3f); \
-    v_float32 _vexp_p3 = vx_setall_f32(4.1665795894E-2f); \
-    v_float32 _vexp_p4 = vx_setall_f32(1.6666665459E-1f); \
-    v_float32 _vexp_p5 = vx_setall_f32(5.0000001201E-1f)
-
-#define _VEXP_COMPUTE(x, y) { \
-    v_float32 _vexp_, _vexp_x, _vexp_y, _vexp_z; \
-    _vexp_x = v_min(x, _vexp_hi); \
-    _vexp_x = v_max(_vexp_x, _vexp_lo); \
-    _vexp_ = v_fma(_vexp_x, _vexp_LOG2EF, _vexp_half); \
-    v_int32 _vexp_mm = v_floor(_vexp_); \
-    _vexp_ = v_cvt_f32(_vexp_mm); \
-    _vexp_mm = v_add(_vexp_mm, vx_setall_s32(0x7f)); \
-    _vexp_mm = v_shl(_vexp_mm, 23); \
-    _vexp_x = v_fma(_vexp_, _vexp_C1, _vexp_x); \
-    _vexp_x = v_fma(_vexp_, _vexp_C2, _vexp_x); \
-    _vexp_z = v_mul(_vexp_x, _vexp_x); \
-    _vexp_y = v_fma(_vexp_x, _vexp_p0, _vexp_p1); \
-    _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p2); \
-    _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p3); \
-    _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p4); \
-    _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p5); \
-    _vexp_y = v_fma(_vexp_y, _vexp_z, _vexp_x); \
-    _vexp_y = v_add(_vexp_y, _vexp_one); \
-    y = v_mul(_vexp_y, v_reinterpret_as_f32(_vexp_mm)); \
-    }
-#endif
-
 namespace cv { namespace dnn {
 
 void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
@@ -94,7 +55,6 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
 
             float s = 0.f;
 #ifdef CV_SIMD
-            _VEXP_INIT();
             // make the value of the redundant dimension to be -FLT_MAX
             if (redundantDim != nlanes) {
                 for (size_t j = axisStep; j < axisStep + redundantDim; j++)
@@ -111,11 +71,49 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
             // calculate the exp value along the axis
             v_float32 vs = vx_setzero_f32();
             vmax = vx_setall_f32(maxVal);
-            v_float32 val;
+            // initialize vexp constant
+            v_float32 _vexp_lo = vx_setall_f32(-88.3762626647949f);
+            v_float32 _vexp_hi = vx_setall_f32(88.3762626647949f);
+            v_float32 _vexp_half = vx_setall_f32(0.5f);
+            v_float32 _vexp_one = vx_setall_f32(1.f);
+            v_float32 _vexp_LOG2EF = vx_setall_f32(1.44269504088896341f);
+            v_float32 _vexp_C1 = vx_setall_f32(-0.693359375f);
+            v_float32 _vexp_C2 = vx_setall_f32(2.12194440e-4f);
+            v_float32 _vexp_p0 = vx_setall_f32(1.9875691500E-4f);
+            v_float32 _vexp_p1 = vx_setall_f32(1.3981999507E-3f);
+            v_float32 _vexp_p2 = vx_setall_f32(8.3334519073E-3f);
+            v_float32 _vexp_p3 = vx_setall_f32(4.1665795894E-2f);
+            v_float32 _vexp_p4 = vx_setall_f32(1.6666665459E-1f);
+            v_float32 _vexp_p5 = vx_setall_f32(5.0000001201E-1f);
+            // initialize temp vectors for vexp
+            v_float32 val, _vexp_, _vexp_x, _vexp_y, _vexp_z;
+            v_int32 _vexp_mm;
+
+            // calculate and sum all data along axis
             for (size_t cnDim = 0; cnDim < axisStep; cnDim += nlanes) {
                 val = vx_load(axisBuf + cnDim);
                 val = v_sub(val, vmax);
-                _VEXP_COMPUTE(val, val);
+
+                // compute vexp of val
+                _vexp_x = v_min(val, _vexp_hi);
+                _vexp_x = v_max(_vexp_x, _vexp_lo);
+                _vexp_ = v_fma(_vexp_x, _vexp_LOG2EF, _vexp_half);
+                _vexp_mm = v_floor(_vexp_);
+                _vexp_ = v_cvt_f32(_vexp_mm);
+                _vexp_mm = v_add(_vexp_mm, vx_setall_s32(0x7f));
+                _vexp_mm = v_shl(_vexp_mm, 23);
+                _vexp_x = v_fma(_vexp_, _vexp_C1, _vexp_x);
+                _vexp_x = v_fma(_vexp_, _vexp_C2, _vexp_x);
+                _vexp_z = v_mul(_vexp_x, _vexp_x);
+                _vexp_y = v_fma(_vexp_x, _vexp_p0, _vexp_p1);
+                _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p2);
+                _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p3);
+                _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p4);
+                _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p5);
+                _vexp_y = v_fma(_vexp_y, _vexp_z, _vexp_x);
+                _vexp_y = v_add(_vexp_y, _vexp_one);
+                val = v_mul(_vexp_y, v_reinterpret_as_f32(_vexp_mm));
+
                 vs = v_add(vs, val);
                 v_store(axisBuf + cnDim, val);
             }
