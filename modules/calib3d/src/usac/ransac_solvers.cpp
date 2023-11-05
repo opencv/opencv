@@ -733,7 +733,9 @@ public:
             const bool is_prosac = params->getSampler() == SamplingMethod::SAMPLING_PROSAC;
             std::atomic_bool success(false);
             std::atomic_int num_hypothesis_tested(0), thread_cnt(0), max_number_inliers(0), subset_size, termination_length;
-            std::atomic<double> best_score_all(std::numeric_limits<double>::max());
+            std::atomic_int best_score_all(std::numeric_limits<int>::max());
+            // since best_score_all is int, we shift the float part to preserve float information
+            const double BEST_SCORE_FLOAT_PART_SHIFT = 1000;
             std::vector<Score> best_scores(MAX_THREADS), best_scores_not_LO;
             std::vector<Mat> best_models(MAX_THREADS), best_models_not_LO, K1_apx, K2_apx;
             std::vector<int> num_tested_models_threads(MAX_THREADS), growth_function, non_random_inliers;
@@ -790,8 +792,8 @@ public:
                 auto update_best = [&] (const Score &new_score, const Mat &new_model, bool from_LO=false) {
                     // update best score of all threads
                     if (max_number_inliers < new_score.inlier_number) max_number_inliers = new_score.inlier_number;
-                    if (best_score_all > new_score.score) best_score_all = new_score.score;
-                    best_score_all_threads = Score(max_number_inliers, best_score_all);
+                    if ((double)best_score_all > new_score.score*BEST_SCORE_FLOAT_PART_SHIFT) best_score_all = (int)(new_score.score*BEST_SCORE_FLOAT_PART_SHIFT);
+                    best_score_all_threads = Score(max_number_inliers, ((double)best_score_all)/BEST_SCORE_FLOAT_PART_SHIFT);
                     //
                     quality->getInliers(new_model, model_inliers_mask);
                     IoU = Utils::intersectionOverUnion(best_inliers_mask_local, model_inliers_mask);
@@ -800,7 +802,7 @@ public:
                         tested_samples_thread.emplace_back(best_sample_thread);
                     }
                     if (!adapt) { // update quality and verifier
-                        quality->setBestScore(best_score_all);
+                        quality->setBestScore(((double)best_score_all)/BEST_SCORE_FLOAT_PART_SHIFT);
                         model_verifier->update(best_score_all_threads, iters);
                     }
                     // copy new score to best score
@@ -839,7 +841,7 @@ public:
                     success = num_hypothesis_tested++ > max_iters;
                     if (iters % 10 && !adapt) {
                         // Synchronize threads. just to speed verification of model.
-                        quality->setBestScore(std::min(best_score_thread.score, (double)best_score_all));
+                        quality->setBestScore(std::min(best_score_thread.score, ((double)best_score_all)/BEST_SCORE_FLOAT_PART_SHIFT));
                         model_verifier->update(best_score_thread.inlier_number > max_number_inliers ? best_score_thread : best_score_all_threads, iters);
                     }
 
