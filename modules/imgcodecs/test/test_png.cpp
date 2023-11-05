@@ -13,7 +13,7 @@ TEST(imRead, passing_Mat)
   Mat subImg = img.rowRange(0, 512).colRange(0, 512);
   imread(samples::findFile("lena.png"), subImg);
   Mat ori = imread(samples::findFile("lena.png"));
-  EXPECT_EQ(cv::norm(ori, subImg, NORM_INF), 0);
+  EXPECT_EQ(0, cv::norm(ori, subImg, NORM_INF));
   EXPECT_EQ(0, sum(img.rowRange(0, 1000).colRange(512, 1000))[0]);
   EXPECT_EQ(0, sum(img.rowRange(0, 512).colRange(0, 512))[0]);
 }
