@@ -758,4 +758,55 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_FullyConnected, Combine(
     dnnBackendsAndTargets()
 ));
 
+typedef TestBaseWithParam<tuple<std::vector<int>, int, tuple<Backend, Target> > > Layer_Softmax;
+PERF_TEST_P_(Layer_Softmax, softmax_3d) {
+    std::vector<int> shape = get<0>(GetParam());
+    int axis = get<1>(GetParam());
+    int backendId = get<0>(get<2>(GetParam()));
+    int targetId = get<1>(get<2>(GetParam()));
+
+    Mat data(shape, CV_32FC1);
+    Scalar mean = 0.f;
+    Scalar std = 1.f;
+    randn(data, mean, std);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Softmax";
+    lp.name = "testLayer";
+    lp.set("axis", axis);
+
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    // warmup
+    {
+        net.setInput(data);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+    }
+
+    TEST_CYCLE() {
+        Mat res = net.forward();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Softmax, Combine(
+    Values(                // input size
+            std::vector<int>({16, 50, 50}),
+            std::vector<int>({16, 197, 197}),
+            std::vector<int>({16, 1024, 1024})
+    ),
+    Values(0, 1, 2),  // axis
+    dnnBackendsAndTargets(/* withInferenceEngine= */ false,
+                          /* withHalide= */          false,
+                          /* withCpuOCV= */          true,
+                          /* withVkCom= */           false,
+                          /* withCUDA= */            false,
+                          /* withNgraph= */          false,
+                          /* withWebnn= */           false,
+                          /* withCann= */            false) // only test on CPU
+));
+
 } // namespace
