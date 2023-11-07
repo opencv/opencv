@@ -45,7 +45,7 @@ public:
 
     virtual void removeNode(int idx) = 0;
 
-    virtual inline bool isCommutativeOp(const std::string& type) const = 0;
+    virtual bool isCommutativeOp(const std::string& type) const = 0;
 };
 
 class Subgraph  // Interface to match and replace subgraphs.
