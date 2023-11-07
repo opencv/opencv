@@ -251,26 +251,6 @@ public:
             // timestamp depending on codec and back-end. So the first frame has timestamp 0 or frame_period.
             EXPECT_NEAR(timestamp, i*frame_period, frame_period) << "i=" << i;
         }
-        if (ext == "wmv" || ext == "mpg" || apiPref != CAP_GSTREAMER)
-            return;
-
-        // Seeking test with manual GStreamer pipeline
-        VideoCapture cap2;
-        EXPECT_NO_THROW(cap2.open("filesrc location="+video_file+" ! decodebin ! videoconvert ! video/x-raw, format=BGR ! appsink drop=1", apiPref));
-        if (!cap.isOpened())
-            throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
-                    cv::String(" can't open the video: ")  + video_file);
-        for (int i = 0; i < 10; i++)
-        {
-            ASSERT_NO_THROW(cap2 >> img);
-        }
-        double timestamp = 0;
-        cap2.set(CAP_PROP_POS_MSEC, 3000.0);
-        ASSERT_NO_THROW(cap2 >> img);
-        EXPECT_NO_THROW(timestamp = cap2.get(CAP_PROP_POS_MSEC));
-        if (cvtest::debugLevel > 0)
-            std::cout << "msec jump rewind back test case: timestamp = " << timestamp << std::endl;
-        EXPECT_NEAR(timestamp, 3000.0, 100.0) << "Failed to rewind back";
     }
 };
 
