@@ -289,14 +289,14 @@ int finiteMaskSIMD_<double, 2>(const double *dsrc, uchar *dst, size_t utotal)
     int total = (int)utotal;
     for(; i < total - npixels + 1; i += npixels )
     {
-        v_uint64 vv0 = v_ne(v_and(vx_load(src + i*2 +  0*(ndoubles)), vmaskExp), vmaskExp);
-        v_uint64 vv1 = v_ne(v_and(vx_load(src + i*2 +  1*(ndoubles)), vmaskExp), vmaskExp);
-        v_uint64 vv2 = v_ne(v_and(vx_load(src + i*2 +  2*(ndoubles)), vmaskExp), vmaskExp);
-        v_uint64 vv3 = v_ne(v_and(vx_load(src + i*2 +  3*(ndoubles)), vmaskExp), vmaskExp);
-        v_uint64 vv4 = v_ne(v_and(vx_load(src + i*2 +  4*(ndoubles)), vmaskExp), vmaskExp);
-        v_uint64 vv5 = v_ne(v_and(vx_load(src + i*2 +  5*(ndoubles)), vmaskExp), vmaskExp);
-        v_uint64 vv6 = v_ne(v_and(vx_load(src + i*2 +  6*(ndoubles)), vmaskExp), vmaskExp);
-        v_uint64 vv7 = v_ne(v_and(vx_load(src + i*2 +  7*(ndoubles)), vmaskExp), vmaskExp);
+        v_uint64 vv0 = v_ne(v_and(vx_load(src + i*2 + 0*ndoubles), vmaskExp), vmaskExp);
+        v_uint64 vv1 = v_ne(v_and(vx_load(src + i*2 + 1*ndoubles), vmaskExp), vmaskExp);
+        v_uint64 vv2 = v_ne(v_and(vx_load(src + i*2 + 2*ndoubles), vmaskExp), vmaskExp);
+        v_uint64 vv3 = v_ne(v_and(vx_load(src + i*2 + 3*ndoubles), vmaskExp), vmaskExp);
+        v_uint64 vv4 = v_ne(v_and(vx_load(src + i*2 + 4*ndoubles), vmaskExp), vmaskExp);
+        v_uint64 vv5 = v_ne(v_and(vx_load(src + i*2 + 5*ndoubles), vmaskExp), vmaskExp);
+        v_uint64 vv6 = v_ne(v_and(vx_load(src + i*2 + 6*ndoubles), vmaskExp), vmaskExp);
+        v_uint64 vv7 = v_ne(v_and(vx_load(src + i*2 + 7*ndoubles), vmaskExp), vmaskExp);
 
         v_uint8 velems0 = v_pack_b(vv0, vv1, vv2, vv3, vv4, vv5, vv6, vv7);
 
