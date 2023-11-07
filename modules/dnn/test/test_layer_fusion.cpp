@@ -128,6 +128,10 @@ TEST_P(Test_Layer_Fusion, MishSubgraph) {
     test("mish", "Mish");
 }
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Layer_Fusion, dnnBackendsAndTargets());
+// Different backends are sharing the same subgraph fusion rule,
+// so testing on tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU) is enough
+using BackendTargetTuple = tuple<Backend, Target>;
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Layer_Fusion,
+                        testing::ValuesIn(std::vector<BackendTargetTuple>{std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)}));
 
 }}
