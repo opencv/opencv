@@ -6,11 +6,11 @@
 
 namespace opencv_test { namespace {
 
-class Test_Layer_Fusion : public DNNTestLayer {
+class Test_Graph_Simplifier : public DNNTestLayer {
  public:
     bool required;
 
-    Test_Layer_Fusion() : required(true) {}
+    Test_Graph_Simplifier() : required(true) {}
 
     void test_conformance(const std::string &basename, const std::string &expected_layer) {
         test(basename + std::string("/model"), std::vector<std::string>{expected_layer}, std::string("dnn/onnx/conformance/node/"));
@@ -33,19 +33,19 @@ class Test_Layer_Fusion : public DNNTestLayer {
     }
 };
 
-TEST_P(Test_Layer_Fusion, GeluSubGraph) {
+TEST_P(Test_Graph_Simplifier, GeluSubGraph) {
     test("gelu", "Gelu");
 }
 
-TEST_P(Test_Layer_Fusion, GeluApproximationSubGraph) {
+TEST_P(Test_Graph_Simplifier, GeluApproximationSubGraph) {
     test("gelu_approximation", "GeluApproximation");
 }
 
-TEST_P(Test_Layer_Fusion, LayerNormSubGraph) {
+TEST_P(Test_Graph_Simplifier, LayerNormSubGraph) {
     test("layer_norm_expanded", "LayerNormalization");
 }
 
-TEST_P(Test_Layer_Fusion, ResizeSubgraph) {
+TEST_P(Test_Graph_Simplifier, ResizeSubgraph) {
     /* Test for 6 subgraphs:
         - GatherCastSubgraph
         - MulCastSubgraph
@@ -61,7 +61,7 @@ TEST_P(Test_Layer_Fusion, ResizeSubgraph) {
     test("two_resizes_with_shared_subgraphs", std::vector<std::string>{"NaryEltwise", "Resize"});
 }
 
-TEST_P(Test_Layer_Fusion, SoftmaxSubgraph) {
+TEST_P(Test_Graph_Simplifier, SoftmaxSubgraph) {
     /* Test for 3 subgraphs
         - SoftMaxSubgraph
         - SoftMaxSubgraph2 (conformance)
@@ -84,15 +84,15 @@ TEST_P(Test_Layer_Fusion, SoftmaxSubgraph) {
     test_conformance("test_logsoftmax_default_axis_expanded", "Softmax");
 }
 
-TEST_P(Test_Layer_Fusion, HardSwishSubgraph) {
+TEST_P(Test_Graph_Simplifier, HardSwishSubgraph) {
     test_conformance("test_hardswish_expanded", "HardSwish");
 }
 
-TEST_P(Test_Layer_Fusion, CeluSubgraph) {
+TEST_P(Test_Graph_Simplifier, CeluSubgraph) {
     test_conformance("test_celu_expanded", "Celu");
 }
 
-TEST_P(Test_Layer_Fusion, NormalizeSubgraph) {
+TEST_P(Test_Graph_Simplifier, NormalizeSubgraph) {
     /* Test for 6 subgraphs
         - NormalizeSubgraph1
         - NormalizeSubgraph2
@@ -106,7 +106,7 @@ TEST_P(Test_Layer_Fusion, NormalizeSubgraph) {
     test("normalize_fusion", "Normalize");
 }
 
-TEST_P(Test_Layer_Fusion, BatchNormalizationSubgraph) {
+TEST_P(Test_Graph_Simplifier, BatchNormalizationSubgraph) {
     /* Test for 2 subgraphs
         - BatchNormalizationSubgraph1
         - BatchNormalizationSubgraph2
@@ -115,11 +115,11 @@ TEST_P(Test_Layer_Fusion, BatchNormalizationSubgraph) {
     test("batch_norm_subgraph", "BatchNorm");
 }
 
-TEST_P(Test_Layer_Fusion, ExpandSubgraph) {
+TEST_P(Test_Graph_Simplifier, ExpandSubgraph) {
     test("expand_neg_batch", "Expand");
 }
 
-TEST_P(Test_Layer_Fusion, MishSubgraph) {
+TEST_P(Test_Graph_Simplifier, MishSubgraph) {
     /* Test for 2 subgraphs
         - SoftplusSubgraph
         - MishSubgraph
@@ -131,7 +131,7 @@ TEST_P(Test_Layer_Fusion, MishSubgraph) {
 // Different backends are sharing the same subgraph fusion rule,
 // so testing on tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU) is enough
 using BackendTargetTuple = tuple<Backend, Target>;
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Layer_Fusion,
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Graph_Simplifier,
                         testing::ValuesIn(std::vector<BackendTargetTuple>{std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)}));
 
 }}
