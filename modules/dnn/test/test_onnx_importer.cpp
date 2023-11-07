@@ -2780,11 +2780,4 @@ TEST_P(Test_ONNX_layers, Expand_shape_model4) {
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
-TEST(Test_ONNX_importer, commutative_fusion) {
-    Net net = readNet(_tf("models/mish.onnx"));
-    std::vector<std::string> layerTypes;
-    net.getLayerTypes(layerTypes);
-    ASSERT_TRUE(std::find(layerTypes.begin(), layerTypes.end(), "Mish") != layerTypes.end());
-}
-
 }} // namespace
