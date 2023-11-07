@@ -1844,44 +1844,43 @@ void ONNXImporter::parseLRN(LayerParams& layerParams, const opencv_onnx::NodePro
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseInstanceNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
-{
-    opencv_onnx::NodeProto node_proto = node_proto_;
-    if (node_proto.input_size() != 3)
-        CV_Error(Error::StsNotImplemented,
-                 "Expected input, scale, bias");
+void ONNXImporter::parseInstanceNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto) {
+    int num_inputs = node_proto.input_size();
+    CV_CheckEQ(num_inputs, 3, "DNN/ONNXImporter - InstanceNorm: three inputs are required");
 
-    layerParams.blobs.resize(4);
-    layerParams.blobs[2] = getBlob(node_proto, 1);  // weightData
-    layerParams.blobs[3] = getBlob(node_proto, 2);  // biasData
-    layerParams.set("has_bias", true);
-    layerParams.set("has_weight", true);
+    bool found_input = constBlobs.find(node_proto.input(0)) != constBlobs.end();
+    bool found_scale = constBlobs.find(node_proto.input(1)) != constBlobs.end();
+    bool found_bias = constBlobs.find(node_proto.input(2)) != constBlobs.end();
 
-    // Get number of channels in input
-    int size = layerParams.blobs[2].total();
-    layerParams.blobs[0] = Mat::zeros(size, 1, CV_32F); // mean
-    layerParams.blobs[1] = Mat::ones(size, 1, CV_32F); // std
+    if (found_input && found_scale && found_bias) {
+        std::vector<Mat> inputs, output;
 
-    LayerParams mvnParams;
-    mvnParams.name = layerParams.name + "/MVN";
-    mvnParams.type = "MVN";
-    mvnParams.set("eps", layerParams.get<float>("epsilon"));
-    layerParams.erase("epsilon");
+        Mat input = getBlob(node_proto, 0);
+        Mat scale = getBlob(node_proto, 1);
+        Mat bias = getBlob(node_proto, 2);
+        inputs.push_back(input);
+        inputs.push_back(scale);
+        inputs.push_back(bias);
 
-    //Create MVN layer
-    int id = dstNet.addLayer(mvnParams.name, mvnParams.type, mvnParams);
-    //Connect to input
-    IterLayerId_t layerId = layer_id.find(node_proto.input(0));
-    CV_Assert(layerId != layer_id.end());
-    dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
-    //Add shape
-    layer_id.insert(std::make_pair(mvnParams.name, LayerInfo(id, 0)));
-    outShapes[mvnParams.name] = outShapes[node_proto.input(0)];
+        runLayer(layerParams, inputs, output);
+        addConstant(node_proto.output(0), output[0]);
+    } else {
+        auto add_const_node = [&] (int i) {
+            LayerParams const_params;
+            const_params.name = node_proto.input(i);
+            const_params.type = "Const";
+            Mat blob = getBlob(node_proto, i);
+            const_params.blobs.push_back(blob);
 
-    //Replace Batch Norm's input to MVN
-    node_proto.set_input(0, mvnParams.name);
-    layerParams.type = "BatchNorm";
-    addLayer(layerParams, node_proto);
+            opencv_onnx::NodeProto proto;
+            proto.add_output(const_params.name);
+            addLayer(const_params, proto);
+        };
+        if (found_input && layer_id.find(node_proto.input(0)) == layer_id.end()) { add_const_node(0); }
+        if (found_scale && layer_id.find(node_proto.input(1)) == layer_id.end()) { add_const_node(1); }
+        if (found_bias && layer_id.find(node_proto.input(2)) == layer_id.end()) { add_const_node(2); }
+        addLayer(layerParams, node_proto);
+    }
 }
 
 void ONNXImporter::parseBatchNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
