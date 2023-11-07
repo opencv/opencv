@@ -44,6 +44,28 @@ Installing OpenCV from prebuilt binaries
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
 
+Installing OpenCV from using pip Package Manager
+------------------------------------------------
+
+You can also install OpenCV using the Python's pip package manager. The steps to be followed are very simple as follows:
+1. Once you have installed python and pip(which comes along with python) Go to your Command Prompt(for Windows) or terminal(for Mac).
+2. Type `pip install opencv-python` and hit enter
+3. pip will automatically install all the necessary dependencies for OpenCV and you're good to go!
+
+# Installing OpenCV in Anaconda
+-------------------------------
+
+To install OpenCV in your Anaconda environment perform the following steps:
+
+1.  *Download and install anaconda environment Python from here : 
+     https://www.anaconda.com/download
+2.  *Open Anaconda Prompt*
+
+3.   *In Anaconda Prompt, type commands to install necessary libraries:*
+      `pip install opencv-python`
+      `pip install opencv-contrib-python`
+4.   *Run your python program*
+
 Building OpenCV from source
 ---------------------------
 
