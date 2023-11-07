@@ -148,7 +148,10 @@ struct MatMulHelper {
     }
 };
 
+size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt);
+
 void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
+void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt);
 
 void fastGemm(bool trans_a, int M, int N, int K,
               float alpha, const float *A, int lda,

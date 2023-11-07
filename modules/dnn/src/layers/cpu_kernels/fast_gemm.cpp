@@ -20,6 +20,32 @@
 
 namespace cv { namespace dnn {
 
+size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt) {
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        return static_cast<size_t>(opt_NEON::fastGemmPackBSize(N, K));
+    } else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2) {
+        return static_cast<size_t>(opt_AVX2::fastGemmPackBSize(N, K));
+    } else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx) {
+        return static_cast<size_t>(opt_AVX::fastGemmPackBSize(N, K));
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        return static_cast<size_t>(opt_LASX::fastGemmPackBSize(N, K));
+    } else
+#endif
+    {
+        return static_cast<size_t>(cpu_baseline::fastGemmPackBSize(N, K));
+    }
+}
+
 void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt) {
     CV_CheckTypeEQ(B.type(), CV_32F, "fastGemmPackB: only float32 is supported for now");
 
@@ -91,6 +117,41 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
             b += N * K * esz;
             packed_b += size_packed_B * esz;
         }
+    }
+}
+
+void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt) {
+    size_t ldb0 = ldb, ldb1 = 1;
+    if (trans) {
+        std::swap(K, N);
+        std::swap(ldb0, ldb1);
+    }
+
+    const auto &b = (const char *)B;
+    auto *packed_b = (char *)packed_B;
+
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        opt_NEON::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
+    } else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2) {
+        opt_AVX2::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
+    } else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx) {
+        opt_AVX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        opt_LASX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
+    } else
+#endif
+    {
+        cpu_baseline::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
     }
 }
 

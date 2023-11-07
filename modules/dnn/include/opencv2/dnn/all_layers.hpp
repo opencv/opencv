@@ -1180,10 +1180,6 @@ CV__DNN_INLINE_NS_BEGIN
 
     class CV_EXPORTS AttentionLayer : public Layer {
      public:
-        int num_heads;
-        std::vector<int> qkv_hidden_sizes;
-        float scale;
-
         static Ptr<AttentionLayer> create(const LayerParams &params);
     };
 
