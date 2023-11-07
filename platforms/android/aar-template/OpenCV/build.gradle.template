@@ -1,0 +1,88 @@
+plugins {
+    id 'com.android.library'
+    id 'maven-publish'
+}
+
+android {
+    namespace 'org.opencv'
+    compileSdk ${COMPILE_SDK}
+
+    defaultConfig {
+        minSdk ${MIN_SDK}
+        targetSdk ${TARGET_SDK}
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            cmake {
+                cppFlags ""
+                arguments "-DANDROID_STL=${LIB_TYPE}"
+            }
+        }
+        ndk {
+            abiFilters ${ABI_FILTERS}
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_${JAVA_VERSION}
+        targetCompatibility JavaVersion.VERSION_${JAVA_VERSION}
+    }
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+        }
+    }
+    buildFeatures {
+        aidl true
+        prefabPublishing true
+        buildConfig true
+    }
+    prefab {
+        ${LIB_NAME} {
+            headers "src/main/cpp/include"
+        }
+    }
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java']
+            //jniLibs.srcDirs = ['libs']
+            aidl.srcDirs = ['src/main/java']
+        }
+    }
+
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+        }
+    }
+}
+
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'org.opencv'
+            artifactId = '${PACKAGE_NAME}'
+            version = '${OPENCV_VERSION}'
+            artifact("opencv-release.aar")
+
+//            afterEvaluate {
+//                from components.release
+//            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'myrepo'
+            url = "${project.buildDir}/repo"
+        }
+    }
+}
+
+dependencies {
+}
