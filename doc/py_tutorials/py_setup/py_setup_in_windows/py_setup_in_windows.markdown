@@ -10,6 +10,14 @@ In this tutorial
 Below steps are tested in a Windows 7-64 bit machine with Visual Studio 2010 and Visual Studio 2012.
 The screenshots shows VS2012.
 
+Installing OpenCV using pip Package Manager
+------------------------------------------------
+
+You can also install OpenCV using the Python's pip package manager. The steps to be followed are very simple as follows:
+1. Once you have installed python and pip(which comes along with python) Go to your Command Prompt(for Windows)
+2. Type `pip install opencv-python` and hit enter
+3. pip will automatically install all the necessary dependencies for OpenCV and you're good to go!
+
 Installing OpenCV from prebuilt binaries
 ----------------------------------------
 
@@ -43,14 +51,6 @@ Installing OpenCV from prebuilt binaries
 
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
-
-Installing OpenCV using pip Package Manager
-------------------------------------------------
-
-You can also install OpenCV using the Python's pip package manager. The steps to be followed are very simple as follows:
-1. Once you have installed python and pip(which comes along with python) Go to your Command Prompt(for Windows)
-2. Type `pip install opencv-python` and hit enter
-3. pip will automatically install all the necessary dependencies for OpenCV and you're good to go!
 
 Installing OpenCV in Anaconda
 -------------------------------
