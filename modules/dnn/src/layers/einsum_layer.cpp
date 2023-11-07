@@ -6,6 +6,8 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/fast_gemm.hpp"
 
 namespace cv
 {
@@ -38,6 +40,10 @@ static Mat batchwiseMatMul(
     const Mat& input2,
     const MatShape& input2ShapeOverride)
 {
+    // hangle this properly in the einsum layer
+    FastGemmOpt opt;
+    opt.init();
+
     // Sanity checks before the actual MatMul
     CV_CheckType(input1.type(), input2.type(), "Data types of the inputs must match for MatMul");
     CV_CheckEQ(input1ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
@@ -91,7 +97,8 @@ static Mat batchwiseMatMul(
             part2 = part2.reshape(1, sizeof(shape2)/sizeof(shape2[0]), shape2);
 
             Mat tmp_output;
-            cv::gemm(part1, part2, 1.0, cv::Mat(), 1.0, tmp_output);
+            tmp_output.create(M, N, part1.type());
+            fastGemm(false, false, 1.0, part1, part2, 0.0, tmp_output, opt);
             int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
             tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
 
@@ -120,7 +127,8 @@ static Mat batchwiseMatMul(
         }
 
         Mat tmp_output;
-        cv::gemm(reshapedInput1, reshapedInput2, 1.0, cv::Mat(), 1.0, tmp_output);
+        tmp_output.create(M, N, reshapedInput1.type());
+        fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, tmp_output, opt);
 
         int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
         tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
