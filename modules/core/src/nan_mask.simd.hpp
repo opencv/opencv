@@ -280,31 +280,31 @@ template <>
 int finiteMaskSIMD_<double, 2>(const double *dsrc, uchar *dst, size_t utotal)
 {
     const uint64_t* src = (const uint64_t*)dsrc;
-    const int size8 = VTraits<v_uint8>::vlanes();
-    const int npixels = size8 / 16;
+    const int npixels = VTraits<v_uint8>::vlanes() / 2;
+    const int ndoubles = VTraits<v_uint64>::vlanes();
     v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
-    v_uint64 z = vx_setzero_u64();
+    v_uint16 vmaskBoth = vx_setall_u16(0xffff);
 
     int i = 0;
     int total = (int)utotal;
     for(; i < total - npixels + 1; i += npixels )
     {
-        v_uint64 vv = v_ne(v_and(vx_load(src + i*2), vmaskExp), vmaskExp);
+        v_uint64 vv0 = v_ne(v_and(vx_load(src + i*2 +  0*(ndoubles)), vmaskExp), vmaskExp);
+        v_uint64 vv1 = v_ne(v_and(vx_load(src + i*2 +  1*(ndoubles)), vmaskExp), vmaskExp);
+        v_uint64 vv2 = v_ne(v_and(vx_load(src + i*2 +  2*(ndoubles)), vmaskExp), vmaskExp);
+        v_uint64 vv3 = v_ne(v_and(vx_load(src + i*2 +  3*(ndoubles)), vmaskExp), vmaskExp);
+        v_uint64 vv4 = v_ne(v_and(vx_load(src + i*2 +  4*(ndoubles)), vmaskExp), vmaskExp);
+        v_uint64 vv5 = v_ne(v_and(vx_load(src + i*2 +  5*(ndoubles)), vmaskExp), vmaskExp);
+        v_uint64 vv6 = v_ne(v_and(vx_load(src + i*2 +  6*(ndoubles)), vmaskExp), vmaskExp);
+        v_uint64 vv7 = v_ne(v_and(vx_load(src + i*2 +  7*(ndoubles)), vmaskExp), vmaskExp);
 
-        v_uint8 velems = v_pack_b(vv, z, z, z, z, z, z, z);
+        v_uint8 velems0 = v_pack_b(vv0, vv1, vv2, vv3, vv4, vv5, vv6, vv7);
 
-        v_uint16 vmaskBoth = vx_setall_u16(0xffff);
-        v_uint16 vfinite = v_eq(v_reinterpret_as_u16(velems), vmaskBoth);
+        v_uint16 vfinite0 = v_eq(v_reinterpret_as_u16(velems0), vmaskBoth);
 
         // 2nd arg is useless
-        v_uint8 vres = v_pack(vfinite, vfinite);
-
-        for (int j = 0; j < npixels; j++)
-        {
-            dst[i+j] = v_get0(vres);
-            // 2nd arg is useless
-            vres = v_extract<1>(vres, vres);
-        }
+        v_uint8 vres = v_pack(vfinite0, vfinite0);
+        v_store_low(dst + i, vres);
     }
 
     return i;
