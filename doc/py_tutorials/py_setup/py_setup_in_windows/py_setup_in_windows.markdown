@@ -1,6 +1,16 @@
 Install OpenCV-Python in Windows {#tutorial_py_setup_in_windows}
 ================================
 
+Table of Contents
+-----------------
+
+1. *Installing OpenCV using pip Package Manager*
+2. *Installing OpenCV-Python from Pre-built Binaries*
+3. *Installing OpenCV using Anaconda*
+4. *Building OpenCV from source*
+5. *Additional Resources*
+6. *Exercises*
+
 Goals
 -----
 
