@@ -105,7 +105,7 @@ public:
         *  +y                           [100]
         *  index 000, 111 are reserved
         */
-    std::vector< Ptr<OctreeNode> > neigh;
+    // std::vector< Ptr<OctreeNode> > neigh;
 
     /**  The serial number of the child of the current node in the parent node,
     * the range is (-1~7). Among them, only the root node's _parentIndex is -1.

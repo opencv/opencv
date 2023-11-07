@@ -131,9 +131,10 @@ void traverse(OctreeNode &root, std::vector<unsigned char> &serializedVectorOut)
 /** @brief Restore octree from vector.
  *
  * @param root the root node of octree.
- * @param serializedVectorOut The vector obtained by traversing the octree.
+ * @param serializedVectorIn The vector of octree nodes' occupancy in BFS order.
+ * @param pointCloud The restored pointcloud.
 */
-void restore(OctreeNode &root, const std::vector<unsigned char> &serializedVectorIn);
+void restore(OctreeNode &root, const std::vector<unsigned char> &serializedVectorIn, std::vector<Point3f> &pointCloud);
 
 /** @brief 3D Haar Transform
  *
