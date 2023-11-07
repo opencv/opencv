@@ -10,12 +10,14 @@ namespace opencv_test { namespace {
 TEST(imRead, passing_Mat)
 {
   Mat img = Mat::zeros(1000, 1000, CV_8UC3);
-  Mat subImg = img.rowRange(0, 512).colRange(0, 512);
-  imread(samples::findFile("lena.png"), subImg);
-  Mat ori = imread(samples::findFile("lena.png"));
-  EXPECT_EQ(0, cv::norm(ori, subImg, NORM_INF));
-  EXPECT_EQ(0, sum(img.rowRange(0, 1000).colRange(512, 1000))[0]);
-  EXPECT_EQ(0, sum(img.rowRange(0, 512).colRange(0, 512))[0]);
+  Mat subImg = img.rowRange(64, 576).colRange(128, 640);
+  imread(samples::findFile("../cv/shared/lena.png"), subImg);
+  Mat ori = imread(samples::findFile("../cv/shared/lena.png"));
+  EXPECT_EQ(0, norm(ori, subImg, NORM_INF));
+  EXPECT_EQ(0, norm(sum(img.rowRange(0, 1000).colRange(0, 128))));
+  EXPECT_EQ(0, norm(sum(img.rowRange(0, 1000).colRange(640, 1000))));
+  EXPECT_EQ(0, norm(sum(img.rowRange(0, 64).colRange(128, 640))));
+  EXPECT_EQ(0, norm(sum(img.rowRange(576, 1000).colRange(128, 640))));
 }
 
 TEST(Imgcodecs_Png, write_big)
