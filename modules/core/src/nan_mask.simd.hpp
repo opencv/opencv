@@ -210,39 +210,43 @@ template <>
 int finiteMaskSIMD_<float, 4>(const float *fsrc, uchar *dst, size_t utotal)
 {
     const uint32_t* src = (const uint32_t*)fsrc;
-    CV_StaticAssert(VTraits<v_uint8>::max_nlanes*8 <= 1024, "SIMD registers should be not more than 1024 bit wide");
-    const int npixels = VTraits<v_uint32>::vlanes()/4;
-
-    v_uint32 vmaskExp = vx_setall_u32(0x7f800000);
-    v_uint32 z = vx_setzero_u32();
+    const int npixels = VTraits<v_uint8>::vlanes() / 2;
+    const int nfloats = VTraits<v_uint32>::vlanes();
+    const v_uint32 vMaskExp = vx_setall_u32(0x7f800000);
     v_uint32 vmaskAll4 = vx_setall_u32(0xFFFFFFFF);
 
     int i = 0;
     int total = (int)utotal;
     for(; i < total - npixels + 1; i += npixels )
     {
-        v_uint32 vv = v_ne(v_and(vx_load(src + i*4), vmaskExp), vmaskExp);
-        v_uint8 velems = v_pack_b(vv, z, z, z);
+        v_uint32 v0 = vx_load(src + i * 4 + 0*nfloats);
+        v_uint32 v1 = vx_load(src + i * 4 + 1*nfloats);
+        v_uint32 v2 = vx_load(src + i * 4 + 2*nfloats);
+        v_uint32 v3 = vx_load(src + i * 4 + 3*nfloats);
+        v_uint32 v4 = vx_load(src + i * 4 + 4*nfloats);
+        v_uint32 v5 = vx_load(src + i * 4 + 5*nfloats);
+        v_uint32 v6 = vx_load(src + i * 4 + 6*nfloats);
+        v_uint32 v7 = vx_load(src + i * 4 + 7*nfloats);
 
-        v_uint32 vresWide = v_eq(v_reinterpret_as_u32(velems), vmaskAll4);
+        v_uint32 vmask0 = v_ne(v_and(v0, vMaskExp), vMaskExp);
+        v_uint32 vmask1 = v_ne(v_and(v1, vMaskExp), vMaskExp);
+        v_uint32 vmask2 = v_ne(v_and(v2, vMaskExp), vMaskExp);
+        v_uint32 vmask3 = v_ne(v_and(v3, vMaskExp), vMaskExp);
+        v_uint32 vmask4 = v_ne(v_and(v4, vMaskExp), vMaskExp);
+        v_uint32 vmask5 = v_ne(v_and(v5, vMaskExp), vMaskExp);
+        v_uint32 vmask6 = v_ne(v_and(v6, vMaskExp), vMaskExp);
+        v_uint32 vmask7 = v_ne(v_and(v7, vMaskExp), vMaskExp);
 
-        v_uint8 vres = v_pack_b(vresWide, z, z, z);
-        if (npixels == 1) // 128 bit wide
-        {
-            dst[i] = v_get0(vres);
-        }
-        else if (npixels == 2) // 256 bit wide
-        {
-            *((uint16_t*)(dst + i)) = v_get0(v_reinterpret_as_u16(vres));
-        }
-        else if (npixels == 4) // 512 bit wide
-        {
-            *((uint32_t*)(dst + i)) = v_get0(v_reinterpret_as_u32(vres));
-        }
-        else if (npixels == 8) // 1024 bit wide
-        {
-            *((uint64_t*)(dst + i)) = v_get0(v_reinterpret_as_u64(vres));
-        }
+        v_uint8 velems0 = v_pack_b(vmask0, vmask1, vmask2, vmask3);
+        v_uint8 velems1 = v_pack_b(vmask4, vmask5, vmask6, vmask7);
+
+        v_uint32 vresWide0 = v_eq(v_reinterpret_as_u32(velems0), vmaskAll4);
+        v_uint32 vresWide1 = v_eq(v_reinterpret_as_u32(velems1), vmaskAll4);
+
+        // last 2 args are useless
+        v_uint8 vres = v_pack_b(vresWide0, vresWide1, vresWide0, vresWide1);
+
+        v_store_low(dst + i, vres);
     }
 
     return i;
