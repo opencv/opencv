@@ -349,43 +349,29 @@ int finiteMaskSIMD_<double, 3>(const double *fsrc, uchar *dst, size_t utotal)
 template <>
 int finiteMaskSIMD_<double, 4>(const double *dsrc, uchar *dst, size_t utotal)
 {
-    const uint64_t* src = (const uint64_t*)dsrc;
-    CV_StaticAssert(VTraits<v_uint8>::max_nlanes*8 <= 1024, "SIMD registers should be not more than 1024 bit wide");
-    // number of pixels in 2 vector registers
-    const int npixels = VTraits<v_uint64>::vlanes()/2;
+    //TODO: vectorize it properly
 
-    v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
-    v_uint64 z = vx_setzero_u64();
-    v_uint32 vmaskAll4 = vx_setall_u32(0xFFFFFFFF);
-    v_uint32 z32 = vx_setzero_u32();
+    const uint64_t* src = (const uint64_t*)dsrc;
+    const int npixels = VTraits<v_uint8>::vlanes();
+    uint64_t maskExp = 0x7ff0000000000000;
 
     int i = 0;
     int total = (int)utotal;
     for(; i < total - npixels + 1; i += npixels )
     {
-        v_uint64 vv0, vv1;
-        vv0 = v_ne(v_and(vx_load(src + i*4            ), vmaskExp), vmaskExp);
-        vv1 = v_ne(v_and(vx_load(src + i*4 + npixels*2), vmaskExp), vmaskExp);
+        for (int j = 0; j < npixels; j++)
+        {
+            uint64_t val0 = src[i * 4 + j * 4 + 0];
+            uint64_t val1 = src[i * 4 + j * 4 + 1];
+            uint64_t val2 = src[i * 4 + j * 4 + 2];
+            uint64_t val3 = src[i * 4 + j * 4 + 3];
 
-        v_uint8 velems = v_pack_b(vv0, vv1, z, z, z, z, z, z);
-        v_uint32 vresWide = v_eq(v_reinterpret_as_u32(velems), vmaskAll4);
+            bool finite = ((val0 & maskExp) != maskExp) &&
+                          ((val1 & maskExp) != maskExp) &&
+                          ((val2 & maskExp) != maskExp) &&
+                          ((val3 & maskExp) != maskExp);
 
-        v_uint8 vres = v_pack_b(vresWide, z32, z32, z32);
-        if (npixels == 1) // 2x128 bit
-        {
-            dst[i] = v_get0(vres);
-        }
-        else if (npixels == 2) // 2x256 bit
-        {
-            *((uint16_t*)(dst + i)) = v_get0(v_reinterpret_as_u16(vres));
-        }
-        else if (npixels == 4) // 2x512 bit
-        {
-            *((uint32_t*)(dst + i)) = v_get0(v_reinterpret_as_u32(vres));
-        }
-        else if (npixels == 8) // 2x1024 bit wide
-        {
-            *((uint64_t*)(dst + i)) = v_get0(v_reinterpret_as_u64(vres));
+            dst[i + j] = finite ? 255 : 0;
         }
     }
 
