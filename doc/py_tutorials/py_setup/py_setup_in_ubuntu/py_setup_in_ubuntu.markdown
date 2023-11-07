@@ -17,6 +17,18 @@ But in this tutorials, we also use **Matplotlib** for some easy and nice plottin
 Matplotlib is optional, but highly recommended.
 Similarly we will also see **IPython**, an Interactive Python Terminal, which is also highly recommended.
 
+Installing OpenCV using pip in Ubuntu
+-------------------------------------
+
+These are the steps that will guide you in setting up OpenCV in your Ubuntu system: 
+
+1. *Install Python on your system : *
+    `sudo apt-get install python3`
+2. *Install pip : *
+    `sudo apt-get install python3-pip`
+3. *Install OpenCV : *
+    `pip3 install opencv-python`
+
 Installing OpenCV-Python from Pre-built Binaries
 ------------------------------------------------
 
@@ -45,6 +57,8 @@ With respect to Python API, latest version will always contain much better suppo
 
 So for getting latest source codes preference is next method, i.e. compiling from source.
 Also at some point in time, if you want to contribute to OpenCV, you will need this.
+
+
 
 Building OpenCV from source
 ---------------------------
