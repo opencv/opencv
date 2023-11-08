@@ -15,10 +15,19 @@ namespace cv {
 static bool ocl_patchNaNs( InputOutputArray _a, double value )
 {
     int ftype = _a.depth();
+
+    const ocl::Device d = ocl::Device::getDefault();
+    bool doubleSupport = d.doubleFPConfig() > 0;
+    if (!doubleSupport && ftype == CV_64F)
+    {
+        return false;
+    }
+
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d",
-                            ftype == CV_64F ? "double" : "float", ftype, rowsPerWI));
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d %s",
+                            ftype == CV_64F ? "double" : "float", ftype, rowsPerWI,
+                            doubleSupport ? "-D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
@@ -76,10 +85,19 @@ static bool ocl_finiteMask(const UMat img, UMat mask)
 {
     int channels = img.channels();
     int depth = img.depth();
+
+    const ocl::Device d = ocl::Device::getDefault();
+    bool doubleSupport = d.doubleFPConfig() > 0;
+    if (!doubleSupport && depth == CV_64F)
+    {
+        return false;
+    }
+
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("finiteMask", ocl::core::finitemask_oclsrc,
-                  format("-D srcT=%s -D cn=%d -D rowsPerWI=%d",
-                         depth == CV_32F ? "float" : "double", channels, rowsPerWI));
+                  format("-D srcT=%s -D cn=%d -D rowsPerWI=%d %s",
+                         depth == CV_32F ? "float" : "double", channels, rowsPerWI,
+                         doubleSupport ? "-D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 

@@ -2,6 +2,19 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
+// This kernel is compiled with the following possible defines:
+//  - srcT, cn: source type and number of channels per pixel
+//  - rowsPerWI: Intel GPU optimization
+//  - DOUBLE_SUPPORT: enable double support if available
+
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
+#endif
+
 __kernel void finiteMask(__global const uchar * srcptr, int srcstep, int srcoffset,
                          __global uchar * dstptr, int dststep, int dstoffset,
                          int rows, int cols )
