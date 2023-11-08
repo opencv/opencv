@@ -154,6 +154,12 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 # endif
 #endif
 
+#if defined __loongarch64
+#include "sys/auxv.h"
+#define LA_HWCAP_LSX   (1<<4)
+#define LA_HWCAP_LASX  (1<<5)
+#endif
+
 #if defined _WIN32 || defined WINCE
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
@@ -704,12 +710,11 @@ struct HWFeatures
         have[CV_CPU_RVV] = true;
     #endif
 
-    #if defined __loongarch_sx
-        have[CV_CPU_LSX] = true;
-    #endif
+    #if defined __loongarch64 && defined __linux__
+        int flag = (int)getauxval(AT_HWCAP);
 
-    #if defined __loongarch_asx
-        have[CV_CPU_LASX] = true;
+        have[CV_CPU_LSX] = (flag & LA_HWCAP_LSX) != 0;
+        have[CV_CPU_LASX] = (flag & LA_HWCAP_LASX) != 0;
     #endif
 
         bool skip_baseline_check = false;

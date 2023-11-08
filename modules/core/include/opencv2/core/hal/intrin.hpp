@@ -246,12 +246,6 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 
 #include "opencv2/core/hal/intrin_lsx.hpp"
 
-#elif CV_LASX
-    #if !defined(CV_FORCE_SIMD128_CPP)
-    #define CV_FORCE_SIMD128_CPP 1
-    #endif
-#include "opencv2/core/hal/intrin_cpp.hpp"
-
 #else
 
 #include "opencv2/core/hal/intrin_cpp.hpp"
