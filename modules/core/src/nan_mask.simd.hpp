@@ -350,28 +350,42 @@ int finiteMaskSIMD_<double, 4>(const double *dsrc, uchar *dst, size_t utotal)
 {
     //TODO: vectorize it properly
 
-    const uint64_t* src = (const uint64_t*)dsrc;
-    const int npixels = VTraits<v_uint8>::vlanes();
-    uint64_t maskExp = 0x7ff0000000000000;
+    uint64_t* src = (uint64_t*)dsrc;
+    const int npixels = VTraits<v_uint8>::vlanes() / 2;
+    const int ndoubles = VTraits<v_uint64>::vlanes();
+    v_uint16 vmaskExp16 = vx_setall_u16(0x7ff0);
+    v_uint32 z = vx_setzero_u32();
 
     int i = 0;
     int total = (int)utotal;
     for(; i < total - npixels + 1; i += npixels )
     {
-        for (int j = 0; j < npixels; j++)
-        {
-            uint64_t val0 = src[i * 4 + j * 4 + 0];
-            uint64_t val1 = src[i * 4 + j * 4 + 1];
-            uint64_t val2 = src[i * 4 + j * 4 + 2];
-            uint64_t val3 = src[i * 4 + j * 4 + 3];
+        v_uint16 vexpb0, vexpb1, vexpb2, vexpb3, vexpb4, vexpb5, vexpb6, vexpb7;
+        v_uint16 dummy;
+        v_load_deinterleave((uint16_t*)(src + 0*4*ndoubles), dummy, dummy, dummy, vexpb0);
+        v_load_deinterleave((uint16_t*)(src + 1*4*ndoubles), dummy, dummy, dummy, vexpb1);
+        v_load_deinterleave((uint16_t*)(src + 2*4*ndoubles), dummy, dummy, dummy, vexpb2);
+        v_load_deinterleave((uint16_t*)(src + 3*4*ndoubles), dummy, dummy, dummy, vexpb3);
 
-            bool finite = ((val0 & maskExp) != maskExp) &&
-                          ((val1 & maskExp) != maskExp) &&
-                          ((val2 & maskExp) != maskExp) &&
-                          ((val3 & maskExp) != maskExp);
+        v_uint16 vcmp0 = v_eq(v_and(vexpb0, vmaskExp16), vmaskExp16);
+        v_uint16 vcmp1 = v_eq(v_and(vexpb1, vmaskExp16), vmaskExp16);
+        v_uint16 vcmp2 = v_eq(v_and(vexpb2, vmaskExp16), vmaskExp16);
+        v_uint16 vcmp3 = v_eq(v_and(vexpb3, vmaskExp16), vmaskExp16);
 
-            dst[i + j] = finite ? 255 : 0;
-        }
+        v_uint8 velems0 = v_pack(vcmp0, vcmp1);
+        v_uint8 velems1 = v_pack(vcmp2, vcmp3);
+
+        v_uint32 vResWide0 = v_eq(v_reinterpret_as_u32(velems0), z);
+        v_uint32 vResWide1 = v_eq(v_reinterpret_as_u32(velems1), z);
+
+        v_uint16 vp16 = v_pack(vResWide0, vResWide1);
+
+        // 2nd arg is useless
+        v_uint8 vres = v_pack(vp16, vp16);
+        v_store_low(dst, vres);
+
+        src += npixels * 4;
+        dst += npixels;
     }
 
     return i;
