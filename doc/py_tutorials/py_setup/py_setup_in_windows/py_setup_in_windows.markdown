@@ -1,7 +1,7 @@
 Install OpenCV-Python in Windows {#tutorial_py_setup_in_windows}
 ================================
 
-Table of Contents
+@tableofcontents
 -----------------
 
 1. *Installing OpenCV using pip Package Manager*
@@ -71,13 +71,10 @@ To install OpenCV in your Anaconda environment perform the following steps:
      https://www.anaconda.com/download
 2.  *Open Anaconda Prompt*
 
-3.   *In Anaconda Prompt, type commands to install necessary libraries:*
-      `conda install -c menpo opencv`
-
-4.   *Alternatively you can also use this command to install opencv in Anaconda*
+3.   *Use this command to install opencv in Anaconda*
       `conda install -c conda-forge opencv`
-5.   *Press Enter*
-6.   *Press y when prompted and press ↵ Enter. This completes the installation.*
+4.   *Press Enter*
+5.   *Press y when prompted and press ↵ Enter. This completes the installation.*
 
 Building OpenCV from source
 ---------------------------
