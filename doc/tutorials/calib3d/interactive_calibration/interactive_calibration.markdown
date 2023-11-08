@@ -4,6 +4,7 @@ Interactive camera calibration application {#tutorial_interactive_calibration}
 @tableofcontents
 
 @prev_tutorial{tutorial_real_time_pose}
+@next_tutorial{tutorial_usac}
 
 |    |    |
 | -: | :- |
