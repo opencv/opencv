@@ -39,6 +39,9 @@ void draw(void* userdata)
     ogl::render(data->arr, data->indices, ogl::TRIANGLES);
 }
 
+//TODO: CommandLineParser
+// This app is used to generate test data for triangleRasterize() function
+
 int main(int argc, char* argv[])
 {
     int win_width = 700;
