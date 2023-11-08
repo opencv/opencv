@@ -121,7 +121,7 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
             s = v_reduce_sum(vs);
             // subtract the value of the redundant dimension
             if (redundantDim != nlanes) {
-                float* _val = new float[nlanes];
+                float _val[VTraits<v_float32>::max_nlanes];
                 v_store(_val, val);
                 for (size_t j = nlanes - redundantDim; j < nlanes; j++)
                     s -= _val[j];
