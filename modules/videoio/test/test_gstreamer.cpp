@@ -190,7 +190,7 @@ TEST_P(gstreamer_bunny, manual_seek)
     const string video_file = BunnyParameters::getFilename("." + GetParam());
     const string pipeline = "filesrc location=" + video_file + " ! decodebin ! videoconvert ! video/x-raw, format=BGR ! appsink drop=1";
     const double target_pos = 3000.0;
-    const float ms_per_frame = 1000 / BunnyParameters::getFps();
+    const double ms_per_frame = 1000.0 / BunnyParameters::getFps();
     VideoCapture cap;
     cap.open(pipeline, CAP_GSTREAMER);
     ASSERT_TRUE(cap.isOpened());
