@@ -637,7 +637,7 @@ void imread( const String& filename, OutputArray dst, int flags )
     CV_TRACE_FUNCTION();
 
     /// load the data
-    imread_( filename, flags, dst.getMatRef() );
+    imread_(filename, flags, dst.getMatRef());
 
 }
 
