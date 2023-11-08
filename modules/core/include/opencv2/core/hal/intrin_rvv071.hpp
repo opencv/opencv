@@ -2536,5 +2536,5 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond
 
-}
+} // namespace cv
 #endif
