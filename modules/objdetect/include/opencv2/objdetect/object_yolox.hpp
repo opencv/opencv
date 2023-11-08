@@ -54,8 +54,9 @@ public:
     /** @brief Creates an instance of this class with given parameters
      *
      *  @param modelPath the path to the requested model
-     *  @param confThresh the path to the config file for compability, which is not requested for ONNX models
-     *  @param nmsThresh the size of the input image
+     *  @param confThresh confifence threshold
+     *  @param nmsThresh  threshold used in non maximum suppression.
+     *  @param objThresh object threshold
      *  @param bId the id of backend
      *  @param tId the id of target device
      */

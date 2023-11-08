@@ -8,8 +8,8 @@ Key features of the YOLOX object detector
     SimOTA advanced label assignment strategy reduces training time and avoids additional solver hyperparameters
     Strong data augmentations like MixUp and Mosiac to boost YOLOX performance
 
-    model can be download https://github.com/opencv/opencv_zoo/blob/main/models/object_detection_yolox/object_detection_yolox_2022nov.onnx
-    or https://github.com/opencv/opencv_zoo/blob/main/models/object_detection_yolox/object_detection_yolox_2022nov_int8.onnx
+    model can be download https://github.com/opencv/opencv_zoo/blob/main/models/object_detection_yolox/object_detection_yolox_20222nov.onnx
+    or https://github.com/opencv/opencv_zoo/blob/main/models/object_detection_yolox/object_detection_yolox_20222nov_int8.onnx
 */
 #include <iostream>
 #include <fstream>
@@ -55,11 +55,11 @@ std::vector<std::string> labelYolox = {
 
 std::string keys =
 "{ help  h          |                                               | Print help message. }"
-"{ model m          | object_detection_yolox_2022nov.onnx           | Usage: Path to the model, defaults to object_detection_yolox_2022nov.onnx  }"
-"{ input i          |                                               | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+"{ model m          | dnn/yolox_s.onnx                              | Usage: Path to the model, defaults to opencv_extra/testdata/dnn/yolox_s.onnx  }"
+"{ input i          | C:/Users/laurent/Desktop/coco_patchwork.jpg   | Path to input image or video file. Skip this argument to capture frames from a camera.}"
 "{ confidence c     | 0.5                                           | Class confidence }"
-"{ nms              | 0.5                                           | Enter nms IOU threshold }"
-"{ obj              | 0.5                                           | Object  threshold }"
+"{ nms              | 0.6                                           | Enter nms IOU threshold }"
+"{ obj              | 0.7                                           | Object  threshold }"
 "{ vis v            | 1                                             | Specify to open a window for result visualization. This flag is invalid when using camera. }"
 "{ backend bt       | 0                                             | Choose one of computation backends: "
 "0: (default) OpenCV implementation + CPU, "
@@ -104,8 +104,8 @@ Mat visualize(Mat dets, Mat srcimg, double letterboxScale, double fps, bool vis)
         Mat boxF = unLetterBox(dets(Rect(0, row, 4, 1)), letterboxScale);
         Mat box;
         boxF.convertTo(box, CV_32S);
-        float score = dets.at<float>(row, 4);
-        int clsId = int(dets.at<float>(row, 5));
+        float score = dets.at<float>(row, 5);
+        int clsId = int(dets.at<float>(row, 4));
 
         int x0 = box.at<int>(0, 0);
         int y0 = box.at<int>(0, 1);
@@ -141,18 +141,21 @@ int main(int argc, char** argv)
     }
 
     string model = parser.get<String>("model");
+    model = "dnn/yolox_s.onnx";
     float confThreshold = parser.get<float>("confidence");
     float nmsThreshold = parser.get<float>("nms");
     float objThreshold = parser.get<float>("obj");
     bool vis = parser.get<bool>("vis");
     int backendTargetid = parser.get<int>("backend");
 
-    if (model.empty())
+    samples::addSamplesDataSearchPath("c:/lib/opencv_extra/testdata/"); // DELETE BEFORE PR
+    string modelPath = samples::findFile(model);
+    if (modelPath.empty())
     {
         CV_Error(Error::StsError, "Model file " + model + " not found");
     }
 
-    Ptr<ObjectDetectorYX> detector = ObjectDetectorYX::create(model, confThreshold, nmsThreshold, objThreshold, backendTargetPairs[backendTargetid].first, backendTargetPairs[backendTargetid].second);
+    Ptr<ObjectDetectorYX> detector = ObjectDetectorYX::create(modelPath, confThreshold, nmsThreshold, objThreshold, backendTargetPairs[backendTargetid].first, backendTargetPairs[backendTargetid].second);
     //! [Open a video file or an image file or a camera stream]
     VideoCapture cap;
     if (parser.has("input"))

@@ -149,18 +149,20 @@ class ObjectDetectorYXImpl : public ObjectDetectorYX
 
             std::vector< int > keep;
             dnn::NMSBoxesBatched(boxesXYXY, maxScores, maxScoreIdx, this->confThreshold, this->nmsThreshold, keep);
-            Mat candidates(int(keep.size()), 6, CV_32FC1);
+            Mat candidatesTmp(int(keep.size()), 6, CV_32FC1);
             int row = 0;
             for (auto idx : keep)
             {
-                boxes_xyxy.rowRange(idx, idx + 1).copyTo(candidates(Rect(0, row, 4, 1)));
-                if (float(maxScoreIdx[idx]) >= objThreshold)
+                boxes_xyxy.rowRange(idx, idx + 1).copyTo(candidatesTmp(Rect(0, row, 4, 1)));
+                if (float(maxScores[idx]) >= objThreshold)
                 {
-                    candidates.at<float>(row, 4) = float(idx);
-                    candidates.at<float>(row, 5) = float(maxScoreIdx[idx]);
+                    candidatesTmp.at<float>(row, 4) = float(maxScoreIdx[idx]);
+                    candidatesTmp.at<float>(row, 5) = float(maxScores[idx]);
                     row++;
                 }
             }
+            Mat candidates(row, 6, CV_32FC1);
+            candidatesTmp.rowRange(0, row).copyTo(candidates);
             if (keep.size() == 0)
                 return Mat();
             return candidates;

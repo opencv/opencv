@@ -9,8 +9,15 @@ namespace opencv_test { namespace {
 
 TEST(Objdetect_yolox_detection, regression)
 {
+    float confThreshold = 0.5;
+    float nmsThreshold = 0.5;
+    float objThreshold = 0.5;
+    dnn::Backend backendId = dnn::DNN_BACKEND_OPENCV;
+    dnn::Target targetId = dnn::DNN_TARGET_CPU;
+
     // Initialize detector
-    std::string detect_model = findDataFile("dnn/onnx/models/object_detection_yolox_2022nov.onnx", false);
+    std::string modelPath = findDataFile("dnn/yolox_s.onnx", false);
+    Ptr<ObjectDetectorYX> detector = ObjectDetectorYX::create(modelPath, confThreshold, nmsThreshold, objThreshold, backendId, targetId);
 }
 
 
