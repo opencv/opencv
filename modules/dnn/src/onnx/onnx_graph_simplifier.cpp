@@ -139,14 +139,13 @@ private:
     opencv_onnx::GraphProto& net;
 };
 
-static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
+static Mat extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
 {
     auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
     int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
     if (initializer_id != -1)
     {
-        Mat const_mat = onnx_net->getMatFromInitializer(initializer_id);
-        return *const_mat.ptr<float>();
+        return onnx_net->getMatFromInitializer(initializer_id);
     }
     else
     {
@@ -155,8 +154,7 @@ static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, in
         Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
         opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
         opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
-        Mat constant_mat = getMatFromTensor(constant_proto);
-        return *constant_mat.ptr<float>();
+        return getMatFromTensor(constant_proto);
     }
 }
 
@@ -192,17 +190,17 @@ public:
         if (Subgraph::match(net, nodeId, matchedNodesIds))
         {
             // Check Div[B=sqrt(2)]
-            float divisor = extractConstant(net, matchedNodesIds[div], 1);
+            float divisor = extractConstant(net, matchedNodesIds[div], 1).at<float>(0);
             if (std::fabs(divisor - M_SQRT2) >= std::numeric_limits<float>::epsilon())
                 return false;
 
             // Check Add[B=1]
-            float add_const = extractConstant(net, matchedNodesIds[add], 1);
+            float add_const = extractConstant(net, matchedNodesIds[add], 1).at<float>(0);
             if (std::fabs(add_const - 1.f) >= std::numeric_limits<float>::epsilon())
                 return false;
 
             // Check Mul[B=0.5]
-            float mul_const = extractConstant(net, matchedNodesIds[mul2], 1);
+            float mul_const = extractConstant(net, matchedNodesIds[mul2], 1).at<float>(0);
             if (std::fabs(mul_const - 0.5f) >= std::numeric_limits<float>::epsilon())
                 return false;
 
@@ -253,22 +251,22 @@ public:
         if (Subgraph::match(net, nodeId, matchedNodesIds))
         {
             // Check Mul[A=0.044714998453855515]
-            float coef = extractConstant(net, matchedNodesIds[mul2], 0);
+            float coef = extractConstant(net, matchedNodesIds[mul2], 0).at<float>(0);
             if (coef - 0.044714998453855515 >= 1e-6)
                 return false;
 
             // Check Mul[A=sqrt(2/pie)]
-            float sqrt_2_pie = extractConstant(net, matchedNodesIds[mul3], 0);
+            float sqrt_2_pie = extractConstant(net, matchedNodesIds[mul3], 0).at<float>(0);
             if (sqrt_2_pie - 0.7978845834732056 >= 1e-6)
                 return false;
 
             // Check Add[A=1]
-            float add_const = extractConstant(net, matchedNodesIds[add1], 0);
+            float add_const = extractConstant(net, matchedNodesIds[add1], 0).at<float>(0);
             if (add_const - 1.f >= 1e-6)
                 return false;
 
             // Check Mul[A=0.5]
-            float mul_const = extractConstant(net, matchedNodesIds[mul5], 0);
+            float mul_const = extractConstant(net, matchedNodesIds[mul5], 0).at<float>(0);
             if (mul_const - 0.5f >= 1e-6)
                 return false;
 
@@ -352,7 +350,7 @@ public:
     {
         if (Subgraph::match(net, nodeId, matchedNodesIds))
         {
-            float pow_exp = extractConstant(net, matchedNodesIds[pow], 1);
+            float pow_exp = extractConstant(net, matchedNodesIds[pow], 1).at<float>(0);
             if (pow_exp - 2 > 1e-5) // not pow(2)
                 return false;
 
@@ -362,7 +360,7 @@ public:
                 return false;
             axis = axis_mean1;
 
-            epsilon = extractConstant(net, matchedNodesIds[add], 1);
+            epsilon = extractConstant(net, matchedNodesIds[add], 1).at<float>(0);
 
             weight_name = getInputName(net, matchedNodesIds[mul], 1);
             bias_name = getInputName(net, matchedNodesIds[bias], 1);
@@ -841,29 +839,6 @@ public:
         return 0;
     }
 
-    static std::vector<int64_t> extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
-    {
-        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
-        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
-        Mat mat_constant;
-        if (initializer_id != -1) // initializer
-        {
-            mat_constant = onnx_net->getMatFromInitializer(initializer_id);
-        }
-        else
-        {
-            const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
-            int constant_id = getInputNodeId(net, node, input_id);
-            Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
-            opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
-            opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
-            mat_constant = getMatFromTensor(constant_proto);
-        }
-
-        std::vector<int64_t> retvals{mat_constant.begin<int>(), mat_constant.end<int>()};
-        return retvals;
-    }
-
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                        std::vector<int>& matchedNodesIds) CV_OVERRIDE {
         if (Subgraph::match(net, nodeId, matchedNodesIds)) {
@@ -871,21 +846,21 @@ public:
             if (!extractValue(net, matchedNodesIds[init], value_ConstantOfShape)) {
                 return false;
             }
-            std::vector<int64_t> input_ConstantOfShape = extractConstant(net, matchedNodesIds[init], 0);
+            std::vector<int> input_ConstantOfShape = extractConstant(net, matchedNodesIds[init], 0);
             if (input_ConstantOfShape.size() != static_cast<size_t>(1)) {
                 return false;
             }
-            auto B_Mul = extractConstant(net, matchedNodesIds[mul], 1);
+            std::vector<int> B_Mul = extractConstant(net, matchedNodesIds[mul], 1);
             if (B_Mul.size() != static_cast<size_t>(1)) {
                 return false;
             }
 
-            auto A_Equal = extractConstant(net, matchedNodesIds[condition], 0);
+            std::vector<int> A_Equal = extractConstant(net, matchedNodesIds[condition], 0);
             if (A_Equal.size() != static_cast<size_t>(input_ConstantOfShape[0])) {
                 return false;
             }
 
-            auto Y_Where = extractConstant(net, matchedNodesIds[where], 2);
+            std::vector<int> Y_Where = extractConstant(net, matchedNodesIds[where], 2);
             if (Y_Where.size() != A_Equal.size()) {
                 return false;
             }
