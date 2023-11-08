@@ -138,6 +138,9 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
 #if CV_TRY_AVX2
     bool useAVX2;
 #endif
+#if CV_TRY_LASX
+    bool useLASX;
+#endif
 
     // CUDA needs input blobs to be rearranged in a specific way, but some transformations
     // in ONNXImporter are destructive, so we keep a copy.
@@ -153,6 +156,10 @@ public:
 #if CV_TRY_AVX2
           , useAVX2(checkHardwareSupport(CPU_AVX2))
 #endif
+#if CV_TRY_LASX
+          , useLASX(checkHardwareSupport(CPU_LASX))
+#endif
+
     {
         setParamsFrom(params);
 
@@ -481,7 +488,7 @@ public:
                 cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
             }
 
-#if CV_TRY_AVX2 || CV_TRY_AVX
+#if CV_TRY_AVX2 || CV_TRY_AVX || CV_TRY_LASX
             bool canUseAvx = gates.isContinuous() && bias.isContinuous()
                 && Wx.depth() == CV_32F && gates.depth() == CV_32F
                 && bias.depth() == CV_32F && Wx.cols >= 8;
@@ -540,6 +547,23 @@ public:
                 }
                 else
 #endif
+#if CV_TRY_LASX
+                if (useLASX && canUseAvx && xCurr.isContinuous())
+                {
+                    for (int n = 0; n < xCurr.rows; n++) {
+                        opt_LASX::fastGEMM1T(
+                            xCurr.ptr<float>(n),
+                            Wx.ptr<float>(),
+                            Wx.step1(),
+                            bias.ptr<float>(),
+                            gates.ptr<float>(n),
+                            Wx.rows,
+                            Wx.cols
+                        );
+                    }
+                }
+                else
+#endif
                 {
                     gemm(xCurr, Wx, 1, gates, 0, gates, GEMM_2_T);      // Wx * x_t
                     gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
@@ -567,6 +591,23 @@ public:
                 {
                     for (int n = 0; n < hInternal.rows; n++) {
                         opt_AVX::fastGEMM1T(
+                            hInternal.ptr<float>(n),
+                            Wh.ptr<float>(),
+                            Wh.step1(),
+                            gates.ptr<float>(n),
+                            gates.ptr<float>(n),
+                            Wh.rows,
+                            Wh.cols
+                        );
+                    }
+                }
+                else
+#endif
+#if CV_TRY_LASX
+                if (useLASX && canUseAvx_hInternal)
+                {
+                    for (int n = 0; n < hInternal.rows; n++) {
+                        opt_LASX::fastGEMM1T(
                             hInternal.ptr<float>(n),
                             Wh.ptr<float>(),
                             Wh.step1(),
