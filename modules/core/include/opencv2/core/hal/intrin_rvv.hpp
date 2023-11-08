@@ -32,6 +32,8 @@
 namespace cv
 {
 
+//! @cond IGNORED
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD128 1
@@ -3336,7 +3338,8 @@ inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
+//! @endcond
 
-}
+} // namespace cv
 
 #endif

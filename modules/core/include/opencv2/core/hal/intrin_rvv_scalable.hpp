@@ -38,6 +38,9 @@
 
 namespace cv
 {
+
+//! @cond IGNORED
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD_SCALABLE 1
@@ -2125,6 +2128,8 @@ inline v_float32 v_matmuladd(const v_float32& v, const v_float32& m0,
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+
+//! @endcond
 
 } //namespace cv
 
