@@ -2,6 +2,7 @@ import cv2 as cv
 import argparse
 import numpy as np
 import sys
+import copy
 import time
 from threading import Thread
 if sys.version_info[0] == 2:
@@ -54,8 +55,6 @@ parser.add_argument('--async', type=int, default=0,
                     dest='asyncN',
                     help='Number of asynchronous forwards at the same time. '
                          'Choose 0 for synchronous mode')
-parser.add_argument('--postprocessing', choices=['yolo', 'ssd', 'faster_rcnn', 'yolov8'],
-                    help='Detection results post-processing kind depends on model topology.')
 args, _ = parser.parse_known_args()
 add_preproc_args(args.zoo, parser, 'object_detection')
 parser = argparse.ArgumentParser(parents=[parser],
@@ -147,40 +146,37 @@ def postprocess(frame, outs):
                     classIds.append(int(detection[1]) - 1)  # Skip background label
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
-    elif lastLayer.type == 'Region':
+    elif lastLayer.type == 'Region' or args.postprocessing == 'yolov8':
         # Network produces output blob with a shape NxC where N is a number of
         # detected objects and C is a number of classes + 4 where the first 4
         # numbers are [center_x, center_y, width, height]
+        if args.postprocessing == 'yolov8':
+            box_scale_w = frameWidth / args.width
+            box_scale_h = frameHeight / args.height
+        else:
+            box_scale_w = frameWidth
+            box_scale_h = frameHeight
+
         for out in outs:
+            if args.postprocessing == 'yolov8':
+                out = out[0].transpose(1, 0)
+
             for detection in out:
-                scores = detection[5:]
+                scores = detection[4:]
+                if args.background_label_id >= 0:
+                    scores = np.delete(scores, args.background_label_id)
                 classId = np.argmax(scores)
                 confidence = scores[classId]
                 if confidence > confThreshold:
-                    center_x = int(detection[0] * frameWidth)
-                    center_y = int(detection[1] * frameHeight)
-                    width = int(detection[2] * frameWidth)
-                    height = int(detection[3] * frameHeight)
+                    center_x = int(detection[0] * box_scale_w)
+                    center_y = int(detection[1] * box_scale_h)
+                    width = int(detection[2] * box_scale_w)
+                    height = int(detection[3] * box_scale_h)
                     left = int(center_x - width / 2)
                     top = int(center_y - height / 2)
                     classIds.append(classId)
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
-    elif args.postprocessing == 'yolov8':
-        out = np.array([cv.transpose(outs[0, 0])])
-        box_scale = max(np.array(frame.shape[:2]) / 640.0)
-        for i in range(out.shape[1]):
-            bbox, scores = out[0][i][:4], out[0][i][4:]
-            (_, confidence, _, (_, classId)) = cv.minMaxLoc(scores)
-            if confidence > confThreshold:
-                left = round((bbox[0] - (bbox[2]/2))*box_scale)
-                top = round((bbox[1] - (bbox[3]/2))*box_scale)
-                width = round(bbox[2]*box_scale)
-                height = round(bbox[3]*box_scale)
-                # Skip background label
-                classIds.append(classId)
-                confidences.append(float(confidence))
-                boxes.append([left, top, width, height])
     else:
         print('Unknown output layer type: ' + lastLayer.type)
         exit()
@@ -198,7 +194,6 @@ def postprocess(frame, outs):
             conf = confidences[class_indices]
             box  = boxes[class_indices].tolist()
             nms_indices = cv.dnn.NMSBoxes(box, conf, confThreshold, nmsThreshold)
-            nms_indices = nms_indices[:, 0] if len(nms_indices) and args.postprocessing != 'yolov8' else nms_indices if len(nms_indices) and args.postprocessing == 'yolov8' else []
             indices.extend(class_indices[nms_indices])
     else:
         indices = np.arange(0, len(classIds))
@@ -286,13 +281,7 @@ def processingThreadBody():
             # Create a 4D blob from a frame.
             inpWidth = args.width if args.width else frameWidth
             inpHeight = args.height if args.height else frameHeight
-            if args.postprocessing == 'yolov8':
-                length = max(frameHeight, frameWidth)
-                padding_img = np.zeros((length, length, 3), np.uint8)
-                padding_img[0: frameHeight, 0:frameWidth] = frame
-                blob = cv.dnn.blobFromImage(padding_img, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_8U)
-            else:
-                blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_8U)
+            blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_8U)
             processedFramesQueue.put(frame)
 
             # Run a model
@@ -305,11 +294,11 @@ def processingThreadBody():
                 futureOutputs.append(net.forwardAsync())
             else:
                 outs = net.forward(outNames)
-                predictionsQueue.put(np.copy(outs))
+                predictionsQueue.put(copy.deepcopy(outs))
 
         while futureOutputs and futureOutputs[0].wait_for(0):
             out = futureOutputs[0].get()
-            predictionsQueue.put(np.copy([out]))
+            predictionsQueue.put(copy.deepcopy([out]))
 
             del futureOutputs[0]
 

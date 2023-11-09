@@ -33,6 +33,7 @@ yolov4:
   height: 416
   rgb: true
   classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
   sample: "object_detection"
 
 yolov4-tiny:
@@ -47,6 +48,7 @@ yolov4-tiny:
   height: 416
   rgb: true
   classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
   sample: "object_detection"
 
 yolov3:
@@ -61,6 +63,7 @@ yolov3:
   height: 416
   rgb: true
   classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
   sample: "object_detection"
 
 tiny-yolo-voc:
@@ -75,12 +78,17 @@ tiny-yolo-voc:
   height: 416
   rgb: true
   classes: "object_detection_classes_pascal_voc.txt"
+  background_label_id: 0
   sample: "object_detection"
 
+# Model should be converted to ONNX:
+# from ultralytics import YOLO
+# model = YOLO("yolov8n.pt")
+# model.export(format="onnx")
 yolov8:
   load_info:
-    url: "https://github.com/JasonLin1110/ultralytics_yolov8_onnx_model/blob/main/yolov8net.onnx"
-    sha1: "67144099b4d8c40fa2d1f8cd17b2a6c6bb81ce90"
+    url: "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt"
+    sha1: "1a83d84eb96ad089c257b7c1ad6303695fd82f41"
   model: "yolov8net.onnx"
   mean: [0, 0, 0]
   scale: 0.00392
@@ -88,7 +96,7 @@ yolov8:
   height: 640
   rgb: true
   postprocessing: "yolov8"
-  classes: "object_detection_classes_yolov4.txt"
+  classes: "object_detection_classes_yolo.txt"
   sample: "object_detection"
 
 # Caffe implementation of SSD model from https://github.com/chuanqi305/MobileNet-SSD
