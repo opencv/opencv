@@ -15,8 +15,8 @@ float focal_length = 525;
 float cx = W / 2.f + 0.5f;
 float cy = H / 2.f + 0.5f;
 
-Mat K = (Mat_<double>(3, 3) << focal_length, 0, cx, 0, focal_length, cy, 0, 0, 1);
-Mat Kinv = K.inv();
+static Mat K() { static Mat res = (Mat_<double>(3, 3) << focal_length, 0, cx, 0, focal_length, cy, 0, 0, 1); return res; }
+static Mat Kinv() { static Mat res = K().inv(); return res; }
 
 void points3dToDepth16U(const Mat_<Vec4f>& points3d, Mat& depthMap);
 
@@ -31,7 +31,7 @@ void points3dToDepth16U(const Mat_<Vec4f>& points3d, Mat& depthMap)
     depthMap = Mat::zeros(H, W, CV_32F);
     Vec3f R(0.0, 0.0, 0.0);
     Vec3f T(0.0, 0.0, 0.0);
-    cv::projectPoints(points3dvec, R, T, K, Mat(), img_points);
+    cv::projectPoints(points3dvec, R, T, K(), Mat(), img_points);
 
     float maxv = 0.f;
     int index = 0;
@@ -119,7 +119,7 @@ void gen_points_3d(std::vector<Plane>& planes_out, Mat_<unsigned char> &plane_ma
             double maxz = 0.0;
             for (auto p : corners)
             {
-                Vec3d v = px.pixelIntersection(p.x, p.y, Kinv);
+                Vec3d v = px.pixelIntersection(p.x, p.y, Kinv());
                 minz = std::min(minz, v[2]);
                 maxz = std::max(maxz, v[2]);
             }
@@ -147,7 +147,7 @@ void gen_points_3d(std::vector<Plane>& planes_out, Mat_<unsigned char> &plane_ma
         {
             unsigned int plane_index = (unsigned int)((u / float(W)) * planes.size());
             Plane plane = planes[plane_index];
-            Vec3f pt = Vec3f(plane.pixelIntersection((double)u, (double)v, Kinv) * scale);
+            Vec3f pt = Vec3f(plane.pixelIntersection((double)u, (double)v, Kinv()) * scale);
             outp(v, u) = {pt[0], pt[1], pt[2], 0};
             outn(v, u) = {(float)plane.nd[0], (float)plane.nd[1], (float)plane.nd[2], 0};
             plane_mask(v, u) = (uchar)plane_index;
@@ -184,7 +184,7 @@ protected:
         idx = std::get<1>(p);
 
         float diffThreshold = scale ? 100000.f : 50.f;
-        normalsComputer = RgbdNormals::create(H, W, depth, K, 5, diffThreshold, alg);
+        normalsComputer = RgbdNormals::create(H, W, depth, K(), 5, diffThreshold, alg);
         normalsComputer->cache();
     }
 
@@ -667,7 +667,7 @@ TEST_P(RgbdPlaneGenerate, compute)
     {
         // First, get the normals
         int depth = CV_32F;
-        Ptr<RgbdNormals> normalsComputer = RgbdNormals::create(H, W, depth, K, 5, 50.f, RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+        Ptr<RgbdNormals> normalsComputer = RgbdNormals::create(H, W, depth, K(), 5, 50.f, RgbdNormals::RGBD_NORMALS_METHOD_FALS);
         normalsComputer->apply(points3d, normals);
     }
 
