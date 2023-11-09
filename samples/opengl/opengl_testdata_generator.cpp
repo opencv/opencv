@@ -39,21 +39,27 @@ void draw(void* userdata)
     ogl::render(data->arr, data->indices, ogl::TRIANGLES);
 }
 
-//TODO: CommandLineParser
-// This app is used to generate test data for triangleRasterize() function
-
 int main(int argc, char* argv[])
 {
-    int win_width = 700;
-    int win_height = 700;
+    cv::CommandLineParser parser(argc, argv,
+            "{ help h usage ? |      | show this message }"
+            "{ width          | 700  | resulting image width }"
+            "{ height         | 700  | resulting image height }"
+            
+    );
+    parser.about("This app is used to generate test data for triangleRasterize() function");
 
-    if (argc != 4)
+    if (parser.has("help"))
     {
-        std::cout << "Wrong input for the demo. please input again" << std::endl;
+        parser.printMessage();
         return 0;
     }
-    std::string testMode = argv[1];
-    win_width = std::atoi(argv[2]), win_height = std::atoi(argv[3]);
+
+    parser.get<string>("colorFname");
+    parser.get<string>("depthFname");
+    parser.get<string>("clip");
+    int win_width  = parser.get<int>("width");
+    int win_height = parser.get<int>("height");
 
     namedWindow("OpenGL", WINDOW_OPENGL);
     resizeWindow("OpenGL", win_width, win_height);
@@ -65,39 +71,56 @@ int main(int argc, char* argv[])
     std::string fname;
     if (clipping)
     {
-        vertex << Vec3f(2.0, 0, -2.0), Vec3f(0, -6, -2), Vec3f(-2, 0, -2),
-                Vec3f(3.5, -1, -5),  Vec3f(2.5, -2.5, -5), Vec3f(-1, 1, -5),
-                Vec3f(-6.5, -1, -3), Vec3f(-2.5, -2, -3), Vec3f(1, 1, -5);
-        colors << Vec4f(0.725f, 0.933f, 0.851f, 1.0f), Vec4f(0.725f, 0.933f, 0.851f, 1.0f), Vec4f(0.725f, 0.933f, 0.851f, 1.0f),
-        Vec4f(0.933f, 0.851f, 0.725f, 1.0f), Vec4f(0.933f, 0.851f, 0.725f, 1.0f), Vec4f(0.933f, 0.851f, 0.725f, 1.0f),
-        Vec4f(0.933f, 0.039f, 0.588f, 1.0f), Vec4f(0.933f, 0.039f, 0.588f, 1.0f), Vec4f(0.933f, 0.039f, 0.588f, 1.0f);
+        vertex = {
+            { 2.0,  0.0, -2.0}, { 0.0  -6.0, -2.0}, {-2.0,  0.0, -2.0},
+            { 3.5, -1.0, -5.0}, { 2.5, -2.5, -5.0}, {-1.0,  1.0, -5.0},
+            {-6.5, -1.0, -3.0}, {-2.5, -2.0, -3.0}, { 1.0,  1.0, -5.0},
+        };
+        Vec4f col1(0.725f, 0.933f, 0.851f, 1.0f);
+        Vec4f col2(0.933f, 0.851f, 0.725f, 1.0f);
+        Vec4f col3(0.933f, 0.039f, 0.588f, 1.0f);
+        colors = {
+            col1, col1, col1,
+            col2, col2, col2,
+            col3, col3, col3,
+        };
+        indices = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 
-        indices << 0, 1, 2, 3, 4, 5, 6, 7, 8;
         fovy = 45.0;
         fname = "example_image_clipping.png";
     }
     else if (color)
     {
-        vertex << Vec3f(2.0, 0, -2.0), Vec3f(0, 2, -3),
-                Vec3f(-2, 0, -2), Vec3f(0, -2, 1.0);
-        colors << Vec3f(1.0f, 0.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f), Vec3f(0.0f, 0.0f, 1.0f), Vec3f(0.0f, 1.0f, 0.0f);
-
-        indices << 0, 1, 2, 0, 2, 3;
+        vertex = {
+            { 2.0,  0.0, -2.0},
+            { 0.0,  2.0, -3.0},
+            {-2.0,  0.0, -2.0},
+            { 0.0, -2.0,  1.0},
+        };
+        colors = {
+            {1.0f, 0.0f, 0.0f},
+            {0.0f, 1.0f, 0.0f},
+            {0.0f, 0.0f, 1.0f},
+            {0.0f, 1.0f, 0.0f},
+        };
+        indices = {0, 1, 2, 0, 2, 3};
 
         fovy = 60.0;
         fname = "example_image_color.png";
     }
     else if (depth)
     {
-        vertex << Vec3f(2.0, 0, -2.0), Vec3f(0, -2, -2),
-                  Vec3f(-2, 0, -2), Vec3f(3.5, -1, -5),
-                  Vec3f(2.5, -1.5, -5), Vec3f(-1, 0.5, -5);
-
-        indices << 0, 1, 2, 3, 4, 5;
-
-        colors << Vec4f(0.851f, 0.933f, 0.725f, 1.0f), Vec4f(0.851f, 0.933f, 0.725f, 1.0f),
-                  Vec4f(0.851f, 0.933f, 0.725f, 1.0f), Vec4f(0.725f, 0.851f, 0.933f, 1.0f),
-                  Vec4f(0.725f, 0.851f, 0.933f, 1.0f), Vec4f(0.725f, 0.851f, 0.933f, 1.0f);
+        vertex = {
+            { 2.0,  0.0, -2.0}, { 0.0, -2.0, -2.0}, {-2.0,  0.0, -2.0},
+            { 3.5, -1.0, -5.0}, { 2.5, -1.5, -5.0}, {-1.0,  0.5, -5.0},
+        };
+        Vec4f col1(0.851f, 0.933f, 0.725f, 1.0f);
+        Vec4f col2(0.725f, 0.851f, 0.933f, 1.0f);
+        colors = {
+            col1, col1, col1,
+            col2, col2, col2
+        };
+        indices = { 0, 1, 2, 3, 4, 5 };
 
         fovy = 45.0;
         fname = "example_image_depth.png";
@@ -132,12 +155,11 @@ int main(int argc, char* argv[])
     {
         updateWindow("OpenGL");
 
-        std::vector<uint8_t> pixels(win_width * win_height * 3);
-        glReadPixels(0, 0, win_width, win_height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-        cv::Mat image(win_height, win_width, CV_8UC3, pixels.data());
-        cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
-        cv::flip(image, image, 0);
-        cv::imwrite(fname, image);
+        cv::Mat colorData(win_height, win_width, CV_8UC3, Scalar());
+        glReadPixels(0, 0, win_width, win_height, GL_RGB, GL_UNSIGNED_BYTE, colorData.data());
+        cv::cvtColor(colorData, colorData, cv::COLOR_RGB2BGR);
+        cv::flip(colorData, colorData, 0);
+        cv::imwrite(colorFname, colorData);
 
         if(depth)
         {
