@@ -729,6 +729,88 @@ struct InRangeOp : public BaseArithmOp
     }
 };
 
+namespace reference {
+
+template<typename _Tp>
+struct SoftType;
+
+template<>
+struct SoftType<float>
+{
+    typedef softfloat type;
+};
+
+template<>
+struct SoftType<double>
+{
+    typedef softdouble type;
+};
+
+
+template <typename _Tp>
+static void finiteMask_(const _Tp *src, uchar *dst, size_t total, int cn)
+{
+    for(size_t i = 0; i < total; i++ )
+    {
+        bool good = true;
+        for (int c = 0; c < cn; c++)
+        {
+            _Tp val = src[i * cn + c];
+            typename SoftType<_Tp>::type sval(val);
+
+            good = good && !sval.isNaN() && !sval.isInf();
+        }
+        dst[i] = good ? 255 : 0;
+    }
+}
+
+static void finiteMask(const Mat& src, Mat& dst)
+{
+    dst.create(src.dims, &src.size[0], CV_8UC1);
+
+    const Mat *arrays[]={&src, &dst, 0};
+    Mat planes[2];
+    NAryMatIterator it(arrays, planes);
+    size_t total = planes[0].total();
+    size_t i, nplanes = it.nplanes;
+    int depth = src.depth(), cn = src.channels();
+
+    for( i = 0; i < nplanes; i++, ++it )
+    {
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
+
+        switch( depth )
+        {
+        case CV_32F: finiteMask_<float >((const  float*)sptr, dptr, total, cn); break;
+        case CV_64F: finiteMask_<double>((const double*)sptr, dptr, total, cn); break;
+        }
+    }
+}
+}
+
+
+struct FiniteMaskOp : public BaseElemWiseOp
+{
+    FiniteMaskOp() : BaseElemWiseOp(1, 0, 1, 1, Scalar::all(0)) {}
+    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        cv::finiteMask(src[0], dst);
+    }
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        reference::finiteMask(src[0], dst);
+    }
+    int getRandomType(RNG& rng)
+    {
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, 4);
+    }
+    double getMaxErr(int)
+    {
+        return 0;
+    }
+};
+
 
 struct ConvertScaleOp : public BaseElemWiseOp
 {
@@ -1572,6 +1654,8 @@ INSTANTIATE_TEST_CASE_P(Core_CmpS, ElemWiseTest, ::testing::Values(ElemWiseOpPtr
 
 INSTANTIATE_TEST_CASE_P(Core_InRangeS, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new InRangeSOp)));
 INSTANTIATE_TEST_CASE_P(Core_InRange, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new InRangeOp)));
+
+INSTANTIATE_TEST_CASE_P(Core_FiniteMask, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new FiniteMaskOp)));
 
 INSTANTIATE_TEST_CASE_P(Core_Flip, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new FlipOp)));
 INSTANTIATE_TEST_CASE_P(Core_Transpose, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new TransposeOp)));
@@ -2875,5 +2959,77 @@ TEST(Core_CartPolar, inplace)
     EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
     EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
 }
+
+
+// Check different values for finiteMask()
+
+template<typename _Tp>
+_Tp randomNan(RNG& rng);
+
+template<>
+float randomNan(RNG& rng)
+{
+    uint32_t r = rng.next();
+    Cv32suf v;
+    v.u = r;
+    // exp & set a bit to avoid zero mantissa
+    v.u = v.u | 0x7f800001;
+    return v.f;
+}
+
+template<>
+double randomNan(RNG& rng)
+{
+    uint32_t r0 = rng.next();
+    uint32_t r1 = rng.next();
+    Cv64suf v;
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // exp &set a bit to avoid zero mantissa
+    v.u = v.u | 0x7ff0000000000001;
+    return v.f;
+}
+
+template<typename T>
+Mat generateFiniteMaskData(int cn, RNG& rng)
+{
+    typedef typename reference::SoftType<T>::type SFT;
+
+    SFT pinf = SFT::inf();
+    SFT ninf = SFT::inf().setSign(true);
+
+    const int len = 100;
+    Mat_<T> plainData(1, cn*len);
+    for(int i = 0; i < cn*len; i++)
+    {
+        int r = rng.uniform(0, 3);
+        plainData(i) = r == 0 ? T(rng.uniform(0, 2) ? pinf : ninf) :
+                       r == 1 ? randomNan<T>(rng) : T(0);
+    }
+
+    return Mat(plainData).reshape(cn);
+}
+
+typedef std::tuple<int, int> FiniteMaskFixtureParams;
+class FiniteMaskFixture : public ::testing::TestWithParam<FiniteMaskFixtureParams> {};
+
+TEST_P(FiniteMaskFixture, flags)
+{
+    auto p = GetParam();
+    int depth = get<0>(p);
+    int channels = get<1>(p);
+
+    RNG rng((uint64)ARITHM_RNG_SEED);
+    Mat data = (depth == CV_32F) ? generateFiniteMaskData<float >(channels, rng)
+                  /* CV_64F */   : generateFiniteMaskData<double>(channels, rng);
+
+    Mat nans, gtNans;
+    cv::finiteMask(data, nans);
+    reference::finiteMask(data, gtNans);
+
+    EXPECT_MAT_NEAR(nans, gtNans, 0);
+}
+
+// Params are: depth, channels 1 to 4
+INSTANTIATE_TEST_CASE_P(Core_FiniteMask, FiniteMaskFixture, ::testing::Combine(::testing::Values(CV_32F, CV_64F), ::testing::Range(1, 5)));
 
 }} // namespace

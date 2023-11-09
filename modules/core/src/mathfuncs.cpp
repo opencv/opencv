@@ -1574,75 +1574,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
     return true;
 }
 
-#ifdef HAVE_OPENCL
-
-static bool ocl_patchNaNs( InputOutputArray _a, float value )
-{
-    int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
-    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D DEPTH_dst=%d -D rowsPerWI=%d",
-                            CV_32F, rowsPerWI));
-    if (k.empty())
-        return false;
-
-    UMat a = _a.getUMat();
-    int cn = a.channels();
-
-    k.args(ocl::KernelArg::ReadOnlyNoSize(a),
-           ocl::KernelArg::WriteOnly(a, cn), (float)value);
-
-    size_t globalsize[2] = { (size_t)a.cols * cn, ((size_t)a.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
-}
-
-#endif
-
-void patchNaNs( InputOutputArray _a, double _val )
-{
-    CV_INSTRUMENT_REGION();
-
-    CV_Assert( _a.depth() == CV_32F );
-
-    CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
-               ocl_patchNaNs(_a, (float)_val))
-
-    Mat a = _a.getMat();
-    const Mat* arrays[] = {&a, 0};
-    int* ptrs[1] = {};
-    NAryMatIterator it(arrays, (uchar**)ptrs);
-    size_t len = it.size*a.channels();
-    Cv32suf val;
-    val.f = (float)_val;
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    v_int32 v_mask1 = vx_setall_s32(0x7fffffff), v_mask2 = vx_setall_s32(0x7f800000);
-    v_int32 v_val = vx_setall_s32(val.i);
-#endif
-
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
-    {
-        int* tptr = ptrs[0];
-        size_t j = 0;
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        size_t cWidth = (size_t)VTraits<v_int32>::vlanes();
-        for ( ; j + cWidth <= len; j += cWidth)
-        {
-            v_int32 v_src = vx_load(tptr + j);
-            v_int32 v_cmp_mask = v_lt(v_mask2, v_and(v_src, v_mask1));
-            v_int32 v_dst = v_select(v_cmp_mask, v_val, v_src);
-            v_store(tptr + j, v_dst);
-        }
-        vx_cleanup();
-#endif
-
-        for( ; j < len; j++ )
-            if( (tptr[j] & 0x7fffffff) > 0x7f800000 )
-                tptr[j] = val.i;
-    }
-}
-
-}
+} // namespace cv
 
 
 #ifndef OPENCV_EXCLUDE_C_API

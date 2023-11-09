@@ -102,16 +102,8 @@ static void extendPyrMaskByPyrNormals(const std::vector<UMat>& pyramidNormals,  
             UMat maski = pyramidMask[i];
             UMat normali = pyramidNormals[i];
             UMat validNormalMask;
-            // NaN check
-            cv::compare(normali, normali, validNormalMask, CMP_EQ);
-            CV_Assert(validNormalMask.type() == CV_8UC4);
-
-            std::vector<UMat> channelMasks;
-            split(validNormalMask, channelMasks);
-            UMat tmpChMask;
-            cv::bitwise_and(channelMasks[0], channelMasks[1], tmpChMask);
-            cv::bitwise_and(channelMasks[2], tmpChMask, tmpChMask);
-            cv::bitwise_and(maski, tmpChMask, maski);
+            finiteMask(normali, validNormalMask);
+            cv::bitwise_and(maski, validNormalMask, maski);
         }
     }
 }
@@ -727,7 +719,7 @@ void computeCorresps(const Matx33f& _K, const Mat& rt,
         {
             float ddst = depthDst_row[udst];
 
-            if (maskDst_row[udst] && !cvIsNaN(ddst))
+            if (maskDst_row[udst])
             {
                 float transformed_ddst = static_cast<float>(ddst * (KRK_inv6_u1[udst] + KRK_inv7_v1_plus_KRK_inv8[vdst]) + ktinv.z);
 

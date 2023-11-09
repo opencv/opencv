@@ -41,6 +41,7 @@
 
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
+#include "opencv2/core/softfloat.hpp"
 
 #ifdef HAVE_OPENCL
 
@@ -1038,14 +1039,40 @@ OCL_PERF_TEST_P(ConvertScaleAbsFixture, ConvertScaleAbs,
 
 ///////////// PatchNaNs ////////////////////////
 
+template<typename _Tp>
+_Tp randomNan(RNG& rng);
+
+template<>
+float randomNan(RNG& rng)
+{
+    uint32_t r = rng.next();
+    Cv32suf v;
+    v.u = r;
+    // exp & set a bit to avoid zero mantissa
+    v.u = v.u | 0x7f800001;
+    return v.f;
+}
+
+template<>
+double randomNan(RNG& rng)
+{
+    uint32_t r0 = rng.next();
+    uint32_t r1 = rng.next();
+    Cv64suf v;
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // exp &set a bit to avoid zero mantissa
+    v.u = v.u | 0x7ff0000000000001;
+    return v.f;
+}
+
 typedef Size_MatType PatchNaNsFixture;
 
 OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
-                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC3, CV_64FC4)))
 {
     const Size_MatType_t params = GetParam();
     Size srcSize = get<0>(params);
-    const int type = get<1>(params), cn = CV_MAT_CN(type);
+    const int type = get<1>(params), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -1056,11 +1083,22 @@ OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
     {
         Mat src_ = src.getMat(ACCESS_RW);
         srcSize.width *= cn;
+        RNG& rng = theRNG();
         for (int y = 0; y < srcSize.height; ++y)
         {
-            float * const ptr = src_.ptr<float>(y);
+            float  *const ptrf = src_.ptr<float>(y);
+            double *const ptrd = src_.ptr<double>(y);
             for (int x = 0; x < srcSize.width; ++x)
-                ptr[x] = (x + y) % 2 == 0 ? std::numeric_limits<float>::quiet_NaN() : ptr[x];
+            {
+                if (depth == CV_32F)
+                {
+                    ptrf[x] = (x + y) % 2 == 0 ? randomNan<float >(rng) : ptrf[x];
+                }
+                else if (depth == CV_64F)
+                {
+                    ptrd[x] = (x + y) % 2 == 0 ? randomNan<double>(rng) : ptrd[x];
+                }
+            }
         }
     }
 
@@ -1069,6 +1107,57 @@ OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
     SANITY_CHECK(src);
 }
 
+////////////// finiteMask ////////////////////////
+
+typedef Size_MatType FiniteMaskFixture;
+
+OCL_PERF_TEST_P(FiniteMaskFixture, FiniteMask,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC3, CV_64FC4)))
+{
+    const Size_MatType_t params = GetParam();
+    Size srcSize = get<0>(params);
+    const int type = get<1>(params), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type);
+    UMat mask(srcSize, CV_8UC1);
+    declare.in(src, WARMUP_RNG).out(mask);
+
+    // generating NaNs
+    {
+        Mat src_ = src.getMat(ACCESS_RW);
+        srcSize.width *= cn;
+        const softfloat  fpinf = softfloat ::inf();
+        const softfloat  fninf = softfloat ::inf().setSign(true);
+        const softdouble dpinf = softdouble::inf();
+        const softdouble dninf = softdouble::inf().setSign(true);
+        RNG& rng = theRNG();
+        for (int y = 0; y < srcSize.height; ++y)
+        {
+            float  *const ptrf = src_.ptr<float>(y);
+            double *const ptrd = src_.ptr<double>(y);
+            for (int x = 0; x < srcSize.width; ++x)
+            {
+                int rem = (x + y) % 10;
+                if (depth == CV_32F)
+                {
+                    ptrf[x] = rem <  4 ? randomNan<float >(rng) :
+                              rem == 5 ? (float )((x + y)%2 ? fpinf : fninf) : ptrf[x];
+                }
+                else if (depth == CV_64F)
+                {
+                    ptrd[x] = rem <  4 ? randomNan<double>(rng) :
+                              rem == 5 ? (double)((x + y)%2 ? dpinf : dninf) : ptrd[x];
+                }
+            }
+        }
+    }
+
+    OCL_TEST_CYCLE() cv::finiteMask(src, mask);
+
+    SANITY_CHECK(mask);
+}
 
 ///////////// ScaleAdd ////////////////////////
 
