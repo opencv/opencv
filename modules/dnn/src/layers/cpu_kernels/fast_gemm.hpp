@@ -22,12 +22,14 @@ struct FastGemmOpt {
     bool use_avx2;
     bool use_neon;
     bool use_lasx;
+    bool multi_thread;
 
     FastGemmOpt() {
         use_avx = false;
         use_avx2 = false;
         use_neon = false;
         use_lasx = false;
+        multi_thread = false;
     }
 
     void init() {
@@ -35,6 +37,7 @@ struct FastGemmOpt {
         use_avx2 = checkHardwareSupport(CPU_AVX2);
         use_neon = checkHardwareSupport(CPU_NEON);
         use_lasx = checkHardwareSupport(CPU_LASX);
+        multi_thread = true;
     }
 
     bool all() {

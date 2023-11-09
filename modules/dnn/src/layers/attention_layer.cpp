@@ -101,20 +101,65 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
         const auto &input = inputs[0];
+        const auto &bias = inputs[2];
         auto &output = outputs[0];
 
         if (!is_prepacked) {
             // prepack
             const auto &weight = inputs[1];
             const auto *weight_data = weight.ptr<const float>();
-            packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data, hidden_size, packed_q, opt);
-            packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0], hidden_size, packed_k, opt);
-            packWeight(num_heads, qkv_head_sizes[2], input_hidden_size, weight_data + qkv_hidden_sizes[0] + qkv_hidden_sizes[1], hidden_size, packed_v, opt);
+            packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data, hidden_size, packed_weight_q, opt);
+            packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0], hidden_size, packed_weight_k, opt);
+            packWeight(num_heads, qkv_head_sizes[2], input_hidden_size, weight_data + qkv_hidden_sizes[0] + qkv_hidden_sizes[1], hidden_size, packed_weight_v, opt);
 
             is_prepacked = true;
         }
 
-        input.copyTo(output);
+        float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
+        size_t packed_weights_size[3] = {packed_weight_q.size(), packed_weight_k.size(), packed_weight_v.size()};
+
+        const auto *input_data = input.ptr<const float>();
+        const auto *bias_data = bias.ptr<const float>();
+
+        auto *output_data = output.ptr<float>();
+        float *qkv[3] = {output_data,
+                         output_data + batch_size * seq_len * qkv_hidden_sizes[0],
+                         output_data + batch_size * seq_len * (qkv_hidden_sizes[0] + qkv_hidden_sizes[1])};
+
+        auto fn = [&](const Range &r) {
+            for (int i = r.start; i < r.end; i++) {
+                const int batch_index = static_cast<int>((i / 3) / num_heads);
+                const int head_index = static_cast<int>((i / 3) % num_heads);
+                const int qkv_index = static_cast<int>(i % 3);
+
+                auto *dst = qkv[qkv_index];
+                size_t head_size = qkv_head_sizes[qkv_index];
+
+                int input_offset = batch_index * seq_len * input_hidden_size;
+                int bias_offset = qkv_index * qkv_hidden_sizes[0] + head_index * head_size;
+                int dst_offset = (batch_index * num_heads + head_index) * (seq_len * head_size);
+
+                // broadcast bias ([NH] -> [BN, SH]) and make copy to dst
+                const auto *bias_data_src = bias_data + bias_offset;
+                auto *dst_data = dst + dst_offset;
+                for (size_t seq_len_idx = 0; seq_len_idx < seq_len; seq_len_idx++) {
+                    std::memcpy(dst_data, bias_data_src, head_size * sizeof(float));
+                    dst_data += head_size; // incorrect?
+                }
+
+                auto *packed_weight = packed_weights[qkv_index] + packed_weights_size[qkv_index] * head_index;
+                // single-thread gemm kernel
+                fastGemm(false, seq_len, head_size, input_hidden_size,
+                         1.f, input_data + input_offset, input_hidden_size,
+                         packed_weight, 1.f, dst + dst_offset, head_size, opt);
+            }
+        };
+
+        size_t loops = 3 * batch_size * num_heads;
+        double nstripes = loops * seq_len * qkv_head_sizes[0] * input_hidden_size * (1 / 1024.0);
+        parallel_for_(Range(0, loops), fn, nstripes);
+
+        // input.copyTo(output);
     }
 
  private:
@@ -130,9 +175,9 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     size_t hidden_size;
 
     bool is_prepacked;
-    std::vector<float> packed_q;
-    std::vector<float> packed_k;
-    std::vector<float> packed_v;
+    std::vector<float> packed_weight_q;
+    std::vector<float> packed_weight_k;
+    std::vector<float> packed_weight_v;
 
     FastGemmOpt opt;
 };

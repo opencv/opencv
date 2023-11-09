@@ -187,6 +187,10 @@ void fastGemm(bool trans_a, int M, int N, int K,
               float alpha, const float *A, int lda,
               const float *packed_B, float beta,
               float *C, int ldc, FastGemmOpt &opt) {
+    const char *a = (const char *)A;
+    const char *packed_b = (const char *)packed_B;
+    char *c = (char *)C;
+
     int lda0 = lda, lda1 = 1;
     if (trans_a) {
         std::swap(lda0, lda1);
@@ -194,26 +198,26 @@ void fastGemm(bool trans_a, int M, int N, int K,
 
 #if CV_TRY_NEON
     if (opt.use_neon) {
-        opt_NEON::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        opt_NEON::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
-        opt_AVX2::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        opt_AVX2::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_AVX
     if (opt.use_avx) {
-        opt_AVX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        opt_AVX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_LASX
     if (opt.use_lasx) {
-        opt_LASX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        opt_LASX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
     {
-        cpu_baseline::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        cpu_baseline::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
     }
 }
 
@@ -241,31 +245,36 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
 
 #if CV_TRY_NEON
     if (opt.use_neon) {
-        opt_NEON::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
-                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+        opt_NEON::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                 b, ldb0, ldb1, beta,
+                                 c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
-        opt_AVX2::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
-                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+        opt_AVX2::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                 b, ldb0, ldb1, beta,
+                                 c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_AVX
     if (opt.use_avx) {
-        opt_AVX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
-                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+        opt_AVX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                 b, ldb0, ldb1, beta,
+                                 c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_LASX
     if (opt.use_lasx) {
-        opt_LASX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
-                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+        opt_LASX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                 b, ldb0, ldb1, beta,
+                                 c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
     {
-        cpu_baseline::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
-                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+        cpu_baseline::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                     b, ldb0, ldb1, beta,
+                                     c, ldc, sizeof(float), opt.multi_thread);
     }
 }
 
