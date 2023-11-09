@@ -34,117 +34,6 @@ static bool IsTransposeReshapeForEinsum(const std::vector<size_t>& perm,
     return true;
 }
 
-static Mat batchwiseMatMul(
-    const Mat& input1,
-    const MatShape& input1ShapeOverride,
-    const Mat& input2,
-    const MatShape& input2ShapeOverride)
-{
-    // hangle this properly in the einsum layer
-    FastGemmOpt opt;
-    opt.init();
-
-    // Sanity checks before the actual MatMul
-    CV_CheckType(input1.type(), input2.type(), "Data types of the inputs must match for MatMul");
-    CV_CheckEQ(input1ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
-    CV_CheckEQ(input2ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
-    CV_CheckEQ((size_t) input1ShapeOverride[0], (size_t) input2ShapeOverride[0], "Batch dimension should match for MatMul;");
-    CV_CheckEQ((size_t) input1ShapeOverride[2], (size_t) input2ShapeOverride[1], "Incompatible matrix dimensions for matMul");
-
-    size_t batches = input1ShapeOverride[0];
-    size_t M = input1ShapeOverride[1];
-    size_t K = input1ShapeOverride[2];
-    size_t N = input2ShapeOverride[2];
-
-    std::vector<Mat> output;
-    if (batches > 1)
-    {
-        Mat reshapedInput1 = input1;
-        Mat reshapedInput2 = input2;
-
-        // input1 should of size MxK
-        // check if input1 needs reshape, if need reshape
-        if (input1.size[0] != M || input1.size[1] != K)
-        {
-            int shape[] = {static_cast<int>(batches), static_cast<int>(M), static_cast<int>(K)};
-            reshapedInput1 = input1.reshape(1, 3, shape);
-        }
-
-        // input2 should be of size KxN
-        // check if input2 needs reshape, if needs reshape
-        if (input2.size[0] != K || input2.size[1] != N)
-        {
-            int shape[] = {static_cast<int>(batches), static_cast<int>(K), static_cast<int>(N)};
-            reshapedInput2 = input2.reshape(1, 3, shape);
-        }
-
-        for (size_t i=0; i < batches; i++)
-        {
-            std::vector<Range> ranges1 = {cv::Range(i, i+1)};
-            for (int j = 1; j < reshapedInput1.dims; j++)
-                ranges1.emplace_back(cv::Range::all());
-
-            Mat part1 = reshapedInput1(ranges1);
-            int shape[] = {static_cast<int>(M), static_cast<int>(K)};
-            part1 = part1.reshape(1, sizeof(shape)/sizeof(shape[0]), shape);
-
-            std::vector<Range> ranges2 = {cv::Range(i, i+1)};
-            for (int j = 1; j < reshapedInput2.dims; j++)
-                ranges2.emplace_back(cv::Range::all());
-
-            Mat part2 = reshapedInput2(ranges2);
-            int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
-            part2 = part2.reshape(1, sizeof(shape2)/sizeof(shape2[0]), shape2);
-
-            Mat tmp_output;
-            tmp_output.create(M, N, part1.type());
-            fastGemm(false, false, 1.0, part1, part2, 0.0, tmp_output, opt);
-            int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
-            tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
-
-            output.emplace_back(tmp_output);
-        }
-
-    } else {
-
-        Mat reshapedInput1 = input1;
-        Mat reshapedInput2 = input2;
-
-        // input1 should of size MxK
-        // check if input1 needs reshape, if need reshape
-        if (input1.dims > 2 || input1.size[0] != M || input1.size[1] != K)
-        {
-            int shape[] = {static_cast<int>(M), static_cast<int>(K)};
-            reshapedInput1 = input1.reshape(1, 2, shape);
-        }
-
-        // input2 should be of size KxN
-        // check if input2 needs reshape, if needs reshape
-        if (input2.dims > 2 || input2.size[0] != K || input2.size[1] != N)
-        {
-            int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
-            reshapedInput2 = input2.reshape(1, 2, shape2);
-        }
-
-        Mat tmp_output;
-        tmp_output.create(M, N, reshapedInput1.type());
-        fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, tmp_output, opt);
-
-        int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
-        tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
-        output.emplace_back(tmp_output);
-
-    }
-
-    int outputDim[] = {static_cast<int>(output.size()), static_cast<int>(M), static_cast<int>(N)};
-    Mat output_buffer = Mat::zeros(3, outputDim, CV_32F);
-
-    for (size_t i = 0; i < output.size(); i++) {
-        Mat output_slice = output_buffer.row(i);
-        output[i].copyTo(output_slice);
-    }
-    return output_buffer;
-};
 
 static Mat Transpose(
     const Mat& input,
@@ -460,6 +349,8 @@ public:
     // The number of dimensions that are encompassed by an "ellipsis" - "...".
     size_t numOfEllipsisDims = 0;
 
+    // Backend for fastgemm
+    FastGemmOpt opt;
 
     void parseEquation(String equation);
     void processEquation(const std::vector<MatShape>& inputs);
@@ -477,7 +368,12 @@ public:
         const MatShape& reduceDims,
         bool isFinalPair
     );
-
+    Mat batchwiseMatMul(
+        const Mat& input1,
+        const MatShape& input1ShapeOverride,
+        const Mat& input2,
+        const MatShape& input2ShapeOverride
+    );
 
     // constructor
     LayerEinsumImpl(const LayerParams& params)
@@ -499,6 +395,7 @@ public:
             einsumInpShapes.emplace_back(shape);
         }
 
+        opt.init();
 
         // Maintains a mapping between input indices and their corresponding subscript labels for each input
         inputSubscriptIndices.reserve(numInputs);
@@ -1397,6 +1294,114 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     return output;
 };
 
+Mat LayerEinsumImpl::batchwiseMatMul(
+    const Mat& input1,
+    const MatShape& input1ShapeOverride,
+    const Mat& input2,
+    const MatShape& input2ShapeOverride)
+{
+
+    // Sanity checks before the actual MatMul
+    CV_CheckType(input1.type(), input2.type(), "Data types of the inputs must match for MatMul");
+    CV_CheckEQ(input1ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
+    CV_CheckEQ(input2ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
+    CV_CheckEQ((size_t) input1ShapeOverride[0], (size_t) input2ShapeOverride[0], "Batch dimension should match for MatMul;");
+    CV_CheckEQ((size_t) input1ShapeOverride[2], (size_t) input2ShapeOverride[1], "Incompatible matrix dimensions for matMul");
+
+    size_t batches = input1ShapeOverride[0];
+    size_t M = input1ShapeOverride[1];
+    size_t K = input1ShapeOverride[2];
+    size_t N = input2ShapeOverride[2];
+
+    std::vector<Mat> output;
+    if (batches > 1)
+    {
+        Mat reshapedInput1 = input1;
+        Mat reshapedInput2 = input2;
+
+        // input1 should of size MxK
+        // check if input1 needs reshape, if need reshape
+        if (input1.size[0] != M || input1.size[1] != K)
+        {
+            int shape[] = {static_cast<int>(batches), static_cast<int>(M), static_cast<int>(K)};
+            reshapedInput1 = input1.reshape(1, 3, shape);
+        }
+
+        // input2 should be of size KxN
+        // check if input2 needs reshape, if needs reshape
+        if (input2.size[0] != K || input2.size[1] != N)
+        {
+            int shape[] = {static_cast<int>(batches), static_cast<int>(K), static_cast<int>(N)};
+            reshapedInput2 = input2.reshape(1, 3, shape);
+        }
+
+        for (size_t i=0; i < batches; i++)
+        {
+            std::vector<Range> ranges1 = {cv::Range(i, i+1)};
+            for (int j = 1; j < reshapedInput1.dims; j++)
+                ranges1.emplace_back(cv::Range::all());
+
+            Mat part1 = reshapedInput1(ranges1);
+            int shape[] = {static_cast<int>(M), static_cast<int>(K)};
+            part1 = part1.reshape(1, sizeof(shape)/sizeof(shape[0]), shape);
+
+            std::vector<Range> ranges2 = {cv::Range(i, i+1)};
+            for (int j = 1; j < reshapedInput2.dims; j++)
+                ranges2.emplace_back(cv::Range::all());
+
+            Mat part2 = reshapedInput2(ranges2);
+            int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
+            part2 = part2.reshape(1, sizeof(shape2)/sizeof(shape2[0]), shape2);
+
+            Mat tmp_output;
+            tmp_output.create(M, N, part1.type());
+            fastGemm(false, false, 1.0, part1, part2, 0.0, tmp_output, opt);
+            int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
+            tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
+
+            output.emplace_back(tmp_output);
+        }
+
+    } else {
+
+        Mat reshapedInput1 = input1;
+        Mat reshapedInput2 = input2;
+
+        // input1 should of size MxK
+        // check if input1 needs reshape, if need reshape
+        if (input1.dims > 2 || input1.size[0] != M || input1.size[1] != K)
+        {
+            int shape[] = {static_cast<int>(M), static_cast<int>(K)};
+            reshapedInput1 = input1.reshape(1, 2, shape);
+        }
+
+        // input2 should be of size KxN
+        // check if input2 needs reshape, if needs reshape
+        if (input2.dims > 2 || input2.size[0] != K || input2.size[1] != N)
+        {
+            int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
+            reshapedInput2 = input2.reshape(1, 2, shape2);
+        }
+
+        Mat tmp_output;
+        tmp_output.create(M, N, reshapedInput1.type());
+        fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, tmp_output, opt);
+
+        int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
+        tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
+        output.emplace_back(tmp_output);
+
+    }
+
+    int outputDim[] = {static_cast<int>(output.size()), static_cast<int>(M), static_cast<int>(N)};
+    Mat output_buffer = Mat::zeros(3, outputDim, CV_32F);
+
+    for (size_t i = 0; i < output.size(); i++) {
+        Mat output_slice = output_buffer.row(i);
+        output[i].copyTo(output_slice);
+    }
+    return output_buffer;
+};
 Ptr<EinsumLayer> EinsumLayer::create(const LayerParams& params)
 {
     return makePtr<LayerEinsumImpl>(params);
