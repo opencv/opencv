@@ -13,12 +13,11 @@
 #ifdef HAVE_ONNX_DML
 #include "../providers/dml/dml_provider_factory.h"
 
-// FIXME It must be different #ifdef
-// E.g HAVE_DXCORE && HAVE_DIRECTX12 && HAVE_DIRECTML
-#ifdef HAVE_DXCORE
+#ifdef HAVE_DIRECTML
 
-// FIXME: Fix warning
+#undef WINVER
 #define WINVER 0x0A00
+#undef _WIN32_WINNT
 #define _WIN32_WINNT 0x0A00
 
 #include <initguid.h>
@@ -38,13 +37,14 @@
 #pragma comment (lib, "dxcore.lib")
 #pragma comment (lib, "directml.lib")
 
-#endif  // HAVE_DXCORE
+#endif  // HAVE_DIRECTML
 
 static void addDMLExecutionProviderWithAdapterName(Ort::SessionOptions *session_options,
                                                    const std::string &adapter_name);
 
 void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions *session_options,
                                               const cv::gapi::onnx::ep::DirectML &dml_ep) {
+    std::cout << "cv::gimpl::onnx::addDMLExecutionProvider" << std::endl;
     namespace ep = cv::gapi::onnx::ep;
     switch (dml_ep.ddesc.index()) {
         case ep::DirectML::DeviceDesc::index_of<int>(): {
@@ -69,11 +69,11 @@ void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions *session_optio
     }
 }
 
-#ifdef HAVE_DXCORE
+#ifdef HAVE_DIRECTML
 
-#define THROW_IF_FAILED(hr, error_msg)    \
-{                                         \
-    if ((hr) != S_OK)                     \
+#define THROW_IF_FAILED(hr, error_msg)       \
+{                                            \
+    if ((hr) != S_OK)                        \
         throw std::runtime_error(error_msg); \
 }
 
@@ -256,7 +256,7 @@ static void addDMLExecutionProviderWithAdapterName(Ort::SessionOptions *session_
     }
 }
 
-#else  // HAVE_DXCORE
+#else  // HAVE_DIRECTML
 
 static void addDMLExecutionProviderWithAdapterName(Ort::SessionOptions*, const std::string&) {
     std::stringstream ss;
@@ -265,7 +265,7 @@ static void addDMLExecutionProviderWithAdapterName(Ort::SessionOptions*, const s
     cv::util::throw_error(std::runtime_error(ss.str()));
 }
 
-#endif  // HAVE_DXCORE
+#endif  // HAVE_DIRECTML
 #else  // HAVE_ONNX_DML
 
 void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions*,

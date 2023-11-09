@@ -407,6 +407,9 @@ OCV_OPTION(WITH_OPENCLAMDBLAS "Include AMD OpenCL BLAS library support" ON
 OCV_OPTION(WITH_DIRECTX "Include DirectX support" ON
   VISIBLE_IF WIN32 AND NOT WINRT
   VERIFY HAVE_DIRECTX)
+OCV_OPTION(WITH_DIRECTML "Include DirectML support" ON
+  VISIBLE_IF WIN32 AND NOT WINRT
+  VERIFY HAVE_DIRECTML)
 OCV_OPTION(WITH_OPENCL_D3D11_NV "Include NVIDIA OpenCL D3D11 support" WITH_DIRECTX
   VISIBLE_IF WIN32 AND NOT WINRT
   VERIFY HAVE_OPENCL_D3D11_NV)
@@ -849,6 +852,10 @@ endif()
 # --- DirectX ---
 if(WITH_DIRECTX)
   include(cmake/OpenCVDetectDirectX.cmake)
+endif()
+# --- DirectML ---
+if(WITH_DIRECTML)
+  include(cmake/OpenCVDetectDirectML.cmake)
 endif()
 
 if(WITH_VTK)
