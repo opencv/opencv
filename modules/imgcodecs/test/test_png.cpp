@@ -7,17 +7,19 @@ namespace opencv_test { namespace {
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
 
-TEST(imRead, passing_Mat)
+TEST(Imgcodecs_Png, imread_passing_mat)
 {
-  Mat img = Mat::zeros(1000, 1000, CV_8UC3);
+  const string root = cvtest::TS::ptr()->get_data_path();
+  const string imgName = root + "../cv/shared/lena.png";
+  Mat img = Mat::zeros(1000, 1000, CV_8UC1);
   Mat subImg = img.rowRange(64, 576).colRange(128, 640);
-  imread(samples::findFile("/cv/shared/lena.png"), subImg);
-  Mat ori = imread(samples::findFile("/cv/shared/lena.png"));
+  imread(imgName, subImg, IMREAD_GRAYSCALE);
+  Mat ori = imread(imgName, IMREAD_GRAYSCALE);
   EXPECT_EQ(0, cv::norm(ori, subImg, NORM_INF));
-  EXPECT_EQ(0, cv::norm(sum(img.rowRange(0, 1000).colRange(0, 128))));
-  EXPECT_EQ(0, cv::norm(sum(img.rowRange(0, 1000).colRange(640, 1000))));
-  EXPECT_EQ(0, cv::norm(sum(img.rowRange(0, 64).colRange(128, 640))));
-  EXPECT_EQ(0, cv::norm(sum(img.rowRange(576, 1000).colRange(128, 640))));
+  EXPECT_EQ(0, countNonZero(img.rowRange(0, 1000).colRange(0, 128)));
+  EXPECT_EQ(0, countNonZero(img.rowRange(0, 1000).colRange(640, 1000)));
+  EXPECT_EQ(0, countNonZero(img.rowRange(0, 64).colRange(128, 640)));
+  EXPECT_EQ(0, countNonZero(img.rowRange(576, 1000).colRange(128, 640)));
 }
 
 TEST(Imgcodecs_Png, write_big)
@@ -64,7 +66,7 @@ TEST(Imgcodecs_Png, regression_ImreadVSCvtColor)
 }
 
 // Test OpenCV issue 3075 is solved
-TEST(Imgcodecs_Png, read_color_palette_with_alpha)
+TEST(, read_color_palette_with_alpha)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     Mat img;
