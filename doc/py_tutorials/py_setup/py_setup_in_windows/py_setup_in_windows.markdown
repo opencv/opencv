@@ -2,14 +2,15 @@ Install OpenCV-Python in Windows {#tutorial_py_setup_in_windows}
 ================================
 
 @tableofcontents
------------------
 
-1. *Installing OpenCV using pip Package Manager*
-2. *Installing OpenCV-Python from Pre-built Binaries*
-3. *Installing OpenCV using Anaconda*
-4. *Building OpenCV from source*
-5. *Additional Resources*
-6. *Exercises*
+Table of Contents
+
+1. Installing OpenCV using pip Package Manager
+2. Installing OpenCV-Python from Pre-built Binaries
+3. Installing OpenCV using Anaconda
+4. Building OpenCV from source
+5. Additional Resources
+6. Exercises
 
 Goals
 -----
@@ -24,9 +25,13 @@ Installing OpenCV using pip Package Manager
 ------------------------------------------------
 
 You can also install OpenCV using the Python's pip package manager. The steps to be followed are very simple as follows:
-1. Once you have installed python and pip(which comes along with python) Go to your Command Prompt(for Windows)
-2. Type `pip install opencv-python` and hit enter
-3. pip will automatically install all the necessary dependencies for OpenCV and you're good to go!
+-# Once you have installed python and pip(which comes along with python) Go to your Command Prompt(for Windows)
+-# Type
+   @code{.sh}
+   pip install opencv-python
+   @endcode
+   and hit enter
+-# pip will automatically install all the necessary dependencies for OpenCV and you're good to go!
 
 Installing OpenCV from prebuilt binaries
 ----------------------------------------
@@ -67,14 +72,15 @@ Installing OpenCV in Anaconda
 
 To install OpenCV in your Anaconda environment perform the following steps:
 
-1.  *Download and install anaconda environment Python from here : 
-     https://www.anaconda.com/download
-2.  *Open Anaconda Prompt*
+-#  Download and install anaconda environment Python from [here](https://www.anaconda.com/download)
+-#  Open Anaconda Prompt
 
-3.   *Use this command to install opencv in Anaconda*
-      `conda install -c conda-forge opencv`
-4.   *Press Enter*
-5.   *Press y when prompted and press ↵ Enter. This completes the installation.*
+-#   Use this command to install opencv in Anaconda
+      @code{.sh}
+      conda install -c conda-forge opencv
+      @endcode
+-#   Press Enter
+-#   Press 'y' when prompted and press Enter. This completes the installation.
 
 Building OpenCV from source
 ---------------------------
