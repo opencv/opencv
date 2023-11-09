@@ -34,13 +34,13 @@ Installing OpenCV using pip in Ubuntu
 These are the steps that will guide you in setting up OpenCV in your Ubuntu system: 
 
 -# Install Python on your system : 
-    ```
+    @code{.sh}
     sudo apt-get install python3
-    ```
+    @endcode
 -# Install pip : 
-    ```
+    @code{.sh}
     sudo apt-get install python3-pip
-    ```
+    @endcode
 -# Install OpenCV :
   @code{.sh}
     python3 -m pip install opencv-python
