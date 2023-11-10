@@ -256,9 +256,6 @@ if __name__ == "__main__":
                         help="Specify configuration file with own list of exported into JS functions")
     parser.add_argument('--webnn', action="store_true", help="Enable WebNN Backend")
 
-    parser.add_argument("-DCMAKE_TOOLCHAIN_FILE", default="", help="DCMAKE_TOOLCHAIN_FILE")
-    parser.add_argument("-DCMAKE_CROSSCOMPILING_EMULATOR",default="",help="DCMAKE_CROSSCOMPILING_EMULATOR")
-
     args = parser.parse_args()
 
     log.debug("Args: %s", args)
