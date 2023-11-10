@@ -6,6 +6,9 @@
 #include "layers_common.hpp"
 #include "cpu_kernels/fast_norm.hpp"
 
+// CANN backend
+#include "../op_cann.hpp"
+
 namespace cv { namespace dnn {
 
 class LayerNormLayerImpl CV_FINAL : public LayerNormLayer
@@ -90,6 +93,66 @@ public:
             fastNorm(input, scale, output, epsilon, static_cast<size_t>(axis));
         }
     }
+
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
+        auto input_tensor_wrapper = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto input_tensor_desc = input_tensor_wrapper->getTensorDesc();
+
+        auto scale_tensor_wrapper = inputs[1].dynamicCast<CannBackendWrapper>();
+        auto scale_tensor_desc = scale_tensor_wrapper->getTensorDesc();
+        if (static_cast<size_t>(axis) == scale_tensor_desc->GetShape().GetDimNum() - 1) {
+            int64_t dim = scale_tensor_desc->GetShape().GetDim(0);
+            scale_tensor_desc = std::make_shared<ge::TensorDesc>(ge::Shape(std::vector<int64_t>{dim}),
+                                                                 ge::FORMAT_NCHW,
+                                                                 ge::DT_FLOAT);
+        }
+
+        auto bias_tensor_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
+        auto bias_tensor_desc = bias_tensor_wrapper->getTensorDesc();
+        if (static_cast<size_t>(axis) == bias_tensor_desc->GetShape().GetDimNum() - 1) {
+            int64_t dim = bias_tensor_desc->GetShape().GetDim(0);
+            bias_tensor_desc = std::make_shared<ge::TensorDesc>(ge::Shape(std::vector<int64_t>{dim}),
+                                                                ge::FORMAT_NCHW,
+                                                                ge::DT_FLOAT);
+        }
+
+        auto last_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto scale_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
+        auto bias_node = nodes[2].dynamicCast<CannBackendNode>()->getOp();
+
+        auto op = std::make_shared<ge::op::LayerNorm>(name);
+
+        // set attrs
+        op->set_attr_begin_norm_axis(axis);
+        op->set_attr_begin_params_axis(axis);
+        op->set_attr_epsilon(epsilon);
+
+        // set inputs
+        // set inputs : x
+        op->set_input_x_by_name(*last_node, input_tensor_wrapper->name.c_str());
+        op->update_input_desc_x(*input_tensor_desc);
+        // set inputs : gamma
+        op->set_input_gamma_by_name(*scale_node, scale_tensor_wrapper->name.c_str());
+        op->update_input_desc_gamma(*scale_tensor_desc);
+        // set inputs : beta
+        op->set_input_beta_by_name(*bias_node, bias_tensor_wrapper->name.c_str());
+        op->update_input_desc_beta(*bias_tensor_desc);
+
+        // set outputs
+        auto output_desc_y = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc_y);
+        auto output_desc_mean = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_mean(*output_desc_mean);
+        auto output_desc_var = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_variance(*output_desc_var);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
+
 };
 
 Ptr<LayerNormLayer> LayerNormLayer::create(const LayerParams& params)
