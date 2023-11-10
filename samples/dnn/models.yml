@@ -32,7 +32,7 @@ yolov4:
   width: 416
   height: 416
   rgb: true
-  classes: "object_detection_classes_yolov4.txt"
+  classes: "object_detection_classes_yolo.txt"
   sample: "object_detection"
 
 yolov4-tiny:
@@ -46,7 +46,7 @@ yolov4-tiny:
   width: 416
   height: 416
   rgb: true
-  classes: "object_detection_classes_yolov4.txt"
+  classes: "object_detection_classes_yolo.txt"
   sample: "object_detection"
 
 yolov3:
@@ -60,7 +60,7 @@ yolov3:
   width: 416
   height: 416
   rgb: true
-  classes: "object_detection_classes_yolov3.txt"
+  classes: "object_detection_classes_yolo.txt"
   sample: "object_detection"
 
 tiny-yolo-voc:
