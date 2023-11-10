@@ -733,7 +733,7 @@ public:
             const bool is_prosac = params->getSampler() == SamplingMethod::SAMPLING_PROSAC;
             std::atomic_bool success(false);
             std::atomic_int num_hypothesis_tested(0), thread_cnt(0), max_number_inliers(0), subset_size, termination_length;
-            std::atomic_int best_score_all(std::numeric_limits<int>::max());
+            std::atomic_int best_score_all(std::numeric_limits<float>::max());
             // since best_score_all is int, we shift the float part to preserve float information
             const double BEST_SCORE_FLOAT_PART_SHIFT = 1000;
             std::vector<Score> best_scores(MAX_THREADS), best_scores_not_LO;
