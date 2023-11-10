@@ -274,41 +274,43 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
 
     if(_src.depth() == CV_8U)
     {
-        static thread_local UMat sdiv_data;
-        static thread_local UMat hdiv_data180;
-        static thread_local UMat hdiv_data256;
-        static thread_local int sdiv_table[256];
-        static thread_local int hdiv_table180[256];
-        static thread_local int hdiv_table256[256];
-        static thread_local volatile bool initialized180 = false, initialized256 = false;
-        volatile bool & initialized = hrange == 180 ? initialized180 : initialized256;
-
-        if (!initialized)
+        static std::mutex mtx;
         {
-            int * const hdiv_table = hrange == 180 ? hdiv_table180 : hdiv_table256, hsv_shift = 12;
-            UMat & hdiv_data = hrange == 180 ? hdiv_data180 : hdiv_data256;
+            std::unique_lock<std::mutex> lock(mtx);
+            static UMat sdiv_data;
+            static UMat hdiv_data180;
+            static UMat hdiv_data256;
+            static int combined_table[256];
+            static volatile bool initialized180 = false, initialized256 = false;
+            static volatile bool initialized = hrange == 180 ? initialized180 : initialized256;
 
-            sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
-
-            int v = 255 << hsv_shift;
-            if (!initialized180 && !initialized256)
+            if (!initialized)
             {
-                for(int i = 1; i < 256; i++ )
-                    sdiv_table[i] = saturate_cast<int>(v/(1.*i));
-                Mat(1, 256, CV_32SC1, sdiv_table).copyTo(sdiv_data);
+                int * const hdiv_table = hrange == 180 ? combined_table : &combined_table[128], hsv_shift = 12;
+                UMat & hdiv_data = hrange == 180 ? hdiv_data180 : hdiv_data256;
+
+                combined_table[0] = 0;
+
+                int v = 255 << hsv_shift;
+                if (!initialized180 && !initialized256)
+                {
+                    for(int i = 1; i < 256; i++ )
+                        combined_table[i] = saturate_cast<int>(v/(1.*i));
+                    Mat(1, 256, CV_32SC1, combined_table).copyTo(sdiv_data);
+                }
+
+                v = hrange << hsv_shift;
+                for (int i = 1; i < 256; i++ )
+                    hdiv_table[i] = saturate_cast<int>(v/(6.*i));
+
+                Mat(1, 256, CV_32SC1, hdiv_table).copyTo(hdiv_data);
+                initialized = true;
             }
 
-            v = hrange << hsv_shift;
-            for (int i = 1; i < 256; i++ )
-                hdiv_table[i] = saturate_cast<int>(v/(6.*i));
-
-            Mat(1, 256, CV_32SC1, hdiv_table).copyTo(hdiv_data);
-            initialized = true;
+            h.setArg(ocl::KernelArg::PtrReadOnly(sdiv_data));
+            h.setArg(hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
+                             ocl::KernelArg::PtrReadOnly(hdiv_data180));
         }
-
-        h.setArg(ocl::KernelArg::PtrReadOnly(sdiv_data));
-        h.setArg(hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
-                                 ocl::KernelArg::PtrReadOnly(hdiv_data180));
     }
 
     return h.run();
