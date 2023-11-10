@@ -44,7 +44,6 @@ static void addDMLExecutionProviderWithAdapterName(Ort::SessionOptions *session_
 
 void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions *session_options,
                                               const cv::gapi::onnx::ep::DirectML &dml_ep) {
-    std::cout << "cv::gimpl::onnx::addDMLExecutionProvider" << std::endl;
     namespace ep = cv::gapi::onnx::ep;
     switch (dml_ep.ddesc.index()) {
         case ep::DirectML::DeviceDesc::index_of<int>(): {
