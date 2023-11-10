@@ -102,7 +102,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, testing::Values({700, 700}, {640,
         startTimer();
         //TODO: no color for depth test
         cv::triangleRasterize(vertices, indices, colors, cameraMatrix, width, height,
-            shadingMode, depth_buf, color_buf);
+                              shadingMode, depth_buf, color_buf);
         stopTimer();
     }
 
