@@ -26,32 +26,7 @@ using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv { namespace dnn {
-namespace detail {
-void getVector(InputArrayOfArrays images_, std::vector<Mat> &images) {
-    images_.getMatVector(images);
-}
 
-void getVector(InputArrayOfArrays images_, std::vector<UMat> &images) {
-    images_.getUMatVector(images);
-}
-
-bool isSame(const cv::UMat &a, const cv::UMat &b) {
-    return a.u == b.u;
-}
-
-bool isSame(const cv::Mat &a, const cv::Mat &b) {
-    return a.data == b.data;
-}
-
-cv::Mat getPlanes(cv::Mat &inp, int numPlanes, int height) {
-    return inp.reshape(1, numPlanes * height);
-}
-
-cv::Mat getPlanes(cv::UMat &inp, int numPlanes, int height) {
-    Mat m = inp.getMat(cv::ACCESS_RW);
-    return getPlanes(m, numPlanes, height);
-}
-}
 class ResizeLayerImpl : public ResizeLayer
 {
 public:
@@ -135,53 +110,79 @@ public:
             scaleWidth = static_cast<float>(inputs[0].size[3]) / outWidth;
     }
 
-
-    template <typename Tmat>
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward_ocl(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        if (inputs_arr.depth() == CV_16S)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
-
-        std::vector<Tmat> inputs, outputs, internals;
-        dnn::detail::getVector(inputs_arr, inputs);
-        dnn::detail::getVector(outputs_arr, outputs);
-        dnn::detail::getVector(internals, internals);
-
+        std::vector<UMat> inputs, outputs, internals;
+        inputs_arr.getUMatVector(inputs);
+        outputs_arr.getUMatVector(outputs);
+        internals_arr.getUMatVector(internals);
         if (outHeight == inputs[0].size[2] && outWidth == inputs[0].size[3])
         {
             // outputs[0] = inputs[0] doesn't work due to BlobManager optimizations
-            if (!dnn::detail::isSame(inputs[0], outputs[0]))
+
+            if (inputs[0].u != outputs[0].u)
             {
                 inputs[0].copyTo(outputs[0]);
             }
             return;
         }
 
-        Tmat& inp = inputs[0];
-        Tmat& out = outputs[0];
-        int depth = inp.depth();
+        UMat& inp = inputs[0];
+        UMat& out = outputs[0];
+        // INTER_LINEAR Resize mode does not support INT8 inputs
+        InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
+        for (size_t n = 0; n < inputs[0].size[0]; ++n)
+        {
+            for (size_t ch = 0; ch < inputs[0].size[1]; ++ch)
+            {
+                UMat src = getPlane(inp, n, ch);
+                UMat dst = getPlane(out, n, ch);
+                resize(src, dst, Size(outWidth, outHeight), 0, 0, mode);
+            }
+        }
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        int depth = inputs_arr.depth();
+
+        if (depth == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
         if ((interpolation == "nearest" && !alignCorners && !halfPixelCenters) || (interpolation == "opencv_linear" && depth != CV_8S) ||
             (interpolation == "bilinear" && halfPixelCenters && depth != CV_8S))
         {
-            // INTER_LINEAR Resize mode does not support INT8 inputs
-            InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
-            for (size_t n = 0; n < inputs[0].size[0]; ++n)
-            {
-                for (size_t ch = 0; ch < inputs[0].size[1]; ++ch)
-                {
-                    Tmat src = getPlane(inp, n, ch);
-                    Tmat dst = getPlane(out, n, ch);
-                    resize(src, dst, Size(outWidth, outHeight), 0, 0, mode);
-                }
-            }
+            forward_ocl(inputs_arr, outputs_arr, internals_arr);
+            return;
         }
-        else if (interpolation == "nearest")
+
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
+
+        if (outHeight == inputs[0].size[2] && outWidth == inputs[0].size[3])
+        {
+            // outputs[0] = inputs[0] doesn't work due to BlobManager optimizations
+            if (inputs[0].data != outputs[0].data)
+            {
+                inputs[0].copyTo(outputs[0]);
+            }
+            return;
+        }
+
+        Mat& inp = inputs[0];
+        Mat& out = outputs[0];
+
+        if (interpolation == "nearest")
         {
             const int inpHeight = inp.size[2];
             const int inpWidth = inp.size[3];
@@ -190,8 +191,8 @@ public:
             const int numPlanes = inp.size[0] * inp.size[1];
             CV_Assert_N(inp.isContinuous(), out.isContinuous());
 
-            Mat inpPlanes = dnn::detail::getPlanes(inp, numPlanes, inpHeight);
-            Mat outPlanes = dnn::detail::getPlanes(out, numPlanes, outHeight);
+            Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
+            Mat outPlanes = out.reshape(1, numPlanes * outHeight);
 
             float heightOffset = 0.0f;
             float widthOffset = 0.0f;
@@ -270,8 +271,8 @@ public:
             const int numPlanes = inp.size[0] * inp.size[1];
             CV_Assert_N(inp.isContinuous(), out.isContinuous());
 
-            Mat inpPlanes = dnn::detail::getPlanes(inp, numPlanes, inpHeight);
-            Mat outPlanes = dnn::detail::getPlanes(out, numPlanes, outHeight);
+            Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
+            Mat outPlanes = out.reshape(1, numPlanes * outHeight);
             if (depth == CV_8S)
             {
                 for (int y = 0; y < outHeight; ++y)
@@ -337,15 +338,6 @@ public:
         }
         else
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
-    }
-
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
-    {
-        if (inputs_arr.kind() == _InputArray::STD_VECTOR_UMAT) {
-            forward<UMat>(inputs_arr, outputs_arr, internals_arr);
-        } else {
-            forward<Mat>(inputs_arr, outputs_arr, internals_arr);
-        }
     }
 
 #ifdef HAVE_CANN
