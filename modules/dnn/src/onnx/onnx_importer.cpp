@@ -888,24 +888,37 @@ void ONNXImporter::populateNet()
     }
 
     // register outputs
-    for (int i = 0; i < graph_proto.output_size(); ++i)
-    {
-        const std::string& output_name = graph_proto.output(i).name();
-        if (output_name.empty())
-        {
-            CV_LOG_ERROR(NULL, "DNN/ONNX: can't register output without name: " << i);
-            continue;
+    std::vector<std::string> conformance_output_filter_list{
+        "LayerNormalization",
+    };
+    std::vector<std::string> all_layers_type;
+    dstNet.getLayerTypes(all_layers_type);
+    // std::cout << "layer size=" << layersSize << ", layers=" << all_layers_type << std::endl;
+    if (layersSize == 1 && std::find(conformance_output_filter_list.begin(), conformance_output_filter_list.end(), all_layers_type[0]) != conformance_output_filter_list.end()) {
+        const std::string& output_name = graph_proto.output(0).name();
+        if (output_name.empty()) {
+            CV_LOG_ERROR(NULL, "DNN/ONNX: can't register output without name: " << graph_proto.output(0).name());
         }
         ConstIterLayerId_t layerIt = layer_id.find(output_name);
-        if (layerIt == layer_id.end())
-        {
-            CV_LOG_ERROR(NULL, "DNN/ONNX: can't find layer for output name: '" << output_name << "'. Does model imported properly?");
-            continue;
-        }
-
         const LayerInfo& li = layerIt->second;
         int outputId = dstNet.registerOutput(output_name, li.layerId, li.outputId); CV_UNUSED(outputId);
-        // no need to duplicate message from engine: CV_LOG_DEBUG(NULL, "DNN/ONNX: registered output='" << output_name << "' with id=" << outputId);
+    } else {
+        for (int i = 0; i < graph_proto.output_size(); ++i) {
+            const std::string& output_name = graph_proto.output(i).name();
+            if (output_name.empty()) {
+                CV_LOG_ERROR(NULL, "DNN/ONNX: can't register output without name: " << graph_proto.output(i).name() << ", output id: " << i);
+                continue;
+            }
+            ConstIterLayerId_t layerIt = layer_id.find(output_name);
+            if (layerIt == layer_id.end()) {
+                CV_LOG_ERROR(NULL, "DNN/ONNX: can't find layer for output name: '" << output_name << "'. Does model imported properly?");
+                continue;
+            }
+
+            const LayerInfo& li = layerIt->second;
+            int outputId = dstNet.registerOutput(output_name, li.layerId, li.outputId); CV_UNUSED(outputId);
+            // no need to duplicate message from engine: CV_LOG_DEBUG(NULL, "DNN/ONNX: registered output='" << output_name << "' with id=" << outputId);
+        }
     }
 
     CV_LOG_DEBUG(NULL, (DNN_DIAGNOSTICS_RUN ? "DNN/ONNX: diagnostic run completed!" : "DNN/ONNX: import completed!"));

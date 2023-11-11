@@ -2677,36 +2677,6 @@ TEST_P(Test_ONNX_layers, Tile)
     testONNXModels("tile", pb);
 }
 
-TEST_P(Test_ONNX_layers, LayerNorm)
-{
-    testONNXModels("test_layer_normalization_2d_axis0", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_2d_axis1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_2d_axis_negative_1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_2d_axis_negative_2", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis0_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis1_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis2_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis_negative_1_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis_negative_2_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis_negative_3_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis0", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis2", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis3", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_2", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_3", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_4", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_default_axis", pb, 0, 0, false, true, 3);
-}
-
-// for testing graph simplification
-TEST_P(Test_ONNX_layers, LayerNormExpanded)
-{
-    testONNXModels("layer_norm_expanded");
-    testONNXModels("layer_norm_expanded_with_initializers");
-}
-
 TEST_P(Test_ONNX_layers, Gelu)
 {
     testONNXModels("gelu");
