@@ -296,7 +296,7 @@ TEST_P(videoio_encapsulate, write)
         ASSERT_TRUE(capActualRaw.isOpened());
         const double fpsReference = capReference.get(CAP_PROP_FPS);
         const double fpsActual = capActual.get(CAP_PROP_FPS);
-        ASSERT_EQ(fpsReference, fpsActual);
+        ASSERT_NEAR(fpsReference, fpsActual, 1e-2);
         const int nFramesActual = static_cast<int>(capActual.get(CAP_PROP_FRAME_COUNT));
         ASSERT_EQ(nFrames, nFramesActual);
 

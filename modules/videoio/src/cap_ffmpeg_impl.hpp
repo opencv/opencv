@@ -1877,15 +1877,16 @@ int64_t CvCapture_FFMPEG::get_bitrate() const
 
 double CvCapture_FFMPEG::get_fps() const
 {
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 1, 100) && LIBAVFORMAT_VERSION_MICRO >= 100
-    double fps = r2d(av_guess_frame_rate(ic, ic->streams[video_stream], NULL));
-#else
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0) || LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     double fps = r2d(ic->streams[video_stream]->avg_frame_rate);
+#else
+    double fps = r2d(ic->streams[video_stream]->r_frame_rate);
+#endif
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 1, 100) && LIBAVFORMAT_VERSION_MICRO >= 100
     if (fps < eps_zero)
     {
-        fps = r2d(ic->streams[video_stream]->avg_frame_rate);
+        fps = r2d(av_guess_frame_rate(ic, ic->streams[video_stream], NULL));
     }
 #endif
 
@@ -1893,7 +1894,7 @@ double CvCapture_FFMPEG::get_fps() const
     {
         fps = 1.0 / r2d(ic->streams[video_stream]->time_base);
     }
-#endif
+
     return fps;
 }
 
