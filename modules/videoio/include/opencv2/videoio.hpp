@@ -1023,7 +1023,7 @@ public:
     VideoWriter::fourcc('P','I','M','1') is a MPEG-1 codec, VideoWriter::fourcc('M','J','P','G')
     is a motion-jpeg codec etc. List of codes can be obtained at
     [MSDN](https://docs.microsoft.com/en-us/windows/win32/medfound/video-fourccs) page
-    or with this [archived page](https://web.archive.org/web/20220316062600/http://www.fourcc.org/codecs.php)
+    or with this [page](https://fourcc.org/codecs.php)
     of the fourcc site for a more complete list). FFMPEG backend with MP4 container natively uses
     other values as fourcc code: see [ObjectType](http://mp4ra.org/#/codecs),
     so you may receive a warning message from OpenCV about fourcc code conversion.
