@@ -38,6 +38,9 @@
 
 namespace cv
 {
+
+//! @cond IGNORED
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD_SCALABLE 1
@@ -1390,23 +1393,23 @@ OPENCV_HAL_IMPL_RVV_REVERSE(v_float64, 64)
 #define OPENCV_HAL_IMPL_RVV_EXPAND(_Tp, _Tpwvec, _Tpwvec_m2, _Tpvec, width, suffix, suffix2, cvt) \
 inline void v_expand(const _Tpvec& a, _Tpwvec& b0, _Tpwvec& b1) \
 { \
-    _Tpwvec_m2 temp = cvt(a, vsetvlmax_e##width##m1()); \
+    _Tpwvec_m2 temp = cvt(a, VTraits<_Tpvec>::vlanes()); \
     b0 = vget_##suffix##m1(temp, 0); \
     b1 = vget_##suffix##m1(temp, 1); \
 } \
 inline _Tpwvec v_expand_low(const _Tpvec& a) \
 { \
-    _Tpwvec_m2 temp = cvt(a, vsetvlmax_e##width##m1()); \
+    _Tpwvec_m2 temp = cvt(a, VTraits<_Tpvec>::vlanes()); \
     return vget_##suffix##m1(temp, 0); \
 } \
 inline _Tpwvec v_expand_high(const _Tpvec& a) \
 { \
-    _Tpwvec_m2 temp = cvt(a, vsetvlmax_e##width##m1()); \
+    _Tpwvec_m2 temp = cvt(a, VTraits<_Tpvec>::vlanes()); \
     return vget_##suffix##m1(temp, 1); \
 } \
 inline _Tpwvec v_load_expand(const _Tp* ptr) \
 { \
-    return cvt(vle##width##_v_##suffix2##mf2(ptr, vsetvlmax_e##width##m1()), vsetvlmax_e##width##m1()); \
+    return cvt(vle##width##_v_##suffix2##mf2(ptr, VTraits<_Tpvec>::vlanes()), VTraits<_Tpvec>::vlanes()); \
 }
 
 OPENCV_HAL_IMPL_RVV_EXPAND(uchar, v_uint16, vuint16m2_t, v_uint8, 8, u16, u8, vwcvtu_x)
@@ -1759,8 +1762,8 @@ inline int v_scan_forward(const v_float64& a)
 // mask: {0,0,0,1, ...} -> {T,T,T,F, ...}
 #define OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(_Tpvec, v_trunc) \
 inline _Tpvec v_pack_triplets(const _Tpvec& vec) { \
-    size_t vl = vsetvlmax_e8m1(); \
-    vuint32m1_t one = vmv_v_x_u32m1(1, vl/4); \
+    size_t vl = __cv_rvv_e8m1_nlanes; \
+    vuint32m1_t one = vmv_v_x_u32m1(1, __cv_rvv_e32m1_nlanes); \
     vuint8m1_t zero = vmv_v_x_u8m1(0, vl); \
     vuint8m1_t mask = vreinterpret_u8m1(one); \
     return vcompress(vmseq(v_trunc(vslideup(zero, mask, 3, vl)), 0, vl), vec, vec, VTraits<_Tpvec>::vlanes()); \
@@ -2125,6 +2128,8 @@ inline v_float32 v_matmuladd(const v_float32& v, const v_float32& m0,
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+
+//! @endcond
 
 } //namespace cv
 

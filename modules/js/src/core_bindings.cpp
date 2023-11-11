@@ -99,6 +99,10 @@ typedef QRCodeDetectorAruco::Params QRCodeDetectorAruco_Params;
 using namespace cv::dnn;
 #endif
 
+#ifdef HAVE_OPENCV_FEATURES2D
+typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
+#endif
+
 #ifdef HAVE_OPENCV_VIDEO
 typedef TrackerMIL::Params TrackerMIL_Params;
 #endif

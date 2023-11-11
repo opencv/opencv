@@ -54,7 +54,8 @@ public:
 
     void testONNXModels(const String& basename, const Extension ext = npy,
                         double l1 = 0, double lInf = 0, const bool useSoftmax = false,
-                        bool checkNoFallbacks = true, int numInps = 1)
+                        bool checkNoFallbacks = true, int numInps = 1,
+                        bool testShapes = true)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
         std::vector<Mat> inps(numInps);
@@ -76,7 +77,8 @@ public:
         Net net = readNetFromONNX(onnxmodel);
         ASSERT_FALSE(net.empty());
 
-        testInputShapes(net, inps);
+        if (testShapes)
+            testInputShapes(net, inps);
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
@@ -246,6 +248,10 @@ TEST_P(Test_ONNX_layers, GatherMulti)
 
 TEST_P(Test_ONNX_layers, Gather_shared_indices) {
     testONNXModels("gather_shared_indices", npy, 0, 0, false, false, 1);
+}
+
+TEST_P(Test_ONNX_layers, Two_resizes_with_shared_subgraphs) {
+    testONNXModels("two_resizes_with_shared_subgraphs", npy, 0, 0, false, false, 3, /*testShapes*/ false);
 }
 
 TEST_P(Test_ONNX_layers, Convolution3D)
@@ -1456,6 +1462,11 @@ TEST_P(Test_ONNX_layers, Einsum_2D)
     testONNXModels("einsum_2d", npy, 0, 0, false, false, 2);
 }
 
+TEST_P(Test_ONNX_layers, Einsum_2D_Ellipses)
+{
+    testONNXModels("einsum_2d_ellipses", npy, 0, 0, false, false, 2);
+}
+
 TEST_P(Test_ONNX_layers, Einsum_3D)
 {
     testONNXModels("einsum_3d", npy, 0, 0, false, false, 2);
@@ -1481,7 +1492,7 @@ TEST_P(Test_ONNX_layers, DISABLED_Einsum_HadamardProduct)
     testONNXModels("einsum_hadamard", npy, 0, 0, false, false, 2);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_Einsum_Batch_Diagonal)
+TEST_P(Test_ONNX_layers, Einsum_Batch_Diagonal)
 {
     testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
 }
