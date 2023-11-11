@@ -146,9 +146,11 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
         }
         while( ++iter < max_iters && err > eps );
 
+        // if new point is out of image or
         // if new point is too far from initial, it means poor convergence.
         // leave initial point as the result
-        if( fabs( cI.x - cT.x ) > win.width || fabs( cI.y - cT.y ) > win.height )
+        if( cI.x < 0 || cI.x >= src.cols || cI.y < 0 || cI.y >= src.rows ||
+            fabs( cI.x - cT.x ) > win.width || fabs( cI.y - cT.y ) > win.height )
             cI = cT;
 
         corners[pt_i] = cI;
