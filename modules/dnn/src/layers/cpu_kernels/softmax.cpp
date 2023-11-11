@@ -35,7 +35,7 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
     // make the channel axis to be multiple of 8
     size_t channelAxis = (axisStep + 7) & -8;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     const int nlanes = VTraits<v_float32>::vlanes();
     // the number of redundant dimension
     size_t redundantDim = nlanes - axisStep % nlanes;
@@ -54,7 +54,7 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
                 axisBuf[cnDim] = srcPtr[srcOffset + (cnDim + axisBias) * cnStep];
 
             float s = 0.f;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             // make the value of the redundant dimension to be -FLT_MAX
             if (redundantDim != nlanes) {
                 for (size_t j = axisStep; j < axisStep + redundantDim; j++)
@@ -121,7 +121,7 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
             s = v_reduce_sum(vs);
             // subtract the value of the redundant dimension
             if (redundantDim != nlanes) {
-                float* _val = new float[nlanes];
+                float _val[VTraits<v_float32>::max_nlanes];
                 v_store(_val, val);
                 for (size_t j = nlanes - redundantDim; j < nlanes; j++)
                     s -= _val[j];
