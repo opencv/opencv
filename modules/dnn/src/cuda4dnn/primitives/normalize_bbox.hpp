@@ -61,7 +61,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             if (!weights.empty())
             {
-                if (weights.total() == 1)
+                if (weights.total() == static_cast<T>(1))
                 {
                     CV_Assert(weights.type() == CV_32F);
                     weight = weights.at<float>(0, 0);
