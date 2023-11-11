@@ -1143,7 +1143,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS LayerNormLayer : public Layer
     {
     public:
-        bool hasBias;
+        CV_DEPRECATED_EXTERNAL bool hasBias; // Deprecated, preserve for compatibility
         int axis;
         float epsilon;
 
@@ -1164,6 +1164,13 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<ExpandLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS InstanceNormLayer : public Layer {
+    public:
+        float epsilon;
+
+        static Ptr<InstanceNormLayer> create(const LayerParams &params);
     };
 
 //! @}
