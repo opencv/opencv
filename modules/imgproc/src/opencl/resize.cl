@@ -222,7 +222,6 @@ __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offs
 
 #elif defined INTER_LINEAR_EXACT
 
-#define INTER_RESIZE_COEF_SCALE (1 << INTER_RESIZE_COEF_BITS)
 #define FIXED_POINT_BITS 8
 #define FIXED_POINT_SCALE (1 << FIXED_POINT_BITS)
 
