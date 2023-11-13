@@ -3358,7 +3358,6 @@ static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * 
 static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                         double fx, double fy, int interpolation)
 {
-
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     double inv_fx = 1.0 / fx, inv_fy = 1.0 / fy;
