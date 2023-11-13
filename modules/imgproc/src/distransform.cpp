@@ -824,7 +824,8 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
         if( maskSize == CV_DIST_MASK_3 )
         {
 #if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
-            if (dst.isContinuous() && CV_IPP_CHECK_COND)
+            bool has_int_overflow = (int64)src.cols * src.rows >= INT_MAX;
+            if (!has_int_overflow && CV_IPP_CHECK_COND)
             {
                 IppiSize roi = { src.cols, src.rows };
                 if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_3x3_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0)
@@ -842,7 +843,8 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
         else
         {
 #if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
-            if (dst.isContinuous() && CV_IPP_CHECK_COND)
+            bool has_int_overflow = (int64)src.cols * src.rows >= INT_MAX;
+            if (!has_int_overflow && CV_IPP_CHECK_COND)
             {
                 IppiSize roi = { src.cols, src.rows };
                 if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_5x5_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0)
