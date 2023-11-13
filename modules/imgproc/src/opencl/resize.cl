@@ -222,12 +222,6 @@ __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offs
 
 #elif defined INTER_LINEAR_EXACT
 
-#define FIXED_POINT_BITS 16
-#define FIXED_POINT_SCALE (1 << FIXED_POINT_BITS)
-
-// Fixed-point multiply
-#define FIXED_MUL(a, b) (((a) * (b)) >> FIXED_POINT_BITS)
-
 __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                        __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                        __global const uchar * buffer)
