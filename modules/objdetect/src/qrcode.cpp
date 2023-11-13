@@ -4476,25 +4476,14 @@ static
 vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, const Mat& img,
                                      const QRCodeDetectorAruco::Params& qrDetectorParameters) {
     vector<QRCode> qrCodes;
-    vector<FinderPatternInfo> patterns;
+    vector<FinderPatternInfo> patterns(corners.size());
     if (img.empty())
         return qrCodes;
     float maxModuleSize = 0.f;
     for (size_t i = 0ull; i < corners.size(); i++) {
         FinderPatternInfo pattern = FinderPatternInfo(corners[i]);
-        // TODO: improve thinning Aruco markers
-        bool isUniq = true;
-        for (const FinderPatternInfo& tmp : patterns) {
-            Point2f dist = pattern.center - tmp.center;
-            if (max(abs(dist.x), abs(dist.y)) < 3.f * tmp.moduleSize) {
-                isUniq = false;
-                break;
-            }
-        }
-        if (isUniq) {
-            patterns.push_back(pattern);
-            maxModuleSize = max(maxModuleSize, patterns.back().moduleSize);
-        }
+        patterns[i] = pattern;
+        maxModuleSize = max(maxModuleSize, pattern.moduleSize);
     }
     const int threshold = cvRound(qrDetectorParameters.minModuleSizeInPyramid * 12.5f) +
                           (cvRound(qrDetectorParameters.minModuleSizeInPyramid * 12.5f) % 2 ? 0 : 1);
