@@ -96,6 +96,7 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
     for( int pt_i = 0; pt_i < count; pt_i++ )
     {
         Point2f cT = corners[pt_i], cI = cT;
+        CV_Assert( Rect(0, 0, src.cols, src.rows).contains(cT) );
         int iter = 0;
         double err = 0;
 
@@ -140,17 +141,16 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
             cI2.x = (float)(cI.x + c*scale*bb1 - b*scale*bb2);
             cI2.y = (float)(cI.y - b*scale*bb1 + a*scale*bb2);
             err = (cI2.x - cI.x) * (cI2.x - cI.x) + (cI2.y - cI.y) * (cI2.y - cI.y);
-            cI = cI2;
-            if( cI.x < 0 || cI.x >= src.cols || cI.y < 0 || cI.y >= src.rows )
+            // if new point is out of image, leave previous point as the result
+            if( !Rect(0, 0, src.cols, src.rows).contains(cI2) )
                 break;
+            cI = cI2;
         }
         while( ++iter < max_iters && err > eps );
 
-        // if new point is out of image or
         // if new point is too far from initial, it means poor convergence.
         // leave initial point as the result
-        if( cI.x < 0 || cI.x >= src.cols || cI.y < 0 || cI.y >= src.rows ||
-            fabs( cI.x - cT.x ) > win.width || fabs( cI.y - cT.y ) > win.height )
+        if( fabs( cI.x - cT.x ) > win.width || fabs( cI.y - cT.y ) > win.height )
             cI = cT;
 
         corners[pt_i] = cI;
