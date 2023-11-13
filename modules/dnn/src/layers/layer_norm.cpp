@@ -26,7 +26,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CANN;
+               (backendId == DNN_BACKEND_CANN && axis != -1); // 
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -99,26 +99,19 @@ public:
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
                                       const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
+        CV_CheckEQ(inputs.size(), static_cast<size_t>(3), "LayerNorm/CANN: requires three input wrappers");
+        CV_CheckEQ(nodes.size(), static_cast<size_t>(3), "LayerNorm/CANN: requires three input nodes");
+
         auto input_tensor_wrapper = inputs[0].dynamicCast<CannBackendWrapper>();
         auto input_tensor_desc = input_tensor_wrapper->getTensorDesc();
 
+        CV_CheckNE(axis, static_cast<int>(input_tensor_desc->GetShape().GetDimNum() - 1), "LayerNorm: CANN does not support axis set as last axis due to 1D mat compatibility issue");
+
         auto scale_tensor_wrapper = inputs[1].dynamicCast<CannBackendWrapper>();
         auto scale_tensor_desc = scale_tensor_wrapper->getTensorDesc();
-        if (static_cast<size_t>(axis) == scale_tensor_desc->GetShape().GetDimNum() - 1) {
-            int64_t dim = scale_tensor_desc->GetShape().GetDim(0);
-            scale_tensor_desc = std::make_shared<ge::TensorDesc>(ge::Shape(std::vector<int64_t>{dim}),
-                                                                 ge::FORMAT_NCHW,
-                                                                 ge::DT_FLOAT);
-        }
 
         auto bias_tensor_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
         auto bias_tensor_desc = bias_tensor_wrapper->getTensorDesc();
-        if (static_cast<size_t>(axis) == bias_tensor_desc->GetShape().GetDimNum() - 1) {
-            int64_t dim = bias_tensor_desc->GetShape().GetDim(0);
-            bias_tensor_desc = std::make_shared<ge::TensorDesc>(ge::Shape(std::vector<int64_t>{dim}),
-                                                                ge::FORMAT_NCHW,
-                                                                ge::DT_FLOAT);
-        }
 
         auto last_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto scale_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
