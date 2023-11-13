@@ -1865,7 +1865,7 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
         }
         else
         {
-            resize(_img, image_scale, effect_size, 0, 0, INTER_LINEAR);
+            resize(_img, image_scale, effect_size, 0, 0, INTER_LINEAR_EXACT);
             if(!ocl_detect(image_scale, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
                 blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef, signedGradient))
                 return false;
