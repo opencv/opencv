@@ -118,9 +118,6 @@ public:
 
 TEST_P(Test_ONNX_layers, InstanceNorm)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* MVN is not supported */
-
     if (target == DNN_TARGET_MYRIAD)
         testONNXModels("instancenorm", npy, 0, 0, false, false);
     else
