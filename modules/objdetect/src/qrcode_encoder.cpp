@@ -397,36 +397,10 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
 
 void QRCodeEncoderImpl::formatGenerate(const int mask_type_num, vector<uint8_t> &format_array)
 {
-    const int mask_bits_num = 3;
-    const int level_bits_num = 2;
-
-    std::vector<uint8_t> mask_type_bin(mask_bits_num);
-    std::vector<uint8_t> ec_level_bin(level_bits_num);
-    decToBin(mask_type_num, mask_bits_num, mask_type_bin);
-    decToBin(eccLevelToCode(ecc_level), level_bits_num, ec_level_bin);
-
-    std::vector<uint8_t> format_bits;
-    hconcat(ec_level_bin, mask_type_bin, format_bits);
-    std::reverse(format_bits.begin(), format_bits.end());
-
-    const int ecc_info_bits = 10;
-
-    std::vector<uint8_t> shift(ecc_info_bits, 0);
-    std::vector<uint8_t> polynomial;
-    hconcat(shift, format_bits, polynomial);
-
-    const int generator_len = 11;
-    const uint8_t generator_arr[generator_len] = {1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1};
-    std::vector<uint8_t> format_generator (generator_arr, generator_arr + sizeof(generator_arr) / sizeof(generator_arr[0]));
-    vector<uint8_t> ecc_code;
-    gfPolyDiv(polynomial, format_generator, ecc_info_bits, ecc_code);
-    hconcat(ecc_code, format_bits, format_array);
-
-    const uint8_t mask_arr[MAX_FORMAT_LENGTH] = {0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
-    std::vector<uint8_t> system_mask (mask_arr, mask_arr + sizeof(mask_arr) / sizeof(mask_arr[0]));
-    for(int i = 0; i < MAX_FORMAT_LENGTH; i++)
-    {
-        format_array[i] ^= system_mask[i];
+    int idx = (eccLevelToCode(ecc_level) << 3) | mask_type_num;
+    format_array.resize(MAX_FORMAT_LENGTH);
+    for (int i = 0; i < MAX_FORMAT_LENGTH; ++i) {
+        format_array[i] = (formatInfoLUT[idx] >> i) & 1;
     }
 }
 
@@ -1406,18 +1380,11 @@ bool decode(const Mat& _straight, String& decoded_info, QRCodeEncoder::EncodeMod
 
 // Unmask format info bits and apply error correction
 bool QRCodeDecoder::correctFormatInfo(uint16_t& format_info) {
-    // There are only 32 combinations of format info sequences.
-    // So lookup table is a simplest way to correct errors.
-    // TODO: encoder can reuse this format info LUT
-    static const uint16_t lut[32] = {0x5412, 0x5125, 0x5e7c, 0x5b4b, 0x45f9, 0x40ce, 0x4f97, 0x4aa0,
-                                     0x77c4, 0x72f3, 0x7daa, 0x789d, 0x662f, 0x6318, 0x6c41, 0x6976,
-                                     0x1689, 0x13be, 0x1ce7, 0x19d0, 0x0762, 0x0255, 0x0d0c, 0x083b,
-                                     0x355f, 0x3068, 0x3f31, 0x3a06, 0x24b4, 0x2183, 0x2eda, 0x2bed};
     static uint16_t mask_pattern = 0b101010000010010;
 
     for (int i = 0; i < 32; ++i) {
         // Compute Hamming distance
-        uint16_t diff = lut[i] ^ format_info;
+        uint16_t diff = formatInfoLUT[i] ^ format_info;
         int distance = 0;
         for (int j = 0; j < MAX_FORMAT_LENGTH; ++j) {
             distance += (diff >> j) & 1;
@@ -1425,7 +1392,7 @@ bool QRCodeDecoder::correctFormatInfo(uint16_t& format_info) {
         // Up to 3 bit errors might be corrected.
         // So if distance is less or equal than 3 - we found a correct format info.
         if (distance <= 3) {
-            format_info = lut[i] ^ mask_pattern;
+            format_info = formatInfoLUT[i] ^ mask_pattern;
             return true;
         }
     }
