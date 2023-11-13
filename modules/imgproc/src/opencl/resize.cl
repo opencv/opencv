@@ -228,15 +228,6 @@ __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offs
 // Fixed-point multiply
 #define FIXED_MUL(a, b) (((a) * (b)) >> FIXED_POINT_BITS)
 
-// Rounding methods
-#define ROUND_NEAREST_EVEN 0
-#define ROUND_DOWN 1
-#define ROUND_UP 2
-#define TRUNCATE 3
-
-// Choose rounding method
-#define ROUNDING_METHOD ROUND_NEAREST_EVEN
-
 __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                        __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                        __global const uchar * buffer)
