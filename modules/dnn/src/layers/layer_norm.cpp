@@ -26,7 +26,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CANN && axis != -1); // 
+               (backendId == DNN_BACKEND_CANN && axis != -1); // axis=-1 not supported due to 1d mat shape problem
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
