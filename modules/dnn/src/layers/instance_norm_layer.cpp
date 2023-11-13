@@ -43,8 +43,8 @@ public:
             return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_CUDA;
+            //    backendId == DNN_BACKEND_CANN; // not supported due to 1d mat shape issue
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
