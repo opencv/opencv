@@ -3495,9 +3495,45 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         }
     }
     else if (interpolation == INTER_LINEAR_EXACT) {
+        AutoBuffer<uchar> _buffer((dsize.width + dsize.height)*(sizeof(int) + sizeof(short)*2));
+        int* xofs = (int*)_buffer.data(), * yofs = xofs + dsize.width;
+        short* ialpha = (short*)(yofs + dsize.height), * ibeta = ialpha + dsize.width*2;
+        float fxx, fyy;
+        int sx, sy;
+
+        for (int dx = 0; dx < dsize.width; dx++)
+        {
+            fxx = (float)((dx+0.5)*inv_fx - 0.5);
+            sx = cvFloor(fxx);
+            fxx -= sx;
+
+            if (sx < 0)
+                fxx = 0, sx = 0;
+
+            if (sx >= ssize.width-1)
+                fxx = 0, sx = ssize.width-1;
+
+            xofs[dx] = sx;
+            ialpha[dx*2 + 0] = saturate_cast<short>((1.f - fxx) * INTER_RESIZE_COEF_SCALE);
+            ialpha[dx*2 + 1] = saturate_cast<short>(fxx         * INTER_RESIZE_COEF_SCALE);
+        }
+
+        for (int dy = 0; dy < dsize.height; dy++)
+        {
+            fyy = (float)((dy+0.5)*inv_fy - 0.5);
+            sy = cvFloor(fyy);
+            fyy -= sy;
+
+            yofs[dy] = sy;
+            ibeta[dy*2 + 0] = saturate_cast<short>((1.f - fyy) * INTER_RESIZE_COEF_SCALE);
+            ibeta[dy*2 + 1] = saturate_cast<short>(fyy         * INTER_RESIZE_COEF_SCALE);
+        }
+
+        int wdepth = std::max(depth, CV_32S), wtype = CV_MAKETYPE(wdepth, cn);
+        UMat coeffs;
+        Mat(1, static_cast<int>(_buffer.size()), CV_8UC1, _buffer.data()).copyTo(coeffs);
+
         char buf[2][50];
-        int wdepth = depth <= CV_8S ? CV_32S : std::max(depth, CV_32F);
-        int wtype = CV_MAKETYPE(wdepth, cn);
         k.create("resizeLN", ocl::imgproc::resize_oclsrc,
                  format("-D INTER_LINEAR_EXACT -D depth=%d -D T=%s -D T1=%s "
                         "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
@@ -3510,7 +3546,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
             return false;
 
         k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
-               (float)inv_fx, (float)inv_fy);
+               ocl::KernelArg::PtrReadOnly(coeffs));
     }
     else if (interpolation == INTER_NEAREST)
     {
