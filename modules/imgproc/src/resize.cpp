@@ -58,6 +58,7 @@
 
 #include "opencv2/core/softfloat.hpp"
 #include "fixedpoint.inl.hpp"
+
 using namespace cv;
 
 namespace
