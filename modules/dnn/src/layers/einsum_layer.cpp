@@ -7,7 +7,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
-#include "cpu_kernels/fast_gemm.hpp"
 
 namespace cv
 {
@@ -1353,8 +1352,7 @@ Mat LayerEinsumImpl::batchwiseMatMul(
             int shape2[] = {K, N};
             part2 = part2.reshape(1, sizeof(shape2)/sizeof(shape2[0]), shape2);
 
-            Mat tmp_output;
-            tmp_output.create(M, N, part1.type());
+            Mat tmp_output(M, N, part1.type());
             fastGemm(false, false, 1.0, part1, part2, 0.0, tmp_output, opt);
             int newShape[] = {1, M, N};
             tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
@@ -1383,8 +1381,7 @@ Mat LayerEinsumImpl::batchwiseMatMul(
             reshapedInput2 = input2.reshape(1, 2, shape2);
         }
 
-        Mat tmp_output;
-        tmp_output.create(M, N, reshapedInput1.type());
+        Mat tmp_output(M, N, reshapedInput1.type());
         fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, tmp_output, opt);
 
         int newShape[] = {1, M, N};
