@@ -91,7 +91,7 @@ public:
     {                                                           \
     struct G_DESCR_HELPER_CLASS(Class)                          \
     {                                                           \
-        static constexpr const char *descr() { return Descr; }; \
+        static constexpr const char *descr() { return Descr; }  \
     };                                                          \
     }
 

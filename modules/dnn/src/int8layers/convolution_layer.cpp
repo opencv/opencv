@@ -19,7 +19,7 @@ namespace cv
 namespace dnn
 {
 
-#if CV_SIMD
+#if CV_SIMD128
 static inline void v_expand_mul_add(const v_int8x16& a, const v_int8x16& b,
                                     v_int32x4& out0, v_int32x4& out1, v_int32x4& out2, v_int32x4& out3)
 {
@@ -29,10 +29,10 @@ static inline void v_expand_mul_add(const v_int8x16& a, const v_int8x16& b,
 
     v_int32x4 t0, t1;
     v_mul_expand(a0, b0, t0, t1);
-    out0 += t0; out1 += t1;
+    out0 = v_add(out0, t0); out1 = v_add(out1, t1);
 
     v_mul_expand(a1, b1, t0, t1);
-    out2 += t0; out3 += t1;
+    out2 = v_add(out2, t0); out3 = v_add(out3, t1);
 }
 #endif
 
@@ -1015,7 +1015,7 @@ public:
                                         outptr[0] = std::min(std::max(out1, -128), 127);
                                         out_j = 1;
                                     }
-                                #if CV_SIMD
+                                #if CV_SIMD128
                                     if( stride_w == 1 )
                                     {
                                         const int out_delta = 16;
@@ -1055,10 +1055,10 @@ public:
                                             v_expand_mul_add(v21, vw21, vout0, vout1, vout2, vout3);
                                             v_expand_mul_add(v22, vw22, vout0, vout1, vout2, vout3);
 
-                                            vout0 = voutzp + v_round(v_cvt_f32(vout0)*vmult);
-                                            vout1 = voutzp + v_round(v_cvt_f32(vout1)*vmult);
-                                            vout2 = voutzp + v_round(v_cvt_f32(vout2)*vmult);
-                                            vout3 = voutzp + v_round(v_cvt_f32(vout3)*vmult);
+                                            vout0 = v_add(voutzp, v_round(v_mul(v_cvt_f32(vout0), vmult)));
+                                            vout1 = v_add(voutzp, v_round(v_mul(v_cvt_f32(vout1), vmult)));
+                                            vout2 = v_add(voutzp, v_round(v_mul(v_cvt_f32(vout2), vmult)));
+                                            vout3 = v_add(voutzp, v_round(v_mul(v_cvt_f32(vout3), vmult)));
 
                                             vout0 = v_min(v_max(vout0, outmin), outmax);
                                             vout1 = v_min(v_max(vout1, outmin), outmax);
@@ -1408,12 +1408,12 @@ public:
                                     vs12 = v_dotprod_expand_fast(w1, r2, vs12);
                                     vs13 = v_dotprod_expand_fast(w1, r3, vs13);
                                 }
-                                s0 += v_int32x4(v_reduce_sum(vs00), v_reduce_sum(vs01), v_reduce_sum(vs02), v_reduce_sum(vs03));
-                                s1 += v_int32x4(v_reduce_sum(vs10), v_reduce_sum(vs11), v_reduce_sum(vs12), v_reduce_sum(vs13));
+                                s0 = v_add(s0, v_int32x4(v_reduce_sum(vs00), v_reduce_sum(vs01), v_reduce_sum(vs02), v_reduce_sum(vs03)));
+                                s1 = v_add(s1, v_int32x4(v_reduce_sum(vs10), v_reduce_sum(vs11), v_reduce_sum(vs12), v_reduce_sum(vs13)));
                                 if( cn1 == inpCn )
                                 {
-                                    s0 = voutzp + v_round(v_cvt_f32(s0)*vmult0);
-                                    s1 = voutzp + v_round(v_cvt_f32(s1)*vmult1);
+                                    s0 = v_add(voutzp, v_round(v_mul(v_cvt_f32(s0), vmult0)));
+                                    s1 = v_add(voutzp, v_round(v_mul(v_cvt_f32(s1), vmult1)));
 
                                     s0 = v_min(v_max(s0, outmin), outmax);
                                     s1 = v_min(v_max(s1, outmin), outmax);

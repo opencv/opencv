@@ -36,15 +36,15 @@
 namespace cv {
 
 template <typename T>
-DualQuat<T>::DualQuat():w(0), x(0), y(0), z(0), w_(0), x_(0), y_(0), z_(0){};
+DualQuat<T>::DualQuat():w(0), x(0), y(0), z(0), w_(0), x_(0), y_(0), z_(0){}
 
 template <typename T>
 DualQuat<T>::DualQuat(const T vw, const T vx, const T vy, const T vz, const T _w, const T _x, const T _y, const T _z):
-                      w(vw), x(vx), y(vy), z(vz), w_(_w), x_(_x), y_(_y), z_(_z){};
+                      w(vw), x(vx), y(vy), z(vz), w_(_w), x_(_x), y_(_y), z_(_z){}
 
 template <typename T>
 DualQuat<T>::DualQuat(const Vec<T, 8> &q):w(q[0]), x(q[1]), y(q[2]), z(q[3]),
-                                          w_(q[4]), x_(q[5]), y_(q[6]), z_(q[7]){};
+                                          w_(q[4]), x_(q[5]), y_(q[6]), z_(q[7]){}
 
 template <typename T>
 DualQuat<T> DualQuat<T>::createFromQuat(const Quat<T> &realPart, const Quat<T> &dualPart)

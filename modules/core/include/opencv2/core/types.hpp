@@ -89,7 +89,7 @@ public:
     //! conjugation
     Complex conj() const;
 
-    _Tp re, im; //< the real and the imaginary parts
+    _Tp re, im; ///< the real and the imaginary parts
 };
 
 typedef Complex<float> Complexf;
@@ -2031,8 +2031,8 @@ double jaccardDistance(const Rect_<_Tp>& a, const Rect_<_Tp>& b) {
 /** @brief Finds out if there is any intersection between two rectangles
  *
  * mainly useful for language bindings
- * @param rect1 First rectangle
- * @param rect2 Second rectangle
+ * @param a First rectangle
+ * @param b Second rectangle
  * @return the area of the intersection
  */
 CV_EXPORTS_W inline double rectangleIntersectionArea(const Rect2d& a, const Rect2d& b) { return (a & b).area(); }

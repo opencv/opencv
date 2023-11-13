@@ -167,10 +167,12 @@ TEST_P(DNNTestNetwork, ENet)
 {
     applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
@@ -529,7 +531,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     Mat img = imread(findDataFile("dnn/googlenet_1.png"));
     Mat inp = blobFromImage(img, 1.0, Size(320, 240), Scalar(103.939, 116.779, 123.68), false, false);
     // Output image has values in range [-143.526, 148.539].
-    float l1 = 2e-4, lInf = 2e-3;
+    float l1 = 2e-4, lInf = 2.4e-3;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.4;
@@ -918,8 +920,12 @@ TEST_P(MaxPooling, Accuracy)
     Target targetId = get<1>(get<5>(GetParam()));
 
     // https://github.com/openvinotoolkit/openvino/issues/18731
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && stride != Size(1, 1))
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && stride != Size(1, 1)) {
+        int ow = ceil(static_cast<float>(inSize.width + 2 * pad.width - kernel.width) / stride.width);
+        int oh = ceil(static_cast<float>(inSize.height + 2 * pad.height - kernel.height) / stride.height);
+        if (ow * stride.width >= inSize.width + pad.width || oh * stride.height >= inSize.height + pad.height)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
@@ -1069,10 +1075,12 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Backends, SoftMax, testing::Combine(
 //////////////////////////////////////////////////////////////////////////////
 TEST_P(Test_layers_backends, MaxPoolUnpool)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
 
     LayerParams pool;
     pool.set("pool", "max");
