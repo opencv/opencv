@@ -882,7 +882,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
         }
 
         temp.create(size.height + border*2, size.width + border*2, CV_32SC1);
-       distanceTransformEx_5x5( src, temp, dst, labels, _mask );
+        distanceTransformEx_5x5( src, temp, dst, labels, _mask );
     }
 }
 
