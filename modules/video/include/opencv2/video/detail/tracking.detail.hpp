@@ -171,7 +171,7 @@ width, height, orientation, etc.
 class CV_EXPORTS TrackerTargetState
 {
 public:
-    virtual ~TrackerTargetState() {};
+    virtual ~TrackerTargetState() {}
     /** @brief Get the position
     * @return The position
     */

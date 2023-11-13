@@ -8,6 +8,7 @@
 #include "../test_precomp.hpp"
 
 #include "../common/gapi_streaming_tests_common.hpp"
+#include "../common/gapi_tests_common.hpp"
 
 #include <chrono>
 #include <future>
@@ -29,6 +30,7 @@
 
 #ifdef HAVE_ONEVPL
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include <opencv2/gapi/streaming/onevpl/default.hpp>
 #include "streaming/onevpl/file_data_provider.hpp"
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
 
@@ -325,6 +327,72 @@ TEST(OneVPL_Source_CPU_FrameAdapter, InitFrameAdapter)
         EXPECT_TRUE(1 == surf->get_locks_count());
     }
     EXPECT_TRUE(0 == surf->get_locks_count());
+}
+
+TEST(OneVPL_Source_Default_Source_With_OCL_Backend, Accuracy)
+{
+    using namespace cv::gapi::wip::onevpl;
+
+    auto create_from_string = [](const std::string& line){
+        std::string::size_type name_endline_pos = line.find(':');
+        std::string name = line.substr(0, name_endline_pos);
+        std::string value = line.substr(name_endline_pos + 1);
+        return CfgParam::create(name, value);
+    };
+
+    std::vector<CfgParam> source_cfgs;
+    source_cfgs.push_back(create_from_string("mfxImplDescription.AccelerationMode:MFX_ACCEL_MODE_VIA_D3D11"));
+
+    // Create VPL-based source
+    std::shared_ptr<IDeviceSelector> default_device_selector = getDefaultDeviceSelector(source_cfgs);
+
+    cv::gapi::wip::IStreamSource::Ptr source;
+    cv::gapi::wip::IStreamSource::Ptr source_cpu;
+
+    auto input = findDataFile("cv/video/768x576.avi");
+    try {
+        source = cv::gapi::wip::make_onevpl_src(input, source_cfgs, default_device_selector);
+        source_cpu = cv::gapi::wip::make_onevpl_src(input, source_cfgs, default_device_selector);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    // Build the graph w/ OCL backend
+    cv::GFrame in; // input frame from VPL source
+    auto bgr_gmat = cv::gapi::streaming::BGR(in); // conversion from VPL source frame to BGR UMat
+    auto out = cv::gapi::blur(bgr_gmat, cv::Size(4,4)); // ocl kernel of blur operation
+
+    cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
+        .compileStreaming(std::move(cv::compile_args(cv::gapi::core::ocl::kernels())));
+    pipeline.setSource(std::move(source));
+
+    cv::GStreamingCompiled pipeline_cpu = cv::GComputation(cv::GIn(in), cv::GOut(out))
+        .compileStreaming(std::move(cv::compile_args(cv::gapi::core::cpu::kernels())));
+    pipeline_cpu.setSource(std::move(source_cpu));
+
+    // The execution part
+    cv::Mat out_mat;
+    std::vector<cv::Mat> ocl_mats, cpu_mats;
+
+    // Run the pipelines
+    pipeline.start();
+    while (pipeline.pull(cv::gout(out_mat)))
+    {
+        ocl_mats.push_back(out_mat);
+    }
+
+    pipeline_cpu.start();
+    while (pipeline_cpu.pull(cv::gout(out_mat)))
+    {
+        cpu_mats.push_back(out_mat);
+    }
+
+    // Compare results
+    // FIXME: investigate why 2 sources produce different number of frames sometimes
+    for (size_t i = 0; i < std::min(ocl_mats.size(), cpu_mats.size()); ++i)
+    {
+        EXPECT_TRUE(AbsTolerance(1).to_compare_obj()(ocl_mats[i], cpu_mats[i]));
+    }
 }
 
 TEST(OneVPL_Source_CPU_Accelerator, InitDestroy)

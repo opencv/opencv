@@ -152,12 +152,13 @@ public:
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
-
+        Mat iter_rvec = rvec.clone();
+        Mat iter_tvec = tvec.clone();
         bool correspondence = solvePnP( _m1, _m2, cameraMatrix, distCoeffs,
-                                            rvec, tvec, useExtrinsicGuess, flags );
+                                            iter_rvec, iter_tvec, useExtrinsicGuess, flags );
 
         Mat _local_model;
-        hconcat(rvec, tvec, _local_model);
+        hconcat(iter_rvec, iter_tvec, _local_model);
         _local_model.copyTo(_model);
 
         return correspondence;
@@ -197,21 +198,6 @@ public:
     Mat rvec;
     Mat tvec;
 };
-
-UsacParams::UsacParams()
-{
-    confidence = 0.99;
-    isParallel = false;
-    loIterations = 5;
-    loMethod = LocalOptimMethod::LOCAL_OPTIM_INNER_LO;
-    loSampleSize = 14;
-    maxIterations = 5000;
-    neighborsSearch = NeighborSearchMethod::NEIGH_GRID;
-    randomGeneratorState = 0;
-    sampler = SamplingMethod::SAMPLING_UNIFORM;
-    score = ScoreMethod::SCORE_METHOD_MSAC;
-    threshold = 1.5;
-}
 
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                     InputArray _cameraMatrix, InputArray _distCoeffs,
@@ -336,7 +322,13 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     ipoints_inliers.resize(npoints1);
     try
     {
-        result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
+       if (flags == SOLVEPNP_ITERATIVE && !useExtrinsicGuess)
+       {
+          rvec = _local_model.col(0).clone();
+          tvec = _local_model.col(1).clone();
+          useExtrinsicGuess = true;
+       }
+       result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
                           distCoeffs, rvec, tvec, useExtrinsicGuess,
                           (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
     }
@@ -400,7 +392,7 @@ bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
     usac::setParameters(model_params, cameraMatrix.empty() ? usac::EstimationMethod::P6P :
         usac::EstimationMethod::P3P, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model_params, imagePoints, objectPoints, model_params->getRandomGeneratorState(),
+    if (usac::run(model_params, imagePoints, objectPoints,
             ransac_output, cameraMatrix, noArray(), distCoeffs, noArray())) {
         if (inliers.needed()) {
             const auto &inliers_mask = ransac_output->getInliersMask();

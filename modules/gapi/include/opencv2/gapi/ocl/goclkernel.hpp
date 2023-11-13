@@ -119,6 +119,10 @@ template<typename U> struct ocl_get_in<cv::GArray<U> >
 {
     static const std::vector<U>& get(GOCLContext &ctx, int idx) { return ctx.inArg<VectorRef>(idx).rref<U>(); }
 };
+template<> struct ocl_get_in<cv::GFrame>
+{
+    static cv::MediaFrame get(GOCLContext &ctx, int idx) { return ctx.inArg<cv::MediaFrame>(idx); }
+};
 template<typename U> struct ocl_get_in<cv::GOpaque<U> >
 {
     static const U& get(GOCLContext &ctx, int idx) { return ctx.inArg<OpaqueRef>(idx).rref<U>(); }
@@ -149,6 +153,10 @@ struct tracked_cv_umat{
     }
 };
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4702)  // unreachable code
+#endif
 template<typename... Outputs>
 void postprocess_ocl(Outputs&... outs)
 {
@@ -162,6 +170,9 @@ void postprocess_ocl(Outputs&... outs)
     int dummy[] = { 0, (validate(&outs), 0)... };
     cv::util::suppress_unused_warning(dummy);
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 template<class T> struct ocl_get_out;
 template<> struct ocl_get_out<cv::GMat>

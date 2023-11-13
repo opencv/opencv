@@ -1159,7 +1159,12 @@ bool CvCapture_MSMF::configureVideoOutput(MediaType newType, cv::uint32_t outFor
     {
         initStream(dwVideoStreamIndex, nativeFormat);
     }
-    return initStream(dwVideoStreamIndex, newFormat);
+    if (!initStream(dwVideoStreamIndex, newFormat))
+    {
+        return false;
+    }
+    outputVideoFormat = outFormat;
+    return true;
 }
 
 bool CvCapture_MSMF::configureOutput()
@@ -2469,6 +2474,12 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
 #endif
         case CV_FOURCC_MACRO('H', '2', '6', '4'):
                 return MFVideoFormat_H264; break;
+#if defined(NTDDI_WIN10)
+        case CV_FOURCC_MACRO('H', '2', '6', '5'):
+                return MFVideoFormat_H265;  break;
+        case CV_FOURCC_MACRO('H', 'E', 'V', 'C'):
+                return MFVideoFormat_HEVC;  break;
+#endif
         case CV_FOURCC_MACRO('M', '4', 'S', '2'):
                 return MFVideoFormat_M4S2; break;
         case CV_FOURCC_MACRO('M', 'J', 'P', 'G'):
@@ -2713,8 +2724,6 @@ CvResult CV_API_CALL cv_capture_open_with_params(
     if (!handle)
         return CV_ERROR_FAIL;
     *handle = NULL;
-    if (!filename)
-        return CV_ERROR_FAIL;
     CaptureT* cap = 0;
     try
     {

@@ -556,9 +556,9 @@ is at the kernel center.
 @param borderValue border value in case of constant border type
 @sa  boxFilter, gaussianBlur, medianBlur
  */
-GAPI_EXPORTS GMat sepFilter(const GMat& src, int ddepth, const Mat& kernelX, const Mat& kernelY, const Point& anchor /*FIXME: = Point(-1,-1)*/,
-                            const Scalar& delta /*FIXME = GScalar(0)*/, int borderType = BORDER_DEFAULT,
-                            const Scalar& borderValue = Scalar(0));
+GAPI_EXPORTS_W GMat sepFilter(const GMat& src, int ddepth, const Mat& kernelX, const Mat& kernelY, const Point& anchor /*FIXME: = Point(-1,-1)*/,
+                              const Scalar& delta /*FIXME = GScalar(0)*/, int borderType = BORDER_DEFAULT,
+                              const Scalar& borderValue = Scalar(0));
 
 /** @brief Convolves an image with the kernel.
 
@@ -593,8 +593,8 @@ is at the kernel center.
 @param borderValue border value in case of constant border type
 @sa  sepFilter
  */
-GAPI_EXPORTS GMat filter2D(const GMat& src, int ddepth, const Mat& kernel, const Point& anchor = Point(-1,-1), const Scalar& delta = Scalar(0),
-                           int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
+GAPI_EXPORTS_W GMat filter2D(const GMat& src, int ddepth, const Mat& kernel, const Point& anchor = Point(-1,-1), const Scalar& delta = Scalar(0),
+                             int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
 
 
 /** @brief Blurs an image using the box filter.
@@ -627,9 +627,9 @@ is at the kernel center.
 @param borderValue border value in case of constant border type
 @sa  sepFilter, gaussianBlur, medianBlur, integral
  */
-GAPI_EXPORTS GMat boxFilter(const GMat& src, int dtype, const Size& ksize, const Point& anchor = Point(-1,-1),
-                            bool normalize = true, int borderType = BORDER_DEFAULT,
-                            const Scalar& borderValue = Scalar(0));
+GAPI_EXPORTS_W GMat boxFilter(const GMat& src, int dtype, const Size& ksize, const Point& anchor = Point(-1,-1),
+                              bool normalize = true, int borderType = BORDER_DEFAULT,
+                              const Scalar& borderValue = Scalar(0));
 
 /** @brief Blurs an image using the normalized box filter.
 
@@ -687,8 +687,8 @@ sigmaX, and sigmaY.
 @param borderValue border value in case of constant border type
 @sa  sepFilter, boxFilter, medianBlur
  */
-GAPI_EXPORTS GMat gaussianBlur(const GMat& src, const Size& ksize, double sigmaX, double sigmaY = 0,
-                               int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
+GAPI_EXPORTS_W GMat gaussianBlur(const GMat& src, const Size& ksize, double sigmaX, double sigmaY = 0,
+                                 int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
 
 /** @brief Blurs an image using the median filter.
 
@@ -730,9 +730,9 @@ anchor is at the element center.
 @param borderValue border value in case of a constant border
 @sa  dilate, morphologyEx
  */
-GAPI_EXPORTS GMat erode(const GMat& src, const Mat& kernel, const Point& anchor = Point(-1,-1), int iterations = 1,
-                        int borderType = BORDER_CONSTANT,
-                        const  Scalar& borderValue = morphologyDefaultBorderValue());
+GAPI_EXPORTS_W GMat erode(const GMat& src, const Mat& kernel, const Point& anchor = Point(-1,-1), int iterations = 1,
+                          int borderType = BORDER_CONSTANT,
+                          const  Scalar& borderValue = morphologyDefaultBorderValue());
 
 /** @brief Erodes an image by using 3 by 3 rectangular structuring element.
 
@@ -750,9 +750,9 @@ Output image must have the same type, size, and number of channels as the input 
 @param borderValue border value in case of a constant border
 @sa  erode, dilate3x3
  */
-GAPI_EXPORTS GMat erode3x3(const GMat& src, int iterations = 1,
-                           int borderType = BORDER_CONSTANT,
-                           const  Scalar& borderValue = morphologyDefaultBorderValue());
+GAPI_EXPORTS_W GMat erode3x3(const GMat& src, int iterations = 1,
+                             int borderType = BORDER_CONSTANT,
+                             const  Scalar& borderValue = morphologyDefaultBorderValue());
 
 /** @brief Dilates an image by using a specific structuring element.
 
@@ -777,9 +777,9 @@ anchor is at the element center.
 @param borderValue border value in case of a constant border
 @sa  erode, morphologyEx, getStructuringElement
  */
-GAPI_EXPORTS GMat dilate(const GMat& src, const Mat& kernel, const Point& anchor = Point(-1,-1), int iterations = 1,
-                         int borderType = BORDER_CONSTANT,
-                         const  Scalar& borderValue = morphologyDefaultBorderValue());
+GAPI_EXPORTS_W GMat dilate(const GMat& src, const Mat& kernel, const Point& anchor = Point(-1,-1), int iterations = 1,
+                           int borderType = BORDER_CONSTANT,
+                           const  Scalar& borderValue = morphologyDefaultBorderValue());
 
 /** @brief Dilates an image by using 3 by 3 rectangular structuring element.
 
@@ -801,9 +801,9 @@ Output image must have the same type, size, and number of channels as the input 
 @sa  dilate, erode3x3
  */
 
-GAPI_EXPORTS GMat dilate3x3(const GMat& src, int iterations = 1,
-                            int borderType = BORDER_CONSTANT,
-                            const  Scalar& borderValue = morphologyDefaultBorderValue());
+GAPI_EXPORTS_W GMat dilate3x3(const GMat& src, int iterations = 1,
+                              int borderType = BORDER_CONSTANT,
+                              const  Scalar& borderValue = morphologyDefaultBorderValue());
 
 /** @brief Performs advanced morphological transformations.
 
@@ -831,11 +831,11 @@ the kernel center.
 meaning.
 @sa  dilate, erode, getStructuringElement
  */
-GAPI_EXPORTS GMat morphologyEx(const GMat &src, const MorphTypes op, const Mat &kernel,
-                               const Point       &anchor      = Point(-1,-1),
-                               const int          iterations  = 1,
-                               const BorderTypes  borderType  = BORDER_CONSTANT,
-                               const Scalar      &borderValue = morphologyDefaultBorderValue());
+GAPI_EXPORTS_W GMat morphologyEx(const GMat &src, const MorphTypes op, const Mat &kernel,
+                                 const Point       &anchor      = Point(-1,-1),
+                                 const int          iterations  = 1,
+                                 const BorderTypes  borderType  = BORDER_CONSTANT,
+                                 const Scalar      &borderValue = morphologyDefaultBorderValue());
 
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
@@ -883,10 +883,10 @@ applied (see cv::getDerivKernels for details).
 @param borderValue border value in case of constant border type
 @sa filter2D, gaussianBlur, cartToPolar
  */
-GAPI_EXPORTS GMat Sobel(const GMat& src, int ddepth, int dx, int dy, int ksize = 3,
-                        double scale = 1, double delta = 0,
-                        int borderType = BORDER_DEFAULT,
-                        const Scalar& borderValue = Scalar(0));
+GAPI_EXPORTS_W GMat Sobel(const GMat& src, int ddepth, int dx, int dy, int ksize = 3,
+                          double scale = 1, double delta = 0,
+                          int borderType = BORDER_DEFAULT,
+                          const Scalar& borderValue = Scalar(0));
 
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
@@ -934,10 +934,10 @@ applied (see cv::getDerivKernels for details).
 @param borderValue border value in case of constant border type
 @sa filter2D, gaussianBlur, cartToPolar
  */
-GAPI_EXPORTS std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int order, int ksize = 3,
-                        double scale = 1, double delta = 0,
-                        int borderType = BORDER_DEFAULT,
-                        const Scalar& borderValue = Scalar(0));
+GAPI_EXPORTS_W std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int order, int ksize = 3,
+                                              double scale = 1, double delta = 0,
+                                              int borderType = BORDER_DEFAULT,
+                                              const Scalar& borderValue = Scalar(0));
 
 /** @brief Calculates the Laplacian of an image.
 
@@ -964,8 +964,8 @@ applied. See #getDerivKernels for details.
 @return Destination image of the same size and the same number of channels as src.
 @sa  Sobel, Scharr
  */
-GAPI_EXPORTS GMat Laplacian(const GMat& src, int ddepth, int ksize = 1,
-                            double scale = 1, double delta = 0, int borderType = BORDER_DEFAULT);
+GAPI_EXPORTS_W GMat Laplacian(const GMat& src, int ddepth, int ksize = 1,
+                              double scale = 1, double delta = 0, int borderType = BORDER_DEFAULT);
 
 /** @brief Applies the bilateral filter to an image.
 
@@ -998,8 +998,8 @@ proportional to sigmaSpace.
 @param borderType border mode used to extrapolate pixels outside of the image, see #BorderTypes
 @return Destination image of the same size and type as src.
  */
-GAPI_EXPORTS GMat bilateralFilter(const GMat& src, int d, double sigmaColor, double sigmaSpace,
-                                  int borderType = BORDER_DEFAULT);
+GAPI_EXPORTS_W GMat bilateralFilter(const GMat& src, int d, double sigmaColor, double sigmaSpace,
+                                    int borderType = BORDER_DEFAULT);
 
 //! @} gapi_filters
 
@@ -1023,8 +1023,8 @@ largest value is used to find initial segments of strong edges. See
 L2gradient=true ), or whether the default \f$L_1\f$ norm \f$=|dI/dx|+|dI/dy|\f$ is enough (
 L2gradient=false ).
  */
-GAPI_EXPORTS GMat Canny(const GMat& image, double threshold1, double threshold2,
-                        int apertureSize = 3, bool L2gradient = false);
+GAPI_EXPORTS_W GMat Canny(const GMat& image, double threshold1, double threshold2,
+                          int apertureSize = 3, bool L2gradient = false);
 
 /** @brief Determines strong corners on an image.
 
@@ -1070,14 +1070,14 @@ or #cornerMinEigenVal.
 
 @return vector of detected corners.
  */
-GAPI_EXPORTS_W GArray<Point2f> goodFeaturesToTrack(const GMat  &image,
-                                                       int    maxCorners,
-                                                       double qualityLevel,
-                                                       double minDistance,
-                                                 const Mat   &mask = Mat(),
-                                                       int    blockSize = 3,
-                                                       bool   useHarrisDetector = false,
-                                                       double k = 0.04);
+GAPI_EXPORTS_W GArray<Point2f> goodFeaturesToTrack(const GMat   &image,
+                                                         int    maxCorners,
+                                                         double qualityLevel,
+                                                         double minDistance,
+                                                   const Mat    &mask = Mat(),
+                                                         int    blockSize = 3,
+                                                         bool   useHarrisDetector = false,
+                                                         double k = 0.04);
 
 /** @brief Equalizes the histogram of a grayscale image.
 
@@ -1098,7 +1098,7 @@ The algorithm normalizes the brightness and increases the contrast of the image.
 
 @param src Source 8-bit single channel image.
  */
-GAPI_EXPORTS GMat equalizeHist(const GMat& src);
+GAPI_EXPORTS_W GMat equalizeHist(const GMat& src);
 
 //! @addtogroup gapi_shape
 //! @{
@@ -1209,7 +1209,7 @@ Calculates the up-right bounding rectangle of a point set.
 
 @param src Input 2D point set, stored in std::vector<cv::Point2f>.
  */
-GAPI_EXPORTS GOpaque<Rect> boundingRect(const GArray<Point2f>& src);
+GAPI_EXPORTS_W GOpaque<Rect> boundingRect(const GArray<Point2f>& src);
 
 /** @brief Fits a line to a 2D point set.
 
@@ -1399,7 +1399,7 @@ Resulting gray color value computed as
 @param bY float multiplier for B channel.
 @sa RGB2YUV
  */
-GAPI_EXPORTS GMat RGB2Gray(const GMat& src, float rY, float gY, float bY);
+GAPI_EXPORTS_W GMat RGB2Gray(const GMat& src, float rY, float gY, float bY);
 
 /** @brief Converts an image from BGR color space to gray-scaled.
 
@@ -1412,7 +1412,7 @@ Resulting gray color value computed as
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC1.
 @sa BGR2LUV
  */
-GAPI_EXPORTS GMat BGR2Gray(const GMat& src);
+GAPI_EXPORTS_W GMat BGR2Gray(const GMat& src);
 
 /** @brief Converts an image from RGB color space to YUV color space.
 
@@ -1429,7 +1429,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa YUV2RGB, RGB2Lab
 */
-GAPI_EXPORTS GMat RGB2YUV(const GMat& src);
+GAPI_EXPORTS_W GMat RGB2YUV(const GMat& src);
 
 /** @brief Converts an image from BGR color space to I420 color space.
 
@@ -1445,7 +1445,7 @@ Height of I420 output image must be equal 3/2 from height of input image.
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa I4202BGR
 */
-GAPI_EXPORTS GMat BGR2I420(const GMat& src);
+GAPI_EXPORTS_W GMat BGR2I420(const GMat& src);
 
 /** @brief Converts an image from RGB color space to I420 color space.
 
@@ -1461,7 +1461,7 @@ Height of I420 output image must be equal 3/2 from height of input image.
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa I4202RGB
 */
-GAPI_EXPORTS GMat RGB2I420(const GMat& src);
+GAPI_EXPORTS_W GMat RGB2I420(const GMat& src);
 
 /** @brief Converts an image from I420 color space to BGR color space.
 
@@ -1477,7 +1477,7 @@ Height of BGR output image must be equal 2/3 from height of input image.
 @param src input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
 @sa BGR2I420
 */
-GAPI_EXPORTS GMat I4202BGR(const GMat& src);
+GAPI_EXPORTS_W GMat I4202BGR(const GMat& src);
 
 /** @brief Converts an image from I420 color space to BGR color space.
 
@@ -1493,7 +1493,7 @@ Height of RGB output image must be equal 2/3 from height of input image.
 @param src input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
 @sa RGB2I420
 */
-GAPI_EXPORTS GMat I4202RGB(const GMat& src);
+GAPI_EXPORTS_W GMat I4202RGB(const GMat& src);
 
 /** @brief Converts an image from BGR color space to LUV color space.
 
@@ -1507,7 +1507,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa RGB2Lab, RGB2LUV
 */
-GAPI_EXPORTS GMat BGR2LUV(const GMat& src);
+GAPI_EXPORTS_W GMat BGR2LUV(const GMat& src);
 
 /** @brief Converts an image from LUV color space to BGR color space.
 
@@ -1521,7 +1521,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa BGR2LUV
 */
-GAPI_EXPORTS GMat LUV2BGR(const GMat& src);
+GAPI_EXPORTS_W GMat LUV2BGR(const GMat& src);
 
 /** @brief Converts an image from YUV color space to BGR color space.
 
@@ -1535,7 +1535,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa BGR2YUV
 */
-GAPI_EXPORTS GMat YUV2BGR(const GMat& src);
+GAPI_EXPORTS_W GMat YUV2BGR(const GMat& src);
 
 /** @brief Converts an image from BGR color space to YUV color space.
 
@@ -1549,7 +1549,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa YUV2BGR
 */
-GAPI_EXPORTS GMat BGR2YUV(const GMat& src);
+GAPI_EXPORTS_W GMat BGR2YUV(const GMat& src);
 
 /** @brief Converts an image from RGB color space to Lab color space.
 
@@ -1563,7 +1563,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC1.
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC1.
 @sa RGB2YUV, RGB2LUV
 */
-GAPI_EXPORTS GMat RGB2Lab(const GMat& src);
+GAPI_EXPORTS_W GMat RGB2Lab(const GMat& src);
 
 /** @brief Converts an image from YUV color space to RGB.
 The function converts an input image from YUV color space to RGB.
@@ -1577,7 +1577,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 
 @sa RGB2Lab, RGB2YUV
 */
-GAPI_EXPORTS GMat YUV2RGB(const GMat& src);
+GAPI_EXPORTS_W GMat YUV2RGB(const GMat& src);
 
 /** @brief Converts an image from NV12 (YUV420p) color space to RGB.
 The function converts an input image from NV12 color space to RGB.
@@ -1592,7 +1592,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 
 @sa YUV2RGB, NV12toBGR
 */
-GAPI_EXPORTS GMat NV12toRGB(const GMat& src_y, const GMat& src_uv);
+GAPI_EXPORTS_W GMat NV12toRGB(const GMat& src_y, const GMat& src_uv);
 
 /** @brief Converts an image from NV12 (YUV420p) color space to gray-scaled.
 The function converts an input image from NV12 color space to gray-scaled.
@@ -1607,7 +1607,7 @@ Output image must be 8-bit unsigned 1-channel image @ref CV_8UC1.
 
 @sa YUV2RGB, NV12toBGR
 */
-GAPI_EXPORTS GMat NV12toGray(const GMat& src_y, const GMat& src_uv);
+GAPI_EXPORTS_W GMat NV12toGray(const GMat& src_y, const GMat& src_uv);
 
 /** @brief Converts an image from NV12 (YUV420p) color space to BGR.
 The function converts an input image from NV12 color space to RGB.
@@ -1622,7 +1622,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 
 @sa YUV2BGR, NV12toRGB
 */
-GAPI_EXPORTS GMat NV12toBGR(const GMat& src_y, const GMat& src_uv);
+GAPI_EXPORTS_W GMat NV12toBGR(const GMat& src_y, const GMat& src_uv);
 
 /** @brief Converts an image from BayerGR color space to RGB.
 The function converts an input image from BayerGR color space to RGB.
@@ -1636,7 +1636,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 
 @sa YUV2BGR, NV12toRGB
 */
-GAPI_EXPORTS GMat BayerGR2RGB(const GMat& src_gr);
+GAPI_EXPORTS_W GMat BayerGR2RGB(const GMat& src_gr);
 
 /** @brief Converts an image from RGB color space to HSV.
 The function converts an input image from RGB color space to HSV.
@@ -1650,7 +1650,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 
 @sa YUV2BGR, NV12toRGB
 */
-GAPI_EXPORTS GMat RGB2HSV(const GMat& src);
+GAPI_EXPORTS_W GMat RGB2HSV(const GMat& src);
 
 /** @brief Converts an image from RGB color space to YUV422.
 The function converts an input image from RGB color space to YUV422.
@@ -1664,7 +1664,7 @@ Output image must be 8-bit unsigned 2-channel image @ref CV_8UC2.
 
 @sa YUV2BGR, NV12toRGB
 */
-GAPI_EXPORTS GMat RGB2YUV422(const GMat& src);
+GAPI_EXPORTS_W GMat RGB2YUV422(const GMat& src);
 
 /** @brief Converts an image from NV12 (YUV420p) color space to RGB.
 The function converts an input image from NV12 color space to RGB.

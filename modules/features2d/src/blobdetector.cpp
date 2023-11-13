@@ -71,6 +71,37 @@ public:
   virtual void read( const FileNode& fn ) CV_OVERRIDE;
   virtual void write( FileStorage& fs ) const CV_OVERRIDE;
 
+  void setParams(const SimpleBlobDetector::Params& _params ) CV_OVERRIDE {
+    SimpleBlobDetectorImpl::validateParameters(_params);
+    params = _params;
+  }
+
+  SimpleBlobDetector::Params getParams() const CV_OVERRIDE { return params; }
+
+  static void validateParameters(const SimpleBlobDetector::Params& p)
+  {
+      if (p.thresholdStep <= 0)
+          CV_Error(Error::StsBadArg, "thresholdStep>0");
+
+      if (p.minThreshold > p.maxThreshold || p.minThreshold < 0)
+          CV_Error(Error::StsBadArg, "0<=minThreshold<=maxThreshold");
+
+      if (p.minDistBetweenBlobs <=0 )
+          CV_Error(Error::StsBadArg, "minDistBetweenBlobs>0");
+
+      if (p.minArea > p.maxArea || p.minArea <=0)
+          CV_Error(Error::StsBadArg, "0<minArea<=maxArea");
+
+      if (p.minCircularity > p.maxCircularity || p.minCircularity <= 0)
+          CV_Error(Error::StsBadArg, "0<minCircularity<=maxCircularity");
+
+      if (p.minInertiaRatio > p.maxInertiaRatio || p.minInertiaRatio <= 0)
+          CV_Error(Error::StsBadArg, "0<minInertiaRatio<=maxInertiaRatio");
+
+      if (p.minConvexity > p.maxConvexity || p.minConvexity <= 0)
+          CV_Error(Error::StsBadArg, "0<minConvexity<=maxConvexity");
+  }
+
 protected:
   struct CV_EXPORTS Center
   {
@@ -192,7 +223,10 @@ params(parameters)
 
 void SimpleBlobDetectorImpl::read( const cv::FileNode& fn )
 {
-    params.read(fn);
+    SimpleBlobDetector::Params rp;
+    rp.read(fn);
+    SimpleBlobDetectorImpl::validateParameters(rp);
+    params = rp;
 }
 
 void SimpleBlobDetectorImpl::write( cv::FileStorage& fs ) const
@@ -455,6 +489,7 @@ const std::vector<std::vector<Point> >& SimpleBlobDetectorImpl::getBlobContours(
 
 Ptr<SimpleBlobDetector> SimpleBlobDetector::create(const SimpleBlobDetector::Params& params)
 {
+    SimpleBlobDetectorImpl::validateParameters(params);
     return makePtr<SimpleBlobDetectorImpl>(params);
 }
 

@@ -13,7 +13,7 @@
 #include <opencv2/core/hal/hal.hpp>
 #include <opencv2/core/hal/intrin.hpp>
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 #include "gfluidcore_func.hpp"
 #endif
 
@@ -113,7 +113,7 @@ static inline DST divr(SRC1 x, SRC2 y, float scale=1)
 // Fluid kernels: addWeighted
 //
 //---------------------------
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 CV_ALWAYS_INLINE v_float32 v_load_f32(const ushort* in)
 {
     return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(in)));
@@ -150,8 +150,8 @@ CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], DST out[],
                   ((std::is_same<SRC, short>::value) && (std::is_same<DST, short>::value)),
                   "This templated overload is only for short and ushort type combinations.");
 
-    constexpr int nlanes = (std::is_same<DST, ushort>::value) ? static_cast<int>(v_uint16::nlanes) :
-                                                                static_cast<int>(v_int16::nlanes);
+    const int nlanes = (std::is_same<DST, ushort>::value) ? static_cast<int>(VTraits<v_uint16>::vlanes()) :
+                                                                static_cast<int>(VTraits<v_int16>::vlanes());
 
     if (length < nlanes)
         return 0;
@@ -189,7 +189,7 @@ CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], uchar out[],
                                const float _alpha, const float _beta,
                                const float _gamma, int length)
 {
-    constexpr int nlanes = v_uint8::nlanes;
+    const int nlanes = VTraits<v_uint8>::vlanes();
 
     if (length < nlanes)
         return 0;
@@ -298,7 +298,7 @@ GAPI_FLUID_KERNEL(GFluidAddW, cv::gapi::core::GAddW, false)
 
 enum Arithm { ARITHM_ABSDIFF, ARITHM_ADD, ARITHM_SUBTRACT, ARITHM_MULTIPLY, ARITHM_DIVIDE };
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 CV_ALWAYS_INLINE void absdiff_store(short out[], const v_int16& a, const v_int16& b, int x)
 {
     vx_store(&out[x], v_absdiffs(a, b));
@@ -322,7 +322,7 @@ CV_ALWAYS_INLINE void absdiff_store(float out[], const v_float32& a, const v_flo
 template<typename T, typename VT>
 CV_ALWAYS_INLINE int absdiff_impl(const T in1[], const T in2[], T out[], int length)
 {
-    constexpr int nlanes = static_cast<int>(VT::nlanes);
+    const int nlanes = static_cast<int>(VTraits<VT>::vlanes());
 
     if (length < nlanes)
         return 0;
@@ -403,7 +403,7 @@ CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const View &src2
     {
         case ARITHM_ADD:
         {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             x = add_simd(in1, in2, out, length);
 #endif
             for (; x < length; ++x)
@@ -412,7 +412,7 @@ CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const View &src2
         }
         case ARITHM_SUBTRACT:
         {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             x = sub_simd(in1, in2, out, length);
 #endif
             for (; x < length; ++x)
@@ -421,7 +421,7 @@ CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const View &src2
         }
         case ARITHM_MULTIPLY:
         {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             x = mul_simd(in1, in2, out, length, scale);
 #endif
             for (; x < length; ++x)
@@ -430,7 +430,7 @@ CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const View &src2
         }
         case ARITHM_DIVIDE:
         {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             x = div_simd(in1, in2, out, length, scale);
 #endif
             for (; x < length; ++x)
@@ -569,7 +569,7 @@ static void run_absdiff(Buffer &dst, const View &src1, const View &src2)
 
     int x = 0;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     x = absdiff_simd(in1, in2, out, length);
 #endif
     for (; x < length; ++x)
@@ -660,7 +660,7 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
     case ARITHM_ADD:
     {
         int w = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         w = addc_simd(in, scalar, out, length, chan);
 #endif
         for (; w < length; ++w)
@@ -671,7 +671,7 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
     case ARITHM_SUBTRACT:
     {
         int w = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         w = subc_simd(in, scalar, out, length, chan);
 #endif
         for (; w < length; ++w)
@@ -681,7 +681,7 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
     case ARITHM_MULTIPLY:
     {
         int w = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         w = mulc_simd(in, scalar, out, length, chan, scale);
 #endif
         for (; w < width; ++w)
@@ -709,7 +709,7 @@ CV_ALWAYS_INLINE void run_arithm_rs(Buffer &dst, const View &src, const float sc
     case ARITHM_SUBTRACT:
     {
         int w = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         w = subrc_simd(scalar, in, out, length, chan);
 #endif
         for (; w < length; ++w)
@@ -721,7 +721,7 @@ CV_ALWAYS_INLINE void run_arithm_rs(Buffer &dst, const View &src, const float sc
     case ARITHM_DIVIDE:
     {
         int w = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         w = divrc_simd(scalar, in, out, length, chan, scale);
 #endif
         for (; w < length; ++w)
@@ -744,7 +744,7 @@ CV_ALWAYS_INLINE void setScratchSize(Buffer& scratch, const int buflen)
 
 CV_ALWAYS_INLINE void initScratchBuffer(Buffer& scratch)
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     // 512 bits / 32 bits = 16 elements of float32 can contain a AVX 512 SIMD vector.
     constexpr int maxNlanes = 16;
 
@@ -783,7 +783,7 @@ CV_ALWAYS_INLINE void run_absdiffc(Buffer& dst, const View& src, const float sca
     const int length = width * chan;
 
     int w = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     w = absdiffc_simd(in, scalar, out, length, chan);
 #endif
 
@@ -1076,7 +1076,7 @@ CV_ALWAYS_INLINE void run_divc(Buffer& dst, const View& src, Buffer& scratch,
     const int length = width * chan;
 
     int w = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     int scratch_length = scratch.length();
     int indicator_offset = scratch_length - 1;
     const int set_mask_indicator = static_cast<int>(*(scratch.OutLine<float>() + (indicator_offset)));
@@ -1143,7 +1143,7 @@ GAPI_FLUID_KERNEL(GFluidDivC, cv::gapi::core::GDivC, true)
 
     static void initScratch(const GMatDesc&, const GScalarDesc&, double, int, Buffer& scratch)
     {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             // 512 bits / 32 bits = 16 elements of float32 a AVX512 SIMD vector can contain.
             constexpr int maxNlanes = 16;
 
@@ -1565,7 +1565,7 @@ template<typename SRC, typename DST>
 CV_ALWAYS_INLINE void convertto_impl(const SRC in[], DST out[], const int length)
 {
     int x = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     x = convertto_simd(in, out, length);
 #endif
     // tail of SIMD cycle
@@ -1580,7 +1580,7 @@ CV_ALWAYS_INLINE void convertto_impl(const SRC *in, DST* out, const float alpha,
                                      const int length)
 {
     int x = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     x = convertto_scaled_simd(in, out, alpha, beta, length);
 #endif
 
@@ -2096,9 +2096,7 @@ static void run_inrange3(uchar out[], const uchar in[], int width,
         v_load_deinterleave(&in[3*w], i0, i1, i2);
 
         v_uint8x16 o;
-        o = (i0 >= v_setall_u8(lower[0])) & (i0 <= v_setall_u8(upper[0])) &
-            (i1 >= v_setall_u8(lower[1])) & (i1 <= v_setall_u8(upper[1])) &
-            (i2 >= v_setall_u8(lower[2])) & (i2 <= v_setall_u8(upper[2]));
+        o = v_and(v_and(v_and(v_and(v_and(v_ge(i0, v_setall_u8(lower[0])), v_le(i0, v_setall_u8(upper[0]))), v_ge(i1, v_setall_u8(lower[1]))), v_le(i1, v_setall_u8(upper[1]))), v_ge(i2, v_setall_u8(lower[2]))), v_le(i2, v_setall_u8(upper[2])));
 
         v_store(&out[w], o);
     }
@@ -2226,7 +2224,7 @@ static void run_select_row3(int width, uchar out[], uchar in1[], uchar in2[], uc
         v_load_deinterleave(&in2[3*w], a2, b2, c2);
 
         mask = v_load(&in3[w]);
-        mask = mask != v_setzero_u8();
+        mask = v_ne(mask, v_setzero_u8());
 
         a = v_select(mask, a1, a2);
         b = v_select(mask, b1, b2);
@@ -2320,16 +2318,19 @@ GAPI_FLUID_KERNEL(GFluidSplit3, cv::gapi::core::GSplit3, false)
 
     static void run(const View &src, Buffer &dst1, Buffer &dst2, Buffer &dst3)
     {
+        GAPI_Assert((src.meta().depth == CV_8U) && (dst1.meta().depth == CV_8U) &&
+                    (dst2.meta().depth == CV_8U) && (dst3.meta().depth == CV_8U) &&
+                    (3 == src.meta().chan));
+
         const auto *in   = src.InLine<uchar>(0);
               auto *out1 = dst1.OutLine<uchar>();
               auto *out2 = dst2.OutLine<uchar>();
               auto *out3 = dst3.OutLine<uchar>();
 
-        GAPI_Assert(3 == src.meta().chan);
         int width = src.length();
         int w = 0;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         w = split3_simd(in, out1, out2, out3, width);
 #endif
 
@@ -2348,17 +2349,20 @@ GAPI_FLUID_KERNEL(GFluidSplit4, cv::gapi::core::GSplit4, false)
 
     static void run(const View &src, Buffer &dst1, Buffer &dst2, Buffer &dst3, Buffer &dst4)
     {
+        GAPI_Assert((src.meta().depth == CV_8U) && (dst1.meta().depth == CV_8U) &&
+                    (dst2.meta().depth == CV_8U) && (dst3.meta().depth == CV_8U) &&
+                    (dst4.meta().depth == CV_8U) && (4 == src.meta().chan));
+
         const auto *in   = src.InLine<uchar>(0);
               auto *out1 = dst1.OutLine<uchar>();
               auto *out2 = dst2.OutLine<uchar>();
               auto *out3 = dst3.OutLine<uchar>();
               auto *out4 = dst4.OutLine<uchar>();
 
-        GAPI_Assert(4 == src.meta().chan);
         int width = src.length();
         int w = 0;
 
-    #if CV_SIMD
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
         w = split4_simd(in, out1, out2, out3, out4, width);
     #endif
 
@@ -2372,31 +2376,46 @@ GAPI_FLUID_KERNEL(GFluidSplit4, cv::gapi::core::GSplit4, false)
     }
 };
 
+template<typename T>
+CV_ALWAYS_INLINE void run_merge3(Buffer& dst, const View& src1, const View& src2, const View& src3)
+{
+    const auto* in1 = src1.InLine<T>(0);
+    const auto* in2 = src2.InLine<T>(0);
+    const auto* in3 = src3.InLine<T>(0);
+    auto* out = dst.OutLine<T>();
+
+    int width = dst.length();
+    int w = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        w = merge3_simd(in1, in2, in3, out, width);
+#endif
+
+    for (; w < width; w++)
+    {
+        out[3 * w] = in1[w];
+        out[3 * w + 1] = in2[w];
+        out[3 * w + 2] = in3[w];
+    }
+}
+
 GAPI_FLUID_KERNEL(GFluidMerge3, cv::gapi::core::GMerge3, false)
 {
     static const int Window = 1;
 
-    static void run(const View &src1, const View &src2, const View &src3, Buffer &dst)
+    static void run(const View& src1, const View& src2, const View& src3, Buffer& dst)
     {
-        const auto *in1 = src1.InLine<uchar>(0);
-        const auto *in2 = src2.InLine<uchar>(0);
-        const auto *in3 = src3.InLine<uchar>(0);
-              auto *out = dst.OutLine<uchar>();
+        GAPI_Assert((src1.meta().depth == dst.meta().depth) &&
+                    (src1.meta().depth == src2.meta().depth) &&
+                    (src1.meta().depth == src3.meta().depth));
 
-        GAPI_Assert(3 == dst.meta().chan);
-        int width = dst.length();
-        int w = 0;
+        // SRC/DST TYPE      OP          __VA_ARGS__
+        MERGE3_(uchar,  run_merge3, dst, src1, src2, src3);
+        MERGE3_(ushort, run_merge3, dst, src1, src2, src3);
+        MERGE3_(short,  run_merge3, dst, src1, src2, src3);
+        MERGE3_(float,  run_merge3, dst, src1, src2, src3);
 
-    #if CV_SIMD
-        w = merge3_simd(in1, in2, in3, out, width);
-    #endif
-
-        for (; w < width; w++)
-        {
-            out[3*w    ] = in1[w];
-            out[3*w + 1] = in2[w];
-            out[3*w + 2] = in3[w];
-        }
+        CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
 };
 
@@ -2407,18 +2426,21 @@ GAPI_FLUID_KERNEL(GFluidMerge4, cv::gapi::core::GMerge4, false)
     static void run(const View &src1, const View &src2, const View &src3, const View &src4,
                     Buffer &dst)
     {
+        GAPI_Assert((dst.meta().depth == CV_8U) && (src1.meta().depth == CV_8U) &&
+                    (src2.meta().depth == CV_8U) && (src3.meta().depth == CV_8U) &&
+                    (4 == dst.meta().chan));
+
         const auto *in1 = src1.InLine<uchar>(0);
         const auto *in2 = src2.InLine<uchar>(0);
         const auto *in3 = src3.InLine<uchar>(0);
         const auto *in4 = src4.InLine<uchar>(0);
               auto *out = dst.OutLine<uchar>();
 
-        GAPI_Assert(4 == dst.meta().chan);
         int width = dst.length();
 
         int w = 0; // cycle counter
 
-    #if CV_SIMD
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
         w = merge4_simd(in1, in2, in3, in4, out, width);
     #endif
 

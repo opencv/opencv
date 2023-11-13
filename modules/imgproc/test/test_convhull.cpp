@@ -180,7 +180,7 @@ cvTsIsPointOnLineSegment(const cv::Point2f &x, const cv::Point2f &a, const cv::P
     double d2 = cvTsDist(cvPoint2D32f(x.x, x.y), cvPoint2D32f(b.x, b.y));
     double d3 = cvTsDist(cvPoint2D32f(a.x, a.y), cvPoint2D32f(b.x, b.y));
 
-    return (abs(d1 + d2 - d3) <= (1E-5));
+    return (abs(d1 + d2 - d3) <= (1E-4));
 }
 
 

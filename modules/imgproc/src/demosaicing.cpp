@@ -184,25 +184,25 @@ public:
 
         for( ; bayer <= bayer_end - 18; bayer += 14, dst += 14 )
         {
-            v_uint16x8 r0 = v_load((ushort*)bayer);
-            v_uint16x8 r1 = v_load((ushort*)(bayer+bayer_step));
-            v_uint16x8 r2 = v_load((ushort*)(bayer+bayer_step*2));
+            v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
+            v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
+            v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
 
-            v_uint16x8 b1 = ((r0 << 8) >> 7) + ((r2 << 8) >> 7);
-            v_uint16x8 b0 = v_rotate_right<1>(b1) + b1;
-            b1 = v_rotate_right<1>(b1) << 1;
+            v_uint16x8 b1 = v_add(v_shr<7>(v_shl<8>(r0)), v_shr<7>(v_shl<8>(r2)));
+            v_uint16x8 b0 = v_add(v_rotate_right<1>(b1), b1);
+            b1 = v_shl<1>(v_rotate_right<1>(b1));
 
-            v_uint16x8 g0 = (r0 >> 7) + (r2 >> 7);
-            v_uint16x8 g1 = (r1 << 8) >> 7;
-            g0 += v_rotate_right<1>(g1) + g1;
-            g1 = v_rotate_right<1>(g1) << 2;
+            v_uint16x8 g0 = v_add(v_shr<7>(r0), v_shr<7>(r2));
+            v_uint16x8 g1 = v_shr<7>(v_shl<8>(r1));
+            g0 = v_add(g0, v_add(v_rotate_right<1>(g1), g1));
+            g1 = v_shl<2>(v_rotate_right<1>(g1));
 
-            r0 = r1 >> 8;
-            r1 = (v_rotate_right<1>(r0) + r0) << 2;
-            r0 = r0 << 3;
+            r0 = v_shr<8>(r1);
+            r1 = v_shl<2>(v_add(v_rotate_right<1>(r0), r0));
+            r0 = v_shl<3>(r0);
 
-            g0 = (v_mul_hi(b0, _b2y) + v_mul_hi(g0, _g2y) + v_mul_hi(r0, _r2y)) >> 2;
-            g1 = (v_mul_hi(b1, _b2y) + v_mul_hi(g1, _g2y) + v_mul_hi(r1, _r2y)) >> 2;
+            g0 = v_shr<2>(v_add(v_add(v_mul_hi(b0, _b2y), v_mul_hi(g0, _g2y)), v_mul_hi(r0, _r2y)));
+            g1 = v_shr<2>(v_add(v_add(v_mul_hi(b1, _b2y), v_mul_hi(g1, _g2y)), v_mul_hi(r1, _r2y)));
             v_uint8x16 pack_lo, pack_hi;
             v_zip(v_pack_u(v_reinterpret_as_s16(g0), v_reinterpret_as_s16(g0)),
                   v_pack_u(v_reinterpret_as_s16(g1), v_reinterpret_as_s16(g1)),
@@ -265,35 +265,35 @@ public:
 
         for( ; bayer <= bayer_end - 18; bayer += 14, dst += 42 )
         {
-            v_uint16x8 r0 = v_load((ushort*)bayer);
-            v_uint16x8 r1 = v_load((ushort*)(bayer+bayer_step));
-            v_uint16x8 r2 = v_load((ushort*)(bayer+bayer_step*2));
+            v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
+            v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
+            v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
 
-            v_uint16x8 b1 = (r0 & masklo) + (r2 & masklo);
+            v_uint16x8 b1 = v_add(v_and(r0, masklo), v_and(r2, masklo));
             v_uint16x8 nextb1 = v_rotate_right<1>(b1);
-            v_uint16x8 b0 = b1 + nextb1;
-            b1 = (nextb1 + delta1) >> 1;
-            b0 = (b0 + delta2) >> 2;
+            v_uint16x8 b0 = v_add(b1, nextb1);
+            b1 = v_shr<1>(v_add(nextb1, delta1));
+            b0 = v_shr<2>(v_add(b0, delta2));
             // b0 b2 ... b14 b1 b3 ... b15
             b0 = v_reinterpret_as_u16(v_pack_u(v_reinterpret_as_s16(b0), v_reinterpret_as_s16(b1)));
 
-            v_uint16x8 g0 = (r0 >> 8) + (r2 >> 8);
-            v_uint16x8 g1 = r1 & masklo;
-            g0 += v_rotate_right<1>(g1) + g1;
+            v_uint16x8 g0 = v_add(v_shr<8>(r0), v_shr<8>(r2));
+            v_uint16x8 g1 = v_and(r1, masklo);
+            g0 = v_add(g0, v_add(v_rotate_right<1>(g1), g1));
             g1 = v_rotate_right<1>(g1);
-            g0 = (g0 + delta2) >> 2;
+            g0 = v_shr<2>(v_add(g0, delta2));
             // g0 g2 ... g14 g1 g3 ... g15
             g0 = v_reinterpret_as_u16(v_pack_u(v_reinterpret_as_s16(g0), v_reinterpret_as_s16(g1)));
 
-            r0 = r1 >> 8;
-            r1 = v_rotate_right<1>(r0) + r0;
-            r1 = (r1 + delta1) >> 1;
+            r0 = v_shr<8>(r1);
+            r1 = v_add(v_rotate_right<1>(r0), r0);
+            r1 = v_shr<1>(v_add(r1, delta1));
             // r0 r2 ... r14 r1 r3 ... r15
             r0 = v_reinterpret_as_u16(v_pack_u(v_reinterpret_as_s16(r0), v_reinterpret_as_s16(r1)));
 
-            b1 = (b0 ^ r0) & mask;
-            b0 = b0 ^ b1;
-            r0 = r0 ^ b1;
+            b1 = v_and(v_xor(b0, r0), mask);
+            b0 = v_xor(b0, b1);
+            r0 = v_xor(r0, b1);
 
             // b1 g1 b3 g3 b5 g5...
             v_uint8x16 pack_lo, pack_hi;
@@ -398,35 +398,35 @@ public:
 
         for( ; bayer <= bayer_end - 18; bayer += 14, dst += 56 )
         {
-            v_uint16x8 r0 = v_load((ushort*)bayer);
-            v_uint16x8 r1 = v_load((ushort*)(bayer+bayer_step));
-            v_uint16x8 r2 = v_load((ushort*)(bayer+bayer_step*2));
+            v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
+            v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
+            v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
 
-            v_uint16x8 b1 = (r0 & masklo) + (r2 & masklo);
+            v_uint16x8 b1 = v_add(v_and(r0, masklo), v_and(r2, masklo));
             v_uint16x8 nextb1 = v_rotate_right<1>(b1);
-            v_uint16x8 b0 = b1 + nextb1;
-            b1 = (nextb1 + delta1) >> 1;
-            b0 = (b0 + delta2) >> 2;
+            v_uint16x8 b0 = v_add(b1, nextb1);
+            b1 = v_shr<1>(v_add(nextb1, delta1));
+            b0 = v_shr<2>(v_add(b0, delta2));
             // b0 b2 ... b14 b1 b3 ... b15
             b0 = v_reinterpret_as_u16(v_pack_u(v_reinterpret_as_s16(b0), v_reinterpret_as_s16(b1)));
 
-            v_uint16x8 g0 = (r0 >> 8) + (r2 >> 8);
-            v_uint16x8 g1 = r1 & masklo;
-            g0 += v_rotate_right<1>(g1) + g1;
+            v_uint16x8 g0 = v_add(v_shr<8>(r0), v_shr<8>(r2));
+            v_uint16x8 g1 = v_and(r1, masklo);
+            g0 = v_add(g0, v_add(v_rotate_right<1>(g1), g1));
             g1 = v_rotate_right<1>(g1);
-            g0 = (g0 + delta2) >> 2;
+            g0 = v_shr<2>(v_add(g0, delta2));
             // g0 g2 ... g14 g1 g3 ... g15
             g0 = v_reinterpret_as_u16(v_pack_u(v_reinterpret_as_s16(g0), v_reinterpret_as_s16(g1)));
 
-            r0 = r1 >> 8;
-            r1 = v_rotate_right<1>(r0) + r0;
-            r1 = (r1 + delta1) >> 1;
+            r0 = v_shr<8>(r1);
+            r1 = v_add(v_rotate_right<1>(r0), r0);
+            r1 = v_shr<1>(v_add(r1, delta1));
             // r0 r2 ... r14 r1 r3 ... r15
             r0 = v_reinterpret_as_u16(v_pack_u(v_reinterpret_as_s16(r0), v_reinterpret_as_s16(r1)));
 
-            b1 = (b0 ^ r0) & mask;
-            b0 = b0 ^ b1;
-            r0 = r0 ^ b1;
+            b1 = v_and(v_xor(b0, r0), mask);
+            b0 = v_xor(b0, b1);
+            r0 = v_xor(r0, b1);
 
             // b1 g1 b3 g3 b5 g5...
             v_uint8x16 pack_lo, pack_hi;
@@ -494,44 +494,44 @@ public:
              B G B G | B G B G | B G B G | B G B G
              */
 
-            v_uint16x8 r0 = v_load((ushort*)bayer);
-            v_uint16x8 r1 = v_load((ushort*)(bayer+bayer_step));
-            v_uint16x8 r2 = v_load((ushort*)(bayer+bayer_step*2));
+            v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
+            v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
+            v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
 
-            v_uint16x8 b1 = (r0 & masklow) + (r2 & masklow);
+            v_uint16x8 b1 = v_add(v_and(r0, masklow), v_and(r2, masklow));
             v_uint16x8 nextb1 = v_rotate_right<1>(b1);
-            v_uint16x8 b0 = b1 + nextb1;
-            b1 = (nextb1 + delta1) >> 1;
-            b0 = (b0 + delta2) >> 2;
+            v_uint16x8 b0 = v_add(b1, nextb1);
+            b1 = v_shr<1>(v_add(nextb1, delta1));
+            b0 = v_shr<2>(v_add(b0, delta2));
             // b0 b2 ... b14 b1 b3 ... b15
             b0 = v_reinterpret_as_u16(v_pack_u(v_reinterpret_as_s16(b0), v_reinterpret_as_s16(b1)));
 
             // vertical sum
-            v_uint16x8 r0g = r0 >> 8;
-            v_uint16x8 r2g = r2 >> 8;
-            v_uint16x8 sumv = ((r0g + r2g) + delta1) >> 1;
+            v_uint16x8 r0g = v_shr<8>(r0);
+            v_uint16x8 r2g = v_shr<8>(r2);
+            v_uint16x8 sumv = v_shr<1>(v_add(v_add(r0g, r2g), delta1));
             // horizontal sum
-            v_uint16x8 g1 = r1 & masklow;
+            v_uint16x8 g1 = v_and(r1, masklow);
             v_uint16x8 nextg1 = v_rotate_right<1>(g1);
-            v_uint16x8 sumg = (g1 + nextg1 + delta1) >> 1;
+            v_uint16x8 sumg = v_shr<1>(v_add(v_add(g1, nextg1), delta1));
 
             // gradients
-            v_uint16x8 gradv = (r0g - r2g) + (r2g - r0g);
-            v_uint16x8 gradg = (nextg1 - g1) + (g1 - nextg1);
-            v_uint16x8 gmask = gradg > gradv;
-            v_uint16x8 g0 = (gmask & sumv) + (sumg & (gmask ^ full));
+            v_uint16x8 gradv = v_add(v_sub(r0g, r2g), v_sub(r2g, r0g));
+            v_uint16x8 gradg = v_add(v_sub(nextg1, g1), v_sub(g1, nextg1));
+            v_uint16x8 gmask = v_gt(gradg, gradv);
+            v_uint16x8 g0 = v_add(v_and(gmask, sumv), v_and(sumg, v_xor(gmask, full)));
             // g0 g2 ... g14 g1 g3 ...
             g0 = v_reinterpret_as_u16(v_pack_u(v_reinterpret_as_s16(g0), v_reinterpret_as_s16(nextg1)));
 
-            r0 = r1 >> 8;
-            r1 = v_rotate_right<1>(r0) + r0;
-            r1 = (r1 + delta1) >> 1;
+            r0 = v_shr<8>(r1);
+            r1 = v_add(v_rotate_right<1>(r0), r0);
+            r1 = v_shr<1>(v_add(r1, delta1));
             // r0 r2 ... r14 r1 r3 ... r15
             r0 = v_reinterpret_as_u16(v_pack_u(v_reinterpret_as_s16(r0), v_reinterpret_as_s16(r1)));
 
-            b1 = (b0 ^ r0) & mask;
-            b0 = b0 ^ b1;
-            r0 = r0 ^ b1;
+            b1 = v_and(v_xor(b0, r0), mask);
+            b0 = v_xor(b0, b1);
+            r0 = v_xor(r0, b1);
 
             // b1 g1 b3 g3 b5 g5...
             v_uint8x16 pack_lo, pack_hi;
@@ -1060,19 +1060,19 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
                 v_uint16x8 b0, b1, b2, b3, b4, b5, b6;
 
-                b0 = (v_absdiff(s2, s8)<<1) + v_absdiff(s1, s7) + v_absdiff(s3, s9);
-                b1 = (v_absdiff(s4, s6)<<1) + v_absdiff(s1, s3) + v_absdiff(s7, s9);
-                b2 = v_absdiff(s3, s7)<<1;
-                b3 = v_absdiff(s1, s9)<<1;
+                b0 = v_add(v_add(v_shl<1>(v_absdiff(s2, s8)), v_absdiff(s1, s7)), v_absdiff(s3, s9));
+                b1 = v_add(v_add(v_shl<1>(v_absdiff(s4, s6)), v_absdiff(s1, s3)), v_absdiff(s7, s9));
+                b2 = v_shl<1>(v_absdiff(s3, s7));
+                b3 = v_shl<1>(v_absdiff(s1, s9));
 
                 v_store(brow, b0);
                 v_store(brow + N, b1);
                 v_store(brow + N2, b2);
                 v_store(brow + N3, b3);
 
-                b4 = b2 + v_absdiff(s2, s4) + v_absdiff(s6, s8);
-                b5 = b3 + v_absdiff(s2, s6) + v_absdiff(s4, s8);
-                b6 = (s2 + s4 + s6 + s8)>>1;
+                b4 = v_add(v_add(b2, v_absdiff(s2, s4)), v_absdiff(s6, s8));
+                b5 = v_add(v_add(b3, v_absdiff(s2, s6)), v_absdiff(s4, s8));
+                b6 = v_shr<1>(v_add(v_add(v_add(s2, s4), s6), s8));
 
                 v_store(brow + N4, b4);
                 v_store(brow + N5, b5);
@@ -1279,7 +1279,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
             v_uint16x8 one = v_setall_u16(1), z = v_setzero_u16();
             v_float32x4 _0_5 = v_setall_f32(0.5f);
 
-            #define v_merge_u16(a, b) (((a) & v_reinterpret_as_u16(emask)) | ((b) & v_reinterpret_as_u16(omask))) //(aA_aA_aA_aA) * (bB_bB_bB_bB) => (bA_bA_bA_bA)
+            #define v_merge_u16(a, b) (v_or((v_and((a), v_reinterpret_as_u16(emask))), (v_and((b), v_reinterpret_as_u16(omask))))) //(aA_aA_aA_aA) * (bB_bB_bB_bB) => (bA_bA_bA_bA)
             #define v_cvt_s16f32_lo(a)  v_cvt_f32(v_expand_low(v_reinterpret_as_s16(a)))   //(1,2,3,4,5,6,7,8) => (1f,2f,3f,4f)
             #define v_cvt_s16f32_hi(a)  v_cvt_f32(v_expand_high(v_reinterpret_as_s16(a)))   //(1,2,3,4,5,6,7,8) => (5f,6f,7f,8f)
 
@@ -1287,16 +1287,16 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
             for( ; i <= N - 10; i += 8, srow += 8, brow0 += 8, brow1 += 8, brow2 += 8 )
             {
                 //int gradN = brow0[0] + brow1[0];
-                v_uint16x8 gradN = v_load(brow0) + v_load(brow1);
+                v_uint16x8 gradN = v_add(v_load(brow0), v_load(brow1));
 
                 //int gradS = brow1[0] + brow2[0];
-                v_uint16x8 gradS = v_load(brow1) + v_load(brow2);
+                v_uint16x8 gradS = v_add(v_load(brow1), v_load(brow2));
 
                 //int gradW = brow1[N-1] + brow1[N];
-                v_uint16x8 gradW = v_load(brow1+N-1) + v_load(brow1+N);
+                v_uint16x8 gradW = v_add(v_load(brow1 + N - 1), v_load(brow1 + N));
 
                 //int gradE = brow1[N+1] + brow1[N];
-                v_uint16x8 gradE = v_load(brow1+N+1) + v_load(brow1+N);
+                v_uint16x8 gradE = v_add(v_load(brow1 + N + 1), v_load(brow1 + N));
 
                 //int minGrad = std::min(std::min(std::min(gradN, gradS), gradW), gradE);
                 //int maxGrad = std::max(std::max(std::max(gradN, gradS), gradW), gradE);
@@ -1307,14 +1307,14 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
                 //int gradNE = brow0[N4+1] + brow1[N4];
                 //int gradNE = brow0[N2] + brow0[N2+1] + brow1[N2] + brow1[N2+1];
-                grad0 = v_load(brow0+N4+1) + v_load(brow1+N4);
-                grad1 = v_load(brow0+N2) + v_load(brow0+N2+1) + v_load(brow1+N2) + v_load(brow1+N2+1);
+                grad0 = v_add(v_load(brow0 + N4 + 1), v_load(brow1 + N4));
+                grad1 = v_add(v_add(v_add(v_load(brow0 + N2), v_load(brow0 + N2 + 1)), v_load(brow1 + N2)), v_load(brow1 + N2 + 1));
                 v_uint16x8 gradNE = v_merge_u16(grad0, grad1);
 
                 //int gradSW = brow1[N4] + brow2[N4-1];
                 //int gradSW = brow1[N2] + brow1[N2-1] + brow2[N2] + brow2[N2-1];
-                grad0 = v_load(brow2+N4-1) + v_load(brow1+N4);
-                grad1 = v_load(brow2+N2) + v_load(brow2+N2-1) + v_load(brow1+N2) + v_load(brow1+N2-1);
+                grad0 = v_add(v_load(brow2 + N4 - 1), v_load(brow1 + N4));
+                grad1 = v_add(v_add(v_add(v_load(brow2 + N2), v_load(brow2 + N2 - 1)), v_load(brow1 + N2)), v_load(brow1 + N2 - 1));
                 v_uint16x8 gradSW = v_merge_u16(grad0, grad1);
 
                 minGrad = v_min(v_min(minGrad, gradNE), gradSW);
@@ -1322,21 +1322,21 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
                 //int gradNW = brow0[N5-1] + brow1[N5];
                 //int gradNW = brow0[N3] + brow0[N3-1] + brow1[N3] + brow1[N3-1];
-                grad0 = v_load(brow0+N5-1) + v_load(brow1+N5);
-                grad1 = v_load(brow0+N3) + v_load(brow0+N3-1) + v_load(brow1+N3) + v_load(brow1+N3-1);
+                grad0 = v_add(v_load(brow0 + N5 - 1), v_load(brow1 + N5));
+                grad1 = v_add(v_add(v_add(v_load(brow0 + N3), v_load(brow0 + N3 - 1)), v_load(brow1 + N3)), v_load(brow1 + N3 - 1));
                 v_uint16x8 gradNW = v_merge_u16(grad0, grad1);
 
                 //int gradSE = brow1[N5] + brow2[N5+1];
                 //int gradSE = brow1[N3] + brow1[N3+1] + brow2[N3] + brow2[N3+1];
-                grad0 = v_load(brow2+N5+1) + v_load(brow1+N5);
-                grad1 = v_load(brow2+N3) + v_load(brow2+N3+1) + v_load(brow1+N3) + v_load(brow1+N3+1);
+                grad0 = v_add(v_load(brow2 + N5 + 1), v_load(brow1 + N5));
+                grad1 = v_add(v_add(v_add(v_load(brow2 + N3), v_load(brow2 + N3 + 1)), v_load(brow1 + N3)), v_load(brow1 + N3 + 1));
                 v_uint16x8 gradSE = v_merge_u16(grad0, grad1);
 
                 minGrad = v_min(v_min(minGrad, gradNW), gradSE);
                 maxGrad = v_max(v_max(maxGrad, gradNW), gradSE);
 
                 //int T = minGrad + maxGrad/2;
-                v_uint16x8 T = v_max((maxGrad >> 1), one) + minGrad;
+                v_uint16x8 T = v_add(v_max((v_shr<1>(maxGrad)), one), minGrad);
 
                 v_uint16x8 RGs = z, GRs = z, Bs = z, ng = z;
 
@@ -1361,133 +1361,135 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 v_uint16x8 t0, t1, mask;
 
                 // gradN ***********************************************
-                mask = (T > gradN); // mask = T>gradN
-                ng = v_reinterpret_as_u16(v_reinterpret_as_s16(ng) - v_reinterpret_as_s16(mask));     // ng += (T>gradN)
+                mask = (v_gt(T, gradN)); // mask = T>gradN
+                ng = v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(ng), v_reinterpret_as_s16(mask)));     // ng += (T>gradN)
 
-                t0 = (x3 << 1);                                 // srow[-bstep]*2
-                t1 = v_load_expand(srow - bstep*2) + x0;  // srow[-bstep*2] + srow[0]
+                t0 = (v_shl<1>(x3));                                 // srow[-bstep]*2
+                t1 = v_add(v_load_expand(srow - bstep * 2), x0);  // srow[-bstep*2] + srow[0]
 
                 // RGs += (srow[-bstep*2] + srow[0]) * (T>gradN)
-                RGs += (t1 & mask);
+                RGs = v_add(RGs, v_and(t1, mask));
                 // GRs += {srow[-bstep]*2; (srow[-bstep*2-1] + srow[-bstep*2+1])} * (T>gradN)
-                GRs += (v_merge_u16(t0, x2 + x4) & mask);
+                GRs = v_add(GRs, (v_and(v_merge_u16(t0, v_add(x2, x4)), mask)));
                 // Bs  += {(srow[-bstep-1]+srow[-bstep+1]); srow[-bstep]*2 } * (T>gradN)
-                Bs  += (v_merge_u16(x1 + x5, t0) & mask);
+                Bs = v_add(Bs, v_and(v_merge_u16(v_add(x1, x5), t0), mask));
 
                 // gradNE **********************************************
-                mask = (T > gradNE); // mask = T>gradNE
-                ng = v_reinterpret_as_u16(v_reinterpret_as_s16(ng) - v_reinterpret_as_s16(mask));     // ng += (T>gradNE)
+                mask = (v_gt(T, gradNE)); // mask = T>gradNE
+                ng = v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(ng), v_reinterpret_as_s16(mask)));     // ng += (T>gradNE)
 
-                t0 = (x5 << 1);                                    // srow[-bstep+1]*2
-                t1 = v_load_expand(srow - bstep*2+2) + x0;   // srow[-bstep*2+2] + srow[0]
+                t0 = (v_shl<1>(x5));                                    // srow[-bstep+1]*2
+                t1 = v_add(v_load_expand(srow - bstep * 2 + 2), x0);   // srow[-bstep*2+2] + srow[0]
 
                 // RGs += {(srow[-bstep*2+2] + srow[0]); srow[-bstep+1]*2} * (T>gradNE)
-                RGs += (v_merge_u16(t1, t0) & mask);
+                RGs = v_add(RGs, v_and(v_merge_u16(t1, t0), mask));
                 // GRs += {brow0[N6+1]; (srow[-bstep*2+1] + srow[1])} * (T>gradNE)
-                GRs += (v_merge_u16(v_load(brow0+N6+1), x4 + x7) & mask);
+                GRs = v_add(GRs, v_and(v_merge_u16(v_load(brow0+N6+1), v_add(x4, x7)), mask));
                 // Bs  += {srow[-bstep+1]*2; (srow[-bstep] + srow[-bstep+2])}  * (T>gradNE)
-                Bs  += (v_merge_u16(t0, x3 + x6) & mask);
+                Bs = v_add(Bs, v_and(v_merge_u16(t0, v_add(x3, x6)), mask));
 
                 // gradE ***********************************************
-                mask = (T > gradE);  // mask = T>gradE
-                ng = v_reinterpret_as_u16(v_reinterpret_as_s16(ng) - v_reinterpret_as_s16(mask));     // ng += (T>gradE)
+                mask = (v_gt(T, gradE));  // mask = T>gradE
+                ng = v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(ng), v_reinterpret_as_s16(mask)));     // ng += (T>gradE)
 
-                t0 = (x7 << 1);                         // srow[1]*2
-                t1 = v_load_expand(srow +2) + x0; // srow[2] + srow[0]
+                t0 = (v_shl<1>(x7));                         // srow[1]*2
+                t1 = v_add(v_load_expand(srow + 2), x0); // srow[2] + srow[0]
 
                 // RGs += (srow[2] + srow[0]) * (T>gradE)
-                RGs += (t1 & mask);
+                RGs = v_add(RGs, v_and(t1, mask));
                 // GRs += (srow[1]*2) * (T>gradE)
-                GRs += (t0 & mask);
+                GRs = v_add(GRs, v_and(t0, mask));
                 // Bs  += {(srow[-bstep+1]+srow[bstep+1]); (srow[-bstep+2]+srow[bstep+2])} * (T>gradE)
-                Bs  += (v_merge_u16(x5 + x9, x6 + x8) & mask);
+                Bs = v_add(Bs, v_and(v_merge_u16(v_add(x5, x9), v_add(x6, x8)), mask));
 
                 // gradSE **********************************************
-                mask = (T > gradSE);  // mask = T>gradSE
-                ng = v_reinterpret_as_u16(v_reinterpret_as_s16(ng) - v_reinterpret_as_s16(mask));     // ng += (T>gradSE)
+                mask = (v_gt(T, gradSE));  // mask = T>gradSE
+                ng = v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(ng), v_reinterpret_as_s16(mask)));     // ng += (T>gradSE)
 
-                t0 = (x9 << 1);                                 // srow[bstep+1]*2
-                t1 = v_load_expand(srow + bstep*2+2) + x0; // srow[bstep*2+2] + srow[0]
+                t0 = (v_shl<1>(x9));                                 // srow[bstep+1]*2
+                t1 = v_add(v_load_expand(srow + bstep * 2 + 2), x0); // srow[bstep*2+2] + srow[0]
 
                 // RGs += {(srow[bstep*2+2] + srow[0]); srow[bstep+1]*2} * (T>gradSE)
-                RGs += (v_merge_u16(t1, t0) & mask);
+                RGs = v_add(RGs, v_and(v_merge_u16(t1, t0), mask));
                 // GRs += {brow2[N6+1]; (srow[1]+srow[bstep*2+1])} * (T>gradSE)
-                GRs += (v_merge_u16(v_load(brow2+N6+1), x7 + x10) & mask);
+                GRs = v_add(GRs, v_and(v_merge_u16(v_load(brow2+N6+1), v_add(x7, x10)), mask));
                 // Bs  += {srow[bstep+1]*2; (srow[bstep+2]+srow[bstep])} * (T>gradSE)
-                Bs  += (v_merge_u16((x9 << 1), x8 + x11) & mask);
+                Bs = v_add(Bs, v_and(v_merge_u16((v_shl<1>(x9)), v_add(x8, x11)), mask));
 
                 // gradS ***********************************************
-                mask = (T > gradS);  // mask = T>gradS
-                ng = v_reinterpret_as_u16(v_reinterpret_as_s16(ng) - v_reinterpret_as_s16(mask));     // ng += (T>gradS)
+                mask = (v_gt(T, gradS));  // mask = T>gradS
+                ng = v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(ng), v_reinterpret_as_s16(mask)));     // ng += (T>gradS)
 
-                t0 = (x11 << 1);                             // srow[bstep]*2
-                t1 = v_load_expand(srow + bstep*2) + x0; // srow[bstep*2]+srow[0]
+                t0 = (v_shl<1>(x11));                             // srow[bstep]*2
+                t1 = v_add(v_load_expand(srow + bstep * 2), x0); // srow[bstep*2]+srow[0]
 
                 // RGs += (srow[bstep*2]+srow[0]) * (T>gradS)
-                RGs += (t1 & mask);
+                RGs = v_add(RGs, v_and(t1, mask));
                 // GRs += {srow[bstep]*2; (srow[bstep*2+1]+srow[bstep*2-1])} * (T>gradS)
-                GRs += (v_merge_u16(t0, x10 + x12) & mask);
+                GRs = v_add(GRs, v_and(v_merge_u16(t0, v_add(x10, x12)), mask));
                 // Bs  += {(srow[bstep+1]+srow[bstep-1]); srow[bstep]*2} * (T>gradS)
-                Bs  += (v_merge_u16(x9 + x13, t0) & mask);
+                Bs = v_add(Bs, v_and(v_merge_u16(v_add(x9, x13), t0), mask));
 
                 // gradSW **********************************************
-                mask = (T > gradSW);  // mask = T>gradSW
-                ng = v_reinterpret_as_u16(v_reinterpret_as_s16(ng) - v_reinterpret_as_s16(mask));     // ng += (T>gradSW)
+                mask = (v_gt(T, gradSW));  // mask = T>gradSW
+                ng = v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(ng), v_reinterpret_as_s16(mask)));     // ng += (T>gradSW)
 
-                t0 = (x13 << 1);                                // srow[bstep-1]*2
-                t1 = v_load_expand(srow + bstep*2-2) + x0; // srow[bstep*2-2]+srow[0]
+                t0 = (v_shl<1>(x13));                                // srow[bstep-1]*2
+                t1 = v_add(v_load_expand(srow + bstep * 2 - 2), x0); // srow[bstep*2-2]+srow[0]
 
                 // RGs += {(srow[bstep*2-2]+srow[0]); srow[bstep-1]*2} * (T>gradSW)
-                RGs += (v_merge_u16(t1, t0) & mask);
+                RGs = v_add(RGs, v_and(v_merge_u16(t1, t0), mask));
                 // GRs += {brow2[N6-1]; (srow[bstep*2-1]+srow[-1])} * (T>gradSW)
-                GRs += (v_merge_u16(v_load(brow2+N6-1), x12 + x15) & mask);
+                GRs = v_add(GRs, v_and(v_merge_u16(v_load(brow2+N6-1), v_add(x12, x15)), mask));
                 // Bs  += {srow[bstep-1]*2; (srow[bstep]+srow[bstep-2])} * (T>gradSW)
-                Bs  += (v_merge_u16(t0, x11 + x14) & mask);
+                Bs = v_add(Bs, v_and(v_merge_u16(t0, v_add(x11, x14)), mask));
 
                 // gradW ***********************************************
-                mask = (T > gradW);  // mask = T>gradW
-                ng = v_reinterpret_as_u16(v_reinterpret_as_s16(ng) - v_reinterpret_as_s16(mask));     // ng += (T>gradW)
+                mask = (v_gt(T, gradW));  // mask = T>gradW
+                ng = v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(ng), v_reinterpret_as_s16(mask)));     // ng += (T>gradW)
 
-                t0 = (x15 << 1);                         // srow[-1]*2
-                t1 = v_load_expand(srow -2) + x0; // srow[-2]+srow[0]
+                t0 = (v_shl<1>(x15));                         // srow[-1]*2
+                t1 = v_add(v_load_expand(srow - 2), x0); // srow[-2]+srow[0]
 
                 // RGs += (srow[-2]+srow[0]) * (T>gradW)
-                RGs += (t1 & mask);
+                RGs = v_add(RGs, v_and(t1, mask));
                 // GRs += (srow[-1]*2) * (T>gradW)
-                GRs += (t0 & mask);
+                GRs = v_add(GRs, v_and(t0, mask));
                 // Bs  += {(srow[-bstep-1]+srow[bstep-1]); (srow[bstep-2]+srow[-bstep-2])} * (T>gradW)
-                Bs  += (v_merge_u16(x1 + x13, x14 + x16) & mask);
+                Bs = v_add(Bs, v_and(v_merge_u16(v_add(x1, x13), v_add(x14, x16)), mask));
 
                 // gradNW **********************************************
-                mask = (T > gradNW);  // mask = T>gradNW
-                ng = v_reinterpret_as_u16(v_reinterpret_as_s16(ng) - v_reinterpret_as_s16(mask));     // ng += (T>gradNW)
+                mask = (v_gt(T, gradNW));  // mask = T>gradNW
+                ng = v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(ng), v_reinterpret_as_s16(mask)));     // ng += (T>gradNW)
 
-                t0 = (x1 << 1);                                 // srow[-bstep-1]*2
-                t1 = v_load_expand(srow -bstep*2-2) + x0; // srow[-bstep*2-2]+srow[0]
+                t0 = (v_shl<1>(x1));                                 // srow[-bstep-1]*2
+                t1 = v_add(v_load_expand(srow - bstep * 2 - 2), x0); // srow[-bstep*2-2]+srow[0]
 
                 // RGs += {(srow[-bstep*2-2]+srow[0]); srow[-bstep-1]*2} * (T>gradNW)
-                RGs += (v_merge_u16(t1, t0) & mask);
+                RGs = v_add(RGs, v_and(v_merge_u16(t1, t0), mask));
                 // GRs += {brow0[N6-1]; (srow[-bstep*2-1]+srow[-1])} * (T>gradNW)
-                GRs += (v_merge_u16(v_load(brow0+N6-1), x2 + x15) & mask);
+                GRs = v_add(GRs, v_and(v_merge_u16(v_load(brow0+N6-1), v_add(x2, x15)), mask));
                 // Bs  += {srow[-bstep-1]*2; (srow[-bstep]+srow[-bstep-2])} * (T>gradNW)
-                Bs  += (v_merge_u16((x1 << 1), x3 + x16) & mask);
+                Bs = v_add(Bs, v_and(v_merge_u16(v_shl<1>(x1), v_add(x3, x16)), mask));
 
-                v_float32x4 ngf0 = _0_5 / v_cvt_s16f32_lo(ng);
-                v_float32x4 ngf1 = _0_5 / v_cvt_s16f32_hi(ng);
+                v_float32x4 ngf0 = v_div(_0_5, v_cvt_s16f32_lo(ng));
+                v_float32x4 ngf1 = v_div(_0_5, v_cvt_s16f32_hi(ng));
 
                 // now interpolate r, g & b
-                t0 = v_reinterpret_as_u16(v_reinterpret_as_s16(GRs) - v_reinterpret_as_s16(RGs));
-                t1 = v_reinterpret_as_u16(v_reinterpret_as_s16(Bs) -  v_reinterpret_as_s16(RGs));
+                t0 = v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(GRs), v_reinterpret_as_s16(RGs)));
+                t1 = v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(Bs), v_reinterpret_as_s16(RGs)));
 
-                t0 = v_reinterpret_as_u16(v_reinterpret_as_s16(x0) +
+                t0 = v_reinterpret_as_u16(
+                    v_add(v_reinterpret_as_s16(x0),
                         v_pack(
-                          v_round(v_cvt_s16f32_lo(t0) * ngf0),
-                          v_round(v_cvt_s16f32_hi(t0) * ngf1)));
+                            v_round(v_mul(v_cvt_s16f32_lo(t0), ngf0)),
+                            v_round(v_mul(v_cvt_s16f32_hi(t0), ngf1)))));
 
-                t1 = v_reinterpret_as_u16(v_reinterpret_as_s16(x0) +
+                t1 = v_reinterpret_as_u16(
+                    v_add(v_reinterpret_as_s16(x0),
                         v_pack(
-                          v_round(v_cvt_s16f32_lo(t1) * ngf0),
-                          v_round(v_cvt_s16f32_hi(t1) * ngf1)));
+                            v_round(v_mul(v_cvt_s16f32_lo(t1), ngf0)),
+                            v_round(v_mul(v_cvt_s16f32_hi(t1), ngf1)))));
 
                 x1 = v_merge_u16(x0, t0);
                 x2 = v_merge_u16(t0, x0);

@@ -35,6 +35,20 @@ yolo:
   classes: "object_detection_classes_yolov4.txt"
   sample: "object_detection"
 
+yolov4-tiny:
+  load_info:
+    url: "https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights"
+    sha1: "451caaab22fb9831aa1a5ee9b5ba74a35ffa5dcb"
+  model: "yolov4-tiny.weights"
+  config: "yolov4-tiny.cfg"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 416
+  height: 416
+  rgb: true
+  classes: "object_detection_classes_yolov4.txt"
+  sample: "object_detection"
+
 tiny-yolo-voc:
   load_info:
     url: "https://pjreddie.com/media/files/yolov2-tiny-voc.weights"
@@ -160,6 +174,18 @@ fcn8s:
   config: "fcn8s-heavy-pascal.prototxt"
   mean: [0, 0, 0]
   scale: 1.0
+  width: 500
+  height: 500
+  rgb: false
+  sample: "segmentation"
+
+fcnresnet101:
+  load_info:
+    url: "https://github.com/onnx/models/raw/fb8271d5d5d9b90dbb1eb5e8e40f8f580fb248b3/vision/object_detection_segmentation/fcn/model/fcn-resnet101-11.onnx"
+    sha1: "e7e76474bf6b73334ab32c4be1374c9e605f5aed"
+  model: "fcn-resnet101-11.onnx"
+  mean: [103.5, 116.2, 123.6]
+  scale: 0.019
   width: 500
   height: 500
   rgb: false

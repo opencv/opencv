@@ -224,7 +224,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 
         /* read the image */
         String img_file = board_list[idx * 2];
-        Mat gray = imread( folder + img_file, 0);
+        Mat gray = imread( folder + img_file, IMREAD_GRAYSCALE);
 
         if( gray.empty() )
         {

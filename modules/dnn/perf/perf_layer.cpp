@@ -55,6 +55,8 @@ struct Layer_Slice : public TestBaseWithParam<tuple<Backend, Target> >
     }
 };
 
+static std::set<std::string> nary_eltwise_cuda_deny_ops = {"equal", "greater", "less", "mean", "pow", "sub"};
+
 struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
 {
     void test_layer(const std::vector<int>& a_shape, const std::vector<int>& b_shape, const String op, bool isRef = false)
@@ -62,6 +64,18 @@ struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
         int backendId = get<0>(GetParam());
         int targetId = get<1>(GetParam());
 
+        if (!isRef && backendId == DNN_BACKEND_CUDA)
+        {
+            if (a_shape.size() != b_shape.size())
+                throw SkipTestException("The test is skipped because inputs with different shape size are not supported.");
+
+            for(int i = 0; i < a_shape.size(); i++)
+                if (a_shape[i] != b_shape[i] && a_shape[i] != 1 && b_shape[i] != 1)
+                    throw SkipTestException("The test is skipped because inputs are not supported.");
+
+            if (nary_eltwise_cuda_deny_ops.find(op) != nary_eltwise_cuda_deny_ops.end())
+                throw SkipTestException("The operator '" + op + "' is skipped because is not support with cuda currently.");
+        }
         Mat a(a_shape, CV_32FC1);
         Mat b(b_shape, CV_32FC1);
 
@@ -204,6 +218,11 @@ PERF_TEST_P_(Layer_NaryEltwise, NCHW_C_sum)
 PERF_TEST_P_(Layer_NaryEltwise, NHWC_C)
 {
     test_layer({N, H, W, C}, {1, C}, "sum");
+}
+
+PERF_TEST_P_(Layer_NaryEltwise, NHWC_H)
+{
+    test_layer({N, H, W, C}, {1, H, 1, 1}, "sum");
 }
 
 PERF_TEST_P_(Layer_Slice, YOLOv4_tiny_1)
@@ -408,9 +427,443 @@ PERF_TEST_P_(Layer_ScatterND, DISABLED_ScatterND_add)
     test_layer({N, C, H , W}, "add");
 }
 
+struct Layer_LayerNorm : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& x_shape)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat x(x_shape, CV_32FC1);
+        Mat scale(x_shape.back(), 1, CV_32FC1);
+        Mat b(x_shape.back(), 1, CV_32FC1);
+
+        randu(x, 0.f, 1.f);
+        randu(scale, 0.f, 1.f);
+        randu(b, 0.f, 1.f);
+
+
+        Net net;
+        LayerParams lp;
+        lp.type = "LayerNormalization";
+        lp.name = "testLayer";
+        lp.set("axis", 2);
+        lp.set("hasBias", true);
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+
+        // warmup
+        {
+            std::vector<String> inpNames(3);
+            inpNames[0] = "x";
+            inpNames[1] = "scale";
+            inpNames[2] = "b";
+            net.setInputsNames(inpNames);
+            net.setInput(x, inpNames[0]);
+            net.setInput(scale, inpNames[1]);
+            net.setInput(b, inpNames[2]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+
+    int N = 1;
+    int H = 50;
+    int W = 768;
+};
+
+PERF_TEST_P_(Layer_LayerNorm, LayerNorm)
+{
+    test_layer({N, H ,W});
+}
+
+struct Layer_LayerNormExpanded : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& x_shape)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat x(x_shape, CV_32FC1);
+        Mat scale(1, x_shape.back(), CV_32FC1); // transpose to pass shape check
+        Mat b(1, x_shape.back(), CV_32FC1);     // transpose to pass shape check
+
+        randu(x, 0.f, 1.f);
+        randu(scale, 0.f, 1.f);
+        randu(b, 0.f, 1.f);
+
+        // sub graph structure:
+        //   -> ReduceMean ->     -> Pow(2) -> ReduceMean -> Add(epsilon) -> Sqrt ->
+        // x                  Sub                                                    Div -> Mul(scale) -> Add(bias)
+        //   --------------->     ------------------------------------------------->
+
+        Net net;
+
+        LayerParams lp_rm;
+        lp_rm.type = "Reduce";
+        lp_rm.name = "reducemean1";
+        lp_rm.set("reduce", "AVE");
+        std::vector<int> deleteDims(1, x_shape.back());
+        lp_rm.set("deleted_dims", DictValue::arrayInt(&deleteDims[0], deleteDims.size()));
+        std::vector<int> targetDims(x_shape.begin(), x_shape.end());
+        targetDims[x_shape.size() - 1] = 1;
+        lp_rm.set("target_dims", DictValue::arrayInt(&targetDims[0], targetDims.size()));
+        int id_rm = net.addLayerToPrev(lp_rm.name, lp_rm.type, lp_rm);
+        net.connect(0, 0, id_rm, 0);
+
+        LayerParams lp_sub;
+        lp_sub.type = "NaryEltwise";
+        lp_sub.name = "sub1";
+        lp_sub.set("operation", "sub");
+        int id_sub = net.addLayer(lp_sub.name, lp_sub.type, lp_sub);
+        net.connect(0, 0, id_sub, 0);
+        net.connect(id_rm, 0, id_sub, 1);
+
+        Mat pow_const(1, 1, CV_32FC1);
+        pow_const.at<float>(0) = 2.f;
+        LayerParams lp_pow_const;
+        lp_pow_const.type = "Const";
+        lp_pow_const.name = "const1";
+        lp_pow_const.blobs.push_back(pow_const);
+        int id_pow_const = net.addLayer(lp_pow_const.name, lp_pow_const.type, lp_pow_const);
+        LayerParams lp_pow;
+        lp_pow.type = "NaryEltwise";
+        lp_pow.name = "pow1";
+        lp_pow.set("operation", "pow");
+        int id_pow = net.addLayer(lp_pow.name, lp_pow.type, lp_pow);
+        net.connect(id_sub, 0, id_pow, 0);
+        net.connect(id_pow_const, 0, id_pow, 1);
+
+        LayerParams lp_rm1;
+        lp_rm1.type = "Reduce";
+        lp_rm1.name = "reducemean2";
+        lp_rm1.set("reduce", "AVE");
+        lp_rm1.set("deleted_dims", DictValue::arrayInt(&deleteDims[0], deleteDims.size()));
+        lp_rm1.set("target_dims", DictValue::arrayInt(&targetDims[0], targetDims.size()));
+        int id_rm1 = net.addLayer(lp_rm1.name, lp_rm1.type, lp_rm1);
+        net.connect(id_pow, 0, id_rm1, 0);
+
+        Mat add_const(1, 1, CV_32F);
+        add_const.at<float>(0) = 1e-5;
+        LayerParams lp_add_const;
+        lp_add_const.type = "Const";
+        lp_add_const.name = "const2";
+        lp_add_const.blobs.push_back(add_const);
+        int id_add_const = net.addLayer(lp_add_const.name, lp_add_const.type, lp_add_const);
+        LayerParams lp_add;
+        lp_add.type = "NaryEltwise";
+        lp_add.name = "add1";
+        lp_add.set("operation", "add");
+        int id_add = net.addLayer(lp_add.name, lp_add.type, lp_add);
+        net.connect(id_rm1, 0, id_add, 0);
+        net.connect(id_add_const, 0, id_add, 1);
+
+        LayerParams lp_sqrt;
+        lp_sqrt.type = "Sqrt";
+        lp_sqrt.name = "sqrt1";
+        int id_sqrt = net.addLayer(lp_sqrt.name, lp_sqrt.type, lp_sqrt);
+        net.connect(id_add, 0, id_sqrt, 0);
+
+        LayerParams lp_div;
+        lp_div.type = "NaryEltwise";
+        lp_div.name = "div1";
+        lp_div.set("operation", "div");
+        int id_div = net.addLayer(lp_div.name, lp_div.type, lp_div);
+        net.connect(id_sub, 0, id_div, 0);
+        net.connect(id_sqrt, 0, id_div, 1);
+
+        LayerParams lp_mul;
+        lp_mul.type = "NaryEltwise";
+        lp_mul.name = "mul1";
+        lp_mul.set("operation", "mul");
+        int id_mul = net.addLayer(lp_mul.name, lp_mul.type, lp_mul);
+        net.connect(id_div, 0, id_mul, 0);
+        net.connect(0, 1, id_mul, 1);
+
+        LayerParams lp_add1;
+        lp_add1.type = "NaryEltwise";
+        lp_add1.name = "add2";
+        lp_add1.set("operation", "add");
+        int id_add1 = net.addLayer(lp_add1.name, lp_add1.type, lp_add1);
+        net.connect(id_mul, 0, id_add1, 0);
+        net.connect(0, 2, id_add1, 1);
+
+        // warmup
+        {
+            std::vector<String> inpNames(3);
+            inpNames[0] = "x";
+            inpNames[1] = "scale";
+            inpNames[2] = "b";
+            net.setInputsNames(inpNames);
+            net.setInput(x, inpNames[0]);
+            net.setInput(scale, inpNames[1]);
+            net.setInput(b, inpNames[2]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+
+    int N = 1;
+    int H = 50;
+    int W = 768;
+};
+
+PERF_TEST_P_(Layer_LayerNormExpanded, DISABLED_LayerNormExpanded)
+{
+    test_layer({N, H ,W});
+}
+
+struct Layer_GatherElements : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& data_shape, const std::vector<int>& indices_shape, int axis = 0)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat data(data_shape, CV_32FC1);
+        Mat indices(indices_shape, CV_32FC1);
+
+        randu(data, 0.f, 1.f);
+        randu(indices, 0, data_shape[axis]);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "GatherElements";
+        lp.name = "testLayer";
+        lp.set("axis", axis);
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+
+        // warmup
+        {
+            std::vector<String> inpNames(3);
+            inpNames[0] = "data";
+            inpNames[1] = "indices";
+            net.setInputsNames(inpNames);
+            net.setInput(data, inpNames[0]);
+            net.setInput(indices, inpNames[1]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+};
+
+PERF_TEST_P_(Layer_GatherElements, GatherElements)
+{
+    test_layer({2700, 1, 2914}, {2700, 1, 81}, 2);
+}
+
+struct Layer_InstanceNorm : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& x_shape)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat x(x_shape, CV_32FC1);
+        Mat scale(x_shape[1], 1, CV_32FC1);
+        Mat b(x_shape[1], 1, CV_32FC1);
+
+        randu(x, 0.f, 1.f);
+        randu(scale, 0.f, 1.f);
+        randu(b, 0.f, 1.f);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "InstanceNormalization";
+        lp.name = "testLayer";
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+
+        // warmup
+        {
+            std::vector<String> inpNames{"x", "scale", "b"};
+            net.setInputsNames(inpNames);
+            net.setInput(x, inpNames[0]);
+            net.setInput(scale, inpNames[1]);
+            net.setInput(b, inpNames[2]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+
+    int N = 2;
+    int C = 64;
+    int H = 180;
+    int W = 240;
+};
+
+PERF_TEST_P_(Layer_InstanceNorm, InstanceNorm)
+{
+    test_layer({N, C, H, W});
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+#ifdef HAVE_CUDA
+INSTANTIATE_TEST_CASE_P(CUDA, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_CUDA, DNN_TARGET_CUDA)));
+#endif
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Scatter, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_ScatterND, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_InstanceNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+
+
+typedef TestBaseWithParam<tuple<Vec4i, int, bool, tuple<Backend, Target> > > Layer_FullyConnected;
+PERF_TEST_P_(Layer_FullyConnected, fc)
+{
+    std::vector<int> inpShape;
+    inpShape.reserve(4);
+    for (int i = 0; i < 4; ++i) {
+        int dim = get<0>(GetParam())[i];
+        if (dim == 0)
+            break;
+        inpShape.push_back(dim);
+    }
+    Mat input(inpShape, CV_32F);
+    randn(input, 0, 1);
+
+    int axis = input.dims - 1;
+    int outDims = get<1>(GetParam());
+    bool isMatMul = get<2>(GetParam());
+    int backendId = get<0>(get<3>(GetParam()));
+    int targetId = get<1>(get<3>(GetParam()));
+
+    std::vector<int> weightShape;
+    if (isMatMul) {
+        weightShape = inpShape;
+        weightShape[weightShape.size() - 2] = outDims;
+    } else {
+        weightShape = {outDims, (int)input.total(axis, input.dims)};
+    }
+    Mat weights(weightShape, CV_32F);
+    randn(weights, 0, 1);
+
+    LayerParams lp;
+    lp.set("axis", input.dims - 1);
+    lp.set("is_matmul", weights.dims > 2);
+    lp.set("bias_term", false);
+    lp.set("num_output", (int)weights.total(0, weights.dims - 1));
+    lp.blobs.resize(1, weights);
+
+    Net net;
+    net.addLayerToPrev("matmul", "InnerProduct", lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    // warmup
+    Mat output = net.forward();
+
+    TEST_CYCLE()
+    {
+        net.forward();
+    }
+    SANITY_CHECK_NOTHING();
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_FullyConnected, Combine(
+    Values(                // input size
+        Vec4i(5, 512, 384),
+        Vec4i(5, 16, 512, 128)
+    ),
+    Values(256, 512, 1024),  // output dimension
+    testing::Bool(),         // is_matmul
+    dnnBackendsAndTargets()
+));
+
+typedef TestBaseWithParam<tuple<std::vector<int>, int, tuple<Backend, Target> > > Layer_Softmax;
+PERF_TEST_P_(Layer_Softmax, softmax_3d) {
+    std::vector<int> shape = get<0>(GetParam());
+    int axis = get<1>(GetParam());
+    int backendId = get<0>(get<2>(GetParam()));
+    int targetId = get<1>(get<2>(GetParam()));
+
+    Mat data(shape, CV_32FC1);
+    Scalar mean = 0.f;
+    Scalar std = 1.f;
+    randn(data, mean, std);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Softmax";
+    lp.name = "testLayer";
+    lp.set("axis", axis);
+
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    // warmup
+    {
+        net.setInput(data);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+    }
+
+    TEST_CYCLE() {
+        Mat res = net.forward();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Softmax, Combine(
+    Values(                // input size
+            std::vector<int>({16, 50, 50}),
+            std::vector<int>({16, 197, 197}),
+            std::vector<int>({16, 1024, 1024})
+    ),
+    Values(0, 1, 2),  // axis
+    dnnBackendsAndTargets(/* withInferenceEngine= */ false,
+                          /* withHalide= */          false,
+                          /* withCpuOCV= */          true,
+                          /* withVkCom= */           false,
+                          /* withCUDA= */            false,
+                          /* withNgraph= */          false,
+                          /* withWebnn= */           false,
+                          /* withCann= */            false) // only test on CPU
+));
 
 } // namespace

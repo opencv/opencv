@@ -219,10 +219,10 @@ void calib::calibDataController::filterFrames()
         if(mCalibData->imagePoints.size()) {
             mCalibData->imagePoints.erase(mCalibData->imagePoints.begin() + worstElemIndex);
             mCalibData->objectPoints.erase(mCalibData->objectPoints.begin() + worstElemIndex);
-        }
-        else {
-            mCalibData->allCharucoCorners.erase(mCalibData->allCharucoCorners.begin() + worstElemIndex);
-            mCalibData->allCharucoIds.erase(mCalibData->allCharucoIds.begin() + worstElemIndex);
+            if (mCalibData->allCharucoCorners.size()) {
+                mCalibData->allCharucoCorners.erase(mCalibData->allCharucoCorners.begin() + worstElemIndex);
+                mCalibData->allCharucoIds.erase(mCalibData->allCharucoIds.begin() + worstElemIndex);
+            }
         }
 
         cv::Mat newErrorsVec = cv::Mat((int)numberOfFrames - 1, 1, CV_64F);

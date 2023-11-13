@@ -14,9 +14,9 @@ using namespace cv;
 
 const char* keys =
     "{ help  h| | Print help message. }"
-    "{ @input1 | | Path to input image 1. }"
-    "{ @input2 | | Path to input image 2. }"
-    "{ @input3 | | Path to input image 3. }";
+    "{ @input1 |Histogram_Comparison_Source_0.jpg | Path to input image 1. }"
+    "{ @input2 |Histogram_Comparison_Source_1.jpg | Path to input image 2. }"
+    "{ @input3 |Histogram_Comparison_Source_2.jpg | Path to input image 3. }";
 
 /**
  * @function main
@@ -25,9 +25,10 @@ int main( int argc, char** argv )
 {
     //! [Load three images with different environment settings]
     CommandLineParser parser( argc, argv, keys );
-    Mat src_base = imread( parser.get<String>("input1") );
-    Mat src_test1 = imread( parser.get<String>("input2") );
-    Mat src_test2 = imread( parser.get<String>("input3") );
+    samples::addSamplesDataSearchSubDirectory( "doc/tutorials/imgproc/histograms/histogram_comparison/images" );
+    Mat src_base = imread(samples::findFile( parser.get<String>( "@input1" ) ) );
+    Mat src_test1 = imread(samples::findFile( parser.get<String>( "@input2" ) ) );
+    Mat src_test2 = imread(samples::findFile( parser.get<String>( "@input3" ) ) );
     if( src_base.empty() || src_test1.empty() || src_test2.empty() )
     {
         cout << "Could not open or find the images!\n" << endl;

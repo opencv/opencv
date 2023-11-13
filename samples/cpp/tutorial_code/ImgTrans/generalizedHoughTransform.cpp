@@ -13,8 +13,9 @@ using namespace std;
 int main() {
     //! [generalized-hough-transform-load-and-setup]
 //  load source image and grayscale template
-    Mat image = imread("images/generalized_hough_mini_image.jpg");
-    Mat templ = imread("images/generalized_hough_mini_template.jpg", IMREAD_GRAYSCALE);
+    samples::addSamplesDataSearchSubDirectory("doc/tutorials/imgproc/generalized_hough_ballard_guil");
+    Mat image = imread(samples::findFile("images/generalized_hough_mini_image.jpg"));
+    Mat templ = imread(samples::findFile("images/generalized_hough_mini_template.jpg"), IMREAD_GRAYSCALE);
 
 //  create grayscale image
     Mat grayImage;

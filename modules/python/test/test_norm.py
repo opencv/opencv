@@ -88,7 +88,7 @@ def get_element_types(norm_type):
         return (np.uint8,)
     else:
         return (np.uint8, np.int8, np.uint16, np.int16, np.int32, np.float32,
-                np.float64)
+                np.float64, np.float16)
 
 
 def generate_vector(shape, dtype):

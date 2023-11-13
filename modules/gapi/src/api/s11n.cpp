@@ -98,7 +98,7 @@ cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &out_args)
             outputs.emplace_back(&(cv::util::get<cv::MediaFrame>(res_obj)));
             break;
         default:
-            GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
+            GAPI_Error("This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
         }
     }
@@ -114,7 +114,7 @@ cv::GRunArg cv::gapi::bind(cv::GRunArgP &out)
     {
 #if !defined(GAPI_STANDALONE)
     case T::index_of<cv::UMat*>() :
-        GAPI_Assert(false && "Please implement this!");
+        GAPI_Error("Please implement this!");
         break;
 #endif
 
@@ -138,7 +138,7 @@ cv::GRunArg cv::gapi::bind(cv::GRunArgP &out)
 
     default:
         // ...maybe our types were extended
-        GAPI_Assert(false && "This value type is UNKNOWN!");
+        GAPI_Error("This value type is UNKNOWN!");
         break;
     }
     return cv::GRunArg();

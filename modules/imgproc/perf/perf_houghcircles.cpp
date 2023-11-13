@@ -26,7 +26,7 @@ PERF_TEST(PerfHoughCircles, Basic)
 
     TEST_CYCLE()
     {
-        HoughCircles(img, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(img, circles, cv::HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
     }
 
     SANITY_CHECK_NOTHING();
@@ -50,7 +50,7 @@ PERF_TEST(PerfHoughCircles2, ManySmallCircles)
 
     TEST_CYCLE()
     {
-        HoughCircles(img, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(img, circles, cv::HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
     }
 
     SANITY_CHECK_NOTHING();
@@ -76,7 +76,7 @@ PERF_TEST(PerfHoughCircles4f, Basic)
 
     TEST_CYCLE()
     {
-        HoughCircles(img, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(img, circles, cv::HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
     }
 
     SANITY_CHECK_NOTHING();

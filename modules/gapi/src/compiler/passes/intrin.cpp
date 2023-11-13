@@ -128,7 +128,7 @@ void traceUp(cv::gimpl::GModel::Graph &g,
         // this recursive process (e.g. via some other output or branch in the
         // subgraph)
         if (g.metadata(nh).get<DesyncPath>().index != desync_id) {
-            GAPI_Assert(false && "Desynchronization can't be nested!");
+            GAPI_Error("Desynchronization can't be nested!");
         }
         return; // This object belongs to the desync path - exit early.
     }

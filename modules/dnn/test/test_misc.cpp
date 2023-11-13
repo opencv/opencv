@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
+#include "npy_blob.hpp"
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/opencl/ocl_defs.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
@@ -61,6 +62,85 @@ TEST(imagesFromBlob, Regression)
             << " inputImgs[i]=" << inputImgs[i].size
             << " outputImgs[i]=" << outputImgs[i].size;
     }
+}
+
+TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
+{
+    Mat img(10, 10, CV_8UC4, cv::Scalar(0,1,2,3));
+    std::vector<double> factorVec = {0.1, 0.2, 0.3, 0.4};
+
+    Scalar scalefactor(factorVec[0], factorVec[1], factorVec[2], factorVec[3]);
+
+    Image2BlobParams param;
+    param.scalefactor = scalefactor;
+    param.datalayout = DNN_LAYOUT_NHWC;
+    Mat blob = dnn::blobFromImageWithParams(img, param); // [1, 10, 10, 4]
+
+    float* blobPtr = blob.ptr<float>(0);
+    std::vector<float> targetVec = {(float )factorVec[0] * 0, (float )factorVec[1] * 1, (float )factorVec[2] * 2, (float )factorVec[3] * 3}; // Target Value.
+    for (int hi = 0; hi < 10; hi++)
+    {
+        for (int wi = 0; wi < 10; wi++)
+        {
+            float* hwPtr = blobPtr + hi * 10 * 4 + wi * 4;
+
+            // Check equal
+            EXPECT_NEAR(hwPtr[0], targetVec[0], 1e-5);
+            EXPECT_NEAR(hwPtr[1], targetVec[1], 1e-5);
+            EXPECT_NEAR(hwPtr[2], targetVec[2], 1e-5);
+            EXPECT_NEAR(hwPtr[3], targetVec[3], 1e-5);
+        }
+    }
+}
+
+TEST(blobFromImageWithParams_4ch, letter_box)
+{
+    Mat img(40, 20, CV_8UC4, cv::Scalar(0,1,2,3));
+
+    // Construct target mat.
+    Mat targetCh[4];
+    // The letterbox will add zero at the left and right of output blob.
+    // After the letterbox, every row data would have same value showing as valVec.
+    std::vector<uint8_t> valVec = {0,0,0,0,0, 1,1,1,1,1,1,1,1,1,1, 0,0,0,0,0};
+    Mat rowM(1, 20, CV_8UC1, valVec.data());
+
+    for(int i = 0; i < 4; i++)
+    {
+        targetCh[i] = rowM * i;
+    }
+
+    Mat targetImg;
+    merge(targetCh, 4, targetImg);
+    Size targeSize(20, 20);
+
+    Image2BlobParams param;
+    param.size = targeSize;
+    param.paddingmode = DNN_PMODE_LETTERBOX;
+    Mat blob = dnn::blobFromImageWithParams(img, param);
+    Mat targetBlob = dnn::blobFromImage(targetImg, 1.0, targeSize); // only convert data from uint8 to float32.
+    EXPECT_EQ(0, cvtest::norm(targetBlob, blob, NORM_INF));
+}
+
+TEST(blobFromImagesWithParams_4ch, multi_image)
+{
+    Mat img(10, 10, CV_8UC4, cv::Scalar(0, 1, 2, 3));
+    Scalar scalefactor(0.1, 0.2, 0.3, 0.4);
+
+    Image2BlobParams param;
+    param.scalefactor = scalefactor;
+    param.datalayout = DNN_LAYOUT_NHWC;
+
+    Mat blobs = blobFromImagesWithParams(std::vector<Mat> { img, 2*img }, param);
+    vector<Range> ranges;
+    ranges.push_back(Range(0, 1));
+    ranges.push_back(Range(0, blobs.size[1]));
+    ranges.push_back(Range(0, blobs.size[2]));
+    ranges.push_back(Range(0, blobs.size[3]));
+    Mat blob0 = blobs(ranges);
+    ranges[0] = Range(1, 2);
+    Mat blob1 = blobs(ranges);
+
+    EXPECT_EQ(0, cvtest::norm(2*blob0, blob1, NORM_INF));
 }
 
 TEST(readNet, Regression)
@@ -790,6 +870,35 @@ TEST_P(Test_Model_Optimizer, flexible_inputs)
     net1.setInput(input0);
     out = net1.forward();
     normAssert(ref, out, 0, 0);
+}
+
+TEST_P(Test_Model_Optimizer, readONNX)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
+
+    const std::string& model = findDataFile("dnn/onnx/models/convolution.onnx");
+
+    std::vector<Net> nets = {
+        // Old API
+        readNetFromModelOptimizer(model, ""),
+        readNet("", model, "dldt"),
+        // New API
+        readNetFromModelOptimizer(model),
+        readNet(model, "", "openvino")
+    };
+
+    Mat inp = blobFromNPY(findDataFile("dnn/onnx/data/input_convolution.npy"));
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_convolution.npy"));
+
+    for (int i = 0; i < nets.size(); ++i) {
+        nets[i].setPreferableTarget(targetId);
+        nets[i].setInput(inp);
+        Mat out = nets[i].forward();
+        normAssert(out, ref, format("Index: %d", i).c_str());
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model_Optimizer,

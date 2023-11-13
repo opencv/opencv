@@ -220,6 +220,58 @@ __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offs
     }
 }
 
+#elif defined INTER_LINEAR_EXACT
+
+#define INTER_RESIZE_COEF_SCALE (1 << INTER_RESIZE_COEF_BITS)
+#define FIXED_POINT_BITS 8
+#define FIXED_POINT_SCALE (1 << FIXED_POINT_BITS)
+
+// Fixed-point multiply
+#define FIXED_MUL(a, b) (((a) * (b)) >> FIXED_POINT_BITS)
+
+__kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
+                                __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                int ifx, int ify)
+{
+    int dx = get_global_id(0);
+    int dy = get_global_id(1);
+
+    if (dx < dst_cols && dy < dst_rows)
+    {
+        // Calculate source coordinates
+        int sx = (dx * ifx) >> 16;
+        int sy = (dy * ify) >> 16;
+
+        // Perform boundary checks
+        sx = clamp(sx, 0, src_cols - 1);
+        sy = clamp(sy, 0, src_rows - 1);
+
+        // Calculate interpolation coefficients
+        int u = (dx * ifx) & 0xFFFF;
+        int v = (dy * ify) & 0xFFFF;
+
+        int U = (0x10000 - u) >> 8;
+        int V = (0x10000 - v) >> 8;
+        int U1 = u >> 8;
+        int V1 = v >> 8;
+
+        // Load pixel values
+        WT data0 = convertToWT(loadpix(srcptr + mad24(sy, src_step, mad24(sx, TSIZE, src_offset))));
+        WT data1 = convertToWT(loadpix(srcptr + mad24(sy, src_step, mad24(INC(sx, src_cols), TSIZE, src_offset))));
+        WT data2 = convertToWT(loadpix(srcptr + mad24(INC(sy, src_rows), src_step, mad24(sx, TSIZE, src_offset))));
+        WT data3 = convertToWT(loadpix(srcptr + mad24(INC(sy, src_rows), src_step, mad24(INC(sx, src_cols), TSIZE, src_offset))));
+
+        // Perform fixed-point interpolation
+        WT val = mul24((WT)mul24(U1, V1), data0) + mul24((WT)mul24(U, V1), data1) +
+                 mul24((WT)mul24(U1, V), data2) + mul24((WT)mul24(U, V), data3);
+
+        // Convert and store the result
+        T uval = convertToDT((val + 2) >> 2);
+        storepix(uval, dstptr + mad24(dy, dst_step, mad24(dx, TSIZE, dst_offset)));
+    }
+}
+
+
 #elif defined INTER_NEAREST
 
 __kernel void resizeNN(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,

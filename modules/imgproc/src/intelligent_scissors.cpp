@@ -40,7 +40,7 @@ static const int neighbors_encode[8] = {
 };
 
 #define ACOS_TABLE_SIZE 64
-// acos_table[x + ACOS_TABLE_SIZE] = acos(x / ACOS_TABLE_SIZE) / CV_PI (see local_cost)
+// acos_table[x + ACOS_TABLE_SIZE] = acos(x / ACOS_TABLE_SIZE) / CV_PI (see add_local_cost)
 //    x = [ -ACOS_TABLE_SIZE .. ACOS_TABLE_SIZE ]
 float* getAcosTable()
 {
@@ -90,9 +90,9 @@ struct IntelligentScissorsMB::Impl
     int laplacianKernelSize = 3;  // 1 or 3
 
     // image features
-    Mat_<Point2f> gradient_direction;  //< I: normalized laplacian x/y components
-    Mat_<float> gradient_magnitude;  //< Fg: gradient cost function
-    Mat_<uchar> non_edge_feature;  //< Fz: zero-crossing function
+    Mat_<Point2f> gradient_direction;  ///< I: normalized laplacian x/y components
+    Mat_<float> gradient_magnitude;  ///< Fg: gradient cost function
+    Mat_<uchar> non_edge_feature;  ///< Fz: zero-crossing function
 
     float weight_non_edge_compute = 0.0f;
 
@@ -495,55 +495,76 @@ struct IntelligentScissorsMB::Impl
 
     // details: see section 3.1 of the article
     const float* acos_table = getAcosTable();
-    float local_cost(const Point& p, const Point& q) const
+    const float sqrt2_inv = 0.7071067811865475f; // 1.0 / sqrt(2)
+
+    /** @brief Adds local_cost(p, q) to cost_p.
+     *
+     * local_cost(p, q) is computed as
+          weight_non_edge_compute * non_edge_feature.at<uchar>(q) +
+          weight_gradient_direction * fD +
+          weight_gradient_magnitude * fG
+     *
+     * @param p point p (input)
+     * @param q point q (input)
+     * @param cost_p cost for p (input/output)
+     * @param cost_q cost for q (input)
+     *
+     * @return The boolean result of the (cost_p < cost_q) comparison.
+     *
+     * @note The computed output cost_p can be partial if (cost_p < cost_q) is false.
+     */
+    bool add_local_cost(const Point& p, const Point& q, float& cost_p, const float cost_q) const
     {
-        const bool isDiag = (p.x != q.x) && (p.y != q.y);
-
-        float fG = gradient_magnitude.at<float>(q);
-
-        const Point2f diff((float)(q.x - p.x), (float)(q.y - p.y));
-
-        const Point2f Ip = gradient_direction(p);
-        const Point2f Iq = gradient_direction(q);
-
-        const Point2f Dp(Ip.y, -Ip.x);  // D(p) - 90 degrees clockwise
-        const Point2f Dq(Iq.y, -Iq.x);  // D(q) - 90 degrees clockwise
-
-        float dp = Dp.dot(diff);  // dp(p, q)
-        float dq = Dq.dot(diff);  // dq(p, q)
-        if (dp < 0)
+        if ((cost_p += weight_non_edge_compute * non_edge_feature.at<uchar>(q)) < cost_q)
         {
-            dp = -dp;  // ensure dp >= 0
-            dq = -dq;
-        }
+            const bool isDiag = (p.x != q.x) && (p.y != q.y);
 
-        const float sqrt2_inv = 0.7071067811865475f; // 1.0 / sqrt(2)
-        if (isDiag)
-        {
-            dp *= sqrt2_inv;  // normalize length of (q - p)
-            dq *= sqrt2_inv;  // normalize length of (q - p)
-        }
-        else
-        {
-            fG *= sqrt2_inv;
-        }
+            float fG = gradient_magnitude.at<float>(q);
+            if (!isDiag)
+            {
+                fG *= sqrt2_inv;
+            }
+
+            if ((cost_p += weight_gradient_magnitude * fG) < cost_q)
+            {
+
+                const Point2f diff((float)(q.x - p.x), (float)(q.y - p.y));
+
+                const Point2f Ip = gradient_direction(p);
+                const Point2f Iq = gradient_direction(q);
+
+                const Point2f Dp(Ip.y, -Ip.x);  // D(p) - 90 degrees clockwise
+                const Point2f Dq(Iq.y, -Iq.x);  // D(q) - 90 degrees clockwise
+
+                float dp = Dp.dot(diff);  // dp(p, q)
+                float dq = Dq.dot(diff);  // dq(p, q)
+                if (dp < 0)
+                {
+                    dp = -dp;  // ensure dp >= 0
+                    dq = -dq;
+                }
+
+                if (isDiag)
+                {
+                    dp *= sqrt2_inv;  // normalize length of (q - p)
+                    dq *= sqrt2_inv;  // normalize length of (q - p)
+                }
 
 #if 1
-        int dp_i = cvFloor(dp * ACOS_TABLE_SIZE);  // dp is in range 0..1
-        dp_i = std::min(ACOS_TABLE_SIZE, std::max(0, dp_i));
-        int dq_i = cvFloor(dq * ACOS_TABLE_SIZE);  // dq is in range -1..1
-        dq_i = std::min(ACOS_TABLE_SIZE, std::max(-ACOS_TABLE_SIZE, dq_i));
-        const float fD = acos_table[dp_i + ACOS_TABLE_SIZE] + acos_table[dq_i + ACOS_TABLE_SIZE];
+                int dp_i = cvFloor(dp * ACOS_TABLE_SIZE);  // dp is in range 0..1
+                dp_i = std::min(ACOS_TABLE_SIZE, std::max(0, dp_i));
+                int dq_i = cvFloor(dq * ACOS_TABLE_SIZE);  // dq is in range -1..1
+                dq_i = std::min(ACOS_TABLE_SIZE, std::max(-ACOS_TABLE_SIZE, dq_i));
+                const float fD = acos_table[dp_i + ACOS_TABLE_SIZE] + acos_table[dq_i + ACOS_TABLE_SIZE];
 #else
-        const float CV_PI_inv = static_cast<float>(1.0 / CV_PI);
-        const float fD = (acosf(dp) + acosf(dq)) * CV_PI_inv;  // TODO optimize acos calls (through tables)
+                const float CV_PI_inv = static_cast<float>(1.0 / CV_PI);
+                const float fD = (acosf(dp) + acosf(dq)) * CV_PI_inv;  // TODO optimize acos calls (through tables)
 #endif
 
-        float cost =
-            weight_non_edge_compute * non_edge_feature.at<uchar>(q) +
-            weight_gradient_direction * fD +
-            weight_gradient_magnitude * fG;
-        return cost;
+                cost_p += weight_gradient_direction * fD;
+            }
+        }
+        return cost_p < cost_q;
     }
 
     struct Pix
@@ -625,8 +646,8 @@ struct IntelligentScissorsMB::Impl
                 CV_DbgCheckLE(cost_q, cost_r, "INTERNAL ERROR: sorted queue is corrupted");
 #endif
 
-                float cost = cost_q + local_cost(q, r);  // TODO(opt): compute partially until cost < cost_r
-                if (cost < cost_r)
+                float cost = cost_q;
+                if (add_local_cost(q, r, cost, cost_r))
                 {
 #if 0  // avoid compiler warning
                     if (cost_r != FLT_MAX)

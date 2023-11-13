@@ -1,0 +1,121 @@
+#version 450
+
+// This kernel is made for generic convolution, but for depth-wise, it is very slow.
+
+#define KSTRIP_LEN 16
+#define REAL_KSTRIP_LEN 9 // 3x3 kernel size.
+#define BLOCK_SIZE 64 // the output channel shoule be aligned to 64.
+#define WARP 32
+
+#define ALL_THREAD 64
+
+layout(binding = 0) readonly buffer Input0{
+    float image_data[];
+};
+
+layout(binding = 1) readonly buffer Input1 {
+    float bias_data[];
+};
+
+layout(binding = 2) readonly buffer Input2{
+    float weight_data[];
+};
+
+layout(binding = 3) writeonly buffer Output{
+    float output_data[];
+};
+
+layout(binding = 4) uniform pushBlock {
+    int Hi; // H in
+    int Wi; // W in
+    int H0; // H out
+    int W0; // W out
+    int stride_h;
+    int stride_w;
+    int pad_h;
+    int pad_w;
+    int Hk;
+    int Wk;
+    int dilation_h;
+    int dilation_w;
+    int Kg;
+    int Cg;
+    int group;
+    int CgHkWk_aligned;
+    int activationType; // 0 : no activation, 1: ReLU, 2: ReLU6.
+    int batchi;
+    int _unused;
+} p;
+
+shared float wshare[KSTRIP_LEN];
+shared float inshare[KSTRIP_LEN][BLOCK_SIZE]; // 2 KB
+
+layout(local_size_x = ALL_THREAD, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    int outputPlan = p.H0 * p.W0;      // H0 * W0
+    int HkWk = p.Hk * p.Wk;
+
+    int hwIndex = int(gl_WorkGroupID.x) * BLOCK_SIZE;
+    int kIndex = int(gl_WorkGroupID.y);
+
+    int local_x = int(gl_LocalInvocationID.x); // 0 ~ 63
+
+    int w_local_x = int(gl_LocalInvocationID.x) % KSTRIP_LEN; // 64 % 32 = 0 ~ 31
+    int w_local_y = int(gl_LocalInvocationID.x) / KSTRIP_LEN;
+
+    int in_local_x = local_x; // 64 / 64 = 1
+
+    int woffset = kIndex * p.CgHkWk_aligned + w_local_x;
+    int inoffset = p.batchi * p.group * p.Hi * p.Wi;
+    int outoffset = p.batchi * p.group * p.H0 * p.W0;
+
+    float sum = bias_data[kIndex];
+
+    // load Weight to local memory.
+    if (w_local_y == 0)
+        wshare[w_local_x] = weight_data[woffset];
+
+    for (int k = 0; k < REAL_KSTRIP_LEN; k++)
+    {
+        int hk = k / p.Wk;
+        int wk = k - hk * p.Wk;
+        int dh = hk * p.dilation_h, dw = wk * p.dilation_w;
+
+        int h0w0 = in_local_x + hwIndex;
+        int h0 = h0w0 / p.W0;
+        int w0 = h0w0 - h0 * p.W0;
+
+        int hi = h0 * p.stride_h + dh - p.pad_h;
+        int wi = w0 * p.stride_w + dw - p.pad_w;
+
+        if (uint(hi) < uint(p.Hi) && uint(wi) < uint(p.Wi))
+            inshare[k][in_local_x] = image_data[inoffset + hi * p.Wi + wi];
+        else
+            inshare[k][in_local_x] = 0.f;
+    }
+
+    barrier();
+
+    for (int j = 0; j < REAL_KSTRIP_LEN; j++)
+    {
+        sum += wshare[j] * inshare[j][in_local_x];
+    }
+
+    barrier();
+
+    if (p.activationType == 1) // ReLU
+    {
+        sum = max(sum, 0.f);
+    }
+    else if (p.activationType == 2) // ReLU6
+    {
+        sum = clamp(sum, 0.f, 6.f);
+    }
+
+    hwIndex += in_local_x;
+
+    if (hwIndex < outputPlan)
+        output_data[outoffset + hwIndex] = sum;
+}

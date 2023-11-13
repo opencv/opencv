@@ -53,7 +53,7 @@ struct SimilarWith
     T value;
     float theta_eps;
     float rho_eps;
-    SimilarWith<T>(T val, float e, float r_e): value(val), theta_eps(e), rho_eps(r_e) { };
+    SimilarWith(T val, float e, float r_e): value(val), theta_eps(e), rho_eps(r_e) { }
     bool operator()(const T& other);
 };
 

@@ -243,27 +243,92 @@ public:
 
 //===================================================
 
+// Utility
+
+static inline void applyMetadataRotation(const IVideoCapture& cap, OutputArray mat)
+{
+    bool rotation_auto = 0 != cap.getProperty(CAP_PROP_ORIENTATION_AUTO);
+    int rotation_angle = static_cast<int>(cap.getProperty(CAP_PROP_ORIENTATION_META));
+
+    if(!rotation_auto || rotation_angle%360 == 0)
+    {
+        return;
+    }
+
+    cv::RotateFlags flag;
+    if(rotation_angle == 90 || rotation_angle == -270) { // Rotate clockwise 90 degrees
+        flag = cv::ROTATE_90_CLOCKWISE;
+    } else if(rotation_angle == 270 || rotation_angle == -90) { // Rotate clockwise 270 degrees
+        flag = cv::ROTATE_90_COUNTERCLOCKWISE;
+    } else if(rotation_angle == 180 || rotation_angle == -180) { // Rotate clockwise 180 degrees
+        flag = cv::ROTATE_180;
+    } else { // Unsupported rotation
+        return;
+    }
+
+    cv::rotate(mat, mat, flag);
+}
+
+//===================================================
+
 // Wrapper
 
 class LegacyCapture : public IVideoCapture
 {
 private:
     CvCapture * cap;
+    bool autorotate;
     LegacyCapture(const LegacyCapture &);
     LegacyCapture& operator=(const LegacyCapture &);
+
+    bool shouldSwapWidthHeight() const
+    {
+        if (!autorotate)
+            return false;
+        int rotation = static_cast<int>(cap->getProperty(cv::CAP_PROP_ORIENTATION_META));
+        return std::abs(rotation % 180) == 90;
+    }
+
 public:
-    LegacyCapture(CvCapture * cap_) : cap(cap_) {}
+    LegacyCapture(CvCapture * cap_) : cap(cap_), autorotate(true) {}
     ~LegacyCapture()
     {
         cvReleaseCapture(&cap);
     }
     double getProperty(int propId) const CV_OVERRIDE
     {
-        return cap ? cap->getProperty(propId) : 0;
+        if (!cap)
+            return 0;
+
+        switch(propId)
+        {
+            case cv::CAP_PROP_ORIENTATION_AUTO:
+                return static_cast<double>(autorotate);
+
+            case cv::CAP_PROP_FRAME_WIDTH:
+                return shouldSwapWidthHeight() ? cap->getProperty(cv::CAP_PROP_FRAME_HEIGHT) : cap->getProperty(cv::CAP_PROP_FRAME_WIDTH);
+
+            case cv::CAP_PROP_FRAME_HEIGHT:
+                return shouldSwapWidthHeight() ? cap->getProperty(cv::CAP_PROP_FRAME_WIDTH) : cap->getProperty(cv::CAP_PROP_FRAME_HEIGHT);
+
+            default:
+                return cap->getProperty(propId);
+        }
     }
     bool setProperty(int propId, double value) CV_OVERRIDE
     {
-        return cvSetCaptureProperty(cap, propId, value) != 0;
+        if (!cap)
+            return false;
+
+        switch(propId)
+        {
+            case cv::CAP_PROP_ORIENTATION_AUTO:
+                autorotate = (value != 0);
+                return true;
+
+            default:
+                return cvSetCaptureProperty(cap, propId, value) != 0;
+        }
     }
     bool grabFrame() CV_OVERRIDE
     {
@@ -286,6 +351,7 @@ public:
             Mat temp = cv::cvarrToMat(_img);
             flip(temp, image, 0);
         }
+        applyMetadataRotation(*this, image);
         return true;
     }
     bool isOpened() const CV_OVERRIDE
