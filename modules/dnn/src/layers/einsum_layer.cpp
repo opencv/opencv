@@ -1308,10 +1308,10 @@ Mat LayerEinsumImpl::batchwiseMatMul(
     CV_CheckEQ((size_t) input1ShapeOverride[0], (size_t) input2ShapeOverride[0], "Batch dimension should match for MatMul;");
     CV_CheckEQ((size_t) input1ShapeOverride[2], (size_t) input2ShapeOverride[1], "Incompatible matrix dimensions for matMul");
 
-    size_t batches = input1ShapeOverride[0];
-    size_t M = input1ShapeOverride[1];
-    size_t K = input1ShapeOverride[2];
-    size_t N = input2ShapeOverride[2];
+    int batches = input1ShapeOverride[0];
+    int M = input1ShapeOverride[1];
+    int K = input1ShapeOverride[2];
+    int N = input2ShapeOverride[2];
 
     std::vector<Mat> output;
     if (batches > 1)
@@ -1323,7 +1323,7 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         // check if input1 needs reshape, if need reshape
         if (input1.size[0] != M || input1.size[1] != K)
         {
-            int shape[] = {static_cast<int>(batches), static_cast<int>(M), static_cast<int>(K)};
+            int shape[] = {batches, M, K};
             reshapedInput1 = input1.reshape(1, 3, shape);
         }
 
@@ -1331,7 +1331,7 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         // check if input2 needs reshape, if needs reshape
         if (input2.size[0] != K || input2.size[1] != N)
         {
-            int shape[] = {static_cast<int>(batches), static_cast<int>(K), static_cast<int>(N)};
+            int shape[] = {batches, K, N};
             reshapedInput2 = input2.reshape(1, 3, shape);
         }
 
@@ -1342,7 +1342,7 @@ Mat LayerEinsumImpl::batchwiseMatMul(
                 ranges1.emplace_back(cv::Range::all());
 
             Mat part1 = reshapedInput1(ranges1);
-            int shape[] = {static_cast<int>(M), static_cast<int>(K)};
+            int shape[] = {M, K};
             part1 = part1.reshape(1, sizeof(shape)/sizeof(shape[0]), shape);
 
             std::vector<Range> ranges2 = {cv::Range(i, i+1)};
@@ -1350,13 +1350,13 @@ Mat LayerEinsumImpl::batchwiseMatMul(
                 ranges2.emplace_back(cv::Range::all());
 
             Mat part2 = reshapedInput2(ranges2);
-            int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
+            int shape2[] = {K, N};
             part2 = part2.reshape(1, sizeof(shape2)/sizeof(shape2[0]), shape2);
 
             Mat tmp_output;
             tmp_output.create(M, N, part1.type());
             fastGemm(false, false, 1.0, part1, part2, 0.0, tmp_output, opt);
-            int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
+            int newShape[] = {1, M, N};
             tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
 
             output.emplace_back(tmp_output);
@@ -1371,7 +1371,7 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         // check if input1 needs reshape, if need reshape
         if (input1.dims > 2 || input1.size[0] != M || input1.size[1] != K)
         {
-            int shape[] = {static_cast<int>(M), static_cast<int>(K)};
+            int shape[] = {M, K};
             reshapedInput1 = input1.reshape(1, 2, shape);
         }
 
@@ -1379,7 +1379,7 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         // check if input2 needs reshape, if needs reshape
         if (input2.dims > 2 || input2.size[0] != K || input2.size[1] != N)
         {
-            int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
+            int shape2[] = {K, N};
             reshapedInput2 = input2.reshape(1, 2, shape2);
         }
 
@@ -1387,13 +1387,13 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         tmp_output.create(M, N, reshapedInput1.type());
         fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, tmp_output, opt);
 
-        int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
+        int newShape[] = {1, M, N};
         tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
         output.emplace_back(tmp_output);
 
     }
 
-    int outputDim[] = {static_cast<int>(output.size()), static_cast<int>(M), static_cast<int>(N)};
+    int outputDim[] = {static_cast<int>(output.size()), M, N};
     Mat output_buffer = Mat::zeros(3, outputDim, CV_32F);
 
     for (size_t i = 0; i < output.size(); i++) {
