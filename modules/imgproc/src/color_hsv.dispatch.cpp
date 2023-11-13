@@ -10,6 +10,7 @@
 
 #include "color_hsv.simd.hpp"
 #include "color_hsv.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
+#include <atomic>
 
 namespace cv {
 
@@ -279,8 +280,8 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
         static UMat hdiv_data180;
         static UMat hdiv_data256;
         static int combined_table[256];
-        static volatile bool initialized180 = false, initialized256 = false;
-        static volatile bool initialized = hrange == 180 ? initialized180 : initialized256;
+        static std::atomic<bool> initialized180(false), initialized256(false);
+        std::atomic<bool>& initialized = hrange == 180 ? initialized180 : initialized256;
 
         if (!initialized)
         {
@@ -305,15 +306,14 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
                     hdiv_table[i] = saturate_cast<int>(v/(6.*i));
 
                 Mat(1, 256, CV_32SC1, hdiv_table).copyTo(hdiv_data);
-                initialized = true;
+                initialized.store(true);
             }
         }
 
         h.setArg(ocl::KernelArg::PtrReadOnly(sdiv_data));
         h.setArg(hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
-                             ocl::KernelArg::PtrReadOnly(hdiv_data180));
+                                 ocl::KernelArg::PtrReadOnly(hdiv_data180));
     }
-
 
     return h.run();
 }
