@@ -269,34 +269,38 @@ int QRCodeEncoderImpl::findVersionCapacity(const int input_length, const int ecc
     return version_index;
 }
 
+static inline int getCapacity(int version, QRCodeEncoder::CorrectionLevel ecc_level, QRCodeEncoder::EncodeMode mode) {
+    const int* capacity = version_capacity_database[version].ec_level[ecc_level].encoding_modes;
+    switch (mode) {
+        case QRCodeEncoder::EncodeMode::MODE_NUMERIC:
+            return capacity[0];
+        case QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC:
+            return capacity[1];
+        case QRCodeEncoder::EncodeMode::MODE_BYTE:
+            return capacity[2];
+        case QRCodeEncoder::EncodeMode::MODE_KANJI:
+            return capacity[3];
+        default:
+            CV_Error(Error::StsNotImplemented, format("Unexpected mode %d", mode));
+    }
+}
+
 bool QRCodeEncoderImpl::estimateVersion(const int input_length, EncodeMode mode, vector<int>& possible_version)
 {
     possible_version.clear();
 
     CV_Assert(mode != EncodeMode::MODE_AUTO);
 
-    const int mode_index[] = {
-       -1,
-        0, // cv::QRCodeEncoder::EncodeMode::MODE_NUMERIC
-        1, // cv::QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC
-       -1,
-        2, // cv::QRCodeEncoder::EncodeMode::MODE_BYTE
-       -1,
-       -1,
-       -1,
-        3  // cv::QRCodeEncoder::EncodeMode::MODE_KANJI
-    };
-
-    if (input_length > version_capacity_database[40].ec_level[ecc_level].encoding_modes[mode_index[mode]])
+    if (input_length > getCapacity(MAX_VERSION, ecc_level, mode))
     {
         return false;
     }
 
-    int version = 40;
+    int version = MAX_VERSION;
 
     for (; version > 0; --version)
     {
-        if (input_length > version_capacity_database[version].ec_level[ecc_level].encoding_modes[mode_index[mode]]) {
+        if (input_length > getCapacity(version, ecc_level, mode)) {
             break;
         }
     }
