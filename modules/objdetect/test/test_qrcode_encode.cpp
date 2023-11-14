@@ -548,4 +548,22 @@ TEST(Objdetect_QRCode_Encode_Decode, regression_issue22029)
     }
 }
 
+// This test reproduces issue https://github.com/opencv/opencv/issues/24366 only in a loop
+TEST(Objdetect_QRCode_Encode_Decode, auto_version_pick)
+{
+    cv::QRCodeEncoder::Params params;
+    params.correction_level = cv::QRCodeEncoder::CORRECT_LEVEL_L;
+    params.mode = cv::QRCodeEncoder::EncodeMode::MODE_AUTO;
+
+    cv::Ptr<cv::QRCodeEncoder> encoder = cv::QRCodeEncoder::create(params);
+
+    for (int len = 1; len < 19; len++) {
+        std::string input;
+        input.resize(len);
+        cv::randu(Mat(1, len, CV_8U, &input[0]), 'a', 'z' + 1);
+        cv::Mat qrcode;
+        encoder->encode(input, qrcode);
+    }
+}
+
 }} // namespace
