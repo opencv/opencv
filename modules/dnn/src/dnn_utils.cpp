@@ -382,6 +382,60 @@ void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_)
     }
 }
 
+Rect blobRectToImage(Rect r, InputArray oriImage, Image2BlobParams param)
+{
+    Rect rNew;
+    Size size = param.size;
+    CV_Assert(!oriImage.getMat_().empty());
+    Size imgSize = oriImage.getMat_().size();
+    if (size != imgSize)
+    {
+        if (param.paddingmode == DNN_PMODE_CROP_CENTER)
+        {
+            float resizeFactor = std::max(size.width / (float)imgSize.width,
+                size.height / (float)imgSize.height);
+            rNew = Rect((r.x + 0.5 * (imgSize.width * resizeFactor - size.width)) / resizeFactor, (r.y + 0.5 * (imgSize.height * resizeFactor - size.height)) / resizeFactor,
+                r.width / resizeFactor, r.height / resizeFactor);
+        }
+        else if (param.paddingmode == DNN_PMODE_LETTERBOX)
+        {
+            float resizeFactor = std::min(size.width / (float)imgSize.width,
+                size.height / (float)imgSize.height);
+            int rh = int(imgSize.height * resizeFactor);
+            int rw = int(imgSize.width * resizeFactor);
+
+            int top = (size.height - rh) / 2;
+            int left = (size.width - rw) / 2;
+            rNew = Rect((r.x - left) / resizeFactor, (r.y - top) / resizeFactor, r.width / resizeFactor, r.height / resizeFactor);
+        }
+        else
+        {
+            rNew = Rect(r.x * (float)imgSize.width / size.width, r.y * (float)imgSize.height / size.height,
+                r.width * (float)imgSize.width / size.width, r.height * (float)imgSize.height / size.height);
+        }
+    }
+
+    return rNew;
+}
+
+Rect blobRectToImage(Rect r, InputArray image, const Size& size, bool crop)
+{
+    CV_Assert(!image.getMat_().empty());
+    Image2BlobParams paramNet;
+    paramNet.scalefactor = Scalar::all(1);
+    paramNet.size = size;
+    paramNet.ddepth = CV_32F;
+    paramNet.mean = Scalar();
+    paramNet.swapRB = false;
+    paramNet.datalayout = DNN_LAYOUT_NHWC;
+    if (crop)
+        paramNet.paddingmode = DNN_PMODE_CROP_CENTER;
+    else
+        paramNet.paddingmode = DNN_PMODE_NULL;
+    return blobRectToImage(r, image, paramNet);
+
+}
+
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
