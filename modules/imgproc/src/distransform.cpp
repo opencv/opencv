@@ -817,14 +817,15 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     Size size = src.size();
 
     int border = maskSize == CV_DIST_MASK_3 ? 1 : 2;
-    Mat temp( size.height + border*2, size.width + border*2, CV_32SC1 );
+    Mat temp;
 
     if( !need_labels )
     {
         if( maskSize == CV_DIST_MASK_3 )
         {
-#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700) && 0  // disabled: https://github.com/opencv/opencv/issues/15904
-            CV_IPP_CHECK()
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
+            bool has_int_overflow = (int64)src.cols * src.rows >= INT_MAX;
+            if (!has_int_overflow && CV_IPP_CHECK_COND)
             {
                 IppiSize roi = { src.cols, src.rows };
                 if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_3x3_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0)
@@ -836,12 +837,14 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             }
 #endif
 
+            temp.create(size.height + border*2, size.width + border*2, CV_32SC1);
             distanceTransform_3x3(src, temp, dst, _mask);
         }
         else
         {
 #if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
-            CV_IPP_CHECK()
+            bool has_int_overflow = (int64)src.cols * src.rows >= INT_MAX;
+            if (!has_int_overflow && CV_IPP_CHECK_COND)
             {
                 IppiSize roi = { src.cols, src.rows };
                 if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_5x5_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0)
@@ -853,6 +856,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             }
 #endif
 
+            temp.create(size.height + border*2, size.width + border*2, CV_32SC1);
             distanceTransform_5x5(src, temp, dst, _mask);
         }
     }
@@ -879,7 +883,8 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             }
         }
 
-       distanceTransformEx_5x5( src, temp, dst, labels, _mask );
+        temp.create(size.height + border*2, size.width + border*2, CV_32SC1);
+        distanceTransformEx_5x5( src, temp, dst, labels, _mask );
     }
 }
 
