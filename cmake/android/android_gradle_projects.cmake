@@ -1,8 +1,8 @@
 # https://developer.android.com/studio/releases/gradle-plugin
-set(ANDROID_GRADLE_PLUGIN_VERSION "3.2.1" CACHE STRING "Android Gradle Plugin version")
+set(ANDROID_GRADLE_PLUGIN_VERSION "7.3.1" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
-set(KOTLIN_PLUGIN_VERSION "1.4.10" CACHE STRING "Kotlin Plugin version")
+set(KOTLIN_PLUGIN_VERSION "1.5.20" CACHE STRING "Kotlin Plugin version")
 message(STATUS "Kotlin Plugin version: ${KOTLIN_PLUGIN_VERSION}")
 
 if(BUILD_KOTLIN_EXTENSIONS)
@@ -13,7 +13,7 @@ else()
   set(KOTLIN_STD_LIB "" CACHE STRING "Kotlin Standard Library dependency")
 endif()
 
-set(GRADLE_VERSION "5.6.4" CACHE STRING "Gradle version")
+set(GRADLE_VERSION "7.5.1" CACHE STRING "Gradle version")
 message(STATUS "Gradle version: ${GRADLE_VERSION}")
 
 set(ANDROID_COMPILE_SDK_VERSION "26" CACHE STRING "Android compileSdkVersion")
@@ -109,7 +109,7 @@ if(NOT OPENCV_SKIP_ANDROID_FORCE_CMAKE)
     get_filename_component(_CMAKE_INSTALL_DIR "${CMAKE_ROOT}" PATH)
     get_filename_component(_CMAKE_INSTALL_DIR "${_CMAKE_INSTALL_DIR}" PATH)
   endif()
-  ocv_update_file("${ANDROID_BUILD_BASE_DIR}/local.properties" "cmake.dir=${_CMAKE_INSTALL_DIR}")
+  ocv_update_file("${ANDROID_BUILD_BASE_DIR}/local.properties" "cmake.dir=${_CMAKE_INSTALL_DIR}\nndk.dir=${ANDROID_NDK}")
 endif()
 
 file(WRITE "${ANDROID_BUILD_BASE_DIR}/settings.gradle" "
