@@ -207,7 +207,7 @@ protected:
     bool encodeNumeric(const std::string& input, vector<uint8_t> &output);
     bool encodeECI(const std::string& input, vector<uint8_t> &output);
     bool encodeKanji(const std::string& input, vector<uint8_t> &output);
-    bool encodeAuto(const std::string& input, vector<uint8_t> &output, EncodeMode *mode);
+    bool encodeAuto(const std::string& input, vector<uint8_t> &output, EncodeMode *mode = nullptr);
     bool encodeStructure(const std::string& input, vector<uint8_t> &output);
     int eccLevelToCode(CorrectionLevel level);
     void padBitStream();
@@ -631,7 +631,7 @@ bool QRCodeEncoderImpl::encodeStructure(const std::string& input, vector<uint8_t
     writeDecNumber(total_num, num_field, output);
     writeDecNumber(parity, checksum_field, output);
 
-    return encodeAuto(input, output, nullptr);
+    return encodeAuto(input, output);
 }
 
 bool QRCodeEncoderImpl::isNumeric(const std::string& input) const
@@ -656,11 +656,6 @@ bool QRCodeEncoderImpl::isAlphaNumeric(const std::string& input) const
 
 QRCodeEncoder::EncodeMode QRCodeEncoderImpl::autoEncodeMode(const std::string &input) const
 {
-    if (mode_type != EncodeMode::MODE_AUTO)
-    {
-        return mode_type;
-    }
-
     if (isNumeric(input))
     {
         return EncodeMode::MODE_NUMERIC;
@@ -769,7 +764,7 @@ bool QRCodeEncoderImpl::stringToBits(const std::string& input_info)
         case MODE_KANJI:
             return encodeKanji(input_info, payload);
         default:
-            return encodeAuto(input_info, payload, nullptr);
+            return encodeAuto(input_info, payload);
     }
 }
 
