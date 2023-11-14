@@ -10,6 +10,7 @@ SET(OPENCV_OPENGL_SAMPLES_REQUIRED_DEPS
   opencv_core
   opencv_imgproc
   opencv_imgcodecs
+  opencv_3d
   opencv_videoio
   opencv_highgui)
 ocv_check_dependencies(${OPENCV_OPENGL_SAMPLES_REQUIRED_DEPS})
