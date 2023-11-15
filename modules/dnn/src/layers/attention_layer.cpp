@@ -43,7 +43,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         hidden_size = qkv_hidden_sizes[0] + qkv_hidden_sizes[1] + qkv_hidden_sizes[2];
 
         qkv_head_sizes.resize(3);
-        std::transform(qkv_hidden_sizes.begin(), qkv_hidden_sizes.end(), std::back_inserter(qkv_head_sizes),
+        std::transform(qkv_hidden_sizes.begin(), qkv_hidden_sizes.end(), qkv_head_sizes.begin(),
                        [this] (const size_t w) { return static_cast<size_t>(w / num_heads); });
 
         scale = params.get<float>("scale", sqrt(1.f / qkv_head_sizes[0]));
@@ -108,23 +108,26 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             // prepack
             const auto &weight = inputs[1];
             const auto *weight_data = weight.ptr<const float>();
-            packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data, hidden_size, packed_weight_q, opt);
-            packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0], hidden_size, packed_weight_k, opt);
+            packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data,                                             hidden_size, packed_weight_q, opt);
+            packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0],                       hidden_size, packed_weight_k, opt);
             packWeight(num_heads, qkv_head_sizes[2], input_hidden_size, weight_data + qkv_hidden_sizes[0] + qkv_hidden_sizes[1], hidden_size, packed_weight_v, opt);
 
             is_prepacked = true;
         }
 
-        float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
-        size_t packed_weights_size[3] = {packed_weight_q.size(), packed_weight_k.size(), packed_weight_v.size()};
+        float *packed_weights[3] =      {packed_weight_q.data(),             packed_weight_k.data(),             packed_weight_v.data()};
+        size_t packed_weights_size[3] = {packed_weight_q.size() / num_heads, packed_weight_k.size() / num_heads, packed_weight_v.size() / num_heads};
 
         const auto *input_data = input.ptr<const float>();
         const auto *bias_data = bias.ptr<const float>();
+        // std::cout << format("Forward: batch_size=%zu, seq_len=%zu, input_hidden_size=%zu, hidden_size=%zu\n", batch_size, seq_len, input_hidden_size, hidden_size);
 
-        auto *output_data = output.ptr<float>();
-        float *qkv[3] = {output_data,
-                         output_data + batch_size * seq_len * qkv_hidden_sizes[0],
-                         output_data + batch_size * seq_len * (qkv_hidden_sizes[0] + qkv_hidden_sizes[1])};
+        AutoBuffer<float> buff(batch_size * seq_len * hidden_size);
+        auto Q = buff.data();
+        auto K = Q + batch_size * seq_len * qkv_hidden_sizes[0];
+        auto V = K + batch_size * seq_len * qkv_hidden_sizes[1];
+        float *QKV[3] = {Q, K, V};
+        opt.multi_thread = false;
 
         auto fn = [&](const Range &r) {
             for (int i = r.start; i < r.end; i++) {
@@ -132,7 +135,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                 const int head_index = static_cast<int>((i / 3) % num_heads);
                 const int qkv_index = static_cast<int>(i % 3);
 
-                auto *dst = qkv[qkv_index];
+                auto *dst = QKV[qkv_index];
                 size_t head_size = qkv_head_sizes[qkv_index];
 
                 int input_offset = batch_index * seq_len * input_hidden_size;
@@ -144,7 +147,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                 auto *dst_data = dst + dst_offset;
                 for (size_t seq_len_idx = 0; seq_len_idx < seq_len; seq_len_idx++) {
                     std::memcpy(dst_data, bias_data_src, head_size * sizeof(float));
-                    dst_data += head_size; // incorrect?
+                    dst_data += head_size;
                 }
 
                 auto *packed_weight = packed_weights[qkv_index] + packed_weights_size[qkv_index] * head_index;
@@ -158,6 +161,17 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         size_t loops = 3 * batch_size * num_heads;
         double nstripes = loops * seq_len * qkv_head_sizes[0] * input_hidden_size * (1 / 1024.0);
         parallel_for_(Range(0, loops), fn, nstripes);
+
+        // auto printfn = [] (const float *d, size_t len, const std::string tag) {
+        //     std::cout << tag << std::endl;
+        //     for (size_t i = 0; i < len; i++) {
+        //         std::cout << d[i] << " ";
+        //     }
+        //     std::cout << std::endl;
+        // };
+        // printfn(QKV[0], batch_size * seq_len * qkv_hidden_sizes[0], "Q=");
+        // printfn(QKV[1], batch_size * seq_len * qkv_hidden_sizes[1], "K=");
+        // printfn(QKV[2], batch_size * seq_len * qkv_hidden_sizes[2], "V=");
 
         // input.copyTo(output);
     }

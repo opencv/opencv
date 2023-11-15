@@ -259,7 +259,8 @@ class AttentionSubGraph : public Subgraph {
  public:
     AttentionSubGraph() {
         int input = addNodeToMatch("");
-        int matmul = addNodeToMatch("MatMul", input, addNodeToMatch(""));
+        int transpose = addNodeToMatch("Transpose", input); // tranpose does not make any differences to the accuracy here in this subgraph
+        int matmul = addNodeToMatch("MatMul", transpose, addNodeToMatch(""));
         int add = addNodeToMatch("Add", addNodeToMatch(""), matmul);
 
         // v_path
@@ -363,11 +364,11 @@ class AttentionSubGraph : public Subgraph {
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
         {
             // get weight
-            weight_name = getInputName(net, matchedNodesIds[0], 1);
+            weight_name = getInputName(net, matchedNodesIds[1], 1);
             // std::cout << "attention: weight_name=" << weight_name << std::endl;
 
             // get bias
-            bias_name = getInputName(net, matchedNodesIds[1], 0);
+            bias_name = getInputName(net, matchedNodesIds[2], 0);
             // std::cout << "attention: bias_name=" << bias_name << std::endl;
 
             // get attrs
