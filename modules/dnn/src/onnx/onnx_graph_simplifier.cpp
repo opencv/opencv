@@ -1190,7 +1190,10 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
         const auto &node = net.node(0);
         const auto &op_type = node.op_type();
         if (op_type == "LayerNormalization") {
-            net.mutable_output()->DeleteSubrange(1, 2);
+            if (net.output_size() > 1) {
+                int num = net.output_size() - 1;
+                net.mutable_output()->DeleteSubrange(1, num);
+            }
         }
     }
 }
