@@ -26,7 +26,8 @@ struct ConvParam_t {
     double declared_flops;
 };
 // Details: #12142
-// Last update: 2021-09
+// Last update: 2023-11
+// Extended and classified: #24547
 static const ConvParam_t testConvolutionConfigs[] = {
     /////////////////////////////////////// CONV_1x1 ///////////////////////////////////////
 
