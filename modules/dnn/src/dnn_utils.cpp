@@ -384,8 +384,6 @@ void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_)
 
 Rect blobRectToImage(Rect r, InputArray oriImage, Image2BlobParams param)
 {
-    Rect rNew;
-    Size size = param.size;
     CV_Assert(!oriImage.getMat_().empty());
     Size imgSize = oriImage.getMat_().size();
     std::vector<Rect> rImg, rBlob;
