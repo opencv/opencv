@@ -1184,6 +1184,15 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<NormalizeSubgraph5>());
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
+
+    // remove training outputs for conformance tests
+    if (net.node().size() == 1) {
+        const auto &node = net.node(0);
+        const auto &op_type = node.op_type();
+        if (op_type == "LayerNormalization") {
+            net.mutable_output()->DeleteSubrange(1, 2);
+        }
+    }
 }
 
 Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
