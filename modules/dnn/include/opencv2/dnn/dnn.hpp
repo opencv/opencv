@@ -1257,17 +1257,26 @@ CV__DNN_INLINE_NS_BEGIN
      *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob
      *  @returns rectangle in original image coordinates.
      */
-    Rect blobRectToImage(Rect r, InputArray image, Image2BlobParams param);
+    CV_EXPORTS_W Rect blobRectToImage(Rect r, InputArray image, Image2BlobParams param);
 
     /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
      *  @param r rect in blob coordinates.
-     *  @param image input.
+     *  @param image input image.
      *  @param size spatial size for output image
      *  @param crop flag use in blobFromImage called
      *  @returns rectangle in original image coordinates.
      */
-    Rect blobRectToImage(Rect r, InputArray image, const Size& size, bool crop);
+    CV_EXPORTS_W Rect blobRectToImage(Rect r, InputArray image, const Size& size, bool crop);
 
+    /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
+     *  @param rBlob rect in blob coordinates.
+     *  @param rImg result rect in image coordinates.
+     *  @param size spatial size for output image
+     *  @param oriImage input image.
+     *  @returns rectangle in original image coordinates.
+     */
+
+    CV_EXPORTS_W void blobRectToImage(std::vector<Rect> rBlob, CV_OUT std::vector<Rect> &rImg, const Size& size, Image2BlobParams param);
 
     /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
      *  (std::vector<cv::Mat>).
