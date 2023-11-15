@@ -43,6 +43,7 @@ TEST_F(Test_Graph_Simplifier, GeluApproximationSubGraph) {
 
 TEST_F(Test_Graph_Simplifier, LayerNormSubGraph) {
     test("layer_norm_expanded", "LayerNormalization");
+    test("layer_norm_expanded_with_initializers", "LayerNormalization");
 }
 
 TEST_F(Test_Graph_Simplifier, ResizeSubgraph) {

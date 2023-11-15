@@ -792,6 +792,82 @@ CASE(test_isinf_positive)
     // no filter
 CASE(test_isnan)
     // no filter
+CASE(test_layer_normalization_2d_axis0)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_2d_axis1)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_2d_axis_negative_1)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_2d_axis_negative_2)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_3d_axis0_epsilon)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_3d_axis1_epsilon)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_3d_axis2_epsilon)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_3d_axis_negative_1_epsilon)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_3d_axis_negative_2_epsilon)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_3d_axis_negative_3_epsilon)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_4d_axis0)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_4d_axis1)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_4d_axis2)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_4d_axis3)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_4d_axis_negative_1)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_4d_axis_negative_2)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_4d_axis_negative_3)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_4d_axis_negative_4)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
+CASE(test_layer_normalization_default_axis)
+#if SKIP_SET_1
+    SKIP_NON_CPU;
+#endif
 CASE(test_leakyrelu)
     // no filter
 CASE(test_leakyrelu_default)
