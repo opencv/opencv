@@ -2778,8 +2778,6 @@ static std::string encodeUTF8_bytesarray(const uint8_t* str, const size_t size) 
     return res.str();
 }
 
-extern bool decode(const Mat& straight, String& decoded_info, QRCodeEncoder::EncodeMode& mode, QRCodeEncoder::ECIEncodings& eci);
-
 bool QRDecode::decodingProcess()
 {
     QRCodeEncoder::EncodeMode mode;
@@ -2820,8 +2818,11 @@ bool QRDecode::decodingProcess()
     payload = qr_code_data.payload;
     payload_len = qr_code_data.payload_len;
 #else
-    if (!decode(straight, result_info, mode, eci))
+    auto decoder = QRCodeDecoder::create();
+    if (!decoder->decode(straight, result_info))
         return false;
+    mode = decoder->mode;
+    eci = decoder->eci;
     payload = reinterpret_cast<const uint8_t*>(result_info.c_str());
     payload_len = result_info.size();
 #endif

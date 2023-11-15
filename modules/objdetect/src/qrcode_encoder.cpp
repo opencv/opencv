@@ -6,6 +6,7 @@
 
 #include "precomp.hpp"
 #include "qrcode_encoder_table.inl.hpp"
+#include "graphical_code_detector_impl.hpp"
 
 namespace cv
 {
@@ -1308,16 +1309,9 @@ Ptr<QRCodeEncoder> QRCodeEncoder::create(const QRCodeEncoder::Params& parameters
     return makePtr<QRCodeEncoderImpl>(parameters);
 }
 
-// QRCodeDecoder
-
-bool decode(const Mat& straight, String& decoded_info, QRCodeEncoder::EncodeMode& mode, QRCodeEncoder::ECIEncodings& eci);
-
-class QRCodeDecoder {
+class QRCodeDecoderImpl : public QRCodeDecoder {
 public:
-    bool run(const Mat& straight, String& decoded_info);
-
-    QRCodeEncoder::EncodeMode mode;
-    QRCodeEncoder::ECIEncodings eci;
+    bool decode(const Mat& straight, String& decoded_info) CV_OVERRIDE;
 
 private:
     QRCodeEncoder::CorrectionLevel level;
@@ -1350,6 +1344,7 @@ private:
         size_t idx = 0;
     } bitstream;
 
+    bool run(const Mat& straight, String& decoded_info);
     bool decodeFormatInfo(const Mat& straight, int& mask);
     bool correctFormatInfo(uint16_t& format_info);
     void extractCodewords(Mat& source, std::vector<uint8_t>& codewords);
@@ -1363,23 +1358,27 @@ private:
     void decodeKanji(String& result);
 };
 
-bool decode(const Mat& _straight, String& decoded_info, QRCodeEncoder::EncodeMode& mode, QRCodeEncoder::ECIEncodings& eci) {
-    QRCodeDecoder decoder;
+QRCodeDecoder::~QRCodeDecoder()
+{
+    // nothing
+}
+
+Ptr<QRCodeDecoder> QRCodeDecoder::create() {
+    return makePtr<QRCodeDecoderImpl>();
+}
+
+bool QRCodeDecoderImpl::decode(const Mat& _straight, String& decoded_info) {
     Mat straight = ~_straight;  // Invert modules
-    bool decoded = decoder.run(straight, decoded_info);
+    bool decoded = run(straight, decoded_info);
     if (!decoded) {
         cv::transpose(straight, straight);
-        decoded = decoder.run(straight, decoded_info);
-    }
-    if (decoded) {
-        mode = decoder.mode;
-        eci = decoder.eci;
+        decoded = run(straight, decoded_info);
     }
     return decoded;
 }
 
 // Unmask format info bits and apply error correction
-bool QRCodeDecoder::correctFormatInfo(uint16_t& format_info) {
+bool QRCodeDecoderImpl::correctFormatInfo(uint16_t& format_info) {
     static uint16_t mask_pattern = 0b101010000010010;
 
     for (int i = 0; i < 32; ++i) {
@@ -1399,7 +1398,7 @@ bool QRCodeDecoder::correctFormatInfo(uint16_t& format_info) {
     return false;
 }
 
-bool QRCodeDecoder::decodeFormatInfo(const Mat& straight, int& mask) {
+bool QRCodeDecoderImpl::decodeFormatInfo(const Mat& straight, int& mask) {
     // Read left-top format info
     uint16_t format_info = 0;
     for (int i = 0; i < 6; ++i)
@@ -1442,7 +1441,7 @@ bool QRCodeDecoder::decodeFormatInfo(const Mat& straight, int& mask) {
     return true;
 }
 
-bool QRCodeDecoder::run(const Mat& straight, String& decoded_info) {
+bool QRCodeDecoderImpl::run(const Mat& straight, String& decoded_info) {
     CV_Assert(straight.rows == straight.cols);
     version = (straight.rows - 21) / 4 + 1;
 
@@ -1469,7 +1468,7 @@ bool QRCodeDecoder::run(const Mat& straight, String& decoded_info) {
     return true;
 }
 
-bool QRCodeDecoder::errorCorrection(std::vector<uint8_t>& codewords) {
+bool QRCodeDecoderImpl::errorCorrection(std::vector<uint8_t>& codewords) {
     CV_CheckEQ((int)codewords.size(), version_info_database[version].total_codewords,
                "Number of codewords");
 
@@ -1536,7 +1535,7 @@ bool QRCodeDecoder::errorCorrection(std::vector<uint8_t>& codewords) {
     return true;
 }
 
-bool QRCodeDecoder::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
+bool QRCodeDecoderImpl::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
     size_t numEcc = version_info_database[version].ecc[level].ecc_codewords;
     size_t numSyndromes = numEcc;
     if (version == 3 && level == QRCodeEncoder::CorrectionLevel::CORRECT_LEVEL_L)
@@ -1658,7 +1657,7 @@ bool QRCodeDecoder::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
     return true;
 }
 
-void QRCodeDecoder::extractCodewords(Mat& source, std::vector<uint8_t>& codewords) {
+void QRCodeDecoderImpl::extractCodewords(Mat& source, std::vector<uint8_t>& codewords) {
     const VersionInfo& version_info = version_info_database[version];
 
     // Mask alignment markers
@@ -1733,7 +1732,7 @@ void QRCodeDecoder::extractCodewords(Mat& source, std::vector<uint8_t>& codeword
     }
 }
 
-void QRCodeDecoder::decodeSymbols(String& result) {
+void QRCodeDecoderImpl::decodeSymbols(String& result) {
     CV_Assert(!bitstream.empty());
 
     // Decode depends on the mode
@@ -1762,7 +1761,7 @@ void QRCodeDecoder::decodeSymbols(String& result) {
     }
 }
 
-void QRCodeDecoder::decodeNumeric(String& result) {
+void QRCodeDecoderImpl::decodeNumeric(String& result) {
     int numDigits = bitstream.next(version <= 9 ? 10 : (version <= 26 ? 12 : 14));
     for (int i = 0; i < numDigits / 3; ++i) {
         int triple = bitstream.next(10);
@@ -1779,7 +1778,7 @@ void QRCodeDecoder::decodeNumeric(String& result) {
     }
 }
 
-void QRCodeDecoder::decodeAlpha(String& result) {
+void QRCodeDecoderImpl::decodeAlpha(String& result) {
     static char map[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                          'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
                          'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
@@ -1798,14 +1797,14 @@ void QRCodeDecoder::decodeAlpha(String& result) {
     }
 }
 
-void QRCodeDecoder::decodeByte(String& result) {
+void QRCodeDecoderImpl::decodeByte(String& result) {
     int num = bitstream.next(version <= 9 ? 8 : 16);
     for (int i = 0; i < num; ++i) {
         result += static_cast<char>(bitstream.next(8));
     }
 }
 
-void QRCodeDecoder::decodeECI(String& result) {
+void QRCodeDecoderImpl::decodeECI(String& result) {
     int eciAssignValue = bitstream.next(8);
     for (int i = 0; i < 8; ++i) {
         if (eciAssignValue & 1 << (7 - i))
@@ -1820,7 +1819,7 @@ void QRCodeDecoder::decodeECI(String& result) {
 
 }
 
-void QRCodeDecoder::decodeKanji(String& result) {
+void QRCodeDecoderImpl::decodeKanji(String& result) {
     int num = bitstream.next(version <= 9 ? 8 : (version <= 26 ? 10 : 12));
     for (int i = 0; i < num; ++i) {
         int data = bitstream.next(13);
