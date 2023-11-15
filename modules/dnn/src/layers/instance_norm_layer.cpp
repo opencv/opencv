@@ -186,15 +186,6 @@ public:
         auto bias_tensor_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
         auto bias_tensor_desc = bias_tensor_wrapper->getTensorDesc();
 
-        auto fn_build_1d_desc = [] (const ge::TensorDesc &desc) {
-            int64_t dim = desc.GetShape().GetDim(0);
-            return std::make_shared<ge::TensorDesc>(ge::Shape(std::vector<int64_t>{dim}),
-                                                    ge::FORMAT_NCHW,
-                                                    ge::DT_FLOAT);
-        };
-        scale_tensor_desc = fn_build_1d_desc(*scale_tensor_desc);
-        bias_tensor_desc = fn_build_1d_desc(*bias_tensor_desc);
-
         auto last_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto scale_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
         auto bias_node = nodes[2].dynamicCast<CannBackendNode>()->getOp();
