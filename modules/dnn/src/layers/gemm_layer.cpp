@@ -274,6 +274,7 @@ public:
         op->update_input_desc_bias(*(op_const_C->getTensorDesc()));
 
         // set outputs
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
         op->update_output_desc_y(*output_desc);
         return Ptr<BackendNode>(new CannBackendNode(op));
     }
