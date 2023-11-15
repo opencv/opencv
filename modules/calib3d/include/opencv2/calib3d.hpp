@@ -1273,6 +1273,28 @@ Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerb
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
 
+
+/** @brief Finds the positions of internal corners of the chessboard.
+
+@param image Source chessboard view. It must be an 8-bit black and white image
+@param patternSize Number of inner corners per a chessboard row and column
+( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
+@param corners Output array of detected corners.
+@param flags Various operation flags that can be zero or a combination of the following values:
+-   @ref CALIB_CB_FILTER_QUADS Use additional criteria (like contour area, perimeter,
+square-like shape) to filter out false quads extracted at the contour retrieval stage.
+
+The function similarly to #findChessboardCorners attempts to determine whether the input image is a view of the chessboard pattern and
+locate the internal chessboard corners. The main difference with #findChessboardCorners is that the function does not perform any kind of processing of the input image,
+which rather must be preprocessed before calling the function i.e. the image must be a B&W image.
+The function returns a non-zero value if all of the corners are found and they are placed in a certain order (row by row, left to right in every row).
+Otherwise, if the function fails to find all the corners or reorder them, it returns 0.
+The detected coordinates are approximate, and to determine their positions more accurately the function #cornerSubPix can be used.
+ */
+CV_EXPORTS_W bool checkChessboardCorners(InputArray image, Size patternSize, OutputArray corners, int flags = 0);
+
+
+
 /*
    Checks whether the image contains chessboard of the specific size or not.
    If yes, nonzero value is returned.

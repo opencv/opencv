@@ -662,6 +662,74 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     return found;
 }
 
+{
+    CV_INSTRUMENT_REGION();
+    
+    int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    
+    Mat img = image_.getMat();
+    
+    CV_CheckType(type, depth == CV_8U && cn == 1, "Only 8-bit grayscale image are supported");
+    
+    if (pattern_size.width <= 2 || pattern_size.height <= 2)
+      CV_Error(Error::StsOutOfRange, "Both width and height of the pattern should have bigger than 2");
+    
+    if (!corners_.needed())
+      CV_Error(Error::StsNullPtr, "Null pointer to corners");
+    
+    std::vector<cv::Point2f> out_corners;
+    
+    ChessBoardDetector detector(pattern_size);
+    
+    // So we can find rectangles that go to the edge, we draw a white line around the image edge.
+    // Otherwise FindContours will miss those clipped rectangle contours.
+    // The border color will be the image mean, because otherwise we risk screwing up filters like cvSmooth()...
+    rectangle(img, Point(0,0), Point(img.cols-1, img.rows-1), Scalar(255,255,255), 3, LINE_8);
+    
+    detector.reset();
+  
+    detector.generateQuads(img, flags);
+    
+    int prev_sqr_size = 0;
+  
+    if(!detector.processQuads(out_corners, prev_sqr_size))
+    {
+      return false;
+    }
+    
+    if(!detector.checkBoardMonotony(out_corners))
+    {
+      return false;
+    }
+    
+    // check that none of the found corners is too close to the image boundary
+    const int BORDER = 8;
+    for (int k = 0; k < pattern_size.width*pattern_size.height; ++k)
+    {
+      if( out_corners[k].x <= BORDER || out_corners[k].x > img.cols - BORDER ||
+         out_corners[k].y <= BORDER || out_corners[k].y > img.rows - BORDER )
+      {
+        return false;
+      }
+    }
+    
+    if ((pattern_size.height & 1) == 0 && (pattern_size.width & 1) == 0 )
+    {
+      int last_row = (pattern_size.height-1)*pattern_size.width;
+      double dy0 = out_corners[last_row].y - out_corners[0].y;
+      if (dy0 < 0)
+      {
+        int n = pattern_size.width*pattern_size.height;
+        for(int i = 0; i < n/2; i++ )
+        {
+          std::swap(out_corners[i], out_corners[n-i-1]);
+        }
+      }
+    }
+        
+    Mat(out_corners).copyTo(corners_);
+    return true;
+}
 
 //
 // Checks that each board row and column is pretty much monotonous curve:
