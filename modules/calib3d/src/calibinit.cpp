@@ -662,6 +662,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     return found;
 }
 
+bool checkChessboardCorners(InputArray image_, Size pattern_size, OutputArray corners_, int flags)
 {
     CV_INSTRUMENT_REGION();
     
