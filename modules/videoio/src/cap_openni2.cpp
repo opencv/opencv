@@ -512,6 +512,8 @@ double CvCapture_OpenNI2::getCommonProperty( int propIdx ) const
         propValue = isMirroring ? 1.0 : 0.0;
         break;
     }
+    case CAP_PROP_ORIENTATION_META:
+    	break;
     default :
         CV_Error( CV_StsBadArg, cv::format("Such parameter (propIdx=%d) isn't supported for getting.", propIdx) );
     }
