@@ -11,19 +11,16 @@ struct EinsumParams {
     int outputSize;
     std::string equation;
     std::vector<MatShape> einsumInpShapes;
-    EinsumParams(std::string equation_, int inputSize_, int outputSize_,  std::vector<MatShape> einsumInpShapes_ = std::vector<MatShape>())
+    EinsumParams(std::string equation_, std::vector<MatShape> einsumInpShapes_ = std::vector<MatShape>())
     {
-        inputSize = inputSize_;
-        outputSize = outputSize_;
+        inputSize = einsumInpShapes_.size();
         equation = equation_;
         einsumInpShapes = einsumInpShapes_;
     }
 };
 
 static inline void PrintTo(const EinsumParams& params, ::std::ostream* os) {
-     (*os) << "Eqiation=" << params.equation << ", "
-        << "InputSize=" << params.inputSize << ", "
-        << "OutputSize=" << params.outputSize << ", ";
+     (*os) << "Equation=" << params.equation << " ";
 
         (*os) << "InputShape={";
         for(int i = 0; i < params.einsumInpShapes.size(); i++)
@@ -41,22 +38,22 @@ static inline void PrintTo(const EinsumParams& params, ::std::ostream* os) {
 // test cases
 static const EinsumParams testEinsumConfigs[] = {
     // TODO: Add tests with one input after ellips merge
-    {"ij, jk -> ik", 2, 1,  {{2, 3}, {3, 2}}},
-    {"ij, jk -> ik", 2, 1,  {{20, 30}, {30, 20}}},
-    {"ij, jk -> ik", 2, 1,  {{113, 127}, {127, 113}}},
+    {"ij, jk -> ik", {{2, 3}, {3, 2}}},
+    {"ij, jk -> ik", {{20, 30}, {30, 20}}},
+    {"ij, jk -> ik", {{113, 127}, {127, 113}}},
 
-    {"imkj, injs -> imnks", 2, 1,  {{1, 4, 7, 9}, {1, 5, 9, 8}}},
-    {"imkj, injs -> imnks", 2, 1,  {{1, 4, 70, 90}, {1, 5, 90, 80}}},
-    {"imkj, injs -> imnks", 2, 1,  {{1, 4, 73, 91}, {1, 5, 91, 57}}},
+    {"imkj, injs -> imnks", {{1, 4, 7, 9}, {1, 5, 9, 8}}},
+    {"imkj, injs -> imnks", {{1, 4, 70, 90}, {1, 5, 90, 80}}},
+    {"imkj, injs -> imnks", {{1, 4, 73, 91}, {1, 5, 91, 57}}},
 
-    {"ij -> i", 1, 1, {{30, 40}}},
-    {"ij -> i", 1, 1, {{113, 374}}},
+    {"ij -> i",  {{30, 40}}},
+    {"ij -> i",  {{113, 374}}},
 
-    {"...ij -> ...i", 1, 1, {{30, 40}}},
-    {"...ij -> ...i", 1, 1, {{113, 374}}},
+    {"...ij -> ...i", {{30, 40}}},
+    {"...ij -> ...i", {{113, 374}}},
 
-    {"...ij, ...jk -> ...ik", 2, 1, {{40, 50}, {50, 80}}},
-    {"...ij, ...jk -> ...ik", 2, 1, {{47, 51}, {51, 83}}},
+    {"...ij, ...jk -> ...ik",  {{40, 50}, {50, 80}}},
+    {"...ij, ...jk -> ...ik",  {{47, 51}, {51, 83}}},
 };
 
 class Layer_Einsum: public TestBaseWithParam<EinsumParams> {};
@@ -68,7 +65,7 @@ PERF_TEST_P_(Layer_Einsum, einsum) {
     lp.name = "testEinsum";
     lp.set("equation", params.equation);
     lp.set("inputSize", params.inputSize);
-    lp.set("outputSize", params.outputSize);
+    lp.set("outputSize", 1);
 
     CV_CheckFalse(params.einsumInpShapes.empty(), "ERROR no inputs shapes provided");
 
@@ -79,38 +76,27 @@ PERF_TEST_P_(Layer_Einsum, einsum) {
     Net net;
     std::vector<Mat> inputs;
     std::vector<std::string> input_names;
-    if (params.inputSize == 1){
+    int id = net.addLayer(lp.name, lp.type, lp);
 
+    for (int i = 0; i < params.inputSize; ++i) {
         // create inputs
-        inputs.emplace_back(Mat(params.einsumInpShapes[0].size(), params.einsumInpShapes[0].data(), CV_32FC1));
+        inputs.emplace_back(Mat(params.einsumInpShapes[i].size(), params.einsumInpShapes[i].data(), CV_32FC1));
 
-        int id = net.addLayerToPrev(lp.name, lp.type, lp);
-        net.connect(0, 0, id, 0);
+        // connect each input to the layer
+        net.connect(0, i, id, i);
 
-        input_names.emplace_back("input1");
-
-    } else {
-
-        // create inputs
-        inputs.emplace_back(Mat(params.einsumInpShapes[0].size(), params.einsumInpShapes[0].data(), CV_32FC1));
-        inputs.emplace_back(Mat(params.einsumInpShapes[1].size(), params.einsumInpShapes[1].data(), CV_32FC1));
-
-        int id = net.addLayerToPrev(lp.name, lp.type, lp);
-        net.connect(0, 0, id, 0);
-        net.connect(0, 1, id, 1);
-
-        input_names.emplace_back("input1");
-        input_names.emplace_back("input2");
+        // create input names dynamically, assuming input naming follows a consistent pattern
+        input_names.emplace_back("input" + std::to_string(i + 1));
     }
 
     //warm up
+    std::vector<Mat> outputs;
     net.setInputsNames(input_names);
     for (int i = 0; i < input_names.size(); i++){
         net.setInput(inputs[i], input_names[i]);
     }
-    Mat out = net.forward();
+    net.forward(outputs, "testEinsum");
 
-    std::vector<Mat> outputs;
     TEST_CYCLE()
     {
         net.forward(outputs, "testEinsum");
