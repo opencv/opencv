@@ -81,15 +81,11 @@ tiny-yolo-voc:
   background_label_id: 0
   sample: "object_detection"
 
-# Model should be converted to ONNX:
-# from ultralytics import YOLO
-# model = YOLO("yolov8n.pt")
-# model.export(format="onnx")
 yolov8:
   load_info:
-    url: "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt"
-    sha1: "1a83d84eb96ad089c257b7c1ad6303695fd82f41"
-  model: "yolov8net.onnx"
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
+    sha1: "68f864475d06e2ec4037181052739f268eeac38d"
+  model: "yolov8n.onnx"
   mean: [0, 0, 0]
   scale: 0.00392
   width: 640
