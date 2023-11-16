@@ -9,8 +9,15 @@
 // CANN backend
 #include "../op_cann.hpp"
 
+// OpenCL backend
+#ifdef HAVE_OPENCL
+#include "../ocl4dnn/include/math_functions.hpp"
+#include "opencl_kernels_dnn.hpp"
+#endif
+
 namespace cv { namespace dnn {
 
+// https://github.com/onnx/onnx/blob/main/docs/Operators.md#LayerNormalization
 class LayerNormLayerImpl CV_FINAL : public LayerNormLayer
 {
 public:
@@ -73,6 +80,9 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
         if (inputs_arr.depth() == CV_16S)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
@@ -94,6 +104,91 @@ public:
             fastNorm(input, scale, output, epsilon, static_cast<size_t>(axis));
         }
     }
+
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_) {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+
+        const auto &input = inputs[0], &scale = inputs[1]; // &bias = inputs[2]; // bias is optional
+        auto &output = outputs[0];
+
+        const auto input_shape = shape(input);
+        size_t loops = static_cast<size_t>(total(input_shape, 0, axis)),
+               norm_size = static_cast<size_t>(total(input_shape, axis));
+        float inv_norm_size = 1.f / norm_size;
+
+        const auto &bias = inputs.size() == 3 ? inputs[2] : UMat::zeros(norm_size, 1, CV_32F);
+
+        // no fp16 support
+        if (input.depth() == CV_16S) {
+            return false;
+        }
+
+        String base_opts = format(" -DT=float -DT4=float4 -Dconvert_T=convert_float4");
+
+        // Calculate mean
+        UMat one = UMat::ones(norm_size, 1, CV_32F);
+        UMat mean = UMat(loops, 1, CV_32F);
+        UMat mean_square = UMat(loops, 1, CV_32F);
+        UMat tmp = UMat(loops, norm_size, CV_32F);
+        bool ret = ocl4dnn::ocl4dnnGEMV<float>(ocl4dnn::CblasNoTrans, loops, norm_size, inv_norm_size,
+                                               input, 0, one, 0, 0.f, mean, 0);
+        if (!ret) {
+            return false;
+        }
+        // Calculate mean_square
+        int num_vector = (norm_size % 8 == 0) ? 8 : ((norm_size % 4 == 0) ? 4 : 1);
+        size_t global[] = {loops, static_cast<size_t>(norm_size / num_vector)};
+        String build_opt = format(" -DNUM=%d", num_vector) + base_opts;
+        String mean_square_kernel_name = format("calc_mean%d", num_vector);
+        ocl::Kernel mean_square_kernel(mean_square_kernel_name.c_str(), ocl::dnn::mvn_oclsrc, build_opt + " -DKERNEL_MEAN");
+        if (mean_square_kernel.empty()) {
+            return false;
+        }
+        mean_square_kernel.set(0, ocl::KernelArg::PtrReadOnly(input));
+        mean_square_kernel.set(1, (int)loops);
+        mean_square_kernel.set(2, (int)norm_size);
+        mean_square_kernel.set(3, ocl::KernelArg::PtrReadOnly(mean));
+        mean_square_kernel.set(4, ocl::KernelArg::PtrWriteOnly(tmp));
+        ret = mean_square_kernel.run(2, global, NULL, false);
+        if (!ret) {
+            return false;
+        }
+        ret = ocl4dnn::ocl4dnnGEMV<float>(ocl4dnn::CblasNoTrans, loops, norm_size, inv_norm_size,
+                                          tmp, 0, one, 0, 0.f, mean_square, 0);
+        if (!ret) {
+            return false;
+        }
+        // Calculate instance norm: output = scale * (x - mean) / sqrt(var + eps) + bias
+        String mvn_kernel_name = format("mvn%d", num_vector);
+        build_opt += " -DNORM_VARIANCE -DLAYER_NORM -DKERNEL_MVN";
+        ocl::Kernel mvn_kernel(mvn_kernel_name.c_str(), ocl::dnn::mvn_oclsrc, build_opt);
+        if (mvn_kernel.empty()) {
+            return false;
+        }
+        mvn_kernel.set(0, ocl::KernelArg::PtrReadOnly(input));
+        mvn_kernel.set(1, (int)loops);
+        mvn_kernel.set(2, (int)norm_size);
+        mvn_kernel.set(3, (float)epsilon);
+        mvn_kernel.set(4, ocl::KernelArg::PtrReadOnly(mean));
+        mvn_kernel.set(5, ocl::KernelArg::PtrReadOnly(mean_square));
+        mvn_kernel.set(6, ocl::KernelArg::PtrReadOnly(scale));
+        mvn_kernel.set(7, ocl::KernelArg::PtrReadOnly(bias));
+        mvn_kernel.set(8, (int)1);
+        mvn_kernel.set(9, (float)0.f);
+        mvn_kernel.set(10, ocl::KernelArg::PtrWriteOnly(output));
+        ret = mvn_kernel.run(2, global, NULL, false);
+        if (!ret) {
+            return false;
+        }
+
+        return true;
+    }
+#endif
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
