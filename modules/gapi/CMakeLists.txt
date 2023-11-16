@@ -367,6 +367,10 @@ if(WIN32)
   ocv_target_link_libraries(${the_module} PRIVATE wsock32 ws2_32)
 endif()
 
+if(HAVE_DIRECTML)
+  ocv_target_compile_definitions(${the_module} PRIVATE HAVE_DIRECTML=1)
+endif()
+
 if(HAVE_ONNX)
   ocv_target_link_libraries(${the_module} PRIVATE ${ONNX_LIBRARY})
   ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ONNX=1)
