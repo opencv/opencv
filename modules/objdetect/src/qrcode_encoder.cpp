@@ -196,8 +196,8 @@ protected:
     uint8_t total_num;
     vector<Mat> final_qrcodes;
 
-    Ptr<VersionInfo> version_info;
-    Ptr<BlockParams> cur_ecc_params;
+    const VersionInfo* version_info;
+    const BlockParams* cur_ecc_params;
 
     bool isNumeric(const std::string& input) const;
     bool isAlphaNumeric(const std::string& input) const;
@@ -256,9 +256,9 @@ int QRCodeEncoderImpl::findVersionCapacity(const int input_length, const int ecc
 
     for (int i : possible_versions)
     {
-        Ptr<BlockParams> tmp_ecc_params = makePtr<BlockParams>(version_info_database[i].ecc[ecc]);
-        data_codewords = tmp_ecc_params->data_codewords_in_G1 * tmp_ecc_params->num_blocks_in_G1 +
-                         tmp_ecc_params->data_codewords_in_G2 * tmp_ecc_params->num_blocks_in_G2;
+        auto& tmp_ecc_params = version_info_database[i].ecc[ecc];
+        data_codewords = tmp_ecc_params.data_codewords_in_G1 * tmp_ecc_params.num_blocks_in_G1 +
+                         tmp_ecc_params.data_codewords_in_G2 * tmp_ecc_params.num_blocks_in_G2;
 
         if (data_codewords * byte_len >= input_length)
         {
@@ -375,8 +375,8 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
         format = vector<uint8_t> (15, 255);
         version_reserved = vector<uint8_t> (18, 255);
         version_size = (21 + (tmp_version_level - 1) * 4);
-        version_info = makePtr<VersionInfo>(version_info_database[tmp_version_level]);
-        cur_ecc_params = makePtr<BlockParams>(version_info->ecc[ecc_level]);
+        version_info = &version_info_database[tmp_version_level];
+        cur_ecc_params = &version_info->ecc[ecc_level];
         original = Mat(Size(version_size, version_size), CV_8UC1, Scalar(255));
         masked_data = original.clone();
         Mat qrcode = masked_data.clone();
