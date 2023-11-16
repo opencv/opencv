@@ -79,6 +79,10 @@ def add_preproc_args(zoo, parser, sample):
                  help='Indicate that model works with RGB input images instead BGR ones.')
     add_argument(zoo, parser, 'classes',
                  help='Optional path to a text file with names of classes to label detected objects.')
+    add_argument(zoo, parser, 'postprocessing', type=str,
+                 help='Post-processing kind depends on model topology.')
+    add_argument(zoo, parser, 'background_label_id', type=int, default=-1,
+                 help='An index of background class in predictions. If not negative, exclude such class from list of classes.')
 
 
 def findFile(filename):
