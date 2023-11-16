@@ -1291,7 +1291,7 @@ The function returns a non-zero value if all of the corners are found and they a
 Otherwise, if the function fails to find all the corners or reorder them, it returns 0.
 The detected coordinates are approximate, and to determine their positions more accurately the function #cornerSubPix can be used.
  */
-CV_EXPORTS_W bool checkChessboardCorners(InputArray image, Size patternSize, OutputArray corners, int flags = 0);
+CV_EXPORTS_W bool findChessboardCornersSimple(InputArray image, Size patternSize, OutputArray corners, int flags = 0);
 
 
 
