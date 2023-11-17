@@ -138,7 +138,9 @@ if (gradle.opencv_source == 'maven_local') {
 }
 
 if (gradle.opencv_source == 'sdk_path') {
-    def opencvsdk='/<path to OpenCV-android-sdk>'
+    def opencvsdk='../'
+    //def opencvsdk='/<path to OpenCV-android-sdk>'
+    //println opencvsdk
     include ':opencv'
     project(':opencv').projectDir = new File(opencvsdk + '/sdk')
 }
