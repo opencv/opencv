@@ -13,6 +13,13 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 
+// CUDA backend
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/layer_norm.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
+
 // OpenCL backend
 #ifdef HAVE_OPENCL
 #include "../ocl4dnn/include/math_functions.hpp"
@@ -296,6 +303,21 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(result));
     }
 #endif // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void *context_,
+                              const std::vector<Ptr<BackendWrapper>>& inputs,
+                              const std::vector<Ptr<BackendWrapper>>& outputs) override {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+        size_t loops = static_cast<size_t>(total(input_shape, 0, axis));
+        size_t norm_size = static_cast<size_t>(total(input_shape, axis));
+
+        return make_cuda_node<cuda4dnn::LayerNormOp>(preferableTarget, std::move(context->stream), epsilon, loops, norm_size);
+    }
+#endif // HAVE_CUDA
 
 };
 

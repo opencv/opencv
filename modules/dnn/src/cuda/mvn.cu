@@ -77,6 +77,27 @@ namespace raw {
             output[idx] = (static_cast<float>(input[idx]) - means[outer_idx]) * s + b;
         }
     }
+
+    template <class T>
+    __global__ void normalize_mean_variance_layernorm(Span<T> output, View<T> input, View<T> scale, View<float> means, View<float> stdev, size_type inner_size) {
+        for (auto idx : grid_stride_range(output.size())) {
+            const index_type outer_idx = idx / inner_size;
+            const index_type inner_idx = idx % inner_size;
+            auto s = static_cast<float>(scale[inner_idx]) * stdev[outer_idx];
+            output[idx] = (static_cast<float>(input[idx]) - means[outer_idx]) * s;
+        }
+    }
+
+    template <class T>
+    __global__ void normalize_mean_variance_layernorm_with_bias(Span<T> output, View<T> input, View<T> scale, View<T> bias, View<float> means, View<float> stdev, size_type inner_size) {
+        for (auto idx : grid_stride_range(output.size())) {
+            const index_type outer_idx = idx / inner_size;
+            const index_type inner_idx = idx % inner_size;
+            auto s = static_cast<float>(scale[inner_idx]) * stdev[outer_idx];
+            auto b = static_cast<float>(bias[inner_idx]);
+            output[idx] = (static_cast<float>(input[idx]) - means[outer_idx]) * s + b;
+        }
+    }
 }
 
 template <class T>
@@ -169,5 +190,39 @@ void normalize_mean_variance_channelwise(const Stream& stream, Span<T> output, V
 template void normalize_mean_variance_channelwise(const Stream&, Span<__half> /*output*/, View<__half> /*input*/, View<__half> /*scale*/, View<__half> /*bias*/, View<float> /*means*/, View<float> /*stdev*/, std::size_t, std::size_t);
 #endif
 template void normalize_mean_variance_channelwise(const Stream&, Span<float> /*output*/, View<float> /*input*/, View<float> /*scale*/, View<float> /*bias*/, View<float> /*means*/, View<float> /*stdev*/, std::size_t, std::size_t);
+
+template <class T>
+void normalize_mean_variance_layernorm(const Stream& stream, Span<T> output, View<T> input, View<T> scale, View<float> means, View<float> stdev, std::size_t inner_size)
+{
+    CV_Assert(input.size() == output.size());
+    CV_Assert(input.size() / inner_size == means.size());
+    CV_Assert(means.size() == stdev.size());
+
+    auto kernel = raw::normalize_mean_variance_layernorm<T>;
+    auto policy = make_policy(kernel, output.size(), 0, stream);
+    launch_kernel(kernel, policy, output, input, scale, means, stdev, inner_size);
+}
+
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+template void normalize_mean_variance_layernorm(const Stream&, Span<__half> /*output*/, View<__half> /*input*/, View<__half> /*scale*/, View<float> /*means*/, View<float> /*stdev*/, std::size_t);
+#endif
+template void normalize_mean_variance_layernorm(const Stream&, Span<float> /*output*/, View<float> /*input*/, View<float> /*scale*/, View<float> /*means*/, View<float> /*stdev*/, std::size_t);
+
+template <class T>
+void normalize_mean_variance_layernorm(const Stream& stream, Span<T> output, View<T> input, View<T> scale, View<T> bias, View<float> means, View<float> stdev, std::size_t inner_size)
+{
+    CV_Assert(input.size() == output.size());
+    CV_Assert(input.size() / inner_size == means.size());
+    CV_Assert(means.size() == stdev.size());
+
+    auto kernel = raw::normalize_mean_variance_layernorm_with_bias<T>;
+    auto policy = make_policy(kernel, output.size(), 0, stream);
+    launch_kernel(kernel, policy, output, input, scale, bias, means, stdev, inner_size);
+}
+
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+template void normalize_mean_variance_layernorm(const Stream&, Span<__half> /*output*/, View<__half> /*input*/, View<__half> /*scale*/, View<__half> /*bias*/, View<float> /*means*/, View<float> /*stdev*/, std::size_t);
+#endif
+template void normalize_mean_variance_layernorm(const Stream&, Span<float> /*output*/, View<float> /*input*/, View<float> /*scale*/, View<float> /*bias*/, View<float> /*means*/, View<float> /*stdev*/, std::size_t);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
