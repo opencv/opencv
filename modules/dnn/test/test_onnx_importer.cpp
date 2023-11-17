@@ -2670,23 +2670,23 @@ TEST_P(Test_ONNX_layers, YOLOv7)
 }
 
 
-TEST_P(Test_ONNX_layers, YOLOv5m)
+TEST_P(Test_ONNX_layers, YOLOv5n)
 {
-    std::string weightPath = _tf("models/yolov5m.onnx", false);
+    std::string weightPath = _tf("models/yolov5n.onnx", false);
     std::string imgPath = _tf("../dog_orig_size.png");
 
     Size targetSize{640, 640};
-    float conf_threshold = 0.25;
+    float conf_threshold = 0.3;
     float iou_threshold = 0.45;
 
     // Reference, which is collected with input size of 640x640
-    std::vector<int> refClassIds{16, 1, 7};
-    std::vector<float> refScores{0.907127f, 0.889226f, 0.74817f};
+    std::vector<int> refClassIds{16, 2, 1};
+    std::vector<float> refScores{0.749053f, 0.616853f, 0.32506f};
     // [x1, y1, x2, y2] x 4
 
-    std::vector<Rect2d> refBoxes{Rect2d(109.318f, 252.709f, 257.87f, 598.693f),
-                                 Rect2d(102.513f, 146.225f, 478.182f, 464.939f),
-                                 Rect2d(392.139f, 82.1886, 578.795f, 190.488f)};
+    std::vector<Rect2d> refBoxes{Rect2d(108.088f, 239.293f, 266.196f, 607.658f),
+                                 Rect2d(392.028f, 89.9233f, 579.152f, 190.447f),
+                                 Rect2d(120.278f, 159.76, 214.481f, 241.473f)};
 
     Mat img = imread(imgPath);
     Mat inp = blobFromImage(img, 1/255.0, targetSize, Scalar(0, 0, 0), true, false);
@@ -2745,9 +2745,7 @@ TEST_P(Test_ONNX_layers, YOLOv5m)
         keep_confidences.push_back(confidences[i]);
         keep_boxes.push_back(boxes[i]);
     }
-    for (int i = 0; i <= 2; i++) 
-        cout << keep_classIds[i];
- 
+
     normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes);
 }
 
