@@ -222,40 +222,75 @@ __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offs
 
 #elif defined INTER_LINEAR_EXACT
 
-__kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
-                       __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                       __global const uchar * buffer)
-{
+__kernel void precomputeCoeffs(__read_only image2d_t src, __write_only image2d_t coeffsTex, float inv_fx, float inv_fy) {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
+    int sx, sy;
+    float fxx, fyy;
+    short ialpha, ibeta;
 
-    if (dx < dst_cols && dy < dst_rows)
-    {
-        __global const int * xofs = (__global const int *)(buffer), * yofs = xofs + dst_cols;
-        __global const short * ialpha = (__global const short *)(yofs + dst_rows);
-        __global const short * ibeta = ialpha + ((dst_cols + dy) << 1);
-        ialpha += dx << 1;
+    fxx = (float)((dx + 0.5) * inv_fx * 0.5 - 0.5);
+    fyy = (float)((dy + 0.5) * inv_fy * 0.5 - 0.5);
 
-        int sx0 = xofs[dx], sy0 = clamp(yofs[dy], 0, src_rows - 1),
-        sy1 = clamp(yofs[dy] + 1, 0, src_rows - 1);
-        short a0 = ialpha[0], a1 = ialpha[1];
-        short b0 = ibeta[0], b1 = ibeta[1];
+    sx = floor(fxx);
+    fxx -= sx;
+    if (sx < 0)
+        fxx = 0, sx = 0;
+    if (sx >= get_image_width(src) - 1)
+        fxx = 0, sx = get_image_width(src) - 1;
 
-        int src_index0 = mad24(sy0, src_step, mad24(sx0, TSIZE, src_offset)),
-        src_index1 = mad24(sy1, src_step, mad24(sx0, TSIZE, src_offset));
-        WT data0 = convertToWT(loadpix(srcptr + src_index0));
-        WT data1 = convertToWT(loadpix(srcptr + src_index0 + TSIZE));
-        WT data2 = convertToWT(loadpix(srcptr + src_index1));
-        WT data3 = convertToWT(loadpix(srcptr + src_index1 + TSIZE));
+    sy = floor(fyy);
+    fyy -= sy;
+    if (sy < 0)
+        fyy = 0, sy = 0;
+    if (sy >= get_image_height(src) - 1)
+        fyy = 0, sy = get_image_height(src) - 1;
 
-        WT val = ( (((data0 * a0 + data1 * a1) >> 4) * b0) >> 16) +
-                 ( (((data2 * a0 + data3 * a1) >> 4) * b1) >> 16);
+    ialpha = convert_short_sat_rte((1.f - fxx) * INTER_RESIZE_COEF_SCALE);
+    ibeta = convert_short_sat_rte((1.f - fyy) * INTER_RESIZE_COEF_SCALE);
 
-        storepix(convertToDT((val + 2) >> 2),
-                 dstptr + mad24(dy, dst_step, mad24(dx, TSIZE, dst_offset)));
-    }
+    write_imagei(coeffsTex, (int2)(dx, 0), (int4)(sx, ialpha, 0, 0));
+    write_imagei(coeffsTex, (int2)(0, dy), (int4)(sy, ibeta, 0, 0));
 }
 
+__kernel void resizeLN(__read_only image2d_t src, __write_only image2d_t dst, __read_only image2d_t coeffsTex) {
+    int dx = get_global_id(0);
+    int dy = get_global_id(1);
+    int sx, sy, sx0, sx1, sy0, sy1;
+    short ialpha0, ialpha1, ibeta0, ibeta1;
+    int4 v0, v1, v2, v3, res;
+    float4 f0, f1, f2, f3, fres;
+
+    sx = read_imagei(coeffsTex, (int2)(dx, 0)).x;
+    ialpha0 = read_imagei(coeffsTex, (int2)(dx, 0)).y;
+    ialpha1 = INTER_RESIZE_COEF_SCALE - ialpha0;
+
+    sy = read_imagei(coeffsTex, (int2)(0, dy)).x;
+    ibeta0 = read_imagei(coeffsTex, (int2)(0, dy)).y;
+    ibeta1 = INTER_RESIZE_COEF_SCALE - ibeta0;
+
+    sx0 = sx * cn;
+    sx1 = sx0 + cn;
+    sy0 = sy * src_stride;
+    sy1 = sy0 + src_stride;
+
+    sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
+    v0 = read_imagei(src, sampler, (int2)(sx0, sy0));
+    v1 = read_imagei(src, sampler, (int2)(sx1, sy0));
+    v2 = read_imagei(src, sampler, (int2)(sx0, sy1));
+    v3 = read_imagei(src, sampler, (int2)(sx1, sy1));
+
+    f0 = convert_float4(v0);
+    f1 = convert_float4(v1);
+    f2 = convert_float4(v2);
+    f3 = convert_float4(v3);
+
+    fres = (f0 * ialpha0 + f1 * ialpha1) * ibeta0 + (f2 * ialpha0 + f3 * ialpha1) * ibeta1;
+    fres = fres * (1.0f / (INTER_RESIZE_COEF_SCALE * INTER_RESIZE_COEF_SCALE));
+
+    res = convert_int4_sat_rte(fres);
+    write_imagei(dst, (int2)(dx + dst_offset, dy + dst_offset), res);
+}
 
 #elif defined INTER_NEAREST
 
