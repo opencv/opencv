@@ -131,6 +131,16 @@ def main(args):
                   path.join(ANDROID_PROJECT_DIR, "OpenCV/src/main/cpp/CMakeLists.txt"),
                   {"LIB_NAME": "templib", "LIB_TYPE": "STATIC"})
 
+    local_props = ""
+    if args.ndk_location:
+        local_props += "ndk.dir=" + args.ndk_location + "\n"
+    if args.cmake_location:
+        local_props += "cmake.dir=" + args.cmake_location + "\n"
+
+    if local_props:
+        with open(path.join(ANDROID_PROJECT_DIR, "local.properties"), "wt") as f:
+            f.write(local_props)
+
     opencv_libs = get_list_of_opencv_libs(sdk_dir)
     external_libs = get_list_of_3rdparty_libs(sdk_dir, abis)
 
@@ -224,6 +234,8 @@ if __name__ == "__main__":
     parser.add_argument('--android_min_sdk', default="21")
     parser.add_argument('--android_target_sdk', default="26")
     parser.add_argument('--java_version', default="1_8")
+    parser.add_argument('--ndk_location', default="")
+    parser.add_argument('--cmake_location', default="")
     args = parser.parse_args()
 
     main(args)

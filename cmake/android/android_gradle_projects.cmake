@@ -114,8 +114,7 @@ endif()
 
 file(WRITE "${ANDROID_BUILD_BASE_DIR}/settings.gradle" "
 gradle.ext {
-    //opencv_source = 'maven_central'
-    //opencv_source = 'maven_local'
+    // possible options: 'maven_central', 'maven_local', 'sdk_path'
     opencv_source = 'sdk_path'
 }
 
@@ -126,19 +125,18 @@ file(WRITE "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
 rootProject.name = 'opencv_samples'
 
 gradle.ext {
-    //opencv_source = 'maven_central'
-    //opencv_source = 'maven_local'
+    // possible options: 'maven_central', 'maven_local', 'sdk_path'
     opencv_source = 'sdk_path'
 }
 
 if (gradle.opencv_source == 'maven_local') {
     gradle.ext {
-        opencv_maven_path = '/<path_to_maven_repo>'
+        opencv_maven_path = '<path_to_maven_repo>'
     }
 }
 
 if (gradle.opencv_source == 'sdk_path') {
-    def opencvsdk='../'
+    def opencvsdk = '../'
     //def opencvsdk='/<path to OpenCV-android-sdk>'
     //println opencvsdk
     include ':opencv'
