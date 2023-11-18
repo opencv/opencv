@@ -489,7 +489,7 @@ void convBlockMR1_F32(int np, const float * a, const float * b, float *c, const 
 }
 #endif
 
-#if CV_NEON_AARCH64 && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
+#if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
 
 void convBlock_F16(int np, const char * _a, const char * _b, char * _c, int ldc, bool init_c, int width,
                     const int convMR_fp16, const int convNR_fp16)

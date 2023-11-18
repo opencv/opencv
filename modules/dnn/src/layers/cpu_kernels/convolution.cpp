@@ -210,7 +210,7 @@ Ptr<FastConv> initFastConv(
         {
             conv->weightsBuf_FP16.resize(nweights + VEC_ALIGN);
             auto weightsPtr_FP16 = conv->getWeightsFP16();
-            memset(weightsPtr_FP16, 0, nweights * sizeof(weightsPtr_FP16[0]));
+            memset(reinterpret_cast<short*>(weightsPtr_FP16), 0, nweights * sizeof(weightsPtr_FP16[0]));
 
             parallel_for_(Range(0, C), [&](const Range& r0){
                 for(int c = r0.start; c < r0.end; c++)
@@ -276,7 +276,7 @@ Ptr<FastConv> initFastConv(
         {
             conv->weightsWinoBuf_FP16.resize(nweights + VEC_ALIGN);
             wptrWino_FP16 = conv->getWeightsWinoFP16();
-            memset(wptrWino_FP16, 0, nweights * sizeof(wptrWino_FP16[0]));
+            memset(reinterpret_cast<short*>(wptrWino_FP16), 0, nweights * sizeof(wptrWino_FP16[0]));
         }
         else
 #endif
@@ -377,7 +377,7 @@ Ptr<FastConv> initFastConv(
         {
             conv->weightsBuf_FP16.resize(nweights_FP16 + VEC_ALIGN);
             weightsPtr_FP16 = conv->getWeightsFP16();
-            memset(weightsPtr_FP16, 0, nweights_FP16*sizeof(weightsPtr_FP16[0]));
+            memset(reinterpret_cast<short*>(weightsPtr_FP16), 0, nweights_FP16*sizeof(weightsPtr_FP16[0]));
         }
         else
 #endif
