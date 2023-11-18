@@ -30,7 +30,9 @@ void winofunc_AtXA_8x8_F16(const char* inptr, int inpstep,
                            float * bpptr, int bpstep, float* outptr, int outstep,
                            float bias, float minval, float maxval, bool ifMinMaxAct);
 
-#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_AVX
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY)
+
+#if CV_AVX
 
 #if !CV_FMA3 // AVX workaround
 #undef _mm256_fmadd_ps
@@ -414,16 +416,11 @@ void winofunc_AtXA_8x8_F32(const float* inptr, int inpstep,
     STORE6_ELE_FROM_16(outptr + outstep * 5, z50, lowM, highM);
     _mm256_zeroupper();
 }
-#endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-// FP16, currently, only ARMv8 supports it.
-#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_FP16 && CV_NEON && CV_NEON_AARCH64
+#endif // CV_AVX
 
-// Fix conflict between float16_t in arm_neon.h and float16_t in cvdef.h.
-#ifndef _FIX_ARM_FP16
-#define _FIX_ARM_FP16
-typedef __fp16 float16_t;
-#endif
+// FP16, currently, only ARMv8 may support it
+#if defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
 
 #undef T4x4
 #define T4x4(a, b, c, d, tr0, tr1) \
@@ -438,6 +435,7 @@ typedef __fp16 float16_t;
 void winofunc_accum_F16(const char* _inwptr, const char* _wptr, char* _outbuf, int Cg, int iblock,
                         const int winoIblock, const int winoKblock, const int winoAtomF16, const int winoNatomF16)
 {
+    typedef __fp16 float16_t;
     const float16_t* inwptr = (const float16_t*)_inwptr;
     const float16_t* wptr = (const float16_t*)_wptr;
     float16_t* outbuf = (float16_t*)_outbuf;
@@ -593,6 +591,7 @@ void winofunc_accum_F16(const char* _inwptr, const char* _wptr, char* _outbuf, i
 void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
                            char * _outptr, int Cg, const int winoIblock, const int winoAtomF16)
 {
+    typedef __fp16 float16_t;
     float16_t* outptr = (float16_t*)_outptr;
     float32x4_t x00 = vld1q_f32(inptr), x01 = vld1q_f32(inptr + 4);
     float32x4_t x10 = vld1q_f32(inptr + inpstep), x11 = vld1q_f32(inptr + inpstep + 4);
@@ -606,8 +605,8 @@ void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
     float32x4_t z00, z01, z10, z11, z20, z21, z30, z31, z40, z41, z50, z51, z60, z61, z70, z71;
 
     {
-        /* Y[0] = [1.f, 0.f, -5.25f, 0.f, 5.25f, 0.f, -1.f, 0.f]*X */
-        /* Y[7] = [0.f, -1.f, 0.f, 5.25f, 0.f, -5.25f, 0.f, 1.f]*X */
+        // Y[0] = [1.f, 0.f, -5.25f, 0.f, 5.25f, 0.f, -1.f, 0.f]*X
+        // Y[7] = [0.f, -1.f, 0.f, 5.25f, 0.f, -5.25f, 0.f, 1.f]*X
         float32x4_t q5_25 = vdupq_n_f32(5.25f), t00, t01, t10, t11;
         t00 = vsubq_f32(x40, x20);
         t01 = vsubq_f32(x41, x21);
@@ -618,8 +617,8 @@ void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
         float32x4_t y70 = vfmaq_f32(vsubq_f32(x70, x10), t10, q5_25);
         float32x4_t y71 = vfmaq_f32(vsubq_f32(x71, x11), t11, q5_25);
 
-        /* Y[1] = [0.f, 1.f, 1.f, -4.25f, -4.25f, 1.f, 1.f, 0.f]*X */
-        /* Y[2] = [0.f, -1.f, 1.f, 4.25f, -4.25f, -1.f, 1.f, 0.f]*X */
+        // Y[1] = [0.f, 1.f, 1.f, -4.25f, -4.25f, 1.f, 1.f, 0.f]*X
+        // Y[2] = [0.f, -1.f, 1.f, 4.25f, -4.25f, -1.f, 1.f, 0.f]*X
         float32x4_t qm4_25 = vdupq_n_f32(-4.25f);
         t00 = vfmaq_f32(vaddq_f32(x10, x50), x30, qm4_25);
         t01 = vfmaq_f32(vaddq_f32(x11, x51), x31, qm4_25);
@@ -629,8 +628,8 @@ void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
         float32x4_t y10 = vaddq_f32(t00, t10), y11 = vaddq_f32(t01, t11);
         float32x4_t y20 = vsubq_f32(t10, t00), y21 = vsubq_f32(t11, t01);
 
-        /* Y[3] = [0.f, 0.5f, 0.25f, -2.5f, -1.25f, 2.f, 1.f, 0.f]*X */
-        /* Y[4] = [0.f, -0.5f, 0.25f, 2.5f, -1.25f, -2.f, 1.f, 0.f]*X */
+        // Y[3] = [0.f, 0.5f, 0.25f, -2.5f, -1.25f, 2.f, 1.f, 0.f]*X
+        // Y[4] = [0.f, -0.5f, 0.25f, 2.5f, -1.25f, -2.f, 1.f, 0.f]*X
         float32x4_t q0_5 = vdupq_n_f32(0.5f), q0_25 = vdupq_n_f32(0.25f);
         float32x4_t qm2_5 = vdupq_n_f32(-2.5f), qm1_25 = vdupq_n_f32(-1.25f);
         t00 = vfmaq_f32(vaddq_f32(x50, x50), x10, q0_5);
@@ -645,8 +644,8 @@ void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
         float32x4_t y30 = vaddq_f32(t00, t10), y31 = vaddq_f32(t01, t11);
         float32x4_t y40 = vsubq_f32(t10, t00), y41 = vsubq_f32(t11, t01);
 
-        /* Y[5] = [0.f, 2.f, 4.f, -2.5f, -5.f, 0.5f, 1.f, 0.f]*X */
-        /* Y[6] = [0.f, -2.f, 4.f, 2.5f, -5.f, -0.5f, 1.f, 0.f]*X */
+        // Y[5] = [0.f, 2.f, 4.f, -2.5f, -5.f, 0.5f, 1.f, 0.f]*X
+        // Y[6] = [0.f, -2.f, 4.f, 2.5f, -5.f, -0.5f, 1.f, 0.f]*X
         float32x4_t q4 = vdupq_n_f32(4.f), qm5 = vdupq_n_f32(-5.f);
         t00 = vfmaq_f32(vaddq_f32(x10, x10), x50, q0_5);
         t01 = vfmaq_f32(vaddq_f32(x11, x11), x51, q0_5);
@@ -660,22 +659,22 @@ void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
         float32x4_t y50 = vaddq_f32(t00, t10), y51 = vaddq_f32(t01, t11);
         float32x4_t y60 = vsubq_f32(t10, t00), y61 = vsubq_f32(t11, t01);
 
-        /* transpose 8x8 matrix in-place with some renumeration of the elements: */
-        /* Y:              */
-        /*        y00 y01  */
-        /*        y10 y11  */
-        /*        ...      */
-        /*        y70 y71  */
-        /*   Y':           */
-        /*        y00 y40  */
-        /*        y10 y50  */
-        /*        y20 y60  */
-        /*        y30 y70  */
-        /*        y01 y41  */
-        /*        y11 y51  */
-        /*        y21 y61  */
-        /*        y31 y71  */
-        /*    in other words, y40 <-> y01, y50 <-> y11, y60 <-> y21, y70 <-> y31 */
+        // transpose 8x8 matrix in-place with some renumeration of the elements:
+        // Y:
+        //        y00 y01
+        //        y10 y11
+        //        ...
+        //        y70 y71
+        // Y':
+        //        y00 y40
+        //        y10 y50
+        //        y20 y60
+        //        y30 y70
+        //        y01 y41
+        //        y11 y51
+        //        y21 y61
+        //        y31 y71
+        // in other words, y40 <-> y01, y50 <-> y11, y60 <-> y21, y70 <-> y31
         float32x4x2_t tr0, tr1;
 
         T4x4(y00, y10, y20, y30, tr0, tr1);
@@ -683,8 +682,8 @@ void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
         T4x4(y40, y50, y60, y70, tr0, tr1);
         T4x4(y41, y51, y61, y71, tr0, tr1);
 
-        /* Z[0] = [1.f, 0.f, -5.25f, 0.f, 5.25f, 0.f, -1.f, 0.f]*Y */
-        /* Z[7] = [0.f, -1.f, 0.f, 5.25f, 0.f, -5.25f, 0.f, 1.f]*Y */
+        // Z[0] = [1.f, 0.f, -5.25f, 0.f, 5.25f, 0.f, -1.f, 0.f]*Y
+        // Z[7] = [0.f, -1.f, 0.f, 5.25f, 0.f, -5.25f, 0.f, 1.f]*Y
         t00 = vsubq_f32(y01, y20);
         t01 = vsubq_f32(y41, y60);
         t10 = vsubq_f32(y30, y11);
@@ -694,8 +693,8 @@ void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
         z70 = vfmaq_f32(vsubq_f32(y31, y10), t10, q5_25);
         z71 = vfmaq_f32(vsubq_f32(y71, y50), t11, q5_25);
 
-        /* Z[1] = [0.f, 1.f, 1.f, -4.25f, -4.25f, 1.f, 1.f, 0.f]*Y */
-        /* Z[2] = [0.f, -1.f, 1.f, 4.25f, -4.25f, -1.f, 1.f, 0.f]*Y */
+        // Z[1] = [0.f, 1.f, 1.f, -4.25f, -4.25f, 1.f, 1.f, 0.f]*Y
+        // Z[2] = [0.f, -1.f, 1.f, 4.25f, -4.25f, -1.f, 1.f, 0.f]*Y
         t00 = vfmaq_f32(vaddq_f32(y10, y11), y30, qm4_25);
         t01 = vfmaq_f32(vaddq_f32(y50, y51), y70, qm4_25);
         t10 = vfmaq_f32(vaddq_f32(y20, y21), y01, qm4_25);
@@ -704,8 +703,8 @@ void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
         z10 = vaddq_f32(t00, t10); z11 = vaddq_f32(t01, t11);
         z20 = vsubq_f32(t10, t00); z21 = vsubq_f32(t11, t01);
 
-        /* Z[3] = [0.f, 0.5f, 0.25f, -2.5f, -1.25f, 2.f, 1.f, 0.f]*Y */
-        /* Z[4] = [0.f, -0.5f, 0.25f, 2.5f, -1.25f, -2.f, 1.f, 0.f]*Y */
+        // Z[3] = [0.f, 0.5f, 0.25f, -2.5f, -1.25f, 2.f, 1.f, 0.f]*Y
+        // Z[4] = [0.f, -0.5f, 0.25f, 2.5f, -1.25f, -2.f, 1.f, 0.f]*Y
         t00 = vfmaq_f32(vaddq_f32(y11, y11), y10, q0_5);
         t01 = vfmaq_f32(vaddq_f32(y51, y51), y50, q0_5);
         t10 = vfmaq_f32(y21, y20, q0_25);
@@ -718,8 +717,8 @@ void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
         z30 = vaddq_f32(t00, t10); z31 = vaddq_f32(t01, t11);
         z40 = vsubq_f32(t10, t00); z41 = vsubq_f32(t11, t01);
 
-        /* Z[5] = [0.f, 2.f, 4.f, -2.5f, -5.f, 0.5f, 1.f, 0.f]*Y */
-        /* Z[6] = [0.f, -2.f, 4.f, 2.5f, -5.f, -0.5f, 1.f, 0.f]*Y */
+        // Z[5] = [0.f, 2.f, 4.f, -2.5f, -5.f, 0.5f, 1.f, 0.f]*Y
+        // Z[6] = [0.f, -2.f, 4.f, 2.5f, -5.f, -0.5f, 1.f, 0.f]*Y
         t00 = vfmaq_f32(vaddq_f32(y10, y10), y11, q0_5);
         t01 = vfmaq_f32(vaddq_f32(y50, y50), y51, q0_5);
         t10 = vfmaq_f32(y21, y20, q4);
@@ -753,11 +752,12 @@ void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
     vst1_f16(outptr + outstep*7 + 4, vcvt_f16_f32(z71));
 }
 
-/*Output transform*/
+// Output transform
 void winofunc_AtXA_8x8_F16(const char* _inptr, int inpstep,
                            float * bpptr, int bpstep, float* outptr, int outstep,
                            float bias, float minval, float maxval, bool ifMinMaxAct)
 {
+    typedef __fp16 float16_t;
     const float16_t* inptr = (const float16_t*)_inptr;
 
     float32x4_t x00 = vcvt_f32_f16(vld1_f16(inptr)), x01 = vcvt_f32_f16(vld1_f16(inptr + 4));
@@ -797,24 +797,24 @@ void winofunc_AtXA_8x8_F16(const char* _inptr, int inpstep,
         float32x4_t y31 = vfmaq_n_f32(vfmaq_n_f32(s12_1, s34_1, 8.0f), s56_1, 0.125f);
         float32x4_t y60 = vdupq_n_f32(0.f), y61 = y60, y70 = y60, y71 = y60;
 
-        /* transpose 8x8 matrix in-place with some renumeration of the elements: */
-        /*  Y: */
-        /*        y00 y01 */
-        /*        y10 y11 */
-        /*        ... */
-        /*        y50 y51 */
-        /*        0   0 */
-        /*        0   0 */
-        /*   Y': */
-        /*        y00 y40 */
-        /*        y10 y50 */
-        /*        y20 y60 */
-        /*        y30 y70 */
-        /*        y01 y41 */
-        /*        y11 y51 */
-        /*        y21 y61 */
-        /*        y31 y71 */
-        /*    in other words, y40 <-> y01, y50 <-> y11, y60 <-> y21, y70 <-> y31 */
+        // transpose 8x8 matrix in-place with some renumeration of the elements:
+        // Y:
+        //        y00 y01
+        //        y10 y11
+        //        ...
+        //        y50 y51
+        //        0   0
+        //        0   0
+        // Y':
+        //        y00 y40
+        //        y10 y50
+        //        y20 y60
+        //        y30 y70
+        //        y01 y41
+        //        y11 y51
+        //        y21 y61
+        //        y31 y71
+        // in other words, y40 <-> y01, y50 <-> y11, y60 <-> y21, y70 <-> y31
         float32x4x2_t tr0, tr1;
 
         T4x4(y00, y10, y20, y30, tr0, tr1);
@@ -910,6 +910,7 @@ void winofunc_AtXA_8x8_F16(const char* _inptr, int inpstep,
     vst1q_f32(outptr + outstep*5, z50);
     vst1_f32(outptr + outstep*5 + 4, vget_low_f32(z51));
 }
+#endif
 #endif
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END

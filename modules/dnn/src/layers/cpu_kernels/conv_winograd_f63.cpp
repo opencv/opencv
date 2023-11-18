@@ -192,7 +192,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 #ifdef CONV_ARM_FP16
                             if (useFP16)
                             {
-                                opt_FP16::winofunc_BtXB_8x8_F16(inptr, inpstep, inwptr, Cg, CONV_WINO_IBLOCK,
+                                opt_NEON_FP16::winofunc_BtXB_8x8_F16(inptr, inpstep, inwptr, Cg, CONV_WINO_IBLOCK,
                                                                 CONV_WINO_ATOM);
                             }
                             else
@@ -222,14 +222,14 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 #ifdef CONV_ARM_FP16
     if (useFP16)
     {
-        CV_Assert(conv->weightsWinoBufPtr_FP16);
-        wptr0 = (char *)conv->weightsWinoBufPtr_FP16;
+        CV_Assert(!conv->weightsWinoBuf_FP16.empty());
+        wptr0 = (char *)conv->weightsWinoBuf_FP16.data();
     }
     else
 #endif
     {
-        CV_Assert(conv->weightsWinoBufPtr);
-        wptr0 = (char *)conv->weightsWinoBufPtr;
+        CV_Assert(!conv->weightsWinoBuf.empty());
+        wptr0 = (char *)conv->weightsWinoBuf.data();
     }
 
     parallel_for_(Range(0, ntasks), [&](const Range& r0) {
@@ -289,7 +289,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 #ifdef CONV_ARM_FP16
                     if (useFP16)
                     {
-                        opt_FP16::winofunc_accum_F16(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
+                        opt_NEON_FP16::winofunc_accum_F16(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
                                                      CONV_WINO_KBLOCK, CONV_WINO_ATOM, CONV_WINO_NATOMS);
                     }
                     else
@@ -355,7 +355,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 #ifdef CONV_ARM_FP16
                             if (useFP16)
                             {
-                                opt_FP16::winofunc_AtXA_8x8_F16(out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA * esz, CONV_WINO_SIZE,
+                                opt_NEON_FP16::winofunc_AtXA_8x8_F16(out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA * esz, CONV_WINO_SIZE,
                                                                 bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
                             }
                             else

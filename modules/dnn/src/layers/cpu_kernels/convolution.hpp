@@ -14,7 +14,7 @@
 #define CONV_NR_FP32 28
 
 // The FP16 can only be supported by ARM64 and with FP16 FMA supported.
-#if defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && CV_FP16 // check FP16 FMA.
+#if CV_FP16 // check FP16 FMA.
 #define CONV_ARM_FP16 1
 #endif
 
@@ -22,7 +22,6 @@
 // Currently, only ARM 64 support FP16.
 #define CONV_MR_FP16 8
 #define CONV_NR_FP16 24
-typedef __fp16 float16_t; // Fix conflict between float16_t in arm_neon.h and float16_t in cvdef.h.
 #endif
 
 #elif CV_NEON              // 16 registers.
@@ -58,15 +57,15 @@ struct FastConv
     int pad_top, pad_bottom, pad_left, pad_right, pad_front, pad_behind;
 
     std::vector<float> weightsBuf;     // For generic Conv 2D
-    float* weightsBufPtr;
     std::vector<float> weightsWinoBuf; // For Winograd F(6x6, 3x3).
-    float* weightsWinoBufPtr;
     std::vector<float> biasBuf;
+    float* getWeights();
+    float* getWeightsWino();
 
     std::vector<float16_t> weightsBuf_FP16;
-    float16_t* weightsBufPtr_FP16;
     std::vector<float16_t> weightsWinoBuf_FP16;
-    float16_t* weightsWinoBufPtr_FP16;
+    float16_t* getWeightsFP16();
+    float16_t* getWeightsWinoFP16();
 
     int conv_type;
     int conv_dim;  // Flag for conv1d, conv2d, or conv3d.
@@ -112,8 +111,6 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
 
 int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv, int ntasks,
                   float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct);
-
-bool haveFP16_ARM();
 
 // Work around of NEON, the following functions are only used internally.
 namespace opt_NEON {

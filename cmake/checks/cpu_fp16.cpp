@@ -15,20 +15,12 @@ int test()
 #include "arm_neon.h"
 int test()
 {
-#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-    const float src[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    short dst[8];
-    float32x4_t v_src = *(float32x4_t*)src;
-    float16x4_t v_dst = vcvt_f16_f32(v_src);
-    float16x8_t x = vcombine_f16(v_dst, v_dst);
-
-    x = vfmaq_laneq_f16(x, x, x, 7);
-    x = vfmaq_f16(x, x, x);
-
-    return (int)dst[0];
-#else
-    return 0;
-#endif
+    const float src[] = { 0.0f, 1.0f, 2.0f, 3.0f };
+    short dst[4];
+    float32x4_t v_src = vld1q_f32(src);
+    float16x4_t v_dst = vcvt_f16_f32(v_src);    
+    vst1_f16((__fp16*)dst, v_dst);
+    return dst[0] + dst[1] + dst[2] + dst[3];
 }
 #else
 #error "FP16 is not supported"

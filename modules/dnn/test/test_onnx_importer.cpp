@@ -55,7 +55,7 @@ public:
     void testONNXModels(const String& basename, const Extension ext = npy,
                         double l1 = 0, double lInf = 0, const bool useSoftmax = false,
                         bool checkNoFallbacks = true, int numInps = 1,
-                        bool testShapes = true)
+                        bool testShapes = true, bool useWinograd = true)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
         std::vector<Mat> inps(numInps);
@@ -2356,7 +2356,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
     }
 #endif
 
-    testONNXModels("tiny_yolo2", pb, l1, lInf, false, true, 1, false);
+    testONNXModels("tiny_yolo2", pb, l1, lInf, false, true, 1, true, false);
 }
 
 TEST_P(Test_ONNX_nets, CNN_MNIST)
@@ -2424,7 +2424,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
         lInf = 0.035;
     }
 
-    testONNXModels("LResNet100E_IR", pb, l1, lInf, false, true, 1, useWinograd);
+    testONNXModels("LResNet100E_IR", pb, l1, lInf, false, true, 1, true, useWinograd);
 }
 
 TEST_P(Test_ONNX_nets, Emotion_ferplus)
@@ -2464,7 +2464,7 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
     }
 #endif
 
-    testONNXModels("emotion_ferplus", pb, l1, lInf, false, true, 1, useWinograd);
+    testONNXModels("emotion_ferplus", pb, l1, lInf, false, true, 1, true, useWinograd);
 }
 
 TEST_P(Test_ONNX_nets, Inception_v2)
