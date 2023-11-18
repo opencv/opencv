@@ -69,7 +69,7 @@ public:
             else if (inlier_number - point < preemptive_thr)
                     break;
         // score is negative inlier number! If less then better
-        return {inlier_number, -static_cast<double>(inlier_number)};
+        return {inlier_number, -static_cast<float>(inlier_number)};
     }
 
     Score getScore (const std::vector<float> &errors) const override {
@@ -78,10 +78,10 @@ public:
             if (errors[point] < threshold)
                 inlier_number++;
         // score is negative inlier number! If less then better
-        return {inlier_number, -static_cast<double>(inlier_number)};
+        return {inlier_number, -static_cast<float>(inlier_number)};
     }
 
-    void setBestScore(double best_score_) override {
+    void setBestScore(float best_score_) override {
         if (best_score > best_score_) best_score = best_score_;
     }
 
@@ -106,7 +106,8 @@ protected:
     const Ptr<Error> error;
     const int points_size;
     const double threshold, k_msac;
-    double best_score, norm_thr, one_over_thr;
+    float best_score;
+    double norm_thr, one_over_thr;
 public:
     MsacQualityImpl (int points_size_, double threshold_, const Ptr<Error> &error_, double k_msac_)
             : error (error_), points_size (points_size_), threshold (threshold_), k_msac(k_msac_) {
@@ -117,7 +118,7 @@ public:
 
     inline Score getScore (const Mat &model) const override {
         error->setModelParameters(model);
-        double err, sum_errors = 0;
+        float err, sum_errors = 0;
         int inlier_number = 0;
         const auto preemptive_thr = points_size + best_score;
         for (int point = 0; point < points_size; point++) {
@@ -133,7 +134,7 @@ public:
     }
 
     Score getScore (const std::vector<float> &errors) const override {
-        double sum_errors = 0;
+        float sum_errors = 0;
         int inlier_number = 0;
         for (int point = 0; point < points_size; point++) {
             const auto err = errors[point];
@@ -146,7 +147,7 @@ public:
         return {inlier_number, sum_errors};
     }
 
-    void setBestScore(double best_score_) override {
+    void setBestScore(float best_score_) override {
         if (best_score > best_score_) best_score = best_score_;
     }
 
@@ -224,7 +225,7 @@ public:
     // https://github.com/danini/magsac
     Score getScore (const Mat &model) const override {
         error->setModelParameters(model);
-        double total_loss = 0.0;
+        float total_loss = 0.0;
         int num_tentative_inliers = 0;
         const auto preemptive_thr = points_size + previous_best_loss;
         for (int point_idx = 0; point_idx < points_size; point_idx++) {
@@ -248,7 +249,7 @@ public:
     }
 
     Score getScore (const std::vector<float> &errors) const override {
-        double total_loss = 0.0;
+        float total_loss = 0.0;
         int num_tentative_inliers = 0;
         for (int point_idx = 0; point_idx < points_size; point_idx++) {
             const float squared_residual = errors[point_idx];
@@ -266,7 +267,7 @@ public:
         return {num_tentative_inliers, total_loss};
     }
 
-    void setBestScore (double best_loss) override {
+    void setBestScore (float best_loss) override {
         if (previous_best_loss > best_loss) previous_best_loss = best_loss;
     }
 
@@ -317,7 +318,7 @@ public:
         return {inlier_number, Utils::findMedian (errors)};
     }
 
-    void setBestScore (double /*best_score*/) override {}
+    void setBestScore (float /*best_score*/) override {}
 
     int getPointsSize () const override { return points_size; }
     int getInliers (const Mat &model, std::vector<int> &inliers) const override
@@ -489,7 +490,7 @@ public:
             if (score_type == ScoreMethod::SCORE_METHOD_MSAC)
                 out_score.score = sum_errors;
             else if (score_type == ScoreMethod::SCORE_METHOD_RANSAC)
-                out_score.score = -static_cast<double>(tested_inliers);
+                out_score.score = -static_cast<float>(tested_inliers);
             else out_score = quality->getScore(errors);
         }
         return last_model_is_good;

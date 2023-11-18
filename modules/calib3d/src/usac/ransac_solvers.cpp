@@ -840,7 +840,7 @@ public:
                     success = num_hypothesis_tested++ > max_iters;
                     if (iters % 10 && !adapt) {
                         // Synchronize threads. just to speed verification of model.
-                        quality->setBestScore(std::min(best_score_thread.score, (double)best_score_all));
+                        quality->setBestScore(std::min(best_score_thread.score, (float)best_score_all));
                         model_verifier->update(best_score_thread.inlier_number > max_number_inliers ? best_score_thread : best_score_all_threads, iters);
                     }
 
