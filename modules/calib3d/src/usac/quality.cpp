@@ -106,13 +106,12 @@ protected:
     const Ptr<Error> error;
     const int points_size;
     const double threshold, k_msac;
-    float best_score;
-    double norm_thr, one_over_thr;
+    float best_score, norm_thr, one_over_thr;
 public:
     MsacQualityImpl (int points_size_, double threshold_, const Ptr<Error> &error_, double k_msac_)
             : error (error_), points_size (points_size_), threshold (threshold_), k_msac(k_msac_) {
-        best_score = std::numeric_limits<double>::max();
-        norm_thr = threshold*k_msac;
+        best_score = std::numeric_limits<float>::max();
+        norm_thr = (float)threshold*k_msac;
         one_over_thr = 1 / norm_thr;
     }
 
@@ -225,7 +224,7 @@ public:
     // https://github.com/danini/magsac
     Score getScore (const Mat &model) const override {
         error->setModelParameters(model);
-        float total_loss = 0.0;
+        double total_loss = 0.0;
         int num_tentative_inliers = 0;
         const auto preemptive_thr = points_size + previous_best_loss;
         for (int point_idx = 0; point_idx < points_size; point_idx++) {
@@ -245,11 +244,11 @@ public:
             } else if (total_loss + point_idx > preemptive_thr)
                 break;
         }
-        return {num_tentative_inliers, total_loss};
+        return {num_tentative_inliers, (float)total_loss};
     }
 
     Score getScore (const std::vector<float> &errors) const override {
-        float total_loss = 0.0;
+        double total_loss = 0.0;
         int num_tentative_inliers = 0;
         for (int point_idx = 0; point_idx < points_size; point_idx++) {
             const float squared_residual = errors[point_idx];
@@ -264,7 +263,7 @@ public:
                         (stored_complete_gamma_values[x] - gamma_value_of_k)) * norm_loss);
             }
         }
-        return {num_tentative_inliers, total_loss};
+        return {num_tentative_inliers, (float)total_loss};
     }
 
     void setBestScore (float best_loss) override {
@@ -488,7 +487,7 @@ public:
         if (last_model_is_good && do_sprt) {
             out_score.inlier_number = tested_inliers;
             if (score_type == ScoreMethod::SCORE_METHOD_MSAC)
-                out_score.score = sum_errors;
+                out_score.score = static_cast<float>(sum_errors);
             else if (score_type == ScoreMethod::SCORE_METHOD_RANSAC)
                 out_score.score = -static_cast<float>(tested_inliers);
             else out_score = quality->getScore(errors);
