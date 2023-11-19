@@ -223,13 +223,13 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
     if (useFP16)
     {
         CV_Assert(!conv->weightsWinoBuf_FP16.empty());
-        wptr0 = (char *)conv->weightsWinoBuf_FP16.data();
+        wptr0 = (char *)conv->getWeightsWinoFP16();
     }
     else
 #endif
     {
         CV_Assert(!conv->weightsWinoBuf.empty());
-        wptr0 = (char *)conv->weightsWinoBuf.data();
+        wptr0 = (char *)conv->getWeightsWino();
     }
 
     parallel_for_(Range(0, ntasks), [&](const Range& r0) {
