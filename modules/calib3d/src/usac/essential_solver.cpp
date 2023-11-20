@@ -175,6 +175,8 @@ public:
                 Matx33d Bz(bz);
                 // Bz is rank 2, matrix, so epipole is its null-vector
                 Vec3d xy1 = Utils::getRightEpipole(Mat(Bz * (1/sqrt(norm_bz))));
+                const double one_over_xy1_norm = 1 / sqrt(xy1[0] * xy1[0] + xy1[1] * xy1[1] + xy1[2] * xy1[2]);
+                xy1 *= one_over_xy1_norm;
 
                 if (fabs(xy1(2)) < 1e-10) continue;
                 Mat_<double> E(3,3);
