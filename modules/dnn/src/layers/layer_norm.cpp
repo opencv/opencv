@@ -48,6 +48,7 @@ public:
             return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA   ||
                (backendId == DNN_BACKEND_CANN && axis != -1); // axis=-1 not supported due to 1d mat shape problem
     }
 
@@ -313,9 +314,8 @@ public:
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
         size_t loops = static_cast<size_t>(total(input_shape, 0, axis));
-        size_t norm_size = static_cast<size_t>(total(input_shape, axis));
 
-        return make_cuda_node<cuda4dnn::LayerNormOp>(preferableTarget, std::move(context->stream), epsilon, loops, norm_size);
+        return make_cuda_node<cuda4dnn::LayerNormOp>(preferableTarget, std::move(context->stream), axis, epsilon, loops);
     }
 #endif // HAVE_CUDA
 
