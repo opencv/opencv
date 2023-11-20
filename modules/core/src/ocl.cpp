@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+    /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -3747,7 +3747,9 @@ int Kernel::set(int i, const KernelArg& arg)
     if( arg.m )
     {
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(arg.m->u->allocatorContext);
-        OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext::getCurrent());
+        ocl::OpenCLExecutionContext& currentExecCtx = ocl::OpenCLExecutionContext::getCurrent();
+        if(pExecCtx->getContext().ptr() != currentExecCtx.getContext().ptr())
+            CV_Error(cv::Error::StsBadArg,  "OpenCL: buffer doesn't belong to the current context.");
 
         AccessFlag accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : static_cast<AccessFlag>(0)) |
                                  ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : static_cast<AccessFlag>(0));
