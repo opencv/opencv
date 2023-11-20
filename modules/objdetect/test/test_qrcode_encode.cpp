@@ -554,4 +554,40 @@ TEST(Objdetect_QRCode_Encode_Decode, auto_version_pick)
     }
 }
 
+// Test two QR codes which error correction procedure requires more number of
+// syndroms that described in the ISO/IEC 18004
+TEST(Objdetect_QRCode_decode, error_correction)
+{
+    const std::string filename[] = {"err_correct_1M.png", "err_correct_2L.png"};
+    const std::string expected[] = {"New", "Version 2 QR Code Test Image"};
+
+    QRCodeDetector qrcode;
+    cv::String decoded_msg;
+    for (int i = 0; i < 2; ++i)
+    {
+        Mat src = cv::imread(findDataFile("qrcode/" + filename[i]), IMREAD_GRAYSCALE);
+
+        std::vector<Point2f> corners(4);
+        corners[0] = Point2f(0, 0);
+        corners[1] = Point2f(src.cols * 1.0f, 0);
+        corners[2] = Point2f(src.cols * 1.0f, src.rows * 1.0f);
+        corners[3] = Point2f(0, src.rows * 1.0f);
+
+        Mat resized_src;
+        resize(src, resized_src, fixed_size, 0, 0, INTER_AREA);
+        float width_ratio =  resized_src.cols * 1.0f / src.cols;
+        float height_ratio = resized_src.rows * 1.0f / src.rows;
+        for(size_t m = 0; m < corners.size(); m++)
+        {
+            corners[m].x = corners[m].x * width_ratio;
+            corners[m].y = corners[m].y * height_ratio;
+        }
+
+        Mat straight_barcode;
+        EXPECT_NO_THROW(decoded_msg = qrcode.decode(resized_src, corners, straight_barcode));
+        ASSERT_FALSE(straight_barcode.empty()) << "Can't decode qrimage " << filename[i];
+        EXPECT_EQ(expected[i], decoded_msg);
+    }
+}
+
 }} // namespace

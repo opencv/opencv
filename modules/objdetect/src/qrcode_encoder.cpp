@@ -1538,22 +1538,14 @@ bool QRCodeDecoderImpl::errorCorrection(std::vector<uint8_t>& codewords) {
 bool QRCodeDecoderImpl::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
     size_t numEcc = version_info_database[version].ecc[level].ecc_codewords;
     size_t numSyndromes = numEcc;
-    if (version == 3 && level == QRCodeEncoder::CorrectionLevel::CORRECT_LEVEL_L)
-        numSyndromes -= 1;
-    else if (version == 2 && level == QRCodeEncoder::CorrectionLevel::CORRECT_LEVEL_L)
-        numSyndromes -= 2;
-    else if (version == 1) {
-        if (level == QRCodeEncoder::CorrectionLevel::CORRECT_LEVEL_L)
-            // According to ISO, number of syndromes for 1-L QR code should be 26-19-3=4.
-            // However, test Objdetect_QRCode_Multi.regression/13 passed only with 6 syndromes.
-            numSyndromes -= 1;
-        else if (level == QRCodeEncoder::CorrectionLevel::CORRECT_LEVEL_M)
-            numSyndromes -= 2;
-        else
-            numSyndromes -= 1;
-    }
 
-    CV_Assert(numSyndromes % 2 == 0);
+    // According to the ISO there is a formula for a number of the syndromes.
+    // However several tests don't pass the error correction step because of less number of syndromes:
+    // 1M: qrcodes/detection/lots/image001.jpg from BoofCV (8 syndromes by formula, 10 needed)
+    // 1L: Objdetect_QRCode_Multi.regression/13 (4 syndromes by formula, 6 needed)
+    // 2L: qrcodes/detection/brightness/image011.jpg from BoofCV (8 syndromes by formula, 10 needed)
+    if (numSyndromes % 2 == 1)
+        numSyndromes -= 1;
 
     // Compute syndromes
     bool hasError = false;
