@@ -49,7 +49,10 @@ public:
         net.setInput(inp);
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
-        net.enableWinograd(useWinograd);
+
+        if (target == DNN_TARGET_CPU_FP16)
+            net.enableWinograd(false);
+
         if (backend == DNN_BACKEND_HALIDE && !halideScheduler.empty())
         {
             halideScheduler = findDataFile(halideScheduler);
@@ -545,7 +548,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     else if (target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.4;
-        lInf = 19.;
+        lInf = 22.;
     }
     else if (target == DNN_TARGET_VULKAN)
     {

@@ -37,6 +37,7 @@ public:
 
     virtual void setPreferableBackend(Backend backendId) { net.setPreferableBackend(backendId); }
     virtual void setPreferableTarget(Target targetId) { net.setPreferableTarget(targetId); }
+    virtual void enableWinograd(bool useWinograd) { net.enableWinograd(useWinograd); }
 
     virtual
     void initNet(const Net& network)
@@ -151,10 +152,18 @@ Model& Model::setPreferableBackend(Backend backendId)
     impl->setPreferableBackend(backendId);
     return *this;
 }
+
 Model& Model::setPreferableTarget(Target targetId)
 {
     CV_DbgAssert(impl);
     impl->setPreferableTarget(targetId);
+    return *this;
+}
+
+Model& Model::enableWinograd(bool useWinograd)
+{
+    CV_DbgAssert(impl);
+    impl->enableWinograd(useWinograd);
     return *this;
 }
 

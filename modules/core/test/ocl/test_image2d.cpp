@@ -83,7 +83,7 @@ TEST(Image2D, turnOffOpenCL)
         }
         else
             std::cout << "CV_8UC1 is not supported for OpenCL images. Test skipped." << std::endl;
-    
+
         // reset state to the previous one
         cv::ocl::setUseOpenCL(useOCL);
     }
