@@ -13,6 +13,72 @@
 
 namespace opencv_test { namespace {
 
+TEST(blobRectToImageRect, DNN_PMODE_NULL)
+{
+    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
+    Size imgSize(200 + +(rand() % 100) / 4 * 4, 200 + +(rand() % 100) / 4 * 4);
+    Rect rBlob(inputSize.width / 2 - inputSize.width / 4, inputSize.height / 2 - inputSize.height / 4, inputSize.width / 2, inputSize.height / 2);
+    Image2BlobParams paramNet;
+    paramNet.scalefactor = Scalar::all(1.f);
+    paramNet.size = inputSize;
+    paramNet.ddepth = CV_32F;
+    paramNet.mean = Scalar();
+    paramNet.swapRB = false;
+    paramNet.datalayout = DNN_LAYOUT_NHWC;
+    paramNet.paddingmode = DNN_PMODE_NULL;
+    Rect rOri = blobRectToImageRect(rBlob, imgSize, paramNet);
+    Rect rImg = Rect(rBlob.x * (float)imgSize.width / inputSize.width, rBlob.y * (float)imgSize.height / inputSize.height,
+        rBlob.width * (float)imgSize.width / inputSize.width, rBlob.height * (float)imgSize.height / inputSize.height);
+    ASSERT_EQ(rImg, rOri);
+}
+
+TEST(blobRectToImageRect, DNN_PMODE_CROP_CENTER)
+{
+    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
+    Size imgSize(200 + +(rand() % 100) / 4 * 4, 200 + +(rand() % 100) / 4 * 4);
+    Rect rBlob(inputSize.width / 2 - inputSize.width / 4, inputSize.height / 2 - inputSize.height / 4, inputSize.width / 2, inputSize.height / 2);
+    Image2BlobParams paramNet;
+    paramNet.scalefactor = Scalar::all(1.f);
+    paramNet.size = inputSize;
+    paramNet.ddepth = CV_32F;
+    paramNet.mean = Scalar();
+    paramNet.swapRB = false;
+    paramNet.datalayout = DNN_LAYOUT_NHWC;
+    paramNet.paddingmode = DNN_PMODE_CROP_CENTER;
+    Rect rOri = blobRectToImageRect(rBlob, imgSize, paramNet);
+    float resizeFactor = std::max(inputSize.width / (float)imgSize.width,
+        inputSize.height / (float)imgSize.height);
+    Rect rImg = Rect((rBlob.x + 0.5 * (imgSize.width * resizeFactor - inputSize.width)) / resizeFactor, (rBlob.y + 0.5 * (imgSize.height * resizeFactor - inputSize.height)) / resizeFactor,
+        rBlob.width / resizeFactor, rBlob.height / resizeFactor);
+    ASSERT_EQ(rImg, rOri);
+}
+
+TEST(blobRectToImageRect, DNN_PMODE_LETTERBOX)
+{
+    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
+    Size imgSize(200 + +(rand() % 100) / 4 * 4, 200 + +(rand() % 100) / 4 * 4);
+    Rect rBlob(inputSize.width / 2 - inputSize.width / 4, inputSize.height / 2 - inputSize.height / 4, inputSize.width / 2, inputSize.height / 2);
+    Image2BlobParams paramNet;
+    paramNet.scalefactor = Scalar::all(1.f);
+    paramNet.size = inputSize;
+    paramNet.ddepth = CV_32F;
+    paramNet.mean = Scalar();
+    paramNet.swapRB = false;
+    paramNet.datalayout = DNN_LAYOUT_NHWC;
+    paramNet.paddingmode = DNN_PMODE_LETTERBOX;
+    Rect rOri = blobRectToImageRect(rBlob, imgSize, paramNet);
+    float resizeFactor = std::min(inputSize.width / (float)imgSize.width,
+        inputSize.height / (float)imgSize.height);
+    int rh = int(imgSize.height * resizeFactor);
+    int rw = int(imgSize.width * resizeFactor);
+
+    int top = (inputSize.height - rh) / 2;
+    int left = (inputSize.width - rw) / 2;
+    Rect rImg = Rect((rBlob.x - left) / resizeFactor, (rBlob.y - top) / resizeFactor, rBlob.width / resizeFactor, rBlob.height / resizeFactor);
+    ASSERT_EQ(rImg, rOri);
+}
+
+
 TEST(blobFromImage_4ch, Regression)
 {
     Mat ch[4];

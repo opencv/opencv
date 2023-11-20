@@ -1253,20 +1253,20 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
      *  @param rBlob rect in blob coordinates.
-     *  @param image input inserted in blob.
+     *  @param sizeOri original input image size inserted in blob.
      *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob
      *  @returns rectangle in original image coordinates.
      */
-    CV_EXPORTS_W Rect blobRectToImageRect(Rect rBlob, InputArray image, Image2BlobParams param);
+    CV_EXPORTS_W Rect blobRectToImageRect(Rect rBlob, Size sizeOri, Image2BlobParams param);
 
     /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
      *  @param rBlob rect in blob coordinates.
-     *  @param image input image.
+     *  @param sizeOri original input image size inserted in blob.
      *  @param size spatial size for output image
      *  @param crop flag use in blobFromImage called
      *  @returns rectangle in original image coordinates.
      */
-    CV_EXPORTS_W Rect blobRectToImageRect(Rect rBlob, InputArray image, const Size& size, bool crop);
+    CV_EXPORTS_W Rect blobRectToImageRect(Rect rBlob, Size sizeOri, const Size& size, bool crop);
 
     /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
      *  @param rBlob rect in blob coordinates.

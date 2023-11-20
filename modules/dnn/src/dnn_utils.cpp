@@ -382,20 +382,19 @@ void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_)
     }
 }
 
-Rect blobRectToImageRect(Rect r, InputArray oriImage, Image2BlobParams param)
+Rect blobRectToImageRect(Rect r, Size oriImage, Image2BlobParams param)
 {
-    CV_Assert(!oriImage.getMat_().empty());
-    Size imgSize = oriImage.getMat_().size();
+    CV_Assert(!oriImage.empty());
     std::vector<Rect> rImg, rBlob;
     rBlob.push_back(r);
     rImg.resize(1);
-    blobRectsToImageRects(rBlob, rImg, imgSize, param);
+    blobRectsToImageRects(rBlob, rImg, oriImage, param);
     return rImg[0];
 }
 
-Rect blobRectToImageRect(Rect r, InputArray image, const Size& size, bool crop)
+Rect blobRectToImageRect(Rect r, Size oriImage, const Size& size, bool crop)
 {
-    CV_Assert(!image.getMat_().empty());
+    CV_Assert(!oriImage.empty());
     Image2BlobParams paramNet;
     paramNet.scalefactor = Scalar::all(1);
     paramNet.size = size;
@@ -407,7 +406,7 @@ Rect blobRectToImageRect(Rect r, InputArray image, const Size& size, bool crop)
         paramNet.paddingmode = DNN_PMODE_CROP_CENTER;
     else
         paramNet.paddingmode = DNN_PMODE_NULL;
-    return blobRectToImageRect(r, image, paramNet);
+    return blobRectToImageRect(r, oriImage, paramNet);
 }
 
 void blobRectsToImageRects(std::vector<Rect> rBlob, std::vector<Rect> &rImg, const Size& imgSize, Image2BlobParams param)
