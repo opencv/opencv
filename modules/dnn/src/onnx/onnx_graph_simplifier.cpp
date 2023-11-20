@@ -180,6 +180,7 @@ static Mat extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int 
         return getMatFromTensor(constant_proto);
     }
 }
+
 /*  The fusion for the multi-head attention from vision transformer.
 
     Abbreviations:
@@ -260,22 +261,22 @@ class AttentionSubGraph : public Subgraph {
     AttentionSubGraph() {
         int input = addNodeToMatch("");
         int transpose = addNodeToMatch("Transpose", input); // tranpose does not make any differences to the accuracy here in this subgraph
-        int matmul = addNodeToMatch("MatMul", transpose, addNodeToMatch(""));
-        int add = addNodeToMatch("Add", addNodeToMatch(""), matmul);
+        att_matmul = addNodeToMatch("MatMul", transpose, addNodeToMatch(""));
+        att_add = addNodeToMatch("Add", addNodeToMatch(""), att_matmul);
 
         // v_path
-        int slice_v = addNodeToMatch("Slice", add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
+        slice_v = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
         int reshape_v = addNodeToMatch("Reshape", slice_v, addNodeToMatch(""));
         int transpose_v = addNodeToMatch("Transpose", reshape_v);
 
         // q_path
-        int slice_q = addNodeToMatch("Slice", add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
-        int reshape_q = addNodeToMatch("Reshape", slice_q, addNodeToMatch(""));
+        slice_q = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
+        reshape_q = addNodeToMatch("Reshape", slice_q, addNodeToMatch(""));
         int transpose_q = addNodeToMatch("Transpose", reshape_q);
-        int div_q = addNodeToMatch("Div", transpose_q, addNodeToMatch(""));
+        div_q = addNodeToMatch("Div", transpose_q, addNodeToMatch(""));
 
         // k_path
-        int slice_k = addNodeToMatch("Slice", add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
+        slice_k = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
         int reshape_k = addNodeToMatch("Reshape", slice_k, addNodeToMatch(""));
         int transpose_k = addNodeToMatch("Transpose", reshape_k);
 
@@ -302,85 +303,37 @@ class AttentionSubGraph : public Subgraph {
         }
     }
 
-    template <typename T>
-    static T extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id, int return_mat_ele_idx) {
-        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
-        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
-        if (initializer_id != -1) {
-            Mat const_mat = onnx_net->getMatFromInitializer(initializer_id);
-            return *const_mat.ptr<T>(return_mat_ele_idx);
-        } else {
-            const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
-            int constant_id = getInputNodeId(net, node, input_id);
-            Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
-            opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
-            opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
-            Mat constant_mat = getMatFromTensor(constant_proto);
-            return *constant_mat.ptr<T>(return_mat_ele_idx);
-        }
-    }
-
-    static void getAttributes(const Ptr<ImportGraphWrapper>& net, std::vector<int>& matchedNodesIds, int64_t& _num_heads, std::vector<int64_t>& _qkv_hidden_sizes, float& _scale) {
-        _qkv_hidden_sizes.clear();
-        int64_t qk_hidden_size = 0;
-        for (size_t i = 0; i < matchedNodesIds.size(); i++) {
-            auto id = matchedNodesIds[i];
-            const auto node = net->getNode(id);
-            if (node->getType() == "Slice") { // collect hidden_sizes
-                int slice_start = extractConstant<int>(net, id, 1, 0);
-                int slice_end = extractConstant<int>(net, id, 2, 0);
-                int64_t hidden_size = static_cast<int64_t>(slice_end - slice_start);
-                if (slice_start == 0) {
-                    qk_hidden_size = hidden_size;
-                }
-                _qkv_hidden_sizes.push_back(hidden_size);
-            } else if (node->getType() == "Reshape" && i != matchedNodesIds.size() - 1) { // collect num_heads
-                _num_heads = extractConstant<int>(net, id, 1, 1);
-            } else if (node->getType() == "Div") { // collect scale
-                _scale = extractConstant<float>(net, id, 1, 0);
-            }
-        }
-
-        CV_CheckGT(qk_hidden_size, 0, "Attention fusion: failed to get qk_hidden_size");
-        CV_CheckEQ(_qkv_hidden_sizes.size(), static_cast<size_t>(3), "Attention fusion: invalid qkv hidden sizes");
-
-        int64_t v_hidden_size = 0;
-        for (auto h: _qkv_hidden_sizes) {
-            if (h != qk_hidden_size) {
-                v_hidden_size = h;
-            }
-        }
-        if (v_hidden_size == 0) {
-            v_hidden_size = qk_hidden_size;
-        }
-        _qkv_hidden_sizes[0] = qk_hidden_size;
-        _qkv_hidden_sizes[1] = qk_hidden_size;
-        _qkv_hidden_sizes[2] = v_hidden_size;
-    }
-
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE {
-        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
-        {
-            // get weight
-            weight_name = getInputName(net, matchedNodesIds[1], 1);
-            // std::cout << "attention: weight_name=" << weight_name << std::endl;
-
-            // get bias
-            bias_name = getInputName(net, matchedNodesIds[2], 0);
-            // std::cout << "attention: bias_name=" << bias_name << std::endl;
-
-            // get attrs
-            getAttributes(net, matchedNodesIds, num_heads, qkv_hidden_sizes, scale);
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE {
+        if (Subgraph::match(net, nodeId, matchedNodesIds)) {
+            // get attrs - qkv_hidden_sizes
+            auto fill_qkv_hidden_sizes = [&] (const int slice_node_id) {
+                int slice_start = extractConstant(net, matchedNodesIds[slice_node_id], 1).at<int>(0);
+                int slice_end = extractConstant(net, matchedNodesIds[slice_node_id], 2).at<int>(0);
+                int64_t hidden_size = static_cast<int64_t>(slice_end - slice_start);
+                qkv_hidden_sizes.push_back(hidden_size);
+            };
+            fill_qkv_hidden_sizes(slice_q);
+            fill_qkv_hidden_sizes(slice_k);
+            fill_qkv_hidden_sizes(slice_v);
+            CV_CheckEQ(qkv_hidden_sizes.size(), static_cast<size_t>(3), "ONNXSimplifier/Attention: invalid qkv hidden sizes");
+            CV_CheckEQ(int(qkv_hidden_sizes[0]), int(qkv_hidden_sizes[1]), "ONNXSimplifier/Attention: invalid qkv hidden sizes, q_hidden_size == v_hidden_size is required");
+            // get attrs - num_heads, scale
+            num_heads = extractConstant(net, matchedNodesIds[reshape_q], 1).at<int>(1);
+            scale = extractConstant(net, matchedNodesIds[div_q], 1).at<float>(0);
             // std::cout << "attention: num_heads=" << num_heads << ", qkv_hidden_sizes=" << qkv_hidden_sizes << ", scale=" << scale << std::endl;
 
+            // get names
+            weight_name = getInputName(net, matchedNodesIds[att_matmul], 1);
+            // std::cout << "attention: weight_name=" << weight_name << std::endl;
+            bias_name = getInputName(net, matchedNodesIds[att_add], 0);
+            // std::cout << "attention: bias_name=" << bias_name << std::endl;
             return true;
         }
         return false;
     }
 
-    virtual void finalize(const Ptr<ImportGraphWrapper>&,
+    virtual void finalize(const Ptr<ImportGraphWrapper>& net,
                           const Ptr<ImportNodeWrapper>& fusedNode,
                           std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE {
         // add attrs
@@ -403,12 +356,14 @@ class AttentionSubGraph : public Subgraph {
     }
 
  private:
-    // attrs
-    int64_t num_heads;
+    int att_matmul, att_add;
+    int slice_q, slice_k, slice_v;
+    int reshape_q, div_q;
+
     std::vector<int64_t> qkv_hidden_sizes; // order: [qk_hidden_size, qk_hidden_size, v_hidden_size]
+    int64_t num_heads;
     float scale;
 
-    // inputs
     std::string weight_name;
     std::string bias_name;
 };
