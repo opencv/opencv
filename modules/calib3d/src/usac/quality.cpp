@@ -106,14 +106,13 @@ protected:
     const Ptr<Error> error;
     const int points_size;
     const double threshold, k_msac;
-    float best_score, norm_thr, one_over_thr;
+    const float norm_thr, one_over_thr;
+    float best_score;
 public:
     MsacQualityImpl (int points_size_, double threshold_, const Ptr<Error> &error_, double k_msac_)
-            : error (error_), points_size (points_size_), threshold (threshold_), k_msac(k_msac_) {
-        best_score = std::numeric_limits<float>::max();
-        norm_thr = (float)threshold*k_msac;
-        one_over_thr = 1 / norm_thr;
-    }
+            : error (error_), points_size (points_size_), threshold (threshold_), k_msac(k_msac_),
+              norm_thr(static_cast<float>(threshold*k_msac)), one_over_thr(1.f/norm_thr),
+              best_score(std::numeric_limits<float>::max()) {}
 
     inline Score getScore (const Mat &model) const override {
         error->setModelParameters(model);
