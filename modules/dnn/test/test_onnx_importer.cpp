@@ -2694,9 +2694,8 @@ TEST_P(Test_ONNX_layers, YOLOv5n)
     Net net = readNet(weightPath);
 
     net.setInput(inp);
-    std::vector<Mat> outs;
-    net.forward(outs, net.getUnconnectedOutLayersNames());
-    Mat preds = outs[0].reshape(1, outs[0].size[1]); // [1, 25200, 85]
+    Mat preds = net.forward();
+    preds = preds.reshape(1, preds.size[1]);
 
     // Retrieve
     std::vector<int> classIds;
