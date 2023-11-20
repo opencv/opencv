@@ -62,17 +62,17 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto mean = ws_allocator.get_span<float>(loops);
                 kernels::fill<float>(stream, mean, 0.f);
 
-                auto stdev = ws_allocator.get_span<float>(loops);
-                kernels::fill<float>(stream, stdev, 0.f);
+                auto inv_stddev = ws_allocator.get_span<float>(loops);
+                kernels::fill<float>(stream, inv_stddev, 0.f);
 
-                kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size);
-                kernels::compute_normalization_scale(stream, stdev, mean, stdev, norm_size, epsilon);
+                kernels::reduce_mean_sqr_sum<T>(stream, mean, inv_stddev, input, norm_size);
+                kernels::compute_normalization_scale(stream, inv_stddev, mean, inv_stddev, norm_size, epsilon);
                 if (inputs.size() == 3) {
                     auto bias_wrapper = inputs[2].dynamicCast<wrapper_type>();
                     auto bias = bias_wrapper->getView();
-                    kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, bias, mean, stdev, norm_size);
+                    kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, bias, mean, inv_stddev, norm_size);
                 } else {
-                    kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, mean, stdev, norm_size);
+                    kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, mean, inv_stddev, norm_size);
                 }
             }
         }
