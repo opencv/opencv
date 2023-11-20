@@ -2725,8 +2725,8 @@ TEST_P(Test_ONNX_layers, YOLOv5n)
         double w = det[2];
         double h = det[3];
         // [x1, y1, x2, y2]
-        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
-                                cx + 0.5 * w, cy + 0.5 * h));
+        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h, 
+                               cx + 0.5 * w, cy + 0.5 * h));
         classIds.push_back(maxLoc.x);
         confidences.push_back(conf);
     }
