@@ -250,15 +250,16 @@ class Builder:
             cmake_vars['BUILD_SHARED_LIBS'] = "ON"
 
         if self.config.modules_list is not None:
-            cmd.append("-DBUILD_LIST='%s'" % self.config.modules_list)
+            cmake_vars['BUILD_LIST'] = '%s' % self.config.modules_list
 
         if self.config.extra_modules_path is not None:
-            cmd.append("-DOPENCV_EXTRA_MODULES_PATH='%s'" % self.config.extra_modules_path)
+            cmake_vars['OPENCV_EXTRA_MODULES_PATH'] = '%s' % self.config.extra_modules_path
 
         if self.use_ccache == True:
-            cmd.append("-DNDK_CCACHE=ccache")
+            cmake_vars['NDK_CCACHE'] = 'ccache'
         if do_install:
-            cmd.extend(["-DBUILD_TESTS=ON", "-DINSTALL_TESTS=ON"])
+            cmake_vars['BUILD_TESTS'] = "ON"
+            cmake_vars['INSTALL_TESTS'] = "ON"
 
         cmake_vars.update(abi.cmake_vars)
         cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
