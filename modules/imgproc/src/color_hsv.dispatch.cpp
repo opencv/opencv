@@ -10,6 +10,7 @@
 
 #include "color_hsv.simd.hpp"
 #include "color_hsv.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
+#include <atomic>
 
 namespace cv {
 
@@ -275,15 +276,16 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
     if(_src.depth() == CV_8U)
     {
         static std::mutex mtx;
-        {
-            std::unique_lock<std::mutex> lock(mtx);
-            static UMat sdiv_data;
-            static UMat hdiv_data180;
-            static UMat hdiv_data256;
-            static int combined_table[256];
-            static volatile bool initialized180 = false, initialized256 = false;
-            static volatile bool initialized = hrange == 180 ? initialized180 : initialized256;
+        static UMat sdiv_data;
+        static UMat hdiv_data180;
+        static UMat hdiv_data256;
+        static int combined_table[256];
+        static std::atomic<bool> initialized180(false), initialized256(false);
+        std::atomic<bool>& initialized = hrange == 180 ? initialized180 : initialized256;
 
+        if (!initialized)
+        {
+            std::lock_guard<std::mutex> lock(mtx);
             if (!initialized)
             {
                 int * const hdiv_table = hrange == 180 ? combined_table : &combined_table[128], hsv_shift = 12;
@@ -304,13 +306,13 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
                     hdiv_table[i] = saturate_cast<int>(v/(6.*i));
 
                 Mat(1, 256, CV_32SC1, hdiv_table).copyTo(hdiv_data);
-                initialized = true;
+                initialized.store(true);
             }
-
-            h.setArg(ocl::KernelArg::PtrReadOnly(sdiv_data));
-            h.setArg(hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
-                             ocl::KernelArg::PtrReadOnly(hdiv_data180));
         }
+
+        h.setArg(ocl::KernelArg::PtrReadOnly(sdiv_data));
+        h.setArg(hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
+                                 ocl::KernelArg::PtrReadOnly(hdiv_data180));
     }
 
     return h.run();
