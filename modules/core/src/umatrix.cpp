@@ -1166,7 +1166,6 @@ void UMat::copyTo(OutputArray _dst) const
     _dst.create( dims, size.p, type() );
 #ifdef HAVE_OPENCL
     ocl::OpenCLExecutionContext& currentExecCtx = ocl::OpenCLExecutionContext::getCurrent();
-    CV_Assert(!currentExecCtx.empty());
 #endif
     if( _dst.isUMat() )
     {
@@ -1177,25 +1176,46 @@ void UMat::copyTo(OutputArray _dst) const
 
 #ifdef HAVE_OPENCL
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxDst = std::static_pointer_cast<ocl::OpenCLExecutionContext>(dst.u->allocatorContext);
-        CV_Assert(pExecCtxDst && !pExecCtxDst->empty());
-
-        if(pExecCtxDst->getContext().ptr() != currentExecCtx.getContext().ptr())
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxSrc = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
+        if(pExecCtxDst &&
+                (
+                        (currentExecCtx.empty() && !pExecCtxDst->empty())
+                        || (!currentExecCtx.empty() && pExecCtxDst->empty())
+                        || (pExecCtxDst->getContext().ptr() != currentExecCtx.getContext().ptr())
+                ))
             CV_Error(cv::Error::StsBadArg,  "OpenCL: destination doesn't belong to the current context.");
 #endif
-        if (u->currAllocator == dst.u->currAllocator)  {
+        if (u->currAllocator == dst.u->currAllocator) {
             dst.ndoffset(dstofs);
             dstofs[dims-1] *= esz;
-            u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
-            return;
+#ifdef HAVE_OPENCL
+            if(pExecCtxSrc &&
+                    (
+                            (currentExecCtx.empty() && !pExecCtxSrc->empty())
+                            || (!currentExecCtx.empty() && pExecCtxSrc->empty())
+                            || pExecCtxSrc->getContext().ptr() == currentExecCtx.getContext().ptr()
+                    ))  {
+#else
+                u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
+                return;
+#endif
+#ifdef HAVE_OPENCL
+            }
+#endif
         }
     }
+
 
     Mat dst = _dst.getMat();
     {
 #ifdef HAVE_OPENCL
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxSrc = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-        CV_Assert(pExecCtxSrc && !pExecCtxSrc->empty());
-        if(pExecCtxSrc->getContext().ptr() != currentExecCtx.getContext().ptr())  {
+        if(pExecCtxSrc &&
+                (
+                        (currentExecCtx.empty() && !pExecCtxSrc->empty())
+                        || (!currentExecCtx.empty() && pExecCtxSrc->empty())
+                        || pExecCtxSrc->getContext().ptr() != currentExecCtx.getContext().ptr()
+                ))  {
             ocl::OpenCLExecutionContextScope scope(*pExecCtxSrc.get());
             u->currAllocator->download(u, dst.ptr(), dims, sz, srcofs, step.p, dst.step.p);
         }
@@ -1240,33 +1260,43 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
                              ocl::memopTypeToStr(depth()), cn, mcn,
                              haveDstUninit ? " -D HAVE_DST_UNINIT" : "");
 
-
         UMat mask = _mask.getUMat();
 
         ocl::OpenCLExecutionContext& currentExecCtx = ocl::OpenCLExecutionContext::getCurrent();
-        CV_Assert(!currentExecCtx.empty());
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxSrc = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-        CV_Assert(pExecCtxSrc && !pExecCtxSrc->empty());
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxDst = std::static_pointer_cast<ocl::OpenCLExecutionContext>(dst.u->allocatorContext);
-        CV_Assert(pExecCtxDst && !pExecCtxDst->empty());
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxMask = std::static_pointer_cast<ocl::OpenCLExecutionContext>(mask.u->allocatorContext);
-        CV_Assert(pExecCtxMask && !pExecCtxMask->empty());
 
         cv::UMat corrected_src;
         cv::UMat corrected_dst;
         cv::UMat corrected_mask;
 
-        if(pExecCtxSrc->getContext().ptr() != currentExecCtx.getContext().ptr())
+        if(pExecCtxSrc &&
+                (
+                    (currentExecCtx.empty() && !pExecCtxSrc->empty())
+                    || (!currentExecCtx.empty() && pExecCtxSrc->empty())
+                    || (pExecCtxSrc->getContext().ptr() != currentExecCtx.getContext().ptr())
+                ))
             corrected_src = this->clone();
         else
             corrected_src = *this;
 
-        if(pExecCtxDst->getContext().ptr() != currentExecCtx.getContext().ptr())
+        if(pExecCtxDst &&
+                (
+                        (currentExecCtx.empty() && !pExecCtxDst->empty())
+                        || (!currentExecCtx.empty() && pExecCtxDst->empty())
+                        || (pExecCtxDst->getContext().ptr() != currentExecCtx.getContext().ptr())
+                ))
             corrected_dst = dst.clone();
         else
             corrected_dst = dst;
 
-        if(pExecCtxMask ->getContext().ptr() != currentExecCtx.getContext().ptr())
+        if(pExecCtxMask &&
+                (
+                        (currentExecCtx.empty() && !pExecCtxMask->empty())
+                        || (!currentExecCtx.empty() && pExecCtxMask->empty())
+                        || (pExecCtxMask ->getContext().ptr() != currentExecCtx.getContext().ptr())
+                ))
             corrected_mask = mask.clone();
         else
             corrected_mask = mask;
@@ -1320,14 +1350,17 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
 
         char cvt[2][50];
         ocl::OpenCLExecutionContext& currentExecCtx = ocl::OpenCLExecutionContext::getCurrent();
-        CV_Assert(!currentExecCtx.empty());
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxSrc = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-        CV_Assert(pExecCtxSrc && !pExecCtxSrc->empty());
 
         cv::UMat src = *this;
         cv::UMat corrected_src;
 
-        if(pExecCtxSrc->getContext().ptr() != currentExecCtx.getContext().ptr())
+        if(pExecCtxSrc &&
+                (
+                        (currentExecCtx.empty() && !pExecCtxSrc->empty())
+                        || (!currentExecCtx.empty() && pExecCtxSrc->empty())
+                        || (pExecCtxSrc->getContext().ptr() != currentExecCtx.getContext().ptr())
+                ))
             corrected_src = src.clone();
         else
             corrected_src = src;
@@ -1392,9 +1425,6 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
                              ocl::memopTypeToStr(kertp), rowsPerWI,
                              ocl::memopTypeToStr(CV_MAKETYPE(d, scalarcn)),
                              ocl::memopTypeToStr(d), kercn);
-
-        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-        ocl::OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext::getCurrent());
 
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
