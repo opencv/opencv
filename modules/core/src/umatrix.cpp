@@ -1176,7 +1176,7 @@ void UMat::copyTo(OutputArray _dst) const
 
 #ifdef HAVE_OPENCL
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxDst = std::static_pointer_cast<ocl::OpenCLExecutionContext>(dst.u->allocatorContext);
-
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxSrc = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
         if(pExecCtxDst &&
                 (
                         (currentExecCtx.empty() && !pExecCtxDst->empty())
@@ -1185,13 +1185,26 @@ void UMat::copyTo(OutputArray _dst) const
                 ))
             CV_Error(cv::Error::StsBadArg,  "OpenCL: destination doesn't belong to the current context.");
 #endif
-        if (u->currAllocator == dst.u->currAllocator)  {
+        if (u->currAllocator == dst.u->currAllocator) {
             dst.ndoffset(dstofs);
             dstofs[dims-1] *= esz;
-            u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
-            return;
+#ifdef HAVE_OPENCL
+            if(pExecCtxSrc &&
+                    (
+                            (currentExecCtx.empty() && !pExecCtxSrc->empty())
+                            || (!currentExecCtx.empty() && pExecCtxSrc->empty())
+                            || pExecCtxSrc->getContext().ptr() == currentExecCtx.getContext().ptr()
+                    ))  {
+#else
+                u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
+                return;
+#endif
+#ifdef HAVE_OPENCL
+            }
+#endif
         }
     }
+
 
     Mat dst = _dst.getMat();
     {
