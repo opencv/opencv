@@ -2594,22 +2594,32 @@ TEST_P(Test_ONNX_layers, YOLOx)
     std::string imgPath = _tf("../dog_orig_size.png");
 
     Size targetSize{640, 640};
-    float conf_threshold = 0.25;
-    float iou_threshold = 0.45;
+    float conf_threshold = 0.50;
+    float iou_threshold = 0.50;
 
-    // Reference, which is collected with input size of 640x640
     std::vector<int> refClassIds{1, 16, 7};
-    std::vector<float> refScores{0.9642f, 0.9205f, 0.7558f};
+    std::vector<float> refScores{0.96f, 0.91f, 0.66f};
     // [x1, y1, x2, y2] x 3
     std::vector<Rect2d> refBoxes{
-        Rect2d(101.8698, 143.0301, 472.6174, 465.4247),
-        Rect2d(110.7208, 247.7161, 257.6797, 604.0322),
-        Rect2d(384.4736,  82.4499, 579.6175, 190.9493)};
-
+        Rect2d(104.62, 181.28, 470.95, 428.22),
+        Rect2d(112.32, 264.88, 258.11, 527.31),
+        Rect2d(389.63, 144.63, 576.66, 223.18),
+        };
 
     Mat img = imread(imgPath);
-    // Note: this image tranformation is not the same as in YOLOX repo.
-    Mat inp = blobFromImage(img, 1.0, targetSize, Scalar(0, 0, 0), true, false);
+
+    Image2BlobParams paramYolox(
+        Scalar::all(1),
+        targetSize,
+        Scalar::all(0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NCHW,
+        DNN_PMODE_LETTERBOX,
+        Scalar::all(144)
+        );
+
+    Mat inp = blobFromImageWithParams(img, paramYolox);
 
     Net net = readNet(weightPath);
 
@@ -2662,6 +2672,7 @@ TEST_P(Test_ONNX_layers, YOLOx)
     std::vector<int> keep_classIds;
     std::vector<float> keep_confidences;
     std::vector<Rect2d> keep_boxes;
+
     for (auto i : keep_idx)
     {
         keep_classIds.push_back(classIds[i]);
@@ -2669,7 +2680,7 @@ TEST_P(Test_ONNX_layers, YOLOx)
         keep_boxes.push_back(boxes[i]);
     }
 
-    normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes, "", 0.0, 1.0e-1, 3.0e+0);
+    normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes, "", 0.0, 1.0e-1, 1.0e-1);
 }
 
 // This test is mainly to test:
