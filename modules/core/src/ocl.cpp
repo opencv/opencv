@@ -5825,7 +5825,6 @@ public:
                 u->markHostCopyObsolete(true);
             }
 
-            std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx((u && u->allocatorContext) ? std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext) : nullptr);
             if (pExecCtx && u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_USED)
             {
                 ocl::Context& ctx = pExecCtx->getContext();
