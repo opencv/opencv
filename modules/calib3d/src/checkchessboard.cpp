@@ -51,9 +51,9 @@ using namespace std;
 
 static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point > > & contours, const std::vector< cv::Vec4i > & hierarchy, std::vector<std::pair<float, int> >& quads, int class_id)
 {
-    const float min_aspect_ratio = 0.5f;
-    const float max_aspect_ratio = 1.5f;
-    const float min_box_size = 25.0f;
+    const float min_aspect_ratio = 0.3f;
+    const float max_aspect_ratio = 3.0f;
+    const float min_box_size = 10.0f;
 
     for (size_t i = 0; i < contours.size(); ++i)
     {
@@ -63,7 +63,7 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
         const std::vector< cv::Point > & c = contours[i];
         cv::RotatedRect box = cv::minAreaRect(c);
 
-        float box_size = MIN(box.size.width, box.size.height);
+        float box_size = MAX(box.size.width, box.size.height);
         if(box_size < min_box_size)
         {
             continue;
