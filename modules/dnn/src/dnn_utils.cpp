@@ -17,9 +17,9 @@ Image2BlobParams::Image2BlobParams():scalefactor(Scalar::all(1.0)), size(Size())
 {}
 
 Image2BlobParams::Image2BlobParams(const Scalar& scalefactor_, const Size& size_, const Scalar& mean_, bool swapRB_,
-                         int ddepth_, DataLayout datalayout_, ImagePaddingMode mode_):
+                         int ddepth_, DataLayout datalayout_, ImagePaddingMode mode_, Scalar fillvalue_):
         scalefactor(scalefactor_), size(size_), mean(mean_), swapRB(swapRB_), ddepth(ddepth_),
-        datalayout(datalayout_), paddingmode(mode_)
+        datalayout(datalayout_), paddingmode(mode_), paddingmodefillvalue(fillvalue_)
 {}
 
 void getVector(InputArrayOfArrays images_, std::vector<Mat>& images) {
@@ -196,7 +196,7 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
                 int bottom = size.height - top - rh;
                 int left = (size.width - rw)/2;
                 int right = size.width - left - rw;
-                copyMakeBorder(images[i], images[i], top, bottom, left, right, BORDER_CONSTANT);
+                copyMakeBorder(images[i], images[i], top, bottom, left, right, BORDER_CONSTANT, param.paddingmodefillvalue);
             }
             else
             {
