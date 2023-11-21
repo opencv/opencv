@@ -3746,7 +3746,7 @@ int Kernel::set(int i, const KernelArg& arg)
     cl_int status = 0;
     if( arg.m )
     {
-        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(arg.m->u->allocatorContext);
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx(arg.m->u && arg.m->u->allocatorContext ? std::static_pointer_cast<ocl::OpenCLExecutionContext>(arg.m->u->allocatorContext) : nullptr);
         ocl::OpenCLExecutionContext& currentExecCtx = ocl::OpenCLExecutionContext::getCurrent();
         if(pExecCtx && ((currentExecCtx.empty() && !pExecCtx->empty()) || (pExecCtx->getContext().ptr() != currentExecCtx.getContext().ptr())))
             CV_Error(cv::Error::StsBadArg,  "OpenCL: buffer doesn't belong to the current context.");
@@ -3773,7 +3773,7 @@ int Kernel::set(int i, const KernelArg& arg)
         }
 
 #ifdef HAVE_OPENCL_SVM
-        if ((arg.m->u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
+        if (pExecCtx && (arg.m->u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
         {
             const Context& ctx = pExecCtx->getContext();
             const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
@@ -5700,6 +5700,9 @@ public:
             return;             // avoid any OpenCL calls
 #endif
 
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx(u->allocatorContext ? std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext) : nullptr);
+        ocl::OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext());
+
         if(u->tempUMat())
         {
             CV_Assert(u->origdata);
@@ -5821,27 +5824,23 @@ public:
                 u->data = 0;
                 u->markHostCopyObsolete(true);
             }
-            if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_USED)
+
+            std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx((u && u->allocatorContext) ? std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext) : nullptr);
+            if (pExecCtx && u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_USED)
             {
-                std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-                CV_Assert(pExecCtx);
                 ocl::Context& ctx = pExecCtx->getContext();
                 CV_Assert(ctx.getImpl());
                 ctx.getImpl()->getBufferPool().release((cl_mem)u->handle);
             }
-            else if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED)
+            else if (pExecCtx && u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED)
             {
-                std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-                CV_Assert(pExecCtx);
                 ocl::Context& ctx = pExecCtx->getContext();
                 CV_Assert(ctx.getImpl());
                 ctx.getImpl()->getBufferPoolHostPtr().release((cl_mem)u->handle);
             }
 #ifdef HAVE_OPENCL_SVM
-            else if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED)
+            else if (pExecCtx && u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED)
             {
-                std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-                CV_Assert(pExecCtx);
                 ocl::Context& ctx = pExecCtx->getContext();
                 if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_SYSTEM)
                 {
@@ -5881,6 +5880,8 @@ public:
     void map(UMatData* u, AccessFlag accessFlags) const CV_OVERRIDE
     {
         CV_Assert(u && u->handle);
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx(u->allocatorContext ? std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext) : nullptr);
+        ocl::OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext());
 
         if (!!(accessFlags & ACCESS_WRITE))
             u->markDeviceCopyObsolete(true);
@@ -5972,6 +5973,8 @@ public:
         CV_Assert(u->handle != 0);
 
         UMatDataAutoLock autolock(u);
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx(u->allocatorContext ? std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext) : nullptr);
+        ocl::OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext());
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
         cl_int retval = 0;
@@ -6123,6 +6126,8 @@ public:
             return;
         }
         CV_Assert( u->handle != 0 );
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx(u->allocatorContext ? std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext) : nullptr);
+        ocl::OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext());
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
@@ -6267,6 +6272,9 @@ public:
         }
 
         CV_Assert( u->handle != 0 );
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx(u->allocatorContext ? std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext) : nullptr);
+        ocl::OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext());
+
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
 #ifdef HAVE_OPENCL_SVM
@@ -6616,7 +6624,13 @@ public:
             }
             for (std::deque<UMatData*>::const_iterator i = q.begin(); i != q.end(); ++i)
             {
-                deallocate_(*i);
+                std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx(*i && (*i)->allocatorContext ? std::static_pointer_cast<ocl::OpenCLExecutionContext>((*i)->allocatorContext) : nullptr);
+                if(pExecCtx) {
+                    ocl::OpenCLExecutionContextScope scope(*pExecCtx.get());
+                    deallocate_(*i);
+                } else {
+                    deallocate_(*i);
+                }
             }
         }
     }
