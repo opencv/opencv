@@ -79,9 +79,8 @@ int Subgraph::getInputNodeId(const Ptr<ImportGraphWrapper>& net,
 bool Subgraph::match(const Ptr<ImportGraphWrapper>& net,
                      int nodeToMatch, int targetNodeId,
                      std::vector<std::pair<int, int>>& matchings) {
-    const auto it = std::find_if(matchings.begin(), matchings.end(), [&](const std::pair<int, int>& match){ return match.first == targetNodeId; });
-    if (it != matchings.end())
-        return it->second == nodeToMatch;
+    if (std::find_if(matchings.begin(), matchings.end(), [&](const std::pair<int, int>& match){ return match.first == targetNodeId; }) != matchings.end())
+        return true;
 
     if (nodes[targetNodeId].empty()) {
         matchings.push_back({targetNodeId, nodeToMatch});
@@ -136,7 +135,7 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net,
     newMatchings.push_back({targetNodeId, nodeToMatch});
     for (const auto& it : newMatchings)
     {
-        if (std::find(matchings.begin(), matchings.end(), it) == matchings.end())
+        if (std::find_if(matchings.begin(), matchings.end(), [&](const std::pair<int, int>& match){ return match.first == it.first; }) == matchings.end())
         {
             matchings.push_back(it);
         }
@@ -153,7 +152,7 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
     std::vector<std::pair<int, int> > matchings;
     bool matched = match(net, nodeId, nodes.size() - 1, matchings);
 
-    if (!matched || matchings.size() != nodes.size())
+    if (!matched)
         return false;
 
     // Sort matched by pattern nodes order.
