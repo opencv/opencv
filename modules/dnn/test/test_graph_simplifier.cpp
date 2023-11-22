@@ -35,6 +35,7 @@ class Test_Graph_Simplifier : public ::testing::Test {
 
 TEST_F(Test_Graph_Simplifier, GeluSubGraph) {
     test("gelu", "Gelu");
+    test("bias_gelu", std::vector<std::string>{"Gelu", "NaryEltwise"});
 }
 
 TEST_F(Test_Graph_Simplifier, GeluApproximationSubGraph) {
