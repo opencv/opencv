@@ -987,10 +987,6 @@ if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_ANDROID_EXAMPLES OR INSTA
   add_subdirectory(samples)
 endif()
 
-if(ANDROID)
-  add_subdirectory(platforms/android/service)
-endif()
-
 # ----------------------------------------------------------------------------
 # Finalization: generate configuration-based files
 # ----------------------------------------------------------------------------
