@@ -180,15 +180,12 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         bool tranAorB = transA || transB;
-#ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            return axis == 1 && !tranAorB;
-#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !tranAorB) ||
                (backendId == DNN_BACKEND_WEBNN && axis == 1 && !tranAorB) ||
                backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !tranAorB);
     }
 
@@ -311,7 +308,7 @@ public:
                         }
 
                         v_float32x4 s = v_reduce_sum4(vs0, vs1, vs2, vs3);
-                        s += v_load(biasptr + i);
+                        s = v_add(s, v_load(biasptr + i));
                         v_store(dptr + i, s);
                     }
             #endif
@@ -630,8 +627,10 @@ public:
 
             if(input_wrapper->getRank() == inp2Dim)
                 return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), oriMat, biasMat_, transA, transB);
-            else
+            else {
+                CV_LOG_INFO(NULL, "DNN/CUDA: no implementation for MatMul with rank " << input_wrapper->getRank());
                 return Ptr<BackendNode>();
+            }
         }
 
         auto flatten_start_axis = normalize_axis(axis, input_wrapper->getRank());
@@ -800,17 +799,26 @@ public:
         if (nodes.size() == 2)
         {
             auto& inp2 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, false, false);
+            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, transA, transB);
         }
         else
         {
-            std::vector<int64_t> data = {(int64_t)ieInpNode->get_shape()[0], (int64_t)blobs[0].size[1]};
-            auto new_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, data.data());
-            auto inp = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, new_shape, true);
+            std::vector<int> shape(1 + normalize_axis(axis, ieInpNode.get_shape().size()), 0);
+            shape[shape.size() - 1] = -1;
+            auto inp = std::make_shared<ngraph::op::v1::Reshape>(
+                ieInpNode,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{shape.size()}, shape.data()),
+                true
+            );
 
-            std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
+            std::vector<size_t> weight_shape;
+            if (isMatMul) {
+                weight_shape = getShape<size_t>(oriMat);
+            } else {
+                weight_shape = {(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
+            }
             auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
-            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, false, true);
+            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, transA, transB);
         }
 
         if (bias) {

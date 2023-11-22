@@ -160,4 +160,13 @@ TEST(NanoTrack, accuracy_NanoTrack_V2)
     checkTrackingAccuracy(tracker, 0.69);
 }
 
+TEST(vittrack, accuracy_vittrack)
+{
+    std::string model = cvtest::findDataFile("dnn/onnx/models/vitTracker.onnx");
+    cv::TrackerVit::Params params;
+    params.net = model;
+    cv::Ptr<Tracker> tracker = TrackerVit::create(params);
+    checkTrackingAccuracy(tracker, 0.67);
+}
+
 }}  // namespace opencv_test::

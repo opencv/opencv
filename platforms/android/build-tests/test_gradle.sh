@@ -29,6 +29,9 @@ rm -rf "test-gradle"
 cp -rp "${SDK_DIR}" "test-gradle"
 echo "Cloning OpenCV Android SDK ... Done!"
 
+echo "Force Current CMake for Gradle project"
+# drop cmake bin name and "bin" folder from path
+echo "cmake.dir=$(dirname $(dirname $(which cmake)))" > "test-gradle/samples/local.properties"
 echo "Run gradle ..."
 (cd "test-gradle/samples"; ./gradlew -i assemble)
 

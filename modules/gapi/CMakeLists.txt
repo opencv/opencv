@@ -162,6 +162,7 @@ set(gapi_srcs
 
     # ONNX backend
     src/backends/onnx/gonnxbackend.cpp
+    src/backends/onnx/dml_ep.cpp
 
     # Render backend
     src/backends/render/grenderocv.cpp
@@ -188,6 +189,9 @@ set(gapi_srcs
     src/backends/onnx/bindings_onnx.cpp
     src/backends/ov/bindings_ov.cpp
     src/backends/python/gpythonbackend.cpp
+
+    # Queue Streaming source
+    src/streaming/queue_source.cpp
 
     # OpenVPL Streaming source
     src/streaming/onevpl/source.cpp
@@ -363,9 +367,16 @@ if(WIN32)
   ocv_target_link_libraries(${the_module} PRIVATE wsock32 ws2_32)
 endif()
 
+if(HAVE_DIRECTML)
+  ocv_target_compile_definitions(${the_module} PRIVATE HAVE_DIRECTML=1)
+endif()
+
 if(HAVE_ONNX)
   ocv_target_link_libraries(${the_module} PRIVATE ${ONNX_LIBRARY})
   ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ONNX=1)
+  if(HAVE_ONNX_DML)
+    ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ONNX_DML=1)
+  endif()
   if(TARGET opencv_test_gapi)
     ocv_target_compile_definitions(opencv_test_gapi PRIVATE HAVE_ONNX=1)
     ocv_target_link_libraries(opencv_test_gapi PRIVATE ${ONNX_LIBRARY})

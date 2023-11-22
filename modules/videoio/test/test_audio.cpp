@@ -14,7 +14,7 @@ typedef std::tuple<std::string, int, int, double, VideoCaptureAPIs> param;
 class AudioBaseTest
 {
 protected:
-    AudioBaseTest(){};
+    AudioBaseTest(){}
     void getValidAudioData()
     {
         const double step = 3.14/22050;
@@ -157,7 +157,7 @@ public:
             params = {  CAP_PROP_AUDIO_STREAM, 0,
                         CAP_PROP_VIDEO_STREAM, 0,
                         CAP_PROP_AUDIO_DATA_DEPTH, CV_16S };
-        };
+        }
 
     void doTest()
     {
@@ -186,6 +186,7 @@ public:
                 double audio_shift = cap.get(CAP_PROP_AUDIO_SHIFT_NSEC);
                 double video0_timestamp = cap.get(CAP_PROP_POS_MSEC) * 1e-3;
                 audio0_timestamp = video0_timestamp + audio_shift * 1e-9;
+
                 std::cout << "video0 timestamp: " << video0_timestamp << "  audio0 timestamp: " << audio0_timestamp << " (audio shift nanoseconds: " << audio_shift << " , seconds: " << audio_shift * 1e-9 << ")" << std::endl;
             }
             ASSERT_TRUE(cap.retrieve(videoFrame));
@@ -228,7 +229,7 @@ public:
                 EXPECT_NEAR(
                         cap.get(CAP_PROP_AUDIO_POS) / samplePerSecond + audio0_timestamp,
                         cap.get(CAP_PROP_POS_MSEC) * 1e-3,
-                        (1.0 / fps) * 0.3)
+                        (1.0 / fps) * 0.6)
                     << "CAP_PROP_AUDIO_POS=" << cap.get(CAP_PROP_AUDIO_POS) << " CAP_PROP_POS_MSEC=" << cap.get(CAP_PROP_POS_MSEC);
             }
             if (frame != 0 && frame != numberOfFrames-1 && audioData[0].size() != (size_t)numberOfSamples)

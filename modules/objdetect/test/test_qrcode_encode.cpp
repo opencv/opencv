@@ -264,7 +264,8 @@ TEST(Objdetect_QRCode_Encode_Decode, regression)
                 int true_capacity = establishCapacity(mode, version, cur_capacity);
 
                 std::string input_info = symbol_set;
-                std::random_shuffle(input_info.begin(),input_info.end());
+                std::mt19937 rand_gen {1};
+                std::shuffle(input_info.begin(), input_info.end(), rand_gen);
                 int count = 0;
                 if((int)input_info.length() > true_capacity)
                 {
@@ -390,15 +391,8 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
         std::string symbol_set = config["symbols_set"];
 
         std::string input_info = symbol_set;
-#if defined CV_CXX11
-        // std::random_shuffle is deprecated since C++11 and removed in C++17.
-        // Use manually constructed RNG with a fixed seed and std::shuffle instead.
         std::mt19937 rand_gen {1};
         std::shuffle(input_info.begin(), input_info.end(), rand_gen);
-#else
-        SeededRandFunctor<1> rand_gen;
-        std::random_shuffle(input_info.begin(), input_info.end(), rand_gen);
-#endif
         for (int j = min_stuctures_num; j < max_stuctures_num; j++)
         {
             QRCodeEncoder::Params params;
@@ -551,6 +545,24 @@ TEST(Objdetect_QRCode_Encode_Decode, regression_issue22029)
         {
             ASSERT_EQ((uint8_t)255, qrimg.at<uint8_t>(timing_pos, i)) << "i=" << i;
         }
+    }
+}
+
+// This test reproduces issue https://github.com/opencv/opencv/issues/24366 only in a loop
+TEST(Objdetect_QRCode_Encode_Decode, auto_version_pick)
+{
+    cv::QRCodeEncoder::Params params;
+    params.correction_level = cv::QRCodeEncoder::CORRECT_LEVEL_L;
+    params.mode = cv::QRCodeEncoder::EncodeMode::MODE_AUTO;
+
+    cv::Ptr<cv::QRCodeEncoder> encoder = cv::QRCodeEncoder::create(params);
+
+    for (int len = 1; len < 19; len++) {
+        std::string input;
+        input.resize(len);
+        cv::randu(Mat(1, len, CV_8U, &input[0]), 'a', 'z' + 1);
+        cv::Mat qrcode;
+        encoder->encode(input, qrcode);
     }
 }
 

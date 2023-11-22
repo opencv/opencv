@@ -913,4 +913,19 @@ INSTANTIATE_TEST_CASE_P(
     )
 );
 
+TEST(Drawing, circle_overflow)
+{
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+    cv::Mat1b matrix = cv::Mat1b::zeros(600, 600);
+    cv::Scalar kBlue = cv::Scalar(0, 0, 255);
+    cv::circle(matrix, cv::Point(275, -2147483318), 2147483647, kBlue, 1, 8, 0);
+}
+
+TEST(Drawing, circle_memory_access)
+{
+    cv::Mat1b matrix = cv::Mat1b::zeros(10, 10);
+    cv::Scalar kBlue = cv::Scalar(0, 0, 255);
+    cv::circle(matrix, cv::Point(-1, -1), 0, kBlue, 2, 8, 16);
+}
+
 }} // namespace

@@ -176,7 +176,7 @@ public:
 //-------------------------- ESSENTIAL MATRIX -----------------------
 class EssentialNonMinimalSolverViaF : public NonMinimalSolver {
 public:
-static Ptr<EssentialNonMinimalSolverViaF> create(const Mat &points_, const cv::Mat &K1, const Mat &K2);
+    static Ptr<EssentialNonMinimalSolverViaF> create(const Mat &points_, const cv::Mat &K1, const Mat &K2);
 };
 
 class EssentialNonMinimalSolverViaT : public NonMinimalSolver {
@@ -210,12 +210,12 @@ public:
 class Score {
 public:
     int inlier_number;
-    double score;
+    float score;
     Score () { // set worst case
         inlier_number = 0;
-        score = std::numeric_limits<double>::max();
+        score = std::numeric_limits<float>::max();
     }
-    Score (int inlier_number_, double score_) { // copy constructor
+    Score (int inlier_number_, float score_) { // copy constructor
         inlier_number = inlier_number_;
         score = score_;
     }
@@ -254,7 +254,7 @@ public:
     // get @inliers of the @model for given threshold
     virtual int getInliers (const Mat &model, std::vector<int> &inliers, double thr) const = 0;
     // Set the best score, so evaluation of the model can terminate earlier
-    virtual void setBestScore (double best_score_) = 0;
+    virtual void setBestScore (float best_score_) = 0;
     // set @inliers_mask: true if point i is inlier, false - otherwise.
     virtual int getInliers (const Mat &model, std::vector<bool> &inliers_mask) const = 0;
     virtual int getPointsSize() const = 0;
@@ -432,7 +432,7 @@ public:
 };
 
 class EssentialEstimator : public Estimator {
-public :
+public:
     static Ptr<EssentialEstimator> create (const Ptr<MinimalSolver> &min_solver_,
             const Ptr<NonMinimalSolver> &non_min_solver_, const Ptr<Degeneracy> &degeneracy_);
 };
@@ -542,21 +542,11 @@ public:
             int cell_size_x_img1_, int cell_size_y_img1_,
             int cell_size_x_img2_, int cell_size_y_img2_, int max_neighbors);
 };
-class GridNeighborhoodGraph2Images : public NeighborhoodGraph {
-public:
-    static Ptr<GridNeighborhoodGraph2Images> create(const Mat &points, int points_size,
-        float cell_size_x_img1_, float cell_size_y_img1_, float cell_size_x_img2_, float cell_size_y_img2_);
-};
 
 ////////////////////////////////////// UNIFORM SAMPLER ////////////////////////////////////////////
 class UniformSampler : public Sampler {
 public:
     static Ptr<UniformSampler> create(int state, int sample_size_, int points_size_);
-};
-
-class QuasiUniformSampler : public Sampler {
-public:
-    static Ptr<QuasiUniformSampler> create(int state, int sample_size_, int points_size_);
 };
 
 /////////////////////////////////// PROSAC (SIMPLE) SAMPLER ///////////////////////////////////////

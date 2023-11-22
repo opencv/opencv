@@ -175,6 +175,8 @@ public:
                 Matx33d Bz(bz);
                 // Bz is rank 2, matrix, so epipole is its null-vector
                 Vec3d xy1 = Utils::getRightEpipole(Mat(Bz * (1/sqrt(norm_bz))));
+                const double one_over_xy1_norm = 1 / sqrt(xy1[0] * xy1[0] + xy1[1] * xy1[1] + xy1[2] * xy1[2]);
+                xy1 *= one_over_xy1_norm;
 
                 if (fabs(xy1(2)) < 1e-10) continue;
                 Mat_<double> E(3,3);
@@ -239,7 +241,8 @@ public:
             // (5) Compute the left eigenvectors of the action matrix
             Eigen::EigenSolver<Eigen::Matrix<double, 10, 10>> eigensolver(action_mat_eig);
             const Eigen::VectorXcd &eigenvalues = eigensolver.eigenvalues();
-            const auto * const eig_vecs_ = (double *) eigensolver.eigenvectors().real().data();
+            const Eigen::MatrixXcd eigenvectors = eigensolver.eigenvectors();
+            const auto * const eig_vecs_ = (double *) eigenvectors.data();
 #else
             Matx<double, 10, 10> A = constraint_mat.colRange(0, 10),
                              B = constraint_mat.colRange(10, 20), eliminated_mat;

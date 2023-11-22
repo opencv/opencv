@@ -3,17 +3,21 @@ __all__ = ("generate_typing_stubs", )
 from io import StringIO
 from pathlib import Path
 import re
-from typing import (Generator, Type, Callable, NamedTuple, Union, Set, Dict,
+from typing import (Callable, NamedTuple, Union, Set, Dict,
                     Collection, Tuple, List)
 import warnings
 
-from .ast_utils import get_enclosing_namespace, get_enum_module_and_export_name
+from .ast_utils import (get_enclosing_namespace,
+                        get_enum_module_and_export_name,
+                        for_each_function_overload,
+                        for_each_class)
 
 from .predefined_types import PREDEFINED_TYPES
 from .api_refinement import apply_manual_api_refinement
 
-from .nodes import (ASTNode, ASTNodeType, NamespaceNode, ClassNode, FunctionNode,
-                    EnumerationNode, ConstantNode)
+from .nodes import (ASTNode, ASTNodeType, NamespaceNode, ClassNode,
+                    FunctionNode, EnumerationNode, ConstantNode,
+                    ProtocolClassNode)
 
 from .nodes.type_node import (TypeNode, AliasTypeNode, AliasRefTypeNode,
                               AggregatedTypeNode, ASTNodeTypeNode,
@@ -98,6 +102,9 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
 
     output_stream = StringIO()
 
+    # Add empty __all__ dunder on top of the module
+    output_stream.write("__all__: list[str] = []\n\n")
+
     # Write required imports at the top of file
     _write_required_imports(required_imports, output_stream)
 
@@ -105,11 +112,14 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
 
     # NOTE: Enumerations require special handling, because all enumeration
     # constants are exposed as module attributes
-    has_enums = _generate_section_stub(StubSection("# Enumerations", EnumerationNode),
-                                       root, output_stream, 0)
+    has_enums = _generate_section_stub(
+        StubSection("# Enumerations", ASTNodeType.Enumeration), root,
+        output_stream, 0
+    )
     # Collect all enums from class level and export them to module level
     for class_node in root.classes.values():
-        if _generate_enums_from_classes_tree(class_node, output_stream, indent=0):
+        if _generate_enums_from_classes_tree(class_node, output_stream,
+                                             indent=0):
             has_enums = True
     # 2 empty lines between enum and classes definitions
     if has_enums:
@@ -127,14 +137,15 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
 
 class StubSection(NamedTuple):
     name: str
-    node_type: Type[ASTNode]
+    node_type: ASTNodeType
 
 
 STUB_SECTIONS = (
-    StubSection("# Constants", ConstantNode),
-    # StubSection("# Enumerations", EnumerationNode), # Skipped for now (special rules)
-    StubSection("# Classes", ClassNode),
-    StubSection("# Functions", FunctionNode)
+    StubSection("# Constants", ASTNodeType.Constant),
+    # Enumerations are skipped due to special handling rules
+    # StubSection("# Enumerations", ASTNodeType.Enumeration),
+    StubSection("# Classes", ASTNodeType.Class),
+    StubSection("# Functions", ASTNodeType.Function)
 )
 
 
@@ -243,9 +254,9 @@ def _generate_class_stub(class_node: ClassNode, output_stream: StringIO,
             else:
                 bases.append(base.export_name)
 
-        inheritance_str = "({})".format(
-            ', '.join(bases)
-        )
+        inheritance_str = f"({', '.join(bases)})"
+    elif isinstance(class_node, ProtocolClassNode):
+        inheritance_str = "(Protocol)"
     else:
         inheritance_str = ""
 
@@ -314,6 +325,10 @@ def _generate_constant_stub(constant_node: ConstantNode,
     export_name = extra_export_prefix + constant_node.export_name
     write_constant_to_stream(export_name)
     if generate_uppercase_version:
+        # Handle Python "magic" constants like __version__
+        if re.match(r"^__.*__$", export_name) is not None:
+            return export_name,
+
         uppercase_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", export_name).upper()
         if export_name != uppercase_name:
             write_constant_to_stream(uppercase_name)
@@ -429,7 +444,7 @@ def _generate_function_stub(function_node: FunctionNode,
     elif function_node.is_static:
         decorators.append(" " * indent + "@staticmethod")
     if len(function_node.overloads) > 1:
-        decorators.append(" " * indent + "@typing.overload")
+        decorators.append(" " * indent + "@_typing.overload")
 
     function_module = get_enclosing_namespace(function_node)
     function_module_name = function_module.full_export_name
@@ -537,30 +552,7 @@ def check_overload_presence(node: Union[NamespaceNode, ClassNode]) -> bool:
     return False
 
 
-def _for_each_class(node: Union[NamespaceNode, ClassNode]) \
-        -> Generator[ClassNode, None, None]:
-    for cls in node.classes.values():
-        yield cls
-        if len(cls.classes):
-            yield from _for_each_class(cls)
-
-
-def _for_each_function(node: Union[NamespaceNode, ClassNode]) \
-        -> Generator[FunctionNode, None, None]:
-    for func in node.functions.values():
-        yield func
-    for cls in node.classes.values():
-        yield from _for_each_function(cls)
-
-
-def _for_each_function_overload(node: Union[NamespaceNode, ClassNode]) \
-        -> Generator[FunctionNode.Overload, None, None]:
-    for func in _for_each_function(node):
-        for overload in func.overloads:
-            yield overload
-
-
-def _collect_required_imports(root: NamespaceNode) -> Set[str]:
+def _collect_required_imports(root: NamespaceNode) -> Collection[str]:
     """Collects all imports required for classes and functions typing stubs
     declarations.
 
@@ -568,8 +560,8 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
         root (NamespaceNode): Namespace node to collect imports for
 
     Returns:
-        Set[str]: Collection of unique `import smth` statements required for
-        classes and function declarations of `root` node.
+        Collection[str]: Collection of unique `import smth` statements required
+        for classes and function declarations of `root` node.
     """
 
     def _add_required_usage_imports(type_node: TypeNode, imports: Set[str]):
@@ -582,10 +574,11 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
     has_overload = check_overload_presence(root)
     # if there is no module-level functions with overload, check its presence
     # during class traversing, including their inner-classes
-    for cls in _for_each_class(root):
+    has_protocol = False
+    for cls in for_each_class(root):
         if not has_overload and check_overload_presence(cls):
             has_overload = True
-            required_imports.add("import typing")
+            required_imports.add("import typing as _typing")
         # Add required imports for class properties
         for prop in cls.properties:
             _add_required_usage_imports(prop.type_node, required_imports)
@@ -596,12 +589,15 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
                 required_imports.add(
                     "import " + base_namespace.full_export_name
                 )
+        if isinstance(cls, ProtocolClassNode):
+            has_protocol = True
 
     if has_overload:
-        required_imports.add("import typing")
+        required_imports.add("import typing as _typing")
     # Importing modules required to resolve functions arguments
-    for overload in _for_each_function_overload(root):
-        for arg in filter(lambda a: a.type_node is not None, overload.arguments):
+    for overload in for_each_function_overload(root):
+        for arg in filter(lambda a: a.type_node is not None,
+                          overload.arguments):
             _add_required_usage_imports(arg.type_node, required_imports)  # type: ignore
         if overload.return_type is not None:
             _add_required_usage_imports(overload.return_type.type_node,
@@ -611,7 +607,20 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
     if root_import in required_imports:
         required_imports.remove(root_import)
 
-    return required_imports
+    if has_protocol:
+        required_imports.add("import sys")
+    ordered_required_imports = sorted(required_imports)
+
+    # Protocol import always goes as last import statement
+    if has_protocol:
+        ordered_required_imports.append(
+            """if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol"""
+        )
+
+    return ordered_required_imports
 
 
 def _populate_reexported_symbols(root: NamespaceNode) -> None:
@@ -625,11 +634,15 @@ def _populate_reexported_symbols(root: NamespaceNode) -> None:
 
     _reexport_submodule(root)
 
-    # Special cases, symbols defined in possible pure Python submodules should be
+    root.reexported_submodules.append("typing")
+
+    # Special cases, symbols defined in possible pure Python submodules
+    # should be
     root.reexported_submodules_symbols["mat_wrapper"].append("Mat")
 
 
-def _write_reexported_symbols_section(module: NamespaceNode, output_stream: StringIO) -> None:
+def _write_reexported_symbols_section(module: NamespaceNode,
+                                      output_stream: StringIO) -> None:
     """Write re-export section for the given module.
 
     Re-export statements have from `from module_name import smth as smth`.
@@ -676,7 +689,7 @@ def _write_required_imports(required_imports: Collection[str],
         output_stream (StringIO): Output stream for import statements.
     """
 
-    for required_import in sorted(required_imports):
+    for required_import in required_imports:
         output_stream.write(required_import)
         output_stream.write("\n")
     if len(required_imports):
@@ -724,10 +737,10 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         )
         return ConditionalAliasTypeNode(
             enum_export_name,
-            "typing.TYPE_CHECKING",
+            "_typing.TYPE_CHECKING",
             positive_branch_type=enum_node_alias,
             negative_branch_type=PrimitiveTypeNode.int_(enum_export_name),
-            condition_required_imports=("import typing", )
+            condition_required_imports=("import typing as _typing", )
         )
 
     def register_alias(alias_node: AliasTypeNode) -> None:
@@ -813,8 +826,8 @@ StubGenerator = Callable[[ASTNode, StringIO, int], None]
 
 
 NODE_TYPE_TO_STUB_GENERATOR = {
-    ClassNode: _generate_class_stub,
-    ConstantNode: _generate_constant_stub,
-    EnumerationNode: _generate_enumeration_stub,
-    FunctionNode: _generate_function_stub
+    ASTNodeType.Class: _generate_class_stub,
+    ASTNodeType.Constant: _generate_constant_stub,
+    ASTNodeType.Enumeration: _generate_enumeration_stub,
+    ASTNodeType.Function: _generate_function_stub
 }

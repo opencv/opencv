@@ -109,7 +109,7 @@ gen_template_set_prop_from_map = Template("""
     if( PyMapping_HasKeyString(src, (char*)"$propname") )
     {
         tmp = PyMapping_GetItemString(src, (char*)"$propname");
-        ok = tmp && pyopencv_to_safe(tmp, dst.$propname, ArgInfo("$propname", false));
+        ok = tmp && pyopencv_to_safe(tmp, dst.$propname, ArgInfo("$propname", 0));
         Py_DECREF(tmp);
         if(!ok) return false;
     }""")
@@ -163,7 +163,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
-    return pyopencv_to_safe(value, p->v${access}${member}, ArgInfo("value", false)) ? 0 : -1;
+    return pyopencv_to_safe(value, p->v${access}${member}, ArgInfo("value", 0)) ? 0 : -1;
 }
 """)
 
@@ -181,7 +181,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
         return -1;
     }
-    return pyopencv_to_safe(value, _self_${access}${member}, ArgInfo("value", false)) ? 0 : -1;
+    return pyopencv_to_safe(value, _self_${access}${member}, ArgInfo("value", 0)) ? 0 : -1;
 }
 """)
 
@@ -231,6 +231,8 @@ simple_argtype_mapping = {
     "c_string": ArgTypeInfo("char*", FormatStrings.string, '(char*)""'),
     "string": ArgTypeInfo("std::string", FormatStrings.object, None, True),
     "Stream": ArgTypeInfo("Stream", FormatStrings.object, 'Stream::Null()', True),
+    "cuda_Stream": ArgTypeInfo("cuda::Stream", FormatStrings.object, "cuda::Stream::Null()", True),
+    "cuda_GpuMat": ArgTypeInfo("cuda::GpuMat", FormatStrings.object, "cuda::GpuMat()", True),
     "UMat": ArgTypeInfo("UMat", FormatStrings.object, 'UMat()', True),  # FIXIT: switch to CV_EXPORTS_W_SIMPLE as UMat is already a some kind of smart pointer
 }
 
@@ -430,7 +432,7 @@ class ClassInfo(object):
         if self.constructor is not None:
             constructor_name = self.constructor.get_wrapper_name()
 
-        return 'CVPY_TYPE({}, {}, {}, {}, {}, {}, "{}");\n'.format(
+        return 'CVPY_TYPE({}, {}, {}, {}, {}, {}, "{}")\n'.format(
             self.export_name,
             self.class_id,
             self.cname if self.issimple else "Ptr<{}>".format(self.cname),
@@ -491,6 +493,10 @@ class ArgInfo(object):
         return '/O' not in self._modifiers
 
     @property
+    def arithm_op_src_arg(self):
+        return '/AOS' in self._modifiers
+
+    @property
     def outputarg(self):
         return '/O' in self._modifiers or '/IO' in self._modifiers
 
@@ -509,14 +515,19 @@ class ArgInfo(object):
         return self.enclosing_arg.name + '.' + self.name
 
     def isbig(self):
-        return self.tp in ["Mat", "vector_Mat", "cuda::GpuMat", "GpuMat", "vector_GpuMat", "UMat", "vector_UMat"] # or self.tp.startswith("vector")
+        return self.tp in ["Mat", "vector_Mat",
+                           "cuda::GpuMat", "cuda_GpuMat", "GpuMat",
+                           "vector_GpuMat", "vector_cuda_GpuMat",
+                           "UMat", "vector_UMat"] # or self.tp.startswith("vector")
 
     def crepr(self):
-        return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
+        arg  = 0x01 if self.outputarg else 0x0
+        arg += 0x02 if self.arithm_op_src_arg else 0x0
+        return "ArgInfo(\"%s\", %d)" % (self.name, arg)
 
 
 def find_argument_class_info(argument_type, function_namespace,
-                            function_class_name, known_classes):
+                             function_class_name, known_classes):
     # type: (str, str, str, dict[str, ClassInfo]) -> ClassInfo | None
     """Tries to find corresponding class info for the provided argument type
 
@@ -1048,7 +1059,7 @@ class FuncInfo(object):
             else:
                 py_name = classinfo.full_export_name + "." + self.variants[0].wname
 
-            if not self.is_static:
+            if not self.is_static and not self.isconstructor:
                 cname = classinfo.cname + '::' + cname
         else:
             py_name = '.'.join([self.namespace, self.variants[0].wname])
@@ -1280,7 +1291,7 @@ class PythonWrapperGenerator(object):
         code = ""
         if re.sub(r"^cv\.", "", enum_name) != wname:
             code += "typedef {0} {1};\n".format(cname, wname)
-        code += "CV_PY_FROM_ENUM({0});\nCV_PY_TO_ENUM({0});\n\n".format(wname)
+        code += "CV_PY_FROM_ENUM({0})\nCV_PY_TO_ENUM({0})\n\n".format(wname)
         self.code_enums.write(code)
 
     def save(self, path, name, buf):

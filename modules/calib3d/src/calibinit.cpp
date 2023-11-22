@@ -46,7 +46,7 @@
     Here is the copyright notice from the original Vladimir's code:
     ===============================================================
 
-    The algorithms developed and implemented by Vezhnevets Vldimir
+    The algorithms developed and implemented by Vezhnevets Vladimir
     aka Dead Moroz (vvp@graphics.cs.msu.ru)
     See http://graphics.cs.msu.su/en/research/calibration/opencv.html
     for detailed information.
@@ -54,7 +54,7 @@
     Reliability additions and modifications made by Philip Gruebele.
     <a href="mailto:pgruebele@cox.net">pgruebele@cox.net</a>
 
-    Some further improvements for detection of partially ocluded boards at non-ideal
+    Some further improvements for detection of partially occluded boards at non-ideal
     lighting conditions have been made by Alex Bovyrin and Kurt Kolonige
 
 \************************************************************************************/
@@ -325,7 +325,7 @@ static void icvGradientOfHistogram256(const ArrayContainer& piHist, ArrayContain
     piHistGrad[255] = 0;
 }
 /***************************************************************************************************/
-//PERFORM SMART IMAGE THRESHOLDING BASED ON ANALYSIS OF INTENSTY HISTOGRAM
+//PERFORM SMART IMAGE THRESHOLDING BASED ON ANALYSIS OF INTENSITY HISTOGRAM
 static void icvBinarizationHistogramBased(Mat & img)
 {
     CV_Assert(img.channels() == 1 && img.depth() == CV_8U);
@@ -671,7 +671,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 //    of the neighbor corners in the same row/column.
 //
 // This function has been created as temporary workaround for the bug in current implementation
-// of cvFindChessboardCornes that produces absolutely unordered sets of corners.
+// of cvFindChessboardCorners that produces absolutely unordered sets of corners.
 //
 bool ChessBoardDetector::checkBoardMonotony(const std::vector<cv::Point2f>& corners)
 {
@@ -1213,7 +1213,7 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
     // We iteratively remove the point which reduces the size of
     // the bounding box of the blobs the most
     // (since we want the rectangle to be as small as possible)
-    // remove the quadrange that causes the biggest reduction
+    // remove the quadrangle that causes the biggest reduction
     // in pattern size until we have the correct number
     for (; quad_count > count; quad_count--)
     {

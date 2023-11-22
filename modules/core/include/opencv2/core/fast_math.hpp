@@ -68,7 +68,7 @@
   // nothing, intrinsics/asm code is not supported
 #else
   #if ((defined _MSC_VER && defined _M_X64) \
-      || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__)) \
+      || (defined __GNUC__ && defined __SSE2__)) \
       && !defined(OPENCV_SKIP_INCLUDE_EMMINTRIN_H)
     #include <emmintrin.h>
   #endif
@@ -201,7 +201,7 @@ cvRound( double value )
 {
 #if defined CV_INLINE_ROUND_DBL
     CV_INLINE_ROUND_DBL(value);
-#elif (defined _MSC_VER && defined _M_X64) && !defined(__CUDACC__)
+#elif ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __SSE2__)) && !defined(__CUDACC__)
     __m128d t = _mm_set_sd( value );
     return _mm_cvtsd_si32(t);
 #elif defined _MSC_VER && defined _M_IX86
@@ -323,7 +323,7 @@ CV_INLINE int cvRound(float value)
 {
 #if defined CV_INLINE_ROUND_FLT
     CV_INLINE_ROUND_FLT(value);
-#elif (defined _MSC_VER && defined _M_X64) && !defined(__CUDACC__)
+#elif ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __SSE2__)) && !defined(__CUDACC__)
     __m128 t = _mm_set_ss( value );
     return _mm_cvtss_si32(t);
 #elif defined _MSC_VER && defined _M_IX86

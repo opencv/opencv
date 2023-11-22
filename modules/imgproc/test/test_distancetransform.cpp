@@ -40,6 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include <numeric>
 
 namespace opencv_test { namespace {
 
@@ -342,6 +343,77 @@ TEST(Imgproc_DistanceTransform, large_square_22732)
             }
         }
     EXPECT_EQ(0, nerrs) << "reference distance map is different from computed one at " << nerrs << " pixels\n";
+}
+
+BIGDATA_TEST(Imgproc_DistanceTransform, issue_23895_3x3)
+{
+    Mat src = Mat::zeros(50000, 50000, CV_8U), dist;
+    distanceTransform(src.col(0), dist, DIST_L2, DIST_MASK_3);
+    int nz = countNonZero(dist);
+    EXPECT_EQ(nz, 0);
+}
+
+BIGDATA_TEST(Imgproc_DistanceTransform, issue_23895_5x5)
+{
+    Mat src = Mat::zeros(50000, 50000, CV_8U), dist;
+    distanceTransform(src.col(0), dist, DIST_L2, DIST_MASK_5);
+    int nz = countNonZero(dist);
+    EXPECT_EQ(nz, 0);
+}
+
+BIGDATA_TEST(Imgproc_DistanceTransform, issue_23895_5x5_labels)
+{
+    Mat src = Mat::zeros(50000, 50000, CV_8U), dist, labels;
+    distanceTransform(src.col(0), dist, labels, DIST_L2, DIST_MASK_5);
+    int nz = countNonZero(dist);
+    EXPECT_EQ(nz, 0);
+}
+
+TEST(Imgproc_DistanceTransform, max_distance_3x3)
+{
+    Mat src = Mat::ones(1, 70000, CV_8U), dist;
+    src.at<uint8_t>(0, 0) = 0;
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_3);
+
+    double minVal, maxVal;
+    minMaxLoc(dist, &minVal, &maxVal);
+    EXPECT_GE(maxVal, 65533);
+}
+
+TEST(Imgproc_DistanceTransform, max_distance_5x5)
+{
+    Mat src = Mat::ones(1, 70000, CV_8U), dist;
+    src.at<uint8_t>(0, 0) = 0;
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_5);
+
+    double minVal, maxVal;
+    minMaxLoc(dist, &minVal, &maxVal);
+    EXPECT_GE(maxVal, 65533);
+}
+
+TEST(Imgproc_DistanceTransform, max_distance_5x5_labels)
+{
+    Mat src = Mat::ones(1, 70000, CV_8U), dist, labels;
+    src.at<uint8_t>(0, 0) = 0;
+    distanceTransform(src, dist, labels, DIST_L2, DIST_MASK_5);
+
+    double minVal, maxVal;
+    minMaxLoc(dist, &minVal, &maxVal);
+    EXPECT_GE(maxVal, 65533);
+}
+
+TEST(Imgproc_DistanceTransform, precise_long_dist)
+{
+    static const int maxDist = 1 << 16;
+    Mat src = Mat::ones(1, 70000, CV_8U), dist;
+    src.at<uint8_t>(0, 0) = 0;
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE, CV_32F);
+
+    Mat expected(src.size(), CV_32F);
+    std::iota(expected.begin<float>(), expected.end<float>(), 0.f);
+    expected.colRange(maxDist, expected.cols).setTo(maxDist);
+
+    EXPECT_EQ(cv::norm(expected, dist, NORM_INF), 0);
 }
 
 }} // namespace

@@ -6,9 +6,10 @@ set(the_description "Deep neural network module. It allows to load models from d
 
 ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX)
 ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX LASX)
-ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_depthwise" AVX AVX2 RVV LASX)
-ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2 NEON_FP16)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX2 NEON LASX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
 
@@ -56,11 +57,6 @@ endif()
 
 
 ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
-
-
-if(HAVE_TENGINE)
-  ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_TENGINE=1")
-endif()
 
 
 if(MSVC)
@@ -172,11 +168,6 @@ else()
   set(sources_options ${sources_options} EXCLUDE_CUDA)
 endif()
 
-if(HAVE_TENGINE)
-	list(APPEND include_dirs ${TENGINE_INCLUDE_DIRS})
-	list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
-endif()
-
 if(HAVE_TIMVX)
     list(APPEND include_dirs ${TIMVX_INCLUDE_DIR})
     list(APPEND libs -Wl,--whole-archive ${TIMVX_LIBRARY} -Wl,--no-whole-archive)
@@ -237,6 +228,10 @@ if(TARGET ocv.3rdparty.openvino AND OPENCV_DNN_OPENVINO)
   endif()
 endif()
 
+set(OPENCV_DNN_BACKEND_DEFAULT "" CACHE STRING "Default backend used by the DNN module (DNN_BACKEND_OPENCV if empty)")
+if(OPENCV_DNN_BACKEND_DEFAULT)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/dnn_params.cpp" "OPENCV_DNN_BACKEND_DEFAULT=${OPENCV_DNN_BACKEND_DEFAULT}")
+endif()
 
 ocv_install_used_external_targets(${libs} ${dnn_runtime_libs})
 
@@ -244,6 +239,12 @@ ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs})
 ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
+
+if(NOT BUILD_PROTOBUF)
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "OPENCV_DNN_EXTERNAL_PROTOBUF=1")
+  endif()
+endif()
 
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
@@ -297,6 +298,13 @@ ocv_option(OPENCV_TEST_DNN_CANN "Build test with CANN" (TARGET ocv.3rdparty.cann
 if(TARGET ocv.3rdparty.cann AND OPENCV_TEST_DNN_CANN)
   if(TARGET opencv_test_dnn)
     ocv_target_link_libraries(opencv_test_dnn ocv.3rdparty.cann)
+  endif()
+endif()
+
+ocv_option(OPENCV_TEST_DNN_TIMVX "Build test with TIM-VX" (HAVE_TIMVX))
+if(OPENCV_TEST_DNN_TIMVX)
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "HAVE_TIMVX=1")
   endif()
 endif()
 

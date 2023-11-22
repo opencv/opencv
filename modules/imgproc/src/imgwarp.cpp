@@ -455,7 +455,7 @@ struct RemapVec_8u
         v_int32x4 delta = v_setall_s32(INTER_REMAP_COEF_SCALE / 2);
         v_int16x8 xy2ofs = v_reinterpret_as_s16(v_setall_s32(cn + (sstep << 16)));
         int CV_DECL_ALIGNED(16) iofs0[4], iofs1[4];
-        const uchar* src_limit_8bytes = _src.datalimit - v_int16x8::nlanes;
+        const uchar* src_limit_8bytes = _src.datalimit - VTraits<v_int16x8>::vlanes();
 #define CV_PICK_AND_PACK_RGB(ptr, offset, result)  \
         {                                          \
             const uchar* const p = ((const uchar*)ptr) + (offset); \
@@ -483,7 +483,7 @@ struct RemapVec_8u
             v_uint8x16 rrggbbaa, dummy;            \
             v_uint16x8 rrggbbaa8, dummy8;          \
             v_uint8x16 rgba0 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p), 0, 0, 0)); \
-            v_uint8x16 rgba1 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p + v_int32x4::nlanes), 0, 0, 0)); \
+            v_uint8x16 rgba1 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p + VTraits<v_int32x4>::vlanes()), 0, 0, 0)); \
             v_zip(rgba0, rgba1, rrggbbaa, dummy);  \
             v_expand(rrggbbaa, rrggbbaa8, dummy8); \
             result = v_reinterpret_as_s16(rrggbbaa8); \
@@ -534,8 +534,8 @@ struct RemapVec_8u
                 v3 = v_dotprod(v_reinterpret_as_s16(v3), v_reinterpret_as_s16(d2), delta);
                 v2 = v_dotprod(v_reinterpret_as_s16(v2), v_reinterpret_as_s16(c2), v3);
 
-                v0 = v0 >> INTER_REMAP_COEF_BITS;
-                v2 = v2 >> INTER_REMAP_COEF_BITS;
+                v0 = v_shr<INTER_REMAP_COEF_BITS>(v0);
+                v2 = v_shr<INTER_REMAP_COEF_BITS>(v2);
                 v_pack_u_store(D + x, v_pack(v0, v2));
             }
         }
@@ -563,8 +563,8 @@ struct RemapVec_8u
                 CV_PICK_AND_PACK_RGB(S0, iofs0[1], u1);
                 CV_PICK_AND_PACK_RGB(S1, iofs0[1], v1);
 
-                v_int32x4 result0 = v_dotprod(u0, w00, v_dotprod(v0, w01, delta)) >> INTER_REMAP_COEF_BITS;
-                v_int32x4 result1 = v_dotprod(u1, w10, v_dotprod(v1, w11, delta)) >> INTER_REMAP_COEF_BITS;
+                v_int32x4 result0 = v_shr<INTER_REMAP_COEF_BITS>(v_dotprod(u0, w00, v_dotprod(v0, w01, delta)));
+                v_int32x4 result1 = v_shr<INTER_REMAP_COEF_BITS>(v_dotprod(u1, w10, v_dotprod(v1, w11, delta)));
 
                 result0 = v_rotate_left<1>(result0);
                 v_int16x8 result8 = v_pack(result0, result1);
@@ -581,8 +581,8 @@ struct RemapVec_8u
                 CV_PICK_AND_PACK_RGB(S0, iofs0[3], u1);
                 CV_PICK_AND_PACK_RGB(S1, iofs0[3], v1);
 
-                result0 = v_dotprod(u0, w00, v_dotprod(v0, w01, delta)) >> INTER_REMAP_COEF_BITS;
-                result1 = v_dotprod(u1, w10, v_dotprod(v1, w11, delta)) >> INTER_REMAP_COEF_BITS;
+                result0 = v_shr<INTER_REMAP_COEF_BITS>(v_dotprod(u0, w00, v_dotprod(v0, w01, delta)));
+                result1 = v_shr<INTER_REMAP_COEF_BITS>(v_dotprod(u1, w10, v_dotprod(v1, w11, delta)));
 
                 result0 = v_rotate_left<1>(result0);
                 result8 = v_pack(result0, result1);
@@ -613,8 +613,8 @@ struct RemapVec_8u
                 CV_PICK_AND_PACK_RGBA(S0, iofs0[1], u1);
                 CV_PICK_AND_PACK_RGBA(S1, iofs0[1], v1);
 
-                v_int32x4 result0 = v_dotprod(u0, w00, v_dotprod(v0, w01, delta)) >> INTER_REMAP_COEF_BITS;
-                v_int32x4 result1 = v_dotprod(u1, w10, v_dotprod(v1, w11, delta)) >> INTER_REMAP_COEF_BITS;
+                v_int32x4 result0 = v_shr<INTER_REMAP_COEF_BITS>(v_dotprod(u0, w00, v_dotprod(v0, w01, delta)));
+                v_int32x4 result1 = v_shr<INTER_REMAP_COEF_BITS>(v_dotprod(u1, w10, v_dotprod(v1, w11, delta)));
                 v_int16x8 result8 = v_pack(result0, result1);
                 v_pack_u_store(D, result8);
 
@@ -627,8 +627,8 @@ struct RemapVec_8u
                 CV_PICK_AND_PACK_RGBA(S0, iofs0[3], u1);
                 CV_PICK_AND_PACK_RGBA(S1, iofs0[3], v1);
 
-                result0 = v_dotprod(u0, w00, v_dotprod(v0, w01, delta)) >> INTER_REMAP_COEF_BITS;
-                result1 = v_dotprod(u1, w10, v_dotprod(v1, w11, delta)) >> INTER_REMAP_COEF_BITS;
+                result0 = v_shr<INTER_REMAP_COEF_BITS>(v_dotprod(u0, w00, v_dotprod(v0, w01, delta)));
+                result1 = v_shr<INTER_REMAP_COEF_BITS>(v_dotprod(u1, w10, v_dotprod(v1, w11, delta)));
                 result8 = v_pack(result0, result1);
                 v_pack_u_store(D + 8, result8);
             }
@@ -1164,7 +1164,7 @@ public:
 
                             #if CV_SIMD128
                             {
-                                int span = v_float32x4::nlanes;
+                                int span = VTraits<v_float32x4>::vlanes();
                                 for( ; x1 <= bcols - span * 2; x1 += span * 2 )
                                 {
                                     v_int32x4 ix0 = v_round(v_load(sX + x1));
@@ -1206,9 +1206,9 @@ public:
                         #if CV_SIMD128
                         {
                             v_uint16x8 v_scale = v_setall_u16(INTER_TAB_SIZE2 - 1);
-                            int span = v_uint16x8::nlanes;
+                            int span = VTraits<v_uint16x8>::vlanes();
                             for( ; x1 <= bcols - span; x1 += span )
-                                v_store((unsigned short*)(A + x1), v_load(sA + x1) & v_scale);
+                                v_store((unsigned short*)(A + x1), v_and(v_load(sA + x1), v_scale));
                         }
                         #endif
                         for( ; x1 < bcols; x1++ )
@@ -1224,16 +1224,16 @@ public:
                         {
                             v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                             v_int32x4 v_scale2 = v_setall_s32(INTER_TAB_SIZE - 1);
-                            int span = v_float32x4::nlanes;
+                            int span = VTraits<v_float32x4>::vlanes();
                             for( ; x1 <= bcols - span * 2; x1 += span * 2 )
                             {
-                                v_int32x4 v_sx0 = v_round(v_scale * v_load(sX + x1));
-                                v_int32x4 v_sy0 = v_round(v_scale * v_load(sY + x1));
-                                v_int32x4 v_sx1 = v_round(v_scale * v_load(sX + x1 + span));
-                                v_int32x4 v_sy1 = v_round(v_scale * v_load(sY + x1 + span));
-                                v_uint16x8 v_sx8 = v_reinterpret_as_u16(v_pack(v_sx0 & v_scale2, v_sx1 & v_scale2));
-                                v_uint16x8 v_sy8 = v_reinterpret_as_u16(v_pack(v_sy0 & v_scale2, v_sy1 & v_scale2));
-                                v_uint16x8 v_v = v_shl<INTER_BITS>(v_sy8) | (v_sx8);
+                                v_int32x4 v_sx0 = v_round(v_mul(v_scale, v_load(sX + x1)));
+                                v_int32x4 v_sy0 = v_round(v_mul(v_scale, v_load(sY + x1)));
+                                v_int32x4 v_sx1 = v_round(v_mul(v_scale, v_load(sX + x1 + span)));
+                                v_int32x4 v_sy1 = v_round(v_mul(v_scale, v_load(sY + x1 + span)));
+                                v_uint16x8 v_sx8 = v_reinterpret_as_u16(v_pack(v_and(v_sx0, v_scale2), v_and(v_sx1, v_scale2)));
+                                v_uint16x8 v_sy8 = v_reinterpret_as_u16(v_pack(v_and(v_sy0, v_scale2), v_and(v_sy1, v_scale2)));
+                                v_uint16x8 v_v = v_or(v_shl<INTER_BITS>(v_sy8), v_sx8);
                                 v_store(A + x1, v_v);
 
                                 v_int16x8 v_d0 = v_pack(v_shr<INTER_BITS>(v_sx0), v_shr<INTER_BITS>(v_sx1));
@@ -1261,18 +1261,18 @@ public:
                         {
                             v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                             v_int32x4 v_scale2 = v_setall_s32(INTER_TAB_SIZE - 1), v_scale3 = v_setall_s32(INTER_TAB_SIZE);
-                            int span = v_float32x4::nlanes;
+                            int span = VTraits<v_float32x4>::vlanes();
                             for( ; x1 <= bcols - span * 2; x1 += span * 2 )
                             {
                                 v_float32x4 v_fx, v_fy;
                                 v_load_deinterleave(sXY + (x1 << 1), v_fx, v_fy);
-                                v_int32x4 v_sx0 = v_round(v_fx * v_scale);
-                                v_int32x4 v_sy0 = v_round(v_fy * v_scale);
+                                v_int32x4 v_sx0 = v_round(v_mul(v_fx, v_scale));
+                                v_int32x4 v_sy0 = v_round(v_mul(v_fy, v_scale));
                                 v_load_deinterleave(sXY + ((x1 + span) << 1), v_fx, v_fy);
-                                v_int32x4 v_sx1 = v_round(v_fx * v_scale);
-                                v_int32x4 v_sy1 = v_round(v_fy * v_scale);
-                                v_int32x4 v_v0 = v_muladd(v_scale3, (v_sy0 & v_scale2), (v_sx0 & v_scale2));
-                                v_int32x4 v_v1 = v_muladd(v_scale3, (v_sy1 & v_scale2), (v_sx1 & v_scale2));
+                                v_int32x4 v_sx1 = v_round(v_mul(v_fx, v_scale));
+                                v_int32x4 v_sy1 = v_round(v_mul(v_fy, v_scale));
+                                v_int32x4 v_v0 = v_muladd(v_scale3, (v_and(v_sy0, v_scale2)), (v_and(v_sx0, v_scale2)));
+                                v_int32x4 v_v1 = v_muladd(v_scale3, (v_and(v_sy1, v_scale2)), (v_and(v_sx1, v_scale2)));
                                 v_uint16x8 v_v8 = v_reinterpret_as_u16(v_pack(v_v0, v_v1));
                                 v_store(A + x1, v_v8);
                                 v_int16x8 v_dx = v_pack(v_shr<INTER_BITS>(v_sx0), v_shr<INTER_BITS>(v_sx1));
@@ -1941,7 +1941,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 {
                     #if CV_SIMD128
                     {
-                        int span = v_int16x8::nlanes;
+                        int span = VTraits<v_int16x8>::vlanes();
                         for( ; x <= size.width - span; x += span )
                         {
                             v_int16x8 v_dst[2];
@@ -1973,21 +1973,21 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                         v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                         v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
                         v_int32x4 v_scale3 = v_setall_s32(INTER_TAB_SIZE);
-                        int span = v_float32x4::nlanes;
+                        int span = VTraits<v_float32x4>::vlanes();
                         for( ; x <= size.width - span * 2; x += span * 2 )
                         {
-                            v_int32x4 v_ix0 = v_round(v_scale * (v_load(src1f + x)));
-                            v_int32x4 v_ix1 = v_round(v_scale * (v_load(src1f + x + span)));
-                            v_int32x4 v_iy0 = v_round(v_scale * (v_load(src2f + x)));
-                            v_int32x4 v_iy1 = v_round(v_scale * (v_load(src2f + x + span)));
+                            v_int32x4 v_ix0 = v_round(v_mul(v_scale, v_load(src1f + x)));
+                            v_int32x4 v_ix1 = v_round(v_mul(v_scale, v_load(src1f + x + span)));
+                            v_int32x4 v_iy0 = v_round(v_mul(v_scale, v_load(src2f + x)));
+                            v_int32x4 v_iy1 = v_round(v_mul(v_scale, v_load(src2f + x + span)));
 
                             v_int16x8 v_dst[2];
                             v_dst[0] = v_pack(v_shr<INTER_BITS>(v_ix0), v_shr<INTER_BITS>(v_ix1));
                             v_dst[1] = v_pack(v_shr<INTER_BITS>(v_iy0), v_shr<INTER_BITS>(v_iy1));
                             v_store_interleave(dst1 + (x << 1), v_dst[0], v_dst[1]);
 
-                            v_int32x4 v_dst0 = v_muladd(v_scale3, (v_iy0 & v_mask), (v_ix0 & v_mask));
-                            v_int32x4 v_dst1 = v_muladd(v_scale3, (v_iy1 & v_mask), (v_ix1 & v_mask));
+                            v_int32x4 v_dst0 = v_muladd(v_scale3, (v_and(v_iy0, v_mask)), (v_and(v_ix0, v_mask)));
+                            v_int32x4 v_dst1 = v_muladd(v_scale3, (v_and(v_iy1, v_mask)), (v_and(v_ix1, v_mask)));
                             v_store(dst2 + x, v_pack_u(v_dst0, v_dst1));
                         }
                     }
@@ -2008,7 +2008,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
             if( nninterpolate )
             {
                 #if CV_SIMD128
-                int span = v_float32x4::nlanes;
+                int span = VTraits<v_float32x4>::vlanes();
                 {
                     for( ; x <= (size.width << 1) - span * 2; x += span * 2 )
                         v_store(dst1 + x, v_pack(v_round(v_load(src1f + x)),
@@ -2034,16 +2034,16 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                         v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                         v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
                         v_int32x4 v_scale3 = v_setall_s32(INTER_TAB_SIZE);
-                        int span = v_uint16x8::nlanes;
+                        int span = VTraits<v_uint16x8>::vlanes();
                         for (; x <= size.width - span; x += span )
                         {
                             v_float32x4 v_src0[2], v_src1[2];
                             v_load_deinterleave(src1f + (x << 1), v_src0[0], v_src0[1]);
                             v_load_deinterleave(src1f + (x << 1) + span, v_src1[0], v_src1[1]);
-                            v_int32x4 v_ix0 = v_round(v_src0[0] * v_scale);
-                            v_int32x4 v_ix1 = v_round(v_src1[0] * v_scale);
-                            v_int32x4 v_iy0 = v_round(v_src0[1] * v_scale);
-                            v_int32x4 v_iy1 = v_round(v_src1[1] * v_scale);
+                            v_int32x4 v_ix0 = v_round(v_mul(v_src0[0], v_scale));
+                            v_int32x4 v_ix1 = v_round(v_mul(v_src1[0], v_scale));
+                            v_int32x4 v_iy0 = v_round(v_mul(v_src0[1], v_scale));
+                            v_int32x4 v_iy1 = v_round(v_mul(v_src1[1], v_scale));
 
                             v_int16x8 v_dst[2];
                             v_dst[0] = v_pack(v_shr<INTER_BITS>(v_ix0), v_shr<INTER_BITS>(v_ix1));
@@ -2051,8 +2051,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                             v_store_interleave(dst1 + (x << 1), v_dst[0], v_dst[1]);
 
                             v_store(dst2 + x, v_pack_u(
-                                v_muladd(v_scale3, (v_iy0 & v_mask), (v_ix0 & v_mask)),
-                                v_muladd(v_scale3, (v_iy1 & v_mask), (v_ix1 & v_mask))));
+                                v_muladd(v_scale3, (v_and(v_iy0, v_mask)), (v_and(v_ix0, v_mask))),
+                                v_muladd(v_scale3, (v_and(v_iy1, v_mask)), (v_and(v_ix1, v_mask)))));
                         }
                     }
                     #endif
@@ -2074,13 +2074,13 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 v_uint16x8 v_mask2 =  v_setall_u16(INTER_TAB_SIZE2-1);
                 v_uint32x4 v_zero =   v_setzero_u32(), v_mask = v_setall_u32(INTER_TAB_SIZE-1);
                 v_float32x4 v_scale = v_setall_f32(scale);
-                int span = v_float32x4::nlanes;
+                int span = VTraits<v_float32x4>::vlanes();
                 for( ; x <= size.width - span * 2; x += span * 2 )
                 {
                     v_uint32x4 v_fxy1, v_fxy2;
                     if ( src2 )
                     {
-                        v_uint16x8 v_src2 = v_load(src2 + x) & v_mask2;
+                        v_uint16x8 v_src2 = v_and(v_load(src2 + x), v_mask2);
                         v_expand(v_src2, v_fxy1, v_fxy2);
                     }
                     else
@@ -2091,9 +2091,9 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                     v_load_deinterleave(src1 + (x << 1), v_src[0], v_src[1]);
                     v_expand(v_src[0], v_src0[0], v_src0[1]);
                     v_expand(v_src[1], v_src1[0], v_src1[1]);
-                    #define CV_COMPUTE_MAP_X(X, FXY)  v_muladd(v_scale, v_cvt_f32(v_reinterpret_as_s32((FXY) & v_mask)),\
+                    #define CV_COMPUTE_MAP_X(X, FXY)  v_muladd(v_scale, v_cvt_f32(v_reinterpret_as_s32(v_and((FXY), v_mask))),\
                                                                         v_cvt_f32(v_reinterpret_as_s32(X)))
-                    #define CV_COMPUTE_MAP_Y(Y, FXY)  v_muladd(v_scale, v_cvt_f32(v_reinterpret_as_s32((FXY) >> INTER_BITS)),\
+                    #define CV_COMPUTE_MAP_Y(Y, FXY)  v_muladd(v_scale, v_cvt_f32(v_reinterpret_as_s32(v_shr<INTER_BITS>((FXY)))),\
                                                                         v_cvt_f32(v_reinterpret_as_s32(Y)))
                     v_float32x4 v_dst1 = CV_COMPUTE_MAP_X(v_src0[0], v_fxy1);
                     v_float32x4 v_dst2 = CV_COMPUTE_MAP_Y(v_src1[0], v_fxy1);
@@ -2123,13 +2123,13 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 v_int16x8 v_mask2 = v_setall_s16(INTER_TAB_SIZE2-1);
                 v_int32x4 v_zero = v_setzero_s32(), v_mask = v_setall_s32(INTER_TAB_SIZE-1);
                 v_float32x4 v_scale = v_setall_f32(scale);
-                int span = v_int16x8::nlanes;
+                int span = VTraits<v_int16x8>::vlanes();
                 for( ; x <= size.width - span; x += span )
                 {
                     v_int32x4 v_fxy1, v_fxy2;
                     if (src2)
                     {
-                        v_int16x8 v_src2 = v_load((short *)src2 + x) & v_mask2;
+                        v_int16x8 v_src2 = v_and(v_load((short *)src2 + x), v_mask2);
                         v_expand(v_src2, v_fxy1, v_fxy2);
                     }
                     else
@@ -2142,8 +2142,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                     v_expand(v_src[0], v_src0[0], v_src0[1]);
                     v_expand(v_src[1], v_src1[0], v_src1[1]);
 
-                    #define CV_COMPUTE_MAP_X(X, FXY) v_muladd(v_scale, v_cvt_f32((FXY) & v_mask), v_cvt_f32(X))
-                    #define CV_COMPUTE_MAP_Y(Y, FXY) v_muladd(v_scale, v_cvt_f32((FXY) >> INTER_BITS), v_cvt_f32(Y))
+                    #define CV_COMPUTE_MAP_X(X, FXY) v_muladd(v_scale, v_cvt_f32(v_and((FXY), v_mask)), v_cvt_f32(X))
+                    #define CV_COMPUTE_MAP_Y(Y, FXY) v_muladd(v_scale, v_cvt_f32(v_shr<INTER_BITS>((FXY))), v_cvt_f32(Y))
                     v_dst[0] = CV_COMPUTE_MAP_X(v_src0[0], v_fxy1);
                     v_dst[1] = CV_COMPUTE_MAP_Y(v_src1[0], v_fxy1);
                     v_store_interleave(dst1f + (x << 1), v_dst[0], v_dst[1]);
@@ -2234,12 +2234,12 @@ public:
                             #if CV_SIMD128
                             {
                                 v_int32x4 v_X0 = v_setall_s32(X0), v_Y0 = v_setall_s32(Y0);
-                                int span = v_uint16x8::nlanes;
+                                int span = VTraits<v_uint16x8>::vlanes();
                                 for( ; x1 <= bw - span; x1 += span )
                                 {
                                     v_int16x8 v_dst[2];
-                                    #define CV_CONVERT_MAP(ptr,offset,shift) v_pack(v_shr<AB_BITS>(shift+v_load(ptr + offset)),\
-                                                                                    v_shr<AB_BITS>(shift+v_load(ptr + offset + 4)))
+                                    #define CV_CONVERT_MAP(ptr,offset,shift) v_pack(v_shr<AB_BITS>(v_add(shift,v_load(ptr + offset))),\
+                                                                                    v_shr<AB_BITS>(v_add(shift,v_load(ptr + offset + 4))))
                                     v_dst[0] = CV_CONVERT_MAP(adelta, x+x1, v_X0);
                                     v_dst[1] = CV_CONVERT_MAP(bdelta, x+x1, v_Y0);
                                     #undef CV_CONVERT_MAP
@@ -2272,21 +2272,21 @@ public:
                         {
                             v_int32x4 v__X0 = v_setall_s32(X0), v__Y0 = v_setall_s32(Y0);
                             v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
-                            int span = v_float32x4::nlanes;
+                            int span = VTraits<v_float32x4>::vlanes();
                             for( ; x1 <= bw - span * 2; x1 += span * 2 )
                             {
-                                v_int32x4 v_X0 = v_shr<AB_BITS - INTER_BITS>(v__X0 + v_load(adelta + x + x1));
-                                v_int32x4 v_Y0 = v_shr<AB_BITS - INTER_BITS>(v__Y0 + v_load(bdelta + x + x1));
-                                v_int32x4 v_X1 = v_shr<AB_BITS - INTER_BITS>(v__X0 + v_load(adelta + x + x1 + span));
-                                v_int32x4 v_Y1 = v_shr<AB_BITS - INTER_BITS>(v__Y0 + v_load(bdelta + x + x1 + span));
+                                v_int32x4 v_X0 = v_shr<AB_BITS - INTER_BITS>(v_add(v__X0, v_load(this->adelta + x + x1)));
+                                v_int32x4 v_Y0 = v_shr<AB_BITS - INTER_BITS>(v_add(v__Y0, v_load(this->bdelta + x + x1)));
+                                v_int32x4 v_X1 = v_shr<AB_BITS - INTER_BITS>(v_add(v__X0, v_load(this->adelta + x + x1 + span)));
+                                v_int32x4 v_Y1 = v_shr<AB_BITS - INTER_BITS>(v_add(v__Y0, v_load(this->bdelta + x + x1 + span)));
 
                                 v_int16x8 v_xy[2];
                                 v_xy[0] = v_pack(v_shr<INTER_BITS>(v_X0), v_shr<INTER_BITS>(v_X1));
                                 v_xy[1] = v_pack(v_shr<INTER_BITS>(v_Y0), v_shr<INTER_BITS>(v_Y1));
                                 v_store_interleave(xy + (x1 << 1), v_xy[0], v_xy[1]);
 
-                                v_int32x4 v_alpha0 = v_shl<INTER_BITS>(v_Y0 & v_mask) | (v_X0 & v_mask);
-                                v_int32x4 v_alpha1 = v_shl<INTER_BITS>(v_Y1 & v_mask) | (v_X1 & v_mask);
+                                v_int32x4 v_alpha0 = v_or(v_shl<INTER_BITS>(v_and(v_Y0, v_mask)), v_and(v_X0, v_mask));
+                                v_int32x4 v_alpha1 = v_or(v_shl<INTER_BITS>(v_and(v_Y1, v_mask)), v_and(v_X1, v_mask));
                                 v_store(alpha + x1, v_pack(v_alpha0, v_alpha1));
                             }
                         }
@@ -2679,8 +2679,13 @@ static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation
     }
 
     return true;
+#else
+    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(interpolation);
+    CV_UNUSED(borderType); CV_UNUSED(_M); CV_UNUSED(flags);
+    return false;
 #endif
 }
+
 #endif
 
 namespace hal {
@@ -2861,16 +2866,16 @@ void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0
         v_int32x4 v_X0, v_Y0;
         {
             v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_1, v_W), v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_1, v_W), v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_X0 = v_round(v_fX0, v_fX1);
             v_Y0 = v_round(v_fY0, v_fY1);
@@ -2880,16 +2885,16 @@ void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0
         v_int32x4 v_X1, v_Y1;
         {
             v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_1, v_W), v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_1, v_W), v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_X1 = v_round(v_fX0, v_fX1);
             v_Y1 = v_round(v_fY0, v_fY1);
@@ -2899,16 +2904,16 @@ void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0
         v_int32x4 v_X2, v_Y2;
         {
             v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_1, v_W), v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_1, v_W), v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_X2 = v_round(v_fX0, v_fX1);
             v_Y2 = v_round(v_fY0, v_fY1);
@@ -2918,16 +2923,16 @@ void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0
         v_int32x4 v_X3, v_Y3;
         {
             v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_1, v_W), v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_1, v_W), v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_X3 = v_round(v_fX0, v_fX1);
             v_Y3 = v_round(v_fY0, v_fY1);
@@ -2982,16 +2987,16 @@ void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alph
         v_int32x4 v_X0, v_Y0;
         {
             v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_X0 = v_round(v_fX0, v_fX1);
             v_Y0 = v_round(v_fY0, v_fY1);
@@ -3001,16 +3006,16 @@ void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alph
         v_int32x4 v_X1, v_Y1;
         {
             v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_X1 = v_round(v_fX0, v_fX1);
             v_Y1 = v_round(v_fY0, v_fY1);
@@ -3020,16 +3025,16 @@ void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alph
         v_int32x4 v_X2, v_Y2;
         {
             v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_X2 = v_round(v_fX0, v_fX1);
             v_Y2 = v_round(v_fY0, v_fY1);
@@ -3039,35 +3044,35 @@ void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alph
         v_int32x4 v_X3, v_Y3;
         {
             v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
-            v_x1 += v_2;
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
+            v_x1 = v_add(v_x1, v_2);
 
             v_X3 = v_round(v_fX0, v_fX1);
             v_Y3 = v_round(v_fY0, v_fY1);
         }
 
         // store alpha
-        v_int32x4 v_alpha0 = ((v_Y0 & v_itsi1) << INTER_BITS) + (v_X0 & v_itsi1);
-        v_int32x4 v_alpha1 = ((v_Y1 & v_itsi1) << INTER_BITS) + (v_X1 & v_itsi1);
+        v_int32x4 v_alpha0 = v_add(v_shl<INTER_BITS>(v_and(v_Y0, v_itsi1)), v_and(v_X0, v_itsi1));
+        v_int32x4 v_alpha1 = v_add(v_shl<INTER_BITS>(v_and(v_Y1, v_itsi1)), v_and(v_X1, v_itsi1));
         v_store((alpha + x1), v_pack(v_alpha0, v_alpha1));
 
-        v_alpha0 = ((v_Y2 & v_itsi1) << INTER_BITS) + (v_X2 & v_itsi1);
-        v_alpha1 = ((v_Y3 & v_itsi1) << INTER_BITS) + (v_X3 & v_itsi1);
+        v_alpha0 = v_add(v_shl<INTER_BITS>(v_and(v_Y2, v_itsi1)), v_and(v_X2, v_itsi1));
+        v_alpha1 = v_add(v_shl<INTER_BITS>(v_and(v_Y3, v_itsi1)), v_and(v_X3, v_itsi1));
         v_store((alpha + x1 + 8), v_pack(v_alpha0, v_alpha1));
 
         // convert to 16s
-        v_X0 = v_reinterpret_as_s32(v_pack(v_X0 >> INTER_BITS, v_X1 >> INTER_BITS));
-        v_X1 = v_reinterpret_as_s32(v_pack(v_X2 >> INTER_BITS, v_X3 >> INTER_BITS));
-        v_Y0 = v_reinterpret_as_s32(v_pack(v_Y0 >> INTER_BITS, v_Y1 >> INTER_BITS));
-        v_Y1 = v_reinterpret_as_s32(v_pack(v_Y2 >> INTER_BITS, v_Y3 >> INTER_BITS));
+        v_X0 = v_reinterpret_as_s32(v_pack(v_shr<INTER_BITS>(v_X0), v_shr<INTER_BITS>(v_X1)));
+        v_X1 = v_reinterpret_as_s32(v_pack(v_shr<INTER_BITS>(v_X2), v_shr<INTER_BITS>(v_X3)));
+        v_Y0 = v_reinterpret_as_s32(v_pack(v_shr<INTER_BITS>(v_Y0), v_shr<INTER_BITS>(v_Y1)));
+        v_Y1 = v_reinterpret_as_s32(v_pack(v_shr<INTER_BITS>(v_Y2), v_shr<INTER_BITS>(v_Y3)));
 
         v_store_interleave(xy + x1 * 2, (v_reinterpret_as_s16)(v_X0), (v_reinterpret_as_s16)(v_Y0));
         v_store_interleave(xy + x1 * 2 + 16, (v_reinterpret_as_s16)(v_X1), (v_reinterpret_as_s16)(v_Y1));
