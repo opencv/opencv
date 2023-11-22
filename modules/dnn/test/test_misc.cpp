@@ -118,7 +118,7 @@ TEST(blobFromImageWithParams_CustomPadding, letter_box)
     Image2BlobParams param;
     param.size = targetSize;
     param.paddingmode = DNN_PMODE_LETTERBOX;
-    param.paddingmodefillvalue = customPaddingValue; // Use your new feature here
+    param.paddingmodeborderValue = customPaddingValue; // Use your new feature here
 
     // Create blob with custom padding
     Mat blob = dnn::blobFromImageWithParams(img, param);
