@@ -266,8 +266,8 @@ void magnitudeSqr32f(const float* x, const float* y, float* mag, int len)
 
     int i = 0;
 
-#if CV_SIMD
-    const int VECSZ = v_float32::nlanes;
+#if CV_SIMD || CV_SIMD_SCALABLE
+    const int VECSZ = VTraits<v_float32>::vlanes();
     for( ; i < len; i += VECSZ*2 )
     {
         if( i + VECSZ*2 > len )
@@ -278,8 +278,8 @@ void magnitudeSqr32f(const float* x, const float* y, float* mag, int len)
         }
         v_float32 x0 = vx_load(x + i), x1 = vx_load(x + i + VECSZ);
         v_float32 y0 = vx_load(y + i), y1 = vx_load(y + i + VECSZ);
-        x0 = v_muladd(x0, x0, y0*y0);
-        x1 = v_muladd(x1, x1, y1*y1);
+        x0 = v_muladd(x0, x0, v_mul(y0, y0));
+        x1 = v_muladd(x1, x1, v_mul(y1, y1));
         v_store(mag + i, x0);
         v_store(mag + i + VECSZ, x1);
     }
@@ -299,8 +299,8 @@ void magnitudeSqr64f(const double* x, const double* y, double* mag, int len)
 
     int i = 0;
 
-#if CV_SIMD_64F
-    const int VECSZ = v_float64::nlanes;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    const int VECSZ = VTraits<v_float64>::vlanes();
     for( ; i < len; i += VECSZ*2 )
     {
         if( i + VECSZ*2 > len )
@@ -311,8 +311,8 @@ void magnitudeSqr64f(const double* x, const double* y, double* mag, int len)
         }
         v_float64 x0 = vx_load(x + i), x1 = vx_load(x + i + VECSZ);
         v_float64 y0 = vx_load(y + i), y1 = vx_load(y + i + VECSZ);
-        x0 = v_muladd(x0, x0, y0*y0);
-        x1 = v_muladd(x1, x1, y1*y1);
+        x0 = v_muladd(x0, x0, v_mul(y0, y0));
+        x1 = v_muladd(x1, x1, v_mul(y1, y1));
         v_store(mag + i, x0);
         v_store(mag + i + VECSZ, x1);
     }
@@ -445,8 +445,8 @@ void sqr64f(const double* src, double* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD_64F
-    const int VECSZ = v_float64::nlanes;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    const int VECSZ = VTraits<v_float64>::vlanes();
     for( ; i < len; i += VECSZ*2 )
     {
         if( i + VECSZ*2 > len )
@@ -456,8 +456,8 @@ void sqr64f(const double* src, double* dst, int len)
             i = len - VECSZ*2;
         }
         v_float64 x0 = vx_load(src + i), x1 = vx_load(src + i + VECSZ);
-        v_store(dst + i, x0*x0);
-        v_store(dst + i + VECSZ, x1*x1);
+        v_store(dst + i, v_mul(x0, x0));
+        v_store(dst + i + VECSZ, v_mul(x1, x1));
     }
     vx_cleanup();
 #endif
