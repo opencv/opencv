@@ -1475,12 +1475,15 @@ template<typename R> struct TheTest
     TheTest & test_float_math()
     {
         typedef typename V_RegTraits<R>::round_reg Ri;
-        Data<R> data1, data2, data3;
+        Data<R> data1, data1_border, data2, data3;
+        // See https://github.com/opencv/opencv/issues/24213
+        data1_border *= 0.5;
         data1 *= 1.1;
         data2 += 10;
-        R a1 = data1, a2 = data2, a3 = data3;
+        R a1 = data1, a1_border = data1_border, a2 = data2, a3 = data3;
 
         Data<Ri> resB = v_round(a1),
+                 resB_border = v_round(a1_border),
                  resC = v_trunc(a1),
                  resD = v_floor(a1),
                  resE = v_ceil(a1);
@@ -1493,6 +1496,7 @@ template<typename R> struct TheTest
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(cvRound(data1[i]), resB[i]);
+            EXPECT_EQ(cvRound(data1_border[i]), resB_border[i]);
             EXPECT_EQ((typename VTraits<Ri>::lane_type)data1[i], resC[i]);
             EXPECT_EQ(cvFloor(data1[i]), resD[i]);
             EXPECT_EQ(cvCeil(data1[i]), resE[i]);
@@ -1741,13 +1745,8 @@ template<typename R> struct TheTest
         R a = dataA;
         R b = dataB;
 
-#if CV_SIMD_SCALABLE
         Data<R> dataEQ = v_eq(a, b);
         Data<R> dataNE = v_ne(a, b);
-#else
-        Data<R> dataEQ = (a == b);
-        Data<R> dataNE = (a != b);
-#endif
 
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {

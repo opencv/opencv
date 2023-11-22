@@ -27,6 +27,7 @@
 #define INF_ENGINE_RELEASE_2021_3 2021030000
 #define INF_ENGINE_RELEASE_2021_4 2021040000
 #define INF_ENGINE_RELEASE_2022_1 2022010000
+#define INF_ENGINE_RELEASE_2023_0 2023000000
 
 #ifndef INF_ENGINE_RELEASE
 #warning("IE version have not been provided via command-line. Using 2021.4 by default")

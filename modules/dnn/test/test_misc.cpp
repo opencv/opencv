@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
+#include "npy_blob.hpp"
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/opencl/ocl_defs.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
@@ -118,6 +119,28 @@ TEST(blobFromImageWithParams_4ch, letter_box)
     Mat blob = dnn::blobFromImageWithParams(img, param);
     Mat targetBlob = dnn::blobFromImage(targetImg, 1.0, targeSize); // only convert data from uint8 to float32.
     EXPECT_EQ(0, cvtest::norm(targetBlob, blob, NORM_INF));
+}
+
+TEST(blobFromImagesWithParams_4ch, multi_image)
+{
+    Mat img(10, 10, CV_8UC4, cv::Scalar(0, 1, 2, 3));
+    Scalar scalefactor(0.1, 0.2, 0.3, 0.4);
+
+    Image2BlobParams param;
+    param.scalefactor = scalefactor;
+    param.datalayout = DNN_LAYOUT_NHWC;
+
+    Mat blobs = blobFromImagesWithParams(std::vector<Mat> { img, 2*img }, param);
+    vector<Range> ranges;
+    ranges.push_back(Range(0, 1));
+    ranges.push_back(Range(0, blobs.size[1]));
+    ranges.push_back(Range(0, blobs.size[2]));
+    ranges.push_back(Range(0, blobs.size[3]));
+    Mat blob0 = blobs(ranges);
+    ranges[0] = Range(1, 2);
+    Mat blob1 = blobs(ranges);
+
+    EXPECT_EQ(0, cvtest::norm(2*blob0, blob1, NORM_INF));
 }
 
 TEST(readNet, Regression)
@@ -847,6 +870,35 @@ TEST_P(Test_Model_Optimizer, flexible_inputs)
     net1.setInput(input0);
     out = net1.forward();
     normAssert(ref, out, 0, 0);
+}
+
+TEST_P(Test_Model_Optimizer, readONNX)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
+
+    const std::string& model = findDataFile("dnn/onnx/models/convolution.onnx");
+
+    std::vector<Net> nets = {
+        // Old API
+        readNetFromModelOptimizer(model, ""),
+        readNet("", model, "dldt"),
+        // New API
+        readNetFromModelOptimizer(model),
+        readNet(model, "", "openvino")
+    };
+
+    Mat inp = blobFromNPY(findDataFile("dnn/onnx/data/input_convolution.npy"));
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_convolution.npy"));
+
+    for (int i = 0; i < nets.size(); ++i) {
+        nets[i].setPreferableTarget(targetId);
+        nets[i].setInput(inp);
+        Mat out = nets[i].forward();
+        normAssert(out, ref, format("Index: %d", i).c_str());
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model_Optimizer,

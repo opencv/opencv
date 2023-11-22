@@ -9,6 +9,7 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <numeric>
 namespace opencv_test { namespace {
 
 template<typename TString>
@@ -52,8 +53,9 @@ public:
     }
 
     void testONNXModels(const String& basename, const Extension ext = npy,
-                        const double l1 = 0, const float lInf = 0, const bool useSoftmax = false,
-                        bool checkNoFallbacks = true, int numInps = 1)
+                        double l1 = 0, double lInf = 0, const bool useSoftmax = false,
+                        bool checkNoFallbacks = true, int numInps = 1,
+                        bool testShapes = true, bool useWinograd = true)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
         std::vector<Mat> inps(numInps);
@@ -75,10 +77,12 @@ public:
         Net net = readNetFromONNX(onnxmodel);
         ASSERT_FALSE(net.empty());
 
-        testInputShapes(net, inps);
+        if (testShapes)
+            testInputShapes(net, inps);
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
+        net.enableWinograd(useWinograd);
 
         std::vector<String> inputNames;
         for (int i = 0; i < numInps; ++i)
@@ -102,7 +106,12 @@ public:
             netSoftmax.setInput(ref);
             ref = netSoftmax.forward();
         }
-        normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        {
+            l1 = std::max(l1, 1.4e-3);
+            lInf = std::max(lInf, 8e-3);
+        }
+        normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         if (checkNoFallbacks)
             expectNoFallbacksFromIE(net);
     }
@@ -110,9 +119,6 @@ public:
 
 TEST_P(Test_ONNX_layers, InstanceNorm)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* MVN is not supported */
-
     if (target == DNN_TARGET_MYRIAD)
         testONNXModels("instancenorm", npy, 0, 0, false, false);
     else
@@ -236,6 +242,14 @@ TEST_P(Test_ONNX_layers, GatherMulti)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("gather_multi", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, Gather_shared_indices) {
+    testONNXModels("gather_shared_indices", npy, 0, 0, false, false, 1);
+}
+
+TEST_P(Test_ONNX_layers, Two_resizes_with_shared_subgraphs) {
+    testONNXModels("two_resizes_with_shared_subgraphs", npy, 0, 0, false, false, 3, /*testShapes*/ false);
 }
 
 TEST_P(Test_ONNX_layers, Convolution3D)
@@ -666,6 +680,9 @@ TEST_P(Test_ONNX_layers, Compare_GT)
 
     testONNXModels("greater");
 }
+TEST_P(Test_ONNX_layers, Greater_input_dtype_int64) {
+    testONNXModels("greater_input_dtype_int64");
+}
 
 TEST_P(Test_ONNX_layers, Compare_LT)
 {
@@ -771,6 +788,11 @@ TEST_P(Test_ONNX_layers, Concatenation)
     }
     testONNXModels("concatenation");
     testONNXModels("concat_const_blobs");
+}
+
+TEST_P(Test_ONNX_layers, CumSumExclusiveInplace)
+{
+    testONNXModels("cumsum_exclusive_inplace");
 }
 
 TEST_P(Test_ONNX_layers, Eltwise3D)
@@ -982,9 +1004,21 @@ TEST_P(Test_ONNX_layers, MatMulAdd)
 TEST_P(Test_ONNX_layers, Expand)
 {
     testONNXModels("expand");
+}
+
+TEST_P(Test_ONNX_layers, ExpandIdentity) {
     testONNXModels("expand_identity");
+}
+
+TEST_P(Test_ONNX_layers, ExpandBatch) {
     testONNXModels("expand_batch");
+}
+
+TEST_P(Test_ONNX_layers, ExpandChannels) {
     testONNXModels("expand_channels");
+}
+
+TEST_P(Test_ONNX_layers, ExpandNegBatch) {
     testONNXModels("expand_neg_batch");
 }
 
@@ -1036,10 +1070,12 @@ TEST_P(Test_ONNX_layers, ResizeUnfused)
 
 TEST_P(Test_ONNX_layers, ResizeUnfusedTwoInputs)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     testONNXModels("upsample_unfused_two_inputs_opset9_torch1.4", npy, 0, 0, false, true, 2);
     testONNXModels("upsample_unfused_two_inputs_opset11_torch1.4", npy, 0, 0, false, true, 2);
 }
@@ -1143,10 +1179,12 @@ TEST_P(Test_ONNX_layers, ReduceL2)
 
 TEST_P(Test_ONNX_layers, Split)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     testONNXModels("split_0");
     testONNXModels("split_1");
     testONNXModels("split_2");
@@ -1222,10 +1260,12 @@ TEST_P(Test_ONNX_layers, Softmax)
 
 TEST_P(Test_ONNX_layers, Split_EltwiseMax)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     testONNXModels("split_max");
 }
 
@@ -1408,6 +1448,61 @@ TEST_P(Test_ONNX_layers, LSTM_layout_batch)
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm_layout_1", npy, 0.005, 0.005, false, false, 3);
+}
+
+TEST_P(Test_ONNX_layers, DISABLED_Einsum_1D)
+{
+    testONNXModels("einsum_1d", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_2D)
+{
+    testONNXModels("einsum_2d", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_2D_Ellipses)
+{
+    testONNXModels("einsum_2d_ellipses", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_3D)
+{
+    testONNXModels("einsum_3d", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_4D)
+{
+    testONNXModels("einsum_4d", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_5D)
+{
+    testONNXModels("einsum_5d", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, DISABLED_Einsum_InnerProduct)
+{
+    testONNXModels("einsum_inner", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, DISABLED_Einsum_HadamardProduct)
+{
+    testONNXModels("einsum_hadamard", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_Batch_Diagonal)
+{
+    testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_Sum)
+{
+    testONNXModels("einsum_sum", npy, 0, 0, false, false, 1);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_transpose)
+{
+    testONNXModels("einsum_transpose", npy, 0, 0, false, false, 1);
 }
 
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
@@ -1835,7 +1930,9 @@ TEST_P(Test_ONNX_layers, ConvResizePool1d)
 #endif
     }
 #endif
-    testONNXModels("conv_resize_pool_1d");
+
+    const double lInf = (target == DNN_TARGET_CPU_FP16) ? 0.024 : default_lInf;
+    testONNXModels("conv_resize_pool_1d", npy, default_l1, lInf);
 }
 
 TEST_P(Test_ONNX_layers, DepthWiseAdd)
@@ -1981,12 +2078,16 @@ TEST_P(Test_ONNX_layers, Quantized_Unsqueeze)
 TEST_P(Test_ONNX_layers, Quantized_Resize)
 {
     testONNXModels("quantized_resize_nearest");
-    testONNXModels("quantized_resize_bilinear", npy, 2e-4, 0.003);
-    testONNXModels("quantized_resize_bilinear_align", npy, 3e-4, 0.003);
+    double l1 = backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ? 0.0013 : 2e-4;
+    testONNXModels("quantized_resize_bilinear", npy, l1, 0.003);
+    l1 = backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ? 0.0013 : 3e-4;
+    testONNXModels("quantized_resize_bilinear_align", npy, l1, 0.003);
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Concat)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("quantized_concat");
     testONNXModels("quantized_concat_const_blob");
 }
@@ -2003,6 +2104,8 @@ TEST_P(Test_ONNX_layers, OutputRegistration)
 
 TEST_P(Test_ONNX_layers, QLinearSoftmax)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("qlinearsoftmax_v11", npy, 0.002, 0.002); // 2D coerced
     testONNXModels("qlinearsoftmax_v13", npy, 0.002, 0.002);
 }
@@ -2030,6 +2133,7 @@ TEST_P(Test_ONNX_nets, Alexnet)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+    net.enableWinograd(false);
 
     Mat inp = imread(_tf("../grace_hopper_227.png"));
     Mat ref = blobFromNPY(_tf("../caffe_alexnet_prob.npy"));
@@ -2041,6 +2145,34 @@ TEST_P(Test_ONNX_nets, Alexnet)
 
     normAssert(out, ref, "", default_l1,  default_lInf);
     expectNoFallbacksFromIE(net);
+}
+
+TEST_P(Test_ONNX_nets, RAFT)
+{
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG, CV_TEST_TAG_MEMORY_2GB);
+
+    std::string weight_path = _tf("models/optical_flow_estimation_raft_2023aug.onnx", false);
+    std::string img0_path = findDataFile(std::string("gpu/opticalflow/frame0.png"));
+    std::string img1_path = findDataFile(std::string("gpu/opticalflow/frame1.png"));
+
+    Size target_size{480, 360};
+    auto img0 = imread(img0_path);
+    auto img1 = imread(img1_path);
+    auto blob0 = blobFromImage(img0, 1.0, target_size, 0, true);
+    auto blob1 = blobFromImage(img1, 1.0, target_size, 0, true);
+
+    auto net = readNet(weight_path);
+    net.setInput(blob0, "0");
+    net.setInput(blob1, "1");
+    std::vector<std::string> outnames{"12007", "12006"};
+    std::vector<Mat> outs;
+    net.forward(outs, outnames);
+
+    // output 12006 is not checked to save space in opencv_extra since its ref is > 1MB,
+    // and output 12006 is calculated from 12007 so checking 12007 is sufficient.
+    std::string ref_12700_path = _tf("data/output_optical_flow_estimation_raft_2023aug.npy");
+    auto ref0 = blobFromNPY(ref_12700_path);
+    normAssert(ref0, outs[0], "", 1e-5, 1.8e-4);
 }
 
 TEST_P(Test_ONNX_nets, Squeezenet)
@@ -2073,6 +2205,9 @@ TEST_P(Test_ONNX_nets, Googlenet)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
 
     std::vector<Mat> images;
     images.push_back( imread(_tf("../googlenet_0.png")) );
@@ -2218,7 +2353,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
     }
 #endif
 
-    testONNXModels("tiny_yolo2", pb, l1, lInf);
+    testONNXModels("tiny_yolo2", pb, l1, lInf, false, true, 1, true, false);
 }
 
 TEST_P(Test_ONNX_nets, CNN_MNIST)
@@ -2263,6 +2398,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
 
     double l1 = default_l1, lInf = default_lInf;
     // output range: [-3; 3]
+    bool useWinograd = true;
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
     {
         l1 = 0.009;
@@ -2278,7 +2414,14 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
         l1 = 0.009;
         lInf = 0.04;
     }
-    testONNXModels("LResNet100E_IR", pb, l1, lInf);
+    else if (target == DNN_TARGET_CPU_FP16)
+    {
+        useWinograd = false;
+        l1 = 0.009;
+        lInf = 0.035;
+    }
+
+    testONNXModels("LResNet100E_IR", pb, l1, lInf, false, true, 1, true, useWinograd);
 }
 
 TEST_P(Test_ONNX_nets, Emotion_ferplus)
@@ -2293,7 +2436,7 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
 
     double l1 = default_l1;
     double lInf = default_lInf;
-
+    bool useWinograd = true;
     // Output values are in range [-2.011, 2.111]
     if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) || (target == DNN_TARGET_CUDA_FP16))
         l1 = 0.007;
@@ -2306,6 +2449,11 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
         l1 = 2.4e-4;
         lInf = 6e-4;
     }
+    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+    {
+        useWinograd = false;
+        l1 = 0.007;
+    }
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
     {
@@ -2313,7 +2461,7 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
     }
 #endif
 
-    testONNXModels("emotion_ferplus", pb, l1, lInf);
+    testONNXModels("emotion_ferplus", pb, l1, lInf, false, true, 1, true, useWinograd);
 }
 
 TEST_P(Test_ONNX_nets, Inception_v2)
@@ -2546,36 +2694,6 @@ TEST_P(Test_ONNX_layers, Tile)
     testONNXModels("tile", pb);
 }
 
-TEST_P(Test_ONNX_layers, LayerNorm)
-{
-    testONNXModels("test_layer_normalization_2d_axis0", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_2d_axis1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_2d_axis_negative_1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_2d_axis_negative_2", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis0_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis1_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis2_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis_negative_1_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis_negative_2_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis_negative_3_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis0", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis2", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis3", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_2", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_3", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_4", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_default_axis", pb, 0, 0, false, true, 3);
-}
-
-// for testing graph simplification
-TEST_P(Test_ONNX_layers, LayerNormExpanded)
-{
-    testONNXModels("layer_norm_expanded");
-    testONNXModels("layer_norm_expanded_with_initializers");
-}
-
 TEST_P(Test_ONNX_layers, Gelu)
 {
     testONNXModels("gelu");
@@ -2590,6 +2708,61 @@ TEST_P(Test_ONNX_layers, OpenAI_CLIP_head)
 TEST_P(Test_ONNX_layers, where_node)
 {
     testONNXModels("where_layer");
+}
+
+TEST_P(Test_ONNX_layers, Gemm_all_attributes) {
+    testONNXModels("test_gemm_all_attributes", pb, 0, 0, false, true, 2);
+}
+TEST_P(Test_ONNX_layers, Gemm_alpha) {
+    testONNXModels("test_gemm_alpha", pb, 0, 0, false, true, 2);
+}
+TEST_P(Test_ONNX_layers, Gemm_beta) {
+    testONNXModels("test_gemm_beta", pb, 0, 0, false, true, 2);
+}
+TEST_P(Test_ONNX_layers, Gemm_default_matrix_bias) {
+    testONNXModels("test_gemm_default_matrix_bias", pb, 0, 0, false, true, 2);
+}
+TEST_P(Test_ONNX_layers, Gemm_default_no_bias) {
+    testONNXModels("test_gemm_default_no_bias", pb, 0, 0, false, true, 2);
+}
+TEST_P(Test_ONNX_layers, Gemm_default_scalar_bias) {
+    testONNXModels("test_gemm_default_scalar_bias", pb, 0, 0, false, true, 2);
+}
+TEST_P(Test_ONNX_layers, Gemm_default_single_elem_vector_bias) {
+    testONNXModels("test_gemm_default_single_elem_vector_bias", pb, 0, 0, false, true, 2);
+}
+TEST_P(Test_ONNX_layers, Gemm_default_vector_bias) {
+    testONNXModels("test_gemm_default_vector_bias", pb, 0, 0, false, true, 2);
+}
+TEST_P(Test_ONNX_layers, Gemm_default_zero_bias) {
+    testONNXModels("test_gemm_default_zero_bias", pb, 0, 0, false, true, 2);
+}
+TEST_P(Test_ONNX_layers, Gemm_transposeA) {
+    testONNXModels("test_gemm_transposeA", pb, 0, 0, false, true, 2);
+}
+TEST_P(Test_ONNX_layers, Gemm_transposeB) {
+    testONNXModels("test_gemm_transposeB", pb, 0, 0, false, true, 2);
+}
+
+// Note: These tests are converted from onnx/onnx so that they have constant shape as input.
+// TODO: They can be moved into conformance tests once dynamic input is properly supported.
+TEST_P(Test_ONNX_layers, Expand_dim_changed) {
+    testONNXModels("test_expand_dim_changed", pb, 0, 0, false, true, 1);
+}
+TEST_P(Test_ONNX_layers, Expand_dim_unchanged) {
+    testONNXModels("test_expand_dim_unchanged", pb, 0, 0, false, true, 1);
+}
+TEST_P(Test_ONNX_layers, Expand_shape_model1) {
+    testONNXModels("test_expand_shape_model1", pb, 0, 0, false, true, 1);
+}
+TEST_P(Test_ONNX_layers, Expand_shape_model2) {
+    testONNXModels("test_expand_shape_model2", pb, 0, 0, false, true, 1);
+}
+TEST_P(Test_ONNX_layers, Expand_shape_model3) {
+    testONNXModels("test_expand_shape_model3", pb, 0, 0, false, true, 1);
+}
+TEST_P(Test_ONNX_layers, Expand_shape_model4) {
+    testONNXModels("test_expand_shape_model4", pb, 0, 0, false, true, 1);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

@@ -40,6 +40,8 @@ public:
         model.setPreferableTarget(target);
 
         model.setNmsAcrossClasses(nmsAcrossClasses);
+        if (target == DNN_TARGET_CPU_FP16)
+            model.enableWinograd(false);
 
         std::vector<int> classIds;
         std::vector<float> confidences;
@@ -447,14 +449,17 @@ TEST_P(Test_Model, DetectionOutput)
     {
         if (backend == DNN_BACKEND_OPENCV)
             scoreDiff = 4e-3;
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2022010000)
-        else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            scoreDiff = 4e-2;
-#endif
         else
             scoreDiff = 2e-2;
         iouDiff = 1.8e-1;
     }
+#if defined(INF_ENGINE_RELEASE)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+            scoreDiff = 0.05;
+            iouDiff = 0.08;
+        }
+#endif
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
@@ -487,8 +492,8 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
         refBoxes.emplace_back(left, top, width, height);
     }
 
-    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel", false);
-    std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
+    std::string weights_file = _tf("MobileNetSSD_deploy_19e3ec3.caffemodel", false);
+    std::string config_file = _tf("MobileNetSSD_deploy_19e3ec3.prototxt");
 
     Scalar mean = Scalar(127.5, 127.5, 127.5);
     double scale = 1.0 / 127.5;
@@ -508,7 +513,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        scoreDiff = 0.0021;
+        scoreDiff = 0.0028;
         iouDiff = 1e-2;
     }
     float confThreshold = FLT_MIN;
@@ -592,8 +597,8 @@ TEST_P(Test_Model, Detection_normalized)
     std::vector<float> refConfidences = {0.999222f};
     std::vector<Rect2d> refBoxes = {Rect2d(0, 4, 227, 222)};
 
-    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel", false);
-    std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
+    std::string weights_file = _tf("MobileNetSSD_deploy_19e3ec3.caffemodel", false);
+    std::string config_file = _tf("MobileNetSSD_deploy_19e3ec3.prototxt");
 
     Scalar mean = Scalar(127.5, 127.5, 127.5);
     double scale = 1.0 / 127.5;

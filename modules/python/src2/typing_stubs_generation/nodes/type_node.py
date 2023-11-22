@@ -163,11 +163,11 @@ class AnyTypeNode(TypeNode):
     """
     @property
     def typename(self) -> str:
-        return "typing.Any"
+        return "_typing.Any"
 
     @property
     def required_usage_imports(self) -> Generator[str, None, None]:
-        yield "import typing"
+        yield "import typing as _typing"
 
 
 class PrimitiveTypeNode(TypeNode):
@@ -474,11 +474,11 @@ class ConditionalAliasTypeNode(TypeNode):
         """Type subscription is not possible in python 3.8 and older numpy versions."""
         return cls(
             ctype_name,
-            "typing.TYPE_CHECKING",
+            "_typing.TYPE_CHECKING",
             NDArrayTypeNode(ctype_name, shape, dtype),
             NDArrayTypeNode(ctype_name, shape, dtype,
                             use_numpy_generics=False),
-            condition_required_imports=("import typing",)
+            condition_required_imports=("import typing as _typing",)
         )
 
 
@@ -499,14 +499,14 @@ class NDArrayTypeNode(TypeNode):
         if self._use_numpy_generics:
             # NOTE: Shape is not fully supported yet
             dtype = self.dtype if self.dtype is not None else "numpy.generic"
-            return f"numpy.ndarray[typing.Any, numpy.dtype[{dtype}]]"
+            return f"numpy.ndarray[_typing.Any, numpy.dtype[{dtype}]]"
         return "numpy.ndarray"
 
     @property
     def required_usage_imports(self) -> Generator[str, None, None]:
         yield "import numpy"
         # if self.shape is None:
-        yield "import typing"
+        yield "import typing as _typing"
 
 
 class ASTNodeTypeNode(TypeNode):
@@ -668,13 +668,13 @@ class ContainerTypeNode(AggregatedTypeNode):
 
     @property
     def required_definition_imports(self) -> Generator[str, None, None]:
-        yield "import typing"
+        yield "import typing as _typing"
         yield from super().required_definition_imports
 
     @property
     def required_usage_imports(self) -> Generator[str, None, None]:
         if TypeNode.compatible_to_runtime_usage:
-            yield "import typing"
+            yield "import typing as _typing"
         yield from super().required_usage_imports
 
     @abc.abstractproperty
@@ -695,7 +695,7 @@ class SequenceTypeNode(ContainerTypeNode):
 
     @property
     def type_format(self) -> str:
-        return "typing.Sequence[{}]"
+        return "_typing.Sequence[{}]"
 
     @property
     def types_separator(self) -> str:
@@ -709,7 +709,7 @@ class TupleTypeNode(ContainerTypeNode):
     @property
     def type_format(self) -> str:
         if TypeNode.compatible_to_runtime_usage:
-            return "typing.Tuple[{}]"
+            return "_typing.Tuple[{}]"
         return "tuple[{}]"
 
     @property
@@ -723,7 +723,7 @@ class UnionTypeNode(ContainerTypeNode):
     @property
     def type_format(self) -> str:
         if TypeNode.compatible_to_runtime_usage:
-            return "typing.Union[{}]"
+            return "_typing.Union[{}]"
         return "{}"
 
     @property
@@ -743,7 +743,7 @@ class OptionalTypeNode(ContainerTypeNode):
     @property
     def type_format(self) -> str:
         if TypeNode.compatible_to_runtime_usage:
-            return "typing.Optional[{}]"
+            return "_typing.Optional[{}]"
         return "{} | None"
 
     @property
@@ -769,7 +769,7 @@ class DictTypeNode(ContainerTypeNode):
     @property
     def type_format(self) -> str:
         if TypeNode.compatible_to_runtime_usage:
-            return "typing.Dict[{}]"
+            return "_typing.Dict[{}]"
         return "dict[{}]"
 
     @property
@@ -810,33 +810,48 @@ class CallableTypeNode(AggregatedTypeNode):
 
     @property
     def typename(self) -> str:
-        return 'typing.Callable[[{}], {}]'.format(
+        return '_typing.Callable[[{}], {}]'.format(
             ', '.join(arg.typename for arg in self.arg_types),
             self.ret_type.typename
         )
 
     @property
     def full_typename(self) -> str:
-        return 'typing.Callable[[{}], {}]'.format(
+        return '_typing.Callable[[{}], {}]'.format(
             ', '.join(arg.full_typename for arg in self.arg_types),
             self.ret_type.full_typename
         )
 
     def relative_typename(self, module: str) -> str:
-        return 'typing.Callable[[{}], {}]'.format(
+        return '_typing.Callable[[{}], {}]'.format(
             ', '.join(arg.relative_typename(module) for arg in self.arg_types),
             self.ret_type.relative_typename(module)
         )
 
     @property
     def required_definition_imports(self) -> Generator[str, None, None]:
-        yield "import typing"
+        yield "import typing as _typing"
         yield from super().required_definition_imports
 
     @property
     def required_usage_imports(self) -> Generator[str, None, None]:
-        yield "import typing"
+        yield "import typing as _typing"
         yield from super().required_usage_imports
+
+
+class ClassTypeNode(ContainerTypeNode):
+    """Type node representing types themselves (refer to typing.Type)
+    """
+    def __init__(self, value: TypeNode) -> None:
+        super().__init__(value.ctype_name, (value,))
+
+    @property
+    def type_format(self) -> str:
+        return "_typing.Type[{}]"
+
+    @property
+    def types_separator(self) -> str:
+        return ", "
 
 
 def _resolve_symbol(root: Optional[ASTNode], full_symbol_name: str) -> Optional[ASTNode]:

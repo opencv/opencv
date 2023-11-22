@@ -45,6 +45,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include "../nms.inl.hpp"
+#include "cpu_kernels/softmax.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -280,10 +281,8 @@ public:
                 }
 
                 if (useSoftmax) {  // Yolo v2
-                    for (int i = 0; i < batch_size*rows*cols*anchors; ++i) {
-                        int index = cell_size*i;
-                        softmax_activate(srcData + index + 5, classes, 1, dstData + index + 5);
-                    }
+                    Mat _inpBlob = inpBlob.reshape(0, outBlob.dims, outBlob.size);
+                    softmax(outBlob, _inpBlob, -1, 5, classes);
                 }
                 else if (useLogistic) {  // Yolo v3
                     for (int i = 0; i < batch_size*rows*cols*anchors; ++i){
@@ -466,7 +465,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto parent_shape = input->get_shape();
+        auto parent_shape = input.get_shape();
         int64_t b = parent_shape[0];
         int64_t h = parent_shape[1];
         int64_t w = parent_shape[2];
@@ -567,7 +566,7 @@ public:
             int hNorm, wNorm;
             if (nodes.size() > 1)
             {
-                auto node_1_shape = nodes[1].dynamicCast<InfEngineNgraphNode>()->node->get_shape();
+                auto node_1_shape = nodes[1].dynamicCast<InfEngineNgraphNode>()->node.get_shape();
                 hNorm = node_1_shape[2];
                 wNorm = node_1_shape[3];
             }

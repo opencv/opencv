@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_timvx.hpp"
+#include "../ie_ngraph.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -86,7 +87,8 @@ public:
                return false;
         }
 
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -303,7 +305,7 @@ public:
             #endif
                 {
                     int i = 0;
-            #if CV_SIMD
+            #if CV_SIMD128
                     for( ; i  <= nw - 4; i += 4, wptr += 4*wstep )
                     {
                         v_int32x4 vs0 = v_setzero_s32(), vs1 = v_setzero_s32(),
@@ -321,8 +323,8 @@ public:
                             vs3 = v_dotprod_expand_fast(v, v_load_aligned(wptr + wstep*3 + k), vs3);
                         }
 
-                        s += v_int32x4(v_reduce_sum(vs0), v_reduce_sum(vs1), v_reduce_sum(vs2), v_reduce_sum(vs3));
-                        v_int32x4 out = outzp + v_round(v_cvt_f32(s)*mult);
+                        s = v_add(s, v_int32x4(v_reduce_sum(vs0), v_reduce_sum(vs1), v_reduce_sum(vs2), v_reduce_sum(vs3)));
+                        v_int32x4 out = v_add(outzp, v_round(v_mul(v_cvt_f32(s), mult)));
                         v_store(dptr + i, v_min(v_max(out, outmin), outmax));
                     }
             #endif
@@ -394,6 +396,77 @@ public:
         return flops;
 
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_CheckTypeEQ(blobs[0].type(), CV_8S, "");  // weights
+        CV_CheckTypeEQ(blobs[1].type(), CV_32S, "");  // bias
+        CV_CheckTypeEQ(outputMultiplier.type(), CV_32F, "");
+
+        ngraph::Output<ngraph::Node> input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        ngraph::Output<ngraph::Node> ieWeights, ieBias, matmul;
+        bool transA = false, transB = true;
+        size_t numOutput = blobs[0].size[0];
+
+        if (nodes.size() == 2)
+        {
+            CV_Error(Error::StsNotImplemented, "");
+            // auto inp2 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+            // matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, transA, transB);
+        }
+        else
+        {
+            std::vector<int> shape(1 + normalize_axis(axis, input.get_shape().size()), 0);
+            shape[shape.size() - 1] = -1;
+            input = std::make_shared<ngraph::op::v1::Reshape>(
+                input,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{shape.size()}, shape.data()),
+                true
+            );
+
+            input = ngraphDequantize(input, input_sc, input_zp);
+
+            const float low = -128, high = 127;
+            std::vector<float> inpLows(numOutput, low);
+            std::vector<float> inpHighs(numOutput, high);
+            std::vector<float> outLows(numOutput);
+            std::vector<float> outHighs(numOutput);
+            for (int i = 0; i < numOutput; ++i) {
+                outLows[i] = low * outputMultiplier.ptr<float>()[i] * output_sc / input_sc;
+                outHighs[i] = high * outputMultiplier.ptr<float>()[i] * output_sc / input_sc;
+            }
+
+            std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
+            ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::i8, weight_shape, blobs[0].data);
+            ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::f32);
+            ieWeights = std::make_shared<ngraph::op::FakeQuantize>(ieWeights,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numOutput, 1}, inpLows.data()),
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numOutput, 1}, inpHighs.data()),
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numOutput, 1}, outLows.data()),
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numOutput, 1}, outHighs.data()),
+                256 // levels
+            );
+            matmul = std::make_shared<ngraph::op::MatMul>(input, ieWeights, transA, transB);
+        }
+
+        if (blobs.size() > 1) {
+            int32_t* bias = blobs[1].ptr<int32_t>();
+            std::vector<float> ovBias(blobs[1].total());
+            for (int i = 0; i < ovBias.size(); ++i) {
+                ovBias[i] = (bias[i] + input_zp * cv::sum(blobs[0].row(i))[0]) * outputMultiplier.ptr<float>()[i] * output_sc;
+            }
+            auto bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                            ngraph::Shape{blobs[1].total()}, ovBias.data());
+            matmul = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node);
+        }
+
+        matmul = ngraphQuantize(matmul, output_sc, output_zp);
+
+        return new InfEngineNgraphNode(matmul);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     Mat weightsMat, biasMat, outputMultiplier, activationLUT;
     Ptr<ActivationLayerInt8> activ;

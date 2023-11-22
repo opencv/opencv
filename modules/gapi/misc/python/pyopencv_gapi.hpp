@@ -32,6 +32,8 @@ using map_int_and_double            = std::map<int, double>;
 using ep_OpenVINO                   = cv::gapi::onnx::ep::OpenVINO;
 using ep_DirectML                   = cv::gapi::onnx::ep::DirectML;
 using ep_CoreML                     = cv::gapi::onnx::ep::CoreML;
+using ep_CUDA                       = cv::gapi::onnx::ep::CUDA;
+using ep_TensorRT                   = cv::gapi::onnx::ep::TensorRT;
 
 // NB: Python wrapper generate T_U for T<U>
 // This behavior is only observed for inputs
@@ -320,7 +322,7 @@ PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
 
     PyErr_SetString(PyExc_TypeError, "Unsupported GOpaque type");
     return NULL;
-};
+}
 
 template <>
 PyObject* pyopencv_from(const cv::detail::VectorRef& v)

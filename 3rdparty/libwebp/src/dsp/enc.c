@@ -732,6 +732,7 @@ VP8QuantizeBlockWHT VP8EncQuantizeBlockWHT;
 VP8BlockCopy VP8Copy4x4;
 VP8BlockCopy VP8Copy16x8;
 
+extern VP8CPUInfo VP8GetCPUInfo;
 extern void VP8EncDspInitSSE2(void);
 extern void VP8EncDspInitSSE41(void);
 extern void VP8EncDspInitNEON(void);
@@ -773,10 +774,10 @@ WEBP_DSP_INIT_FUNC(VP8EncDspInit) {
 
   // If defined, use CPUInfo() to overwrite some pointers with faster versions.
   if (VP8GetCPUInfo != NULL) {
-#if defined(WEBP_USE_SSE2)
+#if defined(WEBP_HAVE_SSE2)
     if (VP8GetCPUInfo(kSSE2)) {
       VP8EncDspInitSSE2();
-#if defined(WEBP_USE_SSE41)
+#if defined(WEBP_HAVE_SSE41)
       if (VP8GetCPUInfo(kSSE4_1)) {
         VP8EncDspInitSSE41();
       }
@@ -800,7 +801,7 @@ WEBP_DSP_INIT_FUNC(VP8EncDspInit) {
 #endif
   }
 
-#if defined(WEBP_USE_NEON)
+#if defined(WEBP_HAVE_NEON)
   if (WEBP_NEON_OMIT_C_CODE ||
       (VP8GetCPUInfo != NULL && VP8GetCPUInfo(kNEON))) {
     VP8EncDspInitNEON();

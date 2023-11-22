@@ -619,10 +619,12 @@ TEST_P(Test_TensorFlow_layers, pooling_reduce_sum_1_2_true)
 
 TEST_P(Test_TensorFlow_layers, max_pool_grad)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     runTensorFlowNet("max_pool_grad");
 }
 
@@ -972,6 +974,9 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
     net.setInput(blob);
     // Output has shape 1x1xNx7 where N - number of detections.
     // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
@@ -1305,6 +1310,8 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
 
     Mat img = imread(imgPath);
     Mat inp = blobFromImage(img, 1.0, Size(), Scalar(123.68, 116.78, 103.94), true, false);
@@ -1339,8 +1346,9 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     }
     else if (target == DNN_TARGET_CPU_FP16)
     {
-        lInf_scores = 0.1;
-        l1_geometry = 0.28; lInf_geometry = 5.94;
+        lInf_scores = 0.17;
+        l1_geometry = 0.28;
+        lInf_geometry = 5.94;
     }
     else
     {
@@ -1496,17 +1504,21 @@ TEST_P(Test_TensorFlow_layers, split)
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     runTensorFlowNet("split");
 }
 
 TEST_P(Test_TensorFlow_layers, split_equals)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     runTensorFlowNet("split_equals");
 }
 
@@ -1581,7 +1593,7 @@ TEST_P(Test_TensorFlow_layers, relu6)
 
 TEST_P(Test_TensorFlow_layers, subpixel)
 {
-#if defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -1621,8 +1633,10 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear_align_corners)
 // TF case: align_corners=False, half_pixel_centers=True
 TEST_P(Test_TensorFlow_layers, resize_bilinear_half_pixel)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
 
     runTensorFlowNet("resize_bilinear", false, 0.0, 0.0, false, "_half_pixel");
 }
@@ -1636,8 +1650,10 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear_factor)
 // TF case: align_corners=False, half_pixel_centers=True
 TEST_P(Test_TensorFlow_layers, resize_bilinear_factor_half_pixel)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
 
     runTensorFlowNet("resize_bilinear_factor", false, 0.0, 0.0, false, "_half_pixel");
 }
@@ -1675,6 +1691,7 @@ TEST_P(Test_TensorFlow_layers, clip_by_value)
 
 TEST_P(Test_TensorFlow_layers, tf2_prelu)
 {
+    double l1 = 0, lInf = 0;
     if (backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported; only across channels is supported
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -1686,6 +1703,11 @@ TEST_P(Test_TensorFlow_layers, tf2_prelu)
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
             CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
         );
+#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2023000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) {
+        l1 = 1e-4;
+        lInf = 1e-3;
+    }
 #elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
@@ -1705,7 +1727,7 @@ TEST_P(Test_TensorFlow_layers, tf2_prelu)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
 
-    runTensorFlowNet("tf2_prelu");
+    runTensorFlowNet("tf2_prelu", false, l1, lInf);
 }
 
 TEST_P(Test_TensorFlow_layers, tf2_permute_nhwc_ncwh)
@@ -1794,6 +1816,8 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
 
     net.setInput(blob);
 
@@ -1810,6 +1834,11 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.2 : 2e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.018 : default_lInf;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        scoreDiff = std::max(scoreDiff, 0.06);
+        iouDiff = std::max(iouDiff, 0.01);
+    }
     normAssertDetections(refDetections, outDetections, "", /*threshold for zero confidence*/1e-5, scoreDiff, iouDiff);
 
     // Output size of masks is NxCxHxW where

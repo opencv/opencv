@@ -137,7 +137,7 @@ public:
     using Storage = cv::detail::MakeVariantType<cv::GOpaque, GOPAQUE_TYPE_LIST_G(ID_, ID)>;
 
     template<typename T>
-    GOpaqueT(cv::GOpaque<T> arg) : m_type(cv::detail::ArgTypeTraits<T>::type), m_arg(arg) { };
+    GOpaqueT(cv::GOpaque<T> arg) : m_type(cv::detail::ArgTypeTraits<T>::type), m_arg(arg) { }
 
     GAPI_WRAP GOpaqueT(gapi::ArgType type) : m_type(type)
     {
@@ -175,7 +175,7 @@ public:
     using Storage = cv::detail::MakeVariantType<cv::GArray, GARRAY_TYPE_LIST_G(ID_, ID)>;
 
     template<typename T>
-    GArrayT(cv::GArray<T> arg) : m_type(cv::detail::ArgTypeTraits<T>::type), m_arg(arg) { };
+    GArrayT(cv::GArray<T> arg) : m_type(cv::detail::ArgTypeTraits<T>::type), m_arg(arg) { }
 
     GAPI_WRAP GArrayT(gapi::ArgType type) : m_type(type)
     {

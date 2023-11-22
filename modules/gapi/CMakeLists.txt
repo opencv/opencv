@@ -191,6 +191,9 @@ set(gapi_srcs
     src/backends/ov/bindings_ov.cpp
     src/backends/python/gpythonbackend.cpp
 
+    # Queue Streaming source
+    src/streaming/queue_source.cpp
+
     # OpenVPL Streaming source
     src/streaming/onevpl/source.cpp
     src/streaming/onevpl/source_priv.cpp
@@ -363,6 +366,10 @@ endif()
 if(WIN32)
   # Required for htonl/ntohl on Windows
   ocv_target_link_libraries(${the_module} PRIVATE wsock32 ws2_32)
+endif()
+
+if(HAVE_DIRECTML)
+  ocv_target_compile_definitions(${the_module} PRIVATE HAVE_DIRECTML=1)
 endif()
 
 if(HAVE_ONNX)

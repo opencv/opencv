@@ -300,9 +300,7 @@ You can call cv::destroyWindow or cv::destroyAllWindows to close the window and 
 memory usage. For a simple program, you do not really have to call these functions because all the
 resources and windows of the application are closed automatically by the operating system upon exit.
 
-@note
-
-Qt backend supports additional flags:
+@note Qt backend supports additional flags:
  -   **WINDOW_NORMAL or WINDOW_AUTOSIZE:** WINDOW_NORMAL enables you to resize the
      window, whereas WINDOW_AUTOSIZE adjusts automatically the window size to fit the
      displayed image (see imshow ), and you cannot change the window size manually.
@@ -335,9 +333,7 @@ CV_EXPORTS_W int startWindowThread();
 
 /** @brief Similar to #waitKey, but returns full key code.
 
-@note
-
-Key code is implementation specific and depends on used backend: QT/GTK/Win32/etc
+@note Key code is implementation specific and depends on used backend: QT/GTK/Win32/etc
 
 */
 CV_EXPORTS_W int waitKeyEx(int delay = 0);
@@ -404,11 +400,7 @@ For example, **waitKey(0)** will display the window infinitely until any keypres
 for image display). **waitKey(25)** will display a frame and wait approximately 25 ms for a key
 press (suitable for displaying a video frame-by-frame). To remove the window, use cv::destroyWindow.
 
-@note
-
-[__Windows Backend Only__] Pressing Ctrl+C will copy the image to the clipboard.
-
-[__Windows Backend Only__] Pressing Ctrl+S will show a dialog to save the image.
+@note [__Windows Backend Only__] Pressing Ctrl+C will copy the image to the clipboard. Pressing Ctrl+S will show a dialog to save the image.
 
 @param winname Name of the window.
 @param mat Image to be shown.
@@ -417,10 +409,8 @@ CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
 
 /** @brief Resizes the window to the specified size
 
-@note
-
--   The specified window size is for the image area. Toolbars are not counted.
--   Only windows created without cv::WINDOW_AUTOSIZE flag can be resized.
+@note The specified window size is for the image area. Toolbars are not counted.
+Only windows created without cv::WINDOW_AUTOSIZE flag can be resized.
 
 @param winname Window name.
 @param width The new window width.
@@ -502,9 +492,7 @@ For cv::EVENT_MOUSEWHEEL positive and negative values mean forward and backward 
 respectively. For cv::EVENT_MOUSEHWHEEL, where available, positive and negative values mean right and
 left scrolling, respectively.
 
-@note
-
-Mouse-wheel events are currently supported only on Windows and Cocoa
+@note Mouse-wheel events are currently supported only on Windows and Cocoa.
 
 @param flags The mouse callback flags parameter.
  */
@@ -559,9 +547,7 @@ and range, assigns a variable value to be a position synchronized with the track
 the callback function onChange to be called on the trackbar position change. The created trackbar is
 displayed in the specified window winname.
 
-@note
-
-[__Qt Backend Only__] winname can be empty if the trackbar should be attached to the
+@note [__Qt Backend Only__] winname can be empty if the trackbar should be attached to the
 control panel.
 
 Clicking the label of each trackbar enables editing the trackbar values manually.
@@ -587,9 +573,7 @@ CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,
 
 The function returns the current position of the specified trackbar.
 
-@note
-
-[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
+@note [__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -601,9 +585,7 @@ CV_EXPORTS_W int getTrackbarPos(const String& trackbarname, const String& winnam
 
 The function sets the position of the specified trackbar in the specified window.
 
-@note
-
-[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
+@note [__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -616,9 +598,7 @@ CV_EXPORTS_W void setTrackbarPos(const String& trackbarname, const String& winna
 
 The function sets the maximum position of the specified trackbar in the specified window.
 
-@note
-
-[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
+@note [__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -631,9 +611,7 @@ CV_EXPORTS_W void setTrackbarMax(const String& trackbarname, const String& winna
 
 The function sets the minimum position of the specified trackbar in the specified window.
 
-@note
-
-[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
+@note [__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.

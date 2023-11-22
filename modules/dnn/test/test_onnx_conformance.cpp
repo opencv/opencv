@@ -339,6 +339,25 @@ static const TestCase testConformanceConfig[] = {
     {"test_isinf_negative", 1, 1},
     {"test_isinf_positive", 1, 1},
     {"test_isnan", 1, 1},
+    {"test_layer_normalization_2d_axis0", 3, 1},
+    {"test_layer_normalization_2d_axis1", 3, 1},
+    {"test_layer_normalization_2d_axis_negative_1", 3, 1},
+    {"test_layer_normalization_2d_axis_negative_2", 3, 1},
+    {"test_layer_normalization_3d_axis0_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis1_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis2_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_1_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_2_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_3_epsilon", 3, 1},
+    {"test_layer_normalization_4d_axis0", 3, 1},
+    {"test_layer_normalization_4d_axis1", 3, 1},
+    {"test_layer_normalization_4d_axis2", 3, 1},
+    {"test_layer_normalization_4d_axis3", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_1", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_2", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_3", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_4", 3, 1},
+    {"test_layer_normalization_default_axis", 3, 1},
     {"test_leakyrelu", 1, 1},
     {"test_leakyrelu_default", 1, 1},
     {"test_leakyrelu_example", 1, 1},
@@ -1257,4 +1276,4 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_conformance,
     printOnnxConfParams
 );
 
-};
+}

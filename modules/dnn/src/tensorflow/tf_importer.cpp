@@ -260,6 +260,11 @@ const tensorflow::AttrValue& getLayerAttr(const tensorflow::NodeDef &layer, cons
     return layer.attr().at(name);
 }
 
+#if defined(__GNUC__) && (__GNUC__ == 13)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdangling-reference"
+#endif
+
 static DataLayout getDataLayout(const tensorflow::NodeDef& layer)
 {
     if (hasLayerAttr(layer, "data_format"))
@@ -589,6 +594,7 @@ private:
     void parsePack               (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseClipByValue        (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseLeakyRelu          (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
+    void parsePReLU              (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseActivation         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseExpandDims         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseSquare             (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
@@ -668,6 +674,7 @@ TFImporter::DispatchMap TFImporter::buildDispatchMap()
     dispatch["Pack"] = &TFImporter::parsePack;
     dispatch["ClipByValue"] = &TFImporter::parseClipByValue;
     dispatch["LeakyRelu"] = &TFImporter::parseLeakyRelu;
+    dispatch["PReLU"] = &TFImporter::parsePReLU;
     dispatch["Abs"] = dispatch["Tanh"] = dispatch["Sigmoid"] = dispatch["Relu"] =
             dispatch["Elu"] = dispatch["Exp"] = dispatch["Identity"] = dispatch["Relu6"] = &TFImporter::parseActivation;
     dispatch["ExpandDims"] = &TFImporter::parseExpandDims;
@@ -2622,6 +2629,27 @@ void TFImporter::parseLeakyRelu(tensorflow::GraphDef& net, const tensorflow::Nod
     connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
 }
 
+void TFImporter::parsePReLU(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
+{
+    const std::string& name = layer.name();
+
+    Mat scales;
+    blobFromTensor(getConstBlob(layer, value_id, 1), scales);
+
+    layerParams.blobs.resize(1);
+
+    if (scales.dims == 3) {
+        // Considering scales from Keras wih HWC layout;
+        transposeND(scales, {2, 0, 1}, layerParams.blobs[0]);
+    } else {
+        layerParams.blobs[0] = scales;
+    }
+
+    int id = dstNet.addLayer(name, "PReLU", layerParams);
+    layer_id[name] = id;
+    connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+}
+
 // "Abs" "Tanh" "Sigmoid" "Relu" "Elu" "Exp" "Identity" "Relu6"
 void TFImporter::parseActivation(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
@@ -2642,14 +2670,20 @@ void TFImporter::parseActivation(tensorflow::GraphDef& net, const tensorflow::No
     connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
 }
 
+// ArgMin or ArgMax node
 void TFImporter::parseArg(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     const std::string& name = layer.name();
     const std::string& type = layer.op();
 
-    Mat dimension = getTensorContent(getConstBlob(layer, value_id, 1));
-    CV_Assert(dimension.total() == 1 && dimension.type() == CV_32SC1);
-    layerParams.set("axis", *dimension.ptr<int>());
+    if (layer.input_size() < 2)
+        layerParams.set("axis", 0); // default dimension is 0
+    else
+    {
+        Mat dimension = getTensorContent(getConstBlob(layer, value_id, 1));
+        CV_Assert(dimension.total() == 1 && dimension.type() == CV_32SC1);
+        layerParams.set("axis", dimension.at<int>(0));
+    }
     layerParams.set("op", type == "ArgMax" ? "max" : "min");
     layerParams.set("keepdims", false); //tensorflow doesn't have this atrr, the output's dims minus one(default);
 
@@ -2843,6 +2877,7 @@ const tensorflow::TensorProto& TFImporter::getConstBlob(const tensorflow::NodeDe
 
     if (input_blob_index == -1)
         CV_Error(Error::StsError, "Const input blob for weights not found");
+    CV_CheckLT(input_blob_index, layer.input_size(), "Input index is out of range");
 
     Pin kernel_inp = parsePin(layer.input(input_blob_index));
     if (const_layers.find(kernel_inp.name) == const_layers.end())
@@ -2947,6 +2982,10 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
     }
     CV_LOG_DEBUG(NULL, "DNN/TF: layers_to_ignore.size() = " << layers_to_ignore.size());
 }
+
+#if defined(__GNUC__) && (__GNUC__ == 13)
+#pragma GCC diagnostic pop
+#endif
 
 // If all inputs of specific layer have the same data layout we can say that
 // this layer's output has this data layout too. Returns DNN_LAYOUT_UNKNOWN otherwise.
@@ -3197,7 +3236,7 @@ void TFLayerHandler::fillRegistry(const tensorflow::GraphDef& net)
         }
     }
     printMissing();
-};
+}
 
 bool TFLayerHandler::handleMissing(const tensorflow::NodeDef& layer)
 {

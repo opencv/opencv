@@ -638,18 +638,12 @@ public:
         #undef is_lower_bound
         #define is_lower_bound(i) (alpha_status[i] < 0)
 
-        #undef is_free
-        #define is_free(i) (alpha_status[i] == 0)
-
         #undef get_C
         #define get_C(i) (C[y[i]>0])
 
         #undef update_alpha_status
         #define update_alpha_status(i) \
             alpha_status[i] = (schar)(alpha[i] >= get_C(i) ? 1 : alpha[i] <= 0 ? -1 : 0)
-
-        #undef reconstruct_gradient
-        #define reconstruct_gradient() /* empty for now */
 
         bool solve_generic( SolutionInfo& si )
         {

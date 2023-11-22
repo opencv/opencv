@@ -1,4 +1,4 @@
-from typing import Type, Optional, Tuple
+from typing import Optional, Tuple
 
 from .node import ASTNode, ASTNodeType
 
@@ -14,7 +14,7 @@ class ConstantNode(ASTNode):
         self._value_type = "int"
 
     @property
-    def children_types(self) -> Tuple[Type[ASTNode], ...]:
+    def children_types(self) -> Tuple[ASTNodeType, ...]:
         return ()
 
     @property

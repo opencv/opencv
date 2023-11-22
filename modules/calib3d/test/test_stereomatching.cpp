@@ -740,8 +740,8 @@ public:
     CV_StereoBMTest()
     {
         name = "stereobm";
-        fill(rmsEps.begin(), rmsEps.end(), 0.4f);
-        fill(fracEps.begin(), fracEps.end(), 0.022f);
+        std::fill(rmsEps.begin(), rmsEps.end(), 0.4f);
+        std::fill(fracEps.begin(), fracEps.end(), 0.022f);
     }
 
 protected:
@@ -866,8 +866,8 @@ public:
     CV_StereoSGBMTest()
     {
         name = "stereosgbm";
-        fill(rmsEps.begin(), rmsEps.end(), 0.25f);
-        fill(fracEps.begin(), fracEps.end(), 0.01f);
+        std::fill(rmsEps.begin(), rmsEps.end(), 0.25f);
+        std::fill(fracEps.begin(), fracEps.end(), 0.01f);
     }
 
 protected:

@@ -165,7 +165,7 @@ namespace
             out = true;
         }
     };
-};
+}
 
 TEST(StatefulKernel, StateInitOnceInRegularMode)
 {
@@ -190,7 +190,7 @@ TEST(StatefulKernel, StateInitOnceInRegularMode)
         EXPECT_TRUE(params.pSetupsCount != nullptr);
         EXPECT_EQ(1, *params.pSetupsCount);
     }
-};
+}
 
 struct StateInitOnce : public ::testing::TestWithParam<bool>{};
 TEST_P(StateInitOnce, StreamingCompiledWithMeta)

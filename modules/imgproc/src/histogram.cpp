@@ -2053,13 +2053,13 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         }
         else if( method == CV_COMP_CORREL )
         {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
             v_float64 v_s1 = vx_setzero_f64();
             v_float64 v_s2 = vx_setzero_f64();
             v_float64 v_s11 = vx_setzero_f64();
             v_float64 v_s12 = vx_setzero_f64();
             v_float64 v_s22 = vx_setzero_f64();
-            for ( ; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            for ( ; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
             {
                 v_float32 v_a = vx_load(h1 + j);
                 v_float32 v_b = vx_load(h2 + j);
@@ -2070,8 +2070,8 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                 v_s12 = v_muladd(v_ad, v_bd, v_s12);
                 v_s11 = v_muladd(v_ad, v_ad, v_s11);
                 v_s22 = v_muladd(v_bd, v_bd, v_s22);
-                v_s1 += v_ad;
-                v_s2 += v_bd;
+                v_s1 = v_add(v_s1, v_ad);
+                v_s2 = v_add(v_s2, v_bd);
 
                 // 2-3
                 v_ad = v_cvt_f64_high(v_a);
@@ -2079,8 +2079,8 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                 v_s12 = v_muladd(v_ad, v_bd, v_s12);
                 v_s11 = v_muladd(v_ad, v_ad, v_s11);
                 v_s22 = v_muladd(v_bd, v_bd, v_s22);
-                v_s1 += v_ad;
-                v_s2 += v_bd;
+                v_s1 = v_add(v_s1, v_ad);
+                v_s2 = v_add(v_s2, v_bd);
             }
             s12 += v_reduce_sum(v_s12);
             s11 += v_reduce_sum(v_s11);
@@ -2093,7 +2093,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             v_float32 v_s11 = vx_setzero_f32();
             v_float32 v_s12 = vx_setzero_f32();
             v_float32 v_s22 = vx_setzero_f32();
-            for (; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            for (; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
             {
                 v_float32 v_a = vx_load(h1 + j);
                 v_float32 v_b = vx_load(h2 + j);
@@ -2124,20 +2124,20 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         }
         else if( method == CV_COMP_INTERSECT )
         {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
             v_float64 v_result = vx_setzero_f64();
-            for ( ; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            for ( ; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
             {
                 v_float32 v_src = v_min(vx_load(h1 + j), vx_load(h2 + j));
-                v_result += v_cvt_f64(v_src) + v_cvt_f64_high(v_src);
+                v_result = v_add(v_result, v_add(v_cvt_f64(v_src), v_cvt_f64_high(v_src)));
             }
             result += v_reduce_sum(v_result);
 #elif CV_SIMD
             v_float32 v_result = vx_setzero_f32();
-            for (; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            for (; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
             {
                 v_float32 v_src = v_min(vx_load(h1 + j), vx_load(h2 + j));
-                v_result += v_src;
+                v_result = v_add(v_result, v_src);
             }
             result += v_reduce_sum(v_result);
 #endif
@@ -2146,26 +2146,26 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         }
         else if( method == CV_COMP_BHATTACHARYYA )
         {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
             v_float64 v_s1 = vx_setzero_f64();
             v_float64 v_s2 = vx_setzero_f64();
             v_float64 v_result = vx_setzero_f64();
-            for ( ; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            for ( ; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
             {
                 v_float32 v_a = vx_load(h1 + j);
                 v_float32 v_b = vx_load(h2 + j);
 
                 v_float64 v_ad = v_cvt_f64(v_a);
                 v_float64 v_bd = v_cvt_f64(v_b);
-                v_s1 += v_ad;
-                v_s2 += v_bd;
-                v_result += v_sqrt(v_ad * v_bd);
+                v_s1 = v_add(v_s1, v_ad);
+                v_s2 = v_add(v_s2, v_bd);
+                v_result = v_add(v_result, v_sqrt(v_mul(v_ad, v_bd)));
 
                 v_ad = v_cvt_f64_high(v_a);
                 v_bd = v_cvt_f64_high(v_b);
-                v_s1 += v_ad;
-                v_s2 += v_bd;
-                v_result += v_sqrt(v_ad * v_bd);
+                v_s1 = v_add(v_s1, v_ad);
+                v_s2 = v_add(v_s2, v_bd);
+                v_result = v_add(v_result, v_sqrt(v_mul(v_ad, v_bd)));
             }
             s1 += v_reduce_sum(v_s1);
             s2 += v_reduce_sum(v_s2);
@@ -2174,7 +2174,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             v_float32 v_s1 = vx_setzero_f32();
             v_float32 v_s2 = vx_setzero_f32();
             v_float32 v_result = vx_setzero_f32();
-            for (; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            for (; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
             {
                 v_float32 v_a = vx_load(h1 + j);
                 v_float32 v_b = vx_load(h2 + j);

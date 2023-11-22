@@ -4,6 +4,8 @@
 
 #include "precomp.hpp"
 
+#include <sstream>
+
 #include "opencv2/core/check.hpp"
 
 namespace cv {

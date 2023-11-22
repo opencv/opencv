@@ -228,7 +228,7 @@ if(CUDA_FOUND)
     endif()
   endmacro()
 
-  set(__cuda_arch_ptx "")
+  set(__cuda_arch_ptx ${CUDA_ARCH_PTX})
   if(CUDA_GENERATION STREQUAL "Fermi")
     set(__cuda_arch_bin ${_arch_fermi})
   elseif(CUDA_GENERATION STREQUAL "Kepler")
@@ -259,7 +259,7 @@ if(CUDA_FOUND)
     set(__cuda_arch_bin ${CUDA_ARCH_BIN})
   endif()
 
-  if(NOT DEFINED __cuda_arch_bin)
+  if(NOT DEFINED __cuda_arch_bin AND NOT DEFINED __cuda_arch_ptx)
     if(ARM)
       set(__cuda_arch_bin "3.2")
       set(__cuda_arch_ptx "")
@@ -295,6 +295,7 @@ if(CUDA_FOUND)
           ${_arch_lovelace}
           ${_arch_hopper}
       )
+      list(GET __cuda_arch_bin -1 __cuda_arch_ptx)
     endif()
   endif()
 
@@ -352,6 +353,14 @@ if(CUDA_FOUND)
 
   if(ANDROID)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xptxas;-dlcm=ca")
+  endif()
+
+  # Tell NVCC the maximum number of threads to be used to execute the compilation steps in parallel
+  # (option --threads was introduced in version 11.2)
+  if(NOT CUDA_VERSION VERSION_LESS "11.2")
+    if(CMAKE_GENERATOR MATCHES "Visual Studio" AND NOT $ENV{CMAKE_BUILD_PARALLEL_LEVEL} STREQUAL "")
+      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "--threads=$ENV{CMAKE_BUILD_PARALLEL_LEVEL}")
+    endif()
   endif()
 
   message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")

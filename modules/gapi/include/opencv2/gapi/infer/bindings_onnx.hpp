@@ -43,6 +43,12 @@ public:
     PyParams& cfgAddExecutionProvider(ep::CoreML ep);
 
     GAPI_WRAP
+    PyParams& cfgAddExecutionProvider(ep::CUDA ep);
+
+    GAPI_WRAP
+    PyParams& cfgAddExecutionProvider(ep::TensorRT ep);
+
+    GAPI_WRAP
     PyParams& cfgDisableMemPattern();
 
     GBackend backend() const;

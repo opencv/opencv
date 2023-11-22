@@ -209,7 +209,8 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            return !computeMaxIdx && type != STOCHASTIC && kernel_size.size() > 1 && (kernel_size.size() != 3 || !isArmComputePlugin());
+            return type != STOCHASTIC && kernel_size.size() > 1 && (kernel_size.size() != 3 || !isArmComputePlugin()) &&
+                   (!computeMaxIdx || INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1));
         }
 #endif
         if (backendId == DNN_BACKEND_OPENCV)
@@ -600,7 +601,7 @@ public:
             return Ptr<BackendNode>(new InfEngineNgraphNode(ave_pool));
         }
         else if (type == SUM) {
-            ngraph::Shape inpShape = ieInpNode->get_shape();
+            ngraph::Shape inpShape = ieInpNode.get_shape();
             CV_Assert(inpShape.size() == 2 + kernel_size.size());
             std::vector<int64_t> axes;
             for (size_t i = 0; i < kernel_size.size(); i++)
@@ -613,9 +614,21 @@ public:
             return Ptr<BackendNode>(new InfEngineNgraphNode(reduce_sum));
         }
         else if (type == MAX) {
-            auto max_pool = std::make_shared<ngraph::op::v1::MaxPool>(ieInpNode, ngraph::Strides(strides),
-                            ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
-                            rounding_type, pad_type);
+            std::shared_ptr<ngraph::Node> max_pool;
+            if (computeMaxIdx) {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+                std::vector<size_t> dilations(kernel_size.size(), 1);
+                max_pool = std::make_shared<ngraph::op::v8::MaxPool>(ieInpNode, ngraph::Strides(strides), ngraph::Strides(dilations),
+                                ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                                rounding_type, pad_type);
+#else
+                CV_Error(Error::StsNotImplemented, "OpenVINO MaxPool with indices");
+#endif
+            } else {
+                max_pool = std::make_shared<ngraph::op::v1::MaxPool>(ieInpNode, ngraph::Strides(strides),
+                                ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                                rounding_type, pad_type);
+            }
             return Ptr<BackendNode>(new InfEngineNgraphNode(max_pool));
         }
         else if (type == ROI) {
@@ -885,25 +898,25 @@ public:
                                 v_float32x4 max_idx0 = v_setall_f32(-1.f);
                                 v_float32x4 max_idx1 = max_idx0;
                                 int index0 = ystart * inp_width + xstart;
-                                v_float32x4 idx0 = idx00 + v_setall_f32((float)index0);
-                                v_float32x4 idx1 = idx0 + v_setall_f32((float)(stride_w*4));
+                                v_float32x4 idx0 = v_add(idx00, v_setall_f32((float)index0));
+                                v_float32x4 idx1 = v_add(idx0, v_setall_f32((float)(stride_w * 4)));
 
                                 for (int y = ystart; y < yend; ++y)
                                 {
-                                    for (int x = xstart; x < xend; ++x, idx0 += ones, idx1 += ones)
+                                    for (int x = xstart; x < xend; ++x, idx0 = v_add(idx0, ones), idx1 = v_add(idx1, ones))
                                     {
                                         const int index = y * inp_width + x;
                                         v_float32x4 v0(srcData[index], srcData[index + stride_w],
                                                        srcData[index + stride_w*2], srcData[index + stride_w*3]);
                                         v_float32x4 v1(srcData[index + stride_w*4], srcData[index + stride_w*5],
                                                        srcData[index + stride_w*6], srcData[index + stride_w*7]);
-                                        max_idx0 = v_select(v0 > max_val0, idx0, max_idx0);
-                                        max_idx1 = v_select(v1 > max_val1, idx1, max_idx1);
+                                        max_idx0 = v_select(v_gt(v0, max_val0), idx0, max_idx0);
+                                        max_idx1 = v_select(v_gt(v1, max_val1), idx1, max_idx1);
                                         max_val0 = v_max(max_val0, v0);
                                         max_val1 = v_max(max_val1, v1);
                                     }
-                                    idx0 += idx_delta;
-                                    idx1 += idx_delta;
+                                    idx0 = v_add(idx0, idx_delta);
+                                    idx1 = v_add(idx1, idx_delta);
                                 }
                                 v_store(dstData + x0, max_val0);
                                 v_store(dstData + x0 + 4, max_val1);
@@ -1056,12 +1069,12 @@ public:
                                                    srcData[index + stride_w*2], srcData[index + stride_w*3]);
                                     v_float32x4 v1(srcData[index + stride_w*4], srcData[index + stride_w*5],
                                                    srcData[index + stride_w*6], srcData[index + stride_w*7]);
-                                    sum_val0 += v0;
-                                    sum_val1 += v1;
+                                    sum_val0 = v_add(sum_val0, v0);
+                                    sum_val1 = v_add(sum_val1, v1);
                                 }
                             }
-                            v_store(dstData + x0, sum_val0*ikarea);
-                            v_store(dstData + x0 + 4, sum_val1*ikarea);
+                            v_store(dstData + x0, v_mul(sum_val0, ikarea));
+                            v_store(dstData + x0 + 4, v_mul(sum_val1, ikarea));
                             x0 += 7;
                         }
                         else

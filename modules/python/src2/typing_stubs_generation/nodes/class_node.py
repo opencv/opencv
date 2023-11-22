@@ -63,8 +63,9 @@ class ClassNode(ASTNode):
         return 1 + sum(base.weight for base in self.bases)
 
     @property
-    def children_types(self) -> Tuple[Type[ASTNode], ...]:
-        return (ClassNode, FunctionNode, EnumerationNode, ConstantNode)
+    def children_types(self) -> Tuple[ASTNodeType, ...]:
+        return (ASTNodeType.Class, ASTNodeType.Function,
+                ASTNodeType.Enumeration, ASTNodeType.Constant)
 
     @property
     def node_type(self) -> ASTNodeType:
@@ -72,19 +73,19 @@ class ClassNode(ASTNode):
 
     @property
     def classes(self) -> Dict[str, "ClassNode"]:
-        return self._children[ClassNode]
+        return self._children[ASTNodeType.Class]
 
     @property
     def functions(self) -> Dict[str, FunctionNode]:
-        return self._children[FunctionNode]
+        return self._children[ASTNodeType.Function]
 
     @property
     def enumerations(self) -> Dict[str, EnumerationNode]:
-        return self._children[EnumerationNode]
+        return self._children[ASTNodeType.Enumeration]
 
     @property
     def constants(self) -> Dict[str, ConstantNode]:
-        return self._children[ConstantNode]
+        return self._children[ASTNodeType.Constant]
 
     def add_class(self, name: str,
                   bases: Sequence["weakref.ProxyType[ClassNode]"] = (),
@@ -179,3 +180,11 @@ class ClassNode(ASTNode):
                     self.full_export_name, root.full_export_name, errors
                 )
             )
+
+
+class ProtocolClassNode(ClassNode):
+    def __init__(self, name: str, parent: Optional[ASTNode] = None,
+                 export_name: Optional[str] = None,
+                 properties: Sequence[ClassProperty] = ()) -> None:
+        super().__init__(name, parent, export_name, bases=(),
+                         properties=properties)
