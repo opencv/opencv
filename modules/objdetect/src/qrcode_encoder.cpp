@@ -1379,15 +1379,13 @@ bool QRCodeDecoderImpl::decode(const Mat& _straight, String& decoded_info) {
 
 // Unmask format info bits and apply error correction
 bool QRCodeDecoderImpl::correctFormatInfo(uint16_t& format_info) {
-    static uint16_t mask_pattern = 0b101010000010010;
+    static const uint16_t mask_pattern = 0b101010000010010;
 
+    cv::Hamming hd;
     for (int i = 0; i < 32; ++i) {
         // Compute Hamming distance
-        uint16_t diff = formatInfoLUT[i] ^ format_info;
-        int distance = 0;
-        for (int j = 0; j < MAX_FORMAT_LENGTH; ++j) {
-            distance += (diff >> j) & 1;
-        }
+        int distance = hd(reinterpret_cast<const unsigned char*>(&formatInfoLUT[i]),
+                          reinterpret_cast<const unsigned char*>(&format_info), 2);
         // Up to 3 bit errors might be corrected.
         // So if distance is less or equal than 3 - we found a correct format info.
         if (distance <= 3) {
@@ -1771,11 +1769,11 @@ void QRCodeDecoderImpl::decodeNumeric(String& result) {
 }
 
 void QRCodeDecoderImpl::decodeAlpha(String& result) {
-    static char map[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-                         'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-                         'U', 'V', 'W', 'X', 'Y', 'Z', ' ', '$', '%', '*',
-                         '+', '-', '.', '/', ':'};
+    static const char map[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                               'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+                               'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+                               'U', 'V', 'W', 'X', 'Y', 'Z', ' ', '$', '%', '*',
+                               '+', '-', '.', '/', ':'};
 
     int num = bitstream.next(version <= 9 ? 9 : (version <= 26 ? 11 : 13));
     for (int i = 0; i < num / 2; ++i) {
