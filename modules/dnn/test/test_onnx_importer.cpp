@@ -2672,8 +2672,8 @@ TEST_P(Test_ONNX_layers, YOLOv7)
 
 TEST_P(Test_ONNX_layers, YOLOv5n)
 {
-    std::string weightPath = _tf("models/yolov5n.onnx", false);
-    std::string imgPath = _tf("../dog_orig_size.png");
+    std::string weightPath = findDataFile("dnn/yolov5n.onnx", false);
+    std::string imgPath = findDataFile("dnn/dog_orig_size.png");
 
     Size targetSize{640, 640};
     float conf_threshold = 0.3;
@@ -2725,7 +2725,7 @@ TEST_P(Test_ONNX_layers, YOLOv5n)
         double w = det[2];
         double h = det[3];
         // [x1, y1, x2, y2]
-        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h, 
+        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
                                cx + 0.5 * w, cy + 0.5 * h));
         classIds.push_back(maxLoc.x);
         confidences.push_back(conf);
