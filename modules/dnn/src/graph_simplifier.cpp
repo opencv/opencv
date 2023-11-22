@@ -76,68 +76,84 @@ int Subgraph::getInputNodeId(const Ptr<ImportGraphWrapper>& net,
     CV_Error(Error::StsParseError, "Input node with name " + name + " not found");
 }
 
+bool Subgraph::match(const Ptr<ImportGraphWrapper>& net,
+                     int nodeToMatch, int targetNodeId,
+                     std::vector<std::pair<int, int>>& matchings) {
+    const auto it = std::find_if(matchings.begin(), matchings.end(), [&](const std::pair<int, int>& match){ return match.first == targetNodeId; });
+    if (it != matchings.end())
+        return it->second == nodeToMatch;
+
+    if (nodes[targetNodeId].empty()) {
+        matchings.push_back({targetNodeId, nodeToMatch});
+        return true;
+    }
+
+    const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
+    if (node->getType() != nodes[targetNodeId])
+        return false;
+
+    std::vector<int>& inputNodes = inputs[targetNodeId];
+    if (inputNodes.size() != node->getNumInputs())
+        return false;
+
+    bool isCommutative = net->isCommutativeOp(node->getType());
+
+    std::vector<std::pair<int, int>> newMatchings;
+
+    if (isCommutative)
+    {
+        if (inputNodes.size() != 2)
+            CV_Error(Error::StsNotImplemented, "Commutative op fusion with more than 2 inputs");
+
+        int node0 = getInputNodeId(net, node, 0);
+        int node1 = getInputNodeId(net, node, 1);
+
+        if (!match(net, node0, inputNodes[0], newMatchings) ||
+            !match(net, node1, inputNodes[1], newMatchings))
+        {
+            newMatchings.clear();
+            if (!match(net, node0, inputNodes[1], newMatchings) ||
+                !match(net, node1, inputNodes[0], newMatchings))
+            {
+                return false;
+            }
+        }
+    }
+    else
+    {
+        for (int j = 0; j < inputNodes.size(); ++j)
+        {
+            if (node->getInputName(j).empty())
+                continue;
+            int nodeId = getInputNodeId(net, node, j);
+            if (!match(net, nodeId, inputNodes[j], newMatchings))
+            {
+                return false;
+            }
+        }
+    }
+
+    newMatchings.push_back({targetNodeId, nodeToMatch});
+    for (const auto& it : newMatchings)
+    {
+        if (std::find(matchings.begin(), matchings.end(), it) == matchings.end())
+        {
+            matchings.push_back(it);
+        }
+    }
+    return true;
+}
+
+
 bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                      std::vector<int>& matchedNodesIds)
 {
     matchedNodesIds.clear();
 
-    std::queue<int> nodesToMatch;
-    std::queue<int> targetNodes;
     std::vector<std::pair<int, int> > matchings;
-    matchings.reserve(nodes.size());
-    nodesToMatch.push(nodeId);
-    targetNodes.push(nodes.size() - 1);
-    while (!nodesToMatch.empty())
-    {
-        int nodeToMatch = nodesToMatch.front();
-        int targetNodeId = targetNodes.front();
-        nodesToMatch.pop();
-        targetNodes.pop();
+    bool matched = match(net, nodeId, nodes.size() - 1, matchings);
 
-        if (std::find_if(matchings.begin(), matchings.end(), [&](const std::pair<int, int>& match){ return match.first == targetNodeId; }) !=
-            matchings.end())
-            continue;
-
-        // Empty placeholder matches with any input type
-        if (nodes[targetNodeId].empty()) {
-            matchings.push_back({targetNodeId, nodeToMatch});
-            continue;
-        }
-
-        const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
-        if (node->getType() != nodes[targetNodeId])
-            continue;
-
-        std::vector<int>& inputNodes = inputs[targetNodeId];
-        if (inputNodes.size() != node->getNumInputs())
-            continue;
-
-        bool isCommutative = net->isCommutativeOp(node->getType());
-
-        for (int j = 0; j < inputNodes.size(); ++j)
-        {
-            // Sometimes, ONNX may have input but it's empty (see Clip layer from reduceL2_subgraph2_2 testcase)
-            if (node->getInputName(j).empty())
-                continue;
-            nodeId = getInputNodeId(net, node, j);
-            const Ptr<ImportNodeWrapper> inpNode = net->getNode(nodeId);
-            if (isCommutative)
-            {
-                for (int i = 0; i < inputNodes.size(); ++i)
-                {
-                    nodesToMatch.push(nodeId);
-                    targetNodes.push(inputNodes[i]);
-                }
-            }
-            else
-            {
-                nodesToMatch.push(nodeId);
-                targetNodes.push(inputNodes[j]);
-            }
-        }
-        matchings.push_back({targetNodeId, nodeToMatch});
-    }
-    if (matchings.size() != nodes.size())
+    if (!matched || matchings.size() != nodes.size())
         return false;
 
     // Sort matched by pattern nodes order.
