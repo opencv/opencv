@@ -76,93 +76,105 @@ int Subgraph::getInputNodeId(const Ptr<ImportGraphWrapper>& net,
     CV_Error(Error::StsParseError, "Input node with name " + name + " not found");
 }
 
-bool Subgraph::match(const Ptr<ImportGraphWrapper>& net,
-                     int nodeToMatch, int targetNodeId,
-                     std::vector<std::pair<int, int>>& matchings) {
-    if (std::find_if(matchings.begin(), matchings.end(), [&](const std::pair<int, int>& match){ return match.first == targetNodeId; }) != matchings.end())
-        return true;
-
-    if (nodes[targetNodeId].empty()) {
-        matchings.push_back({targetNodeId, nodeToMatch});
-        return true;
-    }
-
-    const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
-    if (node->getType() != nodes[targetNodeId])
-        return false;
-
-    std::vector<int>& inputNodes = inputs[targetNodeId];
-    if (inputNodes.size() != node->getNumInputs())
-        return false;
-
-    bool isCommutative = net->isCommutativeOp(node->getType());
-
-    std::vector<std::pair<int, int>> newMatchings;
-
-    if (isCommutative)
-    {
-        if (inputNodes.size() != 2)
-            CV_Error(Error::StsNotImplemented, "Commutative op fusion with more than 2 inputs");
-
-        int node0 = getInputNodeId(net, node, 0);
-        int node1 = getInputNodeId(net, node, 1);
-
-        if (!match(net, node0, inputNodes[0], newMatchings) ||
-            !match(net, node1, inputNodes[1], newMatchings))
-        {
-            newMatchings.clear();
-            if (!match(net, node0, inputNodes[1], newMatchings) ||
-                !match(net, node1, inputNodes[0], newMatchings))
-            {
-                return false;
-            }
-        }
-    }
-    else
-    {
-        for (int j = 0; j < inputNodes.size(); ++j)
-        {
-            if (node->getInputName(j).empty())
-                continue;
-            int nodeId = getInputNodeId(net, node, j);
-            if (!match(net, nodeId, inputNodes[j], newMatchings))
-            {
-                return false;
-            }
-        }
-    }
-
-    newMatchings.push_back({targetNodeId, nodeToMatch});
-    for (const auto& it : newMatchings)
-    {
-        if (std::find_if(matchings.begin(), matchings.end(), [&](const std::pair<int, int>& match){ return match.first == it.first; }) == matchings.end())
-        {
-            matchings.push_back(it);
-        }
-    }
-    return true;
-}
-
-
 bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                      std::vector<int>& matchedNodesIds)
 {
     matchedNodesIds.clear();
 
-    std::vector<std::pair<int, int> > matchings;
-    bool matched = match(net, nodeId, nodes.size() - 1, matchings);
-
-    if (!matched)
-        return false;
-
-    // Sort matched by pattern nodes order.
-    std::sort(matchings.begin(), matchings.end());
-    matchedNodesIds.resize(matchings.size());
-    for (int i = 0; i < matchings.size(); ++i)
+    struct State
     {
-        matchedNodesIds[i] = matchings[i].second;
+        int nodeToMatch;
+        int targetNodeId;
+        std::shared_ptr<std::map<int, int>> matchings;
+        std::vector<std::shared_ptr<std::map<int, int>>> branches;
+
+        // Add matched nodes all matchings maps in every branch
+        // produced by commutative operators.
+        void addMatch(std::pair<int, int> match)
+        {
+            matchings->insert(match);
+            for (auto& branch : branches)
+                branch->insert(match);
+        }
+    };
+    std::queue<State> states;
+
+    std::vector<std::shared_ptr<std::map<int, int>>> matchCandidates;
+    matchCandidates.push_back(std::make_shared<std::map<int, int>>());
+    states.push({nodeId, (int)nodes.size() - 1, matchCandidates[0], {}});
+
+    while (!states.empty())
+    {
+        auto state = states.front();
+        states.pop();
+        int nodeToMatch = state.nodeToMatch;
+        int targetNodeId = state.targetNodeId;
+        auto matchings = state.matchings;
+
+        if (matchings->find(targetNodeId) != matchings->end())
+            continue;
+
+        // Empty placeholder matches with any input type
+        if (nodes[targetNodeId].empty()) {
+            state.addMatch({targetNodeId, nodeToMatch});
+            continue;
+        }
+
+        const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
+        if (node->getType() != nodes[targetNodeId])
+            continue;
+
+        std::vector<int>& inputNodes = inputs[targetNodeId];
+        if (inputNodes.size() != node->getNumInputs())
+            continue;
+
+        bool isCommutative = net->isCommutativeOp(node->getType());
+
+        if (isCommutative)
+        {
+            if (inputNodes.size() != 2)
+                CV_Error(Error::StsNotImplemented, "Commutative op fusion with more than 2 inputs");
+            CV_Assert(!node->getInputName(0).empty() && !node->getInputName(1).empty());
+
+            auto branches = state.branches;
+            branches.push_back(matchings);
+
+            auto newMatchings = std::make_shared<std::map<int, int>>(*matchings);
+            matchCandidates.push_back(newMatchings);
+            states.push({getInputNodeId(net, node, 0), inputNodes[0], newMatchings, branches});
+            states.push({getInputNodeId(net, node, 1), inputNodes[1], newMatchings, branches});
+
+            newMatchings = std::make_shared<std::map<int, int>>(*matchings);
+            matchCandidates.push_back(newMatchings);
+            states.push({getInputNodeId(net, node, 0), inputNodes[1], newMatchings, branches});
+            states.push({getInputNodeId(net, node, 1), inputNodes[0], newMatchings, branches});
+        }
+        else
+        {
+            for (int j = 0; j < inputNodes.size(); ++j)
+            {
+                // Sometimes, ONNX may have input but it's empty (see Clip layer from reduceL2_subgraph2_2 testcase)
+                if (node->getInputName(j).empty())
+                    continue;
+                nodeId = getInputNodeId(net, node, j);
+                states.push({nodeId, inputNodes[j], matchings, state.branches});
+            }
+        }
+        state.addMatch({targetNodeId, nodeToMatch});
     }
-    return true;
+    for (auto& matchings : matchCandidates)
+    {
+        if (matchings->size() != nodes.size())
+            continue;
+        matchedNodesIds.resize(matchings->size());
+        for (int i = 0; i < matchings->size(); ++i)
+        {
+            CV_Assert(matchings->find(i) != matchings->end());
+            matchedNodesIds[i] = matchings->at(i);
+        }
+        return true;
+    }
+    return false;
 }
 
 void Subgraph::replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int>& matchedNodesIds)

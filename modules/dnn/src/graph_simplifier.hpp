@@ -79,10 +79,6 @@ public:
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                        std::vector<int>& matchedNodesIds);
 
-    bool match(const Ptr<ImportGraphWrapper>& net,
-                        int nodeToMatch, int targetNodeId,
-                        std::vector<std::pair<int, int>>& matchings);
-
     // Fuse matched subgraph.
     void replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int>& matchedNodesIds);
 
