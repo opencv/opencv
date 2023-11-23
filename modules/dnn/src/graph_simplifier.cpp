@@ -81,10 +81,10 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
 {
     matchedNodesIds.clear();
 
-    // Collection of all macthing states across branching.
+    // Collection of all matchings states across branching.
     // If there is no commutative ops in the subgraph - there would be just a single map.
     std::vector<std::shared_ptr<std::map<int, int>>> matchCandidates;
-    matchCandidates.push_back(std::make_shared<std::map<int, int>>());
+    matchCandidates.push_back(makePtr<std::map<int, int>>());
 
     struct State
     {
@@ -131,44 +131,36 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
         if (inputNodes.size() != node->getNumInputs())
             continue;
 
-        bool isCommutative = net->isCommutativeOp(node->getType());
+        state.addMatch({targetNodeId, nodeToMatch});
 
+        bool isCommutative = net->isCommutativeOp(node->getType());
         if (isCommutative)
         {
             if (inputNodes.size() != 2)
                 CV_Error(Error::StsNotImplemented, "Commutative op fusion with more than 2 inputs");
 
-            auto newMatchings = std::make_shared<std::map<int, int>>(*matchings);
+            auto newMatchings = makePtr<std::map<int, int>>(*matchings);
             matchCandidates.push_back(newMatchings);
             state.matchings.push_back(newMatchings);
-            if (!node->getInputName(0).empty())  // TODO: this is a soft workaround
-                states.push({getInputNodeId(net, node, 0), inputNodes[0], state.matchings});
-            if (!node->getInputName(1).empty())
-                states.push({getInputNodeId(net, node, 1), inputNodes[1], state.matchings});
+            states.push({getInputNodeId(net, node, 0), inputNodes[0], state.matchings});
+            states.push({getInputNodeId(net, node, 1), inputNodes[1], state.matchings});
             state.matchings.pop_back();
 
-            newMatchings = std::make_shared<std::map<int, int>>(*matchings);
+            newMatchings = makePtr<std::map<int, int>>(*matchings);
             matchCandidates.push_back(newMatchings);
             state.matchings.push_back(newMatchings);
-            if (!node->getInputName(0).empty())
-                states.push({getInputNodeId(net, node, 0), inputNodes[1], state.matchings});
-            if (!node->getInputName(1).empty())
-                states.push({getInputNodeId(net, node, 1), inputNodes[0], state.matchings});
+            states.push({getInputNodeId(net, node, 0), inputNodes[1], state.matchings});
+            states.push({getInputNodeId(net, node, 1), inputNodes[0], state.matchings});
             state.matchings.pop_back();
         }
         else
         {
             for (int j = 0; j < inputNodes.size(); ++j)
             {
-                // Sometimes, ONNX may have input but it's empty (see Clip layer from reduceL2_subgraph2_2 testcase)
-                // TODO: check what's wrong here.
-                if (node->getInputName(j).empty())
-                    continue;
                 nodeId = getInputNodeId(net, node, j);
                 states.push({nodeId, inputNodes[j], state.matchings});
             }
         }
-        state.addMatch({targetNodeId, nodeToMatch});
     }
     for (auto& matchings : matchCandidates)
     {
