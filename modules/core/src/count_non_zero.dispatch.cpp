@@ -161,6 +161,8 @@ void findNonZero(InputArray _src, OutputArray _idx)
     AutoBuffer<int> buf_(cols + 1);
     int* buf = buf_.data();
 
+    CV_Assert( depth < CV_16F );
+
     for( int i = 0; i < rows; i++ )
     {
         int j, k = 0;

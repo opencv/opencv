@@ -566,6 +566,7 @@ are taken from the input array. That is, the function processes each element of 
 \f[\texttt{dst} (I)  \leftarrow \texttt{lut(src(I) + d)}\f]
 where
 \f[d =  \fork{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}\f]
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for lut.
 @param src input array of 8-bit elements.
 @param lut look-up table of 256 elements; in case of multi-channel input array, the table should
 either have a single channel (in this case the same table is used for all channels) or the same
@@ -587,6 +588,7 @@ CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
 /** @brief Checks for the presence of at least one non-zero array element.
 
 The function returns whether there are non-zero elements in src
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src single-channel array.
 @sa  mean, meanStdDev, norm, minMaxLoc, calcCovarMatrix
 */
@@ -596,6 +598,7 @@ CV_EXPORTS_W bool hasNonZero( InputArray src );
 
 The function returns the number of non-zero elements in src :
 \f[\sum _{I: \; \texttt{src} (I) \ne0 } 1\f]
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src single-channel array.
 @sa  mean, meanStdDev, norm, minMaxLoc, calcCovarMatrix
 */
@@ -624,6 +627,7 @@ or
     // access pixel coordinates
     Point pnt = locations[i];
 @endcode
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src single-channel array
 @param idx the output array, type of cv::Mat or std::vector<Point>, corresponding to non-zero indices in the input
 */
@@ -834,6 +838,7 @@ The function do not work with multi-channel arrays. If you need to find minimum 
 elements across all the channels, use Mat::reshape first to reinterpret the array as
 single-channel. Or you may extract the particular channel using either extractImageCOI , or
 mixChannels , or split .
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
@@ -894,6 +899,7 @@ a single-row or single-column matrix. In OpenCV (following MATLAB) each array ha
 dimensions, i.e. single-column matrix is Mx1 matrix (and therefore minIdx/maxIdx will be
 (i1,0)/(i2,0)) and single-row matrix is 1xN matrix (and therefore minIdx/maxIdx will be
 (0,j1)/(0,j2)).
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.

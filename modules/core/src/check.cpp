@@ -45,15 +45,16 @@ static const char* getTestOpMath(unsigned testOp)
 
 const char* depthToString_(int depth)
 {
-    static const char* depthNames[] = { "CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F", "CV_16F" };
-    return (depth <= CV_16F && depth >= 0) ? depthNames[depth] : NULL;
+    static const char* depthNames[] = { "CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F", "CV_16F",
+                                        "CV_16BF", "CV_Bool", "CV_64U", "CV_64S", "CV_32U" };
+    return (depth < CV_DEPTH_CURR_MAX && depth >= 0) ? depthNames[depth] : NULL;
 }
 
 cv::String typeToString_(int type)
 {
     int depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
-    if (depth >= 0 && depth <= CV_16F)
+    if (depth >= 0 && depth < CV_DEPTH_CURR_MAX)
         return cv::format("%sC%d", depthToString_(depth), cn);
     return cv::String();
 }
