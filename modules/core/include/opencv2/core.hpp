@@ -566,6 +566,7 @@ are taken from the input array. That is, the function processes each element of 
 \f[\texttt{dst} (I)  \leftarrow \texttt{lut(src(I) + d)}\f]
 where
 \f[d =  \fork{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}\f]
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for lut.
 @param src input array of 8-bit elements.
 @param lut look-up table of 256 elements; in case of multi-channel input array, the table should
 either have a single channel (in this case the same table is used for all channels) or the same
@@ -596,6 +597,7 @@ CV_EXPORTS_W bool hasNonZero( InputArray src );
 
 The function returns the number of non-zero elements in src :
 \f[\sum _{I: \; \texttt{src} (I) \ne0 } 1\f]
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src single-channel array.
 @sa  mean, meanStdDev, norm, minMaxLoc, calcCovarMatrix
 */
@@ -624,6 +626,7 @@ or
     // access pixel coordinates
     Point pnt = locations[i];
 @endcode
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src single-channel array
 @param idx the output array, type of cv::Mat or std::vector<Point>, corresponding to non-zero indices in the input
 */
@@ -635,6 +638,7 @@ The function cv::mean calculates the mean value M of array elements,
 independently for each channel, and return it:
 \f[\begin{array}{l} N =  \sum _{I: \; \texttt{mask} (I) \ne 0} 1 \\ M_c =  \left ( \sum _{I: \; \texttt{mask} (I) \ne 0}{ \texttt{mtx} (I)_c} \right )/N \end{array}\f]
 When all the mask elements are 0's, the function returns Scalar::all(0)
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src input array that should have from 1 to 4 channels so that the result can be stored in
 Scalar_ .
 @param mask optional operation mask.
@@ -907,6 +911,7 @@ CV_EXPORTS void minMaxIdx(InputArray src, double* minVal, double* maxVal = 0,
                           int* minIdx = 0, int* maxIdx = 0, InputArray mask = noArray());
 
 /** @overload
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param a input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
