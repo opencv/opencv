@@ -1221,7 +1221,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW int ddepth;   //!< Depth of output blob. Choose CV_32F or CV_8U.
         CV_PROP_RW DataLayout datalayout; //!< Order of output dimensions. Choose DNN_LAYOUT_NCHW or DNN_LAYOUT_NHWC.
         CV_PROP_RW ImagePaddingMode paddingmode;   //!< Image padding mode. @see ImagePaddingMode.
-        CV_PROP_RW Scalar paddingmodeborderValue;   //!< Value used in padding mode for padding.
+        CV_PROP_RW Scalar borderValue;   //!< Value used in padding mode for padding.
     };
 
     /** @brief Creates 4-dimensional blob from image with given params.

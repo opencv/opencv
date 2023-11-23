@@ -95,19 +95,19 @@ TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
 
 TEST(blobFromImageWithParams_CustomPadding, letter_box)
 {
-    Mat img(40, 20, CV_8UC4, Scalar(2, 2, 2, 2));
+    Mat img(40, 20, CV_8UC4, Scalar(0, 1, 2, 3));
 
     // Custom padding value that you have added
-    Scalar customPaddingValue(1, 1, 1, 1); // Example padding value
+    Scalar customPaddingValue(0, 1, 2, 3); // Example padding value
 
     // Construct target mat with the expected padding value
     Mat targetCh[4];
 
-    std::vector<uint8_t> valVec = {1,1,1,1,1, 2,2,2,2,2,2,2,2,2,2, 1,1,1,1,1};
+    std::vector<uint8_t> valVec = {1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1};
 
     Mat rowM(1, 20, CV_8UC1, valVec.data());
     for (int i = 0; i < 4; i++) {
-        targetCh[i] = rowM;
+        targetCh[i] = rowM * i;
     }
 
     Mat targetImg;
@@ -118,7 +118,7 @@ TEST(blobFromImageWithParams_CustomPadding, letter_box)
     Image2BlobParams param;
     param.size = targetSize;
     param.paddingmode = DNN_PMODE_LETTERBOX;
-    param.paddingmodeborderValue = customPaddingValue; // Use your new feature here
+    param.borderValue = customPaddingValue; // Use your new feature here
 
     // Create blob with custom padding
     Mat blob = dnn::blobFromImageWithParams(img, param);
