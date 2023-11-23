@@ -564,6 +564,9 @@ public:
     @return the reference on modified object.
     */
     Params<Net>& cfgAddExecutionProvider(ep::CoreML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
 
     /** @brief Adds execution provider for runtime.
 
