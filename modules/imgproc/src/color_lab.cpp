@@ -1225,9 +1225,7 @@ static LABLUVLUT_s16_t initLUTforLABLUVs16(const softfloat & un, const softfloat
 
 static void initLabTabs()
 {
-    static bool initialized = false;
-    if(!initialized)
-    {
+    static bool initialized = [] {
         softfloat f[LAB_CBRT_TAB_SIZE+1], g[GAMMA_TAB_SIZE+1], ig[GAMMA_TAB_SIZE+1];
         softfloat scale = softfloat::one()/softfloat(LabCbrtTabScale);
         int i;
@@ -1333,9 +1331,9 @@ static void initLabTabs()
                 }
             }
         }
-
-        initialized = true;
-    }
+        return true;
+    }();
+    static_cast<void>(initialized);
 }
 
 
