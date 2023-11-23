@@ -2949,6 +2949,10 @@ TEST_P(Test_ONNX_layers, Expand_shape_model4) {
     testONNXModels("test_expand_shape_model4", pb, 0, 0, false, true, 1);
 }
 
+TEST_P(Test_ONNX_layers, Attention) {
+    testONNXModels("attention");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

@@ -315,7 +315,7 @@ class AttentionSubGraph : public Subgraph {
             };
             fill_qkv_hidden_sizes(slice_q);
             fill_qkv_hidden_sizes(slice_k);
-            fill_qkv_hidden_sizes(slice_v);
+            fill_qkv_hidden_sizes(slice_v); // TODO: take care of INT64_MAX
             CV_CheckEQ(qkv_hidden_sizes.size(), static_cast<size_t>(3), "ONNXSimplifier/Attention: invalid qkv hidden sizes");
             CV_CheckEQ(int(qkv_hidden_sizes[0]), int(qkv_hidden_sizes[1]), "ONNXSimplifier/Attention: invalid qkv hidden sizes, q_hidden_size == v_hidden_size is required");
             // get attrs - num_heads, scale
