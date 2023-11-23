@@ -43,18 +43,21 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "calib3d_c_api.h"
 
+#include "opencv2/highgui.hpp"
+
 #include <vector>
 #include <algorithm>
 
 using namespace cv;
 using namespace std;
 
-static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point > > & contours, const std::vector< cv::Vec4i > & hierarchy, std::vector<std::pair<float, int> >& quads, int class_id, int min_box_size)
+static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point > > & contours, const std::vector< cv::Vec4i > & hierarchy, std::vector<std::pair<float, int> >& quads, int class_id)
 {
-    const float min_aspect_ratio = 0.5f;
-    const float max_aspect_ratio = 1.5f;
-    //const float min_box_size = 25.0f;
-
+    const float min_aspect_ratio = 0.3f;
+    const float max_aspect_ratio = 3.0f;
+    const float min_box_size = 10.0f;
+    const float box_area_covered = 0.5f;
+    
     for (size_t i = 0; i < contours.size(); ++i)
     {
         if (hierarchy.at(i)[3] != -1)
@@ -63,7 +66,7 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
         const std::vector< cv::Point > & c = contours[i];
         cv::RotatedRect box = cv::minAreaRect(c);
 
-        float box_size = MIN(box.size.width, box.size.height);
+        float box_size = MAX(box.size.width, box.size.height);
         if(box_size < min_box_size)
         {
             continue;
@@ -74,8 +77,15 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
         {
             continue;
         }
-
+      
+        float box_area = box.size.width * box.size.height;
+        if(contourArea(c) < (box_area_covered * box_area))
+        {
+          continue;
+        }
+      
         quads.emplace_back(box_size, class_id);
+      
     }
 }
 
@@ -93,15 +103,16 @@ inline bool less_pred(const std::pair<float, int>& p1, const std::pair<float, in
     return p1.first < p2.first;
 }
 
-static void fillQuads(Mat & white, Mat & black, double white_thresh, double black_thresh, vector<pair<float, int> > & quads, int min_box_size)
+static void fillQuads(Mat & white, Mat & black, double white_thresh, double black_thresh, vector<pair<float, int> > & quads)
 {
     Mat thresh;
+  
     {
         vector< vector<Point> > contours;
         vector< Vec4i > hierarchy;
         threshold(white, thresh, white_thresh, 255, THRESH_BINARY);
         findContours(thresh, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
-        icvGetQuadrangleHypotheses(contours, hierarchy, quads, 1, min_box_size);
+        icvGetQuadrangleHypotheses(contours, hierarchy, quads, 1);
     }
 
     {
@@ -109,8 +120,9 @@ static void fillQuads(Mat & white, Mat & black, double white_thresh, double blac
         vector< Vec4i > hierarchy;
         threshold(black, thresh, black_thresh, 255, THRESH_BINARY_INV);
         findContours(thresh, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
-        icvGetQuadrangleHypotheses(contours, hierarchy, quads, 0, min_box_size);
+        icvGetQuadrangleHypotheses(contours, hierarchy, quads, 0);
     }
+  
 }
 
 static bool checkQuads(vector<pair<float, int> > & quads, const cv::Size & size)
@@ -177,14 +189,12 @@ bool cv::checkChessboard(InputArray _img, Size size)
     Mat black;
     erode(img, white, Mat(), Point(-1, -1), erosion_count);
     dilate(img, black, Mat(), Point(-1, -1), erosion_count);
- 
-    int min_box_size = std::sqrt(cvRound((img.cols * img.rows * 0.05) / ((size.width+1) * (size.height+1))));
-  
+   
     bool result = false;
     for(float thresh_level = black_level; thresh_level < white_level && !result; thresh_level += 20.0f)
     {
         vector<pair<float, int> > quads;
-        fillQuads(white, black, thresh_level + black_white_gap, thresh_level, quads, min_box_size);
+        fillQuads(white, black, thresh_level + black_white_gap, thresh_level, quads);
         if (checkQuads(quads, size))
             result = true;
     }
@@ -204,8 +214,6 @@ int checkChessboardBinary(const cv::Mat & img, const cv::Size & size)
     Mat white = img.clone();
     Mat black = img.clone();
 
-    int min_box_size = std::sqrt(cvRound((img.cols * img.rows * 0.05) / ((size.width+1) * (size.height+1))));
-
     int result = 0;
     for ( int erosion_count = 0; erosion_count <= 3; erosion_count++ )
     {
@@ -219,7 +227,7 @@ int checkChessboardBinary(const cv::Mat & img, const cv::Size & size)
         }
 
         vector<pair<float, int> > quads;
-        fillQuads(white, black, 128, 128, quads, min_box_size);
+        fillQuads(white, black, 128, 128, quads);
         if (checkQuads(quads, size))
             result = 1;
     }
