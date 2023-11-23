@@ -5,21 +5,10 @@
 #include "../precomp.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
 #include "cpu_kernels/softmax.hpp"
-// #include <fstream>
 
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv { namespace dnn {
-
-// void writeToFile(const float *d, size_t len, std::string filename) {
-//     std::ofstream f(filename);
-//     if (f.is_open()) {
-//         for (size_t i = 0; i < len; i++) {
-//             f << d[i] << " ";
-//         }
-//         f.close();
-//     }
-// }
 
 static void packWeight(size_t num_heads, size_t head_size, size_t input_hidden_size,
                        const float *weight_data, size_t hidden_size, std::vector<float> &packed_weight, const FastGemmOpt &opt) {
@@ -112,10 +101,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
-        const auto &input = inputs[0];
-        const auto &bias = inputs[2];
-        // auto &output = outputs[0];
 
+        // prepack weights
         if (!is_prepacked) {
             // prepack
             const auto &weight = inputs[1];
@@ -127,64 +114,61 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             is_prepacked = true;
         }
 
-        float *packed_weights[3] =      {packed_weight_q.data(),             packed_weight_k.data(),             packed_weight_v.data()};
+        float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
         size_t packed_weights_size[3] = {packed_weight_q.size() / num_heads, packed_weight_k.size() / num_heads, packed_weight_v.size() / num_heads};
 
-        const auto *input_data = input.ptr<const float>();
-        const auto *bias_data = bias.ptr<const float>();
-        // std::cout << format("Forward: batch_size=%zu, seq_len=%zu, input_hidden_size=%zu, hidden_size=%zu\n", batch_size, seq_len, input_hidden_size, hidden_size);
-
-        std::vector<int> gemm_buffer_shape{int(batch_size), int(seq_len), int(hidden_size)};
-        Mat gemm_buffer = Mat::zeros(gemm_buffer_shape.size(), gemm_buffer_shape.data(), CV_32F);
+        Mat gemm_buffer = Mat::zeros(1, int(batch_size * seq_len * hidden_size), CV_32F);
         auto *Q = gemm_buffer.ptr<float>();
         auto *K = Q + batch_size * seq_len * qkv_hidden_sizes[0];
         auto *V = K + batch_size * seq_len * qkv_hidden_sizes[1];
-        float *QKV[3] = {Q, K, V};
-        opt.multi_thread = false;
+        float *QKV[3] = {Q, K, V}; // Q, K, V: [B, N, S, H]
+        {
+            const auto &input = inputs[0];
+            const auto &bias = inputs[2];
+            const auto *input_data = input.ptr<const float>();
+            const auto *bias_data = bias.ptr<const float>();
 
-        auto fn = [&](const Range &r) {
-            for (int i = r.start; i < r.end; i++) {
-                const int batch_index = static_cast<int>((i / 3) / num_heads);
-                const int head_index = static_cast<int>((i / 3) % num_heads);
-                const int qkv_index = static_cast<int>(i % 3);
+            opt.multi_thread = false;
+            auto fn = [&](const Range &r) {
+                for (int i = r.start; i < r.end; i++) {
+                    const int batch_index = static_cast<int>((i / 3) / num_heads);
+                    const int head_index = static_cast<int>((i / 3) % num_heads);
+                    const int qkv_index = static_cast<int>(i % 3);
 
-                auto *dst = QKV[qkv_index];
-                size_t head_size = qkv_head_sizes[qkv_index];
+                    auto *dst = QKV[qkv_index];
+                    size_t head_size = qkv_head_sizes[qkv_index];
 
-                int input_offset = batch_index * seq_len * input_hidden_size;
-                int bias_offset = qkv_index * qkv_hidden_sizes[0] + head_index * head_size;
-                int dst_offset = (batch_index * num_heads + head_index) * (seq_len * head_size);
+                    int input_offset = batch_index * seq_len * input_hidden_size;
+                    int bias_offset = qkv_index * qkv_hidden_sizes[0] + head_index * head_size;
+                    int dst_offset = (batch_index * num_heads + head_index) * (seq_len * head_size);
 
-                // broadcast bias ([NH] -> [BN, SH]) and make copy to dst
-                const auto *bias_data_src = bias_data + bias_offset;
-                auto *dst_data = dst + dst_offset;
-                for (size_t seq_len_idx = 0; seq_len_idx < seq_len; seq_len_idx++) {
-                    std::memcpy(dst_data, bias_data_src, head_size * sizeof(float));
-                    dst_data += head_size;
+                    // broadcast bias ([NH] -> [BN, SH]) and make copy to dst
+                    const auto *bias_data_src = bias_data + bias_offset;
+                    auto *dst_data = dst + dst_offset;
+                    for (size_t seq_len_idx = 0; seq_len_idx < seq_len; seq_len_idx++) {
+                        std::memcpy(dst_data, bias_data_src, head_size * sizeof(float));
+                        dst_data += head_size;
+                    }
+
+                    auto *packed_weight = packed_weights[qkv_index] + packed_weights_size[qkv_index] * head_index;
+                    // single-thread gemm kernel
+                    fastGemm(false, seq_len, head_size, input_hidden_size,
+                            1.f, input_data + input_offset, input_hidden_size,
+                            packed_weight, 1.f, dst + dst_offset, head_size, opt);
                 }
+            };
 
-                auto *packed_weight = packed_weights[qkv_index] + packed_weights_size[qkv_index] * head_index;
-                // single-thread gemm kernel
-                fastGemm(false, seq_len, head_size, input_hidden_size,
-                         1.f, input_data + input_offset, input_hidden_size,
-                         packed_weight, 1.f, dst + dst_offset, head_size, opt);
-            }
-        };
-
-        size_t loops = 3 * batch_size * num_heads;
-        double nstripes = loops * seq_len * qkv_head_sizes[0] * input_hidden_size * (1 / 1024.0);
-        parallel_for_(Range(0, loops), fn, nstripes);
-
-        // Q, K, V: [B, N, S, H]
-        // writeToFile(QKV[0], batch_size * seq_len * qkv_hidden_sizes[0], "Q.log");
-        // writeToFile(QKV[1], batch_size * seq_len * qkv_hidden_sizes[1], "K.log");
-        // writeToFile(QKV[2], batch_size * seq_len * qkv_hidden_sizes[2], "V.log");
+            size_t loops = 3 * batch_size * num_heads;
+            double nstripes = loops * seq_len * qkv_head_sizes[0] * input_hidden_size * (1 / 1024.0);
+            parallel_for_(Range(0, loops), fn, nstripes);
+        }
 
         // Compute softmax(scale * matmul(Q, K))
         std::vector<int> attention_prob_shape{int(batch_size * num_heads), int(seq_len), int(seq_len)};
         Mat attention_prob = Mat::zeros(attention_prob_shape.size(), attention_prob_shape.data(), CV_32F);
         {
             auto *output = attention_prob.ptr<float>();
+
             auto loops = batch_size * num_heads;
             auto seq_len_square = seq_len * seq_len;
             auto qk_head_size = qkv_head_sizes[0];
@@ -203,13 +187,47 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                              output + output_offset, seq_len, opt);
                 }
             }, loops * seq_len * qk_head_size * seq_len * (1 / 1024.0));
-            // writeToFile(output, batch_size * num_heads * seq_len * seq_len, "attention_prob.log");
 
             // Compute softmax
             softmax(attention_prob, attention_prob, attention_prob_shape.size() - 1);
-            // writeToFile(output, batch_size * num_heads * seq_len * seq_len, "attention_prob_softmax.log");
         }
 
+        // Compute np.matmul(attention_prob, V)
+        Mat output_buffer = Mat::zeros(1, int(batch_size * num_heads * seq_len * qkv_head_sizes[2]), CV_32F);
+        {
+            auto *output = outputs[0].ptr<float>();
+            auto *output_buff = output_buffer.ptr<float>();
+            const auto *prob = attention_prob.ptr<const float>();
+
+            auto loops = batch_size * num_heads;
+            auto prob_inner_size = seq_len * seq_len;
+            auto v_head_size = qkv_head_sizes[2];
+            auto v_inner_size = seq_len * v_head_size;
+
+            opt.multi_thread = false;
+            parallel_for_(Range(0, loops), [&] (const Range &r) {
+                for (int i = r.start; i < r.end; i++) {
+                    const int output_offset = i * v_inner_size;
+
+                    const auto *p = prob + i * prob_inner_size, *v = V + i * v_inner_size;
+                    fastGemm(false, false, seq_len, seq_len, seq_len, v_head_size,
+                             1.f, p, seq_len, 1,
+                             v, v_head_size, 1, 0.f,
+                             output_buff + output_offset, v_head_size, opt);
+
+                    // tranpose on the fly
+                    const int batch_index = static_cast<int>(i / num_heads);
+                    const int head_index = static_cast<int>(i % num_heads);
+                    auto *src = output_buff + output_offset;
+                    auto *dst = output + (batch_index * seq_len * num_heads + head_index) * v_head_size;
+                    for (int j = 0; j < seq_len; j++) {
+                        std::memcpy(dst, src, v_head_size * sizeof(float));
+                        src += v_head_size;
+                        dst += qkv_hidden_sizes[2];
+                    }
+                }
+            }, loops * seq_len * seq_len * v_head_size * (1 / 1024.0));
+        }
     }
 
  private:

@@ -158,7 +158,7 @@ void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, f
 static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
                            const char *a_, int lda0, int lda1,
                            const char *b_, int ldb,
-                           char *c_, int ldc) {
+                           char *c_, int ldc, bool multi_thread) {
     const float* a = (const float*)a_;
 
     auto fn = [&](const Range &r) {
@@ -177,10 +177,14 @@ static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
         }
     };
 
-    int total = M; // outer loops
-    int cost_per_thread = static_cast<int>(K * N); // inner loops
-    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
-    parallel_for_(Range(0, total), fn, nstripes);
+    if (multi_thread) {
+        int total = M; // outer loops
+        int cost_per_thread = static_cast<int>(K * N); // inner loops
+        double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
+        parallel_for_(Range(0, total), fn, nstripes);
+    } else {
+        fn(Range(0, M));
+    }
 }
 
 void fastGemm(bool trans_a, int M, int N, int K,
@@ -240,7 +244,7 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     }
 
     if (!trans_b && ldb1 == 1 && (M <= 4 || (uint64_t)M * N * K <= 10000)) {
-        return fast_gemm_thin(alpha, beta, M, N, K, a, lda0, lda1, b, ldb0, c, ldc);
+        return fast_gemm_thin(alpha, beta, M, N, K, a, lda0, lda1, b, ldb0, c, ldc, opt.multi_thread);
     }
 
 #if CV_TRY_NEON
