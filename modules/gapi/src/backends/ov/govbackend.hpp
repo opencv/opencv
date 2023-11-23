@@ -42,8 +42,13 @@ class GOVExecutable final: public GIslandExecutable
     // To manage multiple async requests
     std::unique_ptr<RequestPool> m_reqPool;
 
+    // Only performs inference of the model
+    // without i/o data transfer if enabled.
+    bool m_inference_only;
+
 public:
     GOVExecutable(const ade::Graph                   &graph,
+                  const cv::GCompileArgs             &compileArgs,
                   const std::vector<ade::NodeHandle> &nodes);
 
     virtual inline bool canReshape() const override { return false; }

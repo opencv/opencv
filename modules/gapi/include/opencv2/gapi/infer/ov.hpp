@@ -678,8 +678,28 @@ protected:
     detail::ParamDesc m_desc;
 };
 
+/**
+ * @brief Ask G-API OpenVINO backend to run only inference of model provided.
+ *
+ * G-API OpenVINO backend will perform only the inference of the model provided
+ * without populating input and copying back output data.
+ * This mode is used to evaluate the pure inference performance of the model without
+ * taking into account the i/o data transfer.
+ */
+struct inference_only { };
+/** @} */
+
 } // namespace ov
 } // namespace gapi
+
+namespace detail
+{
+    template<> struct CompileArgTag<cv::gapi::ov::inference_only>
+    {
+        static const char* tag() { return "gapi.ov.inference_only"; }
+    };
+}
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_INFER_OV_HPP
