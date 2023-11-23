@@ -420,7 +420,7 @@ void winofunc_AtXA_8x8_F32(const float* inptr, int inpstep,
 #endif // CV_AVX
 
 // FP16, currently, only ARMv8 may support it
-#if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
+#if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && CV_FP16
 
 #undef T4x4
 #define T4x4(a, b, c, d, tr0, tr1) \
