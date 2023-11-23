@@ -834,7 +834,7 @@ typedef void (*MinMaxIdxFunc)(const uchar*, const uchar*, int*, int*, size_t*, s
 
 static MinMaxIdxFunc getMinmaxTab(int depth)
 {
-    static MinMaxIdxFunc minmaxTab[] =
+    static MinMaxIdxFunc minmaxTab[CV_DEPTH_MAX] =
     {
         (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8s),
         (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16s),

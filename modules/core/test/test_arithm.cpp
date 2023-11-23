@@ -3032,4 +3032,75 @@ TEST_P(FiniteMaskFixture, flags)
 // Params are: depth, channels 1 to 4
 INSTANTIATE_TEST_CASE_P(Core_FiniteMask, FiniteMaskFixture, ::testing::Combine(::testing::Values(CV_32F, CV_64F), ::testing::Range(1, 5)));
 
+
+///////////////////////////////////////////////////////////////////////////////////
+typedef testing::TestWithParam<perf::MatDepth> NonZeroNotSupportedMatDepth;
+
+TEST_P(NonZeroNotSupportedMatDepth, findNonZero)
+{
+    cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
+    vector<Point> pts;
+    EXPECT_THROW( findNonZero(src, pts), cv::Exception);
+}
+
+TEST_P(NonZeroNotSupportedMatDepth, countNonZero)
+{
+    cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
+    EXPECT_THROW( countNonZero(src), cv::Exception);
+}
+
+TEST_P(NonZeroNotSupportedMatDepth, hasNonZero)
+{
+    cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
+    EXPECT_THROW( hasNonZero(src), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    NonZero,
+    NonZeroNotSupportedMatDepth,
+    testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+);
+
+///////////////////////////////////////////////////////////////////////////////////
+typedef testing::TestWithParam<perf::MatDepth> LutNotSupportedMatDepth;
+
+TEST_P(LutNotSupportedMatDepth, lut)
+{
+    cv::Mat src = cv::Mat::zeros(16,16, CV_8UC1);
+    cv::Mat lut = cv::Mat(1, 256, CV_MAKETYPE(GetParam(), 1));
+    cv::Mat dst;
+    EXPECT_THROW( cv::LUT(src,lut,dst), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    Lut,
+    LutNotSupportedMatDepth,
+    testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+);
+
+///////////////////////////////////////////////////////////////////////////////////
+typedef testing::TestWithParam<perf::MatDepth> MinMaxNotSupportedMatDepth;
+
+TEST_P(MinMaxNotSupportedMatDepth, minMaxLoc)
+{
+    cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
+    double minV=0.0, maxV=0.0;
+    Point minLoc, maxLoc;
+    EXPECT_THROW( cv::minMaxLoc(src, &minV, &maxV, &minLoc, &maxLoc), cv::Exception);
+}
+
+TEST_P(MinMaxNotSupportedMatDepth, minMaxIdx)
+{
+    cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
+    double minV=0.0, maxV=0.0;
+    int minIdx=0, maxIdx=0;
+    EXPECT_THROW( cv::minMaxIdx(src, &minV, &maxV, &minIdx, &maxIdx), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    MinMaxLoc,
+    MinMaxNotSupportedMatDepth,
+    testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+);
+
 }} // namespace
