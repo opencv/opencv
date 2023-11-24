@@ -64,6 +64,12 @@ class ONNXGraphWrapper : public ImportGraphWrapper
 public:
     ONNXGraphWrapper(opencv_onnx::GraphProto& _net) : net(_net)
     {
+        // Add a fake initializer with empty name.
+        // Some ONNX models skip their inputs. For example,
+        // Resize which has 4 inputs but 2 of them have empty names.
+        // So we add a fake empty node to which such ops may refer as input.
+        net.add_initializer();
+
         numInputs = net.input_size();
         numInitializers = net.initializer_size();
     }

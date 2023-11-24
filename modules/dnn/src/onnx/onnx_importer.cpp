@@ -3539,7 +3539,7 @@ void ONNXImporter::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     Mat bias;
     if (constBlobs.find(node_proto.input(6)) != constBlobs.end())
         bias = getBlob(node_proto, 6);
-    else
+    if (bias.empty())
         bias = Mat::zeros(1, outCn, CV_32S);
 
     Mat biasFused(1, outCn, CV_32S);
