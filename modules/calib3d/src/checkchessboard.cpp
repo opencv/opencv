@@ -43,8 +43,6 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "calib3d_c_api.h"
 
-#include "opencv2/highgui.hpp"
-
 #include <vector>
 #include <algorithm>
 
