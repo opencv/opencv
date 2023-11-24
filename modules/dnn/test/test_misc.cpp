@@ -97,8 +97,9 @@ TEST(blobFromImageWithParams_CustomPadding, letter_box)
 {
     Mat img(40, 20, CV_8UC4, Scalar(0, 1, 2, 3));
 
-    // Custom padding value that you have added
-    Scalar customPaddingValue(0, 1, 2, 3); // Example padding value
+    // Custom padding values
+    int values[] = {5, 6, 7, 8};
+    Scalar customPaddingValue(values[0], values[1], values[2], values[3]);
 
     // Construct target mat with the expected padding value
     Mat targetCh[4];
@@ -108,6 +109,12 @@ TEST(blobFromImageWithParams_CustomPadding, letter_box)
     Mat rowM(1, 20, CV_8UC1, valVec.data());
     for (int i = 0; i < 4; i++) {
         targetCh[i] = rowM * i;
+        // Modify specific values in targetCh[i]
+        for (int col = 0; col < targetCh[i].cols; col++) {
+            if (col < 5 || col > 14) {
+                targetCh[i].at<uint8_t>(0, col) = values[i];
+            }
+        }
     }
 
     Mat targetImg;
