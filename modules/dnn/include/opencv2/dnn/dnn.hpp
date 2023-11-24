@@ -862,7 +862,7 @@ CV__DNN_INLINE_NS_BEGIN
 
         /** @brief Enables or disables the Winograd compute branch. The Winograd compute branch can speed up
          * 3x3 Convolution at a small loss of accuracy.
-        * @param useWinograd true to enable the Winograd compute branch. The default is true.
+        * @param useWinograd true to enable the Winograd compute branch. The default is false.
         */
         CV_WRAP void enableWinograd(bool useWinograd);
 
