@@ -55,7 +55,7 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
     const float max_aspect_ratio = 3.0f;
     const float min_box_size = 10.0f;
     const float box_area_covered = 0.5f;
-    
+
     for (size_t i = 0; i < contours.size(); ++i)
     {
         if (hierarchy.at(i)[3] != -1)
@@ -75,13 +75,13 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
         {
             continue;
         }
-      
+
         float box_area = box.size.width * box.size.height;
         if(contourArea(c) < (box_area_covered * box_area))
         {
           continue;
         }
-      
+
         quads.emplace_back(box_size, class_id);
       
     }
@@ -104,7 +104,7 @@ inline bool less_pred(const std::pair<float, int>& p1, const std::pair<float, in
 static void fillQuads(Mat & white, Mat & black, double white_thresh, double black_thresh, vector<pair<float, int> > & quads)
 {
     Mat thresh;
-  
+
     {
         vector< vector<Point> > contours;
         vector< Vec4i > hierarchy;
@@ -120,7 +120,7 @@ static void fillQuads(Mat & white, Mat & black, double white_thresh, double blac
         findContours(thresh, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
         icvGetQuadrangleHypotheses(contours, hierarchy, quads, 0);
     }
-  
+
 }
 
 static bool checkQuads(vector<pair<float, int> > & quads, const cv::Size & size)
@@ -187,7 +187,7 @@ bool cv::checkChessboard(InputArray _img, Size size)
     Mat black;
     erode(img, white, Mat(), Point(-1, -1), erosion_count);
     dilate(img, black, Mat(), Point(-1, -1), erosion_count);
-   
+
     bool result = false;
     for(float thresh_level = black_level; thresh_level < white_level && !result; thresh_level += 20.0f)
     {
