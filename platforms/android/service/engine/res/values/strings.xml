@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">OpenCV Manager</string>
-    <string name="about">About</string>
-    <string name="checkUpdate">Check for update</string>
-    <string name="intro">OpenCV library is used by other applications for image enhancement, panorama stitching, object detection, recognition and tracking and so on. OpenCV Manager provides the best version of the OpenCV for your hardware. See opencv.org for details.</string>
-</resources>
