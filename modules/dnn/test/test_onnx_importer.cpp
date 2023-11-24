@@ -2678,6 +2678,101 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
     normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes);
 }
 
+TEST_P(Test_ONNX_layers, YOLOx)
+{
+    std::string weightPath = _tf("models/yolox_s_inf_decoder.onnx", false);
+    std::string imgPath = _tf("../dog_orig_size.png");
+
+    Size targetSize{640, 640};
+    float conf_threshold = 0.50;
+    float iou_threshold = 0.50;
+
+    std::vector<int> refClassIds{1, 16, 7};
+    std::vector<float> refScores{0.96f, 0.91f, 0.66f};
+    // [x1, y1, x2, y2] x 3
+    std::vector<Rect2d> refBoxes{
+        Rect2d(104.62, 181.28, 470.95, 428.22),
+        Rect2d(112.32, 264.88, 258.11, 527.31),
+        Rect2d(389.63, 144.63, 576.66, 223.18),
+        };
+
+    Mat img = imread(imgPath);
+
+    Image2BlobParams paramYolox(
+        Scalar::all(1),
+        targetSize,
+        Scalar::all(0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NCHW,
+        DNN_PMODE_LETTERBOX,
+        Scalar::all(144)
+        );
+
+    Mat inp = blobFromImageWithParams(img, paramYolox);
+
+    Net net = readNet(weightPath);
+
+    net.setInput(inp);
+    std::vector<Mat> outs;
+    net.forward(outs, net.getUnconnectedOutLayersNames());
+
+    Mat preds = outs[0].reshape(1, outs[0].size[1]); // [1, 8400, 85]
+
+    // Retrieve
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect2d> boxes;
+    // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
+    for (int i = 0; i < preds.rows; ++i)
+    {
+        // filter out non objects
+        float obj_conf = preds.row(i).at<float>(4);
+        if (obj_conf < conf_threshold)
+            continue;
+
+        // get class id and conf
+        Mat scores = preds.row(i).colRange(5, preds.cols);
+        double conf;
+        Point maxLoc;
+        minMaxLoc(scores, 0, &conf, 0, &maxLoc);
+        conf *= obj_conf;
+        if (conf < conf_threshold)
+            continue;
+
+        // get bbox coords
+        float* det = preds.ptr<float>(i);
+        double cx = det[0];
+        double cy = det[1];
+        double w = det[2];
+        double h = det[3];
+
+        // [x1, y1, x2, y2]
+        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
+                                cx + 0.5 * w, cy + 0.5 * h));
+        classIds.push_back(maxLoc.x);
+        confidences.push_back(conf);
+
+    }
+
+    // NMS
+    std::vector<int> keep_idx;
+    NMSBoxes(boxes, confidences, conf_threshold, iou_threshold, keep_idx);
+
+    std::vector<int> keep_classIds;
+    std::vector<float> keep_confidences;
+    std::vector<Rect2d> keep_boxes;
+
+    for (auto i : keep_idx)
+    {
+        keep_classIds.push_back(classIds[i]);
+        keep_confidences.push_back(confidences[i]);
+        keep_boxes.push_back(boxes[i]);
+    }
+
+    normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes, "", 0.0, 1.0e-1, 1.0e-1);
+}
+
 // This test is mainly to test:
 //  1. identity node with constant input
 //  2. limited support to range operator (all inputs are constant)
