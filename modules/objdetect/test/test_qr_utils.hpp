@@ -10,9 +10,6 @@ void check_qr(const string& root, const string& name_current_image, const string
                 const std::vector<Point>& corners,
                 const std::vector<string>& decoded_info, const int max_pixel_error,
                 bool isMulti = false) {
-#ifndef HAVE_QUIRC
-    CV_UNUSED(decoded_info);
-#endif
     const std::string dataset_config = findDataFile(root + "dataset_config.json");
     FileStorage file_config(dataset_config, FileStorage::READ);
     ASSERT_TRUE(file_config.isOpened()) << "Can't read validation data: " << dataset_config;
@@ -50,7 +47,7 @@ void check_qr(const string& root, const string& name_current_image, const string
                     EXPECT_NEAR(y, corners[i].y, max_pixel_error);
                 }
             }
-#ifdef HAVE_QUIRC
+
             if (decoded_info.size() == 0ull)
                 return;
             if (isMulti) {
@@ -70,7 +67,7 @@ void check_qr(const string& root, const string& name_current_image, const string
                 std::string original_info = config["info"];
                 EXPECT_EQ(decoded_info[0], original_info);
             }
-#endif
+
             return; // done
         }
     }
