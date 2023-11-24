@@ -21,6 +21,8 @@ int main()
     Mat image;
     Mat depthMap;
     Mat adjDepthMap;
+    double minVal = 300;
+    double maxVal = 5000;
     while (true)
     {
         // Grab depth map like this:
@@ -33,19 +35,20 @@ int main()
             {
                 imshow("RGB", image);
             }
-
+            
             if (obsensorCapture.retrieve(depthMap, CAP_OBSENSOR_DEPTH_MAP))
-            {
-                normalize(depthMap, adjDepthMap, 0, 255, NORM_MINMAX, CV_8UC1);
+            {           
+                depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
                 applyColorMap(adjDepthMap, adjDepthMap, COLORMAP_JET);
                 imshow("DEPTH", adjDepthMap);
+                std::cout << maxVal << std::endl;
             }
 
             // depth map overlay on bgr image
             static const float alpha = 0.6f;
             if (!image.empty() && !depthMap.empty())
             {
-                normalize(depthMap, adjDepthMap, 0, 255, NORM_MINMAX, CV_8UC1);
+                depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
                 cv::resize(adjDepthMap, adjDepthMap, cv::Size(image.cols, image.rows));
                 for (int i = 0; i < image.rows; i++)
                 {
