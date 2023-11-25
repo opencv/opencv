@@ -36,16 +36,17 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         CV_CheckTrue(params.has("qkv_hidden_sizes"), "DNN/Attention: qkv_hidden_sizes is required but missing");
         auto param_qkv_hidden_sizes = params.get("qkv_hidden_sizes");
         CV_CheckEQ(param_qkv_hidden_sizes.size(), 3, "DNN/Attention: qkv_hidden_sizes must and only have three elements");
+
+        qkv_hidden_sizes.clear();
         qkv_hidden_sizes.resize(3);
         qkv_hidden_sizes[0] = static_cast<size_t>(param_qkv_hidden_sizes.get<int>(0));
         qkv_hidden_sizes[1] = static_cast<size_t>(param_qkv_hidden_sizes.get<int>(1));
-        qkv_hidden_sizes[2] = static_cast<size_t>(param_qkv_hidden_sizes.get<int>(2));
+        /* v_hidden_size needs to be initialized in finalize in case v_slice_end=INT_MAX */
 
-        hidden_size = qkv_hidden_sizes[0] + qkv_hidden_sizes[1] + qkv_hidden_sizes[2];
-
+        qkv_head_sizes.clear();
         qkv_head_sizes.resize(3);
-        std::transform(qkv_hidden_sizes.begin(), qkv_hidden_sizes.end(), qkv_head_sizes.begin(),
-                       [this] (const size_t w) { return static_cast<size_t>(w / num_heads); });
+        qkv_head_sizes[0] = static_cast<size_t>(qkv_hidden_sizes[0] / num_heads);
+        qkv_head_sizes[1] = static_cast<size_t>(qkv_hidden_sizes[1] / num_heads);
 
         scale = 1.f / params.get<float>("scale", sqrt(qkv_head_sizes[0]));
 
@@ -64,14 +65,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         const auto &input_shape = inputs[0];
         const auto &weight_shape = inputs[1];
         const auto &bias_shape = inputs[2];
-        size_t dim_bias = static_cast<size_t>(std::accumulate(bias_shape.begin(), bias_shape.end(), 1, std::multiplies<int>()));
 
         CV_CheckEQ(input_shape.size(), static_cast<size_t>(3), "DNN/Attention: invalid input dimension");
         CV_CheckEQ(weight_shape.size(), static_cast<size_t>(2), "DNN/Attention: invalid weight dimension");
 
         CV_CheckEQ(input_shape[2], weight_shape[0], "DNN/Attention: invalid input shape");
-        CV_CheckEQ(static_cast<size_t>(weight_shape[1]), hidden_size, "DNN/Attention: invalid weight shape");
-        CV_CheckEQ(dim_bias, hidden_size, "DNN/Attention: invalid bias shape");
+        CV_CheckEQ(weight_shape[1], bias_shape[0], "DNN/Attention: invalid weight or bias shape");
 
         outputs.assign(1, inputs[0]);
         return false;
@@ -86,6 +85,13 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         batch_size = static_cast<size_t>(input_shape[0]);
         seq_len = static_cast<size_t>(input_shape[1]);
         input_hidden_size = static_cast<size_t>(input_shape[2]);
+
+        const auto weight_shape = shape(inputs[1]);
+        hidden_size = weight_shape[1];
+        qkv_hidden_sizes[2] = hidden_size - qkv_hidden_sizes[0] - qkv_hidden_sizes[1];
+        qkv_head_sizes[2] = static_cast<size_t>(qkv_hidden_sizes[2] / num_heads);
+
+        // std::cout << "finalize: qkv_hidden_sizes="  << qkv_hidden_sizes << ", qkv_head_sizes=" << qkv_head_sizes << ", hidden_size=" << hidden_size << std::endl;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {

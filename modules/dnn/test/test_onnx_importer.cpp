@@ -2952,6 +2952,9 @@ TEST_P(Test_ONNX_layers, Expand_shape_model4) {
 TEST_P(Test_ONNX_layers, Attention) {
     testONNXModels("attention");
 }
+TEST_P(Test_ONNX_layers, AttentionSingleHead) {
+    testONNXModels("attention_single_head");
+}
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 

@@ -13,6 +13,7 @@
 
 #include <opencv2/core/utils/logger.hpp>
 #include <queue>
+#include <limits>
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -310,8 +311,12 @@ class AttentionSubGraph : public Subgraph {
             auto fill_qkv_hidden_sizes = [&] (const int slice_node_id) {
                 int slice_start = extractConstant(net, matchedNodesIds[slice_node_id], 1).at<int>(0);
                 int slice_end = extractConstant(net, matchedNodesIds[slice_node_id], 2).at<int>(0);
-                int64_t hidden_size = static_cast<int64_t>(slice_end - slice_start);
-                qkv_hidden_sizes.push_back(hidden_size);
+                if (slice_end == std::numeric_limits<int>::max()) {
+                    qkv_hidden_sizes.push_back(0); // workaround for Slice with end=INT_MAX
+                } else {
+                    int64_t hidden_size = static_cast<int64_t>(slice_end - slice_start);
+                    qkv_hidden_sizes.push_back(hidden_size);
+                }
             };
             fill_qkv_hidden_sizes(slice_q);
             fill_qkv_hidden_sizes(slice_k);
@@ -399,10 +404,125 @@ class AdjustSliceAllOptionalInputsSubgraph : public Subgraph {
             node->add_input("");
         }
     }
-
-private:
+ private:
     int slice_id;
     size_t num_inputs_;
+};
+
+/*  Attention subgraph with single head.
+    No Reshape operator is appended after each Slice operator.
+*/
+class AttentionSingleHeadSubGraph : public Subgraph {
+ public:
+    AttentionSingleHeadSubGraph() {
+        int input = addNodeToMatch("");
+        int transpose = addNodeToMatch("Transpose", input); // tranpose does not make any differences to the accuracy here in this subgraph
+        att_matmul = addNodeToMatch("MatMul", transpose, addNodeToMatch(""));
+        att_add = addNodeToMatch("Add", addNodeToMatch(""), att_matmul);
+
+        // v_path
+        slice_v = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
+        int transpose_v = addNodeToMatch("Transpose", slice_v);
+
+        // q_path
+        slice_q = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
+        int transpose_q = addNodeToMatch("Transpose", slice_q);
+        div_q = addNodeToMatch("Div", transpose_q, addNodeToMatch(""));
+
+        // k_path
+        slice_k = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
+        int transpose_k = addNodeToMatch("Transpose", slice_k);
+
+        // qk
+        int matmul_qk = addNodeToMatch("MatMul", div_q, transpose_k);
+        int softmax_qk = addNodeToMatch("Softmax", matmul_qk);
+
+        // qkv
+        int matmul_qkv = addNodeToMatch("MatMul", softmax_qk, transpose_v);
+        int transpose_qkv = addNodeToMatch("Transpose", matmul_qkv);
+        addNodeToMatch("Reshape", transpose_qkv, addNodeToMatch(""));
+
+        setFusedNode("Attention", input);
+    }
+
+    static std::string getInputName(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id) {
+        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
+        if (initializer_id != -1) {
+            return onnx_net->getNameOfInitializer(initializer_id);
+        } else {
+            const auto node = net->getNode(node_id);
+            return node->getInputName(input_id);
+        }
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE {
+        if (Subgraph::match(net, nodeId, matchedNodesIds)) {
+            // get attrs - qkv_hidden_sizes
+            auto fill_qkv_hidden_sizes = [&] (const int slice_node_id) {
+                int slice_start = extractConstant(net, matchedNodesIds[slice_node_id], 1).at<int>(0);
+                int slice_end = extractConstant(net, matchedNodesIds[slice_node_id], 2).at<int>(0);
+                if (slice_end == std::numeric_limits<int>::max()) {
+                    qkv_hidden_sizes.push_back(0); // workaround for Slice with end=INT_MAX
+                } else {
+                    int64_t hidden_size = static_cast<int64_t>(slice_end - slice_start);
+                    qkv_hidden_sizes.push_back(hidden_size);
+                }
+            };
+            fill_qkv_hidden_sizes(slice_q);
+            fill_qkv_hidden_sizes(slice_k);
+            fill_qkv_hidden_sizes(slice_v);
+            CV_CheckEQ(qkv_hidden_sizes.size(), static_cast<size_t>(3), "ONNXSimplifier/Attention: invalid qkv hidden sizes");
+            CV_CheckEQ(int(qkv_hidden_sizes[0]), int(qkv_hidden_sizes[1]), "ONNXSimplifier/Attention: invalid qkv hidden sizes, q_hidden_size == v_hidden_size is required");
+            // get attrs - num_heads, scale
+            num_heads = 1;
+            scale = extractConstant(net, matchedNodesIds[div_q], 1).at<float>(0);
+            // std::cout << "AttentionSingleHeadSubGraph: num_heads=" << num_heads << ", qkv_hidden_sizes=" << qkv_hidden_sizes << ", scale=" << scale << std::endl;
+
+            // get names
+            weight_name = getInputName(net, matchedNodesIds[att_matmul], 1);
+            // std::cout << "AttentionSingleHeadSubGraph: weight_name=" << weight_name << std::endl;
+            bias_name = getInputName(net, matchedNodesIds[att_add], 0);
+            // std::cout << "AttentionSingleHeadSubGraph: bias_name=" << bias_name << std::endl;
+            return true;
+        }
+        return false;
+    }
+
+    virtual void finalize(const Ptr<ImportGraphWrapper>& net,
+                          const Ptr<ImportNodeWrapper>& fusedNode,
+                          std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE {
+        // add attrs
+        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        opencv_onnx::AttributeProto* attr_num_heads = node->add_attribute();
+        attr_num_heads->set_name("num_heads");
+        attr_num_heads->set_i(num_heads);
+        opencv_onnx::AttributeProto* attr_qkv_hidden_sizes = node->add_attribute();
+        attr_qkv_hidden_sizes->set_name("qkv_hidden_sizes");
+        attr_qkv_hidden_sizes->add_ints(qkv_hidden_sizes[0]);
+        attr_qkv_hidden_sizes->add_ints(qkv_hidden_sizes[1]);
+        attr_qkv_hidden_sizes->add_ints(qkv_hidden_sizes[2]);
+        opencv_onnx::AttributeProto* attr_scale = node->add_attribute();
+        attr_scale->set_name("scale");
+        attr_scale->set_f(scale);
+
+        // add inputs
+        node->add_input(weight_name);
+        node->add_input(bias_name);
+    }
+
+ protected:
+    int att_matmul, att_add;
+    int slice_q, slice_k, slice_v;
+    int div_q;
+
+    std::vector<int64_t> qkv_hidden_sizes; // order: [qk_hidden_size, qk_hidden_size, v_hidden_size]
+    int64_t num_heads;
+    float scale;
+
+    std::string weight_name;
+    std::string bias_name;
 };
 
 /*  Fusion for Gelu.
@@ -1440,6 +1560,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<NormalizeSubgraph4>());
     subgraphs.push_back(makePtr<NormalizeSubgraph5>());
     subgraphs.push_back(makePtr<AttentionSubGraph>());
+    subgraphs.push_back(makePtr<AttentionSingleHeadSubGraph>());
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
