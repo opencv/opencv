@@ -275,7 +275,7 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
 
     if(_src.depth() == CV_8U)
     {
-        static std::mutex mtx;
+        static cv::Mutex& initMtx = getInitializationMutex();
         static int combined_table[256];
         static std::atomic<bool> initialized180(false), initialized256(false);
         std::atomic<bool>& initialized = hrange == 180 ? initialized180 : initialized256;
@@ -288,7 +288,7 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
 
         if (!initialized)
         {
-            std::lock_guard<std::mutex> lock(mtx);
+            std::lock_guard<cv::Mutex> lock(initMtx);
             if (!initialized)
             {
                 constexpr int hsv_shift = 12;
