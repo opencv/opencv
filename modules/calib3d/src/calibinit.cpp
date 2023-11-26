@@ -1730,7 +1730,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
     all_quads.deallocate();
     all_corners.deallocate();
 
-    // empiric bound for minimal allowed perimeter for squares
+    // empiric bound for minimal allowed area for squares
     int min_size = 25; //cvRound( image->cols * image->rows * .03 * 0.01 * 0.92 );
 
     bool filterQuads = (flags & CALIB_CB_FILTER_QUADS) != 0;
