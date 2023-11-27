@@ -525,7 +525,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     if(flags & CALIB_CB_PLAIN)
       max_dilations = 0;
-      
+
     // Try our standard "1" dilation, but if the pattern is not found, iterate the whole procedure with higher dilations.
     // This is necessary because some squares simply do not separate properly with a single dilation.  However,
     // we want to use the minimum number of dilations possible since dilations cause the squares to become smaller,
