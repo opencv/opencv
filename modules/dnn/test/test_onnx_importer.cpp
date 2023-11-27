@@ -2770,9 +2770,9 @@ TEST_P(Test_ONNX_nets, YOLOv8)
         1.0e-1, 1.0e-1, "yolov8");
 }
 
-TEST_P(Test_ONNX_layers, YOLOv8)
+TEST_P(Test_ONNX_nets, YOLOv8)
 {
-    std::string weightPath = _tf("/yolov8n.onnx", false);
+    std::string weightPath = _tf("models/yolov8n.onnx", false);
     std::string imgPath = _tf("../dog_orig_size.png");
 
     Size targetSize{640, 640};
@@ -2781,7 +2781,7 @@ TEST_P(Test_ONNX_layers, YOLOv8)
 
     std::vector<int> refClassIds{16, 1, 2};
     std::vector<float> refScores{0.9332, 0.8959, 0.6157};
-    // [x1, y1, x2, y2] 
+    // [x1, y1, x2, y2]
     std::vector<Rect2d> refBoxes{
         Rect2d(108.8965, 261.9094, 257.1633, 530.3049),
         Rect2d(110.4020, 192.9843, 473.4418, 429.5965),
