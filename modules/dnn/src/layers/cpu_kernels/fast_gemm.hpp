@@ -42,6 +42,17 @@ struct FastGemmOpt {
     }
 };
 
+// struct FastGemmBatchData {
+//     const float *A = nullptr;
+//     size_t lda = 0;
+//     const float *B = nullptr;
+//     size_t ldb = 0;
+//     float *C = nullptr;
+//     size_t ldc = 0;
+//     float alpha = 1.f;
+//     float beta = 0.f;
+// };
+
 void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
 
 void fastGemm(bool trans_a, int M, int N, int K,
@@ -55,10 +66,8 @@ void fastGemm(bool trans_a, bool trans_b,
               float alpha, const Mat &A, const Mat &B,
               float beta, Mat &C, FastGemmOpt &opt);
 
-// FIXME: B needs to 2d for now. Support nd (n>=2) B in the future.
-void fastGemmBatched(bool trans_a, bool trans_b,
-                     float alpha, const Mat &A, const Mat &B,
-                     float beta, Mat &C, FastGemmOpt &opt);
+void fastGemmBatch(bool trans_a, bool trans_b, float alpha, const Mat &A,
+                   const Mat &B, float beta, Mat &C, FastGemmOpt &opt);
 
 }} // cv::dnn
 

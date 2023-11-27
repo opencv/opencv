@@ -209,54 +209,53 @@ void fastGemm(bool trans_a, bool trans_b,
              beta, c, ldc, opt);
 }
 
-void fastGemmBatched(bool trans_a, bool trans_b,
-                     float alpha, const Mat &A, const Mat &B,
-                     float beta, Mat &C, FastGemmOpt &opt) {
-    CV_CheckTypeEQ(A.type(), B.type(), "DNN/fastGemmBatched: A and B should have the same type");
-    CV_CheckTypeEQ(B.type(), C.type(), "DNN/fastGemmBatched: B and C should have the same type");
-    CV_CheckTypeEQ(A.type(), CV_32F, "DNN/fastGemmBatched: only support float32 for now");
+void fastGemmBatch(bool trans_a, bool trans_b,
+                   float alpha, const Mat &A, const Mat &B,
+                   float beta, Mat &C, FastGemmOpt &opt) {
+    CV_CheckTypeEQ(A.type(), B.type(), "DNN/fastGemmBatch: A and B should have the same type");
+    CV_CheckTypeEQ(B.type(), C.type(), "DNN/fastGemmBatch: B and C should have the same type");
+    CV_CheckTypeEQ(A.type(), CV_32F, "DNN/fastGemmBatch: only support float32 for now");
 
     const auto shape_a = shape(A);
-    size_t dims_A = shape_a.size();
-    CV_CheckGE(dims_A, static_cast<size_t>(2), "DNN/fastGemmBatched: A must be n-dimensional (n >= 2)");
     const auto shape_b = shape(B);
-    CV_CheckEQ(shape_b.size(), static_cast<size_t>(2), "DNN/fastGemmBatched: B must be 2-dimensional");
     const auto shape_c = shape(C);
-    size_t dims_C = shape_c.size();
-    CV_CheckGE(dims_C, static_cast<size_t>(2), "DNN/fastGemmBatched: C must be n-dimensional (n >= 2)");
+    CV_CheckGE(shape_a.size(), static_cast<size_t>(2), "DNN/fastGemmBatch: A must be n-dimensional (n >= 2)");
+    CV_CheckEQ(shape_b.size(), static_cast<size_t>(2), "DNN/fastGemmBatch: B must be n-dimensional (n >= 2)");
 
-    if (trans_a) {
-        int ma = shape_a[dims_A - 2], na = shape_a[dims_A - 1];
-        int mb = shape_b[0], nb = shape_b[1];
+    size_t outer_loops = std::accumulate(shape_c.begin(), shape_c.end() - 2, 1, std::multiplies<int>());
 
-        int lda0 = na, lda1 = 1, ldb0 = nb, ldb1 = 1, ldc = shape_c[1];
+    // if (trans_a) {
+    //     int ma = shape_a[dims_A - 2], na = shape_a[dims_A - 1];
+    //     int mb = shape_b[0], nb = shape_b[1];
 
-        const float *a = A.ptr<const float>();
-        const float *b = B.ptr<const float>();
-        float *c = C.ptr<float>();
+    //     int lda0 = na, lda1 = 1, ldb0 = nb, ldb1 = 1, ldc = shape_c[1];
 
-        int batches = std::accumulate(shape_a.begin(), shape_a.end() - 2, 1, std::multiplies<int>());
-        int step_a = ma * na, step_c = na * nb;
-        for (int i = 0; i < batches; i++) {
-            fastGemm(true, trans_b, ma, na, mb, nb,
-                     alpha, a + i * step_a, lda0, lda1, b, ldb0, ldb1,
-                     beta, c + i * step_c, ldc, opt);
-        }
-    } else {
-        int ma = std::accumulate(shape_a.begin(), shape_a.end() - 1, 1, std::multiplies<int>()),
-            na = shape_a[dims_A - 1];
-        int mb = shape_b[0], nb = shape_b[1];
+    //     const float *a = A.ptr<const float>();
+    //     const float *b = B.ptr<const float>();
+    //     float *c = C.ptr<float>();
 
-        int lda0 = na, lda1 = 1, ldb0 = nb, ldb1 = 1, ldc = shape_c[1];
+    //     int batches = std::accumulate(shape_a.begin(), shape_a.end() - 2, 1, std::multiplies<int>());
+    //     int step_a = ma * na, step_c = na * nb;
+    //     for (int i = 0; i < batches; i++) {
+    //         fastGemm(true, trans_b, ma, na, mb, nb,
+    //                  alpha, a + i * step_a, lda0, lda1, b, ldb0, ldb1,
+    //                  beta, c + i * step_c, ldc, opt);
+    //     }
+    // } else {
+    //     int ma = std::accumulate(shape_a.begin(), shape_a.end() - 1, 1, std::multiplies<int>()),
+    //         na = shape_a[dims_A - 1];
+    //     int mb = shape_b[0], nb = shape_b[1];
 
-        const float *a = A.ptr<const float>();
-        const float *b = B.ptr<const float>();
-        float *c = C.ptr<float>();
+    //     int lda0 = na, lda1 = 1, ldb0 = nb, ldb1 = 1, ldc = shape_c[1];
 
-        fastGemm(false, trans_b, ma, na, mb, nb,
-                 alpha, a, lda0, lda1, b, ldb0, ldb1,
-                 beta, c, ldc, opt);
-    }
+    //     const float *a = A.ptr<const float>();
+    //     const float *b = B.ptr<const float>();
+    //     float *c = C.ptr<float>();
+
+    //     fastGemm(false, trans_b, ma, na, mb, nb,
+    //              alpha, a, lda0, lda1, b, ldb0, ldb1,
+    //              beta, c, ldc, opt);
+    // }
 }
 
 }} // cv::dnn
