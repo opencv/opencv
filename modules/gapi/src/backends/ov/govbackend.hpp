@@ -26,6 +26,12 @@ struct OVCompiled {
 
 class RequestPool;
 
+struct Options {
+    // Only performs inference of the model
+    // without i/o data transfer if enabled.
+    bool inference_only = false;
+};
+
 class GOVExecutable final: public GIslandExecutable
 {
     const ade::Graph &m_g;
@@ -42,9 +48,8 @@ class GOVExecutable final: public GIslandExecutable
     // To manage multiple async requests
     std::unique_ptr<RequestPool> m_reqPool;
 
-    // Only performs inference of the model
-    // without i/o data transfer if enabled.
-    bool m_inference_only;
+    // To manage additional execution options
+    Options m_options;
 
 public:
     GOVExecutable(const ade::Graph                   &graph,

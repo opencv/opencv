@@ -253,7 +253,7 @@ public:
                   cv::GRunArg::Meta                                 && meta,
                   std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
                   std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs,
-                  const bool                                           inference_only);
+                  const cv::gimpl::ov::Options                      &  options);
 
     const cv::GArgs& inArgs() const;
 
@@ -283,7 +283,7 @@ public:
 
     const cv::GRunArg::Meta& getMeta() { return m_meta; };
 
-    bool isInferenceOnly() const { return m_inference_only; };
+    const cv::gimpl::ov::Options& getOptions() const { return m_options; };
 
 private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
@@ -305,7 +305,8 @@ private:
     // Input parameters passed to an inference operation.
     cv::GArgs m_args;
     cv::GShapes m_in_shapes;
-    bool m_inference_only;
+
+    cv::gimpl::ov::Options m_options;
 };
 
 OVCallContext::OVCallContext(const OVUnit                                      &  unit,
@@ -315,10 +316,10 @@ OVCallContext::OVCallContext(const OVUnit                                      &
                              cv::GRunArg::Meta                                 && meta,
                              std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
                              std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs,
-                             const bool                                           inference_only)
+                             const cv::gimpl::ov::Options                      &  options)
 : uu(unit), out(output), m_meta(std::move(meta)),
   m_input_objs(std::move(input_objs)), m_output_objs(std::move(output_objs)),
-  m_inference_only(inference_only)
+  m_options(options)
 {
     for (auto& it : m_input_objs)  cv::gimpl::magazine::bindInArg (m_res, it.first, it.second);
     for (auto& it : m_output_objs) cv::gimpl::magazine::bindOutArg(m_res, it.first, it.second);
@@ -587,7 +588,7 @@ static void PostOutputs(::ov::InferRequest             &infer_request,
         // NB: Copy data back only if execution finished sucessfuly
         // and inference only mode is disabled.
         // Otherwise just post outputs to maintain streaming executor contract.
-        if (!ctx->eptr && !ctx->isInferenceOnly()) {
+        if (!ctx->eptr && !ctx->getOptions().inference_only) {
             const auto& out_name = ctx->uu.params.output_names[i];
             copyFromOV(infer_request.get_tensor(out_name),
                        ctx->outMatR(i));
@@ -1000,7 +1001,7 @@ struct Infer: public cv::detail::KernelTag {
                     [ctx](::ov::InferRequest &infer_request) {
                         // NB: No need to populate model inputs with data
                         // if it's inference only mode.
-                        if (ctx->isInferenceOnly()) {
+                        if (ctx->getOptions().inference_only) {
                             return;
                         }
                         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
@@ -1082,7 +1083,7 @@ struct InferROI: public cv::detail::KernelTag {
     static void run(std::shared_ptr<OVCallContext> ctx,
                     cv::gimpl::ov::RequestPool     &reqPool) {
         using namespace std::placeholders;
-        if (ctx->isInferenceOnly()) {
+        if (ctx->getOptions().inference_only) {
             cv::util::throw_error(
                     std::logic_error("OV Backend: Inference only mode is not supported for InferROI!"));
         }
@@ -1158,7 +1159,7 @@ struct InferList: public cv::detail::KernelTag {
 
     static void run(std::shared_ptr<OVCallContext> ctx,
                     cv::gimpl::ov::RequestPool     &reqPool) {
-        if (ctx->isInferenceOnly()) {
+        if (ctx->getOptions().inference_only) {
             cv::util::throw_error(
                     std::logic_error("OV Backend: Inference only mode is not supported for InferList!"));
         }
@@ -1278,7 +1279,7 @@ struct InferList2: public cv::detail::KernelTag {
 
     static void run(std::shared_ptr<OVCallContext> ctx,
                     cv::gimpl::ov::RequestPool     &reqPool) {
-        if (ctx->isInferenceOnly()) {
+        if (ctx->getOptions().inference_only) {
             cv::util::throw_error(
                     std::logic_error("OV Backend: Inference only mode is not supported for InferList2!"));
         }
@@ -1420,8 +1421,8 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
                                             const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g) {
 
-    m_inference_only =
-        cv::gapi::getCompileArg<cv::gapi::ov::inference_only>(compileArgs).has_value();
+    m_options.inference_only =
+        cv::gapi::getCompileArg<cv::gapi::wip::ov::benchmark_mode>(compileArgs).has_value();
     // FIXME: Currently this backend is capable to run a single inference node only.
     // Need to extend our island fusion with merge/not-to-merge decision making parametrization
     GConstGOVModel ovm(g);
@@ -1499,7 +1500,7 @@ void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     const auto &op = m_gm.metadata(this_nh).get<Op>();
 
     auto ctx = std::make_shared<OVCallContext>(uu, out, op.args, op.outs,
-            std::move(stub_meta), std::move(input_objs), std::move(output_objs), m_inference_only);
+            std::move(stub_meta), std::move(input_objs), std::move(output_objs), m_options);
 
     const auto &kk = giem.metadata(this_nh).get<OVCallable>();
 

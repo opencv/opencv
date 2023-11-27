@@ -678,6 +678,9 @@ protected:
     detail::ParamDesc m_desc;
 };
 
+} // namespace ov
+
+namespace wip { namespace ov {
 /**
  * @brief Ask G-API OpenVINO backend to run only inference of model provided.
  *
@@ -686,17 +689,19 @@ protected:
  * This mode is used to evaluate the pure inference performance of the model without
  * taking into account the i/o data transfer.
  */
-struct inference_only { };
+struct benchmark_mode { };
 /** @} */
 
 } // namespace ov
+} // namespace wip
+
 } // namespace gapi
 
 namespace detail
 {
-    template<> struct CompileArgTag<cv::gapi::ov::inference_only>
+    template<> struct CompileArgTag<cv::gapi::wip::ov::benchmark_mode>
     {
-        static const char* tag() { return "gapi.ov.inference_only"; }
+        static const char* tag() { return "gapi.wip.ov.benchmark_mode"; }
     };
 }
 
