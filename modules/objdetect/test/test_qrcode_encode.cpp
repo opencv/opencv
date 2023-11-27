@@ -349,7 +349,7 @@ TEST(Objdetect_QRCode_Encode_Kanji, regression)
     }
 }
 
-TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
+TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, regression)
 {
     // disabled since QR decoder probably doesn't support structured append mode qr codes
     const std::string root = "qrcode/decode_encode";
@@ -385,6 +385,7 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
             vector<Mat> qrcodes;
             encoder->encodeStructuredAppend(input_info, qrcodes);
             EXPECT_TRUE(!qrcodes.empty()) << "Can't generate this QR images";
+            CV_CheckEQ(qrcodes.size(), (size_t)j, "Number of QR codes");
 
             std::string output_info = "";
             for (size_t k = 0; k < qrcodes.size(); k++)

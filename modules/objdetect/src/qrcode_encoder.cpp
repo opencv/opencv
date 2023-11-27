@@ -365,7 +365,7 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
     auto string_itr = input.begin();
     for (int i = struct_num; i > 0; --i)
     {
-        sequence_num = (uint8_t) i;
+        sequence_num = (uint8_t) (i - 1);
         size_t segment_begin = string_itr - input.begin();
         size_t segment_end = (input.end() - string_itr) / i;
 
@@ -1356,6 +1356,7 @@ private:
     void decodeByte(String& result);
     void decodeECI(String& result);
     void decodeKanji(String& result);
+    void decodeStructuredAppend(String& result);
 };
 
 QRCodeDecoder::~QRCodeDecoder()
@@ -1746,6 +1747,11 @@ void QRCodeDecoderImpl::decodeSymbols(String& result) {
             decodeECI(result);
         else if (currMode == QRCodeEncoder::EncodeMode::MODE_KANJI)
             decodeKanji(result);
+        else if (currMode == QRCodeEncoder::EncodeMode::MODE_STRUCTURED_APPEND) {
+            sequence_num = bitstream.next(4);
+            total_num = 1 + bitstream.next(4);
+            parity = bitstream.next(8);
+        }
         else
             CV_Error(Error::StsNotImplemented, format("mode %d", currMode));
     }
