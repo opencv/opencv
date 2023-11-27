@@ -83,7 +83,7 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
         }
 
         quads.emplace_back(box_size, class_id);
-      
+
     }
 }
 
