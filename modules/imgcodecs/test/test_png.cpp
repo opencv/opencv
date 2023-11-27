@@ -66,7 +66,7 @@ TEST(Imgcodecs_Png, regression_ImreadVSCvtColor)
 }
 
 // Test OpenCV issue 3075 is solved
-TEST(, read_color_palette_with_alpha)
+TEST(Imgcodecs_Png, read_color_palette_with_alpha)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     Mat img;
