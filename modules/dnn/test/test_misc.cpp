@@ -105,12 +105,11 @@ TEST(blobFromImageWithParams_CustomPadding, letter_box)
     Mat targetImg = img.clone();
 
     cv::copyMakeBorder(
-        targetImg, targetImg, 0, 0, 
-        targetSize.width / 2, 
-        targetSize.width / 2, 
-        BORDER_CONSTANT, 
-        customPaddingValue
-        );
+        targetImg, targetImg, 0, 0,
+        targetSize.width / 2,
+        targetSize.width / 2,
+        BORDER_CONSTANT,
+        customPaddingValue);
 
     // Set up Image2BlobParams with your new functionality
     Image2BlobParams param;
