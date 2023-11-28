@@ -57,6 +57,9 @@ public class Tutorial2Activity extends CameraActivity implements CvCameraViewLis
             return;
         }
 
+        // Load native library after(!) OpenCV initialization
+        System.loadLibrary("mixed_sample");
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.tutorial2_surface_view);
