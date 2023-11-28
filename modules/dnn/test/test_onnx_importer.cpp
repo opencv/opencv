@@ -2770,97 +2770,6 @@ TEST_P(Test_ONNX_nets, YOLOv8)
         1.0e-1, 1.0e-1, "yolov8");
 }
 
-TEST_P(Test_ONNX_nets, YOLOv8)
-{
-    std::string weightPath = _tf("models/yolov8n.onnx", false);
-    std::string imgPath = _tf("../dog_orig_size.png");
-
-    Size targetSize{640, 640};
-    float conf_threshold = 0.25;
-    float iou_threshold = 0.50;
-
-    std::vector<int> refClassIds{16, 1, 2};
-    std::vector<float> refScores{0.9332, 0.8959, 0.6157};
-    // [x1, y1, x2, y2]
-    std::vector<Rect2d> refBoxes{
-        Rect2d(108.8965, 261.9094, 257.1633, 530.3049),
-        Rect2d(110.4020, 192.9843, 473.4418, 429.5965),
-        Rect2d(389.1603, 143.2506, 577.3542, 223.0615),
-        };
-
-    Mat img = imread(imgPath);
-
-    Image2BlobParams paramYolox(
-        Scalar::all(1/255.0),
-        targetSize,
-        Scalar::all(0),
-        true,
-        CV_32F,
-        DNN_LAYOUT_NCHW,
-        DNN_PMODE_LETTERBOX,
-        Scalar::all(144)
-        );
-
-    Mat inp = blobFromImageWithParams(img, paramYolox);
-    Net net = readNet(weightPath);
-
-    net.setInput(inp);
-    std::vector<Mat> outs;
-    net.forward(outs, net.getUnconnectedOutLayersNames());
-
-    // transpose to [1, 8400, 84] from [1, 84, 8400]
-    cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
-
-    Mat preds = outs[0].reshape(1, outs[0].size[1]); // [1, 8400, 84]
-
-    // Retrieve
-    std::vector<int> classIds;
-    std::vector<float> confidences;
-    std::vector<Rect2d> boxes;
-
-    for (int i = 0; i < preds.rows; ++i)
-    {
-
-        Mat scores = preds.row(i).colRange(4, preds.cols);
-        double conf;
-        Point maxLoc;
-        minMaxLoc(scores, 0, &conf, 0, &maxLoc);
-
-        if (conf < conf_threshold)
-            continue;
-
-        // get bbox coords
-        float* det = preds.ptr<float>(i);
-        double cx = det[0];
-        double cy = det[1];
-        double w = det[2];
-        double h = det[3];
-
-        // [x1, y1, x2, y2]
-        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
-                                cx + 0.5 * w, cy + 0.5 * h));
-        classIds.push_back(maxLoc.x);
-        confidences.push_back(conf);
-    }
-
-    // NMS
-    std::vector<int> keep_idx;
-    NMSBoxes(boxes, confidences, conf_threshold, iou_threshold, keep_idx);
-
-    std::vector<int> keep_classIds;
-    std::vector<float> keep_confidences;
-    std::vector<Rect2d> keep_boxes;
-
-    for (auto i : keep_idx)
-    {
-        keep_classIds.push_back(classIds[i]);
-        keep_confidences.push_back(confidences[i]);
-        keep_boxes.push_back(boxes[i]);
-    }
-
-    normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes, "", 0.0, 1.0e-1, 1.0e-1);
-}
-
 // This test is mainly to test:
 //  1. identity node with constant input
 //  2. limited support to range operator (all inputs are constant)
@@ -2897,29 +2806,18 @@ TEST_P(Test_ONNX_nets, YOLOv6)
 {
     std::string weightPath = _tf("models/yolov6n.onnx", false);
     std::string imgPath = _tf("../dog_orig_size.png");
-    // std::string imgPath = _tf("../yolov6_input_preprocessed.png");
 
     Size targetSize{640, 640};
     float conf_threshold = 0.30;
     float iou_threshold = 0.50;
 
-    // Reference, which is collected with input size of 640x640
-    // std::vector<int> refClassIds{1, 16, 7, 2, 1};
-    // std::vector<float> refScores{0.95031, 0.87123,  0.65453, 0.55388, 0.34142};
-
     std::vector<int> refClassIds{1, 16, 7, 1};
     std::vector<float> refScores{0.95031, 0.87123,  0.65453, 0.34142};
-    // tensor([[   98.84711,   177.91743,   473.29028,   431.19647,     0.95031,     1.00000],
-    //     [  109.80331,   265.50464,   258.86099,   531.97986,     0.87123,    16.00000],
-    //     [  387.79333,   141.61865,   576.98975,   223.52478,     0.65453,     7.00000],
-    //     [  386.31982,   141.43988,   576.56836,   223.00580,     0.55388,     2.00000]])
-    //     [  105.62915,   199.24750,   218.37820,   389.84839,     0.34142,     1.00000]])
     // [x1, y1, x2, y2] x 3
     std::vector<Rect2d> refBoxes{Rect2d(98.84, 177.91, 473.29, 431.19),
                                  Rect2d(109.80, 265.50, 258.86, 531.97),
                                  Rect2d(387.79, 141.61, 576.98, 223.52),
                                  Rect2d(105.62, 199.24, 218.37, 389.84),
-                                //  Rect2d(386.31, 141.43, 576.56, 223.00),
                                  };
     Mat img = imread(imgPath);
 
@@ -2933,23 +2831,14 @@ TEST_P(Test_ONNX_nets, YOLOv6)
         DNN_PMODE_LETTERBOX,
         Scalar::all(114)
         );
+
     Mat inp = blobFromImageWithParams(img, paramYolox);
 
-    // Mat inp = blobFromImage(img, 1/255.0, targetSize, Scalar(0, 0, 0), true, false);
-
-    std::cout << "sum " << cv::sum(inp) << std::endl;
-    std::cout << "shape: " << inp.size << std::endl;
-
-
     Net net = readNet(weightPath);
-
 
     net.setInput(inp);
     std::vector<Mat> outs;
     net.forward(outs, net.getUnconnectedOutLayersNames());
-
-    // transpose to [1, 8400, 84] from [1, 84, 8400]
-    // cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
 
     Mat preds = outs[0].reshape(1, outs[0].size[1]); // [1, 8400, 85]
 
@@ -3004,12 +2893,7 @@ TEST_P(Test_ONNX_nets, YOLOv6)
         keep_boxes.push_back(boxes[i]);
     }
 
-    for (int i = 0; i < keep_idx.size(); i++){
-        std::cout << keep_boxes[i].x  << " " << keep_boxes[i].y << " " << keep_boxes[i].width << " " << keep_boxes[i].height
-        << " " << keep_confidences[i] << " " << keep_classIds[i] << std::endl;
-    }
-
-    normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes, "", 0.0, 1.0e-1, 1.0e-1);
+   normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes, "", 0.0, 1.0e-1, 1.0e-1);
 }
 
 TEST_P(Test_ONNX_nets, YOLOv5n)
