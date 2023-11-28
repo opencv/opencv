@@ -22,7 +22,7 @@ public class QRdetectionActivity extends CameraActivity implements CvCameraViewL
     private static final String  TAG = "QRdetection::Activity";
 
     private CameraBridgeViewBase mOpenCvCameraView;
-    private QRdetectionProcessor    mQRdetection;
+    private QRProcessor    mQRDetector;
     private MenuItem             mItemQRCodeDetectorAruco;
     private MenuItem             mItemQRCodeDetector;
     private MenuItem             mItemTryDecode;
@@ -46,7 +46,7 @@ public class QRdetectionActivity extends CameraActivity implements CvCameraViewL
         setContentView(mOpenCvCameraView);
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
-        mQRdetection = new QRdetectionProcessor(true);
+        mQRDetector = new QRProcessor(true);
     }
 
     @Override
@@ -80,21 +80,22 @@ public class QRdetectionActivity extends CameraActivity implements CvCameraViewL
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         Log.i(TAG, "called onCreateOptionsMenu");
-        mItemQRCodeDetectorAruco = menu.add("QR code aruco detector");
+        mItemQRCodeDetectorAruco = menu.add("Aruco-based QR code detector");
         mItemQRCodeDetectorAruco.setCheckable(true);
         mItemQRCodeDetectorAruco.setChecked(true);
 
-        mItemQRCodeDetector = menu.add("QR code base detector");
+        mItemQRCodeDetector = menu.add("Legacy QR code detector");
         mItemQRCodeDetector.setCheckable(true);
         mItemQRCodeDetector.setChecked(false);
 
-        mItemTryDecode = menu.add("Try to decode qr codes");
+        mItemTryDecode = menu.add("Try to decode QR codes");
         mItemTryDecode.setCheckable(true);
         mItemTryDecode.setChecked(true);
 
         mItemMulti = menu.add("Use multi detect/decode");
         mItemMulti.setCheckable(true);
         mItemMulti.setChecked(true);
+
         return true;
     }
 
@@ -102,11 +103,11 @@ public class QRdetectionActivity extends CameraActivity implements CvCameraViewL
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.i(TAG, "Menu Item selected " + item);
         if (item == mItemQRCodeDetector && !mItemQRCodeDetector.isChecked()) {
-            mQRdetection = new QRdetectionProcessor(false);
+            mQRDetector = new QRProcessor(false);
             mItemQRCodeDetector.setChecked(true);
             mItemQRCodeDetectorAruco.setChecked(false);
         } else if (item == mItemQRCodeDetectorAruco && !mItemQRCodeDetectorAruco.isChecked()) {
-            mQRdetection = new QRdetectionProcessor(true);
+            mQRDetector = new QRProcessor(true);
             mItemQRCodeDetector.setChecked(false);
             mItemQRCodeDetectorAruco.setChecked(true);
         } else if (item == mItemTryDecode) {
@@ -124,6 +125,6 @@ public class QRdetectionActivity extends CameraActivity implements CvCameraViewL
     }
 
     public Mat onCameraFrame(Mat inputFrame) {
-        return mQRdetection.qrFrame(inputFrame, mItemTryDecode.isChecked(), mItemMulti.isChecked());
+        return mQRDetector.handleFrame(inputFrame, mItemTryDecode.isChecked(), mItemMulti.isChecked());
     }
 }
