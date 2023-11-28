@@ -308,6 +308,7 @@ class AttentionSubGraph : public Subgraph {
                        std::vector<int>& matchedNodesIds) CV_OVERRIDE {
         if (Subgraph::match(net, nodeId, matchedNodesIds)) {
             // get attrs - qkv_hidden_sizes
+            qkv_hidden_sizes.clear();
             auto fill_qkv_hidden_sizes = [&] (const int slice_node_id) {
                 int slice_start = extractConstant(net, matchedNodesIds[slice_node_id], 1).at<int>(0);
                 int slice_end = extractConstant(net, matchedNodesIds[slice_node_id], 2).at<int>(0);
@@ -421,16 +422,16 @@ class AttentionSingleHeadSubGraph : public Subgraph {
         att_add = addNodeToMatch("Add", addNodeToMatch(""), att_matmul);
 
         // v_path
-        slice_v = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
+        slice_v = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int transpose_v = addNodeToMatch("Transpose", slice_v);
 
         // q_path
-        slice_q = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
+        slice_q = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int transpose_q = addNodeToMatch("Transpose", slice_q);
         div_q = addNodeToMatch("Div", transpose_q, addNodeToMatch(""));
 
         // k_path
-        slice_k = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""));
+        slice_k = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int transpose_k = addNodeToMatch("Transpose", slice_k);
 
         // qk
@@ -460,6 +461,7 @@ class AttentionSingleHeadSubGraph : public Subgraph {
                        std::vector<int>& matchedNodesIds) CV_OVERRIDE {
         if (Subgraph::match(net, nodeId, matchedNodesIds)) {
             // get attrs - qkv_hidden_sizes
+            qkv_hidden_sizes.clear();
             auto fill_qkv_hidden_sizes = [&] (const int slice_node_id) {
                 int slice_start = extractConstant(net, matchedNodesIds[slice_node_id], 1).at<int>(0);
                 int slice_end = extractConstant(net, matchedNodesIds[slice_node_id], 2).at<int>(0);

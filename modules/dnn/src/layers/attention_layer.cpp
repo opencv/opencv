@@ -90,8 +90,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         hidden_size = weight_shape[1];
         qkv_hidden_sizes[2] = hidden_size - qkv_hidden_sizes[0] - qkv_hidden_sizes[1];
         qkv_head_sizes[2] = static_cast<size_t>(qkv_hidden_sizes[2] / num_heads);
-
-        // std::cout << "finalize: qkv_hidden_sizes="  << qkv_hidden_sizes << ", qkv_head_sizes=" << qkv_head_sizes << ", hidden_size=" << hidden_size << std::endl;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {

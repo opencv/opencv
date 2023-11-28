@@ -2955,6 +2955,23 @@ TEST_P(Test_ONNX_layers, Attention) {
 TEST_P(Test_ONNX_layers, AttentionSingleHead) {
     testONNXModels("attention_single_head");
 }
+/*
+TEST_P(Test_ONNX_nets, ViT_B_16) {
+    testONNXModels("vit_b_16");
+}
+TEST_P(Test_ONNX_nets, ViT_B_32) {
+    testONNXModels("vit_b_32");
+}
+TEST_P(Test_ONNX_nets, ViT_l_16) {
+    testONNXModels("vit_l_16");
+}
+TEST_P(Test_ONNX_nets, ViT_l_32) {
+    testONNXModels("vit_l_32");
+}
+// TEST_P(Test_ONNX_nets, VitTrack) {
+//     ;
+// }
+*/
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
