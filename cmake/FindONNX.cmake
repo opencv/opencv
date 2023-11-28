@@ -13,6 +13,7 @@ if(ONNXRT_ROOT_DIR)
     CMAKE_FIND_ROOT_PATH_BOTH)
   find_path(ORT_INCLUDE onnxruntime_cxx_api.h
     ${ONNXRT_ROOT_DIR}/include/onnxruntime/
+    ${ONNXRT_ROOT_DIR}/include/onnxruntime/core/session
     CMAKE_FIND_ROOT_PATH_BOTH)
 endif()
 
