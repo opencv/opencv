@@ -765,17 +765,18 @@ static const ConvParam_t testConvolution_Depthwise_Configs[] = {
 
 struct ConvParamGenerator
 {
-    ConvParamGenerator(const ConvParam_t* testConfigs, int size): testConfigs(testConfigs), size(size)
+    ConvParamGenerator(const ConvParam_t* testConfigs, const int size): testConfigs(testConfigs), size(size)
     {}
 
     const ConvParam_t* testConfigs;
-    int size;
+    const int size;
 
     ::testing::internal::ParamGenerator<ConvParam_t> all() const
     {
-        int NUM = 20;
-#if 0
-        NUM = size;
+#if 1
+        const int NUM = 20;
+#else
+        const int NUM = size;
 #endif
 
         ConvParam_t v_[NUM];
