@@ -805,7 +805,7 @@ static inline void PrintTo(const ConvParam_t& p, std::ostream* os)
         *os << ", BIAS";
 }
 
-static Net build_net(const ConvParam_t& params, Backend backendId, Target targetId)
+Net build_net(const ConvParam_t& params, Backend backendId, Target targetId)
 {
     double declared_flops = params.declared_flops;
     Size kernel = params.kernel;
