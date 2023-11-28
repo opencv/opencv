@@ -42,17 +42,6 @@ struct FastGemmOpt {
     }
 };
 
-// struct FastGemmBatchData {
-//     const float *A = nullptr;
-//     size_t lda = 0;
-//     const float *B = nullptr;
-//     size_t ldb = 0;
-//     float *C = nullptr;
-//     size_t ldc = 0;
-//     float alpha = 1.f;
-//     float beta = 0.f;
-// };
-
 void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
 
 void fastGemm(bool trans_a, int M, int N, int K,
@@ -66,6 +55,9 @@ void fastGemm(bool trans_a, bool trans_b,
               float alpha, const Mat &A, const Mat &B,
               float beta, Mat &C, FastGemmOpt &opt);
 
+void fastGemmBatch(bool trans_a, bool trans_b, int batch, int ma, int na, int mb, int nb,
+                   float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
+                   float beta, float *C, int ldc, FastGemmOpt &opt);
 void fastGemmBatch(bool trans_a, bool trans_b, float alpha, const Mat &A,
                    const Mat &B, float beta, Mat &C, FastGemmOpt &opt);
 
