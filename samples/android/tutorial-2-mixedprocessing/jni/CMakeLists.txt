@@ -4,8 +4,10 @@ set(target mixed_sample)
 project(${target} CXX)
 
 if (OPENCV_FROM_SDK)
+  message(STATUS "Using OpenCV from local SDK")
   set(ANDROID_OPENCV_COMPONENTS "opencv_java" CACHE STRING "")
 else()
+  message(STATUS "Using OpenCV from AAR (Maven repo)")
   set(ANDROID_OPENCV_COMPONENTS "OpenCV::opencv_java${OPENCV_VERSION_MAJOR}" CACHE STRING "")
 endif()
 
