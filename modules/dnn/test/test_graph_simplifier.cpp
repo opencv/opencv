@@ -138,4 +138,5 @@ TEST_F(Test_Graph_Simplifier, AttentionSubgraph) {
     test("attention", "Attention");
     test("attention_single_head", "Attention");
 }
+
 }}

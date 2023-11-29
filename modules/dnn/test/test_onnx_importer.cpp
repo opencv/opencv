@@ -2968,9 +2968,9 @@ TEST_P(Test_ONNX_nets, ViT_l_16) {
 TEST_P(Test_ONNX_nets, ViT_l_32) {
     testONNXModels("vit_l_32");
 }
-// TEST_P(Test_ONNX_nets, VitTrack) {
-//     ;
-// }
+TEST_P(Test_ONNX_nets, VitTrack) {
+    testONNXModels("object_tracking_vittrack_2023sep.onnx")
+}
 */
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

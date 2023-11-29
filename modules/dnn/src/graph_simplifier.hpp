@@ -19,7 +19,9 @@ class ImportNodeWrapper
 public:
     virtual ~ImportNodeWrapper() {}
 
-    virtual int getNumInputs() const = 0;
+    virtual int getNumRequiredInputs () const = 0;
+
+    virtual int getNumInputs(bool omit_optional_inputs = false) const = 0;
 
     virtual std::string getInputName(int idx) const = 0;
 
@@ -46,6 +48,8 @@ public:
     virtual void removeNode(int idx) = 0;
 
     virtual bool isCommutativeOp(const std::string& type) const = 0;
+
+    virtual bool isInputOptional(const std::string &op, int input_id) const = 0;
 };
 
 class Subgraph  // Interface to match and replace subgraphs.
@@ -92,6 +96,9 @@ private:
 
     std::string fusedNodeOp;           // Operation name of resulting fused node.
     std::vector<int> fusedNodeInputs;  // Inputs of fused node.
+
+protected:
+    bool omit_optional_inputs{false};
 };
 
 void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
