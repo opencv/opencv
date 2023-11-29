@@ -2082,15 +2082,8 @@ struct InferList2: public cv::detail::KernelTag {
              ? uu.net.getInputsInfo().at(input_name_0)->getTensorDesc()
              : uu.this_network.GetInputsInfo().at(input_name_0)->getTensorDesc();
 
-        if (cv::util::holds_alternative<cv::GMatDesc>(mm_0) ||
-            cv::util::holds_alternative<cv::GFrameDesc>(mm_0)) {
-            const auto trait = clarifyTrait(mm_0, tensor_desc_0.getDims());
-            if (trait != cv::gapi::ie::TraitAs::IMAGE) {
-                util::throw_error(std::runtime_error(
-                            "IE Backend: Only images is"
-                            " supported as the 0th argument"));
-            }
-        } else {
+        if (!(cv::util::holds_alternative<cv::GMatDesc>(mm_0) ||
+              cv::util::holds_alternative<cv::GFrameDesc>(mm_0))) {
             util::throw_error(std::runtime_error(
                         "IE Backend: Unsupported input meta"
                         " for 0th argument in IE backend"));
@@ -2107,7 +2100,10 @@ struct InferList2: public cv::detail::KernelTag {
                         && "Non-array inputs are not supported");
 
             if (op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_RECT) {
-                const auto input_trait = cv::gapi::ie::TraitAs::IMAGE;
+                const auto input_trait = clarifyTrait(mm_0, tensor_desc_0.getDims());
+                GAPI_Assert(input_trait == cv::gapi::ie::TraitAs::IMAGE
+                            && "IE Backend: Only image is supported as the 0th argument for an input array of cv::Rect");
+
                 // NB: Configuring input precision and network reshape must be done
                 // only in the loadNetwork case.
                 if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
