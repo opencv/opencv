@@ -1262,6 +1262,14 @@ CV__DNN_INLINE_NS_BEGIN
     /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
      *  @param rBlob rect in blob coordinates.
      *  @param sizeOri original input image size inserted in blob.
+     *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob
+     *  @returns rectangle in original image coordinates.
+     */
+    CV_EXPORTS_W Rect2d blobRectToImageRect(Rect2d rBlob, Size sizeOri, Image2BlobParams param);
+
+    /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
+     *  @param rBlob rect in blob coordinates.
+     *  @param sizeOri original input image size inserted in blob.
      *  @param size spatial size for output image
      *  @param crop flag use in blobFromImage called
      *  @returns rectangle in original image coordinates.
@@ -1270,11 +1278,28 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
      *  @param rBlob rect in blob coordinates.
+     *  @param sizeOri original input image size inserted in blob.
+     *  @param size spatial size for output image
+     *  @param crop flag use in blobFromImage called
+     *  @returns rectangle in original image coordinates.
+     */
+    CV_EXPORTS_W Rect2d blobRectToImageRect(Rect2d rBlob, Size sizeOri, const Size& size, bool crop);
+
+    /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
+     *  @param rBlob rect in blob coordinates.
      *  @param rImg result rect in image coordinates.
      *  @param size spatial size for output image
      *  @param param input image.
      */
-    CV_EXPORTS_W void blobRectsToImageRects(std::vector<Rect> rBlob, CV_OUT std::vector<Rect> &rImg, const Size& size, Image2BlobParams param);
+    CV_EXPORTS_W void blobRectsToImageRects(std::vector<Rect> rBlob, CV_OUT std::vector<Rect>& rImg, const Size& size, Image2BlobParams param);
+
+    /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
+     *  @param rBlob rect in blob coordinates.
+     *  @param rImg result rect in image coordinates.
+     *  @param size spatial size for output image
+     *  @param param input image.
+     */
+    CV_EXPORTS_W void blobRectsToImageRects(std::vector<Rect2d> rBlob, CV_OUT std::vector<Rect2d>& rImg, const Size& size, Image2BlobParams param);
 
     /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
      *  (std::vector<cv::Mat>).
