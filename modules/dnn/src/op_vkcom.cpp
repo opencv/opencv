@@ -23,6 +23,7 @@ void Net::Impl::initVkComBackend()
     CV_TRACE_FUNCTION();
     CV_Assert(preferableBackend == DNN_BACKEND_VKCOM);
 
+    auto begin = std::chrono::high_resolution_clock::now();
     context = vkcom::Context::create();
 
     for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); it++)
@@ -44,6 +45,8 @@ void Net::Impl::initVkComBackend()
             ld.backendNodes[DNN_BACKEND_VKCOM] = Ptr<BackendNode>();
         }
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    CV_LOG_DEBUG(NULL, "Time elapsed to setup: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
 }
 
 CV__DNN_INLINE_NS_END
