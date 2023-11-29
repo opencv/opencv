@@ -45,6 +45,9 @@ if(ORT_LIB AND ORT_INCLUDE)
                         INTERFACE_INCLUDE_DIRECTORIES ${ORT_INCLUDE}
                         IMPORTED_LOCATION ${ORT_LIB}
                         IMPORTED_IMPLIB ${ORT_LIB})
+  # ONNXRT requires C++14 feautues to compile its headers
+  message(STATUS "Setting C++ standard to C++14 as required by ONNX Runtime")
+  set(CMAKE_CXX_STANDARD 14)
 endif()
 
 if(NOT HAVE_ONNX)
