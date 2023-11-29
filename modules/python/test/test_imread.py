@@ -20,7 +20,7 @@ class dft_test(NewOpenCVTests):
         subImg = img[64:576, 128:640]
         subImg = cv.imread(self.find_file("cv/shared/lena.png"), subImg, cv.IMREAD_GRAYSCALE)
         ori = cv.imread(self.find_file("cv/shared/lena.png"), cv.IMREAD_GRAYSCALE)
-        self.assertEqual(cv.norm(ori, subImg, cv2.NORM_INF), 0)
+        self.assertEqual(cv.norm(ori, subImg, cv.NORM_INF), 0)
         self.assertEqual(cv.countNonZero(img[0:1000, 0:128]), 0)
         self.assertEqual(cv.countNonZero(img[0:1000, 640:1000]), 0)
         self.assertEqual(cv.countNonZero(img[0:64, 128:640]), 0)
