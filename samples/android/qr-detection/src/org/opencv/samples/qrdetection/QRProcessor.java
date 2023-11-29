@@ -52,7 +52,7 @@ public class QRProcessor {
         return result;
     }
 
-    private void rednerQRs(Mat inputFrame, List<String> decodedInfo, MatOfPoint points) {
+    private void renderQRs(Mat inputFrame, List<String> decodedInfo, MatOfPoint points) {
         for (int i = 0; i < points.rows(); i++) {
             for (int j = 0; j < points.cols(); j++) {
                 Point pt1 = new Point(points.get(i, j));
@@ -79,7 +79,7 @@ public class QRProcessor {
         MatOfPoint points = new MatOfPoint();
         boolean result = findQRs(inputFrame, decodedInfo, points, tryDecode, multiDetect);
         if (result) {
-            rednerQRs(inputFrame, decodedInfo, points);
+            renderQRs(inputFrame, decodedInfo, points);
         }
         points.release();
         return inputFrame;
