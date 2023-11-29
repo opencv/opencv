@@ -103,6 +103,7 @@ Tests are done with M1. data in millisecond (ms).
 | vit_b_32 | 89.92          | 116.22            | 30.36  |
 | vit_l_16 | 1593.32        | 1730.74           | 419.92 |
 | vit_l_32 | 468.11         | 577.41            | 134.12 |
+| VitTrack | 3.80           | 3.87              | 2.25   |
 
 */
 
@@ -120,7 +121,11 @@ PERF_TEST_P_(DNNTestNetwork, VIT_L_32) {
     processNet("", "dnn/onnx/models/vit_l_32.onnx", "", cv::Size(224, 224));
 }
 PERF_TEST_P_(DNNTestNetwork, VitTrack) {
-    processNet("", "dnn/onnx/models/vittrack.onnx", "", cv::Size(224, 224));
+    Mat input0(std::vector<int>{1, 3, 128, 128}, CV_32F);
+    randu(input0, 0.f, 1.f);
+    Mat input1(std::vector<int>{1, 3, 256, 256}, CV_32F);
+    randu(input1, 0.f, 1.f);
+    processNet("", "dnn/onnx/models/object_tracking_vittrack_2023sep.onnx", "", std::vector<std::tuple<Mat, std::string>>{std::make_tuple(input0, "template"), std::make_tuple(input1, "search")});
 }
 */
 

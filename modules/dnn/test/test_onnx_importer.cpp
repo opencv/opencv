@@ -2969,7 +2969,24 @@ TEST_P(Test_ONNX_nets, ViT_l_32) {
     testONNXModels("vit_l_32");
 }
 TEST_P(Test_ONNX_nets, VitTrack) {
-    testONNXModels("object_tracking_vittrack_2023sep.onnx")
+    auto input0 = blobFromNPY(_tf("data/input_object_tracking_vittrack_2023sep_0.npy"));
+    auto input1 = blobFromNPY(_tf("data/input_object_tracking_vittrack_2023sep_1.npy"));
+
+    auto net = readNet(_tf("models/object_tracking_vittrack_2023sep.onnx"));
+    net.setInput(input0, "template");
+    net.setInput(input1, "search");
+
+    std::vector<std::string> output_names{"output1", "output2", "output3"};
+    std::vector<Mat> outputs;
+    net.forward(outputs, output_names);
+
+    auto ref_output1 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_0.npy"));
+    auto ref_output2 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_1.npy"));
+    auto ref_output3 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_2.npy"));
+
+    normAssert(ref_output1, outputs[0], "output1");
+    normAssert(ref_output2, outputs[1], "output2");
+    normAssert(ref_output3, outputs[2], "output3");
 }
 */
 
