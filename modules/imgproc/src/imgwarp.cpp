@@ -497,8 +497,10 @@ struct RemapVec_8u
                        *(unaligned_ushort*)(base + offset[2]), *(unaligned_ushort*)(base + offset[3]), \
                        0, 0, 0, 0)
 
-        v_int16x8 v_dxy0(rel_offset.x, rel_offset.y, rel_offset.x, rel_offset.y, rel_offset.x, rel_offset.y, rel_offset.x, rel_offset.y);
-        v_int16x8 v_dxy1(rel_offset.x, rel_offset.y, rel_offset.x, rel_offset.y, rel_offset.x, rel_offset.y, rel_offset.x, rel_offset.y);
+        const short _rel_offset_x = static_cast<short>(rel_offset.x);
+        const short _rel_offset_y = static_cast<short>(rel_offset.y);
+        v_int16x8 v_dxy0(_rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y);
+        v_int16x8 v_dxy1 = v_dxy0;
         v_dxy0 += v_int16x8(0, 0, 1, 0, 2, 0, 3, 0);
         v_dxy1 += v_int16x8(4, 0, 5, 0, 6, 0, 7, 0);
         if( cn == 1 )
@@ -509,7 +511,8 @@ struct RemapVec_8u
                 v_int16x8 _xy1 = v_load(XY + x*2 + 8);
                 if (isRelative)
                 {
-                    v_int16x8 v_dxy01(x, 0, x, 0, x, 0, x, 0);
+                    const short x_s16 = static_cast<short>(x);
+                    v_int16x8 v_dxy01(x_s16, 0, x_s16, 0, x_s16, 0, x_s16, 0);
                     _xy0 += v_dxy01+v_dxy0;
                     _xy1 += v_dxy01+v_dxy1;
                 }
@@ -561,7 +564,8 @@ struct RemapVec_8u
                 v_int16x8 _xy0 = v_load(XY + x * 2);
                 if (isRelative)
                 {
-                    v_int16x8 v_dxy01(x, 0, x, 0, x, 0, x, 0);
+                    const short x_s16 = static_cast<short>(x);
+                    v_int16x8 v_dxy01(x_s16, 0, x_s16, 0, x_s16, 0, x_s16, 0);
                     _xy0 += v_dxy01+v_dxy0;
                 }
 
@@ -616,7 +620,8 @@ struct RemapVec_8u
                 v_int16x8 _xy0 = v_load(XY + x * 2);
                 if (isRelative)
                 {
-                    v_int16x8 v_dxy01(x, 0, x, 0, x, 0, x, 0);
+                    const short x_s16 = static_cast<short>(x);
+                    v_int16x8 v_dxy01(x_s16, 0, x_s16, 0, x_s16, 0, x_s16, 0);
                     _xy0 += v_dxy01+v_dxy0;
                 }
                 v_int16x8 u0, v0, u1, v1;
