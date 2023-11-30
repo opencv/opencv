@@ -27,7 +27,6 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.4.0'
     //implementation fileTree(dir: 'libs', include: ['*.jar'])
     if (gradle.opencv_source == "sdk_path") {
         println 'Using OpenCV from SDK'
