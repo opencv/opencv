@@ -1311,6 +1311,73 @@ TEST(Imgproc_resize_area, regression_quarter_round)
     check_resize_area<uchar>(expected, actual, 0.5);
 }
 
+typedef tuple<int, int, int, int, bool> RemapRelativeParam;
+typedef testing::TestWithParam<RemapRelativeParam> Imgproc_RemapRelative;
+
+TEST_P(Imgproc_RemapRelative, validity)
+{
+    int srcType = CV_MAKE_TYPE(get<0>(GetParam()), get<1>(GetParam()));
+    int interpolation = get<2>(GetParam());
+    int borderType = get<3>(GetParam());
+    bool useFixedPoint = get<4>(GetParam());
+
+    const int nChannels = CV_MAT_CN(srcType);
+    const cv::Size size(12, 12);
+    cv::Mat data64FC1(1, size.area()*nChannels, CV_64FC1);
+    data64FC1.forEach<double>([&](double& pixel, const int* position) {pixel = static_cast<double>(position[1]);});
+
+    cv::Mat src;
+    data64FC1.reshape(nChannels, size.height).convertTo(src, srcType);
+
+    cv::Mat mapRelativeX32F(size, CV_32FC1);
+    mapRelativeX32F.setTo(cv::Scalar::all(-0.33));
+
+    cv::Mat mapRelativeY32F(size, CV_32FC1);
+    mapRelativeY32F.setTo(cv::Scalar::all(-0.33));
+
+    cv::Mat mapAbsoluteX32F = mapRelativeX32F.clone();
+    mapAbsoluteX32F.forEach<float>([&](float& pixel, const int* position) {
+        pixel += static_cast<float>(position[1]);
+        });
+
+    cv::Mat mapAbsoluteY32F = mapRelativeY32F.clone();
+    mapAbsoluteY32F.forEach<float>([&](float& pixel, const int* position) {
+        pixel += static_cast<float>(position[0]);
+        });
+
+    cv::Mat mapAbsoluteX16S;
+    cv::Mat mapAbsoluteY16S;
+    cv::Mat mapRelativeX16S;
+    cv::Mat mapRelativeY16S;
+    if (useFixedPoint)
+    {
+        const bool nninterpolation = (interpolation == cv::INTER_NEAREST) || (interpolation == cv::INTER_NEAREST_EXACT);
+        cv::convertMaps(mapAbsoluteX32F, mapAbsoluteY32F, mapAbsoluteX16S, mapAbsoluteY16S, CV_16SC2, nninterpolation);
+        cv::convertMaps(mapRelativeX32F, mapRelativeY32F, mapRelativeX16S, mapRelativeY16S, CV_16SC2, nninterpolation);
+    }
+
+    cv::Mat dstAbsolute;
+    cv::Mat dstRelative;
+    if (useFixedPoint)
+    {
+        cv::remap(src, dstAbsolute, mapAbsoluteX16S, mapAbsoluteY16S, interpolation, borderType);
+        cv::remap(src, dstRelative, mapRelativeX16S, mapRelativeY16S, interpolation | WARP_RELATIVE_MAP, borderType);
+    }
+    else
+    {
+        cv::remap(src, dstAbsolute, mapAbsoluteX32F, mapAbsoluteY32F, interpolation, borderType);
+        cv::remap(src, dstRelative, mapRelativeX32F, mapRelativeY32F, interpolation | WARP_RELATIVE_MAP, borderType);
+    }
+
+    EXPECT_EQ(cvtest::norm(dstAbsolute, dstRelative, NORM_INF), 0);
+};
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapRelative, testing::Combine(
+    testing::Values(CV_8U, CV_16U, CV_32F),
+    testing::Values(1, 3, 4),
+    testing::Values((int)INTER_NEAREST, (int)INTER_LINEAR),
+    testing::Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_WRAP, (int)BORDER_REFLECT, (int)BORDER_REFLECT_101),
+    testing::Values(false, true)));
 
 //////////////////////////////////////////////////////////////////////////
 

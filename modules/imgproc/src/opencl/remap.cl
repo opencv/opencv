@@ -144,7 +144,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                             __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                             __global const uchar * map1ptr, int map1_step, int map1_offset,
                             __global const uchar * map2ptr, int map2_step, int map2_offset,
-                            ST nVal)
+                            ST nVal, char isRelative)
 {
     int x = get_global_id(0);
     int y = get_global_id(1) * rowsPerWI;
@@ -166,8 +166,8 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                 __global const float * map2 = (__global const float *)(map2ptr + map2_index);
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
-                int gx = convert_int_sat_rte(map1[0]);
-                int gy = convert_int_sat_rte(map2[0]);
+                int gx = convert_int_sat_rte(map1[0])+(isRelative ? x : 0);
+                int gy = convert_int_sat_rte(map2[0])+(isRelative ? y : 0);
 
                 if (NEED_EXTRAPOLATION(gx, gy))
                 {
@@ -190,7 +190,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
 __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                           __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                           __global const uchar * mapptr, int map_step, int map_offset,
-                          ST nVal)
+                          ST nVal, char isRelative)
 {
     int x = get_global_id(0);
     int y = get_global_id(1) * rowsPerWI;
@@ -209,7 +209,7 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
                 __global const float2 * map = (__global const float2 *)(mapptr + map_index);
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
-                int2 gxy = convert_int2_sat_rte(map[0]);
+                int2 gxy = convert_int2_sat_rte(map[0])+(isRelative ? (int2)(x, y) : (int2)(0, 0));
                 int gx = gxy.x, gy = gxy.y;
 
                 if (NEED_EXTRAPOLATION(gx, gy))
@@ -230,7 +230,7 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
 __kernel void remap_16SC2(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                           __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                           __global const uchar * mapptr, int map_step, int map_offset,
-                          ST nVal)
+                          ST nVal, char isRelative)
 {
     int x = get_global_id(0);
     int y = get_global_id(1) * rowsPerWI;
@@ -249,7 +249,7 @@ __kernel void remap_16SC2(__global const uchar * srcptr, int src_step, int src_o
                 __global const short2 * map = (__global const short2 *)(mapptr + map_index);
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
-                int2 gxy = convert_int2(map[0]);
+                int2 gxy = convert_int2(map[0])+(isRelative ? (int2)(x, y) : (int2)(0, 0));
                 int gx = gxy.x, gy = gxy.y;
 
                 if (NEED_EXTRAPOLATION(gx, gy))
@@ -271,7 +271,7 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                                 __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                                 __global const uchar * map1ptr, int map1_step, int map1_offset,
                                 __global const uchar * map2ptr, int map2_step, int map2_offset,
-                                ST nVal)
+                                ST nVal, char isRelative)
 {
     int x = get_global_id(0);
     int y = get_global_id(1) * rowsPerWI;
@@ -295,7 +295,7 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                 int map2Value = convert_int(map2[0]) & (INTER_TAB_SIZE2 - 1);
                 int dx = (map2Value & (INTER_TAB_SIZE - 1)) < (INTER_TAB_SIZE >> 1) ? 1 : 0;
                 int dy = (map2Value >> INTER_BITS) < (INTER_TAB_SIZE >> 1) ? 1 : 0;
-                int2 gxy = convert_int2(map1[0]) + (int2)(dx, dy);
+                int2 gxy = convert_int2(map1[0]) + (int2)(dx, dy) + (isRelative ? (int2)(x, y) : (int2)(0, 0));
                 int gx = gxy.x, gy = gxy.y;
 
                 if (NEED_EXTRAPOLATION(gx, gy))
@@ -327,7 +327,7 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                                 __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                                 __global const uchar * map1ptr, int map1_step, int map1_offset,
                                 __global const uchar * map2ptr, int map2_step, int map2_offset,
-                                ST nVal)
+                                ST nVal, char isRelative)
 {
     int x = get_global_id(0);
     int y = get_global_id(1) * rowsPerWI;
@@ -348,7 +348,7 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                 __global const ushort * map2 = (__global const ushort *)(map2ptr + map2_index);
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
-                int2 map_dataA = convert_int2(map1[0]);
+                int2 map_dataA = convert_int2(map1[0])+(isRelative ? (int2)(x,y) : (int2)(0, 0));
                 int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
                 int2 map_dataC = (int2)(map_dataA.x, map_dataA.y + 1);
                 int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y + 1);
@@ -391,7 +391,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                             __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                             __global const uchar * map1ptr, int map1_step, int map1_offset,
                             __global const uchar * map2ptr, int map2_step, int map2_offset,
-                            ST nVal)
+                            ST nVal, char isRelative)
 {
     int x = get_global_id(0);
     int y = get_global_id(1) * rowsPerWI;
@@ -414,8 +414,8 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
 
 #if defined BORDER_CONSTANT
                 float xf = map1[0], yf = map2[0];
-                int sx = convert_int_sat_rtz(mad(xf, (float)INTER_TAB_SIZE, 0.5f)) >> INTER_BITS;
-                int sy = convert_int_sat_rtz(mad(yf, (float)INTER_TAB_SIZE, 0.5f)) >> INTER_BITS;
+                int sx = (convert_int_sat_rtz(mad(xf, (float)INTER_TAB_SIZE, 0.5f)) >> INTER_BITS)+(isRelative ? x : 0);
+                int sy = (convert_int_sat_rtz(mad(yf, (float)INTER_TAB_SIZE, 0.5f)) >> INTER_BITS)+(isRelative ? y : 0);
 
                 __constant float * coeffs_x = coeffs + ((convert_int_rte(xf * INTER_TAB_SIZE) & (INTER_TAB_SIZE - 1)) << 1);
                 __constant float * coeffs_y = coeffs + ((convert_int_rte(yf * INTER_TAB_SIZE) & (INTER_TAB_SIZE - 1)) << 1);
@@ -455,7 +455,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
 
                 storepix(convertToT(sum), dst);
 #else
-                float2 map_data = (float2)(map1[0], map2[0]);
+                float2 map_data = (float2)(map1[0], map2[0])+(isRelative ? (float2)(x, y) : (float2)(0, 0));
 
                 int2 map_dataA = convert_int2_sat_rtn(map_data);
                 int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
@@ -500,7 +500,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
 __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                           __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                           __global const uchar * mapptr, int map_step, int map_offset,
-                          ST nVal)
+                          ST nVal, char isRelative)
 {
     int x = get_global_id(0);
     int y = get_global_id(1) * rowsPerWI;
@@ -519,7 +519,7 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
                 __global const float2 * map = (__global const float2 *)(mapptr + map_index);
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
-                float2 map_data = map[0];
+                float2 map_data = map[0]+(isRelative ? (float2)(x, y) : (float2)(0, 0));
                 int2 map_dataA = convert_int2_sat_rtn(map_data);
                 int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
                 int2 map_dataC = (int2)(map_dataA.x, map_dataA.y + 1);

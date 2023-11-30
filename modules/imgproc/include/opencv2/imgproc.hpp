@@ -275,7 +275,8 @@ enum InterpolationFlags{
     - flag is __not__ set: \f$dst( \rho , \phi ) = src(x,y)\f$
     - flag is set: \f$dst(x,y) = src( \rho , \phi )\f$
     */
-    WARP_INVERSE_MAP     = 16
+    WARP_INVERSE_MAP     = 16,
+    WARP_RELATIVE_MAP    = 32
 };
 
 /** \brief Specify the polar mapping mode
