@@ -111,7 +111,7 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     Ptr<Pipeline> pipeline = pipelineFactoryPtr->getPipeline(shader_name, destTypes);
     Ptr<CommandBuffer> cmdBuffer = cmdPoolPtr->allocBuffer();
     Ptr<Descriptor> desSet = pipeline->createSet();
-    group_x_ = group_y_ = group_z_ = 1; 
+    group_x_ = group_y_ = group_z_ = 1;
     VkCommandBuffer cmdBufferReal = cmdBuffer->get();
 
     auto begin = std::chrono::high_resolution_clock::now();

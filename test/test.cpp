@@ -62,11 +62,11 @@ void cal(Mat &input1, Mat &input2, Mat &output, dnn::Net& net) {
     net.setInput(input1, "input1");
     net.setInput(input2, "input2");
 
-    auto begin = std::chrono::high_resolution_clock::now();
-    CV_LOG_DEBUG(NULL, "start forwarding");
-
     output = net.forward();
 
+    auto begin = std::chrono::high_resolution_clock::now();
+    CV_LOG_DEBUG(NULL, "start forwarding");
+    output = net.forward();
     auto end = std::chrono::high_resolution_clock::now();
     cout << "Time elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\n";
 }
@@ -100,9 +100,11 @@ int main() {
     net.connect(0, 0, 1, 0);
     net.connect(0, 1, 1, 1);
 
-    int matDimH = 16384, matDimW = 16384;
-    Mat input1 = Mat::ones(matDimH, matDimW, CV_32F);
-    Mat input2 = Mat::ones(matDimH, matDimW, CV_32F);
+    Mat input1, input2, output;
+
+    int matDimH = 16392, matDimW = 16392;
+    input1 = Mat::ones(matDimH, matDimW, CV_32F);
+    input2 = Mat::ones(matDimH, matDimW, CV_32F);
 
     net.setPreferableBackend(dnn::DNN_BACKEND_VKCOM);
     net.setPreferableTarget(dnn::DNN_TARGET_VULKAN);
@@ -118,6 +120,7 @@ int main() {
     // input2 = Mat::ones(3, 1, CV_32F);
     // input2.at<float>(0, 0) = 2;
     // cal(input1, input2, output, net);
+    // printMat(output);
 
     // input1 = Mat::ones(3, 1, CV_32F);
     // input2 = Mat::ones(1, 3, CV_32F);
