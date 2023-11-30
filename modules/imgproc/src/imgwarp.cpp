@@ -1780,7 +1780,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
         ((map1.type() == CV_32FC2 && map2.empty() && map1.size == dst.size) ||
          (map1.type() == CV_32FC1 && map2.type() == CV_32FC1 && map1.size == dst.size && map2.size == dst.size) ||
          (map1.empty() && map2.type() == CV_32FC2 && map2.size == dst.size)) &&
-        ((borderType & BORDER_ISOLATED) != 0 || !src.isSubmatrix()),
+        ((borderType & BORDER_ISOLATED) != 0 || !src.isSubmatrix()) &&
+        !hasRelativeFlag,
         openvx_remap(src, dst, map1, map2, interpolation, borderValue));
 
     CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
@@ -1882,9 +1883,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
     RemapInvoker invoker(src, dst, m1, m2,
                          borderType, borderValue, planar_input, nnfunc, ifunc,
                          ctab, hasRelativeFlag);
-    for(int r = 0 ; r<dst.rows ; ++r)
-        invoker(Range(r, r+1));
-    //parallel_for_(Range(0, dst.rows), invoker, dst.total()/(double)(1<<16));
+    parallel_for_(Range(0, dst.rows), invoker, dst.total()/(double)(1<<16));
 }
 
 
