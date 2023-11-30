@@ -1,14 +1,24 @@
 package org.opencv.samples.tutorial3;
 
 import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.util.List;
+import java.util.Objects;
 
 import org.opencv.android.JavaCameraView;
 
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.Size;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.AttributeSet;
 import android.util.Log;
 
