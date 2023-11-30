@@ -28,6 +28,8 @@ import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import androidx.core.app.ActivityCompat;
+
 public class Tutorial3Activity extends CameraActivity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
 
@@ -177,10 +179,17 @@ public class Tutorial3Activity extends CameraActivity implements CvCameraViewLis
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         Log.i(TAG,"onTouch event");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+                String[] permissions = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
+                ActivityCompat.requestPermissions(this, permissions, 1);
+                return false;
+            }
+        }
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
         String currentDateandTime = sdf.format(new Date());
-        String fileName = Environment.getExternalStorageDirectory().getPath() +
-                               "/sample_picture_" + currentDateandTime + ".jpg";
+        String fileName = "sample_picture_" + currentDateandTime + ".jpg";
         mOpenCvCameraView.takePicture(fileName);
         Toast.makeText(this, fileName + " saved", Toast.LENGTH_SHORT).show();
         return false;
