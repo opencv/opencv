@@ -28,6 +28,7 @@ Introduction to OpenCV {#tutorial_table_of_content_introduction}
 ##### Other platforms
 -   @subpage tutorial_macos_install
 -   @subpage tutorial_arm_crosscompile_with_cmake
+-   @subpage tutorial_crosscompile_with_multiarch
 -   @subpage tutorial_building_tegra_cuda
 -   @ref tutorial_ios_install
 
