@@ -1676,6 +1676,13 @@ TEST(Core_Add, AddToColumnWhen4Rows)
     ASSERT_EQ(0, countNonZero(m1 - m2));
 }
 
+TEST(Core_Add, regression_CV_F16_add_sub_do_not_cash){
+    cv::Mat m1(2, 3, CV_16F, cv::Scalar(1));
+    cv::Mat m2(2, 3, CV_16F, cv::Scalar(2));
+    EXPECT_THROW(cv::Mat(m1 + m2), cv::Exception);
+    EXPECT_THROW(cv::Mat(m1 - m2), cv::Exception);
+}
+
 TEST(Core_round, CvRound)
 {
     ASSERT_EQ(2, cvRound(2.0));
