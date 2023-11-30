@@ -93,6 +93,39 @@ TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
     }
 }
 
+TEST(blobFromImageWithParams_CustomPadding, letter_box)
+{
+    Mat img(40, 20, CV_8UC4, Scalar(0, 1, 2, 3));
+
+    // Custom padding value that you have added
+    Scalar customPaddingValue(5, 6, 7, 8); // Example padding value
+
+    Size targetSize(20, 20);
+
+    Mat targetImg = img.clone();
+
+    cv::copyMakeBorder(
+        targetImg, targetImg, 0, 0,
+        targetSize.width / 2,
+        targetSize.width / 2,
+        BORDER_CONSTANT,
+        customPaddingValue);
+
+    // Set up Image2BlobParams with your new functionality
+    Image2BlobParams param;
+    param.size = targetSize;
+    param.paddingmode = DNN_PMODE_LETTERBOX;
+    param.borderValue = customPaddingValue; // Use your new feature here
+
+    // Create blob with custom padding
+    Mat blob = dnn::blobFromImageWithParams(img, param);
+
+    // Create target blob for comparison
+    Mat targetBlob = dnn::blobFromImage(targetImg, 1.0, targetSize);
+
+    EXPECT_EQ(0, cvtest::norm(targetBlob, blob, NORM_INF));
+}
+
 TEST(blobFromImageWithParams_4ch, letter_box)
 {
     Mat img(40, 20, CV_8UC4, cv::Scalar(0,1,2,3));
