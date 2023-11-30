@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "opencv2/videoio/container_avi.private.hpp"
+#include <opencv2/core/utils/logger.hpp>
 #include <fstream>
 #include <limits>
 #include <typeinfo>
@@ -645,6 +646,11 @@ bool BitStream::open(const String& filename)
 {
     close();
     output.open(filename.c_str(), std::ios_base::binary);
+    if (!output.is_open())
+    {
+        CV_LOG_DEBUG(NULL, cv::format("Failed to open stream for writing to  \"%s\"", filename.c_str()));
+        return false;
+    }
     m_current = m_start;
     m_pos = 0;
     return true;
