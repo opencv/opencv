@@ -9,20 +9,6 @@ android {
         targetSdkVersion @ANDROID_TARGET_SDK_VERSION@
         versionCode 301
         versionName "3.01"
-
-        externalNativeBuild {
-            cmake {
-                if (gradle.opencv_source == "sdk_path") {
-                    arguments "-DOpenCV_DIR=" + project(':opencv').projectDir + "/@ANDROID_PROJECT_JNI_PATH@",
-                              "-DOPENCV_FROM_SDK=TRUE"@OPENCV_ANDROID_CMAKE_EXTRA_ARGS@
-
-                } else {
-                    arguments "-DOPENCV_VERSION_MAJOR=@OPENCV_VERSION_MAJOR@",
-                              "-DOPENCV_FROM_SDK=FALSE"@OPENCV_ANDROID_CMAKE_EXTRA_ARGS@
-                }
-                targets "detection_based_tracker"
-            }
-        }
     }
     buildTypes {
         release {
@@ -36,16 +22,6 @@ android {
             aidl.srcDirs = @ANDROID_SAMPLE_JAVA_PATH@
             res.srcDirs = @ANDROID_SAMPLE_RES_PATH@
             manifest.srcFile '@ANDROID_SAMPLE_MANIFEST_PATH@'
-        }
-    }
-    externalNativeBuild {
-        cmake {
-             path '@ANDROID_SAMPLE_JNI_PATH@/CMakeLists.txt'
-        }
-    }
-    buildFeatures {
-        if (gradle.opencv_source == "maven_local" || gradle.opencv_source == "maven_cenral") {
-            prefab true
         }
     }
 }
