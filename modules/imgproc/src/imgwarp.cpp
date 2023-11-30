@@ -430,7 +430,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
     }
 }
 
-
+template<bool>
 struct RemapNoVec
 {
     int operator()( const Mat&, void*, const short*, const ushort*,
@@ -671,7 +671,7 @@ struct RemapVec_8u
 
 #else
 
-typedef RemapNoVec RemapVec_8u;
+template<bool isRelative> using RemapVec_8u = RemapNoVec<isRelative>;
 
 #endif
 
@@ -1746,17 +1746,17 @@ void cv::remap( InputArray _src, OutputArray _dst,
     {
         {
             remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<false>, short, false>, 0,
-            remapBilinear<Cast<float, ushort>, RemapNoVec, float, false>,
-            remapBilinear<Cast<float, short>, RemapNoVec, float, false>, 0,
-            remapBilinear<Cast<float, float>, RemapNoVec, float, false>,
-            remapBilinear<Cast<double, double>, RemapNoVec, float, false>, 0
+            remapBilinear<Cast<float, ushort>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<float, short>, RemapNoVec<false>, float, false>, 0,
+            remapBilinear<Cast<float, float>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<double, double>, RemapNoVec<false>, float, false>, 0
         },
         {
             remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<true>, short, true>, 0,
-            remapBilinear<Cast<float, ushort>, RemapNoVec, float, true>,
-            remapBilinear<Cast<float, short>, RemapNoVec, float, true>, 0,
-            remapBilinear<Cast<float, float>, RemapNoVec, float, true>,
-            remapBilinear<Cast<double, double>, RemapNoVec, float, true>, 0
+            remapBilinear<Cast<float, ushort>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<float, short>, RemapNoVec<true>, float, true>, 0,
+            remapBilinear<Cast<float, float>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<double, double>, RemapNoVec<true>, float, true>, 0
         }
     };
 
