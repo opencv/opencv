@@ -496,7 +496,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     std::vector<cv::Point2f> out_corners;
 
     if (is_plain)
-      CV_CheckType(type, depth == CV_8U && cn == 1, "Only 8-bit grayscale images are supported whit CALIB_CB_PLAIN flag enable");
+      CV_CheckType(type, depth == CV_8U && cn == 1, "Only 8-bit grayscale images are supported whith CALIB_CB_PLAIN flag enable");
 
     if (img.channels() != 1)
     {
@@ -510,7 +510,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         icvBinarizationHistogramBased(thresh_img_new); // process image in-place
     SHOW("New binarization", thresh_img_new);
 
-    if (flags & CALIB_CB_FAST_CHECK && !(flags & CALIB_CB_PLAIN))
+    if (flags & CALIB_CB_FAST_CHECK && !is_plain)
     {
         //perform new method for checking chessboard using a binary image.
         //image is binarised using a threshold dependent on the image histogram
@@ -558,7 +558,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     DPRINTF("Chessboard detection result 0: %d", (int)found);
 
     // revert to old, slower, method if detection failed
-    if (!found && !(flags & CALIB_CB_PLAIN))
+    if (!found && !is_plain)
     {
         if (flags & CALIB_CB_NORMALIZE_IMAGE)
         {
