@@ -458,12 +458,12 @@ imread_( const String& filename, int flags, Mat& mat, bool allocateMat )
     }
 
     if(allocateMat) mat.create( size.height, size.width, type );
-    else 
+    else
     {
       CV_Assert(size == mat.size());
       CV_Assert(type == mat.type());
     }
-  
+
     // read the image data
     bool success = false;
     try

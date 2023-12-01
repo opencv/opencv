@@ -15,7 +15,7 @@ from tests_common import NewOpenCVTests
 
 class dft_test(NewOpenCVTests):
     def test_dft(self):
- 
+
         img = np.zeros((1000, 1000), dtype=np.uint8)
         subImg = img[64:576, 128:640]
         subImg = cv.imread(self.find_file("cv/shared/lena.png"), subImg, cv.IMREAD_GRAYSCALE)
@@ -28,4 +28,3 @@ class dft_test(NewOpenCVTests):
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
-
