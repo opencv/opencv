@@ -13,13 +13,14 @@ import sys
 
 from tests_common import NewOpenCVTests
 
-class dft_test(NewOpenCVTests):
-    def test_dft(self):
+class imread_test(NewOpenCVTests):
+    def test_imread(self):
 
         img = np.zeros((1000, 1000), dtype=np.uint8)
         subImg = img[64:576, 128:640]
-        subImg = cv.imread(self.find_file("cv/shared/lena.png"), subImg, cv.IMREAD_GRAYSCALE)
-        ori = cv.imread(self.find_file("cv/shared/lena.png"), cv.IMREAD_GRAYSCALE)
+        subImg = cv.imread(self.find_file("cv/shared/lena.png"), subImg)
+        subImg = img.rowRange(64, 576).colRange(128, 640);
+        ori = cv.imread(self.find_file("cv/shared/lena.png"))
         self.assertEqual(cv.norm(ori, subImg, cv.NORM_INF), 0)
         self.assertEqual(cv.countNonZero(img[0:1000, 0:128]), 0)
         self.assertEqual(cv.countNonZero(img[0:1000, 640:1000]), 0)
