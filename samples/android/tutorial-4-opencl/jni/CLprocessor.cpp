@@ -1,6 +1,8 @@
+#ifdef OPENCL_FOUND
 #define __CL_ENABLE_EXCEPTIONS
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS /*let's give a chance for OpenCL 1.1 devices*/
 #include <CL/cl.hpp>
+#endif
 
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
@@ -10,7 +12,9 @@
 #include <opencv2/core/ocl.hpp>
 
 #include "common.hpp"
+#include "CLprocessor.hpp"
 
+#ifdef OPENCL_FOUND
 const char oclProgB2B[] = "// clBuffer to clBuffer";
 const char oclProgI2B[] = "// clImage to clBuffer";
 const char oclProgI2I[] = \
@@ -33,7 +37,7 @@ const char oclProgI2I[] = \
     "    write_imagef(imgOut, pos, sum*10); \n" \
     "} \n";
 
-void dumpCLinfo()
+static void dumpCLinfo()
 {
     LOGD("*** OpenCL info ***");
     try
@@ -83,7 +87,7 @@ cl::CommandQueue theQueue;
 cl::Program theProgB2B, theProgI2B, theProgI2I;
 bool haveOpenCL = false;
 
-extern "C" void initCL()
+int initCL()
 {
     dumpCLinfo();
 
@@ -133,20 +137,24 @@ extern "C" void initCL()
     catch(const cl::Error& e)
     {
         LOGE("cl::Error: %s (%d)", e.what(), e.err());
+        return 1;
     }
     catch(const std::exception& e)
     {
         LOGE("std::exception: %s", e.what());
+        return 2;
     }
     catch(...)
     {
         LOGE( "OpenCL info: unknown error while initializing OpenCL stuff" );
+        return 3;
     }
     LOGD("initCL completed");
-}
 
-extern "C" void closeCL()
-{
+    if (haveOpenCL)
+        return 0;
+    else
+        return 4;
 }
 
 #define GL_TEXTURE_2D 0x0DE1
@@ -230,6 +238,16 @@ void procOCL_OCV(int texIn, int texOut, int w, int h)
     cv::ocl::finish();
     LOGD("uploading results to texture costs %d ms", getTimeInterval(t));
 }
+#else
+int initCL()
+{
+    return 5;
+}
+#endif
+
+void closeCL()
+{
+}
 
 void drawFrameProcCPU(int w, int h, int texOut)
 {
@@ -263,7 +281,7 @@ void drawFrameProcCPU(int w, int h, int texOut)
 
 enum ProcMode {PROC_MODE_NO_PROC=0, PROC_MODE_CPU=1, PROC_MODE_OCL_DIRECT=2, PROC_MODE_OCL_OCV=3};
 
-extern "C" void processFrame(int tex1, int tex2, int w, int h, int mode)
+void processFrame(int tex1, int tex2, int w, int h, int mode)
 {
     switch(mode)
     {
@@ -271,12 +289,14 @@ extern "C" void processFrame(int tex1, int tex2, int w, int h, int mode)
     case PROC_MODE_CPU:
         drawFrameProcCPU(w, h, tex2);
         break;
+#ifdef OPENCL_FOUND
     case PROC_MODE_OCL_DIRECT:
         procOCL_I2I(tex1, tex2, w, h);
         break;
     case PROC_MODE_OCL_OCV:
         procOCL_OCV(tex1, tex2, w, h);
         break;
+#endif
     default:
         LOGE("Unexpected processing mode: %d", mode);
     }
