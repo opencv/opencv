@@ -509,11 +509,6 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
 inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b) \
 { \
     return _Tpvec(intrin(a.val, b.val)); \
-} \
-inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b) \
-{ \
-    a.val = intrin(a.val, b.val); \
-    return a; \
 }
 
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_add, v_uint8x16, vqaddq_u8)
