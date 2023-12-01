@@ -339,4 +339,3 @@ PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
 cmake      --build   build4-full_armhf
 sudo cmake --install build4-full_armhf
 ```
-
