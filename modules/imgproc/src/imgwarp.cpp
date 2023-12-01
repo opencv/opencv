@@ -514,8 +514,8 @@ struct RemapVec_8u
                 {
                     const short x_s16 = static_cast<short>(x);
                     v_int16x8 v_dxy01(x_s16, 0, x_s16, 0, x_s16, 0, x_s16, 0);
-                    _xy0 += v_dxy01+v_dxy0;
-                    _xy1 += v_dxy01+v_dxy1;
+                    _xy0 = _xy0+v_dxy01+v_dxy0;
+                    _xy1 = _xy1+v_dxy01+v_dxy1;
                 }
                 v_int32x4 v0, v1, v2, v3, a0, b0, c0, d0, a1, b1, c1, d1, a2, b2, c2, d2;
 
@@ -567,7 +567,7 @@ struct RemapVec_8u
                 {
                     const short x_s16 = static_cast<short>(x);
                     v_int16x8 v_dxy01(x_s16, 0, x_s16, 0, x_s16, 0, x_s16, 0);
-                    _xy0 += v_dxy01+v_dxy0;
+                    _xy0 = _xy0+v_dxy01+v_dxy0;
                 }
 
                 v_int32x4 xy0 = v_dotprod(_xy0, xy2ofs);
@@ -623,7 +623,7 @@ struct RemapVec_8u
                 {
                     const short x_s16 = static_cast<short>(x);
                     v_int16x8 v_dxy01(x_s16, 0, x_s16, 0, x_s16, 0, x_s16, 0);
-                    _xy0 += v_dxy01+v_dxy0;
+                    _xy0 = _xy0+v_dxy01+v_dxy0;
                 }
                 v_int16x8 u0, v0, u1, v1;
 
