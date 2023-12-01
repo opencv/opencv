@@ -479,8 +479,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     bool found = false;
 
-    const int min_dilations = 0;
-          int max_dilations = 7;
+    const bool is_plain = flags & CALIB_CB_PLAIN;
 
     int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Mat img = image_.getMat();
@@ -496,6 +495,9 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     std::vector<cv::Point2f> out_corners;
 
+    if (is_plain)
+      CV_CheckType(type, depth == CV_8U && cn == 1 ), "Only 8-bit grayscale images are supported whit CALIB_CB_PLAIN flag enable");
+
     if (img.channels() != 1)
     {
         cvtColor(img, img, COLOR_BGR2GRAY);
@@ -504,7 +506,8 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     int prev_sqr_size = 0;
 
     Mat thresh_img_new = img.clone();
-    if(!(flags & CALIB_CB_PLAIN)) icvBinarizationHistogramBased(thresh_img_new); // process image in-place
+    if(!is_plain)
+        icvBinarizationHistogramBased(thresh_img_new); // process image in-place
     SHOW("New binarization", thresh_img_new);
 
     if (flags & CALIB_CB_FAST_CHECK && !(flags & CALIB_CB_PLAIN))
@@ -523,8 +526,8 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     ChessBoardDetector detector(pattern_size);
 
-    if(flags & CALIB_CB_PLAIN)
-      max_dilations = 0;
+    const int min_dilations = 0;
+    const int max_dilations = is_plain ? 0 : 7;
 
     // Try our standard "1" dilation, but if the pattern is not found, iterate the whole procedure with higher dilations.
     // This is necessary because some squares simply do not separate properly with a single dilation.  However,
@@ -533,8 +536,8 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     for (int dilations = min_dilations; dilations <= max_dilations; dilations++)
     {
         //USE BINARY IMAGE COMPUTED USING icvBinarizationHistogramBased METHOD
-        if(!(flags & CALIB_CB_PLAIN))
-          dilate( thresh_img_new, thresh_img_new, Mat(), Point(-1, -1), 1 );
+        if(!is_plain)
+            dilate( thresh_img_new, thresh_img_new, Mat(), Point(-1, -1), 1 );
 
         // So we can find rectangles that go to the edge, we draw a white line around the image edge.
         // Otherwise FindContours will miss those clipped rectangle contours.
