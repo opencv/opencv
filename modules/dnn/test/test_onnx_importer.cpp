@@ -18,7 +18,7 @@ struct FilteredDetections{
     std::vector<Rect2d> keep_boxes;
 };
 
-FilteredDetections postProcessing(std::vector<Mat> outs, float conf_threshold, float iou_threshold);
+FilteredDetections yoloPostProcessing(const std::vector<Mat>& outs, float conf_threshold, float iou_threshold);
 
 template<typename TString>
 static std::string _tf(TString filename, bool required = true)
@@ -2631,7 +2631,7 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
     net.forward(outs, net.getUnconnectedOutLayersNames());
 
     FilteredDetections result;
-    result = postProcessing(outs, conf_threshold, iou_threshold);
+    result = yoloPostProcessing(outs, conf_threshold, iou_threshold);
 
     normAssertDetections(
         refClassIds, refScores, refBoxes,
@@ -2639,7 +2639,7 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
         "", 0.0, scores_diff, boxes_iou_diff);
 }
 
-FilteredDetections postProcessing(std::vector<Mat> outs, float conf_threshold, float iou_threshold){
+FilteredDetections yoloPostProcessing(const std::vector<Mat>& outs, float conf_threshold, float iou_threshold){
 
     // Retrieve
     std::vector<int> classIds;
@@ -2656,7 +2656,7 @@ FilteredDetections postProcessing(std::vector<Mat> outs, float conf_threshold, f
             // filter out non objects
             float obj_conf = preds.row(i).at<float>(4);
             if (obj_conf < conf_threshold)
-            continue;
+                continue;
 
             // get class id and conf
             Mat scores = preds.row(i).colRange(5, preds.cols);
