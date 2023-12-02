@@ -17,31 +17,28 @@ This tutorial can contain obsolete information.
 
 What is "MultiArch"
 -------------------
-Ubuntu and Debian supports MultiArch.
-It allows to install several foreign architecture libraries.
+OpenCV may use a lot of 3rdparty libraries for video and image decoding, rendering, acceleration and complex math algorithms. The 3rdparty components are found by CMake on the build host Cross-compilation allows to build OpenCV for foreign architecture or OS, but we loose that large world of components and have to cross-compile each dependency separately and point to it during OpenCV build.
 
-(e.g. aarch64 and/or armv7 binaries are able to installed at x86-64 hosts.)
-
-MultiArch can be used to cross-compile OpenCV library too.
+Debian/Ubuntu MultiArch helps to fix this. It allows to install several foreign architecture libraries on host system and use them during OpenCV dependencies resolution.
 
 @warning
 - Following these steps will make your Linux environment a little dirty.
-  If possible, it is better to use VMs.
+  If possible, it is better to use VMs or Container(e.g. Docker).
 - This tutorial expects host and target uses same ubuntu version.
    Do not use/mix different versions for external library dependency.
-  - OK: Host and Target are 23.04.
-  - OK: Host and Target are 23.10.
-  - NG: Host is 23.04, and Target is 23.10.
-  - NG: Host is 23.10, and Target is 23.04.
+  - Good: Host and Target are 23.04.
+  - Good: Host and Target are 23.10.
+  - Not Good: Host is 23.04, and Target is 23.10.
+  - Not Good: Host is 23.10, and Target is 23.04.
+- This tutorial can also be used for debian(and Raspberry Pi OS)
+  Please make any necessary changes.
 
-Downloading tools
------------------
+Download tools
+--------------
 Install nessesary tools and toolchains to cross-compile.
 
-- git, cmake, build-essential are required basically.
-- ccache is to reduce compilation time(option).
+- git, cmake, pkgconf and build-essential are required basically.
 - ninja-build is to reduce compilation time(option).
-- libfreetype-dev and libharfbuzz-dev is for example to use external libraries(option).
 - crossbuild-essential-armhf is toolchain package for armv7 target.
 - crossbuild-essential-arm64 is toolchain package for aarch64 target.
 
@@ -50,18 +47,16 @@ sudo apt update -y
 sudo apt install -y \
     git \
     cmake \
+    pkgconf \
     build-essential \
-    ccache \
     ninja-build \
-    libfreetype-dev \
-    libharfbuzz-dev \
     crossbuild-essential-armhf \
     crossbuild-essential-arm64
 ```
 
 Working folder structure
 ------------------------
-In this sample, following working folder structure are used.
+In this tutorial, following working folder structure are used.
 
 ```
 /home
@@ -69,7 +64,6 @@ In this sample, following working folder structure are used.
     + work
       + opencv              - source, cloned from github
       + opencv_contrib      - source, cloned from github
-      + build4-full         - artifact(for Host), created by cmake
       + build4-full_arm64   - artifact(for aarch64 target), created by cmake
       + build4-full_armhf   - artifact(for armhf target), created by cmake
 ```
@@ -81,50 +75,19 @@ In this sample, following working folder structure are used.
 cd ~
 mkdir work
 cd work
-git clone https://github.com/opencv/opencv.git
-git clone https://github.com/opencv/opencv_contrib.git
+git clone --depth=1 https://github.com/opencv/opencv.git
+git clone --depth=1 https://github.com/opencv/opencv_contrib.git
 ```
 
-Self-compile(for x86-64)
-------------------------
-
-Following are to compile for host(x86-64) at host(x86-64).
-
-```
-[Host]
-cmake -S opencv \
-      -B build4-full \
-      -DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules \
-      -GNinja
-
-     cmake --build   build4-full
-sudo cmake --install build4-full
-sudo ldconfig
-```
-
-cmake outputs `Host: Linux X.X.X... x86_64`.
-
-```
--- General configuration for OpenCV 4.8.0-dev =====================================
---   Version control:               4.8.0-xxx-XXXXXXXX
---
---   Extra modules:
---     Location (extra):            /home/kmtr/work/opencv_contrib/modules
---     Version control (extra):     4.8.0-xxx-XXXXXXXX
---
---   Platform:
---     Timestamp:                   yyyy-mm-ddThh:mm:ssZ
---     Host:                        Linux 6.2.0-32-generic x86_64
---     CMake:                       3.25.1
-```
-
-Update apt and dpkg settings.
+Update apt and dpkg settings
 ----------------------------
-apt and dpkg is package management system using ubuntu and debian.
+These steps are on target.
+
+`apt` and `dpkg` are package management systems used in ubuntu and debian.
 
 Following are setup steps to use MultiArch.
 
-### Step1)Add apt source
+### Step1) Add apt source for arm64 and armhf
 
 Execute `sudo apt edit-sources` to add foreign arch libraries at end of file.
 
@@ -161,24 +124,29 @@ deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic-security mult
 ### Step2) Update apt database
 Update apt database to apply new apt sources.
 
+Execute `sudo apt update`.
+
 ```
 [Host]
-apt update
+sudo apt update
 ```
 
 ### Step3) Update dpkg setting
 Update dpkg settings to support foreign architectures.
 
-With `--print-architecture` and `--print-foreign-architectures`, we can confirm that dpkg works well.
+Execute `sudo dpkg --add-architecture arm64` and/or `sudo dpkg --add-architecture armhf`.
+
+`sudo dpkg --print-foreign-architectures` shows what foreign architecutures are supported.
 
 ```
 [Host]
-$ sudo dpkg  --add-architecture arm64
-$ sudo dpkg  --add-architecture armhf
+sudo dpkg --add-architecture arm64
+sudo dpkg --add-architecture armhf
 
-$ sudo dpkg  --print-architecture
+sudo dpkg --print-architecture
 amd64
-$ sudo dpkg  --print-foreign-architectures
+
+sudo dpkg --print-foreign-architectures
 arm64
 armhf
 ```
@@ -198,23 +166,23 @@ With MultiArch, several shared libraries and pkgconfig information for each arch
     + pkgconfig         - pkg-config files(for header files)
 ```
 
-Confirm to work pkg-config using `PKG_CONFIG_PATH`, `PKG_CONFIG_LIBDIR` and `PKG_CONFIG_SYSROOT_DIR` options..
+Confirm to work `pkg-config` using `PKG_CONFIG_PATH`, `PKG_CONFIG_LIBDIR` and `PKG_CONFIG_SYSROOT_DIR` options.
 
+for aarch64
 ```
 [Host]
-(for host)
-  pkg-config  --list-all
-
-(for armv7)
-PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
-  PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf \
-  PKG_CONFIG_SYSROOT_DIR=/ \
-      pkg-config --list-all
-
-(for aarch64)
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
+      pkg-config --list-all
+```
+
+for armv7
+```
+[Host]
+PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
+  PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf \
+  PKG_CONFIG_SYSROOT_DIR=/ \
       pkg-config --list-all
 ```
 
@@ -222,27 +190,49 @@ Cross-compile(for aarch64)
 --------------------------
 Following is to compile for target(aarch64) at host(x86-64).
 
-### Step1) Install external libraries for target into host.
+### Step1) Install external libraries for target into host
+This step is on target.
 
-Install libfreetype-dev and libharfbuzz-dev for target(arm64) into host(x86-64).
+Install libfreetype-dev, libharfbuzz-dev and ffmpeg packages for target(arm64) into host(x86-64).
 
 ```
 [Host]
-sudo apt install libfreetype-dev:arm64 libharfbuzz-dev:arm64
+sudo apt install -y \
+    libavcodec-dev:arm64 \
+    libavformat-dev:arm64 \
+    libavutil-dev:arm64 \
+    libswscale-dev:arm64 \
+    libfreetype-dev:arm64 \
+    libharfbuzz-dev:arm64
 
+```
+
+If successeed, pkg-config can show information about these packages.
+
+```
+[Host]
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
        pkg-config freetype2 harfbuzz --cflags --libs
 
 -I/usr/include/freetype2 -I/usr/include/libpng16 -I/usr/include/harfbuzz -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include -L/usr/lib/aarch64-linux-gnu -lfreetype -lharfbuzz
+
+PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
+    PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
+    PKG_CONFIG_SYSROOT_DIR=/ \
+       pkg-config libavcodec libavformat libavutil libswscale --cflags --libs
+
+-I/usr/include/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu -lavcodec -lavformat -lavutil -lswscale
+
 ```
 
-### Step2) Build and install OpenCV libraries into target.
+### Step2) Build and archive OpenCV libraries and headers
+This step is on target.
 
 Execute `cmake` to cross-compile for aarch64.
 
-@note `-DCMAKE_TOOLCHAIN_FILE` seems to require to set absolute file path(not relative path)..
+@note `-DCMAKE_TOOLCHAIN_FILE` should be absolute/real file path, not relative path.
 
 ```
 [Host]
@@ -259,72 +249,164 @@ PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
 sudo cmake --install build4-full_arm64
 ```
 
-cmake outputs `Host: ... x86_64` and `Target: ... aarch64`.
+Following is cmake outputs.
+- `Host` is `Linux x86_64`.
+- `Target` is `Linux aarch64`.
+- FFMPEG is available.
 
 ```
 -- General configuration for OpenCV 4.8.0-dev =====================================
---   Version control:               4.8.0-xxx-XXXXXXXX
+--   Version control:               408730b
 --
 --   Extra modules:
 --     Location (extra):            /home/kmtr/work/opencv_contrib/modules
---     Version control (extra):     4.8.0-xxx-XXXXXXXX
+--     Version control (extra):     faa5468
 --
 --   Platform:
---     Timestamp:                   yyyy-mm-ddThh:mm:ssZ
---     Host:                        Linux 6.2.0-32-generic x86_64
+--     Timestamp:                   2023-12-01T22:02:14Z
+--     Host:                        Linux 6.5.0-13-generic x86_64
 --     Target:                      Linux 1 aarch64
---     CMake:                       3.25.1
+--     CMake:                       3.27.4
+--     CMake generator:             Ninja
+--     CMake build tool:            /usr/bin/ninja
+--     Configuration:               Release
+--
+--   CPU/HW features:
+--     Baseline:                    NEON FP16
+--       required:                  NEON
+--       disabled:                  VFPV3
+--     Dispatched code generation:  NEON_DOTPROD NEON_FP16 NEON_BF16
+--       requested:                 NEON_FP16 NEON_BF16 NEON_DOTPROD
+--       NEON_DOTPROD (1 files):    + NEON_DOTPROD
+--       NEON_FP16 (2 files):       + NEON_FP16
+--       NEON_BF16 (0 files):       + NEON_BF16
+--
+--   C/C++:
+--     Built as dynamic libs?:      YES
+--     C++ standard:                11
+--     C++ Compiler:                /usr/bin/aarch64-linux-gnu-g++  (ver 13.2.0)
+
+:
+:
+
+--
+--   Video I/O:
+--     DC1394:                      NO
+--     FFMPEG:                      YES
+--       avcodec:                   YES (60.3.100)
+--       avformat:                  YES (60.3.100)
+--       avutil:                    YES (58.2.100)
+--       swscale:                   YES (7.1.100)
+--       avresample:                NO
+--     GStreamer:                   NO
+--     v4l/v4l2:                    YES (linux/videodev2.h)
+--
 ```
 
-And copy OpenCV/OpenCV Contrib libraries from host to target.
+Archive artifacts(built libraries and headers) to `opencv_arm64.tgz` with tar command.
 
-But these libraries cannot resolved dependency fot external libraries.
+```
+tar czvf opencv_arm64.tgz -C build4-full_arm64/install .
+```
+
+And send `opencv_arm64.tgz` to target.
+
+### Step3) Install OpenCV libraries to target
+This step is on target.
+
+Install dependency libraries for OpenCV/OpenCV contrib libraies at target.
 
 ```
 [Target]
-ldd /usr/local/lib/libopencv_freetype.so
-        linux-vdso.so.1 (0xABCDEFG01234567)
-        libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEFG01234567)
-        libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEFG01234567)
-        libharfbuzz.so.0 => not found
-        libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEFG01234567)
-```
+sudo apt install -y \
+    libavcodec-dev:arm64 \
+    libavformat-dev:arm64 \
+    libavutil-dev:arm64 \
+    libswscale-dev:arm64 \
+    libfreetype-dev:arm64 \
+    libharfbuzz-dev:arm64
 
-### Step3) Install external libraries on target.
-(This step is executed at target)
-
-Install external libraries to requires OpenCV/OpenCV contrib libraies at target.
-After installing nessesary libraries, dependency is resolved.
-
-```
-[Target]
-sudo apt install libfreetype-dev libharfbuzz-dev
 sudo ldconfig
+```
 
+Receive `opencv_arm64.tgz` from host, and extract to `/usr/local`. You can use OpenCV libraries same as self-compiling.
+
+```
+[Target]
+sudo tar zxvf opencv_arm64.tgz /usr/local
+sudo ldconfig
+```
+
+Following is opencv sample code. Compile and run it on target.
+
+Makefile
+```
+a.out : main.cpp
+    g++ main.cpp -o a.out \
+        -I/usr/local/include/opencv4 \
+        -lopencv_core
+```
+
+main.cpp
+```
+#include <iostream>
+#include <opencv2/core.hpp>
+int main(void)
+{
+  std::cout << cv::getBuildInformation() << std::endl;
+  return 0;
+}
+```
+
+Execute `make` and run it.
+```
+[Target]
+make a.out
+./a.out
+```
+
+@note `ldd` command can detect dependency. If there are any "not found", please could you install essesary libraries.
+
+(Not Good) `freetype module` requests `libharfbuzz.so.0`, but it has not been installed.
+
+```
+[Target]
 ldd /usr/local/lib/libopencv_freetype.so
         linux-vdso.so.1 (0xABCDEFG01234567)
-        libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEFG01234567)
-        libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEFG01234567)
-        libharfbuzz.so.0 => /lib/aarch64-linux-gnu/libharfbuzz.so.0 (0xABCDEFG01234567)
-        libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEFG01234567)
+        libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEF001234567)
+        libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEF001234567)
+        libharfbuzz.so.0 => not found
+        libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEF001234567)
+```
+
+(Good) All libraries which are required from freetyoe modules are installed.
+
+```
+[Target]
+ldd /usr/local/lib/libopencv_freetype.so
+        linux-vdso.so.1 (0xABCDEFG01234567)
+        libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEF001234567)
+        libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEF001234567)
+        libharfbuzz.so.0 => /lib/aarch64-linux-gnu/libharfbuzz.so.0 (0xABCDEF001234567)
+        libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEF001234567)
 ```
 
 Cross-compile(for armv7)
 ------------------------
 Following is to compile for target(armhf) at host(x86-64).
 
-- To resolbe dependencies, `linux-libc-dev:armhf` is required.
+- To resolve dependencies, `linux-libc-dev:armhf` is required.
 - To optimize with neon, `-DENABLE_NEON=ON` is needed.
 
 ```
-sudo apt install linux-libc-dev:armhf
-sudo apt install libfreetype-dev:armhf libharfbuzz-dev:armhf
-
-PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
-    PKG_CONFIG_LIBDIR=/usr/arm-linux-gnueabihf/ \
-    PKG_CONFIG_SYSROOT_DIR=/ \
-       pkg-config freetype2 harfbuzz --cflags --libs
-(output) -I/usr/include/freetype2 -I/usr/include/libpng16 -I/usr/include/harfbuzz -I/usr/include/glib-2.0 -I/usr/lib/arm-linux-gnueabihf/glib-2.0/include -L/usr/lib/arm-linux-gnueabihf -lfreetype -lharfbuzz
+sudo apt install -y \
+    linux-libc-dev:armhf \
+    libavcodec-dev:armhf \
+    libavformat-dev:armhf \
+    libavutil-dev:armhf \
+    libswscale-dev:armhf \
+    libfreetype-dev:armhf \
+    libharfbuzz-dev:armhf
 
 PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf \
@@ -338,4 +420,56 @@ PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
 
 cmake      --build   build4-full_armhf
 sudo cmake --install build4-full_armhf
+tar czvf opencv_armhf.tgz -C build4-full_armhf/install .
+```
+
+Following is cmake outputs.
+- `Host` is `Linux x86_64`.
+- `Target` is `Linux arm`.
+- FFMPEG is available.
+
+```
+-- General configuration for OpenCV 4.8.0-dev =====================================
+--   Version control:               408730b
+--
+--   Extra modules:
+--     Location (extra):            /home/kmtr/work/opencv_contrib/modules
+--     Version control (extra):     faa5468
+--
+--   Platform:
+--     Timestamp:                   2023-12-02T03:39:58Z
+--     Host:                        Linux 6.5.0-13-generic x86_64
+--     Target:                      Linux 1 arm
+--     CMake:                       3.27.4
+--     CMake generator:             Ninja
+--     CMake build tool:            /usr/bin/ninja
+--     Configuration:               Release
+--
+--   CPU/HW features:
+--     Baseline:                    NEON
+--       requested:                 DETECT
+--       required:                  NEON
+--       disabled:                  VFPV3
+--
+--   C/C++:
+--     Built as dynamic libs?:      YES
+--     C++ standard:                11
+--     C++ Compiler:                /usr/bin/arm-linux-gnueabihf-g++  (ver 13.2.0)
+
+:
+:
+
+--
+--   Video I/O:
+--     DC1394:                      NO
+--     FFMPEG:                      YES
+--       avcodec:                   YES (60.3.100)
+--       avformat:                  YES (60.3.100)
+--       avutil:                    YES (58.2.100)
+--       swscale:                   YES (7.1.100)
+--       avresample:                NO
+--     GStreamer:                   NO
+--     v4l/v4l2:                    YES (linux/videodev2.h)
+--
+
 ```
