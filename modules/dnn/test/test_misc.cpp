@@ -82,14 +82,14 @@ TEST(blobRectToImageRect, DNN_PMODE_LETTERBOX)
 TEST(blobFromImage_4ch, Regression)
 {
     Mat ch[4];
-    for(int i = 0; i < 4; i++)
-        ch[i] = Mat::ones(10, 10, CV_8U)*i;
+    for (int i = 0; i < 4; i++)
+        ch[i] = Mat::ones(10, 10, CV_8U) * i;
 
     Mat img;
     merge(ch, 4, img);
     Mat blob = dnn::blobFromImage(img, 1., Size(), Scalar(), false, false);
 
-    for(int i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++)
     {
         ch[i] = Mat(img.rows, img.cols, CV_32F, blob.ptr(0, i));
         ASSERT_DOUBLE_EQ(cvtest::norm(ch[i], cv::NORM_INF), i);
@@ -98,7 +98,7 @@ TEST(blobFromImage_4ch, Regression)
 
 TEST(blobFromImage, allocated)
 {
-    int size[] = {1, 3, 4, 5};
+    int size[] = { 1, 3, 4, 5 };
     Mat img(size[2], size[3], CV_32FC(size[1]));
     Mat blob(4, size, CV_32F);
     void* blobData = blob.data;
@@ -132,8 +132,8 @@ TEST(imagesFromBlob, Regression)
 
 TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
 {
-    Mat img(10, 10, CV_8UC4, cv::Scalar(0,1,2,3));
-    std::vector<double> factorVec = {0.1, 0.2, 0.3, 0.4};
+    Mat img(10, 10, CV_8UC4, cv::Scalar(0, 1, 2, 3));
+    std::vector<double> factorVec = { 0.1, 0.2, 0.3, 0.4 };
 
     Scalar scalefactor(factorVec[0], factorVec[1], factorVec[2], factorVec[3]);
 
@@ -143,7 +143,7 @@ TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
     Mat blob = dnn::blobFromImageWithParams(img, param); // [1, 10, 10, 4]
 
     float* blobPtr = blob.ptr<float>(0);
-    std::vector<float> targetVec = {(float )factorVec[0] * 0, (float )factorVec[1] * 1, (float )factorVec[2] * 2, (float )factorVec[3] * 3}; // Target Value.
+    std::vector<float> targetVec = { (float)factorVec[0] * 0, (float)factorVec[1] * 1, (float)factorVec[2] * 2, (float)factorVec[3] * 3 }; // Target Value.
     for (int hi = 0; hi < 10; hi++)
     {
         for (int wi = 0; wi < 10; wi++)
@@ -159,18 +159,51 @@ TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
     }
 }
 
+TEST(blobFromImageWithParams_CustomPadding, letter_box)
+{
+    Mat img(40, 20, CV_8UC4, Scalar(0, 1, 2, 3));
+
+    // Custom padding value that you have added
+    Scalar customPaddingValue(5, 6, 7, 8); // Example padding value
+
+    Size targetSize(20, 20);
+
+    Mat targetImg = img.clone();
+
+    cv::copyMakeBorder(
+        targetImg, targetImg, 0, 0,
+        targetSize.width / 2,
+        targetSize.width / 2,
+        BORDER_CONSTANT,
+        customPaddingValue);
+
+    // Set up Image2BlobParams with your new functionality
+    Image2BlobParams param;
+    param.size = targetSize;
+    param.paddingmode = DNN_PMODE_LETTERBOX;
+    param.borderValue = customPaddingValue; // Use your new feature here
+
+    // Create blob with custom padding
+    Mat blob = dnn::blobFromImageWithParams(img, param);
+
+    // Create target blob for comparison
+    Mat targetBlob = dnn::blobFromImage(targetImg, 1.0, targetSize);
+
+    EXPECT_EQ(0, cvtest::norm(targetBlob, blob, NORM_INF));
+}
+
 TEST(blobFromImageWithParams_4ch, letter_box)
 {
-    Mat img(40, 20, CV_8UC4, cv::Scalar(0,1,2,3));
+    Mat img(40, 20, CV_8UC4, cv::Scalar(0, 1, 2, 3));
 
     // Construct target mat.
     Mat targetCh[4];
     // The letterbox will add zero at the left and right of output blob.
     // After the letterbox, every row data would have same value showing as valVec.
-    std::vector<uint8_t> valVec = {0,0,0,0,0, 1,1,1,1,1,1,1,1,1,1, 0,0,0,0,0};
+    std::vector<uint8_t> valVec = { 0,0,0,0,0, 1,1,1,1,1,1,1,1,1,1, 0,0,0,0,0 };
     Mat rowM(1, 20, CV_8UC1, valVec.data());
 
-    for(int i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++)
     {
         targetCh[i] = rowM * i;
     }
@@ -196,7 +229,7 @@ TEST(blobFromImagesWithParams_4ch, multi_image)
     param.scalefactor = scalefactor;
     param.datalayout = DNN_LAYOUT_NHWC;
 
-    Mat blobs = blobFromImagesWithParams(std::vector<Mat> { img, 2*img }, param);
+    Mat blobs = blobFromImagesWithParams(std::vector<Mat> { img, 2 * img }, param);
     vector<Range> ranges;
     ranges.push_back(Range(0, 1));
     ranges.push_back(Range(0, blobs.size[1]));
@@ -206,7 +239,7 @@ TEST(blobFromImagesWithParams_4ch, multi_image)
     ranges[0] = Range(1, 2);
     Mat blob1 = blobs(ranges);
 
-    EXPECT_EQ(0, cvtest::norm(2*blob0, blob1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(2 * blob0, blob1, NORM_INF));
 }
 
 TEST(readNet, Regression)

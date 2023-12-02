@@ -1212,7 +1212,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP Image2BlobParams();
         CV_WRAP Image2BlobParams(const Scalar& scalefactor, const Size& size = Size(), const Scalar& mean = Scalar(),
                             bool swapRB = false, int ddepth = CV_32F, DataLayout datalayout = DNN_LAYOUT_NCHW,
-                            ImagePaddingMode mode = DNN_PMODE_NULL);
+                            ImagePaddingMode mode = DNN_PMODE_NULL, Scalar borderValue = 0.0);
 
         CV_PROP_RW Scalar scalefactor; //!< scalefactor multiplier for input image values.
         CV_PROP_RW Size size;    //!< Spatial size for output image.
@@ -1221,6 +1221,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW int ddepth;   //!< Depth of output blob. Choose CV_32F or CV_8U.
         CV_PROP_RW DataLayout datalayout; //!< Order of output dimensions. Choose DNN_LAYOUT_NCHW or DNN_LAYOUT_NHWC.
         CV_PROP_RW ImagePaddingMode paddingmode;   //!< Image padding mode. @see ImagePaddingMode.
+        CV_PROP_RW Scalar borderValue;   //!< Value used in padding mode for padding.
 
         /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
          *  @param rBlob rect in blob coordinates.
@@ -1228,7 +1229,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob
          *  @returns rectangle in original image coordinates.
          */
-        Rect blobRectToImageRect(Rect rBlob, Size sizeOri);
+        CV_WRAP Rect blobRectToImageRect(Rect rBlob, Size sizeOri);
 
         /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
          *  @param rBlob rect in blob coordinates.
@@ -1236,7 +1237,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param size spatial size for output image
          *  @param param input image.
          */
-        void blobRectsToImageRects(std::vector<Rect> rBlob, CV_OUT std::vector<Rect>& rImg, const Size& size);
+        CV_WRAP void blobRectsToImageRects(std::vector<Rect> rBlob, CV_OUT std::vector<Rect>& rImg, const Size& size);
 
         /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
          *  @param rBlob rect in blob coordinates.
@@ -1244,7 +1245,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param size spatial size for output image
          *  @param param input image.
          */
-        void blobRectsToImageRects(std::vector<Rect2d> rBlob, CV_OUT std::vector<Rect2d>& rImg, const Size& size);
+        CV_WRAP void blobRectsToImageRects(std::vector<Rect2d> rBlob, CV_OUT std::vector<Rect2d>& rImg, const Size& size);
 
         /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
          *  @param rBlob rect in blob coordinates.
@@ -1252,7 +1253,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob
          *  @returns rectangle in original image coordinates.
          */
-        Rect2d blobRectToImageRect(Rect2d rBlob, Size sizeOri);
+        CV_WRAP Rect2d blobRectToImageRect(Rect2d rBlob, Size sizeOri);
     };
 
     /** @brief Creates 4-dimensional blob from image with given params.
