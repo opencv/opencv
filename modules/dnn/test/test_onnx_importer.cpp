@@ -2708,7 +2708,7 @@ TEST_P(Test_ONNX_nets, YOLOx)
     std::vector<int> refClassIds{1, 16, 7};
     std::vector<float> refScores{0.96f, 0.91f, 0.66f};
 
-    // [x1, y1, x2, y2] 
+    // [x1, y1, x2, y2]
     std::vector<Rect2d> refBoxes{
         Rect2d(104.62, 181.28, 470.95, 428.22),
         Rect2d(112.32, 264.88, 258.11, 527.31),
@@ -2727,8 +2727,8 @@ TEST_P(Test_ONNX_nets, YOLOx)
         );
 
     testYOLO(
-        weightPath, refClassIds, refScores, refBoxes, 
-        imgParams, conf_threshold, iou_threshold, 
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, conf_threshold, iou_threshold,
         1.0e-1, 1.0e-1);
 }
 
