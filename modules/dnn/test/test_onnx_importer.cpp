@@ -18,7 +18,7 @@ struct FilteredDetections{
     std::vector<Rect2d> keep_boxes;
 };
 
-FilteredDetections yoloPostProcessing(const std::vector<Mat>& outs, float conf_threshold, float iou_threshold);
+FilteredDetections yoloPostProcessing(std::vector<Mat>& outs, float conf_threshold, float iou_threshold, const std::string& test_name);
 
 template<typename TString>
 static std::string _tf(TString filename, bool required = true)
@@ -2615,14 +2615,14 @@ TEST_P(Test_ONNX_layers, CumSum)
 
 static void testYOLO(const std::string& weightPath, const std::vector<int>& refClassIds,
                      const std::vector<float>& refScores, const std::vector<Rect2d>& refBoxes,
-                     Image2BlobParams paramYolox, float conf_threshold = 0.3, float iou_threshold = 0.5,
-                     double scores_diff = 1e-5, double boxes_iou_diff = 1e-4)
+                     Image2BlobParams imgParams, float conf_threshold = 0.3, float iou_threshold = 0.5,
+                     double scores_diff = 1e-5, double boxes_iou_diff = 1e-4, const std::string test_name = "")
 {
     std::string imgPath = _tf("../dog_orig_size.png");
 
     Mat img = imread(imgPath);
 
-    Mat inp = blobFromImageWithParams(img, paramYolox);
+    Mat inp = blobFromImageWithParams(img, imgParams);
 
     Net net = readNet(weightPath);
 
@@ -2631,7 +2631,7 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
     net.forward(outs, net.getUnconnectedOutLayersNames());
 
     FilteredDetections result;
-    result = yoloPostProcessing(outs, conf_threshold, iou_threshold);
+    result = yoloPostProcessing(outs, conf_threshold, iou_threshold, test_name);
 
     normAssertDetections(
         refClassIds, refScores, refBoxes,
@@ -2639,12 +2639,16 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
         "", 0.0, scores_diff, boxes_iou_diff);
 }
 
-FilteredDetections yoloPostProcessing(const std::vector<Mat>& outs, float conf_threshold, float iou_threshold){
+FilteredDetections yoloPostProcessing(std::vector<Mat>& outs, float conf_threshold, float iou_threshold, const std::string& test_name){
 
     // Retrieve
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<Rect2d> boxes;
+
+    if (test_name == "yolov8"){
+        cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
+    }
 
     // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
     for (auto preds : outs){
@@ -2654,16 +2658,16 @@ FilteredDetections yoloPostProcessing(const std::vector<Mat>& outs, float conf_t
         for (int i = 0; i < preds.rows; ++i)
         {
             // filter out non objects
-            float obj_conf = preds.row(i).at<float>(4);
+            float obj_conf = (test_name != "yolov8") ? preds.at<float>(i, 4) : 1.0f;
             if (obj_conf < conf_threshold)
                 continue;
-
-            // get class id and conf
-            Mat scores = preds.row(i).colRange(5, preds.cols);
+            
+            Mat scores = preds.row(i).colRange((test_name != "yolov8") ? 5 : 4, preds.cols);
             double conf;
             Point maxLoc;
             minMaxLoc(scores, 0, &conf, 0, &maxLoc);
-            conf *= obj_conf;
+
+            conf = (test_name != "yolov8") ? conf * obj_conf : conf;
             if (conf < conf_threshold)
                 continue;
 
@@ -2735,7 +2739,6 @@ TEST_P(Test_ONNX_nets, YOLOx)
 TEST_P(Test_ONNX_nets, YOLOv8)
 {
     std::string weightPath = _tf("models/yolov8n.onnx", false);
-    std::string imgPath = _tf("../dog_orig_size.png");
 
     Size targetSize{640, 640};
     float conf_threshold = 0.25;
@@ -2750,9 +2753,7 @@ TEST_P(Test_ONNX_nets, YOLOv8)
         Rect2d(389.1603, 143.2506, 577.3542, 223.0615),
         };
 
-    Mat img = imread(imgPath);
-
-    Image2BlobParams paramYolox(
+    Image2BlobParams imgParams(
         Scalar::all(1/255.0),
         targetSize,
         Scalar::all(0),
@@ -2763,155 +2764,10 @@ TEST_P(Test_ONNX_nets, YOLOv8)
         Scalar::all(144)
         );
 
-    Mat inp = blobFromImageWithParams(img, paramYolox);
-    Net net = readNet(weightPath);
-
-    net.setInput(inp);
-    std::vector<Mat> outs;
-    net.forward(outs, net.getUnconnectedOutLayersNames());
-
-    // transpose to [1, 8400, 84] from [1, 84, 8400]
-    cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
-
-    Mat preds = outs[0].reshape(1, outs[0].size[1]); // [1, 8400, 84]
-
-    // Retrieve
-    std::vector<int> classIds;
-    std::vector<float> confidences;
-    std::vector<Rect2d> boxes;
-
-    for (int i = 0; i < preds.rows; ++i)
-    {
-
-        Mat scores = preds.row(i).colRange(4, preds.cols);
-        double conf;
-        Point maxLoc;
-        minMaxLoc(scores, 0, &conf, 0, &maxLoc);
-
-        if (conf < conf_threshold)
-            continue;
-
-        // get bbox coords
-        float* det = preds.ptr<float>(i);
-        double cx = det[0];
-        double cy = det[1];
-        double w = det[2];
-        double h = det[3];
-
-        // [x1, y1, x2, y2]
-        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
-                                cx + 0.5 * w, cy + 0.5 * h));
-        classIds.push_back(maxLoc.x);
-        confidences.push_back(conf);
-    }
-
-    // NMS
-    std::vector<int> keep_idx;
-    NMSBoxes(boxes, confidences, conf_threshold, iou_threshold, keep_idx);
-
-    std::vector<int> keep_classIds;
-    std::vector<float> keep_confidences;
-    std::vector<Rect2d> keep_boxes;
-
-    for (auto i : keep_idx)
-    {
-        keep_classIds.push_back(classIds[i]);
-        keep_confidences.push_back(confidences[i]);
-        keep_boxes.push_back(boxes[i]);
-    }
-
-    normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes, "", 0.0, 1.0e-1, 1.0e-1);
-}
-
-TEST_P(Test_ONNX_nets, YOLOv8)
-{
-    std::string weightPath = _tf("models/yolov8n.onnx", false);
-    std::string imgPath = _tf("../dog_orig_size.png");
-
-    Size targetSize{640, 640};
-    float conf_threshold = 0.25;
-    float iou_threshold = 0.50;
-
-    std::vector<int> refClassIds{16, 1, 2};
-    std::vector<float> refScores{0.9332, 0.8959, 0.6157};
-    // [x1, y1, x2, y2]
-    std::vector<Rect2d> refBoxes{
-        Rect2d(108.8965, 261.9094, 257.1633, 530.3049),
-        Rect2d(110.4020, 192.9843, 473.4418, 429.5965),
-        Rect2d(389.1603, 143.2506, 577.3542, 223.0615),
-        };
-
-    Mat img = imread(imgPath);
-
-    Image2BlobParams paramYolox(
-        Scalar::all(1/255.0),
-        targetSize,
-        Scalar::all(0),
-        true,
-        CV_32F,
-        DNN_LAYOUT_NCHW,
-        DNN_PMODE_LETTERBOX,
-        Scalar::all(144)
-        );
-
-    Mat inp = blobFromImageWithParams(img, paramYolox);
-    Net net = readNet(weightPath);
-
-    net.setInput(inp);
-    std::vector<Mat> outs;
-    net.forward(outs, net.getUnconnectedOutLayersNames());
-
-    // transpose to [1, 8400, 84] from [1, 84, 8400]
-    cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
-
-    Mat preds = outs[0].reshape(1, outs[0].size[1]); // [1, 8400, 84]
-
-    // Retrieve
-    std::vector<int> classIds;
-    std::vector<float> confidences;
-    std::vector<Rect2d> boxes;
-
-    for (int i = 0; i < preds.rows; ++i)
-    {
-
-        Mat scores = preds.row(i).colRange(4, preds.cols);
-        double conf;
-        Point maxLoc;
-        minMaxLoc(scores, 0, &conf, 0, &maxLoc);
-
-        if (conf < conf_threshold)
-            continue;
-
-        // get bbox coords
-        float* det = preds.ptr<float>(i);
-        double cx = det[0];
-        double cy = det[1];
-        double w = det[2];
-        double h = det[3];
-
-        // [x1, y1, x2, y2]
-        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
-                                cx + 0.5 * w, cy + 0.5 * h));
-        classIds.push_back(maxLoc.x);
-        confidences.push_back(conf);
-    }
-
-    // NMS
-    std::vector<int> keep_idx;
-    NMSBoxes(boxes, confidences, conf_threshold, iou_threshold, keep_idx);
-
-    std::vector<int> keep_classIds;
-    std::vector<float> keep_confidences;
-    std::vector<Rect2d> keep_boxes;
-
-    for (auto i : keep_idx)
-    {
-        keep_classIds.push_back(classIds[i]);
-        keep_confidences.push_back(confidences[i]);
-        keep_boxes.push_back(boxes[i]);
-    }
-
-    normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes, "", 0.0, 1.0e-1, 1.0e-1);
+    testYOLO(
+        weightPath, refClassIds, refScores, refBoxes, 
+        imgParams, conf_threshold, iou_threshold, 
+        1.0e-1, 1.0e-1, "yolov8");
 }
 
 // This test is mainly to test:
