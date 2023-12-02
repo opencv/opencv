@@ -333,7 +333,7 @@ Receive `opencv_arm64.tgz` from host, and extract to `/usr/local`. You can use O
 
 ```
 [Target]
-sudo tar zxvf opencv_arm64.tgz /usr/local
+sudo tar zxvf opencv_arm64.tgz -C /usr/local
 sudo ldconfig
 ```
 
