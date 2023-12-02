@@ -2805,7 +2805,6 @@ TEST_P(Test_ONNX_nets, YOLOv7)
 TEST_P(Test_ONNX_nets, YOLOv6)
 {
     std::string weightPath = _tf("models/yolov6n.onnx", false);
-    std::string imgPath = _tf("../dog_orig_size.png");
 
     Size targetSize{640, 640};
     float conf_threshold = 0.30;
@@ -2819,9 +2818,8 @@ TEST_P(Test_ONNX_nets, YOLOv6)
                                  Rect2d(387.79, 141.61, 576.98, 223.52),
                                  Rect2d(105.62, 199.24, 218.37, 389.84),
                                  };
-    Mat img = imread(imgPath);
 
-    Image2BlobParams paramYolox(
+    Image2BlobParams imgParams(
         Scalar::all(1/255.0),
         targetSize,
         Scalar::all(0),
@@ -2832,68 +2830,10 @@ TEST_P(Test_ONNX_nets, YOLOv6)
         Scalar::all(114)
         );
 
-    Mat inp = blobFromImageWithParams(img, paramYolox);
-
-    Net net = readNet(weightPath);
-
-    net.setInput(inp);
-    std::vector<Mat> outs;
-    net.forward(outs, net.getUnconnectedOutLayersNames());
-
-    Mat preds = outs[0].reshape(1, outs[0].size[1]); // [1, 8400, 85]
-
-    // Retrieve
-    std::vector<int> classIds;
-    std::vector<float> confidences;
-    std::vector<Rect2d> boxes;
-    // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
-    for (int i = 0; i < preds.rows; ++i)
-    {
-        // filter out non objects
-        float obj_conf = preds.row(i).at<float>(4);
-        if (obj_conf < conf_threshold)
-            continue;
-
-        // get class id and conf
-        Mat scores = preds.row(i).colRange(5, preds.cols);
-        double conf;
-        Point maxLoc;
-        minMaxLoc(scores, 0, &conf, 0, &maxLoc);
-        conf *= obj_conf;
-        if (conf < conf_threshold)
-            continue;
-
-        // get bbox coords
-        float* det = preds.ptr<float>(i);
-        double cx = det[0];
-        double cy = det[1];
-        double w = det[2];
-        double h = det[3];
-
-        // [x1, y1, x2, y2]
-        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
-                                cx + 0.5 * w, cy + 0.5 * h));
-        classIds.push_back(maxLoc.x);
-        confidences.push_back(conf);
-
-    }
-
-    // NMS
-    std::vector<int> keep_idx;
-    NMSBoxes(boxes, confidences, conf_threshold, iou_threshold, keep_idx);
-
-    std::vector<int> keep_classIds;
-    std::vector<float> keep_confidences;
-    std::vector<Rect2d> keep_boxes;
-
-    for (auto i : keep_idx)
-    {
-        keep_classIds.push_back(classIds[i]);
-        keep_confidences.push_back(confidences[i]);
-        keep_boxes.push_back(boxes[i]);
-    }
-
-   normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes, "", 0.0, 1.0e-1, 1.0e-1);
+    testYOLO(
+        weightPath, refClassIds, refScores, refBoxes, 
+        imgParams, conf_threshold, iou_threshold, 
+        1.0e-1, 1.0e-1);
 }
 
 TEST_P(Test_ONNX_nets, YOLOv5n)
