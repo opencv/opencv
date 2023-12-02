@@ -26,7 +26,7 @@ TEST(blobRectToImageRect, DNN_PMODE_NULL)
     paramNet.swapRB = false;
     paramNet.datalayout = DNN_LAYOUT_NHWC;
     paramNet.paddingmode = DNN_PMODE_NULL;
-    Rect rOri = blobRectToImageRect(rBlob, imgSize, paramNet);
+    Rect rOri = paramNet.blobRectToImageRect(rBlob, imgSize);
     Rect rImg = Rect(rBlob.x * (float)imgSize.width / inputSize.width, rBlob.y * (float)imgSize.height / inputSize.height,
         rBlob.width * (float)imgSize.width / inputSize.width, rBlob.height * (float)imgSize.height / inputSize.height);
     ASSERT_EQ(rImg, rOri);
@@ -45,7 +45,7 @@ TEST(blobRectToImageRect, DNN_PMODE_CROP_CENTER)
     paramNet.swapRB = false;
     paramNet.datalayout = DNN_LAYOUT_NHWC;
     paramNet.paddingmode = DNN_PMODE_CROP_CENTER;
-    Rect rOri = blobRectToImageRect(rBlob, imgSize, paramNet);
+    Rect rOri = paramNet.blobRectToImageRect(rBlob, imgSize);
     float resizeFactor = std::max(inputSize.width / (float)imgSize.width,
         inputSize.height / (float)imgSize.height);
     Rect rImg = Rect((rBlob.x + 0.5 * (imgSize.width * resizeFactor - inputSize.width)) / resizeFactor, (rBlob.y + 0.5 * (imgSize.height * resizeFactor - inputSize.height)) / resizeFactor,
@@ -66,7 +66,7 @@ TEST(blobRectToImageRect, DNN_PMODE_LETTERBOX)
     paramNet.swapRB = false;
     paramNet.datalayout = DNN_LAYOUT_NHWC;
     paramNet.paddingmode = DNN_PMODE_LETTERBOX;
-    Rect rOri = blobRectToImageRect(rBlob, imgSize, paramNet);
+    Rect rOri = paramNet.blobRectToImageRect(rBlob, imgSize);
     float resizeFactor = std::min(inputSize.width / (float)imgSize.width,
         inputSize.height / (float)imgSize.height);
     int rh = int(imgSize.height * resizeFactor);
