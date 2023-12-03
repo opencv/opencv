@@ -288,7 +288,7 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
 
         if (!initialized)
         {
-            std::lock_guard<cv::Mutex> lock(initMtx);
+            cv::AutoLock lock(initMtx);
             if (!initialized)
             {
                 constexpr int hsv_shift = 12;
