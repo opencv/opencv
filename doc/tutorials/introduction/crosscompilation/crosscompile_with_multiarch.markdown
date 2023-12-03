@@ -42,7 +42,7 @@ Install nessesary tools and toolchains to cross-compile.
 - crossbuild-essential-armhf is toolchain package for armv7 target.
 - crossbuild-essential-arm64 is toolchain package for aarch64 target.
 
-```
+@code{.bash}
 sudo apt update -y
 sudo apt install -y \
     git \
@@ -52,21 +52,21 @@ sudo apt install -y \
     ninja-build \
     crossbuild-essential-armhf \
     crossbuild-essential-arm64
-```
+@endcode
 
 If you want to enable python3 wrapper, install these packages too.
 
-```
+@code{.bash}
 sudo apt install -y \
     python3-dev \
     python3-numpy
-```
+@endcode
 
 Working folder structure
 ------------------------
 In this tutorial, following working folder structure are used.
 
-```
+@code{.unparsed}
 /home
   + kmtr                    - please replace your account name.
     + work
@@ -74,18 +74,18 @@ In this tutorial, following working folder structure are used.
       + opencv_contrib      - source, cloned from github
       + build4-full_arm64   - artifact(for aarch64 target), created by cmake
       + build4-full_armhf   - artifact(for armhf target), created by cmake
-```
+@endcode
 
 1. Create working folder under your home directory.
 2. Clone OpenCV and OpenCV Contrib from repository to work directory.
 
-```
+@code{.bash}
 cd ~
 mkdir work
 cd work
 git clone --depth=1 https://github.com/opencv/opencv.git
 git clone --depth=1 https://github.com/opencv/opencv_contrib.git
-```
+@endcode
 
 Update apt and dpkg settings
 ----------------------------
@@ -101,7 +101,7 @@ Execute `sudo apt edit-sources` to add foreign arch libraries at end of file.
 
 ex1) arm64 and armv7 for Ubuntu 23.04
 
-```
+@code{.unparsed}
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports lunar main restricted
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports lunar-updates main restricted
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports lunar universe
@@ -112,11 +112,11 @@ deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports lunar-backports main
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports lunar-security main restricted
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports lunar-security universe
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports lunar-security multiverse
-```
+@endcode
 
 ex2) arm64 and armv7 for Ubuntu 23.10
 
-```
+@code{.unparsed}
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic main restricted
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic-updates main restricted
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic universe
@@ -127,16 +127,16 @@ deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic-backports mai
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic-security main restricted
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic-security universe
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic-security multiverse
-```
+@endcode
 
 ### Step2) Update apt database
 Update apt database to apply new apt sources.
 
 Execute `sudo apt update`.
 
-```
+@code{.bash}
 sudo apt update
-```
+@endcode
 
 ### Step3) Update dpkg setting
 Update dpkg settings to support foreign architectures.
@@ -145,7 +145,7 @@ Execute `sudo dpkg --add-architecture arm64` and/or `sudo dpkg --add-architectur
 
 `sudo dpkg --print-foreign-architectures` shows what foreign architecutures are supported.
 
-```
+@code{.bash}
 sudo dpkg --add-architecture arm64
 sudo dpkg --add-architecture armhf
 
@@ -155,13 +155,13 @@ amd64
 sudo dpkg --print-foreign-architectures
 arm64
 armhf
-```
+@endcode
 
 ### Option) Confirm working pkg-config
 
 With MultiArch, several shared libraries and pkgconfig information for each architectures are stored into /usr/lib.
 
-```
+@code{.unparsed}
 /usr
   + lib
     + aarch64-linux-gnu   - shared libraries for arm64
@@ -170,25 +170,25 @@ With MultiArch, several shared libraries and pkgconfig information for each arch
       + pkgconfig         - pkg-config files for armhf libraries
   + share
     + pkgconfig         - pkg-config files(for header files)
-```
+@endcode
 
 Confirm to work `pkg-config` using `PKG_CONFIG_PATH`, `PKG_CONFIG_LIBDIR` and `PKG_CONFIG_SYSROOT_DIR` options.
 
 for aarch64
-```
+@code{.bash}
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
       pkg-config --list-all
-```
+@endcode
 
 for armv7
-```
+@code{.bash}
 PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
   PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf \
   PKG_CONFIG_SYSROOT_DIR=/ \
       pkg-config --list-all
-```
+@endcode
 
 Cross-compile(for aarch64)
 --------------------------
@@ -199,7 +199,7 @@ This step is on host.
 
 Install libfreetype-dev, libharfbuzz-dev and ffmpeg packages for target(arm64) into host(x86-64).
 
-```
+@code{.bash}
 sudo apt install -y \
     libavcodec-dev:arm64 \
     libavformat-dev:arm64 \
@@ -207,18 +207,18 @@ sudo apt install -y \
     libswscale-dev:arm64 \
     libfreetype-dev:arm64 \
     libharfbuzz-dev:arm64
-```
+@endcode
 
 If you want to enable python3 wrapper, install these packages too.
 
-```
+@code{.bash}
 sudo apt install -y \
     libpython3-dev:arm64
-```
+@endcode
 
 If successeed, pkg-config can show information about these packages.
 
-```
+@code{.bash}
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
@@ -233,7 +233,7 @@ PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
 
 -I/usr/include/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu -lavcodec -lavformat -lavutil -lswscale
 
-```
+@endcode
 
 ### Step2) Configure OpenCV Settings
 This step is on host.
@@ -242,7 +242,7 @@ Execute `cmake` to make cross-compile configuration for aarch64.
 
 @note `-DCMAKE_TOOLCHAIN_FILE` should be absolute/real file path, not relative path.
 
-```
+@code{.bash}
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
@@ -251,11 +251,11 @@ PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
               -DCMAKE_TOOLCHAIN_FILE=/home/kmtr/work/opencv/platforms/linux/aarch64-gnu.toolchain.cmake \
               -DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules \
               -GNinja
-```
+@endcode
 
 If you want to enable python3 wrapper, extra options are needed.
 
-```
+@code{.bash}
 PYTHON3_REALPATH=`realpath /usr/bin/python3`
 PYTHON3_BASENAME=`basename ${PYTHON3_REALPATH}`
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
@@ -271,7 +271,7 @@ PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
               -DPYTHON3_EXECUTABLE="/usr/bin/${PYTHON3_BASENAME}" \
               -DPYTHON3_CVPY_SUFFIX=".so" \
               -GNinja
-```
+@endcode
 
 @note
 @parblock
@@ -285,7 +285,7 @@ Following is cmake outputs.
 - `Target` is `Linux aarch64`.
 - FFmpeg is available.
 
-```
+@code{.unparsed}
 -- General configuration for OpenCV 4.8.0-dev =====================================
 --   Version control:               408730b
 --
@@ -332,11 +332,11 @@ Following is cmake outputs.
 --     GStreamer:                   NO
 --     v4l/v4l2:                    YES (linux/videodev2.h)
 --
-```
+@endcode
 
 If enabling python3 wrapper is succeeded, `Pyhton 3:` section shows more.
 
-```
+@code{.unparsed}
 --
 --   Python 3:
 --     Interpreter:                 /usr/bin/python3.11 (ver 3.11.6)
@@ -346,7 +346,7 @@ If enabling python3 wrapper is succeeded, `Pyhton 3:` section shows more.
 --
 --   Python (for build):            /usr/bin/python3.11
 --
-```
+@endcode
 
 ### Step3) Build and archive OpenCV libraries and headers
 This step in in host.
@@ -354,16 +354,16 @@ This step in in host.
 Build and install.
 (This `install` means only that copying artifacts to `install` folder.)
 
-```
+@code{.bash}
      cmake --build   build4-full_arm64
 sudo cmake --install build4-full_arm64
-```
+@endcode
 
 Archive artifacts(built libraries and headers) to `opencv_arm64.tgz` with tar command.
 
-```
+@code{.bash}
 tar czvf opencv_arm64.tgz -C build4-full_arm64/install .
-```
+@endcode
 
 And send `opencv_arm64.tgz` to target.
 
@@ -372,7 +372,7 @@ This step is on target.
 
 Install dependency libraries for OpenCV/OpenCV contrib libraies at target.
 
-```
+@code{.bash}
 sudo apt install -y \
     libavcodec-dev \
     libavformat-dev \
@@ -382,15 +382,15 @@ sudo apt install -y \
     libharfbuzz-dev
 
 sudo ldconfig
-```
+@endcode
 
 If you want to enable python3 wrapper, install these packages too.
 
-```
+@code{.bash}
 sudo apt install -y \
     python3-dev \
     python3-numpy
-```
+@endcode
 
 @warning
 @parblock
@@ -417,25 +417,25 @@ For example)
 
 (Not Good) `freetype module` requests `libharfbuzz.so.0`, but it has not been installed.
 
-```
+@code{.bash}
 ldd /usr/local/lib/libopencv_freetype.so
         linux-vdso.so.1 (0xABCDEFG01234567)
         libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEF001234567)
         libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEF001234567)
         libharfbuzz.so.0 => not found
         libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEF001234567)
-```
+@endcode
 
 (Good) All libraries which are required from freetyoe modules are installed.
 
-```
+@code{.bash}
 ldd /usr/local/lib/libopencv_freetype.so
         linux-vdso.so.1 (0xABCDEFG01234567)
         libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEF001234567)
         libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEF001234567)
         libharfbuzz.so.0 => /lib/aarch64-linux-gnu/libharfbuzz.so.0 (0xABCDEF001234567)
         libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEF001234567)
-```
+@endcode
 @endparblock
 
 ### Step5) Install OpenCV libraries to target
@@ -443,23 +443,23 @@ This step is on target.
 
 Receive `opencv_arm64.tgz` from host (generated at Step3), and extract to `/usr/local`.
 
-```
+@code{.bash}
 sudo tar zxvf opencv_arm64.tgz -C /usr/local
 sudo ldconfig
-```
+@endcode
 
 You can use OpenCV libraries same as self-compiling.  Following is opencv sample code. Compile and run it on target.
 
 Makefile
-```
+@code{.make}
 a.out : main.cpp
     g++ main.cpp -o a.out \
         -I/usr/local/include/opencv4 \
         -lopencv_core
-```
+@endcode
 
 main.cpp
-```
+@code{.cpp}
 #include <iostream>
 #include <opencv2/core.hpp>
 int main(void)
@@ -467,13 +467,13 @@ int main(void)
   std::cout << cv::getBuildInformation() << std::endl;
   return 0;
 }
-```
+@endcode
 
 Execute `make` and run it.
-```
+@code{.bash}
 make a.out
 ./a.out
-```
+@endcode
 
 
 Cross-compile(for armv7)
@@ -483,7 +483,7 @@ Following is to compile for target(armhf) at host(x86-64).
 - To resolve dependencies, `linux-libc-dev:armhf` is required.
 - To optimize with neon, `-DENABLE_NEON=ON` is needed.
 
-```
+@code{.bash}
 sudo apt install -y \
     linux-libc-dev:armhf \
     libavcodec-dev:armhf \
@@ -506,14 +506,14 @@ PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
 cmake      --build   build4-full_armhf
 sudo cmake --install build4-full_armhf
 tar czvf opencv_armhf.tgz -C build4-full_armhf/install .
-```
+@endcode
 
 Following is cmake outputs.
 - `Host` is `Linux x86_64`.
 - `Target` is `Linux arm`.
 - FFmpeg is available.
 
-```
+@code{.unparsed}
 -- General configuration for OpenCV 4.8.0-dev =====================================
 --   Version control:               408730b
 --
@@ -557,4 +557,4 @@ Following is cmake outputs.
 --     v4l/v4l2:                    YES (linux/videodev2.h)
 --
 
-```
+@endcode
