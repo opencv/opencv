@@ -54,6 +54,14 @@ sudo apt install -y \
     crossbuild-essential-arm64
 ```
 
+If you want to enable python3 wrapper, install these packages too.
+
+```
+sudo apt install -y \
+    python3-dev \
+    python3-numpy
+```
+
 Working folder structure
 ------------------------
 In this tutorial, following working folder structure are used.
@@ -81,7 +89,7 @@ git clone --depth=1 https://github.com/opencv/opencv_contrib.git
 
 Update apt and dpkg settings
 ----------------------------
-These steps are on target.
+These steps are on host.
 
 `apt` and `dpkg` are package management systems used in ubuntu and debian.
 
@@ -127,7 +135,6 @@ Update apt database to apply new apt sources.
 Execute `sudo apt update`.
 
 ```
-[Host]
 sudo apt update
 ```
 
@@ -139,7 +146,6 @@ Execute `sudo dpkg --add-architecture arm64` and/or `sudo dpkg --add-architectur
 `sudo dpkg --print-foreign-architectures` shows what foreign architecutures are supported.
 
 ```
-[Host]
 sudo dpkg --add-architecture arm64
 sudo dpkg --add-architecture armhf
 
@@ -170,7 +176,6 @@ Confirm to work `pkg-config` using `PKG_CONFIG_PATH`, `PKG_CONFIG_LIBDIR` and `P
 
 for aarch64
 ```
-[Host]
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
@@ -179,7 +184,6 @@ PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
 
 for armv7
 ```
-[Host]
 PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
   PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf \
   PKG_CONFIG_SYSROOT_DIR=/ \
@@ -191,12 +195,11 @@ Cross-compile(for aarch64)
 Following is to compile for target(aarch64) at host(x86-64).
 
 ### Step1) Install external libraries for target into host
-This step is on target.
+This step is on host.
 
 Install libfreetype-dev, libharfbuzz-dev and ffmpeg packages for target(arm64) into host(x86-64).
 
 ```
-[Host]
 sudo apt install -y \
     libavcodec-dev:arm64 \
     libavformat-dev:arm64 \
@@ -204,13 +207,18 @@ sudo apt install -y \
     libswscale-dev:arm64 \
     libfreetype-dev:arm64 \
     libharfbuzz-dev:arm64
+```
 
+If you want to enable python3 wrapper, install these packages too.
+
+```
+sudo apt install -y \
+    libpython3-dev:arm64
 ```
 
 If successeed, pkg-config can show information about these packages.
 
 ```
-[Host]
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
@@ -227,15 +235,14 @@ PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
 
 ```
 
-### Step2) Build and archive OpenCV libraries and headers
-This step is on target.
+### Step2) Configure OpenCV Settings
+This step is on host.
 
-Execute `cmake` to cross-compile for aarch64.
+Execute `cmake` to make cross-compile configuration for aarch64.
 
 @note `-DCMAKE_TOOLCHAIN_FILE` should be absolute/real file path, not relative path.
 
 ```
-[Host]
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
@@ -244,15 +251,39 @@ PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
               -DCMAKE_TOOLCHAIN_FILE=/home/kmtr/work/opencv/platforms/linux/aarch64-gnu.toolchain.cmake \
               -DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules \
               -GNinja
-
-     cmake --build   build4-full_arm64
-sudo cmake --install build4-full_arm64
 ```
+
+If you want to enable python3 wrapper, extra options are needed.
+
+```
+PYTHON3_REALPATH=`realpath /usr/bin/python3`
+PYTHON3_BASENAME=`basename ${PYTHON3_REALPATH}`
+PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
+    PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
+    PKG_CONFIG_SYSROOT_DIR=/ \
+        cmake -S opencv \
+              -B build4-full_arm64 \
+              -DCMAKE_TOOLCHAIN_FILE=/home/kmtr/work/opencv/platforms/linux/aarch64-gnu.toolchain.cmake \
+              -DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules \
+              -DPYTHON3_NUMPY_INCLUDE_DIRS="/usr/local/lib/${PYTHON3_BASENAME}/dist-packages/numpy/core/include/" \
+              -DPYTHON3_INCLUDE_PATH="/usr/include/${PYTHON3_BASENAME};/usr/include/" \
+              -DPYTHON3_LIBRARIES=`find /usr/lib/aarch64-linux-gnu/ -name libpython*.so` \
+              -DPYTHON3_EXECUTABLE="/usr/bin/${PYTHON3_BASENAME}" \
+              -DPYTHON3_CVPY_SUFFIX=".so" \
+              -GNinja
+```
+
+@note
+@parblock
+Lastly, "python3.XX" string is needed. So this script generate it.
+- Get real path from "/usr/bin/python3" to "/usr/bin/python3.xx".
+- Get base name from "/usr/bin/python3.xx" to "pyhton3.xx".
+@endparblock
 
 Following is cmake outputs.
 - `Host` is `Linux x86_64`.
 - `Target` is `Linux aarch64`.
-- FFMPEG is available.
+- FFmpeg is available.
 
 ```
 -- General configuration for OpenCV 4.8.0-dev =====================================
@@ -303,6 +334,31 @@ Following is cmake outputs.
 --
 ```
 
+If enabling python3 wrapper is succeeded, `Pyhton 3:` section shows more.
+
+```
+--
+--   Python 3:
+--     Interpreter:                 /usr/bin/python3.11 (ver 3.11.6)
+--     Libraries:                   /usr/lib/aarch64-linux-gnu/libpython3.11.so
+--     numpy:                       /usr/local/lib/python3.11/dist-packages/numpy/core/include/ (ver undefined - cannot be probed because of the cross-compilation)
+--     install path:                lib/python3.11/dist-packages/cv2/python-3.11
+--
+--   Python (for build):            /usr/bin/python3.11
+--
+```
+
+### Step3) Build and archive OpenCV libraries and headers
+This step in in host.
+
+Build and install.
+(This `install` means only that copying artifacts to `install` folder.)
+
+```
+     cmake --build   build4-full_arm64
+sudo cmake --install build4-full_arm64
+```
+
 Archive artifacts(built libraries and headers) to `opencv_arm64.tgz` with tar command.
 
 ```
@@ -311,33 +367,88 @@ tar czvf opencv_arm64.tgz -C build4-full_arm64/install .
 
 And send `opencv_arm64.tgz` to target.
 
-### Step3) Install OpenCV libraries to target
+### Step4) Install dependency libraries at target
 This step is on target.
 
 Install dependency libraries for OpenCV/OpenCV contrib libraies at target.
 
 ```
-[Target]
 sudo apt install -y \
-    libavcodec-dev:arm64 \
-    libavformat-dev:arm64 \
-    libavutil-dev:arm64 \
-    libswscale-dev:arm64 \
-    libfreetype-dev:arm64 \
-    libharfbuzz-dev:arm64
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libfreetype-dev \
+    libharfbuzz-dev
 
 sudo ldconfig
 ```
 
-Receive `opencv_arm64.tgz` from host, and extract to `/usr/local`. You can use OpenCV libraries same as self-compiling.
+If you want to enable python3 wrapper, install these packages too.
 
 ```
-[Target]
+sudo apt install -y \
+    python3-dev \
+    python3-numpy
+```
+
+@warning
+@parblock
+External library version between host and target should be same.
+Please update to the latest version libraries at the same time as possible.
+
+Even if the OS versions are the same between the Host and Target,
+the versions may differ due to additional updates to the libraries.
+This will cause unexpected problems.
+
+For example)
+- On Host, OpenCV has been build with external libraryA(v1.0) for target.
+- libraryA(v1.1) may be updated.
+- On Target, libraryA(v1.1) is installed to use OpenCV.
+- In this case, versions of libraryA is difference between compiling and running.
+@endparblock
+
+@warning
+@parblock
+If you forget install some nessesary libraries, it will not works well.
+`ldd` command can detect dependency. If there are any "not found", please could you install essesary libraries.
+
+For example)
+
+(Not Good) `freetype module` requests `libharfbuzz.so.0`, but it has not been installed.
+
+```
+ldd /usr/local/lib/libopencv_freetype.so
+        linux-vdso.so.1 (0xABCDEFG01234567)
+        libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEF001234567)
+        libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEF001234567)
+        libharfbuzz.so.0 => not found
+        libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEF001234567)
+```
+
+(Good) All libraries which are required from freetyoe modules are installed.
+
+```
+ldd /usr/local/lib/libopencv_freetype.so
+        linux-vdso.so.1 (0xABCDEFG01234567)
+        libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEF001234567)
+        libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEF001234567)
+        libharfbuzz.so.0 => /lib/aarch64-linux-gnu/libharfbuzz.so.0 (0xABCDEF001234567)
+        libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEF001234567)
+```
+@endparblock
+
+### Step5) Install OpenCV libraries to target
+This step is on target.
+
+Receive `opencv_arm64.tgz` from host (generated at Step3), and extract to `/usr/local`.
+
+```
 sudo tar zxvf opencv_arm64.tgz -C /usr/local
 sudo ldconfig
 ```
 
-Following is opencv sample code. Compile and run it on target.
+You can use OpenCV libraries same as self-compiling.  Following is opencv sample code. Compile and run it on target.
 
 Makefile
 ```
@@ -360,36 +471,10 @@ int main(void)
 
 Execute `make` and run it.
 ```
-[Target]
 make a.out
 ./a.out
 ```
 
-@note `ldd` command can detect dependency. If there are any "not found", please could you install essesary libraries.
-
-(Not Good) `freetype module` requests `libharfbuzz.so.0`, but it has not been installed.
-
-```
-[Target]
-ldd /usr/local/lib/libopencv_freetype.so
-        linux-vdso.so.1 (0xABCDEFG01234567)
-        libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEF001234567)
-        libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEF001234567)
-        libharfbuzz.so.0 => not found
-        libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEF001234567)
-```
-
-(Good) All libraries which are required from freetyoe modules are installed.
-
-```
-[Target]
-ldd /usr/local/lib/libopencv_freetype.so
-        linux-vdso.so.1 (0xABCDEFG01234567)
-        libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEF001234567)
-        libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEF001234567)
-        libharfbuzz.so.0 => /lib/aarch64-linux-gnu/libharfbuzz.so.0 (0xABCDEF001234567)
-        libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEF001234567)
-```
 
 Cross-compile(for armv7)
 ------------------------
@@ -426,7 +511,7 @@ tar czvf opencv_armhf.tgz -C build4-full_armhf/install .
 Following is cmake outputs.
 - `Host` is `Linux x86_64`.
 - `Target` is `Linux arm`.
-- FFMPEG is available.
+- FFmpeg is available.
 
 ```
 -- General configuration for OpenCV 4.8.0-dev =====================================
