@@ -270,7 +270,7 @@ class Builder:
         if self.no_samples_build:
             execute([self.ninja_path, "install" if (self.debug_info or self.debug) else "install/strip"])
         else:
-            execute([self.ninja_path, "-j1" if (self.debug_info or self.debug) else "-j3", "install" if (self.debug_info or self.debug) else "install/strip"])
+            execute([self.ninja_path, "-j1", "install" if (self.debug_info or self.debug) else "install/strip"])
 
     def build_javadoc(self):
         classpaths = []

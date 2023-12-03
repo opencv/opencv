@@ -2727,7 +2727,6 @@ bool QRDecode::samplingForVersion()
     return true;
 }
 
-
 static bool checkASCIIcompatible(const uint8_t* str, const size_t size) {
     for (size_t i = 0; i < size; ++i) {
         uint8_t byte = str[i];
@@ -2781,6 +2780,10 @@ static std::string encodeUTF8_bytesarray(const uint8_t* str, const size_t size) 
 
 bool QRDecode::decodingProcess()
 {
+    QRCodeEncoder::EncodeMode mode;
+    QRCodeEncoder::ECIEncodings eci;
+    const uint8_t* payload;
+    size_t payload_len;
 #ifdef HAVE_QUIRC
     if (straight.empty()) { return false; }
 
@@ -2810,65 +2813,79 @@ bool QRDecode::decodingProcess()
 
     CV_LOG_INFO(NULL, "QR: decoded with .version=" << qr_code_data.version << " .data_type=" << qr_code_data.data_type << " .eci=" << qr_code_data.eci << " .payload_len=" << qr_code_data.payload_len)
 
-    switch (qr_code_data.data_type)
+    mode = static_cast<QRCodeEncoder::EncodeMode>(qr_code_data.data_type);
+    eci = static_cast<QRCodeEncoder::ECIEncodings>(qr_code_data.eci);
+    payload = qr_code_data.payload;
+    payload_len = qr_code_data.payload_len;
+#else
+    auto decoder = QRCodeDecoder::create();
+    if (!decoder->decode(straight, result_info))
+        return false;
+    mode = decoder->mode;
+    eci = decoder->eci;
+    payload = reinterpret_cast<const uint8_t*>(result_info.c_str());
+    payload_len = result_info.size();
+#endif
+
+    // Check output string format
+    switch (mode)
     {
-        case QUIRC_DATA_TYPE_NUMERIC:
-            if (!checkASCIIcompatible(qr_code_data.payload, qr_code_data.payload_len)) {
+        case QRCodeEncoder::EncodeMode::MODE_NUMERIC:
+            if (!checkASCIIcompatible(payload, payload_len)) {
                 CV_LOG_INFO(NULL, "QR: DATA_TYPE_NUMERIC payload must be ACSII compatible string");
                 return false;
             }
-            result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+            result_info.assign((const char*)payload, payload_len);
             return true;
-        case QUIRC_DATA_TYPE_ALPHA:
-            if (!checkASCIIcompatible(qr_code_data.payload, qr_code_data.payload_len)) {
+        case QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC:
+            if (!checkASCIIcompatible(payload, payload_len)) {
                 CV_LOG_INFO(NULL, "QR: DATA_TYPE_ALPHA payload must be ASCII compatible string");
                 return false;
             }
-            result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+            result_info.assign((const char*)payload, payload_len);
             return true;
-        case QUIRC_DATA_TYPE_BYTE:
+        case QRCodeEncoder::EncodeMode::MODE_BYTE:
             // https://en.wikipedia.org/wiki/Extended_Channel_Interpretation
-            if (qr_code_data.eci == QUIRC_ECI_UTF_8) {
+            if (eci == QRCodeEncoder::ECIEncodings::ECI_UTF8) {
                 CV_LOG_INFO(NULL, "QR: payload ECI is UTF-8");
-                if (!checkUTF8(qr_code_data.payload, qr_code_data.payload_len)) {
+                if (!checkUTF8(payload, payload_len)) {
                     CV_LOG_INFO(NULL, "QUIRC_DATA_TYPE_BYTE with UTF-8 ECI must be UTF-8 compatible string");
                     return false;
                 }
-                result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
-            } else if (qr_code_data.eci == 25/*ECI_UTF_16BE*/) {
+                result_info.assign((const char*)payload, payload_len);
+            } else if (eci == 25/*ECI_UTF_16BE*/) {
                 CV_LOG_INFO(NULL, "QR: UTF-16BE ECI is not supported");
                 return false;
-            } else if (checkASCIIcompatible(qr_code_data.payload, qr_code_data.payload_len)) {
+            } else if (checkASCIIcompatible(payload, payload_len)) {
                 CV_LOG_INFO(NULL, "QR: payload is ASCII compatible (special handling for symbols encoding is not needed)");
-                result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+                result_info.assign((const char*)payload, payload_len);
             } else {
-                if (checkUTF8(qr_code_data.payload, qr_code_data.payload_len)) {
+                if (checkUTF8(payload, payload_len)) {
                     CV_LOG_INFO(NULL, "QR: payload QUIRC_DATA_TYPE_BYTE is UTF-8 compatible, return as-is");
-                    result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+                    result_info.assign((const char*)payload, payload_len);
                 } else {
                     CV_LOG_INFO(NULL, "QR: assume 1-byte per symbol encoding");
-                    result_info = encodeUTF8_bytesarray(qr_code_data.payload, qr_code_data.payload_len);
+                    result_info = encodeUTF8_bytesarray(payload, payload_len);
                 }
             }
             return true;
-        case QUIRC_DATA_TYPE_KANJI:
+        case QRCodeEncoder::EncodeMode::MODE_KANJI:
             // FIXIT BUG: we must return UTF-8 compatible string
             CV_LOG_WARNING(NULL, "QR: Kanji is not supported properly");
-            result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+            result_info.assign((const char*)payload, payload_len);
             return true;
+        case QRCodeEncoder::EncodeMode::MODE_ECI:
+            CV_LOG_WARNING(NULL, "QR: ECI is not supported properly");
+            result_info.assign((const char*)payload, payload_len);
+            return true;
+        default:
+            CV_LOG_WARNING(NULL, "QR: unsupported QR data type");
+            return false;
     }
-
-    CV_LOG_WARNING(NULL, "QR: unsupported QR data type");
-    return false;
-#else
-    return false;
-#endif
-
 }
 
 bool QRDecode::straightDecodingProcess()
 {
-#ifdef HAVE_QUIRC
     if (!updatePerspective(getHomography()))  { return false; }
     if (!versionDefinition())  { return false; }
     if (useAlignmentMarkers)
@@ -2876,24 +2893,15 @@ bool QRDecode::straightDecodingProcess()
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
     return true;
-#else
-    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
-    return false;
-#endif
 }
 
 bool QRDecode::curvedDecodingProcess()
 {
-#ifdef HAVE_QUIRC
     if (!preparingCurvedQRCodes()) { return false; }
     if (!versionDefinition())  { return false; }
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
     return true;
-#else
-    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
-    return false;
-#endif
 }
 
 QRDecode::QRDecode(bool _useAlignmentMarkers):
@@ -4476,25 +4484,14 @@ static
 vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, const Mat& img,
                                      const QRCodeDetectorAruco::Params& qrDetectorParameters) {
     vector<QRCode> qrCodes;
-    vector<FinderPatternInfo> patterns;
+    vector<FinderPatternInfo> patterns(corners.size());
     if (img.empty())
         return qrCodes;
     float maxModuleSize = 0.f;
     for (size_t i = 0ull; i < corners.size(); i++) {
         FinderPatternInfo pattern = FinderPatternInfo(corners[i]);
-        // TODO: improve thinning Aruco markers
-        bool isUniq = true;
-        for (const FinderPatternInfo& tmp : patterns) {
-            Point2f dist = pattern.center - tmp.center;
-            if (max(abs(dist.x), abs(dist.y)) < 3.f * tmp.moduleSize) {
-                isUniq = false;
-                break;
-            }
-        }
-        if (isUniq) {
-            patterns.push_back(pattern);
-            maxModuleSize = max(maxModuleSize, patterns.back().moduleSize);
-        }
+        patterns[i] = pattern;
+        maxModuleSize = max(maxModuleSize, pattern.moduleSize);
     }
     const int threshold = cvRound(qrDetectorParameters.minModuleSizeInPyramid * 12.5f) +
                           (cvRound(qrDetectorParameters.minModuleSizeInPyramid * 12.5f) % 2 ? 0 : 1);

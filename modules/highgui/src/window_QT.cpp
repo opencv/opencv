@@ -2544,6 +2544,10 @@ DefaultViewPort::DefaultViewPort(CvWindow* arg, int arg2) : QGraphicsView(arg), 
 
     setInteractive(false);
     setMouseTracking(true); //receive mouse event everytime
+
+    // #13657 Tab key disables arrow keys
+    // #20215 QT backend: cv::waitKey() and cv::waitKeyEx() do not capture arrow keys once you click on the image or press TAB
+    setFocusPolicy(Qt::NoFocus);
 }
 
 

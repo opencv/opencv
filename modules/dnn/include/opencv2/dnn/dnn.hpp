@@ -1212,7 +1212,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP Image2BlobParams();
         CV_WRAP Image2BlobParams(const Scalar& scalefactor, const Size& size = Size(), const Scalar& mean = Scalar(),
                             bool swapRB = false, int ddepth = CV_32F, DataLayout datalayout = DNN_LAYOUT_NCHW,
-                            ImagePaddingMode mode = DNN_PMODE_NULL);
+                            ImagePaddingMode mode = DNN_PMODE_NULL, Scalar borderValue = 0.0);
 
         CV_PROP_RW Scalar scalefactor; //!< scalefactor multiplier for input image values.
         CV_PROP_RW Size size;    //!< Spatial size for output image.
@@ -1221,6 +1221,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW int ddepth;   //!< Depth of output blob. Choose CV_32F or CV_8U.
         CV_PROP_RW DataLayout datalayout; //!< Order of output dimensions. Choose DNN_LAYOUT_NCHW or DNN_LAYOUT_NHWC.
         CV_PROP_RW ImagePaddingMode paddingmode;   //!< Image padding mode. @see ImagePaddingMode.
+        CV_PROP_RW Scalar borderValue;   //!< Value used in padding mode for padding.
     };
 
     /** @brief Creates 4-dimensional blob from image with given params.
@@ -1457,6 +1458,9 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP Model& setPreferableBackend(dnn::Backend backendId);
          /// @sa Net::setPreferableTarget
          CV_WRAP Model& setPreferableTarget(dnn::Target targetId);
+
+         /// @sa Net::enableWinograd
+         CV_WRAP Model& enableWinograd(bool useWinograd);
 
          CV_DEPRECATED_EXTERNAL
          operator Net&() const { return getNetwork_(); }

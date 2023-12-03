@@ -62,6 +62,15 @@ QUnit.test('Detectors', function(assert) {
   assert.equal(kp.size(), 53, 'AKAZE');
 });
 
+QUnit.test('SimpleBlobDetector', function(assert) {
+  let image = generateTestFrame();
+
+  let kp = new cv.KeyPointVector();
+  let sbd = new cv.SimpleBlobDetector();
+  sbd.detect(image, kp);
+  assert.equal(kp.size(), 0);
+});
+
 QUnit.test('BFMatcher', function(assert) {
   // Generate key points.
   let image = generateTestFrame();
