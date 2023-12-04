@@ -502,8 +502,8 @@ struct RemapVec_8u
         const short _rel_offset_y = static_cast<short>(rel_offset.y);
         v_int16x8 v_dxy0(_rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y);
         v_int16x8 v_dxy1 = v_dxy0;
-        v_dxy0 += v_int16x8(0, 0, 1, 0, 2, 0, 3, 0);
-        v_dxy1 += v_int16x8(4, 0, 5, 0, 6, 0, 7, 0);
+        v_dxy0 = v_dxy0+v_int16x8(0, 0, 1, 0, 2, 0, 3, 0);
+        v_dxy1 = v_dxy1+v_int16x8(4, 0, 5, 0, 6, 0, 7, 0);
         if( cn == 1 )
         {
             for( ; x <= width - 8; x += 8 )
