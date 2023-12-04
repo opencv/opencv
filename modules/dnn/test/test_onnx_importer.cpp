@@ -2745,7 +2745,7 @@ TEST_P(Test_ONNX_nets, YOLOv8)
     float iou_threshold = 0.50;
 
     std::vector<int> refClassIds{16, 1, 2};
-    std::vector<float> refScores{0.9332, 0.8959, 0.6157};
+    std::vector<float> refScores{0.9332f, 0.8959f, 0.6157f};
     // [x1, y1, x2, y2]
     std::vector<Rect2d> refBoxes{
         Rect2d(108.8965, 261.9094, 257.1633, 530.3049),
@@ -2811,7 +2811,7 @@ TEST_P(Test_ONNX_nets, YOLOv6)
     float iou_threshold = 0.50;
 
     std::vector<int> refClassIds{1, 16, 7, 1};
-    std::vector<float> refScores{0.95031, 0.87123,  0.65453, 0.34142};
+    std::vector<float> refScores{0.95031f, 0.87123f,  0.65453f, 0.34142f};
     // [x1, y1, x2, y2] x 3
     std::vector<Rect2d> refBoxes{Rect2d(98.84, 177.91, 473.29, 431.19),
                                  Rect2d(109.80, 265.50, 258.86, 531.97),
