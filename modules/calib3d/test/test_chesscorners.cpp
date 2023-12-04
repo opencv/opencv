@@ -235,7 +235,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 
     int progress = 0;
     int max_idx = (int)board_list.size()/2;
-    if(filename.compare("chessboard_list.dat") == 0 & pattern == CHESSBOARD_PLAIN)
+    if(filename.compare("chessboard_list.dat") == 0 && pattern == CHESSBOARD_PLAIN)
          max_idx = 7;
 
     double sum_error = 0.0;
