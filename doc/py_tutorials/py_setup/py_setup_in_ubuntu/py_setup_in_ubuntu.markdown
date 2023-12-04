@@ -1,7 +1,7 @@
 Install OpenCV-Python in Ubuntu {#tutorial_py_setup_in_ubuntu}
 ===============================
 
-[TOC]
+`[TOC]`
 
 Table of Contents
 
