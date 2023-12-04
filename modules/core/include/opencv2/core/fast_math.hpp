@@ -68,7 +68,7 @@
   // nothing, intrinsics/asm code is not supported
 #else
   #if ((defined _MSC_VER && defined _M_X64) \
-      || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__)) \
+      || (defined __GNUC__ && defined __SSE2__)) \
       && !defined(OPENCV_SKIP_INCLUDE_EMMINTRIN_H)
     #include <emmintrin.h>
   #endif

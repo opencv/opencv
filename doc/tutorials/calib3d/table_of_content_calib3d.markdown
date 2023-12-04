@@ -6,3 +6,4 @@ Camera calibration and 3D reconstruction (calib3d module) {#tutorial_table_of_co
 -   @subpage tutorial_camera_calibration
 -   @subpage tutorial_real_time_pose
 -   @subpage tutorial_interactive_calibration
+-   @subpage tutorial_usac

@@ -126,11 +126,17 @@ __kernel void MVN(__global const Dtype* src,
     alpha = 1;
 #endif
 
+#ifdef LAYER_NORM
+    vec_type w = load(bnorm_weight, y), b = load(bnorm_bias, y);
+#else
+
     Dtype w = 1.f, b = 0.f;
 #ifdef FUSE_BATCH_NORM
     w = bnorm_weight[x % channels];
     b = bnorm_bias[x % channels];
 #endif
+
+#endif // LAYER_NORM
 
     vec_type src_vec = load(src, index) - (vec_type)mean_val;
     vec_type dst_vec = src_vec * alpha;

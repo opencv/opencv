@@ -160,6 +160,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(GatherElements, GatherElementsLayer);
     CV_DNN_REGISTER_LAYER_CLASS(LayerNormalization, LayerNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Expand,         ExpandLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(InstanceNormalization, InstanceNormLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);

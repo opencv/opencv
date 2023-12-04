@@ -1059,7 +1059,7 @@ class FuncInfo(object):
             else:
                 py_name = classinfo.full_export_name + "." + self.variants[0].wname
 
-            if not self.is_static:
+            if not self.is_static and not self.isconstructor:
                 cname = classinfo.cname + '::' + cname
         else:
             py_name = '.'.join([self.namespace, self.variants[0].wname])
