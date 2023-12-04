@@ -30,7 +30,7 @@ Debian/Ubuntu MultiArch helps to fix this. It allows to install several foreign 
   - Good: Host and Target are 23.10.
   - Not Good: Host is 23.04, and Target is 23.10.
   - Not Good: Host is 23.10, and Target is 23.04.
-- This tutorial can also be used for debian(and Raspberry Pi OS)
+- This tutorial may be able to use for debian(and Raspberry Pi OS).
   Please make any necessary changes.
 
 Download tools
@@ -142,17 +142,24 @@ sudo apt update
 Update dpkg settings to support foreign architectures.
 
 Execute `sudo dpkg --add-architecture arm64` and/or `sudo dpkg --add-architecture armhf`.
-
-`sudo dpkg --print-foreign-architectures` shows what foreign architecutures are supported.
-
 @code{.bash}
 sudo dpkg --add-architecture arm64
 sudo dpkg --add-architecture armhf
+@endcode
 
+`sudo dpkg --print-architecture` shows what is host architecutures.
+@code{.bash}
 sudo dpkg --print-architecture
+@endcode
+@code{.unparsed}
 amd64
+@endcode
 
+And `sudo dpkg --print-foreign-architectures` shows what foreign architecutures are supported.
+@code{.bash}
 sudo dpkg --print-foreign-architectures
+@endcode
+@code{.unparsed}
 arm64
 armhf
 @endcode
@@ -218,21 +225,26 @@ sudo apt install -y \
 
 If successeed, pkg-config can show information about these packages.
 
+For freetype2 and harfbuzz
 @code{.bash}
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
        pkg-config freetype2 harfbuzz --cflags --libs
-
+@endcode
+@code{.unparsed}
 -I/usr/include/freetype2 -I/usr/include/libpng16 -I/usr/include/harfbuzz -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include -L/usr/lib/aarch64-linux-gnu -lfreetype -lharfbuzz
+@endcode
 
+For FFmpeg
+@code{.bash}
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
        pkg-config libavcodec libavformat libavutil libswscale --cflags --libs
-
+@endcode
+@code{.unparsed}
 -I/usr/include/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu -lavcodec -lavformat -lavutil -lswscale
-
 @endcode
 
 ### Step2) Configure OpenCV Settings
@@ -410,31 +422,32 @@ For example)
 
 @warning
 @parblock
-If you forget install some nessesary libraries, it will not works well.
-`ldd` command can detect dependency. If there are any "not found", please could you install essesary libraries.
+If you forget/mismatch to install some nessesary libraries, OpenCV will not works well.
 
-For example)
-
-(Not Good) `freetype module` requests `libharfbuzz.so.0`, but it has not been installed.
+`ldd` command can detect dependency. If there are any "not found", please install nessesary libraries.
 
 @code{.bash}
 ldd /usr/local/lib/libopencv_freetype.so
+@endcode
+
+(Not Good) `freetype module` requires `libharfbuzz.so.0`, but it has not been installed.
+@code{.unparsed}
         linux-vdso.so.1 (0xABCDEFG01234567)
         libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEF001234567)
         libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEF001234567)
         libharfbuzz.so.0 => not found
         libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEF001234567)
+        :
 @endcode
 
-(Good) All libraries which are required from freetyoe modules are installed.
-
-@code{.bash}
-ldd /usr/local/lib/libopencv_freetype.so
+(Good) All libraries which are required from `freetype modules` are installed.
+@code{.unparsed}
         linux-vdso.so.1 (0xABCDEFG01234567)
         libopencv_imgproc.so.408 => /usr/local/lib/libopencv_imgproc.so.408 (0xABCDEF001234567)
         libfreetype.so.6 => /lib/aarch64-linux-gnu/libfreetype.so.6 (0xABCDEF001234567)
         libharfbuzz.so.0 => /lib/aarch64-linux-gnu/libharfbuzz.so.0 (0xABCDEF001234567)
         libopencv_core.so.408 => /usr/local/lib/libopencv_core.so.408 (0xABCDEF001234567)
+        :
 @endcode
 @endparblock
 
