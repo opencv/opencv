@@ -2661,7 +2661,7 @@ FilteredDetections yoloPostProcessing(std::vector<Mat>& outs, float conf_thresho
             float obj_conf = (test_name != "yolov8") ? preds.at<float>(i, 4) : 1.0f;
             if (obj_conf < conf_threshold)
                 continue;
-            
+
             Mat scores = preds.row(i).colRange((test_name != "yolov8") ? 5 : 4, preds.cols);
             double conf;
             Point maxLoc;
@@ -2712,7 +2712,7 @@ TEST_P(Test_ONNX_nets, YOLOx)
     std::vector<int> refClassIds{1, 16, 7};
     std::vector<float> refScores{0.96f, 0.91f, 0.66f};
 
-    // [x1, y1, x2, y2] 
+    // [x1, y1, x2, y2]
     std::vector<Rect2d> refBoxes{
         Rect2d(104.62, 181.28, 470.95, 428.22),
         Rect2d(112.32, 264.88, 258.11, 527.31),
@@ -2731,8 +2731,8 @@ TEST_P(Test_ONNX_nets, YOLOx)
         );
 
     testYOLO(
-        weightPath, refClassIds, refScores, refBoxes, 
-        imgParams, conf_threshold, iou_threshold, 
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, conf_threshold, iou_threshold,
         1.0e-1, 1.0e-1);
 }
 
@@ -2765,8 +2765,8 @@ TEST_P(Test_ONNX_nets, YOLOv8)
         );
 
     testYOLO(
-        weightPath, refClassIds, refScores, refBoxes, 
-        imgParams, conf_threshold, iou_threshold, 
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, conf_threshold, iou_threshold,
         1.0e-1, 1.0e-1, "yolov8");
 }
 
@@ -2785,7 +2785,7 @@ TEST_P(Test_ONNX_nets, YOLOv7)
     std::vector<Rect2d> refBoxes{Rect2d(105.973236f, 150.16716f,  472.59012f, 466.48834f),
                                  Rect2d(109.97953f,  246.17862f, 259.83676f, 600.76624f),
                                  Rect2d(385.96185f, 83.02809f,  576.07355f,  189.82793f)};
-                                 
+
     Size targetSize{640, 640};
 
     Image2BlobParams imgParams(
@@ -2831,8 +2831,8 @@ TEST_P(Test_ONNX_nets, YOLOv6)
         );
 
     testYOLO(
-        weightPath, refClassIds, refScores, refBoxes, 
-        imgParams, conf_threshold, iou_threshold, 
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, conf_threshold, iou_threshold,
         1.0e-1, 1.0e-1);
 }
 
@@ -2847,7 +2847,7 @@ TEST_P(Test_ONNX_nets, YOLOv5n)
     std::vector<Rect2d> refBoxes{Rect2d(108.088f, 239.293f, 266.196f, 607.658f),
                                  Rect2d(392.028f, 89.9233f, 579.152f, 190.447f),
                                  Rect2d(120.278f, 159.76, 214.481f, 241.473f)};
-                                
+
     Size targetSize{640, 640};
 
     Image2BlobParams imgParams(
