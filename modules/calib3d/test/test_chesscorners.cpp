@@ -295,12 +295,12 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         }
 
         bool result = findChessboardCornersWrapper(gray, pattern_size,v,flags);
-      
+
         if(result && pattern == CHESSBOARD_PLAIN) {
             gray = ori;
             cornerSubPix(gray, v, Size(6,6), Size(-1,-1), TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30, 0.1));
         }
-      
+
         if(result && sharpness && (pattern == CHESSBOARD_SB || pattern == CHESSBOARD || pattern == CHESSBOARD_PLAIN))
         {
             Scalar s= estimateChessboardSharpness(gray,pattern_size,v);
