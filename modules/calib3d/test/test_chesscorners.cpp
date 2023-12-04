@@ -149,8 +149,26 @@ void CV_ChessboardDetectorTest::run( int /*start_from */)
         case CHESSBOARD_SB:
             checkByGeneratorHighAccuracy();      // not supported by CHESSBOARD
             /* fallthrough */
-        case CHESSBOARD:
         case CHESSBOARD_PLAIN:
+            checkByGenerator();
+            if (ts->get_err_code() != cvtest::TS::OK)
+            {
+                break;
+            }
+
+            run_batch("negative_list.dat");
+            if (ts->get_err_code() != cvtest::TS::OK)
+            {
+                break;
+            }
+
+            run_batch("chessboard_list.dat");
+            if (ts->get_err_code() != cvtest::TS::OK)
+            {
+                break;
+            }
+            break;
+        case CHESSBOARD:
             checkByGenerator();
             if (ts->get_err_code() != cvtest::TS::OK)
             {
@@ -219,8 +237,6 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
     int max_idx = (int)board_list.size()/2;
     if(filename.compare("chessboard_list.dat") == 0 & pattern == CHESSBOARD_PLAIN)
          max_idx = 7;
-    if(filename.compare("chessboard_list_subpixel.dat") == 0 & pattern == CHESSBOARD_PLAIN)
-      max_idx = 0;
 
     double sum_error = 0.0;
     int count = 0;
