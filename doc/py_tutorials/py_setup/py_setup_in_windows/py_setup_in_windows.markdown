@@ -77,7 +77,7 @@ To install OpenCV in your Anaconda environment perform the following steps:
 
 -#   Use this command to install opencv in Anaconda
       @code{.sh}
-      conda install -c conda-forge opencv
+      conda install -y -c conda-forge opencv
       @endcode
 -#   Press Enter
 -#   Press 'y' when prompted and press Enter. This completes the installation.
