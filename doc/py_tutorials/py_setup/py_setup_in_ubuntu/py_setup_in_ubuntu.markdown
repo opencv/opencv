@@ -1,16 +1,17 @@
 Install OpenCV-Python in Ubuntu {#tutorial_py_setup_in_ubuntu}
 ===============================
 
-`[TOC]`
 
-Table of Contents
 
-1. Installing OpenCV using pip in Ubuntu
-2. Installing OpenCV-Python from Pre-built Binaries
-3. Building OpenCV from source
-4. Optional Dependencies
-5. Downloading OpenCV
-6. Configuring and Installing
+# Table of Contents
+
+1. [Installing OpenCV using pip in Ubuntu](#pip)
+2. [Installing OpenCV-Python from Pre-built Binaries](#binaries)
+3. [Building OpenCV from source](#source)
+4. [Required Built-in Dependencies](#build)
+5. [Optional Dependencies](#dependencies)
+6. [Downloading OpenCV](#download)
+7. [Configuring and Installing](#install)
 
 Goals
 -----
@@ -27,6 +28,8 @@ OpenCV-Python requires only **Numpy** (in addition to other dependencies, which 
 But in this tutorials, we also use **Matplotlib** for some easy and nice plotting purposes (which I feel much better compared to OpenCV).
 Matplotlib is optional, but highly recommended.
 Similarly we will also see **IPython**, an Interactive Python Terminal, which is also highly recommended.
+
+<a id="pip"></a>
 
 Installing OpenCV using pip in Ubuntu
 -------------------------------------
@@ -45,7 +48,9 @@ These are the steps that will guide you in setting up OpenCV in your Ubuntu syst
   @code{.sh}
     python3 -m pip install opencv-python
   @endcode
-  
+
+<a id="binaries"></a>
+
 Installing OpenCV-Python from Pre-built Binaries
 ------------------------------------------------
 
@@ -77,6 +82,8 @@ Also at some point in time, if you want to contribute to OpenCV, you will need t
 
 
 
+<a id="source"></a>
+
 Building OpenCV from source
 ---------------------------
 
@@ -86,6 +93,7 @@ First we will install some dependencies.
 Some are required, some are optional.
 You can skip optional dependencies if you don't want.
 
+<a id="build"></a>
 ### Required build dependencies
 
 We need **CMake** to configure the installation, **GCC** for compilation, **Python-devel** and
@@ -124,6 +132,7 @@ to support gtk3:
 ```
 sudo apt-get install libgtk-3-dev
 ```
+<a id="dependencies"></a>
 
 ### Optional Dependencies
 
@@ -145,6 +154,7 @@ sudo apt-get install libwebp-dev
 
 @note If you are using Ubuntu 16.04 you can also install ```libjasper-dev``` to add a system level support for the JPEG2000 format.
 
+<a id="download"></a>
 ### Downloading OpenCV
 
 To download the latest source from OpenCV's [GitHub Repository](https://github.com/opencv/opencv).
@@ -166,6 +176,7 @@ $ mkdir build
 $ cd build
 ```
 
+<a id="install"></a>
 ### Configuring and Installing
 
 Now we have all the required dependencies, let's install OpenCV.
