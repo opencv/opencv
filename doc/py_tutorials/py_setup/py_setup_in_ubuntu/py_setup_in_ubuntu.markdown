@@ -3,15 +3,15 @@ Install OpenCV-Python in Ubuntu {#tutorial_py_setup_in_ubuntu}
 
 
 
-# Table of Contents
+@tableofcontents
 
-1. [Installing OpenCV using pip in Ubuntu](#pip)
-2. [Installing OpenCV-Python from Pre-built Binaries](#binaries)
-3. [Building OpenCV from source](#source)
-4. [Required Built-in Dependencies](#build)
-5. [Optional Dependencies](#dependencies)
-6. [Downloading OpenCV](#download)
-7. [Configuring and Installing](#install)
+1. Installing OpenCV using pip in Ubuntu
+2. Installing OpenCV-Python from Pre-built Binaries
+3. Building OpenCV from source
+4. Required Built-in Dependencies
+5. Optional Dependencies
+6. Downloading OpenCV
+7. Configuring and Installing
 
 Goals
 -----
@@ -29,30 +29,27 @@ But in this tutorials, we also use **Matplotlib** for some easy and nice plottin
 Matplotlib is optional, but highly recommended.
 Similarly we will also see **IPython**, an Interactive Python Terminal, which is also highly recommended.
 
-<a id="pip"></a>
-
 Installing OpenCV using pip in Ubuntu
 -------------------------------------
 
 These are the steps that will guide you in setting up OpenCV in your Ubuntu system: 
 
-### Install Python on your system:
+-# Install Python on your system:
 
 ```
  sudo apt-get install python3
 ```
     
-### Install pip: 
+-# Install pip:
       ```
       sudo apt-get install python3-pip
       ```
     
-### Install OpenCV:
+-# Install OpenCV:
     ```
     python3 -m pip install opencv-python  
     ```
     
-<a id="binaries"></a>
 
 Installing OpenCV-Python from Pre-built Binaries
 ------------------------------------------------
@@ -84,9 +81,6 @@ So for getting latest source codes preference is next method, i.e. compiling fro
 Also at some point in time, if you want to contribute to OpenCV, you will need this.
 
 
-
-<a id="source"></a>
-
 Building OpenCV from source
 ---------------------------
 
@@ -96,8 +90,8 @@ First we will install some dependencies.
 Some are required, some are optional.
 You can skip optional dependencies if you don't want.
 
-<a id="build"></a>
-### Required build dependencies
+Required build dependencies
+---------------------------
 
 We need **CMake** to configure the installation, **GCC** for compilation, **Python-devel** and
 **Numpy** for building Python bindings etc.
@@ -135,9 +129,9 @@ to support gtk3:
 ```
 sudo apt-get install libgtk-3-dev
 ```
-<a id="dependencies"></a>
 
-### Optional Dependencies
+Optional Dependencies
+---------------------
 
 Above dependencies are sufficient to install OpenCV in your Ubuntu machine.
 But depending upon your requirements, you may need some extra dependencies.
@@ -157,8 +151,8 @@ sudo apt-get install libwebp-dev
 
 @note If you are using Ubuntu 16.04 you can also install ```libjasper-dev``` to add a system level support for the JPEG2000 format.
 
-<a id="download"></a>
-### Downloading OpenCV
+Downloading OpenCV
+------------------
 
 To download the latest source from OpenCV's [GitHub Repository](https://github.com/opencv/opencv).
 (If you want to contribute to OpenCV choose this. For that, you need to install **Git** first)
@@ -179,8 +173,8 @@ $ mkdir build
 $ cd build
 ```
 
-<a id="install"></a>
-### Configuring and Installing
+Configuring and Installing
+--------------------------
 
 Now we have all the required dependencies, let's install OpenCV.
 Installation has to be configured with CMake.
