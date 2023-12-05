@@ -89,7 +89,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     else
                         kernels::eltwise_sum_coeff_2<T>(stream, output, coeffs[0], input_x, coeffs[1], input_y);
                     break;
-                case EltwiseOpType::SUB: kernels::eltwise_div_2<T>(stream, output, input_x, input_y); break;
+                case EltwiseOpType::SUB: kernels::eltwise_sub_2<T>(stream, output, input_x, input_y); break;
                 }
             }
             else
@@ -121,6 +121,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                             kernels::eltwise_sum_coeff_2<T>(stream, output, coeff_x, output, coeffs[i], input);
                         }
                         break;
+                    case EltwiseOpType::SUB: kernels::eltwise_sub_2<T>(stream, output, output, input); break;
                     }
                 }
             }
