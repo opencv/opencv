@@ -834,6 +834,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
                 catch (const cv::Exception& e)
                 {
                     CV_LOG_ERROR(NULL, "forwardVkCom failed, fallback to CPU implementation. " << e.what());
+                    CV_LOG_ERROR(NULL, "This can be caused by insufficient maxComputeGroupInvocation size (1024 is required for some layers).");
                     it->second = Ptr<BackendNode>();
                     forwardLayer(ld);
                 }

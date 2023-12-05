@@ -97,10 +97,10 @@ void copyToMat(Mat &dst, vkcom::Tensor &src)
     CV_Assert(dst.type() == CV_32F);
 
     std::vector<int> shape = src.getShape();
-    void *data = src.map();
+    void *data = src.mapHost();
     Mat tmp(shape, CV_32F, data);
     tmp.copyTo(dst);
-    src.unMap();
+    src.unMapHostReadOnly();
 }
 
 vkcom::Tensor VkComTensor(const Ptr<BackendWrapper>& ptr)

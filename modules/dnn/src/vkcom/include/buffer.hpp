@@ -19,17 +19,21 @@ namespace cv { namespace dnn { namespace vkcom {
 class Buffer
 {
 public:
-    Buffer(VkBufferUsageFlags usageFlag = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    Buffer(size_t size_in_bytes, const char* data, VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    Buffer(VkBufferUsageFlags usageFlag = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, bool deviceOnly = true);
+    Buffer(size_t size_in_bytes, const char* data, VkBufferUsageFlags usageFlag = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, bool deviceOnly = true);
     ~Buffer();
     VkDeviceMemory getVkMemory() { return memory_; }
     VkBuffer getVkBuffer() { return buffer_; }
+    bool isDeviceOnly() { return deviceOnly_; }
 
 private:
     bool init(size_t size_in_bytes, const char* data);
     VkBufferUsageFlags usageFlag_;
     VkBuffer buffer_;
     VkDeviceMemory memory_;
+    // If true, then this buffer should have its VkMemory on target device, 
+    // and it should be copied by first buffering it to host memory.
+    bool deviceOnly_; 
 };
 
 #endif // HAVE_VULKAN

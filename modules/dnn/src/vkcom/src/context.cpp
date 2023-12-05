@@ -34,6 +34,7 @@ namespace cv { namespace dnn { namespace vkcom {
 // Global Variable
 VkQueue kQueue = VK_NULL_HANDLE;
 VkDevice kDevice = VK_NULL_HANDLE; // It was used almost everywhere.
+GPU_TYPE kDeviceType = GPU_TYPE::GPU_TYPE_NOFOUND;
 VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
 cv::Mutex kContextMtx;
 Ptr<CommandPool> cmdPoolPtr;
@@ -434,7 +435,7 @@ Context::Context()
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
     VK_CHECK_RESULT(vkCreateDevice(kPhysicalDevice, &deviceCreateInfo, NULL, &kDevice));
-
+    kDeviceType = gpuInfoList[bestGPUIndex].type;
     // Get a handle to the only member of the queue family.
     vkGetDeviceQueue(kDevice, kQueueFamilyIndex, 0, &kQueue);
 
@@ -536,7 +537,7 @@ GPUInfo Context::parseGPUInfo(VkPhysicalDevice& kPhysicalDevice)
 
     CV_LOG_INFO(NULL, "maxSharedMemorySize = "<<info.maxSharedMemorySize<<".");
     CV_LOG_INFO(NULL, "maxWorkgroupCount ( "
-            <<info.maxWorkgroupSize_x<<", "<<info.maxWorkgroupSize_y<<", "<<info.maxWorkgroupSize_z<<").");
+            <<info.maxWorkgroupCount_x<<", "<<info.maxWorkgroupCount_y<<", "<<info.maxWorkgroupCount_z<<").");
     CV_LOG_INFO(NULL, "maxWorkgroup_invocations = "<<info.maxWorkgroup_invocations<<".");
     CV_LOG_INFO(NULL, "maxWorkgroupSize ( "
             <<info.maxWorkgroupSize_x<<", "<<info.maxWorkgroupSize_y<<", "<<info.maxWorkgroupSize_z<<").");
@@ -615,7 +616,24 @@ GPUInfo Context::parseGPUInfo(VkPhysicalDevice& kPhysicalDevice)
     }
 
     // cache memory properties
+
+    //TODO(VK): delete this
     vkGetPhysicalDeviceMemoryProperties(kPhysicalDevice, &info.physicalDeviceMemoryProperties);
+    CV_LOG_DEBUG(NULL, "memoryTypeCount = "<<info.physicalDeviceMemoryProperties.memoryTypeCount<<".");
+    CV_LOG_DEBUG(NULL, "memoryHeapCount = "<<info.physicalDeviceMemoryProperties.memoryHeapCount<<".");
+    for (uint32_t i = 0; i < info.physicalDeviceMemoryProperties.memoryTypeCount; i++)
+    {
+        const VkMemoryType& memoryType = info.physicalDeviceMemoryProperties.memoryTypes[i];
+        CV_LOG_DEBUG(NULL, "memoryType["<<i<<"] flags = "<<memoryType.propertyFlags<<".");
+        CV_LOG_DEBUG(NULL, "memoryType["<<i<<"] heapIndex = "<<memoryType.heapIndex<<".");
+    }
+    for (uint32_t i = 0; i < info.physicalDeviceMemoryProperties.memoryHeapCount; i++)
+    {
+        const VkMemoryHeap& memoryHeap = info.physicalDeviceMemoryProperties.memoryHeaps[i];
+        CV_LOG_DEBUG(NULL, "memoryHeap["<<i<<"] size = "<<memoryHeap.size<<".");
+        CV_LOG_DEBUG(NULL, "memoryHeap["<<i<<"] flags = "<<memoryHeap.flags<<".");
+    }
+
 
     // get device extension
     uint32_t deviceExtensionPropertyCount = 0;

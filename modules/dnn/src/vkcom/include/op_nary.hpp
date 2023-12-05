@@ -62,16 +62,22 @@ public:
     virtual bool forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs) CV_OVERRIDE;
     Ptr<Tensor> weightTensorPtr;
 private:
+    bool computeGroupCount();
     bool binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs);
     bool trinaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs);
     bool naryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs);
 
     const OPERATION naryOpType;
-    NaryShaderType naryShaderType;
+    NaryShaderType shaderType;
+    NaryShaderConfig config;
     int ninputs;
     int max_ndims;
     AutoBuffer<int32_t> shapesBuf;
     AutoBuffer<int32_t> stepsBuf;
+    int nplanes; // number of planes computations are to be performed on
+    int N2; // value of shape[ndims - 2]
+    int N1; // value of shape[ndims - 1]
+
     bool firstForwardFinsh = false;
 };
 

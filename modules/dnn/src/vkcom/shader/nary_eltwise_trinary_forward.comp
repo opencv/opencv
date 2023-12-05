@@ -1,5 +1,5 @@
 #version 450
-#extension GL_EXT_debug_printf : enable
+// #extension GL_EXT_debug_printf : enable
 #define KSTRIP_LEN 32
 #define BLOCK_SIZE 64
 #define WARP 32
@@ -124,7 +124,7 @@ void binary_add()
 
 void main()
 {
-    debugPrintfEXT("nary_eltwise_binary_forward.comp loaded\n");
+    // debugPrintfEXT("nary_eltwise_binary_forward.comp loaded\n");
     int mIndex = int(gl_WorkGroupID.x) * BLOCK_SIZE;
     int nIndex = int(gl_WorkGroupID.y) * BLOCK_SIZE;
 
