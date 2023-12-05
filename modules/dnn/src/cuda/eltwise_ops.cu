@@ -320,7 +320,7 @@ void eltwise_div_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, 
 }
 
 template <class T>
-void eltwise_div_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
+void eltwise_sub_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
     eltwise_op<T, SubFunctor<T>>(stream, output, x, y);
 }
 
