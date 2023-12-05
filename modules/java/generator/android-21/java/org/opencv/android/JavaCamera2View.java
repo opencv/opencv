@@ -321,6 +321,10 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 }
                 createCameraPreviewSession();
             }
+
+            if (mFpsMeter != null) {
+                mFpsMeter.setResolution(mFrameWidth, mFrameHeight);
+            }
         } catch (RuntimeException e) {
             throw new RuntimeException("Interrupted while setCameraPreviewSize.", e);
         }

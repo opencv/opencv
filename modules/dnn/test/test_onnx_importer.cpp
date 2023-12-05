@@ -55,7 +55,7 @@ public:
     void testONNXModels(const String& basename, const Extension ext = npy,
                         double l1 = 0, double lInf = 0, const bool useSoftmax = false,
                         bool checkNoFallbacks = true, int numInps = 1,
-                        bool testShapes = true)
+                        bool testShapes = true, bool useWinograd = true)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
         std::vector<Mat> inps(numInps);
@@ -82,6 +82,7 @@ public:
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
+        net.enableWinograd(useWinograd);
 
         std::vector<String> inputNames;
         for (int i = 0; i < numInps; ++i)
@@ -1929,7 +1930,9 @@ TEST_P(Test_ONNX_layers, ConvResizePool1d)
 #endif
     }
 #endif
-    testONNXModels("conv_resize_pool_1d");
+
+    const double lInf = (target == DNN_TARGET_CPU_FP16) ? 0.024 : default_lInf;
+    testONNXModels("conv_resize_pool_1d", npy, default_l1, lInf);
 }
 
 TEST_P(Test_ONNX_layers, DepthWiseAdd)
@@ -2130,6 +2133,7 @@ TEST_P(Test_ONNX_nets, Alexnet)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+    net.enableWinograd(false);
 
     Mat inp = imread(_tf("../grace_hopper_227.png"));
     Mat ref = blobFromNPY(_tf("../caffe_alexnet_prob.npy"));
@@ -2201,6 +2205,9 @@ TEST_P(Test_ONNX_nets, Googlenet)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
 
     std::vector<Mat> images;
     images.push_back( imread(_tf("../googlenet_0.png")) );
@@ -2346,7 +2353,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
     }
 #endif
 
-    testONNXModels("tiny_yolo2", pb, l1, lInf);
+    testONNXModels("tiny_yolo2", pb, l1, lInf, false, true, 1, true, false);
 }
 
 TEST_P(Test_ONNX_nets, CNN_MNIST)
@@ -2391,6 +2398,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
 
     double l1 = default_l1, lInf = default_lInf;
     // output range: [-3; 3]
+    bool useWinograd = true;
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
     {
         l1 = 0.009;
@@ -2406,7 +2414,14 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
         l1 = 0.009;
         lInf = 0.04;
     }
-    testONNXModels("LResNet100E_IR", pb, l1, lInf);
+    else if (target == DNN_TARGET_CPU_FP16)
+    {
+        useWinograd = false;
+        l1 = 0.009;
+        lInf = 0.035;
+    }
+
+    testONNXModels("LResNet100E_IR", pb, l1, lInf, false, true, 1, true, useWinograd);
 }
 
 TEST_P(Test_ONNX_nets, Emotion_ferplus)
@@ -2421,7 +2436,7 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
 
     double l1 = default_l1;
     double lInf = default_lInf;
-
+    bool useWinograd = true;
     // Output values are in range [-2.011, 2.111]
     if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) || (target == DNN_TARGET_CUDA_FP16))
         l1 = 0.007;
@@ -2434,6 +2449,11 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
         l1 = 2.4e-4;
         lInf = 6e-4;
     }
+    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+    {
+        useWinograd = false;
+        l1 = 0.007;
+    }
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
     {
@@ -2441,7 +2461,7 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
     }
 #endif
 
-    testONNXModels("emotion_ferplus", pb, l1, lInf);
+    testONNXModels("emotion_ferplus", pb, l1, lInf, false, true, 1, true, useWinograd);
 }
 
 TEST_P(Test_ONNX_nets, Inception_v2)
@@ -2585,27 +2605,14 @@ TEST_P(Test_ONNX_layers, CumSum)
     testONNXModels("cumsum_3d_dim_2");
 }
 
-// This test is mainly to test:
-//  1. identity node with constant input
-//  2. limited support to range operator (all inputs are constant)
-//  3. parseExpand with multiple broadcast axes
-//  4. 1D mat dimension issue with the output of range operator
-TEST_P(Test_ONNX_layers, YOLOv7)
+static void testYOLO(const std::string& weightPath, const std::vector<int>& refClassIds,
+                     const std::vector<float>& refScores, const std::vector<Rect2d>& refBoxes)
 {
-    std::string weightPath = _tf("models/yolov7_not_simplified.onnx", false);
     std::string imgPath = _tf("../dog_orig_size.png");
 
     Size targetSize{640, 640};
     float conf_threshold = 0.3;
     float iou_threshold = 0.5;
-
-    // Reference, which is collected with input size of 640x640
-    std::vector<int> refClassIds{1, 16, 7};
-    std::vector<float> refScores{0.9614331f, 0.9589417f, 0.8679074f};
-    // [x1, y1, x2, y2] x 3
-    std::vector<Rect2d> refBoxes{Rect2d(105.973236f, 150.16716f,  472.59012f, 466.48834f),
-                                  Rect2d(109.97953f,  246.17862f, 259.83676f, 600.76624f),
-                                  Rect2d(385.96185f, 83.02809f,  576.07355f,  189.82793f)};
 
     Mat img = imread(imgPath);
     Mat inp = blobFromImage(img, 1/255.0, targetSize, Scalar(0, 0, 0), true, false);
@@ -2616,40 +2623,42 @@ TEST_P(Test_ONNX_layers, YOLOv7)
     std::vector<Mat> outs;
     net.forward(outs, net.getUnconnectedOutLayersNames());
 
-    Mat preds = outs[3].reshape(1, outs[3].size[1]); // [1, 25200, 85]
-
     // Retrieve
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<Rect2d> boxes;
     // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
-    for (int i = 0; i < preds.rows; ++i)
+    for (auto preds : outs)
     {
-        // filter out non objects
-        float obj_conf = preds.row(i).at<float>(4);
-        if (obj_conf < conf_threshold)
-            continue;
+        preds = preds.reshape(1, preds.size[1]);
+        for (int i = 0; i < preds.rows; ++i)
+        {
+            // filter out non objects
+            float obj_conf = preds.row(i).at<float>(4);
+            if (obj_conf < conf_threshold)
+                continue;
 
-        // get class id and conf
-        Mat scores = preds.row(i).colRange(5, preds.cols);
-        double conf;
-        Point maxLoc;
-        minMaxLoc(scores, 0, &conf, 0, &maxLoc);
-        conf *= obj_conf;
-        if (conf < conf_threshold)
-            continue;
+            // get class id and conf
+            Mat scores = preds.row(i).colRange(5, preds.cols);
+            double conf;
+            Point maxLoc;
+            minMaxLoc(scores, 0, &conf, 0, &maxLoc);
+            conf *= obj_conf;
+            if (conf < conf_threshold)
+                continue;
 
-        // get bbox coords
-        float* det = preds.ptr<float>(i);
-        double cx = det[0];
-        double cy = det[1];
-        double w = det[2];
-        double h = det[3];
-        // [x1, y1, x2, y2]
-        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
-                                cx + 0.5 * w, cy + 0.5 * h));
-        classIds.push_back(maxLoc.x);
-        confidences.push_back(conf);
+            // get bbox coords
+            float* det = preds.ptr<float>(i);
+            double cx = det[0];
+            double cy = det[1];
+            double w = det[2];
+            double h = det[3];
+            // [x1, y1, x2, y2]
+            boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
+                                    cx + 0.5 * w, cy + 0.5 * h));
+            classIds.push_back(maxLoc.x);
+            confidences.push_back(conf);
+        }
     }
 
     // NMS
@@ -2669,39 +2678,41 @@ TEST_P(Test_ONNX_layers, YOLOv7)
     normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes);
 }
 
+// This test is mainly to test:
+//  1. identity node with constant input
+//  2. limited support to range operator (all inputs are constant)
+//  3. parseExpand with multiple broadcast axes
+//  4. 1D mat dimension issue with the output of range operator
+TEST_P(Test_ONNX_nets, YOLOv7)
+{
+    std::string weightPath = _tf("models/yolov7_not_simplified.onnx", false);
+    // Reference, which is collected with input size of 640x640
+    std::vector<int> refClassIds{1, 16, 7};
+    std::vector<float> refScores{0.9614331f, 0.9589417f, 0.8679074f};
+    // [x1, y1, x2, y2] x 3
+    std::vector<Rect2d> refBoxes{Rect2d(105.973236f, 150.16716f,  472.59012f, 466.48834f),
+                                 Rect2d(109.97953f,  246.17862f, 259.83676f, 600.76624f),
+                                 Rect2d(385.96185f, 83.02809f,  576.07355f,  189.82793f)};
+    testYOLO(weightPath, refClassIds, refScores, refBoxes);
+}
+
+TEST_P(Test_ONNX_nets, YOLOv5n)
+{
+    std::string weightPath = findDataFile("dnn/yolov5n.onnx", false);
+    // Reference, which is collected with input size of 640x640
+    std::vector<int> refClassIds{16, 2, 1};
+    std::vector<float> refScores{0.749053f, 0.616853f, 0.32506f};
+    // [x1, y1, x2, y2] x 4
+
+    std::vector<Rect2d> refBoxes{Rect2d(108.088f, 239.293f, 266.196f, 607.658f),
+                                 Rect2d(392.028f, 89.9233f, 579.152f, 190.447f),
+                                 Rect2d(120.278f, 159.76, 214.481f, 241.473f)};
+    testYOLO(weightPath, refClassIds, refScores, refBoxes);
+}
+
 TEST_P(Test_ONNX_layers, Tile)
 {
     testONNXModels("tile", pb);
-}
-
-TEST_P(Test_ONNX_layers, LayerNorm)
-{
-    testONNXModels("test_layer_normalization_2d_axis0", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_2d_axis1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_2d_axis_negative_1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_2d_axis_negative_2", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis0_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis1_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis2_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis_negative_1_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis_negative_2_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_3d_axis_negative_3_epsilon", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis0", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis2", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis3", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_1", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_2", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_3", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_4d_axis_negative_4", pb, 0, 0, false, true, 3);
-    testONNXModels("test_layer_normalization_default_axis", pb, 0, 0, false, true, 3);
-}
-
-// for testing graph simplification
-TEST_P(Test_ONNX_layers, LayerNormExpanded)
-{
-    testONNXModels("layer_norm_expanded");
-    testONNXModels("layer_norm_expanded_with_initializers");
 }
 
 TEST_P(Test_ONNX_layers, Gelu)

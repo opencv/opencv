@@ -9,7 +9,7 @@
 
         <activity
                   android:exported="true"
-                  android:name="FdActivity"
+                  android:name="FaceDetectActivity"
                   android:label="@string/app_name"
                   android:screenOrientation="landscape"
                   android:configChanges="keyboardHidden|orientation">

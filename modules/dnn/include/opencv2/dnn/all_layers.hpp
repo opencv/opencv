@@ -303,7 +303,7 @@ CV__DNN_INLINE_NS_BEGIN
         // quantization type flag. The perChannel default is true, that means it contains the parameters
         // of per-Channel quantization. Otherwise, that means this layer contains per-Tensor quantized parameters.
         bool per_channel;
-        bool useWinograd = true; // Flag whether to use Winograd to speed up 3x3 convolution.
+        bool useWinograd = false; // Flag whether to use Winograd to speed up 3x3 convolution.
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
     };
 
