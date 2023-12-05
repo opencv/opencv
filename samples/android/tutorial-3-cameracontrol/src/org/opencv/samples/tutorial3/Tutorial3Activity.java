@@ -6,11 +6,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.ListIterator;
 
-import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraActivity;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
-import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
@@ -43,24 +41,6 @@ public class Tutorial3Activity extends CameraActivity implements CvCameraViewLis
     private MenuItem[] mResolutionMenuItems;
     private SubMenu mResolutionMenu;
 
-    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                {
-                    Log.i(TAG, "OpenCV loaded successfully");
-                    mOpenCvCameraView.enableView();
-                    mOpenCvCameraView.setOnTouchListener(Tutorial3Activity.this);
-                } break;
-                default:
-                {
-                    super.onManagerConnected(status);
-                } break;
-            }
-        }
-    };
-
     public Tutorial3Activity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
@@ -70,6 +50,15 @@ public class Tutorial3Activity extends CameraActivity implements CvCameraViewLis
     public void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
+
+        if (OpenCVLoader.initLocal()) {
+            Log.i(TAG, "OpenCV loaded successfully");
+        } else {
+            Log.e(TAG, "OpenCV initialization failed!");
+            (Toast.makeText(this, "OpenCV initialization failed!", Toast.LENGTH_LONG)).show();
+            return;
+        }
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.tutorial3_surface_view);
@@ -93,12 +82,9 @@ public class Tutorial3Activity extends CameraActivity implements CvCameraViewLis
     public void onResume()
     {
         super.onResume();
-        if (!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
-        } else {
-            Log.d(TAG, "OpenCV library found inside package. Using it!");
-            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        if (mOpenCvCameraView != null) {
+            mOpenCvCameraView.enableView();
+            mOpenCvCameraView.setOnTouchListener(Tutorial3Activity.this);
         }
     }
 

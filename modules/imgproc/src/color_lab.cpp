@@ -1223,119 +1223,120 @@ static LABLUVLUT_s16_t initLUTforLABLUVs16(const softfloat & un, const softfloat
 }
 
 
-static void initLabTabs()
+static bool createLabTabs()
 {
-    static bool initialized = false;
-    if(!initialized)
+    softfloat f[LAB_CBRT_TAB_SIZE+1], g[GAMMA_TAB_SIZE+1], ig[GAMMA_TAB_SIZE+1];
+    softfloat scale = softfloat::one()/softfloat(LabCbrtTabScale);
+    int i;
+    for(i = 0; i <= LAB_CBRT_TAB_SIZE; i++)
     {
-        softfloat f[LAB_CBRT_TAB_SIZE+1], g[GAMMA_TAB_SIZE+1], ig[GAMMA_TAB_SIZE+1];
-        softfloat scale = softfloat::one()/softfloat(LabCbrtTabScale);
-        int i;
-        for(i = 0; i <= LAB_CBRT_TAB_SIZE; i++)
-        {
-            softfloat x = scale*softfloat(i);
-            f[i] = x < lthresh ? mulAdd(x, lscale, lbias) : cbrt(x);
-        }
-        LabCbrtTab = splineBuild(f, LAB_CBRT_TAB_SIZE);
+        softfloat x = scale*softfloat(i);
+        f[i] = x < lthresh ? mulAdd(x, lscale, lbias) : cbrt(x);
+    }
+    LabCbrtTab = splineBuild(f, LAB_CBRT_TAB_SIZE);
 
-        scale = softfloat::one()/softfloat(GammaTabScale);
-        for(i = 0; i <= GAMMA_TAB_SIZE; i++)
+    scale = softfloat::one()/softfloat(GammaTabScale);
+    for(i = 0; i <= GAMMA_TAB_SIZE; i++)
+    {
+        softfloat x = scale*softfloat(i);
+        g[i] = applyGamma(x);
+        ig[i] = applyInvGamma(x);
+    }
+
+    sRGBGammaTab = splineBuild(g, GAMMA_TAB_SIZE);
+    sRGBInvGammaTab = splineBuild(ig, GAMMA_TAB_SIZE);
+
+    static const softfloat intScale(255*(1 << gamma_shift));
+    for(i = 0; i < 256; i++)
+    {
+        softfloat x = softfloat(i)/f255;
+        sRGBGammaTab_b[i] = (ushort)(cvRound(intScale*applyGamma(x)));
+        linearGammaTab_b[i] = (ushort)(i*(1 << gamma_shift));
+    }
+    static const softfloat invScale = softfloat::one()/softfloat((int)INV_GAMMA_TAB_SIZE);
+    for(i = 0; i < INV_GAMMA_TAB_SIZE; i++)
+    {
+        softfloat x = invScale*softfloat(i);
+        sRGBInvGammaTab_b[i] = (ushort)(cvRound(f255*applyInvGamma(x)));
+        linearInvGammaTab_b[i] = (ushort)(cvTrunc(f255*x));
+    }
+
+    static const softfloat cbTabScale(softfloat::one()/(f255*(1 << gamma_shift)));
+    static const softfloat lshift2(1 << lab_shift2);
+    for(i = 0; i < LAB_CBRT_TAB_SIZE_B; i++)
+    {
+        softfloat x = cbTabScale*softfloat(i);
+        LabCbrtTab_b[i] = (ushort)(cvRound(lshift2 * (x < lthresh ? mulAdd(x, lscale, lbias) : cbrt(x))));
+    }
+
+    //Lookup table for L to y and ify calculations
+    for(i = 0; i < 256; i++)
+    {
+        int y, ify;
+        //8 * 255.0 / 100.0 == 20.4
+        if( i <= 20)
         {
-            softfloat x = scale*softfloat(i);
-            g[i] = applyGamma(x);
-            ig[i] = applyInvGamma(x);
+            //yy = li / 903.3f;
+            //y = L*100/903.3f; 903.3f = (29/3)^3, 255 = 17*3*5
+            y = cvRound(softfloat(i*LUT_BASE*20*9)/softfloat(17*29*29*29));
+            //fy = 7.787f * yy + 16.0f / 116.0f; 7.787f = (29/3)^3/(29*4)
+            ify = cvRound(softfloat((int)LUT_BASE)*(softfloat(16)/softfloat(116) + softfloat(i*5)/softfloat(3*17*29)));
+        }
+        else
+        {
+            //fy = (li + 16.0f) / 116.0f;
+            softfloat fy = (softfloat(i*100*LUT_BASE)/softfloat(255*116) +
+                            softfloat(16*LUT_BASE)/softfloat(116));
+            ify = cvRound(fy);
+            //yy = fy * fy * fy;
+            y = cvRound(fy*fy*fy/softfloat(LUT_BASE*LUT_BASE));
         }
 
-        sRGBGammaTab = splineBuild(g, GAMMA_TAB_SIZE);
-        sRGBInvGammaTab = splineBuild(ig, GAMMA_TAB_SIZE);
+        LabToYF_b[i*2  ] = (ushort)y;   // 0 <= y <= BASE
+        LabToYF_b[i*2+1] = (ushort)ify; // 2260 <= ify <= BASE
+    }
 
-        static const softfloat intScale(255*(1 << gamma_shift));
-        for(i = 0; i < 256; i++)
-        {
-            softfloat x = softfloat(i)/f255;
-            sRGBGammaTab_b[i] = (ushort)(cvRound(intScale*applyGamma(x)));
-            linearGammaTab_b[i] = (ushort)(i*(1 << gamma_shift));
-        }
-        static const softfloat invScale = softfloat::one()/softfloat((int)INV_GAMMA_TAB_SIZE);
-        for(i = 0; i < INV_GAMMA_TAB_SIZE; i++)
-        {
-            softfloat x = invScale*softfloat(i);
-            sRGBInvGammaTab_b[i] = (ushort)(cvRound(f255*applyInvGamma(x)));
-            linearInvGammaTab_b[i] = (ushort)(cvTrunc(f255*x));
-        }
+    //Lookup table for a,b to x,z conversion
+    abToXZ_b = initLUTforABXZ();
 
-        static const softfloat cbTabScale(softfloat::one()/(f255*(1 << gamma_shift)));
-        static const softfloat lshift2(1 << lab_shift2);
-        for(i = 0; i < LAB_CBRT_TAB_SIZE_B; i++)
-        {
-            softfloat x = cbTabScale*softfloat(i);
-            LabCbrtTab_b[i] = (ushort)(cvRound(lshift2 * (x < lthresh ? mulAdd(x, lscale, lbias) : cbrt(x))));
-        }
+    softfloat dd = D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3);
+    dd = softfloat::one()/max(dd, softfloat::eps());
+    softfloat un = dd*softfloat(13*4)*D65[0];
+    softfloat vn = dd*softfloat(13*9)*D65[1];
 
-        //Lookup table for L to y and ify calculations
-        for(i = 0; i < 256; i++)
+    //Luv LUT
+    LUVLUT = initLUTforLUV(un, vn);
+
+    //try to suppress warning
+    static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
+    if(calcLUT)
+    {
+
+        LABLUVLUTs16 = initLUTforLABLUVs16(un, vn);
+
+        for(int16_t p = 0; p < TRILINEAR_BASE; p++)
         {
-            int y, ify;
-            //8 * 255.0 / 100.0 == 20.4
-            if( i <= 20)
+            int16_t pp = TRILINEAR_BASE - p;
+            for(int16_t q = 0; q < TRILINEAR_BASE; q++)
             {
-                //yy = li / 903.3f;
-                //y = L*100/903.3f; 903.3f = (29/3)^3, 255 = 17*3*5
-                y = cvRound(softfloat(i*LUT_BASE*20*9)/softfloat(17*29*29*29));
-                //fy = 7.787f * yy + 16.0f / 116.0f; 7.787f = (29/3)^3/(29*4)
-                ify = cvRound(softfloat((int)LUT_BASE)*(softfloat(16)/softfloat(116) + softfloat(i*5)/softfloat(3*17*29)));
-            }
-            else
-            {
-                //fy = (li + 16.0f) / 116.0f;
-                softfloat fy = (softfloat(i*100*LUT_BASE)/softfloat(255*116) +
-                                softfloat(16*LUT_BASE)/softfloat(116));
-                ify = cvRound(fy);
-                //yy = fy * fy * fy;
-                y = cvRound(fy*fy*fy/softfloat(LUT_BASE*LUT_BASE));
-            }
-
-            LabToYF_b[i*2  ] = (ushort)y;   // 0 <= y <= BASE
-            LabToYF_b[i*2+1] = (ushort)ify; // 2260 <= ify <= BASE
-        }
-
-        //Lookup table for a,b to x,z conversion
-        abToXZ_b = initLUTforABXZ();
-
-        softfloat dd = D65[0] + D65[1]*softdouble(15) + D65[2]*softdouble(3);
-        dd = softfloat::one()/max(dd, softfloat::eps());
-        softfloat un = dd*softfloat(13*4)*D65[0];
-        softfloat vn = dd*softfloat(13*9)*D65[1];
-
-        //Luv LUT
-        LUVLUT = initLUTforLUV(un, vn);
-
-        //try to suppress warning
-        static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
-        if(calcLUT)
-        {
-
-            LABLUVLUTs16 = initLUTforLABLUVs16(un, vn);
-
-            for(int16_t p = 0; p < TRILINEAR_BASE; p++)
-            {
-                int16_t pp = TRILINEAR_BASE - p;
-                for(int16_t q = 0; q < TRILINEAR_BASE; q++)
+                int16_t qq = TRILINEAR_BASE - q;
+                for(int16_t r = 0; r < TRILINEAR_BASE; r++)
                 {
-                    int16_t qq = TRILINEAR_BASE - q;
-                    for(int16_t r = 0; r < TRILINEAR_BASE; r++)
-                    {
-                        int16_t rr = TRILINEAR_BASE - r;
-                        int16_t* w = &trilinearLUT[8*p + 8*TRILINEAR_BASE*q + 8*TRILINEAR_BASE*TRILINEAR_BASE*r];
-                        w[0]  = pp * qq * rr; w[1]  = pp * qq * r ; w[2]  = pp * q  * rr; w[3]  = pp * q  * r ;
-                        w[4]  = p  * qq * rr; w[5]  = p  * qq * r ; w[6]  = p  * q  * rr; w[7]  = p  * q  * r ;
-                    }
+                    int16_t rr = TRILINEAR_BASE - r;
+                    int16_t* w = &trilinearLUT[8*p + 8*TRILINEAR_BASE*q + 8*TRILINEAR_BASE*TRILINEAR_BASE*r];
+                    w[0]  = pp * qq * rr; w[1]  = pp * qq * r ; w[2]  = pp * q  * rr; w[3]  = pp * q  * r ;
+                    w[4]  = p  * qq * rr; w[5]  = p  * qq * r ; w[6]  = p  * q  * rr; w[7]  = p  * q  * r ;
                 }
             }
         }
-
-        initialized = true;
     }
+    return true;
+}
+
+static bool initLabTabs()
+{
+    static bool initialized = createLabTabs();
+    return initialized;
 }
 
 

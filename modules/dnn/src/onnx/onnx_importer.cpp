@@ -3187,10 +3187,19 @@ void ONNXImporter::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::N
     // Remove additional outputs (Mean, InvStdDev)
     if (node_proto.output_size() > 1)
     {
+        // remove from graph proto
+        for (size_t i = 1; i < node_proto.output_size(); i++) {
+            for (int j = graph_proto.output_size() - 1; j >= 0; j--) {
+                if (graph_proto.output(j).name() == node_proto.output(i)) {
+                    graph_proto.mutable_output()->DeleteSubrange(j, 1);
+                    break;
+                }
+            }
+        }
+        // remove from node proto
         auto outputName = node_proto.output(0);
         opencv_onnx::NodeProto node_proto_ = node_proto;
-        node_proto_.clear_output();
-        node_proto_.add_output(outputName);
+        node_proto_.mutable_output()->DeleteSubrange(1, node_proto_.output_size() - 1);
         addLayer(layerParams, node_proto_);
     }
     else
@@ -3530,7 +3539,7 @@ void ONNXImporter::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     Mat bias;
     if (constBlobs.find(node_proto.input(6)) != constBlobs.end())
         bias = getBlob(node_proto, 6);
-    else
+    if (bias.empty())
         bias = Mat::zeros(1, outCn, CV_32S);
 
     Mat biasFused(1, outCn, CV_32S);
