@@ -409,7 +409,7 @@ Rect blobRectToImageRect(Rect r, Size oriImage, const Size& size, bool crop)
     return paramNet.blobRectToImageRect(r, oriImage);
 }
 
-Rect2d Image2BlobParams::blobRectToImageRect(Rect2d r, Size oriImage)
+Rect2d Image2BlobParams::blobRectToImageRect(const Rect2d r, const Size oriImage)
 {
     CV_Assert(!oriImage.empty());
     std::vector<Rect2d> rImg, rBlob;
@@ -419,7 +419,7 @@ Rect2d Image2BlobParams::blobRectToImageRect(Rect2d r, Size oriImage)
     return rImg[0];
 }
 
-Rect2d blobRectToImageRect(Rect2d r, Size oriImage, const Size& size, bool crop)
+Rect2d blobRectToImageRect(const Rect2d r, Size oriImage, const Size& size, bool crop)
 {
     CV_Assert(!oriImage.empty());
     Image2BlobParams paramNet;
@@ -436,7 +436,7 @@ Rect2d blobRectToImageRect(Rect2d r, Size oriImage, const Size& size, bool crop)
     return paramNet.blobRectToImageRect(r, oriImage);
 }
 
-void Image2BlobParams::blobRectsToImageRects(std::vector<Rect> rBlob, std::vector<Rect>& rImg, const Size& imgSize)
+void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect> rBlob, std::vector<Rect>& rImg, const Size& imgSize)
 {
     Size size = this->size;
     rImg.resize(rBlob.size());
@@ -479,7 +479,7 @@ void Image2BlobParams::blobRectsToImageRects(std::vector<Rect> rBlob, std::vecto
     }
 }
 
-void Image2BlobParams::blobRectsToImageRects(std::vector<Rect2d> rBlob, std::vector<Rect2d>& rImg, const Size& imgSize)
+void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect2d> rBlob, std::vector<Rect2d>& rImg, const Size& imgSize)
 {
     Size size = this->size;
     rImg.resize(rBlob.size());

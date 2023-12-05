@@ -1229,7 +1229,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob
          *  @returns rectangle in original image coordinates.
          */
-        CV_WRAP Rect blobRectToImageRect(Rect rBlob, Size sizeOri);
+        CV_WRAP Rect blobRectToImageRect(const Rect rBlob, const Size sizeOri);
 
         /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
          *  @param rBlob rect in blob coordinates.
@@ -1237,7 +1237,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param size spatial size for output image
          *  @param param input image.
          */
-        CV_WRAP void blobRectsToImageRects(std::vector<Rect> rBlob, CV_OUT std::vector<Rect>& rImg, const Size& size);
+        CV_WRAP void blobRectsToImageRects(const std::vector<Rect> rBlob, CV_OUT std::vector<Rect>& rImg, const Size& size);
 
         /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
          *  @param rBlob rect in blob coordinates.
@@ -1245,7 +1245,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param size spatial size for output image
          *  @param param input image.
          */
-        CV_WRAP void blobRectsToImageRects(std::vector<Rect2d> rBlob, CV_OUT std::vector<Rect2d>& rImg, const Size& size);
+        CV_WRAP void blobRectsToImageRects (const std::vector<Rect2d> rBlob, CV_OUT std::vector<Rect2d>& rImg, const Size& size);
 
         /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
          *  @param rBlob rect in blob coordinates.
@@ -1253,7 +1253,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob
          *  @returns rectangle in original image coordinates.
          */
-        CV_WRAP Rect2d blobRectToImageRect(Rect2d rBlob, Size sizeOri);
+        CV_WRAP Rect2d blobRectToImageRect (const Rect2d rBlob, const Size sizeOri);
     };
 
     /** @brief Creates 4-dimensional blob from image with given params.
