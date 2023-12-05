@@ -82,6 +82,23 @@ public:
         return makePtr<ONNXNodeWrapper>(node);
     }
 
+    int getTensorShapeSize(int node_id, int node_input_id) {
+        const auto node = getNode(node_id);
+        const auto &input_name = node->getInputName(node_input_id);
+        for (int i = 0; i < net.value_info_size(); i++) {
+            const auto value_info = net.value_info(i);
+            if (value_info.name() == input_name) {
+                if (value_info.has_type() && value_info.type().has_tensor_type() &&
+                    value_info.type().tensor_type().has_shape()) {
+                    return value_info.type().tensor_type().shape().dim_size();
+                } else {
+                    return -1;
+                }
+            }
+        }
+        return -1;
+    }
+
     int getInputInitializerId(int node_id, int node_input_id)
     {
         auto node = getNode(node_id);
@@ -163,6 +180,77 @@ static Mat extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int 
         return getMatFromTensor(constant_proto);
     }
 }
+
+/*  Slice operator has two optional inputs "axes" and "steps". Some models may be set to have
+    Slice with optional inputs of default values, some of them don't. This Subgraph removes
+    all optional inputs of Slice if values are default.
+*/
+class RemoveSliceAllOptionalInputsSubgraph : public Subgraph {
+ public:
+    RemoveSliceAllOptionalInputsSubgraph(size_t num_inputs = 4) {
+        num_inputs_ = num_inputs;
+
+        int input = addNodeToMatch("");
+        int starts = addNodeToMatch("");
+        int ends = addNodeToMatch("");
+        std::vector<int> inputs{input, starts, ends};
+        for (size_t i = 3; i < num_inputs_; i++) { // axes and steps
+            inputs.push_back(addNodeToMatch(""));
+        }
+
+        slice_id = addNodeToMatch("Slice", inputs);
+
+        setFusedNode("Slice", std::vector<int>{input, starts, ends});
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE {
+        if (Subgraph::match(net, nodeId, matchedNodesIds)) {
+            if (num_inputs_ >= 4) { // with axes
+                // Check if axes are -1 or last axis
+                auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+                int shape_size = onnx_net->getTensorShapeSize(matchedNodesIds[slice_id], 0);
+
+                auto axes = extractConstant(net, matchedNodesIds[slice_id], 3);
+                bool is_default_axes = true;
+                for (size_t i = 0; i < axes.total(); i++) {
+                    const int axis = *(axes.ptr<const int>() + i);
+                    if (axis != -1 && axis != shape_size - 1) {
+                        is_default_axes = false;
+                        break;
+                    }
+                }
+                if (!is_default_axes) {
+                    return false;
+                }
+
+                if (num_inputs_ == 5) {
+                    // Check if steps are 1
+                    auto steps = extractConstant(net, matchedNodesIds[0], 4);
+                    bool is_default_steps = true;
+                    for (size_t i = 0; i < steps.total(); i++) {
+                        if (*(steps.ptr<const int>() + i) != 1) {
+                            is_default_steps = false;
+                            break;
+                        }
+                    }
+                    if (!is_default_steps) {
+                        return false;
+                    }
+                }
+
+                return true;
+            } else {
+                return false;
+            }
+        }
+        return false;
+    }
+
+private:
+    int slice_id;
+    size_t num_inputs_;
+};
 
 /*  Fusion for Gelu.
 
@@ -1091,7 +1179,7 @@ public:
         int cast = addNodeToMatch("Cast", concat1);
 
         int shape2 = addNodeToMatch("Shape", input);
-        int slice = addNodeToMatch("Slice", shape2, addNodeToMatch("Constant"), addNodeToMatch("Constant"), addNodeToMatch("Constant"));
+        int slice = addNodeToMatch("Slice", shape2, addNodeToMatch("Constant"), addNodeToMatch("Constant"));
         int concat2 = addNodeToMatch("Concat", slice, cast);
         addNodeToMatch("Resize", input, addNodeToMatch("Constant"), addNodeToMatch("Constant"), concat2);
 
@@ -1163,6 +1251,8 @@ public:
 void simplifySubgraphs(opencv_onnx::GraphProto& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
+    subgraphs.push_back(makePtr<RemoveSliceAllOptionalInputsSubgraph>(4));
+    subgraphs.push_back(makePtr<RemoveSliceAllOptionalInputsSubgraph>(5));
     subgraphs.push_back(makePtr<GeluSubGraph>());
     subgraphs.push_back(makePtr<GeluApproximationSubGraph>());
     subgraphs.push_back(makePtr<LayerNormSubGraph>());
