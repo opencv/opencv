@@ -1509,6 +1509,9 @@ CV__DNN_INLINE_NS_BEGIN
          /// @sa Net::setPreferableTarget
          CV_WRAP Model& setPreferableTarget(dnn::Target targetId);
 
+         /// @sa Net::enableWinograd
+         CV_WRAP Model& enableWinograd(bool useWinograd);
+
          CV_DEPRECATED_EXTERNAL
          operator Net&() const { return getNetwork_(); }
 

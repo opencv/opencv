@@ -20,6 +20,18 @@ struct GraphicalCodeDetector::Impl {
                                       OutputArray points, OutputArrayOfArrays straight_code) const = 0;
 };
 
+class QRCodeDecoder {
+public:
+    virtual ~QRCodeDecoder();
+
+    static Ptr<QRCodeDecoder> create();
+
+    virtual bool decode(const Mat& straight, String& decoded_info) = 0;
+
+    QRCodeEncoder::EncodeMode mode;
+    QRCodeEncoder::ECIEncodings eci;
+};
+
 }
 
 #endif

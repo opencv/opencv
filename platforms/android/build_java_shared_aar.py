@@ -100,6 +100,16 @@ def main(args):
                   path.join(ANDROID_PROJECT_DIR, "OpenCV/src/main/cpp/CMakeLists.txt"),
                   {"LIB_NAME": lib_name, "LIB_TYPE": "SHARED"})
 
+    local_props = ""
+    if args.ndk_location:
+        local_props += "ndk.dir=" + args.ndk_location + "\n"
+    if args.cmake_location:
+        local_props += "cmake.dir=" + args.cmake_location + "\n"
+
+    if local_props:
+        with open(path.join(ANDROID_PROJECT_DIR, "local.properties"), "wt") as f:
+            f.write(local_props)
+
     # Copying Java code and C++ public headers from SDK to the Android project
     for src, dst in COPY_FROM_SDK_TO_ANDROID_PROJECT:
         shutil.copytree(path.join(args.opencv_sdk_path, src),
@@ -147,10 +157,12 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Builds AAR with Java and shared C++ libs from OpenCV SDK")
     parser.add_argument('opencv_sdk_path')
-    parser.add_argument('--android_compile_sdk', default="26")
+    parser.add_argument('--android_compile_sdk', default="31")
     parser.add_argument('--android_min_sdk', default="21")
-    parser.add_argument('--android_target_sdk', default="26")
+    parser.add_argument('--android_target_sdk', default="31")
     parser.add_argument('--java_version', default="1_8")
+    parser.add_argument('--ndk_location', default="")
+    parser.add_argument('--cmake_location', default="")
     args = parser.parse_args()
 
     main(args)

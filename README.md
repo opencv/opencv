@@ -1,5 +1,9 @@
 ## OpenCV: Open Source Computer Vision Library
 
+### Keep OpenCV Free
+
+OpenCV is raising funds to keep the library free for everyone, and we need the support of the entire community to do it. [Donate to OpenCV on IndieGoGo](http://igg.me/at/opencv5) before the campaign ends on December 16 to show your support.
+
 ### Resources
 
 * Homepage: <https://opencv.org>
@@ -8,7 +12,7 @@
 * Q&A forum: <https://forum.opencv.org>
   * previous forum (read only): <http://answers.opencv.org>
 * Issue tracking: <https://github.com/opencv/opencv/issues>
-* Additional OpenCV functionality: <https://github.com/opencv/opencv_contrib> 
+* Additional OpenCV functionality: <https://github.com/opencv/opencv_contrib>
 
 
 ### Contributing
@@ -22,3 +26,13 @@ Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/
 * Include tests and documentation;
 * Clean up "oops" commits before submitting;
 * Follow the [coding style guide](https://github.com/opencv/opencv/wiki/Coding_Style_Guide).
+
+### Additional Resources
+
+* [Submit your OpenCV-based project](https://form.jotform.com/233105358823151) for inclusion in Community Friday on opencv.org
+* [Subscribe to the OpenCV YouTube Channel](http://youtube.com/@opencvofficial) featuring OpenCV Live, an hour-long streaming show
+* [Follow OpenCV on LinkedIn](http://linkedin.com/company/opencv/) for daily posts showing the state-of-the-art in computer vision &AI
+* [Apply to be an OpenCV Volunteer](https://form.jotform.com/232745316792159) to help organize events and online campaigns as well as amplify them
+* [Follow OpenCV on Mastodon](http://mastodon.social/@opencv) in the Fediverse
+* [Follow OpenCV on Twitter](https://twitter.com/opencvlive)
+* [OpenCV.ai](https://opencv.ai): Computer Vision and AI development services from the OpenCV team.

@@ -210,12 +210,12 @@ public:
 class Score {
 public:
     int inlier_number;
-    double score;
+    float score;
     Score () { // set worst case
         inlier_number = 0;
-        score = std::numeric_limits<double>::max();
+        score = std::numeric_limits<float>::max();
     }
-    Score (int inlier_number_, double score_) { // copy constructor
+    Score (int inlier_number_, float score_) { // copy constructor
         inlier_number = inlier_number_;
         score = score_;
     }
@@ -254,7 +254,7 @@ public:
     // get @inliers of the @model for given threshold
     virtual int getInliers (const Mat &model, std::vector<int> &inliers, double thr) const = 0;
     // Set the best score, so evaluation of the model can terminate earlier
-    virtual void setBestScore (double best_score_) = 0;
+    virtual void setBestScore (float best_score_) = 0;
     // set @inliers_mask: true if point i is inlier, false - otherwise.
     virtual int getInliers (const Mat &model, std::vector<bool> &inliers_mask) const = 0;
     virtual int getPointsSize() const = 0;

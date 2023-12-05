@@ -46,7 +46,7 @@
     Here is the copyright notice from the original Vladimir's code:
     ===============================================================
 
-    The algorithms developed and implemented by Vezhnevets Vldimir
+    The algorithms developed and implemented by Vezhnevets Vladimir
     aka Dead Moroz (vvp@graphics.cs.msu.ru)
     See http://graphics.cs.msu.su/en/research/calibration/opencv.html
     for detailed information.
@@ -54,7 +54,7 @@
     Reliability additions and modifications made by Philip Gruebele.
     <a href="mailto:pgruebele@cox.net">pgruebele@cox.net</a>
 
-    Some further improvements for detection of partially ocluded boards at non-ideal
+    Some further improvements for detection of partially occluded boards at non-ideal
     lighting conditions have been made by Alex Bovyrin and Kurt Kolonige
 
 \************************************************************************************/
@@ -325,7 +325,7 @@ static void icvGradientOfHistogram256(const ArrayContainer& piHist, ArrayContain
     piHistGrad[255] = 0;
 }
 /***************************************************************************************************/
-//PERFORM SMART IMAGE THRESHOLDING BASED ON ANALYSIS OF INTENSTY HISTOGRAM
+//PERFORM SMART IMAGE THRESHOLDING BASED ON ANALYSIS OF INTENSITY HISTOGRAM
 static void icvBinarizationHistogramBased(Mat & img)
 {
     CV_Assert(img.channels() == 1 && img.depth() == CV_8U);
@@ -671,7 +671,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 //    of the neighbor corners in the same row/column.
 //
 // This function has been created as temporary workaround for the bug in current implementation
-// of cvFindChessboardCornes that produces absolutely unordered sets of corners.
+// of cvFindChessboardCorners that produces absolutely unordered sets of corners.
 //
 bool ChessBoardDetector::checkBoardMonotony(const std::vector<cv::Point2f>& corners)
 {
@@ -1213,7 +1213,7 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
     // We iteratively remove the point which reduces the size of
     // the bounding box of the blobs the most
     // (since we want the rectangle to be as small as possible)
-    // remove the quadrange that causes the biggest reduction
+    // remove the quadrangle that causes the biggest reduction
     // in pattern size until we have the correct number
     for (; quad_count > count; quad_count--)
     {
@@ -1630,7 +1630,7 @@ void ChessBoardDetector::findQuadNeighbors()
                     {
                         // check edge lengths, make sure they're compatible
                         // edges that are different by more than 1:4 are rejected
-                        float ediff = cur_quad.edge_len - q_k.edge_len;
+                        const float ediff = fabs(cur_quad.edge_len - q_k.edge_len);
                         if (ediff > 32*cur_quad.edge_len ||
                             ediff > 32*q_k.edge_len)
                         {
@@ -1730,8 +1730,8 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
     all_quads.deallocate();
     all_corners.deallocate();
 
-    // empiric bound for minimal allowed perimeter for squares
-    int min_size = 25; //cvRound( image->cols * image->rows * .03 * 0.01 * 0.92 );
+    // empiric bound for minimal allowed area for squares
+    const int min_area = 25; //cvRound( image->cols * image->rows * .03 * 0.01 * 0.92 );
 
     bool filterQuads = (flags & CALIB_CB_FILTER_QUADS) != 0;
 
@@ -1759,7 +1759,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
         const std::vector<Point>& contour = contours[idx];
 
         Rect contour_rect = boundingRect(contour);
-        if (contour_rect.area() < min_size)
+        if (contour_rect.area() < min_area)
             continue;
 
         std::vector<Point> approx_contour;
@@ -1803,7 +1803,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
             // than rectangular and which are big enough
             double d3 = sqrt(normL2Sqr<double>(pt[0] - pt[1]));
             double d4 = sqrt(normL2Sqr<double>(pt[1] - pt[2]));
-            if (!(d3*4 > d4 && d4*4 > d3 && d3*d4 < area*1.5 && area > min_size &&
+            if (!(d3*4 > d4 && d4*4 > d3 && d3*d4 < area*1.5 && area > min_area &&
                 d1 >= 0.15 * p && d2 >= 0.15 * p))
                 continue;
         }

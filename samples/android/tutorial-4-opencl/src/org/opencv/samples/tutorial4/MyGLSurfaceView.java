@@ -65,7 +65,8 @@ public class MyGLSurfaceView extends CameraGLSurfaceView implements CameraGLSurf
                 Toast.makeText(getContext(), "onCameraViewStarted", Toast.LENGTH_SHORT).show();
             }
         });
-        NativePart.initCL();
+        if (NativePart.builtWithOpenCL())
+            NativePart.initCL();
         frameCounter = 0;
         lastNanoTime = System.nanoTime();
     }

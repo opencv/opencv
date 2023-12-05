@@ -189,7 +189,16 @@ public:
     GAPI_WRAP
     explicit DirectML(const int device_id) : ddesc(device_id) { };
 
-    using DeviceDesc = cv::util::variant<int>;
+    /** @brief Class constructor.
+
+    Constructs DirectML parameters based on adapter name.
+
+    @param adapter_name Target adapter_name to use.
+    */
+    GAPI_WRAP
+    explicit DirectML(const std::string &adapter_name) : ddesc(adapter_name) { };
+
+    using DeviceDesc = cv::util::variant<int, std::string>;
     DeviceDesc ddesc;
 };
 

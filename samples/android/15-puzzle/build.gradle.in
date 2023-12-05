@@ -1,6 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
+    namespace 'org.opencv.samples.puzzle15'
     compileSdkVersion @ANDROID_COMPILE_SDK_VERSION@
     defaultConfig {
         applicationId "org.opencv.samples.puzzle15"
@@ -27,5 +28,11 @@ android {
 
 dependencies {
     //implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation project(':opencv')
+    if (gradle.opencv_source == 'sdk_path') {
+        println 'Using OpenCV from SDK'
+        implementation project(':opencv')
+    } else if (gradle.opencv_source == 'maven_local' || gradle.opencv_source == 'maven_cenral') {
+        println 'Using OpenCV from Maven repo'
+        implementation 'org.opencv:opencv:@OPENCV_VERSION_PLAIN@'
+    }
 }
