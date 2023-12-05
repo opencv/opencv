@@ -54,6 +54,7 @@ public class FpsMeter {
     }
 
     public void setResolution(int width, int height) {
+        Log.d(TAG, "FpsMeter.setResolution " + Integer.valueOf(mWidth) + "x" + Integer.valueOf(mHeight));
         mWidth = width;
         mHeight = height;
     }
