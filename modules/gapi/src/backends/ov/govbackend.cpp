@@ -774,14 +774,19 @@ public:
         if (explicit_in_model_layout) {
             input_info.model().set_layout(::ov::Layout(*explicit_in_model_layout));
         } else if (m_model->input(input_name).get_shape().size() == 4u) {
-            // NB: Back compatibility with IR's without any layout information.
-            // Note that default is only applicable for 4D inputs in order to
-            // support auto resize for image use cases.
-            GAPI_LOG_WARNING(NULL, "Failed to find layout for input layer \""
-                    << input_name << "\" - NCHW is set by default");
-            const std::string default_layout = "NCHW";
-            input_info.model().set_layout(::ov::Layout(default_layout));
-            m_input_model_layout.emplace(input_name, default_layout);
+            const auto& input_layout = ::ov::layout::get_layout(m_model->input(input_name));
+            if (!input_layout.empty()) {
+                input_info.model().set_layout(input_layout);
+            } else {
+                // NB: Back compatibility with IR's without any layout information.
+                // Note that default is only applicable for 4D inputs in order to
+                // support auto resize for image use cases.
+                GAPI_LOG_WARNING(NULL, "Failed to find layout for input layer \""
+                        << input_name << "\" - NCHW is set by default");
+                const std::string default_layout = "NCHW";
+                input_info.model().set_layout(::ov::Layout(default_layout));
+                m_input_model_layout.emplace(input_name, default_layout);
+            }
         }
         const auto explicit_in_tensor_layout = lookUp(m_input_tensor_layout, input_name);
         if (explicit_in_tensor_layout) {

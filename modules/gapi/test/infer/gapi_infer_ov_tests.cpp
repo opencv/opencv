@@ -13,6 +13,26 @@
 #include <opencv2/gapi/infer/ov.hpp>
 
 #include <openvino/openvino.hpp>
+#include <inference_engine.hpp>
+#include <openvino/opsets/opset8.hpp>
+
+#ifdef HAVE_NGRAPH
+#if defined(__clang__)  // clang or MSVC clang
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4100)
+# if _MSC_VER < 1910
+#  pragma warning(disable:4268) // Disable warnings of ngraph. OpenVINO recommends to use MSVS 2019.
+#  pragma warning(disable:4800)
+# endif
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+#include <ngraph/ngraph.hpp>
+#endif
 
 namespace opencv_test
 {
@@ -655,6 +675,49 @@ TEST_F(TestAgeGenderListOV, InferList2Generic_Image) {
 
     // Assert
     validate();
+}
+
+TEST(TestOV, Infer_ImageCorrectNHWCInputLayout) {
+    const std::string model_name   = "ModelNHWC";
+    const std::string model_path   = model_name + ".xml";
+    const std::string weights_path = model_name + ".bin";
+    const std::string device_id    = "CPU";
+    const int W                    = 128;
+    const int H                    = 64;
+    const int C                    = 3;
+    const int N                    = 1;
+
+    auto data1 = std::make_shared<ov::opset8::Parameter>(ov::element::u8, ov::Shape{N, H, W, C});
+    data1->output(0).set_names({"data1_t"});  // tensor names
+    ov::layout::set_layout(data1, ov::Layout("NHWC"));
+
+    auto sin = std::make_shared<ov::opset8::Sin>(data1);
+    sin->output(0).set_names({"sin_t"});  // tensor name
+
+    auto result = std::make_shared<ov::opset8::Result>(sin);
+    result->output(0).set_names({"result_t"});  // tensor name
+
+    auto f = std::make_shared<ov::Model>(ov::ResultVector{result}, ov::ParameterVector{data1}, "function_name");
+
+    ov::serialize(f, model_path, weights_path, ov::pass::Serialize::Version::IR_V11);
+
+    cv::Mat in_mat1(std::vector<int>{N, C, 32, 256}, CV_8U), gapi_mat;
+    cv::randu(in_mat1, 0, 100);
+
+    cv::GMat g_in1;
+    cv::GInferInputs inputs;
+    inputs["data1_t"] = g_in1;
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>(model_name, inputs);
+    auto out = outputs.at("result_t");
+
+    cv::GComputation comp(cv::GIn(g_in1), cv::GOut(out));
+
+    auto pp = cv::gapi::ov::Params<cv::gapi::Generic>(model_name,
+                                                      model_path,
+                                                      weights_path,
+                                                      device_id);
+    EXPECT_NO_THROW(comp.apply(cv::gin(in_mat1), cv::gout(gapi_mat),
+                               cv::compile_args(cv::gapi::networks(pp))));
 }
 
 } // namespace opencv_test
