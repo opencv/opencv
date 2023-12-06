@@ -887,20 +887,19 @@ Net build_net(const ConvParam_t& params, Backend backendId, Target targetId)
     return net;
 }
 
-typedef tuple<ConvParam_t, bool, tuple<Backend, Target> > ConvTestParam_t;
+typedef tuple<ConvParam_t, tuple<Backend, Target> > ConvTestParam_t;
+typedef tuple<ConvParam_t, tuple<Backend, Target>, bool> Conv3x3S1D1TestParam_t;
 typedef TestBaseWithParam<ConvTestParam_t> Conv;
 typedef TestBaseWithParam<ConvTestParam_t> Conv_1x1;
-typedef TestBaseWithParam<ConvTestParam_t> Conv_3x3S1D1;
+typedef TestBaseWithParam<Conv3x3S1D1TestParam_t> Conv_3x3S1D1;
 typedef TestBaseWithParam<ConvTestParam_t> Conv_Depthwise;
 
 PERF_TEST_P_(Conv, conv)
 {
     const ConvParam_t& params = get<0>(GetParam());
-    Backend backendId = get<0>(get<2>(GetParam()));
-    Target targetId = get<1>(get<2>(GetParam()));
-    bool winograd = get<1>(GetParam());
+    Backend backendId = get<0>(get<1>(GetParam()));
+    Target targetId = get<1>(get<1>(GetParam()));
     Net net = build_net(params, backendId, targetId);
-    net.enableWinograd(winograd);
 
     TEST_CYCLE()
     {
@@ -912,11 +911,9 @@ PERF_TEST_P_(Conv, conv)
 PERF_TEST_P_(Conv_1x1, conv)
 {
     const ConvParam_t& params = get<0>(GetParam());
-    Backend backendId = get<0>(get<2>(GetParam()));
-    Target targetId = get<1>(get<2>(GetParam()));
-    bool winograd = get<1>(GetParam());
+    Backend backendId = get<0>(get<1>(GetParam()));
+    Target targetId = get<1>(get<1>(GetParam()));
     Net net = build_net(params, backendId, targetId);
-    net.enableWinograd(winograd);
 
     TEST_CYCLE()
     {
@@ -928,9 +925,9 @@ PERF_TEST_P_(Conv_1x1, conv)
 PERF_TEST_P_(Conv_3x3S1D1, conv)
 {
     const ConvParam_t& params = get<0>(GetParam());
-    Backend backendId = get<0>(get<2>(GetParam()));
-    Target targetId = get<1>(get<2>(GetParam()));
-    bool winograd = get<1>(GetParam());
+    Backend backendId = get<0>(get<1>(GetParam()));
+    Target targetId = get<1>(get<1>(GetParam()));
+    bool winograd = get<2>(GetParam());
     Net net = build_net(params, backendId, targetId);
     net.enableWinograd(winograd);
 
@@ -944,11 +941,9 @@ PERF_TEST_P_(Conv_3x3S1D1, conv)
 PERF_TEST_P_(Conv_Depthwise, conv)
 {
     const ConvParam_t& params = get<0>(GetParam());
-    Backend backendId = get<0>(get<2>(GetParam()));
-    Target targetId = get<1>(get<2>(GetParam()));
-    bool winograd = get<1>(GetParam());
+    Backend backendId = get<0>(get<1>(GetParam()));
+    Target targetId = get<1>(get<1>(GetParam()));
     Net net = build_net(params, backendId, targetId);
-    net.enableWinograd(winograd);
 
     TEST_CYCLE()
     {
@@ -960,28 +955,25 @@ PERF_TEST_P_(Conv_Depthwise, conv)
 ConvParamGenerator conv_params(testConvolution_Configs, sizeof(testConvolution_Configs) / sizeof(testConvolution_Configs[0]));
 INSTANTIATE_TEST_CASE_P(/**/, Conv, Combine(
     conv_params.all(),
-    testing::Values(false),  // enable Winograd or not
     dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
 ));
 
 ConvParamGenerator conv_1x1_params(testConvolution_1x1_Configs, sizeof(testConvolution_1x1_Configs) / sizeof(testConvolution_1x1_Configs[0]));
 INSTANTIATE_TEST_CASE_P(/**/, Conv_1x1, Combine(
     conv_1x1_params.all(),
-    testing::Values(false),  // enable Winograd or not
     dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
 ));
 
 ConvParamGenerator conv_3x3S1D1_params(testConvolution_3x3S1D1_Configs, sizeof(testConvolution_3x3S1D1_Configs) / sizeof(testConvolution_3x3S1D1_Configs[0]));
 INSTANTIATE_TEST_CASE_P(/**/, Conv_3x3S1D1, Combine(
     conv_3x3S1D1_params.all(),
-    testing::Values(true, false),  // enable Winograd or not
-    dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
+    dnnBackendsAndTargets(false, false),  // defined in ../test/test_common.hpp
+    testing::Values(true, false)  // enable Winograd or not
 ));
 
 ConvParamGenerator conv_depthwise_params(testConvolution_Depthwise_Configs, sizeof(testConvolution_Depthwise_Configs) / sizeof(testConvolution_Depthwise_Configs[0]));
 INSTANTIATE_TEST_CASE_P(/**/, Conv_Depthwise, Combine(
     conv_depthwise_params.all(),
-    testing::Values(false),  // enable Winograd or not
     dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
 ));
 
