@@ -28,7 +28,7 @@ struct ConvParam_t {
 // Details: #12142
 // Last update: 2023-11
 // Extended and classified: #24547
-static const ConvParam_t testConvolutionConfigs[] = {
+static const ConvParam_t testConvolution_Configs[] = {
     /* GFLOPS 3.398 x 20 = 67.956 */ {{7, 7}, {{1, 128, 46, 46}}, 128, 1, {1, 1}, {1, 1}, {3, 3}, {0, 0}, "", true, 3397788160.},
     /* GFLOPS 16.987 x 3 = 50.962 */ {{5, 5}, {{1, 1152, 16, 16}}, 1152, 1, {1, 1}, {1, 1}, {0, 0}, {0, 0}, "SAME", false, 16987226112.},
     /* GFLOPS 23.122 x 2 = 46.244 */ {{5, 5}, {{1, 672, 32, 32}}, 672, 1, {1, 1}, {1, 1}, {0, 0}, {0, 0}, "SAME", false, 23121788928.},
@@ -957,17 +957,17 @@ PERF_TEST_P_(Conv_Depthwise, conv)
     SANITY_CHECK_NOTHING();
 }
 
-ConvParamGenerator conv_params(testConvolutionConfigs, sizeof(testConvolutionConfigs) / sizeof(testConvolutionConfigs[0]));
+ConvParamGenerator conv_params(testConvolution_Configs, sizeof(testConvolution_Configs) / sizeof(testConvolution_Configs[0]));
 INSTANTIATE_TEST_CASE_P(/**/, Conv, Combine(
     conv_params.all(),
-    testing::Values(true, false),  // enable Winograd or not
+    testing::Values(false),  // enable Winograd or not
     dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
 ));
 
 ConvParamGenerator conv_1x1_params(testConvolution_1x1_Configs, sizeof(testConvolution_1x1_Configs) / sizeof(testConvolution_1x1_Configs[0]));
 INSTANTIATE_TEST_CASE_P(/**/, Conv_1x1, Combine(
     conv_1x1_params.all(),
-    testing::Values(true, false),  // enable Winograd or not
+    testing::Values(false),  // enable Winograd or not
     dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
 ));
 
@@ -981,7 +981,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Conv_3x3S1D1, Combine(
 ConvParamGenerator conv_depthwise_params(testConvolution_Depthwise_Configs, sizeof(testConvolution_Depthwise_Configs) / sizeof(testConvolution_Depthwise_Configs[0]));
 INSTANTIATE_TEST_CASE_P(/**/, Conv_Depthwise, Combine(
     conv_depthwise_params.all(),
-    testing::Values(true, false),  // enable Winograd or not
+    testing::Values(false),  // enable Winograd or not
     dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
 ));
 
