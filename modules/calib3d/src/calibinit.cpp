@@ -1215,7 +1215,7 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
     // (since we want the rectangle to be as small as possible)
     // remove the quadrangle that causes the biggest reduction
     // in pattern size until we have the correct number
-    for (; quad_count > count; quad_count--)
+    while (quad_count > count)
     {
         double min_box_area = DBL_MAX;
         int min_box_area_index = -1;
