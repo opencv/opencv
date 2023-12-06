@@ -212,37 +212,21 @@ class RemoveSliceAllOptionalInputsSubgraph : public Subgraph {
                 int shape_size = onnx_net->getTensorShapeSize(matchedNodesIds[slice_id], 0);
 
                 auto axes = extractConstant(net, matchedNodesIds[slice_id], 3);
-                bool is_default_axes = true;
                 for (size_t i = 0; i < axes.total(); i++) {
                     const int axis = *(axes.ptr<const int>() + i);
                     if (axis != -1 && axis != shape_size - 1) {
-                        is_default_axes = false;
-                        break;
-                    }
-                }
-                if (!is_default_axes) {
-                    return false;
-                }
-
-                if (num_inputs_ == 5) {
-                    // Check if steps are 1
-                    auto steps = extractConstant(net, matchedNodesIds[0], 4);
-                    bool is_default_steps = true;
-                    for (size_t i = 0; i < steps.total(); i++) {
-                        if (*(steps.ptr<const int>() + i) != 1) {
-                            is_default_steps = false;
-                            break;
-                        }
-                    }
-                    if (!is_default_steps) {
                         return false;
                     }
                 }
-
-                return true;
-            } else {
-                return false;
             }
+            if (num_inputs_ == 5) {
+                // Check if steps are 1
+                auto steps = extractConstant(net, matchedNodesIds[slice_id], 4);
+                if (countNonZero(steps != 1)) {
+                    return false;
+                }
+            }
+            return true;
         }
         return false;
     }
