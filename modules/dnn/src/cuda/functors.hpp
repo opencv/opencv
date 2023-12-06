@@ -742,6 +742,18 @@ struct DivFunctor {
 };
 
 template <class T>
+struct SubFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE SubFunctor() { }
+    CUDA4DNN_DEVICE SubFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) { return x - y; }
+};
+
+template <class T>
 struct SignFunctor {
     struct Params {
         CUDA4DNN_HOST_DEVICE Params() {}

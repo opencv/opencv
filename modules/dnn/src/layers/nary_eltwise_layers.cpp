@@ -114,9 +114,11 @@ public:
                     op == OPERATION::GREATER_EQUAL ||
                     op == OPERATION::LESS_EQUAL
             );
-        if (op == OPERATION::MAX || op == OPERATION::MIN || op == OPERATION::SUM ||
-            op == OPERATION::PROD || op == OPERATION::DIV || op == OPERATION::ADD)
-            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        if (backendId == DNN_BACKEND_CUDA) {
+            return op == OPERATION::MAX || op == OPERATION::MIN || op == OPERATION::SUM ||
+                   op == OPERATION::PROD || op == OPERATION::DIV || op == OPERATION::ADD ||
+                   op == OPERATION::SUB;
+        }
         return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -827,6 +829,9 @@ public:
                 break;
             case OPERATION::ADD:
                 op_ = cuda4dnn::EltwiseOpType::SUM;
+                break;
+            case OPERATION::SUB:
+                op_ = cuda4dnn::EltwiseOpType::SUB;
                 break;
             default: return Ptr<BackendNode>(); // return empty cuda_node if the EltwiseOpType is unsupported type.
         };
