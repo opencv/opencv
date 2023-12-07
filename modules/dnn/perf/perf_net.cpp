@@ -94,20 +94,6 @@ public:
 };
 
 /*
-
-Tests are done with M1. data in millisecond (ms).
-
-| ViTs     | With Attention | Without Attention | ORT    |
-| -------- | -------------- | ----------------- | ------ |
-| vit_b_16 | 302.77         | 365.35            | 109.70 |
-| vit_b_32 | 89.92          | 116.22            | 30.36  |
-| vit_l_16 | 1593.32        | 1730.74           | 419.92 |
-| vit_l_32 | 468.11         | 577.41            | 134.12 |
-| VitTrack | 3.80           | 3.87              | 2.25   |
-
-*/
-
-/*
 PERF_TEST_P_(DNNTestNetwork, VIT_B_16) {
     processNet("", "dnn/onnx/models/vit_b_16.onnx", "", cv::Size(224, 224));
 }
