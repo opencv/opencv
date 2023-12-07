@@ -41,7 +41,6 @@ int main()
                 depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
                 applyColorMap(adjDepthMap, adjDepthMap, COLORMAP_JET);
                 imshow("DEPTH", adjDepthMap);
-                std::cout << maxVal << std::endl;
             }
 
             // depth map overlay on bgr image
