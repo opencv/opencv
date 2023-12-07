@@ -18,7 +18,7 @@ class imread_test(NewOpenCVTests):
 
         img = np.zeros((1000, 1000), dtype=np.uint8)
         subImg = img[64:576, 128:640]
-        subImg = cv.imread(self.find_file("cv/shared/lena.png"), subImg)
+        cv.imread(self.find_file("cv/shared/lena.png"), subImg)
         subImg = img.rowRange(64, 576).colRange(128, 640);
         ori = cv.imread(self.find_file("cv/shared/lena.png"))
         self.assertEqual(cv.norm(ori, subImg, cv.NORM_INF), 0)
