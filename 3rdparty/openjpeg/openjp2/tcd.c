@@ -2262,7 +2262,7 @@ static OPJ_BOOL opj_tcd_dc_level_shift_decode(opj_tcd_t *p_tcd)
             for (j = 0; j < l_height; ++j) {
                 for (i = 0; i < l_width; ++i) {
                     OPJ_FLOAT32 l_value = *((OPJ_FLOAT32 *) l_current_ptr);
-                    if (l_value > INT_MAX) {
+                    if (l_value > (OPJ_FLOAT32)INT_MAX) {
                         *l_current_ptr = l_max;
                     } else if (l_value < INT_MIN) {
                         *l_current_ptr = l_min;

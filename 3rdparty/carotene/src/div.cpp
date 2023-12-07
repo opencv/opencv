@@ -157,8 +157,8 @@ void div(const Size2D &size,
 
     if (scale == 0.0f ||
         (std::numeric_limits<T>::is_integer &&
-         (scale * std::numeric_limits<T>::max()) <  1.0f &&
-         (scale * std::numeric_limits<T>::max()) > -1.0f))
+         (scale * static_cast<float>(std::numeric_limits<T>::max())) <  1.0f &&
+         (scale * static_cast<float>(std::numeric_limits<T>::max())) > -1.0f))
     {
         for (size_t y = 0; y < size.height; ++y)
         {
