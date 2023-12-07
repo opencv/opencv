@@ -12,13 +12,14 @@
 #include <numeric>
 namespace opencv_test { namespace {
 
-struct FilteredDetections{
-    std::vector<int> keep_classIds;
-    std::vector<float> keep_confidences;
-    std::vector<Rect2d> keep_boxes;
-};
-
-FilteredDetections yoloPostProcessing(std::vector<Mat>& outs, float conf_threshold, float iou_threshold, const std::string& test_name);
+void yoloPostProcessing(
+    std::vector<Mat>& outs, 
+    std::vector<int>& keep_classIds,
+    std::vector<float>& keep_confidences,
+    std::vector<Rect2d>& keep_boxes,
+    float conf_threshold, 
+    float iou_threshold, 
+    const std::string& test_name);
 
 template<typename TString>
 static std::string _tf(TString filename, bool required = true)
@@ -2622,7 +2623,7 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
 
     Mat img = imread(imgPath);
 
-    Mat inp = blobFromImageWithParams(img, imgParams);
+    Mat inp = blobFromImageWithParams(img, imgParams);  
 
     Net net = readNet(weightPath);
 
@@ -2630,16 +2631,27 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
     std::vector<Mat> outs;
     net.forward(outs, net.getUnconnectedOutLayersNames());
 
-    FilteredDetections result;
-    result = yoloPostProcessing(outs, conf_threshold, iou_threshold, test_name);
+    // Retrieve
+    std::vector<int> keep_classIds;
+    std::vector<float> keep_confidences;
+    std::vector<Rect2d> keep_boxes;
+    yoloPostProcessing(outs, keep_classIds, keep_confidences, keep_boxes, conf_threshold, iou_threshold, test_name);
 
     normAssertDetections(
         refClassIds, refScores, refBoxes,
-        result.keep_classIds, result.keep_confidences, result.keep_boxes,
+        keep_classIds, keep_confidences, keep_boxes,
         "", 0.0, scores_diff, boxes_iou_diff);
 }
 
-FilteredDetections yoloPostProcessing(std::vector<Mat>& outs, float conf_threshold, float iou_threshold, const std::string& test_name){
+void yoloPostProcessing(
+    std::vector<Mat>& outs, 
+    std::vector<int>& keep_classIds, 
+    std::vector<float>& keep_confidences, 
+    std::vector<Rect2d>& keep_boxes, 
+    float conf_threshold, 
+    float iou_threshold, 
+    const std::string& test_name
+){
 
     // Retrieve
     std::vector<int> classIds;
@@ -2690,18 +2702,16 @@ FilteredDetections yoloPostProcessing(std::vector<Mat>& outs, float conf_thresho
     std::vector<int> keep_idx;
     NMSBoxes(boxes, confidences, conf_threshold, iou_threshold, keep_idx);
 
-    FilteredDetections result;
     for (auto i : keep_idx)
     {
-        result.keep_classIds.push_back(classIds[i]);
-        result.keep_confidences.push_back(confidences[i]);
-        result.keep_boxes.push_back(boxes[i]);
+        keep_classIds.push_back(classIds[i]);
+        keep_confidences.push_back(confidences[i]);
+        keep_boxes.push_back(boxes[i]);
     }
-    return result;
 }
 
 
-TEST_P(Test_ONNX_nets, YOLOx)
+TEST_P(Test_ONNX_nets, YOLOX)
 {
     std::string weightPath = _tf("models/yolox_s_inf_decoder.onnx", false);
 
@@ -2710,13 +2720,12 @@ TEST_P(Test_ONNX_nets, YOLOx)
     float iou_threshold = 0.50;
 
     std::vector<int> refClassIds{1, 16, 7};
-    std::vector<float> refScores{0.96f, 0.91f, 0.66f};
+    std::vector<float> refScores{0.9649f, 0.9163f, 0.6879f};
 
-    // [x1, y1, x2, y2]
     std::vector<Rect2d> refBoxes{
-        Rect2d(104.62, 181.28, 470.95, 428.22),
-        Rect2d(112.32, 264.88, 258.11, 527.31),
-        Rect2d(389.63, 144.63, 576.66, 223.18),
+        Rect2d(105.5384, 179.4100, 470.6339, 428.5553),
+        Rect2d(111.4482, 263.4098, 258.7438, 526.1140),
+        Rect2d(389.1421, 143.9286, 577.9495, 222.0294)
         };
 
     Image2BlobParams imgParams(
@@ -2727,13 +2736,13 @@ TEST_P(Test_ONNX_nets, YOLOx)
         CV_32F,
         DNN_LAYOUT_NCHW,
         DNN_PMODE_LETTERBOX,
-        Scalar::all(144)
+        Scalar::all(114)
         );
 
     testYOLO(
         weightPath, refClassIds, refScores, refBoxes,
         imgParams, conf_threshold, iou_threshold,
-        1.0e-1, 1.0e-1);
+        1.0e-4, 1.0e-4);
 }
 
 TEST_P(Test_ONNX_nets, YOLOv8)
@@ -2761,13 +2770,13 @@ TEST_P(Test_ONNX_nets, YOLOv8)
         CV_32F,
         DNN_LAYOUT_NCHW,
         DNN_PMODE_LETTERBOX,
-        Scalar::all(144)
+        Scalar::all(114)
         );
 
     testYOLO(
         weightPath, refClassIds, refScores, refBoxes,
         imgParams, conf_threshold, iou_threshold,
-        1.0e-1, 1.0e-1, "yolov8");
+        1.0e-4, 1.0e-4, "yolov8");
 }
 
 // This test is mainly to test:
@@ -2833,7 +2842,7 @@ TEST_P(Test_ONNX_nets, YOLOv6)
     testYOLO(
         weightPath, refClassIds, refScores, refBoxes,
         imgParams, conf_threshold, iou_threshold,
-        1.0e-1, 1.0e-1);
+        1.0e-4, 1.0e-3);
 }
 
 TEST_P(Test_ONNX_nets, YOLOv5n)
