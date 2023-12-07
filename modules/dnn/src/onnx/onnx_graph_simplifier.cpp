@@ -193,6 +193,60 @@ static std::string getInputName(const Ptr<ImportGraphWrapper>& net, int node_id,
     }
 }
 
+/*  Slice operator has two optional inputs "axes" and "steps". Some models may be set to have
+    Slice with optional inputs of default values, some of them don't. This Subgraph removes
+    all optional inputs of Slice if values are default.
+*/
+class RemoveSliceAllOptionalInputsSubgraph : public Subgraph {
+ public:
+    RemoveSliceAllOptionalInputsSubgraph(size_t num_inputs = 4) {
+        num_inputs_ = num_inputs;
+
+        int input = addNodeToMatch("");
+        int starts = addNodeToMatch("");
+        int ends = addNodeToMatch("");
+        std::vector<int> inputs{input, starts, ends};
+        for (size_t i = 3; i < num_inputs_; i++) { // axes and steps
+            inputs.push_back(addNodeToMatch(""));
+        }
+
+        slice_id = addNodeToMatch("Slice", inputs);
+
+        setFusedNode("Slice", std::vector<int>{input, starts, ends});
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE {
+        if (Subgraph::match(net, nodeId, matchedNodesIds)) {
+            if (num_inputs_ >= 4) { // with axes
+                // Check if axes are -1 or last axis
+                auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+                int shape_size = onnx_net->getTensorShapeSize(matchedNodesIds[slice_id], 0);
+
+                auto axes = extractConstant(net, matchedNodesIds[slice_id], 3);
+                for (size_t i = 0; i < axes.total(); i++) {
+                    const int axis = *(axes.ptr<const int>() + i);
+                    if (axis != -1 && axis != shape_size - 1) {
+                        return false;
+                    }
+                }
+            }
+            if (num_inputs_ == 5) {
+                // Check if steps are 1
+                auto steps = extractConstant(net, matchedNodesIds[slice_id], 4);
+                if (countNonZero(steps != 1)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+ private:
+    int slice_id;
+    size_t num_inputs_;
+};
+
 /*  The fusion for the multi-head attention from vision transformer.
 
     Abbreviations:
@@ -446,17 +500,6 @@ class AttentionSingleHeadSubGraph : public Subgraph {
         setFusedNode("Attention", input);
     }
 
-    static std::string getInputName(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id) {
-        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
-        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
-        if (initializer_id != -1) {
-            return onnx_net->getNameOfInitializer(initializer_id);
-        } else {
-            const auto node = net->getNode(node_id);
-            return node->getInputName(input_id);
-        }
-    }
-
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                        std::vector<int>& matchedNodesIds) CV_OVERRIDE {
         if (Subgraph::match(net, nodeId, matchedNodesIds)) {
@@ -697,21 +740,6 @@ public:
             axis_ = static_cast<int>(attr.ints(0));
         }
         return axis_;
-    }
-
-    static std::string getInputName(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
-    {
-        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
-        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
-        if (initializer_id != -1)
-        {
-            return onnx_net->getNameOfInitializer(initializer_id);
-        }
-        else
-        {
-            const auto node = net->getNode(node_id);
-            return node->getInputName(input_id);
-        }
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
