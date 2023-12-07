@@ -27,10 +27,17 @@ if(ANDROID_SDK_COMPATIBLE_TARGET)
   set(ANDROID_SDK_COMPATIBLE_TARGET "${ANDROID_SDK_COMPATIBLE_TARGET}" CACHE INTERNAL "")
 endif()
 string(REGEX REPLACE "android-" "" android_sdk_target_num ${ANDROID_SDK_COMPATIBLE_TARGET})
+
 if( (ANDROID_SDK_TARGET AND ANDROID_SDK_TARGET LESS 21) OR (android_sdk_target_num LESS 21) )
   message(STATUS "[OpenCV for Android SDK]: A new OpenGL Camera Bridge (CameraGLSurfaceView, CameraGLRendererBase, CameraRenderer, Camera2Renderer) is disabled, because ANDROID_SDK_TARGET (${android_sdk_target_num}) < 21")
 else()
   ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-21/java" "${java_src_dir}")
+endif()
+
+if( (ANDROID_SDK_TARGET AND ANDROID_SDK_TARGET LESS 24) OR (android_sdk_target_num LESS 24) )
+  message(STATUS "[OpenCV for Android SDK]: An experiemntal Native Camera is disabled, because ANDROID_SDK_TARGET (${android_sdk_target_num}) < 24")
+else()
+  ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-24/java" "${java_src_dir}")
 endif()
 
 # copy boilerplate
@@ -113,6 +120,7 @@ else()  # gradle build
 #TODO: INSTALL ONLY
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android/java" "${java_src_dir}")
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-21/java" "${java_src_dir}")
+ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-24/java" "${java_src_dir}")
 
 # copy boilerplate
 set(__base_dir "${CMAKE_CURRENT_SOURCE_DIR}/android_gradle_lib/")
