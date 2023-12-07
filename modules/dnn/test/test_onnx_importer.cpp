@@ -13,12 +13,12 @@
 namespace opencv_test { namespace {
 
 void yoloPostProcessing(
-    std::vector<Mat>& outs, 
+    std::vector<Mat>& outs,
     std::vector<int>& keep_classIds,
     std::vector<float>& keep_confidences,
     std::vector<Rect2d>& keep_boxes,
-    float conf_threshold, 
-    float iou_threshold, 
+    float conf_threshold,
+    float iou_threshold,
     const std::string& test_name);
 
 template<typename TString>
@@ -2623,7 +2623,7 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
 
     Mat img = imread(imgPath);
 
-    Mat inp = blobFromImageWithParams(img, imgParams);  
+    Mat inp = blobFromImageWithParams(img, imgParams);
 
     Net net = readNet(weightPath);
 
@@ -2644,12 +2644,12 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
 }
 
 void yoloPostProcessing(
-    std::vector<Mat>& outs, 
-    std::vector<int>& keep_classIds, 
-    std::vector<float>& keep_confidences, 
-    std::vector<Rect2d>& keep_boxes, 
-    float conf_threshold, 
-    float iou_threshold, 
+    std::vector<Mat>& outs,
+    std::vector<int>& keep_classIds,
+    std::vector<float>& keep_confidences,
+    std::vector<Rect2d>& keep_boxes,
+    float conf_threshold,
+    float iou_threshold,
     const std::string& test_name
 ){
 
