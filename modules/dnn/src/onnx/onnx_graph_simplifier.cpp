@@ -26,23 +26,8 @@ class ONNXNodeWrapper : public ImportNodeWrapper
 public:
     ONNXNodeWrapper(opencv_onnx::NodeProto* _node = 0) : node(_node) {}
 
-    virtual int getNumRequiredInputs () const CV_OVERRIDE {
-        if (node) {
-            if (node->op_type() == "Slice") {
-                return 3;
-            } else {
-                return node->input_size();
-            }
-        } else {
-            return 0;
-        }
-    }
-
-    virtual int getNumInputs(bool omit_optional_inputs) const CV_OVERRIDE
+    virtual int getNumInputs() const CV_OVERRIDE
     {
-        if (omit_optional_inputs) {
-            return node ? getNumRequiredInputs() : 0;
-        }
         return node ? node->input_size() : 0;
     }
 
@@ -173,13 +158,6 @@ public:
         return type == "Add" || type == "Mul" || type == "Equal" || type == "Max";
     }
 
-    virtual bool isInputOptional(const std::string &type, int input_id) const CV_OVERRIDE {
-        if (type == "Slice") { // Slice: 3-5 inputs
-            return input_id == 3 || input_id == 4;
-        }
-        return false;
-    }
-
 private:
     int numInputs, numInitializers;
     opencv_onnx::GraphProto& net;
@@ -201,6 +179,17 @@ static Mat extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int 
         opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
         opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
         return getMatFromTensor(constant_proto);
+    }
+}
+
+static std::string getInputName(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id) {
+    auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+    int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
+    if (initializer_id != -1) {
+        return onnx_net->getNameOfInitializer(initializer_id);
+    } else {
+        const auto node = net->getNode(node_id);
+        return node->getInputName(input_id);
     }
 }
 
@@ -312,19 +301,7 @@ class AttentionSubGraph : public Subgraph {
         int transpose_qkv = addNodeToMatch("Transpose", matmul_qkv);
         addNodeToMatch("Reshape", transpose_qkv, addNodeToMatch(""));
 
-        omit_optional_inputs = true;
         setFusedNode("Attention", input);
-    }
-
-    static std::string getInputName(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id) {
-        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
-        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
-        if (initializer_id != -1) {
-            return onnx_net->getNameOfInitializer(initializer_id);
-        } else {
-            const auto node = net->getNode(node_id);
-            return node->getInputName(input_id);
-        }
     }
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
@@ -466,7 +443,6 @@ class AttentionSingleHeadSubGraph : public Subgraph {
         int transpose_qkv = addNodeToMatch("Transpose", matmul_qkv);
         addNodeToMatch("Reshape", transpose_qkv, addNodeToMatch(""));
 
-        omit_optional_inputs = true;
         setFusedNode("Attention", input);
     }
 
@@ -1557,61 +1533,6 @@ public:
 
 void simplifySubgraphs(opencv_onnx::GraphProto& net)
 {
-    // Eliminate additional inputs with default values
-    // for (int i = 0; i < net.node_size(); i++) {
-    //     const auto &node = net.node(i);
-    //     if (node.op_type() == "Slice") {
-    //         std::cout << format("OpType: %s, #Inputs: %d, Name: %s\n", "Slice", node.input_size(), node.name().c_str());
-    //         if (node.input_size() == 4) {
-    //             // Check if input(i) is constant; if it is, try to get value; if value equals to default, then detach
-    //             // for (int i = node.input_size() - 1; i >= 3; i--) {
-    //             {
-    //                 const auto input_name = node.input(3);
-    //                 Mat constant_value;
-    //                 // Try get from initializers
-    //                 for (int j = 0; j < net.initializer_size(); j++) {
-    //                     if (net.initializer(j).name() == input_name) {
-    //                         constant_value = getMatFromTensor(net.initializer(j));
-    //                         std::cout << "Initializer: " << constant_value.at<int>(0) << std::endl;
-    //                         break;
-    //                     }
-    //                 }
-    //                 // Try get from Constant node
-    //                 if (constant_value.empty()) {
-    //                     for (int j = 0; j < net.node_size(); j++) {
-    //                         if (net.node(j).name() == input_name) {
-    //                             constant_value = getMatFromTensor(net.node(j).attribute(0).t());
-    //                             break;
-    //                         }
-    //                     }
-    //                 }
-    //                 if (constant_value.empty()) {
-    //                     continue;
-    //                 }
-    //                 // Detach this input if is is constant with default value
-    //                 bool detach = true;
-    //                 std::cout << "detach=" << detach << std::endl;
-    //                 for (int j = 0; j < constant_value.total(); j++) {
-    //                     if (*(constant_value.ptr<int>() + j) != -1) {
-    //                         detach = false;
-    //                         break;
-    //                     }
-    //                 }
-    //                 if (detach) {
-    //                     net.mutable_node(i)->mutable_input()->DeleteSubrange(3, 1);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
-    // for (int i = 0; i < net.node_size(); i++) {
-    //     const auto &node = net.node(i);
-    //     if (node.op_type() == "Slice") {
-    //         std::cout << format("After Elimination, OpType: %s, #Inputs: %d, Name: %s\n", "Slice", node.input_size(), node.name().c_str());
-    //     }
-    // }
-
     std::vector<Ptr<Subgraph> > subgraphs;
     subgraphs.push_back(makePtr<AdjustSliceAllOptionalInputsSubgraph>(3));
     subgraphs.push_back(makePtr<AdjustSliceAllOptionalInputsSubgraph>(4));

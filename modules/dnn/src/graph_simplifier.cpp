@@ -128,7 +128,7 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
             continue;
 
         std::vector<int>& inputNodes = inputs[targetNodeId];
-        if (inputNodes.size() != node->getNumInputs(omit_optional_inputs))
+        if (inputNodes.size() != node->getNumInputs())
             continue;
 
         state.addMatch({targetNodeId, nodeToMatch});
@@ -158,10 +158,6 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
             for (int j = 0; j < inputNodes.size(); ++j)
             {
                 nodeId = getInputNodeId(net, node, j);
-                if (omit_optional_inputs && net->isInputOptional(node->getType(), j)) {
-                    std::cout << node->getType() << ", " << j << std::endl;
-                    continue;
-                }
                 states.push({nodeId, inputNodes[j], state.matchings});
             }
         }

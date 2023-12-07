@@ -34,15 +34,8 @@ class TFNodeWrapper : public ImportNodeWrapper
 public:
     TFNodeWrapper(tensorflow::NodeDef* _node) : node(_node) {}
 
-    virtual int getNumRequiredInputs () const CV_OVERRIDE {
-        return node->input_size();
-    }
-
-    virtual int getNumInputs(bool omit_optional_inputs) const CV_OVERRIDE
+    virtual int getNumInputs() const CV_OVERRIDE
     {
-        if (omit_optional_inputs) {
-            return getNumRequiredInputs();
-        }
         return node->input_size();
     }
 
@@ -111,10 +104,6 @@ public:
                type == "Mul" || type == "Prod" ||
                type == "Max" || type == "Maximum" || type == "Minimum" ||
                type == "Mean" || type == "SquaredDifference";
-    }
-
-    virtual bool isInputOptional(const std::string &type, int input_id) const CV_OVERRIDE {
-        return false;
     }
 
     tensorflow::GraphDef& net;
