@@ -22,9 +22,9 @@ int main()
     Mat depthMap;
     Mat adjDepthMap;
 
-    // 深度最小值
+    // Minimum depth value
     const double minVal = 300;
-    // 深度最大值
+    // Maximum depth value
     const double maxVal = 5000;
     while (true)
     {
