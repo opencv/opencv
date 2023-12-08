@@ -931,6 +931,9 @@ PERF_TEST_P_(Conv_3x3S1D1, conv)
     Net net = build_net(params, backendId, targetId);
     net.enableWinograd(winograd);
 
+    // warmup again since configuration is changed
+    net.forward();
+
     TEST_CYCLE()
     {
         Mat res = net.forward();
