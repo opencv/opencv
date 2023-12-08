@@ -428,11 +428,15 @@ inline const char* _opencv_avcodec_get_name(CV_CODEC_ID id)
 }
 
 
-static
-inline int _opencv_ffmpeg_interrupt_callback(void *ptr)
+static int _opencv_ffmpeg_interrupt_callback(void *ptr)
 {
     AVInterruptCallbackMetadata* metadata = (AVInterruptCallbackMetadata*)ptr;
-    CV_Assert(metadata);
+
+    if(!metadata)
+    {
+        CV_LOG_WARNING(NULL, "Stream timeout without metadata passed");
+        return 0;
+    }
 
     if (metadata->timeout_after_ms == 0)
     {
@@ -442,9 +446,15 @@ inline int _opencv_ffmpeg_interrupt_callback(void *ptr)
     timespec now;
     get_monotonic_time(&now);
 
-    metadata->timeout = get_monotonic_time_diff_ms(metadata->value, now) > metadata->timeout_after_ms;
+    double timeout = get_monotonic_time_diff_ms(metadata->value, now);
+    metadata->timeout = timeout > metadata->timeout_after_ms;
+    if (metadata->timeout)
+    {
+        CV_LOG_WARNING(NULL, cv::format("Stream timeout triggered after %lf ms", timeout));
+        return -1;
+    }
 
-    return metadata->timeout ? -1 : 0;
+    return 0;
 }
 #endif
 
