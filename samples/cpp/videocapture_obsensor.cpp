@@ -38,9 +38,9 @@ int main()
             {
                 imshow("RGB", image);
             }
-            
+
             if (obsensorCapture.retrieve(depthMap, CAP_OBSENSOR_DEPTH_MAP))
-            {           
+            {
                 depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
                 applyColorMap(adjDepthMap, adjDepthMap, COLORMAP_JET);
                 imshow("DEPTH", adjDepthMap);
