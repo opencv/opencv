@@ -33,7 +33,7 @@ Ptr<IVideoCapture> create_obsensor_capture(int index)
 VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
 {
     static const obsensor::StreamProfile colorProfile = { 640, 480, 30, obsensor::FRAME_FORMAT_MJPG };
-    static const obsensor::StreamProfile depthProfile = {640, 480, 30, obsensor::FRAME_FORMAT_Y14};
+    static const obsensor::StreamProfile depthProfile = {640, 480, 30, obsensor::FRAME_FORMAT_Y16};
     static const obsensor::StreamProfile gemini2DepthProfile = {1280, 800, 30, obsensor::FRAME_FORMAT_Y14};
     static const obsensor::StreamProfile astra2ColorProfile = {800, 600, 30, obsensor::FRAME_FORMAT_MJPG};
     static const obsensor::StreamProfile astra2DepthProfile = {800, 600, 30, obsensor::FRAME_FORMAT_Y14};

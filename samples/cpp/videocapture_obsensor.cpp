@@ -21,8 +21,11 @@ int main()
     Mat image;
     Mat depthMap;
     Mat adjDepthMap;
-    double minVal = 300;
-    double maxVal = 5000;
+
+    // 深度最小值
+    const double minVal = 300;
+    // 深度最大值
+    const double maxVal = 5000;
     while (true)
     {
         // Grab depth map like this:
