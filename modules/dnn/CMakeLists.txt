@@ -232,6 +232,9 @@ set(OPENCV_DNN_BACKEND_DEFAULT "" CACHE STRING "Default backend used by the DNN 
 if(OPENCV_DNN_BACKEND_DEFAULT)
   ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/dnn_params.cpp" "OPENCV_DNN_BACKEND_DEFAULT=${OPENCV_DNN_BACKEND_DEFAULT}")
 endif()
+if("x${OPENCV_DNN_BACKEND_DEFAULT}" STREQUAL "x" OR "x${OPENCV_DNN_BACKEND_DEFAULT}" STREQUAL "xDNN_BACKEND_OPENCV")
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/onnx/onnx_graph_simplifier.cpp" "FUSION_DNN_BACKEND_OPENCV=1")
+endif()
 
 ocv_install_used_external_targets(${libs} ${dnn_runtime_libs})
 

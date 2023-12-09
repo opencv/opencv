@@ -242,6 +242,7 @@ class RemoveSliceAllOptionalInputsSubgraph : public Subgraph {
         }
         return false;
     }
+
  private:
     int slice_id;
     size_t num_inputs_;
@@ -1589,8 +1590,10 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<MishSubgraph>());
     subgraphs.push_back(makePtr<NormalizeSubgraph4>());
     subgraphs.push_back(makePtr<NormalizeSubgraph5>());
+#if FUSION_DNN_BACKEND_OPENCV
     subgraphs.push_back(makePtr<AttentionSubGraph>());
     subgraphs.push_back(makePtr<AttentionSingleHeadSubGraph>());
+#endif
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
