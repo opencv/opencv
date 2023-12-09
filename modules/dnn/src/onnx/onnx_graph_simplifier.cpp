@@ -1590,7 +1590,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<MishSubgraph>());
     subgraphs.push_back(makePtr<NormalizeSubgraph4>());
     subgraphs.push_back(makePtr<NormalizeSubgraph5>());
-#if FUSION_DNN_BACKEND_OPENCV
+#ifndef OPENCV_DNN_BACKEND_DEFAULT
     subgraphs.push_back(makePtr<AttentionSubGraph>());
     subgraphs.push_back(makePtr<AttentionSingleHeadSubGraph>());
 #endif
