@@ -1235,7 +1235,7 @@ void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeP
         starts_ = DictValue::arrayInt(start_blob.begin<int>(), start_blob.total());
         ends_ = DictValue::arrayInt(end_blob.begin<int>(), end_blob.total());
 
-        if (inp_size > 3)
+        if (inp_size > 3 && !getBlob(node_proto, 3).empty())
         {
             Mat axes_blob = getBlob(node_proto, 3);
             CV_Assert(axes_blob.total() == start_blob.total());
@@ -1244,7 +1244,7 @@ void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeP
             has_axes = true;
         }
 
-        if (inp_size == 5)
+        if (inp_size == 5 && !getBlob(node_proto, 4).empty())
         {
             Mat step_blob = getBlob(node_proto, 4);
             CV_Assert(step_blob.total() == start_blob.total());
