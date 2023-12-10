@@ -1590,10 +1590,10 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<MishSubgraph>());
     subgraphs.push_back(makePtr<NormalizeSubgraph4>());
     subgraphs.push_back(makePtr<NormalizeSubgraph5>());
-#ifndef OPENCV_DNN_BACKEND_DEFAULT
-    subgraphs.push_back(makePtr<AttentionSubGraph>());
-    subgraphs.push_back(makePtr<AttentionSingleHeadSubGraph>());
-#endif
+    if (getParam_DNN_BACKEND_DEFAULT() == DNN_BACKEND_OPENCV) {
+        subgraphs.push_back(makePtr<AttentionSubGraph>());
+        subgraphs.push_back(makePtr<AttentionSingleHeadSubGraph>());
+    }
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
