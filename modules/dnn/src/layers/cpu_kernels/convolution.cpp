@@ -492,16 +492,8 @@ static inline void packData8(char*& inpbuf, float*& inptrIn, int& in_w, int& x0,
             for (int k = 0; k < ksize; k++)
             {
                 int k1 = ofstab[k];
-                float32x4_t v0, v1;
-
-                v0[0] = inptrInC[k1];
-                v0[1] = inptrInC[k1 + stride_w];
-                v0[2] = inptrInC[k1 + 2*stride_w];
-                v0[3] = inptrInC[k1 + 3*stride_w];
-                v1[0] = inptrInC[k1 + 4*stride_w];
-                v1[1] = inptrInC[k1 + 5*stride_w];
-                v1[2] = inptrInC[k1 + 6*stride_w];
-                v1[3] = inptrInC[k1 + 7*stride_w];
+                float32x4_t v0 = {inptrInC[k1], inptrInC[k1 + stride_w], inptrInC[k1 + 2*stride_w], inptrInC[k1 + 3*stride_w]};
+                float32x4_t v1 = {inptrInC[k1 + 4*stride_w], inptrInC[k1 + 5*stride_w], inptrInC[k1 + 6*stride_w], inptrInC[k1 + 7*stride_w]};
 
                 vst1q_f16((__fp16*)inpbufC_FP16 + k * CONV_NR_FP16, vcombine_f16(vcvt_f16_f32(v0), vcvt_f16_f32(v1)));
             }
@@ -956,11 +948,8 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                                 {
                                     for (int c = 0; c < Cg; c++, inpbuf_ki_FP16 += CONV_NR, inptr_ki += inp_planesize)
                                     {
-                                        float32x4_t v0, v1;
-                                        v0[0] = inptr_ki[0], v0[1] = inptr_ki[2];
-                                        v0[2] = inptr_ki[4], v0[3] = inptr_ki[6];
-                                        v1[0] = inptr_ki[8], v1[1] = inptr_ki[10];
-                                        v1[2] = inptr_ki[12], v1[3] = inptr_ki[14];
+                                        float32x4_t v0 = {inptr_ki[0], inptr_ki[2], inptr_ki[4], inptr_ki[6]};
+                                        float32x4_t v1 = {inptr_ki[8], inptr_ki[10], inptr_ki[12], inptr_ki[14]};
                                         vst1q_f16((__fp16* )inpbuf_ki_FP16, vcombine_f16(vcvt_f16_f32(v0), vcvt_f16_f32(v1)));
                                     }
                                 }
@@ -989,12 +978,8 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                                 {
                                     for (int c = 0; c < Cg; c++, inpbuf_ki_FP16 += CONV_NR, inptr_ki += inp_planesize)
                                     {
-                                        float32x4_t v0, v1;
-
-                                        v0[0] = inptr_ki[0], v0[1] = inptr_ki[stride_w];
-                                        v0[2] = inptr_ki[stride_w * 2], v0[3] = inptr_ki[stride_w * 3];
-                                        v1[0] = inptr_ki[stride_w * 4], v1[1] = inptr_ki[stride_w * 5];
-                                        v1[2] = inptr_ki[stride_w * 6], v1[3] = inptr_ki[stride_w * 7];
+                                        float32x4_t v0 = {inptr_ki[0], inptr_ki[stride_w], inptr_ki[stride_w * 2], inptr_ki[stride_w * 3]};
+                                        float32x4_t v1 = {inptr_ki[stride_w * 4], inptr_ki[stride_w * 5], inptr_ki[stride_w * 6], inptr_ki[stride_w * 7]};
                                         vst1q_f16((__fp16* )inpbuf_ki_FP16, vcombine_f16(vcvt_f16_f32(v0), vcvt_f16_f32(v1)));
                                     }
                                 }
@@ -1051,9 +1036,7 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                                 {
                                     for (int c = 0; c < Cg; c++, inpbuf_ki_FP16 += CONV_NR, inptr_ki += inp_planesize)
                                     {
-                                        float32x4_t v0;
-                                        v0[0] = inptr_ki[0], v0[1] = inptr_ki[stride_w];
-                                        v0[2] = inptr_ki[stride_w * 2], v0[3] = inptr_ki[stride_w * 3];
+                                        float32x4_t v0 = {inptr_ki[0], inptr_ki[stride_w], inptr_ki[stride_w * 2], inptr_ki[stride_w * 3]};
                                         vst1_f16((__fp16* )inpbuf_ki_FP16, vcvt_f16_f32(v0));
                                     }
                                 }
