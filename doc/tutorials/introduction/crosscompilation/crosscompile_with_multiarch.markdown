@@ -24,13 +24,13 @@ Debian/Ubuntu MultiArch helps to fix this. It allows to install several foreign 
 @warning
 - Following these steps will make your Linux environment a little dirty.
   If possible, it is better to use VMs or Container(e.g. Docker).
-- This tutorial expects host and target uses same ubuntu version.
+- This tutorial expects host and target uses same Ubuntu version.
    Do not use/mix different versions for external library dependency.
   - Good: Host and Target are 23.04.
   - Good: Host and Target are 23.10.
   - Not Good: Host is 23.04, and Target is 23.10.
   - Not Good: Host is 23.10, and Target is 23.04.
-- This tutorial may be able to use for debian(and Raspberry Pi OS).
+- This tutorial may be able to use for Debian(and Raspberry Pi OS).
   Please make any necessary changes.
 
 Download tools
@@ -91,7 +91,7 @@ Update apt and dpkg settings
 ----------------------------
 These steps are on host.
 
-`apt` and `dpkg` are package management systems used in ubuntu and debian.
+`apt` and `dpkg` are package management systems used in Ubuntu and Debian.
 
 Following are setup steps to use MultiArch.
 
@@ -382,16 +382,16 @@ And send `opencv_arm64.tgz` to target.
 ### Step4) Install dependency libraries at target
 This step is on target.
 
-Install dependency libraries for OpenCV/OpenCV contrib libraies at target.
+Install dependency runtime libraries for OpenCV/OpenCV contrib libraies at target.
 
 @code{.bash}
 sudo apt install -y \
-    libavcodec-dev \
-    libavformat-dev \
-    libavutil-dev \
-    libswscale-dev \
-    libfreetype-dev \
-    libharfbuzz-dev
+    libavcodec60 \
+    libavformat60 \
+    libavutil58 \
+    libswscale7 \
+    libfreetype6 \
+    libharfbuzz0b
 
 sudo ldconfig
 @endcode
@@ -400,9 +400,14 @@ If you want to enable python3 wrapper, install these packages too.
 
 @code{.bash}
 sudo apt install -y \
-    python3-dev \
+    python3.11 \
     python3-numpy
 @endcode
+
+@warning
+@parblock
+If version of runtime libraries and/or programs are incremented, apt package names may be changed(e.g. `libswscale6` is used for Ubuntu 23.04, but `libswscale7` is used for Ubuntu 23.10). Looking for it with `apt search` command or https://packages.ubuntu.com/ .
+@endparblock
 
 @warning
 @parblock
@@ -488,6 +493,11 @@ make a.out
 ./a.out
 @endcode
 
+If you want to enable python3 wrapper, execute following command to confirm.
+
+@code{.bash}
+python3 -c "import cv2; print(cv2.getBuildInformation())"
+@endcode
 
 Cross-compile(for armv7)
 ------------------------
