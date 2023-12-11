@@ -194,12 +194,12 @@ static std::string getInputName(const Ptr<ImportGraphWrapper>& net, int node_id,
 }
 
 /*  Slice operator has two optional inputs "axes" and "steps". Some models may be set to have
-    Slice with optional inputs of default values, some of them don't. This Subgraph removes
-    all optional inputs of Slice if values are default.
+    Slice with optional inputs of default values, some of them don't. This Subgraph adjusts
+    all optional inputs of Slice up to 5.
 */
-class RemoveSliceAllOptionalInputsSubgraph : public Subgraph {
+class AdjustSliceAllOptionalInputsSubgraph : public Subgraph {
  public:
-    RemoveSliceAllOptionalInputsSubgraph(size_t num_inputs = 4) {
+    AdjustSliceAllOptionalInputsSubgraph(size_t num_inputs = 4) {
         num_inputs_ = num_inputs;
 
         int input = addNodeToMatch("");
@@ -212,37 +212,18 @@ class RemoveSliceAllOptionalInputsSubgraph : public Subgraph {
 
         slice_id = addNodeToMatch("Slice", inputs);
 
-        setFusedNode("Slice", std::vector<int>{input, starts, ends});
+        setFusedNode("Slice", inputs);
     }
 
-    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds) CV_OVERRIDE {
-        if (Subgraph::match(net, nodeId, matchedNodesIds)) {
-            if (num_inputs_ >= 4) { // with axes
-                // Check if axes are -1 or last axis
-                auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
-                int shape_size = onnx_net->getTensorShapeSize(matchedNodesIds[slice_id], 0);
-
-                auto axes = extractConstant(net, matchedNodesIds[slice_id], 3);
-                for (size_t i = 0; i < axes.total(); i++) {
-                    const int axis = *(axes.ptr<const int>() + i);
-                    if (axis != -1 && axis != shape_size - 1) {
-                        return false;
-                    }
-                }
-            }
-            if (num_inputs_ == 5) {
-                // Check if steps are 1
-                auto steps = extractConstant(net, matchedNodesIds[slice_id], 4);
-                if (countNonZero(steps != 1)) {
-                    return false;
-                }
-            }
-            return true;
+    virtual void finalize(const Ptr<ImportGraphWrapper>&,
+                          const Ptr<ImportNodeWrapper>& fusedNode,
+                          std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE
+    {
+        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        for (int i = num_inputs_; i < 5; ++i) {
+            node->add_input("");
         }
-        return false;
     }
-
  private:
     int slice_id;
     size_t num_inputs_;
@@ -332,18 +313,18 @@ class AttentionSubGraph : public Subgraph {
         att_add = addNodeToMatch("Add", addNodeToMatch(""), att_matmul);
 
         // v_path
-        slice_v = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""));
+        slice_v = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int reshape_v = addNodeToMatch("Reshape", slice_v, addNodeToMatch(""));
         int transpose_v = addNodeToMatch("Transpose", reshape_v);
 
         // q_path
-        slice_q = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""));
+        slice_q = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         reshape_q = addNodeToMatch("Reshape", slice_q, addNodeToMatch(""));
         int transpose_q = addNodeToMatch("Transpose", reshape_q);
         div_q = addNodeToMatch("Div", transpose_q, addNodeToMatch(""));
 
         // k_path
-        slice_k = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""));
+        slice_k = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int reshape_k = addNodeToMatch("Reshape", slice_k, addNodeToMatch(""));
         int transpose_k = addNodeToMatch("Transpose", reshape_k);
 
@@ -429,42 +410,6 @@ class AttentionSubGraph : public Subgraph {
     std::string bias_name;
 };
 
-/*  Slice operator has two optional inputs "axes" and "steps". Some models may be set to have
-    Slice with optional inputs of default values, some of them don't. This Subgraph adjusts
-    all optional inputs of Slice up to 5.
-*/
-class AdjustSliceAllOptionalInputsSubgraph : public Subgraph {
- public:
-    AdjustSliceAllOptionalInputsSubgraph(size_t num_inputs = 4) {
-        num_inputs_ = num_inputs;
-
-        int input = addNodeToMatch("");
-        int starts = addNodeToMatch("");
-        int ends = addNodeToMatch("");
-        std::vector<int> inputs{input, starts, ends};
-        for (size_t i = 3; i < num_inputs_; i++) { // axes and steps
-            inputs.push_back(addNodeToMatch(""));
-        }
-
-        slice_id = addNodeToMatch("Slice", inputs);
-
-        setFusedNode("Slice", inputs);
-    }
-
-    virtual void finalize(const Ptr<ImportGraphWrapper>&,
-                          const Ptr<ImportNodeWrapper>& fusedNode,
-                          std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE
-    {
-        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
-        for (int i = num_inputs_; i < 5; ++i) {
-            node->add_input("");
-        }
-    }
- private:
-    int slice_id;
-    size_t num_inputs_;
-};
-
 /*  Attention subgraph with single head.
     No Reshape operator is appended after each Slice operator.
 */
@@ -477,16 +422,16 @@ class AttentionSingleHeadSubGraph : public Subgraph {
         att_add = addNodeToMatch("Add", addNodeToMatch(""), att_matmul);
 
         // v_path
-        slice_v = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""));
+        slice_v = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int transpose_v = addNodeToMatch("Transpose", slice_v);
 
         // q_path
-        slice_q = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""));
+        slice_q = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int transpose_q = addNodeToMatch("Transpose", slice_q);
         div_q = addNodeToMatch("Div", transpose_q, addNodeToMatch(""));
 
         // k_path
-        slice_k = addNodeToMatch("Slice", att_add, addNodeToMatch(""), addNodeToMatch(""));
+        slice_k = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int transpose_k = addNodeToMatch("Transpose", slice_k);
 
         // qk
