@@ -1,5 +1,4 @@
-Cross compilation with Ubuntu/Debian{#tutorial_crosscompile_with_multiarch}
-====================================
+# MultiArch cross-compilation with Ubuntu/Debian{#tutorial_crosscompile_with_multiarch}
 
 @prev_tutorial{tutorial_arm_crosscompile_with_cmake}
 @next_tutorial{tutorial_building_tegra_cuda}
@@ -13,13 +12,18 @@ Cross compilation with Ubuntu/Debian{#tutorial_crosscompile_with_multiarch}
 |^                | OpenCV >=4.8.0 |
 
 @warning
-This tutorial can contain obsolete information.
+This tutorial may contain obsolete information.
 
-What is "MultiArch"
--------------------
-OpenCV may use a lot of 3rdparty libraries for video and image decoding, rendering, acceleration and complex math algorithms. The 3rdparty components are found by CMake on the build host Cross-compilation allows to build OpenCV for foreign architecture or OS, but we loose that large world of components and have to cross-compile each dependency separately and point to it during OpenCV build.
+## What is "MultiArch"
 
-Debian/Ubuntu MultiArch helps to fix this. It allows to install several foreign architecture libraries on host system and use them during OpenCV dependencies resolution.
+OpenCV may use a lot of 3rdparty libraries for video and image decoding, rendering, acceleration
+and complex math algorithms. The 3rd party components are found by CMake on the build host
+cross-compilation allows to build OpenCV for foreign architecture or OS, but we loose that large
+world of components and have to cross-compile each dependency separately and point to it during
+OpenCV build.
+
+Debian/Ubuntu MultiArch helps to fix this. It allows to install several foreign architecture
+libraries on host system and use them during OpenCV dependencies resolution.
 
 @warning
 - Following these steps will make your Linux environment a little dirty.
@@ -30,12 +34,12 @@ Debian/Ubuntu MultiArch helps to fix this. It allows to install several foreign 
   - Good: Host and Target are 23.10.
   - Not Good: Host is 23.04, and Target is 23.10.
   - Not Good: Host is 23.10, and Target is 23.04.
-- This tutorial may be able to use for Debian(and Raspberry Pi OS).
-  Please make any necessary changes.
+- This tutorial may be used for Debian and its derivatives like Raspberry Pi OS. Please make any
+necessary changes.
 
-Download tools
---------------
-Install nessesary tools and toolchains to cross-compile.
+## Download tools
+
+Install necessary tools and toolchains for cross-compilation.
 
 - git, cmake, pkgconf and build-essential are required basically.
 - ninja-build is to reduce compilation time(option).
@@ -54,7 +58,7 @@ sudo apt install -y \
     crossbuild-essential-arm64
 @endcode
 
-If you want to enable python3 wrapper, install these packages too.
+If you want to enable Python 3 wrapper, install these packages too.
 
 @code{.bash}
 sudo apt install -y \
@@ -62,8 +66,8 @@ sudo apt install -y \
     python3-numpy
 @endcode
 
-Working folder structure
-------------------------
+## Working folder structure
+
 In this tutorial, following working folder structure are used.
 
 @code{.unparsed}
@@ -87,19 +91,19 @@ git clone --depth=1 https://github.com/opencv/opencv.git
 git clone --depth=1 https://github.com/opencv/opencv_contrib.git
 @endcode
 
-Update apt and dpkg settings
-----------------------------
+## Update apt and dpkg settings
+
 These steps are on host.
 
 `apt` and `dpkg` are package management systems used in Ubuntu and Debian.
 
 Following are setup steps to use MultiArch.
 
-### Step1) Add apt source for arm64 and armhf
+### Step 1. Add apt source for arm64 and armhf
 
 Execute `sudo apt edit-sources` to add foreign arch libraries at end of file.
 
-ex1) arm64 and armv7 for Ubuntu 23.04
+Example 1: arm64 and armv7 for Ubuntu 23.04
 
 @code{.unparsed}
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports lunar main restricted
@@ -114,7 +118,7 @@ deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports lunar-security unive
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports lunar-security multiverse
 @endcode
 
-ex2) arm64 and armv7 for Ubuntu 23.10
+Example 2: arm64 and armv7 for Ubuntu 23.10
 
 @code{.unparsed}
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic main restricted
@@ -129,7 +133,8 @@ deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic-security univ
 deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports mantic-security multiverse
 @endcode
 
-### Step2) Update apt database
+### Step 2. Update apt database
+
 Update apt database to apply new apt sources.
 
 Execute `sudo apt update`.
@@ -138,35 +143,35 @@ Execute `sudo apt update`.
 sudo apt update
 @endcode
 
-### Step3) Update dpkg setting
+### Step 3. Update dpkg settings
+
 Update dpkg settings to support foreign architectures.
 
 Execute `sudo dpkg --add-architecture arm64` and/or `sudo dpkg --add-architecture armhf`.
+
 @code{.bash}
 sudo dpkg --add-architecture arm64
 sudo dpkg --add-architecture armhf
 @endcode
 
-`sudo dpkg --print-architecture` shows what is host architecutures.
+`sudo dpkg --print-architecture` shows what is host architecture.
+
 @code{.bash}
 sudo dpkg --print-architecture
-@endcode
-@code{.unparsed}
 amd64
 @endcode
 
-And `sudo dpkg --print-foreign-architectures` shows what foreign architecutures are supported.
+And `sudo dpkg --print-foreign-architectures` shows what foreign architectures are supported.
+
 @code{.bash}
 sudo dpkg --print-foreign-architectures
-@endcode
-@code{.unparsed}
 arm64
 armhf
 @endcode
 
-### Option) Confirm working pkg-config
+### Confirm working pkg-config
 
-With MultiArch, several shared libraries and pkgconfig information for each architectures are stored into /usr/lib.
+With MultiArch, several shared libraries and pkg-config information for each architectures are stored into /usr/lib.
 
 @code{.unparsed}
 /usr
@@ -181,7 +186,8 @@ With MultiArch, several shared libraries and pkgconfig information for each arch
 
 Confirm to work `pkg-config` using `PKG_CONFIG_PATH`, `PKG_CONFIG_LIBDIR` and `PKG_CONFIG_SYSROOT_DIR` options.
 
-for aarch64
+for aarch64:
+
 @code{.bash}
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
@@ -189,7 +195,8 @@ PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
       pkg-config --list-all
 @endcode
 
-for armv7
+for armv7:
+
 @code{.bash}
 PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
   PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf \
@@ -197,14 +204,15 @@ PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
       pkg-config --list-all
 @endcode
 
-Cross-compile(for aarch64)
---------------------------
-Following is to compile for target(aarch64) at host(x86-64).
+## Cross-compile for aarch64
 
-### Step1) Install external libraries for target into host
+Following is to compile for target (aarch64) at host (x86-64).
+
+### Step 1. Install external libraries for target into host
+
 This step is on host.
 
-Install libfreetype-dev, libharfbuzz-dev and ffmpeg packages for target(arm64) into host(x86-64).
+Install libfreetype-dev, libharfbuzz-dev and FFmpeg packages for target (arm64) into host (x86-64).
 
 @code{.bash}
 sudo apt install -y \
@@ -216,38 +224,36 @@ sudo apt install -y \
     libharfbuzz-dev:arm64
 @endcode
 
-If you want to enable python3 wrapper, install these packages too.
+If you want to enable Python 3 wrapper, install these packages too.
 
 @code{.bash}
 sudo apt install -y \
     libpython3-dev:arm64
 @endcode
 
-If successeed, pkg-config can show information about these packages.
+If succeed, pkg-config can show information about these packages.
 
-For freetype2 and harfbuzz
+For Freetype2 and Harfbuzz:
+
 @code{.bash}
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
        pkg-config freetype2 harfbuzz --cflags --libs
-@endcode
-@code{.unparsed}
 -I/usr/include/freetype2 -I/usr/include/libpng16 -I/usr/include/harfbuzz -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include -L/usr/lib/aarch64-linux-gnu -lfreetype -lharfbuzz
 @endcode
 
-For FFmpeg
+For FFmpeg:
+
 @code{.bash}
 PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
     PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu \
     PKG_CONFIG_SYSROOT_DIR=/ \
        pkg-config libavcodec libavformat libavutil libswscale --cflags --libs
-@endcode
-@code{.unparsed}
 -I/usr/include/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu -lavcodec -lavformat -lavutil -lswscale
 @endcode
 
-### Step2) Configure OpenCV Settings
+### Step 2. Configure OpenCV Settings
 This step is on host.
 
 Execute `cmake` to make cross-compile configuration for aarch64.
@@ -265,7 +271,7 @@ PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
               -GNinja
 @endcode
 
-If you want to enable python3 wrapper, extra options are needed.
+If you want to enable Python 3 wrapper, extra options are needed.
 
 @code{.bash}
 PYTHON3_REALPATH=`realpath /usr/bin/python3`
@@ -346,7 +352,7 @@ Following is cmake outputs.
 --
 @endcode
 
-If enabling python3 wrapper is succeeded, `Pyhton 3:` section shows more.
+If enabling Python 3 wrapper is succeeded, `Python 3:` section shows more.
 
 @code{.unparsed}
 --
@@ -360,7 +366,8 @@ If enabling python3 wrapper is succeeded, `Pyhton 3:` section shows more.
 --
 @endcode
 
-### Step3) Build and archive OpenCV libraries and headers
+### Step 3. Build and archive OpenCV libraries and headers
+
 This step in in host.
 
 Build and install.
@@ -379,10 +386,11 @@ tar czvf opencv_arm64.tgz -C build4-full_arm64/install .
 
 And send `opencv_arm64.tgz` to target.
 
-### Step4) Install dependency libraries at target
-This step is on target.
+### Step 4. Install dependency libraries at target
 
-Install dependency runtime libraries for OpenCV/OpenCV contrib libraies at target.
+This step is executed on the target system.
+
+Install dependency run-time libraries for OpenCV/OpenCV contrib libraries at target.
 
 @code{.bash}
 sudo apt install -y \
@@ -396,7 +404,7 @@ sudo apt install -y \
 sudo ldconfig
 @endcode
 
-If you want to enable python3 wrapper, install these packages too.
+If you want to enable Python 3 wrapper, install these packages too.
 
 @code{.bash}
 sudo apt install -y \
@@ -406,7 +414,9 @@ sudo apt install -y \
 
 @warning
 @parblock
-If version of runtime libraries and/or programs are incremented, apt package names may be changed(e.g. `libswscale6` is used for Ubuntu 23.04, but `libswscale7` is used for Ubuntu 23.10). Looking for it with `apt search` command or https://packages.ubuntu.com/ .
+If version of runtime libraries and/or programs are incremented, apt package names may be changed
+(e.g. `libswscale6` is used for Ubuntu 23.04, but `libswscale7` is used for Ubuntu 23.10).
+Looking for it with `apt search` command or https://packages.ubuntu.com/ .
 @endparblock
 
 @warning
@@ -419,17 +429,17 @@ the versions may differ due to additional updates to the libraries.
 This will cause unexpected problems.
 
 For example)
-- On Host, OpenCV has been build with external libraryA(v1.0) for target.
-- libraryA(v1.1) may be updated.
-- On Target, libraryA(v1.1) is installed to use OpenCV.
-- In this case, versions of libraryA is difference between compiling and running.
+- On Host, OpenCV has been build with external libA (v1.0) for target.
+- libA (v1.1) may be updated.
+- On Target, libA (v1.1) is installed to use OpenCV.
+- In this case, versions of libA is difference between compiling and running.
 @endparblock
 
 @warning
 @parblock
-If you forget/mismatch to install some nessesary libraries, OpenCV will not works well.
+If you forget/mismatch to install some necessary libraries, OpenCV will not works well.
 
-`ldd` command can detect dependency. If there are any "not found", please install nessesary libraries.
+`ldd` command can detect dependency. If there are any "not found", please install necessary libraries.
 
 @code{.bash}
 ldd /usr/local/lib/libopencv_freetype.so
@@ -456,7 +466,8 @@ ldd /usr/local/lib/libopencv_freetype.so
 @endcode
 @endparblock
 
-### Step5) Install OpenCV libraries to target
+### Step 5. Install OpenCV libraries to target
+
 This step is on target.
 
 Receive `opencv_arm64.tgz` from host (generated at Step3), and extract to `/usr/local`.
@@ -466,7 +477,8 @@ sudo tar zxvf opencv_arm64.tgz -C /usr/local
 sudo ldconfig
 @endcode
 
-You can use OpenCV libraries same as self-compiling.  Following is opencv sample code. Compile and run it on target.
+You can use OpenCV libraries same as self-compiling. Following is OpenCV sample code. Compile and
+run it on target.
 
 Makefile
 @code{.make}
@@ -493,15 +505,15 @@ make a.out
 ./a.out
 @endcode
 
-If you want to enable python3 wrapper, execute following command to confirm.
+If you want to enable Python 3 wrapper, execute following command to confirm.
 
 @code{.bash}
 python3 -c "import cv2; print(cv2.getBuildInformation())"
 @endcode
 
-Cross-compile(for armv7)
-------------------------
-Following is to compile for target(armhf) at host(x86-64).
+## Cross-compile for armv7
+
+Following is to compile for target (armhf) at host (x86-64).
 
 - To resolve dependencies, `linux-libc-dev:armhf` is required.
 - To optimize with neon, `-DENABLE_NEON=ON` is needed.
