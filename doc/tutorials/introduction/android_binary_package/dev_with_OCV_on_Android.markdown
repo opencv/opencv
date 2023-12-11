@@ -2,7 +2,7 @@ Android Development with OpenCV {#tutorial_dev_with_OCV_on_Android}
 ===============================
 
 @prev_tutorial{tutorial_O4A_SDK}
-@next_tutorial{tutorial_android_ocl_intro}
+@next_tutorial{tutorial_android_dnn_intro}
 
 |    |    |
 | -: | :- |
