@@ -776,7 +776,7 @@ public:
         } else if (m_model->input(input_name).get_shape().size() == 4u) {
             const auto& input_layout = ::ov::layout::get_layout(m_model->input(input_name));
             if (!input_layout.empty()) {
-                input_info.model().set_layout(input_layout);
+                GAPI_LOG_INFO(NULL, "Model input layout " << input_name << " found: " << input_layout.to_string() << ".");
             } else {
                 // NB: Back compatibility with IR's without any layout information.
                 // Note that default is only applicable for 4D inputs in order to
