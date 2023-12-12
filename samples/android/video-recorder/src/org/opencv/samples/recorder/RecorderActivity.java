@@ -119,6 +119,15 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
     }
 
     @Override
+    public void onResume()
+    {
+        Log.d(TAG, "onResume");
+        super.onResume();
+        changeStatus();
+
+    }
+
+    @Override
     protected List<? extends CameraBridgeViewBase> getCameraViewList() {
         return Collections.singletonList(mOpenCvCameraView);
     }
@@ -149,7 +158,6 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         Log.d(TAG, "Camera frame arrived");
 
         Mat rgbMat = inputFrame.rgba();
-        Imgproc.cvtColor(rgbMat, rgbMat, Imgproc.COLOR_RGBA2RGB);
 
         int w = rgbMat.width();
         int h = rgbMat.height();
@@ -157,7 +165,9 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         Log.d(TAG, "Size: " + String.valueOf(w) + "x" + String.valueOf(h));
 
         if (videoWriter != null && videoWriter.isOpened()) {
-            videoWriter.write(rgbMat);
+            Mat frame = new Mat();
+            Imgproc.cvtColor(rgbMat, frame, Imgproc.COLOR_RGBA2BGR);
+            videoWriter.write(frame);
         }
 
         return rgbMat;
@@ -166,10 +176,10 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
     @Override
     public void onClick(View view) {
         Log.i(TAG,"onClick event");
-        ChangeStatus();
+        changeStatus();
     }
 
-    public void ChangeStatus() {
+    public void changeStatus() {
         switch(status) {
             case STATUS_ERROR:
                 Toast.makeText(this, "Error", Toast.LENGTH_LONG).show();
@@ -293,12 +303,11 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
                 videoCapture.read(frame);
                 if (frame.empty()) {
                     if (status == STATUS_PLAYING) {
-                        ChangeStatus();
+                        changeStatus();
                     }
                     return;
                 }
-                if (!useMJPG)
-                    Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2RGB);
+                Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2RGB);
                 Bitmap bmp = Bitmap.createBitmap(frame.cols(), frame.rows(), Bitmap.Config.ARGB_8888);
                 Utils.matToBitmap(frame, bmp);
                 imageView.setImageBitmap(bmp);
