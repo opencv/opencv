@@ -2788,7 +2788,7 @@ void ONNXImporter::parseSoftMax(LayerParams& layerParams, const opencv_onnx::Nod
 {
     const std::string& layer_type = node_proto.op_type();
     int axis;
-    if (layerParams.has("opset") && layerParams.get<int>("opset") <= 11) {
+    if (onnx_opset != 0 && onnx_opset <= 11) {
         axis = layerParams.get<int>("axis", 1);
     } else {
         axis = layerParams.get<int>("axis", -1);
