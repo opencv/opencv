@@ -34,6 +34,7 @@ public class Tutorial1Activity extends CameraActivity implements CvCameraViewLis
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
 
+        //! [ocv_loader_init]
         if (OpenCVLoader.initLocal()) {
             Log.i(TAG, "OpenCV loaded successfully");
         } else {
@@ -41,6 +42,7 @@ public class Tutorial1Activity extends CameraActivity implements CvCameraViewLis
             (Toast.makeText(this, "OpenCV initialization failed!", Toast.LENGTH_LONG)).show();
             return;
         }
+        //! [ocv_loader_init]
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
