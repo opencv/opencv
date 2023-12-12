@@ -12,6 +12,15 @@
 #include <numeric>
 namespace opencv_test { namespace {
 
+void yoloPostProcessing(
+    std::vector<Mat>& outs,
+    std::vector<int>& keep_classIds,
+    std::vector<float>& keep_confidences,
+    std::vector<Rect2d>& keep_boxes,
+    float conf_threshold,
+    float iou_threshold,
+    const std::string& test_name);
+
 template<typename TString>
 static std::string _tf(TString filename, bool required = true)
 {
@@ -2606,16 +2615,15 @@ TEST_P(Test_ONNX_layers, CumSum)
 }
 
 static void testYOLO(const std::string& weightPath, const std::vector<int>& refClassIds,
-                     const std::vector<float>& refScores, const std::vector<Rect2d>& refBoxes)
+                     const std::vector<float>& refScores, const std::vector<Rect2d>& refBoxes,
+                     Image2BlobParams imgParams, float conf_threshold = 0.3, float iou_threshold = 0.5,
+                     double scores_diff = 1e-5, double boxes_iou_diff = 1e-4, const std::string test_name = "")
 {
     std::string imgPath = _tf("../dog_orig_size.png");
 
-    Size targetSize{640, 640};
-    float conf_threshold = 0.3;
-    float iou_threshold = 0.5;
-
     Mat img = imread(imgPath);
-    Mat inp = blobFromImage(img, 1/255.0, targetSize, Scalar(0, 0, 0), true, false);
+
+    Mat inp = blobFromImageWithParams(img, imgParams);
 
     Net net = readNet(weightPath);
 
@@ -2624,26 +2632,54 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
     net.forward(outs, net.getUnconnectedOutLayersNames());
 
     // Retrieve
+    std::vector<int> keep_classIds;
+    std::vector<float> keep_confidences;
+    std::vector<Rect2d> keep_boxes;
+    yoloPostProcessing(outs, keep_classIds, keep_confidences, keep_boxes, conf_threshold, iou_threshold, test_name);
+
+    normAssertDetections(
+        refClassIds, refScores, refBoxes,
+        keep_classIds, keep_confidences, keep_boxes,
+        "", 0.0, scores_diff, boxes_iou_diff);
+}
+
+void yoloPostProcessing(
+    std::vector<Mat>& outs,
+    std::vector<int>& keep_classIds,
+    std::vector<float>& keep_confidences,
+    std::vector<Rect2d>& keep_boxes,
+    float conf_threshold,
+    float iou_threshold,
+    const std::string& test_name
+){
+
+    // Retrieve
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<Rect2d> boxes;
+
+    if (test_name == "yolov8"){
+        cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
+    }
+
     // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
-    for (auto preds : outs)
-    {
-        preds = preds.reshape(1, preds.size[1]);
+    for (auto preds : outs){
+
+        preds = preds.reshape(1, preds.size[1]); // [1, 8400, 85] -> [8400, 85]
+
         for (int i = 0; i < preds.rows; ++i)
         {
             // filter out non objects
-            float obj_conf = preds.row(i).at<float>(4);
+            float obj_conf = (test_name != "yolov8") ? preds.at<float>(i, 4) : 1.0f;
             if (obj_conf < conf_threshold)
                 continue;
 
-            // get class id and conf
-            Mat scores = preds.row(i).colRange(5, preds.cols);
+            Mat scores = preds.row(i).colRange((test_name != "yolov8") ? 5 : 4, preds.cols);
             double conf;
             Point maxLoc;
             minMaxLoc(scores, 0, &conf, 0, &maxLoc);
-            conf *= obj_conf;
+
+            conf = (test_name != "yolov8") ? conf * obj_conf : conf;
             if (conf < conf_threshold)
                 continue;
 
@@ -2653,6 +2689,7 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
             double cy = det[1];
             double w = det[2];
             double h = det[3];
+
             // [x1, y1, x2, y2]
             boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
                                     cx + 0.5 * w, cy + 0.5 * h));
@@ -2665,17 +2702,81 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
     std::vector<int> keep_idx;
     NMSBoxes(boxes, confidences, conf_threshold, iou_threshold, keep_idx);
 
-    std::vector<int> keep_classIds;
-    std::vector<float> keep_confidences;
-    std::vector<Rect2d> keep_boxes;
     for (auto i : keep_idx)
     {
         keep_classIds.push_back(classIds[i]);
         keep_confidences.push_back(confidences[i]);
         keep_boxes.push_back(boxes[i]);
     }
+}
 
-    normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes);
+
+TEST_P(Test_ONNX_nets, YOLOX)
+{
+    std::string weightPath = _tf("models/yolox_s_inf_decoder.onnx", false);
+
+    Size targetSize{640, 640};
+    float conf_threshold = 0.50;
+    float iou_threshold = 0.50;
+
+    std::vector<int> refClassIds{1, 16, 7};
+    std::vector<float> refScores{0.9649f, 0.9163f, 0.6879f};
+
+    std::vector<Rect2d> refBoxes{
+        Rect2d(105.5384, 179.4100, 470.6339, 428.5553),
+        Rect2d(111.4482, 263.4098, 258.7438, 526.1140),
+        Rect2d(389.1421, 143.9286, 577.9495, 222.0294)
+        };
+
+    Image2BlobParams imgParams(
+        Scalar::all(1),
+        targetSize,
+        Scalar::all(0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NCHW,
+        DNN_PMODE_LETTERBOX,
+        Scalar::all(114)
+        );
+
+    testYOLO(
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, conf_threshold, iou_threshold,
+        1.0e-4, 1.0e-4);
+}
+
+TEST_P(Test_ONNX_nets, YOLOv8)
+{
+    std::string weightPath = _tf("models/yolov8n.onnx", false);
+
+    Size targetSize{640, 640};
+    float conf_threshold = 0.25;
+    float iou_threshold = 0.50;
+
+    std::vector<int> refClassIds{16, 1, 2};
+    std::vector<float> refScores{0.9332f, 0.8959f, 0.6157f};
+    // [x1, y1, x2, y2]
+    std::vector<Rect2d> refBoxes{
+        Rect2d(108.8965, 261.9094, 257.1633, 530.3049),
+        Rect2d(110.4020, 192.9843, 473.4418, 429.5965),
+        Rect2d(389.1603, 143.2506, 577.3542, 223.0615),
+        };
+
+    Image2BlobParams imgParams(
+        Scalar::all(1/255.0),
+        targetSize,
+        Scalar::all(0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NCHW,
+        DNN_PMODE_LETTERBOX,
+        Scalar::all(114)
+        );
+
+    testYOLO(
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, conf_threshold, iou_threshold,
+        1.0e-4, 1.0e-4, "yolov8");
 }
 
 // This test is mainly to test:
@@ -2693,7 +2794,55 @@ TEST_P(Test_ONNX_nets, YOLOv7)
     std::vector<Rect2d> refBoxes{Rect2d(105.973236f, 150.16716f,  472.59012f, 466.48834f),
                                  Rect2d(109.97953f,  246.17862f, 259.83676f, 600.76624f),
                                  Rect2d(385.96185f, 83.02809f,  576.07355f,  189.82793f)};
-    testYOLO(weightPath, refClassIds, refScores, refBoxes);
+
+    Size targetSize{640, 640};
+
+    Image2BlobParams imgParams(
+        Scalar::all(1/255.0),
+        targetSize,
+        Scalar::all(0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NCHW,
+        DNN_PMODE_NULL,
+        Scalar::all(0)
+        );
+
+    testYOLO(weightPath, refClassIds, refScores, refBoxes, imgParams);
+}
+
+TEST_P(Test_ONNX_nets, YOLOv6)
+{
+    std::string weightPath = _tf("models/yolov6n.onnx", false);
+
+    Size targetSize{640, 640};
+    float conf_threshold = 0.30;
+    float iou_threshold = 0.50;
+
+    std::vector<int> refClassIds{1, 16, 7, 1};
+    std::vector<float> refScores{0.95031f, 0.87123f,  0.65453f, 0.34142f};
+    // [x1, y1, x2, y2] x 3
+    std::vector<Rect2d> refBoxes{Rect2d(98.84, 177.91, 473.29, 431.19),
+                                 Rect2d(109.80, 265.50, 258.86, 531.97),
+                                 Rect2d(387.79, 141.61, 576.98, 223.52),
+                                 Rect2d(105.62, 199.24, 218.37, 389.84),
+                                 };
+
+    Image2BlobParams imgParams(
+        Scalar::all(1/255.0),
+        targetSize,
+        Scalar::all(0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NCHW,
+        DNN_PMODE_LETTERBOX,
+        Scalar::all(114)
+        );
+
+    testYOLO(
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, conf_threshold, iou_threshold,
+        1.0e-4, 1.0e-3);
 }
 
 TEST_P(Test_ONNX_nets, YOLOv5n)
@@ -2707,7 +2856,21 @@ TEST_P(Test_ONNX_nets, YOLOv5n)
     std::vector<Rect2d> refBoxes{Rect2d(108.088f, 239.293f, 266.196f, 607.658f),
                                  Rect2d(392.028f, 89.9233f, 579.152f, 190.447f),
                                  Rect2d(120.278f, 159.76, 214.481f, 241.473f)};
-    testYOLO(weightPath, refClassIds, refScores, refBoxes);
+
+    Size targetSize{640, 640};
+
+    Image2BlobParams imgParams(
+        Scalar::all(1/255.0),
+        targetSize,
+        Scalar::all(0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NCHW,
+        DNN_PMODE_NULL,
+        Scalar::all(0)
+        );
+
+    testYOLO(weightPath, refClassIds, refScores, refBoxes, imgParams);
 }
 
 TEST_P(Test_ONNX_layers, Tile)
