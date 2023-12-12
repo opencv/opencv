@@ -74,6 +74,12 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         opt.init();
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        const auto A_shape = shape(inputs[0]), B_shape = shape(inputs[1]), C_shape = shape(outputs[0]);
+        helper.compute(trans_a, trans_b, A_shape, B_shape, C_shape);
     }
 
     // works like Y = numpy.matmul(A, B)
@@ -94,7 +100,11 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         const auto &A = inputs[0], &B = inputs[1];
         auto &Y = outputs[0];
 
-        // fastMatMul(A, B, Y);
+        const auto *a = A.ptr<const float>(), *b = B.ptr<const float>();
+        auto *y = Y.ptr<float>();
+        fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
+                      helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1, b, helper.ldb0,
+                      helper.ldb1, beta, y, helper.ldc, opt);
     }
 
  private:
@@ -104,6 +114,12 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     float beta;
 
     FastGemmOpt opt;
+    MatMulHelper helper;
 };
+
+Ptr<MatMulLayer> MatMulLayer::create(const LayerParams& params)
+{
+    return makePtr<MatMulLayerImpl>(params);
+}
 
 }} // cv::dnn

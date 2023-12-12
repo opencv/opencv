@@ -127,10 +127,9 @@ void fastGemmKernel(int M, int N, int K,
                     float alpha, const char *A, int lda0, int lda1,
                     const char *packed_B, float beta, char *C, int ldc, int esz);
 
-void fastGemmBatchKernel(size_t batch, int M, int N, int K,
-                         float alpha, const char *A, int lda0, int lda1,
-                         const char *B, int ldb0, int ldb1, float beta,
-                         char *C, int ldc, int esz);
+void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+                         int M, int N, int K, float alpha, const char *A, int lda0, int lda1,
+                         const char *B, int ldb0,int ldb1, float beta, char *C, int ldc, int esz);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -726,10 +725,9 @@ void fastGemmKernel(int M, int N, int K,
     parallel_for_(Range(0, total), fn, nstripes);
 }
 
-void fastGemmBatchKernel(size_t batch, int M, int N, int K,
-                         float alpha, const char *A, int lda0, int lda1,
-                         const char *B, int ldb0, int ldb1, float beta,
-                         char *C, int ldc, int esz) {
+void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+                         int M, int N, int K, float alpha, const char *A, int lda0, int lda1,
+                         const char *B, int ldb0, int ldb1, float beta, char *C, int ldc, int esz) {
     int GEMM_MC = FAST_GEMM_F32_MC,
         GEMM_NC = FAST_GEMM_F32_NC,
         GEMM_MR = FAST_GEMM_F32_MR,
@@ -761,9 +759,9 @@ void fastGemmBatchKernel(size_t batch, int M, int N, int K,
             int mc = M - i0 < MC ? M - i0 : MC;
             int nc = N - j0 < NC ? N - j0 : NC;
             int ldc_block = ldc;
-            const char *a_block = A + batch_index * M * K;
-            const char *b_block = B + batch_index * K * N;
-            char* c_block = C + batch_index * M * N + (i0 * ldc + j0) * esz;
+            const char *a_block = A + A_offsets[batch_index];
+            const char *b_block = B + B_offsets[batch_index];
+            char* c_block = C + C_offsets[batch_index] + (i0 * ldc + j0) * esz;
 
             if (beta == 0.f) {
                 for(int i = 0; i < mc; i++)
