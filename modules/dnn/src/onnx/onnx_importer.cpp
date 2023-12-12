@@ -3962,7 +3962,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Concat"] = &ONNXImporter::parseConcat;
     dispatch["Resize"] = &ONNXImporter::parseResize;
     dispatch["Upsample"] = &ONNXImporter::parseUpsample;
-    dispatch["SoftMax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
+    dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter::parseCumSum;
     dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter::parseDepthToSpace;
@@ -3981,7 +3981,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
-                                          "Identity", "Log", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh", "Softmax",
+                                          "Identity", "Log", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh",
                                           "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "Gelu",
                                           "GeluApproximation"};
     for (const auto& name : simpleLayers)
