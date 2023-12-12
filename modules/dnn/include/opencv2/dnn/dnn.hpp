@@ -1659,6 +1659,52 @@ CV__DNN_INLINE_NS_BEGIN
                              float confThreshold = 0.5f, float nmsThreshold = 0.0f);
      };
 
+    /** @brief This class represents high-level API for YOLO object detection networks.
+      *
+      * YoloDetection allows to set params for preprocessing input image.
+      * YoloDetection creates net from file with trained weights and config,
+      * sets preprocessing input, runs forward pass and return result detections.
+      */
+     class CV_EXPORTS_W_SIMPLE YoloObjectDetector : public DetectionModel
+     {
+     public:
+        /**
+          * @brief Create detection model from network represented in one of the supported formats.
+          * An order of @p model and @p config arguments does not matter.
+          * @param[in] model Binary file contains trained weights.
+          * @param[in] config Text file contains network configuration.
+          */
+        //  CV_WRAP YoloObjectDetector(const String& model, const String& config = "");
+
+         /**
+          * @brief Create model from onnx graph.
+          * @param[in] onnx_path path to onnx graph.
+          */
+         CV_WRAP YoloObjectDetector(const String& onnx, const String& yoloName);
+
+         CV_DEPRECATED_EXTERNAL  // avoid using in C++ code (need to fix bindings first)
+         YoloObjectDetector();
+
+         CV_WRAP void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
+                             CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
+                             float confThreshold = 0.5f, float nmsThreshold = 0.0f);
+
+         CV_WRAP void postProccess(
+            std::vector<Mat>& detections,
+            CV_OUT std::vector<Rect2d>& boxes,
+            CV_OUT std::vector<float>& confidences,
+            CV_OUT std::vector<int>& classIds,
+            const float confThreshold,
+            const float nmsThreshold);
+
+        //  CV_WRAP void setPadingMode(ImagePaddingMode paddingmode);
+        //  CV_WRAP void setPadvalue(float padValue);
+        public:
+            void setPaddingMode(const ImagePaddingMode & paddingMode);
+            void setPaddingValue(const float & paddingValue);
+            void setYoloVersion(const int version);
+            YoloObjectDetector& setNmsAcrossClasses(bool value);
+    };
 
 /** @brief This class represents high-level API for text recognition networks.
  *
