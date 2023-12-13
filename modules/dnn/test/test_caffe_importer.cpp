@@ -716,15 +716,15 @@ INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
 
 TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 {
-    applyTestTag(
-#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
-        CV_TEST_TAG_MEMORY_2GB,  // utilizes ~1Gb, but huge blobs may not be allocated on 32-bit systems due memory fragmentation
-#else
-        CV_TEST_TAG_MEMORY_2GB,
-#endif
-        CV_TEST_TAG_LONG,
-        CV_TEST_TAG_DEBUG_VERYLONG
-    );
+//    applyTestTag(
+//#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+//        CV_TEST_TAG_MEMORY_2GB,  // utilizes ~1Gb, but huge blobs may not be allocated on 32-bit systems due memory fragmentation
+//#else
+//        CV_TEST_TAG_MEMORY_2GB,
+//#endif
+//        CV_TEST_TAG_LONG,
+//        CV_TEST_TAG_DEBUG_VERYLONG
+//    );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
