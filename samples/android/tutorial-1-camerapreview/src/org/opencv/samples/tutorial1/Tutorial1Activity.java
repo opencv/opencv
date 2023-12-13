@@ -44,7 +44,9 @@ public class Tutorial1Activity extends CameraActivity implements CvCameraViewLis
         }
         //! [ocv_loader_init]
 
+        //! [keep_screen]
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        //! [keep_screen]
 
         setContentView(R.layout.tutorial1_surface_view);
 
