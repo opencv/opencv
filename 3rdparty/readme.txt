@@ -31,7 +31,7 @@ libpng                Portable Network Graphics library.
                       
 libspng               Portable Network Graphics library.
                       The license and copyright notes can be found in libspng/LICENSE.
-                      See libspng home page https://www.libspng.org
+                      See libspng home page https://libspng.org
                       for details and links to the source code
                       
                       WITH_SPNG CMake option must be ON to add libspng support to imgcodecs
