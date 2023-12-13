@@ -9,7 +9,6 @@ import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.SurfaceView;
 import android.view.WindowManager;
 import android.widget.Toast;
@@ -21,8 +20,6 @@ public class Tutorial1Activity extends CameraActivity implements CvCameraViewLis
     private static final String TAG = "OCVSample::Activity";
 
     private CameraBridgeViewBase mOpenCvCameraView;
-    private boolean              mIsJavaCamera = true;
-    private MenuItem             mItemSwitchCamera = null;
 
     public Tutorial1Activity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -44,7 +41,9 @@ public class Tutorial1Activity extends CameraActivity implements CvCameraViewLis
         }
         //! [ocv_loader_init]
 
+        //! [keep_screen]
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        //! [keep_screen]
 
         setContentView(R.layout.tutorial1_surface_view);
 
@@ -76,18 +75,22 @@ public class Tutorial1Activity extends CameraActivity implements CvCameraViewLis
         return Collections.singletonList(mOpenCvCameraView);
     }
 
+    @Override
     public void onDestroy() {
         super.onDestroy();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
     }
 
+    @Override
     public void onCameraViewStarted(int width, int height) {
     }
 
+    @Override
     public void onCameraViewStopped() {
     }
 
+    @Override
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
         return inputFrame.rgba();
     }
