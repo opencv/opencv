@@ -77,7 +77,6 @@ In addition to this instruction you can use some video guide, for example [this 
 
 6. OpenCV project uses `aidl` and `buildConfig` features. Please enable them in
    `MyApplication/OpenCV/build.gradle` file to `android` block:
-
     @code{.gradle}
     buildFeatures{
         aidl true
@@ -95,12 +94,14 @@ In addition to this instruction you can use some video guide, for example [this 
 
 7. Add the module to the project:
     - Click ***File -> Project structure... -> Dependencies -> All modules -> + (Add Dependency button) -> Module dependency***
-    - Choose `app`
-    - Select `OpenCV`
 
     ![](images/add_module_1.png)
 
+    - Choose `app`
+
     ![](images/add_module_2.png)
+
+    - Select `OpenCV`
 
     ![](images/add_module_3.png)
 
