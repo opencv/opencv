@@ -165,6 +165,7 @@ set(gapi_srcs
     # ONNX backend
     src/backends/onnx/gonnxbackend.cpp
     src/backends/onnx/dml_ep.cpp
+    src/backends/onnx/coreml_ep.cpp
 
     # Render backend
     src/backends/render/grenderocv.cpp
