@@ -36,7 +36,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         // Check legal matrix multiplication
         int mA = shape_A[shape_A.size() - 2], nA = shape_A.back();
-        int mB = shape_B[shape_A.size() - 2], nB = shape_B.back();
+        int mB = shape_B[shape_B.size() - 2], nB = shape_B.back();
         int M = trans_a ? nA : mA;
         int N = trans_b ? mB : nB;
         int K_A = trans_a ? mA : nA;
