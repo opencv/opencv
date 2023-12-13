@@ -45,7 +45,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         // Check legal broadcast. It is legal for sure if A and B are 2d, or one of them is 2d.
         MatShape common_shape;
-        if (shape_A.size() != 2 && shape_B.size() != 2) {
+        if (shape_A.size() != 2 || shape_B.size() != 2) {
             const auto &shape_more_dims = shape_A.size() > shape_B.size() ? shape_A : shape_B;
             const auto &shape_less_dims = shape_A.size() > shape_B.size() ? shape_B : shape_A;
             size_t diff_dims = shape_more_dims.size() - shape_less_dims.size();
@@ -102,6 +102,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         const auto *a = A.ptr<const float>(), *b = B.ptr<const float>();
         auto *y = Y.ptr<float>();
+        std::memset(y, 0, Y.total() * sizeof(float));
         fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
                       helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1, b, helper.ldb0,
                       helper.ldb1, beta, y, helper.ldc, opt);

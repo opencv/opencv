@@ -103,8 +103,8 @@ struct MatMulHelper {
             for (int j = batch_ndims - 1; j >= 0; j--) {
                 idx = t / C_shape[j];
                 int idx_offset = (int)(t - idx * C_shape[j]);
-                A_offset += idx_offset * A_steps[j];
-                B_offset += idx_offset * B_steps[j];
+                A_offset += A_broadcast_shape[j] == 1 ? 0 : idx_offset * A_steps[j];
+                B_offset += B_broadcast_shape[j] == 1 ? 0 : idx_offset * B_steps[j];
                 t = idx;
             }
             A_offsets[i] = A_offset;
