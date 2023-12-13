@@ -313,9 +313,11 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 
     int MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
     int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
-    int KC = std::min(FAST_GEMM_F32_PACKED_STRIDE_K, K);
+    int KC = FAST_GEMM_STORAGE / ((MC + NC) * esz);
+    KC = KC > 8 ? KC : 8;
+    KC = KC < K ? KC : K;
 
-    size_t buff_size = KC * MC * esz;
+    size_t buff_size = KC * (MC + NC) * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
     int m_tiles = (M + MC - 1) / MC;
     int n_tiles = (N + NC - 1) / NC;
