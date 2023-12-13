@@ -172,7 +172,7 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         Log.d(TAG, "Size: " + rgbMat.width() + "x" + rgbMat.height());
 
         if (mVideoWriter != null && mVideoWriter.isOpened()) {
-            Imgproc.cvtColor(rgbMat, mVideoFrame, mUseBuiltInMJPG ? Imgproc.COLOR_RGBA2BGR: Imgproc.COLOR_RGBA2RGB);
+            Imgproc.cvtColor(rgbMat, mVideoFrame, Imgproc.COLOR_RGBA2BGR);
             mVideoWriter.write(mVideoFrame);
         }
 
@@ -315,7 +315,9 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
                     }
                     return;
                 }
-                Imgproc.cvtColor(mVideoFrame, mRenderFrame, Imgproc.COLOR_BGR2RGBA);
+                // VideoCapture with CAP_ANDROID generates RGB frames instead of BGR
+                // https://github.com/opencv/opencv/issues/24687
+                Imgproc.cvtColor(mVideoFrame, mRenderFrame, mUseBuiltInMJPG ? Imgproc.COLOR_BGR2RGBA: Imgproc.COLOR_RGB2RGBA);
                 Bitmap bmp = Bitmap.createBitmap(mRenderFrame.cols(), mRenderFrame.rows(), Bitmap.Config.ARGB_8888);
                 Utils.matToBitmap(mRenderFrame, bmp);
                 mImageView.setImageBitmap(bmp);
