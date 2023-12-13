@@ -55,7 +55,7 @@ Here's how to get a ready to work environment:
     2. Extract the tar.gz archive
     3. Follow the instructions in `Install-Linux-tar.txt`: open `android-studio/bin` folder in terminal and run `./studio.sh`
     4. Perform standard installation through GUI
-    5. Optionally you can add a shortcut on a desktop for a quick access by clicking menu Tools -> Create desktop entry. The menu appears after any project is created or opened.
+    5. Optionally you can add a shortcut on a desktop for a quick access by clicking menu ***Tools -> Create desktop entry***. The menu appears after any project is created or opened.
 
 2. Install fresh Android SDK and NDK:
     1. Open SDK manager in Android Studio (***Customize -> All Settings -> Languages & Frameworks -> Android SDK***)
