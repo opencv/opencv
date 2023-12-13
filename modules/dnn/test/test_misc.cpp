@@ -27,8 +27,8 @@ TEST(blobRectToImageRect, DNN_PMODE_NULL)
     paramNet.datalayout = DNN_LAYOUT_NHWC;
     paramNet.paddingmode = DNN_PMODE_NULL;
     Rect rOri = paramNet.blobRectToImageRect(rBlob, imgSize);
-    Rect rImg = Rect(rBlob.x * (float)imgSize.width / inputSize.width, rBlob.y * (float)imgSize.height / inputSize.height,
-        rBlob.width * (float)imgSize.width / inputSize.width, rBlob.height * (float)imgSize.height / inputSize.height);
+    Rect rImg = Rect(Rect2d(rBlob.x * (float)imgSize.width / inputSize.width, rBlob.y * (float)imgSize.height / inputSize.height,
+        rBlob.width * (float)imgSize.width / inputSize.width, rBlob.height * (float)imgSize.height / inputSize.height));
     ASSERT_EQ(rImg, rOri);
 }
 
@@ -48,8 +48,8 @@ TEST(blobRectToImageRect, DNN_PMODE_CROP_CENTER)
     Rect rOri = paramNet.blobRectToImageRect(rBlob, imgSize);
     float resizeFactor = std::max(inputSize.width / (float)imgSize.width,
         inputSize.height / (float)imgSize.height);
-    Rect rImg = Rect((rBlob.x + 0.5 * (imgSize.width * resizeFactor - inputSize.width)) / resizeFactor, (rBlob.y + 0.5 * (imgSize.height * resizeFactor - inputSize.height)) / resizeFactor,
-        rBlob.width / resizeFactor, rBlob.height / resizeFactor);
+    Rect rImg = Rect(Rect2d((rBlob.x + 0.5 * (imgSize.width * resizeFactor - inputSize.width)) / resizeFactor, (rBlob.y + 0.5 * (imgSize.height * resizeFactor - inputSize.height)) / resizeFactor,
+        rBlob.width / resizeFactor, rBlob.height / resizeFactor));
     ASSERT_EQ(rImg, rOri);
 }
 
@@ -74,7 +74,7 @@ TEST(blobRectToImageRect, DNN_PMODE_LETTERBOX)
 
     int top = (inputSize.height - rh) / 2;
     int left = (inputSize.width - rw) / 2;
-    Rect rImg = Rect((rBlob.x - left) / resizeFactor, (rBlob.y - top) / resizeFactor, rBlob.width / resizeFactor, rBlob.height / resizeFactor);
+    Rect rImg = Rect(Rect2d((rBlob.x - left) / resizeFactor, (rBlob.y - top) / resizeFactor, rBlob.width / resizeFactor, rBlob.height / resizeFactor));
     ASSERT_EQ(rImg, rOri);
 }
 
