@@ -62,7 +62,7 @@ If you want to enable Python 3 wrapper, install these packages too.
 
 @code{.bash}
 sudo apt install -y \
-    python3-dev \
+    python3-minimal \
     python3-numpy
 @endcode
 
@@ -408,7 +408,7 @@ If you want to enable Python 3 wrapper, install these packages too.
 
 @code{.bash}
 sudo apt install -y \
-    python3.11 \
+    python3-minimal \
     python3-numpy
 @endcode
 
