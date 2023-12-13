@@ -215,7 +215,7 @@ class Builder:
         for d in ["CMakeCache.txt", "CMakeFiles/", "bin/", "libs/", "lib/", "package/", "install/samples/"]:
             rm_one(d)
 
-    def build_library(self, abi, do_install, use_media_ndk):
+    def build_library(self, abi, do_install, no_media_ndk):
         cmd = [self.cmake_path, "-GNinja"]
         cmake_vars = dict(
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
@@ -260,8 +260,8 @@ class Builder:
         if do_install:
             cmd.extend(["-DBUILD_TESTS=ON", "-DINSTALL_TESTS=ON"])
 
-        if use_media_ndk:
-            cmake_vars['WITH_ANDROID_MEDIANDK'] = "ON"
+        if no_media_ndk:
+            cmake_vars['WITH_ANDROID_MEDIANDK'] = "OFF"
 
         cmake_vars.update(abi.cmake_vars)
         cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
@@ -373,7 +373,7 @@ if __name__ == "__main__":
     parser.add_argument('--opencl', action="store_true", help="Enable OpenCL support")
     parser.add_argument('--no_kotlin', action="store_true", help="Disable Kotlin extensions")
     parser.add_argument('--shared', action="store_true", help="Build shared libraries")
-    parser.add_argument('--use_media_ndk', action="store_true", help="Use Media NDK (required for video I/O support)")
+    parser.add_argument('--no_media_ndk', action="store_true", help="Do not link Media NDK (required for video I/O support)")
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
@@ -451,7 +451,7 @@ if __name__ == "__main__":
 
         os.chdir(builder.libdest)
         builder.clean_library_build_dir()
-        builder.build_library(abi, do_install, args.use_media_ndk)
+        builder.build_library(abi, do_install, args.no_media_ndk)
 
     builder.gather_results()
 
