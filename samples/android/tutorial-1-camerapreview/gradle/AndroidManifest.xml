@@ -27,11 +27,13 @@
                       android:largeScreens="true"
                       android:anyDensity="true" />
 
+    //! [camera_permissions]
     <uses-permission android:name="android.permission.CAMERA"/>
 
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.front.autofocus" android:required="false"/>
+    //! [camera_permissions]
 
 </manifest>
