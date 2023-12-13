@@ -34,8 +34,6 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
     private static final String TAG = "OCVSample::Activity";
     private static final String FILENAME_MP4 = "sample_video1.mp4";
     private static final String FILENAME_AVI = "sample_video1.avi";
-    private String videoFilename;
-    private boolean useMJPG = false;
 
     private static final int STATUS_FINISHED_PLAYBACK = 0;
     private static final int STATUS_PREVIEW = 1;
@@ -43,21 +41,23 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
     private static final int STATUS_PLAYING = 3;
     private static final int STATUS_ERROR = 4;
 
-    private int status = STATUS_FINISHED_PLAYBACK;
-    private int FPS = 30;
-    private int width = 0, height = 0;
+    private String mVideoFilename;
+    private boolean mUseBuiltInMJPG = false;
+
+    private int mStatus = STATUS_FINISHED_PLAYBACK;
+    private int mFPS = 30;
+    private int mWidth = 0, mHeight = 0;
 
     private CameraBridgeViewBase mOpenCvCameraView;
-    private boolean mIsJavaCamera = true;
-    private MenuItem mItemSwitchCamera = null;
-    private ImageView imageView;
-    private Button button;
-    private TextView textView;
-    Runnable runnable;
+    private ImageView mImageView;
+    private Button mTriggerButton;
+    private TextView mStatusTextView;
+    Runnable mPlayerThread;
 
-    private VideoWriter videoWriter = null;
-    private VideoCapture videoCapture = null;
-    private Mat frame;
+    private VideoWriter mVideoWriter = null;
+    private VideoCapture mVideoCapture = null;
+    private Mat mVideoFrame;
+    private Mat mRenderFrame;
 
     public RecorderActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -72,32 +72,33 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
 
         setContentView(R.layout.recorder_surface_view);
 
-        textView = (TextView) findViewById(R.id.textview1);
-        textView.bringToFront();
+        mStatusTextView = (TextView) findViewById(R.id.textview1);
+        mStatusTextView.bringToFront();
 
         if (OpenCVLoader.initLocal()) {
             Log.i(TAG, "OpenCV loaded successfully");
         } else {
             Log.e(TAG, "OpenCV initialization failed!");
-            status = STATUS_ERROR;
-            textView.setText("Error: Can't initialize OpenCV");
+            mStatus = STATUS_ERROR;
+            mStatusTextView.setText("Error: Can't initialize OpenCV");
             return;
         }
-
-        frame = new Mat();
 
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.recorder_activity_java_surface_view);
         mOpenCvCameraView.setVisibility(SurfaceView.GONE);
         mOpenCvCameraView.setCvCameraViewListener(this);
         mOpenCvCameraView.disableView();
 
-        imageView = (ImageView) findViewById(R.id.image_view);
+        mImageView = (ImageView) findViewById(R.id.image_view);
 
-        button = (Button) findViewById(R.id.btn1);
-        button.setOnClickListener(this);
-        button.bringToFront();
+        mTriggerButton = (Button) findViewById(R.id.btn1);
+        mTriggerButton.setOnClickListener(this);
+        mTriggerButton.bringToFront();
 
-        videoFilename = getFilesDir() + "/" + FILENAME_MP4;
+        if (mUseBuiltInMJPG)
+            mVideoFilename = getFilesDir() + "/" + FILENAME_AVI;
+        else
+            mVideoFilename = getFilesDir() + "/" + FILENAME_MP4;
     }
 
     @Override
@@ -107,18 +108,21 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        imageView.setVisibility(SurfaceView.GONE);
-        if (videoWriter != null) {
-            videoWriter.release();
-            videoWriter = null;
+        mImageView.setVisibility(SurfaceView.GONE);
+        if (mVideoWriter != null) {
+            mVideoWriter.release();
+            mVideoWriter = null;
         }
-        if (videoCapture != null) {
-            videoCapture.release();
-            videoCapture = null;
+        if (mVideoCapture != null) {
+            mVideoCapture.release();
+            mVideoCapture = null;
         }
-        status = STATUS_FINISHED_PLAYBACK;
-        textView.setText("Status: Finished playback");
-        button.setText("Start Camera");
+        mStatus = STATUS_FINISHED_PLAYBACK;
+        mStatusTextView.setText("Status: Finished playback");
+        mTriggerButton.setText("Start Camera");
+
+        mVideoFrame.release();
+        mRenderFrame.release();
     }
 
     @Override
@@ -126,6 +130,10 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
     {
         Log.d(TAG, "onResume");
         super.onResume();
+
+        mVideoFrame = new Mat();
+        mRenderFrame = new Mat();
+
         changeStatus();
     }
 
@@ -139,16 +147,16 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         super.onDestroy();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        if (videoWriter != null)
-            videoWriter.release();
-        if (videoCapture != null)
-            videoCapture.release();
+        if (mVideoWriter != null)
+            mVideoWriter.release();
+        if (mVideoCapture != null)
+            mVideoCapture.release();
     }
 
     public void onCameraViewStarted(int width, int height) {
         Log.d(TAG, "Camera view started " + String.valueOf(width) + "x" + String.valueOf(height));
-        this.width = width;
-        this.height = height;
+        mWidth = width;
+        mHeight = height;
     }
 
     public void onCameraViewStopped() {
@@ -161,14 +169,11 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
 
         Mat rgbMat = inputFrame.rgba();
 
-        int w = rgbMat.width();
-        int h = rgbMat.height();
+        Log.d(TAG, "Size: " + rgbMat.width() + "x" + rgbMat.height());
 
-        Log.d(TAG, "Size: " + String.valueOf(w) + "x" + String.valueOf(h));
-
-        if (videoWriter != null && videoWriter.isOpened()) {
-            Imgproc.cvtColor(rgbMat, frame, Imgproc.COLOR_RGBA2BGR);
-            videoWriter.write(frame);
+        if (mVideoWriter != null && mVideoWriter.isOpened()) {
+            Imgproc.cvtColor(rgbMat, mVideoFrame, mUseBuiltInMJPG ? Imgproc.COLOR_RGBA2BGR: Imgproc.COLOR_RGBA2RGB);
+            mVideoWriter.write(mVideoFrame);
         }
 
         return rgbMat;
@@ -181,7 +186,7 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
     }
 
     public void changeStatus() {
-        switch(status) {
+        switch(mStatus) {
             case STATUS_ERROR:
                 Toast.makeText(this, "Error", Toast.LENGTH_LONG).show();
                 break;
@@ -190,18 +195,18 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
                     setErrorStatus();
                     break;
                 }
-                status = STATUS_PREVIEW;
-                textView.setText("Status: Camera preview");
-                button.setText("Start recording");
+                mStatus = STATUS_PREVIEW;
+                mStatusTextView.setText("Status: Camera preview");
+                mTriggerButton.setText("Start recording");
                 break;
             case STATUS_PREVIEW:
                 if (!startRecording()) {
                     setErrorStatus();
                     break;
                 }
-                status = STATUS_RECORDING;
-                textView.setText("Status: recording video");
-                button.setText(" Stop and play video");
+                mStatus = STATUS_RECORDING;
+                mStatusTextView.setText("Status: recording video");
+                mTriggerButton.setText(" Stop and play video");
                 break;
             case STATUS_RECORDING:
                 if (!stopRecording()) {
@@ -212,25 +217,25 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
                     setErrorStatus();
                     break;
                 }
-                status = STATUS_PLAYING;
-                textView.setText("Status: Playing video");
-                button.setText("Stop playback");
+                mStatus = STATUS_PLAYING;
+                mStatusTextView.setText("Status: Playing video");
+                mTriggerButton.setText("Stop playback");
                 break;
             case STATUS_PLAYING:
                 if (!stopPlayback()) {
                     setErrorStatus();
                     break;
                 }
-                status = STATUS_FINISHED_PLAYBACK;
-                textView.setText("Status: Finished playback");
-                button.setText("Start Camera");
+                mStatus = STATUS_FINISHED_PLAYBACK;
+                mStatusTextView.setText("Status: Finished playback");
+                mTriggerButton.setText("Start Camera");
                 break;
         }
     }
 
     public void setErrorStatus() {
-        status = STATUS_ERROR;
-        textView.setText("Status: Error");
+        mStatus = STATUS_ERROR;
+        mStatusTextView.setText("Status: Error");
     }
 
     public boolean startPreview() {
@@ -242,28 +247,28 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
     public boolean startRecording() {
         Log.i(TAG,"Starting recording");
 
-        File file = new File(videoFilename);
+        File file = new File(mVideoFilename);
         file.delete();
 
-        videoWriter = new VideoWriter();
-        if (!useMJPG) {
-            videoWriter.open(videoFilename, Videoio.CAP_ANDROID, VideoWriter.fourcc('H', '2', '6', '4'), FPS, new Size(width, height));
-            if (!videoWriter.isOpened()) {
+        mVideoWriter = new VideoWriter();
+        if (!mUseBuiltInMJPG) {
+            mVideoWriter.open(mVideoFilename, Videoio.CAP_ANDROID, VideoWriter.fourcc('H', '2', '6', '4'), mFPS, new Size(mWidth, mHeight));
+            if (!mVideoWriter.isOpened()) {
                 Log.i(TAG,"Can't record H264. Switching to MJPG");
-                useMJPG = true;
-                videoFilename = getFilesDir() + "/" + FILENAME_AVI;
+                mUseBuiltInMJPG = true;
+                mVideoFilename = getFilesDir() + "/" + FILENAME_AVI;
             }
         }
 
-        if (useMJPG) {
-            videoWriter.open(videoFilename, VideoWriter.fourcc('M', 'J', 'P', 'G'), FPS, new Size(width, height));
+        if (mUseBuiltInMJPG) {
+            mVideoWriter.open(mVideoFilename, VideoWriter.fourcc('M', 'J', 'P', 'G'), mFPS, new Size(mWidth, mHeight));
         }
 
-        Log.d(TAG, "Size: " + String.valueOf(width) + "x" + String.valueOf(height));
-        Log.d(TAG, "File: " + videoFilename);
+        Log.d(TAG, "Size: " + String.valueOf(mWidth) + "x" + String.valueOf(mHeight));
+        Log.d(TAG, "File: " + mVideoFilename);
 
-        if (videoWriter.isOpened()) {
-            Toast.makeText(this, "Record started to file " + videoFilename, Toast.LENGTH_LONG).show();
+        if (mVideoWriter.isOpened()) {
+            Toast.makeText(this, "Record started to file " + mVideoFilename, Toast.LENGTH_LONG).show();
             return true;
         } else {
             Toast.makeText(this, "Failed to start a record", Toast.LENGTH_LONG).show();
@@ -275,55 +280,58 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         Log.i(TAG, "Finishing recording");
         mOpenCvCameraView.disableView();
         mOpenCvCameraView.setVisibility(SurfaceView.GONE);
-        videoWriter.release();
-        videoWriter = null;
+        mVideoWriter.release();
+        mVideoWriter = null;
         return true;
     }
 
     public boolean startPlayback() {
-        imageView.setVisibility(SurfaceView.VISIBLE);
+        mImageView.setVisibility(SurfaceView.VISIBLE);
 
-        if (!useMJPG){
-            videoCapture = new VideoCapture(videoFilename, Videoio.CAP_ANDROID);
+        if (!mUseBuiltInMJPG){
+            mVideoCapture = new VideoCapture(mVideoFilename, Videoio.CAP_ANDROID);
         } else {
-            videoCapture = new VideoCapture(videoFilename);
+            mVideoCapture = new VideoCapture(mVideoFilename, Videoio.CAP_OPENCV_MJPEG);
         }
-        if (!videoCapture.isOpened()) {
+
+        if (!mVideoCapture.isOpened()) {
             Log.e(TAG, "Can't open video");
-            Toast.makeText(this, "Can't open file " + videoFilename, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Can't open file " + mVideoFilename, Toast.LENGTH_SHORT).show();
             return false;
         }
-        Toast.makeText(this, "Starting playback from file " + videoFilename, Toast.LENGTH_SHORT).show();
-        runnable = new Runnable() {
+
+        Toast.makeText(this, "Starting playback from file " + mVideoFilename, Toast.LENGTH_SHORT).show();
+
+        mPlayerThread = new Runnable() {
             @Override
             public void run() {
-                if (videoCapture == null || !videoCapture.isOpened()) {
+                if (mVideoCapture == null || !mVideoCapture.isOpened()) {
                     return;
                 }
-                videoCapture.read(frame);
-                if (frame.empty()) {
-                    if (status == STATUS_PLAYING) {
+                mVideoCapture.read(mVideoFrame);
+                if (mVideoFrame.empty()) {
+                    if (mStatus == STATUS_PLAYING) {
                         changeStatus();
                     }
                     return;
                 }
-                Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2RGBA);
-                Bitmap bmp = Bitmap.createBitmap(frame.cols(), frame.rows(), Bitmap.Config.ARGB_8888);
-                Utils.matToBitmap(frame, bmp);
-                imageView.setImageBitmap(bmp);
+                Imgproc.cvtColor(mVideoFrame, mRenderFrame, Imgproc.COLOR_BGR2RGBA);
+                Bitmap bmp = Bitmap.createBitmap(mRenderFrame.cols(), mRenderFrame.rows(), Bitmap.Config.ARGB_8888);
+                Utils.matToBitmap(mRenderFrame, bmp);
+                mImageView.setImageBitmap(bmp);
                 Handler h = new Handler();
                 h.postDelayed(this, 33);
             }
         };
 
-        runnable.run();
+        mPlayerThread.run();
         return true;
     }
 
     public boolean stopPlayback() {
-        videoCapture.release();
-        videoCapture = null;
-        imageView.setVisibility(SurfaceView.GONE);
+        mVideoCapture.release();
+        mVideoCapture = null;
+        mImageView.setVisibility(SurfaceView.GONE);
         return true;
     }
 
