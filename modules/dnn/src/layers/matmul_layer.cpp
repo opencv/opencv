@@ -36,9 +36,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         // Check legal matrix multiplication
         int mA = shape_A[shape_A.size() - 2], nA = shape_A.back();
-        int mB = shape_B[shape_A.size() - 2], nB = shape_A.back();
+        int mB = shape_B[shape_A.size() - 2], nB = shape_B.back();
         int M = trans_a ? nA : mA;
-        int N = trans_b ? nB : mB;
+        int N = trans_b ? mB : nB;
         int K_A = trans_a ? mA : nA;
         int K_B = trans_b ? nB : mB;
         CV_CheckEQ(K_A, K_B, "DNN/MatMul: invalid dimension K");
@@ -50,7 +50,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             const auto &shape_less_dims = shape_A.size() > shape_B.size() ? shape_B : shape_A;
             size_t diff_dims = shape_more_dims.size() - shape_less_dims.size();
             common_shape = shape_more_dims;
-            for (size_t i = 0; i < shape_less_dims.size(); i++) {
+            for (size_t i = 0; i < shape_less_dims.size() - 2; i++) {
                 const auto dl = shape_less_dims[i], dm = shape_more_dims[i + diff_dims];
                 if (dl != 1 && dm != 1 && dl != dm) {
                     CV_Error(Error::StsBadSize, format("DNN/MatMul: invalid shape for broadcasting, shape_A[%zu]=%d, shape_B[%zu]=%d\n", i, shape_less_dims[i], i, shape_more_dims[i + diff_dims]));
@@ -59,9 +59,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 if (dm == 1) {
                     common_shape[i + diff_dims] = dl;
                 }
-                common_shape[common_shape.size() - 2] = M;
-                common_shape[common_shape.size() - 1] = N;
             }
+            common_shape[common_shape.size() - 2] = M;
+            common_shape[common_shape.size() - 1] = N;
         } else {
             common_shape.resize(2);
             common_shape[0] = M;

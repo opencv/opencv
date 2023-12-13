@@ -337,9 +337,9 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
             int mc = M - i0 < MC ? M - i0 : MC;
             int nc = N - j0 < NC ? N - j0 : NC;
             int ldc_block = ldc;
-            const char *a_block = A + A_offsets[batch_index];
-            const char *b_block = B + B_offsets[batch_index];
-            char* c_block = C + C_offsets[batch_index] + (i0 * ldc + j0) * esz;
+            const char *a_block = A + A_offsets[batch_index] * esz;
+            const char *b_block = B + B_offsets[batch_index] * esz;
+            char* c_block = C + C_offsets[batch_index] * esz + (i0 * ldc + j0) * esz;
 
             if (beta == 0.f) {
                 for(int i = 0; i < mc; i++)
