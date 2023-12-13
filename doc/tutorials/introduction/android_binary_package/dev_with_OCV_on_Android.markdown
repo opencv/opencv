@@ -138,7 +138,7 @@ In this section we'll extend our empty OpenCV app created in the previous sectio
     xmlns:opencv="http://schemas.android.com/apk/res-auto"
     @endcode
 
-    2. Add the following code instead of `TextView`:
+    2. Replace `TextView` with `org.opencv.android.JavaCameraView` widget:
     @snippet /samples/android/tutorial-1-camerapreview/res/layout/tutorial1_surface_view.xml camera_view
 
     3. If you get a layout warning replace `fill_parent` values by `match_parent` for `android:layout_width` and `android:layout_height` properties
@@ -147,34 +147,51 @@ In this section we'll extend our empty OpenCV app created in the previous sectio
 
     @include /samples/android/tutorial-1-camerapreview/res/layout/tutorial1_surface_view.xml
 
-4. Inherit the main class from `org.opencv.android.CameraActivity`
-    - Methods we're interested in to override are `onCreate`, `onDestroy`, `onPause`, `onResume` and `getCameraViewList`
+4. Inherit the main class from `org.opencv.android.CameraActivity`. CameraActivity implements
+   camera perimission requiest and some other utilities needed for CV application. Methods we're
+   interested in to override are `onCreate`, `onDestroy`, `onPause`, `onResume` and `getCameraViewList`
 
 5. Implement the interface `org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2`
-   - In `onCameraFrame` method we should return the `Mat` object: `return inputFrame.rgba();`
+   `onCameraFrame` method should return the `Mat` object with content for render.
+    The sample just returns camera frame for preview: `return inputFrame.rgba();`
 
-6. Make `org.opencv.android.CameraBridgeViewBase` object:
+6. Allocate `org.opencv.android.CameraBridgeViewBase` object:
     - It should be created at app start (`onCreate` method) and this class should be set as a listener
     - At pause/resume (`onPause`, `onResume` methods) it should be disabled/enabled
     - Should be disabled at app finish (`onDestroy` method)
     - Should be returned in `getCameraViewList`
 
 7. Optionally you can forbid the phone to dim screen or lock:
+
     @snippet samples/android/tutorial-1-camerapreview/src/org/opencv/samples/tutorial1/Tutorial1Activity.java keep_screen
 
-8. You'll get source code similar to this:
-    @include samples/android/tutorial-1-camerapreview/src/org/opencv/samples/tutorial1/Tutorial1Activity.java
+Finally you'll get source code similar to this:
 
-9. This is it! Now you can run the code on your device to check it
+@include samples/android/tutorial-1-camerapreview/src/org/opencv/samples/tutorial1/Tutorial1Activity.java
+
+This is it! Now you can run the code on your device to check it.
 
 
-Let's discuss some most important steps.
+Let's discuss some most important steps
+---------------------------------------
 
-The simplest OpenCV-centric application must perform OpenCV initialization, create a view to show preview from camera and implement `CvCameraViewListener2` interface to get frames from camera and process them.
+Every Android application with UI must implement Activity and View. By the first steps we create blank
+activity and default view layout. The simplest OpenCV-centric application must perform OpenCV
+initialization, create a view to show preview from camera and implement `CvCameraViewListener2` interface
+to get frames from camera and process them.
 
-1. First of all we create our application view using XML layout. Our layout consists of the only one full screen component of class `org.opencv.android.JavaCameraView`. This OpenCV class is inherited from `CameraBridgeViewBase` that extends `SurfaceView` and under the hood uses standard Android camera API.
+First of all we create our application view using XML layout. Our layout consists of the only one
+full screen component of class `org.opencv.android.JavaCameraView`. This OpenCV class is inherited from
+ `CameraBridgeViewBase` that extends `SurfaceView` and under the hood uses standard Android camera API.
 
-2. The `CvCameraViewListener2` interface lets you add some processing steps after the frame is grabbed from the camera and before it's rendered on the screen. The most important method is `onCameraFrame`. This is a callback function and it's called on retrieving frame from camera. It expects that `onCameraFrame` function returns RGBA frame that will be drawn on the screen.
+The `CvCameraViewListener2` interface lets you add some processing steps after the frame is grabbed from
+the camera and before it's rendered on the screen. The most important method is `onCameraFrame`. This is
+a callback function and it's called on retrieving frame from camera. It expects that `onCameraFrame`
+function returns RGBA frame that will be drawn on the screen.
 
-3. The callback passes a frame from camera to our class as an object of `CvCameraViewFrame` class. This object has `rgba()` and `gray()` methods that let a user get colored or one-channel grayscale frame as a `Mat` class object.
-    @note Do not save or use `CvCameraViewFrame` object out of `onCameraFrame` callback. This object does not have its own state and its behavior outside the callback is unpredictable!
+The callback passes a frame from camera to our class as an object of `CvCameraViewFrame` class.
+This object has `rgba()` and `gray()` methods that let a user get colored or one-channel grayscale
+frame as a `Mat` class object.
+
+@note Do not save or use `CvCameraViewFrame` object out of `onCameraFrame` callback. This object does
+not have its own state and its behavior outside the callback is unpredictable!
