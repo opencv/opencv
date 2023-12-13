@@ -1280,24 +1280,6 @@ CV__DNN_INLINE_NS_BEGIN
     /** @overload */
     CV_EXPORTS_W void blobFromImagesWithParams(InputArrayOfArrays images, OutputArray blob, const Image2BlobParams& param = Image2BlobParams());
 
-    /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
-     *  @param rBlob rect in blob coordinates.
-     *  @param sizeOri original input image size inserted in blob.
-     *  @param size spatial size for output image
-     *  @param crop flag use in blobFromImage called
-     *  @returns rectangle in original image coordinates.
-     */
-    CV_EXPORTS_W Rect blobRectToImageRect(const Rect &rBlob, const Size &sizeOri, const Size& size, bool crop);
-
-    /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
-     *  @param rBlob rect in blob coordinates.
-     *  @param sizeOri original input image size inserted in blob.
-     *  @param size spatial size for output image
-     *  @param crop flag use in blobFromImage called
-     *  @returns rectangle in original image coordinates.
-     */
-    CV_EXPORTS_W Rect2d blobRectToImageRect(const Rect2d &rBlob, const Size &sizeOri, const Size& size, bool crop);
-
     /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
      *  (std::vector<cv::Mat>).
      *  @param[in] blob_ 4 dimensional array (images, channels, height, width) in floating point precision (CV_32F) from

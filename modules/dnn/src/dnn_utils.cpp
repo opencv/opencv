@@ -392,23 +392,6 @@ Rect Image2BlobParams::blobRectToImageRect(const Rect &r, const Size &oriImage)
     return rImg[0];
 }
 
-Rect blobRectToImageRect(const Rect &r, const Size &oriImage, const Size& size, bool crop)
-{
-    CV_Assert(!oriImage.empty());
-    Image2BlobParams paramNet;
-    paramNet.scalefactor = Scalar::all(1);
-    paramNet.size = size;
-    paramNet.ddepth = CV_32F;
-    paramNet.mean = Scalar();
-    paramNet.swapRB = false;
-    paramNet.datalayout = DNN_LAYOUT_NHWC;
-    if (crop)
-        paramNet.paddingmode = DNN_PMODE_CROP_CENTER;
-    else
-        paramNet.paddingmode = DNN_PMODE_NULL;
-    return paramNet.blobRectToImageRect(r, oriImage);
-}
-
 Rect2d Image2BlobParams::blobRectToImageRect(const Rect2d &r, const Size &oriImage)
 {
     CV_Assert(!oriImage.empty());
@@ -417,23 +400,6 @@ Rect2d Image2BlobParams::blobRectToImageRect(const Rect2d &r, const Size &oriIma
     rImg.resize(1);
     this->blobRectsToImageRects(rBlob, rImg, oriImage);
     return rImg[0];
-}
-
-Rect2d blobRectToImageRect(const Rect2d &r, const Size &oriImage, const Size& size, bool crop)
-{
-    CV_Assert(!oriImage.empty());
-    Image2BlobParams paramNet;
-    paramNet.scalefactor = Scalar::all(1);
-    paramNet.size = size;
-    paramNet.ddepth = CV_32F;
-    paramNet.mean = Scalar();
-    paramNet.swapRB = false;
-    paramNet.datalayout = DNN_LAYOUT_NHWC;
-    if (crop)
-        paramNet.paddingmode = DNN_PMODE_CROP_CENTER;
-    else
-        paramNet.paddingmode = DNN_PMODE_NULL;
-    return paramNet.blobRectToImageRect(r, oriImage);
 }
 
 void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect> &rBlob, std::vector<Rect>& rImg, const Size& imgSize)
