@@ -57,6 +57,7 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
 
     private VideoWriter videoWriter = null;
     private VideoCapture videoCapture = null;
+    private Mat frame;
 
     public RecorderActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -82,6 +83,8 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
             textView.setText("Error: Can't initialize OpenCV");
             return;
         }
+
+        frame = new Mat();
 
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.recorder_activity_java_surface_view);
         mOpenCvCameraView.setVisibility(SurfaceView.GONE);
@@ -124,6 +127,7 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         Log.d(TAG, "onResume");
         super.onResume();
         changeStatus();
+
     }
 
     @Override
@@ -164,7 +168,6 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         Log.d(TAG, "Size: " + String.valueOf(w) + "x" + String.valueOf(h));
 
         if (videoWriter != null && videoWriter.isOpened()) {
-            Mat frame = new Mat();
             Imgproc.cvtColor(rgbMat, frame, Imgproc.COLOR_RGBA2BGR);
             videoWriter.write(frame);
         }
@@ -298,7 +301,6 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
                 if (videoCapture == null || !videoCapture.isOpened()) {
                     return;
                 }
-                Mat frame = new Mat();
                 videoCapture.read(frame);
                 if (frame.empty()) {
                     if (status == STATUS_PLAYING) {
@@ -306,7 +308,7 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
                     }
                     return;
                 }
-                Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2RGB);
+                Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2RGBA);
                 Bitmap bmp = Bitmap.createBitmap(frame.cols(), frame.rows(), Bitmap.Config.ARGB_8888);
                 Utils.matToBitmap(frame, bmp);
                 imageView.setImageBitmap(bmp);
