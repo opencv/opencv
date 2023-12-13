@@ -29,6 +29,8 @@ If you encounter any error after thoroughly following these steps, feel free to 
 Hello OpenCV sample
 -------------------
 
+In this section we're gonna create a simple app that does nothing but OpenCV loading. In next section we'll extend it to support camera.
+
 In addition to this instruction you can use some video guide, for example [this one](https://www.youtube.com/watch?v=bR7lL886-uc&ab_channel=ProgrammingHut)
 
 1. Open Android Studio and create empty project by choosing ***Empty Views Activity***
