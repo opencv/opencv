@@ -348,6 +348,51 @@ PERF_TEST_P_(MatMul, matmul)
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST_P_(MatMul, innerproduct)
+{
+    int test_id = (int)get<0>(GetParam());
+    ASSERT_GE(test_id, 0); ASSERT_LT(test_id, MatMulParamId::MATMUL_LAST);
+    const GemmParam_t& params = test_matmul_configs[test_id];
+    auto a_shape = params.a_shape;
+    auto b_shape = params.b_shape;
+
+    Backend backend_id = get<0>(get<1>(GetParam()));
+    Target target_id = get<1>(get<1>(GetParam()));
+
+    Mat A(a_shape, CV_32F);
+    randu(A, -1.0f, 1.0f);
+    Mat B(b_shape, CV_32F);
+    randu(B, -1.0f, 1.0f);
+
+    LayerParams lp;
+    lp.type = "InnerProduct";
+    lp.name = "testLayer";
+    lp.set("axis", (int)(a_shape.size() - 1));
+    lp.set("bias_term", false);
+
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 1, id, 1);
+    net.setPreferableBackend(backend_id);
+    net.setPreferableTarget(target_id);
+
+    // warmup
+    {
+        std::vector<std::string> input_names{"A", "B"};
+        net.setInputsNames(input_names);
+        net.setInput(A, input_names[0]);
+        net.setInput(B, input_names[1]);
+        Mat out = net.forward();
+    }
+
+    TEST_CYCLE()
+    {
+        Mat res = net.forward();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Gemm, Combine(
     GemmParamId::all(),
     dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
