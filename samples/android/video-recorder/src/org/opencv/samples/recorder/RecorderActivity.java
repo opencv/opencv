@@ -127,7 +127,6 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         Log.d(TAG, "onResume");
         super.onResume();
         changeStatus();
-
     }
 
     @Override
