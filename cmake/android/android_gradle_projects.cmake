@@ -225,9 +225,20 @@ include ':${__dir}'
   configure_file("${path}/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/${__dir}/build.gradle" @ONLY)
   install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/${__dir}/build.gradle" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}/${__dir}" COMPONENT samples)
 
-  file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
+  # HACK: AAR packages generated from current OpenCV project has incomple prefab part
+  # and cannot be used for native linkage against OpenCV.
+  # Alternative way to build AAR: https://github.com/opencv/opencv/blob/4.x/platforms/android/build_java_shared_aar.py
+  if("${__dir}" STREQUAL "tutorial-2-mixedprocessing" OR "${__dir}" STREQUAL "tutorial-4-opencl")
+    file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
+if (gradle.opencv_source == 'sdk_path') {
+    include ':${__dir}'
+}
+")
+  else()
+    file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
 include ':${__dir}'
 ")
+  endif()
 
 endmacro()
 
