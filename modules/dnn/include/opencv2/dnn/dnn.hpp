@@ -1680,7 +1680,8 @@ CV__DNN_INLINE_NS_BEGIN
           * @brief Create model from onnx graph.
           * @param[in] onnx_path path to onnx graph.
           */
-         CV_WRAP YoloObjectDetector(const String& onnx, const String& yoloName);
+         CV_WRAP YoloObjectDetector(const String& onnx, const int version);
+         CV_WRAP YoloObjectDetector(const String& model, const String& config, const int version);
 
          CV_DEPRECATED_EXTERNAL  // avoid using in C++ code (need to fix bindings first)
          YoloObjectDetector();
@@ -1689,7 +1690,7 @@ CV__DNN_INLINE_NS_BEGIN
                              CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
                              float confThreshold = 0.5f, float nmsThreshold = 0.0f);
 
-         CV_WRAP void postProccess(
+         CV_WRAP void yoloPostProccess(
             std::vector<Mat>& detections,
             CV_OUT std::vector<Rect2d>& boxes,
             CV_OUT std::vector<float>& confidences,
@@ -1697,13 +1698,11 @@ CV__DNN_INLINE_NS_BEGIN
             const float confThreshold,
             const float nmsThreshold);
 
-        //  CV_WRAP void setPadingMode(ImagePaddingMode paddingmode);
-        //  CV_WRAP void setPadvalue(float padValue);
         public:
-            void setPaddingMode(const ImagePaddingMode & paddingMode);
-            void setPaddingValue(const float & paddingValue);
-            void setYoloVersion(const int version);
-            YoloObjectDetector& setNmsAcrossClasses(bool value);
+            CV_WRAP YoloObjectDetector& setPaddingMode(const ImagePaddingMode paddingMode);
+            CV_WRAP YoloObjectDetector& setPaddingValue(const float paddingValue);
+            CV_WRAP YoloObjectDetector& setYoloVersion(const int version);
+            CV_WRAP YoloObjectDetector& setNmsAcrossClasses(bool value);
     };
 
 /** @brief This class represents high-level API for text recognition networks.

@@ -641,6 +641,9 @@ class YoloObjectDetector_Impl : public Model::Impl
 {
     // Define the enum for YOLO versions
     enum class YoloVersion {
+        YOLOVOC,
+        YOLOv3,
+        YOLOv4,
         YOLOv5,
         YOLOv6,
         YOLOv7,
@@ -659,9 +662,19 @@ class YoloObjectDetector_Impl : public Model::Impl
     Mat    blob;
     ImagePaddingMode paddingMode;
     std::vector<String> outNames;
+    public:
     YoloVersion yoloVersion;
+    bool   darknet;
 
     public:
+    YoloObjectDetector_Impl() {
+        //nothing
+    }
+    YoloObjectDetector_Impl(const int version)
+    {
+        setYoloVersion(version);
+    }
+
     /*virtual*/
     void processFrame(InputArray frame, OutputArrayOfArrays outs)
     {
@@ -682,19 +695,26 @@ class YoloObjectDetector_Impl : public Model::Impl
         net.forward(outs, outNames);
     }
 
-    void setPaddingValue(const float & padValue_){
+    void setPaddingValue(const float padValue_){
         padValue = padValue_;
     }
 
-    void setPaddingMode(const ImagePaddingMode & paddingmode_){
+    void setPaddingMode(const ImagePaddingMode paddingmode_){
         paddingMode = paddingmode_;
     }
     void setNmsAcrossClasses(bool value) {
         nmsAcrossClasses = value;
     }
 
+    void setNetworkType(const bool darknet_ = false){
+        darknet = darknet_;
+    }
+
     void setYoloVersion(const int versionInt){
        if (
+            versionInt == static_cast<int>(YoloVersion::YOLOVOC) ||
+            versionInt == static_cast<int>(YoloVersion::YOLOv3) ||
+            versionInt == static_cast<int>(YoloVersion::YOLOv4) ||
             versionInt == static_cast<int>(YoloVersion::YOLOv5) ||
             versionInt == static_cast<int>(YoloVersion::YOLOv6) ||
             versionInt == static_cast<int>(YoloVersion::YOLOv7) ||
@@ -707,13 +727,23 @@ class YoloObjectDetector_Impl : public Model::Impl
         }
     }
 
-    void postProccess(
+    YoloVersion getYoloVersion(){
+        return yoloVersion;
+    }
+
+    bool getNetworkType(){
+        return darknet;
+    }
+
+    static void yoloPostProccess(
         std::vector<Mat>& detections,
         CV_OUT std::vector<Rect2d>& keep_boxes,
         CV_OUT std::vector<float>& keep_confidences,
         CV_OUT std::vector<int>& keep_classIds,
         const float confThreshold,
-        const float nmsThreshold){
+        const float nmsThreshold,
+        YoloVersion yoloVersion,
+        bool darknet){
 
         // Retrieve
         std::vector<int> classIds;
@@ -723,10 +753,14 @@ class YoloObjectDetector_Impl : public Model::Impl
         if (yoloVersion == YoloVersion::YOLOv8){
             cv::transposeND(detections[0], {0, 2, 1}, detections[0]);
         }
+        std::cout << "detections shape: " << detections[0].size << std::endl;
+
         // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
         for (auto preds : detections)
         {
-            preds = preds.reshape(1, preds.size[1]);
+            if (!darknet)
+                preds = preds.reshape(1, preds.size[1]);
+            std::cout << "preds shape: " << preds.size << std::endl;
 
             for (int i = 0; i < preds.rows; ++i)
             {
@@ -750,11 +784,16 @@ class YoloObjectDetector_Impl : public Model::Impl
                 double cy = det[1];
                 double w = det[2];
                 double h = det[3];
+
                 // [x1, y1, x2, y2]
-                boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
-                                        cx + 0.5 * w, cy + 0.5 * h));
-                classIds.push_back(maxLoc.x);
-                confidences.push_back(conf);
+                double x = cx - 0.5 * w;
+                double y = cy - 0.5 * h;
+                double width = darknet ? w : cx + 0.5 * w;
+                double height = darknet ? h : cy + 0.5 * h;
+
+                boxes.emplace_back(Rect2d(x, y, width, height));
+                classIds.emplace_back(maxLoc.x);
+                confidences.emplace_back(conf);
             }
         }
 
@@ -764,18 +803,35 @@ class YoloObjectDetector_Impl : public Model::Impl
 
         for (auto i : keep_idx)
         {
-            keep_classIds.push_back(classIds[i]);
-            keep_confidences.push_back(confidences[i]);
-            keep_boxes.push_back(boxes[i]);
+            keep_classIds.emplace_back(classIds[i]);
+            keep_confidences.emplace_back(confidences[i]);
+            keep_boxes.emplace_back(boxes[i]);
         }
     }
 };
 
-YoloObjectDetector::YoloObjectDetector(const String& onnx, const String& yoloName)
+
+
+YoloObjectDetector::YoloObjectDetector(const String& model, const String& config, const int version)
 {
-    impl = makePtr<YoloObjectDetector_Impl>();
+    // impl = makePtr<YoloObjectDetector_Impl>();
+    impl = makePtr<YoloObjectDetector_Impl>(version);
+    impl->initNet(readNet(model, config));
+    impl.dynamicCast<YoloObjectDetector_Impl>()->setNetworkType(true);
+    // impl.dynamicCast<DetectionModel_Impl>()->disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
+    std::cout << "Sucessfully loaded model" << std::endl;
+}
+
+YoloObjectDetector::YoloObjectDetector(const String& onnx, const int version)
+{
+    impl = makePtr<YoloObjectDetector_Impl>(version);
     impl->initNet(readNetFromONNX(onnx));
     // impl.dynamicCast<YoloObjectDetector_Impl>()->disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
+}
+
+YoloObjectDetector::YoloObjectDetector()
+{
+    impl = std::static_pointer_cast<Model::Impl>(makePtr<YoloObjectDetector_Impl>());
 }
 
 void YoloObjectDetector::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
@@ -787,7 +843,11 @@ void YoloObjectDetector::detect(InputArray frame, CV_OUT std::vector<int>& class
     std::vector<Mat> detections;
     impl->processFrame(frame, detections);
 
-    postProccess(
+    for (int i = 0; i < detections.size(); i++){
+        std::cout << "detections shape: " << detections[i].size << std::endl;
+    }
+
+    yoloPostProccess(
         detections,
         boxes,
         confidences,
@@ -796,7 +856,7 @@ void YoloObjectDetector::detect(InputArray frame, CV_OUT std::vector<int>& class
         nmsThreshold);
 }
 
-void YoloObjectDetector::postProccess(
+void YoloObjectDetector::yoloPostProccess(
     std::vector<Mat>& detections,
     CV_OUT std::vector<Rect2d>& keep_boxes,
     CV_OUT std::vector<float>& keep_confidences,
@@ -804,33 +864,38 @@ void YoloObjectDetector::postProccess(
     const float confThreshold,
     const float nmsThreshold){
 
-    impl.dynamicCast<YoloObjectDetector_Impl>()->postProccess(
+    impl.dynamicCast<YoloObjectDetector_Impl>()->yoloPostProccess(
         detections,
         keep_boxes,
         keep_confidences,
         keep_classIds,
         confThreshold,
-        nmsThreshold);
+        nmsThreshold,
+        impl.dynamicCast<YoloObjectDetector_Impl>()->getYoloVersion(),
+        impl.dynamicCast<YoloObjectDetector_Impl>()->getNetworkType()
+        );
 }
 
-void YoloObjectDetector::setPaddingMode(const ImagePaddingMode & paddingMode){
+YoloObjectDetector& YoloObjectDetector::setPaddingMode(const ImagePaddingMode paddingMode){
     impl.dynamicCast<YoloObjectDetector_Impl>()->setPaddingMode(paddingMode);
+    return *this;
 }
 
-void YoloObjectDetector::setPaddingValue(const float & PadingValue){
+YoloObjectDetector& YoloObjectDetector::setPaddingValue(const float PadingValue){
     impl.dynamicCast<YoloObjectDetector_Impl>()->setPaddingValue(PadingValue);
+    return *this;
 }
 
 YoloObjectDetector& YoloObjectDetector::setNmsAcrossClasses(bool value)
 {
     CV_Assert(impl != nullptr && impl.dynamicCast<YoloObjectDetector_Impl>() != nullptr); // remove once default constructor is removed
-
     impl.dynamicCast<YoloObjectDetector_Impl>()->setNmsAcrossClasses(value);
     return *this;
 }
 
-void YoloObjectDetector::setYoloVersion(const int versionInt){
-        impl.dynamicCast<YoloObjectDetector_Impl>()->setYoloVersion(versionInt);
+YoloObjectDetector& YoloObjectDetector::setYoloVersion(const int versionInt){
+    impl.dynamicCast<YoloObjectDetector_Impl>()->setYoloVersion(versionInt);
+    return *this;
 }
 
 struct TextRecognitionModel_Impl : public Model::Impl
