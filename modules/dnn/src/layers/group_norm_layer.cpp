@@ -84,26 +84,42 @@ public:
             }
         };
 
+        // 创建mean和variance数组
+        std::vector<float> mean_data(loops);
+        std::vector<float> inv_stdev_data(loops);
+
         for (size_t i = 0; i < loops; i++) {
             const auto* x = input_data + step * i;
             auto* y = output_data + step * i;
 
-            size_t group_idx = i % C;
-
             auto mean = compute_mean(x, step);
+            mean_data[i] = mean;
+
             auto variance = compute_variance(x, step, mean);
-
             float inv_stdev = 1.0f / std::sqrt(variance + epsilon);
-            float s = scale_data[group_idx];
-            float b = bias_data[group_idx];
+            inv_stdev_data[i] = inv_stdev;
+        }
 
-            normalize_data(y, x, step, mean, inv_stdev, s, b);
+        loops = N * C;
+        step = static_cast<size_t>(total(input_shape, 2));
+
+        for (size_t i = 0; i < loops; i++) {
+            const auto* x = input_data + step * i;
+            auto* y = output_data + step * i;
+
+            size_t group_idx = i / channels_per_group;
+            size_t channel_idx = i % C;
+
+            float s = scale_data[channel_idx];
+            float b = bias_data[channel_idx];
+
+            normalize_data(y, x, step, mean_data[group_idx], inv_stdev_data[group_idx], s, b);
         }
     }
 
 private:
     float epsilon;
-    int num_groups;
+    size_t num_groups;
 };
 
 Ptr<GroupNormLayer> GroupNormLayer::create(const LayerParams &params) {
