@@ -18,7 +18,7 @@ android {
         externalNativeBuild {
             cmake {
                 arguments "-DANDROID_STL=@ANDROID_STL@"
-                targets "opencv_jni_shared"
+                targets "opencv_java4"
             }
         }
     }
