@@ -656,7 +656,7 @@ class YoloObjectDetector_Impl : public Model::Impl
     Scalar mean;
     Scalar scale = Scalar::all(1.0);
     bool   swapRB = false;
-    bool   crop = false;
+    bool   crop;
     bool   nmsAcrossClasses;
     float  padValue;
     Mat    blob;
@@ -753,14 +753,12 @@ class YoloObjectDetector_Impl : public Model::Impl
         if (yoloVersion == YoloVersion::YOLOv8){
             cv::transposeND(detections[0], {0, 2, 1}, detections[0]);
         }
-        std::cout << "detections shape: " << detections[0].size << std::endl;
 
         // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
         for (auto preds : detections)
         {
             if (!darknet)
                 preds = preds.reshape(1, preds.size[1]);
-            std::cout << "preds shape: " << preds.size << std::endl;
 
             for (int i = 0; i < preds.rows; ++i)
             {
@@ -814,19 +812,15 @@ class YoloObjectDetector_Impl : public Model::Impl
 
 YoloObjectDetector::YoloObjectDetector(const String& model, const String& config, const int version)
 {
-    // impl = makePtr<YoloObjectDetector_Impl>();
     impl = makePtr<YoloObjectDetector_Impl>(version);
     impl->initNet(readNet(model, config));
     impl.dynamicCast<YoloObjectDetector_Impl>()->setNetworkType(true);
-    // impl.dynamicCast<DetectionModel_Impl>()->disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
-    std::cout << "Sucessfully loaded model" << std::endl;
 }
 
 YoloObjectDetector::YoloObjectDetector(const String& onnx, const int version)
 {
     impl = makePtr<YoloObjectDetector_Impl>(version);
     impl->initNet(readNetFromONNX(onnx));
-    // impl.dynamicCast<YoloObjectDetector_Impl>()->disableRegionNMS(getNetwork_());  // FIXIT Move to DetectionModel::Impl::initNet()
 }
 
 YoloObjectDetector::YoloObjectDetector()
@@ -842,10 +836,6 @@ void YoloObjectDetector::detect(InputArray frame, CV_OUT std::vector<int>& class
 
     std::vector<Mat> detections;
     impl->processFrame(frame, detections);
-
-    for (int i = 0; i < detections.size(); i++){
-        std::cout << "detections shape: " << detections[i].size << std::endl;
-    }
 
     yoloPostProccess(
         detections,
