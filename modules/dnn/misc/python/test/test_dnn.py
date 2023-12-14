@@ -141,7 +141,7 @@ class dnn_test(NewOpenCVTests):
         self.assertTrue(type(rImg[0, 0])==np.int32)
         self.assertTrue(rImg.shape==(20, 4))
         rBlob = np.zeros(shape=(12, 4), dtype=np.float64)
-        rImg = paramNet.blobRectsToImageRects(rBlob, (356, 356))
+        rImg = paramNet.blobRectsToImageRects2d(rBlob, (356, 356))
         self.assertTrue(type(rImg[0, 0])==np.float64)
         self.assertTrue(rImg.shape==(12, 4))
 
