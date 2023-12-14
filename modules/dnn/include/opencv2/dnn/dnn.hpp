@@ -1242,7 +1242,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param rImg result rect in image coordinates.
          *  @param size spatial size for output image
          */
-        CV_WRAP void blobRectsToImageRects (const std::vector<Rect2d> &rBlob, CV_OUT std::vector<Rect2d>& rImg, const Size& size);
+        CV_WRAP_AS(blobRectsToImageRects2d) void blobRectsToImageRects (const std::vector<Rect2d> &rBlob, CV_OUT std::vector<Rect2d>& rImg, const Size& size);
 
         /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
          *  @param rBlob rect in blob coordinates.
