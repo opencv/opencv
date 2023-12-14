@@ -1400,7 +1400,7 @@ void CV_StereoCalibrationTest::run( int )
             imgsize = left.size();
             bool found1 = findChessboardCorners(left, patternSize, imgpt1[i]);
             bool found2 = findChessboardCorners(right, patternSize, imgpt2[i]);
-          
+
             cv::cornerSubPix(left,  imgpt1[i], cv::Size(6,6), cv::Size(-1,-1), cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 15, 0.1));
             cv::cornerSubPix(right, imgpt2[i], cv::Size(6,6), cv::Size(-1,-1), cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 15, 0.1));
 

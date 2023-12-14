@@ -519,7 +519,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     if (!is_plain)
       icvBinarizationHistogramBased(thresh_img_new); // process image in-place
-    
+
     SHOW("New binarization", thresh_img_new);
 
     if (flags & CALIB_CB_FAST_CHECK && !is_plain)
@@ -1418,7 +1418,7 @@ int ChessBoardDetector::checkQuadGroup(const std::vector<ChessBoardQuad*>& quad_
     }
 
     if (corner_count != pattern_size.width*pattern_size.height)
-        goto finalize;
+      goto finalize;
 
 {
     ChessBoardCorner* first = NULL, *first2 = NULL;
