@@ -84,7 +84,6 @@ public:
             }
         };
 
-        // 创建mean和variance数组
         std::vector<float> mean_data(loops);
         std::vector<float> inv_stdev_data(loops);
 
