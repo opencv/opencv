@@ -637,18 +637,18 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: \"" + lastLayer->type + "\"");
 }
 
-class YoloObjectDetector_Impl : public Model::Impl
+class YOLODetectionModel_Impl : public Model::Impl
 {
     // Define the enum for YOLO versions
     enum class YoloVersion {
-        YOLOVOC,
-        YOLOv3,
-        YOLOv4,
-        YOLOv5,
-        YOLOv6,
-        YOLOv7,
-        YOLOv8,
-        YOLOx,
+        YOLOVOC = 0,
+        YOLOv3  = 3,
+        YOLOv4  = 4,
+        YOLOv5  = 5,
+        YOLOv6  = 6,
+        YOLOv7  = 7,
+        YOLOv8  = 8,
+        YOLOx   = 9,
     };
 
     Net    net;
@@ -667,10 +667,10 @@ class YoloObjectDetector_Impl : public Model::Impl
     bool   darknet;
 
     public:
-    YoloObjectDetector_Impl() {
+    YOLODetectionModel_Impl() {
         //nothing
     }
-    YoloObjectDetector_Impl(const int version)
+    YOLODetectionModel_Impl(const int version)
     {
         setYoloVersion(version);
     }
@@ -810,29 +810,29 @@ class YoloObjectDetector_Impl : public Model::Impl
 
 
 
-YoloObjectDetector::YoloObjectDetector(const String& model, const String& config, const int version)
+YOLODetectionModel::YOLODetectionModel(const String& model, const String& config, const int version)
 {
-    impl = makePtr<YoloObjectDetector_Impl>(version);
+    impl = makePtr<YOLODetectionModel_Impl>(version);
     impl->initNet(readNet(model, config));
-    impl.dynamicCast<YoloObjectDetector_Impl>()->setNetworkType(true);
+    impl.dynamicCast<YOLODetectionModel_Impl>()->setNetworkType(true);
 }
 
-YoloObjectDetector::YoloObjectDetector(const String& onnx, const int version)
+YOLODetectionModel::YOLODetectionModel(const String& onnx, const int version)
 {
-    impl = makePtr<YoloObjectDetector_Impl>(version);
+    impl = makePtr<YOLODetectionModel_Impl>(version);
     impl->initNet(readNetFromONNX(onnx));
 }
 
-YoloObjectDetector::YoloObjectDetector()
+YOLODetectionModel::YOLODetectionModel()
 {
-    impl = std::static_pointer_cast<Model::Impl>(makePtr<YoloObjectDetector_Impl>());
+    impl = std::static_pointer_cast<Model::Impl>(makePtr<YOLODetectionModel_Impl>());
 }
 
-void YoloObjectDetector::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
+void YOLODetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                             CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
                             float confThreshold, float nmsThreshold){
 
-    CV_Assert(impl != nullptr && impl.dynamicCast<YoloObjectDetector_Impl>() != nullptr); // remove once default constructor is removed
+    CV_Assert(impl != nullptr && impl.dynamicCast<YOLODetectionModel_Impl>() != nullptr); // remove once default constructor is removed
 
     std::vector<Mat> detections;
     impl->processFrame(frame, detections);
@@ -846,7 +846,7 @@ void YoloObjectDetector::detect(InputArray frame, CV_OUT std::vector<int>& class
         nmsThreshold);
 }
 
-void YoloObjectDetector::yoloPostProccess(
+void YOLODetectionModel::yoloPostProccess(
     std::vector<Mat>& detections,
     CV_OUT std::vector<Rect2d>& keep_boxes,
     CV_OUT std::vector<float>& keep_confidences,
@@ -854,37 +854,37 @@ void YoloObjectDetector::yoloPostProccess(
     const float confThreshold,
     const float nmsThreshold){
 
-    impl.dynamicCast<YoloObjectDetector_Impl>()->yoloPostProccess(
+    impl.dynamicCast<YOLODetectionModel_Impl>()->yoloPostProccess(
         detections,
         keep_boxes,
         keep_confidences,
         keep_classIds,
         confThreshold,
         nmsThreshold,
-        impl.dynamicCast<YoloObjectDetector_Impl>()->getYoloVersion(),
-        impl.dynamicCast<YoloObjectDetector_Impl>()->getNetworkType()
+        impl.dynamicCast<YOLODetectionModel_Impl>()->getYoloVersion(),
+        impl.dynamicCast<YOLODetectionModel_Impl>()->getNetworkType()
         );
 }
 
-YoloObjectDetector& YoloObjectDetector::setPaddingMode(const ImagePaddingMode paddingMode){
-    impl.dynamicCast<YoloObjectDetector_Impl>()->setPaddingMode(paddingMode);
+YOLODetectionModel& YOLODetectionModel::setPaddingMode(const ImagePaddingMode paddingMode){
+    impl.dynamicCast<YOLODetectionModel_Impl>()->setPaddingMode(paddingMode);
     return *this;
 }
 
-YoloObjectDetector& YoloObjectDetector::setPaddingValue(const float PadingValue){
-    impl.dynamicCast<YoloObjectDetector_Impl>()->setPaddingValue(PadingValue);
+YOLODetectionModel& YOLODetectionModel::setPaddingValue(const float PadingValue){
+    impl.dynamicCast<YOLODetectionModel_Impl>()->setPaddingValue(PadingValue);
     return *this;
 }
 
-YoloObjectDetector& YoloObjectDetector::setNmsAcrossClasses(bool value)
+YOLODetectionModel& YOLODetectionModel::setNmsAcrossClasses(bool value)
 {
-    CV_Assert(impl != nullptr && impl.dynamicCast<YoloObjectDetector_Impl>() != nullptr); // remove once default constructor is removed
-    impl.dynamicCast<YoloObjectDetector_Impl>()->setNmsAcrossClasses(value);
+    CV_Assert(impl != nullptr && impl.dynamicCast<YOLODetectionModel_Impl>() != nullptr); // remove once default constructor is removed
+    impl.dynamicCast<YOLODetectionModel_Impl>()->setNmsAcrossClasses(value);
     return *this;
 }
 
-YoloObjectDetector& YoloObjectDetector::setYoloVersion(const int versionInt){
-    impl.dynamicCast<YoloObjectDetector_Impl>()->setYoloVersion(versionInt);
+YOLODetectionModel& YOLODetectionModel::setYoloVersion(const int versionInt){
+    impl.dynamicCast<YOLODetectionModel_Impl>()->setYoloVersion(versionInt);
     return *this;
 }
 
