@@ -40,7 +40,7 @@ In addition to this instruction you can use some video guide, for example [this 
 2. Setup the project:
     - Choose ***Java*** language
     - Choose ***Groovy DSL*** build configuration language
-    - Choose ***Minumum SDK*** to the same version number as was used during OpenCV 4 Android build
+    - Choose ***Minumum SDK*** with the version number not less than was used during OpenCV 4 Android build
         - If you don't know it, you can find it in file `OpenCV-android-sdk/sdk/build.gradle` at `android -> defaultConfig -> minSdkVersion`
 
     ![](images/setup_project.png)
