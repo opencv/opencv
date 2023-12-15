@@ -92,6 +92,8 @@ In addition to this instruction you can use some video guide, for example [this 
     @endcode
     The fix was found [here](https://stackoverflow.com/questions/76374886/error-cannot-find-symbol-import-org-opencv-buildconfig-android-studio) and [here](https://forum.opencv.org/t/task-compiledebugjavawithjavac-failed/13667/4)
 
+    Note: Actual for OpenCV 4.8.0 and earlier: if the `android` block of the file `MyApplication/OpenCV/build.gradle` does not contain property `namespace 'org.opencv'` then you need to add it manually.
+
 7. Add the module to the project:
     - Click ***File -> Project structure... -> Dependencies -> All modules -> + (Add Dependency button) -> Module dependency***
 
@@ -110,6 +112,7 @@ In addition to this instruction you can use some video guide, for example [this 
     @snippet samples/android/tutorial-1-camerapreview/src/org/opencv/samples/tutorial1/Tutorial1Activity.java ocv_loader_init
     Like this:
     ![](images/sample_code.png)
+    Note: Actual for OpenCV 4.8.0 and earlier: if `initLocal()` is undefined, you can use `initDebug()` instead.
 
 9. Choose a device to check the sample on and run the code by pressing `run` button
 
