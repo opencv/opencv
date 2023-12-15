@@ -1,3 +1,7 @@
+/**
+ * attention: Astra2, Gemini2, and Gemini2L cameras currently only support Windows and Linux kernel versions <= 4.15, and higher versions of Linux kernel may have exceptions.
+*/
+
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
