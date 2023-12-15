@@ -241,7 +241,7 @@ public:
 
     void findConnectedQuads(std::vector<ChessBoardQuad*>& out_group, int group_idx);
 
-    int checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group, std::vector<ChessBoardCorner*>& out_corners);
+    int checkQuadGroup(const std::vector<ChessBoardQuad*>& quad_group, std::vector<ChessBoardCorner*>& out_corners);
 
     int cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& quad_group);
 
@@ -1322,7 +1322,7 @@ void ChessBoardDetector::findConnectedQuads(std::vector<ChessBoardQuad*>& out_gr
 }
 
 
-int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group, std::vector<ChessBoardCorner*>& out_corners)
+int ChessBoardDetector::checkQuadGroup(const std::vector<ChessBoardQuad*>& quad_group, std::vector<ChessBoardCorner*>& out_corners)
 {
     const int ROW1 = 1000000;
     const int ROW2 = 2000000;
@@ -1420,6 +1420,7 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
     ChessBoardCorner* cur = first;
     ChessBoardCorner* right = NULL;
     ChessBoardCorner* below = NULL;
+    out_corners.clear();
     out_corners.push_back(cur);
 
     for (int k = 0; k < 4; ++k)
@@ -1937,6 +1938,7 @@ bool ChessBoardDetector::processQuads(std::vector<cv::Point2f>& out_corners, int
         if (count > 0 || (-count > (int)out_corners.size()))
         {
             // copy corners to output array
+            out_corners.clear();
             out_corners.reserve(n);
             for (int i = 0; i < n; ++i)
                 out_corners.push_back(corner_group[i]->pt);
