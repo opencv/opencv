@@ -758,26 +758,30 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
                 box.height *= Height / size.height;
             } else if (paddingMode == ImagePaddingMode::DNN_PMODE_CROP_CENTER) {
                 // Calculate the resize factor and offset for center cropping
-                resizeFactor = std::max(Width / (float)size.width, Height / (float)size.height);
+                resizeFactor = std::min(size.width / (float)Width, size.height / (float)Height);
                 offsetX = (Width - size.width * resizeFactor) / 2.0;
                 offsetY = (Height - size.height * resizeFactor) / 2.0;
 
                 // Adjust the box coordinates
                 box.x = box.x * resizeFactor + offsetX;
                 box.y = box.y * resizeFactor + offsetY;
-                box.width = box.width * resizeFactor + offsetX;
-                box.height = box.height * resizeFactor + offsetY;
+                box.width = box.width * resizeFactor;
+                box.height = box.height * resizeFactor;
             } else if (paddingMode == ImagePaddingMode::DNN_PMODE_LETTERBOX) {
                 // Calculate the resize factor and padding for letterbox
-                resizeFactor = std::min(Width / (float)size.width, Height / (float)size.height);
-                offsetX = (Width - size.width * resizeFactor) / 2.0;
-                offsetY = (Height - size.height * resizeFactor) / 2.0;
+                resizeFactor = std::min(size.width / (float)Width, size.height / (float)Height);
+                int rh = int(Height * resizeFactor);
+                int rw = int(Width * resizeFactor);
 
-                // Adjust the box coordinates
-                box.x = (box.x - offsetX) / resizeFactor;
-                box.y = (box.y - offsetY) / resizeFactor;
-                box.width = (box.width - offsetX) / resizeFactor;
-                box.height = (box.height - offsetY) / resizeFactor;
+                int top = (size.height - rh) / 2;
+                int bottom = size.height - top - rh;
+                int left = (size.width - rw) / 2;
+                int right = size.width - left - rw;
+
+                box.x = (box.x - left) / resizeFactor;
+                box.y = (box.y - top) / resizeFactor;
+                box.width = (box.width) / resizeFactor;
+                box.height = (box.height)  / resizeFactor;
             } else {
                 // Handle other cases or throw an error if the padding mode is unsupported
                 CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
