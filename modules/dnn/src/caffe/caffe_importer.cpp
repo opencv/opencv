@@ -499,6 +499,11 @@ public:
             {
                 type = "Convolution";
             }
+            else if (type == "Softmax"){
+                // set default axis to 1
+                if(!layerParams.has("axis"))
+                    layerParams.set("axis", 1);
+            }
 
             int id = dstNet.addLayer(name, type, layerParams);
 

@@ -76,7 +76,7 @@ public:
 
     SoftMaxLayerImpl(const LayerParams& params)
     {
-        axisRaw = params.get<int>("axis", 1);
+        axisRaw = params.get<int>("axis", -1);
         logSoftMax = params.get<bool>("log_softmax", false);
         setParamsFrom(params);
     }
