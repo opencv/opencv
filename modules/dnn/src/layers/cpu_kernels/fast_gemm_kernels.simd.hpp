@@ -22,8 +22,8 @@
 #define FAST_GEMM_F32_MC 48
 #define FAST_GEMM_F32_NC 128
 #else // CV_NEON_AARCH64, SIMD128
-#define FAST_GEMM_F32_MC 64
-#define FAST_GEMM_F32_NC 240
+#define FAST_GEMM_F32_MC 144
+#define FAST_GEMM_F32_NC 72
 #endif
 
 #if CV_AVX
@@ -735,9 +735,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 
     int MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
     int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
-    int KC = FAST_GEMM_STORAGE / ((MC + NC) * esz);
-    KC = KC > 8 ? KC : 8;
-    KC = KC < K ? KC : K;
+    int KC = std::min(FAST_GEMM_F32_PACKED_STRIDE_K, K);
 
     size_t buff_size = KC * (MC + NC) * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;

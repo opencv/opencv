@@ -5,6 +5,8 @@
 #include "perf_precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
+#include <numeric>
+
 namespace opencv_test {
 
 struct GemmParam_t {
@@ -370,18 +372,26 @@ PERF_TEST_P_(MatMul, innerproduct)
     lp.set("axis", (int)(a_shape.size() - 1));
     lp.set("bias_term", false);
 
+    // pre-transpose
+    std::vector<int> order(b_shape.size());
+    std::iota(order.begin(), order.end(), 0);
+    std::swap(order.back(), order[b_shape.size() - 2]);
+    Mat B_transposed;
+    transposeND(B, order, B_transposed);
+    lp.blobs.push_back(B_transposed);
+    lp.set("num_output", int(B_transposed.total(0, b_shape.size() - 1)));
+    lp.set("is_matmul", true);
+
     Net net;
-    int id = net.addLayerToPrev(lp.name, lp.type, lp);
-    net.connect(0, 1, id, 1);
+    net.addLayerToPrev(lp.name, lp.type, lp);
     net.setPreferableBackend(backend_id);
     net.setPreferableTarget(target_id);
 
     // warmup
     {
-        std::vector<std::string> input_names{"A", "B"};
+        std::vector<std::string> input_names{"A"};
         net.setInputsNames(input_names);
         net.setInput(A, input_names[0]);
-        net.setInput(B, input_names[1]);
         Mat out = net.forward();
     }
 
