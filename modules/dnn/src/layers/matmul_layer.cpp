@@ -91,6 +91,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
         if (inputs_arr.depth() == CV_16S)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
@@ -111,6 +114,64 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                       helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1, b, helper.ldb0,
                       helper.ldb1, beta, y, helper.ldc, opt);
     }
+
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, InputArrayOfArrays internals) {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        bool use_half = (inputs_arr.depth() == CV_16S);
+        inputs_arr.getUMatVector(inputs);
+        outputs_arr.getUMatVector(outputs);
+
+        const auto &input_A = inputs[0],
+                   &input_B = inputs[1];
+        auto &output = outputs[0];
+
+        int M = static_cast<int>(helper.M),
+            N = static_cast<int>(helper.N),
+            K = static_cast<int>(helper.K),
+            batch = static_cast<int>(helper.batch);
+        int batch_A = total(shape(input_A)) / (M * K),
+            batch_B = total(shape(input_B)) / (N * K);
+        MatShape new_shape_A{batch_A, M * K}, new_shape_B{batch_B, N * K}, new_shape_output{batch, M * N};
+
+        const auto input_A_2d = input_A.reshape(1, new_shape_A.size(), &new_shape_A[0]),
+                   input_B_2d = input_B.reshape(1, new_shape_B.size(), &new_shape_B[0]);
+        auto output_2d = output.reshape(1, new_shape_output.size(), &new_shape_output[0]);
+        UMat A, B, C, A_fp32, B_fp32, C_fp32;
+        for (int i = 0; i < batch; i++) {
+            A = input_A_2d.row(helper.A_rows[i]).reshape(1, trans_a ? K : M);
+            B = input_B_2d.row(helper.B_rows[i]).reshape(1, trans_b ? K : N);
+            C = output_2d.row(helper.C_rows[i]).reshape(1, M);
+
+            if (trans_a) {
+                A = A.t();
+            }
+            if (trans_b) {
+                B = B.t();
+            }
+
+            if (use_half) {
+                convertFp16(A, A_fp32);
+                convertFp16(B, B_fp32);
+                convertFp16(C, C_fp32);
+            } else {
+                A_fp32 = A;
+                B_fp32 = B;
+                C_fp32 = C;
+            }
+
+            cv::gemm(A_fp32, B_fp32, 1.f, noArray(), 0.f, C_fp32);
+            if (use_half) {
+                convertFp16(A_fp32, A);
+                convertFp16(B_fp32, B);
+                convertFp16(C_fp32, C);
+            }
+        }
+        return true;
+    }
+#endif // HAVE_OPENCL
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,

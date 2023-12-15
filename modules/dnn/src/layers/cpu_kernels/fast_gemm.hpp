@@ -46,6 +46,9 @@ struct MatMulHelper {
     std::vector<size_t> A_offsets;
     std::vector<size_t> B_offsets;
     std::vector<size_t> C_offsets;
+    std::vector<size_t> A_rows;
+    std::vector<size_t> B_rows;
+    std::vector<size_t> C_rows;
     size_t batch;
 
     int lda0, lda1;
@@ -81,6 +84,9 @@ struct MatMulHelper {
         A_offsets.resize(batch, 0);
         B_offsets.resize(batch, 0);
         C_offsets.resize(batch, 0);
+        A_rows.resize(batch, 0);
+        B_rows.resize(batch, 0);
+        C_rows.resize(batch, 0);
 
         // build C_offsets
         size_t C_step = total(C_shape, C_ndims - 2);
@@ -97,6 +103,7 @@ struct MatMulHelper {
         size_t t, idx;
         for (size_t i = 0; i < batch; i++) {
             C_offsets[i] = i * C_step;
+            C_rows[i] = i;
 
             size_t A_offset = 0, B_offset = 0;
             t = i;
@@ -109,6 +116,8 @@ struct MatMulHelper {
             }
             A_offsets[i] = A_offset;
             B_offsets[i] = B_offset;
+            A_rows[i] = A_offset / (M * K);
+            B_rows[i] = B_offset / (N * K);
         }
     }
 };
