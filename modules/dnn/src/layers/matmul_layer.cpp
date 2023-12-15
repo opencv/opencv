@@ -11,6 +11,9 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 
+// Vulkan backend
+#include "../op_vkcom.hpp"
+
 namespace cv { namespace dnn {
 
 class MatMulLayerImpl CV_FINAL : public MatMulLayer {
@@ -25,7 +28,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !trans_a && !trans_b);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -191,6 +196,29 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         return Ptr<BackendNode>(new InfEngineNgraphNode(matmul));
     }
 #endif // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_VULKAN
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                       std::vector<Ptr<BackendWrapper> > &outputs) CV_OVERRIDE {
+        auto input_A_wrapper = inputs[0].dynamicCast<VkComBackendWrapper>();
+        auto output_wrapper = outputs[0].dynamicCast<VkComBackendWrapper>();
+
+        const auto input_A_shape = shape(*input_A_wrapper->getMat());
+        const auto output_shape = shape(*output_wrapper->getMat());
+        if (output_shape.size() != 2) {
+            return Ptr<BackendNode>();
+        }
+
+        std::vector<Mat> constants;
+
+        if (!blobs.empty()) {
+            constants.push_back(blobs[0].t());
+        }
+
+        Ptr<vkcom::OpBase> op = new vkcom::OpMatMul(constants, input_A_shape[0], input_A_shape[1], output_shape[1]);
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
+    }
+#endif
 
  private:
     bool trans_a;
