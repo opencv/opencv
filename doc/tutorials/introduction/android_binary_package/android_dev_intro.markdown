@@ -51,11 +51,14 @@ In this tutorial we're gonna use an official Android Studio IDE and a set of oth
 Here's how to get a ready to work environment:
 
 1. Download and install Android Studio:
-    1. Download Android Studio: https://developer.android.com/studio
-    2. Extract the tar.gz archive
-    3. Follow the instructions in `Install-Linux-tar.txt`: open `android-studio/bin` folder in terminal and run `./studio.sh`
-    4. Perform standard installation through GUI
-    5. Optionally you can add a shortcut on a desktop for a quick access by clicking menu ***Tools -> Create desktop entry***. The menu appears after any project is created or opened.
+    * Ubuntu:
+        1. Download Android Studio: https://developer.android.com/studio
+        2. Extract the tar.gz archive
+        3. Follow the instructions in `Install-Linux-tar.txt`: open `android-studio/bin` folder in terminal and run `./studio.sh`
+        4. Perform standard installation through GUI
+        5. Optionally you can add a shortcut on a desktop for a quick access by clicking menu ***Tools -> Create desktop entry***. The menu appears after any project is created or opened.
+    * Windows:
+        Just download Android Studio from the official site and run installer.
 
 2. Install fresh Android SDK and NDK:
     1. Open SDK manager in Android Studio (***Customize -> All Settings -> Languages & Frameworks -> Android SDK***)
@@ -86,6 +89,9 @@ Setup Device for Testing and Debugging
 Usually the recipe above works as expected, but in some cases there are additional actions that must be performed. In this section we'll cover some cases.
 
 #### Windows host computer
+
+If you have Windows 10 or higher then you don't have to do additional actions to connect a phone and run samples on it.
+However, earlier Windows versions require a longer procedure:
 
 -#  Enable USB debugging on the Android device (via Settings menu).
 -#  Attach the Android device to your PC with a USB cable.
