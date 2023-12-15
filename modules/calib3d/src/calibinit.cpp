@@ -479,7 +479,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     bool found = false;
 
-    const bool is_plain = (flags & CALIB_CB_PLAIN) != 0;
+    const bool is_plain = (flags & CALIB_CB_PLAIN) != 0;
 
     int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Mat img = image_.getMat();
