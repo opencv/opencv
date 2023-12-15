@@ -2788,10 +2788,10 @@ void ONNXImporter::parseSoftMax(LayerParams& layerParams, const opencv_onnx::Nod
 {
     const std::string& layer_type = node_proto.op_type();
     int axis;
-    if (layerParams.has("opset") && layerParams.get<int>("opset") > 11) {
-        axis = layerParams.get<int>("axis", -1);
-    } else {
+    if (onnx_opset != 0 && onnx_opset <= 11) {
         axis = layerParams.get<int>("axis", 1);
+    } else {
+        axis = layerParams.get<int>("axis", -1);
     }
     layerParams.set<int>("axis", axis);
     layerParams.type = "Softmax";
@@ -3962,7 +3962,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Concat"] = &ONNXImporter::parseConcat;
     dispatch["Resize"] = &ONNXImporter::parseResize;
     dispatch["Upsample"] = &ONNXImporter::parseUpsample;
-    dispatch["SoftMax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
+    dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter::parseCumSum;
     dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter::parseDepthToSpace;
@@ -3981,7 +3981,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
-                                          "Identity", "Log", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh", "Softmax",
+                                          "Identity", "Log", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh",
                                           "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "Gelu",
                                           "GeluApproximation"};
     for (const auto& name : simpleLayers)

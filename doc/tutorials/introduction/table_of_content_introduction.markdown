@@ -21,8 +21,8 @@ Introduction to OpenCV {#tutorial_table_of_content_introduction}
 -   @subpage tutorial_java_eclipse
 -   @subpage tutorial_clojure_dev_intro
 -   @subpage tutorial_android_dev_intro
--   @subpage tutorial_O4A_SDK
 -   @subpage tutorial_dev_with_OCV_on_Android
+-   @subpage tutorial_android_dnn_intro
 -   @subpage tutorial_android_ocl_intro
 
 ##### Other platforms

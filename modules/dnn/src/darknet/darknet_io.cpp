@@ -314,6 +314,9 @@ namespace cv {
                     cv::dnn::LayerParams softmax_param;
                     softmax_param.name = "Softmax-name";
                     softmax_param.type = "Softmax";
+                    // set default axis to 1
+                    if(!softmax_param.has("axis"))
+                        softmax_param.set("axis", 1);
                     darknet::LayerParameter lp;
 
                     std::string layer_name = cv::format("softmax_%d", layer_id);

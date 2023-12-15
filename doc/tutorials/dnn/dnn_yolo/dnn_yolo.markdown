@@ -3,7 +3,7 @@ YOLO DNNs  {#tutorial_dnn_yolo}
 
 @tableofcontents
 
-@prev_tutorial{tutorial_dnn_android}
+@prev_tutorial{tutorial_dnn_openvino}
 @next_tutorial{tutorial_dnn_javascript}
 
 |    |    |
