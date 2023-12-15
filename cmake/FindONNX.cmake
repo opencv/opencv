@@ -11,7 +11,9 @@ if(ONNXRT_ROOT_DIR)
   find_library(ORT_LIB onnxruntime
     ${ONNXRT_ROOT_DIR}/lib
     CMAKE_FIND_ROOT_PATH_BOTH)
+  # The location of headers varies across different versions of ONNX Runtime
   find_path(ORT_INCLUDE onnxruntime_cxx_api.h
+    ${ONNXRT_ROOT_DIR}/include/onnxruntime/
     ${ONNXRT_ROOT_DIR}/include/onnxruntime/core/session
     CMAKE_FIND_ROOT_PATH_BOTH)
 endif()
