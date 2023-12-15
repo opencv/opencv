@@ -7,6 +7,10 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include "cpu_kernels/fast_gemm.hpp"
 
+// OpenVINO backend
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
 namespace cv { namespace dnn {
 
 class MatMulLayerImpl CV_FINAL : public MatMulLayer {
@@ -107,6 +111,25 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                       helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1, b, helper.ldb0,
                       helper.ldb1, beta, y, helper.ldc, opt);
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
+        auto& input_A_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        std::shared_ptr<ngraph::Node> matmul;
+
+        if (nodes.size() == 2) {
+            auto &input_B_node = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+            matmul = std::make_shared<ngraph::op::MatMul>(input_A_node, input_B_node, trans_a, trans_b);
+        } else {
+            auto input_B_shape = getShape<size_t>(blobs[0]);
+            auto input_B_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, input_B_shape, blobs[0].data);
+            matmul = std::make_shared<ngraph::op::MatMul>(input_A_node, input_B_node, trans_a, trans_b);
+        }
+
+        return Ptr<BackendNode>(new InfEngineNgraphNode(matmul));
+    }
+#endif // HAVE_DNN_NGRAPH
 
  private:
     bool trans_a;
