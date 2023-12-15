@@ -637,9 +637,11 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: \"" + lastLayer->type + "\"");
 }
 
-class YOLODetectionModel_Impl : public Model::Impl
+class YOLODetectionModel_Impl : public DetectionModel_Impl
 {
-    // Define the enum for YOLO versions
+    // Define the enum for YOLO versions.
+    // NOTE: yolox here assumes that archor boxes
+    // decoding is already in the onnx model
     enum class YoloVersion {
         YOLOVOC = 0,
         YOLOv3  = 3,
@@ -651,20 +653,11 @@ class YOLODetectionModel_Impl : public Model::Impl
         YOLOx   = 9,
     };
 
-    Net    net;
-    Size   size;
-    Scalar mean;
-    Scalar scale = Scalar::all(1.0);
-    bool   swapRB = false;
-    bool   crop;
-    bool   nmsAcrossClasses;
-    float  padValue;
-    Mat    blob;
     ImagePaddingMode paddingMode;
-    std::vector<String> outNames;
-    public:
     YoloVersion yoloVersion;
-    bool   darknet;
+    float padValue;
+    float Height, Width;
+    bool  darknet;
 
     public:
     YOLODetectionModel_Impl() {
@@ -675,12 +668,14 @@ class YOLODetectionModel_Impl : public Model::Impl
         setYoloVersion(version);
     }
 
-    /*virtual*/
     void processFrame(InputArray frame, OutputArrayOfArrays outs)
     {
         CV_TRACE_FUNCTION();
         if (size.empty())
             CV_Error(Error::StsBadSize, "Input size not specified");
+
+        Width = frame.cols();
+        Height = frame.rows();
 
         Image2BlobParams param;
         param.scalefactor = scale;
@@ -690,8 +685,9 @@ class YOLODetectionModel_Impl : public Model::Impl
         param.borderValue = padValue;
         param.paddingmode = paddingMode;
 
-        Mat blob = dnn::blobFromImageWithParams(frame, param); // [1, 10, 10, 4]
+        Mat blob = dnn::blobFromImageWithParams(frame, param);
         net.setInput(blob);
+
         net.forward(outs, outNames);
     }
 
@@ -700,10 +696,13 @@ class YOLODetectionModel_Impl : public Model::Impl
     }
 
     void setPaddingMode(const ImagePaddingMode paddingmode_){
-        paddingMode = paddingmode_;
-    }
-    void setNmsAcrossClasses(bool value) {
-        nmsAcrossClasses = value;
+        if (paddingmode_ == ImagePaddingMode::DNN_PMODE_NULL ||
+            paddingmode_ == ImagePaddingMode::DNN_PMODE_CROP_CENTER ||
+            paddingmode_ == ImagePaddingMode::DNN_PMODE_LETTERBOX){
+            paddingMode = paddingmode_;
+            } else {
+                CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
+            }
     }
 
     void setNetworkType(const bool darknet_ = false){
@@ -711,104 +710,81 @@ class YOLODetectionModel_Impl : public Model::Impl
     }
 
     void setYoloVersion(const int versionInt){
-       if (
-            versionInt == static_cast<int>(YoloVersion::YOLOVOC) ||
-            versionInt == static_cast<int>(YoloVersion::YOLOv3) ||
-            versionInt == static_cast<int>(YoloVersion::YOLOv4) ||
-            versionInt == static_cast<int>(YoloVersion::YOLOv5) ||
-            versionInt == static_cast<int>(YoloVersion::YOLOv6) ||
-            versionInt == static_cast<int>(YoloVersion::YOLOv7) ||
-            versionInt == static_cast<int>(YoloVersion::YOLOv8) ||
-            versionInt == static_cast<int>(YoloVersion::YOLOx)
-            ) {
+    if (
+        versionInt == static_cast<int>(YoloVersion::YOLOVOC) ||
+        versionInt == static_cast<int>(YoloVersion::YOLOv3) ||
+        versionInt == static_cast<int>(YoloVersion::YOLOv4) ||
+        versionInt == static_cast<int>(YoloVersion::YOLOv5) ||
+        versionInt == static_cast<int>(YoloVersion::YOLOv6) ||
+        versionInt == static_cast<int>(YoloVersion::YOLOv7) ||
+        versionInt == static_cast<int>(YoloVersion::YOLOv8) ||
+        versionInt == static_cast<int>(YoloVersion::YOLOx)
+        ) {
             yoloVersion = static_cast<YoloVersion>(versionInt);
         } else {
             CV_Error(CV_StsNotImplemented, "Unsupported YOLO version");
         }
     }
 
-    YoloVersion getYoloVersion(){
-        return yoloVersion;
+    void setInputParams(double scale_, const Size& size_, const Scalar& mean_,
+                        bool swapRB_, ImagePaddingMode paddingMode_, float padValue_)
+    {
+        size = size_;
+        mean = mean_;
+        scale = Scalar::all(scale_);
+        swapRB = swapRB_;
+        paddingMode = paddingMode_;
+        padValue = padValue_;
+    }
+
+    int getYoloVersion(){
+        return static_cast<int>(yoloVersion);
     }
 
     bool getNetworkType(){
         return darknet;
     }
 
-    static void yoloPostProccess(
-        std::vector<Mat>& detections,
-        CV_OUT std::vector<Rect2d>& keep_boxes,
-        CV_OUT std::vector<float>& keep_confidences,
-        CV_OUT std::vector<int>& keep_classIds,
-        const float confThreshold,
-        const float nmsThreshold,
-        YoloVersion yoloVersion,
-        bool darknet){
+    void boxRescale(CV_OUT std::vector<Rect2d>& boxes){
+        std::cout << "Rescale boxes" << std::endl;
+        float resizeFactor, offsetX, offsetY;
 
-        // Retrieve
-        std::vector<int> classIds;
-        std::vector<float> confidences;
-        std::vector<Rect2d> boxes;
+        for (auto & box : boxes){
+            if (paddingMode == ImagePaddingMode::DNN_PMODE_NULL){
+                // Scale boxes to original image size
+                box.x *= Width / size.width;
+                box.y *= Height / size.height;
+                box.width *= Width / size.width;
+                box.height *= Height / size.height;
+            } else if (paddingMode == ImagePaddingMode::DNN_PMODE_CROP_CENTER) {
+                // Calculate the resize factor and offset for center cropping
+                resizeFactor = std::max(Width / (float)size.width, Height / (float)size.height);
+                offsetX = (Width - size.width * resizeFactor) / 2.0;
+                offsetY = (Height - size.height * resizeFactor) / 2.0;
 
-        if (yoloVersion == YoloVersion::YOLOv8){
-            cv::transposeND(detections[0], {0, 2, 1}, detections[0]);
-        }
+                // Adjust the box coordinates
+                box.x = box.x * resizeFactor + offsetX;
+                box.y = box.y * resizeFactor + offsetY;
+                box.width = box.width * resizeFactor + offsetX;
+                box.height = box.height * resizeFactor + offsetY;
+            } else if (paddingMode == ImagePaddingMode::DNN_PMODE_LETTERBOX) {
+                // Calculate the resize factor and padding for letterbox
+                resizeFactor = std::min(Width / (float)size.width, Height / (float)size.height);
+                offsetX = (Width - size.width * resizeFactor) / 2.0;
+                offsetY = (Height - size.height * resizeFactor) / 2.0;
 
-        // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
-        for (auto preds : detections)
-        {
-            if (!darknet)
-                preds = preds.reshape(1, preds.size[1]);
-
-            for (int i = 0; i < preds.rows; ++i)
-            {
-                // filter out non objects
-                float obj_conf = (yoloVersion != YoloVersion::YOLOv8) ? preds.at<float>(i, 4) : 1.0f;
-                if (obj_conf < confThreshold)
-                    continue;
-
-                Mat scores = preds.row(i).colRange((yoloVersion != YoloVersion::YOLOv8) ? 5 : 4, preds.cols);
-                double conf;
-                Point maxLoc;
-                minMaxLoc(scores, 0, &conf, 0, &maxLoc);
-
-                conf = (yoloVersion != YoloVersion::YOLOv8) ? conf * obj_conf : conf;
-                if (conf < confThreshold)
-                    continue;
-
-                // get bbox coords
-                float* det = preds.ptr<float>(i);
-                double cx = det[0];
-                double cy = det[1];
-                double w = det[2];
-                double h = det[3];
-
-                // [x1, y1, x2, y2]
-                double x = cx - 0.5 * w;
-                double y = cy - 0.5 * h;
-                double width = darknet ? w : cx + 0.5 * w;
-                double height = darknet ? h : cy + 0.5 * h;
-
-                boxes.emplace_back(Rect2d(x, y, width, height));
-                classIds.emplace_back(maxLoc.x);
-                confidences.emplace_back(conf);
+                // Adjust the box coordinates
+                box.x = (box.x - offsetX) / resizeFactor;
+                box.y = (box.y - offsetY) / resizeFactor;
+                box.width = (box.width - offsetX) / resizeFactor;
+                box.height = (box.height - offsetY) / resizeFactor;
+            } else {
+                // Handle other cases or throw an error if the padding mode is unsupported
+                CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
             }
-        }
-
-        // NMS
-        std::vector<int> keep_idx;
-        NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, keep_idx);
-
-        for (auto i : keep_idx)
-        {
-            keep_classIds.emplace_back(classIds[i]);
-            keep_confidences.emplace_back(confidences[i]);
-            keep_boxes.emplace_back(boxes[i]);
         }
     }
 };
-
-
 
 YOLODetectionModel::YOLODetectionModel(const String& model, const String& config, const int version)
 {
@@ -835,35 +811,144 @@ void YOLODetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& class
     CV_Assert(impl != nullptr && impl.dynamicCast<YOLODetectionModel_Impl>() != nullptr); // remove once default constructor is removed
 
     std::vector<Mat> detections;
-    impl->processFrame(frame, detections);
+    impl.dynamicCast<YOLODetectionModel_Impl>()->processFrame(frame, detections);
 
-    yoloPostProccess(
+    postProccess(
         detections,
         boxes,
         confidences,
         classIds,
         confThreshold,
-        nmsThreshold);
+        nmsThreshold,
+        impl.dynamicCast<YOLODetectionModel_Impl>()->getYoloVersion(),
+        impl.dynamicCast<YOLODetectionModel_Impl>()->getNetworkType(),
+        getNmsAcrossClasses(),
+        impl->size.width,
+        impl->size.height);
+
+    impl.dynamicCast<YOLODetectionModel_Impl>()->boxRescale(boxes);
 }
 
-void YOLODetectionModel::yoloPostProccess(
+void YOLODetectionModel::postProccess(
     std::vector<Mat>& detections,
     CV_OUT std::vector<Rect2d>& keep_boxes,
     CV_OUT std::vector<float>& keep_confidences,
     CV_OUT std::vector<int>& keep_classIds,
     const float confThreshold,
-    const float nmsThreshold){
+    const float nmsThreshold,
+    const int yoloVersion,
+    const bool darknet,
+    const bool nmsAcrossClasses,
+    int frameWidth,
+    int frameHeight
+    ){
 
-    impl.dynamicCast<YOLODetectionModel_Impl>()->yoloPostProccess(
-        detections,
-        keep_boxes,
-        keep_confidences,
-        keep_classIds,
-        confThreshold,
-        nmsThreshold,
-        impl.dynamicCast<YOLODetectionModel_Impl>()->getYoloVersion(),
-        impl.dynamicCast<YOLODetectionModel_Impl>()->getNetworkType()
-        );
+    // Retrieve
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect2d> boxes;
+
+    // NOTE: here the number 8 (see below) refers to yolov8
+    if (yoloVersion == 8){
+        cv::transposeND(detections[0], {0, 2, 1}, detections[0]);
+    }
+
+    // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
+    for (auto preds : detections)
+    {
+        if (!darknet)
+            preds = preds.reshape(1, preds.size[1]);
+
+        for (int i = 0; i < preds.rows; ++i)
+        {
+            // filter out non objects
+            float obj_conf = (yoloVersion != 8) ? preds.at<float>(i, 4) : 1.0f;
+            if (obj_conf < confThreshold)
+                continue;
+
+            Mat scores = preds.row(i).colRange((yoloVersion != 8) ? 5 : 4, preds.cols);
+            double conf;
+            Point maxLoc;
+            minMaxLoc(scores, 0, &conf, 0, &maxLoc);
+
+            conf = (yoloVersion != 8) ? conf * obj_conf : conf;
+            if (conf < confThreshold)
+                continue;
+
+            // get bbox coords
+            float* det = preds.ptr<float>(i);
+            double cx = det[0];
+            double cy = det[1];
+            double w = det[2];
+            double h = det[3];
+
+            // [x1, y1, x2, y2]
+            double x1 = cx - 0.5 * w;
+            double y1 = cy - 0.5 * h;
+            double x2 = darknet ? w : cx + 0.5 * w;
+            double y2 = darknet ? h : cy + 0.5 * h;
+
+            int width  = x2 - x1 + 1;
+            int height = y2 - y1 + 1;
+
+            if (width <= 2 || height <= 2)
+            {
+                x1  = x1 * frameWidth;
+                y1  = y1 * frameHeight;
+                x2  = x2 * frameWidth;
+                y2  = y2 * frameHeight;
+                width  = x2 - x1 + 1;
+                height = y2 - y1 + 1;
+            }
+
+            boxes.emplace_back(Rect2d(x1, y1, x2, y2));
+            classIds.emplace_back(maxLoc.x);
+            confidences.emplace_back(conf);
+        }
+    }
+
+    // NMS
+    if (nmsAcrossClasses)
+    {
+        std::vector<int> keep_idx;
+        NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, keep_idx);
+        for (auto i : keep_idx)
+        {
+            keep_classIds.emplace_back(classIds[i]);
+            keep_confidences.emplace_back(confidences[i]);
+            keep_boxes.emplace_back(boxes[i]);
+        }
+    }
+    else
+    {
+        std::map<int, std::vector<size_t> > class2indices;
+        for (size_t i = 0; i < classIds.size(); i++)
+        {
+            if (confidences[i] >= confThreshold)
+            {
+                class2indices[classIds[i]].push_back(i);
+            }
+        }
+        for (const auto& it : class2indices)
+        {
+            std::vector<Rect> localBoxes;
+            std::vector<float> localConfidences;
+            for (size_t idx : it.second)
+            {
+                localBoxes.push_back(boxes[idx]);
+                localConfidences.push_back(confidences[idx]);
+            }
+            std::vector<int> indices;
+            NMSBoxes(localBoxes, localConfidences, confThreshold, nmsThreshold, indices);
+
+            keep_classIds.resize(keep_classIds.size() + indices.size(), it.first);
+            for (int idx : indices)
+            {
+                keep_boxes.push_back(localBoxes[idx]);
+                keep_confidences.push_back(localConfidences[idx]);
+            }
+        }
+    }
 }
 
 YOLODetectionModel& YOLODetectionModel::setPaddingMode(const ImagePaddingMode paddingMode){
@@ -873,13 +958,6 @@ YOLODetectionModel& YOLODetectionModel::setPaddingMode(const ImagePaddingMode pa
 
 YOLODetectionModel& YOLODetectionModel::setPaddingValue(const float PadingValue){
     impl.dynamicCast<YOLODetectionModel_Impl>()->setPaddingValue(PadingValue);
-    return *this;
-}
-
-YOLODetectionModel& YOLODetectionModel::setNmsAcrossClasses(bool value)
-{
-    CV_Assert(impl != nullptr && impl.dynamicCast<YOLODetectionModel_Impl>() != nullptr); // remove once default constructor is removed
-    impl.dynamicCast<YOLODetectionModel_Impl>()->setNmsAcrossClasses(value);
     return *this;
 }
 
