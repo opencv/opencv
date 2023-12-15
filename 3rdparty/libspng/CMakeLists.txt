@@ -23,7 +23,6 @@ if(MSVC)
 endif(MSVC)
 
 add_library(${SPNG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${spng_headers} ${spng_sources})
-ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable)
 target_link_libraries(${SPNG_LIBRARY} ${ZLIB_LIBRARIES})
 
 set_target_properties(${SPNG_LIBRARY}

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: (BSD-2-Clause AND libpng-2.0) */
+/* SPDX-License-Identifier: BSD-2-Clause */
 #ifndef SPNG_H
 #define SPNG_H
 
@@ -28,7 +28,7 @@ extern "C" {
 
 #define SPNG_VERSION_MAJOR 0
 #define SPNG_VERSION_MINOR 7
-#define SPNG_VERSION_PATCH 3
+#define SPNG_VERSION_PATCH 4
 
 enum spng_errno
 {
