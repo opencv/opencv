@@ -758,15 +758,16 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
                 box.height *= Height / size.height;
             } else if (paddingMode == ImagePaddingMode::DNN_PMODE_CROP_CENTER) {
                 // Calculate the resize factor and offset for center cropping
-                resizeFactor = std::min(size.width / (float)Width, size.height / (float)Height);
+                resizeFactor = std::min((float)Width / size.width, (float)Height / size.height);
                 offsetX = (Width - size.width * resizeFactor) / 2.0;
                 offsetY = (Height - size.height * resizeFactor) / 2.0;
 
                 // Adjust the box coordinates
                 box.x = box.x * resizeFactor + offsetX;
                 box.y = box.y * resizeFactor + offsetY;
-                box.width = box.width * resizeFactor;
-                box.height = box.height * resizeFactor;
+                box.width = box.width * resizeFactor + offsetX;
+                box.height = box.height * resizeFactor + offsetY;
+
             } else if (paddingMode == ImagePaddingMode::DNN_PMODE_LETTERBOX) {
                 // Calculate the resize factor and padding for letterbox
                 resizeFactor = std::min(size.width / (float)Width, size.height / (float)Height);
@@ -780,8 +781,8 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
 
                 box.x = (box.x - left) / resizeFactor;
                 box.y = (box.y - top) / resizeFactor;
-                box.width = (box.width) / resizeFactor;
-                box.height = (box.height)  / resizeFactor;
+                box.width = (box.width - right) / resizeFactor;
+                box.height = (box.height - bottom)  / resizeFactor;
             } else {
                 // Handle other cases or throw an error if the padding mode is unsupported
                 CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
@@ -801,6 +802,7 @@ YOLODetectionModel::YOLODetectionModel(const String& onnx, const int version)
 {
     impl = makePtr<YOLODetectionModel_Impl>(version);
     impl->initNet(readNetFromONNX(onnx));
+    impl.dynamicCast<YOLODetectionModel_Impl>()->setNetworkType(false);
 }
 
 YOLODetectionModel::YOLODetectionModel()
@@ -889,8 +891,11 @@ void YOLODetectionModel::postProccess(
             // [x1, y1, x2, y2]
             double x1 = cx - 0.5 * w;
             double y1 = cy - 0.5 * h;
-            double x2 = darknet ? w : cx + 0.5 * w;
-            double y2 = darknet ? h : cy + 0.5 * h;
+            // double x2 = (darknet) ? w : cx + 0.5 * w;
+            // double y2 = (darknet) ? h : cy + 0.5 * h;
+            double x2 = cx + 0.5 * w;
+            double y2 = cy + 0.5 * h;
+
 
             int width  = x2 - x1 + 1;
             int height = y2 - y1 + 1;
