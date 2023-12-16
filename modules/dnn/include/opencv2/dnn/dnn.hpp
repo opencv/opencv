@@ -1666,7 +1666,7 @@ CV__DNN_INLINE_NS_BEGIN
       * sets preprocessing input, runs forward pass and return result detections.
       */
      class CV_EXPORTS_W_SIMPLE YOLODetectionModel : public DetectionModel
-     {   
+     {
      public:
         /**
           * @brief Create detection model from network represented in one of the supported formats.
@@ -1696,7 +1696,7 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[in] nmsThreshold A threshold used in non maximum suppression.
           */
          CV_WRAP void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
-                             CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
+                             CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
                              float confThreshold = 0.5f, float nmsThreshold = 0.0f);
 
         /**
@@ -1719,7 +1719,7 @@ CV__DNN_INLINE_NS_BEGIN
          */
          CV_WRAP static void postProccess(
             std::vector<Mat>& detections,
-            CV_OUT std::vector<Rect2d>& boxes,
+            CV_OUT std::vector<Rect>& boxes,
             CV_OUT std::vector<float>& confidences,
             CV_OUT std::vector<int>& classIds,
             const float confThreshold,

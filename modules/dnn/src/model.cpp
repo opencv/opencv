@@ -745,7 +745,7 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
         return darknet;
     }
 
-    void boxRescale(CV_OUT std::vector<Rect2d>& boxes){
+    void boxRescale(CV_OUT std::vector<Rect>& boxes){
         std::cout << "Rescale boxes" << std::endl;
         float resizeFactor, offsetX, offsetY;
 
@@ -809,7 +809,7 @@ YOLODetectionModel::YOLODetectionModel()
 }
 
 void YOLODetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
-                            CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
+                            CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
                             float confThreshold, float nmsThreshold){
 
     CV_Assert(impl != nullptr && impl.dynamicCast<YOLODetectionModel_Impl>() != nullptr); // remove once default constructor is removed
@@ -835,7 +835,7 @@ void YOLODetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& class
 
 void YOLODetectionModel::postProccess(
     std::vector<Mat>& detections,
-    CV_OUT std::vector<Rect2d>& keep_boxes,
+    CV_OUT std::vector<Rect>& keep_boxes,
     CV_OUT std::vector<float>& keep_confidences,
     CV_OUT std::vector<int>& keep_classIds,
     const float confThreshold,
@@ -850,7 +850,7 @@ void YOLODetectionModel::postProccess(
     // Retrieve
     std::vector<int> classIds;
     std::vector<float> confidences;
-    std::vector<Rect2d> boxes;
+    std::vector<Rect> boxes;
 
     // NOTE: here the number 8 (see below) refers to yolov8
     if (yoloVersion == 8){
@@ -905,7 +905,7 @@ void YOLODetectionModel::postProccess(
                 height = y2 - y1 + 1;
             }
 
-            boxes.emplace_back(Rect2d(x1, y1, x2, y2));
+            boxes.emplace_back(Rect(x1, y1, x2, y2));
             classIds.emplace_back(maxLoc.x);
             confidences.emplace_back(conf);
         }
