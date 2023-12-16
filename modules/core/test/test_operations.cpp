@@ -1561,56 +1561,50 @@ TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/is
     EXPECT_EQ(1, c.rows);
 }
 
-TEST(Core_Arith, regression_24163) // https://github.com/opencv/opencv/issues/24163
+// https://github.com/opencv/opencv/issues/24163
+typedef tuple<perf::MatDepth,int,int,int> Arith_Regression24163Param;
+typedef testing::TestWithParam<Arith_Regression24163Param> Core_Arith_Regression24163;
+
+TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
 {
+    const int matDepth = get<0>(GetParam());
+    const int matHeight= get<1>(GetParam());
+    const int matWidth = 3; // Fixed
+    const int alpha    = get<2>(GetParam());
+    const int beta     = get<3>(GetParam());
+
+    // If alpha and/or beta are negative, and matDepth is unsigned, test is passed.
+    if( ( (alpha < 0) || (beta < 0) )
+        &&
+        ( (matDepth != CV_8S) && (matDepth != CV_16S) && (matDepth != CV_32S) ) )
     {
-        Mat src1 = ( Mat_<uchar>(1, 16) <<  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 );
-        Mat src2 = ( Mat_<uchar>(1, 16) <<  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  1,  1,  1,  1,  1,  1 );
-        Mat mean = ( src1 + src2 ) / 2;
-        Mat expected(1,16,CV_8U);
-
-        for(int i=0;i<16;i++)
-        {
-            expected.at<uchar>(0,i) = static_cast<uchar>( cvRound( ( (double) src1.at<uchar>(0,i) + src2.at<uchar>(0,i) ) / 2.0 ) & 0xFF);
-        }
-
-#if 0
-        std::cout << "[CV_8U]" << std::endl;
-        std::cout << " src1     = " << src1 << std::endl;
-        std::cout << " src2     = " << src2 << std::endl;
-        std::cout << " mean     = " << mean << std::endl;
-        std::cout << " expected = " << expected << std::endl;
-#endif
-
-        for(int i=0;i<16;i++)
-        {
-            EXPECT_EQ( (int)mean.at<uchar>(0,i), (int)expected.at<uchar>(0,i)) << cv::format("i = %d", i );
-        }
+        throw SkipTestException( cv::format("Test is skipped(matDepth is not signed, alpha = %d, beta = %d)", alpha, beta) );
     }
-    {
-        Mat src1 = ( Mat_<char>(1, 16) << -7, -6, -5, -4, -3, -2, -1,  0, 1, 2, 3, 4, 5, 6, 7, 8 );
-        Mat src2 = ( Mat_<char>(1, 16) <<  1,  1,  1,  1,  1,  1,  1,  1, 1, 1, 1, 1, 1, 1, 1, 1 );
-        Mat mean = ( src1 + src2 ) / 2;
-        Mat expected(1,16,CV_8S);
 
-        for(int i=0;i<16;i++)
-        {
-            expected.at<char>(0,i) = static_cast<char>( cvRound( ( (double) src1.at<char>(0,i) + src2.at<char>(0,i) ) / 2.0 ) & 0xFF);
-        }
+    const int matType = CV_MAKE_TYPE(matDepth, 1);
+    const Size matSize(matWidth, matHeight);
+    const Mat src1(matSize, matType, Scalar(alpha,alpha,alpha,alpha));
+    const Mat src2(matSize, matType, Scalar(beta, beta, beta, beta));
+    const Mat result = ( src1 + src2 ) / 2;
 
-#if 0
-        std::cout << "[CV_8S]" << std::endl;
-        std::cout << " src1     = " << src1 << std::endl;
-        std::cout << " src2     = " << src2 << std::endl;
-        std::cout << " mean     = " << mean << std::endl;
-        std::cout << " expected = " << expected << std::endl;
-#endif
+    // Expected that default is FE_TONEAREST(Ties to Even).
+    const int mean = lrint( static_cast<double>(alpha + beta) / 2.0 );
+    const Mat expected(matSize, matType, Scalar(mean,mean,mean,mean));
 
-        for(int i=0;i<16;i++)
-        {
-            EXPECT_EQ( (int)mean.at<char>(0,i), (int)expected.at<char>(0,i)) << cv::format("i = %d", i );
-        }
-    }
+    // Compare result and extected.
+    ASSERT_EQ(expected.size(), result.size());
+    EXPECT_EQ(0, cvtest::norm(expected, result, NORM_INF)) <<
+        "result=" << std::endl << result << std::endl <<
+        "expected=" << std::endl << expected;
 }
+
+INSTANTIATE_TEST_CASE_P(/* */, Core_Arith_Regression24163,
+    testing::Combine(
+        testing::Values(perf::MatDepth(CV_8U), CV_8S, CV_16U, CV_16S, CV_32S), // MatType
+        testing::Values( 3, 4, 5, 6),    // MatHeight
+        testing::Values(-2,-1, 0, 1, 2), // src1
+        testing::Values(   -1, 0, 1   )  // src2
+    )
+);
 
 }} // namespace
