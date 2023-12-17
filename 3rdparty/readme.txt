@@ -41,7 +41,6 @@ libtiff               Tag Image File Format (TIFF) Software
                       Copyright (c) 1991-1997 Silicon Graphics, Inc.
                       See libtiff home page #1 http://www.simplesystems.org/libtiff/
                                             #2 https://libtiff.gitlab.io/libtiff/
-                                            #3 http://libtiff.maptools.org/
                       for details and links to the source code
 
                       WITH_TIFF CMake option must be ON to add libtiff & zlib support to imgcodecs.
