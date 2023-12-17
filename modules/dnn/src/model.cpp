@@ -746,7 +746,6 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
     }
 
     void boxRescale(CV_OUT std::vector<Rect>& boxes){
-        std::cout << "Rescale boxes" << std::endl;
         float resizeFactor, offsetX, offsetY;
 
         for (auto & box : boxes){
@@ -787,6 +786,9 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
                 // Handle other cases or throw an error if the padding mode is unsupported
                 CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
             }
+            // convert from xmin, ymin, xmax, ymax -> xmin, ymin, width, hight
+            box.width = box.width - box.x;
+            box.height = box.height - box.y;
         }
     }
 };
