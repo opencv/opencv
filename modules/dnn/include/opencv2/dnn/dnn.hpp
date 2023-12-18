@@ -1722,13 +1722,10 @@ CV__DNN_INLINE_NS_BEGIN
             CV_OUT std::vector<Rect>& boxes,
             CV_OUT std::vector<float>& confidences,
             CV_OUT std::vector<int>& classIds,
-            const float confThreshold,
-            const float nmsThreshold,
-            const int yoloVersion,
-            const bool darknet,
-            const bool nmsAcrossClasses,
-            int frameWidth,
-            int frameHeight
+            Size inputImgSize,
+            const float confThreshold = 0.5f,
+            const float nmsThreshold = 0.4f,
+            const bool nmsAcrossClasses = true
             );
         /**
          * @brief Set the padding mode used in image preprocessing.

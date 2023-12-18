@@ -826,13 +826,11 @@ void YOLODetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& class
         boxes,
         confidences,
         classIds,
+        impl->size,
         confThreshold,
         nmsThreshold,
-        impl.dynamicCast<YOLODetectionModel_Impl>()->getYoloVersion(),
-        impl.dynamicCast<YOLODetectionModel_Impl>()->getNetworkType(),
-        getNmsAcrossClasses(),
-        impl->size.width,
-        impl->size.height);
+        getNmsAcrossClasses()
+        );
 
     impl.dynamicCast<YOLODetectionModel_Impl>()->boxRescale(boxes);
 }
@@ -842,22 +840,29 @@ void YOLODetectionModel::postProccess(
     CV_OUT std::vector<Rect>& keep_boxes,
     CV_OUT std::vector<float>& keep_confidences,
     CV_OUT std::vector<int>& keep_classIds,
+    Size inputImgSize,
     const float confThreshold,
     const float nmsThreshold,
-    const int yoloVersion,
-    const bool darknet,
-    const bool nmsAcrossClasses,
-    int frameWidth,
-    int frameHeight
+    const bool nmsAcrossClasses
     ){
+
+    bool yolov8 = false;
+    bool darknet = false;
+
+    if (detections[0].dims == 2){
+        darknet = true;
+    }
+
+    if (detections[0].size[1] == 84 and !darknet) {
+        yolov8 = true;  // Set the correct flag based on tensor shape
+    }
 
     // Retrieve
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<Rect> boxes;
 
-    // NOTE: here the number 8 (see below) refers to yolov8
-    if (yoloVersion == 8){
+    if (yolov8){
         cv::transposeND(detections[0], {0, 2, 1}, detections[0]);
     }
 
@@ -870,16 +875,16 @@ void YOLODetectionModel::postProccess(
         for (int i = 0; i < preds.rows; ++i)
         {
             // filter out non objects
-            float obj_conf = (yoloVersion != 8) ? preds.at<float>(i, 4) : 1.0f;
+            float obj_conf = (!yolov8) ? preds.at<float>(i, 4) : 1.0f;
             if (obj_conf < confThreshold)
                 continue;
 
-            Mat scores = preds.row(i).colRange((yoloVersion != 8) ? 5 : 4, preds.cols);
+            Mat scores = preds.row(i).colRange((!yolov8) ? 5 : 4, preds.cols);
             double conf;
             Point maxLoc;
             minMaxLoc(scores, 0, &conf, 0, &maxLoc);
 
-            conf = (yoloVersion != 8) ? conf * obj_conf : conf;
+            conf = (!yolov8) ? conf * obj_conf : conf;
             if (conf < confThreshold)
                 continue;
 
@@ -893,8 +898,6 @@ void YOLODetectionModel::postProccess(
             // [x1, y1, x2, y2]
             double x1 = cx - 0.5 * w;
             double y1 = cy - 0.5 * h;
-            // double x2 = (darknet) ? w : cx + 0.5 * w;
-            // double y2 = (darknet) ? h : cy + 0.5 * h;
             double x2 = cx + 0.5 * w;
             double y2 = cy + 0.5 * h;
 
@@ -904,10 +907,10 @@ void YOLODetectionModel::postProccess(
 
             if (width <= 2 || height <= 2)
             {
-                x1  = x1 * frameWidth;
-                y1  = y1 * frameHeight;
-                x2  = x2 * frameWidth;
-                y2  = y2 * frameHeight;
+                x1  = x1 * inputImgSize.width;
+                y1  = y1 * inputImgSize.height;
+                x2  = x2 * inputImgSize.width;
+                y2  = y2 * inputImgSize.height;
                 width  = x2 - x1 + 1;
                 height = y2 - y1 + 1;
             }
