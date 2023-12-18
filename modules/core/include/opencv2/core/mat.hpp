@@ -2110,7 +2110,7 @@ public:
          - number of channels
      */
     int flags;
-    //! the matrix dimensionality, >= 2
+    //! the matrix dimensionality, >= 2 (can also be 0 when the array is empty)
     int dims;
     //! the number of rows and columns or (-1, -1) when the matrix has more than 2 dimensions
     int rows, cols;
@@ -2591,7 +2591,7 @@ public:
      */
     int flags;
 
-    //! the matrix dimensionality, >= 2
+    //! the matrix dimensionality, >= 2 (can also be 0 when the array is empty)
     int dims;
 
     //! number of rows in the matrix; -1 when the matrix has more than 2 dimensions
