@@ -1675,14 +1675,14 @@ CV__DNN_INLINE_NS_BEGIN
           * @param[in] config Text file contains network configuration.
           * @param[in] version Version of the yolo model.
           */
-         CV_WRAP YOLODetectionModel(const String& model, const String& config, const int version);
+         CV_WRAP YOLODetectionModel(const String& model, const String& config);
 
          /**
           * @brief Create model from onnx graph.
           * @param[in] onnx path to onnx graph.
           * @param[in] version Version of the yolo model.
           */
-         CV_WRAP YOLODetectionModel(const String& onnx, const int version);
+         CV_WRAP YOLODetectionModel(const String& onnx);
 
          CV_DEPRECATED_EXTERNAL  // avoid using in C++ code (need to fix bindings first)
          YOLODetectionModel();
@@ -1746,17 +1746,6 @@ CV__DNN_INLINE_NS_BEGIN
          * @return Reference to the current object for chaining calls.
          */
         CV_WRAP YOLODetectionModel& setPaddingValue(const float paddingValue);
-        /**
-         * @brief Set the version of the YOLO model.
-         *
-         * This method sets the version of the YOLO model being used. Different versions
-         * might require different preprocessing and postprocessing steps.
-         *
-         * @param[in] version The version number of the YOLO model.
-         * @return Reference to the current object for chaining calls.
-         */
-        CV_WRAP YOLODetectionModel& setYoloVersion(const int version);
-
         };
 
 /** @brief This class represents high-level API for text recognition networks.

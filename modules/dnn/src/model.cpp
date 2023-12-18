@@ -639,33 +639,14 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
 class YOLODetectionModel_Impl : public DetectionModel_Impl
 {
-    // Define the enum for YOLO versions.
-    // NOTE: yolox here assumes that archor boxes
-    // decoding is already in the onnx model
-    enum class YoloVersion {
-        YOLOVOC = 0,
-        YOLOv3  = 3,
-        YOLOv4  = 4,
-        YOLOv5  = 5,
-        YOLOv6  = 6,
-        YOLOv7  = 7,
-        YOLOv8  = 8,
-        YOLOx   = 9,
-    };
 
     ImagePaddingMode paddingMode;
-    YoloVersion yoloVersion;
     float padValue;
     float Height, Width;
-    bool  darknet;
 
     public:
     YOLODetectionModel_Impl() {
         //nothing
-    }
-    YOLODetectionModel_Impl(const int version)
-    {
-        setYoloVersion(version);
     }
 
     void processFrame(InputArray frame, OutputArrayOfArrays outs)
@@ -705,27 +686,6 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
             }
     }
 
-    void setNetworkType(const bool darknet_ = false){
-        darknet = darknet_;
-    }
-
-    void setYoloVersion(const int versionInt){
-    if (
-        versionInt == static_cast<int>(YoloVersion::YOLOVOC) ||
-        versionInt == static_cast<int>(YoloVersion::YOLOv3) ||
-        versionInt == static_cast<int>(YoloVersion::YOLOv4) ||
-        versionInt == static_cast<int>(YoloVersion::YOLOv5) ||
-        versionInt == static_cast<int>(YoloVersion::YOLOv6) ||
-        versionInt == static_cast<int>(YoloVersion::YOLOv7) ||
-        versionInt == static_cast<int>(YoloVersion::YOLOv8) ||
-        versionInt == static_cast<int>(YoloVersion::YOLOx)
-        ) {
-            yoloVersion = static_cast<YoloVersion>(versionInt);
-        } else {
-            CV_Error(CV_StsNotImplemented, "Unsupported YOLO version");
-        }
-    }
-
     void setInputParams(double scale_, const Size& size_, const Scalar& mean_,
                         bool swapRB_, ImagePaddingMode paddingMode_, float padValue_)
     {
@@ -735,14 +695,6 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
         swapRB = swapRB_;
         paddingMode = paddingMode_;
         padValue = padValue_;
-    }
-
-    int getYoloVersion(){
-        return static_cast<int>(yoloVersion);
-    }
-
-    bool getNetworkType(){
-        return darknet;
     }
 
     void boxRescale(CV_OUT std::vector<Rect>& boxes){
@@ -793,18 +745,16 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
     }
 };
 
-YOLODetectionModel::YOLODetectionModel(const String& model, const String& config, const int version)
+YOLODetectionModel::YOLODetectionModel(const String& model, const String& config)
 {
-    impl = makePtr<YOLODetectionModel_Impl>(version);
+    impl = makePtr<YOLODetectionModel_Impl>();
     impl->initNet(readNet(model, config));
-    impl.dynamicCast<YOLODetectionModel_Impl>()->setNetworkType(true);
 }
 
-YOLODetectionModel::YOLODetectionModel(const String& onnx, const int version)
+YOLODetectionModel::YOLODetectionModel(const String& onnx)
 {
-    impl = makePtr<YOLODetectionModel_Impl>(version);
+    impl = makePtr<YOLODetectionModel_Impl>();
     impl->initNet(readNetFromONNX(onnx));
-    impl.dynamicCast<YOLODetectionModel_Impl>()->setNetworkType(false);
 }
 
 YOLODetectionModel::YOLODetectionModel()
@@ -972,11 +922,6 @@ YOLODetectionModel& YOLODetectionModel::setPaddingMode(const ImagePaddingMode pa
 
 YOLODetectionModel& YOLODetectionModel::setPaddingValue(const float PadingValue){
     impl.dynamicCast<YOLODetectionModel_Impl>()->setPaddingValue(PadingValue);
-    return *this;
-}
-
-YOLODetectionModel& YOLODetectionModel::setYoloVersion(const int versionInt){
-    impl.dynamicCast<YOLODetectionModel_Impl>()->setYoloVersion(versionInt);
     return *this;
 }
 

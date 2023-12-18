@@ -269,7 +269,7 @@ public:
         }
     }
 
-    void testYOLODetectionModel(const std::string& weights, const std::string& cfg, int yoloVersion,
+    void testYOLODetectionModel(const std::string& weights, const std::string& cfg,
                                 const std::string& imgPath, const std::vector<int>& refClassIds,
                                 const std::vector<float>& refConfidences,
                                 const std::vector<Rect2d>& refBoxes,
@@ -287,10 +287,10 @@ public:
         // Initialize model based on the condition
         if (cfg == "") {
             // ONNX test
-            model = YOLODetectionModel(weights, yoloVersion);
+            model = YOLODetectionModel(weights);
         } else {
             // Darknet test
-            model = YOLODetectionModel(weights, cfg, yoloVersion);
+            model = YOLODetectionModel(weights, cfg);
         }
 
         model.setPaddingMode(paddingMode).setPaddingValue(paddingValue)
@@ -861,7 +861,7 @@ TEST_P(Test_Model, TextDetectionByEAST)
 
     // Detection algorithm parameters
     float confThresh = 0.5;
-    float nmsThresh = 0.5;
+    float nmsThresh = 0.4;
 
     double eps_center = 5/*pixels*/;
     double eps_size = 5/*pixels*/;
@@ -912,7 +912,6 @@ TEST_P(Test_Model, YoloDetectionDarknet)
     std::string img_path = _tf("dog416.png");
     std::string weights_file = _tf("yolov4.weights", false);
     std::string config_file = _tf("yolov4.cfg");
-    int yoloVersion = 4;
 
     Size size{416, 416};
     Scalar mean = Scalar(0);
@@ -943,7 +942,7 @@ TEST_P(Test_Model, YoloDetectionDarknet)
         }
 #endif
 
-    testYOLODetectionModel(weights_file, config_file, yoloVersion, img_path,
+    testYOLODetectionModel(weights_file, config_file, img_path,
                            refClassIds, refConfidences, refBoxes,
                            scoreDiff, iouDiff, confThreshold,
                            nmsThreshold, size, mean, scale,
@@ -985,7 +984,6 @@ TEST_P(Test_Model, YoloDetectionONNX)
     std::string img_path = _tf("dog416.png");
     std::string weights_file = _tf("/onnx/models/yolox_s_inf_decoder.onnx", false);
     std::string config_file = "";
-    int yoloVersion = 4;
 
     Size size{640, 640};
     Scalar mean = Scalar(0);
@@ -1016,7 +1014,7 @@ TEST_P(Test_Model, YoloDetectionONNX)
         }
 #endif
 
-    testYOLODetectionModel(weights_file, config_file, yoloVersion, img_path,
+    testYOLODetectionModel(weights_file, config_file, img_path,
                            refClassIds, refConfidences, refBoxes,
                            scoreDiff, iouDiff, confThreshold,
                            nmsThreshold, size, mean, scale,
