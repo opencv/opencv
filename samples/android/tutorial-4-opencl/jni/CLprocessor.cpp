@@ -1,7 +1,7 @@
 #ifdef OPENCL_FOUND
 #define __CL_ENABLE_EXCEPTIONS
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS /*let's give a chance for OpenCL 1.1 devices*/
-#include <CL/cl.hpp>
+#include <CL/opencl.hpp>
 #endif
 
 #include <GLES2/gl2.h>
@@ -90,7 +90,7 @@ bool haveOpenCL = false;
 int initCL()
 {
     dumpCLinfo();
-
+    LOGE("initCL: start initCL");
     EGLDisplay mEglDisplay = eglGetCurrentDisplay();
     if (mEglDisplay == EGL_NO_DISPLAY)
         LOGE("initCL: eglGetCurrentDisplay() returned 'EGL_NO_DISPLAY', error = %x", eglGetError());
@@ -114,7 +114,9 @@ int initCL()
             LOGE("Warning: CL-GL sharing isn't supported by PLATFORM");
         props[5] = (cl_context_properties) p();
 
+        LOGE("initCL: cl::Context");
         theContext = cl::Context(CL_DEVICE_TYPE_GPU, props);
+        LOGE("initCL: cl::Device");
         std::vector<cl::Device> devs = theContext.getInfo<CL_CONTEXT_DEVICES>();
         LOGD("Context returned %d devices, taking the 1st one", devs.size());
         ext = devs[0].getInfo<CL_DEVICE_EXTENSIONS>();
@@ -232,7 +234,7 @@ void procOCL_OCV(int texIn, int texOut, int w, int h)
     cl_command_queue q = (cl_command_queue)cv::ocl::Queue::getDefault().ptr();
     size_t offset = 0;
     size_t origin[3] = { 0, 0, 0 };
-    size_t region[3] = { w, h, 1 };
+    size_t region[3] = { (size_t)w, (size_t)h, 1 };
     CV_Assert(clEnqueueCopyBufferToImage (q, clBuffer, imgOut(), offset, origin, region, 0, NULL, NULL) == CL_SUCCESS);
     theQueue.enqueueReleaseGLObjects(&images);
     cv::ocl::finish();

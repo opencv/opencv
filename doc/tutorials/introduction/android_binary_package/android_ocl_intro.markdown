@@ -6,21 +6,18 @@ Use OpenCL in Android camera preview based CV application {#tutorial_android_ocl
 
 |    |    |
 | -: | :- |
-| Original author | Andrey Pavlenko |
-| Compatibility | OpenCV >= 3.0 |
-
-@warning
-This tutorial is deprecated.
+| Original author | Andrey Pavlenko, Alexander Panov |
+| Compatibility | OpenCV >= 4.9 |
 
 This guide was designed to help you in use of [OpenCL &trade;](https://www.khronos.org/opencl/) in Android camera preview based CV application.
-It was written for [Eclipse-based ADT tools](http://developer.android.com/tools/help/adt.html)
-(deprecated by Google now), but it easily can be reproduced with [Android Studio](http://developer.android.com/tools/studio/index.html).
+Tutorial was written for [Android Studio](http://developer.android.com/tools/studio/index.html) 2022.2.1. It was tested with Ubuntu 22.04.
 
 This tutorial assumes you have the following installed and configured:
 
--   JDK
--   Android SDK and NDK
--   Eclipse IDE with ADT and CDT plugins
+-   Android Studio (2022.2.1.+)
+-   JDK (17+)
+-   Android SDK and NDK (25.2.9519653+)
+-   download OpenCV source code from [github](git@github.com:opencv/opencv.git) or from [releases](https://opencv.org/releases/) and build by [instruction on wiki](https://github.com/opencv/opencv/wiki/Custom-OpenCV-Android-SDK-and-AAR-package-build).
 
 It also assumes that you are familiar with Android Java and JNI programming basics.
 If you need help with anything of the above, you may refer to our @ref tutorial_android_dev_intro guide.
@@ -29,6 +26,47 @@ This tutorial also assumes you have an Android operated device with OpenCL enabl
 
 The related source code is located within OpenCV samples at
 [opencv/samples/android/tutorial-4-opencl](https://github.com/opencv/opencv/tree/4.x/samples/android/tutorial-4-opencl/) directory.
+
+How to build custom OpenCV Android SDK with OpenCL
+-------
+
+1. Create and configure Android OpenCL SDK.<br/><br/>
+To build this JNI code you need OpenCL headers from OpenCV and from [Khronos](https://github.com/KhronosGroup/OpenCL-CLHPP):
+@code{.bash}
+cd your_path/ && mkdir ANDROID_OPENCL_SDK && mkdir ANDROID_OPENCL_SDK/include && cd ANDROID_OPENCL_SDK/include
+cp -r path_to_opencv/opencv/3rdparty/include/opencl/1.2/CL . && cd CL
+wget https://github.com/KhronosGroup/OpenCL-CLHPP/raw/main/include/CL/opencl.hpp
+wget https://github.com/KhronosGroup/OpenCL-CLHPP/raw/main/include/CL/cl2.hpp
+@endcode
+Also you need to download __libOpenCL.so__ from the device you'll run the application, connect device and run:
+@code{.bash}
+cd your_path/ANDROID_OPENCL_SDK && mkdir lib && cd lib
+adb pull /system/vendor/lib64/libOpenCL.so
+@endcode
+Because of the `-Wl,--allow-shlib-undefined` flags __libOpenCL.so__ will be used to build on your computer, but the library will not be added to the apk file.
+The application will try to find the library on the running device.<br/><br/>
+
+2. [Build custom OpenCV Android SDK with OpenCL](https://github.com/opencv/opencv/wiki/Custom-OpenCV-Android-SDK-and-AAR-package-build).<br/><br/>
+By default the OpenCL support (T-API) is disabled in OpenCV builds for Android OS (so it's absent in official packages as of version 3.0),
+but it's possible to rebuild locally OpenCV for Android with OpenCL/T-API enabled: use `-DWITH_OPENCL=ON` option for CMake.
+You also need to specify the path to the Android OpenCL SDK: use `-DANDROID_OPENCL_SDK=path_to_your_Android_OpenCL_SDK` option for CMake.<br/><br/>
+If you are building OpenCV using build_sdk.py and [instruction on wiki](https://github.com/opencv/opencv/wiki/Custom-OpenCV-Android-SDK-and-AAR-package-build),
+set these CMake parameters in ndk-18-api-level-21.config.py:
+@code{.py}
+ABI("3", "arm64-v8a", None, 21, cmake_vars=dict('WITH_OPENCL': 'ON', 'ANDROID_OPENCL_SDK': 'path_to_your_Android_OpenCL_SDK'))
+@endcode
+If you are building OpenCV using cmake/ninja, use this bash script (set your NDK_VERSION and your paths instead of examples of paths):
+@code{.bash}
+cd path_to_opencv && mkdir build && cd build
+export NDK_VERSION=25.2.9519653
+export ANDROID_SDK=/home/user/Android/Sdk/
+export ANDROID_OPENCL_SDK=/path_to_ANDROID_OPENCL_SDK/
+export ANDROID_HOME=$ANDROID_SDK
+export ANDROID_NDK_HOME=$ANDROID_SDK/ndk/$NDK_VERSION/
+cmake -GNinja -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_STL=c++_shared -DANDROID_NATIVE_API_LEVEL=24
+-DANDROID_SDK=$ANDROID_SDK -DANDROID_NDK=$ANDROID_NDK_HOME -DBUILD_JAVA=ON -DANDROID_HOME=$ANDROID_SDK -DBUILD_ANDROID_EXAMPLES=ON
+-DINSTALL_ANDROID_EXAMPLES=ON -DANDROID_ABI=arm64-v8a -DWITH_OPENCL=ON -DANDROID_OPENCL_SDK=$ANDROID_OPENCL_SDK ..
+@endcode
 
 Preface
 -------
@@ -327,9 +365,6 @@ void initCL()
 }
 @endcode
 
-@note To build this JNI code you need __OpenCL 1.2__ headers from [Khronos web site](https://www.khronos.org/registry/cl/api/1.2/) and
-the __libOpenCL.so__ downloaded from the device you'll run the application.
-
 Then the texture can be wrapped by a `cl::ImageGL` object and processed via OpenCL calls:
 @code{.cpp}
     cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, texIn);
@@ -387,14 +422,6 @@ Unfortunately `UMat` keeps OpenCL _buffer_ internally, that can't be wrapped ove
 @endcode
 
 - @note We have to make one more image data copy when placing back the modified image to the original OpenGL texture via OpenCL image wrapper.
-- @note By default the OpenCL support (T-API) is disabled in OpenCV builds for Android OS (so it's absent in official packages as of version 3.0),
-  but it's possible to rebuild locally OpenCV for Android with OpenCL/T-API enabled: use `-DWITH_OPENCL=YES` option for CMake.
-  @code{.cmd}
-  cd opencv-build-android
-  path/to/cmake.exe -GNinja -DCMAKE_MAKE_PROGRAM="path/to/ninja.exe" -DCMAKE_TOOLCHAIN_FILE=path/to/opencv/platforms/android/android.toolchain.cmake -DANDROID_ABI="armeabi-v7a with NEON" -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON path/to/opencv
-  path/to/ninja.exe install/strip
-  @endcode
-  To use your own modified `libopencv_java4.so` you have to keep inside your APK, not to use OpenCV Manager and load it manually via `System.loadLibrary("opencv_java4")`.
 
 Performance notes
 -----------------
