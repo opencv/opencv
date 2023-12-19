@@ -57,6 +57,17 @@ struct MatMulHelper {
 
     int M, N, K;
 
+    MatMulHelper() {
+	A_offsets = {0};
+        B_offsets = {0};
+        C_offsets = {0};
+        batch = -1;
+    }
+
+    bool empty() const {
+        return batch == -1;
+    }
+
     void compute(bool trans_a, bool trans_b, MatShape A_shape, MatShape B_shape, MatShape C_shape) {
         auto A_ndims = A_shape.size(), B_ndims = B_shape.size(), C_ndims =  C_shape.size();
         int ma = A_shape[A_ndims - 2], na = A_shape.back();

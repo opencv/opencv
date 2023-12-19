@@ -14,6 +14,12 @@
 // Vulkan backend
 #include "../op_vkcom.hpp"
 
+// CUDA backend
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/matmul_broadcast.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
+
 namespace cv { namespace dnn {
 
 class MatMulLayerImpl CV_FINAL : public MatMulLayer {
@@ -30,7 +36,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !trans_a && !trans_b);
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !trans_a && !trans_b) ||
+	       backendId == DNN_BACKEND_CUDA;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -219,6 +226,19 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
     }
 #endif
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void *context_,
+                              const std::vector<Ptr<BackendWrapper>>& inputs,
+                              const std::vector<Ptr<BackendWrapper>>& outputs) override {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        auto input_B = blobs.empty() ? Mat() : blobs[0];
+
+        CV_CheckFalse(helper.empty(), "DNN/MatMul/CUDA: MatMulHelper is not initialized");
+
+        return make_cuda_node<cuda4dnn::MatMulBroadcastOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), input_B, trans_a, trans_b, helper.A_offsets, helper.B_offsets, helper.C_offsets, helper.batch);
+    }
+#endif // HAVE_CUDA
 
  private:
     bool trans_a;

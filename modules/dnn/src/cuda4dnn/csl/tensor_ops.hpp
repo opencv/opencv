@@ -152,6 +152,22 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                 batch_size);
         }
 
+	template <class T> inline
+        void gemmBatched(const cublas::Handle& handle, std::size_t batch,
+                         T beta, TensorSpan<T> C, const std::vector<std::size_t> C_offsets, T alpha,
+                         bool trans_a, TensorView<T> A, const std::vector<std::size_t> A_offsets,
+                         bool trans_b, TensorView<T> B, const std::vector<std::size_t> B_offsets) {
+            const auto M = C.get_axis_size(-2),
+                       N = C.get_axis_size(-1),
+                       K = A.get_axis_size(trans_a ? -2 : -1);
+            const auto lda = A.get_axis_size(-1),
+                       ldb = B.get_axis_size(-1),
+                       ldc = M;
+
+            // collect pointers and run cublasSgemmBatched / cublasHgemmBatched
+            csl::cublas::gemmBatched<T>(handle, trans_b, trans_a, N, M, K, 1.f, B.get(), ldb, B_offsets, A.get(), lda, A_offsets, 0.f, C.get(), ldc, C_offsets, batch);
+        }
+
         /** @brief performs element-wise addition with broadcasting
          *
          * Pre-conditions:
