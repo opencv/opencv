@@ -171,7 +171,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                        K = A.get_axis_size(trans_a ? -2 : -1);
             const auto lda = A.get_axis_size(-1),
                        ldb = B.get_axis_size(-1),
-                       ldc = M;
+                       ldc = N;
 
             // collect pointers and run cublasSgemmBatched / cublasHgemmBatched
             csl::cublas::gemmBatched<T>(handle, trans_b, trans_a, N, M, K, 1.f, B.get(), ldb, B_offsets, A.get(), lda, A_offsets, 0.f, C.get(), ldc, C_offsets, batch);
