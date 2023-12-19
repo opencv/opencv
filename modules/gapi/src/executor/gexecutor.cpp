@@ -15,6 +15,8 @@
 #include "executor/gexecutor.hpp"
 #include "compiler/passes/passes.hpp"
 
+#include "executor/thread_pool.hpp"
+
 cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     : GAbstractExecutor(std::move(g_model))
 {
@@ -453,5 +455,358 @@ void cv::gimpl::GExecutor::prepareForNewStream()
     for (auto &op : m_ops)
     {
         op.isl_exec->handleNewStream();
+    }
+}
+
+//////////////////////////////////////////////////////////////// cv::gimpl::wip::GExecutor
+
+
+class cv::gimpl::wip::GExecutor::Input final: public cv::gimpl::GIslandExecutable::IInput
+{
+    cv::gimpl::Mag &mag;
+    virtual StreamMsg get() override
+    {
+        cv::GRunArgs res;
+        for (const auto &rc : desc()) { res.emplace_back(magazine::getArg(mag, rc)); }
+        return StreamMsg{std::move(res)};
+    }
+    virtual StreamMsg try_get() override { return get(); }
+public:
+    Input(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs) : mag(m) { set(rcs); }
+};
+
+class cv::gimpl::wip::GExecutor::Output final: public cv::gimpl::GIslandExecutable::IOutput
+{
+    cv::gimpl::Mag &mag;
+    std::unordered_map<const void*, int> out_idx;
+    std::exception_ptr eptr;
+
+    GRunArgP get(int idx) override
+    {
+        auto r = magazine::getObjPtrExec(mag, desc()[idx]);
+        // Remember the output port for this output object
+        out_idx[cv::gimpl::proto::ptr(r)] = idx;
+        return r;
+    }
+    void post(GRunArgP&&, const std::exception_ptr& e) override
+    {
+        if (e)
+        {
+            eptr = e;
+        }
+    }
+    void post(EndOfStream&&) override {} // Do nothing here too
+    void post(Exception&& ex) override
+    {
+        eptr = std::move(ex.eptr);
+    }
+    void meta(const GRunArgP &out, const GRunArg::Meta &m) override
+    {
+        const auto idx = out_idx.at(cv::gimpl::proto::ptr(out));
+        magazine::assignMetaStubExec(mag, desc()[idx], m);
+    }
+public:
+    Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs)
+        : mag(m)
+    {
+        set(rcs);
+    }
+
+    void verify()
+    {
+        if (eptr)
+        {
+            std::rethrow_exception(eptr);
+        }
+    }
+};
+
+void cv::gimpl::wip::GExecutor::initResource(const ade::NodeHandle &nh, const ade::NodeHandle &orig_nh) {
+    const Data &d = m_gm.metadata(orig_nh).get<Data>();
+
+    if (   d.storage != Data::Storage::INTERNAL
+        && d.storage != Data::Storage::CONST_VAL)
+        return;
+
+    // INTERNALS+CONST only! no need to allocate/reset output objects
+    // to as it is bound externally (e.g. already in the m_res)
+
+    switch (d.shape)
+    {
+    case GShape::GMAT:
+        {
+            // Let island allocate it's outputs if it can,
+            // allocate cv::Mat and wrap it with RMat otherwise
+            GAPI_Assert(!nh->inNodes().empty());
+            const auto desc = util::get<cv::GMatDesc>(d.meta);
+            auto& exec = m_gim.metadata(nh->inNodes().front()).get<IslandExec>().object;
+            auto& rmat = m_res.slot<cv::RMat>()[d.rc];
+            if (exec->allocatesOutputs()) {
+                rmat = exec->allocate(desc);
+            } else {
+                Mat mat;
+                createMat(desc, mat);
+                rmat = make_rmat<RMatOnMat>(mat);
+            }
+        }
+        break;
+
+    case GShape::GSCALAR:
+        if (d.storage == Data::Storage::CONST_VAL)
+        {
+            auto rc = RcDesc{d.rc, d.shape, d.ctor};
+            magazine::bindInArg(m_res, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
+        }
+        break;
+
+    case GShape::GARRAY:
+        if (d.storage == Data::Storage::CONST_VAL)
+        {
+            auto rc = RcDesc{d.rc, d.shape, d.ctor};
+            magazine::bindInArg(m_res, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
+        }
+        break;
+    case GShape::GOPAQUE:
+        // Constructed on Reset, do nothing here
+        break;
+    case GShape::GFRAME: {
+        // Should be defined by backend, do nothing here
+        break;
+    }
+    default:
+        GAPI_Error("InternalError");
+    }
+}
+
+void cv::gimpl::wip::Task::operator()() {
+    cv::gimpl::wip::GExecutor::Input i{res, in_objects};
+    cv::gimpl::wip::GExecutor::Output o{res, out_objects};
+    isl_exec->run(i, o);
+    // NB: Check if execution finished without exception.
+    o.verify();
+
+    std::lock_guard<std::mutex> lk(m);
+    for (Task* dep : dependents) {
+        dep->ready_deps++;
+        if (dep->ready_deps == dep->num_deps) {
+            tp.schedule(*dep);
+        }
+    }
+}
+
+cv::gimpl::wip::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
+    : GAbstractExecutor(std::move(g_model)) {
+    auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
+    for (auto nh : sorted.nodes())
+    {
+        switch (m_gim.metadata(nh).get<NodeKind>().k)
+        {
+        case NodeKind::ISLAND:
+            {
+                std::vector<RcDesc> input_rcs;
+                std::vector<RcDesc> output_rcs;
+                input_rcs.reserve(nh->inNodes().size());
+                output_rcs.reserve(nh->outNodes().size());
+
+                auto xtract = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
+                    const auto orig_data_nh
+                        = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
+                    const auto &orig_data_info
+                        = m_gm.metadata(orig_data_nh).get<Data>();
+                    vec.emplace_back(RcDesc{ orig_data_info.rc
+                                           , orig_data_info.shape
+                                           , orig_data_info.ctor});
+                };
+                // (3)
+                for (auto in_slot_nh  : nh->inNodes())  xtract(in_slot_nh,  input_rcs);
+                for (auto out_slot_nh : nh->outNodes()) xtract(out_slot_nh, output_rcs);
+
+                std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>> deps;
+                for (auto slot_nh : nh->inNodes()) {
+                    for (auto island_nh : slot_nh->inNodes()) {
+                        GAPI_Assert(m_gim.metadata(island_nh).get<NodeKind>().k == NodeKind::ISLAND);
+                        deps.emplace(island_nh);
+                    }
+                }
+
+                auto& task = m_tasks.emplace(nh, Task{  std::move(input_rcs)
+                                                      , std::move(output_rcs)
+                                                      , m_gim.metadata(nh).get<IslandExec>().object
+                                                      , m_res
+                                                      , m_mutex
+                                                      , m_tp
+                                                      , static_cast<uint32_t>(deps.size())
+                                                      , 0u
+                                                      , {} }).first->second;
+                for (auto dep : deps) {
+                    m_tasks.at(dep).dependents.emplace(&task);
+                }
+            }
+            break;
+
+        case NodeKind::SLOT:
+            {
+                const auto orig_data_nh
+                    = m_gim.metadata(nh).get<DataSlot>().original_data_node;
+                // (1)
+                initResource(nh, orig_data_nh);
+                m_slots.emplace_back(DataDesc{nh, orig_data_nh});
+            }
+            break;
+
+        default:
+            GAPI_Error("InternalError");
+            break;
+        } // switch(kind)
+    } // for(gim nodes)
+
+    // (4)
+    prepareForNewStream();
+}
+
+void cv::gimpl::wip::GExecutor::run(cv::gimpl::GRuntimeArgs &&args) {
+    // (2)
+    const auto proto = m_gm.metadata().get<Protocol>();
+
+    // Basic check if input/output arguments are correct
+    // FIXME: Move to GCompiled (do once for all GExecutors)
+    if (proto.inputs.size() != args.inObjs.size()) // TODO: Also check types
+    {
+        util::throw_error(std::logic_error
+                          ("Computation's input protocol doesn\'t "
+                           "match actual arguments!"));
+    }
+    if (proto.outputs.size() != args.outObjs.size()) // TODO: Also check types
+    {
+        util::throw_error(std::logic_error
+                          ("Computation's output protocol doesn\'t "
+                           "match actual arguments!"));
+    }
+
+    namespace util = ade::util;
+
+    // ensure that output Mat parameters are correctly allocated
+    // FIXME: avoid copy of NodeHandle and GRunRsltComp ?
+    for (auto index : util::iota(proto.out_nhs.size()))
+    {
+        auto& nh = proto.out_nhs.at(index);
+        const Data &d = m_gm.metadata(nh).get<Data>();
+        if (d.shape == GShape::GMAT)
+        {
+            using cv::util::get;
+            const auto desc = get<cv::GMatDesc>(d.meta);
+
+            auto check_rmat = [&desc, &args, &index]()
+            {
+                auto& out_mat = *get<cv::RMat*>(args.outObjs.at(index));
+                GAPI_Assert(desc.canDescribe(out_mat));
+            };
+
+#if !defined(GAPI_STANDALONE)
+            // Building as part of OpenCV - follow OpenCV behavior In
+            // the case of cv::Mat if output buffer is not enough to
+            // hold the result, reallocate it
+            if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index)))
+            {
+                auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
+                createMat(desc, out_mat);
+            }
+            // In the case of RMat check to fit required meta
+            else
+            {
+                check_rmat();
+            }
+#else
+            // Building standalone - output buffer should always exist,
+            // and _exact_ match our inferred metadata
+            if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index)))
+            {
+                auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
+                GAPI_Assert(out_mat.data != nullptr &&
+                        desc.canDescribe(out_mat));
+            }
+            // In the case of RMat check to fit required meta
+            else
+            {
+                check_rmat();
+            }
+#endif // !defined(GAPI_STANDALONE)
+        }
+    }
+    // Update storage with user-passed objects
+    for (auto it : ade::util::zip(ade::util::toRange(proto.inputs),
+                                  ade::util::toRange(args.inObjs)))
+    {
+        magazine::bindInArgExec(m_res, std::get<0>(it), std::get<1>(it));
+    }
+    for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
+                                  ade::util::toRange(args.outObjs)))
+    {
+        magazine::bindOutArgExec(m_res, std::get<0>(it), std::get<1>(it));
+    }
+
+    // Reset internal data
+    for (auto &sd : m_slots)
+    {
+        const auto& data = m_gm.metadata(sd.data_nh).get<Data>();
+        magazine::resetInternalData(m_res, data);
+    }
+
+    std::vector<Task*> initial_tasks;
+    for (auto& p : m_tasks) {
+        auto& task = p.second;
+        task.ready_deps = 0u;
+        if (task.num_deps == 0u) {
+            initial_tasks.push_back(&task);
+        }
+    }
+    for (auto* task : initial_tasks) {
+        m_tp.schedule(*task);
+    }
+
+    m_tp.start();
+    // FIXME: It must be m_tp.wait() !!!!
+    m_tp.stop();
+
+    for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
+                                  ade::util::toRange(args.outObjs)))
+    {
+        magazine::writeBackExec(m_res, std::get<0>(it), std::get<1>(it));
+    }
+}
+
+bool cv::gimpl::wip::GExecutor::canReshape() const {
+    // FIXME: Introduce proper reshaping support on GExecutor level
+    // for all cases!
+    for (const auto& p : m_tasks) {
+        if (!p.second.isl_exec->canReshape()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void cv::gimpl::wip::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs& args) {
+    GAPI_Assert(canReshape());
+    auto& g = *m_orig_graph.get();
+    ade::passes::PassContext ctx{g};
+    passes::initMeta(ctx, inMetas);
+    passes::inferMeta(ctx, true);
+
+    // NB: Before reshape islands need to re-init resources for every slot.
+    for (auto slot : m_slots)
+    {
+        initResource(slot.slot_nh, slot.data_nh);
+    }
+
+    for (const auto& p : m_tasks) {
+        p.second.isl_exec->reshape(g, args);
+    }
+}
+
+void cv::gimpl::wip::GExecutor::prepareForNewStream() {
+    for (auto &p : m_tasks)
+    {
+        p.second.isl_exec->handleNewStream();
     }
 }

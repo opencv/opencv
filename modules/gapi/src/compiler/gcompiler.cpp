@@ -452,7 +452,8 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
         .get<OutputMeta>().outMeta;
     // FIXME: select which executor will be actually used,
     // make GExecutor abstract.
-    std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
+    //std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
+    std::unique_ptr<wip::GExecutor> pE(new wip::GExecutor(std::move(pg)));
 
     GCompiled compiled;
     compiled.priv().setup(m_metas, outMetas, std::move(pE));
