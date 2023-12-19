@@ -21,48 +21,76 @@
 namespace cv { namespace dnn {
 
 void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt) {
-    CV_CheckEQ(B.dims, 2, "fastGemmPackB: input mat should be two-dimensional");
     CV_CheckTypeEQ(B.type(), CV_32F, "fastGemmPackB: only float32 is supported for now");
 
     auto B_shape = shape(B);
-    int K = B_shape[0], N = B_shape[1], ldb0 = N, ldb1 = 1;
+    int batch = total(B_shape, 0, B_shape.size() - 2), 
+        K = B_shape[B_shape.size() - 2], N = B_shape.back(), ldb0 = N, ldb1 = 1;
     if (trans) {
         std::swap(K, N);
         std::swap(ldb0, ldb1);
     }
 
+    const auto *b = B.ptr<const char>();
+    int esz = B.elemSize();
+
 #if CV_TRY_NEON
     if (opt.use_neon) {
         int size_packed_B = opt_NEON::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B);
-        opt_NEON::fastGemmPackBKernel(B.ptr<const char>(), (char *)packed_B.data(), N, K, ldb0, ldb1, B.elemSize());
+        packed_B.resize(size_packed_B * batch);
+        auto *packed_b = (char*)packed_B.data();
+        for (int i = 0; i < batch; i++) {
+            opt_NEON::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
+            b += N * K * esz;
+            packed_b += size_packed_B * esz;
+        }
     } else
 #endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
         int size_packed_B = opt_AVX2::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B);
-        opt_AVX2::fastGemmPackBKernel(B.ptr<const char>(), (char *)packed_B.data(), N, K, ldb0, ldb1, B.elemSize());
+        packed_B.resize(size_packed_B * batch);
+        auto *packed_b = (char*)packed_B.data();
+        for (int i = 0; i < batch; i++) {
+            opt_AVX2::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
+            b += N * K * esz;
+            packed_b += size_packed_B * esz;
+        }
     } else
 #endif
 #if CV_TRY_AVX
     if (opt.use_avx) {
         int size_packed_B = opt_AVX::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B);
-        opt_AVX::fastGemmPackBKernel(B.ptr<const char>(), (char *)packed_B.data(), N, K, ldb0, ldb1, B.elemSize());
+        packed_B.resize(size_packed_B * batch);
+        auto *packed_b = (char*)packed_B.data();
+        for (int i = 0; i < batch; i++) {
+            opt_AVX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
+            b += N * K * esz;
+            packed_b += size_packed_B * esz;
+        }
     } else
 #endif
 #if CV_TRY_LASX
     if (opt.use_lasx) {
         int size_packed_B = opt_LASX::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B);
-        opt_LASX::fastGemmPackBKernel(B.ptr<const char>(), (char *)packed_B.data(), N, K, ldb0, ldb1, B.elemSize());
+        packed_B.resize(size_packed_B * batch);
+        auto *packed_b = (char*)packed_B.data();
+        for (int i = 0; i < batch; i++) {
+            opt_LASX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
+            b += N * K * esz;
+            packed_b += size_packed_B * esz;
+        }
     } else
 #endif
     {
         int size_packed_B = cpu_baseline::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B);
-        cpu_baseline::fastGemmPackBKernel(B.ptr<const char>(), (char *)packed_B.data(), N, K, ldb0, ldb1, B.elemSize());
+        packed_B.resize(size_packed_B * batch);
+        auto *packed_b = (char*)packed_B.data();
+        for (int i = 0; i < batch; i++) {
+            cpu_baseline::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
+            b += N * K * esz;
+            packed_b += size_packed_B * esz;
+        }
     }
 }
 
@@ -209,8 +237,8 @@ void fastGemm(bool trans_a, bool trans_b,
 }
 
 void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
-                   int M, int N, int K, float alpha, const float *A, int lda0, int lda1, const float *B,
-                   int ldb0, int ldb1, float beta, float *C, int ldc, FastGemmOpt &opt) {
+                   int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
+                   const float *B, int ldb0, int ldb1, float beta, float *C, int ldc, FastGemmOpt &opt) {
     const char *a = (const char *)A;
     const char *b = (const char *)B;
     char *c = (char *)C;
@@ -237,6 +265,38 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
 #endif
     {
         cpu_baseline::fastGemmBatchKernel(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
+    }
+}
+
+void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *packed_B_offsets, const size_t *C_offsets,
+                   int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
+                   const float *packed_B, float beta, float *C, int ldc, FastGemmOpt &opt) {
+    const char *a = (const char *)A;
+    const char *b = (const char *)packed_B;
+    char *c = (char *)C;
+
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        opt_NEON::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
+    } else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2) {
+        opt_AVX2::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
+    } else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx) {
+        opt_AVX::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        opt_LASX::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
+    } else
+#endif
+    {
+        cpu_baseline::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
     }
 }
 

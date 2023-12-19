@@ -45,6 +45,7 @@ struct FastGemmOpt {
 struct MatMulHelper {
     std::vector<size_t> A_offsets;
     std::vector<size_t> B_offsets;
+    std::vector<size_t> packed_B_offsets;
     std::vector<size_t> C_offsets;
     std::vector<size_t> A_rows;
     std::vector<size_t> B_rows;
@@ -60,7 +61,12 @@ struct MatMulHelper {
     MatMulHelper() {
         A_offsets = {0};
         B_offsets = {0};
+        packed_B_offsets = {0};
         C_offsets = {0};
+        A_rows = {0};
+        B_rows = {0};
+        C_rows = {0};
+
         batch = 0;
     }
 
@@ -131,6 +137,15 @@ struct MatMulHelper {
             B_rows[i] = B_offset / (N * K);
         }
     }
+
+    // only run after compute
+    void updatePackedBOffsets(size_t packed_B_size) {
+        size_t packed_B_inner_size = packed_B_size / batch;
+        packed_B_offsets.resize(B_offsets.size());
+        for (size_t i = 0; i < packed_B_offsets.size(); i++) {
+            packed_B_offsets[i] = (B_offsets[i] / (N * K)) * packed_B_inner_size;
+        }
+    }
 };
 
 void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
@@ -147,8 +162,11 @@ void fastGemm(bool trans_a, bool trans_b,
               float beta, Mat &C, FastGemmOpt &opt);
 
 void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
-                   int M, int N, int K, float alpha, const float *A, int lda0, int lda1, const float *B,
-                   int ldb0, int ldb1, float beta, float *C, int ldc, FastGemmOpt &opt);
+                   int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
+                   const float *B, int ldb0, int ldb1, float beta, float *C, int ldc, FastGemmOpt &opt);
+void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+                   int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
+                   const float *packed_B, float beta, float *C, int ldc, FastGemmOpt &opt);
 void fastGemmBatch(bool trans_a, bool trans_b, float alpha, const Mat &A,
                    const Mat &B, float beta, Mat &C, FastGemmOpt &opt);
 

@@ -48,9 +48,10 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
-        CV_CheckEQ(inputs.size(), static_cast<size_t>(2), "DNN/MatMul: two inputs required");
+        CV_CheckGE(inputs.size(), static_cast<size_t>(1), "DNN/MatMul: one varible input at least");
+        CV_CheckLE(inputs.size(), static_cast<size_t>(2), "DNN/MatMul: two variable inputs at most");
 
-        const auto shape_A = inputs[0], shape_B = inputs[1];
+        const auto shape_A = inputs[0], shape_B = blobs.empty() ? inputs[1] : shape(blobs[0]);
         CV_CheckGE(shape_A.size(), static_cast<size_t>(2), "DNN/MatMul: invalid shape of input A");
         CV_CheckGE(shape_B.size(), static_cast<size_t>(2), "DNN/MatMul: invalid shape of input B");
 
@@ -98,8 +99,16 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
-        const auto A_shape = shape(inputs[0]), B_shape = shape(inputs[1]), C_shape = shape(outputs[0]);
+
+        const auto A_shape = shape(inputs[0]),
+                   B_shape = blobs.empty() ? shape(inputs[1]) : shape(blobs[0]),
+                   C_shape = shape(outputs[0]);
         helper.compute(trans_a, trans_b, A_shape, B_shape, C_shape);
+
+        if (!blobs.empty()) {
+            fastGemmPackB(blobs[0], packed_input_B, trans_b, opt);
+            helper.updatePackedBOffsets(packed_input_B.size());
+        }
     }
 
     // works like Y = numpy.matmul(A, B)
@@ -120,15 +129,24 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        const auto &A = inputs[0], &B = inputs[1];
+        const auto &A = inputs[0];
         auto &Y = outputs[0];
 
-        const auto *a = A.ptr<const float>(), *b = B.ptr<const float>();
+        const auto *a = A.ptr<const float>();
         auto *y = Y.ptr<float>();
         std::memset(y, 0, Y.total() * sizeof(float));
-        fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
-                      helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1, b, helper.ldb0,
-                      helper.ldb1, beta, y, helper.ldc, opt);
+
+        if (blobs.empty()) {
+            const auto &B = inputs[1];
+            const auto *b = B.ptr<const float>();
+            fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
+                          helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
+                          b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
+        } else {
+            fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.packed_B_offsets.data(), helper.C_offsets.data(),
+                          helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
+                          packed_input_B.data(), beta, y, helper.ldc, opt);
+        }
     }
 
 #ifdef HAVE_OPENCL
@@ -140,8 +158,13 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         inputs_arr.getUMatVector(inputs);
         outputs_arr.getUMatVector(outputs);
 
-        const auto &input_A = inputs[0],
-                   &input_B = inputs[1];
+        const auto &input_A = inputs[0];
+        UMat input_B;
+        if (blobs.empty()) {
+            input_B = inputs[1];
+        } else {
+            blobs[0].copyTo(input_B);
+        }
         auto &output = outputs[0];
 
         int M = static_cast<int>(helper.M),
@@ -288,6 +311,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     bool trans_b;
     float alpha;
     float beta;
+
+    std::vector<float> packed_input_B;
 
     FastGemmOpt opt;
     MatMulHelper helper;

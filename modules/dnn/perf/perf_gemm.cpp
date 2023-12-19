@@ -326,19 +326,18 @@ PERF_TEST_P_(MatMul, matmul)
     lp.set("transB", trans_b);
     lp.set("alpha", alpha);
     lp.set("beta", beta);
+    lp.blobs.push_back(B);
 
     Net net;
-    int id = net.addLayerToPrev(lp.name, lp.type, lp);
-    net.connect(0, 1, id, 1);
+    net.addLayerToPrev(lp.name, lp.type, lp);
     net.setPreferableBackend(backend_id);
     net.setPreferableTarget(target_id);
 
     // warmup
     {
-        std::vector<std::string> input_names{"A", "B"};
+        std::vector<std::string> input_names{"A"};
         net.setInputsNames(input_names);
         net.setInput(A, input_names[0]);
-        net.setInput(B, input_names[1]);
         Mat out = net.forward();
     }
 
