@@ -24,7 +24,7 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
     CV_CheckTypeEQ(B.type(), CV_32F, "fastGemmPackB: only float32 is supported for now");
 
     auto B_shape = shape(B);
-    int batch = total(B_shape, 0, B_shape.size() - 2), 
+    int batch = total(B_shape, 0, B_shape.size() - 2),
         K = B_shape[B_shape.size() - 2], N = B_shape.back(), ldb0 = N, ldb1 = 1;
     if (trans) {
         std::swap(K, N);
