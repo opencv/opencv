@@ -1957,50 +1957,33 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
-{
-    opencv_onnx::NodeProto node_proto = node_proto_;
-    CV_Assert(node_proto.input_size() == 2);
-    layerParams.type = "InnerProduct";
-    layerParams.set("bias_term", false);
-    int firstInpDims, secondInpDims;
+void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_) {
+    auto node_proto = node_proto_;
+    CV_CheckEQ(node_proto.input_size(), 2, "ONNXImporter/MatMul: two inputs required");
 
-    if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
-    {
-        Mat blob = getBlob(node_proto, 0);
-        firstInpDims = blob.dims;
-        LayerParams constParams;
-        constParams.name = layerParams.name + "/const_0";
-        constParams.type = "Const";
-        constParams.blobs.push_back(blob);
+    for (int i = 0; i < node_proto.input_size(); i++) {
+        if (constBlobs.find(node_proto.input(i)) == constBlobs.end()) {
+            continue;
+        }
 
-        opencv_onnx::NodeProto tmpProto;
-        tmpProto.add_output(constParams.name);
-        addLayer(constParams, tmpProto);
+        Mat blob = getBlob(node_proto, i);
 
-        node_proto.set_input(0, constParams.name);
+        if (i == 1) {
+            layerParams.blobs.push_back(blob);
+        } else {
+            LayerParams const_params;
+            const_params.name = node_proto.input(i);
+            const_params.type = "Const";
+            const_params.blobs.push_back(blob);
+
+            opencv_onnx::NodeProto const_node_proto;
+            const_node_proto.add_output(const_params.name);
+            addLayer(const_params, const_node_proto);
+
+            node_proto.set_input(i, const_params.name);
+        }
     }
-    else
-        firstInpDims = outShapes[node_proto.input(0)].size();
 
-    if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
-    {
-        Mat blob = getBlob(node_proto, 1);
-        Mat transBlob;
-        secondInpDims = blob.dims;
-        // create order transposing last 2 dimensions
-        std::vector<int> order(secondInpDims);
-        std::iota(order.begin(), order.end(), 0);
-        std::swap(order[secondInpDims - 2], order[secondInpDims - 1]);
-        transposeND(blob, order, transBlob);
-        layerParams.blobs.push_back(transBlob);
-        int numOutput = layerParams.blobs[0].total(0, secondInpDims - 1);
-        layerParams.set("num_output", numOutput);
-        layerParams.set("is_matmul", secondInpDims > 2);
-    } else
-        secondInpDims = outShapes[node_proto.input(1)].size();
-
-    layerParams.set("axis", firstInpDims - 1);
     addLayer(layerParams, node_proto);
 }
 

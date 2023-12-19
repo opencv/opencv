@@ -1160,6 +1160,11 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GemmLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS MatMulLayer : public Layer {
+     public:
+        static Ptr<MatMulLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ExpandLayer : public Layer
     {
     public:
