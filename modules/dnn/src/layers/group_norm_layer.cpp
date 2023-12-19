@@ -6,7 +6,14 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include "./cpu_kernels/fast_norm.hpp"
 
-namespace cv { 
+// CUDA backend
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/group_norm.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
+
+namespace cv {
 namespace dnn {
 
 // Group Normalization Layer
@@ -20,7 +27,8 @@ public:
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -61,6 +69,22 @@ public:
 
         fastNormGroup(input, scale, bias, outputs[0], epsilon, num_groups);
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void *context_,
+                          const std::vector<Ptr<BackendWrapper>>& inputs,
+                          const std::vector<Ptr<BackendWrapper>>& outputs) override {
+    auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+    auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+    auto input_shape = input_wrapper->getShape();
+    size_t N = input_shape[0];
+    size_t num_groups = this->num_groups;
+    size_t loops = N * num_groups;
+
+    return make_cuda_node<cuda4dnn::GroupNormOp>(preferableTarget, std::move(context->stream), epsilon, loops, num_groups);
+}
+#endif // HAVE_CUDA
 
 private:
     float epsilon;
