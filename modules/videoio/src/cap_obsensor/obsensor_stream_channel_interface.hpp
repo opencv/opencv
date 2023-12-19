@@ -37,6 +37,8 @@ namespace obsensor {
 #define OBSENSOR_ASTRA2_PID 0x0660 // pid of Orbbec Astra 2 Camera
 #define OBSENSOR_GEMINI2_PID 0x0670 // pid of Orbbec Gemini 2 Camera
 #define OBSENSOR_FEMTO_MEGA_PID 0x0669 // pid of Orbbec Femto Mega Camera
+#define OBSENSOR_GEMINI2L_PID 0x0673 // pid of Orbbec Gemini 2 L Camera
+#define OBSENSOR_GEMINI2XL_PID 0x0671 // pid of Orbbec Gemini 2 XL Camera
 
 enum StreamType
 {
