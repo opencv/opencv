@@ -20,6 +20,9 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 
+// CANN backend
+#include "../op_cann.hpp"
+
 namespace cv { namespace dnn {
 
 class MatMulLayerImpl CV_FINAL : public MatMulLayer {
@@ -37,7 +40,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !trans_a && !trans_b) ||
-	       backendId == DNN_BACKEND_CUDA;
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -239,6 +243,50 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         return make_cuda_node<cuda4dnn::MatMulBroadcastOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), input_B, trans_a, trans_b, helper.A_offsets, helper.B_offsets, helper.C_offsets, helper.batch);
     }
 #endif // HAVE_CUDA
+
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
+        auto input_A_wrapper = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto input_A_desc = input_A_wrapper->getTensorDesc();
+        auto input_A_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+
+        auto op = std::make_shared<ge::op::MatMulV2>(name);
+
+        // set attributes
+        op->set_attr_transpose_x1(trans_a);
+        op->set_attr_transpose_x2(trans_b);
+
+        // set inputs
+        // set inputs : x1
+        op->set_input_x1_by_name(*input_A_node, input_A_wrapper->name.c_str());
+        op->update_input_desc_x1(*input_A_desc);
+        // set inputs : x2
+        if (blobs.empty()) { // varaible input B
+            auto input_B_wrapper = inputs[1].dynamicCast<CannBackendWrapper>();
+            auto input_B_desc = input_B_wrapper->getTensorDesc();
+            auto input_B_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
+            op->set_input_x2_by_name(*input_B_node, "y");
+            op->update_input_desc_x2(*input_B_desc);
+        } else { // constant input B
+            auto B = blobs[0];
+            auto const_B_node = std::make_shared<CannConstOp>(B.data, B.type(), shape(B), cv::format("%s_B", name.c_str()));
+            op->set_input_x2_by_name(*(const_B_node->getOp()), "y");
+            op->update_input_desc_x2(*(const_B_node->getTensorDesc()));
+        }
+        // set inputs : bias
+        Mat C = Mat::zeros(1, 1, CV_32F);
+        auto const_C_node = std::make_shared<CannConstOp>(C.data, C.type(), shape(C), cv::format("%s_bias", name.c_str()));
+        op->set_input_bias(*(const_C_node->getOp()));
+        op->update_input_desc_bias(*(const_C_node->getTensorDesc()));
+
+        // set outputs
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
  private:
     bool trans_a;
