@@ -252,11 +252,11 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         auto input_A_desc = input_A_wrapper->getTensorDesc();
         auto input_A_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
 
-        auto op = std::make_shared<ge::op::MatMulV2>(name);
+        auto op = std::make_shared<ge::op::BatchMatMul>(name);
 
         // set attributes
-        op->set_attr_transpose_x1(trans_a);
-        op->set_attr_transpose_x2(trans_b);
+        op->set_attr_adj_x1(trans_a);
+        op->set_attr_adj_x2(trans_b);
 
         // set inputs
         // set inputs : x1
@@ -275,11 +275,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             op->set_input_x2_by_name(*(const_B_node->getOp()), "y");
             op->update_input_desc_x2(*(const_B_node->getTensorDesc()));
         }
-        // set inputs : bias
-        Mat C = Mat::zeros(1, 1, CV_32F);
-        auto const_C_node = std::make_shared<CannConstOp>(C.data, C.type(), shape(C), cv::format("%s_bias", name.c_str()));
-        op->set_input_bias(*(const_C_node->getOp()));
-        op->update_input_desc_bias(*(const_C_node->getTensorDesc()));
 
         // set outputs
         auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
