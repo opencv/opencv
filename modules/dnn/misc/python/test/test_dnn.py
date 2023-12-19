@@ -133,17 +133,13 @@ class dnn_test(NewOpenCVTests):
         paramNet.ddepth = cv.CV_32F
         paramNet.mean = [0.485, 0.456, 0.406]
         paramNet.scalefactor = [0.229, 0.224, 0.225]
-        paramNet.swapRB = False;
+        paramNet.swapRB = False
         paramNet.datalayout = cv.dnn.DNN_LAYOUT_NCHW
         paramNet.paddingmode = cv.dnn.DNN_PMODE_LETTERBOX
         rBlob = np.zeros(shape=(20, 4), dtype=np.int32)
         rImg = paramNet.blobRectsToImageRects(rBlob, (356, 356))
         self.assertTrue(type(rImg[0, 0])==np.int32)
         self.assertTrue(rImg.shape==(20, 4))
-        rBlob = np.zeros(shape=(12, 4), dtype=np.float64)
-        rImg = paramNet.blobRectsToImageRects2d(rBlob, (356, 356))
-        self.assertTrue(type(rImg[0, 0])==np.float64)
-        self.assertTrue(rImg.shape==(12, 4))
 
     def test_blobRectToImageRect(self):
         paramNet = cv.dnn.Image2BlobParams()
@@ -151,14 +147,12 @@ class dnn_test(NewOpenCVTests):
         paramNet.ddepth = cv.CV_32F
         paramNet.mean = [0.485, 0.456, 0.406]
         paramNet.scalefactor = [0.229, 0.224, 0.225]
-        paramNet.swapRB = False;
+        paramNet.swapRB = False
         paramNet.datalayout = cv.dnn.DNN_LAYOUT_NCHW
         paramNet.paddingmode = cv.dnn.DNN_PMODE_LETTERBOX
         rBlob = np.zeros(shape=(20, 4), dtype=np.int32)
         rImg = paramNet.blobRectToImageRect((0, 0, 0, 0), (356, 356))
         self.assertTrue(type(rImg[0])==int)
-        rImg = paramNet.blobRectToImageRect((0.5, 0.2, 0, 0), (356, 356))
-        self.assertTrue(type(rImg[0])==float)
 
 
     def test_blobFromImage(self):

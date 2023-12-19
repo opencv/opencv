@@ -385,37 +385,14 @@ void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_)
 Rect Image2BlobParams::blobRectToImageRect(const Rect &r, const Size &oriImage)
 {
     CV_Assert(!oriImage.empty());
-    std::vector<Rect2d> rImg, rBlob;
-    rBlob.push_back(Rect2d(r));
+    std::vector<Rect> rImg, rBlob;
+    rBlob.push_back(Rect(r));
     rImg.resize(1);
     this->blobRectsToImageRects(rBlob, rImg, oriImage);
     return Rect(rImg[0]);
 }
 
-Rect2d Image2BlobParams::blobRectToImageRect(const Rect2d &r, const Size &oriImage)
-{
-    CV_Assert(!oriImage.empty());
-    std::vector<Rect2d> rImg, rBlob;
-    rBlob.push_back(r);
-    rImg.resize(1);
-    this->blobRectsToImageRects(rBlob, rImg, oriImage);
-    return rImg[0];
-}
-
-void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect>& rBlob, std::vector<Rect>& rImg, const Size& imgSize)
-{
-    std::vector<Rect2d> rImg2d, rBlob2d;
-    rBlob2d.resize(rBlob.size());
-    for (int i = 0; i < rBlob.size(); i++)
-        rBlob2d[i] = Rect2d(rBlob[i]);
-    this->blobRectsToImageRects(rBlob2d, rImg2d, imgSize);
-    rImg.resize(rImg2d.size());
-    for (int i = 0; i < rImg2d.size(); i++)
-        rImg[i] = Rect(rImg2d[i]);
-}
-
-
-void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect2d> &rBlob, std::vector<Rect2d>& rImg, const Size& imgSize)
+void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect> &rBlob, std::vector<Rect>& rImg, const Size& imgSize)
 {
     Size size = this->size;
     rImg.resize(rBlob.size());
@@ -427,8 +404,10 @@ void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect2d> &rBlob, s
                 size.height / (float)imgSize.height);
             for (int i = 0; i < rBlob.size(); i++)
             {
-                rImg[i] = Rect2d((rBlob[i].x + 0.5 * (imgSize.width * resizeFactor - size.width)) / resizeFactor, (rBlob[i].y + 0.5 * (imgSize.height * resizeFactor - size.height)) / resizeFactor,
-                    rBlob[i].width / resizeFactor, rBlob[i].height / resizeFactor);
+                rImg[i] = Rect((rBlob[i].x + 0.5 * (imgSize.width * resizeFactor - size.width)) / resizeFactor,
+                               (rBlob[i].y + 0.5 * (imgSize.height * resizeFactor - size.height)) / resizeFactor,
+                               rBlob[i].width / resizeFactor,
+                               rBlob[i].height / resizeFactor);
             }
         }
         else if (this->paddingmode == DNN_PMODE_LETTERBOX)
@@ -442,15 +421,20 @@ void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect2d> &rBlob, s
             int left = (size.width - rw) / 2;
             for (int i = 0; i < rBlob.size(); i++)
             {
-                rImg[i] = Rect2d((rBlob[i].x - left) / resizeFactor, (rBlob[i].y - top) / resizeFactor, rBlob[i].width / resizeFactor, rBlob[i].height / resizeFactor);
+                rImg[i] = Rect((rBlob[i].x - left) / resizeFactor,
+                               (rBlob[i].y - top) / resizeFactor,
+                               rBlob[i].width / resizeFactor,
+                               rBlob[i].height / resizeFactor);
             }
         }
         else if (this->paddingmode == DNN_PMODE_NULL)
         {
             for (int i = 0; i < rBlob.size(); i++)
             {
-                rImg[i] = Rect2d(rBlob[i].x * (float)imgSize.width / size.width, rBlob[i].y * (float)imgSize.height / size.height,
-                    rBlob[i].width * (float)imgSize.width / size.width, rBlob[i].height * (float)imgSize.height / size.height);
+                rImg[i] = Rect(rBlob[i].x * (float)imgSize.width / size.width,
+                               rBlob[i].y * (float)imgSize.height / size.height,
+                               rBlob[i].width * (float)imgSize.width / size.width,
+                               rBlob[i].height * (float)imgSize.height / size.height);
             }
         }
         else
