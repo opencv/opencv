@@ -246,7 +246,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         std::vector<Mat> constants;
 
         if (!blobs.empty()) {
-            constants.push_back(blobs[0].t());
+            constants.push_back(blobs[0]);
         }
 
         Ptr<vkcom::OpBase> op = new vkcom::OpMatMul(constants, input_A_shape[0], input_A_shape[1], output_shape[1]);
