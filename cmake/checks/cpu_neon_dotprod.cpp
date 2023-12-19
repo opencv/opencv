@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#if defined __GNUC__ && (defined __arm__ || defined __aarch64__)
+#if (defined __GNUC__ && (defined __arm__ || defined __aarch64__)) || (defined _MSC_VER && defined _M_ARM64)
 #include "arm_neon.h"
 int test()
 {
