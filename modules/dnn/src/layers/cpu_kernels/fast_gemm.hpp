@@ -58,14 +58,14 @@ struct MatMulHelper {
     int M, N, K;
 
     MatMulHelper() {
-	A_offsets = {0};
+        A_offsets = {0};
         B_offsets = {0};
         C_offsets = {0};
-        batch = -1;
+        batch = 0;
     }
 
     bool empty() const {
-        return batch == -1;
+        return batch == 0;
     }
 
     void compute(bool trans_a, bool trans_b, MatShape A_shape, MatShape B_shape, MatShape C_shape) {

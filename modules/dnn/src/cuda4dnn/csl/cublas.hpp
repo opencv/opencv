@@ -448,8 +448,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         CUDA4DNN_CHECK_CUBLAS(cublasHgemmBatched(handle.get(), opa, opb, iM, iN, iK, &alpha, dev_A_slices, ilda, dev_B_slices, ildb, &beta, dev_C_slices, ildc, batch_count));
 
         cudaFree(dev_A_slices);
-	cudaFree(dev_B_slices);
-	cudaFree(dev_C_slices);
+        cudaFree(dev_B_slices);
+        cudaFree(dev_C_slices);
     }
 
     template <> inline
@@ -495,12 +495,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         cudaMemcpy(dev_B_slices, B_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice);
         cudaMemcpy(dev_C_slices, C_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice);
 
-	// cuBLAS is column-major
+        // cuBLAS is column-major
         CUDA4DNN_CHECK_CUBLAS(cublasSgemmBatched(handle.get(), opa, opb, iM, iN, iK, &alpha, dev_A_slices, ilda, dev_B_slices, ildb, &beta, dev_C_slices, ildc, batch_count));
 
-	cudaFree(dev_A_slices);
-	cudaFree(dev_B_slices);
-	cudaFree(dev_C_slices);
+        cudaFree(dev_A_slices);
+        cudaFree(dev_B_slices);
+        cudaFree(dev_C_slices);
     }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cublas */

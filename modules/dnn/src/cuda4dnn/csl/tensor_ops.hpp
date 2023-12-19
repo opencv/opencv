@@ -152,7 +152,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                 batch_size);
         }
 
-	template <class T> inline
+        /** @brief performs generalized matrix-multiplication for a strided batch of matrices
+         *
+         * Pre-conditions:
+         * - A, B and C must be rank three tensors with dimensions (batch, rows, cols)
+         * - the last two axes of \p A and \p B must meet the mathematical requirements for matrix multiplication
+         * - \p C must be large enough to hold the result and the matrices must not overlap in memory
+         *
+         * Exception Guarantee: Basic
+         */
+        template <class T> inline
         void gemmBatched(const cublas::Handle& handle, std::size_t batch,
                          T beta, TensorSpan<T> C, const std::vector<std::size_t> C_offsets, T alpha,
                          bool trans_a, TensorView<T> A, const std::vector<std::size_t> A_offsets,
