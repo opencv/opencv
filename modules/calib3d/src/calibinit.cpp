@@ -298,7 +298,7 @@ static void icvSmoothHistogram256(const ArrayContainer& piHist, ArrayContainer& 
             CV_DbgAssert(iIdx >= 0 && iIdx < 256);
             iSmooth += piHist[iIdx];
         }
-        piHistSmooth[i] = iSmooth/(2*iWidth+1);
+        piHistSmooth[i] = iSmooth/(iIdx_max-iIdx_min+1);
     }
 }
 /***************************************************************************************************/
