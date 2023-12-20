@@ -25,11 +25,18 @@ target_link_libraries(${target} ${ANDROID_OPENCV_COMPONENTS} -lGLESv2 -lEGL -llo
 
 if(OpenCL_FOUND)
   include_directories(${OpenCL_INCLUDE_DIRS})
-  target_link_libraries(${OpenCL_LIBRARIES})
+  target_link_libraries(${target} ${OpenCL_LIBRARIES})
   add_definitions("-DOPENCL_FOUND")
-elseif(DEFINED ANDROID_OPENCL_SDK)
+elseif(NOT ("${ANDROID_OPENCL_SDK}" STREQUAL ""))
   include_directories(${ANDROID_OPENCL_SDK}/include)
-  link_directories(${ANDROID_OPENCL_SDK}/lib/${ANDROID_NDK_ABI_NAME})
-  target_link_libraries(-lOpenCL)
+  link_directories(${ANDROID_OPENCL_SDK}/lib)
+  target_link_directories(${target} PRIVATE ${ANDROID_OPENCL_SDK}/lib)
+
+  set_target_properties(${target} PROPERTIES LINK_FLAGS "-Wl,--allow-shlib-undefined")
+  target_link_libraries(${target} -lOpenCL)
+
   add_definitions("-DOPENCL_FOUND")
+  add_definitions("-DCL_HPP_MINIMUM_OPENCL_VERSION=120")
+  add_definitions("-DCL_HPP_TARGET_OPENCL_VERSION=120")
+  add_definitions("-DCL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY")
 endif()
