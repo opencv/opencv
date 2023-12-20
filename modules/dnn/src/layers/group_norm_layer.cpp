@@ -13,7 +13,7 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 
-// OpenCL backend   
+// OpenCL backend
 #ifdef HAVE_OPENCL
 #include "../ocl4dnn/include/math_functions.hpp"
 #include "opencl_kernels_dnn.hpp"
