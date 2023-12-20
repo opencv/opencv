@@ -50,6 +50,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
         scale = 1.f / params.get<float>("scale", sqrt(qkv_head_sizes[0]));
 
+        output_ndims = params.get<int>("output_ndims", 3);
+
         is_prepacked = false;
     }
 
@@ -72,7 +74,15 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         CV_CheckEQ(input_shape[2], weight_shape[0], "DNN/Attention: invalid input shape");
         CV_CheckEQ(weight_shape[1], bias_shape[0], "DNN/Attention: invalid weight or bias shape");
 
-        outputs.assign(1, inputs[0]);
+        if (output_ndims == 3) {
+            outputs.assign(1, inputs[0]);
+        } else if (output_ndims == 2) {
+            int batch = input_shape[0], seq_len = input_shape[1], input_hidden_size = input_shape[2];
+            MatShape output_shape{batch * seq_len, input_hidden_size};
+            outputs.assign(1, output_shape);
+        } else {
+            CV_Error(Error::StsBadArg, format("DNN/Attention: invalid output dimension %zu, valid value is 2 or 3", output_ndims));
+        }
         return false;
     }
 
@@ -238,6 +248,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     size_t num_heads;
     std::vector<size_t> qkv_hidden_sizes; // order: {qk_hidden_size, qk_hidden_size, v_hidden_size}
     float scale;
+    size_t output_ndims;
 
     std::vector<size_t> qkv_head_sizes; // order: {qk_head_size, qk_head_size, v_head_size}
 

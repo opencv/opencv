@@ -335,7 +335,7 @@ class AttentionSubGraph : public Subgraph {
         // qkv
         int matmul_qkv = addNodeToMatch("MatMul", softmax_qk, transpose_v);
         int transpose_qkv = addNodeToMatch("Transpose", matmul_qkv);
-        addNodeToMatch("Reshape", transpose_qkv, addNodeToMatch(""));
+        last_reshape = addNodeToMatch("Reshape", transpose_qkv, addNodeToMatch(""));
 
         setFusedNode("Attention", input);
     }
@@ -363,13 +363,11 @@ class AttentionSubGraph : public Subgraph {
             // get attrs - num_heads, scale
             num_heads = extractConstant(net, matchedNodesIds[reshape_q], 1).at<int>(1);
             scale = extractConstant(net, matchedNodesIds[div_q], 1).at<float>(0);
-            // std::cout << "attention: num_heads=" << num_heads << ", qkv_hidden_sizes=" << qkv_hidden_sizes << ", scale=" << scale << std::endl;
+            output_ndims = extractConstant(net, matchedNodesIds[last_reshape], 1).dims;
 
             // get names
             weight_name = getInputName(net, matchedNodesIds[att_matmul], 1);
-            // std::cout << "attention: weight_name=" << weight_name << std::endl;
             bias_name = getInputName(net, matchedNodesIds[att_add], 0);
-            // std::cout << "attention: bias_name=" << bias_name << std::endl;
             return true;
         }
         return false;
@@ -392,6 +390,11 @@ class AttentionSubGraph : public Subgraph {
         attr_scale->set_name("scale");
         attr_scale->set_f(scale);
 
+        // add customized attrs
+        opencv_onnx::AttributeProto* attr_output_ndims = node->add_attribute();
+        attr_output_ndims->set_name("output_ndims");
+        attr_output_ndims->set_i(output_ndims);
+
         // add inputs
         node->add_input(weight_name);
         node->add_input(bias_name);
@@ -400,11 +403,13 @@ class AttentionSubGraph : public Subgraph {
  private:
     int att_matmul, att_add;
     int slice_q, slice_k, slice_v;
-    int reshape_q, div_q;
+    int reshape_q, div_q, last_reshape;
 
     std::vector<int64_t> qkv_hidden_sizes; // order: [qk_hidden_size, qk_hidden_size, v_hidden_size]
     int64_t num_heads;
     float scale;
+
+    int64_t output_ndims;
 
     std::string weight_name;
     std::string bias_name;
@@ -441,7 +446,7 @@ class AttentionSingleHeadSubGraph : public Subgraph {
         // qkv
         int matmul_qkv = addNodeToMatch("MatMul", softmax_qk, transpose_v);
         int transpose_qkv = addNodeToMatch("Transpose", matmul_qkv);
-        addNodeToMatch("Reshape", transpose_qkv, addNodeToMatch(""));
+        last_reshape = addNodeToMatch("Reshape", transpose_qkv, addNodeToMatch(""));
 
         setFusedNode("Attention", input);
     }
@@ -469,13 +474,11 @@ class AttentionSingleHeadSubGraph : public Subgraph {
             // get attrs - num_heads, scale
             num_heads = 1;
             scale = extractConstant(net, matchedNodesIds[div_q], 1).at<float>(0);
-            // std::cout << "AttentionSingleHeadSubGraph: num_heads=" << num_heads << ", qkv_hidden_sizes=" << qkv_hidden_sizes << ", scale=" << scale << std::endl;
+            output_ndims = extractConstant(net, matchedNodesIds[last_reshape], 1).dims;
 
             // get names
             weight_name = getInputName(net, matchedNodesIds[att_matmul], 1);
-            // std::cout << "AttentionSingleHeadSubGraph: weight_name=" << weight_name << std::endl;
             bias_name = getInputName(net, matchedNodesIds[att_add], 0);
-            // std::cout << "AttentionSingleHeadSubGraph: bias_name=" << bias_name << std::endl;
             return true;
         }
         return false;
@@ -498,6 +501,11 @@ class AttentionSingleHeadSubGraph : public Subgraph {
         attr_scale->set_name("scale");
         attr_scale->set_f(scale);
 
+        // add customized attrs
+        opencv_onnx::AttributeProto* attr_output_ndims = node->add_attribute();
+        attr_output_ndims->set_name("output_ndims");
+        attr_output_ndims->set_i(output_ndims);
+
         // add inputs
         node->add_input(weight_name);
         node->add_input(bias_name);
@@ -506,11 +514,13 @@ class AttentionSingleHeadSubGraph : public Subgraph {
  protected:
     int att_matmul, att_add;
     int slice_q, slice_k, slice_v;
-    int div_q;
+    int div_q, last_reshape;
 
     std::vector<int64_t> qkv_hidden_sizes; // order: [qk_hidden_size, qk_hidden_size, v_hidden_size]
     int64_t num_heads;
     float scale;
+
+    int64_t output_ndims;
 
     std::string weight_name;
     std::string bias_name;
