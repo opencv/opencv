@@ -31,6 +31,7 @@ using cv::gapi::wip::draw::Prim;
 WRAP_ARGS(bool        , cv::gapi::ArgType::CV_BOOL,      G)  \
 WRAP_ARGS(int         , cv::gapi::ArgType::CV_INT,       G)  \
 WRAP_ARGS(int64_t     , cv::gapi::ArgType::CV_INT64,     G)  \
+WRAP_ARGS(uint64_t    , cv::gapi::ArgType::CV_UINT64,    G)  \
 WRAP_ARGS(double      , cv::gapi::ArgType::CV_DOUBLE,    G)  \
 WRAP_ARGS(float       , cv::gapi::ArgType::CV_FLOAT,     G)  \
 WRAP_ARGS(std::string , cv::gapi::ArgType::CV_STRING,    G)  \
@@ -49,6 +50,7 @@ WRAP_ARGS(cv::GMat    , cv::gapi::ArgType::CV_GMAT,      G2) \
 WRAP_ARGS(bool        , cv::gapi::ArgType::CV_BOOL,    G)  \
 WRAP_ARGS(int         , cv::gapi::ArgType::CV_INT,     G)  \
 WRAP_ARGS(int64_t     , cv::gapi::ArgType::CV_INT64,   G)  \
+WRAP_ARGS(uint64_t    , cv::gapi::ArgType::CV_UINT64,  G)  \
 WRAP_ARGS(double      , cv::gapi::ArgType::CV_DOUBLE,  G)  \
 WRAP_ARGS(float       , cv::gapi::ArgType::CV_FLOAT,   G)  \
 WRAP_ARGS(std::string , cv::gapi::ArgType::CV_STRING,  G)  \
@@ -67,6 +69,7 @@ enum ArgType {
     CV_BOOL,
     CV_INT,
     CV_INT64,
+    CV_UINT64,
     CV_DOUBLE,
     CV_FLOAT,
     CV_STRING,

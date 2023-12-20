@@ -19,7 +19,7 @@ namespace gapi {
  */
 namespace ot {
 namespace cpu {
-GAPI_EXPORTS GKernelPackage kernels();
+GAPI_EXPORTS_W GKernelPackage kernels();
 } // namespace cpu
 } // namespace ot
 } // namespace gapi

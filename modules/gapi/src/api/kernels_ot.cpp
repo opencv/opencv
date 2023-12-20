@@ -18,10 +18,11 @@ namespace ot
 GAPI_EXPORTS_W std::tuple<cv::GArray<cv::Rect>,
                           cv::GArray<int32_t>,
                           cv::GArray<uint64_t>,
-                          cv::GArray<TrackingStatus>> track(const cv::GMat& mat,
-                                                            const cv::GArray<cv::Rect>& detected_rects,
-                                                            const cv::GArray<int>& detected_class_labels,
-                                                            float delta)
+                          cv::GArray<int>>
+    track(const cv::GMat& mat,
+          const cv::GArray<cv::Rect>& detected_rects,
+          const cv::GArray<int>& detected_class_labels,
+          float delta)
 {
     return GTrackFromMat::on(mat, detected_rects, detected_class_labels, delta);
 }
@@ -29,10 +30,11 @@ GAPI_EXPORTS_W std::tuple<cv::GArray<cv::Rect>,
 GAPI_EXPORTS_W std::tuple<cv::GArray<cv::Rect>,
                           cv::GArray<int32_t>,
                           cv::GArray<uint64_t>,
-                          cv::GArray<TrackingStatus>> track(const cv::GFrame& frame,
-                                                            const cv::GArray<cv::Rect>& detected_rects,
-                                                            const cv::GArray<int>& detected_class_labels,
-                                                            float delta)
+                          cv::GArray<int>>
+    track(const cv::GFrame& frame,
+          const cv::GArray<cv::Rect>& detected_rects,
+          const cv::GArray<int>& detected_class_labels,
+          float delta)
 {
     return GTrackFromFrame::on(frame, detected_rects, detected_class_labels, delta);
 }
