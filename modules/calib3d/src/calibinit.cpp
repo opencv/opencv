@@ -481,7 +481,16 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     bool found = false;
 
-    const bool is_plain = (flags & CALIB_CB_PLAIN) != 0;
+    const bool  = (flags & CALIB_CB_PLAIN) != 0;
+
+    if (is_plain && flags & CALIB_CB_ADAPTIVE_THRESH)
+        CV_Error(Error::StsOutOfRange, "CALIB_CB_PLAIN defined CALIB_CB_ADAPTIVE_THRESH ignored");
+  
+    if (is_plain && flags & CALIB_CB_FAST_CHECK)
+      CV_Error(Error::StsOutOfRange, "CALIB_CB_PLAIN defined CALIB_CB_FAST_CHECK ignored");
+
+    if (is_plain && flags & CALIB_CB_NORMALIZE_IMAGE)
+      CV_Error(Error::StsOutOfRange, "CALIB_CB_PLAIN defined CALIB_CB_NORMALIZE_IMAGE ignored");
 
     int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Mat img = image_.getMat();
@@ -508,8 +517,8 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     int prev_sqr_size = 0;
 
     Mat thresh_img_new = img.clone();
-  
-    if (flags & CALIB_CB_ADAPTIVE_THRESH)
+
+    if (flags & CALIB_CB_ADAPTIVE_THRESH && !is_plain)
     {
       // Assume that the checkerboard occupies 5% of the image
       int min_size = cvRound((img.cols * img.rows * 0.05) / ((pattern_size.width+1) * (pattern_size.height+1)));
@@ -518,7 +527,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     }
 
     if (!is_plain)
-      icvBinarizationHistogramBased(thresh_img_new); // process image in-place
+        icvBinarizationHistogramBased(thresh_img_new); // process image in-place
 
     SHOW("New binarization", thresh_img_new);
 
@@ -541,10 +550,10 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     const int min_dilations = 0;
     const int max_dilations = is_plain ? 0 : 7;
 
-    // Try our standard "0" and "1" dilations, but if the pattern is not found, iterate the whole procedure with higher dilations.
-    // This is necessary because some squares simply do not separate properly without and with a single dilations. However,
-    // we want to use the minimum number of dilations possible since dilations cause the squares to become smaller,
-    // making it difficult to detect smaller squares.
+  // Try our standard "0" and "1" dilations, but if the pattern is not found, iterate the whole procedure with higher dilations.
+  // This is necessary because some squares simply do not separate properly without and with a single dilations. However,
+  // we want to use the minimum number of dilations possible since dilations cause the squares to become smaller,
+  // making it difficult to detect smaller squares.
     for (int dilations = min_dilations; dilations <= max_dilations; dilations++)
     {
         //USE BINARY IMAGE COMPUTED USING icvBinarizationHistogramBased METHOD
