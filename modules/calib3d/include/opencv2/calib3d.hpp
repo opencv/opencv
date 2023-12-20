@@ -490,7 +490,8 @@ enum { CALIB_CB_ADAPTIVE_THRESH = 1,
        CALIB_CB_EXHAUSTIVE      = 16,
        CALIB_CB_ACCURACY        = 32,
        CALIB_CB_LARGER          = 64,
-       CALIB_CB_MARKER          = 128
+       CALIB_CB_MARKER          = 128,
+       CALIB_CB_PLAIN           = 256
      };
 
 enum { CALIB_CB_SYMMETRIC_GRID  = 1,
@@ -1235,6 +1236,10 @@ square-like shape) to filter out false quads extracted at the contour retrieval 
 -   @ref CALIB_CB_FAST_CHECK Run a fast check on the image that looks for chessboard corners,
 and shortcut the call if none is found. This can drastically speed up the call in the
 degenerate condition when no chessboard is observed.
+-   @ref CALIB_CB_PLAIN All other flags are ignored. The input image is taken as is.
+No image processing is done to improve to find the checkerboard. This has the effect of speeding up the
+execution of the function but could lead to not recognizing the checkerboard if the image
+is not previously binarized in the appropriate manner.
 
 The function attempts to determine whether the input image is a view of the chessboard pattern and
 locate the internal chessboard corners. The function returns a non-zero value if all of the corners

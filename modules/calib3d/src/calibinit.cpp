@@ -480,8 +480,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     bool found = false;
 
-    const int min_dilations = 0;
-    const int max_dilations = 7;
+    const bool is_plain = (flags & CALIB_CB_PLAIN) != 0;
 
     int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Mat img = image_.getMat();
@@ -497,6 +496,9 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     std::vector<cv::Point2f> out_corners;
 
+    if (is_plain)
+      CV_CheckType(type, depth == CV_8U && cn == 1, "Only 8-bit grayscale images are supported whith CALIB_CB_PLAIN flag enable");
+
     if (img.channels() != 1)
     {
         cvtColor(img, img, COLOR_BGR2GRAY);
@@ -505,10 +507,11 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     int prev_sqr_size = 0;
 
     Mat thresh_img_new = img.clone();
-    icvBinarizationHistogramBased(thresh_img_new); // process image in-place
+    if(!is_plain)
+        icvBinarizationHistogramBased(thresh_img_new); // process image in-place
     SHOW("New binarization", thresh_img_new);
 
-    if (flags & CALIB_CB_FAST_CHECK)
+    if (flags & CALIB_CB_FAST_CHECK && !is_plain)
     {
         //perform new method for checking chessboard using a binary image.
         //image is binarised using a threshold dependent on the image histogram
@@ -524,6 +527,9 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     ChessBoardDetector detector(pattern_size);
 
+    const int min_dilations = 0;
+    const int max_dilations = is_plain ? 0 : 7;
+
     // Try our standard "1" dilation, but if the pattern is not found, iterate the whole procedure with higher dilations.
     // This is necessary because some squares simply do not separate properly with a single dilation.  However,
     // we want to use the minimum number of dilations possible since dilations cause the squares to become smaller,
@@ -531,7 +537,8 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     for (int dilations = min_dilations; dilations <= max_dilations; dilations++)
     {
         //USE BINARY IMAGE COMPUTED USING icvBinarizationHistogramBased METHOD
-        dilate( thresh_img_new, thresh_img_new, Mat(), Point(-1, -1), 1 );
+        if(!is_plain)
+            dilate( thresh_img_new, thresh_img_new, Mat(), Point(-1, -1), 1 );
 
         // So we can find rectangles that go to the edge, we draw a white line around the image edge.
         // Otherwise FindContours will miss those clipped rectangle contours.
@@ -552,7 +559,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     DPRINTF("Chessboard detection result 0: %d", (int)found);
 
     // revert to old, slower, method if detection failed
-    if (!found)
+    if (!found && !is_plain)
     {
         if (flags & CALIB_CB_NORMALIZE_IMAGE)
         {
@@ -662,7 +669,6 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     Mat(out_corners).copyTo(corners_);
     return found;
 }
-
 
 //
 // Checks that each board row and column is pretty much monotonous curve:
