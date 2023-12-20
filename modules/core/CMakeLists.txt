@@ -20,7 +20,7 @@ ocv_add_dispatched_file_force_all(test_intrin512 TEST AVX512_SKX)
 
 
 set(PARALLEL_ENABLE_PLUGINS_DEFAULT ON)
-if(EMSCRIPTEN OR IOS OR WINRT)
+if(EMSCRIPTEN OR IOS OR XROS OR WINRT)
   set(PARALLEL_ENABLE_PLUGINS_DEFAULT OFF)
 endif()
 # parallel backends configuration

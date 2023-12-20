@@ -1,4 +1,4 @@
-if(MSVC OR IOS)
+if(MSVC OR IOS OR XROS)
   return()
 endif()
 

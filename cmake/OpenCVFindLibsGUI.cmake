@@ -77,7 +77,7 @@ endif(WITH_OPENGL)
 
 # --- Cocoa ---
 if(APPLE)
-  if(NOT IOS AND CV_CLANG)
+  if(NOT IOS AND NOT XROS AND CV_CLANG)
     set(HAVE_COCOA YES)
   endif()
 endif()
