@@ -308,14 +308,16 @@ namespace cv {
                     layer_id++;
                     fused_layer_names.push_back(last_layer);
                 }
-                
-                void setCrop(int crop_height, int crop_width)
+
+                void setCrop(int crop_height, int crop_width, int inp_height, int inp_width, bool noadjust)
                 {
                     cv::dnn::LayerParams crop_param;
-                    crop_param.set<int>("crop_height", crop_height);
-                    crop_param.set<int>("crop_width", crop_width);
                     crop_param.name = "CropLayer-name";
-                    crop_param.type = "CropLayer";
+                    std::vector<int> begin = {0, 0, (inp_height - crop_height) / 2, (inp_width - crop_width) / 2};
+                    std::vector<int> sizes = {-1, -1, crop_height, crop_width};
+                    crop_param.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
+                    crop_param.set("size", DictValue::arrayInt(&sizes[0], sizes.size()));
+                    crop_param.type = "Slice";
 
                     darknet::LayerParameter lp;
                     std::string layer_name = cv::format("crop_%d", layer_id);
@@ -326,6 +328,26 @@ namespace cv {
                     last_layer = layer_name;
                     net->layers.push_back(lp);
                     layer_id++;
+
+                    if (!noadjust)
+                    {
+                        cv::dnn::LayerParams params;
+                        params.set("bias_term", true);
+                        params.blobs = {
+                            Mat(1, 1, CV_32F, Scalar(2)),
+                            Mat(1, 1, CV_32F, Scalar(-1))
+                        };
+
+                        darknet::LayerParameter lp;
+                        std::string layer_name = cv::format("adjust_crop_%d", layer_id);
+                        lp.layer_name = layer_name;
+                        lp.layer_type = "Scale";
+                        lp.layerParams = params;
+                        lp.bottom_indexes.push_back(last_layer);
+                        last_layer = layer_name;
+                        net->layers.push_back(lp);
+                        layer_id++;
+                    }
                     fused_layer_names.push_back(last_layer);
                 }
 
@@ -702,8 +724,8 @@ namespace cv {
 
                 MatShape tensor_shape(3);
                 tensor_shape[0] = net->channels;
-                tensor_shape[1] = net->width;
-                tensor_shape[2] = net->height;
+                tensor_shape[1] = net->height;
+                tensor_shape[2] = net->width;
                 net->out_channels_vec.resize(net->layers_cfg.size());
 
                 layers_counter = -1;
@@ -782,13 +804,16 @@ namespace cv {
                     }
                     else if (layer_type == "crop")
                     {
-                        int crop_height = getParam<int>(layer_params, "crop_height", 3);
-                        int crop_width = getParam<int>(layer_params, "crop_width", 2);
+                        int crop_height = getParam<int>(layer_params, "crop_height", 0);
+                        int crop_width = getParam<int>(layer_params, "crop_width", 0);
+                        bool noadjust = getParam<int>(layer_params, "noadjust", false);
+                        CV_CheckGT(crop_height, 0, "");
+                        CV_CheckGT(crop_width, 0, "");
 
-                        setParams.setCrop(crop_height, crop_width);
+                        setParams.setCrop(crop_height, crop_width, tensor_shape[1], tensor_shape[2], noadjust);
 
-                        tensor_shape[1] = crop_height;  
-                        tensor_shape[2] = crop_width;   
+                        tensor_shape[1] = crop_height;
+                        tensor_shape[2] = crop_width;
                     }
                     else if (layer_type == "softmax")
                     {
@@ -964,8 +989,8 @@ namespace cv {
 
                 MatShape tensor_shape(3);
                 tensor_shape[0] = net->channels;
-                tensor_shape[1] = net->width;
-                tensor_shape[2] = net->height;
+                tensor_shape[1] = net->height;
+                tensor_shape[2] = net->width;
                 int cv_layers_counter = -1;
                 int darknet_layers_counter = -1;
 
