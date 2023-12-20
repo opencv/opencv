@@ -13,6 +13,12 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 
+// OpenCL backend   
+#ifdef HAVE_OPENCL
+#include "../ocl4dnn/include/math_functions.hpp"
+#include "opencl_kernels_dnn.hpp"
+#endif
+
 namespace cv {
 namespace dnn {
 
@@ -69,6 +75,92 @@ public:
 
         fastNormGroup(input, scale, bias, outputs[0], epsilon, num_groups);
     }
+
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_) {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+
+        const auto &input = inputs[0], &scale = inputs[1], &bias = inputs[2];
+        auto &output = outputs[0];
+
+        const auto input_shape = shape(input);
+        size_t N = input_shape[0], C = input_shape[1];
+        size_t num_groups = this->num_groups; // 组的数量
+        size_t channels_per_group = C / num_groups;
+        size_t loops = N * num_groups, norm_size = static_cast<size_t>(total(input_shape, 2)) * channels_per_group;
+        float inv_norm_size = 1.f / norm_size;
+
+        // no fp16 support
+        if (input.depth() == CV_16S) {
+            return false;
+        }
+
+        String base_opts = format(" -DT=float -DT4=float4 -Dconvert_T=convert_float4 -DNUM_GROUPS=%d -DCHANNELS_PER_GROUP=%d", num_groups, channels_per_group);
+
+        // Calculate mean
+        UMat one = UMat::ones(norm_size, 1, CV_32F);
+        UMat mean = UMat(loops, 1, CV_32F);
+        UMat mean_square = UMat(loops, 1, CV_32F);
+        UMat tmp = UMat(loops, norm_size, CV_32F);
+        bool ret = ocl4dnn::ocl4dnnGEMV<float>(ocl4dnn::CblasNoTrans, loops, norm_size, inv_norm_size,
+                                               input, 0, one, 0, 0.f, mean, 0);
+        if (!ret) {
+            return false;
+        }
+        // Calculate mean_square
+        int num_vector = (norm_size % 8 == 0) ? 8 : ((norm_size % 4 == 0) ? 4 : 1);
+        size_t global[] = {loops, static_cast<size_t>(norm_size / num_vector)};
+        String build_opt = format(" -DNUM=%d", num_vector) + base_opts;
+        String mean_square_kernel_name = format("calc_mean%d", num_vector);
+        ocl::Kernel mean_square_kernel(mean_square_kernel_name.c_str(), ocl::dnn::mvn_oclsrc, build_opt + " -DKERNEL_MEAN");
+        if (mean_square_kernel.empty()) {
+            return false;
+        }
+        mean_square_kernel.set(0, ocl::KernelArg::PtrReadOnly(input));
+        mean_square_kernel.set(1, (int)loops);
+        mean_square_kernel.set(2, (int)norm_size);
+        mean_square_kernel.set(3, ocl::KernelArg::PtrReadOnly(mean));
+        mean_square_kernel.set(4, ocl::KernelArg::PtrWriteOnly(tmp));
+        ret = mean_square_kernel.run(2, global, NULL, false);
+        if (!ret) {
+            return false;
+        }
+        ret = ocl4dnn::ocl4dnnGEMV<float>(ocl4dnn::CblasNoTrans, loops, norm_size, inv_norm_size,
+                                          tmp, 0, one, 0, 0.f, mean_square, 0);
+        if (!ret) {
+            return false;
+        }
+        // Calculate group norm: output = scale * (x - mean) / sqrt(var + eps) + bias
+        String mvn_group_kernel_name = format("mvn_group%d", num_vector);
+        build_opt += " -DNORM_VARIANCE -DFUSE_GROUP_NORM -DKERNEL_MVN_GROUP";
+        ocl::Kernel mvn_group_kernel(mvn_group_kernel_name.c_str(), ocl::dnn::mvn_oclsrc, build_opt);
+        if (mvn_group_kernel.empty()) {
+            return false;
+        }
+        mvn_group_kernel.set(0, ocl::KernelArg::PtrReadOnly(input));
+        mvn_group_kernel.set(1, (int)loops);
+        mvn_group_kernel.set(2, (int)norm_size);
+        mvn_group_kernel.set(3, (float)epsilon);
+        mvn_group_kernel.set(4, ocl::KernelArg::PtrReadOnly(mean));
+        mvn_group_kernel.set(5, ocl::KernelArg::PtrReadOnly(mean_square));
+        mvn_group_kernel.set(6, ocl::KernelArg::PtrReadOnly(scale));
+        mvn_group_kernel.set(7, ocl::KernelArg::PtrReadOnly(bias));
+        mvn_group_kernel.set(8, (int)C);
+        mvn_group_kernel.set(9, (int)num_groups);
+        mvn_group_kernel.set(10, (float)0.f);
+        mvn_group_kernel.set(11, ocl::KernelArg::PtrWriteOnly(output));
+        ret = mvn_group_kernel.run(2, global, NULL, false);
+        if (!ret) {
+            return false;
+        }
+
+        return true;
+        }
+#endif
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void *context_,
