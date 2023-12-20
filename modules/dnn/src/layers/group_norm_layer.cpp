@@ -89,7 +89,7 @@ public:
 
         const auto input_shape = shape(input);
         size_t N = input_shape[0], C = input_shape[1];
-        size_t num_groups = this->num_groups; // 组的数量
+        size_t num_groups = this->num_groups;
         size_t channels_per_group = C / num_groups;
         size_t loops = N * num_groups, norm_size = static_cast<size_t>(total(input_shape, 2)) * channels_per_group;
         float inv_norm_size = 1.f / norm_size;
