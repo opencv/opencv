@@ -443,6 +443,14 @@ cv::Rect cv::getWindowImageRect(const String& winname)
 #endif
 }
 
+void * cv::getWindowHandle(const String& winname){
+  
+  CV_TRACE_FUNCTION();
+  
+  return cvGetWindowHandle(winname.c_str());
+  
+}
+
 void cv::namedWindow( const String& winname, int flags )
 {
     CV_TRACE_FUNCTION();
@@ -1170,6 +1178,34 @@ int cv::createButton(const String& button_name, ButtonCallback on_change, void* 
     return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
 }
 
+void cv::centerView(const String& windowName, float factor, Point coord)
+{
+  CvPoint _coord;
+  _coord.x = coord.x;
+  _coord.y = coord.y;
+  cvCenterView(windowName.c_str(), factor, _coord);
+}
+
+void cv::resetZoom(const String& windowName)
+{
+  cvResetZoom(windowName.c_str());
+}
+
+void cv::hideNav(const String& windowName)
+{
+  cvHideNav(windowName.c_str());
+}
+
+void cv::showNav(const String& windowName)
+{
+  cvShowNav(windowName.c_str());
+}
+
+void cv::setDefaultCursor(const String& windowName, int shape)
+{
+  cvSetDefaultCursor(windowName.c_str(), shape);
+}
+
 #else
 
 static const char* NO_QT_ERR_MSG = "The library is compiled without QT support";
@@ -1223,6 +1259,32 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 {
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
+
+void cv::centerView(float, Point)
+{
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+}
+
+void cv::resetZoom()
+{
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+}
+
+void cv::hideNav()
+{
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+}
+
+void cv::showNav()
+{
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+}
+
+void cv::setDefaultCursor(int)
+{
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+}
+
 
 #endif
 
@@ -1390,6 +1452,31 @@ CV_IMPL void cvSaveWindowParameters(const char* )
 CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
 {
     CV_NO_GUI_ERROR("cvCreateButton");
+}
+
+CV_IMPL void cvCenterView(const char*, float , Point)
+{
+    CV_NO_GUI_ERROR("cvCenterView");
+}
+
+CV_IMPL void cvResetZoom(const char*)
+{
+    CV_NO_GUI_ERROR("cvResetZoom");
+}
+
+CV_IMPL void cvHideNav(const char*)
+{
+    CV_NO_GUI_ERROR("cvHideNav");
+}
+
+CV_IMPL void cvShowNav(const char*)
+{
+    CV_NO_GUI_ERROR("cvShowNav");
+}
+
+CV_IMPL void cvSetDefaultCursor(const char*, int)
+{
+    CV_NO_GUI_ERROR("cvSetDefaultCursor");
 }
 
 #endif

@@ -155,6 +155,13 @@ public slots:
     void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
     void enablePropertiesButtonEachWindow();
 
+    void centerView(QString name, qreal factor, QPoint coord);
+    void resetZoom(QString name);
+    void hideNav(QString name);
+    void showNav(QString name);
+  
+    void setDefaultCursor(QString name, Qt::CursorShape shape);
+
     void setOpenGlDrawCallback(QString name, void* callback, void* userdata);
     void setOpenGlContext(QString name);
     void updateWindow(QString name);
@@ -347,6 +354,13 @@ public:
     QPointer<QToolBar> myToolBar;
     QPointer<QLabel> myStatusBar_msg;
 
+    void centerView(qreal factor, QPoint coord);
+    void resetZoom();
+    void hideNav();
+    void showNav();
+  
+    void setDefaultCursor(Qt::CursorShape shape);
+  
 protected:
     virtual void keyPressEvent(QKeyEvent* event) CV_OVERRIDE;
 
@@ -375,6 +389,7 @@ private:
 
     void hideTools();
     void showTools();
+  
     QSize getAvailableSize();
 
 private slots:
@@ -416,6 +431,14 @@ public:
     virtual void updateGl() = 0;
 
     virtual void setSize(QSize size_) = 0;
+  
+    virtual void centerView(qreal factor, QPoint coord) = 0;
+    virtual void resetZoom() = 0;
+    virtual void hideNav() = 0;
+    virtual void showNav() = 0;
+  
+    virtual void setDefaultCursor(Qt::CursorShape shape) = 0;
+
 };
 
 
@@ -528,7 +551,14 @@ public slots:
     void siftWindowOnUp() ;
     void siftWindowOnDown();
 
-    void resetZoom();
+  
+    void centerView(qreal factor, QPoint coord) override;
+    void resetZoom() override;
+    void hideNav() override;
+    void showNav() override;
+  
+    void setDefaultCursor(Qt::CursorShape shape) override;
+
     void imgRegion();
     void ZoomIn();
     void ZoomOut();
@@ -557,7 +587,6 @@ private:
     QImage image2Draw_qt;
     int nbChannelOriginImage;
 
-
     void scaleView(qreal scaleFactor, QPointF center);
     void moveView(QPointF delta);
 
@@ -575,6 +604,10 @@ private:
     bool drawInfo;
     QString infoText;
     QRectF target;
+  
+    bool drawNav;
+  
+    Qt::CursorShape defaultCursorShape;
 
     void drawInstructions(QPainter *painter);
     void drawViewOverview(QPainter *painter);

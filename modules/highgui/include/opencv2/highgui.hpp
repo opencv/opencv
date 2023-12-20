@@ -261,6 +261,15 @@ enum QtButtonTypes {
        QT_NEW_BUTTONBAR = 1024  //!< Button should create a new buttonbar
      };
 
+//! Qt "cursor" type
+enum QtCursorTypes {
+       QT_ARROW_CURSOR     = 0,  //!< Arrow Cursor
+       QT_CROSS_CURSOR     = 2,  //!< Cross Cursor
+       QT_WAIT_CURSOR      = 3,  //!< Wait Cursor
+       QT_OPENHAND_CURSOR  = 17, //!< Open Hand Cursor
+       QT_CLOSEHAND_CURSOR = 18  //!< Close Hand Cursor
+     };
+
 //! @} highgui_qt
 
 /** @brief Callback function for mouse events. see cv::setMouseCallback
@@ -472,6 +481,17 @@ CV_EXPORTS_W Rect getWindowImageRect(const String& winname);
 /** @example samples/cpp/create_mask.cpp
 This program demonstrates using mouse events and how to make and use a mask image (black and white) .
 */
+
+/** @brief Return the window handle
+
+The function getWindowHandle returns the handle of window
+
+@param winname Name of the window.
+
+@sa resizeWindow moveWindow
+ */
+CV_EXPORTS_W void * getWindowHandle(const String& winname);
+
 /** @brief Sets mouse handler for the specified window
 
 @param winname Name of the window.
@@ -838,6 +858,17 @@ value could be 0 or 1. (__Optional__)
 CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
                              void* userdata = 0, int type = QT_PUSH_BUTTON,
                              bool initial_button_state = false);
+
+
+CV_EXPORTS void centerView(const String& windowName, float factor, Point coord);
+
+CV_EXPORTS void resetZoom(const String& windowName);
+
+CV_EXPORTS void hideNav(const String& windowName);
+
+CV_EXPORTS void showNav(const String& windowName);
+
+CV_EXPORTS void setDefaultCursor(const String& windowName, int shape);
 
 //! @} highgui_qt
 

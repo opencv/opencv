@@ -89,6 +89,15 @@ CVAPI(void) cvStopLoop( void );
 typedef void (CV_CDECL *CvButtonCallback)(int state, void* userdata);
 enum {CV_PUSH_BUTTON = 0, CV_CHECKBOX = 1, CV_RADIOBOX = 2};
 CVAPI(int) cvCreateButton( const char* button_name CV_DEFAULT(NULL),CvButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL) , int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0));
+
+CVAPI(void) cvCenterView(const char* name, float factor, CvPoint coord);
+CVAPI(void) cvResetZoom(const char* name);
+CVAPI(void) cvResetZoom(const char* name);
+CVAPI(void) cvHideNav(const char* name);
+CVAPI(void) cvShowNav(const char* name);
+
+CVAPI(void) cvSetDefaultCursor(const char* name, int shape);
+
 //----------------------
 
 
