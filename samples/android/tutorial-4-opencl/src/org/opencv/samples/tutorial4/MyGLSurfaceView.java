@@ -13,6 +13,7 @@ import android.view.SurfaceHolder;
 import android.widget.TextView;
 import android.widget.Toast;
 
+//![minimal_surface_view]
 public class MyGLSurfaceView extends CameraGLSurfaceView implements CameraGLSurfaceView.CameraTextureListener {
 
     static final String LOGTAG = "MyGLSurfaceView";
@@ -111,3 +112,4 @@ public class MyGLSurfaceView extends CameraGLSurfaceView implements CameraGLSurf
         return true;
     }
 }
+//![minimal_surface_view]

@@ -1,7 +1,7 @@
 #ifdef OPENCL_FOUND
 #define __CL_ENABLE_EXCEPTIONS
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS /*let's give a chance for OpenCL 1.1 devices*/
-#include <CL/cl.hpp>
+#include <CL/opencl.hpp>
 #endif
 
 #include <GLES2/gl2.h>
@@ -87,10 +87,11 @@ cl::CommandQueue theQueue;
 cl::Program theProgB2B, theProgI2B, theProgI2I;
 bool haveOpenCL = false;
 
+//![init_opencl]
 int initCL()
 {
     dumpCLinfo();
-
+    LOGE("initCL: start initCL");
     EGLDisplay mEglDisplay = eglGetCurrentDisplay();
     if (mEglDisplay == EGL_NO_DISPLAY)
         LOGE("initCL: eglGetCurrentDisplay() returned 'EGL_NO_DISPLAY', error = %x", eglGetError());
@@ -156,6 +157,7 @@ int initCL()
     else
         return 4;
 }
+//![init_opencl]
 
 #define GL_TEXTURE_2D 0x0DE1
 void procOCL_I2I(int texIn, int texOut, int w, int h)
@@ -168,6 +170,7 @@ void procOCL_I2I(int texIn, int texOut, int w, int h)
     }
 
     LOGD("procOCL_I2I(%d, %d, %d, %d)", texIn, texOut, w, h);
+//![process_pure_opencl]
     cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, texIn);
     cl::ImageGL imgOut(theContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texOut);
     std::vector < cl::Memory > images;
@@ -195,6 +198,7 @@ void procOCL_I2I(int texIn, int texOut, int w, int h)
     theQueue.enqueueReleaseGLObjects(&images);
     theQueue.finish();
     LOGD("enqueueReleaseGLObjects() costs %d ms", getTimeInterval(t));
+//![process_pure_opencl]
 }
 
 void procOCL_OCV(int texIn, int texOut, int w, int h)
@@ -206,6 +210,7 @@ void procOCL_OCV(int texIn, int texOut, int w, int h)
         return;
     }
 
+//![process_tapi]
     int64_t t = getTimeMs();
     cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, texIn);
     std::vector < cl::Memory > images(1, imgIn);
@@ -232,11 +237,12 @@ void procOCL_OCV(int texIn, int texOut, int w, int h)
     cl_command_queue q = (cl_command_queue)cv::ocl::Queue::getDefault().ptr();
     size_t offset = 0;
     size_t origin[3] = { 0, 0, 0 };
-    size_t region[3] = { w, h, 1 };
+    size_t region[3] = { (size_t)w, (size_t)h, 1 };
     CV_Assert(clEnqueueCopyBufferToImage (q, clBuffer, imgOut(), offset, origin, region, 0, NULL, NULL) == CL_SUCCESS);
     theQueue.enqueueReleaseGLObjects(&images);
     cv::ocl::finish();
     LOGD("uploading results to texture costs %d ms", getTimeInterval(t));
+//![process_tapi]
 }
 #else
 int initCL()
