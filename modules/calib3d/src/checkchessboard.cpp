@@ -54,8 +54,9 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
     const float min_aspect_ratio = 0.3f;
     const float max_aspect_ratio = 3.0f;
     const float min_box_size = 10.0f;
-    const float box_area_covered = 0.5f;
-
+    const float accuracyRate = 0.3f;
+    const float minCornerDistanceRate = 0.05;
+  
     for (size_t i = 0; i < contours.size(); ++i)
     {
         if (hierarchy.at(i)[3] != -1)
@@ -75,12 +76,26 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
         {
             continue;
         }
+      
+        // check is square and is convex
+        vector<Point> approxCurve;
+        approxPolyDP(contours[i], approxCurve, double(contours[i].size()) * accuracyRate, true);
 
-        float box_area = box.size.width * box.size.height;
-        if(contourArea(c) < (box_area_covered * box_area))
-        {
-          continue;
+        if(approxCurve.size() != 4 || !isContourConvex(approxCurve)) continue;
+
+        // check min distance between corners
+        double minDistSq = DBL_MAX;
+
+        for(int j = 0; j < 4; j++) {
+            double d = (double)(approxCurve[j].x - approxCurve[(j + 1) % 4].x) *
+                       (double)(approxCurve[j].x - approxCurve[(j + 1) % 4].x) +
+                       (double)(approxCurve[j].y - approxCurve[(j + 1) % 4].y) *
+                       (double)(approxCurve[j].y - approxCurve[(j + 1) % 4].y);
+            minDistSq = min(minDistSq, d);
         }
+      
+        double minCornerDistancePixels = double(contours[i].size()) * minCornerDistanceRate;
+        if(minDistSq < minCornerDistancePixels * minCornerDistancePixels) continue;
 
         quads.emplace_back(box_size, class_id);
     }
