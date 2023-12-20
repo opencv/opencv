@@ -83,7 +83,6 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
         }
 
         quads.emplace_back(box_size, class_id);
-
     }
 }
 
@@ -104,7 +103,6 @@ inline bool less_pred(const std::pair<float, int>& p1, const std::pair<float, in
 static void fillQuads(Mat & white, Mat & black, double white_thresh, double black_thresh, vector<pair<float, int> > & quads)
 {
     Mat thresh;
-
     {
         vector< vector<Point> > contours;
         vector< Vec4i > hierarchy;
@@ -120,7 +118,6 @@ static void fillQuads(Mat & white, Mat & black, double white_thresh, double blac
         findContours(thresh, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
         icvGetQuadrangleHypotheses(contours, hierarchy, quads, 0);
     }
-
 }
 
 static bool checkQuads(vector<pair<float, int> > & quads, const cv::Size & size)
