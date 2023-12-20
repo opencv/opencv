@@ -12,12 +12,12 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-Tensor::Tensor(Format fmt, VkBufferUsageFlags usageFlag) : size_in_byte_(0), format_(fmt), usageFlag_(usageFlag | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+Tensor::Tensor(Format fmt, VkBufferUsageFlags usageFlag) : size_in_byte_(0), format_(fmt), usageFlag_(usageFlag)
 {
 }
 
 Tensor::Tensor(const char* data, std::vector<int>& shape, Format fmt, VkBufferUsageFlags usageFlag)
-               : size_in_byte_(0), format_(fmt), usageFlag_(usageFlag | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+               : size_in_byte_(0), format_(fmt), usageFlag_(usageFlag)
 {
     reshape(data, shape);
 }
@@ -35,72 +35,6 @@ void* Tensor::map()
 void Tensor::unMap()
 {
     vkUnmapMemory(kDevice, buffer_->getVkMemory());
-}
-
-void* Tensor::mapHost()
-{
-    if (!buffer_->isDeviceOnly())
-    {
-        return map();
-    }
-
-    VkBufferCopy pRegion;
-    pRegion.srcOffset = 0;
-    pRegion.dstOffset = 0;
-    pRegion.size = size_in_byte_;
-
-    hostBuffer_.reset(new Buffer(size_in_byte_, nullptr, usageFlag_, false));
-
-    Ptr<CommandBuffer> cmdBuffer = cmdPoolPtr->allocBuffer();
-    VkCommandBuffer cmdBufferReal = cmdBuffer->get();
-
-    cmdBuffer->beginRecord();
-    vkCmdCopyBuffer(cmdBufferReal, buffer_->getVkBuffer(), hostBuffer_->getVkBuffer(), 1, &pRegion);
-    cmdBuffer->endRecord();
-    cmdPoolPtr->submitAndWait(cmdBufferReal);
-
-    void *p;
-
-    VK_CHECK_RESULT(vkMapMemory(kDevice, hostBuffer_->getVkMemory(),
-                                0, size_in_byte_, 0, (void **)&p));
-    CV_LOG_DEBUG(NULL, "mapped to host.");
-    return p;
-}
-
-void Tensor::unMapHostReadOnly()
-{
-    if (!buffer_->isDeviceOnly())
-    {
-        unMap();
-        return;
-    }
-    CV_DbgAssert(hostBuffer_ != nullptr);
-    vkUnmapMemory(kDevice, hostBuffer_->getVkMemory());
-}
-    
-void Tensor::unMapHostWriteToDevice()
-{
-    if (!buffer_->isDeviceOnly())
-    {
-        unMap();
-        return;
-    }
-    CV_DbgAssert(hostBuffer_ != nullptr);
-    
-    VkBufferCopy pRegion;
-    pRegion.srcOffset = 0;
-    pRegion.dstOffset = 0;
-    pRegion.size = size_in_byte_;
-
-    Ptr<CommandBuffer> cmdBuffer = cmdPoolPtr->allocBuffer();
-    VkCommandBuffer cmdBufferReal = cmdBuffer->get();
-
-    cmdBuffer->beginRecord();
-    vkCmdCopyBuffer(cmdBufferReal, hostBuffer_->getVkBuffer(), buffer_->getVkBuffer(), 1, &pRegion);
-    cmdBuffer->endRecord();
-    cmdPoolPtr->submitAndWait(cmdBufferReal);
-
-    vkUnmapMemory(kDevice, hostBuffer_->getVkMemory());
 }
 
 Shape Tensor::getShape() const
@@ -146,19 +80,13 @@ Tensor Tensor::reshape(const char* data, const std::vector<int>& shape, bool all
 
     if (alloc)
     {
-        buffer_.reset(new Buffer(size_in_byte_, nullptr, usageFlag_));
-        if (data)
-        {
-            void *p = mapHost();
-            memcpy(p, data, size_in_byte_);
-            unMapHostWriteToDevice();
-        }
+        buffer_.reset(new Buffer(size_in_byte_, data, usageFlag_));
     }
     else if (data)
     {
-        void *p = mapHost();
+        void* p = map();
         memcpy(p, data, size_in_byte_);
-        unMapHostWriteToDevice();
+        unMap();
     }
 
     return *this;
@@ -174,11 +102,11 @@ void Tensor::setTo(float val)
 
     CV_Assert(format_ == kFormatFp32);
 
-    float* p = (float *)mapHost();
+    float* p = (float *)map();
     int cnt = count();
     for (int i = 0; i < cnt; i++)
         *p++ = val;
-    unMapHostWriteToDevice();
+    unMap();
 }
 
 int Tensor::getFormat() const
@@ -188,9 +116,9 @@ int Tensor::getFormat() const
 
 void Tensor::copyTo(Tensor& dst)
 {
-    void *p = mapHost();
+    void* p = map();
     dst.reshape((const char*)p, shape_, format_);
-    unMapHostReadOnly();
+    unMap();
 }
 
 #endif // HAVE_VULKAN

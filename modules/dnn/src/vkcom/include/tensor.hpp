@@ -25,14 +25,6 @@ public:
            VkBufferUsageFlags usageFlag = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
     void* map();
     void unMap();
-    // Call this to allocate a host buffer for copy. If the actual buffer
-    // lies on device, then the host buffer returned is synced with device buffer only AT THE TIME IT IS CREATED.
-    // Otherwise, this method returns the same result as Tensor::map() does.
-    // Internally, this invokes Vulkan API to copy the underlying buffer for faster host access.
-    void *mapHost();
-    // Call this to unmap the existing host buffer for copy.
-    void unMapHostReadOnly();
-    void unMapHostWriteToDevice();
     Shape getShape() const;
     int dimSize(const int dim) const;
     int dimNum() const;
@@ -49,7 +41,6 @@ public:
     bool isEmpty() { return size_in_byte_ == 0 ? true : false; }
     void copyTo(Tensor& dst);
     Ptr<Buffer> getBuffer() { return buffer_; }
-    Ptr<Buffer> getHostBuffer() { return hostBuffer_; }
 
 private:
     std::vector<int> shape_;
@@ -57,7 +48,6 @@ private:
     Ptr<Buffer> buffer_;
     Format format_;
     VkBufferUsageFlags usageFlag_;
-    Ptr<Buffer> hostBuffer_;
 };
 
 #endif  // HAVE_VULKAN

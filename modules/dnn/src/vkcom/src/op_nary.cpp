@@ -125,9 +125,6 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     Ptr<Descriptor> desSet = pipeline->createSet();
     VkCommandBuffer cmdBufferReal = cmdBuffer->get();
 
-    // TODO: remove experimental time counter
-    auto begin = std::chrono::high_resolution_clock::now();
-
     desSet->writeTensor(ins[0], 0);
     desSet->writeTensor(ins[1], 1);
     desSet->writeTensor(outs[0], 2);
@@ -135,29 +132,17 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     desSet->writeTensor(shapeTensor, 4);
     desSet->writeTensor(stepTensor, 5);
 
-    // TODO: remove experimental time counter
-    auto end = std::chrono::high_resolution_clock::now();
-    CV_LOG_INFO(NULL, "Time elapsed to writeTensor: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
-
-    // TODO: remove experimental time counter
-    begin = std::chrono::high_resolution_clock::now();
-
     cmdBuffer->beginRecord();
     pipeline->bind(cmdBufferReal, desSet->get());
     vkCmdDispatch(cmdBufferReal, group_x_, group_y_, group_z_);
     cmdBuffer->endRecord();
     cmdPoolPtr->submitAndWait(cmdBufferReal);
 
-    // TODO(VK): remove experimental time counter
-    end = std::chrono::high_resolution_clock::now();
-    CV_LOG_INFO(NULL, "Time elapsed to compute binary forward: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
-
     return true;
 }
 
 bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 {
-    // TODO(VK): CV_assert for necessary conditions
 
     firstForward();
 
@@ -173,7 +158,6 @@ bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 
     switch(shaderType) {
         case kNaryShaderTypeBinary: {
-            // std::cout << "Dispatched binary operation.\n"; // TODO(VK): delete this
             return binaryForward(ins, outs);
             break;
         }
@@ -191,8 +175,6 @@ bool OpNary::computeGroupCount()
         group_x_ = nplanes; // parallelism at plane level
         group_y_ = N2;
         group_z_ = 1;
-        // group_y_ = alignSize(N2, STEP_SIZE) / STEP_SIZE; // TODO(VK): Experimental batched opearation
-        // group_z_ = alignSize(N1, STEP_SIZE) / STEP_SIZE; // TODO(VK): Experimental batched opearation
     }
     else
     {
@@ -202,9 +184,6 @@ bool OpNary::computeGroupCount()
     CV_Assert(group_x_ <= MAX_GROUP_COUNT_X);
     CV_Assert(group_y_ <= MAX_GROUP_COUNT_Y);
     CV_Assert(group_z_ <= MAX_GROUP_COUNT_Z);
-
-    // TODO(VK): delete this
-    CV_LOG_DEBUG(NULL, "dispatching: group_x_="<<group_x_<<", group_y_="<<group_y_<<", group_z_="<<group_z_);
 
     return true;
 }

@@ -35,7 +35,6 @@ namespace cv { namespace dnn { namespace vkcom {
 #ifdef HAVE_VULKAN
 extern VkQueue kQueue;
 extern VkDevice kDevice;
-extern GPU_TYPE kDeviceType;
 extern cv::Mutex kContextMtx;
 extern Ptr<CommandPool> cmdPoolPtr;
 extern Ptr<PipelineFactory> pipelineFactoryPtr;

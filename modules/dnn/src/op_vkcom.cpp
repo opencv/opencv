@@ -23,7 +23,6 @@ void Net::Impl::initVkComBackend()
     CV_TRACE_FUNCTION();
     CV_Assert(preferableBackend == DNN_BACKEND_VKCOM);
 
-    auto begin = std::chrono::high_resolution_clock::now();
     context = vkcom::Context::create();
 
     for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); it++)
@@ -45,8 +44,6 @@ void Net::Impl::initVkComBackend()
             ld.backendNodes[DNN_BACKEND_VKCOM] = Ptr<BackendNode>();
         }
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    CV_LOG_DEBUG(NULL, "Time elapsed to setup: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
 }
 
 CV__DNN_INLINE_NS_END
@@ -97,10 +94,10 @@ void copyToMat(Mat &dst, vkcom::Tensor &src)
     CV_Assert(dst.type() == CV_32F);
 
     std::vector<int> shape = src.getShape();
-    void *data = src.mapHost();
+    void *data = src.map();
     Mat tmp(shape, CV_32F, data);
     tmp.copyTo(dst);
-    src.unMapHostReadOnly();
+    src.unMap();
 }
 
 vkcom::Tensor VkComTensor(const Ptr<BackendWrapper>& ptr)
