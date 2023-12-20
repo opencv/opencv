@@ -363,7 +363,7 @@ class AttentionSubGraph : public Subgraph {
             // get attrs - num_heads, scale
             num_heads = extractConstant(net, matchedNodesIds[reshape_q], 1).at<int>(1);
             scale = extractConstant(net, matchedNodesIds[div_q], 1).at<float>(0);
-            output_ndims = extractConstant(net, matchedNodesIds[last_reshape], 1).dims;
+            output_ndims = extractConstant(net, matchedNodesIds[last_reshape], 1).size[0];
 
             // get names
             weight_name = getInputName(net, matchedNodesIds[att_matmul], 1);
@@ -474,7 +474,7 @@ class AttentionSingleHeadSubGraph : public Subgraph {
             // get attrs - num_heads, scale
             num_heads = 1;
             scale = extractConstant(net, matchedNodesIds[div_q], 1).at<float>(0);
-            output_ndims = extractConstant(net, matchedNodesIds[last_reshape], 1).dims;
+            output_ndims = extractConstant(net, matchedNodesIds[last_reshape], 1).size[0];
 
             // get names
             weight_name = getInputName(net, matchedNodesIds[att_matmul], 1);

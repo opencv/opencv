@@ -2983,7 +2983,7 @@ TEST_P(Test_ONNX_nets, VitTrack) {
     auto input0 = blobFromImage(image, 1.f, Size(128, 128));
     auto input1 = blobFromImage(image, 1.f, Size(256, 256));
 
-    auto net = readNet(_tf("models/object_tracking_vittrack_2023sep.onnx"));
+    auto net = readNet(_tf("models/object_tracking_vittrack_2023sep.onnx", false));
     net.setInput(input0, "template");
     net.setInput(input1, "search");
 
