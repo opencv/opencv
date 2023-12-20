@@ -240,7 +240,7 @@ if(NOT ${found})
                           OUTPUT_STRIP_TRAILING_WHITESPACE)
         endif()
       endif()
-    endif(NOT ANDROID AND NOT IOS)
+    endif(NOT ANDROID AND NOT IOS AND NOT XROS)
   endif()
 
   # Export return values
