@@ -87,6 +87,7 @@ cl::CommandQueue theQueue;
 cl::Program theProgB2B, theProgI2B, theProgI2I;
 bool haveOpenCL = false;
 
+//![init_opencl]
 int initCL()
 {
     dumpCLinfo();
@@ -114,9 +115,7 @@ int initCL()
             LOGE("Warning: CL-GL sharing isn't supported by PLATFORM");
         props[5] = (cl_context_properties) p();
 
-        LOGE("initCL: cl::Context");
         theContext = cl::Context(CL_DEVICE_TYPE_GPU, props);
-        LOGE("initCL: cl::Device");
         std::vector<cl::Device> devs = theContext.getInfo<CL_CONTEXT_DEVICES>();
         LOGD("Context returned %d devices, taking the 1st one", devs.size());
         ext = devs[0].getInfo<CL_DEVICE_EXTENSIONS>();
@@ -158,6 +157,7 @@ int initCL()
     else
         return 4;
 }
+//![init_opencl]
 
 #define GL_TEXTURE_2D 0x0DE1
 void procOCL_I2I(int texIn, int texOut, int w, int h)
@@ -170,6 +170,7 @@ void procOCL_I2I(int texIn, int texOut, int w, int h)
     }
 
     LOGD("procOCL_I2I(%d, %d, %d, %d)", texIn, texOut, w, h);
+//![process_pure_opencl]
     cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, texIn);
     cl::ImageGL imgOut(theContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texOut);
     std::vector < cl::Memory > images;
@@ -197,6 +198,7 @@ void procOCL_I2I(int texIn, int texOut, int w, int h)
     theQueue.enqueueReleaseGLObjects(&images);
     theQueue.finish();
     LOGD("enqueueReleaseGLObjects() costs %d ms", getTimeInterval(t));
+//![process_pure_opencl]
 }
 
 void procOCL_OCV(int texIn, int texOut, int w, int h)
@@ -208,6 +210,7 @@ void procOCL_OCV(int texIn, int texOut, int w, int h)
         return;
     }
 
+//![process_tapi]
     int64_t t = getTimeMs();
     cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, texIn);
     std::vector < cl::Memory > images(1, imgIn);
@@ -239,6 +242,7 @@ void procOCL_OCV(int texIn, int texOut, int w, int h)
     theQueue.enqueueReleaseGLObjects(&images);
     cv::ocl::finish();
     LOGD("uploading results to texture costs %d ms", getTimeInterval(t));
+//![process_tapi]
 }
 #else
 int initCL()
