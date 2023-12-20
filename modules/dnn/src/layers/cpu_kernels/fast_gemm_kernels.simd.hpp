@@ -122,10 +122,10 @@ void fastGemmPackBKernel(const char *B, char *packed_B, int N, int K, int ldb0, 
 void fastGemmKernel(int M, int N, int K,
                     float alpha, const char *A, int lda0, int lda1,
                     const char *B, int ldb0, int ldb1,
-                    float beta, char *C, int ldc, int esz);
+                    float beta, char *C, int ldc, int esz, bool multi_thread);
 void fastGemmKernel(int M, int N, int K,
                     float alpha, const char *A, int lda0, int lda1,
-                    const char *packed_B, float beta, char *C, int ldc, int esz);
+                    const char *packed_B, float beta, char *C, int ldc, int esz, bool multi_thread);
 
 void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
                          int M, int N, int K, float alpha, const char *A, int lda0, int lda1,
@@ -568,7 +568,7 @@ void fastGemmPackBKernel(const char *B, char *packed_B, int N, int K, int ldb0, 
 void fastGemmKernel(int M, int N, int K,
                     float alpha, const char *A, int lda0, int lda1,
                     const char *B, int ldb0, int ldb1,
-                    float beta, char *C, int ldc, int esz) {
+                    float beta, char *C, int ldc, int esz, bool multi_thread) {
     int GEMM_MC = FAST_GEMM_F32_MC,
         GEMM_NC = FAST_GEMM_F32_NC,
         GEMM_MR = FAST_GEMM_F32_MR,
@@ -646,15 +646,19 @@ void fastGemmKernel(int M, int N, int K,
         }
     };
 
-    int total = total_tiles;
-    int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
-    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
-    parallel_for_(Range(0, total), fn, nstripes);
+    if (multi_thread) {
+        int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
+        double nstripes = (size_t)total_tiles * cost_per_thread * (1 / 1024.0);
+        parallel_for_(Range(0, total_tiles), fn, nstripes);
+    } else {
+        fn(Range(0, total_tiles));
+    }
+
 }
 
 void fastGemmKernel(int M, int N, int K,
                     float alpha, const char *A, int lda0, int lda1,
-                    const char *packed_B, float beta, char *C, int ldc, int esz) {
+                    const char *packed_B, float beta, char *C, int ldc, int esz, bool multi_thread) {
     int GEMM_MC = FAST_GEMM_F32_MC,
         GEMM_NC = FAST_GEMM_F32_NC,
         GEMM_MR = FAST_GEMM_F32_MR,
@@ -722,10 +726,13 @@ void fastGemmKernel(int M, int N, int K,
         }
     };
 
-    int total = total_tiles;
-    int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
-    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
-    parallel_for_(Range(0, total), fn, nstripes);
+    if (multi_thread) {
+        int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
+        double nstripes = (size_t)total_tiles * cost_per_thread * (1 / 1024.0);
+        parallel_for_(Range(0, total_tiles), fn, nstripes);
+    } else {
+        fn(Range(0, total_tiles));
+    }
 }
 
 void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,

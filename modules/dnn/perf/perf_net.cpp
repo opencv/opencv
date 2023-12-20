@@ -93,7 +93,6 @@ public:
     }
 };
 
-
 PERF_TEST_P_(DNNTestNetwork, AlexNet)
 {
     processNet("dnn/bvlc_alexnet.caffemodel", "dnn/bvlc_alexnet.prototxt",
@@ -391,16 +390,15 @@ PERF_TEST_P_(DNNTestNetwork, CRNN) {
     processNet("", "dnn/text_recognition_CRNN_EN_2021sep.onnx", "", inp);
 }
 
-PERF_TEST_P_(DNNTestNetwork, ViTTrack) {
+PERF_TEST_P_(DNNTestNetwork, VitTrack) {
     Mat inp1(cv::Size(128, 128), CV_32FC3);
     Mat inp2(cv::Size(256, 256), CV_32FC3);
     randu(inp1, 0.0f, 1.0f);
     randu(inp2, 0.0f, 1.0f);
     inp1 = blobFromImage(inp1, 1.0, Size(), Scalar(), false);
     inp2 = blobFromImage(inp2, 1.0, Size(), Scalar(), false);
-    processNet("", "dnn/onnx/models/vitTracker.onnx", "",  {std::make_tuple(inp1, "template"), std::make_tuple(inp2, "search")});
+    processNet("", "dnn/onnx/models/object_tracking_vittrack_2023sep.onnx", "",  {std::make_tuple(inp1, "template"), std::make_tuple(inp2, "search")});
 }
-
 
 PERF_TEST_P_(DNNTestNetwork, EfficientDet_int8)
 {
@@ -411,6 +409,10 @@ PERF_TEST_P_(DNNTestNetwork, EfficientDet_int8)
     Mat inp = imread(findDataFile("dnn/dog416.png"));
     inp = blobFromImage(inp, 1.0 / 255.0, Size(320, 320), Scalar(), true);
     processNet("", "dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, VIT_B_32) {
+    processNet("", "dnn/onnx/models/vit_b_32.onnx", "", cv::Size(224, 224));
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());
