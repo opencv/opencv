@@ -130,4 +130,13 @@ TEST_F(Test_Graph_Simplifier, MishSubgraph) {
     test("mish", "Mish");
 }
 
+TEST_F(Test_Graph_Simplifier, AttentionSubgraph) {
+    /* Test for 2 subgraphs
+        - AttentionSubgraph
+        - AttentionSingleHeadSubgraph
+    */
+    test("attention", "Attention");
+    test("attention_single_head", "Attention");
+}
+
 }}

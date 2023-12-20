@@ -1178,6 +1178,11 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<InstanceNormLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS AttentionLayer : public Layer {
+     public:
+        static Ptr<AttentionLayer> create(const LayerParams &params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END

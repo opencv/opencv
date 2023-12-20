@@ -2949,6 +2949,63 @@ TEST_P(Test_ONNX_layers, Expand_shape_model4) {
     testONNXModels("test_expand_shape_model4", pb, 0, 0, false, true, 1);
 }
 
+TEST_P(Test_ONNX_layers, Attention) {
+    testONNXModels("attention");
+}
+TEST_P(Test_ONNX_layers, AttentionSingleHead) {
+    testONNXModels("attention_single_head");
+}
+
+TEST_P(Test_ONNX_nets, ViT_B_32) {
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_LONG);
+
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // does not pass test for now
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    }
+
+    const std::string model_path = _tf("models/vit_b_32.onnx", false);
+
+    auto net = readNet(model_path);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    auto image = imread(_tf("../googlenet_0.png"));
+    auto blob = blobFromImage(image, 1.f, Size(224, 224));
+    auto ref = blobFromNPY(_tf("data/output_vit_b_32.npy"));
+    checkBackend(&blob, &ref);
+
+    net.setInput(blob);
+    auto out = net.forward();
+
+    normAssert(ref, out, "ViTB_32", default_l1, default_lInf);
+}
+
+TEST_P(Test_ONNX_nets, VitTrack) {
+    auto image = imread(_tf("../dog_orig_size.png"));
+    auto input0 = blobFromImage(image, 1.f, Size(128, 128));
+    auto input1 = blobFromImage(image, 1.f, Size(256, 256));
+
+    auto net = readNet(_tf("models/object_tracking_vittrack_2023sep.onnx", false));
+    net.setInput(input0, "template");
+    net.setInput(input1, "search");
+
+    std::vector<std::string> output_names{"output1", "output2", "output3"};
+    std::vector<Mat> outputs;
+    net.forward(outputs, output_names);
+
+    auto ref_output1 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_0.npy"));
+    auto ref_output2 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_1.npy"));
+    auto ref_output3 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_2.npy"));
+
+    normAssert(ref_output1, outputs[0], "VitTrack output1");
+    normAssert(ref_output2, outputs[1], "VitTrack output2");
+    normAssert(ref_output3, outputs[2], "VitTrack output3");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

@@ -20,6 +20,32 @@
 
 namespace cv { namespace dnn {
 
+size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt) {
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        return static_cast<size_t>(opt_NEON::fastGemmPackBSize(N, K));
+    } else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2) {
+        return static_cast<size_t>(opt_AVX2::fastGemmPackBSize(N, K));
+    } else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx) {
+        return static_cast<size_t>(opt_AVX::fastGemmPackBSize(N, K));
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        return static_cast<size_t>(opt_LASX::fastGemmPackBSize(N, K));
+    } else
+#endif
+    {
+        return static_cast<size_t>(cpu_baseline::fastGemmPackBSize(N, K));
+    }
+}
+
 void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt) {
     CV_CheckTypeEQ(B.type(), CV_32F, "fastGemmPackB: only float32 is supported for now");
 
@@ -94,10 +120,45 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
     }
 }
 
+void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt) {
+    size_t ldb0 = ldb, ldb1 = 1;
+    if (trans) {
+        std::swap(K, N);
+        std::swap(ldb0, ldb1);
+    }
+
+    const auto &b = (const char *)B;
+    auto *packed_b = (char *)packed_B;
+
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        opt_NEON::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
+    } else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2) {
+        opt_AVX2::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
+    } else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx) {
+        opt_AVX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        opt_LASX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
+    } else
+#endif
+    {
+        cpu_baseline::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
+    }
+}
+
 static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
                            const char *a_, int lda0, int lda1,
                            const char *b_, int ldb,
-                           char *c_, int ldc) {
+                           char *c_, int ldc, bool multi_thread) {
     const float* a = (const float*)a_;
 
     auto fn = [&](const Range &r) {
@@ -116,16 +177,24 @@ static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
         }
     };
 
-    int total = M; // outer loops
-    int cost_per_thread = static_cast<int>(K * N); // inner loops
-    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
-    parallel_for_(Range(0, total), fn, nstripes);
+    if (multi_thread) {
+        int total = M; // outer loops
+        int cost_per_thread = static_cast<int>(K * N); // inner loops
+        double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
+        parallel_for_(Range(0, total), fn, nstripes);
+    } else {
+        fn(Range(0, M));
+    }
 }
 
 void fastGemm(bool trans_a, int M, int N, int K,
               float alpha, const float *A, int lda,
               const float *packed_B, float beta,
               float *C, int ldc, FastGemmOpt &opt) {
+    const char *a = (const char *)A;
+    const char *packed_b = (const char *)packed_B;
+    char *c = (char *)C;
+
     int lda0 = lda, lda1 = 1;
     if (trans_a) {
         std::swap(lda0, lda1);
@@ -133,26 +202,26 @@ void fastGemm(bool trans_a, int M, int N, int K,
 
 #if CV_TRY_NEON
     if (opt.use_neon) {
-        opt_NEON::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        opt_NEON::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
-        opt_AVX2::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        opt_AVX2::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_AVX
     if (opt.use_avx) {
-        opt_AVX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        opt_AVX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_LASX
     if (opt.use_lasx) {
-        opt_LASX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        opt_LASX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
     {
-        cpu_baseline::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        cpu_baseline::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
     }
 }
 
@@ -175,36 +244,41 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     }
 
     if (!trans_b && ldb1 == 1 && (M <= 4 || (uint64_t)M * N * K <= 10000)) {
-        return fast_gemm_thin(alpha, beta, M, N, K, a, lda0, lda1, b, ldb0, c, ldc);
+        return fast_gemm_thin(alpha, beta, M, N, K, a, lda0, lda1, b, ldb0, c, ldc, opt.multi_thread);
     }
 
 #if CV_TRY_NEON
     if (opt.use_neon) {
-        opt_NEON::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
-                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+        opt_NEON::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                 b, ldb0, ldb1, beta,
+                                 c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
-        opt_AVX2::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
-                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+        opt_AVX2::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                 b, ldb0, ldb1, beta,
+                                 c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_AVX
     if (opt.use_avx) {
-        opt_AVX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
-                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+        opt_AVX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                 b, ldb0, ldb1, beta,
+                                 c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
 #if CV_TRY_LASX
     if (opt.use_lasx) {
-        opt_LASX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
-                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+        opt_LASX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                 b, ldb0, ldb1, beta,
+                                 c, ldc, sizeof(float), opt.multi_thread);
     } else
 #endif
     {
-        cpu_baseline::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
-                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+        cpu_baseline::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
+                                     b, ldb0, ldb1, beta,
+                                     c, ldc, sizeof(float), opt.multi_thread);
     }
 }
 
