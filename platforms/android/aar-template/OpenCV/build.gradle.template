@@ -59,6 +59,7 @@ android {
     publishing {
         singleVariant('release') {
             withSourcesJar()
+            withJavadocJar()
         }
     }
 }
@@ -69,11 +70,10 @@ publishing {
             groupId = 'org.opencv'
             artifactId = '${PACKAGE_NAME}'
             version = '${OPENCV_VERSION}'
-            artifact("opencv-release.aar")
 
-//            afterEvaluate {
-//                from components.release
-//            }
+            afterEvaluate {
+                from components.release
+            }
         }
     }
     repositories {
