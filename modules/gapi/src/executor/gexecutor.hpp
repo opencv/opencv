@@ -56,22 +56,7 @@ public:
 
 namespace wip {
 
-struct Task {
-    void operator()();
-
-    std::vector<RcDesc> in_objects;
-    std::vector<RcDesc> out_objects;
-    std::shared_ptr<GIslandExecutable> isl_exec;
-    Mag& res;
-    std::mutex &m;
-    cv::gapi::own::ThreadPool &tp;
-
-    uint32_t num_deps;
-    uint32_t ready_deps;
-    std::unordered_set<Task*> dependents;
-};
-
-
+class Task;
 class GExecutor final: public GAbstractExecutor
 {
 protected:
@@ -88,10 +73,14 @@ protected:
 
     Mag                       m_res;
     std::vector<DataDesc>     m_slots;
+
     cv::gapi::own::ThreadPool m_tp{4u};
     std::mutex                m_mutex;
 
-    std::unordered_map<ade::NodeHandle, Task, ade::HandleHasher<ade::Node>> m_tasks;
+    std::vector<std::shared_ptr<Task>> m_initial_tasks;
+    std::unordered_map< ade::NodeHandle
+                      , std::shared_ptr<Task>
+                      , ade::HandleHasher<ade::Node>> m_tasks;
 public:
     class Input;
     class Output;

@@ -6,6 +6,8 @@
 
 #include "thread_pool.hpp"
 
+#include <iostream>
+
 void cv::gapi::own::WaitGroup::add() {
     task_counter.fetch_add(1u);
 }
@@ -35,7 +37,14 @@ void cv::gapi::own::ThreadPool::start() {
     }
 }
 
+static thread_local cv::gapi::own::ThreadPool* current;
+cv::gapi::own::ThreadPool*
+cv::gapi::own::ThreadPool::get() {
+    return current;
+}
+
 void cv::gapi::own::ThreadPool::worker() {
+    current = this;
     while (true) {
         cv::gapi::own::ThreadPool::Task task;
         m_queue.pop(task);

@@ -45,6 +45,9 @@ public:
     explicit ThreadPool(const uint32_t num_workers);
     using Task = std::function<void()>;
 
+    // NB: To access thread pool from the task
+    static ThreadPool* get();
+
     void start();
     void schedule(Task task);
     void wait();

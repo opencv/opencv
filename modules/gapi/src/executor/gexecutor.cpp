@@ -257,6 +257,7 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::N
 class cv::gimpl::GExecutor::Input final: public cv::gimpl::GIslandExecutable::IInput
 {
     cv::gimpl::Mag &mag;
+
     virtual StreamMsg get() override
     {
         cv::GRunArgs res;
@@ -461,6 +462,7 @@ void cv::gimpl::GExecutor::prepareForNewStream()
 //////////////////////////////////////////////////////////////// cv::gimpl::wip::GExecutor
 
 
+
 class cv::gimpl::wip::GExecutor::Input final: public cv::gimpl::GIslandExecutable::IInput
 {
     cv::gimpl::Mag &mag;
@@ -578,18 +580,66 @@ void cv::gimpl::wip::GExecutor::initResource(const ade::NodeHandle &nh, const ad
     }
 }
 
-void cv::gimpl::wip::Task::operator()() {
-    cv::gimpl::wip::GExecutor::Input i{res, in_objects};
-    cv::gimpl::wip::GExecutor::Output o{res, out_objects};
-    isl_exec->run(i, o);
-    // NB: Check if execution finished without exception.
-    o.verify();
+class cv::gimpl::wip::Task {
+public:
+    Task(std::vector<RcDesc>                            &&in_objects,
+               std::vector<RcDesc>                      &&out_objects,
+               std::shared_ptr<GIslandExecutable>       isl_exec,
+               Mag                                      &res,
+               std::mutex                               &m,
+               std::vector<std::shared_ptr<Task>>       &&deps);
 
-    std::lock_guard<std::mutex> lk(m);
-    for (Task* dep : dependents) {
-        dep->ready_deps++;
-        if (dep->ready_deps == dep->num_deps) {
-            tp.schedule(*dep);
+    void run();
+    void reset() { m_ready_deps = 0u; };
+
+    std::shared_ptr<GIslandExecutable> getExec() { return m_isl_exec; }
+
+private:
+    std::vector<RcDesc> m_in_objs;
+    std::vector<RcDesc> m_out_objs;
+    std::shared_ptr<GIslandExecutable> m_isl_exec;
+    Mag& m_res;
+    std::mutex &m_mutex;
+
+    const uint32_t m_num_deps;
+    uint32_t m_ready_deps = 0u;
+    std::vector<Task*> m_dependents;
+};
+
+cv::gimpl::wip::Task::Task(std::vector<RcDesc>                      &&in_objects,
+                                       std::vector<RcDesc>                      &&out_objects,
+                                       std::shared_ptr<GIslandExecutable>       isl_exec,
+                                       Mag                                      &res,
+                                       std::mutex                               &m,
+                                       std::vector<std::shared_ptr<Task>> &&deps)
+    : m_in_objs(std::move(in_objects)),
+      m_out_objs(std::move(out_objects)),
+      m_isl_exec(isl_exec),
+      m_res(res),
+      m_mutex(m),
+      m_num_deps(deps.size()) {
+    for (auto dep : deps) {
+        dep->m_dependents.push_back(this);
+    }
+}
+
+void cv::gimpl::wip::Task::run() {
+    cv::gimpl::wip::GExecutor::Input  i{m_res, m_in_objs};
+    cv::gimpl::wip::GExecutor::Output o{m_res, m_out_objs};
+
+    m_isl_exec->run(i, o);
+    // NB: Check if execution finished without exception.
+    try {
+        o.verify();
+    } catch (...) {
+        // FIXME: Can't throw exception from there...
+    }
+
+    std::lock_guard<std::mutex> lk(m_mutex);
+    for (auto task : m_dependents) {
+        task->m_ready_deps++;
+        if (task->m_ready_deps == task->m_num_deps) {
+            cv::gapi::own::ThreadPool::get()->schedule([task](){task->run();});
         }
     }
 }
@@ -621,25 +671,25 @@ cv::gimpl::wip::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
                 for (auto in_slot_nh  : nh->inNodes())  xtract(in_slot_nh,  input_rcs);
                 for (auto out_slot_nh : nh->outNodes()) xtract(out_slot_nh, output_rcs);
 
-                std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>> deps;
+                std::unordered_set<std::shared_ptr<Task>> deps;
                 for (auto slot_nh : nh->inNodes()) {
                     for (auto island_nh : slot_nh->inNodes()) {
                         GAPI_Assert(m_gim.metadata(island_nh).get<NodeKind>().k == NodeKind::ISLAND);
-                        deps.emplace(island_nh);
+                        deps.emplace(m_tasks.at(island_nh));
                     }
                 }
 
-                auto& task = m_tasks.emplace(nh, Task{  std::move(input_rcs)
-                                                      , std::move(output_rcs)
-                                                      , m_gim.metadata(nh).get<IslandExec>().object
-                                                      , m_res
-                                                      , m_mutex
-                                                      , m_tp
-                                                      , static_cast<uint32_t>(deps.size())
-                                                      , 0u
-                                                      , {} }).first->second;
-                for (auto dep : deps) {
-                    m_tasks.at(dep).dependents.emplace(&task);
+                auto task = std::make_shared<Task>(
+                        std::move(input_rcs),
+                        std::move(output_rcs),
+                        m_gim.metadata(nh).get<IslandExec>().object,
+                        m_res,
+                        m_mutex,
+                        std::vector<std::shared_ptr<Task>>{deps.begin(), deps.end()});
+
+                m_tasks.emplace(nh, task);
+                if (deps.empty()) {
+                    m_initial_tasks.push_back(task);
                 }
             }
             break;
@@ -662,6 +712,7 @@ cv::gimpl::wip::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
 
     // (4)
     prepareForNewStream();
+    m_tp.start();
 }
 
 void cv::gimpl::wip::GExecutor::run(cv::gimpl::GRuntimeArgs &&args) {
@@ -752,21 +803,13 @@ void cv::gimpl::wip::GExecutor::run(cv::gimpl::GRuntimeArgs &&args) {
         magazine::resetInternalData(m_res, data);
     }
 
-    std::vector<Task*> initial_tasks;
-    for (auto& p : m_tasks) {
-        auto& task = p.second;
-        task.ready_deps = 0u;
-        if (task.num_deps == 0u) {
-            initial_tasks.push_back(&task);
-        }
+    // NB: Reset completion state for tasks and schedule them
+    for (auto& it : m_tasks) { it.second->reset(); }
+    for (auto task : m_initial_tasks) {
+        m_tp.schedule([task](){ task->run(); });
     }
-    for (auto* task : initial_tasks) {
-        m_tp.schedule(*task);
-    }
-
-    m_tp.start();
-    // FIXME: It must be m_tp.wait() !!!!
-    m_tp.stop();
+    // NB: Wait for the completion of all tasks
+    m_tp.wait();
 
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
                                   ade::util::toRange(args.outObjs)))
@@ -778,8 +821,8 @@ void cv::gimpl::wip::GExecutor::run(cv::gimpl::GRuntimeArgs &&args) {
 bool cv::gimpl::wip::GExecutor::canReshape() const {
     // FIXME: Introduce proper reshaping support on GExecutor level
     // for all cases!
-    for (const auto& p : m_tasks) {
-        if (!p.second.isl_exec->canReshape()) {
+    for (auto it : m_tasks) {
+        if (it.second->getExec()->canReshape()) {
             return false;
         }
     }
@@ -799,14 +842,14 @@ void cv::gimpl::wip::GExecutor::reshape(const GMetaArgs& inMetas, const GCompile
         initResource(slot.slot_nh, slot.data_nh);
     }
 
-    for (const auto& p : m_tasks) {
-        p.second.isl_exec->reshape(g, args);
+    for (auto it : m_tasks) {
+        it.second->getExec()->reshape(g, args);
     }
 }
 
 void cv::gimpl::wip::GExecutor::prepareForNewStream() {
-    for (auto &p : m_tasks)
+    for (auto it : m_tasks)
     {
-        p.second.isl_exec->handleNewStream();
+        it.second->getExec()->handleNewStream();
     }
 }
