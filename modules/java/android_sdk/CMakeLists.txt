@@ -123,7 +123,7 @@ ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-24/java" "${java_src_dir}")
 
 # copy boilerplate
-set(__base_dir "${CMAKE_CURRENT_SOURCE_DIR}/android_gradle_lib/")
+set(__base_dir "${CMAKE_CURRENT_SOURCE_DIR}/")
 file(GLOB_RECURSE seed_project_files_rel RELATIVE "${__base_dir}/" "${__base_dir}/*")
 list(REMOVE_ITEM seed_project_files_rel "${ANDROID_MANIFEST_FILE}")
 foreach(file ${seed_project_files_rel})
