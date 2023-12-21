@@ -2959,12 +2959,6 @@ TEST_P(Test_ONNX_layers, AttentionSingleHead) {
 TEST_P(Test_ONNX_nets, ViT_B_32) {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_LONG);
 
-    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
-    {
-        // does not pass test for now
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
-    }
-
     const std::string model_path = _tf("models/vit_b_32.onnx", false);
 
     auto net = readNet(model_path);
@@ -2981,7 +2975,20 @@ TEST_P(Test_ONNX_nets, ViT_B_32) {
     net.setInput(blob);
     auto out = net.forward();
 
-    normAssert(ref, out, "ViTB_32", default_l1, default_lInf);
+    double l1 = default_l1;
+    double lInf = default_lInf;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.01;
+        lInf = 0.05;
+    }
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.008;
+        lInf = 0.04;
+    }
+
+    normAssert(ref, out, "ViTB_32", l1, lInf);
 }
 
 TEST_P(Test_ONNX_nets, VitTrack) {
