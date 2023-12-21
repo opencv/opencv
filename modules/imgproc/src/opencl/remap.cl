@@ -53,7 +53,7 @@
 
 #define noconvert
 
-#if cn != 3
+#if CN != 3
 #define loadpix(addr)  *(__global const T*)(addr)
 #define storepix(val, addr)  *(__global T*)(addr) = val
 #define TSIZE ((int)sizeof(T))
@@ -73,7 +73,7 @@ enum
 };
 
 #ifdef INTER_NEAREST
-#define convertToWT
+#define CONVERT_TO_WT
 #endif
 
 #ifdef BORDER_CONSTANT
@@ -82,7 +82,7 @@ enum
 #define EXTRAPOLATE(v2, v) \
     { \
         v2 = max(min(v2, (int2)(src_cols - 1, src_rows - 1)), (int2)(0)); \
-        v = convertToWT(loadpix((__global const T*)(srcptr + mad24(v2.y, src_step, v2.x * TSIZE + src_offset)))); \
+        v = CONVERT_TO_WT(loadpix((__global const T*)(srcptr + mad24(v2.y, src_step, v2.x * TSIZE + src_offset)))); \
     }
 #elif defined BORDER_WRAP
 #define EXTRAPOLATE(v2, v) \
@@ -96,7 +96,7 @@ enum
             v2.y -= ((v2.y - src_rows + 1) / src_rows) * src_rows; \
         if( v2.y >= src_rows ) \
             v2.y %= src_rows; \
-        v = convertToWT(loadpix((__global const T*)(srcptr + mad24(v2.y, src_step, v2.x * TSIZE + src_offset)))); \
+        v = CONVERT_TO_WT(loadpix((__global const T*)(srcptr + mad24(v2.y, src_step, v2.x * TSIZE + src_offset)))); \
     }
 #elif defined(BORDER_REFLECT) || defined(BORDER_REFLECT_101)
 #ifdef BORDER_REFLECT
@@ -130,7 +130,7 @@ enum
                     v2.y = src_rows - 1 - (v2.y - src_rows) - delta; \
             } \
             while (v2.y >= src_rows || v2.y < 0); \
-        v = convertToWT(loadpix((__global const T*)(srcptr + mad24(v2.y, src_step, v2.x * TSIZE + src_offset)))); \
+        v = CONVERT_TO_WT(loadpix((__global const T*)(srcptr + mad24(v2.y, src_step, v2.x * TSIZE + src_offset)))); \
     }
 #else
 #error No extrapolation method
@@ -147,7 +147,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                             ST nVal)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * ROWS_PER_WI;
 
     if (x < dst_cols)
     {
@@ -158,7 +158,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
         int dst_index = mad24(y, dst_step, mad24(x, TSIZE, dst_offset));
 
         #pragma unroll
-        for (int i = 0; i < rowsPerWI; ++i, ++y,
+        for (int i = 0; i < ROWS_PER_WI; ++i, ++y,
             map1_index += map1_step, map2_index += map2_step, dst_index += dst_step)
             if (y < dst_rows)
             {
@@ -193,7 +193,7 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
                           ST nVal)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * ROWS_PER_WI;
 
     if (x < dst_cols)
     {
@@ -202,7 +202,7 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
         int map_index = mad24(y, map_step, mad24(x, (int)sizeof(float2), map_offset));
 
         #pragma unroll
-        for (int i = 0; i < rowsPerWI; ++i, ++y,
+        for (int i = 0; i < ROWS_PER_WI; ++i, ++y,
             map_index += map_step, dst_index += dst_step)
             if (y < dst_rows)
             {
@@ -233,7 +233,7 @@ __kernel void remap_16SC2(__global const uchar * srcptr, int src_step, int src_o
                           ST nVal)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * ROWS_PER_WI;
 
     if (x < dst_cols)
     {
@@ -242,7 +242,7 @@ __kernel void remap_16SC2(__global const uchar * srcptr, int src_step, int src_o
         int map_index = mad24(y, map_step, mad24(x, (int)sizeof(short2), map_offset));
 
         #pragma unroll
-        for (int i = 0; i < rowsPerWI; ++i, ++y,
+        for (int i = 0; i < ROWS_PER_WI; ++i, ++y,
             map_index += map_step, dst_index += dst_step)
             if (y < dst_rows)
             {
@@ -274,7 +274,7 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                                 ST nVal)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * ROWS_PER_WI;
 
     if (x < dst_cols)
     {
@@ -284,7 +284,7 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
         int map2_index = mad24(y, map2_step, mad24(x, (int)sizeof(ushort), map2_offset));
 
         #pragma unroll
-        for (int i = 0; i < rowsPerWI; ++i, ++y,
+        for (int i = 0; i < ROWS_PER_WI; ++i, ++y,
             map1_index += map1_step, map2_index += map2_step, dst_index += dst_step)
             if (y < dst_rows)
             {
@@ -330,17 +330,17 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                                 ST nVal)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * ROWS_PER_WI;
 
     if (x < dst_cols)
     {
-        WT scalar = convertToWT(convertScalar(nVal));
+        WT scalar = CONVERT_TO_WT(convertScalar(nVal));
         int dst_index = mad24(y, dst_step, mad24(x, TSIZE, dst_offset));
         int map1_index = mad24(y, map1_step, mad24(x, (int)sizeof(short2), map1_offset));
         int map2_index = mad24(y, map2_step, mad24(x, (int)sizeof(ushort), map2_offset));
 
         #pragma unroll
-        for (int i = 0; i < rowsPerWI; ++i, ++y,
+        for (int i = 0; i < ROWS_PER_WI; ++i, ++y,
             map1_index += map1_step, map2_index += map2_step, dst_index += dst_step)
             if (y < dst_rows)
             {
@@ -359,22 +359,22 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                 WT a = scalar, b = scalar, c = scalar, d = scalar;
 
                 if (!NEED_EXTRAPOLATION(map_dataA.x, map_dataA.y))
-                    a = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataA.y, src_step, map_dataA.x * TSIZE + src_offset))));
+                    a = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataA.y, src_step, map_dataA.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataA, a);
 
                 if (!NEED_EXTRAPOLATION(map_dataB.x, map_dataB.y))
-                    b = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataB.y, src_step, map_dataB.x * TSIZE + src_offset))));
+                    b = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataB.y, src_step, map_dataB.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataB, b);
 
                 if (!NEED_EXTRAPOLATION(map_dataC.x, map_dataC.y))
-                    c = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataC.y, src_step, map_dataC.x * TSIZE + src_offset))));
+                    c = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataC.y, src_step, map_dataC.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataC, c);
 
                 if (!NEED_EXTRAPOLATION(map_dataD.x, map_dataD.y))
-                    d = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataD.y, src_step, map_dataD.x * TSIZE + src_offset))));
+                    d = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataD.y, src_step, map_dataD.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataD, d);
 
@@ -382,7 +382,7 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                               b * (u.x)     * (1 - u.y) +
                               c * (1 - u.x) * (u.y) +
                               d * (u.x)     * (u.y);
-                storepix(convertToT(dst_data), dst);
+                storepix(CONVERT_TO_T(dst_data), dst);
             }
     }
 }
@@ -394,17 +394,17 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                             ST nVal)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * ROWS_PER_WI;
 
     if (x < dst_cols)
     {
-        WT scalar = convertToWT(convertScalar(nVal));
+        WT scalar = CONVERT_TO_WT(convertScalar(nVal));
         int dst_index = mad24(y, dst_step, mad24(x, TSIZE, dst_offset));
         int map1_index = mad24(y, map1_step, mad24(x, (int)sizeof(float), map1_offset));
         int map2_index = mad24(y, map2_step, mad24(x, (int)sizeof(float), map2_offset));
 
         #pragma unroll
-        for (int i = 0; i < rowsPerWI; ++i, ++y,
+        for (int i = 0; i < ROWS_PER_WI; ++i, ++y,
             map1_index += map1_step, map2_index += map2_step, dst_index += dst_step)
             if (y < dst_rows)
             {
@@ -431,13 +431,13 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                         xsum = (WT)(0);
                         if (sx >= 0 && sx + 2 < src_cols)
                         {
-#if depth == 0 && cn == 1
+#if SRC_DEPTH == 0 && CN == 1
                             uchar2 value = vload2(0, srcptr + src_index);
                             xsum = dot(convert_float2(value), (float2)(coeffs_x[0], coeffs_x[1]));
 #else
                             #pragma unroll
                             for (int xp = 0; xp < 2; ++xp)
-                                xsum = fma(convertToWT(loadpix(srcptr + mad24(xp, TSIZE, src_index))), coeffs_x[xp], xsum);
+                                xsum = fma(CONVERT_TO_WT(loadpix(srcptr + mad24(xp, TSIZE, src_index))), coeffs_x[xp], xsum);
 #endif
                         }
                         else
@@ -445,7 +445,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                             #pragma unroll
                             for (int xp = 0; xp < 2; ++xp)
                                 xsum = fma(sx + xp >= 0 && sx + xp < src_cols ?
-                                           convertToWT(loadpix(srcptr + mad24(xp, TSIZE, src_index))) : scalar, coeffs_x[xp], xsum);
+                                           CONVERT_TO_WT(loadpix(srcptr + mad24(xp, TSIZE, src_index))) : scalar, coeffs_x[xp], xsum);
                         }
                         sum = fma(xsum, coeffs_y[yp], sum);
                     }
@@ -453,7 +453,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                         sum = fma(scalar, coeffs_y[yp], sum);
                 }
 
-                storepix(convertToT(sum), dst);
+                storepix(CONVERT_TO_T(sum), dst);
 #else
                 float2 map_data = (float2)(map1[0], map2[0]);
 
@@ -463,27 +463,27 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                 int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y + 1);
 
                 float2 _u = map_data - convert_float2(map_dataA);
-                WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)INTER_TAB_SIZE)) / (WT2)INTER_TAB_SIZE;
-                WT scalar = convertToWT(convertScalar(nVal));
+                WT2 u = CONVERT_TO_WT2(convert_int2_rte(CONVERT_TO_WT2(_u) * (WT2)INTER_TAB_SIZE)) / (WT2)INTER_TAB_SIZE;
+                WT scalar = CONVERT_TO_WT(convertScalar(nVal));
                 WT a = scalar, b = scalar, c = scalar, d = scalar;
 
                 if (!NEED_EXTRAPOLATION(map_dataA.x, map_dataA.y))
-                    a = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataA.y, src_step, map_dataA.x * TSIZE + src_offset))));
+                    a = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataA.y, src_step, map_dataA.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataA, a);
 
                 if (!NEED_EXTRAPOLATION(map_dataB.x, map_dataB.y))
-                    b = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataB.y, src_step, map_dataB.x * TSIZE + src_offset))));
+                    b = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataB.y, src_step, map_dataB.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataB, b);
 
                 if (!NEED_EXTRAPOLATION(map_dataC.x, map_dataC.y))
-                    c = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataC.y, src_step, map_dataC.x * TSIZE + src_offset))));
+                    c = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataC.y, src_step, map_dataC.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataC, c);
 
                 if (!NEED_EXTRAPOLATION(map_dataD.x, map_dataD.y))
-                    d = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataD.y, src_step, map_dataD.x * TSIZE + src_offset))));
+                    d = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataD.y, src_step, map_dataD.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataD, d);
 
@@ -491,7 +491,7 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                               b * (u.x)     * (1 - u.y) +
                               c * (1 - u.x) * (u.y) +
                               d * (u.x)     * (u.y);
-                storepix(convertToT(dst_data), dst);
+                storepix(CONVERT_TO_T(dst_data), dst);
 #endif
             }
     }
@@ -503,16 +503,16 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
                           ST nVal)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1) * rowsPerWI;
+    int y = get_global_id(1) * ROWS_PER_WI;
 
     if (x < dst_cols)
     {
-        WT scalar = convertToWT(convertScalar(nVal));
+        WT scalar = CONVERT_TO_WT(convertScalar(nVal));
         int dst_index = mad24(y, dst_step, mad24(x, TSIZE, dst_offset));
         int map_index = mad24(y, map_step, mad24(x, (int)sizeof(float2), map_offset));
 
         #pragma unroll
-        for (int i = 0; i < rowsPerWI; ++i, ++y,
+        for (int i = 0; i < ROWS_PER_WI; ++i, ++y,
             map_index += map_step, dst_index += dst_step)
             if (y < dst_rows)
             {
@@ -526,26 +526,26 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
                 int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y + 1);
 
                 float2 _u = map_data - convert_float2(map_dataA);
-                WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)INTER_TAB_SIZE)) / (WT2)INTER_TAB_SIZE;
+                WT2 u = CONVERT_TO_WT2(convert_int2_rte(CONVERT_TO_WT2(_u) * (WT2)INTER_TAB_SIZE)) / (WT2)INTER_TAB_SIZE;
                 WT a = scalar, b = scalar, c = scalar, d = scalar;
 
                 if (!NEED_EXTRAPOLATION(map_dataA.x, map_dataA.y))
-                    a = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataA.y, src_step, map_dataA.x * TSIZE + src_offset))));
+                    a = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataA.y, src_step, map_dataA.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataA, a);
 
                 if (!NEED_EXTRAPOLATION(map_dataB.x, map_dataB.y))
-                    b = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataB.y, src_step, map_dataB.x * TSIZE + src_offset))));
+                    b = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataB.y, src_step, map_dataB.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataB, b);
 
                 if (!NEED_EXTRAPOLATION(map_dataC.x, map_dataC.y))
-                    c = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataC.y, src_step, map_dataC.x * TSIZE + src_offset))));
+                    c = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataC.y, src_step, map_dataC.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataC, c);
 
                 if (!NEED_EXTRAPOLATION(map_dataD.x, map_dataD.y))
-                    d = convertToWT(loadpix((__global const T *)(srcptr + mad24(map_dataD.y, src_step, map_dataD.x * TSIZE + src_offset))));
+                    d = CONVERT_TO_WT(loadpix((__global const T *)(srcptr + mad24(map_dataD.y, src_step, map_dataD.x * TSIZE + src_offset))));
                 else
                     EXTRAPOLATE(map_dataD, d);
 
@@ -553,7 +553,7 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
                               b * (u.x)     * (1 - u.y) +
                               c * (1 - u.x) * (u.y) +
                               d * (u.x)     * (u.y);
-                storepix(convertToT(dst_data), dst);
+                storepix(CONVERT_TO_T(dst_data), dst);
             }
     }
 }

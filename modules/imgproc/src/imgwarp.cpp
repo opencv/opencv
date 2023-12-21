@@ -1354,7 +1354,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     static const char * const interMap[] = { "INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_LINEAR", "INTER_LANCZOS" };
     static const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                            "BORDER_REFLECT_101", "BORDER_TRANSPARENT" };
-    String buildOptions = format("-D %s -D %s -D T=%s -D rowsPerWI=%d",
+    String buildOptions = format("-D %s -D %s -D T=%s -D ROWS_PER_WI=%d",
                                  interMap[interpolation], borderMap[borderType],
                                  ocl::typeToStr(type), rowsPerWI);
 
@@ -1363,8 +1363,8 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
         char cvt[3][50];
         int wdepth = std::max(CV_32F, depth);
         buildOptions = buildOptions
-                      + format(" -D WT=%s -D convertToT=%s -D convertToWT=%s"
-                               " -D convertToWT2=%s -D WT2=%s",
+                      + format(" -D WT=%s -D CONVERT_TO_T=%s -D CONVERT_TO_WT=%s"
+                               " -D CONVERT_TO_WT2=%s -D WT2=%s",
                                ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
                                ocl::convertTypeStr(wdepth, depth, cn, cvt[0], sizeof(cvt[0])),
                                ocl::convertTypeStr(depth, wdepth, cn, cvt[1], sizeof(cvt[1])),
@@ -1373,7 +1373,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     }
     int scalarcn = cn == 3 ? 4 : cn;
     int sctype = CV_MAKETYPE(depth, scalarcn);
-    buildOptions += format(" -D T=%s -D T1=%s -D cn=%d -D ST=%s -D depth=%d",
+    buildOptions += format(" -D T=%s -D T1=%s -D CN=%d -D ST=%s -D SRC_DEPTH=%d",
                            ocl::typeToStr(type), ocl::typeToStr(depth),
                            cn, ocl::typeToStr(sctype), depth);
 
@@ -2494,7 +2494,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     String opts;
     if (interpolation == INTER_NEAREST)
     {
-        opts = format("-D INTER_NEAREST -D T=%s%s -D CT=%s -D T1=%s -D ST=%s -D cn=%d -D rowsPerWI=%d",
+        opts = format("-D INTER_NEAREST -D T=%s%s -D CT=%s -D T1=%s -D ST=%s -D CN=%d -D ROWS_PER_WI=%d",
                       ocl::typeToStr(type),
                       doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                       useDouble ? "double" : "float",
@@ -2504,8 +2504,8 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     else
     {
         char cvt[2][50];
-        opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D depth=%d"
-                      " -D convertToWT=%s -D convertToT=%s%s -D CT=%s -D cn=%d -D rowsPerWI=%d",
+        opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D SRC_DEPTH=%d"
+                      " -D CONVERT_TO_WT=%s -D CONVERT_TO_T=%s%s -D CT=%s -D CN=%d -D ROWS_PER_WI=%d",
                       interpolationMap[interpolation], ocl::typeToStr(type),
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
                       ocl::typeToStr(sctype),

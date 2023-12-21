@@ -583,9 +583,9 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
                                            "BORDER_REFLECT_101" };
 
         String opts = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUS=%d%s%s"
-                                 " -D convertToWT=%s -D convertToDT=%s"
-                                 " -D %s -D srcT1=%s -D dstT1=%s -D WT1=%s"
-                                 " -D srcT=%s -D dstT=%s -D WT=%s"
+                                 " -D CONVERT_TO_WT=%s -D CONVERT_TO_DT=%s"
+                                 " -D %s -D SRC_T1=%s -D DST_T1=%s -D WT1=%s"
+                                 " -D SRC_T=%s -D DST_T=%s -D WT=%s"
                                  " -D CN=%d ",
                                  (int)lt2[0], (int)lt2[1], kernelX.cols / 2,
                                  ocl::kernelToStr(kernelX, wdepth, "KERNEL_MATRIX_X").c_str(),
@@ -627,8 +627,8 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     char cvt[2][50];
     ocl::Kernel k("sumConvert", ocl::imgproc::laplacian5_oclsrc,
                   format("-D ONLY_SUM_CONVERT "
-                         "-D srcT=%s -D WT=%s -D dstT=%s -D coeffT=%s -D wdepth=%d "
-                         "-D convertToWT=%s -D convertToDT=%s%s",
+                         "-D SRC_T=%s -D WT=%s -D DST_T=%s -D COEFF_T=%s -D WDEPTH=%d "
+                         "-D CONVERT_TO_WT=%s -D CONVERT_TO_DT=%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),

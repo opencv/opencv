@@ -1643,7 +1643,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     if (kercn % cn != 0)
         kercn = cn;
     int colsPerWI = kercn / cn;
-    String opts = format("%s-D cn=%d -D srcT=%s -D srcT1=%s -D dstT=%s -D kercn=%d -D depth=%d%s -D colsPerWI=%d",
+    String opts = format("%s-D CN=%d -D SRC_T=%s -D SRC_T1=%s -D DST_T=%s -D KERCN=%d -D DEPTH=%d%s -D COLS_PER_WI=%d",
                            haveScalar ? "-D HAVE_SCALAR " : "", cn, ocl::typeToStr(CV_MAKE_TYPE(sdepth, kercn)),
                            ocl::typeToStr(sdepth), ocl::typeToStr(CV_8UC(colsPerWI)), kercn, sdepth,
                            doubleSupport ? " -D DOUBLE_SUPPORT" : "", colsPerWI);
