@@ -1462,6 +1462,16 @@ void OCL4DNNConvSpatial<float>::generate_gemmlike_tuneritems(std::vector< cv::Pt
             return;
     }
 
+    // issue #24734
+    // OpenCL 1.2: https://registry.khronos.org/OpenCL/specs/opencl-1.2.pdf
+    // section 6.1.2 page 200: "Supported values of n are 2, 3, 4, 8, and 16 for all vector data types."
+    // besides of builtin types, kernel code defines extra types up to float15 (see float15 definition)
+    if (kernel_w_ > 16)
+    {
+        CV_LOG_DEBUG(NULL, "DNN/OCL: skip KERNEL_TYPE_GEMM_LIKE with blockMKN=[" << blockM << ", " << blockK << ", " << blockN << "] kernel=" << kernel_w_ << " x " << kernel_h_);
+        return;
+    }
+
     tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_GEMM_LIKE, blockM, blockK, blockN));
 }
 
