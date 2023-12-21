@@ -22,7 +22,7 @@ using namespace cv::dnn::cuda4dnn;
 namespace cv {
 namespace dnn {
 
-// Group Normalization Layer
+// https://github.com/onnx/onnx/blob/main/docs/Operators.md#GroupNormalization
 class GroupNormLayerImpl CV_FINAL : public GroupNormLayer {
 public:
     GroupNormLayerImpl(const LayerParams &params) {
@@ -99,7 +99,7 @@ public:
             return false;
         }
 
-        String base_opts = format(" -DT=float -DT4=float4 -Dconvert_T=convert_float4 -DNUM_GROUPS=%d -DCHANNELS_PER_GROUP=%d", num_groups, channels_per_group);
+        String base_opts = format(" -DT=float -DT4=float4 -Dconvert_T=convert_float4");
 
         // Calculate mean
         UMat one = UMat::ones(norm_size, 1, CV_32F);

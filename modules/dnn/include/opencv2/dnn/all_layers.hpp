@@ -1182,7 +1182,7 @@ CV__DNN_INLINE_NS_BEGIN
      public:
         static Ptr<AttentionLayer> create(const LayerParams &params);
     };
-    
+
     class CV_EXPORTS GroupNormLayer : public Layer {
     public:
         static Ptr<GroupNormLayer> create(const LayerParams &params);
