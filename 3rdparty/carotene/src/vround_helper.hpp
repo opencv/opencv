@@ -51,144 +51,48 @@
  * See https://en.wikipedia.org/wiki/Rounding#Rounding_half_to_even
  */
 
+// See https://github.com/opencv/opencv/pull/24271#issuecomment-1867318007
+#define ROUND_DELTA (12582912.0f)
+
 namespace CAROTENE_NS { namespace internal {
 
 inline uint32x4_t vroundq_u32_f32(const float32x4_t val)
 {
-#if CAROTENE_NEON_ARCH == 8
+#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
     return vcvtnq_u32_f32(val);
-
-#elif CAROTENE_NEON_ARCH == 7
-    static const float32x4_t v0_5_f32 = vdupq_n_f32(0.5);
-    static const uint32x4_t  v1_0_u32 = vdupq_n_u32(1);
-
-    const uint32x4_t  round      = vcvtq_u32_f32( vaddq_f32(val, v0_5_f32 ) );
-    const uint32x4_t  odd        = vandq_u32( round, v1_0_u32 );
-    const float32x4_t diff       = vsubq_f32( vcvtq_f32_u32(round), val );
-    const uint32x4_t  round_down = vandq_u32( odd, vceqq_f32(diff, v0_5_f32 ) );
-    const uint32x4_t  ret        = vsubq_u32( round, round_down );
-
-    return ret;
-
 #else
-    static const float32x4_t v0_5_f32 = vdupq_n_f32(0.5);
-    return vcvtq_u32_f32( vaddq_f32(val, v0_5_f32 ));
-
+    const float32x4_t delta = vdupq_n_f32(ROUND_DELTA);
+    return vcvtq_u32_f32(vsubq_f32(vaddq_f32(val, delta), delta));
 #endif
 }
 
 inline uint32x2_t vround_u32_f32(const float32x2_t val)
 {
-#if CAROTENE_NEON_ARCH == 8
+#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
     return vcvtn_u32_f32(val);
-
-#elif CAROTENE_NEON_ARCH == 7
-    static const float32x2_t v0_5_f32 = vdup_n_f32(0.5);
-    static const uint32x2_t  v1_0_u32 = vdup_n_u32(1);
-
-    const uint32x2_t  round      = vcvt_u32_f32( vadd_f32(val, v0_5_f32 ) );
-    const uint32x2_t  odd        = vand_u32( round, v1_0_u32 );
-    const float32x2_t diff       = vsub_f32( vcvt_f32_u32(round), val );
-    const uint32x2_t  round_down = vand_u32( odd, vceq_f32(diff, v0_5_f32 ) );
-    const uint32x2_t  ret        = vsub_u32( round, round_down );
-
-    return ret;
-
 #else
-    static const float32x2_t v0_5_f32 = vdup_n_f32(0.5);
-    return vcvt_u32_f32( vadd_f32(val, v0_5_f32) );
-
+    const float32x2_t delta = vdup_n_f32(ROUND_DELTA);
+    return vcvt_u32_f32(vsub_f32(vadd_f32(val, delta), delta));
 #endif
 }
 
 inline int32x4_t vroundq_s32_f32(const float32x4_t val)
 {
-#if CAROTENE_NEON_ARCH == 8
+#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
     return vcvtnq_s32_f32(val);
-
-#elif CAROTENE_NEON_ARCH == 7
-    static const float32x4_t v0_0_f32  = vdupq_n_f32(0.0);
-    static const float32x4_t v0_5_f32  = vdupq_n_f32(0.5);
-    static const int32x4_t   v1_0_s32  = vdupq_n_s32(1);
-
-    const int32x4_t val_positive = vreinterpretq_s32_u32( vcgtq_f32( val, v0_0_f32 ) );
-    const int32x4_t ret_signs    = vsubq_s32(
-                                       vandq_s32( v1_0_s32, val_positive ),
-                                       vbicq_s32( v1_0_s32, val_positive ) );
-
-    const float32x4_t val_abs    = vabsq_f32( val );
-    const int32x4_t   round      = vcvtq_s32_f32( vaddq_f32( val_abs, v0_5_f32 ) );
-    const int32x4_t   odd        = vandq_s32( round, v1_0_s32 );
-    const float32x4_t diff       = vsubq_f32( vcvtq_f32_s32(round), val_abs);
-    const int32x4_t   round_down = vandq_s32( odd, vreinterpretq_s32_u32( vceqq_f32( diff,v0_5_f32 ) ) );
-    const int32x4_t   ret_abs    = vsubq_s32( round, round_down );
-
-    const int32x4_t   ret        = vmulq_s32( ret_abs, ret_signs );
-
-    return ret;
-
 #else
-    static const float32x4_t v0_0_f32  = vdupq_n_f32(0.0);
-    static const float32x4_t v0_5_f32  = vdupq_n_f32(0.5);
-    static const int32x4_t   v1_0_s32  = vdupq_n_s32(1);
-
-    const int32x4_t val_positive = vreinterpretq_s32_u32( vcgtq_f32( val, v0_0_f32 ) );
-    const int32x4_t ret_signs    = vsubq_s32(
-                                       vandq_s32( v1_0_s32, val_positive ),
-                                       vbicq_s32( v1_0_s32, val_positive ) );
-
-    const float32x4_t val_abs    = vabsq_f32( val );
-    const int32x4_t   ret_abs    = vcvtq_s32_f32( vaddq_f32( val_abs, v0_5_f32 ) );
-
-    const int32x4_t   ret        = vmulq_s32( ret_abs, ret_signs );
-
-    return ret;
-
+    const float32x4_t delta = vdupq_n_f32(ROUND_DELTA);
+    return vcvtq_s32_f32(vsubq_f32(vaddq_f32(val, delta), delta));
 #endif
 }
 
 inline int32x2_t vround_s32_f32(const float32x2_t val)
 {
-#if CAROTENE_NEON_ARCH == 8
+#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
     return vcvtn_s32_f32(val);
-
-#elif CAROTENE_NEON_ARCH == 7
-    static const float32x2_t v0_0_f32  = vdup_n_f32(0.0);
-    static const float32x2_t v0_5_f32  = vdup_n_f32(0.5);
-    static const int32x2_t   v1_0_s32  = vdup_n_s32(1);
-
-    const int32x2_t val_positive = vreinterpret_s32_u32( vcgt_f32( val, v0_0_f32 ) );
-    const int32x2_t ret_signs    = vsub_s32(
-                                       vand_s32( v1_0_s32, val_positive ),
-                                       vbic_s32( v1_0_s32, val_positive ) );
-
-    const float32x2_t val_abs    = vabs_f32( val );
-    const int32x2_t   round      = vcvt_s32_f32( vadd_f32( val_abs, v0_5_f32 ) );
-    const int32x2_t   odd        = vand_s32( round, v1_0_s32 );
-    const float32x2_t diff       = vsub_f32( vcvt_f32_s32(round), val_abs);
-    const int32x2_t   round_down = vand_s32( odd, vreinterpret_s32_u32( vceq_f32( diff,v0_5_f32 ) ) );
-    const int32x2_t   ret_abs    = vsub_s32( round, round_down );
-
-    const int32x2_t   ret        = vmul_s32( ret_abs, ret_signs );
-
-    return ret;
-
 #else
-    static const float32x2_t v0_0_f32  = vdup_n_f32(0.0);
-    static const float32x2_t v0_5_f32  = vdup_n_f32(0.5);
-    static const int32x2_t   v1_0_s32  = vdup_n_s32(1);
-
-    const int32x2_t val_positive = vreinterpret_s32_u32( vcgt_f32( val, v0_0_f32 ) );
-    const int32x2_t ret_signs    = vsub_s32(
-                                       vand_s32( v1_0_s32, val_positive ),
-                                       vbic_s32( v1_0_s32, val_positive ) );
-
-    const float32x2_t val_abs    = vabs_f32( val );
-    const int32x2_t   ret_abs    = vcvt_s32_f32( vadd_f32( val_abs, v0_5_f32 ) );
-
-    const int32x2_t   ret        = vmul_s32( ret_abs, ret_signs );
-    return ret;
-
+    const float32x2_t delta = vdup_n_f32(ROUND_DELTA);
+    return vcvt_s32_f32(vsub_f32(vadd_f32(val, delta), delta));
 #endif
 }
 
