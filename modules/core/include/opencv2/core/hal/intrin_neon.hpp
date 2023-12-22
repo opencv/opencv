@@ -1969,23 +1969,9 @@ inline v_int32x4 v_round(const v_float32x4& a)
 #else
 inline v_int32x4 v_round(const v_float32x4& a)
 {
-    static const float32x4_t v0_0_f32  = vdupq_n_f32(0.0);
-    static const float32x4_t v0_5_f32  = vdupq_n_f32(0.5);
-    static const int32x4_t   v1_0_s32  = vdupq_n_s32(1);
-
-    const int32x4_t val_positive = vreinterpretq_s32_u32( vcgtq_f32( a.val, v0_0_f32 ) );
-    const int32x4_t ret_signs    = vsubq_s32( vandq_s32( v1_0_s32, val_positive ), vbicq_s32( v1_0_s32, val_positive) );
-
-    const float32x4_t val_abs    = vabsq_f32( a.val );
-    const int32x4_t   round      = vcvtq_s32_f32( vaddq_f32( val_abs, v0_5_f32 ) );
-    const int32x4_t   odd        = vandq_s32( round, v1_0_s32 );
-    const float32x4_t diff       = vsubq_f32( vcvtq_f32_s32(round), val_abs);
-    const int32x4_t   round_down = vandq_s32( odd, vreinterpretq_s32_u32( vceqq_f32( diff,v0_5_f32 ) ) );
-    const int32x4_t   ret_abs    = vsubq_s32( round, round_down );
-
-    const int32x4_t   ret        = vmulq_s32( ret_abs, ret_signs );
-
-    return v_int32x4(ret);
+    // See https://github.com/opencv/opencv/pull/24271#issuecomment-1867318007
+    float32x4_t delta = vdupq_n_f32(12582912.0f);
+    return v_int32x4(vcvtq_s32_f32(vsubq_f32(vaddq_f32(a.val, delta), delta)));
 }
 #endif
 inline v_int32x4 v_floor(const v_float32x4& a)
