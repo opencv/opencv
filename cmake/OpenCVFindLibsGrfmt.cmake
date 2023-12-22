@@ -202,6 +202,7 @@ if(WITH_OPENJPEG)
     endif()
   else()
     set(HAVE_OPENJPEG YES)
+    set(OPENJPEG_VERSION "${OPENJPEG_MAJOR_VERSION}.${OPENJPEG_MINOR_VERSION}.${OPENJPEG_BUILD_VERSION}")
     message(STATUS "Found system OpenJPEG: ${OPENJPEG_LIBRARIES} "
             "(found version \"${OPENJPEG_VERSION}\")")
   endif()
