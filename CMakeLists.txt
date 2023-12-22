@@ -1406,7 +1406,7 @@ if(WITH_SPNG)
     status("    PNG:" "${SPNG_LIBRARY} (ver ${SPNG_VERSION})")
   endif()
 elseif(WITH_PNG OR HAVE_PNG)
-  status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION})" ELSE "build (ver ${PNG_VERSION})")
+  status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION_STRING})" ELSE "build (ver ${PNG_VERSION_STRING})")
 endif()
 
 if(WITH_TIFF OR HAVE_TIFF)
