@@ -642,7 +642,7 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
 
     ImagePaddingMode paddingMode;
     float padValue;
-    float Height, Width;
+    Size2f frameSize;
 
     public:
     YOLODetectionModel_Impl() {
@@ -655,8 +655,8 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
         if (size.empty())
             CV_Error(Error::StsBadSize, "Input size not specified");
 
-        Width = frame.cols();
-        Height = frame.rows();
+        frameSize.width = frame.cols();
+        frameSize.height = frame.rows();
 
         Image2BlobParams param;
         param.scalefactor = scale;
@@ -703,15 +703,15 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
         for (auto & box : boxes){
             if (paddingMode == ImagePaddingMode::DNN_PMODE_NULL){
                 // Scale boxes to original image size
-                box.x *= Width / size.width;
-                box.y *= Height / size.height;
-                box.width *= Width / size.width;
-                box.height *= Height / size.height;
+                box.x *= frameSize.width / size.width;
+                box.y *= frameSize.height / size.height;
+                box.width *= frameSize.width / size.width;
+                box.height *= frameSize.height / size.height;
             } else if (paddingMode == ImagePaddingMode::DNN_PMODE_CROP_CENTER) {
                 // Calculate the resize factor and offset for center cropping
-                resizeFactor = std::min((float)Width / size.width, (float)Height / size.height);
-                offsetX = (Width - size.width * resizeFactor) / 2.0;
-                offsetY = (Height - size.height * resizeFactor) / 2.0;
+                resizeFactor = std::min((float)frameSize.width / size.width, (float)frameSize.height / size.height);
+                offsetX = (frameSize.width - size.width * resizeFactor) / 2.0;
+                offsetY = (frameSize.height - size.height * resizeFactor) / 2.0;
 
                 // Adjust the box coordinates
                 box.x = box.x * resizeFactor + offsetX;
@@ -721,9 +721,9 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
 
             } else if (paddingMode == ImagePaddingMode::DNN_PMODE_LETTERBOX) {
                 // Calculate the resize factor and padding for letterbox
-                resizeFactor = std::min(size.width / (float)Width, size.height / (float)Height);
-                int rh = int(Height * resizeFactor);
-                int rw = int(Width * resizeFactor);
+                resizeFactor = std::min(size.width / (float)frameSize.width, size.height / (float)frameSize.height);
+                int rh = int(frameSize.height * resizeFactor);
+                int rw = int(frameSize.width * resizeFactor);
 
                 int top = (size.height - rh) / 2;
                 int bottom = size.height - top - rh;
@@ -803,7 +803,7 @@ void YOLODetectionModel::postProccess(
         darknet = true;
     }
 
-    if (detections[0].size[1] == 84 and !darknet) {
+    if (!darknet && detections[0].size[1] < detections[0].size[2]) {
         yolov8 = true;  // Set the correct flag based on tensor shape
     }
 
@@ -813,7 +813,9 @@ void YOLODetectionModel::postProccess(
     std::vector<Rect> boxes;
 
     if (yolov8){
-        cv::transposeND(detections[0], {0, 2, 1}, detections[0]);
+        for(auto & detection : detections){
+            cv::transposeND(detection, {0, 2, 1}, detection);
+        }
     }
 
     // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
