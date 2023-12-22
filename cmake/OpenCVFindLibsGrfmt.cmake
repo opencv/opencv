@@ -34,7 +34,7 @@ if(NOT ZLIB_FOUND)
   set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
   set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
 
-  ocv_parse_header2(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h" ZLIB_VERSION)
+  ocv_parse_header_version(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h")
 endif()
 
 # --- libavif (optional) ---
