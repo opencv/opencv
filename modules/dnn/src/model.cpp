@@ -697,51 +697,31 @@ class YOLODetectionModel_Impl : public DetectionModel_Impl
         padValue = padValue_;
     }
 
-    void boxRescale(CV_OUT std::vector<Rect>& boxes){
-        float resizeFactor, offsetX, offsetY;
+    void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
+                            CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
+                            float confThreshold, float nmsThreshold){
 
-        for (auto & box : boxes){
-            if (paddingMode == ImagePaddingMode::DNN_PMODE_NULL){
-                // Scale boxes to original image size
-                box.x *= frameSize.width / size.width;
-                box.y *= frameSize.height / size.height;
-                box.width *= frameSize.width / size.width;
-                box.height *= frameSize.height / size.height;
-            } else if (paddingMode == ImagePaddingMode::DNN_PMODE_CROP_CENTER) {
-                // Calculate the resize factor and offset for center cropping
-                resizeFactor = std::min((float)frameSize.width / size.width, (float)frameSize.height / size.height);
-                offsetX = (frameSize.width - size.width * resizeFactor) / 2.0;
-                offsetY = (frameSize.height - size.height * resizeFactor) / 2.0;
+        std::vector<Mat> detections;
+        processFrame(frame, detections);
 
-                // Adjust the box coordinates
-                box.x = box.x * resizeFactor + offsetX;
-                box.y = box.y * resizeFactor + offsetY;
-                box.width = box.width * resizeFactor + offsetX;
-                box.height = box.height * resizeFactor + offsetY;
+        YOLODetectionModel::postProccess(
+            detections,
+            boxes,
+            confidences,
+            classIds,
+            size,
+            confThreshold,
+            nmsThreshold,
+            getNmsAcrossClasses()
+            );
 
-            } else if (paddingMode == ImagePaddingMode::DNN_PMODE_LETTERBOX) {
-                // Calculate the resize factor and padding for letterbox
-                resizeFactor = std::min(size.width / (float)frameSize.width, size.height / (float)frameSize.height);
-                int rh = int(frameSize.height * resizeFactor);
-                int rw = int(frameSize.width * resizeFactor);
-
-                int top = (size.height - rh) / 2;
-                int bottom = size.height - top - rh;
-                int left = (size.width - rw) / 2;
-                int right = size.width - left - rw;
-
-                box.x = (box.x - left) / resizeFactor;
-                box.y = (box.y - top) / resizeFactor;
-                box.width = (box.width - right) / resizeFactor;
-                box.height = (box.height - bottom)  / resizeFactor;
-            } else {
-                // Handle other cases or throw an error if the padding mode is unsupported
-                CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
-            }
-            // convert from xmin, ymin, xmax, ymax -> xmin, ymin, width, hight
-            box.width = box.width - box.x;
-            box.height = box.height - box.y;
-        }
+            Image2BlobParams paramNet;
+            paramNet.scalefactor = scale;
+            paramNet.size = size;
+            paramNet.mean = mean;
+            paramNet.swapRB = swapRB;
+            paramNet.paddingmode = paddingMode;
+            paramNet.blobRectsToImageRects(boxes, boxes, frameSize);
     }
 };
 
@@ -764,25 +744,9 @@ YOLODetectionModel::YOLODetectionModel()
 
 void YOLODetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                             CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
-                            float confThreshold, float nmsThreshold){
-
-    CV_Assert(impl != nullptr && impl.dynamicCast<YOLODetectionModel_Impl>() != nullptr); // remove once default constructor is removed
-
-    std::vector<Mat> detections;
-    impl.dynamicCast<YOLODetectionModel_Impl>()->processFrame(frame, detections);
-
-    postProccess(
-        detections,
-        boxes,
-        confidences,
-        classIds,
-        impl->size,
-        confThreshold,
-        nmsThreshold,
-        getNmsAcrossClasses()
-        );
-
-    impl.dynamicCast<YOLODetectionModel_Impl>()->boxRescale(boxes);
+                            float confThreshold, float nmsThreshold) {
+    impl.dynamicCast<YOLODetectionModel_Impl>()->detect(frame, classIds,
+                            confidences, boxes, confThreshold, nmsThreshold);
 }
 
 void YOLODetectionModel::postProccess(
@@ -914,6 +878,11 @@ void YOLODetectionModel::postProccess(
                 keep_confidences.push_back(localConfidences[idx]);
             }
         }
+    }
+    // convert boxes to xywh
+    for(auto & box : keep_boxes){
+        box.width = box.width - box.x;
+        box.height = box.height - box.y;
     }
 }
 

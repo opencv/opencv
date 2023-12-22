@@ -976,8 +976,8 @@ TEST_P(Test_Model, YoloDetectionONNX)
 
     std::vector<int> refClassIds = {1, 16, 7};
     std::vector<float> refConfidences = {0.96067f, 0.900769f, 0.854416f};
-    std::vector<Rect2d> refBoxes = {Rect2d(66, 94, 241, 209),
-                                    Rect2d(70, 161, 97, 229),
+    std::vector<Rect2d> refBoxes = {Rect2d(66, 94, 241, 208),
+                                    Rect2d(70, 161, 96, 228),
                                     Rect2d(252, 53, 123, 70),
                                     };
 
