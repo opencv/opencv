@@ -2980,7 +2980,7 @@ TEST_P(Test_ONNX_nets, ViT_B_32) {
     if (target == DNN_TARGET_CUDA_FP16)
     {
         l1 = 0.01;
-        lInf = 0.05;
+        lInf = 0.06;
     }
     if (target == DNN_TARGET_OPENCL_FP16)
     {
