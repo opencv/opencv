@@ -42,7 +42,6 @@
 
 #include "common.hpp"
 #include "vtransform.hpp"
-#include <iostream>
 
 #ifdef CAROTENE_NEON
 
@@ -52,7 +51,7 @@
  */
 
 // See https://github.com/opencv/opencv/pull/24271#issuecomment-1867318007
-#define ROUND_DELTA (12582912.0f)
+#define CAROTENE_ROUND_DELTA (12582912.0f)
 
 namespace CAROTENE_NS { namespace internal {
 
@@ -61,7 +60,7 @@ inline uint32x4_t vroundq_u32_f32(const float32x4_t val)
 #if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
     return vcvtnq_u32_f32(val);
 #else
-    const float32x4_t delta = vdupq_n_f32(ROUND_DELTA);
+    const float32x4_t delta = vdupq_n_f32(CAROTENE_ROUND_DELTA);
     return vcvtq_u32_f32(vsubq_f32(vaddq_f32(val, delta), delta));
 #endif
 }
@@ -71,7 +70,7 @@ inline uint32x2_t vround_u32_f32(const float32x2_t val)
 #if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
     return vcvtn_u32_f32(val);
 #else
-    const float32x2_t delta = vdup_n_f32(ROUND_DELTA);
+    const float32x2_t delta = vdup_n_f32(CAROTENE_ROUND_DELTA);
     return vcvt_u32_f32(vsub_f32(vadd_f32(val, delta), delta));
 #endif
 }
@@ -81,7 +80,7 @@ inline int32x4_t vroundq_s32_f32(const float32x4_t val)
 #if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
     return vcvtnq_s32_f32(val);
 #else
-    const float32x4_t delta = vdupq_n_f32(ROUND_DELTA);
+    const float32x4_t delta = vdupq_n_f32(CAROTENE_ROUND_DELTA);
     return vcvtq_s32_f32(vsubq_f32(vaddq_f32(val, delta), delta));
 #endif
 }
@@ -91,7 +90,7 @@ inline int32x2_t vround_s32_f32(const float32x2_t val)
 #if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
     return vcvtn_s32_f32(val);
 #else
-    const float32x2_t delta = vdup_n_f32(ROUND_DELTA);
+    const float32x2_t delta = vdup_n_f32(CAROTENE_ROUND_DELTA);
     return vcvt_s32_f32(vsub_f32(vadd_f32(val, delta), delta));
 #endif
 }
