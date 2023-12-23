@@ -1222,20 +1222,16 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
     MatShape inpShape = outShapes[node_proto.input(0)];
     std::vector<bool> shouldDelete(inpShape.size(), false);
 
-    std::vector<int> axesVec;
     if (layer_type == "ReduceSum" && node_proto.input_size() == 2)
     {
         if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
         {
             Mat axesMat = getBlob(node_proto, 1);
             int axesNum = axesMat.total();
-            // std::vector<int> axesVec(axesNum);
-            axesVec.resize(axesNum);
             for (int i = 0; i < axesNum; i++)
             {
                 int axis = normalize_axis(axesMat.at<int>(i), inpShape.size());
                 shouldDelete[axis] = true;
-                axesVec[i] = axis;
             }
         }
         else
@@ -1248,21 +1244,17 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         if (layerParams.has("axes"))
         {
             DictValue axes = layerParams.get("axes");
-            axesVec.resize(axes.size());
             for (int i = 0; i < axes.size(); i++)
             {
                 int axis = normalize_axis(axes.get<int>(i), inpShape.size());
                 shouldDelete[axis] = true;
-                axesVec[i] = axis;
             }
         }
         else
         {
-            axesVec.resize(inpShape.size());
             for (int i = 0; i < inpShape.size(); i++)
             {
                 shouldDelete[i] = true;
-                axesVec[i] = i;
             }
         }
     }
@@ -1288,9 +1280,7 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
     for (int i = 0; i < inpShape.size(); i++)
         perm[i] = i;
 
-    // FIXME: this piece of code seems to assume axes is of one length, which is not correct,
-    //        epecially when axes has -1, for example, data of shape [300, 14, 14], axes [1, -1]
-    bool needPermute = false;
+    bool needPermuet = false;
     for (int i = 0; i < inpShape.size(); i++)
     {
         if (shouldDelete[i])
@@ -1308,7 +1298,7 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
 
                 std::swap(perm[index], perm[i]);
                 std::swap(inpShape[index], inpShape[i]);
-                needPermute = true;
+                needPermuet = true;
             }
             else
                 break;
@@ -1316,7 +1306,7 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
     }
 
     auto inputString= node_proto.input(0);
-    if (needPermute)
+    if (needPermuet)
     {
         LayerParams permuteLp;
         permuteLp.name = layerParams.name + "/permute";
@@ -1328,15 +1318,7 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         protoPermute.add_output(permuteLp.name);
         addLayer(permuteLp, protoPermute);
         inputString = permuteLp.name;
-
-        // Assume axes has one axis only, change it to -1 as well.
-        // This change should not take affect on Reduce layer, since
-        // the implementation does not use axes.
-        CV_Assert(axesVec.size() == 1);
-        axesVec[0] = -1;
     }
-    // save axes in layerParams for the sake of other backends
-    layerParams.set("axes", DictValue::arrayInt(&axesVec[0], (int)axesVec.size()));
 
     std::vector<int> deletedDims;
     for (int axis_i = 0; axis_i < inpShape.size(); ++axis_i)
@@ -2584,11 +2566,8 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
         node_proto.set_input(0, constParams.name);
         node_proto.set_input(1, srcName);
     }
-    else if (broadcast_axes.size() == 1)
+    else if (broadcast_axes.size() == 1 && broadcast_axes[0] <= 1)
     {
-        // FIXME: this will end up creating massive amount of Identity nodes for broadcasting,
-        //        for example, broadcast 1 to 256 needs 256 Identity nodes and 1 Concat node.
-        //        Possible improvement is to use "Scale".
         expandMid(layerParams.name, node_proto, srcName, targetShape[broadcast_axes[0]]);
 
         layerParams.set("axis", broadcast_axes[0]);
@@ -3385,13 +3364,6 @@ void ONNXImporter::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::N
             LayerParams constParams;
             constParams.name = node_proto.input(i);
             constParams.type = "Const";
-
-            if (constBlobsExtraInfo.find(node_proto.input(i)) != constBlobsExtraInfo.end())
-            {
-                bool is1D = getBlobExtraInfo(node_proto, i).real_ndims == 1;
-                layerParams.set("is1D", is1D);
-                constParams.set("is1D", is1D);
-            }
 
             constParams.blobs.push_back(blob);
 

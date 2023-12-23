@@ -21,7 +21,6 @@ public:
 
         // opencv attr
         hasBias = params.get<bool>("hasBias", false);
-        is1D = params.get<bool>("is1D", false);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -47,7 +46,6 @@ public:
         int w_ndims = static_cast<int>(w_shape.size());
         w_ndims = (axis == x_ndims - 1 && w_ndims == 2) ? w_ndims - 1 : w_ndims;
         CV_CheckEQ(x_ndims - axis, w_ndims, "LayerNorm: shape of weight does not match with given axis and shape of input");
-        // FIXME: support broadcast
         for (int i = 0; i < w_ndims; ++i)
             CV_CheckEQ(x_shape[axis+i], w_shape[i], "LayerNorm: weight dimensions does not match with input dimensions");
         if (hasBias)
@@ -181,7 +179,6 @@ public:
         auto x = inputs[0].dynamicCast<CannBackendWrapper>();
         auto gamma = inputs[1].dynamicCast<CannBackendWrapper>();
         auto beta = inputs[2].dynamicCast<CannBackendWrapper>();
-        std::cout << "is1D: " << is1D << ", gamma shape: " << gamma->host->dims << ", beta shape: " << beta->host->dims << std::endl;
 
         // create operator
         auto op = std::make_shared<ge::op::LayerNorm>(name);
@@ -200,12 +197,12 @@ public:
         // set inputs : gamma
         auto op_gamma = nodes[1].dynamicCast<CannBackendNode>()->getOp();
         op->set_input_gamma_by_name(*op_gamma, gamma->name.c_str());
-        auto desc_gamma = gamma->getTensorDesc(is1D);
+        auto desc_gamma = x->getTensorDesc();
         op->update_input_desc_gamma(*desc_gamma);
         // set inputs : beta
         auto op_beta = nodes[2].dynamicCast<CannBackendNode>()->getOp();
         op->set_input_beta_by_name(*op_beta, beta->name.c_str());
-        auto desc_beta = beta->getTensorDesc(is1D);
+        auto desc_beta = x->getTensorDesc();
         op->update_input_desc_beta(*desc_beta);
 
         // set outputs
@@ -219,9 +216,6 @@ public:
         return Ptr<BackendNode>(new CannBackendNode(op));
     }
 #endif // HAVE_CANN
-
-private:
-    bool is1D;
 };
 
 Ptr<LayerNormLayer> LayerNormLayer::create(const LayerParams& params)

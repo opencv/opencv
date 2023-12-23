@@ -98,7 +98,7 @@ CV__DNN_INLINE_NS_END
         CannBackendWrapper(const Mat& m);
         ~CannBackendWrapper() { }
 
-        std::shared_ptr<ge::TensorDesc> getTensorDesc(bool shape1D = false);
+        std::shared_ptr<ge::TensorDesc> getTensorDesc() { return desc_; }
 
         virtual void copyToHost() CV_OVERRIDE;
 

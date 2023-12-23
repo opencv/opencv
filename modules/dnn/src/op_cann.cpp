@@ -93,29 +93,6 @@ CannBackendWrapper::CannBackendWrapper(const Mat& m)
     desc_ = std::make_shared<ge::TensorDesc>(ge_shape, ge::FORMAT_NCHW, ge::DT_FLOAT);
 }
 
-std::shared_ptr<ge::TensorDesc> CannBackendWrapper::getTensorDesc(bool shape1D)
-{
-    if (!shape1D)
-    {
-        return desc_;
-    }
-    else
-    {
-        auto mat_shape = shape(*host);
-        std::vector<int64_t> shape_{mat_shape.begin(), mat_shape.end()};
-
-        // ensure it is originally 1D
-        CV_Assert(mat_shape.size() == (size_t)2);
-        CV_Assert(mat_shape[1] == 1);
-        shape_.pop_back();
-
-        auto ge_shape = ge::Shape(shape_);
-        desc_ = std::make_shared<ge::TensorDesc>(ge_shape, ge::FORMAT_NCHW, ge::DT_FLOAT);
-
-        return desc_;
-    }
-}
-
 void CannBackendWrapper::copyToHost()
 {
     CV_LOG_DEBUG(NULL, "Not implemented");

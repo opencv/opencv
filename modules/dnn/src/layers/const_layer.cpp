@@ -33,8 +33,6 @@ public:
     {
         setParamsFrom(params);
         CV_Assert(blobs.size() == 1);
-
-        is1D = params.get<bool>("is1D", false);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -92,15 +90,6 @@ public:
     {
         auto mat_shape = shape(blobs[0]);
         std::vector<int64_t> mat_shape_{mat_shape.begin(), mat_shape.end()};
-
-        // if 1D mat
-        if (is1D)
-        {
-            // ensure it is originally 1D
-            CV_Assert(mat_shape.size() == (size_t)2);
-            CV_Assert(mat_shape[1] == 1);
-            mat_shape_.pop_back();
-        }
 
         auto ge_shape = ge::Shape(mat_shape_);
         auto ge_dtype = ge::DT_FLOAT;
@@ -175,9 +164,6 @@ public:
         params.blobs.push_back(quantizedBlob);
         return true;
     }
-
-private:
-    bool is1D;
 };
 
 Ptr<Layer> ConstLayer::create(const LayerParams& params)
