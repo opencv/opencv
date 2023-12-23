@@ -651,7 +651,7 @@ public:
             auto op = std::make_shared<ge::op::SplitV>(name);
 
             // set attr
-            int n_split = static_cast<int>(sliceRanges[0].size());
+            int n_split = static_cast<int>(outputs.size());
             op->set_attr_num_split(n_split);
 
             // set inputs
