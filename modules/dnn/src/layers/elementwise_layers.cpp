@@ -845,8 +845,12 @@ struct GeluFunctor : public BaseFunctor {
 #endif
     }
 
-    bool supportBackend(int backendId, int) {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA   ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
@@ -943,7 +947,19 @@ struct GeluFunctor : public BaseFunctor {
                                 const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        CV_Error(Error::StsNotImplemented, "");
+        auto input_wrapper = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Gelu>(name);
+
+        auto input_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*input_node, input_wrapper->name.c_str());
+        auto input_desc = input_wrapper->getTensorDesc();
+        op->update_input_desc_x(*input_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
     }
 #endif // HAVE_CANN
 
@@ -1781,7 +1797,10 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA   ||
+               backendId == DNN_BACKEND_CANN   ||
+               backendId == DNN_BACKEND_HALIDE;
     }
 
     inline float calculate(float x) const
@@ -1810,6 +1829,27 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
         return std::make_shared<ov::op::v0::Sqrt>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto input_wrapper = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Sqrt>(name);
+
+        auto input_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*input_node, input_wrapper->name.c_str());
+        auto input_desc = input_wrapper->getTensorDesc();
+        op->update_input_desc_x(*input_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
     int64 getFLOPSPerElement() const { return 1; }
 };

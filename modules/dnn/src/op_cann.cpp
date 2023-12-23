@@ -61,14 +61,14 @@ CannConstOp::CannConstOp(const uint8_t* data, const int dtype, const std::vector
     {
         case CV_32F: break;
         case CV_32S: ge_dtype = ge::DT_INT32; break;
-        default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
+        default: CV_Error(Error::StsNotImplemented, cv::format("Unsupported data type %d of node %s", dtype, name.c_str()));
     }
     auto size_of_type = sizeof(float);
     switch (dtype)
     {
         case CV_32F: break;
         case CV_32S: size_of_type = sizeof(int); break;
-        default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
+        default: CV_Error(Error::StsNotImplemented, cv::format("Unsupported data type %d of node %s", dtype, name.c_str()));
     }
     desc_ = std::make_shared<ge::TensorDesc>(ge_shape, ge::FORMAT_NCHW, ge_dtype);
     auto ge_tensor = std::make_shared<ge::Tensor>();
