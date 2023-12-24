@@ -1951,7 +1951,7 @@ OPENCV_HAL_IMPL_NEON_BROADCAST(v_float32x4, float, f32)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_float64x2, double, f64)
 #endif
 
-#if 0 // CV_SIMD128_64F
+#if CV_SIMD128_64F
 inline v_int32x4 v_round(const v_float32x4& a)
 {
     float32x4_t a_ = a.val;
