@@ -3340,9 +3340,7 @@ bool QRDetectMulti::checkPoints(vector<Point2f> quadrangle)
         std::swap(quadrangle[1], quadrangle[2]);
     if ((quadrangle[0] - quadrangle[1]).dot(quadrangle[2] - quadrangle[3]) < 0.f)
         std::swap(quadrangle[0], quadrangle[1]);
-    BWCounter s;
-    s += BWCounter::checkOnePair(quadrangle[1], quadrangle[0], quadrangle[2], quadrangle[0], bin_barcode);
-    s += BWCounter::checkOnePair(quadrangle[1], quadrangle[3], quadrangle[2], quadrangle[3], bin_barcode);
+    BWCounter s = BWCounter::checkOnePair(quadrangle[0], quadrangle[1], quadrangle[2], quadrangle[3], bin_barcode);
     const double frac = s.getBWFraction();
     return frac > 0.76 && frac < 1.24;
 }
