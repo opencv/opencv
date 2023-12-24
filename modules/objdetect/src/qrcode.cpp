@@ -3047,13 +3047,6 @@ protected:
     vector<Point2f> not_resized_loc_points;
     vector<Point2f> resized_loc_points;
     vector< vector< Point2f > > localization_points, transformation_points;
-    struct compareDistanse_y
-    {
-        bool operator()(const Point2f& a, const Point2f& b) const
-        {
-            return a.y < b.y;
-        }
-    };
     struct compareSquare
     {
         const vector<Point2f>& points;
@@ -3343,7 +3336,10 @@ bool QRDetectMulti::checkPoints(vector<Point2f> quadrangle)
 {
     if (quadrangle.size() != 4)
         return false;
-    std::sort(quadrangle.begin(), quadrangle.end(), compareDistanse_y());
+    if (norm(quadrangle[0] - quadrangle[1]) > norm(quadrangle[0] - quadrangle[2]))
+        std::swap(quadrangle[1], quadrangle[2]);
+    if ((quadrangle[0] - quadrangle[1]).dot(quadrangle[2] - quadrangle[3]) < 0.f)
+        std::swap(quadrangle[0], quadrangle[1]);
     BWCounter s;
     s += BWCounter::checkOnePair(quadrangle[1], quadrangle[0], quadrangle[2], quadrangle[0], bin_barcode);
     s += BWCounter::checkOnePair(quadrangle[1], quadrangle[3], quadrangle[2], quadrangle[3], bin_barcode);
