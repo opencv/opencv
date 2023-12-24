@@ -1659,10 +1659,11 @@ void ChessBoardDetector::findQuadNeighbors()
                     dist <= q_k.edge_len * thresh_scale)
                 {
                     // check edge lengths, make sure they're compatible
-                    // edges that are different by more than 1:4 are rejected
-                    const float ediff = fabs(cur_quad.edge_len - q_k.edge_len);
-                    if (ediff > 32 * cur_quad.edge_len ||
-                        ediff > 32 * q_k.edge_len)
+                    // edges that are different by more than 1:4 are rejected.
+                    // edge_len is squared edge length, so we compare them
+                    // with squared constant 16 = 4^2
+                    if (q_k.edge_len > 16 * cur_quad.edge_len ||
+                        cur_quad.edge_len > 16 * q_k.edge_len)
                     {
                         DPRINTF("Incompatible edge lengths");
                         continue;
