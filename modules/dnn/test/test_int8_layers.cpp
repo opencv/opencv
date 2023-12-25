@@ -748,7 +748,10 @@ TEST_P(Test_Int8_nets, GoogLeNet)
 
 TEST_P(Test_Int8_nets, ResNet50)
 {
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(
+        target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
 
     if (target == DNN_TARGET_OPENCL_FP16 && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
@@ -1200,7 +1203,10 @@ TEST_P(Test_Int8_nets, YoloVoc)
 
 TEST_P(Test_Int8_nets, TinyYoloVoc)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_512MB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
 
     if (target == DNN_TARGET_OPENCL_FP16 && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
