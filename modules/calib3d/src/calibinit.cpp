@@ -1885,8 +1885,8 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
         std::vector<int> corners_indices(4);
         std::iota(corners_indices.begin(), corners_indices.end(), 0);
 
-        const auto is_upper_corner = [q] (const int corners_idx1, const int corners_idx2) {
-            return q.corners[corners_idx1]->pt.y < q.corners[corners_idx2]->pt.y;
+        const auto is_upper_corner = [q] (const int corner_idx1, const int corner_idx2) {
+            return q.corners[corner_idx1]->pt.y < q.corners[corner_idx2]->pt.y;
         };
         std::sort(corners_indices.begin(), corners_indices.end(), is_upper_corner);
 
