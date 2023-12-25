@@ -1514,6 +1514,10 @@ TEST_P(Test_ONNX_layers, Einsum_transpose)
     testONNXModels("einsum_transpose", npy, 0, 0, false, false, 1);
 }
 
+TEST_P(Test_ONNX_layers, Einsum_const_inputs) {
+    testONNXModels("einsum_const_inputs", npy, 0, 0, false, false, 1);
+}
+
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
     testONNXModels("ReflectionPad2d");
