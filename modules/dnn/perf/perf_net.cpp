@@ -140,6 +140,8 @@ PERF_TEST_P_(DNNTestNetwork, ENet)
 
 PERF_TEST_P_(DNNTestNetwork, SSD)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", "dnn/ssd_vgg16.prototxt", "disabled",
             cv::Size(300, 300));
 }
@@ -190,6 +192,8 @@ PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
 
 PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     if (backend == DNN_BACKEND_HALIDE ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_HDDL)))
         throw SkipTestException("");
@@ -209,6 +213,8 @@ PERF_TEST_P_(DNNTestNetwork, opencv_face_detector)
 
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "ssd_inception_v2_coco_2017_11_17.pbtxt", "",
@@ -217,7 +223,10 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
@@ -238,7 +247,10 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv4)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     if (target == DNN_TARGET_MYRIAD)  // not enough resources
@@ -274,15 +286,23 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv5) {
     processNet("", "dnn/yolov5n.onnx", "", inp);
 }
 
-PERF_TEST_P_(DNNTestNetwork, YOLOv8) {
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+PERF_TEST_P_(DNNTestNetwork, YOLOv8)
+{
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_512MB,
+        CV_TEST_TAG_DEBUG_LONG
+    );
+
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("", "dnn/yolov8n.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, YOLOX) {
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_512MB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("", "dnn/yolox_s.onnx", "", inp);
@@ -290,6 +310,8 @@ PERF_TEST_P_(DNNTestNetwork, YOLOX) {
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     processNet("dnn/frozen_east_text_detection.pb", "", "", cv::Size(320, 320));
@@ -297,6 +319,8 @@ PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
 
 PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", "", cv::Size(320, 240));
@@ -304,6 +328,8 @@ PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
 
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         throw SkipTestException("Test is disabled in OpenVINO 2019R1");
@@ -411,7 +437,10 @@ PERF_TEST_P_(DNNTestNetwork, EfficientDet_int8)
     processNet("", "dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", "", inp);
 }
 
-PERF_TEST_P_(DNNTestNetwork, VIT_B_32) {
+PERF_TEST_P_(DNNTestNetwork, VIT_B_32)
+{
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     processNet("", "dnn/onnx/models/vit_b_32.onnx", "", cv::Size(224, 224));
 }
 

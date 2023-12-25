@@ -4,6 +4,7 @@
 
 #include "perf_precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/core/utils/configuration.private.hpp>
 
 namespace opencv_test {
 
@@ -773,16 +774,14 @@ struct ConvParamGenerator
 
     ::testing::internal::ParamGenerator<ConvParam_t> all() const
     {
-#if 1
-        // default to 20 for each type of convolution
-        const int NUM = 20;
-#else
-        const int NUM = size;
-#endif
+        int NUM = size;
+        static size_t DNN_LIMIT_CONV = utils::getConfigurationParameterSizeT("OPENCV_TEST_DNN_LIMIT_CONV", 0);
+        if (DNN_LIMIT_CONV > 0)
+            NUM = std::min(NUM, (int)DNN_LIMIT_CONV);
 
-        ConvParam_t v_[NUM];
+        std::vector<ConvParam_t> v_(NUM);
         for (int i = 0; i < NUM; ++i) { v_[i] = testConfigs[i]; } // reduce generated code size
-        return ::testing::ValuesIn(v_, v_ + NUM);
+        return ::testing::ValuesIn(v_);
     }
 };
 static inline void PrintTo(const ConvParam_t& p, std::ostream* os)
@@ -807,9 +806,20 @@ static inline void PrintTo(const ConvParam_t& p, std::ostream* os)
         *os << ", BIAS";
 }
 
-Net build_net(const ConvParam_t& params, Backend backendId, Target targetId)
+static
+Net build_net(
+    const ConvParam_t& params, Backend backendId, Target targetId,
+    const std::function<void(Net&)>& configure_network_cb = std::function<void(Net&)>(),
+    double flops_limit_debug_long = 2e9, double flops_limit_debug_verylong = 6e9
+)
 {
     double declared_flops = params.declared_flops;
+
+    if (flops_limit_debug_verylong > 0 && declared_flops >= flops_limit_debug_verylong)
+        applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+    if (flops_limit_debug_long > 0 && declared_flops >= flops_limit_debug_long)
+        applyTestTag(CV_TEST_TAG_DEBUG_LONG);
+
     Size kernel = params.kernel;
     MatShape inputShape = MatShape(params.shapeIn.dims, params.shapeIn.dims + 4);
     int outChannels = params.outCN;
@@ -863,9 +873,14 @@ Net build_net(const ConvParam_t& params, Backend backendId, Target targetId)
     Net net;
     net.addLayerToPrev(lp.name, lp.type, lp);
 
-    net.setInput(input);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
+    if (configure_network_cb)
+    {
+        configure_network_cb(net);
+    }
+
+    net.setInput(input);
 
     // warmup
     Mat output = net.forward();
@@ -928,11 +943,12 @@ PERF_TEST_P_(Conv_3x3S1D1, conv)
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
     bool winograd = get<2>(GetParam());
-    Net net = build_net(params, backendId, targetId);
-    net.enableWinograd(winograd);
-
-    // warmup again since configuration is changed
-    net.forward();
+    Net net = build_net(params, backendId, targetId,
+        [=](Net& net)
+        {
+            net.enableWinograd(winograd);
+        }
+    );
 
     TEST_CYCLE()
     {
@@ -946,7 +962,8 @@ PERF_TEST_P_(Conv_Depthwise, conv)
     const ConvParam_t& params = get<0>(GetParam());
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
-    Net net = build_net(params, backendId, targetId);
+    Net net = build_net(params, backendId, targetId, std::function<void(Net&)>(),
+        0/*flops_limit_debug_long*/, 0/*flops_limit_debug_verylong*/);
 
     TEST_CYCLE()
     {
