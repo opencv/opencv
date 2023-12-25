@@ -41,6 +41,7 @@
 #include <cmath>
 
 #include "common.hpp"
+#include "vround_helper.hpp"
 
 namespace CAROTENE_NS {
 
@@ -121,8 +122,6 @@ void phase(const Size2D &size,
     size_t roiw16 = size.width >= 15 ? size.width - 15 : 0;
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
 
-    float32x4_t v_05 = vdupq_n_f32(0.5f);
-
     for (size_t i = 0; i < size.height; ++i)
     {
         const s16 * src0 = internal::getRowPtr(src0Base, src0Stride, i);
@@ -149,8 +148,8 @@ void phase(const Size2D &size,
             float32x4_t v_dst32f1;
             FASTATAN2VECTOR(v_src1_p, v_src0_p, v_dst32f1)
 
-            uint16x8_t v_dst16s0 = vcombine_u16(vmovn_u32(vcvtq_u32_f32(vaddq_f32(v_dst32f0, v_05))),
-                                                vmovn_u32(vcvtq_u32_f32(vaddq_f32(v_dst32f1, v_05))));
+            uint16x8_t v_dst16s0 = vcombine_u16(vmovn_u32(internal::vroundq_u32_f32(v_dst32f0)),
+                                                vmovn_u32(internal::vroundq_u32_f32(v_dst32f1)));
 
             // 1
             v_src0_p = vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src01)));
@@ -161,8 +160,8 @@ void phase(const Size2D &size,
             v_src1_p = vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src11)));
             FASTATAN2VECTOR(v_src1_p, v_src0_p, v_dst32f1)
 
-            uint16x8_t v_dst16s1 = vcombine_u16(vmovn_u32(vcvtq_u32_f32(vaddq_f32(v_dst32f0, v_05))),
-                                                vmovn_u32(vcvtq_u32_f32(vaddq_f32(v_dst32f1, v_05))));
+            uint16x8_t v_dst16s1 = vcombine_u16(vmovn_u32(internal::vroundq_u32_f32(v_dst32f0)),
+                                                vmovn_u32(internal::vroundq_u32_f32(v_dst32f1)));
 
             vst1q_u8(dst + j, vcombine_u8(vmovn_u16(v_dst16s0),
                                           vmovn_u16(v_dst16s1)));
@@ -182,8 +181,8 @@ void phase(const Size2D &size,
             float32x4_t v_dst32f1;
             FASTATAN2VECTOR(v_src1_p, v_src0_p, v_dst32f1)
 
-            uint16x8_t v_dst = vcombine_u16(vmovn_u32(vcvtq_u32_f32(vaddq_f32(v_dst32f0, v_05))),
-                                            vmovn_u32(vcvtq_u32_f32(vaddq_f32(v_dst32f1, v_05))));
+            uint16x8_t v_dst = vcombine_u16(vmovn_u32(internal::vroundq_u32_f32(v_dst32f0)),
+                                            vmovn_u32(internal::vroundq_u32_f32(v_dst32f1)));
 
             vst1_u8(dst + j, vmovn_u16(v_dst));
         }
