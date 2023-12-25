@@ -101,6 +101,7 @@ namespace cv {
 //=====================================================================================
 
 #define MAX_CONTOUR_APPROX  7
+#define MAX_CONTOUR_APPROX_ITERS  3
 
 struct QuadCountour {
     Point pt[4];
@@ -1797,20 +1798,35 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
 
         std::vector<Point> approx_contour;
 
-        const int min_approx_level = 1, max_approx_level = MAX_CONTOUR_APPROX;
-        for (int approx_level = min_approx_level; approx_level <= max_approx_level; approx_level++ )
+        float left_approx_level = 1, right_approx_level = MAX_CONTOUR_APPROX;
+        const int max_approx_iters = MAX_CONTOUR_APPROX_ITERS;
+        CV_Assert((1 << max_approx_iters) > right_approx_level - left_approx_level);
+
+        int approx_iter = 0;
+        while (approx_iter < max_approx_iters)
         {
-            approxPolyDP(contour, approx_contour, (float)approx_level, true);
+            approx_iter++;
+
+            const float middle_approx_level = (left_approx_level + right_approx_level) / 2.0f;
+            approxPolyDP(contour, approx_contour, middle_approx_level, true);
             if (approx_contour.size() == 4)
                 break;
+            else if (approx_contour.size() < 4) {
+                right_approx_level = middle_approx_level;
+                continue;
+            }
 
             // we call this again on its own output, because sometimes
             // approxPoly() does not simplify as much as it should.
             std::vector<Point> approx_contour_tmp;
             std::swap(approx_contour, approx_contour_tmp);
-            approxPolyDP(approx_contour_tmp, approx_contour, (float)approx_level, true);
+            approxPolyDP(approx_contour_tmp, approx_contour, middle_approx_level, true);
             if (approx_contour.size() == 4)
                 break;
+            else if (approx_contour.size() < 4)
+                right_approx_level = middle_approx_level;
+            else
+                left_approx_level = middle_approx_level;
         }
 
         // reject non-quadrangles
