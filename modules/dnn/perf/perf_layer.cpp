@@ -829,6 +829,9 @@ PERF_TEST_P_(Layer_FullyConnected, fc)
     int backendId = get<0>(get<3>(GetParam()));
     int targetId = get<1>(get<3>(GetParam()));
 
+    if (inpShape.size() == 4 && inpShape[0] == 5 && inpShape[1] == 16 && inpShape[2] == 512 && inpShape[3] == 128 && outDims >= 512)
+        applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     std::vector<int> weightShape;
     if (isMatMul) {
         weightShape = inpShape;
