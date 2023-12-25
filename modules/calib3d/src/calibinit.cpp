@@ -153,7 +153,7 @@ struct ChessBoardQuad
     int group_idx;  // quad group ID
     int row, col;   // row and column of this quad
     bool ordered;   // true if corners/neighbors are ordered counter-clockwise
-    float edge_len; // quad edge len, in pix^2
+    float edge_squared_len; // quad edge squared len, in pix^2
     // neighbors and corners are synced, i.e., neighbor 0 shares corner 0
     ChessBoardCorner *corners[4]; // Coordinates of quad corners
     struct ChessBoardQuad *neighbors[4]; // Pointers of quad neighbors
@@ -163,7 +163,7 @@ struct ChessBoardQuad
         group_idx(group_idx_),
         row(0), col(0),
         ordered(0),
-        edge_len(0)
+        edge_squared_len(0)
     {
         corners[0] = corners[1] = corners[2] = corners[3] = NULL;
         neighbors[0] = neighbors[1] = neighbors[2] = neighbors[3] = NULL;
@@ -985,7 +985,7 @@ int ChessBoardDetector::addOuterQuad(ChessBoardQuad& quad, std::vector<ChessBoar
             q.group_idx = quad.group_idx;
             q.count = 1;   // number of neighbors
             q.ordered = false;
-            q.edge_len = quad.edge_len;
+            q.edge_squared_len = quad.edge_squared_len;
 
             // make corners of new quad
             // same as neighbor quad, but offset
@@ -1637,7 +1637,7 @@ void ChessBoardDetector::findQuadNeighbors()
 
             // find the closest corresponding corner in all other quadrangles
             std::vector<float> query = Mat(pt);
-            float radius = cur_quad.edge_len * thresh_squared_scale + 1;
+            float radius = cur_quad.edge_squared_len * thresh_squared_scale + 1;
             const cvflann::SearchParams search_params(-1);
             int neighbors_count = all_quads_pts_index.radiusSearch(query, neighbors_indices, neighbors_dists, radius, search_params);
 
@@ -1658,15 +1658,15 @@ void ChessBoardDetector::findQuadNeighbors()
 
                 const float dist = normL2Sqr<float>(pt - q_k.corners[j]->pt);
                 if (dist < min_dist &&
-                    dist <= cur_quad.edge_len * thresh_squared_scale &&
-                    dist <= q_k.edge_len * thresh_squared_scale)
+                    dist <= cur_quad.edge_squared_len * thresh_squared_scale &&
+                    dist <= q_k.edge_squared_len * thresh_squared_scale)
                 {
                     // check edge lengths, make sure they're compatible
                     // edges that are different by more than 1:4 are rejected.
-                    // edge_len is squared edge length, so we compare them
+                    // edge_squared_len is squared edge length, so we compare them
                     // with squared constant 16 = 4^2
-                    if (q_k.edge_len > 16 * cur_quad.edge_len ||
-                        cur_quad.edge_len > 16 * q_k.edge_len)
+                    if (q_k.edge_squared_len > 16 * cur_quad.edge_squared_len ||
+                        cur_quad.edge_squared_len > 16 * q_k.edge_squared_len)
                     {
                         DPRINTF("Incompatible edge lengths");
                         continue;
@@ -1875,11 +1875,11 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
             corner = ChessBoardCorner(pt);
             q.corners[i] = &corner;
         }
-        q.edge_len = FLT_MAX;
+        q.edge_squared_len = FLT_MAX;
         for (int i = 0; i < 4; ++i)
         {
             float d = normL2Sqr<float>(q.corners[i]->pt - q.corners[(i+1)&3]->pt);
-            q.edge_len = std::min(q.edge_len, d);
+            q.edge_squared_len = std::min(q.edge_squared_len, d);
         }
 
         std::vector<int> corners_indices(4);
