@@ -1430,15 +1430,15 @@ macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME)
   endif()
 endmacro()
 
-# set ${LIBNAME}_VERSION_STRING to ${LIBNAME}_VERSION without quotes
-macro(ocv_parse_header_version LIBNAME HDR_PATH)
+# set ${LIBNAME}_VERSION_STRING to ${LIBVER} without quotes
+macro(ocv_parse_header_version LIBNAME HDR_PATH LIBVER)
   ocv_clear_vars(${LIBNAME}_VERSION_STRING)
   set(${LIBNAME}_H "")
   if(EXISTS "${HDR_PATH}")
-    file(STRINGS "${HDR_PATH}" ${LIBNAME}_H REGEX "^#define[ \t]+${LIBNAME}_VERSION[ \t]+\"[^\"]*\".*$" LIMIT_COUNT 1)
+    file(STRINGS "${HDR_PATH}" ${LIBNAME}_H REGEX "^#define[ \t]+${LIBVER}[ \t]+\"[^\"]*\".*$" LIMIT_COUNT 1)
   endif()
   if(${LIBNAME}_H)
-    string(REGEX REPLACE "^.*[ \t]${LIBNAME}_VERSION[ \t]+\"([0-9\.]+)\"$" "\\1" ${LIBNAME}_VERSION_STRING "${${LIBNAME}_H}")
+    string(REGEX REPLACE "^.*[ \t]${LIBVER}[ \t]+\"([0-9\.]+)\"$" "\\1" ${LIBNAME}_VERSION_STRING "${${LIBNAME}_H}")
   endif()
 endmacro()
 
