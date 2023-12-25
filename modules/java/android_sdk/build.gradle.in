@@ -89,6 +89,7 @@
 //
 
 apply plugin: 'com.android.library'
+apply plugin: 'maven-publish'
 @KOTLIN_PLUGIN_DECLARATION@
 
 def openCVersionName = "@OPENCV_VERSION@"
@@ -137,6 +138,17 @@ android {
         }
     }
 
+    buildFeatures {
+        aidl true
+        prefabPublishing true
+        buildConfig true
+    }
+    prefab {
+        opencv_jni_shared {
+            headers "native/jni/include"
+        }
+    }
+
     sourceSets {
         main {
             jniLibs.srcDirs = ['native/libs']
@@ -147,9 +159,36 @@ android {
         }
     }
 
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path (project.projectDir.toString() + '/libcxx_helper/CMakeLists.txt')
+        }
+    }
+}
+
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'org.opencv'
+            artifactId = 'opencv'
+            version = '@OPENCV_VERSION_PLAIN@'
+
+            afterEvaluate {
+               from components.release
+           }
+        }
+    }
+    repositories {
+        maven {
+            name = 'myrepo'
+            url = "${project.buildDir}/repo"
         }
     }
 }
