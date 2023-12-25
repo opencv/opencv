@@ -1663,7 +1663,7 @@ void ChessBoardDetector::findQuadNeighbors()
                 {
                     // check edge lengths, make sure they're compatible
                     // edges that are different by more than 1:4 are rejected.
-                    // edge_squared_len is squared edge length, so we compare them
+                    // edge_squared_len is edge squared length, so we compare them
                     // with squared constant 16 = 4^2
                     if (q_k.edge_squared_len > 16 * cur_quad.edge_squared_len ||
                         cur_quad.edge_squared_len > 16 * q_k.edge_squared_len)
