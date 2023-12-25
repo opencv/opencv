@@ -1595,7 +1595,7 @@ finalize:
 
 void ChessBoardDetector::findQuadNeighbors()
 {
-    const float thresh_scale = 1.f;
+    const float thresh_squared_scale = 2.f;
 
     const int all_corners_count = all_quads_count * 4;
 
@@ -1619,7 +1619,7 @@ void ChessBoardDetector::findQuadNeighbors()
         ChessBoardQuad& cur_quad = (ChessBoardQuad&)all_quads[idx];
 
         // choose the points of the current quadrangle that are close to
-        // some points of the other quadrangles
+        // some corresponding points of the other quadrangles
         // (it can happen for split corners (due to dilation) of the
         // checker board). Search only in other quadrangles!
 
@@ -1635,9 +1635,9 @@ void ChessBoardDetector::findQuadNeighbors()
 
             cv::Point2f pt = cur_quad.corners[i]->pt;
 
-            // find the closest corner in all other quadrangles
+            // find the closest corresponding corner in all other quadrangles
             std::vector<float> query = Mat(pt);
-            float radius = cur_quad.edge_len * thresh_scale + 1;
+            float radius = cur_quad.edge_len * thresh_squared_scale + 1;
             const cvflann::SearchParams search_params(-1);
             int neighbors_count = all_quads_pts_index.radiusSearch(query, neighbors_indices, neighbors_dists, radius, search_params);
 
@@ -1650,13 +1650,16 @@ void ChessBoardDetector::findQuadNeighbors()
 
                 ChessBoardQuad& q_k = all_quads[k];
                 const int j = neighbor_idx & 3;
+                if (abs(i - j) != 2)
+                    continue;
+
                 if (q_k.neighbors[j])
                     continue;
 
                 const float dist = normL2Sqr<float>(pt - q_k.corners[j]->pt);
                 if (dist < min_dist &&
-                    dist <= cur_quad.edge_len * thresh_scale &&
-                    dist <= q_k.edge_len * thresh_scale)
+                    dist <= cur_quad.edge_len * thresh_squared_scale &&
+                    dist <= q_k.edge_len * thresh_squared_scale)
                 {
                     // check edge lengths, make sure they're compatible
                     // edges that are different by more than 1:4 are rejected.
@@ -1752,8 +1755,7 @@ void ChessBoardDetector::findQuadNeighbors()
 
 
 // returns corners in clockwise order
-// corners don't necessarily start at same position on quad (e.g.,
-//   top left corner)
+// corners start at same position on quad (top left corner)
 void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
 {
     binarized_image = image_;  // save for debug purposes
@@ -1879,6 +1881,19 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
             float d = normL2Sqr<float>(q.corners[i]->pt - q.corners[(i+1)&3]->pt);
             q.edge_len = std::min(q.edge_len, d);
         }
+
+        std::vector<int> corners_indices(4);
+        std::iota(corners_indices.begin(), corners_indices.end(), 0);
+
+        const auto is_upper_corner = [q] (const int corners_idx1, const int corners_idx2) {
+            return q.corners[corners_idx1]->pt.y < q.corners[corners_idx2]->pt.y;
+        };
+        std::sort(corners_indices.begin(), corners_indices.end(), is_upper_corner);
+
+        const int top_corner_idx1 = corners_indices[0];
+        const int top_corner_idx2 = corners_indices[1];
+        const int top_left_corner_idx = q.corners[top_corner_idx1]->pt.x < q.corners[top_corner_idx2]->pt.x ? top_corner_idx1 : top_corner_idx2;
+        orderQuad(q, *q.corners[top_left_corner_idx], 0);
     }
 
     all_quads_count = quad_count;
