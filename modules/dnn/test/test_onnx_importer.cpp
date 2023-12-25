@@ -2390,7 +2390,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
 #else
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
 #endif
-        CV_TEST_TAG_DEBUG_LONG
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
@@ -2713,6 +2713,8 @@ void yoloPostProcessing(
 
 TEST_P(Test_ONNX_nets, YOLOX)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     std::string weightPath = _tf("models/yolox_s_inf_decoder.onnx", false);
 
     Size targetSize{640, 640};
@@ -2786,7 +2788,10 @@ TEST_P(Test_ONNX_nets, YOLOv8)
 //  4. 1D mat dimension issue with the output of range operator
 TEST_P(Test_ONNX_nets, YOLOv7)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
 
     std::string weightPath = _tf("models/yolov7_not_simplified.onnx", false);
     // Reference, which is collected with input size of 640x640

@@ -270,7 +270,11 @@ TEST(Reproducibility_FCN, Accuracy)
 
 TEST(Reproducibility_SSD, Accuracy)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_512MB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
+
     Net net;
     {
         const string proto = findDataFile("dnn/ssd_vgg16.prototxt");
@@ -500,7 +504,10 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
 // https://github.com/richzhang/colorization
 TEST_P(Test_Caffe_nets, Colorization)
 {
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(
+        target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
     checkBackend();
 
     Mat inp = blobFromNPY(_tf("colorization_inp.npy"));
@@ -777,7 +784,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
 #else
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
 #endif
-        CV_TEST_TAG_DEBUG_LONG
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // IE exception: Ngraph operation Reshape with name rpn_cls_score_reshape has dynamic output shape on 0 port, but CPU plug-in supports only static shape
