@@ -42,7 +42,8 @@ public:
         MAX,
         MEAN,
         MIN,
-        MOD,
+        IMOD, // Integer Mod. Reminder's sign = Divisor's sign.
+        FMOD, // Floating-point Mod. Reminder's sign = Dividend's sign.
         PROD,
         SUB,
         SUM,
@@ -78,7 +79,9 @@ public:
         else if (operation == "min")
             op = OPERATION::MIN;
         else if (operation == "mod")
-            op = OPERATION::MOD;
+            op = OPERATION::IMOD;
+        else if (operation == "fmod")
+            op = OPERATION::FMOD;
         else if (operation == "mul")
             op = OPERATION::PROD;
         else if (operation == "sub")
@@ -701,10 +704,23 @@ public:
                 nary_forward<T>(min, T{1}, std::forward<Args>(args)...);
                 break;
             }
-            case OPERATION::MOD:
+            case OPERATION::IMOD: // int32_t is converted to float in inference
             {
-                auto mod = [](const uint8_t &a, const uint8_t &b) { return a % b; };
-                binary_forward<T>(mod, std::forward<Args>(args)...);
+                auto imod = [](const float &a, const float &b) {
+                    int a_i32 = static_cast<float>(a), b_i32 = static_cast<float>(b);
+                    int res = a_i32 % b_i32;
+                    if ((res < 0 && b_i32 > 0) || (res > 0 && b_i32 < 0)) {
+                        res += b_i32;
+                    }
+                    return static_cast<float>(res);
+                };
+                binary_forward<T>(imod, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::FMOD:
+            {
+                auto fmod = [](const T &a, const T &b) { return std::fmod(a, b); };
+                binary_forward<T>(fmod, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::PROD:
@@ -778,9 +794,8 @@ public:
                 opDispatch<int32_t>(std::forward<Args>(args)...);
                 break;
             case CV_32F:
-                CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::MOD &&
-                          op != OPERATION::AND && op != OPERATION::OR &&
-                          op != OPERATION::XOR);
+                CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::AND &&
+                          op != OPERATION::OR && op != OPERATION::XOR);
                 opDispatch<float>(std::forward<Args>(args)...);
                 break;
             default:

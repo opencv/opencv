@@ -2830,6 +2830,11 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
 
     layerParams.type = "NaryEltwise";
     layerParams.set("operation", toLowerCase(node_proto.op_type()));
+    if (node_proto.op_type() == "Mod") {
+        if (layerParams.has("fmod") && layerParams.get<int>("fmod") == 1) {
+            layerParams.set("operation", "fmod");
+        };
+    }
 
     // element-wise layers that can have >=1 inputs but actually have one input
     if (node_proto.input_size() == 1 && (op_type == "max" || op_type == "min" || op_type == "mean" || op_type == "sum"))
@@ -3981,7 +3986,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
-            dispatch["LessOrEqual"] = &ONNXImporter::parseElementWise;
+            dispatch["LessOrEqual"] = dispatch["Mod"] = &ONNXImporter::parseElementWise;
 
     dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
     dispatch["Where"] = &ONNXImporter::parseElementWise;
