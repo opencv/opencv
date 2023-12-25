@@ -2786,6 +2786,8 @@ TEST_P(Test_ONNX_nets, YOLOv8)
 //  4. 1D mat dimension issue with the output of range operator
 TEST_P(Test_ONNX_nets, YOLOv7)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+
     std::string weightPath = _tf("models/yolov7_not_simplified.onnx", false);
     // Reference, which is collected with input size of 640x640
     std::vector<int> refClassIds{1, 16, 7};
