@@ -330,8 +330,11 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 
 TEST_P(DNNTestNetwork, SSD_VGG16)
 {
-    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
-                 CV_TEST_TAG_DEBUG_VERYLONG);
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
     if (backend == DNN_BACKEND_HALIDE && target == DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);  // TODO HALIDE_CPU
 
