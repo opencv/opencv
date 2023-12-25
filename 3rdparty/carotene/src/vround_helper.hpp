@@ -37,72 +37,66 @@
  * the use of this software, even if advised of the possibility of such damage.
  */
 
-#ifndef CAROTENE_SRC_COMMON_HPP
-#define CAROTENE_SRC_COMMON_HPP
+#ifndef CAROTENE_SRC_VROUND_HELPER_HPP
+#define CAROTENE_SRC_VROUND_HELPER_HPP
 
-#include <cstddef>
-#include <cstdlib>
-#include <algorithm>
-
-#if defined WITH_NEON && (defined __ARM_NEON__ || defined __ARM_NEON)
-#define CAROTENE_NEON
-#endif
+#include "common.hpp"
+#include "vtransform.hpp"
 
 #ifdef CAROTENE_NEON
-#include <arm_neon.h>
-#include "intrinsics.hpp"
-#endif
 
-#include <carotene/functions.hpp>
-#include "saturate_cast.hpp"
+/**
+ * This helper header is for rounding from float32xN to uin32xN or int32xN to nearest, ties to even.
+ * See https://en.wikipedia.org/wiki/Rounding#Rounding_half_to_even
+ */
+
+// See https://github.com/opencv/opencv/pull/24271#issuecomment-1867318007
+#define CAROTENE_ROUND_DELTA (12582912.0f)
 
 namespace CAROTENE_NS { namespace internal {
 
-#ifndef CAROTENE_NEON_ARCH
-#    if defined(__aarch64__) || defined(__aarch32__)
-#        define CAROTENE_NEON_ARCH 8
-#    else
-#        define CAROTENE_NEON_ARCH 7
-#    endif
-#endif
-#if ( !defined(__aarch64__) && !defined(__aarch32__) ) && (CAROTENE_NEON_ARCH == 8 )
-#    error("ARMv7 doen't support A32/A64 Neon instructions")
-#endif
-
-inline void prefetch(const void *ptr, size_t offset = 32*10)
+inline uint32x4_t vroundq_u32_f32(const float32x4_t val)
 {
-#if defined __GNUC__
-    __builtin_prefetch(reinterpret_cast<const char*>(ptr) + offset);
-#elif defined _MSC_VER && defined CAROTENE_NEON
-    __prefetch(reinterpret_cast<const char*>(ptr) + offset);
+#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
+    return vcvtnq_u32_f32(val);
 #else
-    (void)ptr;
-    (void)offset;
+    const float32x4_t delta = vdupq_n_f32(CAROTENE_ROUND_DELTA);
+    return vcvtq_u32_f32(vsubq_f32(vaddq_f32(val, delta), delta));
 #endif
 }
 
-template <typename T>
-inline T *getRowPtr(T *base, ptrdiff_t stride, size_t row)
+inline uint32x2_t vround_u32_f32(const float32x2_t val)
 {
-    char *baseRaw = const_cast<char *>(reinterpret_cast<const char *>(base));
-    return reinterpret_cast<T *>(baseRaw + ptrdiff_t(row) * stride);
+#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
+    return vcvtn_u32_f32(val);
+#else
+    const float32x2_t delta = vdup_n_f32(CAROTENE_ROUND_DELTA);
+    return vcvt_u32_f32(vsub_f32(vadd_f32(val, delta), delta));
+#endif
 }
 
-void assertSupportedConfiguration(bool parametersSupported = true);
-
-ptrdiff_t borderInterpolate(ptrdiff_t _p, size_t _len, BORDER_MODE borderType, size_t startMargin = 0, size_t endMargin = 0);
-
-/*!
- *  Aligns pointer by the certain number of bytes
- *
- *  This small inline function aligns the pointer by the certain number of bytes by shifting
- *  it forward by 0 or a positive offset.
- */
-template<typename T> inline T* alignPtr(T* ptr, size_t n=sizeof(T))
+inline int32x4_t vroundq_s32_f32(const float32x4_t val)
 {
-    return (T*)(((size_t)ptr + n-1) & -n);
+#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
+    return vcvtnq_s32_f32(val);
+#else
+    const float32x4_t delta = vdupq_n_f32(CAROTENE_ROUND_DELTA);
+    return vcvtq_s32_f32(vsubq_f32(vaddq_f32(val, delta), delta));
+#endif
 }
 
-}}
+inline int32x2_t vround_s32_f32(const float32x2_t val)
+{
+#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
+    return vcvtn_s32_f32(val);
+#else
+    const float32x2_t delta = vdup_n_f32(CAROTENE_ROUND_DELTA);
+    return vcvt_s32_f32(vsub_f32(vadd_f32(val, delta), delta));
+#endif
+}
+
+} }
+
+#endif // CAROTENE_NEON
 
 #endif
