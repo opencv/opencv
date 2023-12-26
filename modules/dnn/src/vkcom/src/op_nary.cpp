@@ -36,10 +36,10 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
         // case OPERATION::POW:
         // case OPERATION::BITSHIFT:
         // case OPERATION::MOD:
-        // case OPERATION::PROD:
-        // case OPERATION::SUB:
+        case OPERATION::PROD:
+        case OPERATION::SUB:
         case OPERATION::ADD:
-        // case OPERATION::DIV:
+        case OPERATION::DIV:
         // case OPERATION::AND:
         // case OPERATION::OR:
         // case OPERATION::XOR:
