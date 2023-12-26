@@ -119,9 +119,9 @@ public:
                     op == OPERATION::LESS_EQUAL
             );
         if (backendId == DNN_BACKEND_CUDA) {
-            return op == OPERATION::MAX || op == OPERATION::MIN || op == OPERATION::SUM ||
-                   op == OPERATION::PROD || op == OPERATION::DIV || op == OPERATION::ADD ||
-                   op == OPERATION::SUB;
+            return op == OPERATION::MAX  || op == OPERATION::MIN  || op == OPERATION::SUM ||
+                   op == OPERATION::PROD || op == OPERATION::DIV  || op == OPERATION::ADD ||
+                   op == OPERATION::SUB  || op == OPERATION::IMOD || op == OPERATION::FMOD;
         }
         return backendId == DNN_BACKEND_OPENCV;
     }
