@@ -76,20 +76,6 @@ String dumpString(const String& argument)
 }
 
 CV_WRAP static inline
-String testOverloadResolution(int value, const Point& point = Point(42, 24))
-{
-    return format("overload (int=%d, point=(x=%d, y=%d))", value, point.x,
-                  point.y);
-}
-
-CV_WRAP static inline
-String testOverloadResolution(const Rect& rect)
-{
-    return format("overload (rect=(x=%d, y=%d, w=%d, h=%d))", rect.x, rect.y,
-                  rect.width, rect.height);
-}
-
-CV_WRAP static inline
 String dumpRect(const Rect& argument)
 {
     return format("rect: (x=%d, y=%d, w=%d, h=%d)", argument.x, argument.y,
@@ -112,6 +98,42 @@ String dumpRotatedRect(const RotatedRect& argument)
 }
 
 CV_WRAP static inline
+String dumpRange(const Range& argument)
+{
+    if (argument == Range::all())
+    {
+        return "range: all";
+    }
+    else
+    {
+        return format("range: (s=%d, e=%d)", argument.start, argument.end);
+    }
+}
+
+CV_EXPORTS_W String dumpVectorOfInt(const std::vector<int>& vec);
+
+CV_EXPORTS_W String dumpVectorOfDouble(const std::vector<double>& vec);
+
+CV_EXPORTS_W String dumpVectorOfRect(const std::vector<Rect>& vec);
+
+
+//! @cond IGNORED
+
+CV_WRAP static inline
+String testOverloadResolution(int value, const Point& point = Point(42, 24))
+{
+    return format("overload (int=%d, point=(x=%d, y=%d))", value, point.x,
+                  point.y);
+}
+
+CV_WRAP static inline
+String testOverloadResolution(const Rect& rect)
+{
+    return format("overload (rect=(x=%d, y=%d, w=%d, h=%d))", rect.x, rect.y,
+                  rect.width, rect.height);
+}
+
+CV_WRAP static inline
 RotatedRect testRotatedRect(float x, float y, float w, float h, float angle)
 {
     return RotatedRect(Point2f(x, y), Size2f(w, h), angle);
@@ -127,19 +149,6 @@ std::vector<RotatedRect> testRotatedRectVector(float x, float y, float w, float 
 }
 
 CV_WRAP static inline
-String dumpRange(const Range& argument)
-{
-    if (argument == Range::all())
-    {
-        return "range: all";
-    }
-    else
-    {
-        return format("range: (s=%d, e=%d)", argument.start, argument.end);
-    }
-}
-
-CV_WRAP static inline
 int testOverwriteNativeMethod(int argument)
 {
     return argument;
@@ -150,12 +159,6 @@ String testReservedKeywordConversion(int positional_argument, int lambda = 2, in
 {
     return format("arg=%d, lambda=%d, from=%d", positional_argument, lambda, from);
 }
-
-CV_EXPORTS_W String dumpVectorOfInt(const std::vector<int>& vec);
-
-CV_EXPORTS_W String dumpVectorOfDouble(const std::vector<double>& vec);
-
-CV_EXPORTS_W String dumpVectorOfRect(const std::vector<Rect>& vec);
 
 CV_WRAP static inline
 void generateVectorOfRect(size_t len, CV_OUT std::vector<Rect>& vec)
@@ -322,6 +325,8 @@ private:
 
 typedef OriginalClassName::Params OriginalClassName_Params;
 } // namespace nested
+
+//! @endcond IGNORED
 
 namespace fs {
     CV_EXPORTS_W cv::String getCacheDirectoryForDownloads();
