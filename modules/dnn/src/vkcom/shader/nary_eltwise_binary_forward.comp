@@ -29,7 +29,7 @@ layout(binding = 5) readonly buffer Step {
     int matStep[];
 };
 
-/* local_size_x, local_size_y, local_size_z there defines the number of invocations 
+/* local_size_x, local_size_y, local_size_z there defines the number of invocations
    of this compute shader in the current work group. */
 // TODO: Check if this makes any sense
 // TODO: Check if it is required to fetch PhysicalDeviceLimit from Context
@@ -43,7 +43,7 @@ const int GREATER_EQUAL = 3;
 const int LESS = 4;
 const int LESS_EQUAL = 5;
 const int OR = 6;
-const int POW = 7; 
+const int POW = 7;
 const int XOR = 8;
 const int BITSHIFT = 9;
 const int MAX = 10;
@@ -125,9 +125,9 @@ void binary_forward()
                 break;
         }
     }
-    
+
     // Experimental Batched Operation
-    
+
     // int threadID = int(gl_LocalInvocationID.x);
     // int i2_offset = (int(gl_WorkGroupID.y)) * STEP_SIZE + threadID;
     // int i1_offset = (int(gl_WorkGroupID.z)) * STEP_SIZE;

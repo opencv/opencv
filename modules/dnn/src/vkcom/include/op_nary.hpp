@@ -32,7 +32,7 @@ class OpNary : public OpBase
 {
 public:
     // Copied from nary_eltwise_layers.cpp
-    enum class OPERATION 
+    enum class OPERATION
     {
         AND = 0,
         EQUAL,
