@@ -1600,6 +1600,10 @@ The algorithm performs the following steps:
     \f$f_y\f$ (ratios of 10:1 or more)), then you are probably using patternSize=cvSize(rows,cols)
     instead of using patternSize=cvSize(cols,rows) in @ref findChessboardCorners.
 
+@note
+    The function may throw exceptions, if unsupported combination of parameters is provided or
+    the system is underconstrained.
+
 @sa
    calibrateCameraRO, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate,
    undistort
