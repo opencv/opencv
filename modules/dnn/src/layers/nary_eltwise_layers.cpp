@@ -116,7 +116,9 @@ public:
             return (op == OPERATION::ADD ||
                     op == OPERATION::PROD ||
                     op == OPERATION::GREATER_EQUAL ||
-                    op == OPERATION::LESS_EQUAL
+                    op == OPERATION::LESS_EQUAL ||
+                    op == OPERATION::IMOD ||
+                    op == OPERATION::FMOD
             );
         if (backendId == DNN_BACKEND_CUDA) {
             return op == OPERATION::MAX  || op == OPERATION::MIN  || op == OPERATION::SUM ||
@@ -941,6 +943,12 @@ public:
             node = std::make_shared<ngraph::op::v1::GreaterEqual>(inp0, inp1);
         else if (op == OPERATION::LESS_EQUAL)
             node = std::make_shared<ngraph::op::v1::LessEqual>(inp0, inp1);
+        // Ideally we should do this but int32 internal blobs are converted to float32 data type in inference.
+        // FIXME: enable this when internal blobs support int32 data type
+        // else if (op == OPERATION::IMOD)
+        //     node = std::make_shared<ngraph::op::v1::FloorMod>(inp0, inp1);
+        else if (op == OPERATION::FMOD)
+            node = std::make_shared<ngraph::op::v1::Mod>(inp0, inp1);
         else
             CV_Error(Error::StsNotImplemented, "Operation is not implemented for nGraph backend");
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));
