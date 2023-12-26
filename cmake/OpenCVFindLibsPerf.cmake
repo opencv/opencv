@@ -40,7 +40,11 @@ endif()
 
 # --- CUDA ---
 if(WITH_CUDA)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+    include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDALanguage.cmake")
+  else()
+    include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
+  endif()
   if(NOT HAVE_CUDA)
     message(WARNING "OpenCV is not able to find/configure CUDA SDK (required by WITH_CUDA).
 CUDA support will be disabled in OpenCV build.
