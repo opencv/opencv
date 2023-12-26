@@ -627,6 +627,8 @@ class CppHeaderParser(object):
                                                              ("noArray", arg_type)]).strip()
                     if '/IO' in modlist and '/O' in modlist:
                         modlist.remove('/O')
+                    if arg_type == 'String' and arg_name == 'filename':
+                        modlist.append('/PATH')
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 

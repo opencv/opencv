@@ -42,6 +42,10 @@ endif()
 ocv_assert(${PYTHON}_VERSION_MAJOR)
 ocv_assert(${PYTHON}_VERSION_MINOR)
 
+if (${PYTHON}_VERSION_STRING VERSION_GREATER "3.5.999")
+  target_compile_definitions(${the_module} PRIVATE OPENCV_PYTHON_ENABLE_PATHLIKE)
+endif()
+
 if(${PYTHON}_LIMITED_API)
   # support only python3.3+
   ocv_assert(${PYTHON}_VERSION_MAJOR EQUAL 3 AND ${PYTHON}_VERSION_MINOR GREATER 2)
