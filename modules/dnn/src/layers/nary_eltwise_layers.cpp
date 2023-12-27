@@ -42,7 +42,7 @@ public:
         MAX,
         MEAN,
         MIN,
-        IMOD, // Integer Mod. Reminder's sign = Divisor's sign.
+        MOD,  // Integer Mod. Reminder's sign = Divisor's sign.
         FMOD, // Floating-point Mod. Reminder's sign = Dividend's sign.
         PROD,
         SUB,
@@ -79,7 +79,7 @@ public:
         else if (operation == "min")
             op = OPERATION::MIN;
         else if (operation == "mod")
-            op = OPERATION::IMOD;
+            op = OPERATION::MOD;
         else if (operation == "fmod")
             op = OPERATION::FMOD;
         else if (operation == "mul")
@@ -110,20 +110,20 @@ public:
         if (backendId == DNN_BACKEND_CANN)
             return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::SUB ||
                    op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN ||
-                   op == OPERATION::IMOD || op == OPERATION::FMOD;
+                   op == OPERATION::MOD || op == OPERATION::FMOD;
 #endif
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return (op == OPERATION::ADD ||
                     op == OPERATION::PROD ||
                     op == OPERATION::GREATER_EQUAL ||
                     op == OPERATION::LESS_EQUAL ||
-                    op == OPERATION::IMOD ||
+                    op == OPERATION::MOD ||
                     op == OPERATION::FMOD
             );
         if (backendId == DNN_BACKEND_CUDA) {
             return op == OPERATION::MAX  || op == OPERATION::MIN  || op == OPERATION::SUM ||
                    op == OPERATION::PROD || op == OPERATION::DIV  || op == OPERATION::ADD ||
-                   op == OPERATION::SUB  || op == OPERATION::IMOD || op == OPERATION::FMOD;
+                   op == OPERATION::SUB  || op == OPERATION::MOD || op == OPERATION::FMOD;
         }
         return backendId == DNN_BACKEND_OPENCV;
     }
@@ -707,9 +707,9 @@ public:
                 nary_forward<T>(min, T{1}, std::forward<Args>(args)...);
                 break;
             }
-            case OPERATION::IMOD: // int32_t is converted to float in inference
+            case OPERATION::MOD: // int32_t is converted to float in inference
             {
-                auto imod = [](const float &a, const float &b) {
+                auto mod = [](const float &a, const float &b) {
                     int a_i32 = static_cast<float>(a), b_i32 = static_cast<float>(b);
                     int res = a_i32 % b_i32;
                     if ((res < 0 && b_i32 > 0) || (res > 0 && b_i32 < 0)) {
@@ -717,7 +717,7 @@ public:
                     }
                     return static_cast<float>(res);
                 };
-                binary_forward<T>(imod, std::forward<Args>(args)...);
+                binary_forward<T>(mod, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::FMOD:
@@ -895,7 +895,7 @@ public:
             BUILD_CANN_ELTWISE_OP(OPERATION::DIV,  Xdivy,   name);
             BUILD_CANN_ELTWISE_OP(OPERATION::MAX,  Maximum, name);
             BUILD_CANN_ELTWISE_OP(OPERATION::MIN,  Minimum, name);
-            BUILD_CANN_ELTWISE_OP(OPERATION::IMOD, Mod,     name);
+            BUILD_CANN_ELTWISE_OP(OPERATION::MOD, Mod,     name);
             BUILD_CANN_ELTWISE_OP(OPERATION::FMOD, Mod,     name);
 #undef BUILD_CANN_ELTWISE_OP
             default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
@@ -945,7 +945,7 @@ public:
             node = std::make_shared<ngraph::op::v1::LessEqual>(inp0, inp1);
         // Ideally we should do this but int32 internal blobs are converted to float32 data type in inference.
         // FIXME: enable this when internal blobs support int32 data type
-        // else if (op == OPERATION::IMOD)
+        // else if (op == OPERATION::MOD)
         //     node = std::make_shared<ngraph::op::v1::FloorMod>(inp0, inp1);
         else if (op == OPERATION::FMOD)
             node = std::make_shared<ngraph::op::v1::Mod>(inp0, inp1);

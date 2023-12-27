@@ -2831,7 +2831,7 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     layerParams.type = "NaryEltwise";
     layerParams.set("operation", toLowerCase(node_proto.op_type()));
     if (node_proto.op_type() == "Mod") {
-        if (layerParams.has("fmod") && layerParams.get<int>("fmod") == 1) {
+        if (layerParams.get<int>("fmod", 0)) {
             layerParams.set("operation", "fmod");
         };
     }
