@@ -2797,7 +2797,7 @@ TEST_P(Test_ONNX_nets, YOLOv7)
         CV_TEST_TAG_DEBUG_VERYLONG
     );
 
-    std::string weightPath = _tf("models/yolov7_not_simplified.onnx", false);
+    std::string weightPath = _tf("models/yolov7.onnx", false);
     // Reference, which is collected with input size of 640x640
     std::vector<int> refClassIds{1, 16, 7};
     std::vector<float> refScores{0.9614331f, 0.9589417f, 0.8679074f};
