@@ -187,11 +187,7 @@ __kernel void MVN_GROUP(__global const Dtype* src,
     alpha = 1;
 #endif
 
-    Dtype w = 1.f, b = 0.f;
-#ifdef FUSE_GROUP_NORM
-    w = bnorm_weight[channel_index];
-    b = bnorm_bias[channel_index];
-#endif
+    Dtype w = bnorm_weight[channel_index], b = bnorm_bias[channel_index];
 
     vec_type src_vec = load(src, index) - (vec_type)mean_val;
     vec_type dst_vec = src_vec * alpha;
