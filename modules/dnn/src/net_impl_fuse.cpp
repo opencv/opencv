@@ -737,7 +737,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                           inp_i_data->layerInstance->type != "Permute" &&
                           inp_i_data->layerInstance->type != "Reorg" &&
                           inp_i_data->layerInstance->type != "Eltwise" &&
-                          inp_i_data->layerInstance->type != "NaryEltwise" &&
+                        //   inp_i_data->layerInstance->type != "NaryEltwise" &&
                           inp_i_data->layerInstance.dynamicCast<ActivationLayer>().empty())))
                     {
                         break;
