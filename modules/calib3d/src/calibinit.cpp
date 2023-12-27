@@ -1701,12 +1701,12 @@ void ChessBoardDetector::findQuadNeighbors()
                     continue;
 
                 // Check that each corner is a neighbor of different quads
-                for(j = 0; j < closest_quad->count; j++ )
+                for(j = 0; j < 4; j++ )
                 {
                     if (closest_quad->neighbors[j] == &cur_quad)
                         break;
                 }
-                if (j < closest_quad->count)
+                if (j < 4)
                     continue;
 
                 // check whether the closest corner to closest_corner
