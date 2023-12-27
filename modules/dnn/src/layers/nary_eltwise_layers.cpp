@@ -944,7 +944,7 @@ public:
         else if (op == OPERATION::LESS_EQUAL)
             node = std::make_shared<ngraph::op::v1::LessEqual>(inp0, inp1);
         // Ideally we should do this but int32 internal blobs are converted to float32 data type in inference.
-        // FIXME: enable this when internal blobs support int32 data type
+        // TODO: Remove data type convertion when we have type inference.
         else if (op == OPERATION::MOD) {
             auto inp0_i32 = std::make_shared<ngraph::op::Convert>(inp0, ngraph::element::i64);
             auto inp1_i32 = std::make_shared<ngraph::op::Convert>(inp1, ngraph::element::i64);
