@@ -136,7 +136,7 @@ public:
         }
         // Calculate group norm: output = scale * (x - mean) / sqrt(var + eps) + bias
         String mvn_group_kernel_name = format("mvn_group%d", num_vector);
-        build_opt += " -DNORM_VARIANCE -DFUSE_GROUP_NORM -DKERNEL_MVN_GROUP";
+        build_opt += " -DNORM_VARIANCE -DKERNEL_MVN_GROUP";
         ocl::Kernel mvn_group_kernel(mvn_group_kernel_name.c_str(), ocl::dnn::mvn_oclsrc, build_opt);
         if (mvn_group_kernel.empty()) {
             return false;

@@ -161,8 +161,8 @@ __kernel void MVN_GROUP(__global const Dtype* src,
                             const Dtype eps,
                             __global const Dtype* mean,
                             __global const Dtype* dev,
-                            __global const Dtype* bnorm_weight,
-                            __global const Dtype* bnorm_bias,
+                            __global const Dtype* weight,
+                            __global const Dtype* bias,
                             const int channels,
                             const int num_groups,
                             const float relu_slope,
@@ -187,7 +187,7 @@ __kernel void MVN_GROUP(__global const Dtype* src,
     alpha = 1;
 #endif
 
-    Dtype w = bnorm_weight[channel_index], b = bnorm_bias[channel_index];
+    Dtype w = weight[channel_index], b = bias[channel_index];
 
     vec_type src_vec = load(src, index) - (vec_type)mean_val;
     vec_type dst_vec = src_vec * alpha;
