@@ -325,7 +325,7 @@ void eltwise_sub_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, 
 }
 
 template <class T>
-void eltwise_imod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
+void eltwise_mod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
     eltwise_op<T, IModFunctor<T>>(stream, output, x, y);
 }
 
@@ -335,7 +335,7 @@ void eltwise_fmod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x,
 }
 
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
-    template void eltwise_imod_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
+    template void eltwise_mod_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_fmod_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_sub_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_div_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
@@ -345,7 +345,7 @@ void eltwise_fmod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x,
     template void eltwise_max_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_min_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
 #endif
-    template void eltwise_imod_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
+    template void eltwise_mod_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_fmod_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_sub_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_div_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);

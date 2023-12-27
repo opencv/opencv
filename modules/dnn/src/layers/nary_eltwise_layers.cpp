@@ -851,6 +851,12 @@ public:
             case OPERATION::SUB:
                 op_ = cuda4dnn::EltwiseOpType::SUB;
                 break;
+            case OPERATION::MOD:
+                op_ = cuda4dnn::EltwiseOpType::MOD;
+                break;
+            case OPERATION::FMOD:
+                op_ = cuda4dnn::EltwiseOpType::FMOD;
+                break;
             default: return Ptr<BackendNode>(); // return empty cuda_node if the EltwiseOpType is unsupported type.
         };
 

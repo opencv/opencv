@@ -34,7 +34,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void eltwise_sub_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
 
     template <class T>
-    void eltwise_imod_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
+    void eltwise_mod_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
 
     template <class T>
     void eltwise_fmod_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
