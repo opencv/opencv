@@ -800,13 +800,13 @@ struct ReciprocalFunctor {
 };
 
 template <class T>
-struct IModFunctor {
+struct ModFunctor {
     struct Params {
         CUDA4DNN_HOST_DEVICE Params() {}
     };
 
-    CUDA4DNN_DEVICE IModFunctor() { }
-    CUDA4DNN_DEVICE IModFunctor(const Params& params) { }
+    CUDA4DNN_DEVICE ModFunctor() { }
+    CUDA4DNN_DEVICE ModFunctor(const Params& params) { }
 
     CUDA4DNN_DEVICE T operator()(T x, T y) {
         int res = (int)x % (int)y;

@@ -326,7 +326,7 @@ void eltwise_sub_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, 
 
 template <class T>
 void eltwise_mod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
-    eltwise_op<T, IModFunctor<T>>(stream, output, x, y);
+    eltwise_op<T, ModFunctor<T>>(stream, output, x, y);
 }
 
 template <class T>
