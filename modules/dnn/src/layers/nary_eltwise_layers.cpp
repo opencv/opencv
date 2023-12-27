@@ -24,6 +24,16 @@ namespace cv
 namespace dnn
 {
 
+namespace {
+static int _mod(int x, int y) {
+    int res = x % y;
+    if ((res < 0 && y > 0) || (res > 0 && y < 0)) {
+        res += y;
+    }
+    return res;
+}
+}
+
 class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
 public:
@@ -707,16 +717,9 @@ public:
                 nary_forward<T>(min, T{1}, std::forward<Args>(args)...);
                 break;
             }
-            case OPERATION::MOD: // int32_t is converted to float in inference
+            case OPERATION::MOD:
             {
-                auto mod = [](const float &a, const float &b) {
-                    int a_i32 = static_cast<float>(a), b_i32 = static_cast<float>(b);
-                    int res = a_i32 % b_i32;
-                    if ((res < 0 && b_i32 > 0) || (res > 0 && b_i32 < 0)) {
-                        res += b_i32;
-                    }
-                    return static_cast<float>(res);
-                };
+                auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
                 binary_forward<T>(mod, std::forward<Args>(args)...);
                 break;
             }
