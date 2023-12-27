@@ -895,7 +895,7 @@ public:
             BUILD_CANN_ELTWISE_OP(OPERATION::DIV,  Xdivy,   name);
             BUILD_CANN_ELTWISE_OP(OPERATION::MAX,  Maximum, name);
             BUILD_CANN_ELTWISE_OP(OPERATION::MIN,  Minimum, name);
-            BUILD_CANN_ELTWISE_OP(OPERATION::MOD, Mod,     name);
+            BUILD_CANN_ELTWISE_OP(OPERATION::MOD,  Mod,     name);
             BUILD_CANN_ELTWISE_OP(OPERATION::FMOD, Mod,     name);
 #undef BUILD_CANN_ELTWISE_OP
             default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
@@ -946,9 +946,9 @@ public:
         // Ideally we should do this but int32 internal blobs are converted to float32 data type in inference.
         // TODO: Remove data type convertion when we have type inference.
         else if (op == OPERATION::MOD) {
-            auto inp0_i32 = std::make_shared<ngraph::op::Convert>(inp0, ngraph::element::i64);
-            auto inp1_i32 = std::make_shared<ngraph::op::Convert>(inp1, ngraph::element::i64);
-            auto mod = std::make_shared<ngraph::op::v1::FloorMod>(inp0, inp1);
+            auto inp0_i64 = std::make_shared<ngraph::op::Convert>(inp0, ngraph::element::i64);
+            auto inp1_i64 = std::make_shared<ngraph::op::Convert>(inp1, ngraph::element::i64);
+            auto mod = std::make_shared<ngraph::op::v1::FloorMod>(inp0_i64, inp1_i64);
             node = std::make_shared<ngraph::op::Convert>(mod, ngraph::element::f32);
         }
         else if (op == OPERATION::FMOD)
