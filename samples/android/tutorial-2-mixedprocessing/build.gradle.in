@@ -44,7 +44,7 @@ android {
         }
     }
     buildFeatures {
-        if (gradle.opencv_source == "maven_local" || gradle.opencv_source == "maven_cenral") {
+        if (gradle.opencv_source == "maven_local" || gradle.opencv_source == "maven_central") {
             prefab true
         }
     }
@@ -55,7 +55,7 @@ dependencies {
     if (gradle.opencv_source == "sdk_path") {
         println 'Using OpenCV from SDK'
         implementation project(':opencv')
-    } else if (gradle.opencv_source == "maven_local" || gradle.opencv_source == "maven_cenral") {
+    } else if (gradle.opencv_source == "maven_local" || gradle.opencv_source == "maven_central") {
         println 'Using OpenCV from Maven repo'
         implementation 'org.opencv:opencv:@OPENCV_VERSION_PLAIN@'
     }
