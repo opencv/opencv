@@ -1518,6 +1518,32 @@ TEST_P(Test_ONNX_layers, Einsum_const_inputs) {
     testONNXModels("einsum_const_inputs", npy, 0, 0, false, false, 1);
 }
 
+TEST_P(Test_ONNX_layers, Cuda_concat)
+{
+    // testONNXModels("matmul_concat", npy, 0, 0, false, false, 1);
+    String basename = "matmul_concat";
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    Net net_cuda = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+
+    ASSERT_FALSE(net.empty());
+    ASSERT_FALSE(net_cuda.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net_cuda.setPreferableBackend(backend);
+    net_cuda.setPreferableTarget(target);
+
+    Mat input = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+
+    net.setInput(input);
+    net_cuda.setInput(input);
+
+    Mat out = net.forward();
+    Mat out_cuda = net.forward();
+    normAssert(out, out_cuda, "", default_l1, default_lInf);
+}
+
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
     testONNXModels("ReflectionPad2d");
