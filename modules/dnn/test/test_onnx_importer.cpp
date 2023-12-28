@@ -1520,7 +1520,6 @@ TEST_P(Test_ONNX_layers, Einsum_const_inputs) {
 
 TEST_P(Test_ONNX_layers, Cuda_concat)
 {
-    // testONNXModels("matmul_concat", npy, 0, 0, false, false, 1);
     String basename = "matmul_concat";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     Net net_cuda = readNetFromONNX(_tf("models/" + basename + ".onnx"));
