@@ -127,13 +127,23 @@ static int toCV(const ov::element::Type &type) {
 }
 
 static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
-    const auto total = mat.total() * mat.channels();
-    if (toCV(tensor.get_element_type()) != mat.depth() ||
+    auto total = mat.total() * mat.channels();
+    auto tensor_shape = tensor.get_shape();
+    cv::Mat rsz(mat);
+    if (tensor.get_size() != total) {
+        GAPI_LOG_WARNING(NULL, "copyToOV :: tensor.get_size() != total, resizing cv::Mat");
+        auto W = ov::layout::width_idx("NHWC");
+        auto H = ov::layout::height_idx("NHWC");
+        cv::Size new_size = cv::Size(tensor_shape[W], tensor_shape[H]);
+        cv::resize(mat, rsz, new_size);  // resize
+        total = rsz.total() * rsz.channels();
+    }
+    if (toCV(tensor.get_element_type()) != rsz.depth() ||
         tensor.get_size()               != total ) {
         std::stringstream ss;
         ss << "Failed to copy data from ov::Tensor to cv::Mat."
            << " Data type or number of elements mismatch."
-           << " cv::Mat: " << cv::descr_of(mat) << " and"
+           << " cv::Mat: " << cv::descr_of(rsz) << " and"
            << " ov::Tensor: " << tensor.get_element_type() << " "
            << tensor.get_shape();
         cv::util::throw_error(std::logic_error(ss.str()));
@@ -142,12 +152,12 @@ static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
     if (tensor.get_element_type() == ov::element::i64) {
         GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
         cv::gimpl::convertInt64ToInt32(tensor.data<int64_t>(),
-                                       mat.ptr<int>(),
+                                       rsz.ptr<int>(),
                                        total);
     } else {
         std::copy_n(reinterpret_cast<uint8_t*>(tensor.data()),
                     tensor.get_byte_size(),
-                    mat.ptr<uint8_t>());
+                    rsz.ptr<uint8_t>());
     }
 }
 
