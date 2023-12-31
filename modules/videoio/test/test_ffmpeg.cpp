@@ -235,6 +235,66 @@ const videoio_container_params_t videoio_container_params[] =
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_container, testing::ValuesIn(videoio_container_params));
 
+typedef tuple<VideoCaptureAPIs, string, int, int, int, int, int> videoio_container_get_params_t;
+typedef testing::TestWithParam<videoio_container_get_params_t > videoio_container_get;
+
+TEST_P(videoio_container_get, read)
+{
+    const VideoCaptureAPIs api = get<0>(GetParam());
+
+    if (!videoio_registry::hasBackend(api))
+        throw SkipTestException("Backend was not found");
+
+    const string fileName = get<1>(GetParam());
+    const int height = get<2>(GetParam());
+    const int width = get<3>(GetParam());
+    const int nFrames = get<4>(GetParam());
+    const int bitrate = get<5>(GetParam());
+    const int fps = get<6>(GetParam());
+
+    VideoCapture container(findDataFile(fileName), api, { CAP_PROP_FORMAT, -1 });
+    if (!container.isOpened())
+        throw SkipTestException("Video stream is not supported");
+
+    const int heightProp = static_cast<int>(container.get(CAP_PROP_FRAME_HEIGHT));
+    ASSERT_EQ(height, heightProp);
+    const int widthProp = static_cast<int>(container.get(CAP_PROP_FRAME_WIDTH));
+    ASSERT_EQ(width, widthProp);
+    const int nFramesProp = static_cast<int>(container.get(CAP_PROP_FRAME_COUNT));
+    ASSERT_EQ(nFrames, nFramesProp);
+    const int bitrateProp = static_cast<int>(container.get(CAP_PROP_BITRATE));
+    ASSERT_EQ(bitrate, bitrateProp);
+    const double fpsProp = container.get(CAP_PROP_FPS);
+    ASSERT_EQ(fps, fpsProp);
+    // remove when PR fixing raw video CAP_PROP_POS_MSEC return value is merged and windows dll is updated
+#ifndef _WIN32
+    vector<int> displayTimeMs;
+    int iFrame = 1;
+    while (container.grab()) {
+        displayTimeMs.push_back(static_cast<int>(container.get(CAP_PROP_POS_MSEC)));
+        const int iFrameProp = static_cast<int>(container.get(CAP_PROP_POS_FRAMES));
+        ASSERT_EQ(iFrame++, iFrameProp);
+    }
+    sort(displayTimeMs.begin(), displayTimeMs.end());
+    vector<int> displayTimeDiffMs(displayTimeMs.size());
+    std::adjacent_difference(displayTimeMs.begin(), displayTimeMs.end(), displayTimeDiffMs.begin());
+    auto minTimeMsIt = min_element(displayTimeDiffMs.begin() + 1, displayTimeDiffMs.end());
+    auto maxTimeMsIt = max_element(displayTimeDiffMs.begin() + 1, displayTimeDiffMs.end());
+    const int frameTimeMs = static_cast<int>(1000.0 / fps);
+    ASSERT_NEAR(frameTimeMs, *minTimeMsIt, 1);
+    ASSERT_NEAR(frameTimeMs, *maxTimeMsIt, 1);
+#endif
+}
+
+const videoio_container_get_params_t videoio_container_get_params[] =
+{
+    videoio_container_get_params_t(CAP_FFMPEG, "video/big_buck_bunny.mp4", 384, 672, 125, 483, 24),
+    videoio_container_get_params_t(CAP_FFMPEG, "video/big_buck_bunny.mjpg.avi", 384, 672, 125, 2713, 24),
+    videoio_container_get_params_t(CAP_FFMPEG, "video/sample_322x242_15frames.yuv420p.libx264.mp4", 242, 322, 15, 542, 25)
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_container_get, testing::ValuesIn(videoio_container_get_params));
+
 typedef tuple<string, string, int, int> videoio_encapsulate_params_t;
 typedef testing::TestWithParam< videoio_encapsulate_params_t > videoio_encapsulate;
 
