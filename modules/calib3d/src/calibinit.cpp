@@ -1685,19 +1685,12 @@ void ChessBoardDetector::findQuadNeighbors()
                 if (cur_quad.count >= 4 || closest_quad->count >= 4)
                     continue;
 
-                // If another point from our current quad is closer to the found corner
-                // than the current one, then we don't count this one after all.
-                // This is necessary to support small squares where otherwise the wrong
-                // corner will get matched to closest_quad;
                 ChessBoardCorner& closest_corner = *closest_quad->corners[closest_corner_idx];
 
                 int j = 0;
                 for (; j < 4; j++)
                 {
                     if (cur_quad.neighbors[j] == closest_quad)
-                        break;
-
-                    if (normL2Sqr<float>(closest_corner.pt - cur_quad.corners[j]->pt) < min_dist)
                         break;
                 }
                 if (j < 4)
@@ -1712,7 +1705,7 @@ void ChessBoardDetector::findQuadNeighbors()
                 if (j < closest_quad->count)
                     continue;
 
-                // check whether the closest corner to closest_corner
+                // check whether the closest corresponding corner to closest_corner
                 // is different from cur_quad->corners[i]->pt
                 query = Mat(closest_corner.pt);
                 radius = min_dist + 1;
@@ -1729,6 +1722,9 @@ void ChessBoardDetector::findQuadNeighbors()
                         continue;
 
                     const int k = neighbor_idx & 3;
+                    if (abs(closest_corner_idx - k) != 2)
+                        break;
+
                     CV_DbgAssert(q);
                     if (!q->neighbors[k])
                     {
