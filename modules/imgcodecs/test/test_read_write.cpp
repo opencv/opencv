@@ -218,6 +218,18 @@ void test_image_io(const Mat& image, const std::string& fname, const std::string
         waitKey();
     }
 #endif
+
+    buf_loaded.setTo(0);
+    const auto* data_before = buf_loaded.data;
+    bool success = imdecode(Mat(buf), imreadFlag, buf_loaded);
+    EXPECT_TRUE(success);
+    EXPECT_EQ(buf_loaded.data, data_before);
+    EXPECT_EQ(0, cv::norm(loaded, buf_loaded, NORM_INF));
+
+    std::fill(buf.begin(), buf.end(), static_cast<uchar>(0));
+    success = imdecode(Mat(buf), imreadFlag, buf_loaded);
+    EXPECT_FALSE(success);
+    EXPECT_EQ(buf_loaded.data, data_before);
 }
 
 TEST_P(Imgcodecs_Image, read_write_BGR)

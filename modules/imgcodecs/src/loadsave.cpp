@@ -929,6 +929,14 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     return *dst;
 }
 
+bool imdecode(InputArray _buf, int flags, Mat& dst)
+{
+    CV_TRACE_FUNCTION();
+
+    Mat buf = _buf.getMat();
+    return imdecode_(buf, flags, dst);
+}
+
 static bool
 imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int count)
 {
