@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -39,27 +40,48 @@
 //
 //M*/
 
-#ifndef _GRFMTS_H_
-#define _GRFMTS_H_
+#ifndef _GRFMT_QOI_H_
+#define _GRFMT_QOI_H_
 
 #include "grfmt_base.hpp"
-#include "grfmt_avif.hpp"
-#include "grfmt_bmp.hpp"
-#include "grfmt_sunras.hpp"
-#include "grfmt_jpeg.hpp"
-#include "grfmt_pxm.hpp"
-#include "grfmt_pfm.hpp"
-#include "grfmt_tiff.hpp"
-#include "grfmt_spng.hpp"
-#include "grfmt_png.hpp"
-#include "grfmt_jpeg2000.hpp"
-#include "grfmt_jpeg2000_openjpeg.hpp"
-#include "grfmt_exr.hpp"
-#include "grfmt_webp.hpp"
-#include "grfmt_hdr.hpp"
-#include "grfmt_gdal.hpp"
-#include "grfmt_gdcm.hpp"
-#include "grfmt_pam.hpp"
-#include "grfmt_qoi.hpp"
 
-#endif/*_GRFMTS_H_*/
+#ifdef HAVE_QOI
+
+namespace cv
+{
+
+class QoiDecoder CV_FINAL : public BaseImageDecoder
+{
+public:
+    QoiDecoder();
+    virtual ~QoiDecoder() CV_OVERRIDE;
+
+    bool  readData( Mat& img ) CV_OVERRIDE;
+    bool  readHeader() CV_OVERRIDE;
+    void  close();
+
+    ImageDecoder newDecoder() const CV_OVERRIDE
+    {
+        return makePtr<QoiDecoder>();
+    }
+};
+
+class QoiEncoder CV_FINAL : public BaseImageEncoder
+{
+public:
+    QoiEncoder();
+    virtual ~QoiEncoder() CV_OVERRIDE;
+
+    bool  write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
+
+    ImageEncoder newEncoder() const CV_OVERRIDE
+    {
+        return makePtr<QoiEncoder>();
+    }
+};
+
+}
+
+#endif // HAVE_QOI
+
+#endif /*_GRFMT_QOI_H_*/

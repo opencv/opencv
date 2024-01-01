@@ -232,6 +232,7 @@ OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          (WIN32 
 OCV_OPTION(BUILD_PNG                "Build libpng from source"           (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          (OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_WEBP               "Build WebP from source"             (((WIN32 OR ANDROID OR APPLE) AND NOT WINRT) OR OPENCV_FORCE_3RDPARTY_BUILD) )
+OCV_OPTION(BUILD_QOI                "Build qoi from source"              (OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" (ANDROID OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_IPP_IW             "Build IPP IW from source"           (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD) IF (X86_64 OR X86) AND NOT WINRT )
 OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"
@@ -435,6 +436,9 @@ OCV_OPTION(WITH_MFX "Include Intel Media SDK support" OFF
 OCV_OPTION(WITH_GDAL "Include GDAL Support" OFF
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_GDAL)
+OCV_OPTION(WITH_QOI "Include QOI Support" OFF
+  VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT XROS AND NOT WINRT
+  VERIFY HAVE_QOI)
 OCV_OPTION(WITH_GPHOTO2 "Include gPhoto2 library support" OFF
   VISIBLE_IF UNIX AND NOT ANDROID AND NOT IOS AND NOT XROS
   VERIFY HAVE_GPHOTO2)
@@ -1498,6 +1502,10 @@ endif()
 
 if(WITH_GDCM OR HAVE_GDCM)
   status("    GDCM:" HAVE_GDCM THEN "YES (${GDCM_VERSION})" ELSE "NO")
+endif()
+
+if(WITH_QOI OR HAVE_QOI)
+  status("    QOI(Quite OK Image):" HAVE_QOI THEN "${QOI_INCLUDE_DIR}/qoi.h" ELSE "NO")
 endif()
 
 if(WITH_IMGCODEC_HDR OR DEFINED HAVE_IMGCODEC_HDR)
