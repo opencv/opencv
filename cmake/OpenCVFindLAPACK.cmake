@@ -106,14 +106,25 @@ macro(ocv_lapack_check)
       list(APPEND __link_directories ${LAPACK_LINK_LIBRARIES})
     endif()
 
+    set(LAPACK_TRY_COMPILE_DEF "")
+    if(LAPACK_IMPL STREQUAL "LAPACK/Apple") # https://github.com/opencv/opencv/issues/24660
+      set(LAPACK_TRY_COMPILE_DEF "-DACCELERATE_NEW_LAPACK")
+      # TODO: Need to find a way detecting macOS / iOS versions
+      #       enbale if macOS >= 13.3 or iOS >= 16.4
+      # add_compile_definitions(ACCELERATE_NEW_LAPACK)
+      # add_compile_definitions(ACCELERATE_LAPACK_ILP64)
+    endif()
+
     try_compile(__VALID_LAPACK
         "${OpenCV_BINARY_DIR}"
         "${OpenCV_SOURCE_DIR}/cmake/checks/lapack_check.cpp"
         CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${LAPACK_INCLUDE_DIR}\;${CMAKE_BINARY_DIR}"
                     "-DLINK_DIRECTORIES:STRING=${__link_directories}"
+        COMPILE_DEFINITIONS ${LAPACK_TRY_COMPILE_DEF}
         LINK_LIBRARIES ${LAPACK_LIBRARIES}
         OUTPUT_VARIABLE TRY_OUT
     )
+    message(STATUS "-------------LAPACK valid check: ${TRY_OUT}")
     if(NOT __VALID_LAPACK)
       file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
           "\nLAPACK(${LAPACK_IMPL}) check FAILED:\n"
