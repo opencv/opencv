@@ -859,7 +859,6 @@ CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
                              void* userdata = 0, int type = QT_PUSH_BUTTON,
                              bool initial_button_state = false);
 
-
 CV_EXPORTS void centerView(const String& windowName, float factor, Point coord);
 
 CV_EXPORTS void resetZoom(const String& windowName);

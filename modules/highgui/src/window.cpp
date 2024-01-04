@@ -1260,27 +1260,27 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
-void cv::centerView(float, Point)
+void cv::centerView(const String&, float, Point)
 {
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
-void cv::resetZoom()
+void cv::resetZoom(const String&)
 {
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
-void cv::hideNav()
+void cv::hideNav(const String&)
 {
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
-void cv::showNav()
+void cv::showNav(const String&)
 {
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
-void cv::setDefaultCursor(int)
+void cv::setDefaultCursor(const String&, int)
 {
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
