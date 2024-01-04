@@ -86,12 +86,25 @@ public:
     int getTensorShapeSize(int node_id, int node_input_id) {
         const auto node = getNode(node_id);
         const auto &input_name = node->getInputName(node_input_id);
+        // try to get from value_info
         for (int i = 0; i < net.value_info_size(); i++) {
             const auto value_info = net.value_info(i);
             if (value_info.name() == input_name) {
                 if (value_info.has_type() && value_info.type().has_tensor_type() &&
                     value_info.type().tensor_type().has_shape()) {
                     return value_info.type().tensor_type().shape().dim_size();
+                } else {
+                    return -1;
+                }
+            }
+        }
+        // try to get from input
+        for (int i = 0; i < net.input_size(); i++) {
+            const auto input = net.input(i);
+            if (input.name() == input_name) {
+                if (input.has_type() && input.type().has_tensor_type() &&
+                    input.type().tensor_type().has_shape()) {
+                    return input.type().tensor_type().shape().dim_size();
                 } else {
                     return -1;
                 }
