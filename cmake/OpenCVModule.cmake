@@ -42,6 +42,7 @@
 #   <add extra installation rules>
 #   ocv_add_accuracy_tests(<extra dependencies>)
 #   ocv_add_perf_tests(<extra dependencies>)
+#   ocv_add_fuzz_tests(<extra dependencies>)
 #   ocv_add_samples(<extra dependencies>)
 #
 #
@@ -1132,6 +1133,7 @@ macro(ocv_define_module module_name)
 
   ocv_add_accuracy_tests()
   ocv_add_perf_tests()
+  ocv_add_fuzz_tests()
   ocv_add_samples()
 endmacro()
 
@@ -1377,6 +1379,84 @@ function(ocv_add_accuracy_tests)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
 
+    if(INSTALL_TESTS)
+      install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+    endif()
+  endif()
+endfunction()
+
+function(ocv_add_fuzz_tests)
+  ocv_debug_message("ocv_add_fuzz_tests(" ${ARGN} ")")
+
+  if(WINRT)
+    set(OPENCV_DEBUG_POSTFIX "")
+  endif()
+
+  set(fuzz_path "${CMAKE_CURRENT_LIST_DIR}/fuzz")
+  if(BUILD_FUZZ_TESTS AND EXISTS "${fuzz_path}"
+      AND (NOT DEFINED OPENCV_BUILD_FUZZ_TEST_MODULES_LIST
+          OR OPENCV_BUILD_FUZZ_TEST_MODULES_LIST STREQUAL "all"
+          OR ";${OPENCV_BUILD_FUZZ_TEST_MODULES_LIST};" MATCHES ";${name};"
+      )
+  )
+    __ocv_parse_test_sources(FUZZ ${ARGN})
+
+    set(fuzz_deps opencv_ts ${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
+    ocv_check_dependencies(${fuzz_deps})
+
+    if(OCV_DEPENDENCIES_FOUND)
+      set(the_target "opencv_fuzz_${name}")
+      # project(${the_target})
+
+      if(NOT OPENCV_FUZZ_${the_module}_SOURCES)
+        file(GLOB_RECURSE fuzz_srcs "${fuzz_path}/*.cpp")
+        file(GLOB_RECURSE fuzz_hdrs "${fuzz_path}/*.hpp" "${fuzz_path}/*.h")
+        ocv_source_group("Src" DIRBASE "${fuzz_path}" FILES ${fuzz_srcs})
+        ocv_source_group("Include" DIRBASE "${fuzz_path}" FILES ${fuzz_hdrs})
+        set(OPENCV_FUZZ_${the_module}_SOURCES ${fuzz_srcs} ${fuzz_hdrs})
+      endif()
+
+      ocv_compiler_optimization_process_sources(OPENCV_FUZZ_${the_module}_SOURCES OPENCV_FUZZ_${the_module}_DEPS ${the_target})
+
+      if(NOT BUILD_opencv_world)
+        get_native_precompiled_header(${the_target} fuzz_precomp.hpp)
+      endif()
+
+      source_group("Src" FILES "${${the_target}_pch}")
+      ocv_add_executable(${the_target} ${OPENCV_FUZZ_${the_module}_SOURCES} ${${the_target}_pch})
+      ocv_target_include_modules(${the_target} ${fuzz_deps})
+      ocv_target_link_libraries(${the_target} PRIVATE ${fuzz_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS} ${OPENCV_FUZZ_${the_module}_DEPS})
+      add_dependencies(opencv_fuzz_tests ${the_target})
+
+      set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};FuzzTest")
+      set_source_files_properties(${OPENCV_FUZZ_${the_module}_SOURCES} ${${the_target}_pch}
+        PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};PerfTest")
+
+      # Additional target properties
+      set_target_properties(${the_target} PROPERTIES
+        DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+        RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
+      )
+      if(ENABLE_SOLUTION_FOLDERS)
+        set_target_properties(${the_target} PROPERTIES FOLDER "tests with fuzzing")
+      endif()
+
+      if(WINRT)
+        # removing APPCONTAINER from tests to run from console
+        # look for detailed description inside of ocv_create_module macro above
+        add_custom_command(TARGET "opencv_fuzz_${name}"
+                           POST_BUILD
+                           COMMAND link.exe /edit /APPCONTAINER:NO $(TargetPath))
+      endif()
+
+      if(NOT BUILD_opencv_world)
+        _ocv_add_precompiled_headers(${the_target})
+      endif()
+
+      ocv_add_test_from_target("${the_target}" "Fuzzing" "${the_target}")
+    else(OCV_DEPENDENCIES_FOUND)
+      # TODO: warn about unsatisfied dependencies
+    endif(OCV_DEPENDENCIES_FOUND)
     if(INSTALL_TESTS)
       install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
     endif()

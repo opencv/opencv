@@ -1781,7 +1781,7 @@ endmacro()
 
 function(ocv_add_test_from_target test_name test_kind the_target)
   if(CMAKE_VERSION VERSION_GREATER "2.8" AND NOT CMAKE_CROSSCOMPILING)
-    if(NOT "${test_kind}" MATCHES "^(Accuracy|Performance|Sanity)$")
+    if(NOT "${test_kind}" MATCHES "^(Accuracy|Fuzzing|Performance|Sanity)$")
       message(FATAL_ERROR "Unknown test kind : ${test_kind}")
     endif()
     if(NOT TARGET "${the_target}")

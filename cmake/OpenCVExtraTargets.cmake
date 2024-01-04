@@ -41,6 +41,12 @@ if(BUILD_PERF_TESTS)
     set_target_properties(opencv_perf_tests PROPERTIES FOLDER "extra")
   endif()
 endif()
+if(BUILD_FUZZ_TESTS)
+  add_custom_target(opencv_fuzz_tests)
+  if(ENABLE_SOLUTION_FOLDERS)
+    set_target_properties(opencv_fuzz_tests PROPERTIES FOLDER "extra")
+  endif()
+endif()
 
 # Documentation
 if(BUILD_DOCS)

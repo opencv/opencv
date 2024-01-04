@@ -261,6 +261,8 @@ ocv_add_perf_tests(${dnn_runtime_libs}
     FILES Include ${perf_hdrs}
 )
 
+ocv_add_fuzz_tests(${dnn_runtime_libs})
+
 ocv_option(OPENCV_DNN_PERF_CAFFE "Add performance tests of Caffe framework" OFF)
 ocv_option(OPENCV_DNN_PERF_CLCAFFE "Add performance tests of clCaffe framework" OFF)
 if(BUILD_PERF_TESTS)
