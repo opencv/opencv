@@ -55,8 +55,8 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
     const float max_aspect_ratio = 3.0f;
     const float min_box_size = 10.0f;
     const float accuracyRate = 0.3f;
-    const float minCornerDistanceRate = 0.05;
-  
+    const float minCornerDistanceRate = 0.05f;
+
     for (size_t i = 0; i < contours.size(); ++i)
     {
         if (hierarchy.at(i)[3] != -1)
@@ -76,7 +76,7 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
         {
             continue;
         }
-      
+
         // check is square and is convex
         vector<Point> approxCurve;
         approxPolyDP(contours[i], approxCurve, double(contours[i].size()) * accuracyRate, true);
@@ -93,7 +93,7 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
                        (double)(approxCurve[j].y - approxCurve[(j + 1) % 4].y);
             minDistSq = min(minDistSq, d);
         }
-      
+
         double minCornerDistancePixels = double(contours[i].size()) * minCornerDistanceRate;
         if(minDistSq < minCornerDistancePixels * minCornerDistancePixels) continue;
 
