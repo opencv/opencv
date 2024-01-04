@@ -874,6 +874,9 @@ struct TorchImporter
             {
                 newModule->apiType = "Softmax";
                 layerParams.set("log_softmax", nnName == "LogSoftMax");
+                // set default axis to 1
+                if(!layerParams.has("axis"))
+                    layerParams.set("axis", 1);
                 curModule->modules.push_back(newModule);
             }
             else if (nnName == "SpatialCrossMapLRN")

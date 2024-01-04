@@ -10,6 +10,7 @@
 #ifdef HAVE_ONNX
 
 #include "backends/onnx/dml_ep.hpp"
+#include "backends/onnx/coreml_ep.hpp"
 
 #include <ade/util/algorithm.hpp> // any_of
 #include <ade/util/zip_range.hpp>
@@ -209,6 +210,12 @@ static void addExecutionProvider(Ort::SessionOptions          *session_options,
             GAPI_LOG_INFO(NULL, "DirectML Execution Provider is added.");
             const auto &dml_ep = cv::util::get<ep::DirectML>(execution_provider);
             addDMLExecutionProvider(session_options, dml_ep);
+            break;
+        }
+        case ep::EP::index_of<ep::CoreML>(): {
+            GAPI_LOG_INFO(NULL, "CoreML Execution Provider is added.");
+            const auto &coreml_ep = cv::util::get<ep::CoreML>(execution_provider);
+            addCoreMLExecutionProvider(session_options, coreml_ep);
             break;
         }
         case ep::EP::index_of<ep::CUDA>(): {

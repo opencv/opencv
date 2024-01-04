@@ -14,7 +14,7 @@
 #define CONV_NR_FP32 28
 
 // The FP16 can only be supported by ARM64 and with FP16 FMA supported.
-#if CV_FP16 // check FP16 FMA.
+#if CV_FP16 && CV_TRY_NEON_FP16 // check FP16 FMA.
 #define CONV_ARM_FP16 1
 #endif
 
