@@ -81,16 +81,15 @@ public:
     }
 
     template<typename T, typename Functor>
-    void forward_impl(const Functor& reduce_operation, const Mat& input_mat, const Mat& indices_mat, const Mat& updates_mat, Mat& output_mat)
-    {
+    void forward_impl(const Functor &reduce_operation, const Mat &input_mat, const Mat &indices_mat, const Mat &updates_mat, Mat &output_mat) {
         input_mat.copyTo(output_mat);
 
         const int ndims = input_mat.dims;
+
         const auto &input_mat_shape = shape(input_mat);
         std::vector<size_t> input_mat_step(ndims);
 
         const auto &indices_mat_shape = shape(indices_mat);
-        // const auto &indices_mat_step = indices_mat.step;
         std::vector<size_t> indices_mat_step(ndims);
 
         for (int i = 0; i < ndims; i++) {
@@ -98,16 +97,16 @@ public:
             indices_mat_step[i] = static_cast<size_t>(indices_mat.step.p[i] / sizeof(T));
         }
 
-        const T* indices = indices_mat.ptr<const T>();
-        const T* updates = updates_mat.ptr<const T>();
-        T* output = output_mat.ptr<T>();
-
         auto fn = [&](const Range &r) {
             size_t input_offset = 0, indices_offset = 0;
 
             int indices_index, index;
             size_t axis_offset, tmp_index, j_index;
             for (int i = r.start; i < r.end; i++) {
+                const T* indices = indices_mat.ptr<const T>();
+                const T* updates = updates_mat.ptr<const T>();
+                T* output = output_mat.ptr<T>();
+
                 input_offset = 0;
                 indices_offset = 0;
                 indices_index = i;
@@ -129,9 +128,9 @@ public:
                 CV_Assert(index < input_mat_shape[axis] && index >= 0);
                 input_offset = input_offset - axis_offset + index * input_mat_step[axis];
 
-                const T* update = updates + indices_offset;
-                T* y = output + input_offset;
-                *y = reduce_operation(*y, *update);
+                updates += indices_offset;
+                output += input_offset;
+                *output = reduce_operation(*output, *updates);
             }
         };
 
