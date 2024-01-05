@@ -324,103 +324,95 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Scatter, Combine(
                           /* withCann= */            false) // only test on CPU
 ));
 
-struct Layer_ScatterND : public TestBaseWithParam<tuple<Backend, Target> >
-{
-    void test_layer(const std::vector<int>& shape, const String reduction = "none")
+using Layer_ScatterND = TestBaseWithParam<tuple<std::vector<int>, std::string, tuple<Backend, Target>>>;
+PERF_TEST_P_(Layer_ScatterND, scatterND) {
+    std::vector<int> shape = get<0>(GetParam());
+    std::string reduction = get<1>(GetParam());
+    int backend_id = get<0>(get<2>(GetParam()));
+    int target_id = get<1>(get<2>(GetParam()));
+
+    std::vector<int> indices_shape(shape);
+    indices_shape.push_back(int(shape.size()));
+    Mat data(shape, CV_32FC1);
+    Mat indices(indices_shape, CV_32FC1);
+    Mat updates(shape, CV_32FC1);
+
+    randn(data, 0.f, 1.f);
+    randn(updates, 0.f, 1.f);
+
+    // initialize the indices with index tuples like [0...N, 0...C, 0...H, 0...W]
+    std::vector<int> current_index_tuple(shape.size());
+    int total = data.total();
+    std::vector<int> indices_step;
+    for (int i = 0; i < indices.dims; i++)
     {
-        int backendId = get<0>(GetParam());
-        int targetId = get<1>(GetParam());
-
-        std::vector<int> indices_shape(shape);
-        indices_shape.push_back(int(shape.size()));
-        Mat data(shape, CV_32FC1);
-        Mat indices(indices_shape, CV_32FC1);
-        Mat updates(shape, CV_32FC1);
-
-        Scalar mean = 0.f;
-        Scalar std = 1.f;
-        randn(data, mean, std);
-        randn(updates, mean, std);
-
-        // initialize the indices with index tuples like [0...N, 0...C, 0...H, 0...W]
-        std::vector<int> current_index_tuple(shape.size());
-        int total = data.total();
-        std::vector<int> indices_step;
-        for (int i = 0; i < indices.dims; i++)
+        int step = indices.step.p[i] / sizeof(float);
+        indices_step.push_back(step);
+    }
+    int t, j, idx, offset_at_idx, offset;
+    for (int i = 0; i < total; i++)
+    {
+        t = i;
+        for (j = shape.size() - 1; j >= 0; j--)
         {
-            int step = indices.step.p[i] / sizeof(float);
-            indices_step.push_back(step);
-        }
-        int t, j, idx, offset_at_idx, offset;
-        for (int i = 0; i < total; i++)
-        {
-            t = i;
-            for (j = shape.size() - 1; j >= 0; j--)
-            {
-                idx = t / shape[j];
-                offset_at_idx = (int)(t - idx * shape[j]);
-                current_index_tuple[j] = offset_at_idx;
-                t = idx;
-            }
-
-            offset = 0;
-            for (j = 0; j < shape.size(); j++)
-                offset += current_index_tuple[j] * indices_step[j];
-
-            for (j = 0; j < shape.size(); j++)
-                indices.at<float>(offset + j) = current_index_tuple[j];
+            idx = t / shape[j];
+            offset_at_idx = (int)(t - idx * shape[j]);
+            current_index_tuple[j] = offset_at_idx;
+            t = idx;
         }
 
-        Net net;
-        LayerParams lp;
-        lp.type = "ScatterND";
-        lp.name = "testLayer";
-        lp.set("reduction", reduction);
+        offset = 0;
+        for (j = 0; j < shape.size(); j++)
+            offset += current_index_tuple[j] * indices_step[j];
 
-        int id = net.addLayerToPrev(lp.name, lp.type, lp);
-        net.connect(0, 0, id, 0);
-        net.connect(0, 1, id, 1);
-        net.connect(0, 2, id, 2);
-
-        // warmup
-        {
-            std::vector<String> inpNames(3);
-            inpNames[0] = "data";
-            inpNames[1] = "indices";
-            inpNames[2] = "updates";
-            net.setInputsNames(inpNames);
-            net.setInput(data, inpNames[0]);
-            net.setInput(indices, inpNames[1]);
-            net.setInput(updates, inpNames[2]);
-
-            net.setPreferableBackend(backendId);
-            net.setPreferableTarget(targetId);
-            Mat out = net.forward();
-        }
-
-        TEST_CYCLE()
-        {
-            Mat res = net.forward();
-        }
-
-        SANITY_CHECK_NOTHING();
+        for (j = 0; j < shape.size(); j++)
+            indices.at<float>(offset + j) = current_index_tuple[j];
     }
 
-    int N = 8;
-    int C = 256;
-    int H = 128;
-    int W = 100;
-};
+    Net net;
+    LayerParams lp;
+    lp.type = "ScatterND";
+    lp.name = "testLayer";
+    lp.set("reduction", reduction);
 
-PERF_TEST_P_(Layer_ScatterND, DISABLED_ScatterND)
-{
-    test_layer({N, C, H ,W});
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 0, id, 0);
+    net.connect(0, 1, id, 1);
+    net.connect(0, 2, id, 2);
+
+    // warmup
+    {
+        std::vector<String> input_names{"data", "indices", "updates"};
+        net.setInputsNames(input_names);
+        net.setInput(data, input_names[0]);
+        net.setInput(indices, input_names[1]);
+        net.setInput(updates, input_names[2]);
+
+        net.setPreferableBackend(backend_id);
+        net.setPreferableTarget(target_id);
+        Mat out = net.forward();
+    }
+
+    TEST_CYCLE()
+    {
+        Mat res = net.forward();
+    }
+
+    SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P_(Layer_ScatterND, DISABLED_ScatterND_add)
-{
-    test_layer({N, C, H , W}, "add");
-}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_ScatterND, Combine(
+    Values(std::vector<int>{2, 128, 64, 50}),
+    Values(std::string("none"), std::string("add")),
+    dnnBackendsAndTargets(/* withInferenceEngine= */ false,
+                          /* withHalide= */          false,
+                          /* withCpuOCV= */          true,
+                          /* withVkCom= */           false,
+                          /* withCUDA= */            false,
+                          /* withNgraph= */          false,
+                          /* withWebnn= */           false,
+                          /* withCann= */            false) // only test on CPU
+));
 
 struct Layer_LayerNorm : public TestBaseWithParam<tuple<Backend, Target> >
 {
@@ -795,8 +787,6 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple
 #ifdef HAVE_CUDA
 INSTANTIATE_TEST_CASE_P(CUDA, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_CUDA, DNN_TARGET_CUDA)));
 #endif
-// INSTANTIATE_TEST_CASE_P(/**/, Layer_Scatter, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
-INSTANTIATE_TEST_CASE_P(/**/, Layer_ScatterND, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
