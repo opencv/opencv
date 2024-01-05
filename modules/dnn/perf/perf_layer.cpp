@@ -350,6 +350,7 @@ PERF_TEST_P_(Layer_ScatterND, scatterND) {
         indices_step.push_back(step);
     }
     int t, j, idx, offset_at_idx, offset;
+    auto *indices_ptr = indices.ptr<float>();
     for (int i = 0; i < total; i++)
     {
         t = i;
@@ -366,7 +367,7 @@ PERF_TEST_P_(Layer_ScatterND, scatterND) {
             offset += current_index_tuple[j] * indices_step[j];
 
         for (j = 0; j < shape.size(); j++)
-            indices.at<float>(offset + j) = current_index_tuple[j];
+            indices_ptr[offset + j] = current_index_tuple[j];
     }
 
     Net net;
