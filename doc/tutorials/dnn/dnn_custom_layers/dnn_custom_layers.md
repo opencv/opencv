@@ -227,7 +227,7 @@ a centric one.
 @snippet dnn/edge_detection.py Register
 
 That's it! We have replaced an implemented OpenCV's layer to a custom one.
-You may find a full script in the [source code](https://github.com/opencv/opencv/tree/3.4/samples/dnn/edge_detection.py).
+You may find a full script in the [source code](https://github.com/opencv/opencv/tree/4.x/samples/dnn/edge_detection.py).
 
 <table border="0">
 <tr>

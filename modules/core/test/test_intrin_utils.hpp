@@ -1748,7 +1748,7 @@ template<typename R> struct TheTest
         Data<R> dataEQ = v_eq(a, b);
         Data<R> dataNE = v_ne(a, b);
 
-        for (int i = 0; i < R::nlanes; ++i)
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             if (cvtest::debugLevel > 0) cout << "i=" << i << " ( " << dataA[i] << " vs " << dataB[i] << " ): eq=" << dataEQ[i] << " ne=" << dataNE[i] << endl;

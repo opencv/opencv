@@ -5,7 +5,6 @@ Deep Neural Networks (dnn module) {#tutorial_table_of_content_dnn}
 -   @subpage tutorial_dnn_halide
 -   @subpage tutorial_dnn_halide_scheduling
 -   @subpage tutorial_dnn_openvino
--   @subpage tutorial_dnn_android
 -   @subpage tutorial_dnn_yolo
 -   @subpage tutorial_dnn_javascript
 -   @subpage tutorial_dnn_custom_layers

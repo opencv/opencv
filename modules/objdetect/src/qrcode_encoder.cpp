@@ -6,6 +6,8 @@
 
 #include "precomp.hpp"
 #include "qrcode_encoder_table.inl.hpp"
+#include "graphical_code_detector_impl.hpp"
+
 namespace cv
 {
 using std::vector;
@@ -19,6 +21,7 @@ const uint8_t INVALID_REGION_VALUE = 110;
 static void decToBin(const int dec_number, const int total_bits, std::vector<uint8_t> &bin_number);
 static uint8_t gfPow(uint8_t x, int power);
 static uint8_t gfMul(const uint8_t x, const uint8_t y);
+static uint8_t gfDiv(const uint8_t x, const uint8_t y);
 static void gfPolyMul(const vector<uint8_t> &p, const vector<uint8_t> &q, vector<uint8_t> &product);
 static void gfPolyDiv(const vector<uint8_t> &dividend, const vector<uint8_t> &divisor, const int ecc_num, vector<uint8_t> &quotient);
 static void polyGenerator(const int n, vector<uint8_t> &result);
@@ -49,6 +52,13 @@ static uint8_t gfMul(const uint8_t x, const uint8_t y)
     if (x == 0 || y == 0)
         return 0;
     return gf_exp[(gf_log[x] + gf_log[y]) % 255];
+}
+
+static uint8_t gfDiv(const uint8_t x, const uint8_t y)
+{
+    if (x == 0 || y == 0)
+        return 0;
+    return gf_exp[(gf_log[x] + 255 - gf_log[y]) % 255];
 }
 
 static void gfPolyMul(const vector<uint8_t> &p, const vector<uint8_t> &q, vector<uint8_t> &product)
@@ -141,6 +151,8 @@ static int mapSymbol(char c)
     return -1;
 }
 
+static void maskData(const Mat& original, const int mask_type_num, Mat &masked);
+
 QRCodeEncoder::QRCodeEncoder()
 {
     // nothing
@@ -221,7 +233,6 @@ protected:
     void formatGenerate(const int mask_type_num, vector<uint8_t> &format_array);
     void versionInfoGenerate(const int version_level_num, vector<uint8_t> &version_array);
     void fillReserved(const vector<uint8_t> &format_array, Mat &masked);
-    void maskData(const int mask_type_num, Mat &masked);
     void findAutoMaskType();
     bool estimateVersion(const int input_length, EncodeMode mode, vector<int> &possible_version);
     int versionAuto(const std::string &input_str);
@@ -387,36 +398,10 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
 
 void QRCodeEncoderImpl::formatGenerate(const int mask_type_num, vector<uint8_t> &format_array)
 {
-    const int mask_bits_num = 3;
-    const int level_bits_num = 2;
-
-    std::vector<uint8_t> mask_type_bin(mask_bits_num);
-    std::vector<uint8_t> ec_level_bin(level_bits_num);
-    decToBin(mask_type_num, mask_bits_num, mask_type_bin);
-    decToBin(eccLevelToCode(ecc_level), level_bits_num, ec_level_bin);
-
-    std::vector<uint8_t> format_bits;
-    hconcat(ec_level_bin, mask_type_bin, format_bits);
-    std::reverse(format_bits.begin(), format_bits.end());
-
-    const int ecc_info_bits = 10;
-
-    std::vector<uint8_t> shift(ecc_info_bits, 0);
-    std::vector<uint8_t> polynomial;
-    hconcat(shift, format_bits, polynomial);
-
-    const int generator_len = 11;
-    const uint8_t generator_arr[generator_len] = {1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1};
-    std::vector<uint8_t> format_generator (generator_arr, generator_arr + sizeof(generator_arr) / sizeof(generator_arr[0]));
-    vector<uint8_t> ecc_code;
-    gfPolyDiv(polynomial, format_generator, ecc_info_bits, ecc_code);
-    hconcat(ecc_code, format_bits, format_array);
-
-    const uint8_t mask_arr[MAX_FORMAT_LENGTH] = {0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
-    std::vector<uint8_t> system_mask (mask_arr, mask_arr + sizeof(mask_arr) / sizeof(mask_arr[0]));
-    for(int i = 0; i < MAX_FORMAT_LENGTH; i++)
-    {
-        format_array[i] ^= system_mask[i];
+    int idx = (eccLevelToCode(ecc_level) << 3) | mask_type_num;
+    format_array.resize(MAX_FORMAT_LENGTH);
+    for (int i = 0; i < MAX_FORMAT_LENGTH; ++i) {
+        format_array[i] = (formatInfoLUT[idx] >> i) & 1;
     }
 }
 
@@ -850,7 +835,7 @@ void QRCodeEncoderImpl::findAutoMaskType()
     {
         Mat test_result = masked_data.clone();
         vector<uint8_t> test_format = format;
-        maskData(cur_type, test_result);
+        maskData(original, cur_type, test_result);
         formatGenerate(cur_type, test_format);
         fillReserved(test_format, test_result);
         int continued_num = 0;
@@ -962,8 +947,9 @@ void QRCodeEncoderImpl::findAutoMaskType()
     mask_type = best_index;
 }
 
-void QRCodeEncoderImpl::maskData(const int mask_type_num, Mat& masked)
+void maskData(const Mat& original, const int mask_type_num, Mat& masked)
 {
+    int version_size = original.rows;
     for (int i = 0; i < version_size; i++)
     {
         for (int j = 0; j < version_size; j++)
@@ -1267,7 +1253,7 @@ void QRCodeEncoderImpl::structureFinalMessage()
     writeReservedArea();
     writeData();
     findAutoMaskType();
-    maskData(mask_type, masked_data);
+    maskData(original, mask_type, masked_data);
     formatGenerate(mask_type, format);
     versionInfoGenerate(version_level, version_reserved);
     fillReserved(format, masked_data);
@@ -1321,6 +1307,523 @@ void QRCodeEncoderImpl::encodeStructuredAppend(const String& input, OutputArrayO
 Ptr<QRCodeEncoder> QRCodeEncoder::create(const QRCodeEncoder::Params& parameters)
 {
     return makePtr<QRCodeEncoderImpl>(parameters);
+}
+
+class QRCodeDecoderImpl : public QRCodeDecoder {
+public:
+    bool decode(const Mat& straight, String& decoded_info) CV_OVERRIDE;
+
+private:
+    QRCodeEncoder::CorrectionLevel level;
+    int version;
+
+    struct Bitstream {
+        int next(int bits) {
+            CV_Assert(idx < data.size());
+
+            int val = 0;
+            while (bits >= actualBits) {
+                val |= data[idx++] << (bits - actualBits);
+                bits -= actualBits;
+                actualBits = 8;
+            }
+            if (bits) {
+                val |= data[idx] >> (actualBits - bits);
+                actualBits -= bits;
+                data[idx] &= 255 >> (8 - actualBits);
+            }
+            return val;
+        }
+
+        bool empty() {
+            return idx >= data.size();
+        }
+
+        std::vector<uint8_t> data;
+        int actualBits = 8;
+        size_t idx = 0;
+    } bitstream;
+
+    bool run(const Mat& straight, String& decoded_info);
+    bool decodeFormatInfo(const Mat& straight, int& mask);
+    bool correctFormatInfo(uint16_t& format_info);
+    void extractCodewords(Mat& source, std::vector<uint8_t>& codewords);
+    bool errorCorrection(std::vector<uint8_t>& codewords);
+    bool errorCorrectionBlock(std::vector<uint8_t>& codewords);
+    void decodeSymbols(String& result);
+    void decodeNumeric(String& result);
+    void decodeAlpha(String& result);
+    void decodeByte(String& result);
+    void decodeECI(String& result);
+    void decodeKanji(String& result);
+};
+
+QRCodeDecoder::~QRCodeDecoder()
+{
+    // nothing
+}
+
+Ptr<QRCodeDecoder> QRCodeDecoder::create() {
+    return makePtr<QRCodeDecoderImpl>();
+}
+
+bool QRCodeDecoderImpl::decode(const Mat& _straight, String& decoded_info) {
+    Mat straight = ~_straight;  // Invert modules
+    bool decoded = run(straight, decoded_info);
+    if (!decoded) {
+        cv::transpose(straight, straight);
+        decoded = run(straight, decoded_info);
+    }
+    return decoded;
+}
+
+// Unmask format info bits and apply error correction
+bool QRCodeDecoderImpl::correctFormatInfo(uint16_t& format_info) {
+    static const uint16_t mask_pattern = 0b101010000010010;
+
+    cv::Hamming hd;
+    for (int i = 0; i < 32; ++i) {
+        // Compute Hamming distance
+        int distance = hd(reinterpret_cast<const unsigned char*>(&formatInfoLUT[i]),
+                          reinterpret_cast<const unsigned char*>(&format_info), 2);
+        // Up to 3 bit errors might be corrected.
+        // So if distance is less or equal than 3 - we found a correct format info.
+        if (distance <= 3) {
+            format_info = formatInfoLUT[i] ^ mask_pattern;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool QRCodeDecoderImpl::decodeFormatInfo(const Mat& straight, int& mask) {
+    // Read left-top format info
+    uint16_t format_info = 0;
+    for (int i = 0; i < 6; ++i)
+        format_info |= (straight.at<uint8_t>(i, 8) & 1) << i;
+
+    format_info |= (straight.at<uint8_t>(7, 8) & 1) << 6;
+    format_info |= (straight.at<uint8_t>(8, 8) & 1) << 7;
+    format_info |= (straight.at<uint8_t>(8, 7) & 1) << 8;
+
+    for (int i = 9; i < 15; ++i)
+        format_info |= (straight.at<uint8_t>(8, 14 - i) & 1) << i;
+
+    bool correct = correctFormatInfo(format_info);
+
+    // Format information 15bit sequence appears twice.
+    // Try extract format info from different position.
+    uint16_t format_info_dup = 0;
+    for (int i = 0; i < 8; ++i)
+        format_info_dup |= (straight.at<uint8_t>(8, straight.cols - 1 - i) & 1) << i;
+    for (int i = 0; i < 7; ++i)
+        format_info_dup |= (straight.at<uint8_t>(straight.rows - 7 + i, 8) & 1) << (i + 8);
+
+    if (correctFormatInfo(format_info_dup)) {
+        // Both strings must be the same
+        if (correct && format_info != format_info_dup)
+            return false;
+        format_info = format_info_dup;
+    } else {
+        if (!correct)
+            return false;
+    }
+
+    switch((format_info >> 13) & 0b11) {
+        case 0: level = QRCodeEncoder::CorrectionLevel::CORRECT_LEVEL_M; break;
+        case 1: level = QRCodeEncoder::CorrectionLevel::CORRECT_LEVEL_L; break;
+        case 2: level = QRCodeEncoder::CorrectionLevel::CORRECT_LEVEL_H; break;
+        case 3: level = QRCodeEncoder::CorrectionLevel::CORRECT_LEVEL_Q; break;
+    };
+    mask = (format_info >> 10) & 0b111;
+    return true;
+}
+
+bool QRCodeDecoderImpl::run(const Mat& straight, String& decoded_info) {
+    CV_Assert(straight.rows == straight.cols);
+    version = (straight.rows - 21) / 4 + 1;
+
+    decoded_info = "";
+    mode = static_cast<QRCodeEncoder::EncodeMode>(0);
+    eci = static_cast<QRCodeEncoder::ECIEncodings>(0);
+
+    // Decode format info
+    int maskPattern;
+    bool decoded = decodeFormatInfo(straight, maskPattern);
+    if (!decoded) {
+        return false;
+    }
+
+    // Generate data mask
+    Mat masked = straight.clone();
+    maskData(straight, maskPattern, masked);
+
+    extractCodewords(masked, bitstream.data);
+    if (!errorCorrection(bitstream.data)) {
+        return false;
+    }
+    decodeSymbols(decoded_info);
+    return true;
+}
+
+bool QRCodeDecoderImpl::errorCorrection(std::vector<uint8_t>& codewords) {
+    CV_CheckEQ((int)codewords.size(), version_info_database[version].total_codewords,
+               "Number of codewords");
+
+    int numBlocks = version_info_database[version].ecc[level].num_blocks_in_G1 +
+                    version_info_database[version].ecc[level].num_blocks_in_G2;
+    if (numBlocks == 1) {
+        return errorCorrectionBlock(codewords);
+    }
+
+    size_t numData = 0;
+    std::vector<int> blockSizes;
+    blockSizes.reserve(numBlocks);
+    for (int i = 0; i < version_info_database[version].ecc[level].num_blocks_in_G1; ++i) {
+        blockSizes.push_back(version_info_database[version].ecc[level].data_codewords_in_G1);
+        numData += blockSizes.back();
+    }
+    for (int i = 0; i < version_info_database[version].ecc[level].num_blocks_in_G2; ++i) {
+        blockSizes.push_back(version_info_database[version].ecc[level].data_codewords_in_G2);
+        numData += blockSizes.back();
+    }
+
+    // TODO: parallel_for
+    std::vector<std::vector<uint8_t>> blocks(numBlocks);
+    int minBlockSize = *std::min_element(blockSizes.begin(), blockSizes.end());
+    size_t offset = 0;
+    for (int i = 0; i < minBlockSize; ++i) {
+        for (int j = 0; j < numBlocks; ++j) {
+            blocks[j].push_back(codewords[offset++]);
+        }
+    }
+    // Put remaining data codewords
+    for (int j = 0; j < numBlocks; ++j) {
+        CV_Assert(blockSizes[j] == minBlockSize || blockSizes[j] == minBlockSize + 1);
+        if (blockSizes[j] > minBlockSize)
+            blocks[j].push_back(codewords[offset++]);
+    }
+    // Copy error correction codewords
+    int numEcc = version_info_database[version].ecc[level].ecc_codewords;
+    for (int i = 0; i < numEcc; ++i) {
+        for (int j = 0; j < numBlocks; ++j) {
+            blocks[j].push_back(codewords[offset++]);
+        }
+    }
+
+    parallel_for_(Range(0, numBlocks), [&](const Range& r) {
+        for (int i = r.start; i < r.end; ++i) {
+            if (!errorCorrectionBlock(blocks[i])) {
+                blocks[i].clear();
+                return;
+            }
+        }
+    });
+
+    // Collect blocks back after error correction. Trim error correction codewords.
+    codewords.resize(numData);
+    offset = 0;
+    for (size_t i = 0; i < blocks.size(); ++i) {
+        if (blocks[i].empty())
+            return false;
+        std::copy(blocks[i].begin(), blocks[i].end(), codewords.begin() + offset);
+        offset += blocks[i].size();
+    }
+
+    return true;
+}
+
+bool QRCodeDecoderImpl::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
+    size_t numEcc = version_info_database[version].ecc[level].ecc_codewords;
+    size_t numSyndromes = numEcc;
+
+    // According to the ISO there is a formula for a number of the syndromes.
+    // However several tests don't pass the error correction step because of less number of syndromes:
+    // 1M: qrcodes/detection/lots/image001.jpg from BoofCV (8 syndromes by formula, 10 needed)
+    // 1L: Objdetect_QRCode_Multi.regression/13 (4 syndromes by formula, 6 needed)
+    // 2L: qrcodes/detection/brightness/image011.jpg from BoofCV (8 syndromes by formula, 10 needed)
+    if (numSyndromes % 2 == 1)
+        numSyndromes -= 1;
+
+    // Compute syndromes
+    bool hasError = false;
+    std::vector<uint8_t> syndromes(numSyndromes, codewords[0]);
+    for (size_t i = 0; i < syndromes.size(); ++i) {
+        for (size_t j = 1; j < codewords.size(); ++j) {
+            syndromes[i] = gfMul(syndromes[i], gfPow(2, static_cast<int>(i))) ^ codewords[j];
+        }
+        hasError |= syndromes[i] != 0;
+    }
+    if (!hasError) {
+        // Trim error correction codewords
+        codewords.resize(codewords.size() - numEcc);
+        return true;
+    }
+
+    // Run Berlekamp–Massey algorithm to find error positions (coefficients of locator poly)
+    size_t L = 0;   // number of assumed errors
+    size_t m = 1;   // shift value (between C and B)
+    uint8_t b = 1;  // discrepancy from last L update
+
+    std::vector<uint8_t> C(numSyndromes, 0);  // Error locator polynomial
+    std::vector<uint8_t> B(numSyndromes, 0);  // A copy of error locator from previos L update
+    C[0] = B[0] = 1;
+    for (size_t i = 0; i < numSyndromes; ++i) {
+        CV_Assert(m + L - 1 < C.size());  // m >= 1 on any iteration
+        uint8_t discrepancy = syndromes[i];
+        for (size_t j = 1; j <= L; ++j) {
+            discrepancy ^= gfMul(C[j], syndromes[i - j]);
+        }
+
+        if (discrepancy == 0) {
+            m += 1;
+        } else {
+            std::vector<uint8_t> C_copy = C;
+            uint8_t inv_b = gfDiv(1, b);
+            uint8_t tmp = gfMul(discrepancy, inv_b);
+
+            for (size_t j = 0; j < L; ++j) {
+                C[m + j] ^= gfMul(tmp, B[j]);
+            }
+
+            if (2 * L <= i) {
+                L = i + 1 - L;
+                B = C_copy;
+                b = discrepancy;
+                m = 1;
+            } else {
+                m += 1;
+            }
+        }
+    }
+
+    // There is an error at i-th position if i is a root of locator poly
+    std::vector<size_t> errLocs;
+    errLocs.reserve(L);
+    for (size_t i = 0; i < codewords.size(); ++i) {
+        uint8_t val = 1;
+        uint8_t pos = gfPow(2, static_cast<int>(i));
+        for (size_t j = 1; j <= L; ++j) {
+            val = gfMul(val, pos) ^ C[j];
+        }
+        if (val == 0) {
+            errLocs.push_back(static_cast<int>(codewords.size() - 1 - i));
+        }
+    }
+
+    // Number of assumed errors does not match number of error locations
+    if (errLocs.size() != L)
+        return false;
+
+    // Forney algorithm for error correction using syndromes and known error locations
+    std::vector<uint8_t> errEval;
+    gfPolyMul(C, syndromes, errEval);
+
+    for (size_t i = 0; i < errLocs.size(); ++i) {
+        uint8_t numenator = 0, denominator = 0;
+        uint8_t X = gfPow(2, static_cast<int>(codewords.size() - 1 - errLocs[i]));
+        uint8_t inv_X = gfDiv(1, X);
+
+        for (size_t j = 0; j < L; ++j) {
+            numenator = gfMul(numenator, inv_X) ^ errEval[L - 1 - j];
+        }
+
+        // Compute demoninator as a product of (1-X_i * X_k) for i != k
+        // TODO: optimize, there is a dubplicated compute
+        denominator = 1;
+        for (size_t j = 0; j < errLocs.size(); ++j) {
+            if (i == j)
+                continue;
+            uint8_t Xj = gfPow(2, static_cast<int>(codewords.size() - 1 - errLocs[j]));
+            denominator = gfMul(denominator, 1 ^ gfMul(inv_X, Xj));
+        }
+
+        uint8_t errValue = gfDiv(numenator, denominator);
+        codewords[errLocs[i]] ^= errValue;
+    }
+
+    // Trim error correction codewords
+    codewords.resize(codewords.size() - numEcc);
+    return true;
+}
+
+void QRCodeDecoderImpl::extractCodewords(Mat& source, std::vector<uint8_t>& codewords) {
+    const VersionInfo& version_info = version_info_database[version];
+
+    // Mask alignment markers
+    std::vector<int> alignCenters;
+    alignCenters.reserve(MAX_ALIGNMENT);
+    for (int i = 0; i < MAX_ALIGNMENT && version_info.alignment_pattern[i]; i++)
+        alignCenters.push_back(version_info.alignment_pattern[i]);
+
+    for (size_t i = 0; i < alignCenters.size(); i++)
+    {
+        for (size_t j = 0; j < alignCenters.size(); j++)
+        {
+            if ((i == alignCenters.size() - 1 && j == 0) || (i == 0 && j == 0) ||
+                (j == alignCenters.size() - 1 && i == 0))
+                continue;
+            int x = alignCenters[i];
+            int y = alignCenters[j];
+            Mat area = source({x - 2, x + 3}, {y - 2, y + 3});
+            area.setTo(INVALID_REGION_VALUE);
+        }
+    }
+
+    // Mask detection markers
+    source.rowRange(0, 9).colRange(source.cols - 8, source.cols).setTo(INVALID_REGION_VALUE);
+    source.rowRange(0, 9).colRange(0, 9).setTo(INVALID_REGION_VALUE);
+    source.colRange(0, 9).rowRange(source.rows - 8, source.rows).setTo(INVALID_REGION_VALUE);
+
+    // Mask Version Information blocks
+    if (version >= 7) {
+        source.rowRange(0, 6).colRange(source.cols - 12, source.cols - 9).setTo(INVALID_REGION_VALUE);
+        source.colRange(0, 6).rowRange(source.rows - 12, source.rows - 9).setTo(INVALID_REGION_VALUE);
+    }
+
+    // Mask timing pattern
+    source.row(6) = INVALID_REGION_VALUE;
+
+    std::vector<uint8_t> bits;
+    bits.reserve(source.total() - source.cols);
+    bool moveUpwards = true;
+    for (auto& data : {source.colRange(7, source.cols), source.colRange(0, 6)}) {
+        for (int i = data.cols / 2 - 1; i >= 0; --i) {
+            Mat col0 = data.col(i * 2);
+            Mat col1 = data.col(i * 2 + 1);
+            for (int j = 0; j < data.rows; ++j) {
+                if (moveUpwards) {
+                    bits.push_back(col1.at<uint8_t>(data.rows - 1 - j));
+                    bits.push_back(col0.at<uint8_t>(data.rows - 1 - j));
+                } else {
+                    bits.push_back(col1.at<uint8_t>(j));
+                    bits.push_back(col0.at<uint8_t>(j));
+                }
+            }
+            moveUpwards = !moveUpwards;
+        }
+    }
+
+    // Combine bits to codewords
+    size_t numCodewords = version_info.total_codewords;
+    codewords.resize(numCodewords);
+
+    size_t offset = 0;
+    for (size_t i = 0; i < numCodewords; ++i) {
+        codewords[i] = 0;
+        for (size_t j = 0; j < 8; ++j) {
+            while (bits[offset] == INVALID_REGION_VALUE) {
+                offset += 1;
+                CV_Assert(offset < bits.size());
+            }
+            codewords[i] |= (bits[offset] & 1) << (7 - j);
+            offset += 1;
+        }
+    }
+}
+
+void QRCodeDecoderImpl::decodeSymbols(String& result) {
+    CV_Assert(!bitstream.empty());
+
+    // Decode depends on the mode
+    result = "";
+    while (!bitstream.empty()) {
+        // Determine mode
+        auto currMode = static_cast<QRCodeEncoder::EncodeMode>(bitstream.next(4));
+        if (this->mode == 0) {
+            mode = currMode;
+        }
+
+        if (currMode == 0 || bitstream.empty())
+            return;
+        if (currMode == QRCodeEncoder::EncodeMode::MODE_NUMERIC)
+            decodeNumeric(result);
+        else if (currMode == QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC)
+            decodeAlpha(result);
+        else if (currMode == QRCodeEncoder::EncodeMode::MODE_BYTE)
+            decodeByte(result);
+        else if (currMode == QRCodeEncoder::EncodeMode::MODE_ECI)
+            decodeECI(result);
+        else if (currMode == QRCodeEncoder::EncodeMode::MODE_KANJI)
+            decodeKanji(result);
+        else
+            CV_Error(Error::StsNotImplemented, format("mode %d", currMode));
+    }
+}
+
+void QRCodeDecoderImpl::decodeNumeric(String& result) {
+    int numDigits = bitstream.next(version <= 9 ? 10 : (version <= 26 ? 12 : 14));
+    for (int i = 0; i < numDigits / 3; ++i) {
+        int triple = bitstream.next(10);
+        result += static_cast<char>('0' + triple / 100);
+        result += static_cast<char>('0' + (triple / 10) % 10);
+        result += static_cast<char>('0' + triple % 10);
+    }
+    int remainingDigits = numDigits % 3;
+    if (remainingDigits) {
+        int triple = bitstream.next(remainingDigits == 1 ? 4 : 7);
+        if (remainingDigits == 2)
+            result += '0' + (triple / 10) % 10;
+        result += '0' + triple % 10;
+    }
+}
+
+void QRCodeDecoderImpl::decodeAlpha(String& result) {
+    static const char map[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                               'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+                               'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+                               'U', 'V', 'W', 'X', 'Y', 'Z', ' ', '$', '%', '*',
+                               '+', '-', '.', '/', ':'};
+
+    int num = bitstream.next(version <= 9 ? 9 : (version <= 26 ? 11 : 13));
+    for (int i = 0; i < num / 2; ++i) {
+        int tuple = bitstream.next(11);
+        result += map[tuple / 45];
+        result += map[tuple % 45];
+    }
+    if (num % 2) {
+        int value = bitstream.next(6);
+        result += map[value];
+    }
+}
+
+void QRCodeDecoderImpl::decodeByte(String& result) {
+    int num = bitstream.next(version <= 9 ? 8 : 16);
+    for (int i = 0; i < num; ++i) {
+        result += static_cast<char>(bitstream.next(8));
+    }
+}
+
+void QRCodeDecoderImpl::decodeECI(String& result) {
+    int eciAssignValue = bitstream.next(8);
+    for (int i = 0; i < 8; ++i) {
+        if (eciAssignValue & 1 << (7 - i))
+            eciAssignValue |= bitstream.next(8) << (i + 1) * 8;
+        else
+            break;
+    }
+    if (this->eci == 0) {
+        this->eci = static_cast<QRCodeEncoder::ECIEncodings>(eciAssignValue);
+    }
+    decodeSymbols(result);
+
+}
+
+void QRCodeDecoderImpl::decodeKanji(String& result) {
+    int num = bitstream.next(version <= 9 ? 8 : (version <= 26 ? 10 : 12));
+    for (int i = 0; i < num; ++i) {
+        int data = bitstream.next(13);
+        int high_byte = data / 0xC0;
+        int low_byte = data - high_byte * 0xC0;
+        int symbol = (high_byte << 8) + low_byte;
+        if (0 <= symbol && symbol <= 0x9FFC - 0x8140) {
+            symbol += 0x8140;
+        } else if (0xE040 - 0xC140 <= symbol && symbol <= 0xEBBF - 0xC140) {
+            symbol += 0xC140;
+        }
+        result += (symbol >> 8) & 0xff;
+        result += symbol & 0xff;
+    }
 }
 
 }

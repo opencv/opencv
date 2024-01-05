@@ -16,7 +16,7 @@ endif()
 set(GRADLE_VERSION "7.6.3" CACHE STRING "Gradle version")
 message(STATUS "Gradle version: ${GRADLE_VERSION}")
 
-set(ANDROID_COMPILE_SDK_VERSION "26" CACHE STRING "Android compileSdkVersion")
+set(ANDROID_COMPILE_SDK_VERSION "31" CACHE STRING "Android compileSdkVersion")
 if(ANDROID_NATIVE_API_LEVEL GREATER 21)
   set(ANDROID_MIN_SDK_VERSION "${ANDROID_NATIVE_API_LEVEL}" CACHE STRING "Android minSdkVersion")
 else()
@@ -114,8 +114,7 @@ endif()
 
 file(WRITE "${ANDROID_BUILD_BASE_DIR}/settings.gradle" "
 gradle.ext {
-    //opencv_source = 'maven_central'
-    //opencv_source = 'maven_local'
+    // possible options: 'maven_central', 'maven_local', 'sdk_path'
     opencv_source = 'sdk_path'
 }
 
@@ -126,19 +125,18 @@ file(WRITE "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
 rootProject.name = 'opencv_samples'
 
 gradle.ext {
-    //opencv_source = 'maven_central'
-    //opencv_source = 'maven_local'
+    // possible options: 'maven_central', 'maven_local', 'sdk_path'
     opencv_source = 'sdk_path'
 }
 
 if (gradle.opencv_source == 'maven_local') {
     gradle.ext {
-        opencv_maven_path = '/<path_to_maven_repo>'
+        opencv_maven_path = '<path_to_maven_repo>'
     }
 }
 
 if (gradle.opencv_source == 'sdk_path') {
-    def opencvsdk='../'
+    def opencvsdk = '../'
     //def opencvsdk='/<path to OpenCV-android-sdk>'
     //println opencvsdk
     include ':opencv'
@@ -227,9 +225,20 @@ include ':${__dir}'
   configure_file("${path}/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/${__dir}/build.gradle" @ONLY)
   install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/${__dir}/build.gradle" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}/${__dir}" COMPONENT samples)
 
-  file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
+  # HACK: AAR packages generated from current OpenCV project has incomple prefab part
+  # and cannot be used for native linkage against OpenCV.
+  # Alternative way to build AAR: https://github.com/opencv/opencv/blob/4.x/platforms/android/build_java_shared_aar.py
+  if("${__dir}" STREQUAL "tutorial-2-mixedprocessing" OR "${__dir}" STREQUAL "tutorial-4-opencl")
+    file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
+if (gradle.opencv_source == 'sdk_path') {
+    include ':${__dir}'
+}
+")
+  else()
+    file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
 include ':${__dir}'
 ")
+  endif()
 
 endmacro()
 
