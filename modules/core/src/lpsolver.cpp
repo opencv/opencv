@@ -157,7 +157,7 @@ int solveLP(InputArray Func_, InputArray Constr_, OutputArray z_, double constr_
     return res;
 }
 
-CV_EXPORTS_W int solveLP(const Mat& Func, const Mat& Constr, Mat& z)
+int solveLP(InputArray Func, InputArray Constr, OutputArray z)
 {
     return solveLP(Func, Constr, z, 1e-12);
 }
