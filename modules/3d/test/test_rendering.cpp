@@ -138,7 +138,7 @@ public:
         break;
         case ModelType::File:
         {
-            string objectPath = "../../../opencv_extra/opencv_extra/testdata/rendering/model/spot.obj";
+            string objectPath = findDataFile("rendering/model/spot.obj");
 
             position = Vec3f( 2.4, 0.7, 1.2);
             lookat   = Vec3f( 0.0, 0.0, 0.3);
@@ -376,7 +376,7 @@ TEST_P(RenderingTest, accuracy)
     }
     else
     {
-        std::string path = "../../../opencv_extra/opencv_extra/testdata/rendering/";
+        std::string path = findDataDirectory("rendering");
 
         std::string modelName;
         {
