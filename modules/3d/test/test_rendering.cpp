@@ -140,13 +140,14 @@ public:
         {
             string objectPath = "../../../opencv_extra/opencv_extra/testdata/rendering/model/spot.obj";
 
-            position = Vec3f(20.0, 60.0,  40.0);
-            lookat   = Vec3f( 0.0,  0.0,   0.0);
-            upVector = Vec3f( 0.0,  1.0,   0.0);
+            position = Vec3f( 2.4, 0.7, 1.2);
+            lookat   = Vec3f( 0.0, 0.0, 0.3);
+            upVector = Vec3f( 0.0, 1.0, 0.0);
 
             fovy = 45.0;
 
             std::vector<vector<int>> indvec;
+            // using per-vertex normals as colors
             loadMesh(objectPath, vertices, colors, indvec);
             for (const auto &vec : indvec)
             {
@@ -161,9 +162,9 @@ public:
         break;
         case ModelType::Clipping:
         {
-            position = Vec3f(0.0, 0.0,  5.0);
-            lookat   = Vec3f(0.0, 0.0,  0.0);
-            upVector = Vec3f(0.0, 1.0,  0.0);
+            position = Vec3f(0.0, 0.0, 5.0);
+            lookat   = Vec3f(0.0, 0.0, 0.0);
+            upVector = Vec3f(0.0, 1.0, 0.0);
 
             fovy = 45.0;
 
@@ -181,17 +182,17 @@ public:
             Vec3f col3(150.0,  10.0, 238.0);
             colors =
             {
-                col1, col1, col1,
-                col2, col2, col2,
-                col3, col3, col3,
+                col1, col2, col3,
+                col2, col3, col1,
+                col3, col1, col2,
             };
         }
         break;
         case ModelType::Centered:
         {
-            position = Vec3f(0.0, 0.0,  5.0);
-            lookat   = Vec3f(0.0, 0.0,  0.0);
-            upVector = Vec3f(0.0, 1.0,  0.0);
+            position = Vec3f(0.0, 0.0, 5.0);
+            lookat   = Vec3f(0.0, 0.0, 0.0);
+            upVector = Vec3f(0.0, 1.0, 0.0);
 
             fovy = 45.0;
 
@@ -207,8 +208,8 @@ public:
             Vec3f col2(185.0, 217.0, 238.0);
             colors =
             {
-                col1, col1, col1,
-                col2, col2, col2,
+                col1, col2, col1,
+                col2, col1, col2,
             };
         }
         break;
