@@ -3,109 +3,97 @@
 namespace opencv_test
 {
 
-typedef perf::TestBaseWithParam<cv::Size> RenderingTest;
+Matx43f makeCamMatrix_TODO_rewrite_it_later(Vec3f position, Vec3f lookat, Vec3f upVector, double fovy, double zNear, double zFar);
+Matx43f makeCamMatrix_TODO_rewrite_it_later(Vec3f position, Vec3f lookat, Vec3f upVector, double fovy, double zNear, double zFar)
+{
+    Matx43f m;
+    m(0, 0) = position(0); m(0, 1) = position(1); m(0, 2) = position(2);
+    m(1, 0) = lookat  (0); m(1, 1) = lookat  (1); m(1, 2) = lookat  (2);
+    m(2, 0) = upVector(0); m(2, 1) = upVector(1); m(2, 2) = upVector(2);
+    m(3, 0) = fovy;        m(3, 1) = zNear;       m(3, 3) = zFar;
 
-PERF_TEST_P(RenderingTest, rasterizeTriangles, testing::Values({700, 700}, {640, 480}))
+    return m;
+}
+
+typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, bool, bool>> RenderingTest;
+
+PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
+    ::testing::Values(std::make_tuple(1920, 1080), std::make_tuple(1024, 768), std::make_tuple(640, 480)),
+    ::testing::Bool(), // shading
+    ::testing::Bool() // have colors
+    ))
 {
     auto t = GetParam();
-    int width = t.width, height = t.height;
+    auto wh = std::get<0>(t);
+    int width = std::get<0>(wh);
+    int height = std::get<1>(wh);
+    bool shadingMode = std::get<1>(t);
+    bool haveColors = std::get<2>(t);
 
-    Vec3f position = Vec3f(0.0, 0.0, 5.0);
-    Vec3f lookat   = Vec3f(0.0, 0.0, 0.0);
-    Vec3f upVector = Vec3f(0.0, 1.0, 0.0);
+    string objectPath = "../../../opencv_extra/opencv_extra/testdata/rendering/model/spot.obj";
 
-    double fovy;
-    if (depth || clipping)
-    {
-        fovy = 45.0;
-    }
-    else if (color)
-    {
-        fovy = 60.0;
-    }
-    double zNear = 0.1, zFar = 50.0;
-    //TODO: check also this
-    bool shadingMode = false;
+    Vec3f position = Vec3f(20.0, 60.0, -40.0);
+    Vec3f lookat   = Vec3f( 0.0,  0.0,   0.0);
+    Vec3f upVector = Vec3f( 0.0,  1.0,   0.0);
+
+    double fovy = 45.0;
 
     std::vector<Vec3f> vertices;
     std::vector<Vec3i> indices;
     std::vector<Vec3f> colors;
-    if (depth)
+    std::vector<vector<int>> indvec;
+    loadMesh(objectPath, vertices, colors, indvec);
+    for (const auto &vec : indvec)
     {
-        vertices =
-        {
-            { 2.0,  0.0, -2.0}, { 0.0, -2.0, -2.0}, {-2.0,  0.0, -2.0},
-            { 3.5, -1.0, -5.0}, { 2.5, -1.5, -5.0}, {-1.0,  0.5, -5.0},
-        };
-        //TODO: value types and ranges
-        Vec3f col1(217.0, 238.0, 185.0);
-        Vec3f col2(185.0, 217.0, 238.0);
-        colors = { col1, col1, col1, col2, col2, col2 };
-
-        indices = { {0, 1, 2}, {3, 4, 5} };
-    }
-    else if (color)
-    {
-        vertices =
-        {
-            { 2.0,  0.0, -2.0},
-            { 0.0,  2.0, -3.0},
-            {-2.0,  0.0, -2.0},
-            { 0.0, -2.0,  1.0},
-        };
-        //TODO: value types and ranges
-        colors =
-        {
-            {  0.0f,   0.0f, 255.0f},
-            {  0.0f, 255.0f,   0.0f},
-            {255.0f,   0.0f,   0.0f},
-            {  0.0f, 255.0f,   0.0f},
-        };
-
-        indices = { {0, 1, 2}, {0, 2, 3} };
-    }
-    else if (clipping)
-    {
-        vertices =
-        {
-            { 2.0,  0.0, -2.0}, { 0.0, -6.0, -2.0}, {-2.0,  0.0, -2.0},
-            { 3.5, -1.0, -5.0}, { 2.5, -2.5, -5.0}, {-1.0,  1.0, -5.0},
-            {-6.5, -1.0, -3.0}, {-2.5, -2.0, -3.0}, { 1.0,  1.0, -5.0},
-        };
-        //TODO: value types and ranges
-        Vec3f col1(217.0, 238.0, 185.0);
-        Vec3f col2(185.0, 217.0, 238.0);
-        Vec3f col3(150.0,  10.0, 238.0);
-        colors =
-        {
-            col1, col1, col1,
-            col2, col2, col2,
-            col3, col3, col3,
-        };
-
-        indices = { {0, 1, 2}, {3, 4, 5}, {6, 7, 8} };
+        indices.push_back({vec[0], vec[1], vec[2]});
     }
 
-    Mat cameraMatrix(4, 3, CV_32F);
+    if (haveColors)
+    {
+        for (auto &color : colors)
+        {
+            color = Vec3f(abs(color[0]), abs(color[1]), abs(color[2])) * 255.0f;
+        }
+    }
+    else
+    {
+        colors.clear();
+    }
 
-    cameraMatrix.row(0) = Mat(position).t();
-    cameraMatrix.row(1) = Mat(lookat).t();
-    cameraMatrix.row(2) = Mat(upVector).t();
-    cameraMatrix.row(3) = Mat(Vec3f(fovy, zNear, zFar)).t();
+    double zNear = 0.1, zFar = 50;
 
-    while(next())
+    Mat cameraMatrix = Mat(makeCamMatrix_TODO_rewrite_it_later(position, lookat, upVector, fovy, zNear, zFar));
+
+    Mat depth_buf, color_buf;
+    while (next())
     {
         // Prefilled to measure pure rendering time w/o allocation and clear
-        Mat depth_buf(height, width, CV_32F, zFar);
-        Mat color_buf(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
+        depth_buf = Mat(height, width, CV_32F, zFar);
+        color_buf = Mat(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
 
         startTimer();
-        //TODO: no color for depth test
         cv::triangleRasterize(vertices, indices, colors, cameraMatrix, width, height,
-                              shadingMode, depth_buf, color_buf);
+                              shadingMode, depth_buf, haveColors ? color_buf : noArray());
         stopTimer();
+    }
+
+    if (debugLevel > 0)
+    {
+        color_buf.convertTo(color_buf, CV_8UC3, 1.0f);
+        cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
+        cv::flip(color_buf, color_buf, 0);
+        depth_buf.convertTo(depth_buf, CV_8UC1, 1.0);
+        cv::flip(depth_buf, depth_buf, 0);
+
+        std::string suffix = std::to_string(width) + "x" + std::to_string(height) + " ";
+        suffix += (shadingMode ? "shaded" : "flat");
+        suffix += (haveColors ? "colored" : "white");
+
+        imwrite("color_image_" + suffix + ".png", color_buf);
+        imwrite("depth_image_" + suffix + ".png", depth_buf);
     }
 
     SANITY_CHECK_NOTHING();
 }
+
 } // namespace
