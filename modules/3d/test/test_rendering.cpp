@@ -320,7 +320,7 @@ protected:
         m(0, 0) = position(0); m(0, 1) = position(1); m(0, 2) = position(2);
         m(1, 0) = lookat  (0); m(1, 1) = lookat  (1); m(1, 2) = lookat  (2);
         m(2, 0) = upVector(0); m(2, 1) = upVector(1); m(2, 2) = upVector(2);
-        m(3, 0) = fovy;        m(3, 1) = znear;       m(3, 3) = zfar;
+        m(3, 0) = fovy;        m(3, 1) = znear;       m(3, 2) = zfar;
 
         return m;
     }
