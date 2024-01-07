@@ -780,7 +780,7 @@ struct ArucoDetector::ArucoDetectorImpl {
         vector<int> idsTmp(ncandidates, -1);
         vector<int> rotated(ncandidates, 0);
         vector<uint8_t> validCandidates(ncandidates, 0);
-        vector<bool> was(ncandidates, false);
+        vector<uint8_t> was(ncandidates, false);
         bool checkCloseContours = true;
 
         int maxDepth = 0;

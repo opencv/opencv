@@ -12,7 +12,11 @@ else()
 endif()
 
 if(HAVE_CUDA)
-  ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-CUDA.cmake.in" CUDA_CONFIGCMAKE @ONLY)
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+    ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-CUDALanguage.cmake.in" CUDA_CONFIGCMAKE @ONLY)
+  else()
+    ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-CUDA.cmake.in" CUDA_CONFIGCMAKE @ONLY)
+  endif()
 endif()
 
 if(ANDROID)
