@@ -7,18 +7,17 @@ namespace opencv_test
 {
 using namespace perf;
 
-#define PERF_QOI
-#define PERF_PNG
-#undef  PERF_AVIF
-#undef  PERF_WEBP
+// To skip test, undef it.
+#undef HAVE_AVIF
+#undef HAVE_WEBP
 
-typedef TestBaseWithParam<tuple<ImreadModes,Size,String>> CodecsCommon;
+typedef TestBaseWithParam<tuple<ImreadModes,Size,string>> CodecsCommon;
 
 PERF_TEST_P_(CodecsCommon, Decode)
 {
     ImreadModes immode = get<0>(GetParam());
     Size dstSize = get<1>(GetParam());
-    String codecExt = get<2>(GetParam());
+    string codecExt = get<2>(GetParam());
 
     String filename = getDataPath("perf/2560x1600.png");
     cv::Mat src = imread(filename, immode);
@@ -39,7 +38,7 @@ PERF_TEST_P_(CodecsCommon, Encode)
 {
     ImreadModes immode = get<0>(GetParam());
     Size dstSize = get<1>(GetParam());
-    String codecExt = get<2>(GetParam());
+    string codecExt = get<2>(GetParam());
 
     String filename = getDataPath("perf/2560x1600.png");
     cv::Mat src = imread(filename, immode);
@@ -55,6 +54,25 @@ PERF_TEST_P_(CodecsCommon, Encode)
     SANITY_CHECK_NOTHING();
 }
 
+const string all_formats[] =
+{
+#ifdef HAVE_PNG
+    ".png",
+#endif
+#ifdef HAVE_QOI
+    ".qoi",
+#endif
+#ifdef HAVE_AVIF
+    ".avif",
+#endif
+#ifdef HAVE_WEBP
+    ".webp",
+#endif
+    ".bmp"
+};
+
+const string all_formats_tmp[] = { ".bmp" };
+
 INSTANTIATE_TEST_CASE_P(/* */,
     CodecsCommon,
     ::testing::Combine(
@@ -64,21 +82,7 @@ INSTANTIATE_TEST_CASE_P(/* */,
             Size(1920,1080),
             Size(3840,2160)
         ),
-        ::testing::Values(
-#if defined( HAVE_PNG ) && defined( PERF_PNG )
-            ".png",
-#endif
-#if defined( HAVE_QOI ) && defined( PERF_QOI )
-            ".qoi",
-#endif
-#if defined( HAVE_AVIF ) && defined( PERF_AVIF )
-            ".avif",
-#endif
-#if defined( HAVE_WEBP ) && defined( PERF_WEBP )
-             ".webp",
-#endif
-            ".bmp"
-        )
+        ::testing::ValuesIn( all_formats )
     )
 );
 

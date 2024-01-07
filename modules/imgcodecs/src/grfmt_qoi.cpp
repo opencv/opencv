@@ -1,44 +1,6 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
 #include "utils.hpp"
@@ -92,8 +54,8 @@ bool QoiDecoder::readHeader()
 
     if( !m_buf.empty() )
     {
-        CV_Assert( m_buf.type() == CV_8UC1 );
-        CV_Assert( m_buf.rows == 1 );
+        CV_CheckTypeEQ( m_buf.type(), CV_8UC1, "" );
+        CV_CheckEQ( m_buf.rows, 1, "" );
 
         size_t mbuf_len = m_buf.cols * m_buf.rows * m_buf.elemSize();
         if( mbuf_len < QOI_HEADER_SIZE + sizeof(qoi_padding) )
@@ -128,7 +90,7 @@ bool QoiDecoder::readHeader()
         swap_endianess( m_height ); // As Little Endian
     }
 
-    CV_Assert( ncn == 3 || ncn == 4 );
+    CV_Check( ncn, ncn == 3 || ncn == 4, "maybe input data is broken" );
     m_type = CV_MAKETYPE( CV_8U, ncn );
 
     strm.close();
@@ -145,7 +107,7 @@ bool QoiDecoder::readData( Mat& img )
     const bool is_img_gray = ( img.channels() == 1 );
     const int img_ncn = ( is_img_gray )? 3 /* Force to RGB */ : img.channels();
 
-    CV_Assert( img_ncn == 3 || img_ncn == 4 );
+    CV_Check( img_ncn, img_ncn == 3 || img_ncn == 4, "" );
 
     // Decode
     uint8_t* rawImg = nullptr;
@@ -164,7 +126,6 @@ bool QoiDecoder::readData( Mat& img )
     {
         CV_Error(Error::StsParseError, "Cannot decode from QOI");
     }
-    CV_Assert( rawImg != nullptr );
 
     // Convert to cv::Mat()
     if( img_ncn == 3 )
@@ -206,7 +167,7 @@ bool QoiEncoder::write(const Mat& _img, const std::vector<int>& params)
 
     // QOI supports only RGB/RGBA, not GRAY. In OpenCV, GRAY will save as RGB.
     const int _img_ncn = _img.channels();
-    CV_Assert( _img_ncn == 1 || _img_ncn == 3 || _img_ncn == 4 );
+    CV_Check( _img_ncn, _img_ncn == 1 || _img_ncn == 3 || _img_ncn == 4, "" );
 
     Mat img; // BGR or BGRA Mat
 
@@ -237,7 +198,7 @@ bool QoiEncoder::write(const Mat& _img, const std::vector<int>& params)
     const int img_height = img.rows;
     const int img_width = img.cols;
     const int img_ncn = img.channels();
-    CV_Assert( img_ncn == 3 || img_ncn == 4 );
+    CV_Check( img_ncn, img_ncn == 3 || img_ncn == 4, "" );
 
     uint8_t* rawImg = nullptr;
     std::vector<uint8_t> rawBuf;
