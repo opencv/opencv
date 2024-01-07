@@ -1723,7 +1723,7 @@ void ChessBoardDetector::findQuadNeighbors()
 
                     const int k = neighbor_idx & 3;
                     if (abs(closest_corner_idx - k) != 2)
-                        break;
+                        continue;
 
                     CV_DbgAssert(q);
                     if (!q->neighbors[k])
