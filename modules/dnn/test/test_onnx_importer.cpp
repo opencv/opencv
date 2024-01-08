@@ -1452,7 +1452,7 @@ TEST_P(Test_ONNX_layers, LSTM_layout_batch)
     testONNXModels("lstm_layout_1", npy, 0.005, 0.005, false, false, 3);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_Einsum_1D)
+TEST_P(Test_ONNX_layers, Einsum_1D)
 {
     testONNXModels("einsum_1d", npy, 0, 0, false, false, 2);
 }
@@ -1482,12 +1482,12 @@ TEST_P(Test_ONNX_layers, Einsum_5D)
     testONNXModels("einsum_5d", npy, 0, 0, false, false, 2);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_Einsum_InnerProduct)
+TEST_P(Test_ONNX_layers, Einsum_InnerProduct)
 {
     testONNXModels("einsum_inner", npy, 0, 0, false, false, 2);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_Einsum_HadamardProduct)
+TEST_P(Test_ONNX_layers, Einsum_HadamardProduct)
 {
     testONNXModels("einsum_hadamard", npy, 0, 0, false, false, 2);
 }
