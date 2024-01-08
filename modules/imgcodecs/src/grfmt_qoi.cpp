@@ -114,7 +114,7 @@ bool QoiDecoder::readData( Mat& img )
     qoi_desc desc;
     if( !m_buf.empty() )
     {
-        int m_buf_len = m_buf.cols * m_buf.rows * m_buf.elemSize();
+        int m_buf_len = static_cast<int>( m_buf.cols * m_buf.rows * m_buf.elemSize() );
         rawImg = static_cast<uint8_t*>( qoi_decode( m_buf.ptr(), m_buf_len, &desc, img_ncn ) );
     }
     else
