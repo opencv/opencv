@@ -23,3 +23,11 @@ union qoi_rgba_t
 ----------------
 Before r,g,b,a are invidual parameters. However it is not suitable for optimization.
 After r,g,b,a are combied into one array.
+
+add static_cast<>()
+-------------------
+To suppress warning C4244, add static_cast<>() to convert unsigned int to unsigned char.
+
+replace int to size_t
+---------------------
+To suppress warning C4267, use size_t instead of int.

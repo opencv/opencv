@@ -356,10 +356,10 @@ typedef union {
 static const unsigned char qoi_padding[8] = {0,0,0,0,0,0,0,1};
 
 static void qoi_write_32(unsigned char *bytes, int *p, unsigned int v) {
-	bytes[(*p)++] = (0xff000000 & v) >> 24;
-	bytes[(*p)++] = (0x00ff0000 & v) >> 16;
-	bytes[(*p)++] = (0x0000ff00 & v) >> 8;
-	bytes[(*p)++] = (0x000000ff & v);
+	bytes[(*p)++] = static_cast<unsigned char>( ( v >> 24) & 0xff );
+	bytes[(*p)++] = static_cast<unsigned char>( ( v >> 16) & 0xff );
+	bytes[(*p)++] = static_cast<unsigned char>( ( v >>  8) & 0xff );
+	bytes[(*p)++] = static_cast<unsigned char>( ( v      ) & 0xff );
 }
 
 static unsigned int qoi_read_32(const unsigned char *bytes, int *p) {
@@ -431,7 +431,7 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 		if (px.v == px_prev.v) {
 			run++;
 			if (run == 62 || px_pos == px_end) {
-				bytes[p++] = QOI_OP_RUN | (run - 1);
+				bytes[p++] = static_cast<unsigned char>( QOI_OP_RUN | (run - 1) );
 				run = 0;
 			}
 		}
@@ -439,14 +439,14 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 			int index_pos;
 
 			if (run > 0) {
-				bytes[p++] = QOI_OP_RUN | (run - 1);
+				bytes[p++] = static_cast<unsigned char>( QOI_OP_RUN | (run - 1) );
 				run = 0;
 			}
 
 			index_pos = QOI_COLOR_HASH(px) % 64;
 
 			if (index[index_pos].v == px.v) {
-				bytes[p++] = QOI_OP_INDEX | index_pos;
+				bytes[p++] = static_cast<unsigned char>( QOI_OP_INDEX | index_pos );
 			}
 			else {
 				index[index_pos] = px;
@@ -582,9 +582,9 @@ void *qoi_decode(const void *data, int size, qoi_desc *desc, int channels) {
 			else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
 				int b2 = bytes[p++];
 				int vg = (b1 & 0x3f) - 32;
-				px.rgba[QOI_EXT_ENCODE_OFFSET_R] += vg - 8 + ((b2 >> 4) & 0x0f);
-				px.rgba[QOI_EXT_ENCODE_OFFSET_G] += vg;
-				px.rgba[QOI_EXT_ENCODE_OFFSET_B] += vg - 8 +  (b2       & 0x0f);
+				px.rgba[QOI_EXT_ENCODE_OFFSET_R] = static_cast<unsigned char>(px.rgba[QOI_EXT_ENCODE_OFFSET_R] + vg - 8 + ((b2 >> 4) & 0x0f) );
+				px.rgba[QOI_EXT_ENCODE_OFFSET_G] = static_cast<unsigned char>(px.rgba[QOI_EXT_ENCODE_OFFSET_G] + vg);
+				px.rgba[QOI_EXT_ENCODE_OFFSET_B] = static_cast<unsigned char>(px.rgba[QOI_EXT_ENCODE_OFFSET_B] + vg - 8 +  (b2       & 0x0f) );
 			}
 			else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
 				run = (b1 & 0x3f);
@@ -634,7 +634,7 @@ int qoi_write(const char *filename, const void *data, const qoi_desc *desc) {
 
 void *qoi_read(const char *filename, qoi_desc *desc, int channels) {
 	FILE *f = fopen(filename, "rb");
-	int size, bytes_read;
+	size_t size, bytes_read;
 	void *pixels, *data;
 
 	if (!f) {
