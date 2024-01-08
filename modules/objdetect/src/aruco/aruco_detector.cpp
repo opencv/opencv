@@ -684,7 +684,7 @@ struct ArucoDetector::ArucoDetectorImpl {
         contours.clear();
 
         // sort candidates from big to small
-        std::sort(candidateTree.begin(), candidateTree.end());
+        std::stable_sort(candidateTree.begin(), candidateTree.end());
         // group index for each candidate
         vector<int> groupId(candidateTree.size(), -1);
         vector<vector<size_t> > groupedCandidates;
@@ -728,11 +728,11 @@ struct ArucoDetector::ArucoDetectorImpl {
 
         for (vector<size_t>& grouped : groupedCandidates) {
             if (detectorParams.detectInvertedMarker) // if detectInvertedMarker choose smallest contours
-                std::sort(grouped.begin(), grouped.end(), [](const size_t &a, const size_t &b) {
+                std::stable_sort(grouped.begin(), grouped.end(), [](const size_t &a, const size_t &b) {
                     return a > b;
                 });
             else // if detectInvertedMarker==false choose largest contours
-                std::sort(grouped.begin(), grouped.end());
+                std::stable_sort(grouped.begin(), grouped.end());
             size_t currId = grouped[0];
             isSelectedContours[currId] = true;
             for (size_t i = 1ull; i < grouped.size(); i++) {
