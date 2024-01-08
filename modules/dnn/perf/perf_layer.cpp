@@ -340,7 +340,7 @@ PERF_TEST_P_(Layer_ScatterND, scatterND) {
     randn(data, 0.f, 1.f);
     randn(updates, 0.f, 1.f);
 
-    // initialize the indices with index tuples like [0...N, 0...C, 0...H, 0...W]
+    // Create indices such that indices[n_i, c_j, h_k, w_l, :4] = [i, j, k, l]
     std::vector<int> current_index_tuple(shape.size());
     int total = data.total();
     std::vector<int> indices_step;
