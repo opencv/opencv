@@ -702,7 +702,7 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
     }
     std::string str;
 
-#if !defined(Py_LIMITED_API) || (Py_LIMITED_API >= 0x03060000)
+#if ((PY_VERSION_HEX >= 0x03060000) && !defined(Py_LIMITED_API)) || (Py_LIMITED_API >= 0x03060000)
     if (info.pathlike)
     {
         obj = PyOS_FSPath(obj);
