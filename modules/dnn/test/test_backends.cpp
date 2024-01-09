@@ -102,6 +102,12 @@ public:
     Net net;
 };
 
+TEST_P(DNNTestNetwork, DISABLED_YOLOv8n) {
+    processNet("dnn/onnx/models/yolov8n.onnx", "", Size(640, 640), "output0");
+    expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
+}
+
 TEST_P(DNNTestNetwork, AlexNet)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB);
@@ -1580,6 +1586,8 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Backends, NaryEltwiseConcat, testing::Combine
     testing::Values(std::vector<int>{1, 4, 84}),
     dnnBackendsAndTargets())
 );
+
+
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_layers_backends, dnnBackendsAndTargets());
 
