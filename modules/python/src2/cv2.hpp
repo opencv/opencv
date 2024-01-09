@@ -13,7 +13,10 @@
 // #define Py_DEBUG
 
 #if defined(CVPY_DYNAMIC_INIT) && !defined(Py_DEBUG)
-#   define Py_LIMITED_API 0x03030000
+#   ifndef PYTHON3_LIMITED_API_VERSION
+#       define PYTHON3_LIMITED_API_VERSION 0x03060000
+#   endif
+#   define Py_LIMITED_API PYTHON3_LIMITED_API_VERSION
 #endif
 
 #include <cmath>
