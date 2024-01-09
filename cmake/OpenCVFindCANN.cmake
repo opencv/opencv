@@ -57,6 +57,18 @@ if(CANN_INSTALL_DIR)
         set(HAVE_CANN OFF)
         return()
     endif()
+
+    #  * libacl_dvpp_mpi.so
+    set(libacl_dvpp_mpi "${CANN_INSTALL_DIR}/lib64")
+    find_library(found_libacldvppmpi NAMES acl_dvpp_mpi PATHS ${libacl_dvpp_mpi} NO_DEFAULT_PATH)
+    if(found_libacldvppmpi)
+        set(libacl_dvpp_mpi ${found_libacldvppmpi})
+        message(STATUS "CANN: libacl_dvpp_mpi.so is found at ${libacl_dvpp_mpi}")
+    else()
+        message(STATUS "CANN: Missing libacl_dvpp_mpi.so. Turning off HAVE_CANN")
+        set(HAVE_CANN OFF)
+        return()
+    endif()
     #  * libgraph.so
     set(lib_graph "${CANN_INSTALL_DIR}/compiler/lib64")
     find_library(found_lib_graph NAMES graph PATHS ${lib_graph} NO_DEFAULT_PATH)
@@ -105,6 +117,7 @@ if(CANN_INSTALL_DIR)
     list(APPEND libs_cann ${lib_opsproto})
     list(APPEND libs_cann ${lib_graph})
     list(APPEND libs_cann ${lib_ge_compiler})
+    list(APPEND libs_cann ${libacl_dvpp_mpi})
 
     #  * lib_graph_base.so
     if(NOT CANN_VERSION_BELOW_6_3_ALPHA002)
