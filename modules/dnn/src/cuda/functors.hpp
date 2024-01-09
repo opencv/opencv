@@ -799,6 +799,40 @@ struct ReciprocalFunctor {
     }
 };
 
+template <class T>
+struct ModFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() {}
+    };
+
+    CUDA4DNN_DEVICE ModFunctor() { }
+    CUDA4DNN_DEVICE ModFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) {
+        int res = (int)x % (int)y;
+        T zero = T(0);
+        if ((res > (int)zero && y < zero) || (res < (int)zero && y > zero)) {
+            res += (int)y;
+        }
+        return res;
+    }
+};
+
+template <class T>
+struct FModFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() {}
+    };
+
+    CUDA4DNN_DEVICE FModFunctor() { }
+    CUDA4DNN_DEVICE FModFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) {
+        using csl::device::fmod;
+        return fmod(x, y);
+    }
+};
+
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 
 #endif /* OPENCV_DNN_SRC_CUDA_FUNCTORS_HPP */
