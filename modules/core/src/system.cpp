@@ -562,7 +562,7 @@ struct HWFeatures
         }
     #endif // CV_CPUID_X86
 
-    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNX__
+    #if defined __ANDROID__ || defined __linux__ || defined __QNX__
     #ifdef __aarch64__
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
@@ -611,7 +611,7 @@ struct HWFeatures
         CV_LOG_INFO(NULL, "- FP16 instructions is NOT enabled via build flags");
         #endif
       #endif
-    #elif defined __arm__ && !defined __FreeBSD__
+    #elif defined __arm__
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
