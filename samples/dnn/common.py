@@ -62,10 +62,10 @@ def add_preproc_args(zoo, parser, sample):
     add_argument(zoo, parser, 'model', required=True,
                  help='Path to a binary file of model contains trained weights. '
                       'It could be a file with extensions .caffemodel (Caffe), '
-                      '.pb (TensorFlow), .weights (Darknet), .bin (OpenVINO)')
+                      '.pb (TensorFlow), .bin (OpenVINO)')
     add_argument(zoo, parser, 'config',
                  help='Path to a text file of model contains network configuration. '
-                      'It could be a file with extensions .prototxt (Caffe), .pbtxt or .config (TensorFlow), .cfg (Darknet), .xml (OpenVINO)')
+                      'It could be a file with extensions .prototxt (Caffe), .pbtxt or .config (TensorFlow), .xml (OpenVINO)')
     add_argument(zoo, parser, 'mean', nargs='+', type=float, default=[0, 0, 0],
                  help='Preprocess input image by subtracting mean values. '
                       'Mean values should be in BGR order.')

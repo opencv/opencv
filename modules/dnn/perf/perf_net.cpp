@@ -158,58 +158,6 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "ssd_inception_v2_coco_2017_11_17.pbtxt", cv::Size(300, 300));
 }
 
-PERF_TEST_P_(DNNTestNetwork, YOLOv3)
-{
-    applyTestTag(
-        CV_TEST_TAG_MEMORY_2GB,
-        CV_TEST_TAG_DEBUG_VERYLONG
-    );
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
-        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
-        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
-#endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)  // nGraph compilation failure
-    if (target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
-#endif
-
-    Mat sample = imread(findDataFile("dnn/dog416.png"));
-    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
-    processNet("dnn/yolov3.weights", "dnn/yolov3.cfg", inp);
-}
-
-PERF_TEST_P_(DNNTestNetwork, YOLOv4)
-{
-    applyTestTag(
-        CV_TEST_TAG_MEMORY_2GB,
-        CV_TEST_TAG_DEBUG_VERYLONG
-    );
-    if (target == DNN_TARGET_MYRIAD)  // not enough resources
-        throw SkipTestException("");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
-        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
-        throw SkipTestException("Test is disabled in OpenVINO 2020.4");
-#endif
-    Mat sample = imread(findDataFile("dnn/dog416.png"));
-    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
-    processNet("dnn/yolov4.weights", "dnn/yolov4.cfg", inp);
-}
-
-PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
-{
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)  // nGraph compilation failure
-    if (target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
-#endif
-    Mat sample = imread(findDataFile("dnn/dog416.png"));
-    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
-    processNet("dnn/yolov4-tiny-2020-12.weights", "dnn/yolov4-tiny-2020-12.cfg", inp);
-}
-
 PERF_TEST_P_(DNNTestNetwork, YOLOv5) {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     Mat sample = imread(findDataFile("dnn/dog416.png"));

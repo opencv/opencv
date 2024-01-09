@@ -22,18 +22,5 @@
             "modelUrl": "https://drive.google.com/uc?id=0BzKzrI_SkD1_WVVTSmQxU0dVRzA&export=download",
             "configUrl": "https://drive.google.com/uc?id=0BzKzrI_SkD1_WVVTSmQxU0dVRzA&export=download"
         }
-    ],
-    "darknet": [
-        {
-            "model": "yolov2_tiny",
-            "inputSize": "416, 416",
-            "mean": "0, 0, 0",
-            "std": "0.00392",
-            "swapRB": "false",
-            "outType": "YOLO",
-            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/object_detection_classes_yolov3.txt",
-            "modelUrl": "https://pjreddie.com/media/files/yolov2-tiny.weights",
-            "configUrl": "https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov2-tiny.cfg"
-        }
     ]
 }

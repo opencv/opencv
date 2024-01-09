@@ -804,38 +804,6 @@ CV__DNN_INLINE_NS_BEGIN
         Ptr<Impl> impl;
     };
 
-    /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
-    *  @param cfgFile      path to the .cfg file with text description of the network architecture.
-    *  @param darknetModel path to the .weights file with learned network.
-    *  @returns Network object that ready to do forward, throw an exception in failure cases.
-    */
-    CV_EXPORTS_W Net readNetFromDarknet(CV_WRAP_FILE_PATH const String &cfgFile, CV_WRAP_FILE_PATH const String &darknetModel = String());
-
-    /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
-     *  @param bufferCfg   A buffer contains a content of .cfg file with text description of the network architecture.
-     *  @param bufferModel A buffer contains a content of .weights file with learned network.
-     *  @returns Net object.
-     */
-    CV_EXPORTS_W Net readNetFromDarknet(const std::vector<uchar>& bufferCfg,
-                                        const std::vector<uchar>& bufferModel = std::vector<uchar>());
-
-    /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
-     *  @param bufferCfg   A buffer contains a content of .cfg file with text description of the network architecture.
-     *  @param lenCfg      Number of bytes to read from bufferCfg
-     *  @param bufferModel A buffer contains a content of .weights file with learned network.
-     *  @param lenModel    Number of bytes to read from bufferModel
-     *  @returns Net object.
-     */
-    CV_EXPORTS Net readNetFromDarknet(const char *bufferCfg, size_t lenCfg,
-                                      const char *bufferModel = NULL, size_t lenModel = 0);
-
-    /** @brief Reads a network model stored in <a href="http://caffe.berkeleyvision.org">Caffe</a> framework's format.
-      * @param prototxt   path to the .prototxt file with text description of the network architecture.
-      * @param caffeModel path to the .caffemodel file with learned network.
-      * @returns Net object.
-      */
-    CV_EXPORTS_W Net readNetFromCaffe(CV_WRAP_FILE_PATH const String &prototxt, CV_WRAP_FILE_PATH const String &caffeModel = String());
-
     /** @brief Reads a network model stored in Caffe model in memory.
       * @param bufferProto buffer containing the content of the .prototxt file
       * @param bufferModel buffer containing the content of the .caffemodel file
@@ -910,21 +878,19 @@ CV__DNN_INLINE_NS_BEGIN
       *                  extensions are expected for models from different frameworks:
       *                  * `*.caffemodel` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pb` (TensorFlow, https://www.tensorflow.org/)
-      *                  * `*.weights` (Darknet, https://pjreddie.com/darknet/)
       *                  * `*.bin` | `*.onnx` (OpenVINO, https://software.intel.com/openvino-toolkit)
       *                  * `*.onnx` (ONNX, https://onnx.ai/)
       * @param[in] config Text file contains network configuration. It could be a
       *                   file with the following extensions:
       *                  * `*.prototxt` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pbtxt` (TensorFlow, https://www.tensorflow.org/)
-      *                  * `*.cfg` (Darknet, https://pjreddie.com/darknet/)
       *                  * `*.xml` (OpenVINO, https://software.intel.com/openvino-toolkit)
       * @param[in] framework Explicit framework name tag to determine a format.
       * @returns Net object.
       *
       * This function automatically detects an origin framework of trained model
-      * and calls an appropriate function such @ref readNetFromCaffe, @ref readNetFromTensorflow
-      * or @ref readNetFromDarknet. An order of @p model and @p config
+      * and calls an appropriate function such @ref readNetFromCaffe or @ref readNetFromTensorflow.
+      * An order of @p model and @p config
       * arguments does not matter.
       */
      CV_EXPORTS_W Net readNet(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config = "", const String& framework = "");

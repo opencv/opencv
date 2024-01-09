@@ -27,6 +27,7 @@ std::string param_keys =
     "{ classes     | | Optional path to a text file with names of classes to label detected objects. }"
     "{ thr         | .5 | Confidence threshold. }"
     "{ nms         | .4 | Non-maximum suppression threshold. }"
+    "{ obj_thr     | .5 | Objectness threshold. }"
     "{ async       | 0 | Number of asynchronous forwards at the same time. "
                         "Choose 0 for synchronous mode }";
 std::string backend_keys = cv::format(
@@ -50,13 +51,13 @@ std::string keys = param_keys + backend_keys + target_keys;
 using namespace cv;
 using namespace dnn;
 
-float confThreshold, nmsThreshold;
+float confThreshold, nmsThreshold, objThreshold;
 std::vector<std::string> classes;
 
 inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
                        const Scalar& mean, bool swapRB);
 
-void postprocess(Mat& frame, const std::vector<Mat>& out, Net& net, int backend);
+void postprocess(Mat& frame, std::vector<Mat>& out, Net& net, Size inpSize, int backend);
 
 void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
 
@@ -133,6 +134,7 @@ int main(int argc, char** argv)
 
     confThreshold = parser.get<float>("thr");
     nmsThreshold = parser.get<float>("nms");
+    objThreshold = parser.get<float>("obj_thr");
     float scale = parser.get<float>("scale");
     Scalar mean = parser.get<Scalar>("mean");
     bool swapRB = parser.get<bool>("rgb");
@@ -172,8 +174,11 @@ int main(int argc, char** argv)
 
     // Open a video file or an image file or a camera stream.
     VideoCapture cap;
-    if (parser.has("input"))
+    if (parser.has("input")){
+        String fileName = parser.get<String>("input");
         cap.open(parser.get<String>("input"));
+
+    }
     else
         cap.open(parser.get<int>("device"));
 
@@ -257,7 +262,7 @@ int main(int argc, char** argv)
         std::vector<Mat> outs = predictionsQueue.get();
         Mat frame = processedFramesQueue.get();
 
-        postprocess(frame, outs, net, backend);
+        postprocess(frame, outs, net, Size(inpWidth, inpHeight), backend);
 
         if (predictionsQueue.counter > 1)
         {
@@ -297,7 +302,7 @@ int main(int argc, char** argv)
         std::vector<Mat> outs;
         net.forward(outs, outNames);
 
-        postprocess(frame, outs, net, backend);
+        postprocess(frame, outs, net, Size(inpWidth, inpHeight), backend);
 
         // Put efficiency information.
         std::vector<double> layersTimes;
@@ -331,7 +336,7 @@ inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
     }
 }
 
-void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend)
+void postprocess(Mat& frame, std::vector<Mat>& outs, Net& net, Size inpSize, int backend)
 {
     static std::vector<int> outLayers = net.getUnconnectedOutLayers();
     static std::string outLayerType = net.getLayer(outLayers[0])->type;
@@ -339,6 +344,13 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<Rect> boxes;
+    // check if mats in outs has 84 or 85
+    bool regionFlag = false;
+    int outsizeLast1 = outs[0].size[outs[0].dims - 1];
+    int outsizeLast2 = outs[0].size[outs[0].dims - 2];
+    if(outsizeLast1 == 85 || outsizeLast1 == 84 || outsizeLast2 == 85 || outsizeLast2 == 84)
+        regionFlag = true;
+
     if (outLayerType == "DetectionOutput")
     {
         // Network produces output blob with a shape 1x1xNx7 where N is a number of
@@ -375,8 +387,30 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend
             }
         }
     }
-    else if (outLayerType == "Region")
+    else if (outLayerType == "Region" || regionFlag)
     {
+        int scores_idx = 5;
+        bool isYOLOv8 = outs[0].size[outs[0].dims - 2] == 84; // YOLOv8 is different from other YOLO models
+        double maxWH = 0;
+        for (auto &out: outs) {
+            out = out.reshape(1, out.total() / outsizeLast1);
+            if (isYOLOv8)
+                out = out.t();
+            double maxWH_;
+            cv::minMaxLoc(out.colRange(2, 4), nullptr, &maxWH_);
+            maxWH = std::max(maxWH, maxWH_);
+        }
+        if(isYOLOv8)
+            scores_idx = 4;
+
+        float frameWidth = (float)frame.cols;
+        float frameHeight = (float )frame.rows;
+        if(maxWH > 2.0){
+            frameWidth /= (float)inpSize.width;
+            frameHeight /= (float)inpSize.height;
+        }
+
+
         for (size_t i = 0; i < outs.size(); ++i)
         {
             // Network produces output blob with a shape NxC where N is a number of
@@ -385,16 +419,19 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend
             float* data = (float*)outs[i].data;
             for (int j = 0; j < outs[i].rows; ++j, data += outs[i].cols)
             {
-                Mat scores = outs[i].row(j).colRange(5, outs[i].cols);
+                Mat scores = outs[i].row(j).colRange(scores_idx, outs[i].cols);
                 Point classIdPoint;
                 double confidence;
                 minMaxLoc(scores, 0, &confidence, 0, &classIdPoint);
                 if (confidence > confThreshold)
                 {
-                    int centerX = (int)(data[0] * frame.cols);
-                    int centerY = (int)(data[1] * frame.rows);
-                    int width = (int)(data[2] * frame.cols);
-                    int height = (int)(data[3] * frame.rows);
+                    // Skip object with <= objectness threshold
+                    if(!isYOLOv8 and data[4] <= objThreshold)
+                        continue;
+                    int centerX = (int)(data[0] * frameWidth);
+                    int centerY = (int)(data[1] * frameHeight);
+                    int width = (int)(data[2] * frameWidth);
+                    int height = (int)(data[3] * frameHeight);
                     int left = centerX - width / 2;
                     int top = centerY - height / 2;
 
@@ -410,7 +447,7 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend
 
     // NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     // or NMS is required if number of outputs > 1
-    if (outLayers.size() > 1 || (outLayerType == "Region" && backend != DNN_BACKEND_OPENCV))
+    if (outLayers.size() > 1 || (outLayerType == "Region" || regionFlag && backend != DNN_BACKEND_OPENCV))
     {
         std::map<int, std::vector<size_t> > class2indices;
         for (size_t i = 0; i < classIds.size(); i++)

@@ -34,67 +34,17 @@ yolov8x:
   background_label_id: 0
   sample: "yolo_detector"
 
-# YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
-# YOLO object detection family from Darknet (https://pjreddie.com/darknet/yolo/)
-# Might be used for all YOLOv2, TinyYolov2, YOLOv3, YOLOv4 and TinyYolov4
-yolov4:
+yolov5n:
   load_info:
-    url: "https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_optimal/yolov4.weights"
-    sha1: "0143deb6c46fcc7f74dd35bf3c14edc3784e99ee"
-  model: "yolov4.weights"
-  config: "yolov4.cfg"
+    url: "https://github.com/ultralytics/yolov5/releases/download/v7.0/yolov5n.onnx"
+    sha1: "90aa4b5f8e1ba19166f214f3e4258e5d1d05070b"
+  model: "yolov5n.onnx"
   mean: [0, 0, 0]
   scale: 0.00392
-  width: 416
-  height: 416
+  width: 640
+  height: 640
   rgb: true
   classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "object_detection"
-
-yolov4-tiny:
-  load_info:
-    url: "https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights"
-    sha1: "451caaab22fb9831aa1a5ee9b5ba74a35ffa5dcb"
-  model: "yolov4-tiny.weights"
-  config: "yolov4-tiny.cfg"
-  mean: [0, 0, 0]
-  scale: 0.00392
-  width: 416
-  height: 416
-  rgb: true
-  classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "object_detection"
-
-yolov3:
-  load_info:
-    url: "https://pjreddie.com/media/files/yolov3.weights"
-    sha1: "520878f12e97cf820529daea502acca380f1cb8e"
-  model: "yolov3.weights"
-  config: "yolov3.cfg"
-  mean: [0, 0, 0]
-  scale: 0.00392
-  width: 416
-  height: 416
-  rgb: true
-  classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "object_detection"
-
-tiny-yolo-voc:
-  load_info:
-    url: "https://pjreddie.com/media/files/yolov2-tiny-voc.weights"
-    sha1: "24b4bd049fc4fa5f5e95f684a8967e65c625dff9"
-  model: "tiny-yolo-voc.weights"
-  config: "tiny-yolo-voc.cfg"
-  mean: [0, 0, 0]
-  scale: 0.00392
-  width: 416
-  height: 416
-  rgb: true
-  classes: "object_detection_classes_pascal_voc.txt"
-  background_label_id: 0
   sample: "object_detection"
 
 yolov8:
