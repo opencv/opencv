@@ -46,6 +46,18 @@
 
 #include <string>
 
+#if defined(_WIN32)
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#define NOGDI
+
+#include <windows.h>
+
+static unsigned int code_page = GetACP();
+
+#endif
+
 #if PY_MAJOR_VERSION >= 3
 
 // Python3 treats all ints as longs, PyInt_X functions have been removed.
@@ -58,14 +70,6 @@
 #define PyNumber_Int PyNumber_Long
 
 #if defined(_WIN32)
-
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#define NOGDI
-
-#include <windows.h>
-
-static unsigned int code_page = GetACP();
 
 static inline PyObject* PyString_FromString(const char* u)
 {
@@ -94,7 +98,7 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
     if (PyUnicode_Check(obj))
     {
         PyObject* bytes;
-#if defined(_WIN32) && PY_MAJOR_VERSION >= 3
+#if defined(_WIN32)
         if (code_page == 65001) bytes = PyUnicode_AsUTF8String(obj);
         else bytes = PyUnicode_AsMBCSString(obj);
 #else
