@@ -1,13 +1,6 @@
 if("${CMAKE_CXX_COMPILER};${CMAKE_C_COMPILER};${CMAKE_CXX_COMPILER_LAUNCHER}" MATCHES "ccache")
-  set(CMAKE_COMPILER_IS_CCACHE 1)  # TODO: FIXIT Avoid setting of CMAKE_ variables
   set(OPENCV_COMPILER_IS_CCACHE 1)
 endif()
-function(access_CMAKE_COMPILER_IS_CCACHE)
-  if(NOT OPENCV_SUPPRESS_DEPRECATIONS)
-    message(WARNING "DEPRECATED: CMAKE_COMPILER_IS_CCACHE is replaced to OPENCV_COMPILER_IS_CCACHE.")
-  endif()
-endfunction()
-variable_watch(CMAKE_COMPILER_IS_CCACHE access_CMAKE_COMPILER_IS_CCACHE)
 if(ENABLE_CCACHE AND NOT OPENCV_COMPILER_IS_CCACHE)
   # This works fine with Unix Makefiles and Ninja generators
   find_host_program(CCACHE_PROGRAM ccache)
