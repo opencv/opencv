@@ -345,7 +345,7 @@ void postprocess(Mat& frame, std::vector<Mat>& outs, Net& net, Size inpSize, int
     std::vector<float> confidences;
     std::vector<Rect> boxes;
     // check if mats in outs has 84 or 85
-    bool regionFlag = false;
+    bool regionFlag = outLayerType == "Region";
     int outsizeLast1 = outs[0].size[outs[0].dims - 1];
     int outsizeLast2 = outs[0].size[outs[0].dims - 2];
     if(outsizeLast1 == 85 || outsizeLast1 == 84 || outsizeLast2 == 85 || outsizeLast2 == 84)
@@ -387,7 +387,7 @@ void postprocess(Mat& frame, std::vector<Mat>& outs, Net& net, Size inpSize, int
             }
         }
     }
-    else if (outLayerType == "Region" || regionFlag)
+    else if (regionFlag)
     {
         int scores_idx = 5;
         bool isYOLOv8 = outs[0].size[outs[0].dims - 2] == 84; // YOLOv8 is different from other YOLO models
@@ -447,7 +447,7 @@ void postprocess(Mat& frame, std::vector<Mat>& outs, Net& net, Size inpSize, int
 
     // NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     // or NMS is required if number of outputs > 1
-    if (outLayers.size() > 1 || (outLayerType == "Region" || regionFlag && backend != DNN_BACKEND_OPENCV))
+    if (outLayers.size() > 1 || (regionFlag && backend != DNN_BACKEND_OPENCV))
     {
         std::map<int, std::vector<size_t> > class2indices;
         for (size_t i = 0; i < classIds.size(); i++)
