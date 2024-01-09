@@ -132,6 +132,16 @@ void eltwise_op(const Stream& stream, TensorSpan<T> output, TensorView<T> x, Ten
     }
     else
     {
+        if (x.rank() >= y.rank()) {
+            for (std::size_t i = 0; i < (x.rank() - y.rank()); i++) {
+               y.unsqueeze(0);
+            }
+        } else {
+            for (std::size_t i = 0; i < (y.rank() - x.rank()); i++) {
+                x.unsqueeze(0);
+            }
+        }
+
         CV_Assert(is_shape_compatible(output, x));
         CV_Assert(is_shape_compatible(output, y));
 
