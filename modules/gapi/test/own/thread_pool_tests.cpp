@@ -28,6 +28,12 @@ TEST(ThreadPool, SingleTaskMultipleThreads)
     EXPECT_EQ(1u, counter);
 }
 
+TEST(ThreadPool, WaitOnEmptyQueue)
+{
+    own::ThreadPool tp(4u);
+    tp.wait();
+}
+
 TEST(ThreadPool, WaitForTheCompletion)
 {
     own::ThreadPool tp(4u);
@@ -35,7 +41,7 @@ TEST(ThreadPool, WaitForTheCompletion)
 
     tp.start();
     tp.schedule([&done]() {
-      std::this_thread::sleep_for(std::chrono::seconds{1u});
+      std::this_thread::sleep_for(std::chrono::milliseconds{500u});
       done = true;
     });
     tp.wait();
@@ -43,78 +49,97 @@ TEST(ThreadPool, WaitForTheCompletion)
     EXPECT_TRUE(done);
 }
 
-TEST(ThreadPool, MultipleWait)
-{
-    own::ThreadPool tp(1u);
-    tp.start();
-
-    const uint32_t kNumIters = 5u;
-    for (uint32_t i = 0; i < kNumIters; ++i) {
-        bool done = false;
-
-        tp.schedule([&]() {
-            std::this_thread::sleep_for(std::chrono::seconds{1u});
-            done = true;
-        });
-        tp.wait();
-
-        EXPECT_TRUE(done);
-    }
-}
-
 TEST(ThreadPool, MultipleTasks)
 {
     own::ThreadPool tp(4u);
-    const uint32_t kNumTasks = 42u;
-    std::atomic<uint32_t> counter{0u};
-
     tp.start();
+
+    const uint32_t kNumTasks = 100u;
+    std::atomic<uint32_t> completed{0u};
     for (uint32_t i = 0; i < kNumTasks; ++i) {
-        tp.schedule([&](){++counter;});
+        tp.schedule([&]() {
+            ++completed;
+        });
     }
     tp.wait();
 
-    EXPECT_EQ(kNumTasks, counter.load());
+    EXPECT_EQ(kNumTasks, completed.load());
 }
 
-TEST(ThreadPool, ParallelTasks)
+TEST(ThreadPool, OrderedExecution)
 {
     own::ThreadPool tp(4u);
-    std::atomic<uint32_t> counter{0u};
-
     tp.start();
-    tp.schedule([&]() {
-        std::this_thread::sleep_for(std::chrono::seconds{1u});
-        ++counter;
-    });
-    tp.schedule([&]() { ++counter; });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds{100u});
-    EXPECT_EQ(1u, counter.load());
-
-    tp.wait();
-    EXPECT_EQ(2u, counter.load());
-}
-
-TEST(ThreadPool, InnerScheduleAfterWait)
-{
-    own::ThreadPool tp{4};
-    bool done = false;
-
-    tp.start();
-    tp.schedule([&]() {
-        std::this_thread::sleep_for(std::chrono::milliseconds{500u});
-        tp.schedule([&](){
-            std::this_thread::sleep_for(std::chrono::milliseconds{500u});
-            done = true;
+    const uint32_t kNumTasks = 100u;
+    std::atomic<uint32_t> completed{0u};
+    for (uint32_t i = 0; i < kNumTasks; ++i) {
+        tp.schedule([&]() {
+            ++completed;
         });
+        tp.wait();
+        EXPECT_EQ(i+1, completed.load());
+    }
+}
+
+static void doRecursive(std::atomic<uint32_t> &scheduled,
+                        std::atomic<uint32_t> &executed,
+                        const uint32_t        limit) {
+    // NB: Protects function to be executed more than limit number of times
+    if (scheduled.fetch_add(1u) >= limit) {
+        return;
+    }
+    // NB: This is the execution part
+    ++executed;
+    // NB: Schedule the new one recursively
+    own::ThreadPool::get()->schedule([&scheduled, &executed, limit](){
+        doRecursive(scheduled, executed, limit);
+    });
+}
+
+TEST(ThreadPool, ScheduleRecursively)
+{
+    const int kNumThreads = 1u;
+    own::ThreadPool tp(kNumThreads);
+    tp.start();
+
+    const uint32_t kNumTasks = 10000u;
+    std::atomic<uint32_t> scheduled{0u};
+    std::atomic<uint32_t> executed {0u};
+
+    // NB: Run initial task which will repeat
+    // until executed is equal to limit
+    tp.schedule([&](){
+        doRecursive(scheduled, executed, kNumTasks);
     });
     tp.wait();
 
-    EXPECT_TRUE(done);
+    EXPECT_EQ(kNumTasks, executed.load());
 }
 
-TEST(ThreadPool, ParallelBenchmark)
+TEST(ThreadPool, ScheduleFromDifferentThreads)
+{
+    const int kNumThreads = 10u;
+    own::ThreadPool tp(kNumThreads);
+    tp.start();
+
+    const uint32_t kNumTasks = 10000u;
+    std::atomic<uint32_t> scheduled{0u};
+    std::atomic<uint32_t> executed {0u};
+
+    // NB: Run multiple initial tasks that will be
+    // executed in different threads recursively
+    for (uint32_t i = 0; i < kNumThreads; ++i) {
+        tp.schedule([&](){
+            doRecursive(scheduled, executed, kNumTasks);
+        });
+    }
+    tp.wait();
+
+    EXPECT_EQ(kNumTasks, executed.load());
+}
+
+TEST(ThreadPool, ExecutionIsParallel)
 {
     own::ThreadPool tp(4u);
     std::atomic<uint32_t> counter{0};
@@ -122,7 +147,7 @@ TEST(ThreadPool, ParallelBenchmark)
     auto start = std::chrono::high_resolution_clock::now();
 
     tp.start();
-    for (uint32_t i = 0; i < 4; ++i) {
+    for (uint32_t i = 0; i < 4u; ++i) {
       tp.schedule([&]() {
         std::this_thread::sleep_for(std::chrono::milliseconds{800u});
         ++counter;

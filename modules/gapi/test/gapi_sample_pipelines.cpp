@@ -69,6 +69,35 @@ namespace
         }
     };
 
+    G_TYPED_KERNEL(GBusyWait, <GMat(GMat, uint32_t)>, "org.busy_wait") {
+        static GMatDesc outMeta(GMatDesc in, uint32_t)
+        {
+            return in;
+        }
+    };
+
+    GAPI_OCV_KERNEL(GOCVBusyWait, GBusyWait)
+    {
+        static void run(const cv::Mat& in,
+                        const uint32_t time_in_ms,
+                        cv::Mat&       out)
+        {
+            using namespace std::chrono;
+            auto s = high_resolution_clock::now();
+            in.copyTo(out);
+            auto e = high_resolution_clock::now();
+
+            const uint32_t elapsed_in_ms = duration_cast<milliseconds>(e-s).count();;
+            auto need_to_wait_in_ms = std::max(0u, time_in_ms - elapsed_in_ms);
+
+            s = high_resolution_clock::now();
+            e = s;
+            while (duration_cast<milliseconds>(e-s).count() < need_to_wait_in_ms) {
+                e = high_resolution_clock::now();
+            }
+        }
+    };
+
     // These definitions test the correct macro work if the kernel has multiple output values
     G_TYPED_KERNEL(GRetGArrayTupleOfGMat2Kernel,  <GArray<std::tuple<GMat, GMat>>(GMat, Scalar)>,                                         "org.opencv.test.retarrayoftupleofgmat2kernel")  {};
     G_TYPED_KERNEL(GRetGArraTupleyOfGMat3Kernel,  <GArray<std::tuple<GMat, GMat, GMat>>(GMat)>,                                           "org.opencv.test.retarrayoftupleofgmat3kernel")  {};
@@ -515,23 +544,29 @@ TEST(GAPI_Pipeline, 1DMatWithinSingleIsland)
     EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
 }
 
-TEST(GAPI_Pipeline, NewExecutorTest)
+TEST(GAPI_Pipeline, BranchesExecutedInParallel)
 {
-    cv::GMat in1, in2;
-    auto out = cv::gapi::copy(in1) + cv::gapi::copy(in2);
-    cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
+    cv::GMat in;
+    // NB: cv::gapi::copy used to prevent fusing OCV backend operations
+    // into the single island where they will be executed in turn
+    auto out0 = GBusyWait::on(cv::gapi::copy(in), 1000u /*1sec*/);
+    auto out1 = GBusyWait::on(cv::gapi::copy(in), 1000u /*1sec*/);
+    auto out2 = GBusyWait::on(cv::gapi::copy(in), 1000u /*1sec*/);
+    auto out3 = GBusyWait::on(cv::gapi::copy(in), 1000u /*1sec*/);
 
-    cv::Mat in_mat1 = cv::Mat::eye(32, 32, CV_8UC1);
-    cv::Mat in_mat2 = cv::Mat::eye(32, 32, CV_8UC1);
-    cv::Scalar ref_out = cv::sum(in_mat1 + in_mat2);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out0,out1,out2,out3));
+    cv::Mat in_mat = cv::Mat::eye(32, 32, CV_8UC1);
+    cv::Mat out_mat0, out_mat1, out_mat2, out_mat3;
 
-    cv::Mat ref_mat = in_mat1 + in_mat2;
+    using namespace std::chrono;
+    auto s = high_resolution_clock::now();
+    comp.apply(cv::gin(in_mat), cv::gout(out_mat0, out_mat1, out_mat2, out_mat3),
+               cv::compile_args(cv::use_threaded_executor{4u},
+                                cv::gapi::kernels<GOCVBusyWait>()));
+    auto e = high_resolution_clock::now();
+    const uint32_t elapsed_in_ms = duration_cast<milliseconds>(e-s).count();;
 
-    cv::Mat gapi_out;
-    for (int i = 0; i < 10; ++i) {
-        comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(gapi_out));
-        EXPECT_EQ(0, cv::norm(gapi_out, ref_mat));
-    }
+    EXPECT_GE(1200u, elapsed_in_ms);
 }
 
 } // namespace opencv_test

@@ -121,6 +121,7 @@ set(gapi_srcs
     src/executor/gabstractstreamingexecutor.cpp
     src/executor/gexecutor.cpp
     src/executor/gtbbexecutor.cpp
+    src/executor/gthreadedexecutor.cpp
     src/executor/gstreamingexecutor.cpp
     src/executor/gasync.cpp
     src/executor/thread_pool.cpp

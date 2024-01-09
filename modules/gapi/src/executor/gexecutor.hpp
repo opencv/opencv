@@ -12,7 +12,6 @@
 #include <unordered_map> // required by magazine
 
 #include "executor/gabstractexecutor.hpp"
-#include "executor/thread_pool.hpp"
 
 namespace cv {
 namespace gimpl {
@@ -53,47 +52,6 @@ public:
 
     void prepareForNewStream() override;
 };
-
-namespace wip {
-
-class Task;
-class GExecutor final: public GAbstractExecutor
-{
-protected:
-
-    // FIXME: Naive executor details are here for now
-    // but then it should be moved to another place
-    struct DataDesc
-    {
-        ade::NodeHandle slot_nh;
-        ade::NodeHandle data_nh;
-    };
-
-    void initResource(const ade::NodeHandle &nh, const ade::NodeHandle &orig_nh); // FIXME: shouldn't it be RcDesc?
-
-    Mag                       m_res;
-    std::vector<DataDesc>     m_slots;
-
-    cv::gapi::own::ThreadPool m_tp{4u};
-    std::mutex                m_mutex;
-
-    std::vector<std::shared_ptr<Task>> m_initial_tasks;
-    std::unordered_map< ade::NodeHandle
-                      , std::shared_ptr<Task>
-                      , ade::HandleHasher<ade::Node>> m_tasks;
-public:
-    class Input;
-    class Output;
-
-    explicit GExecutor(std::unique_ptr<ade::Graph> &&g_model);
-    void run(cv::gimpl::GRuntimeArgs &&args) override;
-
-    bool canReshape() const override;
-    void reshape(const GMetaArgs& inMetas, const GCompileArgs& args) override;
-
-    void prepareForNewStream() override;
-};
-} // namespace wip
 
 } // namespace gimpl
 } // namespace cv

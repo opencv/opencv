@@ -251,6 +251,14 @@ void Net::Impl::setPreferableTarget(int targetId)
 #endif
 
         clear();
+
+        if (targetId == DNN_TARGET_CPU_FP16)
+        {
+            if (useWinograd) {
+                CV_LOG_INFO(NULL, "DNN: DNN_TARGET_CPU_FP16 is set => Winograd convolution is disabled by default to preserve accuracy. If needed, enable it explicitly using enableWinograd(true).");
+                enableWinograd(false);
+            }
+        }
     }
 }
 

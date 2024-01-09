@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2023 Intel Corporation
+// Copyright (C) 2024 Intel Corporation
 
 #ifndef OPENCV_GAPI_THREAD_POOL_HPP
 #define OPENCV_GAPI_THREAD_POOL_HPP
@@ -35,7 +35,7 @@ public:
     void wait();
 
 private:
-    std::atomic<uint64_t>   task_counter{0u};
+    uint64_t                task_counter{0u};
     std::mutex              m;
     std::condition_variable all_done;
 };

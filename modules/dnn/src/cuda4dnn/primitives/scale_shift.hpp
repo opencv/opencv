@@ -128,6 +128,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             /* the scale shift operation might require broadcasting */
             const int end_axis = [&] {
+                if (num_parameters == 1) {
+                    return static_cast<int>(axis + 1);
+                }
                 for (int endAxis = axis + 1; endAxis <= input.rank(); endAxis++) {
                     if (input.size_range(axis, endAxis) == mid_size)
                         return endAxis;
