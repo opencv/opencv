@@ -1,13 +1,11 @@
-qoi.h extemds for OpenCV
-========================
-This document is appendix described what is qoi.h customized for OpenCV.
+Extended qoi.h for OpenCV
+=========================
+This document is appendix described what is qoi.h extended for OpenCV.
 When updating qoi.h embedded in OpenCV, please refer this document.
 
-Base version
-------------
-The base qoi.h has been downloaded with following command.
+The base qoi.h has been downloaded from here.
 
-https://raw.githubusercontent.com/phoboslab/qoi/36190eb07dc5d85f408d998d1884eb69573adf68/qoi.h
+https://github.com/phoboslab/qoi/tree/827a7e4418ca75553e4396ca4e8c508c9dc07048
 
 namespace cv
 ------------
