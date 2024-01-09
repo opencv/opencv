@@ -23,7 +23,7 @@ class UnicodeSupportTest(NewOpenCVTests):
     def tearDown(self):
         shutil.rmtree(self.tmp_path)
 
-    @unittest.skipIf(os.name != 'nt' or cv.getVersionMajor() <= 3, "only windows and opencv4+")
+    @unittest.skipIf(os.name != 'nt' or cv.getVersionMajor() <= 3 or sys.version_info.major == 2, "only windows and opencv4+ and python3")
     def test_fs_get_cache_dir(self):
         tmp_bak = os.environ["TMP"]
         os.environ["TMP"] = self.tmp_path
