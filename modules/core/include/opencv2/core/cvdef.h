@@ -475,6 +475,7 @@ Cv64suf;
 #define CV_WRAP_MAPPABLE(mappable)
 #define CV_WRAP_PHANTOM(phantom_header)
 #define CV_WRAP_DEFAULT(val)
+#define CV_WRAP_FILE_PATH
 
 /****************************************************************************************\
 *                                  Matrix type (Mat)                                     *
