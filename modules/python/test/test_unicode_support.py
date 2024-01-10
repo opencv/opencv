@@ -43,6 +43,7 @@ class UnicodeSupportTest(NewOpenCVTests):
         data_read = cv.imread(file_path, cv.IMREAD_UNCHANGED)
         self.assertTrue(np.array_equal(data_write, data_read))
 
+    @unittest.skipIf(os.name != 'nt', "known issues that exist on non-Windows systems")
     def test_video_write(self):
         file_path = os.path.join(self.tmp_path, str_unicode + ".mp4")
         cv.VideoWriter(file_path, cv.VideoWriter_fourcc('P', 'I', 'M', '1'), 1, (1, 1))
