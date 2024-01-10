@@ -39,7 +39,6 @@ android {
         }
     }
     buildFeatures {
-        aidl true
         prefabPublishing true
         buildConfig true
     }
@@ -52,7 +51,6 @@ android {
         main {
             java.srcDirs = ['src/main/java']
             //jniLibs.srcDirs = ['libs']
-            aidl.srcDirs = ['src/main/java']
         }
     }
 

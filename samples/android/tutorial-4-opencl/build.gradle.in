@@ -35,7 +35,6 @@ android {
     sourceSets {
         main {
             java.srcDirs = @ANDROID_SAMPLE_JAVA_PATH@
-            aidl.srcDirs = @ANDROID_SAMPLE_JAVA_PATH@
             res.srcDirs = @ANDROID_SAMPLE_RES_PATH@
             manifest.srcFile '@ANDROID_SAMPLE_MANIFEST_PATH@'
         }
