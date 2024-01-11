@@ -818,19 +818,6 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        auto input_0_shape = inputs[0].dynamicCast<CUDABackendWrapper>()->getShape();
-        for (int i = 1; i < inputs.size(); i++)
-        {
-            auto input_i_shape = inputs[i].dynamicCast<CUDABackendWrapper>()->getShape();
-            if (input_0_shape.size() != input_i_shape.size())
-                return Ptr<BackendNode>();
-            // check if the shape can be supported by `eltwise_ops.cu`, or return the default BackendNode
-            for (int j = 0; j < input_0_shape.size(); j++)
-                if (input_0_shape[j] != input_i_shape[j] &&
-                    input_0_shape[j] != 1 && input_i_shape[j] != 1)
-                    return Ptr<BackendNode>();
-        }
-
         cuda4dnn::EltwiseOpType op_ = cuda4dnn::EltwiseOpType::SUM;
         switch (op) {
             case OPERATION::MAX:

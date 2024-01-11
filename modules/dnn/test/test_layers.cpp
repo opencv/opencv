@@ -2050,7 +2050,7 @@ private:
         net.setPreferableTarget(target);
 
         Mat re;
-        ASSERT_NO_THROW(re = net.forward()); // runtime error
+        re = net.forward();
         auto ptr_re = (float *) re.data;
         for (int i = 0; i < re.total(); i++)
             if (op == "sum"){

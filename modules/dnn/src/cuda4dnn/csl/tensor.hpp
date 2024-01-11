@@ -1187,6 +1187,23 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         return true;
     }
 
+    template <typename ShapeType>
+    bool is_shape_compatible1(const ShapeType &x_shape, const ShapeType &y_shape) noexcept {
+        const auto x_ndims = x_shape.size(), y_ndims = y_shape.size();
+
+        if (x_ndims != y_ndims) {
+            return false;
+        }
+
+        for (int i = 0; i < x_ndims; i++) {
+            if (x_shape[i] != y_shape[i] && x_shape[i] != 1 && y_shape[i] != 1) {
+                 return false;
+            }
+        }
+
+        return true;
+    }
+
     /** returns the rank to which the given tensor can be squeezed to */
     template <class TensorType>
     std::size_t get_effective_rank(const TensorType& x) noexcept {
