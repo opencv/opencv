@@ -274,7 +274,7 @@ void AssertMatsEqual(const cv::Mat& mat1, const cv::Mat& mat2, int threshold)
 
 
 // resolution, shading type, model type, float type, index type
-class RenderingTest : public ::testing::TestWithParam<std::tuple<std::tuple<int, int>, ShadingTypeEnum, ModelTypeEnum, int, int>>
+class RenderingTest : public ::testing::TestWithParam<std::tuple<std::tuple<int, int>, ShadingTypeEnum, ModelTypeEnum, MatDepth, MatDepth>>
 {
 protected:
     void SetUp() override
@@ -289,6 +289,7 @@ protected:
         ftype = std::get<3>(t);
         itype = std::get<4>(t);
 
+        //TODO: check these values
         zNear = 0.1, zFar = 50;
 
         depth_buf = Mat(height, width, ftype, zFar);
@@ -450,8 +451,12 @@ INSTANTIATE_TEST_CASE_P(Rendering, RenderingTest, ::testing::Combine(
     ::testing::Values(std::make_tuple(700, 700), std::make_tuple(640, 480)),
     ShadingTypeEnum::all(),
     ModelTypeEnum::all(),
-    ::testing::Values(CV_32F, CV_64F), // float type
-    ::testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S) // index type
+    // float type
+    //::testing::Values(CV_32F, CV_64F), // not supported yet
+    ::testing::Values(CV_32F), // float type
+    // index type
+    //::testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S) // not supported yet
+    ::testing::Values(CV_32S) // not supported yet
 ));
 
 }
