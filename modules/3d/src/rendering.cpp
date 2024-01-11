@@ -111,6 +111,10 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
                         depthBuf.at<float>(y, x) = zInter;
                     }
                 }
+                else
+                {
+                    update = true;
+                }
 
                 if (!colorBuf.empty() && update)
                 {
