@@ -422,29 +422,26 @@ TEST_P(RenderingTest, accuracy)
 // drawing model as a whole or as two halves should give the same result
 TEST_P(RenderingTest, keepDrawnData)
 {
-    // should be initialized inside rasterization
-    Mat depth_buf2, color_buf2;
+    if (modelType != ModelType::Empty)
+    {
+        // should be initialized inside rasterization
+        Mat depth_buf2, color_buf2;
 
-    Mat idx1, idx2;
-    int nverts = indices.total();
-    idx1 = indices.reshape(3, 1)(Range::all(), Range(0, nverts/2));
-    idx2 = indices.reshape(3, 1)(Range::all(), Range(nverts/2, nverts));
-    idx2 = idx2 - Scalar(nverts/2, nverts/2, nverts/2);
+        Mat idx1, idx2;
+        int nTriangles = indices.total();
+        idx1 = indices.reshape(3, 1)(Range::all(), Range(0, nTriangles / 2));
+        idx2 = indices.reshape(3, 1)(Range::all(), Range(nTriangles / 2, nTriangles));
+        idx2 = idx2 - Scalar(nTriangles / 2, nTriangles / 2, nTriangles / 2);
 
-    Mat verts1, verts2, colors1, colors2;
-    verts1 = verts.reshape(3, 1)(Range::all(), Range(0, nverts/2));
-    verts2 = verts.reshape(3, 1)(Range::all(), Range(nverts/2, nverts));
-    colors1 = colors.reshape(3, 1)(Range::all(), Range(0, nverts/2));
-    colors2 = colors.reshape(3, 1)(Range::all(), Range(nverts/2, nverts));
+        triangleRasterize(verts, idx1, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), depth_buf2, color_buf2);
+        triangleRasterize(verts, idx2, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), depth_buf2, color_buf2);
 
-    triangleRasterize(verts1, idx1, colors1, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), depth_buf2, color_buf2);
-    triangleRasterize(verts2, idx2, colors2, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), depth_buf2, color_buf2);
+        // TODO: tune this threshold
+        AssertMatsEqual(color_buf, color_buf2, 1000);
 
-    //TODO: tune this threshold
-    AssertMatsEqual(color_buf, color_buf2, 1000);
-
-    //TODO: tune this threshold
-    AssertMatsEqual(depth_buf, depth_buf2, 1000);
+        // TODO: tune this threshold
+        AssertMatsEqual(depth_buf, depth_buf2, 1000);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(Rendering, RenderingTest, ::testing::Combine(
