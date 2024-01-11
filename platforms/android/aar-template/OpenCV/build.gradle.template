@@ -59,6 +59,7 @@ android {
     publishing {
         singleVariant('release') {
             withSourcesJar()
+            withJavadocJar()
         }
     }
 }
@@ -66,14 +67,20 @@ android {
 publishing {
     publications {
         release(MavenPublication) {
+            // Builds aar, sources jar and javadoc jar from project sources and creates maven
+            groupId = 'org.opencv'
+            artifactId = '${PACKAGE_NAME}'
+            version = '${OPENCV_VERSION}'
+            afterEvaluate {
+                from components.release
+            }
+        }
+        modified(MavenPublication) {
+            // Creates maven from opencv-release.aar
             groupId = 'org.opencv'
             artifactId = '${PACKAGE_NAME}'
             version = '${OPENCV_VERSION}'
             artifact("opencv-release.aar")
-
-//            afterEvaluate {
-//                from components.release
-//            }
         }
     }
     repositories {

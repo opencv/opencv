@@ -12,6 +12,7 @@ import subprocess
 COPY_FROM_SDK_TO_ANDROID_PROJECT = [
     ["sdk/native/jni/include", "OpenCV/src/main/cpp/include"],
     ["sdk/java/src/org", "OpenCV/src/main/java/org"],
+    ["sdk/java/javadoc", "OpenCV/src/main/java/javadoc"],
     ["sdk/java/res", "OpenCV/src/main/res"]
 ]
 
@@ -144,6 +145,8 @@ def main(args):
     print("Creating local maven repo...")
 
     shutil.copy(final_aar_path, path.join(ANDROID_PROJECT_DIR, "OpenCV/opencv-release.aar"))
+
+    print("Creating a maven repo from project sources (with sources jar and javadoc jar)...")
     subprocess.run(["./gradlew", "publishReleasePublicationToMyrepoRepository"],
             shell=False,
             cwd=ANDROID_PROJECT_DIR,
@@ -152,6 +155,17 @@ def main(args):
     os.makedirs(path.join(FINAL_REPO_PATH, "org/opencv"), exist_ok=True)
     shutil.move(path.join(ANDROID_PROJECT_DIR, "OpenCV/build/repo/org/opencv", MAVEN_PACKAGE_NAME),
                 path.join(FINAL_REPO_PATH, "org/opencv", MAVEN_PACKAGE_NAME))
+
+    print("Creating a maven repo from modified AAR (with cpp libraries)...")
+    subprocess.run(["./gradlew", "publishModifiedPublicationToMyrepoRepository"],
+            shell=False,
+            cwd=ANDROID_PROJECT_DIR,
+            check=True)
+
+    # Replacing AAR from the first maven repo with modified AAR from the second maven repo
+    shutil.copytree(path.join(ANDROID_PROJECT_DIR, "OpenCV/build/repo/org/opencv", MAVEN_PACKAGE_NAME),
+                    path.join(FINAL_REPO_PATH, "org/opencv", MAVEN_PACKAGE_NAME),
+                    dirs_exist_ok=True)
 
 
 if __name__ == "__main__":
