@@ -320,7 +320,9 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
     {
         Vec3i idx = triangles.at<Vec3i>(t);
 
-        //TODO: check idx out of bounds
+        CV_DbgAssert(idx[0] >= 0 && idx[0] < nVerts);
+        CV_DbgAssert(idx[1] >= 0 && idx[1] < nVerts);
+        CV_DbgAssert(idx[2] >= 0 && idx[2] < nVerts);
 
         Vec3f ver3[3] = {
             vertices.at<Vec3f>(idx[0]),
