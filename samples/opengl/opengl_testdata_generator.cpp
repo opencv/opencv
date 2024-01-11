@@ -291,6 +291,7 @@ void generateImage(cv::Size imgSz, ShadingType shadingType, ModelType modelType,
 
         depthImage = cv::Mat(imgSz.height, imgSz.width, CV_32F);
         glReadPixels(0, 0, imgSz.width, imgSz.height, GL_DEPTH_COMPONENT, GL_FLOAT, depthImage.data);
+        // map from [0, 1] to [zNear, zFar]
         for (auto it = depthImage.begin<float>(); it != depthImage.end<float>(); ++it)
         {
             *it = zNear * zFar / ((*it) * (zNear - zFar) + zFar);
