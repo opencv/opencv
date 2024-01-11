@@ -266,6 +266,7 @@ void AssertMatsEqual(const cv::Mat& mat1, const cv::Mat& mat2, int threshold)
     // Check if the matrices have the same content
     cv::Mat diff;
     cv::compare(mat1, mat2, diff, cv::CMP_NE);
+    diff = diff.reshape(1);
     int nonZeroElements = cv::countNonZero(diff);
 
     EXPECT_LT(nonZeroElements, threshold);
