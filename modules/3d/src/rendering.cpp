@@ -174,7 +174,7 @@ void triangleRasterize(InputArray vertices, InputArray indices, InputArray color
     bool hasColors = !colors.empty();
 
     Mat verts, colorVals, triIdx;
-    int nVerts, nColors, nTriangles;
+    int nVerts = 0, nColors = 0, nTriangles = 0;
 
     ShadingType shadingType = ShadingType::White;
 
