@@ -147,9 +147,9 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 }
 
 
-void triangleRasterize(InputArray vertices, InputArray indices, InputArray colors,
+void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
                        InputArray cameraMatrix, int width, int height, bool shadingMode,
-                       OutputArray depth_buf, OutputArray color_buf)
+                       OutputArray _depthBuffer, OutputArray _colorBuffer)
 {
     //TODO: fix this
     Mat camera = cameraMatrix.getMat();
@@ -161,19 +161,19 @@ void triangleRasterize(InputArray vertices, InputArray indices, InputArray color
     //TODO: add this to args
     bool invDepthMode = false;
 
-    bool needDepth = depth_buf.needed();
-    bool needColor = color_buf.needed();
+    bool needDepth = _depthBuffer.needed();
+    bool needColor = _colorBuffer.needed();
 
     if (!needDepth && !needColor)
     {
         CV_Error(Error::StsBadArg, "No depth nor color output image provided");
     }
 
-    bool hasVerts  = !vertices.empty();
-    bool hasIdx    = !indices.empty();
-    bool hasColors = !colors.empty();
+    bool hasVerts  = !_vertices.empty();
+    bool hasIdx    = !_indices.empty();
+    bool hasColors = !_colors.empty();
 
-    Mat verts, colorVals, triIdx;
+    Mat vertices, colors, triangles;
     int nVerts = 0, nColors = 0, nTriangles = 0;
 
     ShadingType shadingType = ShadingType::White;
@@ -187,34 +187,34 @@ void triangleRasterize(InputArray vertices, InputArray indices, InputArray color
         else
         {
             //TODO: check rows/cols/channels
-            CV_Assert(vertices.depth() == CV_32F);
-            bool vert3f = (vertices.channels() * vertices.total() % 3 == 0);
+            CV_Assert(_vertices.depth() == CV_32F);
+            bool vert3f = (_vertices.channels() * _vertices.total() % 3 == 0);
             // not supported yet
-            //bool vert4f = (vertices.channels() * vertices.total() % 4 == 0);
+            //bool vert4f = (_vertices.channels() * _vertices.total() % 4 == 0);
             //CV_Assert(vert3f || vert4f);
             CV_Assert(vert3f);
 
-            verts = vertices.getMat().reshape(3, 1).t();
-            nVerts = verts.total();
+            vertices = _vertices.getMat().reshape(3, 1).t();
+            nVerts = vertices.total();
 
             //TODO: check rows/cols/channels
             // the rest int types are not supported yet
-            CV_Assert(indices.depth() == CV_32S);
-            CV_Assert(indices.channels() * indices.total() % 3 == 0);
+            CV_Assert(_indices.depth() == CV_32S);
+            CV_Assert(_indices.channels() * _indices.total() % 3 == 0);
 
-            triIdx = indices.getMat().reshape(3, 1).t();
-            nTriangles = triIdx.total();
+            triangles = _indices.getMat().reshape(3, 1).t();
+            nTriangles = triangles.total();
 
             if (hasColors)
             {
                 //TODO: check rows/cols/channels
-                CV_Assert(colors.depth() == CV_32F);
-                bool col3f = (colors.channels() * colors.total() % 3 == 0);
+                CV_Assert(_colors.depth() == CV_32F);
+                bool col3f = (_colors.channels() * _colors.total() % 3 == 0);
                 // 4f is not supported yet
                 CV_Assert(col3f);
 
-                colorVals = colors.getMat().reshape(3, 1).t();
-                nColors = colorVals.total();
+                colors = _colors.getMat().reshape(3, 1).t();
+                nColors = colors.total();
 
                 CV_Assert(nColors == nVerts);
 
@@ -230,23 +230,23 @@ void triangleRasterize(InputArray vertices, InputArray indices, InputArray color
     Mat depthBuf;
     if (needDepth)
     {
-        if (depth_buf.empty())
+        if (_depthBuffer.empty())
         {
             // 64f is not supported yet
-            depth_buf.create(cv::Size(width, height), CV_32FC1);
+            _depthBuffer.create(cv::Size(width, height), CV_32FC1);
             //TODO: wrong value, should be 1
             float maxv = invDepthMode ? 1.f : zFar;
-            depth_buf.setTo(maxv);
+            _depthBuffer.setTo(maxv);
         }
         else
         {
-            CV_Assert(depth_buf.size() == cv::Size(width, height));
-            CV_Assert(depth_buf.type() == CV_32FC1);
+            CV_Assert(_depthBuffer.size() == cv::Size(width, height));
+            CV_Assert(_depthBuffer.type() == CV_32FC1);
         }
 
         if (hasIdx)
         {
-            depthBuf = depth_buf.getMat();
+            depthBuf = _depthBuffer.getMat();
         }
     }
     else if (hasIdx && hasColors)
@@ -261,28 +261,28 @@ void triangleRasterize(InputArray vertices, InputArray indices, InputArray color
     Mat colorBuf;
     if (needColor)
     {
-        if (color_buf.empty())
+        if (_colorBuffer.empty())
         {
             // other types are not supported yet
-            color_buf.create(cv::Size(width, height), CV_32FC3);
-            color_buf.setTo(cv::Scalar(0, 0, 0));
+            _colorBuffer.create(cv::Size(width, height), CV_32FC3);
+            _colorBuffer.setTo(cv::Scalar(0, 0, 0));
         }
         else
         {
-            CV_Assert(color_buf.size() == cv::Size(width, height));
-            CV_Assert(color_buf.type() == CV_32FC3);
+            CV_Assert(_colorBuffer.size() == cv::Size(width, height));
+            CV_Assert(_colorBuffer.type() == CV_32FC3);
         }
 
         if (hasIdx)
         {
             // other types are not supported yet
-            if (color_buf.empty())
+            if (_colorBuffer.empty())
             {
-                color_buf.create(cv::Size(width, height), CV_32FC3);
-                color_buf.setTo(cv::Scalar(0, 0, 0));
+                _colorBuffer.create(cv::Size(width, height), CV_32FC3);
+                _colorBuffer.setTo(cv::Scalar(0, 0, 0));
             }
 
-            colorBuf = color_buf.getMat();
+            colorBuf = _colorBuffer.getMat();
         }
     }
 
@@ -296,7 +296,6 @@ void triangleRasterize(InputArray vertices, InputArray indices, InputArray color
 
     //TODO: find out what the heck is this and fix it
     Matx44f modelMatrix;
-
     {
         Matx44f modelMatrix_scale(15,  0,  0,  0,
                                    0, 15,  0,  0,
@@ -319,26 +318,28 @@ void triangleRasterize(InputArray vertices, InputArray indices, InputArray color
 
     for (int t = 0; t < nTriangles; t++)
     {
-        Vec3i idx = triIdx.at<Vec3i>(t);
+        Vec3i idx = triangles.at<Vec3i>(t);
 
         //TODO: check idx out of bounds
 
-        Vec3f v0 = verts.at<Vec3f>(idx[0]);
-        Vec3f v1 = verts.at<Vec3f>(idx[1]);
-        Vec3f v2 = verts.at<Vec3f>(idx[2]);
+        Vec3f ver3[3] = {
+            vertices.at<Vec3f>(idx[0]),
+            vertices.at<Vec3f>(idx[1]),
+            vertices.at<Vec3f>(idx[2])
+        };
 
         Vec3f col[3];
-        if (!colorVals.empty())
+        if (!colors.empty())
         {
-            col[0] = colorVals.at<Vec3f>(idx[0]);
-            col[1] = colorVals.at<Vec3f>(idx[1]);
-            col[2] = colorVals.at<Vec3f>(idx[2]);
+            col[0] = colors.at<Vec3f>(idx[0]);
+            col[1] = colors.at<Vec3f>(idx[1]);
+            col[2] = colors.at<Vec3f>(idx[2]);
         }
 
         Vec4f ver[3] = {
-            mvpMatrix * Vec4f(v0[0], v0[1], v0[2], 1.f),
-            mvpMatrix * Vec4f(v1[0], v1[1], v1[2], 1.f),
-            mvpMatrix * Vec4f(v2[0], v2[1], v2[2], 1.f),
+            mvpMatrix * Vec4f(ver3[0][0], ver3[0][1], ver3[0][2], 1.f),
+            mvpMatrix * Vec4f(ver3[1][0], ver3[1][1], ver3[1][2], 1.f),
+            mvpMatrix * Vec4f(ver3[2][0], ver3[2][1], ver3[2][2], 1.f),
         };
 
         for (auto &vertex : ver)
