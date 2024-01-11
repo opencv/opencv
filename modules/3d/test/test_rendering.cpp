@@ -431,7 +431,6 @@ TEST_P(RenderingTest, keepDrawnData)
         int nTriangles = indices.total();
         idx1 = indices.reshape(3, 1)(Range::all(), Range(0, nTriangles / 2));
         idx2 = indices.reshape(3, 1)(Range::all(), Range(nTriangles / 2, nTriangles));
-        idx2 = idx2 - Scalar(nTriangles / 2, nTriangles / 2, nTriangles / 2);
 
         triangleRasterize(verts, idx1, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), depth_buf2, color_buf2);
         triangleRasterize(verts, idx2, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), depth_buf2, color_buf2);
