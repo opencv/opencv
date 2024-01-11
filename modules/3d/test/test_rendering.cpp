@@ -138,7 +138,7 @@ public:
         break;
         case ModelType::File:
         {
-            string objectPath = findDataFile("rendering/model/spot.obj");
+            string objectPath = findDataFile("rendering/spot.obj");
 
             position = Vec3f( 2.4, 0.7, 1.2);
             lookat   = Vec3f( 0.0, 0.0, 0.3);

@@ -138,7 +138,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     auto shadingType = std::get<1>(t);
     auto outputs = std::get<2>(t);
 
-    string objectPath = findDataFile("rendering/model/spot.obj");
+    string objectPath = findDataFile("rendering/spot.obj");
 
     Vec3f position = Vec3f(20.0, 60.0, -40.0);
     Vec3f lookat   = Vec3f( 0.0,  0.0,   0.0);
