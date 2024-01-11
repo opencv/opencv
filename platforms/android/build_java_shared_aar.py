@@ -12,7 +12,6 @@ import subprocess
 COPY_FROM_SDK_TO_ANDROID_PROJECT = [
     ["sdk/native/jni/include", "OpenCV/src/main/cpp/include"],
     ["sdk/java/src/org", "OpenCV/src/main/java/org"],
-    ["sdk/java/javadoc", "OpenCV/src/main/java/javadoc"],
     ["sdk/java/res", "OpenCV/src/main/res"]
 ]
 
