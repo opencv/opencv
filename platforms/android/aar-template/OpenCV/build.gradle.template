@@ -81,6 +81,28 @@ publishing {
             artifactId = '${PACKAGE_NAME}'
             version = '${OPENCV_VERSION}'
             artifact("opencv-release.aar")
+            pom {
+                name = "OpenCV"
+                description = "Open Source Computer Vision Library"
+                url = "https://opencv.org/"
+                licenses {
+                    license {
+                        name = "The Apache License, Version 2.0"
+                        url = "https://github.com/opencv/opencv/blob/master/LICENSE"
+                    }
+                }
+                developers {
+                    developer {
+                        id = "admin"
+                        name = "OpenCV Team"
+                        email = "admin@opencv.org"
+                    }
+                }
+                scm {
+                    connection = "scm:git:https://github.com/opencv/opencv.git"
+                    url = "https://github.com/opencv/opencv"
+                }
+            }
         }
     }
     repositories {
