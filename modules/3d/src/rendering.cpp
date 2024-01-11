@@ -313,8 +313,9 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
 
         modelMatrix = modelMatrix_translate * modelMatrix_scale * modelMatrix_rotate_y;
     }
+    //Matx44f mvpMatrix = perspectMatrix * lookAtMatrix * modelMatrix;
 
-    Matx44f mvpMatrix = perspectMatrix * lookAtMatrix * modelMatrix;
+    Matx44f mvpMatrix = perspectMatrix * lookAtMatrix;
 
     for (int t = 0; t < nTriangles; t++)
     {
