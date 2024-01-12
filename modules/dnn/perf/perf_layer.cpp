@@ -795,6 +795,66 @@ PERF_TEST_P_(Layer_Attention, VisionTransformer) {
     test_layer({1, 197, 768}, {768, 768, 768}, 12);
 }
 
+struct Layer_GroupNorm : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& x_shape, int num_groups)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat x(x_shape, CV_32FC1);
+        Mat scale(x_shape[1], 1, CV_32FC1);
+        Mat b(x_shape[1], 1, CV_32FC1);
+
+        randu(x, 0.f, 1.f);
+        randu(scale, 0.f, 1.f);
+        randu(b, 0.f, 1.f);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "GroupNormalization";
+        lp.name = "testLayer";
+        lp.set("num_groups", num_groups);
+
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+
+        // warmup
+        {
+            std::vector<String> inpNames{"x", "scale", "b"};
+            net.setInputsNames(inpNames);
+            net.setInput(x, inpNames[0]);
+            net.setInput(scale, inpNames[1]);
+            net.setInput(b, inpNames[2]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+
+    int N = 2;
+    int C = 64;
+    int H = 180;
+    int W = 240;
+    int num_groups = 16;
+};
+
+PERF_TEST_P_(Layer_GroupNorm, GroupNorm)
+{
+    test_layer({N, C, H, W}, num_groups);
+}
+
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 #ifdef HAVE_CUDA
@@ -807,7 +867,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_InstanceNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Attention, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
-
+INSTANTIATE_TEST_CASE_P(/**/, Layer_GroupNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
 typedef TestBaseWithParam<tuple<Vec4i, int, bool, tuple<Backend, Target> > > Layer_FullyConnected;
 PERF_TEST_P_(Layer_FullyConnected, fc)
