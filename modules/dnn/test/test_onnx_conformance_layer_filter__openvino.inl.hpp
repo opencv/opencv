@@ -736,6 +736,10 @@ CASE(test_gridsample_reflection_padding)
     // no filter
 CASE(test_gridsample_zeros_padding)
     // no filter
+CASE(test_group_normalization_epsilon)
+    // no filter
+CASE(test_group_normalization_example)
+    // no filter
 CASE(test_gru_batchwise)
     // no filter
 CASE(test_gru_defaults)
