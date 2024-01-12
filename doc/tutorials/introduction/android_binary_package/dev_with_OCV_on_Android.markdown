@@ -76,11 +76,10 @@ In addition to this instruction you can use some video guide, for example [this 
     @endcode
     The fix was found [here](https://stackoverflow.com/questions/73225714/import-opencv-sdk-to-android-studio-chipmunk)
 
-6. OpenCV project uses `aidl` and `buildConfig` features. Please enable them in
+6. OpenCV project uses `buildConfig` feature. Please enable it in
    `MyApplication/OpenCV/build.gradle` file to `android` block:
     @code{.gradle}
     buildFeatures{
-        aidl true
         buildConfig true
     }
 
