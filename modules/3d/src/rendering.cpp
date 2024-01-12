@@ -118,7 +118,11 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 
                 if (!colorBuf.empty() && update)
                 {
-                    Vec3f color(1.f, 1.f, 1.f); // ShadingType::White
+                    Vec3f color {0, 0, 0};
+                    if (shadingType == ShadingType::White)
+                    {
+                        color = { 1.f, 1.f, 1.f };
+                    }
                     if (shadingType == ShadingType::Flat)
                     {
                         color = colors[0];
