@@ -11,6 +11,7 @@
 #include <functional>   // std::hash
 #include <vector>       // std::vector
 #include <type_traits>  // decay
+#include <thread>       // hardware_concurrency
 
 #include <opencv2/gapi/opencv_includes.hpp>
 
@@ -263,11 +264,31 @@ struct graph_dump_path
 };
 /** @} */
 
+/**
+ * @brief Ask G-API to use threaded executor when cv::GComputation
+ * is compiled via cv::GComputation::compile method.
+ *
+ * Specifies a number of threads that should be used by executor.
+ */
+struct use_threaded_executor
+{
+    explicit use_threaded_executor(uint32_t nthreads = std::thread::hardware_concurrency())
+        : num_threads(nthreads) {
+    }
+    uint32_t num_threads;
+};
+/** @} */
+
 namespace detail
 {
     template<> struct CompileArgTag<cv::graph_dump_path>
     {
         static const char* tag() { return "gapi.graph_dump_path"; }
+    };
+
+    template<> struct CompileArgTag<cv::use_threaded_executor>
+    {
+        static const char* tag() { return "gapi.threaded_executor"; }
     };
 }
 
