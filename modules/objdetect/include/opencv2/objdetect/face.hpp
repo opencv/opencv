@@ -82,8 +82,8 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceDetectorYN> create(const String& model,
-                                              const String& config,
+    CV_WRAP static Ptr<FaceDetectorYN> create(CV_WRAP_FILE_PATH const String& model,
+                                              CV_WRAP_FILE_PATH const String& config,
                                               const Size& input_size,
                                               float score_threshold = 0.9f,
                                               float nms_threshold = 0.3f,
@@ -154,7 +154,7 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& model, const String& config, int backend_id = 0, int target_id = 0);
+    CV_WRAP static Ptr<FaceRecognizerSF> create(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config, int backend_id = 0, int target_id = 0);
 };
 
 //! @}

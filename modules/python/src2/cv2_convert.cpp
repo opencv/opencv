@@ -701,6 +701,18 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
         return true;
     }
     std::string str;
+
+#if ((PY_VERSION_HEX >= 0x03060000) && !defined(Py_LIMITED_API)) || (Py_LIMITED_API >= 0x03060000)
+    if (info.pathlike)
+    {
+        obj = PyOS_FSPath(obj);
+        if (PyErr_Occurred())
+        {
+            failmsg("Expected '%s' to be a str or path-like object", info.name);
+            return false;
+        }
+    }
+#endif
     if (getUnicodeString(obj, str))
     {
         value = str;
