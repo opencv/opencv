@@ -57,7 +57,7 @@ public:
             fovy = 45.0;
 
             vertices = std::vector<Vec3f>(4, {2.0f, 0, -2.0f});
-            colors   = std::vector<Vec3f>(4, {0, 0, 255.0f});
+            colors   = std::vector<Vec3f>(4, {0, 0, 1.0f});
             indices = { };
         }
         break;
@@ -84,7 +84,7 @@ public:
 
             for (auto &color : colors)
             {
-                color = Vec3f(abs(color[0]), abs(color[1]), abs(color[2])) * 255.0f;
+                color = Vec3f(abs(color[0]), abs(color[1]), abs(color[2]));
             }
         }
         break;
@@ -108,6 +108,11 @@ public:
             Vec3f col1(217.0, 238.0, 185.0);
             Vec3f col2(185.0, 217.0, 238.0);
             Vec3f col3(150.0,  10.0, 238.0);
+
+            col1 *= (1.f / 255.f);
+            col2 *= (1.f / 255.f);
+            col3 *= (1.f / 255.f);
+
             colors =
             {
                 col1, col2, col3,
@@ -134,6 +139,10 @@ public:
 
             Vec3f col1(217.0, 238.0, 185.0);
             Vec3f col2(185.0, 217.0, 238.0);
+
+            col1 *= (1.f / 255.f);
+            col2 *= (1.f / 255.f);
+
             colors =
             {
                 col1, col2, col1,
@@ -161,10 +170,10 @@ public:
 
             colors =
             {
-                {  0.0f,   0.0f, 255.0f},
-                {  0.0f, 255.0f,   0.0f},
-                {255.0f,   0.0f,   0.0f},
-                {  0.0f, 255.0f,   0.0f},
+                { 0.0f, 0.0f, 1.0f},
+                { 0.0f, 1.0f, 0.0f},
+                { 1.0f, 0.0f, 0.0f},
+                { 0.0f, 1.0f, 0.0f},
             };
         }
         break;
@@ -232,7 +241,7 @@ void generateImage(cv::Size imgSz, ShadingType shadingType, ModelType modelType,
                 idxLinear.push_back(ctr++);
             }
 
-            Vec3f ci = modelData.colors[idx[0]] * (1.f/255.f);
+            Vec3f ci = modelData.colors[idx[0]];
             for (int i = 0; i < 3; i++)
             {
                 colors4f.emplace_back(ci[0], ci[1], ci[2], 1.f);
@@ -244,7 +253,7 @@ void generateImage(cv::Size imgSz, ShadingType shadingType, ModelType modelType,
         vertices = modelData.vertices;
         for (const auto& c : modelData.colors)
         {
-            Vec3f ci = (shadingType == ShadingType::Shaded) ? c * (1.f/255.f) : cv::Vec3f::all(1.f);
+            Vec3f ci = (shadingType == ShadingType::Shaded) ? c: cv::Vec3f::all(1.f);
             colors4f.emplace_back(ci[0], ci[1], ci[2], 1.0);
         }
 
