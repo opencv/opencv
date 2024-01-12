@@ -298,7 +298,9 @@ private:
 };
 
 cv::gimpl::Task::Task(F f, std::vector<Task::Ptr> &&deps)
-    : m_f(f), m_num_deps(deps.size()), m_ready_deps(0u) {
+    : m_f(f),
+      m_num_deps(static_cast<uint32_t>(deps.size())),
+      m_ready_deps(0u) {
     for (auto dep : deps) {
         dep->m_dependents.push_back(this);
     }

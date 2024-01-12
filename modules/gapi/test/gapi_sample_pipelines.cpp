@@ -87,7 +87,8 @@ namespace
             in.copyTo(out);
             auto e = high_resolution_clock::now();
 
-            const uint32_t elapsed_in_ms = duration_cast<milliseconds>(e-s).count();;
+            const auto elapsed_in_ms =
+                static_cast<uint32_t>(duration_cast<milliseconds>(e-s).count());
             auto need_to_wait_in_ms = std::max(0u, time_in_ms - elapsed_in_ms);
 
             s = high_resolution_clock::now();
@@ -564,7 +565,7 @@ TEST(GAPI_Pipeline, BranchesExecutedInParallel)
                cv::compile_args(cv::use_threaded_executor{4u},
                                 cv::gapi::kernels<GOCVBusyWait>()));
     auto e = high_resolution_clock::now();
-    const uint32_t elapsed_in_ms = duration_cast<milliseconds>(e-s).count();;
+    const auto elapsed_in_ms = duration_cast<milliseconds>(e-s).count();;
 
     EXPECT_GE(1200u, elapsed_in_ms);
 }
