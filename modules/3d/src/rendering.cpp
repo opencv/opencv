@@ -76,7 +76,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     Point2f bc = b - c, ac = a - c;
     float d = ac.x*bc.y - ac.y*bc.x;
 
-    if (abs(d) < 1e6)
+    if (abs(d) < 1e-6)
     {
         // degenerated triangle
         return;
