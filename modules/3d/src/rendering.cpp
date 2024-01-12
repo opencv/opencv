@@ -89,8 +89,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     {
         for (int x = minPt.x; x < maxPt.x; x++)
         {
-            //TODO: check x + 0.5, y + 0.5
-            Point2f p(x, y), pc = p - c;
+            Point2f p(x + 0.5f, y + 0.5f), pc = p - c;
             // barycentric coordinates
             Vec3f f;
             f[0] = ( pc.x * bc.y - pc.y * bc.x) * invd;
