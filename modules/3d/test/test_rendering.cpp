@@ -360,7 +360,7 @@ TEST_P(RenderingTest, noArrays)
 
 TEST_P(RenderingTest, accuracy)
 {
-    color_buf.convertTo(color_buf, CV_8UC3, 1.0f);
+    color_buf.convertTo(color_buf, CV_8UC3, 255.0f);
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     cv::flip(color_buf, color_buf, 0);
     depth_buf.convertTo(depth_buf, CV_8UC1, 1.0);
