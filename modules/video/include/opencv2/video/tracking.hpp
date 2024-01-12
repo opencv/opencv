@@ -564,7 +564,7 @@ public:
     /** @copybrief getGamma @see getGamma */
     CV_WRAP virtual void setGamma(float val) = 0;
 
-    /** @brief Param in the norm used by robust penalizer
+    /** @brief Norm value shift for robust penalizer
     @see setEpsilon */
     CV_WRAP virtual float getEpsilon() const = 0;
     /** @copybrief getEpsilon @see getEpsilon */
