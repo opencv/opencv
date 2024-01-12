@@ -319,44 +319,39 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
 
     for (int t = 0; t < nTriangles; t++)
     {
-        Vec3i idx = triangles.at<Vec3i>(t);
-
-        CV_DbgAssert(idx[0] >= 0 && idx[0] < nVerts);
-        CV_DbgAssert(idx[1] >= 0 && idx[1] < nVerts);
-        CV_DbgAssert(idx[2] >= 0 && idx[2] < nVerts);
-
-        Vec3f ver3[3] = {
-            vertices.at<Vec3f>(idx[0]),
-            vertices.at<Vec3f>(idx[1]),
-            vertices.at<Vec3f>(idx[2])
-        };
+        Vec3i tri = triangles.at<Vec3i>(t);
 
         Vec3f col[3];
-        if (!colors.empty())
+        Vec4f ver[3];
+        for (int i = 0; i < 3; i++)
         {
-            col[0] = colors.at<Vec3f>(idx[0]);
-            col[1] = colors.at<Vec3f>(idx[1]);
-            col[2] = colors.at<Vec3f>(idx[2]);
-        }
+            int idx = tri[i];
 
-        Vec4f ver[3] = {
-            mvpMatrix * Vec4f(ver3[0][0], ver3[0][1], ver3[0][2], 1.f),
-            mvpMatrix * Vec4f(ver3[1][0], ver3[1][1], ver3[1][2], 1.f),
-            mvpMatrix * Vec4f(ver3[2][0], ver3[2][1], ver3[2][2], 1.f),
-        };
+            CV_DbgAssert(idx >= 0 && idx < nVerts);
 
-        for (auto &vertex : ver)
-        {
-            vertex = Vec4f(vertex[0] / vertex[3], vertex[1] / vertex[3], vertex[2] / vertex[3], vertex[3]);
-        }
+            Vec3f vglobal = vertices.at<Vec3f>(idx);
 
-        // [-1, 1]^3 => [0, width] x [0, height] x [0, 1]
-        for (int j = 0; j < 3; j++)
-        {
-            auto& vertex = ver[j];
-            vertex[0] = 0.5 * width  * (vertex[0] + 1.0);
-            vertex[1] = 0.5 * height * (vertex[1] + 1.0);
-            vertex[2] = vertex[2] * 0.5 + 0.5;
+            Vec3f c(0, 0, 0);
+            if (!colors.empty())
+            {
+                c = colors.at<Vec3f>(idx);
+            }
+            col[i] = c;
+
+            Vec4f vndc = mvpMatrix * Vec4f(vglobal[0], vglobal[1], vglobal[2], 1.f);
+
+            float invw = 1.f / vndc[3];
+            Vec4f vdiv = { vndc[0] * invw, vndc[1] * invw, vndc[2] * invw, vndc[3] };
+
+            // [-1, 1]^3 => [0, width] x [0, height] x [0, 1]
+            Vec4f vscreen = {
+                (vdiv[0] + 1.f) * 0.5f * width,
+                (vdiv[1] + 1.f) * 0.5f * height,
+                (vdiv[2] + 1.f) * 0.5f,
+                vdiv[3]
+            };
+
+            ver[i] = vscreen;
         }
 
         drawTriangle(ver, col, depthBuf, colorBuf, invDepthMode, shadingType);
