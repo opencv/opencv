@@ -408,6 +408,7 @@ TEST_P(RenderingTest, accuracy)
         //TODO: tune this threshold
         AssertMatsEqual(depth_buf, groundTruthDepth, 1000);
 
+        // add --test_debug to output resulting images
         if (debugLevel > 0)
         {
             std::string outColorPath = "color_image_" + suffix + "_" + shadingName + ".png";
