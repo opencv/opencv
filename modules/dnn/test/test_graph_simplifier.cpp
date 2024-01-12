@@ -47,6 +47,10 @@ TEST_F(Test_Graph_Simplifier, LayerNormSubGraph) {
     test("layer_norm_expanded_with_initializers", "LayerNormalization");
 }
 
+TEST_F(Test_Graph_Simplifier, LayerNormNoFusionSubGraph) {
+    test("layer_norm_no_fusion", std::vector<std::string>{"NaryEltwise", "Reduce", "Sqrt"});
+}
+
 TEST_F(Test_Graph_Simplifier, ResizeSubgraph) {
     /* Test for 6 subgraphs:
         - GatherCastSubgraph
