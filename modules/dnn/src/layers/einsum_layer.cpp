@@ -1320,8 +1320,8 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         // create tmpout with type like input1
         output = Mat({batches, M, N}, input1.type());
 
-        reshapedInput2 = reshapedInput2.reshape(0, input2ShapeOverride);
-        reshapedInput1 = reshapedInput1.reshape(0, input1ShapeOverride);
+        reshapedInput2 = reshapedInput2.reshape(1, input2ShapeOverride);
+        reshapedInput1 = reshapedInput1.reshape(1, input1ShapeOverride);
 
         fastGemmBatch(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, output, opt);
     } else {
