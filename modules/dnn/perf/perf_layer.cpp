@@ -739,6 +739,62 @@ PERF_TEST_P_(Layer_InstanceNorm, InstanceNorm)
     test_layer({N, C, H, W});
 }
 
+struct Layer_Attention : public TestBaseWithParam<tuple<Backend, Target>> {
+    void test_layer(const std::vector<int> x_shape, const std::vector<int> qkv_hidden_sizes, const int num_heads) {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        auto qk_hidden_size = qkv_hidden_sizes[0];
+        auto v_hidden_size = qkv_hidden_sizes[2];
+
+        auto input_hidden_size = x_shape[2];
+        auto hidden_size = qk_hidden_size + qk_hidden_size + v_hidden_size;
+
+        Mat x(x_shape, CV_32F);
+        Mat weight(std::vector<int>{input_hidden_size, hidden_size}, CV_32F);
+        Mat bias(std::vector<int>{hidden_size}, CV_32F);
+
+        randu(x, 0.f, 1.f);
+        randu(weight, 0.f, 1.f);
+        randu(bias, 0.f, 1.f);
+
+        LayerParams lp;
+        lp.type = "Attention";
+        lp.name = "testLayer";
+        lp.set("num_heads", num_heads);
+        lp.set("qkv_hidden_sizes", DictValue::arrayInt(qkv_hidden_sizes.data(), qkv_hidden_sizes.size()));
+
+        Net net;
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+
+        {
+            std::vector<std::string> input_names{"x", "weight", "bias"};
+            net.setInputsNames(input_names);
+            net.setInput(x, input_names[0]);
+            net.setInput(weight, input_names[1]);
+            net.setInput(bias, input_names[2]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat out = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+};
+
+PERF_TEST_P_(Layer_Attention, VisionTransformer) {
+    test_layer({1, 197, 768}, {768, 768, 768}, 12);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 #ifdef HAVE_CUDA
@@ -750,6 +806,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNorm, testing::Values(std::make_tuple(D
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_InstanceNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Attention, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
 
 typedef TestBaseWithParam<tuple<Vec4i, int, bool, tuple<Backend, Target> > > Layer_FullyConnected;
@@ -771,6 +828,9 @@ PERF_TEST_P_(Layer_FullyConnected, fc)
     bool isMatMul = get<2>(GetParam());
     int backendId = get<0>(get<3>(GetParam()));
     int targetId = get<1>(get<3>(GetParam()));
+
+    if (inpShape.size() == 4 && inpShape[0] == 5 && inpShape[1] == 16 && inpShape[2] == 512 && inpShape[3] == 128 && outDims >= 512)
+        applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
     std::vector<int> weightShape;
     if (isMatMul) {

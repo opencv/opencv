@@ -24,6 +24,16 @@ namespace cv
 namespace dnn
 {
 
+namespace {
+static int _mod(int x, int y) {
+    int res = x % y;
+    if ((res < 0 && y > 0) || (res > 0 && y < 0)) {
+        res += y;
+    }
+    return res;
+}
+}
+
 class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
 public:
@@ -42,7 +52,8 @@ public:
         MAX,
         MEAN,
         MIN,
-        MOD,
+        MOD,  // Integer Mod. Reminder's sign = Divisor's sign.
+        FMOD, // Floating-point Mod. Reminder's sign = Dividend's sign.
         PROD,
         SUB,
         SUM,
@@ -79,6 +90,8 @@ public:
             op = OPERATION::MIN;
         else if (operation == "mod")
             op = OPERATION::MOD;
+        else if (operation == "fmod")
+            op = OPERATION::FMOD;
         else if (operation == "mul")
             op = OPERATION::PROD;
         else if (operation == "sub")
@@ -106,18 +119,21 @@ public:
 #ifdef HAVE_CANN
         if (backendId == DNN_BACKEND_CANN)
             return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::SUB ||
-                   op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN;
+                   op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN ||
+                   op == OPERATION::MOD || op == OPERATION::FMOD;
 #endif
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return (op == OPERATION::ADD ||
                     op == OPERATION::PROD ||
                     op == OPERATION::GREATER_EQUAL ||
-                    op == OPERATION::LESS_EQUAL
+                    op == OPERATION::LESS_EQUAL ||
+                    op == OPERATION::MOD ||
+                    op == OPERATION::FMOD
             );
         if (backendId == DNN_BACKEND_CUDA) {
-            return op == OPERATION::MAX || op == OPERATION::MIN || op == OPERATION::SUM ||
-                   op == OPERATION::PROD || op == OPERATION::DIV || op == OPERATION::ADD ||
-                   op == OPERATION::SUB;
+            return op == OPERATION::MAX  || op == OPERATION::MIN  || op == OPERATION::SUM ||
+                   op == OPERATION::PROD || op == OPERATION::DIV  || op == OPERATION::ADD ||
+                   op == OPERATION::SUB  || op == OPERATION::MOD || op == OPERATION::FMOD;
         }
         return backendId == DNN_BACKEND_OPENCV;
     }
@@ -703,8 +719,14 @@ public:
             }
             case OPERATION::MOD:
             {
-                auto mod = [](const uint8_t &a, const uint8_t &b) { return a % b; };
+                auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
                 binary_forward<T>(mod, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::FMOD:
+            {
+                auto fmod = [](const T &a, const T &b) { return std::fmod(a, b); };
+                binary_forward<T>(fmod, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::PROD:
@@ -778,9 +800,8 @@ public:
                 opDispatch<int32_t>(std::forward<Args>(args)...);
                 break;
             case CV_32F:
-                CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::MOD &&
-                          op != OPERATION::AND && op != OPERATION::OR &&
-                          op != OPERATION::XOR);
+                CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::AND &&
+                          op != OPERATION::OR && op != OPERATION::XOR);
                 opDispatch<float>(std::forward<Args>(args)...);
                 break;
             default:
@@ -796,19 +817,6 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-
-        auto input_0_shape = inputs[0].dynamicCast<CUDABackendWrapper>()->getShape();
-        for (int i = 1; i < inputs.size(); i++)
-        {
-            auto input_i_shape = inputs[i].dynamicCast<CUDABackendWrapper>()->getShape();
-            if (input_0_shape.size() != input_i_shape.size())
-                return Ptr<BackendNode>();
-            // check if the shape can be supported by `eltwise_ops.cu`, or return the default BackendNode
-            for (int j = 0; j < input_0_shape.size(); j++)
-                if (input_0_shape[j] != input_i_shape[j] &&
-                    input_0_shape[j] != 1 && input_i_shape[j] != 1)
-                    return Ptr<BackendNode>();
-        }
 
         cuda4dnn::EltwiseOpType op_ = cuda4dnn::EltwiseOpType::SUM;
         switch (op) {
@@ -832,6 +840,12 @@ public:
                 break;
             case OPERATION::SUB:
                 op_ = cuda4dnn::EltwiseOpType::SUB;
+                break;
+            case OPERATION::MOD:
+                op_ = cuda4dnn::EltwiseOpType::MOD;
+                break;
+            case OPERATION::FMOD:
+                op_ = cuda4dnn::EltwiseOpType::FMOD;
                 break;
             default: return Ptr<BackendNode>(); // return empty cuda_node if the EltwiseOpType is unsupported type.
         };
@@ -877,6 +891,8 @@ public:
             BUILD_CANN_ELTWISE_OP(OPERATION::DIV,  Xdivy,   name);
             BUILD_CANN_ELTWISE_OP(OPERATION::MAX,  Maximum, name);
             BUILD_CANN_ELTWISE_OP(OPERATION::MIN,  Minimum, name);
+            BUILD_CANN_ELTWISE_OP(OPERATION::MOD,  Mod,     name);
+            BUILD_CANN_ELTWISE_OP(OPERATION::FMOD, Mod,     name);
 #undef BUILD_CANN_ELTWISE_OP
             default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
         }
@@ -923,6 +939,16 @@ public:
             node = std::make_shared<ngraph::op::v1::GreaterEqual>(inp0, inp1);
         else if (op == OPERATION::LESS_EQUAL)
             node = std::make_shared<ngraph::op::v1::LessEqual>(inp0, inp1);
+        // Ideally we should do this but int32 internal blobs are converted to float32 data type in inference.
+        // TODO: Remove data type convertion when we have type inference.
+        else if (op == OPERATION::MOD) {
+            auto inp0_i64 = std::make_shared<ngraph::op::Convert>(inp0, ngraph::element::i64);
+            auto inp1_i64 = std::make_shared<ngraph::op::Convert>(inp1, ngraph::element::i64);
+            auto mod = std::make_shared<ngraph::op::v1::FloorMod>(inp0_i64, inp1_i64);
+            node = std::make_shared<ngraph::op::Convert>(mod, ngraph::element::f32);
+        }
+        else if (op == OPERATION::FMOD)
+            node = std::make_shared<ngraph::op::v1::Mod>(inp0, inp1);
         else
             CV_Error(Error::StsNotImplemented, "Operation is not implemented for nGraph backend");
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));

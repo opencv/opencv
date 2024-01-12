@@ -172,7 +172,7 @@ _CvContourScanner;
 
 /*
    Initializes scanner structure.
-   Prepare image for scanning ( clear borders and convert all pixels to 0-1.
+   Prepare image for scanning ( clear borders and convert all pixels to 0-1 ).
 */
 static CvContourScanner
 cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
@@ -211,7 +211,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
     scanner->img = (schar *) (img + step);
     scanner->img_step = step;
     scanner->img_size.width = size.width - 1;   /* exclude rightest column */
-    scanner->img_size.height = size.height - 1; /* exclude bottomost row */
+    scanner->img_size.height = size.height - 1; /* exclude bottommost row */
     scanner->mode = mode;
     scanner->offset = offset;
     scanner->pt.x = scanner->pt.y = 1;

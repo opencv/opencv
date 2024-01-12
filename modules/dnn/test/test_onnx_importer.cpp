@@ -1514,6 +1514,10 @@ TEST_P(Test_ONNX_layers, Einsum_transpose)
     testONNXModels("einsum_transpose", npy, 0, 0, false, false, 1);
 }
 
+TEST_P(Test_ONNX_layers, Einsum_const_inputs) {
+    testONNXModels("einsum_const_inputs", npy, 0, 0, false, false, 1);
+}
+
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
     testONNXModels("ReflectionPad2d");
@@ -2390,7 +2394,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
 #else
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
 #endif
-        CV_TEST_TAG_DEBUG_LONG
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
@@ -2713,6 +2717,8 @@ void yoloPostProcessing(
 
 TEST_P(Test_ONNX_nets, YOLOX)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     std::string weightPath = _tf("models/yolox_s_inf_decoder.onnx", false);
 
     Size targetSize{640, 640};
@@ -2786,7 +2792,12 @@ TEST_P(Test_ONNX_nets, YOLOv8)
 //  4. 1D mat dimension issue with the output of range operator
 TEST_P(Test_ONNX_nets, YOLOv7)
 {
-    std::string weightPath = _tf("models/yolov7_not_simplified.onnx", false);
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
+
+    std::string weightPath = _tf("models/yolov7.onnx", false);
     // Reference, which is collected with input size of 640x640
     std::vector<int> refClassIds{1, 16, 7};
     std::vector<float> refScores{0.9614331f, 0.9589417f, 0.8679074f};
@@ -2947,6 +2958,74 @@ TEST_P(Test_ONNX_layers, Expand_shape_model3) {
 }
 TEST_P(Test_ONNX_layers, Expand_shape_model4) {
     testONNXModels("test_expand_shape_model4", pb, 0, 0, false, true, 1);
+}
+
+TEST_P(Test_ONNX_layers, Attention) {
+    testONNXModels("attention");
+}
+TEST_P(Test_ONNX_layers, AttentionSingleHead) {
+    testONNXModels("attention_single_head");
+}
+
+TEST_P(Test_ONNX_nets, ViT_B_32) {
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_LONG);
+
+    const std::string model_path = _tf("models/vit_b_32.onnx", false);
+
+    auto net = readNet(model_path);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    auto image = imread(_tf("../googlenet_0.png"));
+    auto blob = blobFromImage(image, 1.f, Size(224, 224));
+    auto ref = blobFromNPY(_tf("data/output_vit_b_32.npy"));
+    checkBackend(&blob, &ref);
+
+    net.setInput(blob);
+    auto out = net.forward();
+
+    double l1 = default_l1;
+    double lInf = default_lInf;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.01;
+        lInf = 0.06;
+    }
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.008;
+        lInf = 0.04;
+    }
+
+    normAssert(ref, out, "ViTB_32", l1, lInf);
+}
+
+TEST_P(Test_ONNX_nets, VitTrack) {
+    auto image = imread(_tf("../dog_orig_size.png"));
+    auto input0 = blobFromImage(image, 1.f, Size(128, 128));
+    auto input1 = blobFromImage(image, 1.f, Size(256, 256));
+
+    auto net = readNet(_tf("models/object_tracking_vittrack_2023sep.onnx", false));
+    net.setInput(input0, "template");
+    net.setInput(input1, "search");
+
+    std::vector<std::string> output_names{"output1", "output2", "output3"};
+    std::vector<Mat> outputs;
+    net.forward(outputs, output_names);
+
+    auto ref_output1 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_0.npy"));
+    auto ref_output2 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_1.npy"));
+    auto ref_output3 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_2.npy"));
+
+    normAssert(ref_output1, outputs[0], "VitTrack output1");
+    normAssert(ref_output2, outputs[1], "VitTrack output2");
+    normAssert(ref_output3, outputs[2], "VitTrack output3");
+}
+
+TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
+    testONNXModels("layer_norm_no_fusion");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

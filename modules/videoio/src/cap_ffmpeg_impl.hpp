@@ -1587,8 +1587,11 @@ bool CvCapture_FFMPEG::grabFrame()
         if (picture_pts == AV_NOPTS_VALUE_) {
             if (!rawMode)
                 picture_pts = picture->CV_FFMPEG_PTS_FIELD != AV_NOPTS_VALUE_ && picture->CV_FFMPEG_PTS_FIELD != 0 ? picture->CV_FFMPEG_PTS_FIELD : picture->pkt_dts;
-            else
-                picture_pts = packet.pts != AV_NOPTS_VALUE_ && packet.pts != 0 ? packet.pts : packet.dts;
+            else {
+                const AVPacket& packet_raw = packet.data != 0 ? packet : packet_filtered;
+                picture_pts = packet_raw.pts != AV_NOPTS_VALUE_ && packet_raw.pts != 0 ? packet_raw.pts : packet_raw.dts;
+                if (picture_pts < 0) picture_pts = 0;
+            }
             frame_number++;
         }
     }

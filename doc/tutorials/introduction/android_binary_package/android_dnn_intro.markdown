@@ -15,14 +15,14 @@
 ## Introduction
 In this tutorial you'll know how to run deep learning networks on Android device
 using OpenCV deep learning module.
-Tutorial was written for Android Studio Android Studio 2022.2.1.
+Tutorial was written for Android Studio 2022.2.1.
 
 ## Requirements
 
 - Download and install Android Studio from https://developer.android.com/studio.
 
 - Get the latest pre-built OpenCV for Android release from https://github.com/opencv/opencv/releases
-and unpack it (for example, `opencv-4.X.Y-android-sdk.zip`).
+and unpack it (for example, `opencv-4.X.Y-android-sdk.zip`, minimum version 4.9 is required).
 
 - Download MobileNet object detection model from https://github.com/chuanqi305/MobileNet-SSD.
 Configuration file `MobileNetSSD_deploy.prototxt` and model weights `MobileNetSSD_deploy.caffemodel`
