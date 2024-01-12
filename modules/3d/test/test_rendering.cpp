@@ -302,7 +302,7 @@ protected:
 
         if (shadingType != ShadingType::White)
         {
-            colors = Mat(modelData.vertices);
+            colors = Mat(modelData.colors);
             colors.convertTo(colors, ftype);
         }
 
