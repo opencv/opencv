@@ -214,6 +214,8 @@ template<> PyObject* pyopencv_from(const cv::Size_<float>& sz);
 // --- Rect
 template<> bool pyopencv_to(PyObject* obj, cv::Rect& r, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Rect& r);
+template<> bool pyopencv_to(PyObject* obj, cv::Rect2f& r, const ArgInfo& info);
+template<> PyObject* pyopencv_from(const cv::Rect2f& r);
 template<> bool pyopencv_to(PyObject* obj, cv::Rect2d& r, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Rect2d& r);
 
@@ -232,6 +234,8 @@ template<> bool pyopencv_to(PyObject* obj, cv::Point2f& p, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Point2f& p);
 template<> bool pyopencv_to(PyObject* obj, cv::Point2d& p, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Point2d& p);
+template<> bool pyopencv_to(PyObject* obj, cv::Point3i& p, const ArgInfo& info);
+template<> PyObject* pyopencv_from(const cv::Point3i& p);
 template<> bool pyopencv_to(PyObject* obj, cv::Point3f& p, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Point3f& p);
 template<> bool pyopencv_to(PyObject* obj, cv::Point3d& p, const ArgInfo& info);
