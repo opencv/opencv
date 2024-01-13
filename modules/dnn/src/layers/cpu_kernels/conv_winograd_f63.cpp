@@ -338,7 +338,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
                         }
 #if CV_TRY_AVX2
                         if (conv->useAVX2)
-                            opt_AVX::winofunc_AtXA_8x8_F32((float *)out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
+                            opt_AVX2::winofunc_AtXA_8x8_F32((float *)out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
                                                                 bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
                         else
 #endif
