@@ -4,7 +4,7 @@
 
 #include "../../precomp.hpp"
 #include "internal.hpp"
-#include "../include/op_nary.hpp"
+#include "../include/op_naryeltwise.hpp"
 
 namespace cv { namespace dnn { namespace vkcom {
 
@@ -16,15 +16,19 @@ namespace cv { namespace dnn { namespace vkcom {
 #define MAX_GROUP_COUNT_Y 65535
 #define MAX_GROUP_COUNT_Z 65535
 
-OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims, const int* _shapesBuf, const size_t* _stepsBuf) : naryOpType(_naryOpType), ninputs(_ninputs), max_ndims(_max_ndims)
+OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims,
+               const std::vector<std::vector<int>> shapes, const std::vector<std::vector<size_t>> steps)
+                : naryOpType(_naryOpType), ninputs(_ninputs), max_ndims(_max_ndims)
 {
     CV_Assert(ninputs > 1);
 
     shapesBuf.resize((ninputs + 1) * max_ndims);
-    std::transform(_shapesBuf, _shapesBuf + (ninputs + 1) * max_ndims, shapesBuf.data(), [](size_t x) { return static_cast<int32_t>(x); });
     stepsBuf.resize((ninputs + 1) * max_ndims);
-    std::transform(_stepsBuf, _stepsBuf + (ninputs + 1) * max_ndims, stepsBuf.data(), [](size_t x) { return static_cast<int32_t>(x); });
-
+    for (int i = 0; i <= ninputs; i++)
+    {
+        std::copy(shapes[i].begin(), shapes[i].end(), shapesBuf.data() + i * max_ndims);
+        std::copy(steps[i].begin(), steps[i].end(), stepsBuf.data() + i * max_ndims);
+    }
 
     // TODO(VK): support more types of operation
     switch(naryOpType) {

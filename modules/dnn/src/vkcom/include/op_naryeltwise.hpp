@@ -56,7 +56,7 @@ public:
         WHERE,
     };
 
-    OpNary(const OPERATION naryOpType, int ninputs, int max_ndims, const int* shapesBuf, const size_t* stepsBuf);
+    OpNary(const OPERATION naryOpType, int ninputs, int max_ndims, const std::vector<std::vector<int>> shapes, const std::vector<std::vector<size_t>> steps);
 
     void firstForward(); // Execute only in the first forward.
     virtual bool forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs) CV_OVERRIDE;

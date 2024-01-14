@@ -51,6 +51,6 @@ bool isAvailable();
 #include "op_base.hpp"
 #include "op_conv.hpp"
 #include "op_matmul.hpp"
-#include "op_nary.hpp"
+#include "op_naryeltwise.hpp"
 
 #endif // OPENCV_DNN_VKCOM_HPP

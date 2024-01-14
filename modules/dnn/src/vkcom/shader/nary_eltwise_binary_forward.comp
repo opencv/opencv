@@ -50,12 +50,13 @@ const int MAX = 10;
 const int MEAN = 11;
 const int MIN = 12;
 const int MOD = 13;
-const int PROD = 14;
-const int SUB = 15;
-const int SUM = 16;
-const int ADD = 17;
-const int DIV = 18;
-const int WHERE = 19;
+const int FMOD = 14;
+const int PROD = 15;
+const int SUB = 16;
+const int SUM = 17;
+const int ADD = 18;
+const int DIV = 19;
+const int WHERE = 20;
 
 void binary_forward()
 {
@@ -88,27 +89,6 @@ void binary_forward()
     ptr2 += i2_offset * matStep[3 * ndims - 2];
     ptr += i2_offset * matStep[ndims - 2];
 
-/*
-    if (dp1 == 1 && dp2 == 1 && dp == 1) {
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            perform_op(&matA + ptr1 + i1, &matB + ptr2 + i1, &matOut + ptr + i1);
-        }
-    } else if (dp1 == 1 && dp2 == 0 && dp == 1) {
-        float k = matB[ptr2];
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            perform_op(&matA + ptr1 + i1, &matB + ptr2, &matOut + ptr + i1);
-        }
-    } else if (dp1 == 0 && dp2 == 1 && dp == 1) {
-        float k = matA[ptr1];
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            perform_op(&matA + ptr1, &matB + ptr2 + i1, &matOut + ptr + i1);
-        }
-    } else {
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            perform_op(&matA + ptr1 + i1 * dp1, &matB + ptr2 + i1 * dp2, &matOut + ptr + i1 * dp);
-        }
-    }
-*/
     for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
         switch (params.opType) {
             case int(ADD):
@@ -125,52 +105,6 @@ void binary_forward()
                 break;
         }
     }
-
-    // Experimental Batched Operation
-
-    // int threadID = int(gl_LocalInvocationID.x);
-    // int i2_offset = (int(gl_WorkGroupID.y)) * STEP_SIZE + threadID;
-    // int i1_offset = (int(gl_WorkGroupID.z)) * STEP_SIZE;
-
-    // ptr1 += i2_offset * matStep[2 * ndims - 2] + i1_offset * dp1;
-    // ptr2 += i2_offset * matStep[3 * ndims - 2] + i1_offset * dp2;
-    // ptr += i2_offset * matStep[ndims - 2] + i1_offset * dp;
-
-
-    // int i2_loop_count = STEP_SIZE / ALL_THREAD;
-    // for (int i2_c = 0; i2_offset < n2 && i2_c < i2_loop_count; i2_offset += ALL_THREAD, ++i2_c)
-    // {
-    //     if (dp1 == 1 && dp2 == 1 && dp == 1) {
-    //         for (int i1 = 0; i1 < STEP_SIZE; ++i1) {
-    //             if (ptr + i1 < n1) {
-    //                 matOut[ptr + i1] = matA[ptr1 + i1] + matB[ptr2 + i1];
-    //             }
-    //         }
-    //     } else if (dp1 == 1 && dp2 == 0 && dp == 1) {
-    //         float k = matB[ptr2];
-    //         for (int i1 = 0; i1 < STEP_SIZE; ++i1) {
-    //             if (ptr + i1 < n1) {
-    //                 matOut[ptr + i1] = matA[ptr1 + i1] + k;
-    //             }
-    //         }
-    //     } else if (dp1 == 0 && dp2 == 1 && dp == 1) {
-    //         float k = matA[ptr1];
-    //         for (int i1 = 0; i1 < STEP_SIZE; ++i1) {
-    //             if (ptr + i1 < n1) {
-    //                 matOut[ptr + i1] = k + matB[ptr2 + i1];
-    //             }
-    //         }
-    //     } else {
-    //         for (int i1 = 0; i1 < STEP_SIZE; ++i1) {
-    //             if (ptr + i1 < n1) {
-    //                 matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] + matB[ptr2 + i1 * dp2];
-    //             }
-    //         }
-    //     }
-    //     ptr1 += ALL_THREAD * matStep[2 * ndims - 2];
-    //     ptr2 += ALL_THREAD * matStep[3 * ndims - 2];
-    //     ptr += ALL_THREAD * matStep[ndims - 2];
-    // }
 }
 
 

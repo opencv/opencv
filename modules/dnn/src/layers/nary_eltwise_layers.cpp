@@ -35,8 +35,74 @@ static int _mod(int x, int y) {
 }
 }
 
+class NaryEltwiseHelper CV_FINAL
+{
+public:
+    int ninputs;
+    int narrays;
+    int max_ndims;
+    std::vector<int> all_ndims;
+    std::vector<std::vector<int>> orig_shapes;
+    std::vector<std::vector<size_t>> orig_steps;
+    std::vector<char*> ptrs;
+    std::vector<std::vector<int>> shapes;
+    std::vector<std::vector<size_t>> steps;
+
+    NaryEltwiseHelper() {
+        narrays = 0;
+        max_ndims = 0;
+        all_ndims.clear();
+        orig_shapes.clear();
+        orig_steps.clear();
+        ptrs.clear();
+        shapes.clear();
+        steps.clear();
+    }
+
+    void helperInit(const std::vector<Mat>& inputs, const std::vector<Mat>& outputs)
+    {
+        NaryEltwiseHelper();
+
+        ninputs = inputs.size();
+        narrays = ninputs + 1;
+
+        // collect ndims
+        std::vector<int> v_inp_dims;
+        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_dims), [] (const Mat& m) { return m.dims; });
+        const int* inp_ndims = v_inp_dims.data();
+        int out_ndims = outputs[0].dims;
+
+        // find max ndims for broadcasting
+        int i;
+        max_ndims = out_ndims > 2 ? out_ndims : 2;
+        for(i = 0; i < ninputs; i++)
+            max_ndims = max_ndims > inp_ndims[i] ? max_ndims : inp_ndims[i];
+
+        shapes = std::vector<std::vector<int>>(narrays, std::vector<int>(max_ndims, 0));
+        steps = std::vector<std::vector<size_t>>(narrays, std::vector<size_t>(max_ndims, 0));
+        ptrs = std::vector<char*>(narrays, nullptr);
+
+        for(i = 0; i <= ninputs; i++) {
+            all_ndims.push_back(i == 0 ? out_ndims : inp_ndims[i-1]);
+            std::vector<int> _size;
+            std::vector<size_t> _step;
+            if (!i) {
+                std::transform(outputs[0].size.p, outputs[0].size.p + outputs[0].dims, std::back_inserter(_size), [](int s) { return s; });
+                std::transform(outputs[0].step.p, outputs[0].step.p + outputs[0].dims, std::back_inserter(_step), [](size_t s) { return s; });
+            }
+            else {
+                std::transform(inputs[i-1].size.p, inputs[i-1].size.p + inputs[i-1].dims, std::back_inserter(_size), [](int s) { return s; });
+                std::transform(inputs[i-1].step.p, inputs[i-1].step.p + inputs[i-1].dims, std::back_inserter(_step), [](size_t s) { return s; });
+            }
+            orig_shapes.push_back(_size);
+            orig_steps.push_back(_step);
+        }
+    }
+};
+
 class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
+    NaryEltwiseHelper helper;
 public:
     enum class OPERATION
     {
@@ -133,7 +199,7 @@ public:
             );
 
 #ifdef HAVE_VULKAN
-        if (backendId == DNN_BACKEND_VKCOM) //TODO(VK) remember to add implemented operations
+        if (backendId == DNN_BACKEND_VKCOM)
             return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::SUB ||
                    op == OPERATION::DIV ;
 #endif
@@ -174,12 +240,15 @@ public:
         return outShape;
     }
 
+    // use FP32 as default type in finalized() function
+    template <typename T>
     static bool prepare_for_broadcast_op(
-        int narrays, int max_ndims, const size_t* elemsize,
-        const int* ndims, const int** shape_, const size_t** step_,
-        int** shape, size_t** step)
+        int narrays, int max_ndims,
+        const std::vector<int>& ndims, const std::vector<std::vector<int>>& shape_, const std::vector<std::vector<size_t>>& step_,
+        std::vector<std::vector<int>>& shape, std::vector<std::vector<size_t>>& step)
     {
         int i, j, k;
+        std::vector<size_t> elemsize(ndims.size(), sizeof(T));
 
         // step 1.
         // * make all inputs and the output max_ndims-dimensional.
@@ -189,7 +258,7 @@ public:
             for (k = 0; k < narrays; k++) {
                 j = ndims[k] - (max_ndims - i);
                 int sz_i = j >= 0 ? shape_[k][j] : 1;
-                size_t st_i = j >= 0 && step_ && step_[k] && step_[k][j] > 0 ? step_[k][j] :
+                size_t st_i = j >= 0 && step_[k][j] > 0 ? step_[k][j] :
                     i == max_ndims-1 ? elemsize[k] : step[k][i+1]*shape[k][i+1];
                 assert(st_i % elemsize[k] == 0);
                 shape[k][i] = sz_i;
@@ -242,6 +311,17 @@ public:
         return true;
     }
 
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        helper.helperInit(inputs, outputs);
+        CV_Assert(prepare_for_broadcast_op<float>(helper.narrays, helper.max_ndims,
+                                 helper.all_ndims, helper.orig_shapes, helper.orig_steps,
+                                 helper.shapes, helper.steps));
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -254,10 +334,10 @@ public:
 
     template <typename T, typename Functor>
     void binary_forward_impl(
-            int ndims, const int* shape,
-            const char* data1, const size_t* step1,
-            const char* data2, const size_t* step2,
-            char* data, const size_t* step,
+            int ndims, const std::vector<int>& shape,
+            const char* data1, const std::vector<size_t>& step1,
+            const char* data2, const std::vector<size_t>& step2,
+            char* data, const std::vector<size_t>& step,
             const Functor& op)
     {
         assert(ndims >= 2);
@@ -313,63 +393,18 @@ public:
         const Mat& a = inputs[0];
         const Mat& b = inputs[1];
         Mat& out = outputs[0];
-
-        // collect info of inputs and output
-        const int* in_shape[] = {a.size.p, b.size.p};
-        const size_t* in_step[] = {a.step.p, b.step.p};
-        const int* out_shape = out.size.p;
-        const size_t* out_step = out.step.p;
-        const int in_ndims[] = {a.dims, b.dims};
-        int out_ndims = out.dims;
-
-        int max_ndims = std::max(a.dims, std::max(b.dims, out.dims));
-
-        // buf holds the folllowing for a, b & output:
-        //  * orig_shapes, shapes (result_shape), orig_steps, steps (result_step), 3*4 elements in total
-        //  * shape_buf & step_buf, 3*2*max_ndims elements in total
-        //  * all_ndims, 3*1 elements in total
-        //  * all_type_sizes, 3*1 elements in total
-        AutoBuffer<size_t> buf(3 * (2 * max_ndims + 6));
-
-        int** orig_shapes = (int**)(buf.data());
-        int** shapes = orig_shapes + 3;
-        size_t** orig_steps = (size_t**)(shapes + 3);
-        size_t** steps = orig_steps + 3;
-
-        int* shape_buf = (int*)(steps + 3);
-        size_t* step_buf = (size_t*)(shape_buf + 3 * max_ndims);
-
-        int* all_ndims = (int*)(step_buf + 3 * max_ndims);
-        size_t* all_type_sizes = (size_t*)(all_ndims + 3);
-
-        // assign orig_shapes, shapes, orig_steps, steps, all_ndims, all_type_sizes
-        for (int i = 0; i < 3; i++)
-        {
-            orig_shapes[i] = (int*)(i == 0 ? out_shape : in_shape[i-1]);
-            orig_steps[i] = (size_t*)(i == 0 ? out_step : in_step[i-1]);
-            shapes[i] = shape_buf + i * max_ndims;
-            steps[i] = step_buf + i * max_ndims;
-            all_ndims[i] = i == 0 ? out_ndims : in_ndims[i-1];
-            all_type_sizes[i] = sizeof(T);
-        }
-
-        if (!prepare_for_broadcast_op(3, max_ndims, all_type_sizes,
-                                      all_ndims, (const int**)orig_shapes,
-                                      (const size_t**)orig_steps,
-                                      shapes, steps))
-            return;
-
+        CV_Assert(helper.shapes.size() == 3 && helper.steps.size() == 3);
         binary_forward_impl<T, Functor>(
-                max_ndims, shapes[0], a.ptr<char>(), steps[1],
-                b.ptr<char>(), steps[2], out.ptr<char>(), steps[0],
+                helper.max_ndims, helper.shapes[0], a.ptr<char>(), helper.steps[1],
+                b.ptr<char>(), helper.steps[2], out.ptr<char>(), helper.steps[0],
                 f);
     }
 
     template<typename T, typename Functor>
     void nary_forward_impl(
-        const Functor& f, const T scale, int ninputs, int ndims, const int* shape,
+        const Functor& f, const T scale, int ninputs, int ndims, const std::vector<int>& shape,
         const char** inp, char* out,
-        const size_t** steps, char** ptrs)
+        const std::vector<std::vector<size_t>>& steps, std::vector<char*>& ptrs)
     {
         CV_Assert(ndims >= 2);
         size_t dp = steps[0][ndims-1]/sizeof(T);
@@ -454,77 +489,16 @@ public:
         const std::vector<Mat>& inputs, std::vector<Mat>& outputs
         )
     {
-        int ninputs = inputs.size();
-
-        // collect all input
+        // collect all input info
         std::vector<const char*> v_inp;
         std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp), [] (const Mat& m) { return m.template ptr<const char>(); });
         const char** inp = v_inp.data();
 
-        // collect ndims of all input
-        std::vector<int> v_inp_dims;
-        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_dims), [] (const Mat& m) { return m.dims; });
-        const int* inp_ndims = v_inp_dims.data();
-
-        // collect shapes of all input
-        std::vector<const int*> v_inp_shape;
-        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_shape), [] (const Mat& m) { return m.size.p; });
-        const int** inp_shape = v_inp_shape.data();
-
-        // collect steps of all input
-        std::vector<const size_t*> v_inp_step;
-        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_step), [] (const Mat& m) { return m.step.p; });
-        const size_t** inp_step = v_inp_step.data();
-
-        // collect info of output (ndims, shape, step)
+        // collect output info
         char* out = outputs[0].ptr<char>();
-        int out_ndims = outputs[0].dims;
-        const int* out_shape = outputs[0].size.p;
-        const size_t* out_step = outputs[0].step.p;
-
-        // find max ndims for broadcasting
-        int i, max_ndims = out_ndims > 2 ? out_ndims : 2;
-        for(i = 0; i < ninputs; i++)
-            max_ndims = max_ndims > inp_ndims[i] ? max_ndims : inp_ndims[i];
-
-        // buf holds the following buffers for inputs & output:
-        //  * orig_shapes, shapes (result_shape), orig_steps, steps (result_step), (ninputs+1)*4 elements in total
-        //  * ptrs, (ninputs+1)*1 elements in total
-        //  * shape_buf & step_buf, (ninputs+1)*2*max_ndims elements in total
-        //  * all_ndims, (ninputs+1)*1 elements in total
-        //  * all_type_sizes, (ninputs+1)*1 elements in total
-        AutoBuffer<size_t> buf((ninputs + 1) * (2 * max_ndims + 7));
-
-        int** orig_shapes = (int**)buf.data();
-        int** shapes = orig_shapes + ninputs + 1;
-        size_t** orig_steps = (size_t**)(shapes + ninputs + 1);
-        size_t** steps = orig_steps + ninputs + 1;
-
-        char** ptrs = (char**)(steps + ninputs + 1);
-
-        size_t* step_buf = (size_t*)(ptrs + ninputs + 1);
-        int* shape_buf = (int*)(step_buf + (ninputs + 1)*max_ndims);
-
-        int* all_ndims = shape_buf + (ninputs + 1)*max_ndims;
-        size_t* all_type_sizes = (size_t*)(all_ndims + ninputs + 1);
-
-        for(i = 0; i <= ninputs; i++) {
-            all_ndims[i] = i == 0 ? out_ndims : inp_ndims[i-1];
-            all_type_sizes[i] = sizeof(T);
-            orig_shapes[i] = (int*)(i == 0 ? out_shape : inp_shape ? inp_shape[i-1] : 0);
-            orig_steps[i] = (size_t*)(i == 0 ? out_step : inp_step ? inp_step[i-1] : 0);
-            shapes[i] = shape_buf + max_ndims*i;
-            steps[i] = step_buf + max_ndims*i;
-        }
-
-        if (!prepare_for_broadcast_op(ninputs + 1, max_ndims, all_type_sizes,
-                                      all_ndims, (const int**)orig_shapes,
-                                      (const size_t**)orig_steps,
-                                      shapes, steps))
-            return;
 
         nary_forward_impl<T>(
-                f, scale, ninputs, max_ndims, shapes[0], inp, out, (const size_t **) steps, ptrs);
+                f, scale, helper.ninputs, helper.max_ndims, helper.shapes[0], inp, out, helper.steps, helper.ptrs);
     }
 
     template <typename T, typename Functor>
@@ -535,59 +509,21 @@ public:
         const Mat& c = inputs[2];
         Mat& out = outputs[0];
 
-        // collect info of inputs and output
-        const int* in_shape[] = {a.size.p, b.size.p, c.size.p};
-        const size_t* in_step[] = {a.step.p, b.step.p, c.step.p};
-        const int* out_shape = out.size.p;
-        const size_t* out_step = out.step.p;
-        const int in_ndims[] = {a.dims, b.dims, c.dims};
-        int out_ndims = out.dims;
-
-        int max_ndims = std::max(a.dims, std::max(b.dims, std::max(c.dims, out.dims)));
-
-        AutoBuffer<size_t> buf(4 * (2 * max_ndims + 6));
-
-        int** orig_shapes = (int**)(buf.data());
-        int** shapes = orig_shapes + 4;
-        size_t** orig_steps = (size_t**)(shapes + 4);
-        size_t** steps = orig_steps + 4;
-
-        int* shape_buf = (int*)(steps + 4);
-        size_t* step_buf = (size_t*)(shape_buf + 4 * max_ndims);
-
-        int* all_ndims = (int*)(step_buf + 4 * max_ndims);
-        size_t* all_type_sizes = (size_t*)(all_ndims + 4);
-
-        // assign orig_shapes, shapes, orig_steps, steps, all_ndims, all_type_sizes
-        for (int i = 0; i < 4; i++)
-        {
-            orig_shapes[i] = (int*)(i == 0 ? out_shape : in_shape[i-1]);
-            orig_steps[i] = (size_t*)(i == 0 ? out_step : in_step[i-1]);
-            shapes[i] = shape_buf + i * max_ndims;
-            steps[i] = step_buf + i * max_ndims;
-            all_ndims[i] = i == 0 ? out_ndims : in_ndims[i-1];
-            all_type_sizes[i] = sizeof(T);
-        }
-
-        if (!prepare_for_broadcast_op(4, max_ndims, all_type_sizes,
-                                      all_ndims, (const int**)orig_shapes,
-                                      (const size_t**)orig_steps,
-                                      shapes, steps))
-            return;
+        CV_Assert(helper.shapes.size() == 4 && helper.steps.size() == 4);
 
         trinary_forward_impl<T, Functor>(
-                max_ndims, shapes[0], a.ptr<char>(), steps[1], b.ptr<char>(), steps[2],
-                c.ptr<char>(), steps[3], out.ptr<char>(), steps[0],
+                helper.max_ndims, helper.shapes[0], a.ptr<char>(), helper.steps[1], b.ptr<char>(), helper.steps[2],
+                c.ptr<char>(), helper.steps[3], out.ptr<char>(), helper.steps[0],
                 f);
     }
 
     template <typename T, typename Functor>
     void trinary_forward_impl(
-            int ndims, const int* shape,
-            const char* data1, const size_t* step1,
-            const char* data2, const size_t* step2,
-            const char* data3, const size_t* step3,
-            char* data, const size_t* step,
+            int ndims, const std::vector<int>& shape,
+            const char* data1, const std::vector<size_t>& step1,
+            const char* data2, const std::vector<size_t>& step2,
+            const char* data3, const std::vector<size_t>& step3,
+            char* data, const std::vector<size_t>& step,
             const Functor& op)
     {
         assert(ndims >= 2);
@@ -803,6 +739,13 @@ public:
         {
             case CV_8U:
                 opDispatch<uint8_t>(std::forward<Args>(args)...);
+                prepare_for_broadcast_op<uint8_t>(helper.narrays, helper.max_ndims,
+                                                  helper.all_ndims, helper.orig_shapes, helper.orig_steps,
+                                                  helper.shapes, helper.steps);
+                /*
+                    recompute broadcasted shapes
+                    because default type is FP32 which is calculated in finalize() function
+                */
                 break;
             case CV_32S:
                 opDispatch<int32_t>(std::forward<Args>(args)...);
@@ -977,78 +920,10 @@ public:
         auto outputWrapper = outputs[0].dynamicCast<VkComBackendWrapper>();
         CV_Assert(outputWrapper);
         auto outputShape = shape(*(outputWrapper->getMat()));
-        std::vector<Mat> vkBlobs; // TODO(vk) what
+        std::vector<Mat> vkBlobs;
 
-        // collect all input
-        int ninputs = inputs.size();
-        std::vector<const char*> v_inp;
-        std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(v_inp), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->template ptr<const char>(); });
-        // const char** inp = v_inp.data();
-
-        // collect ndims of all input
-        std::vector<int> v_inp_dims;
-        std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(v_inp_dims), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->dims; });
-        const int* inp_ndims = v_inp_dims.data();
-
-        // collect shapes of all input
-        std::vector<const int*> v_inp_shape;
-        std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(v_inp_shape), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->size.p; });
-        const int** inp_shape = v_inp_shape.data();
-
-        // collect steps of all input
-        std::vector<const size_t*> v_inp_step;
-        std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(v_inp_step), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->step.p; });
-        const size_t** inp_step = v_inp_step.data();
-
-        // collect info of output (ndims, shape, step)
-        // char* out = outputWrapper->getMat()->ptr<char>();
-        int out_ndims = outputWrapper->getMat()->dims;
-        const int* out_shape = outputWrapper->getMat()->size.p;
-        const size_t* out_step = outputWrapper->getMat()->step.p;
-
-        // find max ndims for broadcasting
-        int i, max_ndims = out_ndims > 2 ? out_ndims : 2;
-        for(i = 0; i < ninputs; i++)
-            max_ndims = max_ndims > inp_ndims[i] ? max_ndims : inp_ndims[i];
-
-        // buf holds the following buffers for inputs & output:
-        //  * orig_shapes, shapes (result_shape), orig_steps, steps (result_step), (ninputs+1)*4 elements in total
-        //  * ptrs, (ninputs+1)*1 elements in total
-        //  * shape_buf & step_buf, (ninputs+1)*2*max_ndims elements in total
-        //  * all_ndims, (ninputs+1)*1 elements in total
-        //  * all_type_sizes, (ninputs+1)*1 elements in total
-        AutoBuffer<size_t> buf((ninputs + 1) * (2 * max_ndims + 7));
-
-        int** orig_shapes = (int**)buf.data();
-        int** shapes = orig_shapes + ninputs + 1;
-        size_t** orig_steps = (size_t**)(shapes + ninputs + 1);
-        size_t** steps = orig_steps + ninputs + 1;
-
-        char** ptrs = (char**)(steps + ninputs + 1);
-
-        size_t* step_buf = (size_t*)(ptrs + ninputs + 1);
-        int* shape_buf = (int*)(step_buf + (ninputs + 1)*max_ndims);
-
-        int* all_ndims = shape_buf + (ninputs + 1)*max_ndims;
-        size_t* all_type_sizes = (size_t*)(all_ndims + ninputs + 1);
-
-        for(i = 0; i <= ninputs; i++) {
-            all_ndims[i] = i == 0 ? out_ndims : inp_ndims[i-1];
-            all_type_sizes[i] = i == 0 ? outputWrapper->getMat()->elemSize() : inputWrappers[i-1]->getMat()->elemSize();
-            orig_shapes[i] = (int*)(i == 0 ? out_shape : inp_shape ? inp_shape[i-1] : 0);
-            orig_steps[i] = (size_t*)(i == 0 ? out_step : inp_step ? inp_step[i-1] : 0);
-            shapes[i] = shape_buf + max_ndims*i;
-            steps[i] = step_buf + max_ndims*i;
-        }
-
-        if (!prepare_for_broadcast_op(ninputs + 1, max_ndims, all_type_sizes,
-                                      all_ndims, (const int**)orig_shapes,
-                                      (const size_t**)orig_steps,
-                                      shapes, steps))
-            return Ptr<BackendNode>(); //TODO(VK) revise return for errors during broadcasting
-
-        Ptr<vkcom::OpBase> op = (new vkcom::OpNary((vkcom::OpNary::OPERATION) this->op, ninputs, max_ndims, shape_buf, step_buf)); //TODO(VK) revise initialization
-        return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
+        Ptr<vkcom::OpBase> op = makePtr<vkcom::OpNary>((vkcom::OpNary::OPERATION) this->op, helper.ninputs, helper.max_ndims, helper.shapes, helper.steps);
+        return Ptr<BackendNode>(makePtr<VkComBackendNode>(inputs, op, outputs));
     }
 #endif
 
