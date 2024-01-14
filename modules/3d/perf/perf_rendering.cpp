@@ -10,7 +10,7 @@ Matx43f makeCamMatrix_TODO_rewrite_it_later(Vec3f position, Vec3f lookat, Vec3f 
     m(0, 0) = position(0); m(0, 1) = position(1); m(0, 2) = position(2);
     m(1, 0) = lookat  (0); m(1, 1) = lookat  (1); m(1, 2) = lookat  (2);
     m(2, 0) = upVector(0); m(2, 1) = upVector(1); m(2, 2) = upVector(2);
-    m(3, 0) = fovy;        m(3, 1) = zNear;       m(3, 3) = zFar;
+    m(3, 0) = fovy;        m(3, 1) = zNear;       m(3, 2) = zFar;
 
     return m;
 }
