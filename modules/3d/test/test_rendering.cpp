@@ -372,7 +372,7 @@ TEST_P(RenderingTest, accuracy)
     color_buf.convertTo(color_buf, CV_8UC3, 255.0f);
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     cv::flip(color_buf, color_buf, 0);
-    depth_buf.convertTo(depth_buf, CV_8UC1, 1.0);
+    depth_buf.convertTo(depth_buf, CV_16U, 1000.0f);
     cv::flip(depth_buf, depth_buf, 0);
 
     if (modelType == ModelType::Empty)
@@ -413,7 +413,7 @@ TEST_P(RenderingTest, accuracy)
         //TODO: tune this threshold
         AssertMatsEqual(color_buf, groundTruthColor, 1000);
 
-        Mat groundTruthDepth = imread(gtPathDepth, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH) * (1. / 1000.0);
+        Mat groundTruthDepth = imread(gtPathDepth, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH);
         //TODO: tune this threshold
         AssertMatsEqual(depth_buf, groundTruthDepth, 1000);
 
