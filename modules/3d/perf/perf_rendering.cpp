@@ -140,9 +140,9 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
 
     string objectPath = findDataFile("rendering/spot.obj");
 
-    Vec3f position = Vec3f(20.0, 60.0, -40.0);
-    Vec3f lookat   = Vec3f( 0.0,  0.0,   0.0);
-    Vec3f upVector = Vec3f( 0.0,  1.0,   0.0);
+    Vec3f position = Vec3f( 2.4, 0.7, 1.2);
+    Vec3f lookat   = Vec3f( 0.0, 0.0, 0.3);
+    Vec3f upVector = Vec3f( 0.0, 1.0, 0.0);
 
     double fovy = 45.0;
 
@@ -164,7 +164,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     {
         for (auto &color : colors)
         {
-            color = Vec3f(abs(color[0]), abs(color[1]), abs(color[2])) * 255.0f;
+            color = Vec3f(abs(color[0]), abs(color[1]), abs(color[2]));
         }
     }
 
@@ -189,10 +189,9 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
 
     if (debugLevel > 0)
     {
-        color_buf.convertTo(color_buf, CV_8UC3, 1.0f);
         cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
         cv::flip(color_buf, color_buf, 0);
-        depth_buf.convertTo(depth_buf, CV_8UC1, 1.0);
+        depth_buf.convertTo(depth_buf, CV_16U, 1000.0);
         cv::flip(depth_buf, depth_buf, 0);
 
         std::string shadingName;
@@ -205,8 +204,8 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
         std::string heightStr = std::to_string(height);
         std::string suffix = widthStr + "x" + heightStr + "_" + shadingName;
 
-        imwrite("color_image_" + suffix + ".png", color_buf);
-        imwrite("depth_image_" + suffix + ".png", depth_buf);
+        imwrite("perf_color_image_" + suffix + ".png", color_buf * 255.f);
+        imwrite("perf_depth_image_" + suffix + ".png", depth_buf);
     }
 
     SANITY_CHECK_NOTHING();
