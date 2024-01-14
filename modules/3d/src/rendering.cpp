@@ -9,6 +9,13 @@ enum class ShadingType
     Shaded = 2
 };
 
+enum class CullingMode
+{
+    None,
+    CW,
+    CCW
+};
+
 static Vec3f normalize_vector(Vec3f a)
 {
     float length = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
@@ -52,7 +59,7 @@ static Matx44f perspectMatrixCal(float aspect, float fovy, float zNear, float zF
 
 
 static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& colorBuf,
-                         bool invDepthMode, ShadingType shadingType)
+                         bool invDepthMode, ShadingType shadingType, CullingMode cullingMode)
 {
     // any of buffers can be empty
     int width  = std::max(colorBuf.cols, depthBuf.cols);
@@ -76,9 +83,11 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     Point2f bc = b - c, ac = a - c;
     float d = ac.x*bc.y - ac.y*bc.x;
 
-    if (abs(d) < 1e-6)
+    // culling and degenerated triangle removal
+    if ((cullingMode == CullingMode::CW  && d <= 0) ||
+        (cullingMode == CullingMode::CCW && d >= 0) ||
+        (abs(d) < 1e-6))
     {
-        // degenerated triangle
         return;
     }
 
@@ -163,6 +172,9 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
 
     //TODO: add this to args
     bool invDepthMode = false;
+    //TODO: add this to args
+    // default mode is CW
+    CullingMode cullingMode = CullingMode::None;
 
     bool needDepth = _depthBuffer.needed();
     bool needColor = _colorBuffer.needed();
@@ -357,7 +369,7 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
             ver[i] = vscreen;
         }
 
-        drawTriangle(ver, col, depthBuf, colorBuf, invDepthMode, shadingType);
+        drawTriangle(ver, col, depthBuf, colorBuf, invDepthMode, shadingType, cullingMode);
     }
 }
 
