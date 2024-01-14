@@ -298,8 +298,7 @@ protected:
         ftype = std::get<3>(t);
         itype = std::get<4>(t);
 
-        //TODO: check these values
-        zNear = 0.1, zFar = 50;
+        zNear = 0.1, zFar = 50.0;
 
         depth_buf = Mat(height, width, ftype, zFar);
         color_buf = Mat(height, width, CV_MAKETYPE(ftype, 3), Scalar(0.0, 0.0, 0.0));
