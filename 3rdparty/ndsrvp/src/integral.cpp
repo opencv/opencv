@@ -7,7 +7,7 @@ int ndsrvp_integral(int depth, int sdepth, int sqdepth,
                     uchar * _tilted, size_t,
                     int width, int height, int cn)
     {
-        if( !(depth == CV_8U && sdepth == CV_32S && sqdepth == CV_64F) )
+        if( !(depth == CV_8U && sdepth == CV_32S) )
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
         int * sum = (int *)_sum;
@@ -17,6 +17,7 @@ int ndsrvp_integral(int depth, int sdepth, int sqdepth,
         if (sqsum || tilted || cn > 4)
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
+        sqdepth = sqdepth;
         width *= cn;
 
         memset(sum, 0, (width + cn) * sizeof(int));
@@ -38,7 +39,7 @@ int ndsrvp_integral(int depth, int sdepth, int sqdepth,
                 {
                     uint8x4_t vs8x4 = *(uint8x4_t*)(src_row + j);
                     int16x4_t vs16x4 = (int16x4_t)__nds__pkbb32(__nds__zunpkd832((unsigned int)vs8x4),
-                                                               __nds__zunpkd810((unsigned int)vs8x4));
+                                                                __nds__zunpkd810((unsigned int)vs8x4));
 
                     vs16x4 += (int16x4_t)((unsigned long)vs16x4 << 16); // gcc vector extension
                     vs16x4 += (int16x4_t)((unsigned long)vs16x4 << 32); // '+' is add16

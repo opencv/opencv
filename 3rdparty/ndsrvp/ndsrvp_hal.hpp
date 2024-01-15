@@ -5,14 +5,8 @@
 #include "opencv2/core/base.hpp"
 #include <nds_intrinsic.h>
 
-int ndsrvp_integral(int depth, int sdepth, int sqdepth,
-                    const uchar * src, size_t _srcstep,
-                    uchar * sum, size_t _sumstep,
-                    uchar * sqsum, size_t,
-                    uchar * tilted, size_t,
-                    int width, int height, int cn);
-
-#undef cv_hal_integral
-#define cv_hal_integral ndsrvp_integral
+#include "include/ndsrvp_core.hpp"
+#include "include/ndsrvp_imgproc.hpp"
+#include "include/ndsrvp_features2d.hpp"
 
 #endif

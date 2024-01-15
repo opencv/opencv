@@ -434,7 +434,6 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX512_ICL] = "AVX512-ICL";
 
         g_hwFeatureNames[CPU_RVV] = "RVV";
-        g_hwFeatureNames[CPU_RVP052] = "RVP052";
 
         g_hwFeatureNames[CPU_LSX]  = "LSX";
         g_hwFeatureNames[CPU_LASX] = "LASX";

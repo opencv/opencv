@@ -4,14 +4,19 @@ message(STATUS "##########")
 
 cmake_minimum_required(VERSION ${MIN_VER_CMAKE} FATAL_ERROR)
 
-# toolchain setup
-
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mext-dsp")
-# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mext-dsp")
-
 # project setup
 
-add_library(ndsrvp_hal STATIC ndsrvp_hal.cpp ndsrvp_hal.hpp)
+set(NDSRVP_INCLUDE_DIR include)
+set(NDSRVP_SOURCE_DIR src)
+
+file(GLOB ndsrvp_headers RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "${NDSRVP_INCLUDE_DIR}/*.hpp")
+file(GLOB ndsrvp_sources RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "${NDSRVP_SOURCE_DIR}/*.cpp")
+
+message(STATUS "ndsrvp_headers: ${ndsrvp_headers}")
+
+add_library(ndsrvp_hal STATIC)
+target_sources(ndsrvp_hal PRIVATE ${ndsrvp_headers} ${ndsrvp_sources})
+
 set_target_properties(ndsrvp_hal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH})
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(ndsrvp_hal EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)

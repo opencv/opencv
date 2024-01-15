@@ -280,7 +280,6 @@ namespace cv {
 #define CV_CPU_VSX3             201
 
 #define CV_CPU_RVV              210
-#define CV_CPU_RVP052           211
 
 #define CV_CPU_LSX              230
 #define CV_CPU_LASX             231
@@ -343,7 +342,6 @@ enum CpuFeatures {
     CPU_VSX3            = 201,
 
     CPU_RVV             = 210,
-    CPU_RVP052          = 211,
 
     CPU_LSX             = 230,
     CPU_LASX            = 231,
