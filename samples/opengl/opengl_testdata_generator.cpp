@@ -41,6 +41,13 @@ enum class ShadingType
     Shaded = 2
 };
 
+enum class CullingMode
+{
+    None,
+    CW,
+    CCW
+};
+
 class ModelData
 {
 public:
@@ -213,9 +220,9 @@ void draw(void* userdata)
     ogl::render(data->arr, data->indices, ogl::TRIANGLES);
 }
 
-void generateImage(cv::Size imgSz, ShadingType shadingType, ModelType modelType, std::string modelPath,
+void generateImage(cv::Size imgSz, ShadingType shadingType, CullingMode cullingMode, ModelType modelType, std::string modelPath,
                    cv::Mat& colorImage, cv::Mat& depthImage);
-void generateImage(cv::Size imgSz, ShadingType shadingType, ModelType modelType, std::string modelPath,
+void generateImage(cv::Size imgSz, ShadingType shadingType, CullingMode cullingMode, ModelType modelType, std::string modelPath,
                    cv::Mat& colorImage, cv::Mat& depthImage)
 {
     namedWindow("OpenGL", WINDOW_OPENGL);
@@ -283,7 +290,24 @@ void generateImage(cv::Size imgSz, ShadingType shadingType, ModelType modelType,
               modelData.lookat  [0], modelData.lookat  [1], modelData.lookat  [2],
               modelData.upVector[0], modelData.upVector[1], modelData.upVector[2]);
 
-    glDisable(GL_CULL_FACE);
+    if (cullingMode == CullingMode::None)
+    {
+        glDisable(GL_CULL_FACE);
+    }
+    else
+    {
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_FRONT);
+        if (cullingMode == CullingMode::CW)
+        {
+            glFrontFace(GL_CW);
+        }
+        else
+        {
+            glFrontFace(GL_CCW);
+        }
+    }
+
     glEnable(GL_DEPTH_TEST);
 
     cv::setOpenGlDrawCallback("OpenGL", draw, &data);
@@ -367,39 +391,56 @@ int main(int argc, char* argv[])
                 break;
             }
 
-            for (const auto modelType : {
-                         ModelType::File,
-                         ModelType::Clipping,
-                         ModelType::Color,
-                         ModelType::Centered,
-                })
+            for (const auto cullingMode : {
+                    CullingMode::None,
+                    CullingMode::CW,
+                    CullingMode::CCW
+            })
             {
-                std::string modelName;
-                switch (modelType)
+                std::string cullingName;
+                switch (cullingMode)
                 {
-                case ModelType::File:     modelName = "File";     break;
-                case ModelType::Clipping: modelName = "Clipping"; break;
-                case ModelType::Color:    modelName = "Color";    break;
-                case ModelType::Centered: modelName = "Centered"; break;
-                default:
-                    break;
+                    case CullingMode::None: cullingName = "None"; break;
+                    case CullingMode::CW:   cullingName = "CW"; break;
+                    case CullingMode::CCW:  cullingName = "CCW"; break;
+                    default: break;
                 }
 
-                std::string widthStr  = std::to_string(res.width);
-                std::string heightStr = std::to_string(res.height);
+                for (const auto modelType : {
+                            ModelType::File,
+                            ModelType::Clipping,
+                            ModelType::Color,
+                            ModelType::Centered,
+                    })
+                {
+                    std::string modelName;
+                    switch (modelType)
+                    {
+                    case ModelType::File:     modelName = "File";     break;
+                    case ModelType::Clipping: modelName = "Clipping"; break;
+                    case ModelType::Color:    modelName = "Color";    break;
+                    case ModelType::Centered: modelName = "Centered"; break;
+                    default:
+                        break;
+                    }
 
-                std::string suffix = modelName + "_" + widthStr + "x" + heightStr;
+                    //TODO: cv::format()
+                    std::string widthStr  = std::to_string(res.width);
+                    std::string heightStr = std::to_string(res.height);
 
-                std::cout << suffix + "_" + shadingName << "..." << std::endl;
+                    std::string suffix = modelName + "_" + widthStr + "x" + heightStr+"_Cull" + cullingName;
 
-                cv::Mat colorImage, depthImage;
-                generateImage(res, shadingType, modelType, modelPath, colorImage, depthImage);
+                    std::cout << suffix + "_" + shadingName << "..." << std::endl;
 
-                std::string gtPathColor = outPath + "/example_image_" + suffix + "_" + shadingName + ".png";
-                std::string gtPathDepth = outPath + "/depth_image_"   + suffix + ".png";
+                    cv::Mat colorImage, depthImage;
+                    generateImage(res, shadingType, cullingMode, modelType, modelPath, colorImage, depthImage);
 
-                cv::imwrite(gtPathColor, colorImage);
-                cv::imwrite(gtPathDepth, depthImage);
+                    std::string gtPathColor = outPath + "/example_image_" + suffix + "_" + shadingName + ".png";
+                    std::string gtPathDepth = outPath + "/depth_image_"   + suffix + ".png";
+
+                    cv::imwrite(gtPathColor, colorImage);
+                    cv::imwrite(gtPathDepth, depthImage);
+                }
             }
         }
     }
