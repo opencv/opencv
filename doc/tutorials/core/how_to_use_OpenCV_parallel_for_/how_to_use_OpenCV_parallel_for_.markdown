@@ -3,11 +3,12 @@ How to use the OpenCV parallel_for_ to parallelize your code {#tutorial_how_to_u
 
 @tableofcontents
 
-@prev_tutorial{tutorial_file_input_output_with_xml_yml}
-
 |    |    |
 | -: | :- |
 | Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial can contain obsolete information. Please check modern version here: [tutorial_how_to_use_OpenCV_parallel_for_new]
 
 Goal
 ----
@@ -165,7 +166,7 @@ This splitting is done automatically to distribute equally the computation load.
 to a 2D `[row, col]` coordinate. Also note that we have to keep a reference on the mat image to be able to modify in-place
 the image.
 
-The parallel execution is called with a lambda expression:
+The parallel execution is called with:
 
 @snippet how_to_use_OpenCV_parallel_for_.cpp mandelbrot-parallel-call
 
@@ -174,6 +175,11 @@ To set the number of threads, you can use: @ref cv::setNumThreads. You can also 
 nstripes parameter in @ref cv::parallel_for_. For instance, if your processor has 4 threads, setting `cv::setNumThreads(2)`
 or setting `nstripes=2` should be the same as by default it will use all the processor threads available but will split the
 workload only on two threads.
+
+@note
+C++ 11 standard allows to simplify the parallel implementation by get rid of the `ParallelMandelbrot` class and replacing it with lambda expression:
+
+@snippet how_to_use_OpenCV_parallel_for_.cpp mandelbrot-parallel-call-cxx11
 
 Results
 -----------

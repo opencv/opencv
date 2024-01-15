@@ -4,6 +4,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
+#define PARALLEL_FOR_LAMBDA
+
 using namespace std;
 using namespace cv;
 
@@ -47,6 +49,8 @@ void conv_seq(Mat src, Mat &dst, Mat kernel)
 }
 //! [convolution-sequential]
 
+#ifdef PARALLEL_FOR_LAMBDA
+
 void conv_parallel(Mat src, Mat &dst, Mat kernel)
 {
     int rows = src.rows, cols = src.cols;
@@ -59,7 +63,7 @@ void conv_parallel(Mat src, Mat &dst, Mat kernel)
     int sz = kernel.rows / 2;
     copyMakeBorder(src, src, sz, sz, sz, sz, BORDER_REPLICATE);
 
-    //! [convolution-parallel]
+    //! [convolution-parallel-cxx11]
     parallel_for_(Range(0, rows * cols), [&](const Range &range)
                     {
                         for (int r = range.start; r < range.end; r++)
@@ -78,7 +82,7 @@ void conv_parallel(Mat src, Mat &dst, Mat kernel)
                             dst.ptr(i)[j] = saturate_cast<uchar>(value);
                         }
                     });
-    //! [convolution-parallel]
+    //! [convolution-parallel-cxx11]
 }
 
 void conv_parallel_row_split(Mat src, Mat &dst, Mat kernel)
@@ -93,7 +97,7 @@ void conv_parallel_row_split(Mat src, Mat &dst, Mat kernel)
     int sz = kernel.rows / 2;
     copyMakeBorder(src, src, sz, sz, sz, sz, BORDER_REPLICATE);
 
-    //! [convolution-parallel-row-split]
+    //! [convolution-parallel-cxx11-row-split]
     parallel_for_(Range(0, rows), [&](const Range &range)
                     {
                         for (int i = range.start; i < range.end; i++)
@@ -115,8 +119,127 @@ void conv_parallel_row_split(Mat src, Mat &dst, Mat kernel)
                             }
                         }
                     });
-    //! [convolution-parallel-row-split]
+    //! [convolution-parallel-cxx11-row-split]
 }
+
+#else // PARALLEL_FOR_LAMBDA
+
+//! [convolution-parallel]
+class parallelConvolution : public ParallelLoopBody
+{
+private:
+    Mat m_src, &m_dst;
+    Mat m_kernel;
+    int sz;
+
+public:
+    parallelConvolution(Mat src, Mat &dst, Mat kernel)
+        : m_src(src), m_dst(dst), m_kernel(kernel)
+    {
+        sz = kernel.rows / 2;
+    }
+
+    //! [overload-full]
+    virtual void operator()(const Range &range) const CV_OVERRIDE
+    {
+        for (int r = range.start; r < range.end; r++)
+        {
+            int i = r / m_src.cols, j = r % m_src.cols;
+
+            double value = 0;
+            for (int k = -sz; k <= sz; k++)
+            {
+                uchar *sptr = m_src.ptr(i + sz + k);
+                for (int l = -sz; l <= sz; l++)
+                {
+                    value += m_kernel.ptr<double>(k + sz)[l + sz] * sptr[j + sz + l];
+                }
+            }
+            m_dst.ptr(i)[j] = saturate_cast<uchar>(value);
+        }
+    }
+    //! [overload-full]
+};
+//! [convolution-parallel]
+
+void conv_parallel(Mat src, Mat &dst, Mat kernel)
+{
+    int rows = src.rows, cols = src.cols;
+
+    dst = Mat(rows, cols, CV_8UC1, Scalar(0));
+
+    // Taking care of edge values
+    // Make border = kernel.rows / 2;
+
+    int sz = kernel.rows / 2;
+    copyMakeBorder(src, src, sz, sz, sz, sz, BORDER_REPLICATE);
+
+    //! [convolution-parallel-function]
+    parallelConvolution obj(src, dst, kernel);
+    parallel_for_(Range(0, rows * cols), obj);
+    //! [convolution-parallel-function]
+}
+
+//! [conv-parallel-row-split]
+class parallelConvolutionRowSplit : public ParallelLoopBody
+{
+private:
+    Mat m_src, &m_dst;
+    Mat m_kernel;
+    int sz;
+
+public:
+    parallelConvolutionRowSplit(Mat src, Mat &dst, Mat kernel)
+        : m_src(src), m_dst(dst), m_kernel(kernel)
+    {
+        sz = kernel.rows / 2;
+    }
+
+    //! [overload-row-split]
+    virtual void operator()(const Range &range) const CV_OVERRIDE
+    {
+        for (int i = range.start; i < range.end; i++)
+        {
+
+            uchar *dptr = dst.ptr(i);
+            for (int j = 0; j < cols; j++)
+            {
+                double value = 0;
+                for (int k = -sz; k <= sz; k++)
+                {
+                    uchar *sptr = src.ptr(i + sz + k);
+                    for (int l = -sz; l <= sz; l++)
+                    {
+                        value += kernel.ptr<double>(k + sz)[l + sz] * sptr[j + sz + l];
+                    }
+                }
+                dptr[j] = saturate_cast<uchar>(value);
+            }
+        }
+    }
+    //! [overload-row-split]
+};
+//! [conv-parallel-row-split]
+
+void conv_parallel_row_split(Mat src, Mat &dst, Mat kernel)
+{
+    int rows = src.rows, cols = src.cols;
+
+    dst = Mat(rows, cols, CV_8UC1, Scalar(0));
+
+    // Taking care of edge values
+    // Make border = kernel.rows / 2;
+
+    int sz = kernel.rows / 2;
+    copyMakeBorder(src, src, sz, sz, sz, sz, BORDER_REPLICATE);
+
+    //! [convolution-parallel-function-row]
+    parallelConvolutionRowSplit obj(src, dst, kernel);
+    parallel_for_(Range(0, rows), obj);
+    //! [convolution-parallel-function-row]
+}
+
+#endif // PARALLEL_FOR_LAMBDA
 
 static void help(char *progName)
 {
