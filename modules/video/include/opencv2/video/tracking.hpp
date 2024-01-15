@@ -651,6 +651,12 @@ public:
     /** @copybrief getVariationalRefinementGamma @see getVariationalRefinementGamma */
     CV_WRAP virtual void setVariationalRefinementGamma(float val) = 0;
 
+    /** @brief Norm value shift for robust penalizer
+    @see setVariationalRefinementEpsilon */
+    CV_WRAP virtual float getVariationalRefinementEpsilon() const = 0;
+    /** @copybrief getVariationalRefinementEpsilon @see getVariationalRefinementEpsilon */
+    CV_WRAP virtual void setVariationalRefinementEpsilon(float val) = 0;
+
 
     /** @brief Whether to use mean-normalization of patches when computing patch distance. It is turned on
         by default as it typically provides a noticeable quality boost because of increased robustness to
