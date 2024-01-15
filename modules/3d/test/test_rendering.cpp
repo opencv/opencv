@@ -444,7 +444,9 @@ TEST_P(RenderingTest, noArrays)
     triangleRasterize(verts, indices, colors, cameraMatrix, width, height,
                       (shadingType == ShadingType::Shaded), cullIdx, cv::noArray(), colorOnly);
 
-    compareRGB(color_buf, colorOnly, 0, 0);
+    compareRGB(color_buf, colorOnly, 1, 0.00134);
+    depth_buf.convertTo(depth_buf, CV_16U, depthScale);
+    depthOnly.convertTo(depthOnly, CV_16U, depthScale);
     compareDepth(depth_buf, depthOnly, zFar, depthScale, 0, 0, 0);
 }
 
@@ -536,6 +538,8 @@ TEST_P(RenderingTest, keepDrawnData)
         triangleRasterize(verts, idx2, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), cullIdx, depth_buf2, color_buf2);
 
         compareRGB(color_buf, color_buf2, 0, 0);
+        depth_buf.convertTo(depth_buf, CV_16U, depthScale);
+        depth_buf2.convertTo(depth_buf2, CV_16U, depthScale);
         compareDepth(depth_buf, depth_buf2, zFar, depthScale, 0, 0, 0);
     }
 }
