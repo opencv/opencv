@@ -335,9 +335,11 @@ void compareDepth(const cv::Mat& gt, const cv::Mat& mat, float zFar, float scale
     int nzDepthDiff = cv::countNonZero(diffMask);
     EXPECT_LE(nzDepthDiff, maskThreshold);
 
-    float normInfDepth = cv::norm(gt, mat, cv::NORM_INF, gtMask & matMask);
+    Mat jointMask = gtMask & matMask;
+    int nzJointMask = cv::countNonZero(jointMask);
+    float normInfDepth = cv::norm(gt, mat, cv::NORM_INF, jointMask);
     EXPECT_LE(normInfDepth, normInfThreshold);
-    float normL2Depth =  cv::norm(gt, mat, cv::NORM_L2, gtMask & matMask);
+    float normL2Depth = nzJointMask ? cv::norm(gt, mat, cv::NORM_L2, jointMask) / nzJointMask : 0;
     EXPECT_LE(normL2Depth, normL2Threshold);
 }
 
@@ -350,7 +352,7 @@ void compareRGB(const cv::Mat& gt, const cv::Mat& mat, float normInfThreshold, f
 
     float normInfRgb = cv::norm(gt, mat, cv::NORM_INF);
     EXPECT_LE(normInfRgb, normInfThreshold);
-    float normL2Rgb = cv::norm(gt, mat, cv::NORM_L2);
+    float normL2Rgb = cv::norm(gt, mat, cv::NORM_L2) / gt.total();
     EXPECT_LE(normL2Rgb, normL2Threshold);
 }
 
@@ -496,7 +498,7 @@ TEST_P(RenderingTest, accuracy)
         std::string gtPathDepth = path + "/depth_image_"   + suffix + ".png";
 
         Mat groundTruthColor = imread(gtPathColor);
-        groundTruthColor.convertTo(groundTruthColor, CV_32F);
+        groundTruthColor.convertTo(groundTruthColor, CV_32F, (1.f / 255.f));
         compareRGB(groundTruthColor, color_buf, 0, 0);
 
         Mat groundTruthDepth = imread(gtPathDepth, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH);
