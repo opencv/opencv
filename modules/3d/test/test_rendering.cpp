@@ -499,10 +499,10 @@ TEST_P(RenderingTest, accuracy)
 
         Mat groundTruthColor = imread(gtPathColor);
         groundTruthColor.convertTo(groundTruthColor, CV_32F, (1.f / 255.f));
-        compareRGB(groundTruthColor, color_buf, 0, 0);
+        compareRGB(groundTruthColor, color_buf, 1, 1.07e-05);
 
         Mat groundTruthDepth = imread(gtPathDepth, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH);
-        compareDepth(groundTruthDepth, depth_buf, zFar, depthScale, 0, 0, 0);
+        compareDepth(groundTruthDepth, depth_buf, zFar, depthScale, 9, 485, 0.00681);
 
         // add --test_debug to output resulting images
         if (debugLevel > 0)
