@@ -321,18 +321,37 @@ public:
 };
 
 
-void AssertMatsEqual(const cv::Mat& mat1, const cv::Mat& mat2, int threshold)
+void compareDepth(const cv::Mat& gt, const cv::Mat& mat, float zFar, float scale,
+                  float maskThreshold, float normInfThreshold, float normL2Threshold)
 {
-    ASSERT_EQ(mat1.size(), mat2.size());
-    ASSERT_EQ(mat1.type(), mat2.type());
+    ASSERT_EQ(gt.type(), CV_16UC1);
+    ASSERT_EQ(mat.type(), CV_16UC1);
+    ASSERT_EQ(gt.size(), mat.size());
 
-    // Check if the matrices have the same content
-    cv::Mat diff;
-    cv::compare(mat1, mat2, diff, cv::CMP_NE);
-    diff = diff.reshape(1);
-    int nonZeroElements = cv::countNonZero(diff);
+    Mat gtMask  = gt  < zFar*scale;
+    Mat matMask = mat < zFar*scale;
 
-    EXPECT_LT(nonZeroElements, threshold);
+    Mat diffMask = gtMask != matMask;
+    int nzDepthDiff = cv::countNonZero(diffMask);
+    EXPECT_LE(nzDepthDiff, maskThreshold);
+
+    float normInfDepth = cv::norm(gt, mat, cv::NORM_INF, gtMask & matMask);
+    EXPECT_LE(normInfDepth, normInfThreshold);
+    float normL2Depth =  cv::norm(gt, mat, cv::NORM_L2, gtMask & matMask);
+    EXPECT_LE(normL2Depth, normL2Threshold);
+}
+
+
+void compareRGB(const cv::Mat& gt, const cv::Mat& mat, float normInfThreshold, float normL2Threshold)
+{
+    ASSERT_EQ(gt.type(), CV_32FC3);
+    ASSERT_EQ(mat.type(), CV_32FC3);
+    ASSERT_EQ(gt.size(), mat.size());
+
+    float normInfRgb = cv::norm(gt, mat, cv::NORM_INF);
+    EXPECT_LE(normInfRgb, normInfThreshold);
+    float normL2Rgb = cv::norm(gt, mat, cv::NORM_L2);
+    EXPECT_LE(normL2Rgb, normL2Threshold);
 }
 
 
@@ -355,9 +374,10 @@ protected:
         itype = std::get<5>(t);
 
         zNear = 0.1, zFar = 50.0;
+        depthScale = 1000.0;
 
         depth_buf = Mat(height, width, ftype, zFar);
-        color_buf = Mat(height, width, CV_MAKETYPE(ftype, 3), Scalar(0.0, 0.0, 0.0));
+        color_buf = Mat(height, width, CV_MAKETYPE(ftype, 3), Scalar::all(0));
 
         cameraMatrix = Mat(makeCamMatrix_TODO_rewrite_it_later(modelData.position, modelData.lookat, modelData.upVector, modelData.fovy, zNear, zFar));
 
@@ -396,7 +416,7 @@ protected:
 
 public:
     int width, height;
-    double zNear, zFar;
+    double zNear, zFar, depthScale;
 
     Mat depth_buf, color_buf;
 
@@ -422,19 +442,16 @@ TEST_P(RenderingTest, noArrays)
     triangleRasterize(verts, indices, colors, cameraMatrix, width, height,
                       (shadingType == ShadingType::Shaded), cullIdx, cv::noArray(), colorOnly);
 
-    // TODO: tune this threshold
-    AssertMatsEqual(color_buf, colorOnly, 1000);
-    // TODO: tune this threshold
-    AssertMatsEqual(depth_buf, depthOnly, 1000);
+    compareRGB(color_buf, colorOnly, 0, 0);
+    compareDepth(depth_buf, depthOnly, zFar, depthScale, 0, 0, 0);
 }
 
 
 TEST_P(RenderingTest, accuracy)
 {
-    color_buf.convertTo(color_buf, CV_8UC3, 255.0f);
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     cv::flip(color_buf, color_buf, 0);
-    depth_buf.convertTo(depth_buf, CV_16U, 1000.0f);
+    depth_buf.convertTo(depth_buf, CV_16U, depthScale);
     cv::flip(depth_buf, depth_buf, 0);
 
     if (modelType == ModelType::Empty)
@@ -444,7 +461,7 @@ TEST_P(RenderingTest, accuracy)
 
         for (int i = 0; i < 3; i++)
         {
-            ASSERT_EQ(countNonZero(channels[i]), 0);
+            EXPECT_EQ(countNonZero(channels[i]), 0);
         }
     }
     else
@@ -479,19 +496,18 @@ TEST_P(RenderingTest, accuracy)
         std::string gtPathDepth = path + "/depth_image_"   + suffix + ".png";
 
         Mat groundTruthColor = imread(gtPathColor);
-        //TODO: tune this threshold
-        AssertMatsEqual(color_buf, groundTruthColor, 1000);
+        groundTruthColor.convertTo(groundTruthColor, CV_32F);
+        compareRGB(groundTruthColor, color_buf, 0, 0);
 
         Mat groundTruthDepth = imread(gtPathDepth, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH);
-        //TODO: tune this threshold
-        AssertMatsEqual(depth_buf, groundTruthDepth, 1000);
+        compareDepth(groundTruthDepth, depth_buf, zFar, depthScale, 0, 0, 0);
 
         // add --test_debug to output resulting images
         if (debugLevel > 0)
         {
             std::string outColorPath = "color_image_" + suffix + "_" + shadingName + ".png";
             std::string outDepthPath = "depth_image_" + suffix + "_" + shadingName + ".png";
-            imwrite(outColorPath, color_buf);
+            imwrite(outColorPath, color_buf * 255.f);
             imwrite(outDepthPath, depth_buf);
         }
     }
@@ -517,11 +533,8 @@ TEST_P(RenderingTest, keepDrawnData)
         triangleRasterize(verts, idx1, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), cullIdx, depth_buf2, color_buf2);
         triangleRasterize(verts, idx2, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), cullIdx, depth_buf2, color_buf2);
 
-        // TODO: tune this threshold
-        AssertMatsEqual(color_buf, color_buf2, 1000);
-
-        // TODO: tune this threshold
-        AssertMatsEqual(depth_buf, depth_buf2, 1000);
+        compareRGB(color_buf, color_buf2, 0, 0);
+        compareDepth(depth_buf, depth_buf2, zFar, depthScale, 0, 0, 0);
     }
 }
 
