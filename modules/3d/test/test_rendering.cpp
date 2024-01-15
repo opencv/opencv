@@ -3,6 +3,60 @@
 namespace opencv_test { namespace {
 using namespace cv;
 
+enum class CullingMode
+{
+    None,
+    CW,
+    CCW
+};
+
+// that was easier than using CV_ENUM() macro
+namespace
+{
+    using namespace cv;
+    struct CullingModeEnum
+    {
+        static const std::array<CullingMode, 3> vals;
+        static const std::array<std::string, 3> svals;
+
+        CullingModeEnum(CullingMode v = CullingMode::None) : val(v) {}
+        operator CullingMode() const { return val; }
+        void PrintTo(std::ostream *os) const
+        {
+            int v = int(val);
+            if (v >= 0 && v < 5)
+            {
+                *os << svals[v];
+            }
+            else
+            {
+                *os << "UNKNOWN";
+            }
+        }
+        static ::testing::internal::ParamGenerator<CullingModeEnum> all()
+        {
+            return ::testing::Values(CullingModeEnum(vals[0]),
+                                     CullingModeEnum(vals[1]),
+                                     CullingModeEnum(vals[2]));
+        }
+
+    private:
+        CullingMode val;
+    };
+
+    const std::array<CullingMode, 3> CullingModeEnum::vals{ CullingMode::None,
+                                                            CullingMode::CW,
+                                                            CullingMode::CCW
+                                                          };
+    const std::array<std::string, 3> CullingModeEnum::svals{ std::string("None"),
+                                                             std::string("CW"),
+                                                             std::string("CCW")
+                                                           };
+
+    static inline void PrintTo(const CullingModeEnum &t, std::ostream *os) { t.PrintTo(os); }
+}
+
+
 enum class ShadingType
 {
     White = 0,
@@ -282,8 +336,9 @@ void AssertMatsEqual(const cv::Mat& mat1, const cv::Mat& mat2, int threshold)
 }
 
 
-// resolution, shading type, model type, float type, index type
-class RenderingTest : public ::testing::TestWithParam<std::tuple<std::tuple<int, int>, ShadingTypeEnum, ModelTypeEnum, MatDepth, MatDepth>>
+// resolution, shading type, culling mode, model type, float type, index type
+class RenderingTest : public ::testing::TestWithParam<
+    std::tuple<std::tuple<int, int>, ShadingTypeEnum, CullingModeEnum, ModelTypeEnum, MatDepth, MatDepth>>
 {
 protected:
     void SetUp() override
@@ -293,10 +348,11 @@ protected:
         width = std::get<0>(wh);
         height = std::get<1>(wh);
         shadingType = std::get<1>(t);
-        modelType = std::get<2>(t);
+        cullingMode = std::get<2>(t);
+        modelType = std::get<3>(t);
         modelData = ModelData(modelType);
-        ftype = std::get<3>(t);
-        itype = std::get<4>(t);
+        ftype = std::get<4>(t);
+        itype = std::get<5>(t);
 
         zNear = 0.1, zFar = 50.0;
 
@@ -320,8 +376,11 @@ protected:
             indices.convertTo(indices, itype);
         }
 
+        int cullIdx = (cullingMode == CullingMode::None) ? 0 :
+                      ((cullingMode == CullingMode::CW) ? 1 :
+                      ((cullingMode == CullingMode::CCW) ? 2 : -1));
         triangleRasterize(verts, indices, colors, cameraMatrix, width, height,
-                          (shadingType == ShadingType::Shaded), depth_buf, color_buf);
+                          (shadingType == ShadingType::Shaded), cullIdx, depth_buf, color_buf);
     }
 
     Matx43f makeCamMatrix_TODO_rewrite_it_later(Vec3f position, Vec3f lookat, Vec3f upVector, double fovy, double znear, double zfar)
@@ -347,6 +406,7 @@ public:
     ModelData modelData;
     ModelTypeEnum modelType;
     ShadingTypeEnum shadingType;
+    CullingModeEnum cullingMode;
     int ftype, itype;
 };
 
@@ -354,10 +414,13 @@ public:
 TEST_P(RenderingTest, noArrays)
 {
     Mat depthOnly, colorOnly;
+    int cullIdx = (cullingMode == CullingMode::None) ? 0 :
+                      ((cullingMode == CullingMode::CW) ? 1 :
+                      ((cullingMode == CullingMode::CCW) ? 2 : -1));
     triangleRasterize(verts, indices, colors, cameraMatrix, width, height,
-                      (shadingType == ShadingType::Shaded), depthOnly, cv::noArray());
+                      (shadingType == ShadingType::Shaded), cullIdx, depthOnly, cv::noArray());
     triangleRasterize(verts, indices, colors, cameraMatrix, width, height,
-                      (shadingType == ShadingType::Shaded), cv::noArray(), colorOnly);
+                      (shadingType == ShadingType::Shaded), cullIdx, cv::noArray(), colorOnly);
 
     // TODO: tune this threshold
     AssertMatsEqual(color_buf, colorOnly, 1000);
@@ -400,11 +463,18 @@ TEST_P(RenderingTest, accuracy)
             shadingType.PrintTo(&ss);
             ss >> shadingName;
         }
+        std::string cullingName;
+        {
+            std::stringstream ss;
+            cullingMode.PrintTo(&ss);
+            ss >> cullingName;
+        }
 
+        //TODO: cv::format()
         std::string widthStr  = std::to_string(width);
         std::string heightStr = std::to_string(height);
 
-        std::string suffix = modelName + "_" + widthStr + "x" + heightStr;
+        std::string suffix = modelName + "_" + widthStr + "x" + heightStr+"_Cull" + cullingName;
         std::string gtPathColor = path + "/example_image_" + suffix + "_" + shadingName + ".png";
         std::string gtPathDepth = path + "/depth_image_"   + suffix + ".png";
 
@@ -441,8 +511,11 @@ TEST_P(RenderingTest, keepDrawnData)
         idx1 = indices.reshape(3, 1)(Range::all(), Range(0, nTriangles / 2));
         idx2 = indices.reshape(3, 1)(Range::all(), Range(nTriangles / 2, nTriangles));
 
-        triangleRasterize(verts, idx1, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), depth_buf2, color_buf2);
-        triangleRasterize(verts, idx2, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), depth_buf2, color_buf2);
+        int cullIdx = (cullingMode == CullingMode::None) ? 0 :
+                      ((cullingMode == CullingMode::CW) ? 1 :
+                      ((cullingMode == CullingMode::CCW) ? 2 : -1));
+        triangleRasterize(verts, idx1, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), cullIdx, depth_buf2, color_buf2);
+        triangleRasterize(verts, idx2, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), cullIdx, depth_buf2, color_buf2);
 
         // TODO: tune this threshold
         AssertMatsEqual(color_buf, color_buf2, 1000);
@@ -455,6 +528,7 @@ TEST_P(RenderingTest, keepDrawnData)
 INSTANTIATE_TEST_CASE_P(Rendering, RenderingTest, ::testing::Combine(
     ::testing::Values(std::make_tuple(700, 700), std::make_tuple(640, 480)),
     ShadingTypeEnum::all(),
+    CullingModeEnum::all(),
     ModelTypeEnum::all(),
     // float type
     //::testing::Values(CV_32F, CV_64F), // not supported yet
