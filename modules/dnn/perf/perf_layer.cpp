@@ -683,7 +683,119 @@ PERF_TEST_P_(Layer_GatherElements, GatherElements)
     test_layer({2700, 1, 2914}, {2700, 1, 81}, 2);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(/* withInferenceEngine = */false, /* obsolete_withHalide = */false));
+struct Layer_InstanceNorm : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& x_shape)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat x(x_shape, CV_32FC1);
+        Mat scale(x_shape[1], 1, CV_32FC1);
+        Mat b(x_shape[1], 1, CV_32FC1);
+
+        randu(x, 0.f, 1.f);
+        randu(scale, 0.f, 1.f);
+        randu(b, 0.f, 1.f);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "InstanceNormalization";
+        lp.name = "testLayer";
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+
+        // warmup
+        {
+            std::vector<String> inpNames{"x", "scale", "b"};
+            net.setInputsNames(inpNames);
+            net.setInput(x, inpNames[0]);
+            net.setInput(scale, inpNames[1]);
+            net.setInput(b, inpNames[2]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+
+    int N = 2;
+    int C = 64;
+    int H = 180;
+    int W = 240;
+};
+
+PERF_TEST_P_(Layer_InstanceNorm, InstanceNorm)
+{
+    test_layer({N, C, H, W});
+}
+
+struct Layer_Attention : public TestBaseWithParam<tuple<Backend, Target>> {
+    void test_layer(const std::vector<int> x_shape, const std::vector<int> qkv_hidden_sizes, const int num_heads) {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        auto qk_hidden_size = qkv_hidden_sizes[0];
+        auto v_hidden_size = qkv_hidden_sizes[2];
+
+        auto input_hidden_size = x_shape[2];
+        auto hidden_size = qk_hidden_size + qk_hidden_size + v_hidden_size;
+
+        Mat x(x_shape, CV_32F);
+        Mat weight(std::vector<int>{input_hidden_size, hidden_size}, CV_32F);
+        Mat bias(std::vector<int>{hidden_size}, CV_32F);
+
+        randu(x, 0.f, 1.f);
+        randu(weight, 0.f, 1.f);
+        randu(bias, 0.f, 1.f);
+
+        LayerParams lp;
+        lp.type = "Attention";
+        lp.name = "testLayer";
+        lp.set("num_heads", num_heads);
+        lp.set("qkv_hidden_sizes", DictValue::arrayInt(qkv_hidden_sizes.data(), qkv_hidden_sizes.size()));
+
+        Net net;
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+
+        {
+            std::vector<std::string> input_names{"x", "weight", "bias"};
+            net.setInputsNames(input_names);
+            net.setInput(x, input_names[0]);
+            net.setInput(weight, input_names[1]);
+            net.setInput(bias, input_names[2]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat out = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+};
+
+PERF_TEST_P_(Layer_Attention, VisionTransformer) {
+    test_layer({1, 197, 768}, {768, 768, 768}, 12);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 #ifdef HAVE_CUDA
 INSTANTIATE_TEST_CASE_P(CUDA, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_CUDA, DNN_TARGET_CUDA)));
@@ -693,6 +805,8 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_ScatterND, testing::Values(std::make_tuple(D
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_InstanceNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Attention, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
 
 typedef TestBaseWithParam<tuple<Vec4i, int, bool, tuple<Backend, Target> > > Layer_FullyConnected;
@@ -714,6 +828,9 @@ PERF_TEST_P_(Layer_FullyConnected, fc)
     bool isMatMul = get<2>(GetParam());
     int backendId = get<0>(get<3>(GetParam()));
     int targetId = get<1>(get<3>(GetParam()));
+
+    if (inpShape.size() == 4 && inpShape[0] == 5 && inpShape[1] == 16 && inpShape[2] == 512 && inpShape[3] == 128 && outDims >= 512)
+        applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
     std::vector<int> weightShape;
     if (isMatMul) {
@@ -756,6 +873,57 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_FullyConnected, Combine(
     Values(256, 512, 1024),  // output dimension
     testing::Bool(),         // is_matmul
     dnnBackendsAndTargets()
+));
+
+typedef TestBaseWithParam<tuple<std::vector<int>, int, tuple<Backend, Target> > > Layer_Softmax;
+PERF_TEST_P_(Layer_Softmax, softmax_3d) {
+    std::vector<int> shape = get<0>(GetParam());
+    int axis = get<1>(GetParam());
+    int backendId = get<0>(get<2>(GetParam()));
+    int targetId = get<1>(get<2>(GetParam()));
+
+    Mat data(shape, CV_32FC1);
+    Scalar mean = 0.f;
+    Scalar std = 1.f;
+    randn(data, mean, std);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Softmax";
+    lp.name = "testLayer";
+    lp.set("axis", axis);
+
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    // warmup
+    {
+        net.setInput(data);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+    }
+
+    TEST_CYCLE() {
+        Mat res = net.forward();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Softmax, Combine(
+    Values(                // input size
+            std::vector<int>({16, 50, 50}),
+            std::vector<int>({16, 197, 197}),
+            std::vector<int>({16, 1024, 1024})
+    ),
+    Values(0, 1, 2),  // axis
+    dnnBackendsAndTargets(/* withInferenceEngine= */ false,
+                          /* withHalide= */          false,
+                          /* withCpuOCV= */          true,
+                          /* withVkCom= */           false,
+                          /* withCUDA= */            false,
+                          /* withNgraph= */          false,
+                          /* withWebnn= */           false,
+                          /* withCann= */            false) // only test on CPU
 ));
 
 } // namespace

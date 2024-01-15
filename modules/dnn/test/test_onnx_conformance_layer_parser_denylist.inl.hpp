@@ -159,8 +159,6 @@
 "test_if",
 "test_if_opt",
 "test_if_seq",
-"test_instancenorm_epsilon",
-"test_instancenorm_example",
 "test_isinf",
 "test_isinf_negative",
 "test_isinf_positive",

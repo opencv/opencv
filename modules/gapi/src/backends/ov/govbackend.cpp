@@ -252,7 +252,8 @@ public:
                   const std::vector<cv::gimpl::RcDesc>              &  outs,
                   cv::GRunArg::Meta                                 && meta,
                   std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
-                  std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs);
+                  std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs,
+                  const cv::gimpl::ov::Options                      &  options);
 
     const cv::GArgs& inArgs() const;
 
@@ -281,6 +282,9 @@ public:
     std::exception_ptr eptr;
 
     const cv::GRunArg::Meta& getMeta() { return m_meta; };
+
+    const cv::gimpl::ov::Options& getOptions() const { return m_options; };
+
 private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
 
@@ -301,6 +305,8 @@ private:
     // Input parameters passed to an inference operation.
     cv::GArgs m_args;
     cv::GShapes m_in_shapes;
+
+    cv::gimpl::ov::Options m_options;
 };
 
 OVCallContext::OVCallContext(const OVUnit                                      &  unit,
@@ -309,9 +315,11 @@ OVCallContext::OVCallContext(const OVUnit                                      &
                              const std::vector<cv::gimpl::RcDesc>              &  outs,
                              cv::GRunArg::Meta                                 && meta,
                              std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
-                             std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs)
+                             std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs,
+                             const cv::gimpl::ov::Options                      &  options)
 : uu(unit), out(output), m_meta(std::move(meta)),
-  m_input_objs(std::move(input_objs)), m_output_objs(std::move(output_objs))
+  m_input_objs(std::move(input_objs)), m_output_objs(std::move(output_objs)),
+  m_options(options)
 {
     for (auto& it : m_input_objs)  cv::gimpl::magazine::bindInArg (m_res, it.first, it.second);
     for (auto& it : m_output_objs) cv::gimpl::magazine::bindOutArg(m_res, it.first, it.second);
@@ -577,9 +585,10 @@ static void PostOutputs(::ov::InferRequest             &infer_request,
 
     ctx->eptr = std::move(eptr);
     for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-        // NB: Copy data back only if execution finished sucessfuly.
-        // Otherwise just post outputs to keep streaming executor contract.
-        if (!ctx->eptr) {
+        // NB: Copy data back only if execution finished sucessfuly
+        // and inference only mode is disabled.
+        // Otherwise just post outputs to maintain streaming executor contract.
+        if (!ctx->eptr && !ctx->getOptions().inference_only) {
             const auto& out_name = ctx->uu.params.output_names[i];
             copyFromOV(infer_request.get_tensor(out_name),
                        ctx->outMatR(i));
@@ -765,14 +774,19 @@ public:
         if (explicit_in_model_layout) {
             input_info.model().set_layout(::ov::Layout(*explicit_in_model_layout));
         } else if (m_model->input(input_name).get_shape().size() == 4u) {
-            // NB: Back compatibility with IR's without any layout information.
-            // Note that default is only applicable for 4D inputs in order to
-            // support auto resize for image use cases.
-            GAPI_LOG_WARNING(NULL, "Failed to find layout for input layer \""
-                    << input_name << "\" - NCHW is set by default");
-            const std::string default_layout = "NCHW";
-            input_info.model().set_layout(::ov::Layout(default_layout));
-            m_input_model_layout.emplace(input_name, default_layout);
+            const auto& input_layout = ::ov::layout::get_layout(m_model->input(input_name));
+            if (!input_layout.empty()) {
+                GAPI_LOG_INFO(NULL, "Model input layout " << input_name << " found: " << input_layout.to_string() << ".");
+            } else {
+                // NB: Back compatibility with IR's without any layout information.
+                // Note that default is only applicable for 4D inputs in order to
+                // support auto resize for image use cases.
+                GAPI_LOG_WARNING(NULL, "Failed to find layout for input layer \""
+                        << input_name << "\" - NCHW is set by default");
+                const std::string default_layout = "NCHW";
+                input_info.model().set_layout(::ov::Layout(default_layout));
+                m_input_model_layout.emplace(input_name, default_layout);
+            }
         }
         const auto explicit_in_tensor_layout = lookUp(m_input_tensor_layout, input_name);
         if (explicit_in_tensor_layout) {
@@ -990,6 +1004,11 @@ struct Infer: public cv::detail::KernelTag {
         reqPool.getIdleRequest()->execute(
                 IInferExecutor::Task {
                     [ctx](::ov::InferRequest &infer_request) {
+                        // NB: No need to populate model inputs with data
+                        // if it's inference only mode.
+                        if (ctx->getOptions().inference_only) {
+                            return;
+                        }
                         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
                             const auto& input_name = ctx->uu.params.input_names[i];
                             auto input_tensor = infer_request.get_tensor(input_name);
@@ -1069,6 +1088,10 @@ struct InferROI: public cv::detail::KernelTag {
     static void run(std::shared_ptr<OVCallContext> ctx,
                     cv::gimpl::ov::RequestPool     &reqPool) {
         using namespace std::placeholders;
+        if (ctx->getOptions().inference_only) {
+            cv::util::throw_error(
+                    std::logic_error("OV Backend: Inference only mode is not supported for InferROI!"));
+        }
         reqPool.getIdleRequest()->execute(
             IInferExecutor::Task {
                 [ctx](::ov::InferRequest &infer_request) {
@@ -1141,6 +1164,10 @@ struct InferList: public cv::detail::KernelTag {
 
     static void run(std::shared_ptr<OVCallContext> ctx,
                     cv::gimpl::ov::RequestPool     &reqPool) {
+        if (ctx->getOptions().inference_only) {
+            cv::util::throw_error(
+                    std::logic_error("OV Backend: Inference only mode is not supported for InferList!"));
+        }
         const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
         // NB: In case there is no input data need to post output anyway
         if (in_roi_vec.empty()) {
@@ -1257,6 +1284,10 @@ struct InferList2: public cv::detail::KernelTag {
 
     static void run(std::shared_ptr<OVCallContext> ctx,
                     cv::gimpl::ov::RequestPool     &reqPool) {
+        if (ctx->getOptions().inference_only) {
+            cv::util::throw_error(
+                    std::logic_error("OV Backend: Inference only mode is not supported for InferList2!"));
+        }
         GAPI_Assert(ctx->inArgs().size() > 1u
                 && "This operation must have at least two arguments");
         // NB: This blob will be used to make roi from its, so
@@ -1348,9 +1379,9 @@ class GOVBackendImpl final: public cv::gapi::GBackend::Priv {
     }
 
     virtual EPtr compile(const ade::Graph &graph,
-                         const cv::GCompileArgs &,
+                         const cv::GCompileArgs &compileArgs,
                          const std::vector<ade::NodeHandle> &nodes) const override {
-        return EPtr{new cv::gimpl::ov::GOVExecutable(graph, nodes)};
+        return EPtr{new cv::gimpl::ov::GOVExecutable(graph, compileArgs, nodes)};
     }
 
     virtual cv::GKernelPackage auxiliaryKernels() const override {
@@ -1391,9 +1422,12 @@ createInferRequests(::ov::CompiledModel &compiled_model,
 
 // GOVExecutable implementation //////////////////////////////////////////////
 cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
+                                            const cv::GCompileArgs &compileArgs,
                                             const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g) {
 
+    m_options.inference_only =
+        cv::gapi::getCompileArg<cv::gapi::wip::ov::benchmark_mode>(compileArgs).has_value();
     // FIXME: Currently this backend is capable to run a single inference node only.
     // Need to extend our island fusion with merge/not-to-merge decision making parametrization
     GConstGOVModel ovm(g);
@@ -1471,7 +1505,7 @@ void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     const auto &op = m_gm.metadata(this_nh).get<Op>();
 
     auto ctx = std::make_shared<OVCallContext>(uu, out, op.args, op.outs,
-            std::move(stub_meta), std::move(input_objs), std::move(output_objs));
+            std::move(stub_meta), std::move(input_objs), std::move(output_objs), m_options);
 
     const auto &kk = giem.metadata(this_nh).get<OVCallable>();
 

@@ -1,6 +1,6 @@
 #include "perf_precomp.hpp"
-#include "opencv2/core/softfloat.hpp"
 #include <numeric>
+#include "opencv2/core/softfloat.hpp"
 
 namespace opencv_test
 {
@@ -451,7 +451,6 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOpTest,
         testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_8SC1, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, CV_32SC1, CV_32FC1)
     )
 );
-
 
 ///////////// PatchNaNs ////////////////////////
 

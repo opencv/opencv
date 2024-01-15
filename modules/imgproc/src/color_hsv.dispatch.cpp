@@ -219,7 +219,7 @@ bool oclCvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, b
     int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 255);
 
     if(!h.createKernel("HSV2RGB", ocl::imgproc::color_hsv_oclsrc,
-                       format("-D dcn=%d -D bidx=%d -D hrange=%d -D hscale=%ff", dcn, bidx, hrange, 6.f/hrange)))
+                       format("-D DCN=%d -D BIDX=%d -D HRANGE=%d -D HSCALE=%ff", dcn, bidx, hrange, 6.f/hrange)))
     {
         return false;
     }
@@ -234,7 +234,7 @@ bool oclCvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, b
     int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 255);
 
     if(!h.createKernel("HLS2RGB", ocl::imgproc::color_hsv_oclsrc,
-                       format("-D dcn=%d -D bidx=%d -D hrange=%d -D hscale=%ff", dcn, bidx, hrange, 6.f/hrange)))
+                       format("-D DCN=%d -D BIDX=%d -D HRANGE=%d -D HSCALE=%ff", dcn, bidx, hrange, 6.f/hrange)))
     {
         return false;
     }
@@ -249,7 +249,7 @@ bool oclCvtColorBGR2HLS( InputArray _src, OutputArray _dst, int bidx, bool full 
     float hscale = (_src.depth() == CV_32F ? 360.f : (!full ? 180.f : 256.f))/360.f;
 
     if(!h.createKernel("RGB2HLS", ocl::imgproc::color_hsv_oclsrc,
-                       format("-D hscale=%ff -D bidx=%d -D dcn=3", hscale, bidx)))
+                       format("-D HSCALE=%ff -D BIDX=%d -D DCN=3", hscale, bidx)))
     {
         return false;
     }
@@ -264,8 +264,8 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
     int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 256);
 
     cv::String options = (_src.depth() == CV_8U ?
-                          format("-D hrange=%d -D bidx=%d -D dcn=3", hrange, bidx) :
-                          format("-D hscale=%ff -D bidx=%d -D dcn=3", hrange*(1.f/360.f), bidx));
+                          format("-D HRANGE=%d -D BIDX=%d -D DCN=3", hrange, bidx) :
+                          format("-D HSCALE=%ff -D BIDX=%d -D DCN=3", hrange*(1.f/360.f), bidx));
 
     if(!h.createKernel("RGB2HSV", ocl::imgproc::color_hsv_oclsrc, options))
     {

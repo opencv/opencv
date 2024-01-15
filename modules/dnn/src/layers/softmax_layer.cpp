@@ -51,6 +51,7 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <opencv2/core/utils/logger.hpp>
+#include "cpu_kernels/softmax.hpp"
 using std::max;
 
 #ifdef HAVE_OPENCL
@@ -74,7 +75,7 @@ public:
 
     SoftMaxLayerImpl(const LayerParams& params)
     {
-        axisRaw = params.get<int>("axis", 1);
+        axisRaw = params.get<int>("axis", -1);
         logSoftMax = params.get<bool>("log_softmax", false);
         setParamsFrom(params);
     }
@@ -223,89 +224,15 @@ public:
         std::vector<Mat> inputs, outputs, internals;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
-        internals_arr.getMatVector(internals);
 
         const Mat &src = inputs[0];
         Mat &dst = outputs[0];
-
         int axis = normalize_axis(axisRaw, src.dims);
-        size_t outerSize = src.total(0, axis), channels = src.size[axis],
-                innerSize = src.total(axis + 1);
 
-        CV_Assert(src.type() == CV_32F);
-        CV_Assert(src.isContinuous() && dst.isContinuous());
-
-        const float *srcPtr = src.ptr<float>();
-        float *dstPtr = dst.ptr<float>();
-        float *bufPtr = internals[0].ptr<float>();
-
-        size_t outerStep = src.total(axis);
-        size_t cnStep = src.total(axis + 1);
-
-        //compute max along axis
-        for (size_t outerDim = 0; outerDim < outerSize; outerDim++)
-        {
-            size_t srcOffset = outerDim * outerStep;
-            size_t bufOffset = outerDim * cnStep;
-
-            memcpy(bufPtr + bufOffset, srcPtr + srcOffset, innerSize * sizeof(float));
-
-            for (size_t cnDim = 1; cnDim < channels; cnDim++)
-            {
-                for (size_t i = 0; i < innerSize; i++)
-                    bufPtr[bufOffset + i] = std::max(bufPtr[bufOffset + i], srcPtr[srcOffset + cnDim * cnStep + i]);
-            }
-        }
-
-        //subtract max
-        for (size_t outerDim = 0; outerDim < outerSize; outerDim++)
-        {
-            size_t srcOffset = outerDim * outerStep;
-            size_t bufOffset = outerDim * cnStep;
-
-            for (size_t cnDim = 0; cnDim < channels; cnDim++)
-            {
-                const int offset = srcOffset + cnDim * cnStep;
-                for (size_t i = 0; i < innerSize; i++)
-                    dstPtr[offset + i] = srcPtr[offset + i] - bufPtr[bufOffset + i];
-            }
-        }
-
-        cv::exp(dst, dst);
-
-        for (size_t outerDim = 0; outerDim < outerSize; outerDim++)
-        {
-            size_t srcOffset = outerDim * outerStep;
-            size_t bufOffset = outerDim * cnStep;
-
-            //sum exp along axis
-            for (size_t i = 0; i < innerSize; i++)
-                bufPtr[bufOffset + i] = 0.f;
-
-            for (size_t cnDim = 0; cnDim < channels; cnDim++)
-            {
-                const int offset = srcOffset + cnDim * cnStep;
-                for (size_t i = 0; i < innerSize; i++)
-                    bufPtr[bufOffset + i] += dstPtr[offset + i];
-            }
-
-            //divide by computed sum
-            for (size_t cnDim = 0; cnDim < channels; cnDim++)
-            {
-                const int offset = srcOffset + cnDim * cnStep;
-                for (size_t i = 0; i < innerSize; i++)
-                    dstPtr[offset + i] /= bufPtr[bufOffset + i];
-            }
-            if (logSoftMax)
-            {
-                for (size_t cnDim = 0; cnDim < channels; cnDim++)
-                {
-                    const int offset = srcOffset + cnDim * cnStep;
-                    for (size_t i = 0; i < innerSize; i++)
-                        dstPtr[offset + i] = log(dstPtr[offset + i]);
-                }
-            }
-        }
+        if(logSoftMax)
+            logSoftmax(dst, src, axis);
+        else
+            softmax(dst, src, axis);
     }
 
 #ifdef HAVE_CUDA

@@ -171,7 +171,7 @@ if(NOT ${found})
       endif()
     endif()
 
-    if(NOT ANDROID AND NOT IOS)
+    if(NOT ANDROID AND NOT IOS AND NOT XROS)
       if(CMAKE_HOST_UNIX)
         execute_process(COMMAND ${_executable} -c "from sysconfig import *; print(get_path('purelib'))"
                         RESULT_VARIABLE _cvpy_process
@@ -233,7 +233,7 @@ if(NOT ${found})
                           OUTPUT_STRIP_TRAILING_WHITESPACE)
         endif()
       endif()
-    endif(NOT ANDROID AND NOT IOS)
+    endif(NOT ANDROID AND NOT IOS AND NOT XROS)
   endif()
 
   # Export return values

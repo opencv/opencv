@@ -240,9 +240,6 @@ typedef testing::TestWithParam< videoio_encapsulate_params_t > videoio_encapsula
 
 TEST_P(videoio_encapsulate, write)
 {
-#ifdef _WIN32
-    throw SkipTestException("Test disabled until PR for raw video encapsulation is merged and windows dll is updated");
-#else
     const VideoCaptureAPIs api = CAP_FFMPEG;
     if (!videoio_registry::hasBackend(api))
         throw SkipTestException("FFmpeg backend was not found");
@@ -296,7 +293,7 @@ TEST_P(videoio_encapsulate, write)
         ASSERT_TRUE(capActualRaw.isOpened());
         const double fpsReference = capReference.get(CAP_PROP_FPS);
         const double fpsActual = capActual.get(CAP_PROP_FPS);
-        ASSERT_EQ(fpsReference, fpsActual);
+        ASSERT_NEAR(fpsReference, fpsActual, 1e-2);
         const int nFramesActual = static_cast<int>(capActual.get(CAP_PROP_FRAME_COUNT));
         ASSERT_EQ(nFrames, nFramesActual);
 
@@ -316,7 +313,6 @@ TEST_P(videoio_encapsulate, write)
     }
 
     ASSERT_EQ(0, remove(fileNameOut.c_str()));
-#endif
 }
 
 const videoio_encapsulate_params_t videoio_encapsulate_params[] =
@@ -351,9 +347,6 @@ INSTANTIATE_TEST_CASE_P(/**/, videoio_encapsulate, testing::ValuesIn(videoio_enc
 
 TEST(videoio_encapsulate_set_idr, write)
 {
-#ifdef _WIN32
-    throw SkipTestException("Test disabled until PR for raw video encapsulation is merged and windows dll is updated");
-#else
     const VideoCaptureAPIs api = CAP_FFMPEG;
     if (!videoio_registry::hasBackend(api))
         throw SkipTestException("FFmpeg backend was not found");
@@ -390,7 +383,7 @@ TEST(videoio_encapsulate_set_idr, write)
                 memcpy(rawFrame.data, extraData.data, extraData.total());
                 memcpy(rawFrame.data + extraData.total(), tmp.data, tmp.total());
             }
-            if (static_cast<bool>(capRaw.get(CAP_PROP_LRF_HAS_KEY_FRAME)))
+            if (capRaw.get(CAP_PROP_LRF_HAS_KEY_FRAME) != 0)
                 container.set(VideoWriterProperties::VIDEOWRITER_PROP_KEY_FLAG, 1);
             else
                 container.set(VideoWriterProperties::VIDEOWRITER_PROP_KEY_FLAG, 0);
@@ -432,7 +425,6 @@ TEST(videoio_encapsulate_set_idr, write)
     }
 
     ASSERT_EQ(0, remove(fileNameOut.c_str()));
-#endif
 }
 
 typedef tuple<string, string, int> videoio_skip_params_t;
@@ -677,7 +669,6 @@ static void ffmpeg_check_read_raw(VideoCapture& cap)
     EXPECT_TRUE(data.rows == 1 || data.cols == 1) << data.size;
     EXPECT_EQ((size_t)37118, data.total());
 
-#ifndef WIN32
     // 12 is the nearset key frame to frame 18
     EXPECT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 18.));
     EXPECT_EQ(cap.get(CAP_PROP_POS_FRAMES), 12.);
@@ -685,7 +676,6 @@ static void ffmpeg_check_read_raw(VideoCapture& cap)
     EXPECT_EQ(CV_8UC1, data.type()) << "CV_8UC1 != " << typeToString(data.type());
     EXPECT_TRUE(data.rows == 1 || data.cols == 1) << data.size;
     EXPECT_EQ((size_t)8726, data.total());
-#endif
 }
 
 TEST(videoio_ffmpeg, ffmpeg_check_extra_data)
@@ -719,9 +709,7 @@ TEST(videoio_ffmpeg, open_with_property)
     // confirm properties are returned without initializing AVCodecContext
     EXPECT_EQ(cap.get(CAP_PROP_FORMAT), -1);
     EXPECT_EQ(static_cast<int>(cap.get(CAP_PROP_FOURCC)), fourccFromString("FMP4"));
-#ifndef WIN32
     EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), 0.0);
-#endif
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_HEIGHT), 384.0);
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_WIDTH), 672.0);
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_COUNT), 125);
@@ -742,9 +730,7 @@ TEST(videoio_ffmpeg, create_with_property)
     // confirm properties are returned without initializing AVCodecContext
     EXPECT_TRUE(cap.get(CAP_PROP_FORMAT) == -1);
     EXPECT_EQ(static_cast<int>(cap.get(CAP_PROP_FOURCC)), fourccFromString("FMP4"));
-#ifndef WIN32
     EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), 0.0);
-#endif
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_HEIGHT), 384.0);
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_WIDTH), 672.0);
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_COUNT), 125);

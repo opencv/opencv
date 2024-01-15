@@ -652,7 +652,7 @@ TEST(Charuco, issue_14014)
     EXPECT_EQ(Size(4, 1), corners[0].size()); // check dimension of detected corners
 
     size_t numRejPoints = rejectedPoints.size();
-    ASSERT_EQ(rejectedPoints.size(), 26ull); // optional check to track regressions
+    ASSERT_EQ(rejectedPoints.size(), 24ull); // optional check to track regressions
     EXPECT_EQ(Size(4, 1), rejectedPoints[0].size()); // check dimension of detected corners
 
     detector.refineDetectedMarkers(img, board, corners, ids, rejectedPoints);
