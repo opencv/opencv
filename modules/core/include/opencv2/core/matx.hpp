@@ -761,7 +761,7 @@ inline Matx<_Tp, m, n>::operator Matx<T2, m, n>() const
 template<typename _Tp, int m, int n> template<int m1, int n1> inline
 Matx<_Tp, m1, n1> Matx<_Tp, m, n>::reshape() const
 {
-    CV_StaticAssert(m1*n1 == m*n, "Input and destnarion matrices must have the same number of elements");
+    CV_StaticAssert(m1*n1 == m*n, "Input and destination matrices must have the same number of elements");
     return (const Matx<_Tp, m1, n1>&)*this;
 }
 

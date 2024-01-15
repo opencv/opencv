@@ -40,6 +40,8 @@ public:
         model.setPreferableTarget(target);
 
         model.setNmsAcrossClasses(nmsAcrossClasses);
+        if (target == DNN_TARGET_CPU_FP16)
+            model.enableWinograd(false);
 
         std::vector<int> classIds;
         std::vector<float> confidences;
@@ -286,8 +288,9 @@ TEST_P(Test_Model, Classify)
 TEST_P(Test_Model, DetectRegion)
 {
     applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
         CV_TEST_TAG_LONG,
-        CV_TEST_TAG_MEMORY_2GB
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -346,8 +349,9 @@ TEST_P(Test_Model, DetectRegion)
 TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
 {
     applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
         CV_TEST_TAG_LONG,
-        CV_TEST_TAG_MEMORY_2GB
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -406,6 +410,8 @@ TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
 
 TEST_P(Test_Model, DetectionOutput)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // Check 'backward_compatible_check || in_out_elements_equal' failed at core/src/op/reshape.cpp:427:
     // While validating node 'v1::Reshape bbox_pred_reshape (ave_bbox_pred_rois[0]:f32{1,8,1,1}, Constant_388[0]:i64{4}) -> (f32{?,?,?,?})' with friendly_name 'bbox_pred_reshape':
@@ -629,7 +635,8 @@ TEST_P(Test_Model, Detection_normalized)
 TEST_P(Test_Model, Segmentation)
 {
     applyTestTag(
-        CV_TEST_TAG_MEMORY_2GB
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
     float norm = 0;
@@ -744,6 +751,8 @@ TEST_P(Test_Model, TextRecognitionWithCTCPrefixBeamSearch)
 
 TEST_P(Test_Model, TextDetectionByDB)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     if (target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_CPU_FP16)
@@ -786,6 +795,8 @@ TEST_P(Test_Model, TextDetectionByDB)
 
 TEST_P(Test_Model, TextDetectionByEAST)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     std::string imgPath = _tf("text_det_test2.jpg");
     std::string weightPath = _tf("frozen_east_text_detection.pb", false);
 

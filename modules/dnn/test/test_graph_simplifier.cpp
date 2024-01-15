@@ -35,6 +35,7 @@ class Test_Graph_Simplifier : public ::testing::Test {
 
 TEST_F(Test_Graph_Simplifier, GeluSubGraph) {
     test("gelu", "Gelu");
+    test("bias_gelu", std::vector<std::string>{"Gelu", "NaryEltwise"});
 }
 
 TEST_F(Test_Graph_Simplifier, GeluApproximationSubGraph) {
@@ -43,6 +44,11 @@ TEST_F(Test_Graph_Simplifier, GeluApproximationSubGraph) {
 
 TEST_F(Test_Graph_Simplifier, LayerNormSubGraph) {
     test("layer_norm_expanded", "LayerNormalization");
+    test("layer_norm_expanded_with_initializers", "LayerNormalization");
+}
+
+TEST_F(Test_Graph_Simplifier, LayerNormNoFusionSubGraph) {
+    test("layer_norm_no_fusion", std::vector<std::string>{"NaryEltwise", "Reduce", "Sqrt"});
 }
 
 TEST_F(Test_Graph_Simplifier, ResizeSubgraph) {
@@ -126,6 +132,15 @@ TEST_F(Test_Graph_Simplifier, MishSubgraph) {
     */
     test("mish_no_softplus", "Mish");
     test("mish", "Mish");
+}
+
+TEST_F(Test_Graph_Simplifier, AttentionSubgraph) {
+    /* Test for 2 subgraphs
+        - AttentionSubgraph
+        - AttentionSingleHeadSubgraph
+    */
+    test("attention", "Attention");
+    test("attention_single_head", "Attention");
 }
 
 }}

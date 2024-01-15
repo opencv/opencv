@@ -154,6 +154,12 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 # endif
 #endif
 
+#if defined __loongarch64
+#include "sys/auxv.h"
+#define LA_HWCAP_LSX   (1<<4)
+#define LA_HWCAP_LASX  (1<<5)
+#endif
+
 #if defined _WIN32 || defined WINCE
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
@@ -245,7 +251,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #include "omp.h"
 #endif
 
-#if defined __unix__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __GLIBC__ || defined __HAIKU__
+#if defined __unix__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __GLIBC__ || defined __HAIKU__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -554,7 +560,7 @@ struct HWFeatures
         }
     #endif // CV_CPUID_X86
 
-    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNX__
+    #if defined __ANDROID__ || defined __linux__ || defined __QNX__
     #ifdef __aarch64__
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
@@ -603,7 +609,7 @@ struct HWFeatures
         CV_LOG_INFO(NULL, "- FP16 instructions is NOT enabled via build flags");
         #endif
       #endif
-    #elif defined __arm__ && !defined __FreeBSD__
+    #elif defined __arm__
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
@@ -702,12 +708,11 @@ struct HWFeatures
         have[CV_CPU_RVV] = true;
     #endif
 
-    #if defined __loongarch_sx
-        have[CV_CPU_LSX] = true;
-    #endif
+    #if defined __loongarch64 && defined __linux__
+        int flag = (int)getauxval(AT_HWCAP);
 
-    #if defined __loongarch_asx
-        have[CV_CPU_LASX] = true;
+        have[CV_CPU_LSX] = (flag & LA_HWCAP_LSX) != 0;
+        have[CV_CPU_LASX] = (flag & LA_HWCAP_LASX) != 0;
     #endif
 
         bool skip_baseline_check = false;
