@@ -2812,11 +2812,13 @@ CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArr
 *@param cameraMatrix(4*3 matrix), which contains vector parameters to define a camera 
 *@param width, height are the size of the screen
 *@param shadingMode represents different ways of shading
+*@param cullingMode cull mode
 *@param depth_buf(matrix of depth buffer image) represents the depth image
 *@param color_buf(matrix of color buffer image) represents the final rendered image
 * */
 CV_EXPORTS  void triangleRasterize(InputArray vertices, InputArray indices,
     InputArray colors, InputArray cameraMatrix, int width, int height, bool shadingMode,
+    int cullingMode,
     OutputArray depth_buf, OutputArray color_buf);
 
 //! @} _3d

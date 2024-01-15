@@ -160,6 +160,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 
 void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
                        InputArray cameraMatrix, int width, int height, bool shadingMode,
+                       int cullingModeIdx,
                        OutputArray _depthBuffer, OutputArray _colorBuffer)
 {
     //TODO: fix this
@@ -173,7 +174,24 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
     bool invDepthMode = false;
     //TODO: add this to args
     // default mode is CW
-    CullingMode cullingMode = CullingMode::None;
+    CullingMode cullingMode;
+    //TODO: this
+    if (cullingModeIdx == 0)
+    {
+        cullingMode = CullingMode::None;
+    }
+    else if (cullingModeIdx == 1)
+    {
+        cullingMode = CullingMode::CW;
+    }
+    else if (cullingModeIdx == 2)
+    {
+        cullingMode = CullingMode::CCW;
+    }
+    else
+    {
+        CV_Error(CV_StsBadArg, "Incorrect culling mode!!!");
+    }
 
     bool needDepth = _depthBuffer.needed();
     bool needColor = _colorBuffer.needed();
