@@ -177,7 +177,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     {
         // Prefilled to measure pure rendering time w/o allocation and clear
         depth_buf = Mat(height, width, CV_32F, zFar);
-        color_buf = Mat(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
+        color_buf = Mat(height, width, CV_32FC3, Scalar::all(0));
 
         startTimer();
         cv::triangleRasterize(vertices, indices, colors, cameraMatrix, width, height,

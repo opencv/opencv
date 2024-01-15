@@ -57,7 +57,6 @@ static Matx44f perspectMatrixCal(float aspect, float fovy, float zNear, float zF
     return res;
 }
 
-
 static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& colorBuf,
                          bool invDepthMode, ShadingType shadingType, CullingMode cullingMode)
 {
@@ -108,7 +107,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
             if ((f[0] >= 0) && (f[1] >= 0) && (f[2] >= 0))
             {
                 bool update = false;
-                float zInter;
+                float zInter = 0.f;
                 if (!depthBuf.empty())
                 {
                     zInter = 1.0f / (f[0] * invz[0] + f[1] * invz[1] + f[2] * invz[2]);
@@ -119,7 +118,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
                         depthBuf.at<float>(y, x) = zInter;
                     }
                 }
-                else
+                else // Shading::White
                 {
                     update = true;
                 }
@@ -179,6 +178,7 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
     bool needDepth = _depthBuffer.needed();
     bool needColor = _colorBuffer.needed();
 
+    //TODO: use CV_Check or CV_Assert
     if (!needDepth && !needColor)
     {
         CV_Error(Error::StsBadArg, "No depth nor color output image provided");
@@ -280,7 +280,7 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
         {
             // other types are not supported yet
             _colorBuffer.create(cv::Size(width, height), CV_32FC3);
-            _colorBuffer.setTo(cv::Scalar(0, 0, 0));
+            _colorBuffer.setTo(cv::Scalar::all(0));
         }
         else
         {
@@ -294,7 +294,7 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
             if (_colorBuffer.empty())
             {
                 _colorBuffer.create(cv::Size(width, height), CV_32FC3);
-                _colorBuffer.setTo(cv::Scalar(0, 0, 0));
+                _colorBuffer.setTo(cv::Scalar::all(0));
             }
 
             colorBuf = _colorBuffer.getMat();
@@ -308,27 +308,6 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
     float fovyDegrees = fovy;
     float fovyRadians = fovyDegrees * CV_PI/180.0;
     Matx44f perspectMatrix = perspectMatrixCal((float)width / (float)height, fovyRadians, zNear, zFar);
-
-    //TODO: find out what the heck is this and fix it
-    Matx44f modelMatrix;
-    {
-        Matx44f modelMatrix_scale(15,  0,  0,  0,
-                                   0, 15,  0,  0,
-                                   0,  0, 15,  0,
-                                   0,  0,  0,  1);
-        Matx44f modelMatrix_translate(1,  0,  0,   0,
-                                      0,  1,  0,  20,
-                                      0,  0,  1, -15,
-                                      0,  0,  0,   1);
-        
-        Matx44f modelMatrix_rotate_y(-1, 0,  0, 0,
-                                      0, 1,  0, 0,
-                                      0, 0, -1, 0,
-                                      0, 0,  0, 1);
-
-        modelMatrix = modelMatrix_translate * modelMatrix_scale * modelMatrix_rotate_y;
-    }
-    //Matx44f mvpMatrix = perspectMatrix * lookAtMatrix * modelMatrix;
 
     Matx44f mvpMatrix = perspectMatrix * lookAtMatrix;
 
