@@ -2,47 +2,11 @@
 
 namespace cv {
 
-enum class ShadingType
+RasterizeSettings::RasterizeSettings()
 {
-    White = 0,
-    Flat = 1,
-    Shaded = 2
-};
-
-enum class CullingMode
-{
-    None,
-    CW,
-    CCW
-};
-
-static Vec3f normalize_vector(Vec3f a)
-{
-    float length = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
-    return Vec3f(a[0] / length, a[1] / length, a[2] / length);
+    shadingType = ShadingType::Shaded;
+    cullingMode = CullingMode::CW;
 }
-
-static Matx44f lookAtMatrixCal(const Vec3f& position, const Vec3f& lookat, const Vec3f& upVector)
-{
-    Vec3f w = normalize_vector(position - lookat);
-    Vec3f u = normalize_vector(upVector.cross(w));
-
-    Vec3f v = w.cross(u);
-
-    Matx44f res(u[0], u[1], u[2],   0,
-                v[0], v[1], v[2],   0,
-                w[0], w[1], w[2],   0,
-                   0,    0,    0,   1.f);
-
-    Matx44f translate(1.f,   0,   0, -position[0],
-                        0, 1.f,   0, -position[1],
-                        0,   0, 1.f, -position[2],
-                        0,   0,   0,          1.0f);
-    res = res * translate;
-
-    return res;
-}
-
 
 static Matx44f perspectMatrixCal(float aspect, float fovy, float zNear, float zFar)
 {
@@ -58,7 +22,7 @@ static Matx44f perspectMatrixCal(float aspect, float fovy, float zNear, float zF
 }
 
 static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& colorBuf,
-                         bool invDepthMode, ShadingType shadingType, CullingMode cullingMode)
+                         bool invDepthMode, RasterizeSettings settings)
 {
     // any of buffers can be empty
     int width  = std::max(colorBuf.cols, depthBuf.cols);
@@ -83,8 +47,8 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     float d = ac.x*bc.y - ac.y*bc.x;
 
     // culling and degenerated triangle removal
-    if ((cullingMode == CullingMode::CW  && d <= 0) ||
-        (cullingMode == CullingMode::CCW && d >= 0) ||
+    if ((settings.cullingMode == CullingMode::CW  && d <= 0) ||
+        (settings.cullingMode == CullingMode::CCW && d >= 0) ||
         (abs(d) < 1e-6))
     {
         return;
@@ -126,11 +90,11 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
                 if (!colorBuf.empty() && update)
                 {
                     Vec3f color {0, 0, 0};
-                    if (shadingType == ShadingType::White)
+                    if (settings.shadingType == ShadingType::White)
                     {
                         color = { 1.f, 1.f, 1.f };
                     }
-                    if (shadingType == ShadingType::Flat)
+                    if (settings.shadingType == ShadingType::Flat)
                     {
                         color = colors[0];
                     }
@@ -158,107 +122,99 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 }
 
 
-void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
-                       InputArray cameraMatrix, int width, int height, bool shadingMode,
-                       int cullingModeIdx,
-                       OutputArray _depthBuffer, OutputArray _colorBuffer)
+CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
+                                   InputArray cameraPose, float fovyRadians, float zNear, float zFar,
+                                   int width, int height, RasterizeSettings settings,
+                                   OutputArray _depthBuffer, OutputArray _colorBuffer)
 {
-    //TODO: fix this
-    Mat camera = cameraMatrix.getMat();
-    Vec3f position = camera.row(0);
-    Vec3f lookat = camera.row(1);
-    Vec3f upVector = camera.row(2);
-    float fovy = camera.at<float>(3, 0), zNear = camera.at<float>(3, 1), zFar = camera.at<float>(3, 2);
-
-    //TODO: add this to args
-    bool invDepthMode = false;
-    //TODO: add this to args
-    // default mode is CW
-    CullingMode cullingMode;
-    //TODO: this
-    if (cullingModeIdx == 0)
-    {
-        cullingMode = CullingMode::None;
-    }
-    else if (cullingModeIdx == 1)
-    {
-        cullingMode = CullingMode::CW;
-    }
-    else if (cullingModeIdx == 2)
-    {
-        cullingMode = CullingMode::CCW;
-    }
-    else
-    {
-        CV_Error(CV_StsBadArg, "Incorrect culling mode!!!");
-    }
-
     bool needDepth = _depthBuffer.needed();
     bool needColor = _colorBuffer.needed();
 
-    //TODO: use CV_Check or CV_Assert
     if (!needDepth && !needColor)
     {
         CV_Error(Error::StsBadArg, "No depth nor color output image provided");
     }
 
-    bool hasVerts  = !_vertices.empty();
+    CV_Assert(cameraPose.type() == CV_32F);
+    CV_Assert((cameraPose.size() == Size {4, 3}) || (cameraPose.size() == Size {4, 4}));
+
+    CV_Assert((fovyRadians > 0) && (fovyRadians < CV_PI));
+    CV_Assert(zNear > 0);
+    CV_Assert(zFar > zNear);
+    CV_Assert((width > 0) && (height > 0));
+
+    Mat cpMat = cameraPose.getMat();
+    Matx44f camPoseMat = Matx44f::eye();
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            camPoseMat(i, j) = cpMat.at<float>(i, j);
+        }
+    }
+
+    // world-to-camera coord system
+    Matx44f lookAtMatrix = camPoseMat.inv();
+
+    // camera to NDC: [-1, 1]^3
+    Matx44f perspectMatrix = perspectMatrixCal((float)width / (float)height, fovyRadians, zNear, zFar);
+
+    Matx44f mvpMatrix = perspectMatrix * lookAtMatrix;
+
     bool hasIdx    = !_indices.empty();
     bool hasColors = !_colors.empty();
 
     Mat vertices, colors, triangles;
     int nVerts = 0, nColors = 0, nTriangles = 0;
 
-    ShadingType shadingType = ShadingType::White;
-
     if (hasIdx)
     {
-        if (!hasVerts)
+        CV_CheckFalse(_vertices.empty(), "No vertices provided along with indices array");
+
+        int vertexType = _vertices.type();
+        CV_Assert(vertexType == CV_32FC1 || vertexType == CV_32FC3);
+        vertices = _vertices.getMat();
+        if ((_vertices.channels() == 1) && (_vertices.rows() == 3))
         {
-            CV_Error(Error::StsBadArg, "No vertices provided");
+            vertices = vertices.t();
+        }
+        vertices = vertices.reshape(3, 1).t();
+        nVerts = vertices.total();
+
+        int indexType = _indices.type();
+        CV_Assert(indexType == CV_32SC1 || indexType == CV_32SC3);
+        triangles = _indices.getMat();
+        if ((_indices.channels() == 1) && (_indices.rows() == 3))
+        {
+            triangles = triangles.t();
+        }
+        triangles = triangles.reshape(3, 1).t();
+        nTriangles = triangles.total();
+
+        if (hasColors)
+        {
+            int colorType = _colors.type();
+            CV_Assert(colorType == CV_32FC1 || colorType == CV_32FC3);
+            colors = _colors.getMat();
+            if ((_colors.channels() == 1) && (_colors.rows() == 3))
+            {
+                colors = colors.t();
+            }
+            colors = colors.reshape(3, 1).t();
+            nColors = colors.total();
+
+            CV_Assert(nColors == nVerts);
+            CV_Assert(settings.shadingType == ShadingType::Flat ||
+                      settings.shadingType == ShadingType::Shaded);
         }
         else
         {
-            //TODO: check rows/cols/channels
-            CV_Assert(_vertices.depth() == CV_32F);
-            bool vert3f = (_vertices.channels() * _vertices.total() % 3 == 0);
-            // not supported yet
-            //bool vert4f = (_vertices.channels() * _vertices.total() % 4 == 0);
-            //CV_Assert(vert3f || vert4f);
-            CV_Assert(vert3f);
-
-            vertices = _vertices.getMat().reshape(3, 1).t();
-            nVerts = vertices.total();
-
-            //TODO: check rows/cols/channels
-            // the rest int types are not supported yet
-            CV_Assert(_indices.depth() == CV_32S);
-            CV_Assert(_indices.channels() * _indices.total() % 3 == 0);
-
-            triangles = _indices.getMat().reshape(3, 1).t();
-            nTriangles = triangles.total();
-
-            if (hasColors)
-            {
-                //TODO: check rows/cols/channels
-                CV_Assert(_colors.depth() == CV_32F);
-                bool col3f = (_colors.channels() * _colors.total() % 3 == 0);
-                // 4f is not supported yet
-                CV_Assert(col3f);
-
-                colors = _colors.getMat().reshape(3, 1).t();
-                nColors = colors.total();
-
-                CV_Assert(nColors == nVerts);
-
-                shadingType = shadingMode ? ShadingType::Shaded : ShadingType::Flat;
-            }
-            else
-            {
-                shadingType = ShadingType::White;
-            }
+            CV_Assert(settings.shadingType == ShadingType::White);
         }
     }
+
+    //TODO: add this to settings
+    bool invDepthMode = false;
 
     Mat depthBuf;
     if (needDepth)
@@ -319,16 +275,6 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
         }
     }
 
-    // world-to-camera coord system
-    Matx44f lookAtMatrix = lookAtMatrixCal(position, lookat, upVector);
-    // camera to NDC: [-1, 1]^3
-    //TODO: argument angle in radians
-    float fovyDegrees = fovy;
-    float fovyRadians = fovyDegrees * CV_PI/180.0;
-    Matx44f perspectMatrix = perspectMatrixCal((float)width / (float)height, fovyRadians, zNear, zFar);
-
-    Matx44f mvpMatrix = perspectMatrix * lookAtMatrix;
-
     for (int t = 0; t < nTriangles; t++)
     {
         Vec3i tri = triangles.at<Vec3i>(t);
@@ -366,7 +312,7 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
             ver[i] = vscreen;
         }
 
-        drawTriangle(ver, col, depthBuf, colorBuf, invDepthMode, shadingType, cullingMode);
+        drawTriangle(ver, col, depthBuf, colorBuf, invDepthMode, settings);
     }
 }
 

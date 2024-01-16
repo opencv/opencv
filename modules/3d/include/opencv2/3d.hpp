@@ -2805,21 +2805,67 @@ CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputA
 */
 CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices);
 
-/*
-*@param vertices(vector of Vec3f) vertex coordinates of a mesh
-*@param indices(vector of Vec3i) vertex index of the mesh in vertices
-*@param colors(vector of Vec3f) vertex colors of a mesh
-*@param cameraMatrix(4*3 matrix), which contains vector parameters to define a camera 
-*@param width, height are the size of the screen
-*@param shadingMode represents different ways of shading
-*@param cullingMode cull mode
-*@param depth_buf(matrix of depth buffer image) represents the depth image
-*@param color_buf(matrix of color buffer image) represents the final rendered image
-* */
-CV_EXPORTS  void triangleRasterize(InputArray vertices, InputArray indices,
-    InputArray colors, InputArray cameraMatrix, int width, int height, bool shadingMode,
-    int cullingMode,
-    OutputArray depth_buf, OutputArray color_buf);
+// Triangle fill settings
+enum class ShadingType
+{
+    // a white color is used for the whole triangle
+    White = 0,
+    // a color of 1st vertex of each triangle is used
+    Flat = 1,
+    // a color is interpolated between 3 vertices with perspective correction
+    Shaded = 2
+};
+
+// Face culling settings: what faces are drawn after face culling
+enum class CullingMode
+{
+    // all faces are drawn, no culling is actually performed
+    None = 0,
+    // triangles which vertices are given in clockwork order are drawn
+    CW = 1,
+    // triangles which vertices are given in counterclockwork order are drawn
+    CCW = 2
+};
+
+/**
+ * @brief Structure to keep settings for rasterization
+ */
+struct CV_EXPORTS RasterizeSettings
+{
+    RasterizeSettings();
+
+    inline RasterizeSettings& setShadingType(ShadingType st) { shadingType = st; return *this; }
+    inline RasterizeSettings& setCullingMode(CullingMode cm) { cullingMode = cm; return *this; }
+
+    ShadingType shadingType;
+    CullingMode cullingMode;
+};
+
+
+/** @brief Renders a set of triangles on a depth and/or RGB image.
+
+The output images are not cleared before the rendering and therefore can be used for drawing over
+existing image or for depth joining with pre-filled Z-buffer.
+Triangles can be drawn white (1.0, 1.0, 1.0), flat-shaded or with a color interpolated between vertices.
+In flat-shaded mode a color of 1st vertex of each triangle is used.
+
+*@param vertices vertices coordinates array. Should contain values of CV_32FC3 type or a compatible one (e.g. cv::Vec3f, etc.)
+*@param indices triangle vertices index array, 3 per triangle. Each index indicates a vertex in a vertices array. Should contain CV_32SC3 values
+*@param colors per-vertex colors of CV_32FC3 type, can be empty.
+*@param cameraPose a 4x3 or 4x4 float matrix containing camera pose
+*@param fovY field of view in vertical direction, given in radians
+*@param zNear minimum Z value to render, everything closer is clipped
+*@param zFar maximum Z value to render, everything farther is clipped
+*@param width frame width
+*@param height frame height
+*@param settings see RasterizeSettings
+*@param depthBuf a width x height array of floats containing resulting Z buffer. Reused if not empty. Created and filled by zFar values if a user-provided array is empty. To disable Z buffer output, pass cv::noArray() here.
+*@param colorBuf a width x height array of CV_32FC3 representing the final rendered image. Reused if not empty. Created and filled by zeroes if a user-provided array is empty. To disable color output, pass cv::noArray() here.
+*/
+CV_EXPORTS void triangleRasterize(InputArray vertices, InputArray indices, InputArray colors,
+                                  InputArray cameraPose, float fovY, float zNear, float zFar,
+                                  int width, int height, RasterizeSettings settings = RasterizeSettings(),
+                                  OutputArray depthBuf=noArray(), OutputArray colorBuf=noArray());
 
 //! @} _3d
 } //end namespace cv

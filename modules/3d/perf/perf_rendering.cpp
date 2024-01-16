@@ -3,25 +3,6 @@
 namespace opencv_test
 {
 
-Matx43f makeCamMatrix_TODO_rewrite_it_later(Vec3f position, Vec3f lookat, Vec3f upVector, double fovy, double zNear, double zFar);
-Matx43f makeCamMatrix_TODO_rewrite_it_later(Vec3f position, Vec3f lookat, Vec3f upVector, double fovy, double zNear, double zFar)
-{
-    Matx43f m;
-    m(0, 0) = position(0); m(0, 1) = position(1); m(0, 2) = position(2);
-    m(1, 0) = lookat  (0); m(1, 1) = lookat  (1); m(1, 2) = lookat  (2);
-    m(2, 0) = upVector(0); m(2, 1) = upVector(1); m(2, 2) = upVector(2);
-    m(3, 0) = fovy;        m(3, 1) = zNear;       m(3, 2) = zFar;
-
-    return m;
-}
-
-enum class ShadingType
-{
-    White = 0,
-    Flat = 1,
-    Shaded = 2
-};
-
 // that was easier than using CV_ENUM() macro
 namespace
 {
@@ -36,7 +17,7 @@ namespace
         void PrintTo(std::ostream *os) const
         {
             int v = int(val);
-            if (v >= 0 && v < 5)
+            if (v >= 0 && v < (int)vals.size())
             {
                 *os << svals[v];
             }
@@ -89,7 +70,7 @@ namespace
         void PrintTo(std::ostream *os) const
         {
             int v = int(val);
-            if (v >= 0 && v < 5)
+            if (v >= 0 && v < (int)vals.size())
             {
                 *os << svals[v];
             }
@@ -121,6 +102,32 @@ namespace
     static inline void PrintTo(const OutputsEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
+static Vec3f normalize_vector(Vec3f a)
+{
+    float length = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+    return Vec3f(a[0] / length, a[1] / length, a[2] / length);
+}
+
+static Matx44f lookAtMatrixCal(const Vec3f& position, const Vec3f& lookat, const Vec3f& upVector)
+{
+    Vec3f w = normalize_vector(position - lookat);
+    Vec3f u = normalize_vector(upVector.cross(w));
+
+    Vec3f v = w.cross(u);
+
+    Matx44f res(u[0], u[1], u[2],   0,
+                v[0], v[1], v[2],   0,
+                w[0], w[1], w[2],   0,
+                   0,    0,    0,   1.f);
+
+    Matx44f translate(1.f,   0,   0, -position[0],
+                        0, 1.f,   0, -position[1],
+                        0,   0, 1.f, -position[2],
+                        0,   0,   0,          1.0f);
+    res = res * translate;
+
+    return res;
+}
 
 // resolution, shading type, outputs needed
 typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, ShadingTypeEnum, OutputsEnum>> RenderingTest;
@@ -170,7 +177,9 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
 
     double zNear = 0.1, zFar = 50;
 
-    Mat cameraMatrix = Mat(makeCamMatrix_TODO_rewrite_it_later(position, lookat, upVector, fovy, zNear, zFar));
+    Matx44f cameraPose = lookAtMatrixCal(position, lookat, upVector);
+    float fovYradians = fovy / 180.f * CV_PI;
+    RasterizeSettings settings = RasterizeSettings().setCullingMode(CullingMode::CW).setShadingType(shadingType);
 
     Mat depth_buf, color_buf;
     while (next())
@@ -180,9 +189,8 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
         color_buf = Mat(height, width, CV_32FC3, Scalar::all(0));
 
         startTimer();
-        cv::triangleRasterize(vertices, indices, colors, cameraMatrix, width, height,
-                              (shadingType == ShadingType::Shaded),
-                              1, /* CullingMode::CW */
+        cv::triangleRasterize(vertices, indices, colors, cameraPose, fovYradians, zNear, zFar,
+                              width, height, settings,
                               (outputs != Outputs::ColorOnly) ? depth_buf : noArray(),
                               (outputs != Outputs::DepthOnly) ? color_buf : noArray());
         stopTimer();

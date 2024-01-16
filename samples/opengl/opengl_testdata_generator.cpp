@@ -34,20 +34,6 @@ enum class ModelType
     Centered = 4
 };
 
-enum class ShadingType
-{
-    White = 0,
-    Flat = 1,
-    Shaded = 2
-};
-
-enum class CullingMode
-{
-    None,
-    CW,
-    CCW
-};
-
 class ModelData
 {
 public:

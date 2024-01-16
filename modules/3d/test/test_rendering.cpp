@@ -3,13 +3,6 @@
 namespace opencv_test { namespace {
 using namespace cv;
 
-enum class CullingMode
-{
-    None,
-    CW,
-    CCW
-};
-
 // that was easier than using CV_ENUM() macro
 namespace
 {
@@ -24,7 +17,7 @@ namespace
         void PrintTo(std::ostream *os) const
         {
             int v = int(val);
-            if (v >= 0 && v < 5)
+            if (v >= 0 && v < (int)vals.size())
             {
                 *os << svals[v];
             }
@@ -56,14 +49,6 @@ namespace
     static inline void PrintTo(const CullingModeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
-
-enum class ShadingType
-{
-    White = 0,
-    Flat = 1,
-    Shaded = 2
-};
-
 // that was easier than using CV_ENUM() macro
 namespace
 {
@@ -78,7 +63,7 @@ namespace
         void PrintTo(std::ostream *os) const
         {
             int v = int(val);
-            if (v >= 0 && v < 5)
+            if (v >= 0 && v < (int)vals.size())
             {
                 *os << svals[v];
             }
@@ -134,7 +119,7 @@ namespace
         void PrintTo(std::ostream *os) const
         {
             int v = int(val);
-            if (v >= 0 && v < 5)
+            if (v >= 0 && v < (int)vals.size())
             {
                 *os << svals[v];
             }
@@ -168,6 +153,33 @@ namespace
                                                            std::string("Centered") };
 
     static inline void PrintTo(const ModelTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
+}
+
+static Vec3f normalize_vector(Vec3f a)
+{
+    float length = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+    return Vec3f(a[0] / length, a[1] / length, a[2] / length);
+}
+
+static Matx44f lookAtMatrixCal(const Vec3f& position, const Vec3f& lookat, const Vec3f& upVector)
+{
+    Vec3f w = normalize_vector(position - lookat);
+    Vec3f u = normalize_vector(upVector.cross(w));
+
+    Vec3f v = w.cross(u);
+
+    Matx44f res(u[0], u[1], u[2],   0,
+                v[0], v[1], v[2],   0,
+                w[0], w[1], w[2],   0,
+                   0,    0,    0,   1.f);
+
+    Matx44f translate(1.f,   0,   0, -position[0],
+                        0, 1.f,   0, -position[1],
+                        0,   0, 1.f, -position[2],
+                        0,   0,   0,          1.0f);
+    res = res * translate;
+
+    return res;
 }
 
 class ModelData
@@ -381,7 +393,8 @@ protected:
         depth_buf = Mat(height, width, ftype, zFar);
         color_buf = Mat(height, width, CV_MAKETYPE(ftype, 3), Scalar::all(0));
 
-        cameraMatrix = Mat(makeCamMatrix_TODO_rewrite_it_later(modelData.position, modelData.lookat, modelData.upVector, modelData.fovy, zNear, zFar));
+        cameraPose = lookAtMatrixCal(modelData.position, modelData.lookat, modelData.upVector);
+        fovYradians = modelData.fovy / 180.f * CV_PI;
 
         verts = Mat(modelData.vertices);
         verts.convertTo(verts, ftype);
@@ -398,22 +411,10 @@ protected:
             indices.convertTo(indices, itype);
         }
 
-        int cullIdx = (cullingMode == CullingMode::None) ? 0 :
-                      ((cullingMode == CullingMode::CW) ? 1 :
-                      ((cullingMode == CullingMode::CCW) ? 2 : -1));
-        triangleRasterize(verts, indices, colors, cameraMatrix, width, height,
-                          (shadingType == ShadingType::Shaded), cullIdx, depth_buf, color_buf);
-    }
+        settings = RasterizeSettings().setCullingMode(cullingMode).setShadingType(shadingType);
 
-    Matx43f makeCamMatrix_TODO_rewrite_it_later(Vec3f position, Vec3f lookat, Vec3f upVector, double fovy, double znear, double zfar)
-    {
-        Matx43f m;
-        m(0, 0) = position(0); m(0, 1) = position(1); m(0, 2) = position(2);
-        m(1, 0) = lookat  (0); m(1, 1) = lookat  (1); m(1, 2) = lookat  (2);
-        m(2, 0) = upVector(0); m(2, 1) = upVector(1); m(2, 2) = upVector(2);
-        m(3, 0) = fovy;        m(3, 1) = znear;       m(3, 2) = zfar;
-
-        return m;
+        triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
+                          width, height, settings, depth_buf, color_buf);
     }
 
 public:
@@ -423,7 +424,9 @@ public:
     Mat depth_buf, color_buf;
 
     Mat verts, colors, indices;
-    Mat cameraMatrix;
+    Matx44f cameraPose;
+    double fovYradians;
+    RasterizeSettings settings;
 
     ModelData modelData;
     ModelTypeEnum modelType;
@@ -436,13 +439,11 @@ public:
 TEST_P(RenderingTest, noArrays)
 {
     Mat depthOnly, colorOnly;
-    int cullIdx = (cullingMode == CullingMode::None) ? 0 :
-                      ((cullingMode == CullingMode::CW) ? 1 :
-                      ((cullingMode == CullingMode::CCW) ? 2 : -1));
-    triangleRasterize(verts, indices, colors, cameraMatrix, width, height,
-                      (shadingType == ShadingType::Shaded), cullIdx, depthOnly, cv::noArray());
-    triangleRasterize(verts, indices, colors, cameraMatrix, width, height,
-                      (shadingType == ShadingType::Shaded), cullIdx, cv::noArray(), colorOnly);
+
+    triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
+                      width, height, settings, depthOnly, cv::noArray());
+    triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
+                      width, height, settings, cv::noArray(), colorOnly);
 
     compareRGB(color_buf, colorOnly, 1, 0.00134);
     depth_buf.convertTo(depth_buf, CV_16U, depthScale);
@@ -531,11 +532,8 @@ TEST_P(RenderingTest, keepDrawnData)
         idx1 = indices.reshape(3, 1)(Range::all(), Range(0, nTriangles / 2));
         idx2 = indices.reshape(3, 1)(Range::all(), Range(nTriangles / 2, nTriangles));
 
-        int cullIdx = (cullingMode == CullingMode::None) ? 0 :
-                      ((cullingMode == CullingMode::CW) ? 1 :
-                      ((cullingMode == CullingMode::CCW) ? 2 : -1));
-        triangleRasterize(verts, idx1, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), cullIdx, depth_buf2, color_buf2);
-        triangleRasterize(verts, idx2, colors, cameraMatrix, width, height, (shadingType == ShadingType::Shaded), cullIdx, depth_buf2, color_buf2);
+        triangleRasterize(verts, idx1, colors, cameraPose, fovYradians, zNear, zFar, width, height, settings, depth_buf2, color_buf2);
+        triangleRasterize(verts, idx2, colors, cameraPose, fovYradians, zNear, zFar, width, height, settings, depth_buf2, color_buf2);
 
         compareRGB(color_buf, color_buf2, 0, 0);
         depth_buf.convertTo(depth_buf, CV_16U, depthScale);
