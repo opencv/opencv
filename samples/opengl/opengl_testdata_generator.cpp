@@ -414,11 +414,7 @@ int main(int argc, char* argv[])
                         break;
                     }
 
-                    //TODO: cv::format()
-                    std::string widthStr  = std::to_string(res.width);
-                    std::string heightStr = std::to_string(res.height);
-
-                    std::string suffix = modelName + "_" + widthStr + "x" + heightStr+"_Cull" + cullingName;
+                    std::string suffix = cv::format("%s_%dx%d_Cull%s", modelName.c_str(), res.width, res.height, cullingName.c_str());
 
                     std::cout << suffix + "_" + shadingName << "..." << std::endl;
 

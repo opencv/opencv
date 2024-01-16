@@ -496,11 +496,7 @@ TEST_P(RenderingTest, accuracy)
             ss >> cullingName;
         }
 
-        //TODO: cv::format()
-        std::string widthStr  = std::to_string(width);
-        std::string heightStr = std::to_string(height);
-
-        std::string suffix = modelName + "_" + widthStr + "x" + heightStr+"_Cull" + cullingName;
+        std::string suffix = cv::format("%s_%dx%d_Cull%s", modelName.c_str(), width, height, cullingName.c_str());
         std::string gtPathColor = path + "/example_image_" + suffix + "_" + shadingName + ".png";
         std::string gtPathDepth = path + "/depth_image_"   + suffix + ".png";
 
