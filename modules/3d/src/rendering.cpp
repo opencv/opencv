@@ -154,7 +154,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     }
 
     // world-to-camera coord system
-    Matx44f lookAtMatrix = camPoseMat.inv();
+    Matx44f lookAtMatrix = camPoseMat;
 
     // camera to NDC: [-1, 1]^3
     Matx44f perspectMatrix = perspectMatrixCal((float)width / (float)height, fovyRadians, zNear, zFar);
