@@ -279,6 +279,31 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         }
     }
 
+    // vertex transform stage
+
+    Mat screenVertices(vertices.size(), CV_32FC4);
+    for (int i = 0; i < nVerts; i++)
+    {
+        Vec3f vglobal = vertices.at<Vec3f>(i);
+
+        Vec4f vndc = mvpMatrix * Vec4f(vglobal[0], vglobal[1], vglobal[2], 1.f);
+
+        float invw = 1.f / vndc[3];
+        Vec4f vdiv = {vndc[0] * invw, vndc[1] * invw, vndc[2] * invw, invw};
+
+        // [-1, 1]^3 => [0, width] x [0, height] x [0, 1]
+        Vec4f vscreen = {
+            (vdiv[0] + 1.f) * 0.5f * width,
+            (vdiv[1] + 1.f) * 0.5f * height,
+            (vdiv[2] + 1.f) * 0.5f,
+            vdiv[3]
+        };
+
+        screenVertices.at<Vec4f>(i) = vscreen;
+    }
+
+    // draw stage
+
     for (int t = 0; t < nTriangles; t++)
     {
         Vec3i tri = triangles.at<Vec3i>(t);
@@ -291,8 +316,6 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
 
             CV_DbgAssert(idx >= 0 && idx < nVerts);
 
-            Vec3f vglobal = vertices.at<Vec3f>(idx);
-
             Vec3f c(0, 0, 0);
             if (!colors.empty())
             {
@@ -300,20 +323,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
             }
             col[i] = c;
 
-            Vec4f vndc = mvpMatrix * Vec4f(vglobal[0], vglobal[1], vglobal[2], 1.f);
-
-            float invw = 1.f / vndc[3];
-            Vec4f vdiv = { vndc[0] * invw, vndc[1] * invw, vndc[2] * invw, invw };
-
-            // [-1, 1]^3 => [0, width] x [0, height] x [0, 1]
-            Vec4f vscreen = {
-                (vdiv[0] + 1.f) * 0.5f * width,
-                (vdiv[1] + 1.f) * 0.5f * height,
-                (vdiv[2] + 1.f) * 0.5f,
-                vdiv[3]
-            };
-
-            ver[i] = vscreen;
+            ver[i] = screenVertices.at<Vec4f>(idx);
         }
 
         drawTriangle(ver, col, depthBuf, colorBuf, invDepthMode, settings);
