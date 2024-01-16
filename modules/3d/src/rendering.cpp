@@ -59,7 +59,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     }
 
     float invd = 1.f / d;
-    float invz[3] = { 1.f / verts[0][3], 1.f / verts[1][3], 1.f / verts[2][3] };
+    float invz[3] = { verts[0][3], verts[1][3], verts[2][3] };
 
     for (int y = minPt.y; y < maxPt.y; y++)
     {
@@ -303,7 +303,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
             Vec4f vndc = mvpMatrix * Vec4f(vglobal[0], vglobal[1], vglobal[2], 1.f);
 
             float invw = 1.f / vndc[3];
-            Vec4f vdiv = { vndc[0] * invw, vndc[1] * invw, vndc[2] * invw, vndc[3] };
+            Vec4f vdiv = { vndc[0] * invw, vndc[1] * invw, vndc[2] * invw, invw };
 
             // [-1, 1]^3 => [0, width] x [0, height] x [0, 1]
             Vec4f vscreen = {
