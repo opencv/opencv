@@ -49,6 +49,10 @@ public:
     std::vector<std::vector<size_t>> steps;
 
     NaryEltwiseHelper() {
+    }
+
+    void helperInit(const std::vector<Mat>& inputs, const std::vector<Mat>& outputs)
+    {
         narrays = 0;
         max_ndims = 0;
         all_ndims.clear();
@@ -57,11 +61,6 @@ public:
         ptrs.clear();
         shapes.clear();
         steps.clear();
-    }
-
-    void helperInit(const std::vector<Mat>& inputs, const std::vector<Mat>& outputs)
-    {
-        NaryEltwiseHelper();
 
         ninputs = inputs.size();
         narrays = ninputs + 1;
