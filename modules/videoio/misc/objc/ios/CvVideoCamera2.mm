@@ -315,7 +315,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
     NSDictionary *outputSettings
      = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithInt:self.imageWidth], AVVideoWidthKey,
                                                   [NSNumber numberWithInt:self.imageHeight], AVVideoHeightKey,
-                                                  AVVideoCodecH264, AVVideoCodecKey,
+                                                  AVVideoCodecTypeH264, AVVideoCodecKey,
                                                   nil
      ];
 
