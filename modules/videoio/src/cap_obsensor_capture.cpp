@@ -23,7 +23,8 @@
 
 #include "cap_obsensor_capture.hpp"
 #include "cap_obsensor/obsensor_stream_channel_interface.hpp"
-#ifdef HAVE_OBSENSOR
+
+#if defined(HAVE_OBSENSOR) && !defined(HAVE_OBSENSOR_ORBBEC_SDK) 
 namespace cv {
 Ptr<IVideoCapture> create_obsensor_capture(int index)
 {
@@ -34,7 +35,7 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
 {
     static const obsensor::StreamProfile colorProfile = { 640, 480, 30, obsensor::FRAME_FORMAT_MJPG };
     static const obsensor::StreamProfile depthProfile = {640, 480, 30, obsensor::FRAME_FORMAT_Y16};
-    static const obsensor::StreamProfile gemini2DepthProfile = {1280, 800, 30, obsensor::FRAME_FORMAT_Y14};
+    static const obsensor::StreamProfile gemini2DepthProfile = {1280, 800, 30, obsensor::FRAME_FORMAT_Y16};
     static const obsensor::StreamProfile astra2ColorProfile = {800, 600, 30, obsensor::FRAME_FORMAT_MJPG};
     static const obsensor::StreamProfile astra2DepthProfile = {800, 600, 30, obsensor::FRAME_FORMAT_Y14};
     static const obsensor::StreamProfile megaColorProfile = {1280, 720, 30, obsensor::FRAME_FORMAT_MJPG};
@@ -143,7 +144,7 @@ bool VideoCapture_obsensor::retrieveFrame(int outputType, OutputArray frame)
         if (!grabbedDepthFrame_.empty())
         {
             if(OBSENSOR_GEMINI2_PID == streamChannelGroup_.front()->getPid()){
-                grabbedDepthFrame_ = grabbedDepthFrame_*0.8;
+                grabbedDepthFrame_ = grabbedDepthFrame_*0.2;
                 Rect rect(320, 160, 640, 480);
                 grabbedDepthFrame_(rect).copyTo(frame);
             }

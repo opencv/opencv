@@ -474,10 +474,12 @@ OCV_OPTION(WITH_ONNX "Include Microsoft ONNX Runtime support" OFF
 OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_TIMVX)
-# attention: Astra2, Gemini2, and Gemini2L cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
-OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+/Femto)" ON
-  VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT AND NOT MINGW) OR ( UNIX AND NOT APPLE AND NOT ANDROID)
-  VERIFY HAVE_OBSENSOR)
+# Attention when OBSENSOR_USE_ORBBEC_SDK set to off: 
+#   Astra2, Gemini2, and Gemini2L cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
+OCV_OPTION(OBSENSOR_USE_ORBBEC_SDK "Use Orbbec SDK as banckend to support more camera models and platforms (force to ON on MacOS)" OFF)
+OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec 3D Cameras)" ON
+  VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT AND NOT MINGW) OR ( UNIX AND NOT APPLE AND NOT ANDROID) OR (APPLE AND AARCH64 AND NOT IOS AND NOT X86_64 AND NOT X86)
+  VERIFY HAVE_OBSENSOR) 
 OCV_OPTION(WITH_CANN "Include CANN support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_CANN)
@@ -493,7 +495,7 @@ OCV_OPTION(BUILD_opencv_js          "Build JavaScript bindings by Emscripten" OF
 OCV_OPTION(BUILD_ANDROID_PROJECTS   "Build Android projects providing .apk files" ON  IF ANDROID )
 OCV_OPTION(BUILD_ANDROID_EXAMPLES   "Build examples for Android platform"         ON  IF ANDROID )
 OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" OFF  IF (NOT WINRT AND NOT APPLE_FRAMEWORK))
-OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          OFF )
+OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          ON )
 OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"       ON  IF NOT WINRT)
 OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     NOT INSTALL_CREATE_DISTRIB  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           NOT INSTALL_CREATE_DISTRIB  IF (NOT APPLE_FRAMEWORK) )
