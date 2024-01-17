@@ -106,16 +106,10 @@ const std::array<std::string, 3> OutputsEnum::svals{ std::string("DepthOnly"),
 static inline void PrintTo(const OutputsEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
-static Vec3f normalize_vector(Vec3f a)
-{
-    float length = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
-    return Vec3f(a[0] / length, a[1] / length, a[2] / length);
-}
-
 static Matx44f lookAtMatrixCal(const Vec3f& position, const Vec3f& lookat, const Vec3f& upVector)
 {
-    Vec3f w = normalize_vector(position - lookat);
-    Vec3f u = normalize_vector(upVector.cross(w));
+    Vec3f w = cv::normalize(position - lookat);
+    Vec3f u = cv::normalize(upVector.cross(w));
 
     Vec3f v = w.cross(u);
 
