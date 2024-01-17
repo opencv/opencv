@@ -2805,26 +2805,20 @@ CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputA
 */
 CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices);
 
-// Triangle fill settings
+//! Triangle fill settings
 enum class ShadingType
 {
-    // a white color is used for the whole triangle
-    White = 0,
-    // a color of 1st vertex of each triangle is used
-    Flat = 1,
-    // a color is interpolated between 3 vertices with perspective correction
-    Shaded = 2
+    White  = 0, //!< a white color is used for the whole triangle
+    Flat   = 1, //!< a color of 1st vertex of each triangle is used
+    Shaded = 2  //!< a color is interpolated between 3 vertices with perspective correction
 };
 
-// Face culling settings: what faces are drawn after face culling
+//! Face culling settings: what faces are drawn after face culling
 enum class CullingMode
 {
-    // all faces are drawn, no culling is actually performed
-    None = 0,
-    // triangles which vertices are given in clockwork order are drawn
-    CW = 1,
-    // triangles which vertices are given in counterclockwork order are drawn
-    CCW = 2
+    None = 0, //!< all faces are drawn, no culling is actually performed
+    CW   = 1, //!< triangles which vertices are given in clockwork order are drawn
+    CCW  = 2  //!< triangles which vertices are given in counterclockwork order are drawn
 };
 
 /**
