@@ -456,7 +456,9 @@ TEST_P(RenderingTest, accuracy)
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     depth_buf.convertTo(depth_buf, CV_16U, depthScale);
 
-    if (modelType == ModelType::Empty)
+    if (modelType == ModelType::Empty ||
+       (modelType == ModelType::Centered && cullingMode == CullingMode::CW) ||
+       (modelType == ModelType::Color    && cullingMode == CullingMode::CCW))
     {
         std::vector<Mat> channels(3);
         split(color_buf, channels);
@@ -465,6 +467,11 @@ TEST_P(RenderingTest, accuracy)
         {
             EXPECT_EQ(countNonZero(channels[i]), 0);
         }
+
+        Mat depthDiff;
+        absdiff(depth_buf, Scalar(zFar * depthScale), depthDiff);
+        float sumDepthDiff = sum(depthDiff)[0];
+        EXPECT_EQ(sumDepthDiff, 0);
     }
     else
     {
