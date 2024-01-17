@@ -22,7 +22,7 @@
 
 #include "precomp.hpp"
 
-#if defined(HAVE_OBSENSOR) && defined(HAVE_OBSENSOR_ORBBEC_SDK) 
+#if defined(HAVE_OBSENSOR) && defined(HAVE_OBSENSOR_ORBBEC_SDK)
 #include "libobsensor/ObSensor.hpp"
 #include "cap_obsensor_liborbbec.hpp"
 
@@ -34,7 +34,7 @@ Ptr<IVideoCapture> create_obsensor_capture(int index)
 }
 
 VideoCapture_obsensor::VideoCapture_obsensor(int)
-{   
+{
     config = std::make_shared<ob::Config>();
     auto colorProfiles = pipe.getStreamProfileList(OB_SENSOR_COLOR);
     auto colorProfile = colorProfiles->getProfile(OB_PROFILE_DEFAULT);

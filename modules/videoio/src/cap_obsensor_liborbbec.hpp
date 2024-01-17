@@ -23,7 +23,7 @@
 #ifndef _CAP_LIBORBBEC_HPP_
 #define _CAP_LIBORBBEC_HPP_
 
-#if defined(HAVE_OBSENSOR) && defined(HAVE_OBSENSOR_ORBBEC_SDK) 
+#if defined(HAVE_OBSENSOR) && defined(HAVE_OBSENSOR_ORBBEC_SDK)
 
 #include <libobsensor/ObSensor.hpp>
 #include <mutex>

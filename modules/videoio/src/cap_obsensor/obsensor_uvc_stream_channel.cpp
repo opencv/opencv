@@ -421,7 +421,7 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
 
 bool IUvcStreamChannel::initDepthFrameProcessor()
 {
-    if( OBSENSOR_ASTRA2_PID == devInfo_.pid || OBSENSOR_GEMINI2L_PID == devInfo_.pid){
+    if( OBSENSOR_ASTRA2_PID == devInfo_.pid){
         uint8_t* rcvData;
         uint32_t rcvLen;
 
@@ -434,7 +434,7 @@ bool IUvcStreamChannel::initDepthFrameProcessor()
         depthFrameProcessor_ = makePtr<DepthFrameUnpacker>();
         return true;
     }
-    else if(OBSENSOR_GEMINI2_PID == devInfo_.pid){
+    else if(OBSENSOR_GEMINI2_PID == devInfo_.pid || OBSENSOR_GEMINI2L_PID == devInfo_.pid){
         uint8_t* rcvData;
         uint32_t rcvLen;
 
@@ -443,6 +443,7 @@ bool IUvcStreamChannel::initDepthFrameProcessor()
 
         setXu(2, OB_EXT_CMD9, sizeof(OB_EXT_CMD9));
         getXu(2, &rcvData, &rcvLen);
+        return true;
     }
     else if(OBSENSOR_GEMINI2XL_PID == devInfo_.pid){
         uint8_t* rcvData;

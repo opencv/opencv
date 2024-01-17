@@ -24,7 +24,7 @@
 #include "cap_obsensor_capture.hpp"
 #include "cap_obsensor/obsensor_stream_channel_interface.hpp"
 
-#if defined(HAVE_OBSENSOR) && !defined(HAVE_OBSENSOR_ORBBEC_SDK) 
+#if defined(HAVE_OBSENSOR) && !defined(HAVE_OBSENSOR_ORBBEC_SDK)
 namespace cv {
 Ptr<IVideoCapture> create_obsensor_capture(int index)
 {
@@ -156,7 +156,7 @@ bool VideoCapture_obsensor::retrieveFrame(int outputType, OutputArray frame)
                 Rect rect(0, 0, 640, 360);
                 grabbedDepthFrame_(rect).copyTo(frame);
             }else if(OBSENSOR_GEMINI2L_PID == streamChannelGroup_.front()->getPid()){
-                grabbedDepthFrame_ = grabbedDepthFrame_*0.8;
+                grabbedDepthFrame_ = grabbedDepthFrame_*0.2;
                 Rect rect(0, 40, 1280, 720);
                 grabbedDepthFrame_(rect).copyTo(frame);
             }else if(OBSENSOR_GEMINI2XL_PID == streamChannelGroup_.front()->getPid()){
