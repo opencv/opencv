@@ -42,7 +42,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     private boolean mStopThread;
 
     protected Camera mCamera;
-    protected JavaCameraFrame[] mCameraFrame;
+    protected RotatedCameraFrame[] mCameraFrame;
     private SurfaceTexture mSurfaceTexture;
     private int mPreviewFormat = ImageFormat.NV21;
 
@@ -132,7 +132,11 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             if (mCamera == null)
                 return false;
 
-            int frameRotation = getFrameRotation(cameraId);
+            android.hardware.Camera.CameraInfo info = new android.hardware.Camera.CameraInfo();
+            android.hardware.Camera.getCameraInfo(cameraId, info);
+            int frameRotation = getFrameRotation(
+                    info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT,
+                    info.orientation);
             /* Now set camera parameters */
             try {
                 Camera.Parameters params = mCamera.getParameters();
@@ -206,9 +210,9 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
                     AllocateCache();
 
-                    mCameraFrame = new JavaCameraFrame[2];
-                    mCameraFrame[0] = new JavaCameraFrame(mFrameChain[0], rawFrameWidth, rawFrameHeight, frameRotation);
-                    mCameraFrame[1] = new JavaCameraFrame(mFrameChain[1], rawFrameWidth, rawFrameHeight, frameRotation);
+                    mCameraFrame = new RotatedCameraFrame[2];
+                    mCameraFrame[0] = new RotatedCameraFrame(new JavaCameraFrame(mFrameChain[0], rawFrameWidth, rawFrameHeight), frameRotation);
+                    mCameraFrame[1] = new RotatedCameraFrame(new JavaCameraFrame(mFrameChain[1], rawFrameWidth, rawFrameHeight), frameRotation);
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                         mSurfaceTexture = new SurfaceTexture(MAGIC_TEXTURE_ID);
@@ -245,7 +249,9 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 mFrameChain[1].release();
             }
             if (mCameraFrame != null) {
+                mCameraFrame[0].mFrame.release();
                 mCameraFrame[0].release();
+                mCameraFrame[1].mFrame.release();
                 mCameraFrame[1].release();
             }
         }
@@ -318,14 +324,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     private class JavaCameraFrame implements CvCameraViewFrame {
         @Override
         public Mat gray() {
-            mGray = mYuvFrameData.submat(0, mHeight, 0, mWidth);
-
-            if (mRotation != 0) {
-                Core.rotate(mGray, mGrayRotated, getCvRotationCode(mRotation));
-                return mGrayRotated;
-            } else {
-                return mGray;
-            }
+            return mYuvFrameData.submat(0, mHeight, 0, mWidth);
         }
 
         @Override
@@ -337,84 +336,27 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             else
                 throw new IllegalArgumentException("Preview Format can be NV21 or YV12");
 
-            if (mRotation != 0) {
-                Core.rotate(mRgba, mRgbaRotated, getCvRotationCode(mRotation));
-                return mRgbaRotated;
-            } else {
-                return mRgba;
-            }
+            return mRgba;
         }
 
-        private int getCvRotationCode(int degrees) {
-           if  (degrees == 90) {
-               return Core.ROTATE_90_CLOCKWISE;
-           } else if (degrees == 180) {
-               return Core.ROTATE_180;
-           } else {
-               return Core.ROTATE_90_COUNTERCLOCKWISE;
-           }
-        }
-
-        public JavaCameraFrame(Mat Yuv420sp, int width, int height, int rotation) {
+        public JavaCameraFrame(Mat Yuv420sp, int width, int height) {
             super();
             mWidth = width;
             mHeight = height;
             mYuvFrameData = Yuv420sp;
             mRgba = new Mat();
-            mRgbaRotated = new Mat();
-            mGrayRotated = new Mat();
-            mRotation = rotation;
         }
 
+        @Override
         public void release() {
             mRgba.release();
         }
 
         private Mat mYuvFrameData;
         private Mat mRgba;
-        private Mat mRgbaRotated;
-        private Mat mGray;
-        private Mat mGrayRotated;
         private int mWidth;
         private int mHeight;
-        private int mRotation;
     };
-
-    /**
-     * Calculates how to rotate camera frame to match current screen orientation
-     */
-    private int getFrameRotation(int cameraId) {
-        WindowManager windowManager = (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
-        int screenOrientation = windowManager.getDefaultDisplay().getRotation();
-        int screenRotation = 0;
-        switch (screenOrientation) {
-            case Surface.ROTATION_0:
-                screenRotation = 0;
-                break;
-            case Surface.ROTATION_90:
-                screenRotation = 90;
-                break;
-            case Surface.ROTATION_180:
-                screenRotation = 180;
-                break;
-            case Surface.ROTATION_270:
-                screenRotation = 270;
-                break;
-        }
-
-        android.hardware.Camera.CameraInfo info = new android.hardware.Camera.CameraInfo();
-        android.hardware.Camera.getCameraInfo(cameraId, info);
-
-        int frameRotation;
-        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-            frameRotation = (info.orientation + screenRotation) % 360;
-            frameRotation = (360 - frameRotation) % 360;
-        } else {
-            frameRotation = (info.orientation - screenRotation + 360) % 360;
-        }
-
-        return frameRotation;
-    }
 
     private class CameraWorker implements Runnable {
 
