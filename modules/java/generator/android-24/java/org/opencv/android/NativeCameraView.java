@@ -90,14 +90,13 @@ public class NativeCameraView extends CameraBridgeViewBase {
 
     private boolean initializeCamera(int width, int height) {
         synchronized (this) {
-
+            Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
             int localCameraIndex = mCameraIndex;
             if (mCameraIndex == CAMERA_ID_ANY) {
                 Log.d(TAG, "Try to open default camera");
                 localCameraIndex = 0;
             } else if (mCameraIndex == CAMERA_ID_BACK) {
                 Log.i(TAG, "Trying to open back camera");
-                Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
                 for (int camIdx = 0; camIdx < Camera.getNumberOfCameras(); ++camIdx) {
                     Camera.getCameraInfo( camIdx, cameraInfo );
                     if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
@@ -107,7 +106,6 @@ public class NativeCameraView extends CameraBridgeViewBase {
                 }
             } else if (mCameraIndex == CAMERA_ID_FRONT) {
                 Log.i(TAG, "Trying to open front camera");
-                Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
                 for (int camIdx = 0; camIdx < Camera.getNumberOfCameras(); ++camIdx) {
                     Camera.getCameraInfo( camIdx, cameraInfo );
                     if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
@@ -117,20 +115,27 @@ public class NativeCameraView extends CameraBridgeViewBase {
                 }
             }
 
+            if (localCameraIndex == CAMERA_ID_BACK) {
+                Log.e(TAG, "Back camera not found!");
+                return false;
+            } else if (localCameraIndex == CAMERA_ID_FRONT) {
+                Log.e(TAG, "Front camera not found!");
+                return false;
+            }
+
             Log.d(TAG, "Try to open camera with index " + localCameraIndex);
             mCamera = new VideoCapture(localCameraIndex, Videoio.CAP_ANDROID);
 
             if (mCamera == null)
                 return false;
-
             if (mCamera.isOpened() == false)
                 return false;
 
-            android.hardware.Camera.CameraInfo info = new android.hardware.Camera.CameraInfo();
-            android.hardware.Camera.getCameraInfo(localCameraIndex, info);
+            if (mCameraIndex != CAMERA_ID_BACK && mCameraIndex != CAMERA_ID_FRONT)
+                Camera.getCameraInfo(localCameraIndex, cameraInfo);
             int frameRotation = getFrameRotation(
-                    info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT,
-                    info.orientation);
+                    cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT,
+                    cameraInfo.orientation);
 
             mFrame = new RotatedCameraFrame(new NativeCameraFrame(mCamera), frameRotation);
 
