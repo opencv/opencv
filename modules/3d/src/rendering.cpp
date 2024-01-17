@@ -128,7 +128,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         CV_Error(Error::StsBadArg, "No depth nor color output image provided");
     }
 
-    CV_Assert(cameraPose.type() == CV_32F);
+    CV_Assert(cameraPose.type() == CV_32F || cameraPose.type() == CV_64F);
     CV_Assert((cameraPose.size() == Size {4, 3}) || (cameraPose.size() == Size {4, 4}));
 
     CV_Assert((fovyRadians > 0) && (fovyRadians < CV_PI));
@@ -136,7 +136,8 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     CV_Assert(zFar > zNear);
     CV_Assert((width > 0) && (height > 0));
 
-    Mat cpMat = cameraPose.getMat();
+    Mat cpMat;
+    cameraPose.getMat().convertTo(cpMat, CV_32FC1);
     Matx44f camPoseMat = Matx44f::eye();
     for (int i = 0; i < 3; i++)
     {

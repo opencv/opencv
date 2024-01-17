@@ -438,9 +438,10 @@ TEST_P(RenderingTest, noArrays)
 {
     Mat depthOnly, colorOnly;
 
-    triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
+    // cameraPose can also be double, checking it
+    triangleRasterize(verts, indices, colors, Matx44d(cameraPose), fovYradians, zNear, zFar,
                       width, height, settings, depthOnly, cv::noArray());
-    triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
+    triangleRasterize(verts, indices, colors, Matx44d(cameraPose), fovYradians, zNear, zFar,
                       width, height, settings, cv::noArray(), colorOnly);
 
     compareRGB(color_buf, colorOnly, 1, 0.00134);

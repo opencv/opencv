@@ -2846,7 +2846,7 @@ In flat-shaded mode a color of 1st vertex of each triangle is used.
 *@param vertices vertices coordinates array. Should contain values of CV_32FC3 type or a compatible one (e.g. cv::Vec3f, etc.)
 *@param indices triangle vertices index array, 3 per triangle. Each index indicates a vertex in a vertices array. Should contain CV_32SC3 values
 *@param colors per-vertex colors of CV_32FC3 type, can be empty.
-*@param cameraPose a 4x3 or 4x4 float matrix containing inverted (sic!) camera pose
+*@param cameraPose a 4x3 or 4x4 float or double matrix containing inverted (sic!) camera pose
 *@param fovY field of view in vertical direction, given in radians
 *@param zNear minimum Z value to render, everything closer is clipped
 *@param zFar maximum Z value to render, everything farther is clipped
