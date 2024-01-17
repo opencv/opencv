@@ -122,12 +122,12 @@ bool VideoCapture_obsensor::retrieveFrame(int outputType, cv::OutputArray frame)
         break;
     case CAP_OBSENSOR_DEPTH_MAP:
         if(grabbedDepthFrame != nullptr){
-            auto format = grabbedColorFrame->format();
+            auto format = grabbedDepthFrame->format();
             if(format != OB_FORMAT_Y16){
-                 CV_LOG_WARNING(NULL, "Unsupported depth frame format");
+                CV_LOG_WARNING(NULL, "Unsupported depth frame format");
                 return false;
             }
-            Mat(grabbedColorFrame->height(), grabbedColorFrame->width(), CV_16UC1, grabbedDepthFrame->data()).copyTo(frame);
+            Mat(grabbedDepthFrame->height(), grabbedDepthFrame->width(), CV_16UC1, grabbedDepthFrame->data()).copyTo(frame);
             return true;
         }
         break;
