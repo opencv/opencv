@@ -10,93 +10,93 @@ using namespace cv;
 // that was easier than using CV_ENUM() macro
 namespace
 {
-    using namespace cv;
-    struct CullingModeEnum
+using namespace cv;
+struct CullingModeEnum
+{
+    static const std::array<CullingMode, 3> vals;
+    static const std::array<std::string, 3> svals;
+
+    CullingModeEnum(CullingMode v = CullingMode::None) : val(v) {}
+    operator CullingMode() const { return val; }
+    void PrintTo(std::ostream *os) const
     {
-        static const std::array<CullingMode, 3> vals;
-        static const std::array<std::string, 3> svals;
-
-        CullingModeEnum(CullingMode v = CullingMode::None) : val(v) {}
-        operator CullingMode() const { return val; }
-        void PrintTo(std::ostream *os) const
+        int v = int(val);
+        if (v >= 0 && v < (int)vals.size())
         {
-            int v = int(val);
-            if (v >= 0 && v < (int)vals.size())
-            {
-                *os << svals[v];
-            }
-            else
-            {
-                *os << "UNKNOWN";
-            }
+            *os << svals[v];
         }
-        static ::testing::internal::ParamGenerator<CullingModeEnum> all()
+        else
         {
-            return ::testing::Values(CullingModeEnum(vals[0]),
-                                     CullingModeEnum(vals[1]),
-                                     CullingModeEnum(vals[2]));
+            *os << "UNKNOWN";
         }
+    }
+    static ::testing::internal::ParamGenerator<CullingModeEnum> all()
+    {
+        return ::testing::Values(CullingModeEnum(vals[0]),
+                                 CullingModeEnum(vals[1]),
+                                 CullingModeEnum(vals[2]));
+    }
 
-    private:
-        CullingMode val;
-    };
+private:
+    CullingMode val;
+};
 
-    const std::array<CullingMode, 3> CullingModeEnum::vals{ CullingMode::None,
-                                                            CullingMode::CW,
-                                                            CullingMode::CCW
-                                                          };
-    const std::array<std::string, 3> CullingModeEnum::svals{ std::string("None"),
-                                                             std::string("CW"),
-                                                             std::string("CCW")
-                                                           };
+const std::array<CullingMode, 3> CullingModeEnum::vals{ CullingMode::None,
+                                                        CullingMode::CW,
+                                                        CullingMode::CCW
+                                                      };
+const std::array<std::string, 3> CullingModeEnum::svals{ std::string("None"),
+                                                         std::string("CW"),
+                                                         std::string("CCW")
+                                                       };
 
-    static inline void PrintTo(const CullingModeEnum &t, std::ostream *os) { t.PrintTo(os); }
+static inline void PrintTo(const CullingModeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
 // that was easier than using CV_ENUM() macro
 namespace
 {
-    using namespace cv;
-    struct ShadingTypeEnum
+using namespace cv;
+struct ShadingTypeEnum
+{
+    static const std::array<ShadingType, 3> vals;
+    static const std::array<std::string, 3> svals;
+
+    ShadingTypeEnum(ShadingType v = ShadingType::White) : val(v) {}
+    operator ShadingType() const { return val; }
+    void PrintTo(std::ostream *os) const
     {
-        static const std::array<ShadingType, 3> vals;
-        static const std::array<std::string, 3> svals;
-
-        ShadingTypeEnum(ShadingType v = ShadingType::White) : val(v) {}
-        operator ShadingType() const { return val; }
-        void PrintTo(std::ostream *os) const
+        int v = int(val);
+        if (v >= 0 && v < (int)vals.size())
         {
-            int v = int(val);
-            if (v >= 0 && v < (int)vals.size())
-            {
-                *os << svals[v];
-            }
-            else
-            {
-                *os << "UNKNOWN";
-            }
+            *os << svals[v];
         }
-        static ::testing::internal::ParamGenerator<ShadingTypeEnum> all()
+        else
         {
-            return ::testing::Values(ShadingTypeEnum(vals[0]),
-                                     ShadingTypeEnum(vals[1]),
-                                     ShadingTypeEnum(vals[2]));
+            *os << "UNKNOWN";
         }
+    }
+    static ::testing::internal::ParamGenerator<ShadingTypeEnum> all()
+    {
+        return ::testing::Values(ShadingTypeEnum(vals[0]),
+                                 ShadingTypeEnum(vals[1]),
+                                 ShadingTypeEnum(vals[2]));
+    }
 
-    private:
-        ShadingType val;
-    };
+private:
+    ShadingType val;
+};
 
-    const std::array<ShadingType, 3> ShadingTypeEnum::vals{ ShadingType::White,
-                                                            ShadingType::Flat,
-                                                            ShadingType::Shaded
-                                                          };
-    const std::array<std::string, 3> ShadingTypeEnum::svals{ std::string("White"),
-                                                             std::string("Flat"),
-                                                             std::string("Shaded")
-                                                           };
+const std::array<ShadingType, 3> ShadingTypeEnum::vals{ ShadingType::White,
+                                                        ShadingType::Flat,
+                                                        ShadingType::Shaded
+                                                      };
+const std::array<std::string, 3> ShadingTypeEnum::svals{ std::string("White"),
+                                                         std::string("Flat"),
+                                                         std::string("Shaded")
+                                                       };
 
-    static inline void PrintTo(const ShadingTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
+static inline void PrintTo(const ShadingTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
 
@@ -112,51 +112,51 @@ enum class ModelType
 // that was easier than using CV_ENUM() macro
 namespace
 {
-    using namespace cv;
-    struct ModelTypeEnum
+using namespace cv;
+struct ModelTypeEnum
+{
+    static const std::array<ModelType, 5> vals;
+    static const std::array<std::string, 5> svals;
+
+    ModelTypeEnum(ModelType v = ModelType::Empty) : val(v) {}
+    operator ModelType() const { return val; }
+    void PrintTo(std::ostream *os) const
     {
-        static const std::array<ModelType, 5> vals;
-        static const std::array<std::string, 5> svals;
-
-        ModelTypeEnum(ModelType v = ModelType::Empty) : val(v) {}
-        operator ModelType() const { return val; }
-        void PrintTo(std::ostream *os) const
+        int v = int(val);
+        if (v >= 0 && v < (int)vals.size())
         {
-            int v = int(val);
-            if (v >= 0 && v < (int)vals.size())
-            {
-                *os << svals[v];
-            }
-            else
-            {
-                *os << "UNKNOWN";
-            }
+            *os << svals[v];
         }
-        static ::testing::internal::ParamGenerator<ModelTypeEnum> all()
+        else
         {
-            return ::testing::Values(ModelTypeEnum(vals[0]),
-                                     ModelTypeEnum(vals[1]),
-                                     ModelTypeEnum(vals[2]),
-                                     ModelTypeEnum(vals[3]),
-                                     ModelTypeEnum(vals[4]));
+            *os << "UNKNOWN";
         }
+    }
+    static ::testing::internal::ParamGenerator<ModelTypeEnum> all()
+    {
+        return ::testing::Values(ModelTypeEnum(vals[0]),
+                                 ModelTypeEnum(vals[1]),
+                                 ModelTypeEnum(vals[2]),
+                                 ModelTypeEnum(vals[3]),
+                                 ModelTypeEnum(vals[4]));
+    }
 
-    private:
-        ModelType val;
-    };
+private:
+    ModelType val;
+};
 
-    const std::array<ModelType, 5> ModelTypeEnum::vals{ ModelType::Empty,
-                                                        ModelType::File,
-                                                        ModelType::Clipping,
-                                                        ModelType::Color,
-                                                        ModelType::Centered };
-    const std::array<std::string, 5> ModelTypeEnum::svals{ std::string("Empty"),
-                                                           std::string("File"),
-                                                           std::string("Clipping"),
-                                                           std::string("Color"),
-                                                           std::string("Centered") };
+const std::array<ModelType, 5> ModelTypeEnum::vals{ ModelType::Empty,
+                                                    ModelType::File,
+                                                    ModelType::Clipping,
+                                                    ModelType::Color,
+                                                    ModelType::Centered };
+const std::array<std::string, 5> ModelTypeEnum::svals{ std::string("Empty"),
+                                                       std::string("File"),
+                                                       std::string("Clipping"),
+                                                       std::string("Color"),
+                                                       std::string("Centered") };
 
-    static inline void PrintTo(const ModelTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
+static inline void PrintTo(const ModelTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
 static Vec3f normalize_vector(Vec3f a)

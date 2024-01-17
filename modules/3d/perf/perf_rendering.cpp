@@ -10,47 +10,47 @@ namespace opencv_test
 // that was easier than using CV_ENUM() macro
 namespace
 {
-    using namespace cv;
-    struct ShadingTypeEnum
+using namespace cv;
+struct ShadingTypeEnum
+{
+    static const std::array<ShadingType, 3> vals;
+    static const std::array<std::string, 3> svals;
+
+    ShadingTypeEnum(ShadingType v = ShadingType::White) : val(v) {}
+    operator ShadingType() const { return val; }
+    void PrintTo(std::ostream *os) const
     {
-        static const std::array<ShadingType, 3> vals;
-        static const std::array<std::string, 3> svals;
-
-        ShadingTypeEnum(ShadingType v = ShadingType::White) : val(v) {}
-        operator ShadingType() const { return val; }
-        void PrintTo(std::ostream *os) const
+        int v = int(val);
+        if (v >= 0 && v < (int)vals.size())
         {
-            int v = int(val);
-            if (v >= 0 && v < (int)vals.size())
-            {
-                *os << svals[v];
-            }
-            else
-            {
-                *os << "UNKNOWN";
-            }
+            *os << svals[v];
         }
-        static ::testing::internal::ParamGenerator<ShadingTypeEnum> all()
+        else
         {
-            return ::testing::Values(ShadingTypeEnum(vals[0]),
-                                     ShadingTypeEnum(vals[1]),
-                                     ShadingTypeEnum(vals[2]));
+            *os << "UNKNOWN";
         }
+    }
+    static ::testing::internal::ParamGenerator<ShadingTypeEnum> all()
+    {
+        return ::testing::Values(ShadingTypeEnum(vals[0]),
+                                 ShadingTypeEnum(vals[1]),
+                                 ShadingTypeEnum(vals[2]));
+    }
 
-    private:
-        ShadingType val;
-    };
+private:
+    ShadingType val;
+};
 
-    const std::array<ShadingType, 3> ShadingTypeEnum::vals{ ShadingType::White,
-                                                            ShadingType::Flat,
-                                                            ShadingType::Shaded
-                                                          };
-    const std::array<std::string, 3> ShadingTypeEnum::svals{ std::string("White"),
-                                                             std::string("Flat"),
-                                                             std::string("Shaded")
-                                                           };
+const std::array<ShadingType, 3> ShadingTypeEnum::vals{ ShadingType::White,
+                                                        ShadingType::Flat,
+                                                        ShadingType::Shaded
+                                                      };
+const std::array<std::string, 3> ShadingTypeEnum::svals{ std::string("White"),
+                                                         std::string("Flat"),
+                                                         std::string("Shaded")
+                                                       };
 
-    static inline void PrintTo(const ShadingTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
+static inline void PrintTo(const ShadingTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
 enum class Outputs
@@ -63,47 +63,47 @@ enum class Outputs
 // that was easier than using CV_ENUM() macro
 namespace
 {
-    using namespace cv;
-    struct OutputsEnum
+using namespace cv;
+struct OutputsEnum
+{
+    static const std::array<Outputs, 3> vals;
+    static const std::array<std::string, 3> svals;
+
+    OutputsEnum(Outputs v = Outputs::DepthColor) : val(v) {}
+    operator Outputs() const { return val; }
+    void PrintTo(std::ostream *os) const
     {
-        static const std::array<Outputs, 3> vals;
-        static const std::array<std::string, 3> svals;
-
-        OutputsEnum(Outputs v = Outputs::DepthColor) : val(v) {}
-        operator Outputs() const { return val; }
-        void PrintTo(std::ostream *os) const
+        int v = int(val);
+        if (v >= 0 && v < (int)vals.size())
         {
-            int v = int(val);
-            if (v >= 0 && v < (int)vals.size())
-            {
-                *os << svals[v];
-            }
-            else
-            {
-                *os << "UNKNOWN";
-            }
+            *os << svals[v];
         }
-        static ::testing::internal::ParamGenerator<OutputsEnum> all()
+        else
         {
-            return ::testing::Values(OutputsEnum(vals[0]),
-                                     OutputsEnum(vals[1]),
-                                     OutputsEnum(vals[2]));
+            *os << "UNKNOWN";
         }
+    }
+    static ::testing::internal::ParamGenerator<OutputsEnum> all()
+    {
+        return ::testing::Values(OutputsEnum(vals[0]),
+                                 OutputsEnum(vals[1]),
+                                 OutputsEnum(vals[2]));
+    }
 
-    private:
-        Outputs val;
-    };
+private:
+    Outputs val;
+};
 
-    const std::array<Outputs, 3> OutputsEnum::vals{ Outputs::DepthOnly,
-                                                    Outputs::ColorOnly,
-                                                    Outputs::DepthColor
-                                                  };
-    const std::array<std::string, 3> OutputsEnum::svals{ std::string("DepthOnly"),
-                                                         std::string("ColorOnly"),
-                                                         std::string("DepthColor")
-                                                       };
+const std::array<Outputs, 3> OutputsEnum::vals{ Outputs::DepthOnly,
+                                                Outputs::ColorOnly,
+                                                Outputs::DepthColor
+                                              };
+const std::array<std::string, 3> OutputsEnum::svals{ std::string("DepthOnly"),
+                                                     std::string("ColorOnly"),
+                                                     std::string("DepthColor")
+                                                   };
 
-    static inline void PrintTo(const OutputsEnum &t, std::ostream *os) { t.PrintTo(os); }
+static inline void PrintTo(const OutputsEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
 static Vec3f normalize_vector(Vec3f a)
