@@ -119,13 +119,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
                                    int width, int height, RasterizeSettings settings,
                                    OutputArray _depthBuffer, OutputArray _colorBuffer)
 {
-    bool needDepth = _depthBuffer.needed();
-    bool needColor = _colorBuffer.needed();
-
-    if (!needDepth && !needColor)
-    {
-        CV_Error(Error::StsBadArg, "No depth nor color output image provided");
-    }
+    CV_Assert(_colorBuffer.needed() || _depthBuffer.needed());
 
     CV_Assert(cameraPose.type() == CV_32FC1 || cameraPose.type() == CV_64FC1);
     CV_Assert((cameraPose.size() == Size {4, 3}) || (cameraPose.size() == Size {4, 4}));
@@ -199,7 +193,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     }
 
     Mat depthBuf;
-    if (needDepth)
+    if (_depthBuffer.needed())
     {
         if (_depthBuffer.empty())
         {
@@ -224,7 +218,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     }
 
     Mat colorBuf;
-    if (needColor)
+    if (_colorBuffer.needed())
     {
         if (_colorBuffer.empty())
         {
