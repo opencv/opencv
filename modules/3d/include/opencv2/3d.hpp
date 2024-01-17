@@ -2838,6 +2838,7 @@ struct CV_EXPORTS RasterizeSettings
 
 /** @brief Renders a set of triangles on a depth and/or RGB image.
 
+Both output images are Y-flipped, this will be fixed later.
 The output images are not cleared before the rendering and therefore can be used for drawing over
 existing image or for depth joining with pre-filled Z-buffer.
 Triangles can be drawn white (1.0, 1.0, 1.0), flat-shaded or with a color interpolated between vertices.

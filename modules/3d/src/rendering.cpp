@@ -12,21 +12,9 @@ RasterizeSettings::RasterizeSettings()
     cullingMode = CullingMode::CW;
 }
 
-static Matx44f perspectMatrixCal(float aspect, float fovy, float zNear, float zFar)
-{
-    float d = 1.0f / std::tan(fovy / 2);
-    float a = (zNear + zFar) / (zNear - zFar);
-    float b = 2 * zFar * zNear / (zNear - zFar);
-    float c = d / aspect;
-    Matx44f res(c,  0,  0,  0,
-                0,  d,  0,  0,
-                0,  0,  a,  b,
-                0,  0, -1,  0);
-    return res;
-}
-
 static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& colorBuf,
-                         bool invDepthMode, RasterizeSettings settings)
+                         //TODO: enable inverse depth mode later
+                         /*bool invDepthMode,*/ RasterizeSettings settings)
 {
     // any of buffers can be empty
     int width  = std::max(colorBuf.cols, depthBuf.cols);
@@ -157,14 +145,6 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         }
     }
 
-    // world-to-camera coord system
-    Matx44f lookAtMatrix = camPoseMat;
-
-    // camera to NDC: [-1, 1]^3
-    Matx44f perspectMatrix = perspectMatrixCal((float)width / (float)height, fovyRadians, zNear, zFar);
-
-    Matx44f mvpMatrix = perspectMatrix * lookAtMatrix;
-
     bool hasIdx    = !_indices.empty();
     bool hasColors = !_colors.empty();
 
@@ -218,17 +198,17 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     }
 
     //TODO: add this to settings
-    bool invDepthMode = false;
+    //bool invDepthMode = false;
 
     Mat depthBuf;
     if (needDepth)
     {
         if (_depthBuffer.empty())
         {
-            // 64f is not supported yet
             _depthBuffer.create(cv::Size(width, height), CV_32FC1);
-            //TODO: wrong value, should be 1
-            float maxv = invDepthMode ? 1.f : zFar;
+            //TODO: fix this
+            //float maxv = invDepthMode ? 0.f : zFar;
+            float maxv = zFar;
             _depthBuffer.setTo(maxv);
         }
         else
@@ -244,10 +224,12 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     }
     else if (hasIdx && hasColors)
     {
-        invDepthMode = true;
+        //TODO: fix this
+        //invDepthMode = true;
         depthBuf.create(cv::Size(width, height), CV_32FC1);
-        //TODO: wrong value, should be 1
-        float maxv = invDepthMode ? 1.f : zFar;
+        //TODO: fix this
+        //float maxv = 0;
+        float maxv = zFar;
         depthBuf.setTo(maxv);
     }
 
@@ -279,8 +261,25 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         }
     }
 
+    // world-to-camera coord system
+    Matx44f lookAtMatrix = camPoseMat;
+
+    float ys = 1.0f / std::tan(fovyRadians / 2);
+    float xs = ys / (float)width * (float)height;
+    float zz = (zNear + zFar) / (zNear - zFar);
+    float zw = 2 * zFar * zNear / (zNear - zFar);
+
+    // camera to NDC: [-1, 1]^3
+    Matx44f perspectMatrix (xs,  0,  0,  0,
+                             0, ys,  0,  0,
+                             0,  0, zz, zw,
+                             0,  0,  -1, 0);
+
+    Matx44f mvpMatrix = perspectMatrix * lookAtMatrix;
+
     // vertex transform stage
 
+    //TODO: vertical flip
     Mat screenVertices(vertices.size(), CV_32FC4);
     for (int i = 0; i < nVerts; i++)
     {
@@ -296,7 +295,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
             (vdiv[0] + 1.f) * 0.5f * width,
             (vdiv[1] + 1.f) * 0.5f * height,
             (vdiv[2] + 1.f) * 0.5f,
-            vdiv[3]
+             vdiv[3]
         };
 
         screenVertices.at<Vec4f>(i) = vscreen;
@@ -326,7 +325,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
             ver[i] = screenVertices.at<Vec4f>(idx);
         }
 
-        drawTriangle(ver, col, depthBuf, colorBuf, invDepthMode, settings);
+        drawTriangle(ver, col, depthBuf, colorBuf, /*invDepthMode,*/ settings);
     }
 }
 
