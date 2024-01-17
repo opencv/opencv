@@ -281,7 +281,6 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
 
     // vertex transform stage
 
-    //TODO: vertical flip
     Mat screenVertices(vertices.size(), CV_32FC4);
     for (int i = 0; i < nVerts; i++)
     {
