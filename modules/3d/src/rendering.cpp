@@ -128,7 +128,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         CV_Error(Error::StsBadArg, "No depth nor color output image provided");
     }
 
-    CV_Assert(cameraPose.type() == CV_32F || cameraPose.type() == CV_64F);
+    CV_Assert(cameraPose.type() == CV_32FC1 || cameraPose.type() == CV_64FC1);
     CV_Assert((cameraPose.size() == Size {4, 3}) || (cameraPose.size() == Size {4, 4}));
 
     CV_Assert((fovyRadians > 0) && (fovyRadians < CV_PI));
