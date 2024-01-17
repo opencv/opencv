@@ -39,8 +39,9 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     float d = ac.x*bc.y - ac.y*bc.x;
 
     // culling and degenerated triangle removal
-    if ((settings.cullingMode == CullingMode::CW  && d <= 0) ||
-        (settings.cullingMode == CullingMode::CCW && d >= 0) ||
+    // signs are flipped because of vertical flip
+    if ((settings.cullingMode == CullingMode::CW  && d >= 0) ||
+        (settings.cullingMode == CullingMode::CCW && d <= 0) ||
         (abs(d) < 1e-6))
     {
         return;
@@ -292,10 +293,10 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
 
         // [-1, 1]^3 => [0, width] x [0, height] x [0, 1]
         Vec4f vscreen = {
-            (vdiv[0] + 1.f) * 0.5f * width,
-            (vdiv[1] + 1.f) * 0.5f * height,
-            (vdiv[2] + 1.f) * 0.5f,
-             vdiv[3]
+            ( vdiv[0] + 1.f) * 0.5f * width,
+            (-vdiv[1] + 1.f) * 0.5f * height, // vertical flip
+            ( vdiv[2] + 1.f) * 0.5f,
+              vdiv[3]
         };
 
         screenVertices.at<Vec4f>(i) = vscreen;
