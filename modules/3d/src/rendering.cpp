@@ -13,8 +13,7 @@ RasterizeSettings::RasterizeSettings()
 }
 
 static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& colorBuf,
-                         //TODO: enable inverse depth mode later
-                         /*bool invDepthMode,*/ RasterizeSettings settings)
+                         RasterizeSettings settings)
 {
     // any of buffers can be empty
     int width  = std::max(colorBuf.cols, depthBuf.cols);
@@ -199,19 +198,13 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         }
     }
 
-    //TODO: add this to settings
-    //bool invDepthMode = false;
-
     Mat depthBuf;
     if (needDepth)
     {
         if (_depthBuffer.empty())
         {
             _depthBuffer.create(cv::Size(width, height), CV_32FC1);
-            //TODO: fix this
-            //float maxv = invDepthMode ? 0.f : zFar;
-            float maxv = zFar;
-            _depthBuffer.setTo(maxv);
+            _depthBuffer.setTo(zFar);
         }
         else
         {
@@ -226,13 +219,8 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     }
     else if (hasIdx && hasColors)
     {
-        //TODO: fix this
-        //invDepthMode = true;
         depthBuf.create(cv::Size(width, height), CV_32FC1);
-        //TODO: fix this
-        //float maxv = 0;
-        float maxv = zFar;
-        depthBuf.setTo(maxv);
+        depthBuf.setTo(zFar);
     }
 
     Mat colorBuf;
@@ -326,7 +314,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
             ver[i] = screenVertices.at<Vec4f>(idx);
         }
 
-        drawTriangle(ver, col, depthBuf, colorBuf, /*invDepthMode,*/ settings);
+        drawTriangle(ver, col, depthBuf, colorBuf, settings);
     }
 }
 
