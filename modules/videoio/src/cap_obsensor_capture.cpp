@@ -41,7 +41,7 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
     static const obsensor::StreamProfile megaColorProfile = {1280, 720, 30, obsensor::FRAME_FORMAT_MJPG};
     static const obsensor::StreamProfile megaDepthProfile = {640, 576, 30, obsensor::FRAME_FORMAT_Y16};
     static const obsensor::StreamProfile gemini2lColorProfile = { 1280, 720, 30, obsensor::FRAME_FORMAT_MJPG};
-    static const obsensor::StreamProfile gemini2lDepthProfile = {1280, 800, 30, obsensor::FRAME_FORMAT_Y14};
+    static const obsensor::StreamProfile gemini2lDepthProfile = {1280, 800, 30, obsensor::FRAME_FORMAT_Y16};
     static const obsensor::StreamProfile gemini2XlColorProfile = { 1280, 800, 10, obsensor::FRAME_FORMAT_MJPG};
     static const obsensor::StreamProfile gemini2XlDepthProfile = {1280, 800, 10, obsensor::FRAME_FORMAT_Y16};
 
