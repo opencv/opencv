@@ -301,16 +301,9 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         for (int i = 0; i < 3; i++)
         {
             int idx = tri[i];
-
             CV_DbgAssert(idx >= 0 && idx < nVerts);
 
-            Vec3f c(0, 0, 0);
-            if (!colors.empty())
-            {
-                c = colors.at<Vec3f>(idx);
-            }
-            col[i] = c;
-
+            col[i] = colors.empty() ? Vec3f::all(0) : colors.at<Vec3f>(idx);
             ver[i] = screenVertices.at<Vec4f>(idx);
         }
 
