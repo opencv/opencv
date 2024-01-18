@@ -155,9 +155,9 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
 
     string objectPath = findDataFile("rendering/spot.obj");
 
-    Vec3f position = Vec3f( 2.4, 0.7, 1.2);
-    Vec3f lookat   = Vec3f( 0.0, 0.0, 0.3);
-    Vec3f upVector = Vec3f( 0.0, 1.0, 0.0);
+    Vec3f position = Vec3f( 2.4f, 0.7f, 1.2f);
+    Vec3f lookat   = Vec3f( 0.0f, 0.0f, 0.3f);
+    Vec3f upVector = Vec3f( 0.0f, 1.0f, 0.0f);
 
     double fovy = 45.0;
 
@@ -183,10 +183,10 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
         }
     }
 
-    double zNear = 0.1, zFar = 50;
+    float zNear = 0.1f, zFar = 50.f;
 
     Matx44f cameraPose = lookAtMatrixCal(position, lookat, upVector);
-    float fovYradians = fovy / 180.f * CV_PI;
+    float fovYradians = fovy * (float)(CV_PI / 180.0);
     RasterizeSettings settings = RasterizeSettings().setCullingMode(CullingMode::CW).setShadingType(shadingType);
 
     Mat depth_buf, color_buf;

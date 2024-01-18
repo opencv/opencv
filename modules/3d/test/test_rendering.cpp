@@ -385,14 +385,14 @@ protected:
         ftype = std::get<4>(t);
         itype = std::get<5>(t);
 
-        zNear = 0.1, zFar = 50.0;
-        depthScale = 1000.0;
+        zNear = 0.1f, zFar = 50.f;
+        depthScale = 1000.f;
 
         depth_buf = Mat(height, width, ftype, zFar);
         color_buf = Mat(height, width, CV_MAKETYPE(ftype, 3), Scalar::all(0));
 
         cameraPose = lookAtMatrixCal(modelData.position, modelData.lookat, modelData.upVector);
-        fovYradians = modelData.fovy / 180.f * CV_PI;
+        fovYradians = modelData.fovy * (float)(CV_PI / 180.0);
 
         verts = Mat(modelData.vertices);
         verts.convertTo(verts, ftype);
@@ -496,7 +496,7 @@ TEST_P(RenderingTest, accuracy)
 
         Mat depthDiff;
         absdiff(depth_buf, Scalar(zFar * depthScale), depthDiff);
-        float sumDepthDiff = sum(depthDiff)[0];
+        float sumDepthDiff = (float)sum(depthDiff)[0];
         EXPECT_EQ(sumDepthDiff, 0);
     }
     else
@@ -519,10 +519,10 @@ TEST_P(RenderingTest, accuracy)
 
         Mat groundTruthColor = imread(gtPathColor);
         groundTruthColor.convertTo(groundTruthColor, CV_32F, (1.f / 255.f));
-        compareRGB(groundTruthColor, color_buf, 1, 3.57e-05);
+        compareRGB(groundTruthColor, color_buf, 1.f, 3.57e-05f);
 
         Mat groundTruthDepth = imread(gtPathDepth, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH);
-        compareDepth(groundTruthDepth, depth_buf, zFar, depthScale, 65, 485, 0.00681);
+        compareDepth(groundTruthDepth, depth_buf, zFar, depthScale, 65.f, 485.f, 0.00681f);
 
         // add --test_debug to output resulting images
         if (debugLevel > 0)
@@ -545,7 +545,7 @@ TEST_P(RenderingTest, keepDrawnData)
         Mat depth_buf2, color_buf2;
 
         Mat idx1, idx2;
-        int nTriangles = indices.total();
+        int nTriangles = (int)indices.total();
         idx1 = indices.reshape(3, 1)(Range::all(), Range(0, nTriangles / 2));
         idx2 = indices.reshape(3, 1)(Range::all(), Range(nTriangles / 2, nTriangles));
 
