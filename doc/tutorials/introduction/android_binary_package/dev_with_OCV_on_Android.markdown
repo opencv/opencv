@@ -18,7 +18,7 @@ This tutorial assumes you have the following installed and configured:
 -   Android Studio
 -   JDK
 -   Android SDK and NDK
--   OpenCV for Android SDK from official [release page on Github](https://github.com/opencv/opencv/releases)
+-   Optional: OpenCV for Android SDK from official [release page on Github](https://github.com/opencv/opencv/releases)
     or [SourceForge](https://sourceforge.net/projects/opencvlibrary/). Advanced: as alternative the SDK may be
     built from source code by [instruction on wiki](https://github.com/opencv/opencv/wiki/Custom-OpenCV-Android-SDK-and-AAR-package-build).
 
@@ -26,8 +26,9 @@ If you need help with anything of the above, you may refer to our @ref tutorial_
 
 If you encounter any error after thoroughly following these steps, feel free to contact us via OpenCV [forum](https://forum.opencv.org). We'll do our best to help you out.
 
-Hello OpenCV sample
--------------------
+
+Hello OpenCV sample with SDK
+----------------------------
 
 In this section we're gonna create a simple app that does nothing but OpenCV loading. In next section we'll extend it to support camera.
 
@@ -75,11 +76,10 @@ In addition to this instruction you can use some video guide, for example [this 
     @endcode
     The fix was found [here](https://stackoverflow.com/questions/73225714/import-opencv-sdk-to-android-studio-chipmunk)
 
-6. OpenCV project uses `aidl` and `buildConfig` features. Please enable them in
+6. OpenCV project uses `buildConfig` feature. Please enable it in
    `MyApplication/OpenCV/build.gradle` file to `android` block:
     @code{.gradle}
     buildFeatures{
-        aidl true
         buildConfig true
     }
 
@@ -112,6 +112,43 @@ In addition to this instruction you can use some video guide, for example [this 
     ![](images/sample_code.png)
 
 9. Choose a device to check the sample on and run the code by pressing `run` button
+
+    ![](images/run_app.png)
+
+Hello OpenCV sample with Maven Central
+--------------------------------------
+
+Since OpenCV 4.9.0 OpenCV for Android package is available with Maven Central and may be installed
+automatically as Gradle dependency. In this section we're gonna create a simple app that does nothing
+but OpenCV loading with Maven Central.
+
+1. Open Android Studio and create empty project by choosing ***Empty Views Activity***
+
+    ![](images/create_empty_project.png)
+
+2. Setup the project:
+    - Choose ***Java*** language
+    - Choose ***Groovy DSL*** build configuration language
+    - Choose ***Minumum SDK*** with the version number not less than OpenCV supports. For 4.9.0 minimal SDK version is 21.
+
+    ![](images/setup_project.png)
+
+3. Edit `build.gradle` and add OpenCV library to Dependencies list like this:
+    @code{.gradle}
+    dependencies {
+        implementation 'org.opencv:opencv:4.9.0'
+    }
+    @endcode
+   `4.9.0` may be replaced by any version available as [official release](https://central.sonatype.com/artifact/org.opencv/opencv).
+
+4. Before using any OpenCV function you have to load the library first. If you application includes other
+   OpenCV-dependent native libraries you should load them ***after*** OpenCV initialization. Add the folowing
+   code to load the library at app start:
+    @snippet samples/android/tutorial-1-camerapreview/src/org/opencv/samples/tutorial1/Tutorial1Activity.java ocv_loader_init
+    Like this:
+    ![](images/sample_code.png)
+
+5. Choose a device to check the sample on and run the code by pressing `run` button
 
     ![](images/run_app.png)
 

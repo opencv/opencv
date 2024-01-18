@@ -2617,6 +2617,7 @@ void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::Node
 
         // Concat-1 has default value for axis is 1: https://github.com/onnx/onnx/blob/master/docs/Changelog.md#Concat-1
         int axis = layerParams.get<int>("axis", 1);
+        axis = normalize_axis(axis, inputShape.size());
         for (size_t i = 0; i < inputs.size(); ++i)
         {
             MatShape targetShape = inputShape;
@@ -4008,6 +4009,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["ScatterElements"] = dispatch["Scatter"] = dispatch["ScatterND"] = &ONNXImporter::parseScatter;
     dispatch["Tile"] = &ONNXImporter::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter::parseLayerNorm;
+    dispatch["GroupNormalization"] = &ONNXImporter::parseInstanceNormalization;
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =

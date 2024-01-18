@@ -120,11 +120,15 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #include <cstdlib>        // std::abort
 #endif
 
-#if defined __ANDROID__ || defined __unix__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__
+#if defined __ANDROID__ || defined __unix__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__ || defined __QNX__
 #  include <unistd.h>
 #  include <fcntl.h>
 #if defined __QNX__
 #  include <sys/elf.h>
+#  include <sys/auxv.h>
+using Elf64_auxv_t = auxv64_t;
+#  include <elfdefinitions.h>
+const uint64_t AT_HWCAP = NT_GNU_HWCAP;
 #else
 #  include <elf.h>
 #endif
@@ -581,10 +585,12 @@ struct HWFeatures
                     have[CV_CPU_NEON_DOTPROD] = (auxv.a_un.a_val & (1 << 20)) != 0; // HWCAP_ASIMDDP
                     have[CV_CPU_NEON_FP16] = (auxv.a_un.a_val & (1 << 10)) != 0; // HWCAP_ASIMDHP
                 }
+#if defined(AT_HWCAP2)
                 else if (auxv.a_type == AT_HWCAP2)
                 {
                     have[CV_CPU_NEON_BF16] = (auxv.a_un.a_val & (1 << 14)) != 0; // HWCAP2_BF16
                 }
+#endif
             }
 
             close(cpufile);

@@ -76,6 +76,8 @@ class VariationalRefinementImpl CV_FINAL : public VariationalRefinement
     void setDelta(float val) CV_OVERRIDE { delta = val; }
     float getGamma() const CV_OVERRIDE { return gamma; }
     void setGamma(float val) CV_OVERRIDE { gamma = val; }
+    float getEpsilon() const CV_OVERRIDE { return epsilon; }
+    void setEpsilon(float val) CV_OVERRIDE { epsilon = val; }
 
   protected: //!< internal buffers
     /* This struct defines a special data layout for Mat_<float>. Original buffer is split into two: one for "red"
