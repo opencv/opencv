@@ -189,11 +189,11 @@ public:
         {
         case ModelType::Empty:
         {
-            position = Vec3f(0.0, 0.0,  0.0);
-            lookat   = Vec3f(0.0, 0.0,  0.0);
-            upVector = Vec3f(0.0, 1.0,  0.0);
+            position = Vec3f(0.0, 0.0, 0.0);
+            lookat   = Vec3f(0.0, 0.0, 0.0);
+            upVector = Vec3f(0.0, 1.0, 0.0);
 
-            fovy = 45.0;
+            fovy = 45.0f;
 
             vertices = std::vector<Vec3f>(4, {2.0f, 0, -2.0f});
             colors   = std::vector<Vec3f>(4, {0, 0, 1.0f});
@@ -204,11 +204,11 @@ public:
         {
             string objectPath = findDataFile("rendering/spot.obj");
 
-            position = Vec3f( 2.4, 0.7, 1.2);
-            lookat   = Vec3f( 0.0, 0.0, 0.3);
-            upVector = Vec3f( 0.0, 1.0, 0.0);
+            position = Vec3f( 2.4f, 0.7f, 1.2f);
+            lookat   = Vec3f( 0.0f, 0.0f, 0.3f);
+            upVector = Vec3f( 0.0f, 1.0f, 0.0f);
 
-            fovy = 45.0;
+            fovy = 45.0f;
 
             std::vector<vector<int>> indvec;
             // using per-vertex normals as colors
@@ -226,11 +226,11 @@ public:
         break;
         case ModelType::Clipping:
         {
-            position = Vec3f(0.0, 0.0, 5.0);
-            lookat   = Vec3f(0.0, 0.0, 0.0);
-            upVector = Vec3f(0.0, 1.0, 0.0);
+            position = Vec3f(0.0f, 0.0f, 5.0f);
+            lookat   = Vec3f(0.0f, 0.0f, 0.0f);
+            upVector = Vec3f(0.0f, 1.0f, 0.0f);
 
-            fovy = 45.0;
+            fovy = 45.0f;
 
             vertices =
             {
@@ -263,7 +263,7 @@ public:
             lookat   = Vec3f(0.0, 0.0, 0.0);
             upVector = Vec3f(0.0, 1.0, 0.0);
 
-            fovy = 45.0;
+            fovy = 45.0f;
 
             vertices =
             {
@@ -292,7 +292,7 @@ public:
             lookat   = Vec3f(0.0, 0.0, 0.0);
             upVector = Vec3f(0.0, 1.0, 0.0);
 
-            fovy = 60.0;
+            fovy = 60.0f;
 
             vertices =
             {
@@ -323,7 +323,7 @@ public:
     Vec3f lookat;
     Vec3f upVector;
 
-    double fovy;
+    float fovy;
 
     std::vector<Vec3f> vertices;
     std::vector<Vec3i> indices;
@@ -347,9 +347,9 @@ void compareDepth(const cv::Mat& gt, const cv::Mat& mat, float zFar, float scale
 
     Mat jointMask = gtMask & matMask;
     int nzJointMask = cv::countNonZero(jointMask);
-    float normInfDepth = cv::norm(gt, mat, cv::NORM_INF, jointMask);
+    float normInfDepth = (float)cv::norm(gt, mat, cv::NORM_INF, jointMask);
     EXPECT_LE(normInfDepth, normInfThreshold);
-    float normL2Depth = nzJointMask ? cv::norm(gt, mat, cv::NORM_L2, jointMask) / nzJointMask : 0;
+    float normL2Depth = nzJointMask ? (float)(cv::norm(gt, mat, cv::NORM_L2, jointMask) / nzJointMask) : 0;
     EXPECT_LE(normL2Depth, normL2Threshold);
 }
 
@@ -360,9 +360,9 @@ void compareRGB(const cv::Mat& gt, const cv::Mat& mat, float normInfThreshold, f
     ASSERT_EQ(mat.type(), CV_32FC3);
     ASSERT_EQ(gt.size(), mat.size());
 
-    float normInfRgb = cv::norm(gt, mat, cv::NORM_INF);
+    float normInfRgb = (float)cv::norm(gt, mat, cv::NORM_INF);
     EXPECT_LE(normInfRgb, normInfThreshold);
-    float normL2Rgb = cv::norm(gt, mat, cv::NORM_L2) / gt.total();
+    float normL2Rgb = (float)(cv::norm(gt, mat, cv::NORM_L2) / gt.total());
     EXPECT_LE(normL2Rgb, normL2Threshold);
 }
 
@@ -417,13 +417,13 @@ protected:
 
 public:
     int width, height;
-    double zNear, zFar, depthScale;
+    float zNear, zFar, depthScale;
 
     Mat depth_buf, color_buf;
 
     Mat verts, colors, indices;
     Matx44f cameraPose;
-    double fovYradians;
+    float fovYradians;
     RasterizeSettings settings;
 
     ModelData modelData;
@@ -444,7 +444,7 @@ TEST_P(RenderingTest, noArrays)
     triangleRasterize(verts, indices, colors, Matx44d(cameraPose), fovYradians, zNear, zFar,
                       width, height, settings, cv::noArray(), colorOnly);
 
-    compareRGB(color_buf, colorOnly, 1, 0.00134);
+    compareRGB(color_buf, colorOnly, 1, 0.00134f);
     depth_buf.convertTo(depth_buf, CV_16U, depthScale);
     depthOnly.convertTo(depthOnly, CV_16U, depthScale);
     compareDepth(depth_buf, depthOnly, zFar, depthScale, 0, 0, 0);

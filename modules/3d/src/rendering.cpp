@@ -158,7 +158,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
             vertices = vertices.t();
         }
         vertices = vertices.reshape(3, 1).t();
-        nVerts = vertices.total();
+        nVerts = (int)vertices.total();
 
         int indexType = _indices.type();
         CV_Assert(indexType == CV_32SC1 || indexType == CV_32SC3);
@@ -168,7 +168,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
             triangles = triangles.t();
         }
         triangles = triangles.reshape(3, 1).t();
-        nTriangles = triangles.total();
+        nTriangles = (int)triangles.total();
 
         if (hasColors)
         {
@@ -180,7 +180,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
                 colors = colors.t();
             }
             colors = colors.reshape(3, 1).t();
-            nColors = colors.total();
+            nColors = (int)colors.total();
 
             CV_Assert(nColors == nVerts);
             CV_Assert(settings.shadingType == ShadingType::Flat ||
