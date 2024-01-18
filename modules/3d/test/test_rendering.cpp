@@ -351,6 +351,14 @@ void compareDepth(const cv::Mat& gt, const cv::Mat& mat, float zFar, float scale
     EXPECT_LE(normInfDepth, normInfThreshold);
     float normL2Depth = nzJointMask ? (float)(cv::norm(gt, mat, cv::NORM_L2, jointMask) / nzJointMask) : 0;
     EXPECT_LE(normL2Depth, normL2Threshold);
+
+    // add --test_debug to output resulting images
+    if (debugLevel > 0)
+    {
+        std::cout << "nzDepthDiff: "  << nzDepthDiff  << " vs " << maskThreshold << std::endl;
+        std::cout << "normInfDepth: " << normInfDepth << " vs " << normInfThreshold << std::endl;
+        std::cout << "normL2Depth: "  << normL2Depth  << " vs " << normL2Threshold << std::endl;
+    }
 }
 
 
@@ -364,6 +372,12 @@ void compareRGB(const cv::Mat& gt, const cv::Mat& mat, float normInfThreshold, f
     EXPECT_LE(normInfRgb, normInfThreshold);
     float normL2Rgb = (float)(cv::norm(gt, mat, cv::NORM_L2) / gt.total());
     EXPECT_LE(normL2Rgb, normL2Threshold);
+    // add --test_debug to output resulting images
+    if (debugLevel > 0)
+    {
+        std::cout << "normInfRgb: " << normInfRgb << " vs " << normInfThreshold << std::endl;
+        std::cout << "normL2Rgb: " << normL2Rgb << " vs " << normL2Threshold << std::endl;
+    }
 }
 
 
