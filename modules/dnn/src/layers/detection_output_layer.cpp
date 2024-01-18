@@ -337,7 +337,7 @@ public:
         std::vector<UMat> outputs;
         outs.getUMatVector(outputs);
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         if (use_half)
         {
             std::vector<UMat> orig_inputs;
@@ -428,7 +428,7 @@ public:
             CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

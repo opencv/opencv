@@ -156,7 +156,7 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
     CHECK_EQ(gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 || gemm_type == GEMM_TYPE_FAST_IMAGE_32_2 ||
              gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE, true) << "Invalid fast image gemm type." << std::endl;
 
-    bool halfPrecisionMode = (A.depth() == CV_16S);
+    bool halfPrecisionMode = (A.depth() == CV_16F);
 
     if (is_image_a)
     {
@@ -439,7 +439,7 @@ static bool ocl4dnnFastBufferGEMM(const CBLAS_TRANSPOSE TransA,
     CHECK_EQ(gemm_type == GEMM_TYPE_FAST_BUFFER, true)
              << "Invalid fast buffer gemm type." << std::endl;
 
-    bool halfPrecisionMode = (A.depth() == CV_16S);
+    bool halfPrecisionMode = (A.depth() == CV_16F);
 
     size_t sub_group_size = 8;
     bool is_small_batch = (M == 2 || M == 4 || M == 8);
@@ -544,7 +544,7 @@ bool ocl4dnnGEMMCommon(const CBLAS_TRANSPOSE TransB,
                        const UMat B_image, UMat C,
                        const size_t max_image_size)
 {
-    bool halfPrecisionMode = (A.depth() == CV_16S);
+    bool halfPrecisionMode = (A.depth() == CV_16F);
     gemm_type_t gemm_type = halfPrecisionMode ? GEMM_TYPE_FAST_BUFFER : GEMM_TYPE_FAST_IMAGE_32_1;
 
     if (gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 ||
@@ -594,7 +594,7 @@ bool ocl4dnnGEMV<float>(const CBLAS_TRANSPOSE TransA,
                  const int32_t offy)
 {
     bool ret = false;
-    bool use_half = (A.depth() == CV_16S);
+    bool use_half = (A.depth() == CV_16F);
     String opts;
     if (use_half)
         opts = format("-DDtype=%s -DDtype4=%s -Dconvert_Dtype=convert_%s", "half", "half4", "half");
@@ -665,7 +665,7 @@ bool ocl4dnnAXPY(const int32_t N, const Dtype alpha,
                  const UMat X, const int32_t offX, UMat Y,
                  const int32_t offY)
 {
-    bool use_half = (X.depth() == CV_16S);
+    bool use_half = (X.depth() == CV_16F);
     String opts;
     if (use_half)
         opts = "-DDtype=half -DDtype4=half4 -Dconvert_Dtype=convert_half";

@@ -514,7 +514,7 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
     CV_Assert(layerShapesIt != layersShapes.end());
 
     if (preferableBackend == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_OPENCL_FP16 && ld.dtype == CV_32F)
-        ld.dtype = CV_16S;
+        ld.dtype = CV_16F;
 
     std::vector<LayerPin> pinsForInternalBlobs;
     blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs);
@@ -572,7 +572,7 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
             preferableTarget == DNN_TARGET_OPENCL_FP16 &&
             layers[0].dtype == CV_32F)
         {
-            layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
+            layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16F);
         }
         inputShapes.push_back(shape(inp));
     }
@@ -656,7 +656,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
                     {
                         UMat& u = umat_outputBlobs[i];
                         Mat m;
-                        if (u.depth() == CV_16S)  // FP16
+                        if (u.depth() == CV_16F)  // FP16
                             convertFp16(u, m);
                         else
                             m = u.getMat(ACCESS_READ);
@@ -679,7 +679,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         {
                             UMat& u = umat_inputBlobs[i];
                             Mat m;
-                            if (u.depth() == CV_16S)  // FP16
+                            if (u.depth() == CV_16F)  // FP16
                                 convertFp16(u, m);
                             else
                                 m = u.getMat(ACCESS_READ);
@@ -690,7 +690,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         {
                             UMat& u = umat_outputBlobs[i];
                             Mat m;
-                            if (u.depth() == CV_16S)  // FP16
+                            if (u.depth() == CV_16F)  // FP16
                                 convertFp16(u, m);
                             else
                                 m = u.getMat(ACCESS_READ);
@@ -701,7 +701,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         {
                             UMat& u = umat_internalBlobs[i];
                             Mat m;
-                            if (u.depth() == CV_16S)  // FP16
+                            if (u.depth() == CV_16F)  // FP16
                                 convertFp16(u, m);
                             else
                                 m = u.getMat(ACCESS_READ);
@@ -981,7 +981,7 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
                 ld.outputBlobsWrappers[i]->copyToHost();
             }
         }
-        if (ld.outputBlobs[0].depth() == CV_16S)
+        if (ld.outputBlobs[0].depth() == CV_16F)
         {
             std::vector<Mat>& outputvec = *(std::vector<Mat>*)outputBlobs.getObj();
             outputvec.resize(ld.outputBlobs.size());
@@ -1275,7 +1275,7 @@ void Net::Impl::updateLayersShapes()
             preferableTarget == DNN_TARGET_OPENCL_FP16 &&
             inputLayerData.dtype == CV_32F)
         {
-            inp.create(inp.dims, inp.size, CV_16S);
+            inp.create(inp.dims, inp.size, CV_16F);
         }
         inputShapes.push_back(shape(inp));
     }
@@ -1344,7 +1344,7 @@ Mat Net::Impl::getBlob(const LayerPin& pin) const
         ld.outputBlobsWrappers[pin.oid]->copyToHost();
     }
 
-    if (ld.outputBlobs[pin.oid].depth() == CV_16S)
+    if (ld.outputBlobs[pin.oid].depth() == CV_16F)
     {
         Mat output_blob;
         convertFp16(ld.outputBlobs[pin.oid], output_blob);

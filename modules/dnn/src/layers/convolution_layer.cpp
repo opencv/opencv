@@ -140,7 +140,7 @@ public:
         }
 
         const Mat &input = inputs[0];
-        CV_Assert(((input.dims == 3 && kernel_size.size() == 1) || input.dims == 4 || input.dims == 5) && (input.type() == CV_32F || input.type() == CV_16S));
+        CV_Assert(((input.dims == 3 && kernel_size.size() == 1) || input.dims == 4 || input.dims == 5) && (input.type() == CV_32F || input.type() == CV_16F));
         for (size_t i = 0; i < outputs.size(); i++)
         {
             CV_Assert(inputs[i].type() == input.type());
@@ -1023,7 +1023,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -1203,7 +1203,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -1883,7 +1883,7 @@ public:
         std::vector<UMat> outputs;
         std::vector<UMat> internals;
 
-        if (inputs_.depth() == CV_16S)
+        if (inputs_.depth() == CV_16F)
             return false;
 
         inputs_.getUMatVector(inputs);
@@ -1990,7 +1990,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr));
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

@@ -101,7 +101,7 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
         dtype = CV_32S;
         break;
     case TensorType_FLOAT16:
-        dtype = CV_16S;
+        dtype = CV_16F;
         break;
     case TensorType_INT8:
         dtype = CV_8S;

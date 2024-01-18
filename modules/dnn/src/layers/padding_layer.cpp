@@ -129,7 +129,7 @@ public:
 
         if (paddingType == "constant")
         {
-            if (inputs_arr.depth() == CV_16S)
+            if (inputs_arr.depth() == CV_16F)
             {
                 std::vector<float> paddingValue_fp32(1, paddingValue);
                 std::vector<int16_t> paddingValue_fp16(1);

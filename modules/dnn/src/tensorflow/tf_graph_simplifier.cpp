@@ -929,7 +929,7 @@ Mat getTensorContentRef_(const tensorflow::TensorProto& tensor)
                 ints.convertTo(halfs, CV_16UC1);
             }
             // Reinterpret as a signed shorts just for a convertFp16 call.
-            Mat halfsSigned(halfs.size(), CV_16SC1, halfs.data);
+            Mat halfsSigned(halfs.size(), CV_16FC1, halfs.data);
             convertFp16(halfsSigned, m);
             break;
         }

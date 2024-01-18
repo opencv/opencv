@@ -621,7 +621,7 @@ public:
             {
                 std::vector<int> inpIdx(dimsNum, 0);
                 std::vector<int> outIdx(dimsNum, 0);
-                if (inpMat.type() == CV_16S)
+                if (inpMat.type() == CV_16F)
                     getSliceRecursive<int16_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
                 else if (inpMat.type() == CV_8S)
                     getSliceRecursive<int8_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);

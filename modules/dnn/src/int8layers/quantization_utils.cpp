@@ -135,7 +135,7 @@ public:
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
-        if (inputs_.depth() == CV_16S)
+        if (inputs_.depth() == CV_16F)
         {
             UMat inputFp32;
             convertFp16(inputs[0], inputFp32);
@@ -264,7 +264,7 @@ public:
         UMat outputFp32;
         inputs[0].convertTo(outputFp32, CV_32F, scales[0], -(scales[0]*zeropoints[0]));
 
-        if (outputs_.depth() == CV_16S)
+        if (outputs_.depth() == CV_16F)
             convertFp16(outputFp32, outputs[0]);
         else
             outputFp32.copyTo(outputs[0]);

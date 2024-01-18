@@ -279,7 +279,7 @@ public:
                 // Half precision floats.
                 CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
 
-                Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
+                Mat halfs((int)shape.size(), &shape[0], CV_16FC1, (void*)raw_data.c_str());
                 convertFp16(halfs, dstBlob);
             }
             else if (pbBlob.raw_data_type() == caffe::FLOAT)

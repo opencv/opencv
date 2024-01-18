@@ -119,7 +119,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -154,7 +154,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inputs_arr.depth() == CV_16S);
+        bool use_half = (inputs_arr.depth() == CV_16F);
         inputs_arr.getUMatVector(inputs);
         outputs_arr.getUMatVector(outputs);
 

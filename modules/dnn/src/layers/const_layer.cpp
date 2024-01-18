@@ -62,7 +62,7 @@ public:
     {
         std::vector<UMat> outputs;
         outs.getUMatVector(outputs);
-        if (outs.depth() == CV_16S) {
+        if (outs.depth() == CV_16F) {
             auto blob = blobs[0];
             if (blob.type() != CV_32F) {
                 blob.convertTo(blob, CV_32F);
