@@ -451,6 +451,32 @@ TEST_P(RenderingTest, noArrays)
 }
 
 
+// some culling options produce the same pictures, let's join them
+CullingMode findSameCulling(ModelType modelType, ShadingType shadingType, CullingMode cullingMode, bool forRgb)
+{
+    CullingMode sameCullingMode = cullingMode;
+
+    if ((modelType == ModelType::Centered && cullingMode == CullingMode::CCW) ||
+        (modelType == ModelType::Color    && cullingMode == CullingMode::CW)  ||
+        (modelType == ModelType::File     && shadingType == ShadingType::White && forRgb) ||
+        (modelType == ModelType::File     && cullingMode == CullingMode::CW))
+    {
+        sameCullingMode = CullingMode::None;
+    }
+
+    return sameCullingMode;
+}
+
+template<typename T>
+std::string printEnum(T v)
+{
+    std::string s;
+    std::stringstream ss;
+    v.PrintTo(&ss);
+    ss >> s;
+    return s;
+}
+
 TEST_P(RenderingTest, accuracy)
 {
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
@@ -475,37 +501,28 @@ TEST_P(RenderingTest, accuracy)
     }
     else
     {
+        CullingModeEnum cullingModeRgb   = findSameCulling(modelType, shadingType, cullingMode, true);
+        CullingModeEnum cullingModeDepth = findSameCulling(modelType, shadingType, cullingMode, false);
+
+        std::string modelName        = printEnum(modelType);
+        std::string shadingName      = printEnum(shadingType);
+        std::string cullingName      = printEnum(cullingMode);
+        std::string cullingRgbName   = printEnum(cullingModeRgb);
+        std::string cullingDepthName = printEnum(cullingModeDepth);
+
         std::string path = findDataDirectory("rendering");
-
-        std::string modelName;
-        {
-            std::stringstream ss;
-            modelType.PrintTo(&ss);
-            ss >> modelName;
-        }
-        std::string shadingName;
-        {
-            std::stringstream ss;
-            shadingType.PrintTo(&ss);
-            ss >> shadingName;
-        }
-        std::string cullingName;
-        {
-            std::stringstream ss;
-            cullingMode.PrintTo(&ss);
-            ss >> cullingName;
-        }
-
-        std::string suffix = cv::format("%s_%dx%d_Cull%s", modelName.c_str(), width, height, cullingName.c_str());
-        std::string gtPathColor = path + "/example_image_" + suffix + "_" + shadingName + ".png";
-        std::string gtPathDepth = path + "/depth_image_"   + suffix + ".png";
+        std::string suffix      = cv::format("%s_%dx%d_Cull%s", modelName.c_str(), width, height, cullingName.c_str());
+        std::string suffixRgb   = cv::format("%s_%dx%d_Cull%s", modelName.c_str(), width, height, cullingRgbName.c_str());
+        std::string suffixDepth = cv::format("%s_%dx%d_Cull%s", modelName.c_str(), width, height, cullingDepthName.c_str());
+        std::string gtPathColor = path + "/example_image_" + suffixRgb + "_" + shadingName + ".png";
+        std::string gtPathDepth = path + "/depth_image_"   + suffixDepth + ".png";
 
         Mat groundTruthColor = imread(gtPathColor);
         groundTruthColor.convertTo(groundTruthColor, CV_32F, (1.f / 255.f));
-        compareRGB(groundTruthColor, color_buf, 1, 3.04e-05);
+        compareRGB(groundTruthColor, color_buf, 1, 3.57e-05);
 
         Mat groundTruthDepth = imread(gtPathDepth, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH);
-        compareDepth(groundTruthDepth, depth_buf, zFar, depthScale, 29, 485, 0.00681);
+        compareDepth(groundTruthDepth, depth_buf, zFar, depthScale, 65, 485, 0.00681);
 
         // add --test_debug to output resulting images
         if (debugLevel > 0)

@@ -127,6 +127,16 @@ static Matx44f lookAtMatrixCal(const Vec3f& position, const Vec3f& lookat, const
     return res;
 }
 
+template<typename T>
+std::string printEnum(T v)
+{
+    std::string s;
+    std::stringstream ss;
+    v.PrintTo(&ss);
+    ss >> s;
+    return s;
+}
+
 // resolution, shading type, outputs needed
 typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, ShadingTypeEnum, OutputsEnum>> RenderingTest;
 
@@ -201,15 +211,8 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
         depth_buf.convertTo(depth_buf, CV_16U, 1000.0);
         cv::flip(depth_buf, depth_buf, 0);
 
-        std::string shadingName;
-        {
-            std::stringstream ss;
-            shadingType.PrintTo(&ss);
-            ss >> shadingName;
-        }
-        std::string widthStr  = std::to_string(width);
-        std::string heightStr = std::to_string(height);
-        std::string suffix = widthStr + "x" + heightStr + "_" + shadingName;
+        std::string shadingName = printEnum(shadingType);
+        std::string suffix = cv::format("%dx%d_%s", width, height, shadingName.c_str());
 
         imwrite("perf_color_image_" + suffix + ".png", color_buf * 255.f);
         imwrite("perf_depth_image_" + suffix + ".png", depth_buf);
