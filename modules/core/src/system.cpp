@@ -128,7 +128,7 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #  include <sys/auxv.h>
 using Elf64_auxv_t = auxv64_t;
 #  include <elfdefinitions.h>
-constexpr decltype(auto) AT_HWCAP = NT_GNU_HWCAP;
+const uint64_t AT_HWCAP = NT_GNU_HWCAP;
 #else
 #  include <elf.h>
 #endif
