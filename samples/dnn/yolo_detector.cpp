@@ -187,7 +187,7 @@ int main(int argc, char** argv){
 
     CV_Assert(parser.has("model"));
     std::string weightPath = findFile(parser.get<String>("model"));
-    std::string imgPath = findFile(parser.get<String>("input"));
+    // std::string imgPath = findFile(parser.get<String>("input"));
 
     // get classes
     if (parser.has("classes"))
@@ -198,6 +198,13 @@ int main(int argc, char** argv){
     int backend = parser.get<int>("backend");
     net.setPreferableBackend(backend);
     net.setPreferableTarget(parser.get<int>("target"));
+
+    // Open a video file or an image file or a camera stream.
+    VideoCapture cap;
+    if (parser.has("input"))
+        cap.open(parser.get<String>("input"));
+    else
+        cap.open(parser.get<int>("device"));
 
     // image pre-processing
     Size size(inpWidth, inpHeight);
@@ -211,35 +218,6 @@ int main(int argc, char** argv){
         paddingMode,
         paddingValue);
 
-    Mat img = imread(imgPath);
-    // Size frameSize = img.size();
-    Mat inp = blobFromImageWithParams(img, imgParams);
-
-    // forward pass
-    net.setInput(inp);
-    std::vector<Mat> outs;
-    net.forward(outs, net.getUnconnectedOutLayersNames());
-
-    // post-processing
-    std::vector<int> keep_classIds;
-    std::vector<float> keep_confidences;
-    std::vector<Rect2d> keep_boxes;
-
-    yoloPostProcessing(
-        outs, keep_classIds, keep_confidences, keep_boxes,
-        confThreshold, nmsThreshold,
-        "yolox");
-
-    for (auto box : keep_boxes){
-        std::cout << box.x << " " << box.y << " " << box.width << " " << box.height << std::endl;
-    }
-
-    // covert Rect2d to Rect
-    std::vector<Rect> boxes;
-    for (auto box : keep_boxes){
-        boxes.push_back(Rect(box.x, box.y, box.width, box.height));
-    }
-
     // rescale boxes back to original image
     Image2BlobParams paramNet;
             paramNet.scalefactor = scale;
@@ -247,17 +225,63 @@ int main(int argc, char** argv){
             paramNet.mean = mean;
             paramNet.swapRB = swapRB;
             paramNet.paddingmode = paddingMode;
-            paramNet.blobRectsToImageRects(boxes, boxes, img.size());
 
-    for (size_t idx = 0; idx < boxes.size(); ++idx)
+    std::vector<Mat> outs;
+    std::vector<int> keep_classIds;
+    std::vector<float> keep_confidences;
+    std::vector<Rect2d> keep_boxes;
+    std::vector<Rect> boxes;
+
+    Mat img, inp;
+    while (waitKey(1) < 0)
     {
-        Rect box = boxes[idx];
-        drawPred(keep_classIds[idx], keep_confidences[idx], box.x, box.y,
-                 box.width, box.height, img);
-    }
 
-    static const std::string kWinName = "Yolo objecte detection in OpenCV";
-    namedWindow(kWinName, WINDOW_NORMAL);
-    imshow(kWinName, img);
-    waitKey(0); // Wait for a keystroke in the window
+        cap >> img;
+        if (img.empty())
+        {
+            std::cout << "Empty frame" << std::endl;
+            waitKey();
+            break;
+        }
+
+        inp = blobFromImageWithParams(img, imgParams);
+
+        // forward pass
+        net.setInput(inp);
+        net.forward(outs, net.getUnconnectedOutLayersNames());
+
+        yoloPostProcessing(
+            outs, keep_classIds, keep_confidences, keep_boxes,
+            confThreshold, nmsThreshold,
+            "yolox");
+
+        for (auto box : keep_boxes){
+            std::cout << box.x << " " << box.y << " " << box.width << " " << box.height << std::endl;
+        }
+
+        // covert Rect2d to Rect
+        for (auto box : keep_boxes){
+            boxes.push_back(Rect(box.x, box.y, box.width, box.height));
+        }
+
+        paramNet.blobRectsToImageRects(boxes, boxes, img.size());
+
+        for (size_t idx = 0; idx < boxes.size(); ++idx)
+        {
+            Rect box = boxes[idx];
+            drawPred(keep_classIds[idx], keep_confidences[idx], box.x, box.y,
+                    box.width, box.height, img);
+        }
+
+        static const std::string kWinName = "Yolo objecte detection in OpenCV";
+        namedWindow(kWinName, WINDOW_NORMAL);
+        imshow(kWinName, img);
+
+        // emply outs, keep_classIds, keep_confidences, keep_boxes, boxes
+        outs.clear();
+        keep_classIds.clear();
+        keep_confidences.clear();
+        keep_boxes.clear();
+        boxes.clear();
+    }
 }
