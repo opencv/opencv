@@ -227,7 +227,7 @@ void TFLiteImporter::populateNet()
                 if (!data.empty()) {
                     // Dequantize a buffer
                     Mat dataFP32;
-                    convertFp16(data, dataFP32);
+                    data.convertTo(dataFP32, CV_32F);
                     allTensors[op_outputs->Get(0)] = dataFP32;
                     continue;
                 }

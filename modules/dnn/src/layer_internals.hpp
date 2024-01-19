@@ -175,7 +175,7 @@ struct DataLayer : public Layer
                 {
                     Mat input_f32;
                     inputsData[i].convertTo(input_f32, CV_32F, scale, -mean[0] * scale);
-                    convertFp16(input_f32, outputs[i]);
+                    input_f32.convertTo(outputs[i], CV_16F);
                 }
                 else
                 {
@@ -194,7 +194,7 @@ struct DataLayer : public Layer
                         {
                             Mat input_f32;
                             inp.convertTo(input_f32, CV_32F, scale, -mean[c] * scale);
-                            convertFp16(input_f32, out);
+                            input_f32.convertTo(out, CV_16F);
                         }
                         else
                         {
@@ -239,7 +239,7 @@ struct DataLayer : public Layer
                 {
                     UMat input_i;
                     inputData.convertTo(input_i, CV_32F, scale, -mean[0] * scale);
-                    convertFp16(input_i, outputs[i]);
+                    input_i.convertTo(outputs[i], CV_16F);
                 }
                 else
                 {
@@ -263,7 +263,7 @@ struct DataLayer : public Layer
                         {
                             UMat input_i;
                             inp.convertTo(input_i, CV_32F, scale, -mean[c] * scale);
-                            convertFp16(input_i, out);
+                            input_i.convertTo(out, CV_16F);
                         }
                         else
                         {

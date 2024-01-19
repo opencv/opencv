@@ -67,7 +67,7 @@ public:
             if (blob.type() != CV_32F) {
                 blob.convertTo(blob, CV_32F);
             }
-            convertFp16(blob, outputs[0]);
+            blob.convertTo(outputs[0], CV_16F);
         }
         else
             blobs[0].convertTo(outputs[0], outputs[0].type());

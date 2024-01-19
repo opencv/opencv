@@ -138,7 +138,7 @@ public:
         if (inputs_.depth() == CV_16F)
         {
             UMat inputFp32;
-            convertFp16(inputs[0], inputFp32);
+            inputs[0].convertTo(inputFp32, CV_32F);
             inputs[0] = inputFp32;  // replace
         }
 
@@ -264,10 +264,7 @@ public:
         UMat outputFp32;
         inputs[0].convertTo(outputFp32, CV_32F, scales[0], -(scales[0]*zeropoints[0]));
 
-        if (outputs_.depth() == CV_16F)
-            convertFp16(outputFp32, outputs[0]);
-        else
-            outputFp32.copyTo(outputs[0]);
+        outputFp32.convertTo(outputs[0], outputs_.depth());
         return true;
     }
 #endif

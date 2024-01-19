@@ -192,9 +192,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             }
 
             if (use_half) {
-                convertFp16(A, A_fp32);
-                convertFp16(B, B_fp32);
-                convertFp16(C, C_fp32);
+                A.convertTo(A_fp32, CV_32F);
+                B.convertTo(B_fp32, CV_32F);
+                C.convertTo(C_fp32, CV_32F);
             } else {
                 A_fp32 = A;
                 B_fp32 = B;
@@ -203,9 +203,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
             cv::gemm(A_fp32, B_fp32, 1.f, noArray(), 0.f, C_fp32);
             if (use_half) {
-                convertFp16(A_fp32, A);
-                convertFp16(B_fp32, B);
-                convertFp16(C_fp32, C);
+                A_fp32.convertTo(A, CV_16F);
+                B_fp32.convertTo(B, CV_16F);
+                C_fp32.convertTo(C, CV_16F);
             }
         }
         return true;

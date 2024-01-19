@@ -192,7 +192,7 @@ void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
 
         inputs.resize(orig_inputs.size());
         for (size_t i = 0; i < orig_inputs.size(); i++)
-            convertFp16(orig_inputs[i], inputs[i]);
+            orig_inputs[i].convertTo(inputs[i], CV_32F);
 
         outputs.resize(orig_outputs.size());
         for (size_t i = 0; i < orig_outputs.size(); i++)
@@ -205,7 +205,7 @@ void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
         forward(inputs, outputs, internals);
 
         for (size_t i = 0; i < outputs.size(); i++)
-            convertFp16(outputs[i], orig_outputs[i]);
+            outputs[i].convertTo(orig_outputs[i], CV_16F);
 
         // sync results back
         outputs_arr.assign(orig_outputs);

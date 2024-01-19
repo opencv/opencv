@@ -778,7 +778,7 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
         if (use_half_)
         {
             CV_CheckTypeEQ(weight.type(), CV_16FC1, "");
-            convertFp16(weight, weight_tmp);
+            weight.convertTo(weight_tmp, CV_32F);
             weightMat = weight_tmp.getMat(ACCESS_READ);
             swizzledWeightMat.create(shape(swizzled_weights_umat), CV_32F);
         }
@@ -817,7 +817,7 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
         weightMat.release();
 
         if (use_half_)
-            convertFp16(swizzledWeightMat, swizzled_weights_umat);
+            swizzledWeightMat.convertTo(swizzled_weights_umat, CV_16F);
     }
 
     return true;
@@ -1154,8 +1154,8 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
     Mat mat_top, mat_verify_top;
     if (use_half_)
     {
-        convertFp16(top, new_top);
-        convertFp16(verifyTop, new_verify_top);
+        top.convertTo(new_top, CV_32F);
+        verifyTop.convertTo(new_verify_top, CV_32F);
 
         mat_top = new_top.getMat(ACCESS_READ);
         mat_verify_top = new_verify_top.getMat(ACCESS_READ);

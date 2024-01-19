@@ -1037,6 +1037,7 @@ public:
             umat_blobs.resize(n);
             for (size_t i = 0; i < n; i++)
             {
+                CV_Assert(!use_half);  // TODO: not implemented
                 inputs[i + 1].copyTo(umat_blobs[i]);
             }
             inputs.resize(1);
@@ -1049,7 +1050,7 @@ public:
             for (size_t i = 0; i < n; i++)
             {
                 if (use_half)
-                    convertFp16(blobs[i], umat_blobs[i]);
+                    blobs[i].convertTo(umat_blobs[i], CV_16F);
                 else
                     blobs[i].copyTo(umat_blobs[i]);
             }
@@ -1130,7 +1131,7 @@ public:
         if (fusedWeights)
         {
             if (use_half)
-                convertFp16(weightsMat, umat_blobs[0]);
+                weightsMat.convertTo(umat_blobs[0], CV_16F);
             else
                 weightsMat.copyTo(umat_blobs[0]);
             fusedWeights = false;
@@ -1140,7 +1141,7 @@ public:
             if ( umat_blobs.size() < 2 )
                 umat_blobs.resize(2);
             if (use_half)
-                convertFp16(Mat(biasvec, true), umat_blobs[1]);
+                Mat(biasvec, true).convertTo(umat_blobs[1], CV_16F);
             else
                 Mat(biasvec, true).copyTo(umat_blobs[1]);
             convolutionOp->setBias(true);

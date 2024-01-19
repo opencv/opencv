@@ -657,7 +657,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         UMat& u = umat_outputBlobs[i];
                         Mat m;
                         if (u.depth() == CV_16F)  // FP16
-                            convertFp16(u, m);
+                            u.convertTo(m, CV_32F);
                         else
                             m = u.getMat(ACCESS_READ);
                         if (!checkRange(m))
@@ -680,7 +680,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
                             UMat& u = umat_inputBlobs[i];
                             Mat m;
                             if (u.depth() == CV_16F)  // FP16
-                                convertFp16(u, m);
+                                u.convertTo(m, CV_32F);
                             else
                                 m = u.getMat(ACCESS_READ);
                             std::cout << "INPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << std::endl;
@@ -691,7 +691,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
                             UMat& u = umat_outputBlobs[i];
                             Mat m;
                             if (u.depth() == CV_16F)  // FP16
-                                convertFp16(u, m);
+                                u.convertTo(m, CV_32F);
                             else
                                 m = u.getMat(ACCESS_READ);
                             std::cout << "OUTPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << std::endl;
@@ -702,7 +702,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
                             UMat& u = umat_internalBlobs[i];
                             Mat m;
                             if (u.depth() == CV_16F)  // FP16
-                                convertFp16(u, m);
+                                u.convertTo(m, CV_32F);
                             else
                                 m = u.getMat(ACCESS_READ);
                             std::cout << "INTERNAL " << i << " " << shape(m) << std::endl;
@@ -986,7 +986,7 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
             std::vector<Mat>& outputvec = *(std::vector<Mat>*)outputBlobs.getObj();
             outputvec.resize(ld.outputBlobs.size());
             for (int i = 0; i < outputvec.size(); i++)
-                convertFp16(ld.outputBlobs[i], outputvec[i]);
+                ld.outputBlobs[i].convertTo(outputvec[i], CV_32F);
         }
         else
         {
@@ -1009,7 +1009,7 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
                 std::vector<UMat> out_vec = OpenCLBackendWrapper::getUMatVector(ld.outputBlobsWrappers);
                 outputvec.resize(out_vec.size());
                 for (int i = 0; i < out_vec.size(); i++)
-                    convertFp16(out_vec[i], outputvec[i]);
+                    out_vec[i].convertTo(outputvec[i], CV_32F);
             }
         }
         else
@@ -1347,7 +1347,7 @@ Mat Net::Impl::getBlob(const LayerPin& pin) const
     if (ld.outputBlobs[pin.oid].depth() == CV_16F)
     {
         Mat output_blob;
-        convertFp16(ld.outputBlobs[pin.oid], output_blob);
+        ld.outputBlobs[pin.oid].convertTo(output_blob, CV_32F);
         return output_blob;
     }
     else

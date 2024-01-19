@@ -62,7 +62,7 @@ public:
         if (indicesType == CV_16F/*FP16*/)
         {
             Mat indicesF32;
-            convertFp16(inputs[1], indicesF32);
+            inputs[1].convertTo(indicesF32, CV_32F);
             indicesF32.convertTo(indices32S, CV_32S);
         }
         else
