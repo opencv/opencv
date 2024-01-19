@@ -1263,7 +1263,7 @@ norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const
         if( !mask )
             for( i = 0; i < total; i++ )
             {
-                double v = src[i];
+                double v = static_cast<double>(src[i]);
                 result += v*v;
             }
         else
@@ -1272,7 +1272,7 @@ norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
                     {
-                        double v = src[i*cn + c];
+                        double v = static_cast<double>(src[i*cn + c]);
                         result += v*v;
                     }
             }
@@ -1456,7 +1456,7 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
         if( !mask )
             for( i = 0; i < total; i++ )
             {
-                double v = src1[i] - src2[i];
+                double v = static_cast<double>(src1[i] - src2[i]);
                 result += v*v;
             }
         else
@@ -1465,7 +1465,7 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
                     {
-                        double v = src1[i*cn + c] - src2[i*cn + c];
+                        double v = static_cast<double>(src1[i*cn + c] - src2[i*cn + c]);
                         result += v*v;
                     }
             }

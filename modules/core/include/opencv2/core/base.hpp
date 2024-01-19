@@ -410,13 +410,16 @@ _AccTp normL2Sqr(const _Tp* a, int n)
 #if CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
     {
-        _AccTp v0 = a[i], v1 = a[i+1], v2 = a[i+2], v3 = a[i+3];
+        _AccTp v0 = static_cast<_AccTp>(a[i]);
+        _AccTp v1 = static_cast<_AccTp>(a[i+1]);
+        _AccTp v2 = static_cast<_AccTp>(a[i+2]);
+        _AccTp v3 = static_cast<_AccTp>(a[i+3]);
         s += v0*v0 + v1*v1 + v2*v2 + v3*v3;
     }
 #endif
     for( ; i < n; i++ )
     {
-        _AccTp v = a[i];
+        _AccTp v = static_cast<_AccTp>(a[i]);
         s += v*v;
     }
     return s;

@@ -401,7 +401,7 @@ normDiffL1_(const uint32_t* src1, const uint32_t* src2, const uchar* mask, doubl
 template<> int
 normDiffL1_(const uint64_t* src1, const uint64_t* src2, const uchar* mask, double* _result, int len, int cn)
 {
-    uint64_t diff = 0;
+    double diff = 0;
     if( !mask )
     {
         for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
@@ -442,7 +442,7 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
             {
                 for( int k = 0; k < cn; k++ )
                 {
-                    ST v = src1[k] - src2[k];
+                    ST v = static_cast<ST>(src1[k] - src2[k]);
                     result += v*v;
                 }
             }
@@ -966,9 +966,9 @@ double norm( InputArray _src, int normType, InputArray _mask )
         else if (depth == CV_32F || depth == CV_16F)
             return result.f;
         else if(depth == CV_64S)
-            return result.s64;
+            return static_cast<double>(result.s64);
         else if(depth == CV_64U)
-            return result.u64;
+            return static_cast<double>(result.u64);
         else if(depth == CV_32S)
             return result.s32;
         else
@@ -1447,9 +1447,9 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         else if (depth == CV_32F || depth == CV_16F)
             return result.f;
         else if(depth == CV_64S)
-            return result.s64;
+            return static_cast<double>(result.s64);
         else if(depth == CV_64U)
-            return result.u64;
+            return static_cast<double>(result.u64);
         else if(depth == CV_32S)
             return result.s32;
         else
