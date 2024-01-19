@@ -1035,14 +1035,10 @@ TEST_P(Test_two_inputs, basic)
     randu(firstInp, 0, 100);
     randu(secondInp, 0, 100);
 
-#ifndef CV_CXX11
     std::vector<String> input_names;
     input_names.push_back("data");
     input_names.push_back("second_input");
     net.setInputsNames(input_names);
-#else
-    net.setInputsNames({"data", "second_input"});
-#endif
     net.setInput(firstInp, "data", kScale);
     net.setInput(secondInp, "second_input", kScaleInv);
     net.setPreferableBackend(backendId);

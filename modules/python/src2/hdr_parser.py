@@ -455,8 +455,7 @@ class CppHeaderParser(object):
                                                  ("CV_INLINE", ""),
                                                  ("CV_DEPRECATED", ""),
                                                  ("CV_DEPRECATED_EXTERNAL", ""),
-                                                 ("CV_NODISCARD_STD", ""),
-                                                 ("CV_NODISCARD", "")]).strip()
+                                                 ("CV_NODISCARD_STD", "")]).strip()
 
         if decl_str.strip().startswith('virtual'):
             virtual_method = True

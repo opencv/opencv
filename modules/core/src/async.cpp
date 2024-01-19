@@ -3,7 +3,6 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
-//#undef CV_CXX11  // debug non C++11 mode
 #include "opencv2/core/async.hpp"
 #include "opencv2/core/detail/async_promise.hpp"
 
@@ -16,11 +15,9 @@
 
 #ifndef OPENCV_DISABLE_THREAD_SUPPORT
 
-#ifdef CV_CXX11
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
-#endif
 
 namespace cv {
 
@@ -37,12 +34,8 @@ struct AsyncArray::Impl
     void releasePromise() CV_NOEXCEPT { CV_XADD(&refcount_promise, -1); if(1 == CV_XADD(&refcount, -1)) delete this; } \
     int refcount_promise;
 
-#ifdef CV_CXX11
     mutable std::mutex mtx;
     mutable std::condition_variable cond_var;
-#else
-    mutable cv::Mutex mtx;
-#endif
 
     mutable bool has_result; // Mat, UMat or exception
 
@@ -88,11 +81,7 @@ struct AsyncArray::Impl
             if (!wait_for(timeoutNs))
                 return false;
         }
-#ifdef CV_CXX11
         std::unique_lock<std::mutex> lock(mtx);
-#else
-        cv::AutoLock lock(mtx);
-#endif
         if (has_result)
         {
             if (!result_mat.empty())
@@ -145,7 +134,6 @@ struct AsyncArray::Impl
         if (timeoutNs == 0)
             return has_result;
         CV_LOG_INFO(NULL, "Waiting for async result ...");
-#ifdef CV_CXX11
         std::unique_lock<std::mutex> lock(mtx);
         const auto cond_pred = [&]{ return has_result == true; };
         if (timeoutNs > 0)
@@ -156,9 +144,6 @@ struct AsyncArray::Impl
             CV_Assert(has_result);
             return true;
         }
-#else
-        CV_Error(Error::StsNotImplemented, "OpenCV has been built without async waiting support (C++11 is required)");
-#endif
     }
 
     AsyncArray getArrayResult()
@@ -175,11 +160,7 @@ struct AsyncArray::Impl
     {
         if (future_is_returned && refcount_future == 0)
             CV_Error(Error::StsError, "Associated AsyncArray has been destroyed");
-#ifdef CV_CXX11
         std::unique_lock<std::mutex> lock(mtx);
-#else
-        cv::AutoLock lock(mtx);
-#endif
         CV_Assert(!has_result);
         int k = value.kind();
         if (k == _InputArray::UMAT)
@@ -193,9 +174,7 @@ struct AsyncArray::Impl
             value.copyTo(*result_mat.get());
         }
         has_result = true;
-#ifdef CV_CXX11
         cond_var.notify_all();
-#endif
     }
 
 #if CV__EXCEPTION_PTR
@@ -203,18 +182,12 @@ struct AsyncArray::Impl
     {
         if (future_is_returned && refcount_future == 0)
             CV_Error(Error::StsError, "Associated AsyncArray has been destroyed");
-#ifdef CV_CXX11
         std::unique_lock<std::mutex> lock(mtx);
-#else
-        cv::AutoLock lock(mtx);
-#endif
         CV_Assert(!has_result);
         has_exception = true;
         exception = e;
         has_result = true;
-#ifdef CV_CXX11
         cond_var.notify_all();
-#endif
     }
 #endif
 
@@ -222,18 +195,12 @@ struct AsyncArray::Impl
     {
         if (future_is_returned && refcount_future == 0)
             CV_Error(Error::StsError, "Associated AsyncArray has been destroyed");
-#ifdef CV_CXX11
         std::unique_lock<std::mutex> lock(mtx);
-#else
-        cv::AutoLock lock(mtx);
-#endif
         CV_Assert(!has_result);
         has_exception = true;
         cv_exception = e;
         has_result = true;
-#ifdef CV_CXX11
         cond_var.notify_all();
-#endif
     }
 };
 

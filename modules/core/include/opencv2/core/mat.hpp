@@ -53,6 +53,7 @@
 
 #include "opencv2/core/bufferpool.hpp"
 
+#include <array>
 #include <type_traits>
 
 namespace cv

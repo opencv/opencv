@@ -941,13 +941,9 @@ namespace opencv_test {
 using namespace cvtest;
 using namespace cv;
 
-#ifdef CV_CXX11
 #define CVTEST_GUARD_SYMBOL(name) \
     class required_namespace_specificatin_here_for_symbol_ ## name {}; \
     using name = required_namespace_specificatin_here_for_symbol_ ## name;
-#else
-#define CVTEST_GUARD_SYMBOL(name) /* nothing */
-#endif
 
 CVTEST_GUARD_SYMBOL(norm)
 CVTEST_GUARD_SYMBOL(add)

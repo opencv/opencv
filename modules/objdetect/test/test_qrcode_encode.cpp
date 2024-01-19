@@ -5,16 +5,6 @@
 #include "test_precomp.hpp"
 namespace opencv_test { namespace {
 
-#if !defined CV_CXX11
-// Wrapper for generating seeded random number via std::rand.
-template<unsigned Seed>
-class SeededRandFunctor {
-public:
-    SeededRandFunctor() { std::srand(Seed); }
-    int operator()(int i) { return std::rand() % (i + 1); }
-};
-#endif
-
 std::string encode_qrcode_images_name[] = {
         "version1_mode1.png", "version1_mode2.png", "version1_mode4.png",
         "version2_mode1.png", "version2_mode2.png", "version2_mode4.png",

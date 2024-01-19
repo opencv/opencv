@@ -210,15 +210,8 @@ struct ImageCodecInitializer
 static
 ImageCodecInitializer& getCodecs()
 {
-#ifdef CV_CXX11
     static ImageCodecInitializer g_codecs;
     return g_codecs;
-#else
-    // C++98 doesn't guarantee correctness of multi-threaded initialization of static global variables
-    // (memory leak here is not critical, use C++11 to avoid that)
-    static ImageCodecInitializer* g_codecs = new ImageCodecInitializer();
-    return *g_codecs;
-#endif
 }
 
 /**

@@ -15,6 +15,7 @@
 #include "quirc.h"
 #endif
 
+#include <array>
 #include <limits>
 #include <cmath>
 #include <queue>
