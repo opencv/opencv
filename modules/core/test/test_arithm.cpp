@@ -106,6 +106,18 @@ static const _OutputArray::DepthMask baseArithmTypeMask =
         _OutputArray::DEPTH_MASK_32F |
         _OutputArray::DEPTH_MASK_64F);
 
+static const _OutputArray::DepthMask baseArithmTypeMaskV5 =
+    _OutputArray::DepthMask(
+        _OutputArray::DEPTH_MASK_8U |
+        _OutputArray::DEPTH_MASK_16U |
+        _OutputArray::DEPTH_MASK_16S |
+        _OutputArray::DEPTH_MASK_32S |
+        _OutputArray::DEPTH_MASK_32F |
+        _OutputArray::DEPTH_MASK_64F |
+        _OutputArray::DEPTH_MASK_32U |
+        _OutputArray::DEPTH_MASK_64U |
+        _OutputArray::DEPTH_MASK_64S);
+
 struct BaseArithmOp : public BaseElemWiseOp
 {
     BaseArithmOp(int _ninputs, int _flags, double _alpha, double _beta, Scalar _gamma=Scalar::all(0))
@@ -1411,7 +1423,7 @@ struct NormOp : public BaseArithmOp
     }
     int getRandomType(RNG& rng)
     {
-        int type = cvtest::randomType(rng, baseArithmTypeMask, 1, 4);
+        int type = cvtest::randomType(rng, baseArithmTypeMaskV5, 1, 4);
         for(;;)
         {
             normType = rng.uniform(1, 8);

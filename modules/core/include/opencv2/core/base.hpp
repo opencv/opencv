@@ -399,6 +399,8 @@ inline int cv_abs(uchar x) { return x; }
 inline int cv_abs(schar x) { return std::abs(x); }
 inline int cv_abs(ushort x) { return x; }
 inline int cv_abs(short x) { return std::abs(x); }
+inline uint32_t cv_abs(uint32_t x) { return x; }
+inline uint64_t cv_abs(uint64_t x) { return x; }
 
 template<typename _Tp, typename _AccTp> static inline
 _AccTp normL2Sqr(const _Tp* a, int n)

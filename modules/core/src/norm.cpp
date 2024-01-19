@@ -295,6 +295,62 @@ normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int l
     *_result = result;
     return 0;
 }
+template<> int
+normDiffInf_(const uint32_t* src1, const uint32_t* src2, const uchar* mask, uint32_t* _result, int len, int cn)
+{
+    uint32_t result = *_result;
+    if( !mask )
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            for( int k = 0; k < cn; k++ )
+            {
+                uint32_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                result = std::max(result, v);
+            }
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                {
+                    uint32_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                    result = std::max(result, v);
+                }
+            }
+    }
+    *_result = result;
+    return 0;
+}
+template<> int
+normDiffInf_(const uint64_t* src1, const uint64_t* src2, const uchar* mask, uint64_t* _result, int len, int cn)
+{
+    uint64_t result = *_result;
+    if( !mask )
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            for( int k = 0; k < cn; k++ )
+            {
+                uint64_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                result = std::max(result, v);
+            }
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                {
+                    uint64_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                    result = std::max(result, v);
+                }
+            }
+    }
+    *_result = result;
+    return 0;
+}
 
 template<typename T, typename ST> int
 normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn)
@@ -314,6 +370,60 @@ normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
             }
     }
     *_result = result;
+    return 0;
+}
+template<> int
+normDiffL1_(const uint32_t* src1, const uint32_t* src2, const uchar* mask, double* _result, int len, int cn)
+{
+    uint64_t diff = 0;
+    if( !mask )
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            for( int k = 0; k < cn; k++ )
+            {
+                uint64_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                diff += v;
+            }
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            if( mask[i] )
+                for( int k = 0; k < cn; k++ )
+                {
+                    uint64_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                    diff += v;
+                }
+    }
+    *_result = *_result + static_cast<double>(diff);
+    return 0;
+}
+template<> int
+normDiffL1_(const uint64_t* src1, const uint64_t* src2, const uchar* mask, double* _result, int len, int cn)
+{
+    uint64_t diff = 0;
+    if( !mask )
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            for( int k = 0; k < cn; k++ )
+            {
+                uint64_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                diff += static_cast<double>(v);
+            }
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                {
+                    uint64_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                    diff += static_cast<double>(v);
+                }
+            }
+    }
+    *_result = *_result + static_cast<double>(diff);
     return 0;
 }
 
@@ -340,6 +450,62 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
     *_result = result;
     return 0;
 }
+template<> int
+normDiffL2_(const uint32_t* src1, const uint32_t* src2, const uchar* mask, double* _result, int len, int cn)
+{
+    uint64_t diff = 0;
+    if( !mask )
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            for( int k = 0; k < cn; k++ )
+            {
+                uint64_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                diff += v*v;
+            }
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                {
+                    uint64_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                    diff += v*v;
+                }
+            }
+    }
+    *_result = *_result + static_cast<double>(diff);
+    return 0;
+}
+template<> int
+normDiffL2_(const uint64_t* src1, const uint64_t* src2, const uchar* mask, double* _result, int len, int cn)
+{
+    uint64_t diff = 0;
+    if( !mask )
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            for( int k = 0; k < cn; k++ )
+            {
+                uint64_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                diff += v*v;
+            }
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                {
+                    uint64_t v = (src1[k] > src2[k])?(src1[k] - src2[k]):(src2[k] - src1[k]);
+                    diff += v*v;
+                }
+            }
+    }
+    *_result = *_result + static_cast<double>(diff);
+    return 0;
+}
 
 #define CV_DEF_NORM_FUNC(L, suffix, type, ntype) \
     static int norm##L##_##suffix(const type* src, const uchar* mask, ntype* r, int len, int cn) \
@@ -360,6 +526,9 @@ CV_DEF_NORM_ALL(16s, short, int, int, double)
 CV_DEF_NORM_ALL(32s, int, int, double, double)
 CV_DEF_NORM_ALL(32f, float, float, double, double)
 CV_DEF_NORM_ALL(64f, double, double, double, double)
+CV_DEF_NORM_ALL(32u, uint32_t, uint32_t, double, double)
+CV_DEF_NORM_ALL(64s, int64_t, int64_t, double, double)
+CV_DEF_NORM_ALL(64u, uint64_t, uint64_t, double, double)
 
 
 typedef int (*NormFunc)(const uchar*, const uchar*, uchar*, int, int);
@@ -371,15 +540,24 @@ static NormFunc getNormFunc(int normType, int depth)
     {
         {
             (NormFunc)GET_OPTIMIZED(normInf_8u), (NormFunc)GET_OPTIMIZED(normInf_8s), (NormFunc)GET_OPTIMIZED(normInf_16u), (NormFunc)GET_OPTIMIZED(normInf_16s),
-            (NormFunc)GET_OPTIMIZED(normInf_32s), (NormFunc)GET_OPTIMIZED(normInf_32f), (NormFunc)normInf_64f, 0
+            (NormFunc)GET_OPTIMIZED(normInf_32s), (NormFunc)GET_OPTIMIZED(normInf_32f), (NormFunc)normInf_64f, 0,
+            0, // CV_16BF
+            0, // CV_Bool
+            (NormFunc)normInf_64u, (NormFunc)normInf_64s, (NormFunc)normInf_32u
         },
         {
             (NormFunc)GET_OPTIMIZED(normL1_8u), (NormFunc)GET_OPTIMIZED(normL1_8s), (NormFunc)GET_OPTIMIZED(normL1_16u), (NormFunc)GET_OPTIMIZED(normL1_16s),
-            (NormFunc)GET_OPTIMIZED(normL1_32s), (NormFunc)GET_OPTIMIZED(normL1_32f), (NormFunc)normL1_64f, 0
+            (NormFunc)GET_OPTIMIZED(normL1_32s), (NormFunc)GET_OPTIMIZED(normL1_32f), (NormFunc)normL1_64f, 0,
+            0, // CV_16BF
+            0, // CV_Bool
+            (NormFunc)normL1_64u, (NormFunc)normL1_64s, (NormFunc)normL1_32u
         },
         {
             (NormFunc)GET_OPTIMIZED(normL2_8u), (NormFunc)GET_OPTIMIZED(normL2_8s), (NormFunc)GET_OPTIMIZED(normL2_16u), (NormFunc)GET_OPTIMIZED(normL2_16s),
-            (NormFunc)GET_OPTIMIZED(normL2_32s), (NormFunc)GET_OPTIMIZED(normL2_32f), (NormFunc)normL2_64f, 0
+            (NormFunc)GET_OPTIMIZED(normL2_32s), (NormFunc)GET_OPTIMIZED(normL2_32f), (NormFunc)normL2_64f, 0,
+            0, // CV_16BF
+            0, // CV_Bool
+            (NormFunc)normL2_64u, (NormFunc)normL2_64s, (NormFunc)normL2_32u
         }
     };
 
@@ -394,19 +572,28 @@ static NormDiffFunc getNormDiffFunc(int normType, int depth)
             (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u), (NormDiffFunc)normDiffInf_8s,
             (NormDiffFunc)normDiffInf_16u, (NormDiffFunc)normDiffInf_16s,
             (NormDiffFunc)normDiffInf_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32f),
-            (NormDiffFunc)normDiffInf_64f, 0
+            (NormDiffFunc)normDiffInf_64f, 0,
+            0, // CV_16BF
+            0, // CV_Bool
+            (NormDiffFunc)normDiffInf_64u, (NormDiffFunc)normDiffInf_64s, (NormDiffFunc)normDiffInf_32u
         },
         {
             (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u), (NormDiffFunc)normDiffL1_8s,
             (NormDiffFunc)normDiffL1_16u, (NormDiffFunc)normDiffL1_16s,
             (NormDiffFunc)normDiffL1_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32f),
-            (NormDiffFunc)normDiffL1_64f, 0
+            (NormDiffFunc)normDiffL1_64f, 0,
+            0, // CV_16BF
+            0, // CV_Bool
+            (NormDiffFunc)normDiffL1_64u, (NormDiffFunc)normDiffL1_64s, (NormDiffFunc)normDiffL1_32u
         },
         {
             (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u), (NormDiffFunc)normDiffL2_8s,
             (NormDiffFunc)normDiffL2_16u, (NormDiffFunc)normDiffL2_16s,
             (NormDiffFunc)normDiffL2_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32f),
-            (NormDiffFunc)normDiffL2_64f, 0
+            (NormDiffFunc)normDiffL2_64f, 0,
+            0, // CV_16BF
+            0, // CV_Bool
+            (NormDiffFunc)normDiffL2_64u, (NormDiffFunc)normDiffL2_64s, (NormDiffFunc)normDiffL2_32u
         }
     };
 
@@ -704,6 +891,9 @@ double norm( InputArray _src, int normType, InputArray _mask )
         double d;
         int i;
         float f;
+        uint64_t u64;
+        int64_t  s64;
+        int32_t  s32;
     }
     result;
     result.d = 0;
@@ -775,6 +965,12 @@ double norm( InputArray _src, int normType, InputArray _mask )
             return result.d;
         else if (depth == CV_32F || depth == CV_16F)
             return result.f;
+        else if(depth == CV_64S)
+            return result.s64;
+        else if(depth == CV_64U)
+            return result.u64;
+        else if(depth == CV_32S)
+            return result.s32;
         else
             return result.i;
     }
@@ -1172,6 +1368,9 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         float f;
         int i;
         unsigned u;
+        uint64_t u64;
+        int64_t  s64;
+        int32_t  s32;
     }
     result;
     result.d = 0;
@@ -1247,6 +1446,12 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
             return result.d;
         else if (depth == CV_32F || depth == CV_16F)
             return result.f;
+        else if(depth == CV_64S)
+            return result.s64;
+        else if(depth == CV_64U)
+            return result.u64;
+        else if(depth == CV_32S)
+            return result.s32;
         else
             return result.u;
     }

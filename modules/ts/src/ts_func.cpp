@@ -10,7 +10,7 @@ namespace cvtest
 
 const char* getTypeName( int type )
 {
-    static const char* type_names[] = { "8u", "8s", "16u", "16s", "32s", "32f", "64f", "ptr" };
+    static const char* type_names[] = { "8u", "8s", "16u", "16s", "32s", "32f", "64f", "ptr", "16bf", "bool", "64u", "64s", "32u" };
     return type_names[CV_MAT_DEPTH(type)];
 }
 
@@ -1279,6 +1279,142 @@ norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const
     }
     return result;
 }
+template<> double
+norm_(const uint32_t* src, size_t total, int cn, int normType, double startval, const uchar* mask)
+{
+    size_t i;
+    double result = startval;
+    if( !mask )
+        total *= cn;
+
+    if( normType == NORM_INF )
+    {
+        uint32_t vresult = static_cast<uint32_t>(startval);
+
+        if( !mask )
+            for( i = 0; i < total; i++ )
+                vresult = std::max(vresult, src[i]);
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint32_t v = src[i*cn + c];
+                        vresult = std::max(vresult, v);
+                    }
+            }
+        result = static_cast<double>(vresult);
+    }
+    else if( normType == NORM_L1 )
+    {
+        uint64_t diff = 0;
+        if( !mask )
+            for( i = 0; i < total; i++ )
+                diff += src[i];
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint64_t v = src[i*cn + c];
+                        diff += v;
+                    }
+            }
+        result = result + static_cast<double>(diff);
+    }
+    else
+    {
+        uint64_t diff = 0;
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                uint64_t v = src[i];
+                diff += v*v;
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint64_t v = src[i*cn + c];
+                        diff += v*v;
+                    }
+            }
+        result = result + static_cast<double>(diff);
+    }
+    return result;
+}
+template<> double
+norm_(const uint64_t* src, size_t total, int cn, int normType, double startval, const uchar* mask)
+{
+    size_t i;
+    double result = startval;
+    if( !mask )
+        total *= cn;
+
+    if( normType == NORM_INF )
+    {
+        uint64_t vresult = static_cast<uint64_t>(startval);
+
+        if( !mask )
+            for( i = 0; i < total; i++ )
+                vresult = std::max(vresult, src[i]);
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint64_t v = src[i*cn + c];
+                        vresult = std::max(vresult, v);
+                    }
+            }
+        result = static_cast<double>(vresult);
+    }
+    else if( normType == NORM_L1 )
+    {
+        uint64_t diff = 0;
+        if( !mask )
+            for( i = 0; i < total; i++ )
+                diff += src[i];
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint64_t v = src[i*cn + c];
+                        diff += v;
+                    }
+            }
+        result = result + static_cast<double>(diff);
+    }
+    else
+    {
+        uint64_t diff = 0;
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                uint64_t v = src[i];
+                diff += v*v;
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint64_t v = src[i*cn + c];
+                        diff += v*v;
+                    }
+            }
+        result = result + static_cast<double>(diff);
+    }
+    return result;
+}
 
 
 template<typename _Tp> static double
@@ -1333,6 +1469,178 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
                         result += v*v;
                     }
             }
+    }
+    return result;
+}
+template<> double
+norm_(const uint32_t* src1, const uint32_t* src2, size_t total, int cn, int normType, double startval, const uchar* mask)
+{
+    size_t i;
+    double result = startval;
+    if( !mask )
+        total *= cn;
+
+    if( normType == NORM_INF )
+    {
+        uint32_t vresult = static_cast<uint32_t>(startval);
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                uint32_t v1 = src1[i];
+                uint32_t v2 = src2[i];
+                uint32_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                vresult = std::max(vresult, v);
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint32_t v1 = src1[i*cn + c];
+                        uint32_t v2 = src2[i*cn + c];
+                        uint32_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                        vresult = std::max(vresult, v);
+                    }
+            }
+        result = static_cast<double>(vresult);
+    }
+    else if( normType == NORM_L1 )
+    {
+        uint64_t diff = 0;
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                uint32_t v1 = src1[i];
+                uint32_t v2 = src2[i];
+                uint64_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                diff += v;
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint32_t v1 = src1[i*cn + c];
+                        uint32_t v2 = src2[i*cn + c];
+                        uint64_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                        diff += v;
+                    }
+            }
+        result = result + static_cast<double>(diff);
+    }
+    else
+    {
+        uint64_t diff = 0;
+
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                uint32_t v1 = src1[i];
+                uint32_t v2 = src2[i];
+                uint64_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                diff += v * v;
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint32_t v1 = src1[i*cn + c];
+                        uint32_t v2 = src2[i*cn + c];
+                        uint64_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                        diff += v * v;
+                    }
+            }
+        result = result + static_cast<double>(diff);
+    }
+    return result;
+}
+template<> double
+norm_(const uint64_t* src1, const uint64_t* src2, size_t total, int cn, int normType, double startval, const uchar* mask)
+{
+    size_t i;
+    double result = startval;
+    if( !mask )
+        total *= cn;
+
+    if( normType == NORM_INF )
+    {
+        uint64_t vresult = static_cast<uint64_t>(startval);
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                uint64_t v1 = src1[i];
+                uint64_t v2 = src2[i];
+                uint64_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                vresult = std::max(vresult, v);
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint64_t v1 = src1[i*cn + c];
+                        uint64_t v2 = src2[i*cn + c];
+                        uint64_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                        vresult = std::max(vresult, v);
+                    }
+            }
+        result = static_cast<double>(vresult);
+    }
+    else if( normType == NORM_L1 )
+    {
+        uint64_t diff = 0;
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                uint64_t v1 = src1[i];
+                uint64_t v2 = src2[i];
+                uint64_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                diff += v;
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint64_t v1 = src1[i*cn + c];
+                        uint64_t v2 = src2[i*cn + c];
+                        uint64_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                        diff += v;
+                    }
+            }
+        result = result + static_cast<double>(diff);
+    }
+    else
+    {
+        uint64_t diff = 0;
+
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                uint64_t v1 = src1[i];
+                uint64_t v2 = src2[i];
+                uint64_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                diff += v * v;
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] )
+                    {
+                        uint64_t v1 = src1[i*cn + c];
+                        uint64_t v2 = src2[i*cn + c];
+                        uint64_t v = (v1 > v2)?(v1 - v2):(v2 - v1);
+                        diff += v * v;
+                    }
+            }
+        result = result + static_cast<double>(diff);
     }
     return result;
 }
@@ -1414,6 +1722,15 @@ double norm(InputArray _src, int normType, InputArray _mask)
             break;
         case CV_64F:
             result = norm_((const double*)sptr, total, cn, normType, result, mptr);
+            break;
+        case CV_64U:
+            result = norm_((const uint64_t*)sptr, total, cn, normType, result, mptr);
+            break;
+        case CV_64S:
+            result = norm_((const int64_t*)sptr, total, cn, normType, result, mptr);
+            break;
+        case CV_32U:
+            result = norm_((const uint32_t*)sptr, total, cn, normType, result, mptr);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -1505,6 +1822,15 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
             break;
         case CV_64F:
             result = norm_((const double*)sptr1, (const double*)sptr2, total, cn, normType, result, mptr);
+            break;
+        case CV_64U:
+            result = norm_((const uint64_t*)sptr1, (const uint64_t*)sptr2, total, cn, normType, result, mptr);
+            break;
+        case CV_64S:
+            result = norm_((const int64_t*)sptr1, (const int64_t*)sptr2, total, cn, normType, result, mptr);
+            break;
+        case CV_32U:
+            result = norm_((const uint32_t*)sptr1, (const uint32_t*)sptr2, total, cn, normType, result, mptr);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
