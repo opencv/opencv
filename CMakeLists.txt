@@ -480,10 +480,6 @@ OCV_OPTION(OBSENSOR_USE_ORBBEC_SDK "Use Orbbec SDK as banckend to support more c
 OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec 3D Cameras)" ON
   VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT AND NOT MINGW) OR ( UNIX AND NOT APPLE AND NOT ANDROID) OR (APPLE AND AARCH64 AND NOT IOS AND NOT X86_64 AND NOT X86)
   VERIFY HAVE_OBSENSOR)
-# If you need to use an orbbec camera on the MacOS system, you need to switch the WITH_OBSENSOR value to ON or comment out this code
-if(APPLE)
-set(WITH_OBSENSOR OFF)
-endif()
 OCV_OPTION(WITH_CANN "Include CANN support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_CANN)
