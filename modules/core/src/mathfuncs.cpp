@@ -270,8 +270,7 @@ void cartToPolar( InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(src1.getObj() != dst1.getObj() && src1.getObj() != dst2.getObj() &&
-              src2.getObj() != dst1.getObj() && src2.getObj() != dst2.getObj());
+    CV_Assert(dst1.getObj() != dst2.getObj());
 
     CV_OCL_RUN(dst1.isUMat() && dst2.isUMat(),
             ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees))
@@ -298,15 +297,13 @@ void cartToPolar( InputArray src1, InputArray src2,
             {
                 const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
                 float *mag = (float*)ptrs[2], *angle = (float*)ptrs[3];
-                hal::magnitude32f( x, y, mag, len );
-                hal::fastAtan32f( y, x, angle, len, angleInDegrees );
+                hal::cartToPolar32f( x, y, mag, angle, len, angleInDegrees );
             }
             else
             {
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
-                double *angle = (double*)ptrs[3];
-                hal::magnitude64f(x, y, (double*)ptrs[2], len);
-                hal::fastAtan64f(y, x, angle, len, angleInDegrees);
+                double *mag = (double*)ptrs[2], *angle = (double*)ptrs[3];
+                hal::cartToPolar64f(x, y, mag, angle, len, angleInDegrees);
             }
             ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;
@@ -567,8 +564,13 @@ void polarToCart( InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(src1.getObj() != dst1.getObj() && src1.getObj() != dst2.getObj() &&
-              src2.getObj() != dst1.getObj() && src2.getObj() != dst2.getObj());
+    CV_Assert(dst1.getObj() != dst2.getObj());
+
+    const bool isInPlace =
+        (src1.getObj() == dst1.getObj()) ||
+        (src1.getObj() == dst2.getObj()) ||
+        (src2.getObj() == dst1.getObj()) ||
+        (src2.getObj() == dst2.getObj());
 
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
@@ -582,7 +584,7 @@ void polarToCart( InputArray src1, InputArray src2,
     dst2.create( Angle.dims, Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();
 
-    CV_IPP_RUN(!angleInDegrees, ipp_polarToCart(Mag, Angle, X, Y));
+    CV_IPP_RUN(!angleInDegrees && !isInPlace, ipp_polarToCart(Mag, Angle, X, Y));
 
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
     uchar* ptrs[4] = {};
@@ -592,7 +594,7 @@ void polarToCart( InputArray src1, InputArray src2,
     int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
     size_t esz1 = Angle.elemSize1();
 
-    if( depth == CV_64F )
+    if (( depth == CV_64F ) || isInPlace)
     {
         _buf.allocate(blockSize*2);
         buf[0] = _buf.data();
@@ -604,7 +606,7 @@ void polarToCart( InputArray src1, InputArray src2,
         for( j = 0; j < total; j += blockSize )
         {
             int len = std::min(total - j, blockSize);
-            if( depth == CV_32F )
+            if (( depth == CV_32F ) && !isInPlace)
             {
                 const float *mag = (const float*)ptrs[0], *angle = (const float*)ptrs[1];
                 float *x = (float*)ptrs[2], *y = (float*)ptrs[3];
@@ -630,6 +632,27 @@ void polarToCart( InputArray src1, InputArray src2,
                         float m = mag[k];
                         x[k] *= m; y[k] *= m;
                     }
+                }
+            }
+            else if (( depth == CV_32F ) && isInPlace)
+            {
+                const float *mag = (const float*)ptrs[0], *angle = (const float*)ptrs[1];
+                float *x = (float*)ptrs[2], *y = (float*)ptrs[3];
+
+                for( k = 0; k < len; k++ )
+                    buf[0][k] = (float)angle[k];
+
+                SinCos_32f( buf[0], buf[1], buf[0], len, angleInDegrees );
+                if( mag )
+                    for( k = 0; k < len; k++ )
+                    {
+                        float m = mag[k];
+                        x[k] = buf[0][k]*m; y[k] = buf[1][k]*m;
+                    }
+                else
+                {
+                    std::memcpy(x, buf[0], sizeof(float) * len);
+                    std::memcpy(y, buf[1], sizeof(float) * len);
                 }
             }
             else

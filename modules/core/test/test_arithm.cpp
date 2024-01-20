@@ -2825,6 +2825,8 @@ TEST(Core_CartPolar, inplace)
     cv::Mat1d A[2] = {cv::Mat1d(10, 10), cv::Mat1d(10, 10)};
     cv::Mat1d B[2], C[2];
     cv::UMat uA[2];
+    cv::UMat uB[2];
+    cv::UMat uC[2];
 
     for(int i = 0; i < 2; ++i)
     {
@@ -2839,16 +2841,34 @@ TEST(Core_CartPolar, inplace)
     EXPECT_MAT_NEAR(A[1], C[1], 2);
 
     // Inplace
-    EXPECT_THROW(cv::polarToCart(B[0], B[1], B[0], B[1], false), cv::Exception);
-    EXPECT_THROW(cv::polarToCart(B[0], B[1], B[1], B[0], false), cv::Exception);
-    EXPECT_THROW(cv::cartToPolar(A[0], A[1], A[0], A[1], false), cv::Exception);
-    EXPECT_THROW(cv::cartToPolar(A[0], A[1], A[1], A[0], false), cv::Exception);
-    // Inplace OCL
-    EXPECT_THROW(cv::polarToCart(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
-    EXPECT_THROW(cv::polarToCart(uA[0], uA[1], uA[1], uA[0]), cv::Exception);
-    EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
-    EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
+    for(int i = 0; i < 2; ++i)
+        A[i].copyTo(B[i]);
+    cv::cartToPolar(A[0], A[1], C[0], C[1], false);
+    cv::cartToPolar(B[0], B[1], B[0], B[1], false);
+    EXPECT_MAT_NEAR(C[0], B[0], 2);
+    EXPECT_MAT_NEAR(C[1], B[1], 2);
 
+    for(int i = 0; i < 2; ++i)
+        A[i].copyTo(B[i]);
+    cv::polarToCart(A[0], A[1], C[0], C[1], false);
+    cv::polarToCart(B[0], B[1], B[0], B[1], false);
+    EXPECT_MAT_NEAR(C[0], B[0], 2);
+    EXPECT_MAT_NEAR(C[1], B[1], 2);
+
+    // Inplace OCL
+    for(int i = 0; i < 2; ++i)
+        uA[i].copyTo(uB[i]);
+    cv::cartToPolar(uA[0], uA[1], uC[0], uC[1], false);
+    cv::cartToPolar(uB[0], uB[1], uB[0], uB[1], false);
+    EXPECT_MAT_NEAR(uC[0], uB[0], 2);
+    EXPECT_MAT_NEAR(uC[1], uB[1], 2);
+
+    for(int i = 0; i < 2; ++i)
+        uA[i].copyTo(uB[i]);
+    cv::polarToCart(uA[0], uA[1], uC[0], uC[1], false);
+    cv::polarToCart(uB[0], uB[1], uB[0], uB[1], false);
+    EXPECT_MAT_NEAR(uC[0], uB[0], 2);
+    EXPECT_MAT_NEAR(uC[1], uB[1], 2);
 }
 
 }} // namespace
