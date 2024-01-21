@@ -17,6 +17,7 @@ namespace barcode {
 
 class CV_EXPORTS_W_SIMPLE BarcodeDetector : public cv::GraphicalCodeDetector
 {
+    std::vector<float> detectorWindowSizes;
 public:
     /** @brief Initialize the BarcodeDetector.
     */
@@ -57,6 +58,24 @@ public:
                                       CV_OUT std::vector<std::string> &decoded_info,
                                       CV_OUT std::vector<std::string> &decoded_type,
                                       OutputArray points = noArray()) const;
+
+    /// downsample image if minimum dimension is larger than threshold (default 512)
+    CV_PROP_RW float detectorThreshDownSamplingLimit; 
+    
+    /** @brief Returns detector window sizes 
+     * 
+     * @param sizes output parameter for returning input scales.
+     */
+    CV_WRAP void getDetectorWindowSizes(CV_OUT OutputArray sizes = noArray()) const;
+
+    /** @brief Set detector window sizes
+     * 
+     * @param sizes window sizes with respect to minimum dimension of image (default [0.01, 0.03, 0.06, 0.08])
+     */
+    CV_WRAP void setDetectorWindowSizes(InputArray sizes);
+
+    /// detector gradient magnitude threshold (default 64)
+    CV_PROP_RW double detectorGradientMagnitudeThresh; 
 };
 //! @}
 

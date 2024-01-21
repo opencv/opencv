@@ -142,11 +142,18 @@ struct BarcodeImpl : public GraphicalCodeDetector::Impl
 public:
     shared_ptr<SuperScale> sr;
     bool use_nn_sr = false;
+    float &detectorThrDownSample;
+    vector<float> &detectorWindowSizes;
+    double &detectorThrGradMagnitude;
 
 public:
     //=================
     // own methods
-    BarcodeImpl() = default;
+    BarcodeImpl(float &thrDownsample, vector<float> &windowSizes, double &thrGradMagnitude) 
+        : detectorThrDownSample(thrDownsample),
+        detectorWindowSizes(windowSizes),
+        detectorThrGradMagnitude(thrGradMagnitude) {}
+
     vector<Mat> initDecode(const Mat &src, const vector<vector<Point2f>> &points) const;
     bool decodeWithType(InputArray img,
                      InputArray points,
@@ -268,8 +275,8 @@ bool BarcodeImpl::detect(InputArray img, OutputArray points) const
     }
 
     Detect bardet;
-    bardet.init(inarr);
-    bardet.localization();
+    bardet.init(inarr, detectorThrDownSample);
+    bardet.localization(detectorWindowSizes, detectorThrGradMagnitude);
     if (!bardet.computeTransformationPoints())
     { return false; }
     vector<vector<Point2f>> pnts2f = bardet.getTransformationPoints();
@@ -341,7 +348,11 @@ BarcodeDetector::BarcodeDetector()
 
 BarcodeDetector::BarcodeDetector(const string &prototxt_path, const string &model_path)
 {
-    Ptr<BarcodeImpl> p_ = new BarcodeImpl();
+    detectorThreshDownSamplingLimit = 512.f;
+    detectorWindowSizes = {0.01f, 0.03f, 0.06f, 0.08f};
+    detectorGradientMagnitudeThresh = 64.0;
+
+    Ptr<BarcodeImpl> p_ = new BarcodeImpl(detectorThreshDownSamplingLimit, detectorWindowSizes, detectorGradientMagnitudeThresh);
     p = p_;
     p_->sr = make_shared<SuperScale>();
     if (!prototxt_path.empty() && !model_path.empty())
@@ -368,6 +379,32 @@ bool BarcodeDetector::detectAndDecodeWithType(InputArray img, vector<string> &de
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
     return p_->detectAndDecodeWithType(img, decoded_info, decoded_type, points_);
+}
+
+void BarcodeDetector::getDetectorWindowSizes(CV_OUT OutputArray sizes) const
+{
+    Mat outputMat = Mat(detectorWindowSizes);
+    outputMat.copyTo(sizes);
+}
+
+void BarcodeDetector::setDetectorWindowSizes(InputArray sizes)
+{
+    Mat sizesMat = sizes.getMat();
+    CV_Assert((sizesMat.rows == 1 || sizesMat.cols == 1) && sizesMat.type() == CV_32FC1);
+    
+    detectorWindowSizes.resize(sizesMat.cols + sizesMat.rows - 1);
+
+    if (sizesMat.rows == 1) {
+        // Copy from a row vector
+        for (int i = 0; i < sizesMat.cols; ++i) {
+            detectorWindowSizes[i] = sizesMat.at<float>(0, i);
+        }
+    } else {
+        // Copy from a column vector
+        for (int i = 0; i < sizesMat.rows; ++i) {
+            detectorWindowSizes[i] = sizesMat.at<float>(i, 0);
+        }
+    }
 }
 
 }// namespace barcode

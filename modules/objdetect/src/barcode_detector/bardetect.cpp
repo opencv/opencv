@@ -136,13 +136,13 @@ static void NMSBoxes(const std::vector<RotatedRect>& bboxes, const std::vector<f
 
 //==============================================================================
 
-void Detect::init(const Mat &src)
+void Detect::init(const Mat &src, float detectorThreshDownSamplingLimit)
 {
     const double min_side = std::min(src.size().width, src.size().height);
-    if (min_side > 512.0)
+    if (min_side > detectorThreshDownSamplingLimit)
     {
         purpose = SHRINKING;
-        coeff_expansion = min_side / 512.0;
+        coeff_expansion = min_side / detectorThreshDownSamplingLimit;
         width = cvRound(src.size().width / coeff_expansion);
         height = cvRound(src.size().height / coeff_expansion);
         Size new_size(width, height);
@@ -171,19 +171,19 @@ void Detect::init(const Mat &src)
 }
 
 
-void Detect::localization()
+void Detect::localization(std::vector<float> detectorWindowSizes, double detectorGradientMagnitudeThresh)
 {
 
     localization_bbox.clear();
     bbox_scores.clear();
 
     // get integral image
-    preprocess();
+    preprocess(detectorGradientMagnitudeThresh);
     // empirical setting
-    static constexpr float SCALE_LIST[] = {0.01f, 0.03f, 0.06f, 0.08f};
+    //static constexpr float SCALE_LIST[] = {0.01f, 0.03f, 0.06f, 0.08f};
     const auto min_side = static_cast<float>(std::min(width, height));
     int window_size;
-    for (const float scale:SCALE_LIST)
+    for (const float scale:detectorWindowSizes)
     {
         window_size = cvRound(min_side * scale);
         if(window_size == 0) {
@@ -231,10 +231,10 @@ bool Detect::computeTransformationPoints()
 }
 
 
-void Detect::preprocess()
+void Detect::preprocess(double detectorGradientMagnitudeThresh)
 {
     Mat scharr_x, scharr_y, temp;
-    static constexpr double THRESHOLD_MAGNITUDE = 64.;
+    double THRESHOLD_MAGNITUDE = detectorGradientMagnitudeThresh;
     Scharr(resized_barcode, scharr_x, CV_32F, 1, 0);
     Scharr(resized_barcode, scharr_y, CV_32F, 0, 1);
     // calculate magnitude of gradient and truncate
