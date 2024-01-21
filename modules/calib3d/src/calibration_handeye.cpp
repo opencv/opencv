@@ -289,13 +289,12 @@ static void calibrateHandEyeTsai(const std::vector<Mat>& Hg, const std::vector<M
     int idx = 0;
     for (size_t i = 0; i < Hg.size(); i++)
     {
-        for (size_t j = i+1; j < Hg.size(); j++, idx++)
+        for (size_t j = i+1; j < Hg.size(); j++)
         {
             //Defines coordinate transformation from Gi to Gj
             //Hgi is from Gi (gripper) to RW (robot base)
             //Hgj is from Gj (gripper) to RW (robot base)
             Mat Hgij = homogeneousInverse(Hg[j]) * Hg[i]; //eq 6
-            vec_Hgij.push_back(Hgij);
             //Rotation axis for Rgij which is the 3D rotation from gripper coordinate frame Gi to Gj
             Mat Pgij = 2*rot2quatMinimal(Hgij);
 
@@ -303,17 +302,35 @@ static void calibrateHandEyeTsai(const std::vector<Mat>& Hg, const std::vector<M
             //Hci is from CW (calibration target) to Ci (camera)
             //Hcj is from CW (calibration target) to Cj (camera)
             Mat Hcij = Hc[j] * homogeneousInverse(Hc[i]); //eq 7
-            vec_Hcij.push_back(Hcij);
             //Rotation axis for Rcij
             Mat Pcij = 2*rot2quatMinimal(Hcij);
+
+            // Discard motions with rotation too small or too close to pi radians
+            double Pgij_norm = cv::norm(Pgij);
+            double Pcij_norm = cv::norm(Pcij);
+            if (Pgij_norm < 0.3 || Pcij_norm < 0.3 || Pgij_norm > 1.7 || Pcij_norm > 1.7) {
+                continue;
+            }
+
+            vec_Hgij.push_back(Hgij);
+            vec_Hcij.push_back(Hcij);
 
             //Left-hand side: skew(Pgij+Pcij)
             skew(Pgij+Pcij).copyTo(A(Rect(0, idx*3, 3, 3)));
             //Right-hand side: Pcij - Pgij
             Mat diff = Pcij - Pgij;
             diff.copyTo(B(Rect(0, idx*3, 1, 3)));
+            idx++;
         }
     }
+
+    // insufficient data
+    if (idx < 2) {
+        CV_LOG_ERROR(NULL, "Hand-eye calibration failed! Not enough informative motions--include larger rotations.");
+        return;
+    }
+    A.resize(3*idx);
+    B.resize(3*idx);
 
     Mat Pcg_;
     //Rotation from camera to gripper is obtained from the set of equations:
@@ -327,28 +344,24 @@ static void calibrateHandEyeTsai(const std::vector<Mat>& Hg, const std::vector<M
 
     Mat Rcg = quatMinimal2rot(Pcg/2.0);
 
-    idx = 0;
-    for (size_t i = 0; i < Hg.size(); i++)
+    for (size_t i = 0; i < vec_Hgij.size(); i++)
     {
-        for (size_t j = i+1; j < Hg.size(); j++, idx++)
-        {
-            //Defines coordinate transformation from Gi to Gj
-            //Hgi is from Gi (gripper) to RW (robot base)
-            //Hgj is from Gj (gripper) to RW (robot base)
-            Mat Hgij = vec_Hgij[static_cast<size_t>(idx)];
-            //Defines coordinate transformation from Ci to Cj
-            //Hci is from CW (calibration target) to Ci (camera)
-            //Hcj is from CW (calibration target) to Cj (camera)
-            Mat Hcij = vec_Hcij[static_cast<size_t>(idx)];
+        //Defines coordinate transformation from Gi to Gj
+        //Hgi is from Gi (gripper) to RW (robot base)
+        //Hgj is from Gj (gripper) to RW (robot base)
+        Mat Hgij = vec_Hgij[i];
+        //Defines coordinate transformation from Ci to Cj
+        //Hci is from CW (calibration target) to Ci (camera)
+        //Hcj is from CW (calibration target) to Cj (camera)
+        Mat Hcij = vec_Hcij[i];
 
-            //Left-hand side: (Rgij - I)
-            Mat diff = Hgij(Rect(0,0,3,3)) - Mat::eye(3,3,CV_64FC1);
-            diff.copyTo(A(Rect(0, idx*3, 3, 3)));
+        //Left-hand side: (Rgij - I)
+        Mat diff = Hgij(Rect(0,0,3,3)) - Mat::eye(3,3,CV_64FC1);
+        diff.copyTo(A(Rect(0, i*3, 3, 3)));
 
-            //Right-hand side: Rcg*Tcij - Tgij
-            diff = Rcg*Hcij(Rect(3, 0, 1, 3)) - Hgij(Rect(3, 0, 1, 3));
-            diff.copyTo(B(Rect(0, idx*3, 1, 3)));
-        }
+        //Right-hand side: Rcg*Tcij - Tgij
+        diff = Rcg*Hcij(Rect(3, 0, 1, 3)) - Hgij(Rect(3, 0, 1, 3));
+        diff.copyTo(B(Rect(0, i*3, 1, 3)));
     }
 
     Mat Tcg;
@@ -461,6 +474,9 @@ static void calibrateHandEyeHoraud(const std::vector<Mat>& Hg, const std::vector
                         rz, -ry,  rx,  r0);
 
             Mat qcij = rot2quat(Rcij);
+            if (qgij.dot(qcij) < 0) {
+                qcij *= -1;
+            }
             r0 = qcij.at<double>(0,0);
             rx = qcij.at<double>(1,0);
             ry = qcij.at<double>(2,0);
@@ -618,6 +634,9 @@ static void calibrateHandEyeDaniilidis(const std::vector<Mat>& Hg, const std::ve
 
             Mat dualqa = homogeneous2dualQuaternion(Hgij);
             Mat dualqb = homogeneous2dualQuaternion(Hcij);
+            if (dualqa.dot(dualqb) < 0) {
+                dualqb *= -1;
+            }
 
             Mat a = dualqa(Rect(0, 1, 1, 3));
             Mat b = dualqb(Rect(0, 1, 1, 3));

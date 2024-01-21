@@ -47,6 +47,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/core/affine.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 /**
   @defgroup calib3d Camera Calibration and 3D Reconstruction
