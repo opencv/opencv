@@ -52,13 +52,30 @@ $ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[
 @endcode
 
 
-Building Yolo Detection Model from ONNX graph
+Building a YOLO Detection Model using an ONNX Graph
 ---------------------------------
 
-Following section will demonstrate how to run yolo model by using ONNX graph. First thing to do is to generate ONNX graph of a yolo model. For the sake of demonstation we will go on with Yolox model. Instructions on generation ONNX model can found in this [README](https://dl.opencv.org/models/yolox/README.md) file and a [link](https://dl.opencv.org/models/yolox/yolox_s_inf_decoder.onnx) for tranied yolox small onnx graph
+This guide provides a step-by-step walkthrough for running a YOLO model utilizing an ONNX graph. We focus on the YOLOX model for demonstration purposes.
+
+## Preparing the ONNX Graph
+
+### Generating the ONNX Model
+To begin, you need to generate the ONNX graph of a YOLO model. We will use the YOLOX model as an example. Detailed instructions for generating the ONNX model are available in the YOLOX [README](https://dl.opencv.org/models/yolox/README.md).
+
+Additionally, you can access a pre-trained YOLOX small ONNX graph via this [link](https://dl.opencv.org/models/yolox/yolox_s_inf_decoder.onnx).
 
 
-**Note on conversion**: Execpt for yolox model you can follow basic conversion flow from pytorch to onnx. In yolox you need to include anchor points generation inside onnx graph. That will simplify inference
+### Note on Model Conversion
+
+For models other than YOLOX, you can generally follow the standard PyTorch to ONNX conversion process. However, for the YOLOX model, it's crucial to include the generation of anchor points within the ONNX graph. This inclusion simplifies the inference process by eliminating the need to create anchor points manually, as they are already integrated into the ONNX graph.
+
+### Running the YOLOX Model
+
+This section demonstrates two methods for running the YOLOX model. These methods are applicable to any model within the YOLO family.
+
+### Method 1: Building a Custom Pipeline
+
+This method involves constructing the pipeline manually. Instructions for this approach will be detailed in subsequent sections.
 
 - Import required libraries
 
@@ -130,13 +147,11 @@ yoloPostProcessing(
 
 @code{.cpp}
 
-// covert Rect2d to Rect
 std::vector<Rect> boxes;
 for (auto box : keep_boxes){
     boxes.push_back(Rect(box.x, box.y, box.width, box.height));
 }
 
-// rescale boxes back to original image
 Image2BlobParams paramNet;
         paramNet.scalefactor = scale;
         paramNet.size = size;
@@ -152,9 +167,33 @@ for (size_t idx = 0; idx < boxes.size(); ++idx)
         box.x, box.y, box.width, box.height, img);
     }
 
-// show results
 imwrite("image.png", img);
 @endcode
+
+
+### Method 2: Using a Predefined Pipeline from the Command Line
+If you prefer a simpler approach without building a custom pipeline, you can run the model directly using command-line instructions.
+
+Steps to Run the Predefined Pipeline:
+
+1. Ensure OpenCV is built on your platform.
+2. Navigate to the `build` directory by executing `cd build`.
+3. Run the following command:
+
+@code{.cpp}
+./bin/example_dnn_yolo_detector --model=<path_to_your_onnx_model> --input=<path_to_your_input_file> --width=<input_width> --height=<input_height> --classes=<path_to_class_names_file> --mns=<minimum_score_threshold> --thr=<confidence_threshold> --mean=<mean_normalization_value> --scale=<scale_factor>
+@endcode
+
+- <path_to_your_onnx_model>: Replace with the file path to your ONNX model.
+- <path_to_your_input_file>: Replace with the file path to your input image or video.
+- <input_width>: Specify the yolo's input width for the model.
+- <input_height>: Specify the yolo's input height for the model (for example, 640).
+- <path_to_class_names_file>: Replace with the file path to the text file containing class names (e.g., /path/to/yolox_classes.txt).
+- <minimum_score_threshold>: Set the minimum score threshold for detection (e.g., 0.5).
+- <confidence_threshold>: Set the confidence threshold for detection (e.g., 0.4).
+- <mean_normalization_value>: Specify the mean normalization value (e.g., 0 for no mean normalization).
+- <scale_factor>: Specify the scale factor for input normalization (e.g., 1.0).
+- <padvalue>: Specify the padding value use for filling image after resize operaiton. defaul 114
 
 
 Questions and suggestions email to: Alessandro de Oliveira Faria cabelo@opensuse.org or OpenCV Team.

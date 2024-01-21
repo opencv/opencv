@@ -10,21 +10,20 @@
 using namespace cv;
 using namespace cv::dnn;
 
+void getClasses(std::string classesFile);
+void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
+void yoloPostProcessing(
+    std::vector<Mat>& outs,
+    std::vector<int>& keep_classIds,
+    std::vector<float>& keep_confidences,
+    std::vector<Rect2d>& keep_boxes,
+    float conf_threshold,
+    float iou_threshold,
+    const std::string& test_name
+);
+
 std::vector<std::string> classes;
 
-// Mat blob2Image(Mat inp){
-//     Mat image(inp.size[2], inp.size[3], CV_32FC3); // Height x Width x 3 channels
-
-//     for (int h = 0; h < inp.size[2]; ++h) {
-//         for (int w = 0; w < inp.size[3]; ++w) {
-//             Vec3f& pixel = image.at<Vec3f>(h, w); // Access the pixel at (h, w)
-//             for (int c = 0; c < 3; ++c) {
-//                 pixel[c] = inp.at<float>(Vec4i(0, c, h, w)); // Access the 4D tensor value
-//             }
-//         }
-//     }
-//     return image;
-// }
 
 std::string keys =
     "{ help  h     | | Print help message. }"
@@ -32,12 +31,12 @@ std::string keys =
     "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
     "{ device      |  0 | camera device number. }"
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
-    "{ framework f | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
     "{ classes     | | Optional path to a text file with names of classes to label detected objects. }"
     "{ thr         | .5 | Confidence threshold. }"
     "{ nms         | .4 | Non-maximum suppression threshold. }"
     "{ mean        | 0.0 | Normalization constant. }"
     "{ scale       | 1.0 | Normalization scalor. }"
+    "{ yolo        | None | yolo model version. }"
     "{ padvalue    | 114.0 | padding value. }"
     "{ paddingmode |  2 | Choose one of computation backends: "
                          "0: resize to required input size without extra processing, "
@@ -186,8 +185,14 @@ int main(int argc, char** argv){
     ImagePaddingMode paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
 
     CV_Assert(parser.has("model"));
+    CV_Assert(parser.has("yolo"));
     std::string weightPath = findFile(parser.get<String>("model"));
-    // std::string imgPath = findFile(parser.get<String>("input"));
+    std::string yolo_model = parser.get<String>("yolo");
+
+    // check if yolo model is valid
+    if (yolo_model != "yolov5" && yolo_model != "yolov6"
+        && yolo_model != "yolov7" && yolo_model != "yolov8" && yolo_model != "yolox")
+        CV_Error(Error::StsError, "Invalid yolo model: " + yolo_model);
 
     // get classes
     if (parser.has("classes"))
@@ -199,12 +204,27 @@ int main(int argc, char** argv){
     net.setPreferableBackend(backend);
     net.setPreferableTarget(parser.get<int>("target"));
 
-    // Open a video file or an image file or a camera stream.
     VideoCapture cap;
-    if (parser.has("input"))
-        cap.open(parser.get<String>("input"));
-    else
+    Mat img;
+    bool isImage = false;
+    bool isCamera = false;
+
+    // Check if input is given
+    if (parser.has("input")) {
+        String input = parser.get<String>("input");
+        // Check if the input is an image
+        if (input.find(".jpg") != String::npos || input.find(".png") != String::npos) {
+            img = imread(input);
+            if (img.empty()) {
+                CV_Error(Error::StsError, "Cannot read image file: " + input);
+            }
+            isImage = true;
+        } else {
+            cap.open(input);
+        }
+    } else {
         cap.open(parser.get<int>("device"));
+    }
 
     // image pre-processing
     Size size(inpWidth, inpHeight);
@@ -232,11 +252,12 @@ int main(int argc, char** argv){
     std::vector<Rect2d> keep_boxes;
     std::vector<Rect> boxes;
 
-    Mat img, inp;
+    Mat inp;
     while (waitKey(1) < 0)
     {
 
-        cap >> img;
+        if (isCamera)
+            cap >> img;
         if (img.empty())
         {
             std::cout << "Empty frame" << std::endl;
@@ -246,14 +267,13 @@ int main(int argc, char** argv){
 
         inp = blobFromImageWithParams(img, imgParams);
 
-        // forward pass
         net.setInput(inp);
         net.forward(outs, net.getUnconnectedOutLayersNames());
 
         yoloPostProcessing(
             outs, keep_classIds, keep_confidences, keep_boxes,
             confThreshold, nmsThreshold,
-            "yolox");
+            yolo_model);
 
         for (auto box : keep_boxes){
             std::cout << box.x << " " << box.y << " " << box.width << " " << box.height << std::endl;
@@ -277,11 +297,15 @@ int main(int argc, char** argv){
         namedWindow(kWinName, WINDOW_NORMAL);
         imshow(kWinName, img);
 
-        // emply outs, keep_classIds, keep_confidences, keep_boxes, boxes
         outs.clear();
         keep_classIds.clear();
         keep_confidences.clear();
         keep_boxes.clear();
         boxes.clear();
+
+        if (isImage){
+            waitKey();
+            break;
+        }
     }
 }
