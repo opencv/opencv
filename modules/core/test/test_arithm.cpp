@@ -2855,7 +2855,7 @@ TEST(Core_CartPolar, inplace)
     EXPECT_MAT_NEAR(C[0], B[0], 2);
     EXPECT_MAT_NEAR(C[1], B[1], 2);
 
-    // Inplace OCL
+    // Inplace OCL x<->mag y<->angle
     for(int i = 0; i < 2; ++i)
         uA[i].copyTo(uB[i]);
     cv::cartToPolar(uA[0], uA[1], uC[0], uC[1], false);
@@ -2869,6 +2869,21 @@ TEST(Core_CartPolar, inplace)
     cv::polarToCart(uB[0], uB[1], uB[0], uB[1], false);
     EXPECT_MAT_NEAR(uC[0], uB[0], 2);
     EXPECT_MAT_NEAR(uC[1], uB[1], 2);
+
+    // Inplace OCL x<->angle y<->mag
+    for(int i = 0; i < 2; ++i)
+        uA[i].copyTo(uB[i]);
+    cv::cartToPolar(uA[0], uA[1], uC[0], uC[1], false);
+    cv::cartToPolar(uB[0], uB[1], uB[1], uB[0], false);
+    EXPECT_MAT_NEAR(uC[0], uB[1], 2);
+    EXPECT_MAT_NEAR(uC[1], uB[0], 2);
+
+    for(int i = 0; i < 2; ++i)
+        uA[i].copyTo(uB[i]);
+    cv::polarToCart(uA[0], uA[1], uC[0], uC[1], false);
+    cv::polarToCart(uB[0], uB[1], uB[1], uB[0], false);
+    EXPECT_MAT_NEAR(uC[0], uB[1], 2);
+    EXPECT_MAT_NEAR(uC[1], uB[0], 2);
 }
 
 }} // namespace

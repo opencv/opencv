@@ -233,6 +233,11 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
 
+    const bool _src1IsDstMag = (_src1.getObj() == _dst1.getObj());
+    const bool _src1IsDstAngle = (_src1.getObj() == _dst2.getObj());
+    const bool _src2IsDstMag = (_src2.getObj() == _dst1.getObj());
+    const bool _src2IsDstAngle = (_src2.getObj() == _dst2.getObj());
+
     if ( !(_src1.dims() <= 2 && _src2.dims() <= 2 &&
            (depth == CV_32F || depth == CV_64F) && type == _src2.type()) ||
          (depth == CV_64F && !doubleSupport) )
@@ -242,7 +247,12 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
                   format("-D BINARY_OP -D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D OP_CTP_%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), depth,
                          rowsPerWI, angleInDegrees ? "AD" : "AR",
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src1IsDstMag   ? " -D SRC1_IS_DST_MAG" : "",
+                         _src1IsDstAngle ? " -D SRC1_IS_DST_ANGLE" : "",
+                         _src2IsDstMag   ? " -D SRC2_IS_DST_MAG" : "",
+                         _src2IsDstAngle ? " -D SRC2_IS_DST_ANGLE" : ""
+                         ));
     if (k.empty())
         return false;
 
@@ -254,8 +264,8 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
     _dst2.create(size, type);
     UMat dst1 = _dst1.getUMat(), dst2 = _dst2.getUMat();
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
-           ocl::KernelArg::ReadOnlyNoSize(src2),
+    k.args(_src1IsDstMag || _src1IsDstAngle ? ocl::KernelArg::ReadWriteNoSize(src1) : ocl::KernelArg::ReadOnlyNoSize(src1),
+           _src2IsDstMag || _src2IsDstAngle ? ocl::KernelArg::ReadWriteNoSize(src2) : ocl::KernelArg::ReadOnlyNoSize(src2),
            ocl::KernelArg::WriteOnly(dst1, cn),
            ocl::KernelArg::WriteOnlyNoSize(dst2));
 
@@ -471,6 +481,11 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
 
+    const bool _src1IsDstX = (_mag.getObj() == _dst1.getObj());
+    const bool _src1IsDstY = (_mag.getObj() == _dst2.getObj());
+    const bool _src2IsDstX = (_angle.getObj() == _dst1.getObj());
+    const bool _src2IsDstY = (_angle.getObj() == _dst2.getObj());
+
     if ( !doubleSupport && depth == CV_64F )
         return false;
 
@@ -479,7 +494,11 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
                          ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), depth,
                          rowsPerWI,
                          angleInDegrees ? "AD" : "AR",
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src1IsDstX   ? " -D SRC1_IS_DST_X" : "",
+                         _src1IsDstY ? " -D SRC1_IS_DST_Y" : "",
+                         _src2IsDstX   ? " -D SRC2_IS_DST_X" : "",
+                         _src2IsDstY ? " -D SRC2_IS_DST_Y" : ""));
     if (k.empty())
         return false;
 
@@ -491,8 +510,10 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
     _dst2.create(size, type);
     UMat dst1 = _dst1.getUMat(), dst2 = _dst2.getUMat();
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(mag), ocl::KernelArg::ReadOnlyNoSize(angle),
-           ocl::KernelArg::WriteOnly(dst1, cn), ocl::KernelArg::WriteOnlyNoSize(dst2));
+    k.args(_src1IsDstX || _src1IsDstY ? ocl::KernelArg::ReadWriteNoSize(mag) : ocl::KernelArg::ReadOnlyNoSize(mag),
+           _src2IsDstX || _src2IsDstY  ? ocl::KernelArg::ReadWriteNoSize(angle) : ocl::KernelArg::ReadOnlyNoSize(angle),
+           ocl::KernelArg::WriteOnly(dst1, cn),
+           ocl::KernelArg::WriteOnlyNoSize(dst2));
 
     size_t globalsize[2] = { (size_t)dst1.cols * cn, ((size_t)dst1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);

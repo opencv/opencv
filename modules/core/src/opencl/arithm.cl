@@ -381,6 +381,16 @@
 #elif defined OP_CTP_AR
 #define TO_DEGREE
 #endif
+#ifdef SRC1_IS_DST_MAG
+dstptr = srcptr1
+#elif SRC1_IS_DST_ANGLE
+dstptr2 = srcptr1
+#endif
+#ifdef SRC2_IS_DST_MAG
+dstptr = srcptr2
+#elif SRC2_IS_DST_ANGLE
+dstptr2 = srcptr2
+#endif
 #define PROCESS_ELEM \
     dstT x = srcelem1, y = srcelem2; \
     dstT x2 = x * x, y2 = y * y; \
@@ -398,6 +408,16 @@
 #define FROM_DEGREE y = radians(y)
 #else
 #define FROM_DEGREE
+#endif
+#ifdef SRC1_IS_DST_X
+dstptr = srcptr1
+#elif SRC1_IS_DST_Y
+dstptr2 = srcptr1
+#endif
+#ifdef SRC2_IS_DST_X
+dstptr = srcptr2
+#elif SRC2_IS_DST_Y
+dstptr2 = srcptr2
 #endif
 #define PROCESS_ELEM \
     dstT x = srcelem1, y = srcelem2, cosval; \
