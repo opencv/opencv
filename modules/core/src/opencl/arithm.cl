@@ -382,14 +382,18 @@
 #define TO_DEGREE
 #endif
 #ifdef SRC1_IS_DST_MAG
-dstptr = srcptr1
+#define ADAPT_SRC1 dstptr = srcptr1;
 #elif SRC1_IS_DST_ANGLE
-dstptr2 = srcptr1
+#define ADAPT_SRC1 dstptr2 = srcptr1;
+#else
+#define ADAPT_SRC1
 #endif
 #ifdef SRC2_IS_DST_MAG
-dstptr = srcptr2
+#define ADAPT_SRC2 dstptr = srcptr2;
 #elif SRC2_IS_DST_ANGLE
-dstptr2 = srcptr2
+#define ADAPT_SRC2 dstptr2 = srcptr2;
+#else
+#define ADAPT_SRC2
 #endif
 #define PROCESS_ELEM \
     dstT x = srcelem1, y = srcelem2; \
@@ -400,6 +404,8 @@ dstptr2 = srcptr2
     dstT tmp1 = y >= 0 ? CV_PI * 0.5f : CV_PI * 1.5f; \
     dstT cartToPolar = y2 <= x2 ? x * y / mad((dstT)(0.28f), y2, x2 + CV_EPSILON) + tmp : (tmp1 - x * y / mad((dstT)(0.28f), x2, y2 + CV_EPSILON)); \
     TO_DEGREE \
+    ADAPT_SRC1 \
+    ADAPT_SRC2 \
     storedst(magnitude); \
     storedst2(cartToPolar)
 
@@ -410,18 +416,24 @@ dstptr2 = srcptr2
 #define FROM_DEGREE
 #endif
 #ifdef SRC1_IS_DST_X
-dstptr = srcptr1
+#define ADAPT_SRC1 dstptr = srcptr1;
 #elif SRC1_IS_DST_Y
-dstptr2 = srcptr1
+#define ADAPT_SRC1 dstptr2 = srcptr1;
+#else
+#define ADAPT_SRC1
 #endif
 #ifdef SRC2_IS_DST_X
-dstptr = srcptr2
+#define ADAPT_SRC2 dstptr = srcptr2;
 #elif SRC2_IS_DST_Y
-dstptr2 = srcptr2
+#define ADAPT_SRC2 dstptr2 = srcptr2;
+#else
+#define ADAPT_SRC2
 #endif
 #define PROCESS_ELEM \
     dstT x = srcelem1, y = srcelem2, cosval; \
     FROM_DEGREE; \
+    ADAPT_SRC1; \
+    ADAPT_SRC2; \
     storedst2(sincos(y, &cosval) * x); \
     storedst(cosval * x);
 
