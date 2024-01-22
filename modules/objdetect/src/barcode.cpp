@@ -396,7 +396,7 @@ void BarcodeDetector::setDetectorWindowSizes(InputArray sizes)
     CV_Assert(p_);
     Mat sizesMat = sizes.getMat();
     CV_Assert((sizesMat.rows == 1 || sizesMat.cols == 1) && sizesMat.type() == CV_32FC1);
-    
+
     p_->detectorWindowSizes.resize(sizesMat.cols + sizesMat.rows - 1);
 
     if (sizesMat.rows == 1) {

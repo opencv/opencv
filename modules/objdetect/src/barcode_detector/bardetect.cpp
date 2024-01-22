@@ -206,7 +206,7 @@ bool Detect::computeTransformationPoints(float detectorThreshNMSBoxes)
     RotatedRect rect;
     Point2f temp[4];
     float THRESHOLD_SCORE = float(width * height) / 300.f;
-    if (detectorThreshNMSBoxes > 0) 
+    if (detectorThreshNMSBoxes > 0)
     {
         THRESHOLD_SCORE = detectorThreshNMSBoxes;
     }
