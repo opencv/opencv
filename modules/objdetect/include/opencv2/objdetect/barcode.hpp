@@ -17,7 +17,6 @@ namespace barcode {
 
 class CV_EXPORTS_W_SIMPLE BarcodeDetector : public cv::GraphicalCodeDetector
 {
-    std::vector<float> detectorWindowSizes;
 public:
     /** @brief Initialize the BarcodeDetector.
     */

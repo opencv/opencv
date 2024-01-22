@@ -143,16 +143,15 @@ public:
     shared_ptr<SuperScale> sr;
     bool use_nn_sr = false;
     float &detectorThrDownSample;
-    vector<float> &detectorWindowSizes;
+    vector<float> detectorWindowSizes = {0.01f, 0.03f, 0.06f, 0.08f};
     double &detectorThrGradMagnitude;
     float &detectorThrNMSBoxes;
 
 public:
     //=================
     // own methods
-    BarcodeImpl(float &thrDownsample, vector<float> &windowSizes, double &thrGradMagnitude, float &thrNMSBoxes) 
+    BarcodeImpl(float &thrDownsample, double &thrGradMagnitude, float &thrNMSBoxes)
         : detectorThrDownSample(thrDownsample),
-        detectorWindowSizes(windowSizes),
         detectorThrGradMagnitude(thrGradMagnitude),
         detectorThrNMSBoxes(thrNMSBoxes) {}
 
@@ -351,11 +350,10 @@ BarcodeDetector::BarcodeDetector()
 BarcodeDetector::BarcodeDetector(const string &prototxt_path, const string &model_path)
 {
     detectorThreshDownSamplingLimit = 512.f;
-    detectorWindowSizes = {0.01f, 0.03f, 0.06f, 0.08f};
     detectorThreshGradientMagnitude = 64.0;
     detectorThreshNMSBoxes = -1.f;
 
-    Ptr<BarcodeImpl> p_ = new BarcodeImpl(detectorThreshDownSamplingLimit, detectorWindowSizes, detectorThreshGradientMagnitude, detectorThreshNMSBoxes);
+    Ptr<BarcodeImpl> p_ = new BarcodeImpl(detectorThreshDownSamplingLimit, detectorThreshGradientMagnitude, detectorThreshNMSBoxes);
     p = p_;
     p_->sr = make_shared<SuperScale>();
     if (!prototxt_path.empty() && !model_path.empty())
@@ -386,26 +384,30 @@ bool BarcodeDetector::detectAndDecodeWithType(InputArray img, vector<string> &de
 
 void BarcodeDetector::getDetectorWindowSizes(CV_OUT OutputArray sizes) const
 {
-    Mat outputMat = Mat(detectorWindowSizes);
+    Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
+    CV_Assert(p_);
+    Mat outputMat = Mat(p_->detectorWindowSizes);
     outputMat.copyTo(sizes);
 }
 
 void BarcodeDetector::setDetectorWindowSizes(InputArray sizes)
 {
+    Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
+    CV_Assert(p_);
     Mat sizesMat = sizes.getMat();
     CV_Assert((sizesMat.rows == 1 || sizesMat.cols == 1) && sizesMat.type() == CV_32FC1);
     
-    detectorWindowSizes.resize(sizesMat.cols + sizesMat.rows - 1);
+    p_->detectorWindowSizes.resize(sizesMat.cols + sizesMat.rows - 1);
 
     if (sizesMat.rows == 1) {
         // Copy from a row vector
         for (int i = 0; i < sizesMat.cols; ++i) {
-            detectorWindowSizes[i] = sizesMat.at<float>(0, i);
+            p_->detectorWindowSizes[i] = sizesMat.at<float>(0, i);
         }
     } else {
         // Copy from a column vector
         for (int i = 0; i < sizesMat.rows; ++i) {
-            detectorWindowSizes[i] = sizesMat.at<float>(i, 0);
+            p_->detectorWindowSizes[i] = sizesMat.at<float>(i, 0);
         }
     }
 }
