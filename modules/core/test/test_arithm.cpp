@@ -2834,8 +2834,8 @@ PARAM_TEST_CASE(Core_CartPolar_reverse, int, bool)
 TEST_P(Core_CartPolar_reverse, reverse)
 {
     const int type = CV_MAKETYPE(depth, 1);
-    cv::Mat1d A[2] = {cv::Mat(10, 10, type), cv::Mat1d(10, 10, type)};
-    cv::Mat1d B[2], C[2];
+    cv::Mat A[2] = {cv::Mat(10, 10, type), cv::Mat(10, 10, type)};
+    cv::Mat B[2], C[2];
     cv::UMat uA[2];
     cv::UMat uB[2];
     cv::UMat uC[2];
@@ -2875,8 +2875,8 @@ PARAM_TEST_CASE(Core_CartToPolar_inplace, int, bool)
 TEST_P(Core_CartToPolar_inplace, inplace)
 {
     const int type = CV_MAKETYPE(depth, 1);
-    cv::Mat1d A[2] = {cv::Mat(10, 10, type), cv::Mat(10, 10, type)};
-    cv::Mat1d B[2], C[2];
+    cv::Mat A[2] = {cv::Mat(10, 10, type), cv::Mat(10, 10, type)};
+    cv::Mat B[2], C[2];
     cv::UMat uA[2];
     cv::UMat uB[2];
     cv::UMat uC[2];
@@ -2944,8 +2944,8 @@ PARAM_TEST_CASE(Core_PolarToCart_inplace, int, bool, bool)
 TEST_P(Core_PolarToCart_inplace, inplace)
 {
     const int type = CV_MAKETYPE(depth, 1);
-    cv::Mat1d A[2] = {cv::Mat(10, 10, type), cv::Mat(10, 10, type)};
-    cv::Mat1d B[2], C[2];
+    cv::Mat A[2] = {cv::Mat(10, 10, type), cv::Mat(10, 10, type)};
+    cv::Mat B[2], C[2];
     cv::UMat uA[2];
     cv::UMat uB[2];
     cv::UMat uC[2];
