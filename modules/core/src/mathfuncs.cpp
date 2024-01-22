@@ -693,8 +693,11 @@ void polarToCart( InputArray src1, InputArray src2,
                     }
                 else
                 {
-                    std::memcpy(x, buf[0], sizeof(float) * len);
-                    std::memcpy(y, buf[1], sizeof(float) * len);
+                    for( k = 0; k < len; k++ )
+                    {
+                        x[k] = buf[0][k];
+                        y[k] = buf[1][k];
+                    }
                 }
             }
 

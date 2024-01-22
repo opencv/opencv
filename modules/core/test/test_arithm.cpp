@@ -2819,10 +2819,22 @@ TEST(Core_Magnitude, regression_19506)
     }
 }
 
-TEST(Core_CartPolar, inplace)
+PARAM_TEST_CASE(Core_CartPolar_reverse, int, bool)
 {
-    RNG& rng = TS::ptr()->get_rng();
-    cv::Mat1d A[2] = {cv::Mat1d(10, 10), cv::Mat1d(10, 10)};
+    int  depth;
+    bool angleInDegrees;
+
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        angleInDegrees = GET_PARAM(1);
+    }
+};
+
+TEST_P(Core_CartPolar_reverse, reverse)
+{
+    const int type = CV_MAKETYPE(depth, 1);
+    cv::Mat1d A[2] = {cv::Mat(10, 10, type), cv::Mat1d(10, 10, type)};
     cv::Mat1d B[2], C[2];
     cv::UMat uA[2];
     cv::UMat uB[2];
@@ -2835,55 +2847,155 @@ TEST(Core_CartPolar, inplace)
     }
 
     // Reverse
-    cv::cartToPolar(A[0], A[1], B[0], B[1], false);
-    cv::polarToCart(B[0], B[1], C[0], C[1], false);
+    cv::cartToPolar(A[0], A[1], B[0], B[1], angleInDegrees);
+    cv::polarToCart(B[0], B[1], C[0], C[1], angleInDegrees);
     EXPECT_MAT_NEAR(A[0], C[0], 2);
     EXPECT_MAT_NEAR(A[1], C[1], 2);
+}
 
-    // Inplace
+INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartPolar_reverse,
+    testing::Combine(
+        testing::Values(CV_32F, CV_64F),
+        testing::Values(false, true)
+    )
+);
+
+PARAM_TEST_CASE(Core_CartToPolar_inplace, int, bool)
+{
+    int  depth;
+    bool angleInDegrees;
+
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        angleInDegrees = GET_PARAM(1);
+    }
+};
+
+TEST_P(Core_CartToPolar_inplace, inplace)
+{
+    const int type = CV_MAKETYPE(depth, 1);
+    cv::Mat1d A[2] = {cv::Mat(10, 10, type), cv::Mat(10, 10, type)};
+    cv::Mat1d B[2], C[2];
+    cv::UMat uA[2];
+    cv::UMat uB[2];
+    cv::UMat uC[2];
+
+    for(int i = 0; i < 2; ++i)
+    {
+        cvtest::randUni(rng, A[i], Scalar::all(-1000), Scalar::all(1000));
+        A[i].copyTo(uA[i]);
+    }
+
+    // Inplace x<->mag y<->angle
     for(int i = 0; i < 2; ++i)
         A[i].copyTo(B[i]);
-    cv::cartToPolar(A[0], A[1], C[0], C[1], false);
-    cv::cartToPolar(B[0], B[1], B[0], B[1], false);
+    cv::cartToPolar(A[0], A[1], C[0], C[1], angleInDegrees);
+    cv::cartToPolar(B[0], B[1], B[0], B[1], angleInDegrees);
     EXPECT_MAT_NEAR(C[0], B[0], 2);
     EXPECT_MAT_NEAR(C[1], B[1], 2);
 
+    // Inplace x<->angle y<->mag
     for(int i = 0; i < 2; ++i)
         A[i].copyTo(B[i]);
-    cv::polarToCart(A[0], A[1], C[0], C[1], false);
-    cv::polarToCart(B[0], B[1], B[0], B[1], false);
-    EXPECT_MAT_NEAR(C[0], B[0], 2);
-    EXPECT_MAT_NEAR(C[1], B[1], 2);
+    cv::cartToPolar(A[0], A[1], C[0], C[1], angleInDegrees);
+    cv::cartToPolar(B[0], B[1], B[1], B[0], angleInDegrees);
+    EXPECT_MAT_NEAR(C[0], B[1], 2);
+    EXPECT_MAT_NEAR(C[1], B[0], 2);
 
     // Inplace OCL x<->mag y<->angle
     for(int i = 0; i < 2; ++i)
         uA[i].copyTo(uB[i]);
-    cv::cartToPolar(uA[0], uA[1], uC[0], uC[1], false);
-    cv::cartToPolar(uB[0], uB[1], uB[0], uB[1], false);
-    EXPECT_MAT_NEAR(uC[0], uB[0], 2);
-    EXPECT_MAT_NEAR(uC[1], uB[1], 2);
-
-    for(int i = 0; i < 2; ++i)
-        uA[i].copyTo(uB[i]);
-    cv::polarToCart(uA[0], uA[1], uC[0], uC[1], false);
-    cv::polarToCart(uB[0], uB[1], uB[0], uB[1], false);
+    cv::cartToPolar(uA[0], uA[1], uC[0], uC[1], angleInDegrees);
+    cv::cartToPolar(uB[0], uB[1], uB[0], uB[1], angleInDegrees);
     EXPECT_MAT_NEAR(uC[0], uB[0], 2);
     EXPECT_MAT_NEAR(uC[1], uB[1], 2);
 
     // Inplace OCL x<->angle y<->mag
     for(int i = 0; i < 2; ++i)
         uA[i].copyTo(uB[i]);
-    cv::cartToPolar(uA[0], uA[1], uC[0], uC[1], false);
-    cv::cartToPolar(uB[0], uB[1], uB[1], uB[0], false);
-    EXPECT_MAT_NEAR(uC[0], uB[1], 2);
-    EXPECT_MAT_NEAR(uC[1], uB[0], 2);
-
-    for(int i = 0; i < 2; ++i)
-        uA[i].copyTo(uB[i]);
-    cv::polarToCart(uA[0], uA[1], uC[0], uC[1], false);
-    cv::polarToCart(uB[0], uB[1], uB[1], uB[0], false);
+    cv::cartToPolar(uA[0], uA[1], uC[0], uC[1], angleInDegrees);
+    cv::cartToPolar(uB[0], uB[1], uB[1], uB[0], angleInDegrees);
     EXPECT_MAT_NEAR(uC[0], uB[1], 2);
     EXPECT_MAT_NEAR(uC[1], uB[0], 2);
 }
+
+INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartToPolar_inplace,
+    testing::Combine(
+        testing::Values(CV_32F, CV_64F),
+        testing::Values(false, true)
+    )
+);
+
+PARAM_TEST_CASE(Core_PolarToCart_inplace, int, bool, bool)
+{
+    int  depth;
+    bool angleInDegrees;
+    bool implicitMagnitude;
+
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        angleInDegrees = GET_PARAM(1);
+        implicitMagnitude = GET_PARAM(2);
+    }
+};
+
+TEST_P(Core_PolarToCart_inplace, inplace)
+{
+    const int type = CV_MAKETYPE(depth, 1);
+    cv::Mat1d A[2] = {cv::Mat(10, 10, type), cv::Mat(10, 10, type)};
+    cv::Mat1d B[2], C[2];
+    cv::UMat uA[2];
+    cv::UMat uB[2];
+    cv::UMat uC[2];
+
+    for(int i = 0; i < 2; ++i)
+    {
+        cvtest::randUni(rng, A[i], Scalar::all(-1000), Scalar::all(1000));
+        A[i].copyTo(uA[i]);
+    }
+
+    // Inplace OCL x<->mag y<->angle
+    for(int i = 0; i < 2; ++i)
+        A[i].copyTo(B[i]);
+    cv::polarToCart(implicitMagnitude ? cv::noArray() : A[0], A[1], C[0], C[1], angleInDegrees);
+    cv::polarToCart(implicitMagnitude ? cv::noArray() : B[0], B[1], B[0], B[1], angleInDegrees);
+    EXPECT_MAT_NEAR(C[0], B[0], 2);
+    EXPECT_MAT_NEAR(C[1], B[1], 2);
+
+    // Inplace OCL x<->angle y<->mag
+    for(int i = 0; i < 2; ++i)
+        A[i].copyTo(B[i]);
+    cv::polarToCart(implicitMagnitude ? cv::noArray() : A[0], A[1], C[0], C[1], angleInDegrees);
+    cv::polarToCart(implicitMagnitude ? cv::noArray() : B[0], B[1], B[1], B[0], angleInDegrees);
+    EXPECT_MAT_NEAR(C[0], B[1], 2);
+    EXPECT_MAT_NEAR(C[1], B[0], 2);
+
+    // Inplace OCL x<->mag y<->angle
+    for(int i = 0; i < 2; ++i)
+        uA[i].copyTo(uB[i]);
+    cv::polarToCart(implicitMagnitude ? cv::noArray() : uA[0], uA[1], uC[0], uC[1], angleInDegrees);
+    cv::polarToCart(implicitMagnitude ? cv::noArray() : uB[0], uB[1], uB[0], uB[1], angleInDegrees);
+    EXPECT_MAT_NEAR(uC[0], uB[0], 2);
+    EXPECT_MAT_NEAR(uC[1], uB[1], 2);
+
+    // Inplace OCL x<->angle y<->mag
+    for(int i = 0; i < 2; ++i)
+        uA[i].copyTo(uB[i]);
+    cv::polarToCart(implicitMagnitude ? cv::noArray() : uA[0], uA[1], uC[0], uC[1], angleInDegrees);
+    cv::polarToCart(implicitMagnitude ? cv::noArray() : uB[0], uB[1], uB[1], uB[0], angleInDegrees);
+    EXPECT_MAT_NEAR(uC[0], uB[1], 2);
+    EXPECT_MAT_NEAR(uC[1], uB[0], 2);
+}
+
+INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_PolarToCart_inplace,
+    testing::Combine(
+        testing::Values(CV_32F, CV_64F),
+        testing::Values(false, true),
+        testing::Values(true, false)
+    )
+);
+
 
 }} // namespace
