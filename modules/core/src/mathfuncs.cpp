@@ -1463,6 +1463,8 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
+    int depth = src.depth();
+    CV_Assert(depth != CV_16F && depth != CV_16BF && depth != CV_32U && depth != CV_64U && depth != CV_64S);
 
     if ( src.dims > 2 )
     {
@@ -1482,7 +1484,6 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         return true;
     }
 
-    int depth = src.depth();
     Point badPt(-1, -1);
 
     if (depth < CV_32F)

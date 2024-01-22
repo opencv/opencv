@@ -594,7 +594,9 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     bool haveMask = !_mask.empty();
     bool reallocate = false;
     int type1 = psrc1->type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
+    CV_Assert(depth1 != CV_16F && depth1 != CV_16BF && depth1 != CV_32U && depth1 != CV_64U && depth1 != CV_64S);
     int type2 = psrc2->type(), depth2 = CV_MAT_DEPTH(type2), cn2 = CV_MAT_CN(type2);
+    CV_Assert(depth2 != CV_16F && depth2 != CV_16BF && depth2 != CV_32U && depth2 != CV_64U && depth2 != CV_64S);
     int wtype, dims1 = psrc1->dims(), dims2 = psrc2->dims();
     Size sz1 = dims1 <= 2 ? psrc1->size() : Size();
     Size sz2 = dims2 <= 2 ? psrc2->size() : Size();
@@ -1222,6 +1224,9 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
 
     int depth1 = src1.depth(), depth2 = src2.depth();
+    CV_Assert(depth1 != CV_16F && depth1 != CV_16BF && depth1 != CV_32U && depth1 != CV_64U && depth1 != CV_64S);
+    CV_Assert(depth2 != CV_16F && depth2 != CV_16BF && depth2 != CV_32U && depth2 != CV_64U && depth2 != CV_64S);
+
     if (depth1 == CV_16F || depth2 == CV_16F)
         CV_Error(Error::StsNotImplemented, "Unsupported depth value CV_16F");
 
@@ -1758,6 +1763,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     CV_Assert(lbScalar == ubScalar);
 
     int cn = src.channels(), depth = src.depth();
+    CV_Assert(depth != CV_16F && depth != CV_16BF && depth != CV_32U && depth != CV_64U && depth != CV_64S);
 
     size_t esz = src.elemSize();
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;

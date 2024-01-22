@@ -122,6 +122,7 @@ int countNonZero(InputArray _src)
 
     int type = _src.type(), cn = CV_MAT_CN(type);
     CV_Assert( cn == 1 );
+    CV_Assert( type != CV_16F && type != CV_16BF && type != CV_32U && type != CV_64U && type != CV_64S );
 
 #if defined HAVE_OPENCL || defined HAVE_IPP
     int res = -1;

@@ -130,6 +130,8 @@ Scalar mean(InputArray _src, InputArray _mask)
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
     int k, cn = src.channels(), depth = src.depth();
+    CV_Assert(depth != CV_16F && depth != CV_16BF && depth != CV_32U && depth != CV_64U && depth != CV_64S);
+
     Scalar s;
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_mean(src, mask, s), s)
@@ -524,13 +526,13 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
                ocl_meanStdDev(_src, _mean, _sdv, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
+    int k, cn = src.channels(), depth = src.depth();
+    CV_Assert(depth != CV_16F && depth != CV_16BF && depth != CV_32U && depth != CV_64U && depth != CV_64S);
 
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MEAN_STDDEV>(src.cols, src.rows),
                openvx_meanStdDev(src, _mean, _sdv, mask))
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
-
-    int k, cn = src.channels(), depth = src.depth();
 
     SumSqrFunc func = getSumSqrFunc(depth);
 

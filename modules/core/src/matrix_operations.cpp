@@ -1265,7 +1265,10 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
+    int depth = src.depth();
     CV_Assert( src.dims <= 2 && src.channels() == 1 );
+    CV_Assert(depth != CV_16F && depth != CV_16BF && depth != CV_32U && depth != CV_64U && depth != CV_64S);
+
     _dst.createSameSize( src, src.type() );
     Mat dst = _dst.getMat();
     CV_IPP_RUN_FAST(ipp_sort(src, dst, flags));
@@ -1275,7 +1278,7 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
         sort_<uchar>, sort_<schar>, sort_<ushort>, sort_<short>,
         sort_<int>, sort_<float>, sort_<double>, 0
     };
-    SortFunc func = tab[src.depth()];
+    SortFunc func = tab[depth];
     CV_Assert( func != 0 );
 
     func( src, dst, flags );
@@ -1287,6 +1290,9 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
 
     Mat src = _src.getMat();
     CV_Assert( src.dims <= 2 && src.channels() == 1 );
+    int depth = src.depth();
+    CV_Assert(depth != CV_16F && depth != CV_16BF && depth != CV_32U && depth != CV_64U && depth != CV_64S);
+
     Mat dst = _dst.getMat();
     if( dst.data == src.data )
         _dst.release();
@@ -1300,7 +1306,7 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
         sortIdx_<uchar>, sortIdx_<schar>, sortIdx_<ushort>, sortIdx_<short>,
         sortIdx_<int>, sortIdx_<float>, sortIdx_<double>, 0
     };
-    SortFunc func = tab[src.depth()];
+    SortFunc func = tab[depth];
     CV_Assert( func != 0 );
     func( src, dst, flags );
 }

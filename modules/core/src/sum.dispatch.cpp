@@ -196,9 +196,11 @@ Scalar sum(InputArray _src)
 #endif
 
     Mat src = _src.getMat();
+    int k, cn = src.channels(), depth = src.depth();
+    CV_Assert(depth != CV_16F && depth != CV_16BF && depth != CV_32U && depth != CV_64U && depth != CV_64S);
+
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_sum(src, _res), _res);
 
-    int k, cn = src.channels(), depth = src.depth();
     SumFunc func = getSumFunc(depth);
     CV_Assert( cn <= 4 && func != 0 );
 
