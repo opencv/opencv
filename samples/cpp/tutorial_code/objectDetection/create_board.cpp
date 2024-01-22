@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     }
     else if (parser.has("cd")) {
         FileStorage fs(parser.get<std::string>("cd"), FileStorage::READ);
-        bool readOk = dictionary.aruco::Dictionary::readDictionary(fs.root());
+        bool readOk = dictionary.readDictionary(fs.root());
         if(!readOk)
         {
             std::cerr << "Invalid dictionary file" << std::endl;
@@ -76,12 +76,11 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    Ptr<aruco::GridBoard> board = aruco::GridBoard::create(markersX, markersY, float(markerLength),
-                                                           float(markerSeparation), dictionary);
+    aruco::GridBoard board(Size(markersX, markersY), float(markerLength), float(markerSeparation), dictionary);
 
     // show created board
     Mat boardImage;
-    board->generateImage(imageSize, boardImage, margins, borderBits);
+    board.generateImage(imageSize, boardImage, margins, borderBits);
 
     if(showImage) {
         imshow("board", boardImage);

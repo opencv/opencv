@@ -1,7 +1,7 @@
+#include <iostream>
+#include <vector>
 #include <opencv2/highgui.hpp>
 #include <opencv2/objdetect/aruco_detector.hpp>
-#include <vector>
-#include <iostream>
 #include "aruco_samples_utility.hpp"
 
 using namespace std;
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
     }
     else if (parser.has("cd")) {
         FileStorage fs(parser.get<std::string>("cd"), FileStorage::READ);
-        bool readOk = dictionary.aruco::Dictionary::readDictionary(fs.root());
+        bool readOk = dictionary.readDictionary(fs.root());
         if(!readOk) {
             cerr << "Invalid dictionary file" << endl;
             return 0;
@@ -96,6 +96,7 @@ int main(int argc, char *argv[]) {
         cerr << "Dictionary not specified" << endl;
         return 0;
     }
+    //! [aruco_detect_board_full_sample]
     aruco::ArucoDetector detector(dictionary, detectorParams);
     VideoCapture inputVideo;
     int waitTime;
@@ -110,10 +111,10 @@ int main(int argc, char *argv[]) {
     float axisLength = 0.5f * ((float)min(markersX, markersY) * (markerLength + markerSeparation) +
                                markerSeparation);
 
-    // create board object
-    Ptr<aruco::GridBoard> gridboard =
-        aruco::GridBoard::create(markersX, markersY, markerLength, markerSeparation, dictionary);
-    Ptr<aruco::Board> board = gridboard.staticCast<aruco::Board>();
+    // Create board object
+    aruco::GridBoard board(
+        Size(markersX, markersY), markerLength, markerSeparation, dictionary
+    );
 
     double totalTime = 0;
     int totalIterations = 0;
@@ -124,24 +125,24 @@ int main(int argc, char *argv[]) {
 
         double tick = (double)getTickCount();
 
-        vector< int > ids;
-        vector< vector< Point2f > > corners, rejected;
+        vector<int> ids;
+        vector<vector<Point2f>> corners, rejected;
         Vec3d rvec, tvec;
 
-        // detect markers
+        // Detect markers
         detector.detectMarkers(image, corners, ids, rejected);
 
-        // refind strategy to detect more markers
+        // Refind strategy to detect more markers
         if(refindStrategy)
             detector.refineDetectedMarkers(image, board, corners, ids, rejected, camMatrix,
                                            distCoeffs);
 
-        // estimate board pose
+        // Estimate board pose
         int markersOfBoardDetected = 0;
         if(!ids.empty()) {
             // Get object and image points for the solvePnP function
             cv::Mat objPoints, imgPoints;
-            board->matchImagePoints(corners, ids, objPoints, imgPoints);
+            board.matchImagePoints(corners, ids, objPoints, imgPoints);
 
             // Find pose
             cv::solvePnP(objPoints, imgPoints, camMatrix, distCoeffs, rvec, tvec);
@@ -157,7 +158,7 @@ int main(int argc, char *argv[]) {
                  << "(Mean = " << 1000 * totalTime / double(totalIterations) << " ms)" << endl;
         }
 
-        // draw results
+        // Draw results
         image.copyTo(imageCopy);
         if(!ids.empty()) {
             aruco::drawDetectedMarkers(imageCopy, corners, ids);
@@ -172,6 +173,7 @@ int main(int argc, char *argv[]) {
         imshow("out", imageCopy);
         char key = (char)waitKey(waitTime);
         if(key == 27) break;
+    //! [aruco_detect_board_full_sample]
     }
 
     return 0;

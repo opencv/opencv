@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     }
     else if (parser.has("cd")) {
         FileStorage fs(parser.get<std::string>("cd"), FileStorage::READ);
-        bool readOk = dictionary.aruco::Dictionary::readDictionary(fs.root());
+        bool readOk = dictionary.readDictionary(fs.root());
         if(!readOk) {
             std::cerr << "Invalid dictionary file" << std::endl;
             return 0;

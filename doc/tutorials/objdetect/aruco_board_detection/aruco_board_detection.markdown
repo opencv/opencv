@@ -33,7 +33,7 @@ Board Detection
 A Board detection is similar to the standard marker detection. The only difference is in the pose estimation step.
 In fact, to use marker boards, a standard marker detection should be done before estimating the Board pose.
 
-To perform pose estimation for boards, you should use ```#cv::solvePnP``` function, as shown below:
+To perform pose estimation for boards, you should use ```cv::solvePnP``` function, as shown below:
 
 @code{.cpp}
 cv::Mat inputImage;
@@ -153,7 +153,7 @@ The output image will be something like this:
 
 ![](images/board.png)
 
-A full working example of board creation is included in the `create_board.cpp` inside the `modules/aruco/samples/`.
+A full working example of board creation is included in the `create_board.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
 
 Note: The samples now take input via commandline via the [OpenCV Commandline Parser](http://docs.opencv.org/trunk/d0/d2e/classcv_1_1CommandLineParser.html#gsc.tab=0). For this file the example parameters will look like
 @code{.cpp}
@@ -162,59 +162,7 @@ Note: The samples now take input via commandline via the [OpenCV Commandline Par
 
 Finally, a full example of board detection:
 
-@code{.cpp}
-    cv::VideoCapture inputVideo;
-    inputVideo.open(0);
-
-    cv::Mat cameraMatrix, distCoeffs;
-    // You can read camera parameters from tutorial_camera_params.yml
-    readCameraParameters(filename, cameraMatrix, distCoeffs);  // This function is implemented in aruco_samples_utility.hpp
-
-    cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
-
-    // To use tutorial sample, you need read custom dictionaty from tutorial_dict.yml
-    readDictionary(filename, dictionary); // This function is implemented in opencv/modules/objdetect/src/aruco/aruco_dictionary.cpp
-    cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(5, 7, 0.04, 0.01, dictionary);
-
-    cv::aruco::DetectorParameters detectorParams = cv::aruco::DetectorParameters();
-    cv::aruco::ArucoDetector detector(dictionary, detectorParams);
-
-    while (inputVideo.grab()) {
-        cv::Mat image, imageCopy;
-        inputVideo.retrieve(image);
-        image.copyTo(imageCopy);
-
-        std::vector<int> ids;
-        std::vector<std::vector<cv::Point2f> > corners;
-
-        // Detect markers
-        detector.detectMarkers(image, corners, ids);
-
-        // If at least one marker detected
-        if (ids.size() > 0) {
-            cv::aruco::drawDetectedMarkers(imageCopy, corners, ids);
-
-            cv::Vec3d rvec, tvec;
-
-            // Get object and image points for the solvePnP function
-            cv::Mat objPoints, imgPoints;
-            board->matchImagePoints(corners, ids, objPoints, imgPoints);
-
-            // Find pose
-            cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
-
-            // If at least one board marker detected
-            markersOfBoardDetected = (int)objPoints.total() / 4;
-            if(markersOfBoardDetected > 0)
-                cv::drawFrameAxes(imageCopy, cameraMatrix, distCoeffs, rvec, tvec, 0.1);
-        }
-
-        cv::imshow("out", imageCopy);
-        char key = (char) cv::waitKey(waitTime);
-        if (key == 27)
-            break;
-    }
-@endcode
+@snippet samples/cpp/tutorial_code/objectDetection/detect_board.cpp aruco_detect_board_full_sample
 
 Sample video:
 
@@ -222,7 +170,7 @@ Sample video:
 <iframe width="420" height="315" src="https://www.youtube.com/embed/Q1HlJEjW_j0" frameborder="0" allowfullscreen></iframe>
 @endhtmlonly
 
-A full working example is included in the `detect_board.cpp` inside the `modules/aruco/samples/`.
+A full working example is included in the `detect_board.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
 
 Note: The samples now take input via commandline via the [OpenCV Commandline Parser](http://docs.opencv.org/trunk/d0/d2e/classcv_1_1CommandLineParser.html#gsc.tab=0). For this file the example parameters will look like
 @code{.cpp}
@@ -232,7 +180,7 @@ Note: The samples now take input via commandline via the [OpenCV Commandline Par
     -cd=/path_to_aruco_samples/tutorial_dict.yml
 @endcode
 Parameters for `detect_board.cpp`:
-@snippet samples/detect_board.cpp aruco_detect_board_keys
+@snippet samples/cpp/tutorial_code/objectDetection/detect_board.cpp aruco_detect_board_keys
 @note To work with examples from the tutorial, you can use camera parameters from `tutorial_camera_params.yml` and
 you need use custom dictionary from `tutorial_dict.yml`.
 An example of usage in `detect_board.cpp`.
