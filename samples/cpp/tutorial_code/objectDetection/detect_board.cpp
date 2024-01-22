@@ -30,6 +30,45 @@ const char* keys  =
 }
 //! [aruco_detect_board_keys]
 
+static void readDetectorParamsFromCommandLine(CommandLineParser &parser, aruco::DetectorParameters& detectorParams) {
+    if(parser.has("dp")) {
+        FileStorage fs(parser.get<string>("dp"), FileStorage::READ);
+        bool readOk = detectorParams.readDetectorParameters(fs.root());
+        if(!readOk) {
+            cerr << "Invalid detector parameters file" << endl;
+            throw -1;
+        }
+    }
+}
+
+static void readCameraParamsFromCommandLine(CommandLineParser &parser, Mat& camMatrix, Mat& distCoeffs) {
+    if(parser.has("c")) {
+        bool readOk = readCameraParameters(parser.get<string>("c"), camMatrix, distCoeffs);
+        if(!readOk) {
+            cerr << "Invalid camera file" << endl;
+            throw -1;
+        }
+    }
+}
+
+static void readDictionatyFromCommandLine(CommandLineParser &parser, aruco::Dictionary& dictionary) {
+    if (parser.has("d")) {
+        int dictionaryId = parser.get<int>("d");
+        dictionary = aruco::getPredefinedDictionary(aruco::PredefinedDictionaryType(dictionaryId));
+    }
+    else if (parser.has("cd")) {
+        FileStorage fs(parser.get<string>("cd"), FileStorage::READ);
+        bool readOk = dictionary.readDictionary(fs.root());
+        if(!readOk) {
+            cerr << "Invalid dictionary file" << endl;
+            throw -1;
+        }
+    }
+    else {
+        cerr << "Dictionary not specified" << endl;
+        throw -1;
+    }
+}
 
 int main(int argc, char *argv[]) {
     CommandLineParser parser(argc, argv, keys);
@@ -40,6 +79,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    //! [aruco_detect_board_full_sample]
     int markersX = parser.get<int>("w");
     int markersY = parser.get<int>("h");
     float markerLength = parser.get<float>("l");
@@ -50,24 +90,11 @@ int main(int argc, char *argv[]) {
 
 
     Mat camMatrix, distCoeffs;
-    if(parser.has("c")) {
-        bool readOk = readCameraParameters(parser.get<string>("c"), camMatrix, distCoeffs);
-        if(!readOk) {
-            cerr << "Invalid camera file" << endl;
-            return 0;
-        }
-    }
+    readCameraParamsFromCommandLine(parser, camMatrix, distCoeffs);
 
     aruco::DetectorParameters detectorParams;
-    if(parser.has("dp")) {
-        FileStorage fs(parser.get<string>("dp"), FileStorage::READ);
-        bool readOk = detectorParams.readDetectorParameters(fs.root());
-        if(!readOk) {
-            cerr << "Invalid detector parameters file" << endl;
-            return 0;
-        }
-    }
     detectorParams.cornerRefinementMethod = aruco::CORNER_REFINE_SUBPIX; // do corner refinement in markers
+    readDetectorParamsFromCommandLine(parser, detectorParams);
 
     String video;
     if(parser.has("v")) {
@@ -80,23 +107,8 @@ int main(int argc, char *argv[]) {
     }
 
     aruco::Dictionary dictionary = aruco::getPredefinedDictionary(0);
-    if (parser.has("d")) {
-        int dictionaryId = parser.get<int>("d");
-        dictionary = aruco::getPredefinedDictionary(aruco::PredefinedDictionaryType(dictionaryId));
-    }
-    else if (parser.has("cd")) {
-        FileStorage fs(parser.get<std::string>("cd"), FileStorage::READ);
-        bool readOk = dictionary.readDictionary(fs.root());
-        if(!readOk) {
-            cerr << "Invalid dictionary file" << endl;
-            return 0;
-        }
-    }
-    else {
-        cerr << "Dictionary not specified" << endl;
-        return 0;
-    }
-    //! [aruco_detect_board_full_sample]
+    readDictionatyFromCommandLine(parser, dictionary);
+
     aruco::ArucoDetector detector(dictionary, detectorParams);
     VideoCapture inputVideo;
     int waitTime;
@@ -111,10 +123,15 @@ int main(int argc, char *argv[]) {
     float axisLength = 0.5f * ((float)min(markersX, markersY) * (markerLength + markerSeparation) +
                                markerSeparation);
 
-    // Create board object
-    aruco::GridBoard board(
-        Size(markersX, markersY), markerLength, markerSeparation, dictionary
-    );
+    // Create GridBoard object
+    //! [aruco_create_board]
+    aruco::GridBoard board(Size(markersX, markersY), markerLength, markerSeparation, dictionary);
+    //! [aruco_create_board]
+
+    // Also you could create Board object
+    //vector<vector<Point3f> > objPoints; // array of object points of all the marker corners in the board
+    //vector<int> ids; // vector of the identifiers of the markers in the board
+    //aruco::Board board(objPoints, dictionary, ids);
 
     double totalTime = 0;
     int totalIterations = 0;
@@ -129,6 +146,8 @@ int main(int argc, char *argv[]) {
         vector<vector<Point2f>> corners, rejected;
         Vec3d rvec, tvec;
 
+        //! [aruco_detect_and_refine]
+
         // Detect markers
         detector.detectMarkers(image, corners, ids, rejected);
 
@@ -136,6 +155,8 @@ int main(int argc, char *argv[]) {
         if(refindStrategy)
             detector.refineDetectedMarkers(image, board, corners, ids, rejected, camMatrix,
                                            distCoeffs);
+
+        //! [aruco_detect_and_refine]
 
         // Estimate board pose
         int markersOfBoardDetected = 0;

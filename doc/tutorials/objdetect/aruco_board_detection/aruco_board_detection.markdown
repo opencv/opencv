@@ -2,7 +2,7 @@ Detection of ArUco Boards {#tutorial_aruco_board_detection}
 ==============================
 
 @prev_tutorial{tutorial_aruco_detection}
-@next_tutorial{tutorial_charuco_detection}
+
 
 An ArUco Board is a set of markers that acts like a single marker in the sense that it provides a
 single pose for the camera.
@@ -33,43 +33,11 @@ Board Detection
 A Board detection is similar to the standard marker detection. The only difference is in the pose estimation step.
 In fact, to use marker boards, a standard marker detection should be done before estimating the Board pose.
 
-To perform pose estimation for boards, you should use ```cv::solvePnP``` function, as shown below:
+To perform pose estimation for boards, you should use ```cv::solvePnP``` function, as shown below
+in the `samples/cpp/tutorial_code/objectDetection/detect_board.cpp`.
 
-@code{.cpp}
-cv::Mat inputImage;
+@snippet samples/cpp/tutorial_code/objectDetection/detect_board.cpp aruco_detect_board_full_sample
 
-// Camera parameters are read from somewhere
-cv::Mat cameraMatrix, distCoeffs;
-
-// You can read camera parameters from tutorial_camera_params.yml
-readCameraParameters(filename, cameraMatrix, distCoeffs); // This function is implemented in aruco_samples_utility.hpp
-
-// Assume we have a function to create the board object
-cv::Ptr<cv::aruco::Board> board = cv::aruco::Board::create();
-
-...
-
-std::vector<int> markerIds;
-std::vector<std::vector<cv::Point2f>> markerCorners;
-
-cv::aruco::DetectorParameters detectorParams = cv::aruco::DetectorParameters();
-cv::aruco::ArucoDetector detector(board.dictionary, detectorParams);
-
-detector.detectMarkers(inputImage, markerCorners, markerIds);
-
-cv::Vec3d rvec, tvec;
-
-// If at least one marker detected
-if(markerIds.size() > 0) {
-    // Get object and image points for the solvePnP function
-    cv::Mat objPoints, imgPoints;
-    board->matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);
-
-    // Find pose
-    cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
-}
-
-@endcode
 
 The parameters are:
 
@@ -93,14 +61,14 @@ As it can be observed, although some markers have not been detected, the Board p
 Grid Board
 -----
 
-Creating the ```Board``` object requires specifying the corner positions for each marker in the environment.
+Creating the ```cv::aruco::Board``` object requires specifying the corner positions for each marker in the environment.
 However, in many cases, the board will be just a set of markers in the same plane and in a grid layout,
 so it can be easily printed and used.
 
 Fortunately, the aruco module provides the basic functionality to create and print these types of markers
 easily.
 
-The ```GridBoard``` class is a specialized class that inherits from the ```Board``` class and which represents a Board
+The ```cv::aruco::GridBoard``` class is a specialized class that inherits from the ```cv::aruco::Board``` class and which represents a Board
 with all the markers in the same plane and in a grid layout, as in the following image:
 
 ![Image with aruco board](images/gboriginal.jpg)
@@ -110,7 +78,7 @@ corner of the board and with the Z pointing out, like in the following image (X:
 
 ![Board with axis](images/gbaxis.jpg)
 
-A ```GridBoard``` object can be defined using the following parameters:
+A ```cv::aruco::GridBoard``` object can be defined using the following parameters:
 
 - Number of markers in the X direction.
 - Number of markers in the Y direction.
@@ -119,11 +87,9 @@ A ```GridBoard``` object can be defined using the following parameters:
 - The dictionary of the markers.
 - Ids of all the markers (X*Y markers).
 
-This object can be easily created from these parameters using the ```cv::aruco::GridBoard::create()``` static function:
+This object can be easily created from these parameters using the ```cv::aruco::GridBoard``` constructor:
 
-@code{.cpp}
-    cv::aruco::GridBoard board = cv::aruco::GridBoard::create(5, 7, 0.04, 0.01, dictionary);
-@endcode
+@snippet samples/cpp/tutorial_code/objectDetection/detect_board.cpp aruco_create_board
 
 - The first and second parameters are the number of markers in the X and Y direction respectively.
 - The third and fourth parameters are the marker length and the marker separation respectively. They can be provided
@@ -134,13 +100,13 @@ So, this board will be composed by 5x7=35 markers. The ids of each of the marker
 order starting on 0, so they will be 0, 1, 2, ..., 34.
 
 After creating a Grid Board, we probably want to print it and use it. A function to generate the image
-of a ```GridBoard``` is provided in ```cv::aruco::GridBoard::generateImage()```. For example:
+of a ```cv::aruco::GridBoard``` is provided in ```cv::aruco::GridBoard::generateImage()```:
 
-@code{.cpp}
-    cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(5, 7, 0.04, 0.01, dictionary);
-    cv::Mat boardImage;
-    board->generateImage( cv::Size(600, 500), boardImage, 10, 1 );
-@endcode
+@snippet samples/cpp/tutorial_code/objectDetection/create_board.cpp aruco_generate_board_image
+
+
+A full working example of board creation is included in the `samples/cpp/tutorial_code/objectDetection/create_board.cpp`
+
 
 - The first parameter is the size of the output image in pixels. In this case 600x500 pixels. If this is not proportional
 to the board dimensions, it will be centered on the image.
@@ -153,16 +119,12 @@ The output image will be something like this:
 
 ![](images/board.png)
 
-A full working example of board creation is included in the `create_board.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
+A full working example of board creation is included in the `samples/cpp/tutorial_code/objectDetection/create_board.cpp`.
 
 Note: The samples now take input via commandline via the [OpenCV Commandline Parser](http://docs.opencv.org/trunk/d0/d2e/classcv_1_1CommandLineParser.html#gsc.tab=0). For this file the example parameters will look like
 @code{.cpp}
     "_output_path_/aboard.png" -w=5 -h=7 -l=100 -s=10 -d=10
 @endcode
-
-Finally, a full example of board detection:
-
-@snippet samples/cpp/tutorial_code/objectDetection/detect_board.cpp aruco_detect_board_full_sample
 
 Sample video:
 
@@ -224,21 +186,7 @@ internal bits are not analyzed at all and only the corner distances are evaluate
 
 This is an example of using the  ```refineDetectedMarkers()``` function:
 
-@code{.cpp}
-
-    cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
-    cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(5, 7, 0.04, 0.01, dictionary);
-    cv::aruco::DetectorParameters detectorParams = cv::aruco::DetectorParameters();
-    cv::aruco::ArucoDetector detector(dictionary, detectorParams);
-
-    std::vector<int> markerIds;
-    std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
-    detector.detectMarkers(inputImage, markerCorners, markerIds, rejectedCandidates);
-
-    detector.refineDetectedMarkers(inputImage, board, markerCorners, markerIds, rejectedCandidates);
-    // After calling this function, if any new marker has been detected it will be removed from rejectedCandidates and included
-    // at the end of markerCorners and markerIds
-@endcode
+@snippet samples/cpp/tutorial_code/objectDetection/detect_board.cpp aruco_detect_and_refine
 
 It must also be noted that, in some cases, if the number of detected markers in the first place is too low (for instance only
 1 or 2 markers), the projections of the missing markers can be of bad quality, producing erroneous correspondences.

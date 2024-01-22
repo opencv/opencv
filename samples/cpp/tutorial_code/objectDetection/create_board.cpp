@@ -79,8 +79,10 @@ int main(int argc, char *argv[]) {
     aruco::GridBoard board(Size(markersX, markersY), float(markerLength), float(markerSeparation), dictionary);
 
     // show created board
+    //! [aruco_generate_board_image]
     Mat boardImage;
     board.generateImage(imageSize, boardImage, margins, borderBits);
+    //! [aruco_generate_board_image]
 
     if(showImage) {
         imshow("board", boardImage);
