@@ -1496,7 +1496,7 @@ TEST_P(Test_ONNX_layers, Einsum_5D)
 }
 
 // https://github.com/opencv/opencv/issues/24883
-TEST_P(Test_ONNX_layers, DISABLED_Einsum_InnerProduct)
+TEST_P(Test_ONNX_layers, Einsum_InnerProduct)
 {
     testONNXModels("einsum_inner", npy, 0, 0, false, false, 2);
 }
