@@ -31,7 +31,7 @@ public:
     vector<vector<Point2f>> getTransformationPoints()
     { return transformation_points; }
 
-    bool computeTransformationPoints();
+    bool computeTransformationPoints(float detectorThreshNMSBoxes);
 
 protected:
     enum resize_direction
@@ -44,7 +44,7 @@ protected:
     int height, width;
     Mat resized_barcode, gradient_magnitude, coherence, orientation, edge_nums, integral_x_sq, integral_y_sq, integral_xy, integral_edges;
 
-    void preprocess(double detectorGradientMagnitudeThresh);
+    void preprocess(double detectorThreshGradientMagnitude);
 
     void calCoherence(int window_size);
 

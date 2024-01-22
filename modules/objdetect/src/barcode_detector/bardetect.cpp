@@ -171,14 +171,14 @@ void Detect::init(const Mat &src, float detectorThreshDownSamplingLimit)
 }
 
 
-void Detect::localization(std::vector<float> detectorWindowSizes, double detectorGradientMagnitudeThresh)
+void Detect::localization(std::vector<float> detectorWindowSizes, double detectorThreshGradientMagnitude)
 {
 
     localization_bbox.clear();
     bbox_scores.clear();
 
     // get integral image
-    preprocess(detectorGradientMagnitudeThresh);
+    preprocess(detectorThreshGradientMagnitude);
     // empirical setting
     //static constexpr float SCALE_LIST[] = {0.01f, 0.03f, 0.06f, 0.08f};
     const auto min_side = static_cast<float>(std::min(width, height));
@@ -197,7 +197,7 @@ void Detect::localization(std::vector<float> detectorWindowSizes, double detecto
 }
 
 
-bool Detect::computeTransformationPoints()
+bool Detect::computeTransformationPoints(float detectorThreshNMSBoxes)
 {
 
     bbox_indices.clear();
@@ -205,7 +205,12 @@ bool Detect::computeTransformationPoints()
     transformation_points.reserve(bbox_indices.size());
     RotatedRect rect;
     Point2f temp[4];
-    const float THRESHOLD_SCORE = float(width * height) / 300.f;
+    float THRESHOLD_SCORE = float(width * height) / 300.f;
+    if (detectorThreshNMSBoxes > 0) 
+    {
+        THRESHOLD_SCORE = detectorThreshNMSBoxes;
+    }
+
     NMSBoxes(localization_bbox, bbox_scores, THRESHOLD_SCORE, 0.1f, bbox_indices);
 
     for (const auto &bbox_index : bbox_indices)

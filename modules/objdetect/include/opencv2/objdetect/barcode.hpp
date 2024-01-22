@@ -75,7 +75,10 @@ public:
     CV_WRAP void setDetectorWindowSizes(InputArray sizes);
 
     /// detector gradient magnitude threshold (default 64)
-    CV_PROP_RW double detectorGradientMagnitudeThresh; 
+    CV_PROP_RW double detectorThreshGradientMagnitude; 
+
+    /// detector NMS box score threshold override, value is calculated using (width * height)/300 (default -1)
+    CV_PROP_RW float detectorThreshNMSBoxes;
 };
 //! @}
 

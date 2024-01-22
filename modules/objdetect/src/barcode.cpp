@@ -145,14 +145,16 @@ public:
     float &detectorThrDownSample;
     vector<float> &detectorWindowSizes;
     double &detectorThrGradMagnitude;
+    float &detectorThrNMSBoxes;
 
 public:
     //=================
     // own methods
-    BarcodeImpl(float &thrDownsample, vector<float> &windowSizes, double &thrGradMagnitude) 
+    BarcodeImpl(float &thrDownsample, vector<float> &windowSizes, double &thrGradMagnitude, float &thrNMSBoxes) 
         : detectorThrDownSample(thrDownsample),
         detectorWindowSizes(windowSizes),
-        detectorThrGradMagnitude(thrGradMagnitude) {}
+        detectorThrGradMagnitude(thrGradMagnitude),
+        detectorThrNMSBoxes(thrNMSBoxes) {}
 
     vector<Mat> initDecode(const Mat &src, const vector<vector<Point2f>> &points) const;
     bool decodeWithType(InputArray img,
@@ -277,7 +279,7 @@ bool BarcodeImpl::detect(InputArray img, OutputArray points) const
     Detect bardet;
     bardet.init(inarr, detectorThrDownSample);
     bardet.localization(detectorWindowSizes, detectorThrGradMagnitude);
-    if (!bardet.computeTransformationPoints())
+    if (!bardet.computeTransformationPoints(detectorThrNMSBoxes))
     { return false; }
     vector<vector<Point2f>> pnts2f = bardet.getTransformationPoints();
     vector<Point2f> trans_points;
@@ -350,9 +352,10 @@ BarcodeDetector::BarcodeDetector(const string &prototxt_path, const string &mode
 {
     detectorThreshDownSamplingLimit = 512.f;
     detectorWindowSizes = {0.01f, 0.03f, 0.06f, 0.08f};
-    detectorGradientMagnitudeThresh = 64.0;
+    detectorThreshGradientMagnitude = 64.0;
+    detectorThreshNMSBoxes = -1.f;
 
-    Ptr<BarcodeImpl> p_ = new BarcodeImpl(detectorThreshDownSamplingLimit, detectorWindowSizes, detectorGradientMagnitudeThresh);
+    Ptr<BarcodeImpl> p_ = new BarcodeImpl(detectorThreshDownSamplingLimit, detectorWindowSizes, detectorThreshGradientMagnitude, detectorThreshNMSBoxes);
     p = p_;
     p_->sr = make_shared<SuperScale>();
     if (!prototxt_path.empty() && !model_path.empty())
