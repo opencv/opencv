@@ -81,7 +81,7 @@ OCL_PERF_TEST_P(ConvertToFixture, ConvertTo,
 }
 
 
-#define RUN_CONVERTFP16
+//#define RUN_CONVERTFP16
 static Size convertFP16_srcSize(4000, 4000);
 
 OCL_PERF_TEST(Core, ConvertFP32FP16MatMat)
