@@ -769,6 +769,57 @@ TEST_P(CharucoBoard, testWrongSizeDetection)
     ASSERT_TRUE(detectedCharucoIds.empty());
 }
 
+TEST(CharucoBoardGenerate, issue_24806)
+{
+    aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_1000);
+    const float squareLength = 13.f, markerLength = 10.f;
+    const Size boardSize(7ull, 4ull);
+    const aruco::CharucoBoard board(boardSize, squareLength, markerLength, dict);
+    const int marginSize = 24;
+    Mat boardImg;
+
+    // generate chessboard image
+    board.generateImage(Size(400, 300), boardImg, marginSize);
+    // This condition checks that the width of the image determines the dimensions of the chessboard in this test
+    CV_Assert((float)(boardImg.cols) / (float)boardSize.width <=
+              (float)(boardImg.rows) / (float)boardSize.height);
+
+    // prepare data for chessboard image test
+    Mat noMarginsImg = boardImg(Range(marginSize, boardImg.rows - marginSize),
+                                Range(marginSize, boardImg.cols - marginSize));
+    const float pixInSquare = (float)(noMarginsImg.cols) / (float)boardSize.width;
+
+    Size pixInChessboard(cvRound(pixInSquare*boardSize.width), cvRound(pixInSquare*boardSize.height));
+    const Point startChessboard((noMarginsImg.cols - pixInChessboard.width) / 2,
+                                (noMarginsImg.rows - pixInChessboard.height) / 2);
+    Mat chessboardZoneImg = noMarginsImg(Rect(startChessboard, pixInChessboard));
+
+    // B - black pixel, W - white pixel
+    // chessboard corner 1:
+    // B W
+    // W B
+    Mat goldCorner1 = (Mat_<uint8_t>(2, 2) <<
+        0, 255,
+        255, 0);
+    // B - black pixel, W - white pixel
+    // chessboard corner 2:
+    // W B
+    // B W
+    Mat goldCorner2 = (Mat_<uint8_t>(2, 2) <<
+        255, 0,
+        0, 255);
+
+    // test chessboard corners in generated image
+    for (const Point3f& p: board.getChessboardCorners()) {
+        Point2f chessCorner(pixInSquare*(p.x/squareLength),
+                            pixInSquare*(p.y/squareLength));
+        Mat winCorner = chessboardZoneImg(Rect(Point(cvRound(chessCorner.x) - 1, cvRound(chessCorner.y) - 1), Size(2, 2)));
+        bool eq = (cv::countNonZero(goldCorner1 != winCorner) == 0) | (cv::countNonZero(goldCorner2 != winCorner) == 0);
+        ASSERT_TRUE(eq);
+    }
+    // TODO: fix aruco generateImage and add test aruco corners for generated image
+}
+
 TEST(Charuco, testSeveralBoardsWithCustomIds)
 {
     Size res{500, 500};
