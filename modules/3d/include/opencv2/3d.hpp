@@ -2839,13 +2839,23 @@ struct CV_EXPORTS RasterizeSettings
 /** @brief Renders a set of triangles on a depth and/or RGB image.
 
 The output images are not cleared before the rendering and therefore can be used for drawing over
-existing image or for depth joining with pre-filled Z-buffer.
-Triangles can be drawn white (1.0, 1.0, 1.0), flat-shaded or with a color interpolated between vertices.
-In flat-shaded mode a color of 1st vertex of each triangle is used.
+existing image or for joining rendered model with pre-filled Z-buffer.
+The function does not create or clear user-provided buffers. This means that if a user wants to get
+resulting depth buffer, they should initialize it and pre-fill by zFar values. On the other side,
+a user shouldn't pass depth or color buffer if they doesn't need them after the function call;
+this can help OpenCV to choose the fastest rendering algorithm.
+
+Triangles can be drawn white (1.0, 1.0, 1.0), flat-shaded or with a color interpolation between vertices.
+In flat-shaded mode the 1st vertex color of each triangle is used to fill the whole triangle.
+The coordinate system emulates the OpenGL's coordinate system with coordinate beginning in the center of the screen,
+X axis pointing right, Y axis pointing up and Z axis pointing towards the viewer
+except that image is vertically flipped after the render.
+This means that all visible objects are placed in z-negative area, or exactly in -zNear > z > -zFar since
+zNear and zFar are positive.
 
 *@param vertices vertices coordinates array. Should contain values of CV_32FC3 type or a compatible one (e.g. cv::Vec3f, etc.)
 *@param indices triangle vertices index array, 3 per triangle. Each index indicates a vertex in a vertices array. Should contain CV_32SC3 values
-*@param colors per-vertex colors of CV_32FC3 type, can be empty.
+*@param colors per-vertex colors of CV_32FC3 type. Can be empty or the same size as vertices array
 *@param cameraPose a 4x3 or 4x4 float or double matrix containing inverted (sic!) camera pose
 *@param fovY field of view in vertical direction, given in radians
 *@param zNear minimum Z value to render, everything closer is clipped
@@ -2853,8 +2863,8 @@ In flat-shaded mode a color of 1st vertex of each triangle is used.
 *@param width frame width
 *@param height frame height
 *@param settings see RasterizeSettings
-*@param depthBuf a width x height array of floats containing resulting Z buffer. Reused if not empty. Created and filled by zFar values if a user-provided array is empty. To disable Z buffer output, pass cv::noArray() here.
-*@param colorBuf a width x height array of CV_32FC3 representing the final rendered image. Reused if not empty. Created and filled by zeroes if a user-provided array is empty. To disable color output, pass cv::noArray() here.
+*@param depthBuf a width x height array of floats containing resulting Z buffer. Reused if not empty. Should be pre-filled by zFar values if required by user. To disable Z buffer output, pass cv::noArray() here.
+*@param colorBuf a width x height array of CV_32FC3 representing the final rendered image. Reused if not empty. To disable color output, pass cv::noArray() here.
 */
 CV_EXPORTS void triangleRasterize(InputArray vertices, InputArray indices, InputArray colors,
                                   InputArray cameraPose, float fovY, float zNear, float zFar,
