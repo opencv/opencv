@@ -15,6 +15,11 @@ RasterizeSettings::RasterizeSettings()
 static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& colorBuf,
                          RasterizeSettings settings)
 {
+    // this will be useful during refactoring
+    // if there's gonna be more supported data types
+    CV_DbgAssert(depthBuf.type() == CV_32FC1);
+    CV_DbgAssert(colorBuf.type() == CV_32FC3);
+
     // any of buffers can be empty
     int width  = std::max(colorBuf.cols, depthBuf.cols);
     int height = std::max(colorBuf.rows, depthBuf.rows);
@@ -47,8 +52,10 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     }
 
     float invd = 1.f / d;
-    float invz[3] = { verts[0][3], verts[1][3], verts[2][3] };
+    Vec3f zinv { 1.0f/verts[0][2], 1.0f/verts[1][2], 1.0f/verts[2][2] };
+    Vec3f w { verts[0][3], verts[1][3], verts[2][3] };
 
+    //TODO: proper Y flip
     for (int y = minPt.y; y < maxPt.y; y++)
     {
         for (int x = minPt.x; x < maxPt.x; x++)
@@ -63,15 +70,14 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
             if ((f[0] >= 0) && (f[1] >= 0) && (f[2] >= 0))
             {
                 bool update = false;
-                float zInter = 0.f;
                 if (!depthBuf.empty())
                 {
-                    zInter = 1.0f / (f[0] * invz[0] + f[1] * invz[1] + f[2] * invz[2]);
                     float zCurrent = depthBuf.at<float>(y, x);
-                    if (zInter < zCurrent)
+                    float zNew = f[0] * zinv[0] + f[1] * zinv[1] + f[2] * zinv[2];
+                    if (zNew < zCurrent)
                     {
                         update = true;
-                        depthBuf.at<float>(y, x) = zInter;
+                        depthBuf.at<float>(y, x) = zNew;
                     }
                 }
                 else // Shading::White
@@ -92,19 +98,12 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
                     }
                     else // ShadingType::Shaded
                     {
-                        Vec3f interp;
-                        for (int i = 0; i < 3; i++)
+                        float zInter = 1.0f / (f[0] * w[0] + f[1] * w[1] + f[2] * w[2]);
+                        for (int j = 0; j < 3; j++)
                         {
-                            interp[i] = f[i] * zInter * invz[i];
+                            color += (f[j] * w[j]) * colors[j];
                         }
-
-                        for (int i = 0; i < 3; i++)
-                        {
-                            for (int j = 0; j < 3; j++)
-                            {
-                                color[i] += interp[j] * colors[j][i];
-                            }
-                        }
+                        color *= zInter;
                     }
                     colorBuf.at<Vec3f>(y, x) = color;
                 }
