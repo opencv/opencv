@@ -1,6 +1,6 @@
     // these constants are wrapped inside functions to prevent inlining
     private static String getVersion() { return "@OPENCV_VERSION@"; }
-    private static String getNativeLibraryName() { return "opencv_java@OPENCV_VERSION_MAJOR@@OPENCV_VERSION_MINOR@@OPENCV_VERSION_PATCH@"; }
+    private static String getNativeLibraryName() { return "opencv_java@OPENCV_VERSION_MAJOR@"; }
     private static int getVersionMajorJ() { return @OPENCV_VERSION_MAJOR@; }
     private static int getVersionMinorJ() { return @OPENCV_VERSION_MINOR@; }
     private static int getVersionRevisionJ() { return @OPENCV_VERSION_PATCH@; }
