@@ -426,7 +426,7 @@ protected:
         settings = RasterizeSettings().setCullingMode(cullingMode).setShadingType(shadingType);
 
         triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
-                          width, height, settings, depth_buf, color_buf);
+                          settings, depth_buf, color_buf);
     }
 
 public:
@@ -454,9 +454,9 @@ TEST_P(RenderingTest, noArrays)
 
     // cameraPose can also be double, checking it
     triangleRasterize(verts, indices, colors, Matx44d(cameraPose), fovYradians, zNear, zFar,
-                      width, height, settings, depthOnly, cv::noArray());
+                      settings, depthOnly, cv::noArray());
     triangleRasterize(verts, indices, colors, Matx44d(cameraPose), fovYradians, zNear, zFar,
-                      width, height, settings, cv::noArray(), colorOnly);
+                      settings, cv::noArray(), colorOnly);
 
     compareRGB(color_buf, colorOnly, 1, 0.00134f);
     depth_buf.convertTo(depth_buf, CV_16U, depthScale);
@@ -563,8 +563,8 @@ TEST_P(RenderingTest, keepDrawnData)
         idx1 = indices.reshape(3, 1)(Range::all(), Range(0, nTriangles / 2));
         idx2 = indices.reshape(3, 1)(Range::all(), Range(nTriangles / 2, nTriangles));
 
-        triangleRasterize(verts, idx1, colors, cameraPose, fovYradians, zNear, zFar, width, height, settings, depth_buf2, color_buf2);
-        triangleRasterize(verts, idx2, colors, cameraPose, fovYradians, zNear, zFar, width, height, settings, depth_buf2, color_buf2);
+        triangleRasterize(verts, idx1, colors, cameraPose, fovYradians, zNear, zFar, settings, depth_buf2, color_buf2);
+        triangleRasterize(verts, idx2, colors, cameraPose, fovYradians, zNear, zFar, settings, depth_buf2, color_buf2);
 
         compareRGB(color_buf, color_buf2, 0, 0);
         depth_buf.convertTo(depth_buf, CV_16U, depthScale);

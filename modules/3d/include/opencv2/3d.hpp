@@ -2860,16 +2860,15 @@ zNear and zFar are positive.
 *@param fovY field of view in vertical direction, given in radians
 *@param zNear minimum Z value to render, everything closer is clipped
 *@param zFar maximum Z value to render, everything farther is clipped
-*@param width frame width
-*@param height frame height
 *@param settings see RasterizeSettings
 *@param depthBuf a width x height array of floats containing resulting Z buffer. Reused if not empty. Should be pre-filled by zFar values if required by user. To disable Z buffer output, pass cv::noArray() here.
 *@param colorBuf a width x height array of CV_32FC3 representing the final rendered image. Reused if not empty. To disable color output, pass cv::noArray() here.
 */
 CV_EXPORTS void triangleRasterize(InputArray vertices, InputArray indices, InputArray colors,
                                   InputArray cameraPose, float fovY, float zNear, float zFar,
-                                  int width, int height, RasterizeSettings settings = RasterizeSettings(),
-                                  OutputArray depthBuf=noArray(), OutputArray colorBuf=noArray());
+                                  RasterizeSettings settings = RasterizeSettings(),
+                                  //TODO: colorBuf should go first
+                                  InputOutputArray depthBuf=noArray(), InputOutputArray colorBuf=noArray());
 
 //! @} _3d
 } //end namespace cv

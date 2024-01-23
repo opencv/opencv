@@ -197,8 +197,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
         color_buf = Mat(height, width, CV_32FC3, Scalar::all(0));
 
         startTimer();
-        cv::triangleRasterize(vertices, indices, colors, cameraPose, fovYradians, zNear, zFar,
-                              width, height, settings,
+        cv::triangleRasterize(vertices, indices, colors, cameraPose, fovYradians, zNear, zFar, settings,
                               (outputs != Outputs::ColorOnly) ? depth_buf : noArray(),
                               (outputs != Outputs::DepthOnly) ? color_buf : noArray());
         stopTimer();

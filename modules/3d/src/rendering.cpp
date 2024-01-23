@@ -116,11 +116,9 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 
 CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
                                    InputArray cameraPose, float fovyRadians, float zNear, float zFar,
-                                   int width, int height, RasterizeSettings settings,
-                                   OutputArray _depthBuffer, OutputArray _colorBuffer)
+                                   RasterizeSettings settings,
+                                   InputOutputArray _depthBuffer, InputOutputArray _colorBuffer)
 {
-    CV_Assert(_colorBuffer.needed() || _depthBuffer.needed());
-
     CV_Assert(cameraPose.type() == CV_32FC1 || cameraPose.type() == CV_64FC1);
     CV_Assert((cameraPose.size() == Size {4, 3}) || (cameraPose.size() == Size {4, 4}));
 
