@@ -125,7 +125,6 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     CV_Assert((fovyRadians > 0) && (fovyRadians < CV_PI));
     CV_Assert(zNear > 0);
     CV_Assert(zFar > zNear);
-    CV_Assert((width > 0) && (height > 0));
 
     Mat cpMat;
     cameraPose.getMat().convertTo(cpMat, CV_32FC1);
@@ -190,18 +189,39 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         }
     }
 
+    Size imgSize {0, 0};
+
+    Mat colorBuf;
+    if (_colorBuffer.needed())
+    {
+        CV_Assert(!_colorBuffer.empty());
+        CV_Assert(_colorBuffer.type() == CV_32FC3);
+        imgSize = _colorBuffer.size();
+
+        if (hasIdx)
+        {
+            colorBuf = _colorBuffer.getMat();
+        }
+    }
+
+    //TODO: put to settings
+    bool useCompatibleGlDepth = false;
+
+    CV_Assert(!_colorBuffer.empty() || !_depthBuffer.empty());
+
+    Mat_<uchar> validMask;
     Mat depthBuf;
     if (_depthBuffer.needed())
     {
-        if (_depthBuffer.empty())
+        CV_Assert(!_depthBuffer.empty());
+        CV_Assert(_depthBuffer.type() == CV_32FC1);
+        if (imgSize.area() > 0)
         {
-            _depthBuffer.create(cv::Size(width, height), CV_32FC1);
-            _depthBuffer.setTo(zFar);
+            CV_Assert(_depthBuffer.size() == imgSize);
         }
         else
         {
-            CV_Assert(_depthBuffer.size() == cv::Size(width, height));
-            CV_Assert(_depthBuffer.type() == CV_32FC1);
+            imgSize = _depthBuffer.size();
         }
 
         if (hasIdx)
@@ -211,43 +231,16 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     }
     else if (hasIdx && hasColors)
     {
-        depthBuf.create(cv::Size(width, height), CV_32FC1);
-        depthBuf.setTo(zFar);
-    }
-
-    Mat colorBuf;
-    if (_colorBuffer.needed())
-    {
-        if (_colorBuffer.empty())
-        {
-            // other types are not supported yet
-            _colorBuffer.create(cv::Size(width, height), CV_32FC3);
-            _colorBuffer.setTo(cv::Scalar::all(0));
-        }
-        else
-        {
-            CV_Assert(_colorBuffer.size() == cv::Size(width, height));
-            CV_Assert(_colorBuffer.type() == CV_32FC3);
-        }
-
-        if (hasIdx)
-        {
-            // other types are not supported yet
-            if (_colorBuffer.empty())
-            {
-                _colorBuffer.create(cv::Size(width, height), CV_32FC3);
-                _colorBuffer.setTo(cv::Scalar::all(0));
-            }
-
-            colorBuf = _colorBuffer.getMat();
-        }
+        // since both depthBuf and colorBuf cannot be empty, imgSize should be filled
+        depthBuf.create(imgSize, CV_32FC1);
+        depthBuf.setTo(1.0);
     }
 
     // world-to-camera coord system
     Matx44f lookAtMatrix = camPoseMat;
 
     float ys = 1.0f / std::tan(fovyRadians / 2);
-    float xs = ys / (float)width * (float)height;
+    float xs = ys / (float)imgSize.width * (float)imgSize.height;
     float zz = (zNear + zFar) / (zNear - zFar);
     float zw = 2 * zFar * zNear / (zNear - zFar);
 
@@ -273,8 +266,8 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
 
         // [-1, 1]^3 => [0, width] x [0, height] x [0, 1]
         Vec4f vscreen = {
-            ( vdiv[0] + 1.f) * 0.5f * width,
-            (-vdiv[1] + 1.f) * 0.5f * height, // vertical flip
+            ( vdiv[0] + 1.f) * 0.5f * (float)imgSize.width,
+            (-vdiv[1] + 1.f) * 0.5f * (float)imgSize.height, // vertical flip
             ( vdiv[2] + 1.f) * 0.5f,
               vdiv[3]
         };

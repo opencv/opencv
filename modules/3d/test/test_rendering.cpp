@@ -450,7 +450,8 @@ public:
 
 TEST_P(RenderingTest, noArrays)
 {
-    Mat depthOnly, colorOnly;
+    Mat depthOnly(height, width, ftype, zFar);
+    Mat colorOnly(height, width, CV_MAKETYPE(ftype, 3), Scalar::all(0));
 
     // cameraPose can also be double, checking it
     triangleRasterize(verts, indices, colors, Matx44d(cameraPose), fovYradians, zNear, zFar,
@@ -555,8 +556,8 @@ TEST_P(RenderingTest, keepDrawnData)
 {
     if (modelType != ModelType::Empty)
     {
-        // should be initialized inside rasterization
-        Mat depth_buf2, color_buf2;
+        Mat depth_buf2(height, width, ftype, zFar);
+        Mat color_buf2(height, width, CV_MAKETYPE(ftype, 3), Scalar::all(0));
 
         Mat idx1, idx2;
         int nTriangles = (int)indices.total();
