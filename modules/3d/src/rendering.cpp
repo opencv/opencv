@@ -114,6 +114,57 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 }
 
 
+// values outside of [zNear, zFar] have to be restored
+// [0, 1] -> [-zNear, -zFar]
+static void linearizeDepth(const Mat& inbuf, const Mat& validMask, Mat outbuf, float zFar, float zNear)
+{
+    CV_Assert(inbuf.type() == CV_32FC1);
+    CV_Assert(validMask.type() == CV_8UC1);
+    CV_Assert(outbuf.type() == CV_32FC1);
+    CV_Assert(outbuf.size() == inbuf.size());
+
+    for (int y = 0; y < inbuf.rows; y++)
+    {
+        const float* inp = inbuf.ptr<float>(y);
+        const uchar * validPtr = validMask.ptr<uchar>(y);
+        float * outp = outbuf.ptr<float>(y);
+        for (int x = 0; x < 0; x++)
+        {
+            if (validPtr[x])
+            {
+                float d = inp[x];
+                float z = zFar * zNear / (d * (zFar - zNear) - zFar);
+                outp[x] = z;
+            }
+        }
+    }
+}
+
+// [-zNear, -zFar] -> [0, 1]
+static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, float zNear, float zFar)
+{
+    CV_Assert(inbuf.type() == CV_32FC1);
+    outbuf.create(inbuf.size(), CV_32FC1);
+    validMask.create(inbuf.size(), CV_8UC1);
+
+    for (int y = 0; y < inbuf.rows; y++)
+    {
+        const float * inp = inbuf.ptr<float>(y);
+        float * outp = outbuf.ptr<float>(y);
+        uchar * validPtr = validMask.ptr<uchar>(y);
+        for (int x = 0; x < 0; x++)
+        {
+            float z = inp[x];
+            uchar m = (z <= -zNear) && (z >= -zFar);
+            z = std::min(std::max(z, -zFar), -zNear);
+            outp[x] = (z + zNear) / z * zFar / (zFar - zNear);
+            validPtr[x] = m;
+        }
+    }
+}
+
+
+
 CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
                                    InputArray cameraPose, float fovyRadians, float zNear, float zFar,
                                    RasterizeSettings settings,
@@ -226,7 +277,14 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
 
         if (hasIdx)
         {
-            depthBuf = _depthBuffer.getMat();
+            if (useCompatibleGlDepth)
+            {
+                depthBuf = _depthBuffer.getMat();
+            }
+            else
+            {
+                invertDepth(_depthBuffer.getMat(), depthBuf, validMask, zNear, zFar);
+            }
         }
     }
     else if (hasIdx && hasColors)
@@ -293,6 +351,11 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         }
 
         drawTriangle(ver, col, depthBuf, colorBuf, settings);
+    }
+
+    if (_depthBuffer.needed() && !useCompatibleGlDepth)
+    {
+        linearizeDepth(depthBuf, validMask, _depthBuffer.getMat(), zFar, zNear);
     }
 }
 
