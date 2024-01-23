@@ -499,7 +499,7 @@ Cv64suf;
     CV_16U - 2 bytes
     ...
 */
-#define CV_ELEM_SIZE1(type) ((int)(0x4881228442211ULL >> (CV_MAT_DEPTH(type) * 4)) & 15)
+#define CV_ELEM_SIZE1(type) ((int)((0x4881228442211ULL >> (CV_MAT_DEPTH(type) * 4)) & 15))
 
 #define CV_ELEM_SIZE(type) (CV_MAT_CN(type)*CV_ELEM_SIZE1(type))
 
