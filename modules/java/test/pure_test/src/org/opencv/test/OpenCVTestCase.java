@@ -106,7 +106,16 @@ public class OpenCVTestCase extends TestCase {
     protected void setUp() throws Exception {
         super.setUp();
 
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        try {
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        } catch (SecurityException e) {
+            System.out.println(e.toString());
+            System.exit(-1);
+        } catch (UnsatisfiedLinkError e) {
+            System.out.println(e.toString());
+            System.exit(-1);
+        }
+
         Core.setErrorVerbosity(false);
 
         String pwd;
@@ -116,6 +125,14 @@ public class OpenCVTestCase extends TestCase {
             System.out.println(e);
             return;
         }
+
+        OpenCVTestRunner.LENA_PATH = pwd + "res/drawable/lena.png";
+        OpenCVTestRunner.CHESS_PATH = pwd + "res/drawable/chessboard.jpg";
+        OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH = pwd + "res/raw/lbpcascade_frontalface.xml";
+
+        assert(new File(OpenCVTestRunner.LENA_PATH).exists());
+        assert(new File(OpenCVTestRunner.CHESS_PATH).exists());
+        assert(new File(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH).exists());
 
         dst = new Mat();
         assertTrue(dst.empty());
