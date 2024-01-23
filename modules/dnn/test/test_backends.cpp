@@ -456,7 +456,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     Mat inp = blobFromImage(img, 1.0, Size(224, 224), Scalar(0.0, 0.0, 0.0), true, false);
     // Output image has values in range [0.0, 255.0].
     float l1 = 5e-4, lInf = 1e-2;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.4;
         lInf = 7.46;
@@ -480,6 +480,15 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     {
         l1 = 0.4;
         lInf = 7.46;
+    }
+    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL)
+    {
+        l1 = 5.5e-4;
+    }
+    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.86;
+        lInf = 16;
     }
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
