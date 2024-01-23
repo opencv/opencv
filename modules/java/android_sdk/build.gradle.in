@@ -121,8 +121,6 @@ android {
         targetCompatibility JavaVersion.VERSION_@ANDROID_GRADLE_JAVA_VERSION_INIT@
     }
 
-    @ANDROID_GRADLE_BUILD_FEATURE_AIDL@
-
     buildTypes {
         debug {
             packagingOptions {
@@ -139,7 +137,6 @@ android {
     }
 
     buildFeatures {
-        aidl true
         prefabPublishing true
         buildConfig true
     }
@@ -153,7 +150,6 @@ android {
         main {
             jniLibs.srcDirs = ['native/libs']
             java.srcDirs = ['java/src']
-            aidl.srcDirs = ['java/src']
             res.srcDirs = ['java/res']
             manifest.srcFile 'java/AndroidManifest.xml'
         }

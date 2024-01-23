@@ -17,7 +17,7 @@ ocv_add_module(java BINDINGS opencv_core opencv_imgproc PRIVATE_REQUIRED opencv_
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/common.cmake)
 
-# UTILITY: glob specific sources and append them to list (type is in H, CPP, JAVA, AIDL)
+# UTILITY: glob specific sources and append them to list (type is in H, CPP, JAVA)
 macro(glob_more_specific_sources _type _root _output)
   unset(_masks)
   if(${_type} STREQUAL "H")
@@ -26,8 +26,6 @@ macro(glob_more_specific_sources _type _root _output)
     set(_masks "${_root}/cpp/*.cpp")
   elseif(${_type} STREQUAL "JAVA")
     set(_masks "${_root}/java/*.java" "${_root}/java/*.java.in")
-  elseif(${_type} STREQUAL "AIDL")
-    set(_masks "${_root}/java/*.aidl")
   endif()
   if (_masks)
     file(GLOB _result ${_masks})

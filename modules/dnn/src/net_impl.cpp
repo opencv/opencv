@@ -901,7 +901,6 @@ AsyncArray Net::Impl::forwardAsync(const String& outputName)
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
-#ifdef CV_CXX11
     String layerName = outputName;
 
     if (layerName.empty())
@@ -922,9 +921,6 @@ AsyncArray Net::Impl::forwardAsync(const String& outputName)
     isAsync = false;
 
     return getBlobAsync(layerName);
-#else
-    CV_Error(Error::StsNotImplemented, "DNN: Asynchronous forward requires build with enabled C++11");
-#endif  // CV_CXX11
 }
 
 

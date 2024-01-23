@@ -42,7 +42,6 @@ android {
         main {
             jniLibs.srcDirs = ['../../jni']
             java.srcDirs = ['src']  // TODO Use original files instead of copied into build directory
-            aidl.srcDirs = ['src']
             res.srcDirs = ['@OpenCV_SOURCE_DIR@/modules/java/android_sdk/android_gradle_lib/res']
             manifest.srcFile 'AndroidManifest.xml'
         }

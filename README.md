@@ -1,8 +1,5 @@
 ## OpenCV: Open Source Computer Vision Library
 
-### Keep OpenCV Free
-
-OpenCV is raising funds to keep the library free for everyone, and we need the support of the entire community to do it. [Donate to OpenCV on IndieGoGo](http://igg.me/at/opencv5) before the campaign ends on December 16 to show your support.
 
 ### Resources
 
@@ -13,6 +10,7 @@ OpenCV is raising funds to keep the library free for everyone, and we need the s
   * previous forum (read only): <http://answers.opencv.org>
 * Issue tracking: <https://github.com/opencv/opencv/issues>
 * Additional OpenCV functionality: <https://github.com/opencv/opencv_contrib>
+* Donate to OpenCV: <https://opencv.org/support/>
 
 
 ### Contributing

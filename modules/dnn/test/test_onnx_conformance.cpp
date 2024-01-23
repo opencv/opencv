@@ -311,6 +311,8 @@ static const TestCase testConformanceConfig[] = {
     {"test_gridsample_nearest", 2, 1},
     {"test_gridsample_reflection_padding", 2, 1},
     {"test_gridsample_zeros_padding", 2, 1},
+    {"test_group_normalization_epsilon", 3, 1},
+    {"test_group_normalization_example", 3, 1},
     {"test_gru_batchwise", 3, 2},
     {"test_gru_defaults", 3, 1},
     {"test_gru_seq_length", 4, 1},

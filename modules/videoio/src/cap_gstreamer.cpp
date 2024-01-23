@@ -2820,7 +2820,8 @@ void handleMessage(GstElement * pipeline)
 
         if (gst_is_missing_plugin_message(msg))
         {
-            CV_WARN("your GStreamer installation is missing a required plugin");
+            CV_WARN("your GStreamer installation is missing a required plugin: " <<
+                    gst_missing_plugin_message_get_description(msg));
         }
         else
         {
