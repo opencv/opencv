@@ -608,6 +608,14 @@ class Arguments(NewOpenCVTests):
         _, inter_pts = cv.rotatedRectangleIntersection(rect1, rect2)
         self.assertLess(np.max(np.abs(inter_pts.reshape(-1, 2) - pts)), 1e-4)
 
+    def test_result_rotated_rect_boundingRect2f(self):
+        center = (0, 0)
+        size = (10, 10)
+        angle = 0
+        gold_box = (-5.0, -5.0, 10.0, 10.0)
+        rect1 = cv.RotatedRect(center, size, angle)
+        bbox = rect1.boundingRect2f()
+        self.assertEqual(gold_box, bbox)
 
     def test_parse_to_rotated_rect_not_convertible(self):
         for not_convertible in ([], (), np.array([]), (123, (45, 34), 1), {1: 2, 3: 4}, 123,
