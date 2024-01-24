@@ -188,13 +188,13 @@ static bool ocl_convertTo(InputArray src_, OutputArray dst_, int ddepth, bool no
     bool doubleCheck = true;
     if (needDouble)
     {
-        doubleCheck = ocl::Device::getDefault().doubleFPConfig() > 0;
+        doubleCheck = ocl::Device::getDefault().hasFP64();
     }
     bool halfCheck = true;
     bool needHalf = sdepth == CV_16F || ddepth == CV_16F;
     if (needHalf)
     {
-        halfCheck = ocl::Device::getDefault().halfFPConfig() > 0;
+        halfCheck = ocl::Device::getDefault().hasFP16();
     }
 
     if (!doubleCheck)
