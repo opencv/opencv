@@ -13,11 +13,11 @@ namespace
 using namespace cv;
 struct ShadingTypeEnum
 {
-    static const std::array<ShadingType, 3> vals;
+    static const std::array<TriangleShadingType, 3> vals;
     static const std::array<std::string, 3> svals;
 
-    ShadingTypeEnum(ShadingType v = ShadingType::White) : val(v) {}
-    operator ShadingType() const { return val; }
+    ShadingTypeEnum(TriangleShadingType v = TriangleShadingType::White) : val(v) {}
+    operator TriangleShadingType() const { return val; }
     void PrintTo(std::ostream *os) const
     {
         int v = int(val);
@@ -38,13 +38,13 @@ struct ShadingTypeEnum
     }
 
 private:
-    ShadingType val;
+    TriangleShadingType val;
 };
 
-const std::array<ShadingType, 3> ShadingTypeEnum::vals{ ShadingType::White,
-                                                        ShadingType::Flat,
-                                                        ShadingType::Shaded
-                                                      };
+const std::array<TriangleShadingType, 3> ShadingTypeEnum::vals{ TriangleShadingType::White,
+                                                                TriangleShadingType::Flat,
+                                                                TriangleShadingType::Shaded
+                                                              };
 const std::array<std::string, 3> ShadingTypeEnum::svals{ std::string("White"),
                                                          std::string("Flat"),
                                                          std::string("Shaded")
@@ -56,11 +56,11 @@ static inline void PrintTo(const ShadingTypeEnum &t, std::ostream *os) { t.Print
 using namespace cv;
 struct GlCompatibleModeEnum
 {
-    static const std::array<GlCompatibleMode, 2> vals;
+    static const std::array<TriangleGlCompatibleMode, 2> vals;
     static const std::array<std::string, 2> svals;
 
-    GlCompatibleModeEnum(GlCompatibleMode v = GlCompatibleMode::Disabled) : val(v) {}
-    operator GlCompatibleMode() const { return val; }
+    GlCompatibleModeEnum(TriangleGlCompatibleMode v = TriangleGlCompatibleMode::Disabled) : val(v) {}
+    operator TriangleGlCompatibleMode() const { return val; }
     void PrintTo(std::ostream *os) const
     {
         int v = int(val);
@@ -80,12 +80,12 @@ struct GlCompatibleModeEnum
     }
 
 private:
-    GlCompatibleMode val;
+    TriangleGlCompatibleMode val;
 };
 
-const std::array<GlCompatibleMode, 2> GlCompatibleModeEnum::vals{ GlCompatibleMode::Disabled,
-                                                                  GlCompatibleMode::InvertedDepth,
-                                                                };
+const std::array<TriangleGlCompatibleMode, 2> GlCompatibleModeEnum::vals{ TriangleGlCompatibleMode::Disabled,
+                                                                          TriangleGlCompatibleMode::InvertedDepth,
+                                                                        };
 const std::array<std::string, 2> GlCompatibleModeEnum::svals{ std::string("Disabled"),
                                                               std::string("InvertedDepth"),
                                                             };
@@ -213,7 +213,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
         indices.push_back({vec[0], vec[1], vec[2]});
     }
 
-    if (shadingType == ShadingType::White)
+    if (shadingType == TriangleShadingType::White)
     {
         colors.clear();
     }
@@ -229,8 +229,8 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
 
     Matx44f cameraPose = lookAtMatrixCal(position, lookat, upVector);
     float fovYradians = fovy * (float)(CV_PI / 180.0);
-    RasterizeSettings settings;
-    settings.setCullingMode(CullingMode::CW)
+    TriangleRasterizeSettings settings;
+    settings.setCullingMode(TriangleCullingMode::CW)
             .setShadingType(shadingType)
             .setGlCompatibleMode(glCompatibleMode);
 
@@ -238,7 +238,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     while (next())
     {
         // Prefilled to measure pure rendering time w/o allocation and clear
-        float zMax = (glCompatibleMode == GlCompatibleMode::InvertedDepth) ? 1.f : zFar;
+        float zMax = (glCompatibleMode == TriangleGlCompatibleMode::InvertedDepth) ? 1.f : zFar;
         depth_buf = Mat(height, width, CV_32F, zMax);
         color_buf = Mat(height, width, CV_32FC3, Scalar::all(0));
 

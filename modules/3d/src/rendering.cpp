@@ -6,15 +6,15 @@
 
 namespace cv {
 
-RasterizeSettings::RasterizeSettings()
+TriangleRasterizeSettings::TriangleRasterizeSettings()
 {
-    shadingType = ShadingType::Shaded;
-    cullingMode = CullingMode::CW;
-    glCompatibleMode = GlCompatibleMode::Disabled;
+    shadingType = TriangleShadingType::Shaded;
+    cullingMode = TriangleCullingMode::CW;
+    glCompatibleMode = TriangleGlCompatibleMode::Disabled;
 }
 
 static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& colorBuf,
-                         RasterizeSettings settings)
+                         TriangleRasterizeSettings settings)
 {
     // this will be useful during refactoring
     // if there's gonna be more supported data types
@@ -45,8 +45,8 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 
     // culling and degenerated triangle removal
     // signs are flipped because of vertical flip
-    if ((settings.cullingMode == CullingMode::CW  && d >= 0) ||
-        (settings.cullingMode == CullingMode::CCW && d <= 0) ||
+    if ((settings.cullingMode == TriangleCullingMode::CW  && d >= 0) ||
+        (settings.cullingMode == TriangleCullingMode::CCW && d <= 0) ||
         (abs(d) < 1e-6))
     {
         return;
@@ -89,15 +89,15 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
                 if (!colorBuf.empty() && update)
                 {
                     Vec3f color;
-                    if (settings.shadingType == ShadingType::White)
+                    if (settings.shadingType == TriangleShadingType::White)
                     {
                         color = { 1.f, 1.f, 1.f };
                     }
-                    else if (settings.shadingType == ShadingType::Flat)
+                    else if (settings.shadingType == TriangleShadingType::Flat)
                     {
                         color = colors[0];
                     }
-                    else // ShadingType::Shaded
+                    else // TriangleShadingType::Shaded
                     {
                         float zInter = 1.0f / (f[0] * w[0] + f[1] * w[1] + f[2] * w[2]);
                         color = { 0, 0, 0 };
@@ -176,7 +176,7 @@ static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, float zNe
 
 CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
                                    InputArray cameraPose, float fovyRadians, float zNear, float zFar,
-                                   RasterizeSettings settings,
+                                   TriangleRasterizeSettings settings,
                                    InputOutputArray _depthBuffer, InputOutputArray _colorBuffer)
 {
     CV_Assert(cameraPose.type() == CV_32FC1 || cameraPose.type() == CV_64FC1);
@@ -240,12 +240,12 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
             nColors = (int)colors.total();
 
             CV_Assert(nColors == nVerts);
-            CV_Assert(settings.shadingType == ShadingType::Flat ||
-                      settings.shadingType == ShadingType::Shaded);
+            CV_Assert(settings.shadingType == TriangleShadingType::Flat ||
+                      settings.shadingType == TriangleShadingType::Shaded);
         }
         else
         {
-            CV_Assert(settings.shadingType == ShadingType::White);
+            CV_Assert(settings.shadingType == TriangleShadingType::White);
         }
     }
 
@@ -283,7 +283,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
 
         if (hasIdx)
         {
-            if (settings.glCompatibleMode == GlCompatibleMode::InvertedDepth)
+            if (settings.glCompatibleMode == TriangleGlCompatibleMode::InvertedDepth)
             {
                 depthBuf = _depthBuffer.getMat();
             }
@@ -359,7 +359,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         drawTriangle(ver, col, depthBuf, colorBuf, settings);
     }
 
-    if (!depthBuf.empty() && _depthBuffer.needed() && (settings.glCompatibleMode == GlCompatibleMode::Disabled))
+    if (!depthBuf.empty() && _depthBuffer.needed() && (settings.glCompatibleMode == TriangleGlCompatibleMode::Disabled))
     {
         linearizeDepth(depthBuf, validMask, _depthBuffer.getMat(), zFar, zNear);
     }

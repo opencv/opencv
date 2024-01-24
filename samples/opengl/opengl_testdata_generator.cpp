@@ -210,10 +210,8 @@ void draw(void* userdata)
     ogl::render(data->arr, data->indices, ogl::TRIANGLES);
 }
 
-void generateImage(cv::Size imgSz, ShadingType shadingType, CullingMode cullingMode, ModelType modelType, std::string modelPath,
-                   cv::Mat& colorImage, cv::Mat& depthImage);
-void generateImage(cv::Size imgSz, ShadingType shadingType, CullingMode cullingMode, ModelType modelType, std::string modelPath,
-                   cv::Mat& colorImage, cv::Mat& depthImage)
+static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, TriangleCullingMode cullingMode,
+                          ModelType modelType, std::string modelPath, cv::Mat& colorImage, cv::Mat& depthImage)
 {
     namedWindow("OpenGL", WINDOW_OPENGL);
     resizeWindow("OpenGL", imgSz.width, imgSz.height);
@@ -226,7 +224,7 @@ void generateImage(cv::Size imgSz, ShadingType shadingType, CullingMode cullingM
     std::vector<Vec4f> colors4f;
     std::vector<int> idxLinear;
 
-    if (shadingType == ShadingType::Flat)
+    if (shadingType == TriangleShadingType::Flat)
     {
         // rearrange vertices and colors for flat shading
         int ctr = 0;
@@ -250,7 +248,7 @@ void generateImage(cv::Size imgSz, ShadingType shadingType, CullingMode cullingM
         vertices = modelData.vertices;
         for (const auto& c : modelData.colors)
         {
-            Vec3f ci = (shadingType == ShadingType::Shaded) ? c: cv::Vec3f::all(1.f);
+            Vec3f ci = (shadingType == TriangleShadingType::Shaded) ? c: cv::Vec3f::all(1.f);
             colors4f.emplace_back(ci[0], ci[1], ci[2], 1.0);
         }
 
@@ -280,7 +278,7 @@ void generateImage(cv::Size imgSz, ShadingType shadingType, CullingMode cullingM
               modelData.lookat  [0], modelData.lookat  [1], modelData.lookat  [2],
               modelData.upVector[0], modelData.upVector[1], modelData.upVector[2]);
 
-    if (cullingMode == CullingMode::None)
+    if (cullingMode == TriangleCullingMode::None)
     {
         glDisable(GL_CULL_FACE);
     }
@@ -288,7 +286,7 @@ void generateImage(cv::Size imgSz, ShadingType shadingType, CullingMode cullingM
     {
         glEnable(GL_CULL_FACE);
         glCullFace(GL_FRONT);
-        if (cullingMode == CullingMode::CW)
+        if (cullingMode == TriangleCullingMode::CW)
         {
             glFrontFace(GL_CW);
         }
@@ -366,33 +364,33 @@ int main(int argc, char* argv[])
     for (const auto& res : resolutions)
     {
         for (const auto shadingType : {
-                ShadingType::White,
-                ShadingType::Flat,
-                ShadingType::Shaded
+                TriangleShadingType::White,
+                TriangleShadingType::Flat,
+                TriangleShadingType::Shaded
             })
         {
             std::string shadingName;
             switch (shadingType)
             {
-            case ShadingType::White:  shadingName = "White";  break;
-            case ShadingType::Flat:   shadingName = "Flat";   break;
-            case ShadingType::Shaded: shadingName = "Shaded"; break;
+            case TriangleShadingType::White:  shadingName = "White";  break;
+            case TriangleShadingType::Flat:   shadingName = "Flat";   break;
+            case TriangleShadingType::Shaded: shadingName = "Shaded"; break;
             default:
                 break;
             }
 
             for (const auto cullingMode : {
-                    CullingMode::None,
-                    CullingMode::CW,
-                    CullingMode::CCW
+                    TriangleCullingMode::None,
+                    TriangleCullingMode::CW,
+                    TriangleCullingMode::CCW
             })
             {
                 std::string cullingName;
                 switch (cullingMode)
                 {
-                    case CullingMode::None: cullingName = "None"; break;
-                    case CullingMode::CW:   cullingName = "CW"; break;
-                    case CullingMode::CCW:  cullingName = "CCW"; break;
+                    case TriangleCullingMode::None: cullingName = "None"; break;
+                    case TriangleCullingMode::CW:   cullingName = "CW"; break;
+                    case TriangleCullingMode::CCW:  cullingName = "CCW"; break;
                     default: break;
                 }
 

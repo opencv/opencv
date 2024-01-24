@@ -13,11 +13,11 @@ namespace
 using namespace cv;
 struct CullingModeEnum
 {
-    static const std::array<CullingMode, 3> vals;
+    static const std::array<TriangleCullingMode, 3> vals;
     static const std::array<std::string, 3> svals;
 
-    CullingModeEnum(CullingMode v = CullingMode::None) : val(v) {}
-    operator CullingMode() const { return val; }
+    CullingModeEnum(TriangleCullingMode v = TriangleCullingMode::None) : val(v) {}
+    operator TriangleCullingMode() const { return val; }
     void PrintTo(std::ostream *os) const
     {
         int v = int(val);
@@ -38,13 +38,13 @@ struct CullingModeEnum
     }
 
 private:
-    CullingMode val;
+    TriangleCullingMode val;
 };
 
-const std::array<CullingMode, 3> CullingModeEnum::vals{ CullingMode::None,
-                                                        CullingMode::CW,
-                                                        CullingMode::CCW
-                                                      };
+const std::array<TriangleCullingMode, 3> CullingModeEnum::vals{ TriangleCullingMode::None,
+                                                                TriangleCullingMode::CW,
+                                                                TriangleCullingMode::CCW
+                                                              };
 const std::array<std::string, 3> CullingModeEnum::svals{ std::string("None"),
                                                          std::string("CW"),
                                                          std::string("CCW")
@@ -59,11 +59,11 @@ namespace
 using namespace cv;
 struct ShadingTypeEnum
 {
-    static const std::array<ShadingType, 3> vals;
+    static const std::array<TriangleShadingType, 3> vals;
     static const std::array<std::string, 3> svals;
 
-    ShadingTypeEnum(ShadingType v = ShadingType::White) : val(v) {}
-    operator ShadingType() const { return val; }
+    ShadingTypeEnum(TriangleShadingType v = TriangleShadingType::White) : val(v) {}
+    operator TriangleShadingType() const { return val; }
     void PrintTo(std::ostream *os) const
     {
         int v = int(val);
@@ -84,13 +84,13 @@ struct ShadingTypeEnum
     }
 
 private:
-    ShadingType val;
+    TriangleShadingType val;
 };
 
-const std::array<ShadingType, 3> ShadingTypeEnum::vals{ ShadingType::White,
-                                                        ShadingType::Flat,
-                                                        ShadingType::Shaded
-                                                      };
+const std::array<TriangleShadingType, 3> ShadingTypeEnum::vals{ TriangleShadingType::White,
+                                                                TriangleShadingType::Flat,
+                                                                TriangleShadingType::Shaded
+                                                              };
 const std::array<std::string, 3> ShadingTypeEnum::svals{ std::string("White"),
                                                          std::string("Flat"),
                                                          std::string("Shaded")
@@ -411,7 +411,7 @@ protected:
         verts = Mat(modelData.vertices);
         verts.convertTo(verts, ftype);
 
-        if (shadingType != ShadingType::White)
+        if (shadingType != TriangleShadingType::White)
         {
             colors = Mat(modelData.colors);
             colors.convertTo(colors, ftype);
@@ -423,7 +423,7 @@ protected:
             indices.convertTo(indices, itype);
         }
 
-        settings = RasterizeSettings().setCullingMode(cullingMode).setShadingType(shadingType);
+        settings = TriangleRasterizeSettings().setCullingMode(cullingMode).setShadingType(shadingType);
 
         triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
                           settings, depth_buf, color_buf);
@@ -438,7 +438,7 @@ public:
     Mat verts, colors, indices;
     Matx44f cameraPose;
     float fovYradians;
-    RasterizeSettings settings;
+    TriangleRasterizeSettings settings;
 
     ModelData modelData;
     ModelTypeEnum modelType;
@@ -467,16 +467,16 @@ TEST_P(RenderingTest, noArrays)
 
 
 // some culling options produce the same pictures, let's join them
-CullingMode findSameCulling(ModelType modelType, ShadingType shadingType, CullingMode cullingMode, bool forRgb)
+TriangleCullingMode findSameCulling(ModelType modelType, TriangleShadingType shadingType, TriangleCullingMode cullingMode, bool forRgb)
 {
-    CullingMode sameCullingMode = cullingMode;
+    TriangleCullingMode sameCullingMode = cullingMode;
 
-    if ((modelType == ModelType::Centered && cullingMode == CullingMode::CCW) ||
-        (modelType == ModelType::Color    && cullingMode == CullingMode::CW)  ||
-        (modelType == ModelType::File     && shadingType == ShadingType::White && forRgb) ||
-        (modelType == ModelType::File     && cullingMode == CullingMode::CW))
+    if ((modelType == ModelType::Centered && cullingMode == TriangleCullingMode::CCW) ||
+        (modelType == ModelType::Color    && cullingMode == TriangleCullingMode::CW)  ||
+        (modelType == ModelType::File     && shadingType == TriangleShadingType::White && forRgb) ||
+        (modelType == ModelType::File     && cullingMode == TriangleCullingMode::CW))
     {
-        sameCullingMode = CullingMode::None;
+        sameCullingMode = TriangleCullingMode::None;
     }
 
     return sameCullingMode;
@@ -498,8 +498,8 @@ TEST_P(RenderingTest, accuracy)
     depth_buf.convertTo(depth_buf, CV_16U, depthScale);
 
     if (modelType == ModelType::Empty ||
-       (modelType == ModelType::Centered && cullingMode == CullingMode::CW) ||
-       (modelType == ModelType::Color    && cullingMode == CullingMode::CCW))
+       (modelType == ModelType::Centered && cullingMode == TriangleCullingMode::CW) ||
+       (modelType == ModelType::Color    && cullingMode == TriangleCullingMode::CCW))
     {
         // empty image case
         std::vector<Mat> channels(3);
@@ -581,7 +581,7 @@ TEST_P(RenderingTest, glCompatibleDepth)
     Mat depth_buf2(height, width, ftype, 1.0f);
 
     triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
-                      settings.setGlCompatibleMode(GlCompatibleMode::InvertedDepth),
+                      settings.setGlCompatibleMode(TriangleGlCompatibleMode::InvertedDepth),
                       depth_buf2, cv::noArray());
 
     Mat convertedDepth(height, width, ftype);

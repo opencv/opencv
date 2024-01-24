@@ -2806,7 +2806,7 @@ CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputA
 CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices);
 
 //! Triangle fill settings
-enum class ShadingType
+enum class TriangleShadingType
 {
     White  = 0, //!< a white color is used for the whole triangle
     Flat   = 1, //!< a color of 1st vertex of each triangle is used
@@ -2814,7 +2814,7 @@ enum class ShadingType
 };
 
 //! Face culling settings: what faces are drawn after face culling
-enum class CullingMode
+enum class TriangleCullingMode
 {
     None = 0, //!< all faces are drawn, no culling is actually performed
     CW   = 1, //!< triangles which vertices are given in clockwork order are drawn
@@ -2822,7 +2822,7 @@ enum class CullingMode
 };
 
 //! GL compatibility settings
-enum class GlCompatibleMode
+enum class TriangleGlCompatibleMode
 {
     Disabled      = 0, //!< RGB and depth have their natural values and converted to internal formats if needed
     InvertedDepth = 1  //!< RGB is natural, Depth is transformed from [-zNear; -zFar] to [0; 1]
@@ -2834,17 +2834,17 @@ enum class GlCompatibleMode
 /**
  * @brief Structure to keep settings for rasterization
  */
-struct CV_EXPORTS RasterizeSettings
+struct CV_EXPORTS TriangleRasterizeSettings
 {
-    RasterizeSettings();
+    TriangleRasterizeSettings();
 
-    inline RasterizeSettings& setShadingType(ShadingType st) { shadingType = st; return *this; }
-    inline RasterizeSettings& setCullingMode(CullingMode cm) { cullingMode = cm; return *this; }
-    inline RasterizeSettings& setGlCompatibleMode(GlCompatibleMode gm) { glCompatibleMode = gm; return *this; }
+    inline TriangleRasterizeSettings& setShadingType(TriangleShadingType st) { shadingType = st; return *this; }
+    inline TriangleRasterizeSettings& setCullingMode(TriangleCullingMode cm) { cullingMode = cm; return *this; }
+    inline TriangleRasterizeSettings& setGlCompatibleMode(TriangleGlCompatibleMode gm) { glCompatibleMode = gm; return *this; }
 
-    ShadingType shadingType;
-    CullingMode cullingMode;
-    GlCompatibleMode glCompatibleMode;
+    TriangleShadingType shadingType;
+    TriangleCullingMode cullingMode;
+    TriangleGlCompatibleMode glCompatibleMode;
 };
 
 
@@ -2882,7 +2882,7 @@ To disable color output, pass cv::noArray() here.
 */
 CV_EXPORTS void triangleRasterize(InputArray vertices, InputArray indices, InputArray colors,
                                   InputArray cameraPose, float fovY, float zNear, float zFar,
-                                  RasterizeSettings settings = RasterizeSettings(),
+                                  TriangleRasterizeSettings settings = TriangleRasterizeSettings(),
                                   InputOutputArray depthBuf=noArray(), InputOutputArray colorBuf=noArray());
 
 //! @} _3d
