@@ -201,7 +201,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     Vec3f lookat   = Vec3f( 0.0f, 0.0f, 0.3f);
     Vec3f upVector = Vec3f( 0.0f, 1.0f, 0.0f);
 
-    double fovy = 45.0;
+    float fovy = 45.0f;
 
     std::vector<Vec3f> vertices;
     std::vector<Vec3i> indices;
