@@ -52,7 +52,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     }
 
     float invd = 1.f / d;
-    Vec3f zinv { 1.0f/verts[0][2], 1.0f/verts[1][2], 1.0f/verts[2][2] };
+    Vec3f zinv { verts[0][2], verts[1][2], verts[2][2] };
     Vec3f w { verts[0][3], verts[1][3], verts[2][3] };
 
     //TODO: proper Y flip
