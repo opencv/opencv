@@ -2854,20 +2854,22 @@ This means that all visible objects are placed in z-negative area, or exactly in
 zNear and zFar are positive.
 
 *@param vertices vertices coordinates array. Should contain values of CV_32FC3 type or a compatible one (e.g. cv::Vec3f, etc.)
-*@param indices triangle vertices index array, 3 per triangle. Each index indicates a vertex in a vertices array. Should contain CV_32SC3 values
+*@param indices triangle vertices index array, 3 per triangle. Each index indicates a vertex in a vertices array.
+Should contain CV_32SC3 values
 *@param colors per-vertex colors of CV_32FC3 type. Can be empty or the same size as vertices array
 *@param cameraPose a 4x3 or 4x4 float or double matrix containing inverted (sic!) camera pose
 *@param fovY field of view in vertical direction, given in radians
 *@param zNear minimum Z value to render, everything closer is clipped
 *@param zFar maximum Z value to render, everything farther is clipped
 *@param settings see RasterizeSettings
-*@param depthBuf a width x height array of floats containing resulting Z buffer. Reused if not empty. Should be pre-filled by zFar values if required by user. To disable Z buffer output, pass cv::noArray() here.
-*@param colorBuf a width x height array of CV_32FC3 representing the final rendered image. Reused if not empty. To disable color output, pass cv::noArray() here.
+*@param depthBuf a width x height array of floats containing resulting Z buffer. Reused if not empty.
+Should be pre-filled by zFar values if required by user. To disable Z buffer output, pass cv::noArray() here.
+*@param colorBuf a width x height array of CV_32FC3 representing the final rendered image. Reused if not empty.
+To disable color output, pass cv::noArray() here.
 */
 CV_EXPORTS void triangleRasterize(InputArray vertices, InputArray indices, InputArray colors,
                                   InputArray cameraPose, float fovY, float zNear, float zFar,
                                   RasterizeSettings settings = RasterizeSettings(),
-                                  //TODO: colorBuf should go first
                                   InputOutputArray depthBuf=noArray(), InputOutputArray colorBuf=noArray());
 
 //! @} _3d
