@@ -87,18 +87,19 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 
                 if (!colorBuf.empty() && update)
                 {
-                    Vec3f color {0, 0, 0};
+                    Vec3f color;
                     if (settings.shadingType == ShadingType::White)
                     {
                         color = { 1.f, 1.f, 1.f };
                     }
-                    if (settings.shadingType == ShadingType::Flat)
+                    else if (settings.shadingType == ShadingType::Flat)
                     {
                         color = colors[0];
                     }
                     else // ShadingType::Shaded
                     {
                         float zInter = 1.0f / (f[0] * w[0] + f[1] * w[1] + f[2] * w[2]);
+                        color = { 0, 0, 0 };
                         for (int j = 0; j < 3; j++)
                         {
                             color += (f[j] * w[j]) * colors[j];
