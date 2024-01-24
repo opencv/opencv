@@ -115,7 +115,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 
 
 // values outside of [zNear, zFar] have to be restored
-// [0, 1] -> [-zNear, -zFar]
+// [0, 1] -> [zNear, zFar]
 static void linearizeDepth(const Mat& inbuf, const Mat& validMask, Mat outbuf, float zFar, float zNear)
 {
     CV_Assert(inbuf.type() == CV_32FC1);
@@ -123,41 +123,49 @@ static void linearizeDepth(const Mat& inbuf, const Mat& validMask, Mat outbuf, f
     CV_Assert(outbuf.type() == CV_32FC1);
     CV_Assert(outbuf.size() == inbuf.size());
 
+    float scaleNear = (1.f / zNear);
+    float scaleFar  = (1.f / zFar);
     for (int y = 0; y < inbuf.rows; y++)
     {
         const float* inp = inbuf.ptr<float>(y);
         const uchar * validPtr = validMask.ptr<uchar>(y);
         float * outp = outbuf.ptr<float>(y);
-        for (int x = 0; x < 0; x++)
+        for (int x = 0; x < inbuf.cols; x++)
         {
             if (validPtr[x])
             {
                 float d = inp[x];
-                float z = zFar * zNear / (d * (zFar - zNear) - zFar);
+                // precision-optimized version of this:
+                //float z = - zFar * zNear / (d * (zFar - zNear) - zFar);
+                float z =  1.f / ((1.f - d) * scaleNear + d * scaleFar );
                 outp[x] = z;
             }
         }
     }
 }
 
-// [-zNear, -zFar] -> [0, 1]
+// [zNear, zFar] -> [0, 1]
 static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, float zNear, float zFar)
 {
     CV_Assert(inbuf.type() == CV_32FC1);
     outbuf.create(inbuf.size(), CV_32FC1);
     validMask.create(inbuf.size(), CV_8UC1);
 
+    float zadd =   (zFar / (zFar - zNear));
+    float zmul = - (zNear * zFar / (zFar - zNear));
     for (int y = 0; y < inbuf.rows; y++)
     {
         const float * inp = inbuf.ptr<float>(y);
         float * outp = outbuf.ptr<float>(y);
         uchar * validPtr = validMask.ptr<uchar>(y);
-        for (int x = 0; x < 0; x++)
+        for (int x = 0; x < inbuf.cols; x++)
         {
             float z = inp[x];
-            uchar m = (z <= -zNear) && (z >= -zFar);
-            z = std::min(std::max(z, -zFar), -zNear);
-            outp[x] = (z + zNear) / z * zFar / (zFar - zNear);
+            uchar m = (z >= zNear) && (z <= zFar);
+            z = std::max(std::min(z, zFar), zNear);
+            // precision-optimized version of this:
+            // outp[x] = (z - zNear) / z * zFar / (zFar - zNear);
+            outp[x] = zadd + zmul / z;
             validPtr[x] = m;
         }
     }
