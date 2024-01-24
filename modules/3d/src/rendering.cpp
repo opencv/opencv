@@ -17,8 +17,8 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 {
     // this will be useful during refactoring
     // if there's gonna be more supported data types
-    CV_DbgAssert(depthBuf.type() == CV_32FC1);
-    CV_DbgAssert(colorBuf.type() == CV_32FC3);
+    CV_DbgAssert(depthBuf.empty() || depthBuf.type() == CV_32FC1);
+    CV_DbgAssert(colorBuf.empty() || colorBuf.type() == CV_32FC3);
 
     // any of buffers can be empty
     int width  = std::max(colorBuf.cols, depthBuf.cols);
@@ -352,7 +352,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         drawTriangle(ver, col, depthBuf, colorBuf, settings);
     }
 
-    if (_depthBuffer.needed() && !useCompatibleGlDepth)
+    if (!depthBuf.empty() && _depthBuffer.needed() && !useCompatibleGlDepth)
     {
         linearizeDepth(depthBuf, validMask, _depthBuffer.getMat(), zFar, zNear);
     }
