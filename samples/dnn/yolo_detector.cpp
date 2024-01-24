@@ -19,7 +19,7 @@ using namespace cv;
 using namespace cv::dnn;
 
 void getClasses(std::string classesFile);
-void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
+void drawPrediction(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
 void yoloPostProcessing(
     std::vector<Mat>& outs,
     std::vector<int>& keep_classIds,
@@ -77,7 +77,7 @@ void getClasses(std::string classesFile){
         classes.push_back(line);
 }
 
-void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame)
+void drawPrediction(int classId, float conf, int left, int top, int right, int bottom, Mat& frame)
 {
     rectangle(frame, Point(left, top), Point(right, bottom), Scalar(0, 255, 0));
 
@@ -187,6 +187,7 @@ int main(int argc, char** argv){
 
     float confThreshold = parser.get<float>("thr");
     float nmsThreshold = parser.get<float>("nms");
+    //![preprocess_params]
     float paddingValue = parser.get<int>("padvalue");
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
@@ -194,6 +195,7 @@ int main(int argc, char** argv){
     Scalar scale = parser.get<float>("scale");
     Scalar mean = parser.get<Scalar>("mean");
     ImagePaddingMode paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
+    //![preprocess_params]
 
     CV_Assert(parser.has("model"));
     CV_Assert(parser.has("yolo"));
@@ -240,6 +242,7 @@ int main(int argc, char** argv){
     }
 
     // image pre-processing
+    //![preprocess_call]
     Size size(inpWidth, inpHeight);
     Image2BlobParams imgParams(
         scale,
@@ -258,12 +261,15 @@ int main(int argc, char** argv){
             paramNet.mean = mean;
             paramNet.swapRB = swapRB;
             paramNet.paddingmode = paddingMode;
+    //![preprocess_call]
 
+    //![forward_buffers]
     std::vector<Mat> outs;
     std::vector<int> keep_classIds;
     std::vector<float> keep_confidences;
     std::vector<Rect2d> keep_boxes;
     std::vector<Rect> boxes;
+    //![forward_buffers]
 
     Mat inp;
     while (waitKey(1) < 0)
@@ -277,22 +283,24 @@ int main(int argc, char** argv){
             waitKey();
             break;
         }
-
+        //![preprocess_call_func]
         inp = blobFromImageWithParams(img, imgParams);
+        //![preprocess_call_func]
 
+        //![forward]
         net.setInput(inp);
         net.forward(outs, net.getUnconnectedOutLayersNames());
+        //![forward]
 
+        //![postprocess]
         yoloPostProcessing(
             outs, keep_classIds, keep_confidences, keep_boxes,
             confThreshold, nmsThreshold,
             yolo_model);
-
-        for (auto box : keep_boxes){
-            std::cout << box.x << " " << box.y << " " << box.width << " " << box.height << std::endl;
-        }
+        //![postprocess]
 
         // covert Rect2d to Rect
+        //![draw_boxes]
         for (auto box : keep_boxes){
             boxes.push_back(Rect(box.x, box.y, box.width, box.height));
         }
@@ -302,13 +310,14 @@ int main(int argc, char** argv){
         for (size_t idx = 0; idx < boxes.size(); ++idx)
         {
             Rect box = boxes[idx];
-            drawPred(keep_classIds[idx], keep_confidences[idx], box.x, box.y,
+            drawPrediction(keep_classIds[idx], keep_confidences[idx], box.x, box.y,
                     box.width, box.height, img);
         }
 
         static const std::string kWinName = "Yolo objecte detection in OpenCV";
         namedWindow(kWinName, WINDOW_NORMAL);
         imshow(kWinName, img);
+        //![draw_boxes]
 
         outs.clear();
         keep_classIds.clear();

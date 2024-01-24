@@ -171,97 +171,31 @@ Sometimes there is a need to make some custom adjustments in the inference pipel
 - Import required libraries
 
 @snippet samples/dnn/yolo_detector.cpp includes
-<!-- @code{.cpp}
-#include <opencv2/dnn.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include "iostream"
-@endcode -->
 
 - Read ONNX graph and create neural network model.
 
 @snippet samples/dnn/yolo_detector.cpp read_net
-<!-- @code{.cpp}
-Net net = readNet("<path_to_onnx_file>");
-@endcode -->
 
 - Read image and preprocess it
 
-@code{.cpp}
-Size size(640, 640);
-Scalar mean(0);
-Scalar scale(1.0);
-ImagePaddingMode paddingMode = DNN_PMODE_LETTERBOX;
-bool swapRB  = true;
-bool nmsAcrossClasses = true;
-float paddingValue  = 114.0;
-float confThreshold = 0.5;
-float nmsThreshold  = 0.5;
-
-Image2BlobParams imgParams(
-                        scale,
-                        size,
-                        mean,
-                        swapRB,
-                        CV_32F,
-                        DNN_LAYOUT_NCHW,
-                        paddingMode,
-                        paddingValue);
-
-Mat img = imread("~/yolox_s_inf_decode.onnx");
-Mat inp = blobFromImageWithParams(img, imgParams);
-@endcode
+@snippet samples/dnn/yolo_detector.cpp preprocess_params
+@snippet samples/dnn/yolo_detector.cpp preprocess_call
+@snippet samples/dnn/yolo_detector.cpp preprocess_call_func
 
 - Inference
 
-@code{.cpp}
-net.setInput(inp);
-std::vector<Mat> outputs;
-net.forward(outputs, net.getUnconnectedOutLayersNames());
-@endcode
+@snippet samples/dnn/yolo_detector.cpp forward_buffers
+@snippet samples/dnn/yolo_detector.cpp forward
+
 
 - Post-Processessing
 
 For post-procssing of the model output we will need to use function [`yoloPostProcess`](https://github.com/opencv/opencv/blob/ef8a5eb6207925e8f3055a82e90dbd9b8d10f3e3/modules/dnn/test/test_onnx_importer.cpp#L2650).
 
-
-@code{.cpp}
-std::vector<int> classIds;
-std::vector<float> confidences;
-std::vector<Rect2d> boxes;
-
-yoloPostProcessing(
-    outputs, classIds, confidences, boxes,
-    confThreshold, nmsThreshold,
-    "yolox");
-@endcode
+@snippet samples/dnn/yolo_detector.cpp postprocess
 
 - Draw predicted boxes
 
-@code{.cpp}
-
-std::vector<Rect> boxes;
-for (auto box : keep_boxes){
-    boxes.push_back(Rect(box.x, box.y, box.width, box.height));
-}
-
-Image2BlobParams paramNet;
-        paramNet.scalefactor = scale;
-        paramNet.size = size;
-        paramNet.mean = mean;
-        paramNet.swapRB = swapRB;
-        paramNet.paddingmode = paddingMode;
-        paramNet.blobRectsToImageRects(boxes, boxes, frameSize);
-
-for (size_t idx = 0; idx < boxes.size(); ++idx)
-    {
-        Rect box = boxes[idx];
-        drawPred(classIds[idx], confidences[idx],
-        box.x, box.y, box.width, box.height, img);
-    }
-
-imwrite("image.png", img);
-@endcode
-
+@snippet samples/dnn/yolo_detector.cpp draw_boxes
 
 Questions and suggestions email to: Alessandro de Oliveira Faria cabelo@opensuse.org or OpenCV Team.
