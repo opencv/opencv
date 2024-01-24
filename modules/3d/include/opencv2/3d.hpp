@@ -2821,6 +2821,16 @@ enum class CullingMode
     CCW  = 2  //!< triangles which vertices are given in counterclockwork order are drawn
 };
 
+//! GL compatibility settings
+enum class GlCompatibleMode
+{
+    Disabled      = 0, //!< RGB and depth have their natural values and converted to internal formats if needed
+    InvertedDepth = 1  //!< RGB is natural, Depth is transformed from [-zNear; -zFar] to [0; 1]
+                       //!< by the following formula: \f$ \frac{z_{far} \left(z + z_{near}\right)}{z \left(z_{far} - z_{near}\right)} \f$ \n
+                       //!< In this mode the input/output depthBuf is considered to be in this format,
+                       //!< therefore it's faster since there're no conversions performed
+};
+
 /**
  * @brief Structure to keep settings for rasterization
  */
@@ -2830,9 +2840,11 @@ struct CV_EXPORTS RasterizeSettings
 
     inline RasterizeSettings& setShadingType(ShadingType st) { shadingType = st; return *this; }
     inline RasterizeSettings& setCullingMode(CullingMode cm) { cullingMode = cm; return *this; }
+    inline RasterizeSettings& setGlCompatibleMode(GlCompatibleMode gm) { glCompatibleMode = gm; return *this; }
 
     ShadingType shadingType;
     CullingMode cullingMode;
+    GlCompatibleMode glCompatibleMode;
 };
 
 
@@ -2841,7 +2853,7 @@ struct CV_EXPORTS RasterizeSettings
 The output images are not cleared before the rendering and therefore can be used for drawing over
 existing image or for joining rendered model with pre-filled Z-buffer.
 The function does not create or clear user-provided buffers. This means that if a user wants to get
-resulting depth buffer, they should initialize it and pre-fill by zFar values. On the other side,
+resulting depth buffer, they should initialize it and pre-fill by zFar values (or by ones in InvertedDepth mode). On the other side,
 a user shouldn't pass depth or color buffer if they doesn't need them after the function call;
 this can help OpenCV to choose the fastest rendering algorithm.
 
@@ -2863,7 +2875,8 @@ Should contain CV_32SC3 values
 *@param zFar maximum Z value to render, everything farther is clipped
 *@param settings see RasterizeSettings
 *@param depthBuf a width x height array of floats containing resulting Z buffer. Reused if not empty.
-Should be pre-filled by zFar values if required by user. To disable Z buffer output, pass cv::noArray() here.
+To disable Z buffer output, pass cv::noArray() here. If required by user, should be pre-filled by zFar values
+(or by 1.0 in InvertedDepth mode) for a new scene.
 *@param colorBuf a width x height array of CV_32FC3 representing the final rendered image. Reused if not empty.
 To disable color output, pass cv::noArray() here.
 */

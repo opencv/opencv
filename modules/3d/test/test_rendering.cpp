@@ -352,7 +352,7 @@ void compareDepth(const cv::Mat& gt, const cv::Mat& mat, float zFar, float scale
     float normL2Depth = nzJointMask ? (float)(cv::norm(gt, mat, cv::NORM_L2, jointMask) / nzJointMask) : 0;
     EXPECT_LE(normL2Depth, normL2Threshold);
 
-    // add --test_debug to output resulting images
+    // add --test_debug to output differences
     if (debugLevel > 0)
     {
         std::cout << "nzDepthDiff: "  << nzDepthDiff  << " vs " << maskThreshold << std::endl;
@@ -372,7 +372,7 @@ void compareRGB(const cv::Mat& gt, const cv::Mat& mat, float normInfThreshold, f
     EXPECT_LE(normInfRgb, normInfThreshold);
     float normL2Rgb = (float)(cv::norm(gt, mat, cv::NORM_L2) / gt.total());
     EXPECT_LE(normL2Rgb, normL2Threshold);
-    // add --test_debug to output resulting images
+    // add --test_debug to output differences
     if (debugLevel > 0)
     {
         std::cout << "normInfRgb: " << normInfRgb << " vs " << normInfThreshold << std::endl;
@@ -574,6 +574,39 @@ TEST_P(RenderingTest, keepDrawnData)
         compareDepth(depth_buf, depth_buf2, zFar, depthScale, 0, 0, 0);
     }
 }
+
+
+TEST_P(RenderingTest, glCompatibleDepth)
+{
+    Mat depth_buf2(height, width, ftype, 1.0f);
+
+    triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
+                      settings.setGlCompatibleMode(GlCompatibleMode::InvertedDepth),
+                      depth_buf2, cv::noArray());
+
+    Mat convertedDepth(height, width, ftype);
+    // map from [0, 1] to [zNear, zFar]
+    float scaleNear = (1.f / zNear);
+    float scaleFar  = (1.f / zFar);
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            float z = depth_buf2.at<float>(y, x);
+            convertedDepth.at<float>(y, x) = 1.f / ((1.f - z) * scaleNear + z * scaleFar );
+        }
+    }
+
+    float normL2Diff = (float)(cv::norm(depth_buf, convertedDepth, cv::NORM_L2) / (height * width));
+    const float normL2Threshold = 1.e-6f;
+    EXPECT_LE(normL2Diff, normL2Threshold);
+    // add --test_debug to output differences
+    if (debugLevel > 0)
+    {
+        std::cout << "normL2Diff: "  << normL2Diff  << " vs " << normL2Threshold << std::endl;
+    }
+}
+
 
 INSTANTIATE_TEST_CASE_P(Rendering, RenderingTest, ::testing::Combine(
     ::testing::Values(std::make_tuple(700, 700), std::make_tuple(640, 480)),

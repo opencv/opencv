@@ -51,6 +51,46 @@ const std::array<std::string, 3> ShadingTypeEnum::svals{ std::string("White"),
                                                        };
 
 static inline void PrintTo(const ShadingTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
+
+
+using namespace cv;
+struct GlCompatibleModeEnum
+{
+    static const std::array<GlCompatibleMode, 2> vals;
+    static const std::array<std::string, 2> svals;
+
+    GlCompatibleModeEnum(GlCompatibleMode v = GlCompatibleMode::Disabled) : val(v) {}
+    operator GlCompatibleMode() const { return val; }
+    void PrintTo(std::ostream *os) const
+    {
+        int v = int(val);
+        if (v >= 0 && v < (int)vals.size())
+        {
+            *os << svals[v];
+        }
+        else
+        {
+            *os << "UNKNOWN";
+        }
+    }
+    static ::testing::internal::ParamGenerator<GlCompatibleModeEnum> all()
+    {
+        return ::testing::Values(GlCompatibleModeEnum(vals[0]),
+                                 GlCompatibleModeEnum(vals[1]));
+    }
+
+private:
+    GlCompatibleMode val;
+};
+
+const std::array<GlCompatibleMode, 2> GlCompatibleModeEnum::vals{ GlCompatibleMode::Disabled,
+                                                                  GlCompatibleMode::InvertedDepth,
+                                                                };
+const std::array<std::string, 2> GlCompatibleModeEnum::svals{ std::string("Disabled"),
+                                                              std::string("InvertedDepth"),
+                                                            };
+
+static inline void PrintTo(const GlCompatibleModeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
 enum class Outputs
@@ -138,12 +178,13 @@ std::string printEnum(T v)
 }
 
 // resolution, shading type, outputs needed
-typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, ShadingTypeEnum, OutputsEnum>> RenderingTest;
+typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, ShadingTypeEnum, OutputsEnum, GlCompatibleModeEnum>> RenderingTest;
 
 PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     ::testing::Values(std::make_tuple(1920, 1080), std::make_tuple(1024, 768), std::make_tuple(640, 480)),
     ShadingTypeEnum::all(),
-    OutputsEnum::all()
+    OutputsEnum::all(),
+    GlCompatibleModeEnum::all()
     ))
 {
     auto t = GetParam();
@@ -152,6 +193,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     int height = std::get<1>(wh);
     auto shadingType = std::get<1>(t);
     auto outputs = std::get<2>(t);
+    auto glCompatibleMode = std::get<3>(t);
 
     string objectPath = findDataFile("rendering/spot.obj");
 
@@ -187,14 +229,17 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
 
     Matx44f cameraPose = lookAtMatrixCal(position, lookat, upVector);
     float fovYradians = fovy * (float)(CV_PI / 180.0);
-    RasterizeSettings settings = RasterizeSettings().setCullingMode(CullingMode::CW).setShadingType(shadingType);
+    RasterizeSettings settings;
+    settings.setCullingMode(CullingMode::CW)
+            .setShadingType(shadingType)
+            .setGlCompatibleMode(glCompatibleMode);
 
     Mat depth_buf, color_buf;
     while (next())
     {
-        //TODO: use GL-compatible z-buffer
         // Prefilled to measure pure rendering time w/o allocation and clear
-        depth_buf = Mat(height, width, CV_32F, zFar);
+        float zMax = (glCompatibleMode == GlCompatibleMode::InvertedDepth) ? 1.f : zFar;
+        depth_buf = Mat(height, width, CV_32F, zMax);
         color_buf = Mat(height, width, CV_32FC3, Scalar::all(0));
 
         startTimer();
@@ -207,9 +252,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     if (debugLevel > 0)
     {
         cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
-        cv::flip(color_buf, color_buf, 0);
         depth_buf.convertTo(depth_buf, CV_16U, 1000.0);
-        cv::flip(depth_buf, depth_buf, 0);
 
         std::string shadingName = printEnum(shadingType);
         std::string suffix = cv::format("%dx%d_%s", width, height, shadingName.c_str());

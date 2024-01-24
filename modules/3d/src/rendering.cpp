@@ -10,6 +10,7 @@ RasterizeSettings::RasterizeSettings()
 {
     shadingType = ShadingType::Shaded;
     cullingMode = CullingMode::CW;
+    glCompatibleMode = GlCompatibleMode::Disabled;
 }
 
 static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& colorBuf,
@@ -263,9 +264,6 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         }
     }
 
-    //TODO: put to settings
-    bool useCompatibleGlDepth = false;
-
     CV_Assert(!_colorBuffer.empty() || !_depthBuffer.empty());
 
     Mat_<uchar> validMask;
@@ -285,7 +283,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
 
         if (hasIdx)
         {
-            if (useCompatibleGlDepth)
+            if (settings.glCompatibleMode == GlCompatibleMode::InvertedDepth)
             {
                 depthBuf = _depthBuffer.getMat();
             }
@@ -361,7 +359,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         drawTriangle(ver, col, depthBuf, colorBuf, settings);
     }
 
-    if (!depthBuf.empty() && _depthBuffer.needed() && !useCompatibleGlDepth)
+    if (!depthBuf.empty() && _depthBuffer.needed() && (settings.glCompatibleMode == GlCompatibleMode::Disabled))
     {
         linearizeDepth(depthBuf, validMask, _depthBuffer.getMat(), zFar, zNear);
     }
