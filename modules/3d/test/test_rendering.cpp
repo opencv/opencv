@@ -501,6 +501,7 @@ TEST_P(RenderingTest, accuracy)
        (modelType == ModelType::Centered && cullingMode == CullingMode::CW) ||
        (modelType == ModelType::Color    && cullingMode == CullingMode::CCW))
     {
+        // empty image case
         std::vector<Mat> channels(3);
         split(color_buf, channels);
 
