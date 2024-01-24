@@ -52,45 +52,138 @@ $ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[
 @endcode
 
 
-Building a YOLO Detection Model using an ONNX Graph
----------------------------------
+Running pre-trained YOLO model in OpenCV
+----------------------------------------
 
-This guide provides a step-by-step walkthrough for running a YOLO model utilizing an ONNX graph. We focus on the YOLOX model for demonstration purposes.
+Deploying pre-trained models is a common task in machine learning, particularly when working with hardware that does not support certain frameworks like PyTorch. This guide provides a comprehensive overview of exporting pre-trained YOLO family models from PyTorch and deploying them using OpenCV's runtime framework. For demonstration purposes, we will focus on the [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main/LICENSE) model, but the methodology applies to other supported<sup>*</sup> models.
 
-## Preparing the ONNX Graph
+<sup>*</sup> Currently, OpenCV supports the following YOLO models: YOLOX, YOLOv8, YOLOv7, YOLOv6, YOLOv5, and YOLOv4. This support includes pre and post-processing routines specific to these models. While other models can be used with OpenCV, they may require custom implementation of these routines.
 
-### Generating the ONNX Model
-To begin, you need to generate the ONNX graph of a YOLO model. We will use the YOLOX model as an example. Detailed instructions for generating the ONNX model are available in the YOLOX [README](https://dl.opencv.org/models/yolox/README.md).
+<!-- Now imagine that you have successuflly trained your yolox (in this case) model and would like to export and run it somewhere else (other than PyTorch). There are a couple of things you need to know before moving forward, lets discuss them. -->
 
-Additionally, you can access a pre-trained YOLOX small ONNX graph via this [link](https://dl.opencv.org/models/yolox/yolox_s_inf_decoder.onnx).
+Assuming that we have successfuly trained YOLOX model, the subsequent step involves exporting and running this model in an environment other than PyTorch. There are several critical considerations to address before proceeding with this process. Let's delve into these aspects.
+
+### YOLO's Preproccessing & Output
+<!-- Let's understand what kind of input and outputs are produced by yolo family detectors. YOLO detectors typically have varying input sizes based on the model scale (just like any DNN network): -->
+Understanding the nature of inputs and outputs associated with YOLO family detectors is pivotal. These detectors, akin to most Deep Neural Networks (DNN), typically exhibit variation in input sizes contingent upon the model's scale.
+
+| Model Scale  | Input Size   |
+|--------------|--------------|
+| Small Models <sup>[1](https://github.com/Megvii-BaseDetection/YOLOX/tree/main#standard-models)</sup>| 416x416      |
+| Midsize Models <sup>[2](https://github.com/Megvii-BaseDetection/YOLOX/tree/main#standard-models)</sup>| 640x640    |
+| Large Models <sup>[3](https://github.com/meituan/YOLOv6/tree/main#benchmark)</sup>| 1280x1280    |
+
+This table provides a quick reference to understand the different input dimensions commonly used in various YOLO models inputs. These are standart input shapes. Make sure you use input size that you trained model with, if it is differed from from the size mentioned in the table.
+
+<!-- Next piece of information we need is the type of image preprocessing. Although preprocessing step for yolo detectors is same,  there are minor differences that need to be considered (otherwise the performance will be hindered). Specifically, we need to know `resize type` and `padding value` after reisze operation. [Yolox uses](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/yolox/data/data_augment.py#L142) `LetterBox` resize type and pad value `114.0`. Make sure that match these two parameter and normalization constants match for the model you are expoerting. -->
+
+<!-- The output of the model is a tensor of size [BxNxC+5] or [BxNxC+4], where B stand for batch size, N for number of anchors and C for number of classes (80 classes if model is trained on COCO dataset). The last 5, stands for obj, conf cx, cy, w, h, where obj - objectness score. `yolov8` as shape of [BxNxC+4], where no explict objectness score for object, so the object score is direcly class score. For `yolox` model only, you also need to add anchor points to scale predictions back to image domain (will bake in this operation in ONNX graph in this case, we will see later how to do that).- -->
+
+The next critical element in the process involves understanding the specifics of image preprocessing for YOLO detectors. While the fundamental preprocessing approach remains consistent across the YOLO family, there are subtle yet crucial differences that must be accounted for to avoid any degradation in performance. Key among these are the `resize type` and the `padding value` applied post-resize. For instance, the [YOLOX model](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/yolox/data/data_augment.py#L142) utilizes a `LetterBox` resize method and a padding value of `114.0`. It is imperative to ensure that these parameters, along with the normalization constants, are appropriately matched to the model being exported.
+
+Regarding the model's output, it typically takes the form of a tensor with dimensions [BxNxC+5] or [BxNxC+4], where 'B' represents the batch size, 'N' denotes the number of anchors, and 'C' signifies the number of classes (for instance, 80 classes if the model is trained on the COCO dataset). The additional 5 in the former tensor structure corresponds to the objectness score (obj), confidence score (conf), and the bounding box coordinates (cx, cy, w, h). Notably, the `yolov8` model's output is shaped as [BxNxC+4], where there is no explicit objectness score, and the object score is directly inferred from the class score. For the `yolox` model, specifically, it is also necessary to incorporate anchor points to rescale predictions back to the image domain. This step will be integrated into the ONNX graph, a process that we will detail further in the subsequent sections.
 
 
-### Note on Model Conversion
+### PyTorch Model Export
+Now that we know know the parameters of the preprecessing we can go on and export the model from Pytorch to ONNX graph. Since in this tutorial we are using Yolox as our sample model, lets use its export for demonstration purposes (the proccess is  identical for the rest of the yolo detectors). To exporting yolox we can just use [export script](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/tools/export_onnx.py). Particularly we need following commands:
 
-For models other than YOLOX, you can generally follow the standard PyTorch to ONNX conversion process. However, for the YOLOX model, it's crucial to include the generation of anchor points within the ONNX graph. This inclusion simplifies the inference process by eliminating the need to create anchor points manually, as they are already integrated into the ONNX graph.
+@code{.bash}
+git clone https://github.com/Megvii-BaseDetection/YOLOX.git
+cd YOLOX
+wget https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_s.pth # download pre-trained weights
+python3 -m tools.export_onnx --output-name yolox_s.onnx -n yolox-s -c yolox_s.pth --decode_in_inference
+@endcode
 
-### Running the YOLOX Model
+**NOTE:** Here `--decode_in_inference` is to incude anchor box creation in the ONNX graph itself. It sets [this value](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/yolox/models/yolo_head.py#L210C16-L210C39) to `True`,
+which subsequently includes anchor generation function.
 
-This section demonstrates two methods for running the YOLOX model. These methods are applicable to any model within the YOLO family.
+Below we demonstared the minimal version of the export script (which could be used for models other than yolox) in case it is needed. However, usually each yolo repository has predefined export script.
 
-### Method 1: Building a Custom Pipeline
+@code{.py}
+    import onnx
+    import torch
+    from onnxsim import simplify
 
-This method involves constructing the pipeline manually. Instructions for this approach will be detailed in subsequent sections.
+    # load the model state dict
+    ckpt = torch.load(ckpt_file, map_location="cpu")
+    model.load_state_dict(ckpt)
+
+    # prepare dummy input
+    dummy_input = torch.randn(args.batch_size, 3, exp.test_size[0], exp.test_size[1])
+
+    #export the model
+    torch.onnx._export(
+        model,
+        dummy_input,
+        "yolox.onnx",
+        input_names=["input"],
+        output_names=["output"],
+        dynamic_axes={"input": {0: 'batch'},
+                      "output": {0: 'batch'}})
+
+    # use onnx-simplifier to reduce reduent model.
+    onnx_model = onnx.load(args.output_name)
+    model_simp, check = simplify(onnx_model)
+    assert check, "Simplified ONNX model could not be validated"
+    onnx.save(model_simp, args.output_name)
+@endcode
+
+### Running ONNX Graph in OpenCV
+Once we have our ONNX graph of the model, we just need to run it in opencv. It is pretty simple, single CLI command with parameters that define your preporocessing values. Before running the command make sure that you have:
+
+1. OpenCV is built on your platform.
+2. Navigate to the OpenCV's `build` directory
+3. Run the following command:
+
+@code{.cpp}
+./bin/example_dnn_yolo_detector --input=<path_to_your_input_file> \
+                                --classes=<path_to_class_names_file> \
+                                --thr=<confidence_threshold> \
+                                --nms=<non_maximum_suppression_threshold> \
+                                --mean=<mean_normalization_value> \
+                                --scale=<scale_factor> \
+                                --yolo=<yolo_model_version> \
+                                --padvalue=<padding_value> \
+                                --paddingmode=<padding_mode> \
+                                --backend=<computation_backend> \
+                                --target=<target_computation_device>
+@endcode
+
+- --input: File path to your input image or video. If omitted, it will capture frames from a camera.
+- --classes: File path to a text file containing class names for object detection.
+- --thr: Confidence threshold for detection (e.g., 0.5).
+- --nms: Non-maximum suppression threshold (e.g., 0.4).
+- --mean: Mean normalization value (e.g., 0.0 for no mean normalization).
+- --scale: Scale factor for input normalization (e.g., 1.0).
+- --yolo: YOLO model version (e.g., YOLOv3, YOLOv4, etc.).
+- --padvalue: Padding value used in preprocessing (e.g., 114.0).
+- --paddingmode: Method for handling image resizing and padding. Options: 0 (resize without extra processing), 1 (crop after resize), 2 (resize with aspect ratio preservation).
+- --backend: Selection of computation backend (0 for automatic, 1 for Halide, 2 for OpenVINO, etc.).
+- --target: Selection of target computation device (0 for CPU, 1 for OpenCL, etc.).
+- --device: Camera device number (0 for default camera). If --input is not provided camera with index 0 will used by default.
+
+Here `mean`, `scale`, `padvalue`, `paddingmode` should exactly match those that we dicussed in preprocessing section in oder for the model to match result in PyTorch
+
+### Building a Custom Pipeline
+
+Sometimes there is a need to make some custom adjustments in the inference pipeline. With OpenCV's framework this is also quite easy to achieve. Below we will outline simple starter pipeline that does the same thing as CLI cammand. You can adjust it according to your needs.
 
 - Import required libraries
 
-@code{.cpp}
+@snippet samples/dnn/yolo_detector.cpp includes
+<!-- @code{.cpp}
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "iostream"
-@endcode
+@endcode -->
 
 - Read ONNX graph and create neural network model.
 
-@code{.cpp}
+@snippet samples/dnn/yolo_detector.cpp read_net
+<!-- @code{.cpp}
 Net net = readNet("<path_to_onnx_file>");
-@endcode
+@endcode -->
 
 - Read image and preprocess it
 
@@ -169,31 +262,6 @@ for (size_t idx = 0; idx < boxes.size(); ++idx)
 
 imwrite("image.png", img);
 @endcode
-
-
-### Method 2: Using a Predefined Pipeline from the Command Line
-If you prefer a simpler approach without building a custom pipeline, you can run the model directly using command-line instructions.
-
-Steps to Run the Predefined Pipeline:
-
-1. Ensure OpenCV is built on your platform.
-2. Navigate to the `build` directory by executing `cd build`.
-3. Run the following command:
-
-@code{.cpp}
-./bin/example_dnn_yolo_detector --model=<path_to_your_onnx_model> --input=<path_to_your_input_file> --width=<input_width> --height=<input_height> --classes=<path_to_class_names_file> --mns=<minimum_score_threshold> --thr=<confidence_threshold> --mean=<mean_normalization_value> --scale=<scale_factor>
-@endcode
-
-- <path_to_your_onnx_model>: Replace with the file path to your ONNX model.
-- <path_to_your_input_file>: Replace with the file path to your input image or video.
-- <input_width>: Specify the yolo's input width for the model.
-- <input_height>: Specify the yolo's input height for the model (for example, 640).
-- <path_to_class_names_file>: Replace with the file path to the text file containing class names (e.g., /path/to/yolox_classes.txt).
-- <minimum_score_threshold>: Set the minimum score threshold for detection (e.g., 0.5).
-- <confidence_threshold>: Set the confidence threshold for detection (e.g., 0.4).
-- <mean_normalization_value>: Specify the mean normalization value (e.g., 0 for no mean normalization).
-- <scale_factor>: Specify the scale factor for input normalization (e.g., 1.0).
-- <padvalue>: Specify the padding value use for filling image after resize operaiton. defaul 114
 
 
 Questions and suggestions email to: Alessandro de Oliveira Faria cabelo@opensuse.org or OpenCV Team.

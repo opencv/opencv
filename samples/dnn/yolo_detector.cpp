@@ -1,3 +1,10 @@
+/**
+ * @file yolo_detector.cpp
+ * @brief Yolo Object Detection Sample
+ * @author OpenCV team
+ */
+
+//![includes]
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -6,6 +13,7 @@
 #include "iostream"
 #include "common.hpp"
 #include <opencv2/highgui.hpp>
+//![includes]
 
 using namespace cv;
 using namespace cv::dnn;
@@ -156,7 +164,10 @@ void yoloPostProcessing(
     }
 }
 
-
+/**
+ * @function main
+ * @brief Main function
+ */
 int main(int argc, char** argv){
 
     CommandLineParser parser(argc, argv, keys);
@@ -199,10 +210,12 @@ int main(int argc, char** argv){
         getClasses(parser.get<String>("classes"));
 
     // load model
+    //![read_net]
     Net net = readNet(weightPath);
     int backend = parser.get<int>("backend");
     net.setPreferableBackend(backend);
     net.setPreferableTarget(parser.get<int>("target"));
+    //![read_net]
 
     VideoCapture cap;
     Mat img;
