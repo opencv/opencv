@@ -2,11 +2,11 @@ apply plugin: 'com.android.application'
 
 android {
     namespace 'org.opencv.tests'
-    compileSdkVersion 31
+    compileSdkVersion @ANDROID_COMPILE_SDK_VERSION@
     defaultConfig {
         applicationId "org.opencv.tests"
-        minSdkVersion 21
-        targetSdkVersion 31
+        minSdkVersion @ANDROID_MIN_SDK_VERSION@
+        targetSdkVersion @ANDROID_TARGET_SDK_VERSION@
         versionCode 301
         versionName "3.01"
 
@@ -20,7 +20,7 @@ android {
     }
     sourceSets {
         androidTest {
-            java.srcDirs = ['../src', '../../common_test/src']
+            java.srcDirs = [@ANDROID_TESTS_SRC_DIRS@]
         }
         main {
             manifest.srcFile 'AndroidManifest.xml'
