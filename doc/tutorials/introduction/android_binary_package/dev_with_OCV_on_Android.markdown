@@ -27,7 +27,7 @@ If you need help with anything of the above, you may refer to our @ref tutorial_
 If you encounter any error after thoroughly following these steps, feel free to contact us via OpenCV [forum](https://forum.opencv.org). We'll do our best to help you out.
 
 
-Hello OpenCV sample with SDK
+Hello OpenCV sample with SDK {#hello_with_o4a_sdk}
 ----------------------------
 
 In this section we're gonna create a simple app that does nothing but OpenCV loading. In next section we'll extend it to support camera.
@@ -115,7 +115,7 @@ In addition to this instruction you can use some video guide, for example [this 
 
     ![](images/run_app.png)
 
-Hello OpenCV sample with Maven Central
+Hello OpenCV sample with Maven Central {#hello_with_maven_central}
 --------------------------------------
 
 Since OpenCV 4.9.0 OpenCV for Android package is available with Maven Central and may be installed
