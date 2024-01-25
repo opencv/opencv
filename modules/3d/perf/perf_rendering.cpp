@@ -146,22 +146,22 @@ const std::array<std::string, 3> OutputsEnum::svals{ std::string("DepthOnly"),
 static inline void PrintTo(const OutputsEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
-static Matx44f lookAtMatrixCal(const Vec3f& position, const Vec3f& lookat, const Vec3f& upVector)
+static Matx44d lookAtMatrixCal(const Vec3d& position, const Vec3d& lookat, const Vec3d& upVector)
 {
-    Vec3f w = cv::normalize(position - lookat);
-    Vec3f u = cv::normalize(upVector.cross(w));
+    Vec3d w = cv::normalize(position - lookat);
+    Vec3d u = cv::normalize(upVector.cross(w));
 
-    Vec3f v = w.cross(u);
+    Vec3d v = w.cross(u);
 
-    Matx44f res(u[0], u[1], u[2],   0,
+    Matx44d res(u[0], u[1], u[2],   0,
                 v[0], v[1], v[2],   0,
                 w[0], w[1], w[2],   0,
-                   0,    0,    0,   1.f);
+                   0,    0,    0,   1.0);
 
-    Matx44f translate(1.f,   0,   0, -position[0],
-                        0, 1.f,   0, -position[1],
-                        0,   0, 1.f, -position[2],
-                        0,   0,   0,          1.0f);
+    Matx44d translate(1.0,   0,   0, -position[0],
+                        0, 1.0,   0, -position[1],
+                        0,   0, 1.0, -position[2],
+                        0,   0,   0,          1.0);
     res = res * translate;
 
     return res;
@@ -197,11 +197,11 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
 
     string objectPath = findDataFile("rendering/spot.obj");
 
-    Vec3f position = Vec3f( 2.4f, 0.7f, 1.2f);
-    Vec3f lookat   = Vec3f( 0.0f, 0.0f, 0.3f);
-    Vec3f upVector = Vec3f( 0.0f, 1.0f, 0.0f);
+    Vec3d position = Vec3d( 2.4, 0.7, 1.2);
+    Vec3d lookat   = Vec3d( 0.0, 0.0, 0.3);
+    Vec3d upVector = Vec3d( 0.0, 1.0, 0.0);
 
-    float fovy = 45.0f;
+    double fovy = 45.0;
 
     std::vector<Vec3f> vertices;
     std::vector<Vec3i> indices;
@@ -225,10 +225,10 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
         }
     }
 
-    float zNear = 0.1f, zFar = 50.f;
+    double zNear = 0.1, zFar = 50.0;
 
-    Matx44f cameraPose = lookAtMatrixCal(position, lookat, upVector);
-    float fovYradians = fovy * (float)(CV_PI / 180.0);
+    Matx44d cameraPose = lookAtMatrixCal(position, lookat, upVector);
+    double fovYradians = fovy * (CV_PI / 180.0);
     TriangleRasterizeSettings settings;
     settings.setCullingMode(TriangleCullingMode::CW)
             .setShadingType(shadingType)
@@ -238,7 +238,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     while (next())
     {
         // Prefilled to measure pure rendering time w/o allocation and clear
-        float zMax = (glCompatibleMode == TriangleGlCompatibleMode::InvertedDepth) ? 1.f : zFar;
+        float zMax = (glCompatibleMode == TriangleGlCompatibleMode::InvertedDepth) ? 1.f : (float)zFar;
         depth_buf = Mat(height, width, CV_32F, zMax);
         color_buf = Mat(height, width, CV_32FC3, Scalar::all(0));
 

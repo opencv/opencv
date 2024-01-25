@@ -2881,7 +2881,7 @@ To disable Z buffer output, pass cv::noArray() here. If required by user, should
 To disable color output, pass cv::noArray() here.
 */
 CV_EXPORTS void triangleRasterize(InputArray vertices, InputArray indices, InputArray colors,
-                                  InputArray cameraPose, float fovY, float zNear, float zFar,
+                                  InputArray cameraPose, double fovY, double zNear, double zFar,
                                   TriangleRasterizeSettings settings = TriangleRasterizeSettings(),
                                   InputOutputArray depthBuf=noArray(), InputOutputArray colorBuf=noArray());
 

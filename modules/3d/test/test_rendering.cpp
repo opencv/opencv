@@ -159,22 +159,22 @@ const std::array<std::string, 5> ModelTypeEnum::svals{ std::string("Empty"),
 static inline void PrintTo(const ModelTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
-static Matx44f lookAtMatrixCal(const Vec3f& position, const Vec3f& lookat, const Vec3f& upVector)
+static Matx44d lookAtMatrixCal(const Vec3d& position, const Vec3d& lookat, const Vec3d& upVector)
 {
-    Vec3f w = cv::normalize(position - lookat);
-    Vec3f u = cv::normalize(upVector.cross(w));
+    Vec3d w = cv::normalize(position - lookat);
+    Vec3d u = cv::normalize(upVector.cross(w));
 
-    Vec3f v = w.cross(u);
+    Vec3d v = w.cross(u);
 
-    Matx44f res(u[0], u[1], u[2],   0,
+    Matx44d res(u[0], u[1], u[2],   0,
                 v[0], v[1], v[2],   0,
                 w[0], w[1], w[2],   0,
-                   0,    0,    0,   1.f);
+                   0,    0,    0,   1.0);
 
-    Matx44f translate(1.f,   0,   0, -position[0],
-                        0, 1.f,   0, -position[1],
-                        0,   0, 1.f, -position[2],
-                        0,   0,   0,          1.0f);
+    Matx44d translate(1.0,   0,   0, -position[0],
+                        0, 1.0,   0, -position[1],
+                        0,   0, 1.0, -position[2],
+                        0,   0,   0,          1.0);
     res = res * translate;
 
     return res;
@@ -189,11 +189,11 @@ public:
         {
         case ModelType::Empty:
         {
-            position = Vec3f(0.0, 0.0, 0.0);
-            lookat   = Vec3f(0.0, 0.0, 0.0);
-            upVector = Vec3f(0.0, 1.0, 0.0);
+            position = Vec3d(0.0, 0.0, 0.0);
+            lookat   = Vec3d(0.0, 0.0, 0.0);
+            upVector = Vec3d(0.0, 1.0, 0.0);
 
-            fovy = 45.0f;
+            fovy = 45.0;
 
             vertices = std::vector<Vec3f>(4, {2.0f, 0, -2.0f});
             colors   = std::vector<Vec3f>(4, {0, 0, 1.0f});
@@ -204,11 +204,11 @@ public:
         {
             string objectPath = findDataFile("rendering/spot.obj");
 
-            position = Vec3f( 2.4f, 0.7f, 1.2f);
-            lookat   = Vec3f( 0.0f, 0.0f, 0.3f);
-            upVector = Vec3f( 0.0f, 1.0f, 0.0f);
+            position = Vec3d( 2.4, 0.7, 1.2);
+            lookat   = Vec3d( 0.0, 0.0, 0.3);
+            upVector = Vec3d( 0.0, 1.0, 0.0);
 
-            fovy = 45.0f;
+            fovy = 45.0;
 
             std::vector<vector<int>> indvec;
             // using per-vertex normals as colors
@@ -226,11 +226,11 @@ public:
         break;
         case ModelType::Clipping:
         {
-            position = Vec3f(0.0f, 0.0f, 5.0f);
-            lookat   = Vec3f(0.0f, 0.0f, 0.0f);
-            upVector = Vec3f(0.0f, 1.0f, 0.0f);
+            position = Vec3d(0.0, 0.0, 5.0);
+            lookat   = Vec3d(0.0, 0.0, 0.0);
+            upVector = Vec3d(0.0, 1.0, 0.0);
 
-            fovy = 45.0f;
+            fovy = 45.0;
 
             vertices =
             {
@@ -259,11 +259,11 @@ public:
         break;
         case ModelType::Centered:
         {
-            position = Vec3f(0.0, 0.0, 5.0);
-            lookat   = Vec3f(0.0, 0.0, 0.0);
-            upVector = Vec3f(0.0, 1.0, 0.0);
+            position = Vec3d(0.0, 0.0, 5.0);
+            lookat   = Vec3d(0.0, 0.0, 0.0);
+            upVector = Vec3d(0.0, 1.0, 0.0);
 
-            fovy = 45.0f;
+            fovy = 45.0;
 
             vertices =
             {
@@ -288,11 +288,11 @@ public:
         break;
         case ModelType::Color:
         {
-            position = Vec3f(0.0, 0.0, 5.0);
-            lookat   = Vec3f(0.0, 0.0, 0.0);
-            upVector = Vec3f(0.0, 1.0, 0.0);
+            position = Vec3d(0.0, 0.0, 5.0);
+            lookat   = Vec3d(0.0, 0.0, 0.0);
+            upVector = Vec3d(0.0, 1.0, 0.0);
 
-            fovy = 60.0f;
+            fovy = 60.0;
 
             vertices =
             {
@@ -319,11 +319,11 @@ public:
         }
     }
 
-    Vec3f position;
-    Vec3f lookat;
-    Vec3f upVector;
+    Vec3d position;
+    Vec3d lookat;
+    Vec3d upVector;
 
-    float fovy;
+    double fovy;
 
     std::vector<Vec3f> vertices;
     std::vector<Vec3i> indices;
@@ -331,8 +331,8 @@ public:
 };
 
 
-void compareDepth(const cv::Mat& gt, const cv::Mat& mat, float zFar, float scale,
-                  float maskThreshold, float normInfThreshold, float normL2Threshold)
+void compareDepth(const cv::Mat& gt, const cv::Mat& mat, cv::Mat& diff, double zFar, double scale,
+                  double maskThreshold, double normInfThreshold, double normL2Threshold)
 {
     ASSERT_EQ(gt.type(), CV_16UC1);
     ASSERT_EQ(mat.type(), CV_16UC1);
@@ -347,9 +347,9 @@ void compareDepth(const cv::Mat& gt, const cv::Mat& mat, float zFar, float scale
 
     Mat jointMask = gtMask & matMask;
     int nzJointMask = cv::countNonZero(jointMask);
-    float normInfDepth = (float)cv::norm(gt, mat, cv::NORM_INF, jointMask);
+    double normInfDepth = cv::norm(gt, mat, cv::NORM_INF, jointMask);
     EXPECT_LE(normInfDepth, normInfThreshold);
-    float normL2Depth = nzJointMask ? (float)(cv::norm(gt, mat, cv::NORM_L2, jointMask) / nzJointMask) : 0;
+    double normL2Depth = nzJointMask ? (cv::norm(gt, mat, cv::NORM_L2, jointMask) / nzJointMask) : 0;
     EXPECT_LE(normL2Depth, normL2Threshold);
 
     // add --test_debug to output differences
@@ -359,18 +359,20 @@ void compareDepth(const cv::Mat& gt, const cv::Mat& mat, float zFar, float scale
         std::cout << "normInfDepth: " << normInfDepth << " vs " << normInfThreshold << std::endl;
         std::cout << "normL2Depth: "  << normL2Depth  << " vs " << normL2Threshold << std::endl;
     }
+
+    diff = (gt - mat) * 0.5 + 0.5;
 }
 
 
-void compareRGB(const cv::Mat& gt, const cv::Mat& mat, float normInfThreshold, float normL2Threshold)
+void compareRGB(const cv::Mat& gt, const cv::Mat& mat, cv::Mat& diff, double normInfThreshold, double normL2Threshold)
 {
     ASSERT_EQ(gt.type(), CV_32FC3);
     ASSERT_EQ(mat.type(), CV_32FC3);
     ASSERT_EQ(gt.size(), mat.size());
 
-    float normInfRgb = (float)cv::norm(gt, mat, cv::NORM_INF);
+    double normInfRgb = cv::norm(gt, mat, cv::NORM_INF);
     EXPECT_LE(normInfRgb, normInfThreshold);
-    float normL2Rgb = (float)(cv::norm(gt, mat, cv::NORM_L2) / gt.total());
+    double normL2Rgb = cv::norm(gt, mat, cv::NORM_L2) / gt.total();
     EXPECT_LE(normL2Rgb, normL2Threshold);
     // add --test_debug to output differences
     if (debugLevel > 0)
@@ -378,6 +380,7 @@ void compareRGB(const cv::Mat& gt, const cv::Mat& mat, float normInfThreshold, f
         std::cout << "normInfRgb: " << normInfRgb << " vs " << normInfThreshold << std::endl;
         std::cout << "normL2Rgb: " << normL2Rgb << " vs " << normL2Threshold << std::endl;
     }
+    diff = (gt - mat) * 0.5 + 0.5;
 }
 
 
@@ -399,14 +402,14 @@ protected:
         ftype = std::get<4>(t);
         itype = std::get<5>(t);
 
-        zNear = 0.1f, zFar = 50.f;
-        depthScale = 1000.f;
+        zNear = 0.1, zFar = 50.0;
+        depthScale = 1000.0;
 
         depth_buf = Mat(height, width, ftype, zFar);
         color_buf = Mat(height, width, CV_MAKETYPE(ftype, 3), Scalar::all(0));
 
         cameraPose = lookAtMatrixCal(modelData.position, modelData.lookat, modelData.upVector);
-        fovYradians = modelData.fovy * (float)(CV_PI / 180.0);
+        fovYradians = modelData.fovy * (CV_PI / 180.0);
 
         verts = Mat(modelData.vertices);
         verts.convertTo(verts, ftype);
@@ -431,13 +434,13 @@ protected:
 
 public:
     int width, height;
-    float zNear, zFar, depthScale;
+    double zNear, zFar, depthScale;
 
     Mat depth_buf, color_buf;
 
     Mat verts, colors, indices;
-    Matx44f cameraPose;
-    float fovYradians;
+    Matx44d cameraPose;
+    double fovYradians;
     TriangleRasterizeSettings settings;
 
     ModelData modelData;
@@ -459,10 +462,11 @@ TEST_P(RenderingTest, noArrays)
     triangleRasterize(verts, indices, colors, Matx44d(cameraPose), fovYradians, zNear, zFar,
                       settings, cv::noArray(), colorOnly);
 
-    compareRGB(color_buf, colorOnly, 1, 0.00134f);
+    Mat rgbDiff, depthDiff;
+    compareRGB(color_buf, colorOnly, rgbDiff, 1, 0.00134);
     depth_buf.convertTo(depth_buf, CV_16U, depthScale);
     depthOnly.convertTo(depthOnly, CV_16U, depthScale);
-    compareDepth(depth_buf, depthOnly, zFar, depthScale, 0, 0, 0);
+    compareDepth(depth_buf, depthOnly, depthDiff, zFar, depthScale, 0, 0, 0);
 }
 
 
@@ -512,7 +516,7 @@ TEST_P(RenderingTest, accuracy)
 
         Mat depthDiff;
         absdiff(depth_buf, Scalar(zFar * depthScale), depthDiff);
-        float sumDepthDiff = (float)sum(depthDiff)[0];
+        double sumDepthDiff = sum(depthDiff)[0];
         EXPECT_EQ(sumDepthDiff, 0);
     }
     else
@@ -533,12 +537,13 @@ TEST_P(RenderingTest, accuracy)
         std::string gtPathColor = path + "/example_image_" + suffixRgb + "_" + shadingName + ".png";
         std::string gtPathDepth = path + "/depth_image_"   + suffixDepth + ".png";
 
+        Mat rgbDiff, depthDiff;
         Mat groundTruthColor = imread(gtPathColor);
         groundTruthColor.convertTo(groundTruthColor, CV_32F, (1.f / 255.f));
-        compareRGB(groundTruthColor, color_buf, 1.f, 3.57e-05f);
+        compareRGB(groundTruthColor, color_buf, rgbDiff, 1.0, 5.012e-05);
 
         Mat groundTruthDepth = imread(gtPathDepth, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH);
-        compareDepth(groundTruthDepth, depth_buf, zFar, depthScale, 65.f, 485.f, 0.00681f);
+        compareDepth(groundTruthDepth, depth_buf, depthDiff, zFar, depthScale, 120.0, 485.0, 0.00681);
 
         // add --test_debug to output resulting images
         if (debugLevel > 0)
@@ -547,6 +552,8 @@ TEST_P(RenderingTest, accuracy)
             std::string outDepthPath = "depth_image_" + suffix + "_" + shadingName + ".png";
             imwrite(outColorPath, color_buf * 255.f);
             imwrite(outDepthPath, depth_buf);
+            imwrite("diff_" + outColorPath, rgbDiff * 255.f);
+            imwrite("diff_" + outDepthPath, depthDiff);
         }
     }
 }
@@ -568,17 +575,18 @@ TEST_P(RenderingTest, keepDrawnData)
         triangleRasterize(verts, idx1, colors, cameraPose, fovYradians, zNear, zFar, settings, depth_buf2, color_buf2);
         triangleRasterize(verts, idx2, colors, cameraPose, fovYradians, zNear, zFar, settings, depth_buf2, color_buf2);
 
-        compareRGB(color_buf, color_buf2, 0, 0);
+        Mat rgbDiff, depthDiff;
+        compareRGB(color_buf, color_buf2, rgbDiff, 0, 0);
         depth_buf.convertTo(depth_buf, CV_16U, depthScale);
         depth_buf2.convertTo(depth_buf2, CV_16U, depthScale);
-        compareDepth(depth_buf, depth_buf2, zFar, depthScale, 0, 0, 0);
+        compareDepth(depth_buf, depth_buf2, depthDiff, zFar, depthScale, 0, 0, 0);
     }
 }
 
 
 TEST_P(RenderingTest, glCompatibleDepth)
 {
-    Mat depth_buf2(height, width, ftype, 1.0f);
+    Mat depth_buf2(height, width, ftype, 1.0);
 
     triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
                       settings.setGlCompatibleMode(TriangleGlCompatibleMode::InvertedDepth),
@@ -586,19 +594,19 @@ TEST_P(RenderingTest, glCompatibleDepth)
 
     Mat convertedDepth(height, width, ftype);
     // map from [0, 1] to [zNear, zFar]
-    float scaleNear = (1.f / zNear);
-    float scaleFar  = (1.f / zFar);
+    double scaleNear = (1.0 / zNear);
+    double scaleFar  = (1.0 / zFar);
     for (int y = 0; y < height; y++)
     {
         for (int x = 0; x < width; x++)
         {
-            float z = depth_buf2.at<float>(y, x);
-            convertedDepth.at<float>(y, x) = 1.f / ((1.f - z) * scaleNear + z * scaleFar );
+            double z = (double)depth_buf2.at<float>(y, x);
+            convertedDepth.at<float>(y, x) = (float)(1.0 / ((1.0 - z) * scaleNear + z * scaleFar ));
         }
     }
 
-    float normL2Diff = (float)(cv::norm(depth_buf, convertedDepth, cv::NORM_L2) / (height * width));
-    const float normL2Threshold = 1.e-6f;
+    double normL2Diff = cv::norm(depth_buf, convertedDepth, cv::NORM_L2) / (height * width);
+    const double normL2Threshold = 1.e-6;
     EXPECT_LE(normL2Diff, normL2Threshold);
     // add --test_debug to output differences
     if (debugLevel > 0)

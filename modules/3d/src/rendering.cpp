@@ -117,15 +117,15 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 
 // values outside of [zNear, zFar] have to be restored
 // [0, 1] -> [zNear, zFar]
-static void linearizeDepth(const Mat& inbuf, const Mat& validMask, Mat outbuf, float zFar, float zNear)
+static void linearizeDepth(const Mat& inbuf, const Mat& validMask, Mat outbuf, double zFar, double zNear)
 {
     CV_Assert(inbuf.type() == CV_32FC1);
     CV_Assert(validMask.type() == CV_8UC1);
     CV_Assert(outbuf.type() == CV_32FC1);
     CV_Assert(outbuf.size() == inbuf.size());
 
-    float scaleNear = (1.f / zNear);
-    float scaleFar  = (1.f / zFar);
+    float scaleNear = (float)(1.0 / zNear);
+    float scaleFar  = (float)(1.0 / zFar);
     for (int y = 0; y < inbuf.rows; y++)
     {
         const float* inp = inbuf.ptr<float>(y);
@@ -146,14 +146,15 @@ static void linearizeDepth(const Mat& inbuf, const Mat& validMask, Mat outbuf, f
 }
 
 // [zNear, zFar] -> [0, 1]
-static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, float zNear, float zFar)
+static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, double zNear, double zFar)
 {
     CV_Assert(inbuf.type() == CV_32FC1);
     outbuf.create(inbuf.size(), CV_32FC1);
     validMask.create(inbuf.size(), CV_8UC1);
 
-    float zadd =   (zFar / (zFar - zNear));
-    float zmul = - (zNear * zFar / (zFar - zNear));
+    float fNear = (float)zNear, fFar = (float)zFar;
+    float zadd = (float)(zFar / (zFar - zNear));
+    float zmul = (float)(-zNear * zFar / (zFar - zNear));
     for (int y = 0; y < inbuf.rows; y++)
     {
         const float * inp = inbuf.ptr<float>(y);
@@ -162,8 +163,8 @@ static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, float zNe
         for (int x = 0; x < inbuf.cols; x++)
         {
             float z = inp[x];
-            uchar m = (z >= zNear) && (z <= zFar);
-            z = std::max(std::min(z, zFar), zNear);
+            uchar m = (z >= fNear) && (z <= fFar);
+            z = std::max(std::min(z, fFar), fNear);
             // precision-optimized version of this:
             // outp[x] = (z - zNear) / z * zFar / (zFar - zNear);
             outp[x] = zadd + zmul / z;
@@ -175,7 +176,7 @@ static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, float zNe
 
 
 CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
-                                   InputArray cameraPose, float fovyRadians, float zNear, float zFar,
+                                   InputArray cameraPose, double fovyRadians, double zNear, double zFar,
                                    TriangleRasterizeSettings settings,
                                    InputOutputArray _depthBuffer, InputOutputArray _colorBuffer)
 {
@@ -187,13 +188,13 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     CV_Assert(zFar > zNear);
 
     Mat cpMat;
-    cameraPose.getMat().convertTo(cpMat, CV_32FC1);
-    Matx44f camPoseMat = Matx44f::eye();
+    cameraPose.getMat().convertTo(cpMat, CV_64FC1);
+    Matx44d camPoseMat = Matx44d::eye();
     for (int i = 0; i < 3; i++)
     {
         for (int j = 0; j < 4; j++)
         {
-            camPoseMat(i, j) = cpMat.at<float>(i, j);
+            camPoseMat(i, j) = cpMat.at<double>(i, j);
         }
     }
 
@@ -301,15 +302,15 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
     }
 
     // world-to-camera coord system
-    Matx44f lookAtMatrix = camPoseMat;
+    Matx44d lookAtMatrix = camPoseMat;
 
-    float ys = 1.0f / std::tan(fovyRadians / 2);
-    float xs = ys / (float)imgSize.width * (float)imgSize.height;
-    float zz = (zNear + zFar) / (zNear - zFar);
-    float zw = 2 * zFar * zNear / (zNear - zFar);
+    double ys = 1.0 / std::tan(fovyRadians / 2);
+    double xs = ys / (double)imgSize.width * (double)imgSize.height;
+    double zz = (zNear + zFar) / (zNear - zFar);
+    double zw = 2.0 * zFar * zNear / (zNear - zFar);
 
     // camera to NDC: [-1, 1]^3
-    Matx44f perspectMatrix (xs,  0,  0,  0,
+    Matx44d perspectMatrix (xs,  0,  0,  0,
                              0, ys,  0,  0,
                              0,  0, zz, zw,
                              0,  0,  -1, 0);

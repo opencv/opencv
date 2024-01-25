@@ -47,9 +47,9 @@ public:
         {
         case ModelType::Empty:
         {
-            position = Vec3f(0.0, 0.0,  0.0);
-            lookat   = Vec3f(0.0, 0.0,  0.0);
-            upVector = Vec3f(0.0, 1.0,  0.0);
+            position = Vec3d(0.0, 0.0, 0.0);
+            lookat   = Vec3d(0.0, 0.0, 0.0);
+            upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 45.0;
 
@@ -60,9 +60,9 @@ public:
         break;
         case ModelType::File:
         {
-            position = Vec3f( 2.4, 0.7, 1.2);
-            lookat   = Vec3f( 0.0, 0.0, 0.3);
-            upVector = Vec3f( 0.0, 1.0, 0.0);
+            position = Vec3d( 2.4, 0.7, 1.2);
+            lookat   = Vec3d( 0.0, 0.0, 0.3);
+            upVector = Vec3d( 0.0, 1.0, 0.0);
 
             fovy = 45.0;
 
@@ -87,9 +87,9 @@ public:
         break;
         case ModelType::Clipping:
         {
-            position = Vec3f(0.0, 0.0, 5.0);
-            lookat   = Vec3f(0.0, 0.0, 0.0);
-            upVector = Vec3f(0.0, 1.0, 0.0);
+            position = Vec3d(0.0, 0.0, 5.0);
+            lookat   = Vec3d(0.0, 0.0, 0.0);
+            upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 45.0;
 
@@ -120,9 +120,9 @@ public:
         break;
         case ModelType::Centered:
         {
-            position = Vec3f(0.0, 0.0, 5.0);
-            lookat   = Vec3f(0.0, 0.0, 0.0);
-            upVector = Vec3f(0.0, 1.0, 0.0);
+            position = Vec3d(0.0, 0.0, 5.0);
+            lookat   = Vec3d(0.0, 0.0, 0.0);
+            upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 45.0;
 
@@ -149,9 +149,9 @@ public:
         break;
         case ModelType::Color:
         {
-            position = Vec3f(0.0, 0.0, 5.0);
-            lookat   = Vec3f(0.0, 0.0, 0.0);
-            upVector = Vec3f(0.0, 1.0, 0.0);
+            position = Vec3d(0.0, 0.0, 5.0);
+            lookat   = Vec3d(0.0, 0.0, 0.0);
+            upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 60.0;
 
@@ -180,9 +180,9 @@ public:
         }
     }
 
-    Vec3f position;
-    Vec3f lookat;
-    Vec3f upVector;
+    Vec3d position;
+    Vec3d lookat;
+    Vec3d upVector;
 
     double fovy;
 
@@ -265,7 +265,7 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
     data.arr.setColorArray(colors4f);
     data.indices.copyFrom(idxLinear);
 
-    float zNear = 0.1, zFar = 50;
+    double zNear = 0.1, zFar = 50;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(modelData.fovy, (double)imgSz.width / imgSz.height, zNear, zFar);
@@ -315,7 +315,7 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
         // map from [0, 1] to [zNear, zFar]
         for (auto it = depthImage.begin<float>(); it != depthImage.end<float>(); ++it)
         {
-            *it = zNear * zFar / ((*it) * (zNear - zFar) + zFar);
+            *it = (float)(zNear * zFar / (double(*it) * (zNear - zFar) + zFar));
         }
         cv::flip(depthImage, depthImage, 0);
         depthImage.convertTo(depthImage, CV_16U, 1000.0);
@@ -324,7 +324,6 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
         if (key == 27)
             break;
     }
-
 
     cv::setOpenGlDrawCallback("OpenGL", 0, 0);
     cv::destroyAllWindows();
