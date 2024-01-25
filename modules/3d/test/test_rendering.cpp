@@ -159,6 +159,17 @@ const std::array<std::string, 5> ModelTypeEnum::svals{ std::string("Empty"),
 static inline void PrintTo(const ModelTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
+template<typename T>
+std::string printEnum(T v)
+{
+    std::string s;
+    std::stringstream ss;
+    v.PrintTo(&ss);
+    ss >> s;
+    return s;
+}
+
+
 static Matx44d lookAtMatrixCal(const Vec3d& position, const Vec3d& lookat, const Vec3d& upVector)
 {
     Vec3d w = cv::normalize(position - lookat);
