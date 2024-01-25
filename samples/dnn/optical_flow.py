@@ -99,7 +99,7 @@ if __name__ == '__main__':
     var['ADAPTED_HEIGHT'] = int(np.ceil(args.height/divisor) * divisor)
     var['SCALE_WIDTH'] = args.width / float(var['ADAPTED_WIDTH'])
     var['SCALE_HEIGHT'] = args.height / float(var['ADAPTED_HEIGHT'])
-    
+
     if not args.raft:
         config = ''
         proto = open(args.proto).readlines()
