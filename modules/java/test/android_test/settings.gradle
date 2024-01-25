@@ -1,0 +1,6 @@
+rootProject.name = 'android_test'
+
+include ':opencv'
+project(':opencv').projectDir = new File('D:\\Android\\opencv-4.9.0-android-sdk_orig\\OpenCV-android-sdk\\sdk')
+
+include ':tests_module'
