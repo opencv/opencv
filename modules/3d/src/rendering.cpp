@@ -44,9 +44,8 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     float d = ac.x*bc.y - ac.y*bc.x;
 
     // culling and degenerated triangle removal
-    // signs are flipped because of vertical flip
-    if ((settings.cullingMode == TriangleCullingMode::CW  && d >= 0) ||
-        (settings.cullingMode == TriangleCullingMode::CCW && d <= 0) ||
+    if ((settings.cullingMode == TriangleCullingMode::CW  && d <= 0) ||
+        (settings.cullingMode == TriangleCullingMode::CCW && d >= 0) ||
         (abs(d) < 1e-6))
     {
         return;
@@ -56,7 +55,6 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     Vec3f zinv { verts[0][2], verts[1][2], verts[2][2] };
     Vec3f w { verts[0][3], verts[1][3], verts[2][3] };
 
-    //TODO: proper Y flip
     for (int y = minPt.y; y < maxPt.y; y++)
     {
         for (int x = minPt.x; x < maxPt.x; x++)
@@ -73,12 +71,12 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
                 bool update = false;
                 if (!depthBuf.empty())
                 {
-                    float zCurrent = depthBuf.at<float>(y, x);
+                    float zCurrent = depthBuf.at<float>(height - 1 - y, x);
                     float zNew = f[0] * zinv[0] + f[1] * zinv[1] + f[2] * zinv[2];
                     if (zNew < zCurrent)
                     {
                         update = true;
-                        depthBuf.at<float>(y, x) = zNew;
+                        depthBuf.at<float>(height - 1 - y, x) = zNew;
                     }
                 }
                 else // Shading::White
@@ -107,7 +105,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
                         }
                         color *= zInter;
                     }
-                    colorBuf.at<Vec3f>(y, x) = color;
+                    colorBuf.at<Vec3f>(height - 1 - y, x) = color;
                 }
             }
         }
@@ -331,10 +329,10 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
 
         // [-1, 1]^3 => [0, width] x [0, height] x [0, 1]
         Vec4f vscreen = {
-            ( vdiv[0] + 1.f) * 0.5f * (float)imgSize.width,
-            (-vdiv[1] + 1.f) * 0.5f * (float)imgSize.height, // vertical flip
-            ( vdiv[2] + 1.f) * 0.5f,
-              vdiv[3]
+            (vdiv[0] + 1.f) * 0.5f * (float)imgSize.width,
+            (vdiv[1] + 1.f) * 0.5f * (float)imgSize.height,
+            (vdiv[2] + 1.f) * 0.5f,
+             vdiv[3]
         };
 
         screenVertices.at<Vec4f>(i) = vscreen;
