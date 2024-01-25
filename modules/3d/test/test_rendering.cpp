@@ -617,7 +617,7 @@ TEST_P(RenderingTest, glCompatibleDepth)
     }
 
     double normL2Diff = cv::norm(depth_buf, convertedDepth, cv::NORM_L2) / (height * width);
-    const double normL2Threshold = 1.e-6;
+    const double normL2Threshold = 1.e-9;
     EXPECT_LE(normL2Diff, normL2Threshold);
     // add --test_debug to output differences
     if (debugLevel > 0)
