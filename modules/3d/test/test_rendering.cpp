@@ -371,7 +371,7 @@ void compareDepth(const cv::Mat& gt, const cv::Mat& mat, cv::Mat& diff, double z
         std::cout << "normL2Depth: "  << normL2Depth  << " vs " << normL2Threshold << std::endl;
     }
 
-    diff = (gt - mat) * 0.5 + 0.5;
+    diff = (gt - mat) + (1 << 15);
 }
 
 
