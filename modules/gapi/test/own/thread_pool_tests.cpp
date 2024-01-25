@@ -16,145 +16,103 @@ namespace opencv_test
 
 using namespace cv::gapi;
 
-TEST(ThreadPool, SingleTaskMultipleThreads)
+TEST(ThreadPool, ScheduleNotBlock)
 {
+    own::Latch latch(1u);
+    std::atomic<uint32_t> counter{0u};
+
     own::ThreadPool tp(4u);
-    uint32_t counter = 0u;
-
-    tp.start();
-    tp.schedule([&counter](){counter++;});
-    tp.wait();
-
-    EXPECT_EQ(1u, counter);
-}
-
-TEST(ThreadPool, WaitOnEmptyQueue)
-{
-    own::ThreadPool tp(4u);
-    tp.wait();
-}
-
-TEST(ThreadPool, WaitForTheCompletion)
-{
-    own::ThreadPool tp(4u);
-    bool done = false;
-
-    tp.start();
-    tp.schedule([&done]() {
-      std::this_thread::sleep_for(std::chrono::milliseconds{500u});
-      done = true;
+    tp.schedule([&](){
+        std::this_thread::sleep_for(std::chrono::milliseconds{500u});
+        counter++;
+        latch.count_down();
     });
-    tp.wait();
 
-    EXPECT_TRUE(done);
+    EXPECT_EQ(0u, counter);
+    latch.wait();
+    EXPECT_EQ(1u, counter);
 }
 
 TEST(ThreadPool, MultipleTasks)
 {
-    own::ThreadPool tp(4u);
-    tp.start();
-
     const uint32_t kNumTasks = 100u;
+    own::Latch latch(kNumTasks);
     std::atomic<uint32_t> completed{0u};
+
+    own::ThreadPool tp(4u);
     for (uint32_t i = 0; i < kNumTasks; ++i) {
         tp.schedule([&]() {
             ++completed;
+            latch.count_down();
         });
     }
-    tp.wait();
+    latch.wait();
 
     EXPECT_EQ(kNumTasks, completed.load());
 }
 
-TEST(ThreadPool, OrderedExecution)
-{
-    own::ThreadPool tp(4u);
-    tp.start();
-
-    const uint32_t kNumTasks = 100u;
-    std::atomic<uint32_t> completed{0u};
-    for (uint32_t i = 0; i < kNumTasks; ++i) {
-        tp.schedule([&]() {
-            ++completed;
-        });
-        tp.wait();
-        EXPECT_EQ(i+1, completed.load());
+struct ExecutionState {
+    ExecutionState(const uint32_t num_threads,
+                   const uint32_t num_tasks)
+        : guard(0u),
+          critical(0u),
+          limit(num_tasks),
+          latch(num_threads),
+          tp(num_threads) {
     }
-}
 
-static void doRecursive(std::atomic<uint32_t> &scheduled,
-                        std::atomic<uint32_t> &executed,
-                        const uint32_t        limit) {
-    // NB: Protects function to be executed more than limit number of times
-    if (scheduled.fetch_add(1u) >= limit) {
+    std::atomic<uint32_t> guard;
+    std::atomic<uint32_t> critical;
+    const uint32_t        limit;
+    own::Latch            latch;
+    own::ThreadPool       tp;
+};
+
+static void doRecursive(ExecutionState& state) {
+    // NB: Protects function to be executed no more than limit number of times
+    if (state.guard.fetch_add(1u) >= state.limit) {
+        state.latch.count_down();
         return;
     }
-    // NB: This is the execution part
-    ++executed;
+    // NB: This simulates critical section
+    std::this_thread::sleep_for(std::chrono::milliseconds{50});
+    ++state.critical;
     // NB: Schedule the new one recursively
-    own::ThreadPool::get()->schedule([&scheduled, &executed, limit](){
-        doRecursive(scheduled, executed, limit);
-    });
+    state.tp.schedule([&](){ doRecursive(state); });
 }
 
 TEST(ThreadPool, ScheduleRecursively)
 {
-    const int kNumThreads = 1u;
-    own::ThreadPool tp(kNumThreads);
-    tp.start();
+    const int kNumThreads = 5u;
+    const uint32_t kNumTasks = 100u;
 
-    const uint32_t kNumTasks = 10000u;
-    std::atomic<uint32_t> scheduled{0u};
-    std::atomic<uint32_t> executed {0u};
-
-    // NB: Run initial task which will repeat
-    // until executed is equal to limit
-    tp.schedule([&](){
-        doRecursive(scheduled, executed, kNumTasks);
-    });
-    tp.wait();
-
-    EXPECT_EQ(kNumTasks, executed.load());
-}
-
-TEST(ThreadPool, ScheduleFromDifferentThreads)
-{
-    const int kNumThreads = 10u;
-    own::ThreadPool tp(kNumThreads);
-    tp.start();
-
-    const uint32_t kNumTasks = 10000u;
-    std::atomic<uint32_t> scheduled{0u};
-    std::atomic<uint32_t> executed {0u};
-
-    // NB: Run multiple initial tasks that will be
-    // executed in different threads recursively
+    ExecutionState state(kNumThreads, kNumTasks);
     for (uint32_t i = 0; i < kNumThreads; ++i) {
-        tp.schedule([&](){
-            doRecursive(scheduled, executed, kNumTasks);
+        state.tp.schedule([&](){
+            doRecursive(state);
         });
     }
-    tp.wait();
+    state.latch.wait();
 
-    EXPECT_EQ(kNumTasks, executed.load());
+    EXPECT_EQ(kNumTasks, state.critical.load());
 }
 
 TEST(ThreadPool, ExecutionIsParallel)
 {
     const uint32_t kNumThreads = 4u;
-    own::ThreadPool tp(kNumThreads);
     std::atomic<uint32_t> counter{0};
+    own::Latch latch{kNumThreads};
 
+    own::ThreadPool tp(kNumThreads);
     auto start = std::chrono::high_resolution_clock::now();
-
-    tp.start();
     for (uint32_t i = 0; i < kNumThreads; ++i) {
       tp.schedule([&]() {
         std::this_thread::sleep_for(std::chrono::milliseconds{800u});
         ++counter;
+        latch.count_down();
       });
     }
-    tp.wait();
+    latch.wait();
 
     auto end = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();

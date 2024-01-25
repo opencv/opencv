@@ -20,8 +20,7 @@ namespace gimpl {
 namespace magazine {
 namespace {
 
-void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg)
-{
+void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg) {
     if (rc.shape != GShape::GMAT)
     {
         bindInArg(mag, rc, arg);
@@ -31,9 +30,11 @@ void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg)
     switch (arg.index())
     {
     case GRunArg::index_of<Mat>() :
-        mag_rmat = make_rmat<RMatOnMat>(util::get<Mat>(arg)); break;
+        mag_rmat = make_rmat<RMatOnMat>(util::get<Mat>(arg));
+        break;
     case GRunArg::index_of<cv::RMat>() :
-        mag_rmat = util::get<cv::RMat>(arg); break;
+        mag_rmat = util::get<cv::RMat>(arg);
+        break;
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
     }
     // FIXME: has to take extra care about meta here for this particuluar
@@ -41,8 +42,7 @@ void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg)
     mag.meta<cv::RMat>()[rc.id] = arg.meta;
 }
 
-void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg)
-{
+void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg) {
     if (rc.shape != GShape::GMAT)
     {
         bindOutArg(mag, rc, arg);
@@ -59,8 +59,7 @@ void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg)
     }
 }
 
-cv::GRunArgP getObjPtrExec(Mag& mag, const RcDesc &rc)
-{
+cv::GRunArgP getObjPtrExec(Mag& mag, const RcDesc &rc) {
     if (rc.shape != GShape::GMAT)
     {
         return getObjPtr(mag, rc);
@@ -68,8 +67,7 @@ cv::GRunArgP getObjPtrExec(Mag& mag, const RcDesc &rc)
     return GRunArgP(&mag.slot<cv::RMat>()[rc.id]);
 }
 
-void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
-{
+void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg) {
     if (rc.shape != GShape::GMAT)
     {
         writeBack(mag, rc, g_arg);
@@ -124,73 +122,50 @@ void assignMetaStubExec(Mag& mag, const RcDesc &rc, const cv::GRunArg::Meta &met
 } // anonymous namespace
 }}} // namespace cv::gimpl::magazine
 
-class cv::gimpl::GThreadedExecutor::Input final: public cv::gimpl::GIslandExecutable::IInput
-{
-    cv::gimpl::Mag &mag;
-    std::mutex     &m_mutex;
+cv::gimpl::StreamMsg cv::gimpl::GThreadedExecutor::Input::get() {
+    std::lock_guard<std::mutex> lock{m_state.m};
+    cv::GRunArgs res;
+    for (const auto &rc : desc()) { res.emplace_back(magazine::getArg(m_state.mag, rc)); }
+    return cv::gimpl::StreamMsg{std::move(res)};
+}
 
-    virtual StreamMsg get() override
-    {
-        std::lock_guard<std::mutex> lock{m_mutex};
-        cv::GRunArgs res;
-        for (const auto &rc : desc()) { res.emplace_back(magazine::getArg(mag, rc)); }
-        return StreamMsg{std::move(res)};
-    }
-    virtual StreamMsg try_get() override { return get(); }
-public:
-    Input(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs, std::mutex& mutex)
-        : mag(m), m_mutex(mutex) { set(rcs); }
+cv::gimpl::GThreadedExecutor::Input::Input(cv::gimpl::GraphState &state,
+                                           const std::vector<RcDesc> &rcs)
+    : m_state(state) {
+    set(rcs);
 };
 
-class cv::gimpl::GThreadedExecutor::Output final: public cv::gimpl::GIslandExecutable::IOutput
-{
-    cv::gimpl::Mag &mag;
-    std::mutex     &m_mutex;
+cv::GRunArgP cv::gimpl::GThreadedExecutor::Output::get(int idx) {
+    std::lock_guard<std::mutex> lock{m_state.m};
+    auto r = magazine::getObjPtrExec(m_state.mag, desc()[idx]);
+    // Remember the output port for this output object
+    m_out_idx[cv::gimpl::proto::ptr(r)] = idx;
+    return r;
+}
 
-    std::unordered_map<const void*, int> out_idx;
-    std::exception_ptr eptr;
+void cv::gimpl::GThreadedExecutor::Output::post(cv::GRunArgP&&, const std::exception_ptr& e) {
+    if (e) { m_eptr = e; }
+}
 
-    GRunArgP get(int idx) override
-    {
-        auto r = magazine::getObjPtrExec(mag, desc()[idx]);
-        // Remember the output port for this output object
-        out_idx[cv::gimpl::proto::ptr(r)] = idx;
-        return r;
-    }
-    void post(GRunArgP&&, const std::exception_ptr& e) override
-    {
-        if (e)
-        {
-            eptr = e;
-        }
-    }
-    void post(EndOfStream&&) override {} // Do nothing here too
-    void post(Exception&& ex) override
-    {
-        eptr = std::move(ex.eptr);
-    }
-    void meta(const GRunArgP &out, const GRunArg::Meta &m) override
-    {
-        const auto idx = out_idx.at(cv::gimpl::proto::ptr(out));
-        std::lock_guard<std::mutex> lock{m_mutex};
-        magazine::assignMetaStubExec(mag, desc()[idx], m);
-    }
-public:
-    Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs, std::mutex &mutex)
-        : mag(m), m_mutex(mutex)
-    {
-        set(rcs);
-    }
+void cv::gimpl::GThreadedExecutor::Output::post(Exception&& ex) {
+    m_eptr = std::move(ex.eptr);
+}
 
-    void verify()
-    {
-        if (eptr)
-        {
-            std::rethrow_exception(eptr);
-        }
-    }
-};
+void cv::gimpl::GThreadedExecutor::Output::meta(const GRunArgP &out, const GRunArg::Meta &m) {
+    const auto idx = m_out_idx.at(cv::gimpl::proto::ptr(out));
+    std::lock_guard<std::mutex> lock{m_state.m};
+    magazine::assignMetaStubExec(m_state.mag, desc()[idx], m);
+}
 
+cv::gimpl::GThreadedExecutor::Output::Output(cv::gimpl::GraphState &state,
+                                             const std::vector<RcDesc> &rcs)
+    : m_state(state) {
+    set(rcs);
+}
+
+void cv::gimpl::GThreadedExecutor::Output::verify() {
+    if (m_eptr) std::rethrow_exception(m_eptr);
+}
 
 void cv::gimpl::GThreadedExecutor::initResource(const ade::NodeHandle &nh, const ade::NodeHandle &orig_nh) {
     const Data &d = m_gm.metadata(orig_nh).get<Data>();
@@ -200,7 +175,7 @@ void cv::gimpl::GThreadedExecutor::initResource(const ade::NodeHandle &nh, const
         return;
 
     // INTERNALS+CONST only! no need to allocate/reset output objects
-    // to as it is bound externally (e.g. already in the m_res)
+    // to as it is bound externally (e.g. already in the m_state.mag)
 
     switch (d.shape)
     {
@@ -211,7 +186,7 @@ void cv::gimpl::GThreadedExecutor::initResource(const ade::NodeHandle &nh, const
             GAPI_Assert(!nh->inNodes().empty());
             const auto desc = util::get<cv::GMatDesc>(d.meta);
             auto& exec = m_gim.metadata(nh->inNodes().front()).get<IslandExec>().object;
-            auto& rmat = m_res.slot<cv::RMat>()[d.rc];
+            auto& rmat = m_state.mag.slot<cv::RMat>()[d.rc];
             if (exec->allocatesOutputs()) {
                 rmat = exec->allocate(desc);
             } else {
@@ -226,7 +201,7 @@ void cv::gimpl::GThreadedExecutor::initResource(const ade::NodeHandle &nh, const
         if (d.storage == Data::Storage::CONST_VAL)
         {
             auto rc = RcDesc{d.rc, d.shape, d.ctor};
-            magazine::bindInArg(m_res, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
+            magazine::bindInArg(m_state.mag, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
         }
         break;
 
@@ -234,7 +209,7 @@ void cv::gimpl::GThreadedExecutor::initResource(const ade::NodeHandle &nh, const
         if (d.storage == Data::Storage::CONST_VAL)
         {
             auto rc = RcDesc{d.rc, d.shape, d.ctor};
-            magazine::bindInArg(m_res, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
+            magazine::bindInArg(m_state.mag, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
         }
         break;
     case GShape::GOPAQUE:
@@ -252,76 +227,114 @@ void cv::gimpl::GThreadedExecutor::initResource(const ade::NodeHandle &nh, const
 cv::gimpl::IslandActor::IslandActor(const std::vector<RcDesc>          &in_objects,
                                     const std::vector<RcDesc>          &out_objects,
                                     std::shared_ptr<GIslandExecutable> isl_exec,
-                                    Mag                                &res,
-                                    std::mutex                         &m)
-    : m_in_objs(in_objects),
-      m_out_objs(out_objects),
-      m_isl_exec(isl_exec),
-      m_res(res),
-      m_mutex(m) {
+                                    cv::gimpl::GraphState              &state)
+    : m_isl_exec(isl_exec),
+      m_inputs(state, in_objects),
+      m_outputs(state, out_objects) {
 }
 
 void cv::gimpl::IslandActor::run() {
-    cv::gimpl::GThreadedExecutor::Input  i{m_res,  m_in_objs,  m_mutex};
-    cv::gimpl::GThreadedExecutor::Output o{m_res,  m_out_objs, m_mutex};
-    m_isl_exec->run(i, o);
-    // NB: Can't throw an exception there as it's supposed to be
-    // executed in different threads
-    try {
-        o.verify();
-    } catch (...) {
-        m_e = std::current_exception();
-    }
+    m_isl_exec->run(m_inputs, m_outputs);
 }
 
 void cv::gimpl::IslandActor::verify() {
-    if (m_e) {
-        std::rethrow_exception(m_e);
-    }
+    m_outputs.verify();
 };
 
 class cv::gimpl::Task {
+    friend class TaskManager;
 public:
-    using F = std::function<void()>;
     using Ptr = std::shared_ptr<Task>;
+    Task(TaskManager::F&& f, std::vector<Task::Ptr> &&producers);
 
-    Task(F f, std::vector<Task::Ptr> &&deps);
+    struct ExecutionState {
+        cv::gapi::own::ThreadPool& tp;
+        cv::gapi::own::Latch& latch;
+    };
 
-    void run();
-    void reset() { m_ready_deps.store(0u); }
+    void run(ExecutionState& state);
+    bool isLast() const { return m_consumers.empty();  }
+    void reset()        { m_ready_producers.store(0u); }
 
 private:
-    F                     m_f;
-    const uint32_t        m_num_deps;
-    std::atomic<uint32_t> m_ready_deps;
-    std::vector<Task*>    m_dependents;
+    TaskManager::F           m_f;
+    const uint32_t           m_num_producers;
+    std::atomic<uint32_t>    m_ready_producers;
+    std::vector<Task*>       m_consumers;
 };
 
-cv::gimpl::Task::Task(F f, std::vector<Task::Ptr> &&deps)
-    : m_f(f),
-      m_num_deps(static_cast<uint32_t>(deps.size())),
-      m_ready_deps(0u) {
-    for (auto dep : deps) {
-        dep->m_dependents.push_back(this);
+cv::gimpl::Task::Task(TaskManager::F         &&f,
+                      std::vector<Task::Ptr> &&producers)
+    : m_f(std::move(f)),
+      m_num_producers(static_cast<uint32_t>(producers.size())) {
+    for (auto producer : producers) {
+        producer->m_consumers.push_back(this);
     }
 }
 
-void cv::gimpl::Task::run() {
+void cv::gimpl::Task::run(ExecutionState& state) {
+    // Execute the task
     m_f();
-    for (auto* dep : m_dependents) {
-        if (dep->m_ready_deps.fetch_add(1u) == dep->m_num_deps - 1) {
-            cv::gapi::own::ThreadPool::get()->schedule([dep](){
-                dep->run();
+    // Notify every consumer about completion one of its dependencies
+    for (auto* consumer : m_consumers) {
+        const auto num_ready =
+            consumer->m_ready_producers.fetch_add(1, std::memory_order_relaxed) + 1;
+        // The last completed producer schedule the consumer for execution
+        if (num_ready == consumer->m_num_producers) {
+            state.tp.schedule([&state, consumer](){
+                consumer->run(state);
             });
         }
     }
+    // If tasks has no consumers this is the last task
+    // Execution lasts until all last tasks are completed
+    // Decrement the latch to notify about completion
+    if (isLast()) {
+        state.latch.count_down();
+    }
+}
+
+std::shared_ptr<cv::gimpl::Task>
+cv::gimpl::TaskManager::createTask(cv::gimpl::TaskManager::F &&f,
+                                   std::vector<std::shared_ptr<cv::gimpl::Task>> &&producers) {
+    const bool is_initial = producers.empty();
+    auto task = std::make_shared<cv::gimpl::Task>(std::move(f),
+                                                  std::move(producers));
+    m_all_tasks.emplace_back(task);
+    if (is_initial) {
+        m_initial_tasks.emplace_back(task);
+    }
+    return task;
+}
+
+void cv::gimpl::TaskManager::scheduleAndWait(cv::gapi::own::ThreadPool& tp) {
+    // Reset the number of ready dependencies for all tasks
+    for (auto& task : m_all_tasks) { task->reset(); }
+
+    // Count the number of last tasks
+    auto isLast = [](const std::shared_ptr<Task>& task) { return task->isLast(); };
+    const auto kNumLastsTasks =
+        std::count_if(m_all_tasks.begin(), m_all_tasks.end(), isLast);
+
+    // Initialize the latch, schedule initial tasks
+    // and wait until all lasts tasks are done
+    cv::gapi::own::Latch latch(kNumLastsTasks);
+    Task::ExecutionState state{tp, latch};
+    for (auto task : m_initial_tasks) {
+        state.tp.schedule([&state, task](){ task->run(state); });
+    }
+    latch.wait();
 }
 
 cv::gimpl::GThreadedExecutor::GThreadedExecutor(const uint32_t num_threads,
                                                 std::unique_ptr<ade::Graph> &&g_model)
     : GAbstractExecutor(std::move(g_model)),
-      m_tp(num_threads) {
+      m_thread_pool(num_threads) {
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
+
+    std::unordered_map< ade::NodeHandle
+                       , std::shared_ptr<Task>
+                       , ade::HandleHasher<ade::Node>> m_tasks_map;
     for (auto nh : sorted.nodes())
     {
         switch (m_gim.metadata(nh).get<NodeKind>().k)
@@ -348,23 +361,24 @@ cv::gimpl::GThreadedExecutor::GThreadedExecutor(const uint32_t num_threads,
                 auto actor = std::make_shared<IslandActor>(std::move(input_rcs),
                                                            std::move(output_rcs),
                                                            m_gim.metadata(nh).get<IslandExec>().object,
-                                                           m_res,
-                                                           m_mutex);
+                                                           m_state);
                 m_actors.push_back(actor);
-                std::unordered_set<std::shared_ptr<Task>> deps;
+
+                std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>> producer_nhs;
                 for (auto slot_nh : nh->inNodes()) {
                     for (auto island_nh : slot_nh->inNodes()) {
                         GAPI_Assert(m_gim.metadata(island_nh).get<NodeKind>().k == NodeKind::ISLAND);
-                        deps.emplace(m_tasks.at(island_nh));
+                        producer_nhs.emplace(island_nh);
                     }
                 }
-
-                auto task = std::make_shared<Task>([actor](){actor->run();},
-                                                   std::vector<std::shared_ptr<Task>>{deps.begin(), deps.end()});
-                m_tasks.emplace(nh, task);
-                if (deps.empty()) {
-                    m_initial_tasks.push_back(task);
+                std::vector<std::shared_ptr<Task>> producers;
+                producers.reserve(producer_nhs.size());
+                for (auto producer_nh : producer_nhs) {
+                    producers.push_back(m_tasks_map.at(producer_nh));
                 }
+                auto task = m_task_manager.createTask(
+                        [actor](){actor->run();}, std::move(producers));
+                m_tasks_map.emplace(nh, task);
             }
             break;
 
@@ -384,7 +398,6 @@ cv::gimpl::GThreadedExecutor::GThreadedExecutor(const uint32_t num_threads,
     } // for(gim nodes)
 
     prepareForNewStream();
-    m_tp.start();
 }
 
 void cv::gimpl::GThreadedExecutor::run(cv::gimpl::GRuntimeArgs &&args) {
@@ -459,34 +472,28 @@ void cv::gimpl::GThreadedExecutor::run(cv::gimpl::GRuntimeArgs &&args) {
     for (auto it : ade::util::zip(ade::util::toRange(proto.inputs),
                                   ade::util::toRange(args.inObjs)))
     {
-        magazine::bindInArgExec(m_res, std::get<0>(it), std::get<1>(it));
+        magazine::bindInArgExec(m_state.mag, std::get<0>(it), std::get<1>(it));
     }
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
                                   ade::util::toRange(args.outObjs)))
     {
-        magazine::bindOutArgExec(m_res, std::get<0>(it), std::get<1>(it));
+        magazine::bindOutArgExec(m_state.mag, std::get<0>(it), std::get<1>(it));
     }
 
     // Reset internal data
     for (auto &sd : m_slots)
     {
         const auto& data = m_gm.metadata(sd.data_nh).get<Data>();
-        magazine::resetInternalData(m_res, data);
+        magazine::resetInternalData(m_state.mag, data);
     }
 
-    // NB: Reset completion state for tasks and schedule them
-    for (auto& it : m_tasks) { it.second->reset(); }
-    for (auto task : m_initial_tasks) {
-        m_tp.schedule([task](){ task->run(); });
-    }
-    // NB: Wait for the completion and verify for errors
-    m_tp.wait();
+    m_task_manager.scheduleAndWait(m_thread_pool);
     for (auto actor : m_actors) { actor->verify(); }
 
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
                                   ade::util::toRange(args.outObjs)))
     {
-        magazine::writeBackExec(m_res, std::get<0>(it), std::get<1>(it));
+        magazine::writeBackExec(m_state.mag, std::get<0>(it), std::get<1>(it));
     }
 }
 

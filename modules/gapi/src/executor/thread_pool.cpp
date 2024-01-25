@@ -9,49 +9,33 @@
 
 #include <opencv2/gapi/util/throw.hpp>
 
-void cv::gapi::own::WaitGroup::add() {
-    std::lock_guard<std::mutex> lk{m};
-    ++task_counter;
+cv::gapi::own::Latch::Latch(const uint64_t expected)
+    : m_expected(expected) {
 }
 
-void cv::gapi::own::WaitGroup::done() {
-    std::lock_guard<std::mutex> lk{m};
-    --task_counter;
-    if (task_counter == 0u) {
-        all_done.notify_one();
+void cv::gapi::own::Latch::count_down() {
+    std::lock_guard<std::mutex> lk{m_mutex};
+    --m_expected;
+    if (m_expected == 0) {
+        m_all_done.notify_all();
     }
 }
 
-void cv::gapi::own::WaitGroup::wait() {
-    std::unique_lock<std::mutex> lk{m};
-    while (task_counter != 0u) {
-        all_done.wait(lk);
+void cv::gapi::own::Latch::wait() {
+    std::unique_lock<std::mutex> lk{m_mutex};
+    while (m_expected != 0u) {
+        m_all_done.wait(lk);
     }
 }
 
-cv::gapi::own::ThreadPool::ThreadPool(const uint32_t num_workers)
-    : m_num_workers(num_workers) {
-}
-
-void cv::gapi::own::ThreadPool::start() {
-    for (uint32_t i = 0; i < m_num_workers; ++i) {
+cv::gapi::own::ThreadPool::ThreadPool(const uint32_t num_workers) {
+    m_workers.reserve(num_workers);
+    for (uint32_t i = 0; i < num_workers; ++i) {
         m_workers.emplace_back([this](){ worker(); });
     }
 }
 
-static thread_local cv::gapi::own::ThreadPool* current;
-
-cv::gapi::own::ThreadPool* cv::gapi::own::ThreadPool::get() {
-    if (!current) {
-        cv::util::throw_error(
-            std::logic_error("ThreadPool::get() must not be accessed"
-                             " from the main thread!"));
-    }
-    return current;
-}
-
 void cv::gapi::own::ThreadPool::worker() {
-    current = this;
     while (true) {
         cv::gapi::own::ThreadPool::Task task;
         m_queue.pop(task);
@@ -59,22 +43,17 @@ void cv::gapi::own::ThreadPool::worker() {
             break;
         }
         task();
-        m_wg.done();
     }
 }
 
-void cv::gapi::own::ThreadPool::schedule(cv::gapi::own::ThreadPool::Task task) {
-    m_wg.add();
+void cv::gapi::own::ThreadPool::schedule(cv::gapi::own::ThreadPool::Task&& task) {
+    GAPI_Assert(task);
     m_queue.push(std::move(task));
 };
 
-void cv::gapi::own::ThreadPool::wait() {
-    m_wg.wait();
-}
-
-void cv::gapi::own::ThreadPool::stop() {
-    wait();
-    for (uint32_t i = 0; i < m_num_workers; ++i) {
+void cv::gapi::own::ThreadPool::shutdown() {
+    for (size_t i = 0; i < m_workers.size(); ++i) {
+        // NB: Empty task - is an indicator for workers to stop their loop
         m_queue.push({});
     }
     for (auto& worker : m_workers) {
@@ -84,5 +63,5 @@ void cv::gapi::own::ThreadPool::stop() {
 }
 
 cv::gapi::own::ThreadPool::~ThreadPool() {
-    stop();
+    shutdown();
 }

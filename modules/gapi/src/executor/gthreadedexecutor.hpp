@@ -17,29 +17,25 @@
 namespace cv {
 namespace gimpl {
 
-class IslandActor {
+class Task;
+class TaskManager {
 public:
-    using Ptr = std::shared_ptr<IslandActor>;
-    IslandActor(const std::vector<RcDesc>          &in_objects,
-                const std::vector<RcDesc>          &out_objects,
-                std::shared_ptr<GIslandExecutable> isl_exec,
-                Mag                                &res,
-                std::mutex                         &m);
+    using F = std::function<void()>;
 
-    void run();
-    void verify();
-    std::shared_ptr<GIslandExecutable> exec() { return m_isl_exec; }
+    std::shared_ptr<Task> createTask(F &&f, std::vector<std::shared_ptr<Task>> &&producers);
+    void scheduleAndWait(cv::gapi::own::ThreadPool& tp);
 
 private:
-    std::vector<RcDesc>                m_in_objs;
-    std::vector<RcDesc>                m_out_objs;
-    std::shared_ptr<GIslandExecutable> m_isl_exec;
-    Mag                                &m_res;
-    std::exception_ptr                 m_e;
-    std::mutex                         &m_mutex; // Mag protection
+    std::vector<std::shared_ptr<Task>> m_all_tasks;
+    std::vector<std::shared_ptr<Task>> m_initial_tasks;
 };
 
-class Task;
+struct GraphState {
+    Mag mag;
+    std::mutex m;
+};
+
+class IslandActor;
 class GThreadedExecutor final: public GAbstractExecutor {
 public:
     class Input;
@@ -63,17 +59,63 @@ private:
 
     void initResource(const ade::NodeHandle &nh, const ade::NodeHandle &orig_nh);
 
-    Mag                       m_res;
-    std::vector<DataDesc>     m_slots;
-    cv::gapi::own::ThreadPool m_tp;
-    std::mutex                m_mutex;
-
-    std::vector<IslandActor::Ptr>      m_actors;
-    std::vector<std::shared_ptr<Task>> m_initial_tasks;
-    std::unordered_map< ade::NodeHandle
-                      , std::shared_ptr<Task>
-                      , ade::HandleHasher<ade::Node>> m_tasks;
+    GraphState                                m_state;
+    std::vector<DataDesc>                     m_slots;
+    cv::gapi::own::ThreadPool                 m_thread_pool;
+    TaskManager                               m_task_manager;
+    std::vector<std::shared_ptr<IslandActor>> m_actors;
 };
+
+class GThreadedExecutor::Input final: public GIslandExecutable::IInput
+{
+public:
+    Input(GraphState& state, const std::vector<RcDesc> &rcs);
+
+private:
+    virtual StreamMsg get() override;
+    virtual StreamMsg try_get() override { return get(); }
+
+private:
+    GraphState& m_state;
+};
+
+class GThreadedExecutor::Output final: public GIslandExecutable::IOutput
+{
+public:
+    Output(GraphState &state, const std::vector<RcDesc> &rcs);
+    void verify();
+
+private:
+    GRunArgP get(int idx) override;
+    void post(cv::GRunArgP&&, const std::exception_ptr& e) override;
+    void post(Exception&& ex) override;
+    void post(EndOfStream&&) override {};
+    void meta(const GRunArgP &out, const GRunArg::Meta &m) override;
+
+private:
+    GraphState& m_state;
+    std::unordered_map<const void*, int> m_out_idx;
+    std::exception_ptr m_eptr;
+};
+
+class IslandActor {
+public:
+    using Ptr = std::shared_ptr<IslandActor>;
+    IslandActor(const std::vector<RcDesc>          &in_objects,
+                const std::vector<RcDesc>          &out_objects,
+                std::shared_ptr<GIslandExecutable> isl_exec,
+                GraphState                         &state);
+
+    void run();
+    void verify();
+    std::shared_ptr<GIslandExecutable> exec() { return m_isl_exec; }
+
+private:
+    std::shared_ptr<GIslandExecutable> m_isl_exec;
+    GThreadedExecutor::Input           m_inputs;
+    GThreadedExecutor::Output          m_outputs;
+};
+
 
 } // namespace gimpl
 } // namespace cv

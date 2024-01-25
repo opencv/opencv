@@ -28,41 +28,37 @@ namespace cv {
 namespace gapi {
 namespace own {
 
-class WaitGroup {
+// NB: Only for tests
+class GAPI_EXPORTS Latch {
 public:
-    void add();
-    void done();
+    explicit Latch(const uint64_t expected);
+    Latch(const Latch&) = delete;
+
+    void count_down();
     void wait();
 
 private:
-    uint64_t                task_counter{0u};
-    std::mutex              m;
-    std::condition_variable all_done;
+    uint64_t                m_expected;
+    std::mutex              m_mutex;
+    std::condition_variable m_all_done;
 };
 
+// NB: Only for tests
 class GAPI_EXPORTS ThreadPool {
 public:
     explicit ThreadPool(const uint32_t num_workers);
     using Task = std::function<void()>;
 
-    // NB: To access thread pool from the task
-    static ThreadPool* get();
-
-    void start();
-    void schedule(Task task);
-    void wait();
-    void stop();
-
+    void schedule(Task&& task);
     ~ThreadPool();
 
 private:
+    void shutdown();
     void worker();
 
 private:
-    uint32_t                 m_num_workers;
     std::vector<std::thread> m_workers;
     QueueClass<Task>         m_queue;
-    WaitGroup                m_wg;
 };
 
 }}} // namespace cv::gapi::own
