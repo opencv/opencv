@@ -462,22 +462,78 @@ public:
 };
 
 
+// depth-only or RGB-only rendering should produce the same result as usual rendering
 TEST_P(RenderingTest, noArrays)
 {
     Mat depthOnly(height, width, ftype, zFar);
     Mat colorOnly(height, width, CV_MAKETYPE(ftype, 3), Scalar::all(0));
 
-    // cameraPose can also be double, checking it
-    triangleRasterize(verts, indices, colors, Matx44d(cameraPose), fovYradians, zNear, zFar,
+    triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
                       settings, depthOnly, cv::noArray());
-    triangleRasterize(verts, indices, colors, Matx44d(cameraPose), fovYradians, zNear, zFar,
+    triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
                       settings, cv::noArray(), colorOnly);
 
     Mat rgbDiff, depthDiff;
-    compareRGB(color_buf, colorOnly, rgbDiff, 1, 0.00134);
+    compareRGB(color_buf, colorOnly, rgbDiff, 0, 0);
     depth_buf.convertTo(depth_buf, CV_16U, depthScale);
     depthOnly.convertTo(depthOnly, CV_16U, depthScale);
     compareDepth(depth_buf, depthOnly, depthDiff, zFar, depthScale, 0, 0, 0);
+
+    // add --test_debug to output resulting images
+    if (debugLevel > 0)
+    {
+        std::string modelName   = printEnum(modelType);
+        std::string shadingName = printEnum(shadingType);
+        std::string cullingName = printEnum(cullingMode);
+        std::string suffix = cv::format("%s_%dx%d_Cull%s", modelName.c_str(), width, height, cullingName.c_str());
+
+        std::string outColorPath = "noarray_color_image_" + suffix + "_" + shadingName + ".png";
+        std::string outDepthPath = "noarray_depth_image_" + suffix + "_" + shadingName + ".png";
+
+        cvtColor(color_buf, color_buf, COLOR_RGB2BGR);
+        cvtColor(rgbDiff, rgbDiff, COLOR_RGB2BGR);
+        imwrite(outColorPath, color_buf * 255.f);
+        imwrite(outDepthPath, depth_buf);
+        imwrite("diff_" + outColorPath, rgbDiff * 255.f);
+        imwrite("diff_" + outDepthPath, depthDiff);
+    }
+}
+
+
+// passing the same parameters in float should give the same result
+TEST_P(RenderingTest, floatParams)
+{
+    Mat depth_buf2(height, width, ftype, zFar);
+    Mat color_buf2(height, width, CV_MAKETYPE(ftype, 3), Scalar::all(0));
+
+    // cameraPose can also be float, checking it
+    triangleRasterize(verts, indices, colors, Matx44f(cameraPose), (float)fovYradians, (float)zNear, (float)zFar,
+                      settings, depth_buf2, color_buf2);
+
+    Mat rgbDiff, depthDiff;
+    compareRGB(color_buf, color_buf2, rgbDiff, 1, 3.76e-05);
+    depth_buf.convertTo(depth_buf, CV_16U, depthScale);
+    depth_buf2.convertTo(depth_buf2, CV_16U, depthScale);
+    compareDepth(depth_buf, depth_buf2, depthDiff, zFar, depthScale, 113, 1, 0.00077);
+
+    // add --test_debug to output resulting images
+    if (debugLevel > 0)
+    {
+        std::string modelName   = printEnum(modelType);
+        std::string shadingName = printEnum(shadingType);
+        std::string cullingName = printEnum(cullingMode);
+        std::string suffix = cv::format("%s_%dx%d_Cull%s", modelName.c_str(), width, height, cullingName.c_str());
+
+        std::string outColorPath = "float_color_image_" + suffix + "_" + shadingName + ".png";
+        std::string outDepthPath = "float_depth_image_" + suffix + "_" + shadingName + ".png";
+
+        cvtColor(color_buf, color_buf, COLOR_RGB2BGR);
+        cvtColor(rgbDiff, rgbDiff, COLOR_RGB2BGR);
+        imwrite(outColorPath, color_buf * 255.f);
+        imwrite(outDepthPath, depth_buf);
+        imwrite("diff_" + outColorPath, rgbDiff * 255.f);
+        imwrite("diff_" + outDepthPath, depthDiff);
+    }
 }
 
 
@@ -495,16 +551,6 @@ TriangleCullingMode findSameCulling(ModelType modelType, TriangleShadingType sha
     }
 
     return sameCullingMode;
-}
-
-template<typename T>
-std::string printEnum(T v)
-{
-    std::string s;
-    std::stringstream ss;
-    v.PrintTo(&ss);
-    ss >> s;
-    return s;
 }
 
 TEST_P(RenderingTest, accuracy)
