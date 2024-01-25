@@ -23,26 +23,23 @@ import cv2 as cv
 
 
 class OpticalFlow(object):
-    def __init__(self, model, height, width, proto=None, raft=False):
+    def __init__(self, model, height, width, proto="", raft=False):
         self.raft = raft
-        if self.raft:
-            self.net = cv.dnn.readNet(model)
-        else:
-            self.net = cv.dnn.readNetFromCaffe(proto, model)
+        self.net = cv.dnn.readNet(model=model, config=proto)
         self.net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
         self.height = height
         self.width = width
 
     def compute_flow(self, first_img, second_img):
-        blob0 = cv.dnn.blobFromImage(first_img, size=(self.width, self.height))
-        blob1 = cv.dnn.blobFromImage(second_img, size=(self.width, self.height))
+        inp0 = cv.dnn.blobFromImage(first_img, size=(self.width, self.height))
+        inp1 = cv.dnn.blobFromImage(second_img, size=(self.width, self.height))
 
         if self.raft:
-            self.net.setInput(blob0, "0")
-            self.net.setInput(blob1, "1")
+            self.net.setInput(inp0, "0")
+            self.net.setInput(inp1, "1")
         else:
-            self.net.setInput(blob0, "img0")
-            self.net.setInput(blob1, "img1")
+            self.net.setInput(inp0, "img0")
+            self.net.setInput(inp1, "img1")
 
         flow = self.net.forward()
         output = self.motion_to_color(flow)
@@ -62,7 +59,7 @@ class OpticalFlow(object):
         rad = rad[..., np.newaxis] / maxrad
         a = np.arctan2(-fy / maxrad, -fx / maxrad) / np.pi
         fk = (a + 1) / 2.0 * (ncols - 1)
-        k0 = fk.astype(int)
+        k0 = fk.astype(np.int32)
         k1 = (k0 + 1) % ncols
         f = fk[..., np.newaxis] - k0[..., np.newaxis]
 
@@ -82,7 +79,7 @@ if __name__ == '__main__':
     parser.add_argument('--width', default=448, type=int, help='Input width')
     parser.add_argument('--raft', '-r', action='store_true', help='Model to estimate optical flow. (RAFT or FlowNet)')
     parser.add_argument('--proto', '-p', help='Path to prototxt.')
-    parser.add_argument('--model', '-m', required=True, help='Path to caffemodel.')
+    parser.add_argument('--model', '-m', required=True, help='Path to model.')
     args, _ = parser.parse_known_args()
 
     if not os.path.isfile(args.model):
@@ -102,7 +99,7 @@ if __name__ == '__main__':
     var['ADAPTED_HEIGHT'] = int(np.ceil(args.height/divisor) * divisor)
     var['SCALE_WIDTH'] = args.width / float(var['ADAPTED_WIDTH'])
     var['SCALE_HEIGHT'] = args.height / float(var['ADAPTED_HEIGHT'])
-
+    
     if not args.raft:
         config = ''
         proto = open(args.proto).readlines()
@@ -112,8 +109,10 @@ if __name__ == '__main__':
                 line = line.replace(tag, str(value))
             config += line
 
-        caffemodel = open(args.model, 'rb').read()
-        opt_flow = OpticalFlow(caffemodel, var['ADAPTED_HEIGHT'], var['ADAPTED_WIDTH'], bytearray(config.encode()))
+        with open('config_run.prototxt', 'w') as f:
+            f.writelines(config)
+
+        opt_flow = OpticalFlow(args.model, var['ADAPTED_HEIGHT'], var['ADAPTED_WIDTH'], 'config_run.prototxt')
     else:
         opt_flow = OpticalFlow(args.model, 360, 480, raft=True)
 
