@@ -186,8 +186,8 @@ public class OpenCVTestCase extends TestCase {
         gray0_64f_1d.release();
         rgba0.release();
         rgba128.release();
-        rgbLena.release();
-        grayChess.release();
+        // rgbLena.release();
+        // grayChess.release();
         gray255_32f_3d.release();
         v1.release();
         v2.release();
