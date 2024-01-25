@@ -52,6 +52,23 @@ if(NOT OPENCV_INITIAL_PASS)
   endforeach()
   message(STATUS "Processing WORLD modules... DONE")
   set(CMAKE_CURRENT_SOURCE_DIR "${OPENCV_MODULE_opencv_world_LOCATION}")
+
+  if(BUILD_opencv_cvv AND OPENCV_MODULE_opencv_cvv_IS_PART_OF_WORLD)
+    # Qt
+    set(CVV_QT_MODULES Core Gui Widgets)
+    if(QT_VERSION_MAJOR EQUAL 6)
+      list(APPEND CVV_QT_MODULES Core5Compat)
+    endif()
+
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${CVV_QT_MODULES})
+    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+    set_property(GLOBAL PROPERTY AUTOGEN_TARGETS_FOLDER AutoMoc)
+    set_target_properties(Qt5::moc PROPERTIES IMPORTED_LOCATION "${QT_MOC_EXECUTABLE}")
+
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_INCLUDE_CURRENT_DIR ON)
+    cmake_policy(SET CMP0071 NEW)
+  endif()
 endif()
 
 ocv_add_module(world opencv_core)
