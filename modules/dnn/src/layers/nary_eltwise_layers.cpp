@@ -909,18 +909,6 @@ public:
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
                                        std::vector<Ptr<BackendWrapper> > &outputs) CV_OVERRIDE
     {
-        std::vector<Ptr<VkComBackendWrapper>> inputWrappers;
-        std::vector<MatShape> inputShapes;
-        std::transform(inputs.begin(), inputs.end(), std::back_inserter(inputWrappers), [] (const Ptr<BackendWrapper>& w) { return w.dynamicCast<VkComBackendWrapper>(); });
-        for (const auto &ptr: inputWrappers) {
-            CV_Assert(ptr);
-        }
-        std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(inputShapes), [] (const Ptr<VkComBackendWrapper>& w) { return shape(*(w->getMat())); });
-        auto outputWrapper = outputs[0].dynamicCast<VkComBackendWrapper>();
-        CV_Assert(outputWrapper);
-        auto outputShape = shape(*(outputWrapper->getMat()));
-        std::vector<Mat> vkBlobs;
-
         Ptr<vkcom::OpBase> op = makePtr<vkcom::OpNary>((vkcom::OpNary::OPERATION) this->op, helper.ninputs, helper.max_ndims, helper.shapes, helper.steps);
         return Ptr<BackendNode>(makePtr<VkComBackendNode>(inputs, op, outputs));
     }
