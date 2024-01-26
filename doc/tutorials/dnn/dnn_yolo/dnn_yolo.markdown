@@ -55,16 +55,14 @@ $ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[
 Running pre-trained YOLO model in OpenCV
 ----------------------------------------
 
-Deploying pre-trained models is a common task in machine learning, particularly when working with hardware that does not support certain frameworks like PyTorch. This guide provides a comprehensive overview of exporting pre-trained YOLO family models from PyTorch and deploying them using OpenCV's runtime framework. For demonstration purposes, we will focus on the [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main/LICENSE) model, but the methodology applies to other supported<sup>*</sup> models.
+Deploying pre-trained models is a common task in machine learning, particularly when working with hardware that does not support certain frameworks like PyTorch. This guide provides a comprehensive overview of exporting pre-trained YOLO family models from PyTorch and deploying them using OpenCV's runtime framework. For demonstration purposes, we will focus on the [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main) model, but the methodology applies to other supported<sup>*</sup> models.
 
-<sup>*</sup> Currently, OpenCV supports the following YOLO models: YOLOX, YOLOv8, YOLOv7, YOLOv6, YOLOv5, and YOLOv4. This support includes pre and post-processing routines specific to these models. While other models can be used with OpenCV, they may require custom implementation of these routines.
+<sup>*</sup> Currently, OpenCV supports the following YOLO models: [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main), [YoloNas](https://github.com/Deci-AI/super-gradients/tree/master), [YOLOv8](https://github.com/ultralytics/ultralytics/tree/main), [YOLOv7](https://github.com/WongKinYiu/yolov7/tree/main), [YOLOv6](https://github.com/meituan/YOLOv6/blob/main), [YOLOv5](https://github.com/ultralytics/yolov5), and [YOLOv4](https://github.com/Tianxiaomo/pytorch-YOLOv4). This support includes pre and post-processing routines specific to these models. While other older models of yolo are also supported by OpenCV, they are out of the scope of this tutorial.
 
-<!-- Now imagine that you have successuflly trained your yolox (in this case) model and would like to export and run it somewhere else (other than PyTorch). There are a couple of things you need to know before moving forward, lets discuss them. -->
 
-Assuming that we have successfuly trained YOLOX model, the subsequent step involves exporting and running this model in an environment other than PyTorch. There are several critical considerations to address before proceeding with this process. Let's delve into these aspects.
+Assuming that we have successfuly trained YOLOX model, the subsequent step involves exporting and running this model in OpenCV environment. There are several critical considerations to address before proceeding with this process. Let's delve into these aspects.
 
 ### YOLO's Preproccessing & Output
-<!-- Let's understand what kind of input and outputs are produced by yolo family detectors. YOLO detectors typically have varying input sizes based on the model scale (just like any DNN network): -->
 Understanding the nature of inputs and outputs associated with YOLO family detectors is pivotal. These detectors, akin to most Deep Neural Networks (DNN), typically exhibit variation in input sizes contingent upon the model's scale.
 
 | Model Scale  | Input Size   |
@@ -74,10 +72,6 @@ Understanding the nature of inputs and outputs associated with YOLO family detec
 | Large Models <sup>[3](https://github.com/meituan/YOLOv6/tree/main#benchmark)</sup>| 1280x1280    |
 
 This table provides a quick reference to understand the different input dimensions commonly used in various YOLO models inputs. These are standart input shapes. Make sure you use input size that you trained model with, if it is differed from from the size mentioned in the table.
-
-<!-- Next piece of information we need is the type of image preprocessing. Although preprocessing step for yolo detectors is same,  there are minor differences that need to be considered (otherwise the performance will be hindered). Specifically, we need to know `resize type` and `padding value` after reisze operation. [Yolox uses](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/yolox/data/data_augment.py#L142) `LetterBox` resize type and pad value `114.0`. Make sure that match these two parameter and normalization constants match for the model you are expoerting. -->
-
-<!-- The output of the model is a tensor of size [BxNxC+5] or [BxNxC+4], where B stand for batch size, N for number of anchors and C for number of classes (80 classes if model is trained on COCO dataset). The last 5, stands for obj, conf cx, cy, w, h, where obj - objectness score. `yolov8` as shape of [BxNxC+4], where no explict objectness score for object, so the object score is direcly class score. For `yolox` model only, you also need to add anchor points to scale predictions back to image domain (will bake in this operation in ONNX graph in this case, we will see later how to do that).- -->
 
 The next critical element in the process involves understanding the specifics of image preprocessing for YOLO detectors. While the fundamental preprocessing approach remains consistent across the YOLO family, there are subtle yet crucial differences that must be accounted for to avoid any degradation in performance. Key among these are the `resize type` and the `padding value` applied post-resize. For instance, the [YOLOX model](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/yolox/data/data_augment.py#L142) utilizes a `LetterBox` resize method and a padding value of `114.0`. It is imperative to ensure that these parameters, along with the normalization constants, are appropriately matched to the model being exported.
 
@@ -128,10 +122,10 @@ Below we demonstared the minimal version of the export script (which could be us
     onnx.save(model_simp, args.output_name)
 @endcode
 
-### Running ONNX Graph in OpenCV
-Once we have our ONNX graph of the model, we just need to run it in opencv. It is pretty simple, single CLI command with parameters that define your preporocessing values. Before running the command make sure that you have:
+### Running Yolo ONNX detector with OpenCV Sample
+Once we have our ONNX graph of the model, we just simply can run with OpenCV's sample. To that we need to make sure:
 
-1. OpenCV is built on your platform.
+1. OpenCV is build with -DBUILD_EXAMLES=ON flag.
 2. Navigate to the OpenCV's `build` directory
 3. Run the following command:
 

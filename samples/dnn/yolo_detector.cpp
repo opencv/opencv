@@ -116,24 +116,36 @@ void yoloPostProcessing(
         cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
     }
 
-    // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
+    if (test_name == "yolonas"){
+        // outs contains 2 elemets of shape [1, 8400, 80] and [1, 8400, 4]. Concat them to get [1, 8400, 84]
+        Mat concat_out;
+        // squeeze the first dimension
+        outs[0] = outs[0].reshape(1, outs[0].size[1]);
+        outs[1] = outs[1].reshape(1, outs[1].size[1]);
+        cv::hconcat(outs[1], outs[0], concat_out);
+        outs[0] = concat_out;
+        // remove the second element
+        outs.pop_back();
+        // unsqueeze the first dimension
+        outs[0] = outs[0].reshape(0, std::vector<int>{1, 8400, 84});
+    }
+
     for (auto preds : outs){
 
         preds = preds.reshape(1, preds.size[1]); // [1, 8400, 85] -> [8400, 85]
-
         for (int i = 0; i < preds.rows; ++i)
         {
-            // filter out non objects
-            float obj_conf = (test_name != "yolov8") ? preds.at<float>(i, 4) : 1.0f;
+            // filter out non object
+            float obj_conf = (test_name == "yolov8" || test_name == "yolonas") ? 1.0f : preds.at<float>(i, 4) ;
             if (obj_conf < conf_threshold)
                 continue;
 
-            Mat scores = preds.row(i).colRange((test_name != "yolov8") ? 5 : 4, preds.cols);
+            Mat scores = preds.row(i).colRange((test_name == "yolov8" || test_name == "yolonas") ? 4 : 5, preds.cols);
             double conf;
             Point maxLoc;
             minMaxLoc(scores, 0, &conf, 0, &maxLoc);
 
-            conf = (test_name != "yolov8") ? conf * obj_conf : conf;
+            conf = (test_name == "yolov8" || test_name == "yolonas") ? conf : conf * obj_conf;
             if (conf < conf_threshold)
                 continue;
 
@@ -145,8 +157,12 @@ void yoloPostProcessing(
             double h = det[3];
 
             // [x1, y1, x2, y2]
-            boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
-                                    cx + 0.5 * w, cy + 0.5 * h));
+            if (test_name == "yolonas"){
+                boxes.push_back(Rect2d(cx, cy, w, h));
+            } else {
+                boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
+                                        cx + 0.5 * w, cy + 0.5 * h));
+            }
             classIds.push_back(maxLoc.x);
             confidences.push_back(conf);
         }
