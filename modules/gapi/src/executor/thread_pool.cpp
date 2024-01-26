@@ -31,7 +31,8 @@ void cv::gapi::own::Latch::wait() {
 cv::gapi::own::ThreadPool::ThreadPool(const uint32_t num_workers) {
     m_workers.reserve(num_workers);
     for (uint32_t i = 0; i < num_workers; ++i) {
-        m_workers.emplace_back([this](){ worker(); });
+        std::thread worker_th([this](){ worker(); });
+        m_workers.push_back(std::move(worker_th));
     }
 }
 
@@ -53,7 +54,7 @@ void cv::gapi::own::ThreadPool::schedule(cv::gapi::own::ThreadPool::Task&& task)
 
 void cv::gapi::own::ThreadPool::shutdown() {
     for (size_t i = 0; i < m_workers.size(); ++i) {
-        // NB: Empty task - is an indicator for workers to stop their loop
+        // NB: Empty task - is an indicator for workers to stop their loops
         m_queue.push({});
     }
     for (auto& worker : m_workers) {
