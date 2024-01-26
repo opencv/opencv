@@ -9,61 +9,40 @@ YOLO DNNs  {#tutorial_dnn_yolo}
 |    |    |
 | -: | :- |
 | Original author | Alessandro de Oliveira Faria |
-| Compatibility | OpenCV >= 3.3.1 |
-
-Introduction
-------------
-
-In this text you will learn how to use opencv_dnn module using yolo_object_detection (Sample of using OpenCV dnn module in real time with device capture, video and image).
-
-We will demonstrate results of this example on the following picture.
-![Picture example](images/yolo.jpg)
-
-Examples
---------
-
-VIDEO DEMO:
-@youtube{NHtRlndE2cg}
-
-Source Code
------------
-
-Use a universal sample for object detection models written
-[in C++](https://github.com/opencv/opencv/blob/4.x/samples/dnn/object_detection.cpp) and
-[in Python](https://github.com/opencv/opencv/blob/4.x/samples/dnn/object_detection.py) languages
-
-Usage examples
---------------
-
-Execute in webcam:
-
-@code{.bash}
-
-$ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[PATH-TO-DARKNET]/yolo.weights --classes=object_detection_classes_pascal_voc.txt --width=416 --height=416 --scale=0.00392 --rgb
-
-@endcode
-
-Execute with image or video file:
-
-@code{.bash}
-
-$ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[PATH-TO-DARKNET]/yolo.weights --classes=object_detection_classes_pascal_voc.txt --width=416 --height=416 --scale=0.00392 --input=[PATH-TO-IMAGE-OR-VIDEO-FILE] --rgb
-
-@endcode
+| Extended by     | Abduragim Shtanchaev |
+| Compatibility   | OpenCV >= 4.9.0 |
 
 
 Running pre-trained YOLO model in OpenCV
 ----------------------------------------
 
-Deploying pre-trained models is a common task in machine learning, particularly when working with hardware that does not support certain frameworks like PyTorch. This guide provides a comprehensive overview of exporting pre-trained YOLO family models from PyTorch and deploying them using OpenCV's runtime framework. For demonstration purposes, we will focus on the [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main) model, but the methodology applies to other supported<sup>*</sup> models.
+Deploying pre-trained models is a common task in machine learning, particularly when working with
+hardware that does not support certain frameworks like PyTorch. This guide provides a comprehensive
+overview of exporting pre-trained YOLO family models from PyTorch and deploying them using OpenCV's
+DNN framework. For demonstration purposes, we will focus on the [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main)
+model, but the methodology applies to other supported models.
 
-<sup>*</sup> Currently, OpenCV supports the following YOLO models: [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main), [YoloNas](https://github.com/Deci-AI/super-gradients/tree/master), [YOLOv8](https://github.com/ultralytics/ultralytics/tree/main), [YOLOv7](https://github.com/WongKinYiu/yolov7/tree/main), [YOLOv6](https://github.com/meituan/YOLOv6/blob/main), [YOLOv5](https://github.com/ultralytics/yolov5), and [YOLOv4](https://github.com/Tianxiaomo/pytorch-YOLOv4). This support includes pre and post-processing routines specific to these models. While other older models of yolo are also supported by OpenCV, they are out of the scope of this tutorial.
+@Note Currently, OpenCV supports the following YOLO models:
+- [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main),
+- [YoloNas](https://github.com/Deci-AI/super-gradients/tree/master),
+- [YOLOv8](https://github.com/ultralytics/ultralytics/tree/main),
+- [YOLOv7](https://github.com/WongKinYiu/yolov7/tree/main),
+- [YOLOv6](https://github.com/meituan/YOLOv6/blob/main),
+- [YOLOv5](https://github.com/ultralytics/yolov5),
+- [YOLOv4](https://github.com/Tianxiaomo/pytorch-YOLOv4).
+This support includes pre and post-processing routines specific to these models. While other older
+version of YOLO are also supported by OpenCV in Darknet format, they are out of the scope of this tutorial.
 
 
-Assuming that we have successfuly trained YOLOX model, the subsequent step involves exporting and running this model in OpenCV environment. There are several critical considerations to address before proceeding with this process. Let's delve into these aspects.
+Assuming that we have successfully trained YOLOX model, the subsequent step involves exporting and
+running this model with OpenCV. There are several critical considerations to address before
+proceeding with this process. Let's delve into these aspects.
 
-### YOLO's Preproccessing & Output
-Understanding the nature of inputs and outputs associated with YOLO family detectors is pivotal. These detectors, akin to most Deep Neural Networks (DNN), typically exhibit variation in input sizes contingent upon the model's scale.
+### YOLO's Pre-proccessing & Output
+
+Understanding the nature of inputs and outputs associated with YOLO family detectors is pivotal.
+These detectors, akin to most Deep Neural Networks (DNN), typically exhibit variation in input
+sizes contingent upon the model's scale.
 
 | Model Scale  | Input Size   |
 |--------------|--------------|
@@ -71,15 +50,36 @@ Understanding the nature of inputs and outputs associated with YOLO family detec
 | Midsize Models <sup>[2](https://github.com/Megvii-BaseDetection/YOLOX/tree/main#standard-models)</sup>| 640x640    |
 | Large Models <sup>[3](https://github.com/meituan/YOLOv6/tree/main#benchmark)</sup>| 1280x1280    |
 
-This table provides a quick reference to understand the different input dimensions commonly used in various YOLO models inputs. These are standart input shapes. Make sure you use input size that you trained model with, if it is differed from from the size mentioned in the table.
+This table provides a quick reference to understand the different input dimensions commonly used in
+various YOLO models inputs. These are standard input shapes. Make sure you use input size that you
+trained model with, if it is differed from from the size mentioned in the table.
 
-The next critical element in the process involves understanding the specifics of image preprocessing for YOLO detectors. While the fundamental preprocessing approach remains consistent across the YOLO family, there are subtle yet crucial differences that must be accounted for to avoid any degradation in performance. Key among these are the `resize type` and the `padding value` applied post-resize. For instance, the [YOLOX model](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/yolox/data/data_augment.py#L142) utilizes a `LetterBox` resize method and a padding value of `114.0`. It is imperative to ensure that these parameters, along with the normalization constants, are appropriately matched to the model being exported.
+The next critical element in the process involves understanding the specifics of image pre-processing
+for YOLO detectors. While the fundamental pre-processing approach remains consistent across the YOLO
+family, there are subtle yet crucial differences that must be accounted for to avoid any degradation
+in performance. Key among these are the `resize type` and the `padding value` applied post-resize.
+For instance, the [YOLOX model](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/yolox/data/data_augment.py#L142)
+utilizes a `LetterBox` resize method and a padding value of `114.0`. It is imperative to ensure that
+these parameters, along with the normalization constants, are appropriately matched to the model being
+exported.
 
-Regarding the model's output, it typically takes the form of a tensor with dimensions [BxNxC+5] or [BxNxC+4], where 'B' represents the batch size, 'N' denotes the number of anchors, and 'C' signifies the number of classes (for instance, 80 classes if the model is trained on the COCO dataset). The additional 5 in the former tensor structure corresponds to the objectness score (obj), confidence score (conf), and the bounding box coordinates (cx, cy, w, h). Notably, the `yolov8` model's output is shaped as [BxNxC+4], where there is no explicit objectness score, and the object score is directly inferred from the class score. For the `yolox` model, specifically, it is also necessary to incorporate anchor points to rescale predictions back to the image domain. This step will be integrated into the ONNX graph, a process that we will detail further in the subsequent sections.
+Regarding the model's output, it typically takes the form of a tensor with dimensions [BxNxC+5] or
+[BxNxC+4], where 'B' represents the batch size, 'N' denotes the number of anchors, and 'C' signifies
+the number of classes (for instance, 80 classes if the model is trained on the COCO dataset).
+The additional 5 in the former tensor structure corresponds to the objectness score (obj), confidence
+score (conf), and the bounding box coordinates (cx, cy, w, h). Notably, the YOLOv8 model's output
+is shaped as [BxNxC+4], where there is no explicit objectness score, and the object score is directly
+inferred from the class score. For the YOLOX model, specifically, it is also necessary to incorporate
+anchor points to rescale predictions back to the image domain. This step will be integrated into
+the ONNX graph, a process that we will detail further in the subsequent sections.
 
 
 ### PyTorch Model Export
-Now that we know know the parameters of the preprecessing we can go on and export the model from Pytorch to ONNX graph. Since in this tutorial we are using Yolox as our sample model, lets use its export for demonstration purposes (the proccess is  identical for the rest of the yolo detectors). To exporting yolox we can just use [export script](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/tools/export_onnx.py). Particularly we need following commands:
+
+Now that we know know the parameters of the pre-precessing we can go on and export the model from
+Pytorch to ONNX graph. Since in this tutorial we are using YOLOX as our sample model, lets use its
+export for demonstration purposes (the process is  identical for the rest of the YOLO detectors).
+To exporting YOLOX we can just use [export script](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/tools/export_onnx.py). Particularly we need following commands:
 
 @code{.bash}
 git clone https://github.com/Megvii-BaseDetection/YOLOX.git
@@ -88,10 +88,12 @@ wget https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yo
 python3 -m tools.export_onnx --output-name yolox_s.onnx -n yolox-s -c yolox_s.pth --decode_in_inference
 @endcode
 
-**NOTE:** Here `--decode_in_inference` is to incude anchor box creation in the ONNX graph itself. It sets [this value](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/yolox/models/yolo_head.py#L210C16-L210C39) to `True`,
-which subsequently includes anchor generation function.
+**NOTE:** Here `--decode_in_inference` is to include anchor box creation in the ONNX graph itself.
+It sets [this value](https://github.com/Megvii-BaseDetection/YOLOX/blob/ac58e0a5e68e57454b7b9ac822aced493b553c53/yolox/models/yolo_head.py#L210C16-L210C39)
+to `True`, which subsequently includes anchor generation function.
 
-Below we demonstared the minimal version of the export script (which could be used for models other than yolox) in case it is needed. However, usually each yolo repository has predefined export script.
+Below we demonstrated the minimal version of the export script (which could be used for models other
+than YOLOX) in case it is needed. However, usually each YOLO repository has predefined export script.
 
 @code{.py}
     import onnx
@@ -123,6 +125,7 @@ Below we demonstared the minimal version of the export script (which could be us
 @endcode
 
 ### Running Yolo ONNX detector with OpenCV Sample
+
 Once we have our ONNX graph of the model, we just simply can run with OpenCV's sample. To that we need to make sure:
 
 1. OpenCV is build with -DBUILD_EXAMLES=ON flag.
@@ -143,6 +146,9 @@ Once we have our ONNX graph of the model, we just simply can run with OpenCV's s
                                 --target=<target_computation_device>
 @endcode
 
+VIDEO DEMO:
+@youtube{NHtRlndE2cg}
+
 - --input: File path to your input image or video. If omitted, it will capture frames from a camera.
 - --classes: File path to a text file containing class names for object detection.
 - --thr: Confidence threshold for detection (e.g., 0.5).
@@ -150,17 +156,20 @@ Once we have our ONNX graph of the model, we just simply can run with OpenCV's s
 - --mean: Mean normalization value (e.g., 0.0 for no mean normalization).
 - --scale: Scale factor for input normalization (e.g., 1.0).
 - --yolo: YOLO model version (e.g., YOLOv3, YOLOv4, etc.).
-- --padvalue: Padding value used in preprocessing (e.g., 114.0).
+- --padvalue: Padding value used in pre-processing (e.g., 114.0).
 - --paddingmode: Method for handling image resizing and padding. Options: 0 (resize without extra processing), 1 (crop after resize), 2 (resize with aspect ratio preservation).
 - --backend: Selection of computation backend (0 for automatic, 1 for Halide, 2 for OpenVINO, etc.).
 - --target: Selection of target computation device (0 for CPU, 1 for OpenCL, etc.).
-- --device: Camera device number (0 for default camera). If --input is not provided camera with index 0 will used by default.
+- --device: Camera device number (0 for default camera). If `--input` is not provided camera with index 0 will used by default.
 
-Here `mean`, `scale`, `padvalue`, `paddingmode` should exactly match those that we dicussed in preprocessing section in oder for the model to match result in PyTorch
+Here `mean`, `scale`, `padvalue`, `paddingmode` should exactly match those that we discussed
+in pre-processing section in order for the model to match result in PyTorch
 
 ### Building a Custom Pipeline
 
-Sometimes there is a need to make some custom adjustments in the inference pipeline. With OpenCV's framework this is also quite easy to achieve. Below we will outline simple starter pipeline that does the same thing as CLI cammand. You can adjust it according to your needs.
+Sometimes there is a need to make some custom adjustments in the inference pipeline. With OpenCV DNN
+module this is also quite easy to achieve. Below we will outline simple starter pipeline that does
+the same thing as CLI command. You can adjust it according to your needs.
 
 - Import required libraries
 
@@ -182,14 +191,12 @@ Sometimes there is a need to make some custom adjustments in the inference pipel
 @snippet samples/dnn/yolo_detector.cpp forward
 
 
-- Post-Processessing
+- Post-Processing
 
-For post-procssing of the model output we will need to use function [`yoloPostProcess`](https://github.com/opencv/opencv/blob/ef8a5eb6207925e8f3055a82e90dbd9b8d10f3e3/modules/dnn/test/test_onnx_importer.cpp#L2650).
+For post-processing of the model output we will need to use function `yoloPostProcess`.
 
 @snippet samples/dnn/yolo_detector.cpp postprocess
 
 - Draw predicted boxes
 
 @snippet samples/dnn/yolo_detector.cpp draw_boxes
-
-Questions and suggestions email to: Alessandro de Oliveira Faria cabelo@opensuse.org or OpenCV Team.
