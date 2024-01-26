@@ -32,7 +32,9 @@ namespace own {
 class GAPI_EXPORTS Latch {
 public:
     explicit Latch(const uint64_t expected);
+
     Latch(const Latch&) = delete;
+    Latch& operator=(const Latch&) = delete;
 
     void count_down();
     void wait();
@@ -46,8 +48,11 @@ private:
 // NB: Only for tests
 class GAPI_EXPORTS ThreadPool {
 public:
-    explicit ThreadPool(const uint32_t num_workers);
     using Task = std::function<void()>;
+    explicit ThreadPool(const uint32_t num_workers);
+
+    ThreadPool(const ThreadPool&) = delete;
+    ThreadPool& operator=(const ThreadPool&) = delete;
 
     void schedule(Task&& task);
     ~ThreadPool();
