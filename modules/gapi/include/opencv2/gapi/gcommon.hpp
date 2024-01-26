@@ -11,7 +11,8 @@
 #include <functional>   // std::hash
 #include <vector>       // std::vector
 #include <type_traits>  // decay
-#include <thread>       // hardware_concurrency
+
+#include <opencv2/core/utility.hpp>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 
@@ -272,7 +273,8 @@ struct graph_dump_path
  */
 struct use_threaded_executor
 {
-    explicit use_threaded_executor(uint32_t nthreads = std::thread::hardware_concurrency())
+    explicit use_threaded_executor(
+            uint32_t nthreads = static_cast<uint32_t>(cv::getNumThreads()))
         : num_threads(nthreads) {
     }
     uint32_t num_threads;
