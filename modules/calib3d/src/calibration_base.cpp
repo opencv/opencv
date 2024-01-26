@@ -1617,9 +1617,6 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _dis
                                       (double)((inner.y - cy0)*s + cy),
                                       (double)(inner.width*s),
                                       (double)(inner.height*s));
-            Rect r(cvCeil(inner.x), cvCeil(inner.y), cvFloor(inner.width), cvFloor(inner.height));
-            r &= Rect(0, 0, newImgSize.width, newImgSize.height);
-            *validPixROI = r;
         }
     }
     else
@@ -1649,10 +1646,14 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _dis
         if( validPixROI )
         {
             getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), M, imgSize, inner, outer );
-            Rect r = inner;
-            r &= Rect(0, 0, newImgSize.width, newImgSize.height);
-            *validPixROI = r;
         }
+    }
+    if( validPixROI )
+    {
+        Rect r(cvFloor(inner.x), cvFloor(inner.y), cvCeil(inner.x+inner.width)-cvFloor(inner.x)+1,
+               cvCeil(inner.y+inner.height)-cvFloor(inner.y)+1);
+        r &= Rect(0, 0, newImgSize.width, newImgSize.height);
+        *validPixROI = r;
     }
     M.convertTo(M, cameraMatrix.type());
 
