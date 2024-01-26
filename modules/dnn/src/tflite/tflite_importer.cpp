@@ -101,7 +101,7 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
         dtype = CV_32S;
         break;
     case TensorType_FLOAT16:
-        dtype = CV_16S;
+        dtype = CV_16F;
         break;
     case TensorType_INT8:
         dtype = CV_8S;
@@ -227,7 +227,7 @@ void TFLiteImporter::populateNet()
                 if (!data.empty()) {
                     // Dequantize a buffer
                     Mat dataFP32;
-                    convertFp16(data, dataFP32);
+                    data.convertTo(dataFP32, CV_32F);
                     allTensors[op_outputs->Get(0)] = dataFP32;
                     continue;
                 }

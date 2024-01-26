@@ -2443,7 +2443,7 @@ void ONNXImporter::parseCast(LayerParams& layerParams, const opencv_onnx::NodePr
             case opencv_onnx::TensorProto_DataType_FLOAT:   type = CV_32F; break;
             case opencv_onnx::TensorProto_DataType_UINT8:   type = CV_8U; break;
             case opencv_onnx::TensorProto_DataType_UINT16:  type = CV_16U; break;
-            case opencv_onnx::TensorProto_DataType_FLOAT16: type = CV_16S; break;
+            case opencv_onnx::TensorProto_DataType_FLOAT16: type = CV_16F; break;
             case opencv_onnx::TensorProto_DataType_INT8:
             case opencv_onnx::TensorProto_DataType_INT16:
             case opencv_onnx::TensorProto_DataType_INT32:
