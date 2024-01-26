@@ -119,7 +119,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -154,7 +154,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inputs_arr.depth() == CV_16S);
+        bool use_half = (inputs_arr.depth() == CV_16F);
         inputs_arr.getUMatVector(inputs);
         outputs_arr.getUMatVector(outputs);
 
@@ -192,9 +192,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             }
 
             if (use_half) {
-                convertFp16(A, A_fp32);
-                convertFp16(B, B_fp32);
-                convertFp16(C, C_fp32);
+                A.convertTo(A_fp32, CV_32F);
+                B.convertTo(B_fp32, CV_32F);
+                C.convertTo(C_fp32, CV_32F);
             } else {
                 A_fp32 = A;
                 B_fp32 = B;
@@ -203,9 +203,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
             cv::gemm(A_fp32, B_fp32, 1.f, noArray(), 0.f, C_fp32);
             if (use_half) {
-                convertFp16(A_fp32, A);
-                convertFp16(B_fp32, B);
-                convertFp16(C_fp32, C);
+                A_fp32.convertTo(A, CV_16F);
+                B_fp32.convertTo(B, CV_16F);
+                C_fp32.convertTo(C, CV_16F);
             }
         }
         return true;
