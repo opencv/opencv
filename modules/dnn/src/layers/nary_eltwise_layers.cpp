@@ -97,6 +97,74 @@ public:
             orig_steps.push_back(_step);
         }
     }
+
+    // use FP32 as default type in finalized() function
+    template <typename T>
+    bool prepare_for_broadcast_op()
+    {
+        int i, j, k;
+        std::vector<size_t> elemsize(this->all_ndims.size(), sizeof(T));
+
+        // step 1.
+        // * make all inputs and the output max_ndims-dimensional.
+        // ** prepend dimension 1 to the mat of less dims
+        // * compute proper step's
+        for (i = this->max_ndims-1; i >= 0; i--) {
+            for (k = 0; k < this->narrays; k++) {
+                j = this->all_ndims[k] - (this->max_ndims - i);
+                int sz_i = j >= 0 ? this->orig_shapes[k][j] : 1;
+                size_t st_i = j >= 0 && this->orig_steps[k][j] > 0 ? this->orig_steps[k][j] :
+                    i == this->max_ndims-1 ? elemsize[k] : this->steps[k][i+1]*this->shapes[k][i+1];
+                assert(st_i % elemsize[k] == 0);
+                this->shapes[k][i] = sz_i;
+                this->steps[k][i] = st_i;
+                if (this->shapes[k][i] == 0)
+                    return false;
+            }
+        }
+
+        // step 3. Let's do the flattening first,
+        // since we'd need proper values of steps to check continuity.
+        // this loop is probably the most tricky part
+        // in the whole implementation of broadcasting.
+        j = this->max_ndims-1;
+        for (i = j - 1; i >= 0; i--) {
+            bool all_contiguous = true, all_scalars = true, all_consistent = true;
+            for(k = 0; k < this->narrays; k++) {
+                size_t st = this->steps[k][j]*this->shapes[k][j];
+                bool prev_scalar = this->shapes[k][j] == 1;
+                bool scalar = this->shapes[k][i] == 1;
+                all_contiguous = all_contiguous && (st == this->steps[k][i]);
+                all_scalars = all_scalars && scalar;
+                all_consistent = all_consistent && (scalar == prev_scalar);
+            }
+            if (all_contiguous && (all_consistent || all_scalars)) {
+                for(k = 0; k < this->narrays; k++)
+                    this->shapes[k][j] *= this->shapes[k][i];
+            } else {
+                j--;
+                if (i < j) {
+                    for(k = 0; k < this->narrays; k++) {
+                        this->shapes[k][j] = this->shapes[k][i];
+                        this->steps[k][j] = this->steps[k][i];
+                    }
+                }
+            }
+        }
+
+        // step 2. Set some step's to 0's.
+        for (i = this->max_ndims-1; i >= j; i--) {
+            for (k = 0; k < this->narrays; k++)
+                this->steps[k][i] = this->shapes[k][i] == 1 ? 0 : this->steps[k][i];
+        }
+        for (; i >= 0; i--) {
+            for (k = 0; k < this->narrays; k++) {
+                this->steps[k][i] = 0;
+                this->shapes[k][i] = 1;
+            }
+        }
+        return true;
+    }
 };
 
 class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
@@ -239,76 +307,6 @@ public:
         return outShape;
     }
 
-    // use FP32 as default type in finalized() function
-    template <typename T>
-    static bool prepare_for_broadcast_op(
-        int narrays, int max_ndims,
-        const std::vector<int>& ndims, const std::vector<std::vector<int>>& shape_, const std::vector<std::vector<size_t>>& step_,
-        std::vector<std::vector<int>>& shape, std::vector<std::vector<size_t>>& step)
-    {
-        int i, j, k;
-        std::vector<size_t> elemsize(ndims.size(), sizeof(T));
-
-        // step 1.
-        // * make all inputs and the output max_ndims-dimensional.
-        // ** prepend dimension 1 to the mat of less dims
-        // * compute proper step's
-        for (i = max_ndims-1; i >= 0; i--) {
-            for (k = 0; k < narrays; k++) {
-                j = ndims[k] - (max_ndims - i);
-                int sz_i = j >= 0 ? shape_[k][j] : 1;
-                size_t st_i = j >= 0 && step_[k][j] > 0 ? step_[k][j] :
-                    i == max_ndims-1 ? elemsize[k] : step[k][i+1]*shape[k][i+1];
-                assert(st_i % elemsize[k] == 0);
-                shape[k][i] = sz_i;
-                step[k][i] = st_i;
-                if (shape[k][i] == 0)
-                    return false;
-            }
-        }
-
-        // step 3. Let's do the flattening first,
-        // since we'd need proper values of steps to check continuity.
-        // this loop is probably the most tricky part
-        // in the whole implementation of broadcasting.
-        j = max_ndims-1;
-        for (i = j - 1; i >= 0; i--) {
-            bool all_contiguous = true, all_scalars = true, all_consistent = true;
-            for(k = 0; k < narrays; k++) {
-                size_t st = step[k][j]*shape[k][j];
-                bool prev_scalar = shape[k][j] == 1;
-                bool scalar = shape[k][i] == 1;
-                all_contiguous = all_contiguous && (st == step[k][i]);
-                all_scalars = all_scalars && scalar;
-                all_consistent = all_consistent && (scalar == prev_scalar);
-            }
-            if (all_contiguous && (all_consistent || all_scalars)) {
-                for(k = 0; k < narrays; k++)
-                    shape[k][j] *= shape[k][i];
-            } else {
-                j--;
-                if (i < j) {
-                    for(k = 0; k < narrays; k++) {
-                        shape[k][j] = shape[k][i];
-                        step[k][j] = step[k][i];
-                    }
-                }
-            }
-        }
-
-        // step 2. Set some step's to 0's.
-        for (i = max_ndims-1; i >= j; i--) {
-            for (k = 0; k < narrays; k++)
-                step[k][i] = shape[k][i] == 1 ? 0 : step[k][i];
-        }
-        for (; i >= 0; i--) {
-            for (k = 0; k < narrays; k++) {
-                step[k][i] = 0;
-                shape[k][i] = 1;
-            }
-        }
-        return true;
-    }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         std::vector<Mat> inputs, outputs;
@@ -316,9 +314,7 @@ public:
         outputs_arr.getMatVector(outputs);
 
         helper.helperInit(inputs, outputs);
-        CV_Assert(prepare_for_broadcast_op<float>(helper.narrays, helper.max_ndims,
-                                 helper.all_ndims, helper.orig_shapes, helper.orig_steps,
-                                 helper.shapes, helper.steps));
+        CV_Assert(helper.prepare_for_broadcast_op<float>());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -738,9 +734,7 @@ public:
         {
             case CV_8U:
                 opDispatch<uint8_t>(std::forward<Args>(args)...);
-                prepare_for_broadcast_op<uint8_t>(helper.narrays, helper.max_ndims,
-                                                  helper.all_ndims, helper.orig_shapes, helper.orig_steps,
-                                                  helper.shapes, helper.steps);
+                helper.prepare_for_broadcast_op<uint8_t>();
                 /*
                     recompute broadcasted shapes
                     because default type is FP32 which is calculated in finalize() function
