@@ -35,24 +35,26 @@ Ptr<IVideoCapture> create_obsensor_capture(int index)
 
 VideoCapture_obsensor::VideoCapture_obsensor(int)
 {
+    ob::Context::setLoggerToFile(OB_LOG_SEVERITY_OFF, "");
     config = std::make_shared<ob::Config>();
-    auto colorProfiles = pipe.getStreamProfileList(OB_SENSOR_COLOR);
+    pipe = std::make_shared<ob::Pipeline>();
+    auto colorProfiles = pipe->getStreamProfileList(OB_SENSOR_COLOR);
     auto colorProfile = colorProfiles->getProfile(OB_PROFILE_DEFAULT);
     config->enableStream(colorProfile->as<ob::VideoStreamProfile>());
 
-    auto depthProfiles = pipe.getStreamProfileList(OB_SENSOR_DEPTH);
+    auto depthProfiles = pipe->getStreamProfileList(OB_SENSOR_DEPTH);
     auto depthProfile = depthProfiles->getProfile(OB_PROFILE_DEFAULT);
     config->enableStream(depthProfile->as<ob::VideoStreamProfile>());
 
     config->setAlignMode(ALIGN_D2C_SW_MODE);
 
-    pipe.start(config, [&](std::shared_ptr<ob::FrameSet> frameset) {
+    pipe->start(config, [&](std::shared_ptr<ob::FrameSet> frameset) {
         std::unique_lock<std::mutex> lk(videoFrameMutex);
         colorFrame = frameset->colorFrame();
         depthFrame = frameset->depthFrame();
     });
 
-    auto param = pipe.getCameraParam();
+    auto param = pipe->getCameraParam();
     camParam.p1[0] = param.rgbIntrinsic.fx;
     camParam.p1[1] = param.rgbIntrinsic.fy;
     camParam.p1[2] = param.rgbIntrinsic.cx;
@@ -60,7 +62,7 @@ VideoCapture_obsensor::VideoCapture_obsensor(int)
 }
 
 VideoCapture_obsensor::~VideoCapture_obsensor(){
-    pipe.stop();
+    pipe->stop();
 }
 
 double VideoCapture_obsensor::getProperty(int propIdx) const

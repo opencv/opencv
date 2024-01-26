@@ -63,7 +63,7 @@ protected:
     std::shared_ptr<ob::VideoFrame> depthFrame;
     std::shared_ptr<ob::VideoFrame> grabbedColorFrame;
     std::shared_ptr<ob::VideoFrame> grabbedDepthFrame;
-    ob::Pipeline pipe;
+    std::shared_ptr<ob::Pipeline> pipe;
     std::shared_ptr<ob::Config> config;
     CameraParam camParam;
 };
