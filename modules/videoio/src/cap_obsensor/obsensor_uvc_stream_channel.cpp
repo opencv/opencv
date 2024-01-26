@@ -317,10 +317,10 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
             // return default param
             CameraParam param;
             param.p0[0] = 519.342f;
-            param.p0[1] = 519.043;
+            param.p0[1] = 519.043f;
             param.p0[2] = 319.41f;
             param.p0[3] = 240.839f;
-            param.p1[0] = 519.342;
+            param.p1[0] = 519.342f;
             param.p1[1] = 519.043f;
             param.p1[2] = 319.41f;
             param.p1[3] = 240.839f;
