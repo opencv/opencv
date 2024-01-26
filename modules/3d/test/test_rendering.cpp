@@ -395,23 +395,46 @@ void compareRGB(const cv::Mat& gt, const cv::Mat& mat, cv::Mat& diff, double nor
 }
 
 
+struct RenderTestThresholds
+{
+    RenderTestThresholds(
+        double _rgbInfThreshold,
+        double _rgbL2Threshold,
+        double _depthMaskThreshold,
+        double _depthInfThreshold,
+        double _depthL2Threshold) :
+        rgbInfThreshold(_rgbInfThreshold),
+        rgbL2Threshold(_rgbL2Threshold),
+        depthMaskThreshold(_depthMaskThreshold),
+        depthInfThreshold(_depthInfThreshold),
+        depthL2Threshold(_depthL2Threshold)
+    { }
+
+    double rgbInfThreshold;
+    double rgbL2Threshold;
+    double depthMaskThreshold;
+    double depthInfThreshold;
+    double depthL2Threshold;
+};
+
 // resolution, shading type, culling mode, model type, float type, index type
-class RenderingTest : public ::testing::TestWithParam<
-    std::tuple<std::tuple<int, int>, ShadingTypeEnum, CullingModeEnum, ModelTypeEnum, MatDepth, MatDepth>>
+typedef std::tuple<std::tuple<int, int>, ShadingTypeEnum, CullingModeEnum, ModelTypeEnum, MatDepth, MatDepth> RenderTestParamType;
+
+class RenderingTest : public ::testing::TestWithParam<RenderTestParamType>
 {
 protected:
     void SetUp() override
     {
-        auto t = GetParam();
-        auto wh = std::get<0>(t);
+        params = GetParam();
+        auto wh = std::get<0>(params);
         width = std::get<0>(wh);
         height = std::get<1>(wh);
-        shadingType = std::get<1>(t);
-        cullingMode = std::get<2>(t);
-        modelType = std::get<3>(t);
+        shadingType = std::get<1>(params);
+        cullingMode = std::get<2>(params);
+        modelType = std::get<3>(params);
         modelData = ModelData(modelType);
-        ftype = std::get<4>(t);
-        itype = std::get<5>(t);
+        ftype = std::get<4>(params);
+        itype = std::get<5>(params);
 
         zNear = 0.1, zFar = 50.0;
         depthScale = 1000.0;
@@ -444,6 +467,7 @@ protected:
     }
 
 public:
+    RenderTestParamType params;
     int width, height;
     double zNear, zFar, depthScale;
 
