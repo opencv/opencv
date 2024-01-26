@@ -915,22 +915,22 @@ Mat getTensorContentRef_(const tensorflow::TensorProto& tensor)
         }
         case tensorflow::DT_HALF:
         {
-            Mat halfs;
             if (!content.empty())
             {
                 static const int kHalfSize = 2;
-                halfs = Mat(1, content.size() / kHalfSize, CV_16UC1, (void*)content.c_str());
+                Mat halfs(1, content.size() / kHalfSize, CV_16FC1, (void*)content.c_str());
+                halfs.convertTo(m, CV_32F);
             }
             else
             {
                 const RepeatedField<int32_t>& field = tensor.half_val();
                 CV_Assert(!field.empty());
                 Mat ints(1, field.size(), CV_32SC1, (void*)field.data());
+                Mat halfs;
                 ints.convertTo(halfs, CV_16UC1);
+                Mat halfsSigned(halfs.size(), CV_16FC1, halfs.data);
+                halfsSigned.convertTo(m, CV_32F);
             }
-            // Reinterpret as a signed shorts just for a convertFp16 call.
-            Mat halfsSigned(halfs.size(), CV_16SC1, halfs.data);
-            convertFp16(halfsSigned, m);
             break;
         }
         case tensorflow::DT_QUINT8:

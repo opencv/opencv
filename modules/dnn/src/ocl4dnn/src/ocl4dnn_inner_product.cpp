@@ -102,10 +102,10 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
                 UMat biasOneMat = UMat::ones(M_, 1, CV_32F);
                 UMat newbias, tmpTop;
 
-                convertFp16(bias, newbias);
-                convertFp16(top, tmpTop);
+                bias.convertTo(newbias, CV_32F);
+                top.convertTo(tmpTop, CV_32F);
                 cv::gemm(biasOneMat, newbias, 1, tmpTop, 1, tmpTop, 0);
-                convertFp16(tmpTop, top);
+                tmpTop.convertTo(top, CV_16F);
             } else {
                 UMat biasOnesMat = UMat::ones(M_, 1, CV_32F);
                 cv::gemm(biasOnesMat, bias, 1, top, 1, top, 0);

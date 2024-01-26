@@ -590,7 +590,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        if ((inputs_.depth() == CV_16S && op != SUM) || (channelsMode != ELTWISE_CHANNNELS_SAME))
+        if ((inputs_.depth() == CV_16F && op != SUM) || (channelsMode != ELTWISE_CHANNNELS_SAME))
             return false;
 
         if (hasVecInput)
@@ -610,7 +610,7 @@ public:
                         size_t localsize[] = { 128 };
                         size_t globalsize[] = { (size_t)channels / 4 * localsize[0] };
                         String opts;
-                        if (inputs_.depth() == CV_16S)
+                        if (inputs_.depth() == CV_16F)
                             opts = " -DDtype=half -DDtype4=half4 -DDtype8=half8";
                         else
                             opts = " -DDtype=float -DDtype4=float4 -DDtype8=float8";
@@ -636,7 +636,7 @@ public:
                     }
                     else
                     {
-                        if (inputs_.depth() == CV_16S)
+                        if (inputs_.depth() == CV_16F)
                             return false;
 
                         float coeff1 = coeffs.empty() ? 1.f : coeffs[0];
@@ -689,7 +689,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

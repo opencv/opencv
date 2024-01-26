@@ -57,12 +57,12 @@ public:
         const Mat& inp = inputs[0];
 
         int indicesType = inputs[1].type();
-        CV_CheckType(indicesType, indicesType == CV_32FC1 || indicesType == CV_16SC1, "");
+        CV_CheckType(indicesType, indicesType == CV_32FC1 || indicesType == CV_16FC1, "");
         Mat indices32S;
-        if (indicesType == CV_16S/*FP16*/)
+        if (indicesType == CV_16F/*FP16*/)
         {
             Mat indicesF32;
-            convertFp16(inputs[1], indicesF32);
+            inputs[1].convertTo(indicesF32, CV_32F);
             indicesF32.convertTo(indices32S, CV_32S);
         }
         else

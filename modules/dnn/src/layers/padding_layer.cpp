@@ -129,17 +129,7 @@ public:
 
         if (paddingType == "constant")
         {
-            if (inputs_arr.depth() == CV_16S)
-            {
-                std::vector<float> paddingValue_fp32(1, paddingValue);
-                std::vector<int16_t> paddingValue_fp16(1);
-                cv::convertFp16(paddingValue_fp32, paddingValue_fp16);
-                outputs[0].setTo(paddingValue_fp16[0]);
-            }
-            else if (inputs_arr.depth() == CV_8S)
-                outputs[0].setTo(saturate_cast<int8_t>(paddingValue));
-            else
-                outputs[0].setTo(paddingValue);
+            outputs[0].setTo(paddingValue);
             inputs[0].copyTo(outputs[0](dstRanges));
         }
         else if (paddingType == "reflect" || paddingType == "edge")

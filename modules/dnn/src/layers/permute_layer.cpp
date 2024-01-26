@@ -319,7 +319,7 @@ public:
             mnew_stride.copyTo(unew_stride);
         }
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         String opts = format("-DDtype=%s", use_half ? "half" : "float");
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -350,7 +350,7 @@ public:
                    inputs_arr.depth() != CV_8S,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
