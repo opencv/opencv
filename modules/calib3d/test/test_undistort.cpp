@@ -171,6 +171,7 @@ private:
     cv::Mat camera_mat;
     cv::Mat distortion_coeffs;
     cv::Mat new_camera_mat;
+    cv::Rect validPixROI;
 
     cv::Size img_size;
     double alpha;
@@ -187,6 +188,8 @@ CV_GetOptimalNewCameraMatrixNoDistortionTest::CV_GetOptimalNewCameraMatrixNoDist
     test_array[INPUT].push_back(NULL); // camera_mat
     test_array[INPUT].push_back(NULL); // distortion_coeffs
     test_array[OUTPUT].push_back(NULL); // new_camera_mat
+    test_array[OUTPUT].push_back(NULL); // validPixROI
+    test_array[REF_OUTPUT].push_back(NULL);
     test_array[REF_OUTPUT].push_back(NULL);
 
     alpha = 0.0;
@@ -199,7 +202,9 @@ void CV_GetOptimalNewCameraMatrixNoDistortionTest::get_test_array_types_and_size
     cvtest::ArrayTest::get_test_array_types_and_sizes(test_case_idx, sizes, types);
     RNG& rng = ts->get_rng();
     matrix_type = types[INPUT][0] = types[INPUT][1] = types[OUTPUT][0] = types[REF_OUTPUT][0] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_32S;
     sizes[INPUT][0] = sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = cvSize(3,3);
+    sizes[OUTPUT][1] = sizes[REF_OUTPUT][1] = Size(4,1);
     sizes[INPUT][1] = cvSize(1,4);
 }
 
@@ -240,7 +245,7 @@ int CV_GetOptimalNewCameraMatrixNoDistortionTest::prepare_test_case(int test_cas
 
 void CV_GetOptimalNewCameraMatrixNoDistortionTest::run_func()
 {
-    new_camera_mat = cv::getOptimalNewCameraMatrix(camera_mat, distortion_coeffs, img_size, alpha, img_size, NULL, center_principal_point);
+    new_camera_mat = cv::getOptimalNewCameraMatrix(camera_mat, distortion_coeffs, img_size, alpha, img_size, &validPixROI, center_principal_point);
 }
 
 void CV_GetOptimalNewCameraMatrixNoDistortionTest::prepare_to_validation(int /*test_case_idx*/)
@@ -248,9 +253,13 @@ void CV_GetOptimalNewCameraMatrixNoDistortionTest::prepare_to_validation(int /*t
     const Mat& src = test_mat[INPUT][0];
     Mat& dst = test_mat[REF_OUTPUT][0];
     cvtest::copy(src, dst);
+    Mat& ref_validPixROI = test_mat[REF_OUTPUT][1];
+    cvtest::copy(cv::Mat(cv::Vec4i(0, 0, img_size.width, img_size.height)), ref_validPixROI);
 
     Mat& output = test_mat[OUTPUT][0];
     cvtest::convert(new_camera_mat, output, output.type());
+    Mat& output_validPixROI = test_mat[OUTPUT][1];
+    cvtest::copy(cv::Mat(cv::Vec4i(validPixROI.x, validPixROI.y, validPixROI.width, validPixROI.height)), output_validPixROI);
 }
 
 //---------

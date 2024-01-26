@@ -2808,9 +2808,6 @@ void cvGetOptimalNewCameraMatrix( const CvMat* cameraMatrix, const CvMat* distCo
                                       (double)((inner.y - cy0)*s + cy),
                                       (double)(inner.width*s),
                                       (double)(inner.height*s));
-            cv::Rect r(cvCeil(inner.x), cvCeil(inner.y), cvFloor(inner.width), cvFloor(inner.height));
-            r &= cv::Rect(0, 0, newImgSize.width, newImgSize.height);
-            *validPixROI = cvRect(r);
         }
     }
     else
@@ -2840,10 +2837,14 @@ void cvGetOptimalNewCameraMatrix( const CvMat* cameraMatrix, const CvMat* distCo
         if( validPixROI )
         {
             icvGetRectangles( cameraMatrix, distCoeffs, 0, &matM, imgSize, inner, outer );
-            cv::Rect r = inner;
-            r &= cv::Rect(0, 0, newImgSize.width, newImgSize.height);
-            *validPixROI = cvRect(r);
         }
+    }
+    if( validPixROI )
+    {
+        cv::Rect r(cvFloor(inner.x), cvFloor(inner.y), cvCeil(inner.x+inner.width)-cvFloor(inner.x)+1,
+                   cvCeil(inner.y+inner.height)-cvFloor(inner.y)+1);
+        r &= cv::Rect(0, 0, newImgSize.width, newImgSize.height);
+        *validPixROI = cvRect(r);
     }
 
     cvConvert(&matM, newCameraMatrix);
