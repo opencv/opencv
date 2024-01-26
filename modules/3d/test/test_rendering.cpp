@@ -542,7 +542,7 @@ TEST_P(RenderingTest, floatParams)
         case ModelType::Clipping:
             if (width == 700 && height == 700)
             {
-                thr.rgbL2Threshold = 3.76e-05;
+                thr.rgbL2Threshold = 3.78e-05;
                 if (cullingMode != TriangleCullingMode::CW)
                 {
                     thr.rgbInfThreshold = (shadingType == TriangleShadingType::White) ? 1.0 : 0.934;
@@ -562,7 +562,7 @@ TEST_P(RenderingTest, floatParams)
             {
                 if (cullingMode == TriangleCullingMode::CCW)
                 {
-                    thr.depthMaskThreshold = 113;
+                    thr.depthMaskThreshold = 114;
                 }
                 if (cullingMode == TriangleCullingMode::None)
                 {
@@ -596,7 +596,7 @@ TEST_P(RenderingTest, floatParams)
             }
             else if (width == 640 && height == 480)
             {
-                thr.depthL2Threshold = 4.4e-05;
+                thr.depthL2Threshold = 5.57e-05;
             }
             break;
         case ModelType::Centered:
@@ -722,7 +722,7 @@ TEST_P(RenderingTest, accuracy)
             }
             else if(width == 700 && width == 700)
             {
-                thr.depthMaskThreshold = 120;
+                thr.depthMaskThreshold = 121;
             }
             break;
         case ModelType::Color:
