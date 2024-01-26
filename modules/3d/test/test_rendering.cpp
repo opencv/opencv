@@ -534,11 +534,85 @@ TEST_P(RenderingTest, floatParams)
     triangleRasterize(verts, indices, colors, Matx44f(cameraPose), (float)fovYradians, (float)zNear, (float)zFar,
                       settings, depth_buf2, color_buf2);
 
+    RenderTestThresholds thr(0, 0, 0, 0, 0);
+    switch (modelType)
+    {
+        case ModelType::Empty: break;
+        case ModelType::Color: break;
+        case ModelType::Clipping:
+            if (width == 700 && height == 700)
+            {
+                thr.rgbL2Threshold = 3.76e-05;
+                if (cullingMode != TriangleCullingMode::CW)
+                {
+                    thr.rgbInfThreshold = (shadingType == TriangleShadingType::White) ? 1.0 : 0.934;
+                }
+                else if (shadingType == TriangleShadingType::Shaded)
+                {
+                    thr.rgbInfThreshold = 2.39e-07;
+                }
+            }
+            if (width == 640 && height == 480 && shadingType == TriangleShadingType::Shaded)
+            {
+                thr.rgbInfThreshold = 2.99e-07;
+                thr.rgbL2Threshold  = 9.1e-11;
+            }
+
+            if (width == 700 && height == 700)
+            {
+                if (cullingMode == TriangleCullingMode::CCW)
+                {
+                    thr.depthMaskThreshold = 113;
+                }
+                if (cullingMode == TriangleCullingMode::None)
+                {
+                    thr.depthMaskThreshold = 70;
+                }
+            }
+            if ((width == 640 && height == 480 && shadingType == TriangleShadingType::Shaded && cullingMode == TriangleCullingMode::CCW) ||
+                (width == 700 && height == 700 && cullingMode == TriangleCullingMode::CCW))
+            {
+                thr.depthInfThreshold = 0; thr.depthL2Threshold = 0;
+            }
+            else
+            {
+                thr.depthInfThreshold = 1; thr.depthL2Threshold = 0.000766;
+            }
+            break;
+        case ModelType::File:
+            thr.depthInfThreshold = 1;
+            if (width == 700 && height == 700)
+            {
+                thr.depthL2Threshold = 9.52e-05;
+                if (shadingType == TriangleShadingType::Shaded)
+                {
+                    thr.rgbInfThreshold = 0.000144; thr.rgbL2Threshold = 7.14e-10;
+                }
+                else if (shadingType == TriangleShadingType::Flat && cullingMode != TriangleCullingMode::CCW)
+                {
+                    thr.rgbInfThreshold = 0.109;
+                    thr.rgbL2Threshold = 3.23e-07;
+                }
+            }
+            else if (width == 640 && height == 480)
+            {
+                thr.depthL2Threshold = 4.4e-05;
+            }
+            break;
+        case ModelType::Centered:
+            if (shadingType == TriangleShadingType::Shaded && cullingMode != TriangleCullingMode::CW)
+            {
+                thr.rgbInfThreshold = 3.58e-07;
+                thr.rgbL2Threshold  = 6.06e-11;
+            }
+            break;
+    }
+
     Mat rgbDiff, depthDiff;
-    compareRGB(color_buf, color_buf2, rgbDiff, 1, 3.76e-05);
+    compareRGB(color_buf, color_buf2, rgbDiff, thr.rgbInfThreshold, thr.rgbL2Threshold);
     depth_buf.convertTo(depth_buf, CV_16U, depthScale);
     depth_buf2.convertTo(depth_buf2, CV_16U, depthScale);
-    compareDepth(depth_buf, depth_buf2, depthDiff, zFar, depthScale, 113, 1, 0.00077);
+    compareDepth(depth_buf, depth_buf2, depthDiff, zFar, depthScale, thr.depthMaskThreshold, thr.depthInfThreshold, thr.depthL2Threshold);
 
     // add --test_debug to output resulting images
     if (debugLevel > 0)
@@ -602,6 +676,100 @@ TEST_P(RenderingTest, accuracy)
     }
     else
     {
+        RenderTestThresholds thr(0, 0, 0, 0, 0);
+        switch (modelType)
+        {
+        case ModelType::Centered:
+            if (shadingType == TriangleShadingType::Shaded)
+            {
+                thr.rgbInfThreshold = 0.00217;
+                thr.rgbL2Threshold = 1.13e-06;
+            }
+            break;
+        case ModelType::Clipping:
+            if (shadingType == TriangleShadingType::White)
+            {
+                thr.rgbInfThreshold = 1;
+                thr.rgbL2Threshold  = 5.02e-05;
+            }
+            else
+            {
+                thr.rgbInfThreshold = 0.934;
+                thr.rgbL2Threshold  = 4.22e-05;
+            }
+            if (width == 640 && height == 480 && cullingMode == TriangleCullingMode::CW)
+            {
+                if (shadingType == TriangleShadingType::Shaded)
+                {
+                    thr.rgbInfThreshold = 0.00221;
+                    thr.rgbL2Threshold = 1.17e-06;
+                }
+                else
+                {
+                    thr.rgbInfThreshold = 0;
+                    thr.rgbL2Threshold = 0;
+                }
+            }
+
+            if (cullingMode != TriangleCullingMode::CCW)
+            {
+                thr.depthInfThreshold = 1;
+                thr.depthL2Threshold = 0.000875;
+            }
+            if (width == 640 && height == 480)
+            {
+                thr.depthMaskThreshold = 79;
+            }
+            else if(width == 700 && width == 700)
+            {
+                thr.depthMaskThreshold = 120;
+            }
+            break;
+        case ModelType::Color:
+            thr.depthInfThreshold = 1;
+            if (width == 640 && height == 480)
+            {
+                thr.depthL2Threshold = 0.000718;
+            }
+            else if(width == 700 && width == 700)
+            {
+                thr.depthL2Threshold = 0.000535;
+            }
+            if (shadingType == TriangleShadingType::Shaded)
+            {
+                thr.rgbInfThreshold = 0.00221;
+                thr.rgbL2Threshold = 1.26e-06;
+            }
+            break;
+        case ModelType::File:
+            thr.depthMaskThreshold = 1;
+            if (shadingType == TriangleShadingType::White)
+            {
+                thr.rgbInfThreshold = 1;
+                thr.rgbL2Threshold = 5.64e-06;
+            }
+            else
+            {
+                thr.rgbInfThreshold = 0.948;
+                thr.rgbL2Threshold = 6.82e-06;
+            }
+
+            if (width == 640 && height == 480)
+            {
+                thr.depthL2Threshold = 0.00681;
+                thr.depthInfThreshold = 485;
+            }
+            else if (width == 700 && width == 700)
+            {
+                thr.depthInfThreshold = 25;
+                thr.depthL2Threshold = 0.000242;
+            }
+            break;
+
+        default:
+            break;
+        }
+
         CullingModeEnum cullingModeRgb   = findSameCulling(modelType, shadingType, cullingMode, true);
         CullingModeEnum cullingModeDepth = findSameCulling(modelType, shadingType, cullingMode, false);
 
@@ -621,10 +789,10 @@ TEST_P(RenderingTest, accuracy)
         Mat rgbDiff, depthDiff;
         Mat groundTruthColor = imread(gtPathColor);
         groundTruthColor.convertTo(groundTruthColor, CV_32F, (1.f / 255.f));
-        compareRGB(groundTruthColor, color_buf, rgbDiff, 1.0, 5.012e-05);
+        compareRGB(groundTruthColor, color_buf, rgbDiff, thr.rgbInfThreshold, thr.rgbL2Threshold);
 
         Mat groundTruthDepth = imread(gtPathDepth, cv::IMREAD_GRAYSCALE | cv::IMREAD_ANYDEPTH);
-        compareDepth(groundTruthDepth, depth_buf, depthDiff, zFar, depthScale, 121.0, 485.0, 0.00681);
+        compareDepth(groundTruthDepth, depth_buf, depthDiff, zFar, depthScale, thr.depthMaskThreshold, thr.depthInfThreshold, thr.depthL2Threshold);
 
         // add --test_debug to output resulting images
         if (debugLevel > 0)
