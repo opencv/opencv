@@ -313,7 +313,6 @@ static inline void fast_gemm12x16_f32(int k, const char *a_, const char *b_, cha
     const float* b = (const float*)b_;
     float* c = (float*)c_;
 
-    __m256i dummy = _v256_setall_w(0);
     __m256 s00  = _v256_setall_ps(0), s01  = s00,
            s10  = s00, s11  = s00,
            s20  = s00, s21  = s00,
