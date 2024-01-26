@@ -390,18 +390,35 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, regression)
             Mat resized_src;
             hconcat(qrcodes, resized_src);
 
-            resize(resized_src, resized_src, Size(), 2, 2, INTER_AREA);
-
-            std::vector<Point> corners;
-            std::vector<cv::String> decoded_infos;
-            cv::String output_info;
-
-            // TODO: replace to decodeMulti
-            QRCodeDetector().detectAndDecodeMulti(resized_src, decoded_infos, corners);
-            for (size_t k = 0; k < decoded_infos.size(); ++k)
+            std::vector<Point2f> corners(4 * qrcodes.size());
+            for (size_t k = 0; k < qrcodes.size(); k++)
             {
-                if (!decoded_infos[k].empty())
-                    output_info = decoded_infos[k];
+                corners[4 * k] = Point2f(border_width, border_width);
+                corners[4 * k + 1] = Point2f(qrcodes[0].cols * 1.0f - border_width, border_width);
+                corners[4 * k + 2] = Point2f(qrcodes[0].cols * 1.0f - border_width, qrcodes[0].rows * 1.0f - border_width);
+                corners[4 * k + 3] = Point2f(border_width, qrcodes[0].rows * 1.0f - border_width);
+                for (size_t ki = 0; ki < 4; ki++)
+                {
+                    corners[4 * k + ki].x += qrcodes[0].cols * k;
+                }
+            }
+
+            float width_ratio = 3.0f;
+            float height_ratio = 3.0f;
+            resize(resized_src, resized_src, Size(), width_ratio, height_ratio, INTER_AREA);
+            for(size_t m = 0; m < corners.size(); m++)
+            {
+                corners[m].x = corners[m].x * width_ratio;
+                corners[m].y = corners[m].y * height_ratio;
+            }
+
+            std::vector<cv::String> decoded_info;
+            cv::String output_info;
+            EXPECT_TRUE(QRCodeDetector().decodeMulti(resized_src, corners, decoded_info));
+            for (size_t k = 0; k < decoded_info.size(); ++k)
+            {
+                if (!decoded_info[k].empty())
+                    output_info = decoded_info[k];
             }
             EXPECT_FALSE(output_info.empty())
                 << "The generated QRcode cannot be decoded." << " Mode: " << modes[i]
