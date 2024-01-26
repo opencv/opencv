@@ -237,7 +237,7 @@ endif()
 
 if(TARGET ocv.3rdparty.obsensor)
 if(OBSENSOR_USE_ORBBEC_SDK)
-    list(APPEND videoio_srcs 
+    list(APPEND videoio_srcs
       ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor_liborbbec.hpp
       ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor_liborbbec.cpp)
   else()
