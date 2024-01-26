@@ -365,7 +365,7 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
     auto string_itr = input.begin();
     for (int i = struct_num; i > 0; --i)
     {
-        sequence_num = (uint8_t) (i - 1);
+        sequence_num = (uint8_t) (struct_num - i);
         size_t segment_begin = string_itr - input.begin();
         size_t segment_end = (input.end() - string_itr) / i;
 

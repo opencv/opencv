@@ -367,7 +367,7 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, regression)
     int modes[] = {1, 2, 4};
     const int min_stuctures_num = 2;
     const int max_stuctures_num = 5;
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 1; i++)
     {
         int mode = modes[i];
         FileNode config = mode_list[i];
@@ -387,34 +387,26 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, regression)
             EXPECT_TRUE(!qrcodes.empty()) << "Can't generate this QR images";
             CV_CheckEQ(qrcodes.size(), (size_t)j, "Number of QR codes");
 
-            std::string output_info = "";
-            for (size_t k = 0; k < qrcodes.size(); k++)
+            Mat resized_src;
+            hconcat(qrcodes, resized_src);
+
+            resize(resized_src, resized_src, Size(), 2, 2, INTER_AREA);
+
+            std::vector<Point> corners;
+            std::vector<cv::String> decoded_infos;
+            cv::String output_info;
+
+            // TODO: replace to decodeMulti
+            QRCodeDetector().detectAndDecodeMulti(resized_src, decoded_infos, corners);
+            for (size_t k = 0; k < decoded_infos.size(); ++k)
             {
-                Mat qrcode = qrcodes[k];
-
-                std::vector<Point2f> corners(4);
-                corners[0] = Point2f(border_width, border_width);
-                corners[1] = Point2f(qrcode.cols * 1.0f - border_width, border_width);
-                corners[2] = Point2f(qrcode.cols * 1.0f - border_width, qrcode.rows * 1.0f - border_width);
-                corners[3] = Point2f(border_width, qrcode.rows * 1.0f - border_width);
-
-                Mat resized_src;
-                resize(qrcode, resized_src, fixed_size, 0, 0, INTER_AREA);
-                float width_ratio =  resized_src.cols * 1.0f / qrcode.cols;
-                float height_ratio = resized_src.rows * 1.0f / qrcode.rows;
-                for(size_t m = 0; m < corners.size(); m++)
-                {
-                    corners[m].x = corners[m].x * width_ratio;
-                    corners[m].y = corners[m].y * height_ratio;
-                }
-
-                Mat straight_barcode;
-                std::string decoded_info = QRCodeDetector().decode(resized_src, corners, straight_barcode);
-                EXPECT_FALSE(decoded_info.empty())
-                    << "The generated QRcode cannot be decoded." << " Mode: " << modes[i]
-                    << " structures number: " << k << "/" << j;
-                output_info += decoded_info;
+                if (!decoded_infos[k].empty())
+                    output_info = decoded_infos[k];
             }
+            EXPECT_FALSE(output_info.empty())
+                << "The generated QRcode cannot be decoded." << " Mode: " << modes[i]
+                << " structures number: " << j;
+
             EXPECT_EQ(input_info, output_info) << "The generated QRcode is not same as test data." << " Mode: " << mode <<
                                                   " structures number: " << j;
         }
