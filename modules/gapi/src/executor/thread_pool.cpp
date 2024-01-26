@@ -31,15 +31,15 @@ void cv::gapi::own::Latch::wait() {
 cv::gapi::own::ThreadPool::ThreadPool(const uint32_t num_workers) {
     m_workers.reserve(num_workers);
     for (uint32_t i = 0; i < num_workers; ++i) {
-        std::thread worker_th([this](){ worker(); });
-        m_workers.push_back(std::move(worker_th));
+        m_workers.emplace_back(
+                cv::gapi::own::ThreadPool::worker, std::ref(m_queue));
     }
 }
 
-void cv::gapi::own::ThreadPool::worker() {
+void cv::gapi::own::ThreadPool::worker(QueueClass<Task>& queue) {
     while (true) {
         cv::gapi::own::ThreadPool::Task task;
-        m_queue.pop(task);
+        queue.pop(task);
         if (!task) {
             break;
         }

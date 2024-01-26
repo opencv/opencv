@@ -53,8 +53,8 @@ public:
     ~ThreadPool();
 
 private:
+    static void worker(QueueClass<Task>& queue);
     void shutdown();
-    void worker();
 
 private:
     std::vector<std::thread> m_workers;
