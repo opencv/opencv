@@ -22,7 +22,7 @@ overview of exporting pre-trained YOLO family models from PyTorch and deploying 
 DNN framework. For demonstration purposes, we will focus on the [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main)
 model, but the methodology applies to other supported models.
 
-@Note Currently, OpenCV supports the following YOLO models:
+@note Currently, OpenCV supports the following YOLO models:
 - [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main),
 - [YoloNas](https://github.com/Deci-AI/super-gradients/tree/master),
 - [YOLOv8](https://github.com/ultralytics/ultralytics/tree/main),

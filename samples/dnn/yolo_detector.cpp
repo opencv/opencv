@@ -164,7 +164,7 @@ void yoloPostProcessing(
                                         cx + 0.5 * w, cy + 0.5 * h));
             }
             classIds.push_back(maxLoc.x);
-            confidences.push_back(conf);
+            confidences.push_back(static_cast<float>(conf));
         }
     }
 
@@ -204,7 +204,7 @@ int main(int argc, char** argv){
     float confThreshold = parser.get<float>("thr");
     float nmsThreshold = parser.get<float>("nms");
     //![preprocess_params]
-    float paddingValue = parser.get<int>("padvalue");
+    float paddingValue = parser.get<float>("padvalue");
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
@@ -318,7 +318,7 @@ int main(int argc, char** argv){
         // covert Rect2d to Rect
         //![draw_boxes]
         for (auto box : keep_boxes){
-            boxes.push_back(Rect(box.x, box.y, box.width, box.height));
+            boxes.push_back(Rect(cvFloor(box.x), cvFloor(box.y), cvFloor(box.width), cvFloor(box.height)));
         }
 
         paramNet.blobRectsToImageRects(boxes, boxes, img.size());
