@@ -189,8 +189,10 @@ def main(args):
         os.makedirs(path.join(AAR_UNZIPPED_DIR, "prefab/modules/" + lib + "/include/opencv2"))
         shutil.copy(path.join(sdk_dir, "sdk/native/jni/include/opencv2/" + lib.replace("opencv_", "") + ".hpp"),
                     path.join(AAR_UNZIPPED_DIR, "prefab/modules/" + lib + "/include/opencv2/" + lib.replace("opencv_", "") + ".hpp"))
-        shutil.copytree(path.join(sdk_dir, "sdk/native/jni/include/opencv2/" + lib.replace("opencv_", "")),
-                        path.join(AAR_UNZIPPED_DIR, "prefab/modules/" + lib + "/include/opencv2/" + lib.replace("opencv_", "")))
+        module_include_folder = path.join(sdk_dir, "sdk/native/jni/include/opencv2/" + lib.replace("opencv_", ""))
+        if os.path.exists(module_include_folder):
+            shutil.copytree(module_include_folder,
+                            path.join(AAR_UNZIPPED_DIR, "prefab/modules/" + lib + "/include/opencv2/" + lib.replace("opencv_", "")))
 
         # Adding dependencies list
         module_json_text = {
