@@ -3320,13 +3320,13 @@ void QRDetectMulti::fixationPoints(vector<Point2f> &local_point)
 
 class BWCounter
 {
-    size_t white;
-    size_t black;
+    uint64_t sum;
+    uint64_t cnt;
 public:
-    BWCounter(size_t b = 0, size_t w = 0) : white(w), black(b) {}
-    BWCounter& operator+=(const BWCounter& other) { black += other.black; white += other.white; return *this; }
-    void count1(uchar pixel) { if (pixel == 255) white++; else if (pixel == 0) black++; }
-    double getBWFraction() const { return white == 0 ? std::numeric_limits<double>::infinity() : double(black) / double(white); }
+    BWCounter(uint64_t s = 0, uint64_t c = 0) : sum(s), cnt(c) {}
+    BWCounter& operator+=(const BWCounter& other) { sum += other.sum; cnt += other.cnt; return *this; }
+    void count1(uchar pixel) { sum += pixel; cnt++; }
+    double getBWFraction() const { return sum == 0 ? std::numeric_limits<double>::infinity() : (double(255 * cnt - sum)) / double(sum); }
     static BWCounter checkCorners(const std::vector<Point2f> &points, const Mat& img)
     {
         BWCounter res;
