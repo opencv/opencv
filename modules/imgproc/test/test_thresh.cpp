@@ -478,6 +478,221 @@ static void test_threshold( const Mat& _src, Mat& _dst,
     }
 }
 
+//test for adaptive Threshold
+static void test_adaptiveThereshold( const Mat& _src, Mat& _dst, double maxValue,
+                                        int method, int type, int blockSize, double delta)
+{
+    CV_INSTRUMENT_REGION();
+    int i,j;
+    int depth = _src.depth(), cn = _src.channels();
+    Mat mean;
+    Size size = _src.size();
+    uchar tab[768];
+    if( _src.data != _dst.data )
+        mean = _dst;
+
+    if (method == ADAPTIVE_THRESH_MEAN_C)
+        boxFilter( _src, mean, _src.type(), Size(blockSize, blockSize),
+                   Point(-1,-1), true, BORDER_REPLICATE|BORDER_ISOLATED );
+    if (method == ADAPTIVE_THRESH_GAUSSIAN_C)
+    {
+        Mat srcfloat,meanfloat;
+        _src.convertTo(srcfloat,CV_32F);
+        meanfloat=srcfloat;
+        GaussianBlur(srcfloat, meanfloat, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE|BORDER_ISOLATED);
+        meanfloat.convertTo(mean, _src.type());
+    }
+
+    if( depth == CV_8U )
+    {
+        uchar imaxval = saturate_cast<uchar>(maxValue);
+        int idelta = type == THRESH_BINARY ? cvCeil(delta) : cvFloor(delta);
+
+        if( type == CV_THRESH_BINARY )
+            for( i = 0; i < 768; i++ )
+                tab[i] = (uchar)(i - 255 > -idelta ? imaxval : 0);
+        else if( type == CV_THRESH_BINARY_INV )
+            for( i = 0; i < 768; i++ )
+                tab[i] = (uchar)(i - 255 <= -idelta ? imaxval : 0);
+        else
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported threshold type" );
+
+        if( _src.isContinuous() && mean.isContinuous() && _dst.isContinuous() )
+        {
+            size.width *= size.height;
+            size.height = 1;
+        }
+    }
+    else if( depth == CV_16S )
+    {
+        short imaxval = saturate_cast<short>(maxValue);
+        short idelta = type == THRESH_BINARY ? cvCeil(delta) : cvFloor(delta);
+
+        if( type == CV_THRESH_BINARY )
+            for( i = 0; i < 768; i++ )
+                tab[i] = (short)(i - 255 > -idelta ? imaxval : 0);
+        else if( type == CV_THRESH_BINARY_INV )
+            for( i = 0; i < 768; i++ )
+                tab[i] = (short)(i - 255 <= -idelta ? imaxval : 0);
+        else
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported threshold type" );
+
+        if( _src.isContinuous() && mean.isContinuous() && _dst.isContinuous() )
+        {
+            size.width *= size.height;
+            size.height = 1;
+        }
+    }
+    else if( depth == CV_16U )
+    {
+        ushort imaxval = saturate_cast<ushort>(maxValue);
+        ushort idelta = type == THRESH_BINARY ? cvCeil(delta) : cvFloor(delta);
+
+        if( type == CV_THRESH_BINARY )
+            for( i = 0; i < 768; i++ )
+                tab[i] = (ushort)(i - 255 > -idelta ? imaxval : 0);
+        else if( type == CV_THRESH_BINARY_INV )
+            for( i = 0; i < 768; i++ )
+                tab[i] = (ushort)(i - 255 <= -idelta ? imaxval : 0);
+        else
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported threshold type" );
+
+        if( _src.isContinuous() && mean.isContinuous() && _dst.isContinuous() )
+        {
+            size.width *= size.height;
+            size.height = 1;
+        }
+    }
+    else
+    {
+        int imaxval = saturate_cast<int>(maxValue);
+        int idelta = type == THRESH_BINARY ? cvCeil(delta) : cvFloor(delta);
+
+        if( type == CV_THRESH_BINARY )
+            for( i = 0; i < 768; i++ ){
+                tab[i] = (int)(i - 255 > -idelta ? imaxval : 0);
+                tab[i] = cvRound(tab[i]);}
+        else if( type == CV_THRESH_BINARY_INV )
+            for( i = 0; i < 768; i++ ){
+                tab[i] = (int)(i - 255 <= -idelta ? imaxval : 0);
+                tab[i] = cvRound(tab[i]);}
+        else
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported threshold type" );
+
+        if( _src.isContinuous() && mean.isContinuous() && _dst.isContinuous() )
+        {
+            size.width *= size.height;
+            size.height = 1;
+        }
+    }
+    CV_Assert( depth == CV_8U || depth == CV_16S || depth == CV_16U || depth == CV_32F || depth == CV_64F );
+
+    switch( type )
+    {
+        case CV_THRESH_BINARY:
+            for( i = 0; i < size.height; i++ )
+            {
+                if( depth == CV_8U )
+                {
+                    const uchar* sdata = _src.ptr<uchar>(i);
+                    const uchar* mdata = mean.ptr<uchar>(i);
+                    uchar* ddata = _dst.ptr(i);
+
+                    for( j = 0; j < size.width; j++ )
+                        ddata[j] = (uchar)tab[sdata[j] - mdata[j] + 255];
+                }
+                else if( depth == CV_16S )
+                {
+                    const short* sdata = _src.ptr<short>(i);
+                    const short* mdata = mean.ptr<short>(i);
+                    short* ddata = _dst.ptr<short>(i);
+
+                    for( j = 0; j < size.width; j++ )
+                        ddata[j] = (short)tab[sdata[j] - mdata[j] + 255];
+                }
+                else if( depth == CV_16U )
+                {
+                    const ushort* sdata = _src.ptr<ushort>(i);
+                    const ushort* mdata = mean.ptr<ushort>(i);
+                    ushort* ddata = _dst.ptr<ushort>(i);
+
+                    for( j = 0; j < size.width; j++ )
+                        ddata[j] = (ushort)tab[sdata[j] - mdata[j] + 255];
+                }
+                else if( depth == CV_32F )
+                {
+                    const float* sdata = _src.ptr<float>(i);
+                    const float* mdata = mean.ptr<float>(i);
+                    float* ddata = _dst.ptr<float>(i);
+
+                    for( j = 0; j < size.width; j++ )
+                        ddata[j] = (float)tab[(int)sdata[j] - (int)mdata[j] + 255];
+                }
+                else
+                {
+                    const double* sdata = _src.ptr<double>(i);
+                    const double* mdata = mean.ptr<double>(i);
+                    double* ddata = _dst.ptr<double>(i);
+
+                    for( j = 0; j < size.width; j++ )
+                        ddata[j] = (double)tab[(int)sdata[j] - (int)mdata[j] + 255];
+                }
+            }
+            break;
+        case CV_THRESH_BINARY_INV:
+            for( i = 0; i < size.height; i++ )
+            {
+                if( depth == CV_8U )
+                {
+                    const uchar* sdata = _src.ptr<uchar>(i);
+                    const uchar* mdata = mean.ptr<uchar>(i);
+                    uchar* ddata = _dst.ptr<uchar>(i);
+
+                    for( j = 0; j < size.width; j++ )
+                        ddata[j] = (uchar)tab[sdata[j] - mdata[j] + 255];
+                }
+                else if( depth == CV_16S )
+                {
+                    const short* sdata = _src.ptr<short>(i);
+                    const short* mdata = mean.ptr<short>(i);
+                    short* ddata = _dst.ptr<short>(i);
+
+                    for( j = 0; j < size.width; j++ )
+                        ddata[j] = (short)tab[sdata[j] - mdata[j] + 255];
+                }
+                else if( depth == CV_16U )
+                {
+                    const ushort* sdata = _src.ptr<ushort>(i);
+                    const ushort* mdata = mean.ptr<ushort>(i);
+                    ushort* ddata = _dst.ptr<ushort>(i);
+
+                    for( j = 0; j < size.width; j++ )
+                        ddata[j] = (ushort)tab[sdata[j] - mdata[j] + 255];
+                }
+                else if( depth == CV_32F )
+                {
+                    const float* sdata = _src.ptr<float>(i);
+                    const float* mdata = mean.ptr<float>(i);
+                    float* ddata = _dst.ptr<float>(i);
+
+                    for( j = 0; j < size.width; j++ )
+                        ddata[j] = (float)tab[(int)sdata[j] - (int)mdata[j] + 255];
+                }
+                else
+                {
+                    const double* sdata = _src.ptr<double>(i);
+                    const double* mdata = mean.ptr<double>(i);
+                    double* ddata = _dst.ptr<double>(i);
+
+                    for( j = 0; j < size.width; j++ )
+                        ddata[j] = (double)tab[(int)sdata[j] - (int)mdata[j] + 255];
+                }
+            }
+            break;
+            default:
+                CV_Assert(0);
+    }
+}
 
 void CV_ThreshTest::prepare_to_validation( int /*test_case_idx*/ )
 {
