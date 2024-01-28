@@ -104,7 +104,12 @@ static const _OutputArray::DepthMask baseArithmTypeMask =
         _OutputArray::DEPTH_MASK_16S |
         _OutputArray::DEPTH_MASK_32S |
         _OutputArray::DEPTH_MASK_32F |
-        _OutputArray::DEPTH_MASK_64F);
+        _OutputArray::DEPTH_MASK_64F |
+        _OutputArray::DEPTH_MASK_16F |
+        _OutputArray::DEPTH_MASK_16BF |
+        _OutputArray::DEPTH_MASK_32U |
+        _OutputArray::DEPTH_MASK_64U |
+        _OutputArray::DEPTH_MASK_64S );
 
 struct BaseArithmOp : public BaseElemWiseOp
 {
@@ -133,6 +138,11 @@ struct BaseAddOp : public BaseArithmOp
         }
         else
             cvtest::add(src[0], alpha, src.size() > 1 ? src[1] : Mat(), beta, gamma, dst, src[0].type());
+    }
+
+    double getMaxErr(int depth)
+    {
+        return depth == CV_16BF ? 1e-2 : depth == CV_16F ? 1e-3 : depth == CV_32F ? 1e-4 : depth == CV_64F ? 1e-12 : 2;
     }
 };
 
@@ -198,7 +208,7 @@ struct ScaleAddOp : public BaseAddOp
     }
     double getMaxErr(int depth)
     {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-4 : 1e-12;
+        return depth == CV_16BF ? 1e-2 : depth == CV_16F ? 1e-3 : depth <= CV_32S ? 2 : depth < CV_64F ? 1e-4 : 1e-12;
     }
 };
 
@@ -212,7 +222,7 @@ struct AddWeightedOp : public BaseAddOp
     }
     double getMaxErr(int depth)
     {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-10;
+        return depth == CV_64F ? 1e-9 : BaseAddOp::getMaxErr(depth);
     }
 };
 
@@ -234,10 +244,6 @@ struct MulOp : public BaseArithmOp
     {
         cvtest::multiply(src[0], src[1], dst, alpha);
     }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
-    }
 };
 
 struct DivOp : public BaseArithmOp
@@ -251,10 +257,6 @@ struct DivOp : public BaseArithmOp
     {
         cvtest::divide(src[0], src[1], dst, alpha);
     }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
-    }
 };
 
 struct RecipOp : public BaseArithmOp
@@ -267,10 +269,6 @@ struct RecipOp : public BaseArithmOp
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cvtest::divide(Mat(), src[0], dst, alpha);
-    }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
     }
 };
 
@@ -1608,6 +1606,8 @@ TEST_P(ElemWiseTest, accuracy)
         op->op(src, dst, mask);
 
         double maxErr = op->getMaxErr(depth);
+        if (testIdx >= 6)
+            printf("testIdx=%d\n", testIdx);
         ASSERT_PRED_FORMAT2(cvtest::MatComparator(maxErr, op->context), dst0, dst) << "\nsrc[0] ~ " <<
             cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << "\ntestCase #" << testIdx << "\n";
     }

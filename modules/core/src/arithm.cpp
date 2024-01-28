@@ -873,10 +873,19 @@ static BinaryFuncC* getAddTab()
 {
     static BinaryFuncC addTab[CV_DEPTH_MAX] =
     {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16s),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8u),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8s),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16u),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::add32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add32f), (BinaryFuncC)cv::hal::add64f,
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add32f),
+        (BinaryFuncC)cv::hal::add64f,
+        (BinaryFuncC)cv::hal::add16f,
+        (BinaryFuncC)cv::hal::add16bf,
+        0,
+        (BinaryFuncC)cv::hal::add64u,
+        (BinaryFuncC)cv::hal::add64s,
+        (BinaryFuncC)cv::hal::add32u,
         0
     };
 
@@ -887,10 +896,19 @@ static BinaryFuncC* getSubTab()
 {
     static BinaryFuncC subTab[CV_DEPTH_MAX] =
     {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16s),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8u),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8s),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16u),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub32f), (BinaryFuncC)cv::hal::sub64f,
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub32f),
+        (BinaryFuncC)cv::hal::sub64f,
+        (BinaryFuncC)cv::hal::sub16f,
+        (BinaryFuncC)cv::hal::sub16bf,
+        0,
+        (BinaryFuncC)cv::hal::sub64u,
+        (BinaryFuncC)cv::hal::sub64s,
+        (BinaryFuncC)cv::hal::sub32u,
         0
     };
 
@@ -901,10 +919,19 @@ static BinaryFuncC* getAbsDiffTab()
 {
     static BinaryFuncC absDiffTab[CV_DEPTH_MAX] =
     {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16s),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8u),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8s),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16u),
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff32f), (BinaryFuncC)cv::hal::absdiff64f,
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff32f),
+        (BinaryFuncC)cv::hal::absdiff64f,
+        (BinaryFuncC)cv::hal::absdiff16f,
+        (BinaryFuncC)cv::hal::absdiff16bf,
+        0,
+        (BinaryFuncC)cv::hal::absdiff64u,
+        (BinaryFuncC)cv::hal::absdiff64s,
+        (BinaryFuncC)cv::hal::absdiff32u,
         0
     };
 
@@ -956,7 +983,8 @@ static BinaryFuncC* getMulTab()
     {
         (BinaryFuncC)cv::hal::mul8u, (BinaryFuncC)cv::hal::mul8s, (BinaryFuncC)cv::hal::mul16u,
         (BinaryFuncC)cv::hal::mul16s, (BinaryFuncC)cv::hal::mul32s, (BinaryFuncC)cv::hal::mul32f,
-        (BinaryFuncC)cv::hal::mul64f, 0
+        (BinaryFuncC)cv::hal::mul64f, (BinaryFuncC)cv::hal::mul16f, (BinaryFuncC)cv::hal::mul16bf, 0,
+        (BinaryFuncC)cv::hal::mul64u, (BinaryFuncC)cv::hal::mul64s, (BinaryFuncC)cv::hal::mul32u, 0
     };
 
     return mulTab;
@@ -968,7 +996,8 @@ static BinaryFuncC* getDivTab()
     {
         (BinaryFuncC)cv::hal::div8u, (BinaryFuncC)cv::hal::div8s, (BinaryFuncC)cv::hal::div16u,
         (BinaryFuncC)cv::hal::div16s, (BinaryFuncC)cv::hal::div32s, (BinaryFuncC)cv::hal::div32f,
-        (BinaryFuncC)cv::hal::div64f, 0
+        (BinaryFuncC)cv::hal::div64f, (BinaryFuncC)cv::hal::div16f, (BinaryFuncC)cv::hal::div16bf, 0,
+        (BinaryFuncC)cv::hal::div64u, (BinaryFuncC)cv::hal::div64s, (BinaryFuncC)cv::hal::div32u, 0
     };
 
     return divTab;
@@ -980,7 +1009,8 @@ static BinaryFuncC* getRecipTab()
     {
         (BinaryFuncC)cv::hal::recip8u, (BinaryFuncC)cv::hal::recip8s, (BinaryFuncC)cv::hal::recip16u,
         (BinaryFuncC)cv::hal::recip16s, (BinaryFuncC)cv::hal::recip32s, (BinaryFuncC)cv::hal::recip32f,
-        (BinaryFuncC)cv::hal::recip64f, 0
+        (BinaryFuncC)cv::hal::recip64f, (BinaryFuncC)cv::hal::recip16f, (BinaryFuncC)cv::hal::recip16bf, 0,
+        (BinaryFuncC)cv::hal::recip64u, (BinaryFuncC)cv::hal::recip64s, (BinaryFuncC)cv::hal::recip32u, 0
     };
 
     return recipTab;
@@ -1028,7 +1058,10 @@ static BinaryFuncC* getAddWeightedTab()
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8s), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16u),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16s), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted32s), (BinaryFuncC)cv::hal::addWeighted32f,
-        (BinaryFuncC)cv::hal::addWeighted64f, 0
+        (BinaryFuncC)cv::hal::addWeighted64f, (BinaryFuncC)cv::hal::addWeighted16f,
+        (BinaryFuncC)cv::hal::addWeighted16bf, 0,
+        (BinaryFuncC)cv::hal::addWeighted64u, (BinaryFuncC)cv::hal::addWeighted64s,
+        (BinaryFuncC)cv::hal::addWeighted32u, 0
     };
 
     return addWeightedTab;

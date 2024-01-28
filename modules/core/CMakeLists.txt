@@ -2,7 +2,7 @@ set(the_description "The Core Functionality")
 
 ocv_add_dispatched_file(mathfuncs_core SSE2 AVX AVX2 LASX)
 ocv_add_dispatched_file(stat SSE4_2 AVX2 LASX)
-ocv_add_dispatched_file(arithm SSE2 SSE4_1 AVX2 VSX3 LASX)
+ocv_add_dispatched_file(arithm SSE2 SSE4_1 AVX2 VSX3 LASX FP16)
 ocv_add_dispatched_file(convert SSE2 AVX2 VSX3 LASX)
 ocv_add_dispatched_file(convert_scale SSE2 AVX2 LASX)
 ocv_add_dispatched_file(count_non_zero SSE2 AVX2 LASX)
