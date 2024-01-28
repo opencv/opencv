@@ -242,6 +242,38 @@ TEST(usac_Homography, accuracy) {
     }
 }
 
+TEST(usac_Homography_regression_24835, accuracy) {
+    // ensure that findHomography behaves as expected when the RNG is (and is not) seeded
+    std::vector<int> gt_inliers;
+    const int pts_size = 1500;
+    cv::RNG &rng = cv::theRNG();
+
+    cv::Mat pts1, pts2, K1, K2;
+    generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/, pts_size, TestSolver::Homogr, 0.3/*inl ratio*/, 0.1
+            /*noise std*/, gt_inliers);
+
+    const double conf = 0.9, thr = 1.;
+    int max_iter = 1;
+
+    for (const int method : {cv::RANSAC, cv::LMEDS}) {
+        // output changes when RNG seed is not set
+        cv::Mat mask1, H1 = cv::findHomography(pts1.t(), pts2.t(), method, thr, mask1, max_iter, conf);
+        cv::Mat mask2, H2 = cv::findHomography(pts1.t(), pts2.t(), method, thr, mask2, max_iter, conf);
+        ASSERT_GT(cv::norm(H1 - H2), 1e-15);
+
+        // output changes when RNG seed is changed
+        cv::setRNGSeed(24835);
+        cv::Mat mask3, H3 = cv::findHomography(pts1.t(), pts2.t(), method, thr, mask3, max_iter, conf);
+        ASSERT_GT(cv::norm(H2 - H3), 1e-15);
+        ASSERT_GT(cv::norm(H1 - H3), 1e-15);
+
+        // output doesn't change when RNG seed is fixed
+        cv::setRNGSeed(24835);
+        cv::Mat mask4, H4 = cv::findHomography(pts1.t(), pts2.t(), method, thr, mask4, max_iter, conf);
+        ASSERT_EQ(cv::norm(H3 - H4), 0.);
+    }
+}
+
 TEST(usac_Fundamental, accuracy) {
     std::vector<int> gt_inliers;
     const int pts_size = 2000;
