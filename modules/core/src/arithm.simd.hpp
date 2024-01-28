@@ -773,7 +773,7 @@ void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
 #undef vec_addw
 #define scalar_mul() ((f1)*(f2)*sscale)
 #define vec_mul() v_mul(v_mul((f1), vscale), (f2))
-#define iscalar_div() ((f1)!=0? (f1)*sscale/(f2) : 0)
+#define iscalar_div() ((f2)!=0? (f1)*sscale/(f2) : 0)
 #define ivec_div() v_select(v_eq((f2), vzero), vzero, v_div(v_mul((f1), vscale), (f2)))
 #define fscalar_div() ((f1)*sscale/(f2))
 #define fvec_div() v_div(v_mul((f1), vscale), (f2))

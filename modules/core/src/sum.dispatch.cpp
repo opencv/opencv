@@ -200,6 +200,11 @@ Scalar sum(InputArray _src)
 
     int k, cn = src.channels(), depth = src.depth();
     SumFunc func = getSumFunc(depth);
+    if (func == nullptr) {
+        if (depth == CV_Bool && cn == 1)
+            return Scalar((double)countNonZero(src));
+        CV_Error(Error::StsNotImplemented, "");
+    }
     CV_Assert( cn <= 4 && func != 0 );
 
     const Mat* arrays[] = {&src, 0};

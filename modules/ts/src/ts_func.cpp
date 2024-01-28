@@ -1674,7 +1674,7 @@ void logicOp(const Mat& src, const Scalar& s, Mat& dst, char op)
 }
 
 
-template<typename _Tp> static void
+template<typename _Tp, typename _WTp> static void
 compare_(const _Tp* src1, const _Tp* src2, uchar* dst, size_t total, int cmpop)
 {
     size_t i;
@@ -1682,27 +1682,27 @@ compare_(const _Tp* src1, const _Tp* src2, uchar* dst, size_t total, int cmpop)
     {
     case CMP_LT:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] < src2[i] ? 255 : 0;
+            dst[i] = (_WTp)src1[i] < (_WTp)src2[i] ? 255 : 0;
         break;
     case CMP_LE:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] <= src2[i] ? 255 : 0;
+            dst[i] = (_WTp)src1[i] <= (_WTp)src2[i] ? 255 : 0;
         break;
     case CMP_EQ:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] == src2[i] ? 255 : 0;
+            dst[i] = (_WTp)src1[i] == (_WTp)src2[i] ? 255 : 0;
         break;
     case CMP_NE:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] != src2[i] ? 255 : 0;
+            dst[i] = (_WTp)src1[i] != (_WTp)src2[i] ? 255 : 0;
         break;
     case CMP_GE:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] >= src2[i] ? 255 : 0;
+            dst[i] = (_WTp)src1[i] >= (_WTp)src2[i] ? 255 : 0;
         break;
     case CMP_GT:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] > src2[i] ? 255 : 0;
+            dst[i] = (_WTp)src1[i] > (_WTp)src2[i] ? 255 : 0;
         break;
     default:
         CV_Error(Error::StsBadArg, "Unknown comparison operation");
@@ -1718,27 +1718,27 @@ compareS_(const _Tp* src1, _WTp value, uchar* dst, size_t total, int cmpop)
     {
     case CMP_LT:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] < value ? 255 : 0;
+            dst[i] = (_WTp)src1[i] < (_WTp)value ? 255 : 0;
         break;
     case CMP_LE:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] <= value ? 255 : 0;
+            dst[i] = (_WTp)src1[i] <= (_WTp)value ? 255 : 0;
         break;
     case CMP_EQ:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] == value ? 255 : 0;
+            dst[i] = (_WTp)src1[i] == (_WTp)value ? 255 : 0;
         break;
     case CMP_NE:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] != value ? 255 : 0;
+            dst[i] = (_WTp)src1[i] != (_WTp)value ? 255 : 0;
         break;
     case CMP_GE:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] >= value ? 255 : 0;
+            dst[i] = (_WTp)src1[i] >= (_WTp)value ? 255 : 0;
         break;
     case CMP_GT:
         for( i = 0; i < total; i++ )
-            dst[i] = src1[i] > value ? 255 : 0;
+            dst[i] = (_WTp)src1[i] > (_WTp)value ? 255 : 0;
         break;
     default:
         CV_Error(Error::StsBadArg, "Unknown comparison operation");
@@ -1767,25 +1767,40 @@ void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
         switch( depth )
         {
         case CV_8U:
-            compare_((const uchar*)sptr1, (const uchar*)sptr2, dptr, total, cmpop);
+            compare_<uchar, int>((const uchar*)sptr1, (const uchar*)sptr2, dptr, total, cmpop);
             break;
         case CV_8S:
-            compare_((const schar*)sptr1, (const schar*)sptr2, dptr, total, cmpop);
+            compare_<schar, int>((const schar*)sptr1, (const schar*)sptr2, dptr, total, cmpop);
             break;
         case CV_16U:
-            compare_((const ushort*)sptr1, (const ushort*)sptr2, dptr, total, cmpop);
+            compare_<ushort, int>((const ushort*)sptr1, (const ushort*)sptr2, dptr, total, cmpop);
             break;
         case CV_16S:
-            compare_((const short*)sptr1, (const short*)sptr2, dptr, total, cmpop);
+            compare_<short, int>((const short*)sptr1, (const short*)sptr2, dptr, total, cmpop);
+            break;
+        case CV_32U:
+            compare_<unsigned, unsigned>((const unsigned*)sptr1, (const unsigned*)sptr2, dptr, total, cmpop);
             break;
         case CV_32S:
-            compare_((const int*)sptr1, (const int*)sptr2, dptr, total, cmpop);
+            compare_<int, int>((const int*)sptr1, (const int*)sptr2, dptr, total, cmpop);
+            break;
+        case CV_64U:
+            compare_<uint64, uint64>((const uint64*)sptr1, (const uint64*)sptr2, dptr, total, cmpop);
+            break;
+        case CV_64S:
+            compare_<int64, int64>((const int64*)sptr1, (const int64*)sptr2, dptr, total, cmpop);
             break;
         case CV_32F:
-            compare_((const float*)sptr1, (const float*)sptr2, dptr, total, cmpop);
+            compare_<float, float>((const float*)sptr1, (const float*)sptr2, dptr, total, cmpop);
             break;
         case CV_64F:
-            compare_((const double*)sptr1, (const double*)sptr2, dptr, total, cmpop);
+            compare_<double, double>((const double*)sptr1, (const double*)sptr2, dptr, total, cmpop);
+            break;
+        case CV_16F:
+            compare_<cv::float16_t, float>((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, dptr, total, cmpop);
+            break;
+        case CV_16BF:
+            compare_<cv::bfloat16_t, float>((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, dptr, total, cmpop);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -1825,14 +1840,29 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
         case CV_16S:
             compareS_((const short*)sptr, ivalue, dptr, total, cmpop);
             break;
+        case CV_32U:
+            compareS_((const unsigned*)sptr, value, dptr, total, cmpop);
+            break;
         case CV_32S:
             compareS_((const int*)sptr, ivalue, dptr, total, cmpop);
             break;
+        case CV_64U:
+            compareS_((const uint64*)sptr, value, dptr, total, cmpop);
+            break;
+        case CV_64S:
+            compareS_((const int64*)sptr, value, dptr, total, cmpop);
+            break;
         case CV_32F:
-            compareS_((const float*)sptr, value, dptr, total, cmpop);
+            compareS_((const float*)sptr, (float)value, dptr, total, cmpop);
             break;
         case CV_64F:
             compareS_((const double*)sptr, value, dptr, total, cmpop);
+            break;
+        case CV_16F:
+            compareS_((const cv::float16_t*)sptr, (float)value, dptr, total, cmpop);
+            break;
+        case CV_16BF:
+            compareS_((const cv::bfloat16_t*)sptr, (float)value, dptr, total, cmpop);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -2514,6 +2544,17 @@ minmax_(const _Tp* src1, const _Tp* src2, _Tp* dst, size_t total, char op)
             dst[i] = std::min(src1[i], src2[i]);
 }
 
+template<typename _Tp> static void
+minmax16f_(const _Tp* src1, const _Tp* src2, _Tp* dst, size_t total, char op)
+{
+    if( op == 'M' )
+        for( size_t i = 0; i < total; i++ )
+            dst[i] = _Tp(std::max((float)src1[i], (float)src2[i]));
+    else
+        for( size_t i = 0; i < total; i++ )
+            dst[i] = _Tp(std::min((float)src1[i], (float)src2[i]));
+}
+
 static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
 {
     dst.create(src1.dims, src1.size, src1.type());
@@ -2545,6 +2586,9 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
         case CV_16S:
             minmax_((const short*)sptr1, (const short*)sptr2, (short*)dptr, total, op);
             break;
+        case CV_32U:
+            minmax_((const unsigned*)sptr1, (const unsigned*)sptr2, (unsigned*)dptr, total, op);
+            break;
         case CV_32S:
             minmax_((const int*)sptr1, (const int*)sptr2, (int*)dptr, total, op);
             break;
@@ -2553,6 +2597,18 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
             break;
         case CV_64F:
             minmax_((const double*)sptr1, (const double*)sptr2, (double*)dptr, total, op);
+            break;
+        case CV_64U:
+            minmax_((const uint64*)sptr1, (const uint64*)sptr2, (uint64*)dptr, total, op);
+            break;
+        case CV_64S:
+            minmax_((const int64*)sptr1, (const int64*)sptr2, (int64*)dptr, total, op);
+            break;
+        case CV_16F:
+            minmax16f_((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, (cv::float16_t*)dptr, total, op);
+            break;
+        case CV_16BF:
+            minmax16f_((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, (cv::bfloat16_t*)dptr, total, op);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -2583,6 +2639,18 @@ minmax_(const _Tp* src1, _Tp val, _Tp* dst, size_t total, char op)
             dst[i] = std::min(src1[i], val);
 }
 
+template<typename _Tp> static void
+minmax_16f(const _Tp* src1, _Tp val_, _Tp* dst, size_t total, char op)
+{
+    float val = (float)val_;
+    if( op == 'M' )
+        for( size_t i = 0; i < total; i++ )
+            dst[i] = _Tp(std::max((float)src1[i], val));
+    else
+        for( size_t i = 0; i < total; i++ )
+            dst[i] = _Tp(std::min((float)src1[i], val));
+}
+
 static void minmax(const Mat& src1, double val, Mat& dst, char op)
 {
     dst.create(src1.dims, src1.size, src1.type());
@@ -2602,6 +2670,7 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
         switch( depth )
         {
         case CV_8U:
+        case CV_Bool:
             minmax_((const uchar*)sptr1, saturate_cast<uchar>(ival), (uchar*)dptr, total, op);
             break;
         case CV_8S:
@@ -2613,14 +2682,29 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
         case CV_16S:
             minmax_((const short*)sptr1, saturate_cast<short>(ival), (short*)dptr, total, op);
             break;
+        case CV_32U:
+            minmax_((const unsigned*)sptr1, saturate_cast<unsigned>(val), (unsigned*)dptr, total, op);
+            break;
         case CV_32S:
-            minmax_((const int*)sptr1, saturate_cast<int>(ival), (int*)dptr, total, op);
+            minmax_((const int*)sptr1, ival, (int*)dptr, total, op);
+            break;
+        case CV_64U:
+            minmax_((const uint64*)sptr1, saturate_cast<uint64>(val), (uint64*)dptr, total, op);
+            break;
+        case CV_64S:
+            minmax_((const int64*)sptr1, saturate_cast<int64>(val), (int64*)dptr, total, op);
             break;
         case CV_32F:
             minmax_((const float*)sptr1, saturate_cast<float>(val), (float*)dptr, total, op);
             break;
         case CV_64F:
             minmax_((const double*)sptr1, saturate_cast<double>(val), (double*)dptr, total, op);
+            break;
+        case CV_16F:
+            minmax_16f((const cv::float16_t*)sptr1, saturate_cast<cv::float16_t>(val), (cv::float16_t*)dptr, total, op);
+            break;
+        case CV_16BF:
+            minmax_16f((const cv::bfloat16_t*)sptr1, saturate_cast<cv::bfloat16_t>(val), (cv::bfloat16_t*)dptr, total, op);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -2654,6 +2738,20 @@ muldiv_(const _Tp* src1, const _Tp* src2, _Tp* dst, size_t total, double scale, 
             dst[i] = src2[i] ? saturate_cast<_Tp>(scale/src2[i]) : 0;
 }
 
+template<typename _Tp> static void
+muldiv_16f(const _Tp* src1, const _Tp* src2, _Tp* dst, size_t total, double scale, char op)
+{
+    if( op == '*' )
+        for( size_t i = 0; i < total; i++ )
+            dst[i] = saturate_cast<_Tp>((scale*src1[i])*src2[i]);
+    else if( src1 )
+        for( size_t i = 0; i < total; i++ )
+            dst[i] = saturate_cast<_Tp>((scale*(float)src1[i])/(float)src2[i]);
+    else
+        for( size_t i = 0; i < total; i++ )
+            dst[i] = saturate_cast<_Tp>(scale/(float)src2[i]);
+}
+
 static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, char op)
 {
     dst.create(src2.dims, src2.size, src2.type());
@@ -2685,14 +2783,29 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
         case CV_16S:
             muldiv_((const short*)sptr1, (const short*)sptr2, (short*)dptr, total, scale, op);
             break;
+        case CV_32U:
+            muldiv_((const unsigned*)sptr1, (const unsigned*)sptr2, (unsigned*)dptr, total, scale, op);
+            break;
         case CV_32S:
             muldiv_((const int*)sptr1, (const int*)sptr2, (int*)dptr, total, scale, op);
+            break;
+        case CV_64U:
+            muldiv_((const uint64*)sptr1, (const uint64*)sptr2, (uint64*)dptr, total, scale, op);
+            break;
+        case CV_64S:
+            muldiv_((const int64*)sptr1, (const int64*)sptr2, (int64*)dptr, total, scale, op);
             break;
         case CV_32F:
             muldiv_((const float*)sptr1, (const float*)sptr2, (float*)dptr, total, scale, op);
             break;
         case CV_64F:
             muldiv_((const double*)sptr1, (const double*)sptr2, (double*)dptr, total, scale, op);
+            break;
+        case CV_16F:
+            muldiv_16f((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, (cv::float16_t*)dptr, total, scale, op);
+            break;
+        case CV_16BF:
+            muldiv_16f((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, (cv::bfloat16_t*)dptr, total, scale, op);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -2712,7 +2825,7 @@ void divide(const Mat& src1, const Mat& src2, Mat& dst, double scale)
 }
 
 
-template<typename _Tp> static void
+template<typename _Tp, typename _WTp=_Tp> static void
 mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int& nz)
 {
     if( !mask )
@@ -2722,7 +2835,7 @@ mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int&
         for( size_t i = 0; i < total; i += cn )
         {
             for( int c = 0; c < cn; c++ )
-                sum[c] += src[i + c];
+                sum[c] += (_WTp)src[i + c];
         }
     }
     else
@@ -2732,7 +2845,7 @@ mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int&
             {
                 nz++;
                 for( int c = 0; c < cn; c++ )
-                    sum[c] += src[i*cn + c];
+                    sum[c] += (_WTp)src[i*cn + c];
             }
     }
 }
@@ -2770,14 +2883,29 @@ Scalar mean(const Mat& src, const Mat& mask)
         case CV_16S:
             mean_((const short*)sptr, mptr, total, cn, sum, nz);
             break;
+        case CV_32U:
+            mean_((const unsigned*)sptr, mptr, total, cn, sum, nz);
+            break;
         case CV_32S:
             mean_((const int*)sptr, mptr, total, cn, sum, nz);
+            break;
+        case CV_64U:
+            mean_((const uint64*)sptr, mptr, total, cn, sum, nz);
+            break;
+        case CV_64S:
+            mean_((const int64*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_32F:
             mean_((const float*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_64F:
             mean_((const double*)sptr, mptr, total, cn, sum, nz);
+            break;
+        case CV_16F:
+            mean_<cv::float16_t, float>((const cv::float16_t*)sptr, mptr, total, cn, sum, nz);
+            break;
+        case CV_16BF:
+            mean_<cv::bfloat16_t, float>((const cv::bfloat16_t*)sptr, mptr, total, cn, sum, nz);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");

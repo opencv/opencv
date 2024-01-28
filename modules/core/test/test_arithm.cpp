@@ -208,7 +208,7 @@ struct ScaleAddOp : public BaseAddOp
     }
     double getMaxErr(int depth)
     {
-        return depth == CV_16BF ? 1e-2 : depth == CV_16F ? 1e-3 : depth <= CV_32S ? 2 : depth < CV_64F ? 1e-4 : 1e-12;
+        return depth == CV_16BF ? 1e-2 : depth == CV_16F ? 1e-3 : depth == CV_32F ? 1e-4 : depth == CV_64F ? 1e-12 : 2;
     }
 };
 
@@ -464,7 +464,7 @@ struct CmpSOp : public BaseArithmOp
     {
         BaseElemWiseOp::generateScalars(depth, rng);
         cmpop = rng.uniform(0, 6);
-        if( depth < CV_32F )
+        if( depth != CV_16F && depth != CV_16BF && depth != CV_32F && depth != CV_64F )
             gamma[0] = cvRound(gamma[0]);
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
@@ -530,27 +530,29 @@ struct SetOp : public BaseElemWiseOp
     }
 };
 
-template<typename _Tp, typename _WTp> static void
+template<typename _Tp, typename _WTp=_Tp> static void
 inRangeS_(const _Tp* src, const _WTp* a, const _WTp* b, uchar* dst, size_t total, int cn)
 {
     size_t i;
     int c;
     for( i = 0; i < total; i++ )
     {
-        _Tp val = src[i*cn];
+        _WTp val = (_WTp)src[i*cn];
         dst[i] = (a[0] <= val && val <= b[0]) ? uchar(255) : 0;
     }
     for( c = 1; c < cn; c++ )
     {
         for( i = 0; i < total; i++ )
         {
-            _Tp val = src[i*cn + c];
+            _WTp val = (_WTp)src[i*cn + c];
             dst[i] = a[c] <= val && val <= b[c] ? dst[i] : 0;
         }
     }
 }
 
-template<typename _Tp> static void inRange_(const _Tp* src, const _Tp* a, const _Tp* b, uchar* dst, size_t total, int cn)
+template<typename _Tp, typename _WTp=_Tp> static void
+inRange_(const _Tp* src, const _Tp* a, const _Tp* b,
+         uchar* dst, size_t total, int cn)
 {
     size_t i;
     int c;
@@ -605,14 +607,31 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
         case CV_16S:
             inRange_((const short*)sptr, (const short*)aptr, (const short*)bptr, dptr, total, cn);
             break;
+        case CV_32U:
+            inRange_((const unsigned*)sptr, (const unsigned*)aptr, (const unsigned*)bptr, dptr, total, cn);
+            break;
         case CV_32S:
             inRange_((const int*)sptr, (const int*)aptr, (const int*)bptr, dptr, total, cn);
+            break;
+        case CV_64U:
+            inRange_((const uint64*)sptr, (const uint64*)aptr, (const uint64*)bptr, dptr, total, cn);
+            break;
+        case CV_64S:
+            inRange_((const int64*)sptr, (const int64*)aptr, (const int64*)bptr, dptr, total, cn);
             break;
         case CV_32F:
             inRange_((const float*)sptr, (const float*)aptr, (const float*)bptr, dptr, total, cn);
             break;
         case CV_64F:
             inRange_((const double*)sptr, (const double*)aptr, (const double*)bptr, dptr, total, cn);
+            break;
+        case CV_16F:
+            inRange_<cv::float16_t, float>((const cv::float16_t*)sptr, (const cv::float16_t*)aptr,
+                                           (const cv::float16_t*)bptr, dptr, total, cn);
+            break;
+        case CV_16BF:
+            inRange_<cv::bfloat16_t, float>((const cv::bfloat16_t*)sptr, (const cv::bfloat16_t*)aptr,
+                                            (const cv::bfloat16_t*)bptr, dptr, total, cn);
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "");
@@ -631,7 +650,8 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
     size_t i, nplanes = it.nplanes;
     int depth = src.depth(), cn = src.channels();
     union { double d[4]; float f[4]; int i[4];} lbuf, rbuf;
-    int wtype = CV_MAKETYPE(depth <= CV_32S ? CV_32S : depth, cn);
+    int wtype = CV_MAKETYPE((depth <= CV_32S ? CV_32S :
+        depth == CV_16F || depth == CV_16BF || depth == CV_32F ? CV_32F : CV_64F), cn);
     scalarToRawData(lb, lbuf.d, wtype, cn);
     scalarToRawData(rb, rbuf.d, wtype, cn);
 
@@ -654,14 +674,29 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
         case CV_16S:
             inRangeS_((const short*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
             break;
+        case CV_32U:
+            inRangeS_((const unsigned*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
+            break;
         case CV_32S:
             inRangeS_((const int*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
+            break;
+        case CV_64U:
+            inRangeS_((const uint64*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
+            break;
+        case CV_64S:
+            inRangeS_((const int64*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         case CV_32F:
             inRangeS_((const float*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
             break;
         case CV_64F:
             inRangeS_((const double*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
+            break;
+        case CV_16F:
+            inRangeS_((const cv::float16_t*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
+            break;
+        case CV_16BF:
+            inRangeS_((const cv::bfloat16_t*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "");
@@ -1602,12 +1637,15 @@ TEST_P(ElemWiseTest, accuracy)
         }
         op->generateScalars(depth, rng);
 
+        //printf("testIdx=%d\n", testIdx);
+        //if (testIdx == 1)
+        //    putchar('.');
+
         op->refop(src, dst0, mask);
         op->op(src, dst, mask);
 
         double maxErr = op->getMaxErr(depth);
-        if (testIdx >= 6)
-            printf("testIdx=%d\n", testIdx);
+
         ASSERT_PRED_FORMAT2(cvtest::MatComparator(maxErr, op->context), dst0, dst) << "\nsrc[0] ~ " <<
             cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << "\ntestCase #" << testIdx << "\n";
     }

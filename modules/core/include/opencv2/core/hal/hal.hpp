@@ -187,11 +187,11 @@ CV_EXPORTS void cmp16s(const short* src1, size_t step1, const short* src2, size_
 CV_EXPORTS void cmp32s(const int* src1, size_t step1, const int* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
 CV_EXPORTS void cmp32f(const float* src1, size_t step1, const float* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
 CV_EXPORTS void cmp64f(const double* src1, size_t step1, const double* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
-CV_EXPORTS void cmp16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, cv_hal_f16* dst, size_t step, int width, int height, void* _cmpop);
-CV_EXPORTS void cmp16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, cv_hal_bf16* dst, size_t step, int width, int height, void* _cmpop);
-CV_EXPORTS void cmp64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uint64* dst, size_t step, int width, int height, void* _cmpop);
-CV_EXPORTS void cmp64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* _cmpop);
-CV_EXPORTS void cmp32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* _cmpop);
+CV_EXPORTS void cmp16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+CV_EXPORTS void cmp16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+CV_EXPORTS void cmp64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+CV_EXPORTS void cmp64s( const int64* src1, size_t step1, const int64* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+CV_EXPORTS void cmp32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
 
 CV_EXPORTS void mul8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void mul8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
