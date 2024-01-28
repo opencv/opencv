@@ -168,7 +168,7 @@ public:
         int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
         int count = m1.checkVector(d1), count2 = m2.checkVector(d2), maxGoodCount = 0;
 
-        RNG rng((uint64)-1);
+        RNG& rng = cv::theRNG();
 
         CV_Assert( cb );
         CV_Assert( confidence > 0 && confidence < 1 );
@@ -281,7 +281,7 @@ public:
         int count = m1.checkVector(d1), count2 = m2.checkVector(d2);
         double minMedian = DBL_MAX;
 
-        RNG rng((uint64)-1);
+        RNG& rng = cv::theRNG();
 
         CV_Assert( cb );
         CV_Assert( confidence > 0 && confidence < 1 );
