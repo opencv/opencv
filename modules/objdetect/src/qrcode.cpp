@@ -3047,6 +3047,15 @@ protected:
     vector<Point2f> not_resized_loc_points;
     vector<Point2f> resized_loc_points;
     vector< vector< Point2f > > localization_points, transformation_points;
+    struct compareAtan2
+    {
+        compareAtan2(const Point2f &c) : center(c) {};
+        bool operator()(const Point2f& a, const Point2f& b) const
+        {
+            return fastAtan2(a.y - center.y, a.x - center.x) < fastAtan2(b.y - center.y, b.x - center.x);
+        }
+        Point2f center;
+    };
     struct compareSquare
     {
         const vector<Point2f>& points;
@@ -3318,15 +3327,41 @@ public:
     BWCounter& operator+=(const BWCounter& other) { black += other.black; white += other.white; return *this; }
     void count1(uchar pixel) { if (pixel == 255) white++; else if (pixel == 0) black++; }
     double getBWFraction() const { return white == 0 ? std::numeric_limits<double>::infinity() : double(black) / double(white); }
-    static BWCounter checkOnePair(const Point2f& tl, const Point2f& tr, const Point2f& bl, const Point2f& br, const Mat& img)
+    static BWCounter checkCorners(const std::vector<Point2f> &points, const Mat& img)
     {
         BWCounter res;
-        LineIterator li1(tl, tr), li2(bl, br);
-        for (int i = 0; i < li1.count && i < li2.count; i++, li1++, li2++)
+        int minY = img.size().height - 1;
+        int maxY = 0;
+        for (const auto &p : points)
         {
-            LineIterator it(img, li1.pos(), li2.pos());
-            for (int r = 0; r < it.count; r++, it++)
-                res.count1(img.at<uchar>(it.pos()));
+            minY = std::min(minY, cvCeil(p.y));
+            maxY = std::max(maxY, cvFloor(p.y));
+        }
+        for (int y = std::max(minY, 0); y <= std::min(maxY, img.size().height - 1); ++y)
+        {
+            int minX = img.size().width;
+            int maxX = 0;
+            for (int i = 0; i < 4; ++i)
+            {
+                const Point2f &a = points[i];
+                const Point2f &b = points[(i+1) % 4];
+                if (std::min(a.y, b.y) <= y && y < std::max(a.y, b.y))
+                {
+                    int x = cvRound(a.x + (b.x - a.x) * (y - a.y) / (b.y - a.y));
+                    minX = std::min(minX, x);
+                    maxX = std::max(maxX, x);
+                }
+                else if (a.y == b.y && a.y == y)
+                {
+                    minX = std::min(minX, cvRound(std::min(a.x, b.x)));
+                    maxX = std::max(maxX, cvRound(std::max(a.x, b.x)));
+                }
+            }
+
+            for (int x = std::max(minX, 0); x <= std::min(maxX, img.size().width - 1); ++x)
+            {
+                res.count1(img.at<uchar>(y, x));
+            }
         }
         return res;
     }
@@ -3336,11 +3371,9 @@ bool QRDetectMulti::checkPoints(vector<Point2f> quadrangle)
 {
     if (quadrangle.size() != 4)
         return false;
-    if (norm(quadrangle[0] - quadrangle[1]) > norm(quadrangle[0] - quadrangle[2]))
-        std::swap(quadrangle[1], quadrangle[2]);
-    if ((quadrangle[0] - quadrangle[1]).dot(quadrangle[2] - quadrangle[3]) < 0.f)
-        std::swap(quadrangle[0], quadrangle[1]);
-    BWCounter s = BWCounter::checkOnePair(quadrangle[0], quadrangle[1], quadrangle[2], quadrangle[3], bin_barcode);
+    const Point2f center = std::accumulate(quadrangle.begin(), quadrangle.end(), Point2f()) / 4.f;
+    std::sort(quadrangle.begin(), quadrangle.end(), compareAtan2(center));
+    const BWCounter s = BWCounter::checkCorners(quadrangle, bin_barcode);
     const double frac = s.getBWFraction();
     return frac > 0.76 && frac < 1.24;
 }
