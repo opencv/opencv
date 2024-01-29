@@ -490,12 +490,12 @@ inline v_float32x4 v_sqr_magnitude(const v_float32x4& a, const v_float32x4& b)
 
 inline v_float32x4 v_fma(const v_float32x4& a, const v_float32x4& b, const v_float32x4& c)
 {
-    return v_float32x4(vfmacc_vv_f32m1(c.val, a.val, b.val, 4));
+    return v_float32x4(vfmadd_vv_f32m1(a.val, b.val, c.val, 4));
 }
 
 inline v_int32x4 v_fma(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
 {
-    return v_int32x4(vmacc_vv_i32m1(c.val, a.val, b.val, 4));
+    return v_int32x4(vmadd_vv_i32m1(a.val, b.val, c.val, 4));
 }
 
 inline v_float32x4 v_muladd(const v_float32x4& a, const v_float32x4& b, const v_float32x4& c)
@@ -553,7 +553,7 @@ inline v_float64x2 v_sqr_magnitude(const v_float64x2& a, const v_float64x2& b)
 
 inline v_float64x2 v_fma(const v_float64x2& a, const v_float64x2& b, const v_float64x2& c)
 {
-    return v_float64x2(vfmacc_vv_f64m1(c.val, a.val, b.val, 2));
+    return v_float64x2(vfmadd_vv_f64m1(a.val, b.val, c.val, 2));
 }
 
 inline v_float64x2 v_muladd(const v_float64x2& a, const v_float64x2& b, const v_float64x2& c)
@@ -1429,7 +1429,7 @@ inline _Tpvec v_load_low(const _Tp* ptr) \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(vreinterpret_v_##ldst_len##_##len(vle8_v_##ldst_len((ldst_type *)ptr, 16))); } \
 inline _Tpvec v_load(const _Tp* ptr) \
-{ return _Tpvec(vreinterpret_v_##ldst_len##_##len(vle8_v_##ldst_len((ldst_type *)ptr, 16))); } \
+{ return _Tpvec(vle##elemsize##_v_##len(ptr, num)); } \
 inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
 { vse8_v_##ldst_len((ldst_type *)ptr, vreinterpret_v_##len##_##ldst_len(a.val), 8);}\
 inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
@@ -1438,7 +1438,7 @@ inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
   a0 = vslidedown_vx_##len(a0, a.val, hnum, num);    \
   vse8_v_##ldst_len((ldst_type *)ptr, vreinterpret_v_##len##_##ldst_len(a0), 8);}\
 inline void v_store(_Tp* ptr, const _Tpvec& a) \
-{ vse8_v_##ldst_len((ldst_type *)ptr, vreinterpret_v_##len##_##ldst_len(a.val), 16); } \
+{ vse##elemsize##_v_##len(ptr, a.val, num); } \
 inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
 { vse8_v_##ldst_len((ldst_type *)ptr, vreinterpret_v_##len##_##ldst_len(a.val), 16); } \
 inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a) \
@@ -1469,7 +1469,7 @@ inline _Tpvec v_load_low(const _Tp* ptr) \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(vreinterpret_v_u##elemsize##m1_##len(vreinterpret_v_u8m1_u##elemsize##m1(vle8_v_u8m1((uchar *)ptr, 16)))); } \
 inline _Tpvec v_load(const _Tp* ptr) \
-{ return _Tpvec(vreinterpret_v_u##elemsize##m1_##len(vreinterpret_v_u8m1_u##elemsize##m1(vle8_v_u8m1((uchar *)ptr, 16)))); } \
+{ return _Tpvec(vle##elemsize##_v_##len(ptr, num)); } \
 inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
 { vse8_v_u8m1((uchar *)ptr, vreinterpret_v_u##elemsize##m1_u8m1(vreinterpret_v_##len##_u##elemsize##m1(a.val)), 8);}\
 inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
@@ -1478,7 +1478,7 @@ inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
   a0 = vslidedown_vx_##len(a0, a.val, hnum, num);    \
   vse8_v_u8m1((uchar *)ptr, vreinterpret_v_u##elemsize##m1_u8m1(vreinterpret_v_##len##_u##elemsize##m1(a0)), 8);}\
 inline void v_store(_Tp* ptr, const _Tpvec& a) \
-{ vse8_v_u8m1((uchar *)ptr, vreinterpret_v_u##elemsize##m1_u8m1(vreinterpret_v_##len##_u##elemsize##m1(a.val)), 16); } \
+{ vse##elemsize##_v_##len(ptr, a.val, num); } \
 inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
 { vse8_v_u8m1((uchar *)ptr, vreinterpret_v_u##elemsize##m1_u8m1(vreinterpret_v_##len##_u##elemsize##m1(a.val)), 16); } \
 inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a) \
