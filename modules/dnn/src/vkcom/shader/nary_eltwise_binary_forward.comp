@@ -1,0 +1,116 @@
+#version 450
+// #extension GL_EXT_debug_printf : enable
+#define ALL_THREAD 1024
+// #define ALL_THREAD 128 // Experimental batched operation
+#define STEP_SIZE 65536
+
+layout(binding = 0) readonly buffer Input1{
+    float matA[];
+};
+
+layout(binding = 1) readonly buffer Input2{
+    float matB[];
+};
+
+layout(binding = 2) writeonly buffer Output{
+    float matOut[];
+};
+
+layout(binding = 3) uniform Params {
+    int opType;
+    int ndims;
+} params;
+
+layout(binding = 4) readonly buffer Shape {
+    int shape[];
+};
+
+layout(binding = 5) readonly buffer Step {
+    int matStep[];
+};
+
+/* local_size_x, local_size_y, local_size_z there defines the number of invocations
+   of this compute shader in the current work group. */
+// TODO: Check if this makes any sense
+// TODO: Check if it is required to fetch PhysicalDeviceLimit from Context
+// TODO: here we shall assume that maxGroupInvocation is 1024.
+layout(local_size_x = ALL_THREAD, local_size_y = 1, local_size_z = 1) in; // TODO: Check if this makes any sense
+
+const int AND = 0;
+const int EQUAL = 1;
+const int GREATER = 2;
+const int GREATER_EQUAL = 3;
+const int LESS = 4;
+const int LESS_EQUAL = 5;
+const int OR = 6;
+const int POW = 7;
+const int XOR = 8;
+const int BITSHIFT = 9;
+const int MAX = 10;
+const int MEAN = 11;
+const int MIN = 12;
+const int MOD = 13;
+const int FMOD = 14;
+const int PROD = 15;
+const int SUB = 16;
+const int SUM = 17;
+const int ADD = 18;
+const int DIV = 19;
+const int WHERE = 20;
+
+void binary_forward()
+{
+    int ndims = params.ndims;
+    int dp1 = matStep[2 * ndims - 1];
+    int dp2 = matStep[3 * ndims - 1];
+    int dp = matStep[ndims - 1];
+    int n1 = shape[ndims - 1], n2 = shape[ndims - 2];
+
+    int plane_idx = int(gl_WorkGroupID.x);
+
+    int ptr1 = 0;
+    int ptr2 = 0;
+    int ptr = 0;
+    int idx = plane_idx;
+
+    for (int k = ndims - 3; k >= 0; --k) {
+        int next_idx = idx / shape[k];
+        int i_k = idx - next_idx * shape[k]; // i_k = idx % shape[k]
+        ptr1 += i_k * matStep[ndims + k];
+        ptr2 += i_k * matStep[2 * ndims + k];
+        ptr += i_k * matStep[k];
+        idx = next_idx;
+    }
+
+    int i2_offset = int(gl_WorkGroupID.y);
+    int i1_offset = int(gl_LocalInvocationID.x);
+
+    ptr1 += i2_offset * matStep[2 * ndims - 2];
+    ptr2 += i2_offset * matStep[3 * ndims - 2];
+    ptr += i2_offset * matStep[ndims - 2];
+
+    for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
+        switch (params.opType) {
+            case int(ADD):
+                matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] + matB[ptr2 + i1 * dp2];
+                break;
+            case int(SUB):
+                matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] - matB[ptr2 + i1 * dp2];
+                break;
+            case int(PROD):
+                matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] * matB[ptr2 + i1 * dp2];
+                break;
+            case int(DIV):
+                matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] / matB[ptr2 + i1 * dp2];
+                break;
+        }
+    }
+}
+
+
+void main()
+{
+    // debugPrintfEXT("nary_eltwise_binary_forward.comp loaded\n");
+    binary_forward();
+    return;
+}
