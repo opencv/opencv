@@ -34,19 +34,21 @@ std::vector<std::string> classes;
 
 
 std::string keys =
-    "{ help  h     | | Print help message. }"
-    "{ @alias      | | An alias name of model to extract preprocessing parameters from models.yml file. }"
-    "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
-    "{ device      |  0 | camera device number. }"
-    "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
+    "{ help  h     |   | Print help message. }"
+    "{ device      | 0 | camera device number. }"
+    "{ model       | onnx/models/yolox_s_inf_decoder.onnx | Default model. }"
+    "{ yolo        | yolox | yolo model version. }"
+    "{ input i     | dog_orig_size.png | Path to input image or video file. Skip this argument to capture frames from a camera. }"
     "{ classes     | | Optional path to a text file with names of classes to label detected objects. }"
     "{ thr         | .5 | Confidence threshold. }"
     "{ nms         | .4 | Non-maximum suppression threshold. }"
     "{ mean        | 0.0 | Normalization constant. }"
-    "{ scale       | 1.0 | Normalization scalor. }"
-    "{ yolo        | None | yolo model version. }"
+    "{ scale       | 1.0 | Preprocess input image by multiplying on a scale factor. }"
+    "{ width       | 640 | Preprocess input image by resizing to a specific width. }"
+    "{ height      | 640 | Preprocess input image by resizing to a specific height. }"
+    "{ rgb         | 1 | Indicate that model works with RGB input images instead BGR ones. }"
     "{ padvalue    | 114.0 | padding value. }"
-    "{ paddingmode |  2 | Choose one of computation backends: "
+    "{ paddingmode | 2.0 | Choose one of computation backends: "
                          "0: resize to required input size without extra processing, "
                          "1: Image will be cropped after resize, "
                          "2: Resize image to the desired size while preserving the aspect ratio of original image }"
@@ -187,19 +189,18 @@ void yoloPostProcessing(
 int main(int argc, char** argv){
 
     CommandLineParser parser(argc, argv, keys);
-
-    const std::string modelName = parser.get<String>("@alias");
-    const std::string zooFile = parser.get<String>("zoo");
-
-    keys += genPreprocArguments(modelName, zooFile);
-
-    parser = CommandLineParser(argc, argv, keys);
     parser.about("Use this script to run object detection deep learning networks using OpenCV.");
-    if (argc == 1 || parser.has("help"))
+    if (parser.has("help"))
     {
         parser.printMessage();
         return 0;
     }
+
+    CV_Assert(parser.has("model"));
+    CV_Assert(parser.has("yolo"));
+    // if model is default, use findFile to get the full path otherwise use the given path
+    std::string weightPath = parser.get<String>("model") == "onnx/models/yolox_s_inf_decoder.onnx" ? findFile(parser.get<String>("model")) : parser.get<String>("model");
+    std::string yolo_model = parser.get<String>("yolo");
 
     float confThreshold = parser.get<float>("thr");
     float nmsThreshold = parser.get<float>("nms");
@@ -213,14 +214,10 @@ int main(int argc, char** argv){
     ImagePaddingMode paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
     //![preprocess_params]
 
-    CV_Assert(parser.has("model"));
-    CV_Assert(parser.has("yolo"));
-    std::string weightPath = findFile(parser.get<String>("model"));
-    std::string yolo_model = parser.get<String>("yolo");
-
     // check if yolo model is valid
     if (yolo_model != "yolov5" && yolo_model != "yolov6"
-        && yolo_model != "yolov7" && yolo_model != "yolov8" && yolo_model != "yolox")
+        && yolo_model != "yolov7" && yolo_model != "yolov8"
+        && yolo_model != "yolox" && yolo_model != "yolonas")
         CV_Error(Error::StsError, "Invalid yolo model: " + yolo_model);
 
     // get classes
@@ -245,7 +242,7 @@ int main(int argc, char** argv){
         String input = parser.get<String>("input");
         // Check if the input is an image
         if (input.find(".jpg") != String::npos || input.find(".png") != String::npos) {
-            img = imread(input);
+            img = imread(findFile(input));
             if (img.empty()) {
                 CV_Error(Error::StsError, "Cannot read image file: " + input);
             }
@@ -318,7 +315,7 @@ int main(int argc, char** argv){
         // covert Rect2d to Rect
         //![draw_boxes]
         for (auto box : keep_boxes){
-            boxes.push_back(Rect(cvFloor(box.x), cvFloor(box.y), cvFloor(box.width), cvFloor(box.height)));
+            boxes.push_back(Rect(cvFloor(box.x), cvFloor(box.y), cvFloor(box.width - box.x), cvFloor(box.height - box.y)));
         }
 
         paramNet.blobRectsToImageRects(boxes, boxes, img.size());
@@ -327,7 +324,7 @@ int main(int argc, char** argv){
         {
             Rect box = boxes[idx];
             drawPrediction(keep_classIds[idx], keep_confidences[idx], box.x, box.y,
-                    box.width, box.height, img);
+                    box.width + box.x, box.height + box.y, img);
         }
 
         static const std::string kWinName = "Yolo objecte detection in OpenCV";

@@ -30,6 +30,7 @@ model, but the methodology applies to other supported models.
 - [YOLOv6](https://github.com/meituan/YOLOv6/blob/main),
 - [YOLOv5](https://github.com/ultralytics/yolov5),
 - [YOLOv4](https://github.com/Tianxiaomo/pytorch-YOLOv4).
+
 This support includes pre and post-processing routines specific to these models. While other older
 version of YOLO are also supported by OpenCV in Darknet format, they are out of the scope of this tutorial.
 
@@ -164,6 +165,42 @@ VIDEO DEMO:
 
 Here `mean`, `scale`, `padvalue`, `paddingmode` should exactly match those that we discussed
 in pre-processing section in order for the model to match result in PyTorch
+
+To demonstrate how to run OpenCV YOLO samples without your own pretrained model, follow these instructions:
+
+1. Ensure Python is installed on your platform.
+2. Confirm that OpenCV is built with the `-DBUILD_EXAMPLES=ON` flag.
+
+Run the YOLOX detector(with default values):
+
+@code{.sh}
+git clone https://github.com/opencv/opencv_extra.git
+cd opencv_extra/testdata/dnn
+python download_models.py yolox_s_inf_decoder
+cd ..
+export OPENCV_TEST_DATA_PATH=$(pwd)
+cd <build directory of OpenCV>
+./bin/example_dnn_yolo_detector
+@endcode
+
+This will execute the YOLOX detector on a predefined image. For YOLOv8 (for instance), follow these additional steps:
+
+@code{.sh}
+cd opencv_extra/testdata/dnn
+python download_models.py yolov8
+cd ..
+export OPENCV_TEST_DATA_PATH=$(pwd)
+cd <build directory of OpenCV>
+
+./bin/example_dnn_yolo_detector --model=onnx/models/yolov8n.onnx --yolo=yolov8 --mean=0.0 --scale=0.003921568627 --paddingmode=2 --padvalue=144.0 --thr=0.5 --nms=0.4 --rgb=0
+@endcode
+
+These instructions should guide you through the process of running YOLO samples using OpenCV more effectively. For your own onnx graph run `./bin/example_dnn_yolo_detector` with path direction to your onnx graph and input.
+
+@code{.sh}
+./bin/example_dnn_yolo_detector --model=<path-to-onnx> --input=<path-to-image-or-video> --yolo=<name-of-the-model>
+@endcode
+
 
 ### Building a Custom Pipeline
 
