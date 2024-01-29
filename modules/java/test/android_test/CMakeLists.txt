@@ -3,9 +3,22 @@ project(opencv_test_android)
 set(OPENCV_ANDROID_TEST_DIR "${OpenCV_BINARY_DIR}/android_test" CACHE INTERNAL "")
 file(REMOVE_RECURSE "${OPENCV_ANDROID_TEST_DIR}")
 
-set(ANDROID_TESTS_SRC_DIRS "'${CMAKE_CURRENT_SOURCE_DIR}/src', '${CMAKE_CURRENT_SOURCE_DIR}/../common_test/src'" CACHE INTERNAL "")
+list(APPEND MODULES_TO_TEST "calib3d" "core" "dnn" "features2d" "imgcodecs" "imgproc" "ml" "objdetect" "photo" "video" "videoio")
+set(ANDROID_TESTS_SKIP_LIST "'*BarcodeDetectorTest*', '*QRCodeDetectorTest*'")
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR} DESTINATION ${OpenCV_BINARY_DIR})
+set(ANDROID_TESTS_SRC_DIRS "'${CMAKE_CURRENT_SOURCE_DIR}/src'" CACHE INTERNAL "")
+set(ANDROID_TESTS_SRC_DIRS "${ANDROID_TESTS_SRC_DIRS}, '${OpenCV_SOURCE_DIR}/modules/java/test/common_test/src'" CACHE INTERNAL "")
+foreach(MODULE_TO_TEST ${MODULES_TO_TEST})
+    set(ANDROID_TESTS_SRC_DIRS "${ANDROID_TESTS_SRC_DIRS}, '${OpenCV_SOURCE_DIR}/modules/${MODULE_TO_TEST}/misc/java/test'" CACHE INTERNAL "")
+endforeach()
+
+set(ANDROID_TESTS_RES_DIR "'${OpenCV_SOURCE_DIR}/modules/java/test/common_test/res'" CACHE INTERNAL "")
+
+list(APPEND TEST_PROJECT_FILES "build.gradle" "CMakeLists.txt" "gradle.properties" "gradlew" "gradlew.bat" "settings.gradle")
+foreach(TEST_PROJECT_FILE ${TEST_PROJECT_FILES})
+    file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/${TEST_PROJECT_FILE}" DESTINATION "${OPENCV_ANDROID_TEST_DIR}")
+endforeach()
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/tests_module/AndroidManifest.xml" DESTINATION "${OPENCV_ANDROID_TEST_DIR}/tests_module")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tests_module/build.gradle.in" "${OPENCV_ANDROID_TEST_DIR}/tests_module/build.gradle" @ONLY)
 
 file(COPY "${OpenCV_SOURCE_DIR}/platforms/android/gradle-wrapper/gradle/wrapper/gradle-wrapper.jar" DESTINATION "${OPENCV_ANDROID_TEST_DIR}/gradle/wrapper")

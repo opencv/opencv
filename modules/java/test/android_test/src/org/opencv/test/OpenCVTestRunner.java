@@ -6,6 +6,7 @@ import junit.framework.Assert;
 
 import org.opencv.android.OpenCVLoader;
 //import org.opencv.android.Utils;
+import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 
 import android.content.Context;
@@ -55,12 +56,11 @@ public class OpenCVTestRunner extends AndroidJUnitRunner {
     public void onStart() {
         Assert.assertTrue(OpenCVLoader.initLocal());
 
-        context = getContext();
+        context = getTargetContext();
         Assert.assertNotNull("Context can't be 'null'", context);
-//        LENA_PATH = Utils.exportResource(context, R.drawable.lena);
-//        LENA_PATH = Utils.exportResource(context, context.getResources().getIdentifier("lena", "drawable", context.getPackageName()));
-//        CHESS_PATH = Utils.exportResource(context, R.drawable.chessboard);
-//        LBPCASCADE_FRONTALFACE_PATH = Utils.exportResource(context, R.raw.lbpcascade_frontalface);
+        LENA_PATH = Utils.exportResource(context, context.getResources().getIdentifier("lena", "drawable", context.getPackageName()));
+        CHESS_PATH = Utils.exportResource(context, context.getResources().getIdentifier("chessboard", "drawable", context.getPackageName()));
+        //LBPCASCADE_FRONTALFACE_PATH = Utils.exportResource(context, R.raw.lbpcascade_frontalface);
 
         /*
          * The original idea about test order randomization is from

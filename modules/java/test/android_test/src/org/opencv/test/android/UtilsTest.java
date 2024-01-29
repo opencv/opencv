@@ -5,8 +5,10 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
+import org.opencv.test.OpenCVTestRunner;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -69,13 +71,12 @@ public class UtilsTest extends OpenCVTestCase {
 
 
     public void testBitmapToMat() {
-//        BitmapFactory.Options opt16 = new BitmapFactory.Options();
-//        opt16.inPreferredConfig = Bitmap.Config.RGB_565;
-//        Bitmap bmp16 = BitmapFactory.decodeFile(OpenCVTestRunner.LENA_PATH, opt16);
-        Bitmap bmp16 = createTestBitmap().copy(Bitmap.Config.RGB_565, true);
+        BitmapFactory.Options opt16 = new BitmapFactory.Options();
+        opt16.inPreferredConfig = Bitmap.Config.RGB_565;
+        Bitmap bmp16 = BitmapFactory.decodeFile(OpenCVTestRunner.LENA_PATH, opt16);
         Mat m16 = new Mat();
         Utils.bitmapToMat(bmp16, m16);
-        assertTrue(m16.rows() == testImgWH[1] && m16.cols() == testImgWH[0] && m16.type() == CvType.CV_8UC4);
+        assertTrue(m16.rows() == 512 && m16.cols() == 512 && m16.type() == CvType.CV_8UC4);
 
         /*BitmapFactory.Options opt32 = new BitmapFactory.Options();
         opt32.inPreferredConfig = Bitmap.Config.ARGB_8888;
@@ -109,8 +110,7 @@ public class UtilsTest extends OpenCVTestCase {
     }
 
     public void testMatToBitmap() {
-        //Mat imgBGR = Imgcodecs.imread( OpenCVTestRunner.LENA_PATH );
-        Mat imgBGR = createTestBGRImg();
+        Mat imgBGR = Imgcodecs.imread( OpenCVTestRunner.LENA_PATH );
         assertTrue(imgBGR != null && !imgBGR.empty() && imgBGR.channels() == 3);
 
         Mat m16 = new Mat(imgBGR.rows(), imgBGR.cols(), CvType.CV_8UC4);

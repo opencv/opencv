@@ -21,9 +21,11 @@ android {
     sourceSets {
         androidTest {
             java.srcDirs = [@ANDROID_TESTS_SRC_DIRS@]
+            java.exclude @ANDROID_TESTS_SKIP_LIST@
         }
         main {
             manifest.srcFile 'AndroidManifest.xml'
+            res.srcDirs = [@ANDROID_TESTS_RES_DIR@]
         }
     }
 }
