@@ -482,6 +482,19 @@ TEST(Imgcodecs, write_parameter_type)
     EXPECT_EQ(0, remove(tmp_file.c_str()));
 }
 
+TEST(Imgcodecs, imdecode_user_buffer)
+{
+    cv::Mat encoded = cv::Mat::zeros(1, 1024, CV_8UC1);
+    cv::Mat user_buffer(1, 1024, CV_8UC1);
+    cv::Mat result = cv::imdecode(encoded, IMREAD_ANYCOLOR, &user_buffer);
+    EXPECT_TRUE(result.empty());
+    // the function does not release user-provided buffer
+    EXPECT_FALSE(user_buffer.empty());
+
+    result = cv::imdecode(encoded, IMREAD_ANYCOLOR);
+    EXPECT_TRUE(result.empty());
+}
+
 }} // namespace
 
 #if defined(HAVE_OPENEXR) && defined(OPENCV_IMGCODECS_ENABLE_OPENEXR_TESTS)
