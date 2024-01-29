@@ -21,14 +21,12 @@ namespace magazine {
 namespace {
 
 void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg) {
-    if (rc.shape != GShape::GMAT)
-    {
+    if (rc.shape != GShape::GMAT) {
         bindInArg(mag, rc, arg);
         return;
     }
     auto& mag_rmat = mag.template slot<cv::RMat>()[rc.id];
-    switch (arg.index())
-    {
+    switch (arg.index()) {
     case GRunArg::index_of<Mat>() :
         mag_rmat = make_rmat<RMatOnMat>(util::get<Mat>(arg));
         break;
@@ -43,14 +41,12 @@ void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg) {
 }
 
 void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg) {
-    if (rc.shape != GShape::GMAT)
-    {
+    if (rc.shape != GShape::GMAT) {
         bindOutArg(mag, rc, arg);
         return;
     }
     auto& mag_rmat = mag.template slot<cv::RMat>()[rc.id];
-    switch (arg.index())
-    {
+    switch (arg.index()) {
     case GRunArgP::index_of<Mat*>() :
         mag_rmat = make_rmat<RMatOnMat>(*util::get<Mat*>(arg)); break;
     case GRunArgP::index_of<cv::RMat*>() :
@@ -60,22 +56,19 @@ void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg) {
 }
 
 cv::GRunArgP getObjPtrExec(Mag& mag, const RcDesc &rc) {
-    if (rc.shape != GShape::GMAT)
-    {
+    if (rc.shape != GShape::GMAT) {
         return getObjPtr(mag, rc);
     }
     return GRunArgP(&mag.slot<cv::RMat>()[rc.id]);
 }
 
 void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg) {
-    if (rc.shape != GShape::GMAT)
-    {
+    if (rc.shape != GShape::GMAT) {
         writeBack(mag, rc, g_arg);
         return;
     }
 
-    switch (g_arg.index())
-    {
+    switch (g_arg.index()) {
     case GRunArgP::index_of<cv::Mat*>() : {
         // If there is a copy intrinsic at the end of the graph
         // we need to actually copy the data to the user buffer
@@ -102,8 +95,7 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg) {
 }
 
 void assignMetaStubExec(Mag& mag, const RcDesc &rc, const cv::GRunArg::Meta &meta) {
-    switch (rc.shape)
-    {
+    switch (rc.shape) {
     case GShape::GARRAY:  mag.meta<cv::detail::VectorRef>()[rc.id] = meta; break;
     case GShape::GOPAQUE: mag.meta<cv::detail::OpaqueRef>()[rc.id] = meta; break;
     case GShape::GSCALAR: mag.meta<cv::Scalar>()[rc.id]            = meta; break;
@@ -144,7 +136,9 @@ cv::GRunArgP cv::gimpl::GThreadedExecutor::Output::get(int idx) {
 }
 
 void cv::gimpl::GThreadedExecutor::Output::post(cv::GRunArgP&&, const std::exception_ptr& e) {
-    if (e) { m_eptr = e; }
+    if (e) {
+        m_eptr = e;
+    }
 }
 
 void cv::gimpl::GThreadedExecutor::Output::post(Exception&& ex) {
@@ -164,23 +158,24 @@ cv::gimpl::GThreadedExecutor::Output::Output(cv::gimpl::GraphState &state,
 }
 
 void cv::gimpl::GThreadedExecutor::Output::verify() {
-    if (m_eptr) std::rethrow_exception(m_eptr);
+    if (m_eptr) {
+        std::rethrow_exception(m_eptr);
+    }
 }
 
 void cv::gimpl::GThreadedExecutor::initResource(const ade::NodeHandle &nh, const ade::NodeHandle &orig_nh) {
     const Data &d = m_gm.metadata(orig_nh).get<Data>();
 
     if (   d.storage != Data::Storage::INTERNAL
-        && d.storage != Data::Storage::CONST_VAL)
+        && d.storage != Data::Storage::CONST_VAL) {
         return;
+    }
 
     // INTERNALS+CONST only! no need to allocate/reset output objects
     // to as it is bound externally (e.g. already in the m_state.mag)
 
-    switch (d.shape)
-    {
-    case GShape::GMAT:
-        {
+    switch (d.shape) {
+    case GShape::GMAT: {
             // Let island allocate it's outputs if it can,
             // allocate cv::Mat and wrap it with RMat otherwise
             GAPI_Assert(!nh->inNodes().empty());
@@ -198,16 +193,14 @@ void cv::gimpl::GThreadedExecutor::initResource(const ade::NodeHandle &nh, const
         break;
 
     case GShape::GSCALAR:
-        if (d.storage == Data::Storage::CONST_VAL)
-        {
+        if (d.storage == Data::Storage::CONST_VAL) {
             auto rc = RcDesc{d.rc, d.shape, d.ctor};
             magazine::bindInArg(m_state.mag, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
         }
         break;
 
     case GShape::GARRAY:
-        if (d.storage == Data::Storage::CONST_VAL)
-        {
+        if (d.storage == Data::Storage::CONST_VAL) {
             auto rc = RcDesc{d.rc, d.shape, d.ctor};
             magazine::bindInArg(m_state.mag, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
         }
@@ -405,14 +398,12 @@ void cv::gimpl::GThreadedExecutor::run(cv::gimpl::GRuntimeArgs &&args) {
 
     // Basic check if input/output arguments are correct
     // FIXME: Move to GCompiled (do once for all GExecutors)
-    if (proto.inputs.size() != args.inObjs.size()) // TODO: Also check types
-    {
+    if (proto.inputs.size() != args.inObjs.size()) { // TODO: Also check types
         util::throw_error(std::logic_error
                           ("Computation's input protocol doesn\'t "
                            "match actual arguments!"));
     }
-    if (proto.outputs.size() != args.outObjs.size()) // TODO: Also check types
-    {
+    if (proto.outputs.size() != args.outObjs.size()) { // TODO: Also check types
         util::throw_error(std::logic_error
                           ("Computation's output protocol doesn\'t "
                            "match actual arguments!"));
@@ -422,17 +413,14 @@ void cv::gimpl::GThreadedExecutor::run(cv::gimpl::GRuntimeArgs &&args) {
 
     // ensure that output Mat parameters are correctly allocated
     // FIXME: avoid copy of NodeHandle and GRunRsltComp ?
-    for (auto index : util::iota(proto.out_nhs.size()))
-    {
+    for (auto index : util::iota(proto.out_nhs.size())) {
         auto& nh = proto.out_nhs.at(index);
         const Data &d = m_gm.metadata(nh).get<Data>();
-        if (d.shape == GShape::GMAT)
-        {
+        if (d.shape == GShape::GMAT) {
             using cv::util::get;
             const auto desc = get<cv::GMatDesc>(d.meta);
 
-            auto check_rmat = [&desc, &args, &index]()
-            {
+            auto check_rmat = [&desc, &args, &index]() {
                 auto& out_mat = *get<cv::RMat*>(args.outObjs.at(index));
                 GAPI_Assert(desc.canDescribe(out_mat));
             };
@@ -441,28 +429,24 @@ void cv::gimpl::GThreadedExecutor::run(cv::gimpl::GRuntimeArgs &&args) {
             // Building as part of OpenCV - follow OpenCV behavior In
             // the case of cv::Mat if output buffer is not enough to
             // hold the result, reallocate it
-            if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index)))
-            {
+            if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index))) {
                 auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
                 createMat(desc, out_mat);
             }
             // In the case of RMat check to fit required meta
-            else
-            {
+            else {
                 check_rmat();
             }
 #else
             // Building standalone - output buffer should always exist,
             // and _exact_ match our inferred metadata
-            if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index)))
-            {
+            if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index))) {
                 auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
                 GAPI_Assert(out_mat.data != nullptr &&
                         desc.canDescribe(out_mat));
             }
             // In the case of RMat check to fit required meta
-            else
-            {
+            else {
                 check_rmat();
             }
 #endif // !defined(GAPI_STANDALONE)
@@ -470,29 +454,26 @@ void cv::gimpl::GThreadedExecutor::run(cv::gimpl::GRuntimeArgs &&args) {
     }
     // Update storage with user-passed objects
     for (auto it : ade::util::zip(ade::util::toRange(proto.inputs),
-                                  ade::util::toRange(args.inObjs)))
-    {
+                                  ade::util::toRange(args.inObjs))) {
         magazine::bindInArgExec(m_state.mag, std::get<0>(it), std::get<1>(it));
     }
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
-                                  ade::util::toRange(args.outObjs)))
-    {
+                                  ade::util::toRange(args.outObjs))) {
         magazine::bindOutArgExec(m_state.mag, std::get<0>(it), std::get<1>(it));
     }
 
     // Reset internal data
-    for (auto &sd : m_slots)
-    {
+    for (auto &sd : m_slots) {
         const auto& data = m_gm.metadata(sd.data_nh).get<Data>();
         magazine::resetInternalData(m_state.mag, data);
     }
 
     m_task_manager.scheduleAndWait(m_thread_pool);
-    for (auto actor : m_actors) { actor->verify(); }
-
+    for (auto actor : m_actors) {
+        actor->verify();
+    }
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
-                                  ade::util::toRange(args.outObjs)))
-    {
+                                  ade::util::toRange(args.outObjs))) {
         magazine::writeBackExec(m_state.mag, std::get<0>(it), std::get<1>(it));
     }
 }
@@ -514,8 +495,7 @@ void cv::gimpl::GThreadedExecutor::reshape(const GMetaArgs& inMetas, const GComp
     passes::inferMeta(ctx, true);
 
     // NB: Before reshape islands need to re-init resources for every slot.
-    for (auto slot : m_slots)
-    {
+    for (auto slot : m_slots) {
         initResource(slot.slot_nh, slot.data_nh);
     }
 
@@ -525,8 +505,7 @@ void cv::gimpl::GThreadedExecutor::reshape(const GMetaArgs& inMetas, const GComp
 }
 
 void cv::gimpl::GThreadedExecutor::prepareForNewStream() {
-    for (auto actor : m_actors)
-    {
+    for (auto actor : m_actors) {
         actor->exec()->handleNewStream();
     }
 }
