@@ -562,7 +562,7 @@ TEST(GAPI_Pipeline, BranchesExecutedInParallel)
     using namespace std::chrono;
     auto s = high_resolution_clock::now();
     comp.apply(cv::gin(in_mat), cv::gout(out_mat0, out_mat1, out_mat2, out_mat3),
-               cv::compile_args(cv::use_threaded_executor{4u},
+               cv::compile_args(cv::use_threaded_executor(4u),
                                 cv::gapi::kernels<GOCVBusyWait>()));
     auto e = high_resolution_clock::now();
     const auto elapsed_in_ms = duration_cast<milliseconds>(e-s).count();;

@@ -269,7 +269,7 @@ struct graph_dump_path
  *
  * Specifies a number of threads that should be used by executor.
  */
-struct use_threaded_executor
+struct GAPI_EXPORTS use_threaded_executor
 {
     use_threaded_executor();
     explicit use_threaded_executor(const uint32_t nthreads);
