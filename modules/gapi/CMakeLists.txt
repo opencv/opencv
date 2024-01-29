@@ -79,6 +79,7 @@ set(gapi_srcs
     src/api/gframe.cpp
     src/api/gkernel.cpp
     src/api/gbackend.cpp
+    src/api/gcommon.cpp
     src/api/gproto.cpp
     src/api/gnode.cpp
     src/api/gcall.cpp
