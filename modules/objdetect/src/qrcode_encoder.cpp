@@ -342,7 +342,11 @@ int QRCodeEncoderImpl::versionAuto(const std::string& input_str)
         return -1;
     }
 
-    const auto tmp_version = findVersionCapacity((int)payload_tmp.size(), ecc_level, possible_version);
+    int nbits = static_cast<int>(payload_tmp.size());
+    if (mode_type == MODE_STRUCTURED_APPEND)
+        nbits += 4 + 4 + 8;  // Extra info for structure's position, total and parity
+
+    const auto tmp_version = findVersionCapacity(nbits, ecc_level, possible_version);
 
     return tmp_version;
 }
@@ -1748,9 +1752,9 @@ void QRCodeDecoderImpl::decodeSymbols(String& result) {
         else if (currMode == QRCodeEncoder::EncodeMode::MODE_KANJI)
             decodeKanji(result);
         else if (currMode == QRCodeEncoder::EncodeMode::MODE_STRUCTURED_APPEND) {
-            sequence_num = bitstream.next(4);
-            total_num = 1 + bitstream.next(4);
-            parity = bitstream.next(8);
+            sequence_num = static_cast<uint8_t>(bitstream.next(4));
+            total_num = static_cast<uint8_t>(1 + bitstream.next(4));
+            parity = static_cast<uint8_t>(bitstream.next(8));
         }
         else
             CV_Error(Error::StsNotImplemented, format("mode %d", currMode));

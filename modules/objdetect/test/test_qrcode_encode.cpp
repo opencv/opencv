@@ -367,7 +367,7 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, regression)
     int modes[] = {1, 2, 4};
     const int min_stuctures_num = 2;
     const int max_stuctures_num = 5;
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < 3; i++)
     {
         int mode = modes[i];
         FileNode config = mode_list[i];
@@ -387,30 +387,28 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, regression)
             EXPECT_TRUE(!qrcodes.empty()) << "Can't generate this QR images";
             CV_CheckEQ(qrcodes.size(), (size_t)j, "Number of QR codes");
 
-            Mat resized_src;
-            hconcat(qrcodes, resized_src);
-
             std::vector<Point2f> corners(4 * qrcodes.size());
             for (size_t k = 0; k < qrcodes.size(); k++)
             {
+                Mat qrcode = qrcodes[k];
                 corners[4 * k] = Point2f(border_width, border_width);
-                corners[4 * k + 1] = Point2f(qrcodes[0].cols * 1.0f - border_width, border_width);
-                corners[4 * k + 2] = Point2f(qrcodes[0].cols * 1.0f - border_width, qrcodes[0].rows * 1.0f - border_width);
-                corners[4 * k + 3] = Point2f(border_width, qrcodes[0].rows * 1.0f - border_width);
+                corners[4 * k + 1] = Point2f(qrcode.cols * 1.0f - border_width, border_width);
+                corners[4 * k + 2] = Point2f(qrcode.cols * 1.0f - border_width, qrcode.rows * 1.0f - border_width);
+                corners[4 * k + 3] = Point2f(border_width, qrcode.rows * 1.0f - border_width);
+
+                float width_ratio = fixed_size.width * 1.0f / qrcode.cols;
+                float height_ratio = fixed_size.height * 1.0f / qrcode.rows;
+                resize(qrcode, qrcodes[k], fixed_size, 0, 0, INTER_AREA);
+
                 for (size_t ki = 0; ki < 4; ki++)
                 {
-                    corners[4 * k + ki].x += qrcodes[0].cols * k;
+                    corners[4 * k + ki].x = corners[4 * k + ki].x * width_ratio + fixed_size.width * k;
+                    corners[4 * k + ki].y = corners[4 * k + ki].y * height_ratio;
                 }
             }
 
-            float width_ratio = 3.0f;
-            float height_ratio = 3.0f;
-            resize(resized_src, resized_src, Size(), width_ratio, height_ratio, INTER_AREA);
-            for(size_t m = 0; m < corners.size(); m++)
-            {
-                corners[m].x = corners[m].x * width_ratio;
-                corners[m].y = corners[m].y * height_ratio;
-            }
+            Mat resized_src;
+            hconcat(qrcodes, resized_src);
 
             std::vector<cv::String> decoded_info;
             cv::String output_info;
