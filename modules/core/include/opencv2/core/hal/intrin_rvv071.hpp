@@ -2034,30 +2034,23 @@ void v_rshr_pack_u_store(_Tp* ptr, const v_int##tp2##x##num2& a) \
 OPENCV_HAL_IMPL_RISCVV_PACK_U(8, 16, 16, 8, unsigned char )
 OPENCV_HAL_IMPL_RISCVV_PACK_U(16, 8, 32, 4, unsigned short)
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#endif
 
 // saturating multiply 8-bit, 16-bit
-#define OPENCV_HAL_IMPL_RISCVV_MUL_SAT(_Tpvec, _Tpwvec)            \
-    inline _Tpvec operator * (const _Tpvec& a, const _Tpvec& b)  \
-    {                                                            \
-        _Tpwvec c, d;                                            \
-        v_mul_expand(a, b, c, d);                                \
-        return v_pack(c, d);                                     \
-    }                                                            \
-    inline _Tpvec& operator *= (_Tpvec& a, const _Tpvec& b)      \
+#define OPENCV_HAL_IMPL_RISCVV_MUL_SAT(_Tpvec, num, mul, cvt)   \
+    inline _Tpvec operator * (const _Tpvec& a, const _Tpvec& b) \
+    {                                                           \
+        auto res = mul(a.val, b.val, num);                      \
+        return _Tpvec(cvt(res, 0, num));                        \
+    }                                                           \
+    inline _Tpvec& operator *= (_Tpvec& a, const _Tpvec& b)     \
     { a = a * b; return a; }
 
-OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_int8x16,  v_int16x8)
-OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_uint8x16, v_uint16x8)
-OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_int16x8,  v_int32x4)
-OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_uint16x8, v_uint32x4)
+OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_int8x16,  16, vwmul_vv_i16m2, vnclip_wx_i8m1)
+OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_uint8x16, 16, vwmulu_vv_u16m2, vnclipu_wx_u8m1)
+OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_int16x8,  32, vwmul_vv_i32m2, vnclip_wx_i16m1)
+OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_uint16x8, 32, vwmulu_vv_u32m2, vnclipu_wx_u16m1)
 
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+
 static const signed char popCountTable[256] =
 {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
