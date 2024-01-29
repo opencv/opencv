@@ -5,7 +5,6 @@ import java.io.IOException;
 import junit.framework.Assert;
 
 import org.opencv.android.OpenCVLoader;
-//import org.opencv.android.Utils;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 
