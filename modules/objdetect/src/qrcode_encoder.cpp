@@ -343,8 +343,10 @@ int QRCodeEncoderImpl::versionAuto(const std::string& input_str)
     }
 
     int nbits = static_cast<int>(payload_tmp.size());
+
+    // Extra info for structure's position, total and parity + mode of final message
     if (mode_type == MODE_STRUCTURED_APPEND)
-        nbits += 4 + 4 + 8;  // Extra info for structure's position, total and parity
+        nbits += 4 + 4 + 8 + 4;
 
     const auto tmp_version = findVersionCapacity(nbits, ecc_level, possible_version);
 
