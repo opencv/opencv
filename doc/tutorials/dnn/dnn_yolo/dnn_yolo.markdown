@@ -183,7 +183,7 @@ cd <build directory of OpenCV>
 ./bin/example_dnn_yolo_detector
 @endcode
 
-This will execute the YOLOX detector on a predefined image. For YOLOv8 (for instance), follow these additional steps:
+This will execute the YOLOX detector with your camera. For YOLOv8 (for instance), follow these additional steps:
 
 @code{.sh}
 cd opencv_extra/testdata/dnn
@@ -195,42 +195,35 @@ cd <build directory of OpenCV>
 ./bin/example_dnn_yolo_detector --model=onnx/models/yolov8n.onnx --yolo=yolov8 --mean=0.0 --scale=0.003921568627 --paddingmode=2 --padvalue=144.0 --thr=0.5 --nms=0.4 --rgb=0
 @endcode
 
-These instructions should guide you through the process of running YOLO samples using OpenCV more effectively. For your own onnx graph run `./bin/example_dnn_yolo_detector` with path direction to your onnx graph and input.
-
-@code{.sh}
-./bin/example_dnn_yolo_detector --model=<path-to-onnx> --input=<path-to-image-or-video> --yolo=<name-of-the-model>
-@endcode
-
 
 ### Building a Custom Pipeline
 
 Sometimes there is a need to make some custom adjustments in the inference pipeline. With OpenCV DNN
-module this is also quite easy to achieve. Below we will outline simple starter pipeline that does
-the same thing as CLI command. You can adjust it according to your needs.
+module this is also quite easy to achieve. Below we will outline the sample implementation details:
 
 - Import required libraries
 
 @snippet samples/dnn/yolo_detector.cpp includes
 
-- Read ONNX graph and create neural network model.
+- Read ONNX graph and create neural network model:
 
 @snippet samples/dnn/yolo_detector.cpp read_net
 
-- Read image and preprocess it
+- Read image and pre-process it:
 
 @snippet samples/dnn/yolo_detector.cpp preprocess_params
 @snippet samples/dnn/yolo_detector.cpp preprocess_call
 @snippet samples/dnn/yolo_detector.cpp preprocess_call_func
 
-- Inference
+- Inference:
 
 @snippet samples/dnn/yolo_detector.cpp forward_buffers
 @snippet samples/dnn/yolo_detector.cpp forward
 
-
 - Post-Processing
 
-For post-processing of the model output we will need to use function `yoloPostProcess`.
+All post-processing steps are implemented in function `yoloPostProcess`. Please pay attention,
+that NMS step is not included into onnx graph. Sample uses OpenCV function for it.
 
 @snippet samples/dnn/yolo_detector.cpp postprocess
 

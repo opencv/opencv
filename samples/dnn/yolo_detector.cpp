@@ -350,7 +350,7 @@ int main(int argc, char** argv)
                     box.width + box.x, box.height + box.y, img);
         }
 
-        static const std::string kWinName = "Yolo objecte detection in OpenCV";
+        const std::string kWinName = "Yolo Object Detector";
         namedWindow(kWinName, WINDOW_NORMAL);
         imshow(kWinName, img);
         //![draw_boxes]
