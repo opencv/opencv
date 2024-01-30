@@ -1222,6 +1222,12 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         {
             if (ref_outputs.size() == 1)
             {
+                if (ref_outputs[0].dims != outputs[0].dims) {
+                    if (ref_outputs[0].dims <= 1)
+                        ref_outputs[0] = ref_outputs[0].reshape(1, outputs[0].rows);
+                    if (outputs[0].dims <= 1)
+                        outputs[0] = outputs[0].reshape(1, ref_outputs[0].rows);
+                }
                 // probably we found random unconnected layers.
                 normAssert(ref_outputs[0], outputs[0], "", default_l1, default_lInf);
             }

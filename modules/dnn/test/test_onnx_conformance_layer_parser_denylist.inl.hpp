@@ -103,7 +103,6 @@
 "test_dynamicquantizelinear_min_adjusted",
 "test_dynamicquantizelinear_min_adjusted_expanded",
 "test_edge_pad",
-"test_einsum_inner_prod",
 "test_equal",
 "test_equal_bcast",
 "test_expand_dim_changed",
