@@ -48,7 +48,7 @@ std::string keys =
     "{ height      | 640 | Preprocess input image by resizing to a specific height. }"
     "{ rgb         | 1 | Indicate that model works with RGB input images instead BGR ones. }"
     "{ padvalue    | 114.0 | padding value. }"
-    "{ paddingmode | 2.0 | Choose one of computation backends: "
+    "{ paddingmode | 2 | Choose one of computation backends: "
                          "0: resize to required input size without extra processing, "
                          "1: Image will be cropped after resize, "
                          "2: Resize image to the desired size while preserving the aspect ratio of original image }"
