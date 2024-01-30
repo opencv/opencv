@@ -3,14 +3,12 @@ project(opencv_test_android)
 set(OPENCV_ANDROID_TEST_DIR "${OpenCV_BINARY_DIR}/android_test" CACHE INTERNAL "")
 file(REMOVE_RECURSE "${OPENCV_ANDROID_TEST_DIR}")
 
-list(APPEND MODULES_TO_TEST "calib3d" "core" "dnn" "features2d" "imgcodecs" "imgproc" "ml" "objdetect" "photo" "video" "videoio")
 set(ANDROID_TESTS_SKIP_LIST "'*BarcodeDetectorTest*', '*QRCodeDetectorTest*'")
 
-set(ANDROID_TESTS_SRC_DIRS "'${CMAKE_CURRENT_SOURCE_DIR}/src'" CACHE INTERNAL "")
-set(ANDROID_TESTS_SRC_DIRS "${ANDROID_TESTS_SRC_DIRS}, '${OpenCV_SOURCE_DIR}/modules/java/test/common_test/src'" CACHE INTERNAL "")
-foreach(MODULE_TO_TEST ${MODULES_TO_TEST})
-    set(ANDROID_TESTS_SRC_DIRS "${ANDROID_TESTS_SRC_DIRS}, '${OpenCV_SOURCE_DIR}/modules/${MODULE_TO_TEST}/misc/java/test'" CACHE INTERNAL "")
-endforeach()
+set(ANDROID_TESTS_SRC_DIRS
+"'${CMAKE_CURRENT_SOURCE_DIR}/src',
+'${OpenCV_SOURCE_DIR}/modules/java/test/common_test/src',
+'${CMAKE_BINARY_DIR}/modules/java_bindings_generator/gen/test'" CACHE INTERNAL "")
 
 set(ANDROID_TESTS_RES_DIR "'${OpenCV_SOURCE_DIR}/modules/java/test/common_test/res'" CACHE INTERNAL "")
 
