@@ -88,8 +88,10 @@ namespace
             auto e = high_resolution_clock::now();
 
             const auto elapsed_in_ms =
-                static_cast<uint32_t>(duration_cast<milliseconds>(e-s).count());
-            auto need_to_wait_in_ms = std::max(0u, time_in_ms - elapsed_in_ms);
+                static_cast<int32_t>(duration_cast<milliseconds>(e-s).count());
+
+            int32_t diff = time_in_ms - elapsed_in_ms;
+            const auto need_to_wait_in_ms = static_cast<uint32_t>(std::max(0, diff));
 
             s = high_resolution_clock::now();
             e = s;

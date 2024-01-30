@@ -48,7 +48,6 @@ void cv::gapi::own::ThreadPool::worker(QueueClass<Task>& queue) {
 }
 
 void cv::gapi::own::ThreadPool::schedule(cv::gapi::own::ThreadPool::Task&& task) {
-    GAPI_Assert(task);
     m_queue.push(std::move(task));
 };
 
