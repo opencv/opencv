@@ -38,7 +38,7 @@ std::string keys =
     "{ device      | 0 | camera device number. }"
     "{ model       | onnx/models/yolox_s_inf_decoder.onnx | Default model. }"
     "{ yolo        | yolox | yolo model version. }"
-    "{ input i     | dog_orig_size.png | Path to input image or video file. Skip this argument to capture frames from a camera. }"
+    "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
     "{ classes     | | Optional path to a text file with names of classes to label detected objects. }"
     "{ thr         | .5 | Confidence threshold. }"
     "{ nms         | .4 | Non-maximum suppression threshold. }"
@@ -70,7 +70,8 @@ std::string keys =
     "{ async       | 0 | Number of asynchronous forwards at the same time. "
                         "Choose 0 for synchronous mode }";
 
-void getClasses(std::string classesFile){
+void getClasses(std::string classesFile)
+{
     std::ifstream ifs(classesFile.c_str());
     if (!ifs.is_open())
         CV_Error(Error::StsError, "File " + classesFile  + " not found");
@@ -106,19 +107,20 @@ void yoloPostProcessing(
     std::vector<Rect2d>& keep_boxes,
     float conf_threshold,
     float iou_threshold,
-    const std::string& test_name
-){
-
+    const std::string& test_name)
+{
     // Retrieve
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<Rect2d> boxes;
 
-    if (test_name == "yolov8"){
+    if (test_name == "yolov8")
+    {
         cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
     }
 
-    if (test_name == "yolonas"){
+    if (test_name == "yolonas")
+    {
         // outs contains 2 elemets of shape [1, 8400, 80] and [1, 8400, 4]. Concat them to get [1, 8400, 84]
         Mat concat_out;
         // squeeze the first dimension
@@ -132,8 +134,8 @@ void yoloPostProcessing(
         outs[0] = outs[0].reshape(0, std::vector<int>{1, 8400, 84});
     }
 
-    for (auto preds : outs){
-
+    for (auto preds : outs)
+    {
         preds = preds.reshape(1, preds.size[1]); // [1, 8400, 85] -> [8400, 85]
         for (int i = 0; i < preds.rows; ++i)
         {
@@ -186,8 +188,8 @@ void yoloPostProcessing(
  * @function main
  * @brief Main function
  */
-int main(int argc, char** argv){
-
+int main(int argc, char** argv)
+{
     CommandLineParser parser(argc, argv, keys);
     parser.about("Use this script to run object detection deep learning networks using OpenCV.");
     if (parser.has("help"))
@@ -199,7 +201,7 @@ int main(int argc, char** argv){
     CV_Assert(parser.has("model"));
     CV_Assert(parser.has("yolo"));
     // if model is default, use findFile to get the full path otherwise use the given path
-    std::string weightPath = parser.get<String>("model") == "onnx/models/yolox_s_inf_decoder.onnx" ? findFile(parser.get<String>("model")) : parser.get<String>("model");
+    std::string weightPath = findFile(parser.get<String>("model"));
     std::string yolo_model = parser.get<String>("yolo");
 
     float confThreshold = parser.get<float>("thr");
@@ -222,7 +224,9 @@ int main(int argc, char** argv){
 
     // get classes
     if (parser.has("classes"))
-        getClasses(parser.get<String>("classes"));
+    {
+        getClasses(findFile(parser.get<String>("classes")));
+    }
 
     // load model
     //![read_net]
@@ -238,20 +242,38 @@ int main(int argc, char** argv){
     bool isCamera = false;
 
     // Check if input is given
-    if (parser.has("input")) {
+    if (parser.has("input"))
+    {
         String input = parser.get<String>("input");
         // Check if the input is an image
-        if (input.find(".jpg") != String::npos || input.find(".png") != String::npos) {
+        if (input.find(".jpg") != String::npos || input.find(".png") != String::npos)
+        {
             img = imread(findFile(input));
-            if (img.empty()) {
+            if (img.empty())
+            {
                 CV_Error(Error::StsError, "Cannot read image file: " + input);
             }
             isImage = true;
-        } else {
-            cap.open(input);
         }
-    } else {
-        cap.open(parser.get<int>("device"));
+        else
+        {
+            cap.open(input);
+            if (!cap.isOpened())
+            {
+                CV_Error(Error::StsError, "Cannot open video " + input);
+            }
+            isCamera = true;
+        }
+    }
+    else
+    {
+        int cameraIndex = parser.get<int>("device");
+        cap.open(cameraIndex);
+        if (!cap.isOpened())
+        {
+            CV_Error(Error::StsError, cv::format("Cannot open camera #%d", cameraIndex));
+        }
+        isCamera = true;
     }
 
     // image pre-processing
@@ -314,7 +336,8 @@ int main(int argc, char** argv){
 
         // covert Rect2d to Rect
         //![draw_boxes]
-        for (auto box : keep_boxes){
+        for (auto box : keep_boxes)
+        {
             boxes.push_back(Rect(cvFloor(box.x), cvFloor(box.y), cvFloor(box.width - box.x), cvFloor(box.height - box.y)));
         }
 
@@ -338,7 +361,8 @@ int main(int argc, char** argv){
         keep_boxes.clear();
         boxes.clear();
 
-        if (isImage){
+        if (isImage)
+        {
             waitKey();
             break;
         }
