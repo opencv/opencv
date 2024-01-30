@@ -79,6 +79,7 @@ set(gapi_srcs
     src/api/gframe.cpp
     src/api/gkernel.cpp
     src/api/gbackend.cpp
+    src/api/gcommon.cpp
     src/api/gproto.cpp
     src/api/gnode.cpp
     src/api/gcall.cpp
@@ -121,8 +122,10 @@ set(gapi_srcs
     src/executor/gabstractstreamingexecutor.cpp
     src/executor/gexecutor.cpp
     src/executor/gtbbexecutor.cpp
+    src/executor/gthreadedexecutor.cpp
     src/executor/gstreamingexecutor.cpp
     src/executor/gasync.cpp
+    src/executor/thread_pool.cpp
 
     # CPU Backend (currently built-in)
     src/backends/cpu/gcpubackend.cpp
