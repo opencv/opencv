@@ -2841,8 +2841,32 @@ void cvGetOptimalNewCameraMatrix( const CvMat* cameraMatrix, const CvMat* distCo
     }
     if( validPixROI )
     {
-        cv::Rect r(cvFloor(inner.x), cvFloor(inner.y), cvCeil(inner.x+inner.width)-cvFloor(inner.x)+1,
-                   cvCeil(inner.y+inner.height)-cvFloor(inner.y)+1);
+        // This tolerance defines how incomplete a pixel can be to still be considered complete.
+        // It has been chosen to get Calib3d_GetOptimalNewCameraMatrixNoDistortion.accuracy to pass.
+        constexpr double kTolerance = 1e-12;
+        Point p1, p2;
+        if( std::abs(inner.x-cvRound(inner.x))<kTolerance ) {
+            p1.x = cvRound(inner.x);
+        } else {
+            p1.x = cvCeil(inner.x);
+        }
+        if( std::abs(inner.y-cvRound(inner.y))<kTolerance ) {
+            p1.y = cvRound(inner.y);
+        } else {
+            p1.y = cvCeil(inner.y);
+        }
+        if( std::abs(inner.x+inner.width-cvRound(inner.x+inner.width))<kTolerance ) {
+            p2.x = cvRound(inner.x+inner.width);
+        } else {
+            p2.x = cvFloor(inner.x+inner.width);
+        }
+        if( std::abs(inner.y+inner.height-cvRound(inner.y+inner.height))<kTolerance ) {
+            p2.y = cvRound(inner.y+inner.height);
+        } else {
+            p2.y = cvCeil(inner.y+inner.height);
+        }
+        // +1 to make sure p2 is included.
+        cv::Rect r(p1, p2+cv::Point(1,1));
         r &= cv::Rect(0, 0, newImgSize.width, newImgSize.height);
         *validPixROI = cvRect(r);
     }
