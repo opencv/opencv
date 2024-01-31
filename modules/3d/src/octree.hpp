@@ -92,6 +92,8 @@ public:
     void insertPointRecurse(const Point3f& point, const Point3f &color, int maxDepth,
                             const OctreeKey &key, size_t depthMask);
 
+    void radiusNNSearchRecurse(const Point3f& query, float squareRadius, std::vector<PQueueElem<Point3f> >& candidatePoint) const;
+
 
     //! Contains 8 pointers to its 8 children.
     std::array<Ptr<OctreeNode>, 8> children;

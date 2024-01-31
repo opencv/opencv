@@ -16,8 +16,7 @@ static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node,OctreeK
 
 // For Nearest neighbor search.
 template<typename T> struct PQueueElem; // Priority queue
-static void radiusNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, float squareRadius,
-                                  std::vector<PQueueElem<Point3f> >& candidatePoint);
+
 static void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, const int K,
                              float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint);
 
@@ -442,33 +441,34 @@ bool OctreeNode::overlap(const Point3f& query, float squareRadius) const
     return ( dist + dist * std::numeric_limits<float>::epsilon() ) <= float(temp * 0.25f + squareRadius + sqrt(temp * squareRadius)) ;
 }
 
-void radiusNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, float squareRadius,
-                           std::vector<PQueueElem<Point3f> >& candidatePoint)
+void OctreeNode::radiusNNSearchRecurse(const Point3f& query, float squareRadius,
+                                       std::vector<PQueueElem<Point3f> >& candidatePoint) const
 {
     float dist;
     Ptr<OctreeNode> child;
 
-    // iterate eight children.
-    for(size_t i = 0; i< 8; i++)
+    // iterate eight children
+    for(size_t i = 0; i < 8; i++)
     {
-        if( !node->children[i].empty() && node->children[i]->overlap(query, squareRadius))
+        if( !this->children[i].empty() && this->children[i]->overlap(query, squareRadius))
         {
-            if(!node->children[i]->isLeaf)
+            if(!this->children[i]->isLeaf)
             {
-                // Reach the branch node.
-                radiusNNSearchRecurse(node->children[i], query, squareRadius, candidatePoint);
+                // Reach the branch node
+                this->children[i]->radiusNNSearchRecurse(query, squareRadius, candidatePoint);
             }
             else
             {
-                // Reach the leaf node.
-                child = node->children[i];
+                // Reach the leaf node
+                child = this->children[i];
 
                 for(size_t j = 0; j < child->pointList.size(); j++)
                 {
-                    dist = SquaredDistance(child->pointList[j], query);
+                    Point3f pt = child->pointList[j];
+                    dist = SquaredDistance(pt, query);
                     if(dist + dist * std::numeric_limits<float>::epsilon() <= squareRadius )
                     {
-                        candidatePoint.emplace_back(dist, child->pointList[j]);
+                        candidatePoint.emplace_back(dist, pt);
                     }
                 }
             }
@@ -479,14 +479,18 @@ void radiusNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, fl
 int Octree::radiusNNSearch(const Point3f& query, float radius,
                            std::vector<Point3f>& pointSet, std::vector<float>& squareDistSet) const
 {
+    pointSet.clear();
+    squareDistSet.clear();
+
     if(p->rootNode.empty())
         return 0;
+
     float squareRadius = radius * radius;
 
     PQueueElem<Point3f> elem;
     std::vector<PQueueElem<Point3f> > candidatePoint;
 
-    radiusNNSearchRecurse(p->rootNode, query, squareRadius, candidatePoint);
+    p->rootNode->radiusNNSearchRecurse(query, squareRadius, candidatePoint);
 
     for(size_t i = 0; i < candidatePoint.size(); i++)
     {
