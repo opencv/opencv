@@ -195,58 +195,59 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         }
     }
 
-    bool hasIdx    = !_indices.empty();
+    if(_indices.empty())
+    {
+        return;
+    }
+
     bool hasColors = !_colors.empty();
 
     Mat vertices, colors, triangles;
     int nVerts = 0, nColors = 0, nTriangles = 0;
 
-    if (hasIdx)
+    CV_CheckFalse(_vertices.empty(), "No vertices provided along with indices array");
+
+    int vertexType = _vertices.type();
+    CV_Assert(vertexType == CV_32FC1 || vertexType == CV_32FC3);
+    vertices = _vertices.getMat();
+    if ((_vertices.channels() == 1) && (_vertices.rows() == 3))
     {
-        CV_CheckFalse(_vertices.empty(), "No vertices provided along with indices array");
+        vertices = vertices.t();
+    }
+    // This transposition is performed on 1xN matrix so it's almost free in terms of performance
+    vertices = vertices.reshape(3, 1).t();
+    nVerts = (int)vertices.total();
 
-        int vertexType = _vertices.type();
-        CV_Assert(vertexType == CV_32FC1 || vertexType == CV_32FC3);
-        vertices = _vertices.getMat();
-        if ((_vertices.channels() == 1) && (_vertices.rows() == 3))
-        {
-            vertices = vertices.t();
-        }
-        // This transposition is performed on 1xN matrix so it's almost free in terms of performance
-        vertices = vertices.reshape(3, 1).t();
-        nVerts = (int)vertices.total();
+    int indexType = _indices.type();
+    CV_Assert(indexType == CV_32SC1 || indexType == CV_32SC3);
+    triangles = _indices.getMat();
+    if ((_indices.channels() == 1) && (_indices.rows() == 3))
+    {
+        triangles = triangles.t();
+    }
+    // This transposition is performed on 1xN matrix so it's almost free in terms of performance
+    triangles = triangles.reshape(3, 1).t();
+    nTriangles = (int)triangles.total();
 
-        int indexType = _indices.type();
-        CV_Assert(indexType == CV_32SC1 || indexType == CV_32SC3);
-        triangles = _indices.getMat();
-        if ((_indices.channels() == 1) && (_indices.rows() == 3))
+    if (hasColors)
+    {
+        int colorType = _colors.type();
+        CV_Assert(colorType == CV_32FC1 || colorType == CV_32FC3);
+        colors = _colors.getMat();
+        if ((_colors.channels() == 1) && (_colors.rows() == 3))
         {
-            triangles = triangles.t();
+            colors = colors.t();
         }
-        // This transposition is performed on 1xN matrix so it's almost free in terms of performance
-        triangles = triangles.reshape(3, 1).t();
-        nTriangles = (int)triangles.total();
+        colors = colors.reshape(3, 1).t();
+        nColors = (int)colors.total();
 
-        if (hasColors)
-        {
-            int colorType = _colors.type();
-            CV_Assert(colorType == CV_32FC1 || colorType == CV_32FC3);
-            colors = _colors.getMat();
-            if ((_colors.channels() == 1) && (_colors.rows() == 3))
-            {
-                colors = colors.t();
-            }
-            colors = colors.reshape(3, 1).t();
-            nColors = (int)colors.total();
-
-            CV_Assert(nColors == nVerts);
-            CV_Assert(settings.shadingType == TriangleShadingType::Flat ||
-                      settings.shadingType == TriangleShadingType::Shaded);
-        }
-        else
-        {
-            CV_Assert(settings.shadingType == TriangleShadingType::White);
-        }
+        CV_Assert(nColors == nVerts);
+        CV_Assert(settings.shadingType == TriangleShadingType::Flat ||
+                  settings.shadingType == TriangleShadingType::Shaded);
+    }
+    else
+    {
+        CV_Assert(settings.shadingType == TriangleShadingType::White);
     }
 
     Size imgSize {0, 0};
@@ -258,10 +259,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         CV_Assert(_colorBuffer.type() == CV_32FC3);
         imgSize = _colorBuffer.size();
 
-        if (hasIdx)
-        {
-            colorBuf = _colorBuffer.getMat();
-        }
+        colorBuf = _colorBuffer.getMat();
     }
 
     CV_Assert(!_colorBuffer.empty() || !_depthBuffer.empty());
@@ -281,19 +279,16 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
             imgSize = _depthBuffer.size();
         }
 
-        if (hasIdx)
+        if (settings.glCompatibleMode == TriangleGlCompatibleMode::InvertedDepth)
         {
-            if (settings.glCompatibleMode == TriangleGlCompatibleMode::InvertedDepth)
-            {
-                depthBuf = _depthBuffer.getMat();
-            }
-            else
-            {
-                invertDepth(_depthBuffer.getMat(), depthBuf, validMask, zNear, zFar);
-            }
+            depthBuf = _depthBuffer.getMat();
+        }
+        else
+        {
+            invertDepth(_depthBuffer.getMat(), depthBuf, validMask, zNear, zFar);
         }
     }
-    else if (hasIdx && hasColors)
+    else if (hasColors)
     {
         // since both depthBuf and colorBuf cannot be empty, imgSize should be filled
         depthBuf.create(imgSize, CV_32FC1);
