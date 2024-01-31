@@ -83,15 +83,27 @@ TEST_F(OctreeTest, RadiusSearchTest)
     EXPECT_NO_THROW(treeTest.radiusNNSearch(restPoint, radius, outputPoints, outputSquareDist));
     EXPECT_EQ(outputPoints.size(),(unsigned int)5);
 
-    //The outputPoints should be unordered, so in some resolution, this test will fail because it specified the order of output.
-    EXPECT_FLOAT_EQ(outputPoints[0].x, -8.88461112976f);
-    EXPECT_FLOAT_EQ(outputPoints[0].y, -1.881799697875f);
-    EXPECT_FLOAT_EQ(outputPoints[1].x, -8.405818939208f);
-    EXPECT_FLOAT_EQ(outputPoints[1].y, -2.991247177124f);
-    EXPECT_FLOAT_EQ(outputPoints[2].x, -8.1184864044189f);
-    EXPECT_FLOAT_EQ(outputPoints[2].y, -0.528564453125f);
-    EXPECT_FLOAT_EQ(outputPoints[3].x, -6.551313400268f);
-    EXPECT_FLOAT_EQ(outputPoints[3].y, -0.708484649658f);
+    // The output is unsorted, so let's sort it before checking
+    std::map<float, Point3f> sortResults;
+    for (int i = 0; i < (int)outputPoints.size(); i++)
+    {
+        sortResults[outputSquareDist[i]] = outputPoints[i];
+    }
+
+    std::vector<Point3f> goldVals = {
+        {-8.1184864044189f, -0.528564453125f, 0.f},
+        {-8.405818939208f,  -2.991247177124f, 0.f},
+        {-8.88461112976f,   -1.881799697875f, 0.f},
+        {-6.551313400268f,  -0.708484649658f, 0.f}
+    };
+
+    auto it = sortResults.begin();
+    for (int i = 0; i < (int)goldVals.size(); i++, it++)
+    {
+        Point3f p = it->second;
+        EXPECT_FLOAT_EQ(goldVals[i].x, p.x);
+        EXPECT_FLOAT_EQ(goldVals[i].y, p.y);
+    }
 }
 
 TEST_F(OctreeTest, KNNSearchTest)
@@ -101,6 +113,7 @@ TEST_F(OctreeTest, KNNSearchTest)
     std::vector<float> outputSquareDist;
     EXPECT_NO_THROW(treeTest.KNNSearch(restPoint, K, outputPoints, outputSquareDist));
 
+    // this output should be sorted
     EXPECT_FLOAT_EQ(outputPoints[0].x, -8.118486404418f);
     EXPECT_FLOAT_EQ(outputPoints[0].y, -0.528564453125f);
     EXPECT_FLOAT_EQ(outputPoints[1].x, -8.405818939208f);
