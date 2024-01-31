@@ -14,7 +14,6 @@ void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3
 // Locate the OctreeNode corresponding to the input point from the given OctreeNode.
 static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node,OctreeKey& key,size_t depthMask);
 
-static bool _isPointInBound(const Point3f& _point, const Point3f& _origin, double _size);
 static bool insertPointRecurse( Ptr<OctreeNode>& node, const Point3f& point, const Point3f &color, size_t maxDepth
         ,const OctreeKey &key, size_t depthMask);
 bool deletePointRecurse( Ptr<OctreeNode>& node);
@@ -70,31 +69,19 @@ bool OctreeNode::empty() const
     }
 }
 
+
 bool OctreeNode::isPointInBound(const Point3f& _point) const
 {
-    return isPointInBound(_point, origin, size);
-}
+    Point3f eps;
+    eps.x = std::max(std::abs(_point.x), std::abs(this->origin.x));
+    eps.y = std::max(std::abs(_point.y), std::abs(this->origin.y));
+    eps.z = std::max(std::abs(_point.z), std::abs(this->origin.z));
+    eps *= std::numeric_limits<float>::epsilon();
+    Point3f ptEps = _point + eps;
+    Point3f upPt = this->origin + eps + Point3f {(float)this->size, (float)this->size, (float)this->size};
 
-bool OctreeNode::isPointInBound(const Point3f& _point, const Point3f& _origin, double _size) const
-{
-    return _isPointInBound(_point, _origin, _size);
-}
-
-bool _isPointInBound(const Point3f& _point, const Point3f& _origin, double _size)
-{
-    float epsX = std::numeric_limits<float>::epsilon() * std::max(std::abs(_point.x), std::abs(_origin.x));
-    float epsY = std::numeric_limits<float>::epsilon() * std::max(std::abs(_point.y), std::abs(_origin.y));
-    float epsZ = std::numeric_limits<float>::epsilon() * std::max(std::abs(_point.z), std::abs(_origin.z));
-
-    if((_point.x + epsX >= _origin.x && _point.y + epsY >= _origin.y && _point.z + epsZ >= _origin.z) &&
-       (_point.x <= _origin.x + _size + epsX && _point.y <= _origin.y + _size + epsY && _point.z <= _origin.z + _size + epsZ))
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return (ptEps.x >= this->origin.x) && (ptEps.y >= this->origin.y) && (ptEps.z >= this->origin.z) &&
+           (_point.x <= upPt.x) && (_point.y <= upPt.y) && (_point.z <= upPt.z);
 }
 
 struct Octree::Impl
@@ -161,7 +148,7 @@ bool Octree::insertPoint(const Point3f& point,const Point3f &color)
     {
         p->rootNode = new OctreeNode( 0, p->size, p->origin,  color, -1);
     }
-    bool pointInBoundFlag = p->rootNode->isPointInBound(point, p->rootNode->origin, p->rootNode->size);
+    bool pointInBoundFlag = p->rootNode->isPointInBound(point);
     if(p->rootNode->depth==0 && !pointInBoundFlag)
     {
         return false;
@@ -297,7 +284,7 @@ Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& _node,OctreeKey &ke
 
 bool Octree::isPointInBound(const Point3f& _point) const
 {
-    return _isPointInBound(_point, p->origin, p->size);
+    return p->rootNode->isPointInBound(_point);
 }
 
 bool Octree::deletePoint(const Point3f& point)

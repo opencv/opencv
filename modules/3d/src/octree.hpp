@@ -85,8 +85,6 @@ public:
     //! returns true if the rootNode is NULL.
     bool empty() const;
 
-    bool isPointInBound(const Point3f& _point, const Point3f& _origin, double _size) const;
-
     bool isPointInBound(const Point3f& _point) const;
 
     //! Contains 8 pointers to its 8 children.
