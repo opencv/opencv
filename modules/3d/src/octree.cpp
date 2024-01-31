@@ -14,12 +14,6 @@ void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3
 // Locate the OctreeNode corresponding to the input point from the given OctreeNode.
 static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node,OctreeKey& key,size_t depthMask);
 
-// For Nearest neighbor search.
-template<typename T> struct PQueueElem; // Priority queue
-
-static void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, const int K,
-                             float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint);
-
 OctreeNode::OctreeNode() :
     children(),
     depth(0),
@@ -500,22 +494,23 @@ int Octree::radiusNNSearch(const Point3f& query, float radius,
     return int(pointSet.size());
 }
 
-void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, const int K,
-                      float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint)
+void OctreeNode::KNNSearchRecurse(const Point3f& query, const int K,
+                                  float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint) const
 {
     std::vector<PQueueElem<int> > priorityQue;
+
     Ptr<OctreeNode> child;
     float dist = 0;
     Point3f center; // the OctreeNode Center
 
-    // Add the non-empty OctreeNode to priorityQue.
+    // Add the non-empty OctreeNode to priorityQue
     for(size_t i = 0; i < 8; i++)
     {
-        if(!node->children[i].empty())
+        if(!this->children[i].empty())
         {
-            float halfSize = float(node->children[i]->size * 0.5);
+            float halfSize = float(this->children[i]->size * 0.5);
 
-            center = node->children[i]->origin + Point3f(halfSize, halfSize, halfSize);
+            center = this->children[i]->origin + Point3f(halfSize, halfSize, halfSize);
 
             dist = SquaredDistance(query, center);
             priorityQue.emplace_back(dist, int(i));
@@ -523,43 +518,52 @@ void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, const i
     }
 
     std::sort(priorityQue.rbegin(), priorityQue.rend());
-    child = node->children[priorityQue.back().t];
+    child = this->children[priorityQue.back().t];
 
     while (!priorityQue.empty() && child->overlap(query, smallestDist))
     {
         if (!child->isLeaf)
         {
-            KNNSearchRecurse(child, query, K, smallestDist, candidatePoint);
-        } else {
-            for (size_t i = 0; i < child->pointList.size(); i++) {
+            child->KNNSearchRecurse(query, K, smallestDist, candidatePoint);
+        }
+        else
+        {
+            for (size_t i = 0; i < child->pointList.size(); i++)
+            {
                 dist = SquaredDistance(child->pointList[i], query);
 
-                if ( dist + dist * std::numeric_limits<float>::epsilon() <= smallestDist ) {
+                if ( dist + dist * std::numeric_limits<float>::epsilon() <= smallestDist )
+                {
                     candidatePoint.emplace_back(dist, child->pointList[i]);
                 }
             }
 
             std::sort(candidatePoint.begin(), candidatePoint.end());
 
-            if (int(candidatePoint.size()) > K) {
+            if (int(candidatePoint.size()) > K)
+            {
                 candidatePoint.resize(K);
             }
 
-            if (int(candidatePoint.size()) == K) {
+            if (int(candidatePoint.size()) == K)
+            {
                 smallestDist = candidatePoint.back().dist;
             }
         }
 
         priorityQue.pop_back();
 
-        // To next child.
+        // To next child
         if(!priorityQue.empty())
-            child = node->children[priorityQue.back().t];
+            child = this->children[priorityQue.back().t];
     }
 }
 
 void Octree::KNNSearch(const Point3f& query, const int K, std::vector<Point3f>& pointSet, std::vector<float>& squareDistSet) const
 {
+    pointSet.clear();
+    squareDistSet.clear();
+
     if(p->rootNode.empty())
         return;
 
@@ -567,7 +571,7 @@ void Octree::KNNSearch(const Point3f& query, const int K, std::vector<Point3f>& 
     std::vector<PQueueElem<Point3f> > candidatePoint;
     float smallestDist = std::numeric_limits<float>::max();
 
-    KNNSearchRecurse(p->rootNode, query, K, smallestDist, candidatePoint);
+    p->rootNode->KNNSearchRecurse(query, K, smallestDist, candidatePoint);
 
     for(size_t i = 0; i < candidatePoint.size(); i++)
     {

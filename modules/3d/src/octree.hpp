@@ -94,6 +94,7 @@ public:
 
     void radiusNNSearchRecurse(const Point3f& query, float squareRadius, std::vector<PQueueElem<Point3f> >& candidatePoint) const;
 
+    void KNNSearchRecurse(const Point3f& query, const int K, float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint) const;
 
     //! Contains 8 pointers to its 8 children.
     std::array<Ptr<OctreeNode>, 8> children;
