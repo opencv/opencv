@@ -2806,7 +2806,7 @@ CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputA
 CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices);
 
 //! Triangle fill settings
-enum class TriangleShadingType
+enum TriangleShadingType
 {
     White  = 0, //!< a white color is used for the whole triangle
     Flat   = 1, //!< a color of 1st vertex of each triangle is used
@@ -2814,7 +2814,7 @@ enum class TriangleShadingType
 };
 
 //! Face culling settings: what faces are drawn after face culling
-enum class TriangleCullingMode
+enum TriangleCullingMode
 {
     None = 0, //!< all faces are drawn, no culling is actually performed
     CW   = 1, //!< triangles which vertices are given in clockwork order are drawn
@@ -2822,7 +2822,7 @@ enum class TriangleCullingMode
 };
 
 //! GL compatibility settings
-enum class TriangleGlCompatibleMode
+enum TriangleGlCompatibleMode
 {
     Disabled      = 0, //!< RGB and depth have their natural values and converted to internal formats if needed
     InvertedDepth = 1  //!< RGB is natural, Depth is transformed from [-zNear; -zFar] to [0; 1]
@@ -2834,7 +2834,7 @@ enum class TriangleGlCompatibleMode
 /**
  * @brief Structure to keep settings for rasterization
  */
-struct CV_EXPORTS TriangleRasterizeSettings
+struct CV_EXPORTS_W TriangleRasterizeSettings
 {
     TriangleRasterizeSettings();
 
@@ -2880,10 +2880,10 @@ To disable Z buffer output, pass cv::noArray() here. If required by user, should
 *@param colorBuf a width x height array of CV_32FC3 representing the final rendered image. Reused if not empty.
 To disable color output, pass cv::noArray() here.
 */
-CV_EXPORTS void triangleRasterize(InputArray vertices, InputArray indices, InputArray colors,
-                                  InputArray cameraPose, double fovY, double zNear, double zFar,
-                                  TriangleRasterizeSettings settings = TriangleRasterizeSettings(),
-                                  InputOutputArray depthBuf=noArray(), InputOutputArray colorBuf=noArray());
+CV_EXPORTS_W void triangleRasterize(InputArray vertices, InputArray indices, InputArray colors,
+                                    InputArray cameraPose, double fovY, double zNear, double zFar,
+                                    TriangleRasterizeSettings settings = TriangleRasterizeSettings(),
+                                    InputOutputArray depthBuf=noArray(), InputOutputArray colorBuf=noArray());
 
 //! @} _3d
 } //end namespace cv
