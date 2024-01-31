@@ -19,9 +19,14 @@ public class QRCodeDetectorTest extends OpenCVTestCase {
     protected void setUp() throws Exception {
         super.setUp();
 
-        testDataPath = System.getenv(ENV_OPENCV_TEST_DATA_PATH);
-        if (testDataPath == null)
-            throw new Exception(ENV_OPENCV_TEST_DATA_PATH + " has to be defined!");
+        // relys on https://developer.android.com/reference/java/lang/System
+        isTestCaseEnabled = System.getProperties().getProperty("java.vm.name") != "Dalvik";
+
+        if (isTestCaseEnabled) {
+            testDataPath = System.getenv(ENV_OPENCV_TEST_DATA_PATH);
+            if (testDataPath == null)
+                throw new Exception(ENV_OPENCV_TEST_DATA_PATH + " has to be defined!");
+        }
     }
 
     public void testDetectAndDecode() {
