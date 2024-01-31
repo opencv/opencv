@@ -6,10 +6,6 @@
 #include "octree.hpp"
 #include "opencv2/3d.hpp"
 
-
-#define OCTREE_CHILD_NUM 8
-#define OCTREE_NEIGH_SIZE 8
-
 namespace cv{
 
 void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor, size_t x_key, size_t y_key,
@@ -30,17 +26,27 @@ static void radiusNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& qu
 static void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, const int K,
                              float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint);
 
-OctreeNode::OctreeNode():children(OCTREE_CHILD_NUM, nullptr), depth(0), size(0), origin(0,0,0),
-                                    pointNum(0),neigh(OCTREE_NEIGH_SIZE, nullptr),parentIndex(-1)
-{
-}
+OctreeNode::OctreeNode() :
+    children(),
+    depth(0),
+    size(0),
+    origin(0,0,0),
+    pointNum(0),
+    neigh(),
+    parentIndex(-1)
+{ }
 
-OctreeNode::OctreeNode(size_t _depth, double _size, const Point3f &_origin, const Point3f &_color,
-                       int _parentIndex, int _pointNum) : children(OCTREE_CHILD_NUM), depth(_depth),
-                                                          size(_size), origin(_origin),color(_color),pointNum(_pointNum),
-                                                          neigh(OCTREE_NEIGH_SIZE),parentIndex(_parentIndex)
-                                                          {
-}
+OctreeNode::OctreeNode(int _depth, double _size, const Point3f &_origin, const Point3f &_color,
+                       int _parentIndex) :
+    children(),
+    depth(_depth),
+    size(_size),
+    origin(_origin),
+    color(_color),
+    pointNum(0),
+    neigh(),
+    parentIndex(_parentIndex)
+{ }
 
 bool OctreeNode::empty() const
 {
@@ -53,7 +59,7 @@ bool OctreeNode::empty() const
     }
     else
     {
-        for(size_t i = 0; i< OCTREE_CHILD_NUM; i++)
+        for(size_t i = 0; i < 8; i++)
         {
             if(!this->children[i].empty())
             {
@@ -153,7 +159,7 @@ bool Octree::insertPoint(const Point3f& point,const Point3f &color)
     size_t depthMask=(size_t)1 << (p->maxDepth - 1);
     if(p->rootNode.empty())
     {
-        p->rootNode = new OctreeNode( 0, p->size, p->origin,  color, -1, 0);
+        p->rootNode = new OctreeNode( 0, p->size, p->origin,  color, -1);
     }
     bool pointInBoundFlag = p->rootNode->isPointInBound(point, p->rootNode->origin, p->rootNode->size);
     if(p->rootNode->depth==0 && !pointInBoundFlag)
@@ -354,7 +360,7 @@ bool deletePointRecurse(Ptr<OctreeNode>& _node)
         bool deleteFlag = true;
 
         // Only all children was deleted, can we delete the tree node.
-        for(size_t i = 0; i< OCTREE_CHILD_NUM; i++)
+        for(size_t i = 0; i< 8; i++)
         {
             if(!node.children[i].empty())
             {
@@ -381,7 +387,7 @@ bool insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point,const Poi
 {
     OctreeNode &node = *_node;
     //add point to the leaf node.
-    if (node.depth == maxDepth) {
+    if (node.depth == (int)maxDepth) {
         node.isLeaf = true;
         node.color = color;
         node.pointNum++;
@@ -399,7 +405,7 @@ bool insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point,const Poi
 
     if (node.children[childIndex].empty()) {
         node.children[childIndex] = new OctreeNode(node.depth + 1, childSize, childOrigin, Point3f(0, 0, 0),
-                                                   int(childIndex), 0);
+                                                   int(childIndex));
         node.children[childIndex]->parent = _node;
     }
 
@@ -449,21 +455,7 @@ void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3
     }
 };
 
-// For Nearest neighbor search.
-template<typename T>
-struct PQueueElem
-{
-    PQueueElem() : dist(0), t(0) {}
-    PQueueElem(float _dist, T _t) : dist(_dist), t(_t) {}
-    float dist;
-    T t;
 
-    bool
-    operator<(const PQueueElem<T> p1) const
-    {
-        return (this->dist < p1.dist);
-    }
-};
 
 static float SquaredDistance(const Point3f& query, const Point3f& origin)
 {
@@ -489,7 +481,7 @@ void radiusNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, fl
     Ptr<OctreeNode> child;
 
     // iterate eight children.
-    for(size_t i = 0; i< OCTREE_CHILD_NUM; i++)
+    for(size_t i = 0; i< 8; i++)
     {
         if( !node->children[i].empty() && overlap(*node->children[i], query, squareRadius))
         {
@@ -545,7 +537,7 @@ void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, const i
     Point3f center; // the OctreeNode Center
 
     // Add the non-empty OctreeNode to priorityQue.
-    for(size_t i = 0; i < OCTREE_CHILD_NUM; i++)
+    for(size_t i = 0; i < 8; i++)
     {
         if(!node->children[i].empty())
         {
