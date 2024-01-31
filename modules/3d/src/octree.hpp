@@ -87,6 +87,9 @@ public:
 
     bool isPointInBound(const Point3f& _point) const;
 
+    bool overlap(const Point3f& query, float squareRadius) const;
+
+
     //! Contains 8 pointers to its 8 children.
     std::array<Ptr<OctreeNode>, 8> children;
 

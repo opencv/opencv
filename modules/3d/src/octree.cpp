@@ -450,13 +450,13 @@ static float SquaredDistance(const Point3f& query, const Point3f& origin)
     return diff.dot(diff);
 }
 
-static bool overlap(const OctreeNode& node, const Point3f& query, float squareRadius)
+bool OctreeNode::overlap(const Point3f& query, float squareRadius) const
 {
-    float halfSize = float(node.size * 0.5);
-    Point3f center = node.origin + Point3f( halfSize, halfSize, halfSize );
+    float halfSize = float(this->size * 0.5);
+    Point3f center = this->origin + Point3f( halfSize, halfSize, halfSize );
 
     float dist = SquaredDistance(center, query);
-    float temp = float(node.size) * float(node.size) * 3.0f;
+    float temp = float(this->size) * float(this->size) * 3.0f;
 
     return ( dist + dist * std::numeric_limits<float>::epsilon() ) <= float(temp * 0.25f + squareRadius + sqrt(temp * squareRadius)) ;
 }
@@ -470,7 +470,7 @@ void radiusNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, fl
     // iterate eight children.
     for(size_t i = 0; i< 8; i++)
     {
-        if( !node->children[i].empty() && overlap(*node->children[i], query, squareRadius))
+        if( !node->children[i].empty() && node->children[i]->overlap(query, squareRadius))
         {
             if(!node->children[i]->isLeaf)
             {
@@ -540,7 +540,7 @@ void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, const i
     std::sort(priorityQue.rbegin(), priorityQue.rend());
     child = node->children[priorityQue.back().t];
 
-    while (!priorityQue.empty() && overlap(*child, query, smallestDist))
+    while (!priorityQue.empty() && child->overlap(query, smallestDist))
     {
         if (!child->isLeaf)
         {
