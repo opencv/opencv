@@ -41,14 +41,18 @@ private:
     TriangleShadingType val;
 };
 
-const std::array<TriangleShadingType, 3> ShadingTypeEnum::vals{ TriangleShadingType::White,
-                                                                TriangleShadingType::Flat,
-                                                                TriangleShadingType::Shaded
-                                                              };
-const std::array<std::string, 3> ShadingTypeEnum::svals{ std::string("White"),
-                                                         std::string("Flat"),
-                                                         std::string("Shaded")
-                                                       };
+const std::array<TriangleShadingType, 3> ShadingTypeEnum::vals
+{
+    TriangleShadingType::White,
+    TriangleShadingType::Flat,
+    TriangleShadingType::Shaded
+};
+const std::array<std::string, 3> ShadingTypeEnum::svals
+{
+    std::string("White"),
+    std::string("Flat"),
+    std::string("Shaded")
+};
 
 static inline void PrintTo(const ShadingTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 
@@ -83,12 +87,16 @@ private:
     TriangleGlCompatibleMode val;
 };
 
-const std::array<TriangleGlCompatibleMode, 2> GlCompatibleModeEnum::vals{ TriangleGlCompatibleMode::Disabled,
-                                                                          TriangleGlCompatibleMode::InvertedDepth,
-                                                                        };
-const std::array<std::string, 2> GlCompatibleModeEnum::svals{ std::string("Disabled"),
-                                                              std::string("InvertedDepth"),
-                                                            };
+const std::array<TriangleGlCompatibleMode, 2> GlCompatibleModeEnum::vals
+{
+     TriangleGlCompatibleMode::Disabled,
+     TriangleGlCompatibleMode::InvertedDepth,
+};
+const std::array<std::string, 2> GlCompatibleModeEnum::svals
+{
+    std::string("Disabled"),
+    std::string("InvertedDepth"),
+};
 
 static inline void PrintTo(const GlCompatibleModeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
@@ -134,14 +142,18 @@ private:
     Outputs val;
 };
 
-const std::array<Outputs, 3> OutputsEnum::vals{ Outputs::DepthOnly,
-                                                Outputs::ColorOnly,
-                                                Outputs::DepthColor
-                                              };
-const std::array<std::string, 3> OutputsEnum::svals{ std::string("DepthOnly"),
-                                                     std::string("ColorOnly"),
-                                                     std::string("DepthColor")
-                                                   };
+const std::array<Outputs, 3> OutputsEnum::vals
+{
+    Outputs::DepthOnly,
+    Outputs::ColorOnly,
+    Outputs::DepthColor
+};
+const std::array<std::string, 3> OutputsEnum::svals
+{
+    std::string("DepthOnly"),
+    std::string("ColorOnly"),
+    std::string("DepthColor")
+};
 
 static inline void PrintTo(const OutputsEnum &t, std::ostream *os) { t.PrintTo(os); }
 }

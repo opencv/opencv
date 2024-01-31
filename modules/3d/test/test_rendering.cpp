@@ -41,14 +41,18 @@ private:
     TriangleCullingMode val;
 };
 
-const std::array<TriangleCullingMode, 3> CullingModeEnum::vals{ TriangleCullingMode::None,
-                                                                TriangleCullingMode::CW,
-                                                                TriangleCullingMode::CCW
-                                                              };
-const std::array<std::string, 3> CullingModeEnum::svals{ std::string("None"),
-                                                         std::string("CW"),
-                                                         std::string("CCW")
-                                                       };
+const std::array<TriangleCullingMode, 3> CullingModeEnum::vals
+{
+    TriangleCullingMode::None,
+    TriangleCullingMode::CW,
+    TriangleCullingMode::CCW
+};
+const std::array<std::string, 3> CullingModeEnum::svals
+{
+    std::string("None"),
+    std::string("CW"),
+    std::string("CCW")
+};
 
 static inline void PrintTo(const CullingModeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
@@ -87,14 +91,18 @@ private:
     TriangleShadingType val;
 };
 
-const std::array<TriangleShadingType, 3> ShadingTypeEnum::vals{ TriangleShadingType::White,
-                                                                TriangleShadingType::Flat,
-                                                                TriangleShadingType::Shaded
-                                                              };
-const std::array<std::string, 3> ShadingTypeEnum::svals{ std::string("White"),
-                                                         std::string("Flat"),
-                                                         std::string("Shaded")
-                                                       };
+const std::array<TriangleShadingType, 3> ShadingTypeEnum::vals
+{
+    TriangleShadingType::White,
+    TriangleShadingType::Flat,
+    TriangleShadingType::Shaded
+};
+const std::array<std::string, 3> ShadingTypeEnum::svals
+{
+    std::string("White"),
+    std::string("Flat"),
+    std::string("Shaded")
+};
 
 static inline void PrintTo(const ShadingTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
@@ -145,16 +153,22 @@ private:
     ModelType val;
 };
 
-const std::array<ModelType, 5> ModelTypeEnum::vals{ ModelType::Empty,
-                                                    ModelType::File,
-                                                    ModelType::Clipping,
-                                                    ModelType::Color,
-                                                    ModelType::Centered };
-const std::array<std::string, 5> ModelTypeEnum::svals{ std::string("Empty"),
-                                                       std::string("File"),
-                                                       std::string("Clipping"),
-                                                       std::string("Color"),
-                                                       std::string("Centered") };
+const std::array<ModelType, 5> ModelTypeEnum::vals
+{
+    ModelType::Empty,
+    ModelType::File,
+    ModelType::Clipping,
+    ModelType::Color,
+    ModelType::Centered
+};
+const std::array<std::string, 5> ModelTypeEnum::svals
+{
+    std::string("Empty"),
+    std::string("File"),
+    std::string("Clipping"),
+    std::string("Color"),
+    std::string("Centered")
+};
 
 static inline void PrintTo(const ModelTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
