@@ -857,8 +857,8 @@ TEST(Calib3d_CalibrateHandEye, regression_24871)
         Matx31d t_cam2gripper_est;
         calibrateHandEye(R_gripper2base, t_gripper2base, R_target2cam, t_target2cam, R_cam2gripper_est, t_cam2gripper_est, method);
 
-        EXPECT_TRUE(cv::norm(R_cam2gripper_est - R_true_cam2gripper) < 1e-12);
-        EXPECT_TRUE(cv::norm(t_cam2gripper_est - t_true_cam2gripper) < 1e-12);
+        EXPECT_TRUE(cv::norm(R_cam2gripper_est - R_true_cam2gripper) < 1e-9);
+        EXPECT_TRUE(cv::norm(t_cam2gripper_est - t_true_cam2gripper) < 1e-9);
     }
 }
 

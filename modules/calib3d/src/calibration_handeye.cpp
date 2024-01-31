@@ -306,6 +306,12 @@ static void calibrateHandEyeTsai(const std::vector<Mat>& Hg, const std::vector<M
             Mat Pcij = 2*rot2quatMinimal(Hcij);
 
             // Discard motions with rotation too small or too close to pi radians
+            //   The limits 1.7 and 0.3 correspond to angles less than 17 degrees or greater than 120 degrees. They are
+            //   based on verifying equation 12 from the source paper using data generated with a known hand-eye
+            //   calibration. The data contained 25 poses, so 300 motions were considered. Of these, 188 satisfied
+            //   equation 12, and the remaining 112 all had Pcij or Pgij with norms greater than 1.7. Although errors
+            //   from small rotations were not observed, it is known that these motions are less informative (see
+            //   section II.B.3, and figure 6).
             double Pgij_norm = cv::norm(Pgij);
             double Pcij_norm = cv::norm(Pcij);
             if (Pgij_norm < 0.3 || Pcij_norm < 0.3 || Pgij_norm > 1.7 || Pcij_norm > 1.7) {
