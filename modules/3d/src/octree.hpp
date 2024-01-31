@@ -89,12 +89,15 @@ public:
 
     bool overlap(const Point3f& query, float squareRadius) const;
 
+    void insertPointRecurse(const Point3f& point, const Point3f &color, int maxDepth,
+                            const OctreeKey &key, size_t depthMask);
+
 
     //! Contains 8 pointers to its 8 children.
     std::array<Ptr<OctreeNode>, 8> children;
 
     //! Point to the parent node of the current node. The root node has no parent node and the value is NULL.
-    Ptr<OctreeNode> parent = nullptr;
+    OctreeNode* parent;
 
     //! The depth of the current node. The depth of the root node is 0, and the leaf node is equal to the depth of Octree.
     int depth;
