@@ -4,8 +4,8 @@ set(OPENCV_ANDROID_TEST_DIR "${OpenCV_BINARY_DIR}/android_test" CACHE INTERNAL "
 file(REMOVE_RECURSE "${OPENCV_ANDROID_TEST_DIR}")
 
 set(ANDROID_TESTS_SRC_DIRS
-"'${CMAKE_CURRENT_SOURCE_DIR}/src',
-'${OpenCV_SOURCE_DIR}/modules/java/test/common_test/src',
+"'${CMAKE_CURRENT_SOURCE_DIR}/src', \
+'${OpenCV_SOURCE_DIR}/modules/java/test/common_test/src', \
 '${CMAKE_BINARY_DIR}/modules/java_bindings_generator/gen/test'" CACHE INTERNAL "")
 
 set(ANDROID_TESTS_RES_DIR "'${OpenCV_SOURCE_DIR}/modules/java/test/common_test/res'" CACHE INTERNAL "")
