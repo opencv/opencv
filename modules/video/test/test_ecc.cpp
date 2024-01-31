@@ -119,7 +119,7 @@ bool CV_ECC_Test_Translation::testTranslation(int from)
         return false;
     }
     Mat testImg;
-    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
+    resize(img, testImg, Size(432, 432), 0, 0, INTER_LINEAR_EXACT);
 
     cv::RNG rng = ts->get_rng();
 
