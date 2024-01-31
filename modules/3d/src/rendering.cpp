@@ -172,7 +172,6 @@ static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, double zN
 }
 
 
-
 CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
                                    InputArray cameraPose, double fovyRadians, double zNear, double zFar,
                                    TriangleRasterizeSettings settings,
@@ -213,6 +212,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         {
             vertices = vertices.t();
         }
+        // This transposition is performed on 1xN matrix so it's almost free in terms of performance
         vertices = vertices.reshape(3, 1).t();
         nVerts = (int)vertices.total();
 
@@ -223,6 +223,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         {
             triangles = triangles.t();
         }
+        // This transposition is performed on 1xN matrix so it's almost free in terms of performance
         triangles = triangles.reshape(3, 1).t();
         nTriangles = (int)triangles.total();
 
