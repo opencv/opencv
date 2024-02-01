@@ -122,6 +122,31 @@ static void image_jacobian_homo_ECC(const Mat& src1, const Mat& src2,
     src2Divided_.copyTo(dst.colRange(7*w, 8*w));//8
 }
 
+static void warp_gradients_euclidean_ECC(
+    const Mat& gradientX, const Mat& gradientY,
+    const Mat& map,
+    Mat& gradientXWarped, Mat& gradientYWarped)
+{
+    CV_Assert(gradientX.size() == gradientY.size());
+    CV_Assert(gradientX.size() == gradientXWarped.size());
+    CV_Assert(gradientX.size() == gradientYWarped.size());
+
+    CV_Assert(gradientX.type() == CV_32FC1);
+    CV_Assert(gradientY.type() == CV_32FC1);
+    CV_Assert(gradientXWarped.type() == CV_32FC1);
+    CV_Assert(gradientYWarped.type() == CV_32FC1);
+
+    CV_Assert(map.isContinuous());
+
+    const float* hptr = map.ptr<float>(0);
+
+    const float h0 = hptr[0]; // cos(theta)
+    const float h1 = hptr[3]; // sin(theta)
+
+    addWeighted(gradientX, h0, gradientY, -h1, 0., gradientXWarped); // cos(theta) * grad_x - sin(theta) * grad_y
+    addWeighted(gradientX, h1, gradientY, h0, 0., gradientYWarped); // sin(theta) * grad_x + cos(theta) * grad_y
+}
+
 static void image_jacobian_euclidean_ECC(const Mat& src1, const Mat& src2,
                                          const Mat& src3, const Mat& src4,
                                          const Mat& src5, Mat& dst)
@@ -158,6 +183,33 @@ static void image_jacobian_euclidean_ECC(const Mat& src1, const Mat& src2,
     src2.copyTo(dst.colRange(2*w, 3*w));//3
 }
 
+static void warp_gradients_affine_ECC(
+    const Mat& gradientX, const Mat& gradientY,
+    const Mat& map,
+    Mat& gradientXWarped, Mat& gradientYWarped)
+{
+    CV_Assert(gradientX.size() == gradientY.size());
+    CV_Assert(gradientX.size() == gradientXWarped.size());
+    CV_Assert(gradientX.size() == gradientYWarped.size());
+
+    CV_Assert(gradientX.type() == CV_32FC1);
+    CV_Assert(gradientY.type() == CV_32FC1);
+    CV_Assert(gradientXWarped.type() == CV_32FC1);
+    CV_Assert(gradientYWarped.type() == CV_32FC1);
+
+    CV_Assert(map.isContinuous());
+    CV_Assert(map.cols == 3);
+
+    const float* hptr = map.ptr<float>(0);
+
+    const float a = hptr[0];
+    const float b = hptr[1];
+    const float c = hptr[3];
+    const float d = hptr[4];
+
+    addWeighted(gradientX, a, gradientY, b, 0., gradientXWarped);
+    addWeighted(gradientX, c, gradientY, d, 0., gradientYWarped);
+}
 
 static void image_jacobian_affine_ECC(const Mat& src1, const Mat& src2,
                                       const Mat& src3, const Mat& src4,
@@ -186,6 +238,22 @@ static void image_jacobian_affine_ECC(const Mat& src1, const Mat& src2,
     src2.copyTo(dst.colRange(5*w,6*w));//6
 }
 
+static void warp_gradients_translation_ECC(
+    const Mat& gradientX, const Mat& gradientY,
+    Mat& gradientXWarped, Mat& gradientYWarped)
+{
+    CV_Assert(gradientX.size() == gradientY.size());
+    CV_Assert(gradientX.size() == gradientXWarped.size());
+    CV_Assert(gradientX.size() == gradientYWarped.size());
+
+    CV_Assert(gradientX.type() == CV_32FC1);
+    CV_Assert(gradientY.type() == CV_32FC1);
+    CV_Assert(gradientXWarped.type() == CV_32FC1);
+    CV_Assert(gradientYWarped.type() == CV_32FC1);
+
+    gradientX.copyTo(gradientXWarped);
+    gradientY.copyTo(gradientYWarped);
+}
 
 static void image_jacobian_translation_ECC(const Mat& src1, const Mat& src2, Mat& dst)
 {
@@ -480,8 +548,8 @@ double cv::findTransformECC(InputArray templateImage,
     GaussianBlur(imageFloat, imageFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
 
     // needed matrices for gradients and warped gradients
-    Mat gradientX = Mat::zeros(hd, wd, CV_32FC1);
-    Mat gradientY = Mat::zeros(hd, wd, CV_32FC1);
+    Mat imageWarpedGradientX = Mat(hs, ws, CV_32FC1);
+    Mat imageWarpedGradientY = Mat(hs, ws, CV_32FC1);
     Mat gradientXWarped = Mat(hs, ws, CV_32FC1);
     Mat gradientYWarped = Mat(hs, ws, CV_32FC1);
 
@@ -489,11 +557,8 @@ double cv::findTransformECC(InputArray templateImage,
     // calculate first order image derivatives
     Matx13f dx(-0.5f, 0.0f, 0.5f);
 
-    filter2D(imageFloat, gradientX, -1, dx);
-    filter2D(imageFloat, gradientY, -1, dx.t());
-
-    gradientX = gradientX.mul(preMaskFloat);
-    gradientY = gradientY.mul(preMaskFloat);
+    Mat gradientX;
+    Mat gradientY;
 
     // matrices needed for solving linear equation system for maximizing ECC
     Mat jacobian                = Mat(hs, ws*numberOfParameters, CV_32F);
@@ -505,7 +570,6 @@ double cv::findTransformECC(InputArray templateImage,
     Mat errorProjection         = Mat(numberOfParameters, 1, CV_32F);
 
     Mat deltaP = Mat(numberOfParameters, 1, CV_32F);//transformation parameter correction
-    Mat error = Mat(hs, ws, CV_32F);//error as 2D matrix
 
     const int imageFlags = INTER_LINEAR  + WARP_INVERSE_MAP;
     const int maskFlags  = INTER_NEAREST + WARP_INVERSE_MAP;
@@ -521,17 +585,18 @@ double cv::findTransformECC(InputArray templateImage,
         if (motionType != MOTION_HOMOGRAPHY)
         {
             warpAffine(imageFloat, imageWarped,     map, imageWarped.size(),     imageFlags);
-            warpAffine(gradientX,  gradientXWarped, map, gradientXWarped.size(), imageFlags);
-            warpAffine(gradientY,  gradientYWarped, map, gradientYWarped.size(), imageFlags);
             warpAffine(preMask,    imageMask,       map, imageMask.size(),       maskFlags);
         }
         else
         {
             warpPerspective(imageFloat, imageWarped,     map, imageWarped.size(),     imageFlags);
-            warpPerspective(gradientX,  gradientXWarped, map, gradientXWarped.size(), imageFlags);
-            warpPerspective(gradientY,  gradientYWarped, map, gradientYWarped.size(), imageFlags);
             warpPerspective(preMask,    imageMask,       map, imageMask.size(),       maskFlags);
         }
+        erode(imageMask, imageMask, getStructuringElement(MORPH_CROSS , Size(3, 3)), cv::Point(-1,-1), 1, BORDER_CONSTANT, 0);
+        filter2D(imageWarped, imageWarpedGradientX, -1, dx);
+        filter2D(imageWarped, imageWarpedGradientY, -1, dx.t());
+        imageWarpedGradientX.setTo(0.f, 1 - imageMask);
+        imageWarpedGradientY.setTo(0.f, 1 - imageMask);
 
         Scalar imgMean, imgStd, tmpMean, tmpStd;
         meanStdDev(imageWarped,   imgMean, imgStd, imageMask);
@@ -547,15 +612,19 @@ double cv::findTransformECC(InputArray templateImage,
         // calculate jacobian of image wrt parameters
         switch (motionType){
             case MOTION_AFFINE:
+                warp_gradients_affine_ECC(imageWarpedGradientX, imageWarpedGradientY, map, gradientXWarped, gradientYWarped);
                 image_jacobian_affine_ECC(gradientXWarped, gradientYWarped, Xgrid, Ygrid, jacobian);
                 break;
             case MOTION_HOMOGRAPHY:
+                warp_gradients_affine_ECC(imageWarpedGradientX, imageWarpedGradientY, map, gradientXWarped, gradientYWarped); // affine transformation does fine wrt coordinates' gradients
                 image_jacobian_homo_ECC(gradientXWarped, gradientYWarped, Xgrid, Ygrid, map, jacobian);
                 break;
             case MOTION_TRANSLATION:
+                warp_gradients_translation_ECC(imageWarpedGradientX, imageWarpedGradientY, gradientXWarped, gradientYWarped);
                 image_jacobian_translation_ECC(gradientXWarped, gradientYWarped, jacobian);
                 break;
             case MOTION_EUCLIDEAN:
+                warp_gradients_euclidean_ECC(imageWarpedGradientX, imageWarpedGradientY, map, gradientXWarped, gradientYWarped);
                 image_jacobian_euclidean_ECC(gradientXWarped, gradientYWarped, Xgrid, Ygrid, map, jacobian);
                 break;
         }
@@ -592,8 +661,7 @@ double cv::findTransformECC(InputArray templateImage,
         const double lambda = (lambda_n/lambda_d);
 
         // estimate the update step delta_p
-        error = lambda*templateZM - imageWarped;
-        project_onto_jacobian_ECC(jacobian, error, errorProjection);
+        errorProjection = lambda * templateProjection - imageProjection;
         deltaP = hessianInv * errorProjection;
 
         // update warping matrix
