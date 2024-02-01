@@ -2824,8 +2824,8 @@ enum TriangleCullingMode
 //! GL compatibility settings
 enum TriangleGlCompatibleMode
 {
-    Disabled      = 0, //!< RGB and depth have their natural values and converted to internal formats if needed
-    InvertedDepth = 1  //!< RGB is natural, Depth is transformed from [-zNear; -zFar] to [0; 1]
+    Disabled      = 0, //!< Color and depth have their natural values and converted to internal formats if needed
+    InvertedDepth = 1  //!< Color is natural, Depth is transformed from [-zNear; -zFar] to [0; 1]
                        //!< by the following formula: \f$ \frac{z_{far} \left(z + z_{near}\right)}{z \left(z_{far} - z_{near}\right)} \f$ \n
                        //!< In this mode the input/output depthBuf is considered to be in this format,
                        //!< therefore it's faster since there're no conversions performed
@@ -2848,7 +2848,7 @@ struct CV_EXPORTS_W TriangleRasterizeSettings
 };
 
 
-/** @brief Renders a set of triangles on a depth and/or RGB image.
+/** @brief Renders a set of triangles on a depth and/or color image.
 
 The output images are not cleared before the rendering and therefore can be used for drawing over
 existing image or for joining rendered model with pre-filled Z-buffer.
@@ -2868,7 +2868,8 @@ zNear and zFar are positive.
 *@param vertices vertices coordinates array. Should contain values of CV_32FC3 type or a compatible one (e.g. cv::Vec3f, etc.)
 *@param indices triangle vertices index array, 3 per triangle. Each index indicates a vertex in a vertices array.
 Should contain CV_32SC3 values
-*@param colors per-vertex colors of CV_32FC3 type. Can be empty or the same size as vertices array
+*@param colors per-vertex colors of CV_32FC3 type. Can be empty or the same size as vertices array.
+If the values are out of [0; 1] range, the result correctness is not guaranteed.
 *@param cameraPose a 4x3 or 4x4 float or double matrix containing inverted (sic!) camera pose
 *@param fovY field of view in vertical direction, given in radians
 *@param zNear minimum Z value to render, everything closer is clipped

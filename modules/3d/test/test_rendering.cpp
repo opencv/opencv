@@ -466,6 +466,11 @@ protected:
         {
             colors = Mat(modelData.colors);
             colors.convertTo(colors, ftype);
+            // let vertices be in BGR format to avoid later color conversions
+            // cvtColor does not work with 1d Mats
+            std::vector<Mat> xyz;
+            cv::split(colors, xyz);
+            cv::merge(std::vector<Mat>{xyz[2], xyz[1], xyz[0]}, colors);
         }
 
         indices = Mat(modelData.indices);
@@ -528,8 +533,6 @@ TEST_P(RenderingTest, noArrays)
         std::string outColorPath = "noarray_color_image_" + suffix + "_" + shadingName + ".png";
         std::string outDepthPath = "noarray_depth_image_" + suffix + "_" + shadingName + ".png";
 
-        cvtColor(color_buf, color_buf, COLOR_RGB2BGR);
-        cvtColor(rgbDiff, rgbDiff, COLOR_RGB2BGR);
         imwrite(outColorPath, color_buf * 255.f);
         imwrite(outDepthPath, depth_buf);
         imwrite("diff_" + outColorPath, rgbDiff * 255.f);
@@ -639,8 +642,6 @@ TEST_P(RenderingTest, floatParams)
         std::string outColorPath = "float_color_image_" + suffix + "_" + shadingName + ".png";
         std::string outDepthPath = "float_depth_image_" + suffix + "_" + shadingName + ".png";
 
-        cvtColor(color_buf, color_buf, COLOR_RGB2BGR);
-        cvtColor(rgbDiff, rgbDiff, COLOR_RGB2BGR);
         imwrite(outColorPath, color_buf * 255.f);
         imwrite(outDepthPath, depth_buf);
         imwrite("diff_" + outColorPath, rgbDiff * 255.f);
@@ -667,7 +668,6 @@ TriangleCullingMode findSameCulling(ModelType modelType, TriangleShadingType sha
 
 TEST_P(RenderingTest, accuracy)
 {
-    cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     depth_buf.convertTo(depth_buf, CV_16U, depthScale);
 
     if (modelType == ModelType::Empty ||

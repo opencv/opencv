@@ -231,9 +231,10 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     }
     else
     {
+        // let vertices be in BGR format to avoid later color conversions
         for (auto &color : colors)
         {
-            color = Vec3f(abs(color[0]), abs(color[1]), abs(color[2]));
+            color = Vec3f(abs(color[2]), abs(color[1]), abs(color[0]));
         }
     }
 
@@ -263,7 +264,6 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
 
     if (debugLevel > 0)
     {
-        cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
         depth_buf.convertTo(depth_buf, CV_16U, 1000.0);
 
         std::string shadingName = printEnum(shadingType);
