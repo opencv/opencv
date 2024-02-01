@@ -76,41 +76,43 @@ bool OctreeNode::isPointInBound(const Point3f& _point) const
 struct Octree::Impl
 {
 public:
-    Impl():maxDepth(0), size(0), origin(0,0,0), resolution(0)
-    {}
+    Impl() : Impl(0, 0, {0, 0, 0}) { }
 
-    ~Impl()
-    {}
+    Impl(int _maxDepth, double _size, const Point3f& _origin) :
+        maxDepth(_maxDepth),
+        size(_size),
+        origin(_origin),
+        resolution(0)
+    { }
+
+    ~Impl() { }
 
     void fill(bool useResolution, const std::vector<Point3f>& pointCloud, const std::vector<Point3f>& colorAttribute);
     bool insertPoint(const Point3f& point, const Point3f &color);
 
-    // The pointer to Octree root node.
+    // The pointer to Octree root node
     Ptr <OctreeNode> rootNode = nullptr;
-    //! Max depth of the Octree. And depth must be greater than zero
+    //! Max depth of the Octree
     int maxDepth;
-    //! The size of the cube of the .
+    //! The size of the cube
     double size;
-    //! The origin coordinate of root node.
+    //! The origin coordinate of root node
     Point3f origin;
-    //! The size of the leaf node.
+    //! The size of the leaf node
     double resolution;
-    //! Whether the point cloud has a color attribute.
-    bool hasColor{};
+    //! Whether the point cloud has a color attribute
+    bool hasColor { };
 };
 
-Octree::Octree() : p(new Impl)
-{
-    p->maxDepth = 0;
-    p->size = 0;
-    p->origin = Point3f(0,0,0);
-}
+Octree::Octree() : Octree(0, 0, {0, 0, 0}) { }
 
-Octree::Octree(int _maxDepth, double _size, const Point3f& _origin ) : p(new Impl)
+Octree::Octree(int _maxDepth) : Octree(_maxDepth, 0, {0, 0, 0}) { }
+
+Octree::Octree(int _maxDepth, double _size, const Point3f& _origin ) :
+    p(makePtr<Impl>(_maxDepth, _size, _origin))
 {
-    p->maxDepth = _maxDepth;
-    p->size = _size;
-    p->origin = _origin;
+    // empty octree is specified by maxDepth=0, size=0
+    CV_Assert(((_maxDepth > 0) && (_size > 0)) || ((_maxDepth == 0) && (_size == 0)));
 }
 
 Octree::Octree(const std::vector<Point3f>& _pointCloud, double resolution) : p(new Impl)
@@ -119,11 +121,10 @@ Octree::Octree(const std::vector<Point3f>& _pointCloud, double resolution) : p(n
     this->create(_pointCloud, v, resolution);
 }
 
-Octree::Octree(int _maxDepth) : p(new Impl)
+Octree::Octree(const std::vector<Point3f>& _pointCloud, int _maxDepth) : p(new Impl)
 {
-    p->maxDepth = _maxDepth;
-    p->size = 0;
-    p->origin = Point3f(0,0,0);
+    std::vector<Point3f> v;
+    this->create(_pointCloud, v, _maxDepth);
 }
 
 Octree::~Octree() { }
@@ -280,14 +281,7 @@ void Octree::setOrigin(const Point3f& _origin)
 
 void Octree::clear()
 {
-    if(!p->rootNode.empty())
-    {
-        p->rootNode.release();
-    }
-
-    p->size = 0;
-    p->maxDepth = 0;
-    p->origin = Point3f (0,0,0); // origin coordinate
+    p = makePtr<Impl>();
 }
 
 bool Octree::empty() const
