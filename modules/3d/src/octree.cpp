@@ -82,6 +82,9 @@ public:
     ~Impl()
     {}
 
+    void fill(bool useResolution, const std::vector<Point3f>& pointCloud, const std::vector<Point3f>& colorAttribute);
+    bool insertPoint(const Point3f& point, const Point3f &color);
+
     // The pointer to Octree root node.
     Ptr <OctreeNode> rootNode = nullptr;
     //! Max depth of the Octree. And depth must be greater than zero
@@ -113,7 +116,7 @@ Octree::Octree(int _maxDepth, double _size, const Point3f& _origin ) : p(new Imp
 Octree::Octree(const std::vector<Point3f>& _pointCloud, double resolution) : p(new Impl)
 {
     std::vector<Point3f> v;
-    this->create(_pointCloud,v, resolution);
+    this->create(_pointCloud, v, resolution);
 }
 
 Octree::Octree(int _maxDepth) : p(new Impl)
@@ -125,97 +128,148 @@ Octree::Octree(int _maxDepth) : p(new Impl)
 
 Octree::~Octree() { }
 
-bool Octree::insertPoint(const Point3f& point)
+bool Octree::insertPoint(const Point3f& point, const Point3f &color)
 {
-    return insertPoint(point, Point3f(0,0,0));
+    return p->insertPoint(point, color);
 }
 
-bool Octree::insertPoint(const Point3f& point,const Point3f &color)
+bool Octree::Impl::insertPoint(const Point3f& point, const Point3f &color)
 {
-    double resolution=p->resolution;
-    size_t depthMask=(size_t)1 << (p->maxDepth - 1);
-    if(p->rootNode.empty())
+    size_t depthMask = (size_t)(1 << (this->maxDepth - 1));
+
+    if(this->rootNode.empty())
     {
-        p->rootNode = new OctreeNode( 0, p->size, p->origin,  color, -1);
+        this->rootNode = new OctreeNode( 0, this->size, this->origin,  color, -1);
     }
-    bool pointInBoundFlag = p->rootNode->isPointInBound(point);
-    if(p->rootNode->depth==0 && !pointInBoundFlag)
+
+    bool pointInBoundFlag = this->rootNode->isPointInBound(point);
+    if(this->rootNode->depth == 0 && !pointInBoundFlag)
     {
         return false;
     }
-    OctreeKey key((size_t)floor((point.x - this->p->origin.x) / resolution),
-                  (size_t)floor((point.y - this->p->origin.y) / resolution),
-                  (size_t)floor((point.z - this->p->origin.z) / resolution));
 
-    p->rootNode->insertPointRecurse(point, color, p->maxDepth, key, depthMask);
+    OctreeKey key((size_t)floor((point.x - this->origin.x) / this->resolution),
+                  (size_t)floor((point.y - this->origin.y) / this->resolution),
+                  (size_t)floor((point.z - this->origin.z) / this->resolution));
+
+    this->rootNode->insertPointRecurse(point, color, this->maxDepth, key, depthMask);
     return true;
 }
 
 
-bool Octree::create(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute, double resolution)
+static Vec6f getBoundingBox(const std::vector<Point3f>& pointCloud)
 {
+    const float mval = std::numeric_limits<float>::max();
+    Vec6f bb(mval, mval, mval, -mval, -mval, -mval);
 
-    if (resolution > 0) {
-        p->resolution = resolution;
+    for (const auto& pt : pointCloud)
+    {
+        bb[0] = min(bb[0], pt.x);
+        bb[1] = min(bb[1], pt.y);
+        bb[2] = min(bb[2], pt.z);
+        bb[3] = max(bb[3], pt.x);
+        bb[4] = max(bb[4], pt.y);
+        bb[5] = max(bb[5], pt.z);
     }
-    else{
-        CV_Error(Error::StsBadArg, "The resolution must be greater than 0!");
-    }
 
-    if (pointCloud.empty())
-        return false;
+    return bb;
+}
 
-    Point3f maxBound(pointCloud[0]);
-    Point3f minBound(pointCloud[0]);
-
-    // Find center coordinate of PointCloud data.
-    for (auto idx: pointCloud) {
-        maxBound.x = max(idx.x, maxBound.x);
-        maxBound.y = max(idx.y, maxBound.y);
-        maxBound.z = max(idx.z, maxBound.z);
-
-        minBound.x = min(idx.x, minBound.x);
-        minBound.y = min(idx.y, minBound.y);
-        minBound.z = min(idx.z, minBound.z);
-    }
+void Octree::Impl::fill(bool useResolution, const std::vector<Point3f>& pointCloud, const std::vector<Point3f>& colorAttribute)
+{
+    Vec6f bbox = getBoundingBox(pointCloud);
+    Point3f minBound(bbox[0], bbox[1], bbox[2]);
+    Point3f maxBound(bbox[3], bbox[4], bbox[5]);
 
     double maxSize = max(max(maxBound.x - minBound.x, maxBound.y - minBound.y), maxBound.z - minBound.z);
-    //To use bit operation, the length of the root cube should be power of 2.
-    maxSize=double(1 << int(ceil(log2(maxSize))));
-    p->maxDepth = ceil(log2(maxSize / resolution));
-    this->p->size = (1 << p->maxDepth)*resolution;
-    this->p->origin = Point3f(float(floor(minBound.x / resolution) * resolution),
-                              float(floor(minBound.y / resolution) * resolution),
-                              float(floor(minBound.z / resolution) * resolution));
 
-    p->hasColor = !colorAttribute.empty();
+    // Extend maxSize to the closest power of 2 that exceeds it for bit operations
+    maxSize = double(1 << int(ceil(log2(maxSize))));
+
+    // to calculate maxDepth from resolution or vice versa
+    if (useResolution)
+    {
+        this->maxDepth = ceil(log2(maxSize / this->resolution));
+    }
+    else
+    {
+        this->resolution = (maxSize / (1 << (this->maxDepth + 1)));
+    }
+
+    this->size = (1 << this->maxDepth) * this->resolution;
+    this->origin = Point3f(float(floor(minBound.x / this->resolution) * this->resolution),
+                           float(floor(minBound.y / this->resolution) * this->resolution),
+                           float(floor(minBound.z / this->resolution) * this->resolution));
+
+    this->hasColor = !colorAttribute.empty();
 
     // Insert every point in PointCloud data.
     for (size_t idx = 0; idx < pointCloud.size(); idx++)
     {
-        Point3f insertColor = p->hasColor ? colorAttribute[idx] : Point3f(0.0f, 0.0f, 0.0f);
-        if (!insertPoint(pointCloud[idx], insertColor)) {
+        Point3f insertColor = this->hasColor ? colorAttribute[idx] : Point3f(0.0f, 0.0f, 0.0f);
+        if (!this->insertPoint(pointCloud[idx], insertColor))
+        {
             CV_Error(Error::StsBadArg, "The point is out of boundary!");
         }
     }
-
-    return true;
 }
 
-bool Octree::create(const std::vector<Point3f> &pointCloud, double resolution)
+
+void Octree::create(const std::vector<Point3f> &pointCloud, double _resolution)
 {
-    std::vector<Point3f> v;
-    return this->create(pointCloud, v, resolution);
+    CV_Assert(_resolution > 0);
+
+    p->resolution = _resolution;
+
+    CV_Assert(!pointCloud.empty());
+
+    p->fill( /* useResolution */ true, pointCloud, { });
+}
+
+void Octree::create(const std::vector<Point3f> &pointCloud, int _maxDepth)
+{
+    CV_Assert(_maxDepth > 0);
+
+    p->maxDepth = _maxDepth;
+
+    CV_Assert(!pointCloud.empty());
+
+    p->fill( /* useResolution */ false, pointCloud, { });
+}
+
+void Octree::create(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute, double _resolution)
+{
+    CV_Assert(_resolution > 0);
+
+    p->resolution = _resolution;
+
+    CV_Assert(!pointCloud.empty());
+    CV_Assert(pointCloud.size() == colorAttribute.size() || colorAttribute.empty());
+
+    p->fill( /* useResolution */ true, pointCloud, colorAttribute);
+}
+
+void Octree::create(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute, int _maxDepth)
+{
+    CV_Assert(_maxDepth > 0);
+
+    p->maxDepth = _maxDepth;
+
+    CV_Assert(!pointCloud.empty());
+    CV_Assert(pointCloud.size() == colorAttribute.size() || colorAttribute.empty());
+
+    p->fill( /* useResolution */ false, pointCloud, colorAttribute);
 }
 
 void Octree::setMaxDepth(int _maxDepth)
 {
-    if(_maxDepth )
-        this->p->maxDepth = _maxDepth;
+    CV_Assert(_maxDepth > 0);
+    this->p->maxDepth = _maxDepth;
 }
 
 void Octree::setSize(double _size)
 {
+    CV_Assert(_size > 0);
     this->p->size = _size;
 };
 
