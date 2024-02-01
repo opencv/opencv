@@ -12,7 +12,7 @@ void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3
                      size_t z_key, Ptr<OctreeNode> &_node, double resolution, Point3f ori, bool hasColor);
 
 // Locate the OctreeNode corresponding to the input point from the given OctreeNode.
-static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node,OctreeKey& key,size_t depthMask);
+static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node, OctreeKey& key, size_t depthMask);
 
 OctreeNode::OctreeNode() :
     children(),
@@ -85,7 +85,7 @@ public:
     // The pointer to Octree root node.
     Ptr <OctreeNode> rootNode = nullptr;
     //! Max depth of the Octree. And depth must be greater than zero
-    size_t maxDepth;
+    int maxDepth;
     //! The size of the cube of the .
     double size;
     //! The origin coordinate of root node.
@@ -103,7 +103,7 @@ Octree::Octree() : p(new Impl)
     p->origin = Point3f(0,0,0);
 }
 
-Octree::Octree(size_t _maxDepth, double _size, const Point3f& _origin ) : p(new Impl)
+Octree::Octree(int _maxDepth, double _size, const Point3f& _origin ) : p(new Impl)
 {
     p->maxDepth = _maxDepth;
     p->size = _size;
@@ -116,7 +116,7 @@ Octree::Octree(const std::vector<Point3f>& _pointCloud, double resolution) : p(n
     this->create(_pointCloud,v, resolution);
 }
 
-Octree::Octree(size_t _maxDepth) : p(new Impl)
+Octree::Octree(int _maxDepth) : p(new Impl)
 {
     p->maxDepth = _maxDepth;
     p->size = 0;
@@ -181,9 +181,9 @@ bool Octree::create(const std::vector<Point3f> &pointCloud, const std::vector<Po
 
     double maxSize = max(max(maxBound.x - minBound.x, maxBound.y - minBound.y), maxBound.z - minBound.z);
     //To use bit operation, the length of the root cube should be power of 2.
-    maxSize=double(1<<int(ceil(log2(maxSize))));
-    p->maxDepth = (size_t)ceil(log2(maxSize / resolution));
-    this->p->size = (1<<p->maxDepth)*resolution;
+    maxSize=double(1 << int(ceil(log2(maxSize))));
+    p->maxDepth = ceil(log2(maxSize / resolution));
+    this->p->size = (1 << p->maxDepth)*resolution;
     this->p->origin = Point3f(float(floor(minBound.x / resolution) * resolution),
                               float(floor(minBound.y / resolution) * resolution),
                               float(floor(minBound.z / resolution) * resolution));
@@ -202,12 +202,13 @@ bool Octree::create(const std::vector<Point3f> &pointCloud, const std::vector<Po
     return true;
 }
 
-bool Octree::create(const std::vector<Point3f> &pointCloud, double resolution) {
+bool Octree::create(const std::vector<Point3f> &pointCloud, double resolution)
+{
     std::vector<Point3f> v;
     return this->create(pointCloud, v, resolution);
 }
 
-void Octree::setMaxDepth(size_t _maxDepth)
+void Octree::setMaxDepth(int _maxDepth)
 {
     if(_maxDepth )
         this->p->maxDepth = _maxDepth;
