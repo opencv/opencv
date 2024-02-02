@@ -675,18 +675,11 @@ TEST_P(RenderingTest, accuracy)
        (modelType == ModelType::Color    && cullingMode == RASTERIZE_CULLING_CCW))
     {
         // empty image case
-        std::vector<Mat> channels(3);
-        split(color_buf, channels);
-
-        for (int i = 0; i < 3; i++)
-        {
-            EXPECT_EQ(countNonZero(channels[i]), 0);
-        }
+        EXPECT_EQ(0, cv::norm(color_buf, NORM_INF));
 
         Mat depthDiff;
         absdiff(depth_buf, Scalar(zFar * depthScale), depthDiff);
-        double sumDepthDiff = sum(depthDiff)[0];
-        EXPECT_EQ(sumDepthDiff, 0);
+        EXPECT_EQ(0, cv::norm(depthDiff, cv::NORM_INF));
     }
     else
     {
