@@ -35,7 +35,7 @@ echo "ndk.dir=${ANDROID_NDK}" > "aar-build/samples/local.properties"
 echo "cmake.dir=$(dirname $(dirname $(which cmake)))" >> "aar-build/samples/local.properties"
 
 echo "Run gradle ..."
-(cd "aar-build/samples"; ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS:--i} opencv:publishReleasePublicationToMyrepoRepository)
+(cd "aar-build/samples"; ./gradlew --offline ${OPENCV_GRADLE_VERBOSE_OPTIONS:--i} opencv:publishReleasePublicationToMyrepoRepository)
 
 mkdir "maven_repo"
 cp -r aar-build/sdk/build/repo/* ./maven_repo/

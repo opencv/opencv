@@ -35,7 +35,7 @@ echo "ndk.dir=${ANDROID_NDK}" > "test-gradle/samples/local.properties"
 echo "cmake.dir=$(dirname $(dirname $(which cmake)))" >> "test-gradle/samples/local.properties"
 
 echo "Run gradle ..."
-(cd "test-gradle/samples"; ./gradlew -i assemble)
+(cd "test-gradle/samples"; ./gradlew --offline -i assemble)
 
 echo "#"
 echo "# Done!"

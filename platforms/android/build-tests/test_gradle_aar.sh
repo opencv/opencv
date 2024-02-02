@@ -40,7 +40,7 @@ sed -i "s/opencv_source = 'sdk_path'/opencv_source = 'maven_local'/g" test-gradl
 sed -i "s+opencv_maven_path = '<path_to_maven_repo>'+opencv_maven_path = 'file\\://$LOCAL_MAVEN_REPO'+g" test-gradle-aar/settings.gradle
 
 echo "Run gradle ..."
-(cd "test-gradle-aar"; ./gradlew -i assemble)
+(cd "test-gradle-aar"; ./gradlew --offline -i assemble)
 
 echo "#"
 echo "# Done!"
