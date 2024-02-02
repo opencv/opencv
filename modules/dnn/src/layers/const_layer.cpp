@@ -66,7 +66,7 @@ public:
         if (preferableTarget == DNN_TARGET_OPENCL_FP16 && blobs[0].type() == CV_32F)
             outputs.assign(1, CV_16S);
         else
-            outputs.assign(1, blobs[0].type());
+            outputs.assign(1, blobs[0].depth());
     }
 
 

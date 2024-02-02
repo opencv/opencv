@@ -47,7 +47,7 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2);
-        CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_16S);
+        CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_16S || inputs[0] == CV_8U);
         CV_Assert(inputs[1] == CV_64S || inputs[1] == CV_32S);
         outputs.assign(1, inputs[0]);
     }
