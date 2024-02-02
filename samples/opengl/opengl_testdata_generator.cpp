@@ -172,6 +172,7 @@ public:
         break;
 
         default:
+            CV_Error(Error::StsBadArg, "Unknown model type");
             break;
         }
     }
