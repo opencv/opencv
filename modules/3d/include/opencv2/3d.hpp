@@ -2808,27 +2808,27 @@ CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArr
 //! Triangle fill settings
 enum TriangleShadingType
 {
-    White  = 0, //!< a white color is used for the whole triangle
-    Flat   = 1, //!< a color of 1st vertex of each triangle is used
-    Shaded = 2  //!< a color is interpolated between 3 vertices with perspective correction
+    RASTERIZE_SHADING_WHITE  = 0, //!< a white color is used for the whole triangle
+    RASTERIZE_SHADING_FLAT   = 1, //!< a color of 1st vertex of each triangle is used
+    RASTERIZE_SHADING_SHADED = 2  //!< a color is interpolated between 3 vertices with perspective correction
 };
 
 //! Face culling settings: what faces are drawn after face culling
 enum TriangleCullingMode
 {
-    None = 0, //!< all faces are drawn, no culling is actually performed
-    CW   = 1, //!< triangles which vertices are given in clockwork order are drawn
-    CCW  = 2  //!< triangles which vertices are given in counterclockwork order are drawn
+    RASTERIZE_CULLING_NONE = 0, //!< all faces are drawn, no culling is actually performed
+    RASTERIZE_CULLING_CW   = 1, //!< triangles which vertices are given in clockwork order are drawn
+    RASTERIZE_CULLING_CCW  = 2  //!< triangles which vertices are given in counterclockwork order are drawn
 };
 
 //! GL compatibility settings
 enum TriangleGlCompatibleMode
 {
-    Disabled      = 0, //!< Color and depth have their natural values and converted to internal formats if needed
-    InvertedDepth = 1  //!< Color is natural, Depth is transformed from [-zNear; -zFar] to [0; 1]
-                       //!< by the following formula: \f$ \frac{z_{far} \left(z + z_{near}\right)}{z \left(z_{far} - z_{near}\right)} \f$ \n
-                       //!< In this mode the input/output depthBuf is considered to be in this format,
-                       //!< therefore it's faster since there're no conversions performed
+    RASTERIZE_COMPAT_DISABLED = 0, //!< Color and depth have their natural values and converted to internal formats if needed
+    RASTERIZE_COMPAT_INVDEPTH = 1  //!< Color is natural, Depth is transformed from [-zNear; -zFar] to [0; 1]
+                                   //!< by the following formula: \f$ \frac{z_{far} \left(z + z_{near}\right)}{z \left(z_{far} - z_{near}\right)} \f$ \n
+                                   //!< In this mode the input/output depthBuf is considered to be in this format,
+                                   //!< therefore it's faster since there're no conversions performed
 };
 
 /**
@@ -2874,7 +2874,7 @@ If the values are out of [0; 1] range, the result correctness is not guaranteed.
 *@param fovY field of view in vertical direction, given in radians
 *@param zNear minimum Z value to render, everything closer is clipped
 *@param zFar maximum Z value to render, everything farther is clipped
-*@param settings see RasterizeSettings
+*@param settings see TriangleRasterizeSettings
 *@param depthBuf a width x height array of floats containing resulting Z buffer. Reused if not empty.
 To disable Z buffer output, pass cv::noArray() here. If required by user, should be pre-filled by zFar values
 (or by 1.0 in InvertedDepth mode) for a new scene.

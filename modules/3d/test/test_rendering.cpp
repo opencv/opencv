@@ -16,7 +16,7 @@ struct CullingModeEnum
     static const std::array<TriangleCullingMode, 3> vals;
     static const std::array<std::string, 3> svals;
 
-    CullingModeEnum(TriangleCullingMode v = TriangleCullingMode::None) : val(v) {}
+    CullingModeEnum(TriangleCullingMode v = RASTERIZE_CULLING_NONE) : val(v) {}
     operator TriangleCullingMode() const { return val; }
     void PrintTo(std::ostream *os) const
     {
@@ -43,9 +43,9 @@ private:
 
 const std::array<TriangleCullingMode, 3> CullingModeEnum::vals
 {
-    TriangleCullingMode::None,
-    TriangleCullingMode::CW,
-    TriangleCullingMode::CCW
+    RASTERIZE_CULLING_NONE,
+    RASTERIZE_CULLING_CW,
+    RASTERIZE_CULLING_CCW
 };
 const std::array<std::string, 3> CullingModeEnum::svals
 {
@@ -66,7 +66,7 @@ struct ShadingTypeEnum
     static const std::array<TriangleShadingType, 3> vals;
     static const std::array<std::string, 3> svals;
 
-    ShadingTypeEnum(TriangleShadingType v = TriangleShadingType::White) : val(v) {}
+    ShadingTypeEnum(TriangleShadingType v = RASTERIZE_SHADING_WHITE) : val(v) {}
     operator TriangleShadingType() const { return val; }
     void PrintTo(std::ostream *os) const
     {
@@ -93,9 +93,9 @@ private:
 
 const std::array<TriangleShadingType, 3> ShadingTypeEnum::vals
 {
-    TriangleShadingType::White,
-    TriangleShadingType::Flat,
-    TriangleShadingType::Shaded
+    RASTERIZE_SHADING_WHITE,
+    RASTERIZE_SHADING_FLAT,
+    RASTERIZE_SHADING_SHADED
 };
 const std::array<std::string, 3> ShadingTypeEnum::svals
 {
@@ -462,7 +462,7 @@ protected:
         verts = Mat(modelData.vertices);
         verts.convertTo(verts, ftype);
 
-        if (shadingType != TriangleShadingType::White)
+        if (shadingType != RASTERIZE_SHADING_WHITE)
         {
             colors = Mat(modelData.colors);
             colors.convertTo(colors, ftype);
@@ -560,16 +560,16 @@ TEST_P(RenderingTest, floatParams)
             if (width == 700 && height == 700)
             {
                 thr.rgbL2Threshold = 3.78e-05;
-                if (cullingMode != TriangleCullingMode::CW)
+                if (cullingMode != RASTERIZE_CULLING_CW)
                 {
-                    thr.rgbInfThreshold = (shadingType == TriangleShadingType::White) ? 1.0 : 0.934;
+                    thr.rgbInfThreshold = (shadingType == RASTERIZE_SHADING_WHITE) ? 1.0 : 0.934;
                 }
-                else if (shadingType == TriangleShadingType::Shaded)
+                else if (shadingType == RASTERIZE_SHADING_SHADED)
                 {
                     thr.rgbInfThreshold = 2.39e-07;
                 }
             }
-            if (width == 640 && height == 480 && shadingType == TriangleShadingType::Shaded)
+            if (width == 640 && height == 480 && shadingType == RASTERIZE_SHADING_SHADED)
             {
                 thr.rgbInfThreshold = 2.99e-07;
                 thr.rgbL2Threshold  = 9.1e-11;
@@ -577,17 +577,17 @@ TEST_P(RenderingTest, floatParams)
 
             if (width == 700 && height == 700)
             {
-                if (cullingMode == TriangleCullingMode::CCW)
+                if (cullingMode == RASTERIZE_CULLING_CCW)
                 {
                     thr.depthMaskThreshold = 114;
                 }
-                if (cullingMode == TriangleCullingMode::None)
+                if (cullingMode == RASTERIZE_CULLING_NONE)
                 {
                     thr.depthMaskThreshold = 70;
                 }
             }
-            if ((width == 640 && height == 480 && shadingType == TriangleShadingType::Shaded && cullingMode == TriangleCullingMode::CCW) ||
-                (width == 700 && height == 700 && cullingMode == TriangleCullingMode::CCW))
+            if ((width == 640 && height == 480 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_CCW) ||
+                (width == 700 && height == 700 && cullingMode == RASTERIZE_CULLING_CCW))
             {
                 thr.depthInfThreshold = 0; thr.depthL2Threshold = 0;
             }
@@ -601,11 +601,11 @@ TEST_P(RenderingTest, floatParams)
             if (width == 700 && height == 700)
             {
                 thr.depthL2Threshold = 9.52e-05;
-                if (shadingType == TriangleShadingType::Shaded)
+                if (shadingType == RASTERIZE_SHADING_SHADED)
                 {
                     thr.rgbInfThreshold = 0.000144; thr.rgbL2Threshold = 7.14e-10;
                 }
-                else if (shadingType == TriangleShadingType::Flat && cullingMode != TriangleCullingMode::CCW)
+                else if (shadingType == RASTERIZE_SHADING_FLAT && cullingMode != RASTERIZE_CULLING_CCW)
                 {
                     thr.rgbInfThreshold = 0.109;
                     thr.rgbL2Threshold = 3.23e-07;
@@ -617,7 +617,7 @@ TEST_P(RenderingTest, floatParams)
             }
             break;
         case ModelType::Centered:
-            if (shadingType == TriangleShadingType::Shaded && cullingMode != TriangleCullingMode::CW)
+            if (shadingType == RASTERIZE_SHADING_SHADED && cullingMode != RASTERIZE_CULLING_CW)
             {
                 thr.rgbInfThreshold = 3.58e-07;
                 thr.rgbL2Threshold  = 6.06e-11;
@@ -655,12 +655,12 @@ TriangleCullingMode findSameCulling(ModelType modelType, TriangleShadingType sha
 {
     TriangleCullingMode sameCullingMode = cullingMode;
 
-    if ((modelType == ModelType::Centered && cullingMode == TriangleCullingMode::CCW) ||
-        (modelType == ModelType::Color    && cullingMode == TriangleCullingMode::CW)  ||
-        (modelType == ModelType::File     && shadingType == TriangleShadingType::White && forRgb) ||
-        (modelType == ModelType::File     && cullingMode == TriangleCullingMode::CW))
+    if ((modelType == ModelType::Centered && cullingMode == RASTERIZE_CULLING_CCW) ||
+        (modelType == ModelType::Color    && cullingMode == RASTERIZE_CULLING_CW)  ||
+        (modelType == ModelType::File     && shadingType == RASTERIZE_SHADING_WHITE && forRgb) ||
+        (modelType == ModelType::File     && cullingMode == RASTERIZE_CULLING_CW))
     {
-        sameCullingMode = TriangleCullingMode::None;
+        sameCullingMode = RASTERIZE_CULLING_NONE;
     }
 
     return sameCullingMode;
@@ -671,8 +671,8 @@ TEST_P(RenderingTest, accuracy)
     depth_buf.convertTo(depth_buf, CV_16U, depthScale);
 
     if (modelType == ModelType::Empty ||
-       (modelType == ModelType::Centered && cullingMode == TriangleCullingMode::CW) ||
-       (modelType == ModelType::Color    && cullingMode == TriangleCullingMode::CCW))
+       (modelType == ModelType::Centered && cullingMode == RASTERIZE_CULLING_CW) ||
+       (modelType == ModelType::Color    && cullingMode == RASTERIZE_CULLING_CCW))
     {
         // empty image case
         std::vector<Mat> channels(3);
@@ -694,14 +694,14 @@ TEST_P(RenderingTest, accuracy)
         switch (modelType)
         {
         case ModelType::Centered:
-            if (shadingType == TriangleShadingType::Shaded)
+            if (shadingType == RASTERIZE_SHADING_SHADED)
             {
                 thr.rgbInfThreshold = 0.00217;
                 thr.rgbL2Threshold = 1.13e-06;
             }
             break;
         case ModelType::Clipping:
-            if (shadingType == TriangleShadingType::White)
+            if (shadingType == RASTERIZE_SHADING_WHITE)
             {
                 thr.rgbInfThreshold = 1;
                 thr.rgbL2Threshold  = 5.02e-05;
@@ -711,9 +711,9 @@ TEST_P(RenderingTest, accuracy)
                 thr.rgbInfThreshold = 0.934;
                 thr.rgbL2Threshold  = 4.22e-05;
             }
-            if (width == 640 && height == 480 && cullingMode == TriangleCullingMode::CW)
+            if (width == 640 && height == 480 && cullingMode == RASTERIZE_CULLING_CW)
             {
-                if (shadingType == TriangleShadingType::Shaded)
+                if (shadingType == RASTERIZE_SHADING_SHADED)
                 {
                     thr.rgbInfThreshold = 0.00221;
                     thr.rgbL2Threshold = 1.17e-06;
@@ -725,7 +725,7 @@ TEST_P(RenderingTest, accuracy)
                 }
             }
 
-            if (cullingMode != TriangleCullingMode::CCW)
+            if (cullingMode != RASTERIZE_CULLING_CCW)
             {
                 thr.depthInfThreshold = 1;
                 thr.depthL2Threshold = 0.000875;
@@ -749,7 +749,7 @@ TEST_P(RenderingTest, accuracy)
             {
                 thr.depthL2Threshold = 0.000535;
             }
-            if (shadingType == TriangleShadingType::Shaded)
+            if (shadingType == RASTERIZE_SHADING_SHADED)
             {
                 thr.rgbInfThreshold = 0.00221;
                 thr.rgbL2Threshold = 1.26e-06;
@@ -757,7 +757,7 @@ TEST_P(RenderingTest, accuracy)
             break;
         case ModelType::File:
             thr.depthMaskThreshold = 1;
-            if (shadingType == TriangleShadingType::White)
+            if (shadingType == RASTERIZE_SHADING_WHITE)
             {
                 thr.rgbInfThreshold = 1;
                 thr.rgbL2Threshold = 5.64e-06;
@@ -852,7 +852,7 @@ TEST_P(RenderingTest, glCompatibleDepth)
     Mat depth_buf2(height, width, ftype, 1.0);
 
     triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
-                      settings.setGlCompatibleMode(TriangleGlCompatibleMode::InvertedDepth),
+                      settings.setGlCompatibleMode(RASTERIZE_COMPAT_INVDEPTH),
                       depth_buf2, cv::noArray());
 
     Mat convertedDepth(height, width, ftype);

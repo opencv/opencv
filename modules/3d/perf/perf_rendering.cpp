@@ -16,7 +16,7 @@ struct ShadingTypeEnum
     static const std::array<TriangleShadingType, 3> vals;
     static const std::array<std::string, 3> svals;
 
-    ShadingTypeEnum(TriangleShadingType v = TriangleShadingType::White) : val(v) {}
+    ShadingTypeEnum(TriangleShadingType v = RASTERIZE_SHADING_WHITE) : val(v) {}
     operator TriangleShadingType() const { return val; }
     void PrintTo(std::ostream *os) const
     {
@@ -43,9 +43,9 @@ private:
 
 const std::array<TriangleShadingType, 3> ShadingTypeEnum::vals
 {
-    TriangleShadingType::White,
-    TriangleShadingType::Flat,
-    TriangleShadingType::Shaded
+    RASTERIZE_SHADING_WHITE,
+    RASTERIZE_SHADING_FLAT,
+    RASTERIZE_SHADING_SHADED
 };
 const std::array<std::string, 3> ShadingTypeEnum::svals
 {
@@ -63,7 +63,7 @@ struct GlCompatibleModeEnum
     static const std::array<TriangleGlCompatibleMode, 2> vals;
     static const std::array<std::string, 2> svals;
 
-    GlCompatibleModeEnum(TriangleGlCompatibleMode v = TriangleGlCompatibleMode::Disabled) : val(v) {}
+    GlCompatibleModeEnum(TriangleGlCompatibleMode v = RASTERIZE_COMPAT_DISABLED) : val(v) {}
     operator TriangleGlCompatibleMode() const { return val; }
     void PrintTo(std::ostream *os) const
     {
@@ -89,8 +89,8 @@ private:
 
 const std::array<TriangleGlCompatibleMode, 2> GlCompatibleModeEnum::vals
 {
-     TriangleGlCompatibleMode::Disabled,
-     TriangleGlCompatibleMode::InvertedDepth,
+    RASTERIZE_COMPAT_DISABLED,
+    RASTERIZE_COMPAT_INVDEPTH,
 };
 const std::array<std::string, 2> GlCompatibleModeEnum::svals
 {
@@ -225,7 +225,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
         indices.push_back({vec[0], vec[1], vec[2]});
     }
 
-    if (shadingType == TriangleShadingType::White)
+    if (shadingType == RASTERIZE_SHADING_WHITE)
     {
         colors.clear();
     }
@@ -243,7 +243,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     Matx44d cameraPose = lookAtMatrixCal(position, lookat, upVector);
     double fovYradians = fovy * (CV_PI / 180.0);
     TriangleRasterizeSettings settings;
-    settings.setCullingMode(TriangleCullingMode::CW)
+    settings.setCullingMode(RASTERIZE_CULLING_CW)
             .setShadingType(shadingType)
             .setGlCompatibleMode(glCompatibleMode);
 
@@ -251,7 +251,7 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     while (next())
     {
         // Prefilled to measure pure rendering time w/o allocation and clear
-        float zMax = (glCompatibleMode == TriangleGlCompatibleMode::InvertedDepth) ? 1.f : (float)zFar;
+        float zMax = (glCompatibleMode == RASTERIZE_COMPAT_INVDEPTH) ? 1.f : (float)zFar;
         depth_buf = Mat(height, width, CV_32F, zMax);
         color_buf = Mat(height, width, CV_32FC3, Scalar::all(0));
 

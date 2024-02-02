@@ -1,7 +1,3 @@
-// This file is part of OpenCV project.
-// It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html
-
 #include <iostream>
 
 #ifdef _WIN32
@@ -224,7 +220,7 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
     std::vector<Vec4f> colors4f;
     std::vector<int> idxLinear;
 
-    if (shadingType == TriangleShadingType::Flat)
+    if (shadingType == RASTERIZE_SHADING_FLAT)
     {
         // rearrange vertices and colors for flat shading
         int ctr = 0;
@@ -248,7 +244,7 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
         vertices = modelData.vertices;
         for (const auto& c : modelData.colors)
         {
-            Vec3f ci = (shadingType == TriangleShadingType::Shaded) ? c: cv::Vec3f::all(1.f);
+            Vec3f ci = (shadingType == RASTERIZE_SHADING_SHADED) ? c: cv::Vec3f::all(1.f);
             colors4f.emplace_back(ci[0], ci[1], ci[2], 1.0);
         }
 
@@ -278,7 +274,7 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
               modelData.lookat  [0], modelData.lookat  [1], modelData.lookat  [2],
               modelData.upVector[0], modelData.upVector[1], modelData.upVector[2]);
 
-    if (cullingMode == TriangleCullingMode::None)
+    if (cullingMode == RASTERIZE_CULLING_NONE)
     {
         glDisable(GL_CULL_FACE);
     }
@@ -286,7 +282,7 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
     {
         glEnable(GL_CULL_FACE);
         glCullFace(GL_FRONT);
-        if (cullingMode == TriangleCullingMode::CW)
+        if (cullingMode == RASTERIZE_CULLING_CW)
         {
             glFrontFace(GL_CW);
         }
@@ -363,33 +359,33 @@ int main(int argc, char* argv[])
     for (const auto& res : resolutions)
     {
         for (const auto shadingType : {
-                TriangleShadingType::White,
-                TriangleShadingType::Flat,
-                TriangleShadingType::Shaded
+                RASTERIZE_SHADING_WHITE,
+                RASTERIZE_SHADING_FLAT,
+                RASTERIZE_SHADING_SHADED
             })
         {
             std::string shadingName;
             switch (shadingType)
             {
-            case TriangleShadingType::White:  shadingName = "White";  break;
-            case TriangleShadingType::Flat:   shadingName = "Flat";   break;
-            case TriangleShadingType::Shaded: shadingName = "Shaded"; break;
+            case RASTERIZE_SHADING_WHITE:  shadingName = "White";  break;
+            case RASTERIZE_SHADING_FLAT:   shadingName = "Flat";   break;
+            case RASTERIZE_SHADING_SHADED: shadingName = "Shaded"; break;
             default:
                 break;
             }
 
             for (const auto cullingMode : {
-                    TriangleCullingMode::None,
-                    TriangleCullingMode::CW,
-                    TriangleCullingMode::CCW
+                    RASTERIZE_CULLING_NONE,
+                    RASTERIZE_CULLING_CW,
+                    RASTERIZE_CULLING_CCW
             })
             {
                 std::string cullingName;
                 switch (cullingMode)
                 {
-                    case TriangleCullingMode::None: cullingName = "None"; break;
-                    case TriangleCullingMode::CW:   cullingName = "CW"; break;
-                    case TriangleCullingMode::CCW:  cullingName = "CCW"; break;
+                    case RASTERIZE_CULLING_NONE: cullingName = "None"; break;
+                    case RASTERIZE_CULLING_CW:   cullingName = "CW"; break;
+                    case RASTERIZE_CULLING_CCW:  cullingName = "CCW"; break;
                     default: break;
                 }
 

@@ -8,9 +8,9 @@ namespace cv {
 
 TriangleRasterizeSettings::TriangleRasterizeSettings()
 {
-    shadingType = TriangleShadingType::Shaded;
-    cullingMode = TriangleCullingMode::CW;
-    glCompatibleMode = TriangleGlCompatibleMode::Disabled;
+    shadingType = RASTERIZE_SHADING_SHADED;
+    cullingMode = RASTERIZE_CULLING_CW;
+    glCompatibleMode = RASTERIZE_COMPAT_DISABLED;
 }
 
 static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& colorBuf,
@@ -44,8 +44,8 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
     float d = ac.x*bc.y - ac.y*bc.x;
 
     // culling and degenerated triangle removal
-    if ((settings.cullingMode == TriangleCullingMode::CW  && d <= 0) ||
-        (settings.cullingMode == TriangleCullingMode::CCW && d >= 0) ||
+    if ((settings.cullingMode == RASTERIZE_CULLING_CW  && d <= 0) ||
+        (settings.cullingMode == RASTERIZE_CULLING_CCW && d >= 0) ||
         (abs(d) < 1e-6))
     {
         return;
@@ -87,11 +87,11 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
                 if (!colorBuf.empty() && update)
                 {
                     Vec3f color;
-                    if (settings.shadingType == TriangleShadingType::White)
+                    if (settings.shadingType == RASTERIZE_SHADING_WHITE)
                     {
                         color = { 1.f, 1.f, 1.f };
                     }
-                    else if (settings.shadingType == TriangleShadingType::Flat)
+                    else if (settings.shadingType == RASTERIZE_SHADING_FLAT)
                     {
                         color = colors[0];
                     }
@@ -172,10 +172,10 @@ static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, double zN
 }
 
 
-CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
-                                   InputArray cameraPose, double fovyRadians, double zNear, double zFar,
-                                   TriangleRasterizeSettings settings,
-                                   InputOutputArray _depthBuffer, InputOutputArray _colorBuffer)
+void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
+                       InputArray cameraPose, double fovyRadians, double zNear, double zFar,
+                       TriangleRasterizeSettings settings,
+                       InputOutputArray _depthBuffer, InputOutputArray _colorBuffer)
 {
     CV_Assert(cameraPose.type() == CV_32FC1 || cameraPose.type() == CV_64FC1);
     CV_Assert((cameraPose.size() == Size {4, 3}) || (cameraPose.size() == Size {4, 4}));
@@ -242,12 +242,12 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         nColors = (int)colors.total();
 
         CV_Assert(nColors == nVerts);
-        CV_Assert(settings.shadingType == TriangleShadingType::Flat ||
-                  settings.shadingType == TriangleShadingType::Shaded);
+        CV_Assert(settings.shadingType == RASTERIZE_SHADING_FLAT ||
+                  settings.shadingType == RASTERIZE_SHADING_SHADED);
     }
     else
     {
-        CV_Assert(settings.shadingType == TriangleShadingType::White);
+        CV_Assert(settings.shadingType == RASTERIZE_SHADING_WHITE);
     }
 
     Size imgSize {0, 0};
@@ -279,7 +279,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
             imgSize = _depthBuffer.size();
         }
 
-        if (settings.glCompatibleMode == TriangleGlCompatibleMode::InvertedDepth)
+        if (settings.glCompatibleMode == RASTERIZE_COMPAT_INVDEPTH)
         {
             depthBuf = _depthBuffer.getMat();
         }
@@ -354,7 +354,7 @@ CV_EXPORTS  void triangleRasterize(InputArray _vertices, InputArray _indices, In
         drawTriangle(ver, col, depthBuf, colorBuf, settings);
     }
 
-    if (!depthBuf.empty() && _depthBuffer.needed() && (settings.glCompatibleMode == TriangleGlCompatibleMode::Disabled))
+    if (!depthBuf.empty() && _depthBuffer.needed() && (settings.glCompatibleMode == RASTERIZE_COMPAT_DISABLED))
     {
         linearizeDepth(depthBuf, validMask, _depthBuffer.getMat(), zFar, zNear);
     }
