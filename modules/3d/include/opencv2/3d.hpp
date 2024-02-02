@@ -2865,20 +2865,21 @@ except that image is vertically flipped after the render.
 This means that all visible objects are placed in z-negative area, or exactly in -zNear > z > -zFar since
 zNear and zFar are positive.
 
-*@param vertices vertices coordinates array. Should contain values of CV_32FC3 type or a compatible one (e.g. cv::Vec3f, etc.)
-*@param indices triangle vertices index array, 3 per triangle. Each index indicates a vertex in a vertices array.
+@param vertices vertices coordinates array. Should contain values of CV_32FC3 type or a compatible one (e.g. cv::Vec3f, etc.)
+@param indices triangle vertices index array, 3 per triangle. Each index indicates a vertex in a vertices array.
 Should contain CV_32SC3 values
-*@param colors per-vertex colors of CV_32FC3 type. Can be empty or the same size as vertices array.
+@param colors per-vertex colors of CV_32FC3 type. Can be empty or the same size as vertices array.
 If the values are out of [0; 1] range, the result correctness is not guaranteed.
-*@param cameraPose a 4x3 or 4x4 float or double matrix containing inverted (sic!) camera pose
-*@param fovY field of view in vertical direction, given in radians
-*@param zNear minimum Z value to render, everything closer is clipped
-*@param zFar maximum Z value to render, everything farther is clipped
-*@param settings see TriangleRasterizeSettings
-*@param depthBuf a width x height array of floats containing resulting Z buffer. Reused if not empty.
+@param cameraPose a 4x3 or 4x4 float or double matrix containing inverted (sic!) camera pose
+@param fovY field of view in vertical direction, given in radians
+@param zNear minimum Z value to render, everything closer is clipped
+@param zFar maximum Z value to render, everything farther is clipped
+@param settings see TriangleRasterizeSettings. By default it's smooth shaded,
+with CW culling and with disabled GL compatibility.
+@param depthBuf a width x height array of floats containing resulting Z buffer. Reused if not empty.
 To disable Z buffer output, pass cv::noArray() here. If required by user, should be pre-filled by zFar values
 (or by 1.0 in InvertedDepth mode) for a new scene.
-*@param colorBuf a width x height array of CV_32FC3 representing the final rendered image. Reused if not empty.
+@param colorBuf a width x height array of CV_32FC3 representing the final rendered image. Reused if not empty.
 To disable color output, pass cv::noArray() here.
 */
 CV_EXPORTS_W void triangleRasterize(InputArray vertices, InputArray indices, InputArray colors,
