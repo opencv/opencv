@@ -70,7 +70,7 @@ public:
         std::vector<MatType>& internals) const
     {
         CV_Assert(inputs.size() == 3);
-        CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_16S);
+        CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_8U);
         CV_Assert(inputs[1] == CV_64S || inputs[1] == CV_32S);
         CV_Assert(inputs[2] == inputs[0]);
         outputs.assign(1, inputs[0]);
