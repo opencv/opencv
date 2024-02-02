@@ -359,8 +359,8 @@ public:
 void compareDepth(const cv::Mat& gt, const cv::Mat& mat, cv::Mat& diff, double zFar, double scale,
                   double maskThreshold, double normInfThreshold, double normL2Threshold)
 {
-    ASSERT_EQ(gt.type(), CV_16UC1);
-    ASSERT_EQ(mat.type(), CV_16UC1);
+    ASSERT_EQ(CV_16UC1, gt.type());
+    ASSERT_EQ(CV_16UC1, mat.type());
     ASSERT_EQ(gt.size(), mat.size());
 
     Mat gtMask  = gt  < zFar*scale;
@@ -391,8 +391,8 @@ void compareDepth(const cv::Mat& gt, const cv::Mat& mat, cv::Mat& diff, double z
 
 void compareRGB(const cv::Mat& gt, const cv::Mat& mat, cv::Mat& diff, double normInfThreshold, double normL2Threshold)
 {
-    ASSERT_EQ(gt.type(), CV_32FC3);
-    ASSERT_EQ(mat.type(), CV_32FC3);
+    ASSERT_EQ(CV_32FC3, gt.type());
+    ASSERT_EQ(CV_32FC3, mat.type());
     ASSERT_EQ(gt.size(), mat.size());
 
     double normInfRgb = cv::norm(gt, mat, cv::NORM_INF);
