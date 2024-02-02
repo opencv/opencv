@@ -177,10 +177,9 @@ template<typename T>
 std::string printEnum(T v)
 {
     std::string s;
-    std::stringstream ss;
+    std::ostringstream ss;
     v.PrintTo(&ss);
-    ss >> s;
-    return s;
+    return ss.str();
 }
 
 
