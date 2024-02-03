@@ -463,8 +463,8 @@ imread_( const String& filename, int flags, Mat& mat )
     }
     else
     {
-        CV_Assert(size == mat.size());
-        CV_Assert(type == mat.type());
+        CV_CheckEQ(size, mat.size(), "");
+        CV_CheckTypeEQ(type, mat.type(), "");
         CV_Assert(mat.isContinuous());
     }
 
