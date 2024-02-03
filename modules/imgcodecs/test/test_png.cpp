@@ -9,17 +9,15 @@ namespace opencv_test { namespace {
 
 TEST(Imgcodecs_Png, imread_passing_mat)
 {
-  const string root = cvtest::TS::ptr()->get_data_path();
-  const string imgName = root + "../cv/shared/lena.png";
-  Mat img = Mat::zeros(1000, 1000, CV_8UC1);
-  Mat subImg = img.rowRange(64, 576).colRange(128, 640);
-  imread(imgName, subImg, IMREAD_GRAYSCALE);
-  Mat ori = imread(imgName, IMREAD_GRAYSCALE);
-  EXPECT_EQ(0, cv::norm(ori, subImg, NORM_INF));
-  EXPECT_EQ(0, countNonZero(img.rowRange(0, 1000).colRange(0, 128)));
-  EXPECT_EQ(0, countNonZero(img.rowRange(0, 1000).colRange(640, 1000)));
-  EXPECT_EQ(0, countNonZero(img.rowRange(0, 64).colRange(128, 640)));
-  EXPECT_EQ(0, countNonZero(img.rowRange(576, 1000).colRange(128, 640)));
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string imgName = root + "../cv/shared/lena.png";
+
+    Mat ref = imread(imgName);
+    Mat img(ref.size(), ref.type());
+    void* ptr = img.data;
+    imread(imgName, img);
+    EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+    EXPECT_EQ(img.data, ptr);
 }
 
 TEST(Imgcodecs_Png, write_big)

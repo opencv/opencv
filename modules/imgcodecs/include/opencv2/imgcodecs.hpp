@@ -236,7 +236,7 @@ This is an overloaded member function, provided for convenience. It differs from
 @note
 The image passing through the img parameter can be pre-allocated. The memory is reused if the shape and the type match with the load image.
  */
-CV_EXPORTS_W void imread( const String& filename, OutputArray & dst, int flags = IMREAD_COLOR );
+CV_EXPORTS_W void imread( const String& filename, OutputArray dst, int flags = IMREAD_COLOR );
 
 /** @brief Loads a multi-page image from a file.
 

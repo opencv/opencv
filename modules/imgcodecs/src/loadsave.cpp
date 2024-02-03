@@ -385,7 +385,7 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, Mat& img)
  *
 */
 static bool
-imread_( const String& filename, int flags, Mat& mat, bool allocateMat )
+imread_( const String& filename, int flags, Mat& mat )
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
@@ -457,11 +457,15 @@ imread_( const String& filename, int flags, Mat& mat, bool allocateMat )
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
     }
 
-    if(allocateMat) mat.create( size.height, size.width, type );
+    if (mat.empty())
+    {
+        mat.create( size.height, size.width, type );
+    }
     else
     {
-      CV_Assert(size == mat.size());
-      CV_Assert(type == mat.type());
+        CV_Assert(size == mat.size());
+        CV_Assert(type == mat.type());
+        CV_Assert(mat.isContinuous());
     }
 
     // read the image data
@@ -631,18 +635,20 @@ Mat imread( const String& filename, int flags )
     Mat img;
 
     /// load the data
-    imread_( filename, flags, img, true);
+    imread_( filename, flags, img );
 
     /// return a reference to the data
     return img;
 }
 
-void imread( const String& filename, OutputArray & dst, int flags )
+void imread( const String& filename, OutputArray dst, int flags )
 {
     CV_TRACE_FUNCTION();
 
+    Mat img = dst.getMat();
+
     /// load the data
-    imread_(filename, flags, dst.getMatRef(), false);
+    imread_(filename, flags, img);
 }
 
 /**
