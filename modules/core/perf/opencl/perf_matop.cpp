@@ -80,6 +80,187 @@ OCL_PERF_TEST_P(ConvertToFixture, ConvertTo,
     SANITY_CHECK(dst);
 }
 
+
+//#define RUN_CONVERTFP16
+static Size convertFP16_srcSize(4000, 4000);
+
+OCL_PERF_TEST(Core, ConvertFP32FP16MatMat)
+{
+    const Size srcSize = convertFP16_srcSize;
+    const int type = CV_32F;
+    const int dtype = CV_16F;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
+
+    Mat src(srcSize, type);
+    Mat dst(srcSize, dtype);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+#ifdef RUN_CONVERTFP16
+    OCL_TEST_CYCLE() convertFp16(src, dst);
+#else
+    OCL_TEST_CYCLE() src.convertTo(dst, dtype);
+#endif
+
+    SANITY_CHECK_NOTHING();
+}
+
+OCL_PERF_TEST(Core, ConvertFP32FP16MatUMat)
+{
+    const Size srcSize = convertFP16_srcSize;
+    const int type = CV_32F;
+    const int dtype = CV_16F;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
+
+    Mat src(srcSize, type);
+    UMat dst(srcSize, dtype);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+#ifdef RUN_CONVERTFP16
+    OCL_TEST_CYCLE() convertFp16(src, dst);
+#else
+    OCL_TEST_CYCLE() src.convertTo(dst, dtype);
+#endif
+
+    SANITY_CHECK_NOTHING();
+}
+
+OCL_PERF_TEST(Core, ConvertFP32FP16UMatMat)
+{
+    const Size srcSize = convertFP16_srcSize;
+    const int type = CV_32F;
+    const int dtype = CV_16F;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
+
+    UMat src(srcSize, type);
+    Mat dst(srcSize, dtype);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+#ifdef RUN_CONVERTFP16
+    OCL_TEST_CYCLE() convertFp16(src, dst);
+#else
+    OCL_TEST_CYCLE() src.convertTo(dst, dtype);
+#endif
+
+    SANITY_CHECK_NOTHING();
+}
+
+OCL_PERF_TEST(Core, ConvertFP32FP16UMatUMat)
+{
+    const Size srcSize = convertFP16_srcSize;
+    const int type = CV_32F;
+    const int dtype = CV_16F;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
+
+    UMat src(srcSize, type);
+    UMat dst(srcSize, dtype);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+#ifdef RUN_CONVERTFP16
+    OCL_TEST_CYCLE() convertFp16(src, dst);
+#else
+    OCL_TEST_CYCLE() src.convertTo(dst, dtype);
+#endif
+
+    SANITY_CHECK_NOTHING();
+}
+
+OCL_PERF_TEST(Core, ConvertFP16FP32MatMat)
+{
+    const Size srcSize = convertFP16_srcSize;
+    const int type = CV_16F;
+    const int dtype = CV_32F;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
+
+    Mat src(srcSize, type);
+    Mat dst(srcSize, dtype);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+#ifdef RUN_CONVERTFP16
+    OCL_TEST_CYCLE() convertFp16(src, dst);
+#else
+    OCL_TEST_CYCLE() src.convertTo(dst, dtype);
+#endif
+
+    SANITY_CHECK_NOTHING();
+}
+
+OCL_PERF_TEST(Core, ConvertFP16FP32MatUMat)
+{
+    const Size srcSize = convertFP16_srcSize;
+    const int type = CV_16F;
+    const int dtype = CV_32F;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
+
+    Mat src(srcSize, type);
+    UMat dst(srcSize, dtype);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+#ifdef RUN_CONVERTFP16
+    OCL_TEST_CYCLE() convertFp16(src, dst);
+#else
+    OCL_TEST_CYCLE() src.convertTo(dst, dtype);
+#endif
+
+    SANITY_CHECK_NOTHING();
+}
+
+OCL_PERF_TEST(Core, ConvertFP16FP32UMatMat)
+{
+    const Size srcSize = convertFP16_srcSize;
+    const int type = CV_16F;
+    const int dtype = CV_32F;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
+
+    UMat src(srcSize, type);
+    Mat dst(srcSize, dtype);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+#ifdef RUN_CONVERTFP16
+    OCL_TEST_CYCLE() convertFp16(src, dst);
+#else
+    OCL_TEST_CYCLE() src.convertTo(dst, dtype);
+#endif
+
+    SANITY_CHECK_NOTHING();
+}
+
+OCL_PERF_TEST(Core, ConvertFP16FP32UMatUMat)
+{
+    const Size srcSize = convertFP16_srcSize;
+    const int type = CV_16F;
+    const int dtype = CV_32F;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
+
+    UMat src(srcSize, type);
+    UMat dst(srcSize, dtype);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+#ifdef RUN_CONVERTFP16
+    OCL_TEST_CYCLE() convertFp16(src, dst);
+#else
+    OCL_TEST_CYCLE() src.convertTo(dst, dtype);
+#endif
+
+    SANITY_CHECK_NOTHING();
+}
+
+
 ///////////// CopyTo ////////////////////////
 
 typedef Size_MatType CopyToFixture;

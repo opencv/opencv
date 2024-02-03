@@ -355,7 +355,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -383,9 +383,9 @@ public:
 
                 if (use_half)
                 {
-                    convertFp16(A, A_fp32);
-                    convertFp16(B, B_fp32);
-                    convertFp16(C, C_fp32);
+                    A.convertTo(A_fp32, CV_32F);
+                    B.convertTo(B_fp32, CV_32F);
+                    C.convertTo(C_fp32, CV_32F);
                 }
                 else
                 {
@@ -396,9 +396,9 @@ public:
                 cv::gemm(A_fp32, B_fp32, 1, noArray(), 0, C_fp32);
                 if (use_half)
                 {
-                    convertFp16(A_fp32, A);
-                    convertFp16(B_fp32, B);
-                    convertFp16(C_fp32, C);
+                    A_fp32.convertTo(A, CV_16F);
+                    B_fp32.convertTo(B, CV_16F);
+                    C_fp32.convertTo(C, CV_16F);
                 }
             }
             return true;
@@ -429,7 +429,7 @@ public:
                 for (int i = 0; i < umat_blobs.size(); i++)
                 {
                     if (!umat_blobs[i].empty())
-                        convertFp16(umat_blobs[i], half_blobs[i]);
+                        umat_blobs[i].convertTo(half_blobs[i], CV_16F);
                 }
             }
 
@@ -470,8 +470,8 @@ public:
 
             if (use_half)
             {
-                convertFp16(srcMat, srcMat_fp32);
-                convertFp16(dstMat, dstMat_fp32);
+                srcMat.convertTo(srcMat_fp32, CV_32F);
+                dstMat.convertTo(dstMat_fp32, CV_32F);
             }
             else
             {
@@ -489,8 +489,8 @@ public:
             }
             if (use_half)
             {
-                convertFp16(srcMat_fp32, srcMat);
-                convertFp16(dstMat_fp32, dstMat);
+                srcMat_fp32.convertTo(srcMat, CV_16F);
+                dstMat_fp32.convertTo(dstMat, CV_16F);
             }
         }
 
@@ -506,7 +506,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && !isMatMul,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
