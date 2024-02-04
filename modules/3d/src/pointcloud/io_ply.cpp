@@ -210,6 +210,21 @@ T readNext(std::ifstream &file, DataFormat format)
     return val;
 }
 
+template <>
+uchar readNext<uchar>(std::ifstream &file, DataFormat format)
+{
+    int val {0};
+    if (format == DataFormat::ASCII)
+    {
+        file >> val;
+    }
+    else
+    {
+        file.read((char *)&val, sizeof(uchar));
+    }
+    return (uchar)val;
+}
+
 void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb,
                            std::vector<std::vector<int32_t>> &indices)
 {
