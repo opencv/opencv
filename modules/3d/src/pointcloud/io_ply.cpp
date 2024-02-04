@@ -113,32 +113,38 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                                  << " words instead of at least 3");
                     return false;
                 }
-                if (splitArrElem[2] == "x" || splitArrElem[2] == "y" || splitArrElem[2] == "z")
+                std::string propType = splitArrElem[1];
+                std::string propName = splitArrElem[2];
+                if (propName == "x" || propName == "y" || propName == "z")
                 {
-                    if (splitArrElem[1] != "float") {
-                        CV_LOG_ERROR(NULL, "Provided property '" << splitArrElem[2] << "' with format '" << splitArrElem[1]
+                    if (propType != "float")
+                    {
+                        CV_LOG_ERROR(NULL, "Provided property '" << propName << "' with format '" << propType
                                      << "' is not supported");
                         return false;
                     }
                 }
-                if (splitArrElem[2] == "red" || splitArrElem[2] == "green" || splitArrElem[2] == "blue")
+                if (propName == "red" || propName == "green" || propName == "blue")
                 {
-                    if (splitArrElem[1] != "uchar") {
-                        CV_LOG_ERROR(NULL, "Provided property '" << splitArrElem[2] << "' with format '" << splitArrElem[1]
+                    if (propType != "uchar")
+                    {
+                        CV_LOG_ERROR(NULL, "Provided property '" << propName << "' with format '" << propType
                                      << "' is not supported");
                         return false;
                     }
                     m_hasColour = true;
                 }
-                if (splitArrElem[2] == "nx")
+                if (propName == "nx")
                 {
-                    if (splitArrElem[1] != "float") {
-                        CV_LOG_ERROR(NULL, "Provided property '" << splitArrElem[2] << "' with format '" << splitArrElem[1]
+                    if (propType != "float")
+                    {
+                        CV_LOG_ERROR(NULL, "Provided property '" << propName << "' with format '" << propType
                                      << "' is not supported");
                         return false;
                     }
                     m_hasNormal = true;
                 }
+                //TODO: skip unknown data types
             }
             else if (elemRead == READ_FACE)
             {
