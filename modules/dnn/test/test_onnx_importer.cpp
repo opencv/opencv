@@ -130,6 +130,39 @@ public:
         if (checkNoFallbacks)
             expectNoFallbacksFromIE(net);
     }
+
+    void testONNXModelRead(const String& basename, const Extension ext = npy,
+                        double l1 = 0, double lInf = 0, const bool useSoftmax = false,
+                        bool checkNoFallbacks = true, int numInps = 1,
+                        bool testShapes = true, bool useWinograd = true, bool conformance = false)
+    {
+        String onnxmodel = _tf((conformance ? "conformance/node/" : "models/") + basename + (conformance ? "/model" : "") + ".onnx", required);
+        std::vector<Mat> inps(numInps);
+        Mat ref;
+        if (ext == npy) {
+            for (int i = 0; i < numInps; ++i){
+                inps[i] = (conformance) ? blobFromNPY(_tf("conformance/node/" + basename + "/test_data_set_0/input" + (numInps > 1 ? format("_%d", i) : "") + ".npy")) : \
+                blobFromNPY(_tf("data/input_" + basename + (numInps > 1 ? format("_%d", i) : "") + ".npy"));
+            }
+
+            ref = (conformance) ? blobFromNPY(_tf("conformance/node/" + basename + "/test_data_set_0/output_0" ".npy")) : \
+            blobFromNPY(_tf("data/output_" + basename + ".npy"));
+        }
+        else if (ext == pb) {
+            for (int i = 0; i < numInps; ++i) {
+                inps[i] = (conformance) ? readTensorFromONNX(_tf("conformance/node/" + basename + "/test_data_set_0/input" + (numInps > 1 ? format("_%d", i) : "") + ".pb")) : \
+                readTensorFromONNX(_tf("data/input_" + basename + (numInps > 1 ? format("_%d", i) : "") + ".pb"));
+            }
+            ref = (conformance) ? readTensorFromONNX(_tf("conformance/node/" + basename + "/test_data_set_0/output_0" ".pb")) : \
+            readTensorFromONNX(_tf("data/output_" + basename + ".pb"));
+        }
+        else
+            CV_Error(Error::StsUnsupportedFormat, "Unsupported extension");
+
+        checkBackend(&inps[0], &ref);
+        Net net = readNetFromONNX(onnxmodel);
+        ASSERT_FALSE(net.empty());
+    }
 };
 
 TEST_P(Test_ONNX_layers, InstanceNorm)
@@ -3085,6 +3118,10 @@ TEST_P(Test_ONNX_nets, VitTrack) {
 
 TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
     testONNXModels("layer_norm_no_fusion");
+}
+
+TEST_P(Test_ONNX_layers, ImportBooleanRead) {
+    testONNXModelRead("test_and_bcast3v1d", pb, 0, 0, false, true, 2, true, true, true);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

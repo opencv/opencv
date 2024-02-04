@@ -1744,6 +1744,19 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
             Mat(sizes, depth, val).convertTo(blob, CV_8S, 1.0, offset);
         }
     }
+    else if (datatype == opencv_onnx::TensorProto_DataType_BOOL)
+    {
+        // Assuming ONNX boolean data is stored as raw bytes where each byte is either 0 or 1.
+        char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+        size_t totalElements = std::accumulate(sizes.begin(), sizes.end(), 1, std::multiplies<int>());
+        Mat temp(Size(sizes[1], sizes[0]), CV_8UC1, val); // Create a temporary Mat with raw boolean data.
+
+        blob.create(sizes, CV_8UC1); // Create the blob Mat with the appropriate size.
+        uchar* dst = blob.data;
+        for (size_t i = 0; i < totalElements; ++i) {
+            dst[i] = static_cast<uchar>(val[i] != 0); // Convert raw bytes to 0 or 1.
+        }
+    }
     else
     {
         std::string errorMsg = "Unsupported data type: " +
