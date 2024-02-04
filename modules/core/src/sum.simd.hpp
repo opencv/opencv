@@ -226,15 +226,15 @@ DEFINE_SUM_SIMD_32(float, double, int64, v_float64)
 #endif
 #endif
 
-template<typename T, typename ST>
+template<typename T, typename ST, typename WT=T>
 static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 {
     const T* src = src0;
     if( !mask )
     {
         Sum_SIMD<T, ST> vop(cn);
-        int i = vop(src0, mask, dst, len, cn), k = cn % 4;
-        src += i * cn;
+        int i0 = vop(src0, mask, dst, len, cn), i = i0, k = cn % 4;
+        src += i0 * cn;
 
         if( k == 1 )
         {
@@ -242,10 +242,10 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 
             #if CV_ENABLE_UNROLLED
             for(; i <= len - 4; i += 4, src += cn*4 )
-                s0 += src[0] + src[cn] + src[cn*2] + src[cn*3];
+                s0 += (WT)src[0] + (WT)src[cn] + (WT)src[cn*2] + (WT)src[cn*3];
             #endif
             for( ; i < len; i++, src += cn )
-                s0 += src[0];
+                s0 += (WT)src[0];
             dst[0] = s0;
         }
         else if( k == 2 )
@@ -253,8 +253,8 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
             ST s0 = dst[0], s1 = dst[1];
             for( ; i < len; i++, src += cn )
             {
-                s0 += src[0];
-                s1 += src[1];
+                s0 += (WT)src[0];
+                s1 += (WT)src[1];
             }
             dst[0] = s0;
             dst[1] = s1;
@@ -264,9 +264,9 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
             ST s0 = dst[0], s1 = dst[1], s2 = dst[2];
             for( ; i < len; i++, src += cn )
             {
-                s0 += src[0];
-                s1 += src[1];
-                s2 += src[2];
+                s0 += (WT)src[0];
+                s1 += (WT)src[1];
+                s2 += (WT)src[2];
             }
             dst[0] = s0;
             dst[1] = s1;
@@ -275,12 +275,12 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 
         for( ; k < cn; k += 4 )
         {
-            src = src0 + i*cn + k;
+            src = src0 + i0*cn + k;
             ST s0 = dst[k], s1 = dst[k+1], s2 = dst[k+2], s3 = dst[k+3];
-            for( ; i < len; i++, src += cn )
+            for( i = i0; i < len; i++, src += cn )
             {
-                s0 += src[0]; s1 += src[1];
-                s2 += src[2]; s3 += src[3];
+                s0 += (WT)src[0]; s1 += (WT)src[1];
+                s2 += (WT)src[2]; s3 += (WT)src[3];
             }
             dst[k] = s0;
             dst[k+1] = s1;
@@ -297,7 +297,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
         for( i = 0; i < len; i++ )
             if( mask[i] )
             {
-                s += src[i];
+                s += (WT)src[i];
                 nzm++;
             }
         dst[0] = s;
@@ -308,9 +308,9 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
         for( i = 0; i < len; i++, src += 3 )
             if( mask[i] )
             {
-                s0 += src[0];
-                s1 += src[1];
-                s2 += src[2];
+                s0 += (WT)src[0];
+                s1 += (WT)src[1];
+                s2 += (WT)src[2];
                 nzm++;
             }
         dst[0] = s0;
@@ -327,16 +327,16 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
                 for( ; k <= cn - 4; k += 4 )
                 {
                     ST s0, s1;
-                    s0 = dst[k] + src[k];
-                    s1 = dst[k+1] + src[k+1];
+                    s0 = dst[k] + (WT)src[k];
+                    s1 = dst[k+1] + (WT)src[k+1];
                     dst[k] = s0; dst[k+1] = s1;
-                    s0 = dst[k+2] + src[k+2];
-                    s1 = dst[k+3] + src[k+3];
+                    s0 = dst[k+2] + (WT)src[k+2];
+                    s1 = dst[k+3] + (WT)src[k+3];
                     dst[k+2] = s0; dst[k+3] = s1;
                 }
                 #endif
                 for( ; k < cn; k++ )
-                    dst[k] += src[k];
+                    dst[k] += (WT)src[k];
                 nzm++;
             }
     }
@@ -374,11 +374,11 @@ static int sum32f( const float* src, const uchar* mask, double* dst, int len, in
 static int sum64f( const double* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
 
-static int sum16f( const float16_t* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+static int sum16f( const float16_t* src, const uchar* mask, float* dst, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sum_<float16_t, float, float>(src, mask, dst, len, cn); }
 
-static int sum16bf( const bfloat16_t* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+static int sum16bf( const bfloat16_t* src, const uchar* mask, float* dst, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sum_<bfloat16_t, float, float>(src, mask, dst, len, cn); }
 
 SumFunc getSumFunc(int depth)
 {
