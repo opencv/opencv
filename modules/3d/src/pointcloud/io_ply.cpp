@@ -318,10 +318,10 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
 
     for (const auto& faceIndices : indices)
     {
-        file << faceIndices.size() << " ";
+        file << faceIndices.size();
         for (const auto& index : faceIndices)
         {
-            file << index << " ";
+            file << " " << index;
         }
         file << std::endl;
     }
