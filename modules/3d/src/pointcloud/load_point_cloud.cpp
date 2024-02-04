@@ -127,7 +127,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     PointCloudDecoder decoder = findDecoder(filename);
     String file_ext = getExtension(filename);
-    if (!decoder || (file_ext != "obj" && file_ext != "OBJ")) {
+    if (!decoder) {
         CV_LOG_ERROR(NULL, "File extension '" << file_ext << "' is not supported");
         return;
     }
@@ -175,7 +175,7 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
 
     auto encoder = findEncoder(filename);
     String file_ext = getExtension(filename);
-    if (!encoder || (file_ext != "obj" && file_ext != "OBJ")) {
+    if (!encoder) {
         CV_LOG_ERROR(NULL, "File extension '" << file_ext << "' is not supported");
         return;
     }

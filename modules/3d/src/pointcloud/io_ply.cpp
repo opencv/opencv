@@ -16,12 +16,12 @@ void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     points.clear();
     normals.clear();
     rgb.clear();
-    CV_UNUSED(indices);
+    indices.clear();
 
     std::ifstream file(m_filename, std::ios::binary);
     if (parseHeader(file))
     {
-        parseBody(file, points, normals, rgb);
+        parseBody(file, points, normals, rgb, indices);
     }
 }
 
@@ -59,34 +59,65 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
         return false;
     }
 
-    bool onVertexRead = false;
+    enum ReadElement
+    {
+        READ_OTHER  = 0,
+        READ_VERTEX = 1,
+        READ_FACE   = 2
+    };
+    ReadElement elemRead = READ_OTHER;
     while (std::getline(file, s))
     {
         if (startsWith(s, "element"))
         {
-            auto splitArrElem = split(s, ' ');
-            if (splitArrElem[1] == "vertex")
+            std::vector<std::string> splitArrElem = split(s, ' ');
+            std::string elemName = splitArrElem.at(1);
+            if (elemName == "vertex")
             {
-                onVertexRead = true;
+                elemRead = READ_VERTEX;
+                if(splitArrElem.size() != 3)
+                {
+                    CV_LOG_ERROR(NULL, "Vertex element description has " << splitArrElem.size()
+                                 << " words instead of 3");
+                    return false;
+                }
                 std::istringstream iss(splitArrElem[2]);
                 iss >> m_vertexCount;
             }
+            else if (elemName == "face")
+            {
+                elemRead = READ_FACE;
+                if(splitArrElem.size() != 3)
+                {
+                    CV_LOG_ERROR(NULL, "Face element description has " << splitArrElem.size()
+                                 << " words instead of 3");
+                    return false;
+                }
+                std::istringstream iss(splitArrElem[2]);
+                iss >> m_faceCount;
+            }
             else
             {
-                onVertexRead = false;
+                elemRead = READ_OTHER;
             }
             continue;
         }
         if (startsWith(s, "property"))
         {
-            if (onVertexRead)
+            if (elemRead == READ_VERTEX)
             {
                 auto splitArrElem = split(s, ' ');
+                if (splitArrElem.size() < 3)
+                {
+                    CV_LOG_ERROR(NULL, "Vertex property has " << splitArrElem.size()
+                                 << " words instead of at least 3");
+                    return false;
+                }
                 if (splitArrElem[2] == "x" || splitArrElem[2] == "y" || splitArrElem[2] == "z")
                 {
                     if (splitArrElem[1] != "float") {
                         CV_LOG_ERROR(NULL, "Provided property '" << splitArrElem[2] << "' with format '" << splitArrElem[1]
-                        << "' is not supported");
+                                     << "' is not supported");
                         return false;
                     }
                 }
@@ -94,7 +125,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                 {
                     if (splitArrElem[1] != "uchar") {
                         CV_LOG_ERROR(NULL, "Provided property '" << splitArrElem[2] << "' with format '" << splitArrElem[1]
-                        << "' is not supported");
+                                     << "' is not supported");
                         return false;
                     }
                     m_hasColour = true;
@@ -103,17 +134,54 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                 {
                     if (splitArrElem[1] != "float") {
                         CV_LOG_ERROR(NULL, "Provided property '" << splitArrElem[2] << "' with format '" << splitArrElem[1]
-                        << "' is not supported");
+                                     << "' is not supported");
                         return false;
                     }
                     m_hasNormal = true;
+                }
+            }
+            else if (elemRead == READ_FACE)
+            {
+                std::vector<std::string> splitArrElem = split(s, ' ');
+                if (splitArrElem.size() < 5)
+                {
+                    CV_LOG_ERROR(NULL, "Face property has " << splitArrElem.size()
+                                 << " words instead of at least 5");
+                    return false;
+                }
+                std::string propName = splitArrElem[1];
+                if (propName != "list")
+                {
+                    CV_LOG_ERROR(NULL, "Face property is " << propName
+                                 << " instead of \"list\"");
+                    return false;
+                }
+                std::string amtTypeString = splitArrElem[2];
+                if (amtTypeString != "uchar")
+                {
+                    CV_LOG_ERROR(NULL, "Face property is " << amtTypeString
+                                 << " instead of \"uchar\"");
+                    return false;
+                }
+                std::string idxTypeString = splitArrElem[3];
+                if (idxTypeString != "int" && idxTypeString != "uint")
+                {
+                    CV_LOG_ERROR(NULL, "Face property is " << idxTypeString
+                                 << " instead of \"int\" or \"uint\"");
+                    return false;
+                }
+                std::string propTypeName = splitArrElem[4];
+                if (propTypeName != "vertex_indices" && propTypeName != "vertex_index")
+                {
+                    CV_LOG_ERROR(NULL, "Face property is " << propTypeName
+                                 << " instead of \"vertex_index\" or \"vertex_indices\"");
+                    return false;
                 }
             }
             continue;
         }
         if (startsWith(s, "end_header"))
             break;
-
     }
     return true;
 }
@@ -142,7 +210,8 @@ T readNext(std::ifstream &file, DataFormat format)
     return val;
 }
 
-void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb)
+void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb,
+                           std::vector<std::vector<int32_t>> &indices)
 {
     points.reserve(m_vertexCount);
     if (m_hasNormal)
@@ -173,11 +242,31 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
             normals.push_back(normal);
         }
     }
+
+    indices.reserve(m_faceCount);
+    for (size_t i = 0; i < m_faceCount; i++)
+    {
+        // PLY can have faces with >3 vertices in TRIANGLE_FAN format
+        // in this case we load them as separate triangles
+        size_t nVerts = readNext<uchar>(file, m_inputDataFormat);
+        if (nVerts < 3)
+        {
+            CV_LOG_ERROR(NULL, "Face should have at least 3 vertices but has " << nVerts);
+            return;
+        }
+        int vert1 = readNext<int>(file, m_inputDataFormat);
+        int vert2 = readNext<int>(file, m_inputDataFormat);
+        for (size_t j = 2; j < nVerts; j++)
+        {
+            int vert3 = readNext<int>(file, m_inputDataFormat);
+            indices.push_back({vert1, vert2, vert3});
+            vert2 = vert3;
+        }
+    }
 }
 
 void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<Point3_<uchar>> &rgb, const std::vector<std::vector<int32_t>> &indices)
 {
-    CV_UNUSED(indices);
     std::ofstream file(m_filename, std::ios::binary);
     if (!file) {
         CV_LOG_ERROR(NULL, "Impossible to open the file: " << m_filename);
@@ -207,8 +296,13 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
         file << "property float nz" << std::endl;
     }
 
-    file << "end_header" << std::endl;
+    if (!indices.empty())
+    {
+        file << "element face " << indices.size() << std::endl;
+        file << "property list uchar int vertex_indices" << std::endl;
+    }
 
+    file << "end_header" << std::endl;
 
     for (size_t i = 0; i < points.size(); i++)
     {
@@ -218,6 +312,16 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
         }
         if (hasNormals) {
             file << " " << normals[i].x << " " << normals[i].y << " " << normals[i].z;
+        }
+        file << std::endl;
+    }
+
+    for (const auto& faceIndices : indices)
+    {
+        file << faceIndices.size() << " ";
+        for (const auto& index : faceIndices)
+        {
+            file << index << " ";
         }
         file << std::endl;
     }

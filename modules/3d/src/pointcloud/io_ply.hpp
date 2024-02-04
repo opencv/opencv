@@ -25,10 +25,12 @@ public:
 
 protected:
     bool parseHeader(std::ifstream &file);
-    void parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb);
+    void parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb,
+                   std::vector<std::vector<int32_t>> &indices);
 
     DataFormat m_inputDataFormat;
     size_t m_vertexCount{0};
+    size_t m_faceCount{0};
     bool m_hasColour{false};
     bool m_hasNormal{false};
 };
