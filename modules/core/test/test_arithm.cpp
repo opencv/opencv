@@ -1639,8 +1639,8 @@ TEST_P(ElemWiseTest, accuracy)
         op->generateScalars(depth, rng);
 
         /*printf("testIdx=%d, depth=%d, channels=%d, have_mask=%d\n", testIdx, depth, src[0].channels(), (int)haveMask);
-        if (testIdx == 7)
-            putchar('.');*/
+        if (testIdx == 22)
+            printf(">>>\n");*/
 
         op->refop(src, dst0, mask);
         op->op(src, dst, mask);
@@ -2271,7 +2271,7 @@ TEST(Compare, regression_16F_do_not_crash)
     cv::Mat mat1(2, 2, CV_16F, cv::Scalar(1));
     cv::Mat mat2(2, 2, CV_16F, cv::Scalar(2));
     cv::Mat dst;
-    EXPECT_THROW(cv::compare(mat1, mat2, dst, cv::CMP_EQ), cv::Exception);
+    EXPECT_NO_THROW(cv::compare(mat1, mat2, dst, cv::CMP_EQ));
 }
 
 

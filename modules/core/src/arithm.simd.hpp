@@ -799,8 +799,8 @@ void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
     DEFINE_SCALED_OP_8(opname##8s, scale_arg, schar, v_int8, iscalar_op, ivec_op, init##_f32, v_pack_store, when_binary) \
     DEFINE_SCALED_OP_16(opname##16u, scale_arg, ushort, v_uint16, iscalar_op, ivec_op, init##_f32, v_pack_u_store, when_binary) \
     DEFINE_SCALED_OP_16(opname##16s, scale_arg, short, v_int16, iscalar_op, ivec_op, init##_f32, v_pack_store, when_binary) \
-    DEFINE_SCALED_OP_NOSIMD(opname##32u, scale_arg, unsigned, float, iscalar_op, init##_nosimd_f32, when_binary) \
-    DEFINE_SCALED_OP_32(opname##32s, scale_arg, int, v_int32, iscalar_op, ivec_op, init##_f32, load_as_f32, store_as_s32, when_binary) \
+    DEFINE_SCALED_OP_NOSIMD(opname##32u, scale_arg, unsigned, double, iscalar_op, init##_nosimd_f64, when_binary) \
+    DEFINE_SCALED_OP_NOSIMD(opname##32s, scale_arg, int, double, iscalar_op, init##_nosimd_f64, when_binary) \
     DEFINE_SCALED_OP_NOSIMD(opname##64u, scale_arg, uint64, double, iscalar_op, init##_nosimd_f64, when_binary) \
     DEFINE_SCALED_OP_NOSIMD(opname##64s, scale_arg, int64, double, iscalar_op, init##_nosimd_f64, when_binary) \
     DEFINE_SCALED_OP_32(opname##32f, scale_arg, float, v_float32, fscalar_op, fvec_op, init##_f32, vx_load, v_store, when_binary) \

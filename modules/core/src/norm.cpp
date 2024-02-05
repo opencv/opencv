@@ -366,8 +366,8 @@ CV_DEF_NORM_ALL(64s, int64, uint64, double, double)
 CV_DEF_NORM_ALL(16f, float16_t, float, float, float)
 CV_DEF_NORM_ALL(16bf, bfloat16_t, float, float, float)
 
-typedef int (*NormFunc)(const uchar*, const uchar*, uchar*, int, int);
-typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, int, int);
+typedef int (*NormFunc)(const uchar*, const uchar*, void*, int, int);
+typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, void*, int, int);
 
 static NormFunc getNormFunc(int normType, int depth)
 {
@@ -791,7 +791,11 @@ double norm( InputArray _src, int normType, InputArray _mask )
         const int blockSize0 = (is_fp16 ? (1 << 10) :
             normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
         const int blockSize = std::min(total, blockSize0);
-        unsigned isum = 0;
+        union {
+            int i;
+            float f;
+        } blocksum;
+        blocksum.i = 0;
         int count = 0;
 
         for (size_t i = 0; i < it.nplanes; i++, ++it)
@@ -799,12 +803,12 @@ double norm( InputArray _src, int normType, InputArray _mask )
             for (int j = 0; j < total; j += blockSize)
             {
                 int bsz = std::min(total - j, blockSize);
-                func(ptrs[0], ptrs[1], (uchar*)&isum, bsz, cn);
+                func(ptrs[0], ptrs[1], &blocksum.i, bsz, cn);
                 count += bsz;
                 if (count + blockSize >= blockSize0 || (i+1 >= it.nplanes && j+bsz >= total))
                 {
-                    result.d += is_fp16 ? (double)*(float*)&isum : (double)isum;
-                    isum = 0;
+                    result.d += is_fp16 ? (double)blocksum.f : (double)blocksum.i;
+                    blocksum.i = 0;
                     count = 0;
                 }
                 ptrs[0] += bsz*esz;
@@ -818,7 +822,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
         // generic implementation
         for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
-            func(ptrs[0], ptrs[1], (uchar*)&result, (int)it.size, cn);
+            func(ptrs[0], ptrs[1], &result, (int)it.size, cn);
         }
     }
 
@@ -1242,7 +1246,11 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         const int blockSize0 = (is_fp16 ? (1 << 10) :
             normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
         const int blockSize = std::min(total, blockSize0);
-        unsigned isum = 0;
+        union {
+            int i;
+            float f;
+        } blocksum;
+        blocksum.i = 0;
         int count = 0;
 
         for (size_t i = 0; i < it.nplanes; i++, ++it)
@@ -1250,12 +1258,12 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
             for (int j = 0; j < total; j += blockSize)
             {
                 int bsz = std::min(total - j, blockSize);
-                func(ptrs[0], ptrs[1], ptrs[2], (uchar*)&isum, bsz, cn);
+                func(ptrs[0], ptrs[1], ptrs[2], &blocksum.i, bsz, cn);
                 count += bsz;
                 if (count + blockSize >= blockSize0 || (i+1 >= it.nplanes && j+bsz >= total))
                 {
-                    result.d += is_fp16 ? (double)*(float*)&isum : (double)isum;
-                    isum = 0;
+                    result.d += is_fp16 ? (double)blocksum.f : (double)blocksum.i;
+                    blocksum.i = 0;
                     count = 0;
                 }
                 ptrs[0] += bsz*esz;
@@ -1270,7 +1278,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         // generic implementation
         for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
-            func(ptrs[0], ptrs[1], ptrs[2], (uchar*)&result, (int)it.size, cn);
+            func(ptrs[0], ptrs[1], ptrs[2], &result, (int)it.size, cn);
         }
     }
 

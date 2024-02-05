@@ -75,7 +75,9 @@ static bool funcname( const T* src, size_t len ) \
 #undef CHECK_NZ_INT
 #define CHECK_NZ_INT(x) ((x) != 0)
 #undef CHECK_NZ_FP
-#define CHECK_NZ_FP(x) ((x)*2 != 0)
+#define CHECK_NZ_FP(x) (((x)<<1) != 0)
+#undef CHECK_NZ_FP16
+#define CHECK_NZ_FP16(x) (((x)&0x7fff) != 0)
 #undef VEC_CMP_EQ_Z_FP16
 #define VEC_CMP_EQ_Z_FP16(x, z) v_ne(v_add_wrap(x, x), z)
 #undef VEC_CMP_EQ_Z_FP
@@ -88,7 +90,7 @@ DEFINE_HASNONZERO_FUNC(hasNonZero64s, s64, int64, v_int64, v_ne, CHECK_NZ_INT)
 
 DEFINE_HASNONZERO_FUNC(hasNonZero32f, s32, int, v_int32, VEC_CMP_EQ_Z_FP, CHECK_NZ_FP)
 DEFINE_HASNONZERO_FUNC(hasNonZero64f, s64, int64, v_int64, VEC_CMP_EQ_Z_FP, CHECK_NZ_FP)
-DEFINE_HASNONZERO_FUNC(hasNonZero16f, u16, ushort, v_uint16, VEC_CMP_EQ_Z_FP16, CHECK_NZ_FP)
+DEFINE_HASNONZERO_FUNC(hasNonZero16f, u16, ushort, v_uint16, VEC_CMP_EQ_Z_FP16, CHECK_NZ_FP16)
 
 HasNonZeroFunc getHasNonZeroFunc(int depth)
 {

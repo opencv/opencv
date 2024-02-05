@@ -319,23 +319,32 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     size_t minidx = 0, maxidx = 0;
     size_t startidx = 1;
-    int64 minval = 0, maxval = 0;
+    union {
+        int i;
+        float f;
+        double d;
+        int64 L;
+        uint64 UL;
+    } minval, maxval;
     int planeSize = (int)it.size*cn;
+    minval.L = maxval.L = 0;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it, startidx += planeSize )
-        func( ptrs[0], ptrs[1], &minval, &maxval, &minidx, &maxidx, planeSize, startidx );
+        func( ptrs[0], ptrs[1], &minval.L, &maxval.L, &minidx, &maxidx, planeSize, startidx );
 
     double dminval, dmaxval;
     if( depth <= CV_32S || depth == CV_Bool )
-        dminval = *(int*)&minval, dmaxval = *(int*)&maxval;
+        dminval = minval.i, dmaxval = maxval.i;
     else if( depth == CV_32F || depth == CV_16F || depth == CV_16BF )
-        dminval = *(float*)&minval, dmaxval = *(float*)&maxval;
+        dminval = minval.f, dmaxval = maxval.f;
     else if( depth == CV_64F )
-        dminval = *(double*)&minval, dmaxval = *(double*)&maxval;
+        dminval = minval.d, dmaxval = maxval.d;
     else if( depth == CV_64S || depth == CV_32U )
-        dminval = (double)*(int64*)&minval, dmaxval = (double)*(int64*)&maxval;
-    else
-        dminval = (double)*(uint64*)&minval, dmaxval = (double)*(uint64*)&maxval;
+        dminval = (double)minval.L, dmaxval = (double)maxval.L;
+    else {
+        CV_Assert(depth == CV_64U);
+        dminval = (double)minval.UL, dmaxval = (double)maxval.UL;
+    }
 
     if( minVal )
         *minVal = dminval;
