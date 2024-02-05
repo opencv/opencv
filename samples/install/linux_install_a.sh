@@ -50,7 +50,7 @@ ls lib
 
 # [check cmake]
 ls OpenCVConfig*.cmake
-ls OpenCVModules.cmake
+ls OpenCVModules*.cmake
 # [check cmake]
 
 # [install]

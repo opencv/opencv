@@ -1,5 +1,7 @@
 if(NOT DEFINED MIN_VER_CMAKE)
-  set(MIN_VER_CMAKE 3.5.1)
+  # Driven by install(FILES) support of generator expressions
+  # Ubuntu Focal comes with 3.16
+  set(MIN_VER_CMAKE 3.14)
 endif()
 set(MIN_VER_CUDA 6.5)
 set(MIN_VER_CUDNN 7.5)
