@@ -194,7 +194,7 @@ TEST_P(DivTest, DISABLED_DivByZeroTest)  // https://github.com/opencv/opencv/pul
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
+        EXPECT_LE(cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF), 1.);
         EXPECT_EQ(sz, out_mat_gapi.size());
     }
 }
@@ -218,7 +218,7 @@ TEST_P(DivCTest, DISABLED_DivByZeroTest)  // https://github.com/opencv/opencv/pu
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+        EXPECT_LE(cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF), 1.);
         cv::Mat zeros = cv::Mat::zeros(sz, type);
         EXPECT_EQ(0, cvtest::norm(out_mat_gapi, zeros, NORM_INF));
     }

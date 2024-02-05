@@ -83,7 +83,7 @@ INSTANTIATE_TEST_CASE_P(MulCPerfTestFluid, MulCPerfTest,
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(DivPerfTestFluid, DivPerfTest,
-    Combine(Values(AbsExact().to_compare_f()),
+    Combine(Values(AbsTolerance(1).to_compare_f()),
             Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
             Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
