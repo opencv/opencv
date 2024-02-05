@@ -1145,7 +1145,7 @@ static double getMinVal(int depth)
     static const double tab[CV_DEPTH_MAX] =
     {
         0, -128, 0, -32768, INT_MIN, -FLT_MAX, -DBL_MAX,
-        -65504, -FLT_MAX, 0, 0, INT64_MIN, 0
+        -65504, -FLT_MAX, 0, 0, (double)INT64_MIN, 0
     };
     return tab[depth];
 }
@@ -1154,7 +1154,7 @@ static double getMaxVal(int depth)
 {
     static const double tab[CV_DEPTH_MAX] = {
         255, 127, 65535, 32767, INT_MAX, FLT_MAX, DBL_MAX,
-        65504, FLT_MAX, 255, UINT64_MAX, INT64_MAX, UINT32_MAX, 0
+        65504, FLT_MAX, 255, (double)UINT64_MAX, (double)INT64_MAX, (double)UINT32_MAX, 0
     };
     return tab[depth];
 }
