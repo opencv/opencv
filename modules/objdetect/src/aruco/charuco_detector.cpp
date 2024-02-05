@@ -314,7 +314,9 @@ struct CharucoDetector::CharucoDetectorImpl {
             vector<vector<Point2f> > rejectedMarkers;
             arucoDetector.detectMarkers(image, _markerCorners, _markerIds, rejectedMarkers);
             if (charucoParameters.tryRefineMarkers)
-                arucoDetector.refineDetectedMarkers(image, board, _markerCorners,  _markerIds, rejectedMarkers);
+                arucoDetector.refineDetectedMarkers(image, board, _markerCorners, _markerIds, rejectedMarkers);
+            if (_markerCorners.empty() && _markerIds.empty())
+                return;
         }
         // if camera parameters are avaible, use approximated calibration
         if(!charucoParameters.cameraMatrix.empty())

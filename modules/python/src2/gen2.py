@@ -501,6 +501,10 @@ class ArgInfo(object):
         return '/O' in self._modifiers or '/IO' in self._modifiers
 
     @property
+    def pathlike(self):
+        return '/PATH' in self._modifiers
+
+    @property
     def returnarg(self):
         return self.outputarg
 
@@ -523,6 +527,7 @@ class ArgInfo(object):
     def crepr(self):
         arg  = 0x01 if self.outputarg else 0x0
         arg += 0x02 if self.arithm_op_src_arg else 0x0
+        arg += 0x04 if self.pathlike else 0x0
         return "ArgInfo(\"%s\", %d)" % (self.name, arg)
 
 
@@ -1059,7 +1064,7 @@ class FuncInfo(object):
             else:
                 py_name = classinfo.full_export_name + "." + self.variants[0].wname
 
-            if not self.is_static:
+            if not self.is_static and not self.isconstructor:
                 cname = classinfo.cname + '::' + cname
         else:
             py_name = '.'.join([self.namespace, self.variants[0].wname])

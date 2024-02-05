@@ -92,7 +92,7 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
         ofstab[k] = dy * Wi + dx;
     }
 
-    const float *weights0 = conv->weightsBufPtr, *bias = conv->biasBuf.data();
+    const float *weights0 = conv->getWeights(), *bias = conv->biasBuf.data();
     const float* relu = reluslope.data();
     CV_Assert(ksize > 1 || (pad_left == 0 && pad_right == 0 && pad_top == 0 && pad_bottom == 0));
 

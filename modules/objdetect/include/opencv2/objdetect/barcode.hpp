@@ -27,7 +27,7 @@ public:
      * @param prototxt_path prototxt file path for the super resolution model
      * @param model_path model file path for the super resolution model
      */
-    CV_WRAP BarcodeDetector(const std::string &prototxt_path, const std::string &model_path);
+    CV_WRAP BarcodeDetector(CV_WRAP_FILE_PATH const std::string &prototxt_path, CV_WRAP_FILE_PATH const std::string &model_path);
     ~BarcodeDetector();
 
     /** @brief Decodes barcode in image once it's found by the detect() method.

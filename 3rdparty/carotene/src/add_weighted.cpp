@@ -39,6 +39,7 @@
 
 #include "common.hpp"
 #include "vtransform.hpp"
+#include "vround_helper.hpp"
 
 namespace CAROTENE_NS {
 
@@ -106,7 +107,7 @@ template <> struct wAdd<s32>
     {
         valpha = vdupq_n_f32(_alpha);
         vbeta = vdupq_n_f32(_beta);
-        vgamma = vdupq_n_f32(_gamma + 0.5);
+        vgamma = vdupq_n_f32(_gamma);
     }
 
     void operator() (const VecTraits<s32>::vec128 & v_src0,
@@ -118,7 +119,7 @@ template <> struct wAdd<s32>
 
         vs1 = vmlaq_f32(vgamma, vs1, valpha);
         vs1 = vmlaq_f32(vs1, vs2, vbeta);
-        v_dst = vcvtq_s32_f32(vs1);
+        v_dst = vroundq_s32_f32(vs1);
     }
 
     void operator() (const VecTraits<s32>::vec64 & v_src0,
@@ -130,7 +131,7 @@ template <> struct wAdd<s32>
 
         vs1 = vmla_f32(vget_low(vgamma), vs1, vget_low(valpha));
         vs1 = vmla_f32(vs1, vs2, vget_low(vbeta));
-        v_dst = vcvt_s32_f32(vs1);
+        v_dst = vround_s32_f32(vs1);
     }
 
     void operator() (const s32 * src0, const s32 * src1, s32 * dst) const
@@ -150,7 +151,7 @@ template <> struct wAdd<u32>
     {
         valpha = vdupq_n_f32(_alpha);
         vbeta = vdupq_n_f32(_beta);
-        vgamma = vdupq_n_f32(_gamma + 0.5);
+        vgamma = vdupq_n_f32(_gamma);
     }
 
     void operator() (const VecTraits<u32>::vec128 & v_src0,
@@ -162,7 +163,7 @@ template <> struct wAdd<u32>
 
         vs1 = vmlaq_f32(vgamma, vs1, valpha);
         vs1 = vmlaq_f32(vs1, vs2, vbeta);
-        v_dst = vcvtq_u32_f32(vs1);
+        v_dst = vroundq_u32_f32(vs1);
     }
 
     void operator() (const VecTraits<u32>::vec64 & v_src0,
@@ -174,7 +175,7 @@ template <> struct wAdd<u32>
 
         vs1 = vmla_f32(vget_low(vgamma), vs1, vget_low(valpha));
         vs1 = vmla_f32(vs1, vs2, vget_low(vbeta));
-        v_dst = vcvt_u32_f32(vs1);
+        v_dst = vround_u32_f32(vs1);
     }
 
     void operator() (const u32 * src0, const u32 * src1, u32 * dst) const

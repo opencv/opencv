@@ -1604,6 +1604,9 @@ struct Device::Impl
             pos = pos2 + 1;
         }
 
+        khr_fp64_support_ = isExtensionSupported("cl_khr_fp64");
+        khr_fp16_support_ = isExtensionSupported("cl_khr_fp16");
+
         intelSubgroupsSupport_ = isExtensionSupported("cl_intel_subgroups");
 
         vendorName_ = getStrProp(CL_DEVICE_VENDOR);
@@ -1692,7 +1695,9 @@ struct Device::Impl
     String version_;
     std::string extensions_;
     int doubleFPConfig_;
+    bool khr_fp64_support_;
     int halfFPConfig_;
+    bool khr_fp16_support_;
     bool hostUnifiedMemory_;
     int maxComputeUnits_;
     size_t maxWorkGroupSize_;
@@ -1843,6 +1848,11 @@ int Device::singleFPConfig() const
 
 int Device::halfFPConfig() const
 { return p ? p->halfFPConfig_ : 0; }
+
+bool Device::hasFP64() const
+{ return p ? p->khr_fp64_support_ : false; }
+bool Device::hasFP16() const
+{ return p ? p->khr_fp16_support_ : false; }
 
 bool Device::endianLittle() const
 { return p ? p->getBoolProp(CL_DEVICE_ENDIAN_LITTLE) : false; }

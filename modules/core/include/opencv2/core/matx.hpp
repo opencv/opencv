@@ -376,10 +376,8 @@ public:
     static Vec randn(_Tp a, _Tp b);
     static Vec randu(_Tp a, _Tp b);
     static Vec zeros();
-#ifdef CV_CXX11
     static Vec diag(_Tp alpha) = delete;
     static Vec eye() = delete;
-#endif
 
     //! per-element multiplication
     Vec mul(const Vec<_Tp, cn>& v) const;
@@ -402,9 +400,7 @@ public:
     const _Tp& operator ()(int i) const;
     _Tp& operator ()(int i);
 
-#ifdef CV_CXX11
     Vec<_Tp, cn>& operator=(const Vec<_Tp, cn>& rhs) = default;
-#endif
 
     Vec(const Matx<_Tp, cn, 1>& a, const Matx<_Tp, cn, 1>& b, Matx_AddOp);
     Vec(const Matx<_Tp, cn, 1>& a, const Matx<_Tp, cn, 1>& b, Matx_SubOp);
@@ -765,7 +761,7 @@ inline Matx<_Tp, m, n>::operator Matx<T2, m, n>() const
 template<typename _Tp, int m, int n> template<int m1, int n1> inline
 Matx<_Tp, m1, n1> Matx<_Tp, m, n>::reshape() const
 {
-    CV_StaticAssert(m1*n1 == m*n, "Input and destnarion matrices must have the same number of elements");
+    CV_StaticAssert(m1*n1 == m*n, "Input and destination matrices must have the same number of elements");
     return (const Matx<_Tp, m1, n1>&)*this;
 }
 

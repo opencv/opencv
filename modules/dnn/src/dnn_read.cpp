@@ -62,7 +62,9 @@ Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
         const std::vector<uchar>& bufferConfig)
 {
     String framework = toLowerCase(_framework);
-    if (framework == "caffe")
+    if (framework == "onnx")
+        return readNetFromONNX(bufferModel);
+    else if (framework == "caffe")
         return readNetFromCaffe(bufferConfig, bufferModel);
     else if (framework == "tensorflow")
         return readNetFromTensorflow(bufferModel, bufferConfig);

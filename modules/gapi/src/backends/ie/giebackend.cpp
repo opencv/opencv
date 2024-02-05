@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2023 Intel Corporation
+// Copyright (C) 2018-2024 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -10,7 +10,7 @@
 // (cv::gapi::ie::backend() is still there and is defined always)
 #include "backends/ie/giebackend.hpp"
 
-#ifdef HAVE_INF_ENGINE
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2024000000
 
 #if INF_ENGINE_RELEASE <= 2019010000
 #   error G-API IE module supports only OpenVINO IE >= 2019 R1
@@ -2082,15 +2082,8 @@ struct InferList2: public cv::detail::KernelTag {
              ? uu.net.getInputsInfo().at(input_name_0)->getTensorDesc()
              : uu.this_network.GetInputsInfo().at(input_name_0)->getTensorDesc();
 
-        if (cv::util::holds_alternative<cv::GMatDesc>(mm_0) ||
-            cv::util::holds_alternative<cv::GFrameDesc>(mm_0)) {
-            const auto trait = clarifyTrait(mm_0, tensor_desc_0.getDims());
-            if (trait != cv::gapi::ie::TraitAs::IMAGE) {
-                util::throw_error(std::runtime_error(
-                            "IE Backend: Only images is"
-                            " supported as the 0th argument"));
-            }
-        } else {
+        if (!(cv::util::holds_alternative<cv::GMatDesc>(mm_0) ||
+              cv::util::holds_alternative<cv::GFrameDesc>(mm_0))) {
             util::throw_error(std::runtime_error(
                         "IE Backend: Unsupported input meta"
                         " for 0th argument in IE backend"));
@@ -2107,7 +2100,10 @@ struct InferList2: public cv::detail::KernelTag {
                         && "Non-array inputs are not supported");
 
             if (op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_RECT) {
-                const auto input_trait = cv::gapi::ie::TraitAs::IMAGE;
+                const auto input_trait = clarifyTrait(mm_0, tensor_desc_0.getDims());
+                GAPI_Assert(input_trait == cv::gapi::ie::TraitAs::IMAGE
+                            && "IE Backend: Only image is supported as the 0th argument for an input array of cv::Rect");
+
                 // NB: Configuring input precision and network reshape must be done
                 // only in the loadNetwork case.
                 if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {

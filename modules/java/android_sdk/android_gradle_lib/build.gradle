@@ -5,6 +5,7 @@ def openCVersionName = "@OPENCV_VERSION@"
 def openCVersionCode = ((@OPENCV_VERSION_MAJOR@ * 100 + @OPENCV_VERSION_MINOR@) * 100 + @OPENCV_VERSION_PATCH@) * 10 + 0
 
 android {
+    @OPENCV_ANDROID_NAMESPACE_DECLARATION@
     compileSdkVersion @ANDROID_COMPILE_SDK_VERSION@
 
     defaultConfig {
@@ -41,7 +42,6 @@ android {
         main {
             jniLibs.srcDirs = ['../../jni']
             java.srcDirs = ['src']  // TODO Use original files instead of copied into build directory
-            aidl.srcDirs = ['src']
             res.srcDirs = ['@OpenCV_SOURCE_DIR@/modules/java/android_sdk/android_gradle_lib/res']
             manifest.srcFile 'AndroidManifest.xml'
         }

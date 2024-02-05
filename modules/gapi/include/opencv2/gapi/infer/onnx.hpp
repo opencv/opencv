@@ -34,6 +34,65 @@ namespace ep {
 
 /**
  * @brief This structure provides functions
+ * that fill inference options for ONNX CoreML Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml-execution-provider
+ */
+struct GAPI_EXPORTS_W_SIMPLE CoreML {
+    /** @brief Class constructor.
+
+    Constructs CoreML parameters.
+
+    */
+    GAPI_WRAP
+    CoreML() = default;
+
+    /** @brief Limit CoreML Execution Provider to run on CPU only.
+
+    This function is used to limit CoreML to run on CPU only.
+    Please follow: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml_flag_use_cpu_only
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    CoreML& cfgUseCPUOnly() {
+        use_cpu_only = true;
+        return *this;
+    }
+
+    /** @brief Enable CoreML EP to run on a subgraph in the body of a control flow ONNX operator (i.e. a Loop, Scan or If operator).
+
+    This function is used to enable CoreML EP to run on
+    a subgraph of a control flow of ONNX operation.
+    Please follow: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml_flag_enable_on_subgraph
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    CoreML& cfgEnableOnSubgraph() {
+        enable_on_subgraph = true;
+        return *this;
+    }
+
+    /** @brief Enable CoreML EP to run only on Apple Neural Engine.
+
+    This function is used to enable CoreML EP to run only on Apple Neural Engine.
+    Please follow: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml_flag_only_enable_device_with_ane
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    CoreML& cfgEnableOnlyNeuralEngine() {
+        enable_only_ane = true;
+        return *this;
+    }
+
+    bool use_cpu_only = false;
+    bool enable_on_subgraph = false;
+    bool enable_only_ane = false;
+};
+
+/**
+ * @brief This structure provides functions
  * that fill inference options for CUDA Execution Provider.
  * Please follow https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html#cuda-execution-provider
  */
@@ -189,13 +248,23 @@ public:
     GAPI_WRAP
     explicit DirectML(const int device_id) : ddesc(device_id) { };
 
-    using DeviceDesc = cv::util::variant<int>;
+    /** @brief Class constructor.
+
+    Constructs DirectML parameters based on adapter name.
+
+    @param adapter_name Target adapter_name to use.
+    */
+    GAPI_WRAP
+    explicit DirectML(const std::string &adapter_name) : ddesc(adapter_name) { };
+
+    using DeviceDesc = cv::util::variant<int, std::string>;
     DeviceDesc ddesc;
 };
 
 using EP = cv::util::variant< cv::util::monostate
                             , OpenVINO
                             , DirectML
+                            , CoreML
                             , CUDA
                             , TensorRT>;
 
@@ -487,6 +556,20 @@ public:
 
     /** @brief Adds execution provider for runtime.
 
+    The function is used to add ONNX Runtime CoreML Execution Provider options.
+
+    @param ep CoreML Execution Provider options.
+    @see cv::gapi::onnx::ep::CoreML.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgAddExecutionProvider(ep::CoreML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
+
+    /** @brief Adds execution provider for runtime.
+
     The function is used to add ONNX Runtime CUDA Execution Provider options.
 
     @param ep CUDA Execution Provider options.
@@ -570,6 +653,11 @@ public:
 
     /** @see onnx::Params::cfgAddExecutionProvider. */
     void cfgAddExecutionProvider(ep::DirectML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+    }
+
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::CoreML&& ep) {
         desc.execution_providers.emplace_back(std::move(ep));
     }
 

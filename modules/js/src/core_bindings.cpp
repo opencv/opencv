@@ -99,6 +99,10 @@ typedef QRCodeDetectorAruco::Params QRCodeDetectorAruco_Params;
 using namespace cv::dnn;
 #endif
 
+#ifdef HAVE_OPENCV_FEATURES2D
+typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
+#endif
+
 #ifdef HAVE_OPENCV_VIDEO
 typedef TrackerMIL::Params TrackerMIL_Params;
 #endif
@@ -461,6 +465,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<char>("CharVector");
     register_vector<float>("FloatVector");
     register_vector<double>("DoubleVector");
+    register_vector<std::string>("StringVector");
     register_vector<cv::Point>("PointVector");
     register_vector<cv::Mat>("MatVector");
     register_vector<cv::Rect>("RectVector");

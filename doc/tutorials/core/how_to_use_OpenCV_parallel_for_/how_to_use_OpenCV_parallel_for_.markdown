@@ -9,6 +9,9 @@ How to use the OpenCV parallel_for_ to parallelize your code {#tutorial_how_to_u
 | -: | :- |
 | Compatibility | OpenCV >= 3.0 |
 
+
+@note See also C++ lambda usage with parallel for in [tuturial](@ref tutorial_how_to_use_OpenCV_parallel_for_new).
+
 Goal
 ----
 
@@ -20,7 +23,7 @@ If you want more information about multithreading, you will have to refer to a r
 to remain simple.
 
 Precondition
-----
+------------
 
 The first precondition is to have OpenCV built with a parallel framework.
 In OpenCV 3.2, the following parallel frameworks are available in that order:
@@ -50,7 +53,7 @@ We will use the example of drawing a Mandelbrot set to show how from a regular s
 the code to parallelize the computation.
 
 Theory
------------
+------
 
 The Mandelbrot set definition has been named in tribute to the mathematician Benoit Mandelbrot by the mathematician
 Adrien Douady. It has been famous outside of the mathematics field as the image representation is an example of a
@@ -69,7 +72,7 @@ Here, we will just introduce the formula to draw the Mandelbrot set (from the me
 > \f[\limsup_{n\to\infty}|z_{n+1}|\leqslant2\f]
 
 Pseudocode
------------
+----------
 
 A simple algorithm to generate a representation of the Mandelbrot set is called the
 ["escape time algorithm"](https://en.wikipedia.org/wiki/Mandelbrot_set#Escape_time_algorithm).
@@ -110,10 +113,10 @@ On this figure, we recall that the real part of a complex number is on the x-axi
 You can see that the whole shape can be repeatedly visible if we zoom at particular locations.
 
 Implementation
------------
+--------------
 
 Escape time algorithm implementation
---------------------------
+------------------------------------
 
 @snippet how_to_use_OpenCV_parallel_for_.cpp mandelbrot-escape-time-algorithm
 
@@ -121,7 +124,7 @@ Here, we used the [`std::complex`](http://en.cppreference.com/w/cpp/numeric/comp
 complex number. This function performs the test to check if the pixel is in set or not and returns the "escaped" iteration.
 
 Sequential Mandelbrot implementation
---------------------------
+------------------------------------
 
 @snippet how_to_use_OpenCV_parallel_for_.cpp mandelbrot-sequential
 
@@ -149,7 +152,7 @@ The green curve corresponds to a simple linear scale transformation, the blue on
 and you can observe how the lowest values will be boosted when looking at the slope at these positions.
 
 Parallel Mandelbrot implementation
---------------------------
+----------------------------------
 
 When looking at the sequential implementation, we can notice that each pixel is computed independently. To optimize the
 computation, we can perform multiple pixel calculations in parallel, by exploiting the multi-core architecture of modern
@@ -181,7 +184,7 @@ C++ 11 standard allows to simplify the parallel implementation by get rid of the
 @snippet how_to_use_OpenCV_parallel_for_.cpp mandelbrot-parallel-call-cxx11
 
 Results
------------
+-------
 
 You can find the full tutorial code [here](https://github.com/opencv/opencv/blob/4.x/samples/cpp/tutorial_code/core/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_.cpp).
 The performance of the parallel implementation depends of the type of CPU you have. For instance, on 4 cores / 8 threads

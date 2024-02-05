@@ -45,6 +45,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include "../nms.inl.hpp"
+#include "cpu_kernels/softmax.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -160,7 +161,7 @@ public:
         std::vector<UMat> outputs;
 
         // TODO: implement a logistic activation to classification scores.
-        if (useLogistic || inps.depth() == CV_16S)
+        if (useLogistic || inps.depth() == CV_16F)
             return false;
 
         inps.getUMatVector(inputs);
@@ -231,7 +232,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -280,10 +281,8 @@ public:
                 }
 
                 if (useSoftmax) {  // Yolo v2
-                    for (int i = 0; i < batch_size*rows*cols*anchors; ++i) {
-                        int index = cell_size*i;
-                        softmax_activate(srcData + index + 5, classes, 1, dstData + index + 5);
-                    }
+                    Mat _inpBlob = inpBlob.reshape(0, outBlob.dims, outBlob.size);
+                    softmax(outBlob, _inpBlob, -1, 5, classes);
                 }
                 else if (useLogistic) {  // Yolo v3
                     for (int i = 0; i < batch_size*rows*cols*anchors; ++i){

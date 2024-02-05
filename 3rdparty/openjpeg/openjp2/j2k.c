@@ -7796,7 +7796,7 @@ OPJ_BOOL opj_j2k_setup_encoder(opj_j2k_t *p_j2k,
                                        image->comps[0].h * image->comps[0].prec) /
                                       ((double)parameters->tcp_rates[parameters->tcp_numlayers - 1] * 8 *
                                        image->comps[0].dx * image->comps[0].dy));
-            if (temp_size > INT_MAX) {
+            if (temp_size > (OPJ_FLOAT32)INT_MAX) {
                 parameters->max_cs_size = INT_MAX;
             } else {
                 parameters->max_cs_size = (int) floor(temp_size);

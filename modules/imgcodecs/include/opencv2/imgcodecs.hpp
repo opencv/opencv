@@ -322,7 +322,8 @@ CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 @param buf Input array or vector of bytes.
 @param flags The same flags as in cv::imread, see cv::ImreadModes.
 @param dst The optional output placeholder for the decoded matrix. It can save the image
-reallocations when the function is called repeatedly for images of the same size.
+reallocations when the function is called repeatedly for images of the same size. In case of decoder
+failure the function returns empty cv::Mat object, but does not release user-provided dst buffer.
 */
 CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
 
@@ -337,8 +338,9 @@ See cv::imreadmulti for the list of supported formats and flags description.
 @param buf Input array or vector of bytes.
 @param flags The same flags as in cv::imread, see cv::ImreadModes.
 @param mats A vector of Mat objects holding each page, if more than one.
+@param range A continuous selection of pages.
 */
-CV_EXPORTS_W bool imdecodemulti(InputArray buf, int flags, CV_OUT std::vector<Mat>& mats);
+CV_EXPORTS_W bool imdecodemulti(InputArray buf, int flags, CV_OUT std::vector<Mat>& mats, const cv::Range& range = Range::all());
 
 /** @brief Encodes an image into a memory buffer.
 
