@@ -1602,7 +1602,7 @@ TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
     const Mat result = ( src1 + src2 ) / 2;
 
     // Expected that default is FE_TONEAREST(Ties to Even).
-    const int mean = lrint( static_cast<double>(alpha + beta) / 2.0 );
+    const int mean = (int)lrint( static_cast<double>(alpha + beta) / 2.0 );
     const Mat expected(matSize, matType, Scalar(mean,mean,mean,mean));
 
     // Compare result and extected.

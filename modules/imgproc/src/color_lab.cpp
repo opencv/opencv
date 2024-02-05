@@ -3591,7 +3591,7 @@ struct Luv2RGBinteger
 
         long long int xv = ((int)up)*(long long)vp;
         int x = (int)(xv/BASE);
-        x = ((long long int)y)*x/BASE;
+        x = (int)(((long long int)y)*x/BASE);
 
         long long int vpl = LUVLUT.LvToVpl_b[LL*256+vv];
         long long int zp = vpl - xv*(255/3);
@@ -3716,7 +3716,7 @@ struct Luv2RGBinteger
             vzm[i] = zm;
 
             vx[i] = (int32_t)(xv >> base_shift);
-            vx[i] = (((int64_t)y_)*vx[i]) >> base_shift;
+            vx[i] = (int32_t)((((int64_t)y_)*vx[i]) >> base_shift);
         }
         v_int32 zm[4];
         for(int k = 0; k < 4; k++)
@@ -4075,7 +4075,7 @@ struct Luv2RGB_b
 #if NEED_IPP
 
 #if !IPP_DISABLE_RGB_XYZ
-static ippiGeneralFunc ippiRGB2XYZTab[] =
+static ippiGeneralFunc ippiRGB2XYZTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiRGBToXYZ_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToXYZ_16u_C3R, 0,
     0, (ippiGeneralFunc)ippiRGBToXYZ_32f_C3R, 0, 0
@@ -4083,7 +4083,7 @@ static ippiGeneralFunc ippiRGB2XYZTab[] =
 #endif
 
 #if !IPP_DISABLE_XYZ_RGB
-static ippiGeneralFunc ippiXYZ2RGBTab[] =
+static ippiGeneralFunc ippiXYZ2RGBTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiXYZToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiXYZToRGB_16u_C3R, 0,
     0, (ippiGeneralFunc)ippiXYZToRGB_32f_C3R, 0, 0
@@ -4091,7 +4091,7 @@ static ippiGeneralFunc ippiXYZ2RGBTab[] =
 #endif
 
 #if !IPP_DISABLE_RGB_LAB
-static ippiGeneralFunc ippiRGBToLUVTab[] =
+static ippiGeneralFunc ippiRGBToLUVTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiRGBToLUV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToLUV_16u_C3R, 0,
     0, (ippiGeneralFunc)ippiRGBToLUV_32f_C3R, 0, 0
@@ -4099,7 +4099,7 @@ static ippiGeneralFunc ippiRGBToLUVTab[] =
 #endif
 
 #if !IPP_DISABLE_LAB_RGB
-static ippiGeneralFunc ippiLUVToRGBTab[] =
+static ippiGeneralFunc ippiLUVToRGBTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiLUVToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiLUVToRGB_16u_C3R, 0,
     0, (ippiGeneralFunc)ippiLUVToRGB_32f_C3R, 0, 0

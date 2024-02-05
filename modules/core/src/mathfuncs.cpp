@@ -1137,7 +1137,7 @@ static void iPow64f(const double* src, double* dst, int len, int power)
 
 typedef void (*IPowFunc)( const uchar* src, uchar* dst, int len, int power );
 
-static IPowFunc ipowTab[] =
+static IPowFunc ipowTab[CV_DEPTH_MAX] =
 {
     (IPowFunc)iPow8u, (IPowFunc)iPow8s, (IPowFunc)iPow16u, (IPowFunc)iPow16s,
     (IPowFunc)iPow32s, (IPowFunc)iPow32f, (IPowFunc)iPow64f, 0

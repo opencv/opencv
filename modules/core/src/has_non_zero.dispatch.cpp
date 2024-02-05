@@ -12,10 +12,10 @@
 
 namespace cv {
 
-static HasNonZeroFunc getHasNonZeroTab(int depth)
+static HasNonZeroFunc getHasNonZeroFunc(int depth)
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(getHasNonZeroTab, (depth),
+    CV_CPU_DISPATCH(getHasNonZeroFunc, (depth),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
@@ -74,7 +74,7 @@ bool hasNonZero(InputArray _src)
 
     Mat src = _src.getMat();
 
-    HasNonZeroFunc func = getHasNonZeroTab(src.depth());
+    HasNonZeroFunc func = getHasNonZeroFunc(src.depth());
     CV_Assert( func != 0 );
 
     if (src.dims == 2)//fast path to avoid creating planes of single rows

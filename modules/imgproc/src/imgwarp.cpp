@@ -1687,13 +1687,13 @@ void cv::remap( InputArray _src, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION();
 
-    static RemapNNFunc nn_tab[] =
+    static RemapNNFunc nn_tab[CV_DEPTH_MAX] =
     {
         remapNearest<uchar>, remapNearest<schar>, remapNearest<ushort>, remapNearest<short>,
         remapNearest<int>, remapNearest<float>, remapNearest<double>, 0
     };
 
-    static RemapFunc linear_tab[] =
+    static RemapFunc linear_tab[CV_DEPTH_MAX] =
     {
         remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u, short>, 0,
         remapBilinear<Cast<float, ushort>, RemapNoVec, float>,
@@ -1702,7 +1702,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         remapBilinear<Cast<double, double>, RemapNoVec, float>, 0
     };
 
-    static RemapFunc cubic_tab[] =
+    static RemapFunc cubic_tab[CV_DEPTH_MAX] =
     {
         remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE>, 0,
         remapBicubic<Cast<float, ushort>, float, 1>,
@@ -1711,7 +1711,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         remapBicubic<Cast<double, double>, float, 1>, 0
     };
 
-    static RemapFunc lanczos4_tab[] =
+    static RemapFunc lanczos4_tab[CV_DEPTH_MAX] =
     {
         remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE>, 0,
         remapLanczos4<Cast<float, ushort>, float, 1>,

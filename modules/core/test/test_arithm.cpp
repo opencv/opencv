@@ -649,9 +649,9 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
     int depth = src.depth(), cn = src.channels();
-    union { double d[4]; float f[4]; int i[4];} lbuf, rbuf;
+    union { double d[4]; float f[4]; int i[4]; unsigned u[4]; int64 L[4]; uint64 UL[4]; } lbuf, rbuf;
     int wtype = CV_MAKETYPE((depth <= CV_32S ? CV_32S :
-        depth == CV_16F || depth == CV_16BF || depth == CV_32F ? CV_32F : CV_64F), cn);
+        depth == CV_16F || depth == CV_16BF || depth == CV_32F ? CV_32F : depth), cn);
     scalarToRawData(lb, lbuf.d, wtype, cn);
     scalarToRawData(rb, rbuf.d, wtype, cn);
 
@@ -675,16 +675,16 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
             inRangeS_((const short*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
             break;
         case CV_32U:
-            inRangeS_((const unsigned*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
+            inRangeS_((const unsigned*)sptr, lbuf.u, rbuf.u, dptr, total, cn);
             break;
         case CV_32S:
             inRangeS_((const int*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
             break;
         case CV_64U:
-            inRangeS_((const uint64*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
+            inRangeS_((const uint64*)sptr, lbuf.UL, rbuf.UL, dptr, total, cn);
             break;
         case CV_64S:
-            inRangeS_((const int64*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
+            inRangeS_((const int64*)sptr, lbuf.L, rbuf.L, dptr, total, cn);
             break;
         case CV_32F:
             inRangeS_((const float*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
@@ -1639,7 +1639,7 @@ TEST_P(ElemWiseTest, accuracy)
         op->generateScalars(depth, rng);
 
         /*printf("testIdx=%d, depth=%d, channels=%d, have_mask=%d\n", testIdx, depth, src[0].channels(), (int)haveMask);
-        if (testIdx == 4)
+        if (testIdx == 7)
             putchar('.');*/
 
         op->refop(src, dst0, mask);
@@ -2102,6 +2102,31 @@ TEST(Core_FindNonZero, regression)
     ASSERT_TRUE(pts.size() == nz);
 
     img.convertTo( img, CV_32S );
+    pts.resize(pts.size()*4);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_32U );
+    pts.resize(pts.size()*3);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_64U );
+    pts.resize(pts.size()*2);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_64S );
+    pts.resize(pts.size()*5);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_16F );
+    pts.resize(pts.size()*3);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_16BF );
     pts.resize(pts.size()*4);
     findNonZero(img, pts);
     ASSERT_TRUE(pts.size() == nz);
@@ -3073,30 +3098,30 @@ INSTANTIATE_TEST_CASE_P(Core_FiniteMask, FiniteMaskFixture, ::testing::Combine(:
 
 
 ///////////////////////////////////////////////////////////////////////////////////
-typedef testing::TestWithParam<perf::MatDepth> NonZeroNotSupportedMatDepth;
+typedef testing::TestWithParam<perf::MatDepth> NonZeroSupportedMatDepth;
 
-TEST_P(NonZeroNotSupportedMatDepth, findNonZero)
+TEST_P(NonZeroSupportedMatDepth, findNonZero)
 {
     cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
     vector<Point> pts;
-    EXPECT_THROW( findNonZero(src, pts), cv::Exception);
+    EXPECT_NO_THROW(findNonZero(src, pts));
 }
 
-TEST_P(NonZeroNotSupportedMatDepth, countNonZero)
+TEST_P(NonZeroSupportedMatDepth, countNonZero)
 {
     cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
-    EXPECT_THROW( countNonZero(src), cv::Exception);
+    EXPECT_NO_THROW(countNonZero(src));
 }
 
-TEST_P(NonZeroNotSupportedMatDepth, hasNonZero)
+TEST_P(NonZeroSupportedMatDepth, hasNonZero)
 {
     cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
-    EXPECT_THROW( hasNonZero(src), cv::Exception);
+    EXPECT_NO_THROW(hasNonZero(src));
 }
 
 INSTANTIATE_TEST_CASE_P(
     NonZero,
-    NonZeroNotSupportedMatDepth,
+    NonZeroSupportedMatDepth,
     testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
 );
 
@@ -3118,27 +3143,27 @@ INSTANTIATE_TEST_CASE_P(
 );
 
 ///////////////////////////////////////////////////////////////////////////////////
-typedef testing::TestWithParam<perf::MatDepth> MinMaxNotSupportedMatDepth;
+typedef testing::TestWithParam<perf::MatDepth> MinMaxSupportedMatDepth;
 
-TEST_P(MinMaxNotSupportedMatDepth, minMaxLoc)
+TEST_P(MinMaxSupportedMatDepth, minMaxLoc)
 {
     cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
     double minV=0.0, maxV=0.0;
     Point minLoc, maxLoc;
-    EXPECT_THROW( cv::minMaxLoc(src, &minV, &maxV, &minLoc, &maxLoc), cv::Exception);
+    EXPECT_NO_THROW(cv::minMaxLoc(src, &minV, &maxV, &minLoc, &maxLoc));
 }
 
-TEST_P(MinMaxNotSupportedMatDepth, minMaxIdx)
+TEST_P(MinMaxSupportedMatDepth, minMaxIdx)
 {
     cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
     double minV=0.0, maxV=0.0;
     int minIdx=0, maxIdx=0;
-    EXPECT_THROW( cv::minMaxIdx(src, &minV, &maxV, &minIdx, &maxIdx), cv::Exception);
+    EXPECT_NO_THROW(cv::minMaxIdx(src, &minV, &maxV, &minIdx, &maxIdx));
 }
 
 INSTANTIATE_TEST_CASE_P(
     MinMaxLoc,
-    MinMaxNotSupportedMatDepth,
+    MinMaxSupportedMatDepth,
     testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
 );
 

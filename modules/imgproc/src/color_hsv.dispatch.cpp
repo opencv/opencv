@@ -20,26 +20,26 @@ namespace cv {
 #if NEED_IPP
 
 #if !IPP_DISABLE_RGB_HSV
-static ippiGeneralFunc ippiRGB2HSVTab[] =
+static ippiGeneralFunc ippiRGB2HSVTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiRGBToHSV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToHSV_16u_C3R, 0,
     0, 0, 0, 0
 };
 #endif
 
-static ippiGeneralFunc ippiHSV2RGBTab[] =
+static ippiGeneralFunc ippiHSV2RGBTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiHSVToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiHSVToRGB_16u_C3R, 0,
     0, 0, 0, 0
 };
 
-static ippiGeneralFunc ippiRGB2HLSTab[] =
+static ippiGeneralFunc ippiRGB2HLSTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiRGBToHLS_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToHLS_16u_C3R, 0,
     0, (ippiGeneralFunc)ippiRGBToHLS_32f_C3R, 0, 0
 };
 
-static ippiGeneralFunc ippiHLS2RGBTab[] =
+static ippiGeneralFunc ippiHLS2RGBTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiHLSToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiHLSToRGB_16u_C3R, 0,
     0, (ippiGeneralFunc)ippiHLSToRGB_32f_C3R, 0, 0

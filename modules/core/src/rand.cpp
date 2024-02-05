@@ -271,7 +271,7 @@ randf_64f( double* arr, int len_, int cn, uint64* state, const Vec2d* p, void*, 
 typedef void (*RandFunc)(uchar* arr, int len, int cn, uint64* state,
                          const void* p, void* tempbuf, int flags);
 
-static RandFunc randTab[][16] =
+static RandFunc randTab[][CV_DEPTH_MAX] =
 {
     {
         (RandFunc)randi_8u, (RandFunc)randi_8s, (RandFunc)randi_16u,
@@ -502,7 +502,7 @@ DEF_RANDNSCALE_FUNC(64f, double, double)
 typedef void (*RandnScaleFunc)(float* src, void* dst, int len, int cn,
                                const void* mean, const void* stddev, int flags);
 
-static RandnScaleFunc randnScaleTab[] =
+static RandnScaleFunc randnScaleTab[CV_DEPTH_MAX] =
 {
     (RandnScaleFunc)randnScale_8u, (RandnScaleFunc)randnScale_8s, (RandnScaleFunc)randnScale_16u,
     (RandnScaleFunc)randnScale_16s, (RandnScaleFunc)randnScale_32s, (RandnScaleFunc)randnScale_16_or_32f,
