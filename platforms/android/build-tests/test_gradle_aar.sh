@@ -6,6 +6,7 @@ echo "Use local maven repo from $LOCAL_MAVEN_REPO"
 
 ANDROID_HOME=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-${ANDROID_SDK?Required ANDROID_HOME/ANDROID_SDK/ANDROID_SDK_ROOT}}}
 ANDROID_NDK=${ANDROID_NDK_HOME-${ANDROID_NDK:-${NDKROOT?Required ANDROID_NDK_HOME/ANDROID_NDK/NDKROOT}}}
+OPENCV_GRADLE_VERBOSE_OPTIONS=${OPENCV_GRADLE_VERBOSE_OPTIONS:-'-i'}
 
 echo "Android SDK: ${ANDROID_HOME}"
 echo "Android NDK: ${ANDROID_NDK}"
@@ -40,7 +41,7 @@ sed -i "s/opencv_source = 'sdk_path'/opencv_source = 'maven_local'/g" test-gradl
 sed -i "s+opencv_maven_path = '<path_to_maven_repo>'+opencv_maven_path = 'file\\://$LOCAL_MAVEN_REPO'+g" test-gradle-aar/settings.gradle
 
 echo "Run gradle ..."
-(cd "test-gradle-aar"; ./gradlew -i assemble)
+(cd "test-gradle-aar"; ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} assemble)
 
 echo "#"
 echo "# Done!"
