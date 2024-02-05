@@ -258,10 +258,10 @@ static void funcname(const T* src, const uchar* mask, WT* _minVal, WT* _maxVal, 
     for (int j = 0; j < vlanes; j++) \
         idxbuf[j] = (UT)(i+j); \
     UVT v_locidx = vx_load(idxbuf); \
-    UVT v_idx_delta = vx_setall_##usuffix(vlanes); \
+    UVT v_idx_delta = vx_setall_##usuffix((UT)vlanes); \
     UVT v_invalid_idx = vx_setall_##usuffix((UT)-1); \
-    VT v_minval = vx_setall_##suffix(minVal); \
-    VT v_maxval = vx_setall_##suffix(maxVal); \
+    VT v_minval = vx_setall_##suffix((T)minVal); \
+    VT v_maxval = vx_setall_##suffix((T)maxVal); \
     UVT v_minidx = v_invalid_idx; \
     UVT v_maxidx = v_invalid_idx; \
     /* process data by blocks: */ \
@@ -312,7 +312,7 @@ static void funcname(const T* src, const uchar* mask, WT* _minVal, WT* _maxVal, 
         VT invmask = v_ne(v_minval, vx_setall_##suffix(minVal)); \
         v_minidx = v_or(v_minidx, v_reinterpret_as_##usuffix(invmask)); \
         minIdx = startIdx + v_reduce_min(v_minidx); \
-        v_minval = vx_setall_##suffix(minVal); \
+        v_minval = vx_setall_##suffix((T)minVal); \
     } \
     idxmask = v_ne(v_maxidx, v_invalid_idx); \
     if (v_check_any(idxmask)) { \
@@ -320,7 +320,7 @@ static void funcname(const T* src, const uchar* mask, WT* _minVal, WT* _maxVal, 
         VT invmask = v_ne(v_maxval, vx_setall_##suffix(maxVal)); \
         v_maxidx = v_or(v_maxidx, v_reinterpret_as_##usuffix(invmask)); \
         maxIdx = startIdx + v_reduce_min(v_maxidx); \
-        v_maxval = vx_setall_##suffix(maxVal); \
+        v_maxval = vx_setall_##suffix((T)maxVal); \
     }) \
     *_minVal = (WT)minVal; \
     *_maxVal = (WT)maxVal; \

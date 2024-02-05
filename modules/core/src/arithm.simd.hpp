@@ -209,8 +209,8 @@ void opname(const T1* src1, size_t step1, \
 #define DEFINE_SIMPLE_BINARY_OP_64F(opname, scalar_op, vec_op) \
     DEFINE_SIMPLE_BINARY_OP(opname, double, v_float64, scalar_op, vec_op)
 #else
-#define DEFINE_SIMPLE_BINARY_OP_64F(opname) \
-    DEFINE_SIMPLE_BINARY_OP_NOSIMD(opname, double, scalar_op)
+#define DEFINE_SIMPLE_BINARY_OP_64F(opname, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP_NOSIMD(opname, double, double, scalar_op)
 #endif
 
 #undef DEFINE_SIMPLE_BINARY_OP_ALLTYPES
@@ -719,7 +719,7 @@ void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
 #define init_addw_f32() \
     float sw1 = (float)weights[0]; \
     float sw2 = (float)weights[1]; \
-    double sdelta = (float)weights[2];\
+    float sdelta = (float)weights[2];\
     SIMD_ONLY(v_float32 vw1 = vx_setall_f32(sw1); \
         v_float32 vw2 = vx_setall_f32(sw2); \
         v_float32 vdelta = vx_setall_f32(sdelta);)
@@ -731,7 +731,7 @@ void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
 #define init_addw_nosimd_f32() \
     float sw1 = (float)weights[0]; \
     float sw2 = (float)weights[1]; \
-    double sdelta = (float)weights[2];
+    float sdelta = (float)weights[2];
 
 #undef init_muldiv_nosimd_f64
 #undef init_addw_nosimd_f64
@@ -759,8 +759,8 @@ void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
 #else
 #define DEFINE_SCALED_OP_64F(opname, scale_arg, scalar_op, vec_op, init, when_binary) \
     DEFINE_SCALED_OP_NOSIMD(opname, scale_arg, double, double, scalar_op, init, when_binary)
-#define init_muldiv_f64 init_muldiv_nosimd_f64
-#define init_addw_f64() init_addw_nosimd_f64
+#define init_muldiv_f64() init_muldiv_nosimd_f64()
+#define init_addw_f64() init_addw_nosimd_f64()
 #endif
 
 #undef scalar_mul

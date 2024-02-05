@@ -833,7 +833,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
         if (depth == CV_32F || is_fp16)
             return result.f;
         if (depth == CV_64U || depth == CV_64S)
-            return result.UL;
+            return (double)result.UL;
     }
     if( normType == NORM_L2 )
         return std::sqrt(result.d);
@@ -1289,7 +1289,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         if (depth == CV_32F || is_fp16)
             return result.f;
         if (depth == CV_64U || depth == CV_64S)
-            return result.UL;
+            return (double)result.UL;
     }
     if( normType == NORM_L2 )
         return std::sqrt(result.d);

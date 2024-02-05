@@ -1113,8 +1113,8 @@ minMaxLoc_(const _Tp* src, size_t total, size_t startidx,
         }
     }
 
-    *_maxval = maxval;
-    *_minval = minval;
+    *_maxval = (double)maxval;
+    *_minval = (double)minval;
     *_maxpos = maxpos;
     *_minpos = minpos;
 }
@@ -1285,7 +1285,7 @@ norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const
         if( !mask )
             for( i = 0; i < total; i++ )
             {
-                double v = src[i];
+                double v = (double)src[i];
                 result += v*v;
             }
         else
@@ -1294,7 +1294,7 @@ norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
                     {
-                        double v = src[i*cn + c];
+                        double v = (double)src[i*cn + c];
                         result += v*v;
                     }
             }
