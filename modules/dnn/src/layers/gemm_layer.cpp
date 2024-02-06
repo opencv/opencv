@@ -172,7 +172,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -211,7 +211,7 @@ public:
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
             fastGemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
         } else {
-            fastGemmBatched(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
+            fastGemmBatch(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
         }
     }
 

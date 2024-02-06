@@ -1,5 +1,5 @@
 set(VIDEOIO_ENABLE_PLUGINS_DEFAULT ON)
-if(EMSCRIPTEN OR IOS OR WINRT)
+if(EMSCRIPTEN OR IOS OR XROS OR WINRT)
   set(VIDEOIO_ENABLE_PLUGINS_DEFAULT OFF)
 endif()
 
@@ -197,7 +197,7 @@ if(TARGET ocv.3rdparty.aravis)
 endif()
 
 if(TARGET ocv.3rdparty.avfoundation)
-  if(IOS)
+  if(IOS OR XROS)
     list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation.mm)
   else()
     list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation_mac.mm)

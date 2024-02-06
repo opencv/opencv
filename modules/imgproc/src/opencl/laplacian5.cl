@@ -13,25 +13,25 @@
 __kernel void sumConvert(__global const uchar * src1ptr, int src1_step, int src1_offset,
                          __global const uchar * src2ptr, int src2_step, int src2_offset,
                          __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                         coeffT scale, coeffT delta)
+                         COEFF_T scale, COEFF_T delta)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
     if (y < dst_rows && x < dst_cols)
     {
-        int src1_index = mad24(y, src1_step, mad24(x, (int)sizeof(srcT), src1_offset));
-        int src2_index = mad24(y, src2_step, mad24(x, (int)sizeof(srcT), src2_offset));
-        int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(dstT), dst_offset));
+        int src1_index = mad24(y, src1_step, mad24(x, (int)sizeof(SRC_T), src1_offset));
+        int src2_index = mad24(y, src2_step, mad24(x, (int)sizeof(SRC_T), src2_offset));
+        int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(DST_T), dst_offset));
 
-        __global const srcT * src1 = (__global const srcT *)(src1ptr + src1_index);
-        __global const srcT * src2 = (__global const srcT *)(src2ptr + src2_index);
-        __global dstT * dst = (__global dstT *)(dstptr + dst_index);
+        __global const SRC_T * src1 = (__global const SRC_T *)(src1ptr + src1_index);
+        __global const SRC_T * src2 = (__global const SRC_T *)(src2ptr + src2_index);
+        __global DST_T * dst = (__global DST_T *)(dstptr + dst_index);
 
-#if wdepth <= 4
-        dst[0] = convertToDT( mad24((WT)(scale), convertToWT(src1[0]) + convertToWT(src2[0]), (WT)(delta)) );
+#if WDEPTH <= 4
+        dst[0] = CONVERT_TO_DT( mad24((WT)(scale), CONVERT_TO_WT(src1[0]) + CONVERT_TO_WT(src2[0]), (WT)(delta)) );
 #else
-        dst[0] = convertToDT( mad((WT)(scale), convertToWT(src1[0]) + convertToWT(src2[0]), (WT)(delta)) );
+        dst[0] = CONVERT_TO_DT( mad((WT)(scale), CONVERT_TO_WT(src1[0]) + CONVERT_TO_WT(src2[0]), (WT)(delta)) );
 #endif
     }
 }
@@ -74,18 +74,18 @@ __kernel void sumConvert(__global const uchar * src1ptr, int src1_step, int src1
 #endif
 
 #if CN != 3
-#define loadpix(addr) *(__global const srcT *)(addr)
-#define storepix(val, addr)  *(__global dstT *)(addr) = val
-#define SRCSIZE (int)sizeof(srcT)
-#define DSTSIZE (int)sizeof(dstT)
+#define loadpix(addr) *(__global const SRC_T *)(addr)
+#define storepix(val, addr)  *(__global DST_T *)(addr) = val
+#define SRCSIZE (int)sizeof(SRC_T)
+#define DSTSIZE (int)sizeof(DST_T)
 #else
-#define loadpix(addr)  vload3(0, (__global const srcT1 *)(addr))
-#define storepix(val, addr) vstore3(val, 0, (__global dstT1 *)(addr))
-#define SRCSIZE (int)sizeof(srcT1)*3
-#define DSTSIZE (int)sizeof(dstT1)*3
+#define loadpix(addr)  vload3(0, (__global const SRC_T1 *)(addr))
+#define storepix(val, addr) vstore3(val, 0, (__global DST_T1 *)(addr))
+#define SRCSIZE (int)sizeof(SRC_T1)*3
+#define DSTSIZE (int)sizeof(DST_T1)*3
 #endif
 
-#define SRC(_x,_y) convertToWT(loadpix(Src + mad24(_y, src_step, SRCSIZE * _x)))
+#define SRC(_x,_y) CONVERT_TO_WT(loadpix(Src + mad24(_y, src_step, SRCSIZE * _x)))
 
 #ifdef BORDER_CONSTANT
 // CCCCCC|abcdefgh|CCCCCCC
@@ -173,7 +173,7 @@ __kernel void laplacian(__global uchar* Src, int src_step, int srcOffsetX, int s
             }
 
             WT sum = mad(scale_v, (sum1 + sum2), delta_v);
-            storepix(convertToDT(sum), Dst + mad24(y + liy, dst_step, mad24(x, DSTSIZE, dst_offset)));
+            storepix(CONVERT_TO_DT(sum), Dst + mad24(y + liy, dst_step, mad24(x, DSTSIZE, dst_offset)));
         }
 
         for (int i = liy * BLK_X + lix; i < (RADIUS*2) * (BLK_X+(RADIUS*2)); i += BLK_X * BLK_Y)

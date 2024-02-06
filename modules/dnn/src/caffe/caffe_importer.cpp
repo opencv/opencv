@@ -279,8 +279,8 @@ public:
                 // Half precision floats.
                 CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
 
-                Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
-                convertFp16(halfs, dstBlob);
+                Mat halfs((int)shape.size(), &shape[0], CV_16FC1, (void*)raw_data.c_str());
+                halfs.convertTo(dstBlob, CV_32F);
             }
             else if (pbBlob.raw_data_type() == caffe::FLOAT)
             {
@@ -498,6 +498,11 @@ public:
             else if ("ConvolutionDepthwise" == type)
             {
                 type = "Convolution";
+            }
+            else if (type == "Softmax"){
+                // set default axis to 1
+                if(!layerParams.has("axis"))
+                    layerParams.set("axis", 1);
             }
 
             int id = dstNet.addLayer(name, type, layerParams);

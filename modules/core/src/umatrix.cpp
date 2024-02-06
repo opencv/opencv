@@ -1233,70 +1233,10 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
     src.copyTo(_dst, _mask);
 }
 
-void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
-{
-    CV_INSTRUMENT_REGION();
 
-    bool noScale = std::fabs(alpha - 1) < DBL_EPSILON && std::fabs(beta) < DBL_EPSILON;
-    int stype = type(), cn = CV_MAT_CN(stype);
-
-    if( _type < 0 )
-        _type = _dst.fixedType() ? _dst.type() : stype;
-    else
-        _type = CV_MAKETYPE(CV_MAT_DEPTH(_type), cn);
-
-    int sdepth = CV_MAT_DEPTH(stype), ddepth = CV_MAT_DEPTH(_type);
-    if( sdepth == ddepth && noScale )
-    {
-        copyTo(_dst);
-        return;
-    }
-#ifdef HAVE_OPENCL
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    bool needDouble = sdepth == CV_64F || ddepth == CV_64F;
-    if( dims <= 2 && cn && _dst.isUMat() && ocl::useOpenCL() &&
-            ((needDouble && doubleSupport) || !needDouble) )
-    {
-        int wdepth = std::max(CV_32F, sdepth), rowsPerWI = 4;
-
-        char cvt[2][50];
-        ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
-                      format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s%s",
-                             ocl::typeToStr(sdepth), ocl::typeToStr(wdepth), ocl::typeToStr(ddepth),
-                             ocl::convertTypeStr(sdepth, wdepth, 1, cvt[0], sizeof(cvt[0])),
-                             ocl::convertTypeStr(wdepth, ddepth, 1, cvt[1], sizeof(cvt[1])),
-                             doubleSupport ? " -D DOUBLE_SUPPORT" : "", noScale ? " -D NO_SCALE" : ""));
-        if (!k.empty())
-        {
-            UMat src = *this;
-            _dst.create( size(), _type );
-            UMat dst = _dst.getUMat();
-
-            float alphaf = (float)alpha, betaf = (float)beta;
-            ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
-                    dstarg = ocl::KernelArg::WriteOnly(dst, cn);
-
-            if (noScale)
-                k.args(srcarg, dstarg, rowsPerWI);
-            else if (wdepth == CV_32F)
-                k.args(srcarg, dstarg, alphaf, betaf, rowsPerWI);
-            else
-                k.args(srcarg, dstarg, alpha, beta, rowsPerWI);
-
-            size_t globalsize[2] = { (size_t)dst.cols * cn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
-            if (k.run(2, globalsize, NULL, false))
-            {
-                CV_IMPL_ADD(CV_IMPL_OCL);
-                return;
-            }
-        }
-    }
-#endif
-    UMat src = *this;  // Fake reference to itself.
-                       // Resolves issue 8693 in case of src == dst.
-    Mat m = getMat(ACCESS_READ);
-    m.convertTo(_dst, _type, alpha, beta);
-}
+//
+// void UMat::convertTo moved to convert.dispatch.cpp
+//
 
 UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {

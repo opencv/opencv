@@ -30,6 +30,9 @@ public:
 
     QRCodeEncoder::EncodeMode mode;
     QRCodeEncoder::ECIEncodings eci;
+    uint8_t parity = 0;
+    uint8_t sequence_num = 0;
+    uint8_t total_num = 1;
 };
 
 }

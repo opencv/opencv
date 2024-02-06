@@ -90,6 +90,10 @@ class CppHeaderParser(object):
             modlist.append("/IO")
             arg_str = arg_str.replace("CV_IN_OUT", "")
 
+        if "CV_WRAP_FILE_PATH" in arg_str:
+            modlist.append("/PATH")
+            arg_str = arg_str.replace("CV_WRAP_FILE_PATH", "")
+
         isarray = False
         npos = arg_str.find("CV_CARRAY")
         if npos >= 0:
@@ -451,8 +455,7 @@ class CppHeaderParser(object):
                                                  ("CV_INLINE", ""),
                                                  ("CV_DEPRECATED", ""),
                                                  ("CV_DEPRECATED_EXTERNAL", ""),
-                                                 ("CV_NODISCARD_STD", ""),
-                                                 ("CV_NODISCARD", "")]).strip()
+                                                 ("CV_NODISCARD_STD", "")]).strip()
 
         if decl_str.strip().startswith('virtual'):
             virtual_method = True
@@ -627,6 +630,8 @@ class CppHeaderParser(object):
                                                              ("noArray", arg_type)]).strip()
                     if '/IO' in modlist and '/O' in modlist:
                         modlist.remove('/O')
+                    if (arg_name.lower() == 'filename' or arg_name.lower() == 'filepath') and '/PATH' not in modlist:
+                        modlist.append('/PATH')
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 

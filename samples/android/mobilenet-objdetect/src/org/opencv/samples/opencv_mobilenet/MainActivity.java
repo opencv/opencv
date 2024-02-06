@@ -1,5 +1,11 @@
 package org.opencv.samples.opencv_mobilenet;
-
+/*
+// snippet was added for Android tutorial
+//! [mobilenet_tutorial_package]
+package com.example.myapplication;
+//! [mobilenet_tutorial_package]
+*/
+//! [mobilenet_tutorial]
 import android.content.Context;
 import android.content.res.AssetManager;
 import android.os.Bundle;
@@ -47,6 +53,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             return;
         }
 
+        //! [init_model_from_memory]
         mModelBuffer = loadFileFromResource(R.raw.mobilenet_iter_73000);
         mConfigBuffer = loadFileFromResource(R.raw.deploy);
         if (mModelBuffer == null || mConfigBuffer == null) {
@@ -54,9 +61,9 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         } else
             Log.i(TAG, "Model files loaded successfully");
 
-
         net = Dnn.readNet("caffe", mModelBuffer, mConfigBuffer);
         Log.i(TAG, "Network loaded successfully");
+        //! [init_model_from_memory]
 
         setContentView(R.layout.activity_main);
 
@@ -106,6 +113,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         Imgproc.cvtColor(frame, frame, Imgproc.COLOR_RGBA2RGB);
 
         // Forward image through network.
+        //! [mobilenet_handle_frame]
         Mat blob = Dnn.blobFromImage(frame, IN_SCALE_FACTOR,
                 new Size(IN_WIDTH, IN_HEIGHT),
                 new Scalar(MEAN_VAL, MEAN_VAL, MEAN_VAL), /*swapRB*/false, /*crop*/false);
@@ -143,11 +151,14 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
                         Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
             }
         }
+        //! [mobilenet_handle_frame]
+
         return frame;
     }
 
     public void onCameraViewStopped() {}
 
+    //! [mobilenet_tutorial_resource]
     private MatOfByte loadFileFromResource(int id) {
        byte[] buffer;
         try {
@@ -167,6 +178,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
 
         return new MatOfByte(buffer);
     }
+    //! [mobilenet_tutorial_resource]
 
     private static final String TAG = "OpenCV-MobileNet";
     private static final String[] classNames = {"background",
@@ -181,3 +193,4 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     private Net                  net;
     private CameraBridgeViewBase mOpenCvCameraView;
 }
+//! [mobilenet_tutorial]

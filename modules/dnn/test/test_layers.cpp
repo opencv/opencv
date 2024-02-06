@@ -1613,7 +1613,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -2050,7 +2050,7 @@ private:
         net.setPreferableTarget(target);
 
         Mat re;
-        ASSERT_NO_THROW(re = net.forward()); // runtime error
+        re = net.forward();
         auto ptr_re = (float *) re.data;
         for (int i = 0; i < re.total(); i++)
             if (op == "sum"){

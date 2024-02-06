@@ -475,6 +475,8 @@ Cv64suf;
 #define CV_WRAP_MAPPABLE(mappable)
 #define CV_WRAP_PHANTOM(phantom_header)
 #define CV_WRAP_DEFAULT(val)
+/* Indicates that the function parameter has filesystem path semantic */
+#define CV_WRAP_FILE_PATH
 
 /****************************************************************************************\
 *                                  Matrix type (Mat)                                     *
@@ -751,88 +753,43 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 
 
 /****************************************************************************************\
-*                      CV_NODISCARD attribute (deprecated, GCC only)                     *
-* DONT USE: use instead the standard CV_NODISCARD_STD macro above                        *
-*           this legacy method silently fails to issue warning until some version        *
-*           after gcc 6.3.0. Yet with gcc 7+ you can use the above standard method       *
-*           which makes this method useless. Don't use it.                               *
-* @deprecated use instead CV_NODISCARD_STD                                               *
-\****************************************************************************************/
-#ifndef CV_NODISCARD
-#  if defined(__GNUC__)
-#    define CV_NODISCARD __attribute__((__warn_unused_result__))
-#  elif defined(__clang__) && defined(__has_attribute)
-#    if __has_attribute(__warn_unused_result__)
-#      define CV_NODISCARD __attribute__((__warn_unused_result__))
-#    endif
-#  endif
-#endif
-#ifndef CV_NODISCARD
-#  define CV_NODISCARD /* nothing by default */
-#endif
-
-
-/****************************************************************************************\
 *                                    C++ 11                                              *
 \****************************************************************************************/
-#ifndef CV_CXX11
-#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1800)
-#    define CV_CXX11 1
+#ifdef __cplusplus
+// MSVC was stuck at __cplusplus == 199711L for a long time, even where it supports C++11,
+// so check _MSC_VER instead. See:
+// <https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus>
+#  if defined(_MSC_VER)
+#    if _MSC_VER < 1800
+#      error "OpenCV 4.x+ requires enabled C++11 support"
+#    endif
+#  elif __cplusplus < 201103L
+#    error "OpenCV 4.x+ requires enabled C++11 support"
 #  endif
-#else
-#  if CV_CXX11 == 0
-#    undef CV_CXX11
-#  endif
-#endif
-#ifndef CV_CXX11
-#  error "OpenCV 4.x+ requires enabled C++11 support"
 #endif
 
-#define CV_CXX_MOVE_SEMANTICS 1
-#define CV_CXX_MOVE(x) std::move(x)
-#define CV_CXX_STD_ARRAY 1
-#include <array>
+#ifndef CV_CXX11
+#  define CV_CXX11 1
+#endif
+
 #ifndef CV_OVERRIDE
 #  define CV_OVERRIDE override
 #endif
+
 #ifndef CV_FINAL
 #  define CV_FINAL final
 #endif
 
 #ifndef CV_NOEXCEPT
-#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
-#    define CV_NOEXCEPT noexcept
-#  endif
-#endif
-#ifndef CV_NOEXCEPT
-#  define CV_NOEXCEPT
+#  define CV_NOEXCEPT noexcept
 #endif
 
 #ifndef CV_CONSTEXPR
-#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
-#    define CV_CONSTEXPR constexpr
-#  endif
-#endif
-#ifndef CV_CONSTEXPR
-#  define CV_CONSTEXPR
+#  define CV_CONSTEXPR constexpr
 #endif
 
 // Integer types portability
-#ifdef OPENCV_STDINT_HEADER
-#include OPENCV_STDINT_HEADER
-#elif defined(__cplusplus)
-#if defined(_MSC_VER) && _MSC_VER < 1600 /* MSVS 2010 */
-namespace cv {
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef signed short int16_t;
-typedef unsigned short uint16_t;
-typedef signed int int32_t;
-typedef unsigned int uint32_t;
-typedef signed __int64 int64_t;
-typedef unsigned __int64 uint64_t;
-}
-#elif defined(_MSC_VER) || __cplusplus >= 201103L
+#ifdef __cplusplus
 #include <cstdint>
 namespace cv {
 using std::int8_t;
@@ -844,19 +801,6 @@ using std::uint32_t;
 using std::int64_t;
 using std::uint64_t;
 }
-#else
-#include <stdint.h>
-namespace cv {
-typedef ::int8_t int8_t;
-typedef ::uint8_t uint8_t;
-typedef ::int16_t int16_t;
-typedef ::uint16_t uint16_t;
-typedef ::int32_t int32_t;
-typedef ::uint32_t uint32_t;
-typedef ::int64_t int64_t;
-typedef ::uint64_t uint64_t;
-}
-#endif
 #else // pure C
 #include <stdint.h>
 #endif

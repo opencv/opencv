@@ -15,6 +15,7 @@
 #include "quirc.h"
 #endif
 
+#include <array>
 #include <limits>
 #include <cmath>
 #include <queue>
@@ -1015,6 +1016,17 @@ public:
     float coeff_expansion = 1.f;
     vector<Point2f> getOriginalPoints() {return original_points;}
     bool useAlignmentMarkers;
+
+    // Structured Append mode generates a sequence of QR codes.
+    // Final message is restored according to the index of the code in sequence.
+    // Different QR codes are grouped by a parity value.
+    bool isStructured() { return mode == QRCodeEncoder::EncodeMode::MODE_STRUCTURED_APPEND; }
+    struct {
+        uint8_t parity = 0;
+        uint8_t sequence_num = 0;
+        uint8_t total_num = 1;
+    } structure_info;
+
 protected:
     double getNumModules();
     Mat getHomography() {
@@ -1067,6 +1079,8 @@ protected:
     std::string result_info;
     uint8_t version, version_size;
     float test_perspective_size;
+    QRCodeEncoder::EncodeMode mode;
+
     struct sortPairAsc
     {
         bool operator()(const std::pair<size_t, double> &a,
@@ -2780,7 +2794,6 @@ static std::string encodeUTF8_bytesarray(const uint8_t* str, const size_t size) 
 
 bool QRDecode::decodingProcess()
 {
-    QRCodeEncoder::EncodeMode mode;
     QRCodeEncoder::ECIEncodings eci;
     const uint8_t* payload;
     size_t payload_len;
@@ -2825,6 +2838,9 @@ bool QRDecode::decodingProcess()
     eci = decoder->eci;
     payload = reinterpret_cast<const uint8_t*>(result_info.c_str());
     payload_len = result_info.size();
+    structure_info.parity = decoder->parity;
+    structure_info.sequence_num = decoder->sequence_num;
+    structure_info.total_num = decoder->total_num;
 #endif
 
     // Check output string format
@@ -2876,6 +2892,9 @@ bool QRDecode::decodingProcess()
             return true;
         case QRCodeEncoder::EncodeMode::MODE_ECI:
             CV_LOG_WARNING(NULL, "QR: ECI is not supported properly");
+            result_info.assign((const char*)payload, payload_len);
+            return true;
+        case QRCodeEncoder::EncodeMode::MODE_STRUCTURED_APPEND:
             result_info.assign((const char*)payload, payload_len);
             return true;
         default:
@@ -4075,11 +4094,44 @@ bool ImplContour::decodeMulti(
         }
         straight_qrcode.assign(tmp_straight_qrcodes);
     }
+
     decoded_info.clear();
     for (size_t i = 0; i < info.size(); i++)
     {
-       decoded_info.push_back(info[i]);
+        auto& decoder = qrdec[i];
+        if (!decoder.isStructured())
+        {
+            decoded_info.push_back(info[i]);
+            continue;
+        }
+
+        // Store final message corresponding to 0-th code in a sequence.
+        if (decoder.structure_info.sequence_num != 0)
+        {
+            decoded_info.push_back("");
+            continue;
+        }
+
+        cv::String decoded = info[i];
+        for (size_t idx = 1; idx < decoder.structure_info.total_num; ++idx)
+        {
+            auto it = std::find_if(qrdec.begin(), qrdec.end(), [&](QRDecode& dec) {
+                return dec.structure_info.parity == decoder.structure_info.parity &&
+                       dec.structure_info.sequence_num == idx;
+            });
+            if (it != qrdec.end())
+            {
+                decoded += info[it - qrdec.begin()];
+            }
+            else
+            {
+                decoded = "";
+                break;
+            }
+        }
+        decoded_info.push_back(decoded);
     }
+
     alignmentMarkers.resize(src_points.size());
     updateQrCorners.resize(src_points.size()*4ull);
     for (size_t i = 0ull; i < src_points.size(); i++) {

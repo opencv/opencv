@@ -46,6 +46,7 @@ if(${PYTHON}_LIMITED_API)
   # support only python3.3+
   ocv_assert(${PYTHON}_VERSION_MAJOR EQUAL 3 AND ${PYTHON}_VERSION_MINOR GREATER 2)
   target_compile_definitions(${the_module} PRIVATE CVPY_DYNAMIC_INIT)
+  target_compile_definitions(${the_module} PRIVATE PYTHON3_LIMITED_API_VERSION=${PYTHON3_LIMITED_API_VERSION})
   if(WIN32)
     string(REPLACE
       "python${${PYTHON}_VERSION_MAJOR}${${PYTHON}_VERSION_MINOR}.lib"

@@ -16,7 +16,7 @@ endif()
 set(GRADLE_VERSION "7.6.3" CACHE STRING "Gradle version")
 message(STATUS "Gradle version: ${GRADLE_VERSION}")
 
-set(ANDROID_COMPILE_SDK_VERSION "26" CACHE STRING "Android compileSdkVersion")
+set(ANDROID_COMPILE_SDK_VERSION "31" CACHE STRING "Android compileSdkVersion")
 if(ANDROID_NATIVE_API_LEVEL GREATER 21)
   set(ANDROID_MIN_SDK_VERSION "${ANDROID_NATIVE_API_LEVEL}" CACHE STRING "Android minSdkVersion")
 else()
@@ -89,15 +89,11 @@ else()
   ocv_update(OPENCV_ANDROID_NAMESPACE_DECLARATION "")
 endif()
 
-# set android gradle java version in build.gradle and set aidl config
 if(NOT (ANDROID_GRADLE_PLUGIN_VERSION VERSION_LESS "8.0.0"))
   # AGP-8.0 requires a minimum JDK version of JDK17
   ocv_update(ANDROID_GRADLE_JAVA_VERSION_INIT "17")
-  # Enable aidl configuration for OpenCV compile with AGP-8.0
-  ocv_update(ANDROID_GRADLE_BUILD_FEATURE_AIDL "buildFeatures { aidl true }")
 else()
   ocv_update(ANDROID_GRADLE_JAVA_VERSION_INIT "1_8")
-  ocv_update(ANDROID_GRADLE_BUILD_FEATURE_AIDL "")
 endif()
 
 set(ANDROID_GRADLE_JAVA_VERSION "${ANDROID_GRADLE_JAVA_VERSION_INIT}" CACHE STRING "Android Gradle Java version")
@@ -225,9 +221,20 @@ include ':${__dir}'
   configure_file("${path}/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/${__dir}/build.gradle" @ONLY)
   install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/${__dir}/build.gradle" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}/${__dir}" COMPONENT samples)
 
-  file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
+  # HACK: AAR packages generated from current OpenCV project has incomple prefab part
+  # and cannot be used for native linkage against OpenCV.
+  # Alternative way to build AAR: https://github.com/opencv/opencv/blob/4.x/platforms/android/build_java_shared_aar.py
+  if("${__dir}" STREQUAL "tutorial-2-mixedprocessing" OR "${__dir}" STREQUAL "tutorial-4-opencl")
+    file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
+if (gradle.opencv_source == 'sdk_path') {
+    include ':${__dir}'
+}
+")
+  else()
+    file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
 include ':${__dir}'
 ")
+  endif()
 
 endmacro()
 
