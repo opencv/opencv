@@ -8,6 +8,7 @@
 #include <opencv2/core/utils/logger.hpp>
 #include <fstream>
 #include <string>
+#include <iomanip>
 
 namespace cv {
 
@@ -327,12 +328,12 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
 
     for (size_t i = 0; i < points.size(); i++)
     {
-        file << points[i].x << " " << points[i].y << " " << points[i].z;
+        file << std::setprecision(8) << points[i].x << " " << points[i].y << " " << points[i].z;
         if (hasColor) {
             file << " " << static_cast<int>(rgb[i].x) << " " << static_cast<int>(rgb[i].y) << " " << static_cast<int>(rgb[i].z);
         }
         if (hasNormals) {
-            file << " " << normals[i].x << " " << normals[i].y << " " << normals[i].z;
+            file << " " << std::setprecision(8) << normals[i].x << " " << normals[i].y << " " << normals[i].z;
         }
         file << std::endl;
     }
