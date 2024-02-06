@@ -206,8 +206,16 @@ CV__DNN_INLINE_NS_BEGIN
          */
         virtual void setHostDirty() = 0;
 
+        int getHostMatDepth() {
+            CV_Assert(hostMatDepth != -1);
+            return hostMatDepth;
+        }
+
         int backendId;  //!< Backend identifier.
         int targetId;   //!< Target identifier.
+
+    protected:
+        int hostMatDepth = -1;
     };
 
     class CV_EXPORTS ActivationLayer;

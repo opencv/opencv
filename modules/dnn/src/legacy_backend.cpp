@@ -90,14 +90,21 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
         CV_Assert(haveCUDA());
 
 #ifdef HAVE_CUDA
-        switch (targetId)
+        CV_CheckType(m.depth(), m.depth() == CV_32F || m.depth() == CV_32S || m.depth() == CV_64S, "Unsupported type for CUDA");
+        CV_Assert(IS_DNN_CUDA_TARGET(targetId));
+        switch (m.depth())
         {
-        case DNN_TARGET_CUDA:
-            return CUDABackendWrapperFP32::create(m);
-        case DNN_TARGET_CUDA_FP16:
-            return CUDABackendWrapperFP16::create(m);
+        case CV_32F:
+            if (targetId == DNN_TARGET_CUDA_FP16)
+                return CUDABackendWrapperFP16::create(m);
+            else
+                return CUDABackendWrapperFP32::create(m);
+        case CV_32S:
+            return CUDABackendWrapperINT32::create(m);
+        case CV_64S:
+            return CUDABackendWrapperINT64::create(m);
         default:
-            CV_Assert(IS_DNN_CUDA_TARGET(targetId));
+            CV_Assert(false);
         }
 #endif
     }

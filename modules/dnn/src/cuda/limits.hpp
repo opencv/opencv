@@ -31,6 +31,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
         __device__ static float lowest() { return -FLT_MAX; }
     };
 
+    template <>
+    struct numeric_limits<int32_t> {
+        __device__ static int32_t min() { return 1; }
+        __device__ static int32_t max() { return INT_MAX; }
+        __device__ static int32_t lowest() { return INT_MIN; }
+    };
+
+    template <>
+    struct numeric_limits<int64_t> {
+        __device__ static int64_t min() { return 1; }
+        __device__ static int64_t max() { return LLONG_MAX; }
+        __device__ static int64_t lowest() { return LLONG_MIN; }
+    };
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::device */
 
 #endif /* OPENCV_DNN_SRC_CUDA_LIMITS_HPP */

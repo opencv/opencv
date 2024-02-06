@@ -431,7 +431,16 @@ public:
 
             config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
 
-            return make_cuda_node<cuda4dnn::MaxPoolingOp>(preferableTarget, std::move(context->stream), config);
+            int indicesType = outputs[1]->getHostMatDepth();
+            CV_CheckType(indicesType, indicesType == CV_32S || indicesType == CV_64S, "Unsupported indices type");
+
+            if (indicesType == CV_32S)
+                return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int32_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
+            else if (indicesType == CV_64S)
+                return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int64_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
+            
+            CV_Assert(false);
+            return Ptr<BackendNode>();
         }
 
         if (input_shape.size() == 3)
@@ -1276,9 +1285,10 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size());
-        if (preferableTarget == DNN_TARGET_OPENCL_FP16
-            || preferableTarget == DNN_TARGET_CPU_FP16
-            || preferableTarget == DNN_TARGET_CUDA_FP16)
+        if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
+            CV_CheckEQ(inputs[0], CV_32F, "Unsupported type");
+        else if (preferableTarget == DNN_TARGET_OPENCL_FP16
+            || preferableTarget == DNN_TARGET_CPU_FP16)
             CV_Assert(inputs[0] == CV_16S || inputs[0] == CV_8S);
         else
             CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_8S);

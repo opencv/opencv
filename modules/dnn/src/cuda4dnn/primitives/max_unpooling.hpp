@@ -39,7 +39,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         std::vector<std::size_t> input_shape;
     };
 
-    template <class T>
+    template <class T, class T_INDEX>
     class MaxPoolingOp final : public CUDABackendNode {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
@@ -103,10 +103,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output_data = output_wrapper->getSpan();
 
-            auto indices_wrapper = outputs[1].dynamicCast<wrapper_type>();
+            auto indices_wrapper = outputs[1].dynamicCast<GetCUDABackendWrapperType<T_INDEX>>();
             auto output_indices = indices_wrapper->getSpan();
 
-            kernels::max_pooling_with_indices<T>(
+            kernels::max_pooling_with_indices<T, T_INDEX>(
                 stream, output_data, output_indices, input_data, window_size, strides, padding_left
             );
         }
@@ -124,7 +124,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         std::vector<std::size_t> pads_begin;
     };
 
-    template <class T>
+    template <class T, class T_INDEX>
     class MaxUnpoolingOp final : public CUDABackendNode {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
@@ -160,13 +160,13 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
                 auto input_data = input_wrapper->getView();
 
-                auto indices_wrapper = inputs[1].dynamicCast<wrapper_type>();
+                auto indices_wrapper = inputs[1].dynamicCast<GetCUDABackendWrapperType<T_INDEX>>();
                 auto input_indices = indices_wrapper->getView();
 
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output_data = output_wrapper->getSpan();
 
-                kernels::max_unpooling<T>(stream, output_data, input_data, input_indices, window_size, strides, padding_left);
+                kernels::max_unpooling<T, T_INDEX>(stream, output_data, input_data, input_indices, window_size, strides, padding_left);
             }
         }
 
