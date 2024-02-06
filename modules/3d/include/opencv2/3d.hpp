@@ -2785,6 +2785,7 @@ CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, In
 *
 * Currently, the following file formats are supported:
 * -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file) (ONLY TRIANGULATED FACES)
+* -  [Polygon File Format *.ply](https://en.wikipedia.org/wiki/PLY_(file_format))
 * @param filename Name of the file.
 * @param vertices (vector of Point3f) vertex coordinates of a mesh
 * @param normals (vector of Point3f) vertex normals of a mesh
