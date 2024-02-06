@@ -180,7 +180,8 @@ TEST_P(PlyTest, LoadSaveMesh)
 
 
 INSTANTIATE_TEST_CASE_P(PointCloud, PlyTest,
-    ::testing::Values("pointcloudio/orig.ply", "viz/dragon.ply", "rendering/spot.ply"));
+    ::testing::Values("pointcloudio/orig.ply", "pointcloudio/orig_ascii_fidx.ply", "pointcloudio/orig_bin_fidx.ply",
+                      "pointcloudio/orig_ascii_vidx.ply", "pointcloudio/orig_bin.ply", "viz/dragon.ply"));
 
 TEST(PointCloud, NonexistentFile)
 {
