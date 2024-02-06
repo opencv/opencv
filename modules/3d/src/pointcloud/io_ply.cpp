@@ -26,6 +26,7 @@ void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     }
 }
 
+
 bool PlyDecoder::parseHeader(std::ifstream &file)
 {
     std::string s;
@@ -60,6 +61,18 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
         return false;
     }
 
+    const std::map<std::string, int> dataTypes =
+    {
+        { "char",   CV_8S  }, { "int8",    CV_8S  },
+        { "uchar",  CV_8U  }, { "uint8",   CV_8U  },
+        { "short",  CV_16S }, { "int16",   CV_16S },
+        { "ushort", CV_16U }, { "uint16",  CV_16U },
+        { "int",    CV_32S }, { "int32",   CV_32S },
+        { "uint",   CV_32U }, { "uint32",  CV_32U },
+        { "float",  CV_32F }, { "float32", CV_32F },
+        { "double", CV_64F }, { "float64", CV_64F },
+    };
+
     enum ReadElement
     {
         READ_OTHER  = 0,
@@ -67,6 +80,8 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
         READ_FACE   = 2
     };
     ReadElement elemRead = READ_OTHER;
+    m_vertexDescription = ElementDescription();
+    m_faceDescription = ElementDescription();
     while (std::getline(file, s))
     {
         if (startsWith(s, "element"))
@@ -83,7 +98,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                     return false;
                 }
                 std::istringstream iss(splitArrElem[2]);
-                iss >> m_vertexCount;
+                iss >> m_vertexDescription.amount;
             }
             else if (elemName == "face")
             {
@@ -95,7 +110,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                     return false;
                 }
                 std::istringstream iss(splitArrElem[2]);
-                iss >> m_faceCount;
+                iss >> m_faceDescription.amount;
             }
             else
             {
@@ -105,91 +120,169 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
         }
         if (startsWith(s, "property"))
         {
-            if (elemRead == READ_VERTEX)
+            Property property;
+            std::string elName = (elemRead == READ_VERTEX) ? "Vertex" : "Face";
+            std::vector<std::string> splitArrElem = split(s, ' ');
+
+            if (splitArrElem.size() < 3)
             {
-                auto splitArrElem = split(s, ' ');
-                if (splitArrElem.size() < 3)
-                {
-                    CV_LOG_ERROR(NULL, "Vertex property has " << splitArrElem.size()
-                                 << " words instead of at least 3");
-                    return false;
-                }
-                std::string propType = splitArrElem[1];
-                std::string propName = splitArrElem[2];
-                if (propName == "x" || propName == "y" || propName == "z")
-                {
-                    if (propType != "float")
-                    {
-                        CV_LOG_ERROR(NULL, "Provided property '" << propName << "' with format '" << propType
-                                     << "' is not supported");
-                        return false;
-                    }
-                }
-                if (propName == "red" || propName == "green" || propName == "blue")
-                {
-                    if (propType != "uchar")
-                    {
-                        CV_LOG_ERROR(NULL, "Provided property '" << propName << "' with format '" << propType
-                                     << "' is not supported");
-                        return false;
-                    }
-                    m_hasColour = true;
-                }
-                if (propName == "nx")
-                {
-                    if (propType != "float")
-                    {
-                        CV_LOG_ERROR(NULL, "Provided property '" << propName << "' with format '" << propType
-                                     << "' is not supported");
-                        return false;
-                    }
-                    m_hasNormal = true;
-                }
-                //TODO: skip unknown data types
+                CV_LOG_ERROR(NULL, elName << " property has " << splitArrElem.size()
+                             << " words instead of at least 3");
+                return false;
             }
-            else if (elemRead == READ_FACE)
+            std::string propType = splitArrElem[1];
+            if (propType == "list")
             {
-                std::vector<std::string> splitArrElem = split(s, ' ');
+                property.isList = true;
                 if (splitArrElem.size() < 5)
                 {
-                    CV_LOG_ERROR(NULL, "Face property has " << splitArrElem.size()
+                    CV_LOG_ERROR(NULL, elName << " property has " << splitArrElem.size()
                                  << " words instead of at least 5");
                     return false;
                 }
-                std::string propName = splitArrElem[1];
-                if (propName != "list")
+                std::string amtTypeString = splitArrElem[2];
+                if (dataTypes.count(amtTypeString) <= 0)
                 {
-                    CV_LOG_ERROR(NULL, "Face property is " << propName
-                                 << " instead of \"list\"");
+                    CV_LOG_ERROR(NULL, "Property type " << amtTypeString
+                                 << " is not supported");
                     return false;
                 }
-                std::string amtTypeString = splitArrElem[2];
-                if (amtTypeString != "uchar")
+                else
                 {
-                    CV_LOG_ERROR(NULL, "Face property is " << amtTypeString
-                                 << " instead of \"uchar\"");
-                    return false;
+                    property.counterType = dataTypes.at(amtTypeString);
                 }
                 std::string idxTypeString = splitArrElem[3];
-                if (idxTypeString != "int" && idxTypeString != "uint")
+                if (dataTypes.count(idxTypeString) <= 0)
                 {
-                    CV_LOG_ERROR(NULL, "Face property is " << idxTypeString
-                                 << " instead of \"int\" or \"uint\"");
+                    CV_LOG_ERROR(NULL, "Property type " << idxTypeString
+                                 << " is not supported");
                     return false;
                 }
-                std::string propTypeName = splitArrElem[4];
-                if (propTypeName != "vertex_indices" && propTypeName != "vertex_index")
+                else
                 {
-                    CV_LOG_ERROR(NULL, "Face property is " << propTypeName
-                                 << " instead of \"vertex_index\" or \"vertex_indices\"");
-                    return false;
+                    property.valType = dataTypes.at(idxTypeString);
                 }
+
+                property.name = splitArrElem[4];
             }
+            else
+            {
+                property.isList = false;
+                if (dataTypes.count(propType) <= 0)
+                {
+                    CV_LOG_ERROR(NULL, "Property type " << propType
+                                 << " is not supported");
+                    return false;
+                }
+                else
+                {
+                    property.valType = dataTypes.at(propType);
+                }
+                property.name = splitArrElem[2];
+            }
+
+            if (elemRead == READ_VERTEX)
+            {
+                m_vertexDescription.properties.push_back(property);
+            }
+            else if (elemRead == READ_FACE)
+            {
+                m_faceDescription.properties.push_back(property);
+            }
+
             continue;
         }
         if (startsWith(s, "end_header"))
             break;
     }
+
+    m_vertexCount = m_vertexDescription.amount;
+    std::map<std::string, int> amtProps;
+    for (const auto& p : m_vertexDescription.properties)
+    {
+        bool known = false;
+        if (p.name ==  "x" || p.name ==  "y" || p.name ==  "z")
+        {
+            known = true;
+            if (p.valType != CV_32F)
+            {
+                CV_LOG_ERROR(NULL, "Vertex property " << p.name
+                                                      << " should be float");
+                return false;
+            }
+        }
+        if (p.name == "nx" || p.name == "ny" || p.name == "nz")
+        {
+            known = true;
+            if (p.valType != CV_32F)
+            {
+                CV_LOG_ERROR(NULL, "Vertex property " << p.name
+                                                      << " should be float");
+                return false;
+            }
+            m_hasNormal = true;
+        }
+        if (p.name ==  "red" || p.name ==  "green" || p.name ==  "blue")
+        {
+            known = true;
+            if (p.valType != CV_8U)
+            {
+                CV_LOG_ERROR(NULL, "Vertex property " << p.name
+                                                      << " should be uchar");
+                return false;
+            }
+            m_hasColour = true;
+        }
+        if (p.isList)
+        {
+            CV_LOG_ERROR(NULL, "List properties for vertices are not supported");
+            return false;
+        }
+        if (known)
+        {
+            amtProps[p.name]++;
+        }
+    }
+
+    // check if we have no duplicates
+    for (const auto& a : amtProps)
+    {
+        if (a.second > 1)
+        {
+            CV_LOG_ERROR(NULL, "Vertex property " << a.first << " is duplicated");
+            return false;
+        }
+    }
+    for (const auto& c : {"x", "y", "z"})
+    {
+        if (amtProps.count(c) <= 0)
+        {
+            CV_LOG_ERROR(NULL, "Vertex property " << c << " is not presented in the file");
+            return false;
+        }
+    }
+
+    m_faceCount = m_faceDescription.amount;
+    int amtLists = 0;
+    for (const auto& p : m_faceDescription.properties)
+    {
+        if (p.isList)
+        {
+            amtLists++;
+            if (!(p.counterType == CV_8U && (p.valType == CV_32S || p.valType == CV_32U)))
+            {
+                CV_LOG_ERROR(NULL, "List property " << p.name
+                             << " should have type uint8 for counter and uint32 for values");
+                return false;
+            }
+        }
+    }
+    if (amtLists > 1)
+    {
+        CV_LOG_ERROR(NULL, "Only 1 list property is supported per face");
+        return false;
+    }
+
     return true;
 }
 
@@ -229,38 +322,114 @@ uchar readNext<uchar>(std::ifstream &file, DataFormat format)
     {
         file.read((char *)&val, sizeof(uchar));
     }
-    return (uchar)val;
+    return (uchar)(val & 0xff);
 }
 
 void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb,
                            std::vector<std::vector<int32_t>> &indices)
 {
     points.reserve(m_vertexCount);
+    if (m_hasColour)
+    {
+        rgb.reserve(m_vertexCount);
+    }
     if (m_hasNormal)
     {
         normals.reserve(m_vertexCount);
     }
+
+    // to avoid string matching at file loading
+    size_t ivx = -1, ivy = -1, ivz = -1, inx = -1, iny = -1, inz = -1;
+    size_t ir = -1, ig = -1, ib = -1;
+    for (size_t j = 0; j < m_vertexDescription.properties.size(); j++)
+    {
+        const auto& p = m_vertexDescription.properties[j];
+        ivx = (p.name == "x") ? j : ivx;
+        ivy = (p.name == "y") ? j : ivy;
+        ivz = (p.name == "z") ? j : ivz;
+        inx = (p.name == "nx") ? j : inx;
+        iny = (p.name == "ny") ? j : iny;
+        inz = (p.name == "nz") ? j : inz;
+        ir = (p.name == "red"  ) ? j : ir;
+        ig = (p.name == "green") ? j : ig;
+        ib = (p.name == "blue" ) ? j : ib;
+    }
+
     for (size_t i = 0; i < m_vertexCount; i++)
     {
-        Point3f vertex;
-        vertex.x = readNext<float>(file, m_inputDataFormat);
-        vertex.y = readNext<float>(file, m_inputDataFormat);
-        vertex.z = readNext<float>(file, m_inputDataFormat);
+        Point3f vertex, normal;
+        Point3_<uchar> color;
+
+        for (size_t j = 0; j < m_vertexDescription.properties.size(); j++)
+        {
+            const auto& p = m_vertexDescription.properties[j];
+            uint ival = 0; float fval = 0;
+            // here signedness is not important
+            switch (p.valType)
+            {
+            case CV_8U: case CV_8S:
+                ival = readNext<uchar>(file, m_inputDataFormat);
+                break;
+            case CV_16U: case CV_16S:
+                ival = readNext<ushort>(file, m_inputDataFormat);
+                break;
+            case CV_32S: case CV_32U:
+                ival = readNext<uint>(file, m_inputDataFormat);
+                break;
+            case CV_32F:
+                fval = readNext<float>(file, m_inputDataFormat);
+                break;
+            case CV_64F:
+                fval = (float)readNext<double>(file, m_inputDataFormat);
+                break;
+            default:
+                break;
+            }
+            if (j == ivx)
+            {
+                vertex.x = fval;
+            }
+            if (j == ivy)
+            {
+                vertex.y = fval;
+            }
+            if (j == ivz)
+            {
+                vertex.z = fval;
+            }
+            if (j == inx)
+            {
+                normal.x = fval;
+            }
+            if (j == iny)
+            {
+                normal.y = fval;
+            }
+            if (j == inz)
+            {
+                normal.z = fval;
+            }
+            if (j == ir)
+            {
+                color.x = (uchar)ival;
+            }
+            if (j == ig)
+            {
+                color.y = (uchar)ival;
+            }
+            if (j == ib)
+            {
+                color.z = (uchar)ival;
+            }
+        }
+
         points.push_back(vertex);
         if (m_hasColour)
         {
-            Point3_<uchar> colour;
-            colour.x = readNext<int>(file, m_inputDataFormat) & 0xff;
-            colour.y = readNext<int>(file, m_inputDataFormat) & 0xff;
-            colour.z = readNext<int>(file, m_inputDataFormat) & 0xff;
-            rgb.push_back(colour);
+            rgb.push_back(color);
         }
         if (m_hasNormal)
         {
-            Point3f normal;
-            normal.x = readNext<float>(file, m_inputDataFormat);
-            normal.y = readNext<float>(file, m_inputDataFormat);
-            normal.z = readNext<float>(file, m_inputDataFormat);
             normals.push_back(normal);
         }
     }
@@ -268,21 +437,51 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
     indices.reserve(m_faceCount);
     for (size_t i = 0; i < m_faceCount; i++)
     {
-        // PLY can have faces with >3 vertices in TRIANGLE_FAN format
-        // in this case we load them as separate triangles
-        size_t nVerts = readNext<uchar>(file, m_inputDataFormat);
-        if (nVerts < 3)
+        for (const auto& p : m_faceDescription.properties)
         {
-            CV_LOG_ERROR(NULL, "Face should have at least 3 vertices but has " << nVerts);
-            return;
-        }
-        int vert1 = readNext<int>(file, m_inputDataFormat);
-        int vert2 = readNext<int>(file, m_inputDataFormat);
-        for (size_t j = 2; j < nVerts; j++)
-        {
-            int vert3 = readNext<int>(file, m_inputDataFormat);
-            indices.push_back({vert1, vert2, vert3});
-            vert2 = vert3;
+            if (p.isList)
+            {
+                size_t nVerts = readNext<uchar>(file, m_inputDataFormat);
+                if (nVerts < 3)
+                {
+                    CV_LOG_ERROR(NULL, "Face should have at least 3 vertices but has " << nVerts);
+                    return;
+                }
+                // PLY can have faces with >3 vertices in TRIANGLE_FAN format
+                // in this case we load them as separate triangles
+                int vert1 = readNext<int>(file, m_inputDataFormat);
+                int vert2 = readNext<int>(file, m_inputDataFormat);
+                for (size_t j = 2; j < nVerts; j++)
+                {
+                    int vert3 = readNext<int>(file, m_inputDataFormat);
+                    indices.push_back({vert1, vert2, vert3});
+                    vert2 = vert3;
+                }
+            }
+            else
+            {
+                // read and discard
+                switch (p.valType)
+                {
+                case CV_8U: case CV_8S:
+                    readNext<uchar>(file, m_inputDataFormat);
+                    break;
+                case CV_16U: case CV_16S:
+                    readNext<ushort>(file, m_inputDataFormat);
+                    break;
+                case CV_32S: case CV_32U:
+                    readNext<uint>(file, m_inputDataFormat);
+                    break;
+                case CV_32F:
+                    readNext<float>(file, m_inputDataFormat);
+                    break;
+                case CV_64F:
+                    readNext<double>(file, m_inputDataFormat);
+                    break;
+                default:
+                    break;
+                }
+            }
         }
     }
 }

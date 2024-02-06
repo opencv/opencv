@@ -18,6 +18,20 @@ enum class DataFormat
     BinaryBigEndian
 };
 
+struct Property
+{
+    bool isList;
+    int counterType;
+    int valType;
+    std::string name;
+};
+
+struct ElementDescription
+{
+    size_t amount;
+    std::vector<Property> properties;
+};
+
 class PlyDecoder CV_FINAL : public BasePointCloudDecoder
 {
 public:
@@ -33,6 +47,8 @@ protected:
     size_t m_faceCount{0};
     bool m_hasColour{false};
     bool m_hasNormal{false};
+    ElementDescription m_vertexDescription;
+    ElementDescription m_faceDescription;
 };
 
 class PlyEncoder CV_FINAL : public BasePointCloudEncoder
