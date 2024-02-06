@@ -331,7 +331,8 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
                           int borderType, const Scalar& _borderValue, const Point& _offset )
 {
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;
+    const Point offset = _offset;//expected better performance byt bringing it as a local variable,
+                                 //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const T* S0 = _src.ptr<T>();
     T cval[CV_CN_MAX];
@@ -449,7 +450,8 @@ struct RemapVec_8u
                     const ushort* FXY, const void* _wtab, int width, const Point& _offset ) const
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
-        Point rel_offset = _offset;
+        const Point rel_offset = _offset;//expected better performance byt bringing it as a local variable,
+                                         //since used in inner loop. We'll have to check perf. test
 
         if( (cn != 1 && cn != 3 && cn != 4) || sstep >= 0x8000 )
             return 0;
@@ -683,7 +685,8 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;
+    const Point offset = _offset;//expected better performance byt bringing it as a local variable,
+                                 //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr<T>();
@@ -916,7 +919,8 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;
+    const Point offset = _offset;//expected better performance byt bringing it as a local variable,
+                                 //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr<T>();
@@ -1022,7 +1026,8 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;
+    const Point offset = _offset;//expected better performance byt bringing it as a local variable,
+                                 //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr<T>();
@@ -1395,9 +1400,10 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     static const char * const interMap[] = { "INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_LINEAR", "INTER_LANCZOS" };
     static const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                            "BORDER_REFLECT_101", "BORDER_TRANSPARENT" };
-    String buildOptions = format("-D %s -D %s -D T=%s -D ROWS_PER_WI=%d",
+    String buildOptions = format("-D %s -D %s -D T=%s -D ROWS_PER_WI=%d -D WARP_RELATIVE=%d",
                                  interMap[interpolation], borderMap[borderType],
-                                 ocl::typeToStr(type), rowsPerWI);
+                                 ocl::typeToStr(type), rowsPerWI,
+                                 hasRelativeFlag ? 1 : 0);
 
     if (interpolation != INTER_NEAREST)
     {
@@ -1426,9 +1432,9 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
             scalararg = ocl::KernelArg::Constant((void*)scalar.ptr(), scalar.elemSize());
 
     if (map2.empty())
-        k.args(srcarg, dstarg, map1arg, scalararg, (char)hasRelativeFlag);
+        k.args(srcarg, dstarg, map1arg, scalararg);
     else
-        k.args(srcarg, dstarg, map1arg, ocl::KernelArg::ReadOnlyNoSize(map2), scalararg, (char)hasRelativeFlag);
+        k.args(srcarg, dstarg, map1arg, ocl::KernelArg::ReadOnlyNoSize(map2), scalararg);
 
     size_t globalThreads[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalThreads, NULL, false);

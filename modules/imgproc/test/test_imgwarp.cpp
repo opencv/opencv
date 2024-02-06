@@ -1322,7 +1322,7 @@ TEST_P(Imgproc_RemapRelative, validity)
     bool useFixedPoint = get<4>(GetParam());
 
     const int nChannels = CV_MAT_CN(srcType);
-    const cv::Size size(12, 12);
+    const cv::Size size(127, 61);
     cv::Mat data64FC1(1, size.area()*nChannels, CV_64FC1);
     data64FC1.forEach<double>([&](double& pixel, const int* position) {pixel = static_cast<double>(position[1]);});
 
@@ -1373,9 +1373,9 @@ TEST_P(Imgproc_RemapRelative, validity)
 };
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapRelative, testing::Combine(
-    testing::Values(CV_8U, CV_16U, CV_32F),
+    testing::Values(CV_8U, CV_16U, CV_32F, CV_64F),
     testing::Values(1, 3, 4),
-    testing::Values((int)INTER_NEAREST, (int)INTER_LINEAR),
+    testing::Values((int)INTER_NEAREST, (int)INTER_LINEAR, (int)INTER_CUBIC, (int)INTER_LANCZOS4),
     testing::Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_WRAP, (int)BORDER_REFLECT, (int)BORDER_REFLECT_101),
     testing::Values(false, true)));
 

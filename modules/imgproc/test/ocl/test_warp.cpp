@@ -472,7 +472,7 @@ PARAM_TEST_CASE(RemapRelative, MatDepth, Channels, Interpolation, BorderType, bo
         useFixedPoint = GET_PARAM(4);
 
         const int nChannels = CV_MAT_CN(srcType);
-        const cv::Size size(8, 8);
+        const cv::Size size(127, 61);
         cv::Mat data64FC1(1, size.area()*nChannels, CV_64FC1);
         data64FC1.forEach<double>([&](double& pixel, const int* position) {pixel = static_cast<double>(position[1]);});
 
@@ -611,10 +611,12 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, RemapRelative, Combine(
-                            Values(CV_8U, CV_16U, CV_32F),
+                            Values(CV_8U, CV_16U, CV_32F, CV_64F),
                             Values(1, 3, 4),
                             Values((Interpolation)INTER_NEAREST,
-                                   (Interpolation)INTER_LINEAR),
+                                   (Interpolation)INTER_LINEAR,
+                                   (Interpolation)INTER_CUBIC,
+                                   (Interpolation)INTER_LANCZOS4),
                             Values((BorderType)BORDER_CONSTANT,
                                    (BorderType)BORDER_REPLICATE,
                                    (BorderType)BORDER_WRAP,
