@@ -153,7 +153,6 @@ set(depends ${the_module}_android_source_copy "${OPENCV_DEPHELPER}/${the_module}
 
 # build jar
 set(AAR_FILE "${OPENCV_JAVA_DIR}/build/outputs/aar/opencv-release.aar")
-ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
 add_custom_command(
     OUTPUT "${AAR_FILE}" "${OPENCV_DEPHELPER}/${the_module}_android"
     COMMAND ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} "opencv:assemble"
