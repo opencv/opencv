@@ -5,8 +5,8 @@
 #include "opencv2/core/base.hpp"
 #include <nds_intrinsic.h>
 
-#include "include/ndsrvp_core.hpp"
-#include "include/ndsrvp_imgproc.hpp"
-#include "include/ndsrvp_features2d.hpp"
+#include "include/core.hpp"
+#include "include/imgproc.hpp"
+#include "include/features2d.hpp"
 
 #endif

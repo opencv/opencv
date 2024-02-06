@@ -12,8 +12,6 @@ set(NDSRVP_SOURCE_DIR src)
 file(GLOB ndsrvp_headers RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "${NDSRVP_INCLUDE_DIR}/*.hpp")
 file(GLOB ndsrvp_sources RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "${NDSRVP_SOURCE_DIR}/*.cpp")
 
-message(STATUS "ndsrvp_headers: ${ndsrvp_headers}")
-
 add_library(ndsrvp_hal STATIC)
 target_sources(ndsrvp_hal PRIVATE ${ndsrvp_headers} ${ndsrvp_sources})
 
