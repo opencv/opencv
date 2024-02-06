@@ -155,26 +155,27 @@ TEST_P(PlyTest, LoadSaveMesh)
 {
     std::string fname = GetParam();
 
-    std::vector<cv::Point3f> points;
-    std::vector<cv::Point3f> normals;
-    std::vector<std::vector<int32_t>> indices;
-
-    auto folder = cvtest::TS::ptr()->get_data_path();
-    std::string new_path = tempfile("new_mesh.ply");
-
-    cv::loadMesh(folder + fname, points, normals, indices);
-    cv::saveMesh(new_path, points, normals, indices);
-
     std::vector<cv::Point3f> points_gold;
     std::vector<cv::Point3f> normals_gold;
     std::vector<std::vector<int32_t>> indices_gold;
 
-    cv::loadMesh(new_path, points_gold, normals_gold, indices_gold);
+    auto folder = cvtest::TS::ptr()->get_data_path();
+    std::string new_path = tempfile("new_mesh.ply");
+
+    cv::loadMesh(folder + fname, points_gold, normals_gold, indices_gold);
+    EXPECT_FALSE(points_gold.empty());
+    EXPECT_FALSE(indices_gold.empty());
+
+    cv::saveMesh(new_path, points_gold, normals_gold, indices_gold);
+
+    std::vector<cv::Point3f> points;
+    std::vector<cv::Point3f> normals;
+    std::vector<std::vector<int32_t>> indices;
+    cv::loadMesh(new_path, points, normals, indices);
 
     EXPECT_EQ(normals_gold, normals);
     EXPECT_EQ(points_gold, points);
     EXPECT_EQ(indices_gold, indices);
-    EXPECT_TRUE(!indices.empty());
     std::remove(new_path.c_str());
 }
 
