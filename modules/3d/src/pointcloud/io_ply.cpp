@@ -253,7 +253,8 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             return false;
         }
     }
-    for (const auto& c : {"x", "y", "z"})
+    const std::array<std::string, 3> vertKeys = {"x", "y", "z"};
+    for (const std::string& c : vertKeys)
     {
         if (amtProps.count(c) <= 0)
         {
@@ -313,16 +314,16 @@ T readNext(std::ifstream &file, DataFormat format)
 template <>
 uchar readNext<uchar>(std::ifstream &file, DataFormat format)
 {
-    int val {0};
     if (format == DataFormat::ASCII)
     {
+        int val;
         file >> val;
+        return (uchar)val;
     }
-    else
-    {
-        file.read((char *)&val, sizeof(uchar));
-    }
-    return (uchar)(val & 0xff);
+    uchar val;
+    file.read((char *)&val, sizeof(uchar));
+    // 1 byte does not have to be endian-swapped
+    return val;
 }
 
 void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb,
@@ -339,8 +340,8 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
     }
 
     // to avoid string matching at file loading
-    size_t ivx = -1, ivy = -1, ivz = -1, inx = -1, iny = -1, inz = -1;
-    size_t ir = -1, ig = -1, ib = -1;
+    size_t ivx = (size_t)-1, ivy = (size_t)-1, ivz = (size_t)-1, inx = (size_t)-1, iny = (size_t)-1, inz = (size_t)-1;
+    size_t ir = (size_t)-1, ig = (size_t)-1, ib = (size_t)-1;
     for (size_t j = 0; j < m_vertexDescription.properties.size(); j++)
     {
         const auto& p = m_vertexDescription.properties[j];
