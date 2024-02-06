@@ -7,41 +7,41 @@ on:
 
 jobs:
   Ubuntu2004-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64.yaml@as/force_test_data_requirement_4.x
 
   Ubuntu2004-ARM64-Debug:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64-Debug.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64-Debug.yaml@as/force_test_data_requirement_4.x
 
   Ubuntu2004-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20.yaml@as/force_test_data_requirement_4.x
 
   Ubuntu2004-x64-OpenVINO:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-OpenVINO.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-OpenVINO.yaml@as/force_test_data_requirement_4.x
 
   Ubuntu2204-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U22.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U22.yaml@as/force_test_data_requirement_4.x
 
   Ubuntu2004-x64-CUDA:
     if: "${{ contains(github.event.pull_request.labels.*.name, 'category: dnn') }} || ${{ contains(github.event.pull_request.labels.*.name, 'category: dnn (onnx)') }}"
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-Cuda.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-Cuda.yaml@as/force_test_data_requirement_4.x
 
   Windows10-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10.yaml@as/force_test_data_requirement_4.x
 
   Windows10-x64-Vulkan:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-Vulkan.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-Vulkan.yaml@as/force_test_data_requirement_4.x
 
   macOS-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64.yaml@as/force_test_data_requirement_4.x
 
   macOS-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-x86_64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-x86_64.yaml@as/force_test_data_requirement_4.x
 
   macOS-ARM64-Vulkan:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64-Vulkan.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64-Vulkan.yaml@as/force_test_data_requirement_4.x
 
   iOS:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@as/force_test_data_requirement_4.x
 
   Android-SDK:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-4.x-Android-SDK.yaml@main
@@ -50,10 +50,10 @@ jobs:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-Android-Test.yaml@main
 
   TIM-VX:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@as/force_test_data_requirement_4.x
 
   docs:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-docs.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-docs.yaml@as/force_test_data_requirement_4.x
 
   Linux-RISC-V-Clang:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-RISCV.yaml@main
