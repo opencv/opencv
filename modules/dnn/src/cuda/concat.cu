@@ -152,6 +152,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void concat<__half>(const Stream&, TensorSpan<__half>, std::size_t, TensorView<__half>, std::size_t);
 #endif
     template void concat<float>(const Stream&, TensorSpan<float>, std::size_t, TensorView<float>,  std::size_t);
+    template void concat<int32_t>(const Stream&, TensorSpan<int32_t>, std::size_t, TensorView<int32_t>,  std::size_t);
+    template void concat<int64_t>(const Stream&, TensorSpan<int64_t>, std::size_t, TensorView<int64_t>,  std::size_t);
 
     template <class T, std::size_t Rank> static
     void launch_concat_with_offsets(
@@ -271,7 +273,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         concat_with_offsets_dispatcher<T, 1, CSL_MAX_TENSOR_RANK>(rank, stream, output, outStride, offsets, input, inStride);
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void concat_with_offsets(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
+#endif
     template void concat_with_offsets(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
+    template void concat_with_offsets(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, std::vector<std::size_t>);
+    template void concat_with_offsets(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, std::vector<std::size_t>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

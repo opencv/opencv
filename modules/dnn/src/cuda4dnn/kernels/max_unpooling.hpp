@@ -13,17 +13,17 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
-    template <class T>
+    template <class T, class T_INDEX>
     void max_pooling_with_indices(
         const csl::Stream& stream,
-        csl::TensorSpan<T> output, csl::TensorSpan<T> indices, csl::TensorView<T> input,
+        csl::TensorSpan<T> output, csl::TensorSpan<T_INDEX> indices, csl::TensorView<T> input,
         const std::vector<std::size_t>& kernel_size, const std::vector<std::size_t>& strides,
         const std::vector<std::size_t>& padding_left);
 
-    template <class T>
+    template <class T, class T_INDEX>
     void max_unpooling(
         const csl::Stream& stream,
-        csl::TensorSpan<T> output, csl::TensorView<T> input, csl::TensorView<T> indices,
+        csl::TensorSpan<T> output, csl::TensorView<T> input, csl::TensorView<T_INDEX> indices,
         const std::vector<std::size_t>& window_size, const std::vector<std::size_t>& strides,
         const std::vector<std::size_t>& padding_left);
 

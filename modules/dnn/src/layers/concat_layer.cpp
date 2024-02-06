@@ -123,7 +123,7 @@ public:
     {
         CV_Assert(inputs.size());
         for (int i = 1; i < inputs.size(); i++)
-            CV_Assert(inputs[i] == inputs[0]);
+            CV_CheckTypeEQ(inputs[i], inputs[0], "All input types should be equal");
         outputs.assign(1, inputs[0]);
     }
 
@@ -338,7 +338,7 @@ public:
 
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto concat_axis = normalize_axis(axis, input_wrapper->getRank());
-        return make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(context->stream), concat_axis, padding);
+        return make_cuda_node_with_type<cuda4dnn::ConcatOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), concat_axis, padding);
     }
 #endif
 

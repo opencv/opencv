@@ -132,8 +132,8 @@ public:
                     if (!(0 <= index && index < outPlaneTotal))
                     {
                         CV_LOG_ERROR(NULL, cv::format(
-                            "i_n=%d\ni_c=%d\ni_wh=%d\nindex=%d\nmaxval=%lf\noutPlaneTotal=%d\n",
-                            i_n, i_c, i_wh, index, inptr[i_wh], outPlaneTotal));
+                            "i_n=%d\ni_c=%d\ni_wh=%d\nindex=%d\noutPlaneTotal=%d\n",
+                            i_n, i_c, i_wh, index, outPlaneTotal));
                         CV_LOG_ERROR(NULL, "input.size=" << input.size);
                         CV_LOG_ERROR(NULL, "indices.size=" << indices.size);
                         CV_LOG_ERROR(NULL, "outBlob=" << outBlob.size);
@@ -171,7 +171,16 @@ public:
         pads_begin[0] = poolPad.height;
         pads_begin[1] = poolPad.width;
 
-        return make_cuda_node<cuda4dnn::MaxUnpoolingOp>(preferableTarget, std::move(context->stream), config);
+        int indicesType = inputs[1]->getHostMatDepth();
+        CV_CheckType(indicesType, indicesType == CV_32S || indicesType == CV_64S, "Unsupported indices type");
+
+        if (indicesType == CV_32S)
+            return make_cuda_node_with_indices<cuda4dnn::MaxUnpoolingOp, int32_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
+        else if (indicesType == CV_64S)
+            return make_cuda_node_with_indices<cuda4dnn::MaxUnpoolingOp, int64_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
+
+        CV_Assert(false);
+        return Ptr<BackendNode>();
     }
 #endif
 

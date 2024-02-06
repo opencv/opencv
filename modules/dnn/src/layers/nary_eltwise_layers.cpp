@@ -357,12 +357,15 @@ public:
     {
         CV_Assert(inputs.size());
         for (auto input : inputs)
-            if (preferableTarget == DNN_TARGET_OPENCL_FP16
-                || preferableTarget == DNN_TARGET_CPU_FP16
-                || preferableTarget == DNN_TARGET_CUDA_FP16)
-                CV_Assert(input == CV_16S || input == CV_8S || input == CV_32S);
+        {
+            CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
+            if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
+                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S, "Unsupported type");
+            else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+                CV_CheckType(input, input == CV_16S || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
             else
-                CV_Assert(input == CV_32F || input == CV_8S || input == CV_32S);
+                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
+        }
 
         outputs.assign(requiredOutputs, inputs[0]);
     }
@@ -792,10 +795,16 @@ public:
                 helper.reInit(sizeof(uint8_t));
                 opDispatch<uint8_t>(std::forward<Args>(args)...);
                 break;
+            case CV_8S:
+                opDispatch<int8_t>(std::forward<Args>(args)...);
+                break;
             case CV_32S:
                 // TODO: integrate with type inference
                 helper.reInit(sizeof(int32_t));
                 opDispatch<int32_t>(std::forward<Args>(args)...);
+                break;
+            case CV_64S:
+                opDispatch<int64_t>(std::forward<Args>(args)...);
                 break;
             case CV_32F:
                 CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::AND &&
@@ -848,7 +857,7 @@ public:
             default: return Ptr<BackendNode>(); // return empty cuda_node if the EltwiseOpType is unsupported type.
         };
 
-        return make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(context->stream), op_, std::vector<float>());
+        return make_cuda_node_with_type<cuda4dnn::EltwiseOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), op_, std::vector<float>());
     }
 #endif
 
