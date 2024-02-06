@@ -156,7 +156,8 @@ struct ChessBoardQuad
     float edge_len; // quad edge len, in pix^2
     // neighbors and corners are synced, i.e., neighbor 0 shares corner 0
     ChessBoardCorner *corners[4]; // Coordinates of quad corners
-    struct ChessBoardQuad *neighbors[4]; // Pointers of quad neighbors
+    struct ChessBoardQuad *neighbors[4]; // Pointers of quad neighbors. M.b. sparse.
+    // Each neighbors element corresponds to quad corner, but not just sequential index.
 
     ChessBoardQuad(int group_idx_ = -1) :
         count(0),
@@ -1701,12 +1702,12 @@ void ChessBoardDetector::findQuadNeighbors()
                     continue;
 
                 // Check that each corner is a neighbor of different quads
-                for(j = 0; j < closest_quad->count; j++ )
+                for(j = 0; j < 4; j++ )
                 {
                     if (closest_quad->neighbors[j] == &cur_quad)
                         break;
                 }
-                if (j < closest_quad->count)
+                if (j < 4)
                     continue;
 
                 // check whether the closest corner to closest_corner
