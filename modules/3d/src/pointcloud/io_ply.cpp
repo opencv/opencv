@@ -196,6 +196,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             break;
     }
 
+    bool good = true;
     m_vertexCount = m_vertexDescription.amount;
     std::map<std::string, int> amtProps;
     for (const auto& p : m_vertexDescription.properties)
@@ -208,7 +209,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             {
                 CV_LOG_ERROR(NULL, "Vertex property " << p.name
                                                       << " should be float");
-                return false;
+                good = false;
             }
         }
         if (p.name == "nx" || p.name == "ny" || p.name == "nz")
@@ -218,7 +219,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             {
                 CV_LOG_ERROR(NULL, "Vertex property " << p.name
                                                       << " should be float");
-                return false;
+                good = false;
             }
             m_hasNormal = true;
         }
@@ -229,14 +230,14 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             {
                 CV_LOG_ERROR(NULL, "Vertex property " << p.name
                                                       << " should be uchar");
-                return false;
+                good = false;
             }
             m_hasColour = true;
         }
         if (p.isList)
         {
             CV_LOG_ERROR(NULL, "List properties for vertices are not supported");
-            return false;
+            good = false;
         }
         if (known)
         {
@@ -250,7 +251,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
         if (a.second > 1)
         {
             CV_LOG_ERROR(NULL, "Vertex property " << a.first << " is duplicated");
-            return false;
+            good = false;
         }
     }
     const std::array<std::string, 3> vertKeys = {"x", "y", "z"};
@@ -259,7 +260,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
         if (amtProps.count(c) <= 0)
         {
             CV_LOG_ERROR(NULL, "Vertex property " << c << " is not presented in the file");
-            return false;
+            good = false;
         }
     }
 
@@ -274,17 +275,17 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             {
                 CV_LOG_ERROR(NULL, "List property " << p.name
                              << " should have type uint8 for counter and uint32 for values");
-                return false;
+                good = false;
             }
         }
     }
     if (amtLists > 1)
     {
         CV_LOG_ERROR(NULL, "Only 1 list property is supported per face");
-        return false;
+        good = false;
     }
 
-    return true;
+    return good;
 }
 
 template <typename T>
