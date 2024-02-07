@@ -124,7 +124,20 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
 
 void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArrayOfArrays indices)
 {
+    loadMesh(filename, vertices, normals, noArray(), indices);
+}
+
+void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays indices)
+{
+    loadMesh(filename, vertices, noArray(), noArray(), indices);
+}
+
+void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArray colors, OutputArrayOfArrays indices)
+{
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
+    CV_Assert(vertices.needed());
+    CV_Assert(indices.needed());
+
     PointCloudDecoder decoder = findDecoder(filename);
     String file_ext = getExtension(filename);
     if (!decoder) {
@@ -149,7 +162,10 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
         Mat(1, static_cast<int>(vec_normals.size()), CV_32FC3, vec_normals.data()).copyTo(normals);
     }
 
-    if (!vec_indices.empty()) {
+    if (colors.needed() && !vec_rgb.empty())
+    {
+        Mat(1, static_cast<int>(vec_rgb.size()), CV_8UC3, vec_rgb.data()).convertTo(colors, CV_32F, (1.0/255.0));
+    }
         std::vector<std::vector<int32_t>>& vec = *(std::vector<std::vector<int32_t>>*)indices.getObj();
         vec.resize(vec_indices.size());
         for (size_t i = 0; i < vec_indices.size(); ++i) {
@@ -161,11 +177,22 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
     CV_UNUSED(normals);
+    CV_UNUSED(colors);
     CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 }
 
 void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices)
+{
+    saveMesh(filename, vertices, normals, noArray(), indices);
+}
+
+void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays indices)
+{
+    saveMesh(filename, vertices, noArray(), noArray(), indices);
+}
+
+void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArray colors, InputArrayOfArrays indices)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     if (vertices.empty()) {
@@ -188,6 +215,10 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
     if (!normals.empty()){
         vec_normals = normals.getMat();
     }
+    if (!colors.empty())
+    {
+        colors.getMat().convertTo(vec_rgb, CV_8U, 255.0);
+    }
 
     std::vector<Mat> mat_indices;
     indices.getMatVector(mat_indices);
@@ -202,6 +233,7 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
+    CV_UNUSED(colors);
     CV_UNUSED(normals);
     CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
