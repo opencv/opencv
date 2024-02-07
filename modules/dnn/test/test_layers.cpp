@@ -618,6 +618,101 @@ TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
     normAssert(h_t_reference, outputs[0]);
 }
 
+TEST(Layer_MAX_1d_Test_Accuracy_, Accuracy) {
+
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = "addLayer";
+    lp.set("operation", "max");
+    Ptr<EltwiseLayer> layer = EltwiseLayer::create(lp);
+
+    cv::Mat input1 = cv::Mat::ones(1, 1, CV_32F);
+    cv::Mat input2 = cv::Mat::ones(1, 1, CV_32F) + 1;
+    cv::Mat output_ref = input2;
+
+    std::vector<Mat> inputs{input1, input2};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    normAssert(output_ref, outputs[0]);
+}
+
+TEST(Layer_MIN_1d_Test_Accuracy_, Accuracy) {
+
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = "addLayer";
+    lp.set("operation", "min");
+    Ptr<EltwiseLayer> layer = EltwiseLayer::create(lp);
+
+    cv::Mat input1 = cv::Mat::ones(1, 1, CV_32F);
+    cv::Mat input2 = cv::Mat::ones(1, 1, CV_32F) * 2;
+    cv::Mat output_ref = input1;
+
+    std::vector<Mat> inputs{input1, input2};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    normAssert(output_ref, outputs[0]);
+}
+
+TEST(Layer_PROD_1d_Test_Accuracy_, Accuracy) {
+
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = "addLayer";
+    lp.set("operation", "prod");
+    Ptr<EltwiseLayer> layer = EltwiseLayer::create(lp);
+
+    cv::Mat input1 = cv::Mat::ones(1, 1, CV_32F);
+    cv::Mat input2 = cv::Mat::ones(1, 1, CV_32F) * 2;
+    cv::Mat output_ref = input1 * input2;
+
+    std::vector<Mat> inputs{input1, input2};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    normAssert(output_ref, outputs[0]);
+}
+
+TEST(Layer_DIV_1d_Test_Accuracy_, Accuracy) {
+
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = "addLayer";
+    lp.set("operation", "div");
+    Ptr<EltwiseLayer> layer = EltwiseLayer::create(lp);
+
+    cv::Mat input1 = cv::Mat::ones(1, 1, CV_32F);
+    cv::Mat input2 = cv::Mat::ones(1, 1, CV_32F) * 2;
+    cv::Mat output_ref = input1 / input2;
+
+    std::vector<Mat> inputs{input1, input2};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    normAssert(output_ref, outputs[0]);
+}
+
+TEST(Layer_ADD_1d_Test_Accuracy_, Accuracy) {
+
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = "addLayer";
+    lp.set("operation", "sum");
+    Ptr<EltwiseLayer> layer = EltwiseLayer::create(lp);
+
+    cv::Mat input1 = cv::Mat::ones(1, 1, CV_32F);
+    cv::Mat input2 = cv::Mat::ones(1, 1, CV_32F) * 2;
+    cv::Mat output_ref = input1 + input2;
+
+    std::vector<Mat> inputs{input1, input2};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    normAssert(output_ref, outputs[0]);
+}
+
 TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)
 {
     Mat Wx = blobFromNPY(_tf("gru.W.npy"));
