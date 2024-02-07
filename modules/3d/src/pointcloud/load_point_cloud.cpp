@@ -154,11 +154,13 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
 
     decoder->readData(vec_vertices, vec_normals, vec_rgb, vec_indices);
 
-    if (!vec_vertices.empty()) {
+    if (!vec_vertices.empty())
+    {
         Mat(1, static_cast<int>(vec_vertices.size()), CV_32FC3, vec_vertices.data()).copyTo(vertices);
     }
 
-    if (!vec_normals.empty()) {
+    if (normals.needed() && !vec_normals.empty())
+    {
         Mat(1, static_cast<int>(vec_normals.size()), CV_32FC3, vec_normals.data()).copyTo(normals);
     }
 
@@ -166,6 +168,9 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
     {
         Mat(1, static_cast<int>(vec_rgb.size()), CV_8UC3, vec_rgb.data()).convertTo(colors, CV_32F, (1.0/255.0));
     }
+
+    if (!vec_indices.empty())
+    {
         std::vector<std::vector<int32_t>>& vec = *(std::vector<std::vector<int32_t>>*)indices.getObj();
         vec.resize(vec_indices.size());
         for (size_t i = 0; i < vec_indices.size(); ++i) {
@@ -178,6 +183,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
     CV_UNUSED(vertices);
     CV_UNUSED(normals);
     CV_UNUSED(colors);
+    CV_UNUSED(indices);
     CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 }
@@ -212,9 +218,11 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
     std::vector<Point3f> vec_vertices(vertices.getMat());
     std::vector<Point3f> vec_normals;
     std::vector<Point3_<uchar>> vec_rgb;
-    if (!normals.empty()){
+    if (!normals.empty())
+    {
         vec_normals = normals.getMat();
     }
+
     if (!colors.empty())
     {
         colors.getMat().convertTo(vec_rgb, CV_8U, 255.0);
@@ -224,7 +232,8 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
     indices.getMatVector(mat_indices);
     std::vector<std::vector<int32_t>> vec_indices(mat_indices.size());
 
-    for (size_t i = 0; i < mat_indices.size(); ++i) {
+    for (size_t i = 0; i < mat_indices.size(); ++i)
+    {
         mat_indices[i].copyTo(vec_indices[i]);
     }
 
@@ -235,6 +244,7 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
     CV_UNUSED(vertices);
     CV_UNUSED(colors);
     CV_UNUSED(normals);
+    CV_UNUSED(indices);
     CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 

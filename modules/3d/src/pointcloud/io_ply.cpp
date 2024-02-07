@@ -506,7 +506,8 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
     file << "property float y" << std::endl;
     file << "property float z" << std::endl;
 
-    if(hasColor) {
+    if(hasColor)
+    {
         file << "property uchar red" << std::endl;
         file << "property uchar green" << std::endl;
         file << "property uchar blue" << std::endl;
@@ -530,10 +531,12 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
     for (size_t i = 0; i < points.size(); i++)
     {
         file << std::setprecision(8) << points[i].x << " " << points[i].y << " " << points[i].z;
-        if (hasColor) {
+        if (hasColor)
+        {
             file << " " << static_cast<int>(rgb[i].x) << " " << static_cast<int>(rgb[i].y) << " " << static_cast<int>(rgb[i].z);
         }
-        if (hasNormals) {
+        if (hasNormals)
+        {
             file << " " << std::setprecision(8) << normals[i].x << " " << normals[i].y << " " << normals[i].z;
         }
         file << std::endl;
