@@ -141,6 +141,8 @@ if (gradle.opencv_source == 'sdk_path') {
 ")
 
 ocv_check_environment_variables(OPENCV_GRADLE_VERBOSE_OPTIONS)
+ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
+separate_arguments(OPENCV_GRADLE_VERBOSE_OPTIONS UNIX_COMMAND "${OPENCV_GRADLE_VERBOSE_OPTIONS}")
 
 macro(add_android_project target path)
   get_filename_component(__dir "${path}" NAME)
@@ -175,7 +177,6 @@ include ':${__dir}'
   if (BUILD_ANDROID_EXAMPLES)
     # build apk
     set(APK_FILE "${ANDROID_BUILD_BASE_DIR}/${__dir}/build/outputs/apk/release/${__dir}-${ANDROID_ABI}-release-unsigned.apk")
-    ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
     add_custom_command(
         OUTPUT "${APK_FILE}" "${OPENCV_DEPHELPER}/android_sample_${__dir}"
         COMMAND ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} "${__dir}:assemble"
