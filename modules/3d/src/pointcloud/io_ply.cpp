@@ -141,7 +141,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                     return false;
                 }
                 std::string amtTypeString = splitArrElem[2];
-                if (dataTypes.count(amtTypeString) <= 0)
+                if (dataTypes.count(amtTypeString) == 0)
                 {
                     CV_LOG_ERROR(NULL, "Property type " << amtTypeString
                                  << " is not supported");
@@ -152,7 +152,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                     property.counterType = dataTypes.at(amtTypeString);
                 }
                 std::string idxTypeString = splitArrElem[3];
-                if (dataTypes.count(idxTypeString) <= 0)
+                if (dataTypes.count(idxTypeString) == 0)
                 {
                     CV_LOG_ERROR(NULL, "Property type " << idxTypeString
                                  << " is not supported");
@@ -168,7 +168,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             else
             {
                 property.isList = false;
-                if (dataTypes.count(propType) <= 0)
+                if (dataTypes.count(propType) == 0)
                 {
                     CV_LOG_ERROR(NULL, "Property type " << propType
                                  << " is not supported");
@@ -257,7 +257,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
     const std::array<std::string, 3> vertKeys = {"x", "y", "z"};
     for (const std::string& c : vertKeys)
     {
-        if (amtProps.count(c) <= 0)
+        if (amtProps.count(c) == 0)
         {
             CV_LOG_ERROR(NULL, "Vertex property " << c << " is not presented in the file");
             good = false;
