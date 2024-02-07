@@ -1952,12 +1952,7 @@ void _OutputArray::move(UMat& u) const
     int k = kind();
     if (k == UMAT)
     {
-#ifdef CV_CXX11
         *(UMat*)obj = std::move(u);
-#else
-        *(UMat*)obj = u;
-        u.release();
-#endif
     }
     else if (k == MAT)
     {
@@ -1992,12 +1987,7 @@ void _OutputArray::move(Mat& m) const
     }
     else if (k == MAT)
     {
-#ifdef CV_CXX11
         *(Mat*)obj = std::move(m);
-#else
-        *(Mat*)obj = m;
-        m.release();
-#endif
     }
     else if (k == MATX)
     {

@@ -303,6 +303,11 @@ public:
                     opt_LASX::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
                 else
             #endif
+            #if CV_RVP052
+                if( 1 )
+                    opt_RVP052::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
+                else
+            #endif
                 {
                     int i = 0;
             #if CV_SIMD128

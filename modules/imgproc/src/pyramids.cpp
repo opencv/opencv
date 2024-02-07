@@ -1189,8 +1189,8 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
                                        "BORDER_REFLECT_101" };
     char cvt[2][50];
     String buildOptions = format(
-            "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
-            "-D T1=%s -D cn=%d -D kercn=%d -D fdepth=%d -D %s -D LOCAL_SIZE=%d",
+            "-D T=%s -D FT=%s -D CONVERT_TO_T=%s -D CONVERT_TO_FT=%s%s "
+            "-D T1=%s -D CN=%d -D KERCN=%d -D FDEPTH=%d -D %s -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, cn)),
             ocl::convertTypeStr(float_depth, depth, cn, cvt[0], sizeof(cvt[0])),
             ocl::convertTypeStr(depth, float_depth, cn, cvt[1], sizeof(cvt[1])),
@@ -1232,8 +1232,8 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     const int local_size = channels == 1 ? 16 : 8;
     char cvt[2][50];
     String buildOptions = format(
-            "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
-            "-D T1=%s -D cn=%d -D LOCAL_SIZE=%d",
+            "-D T=%s -D FT=%s -D CONVERT_TO_T=%s -D CONVERT_TO_FT=%s%s "
+            "-D T1=%s -D CN=%d -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, channels)),
             ocl::convertTypeStr(float_depth, depth, channels, cvt[0], sizeof(cvt[0])),
             ocl::convertTypeStr(depth, float_depth, channels, cvt[1], sizeof(cvt[1])),

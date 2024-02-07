@@ -453,13 +453,6 @@ public:
                 ret = false;
                 break;
             }
-
-            if (!use_half && bias && (outerSize > 1))
-            {
-                UMat biasOnesMat = UMat::ones(outerSize, 1, umat_blobs[0].type());
-                UMat& biases = umat_blobs[1];
-                cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
-            }
         }
 
         if (ret) return true;

@@ -95,23 +95,23 @@
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
 #define LOOP0(VAR, STMT)
-#define LOOP1(VAR, STMT) (STMT); (VAR)++;
-#define LOOP2(VAR, STMT) LOOP1(VAR, STMT); (STMT); (VAR)++;
-#define LOOP3(VAR, STMT) LOOP2(VAR, STMT); (STMT); (VAR)++;
-#define LOOP4(VAR, STMT) LOOP3(VAR, STMT); (STMT); (VAR)++;
-#define LOOP5(VAR, STMT) LOOP4(VAR, STMT); (STMT); (VAR)++;
-#define LOOP6(VAR, STMT) LOOP5(VAR, STMT); (STMT); (VAR)++;
-#define LOOP7(VAR, STMT) LOOP6(VAR, STMT); (STMT); (VAR)++;
-#define LOOP8(VAR, STMT) LOOP7(VAR, STMT); (STMT); (VAR)++;
-#define LOOP9(VAR, STMT) LOOP8(VAR, STMT); (STMT); (VAR)++;
-#define LOOP10(VAR, STMT) LOOP9(VAR, STMT); (STMT); (VAR)++;
-#define LOOP11(VAR, STMT) LOOP10(VAR, STMT); (STMT); (VAR)++;
-#define LOOP12(VAR, STMT) LOOP11(VAR, STMT); (STMT); (VAR)++;
-#define LOOP13(VAR, STMT) LOOP12(VAR, STMT); (STMT); (VAR)++;
-#define LOOP14(VAR, STMT) LOOP13(VAR, STMT); (STMT); (VAR)++;
-#define LOOP15(VAR, STMT) LOOP14(VAR, STMT); (STMT); (VAR)++;
-#define LOOP16(VAR, STMT) LOOP15(VAR, STMT); (STMT); (VAR)++;
-#define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))
+#define LOOP1(VAR, STMT) STMT; (VAR)++;
+#define LOOP2(VAR, STMT) LOOP1(VAR, STMT); STMT; (VAR)++;
+#define LOOP3(VAR, STMT) LOOP2(VAR, STMT); STMT; (VAR)++;
+#define LOOP4(VAR, STMT) LOOP3(VAR, STMT); STMT; (VAR)++;
+#define LOOP5(VAR, STMT) LOOP4(VAR, STMT); STMT; (VAR)++;
+#define LOOP6(VAR, STMT) LOOP5(VAR, STMT); STMT; (VAR)++;
+#define LOOP7(VAR, STMT) LOOP6(VAR, STMT); STMT; (VAR)++;
+#define LOOP8(VAR, STMT) LOOP7(VAR, STMT); STMT; (VAR)++;
+#define LOOP9(VAR, STMT) LOOP8(VAR, STMT); STMT; (VAR)++;
+#define LOOP10(VAR, STMT) LOOP9(VAR, STMT); STMT; (VAR)++;
+#define LOOP11(VAR, STMT) LOOP10(VAR, STMT); STMT; (VAR)++;
+#define LOOP12(VAR, STMT) LOOP11(VAR, STMT); STMT; (VAR)++;
+#define LOOP13(VAR, STMT) LOOP12(VAR, STMT); STMT; (VAR)++;
+#define LOOP14(VAR, STMT) LOOP13(VAR, STMT); STMT; (VAR)++;
+#define LOOP15(VAR, STMT) LOOP14(VAR, STMT); STMT; (VAR)++;
+#define LOOP16(VAR, STMT) LOOP15(VAR, STMT); STMT; (VAR)++;
+#define LOOP(N, VAR, STMT) CAT(LOOP, N)(VAR, STMT)
 
 #if defined(convolve_simd) || defined(Conv_Interleaved)
 #if TYPE == TYPE_HALF

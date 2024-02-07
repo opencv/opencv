@@ -171,7 +171,7 @@ if(NOT ${found})
       endif()
     endif()
 
-    if(NOT ANDROID AND NOT IOS)
+    if(NOT ANDROID AND NOT IOS AND NOT XROS)
       if(CMAKE_HOST_UNIX)
         execute_process(COMMAND ${_executable} -c "from sysconfig import *; print(get_path('purelib'))"
                         RESULT_VARIABLE _cvpy_process
@@ -233,7 +233,7 @@ if(NOT ${found})
                           OUTPUT_STRIP_TRAILING_WHITESPACE)
         endif()
       endif()
-    endif(NOT ANDROID AND NOT IOS)
+    endif(NOT ANDROID AND NOT IOS AND NOT XROS)
   endif()
 
   # Export return values
@@ -269,6 +269,18 @@ find_python("${OPENCV_PYTHON3_VERSION}" "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYT
     PYTHON3_DEBUG_LIBRARIES PYTHON3_LIBRARY_DEBUG PYTHON3_INCLUDE_PATH
     PYTHON3_INCLUDE_DIR PYTHON3_INCLUDE_DIR2 PYTHON3_PACKAGES_PATH
     PYTHON3_NUMPY_INCLUDE_DIRS PYTHON3_NUMPY_VERSION)
+
+# Problem in numpy >=1.15 <1.17
+OCV_OPTION(PYTHON3_LIMITED_API "Build with Python Limited API (not available with numpy >=1.15 <1.17)" NO
+           VISIBLE_IF PYTHON3_NUMPY_VERSION VERSION_LESS "1.15" OR NOT PYTHON3_NUMPY_VERSION VERSION_LESS "1.17")
+if(PYTHON3_LIMITED_API)
+  set(_default_ver "0x03060000")
+  if(PYTHON3_VERSION_STRING VERSION_LESS "3.6")
+    # fix for older pythons
+    set(_default_ver "0x030${PYTHON3_VERSION_MINOR}0000")
+  endif()
+  set(PYTHON3_LIMITED_API_VERSION ${_default_ver} CACHE STRING "Minimal Python version for Limited API")
+endif()
 
 if(PYTHON_DEFAULT_EXECUTABLE)
     set(PYTHON_DEFAULT_AVAILABLE "TRUE")

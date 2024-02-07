@@ -1,5 +1,6 @@
 #!/bin/bash -e
 SDK_DIR=$1
+
 echo "OpenCV Android SDK path: ${SDK_DIR}"
 
 ANDROID_HOME=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-${ANDROID_SDK?Required ANDROID_HOME/ANDROID_SDK/ANDROID_SDK_ROOT}}}
@@ -28,6 +29,10 @@ echo "Cloning OpenCV Android SDK ..."
 rm -rf "test-gradle"
 cp -rp "${SDK_DIR}" "test-gradle"
 echo "Cloning OpenCV Android SDK ... Done!"
+
+# drop cmake bin name and "bin" folder from path
+echo "ndk.dir=${ANDROID_NDK}" > "test-gradle/samples/local.properties"
+echo "cmake.dir=$(dirname $(dirname $(which cmake)))" >> "test-gradle/samples/local.properties"
 
 echo "Run gradle ..."
 (cd "test-gradle/samples"; ./gradlew -i assemble)

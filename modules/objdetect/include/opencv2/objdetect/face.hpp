@@ -71,7 +71,7 @@ public:
      */
     CV_WRAP virtual int detect(InputArray image, OutputArray faces) = 0;
 
-    /** @brief Creates an instance of this class with given parameters
+    /** @brief Creates an instance of face detector class with given parameters
      *
      *  @param model the path to the requested model
      *  @param config the path to the config file for compability, which is not requested for ONNX models
@@ -82,14 +82,37 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceDetectorYN> create(const String& model,
-                                              const String& config,
+    CV_WRAP static Ptr<FaceDetectorYN> create(CV_WRAP_FILE_PATH const String& model,
+                                              CV_WRAP_FILE_PATH const String& config,
                                               const Size& input_size,
                                               float score_threshold = 0.9f,
                                               float nms_threshold = 0.3f,
                                               int top_k = 5000,
                                               int backend_id = 0,
                                               int target_id = 0);
+
+    /** @overload
+     *
+     *  @param framework Name of origin framework
+     *  @param bufferModel A buffer with a content of binary file with weights
+     *  @param bufferConfig A buffer with a content of text file contains network configuration
+     *  @param input_size the size of the input image
+     *  @param score_threshold the threshold to filter out bounding boxes of score smaller than the given value
+     *  @param nms_threshold the threshold to suppress bounding boxes of IoU bigger than the given value
+     *  @param top_k keep top K bboxes before NMS
+     *  @param backend_id the id of backend
+     *  @param target_id the id of target device
+     */
+    CV_WRAP static Ptr<FaceDetectorYN> create(const String& framework,
+                                              const std::vector<uchar>& bufferModel,
+                                              const std::vector<uchar>& bufferConfig,
+                                              const Size& input_size,
+                                              float score_threshold = 0.9f,
+                                              float nms_threshold = 0.3f,
+                                              int top_k = 5000,
+                                              int backend_id = 0,
+                                              int target_id = 0);
+
 };
 
 /** @brief DNN-based face recognizer
@@ -131,7 +154,7 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& model, const String& config, int backend_id = 0, int target_id = 0);
+    CV_WRAP static Ptr<FaceRecognizerSF> create(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config, int backend_id = 0, int target_id = 0);
 };
 
 //! @}

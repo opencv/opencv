@@ -148,28 +148,41 @@ TEST(PointCloud, LoadSaveMeshObj)
     std::remove(new_path.c_str());
 }
 
-TEST(PointCloud, LoadSaveMeshPly)
+typedef std::string PlyTestParamsType;
+typedef testing::TestWithParam<PlyTestParamsType> PlyTest;
+
+TEST_P(PlyTest, LoadSaveMesh)
 {
-    std::vector<cv::Point3f> points;
-    std::vector<cv::Point3f> normals;
-    std::vector<std::vector<int32_t>> indices;
+    std::string fname = GetParam();
+
+    std::vector<cv::Point3f> points_gold;
+    std::vector<cv::Point3f> normals_gold;
+    std::vector<std::vector<int32_t>> indices_gold;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
     std::string new_path = tempfile("new_mesh.ply");
 
-    // we don't support meshes in PLY format right now but it should exit silently
-    cv::loadMesh(folder + "pointcloudio/orig.ply", points, normals, indices);
-    EXPECT_TRUE(points.empty());
-    EXPECT_TRUE(normals.empty());
-    EXPECT_TRUE(indices.empty());
+    cv::loadMesh(folder + fname, points_gold, normals_gold, indices_gold);
+    EXPECT_FALSE(points_gold.empty());
+    EXPECT_FALSE(indices_gold.empty());
 
-    cv::saveMesh(new_path, points, normals, indices);
-    EXPECT_TRUE(points.empty());
-    EXPECT_TRUE(normals.empty());
-    EXPECT_TRUE(indices.empty());
+    cv::saveMesh(new_path, points_gold, normals_gold, indices_gold);
 
+    std::vector<cv::Point3f> points;
+    std::vector<cv::Point3f> normals;
+    std::vector<std::vector<int32_t>> indices;
+    cv::loadMesh(new_path, points, normals, indices);
+
+    EXPECT_EQ(normals_gold, normals);
+    EXPECT_EQ(points_gold, points);
+    EXPECT_EQ(indices_gold, indices);
     std::remove(new_path.c_str());
 }
+
+
+INSTANTIATE_TEST_CASE_P(PointCloud, PlyTest,
+    ::testing::Values("pointcloudio/orig.ply", "pointcloudio/orig_ascii_fidx.ply", "pointcloudio/orig_bin_fidx.ply",
+                      "pointcloudio/orig_ascii_vidx.ply", "pointcloudio/orig_bin.ply", "viz/dragon.ply"));
 
 TEST(PointCloud, NonexistentFile)
 {

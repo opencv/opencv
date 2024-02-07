@@ -613,6 +613,32 @@ TEST(CV_ArucoDetectMarkers, regression_2492)
     }
 }
 
+
+TEST(CV_ArucoDetectMarkers, regression_contour_24220)
+{
+    aruco::ArucoDetector detector;
+    vector<int> markerIds;
+    vector<vector<Point2f> > markerCorners;
+    string imgPath = cvtest::findDataFile("aruco/failmask9.png");
+    Mat image = imread(imgPath);
+
+    const size_t N = 1ull;
+    const int goldCorners[8] = {392,175, 99,257, 117,109, 365,44};
+    const int goldCornersId = 0;
+
+    detector.detectMarkers(image, markerCorners, markerIds);
+
+    ASSERT_EQ(N, markerIds.size());
+    ASSERT_EQ(4ull, markerCorners[0].size());
+    ASSERT_EQ(goldCornersId, markerIds[0]);
+    for (int j = 0; j < 4; j++)
+    {
+        EXPECT_NEAR(static_cast<float>(goldCorners[j * 2]), markerCorners[0][j].x, 1.f);
+        EXPECT_NEAR(static_cast<float>(goldCorners[j * 2 + 1]), markerCorners[0][j].y, 1.f);
+    }
+}
+
+
 struct ArucoThreading: public testing::TestWithParam<aruco::CornerRefineMethod>
 {
     struct NumThreadsSetter {
