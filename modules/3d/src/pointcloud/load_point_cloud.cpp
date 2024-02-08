@@ -122,17 +122,7 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
 #endif
 }
 
-void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArrayOfArrays indices)
-{
-    loadMesh(filename, vertices, normals, noArray(), indices);
-}
-
-void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays indices)
-{
-    loadMesh(filename, vertices, noArray(), noArray(), indices);
-}
-
-void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArray colors, OutputArrayOfArrays indices)
+void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays indices, OutputArray normals, OutputArray colors)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_Assert(vertices.needed());
@@ -188,17 +178,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
 #endif
 }
 
-void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices)
-{
-    saveMesh(filename, vertices, normals, noArray(), indices);
-}
-
-void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays indices)
-{
-    saveMesh(filename, vertices, noArray(), noArray(), indices);
-}
-
-void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArray colors, InputArrayOfArrays indices)
+void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays indices, InputArray normals, InputArray colors)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     if (vertices.empty()) {

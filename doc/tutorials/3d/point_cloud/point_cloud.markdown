@@ -66,7 +66,7 @@ For that we use special functions to load mesh data and display it.
 Here for now only .OBJ files are supported and they should be triangulated before processing (triangulation - process of breaking faces into triangles).
 
 @code{.py}
-vertices, _, indices = cv2.loadMesh("../data/teapot.obj")
+vertices, indices = cv2.loadMesh("../data/teapot.obj")
 vertices = np.squeeze(vertices, axis=1)
 
 cv2.viz3d.showMesh("window", "mesh", vertices, indices)
