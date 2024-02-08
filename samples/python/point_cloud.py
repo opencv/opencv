@@ -15,7 +15,7 @@ cv.viz3d.setGridVisible("window", True)
 
 cv.waitKey(0)
 
-vertices, _, indices = cv.loadMesh("../data/teapot.obj")
+vertices, indices = cv.loadMesh("../data/teapot.obj")
 vertices = np.squeeze(vertices, axis=1)
 
 cv.viz3d.showMesh("window", "mesh", vertices, indices)

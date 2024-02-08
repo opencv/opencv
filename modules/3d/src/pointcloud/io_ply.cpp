@@ -9,6 +9,7 @@
 #include <fstream>
 #include <string>
 #include <iomanip>
+#include <cstddef>
 
 namespace cv {
 
@@ -38,6 +39,11 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
     }
     std::getline(file, s);
     auto splitArr = split(s, ' ');
+    // "\r" symbols are not trimmed by default
+    for (auto& e : splitArr)
+    {
+        e = trimSpaces(e);
+    }
     if (splitArr[0] != "format")
     {
         CV_LOG_ERROR(NULL, "Provided file doesn't have format");
@@ -87,6 +93,11 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
         if (startsWith(s, "element"))
         {
             std::vector<std::string> splitArrElem = split(s, ' ');
+            // "\r" symbols are not trimmed by default
+            for (auto& e : splitArrElem)
+            {
+                e = trimSpaces(e);
+            }
             std::string elemName = splitArrElem.at(1);
             if (elemName == "vertex")
             {
@@ -123,7 +134,11 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             Property property;
             std::string elName = (elemRead == READ_VERTEX) ? "Vertex" : "Face";
             std::vector<std::string> splitArrElem = split(s, ' ');
-
+            // "\r" symbols are not trimmed by default
+            for (auto& e : splitArrElem)
+            {
+                e = trimSpaces(e);
+            }
             if (splitArrElem.size() < 3)
             {
                 CV_LOG_ERROR(NULL, elName << " property has " << splitArrElem.size()
@@ -141,7 +156,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                     return false;
                 }
                 std::string amtTypeString = splitArrElem[2];
-                if (dataTypes.count(amtTypeString) <= 0)
+                if (dataTypes.count(amtTypeString) == 0)
                 {
                     CV_LOG_ERROR(NULL, "Property type " << amtTypeString
                                  << " is not supported");
@@ -152,7 +167,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                     property.counterType = dataTypes.at(amtTypeString);
                 }
                 std::string idxTypeString = splitArrElem[3];
-                if (dataTypes.count(idxTypeString) <= 0)
+                if (dataTypes.count(idxTypeString) == 0)
                 {
                     CV_LOG_ERROR(NULL, "Property type " << idxTypeString
                                  << " is not supported");
@@ -168,7 +183,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             else
             {
                 property.isList = false;
-                if (dataTypes.count(propType) <= 0)
+                if (dataTypes.count(propType) == 0)
                 {
                     CV_LOG_ERROR(NULL, "Property type " << propType
                                  << " is not supported");
@@ -257,7 +272,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
     const std::array<std::string, 3> vertKeys = {"x", "y", "z"};
     for (const std::string& c : vertKeys)
     {
-        if (amtProps.count(c) <= 0)
+        if (amtProps.count(c) == 0)
         {
             CV_LOG_ERROR(NULL, "Vertex property " << c << " is not presented in the file");
             good = false;
@@ -340,28 +355,49 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
         normals.reserve(m_vertexCount);
     }
 
+    struct VertexFields
+    {
+        float vx, vy, vz;
+        float nx, ny, nz;
+        uchar r, g, b;
+    };
+
+    union VertexData
+    {
+        std::array<uchar, 27> bytes;
+        VertexFields vf;
+    };
+
     // to avoid string matching at file loading
-    size_t ivx = (size_t)-1, ivy = (size_t)-1, ivz = (size_t)-1, inx = (size_t)-1, iny = (size_t)-1, inz = (size_t)-1;
-    size_t ir = (size_t)-1, ig = (size_t)-1, ib = (size_t)-1;
+    std::vector<size_t> vertexOffsets(m_vertexDescription.properties.size(), (size_t)(-1));
     for (size_t j = 0; j < m_vertexDescription.properties.size(); j++)
     {
         const auto& p = m_vertexDescription.properties[j];
-        ivx = (p.name == "x") ? j : ivx;
-        ivy = (p.name == "y") ? j : ivy;
-        ivz = (p.name == "z") ? j : ivz;
-        inx = (p.name == "nx") ? j : inx;
-        iny = (p.name == "ny") ? j : iny;
-        inz = (p.name == "nz") ? j : inz;
-        ir = (p.name == "red"  ) ? j : ir;
-        ig = (p.name == "green") ? j : ig;
-        ib = (p.name == "blue" ) ? j : ib;
+        size_t offset = 0;
+        if (p.name == "x")
+            offset = offsetof(VertexFields, vx);
+        if (p.name == "y")
+            offset = offsetof(VertexFields, vy);
+        if (p.name == "z")
+            offset = offsetof(VertexFields, vz);
+        if (p.name == "nx")
+            offset = offsetof(VertexFields, nx);
+        if (p.name == "ny")
+            offset = offsetof(VertexFields, ny);
+        if (p.name == "nz")
+            offset = offsetof(VertexFields, nz);
+        if (p.name == "red")
+            offset = offsetof(VertexFields, r);
+        if (p.name == "green")
+            offset = offsetof(VertexFields, g);
+        if (p.name == "blue")
+            offset = offsetof(VertexFields, b);
+        vertexOffsets[j] = offset;
     }
 
     for (size_t i = 0; i < m_vertexCount; i++)
     {
-        Point3f vertex, normal;
-        Point3_<uchar> color;
-
+        VertexData vertexData{ };
         for (size_t j = 0; j < m_vertexDescription.properties.size(); j++)
         {
             const auto& p = m_vertexDescription.properties[j];
@@ -387,52 +423,32 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
             default:
                 break;
             }
-            if (j == ivx)
+            size_t offset = vertexOffsets[j];
+            if (offset != (size_t)(-1))
             {
-                vertex.x = fval;
-            }
-            if (j == ivy)
-            {
-                vertex.y = fval;
-            }
-            if (j == ivz)
-            {
-                vertex.z = fval;
-            }
-            if (j == inx)
-            {
-                normal.x = fval;
-            }
-            if (j == iny)
-            {
-                normal.y = fval;
-            }
-            if (j == inz)
-            {
-                normal.z = fval;
-            }
-            if (j == ir)
-            {
-                color.x = (uchar)ival;
-            }
-            if (j == ig)
-            {
-                color.y = (uchar)ival;
-            }
-            if (j == ib)
-            {
-                color.z = (uchar)ival;
+                switch (p.valType)
+                {
+                case CV_8U: case CV_8S:
+                    *(vertexData.bytes.data() + offset) = (uchar)ival;
+                    break;
+                case CV_32F:
+                    *(float*)(vertexData.bytes.data() + offset) = fval;
+                    break;
+                default:
+                    // the rest are unused
+                    break;
+                }
             }
         }
 
-        points.push_back(vertex);
+        points.push_back({ vertexData.vf.vx, vertexData.vf.vy, vertexData.vf.vz });
         if (m_hasColour)
         {
-            rgb.push_back(color);
+            rgb.push_back({ vertexData.vf.r, vertexData.vf.g, vertexData.vf.b });
         }
         if (m_hasNormal)
         {
-            normals.push_back(normal);
+            normals.push_back({ vertexData.vf.nx, vertexData.vf.ny, vertexData.vf.nz });
         }
     }
 
@@ -530,14 +546,14 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
 
     for (size_t i = 0; i < points.size(); i++)
     {
-        file << std::setprecision(8) << points[i].x << " " << points[i].y << " " << points[i].z;
+        file << std::setprecision(9) << points[i].x << " " << points[i].y << " " << points[i].z;
         if (hasColor)
         {
             file << " " << static_cast<int>(rgb[i].x) << " " << static_cast<int>(rgb[i].y) << " " << static_cast<int>(rgb[i].z);
         }
         if (hasNormals)
         {
-            file << " " << std::setprecision(8) << normals[i].x << " " << normals[i].y << " " << normals[i].z;
+            file << " " << std::setprecision(9) << normals[i].x << " " << normals[i].y << " " << normals[i].z;
         }
         file << std::endl;
     }

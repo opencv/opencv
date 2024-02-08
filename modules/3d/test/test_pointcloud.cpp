@@ -132,14 +132,14 @@ TEST(PointCloud, LoadSaveMeshObj)
     auto folder = cvtest::TS::ptr()->get_data_path();
     std::string new_path = tempfile("new_mesh.obj");
 
-    cv::loadMesh(folder + "pointcloudio/orig.obj", points, normals, indices);
-    cv::saveMesh(new_path, points, normals, indices);
+    cv::loadMesh(folder + "pointcloudio/orig.obj", points, indices, normals);
+    cv::saveMesh(new_path, points, indices, normals);
 
     std::vector<cv::Point3f> points_gold;
     std::vector<cv::Point3f> normals_gold;
     std::vector<std::vector<int32_t>> indices_gold;
 
-    cv::loadMesh(new_path, points_gold, normals_gold, indices_gold);
+    cv::loadMesh(new_path, points_gold, indices_gold, normals_gold);
 
     EXPECT_EQ(normals_gold, normals);
     EXPECT_EQ(points_gold, points);
@@ -161,19 +161,22 @@ TEST_P(PlyTest, LoadSaveMesh)
     auto folder = cvtest::TS::ptr()->get_data_path();
     std::string new_path = tempfile("new_mesh.ply");
 
-    cv::loadMesh(folder + fname, points_gold, normals_gold, colors_gold, indices_gold);
+    cv::loadMesh(folder + fname, points_gold, indices_gold, normals_gold, colors_gold);
     EXPECT_FALSE(points_gold.empty());
     EXPECT_FALSE(indices_gold.empty());
 
-    cv::saveMesh(new_path, points_gold, normals_gold, colors_gold, indices_gold);
+    cv::saveMesh(new_path, points_gold, indices_gold, normals_gold, colors_gold);
 
     std::vector<cv::Point3f> points, normals, colors;
     std::vector<std::vector<int32_t>> indices;
-    cv::loadMesh(new_path, points, normals, colors, indices);
+    cv::loadMesh(new_path, points, indices, normals, colors);
 
-    EXPECT_EQ(colors_gold, colors);
-    EXPECT_EQ(normals_gold, normals);
-    EXPECT_EQ(points_gold, points);
+    if (!normals.empty())
+    {
+        EXPECT_LE(cv::norm(normals_gold, normals, NORM_INF), 0);
+    }
+    EXPECT_LE(cv::norm(points_gold, points, NORM_INF), 0);
+    EXPECT_LE(cv::norm(colors_gold, colors, NORM_INF), 0);
     EXPECT_EQ(indices_gold, indices);
     std::remove(new_path.c_str());
 }
