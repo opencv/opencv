@@ -14,38 +14,6 @@ namespace opencv_test { namespace {
 #define int64 int64_hack_
 #include "tiff.h"
 
-// Re-define Mat type as enum for showing on Google Test.
-enum CV_ddtCn{
-  _CV_8UC1  = CV_8UC1,  _CV_8UC3  = CV_8UC3,  _CV_8UC4  = CV_8UC4,
-  _CV_8SC1  = CV_8SC1,  _CV_8SC3  = CV_8SC3,  _CV_8SC4  = CV_8SC4,
-  _CV_16UC1 = CV_16UC1, _CV_16UC3 = CV_16UC3, _CV_16UC4 = CV_16UC4,
-  _CV_16SC1 = CV_16SC1, _CV_16SC3 = CV_16SC3, _CV_16SC4 = CV_16SC4,
-  _CV_32SC1 = CV_32SC1, _CV_32SC3 = CV_32SC3, _CV_32SC4 = CV_32SC4,
-  _CV_16FC1 = CV_16FC1, _CV_16FC3 = CV_16FC3, _CV_16FC4 = CV_16FC4,
-  _CV_32FC1 = CV_32FC1, _CV_32FC3 = CV_32FC3, _CV_32FC4 = CV_32FC4,
-  _CV_64FC1 = CV_64FC1, _CV_64FC3 = CV_64FC3, _CV_64FC4 = CV_64FC4,
-};
-
-static inline
-void PrintTo(const CV_ddtCn& val, std::ostream* os)
-{
-    const int val_type = static_cast<int>(val);
-
-    switch ( CV_MAT_DEPTH(val_type) )
-    {
-    case CV_8U  : *os << "CV_8U" ; break;
-    case CV_16U : *os << "CV_16U" ; break;
-    case CV_8S  : *os << "CV_8S" ; break;
-    case CV_16S : *os << "CV_16S" ; break;
-    case CV_32S : *os << "CV_32S" ; break;
-    case CV_16F : *os << "CV_16F" ; break;
-    case CV_32F : *os << "CV_32F" ; break;
-    case CV_64F : *os << "CV_64F" ; break;
-    default     : *os << "CV_???" ; break;
-    }
-    *os << "C" << CV_MAT_CN(val_type);
-}
-
 #ifdef __ANDROID__
 // Test disabled as it uses a lot of memory.
 // It is killed with SIGKILL by out of memory killer.
@@ -874,7 +842,7 @@ TEST(Imgcodecs_Tiff, readWrite_predictor)
 
 // See https://github.com/opencv/opencv/issues/23416
 
-typedef std::pair<CV_ddtCn,bool> Imgcodes_Tiff_TypeAndComp;
+typedef std::pair<perf::MatType,bool> Imgcodes_Tiff_TypeAndComp;
 typedef testing::TestWithParam< Imgcodes_Tiff_TypeAndComp > Imgcodecs_Tiff_Types;
 
 TEST_P(Imgcodecs_Tiff_Types, readWrite_alltypes)
@@ -925,13 +893,13 @@ TEST_P(Imgcodecs_Tiff_Types, readWrite_alltypes)
 }
 
 Imgcodes_Tiff_TypeAndComp all_types[] = {
-    { _CV_8UC1,  true  }, { _CV_8UC3,  true  }, { _CV_8UC4,  true  },
-    { _CV_8SC1,  true  }, { _CV_8SC3,  true  }, { _CV_8SC4,  true  },
-    { _CV_16UC1, true  }, { _CV_16UC3, true  }, { _CV_16UC4, true  },
-    { _CV_16SC1, true  }, { _CV_16SC3, true  }, { _CV_16SC4, true  },
-    { _CV_32SC1, true  }, { _CV_32SC3, true  }, { _CV_32SC4, true  },
-    { _CV_32FC1, false }, { _CV_32FC3, false }, { _CV_32FC4, false }, // No compression
-    { _CV_64FC1, false }, { _CV_64FC3, false }, { _CV_64FC4, false }  // No compression
+    { CV_8UC1,  true  }, { CV_8UC3,  true  }, { CV_8UC4,  true  },
+    { CV_8SC1,  true  }, { CV_8SC3,  true  }, { CV_8SC4,  true  },
+    { CV_16UC1, true  }, { CV_16UC3, true  }, { CV_16UC4, true  },
+    { CV_16SC1, true  }, { CV_16SC3, true  }, { CV_16SC4, true  },
+    { CV_32SC1, true  }, { CV_32SC3, true  }, { CV_32SC4, true  },
+    { CV_32FC1, false }, { CV_32FC3, false }, { CV_32FC4, false }, // No compression
+    { CV_64FC1, false }, { CV_64FC3, false }, { CV_64FC4, false }  // No compression
 };
 
 INSTANTIATE_TEST_CASE_P(AllTypes, Imgcodecs_Tiff_Types, testing::ValuesIn(all_types));
