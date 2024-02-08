@@ -939,6 +939,8 @@ void TFLiteImporter::parseActivation(const Operator& op, const std::string& opco
                 y = std::min(std::max(x, 0.f), 6.f);
             else if (opcode == "LOGISTIC")
                 y = 1.0f / (1.0f + std::exp(-x));
+            else if (opcode == "HARD_SWISH") 
+                y = x * std::min(std::max(x + 3.f, 0.f), 6.f) * 0.166666667;
             else
                 CV_Error(Error::StsNotImplemented, "Lookup table for " + opcode);
 
