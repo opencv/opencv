@@ -9,6 +9,7 @@
 #include <fstream>
 #include <string>
 #include <iomanip>
+#include <cstddef>
 
 namespace cv {
 
@@ -354,28 +355,47 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
         normals.reserve(m_vertexCount);
     }
 
+    union VertexData
+    {
+        std::array<uchar, 27> bytes;
+        struct
+        {
+            float vx, vy, vz;
+            float nx, ny, nz;
+            uchar r, g, b;
+        };
+    };
+
     // to avoid string matching at file loading
-    size_t ivx = (size_t)-1, ivy = (size_t)-1, ivz = (size_t)-1, inx = (size_t)-1, iny = (size_t)-1, inz = (size_t)-1;
-    size_t ir = (size_t)-1, ig = (size_t)-1, ib = (size_t)-1;
+    std::vector<size_t> vertexOffsets(m_vertexDescription.properties.size(), (size_t)(-1));
     for (size_t j = 0; j < m_vertexDescription.properties.size(); j++)
     {
         const auto& p = m_vertexDescription.properties[j];
-        ivx = (p.name == "x") ? j : ivx;
-        ivy = (p.name == "y") ? j : ivy;
-        ivz = (p.name == "z") ? j : ivz;
-        inx = (p.name == "nx") ? j : inx;
-        iny = (p.name == "ny") ? j : iny;
-        inz = (p.name == "nz") ? j : inz;
-        ir = (p.name == "red"  ) ? j : ir;
-        ig = (p.name == "green") ? j : ig;
-        ib = (p.name == "blue" ) ? j : ib;
+        size_t offset = 0;
+        if (p.name == "x")
+            offset = offsetof(VertexData, vx);
+        if (p.name == "y")
+            offset = offsetof(VertexData, vy);
+        if (p.name == "z")
+            offset = offsetof(VertexData, vz);
+        if (p.name == "nx")
+            offset = offsetof(VertexData, nx);
+        if (p.name == "ny")
+            offset = offsetof(VertexData, ny);
+        if (p.name == "nz")
+            offset = offsetof(VertexData, nz);
+        if (p.name == "red")
+            offset = offsetof(VertexData, r);
+        if (p.name == "green")
+            offset = offsetof(VertexData, g);
+        if (p.name == "blue")
+            offset = offsetof(VertexData, b);
+        vertexOffsets[j] = offset;
     }
 
     for (size_t i = 0; i < m_vertexCount; i++)
     {
-        Point3f vertex, normal;
-        Point3_<uchar> color;
-
+        VertexData vertexData{ };
         for (size_t j = 0; j < m_vertexDescription.properties.size(); j++)
         {
             const auto& p = m_vertexDescription.properties[j];
@@ -401,52 +421,32 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
             default:
                 break;
             }
-            if (j == ivx)
+            size_t offset = vertexOffsets[j];
+            if (offset != (size_t)(-1))
             {
-                vertex.x = fval;
-            }
-            if (j == ivy)
-            {
-                vertex.y = fval;
-            }
-            if (j == ivz)
-            {
-                vertex.z = fval;
-            }
-            if (j == inx)
-            {
-                normal.x = fval;
-            }
-            if (j == iny)
-            {
-                normal.y = fval;
-            }
-            if (j == inz)
-            {
-                normal.z = fval;
-            }
-            if (j == ir)
-            {
-                color.x = (uchar)ival;
-            }
-            if (j == ig)
-            {
-                color.y = (uchar)ival;
-            }
-            if (j == ib)
-            {
-                color.z = (uchar)ival;
+                switch (p.valType)
+                {
+                case CV_8U: case CV_8S:
+                    *(vertexData.bytes.data() + offset) = (uchar)ival;
+                    break;
+                case CV_32F:
+                    *(float*)(vertexData.bytes.data() + offset) = fval;
+                    break;
+                default:
+                    // the rest are unused
+                    break;
+                }
             }
         }
 
-        points.push_back(vertex);
+        points.push_back({ vertexData.vx, vertexData.vy, vertexData.vz });
         if (m_hasColour)
         {
-            rgb.push_back(color);
+            rgb.push_back({ vertexData.r, vertexData.g, vertexData.b });
         }
         if (m_hasNormal)
         {
-            normals.push_back(normal);
+            normals.push_back({ vertexData.nx, vertexData.ny, vertexData.nz });
         }
     }
 
