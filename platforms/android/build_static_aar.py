@@ -147,11 +147,11 @@ def main(args):
     add_printing_linked_libs(sdk_dir, opencv_libs)
 
     print("Running gradle assembleRelease...")
+    cmd = ["./gradlew", "assembleRelease"]
+    if args.offline:
+        cmd = cmd + ["--offline"]
     # Running gradle to build the Android project
-    subprocess.run(["./gradlew", "assembleRelease"],
-                shell=False,
-                cwd=ANDROID_PROJECT_DIR,
-                check=True)
+    subprocess.run(cmd, shell=False, cwd=ANDROID_PROJECT_DIR, check=True)
 
     # The created AAR package contains only one empty libtemplib.a library.
     # We need to add OpenCV libraries manually.
@@ -217,20 +217,20 @@ def main(args):
     shutil.copy(final_aar_path, path.join(ANDROID_PROJECT_DIR, "OpenCV/opencv-release.aar"))
 
     print("Creating a maven repo from project sources (with sources jar and javadoc jar)...")
-    subprocess.run(["./gradlew", "publishReleasePublicationToMyrepoRepository"],
-            shell=False,
-            cwd=ANDROID_PROJECT_DIR,
-            check=True)
+    cmd = ["./gradlew", "publishReleasePublicationToMyrepoRepository"]
+    if args.offline:
+        cmd = cmd + ["--offline"]
+    subprocess.run(cmd, shell=False, cwd=ANDROID_PROJECT_DIR, check=True)
 
     os.makedirs(path.join(FINAL_REPO_PATH, "org/opencv"), exist_ok=True)
     shutil.move(path.join(ANDROID_PROJECT_DIR, "OpenCV/build/repo/org/opencv", MAVEN_PACKAGE_NAME),
                 path.join(FINAL_REPO_PATH, "org/opencv", MAVEN_PACKAGE_NAME))
 
     print("Creating a maven repo from modified AAR (with cpp libraries)...")
-    subprocess.run(["./gradlew", "publishModifiedPublicationToMyrepoRepository"],
-            shell=False,
-            cwd=ANDROID_PROJECT_DIR,
-            check=True)
+    cmd = ["./gradlew", "publishModifiedPublicationToMyrepoRepository"]
+    if args.offline:
+        cmd = cmd + ["--offline"]
+    subprocess.run(cmd, shell=False, cwd=ANDROID_PROJECT_DIR, check=True)
 
     # Replacing AAR from the first maven repo with modified AAR from the second maven repo
     shutil.copytree(path.join(ANDROID_PROJECT_DIR, "OpenCV/build/repo/org/opencv", MAVEN_PACKAGE_NAME),
@@ -249,6 +249,7 @@ if __name__ == "__main__":
     parser.add_argument('--java_version', default="1_8")
     parser.add_argument('--ndk_location', default="")
     parser.add_argument('--cmake_location', default="")
+    parser.add_argument('--offline', action="store_true", help="Force Gradle use offline mode")
     args = parser.parse_args()
 
     main(args)

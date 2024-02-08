@@ -5,6 +5,7 @@ echo "OpenCV Android SDK path: ${SDK_DIR}"
 
 ANDROID_HOME=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-${ANDROID_SDK?Required ANDROID_HOME/ANDROID_SDK/ANDROID_SDK_ROOT}}}
 ANDROID_NDK=${ANDROID_NDK_HOME-${ANDROID_NDK:-${NDKROOT?Required ANDROID_NDK_HOME/ANDROID_NDK/NDKROOT}}}
+OPENCV_GRADLE_VERBOSE_OPTIONS=${OPENCV_GRADLE_VERBOSE_OPTIONS:-'-i'}
 
 echo "Android SDK: ${ANDROID_HOME}"
 echo "Android NDK: ${ANDROID_NDK}"
@@ -35,7 +36,7 @@ echo "ndk.dir=${ANDROID_NDK}" > "aar-build/samples/local.properties"
 echo "cmake.dir=$(dirname $(dirname $(which cmake)))" >> "aar-build/samples/local.properties"
 
 echo "Run gradle ..."
-(cd "aar-build/samples"; ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS:--i} opencv:publishReleasePublicationToMyrepoRepository)
+(cd "aar-build/samples"; ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} opencv:publishReleasePublicationToMyrepoRepository)
 
 mkdir "maven_repo"
 cp -r aar-build/sdk/build/repo/* ./maven_repo/
