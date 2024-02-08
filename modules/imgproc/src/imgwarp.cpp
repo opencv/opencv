@@ -331,7 +331,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
                           int borderType, const Scalar& _borderValue, const Point& _offset )
 {
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;//expected better performance byt bringing it as a local variable,
+    const Point offset = _offset;//expected better performance by bringing it as a local variable,
                                  //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const T* S0 = _src.ptr<T>();
@@ -450,7 +450,7 @@ struct RemapVec_8u
                     const ushort* FXY, const void* _wtab, int width, const Point& _offset ) const
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
-        const Point rel_offset = _offset;//expected better performance byt bringing it as a local variable,
+        const Point rel_offset = _offset;//expected better performance by bringing it as a local variable,
                                          //since used in inner loop. We'll have to check perf. test
 
         if( (cn != 1 && cn != 3 && cn != 4) || sstep >= 0x8000 )
@@ -685,7 +685,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;//expected better performance byt bringing it as a local variable,
+    const Point offset = _offset;//expected better performance by bringing it as a local variable,
                                  //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
@@ -919,7 +919,7 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;//expected better performance byt bringing it as a local variable,
+    const Point offset = _offset;//expected better performance by bringing it as a local variable,
                                  //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
@@ -1026,7 +1026,7 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;//expected better performance byt bringing it as a local variable,
+    const Point offset = _offset;//expected better performance by bringing it as a local variable,
                                  //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
@@ -1144,11 +1144,10 @@ class RemapInvoker :
 public:
     RemapInvoker(const Mat& _src, Mat& _dst, const Mat *_m1,
                  const Mat *_m2, int _borderType, const Scalar &_borderValue,
-                 int _planar_input, RemapNNFunc _nnfunc, RemapFunc _ifunc, const void *_ctab,
-                 bool _isRelative) :
+                 int _planar_input, RemapNNFunc _nnfunc, RemapFunc _ifunc, const void *_ctab) :
         ParallelLoopBody(), src(&_src), dst(&_dst), m1(_m1), m2(_m2),
         borderType(_borderType), borderValue(_borderValue),
-        planar_input(_planar_input), nnfunc(_nnfunc), ifunc(_ifunc), ctab(_ctab),isRelative(_isRelative)
+        planar_input(_planar_input), nnfunc(_nnfunc), ifunc(_ifunc), ctab(_ctab)
     {
     }
 
@@ -1350,7 +1349,6 @@ private:
     RemapNNFunc nnfunc;
     RemapFunc ifunc;
     const void *ctab;
-    bool isRelative;
 };
 
 #ifdef HAVE_OPENCL
@@ -1923,7 +1921,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     RemapInvoker invoker(src, dst, m1, m2,
                          borderType, borderValue, planar_input, nnfunc, ifunc,
-                         ctab, hasRelativeFlag);
+                         ctab);
     parallel_for_(Range(0, dst.rows), invoker, dst.total()/(double)(1<<16));
 }
 
