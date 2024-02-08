@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+/*
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -513,7 +514,7 @@ TEST_P(Test_Int8_layers, Eltwise)
     testLayer("split_max", "ONNX", 0.004, 0.012);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Test_Int8_layers, dnnBackendsAndTargetsInt8());
+INSTANTIATE_TEST_CASE_P(, Test_Int8_layers, dnnBackendsAndTargetsInt8());
 
 class Test_Int8_nets : public DNNTestLayer
 {
@@ -1261,7 +1262,7 @@ TEST_P(Test_Int8_nets, YOLOv3)
 
     const int N0 = 3;
     const int N1 = 6;
-    static const float ref_[/* (N0 + N1) * 7 */] = {
+    static const float ref_[] = { // (N0 + N1) * 7
 0, 16, 0.998836f, 0.160024f, 0.389964f, 0.417885f, 0.943716f,
 0, 1, 0.987908f, 0.150913f, 0.221933f, 0.742255f, 0.746261f,
 0, 7, 0.952983f, 0.614621f, 0.150257f, 0.901368f, 0.289251f,
@@ -1305,7 +1306,7 @@ TEST_P(Test_Int8_nets, YOLOv4)
 
     const int N0 = 3;
     const int N1 = 7;
-    static const float ref_[/* (N0 + N1) * 7 */] = {
+    static const float ref_[] = { // (N0 + N1) * 7
 0, 16, 0.992194f, 0.172375f, 0.402458f, 0.403918f, 0.932801f,
 0, 1, 0.988326f, 0.166708f, 0.228236f, 0.737208f, 0.735803f,
 0, 7, 0.94639f, 0.602523f, 0.130399f, 0.901623f, 0.298452f,
@@ -1352,7 +1353,7 @@ TEST_P(Test_Int8_nets, YOLOv4_tiny)
 
     const int N0 = 2;
     const int N1 = 3;
-    static const float ref_[/* (N0 + N1) * 7 */] = {
+    static const float ref_[] = { // (N0 + N1) * 7
 0, 16, 0.912199f, 0.169926f, 0.350896f, 0.422704f, 0.941837f,
 0, 7, 0.845388f, 0.617568f, 0.13961f, 0.9008f, 0.29315f,
 
@@ -1378,14 +1379,14 @@ TEST_P(Test_Int8_nets, YOLOv4_tiny)
     }
 
     throw SkipTestException("batch2: bad accuracy on second image");
-    /* bad accuracy on second image
-    {
-        SCOPED_TRACE("batch size 2");
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, confThreshold);
-    }
-    */
+    // bad accuracy on second image
+    // {
+    //     SCOPED_TRACE("batch size 2");
+    //     testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, confThreshold);
+    // }
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Test_Int8_nets, dnnBackendsAndTargetsInt8());
+INSTANTIATE_TEST_CASE_P(, Test_Int8_nets, dnnBackendsAndTargetsInt8());
 
 }} // namespace
+*/

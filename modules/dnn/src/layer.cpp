@@ -228,12 +228,6 @@ void Layer::run(const std::vector<Mat>& inputs, std::vector<Mat>& outputs, std::
     this->forward(inputs, outputs, internals);
 }
 
-bool Layer::tryQuantize(const std::vector<std::vector<float>>& scales,
-        const std::vector<std::vector<int>>& zeropoints, LayerParams& params)
-{
-    return false;
-}
-
 Layer::~Layer() {}
 
 bool Layer::getMemoryShapes(const std::vector<MatShape>& inputs,

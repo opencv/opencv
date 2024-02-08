@@ -250,12 +250,6 @@ public:
     }
 #endif
 
-    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
-    {
-        return func.tryQuantize(scales, zeropoints, params);
-    }
-
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
@@ -289,8 +283,6 @@ struct BaseFunctor
     bool tryFuse(Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
-
-    bool tryQuantize(const std::vector<std::vector<float>>&, const std::vector<std::vector<int>>&, LayerParams&) { return false; }
 };
 
 struct ReLUFunctor : public BaseFunctor
@@ -458,32 +450,6 @@ struct ReLUFunctor : public BaseFunctor
     }
 #endif
 
-    bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                     const std::vector<std::vector<int> > &zeropoints, LayerParams& params)
-    {
-        if (slope != 0.f)
-        {
-            float inpScale = scales[0][0], outScale = scales[1][0];
-            int inpZp = zeropoints[0][0], outZp = zeropoints[1][0];
-
-            Mat lookUpTable(1, 256, CV_8S);
-            int8_t* table = lookUpTable.ptr<int8_t>();
-            for (int i = -128; i < 128; i++)
-            {
-                float x = inpScale*(i - inpZp);
-                float y = x >= 0.f ? x : slope*x;
-                int quantized = outZp + (int)std::round(y/outScale);
-                table[i+128] = saturate_cast<int8_t>(quantized);
-            }
-            params.blobs.clear();
-            params.blobs.push_back(lookUpTable);
-        }
-        params.set("input_scale", scales[0][0]);
-        params.set("input_zeropoint", zeropoints[0][0]);
-        params.set("slope", slope);
-        return true;
-    }
-
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -634,14 +600,6 @@ struct ReLU6Functor : public BaseFunctor
     }
 #endif
 
-    bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                     const std::vector<std::vector<int> > &zeropoints, LayerParams& params)
-    {
-        params.set("input_scale", scales[0][0]);
-        params.set("input_zeropoint", zeropoints[0][0]);
-        return true;
-    }
-
     int64 getFLOPSPerElement() const { return 2; }
 };
 
@@ -691,28 +649,6 @@ struct BaseDefaultFunctor : public BaseFunctor
 #endif
 
     inline void setKernelParams(ocl::Kernel& kernel) const {}
-
-    bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                     const std::vector<std::vector<int> > &zeropoints, LayerParams& params)
-    {
-        float inpScale = scales[0][0], outScale = scales[1][0];
-        int inpZp = zeropoints[0][0], outZp = zeropoints[1][0];
-
-        Mat lookUpTable(1, 256, CV_8S);
-        int8_t* table = lookUpTable.ptr<int8_t>();
-        for (int i = -128; i < 128; i++)
-        {
-            float x = inpScale * static_cast<float>(i - inpZp);
-            float y = static_cast<T const*>(this)->calculate(x);
-            int quantized = outZp + static_cast<int>(std::round(y/outScale));
-            table[i+128] = saturate_cast<int8_t>(quantized);
-        }
-        params.blobs.clear();
-        params.blobs.push_back(lookUpTable);
-        params.set("input_scale", scales[0][0]);
-        params.set("input_zeropoint", zeropoints[0][0]);
-        return true;
-    }
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)

@@ -267,16 +267,6 @@ public:
     }
 #endif
 
-    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
-    {
-        float outputScale = scales[1][0];
-        int outputZp = zeropoints[1][0];
-        float padValue = outputZp + std::round(params.get<float>("value", 0)/outputScale);
-        params.set("value", padValue);
-        return true;
-    }
-
 private:
     std::vector<std::pair<int, int> > paddings;  // Pairs pad before, pad after.
     std::vector<Range> dstRanges;

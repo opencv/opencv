@@ -114,33 +114,6 @@ void Net::forward(std::vector<std::vector<Mat>>& outputBlobs,
     return impl->forward(outputBlobs, outBlobNames);
 }
 
-// FIXIT drop from inference API
-Net Net::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel)
-{
-    CV_TRACE_FUNCTION();
-    CV_Assert(impl);
-    CV_Assert(!empty());
-    return impl->quantize(*this, calibData, inputsDtype, outputsDtype, perChannel);
-}
-
-// FIXIT drop from inference API
-void Net::getInputDetails(std::vector<float>& scales, std::vector<int>& zeropoints) const
-{
-    CV_TRACE_FUNCTION();
-    CV_Assert(impl);
-    CV_Assert(!empty());
-    return impl->getInputDetails(scales, zeropoints);
-}
-
-// FIXIT drop from inference API
-void Net::getOutputDetails(std::vector<float>& scales, std::vector<int>& zeropoints) const
-{
-    CV_TRACE_FUNCTION();
-    CV_Assert(impl);
-    CV_Assert(!empty());
-    return impl->getOutputDetails(scales, zeropoints);
-}
-
 void Net::setPreferableBackend(int backendId)
 {
     CV_TRACE_FUNCTION();
