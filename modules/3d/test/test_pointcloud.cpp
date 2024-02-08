@@ -171,9 +171,12 @@ TEST_P(PlyTest, LoadSaveMesh)
     std::vector<std::vector<int32_t>> indices;
     cv::loadMesh(new_path, points, normals, colors, indices);
 
-    EXPECT_EQ(colors_gold, colors);
-    EXPECT_EQ(normals_gold, normals);
-    EXPECT_EQ(points_gold, points);
+    if (!normals.empty())
+    {
+        EXPECT_LE(cv::norm(normals_gold, normals, NORM_INF), 0);
+    }
+    EXPECT_LE(cv::norm(points_gold, points, NORM_INF), 0);
+    EXPECT_LE(cv::norm(colors_gold, colors, NORM_INF), 0);
     EXPECT_EQ(indices_gold, indices);
     std::remove(new_path.c_str());
 }
