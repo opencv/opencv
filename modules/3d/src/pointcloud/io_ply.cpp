@@ -38,6 +38,11 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
     }
     std::getline(file, s);
     auto splitArr = split(s, ' ');
+    // "\r" symbols are not trimmed by default
+    for (auto& e : splitArr)
+    {
+        e = trimSpaces(e);
+    }
     if (splitArr[0] != "format")
     {
         CV_LOG_ERROR(NULL, "Provided file doesn't have format");
@@ -87,6 +92,11 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
         if (startsWith(s, "element"))
         {
             std::vector<std::string> splitArrElem = split(s, ' ');
+            // "\r" symbols are not trimmed by default
+            for (auto& e : splitArrElem)
+            {
+                e = trimSpaces(e);
+            }
             std::string elemName = splitArrElem.at(1);
             if (elemName == "vertex")
             {
@@ -123,7 +133,11 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             Property property;
             std::string elName = (elemRead == READ_VERTEX) ? "Vertex" : "Face";
             std::vector<std::string> splitArrElem = split(s, ' ');
-
+            // "\r" symbols are not trimmed by default
+            for (auto& e : splitArrElem)
+            {
+                e = trimSpaces(e);
+            }
             if (splitArrElem.size() < 3)
             {
                 CV_LOG_ERROR(NULL, elName << " property has " << splitArrElem.size()
