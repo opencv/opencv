@@ -225,7 +225,7 @@ PERF_TEST_P( TestRemap, remap,
 
     declare.in(source, WARMUP_RNG);
 
-    update_map(source, map_x, map_y, remapMode, interpolationType & WARP_RELATIVE_MAP);
+    update_map(source, map_x, map_y, remapMode, ((interpolationType & WARP_RELATIVE_MAP) != 0));
 
     TEST_CYCLE()
     {
