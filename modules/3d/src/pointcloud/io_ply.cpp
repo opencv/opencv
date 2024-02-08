@@ -355,15 +355,17 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
         normals.reserve(m_vertexCount);
     }
 
+    struct VertexFields
+    {
+        float vx, vy, vz;
+        float nx, ny, nz;
+        uchar r, g, b;
+    };
+
     union VertexData
     {
         std::array<uchar, 27> bytes;
-        struct
-        {
-            float vx, vy, vz;
-            float nx, ny, nz;
-            uchar r, g, b;
-        };
+        VertexFields vf;
     };
 
     // to avoid string matching at file loading
@@ -373,23 +375,23 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
         const auto& p = m_vertexDescription.properties[j];
         size_t offset = 0;
         if (p.name == "x")
-            offset = offsetof(VertexData, vx);
+            offset = offsetof(VertexFields, vx);
         if (p.name == "y")
-            offset = offsetof(VertexData, vy);
+            offset = offsetof(VertexFields, vy);
         if (p.name == "z")
-            offset = offsetof(VertexData, vz);
+            offset = offsetof(VertexFields, vz);
         if (p.name == "nx")
-            offset = offsetof(VertexData, nx);
+            offset = offsetof(VertexFields, nx);
         if (p.name == "ny")
-            offset = offsetof(VertexData, ny);
+            offset = offsetof(VertexFields, ny);
         if (p.name == "nz")
-            offset = offsetof(VertexData, nz);
+            offset = offsetof(VertexFields, nz);
         if (p.name == "red")
-            offset = offsetof(VertexData, r);
+            offset = offsetof(VertexFields, r);
         if (p.name == "green")
-            offset = offsetof(VertexData, g);
+            offset = offsetof(VertexFields, g);
         if (p.name == "blue")
-            offset = offsetof(VertexData, b);
+            offset = offsetof(VertexFields, b);
         vertexOffsets[j] = offset;
     }
 
@@ -439,14 +441,14 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
             }
         }
 
-        points.push_back({ vertexData.vx, vertexData.vy, vertexData.vz });
+        points.push_back({ vertexData.vf.vx, vertexData.vf.vy, vertexData.vf.vz });
         if (m_hasColour)
         {
-            rgb.push_back({ vertexData.r, vertexData.g, vertexData.b });
+            rgb.push_back({ vertexData.vf.r, vertexData.vf.g, vertexData.vf.b });
         }
         if (m_hasNormal)
         {
-            normals.push_back({ vertexData.nx, vertexData.ny, vertexData.nz });
+            normals.push_back({ vertexData.vf.nx, vertexData.vf.ny, vertexData.vf.nz });
         }
     }
 
