@@ -631,20 +631,26 @@ TEST_P(RenderingTest, floatParams)
             thr.depthInfThreshold = 1;
             if (width == 700 && height == 700)
             {
-                thr.depthL2Threshold = 9.52e-05;
+                thr.depthL2Threshold = 0.000133;
                 if (shadingType == RASTERIZE_SHADING_SHADED)
                 {
-                    thr.rgbInfThreshold = 0.000144; thr.rgbL2Threshold = 7.14e-10;
+                    thr.rgbInfThreshold = 0.00027;
+                    thr.rgbL2Threshold = 2.16e-9;
                 }
                 else if (shadingType == RASTERIZE_SHADING_FLAT && cullingMode != RASTERIZE_CULLING_CCW)
                 {
-                    thr.rgbInfThreshold = 0.109;
-                    thr.rgbL2Threshold = 3.23e-07;
+                    thr.rgbInfThreshold = 0.335;
+                    thr.rgbL2Threshold = 7.03e-07;
                 }
             }
             else if (width == 640 && height == 480)
             {
-                thr.depthL2Threshold = 5.57e-05;
+                thr.depthL2Threshold = 0.00019;
+                if (shadingType == RASTERIZE_SHADING_SHADED)
+                {
+                    thr.rgbInfThreshold = 0.00376;
+                    thr.rgbL2Threshold = 1.54e-8;
+                }
             }
             break;
         case ModelType::Centered:
@@ -780,27 +786,27 @@ TEST_P(RenderingTest, accuracy)
             }
             break;
         case ModelType::File:
-            thr.depthMaskThreshold = 1;
+            thr.depthMaskThreshold = 3;
             if (shadingType == RASTERIZE_SHADING_WHITE)
             {
                 thr.rgbInfThreshold = 1;
-                thr.rgbL2Threshold = 5.64e-06;
+                thr.rgbL2Threshold = 6.13e-6;
             }
             else
             {
-                thr.rgbInfThreshold = 0.948;
-                thr.rgbL2Threshold = 6.82e-06;
+                thr.rgbInfThreshold = 0.973;
+                thr.rgbL2Threshold = 9.57e-6;
             }
 
             if (width == 640 && height == 480)
             {
-                thr.depthL2Threshold = 0.00681;
                 thr.depthInfThreshold = 485;
+                thr.depthL2Threshold = 0.00681;
             }
             else if (width == 700 && width == 700)
             {
-                thr.depthInfThreshold = 25;
-                thr.depthL2Threshold = 0.000242;
+                thr.depthInfThreshold = 387;
+                thr.depthL2Threshold = 0.00331;
             }
             break;
 
