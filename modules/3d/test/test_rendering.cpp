@@ -256,10 +256,10 @@ public:
         break;
         case ModelType::File:
         {
-            string objectPath = findDataFile("rendering/spot.obj");
+            string objectPath = findDataFile("viz/dragon.ply");
 
-            position = Vec3d( 2.4, 0.7, 1.2);
-            lookat   = Vec3d( 0.0, 0.0, 0.3);
+            position = Vec3d( 1.9, 0.4, 1.3);
+            lookat   = Vec3d( 0.0, 0.0, 0.0);
             upVector = Vec3d( 0.0, 1.0, 0.0);
 
             fovy = 45.0;

@@ -236,11 +236,11 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     auto outputs = std::get<2>(t);
     auto glCompatibleMode = std::get<3>(t);
 
-    string objectPath = findDataFile("rendering/spot.obj");
+    string objectPath = findDataFile("viz/dragon.ply");
 
-    Vec3d position = Vec3d( 2.4, 0.7, 1.2);
-    Vec3d lookat   = Vec3d( 0.0, 0.0, 0.3);
-    Vec3d upVector = Vec3d( 0.0, 1.0, 0.0);
+    Vec3f position = Vec3d( 1.9, 0.4, 1.3);
+    Vec3f lookat   = Vec3d( 0.0, 0.0, 0.0);
+    Vec3f upVector = Vec3d( 0.0, 1.0, 0.0);
 
     double fovy = 45.0;
 
