@@ -72,15 +72,8 @@ namespace cv {
         @param R Camera rotation matrix
         @return Backward-projected point
         */
-#if CV_VERSION_MAJOR == 4
-        CV_WRAP Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R)
-        {
-            CV_UNUSED(pt); CV_UNUSED(K); CV_UNUSED(R);
-            CV_Error(Error::StsNotImplemented, "");
-        }
-#else
         CV_WRAP Point2f warpPointBackward(const Point2f &pt, InputArray K, InputArray R);
-#endif
+
         /** @brief Builds the projection maps according to the given camera data.
 
         @param src_size Source image size

@@ -74,20 +74,12 @@ public:
 
     @param pt Projected point
     @param K Camera intrinsic parameters
-    @param R Camera rotation matrix
-    @return Backward-projected point
-    */
-#if CV_VERSION_MAJOR == 4
-    virtual Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R)
-    {
-        CV_UNUSED(pt); CV_UNUSED(K); CV_UNUSED(R);
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#else
-    virtual Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R) = 0;
-#endif
+            @param R Camera rotation matrix
+            @return Backward-projected point
+            */
+            virtual Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R) = 0;
 
-    /** @brief Builds the projection maps according to the given camera data.
+            /** @brief Builds the projection maps according to the given camera data.
 
     @param src_size Source image size
     @param K Camera intrinsic parameters
