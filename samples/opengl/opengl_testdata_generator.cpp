@@ -34,6 +34,36 @@ enum class ModelType
     Centered = 4
 };
 
+static void generateNormals(const std::vector<Vec3f>& points, const std::vector<std::vector<int>>& indices,
+                            std::vector<Vec3f>& normals)
+{
+    std::vector<std::vector<Vec3f>> preNormals(points.size(), std::vector<Vec3f>());
+
+    for (const auto& tri : indices)
+    {
+        Vec3f p0 = points[tri[0]];
+        Vec3f p1 = points[tri[1]];
+        Vec3f p2 = points[tri[2]];
+
+        Vec3f cross = cv::normalize((p1 - p0).cross(p2 - p0));
+        for (int i = 0; i < 3; i++)
+        {
+            preNormals[tri[i]].push_back(cross);
+        }
+    }
+
+    normals.reserve(points.size());
+    for (const auto& pn : preNormals)
+    {
+        Vec3f sum { };
+        for (const auto& n : pn)
+        {
+            sum += n;
+        }
+        normals.push_back(cv::normalize(sum));
+    }
+}
+
 class ModelData
 {
 public:
@@ -64,8 +94,9 @@ public:
 
             objectPath = objPath;
             std::vector<vector<int>> indvec;
+            loadMesh(objectPath, vertices, indvec);
             // using per-vertex normals as colors
-            loadMesh(objectPath, vertices, colors, indvec);
+            generateNormals(vertices, indvec, colors);
             if (vertices.size() != colors.size())
             {
                 std::runtime_error("Model should contain normals for each vertex");
