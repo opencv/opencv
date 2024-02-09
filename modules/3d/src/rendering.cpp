@@ -171,21 +171,34 @@ static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, double zN
     }
 }
 
+void triangleRasterizeDepth(InputArray vertices, InputArray indices, InputOutputArray depthBuf,
+                            InputArray world2cam, double fovY, double zNear, double zFar,
+                            const TriangleRasterizeSettings& settings)
+{
+    triangleRasterize(vertices, indices, noArray(), noArray(), depthBuf, world2cam, fovY, zNear, zFar, settings);
+}
+
+void triangleRasterizeColor(InputArray vertices, InputArray indices, InputArray colors, InputOutputArray colorBuf,
+                            InputArray world2cam, double fovY, double zNear, double zFar,
+                            const TriangleRasterizeSettings& settings)
+{
+    triangleRasterize(vertices, indices, colors, colorBuf, noArray(), world2cam, fovY, zNear, zFar, settings);
+}
 
 void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
-                       InputArray cameraPose, double fovyRadians, double zNear, double zFar,
-                       TriangleRasterizeSettings settings,
-                       InputOutputArray _depthBuffer, InputOutputArray _colorBuffer)
+                       InputOutputArray _colorBuffer, InputOutputArray _depthBuffer,
+                       InputArray world2cam, double fovyRadians, double zNear, double zFar,
+                       const TriangleRasterizeSettings& settings)
 {
-    CV_Assert(cameraPose.type() == CV_32FC1 || cameraPose.type() == CV_64FC1);
-    CV_Assert((cameraPose.size() == Size {4, 3}) || (cameraPose.size() == Size {4, 4}));
+    CV_Assert(world2cam.type() == CV_32FC1 || world2cam.type() == CV_64FC1);
+    CV_Assert((world2cam.size() == Size {4, 3}) || (world2cam.size() == Size {4, 4}));
 
     CV_Assert((fovyRadians > 0) && (fovyRadians < CV_PI));
     CV_Assert(zNear > 0);
     CV_Assert(zFar > zNear);
 
     Mat cpMat;
-    cameraPose.getMat().convertTo(cpMat, CV_64FC1);
+    world2cam.getMat().convertTo(cpMat, CV_64FC1);
     Matx44d camPoseMat = Matx44d::eye();
     for (int i = 0; i < 3; i++)
     {

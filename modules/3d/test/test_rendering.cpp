@@ -512,8 +512,8 @@ protected:
 
         settings = TriangleRasterizeSettings().setCullingMode(cullingMode).setShadingType(shadingType);
 
-        triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
-                          settings, depth_buf, color_buf);
+        triangleRasterize(verts, indices, colors, color_buf, depth_buf,
+                          cameraPose, fovYradians, zNear, zFar, settings);
     }
 
 public:
@@ -542,10 +542,8 @@ TEST_P(RenderingTest, noArrays)
     Mat depthOnly(height, width, ftype, zFar);
     Mat colorOnly(height, width, CV_MAKETYPE(ftype, 3), Scalar::all(0));
 
-    triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
-                      settings, depthOnly, cv::noArray());
-    triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
-                      settings, cv::noArray(), colorOnly);
+    triangleRasterizeDepth(verts, indices, depthOnly, cameraPose, fovYradians, zNear, zFar, settings);
+    triangleRasterizeColor(verts, indices, colors, colorOnly, cameraPose, fovYradians, zNear, zFar, settings);
 
     Mat rgbDiff, depthDiff;
     compareRGB(color_buf, colorOnly, rgbDiff, 0, 0);
@@ -579,8 +577,8 @@ TEST_P(RenderingTest, floatParams)
     Mat color_buf2(height, width, CV_MAKETYPE(ftype, 3), Scalar::all(0));
 
     // cameraPose can also be float, checking it
-    triangleRasterize(verts, indices, colors, Matx44f(cameraPose), (float)fovYradians, (float)zNear, (float)zFar,
-                      settings, depth_buf2, color_buf2);
+    triangleRasterize(verts, indices, colors, color_buf2, depth_buf2,
+                      Matx44f(cameraPose), (float)fovYradians, (float)zNear, (float)zFar, settings);
 
     RenderTestThresholds thr(0, 0, 0, 0, 0);
     switch (modelType)
@@ -865,8 +863,8 @@ TEST_P(RenderingTest, keepDrawnData)
         idx1 = indices.reshape(3, 1)(Range::all(), Range(0, nTriangles / 2));
         idx2 = indices.reshape(3, 1)(Range::all(), Range(nTriangles / 2, nTriangles));
 
-        triangleRasterize(verts, idx1, colors, cameraPose, fovYradians, zNear, zFar, settings, depth_buf2, color_buf2);
-        triangleRasterize(verts, idx2, colors, cameraPose, fovYradians, zNear, zFar, settings, depth_buf2, color_buf2);
+        triangleRasterize(verts, idx1, colors, color_buf2, depth_buf2, cameraPose, fovYradians, zNear, zFar, settings);
+        triangleRasterize(verts, idx2, colors, color_buf2, depth_buf2, cameraPose, fovYradians, zNear, zFar, settings);
 
         Mat rgbDiff, depthDiff;
         compareRGB(color_buf, color_buf2, rgbDiff, 0, 0);
@@ -881,9 +879,8 @@ TEST_P(RenderingTest, glCompatibleDepth)
 {
     Mat depth_buf2(height, width, ftype, 1.0);
 
-    triangleRasterize(verts, indices, colors, cameraPose, fovYradians, zNear, zFar,
-                      settings.setGlCompatibleMode(RASTERIZE_COMPAT_INVDEPTH),
-                      depth_buf2, cv::noArray());
+    triangleRasterizeDepth(verts, indices, depth_buf2, cameraPose, fovYradians, zNear, zFar,
+                           settings.setGlCompatibleMode(RASTERIZE_COMPAT_INVDEPTH));
 
     Mat convertedDepth(height, width, ftype);
     // map from [0, 1] to [zNear, zFar]
