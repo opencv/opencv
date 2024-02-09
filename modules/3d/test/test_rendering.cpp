@@ -176,7 +176,6 @@ static inline void PrintTo(const ModelTypeEnum &t, std::ostream *os) { t.PrintTo
 template<typename T>
 std::string printEnum(T v)
 {
-    std::string s;
     std::ostringstream ss;
     v.PrintTo(&ss);
     return ss.str();

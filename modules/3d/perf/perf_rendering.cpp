@@ -182,7 +182,6 @@ static Matx44d lookAtMatrixCal(const Vec3d& position, const Vec3d& lookat, const
 template<typename T>
 std::string printEnum(T v)
 {
-    std::string s;
     std::ostringstream ss;
     v.PrintTo(&ss);
     return ss.str();
