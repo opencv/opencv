@@ -79,7 +79,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
                         depthBuf.at<float>(height - 1 - y, x) = zNew;
                     }
                 }
-                else // Shading::White
+                else // RASTERIZE_SHADING_WHITE
                 {
                     update = true;
                 }
@@ -171,24 +171,11 @@ static void invertDepth(const Mat& inbuf, Mat& outbuf, Mat& validMask, double zN
     }
 }
 
-void triangleRasterizeDepth(InputArray vertices, InputArray indices, InputOutputArray depthBuf,
-                            InputArray world2cam, double fovY, double zNear, double zFar,
-                            const TriangleRasterizeSettings& settings)
-{
-    triangleRasterize(vertices, indices, noArray(), noArray(), depthBuf, world2cam, fovY, zNear, zFar, settings);
-}
 
-void triangleRasterizeColor(InputArray vertices, InputArray indices, InputArray colors, InputOutputArray colorBuf,
-                            InputArray world2cam, double fovY, double zNear, double zFar,
-                            const TriangleRasterizeSettings& settings)
-{
-    triangleRasterize(vertices, indices, colors, colorBuf, noArray(), world2cam, fovY, zNear, zFar, settings);
-}
-
-void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
-                       InputOutputArray _colorBuffer, InputOutputArray _depthBuffer,
-                       InputArray world2cam, double fovyRadians, double zNear, double zFar,
-                       const TriangleRasterizeSettings& settings)
+static void triangleRasterizeInternal(InputArray _vertices, InputArray _indices, InputArray _colors,
+                                      Mat& colorBuf, Mat& depthBuf,
+                                      InputArray world2cam, double fovyRadians, double zNear, double zFar,
+                                      const TriangleRasterizeSettings& settings)
 {
     CV_Assert(world2cam.type() == CV_32FC1 || world2cam.type() == CV_64FC1);
     CV_Assert((world2cam.size() == Size {4, 3}) || (world2cam.size() == Size {4, 4}));
@@ -213,12 +200,10 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
         return;
     }
 
-    bool hasColors = !_colors.empty();
+    CV_CheckFalse(_vertices.empty(), "No vertices provided along with indices array");
 
     Mat vertices, colors, triangles;
     int nVerts = 0, nColors = 0, nTriangles = 0;
-
-    CV_CheckFalse(_vertices.empty(), "No vertices provided along with indices array");
 
     int vertexType = _vertices.type();
     CV_Assert(vertexType == CV_32FC1 || vertexType == CV_32FC3);
@@ -242,7 +227,7 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
     triangles = triangles.reshape(3, 1).t();
     nTriangles = (int)triangles.total();
 
-    if (hasColors)
+    if (!_colors.empty())
     {
         int colorType = _colors.type();
         CV_Assert(colorType == CV_32FC1 || colorType == CV_32FC3);
@@ -255,58 +240,10 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
         nColors = (int)colors.total();
 
         CV_Assert(nColors == nVerts);
-        CV_Assert(settings.shadingType == RASTERIZE_SHADING_FLAT ||
-                  settings.shadingType == RASTERIZE_SHADING_SHADED);
-    }
-    else
-    {
-        CV_Assert(settings.shadingType == RASTERIZE_SHADING_WHITE);
     }
 
-    Size imgSize {0, 0};
-
-    Mat colorBuf;
-    if (_colorBuffer.needed())
-    {
-        CV_Assert(!_colorBuffer.empty());
-        CV_Assert(_colorBuffer.type() == CV_32FC3);
-        imgSize = _colorBuffer.size();
-
-        colorBuf = _colorBuffer.getMat();
-    }
-
-    CV_Assert(!_colorBuffer.empty() || !_depthBuffer.empty());
-
-    Mat_<uchar> validMask;
-    Mat depthBuf;
-    if (_depthBuffer.needed())
-    {
-        CV_Assert(!_depthBuffer.empty());
-        CV_Assert(_depthBuffer.type() == CV_32FC1);
-        if (imgSize.area() > 0)
-        {
-            CV_Assert(_depthBuffer.size() == imgSize);
-        }
-        else
-        {
-            imgSize = _depthBuffer.size();
-        }
-
-        if (settings.glCompatibleMode == RASTERIZE_COMPAT_INVDEPTH)
-        {
-            depthBuf = _depthBuffer.getMat();
-        }
-        else
-        {
-            invertDepth(_depthBuffer.getMat(), depthBuf, validMask, zNear, zFar);
-        }
-    }
-    else if (hasColors)
-    {
-        // since both depthBuf and colorBuf cannot be empty, imgSize should be filled
-        depthBuf.create(imgSize, CV_32FC1);
-        depthBuf.setTo(1.0);
-    }
+    // any of buffers can be empty
+    Size imgSize {std::max(colorBuf.cols, depthBuf.cols), std::max(colorBuf.rows, depthBuf.rows)};
 
     // world-to-camera coord system
     Matx44d lookAtMatrix = camPoseMat;
@@ -366,11 +303,97 @@ void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _co
 
         drawTriangle(ver, col, depthBuf, colorBuf, settings);
     }
+}
 
-    if (!depthBuf.empty() && _depthBuffer.needed() && (settings.glCompatibleMode == RASTERIZE_COMPAT_DISABLED))
+
+void triangleRasterizeDepth(InputArray _vertices, InputArray _indices, InputOutputArray _depthBuf,
+                            InputArray world2cam, double fovY, double zNear, double zFar,
+                            const TriangleRasterizeSettings& settings)
+{
+    CV_Assert(!_depthBuf.empty());
+    CV_Assert(_depthBuf.type() == CV_32FC1);
+
+    Mat emptyColorBuf;
+    // out-of-range values from user-provided depthBuf should not be altered, let's mark them
+    Mat_<uchar> validMask;
+    Mat depthBuf;
+    if (settings.glCompatibleMode == RASTERIZE_COMPAT_INVDEPTH)
+    {
+        depthBuf = _depthBuf.getMat();
+    }
+    else // RASTERIZE_COMPAT_DISABLED
+    {
+        invertDepth(_depthBuf.getMat(), depthBuf, validMask, zNear, zFar);
+    }
+
+    triangleRasterizeInternal(_vertices, _indices, noArray(), emptyColorBuf, depthBuf, world2cam, fovY, zNear, zFar, settings);
+
+    if (settings.glCompatibleMode == RASTERIZE_COMPAT_DISABLED)
+    {
+        linearizeDepth(depthBuf, validMask, _depthBuf.getMat(), zFar, zNear);
+    }
+}
+
+void triangleRasterizeColor(InputArray _vertices, InputArray _indices, InputArray _colors, InputOutputArray _colorBuf,
+                            InputArray world2cam, double fovY, double zNear, double zFar,
+                            const TriangleRasterizeSettings& settings)
+{
+    CV_Assert(!_colorBuf.empty());
+    CV_Assert(_colorBuf.type() == CV_32FC3);
+    Mat colorBuf = _colorBuf.getMat();
+
+    Mat depthBuf;
+    if (_colors.empty())
+    {
+        // full white shading does not require depth test
+        CV_Assert(settings.shadingType == RASTERIZE_SHADING_WHITE);
+    }
+    else
+    {
+        // internal depth buffer is not exposed outside
+        depthBuf.create(_colorBuf.size(), CV_32FC1);
+        depthBuf.setTo(1.0);
+    }
+
+    triangleRasterizeInternal(_vertices, _indices, _colors, colorBuf, depthBuf, world2cam, fovY, zNear, zFar, settings);
+}
+
+void triangleRasterize(InputArray _vertices, InputArray _indices, InputArray _colors,
+                       InputOutputArray _colorBuffer, InputOutputArray _depthBuffer,
+                       InputArray world2cam, double fovyRadians, double zNear, double zFar,
+                       const TriangleRasterizeSettings& settings)
+{
+    if (_colors.empty())
+    {
+        CV_Assert(settings.shadingType == RASTERIZE_SHADING_WHITE);
+    }
+
+    CV_Assert(!_colorBuffer.empty());
+    CV_Assert(_colorBuffer.type() == CV_32FC3);
+    CV_Assert(!_depthBuffer.empty());
+    CV_Assert(_depthBuffer.type() == CV_32FC1);
+
+    CV_Assert(_depthBuffer.size() == _colorBuffer.size());
+
+    Mat colorBuf = _colorBuffer.getMat();
+
+    // out-of-range values from user-provided depthBuf should not be altered, let's mark them
+    Mat_<uchar> validMask;
+    Mat depthBuf;
+    if (settings.glCompatibleMode == RASTERIZE_COMPAT_INVDEPTH)
+    {
+        depthBuf = _depthBuffer.getMat();
+    }
+    else // RASTERIZE_COMPAT_DISABLED
+    {
+        invertDepth(_depthBuffer.getMat(), depthBuf, validMask, zNear, zFar);
+    }
+
+    triangleRasterizeInternal(_vertices, _indices, _colors, colorBuf, depthBuf, world2cam, fovyRadians, zNear, zFar, settings);
+
+    if (settings.glCompatibleMode == RASTERIZE_COMPAT_DISABLED)
     {
         linearizeDepth(depthBuf, validMask, _depthBuffer.getMat(), zFar, zNear);
     }
 }
-
 } // namespace cv
