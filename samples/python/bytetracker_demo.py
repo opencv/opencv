@@ -165,10 +165,10 @@ def post_process_image(input_image, output, class_names, objects):
         #print(box)
         left, top, width, height = box
         class_id = class_ids[i]
-        class_name = class_names[class_id]
+        #class_name = class_names[class_id]
         confidence = confidences[i]
 
-        color = get_color(class_id)
+        #color = get_color(class_id)
         #cv2.rectangle(input_image, (left, top), (left + width, top + height), color, 2)
         #label = f"{class_name}: {confidence:.2f}"
         #drawLabel(input_image, label, left, top)
