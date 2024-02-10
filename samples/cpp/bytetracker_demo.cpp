@@ -330,7 +330,7 @@ void writeDetectionsToFile(const vector<Detection> objects, const string &output
     }
 
     // Iterate over the detections and write the data to the output file
-    for (const auto object : objects)
+    for (const auto& object : objects)
     {
         // Extract the detection data (frame, trackId, x, y, width, height, score, classId)
         float y = object.rect.y;
