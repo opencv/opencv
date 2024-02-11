@@ -394,27 +394,35 @@ typedef Hamming HammingLUT;
 
 /////////////////////////////////// inline norms ////////////////////////////////////
 
-template<typename _Tp> inline _Tp cv_abs(_Tp x) { return std::abs(x); }
+template<typename _Tp> inline _Tp cv_abs(_Tp x) { return (_Tp)std::abs(x); }
+template<typename _Tp> inline _Tp cv_absdiff(_Tp x, _Tp y) { return (_Tp)std::abs(x - y); }
 inline int cv_abs(uchar x) { return x; }
 inline int cv_abs(schar x) { return std::abs(x); }
 inline int cv_abs(ushort x) { return x; }
 inline int cv_abs(short x) { return std::abs(x); }
+inline unsigned cv_abs(int x) { return (unsigned)std::abs(x); }
+inline unsigned cv_abs(unsigned x) { return x; }
+inline uint64 cv_abs(uint64 x) { return x; }
+inline uint64 cv_abs(int64 x) { return (uint64)std::abs(x); }
+inline float cv_abs(float16_t x) { return std::abs((float)x); }
+inline float cv_abs(bfloat16_t x) { return std::abs((float)x); }
+inline int cv_absdiff(uchar x, uchar y) { return (int)std::abs((int)x - (int)y); }
+inline int cv_absdiff(schar x, schar y) { return (int)std::abs((int)x - (int)y); }
+inline int cv_absdiff(ushort x, ushort y) { return (int)std::abs((int)x - (int)y); }
+inline int cv_absdiff(short x, short y) { return (int)std::abs((int)x - (int)y); }
+inline unsigned cv_absdiff(int x, int y) { return (unsigned)(std::max(x, y) - std::min(x, y)); }
+inline unsigned cv_absdiff(unsigned x, unsigned y) { return std::max(x, y) - std::min(x, y); }
+inline uint64 cv_absdiff(uint64 x, uint64 y) { return std::max(x, y) - std::min(x, y); }
+inline float cv_absdiff(float16_t x, float16_t y) { return std::abs((float)x - (float)y); }
+inline float cv_absdiff(bfloat16_t x, bfloat16_t y) { return std::abs((float)x - (float)y); }
 
 template<typename _Tp, typename _AccTp> static inline
 _AccTp normL2Sqr(const _Tp* a, int n)
 {
     _AccTp s = 0;
-    int i=0;
-#if CV_ENABLE_UNROLLED
-    for( ; i <= n - 4; i += 4 )
+    for( int i = 0; i < n; i++ )
     {
-        _AccTp v0 = a[i], v1 = a[i+1], v2 = a[i+2], v3 = a[i+3];
-        s += v0*v0 + v1*v1 + v2*v2 + v3*v3;
-    }
-#endif
-    for( ; i < n; i++ )
-    {
-        _AccTp v = a[i];
+        _AccTp v = (_AccTp)a[i];
         s += v*v;
     }
     return s;
@@ -424,15 +432,7 @@ template<typename _Tp, typename _AccTp> static inline
 _AccTp normL1(const _Tp* a, int n)
 {
     _AccTp s = 0;
-    int i = 0;
-#if CV_ENABLE_UNROLLED
-    for(; i <= n - 4; i += 4 )
-    {
-        s += (_AccTp)cv_abs(a[i]) + (_AccTp)cv_abs(a[i+1]) +
-            (_AccTp)cv_abs(a[i+2]) + (_AccTp)cv_abs(a[i+3]);
-    }
-#endif
-    for( ; i < n; i++ )
+    for( int i = 0; i < n; i++ )
         s += cv_abs(a[i]);
     return s;
 }
@@ -450,28 +450,9 @@ template<typename _Tp, typename _AccTp> static inline
 _AccTp normL2Sqr(const _Tp* a, const _Tp* b, int n)
 {
     _AccTp s = 0;
-    int i= 0;
-#if CV_ENABLE_UNROLLED
-    for(; i <= n - 4; i += 4 )
-    {
-        _AccTp v0 = _AccTp(a[i] - b[i]), v1 = _AccTp(a[i+1] - b[i+1]), v2 = _AccTp(a[i+2] - b[i+2]), v3 = _AccTp(a[i+3] - b[i+3]);
-        s += v0*v0 + v1*v1 + v2*v2 + v3*v3;
-    }
-#endif
-    for( ; i < n; i++ )
-    {
-        _AccTp v = _AccTp(a[i] - b[i]);
-        s += v*v;
-    }
-    return s;
-}
-
-static inline float normL2Sqr(const float* a, const float* b, int n)
-{
-    float s = 0.f;
     for( int i = 0; i < n; i++ )
     {
-        float v = a[i] - b[i];
+        _AccTp v = (_AccTp)a[i] - (_AccTp)b[i];
         s += v*v;
     }
     return s;
@@ -481,39 +462,8 @@ template<typename _Tp, typename _AccTp> static inline
 _AccTp normL1(const _Tp* a, const _Tp* b, int n)
 {
     _AccTp s = 0;
-    int i= 0;
-#if CV_ENABLE_UNROLLED
-    for(; i <= n - 4; i += 4 )
-    {
-        _AccTp v0 = _AccTp(a[i] - b[i]), v1 = _AccTp(a[i+1] - b[i+1]), v2 = _AccTp(a[i+2] - b[i+2]), v3 = _AccTp(a[i+3] - b[i+3]);
-        s += std::abs(v0) + std::abs(v1) + std::abs(v2) + std::abs(v3);
-    }
-#endif
-    for( ; i < n; i++ )
-    {
-        _AccTp v = _AccTp(a[i] - b[i]);
-        s += std::abs(v);
-    }
-    return s;
-}
-
-inline float normL1(const float* a, const float* b, int n)
-{
-    float s = 0.f;
     for( int i = 0; i < n; i++ )
-    {
-        s += std::abs(a[i] - b[i]);
-    }
-    return s;
-}
-
-inline int normL1(const uchar* a, const uchar* b, int n)
-{
-    int s = 0;
-    for( int i = 0; i < n; i++ )
-    {
-        s += std::abs(a[i] - b[i]);
-    }
+        s += (_AccTp)cv_absdiff(a[i], b[i]);
     return s;
 }
 
@@ -522,10 +472,7 @@ _AccTp normInf(const _Tp* a, const _Tp* b, int n)
 {
     _AccTp s = 0;
     for( int i = 0; i < n; i++ )
-    {
-        _AccTp v0 = a[i] - b[i];
-        s = std::max(s, std::abs(v0));
-    }
+        s = std::max(s, (_AccTp)cv_absdiff(a[i], b[i]));
     return s;
 }
 

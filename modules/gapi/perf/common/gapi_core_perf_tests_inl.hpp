@@ -332,6 +332,28 @@ PERF_TEST_P_(MulPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
+        printf("scale=%.5f, rows=%d, cols=%d, inp_depth=%d, out_depth=%d, channels=%d, inf norm=%g\n", scale, in_mat1.rows, in_mat1.cols, in_mat1.depth(), out_mat_ocv.depth(), in_mat1.channels(),
+               cv::norm(out_mat_gapi, out_mat_ocv, cv::NORM_INF));
+        if (in_mat1.depth() == CV_8U && out_mat_ocv.depth() == CV_16U) {
+            // looks like G-API does not always work properly on MacOSX or Windows with OpenCL
+            int cn = in_mat1.channels();
+            int nerrs = 0;
+            for (int i = 0; i < in_mat1.rows; i++) {
+                const uchar* inptr1 = in_mat1.ptr<uchar>(i);
+                const uchar* inptr2 = in_mat2.ptr<uchar>(i);
+                ushort* outptr1 = out_mat_gapi.ptr<ushort>(i);
+                ushort* outptr2 = out_mat_ocv.ptr<ushort>(i);
+                for (int j = 0; j < in_mat1.cols*cn; j++) {
+                    int v1 = outptr1[j], v2 = outptr2[j];
+                    if (std::abs(v1 - v2) > 3) {
+                        nerrs++;
+                        if (nerrs <= 100)
+                            printf("i=%d, j=%d, inp1=%d, inp2=%d, gapi=%d, ocv=%d\n", i, j, inptr1[j], inptr2[j], v1, v2);
+                    }
+                }
+            }
+        }
+
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 

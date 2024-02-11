@@ -56,7 +56,7 @@ typedef void(*AccFunc)(const uchar*, uchar*, const uchar*, int, int);
 typedef void(*AccProdFunc)(const uchar*, const uchar*, uchar*, const uchar*, int, int);
 typedef void(*AccWFunc)(const uchar*, uchar*, const uchar*, int, int, double);
 
-static AccFunc accTab[] =
+static AccFunc accTab[CV_DEPTH_MAX] =
 {
     (AccFunc)acc_8u32f, (AccFunc)acc_8u64f,
     (AccFunc)acc_16u32f, (AccFunc)acc_16u64f,
@@ -64,7 +64,7 @@ static AccFunc accTab[] =
     (AccFunc)acc_64f
 };
 
-static AccFunc accSqrTab[] =
+static AccFunc accSqrTab[CV_DEPTH_MAX] =
 {
     (AccFunc)accSqr_8u32f, (AccFunc)accSqr_8u64f,
     (AccFunc)accSqr_16u32f, (AccFunc)accSqr_16u64f,
@@ -72,7 +72,7 @@ static AccFunc accSqrTab[] =
     (AccFunc)accSqr_64f
 };
 
-static AccProdFunc accProdTab[] =
+static AccProdFunc accProdTab[CV_DEPTH_MAX] =
 {
     (AccProdFunc)accProd_8u32f, (AccProdFunc)accProd_8u64f,
     (AccProdFunc)accProd_16u32f, (AccProdFunc)accProd_16u64f,
@@ -80,7 +80,7 @@ static AccProdFunc accProdTab[] =
     (AccProdFunc)accProd_64f
 };
 
-static AccWFunc accWTab[] =
+static AccWFunc accWTab[CV_DEPTH_MAX] =
 {
     (AccWFunc)accW_8u32f, (AccWFunc)accW_8u64f,
     (AccWFunc)accW_16u32f, (AccWFunc)accW_16u64f,

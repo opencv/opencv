@@ -419,7 +419,7 @@ void finiteMask_(const uchar *src, uchar *dst, size_t total)
 
 FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn)
 {
-    static FiniteMaskFunc tab[] =
+    static FiniteMaskFunc tab[CV_DEPTH_MAX] =
     {
         (FiniteMaskFunc)GET_OPTIMIZED((finiteMask_<float,  1>)),
         (FiniteMaskFunc)GET_OPTIMIZED((finiteMask_<float,  2>)),

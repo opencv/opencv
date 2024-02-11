@@ -223,7 +223,7 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, ST(cv_abs(src[k])));
+                    result = std::max(result, (ST)cv_abs(src[k]));
             }
     }
     *_result = result;
@@ -266,8 +266,8 @@ normL2_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             {
                 for( int k = 0; k < cn; k++ )
                 {
-                    T v = src[k];
-                    result += (ST)v*v;
+                    ST v = (ST)src[k];
+                    result += v*v;
                 }
             }
     }
@@ -289,14 +289,14 @@ normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int l
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, (ST)std::abs(src1[k] - src2[k]));
+                    result = std::max(result, (ST)cv_absdiff(src1[k], src2[k]));
             }
     }
     *_result = result;
     return 0;
 }
 
-template<typename T, typename ST> int
+template<typename T, typename ST, typename WT=T> int
 normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn)
 {
     ST result = *_result;
@@ -310,7 +310,7 @@ normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result += std::abs(src1[k] - src2[k]);
+                    result += cv_absdiff(src1[k], src2[k]);
             }
     }
     *_result = result;
@@ -332,7 +332,7 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
             {
                 for( int k = 0; k < cn; k++ )
                 {
-                    ST v = src1[k] - src2[k];
+                    ST v = (ST)src1[k] - (ST)src2[k];
                     result += v*v;
                 }
             }
@@ -343,10 +343,10 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
 
 #define CV_DEF_NORM_FUNC(L, suffix, type, ntype) \
     static int norm##L##_##suffix(const type* src, const uchar* mask, ntype* r, int len, int cn) \
-{ return norm##L##_(src, mask, r, len, cn); } \
+{ return norm##L##_<type, ntype>(src, mask, r, len, cn); } \
     static int normDiff##L##_##suffix(const type* src1, const type* src2, \
     const uchar* mask, ntype* r, int len, int cn) \
-{ return normDiff##L##_(src1, src2, mask, r, (int)len, cn); }
+{ return normDiff##L##_<type, ntype>(src1, src2, mask, r, (int)len, cn); }
 
 #define CV_DEF_NORM_ALL(suffix, type, inftype, l1type, l2type) \
     CV_DEF_NORM_FUNC(Inf, suffix, type, inftype) \
@@ -357,29 +357,69 @@ CV_DEF_NORM_ALL(8u, uchar, int, int, int)
 CV_DEF_NORM_ALL(8s, schar, int, int, int)
 CV_DEF_NORM_ALL(16u, ushort, int, int, double)
 CV_DEF_NORM_ALL(16s, short, int, int, double)
-CV_DEF_NORM_ALL(32s, int, int, double, double)
+CV_DEF_NORM_ALL(32u, unsigned, unsigned, double, double)
+CV_DEF_NORM_ALL(32s, int, unsigned, double, double)
 CV_DEF_NORM_ALL(32f, float, float, double, double)
 CV_DEF_NORM_ALL(64f, double, double, double, double)
+CV_DEF_NORM_ALL(64u, uint64, uint64, double, double)
+CV_DEF_NORM_ALL(64s, int64, uint64, double, double)
+CV_DEF_NORM_ALL(16f, float16_t, float, float, float)
+CV_DEF_NORM_ALL(16bf, bfloat16_t, float, float, float)
 
-
-typedef int (*NormFunc)(const uchar*, const uchar*, uchar*, int, int);
-typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, int, int);
+typedef int (*NormFunc)(const uchar*, const uchar*, void*, int, int);
+typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, void*, int, int);
 
 static NormFunc getNormFunc(int normType, int depth)
 {
     static NormFunc normTab[3][CV_DEPTH_MAX] =
     {
         {
-            (NormFunc)GET_OPTIMIZED(normInf_8u), (NormFunc)GET_OPTIMIZED(normInf_8s), (NormFunc)GET_OPTIMIZED(normInf_16u), (NormFunc)GET_OPTIMIZED(normInf_16s),
-            (NormFunc)GET_OPTIMIZED(normInf_32s), (NormFunc)GET_OPTIMIZED(normInf_32f), (NormFunc)normInf_64f, 0
+            (NormFunc)GET_OPTIMIZED(normInf_8u),
+            (NormFunc)GET_OPTIMIZED(normInf_8s),
+            (NormFunc)GET_OPTIMIZED(normInf_16u),
+            (NormFunc)GET_OPTIMIZED(normInf_16s),
+            (NormFunc)GET_OPTIMIZED(normInf_32s),
+            (NormFunc)GET_OPTIMIZED(normInf_32f),
+            (NormFunc)normInf_64f,
+            (NormFunc)GET_OPTIMIZED(normInf_16f),
+            (NormFunc)GET_OPTIMIZED(normInf_16bf),
+            0,
+            (NormFunc)GET_OPTIMIZED(normInf_64u),
+            (NormFunc)GET_OPTIMIZED(normInf_64s),
+            (NormFunc)GET_OPTIMIZED(normInf_32u),
+            0
         },
         {
-            (NormFunc)GET_OPTIMIZED(normL1_8u), (NormFunc)GET_OPTIMIZED(normL1_8s), (NormFunc)GET_OPTIMIZED(normL1_16u), (NormFunc)GET_OPTIMIZED(normL1_16s),
-            (NormFunc)GET_OPTIMIZED(normL1_32s), (NormFunc)GET_OPTIMIZED(normL1_32f), (NormFunc)normL1_64f, 0
+            (NormFunc)GET_OPTIMIZED(normL1_8u),
+            (NormFunc)GET_OPTIMIZED(normL1_8s),
+            (NormFunc)GET_OPTIMIZED(normL1_16u),
+            (NormFunc)GET_OPTIMIZED(normL1_16s),
+            (NormFunc)GET_OPTIMIZED(normL1_32s),
+            (NormFunc)GET_OPTIMIZED(normL1_32f),
+            (NormFunc)normL1_64f,
+            (NormFunc)GET_OPTIMIZED(normL1_16f),
+            (NormFunc)GET_OPTIMIZED(normL1_16bf),
+            0,
+            (NormFunc)GET_OPTIMIZED(normL1_64u),
+            (NormFunc)GET_OPTIMIZED(normL1_64s),
+            (NormFunc)GET_OPTIMIZED(normL1_32u),
+            0
         },
         {
-            (NormFunc)GET_OPTIMIZED(normL2_8u), (NormFunc)GET_OPTIMIZED(normL2_8s), (NormFunc)GET_OPTIMIZED(normL2_16u), (NormFunc)GET_OPTIMIZED(normL2_16s),
-            (NormFunc)GET_OPTIMIZED(normL2_32s), (NormFunc)GET_OPTIMIZED(normL2_32f), (NormFunc)normL2_64f, 0
+            (NormFunc)GET_OPTIMIZED(normL2_8u),
+            (NormFunc)GET_OPTIMIZED(normL2_8s),
+            (NormFunc)GET_OPTIMIZED(normL2_16u),
+            (NormFunc)GET_OPTIMIZED(normL2_16s),
+            (NormFunc)GET_OPTIMIZED(normL2_32s),
+            (NormFunc)GET_OPTIMIZED(normL2_32f),
+            (NormFunc)normL2_64f,
+            (NormFunc)GET_OPTIMIZED(normL2_16f),
+            (NormFunc)GET_OPTIMIZED(normL2_16bf),
+            0,
+            (NormFunc)GET_OPTIMIZED(normL2_64u),
+            (NormFunc)GET_OPTIMIZED(normL2_64s),
+            (NormFunc)GET_OPTIMIZED(normL2_32u),
+            0
         }
     };
 
@@ -391,22 +431,52 @@ static NormDiffFunc getNormDiffFunc(int normType, int depth)
     static NormDiffFunc normDiffTab[3][CV_DEPTH_MAX] =
     {
         {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u), (NormDiffFunc)normDiffInf_8s,
-            (NormDiffFunc)normDiffInf_16u, (NormDiffFunc)normDiffInf_16s,
-            (NormDiffFunc)normDiffInf_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32f),
-            (NormDiffFunc)normDiffInf_64f, 0
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_16u),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_16s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32f),
+            (NormDiffFunc)normDiffInf_64f,
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_16f),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_16bf),
+            0,
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_64u),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_64s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32u),
+            0
         },
         {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u), (NormDiffFunc)normDiffL1_8s,
-            (NormDiffFunc)normDiffL1_16u, (NormDiffFunc)normDiffL1_16s,
-            (NormDiffFunc)normDiffL1_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32f),
-            (NormDiffFunc)normDiffL1_64f, 0
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_16u),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_16s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32f),
+            (NormDiffFunc)normDiffL1_64f,
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_16f),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_16bf),
+            0,
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_64u),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_64s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32u),
+            0
         },
         {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u), (NormDiffFunc)normDiffL2_8s,
-            (NormDiffFunc)normDiffL2_16u, (NormDiffFunc)normDiffL2_16s,
-            (NormDiffFunc)normDiffL2_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32f),
-            (NormDiffFunc)normDiffL2_64f, 0
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_16u),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_16s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32f),
+            (NormDiffFunc)normDiffL2_64f,
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_16f),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_16bf),
+            0,
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_64u),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_64s),
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32u),
+            0
         }
     };
 
@@ -694,7 +764,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
         return result;
     }
 
-    NormFunc func = getNormFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
+    NormFunc func = getNormFunc(normType >> 1, depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
@@ -702,23 +772,30 @@ double norm( InputArray _src, int normType, InputArray _mask )
     union
     {
         double d;
-        int i;
+        unsigned u;
+        uint64 UL;
         float f;
     }
     result;
     result.d = 0;
     NAryMatIterator it(arrays, ptrs);
     CV_CheckLT((size_t)it.size, (size_t)INT_MAX, "");
+    bool is_fp16 = depth == CV_16F || depth == CV_16BF;
 
-    if ((normType == NORM_L1 && depth <= CV_16S) ||
-        ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S))
+    if ((normType == NORM_L1 && (depth <= CV_16S || is_fp16)) ||
+        ((normType == NORM_L2 || normType == NORM_L2SQR) && (depth <= CV_8S || is_fp16)))
     {
         // special case to handle "integer" overflow in accumulator
         const size_t esz = src.elemSize();
         const int total = (int)it.size;
-        const int intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
-        const int blockSize = std::min(total, intSumBlockSize);
-        int isum = 0;
+        const int blockSize0 = (is_fp16 ? (1 << 10) :
+            normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
+        const int blockSize = std::min(total, blockSize0);
+        union {
+            int i;
+            float f;
+        } blocksum;
+        blocksum.i = 0;
         int count = 0;
 
         for (size_t i = 0; i < it.nplanes; i++, ++it)
@@ -726,34 +803,14 @@ double norm( InputArray _src, int normType, InputArray _mask )
             for (int j = 0; j < total; j += blockSize)
             {
                 int bsz = std::min(total - j, blockSize);
-                func(ptrs[0], ptrs[1], (uchar*)&isum, bsz, cn);
+                func(ptrs[0], ptrs[1], &blocksum.i, bsz, cn);
                 count += bsz;
-                if (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total))
+                if (count + blockSize >= blockSize0 || (i+1 >= it.nplanes && j+bsz >= total))
                 {
-                    result.d += isum;
-                    isum = 0;
+                    result.d += is_fp16 ? (double)blocksum.f : (double)blocksum.i;
+                    blocksum.i = 0;
                     count = 0;
                 }
-                ptrs[0] += bsz*esz;
-                if (ptrs[1])
-                    ptrs[1] += bsz;
-            }
-        }
-    }
-    else if (depth == CV_16F)
-    {
-        const size_t esz = src.elemSize();
-        const int total = (int)it.size;
-        const int blockSize = std::min(total, divUp(1024, cn));
-        AutoBuffer<float, 1026/*divUp(1024,3)*3*/> fltbuf(blockSize * cn);
-        float* data0 = fltbuf.data();
-        for (size_t i = 0; i < it.nplanes; i++, ++it)
-        {
-            for (int j = 0; j < total; j += blockSize)
-            {
-                int bsz = std::min(total - j, blockSize);
-                hal::cvt16f32f((const float16_t*)ptrs[0], data0, bsz * cn);
-                func((uchar*)data0, ptrs[1], (uchar*)&result.f, bsz, cn);
                 ptrs[0] += bsz*esz;
                 if (ptrs[1])
                     ptrs[1] += bsz;
@@ -765,20 +822,20 @@ double norm( InputArray _src, int normType, InputArray _mask )
         // generic implementation
         for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
-            func(ptrs[0], ptrs[1], (uchar*)&result, (int)it.size, cn);
+            func(ptrs[0], ptrs[1], &result, (int)it.size, cn);
         }
     }
 
     if( normType == NORM_INF )
     {
-        if(depth == CV_64F)
-            return result.d;
-        else if (depth == CV_32F || depth == CV_16F)
+        if(depth <= CV_32S || depth == CV_32U)
+            return result.u;
+        if (depth == CV_32F || is_fp16)
             return result.f;
-        else
-            return result.i;
+        if (depth == CV_64U || depth == CV_64S)
+            return (double)result.UL;
     }
-    else if( normType == NORM_L2 )
+    if( normType == NORM_L2 )
         return std::sqrt(result.d);
 
     return result.d;
@@ -1161,7 +1218,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         return result;
     }
 
-    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
+    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src1, &src2, &mask, 0};
@@ -1170,23 +1227,30 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
     {
         double d;
         float f;
-        int i;
         unsigned u;
+        uint64 UL;
     }
     result;
     result.d = 0;
     NAryMatIterator it(arrays, ptrs);
     CV_CheckLT((size_t)it.size, (size_t)INT_MAX, "");
 
-    if ((normType == NORM_L1 && depth <= CV_16S) ||
-        ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S))
+    bool is_fp16 = depth == CV_16F || depth == CV_16BF;
+
+    if ((normType == NORM_L1 && (depth <= CV_16S || is_fp16)) ||
+        ((normType == NORM_L2 || normType == NORM_L2SQR) && (depth <= CV_8S || is_fp16)))
     {
         // special case to handle "integer" overflow in accumulator
         const size_t esz = src1.elemSize();
         const int total = (int)it.size;
-        const int intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
-        const int blockSize = std::min(total, intSumBlockSize);
-        int isum = 0;
+        const int blockSize0 = (is_fp16 ? (1 << 10) :
+            normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
+        const int blockSize = std::min(total, blockSize0);
+        union {
+            int i;
+            float f;
+        } blocksum;
+        blocksum.i = 0;
         int count = 0;
 
         for (size_t i = 0; i < it.nplanes; i++, ++it)
@@ -1194,37 +1258,14 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
             for (int j = 0; j < total; j += blockSize)
             {
                 int bsz = std::min(total - j, blockSize);
-                func(ptrs[0], ptrs[1], ptrs[2], (uchar*)&isum, bsz, cn);
+                func(ptrs[0], ptrs[1], ptrs[2], &blocksum.i, bsz, cn);
                 count += bsz;
-                if (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total))
+                if (count + blockSize >= blockSize0 || (i+1 >= it.nplanes && j+bsz >= total))
                 {
-                    result.d += isum;
-                    isum = 0;
+                    result.d += is_fp16 ? (double)blocksum.f : (double)blocksum.i;
+                    blocksum.i = 0;
                     count = 0;
                 }
-                ptrs[0] += bsz*esz;
-                ptrs[1] += bsz*esz;
-                if (ptrs[2])
-                    ptrs[2] += bsz;
-            }
-        }
-    }
-    else if (depth == CV_16F)
-    {
-        const size_t esz = src1.elemSize();
-        const int total = (int)it.size;
-        const int blockSize = std::min(total, divUp(512, cn));
-        AutoBuffer<float, 1026/*divUp(512,3)*3*2*/> fltbuf(blockSize * cn * 2);
-        float* data0 = fltbuf.data();
-        float* data1 = fltbuf.data() + blockSize * cn;
-        for (size_t i = 0; i < it.nplanes; i++, ++it)
-        {
-            for (int j = 0; j < total; j += blockSize)
-            {
-                int bsz = std::min(total - j, blockSize);
-                hal::cvt16f32f((const float16_t*)ptrs[0], data0, bsz * cn);
-                hal::cvt16f32f((const float16_t*)ptrs[1], data1, bsz * cn);
-                func((uchar*)data0, (uchar*)data1, ptrs[2], (uchar*)&result.f, bsz, cn);
                 ptrs[0] += bsz*esz;
                 ptrs[1] += bsz*esz;
                 if (ptrs[2])
@@ -1237,20 +1278,20 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         // generic implementation
         for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
-            func(ptrs[0], ptrs[1], ptrs[2], (uchar*)&result, (int)it.size, cn);
+            func(ptrs[0], ptrs[1], ptrs[2], &result, (int)it.size, cn);
         }
     }
 
     if( normType == NORM_INF )
     {
-        if (depth == CV_64F)
-            return result.d;
-        else if (depth == CV_32F || depth == CV_16F)
-            return result.f;
-        else
+        if (depth <= CV_32S || depth == CV_32U)
             return result.u;
+        if (depth == CV_32F || is_fp16)
+            return result.f;
+        if (depth == CV_64U || depth == CV_64S)
+            return (double)result.UL;
     }
-    else if( normType == NORM_L2 )
+    if( normType == NORM_L2 )
         return std::sqrt(result.d);
 
     return result.d;
