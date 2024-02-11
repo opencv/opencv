@@ -25,4 +25,4 @@ There are 2 approaches how to get OpenCV:
     - OpenCV DNN module may not use OpenVINO as an inference backend
 - Build OpenCV from source code against specific version of OpenVINO. This approach solves the limitations mentioned above.
 
-The instruction how to follow both approaches is provided in [OpenCV wiki](https://github.com/opencv/opencv/wiki/BuildOpenCV4OpenVINO).
+The instruction how to follow both approaches is provided in [OpenCV wiki](https://github.com/opencv/opencv/wiki/BuildOpenCV4OpenVINO) and especially the compilation for openSUSE Linux in this [official wiki](https://en.opensuse.org/SDB:Install_OpenVINO).
