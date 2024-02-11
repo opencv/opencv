@@ -618,7 +618,76 @@ TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
     normAssert(h_t_reference, outputs[0]);
 }
 
-TEST(Layer_MAX_1d_Test_Accuracy_, Accuracy) {
+
+TEST(Layer_GATHER_1d_Test, Accuracy) {
+
+    LayerParams lp;
+    lp.type = "Gather";
+    lp.name = "gatherLayer";
+    lp.set("axis", 1);
+    lp.set("real_ndims", 1);
+
+    Ptr<GatherLayer> layer = GatherLayer::create(lp);
+
+    cv::Mat input = cv::Mat::ones(1, 1, CV_32F);
+    cv::Mat indices = cv::Mat::ones(1, 1, CV_32F) * 0;
+    cv::Mat output_ref = cv::Mat::ones(1, 1, CV_32F);
+
+    std::vector<Mat> inputs{input, indices};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+
+TEST(Layer_ARGMIN_1d_Test, Accuracy) {
+
+    LayerParams lp;
+    lp.type = "Arg";
+    lp.name = "argLayer";
+    lp.set("op", "min");
+    lp.set("axis", 1);
+    lp.set("keepdims", 1);
+    lp.set("select_last_index", 0);
+
+    Ptr<ArgLayer> layer = ArgLayer::create(lp);
+
+    cv::Mat input = cv::Mat::ones(1, 1, CV_32F);
+    cv::Mat output_ref = cv::Mat::ones(1, 1, CV_32F) * 0;
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+
+TEST(Layer_ARGMAX_1d_Test, Accuracy) {
+
+    LayerParams lp;
+    lp.type = "Arg";
+    lp.name = "argLayer";
+    lp.set("op", "max");
+    lp.set("axis", 1);
+    lp.set("keepdims", 1);
+    lp.set("select_last_index", 0);
+
+    Ptr<ArgLayer> layer = ArgLayer::create(lp);
+
+    cv::Mat input = cv::Mat::ones(1, 1, CV_32F);
+    cv::Mat output_ref = cv::Mat::ones(1, 1, CV_32F) * 0;
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+
+TEST(Layer_MAX_1d_Test, Accuracy) {
 
     LayerParams lp;
     lp.type = "Eltwise";
@@ -634,10 +703,11 @@ TEST(Layer_MAX_1d_Test_Accuracy_, Accuracy) {
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
 
-TEST(Layer_MIN_1d_Test_Accuracy_, Accuracy) {
+TEST(Layer_MIN_1d_Test, Accuracy) {
 
     LayerParams lp;
     lp.type = "Eltwise";
@@ -653,10 +723,11 @@ TEST(Layer_MIN_1d_Test_Accuracy_, Accuracy) {
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
 
-TEST(Layer_PROD_1d_Test_Accuracy_, Accuracy) {
+TEST(Layer_PROD_1d_Test, Accuracy) {
 
     LayerParams lp;
     lp.type = "Eltwise";
@@ -672,10 +743,11 @@ TEST(Layer_PROD_1d_Test_Accuracy_, Accuracy) {
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
 
-TEST(Layer_DIV_1d_Test_Accuracy_, Accuracy) {
+TEST(Layer_DIV_1d_Test, Accuracy) {
 
     LayerParams lp;
     lp.type = "Eltwise";
@@ -691,10 +763,11 @@ TEST(Layer_DIV_1d_Test_Accuracy_, Accuracy) {
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
 
-TEST(Layer_ADD_1d_Test_Accuracy_, Accuracy) {
+TEST(Layer_ADD_1d_Test, Accuracy) {
 
     LayerParams lp;
     lp.type = "Eltwise";
@@ -710,6 +783,7 @@ TEST(Layer_ADD_1d_Test_Accuracy_, Accuracy) {
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
 
