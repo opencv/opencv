@@ -210,6 +210,39 @@ static void generateNormals(const std::vector<Vec3f>& points, const std::vector<
     }
 }
 
+// load model once and keep it in static memory
+static void getModelOnce(const std::string& objectPath, std::vector<Vec3f>& vertices,
+                         std::vector<Vec3i>& indices, std::vector<Vec3f>& colors)
+{
+    static bool load = false;
+    static std::vector<Vec3f> vert, col;
+    static std::vector<Vec3i> ind;
+
+    if (!load)
+    {
+        std::vector<vector<int>> indvec;
+        // using per-vertex normals as colors
+        loadMesh(objectPath, vert, indvec);
+        generateNormals(vert, indvec, col);
+
+        for (const auto &vec : indvec)
+        {
+            ind.push_back({vec[0], vec[1], vec[2]});
+        }
+
+        for (auto &color : col)
+        {
+            color = Vec3f(abs(color[0]), abs(color[1]), abs(color[2]));
+        }
+
+        load = true;
+    }
+
+    vertices = vert;
+    colors = col;
+    indices = ind;
+}
+
 template<typename T>
 std::string printEnum(T v)
 {
@@ -247,26 +280,15 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     std::vector<Vec3f> vertices;
     std::vector<Vec3i> indices;
     std::vector<Vec3f> colors;
-    std::vector<vector<int>> indvec;
-    // using per-vertex normals as colors
-    loadMesh(objectPath, vertices, indvec);
-    generateNormals(vertices, indvec, colors);
-    for (const auto &vec : indvec)
-    {
-        indices.push_back({vec[0], vec[1], vec[2]});
-    }
 
-    if (shadingType == RASTERIZE_SHADING_WHITE)
-    {
-        colors.clear();
-    }
-    else
+    getModelOnce(objectPath, vertices, indices, colors);
+    if (shadingType != RASTERIZE_SHADING_WHITE)
     {
         // let vertices be in BGR format to avoid later color conversions
-        for (auto &color : colors)
-        {
-            color = Vec3f(abs(color[2]), abs(color[1]), abs(color[0]));
-        }
+        // cvtColor does not work with 1d Mats
+        std::vector<Mat> xyz;
+        cv::split(colors, xyz);
+        cv::merge(std::vector<Mat>{xyz[2], xyz[1], xyz[0]}, colors);
     }
 
     double zNear = 0.1, zFar = 50.0;
