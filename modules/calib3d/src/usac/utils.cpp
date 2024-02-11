@@ -170,7 +170,7 @@ public:
         if (coeffs.empty())
             return 0;
         for (auto c : coeffs)
-            if (std::isnan(c))
+            if (cvIsNaN(c) || cvIsInf(c))
                 return 0;
         Poly input(coeffs);
         if (input.degree() < 1)
