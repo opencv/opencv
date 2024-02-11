@@ -14,6 +14,7 @@
 
 #include <vector>
 #include "opencv2/core.hpp"
+#include "opencv2/3d.hpp"
 
 namespace cv {
 
@@ -41,7 +42,7 @@ within the node, which will be used for octree indexing and mapping from point c
 in an octree, each leaf node contains at least one point cloud data. Similarly, every intermediate OctreeNode
 contains at least one non-empty child pointer, except for the root node.
 */
-class OctreeNode{
+class CV_EXPORTS OctreeNode{
 public:
 
     /**
@@ -55,10 +56,12 @@ public:
     * to the depth of Octree.
     * @param _size The length of the OctreeNode. In space, every OctreeNode represents a cube.
     * @param _origin The absolute coordinates of the center of the cube.
+    * @param _color THe color attribute of octreeNode.
     * @param _parentIndex The serial number of the child of the current node in the parent node,
     * the range is (-1~7). Among them, only the root node's _parentIndex is -1.
+    * @param _pointNum The number of point in this cube.
     */
-    OctreeNode(int _depth, double _size, const Point3f& _origin, int _parentIndex);
+    OctreeNode(size_t _depth, double _size, const Point3f& _origin, const Point3f& _color, int _parentIndex, int _pointNum);
 
     //! returns true if the rootNode is NULL.
     bool empty() const;
@@ -69,12 +72,14 @@ public:
 
     //! Contains 8 pointers to its 8 children.
     std::vector< Ptr<OctreeNode> > children;
+    //! 8bit to indicate 8 children's existence.
+    unsigned char occupancy;
 
     //! Point to the parent node of the current node. The root node has no parent node and the value is NULL.
     Ptr<OctreeNode> parent = nullptr;
 
     //! The depth of the current node. The depth of the root node is 0, and the leaf node is equal to the depth of Octree.
-    int depth;
+    size_t depth;
 
     //! The length of the OctreeNode. In space, every OctreeNode represents a cube.
     double size;
@@ -82,6 +87,25 @@ public:
     //! Absolute coordinates of the smallest point of the cube.
     //! And the center of cube is `center = origin + Point3f(size/2, size/2, size/2)`.
     Point3f origin;
+    //! RGB color attribute of octree node.
+    Point3f color;
+    //! RAHTCoefficient of octree node for attribute compression.
+    Point3f RAHTCoefficient=Point3f(0,0,0);
+    //! Number of point cloud in this node.
+    int pointNum;
+
+    /**  The list of 6 adjacent neighbor node.
+        *    index mapping:
+        *     +z                        [101]
+        *      |                          |    [110]
+        *      |                          |  /
+        *      O-------- +x    [001]----{000} ----[011]
+        *     /                       /   |
+        *    /                   [010]    |
+        *  +y                           [100]
+        *  index 000, 111 are reserved
+        */
+    // std::vector< Ptr<OctreeNode> > neigh;
 
     /**  The serial number of the child of the current node in the parent node,
     * the range is (-1~7). Among them, only the root node's _parentIndex is -1.
@@ -95,5 +119,62 @@ public:
     std::vector<Point3f> pointList;
 };
 
+/** @brief Key for pointCloud, used to compute the child node index through bit operations.
+
+When building the octree, the point cloud data is firstly voxelized/discretized: by inserting
+all the points into a voxel coordinate system. For example, when resolution is set to 0.01, a point
+with coordinate Point3f(0.251,0.502,0.753) would be transformed to:(0.251/0.01,0.502/0.01,0.753/0.01)
+=(25,50,75). And the OctreeKey will be (x_key:1_1001,y_key:11_0010,z_key:100_1011). Assume the Octree->depth
+is 100_0000, It can quickly calculate the index of the child nodes at each layer.
+layer	    Depth Mask	    x&Depth Mask	    y&Depth Mask	    z&Depth Mask	    Child Index(0-7)
+1	        100_0000	    0	                0	                1	                4
+2	        10_0000	        0	                1	                0	                2
+3	        1_0000	        1	                1	                0	                3
+4	        1000	        1	                0	                1	                5
+5	        100	            0	                0	                0	                0
+6	        10	            0	                1	                1	                6
+7	        1	            1	                0	                1	                5
+*/
+
+class OctreeKey{
+public:
+    size_t x_key;
+    size_t y_key;
+    size_t z_key;
+
+public:
+    OctreeKey():x_key(0),y_key(0),z_key(0){};
+    OctreeKey(size_t x,size_t y,size_t z):x_key(x),y_key(y),z_key(z){};
+
+    /** @brief compute the child node index through bit operations.
+    *
+    * @param mask The mask of specify layer.
+    * @return the index of child(0-7)
+    */
+    inline unsigned char findChildIdxByMask(size_t mask) const{
+        return static_cast<unsigned char>((!!(z_key&mask))<<2)|((!!(y_key&mask))<<1)|(!!(x_key&mask));
+    }
+};
+
+struct Octree::Impl{
+    Impl():maxDepth(0), size(0), origin(0,0,0), resolution(0)
+    {}
+
+    ~Impl()
+    {}
+
+    // The pointer to Octree root node.
+    Ptr <OctreeNode> rootNode = nullptr;
+    //! Max depth of the Octree. And depth must be greater than zero
+    size_t maxDepth;
+    //! The size of the cube of the root.
+    double size;
+    //! The origin coordinate of root node.
+    Point3f origin;
+    //! The size of the leaf node.
+    double resolution;
+    //! Whether the point cloud has a color attribute.
+    bool hasColor{};
+};
 }
 #endif //OPENCV_3D_SRC_OCTREE_HPP

@@ -9,7 +9,8 @@ endif()
 ocv_define_module(3d opencv_imgproc opencv_features2d opencv_flann ${debug_modules}
     WRAP java objc python js
 )
-ocv_target_link_libraries(${the_module} ${LAPACK_LIBRARIES})
+ocv_include_directories(${ZLIB_INCLUDE_DIRS})
+ocv_target_link_libraries(${the_module} ${LAPACK_LIBRARIES} ${ZLIB_LIBRARIES})
 
 if(NOT HAVE_EIGEN)
   message(STATUS "3d: Eigen support is disabled. Eigen is Required for Posegraph optimization")

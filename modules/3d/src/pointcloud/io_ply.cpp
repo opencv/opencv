@@ -19,6 +19,12 @@ void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     CV_UNUSED(indices);
 
     std::ifstream file(m_filename, std::ios::binary);
+
+    if (!file.is_open()) {
+        CV_LOG_ERROR(NULL, "File " + m_filename + " does not exist.");
+        return;
+    }
+
     if (parseHeader(file))
     {
         parseBody(file, points, normals, rgb);
@@ -35,6 +41,9 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
         return false;
     }
     std::getline(file, s);
+    if (!s.empty() && s.back() == '\r') {
+        s.pop_back();
+    }
     auto splitArr = split(s, ' ');
     if (splitArr[0] != "format")
     {
@@ -62,6 +71,9 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
     bool onVertexRead = false;
     while (std::getline(file, s))
     {
+        if (s.back() == '\r') {
+            s.pop_back();
+        }
         if (startsWith(s, "element"))
         {
             auto splitArrElem = split(s, ' ');

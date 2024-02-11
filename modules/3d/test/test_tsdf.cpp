@@ -485,12 +485,12 @@ void debugVolumeDraw(const Volume &volume, Affine3f pose, Mat depth, float depth
     Mat points, normals;
     volume.raycast(pose.matrix, points, normals);
 
-    Mat ptsList, ptsList3, nrmList, nrmList3;
+    Mat ptsList, ptsList3, nrmList, nrmList3, rgb;
     volume.fetchPointsNormals(ptsList, nrmList);
     // transform 4 channels to 3 channels
     cvtColor(ptsList, ptsList3, COLOR_BGRA2BGR);
     cvtColor(ptsList, nrmList3, COLOR_BGRA2BGR);
-    savePointCloud(objFname, ptsList3, nrmList3);
+    savePointCloud(objFname, ptsList3, nrmList3, rgb);
 
     displayImage(depth, points, normals, depthFactor, lightPose);
 }
