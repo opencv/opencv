@@ -816,7 +816,7 @@ TEST(CharucoBoardGenerate, issue_24806)
         Point2f chessCorner(pixInSquare*(p.x/squareLength),
                             pixInSquare*(p.y/squareLength));
         Mat winCorner = chessboardZoneImg(Rect(Point(cvRound(chessCorner.x) - 1, cvRound(chessCorner.y) - 1), Size(2, 2)));
-        bool eq = (cv::countNonZero(goldCorner1 != winCorner) == 0) | (cv::countNonZero(goldCorner2 != winCorner) == 0);
+        bool eq = (cv::countNonZero(goldCorner1 != winCorner) == 0) || (cv::countNonZero(goldCorner2 != winCorner) == 0);
         ASSERT_TRUE(eq);
     }
     // TODO: fix aruco generateImage and add test aruco corners for generated image

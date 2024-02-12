@@ -502,7 +502,7 @@ void InfEngineNgraphNet::init(Target targetId)
                     size_t total = ngraph::shape_size(constant->get_shape());
                     Mat floats(1, total, CV_32F, (void*)floatsData);
                     Mat halfs;
-                    cv::convertFp16(floats, halfs);
+                    floats.convertTo(halfs, CV_16F);
 
                     auto new_const = std::make_shared<ngraph::op::Constant>(ngraph::element::f16, constant->get_shape(), halfs.data);
                     new_const->set_friendly_name(constant->get_friendly_name());

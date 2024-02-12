@@ -99,7 +99,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -140,7 +140,7 @@ public:
         const auto &bias = inputs.size() == 3 ? inputs[2] : UMat::zeros(norm_size, 1, CV_32F);
 
         // no fp16 support
-        if (input.depth() == CV_16S) {
+        if (input.depth() == CV_16F) {
             return false;
         }
 

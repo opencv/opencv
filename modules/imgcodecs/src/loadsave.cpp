@@ -782,7 +782,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
 
     ImageDecoder decoder = findDecoder(buf_row);
     if( !decoder )
-        return 0;
+        return false;
 
     int scale_denom = 1;
     if( flags > IMREAD_LOAD_GDAL )
@@ -803,7 +803,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
         filename = tempfile();
         FILE* f = fopen( filename.c_str(), "wb" );
         if( !f )
-            return 0;
+            return false;
         size_t bufSize = buf_row.total()*buf.elemSize();
         if (fwrite(buf_row.ptr(), 1, bufSize, f) != bufSize)
         {
@@ -841,7 +841,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
                 CV_LOG_WARNING(NULL, "unable to remove temporary file:" << filename);
             }
         }
-        return 0;
+        return false;
     }
 
     // established the required input image size
@@ -887,7 +887,6 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
 
     if (!success)
     {
-        mat.release();
         return false;
     }
 
@@ -911,7 +910,8 @@ Mat imdecode( InputArray _buf, int flags )
     CV_TRACE_FUNCTION();
 
     Mat buf = _buf.getMat(), img;
-    imdecode_( buf, flags, img );
+    if (!imdecode_(buf, flags, img))
+        img.release();
 
     return img;
 }
@@ -922,9 +922,10 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
 
     Mat buf = _buf.getMat(), img;
     dst = dst ? dst : &img;
-    imdecode_( buf, flags, *dst );
-
-    return *dst;
+    if (imdecode_(buf, flags, *dst))
+        return *dst;
+    else
+        return cv::Mat();
 }
 
 static bool
