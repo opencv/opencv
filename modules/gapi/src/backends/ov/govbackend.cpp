@@ -794,13 +794,24 @@ public:
         }
     }
 
-    void cfgScaleMean(const std::string &input_name) {
+    void cfgScaleMean(const std::string &input_name,
+                      const GMetaArg &input_meta) {
         auto &input_info = m_ppp.input(input_name);
+
         const auto mean_vec = lookUp(m_mean_values, input_name);
+        const auto scale_vec = lookUp(m_scale_values, input_name);
+
+        if (mean_vec || scale_vec) {
+            GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(input_meta));
+            const auto depth = cv::util::get<cv::GMatDesc>(input_meta).depth;
+            const bool depth_is_real = (depth == CV_32F) || (depth == CV_16F);
+            if (!depth_is_real) {
+                input_info.preprocess().convert_element_type(toOV(CV_32F));
+            }
+        }
         if (mean_vec) {
             input_info.preprocess().mean(*mean_vec);
         }
-        const auto scale_vec = lookUp(m_scale_values, input_name);
         if (scale_vec) {
             input_info.preprocess().scale(*scale_vec);
         }
@@ -974,7 +985,7 @@ struct Infer: public cv::detail::KernelTag {
 
                 ppp.cfgLayouts(input_name);
                 ppp.cfgPreProcessing(input_name, mm);
-                ppp.cfgScaleMean(input_name);
+                ppp.cfgScaleMean(input_name, mm);
             }
             ppp.cfgPostProcessing();
             ppp.finalize();
@@ -1062,7 +1073,7 @@ struct InferROI: public cv::detail::KernelTag {
 
             ppp.cfgLayouts(input_name);
             ppp.cfgPreProcessing(input_name, mm, true /*disable_img_resize*/);
-            ppp.cfgScaleMean(input_name);
+            ppp.cfgScaleMean(input_name, mm);
             ppp.cfgPostProcessing();
             ppp.finalize();
         }
@@ -1148,7 +1159,7 @@ struct InferList: public cv::detail::KernelTag {
 
                 ppp.cfgLayouts(input_name);
                 ppp.cfgPreProcessing(input_name, mm, true /*disable_img_resize*/);
-                ppp.cfgScaleMean(input_name);
+                ppp.cfgScaleMean(input_name, mm);
             }
             ppp.cfgPostProcessing();
             ppp.finalize();
@@ -1267,7 +1278,7 @@ struct InferList2: public cv::detail::KernelTag {
                     GAPI_Assert(op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_MAT);
                 }
 
-                ppp.cfgScaleMean(input_name);
+                ppp.cfgScaleMean(input_name, mm_0);
                 idx++; // NB: Never forget to increment the counter
             }
             ppp.cfgPostProcessing();
