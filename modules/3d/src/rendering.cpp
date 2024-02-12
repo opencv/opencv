@@ -208,7 +208,8 @@ static void triangleRasterizeInternal(InputArray _vertices, InputArray _indices,
     int vertexType = _vertices.type();
     CV_Assert(vertexType == CV_32FC1 || vertexType == CV_32FC3);
     vertices = _vertices.getMat();
-    if ((_vertices.channels() == 1) && (_vertices.rows() == 3))
+    // transform 3xN matrix to Nx3, except 3x3
+    if ((_vertices.channels() == 1) && (_vertices.rows() == 3) && (_vertices.cols() != 3))
     {
         vertices = vertices.t();
     }
@@ -219,7 +220,8 @@ static void triangleRasterizeInternal(InputArray _vertices, InputArray _indices,
     int indexType = _indices.type();
     CV_Assert(indexType == CV_32SC1 || indexType == CV_32SC3);
     triangles = _indices.getMat();
-    if ((_indices.channels() == 1) && (_indices.rows() == 3))
+    // transform 3xN matrix to Nx3, except 3x3
+    if ((_indices.channels() == 1) && (_indices.rows() == 3) && (_indices.cols() != 3))
     {
         triangles = triangles.t();
     }
@@ -232,7 +234,8 @@ static void triangleRasterizeInternal(InputArray _vertices, InputArray _indices,
         int colorType = _colors.type();
         CV_Assert(colorType == CV_32FC1 || colorType == CV_32FC3);
         colors = _colors.getMat();
-        if ((_colors.channels() == 1) && (_colors.rows() == 3))
+        // transform 3xN matrix to Nx3, except 3x3
+        if ((_colors.channels() == 1) && (_colors.rows() == 3) && (_colors.cols() != 3))
         {
             colors = colors.t();
         }
