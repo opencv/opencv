@@ -10,7 +10,8 @@ namespace cvtest
 
 const char* getTypeName( int type )
 {
-    static const char* type_names[] = { "8u", "8s", "16u", "16s", "32s", "32f", "64f", "ptr" };
+    static const char* type_names[CV_DEPTH_MAX] = { "8u", "8s", "16u", "16s", "32s", "32f", "64f",
+                                                    "16f","16bf","bool","64u", "64s", "32u" };
     return type_names[CV_MAT_DEPTH(type)];
 }
 
