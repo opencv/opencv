@@ -2839,13 +2839,13 @@ enum TriangleGlCompatibleMode
 /**
  * @brief Structure to keep settings for rasterization
  */
-struct CV_EXPORTS_W TriangleRasterizeSettings
+struct CV_EXPORTS_W_SIMPLE TriangleRasterizeSettings
 {
     TriangleRasterizeSettings();
 
-    inline TriangleRasterizeSettings& setShadingType(TriangleShadingType st) { shadingType = st; return *this; }
-    inline TriangleRasterizeSettings& setCullingMode(TriangleCullingMode cm) { cullingMode = cm; return *this; }
-    inline TriangleRasterizeSettings& setGlCompatibleMode(TriangleGlCompatibleMode gm) { glCompatibleMode = gm; return *this; }
+    CV_WRAP TriangleRasterizeSettings& setShadingType(TriangleShadingType st) { shadingType = st; return *this; }
+    CV_WRAP TriangleRasterizeSettings& setCullingMode(TriangleCullingMode cm) { cullingMode = cm; return *this; }
+    CV_WRAP TriangleRasterizeSettings& setGlCompatibleMode(TriangleGlCompatibleMode gm) { glCompatibleMode = gm; return *this; }
 
     TriangleShadingType shadingType;
     TriangleCullingMode cullingMode;
