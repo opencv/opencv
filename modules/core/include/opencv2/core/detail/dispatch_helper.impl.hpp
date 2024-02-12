@@ -27,6 +27,9 @@ static inline void depthDispatch(const int depth, Args&&... args)
         case CV_16S:
             Functor<int16_t>{}(std::forward<Args>(args)...);
             break;
+        case CV_32U:
+            Functor<uint32_t>{}(std::forward<Args>(args)...);
+            break;
         case CV_32S:
             Functor<int32_t>{}(std::forward<Args>(args)...);
             break;
@@ -36,7 +39,18 @@ static inline void depthDispatch(const int depth, Args&&... args)
         case CV_64F:
             Functor<double>{}(std::forward<Args>(args)...);
             break;
+        case CV_64U:
+            Functor<uint64_t>{}(std::forward<Args>(args)...);
+            break;
+        case CV_64S:
+            Functor<int64_t>{}(std::forward<Args>(args)...);
+            break;
         case CV_16F:
+            Functor<cv::float16_t>{}(std::forward<Args>(args)...);
+            break;
+        case CV_16BF:
+            Functor<cv::bfloat16_t>{}(std::forward<Args>(args)...);
+            break;
         default:
             CV_Error(cv::Error::BadDepth, "Unsupported matrix type.");
     };

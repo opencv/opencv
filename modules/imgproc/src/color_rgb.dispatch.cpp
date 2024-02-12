@@ -20,25 +20,25 @@ namespace cv {
 
 #if NEED_IPP
 
-static const ippiColor2GrayFunc ippiColor2GrayC3Tab[] =
+static const ippiColor2GrayFunc ippiColor2GrayC3Tab[CV_DEPTH_MAX] =
 {
     (ippiColor2GrayFunc)ippiColorToGray_8u_C3C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_C3C1R, 0,
     0, (ippiColor2GrayFunc)ippiColorToGray_32f_C3C1R, 0, 0
 };
 
-static const ippiColor2GrayFunc ippiColor2GrayC4Tab[] =
+static const ippiColor2GrayFunc ippiColor2GrayC4Tab[CV_DEPTH_MAX] =
 {
     (ippiColor2GrayFunc)ippiColorToGray_8u_AC4C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_AC4C1R, 0,
     0, (ippiColor2GrayFunc)ippiColorToGray_32f_AC4C1R, 0, 0
 };
 
-static const ippiGeneralFunc ippiRGB2GrayC3Tab[] =
+static const ippiGeneralFunc ippiRGB2GrayC3Tab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiRGBToGray_8u_C3C1R, 0, (ippiGeneralFunc)ippiRGBToGray_16u_C3C1R, 0,
     0, (ippiGeneralFunc)ippiRGBToGray_32f_C3C1R, 0, 0
 };
 
-static const ippiGeneralFunc ippiRGB2GrayC4Tab[] =
+static const ippiGeneralFunc ippiRGB2GrayC4Tab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiRGBToGray_8u_AC4C1R, 0, (ippiGeneralFunc)ippiRGBToGray_16u_AC4C1R, 0,
     0, (ippiGeneralFunc)ippiRGBToGray_32f_AC4C1R, 0, 0
@@ -137,34 +137,34 @@ static IppStatus CV_STDCALL ippiSwapChannels_32f_C3C4Rf(const Ipp32f* pSrc, int 
 }
 
 // shared
-ippiReorderFunc ippiSwapChannelsC3C4RTab[] =
+ippiReorderFunc ippiSwapChannelsC3C4RTab[CV_DEPTH_MAX] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C3C4Rf, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3C4Rf, 0,
     0, (ippiReorderFunc)ippiSwapChannels_32f_C3C4Rf, 0, 0
 };
 
-static ippiGeneralFunc ippiCopyAC4C3RTab[] =
+static ippiGeneralFunc ippiCopyAC4C3RTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiCopy_8u_AC4C3R, 0, (ippiGeneralFunc)ippiCopy_16u_AC4C3R, 0,
     0, (ippiGeneralFunc)ippiCopy_32f_AC4C3R, 0, 0
 };
 
 // shared
-ippiReorderFunc ippiSwapChannelsC4C3RTab[] =
+ippiReorderFunc ippiSwapChannelsC4C3RTab[CV_DEPTH_MAX] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C4C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4C3R, 0,
     0, (ippiReorderFunc)ippiSwapChannels_32f_C4C3R, 0, 0
 };
 
 // shared
-ippiReorderFunc ippiSwapChannelsC3RTab[] =
+ippiReorderFunc ippiSwapChannelsC3RTab[CV_DEPTH_MAX] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3R, 0,
     0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
 };
 
 #if IPP_VERSION_X100 >= 810
-static ippiReorderFunc ippiSwapChannelsC4RTab[] =
+static ippiReorderFunc ippiSwapChannelsC4RTab[CV_DEPTH_MAX] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4R, 0,
     0, (ippiReorderFunc)ippiSwapChannels_32f_C4R, 0, 0

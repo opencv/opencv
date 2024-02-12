@@ -139,7 +139,7 @@ public:
         }
 
         const Mat &input = inputs[0];
-        CV_Assert(((input.dims == 3 && kernel_size.size() == 1) || input.dims == 4 || input.dims == 5) && (input.type() == CV_32F || input.type() == CV_16S));
+        CV_Assert(((input.dims == 3 && kernel_size.size() == 1) || input.dims == 4 || input.dims == 5) && (input.type() == CV_32F || input.type() == CV_16F));
         for (size_t i = 0; i < outputs.size(); i++)
         {
             CV_Assert(inputs[i].type() == input.type());
@@ -929,7 +929,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -943,6 +943,7 @@ public:
             umat_blobs.resize(n);
             for (size_t i = 0; i < n; i++)
             {
+                CV_Assert(!use_half);  // TODO: not implemented
                 inputs[i + 1].copyTo(umat_blobs[i]);
             }
             inputs.resize(1);
@@ -955,7 +956,7 @@ public:
             for (size_t i = 0; i < n; i++)
             {
                 if (use_half)
-                    convertFp16(blobs[i], umat_blobs[i]);
+                    blobs[i].convertTo(umat_blobs[i], CV_16F);
                 else
                     blobs[i].copyTo(umat_blobs[i]);
             }
@@ -1036,7 +1037,7 @@ public:
         if (fusedWeights)
         {
             if (use_half)
-                convertFp16(weightsMat, umat_blobs[0]);
+                weightsMat.convertTo(umat_blobs[0], CV_16F);
             else
                 weightsMat.copyTo(umat_blobs[0]);
             fusedWeights = false;
@@ -1046,7 +1047,7 @@ public:
             if ( umat_blobs.size() < 2 )
                 umat_blobs.resize(2);
             if (use_half)
-                convertFp16(Mat(biasvec, true), umat_blobs[1]);
+                Mat(biasvec, true).convertTo(umat_blobs[1], CV_16F);
             else
                 Mat(biasvec, true).copyTo(umat_blobs[1]);
             convolutionOp->setBias(true);
@@ -1109,7 +1110,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -1789,7 +1790,7 @@ public:
         std::vector<UMat> outputs;
         std::vector<UMat> internals;
 
-        if (inputs_.depth() == CV_16S)
+        if (inputs_.depth() == CV_16F)
             return false;
 
         inputs_.getUMatVector(inputs);
@@ -1896,7 +1897,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr));
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

@@ -117,6 +117,11 @@ CV_EXPORTS void add16s( const short* src1, size_t step1, const short* src2, size
 CV_EXPORTS void add32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void add32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void add64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void add16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, cv_hal_f16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void add16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, cv_hal_bf16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void add64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uint64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void add64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void add32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* );
 
 CV_EXPORTS void sub8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void sub8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* );
@@ -125,6 +130,11 @@ CV_EXPORTS void sub16s( const short* src1, size_t step1, const short* src2, size
 CV_EXPORTS void sub32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void sub32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void sub64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void sub16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, cv_hal_f16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void sub16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, cv_hal_bf16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void sub64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uint64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void sub64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void sub32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* );
 
 CV_EXPORTS void max8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void max8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* );
@@ -133,6 +143,11 @@ CV_EXPORTS void max16s( const short* src1, size_t step1, const short* src2, size
 CV_EXPORTS void max32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void max32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void max64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void max16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, cv_hal_f16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void max16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, cv_hal_bf16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void max64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uint64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void max64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void max32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* );
 
 CV_EXPORTS void min8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void min8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* );
@@ -141,6 +156,11 @@ CV_EXPORTS void min16s( const short* src1, size_t step1, const short* src2, size
 CV_EXPORTS void min32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void min32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void min64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void min16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, cv_hal_f16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void min16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, cv_hal_bf16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void min64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uint64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void min64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void min32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* );
 
 CV_EXPORTS void absdiff8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void absdiff8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* );
@@ -149,6 +169,11 @@ CV_EXPORTS void absdiff16s( const short* src1, size_t step1, const short* src2, 
 CV_EXPORTS void absdiff32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void absdiff32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void absdiff64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void absdiff16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, cv_hal_f16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void absdiff16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, cv_hal_bf16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void absdiff64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uint64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void absdiff64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void absdiff32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* );
 
 CV_EXPORTS void and8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
 CV_EXPORTS void or8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
@@ -162,6 +187,11 @@ CV_EXPORTS void cmp16s(const short* src1, size_t step1, const short* src2, size_
 CV_EXPORTS void cmp32s(const int* src1, size_t step1, const int* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
 CV_EXPORTS void cmp32f(const float* src1, size_t step1, const float* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
 CV_EXPORTS void cmp64f(const double* src1, size_t step1, const double* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+CV_EXPORTS void cmp16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+CV_EXPORTS void cmp16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+CV_EXPORTS void cmp64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+CV_EXPORTS void cmp64s( const int64* src1, size_t step1, const int64* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+CV_EXPORTS void cmp32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
 
 CV_EXPORTS void mul8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void mul8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
@@ -170,6 +200,11 @@ CV_EXPORTS void mul16s( const short* src1, size_t step1, const short* src2, size
 CV_EXPORTS void mul32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void mul32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void mul64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void mul16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, cv_hal_f16* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void mul16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, cv_hal_bf16* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void mul64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uint64* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void mul64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void mul32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* scale);
 
 CV_EXPORTS void div8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void div8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
@@ -178,6 +213,11 @@ CV_EXPORTS void div16s( const short* src1, size_t step1, const short* src2, size
 CV_EXPORTS void div32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void div32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void div64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void div16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, cv_hal_f16* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void div16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, cv_hal_bf16* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void div64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uint64* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void div64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void div32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* scale);
 
 CV_EXPORTS void recip8u( const uchar *, size_t, const uchar * src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void recip8s( const schar *, size_t, const schar * src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
@@ -186,6 +226,11 @@ CV_EXPORTS void recip16s( const short *, size_t, const short * src2, size_t step
 CV_EXPORTS void recip32s( const int *, size_t, const int * src2, size_t step2, int* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void recip32f( const float *, size_t, const float * src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void recip64f( const double *, size_t, const double * src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip16f( const cv_hal_f16 *, size_t, const cv_hal_f16* src2, size_t step2, cv_hal_f16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void recip16bf( const cv_hal_bf16 *, size_t, const cv_hal_bf16* src2, size_t step2, cv_hal_bf16* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void recip64u( const uint64 *, size_t, const uint64* src2, size_t step2, uint64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void recip64s( const int64 *, size_t, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* );
+CV_EXPORTS void recip32u( const unsigned *, size_t, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* );
 
 CV_EXPORTS void addWeighted8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _scalars );
 CV_EXPORTS void addWeighted8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scalars );
@@ -194,6 +239,11 @@ CV_EXPORTS void addWeighted16s( const short* src1, size_t step1, const short* sr
 CV_EXPORTS void addWeighted32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scalars );
 CV_EXPORTS void addWeighted32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scalars );
 CV_EXPORTS void addWeighted64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scalars );
+CV_EXPORTS void addWeighted16f( const cv_hal_f16* src1, size_t step1, const cv_hal_f16* src2, size_t step2, cv_hal_f16* dst, size_t step, int width, int height, void* scalars );
+CV_EXPORTS void addWeighted16bf( const cv_hal_bf16* src1, size_t step1, const cv_hal_bf16* src2, size_t step2, cv_hal_bf16* dst, size_t step, int width, int height, void* scalars );
+CV_EXPORTS void addWeighted64u( const uint64* src1, size_t step1, const uint64* src2, size_t step2, uint64* dst, size_t step, int width, int height, void* scalars );
+CV_EXPORTS void addWeighted64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* scalars );
+CV_EXPORTS void addWeighted32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* scalars );
 
 CV_EXPORTS void cvt16f32f( const float16_t* src, float* dst, int len );
 CV_EXPORTS void cvt32f16f( const float* src, float16_t* dst, int len );

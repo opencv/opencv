@@ -798,6 +798,21 @@ PyObject* pyopencv_from(const Rect& r)
 }
 
 template<>
+bool pyopencv_to(PyObject* obj, Rect2f& r, const ArgInfo& info)
+{
+    RefWrapper<float> values[] = {
+        RefWrapper<float>(r.x), RefWrapper<float>(r.y),
+        RefWrapper<float>(r.width), RefWrapper<float>(r.height)};
+    return parseSequence(obj, values, info);
+}
+
+template<>
+PyObject* pyopencv_from(const Rect2f& r)
+{
+    return Py_BuildValue("(ffff)", r.x, r.y, r.width, r.height);
+}
+
+template<>
 bool pyopencv_to(PyObject* obj, Rect2d& r, const ArgInfo& info)
 {
     RefWrapper<double> values[] = {
@@ -962,6 +977,21 @@ template<>
 PyObject* pyopencv_from(const Point2d& p)
 {
     return Py_BuildValue("(dd)", p.x, p.y);
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, Point3i& p, const ArgInfo& info)
+{
+    RefWrapper<int> values[] = {RefWrapper<int>(p.x),
+                                RefWrapper<int>(p.y),
+                                RefWrapper<int>(p.z)};
+    return parseSequence(obj, values, info);
+}
+
+template<>
+PyObject* pyopencv_from(const Point3i& p)
+{
+    return Py_BuildValue("(iii)", p.x, p.y, p.z);
 }
 
 template<>

@@ -505,9 +505,9 @@ private:
     int depth;
 };
 
-extern ippiReorderFunc ippiSwapChannelsC3C4RTab[8];
-extern ippiReorderFunc ippiSwapChannelsC4C3RTab[8];
-extern ippiReorderFunc ippiSwapChannelsC3RTab[8];
+extern ippiReorderFunc ippiSwapChannelsC3C4RTab[CV_DEPTH_MAX];
+extern ippiReorderFunc ippiSwapChannelsC4C3RTab[CV_DEPTH_MAX];
+extern ippiReorderFunc ippiSwapChannelsC3RTab[CV_DEPTH_MAX];
 
 #endif
 

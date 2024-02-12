@@ -104,7 +104,12 @@ static const _OutputArray::DepthMask baseArithmTypeMask =
         _OutputArray::DEPTH_MASK_16S |
         _OutputArray::DEPTH_MASK_32S |
         _OutputArray::DEPTH_MASK_32F |
-        _OutputArray::DEPTH_MASK_64F);
+        _OutputArray::DEPTH_MASK_64F |
+        _OutputArray::DEPTH_MASK_16F |
+        _OutputArray::DEPTH_MASK_16BF |
+        _OutputArray::DEPTH_MASK_32U |
+        _OutputArray::DEPTH_MASK_64U |
+        _OutputArray::DEPTH_MASK_64S );
 
 struct BaseArithmOp : public BaseElemWiseOp
 {
@@ -133,6 +138,11 @@ struct BaseAddOp : public BaseArithmOp
         }
         else
             cvtest::add(src[0], alpha, src.size() > 1 ? src[1] : Mat(), beta, gamma, dst, src[0].type());
+    }
+
+    double getMaxErr(int depth)
+    {
+        return depth == CV_16BF ? 1e-2 : depth == CV_16F ? 1e-3 : depth == CV_32F ? 1e-4 : depth == CV_64F ? 1e-12 : 2;
     }
 };
 
@@ -198,7 +208,7 @@ struct ScaleAddOp : public BaseAddOp
     }
     double getMaxErr(int depth)
     {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-4 : 1e-12;
+        return depth == CV_16BF ? 1e-2 : depth == CV_16F ? 1e-3 : depth == CV_32F ? 1e-4 : depth == CV_64F ? 1e-12 : 2;
     }
 };
 
@@ -212,7 +222,7 @@ struct AddWeightedOp : public BaseAddOp
     }
     double getMaxErr(int depth)
     {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-10;
+        return depth == CV_64F ? 1e-9 : BaseAddOp::getMaxErr(depth);
     }
 };
 
@@ -234,10 +244,6 @@ struct MulOp : public BaseArithmOp
     {
         cvtest::multiply(src[0], src[1], dst, alpha);
     }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
-    }
 };
 
 struct DivOp : public BaseArithmOp
@@ -251,10 +257,6 @@ struct DivOp : public BaseArithmOp
     {
         cvtest::divide(src[0], src[1], dst, alpha);
     }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
-    }
 };
 
 struct RecipOp : public BaseArithmOp
@@ -267,10 +269,6 @@ struct RecipOp : public BaseArithmOp
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cvtest::divide(Mat(), src[0], dst, alpha);
-    }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
     }
 };
 
@@ -466,7 +464,7 @@ struct CmpSOp : public BaseArithmOp
     {
         BaseElemWiseOp::generateScalars(depth, rng);
         cmpop = rng.uniform(0, 6);
-        if( depth < CV_32F )
+        if( depth != CV_16F && depth != CV_16BF && depth != CV_32F && depth != CV_64F )
             gamma[0] = cvRound(gamma[0]);
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
@@ -532,27 +530,29 @@ struct SetOp : public BaseElemWiseOp
     }
 };
 
-template<typename _Tp, typename _WTp> static void
+template<typename _Tp, typename _WTp=_Tp> static void
 inRangeS_(const _Tp* src, const _WTp* a, const _WTp* b, uchar* dst, size_t total, int cn)
 {
     size_t i;
     int c;
     for( i = 0; i < total; i++ )
     {
-        _Tp val = src[i*cn];
+        _WTp val = (_WTp)src[i*cn];
         dst[i] = (a[0] <= val && val <= b[0]) ? uchar(255) : 0;
     }
     for( c = 1; c < cn; c++ )
     {
         for( i = 0; i < total; i++ )
         {
-            _Tp val = src[i*cn + c];
+            _WTp val = (_WTp)src[i*cn + c];
             dst[i] = a[c] <= val && val <= b[c] ? dst[i] : 0;
         }
     }
 }
 
-template<typename _Tp> static void inRange_(const _Tp* src, const _Tp* a, const _Tp* b, uchar* dst, size_t total, int cn)
+template<typename _Tp, typename _WTp=_Tp> static void
+inRange_(const _Tp* src, const _Tp* a, const _Tp* b,
+         uchar* dst, size_t total, int cn)
 {
     size_t i;
     int c;
@@ -607,14 +607,31 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
         case CV_16S:
             inRange_((const short*)sptr, (const short*)aptr, (const short*)bptr, dptr, total, cn);
             break;
+        case CV_32U:
+            inRange_((const unsigned*)sptr, (const unsigned*)aptr, (const unsigned*)bptr, dptr, total, cn);
+            break;
         case CV_32S:
             inRange_((const int*)sptr, (const int*)aptr, (const int*)bptr, dptr, total, cn);
+            break;
+        case CV_64U:
+            inRange_((const uint64*)sptr, (const uint64*)aptr, (const uint64*)bptr, dptr, total, cn);
+            break;
+        case CV_64S:
+            inRange_((const int64*)sptr, (const int64*)aptr, (const int64*)bptr, dptr, total, cn);
             break;
         case CV_32F:
             inRange_((const float*)sptr, (const float*)aptr, (const float*)bptr, dptr, total, cn);
             break;
         case CV_64F:
             inRange_((const double*)sptr, (const double*)aptr, (const double*)bptr, dptr, total, cn);
+            break;
+        case CV_16F:
+            inRange_<cv::float16_t, float>((const cv::float16_t*)sptr, (const cv::float16_t*)aptr,
+                                           (const cv::float16_t*)bptr, dptr, total, cn);
+            break;
+        case CV_16BF:
+            inRange_<cv::bfloat16_t, float>((const cv::bfloat16_t*)sptr, (const cv::bfloat16_t*)aptr,
+                                            (const cv::bfloat16_t*)bptr, dptr, total, cn);
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "");
@@ -632,8 +649,9 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
     int depth = src.depth(), cn = src.channels();
-    union { double d[4]; float f[4]; int i[4];} lbuf, rbuf;
-    int wtype = CV_MAKETYPE(depth <= CV_32S ? CV_32S : depth, cn);
+    union { double d[4]; float f[4]; int i[4]; unsigned u[4]; int64 L[4]; uint64 UL[4]; } lbuf, rbuf;
+    int wtype = CV_MAKETYPE((depth <= CV_32S ? CV_32S :
+        depth == CV_16F || depth == CV_16BF || depth == CV_32F ? CV_32F : depth), cn);
     scalarToRawData(lb, lbuf.d, wtype, cn);
     scalarToRawData(rb, rbuf.d, wtype, cn);
 
@@ -656,14 +674,29 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
         case CV_16S:
             inRangeS_((const short*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
             break;
+        case CV_32U:
+            inRangeS_((const unsigned*)sptr, lbuf.u, rbuf.u, dptr, total, cn);
+            break;
         case CV_32S:
             inRangeS_((const int*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
+            break;
+        case CV_64U:
+            inRangeS_((const uint64*)sptr, lbuf.UL, rbuf.UL, dptr, total, cn);
+            break;
+        case CV_64S:
+            inRangeS_((const int64*)sptr, lbuf.L, rbuf.L, dptr, total, cn);
             break;
         case CV_32F:
             inRangeS_((const float*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
             break;
         case CV_64F:
             inRangeS_((const double*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
+            break;
+        case CV_16F:
+            inRangeS_((const cv::float16_t*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
+            break;
+        case CV_16BF:
+            inRangeS_((const cv::bfloat16_t*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "");
@@ -1318,9 +1351,9 @@ struct SumOp : public BaseArithmOp
         dst.create(1, 1, CV_64FC4);
         dst.at<Scalar>(0,0) = cvtest::mean(src[0])*(double)src[0].total();
     }
-    double getMaxErr(int)
+    double getMaxErr(int depth)
     {
-        return 1e-5;
+        return depth == CV_16F || depth == CV_16BF ? 1e-3 : 1e-5;
     }
 };
 
@@ -1441,9 +1474,10 @@ struct NormOp : public BaseArithmOp
     void generateScalars(int, RNG& /*rng*/)
     {
     }
-    double getMaxErr(int)
+    double getMaxErr(int depth)
     {
-        return 1e-6;
+        return normType == NORM_INF && depth <= CV_32S ? 0 :
+            depth == CV_16F || depth == CV_16BF ? 1e-5 : 1e-6;
     }
     int normType;
 };
@@ -1604,10 +1638,15 @@ TEST_P(ElemWiseTest, accuracy)
         }
         op->generateScalars(depth, rng);
 
+        /*printf("testIdx=%d, depth=%d, channels=%d, have_mask=%d\n", testIdx, depth, src[0].channels(), (int)haveMask);
+        if (testIdx == 22)
+            printf(">>>\n");*/
+
         op->refop(src, dst0, mask);
         op->op(src, dst, mask);
 
         double maxErr = op->getMaxErr(depth);
+
         ASSERT_PRED_FORMAT2(cvtest::MatComparator(maxErr, op->context), dst0, dst) << "\nsrc[0] ~ " <<
             cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << "\ntestCase #" << testIdx << "\n";
     }
@@ -2067,6 +2106,31 @@ TEST(Core_FindNonZero, regression)
     findNonZero(img, pts);
     ASSERT_TRUE(pts.size() == nz);
 
+    img.convertTo( img, CV_32U );
+    pts.resize(pts.size()*3);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_64U );
+    pts.resize(pts.size()*2);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_64S );
+    pts.resize(pts.size()*5);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_16F );
+    pts.resize(pts.size()*3);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_16BF );
+    pts.resize(pts.size()*4);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
     img.convertTo( img, CV_32F );
     pts.resize(pts.size()*5);
     findNonZero(img, pts);
@@ -2207,7 +2271,7 @@ TEST(Compare, regression_16F_do_not_crash)
     cv::Mat mat1(2, 2, CV_16F, cv::Scalar(1));
     cv::Mat mat2(2, 2, CV_16F, cv::Scalar(2));
     cv::Mat dst;
-    EXPECT_THROW(cv::compare(mat1, mat2, dst, cv::CMP_EQ), cv::Exception);
+    EXPECT_NO_THROW(cv::compare(mat1, mat2, dst, cv::CMP_EQ));
 }
 
 
@@ -3034,30 +3098,30 @@ INSTANTIATE_TEST_CASE_P(Core_FiniteMask, FiniteMaskFixture, ::testing::Combine(:
 
 
 ///////////////////////////////////////////////////////////////////////////////////
-typedef testing::TestWithParam<perf::MatDepth> NonZeroNotSupportedMatDepth;
+typedef testing::TestWithParam<perf::MatDepth> NonZeroSupportedMatDepth;
 
-TEST_P(NonZeroNotSupportedMatDepth, findNonZero)
+TEST_P(NonZeroSupportedMatDepth, findNonZero)
 {
     cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
     vector<Point> pts;
-    EXPECT_THROW( findNonZero(src, pts), cv::Exception);
+    EXPECT_NO_THROW(findNonZero(src, pts));
 }
 
-TEST_P(NonZeroNotSupportedMatDepth, countNonZero)
+TEST_P(NonZeroSupportedMatDepth, countNonZero)
 {
     cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
-    EXPECT_THROW( countNonZero(src), cv::Exception);
+    EXPECT_NO_THROW(countNonZero(src));
 }
 
-TEST_P(NonZeroNotSupportedMatDepth, hasNonZero)
+TEST_P(NonZeroSupportedMatDepth, hasNonZero)
 {
     cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
-    EXPECT_THROW( hasNonZero(src), cv::Exception);
+    EXPECT_NO_THROW(hasNonZero(src));
 }
 
 INSTANTIATE_TEST_CASE_P(
     NonZero,
-    NonZeroNotSupportedMatDepth,
+    NonZeroSupportedMatDepth,
     testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
 );
 
@@ -3079,27 +3143,27 @@ INSTANTIATE_TEST_CASE_P(
 );
 
 ///////////////////////////////////////////////////////////////////////////////////
-typedef testing::TestWithParam<perf::MatDepth> MinMaxNotSupportedMatDepth;
+typedef testing::TestWithParam<perf::MatDepth> MinMaxSupportedMatDepth;
 
-TEST_P(MinMaxNotSupportedMatDepth, minMaxLoc)
+TEST_P(MinMaxSupportedMatDepth, minMaxLoc)
 {
     cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
     double minV=0.0, maxV=0.0;
     Point minLoc, maxLoc;
-    EXPECT_THROW( cv::minMaxLoc(src, &minV, &maxV, &minLoc, &maxLoc), cv::Exception);
+    EXPECT_NO_THROW(cv::minMaxLoc(src, &minV, &maxV, &minLoc, &maxLoc));
 }
 
-TEST_P(MinMaxNotSupportedMatDepth, minMaxIdx)
+TEST_P(MinMaxSupportedMatDepth, minMaxIdx)
 {
     cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
     double minV=0.0, maxV=0.0;
     int minIdx=0, maxIdx=0;
-    EXPECT_THROW( cv::minMaxIdx(src, &minV, &maxV, &minIdx, &maxIdx), cv::Exception);
+    EXPECT_NO_THROW(cv::minMaxIdx(src, &minV, &maxV, &minIdx, &maxIdx));
 }
 
 INSTANTIATE_TEST_CASE_P(
     MinMaxLoc,
-    MinMaxNotSupportedMatDepth,
+    MinMaxSupportedMatDepth,
     testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
 );
 

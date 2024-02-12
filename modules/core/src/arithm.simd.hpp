@@ -20,80 +20,6 @@
     #define ARITHM_DEFINITIONS_ONLY
 #endif
 
-#ifdef ARITHM_DECLARATIONS_ONLY
-    #undef DEFINE_SIMD
-    #define DEFINE_SIMD(fun_name, c_type, ...) \
-        DECLARE_SIMD_FUN(fun_name, c_type)
-#endif // ARITHM_DECLARATIONS_ONLY
-
-#ifdef ARITHM_DEFINITIONS_ONLY
-    #undef DEFINE_SIMD
-    #define DEFINE_SIMD(fun_name, c_type, v_type, ...)          \
-        DECLARE_SIMD_FUN(fun_name, c_type)                      \
-        DEFINE_SIMD_FUN(fun_name, c_type, v_type, __VA_ARGS__)
-#endif // ARITHM_DEFINITIONS_ONLY
-
-#ifdef ARITHM_DISPATCHING_ONLY
-    #undef DEFINE_SIMD
-    #define DEFINE_SIMD(fun_name, c_type, v_type, ...)           \
-        DISPATCH_SIMD_FUN(fun_name, c_type, v_type, __VA_ARGS__)
-#endif // ARITHM_DISPATCHING_ONLY
-
-// workaround when neon miss support of double precision
-#undef DEFINE_NOSIMD
-#ifdef ARITHM_DEFINITIONS_ONLY
-    #define DEFINE_NOSIMD(fun_name, c_type, ...)          \
-        DECLARE_SIMD_FUN(fun_name, c_type)                \
-        DEFINE_NOSIMD_FUN(fun_name, c_type, __VA_ARGS__)
-#else
-    #define DEFINE_NOSIMD DEFINE_SIMD
-#endif // ARITHM_DEFINITIONS_ONLY
-
-#ifndef SIMD_GUARD
-
-#define DEFINE_SIMD_U8(fun, ...) \
-    DEFINE_SIMD(__CV_CAT(fun, 8u), uchar, v_uint8, __VA_ARGS__)
-
-#define DEFINE_SIMD_S8(fun, ...) \
-    DEFINE_SIMD(__CV_CAT(fun, 8s), schar, v_int8,  __VA_ARGS__)
-
-#define DEFINE_SIMD_U16(fun, ...) \
-    DEFINE_SIMD(__CV_CAT(fun, 16u), ushort, v_uint16, __VA_ARGS__)
-
-#define DEFINE_SIMD_S16(fun, ...) \
-    DEFINE_SIMD(__CV_CAT(fun, 16s), short, v_int16,  __VA_ARGS__)
-
-#define DEFINE_SIMD_S32(fun, ...) \
-    DEFINE_SIMD(__CV_CAT(fun, 32s), int, v_int32,  __VA_ARGS__)
-
-#define DEFINE_SIMD_F32(fun, ...) \
-    DEFINE_SIMD(__CV_CAT(fun, 32f), float, v_float32, __VA_ARGS__)
-
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-    #define DEFINE_SIMD_F64(fun, ...) \
-        DEFINE_SIMD(__CV_CAT(fun, 64f), double, v_float64, __VA_ARGS__)
-#else
-    #define DEFINE_SIMD_F64(fun, ...) \
-        DEFINE_NOSIMD(__CV_CAT(fun, 64f), double, __VA_ARGS__)
-#endif
-
-#define DEFINE_SIMD_SAT(fun, ...)      \
-    DEFINE_SIMD_U8(fun, __VA_ARGS__)   \
-    DEFINE_SIMD_S8(fun, __VA_ARGS__)   \
-    DEFINE_SIMD_U16(fun, __VA_ARGS__)  \
-    DEFINE_SIMD_S16(fun, __VA_ARGS__)
-
-#define DEFINE_SIMD_NSAT(fun, ...)     \
-    DEFINE_SIMD_S32(fun, __VA_ARGS__)  \
-    DEFINE_SIMD_F32(fun, __VA_ARGS__)  \
-    DEFINE_SIMD_F64(fun, __VA_ARGS__)
-
-#define DEFINE_SIMD_ALL(fun, ...)      \
-    DEFINE_SIMD_SAT(fun, __VA_ARGS__)  \
-    DEFINE_SIMD_NSAT(fun, __VA_ARGS__)
-
-#endif // SIMD_GUARD
-
 ///////////////////////////////////////////////////////////////////////////
 
 namespace cv { namespace hal {
@@ -102,106 +28,91 @@ namespace cv { namespace hal {
     CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 #endif
 
+#if (defined ARITHM_DECLARATIONS_ONLY) || (defined ARITHM_DEFINITIONS_ONLY)
+
+#undef DECLARE_SIMPLE_BINARY_OP
+#define DECLARE_SIMPLE_BINARY_OP(opname, type) \
+    void opname(const type* src1, size_t step1, const type* src2, size_t step2, \
+                type* dst, size_t step, int width, int height)
+
+#undef DECLARE_SIMPLE_BINARY_OP_ALLTYPES
+#define DECLARE_SIMPLE_BINARY_OP_ALLTYPES(opname) \
+    DECLARE_SIMPLE_BINARY_OP(opname##8u, uchar); \
+    DECLARE_SIMPLE_BINARY_OP(opname##8s, schar); \
+    DECLARE_SIMPLE_BINARY_OP(opname##16u, ushort); \
+    DECLARE_SIMPLE_BINARY_OP(opname##16s, short); \
+    DECLARE_SIMPLE_BINARY_OP(opname##32u, unsigned); \
+    DECLARE_SIMPLE_BINARY_OP(opname##32s, int); \
+    DECLARE_SIMPLE_BINARY_OP(opname##64u, uint64); \
+    DECLARE_SIMPLE_BINARY_OP(opname##64s, int64); \
+    DECLARE_SIMPLE_BINARY_OP(opname##16f, float16_t); \
+    DECLARE_SIMPLE_BINARY_OP(opname##16bf, bfloat16_t); \
+    DECLARE_SIMPLE_BINARY_OP(opname##32f, float); \
+    DECLARE_SIMPLE_BINARY_OP(opname##64f, double)
+
+DECLARE_SIMPLE_BINARY_OP_ALLTYPES(add);
+DECLARE_SIMPLE_BINARY_OP_ALLTYPES(sub);
+DECLARE_SIMPLE_BINARY_OP_ALLTYPES(max);
+DECLARE_SIMPLE_BINARY_OP_ALLTYPES(min);
+DECLARE_SIMPLE_BINARY_OP_ALLTYPES(absdiff);
+
+void and8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height);
+void or8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height);
+void xor8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height);
+void not8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height);
+
+#undef DECLARE_CMP_OP
+#define DECLARE_CMP_OP(opname, type) \
+    void opname(const type* src1, size_t step1, const type* src2, size_t step2, \
+                uchar* dst, size_t step, int width, int height, int cmpop)
+
+DECLARE_CMP_OP(cmp8u, uchar);
+DECLARE_CMP_OP(cmp8s, schar);
+DECLARE_CMP_OP(cmp16u, ushort);
+DECLARE_CMP_OP(cmp16s, short);
+DECLARE_CMP_OP(cmp32u, unsigned);
+DECLARE_CMP_OP(cmp32s, int);
+DECLARE_CMP_OP(cmp64u, uint64);
+DECLARE_CMP_OP(cmp64s, int64);
+DECLARE_CMP_OP(cmp16f, float16_t);
+DECLARE_CMP_OP(cmp16bf, bfloat16_t);
+DECLARE_CMP_OP(cmp32f, float);
+DECLARE_CMP_OP(cmp64f, double);
+
+#undef DECLARE_SCALED_BINARY_OP
+#define DECLARE_SCALED_BINARY_OP(opname, type, scale_arg) \
+    void opname(const type* src1, size_t step1, const type* src2, size_t step2, \
+                type* dst, size_t step, int width, int height, scale_arg)
+
+#undef DECLARE_SCALED_BINARY_OP_ALLTYPES
+#define DECLARE_SCALED_BINARY_OP_ALLTYPES(opname, scale_arg) \
+    DECLARE_SCALED_BINARY_OP(opname##8u, uchar, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##8s, schar, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##16u, ushort, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##16s, short, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##32u, unsigned, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##32s, int, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##64u, uint64, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##64s, int64, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##16f, float16_t, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##16bf, bfloat16_t, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##32f, float, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##64f, double, scale_arg)
+
+DECLARE_SCALED_BINARY_OP_ALLTYPES(mul, double);
+DECLARE_SCALED_BINARY_OP_ALLTYPES(div, double);
+DECLARE_SCALED_BINARY_OP_ALLTYPES(recip, double);
+DECLARE_SCALED_BINARY_OP_ALLTYPES(addWeighted, double weights[3]);
+
+#endif
+
 #ifdef ARITHM_DEFINITIONS_ONLY
 
-//=======================================
-// Utility
-//=======================================
-
-/** add **/
-template<typename T>
-static inline T c_add(T a, T b)
-{ return saturate_cast<T>(a + b); }
-template<>
-inline uchar c_add<uchar>(uchar a, uchar b)
-{ return CV_FAST_CAST_8U(a + b); }
-// scale
-template<typename T1, typename T2>
-static inline T1 c_add(T1 a, T1 b, T2 scalar)
-{ return saturate_cast<T1>((T2)a * scalar + b); }
-template<>
-inline uchar c_add<uchar, float>(uchar a, uchar b, float scalar)
-{ return saturate_cast<uchar>(CV_8TO32F(a) * scalar + b); }
-// weight
-template<typename T1, typename T2>
-static inline T1 c_add(T1 a, T1 b, T2 alpha, T2 beta, T2 gamma)
-{ return saturate_cast<T1>(a * alpha + b * beta + gamma); }
-template<>
-inline uchar c_add<uchar, float>(uchar a, uchar b, float alpha, float beta, float gamma)
-{ return saturate_cast<uchar>(CV_8TO32F(a) * alpha + CV_8TO32F(b) * beta + gamma); }
-
-/** sub **/
-template<typename T>
-static inline T c_sub(T a, T b)
-{ return saturate_cast<T>(a - b); }
-template<>
-inline uchar c_sub<uchar>(uchar a, uchar b)
-{ return CV_FAST_CAST_8U(a - b); }
-
-/** max **/
-template<typename T>
-static inline T c_max(T a, T b)
-{ return std::max(a, b); }
-template<>
-inline uchar c_max<uchar>(uchar a, uchar b)
-{ return CV_MAX_8U(a, b); }
-
-/** min **/
-template<typename T>
-static inline T c_min(T a, T b)
-{ return std::min(a, b); }
-template<>
-inline uchar c_min<uchar>(uchar a, uchar b)
-{ return CV_MIN_8U(a, b); }
-
-/** absdiff **/
-template<typename T>
-static inline T c_absdiff(T a, T b)
-{ return a > b ? a - b : b - a; }
-template<>
-inline schar c_absdiff(schar a, schar b)
-{ return saturate_cast<schar>(std::abs(a - b)); }
-template<>
-inline short c_absdiff(short a, short b)
-{ return saturate_cast<short>(std::abs(a - b)); }
-// specializations to prevent "-0" results
-template<>
-inline float c_absdiff<float>(float a, float b)
-{ return std::abs(a - b); }
-template<>
-inline double c_absdiff<double>(double a, double b)
-{ return std::abs(a - b); }
-
-/** multiply **/
-template<typename T>
-static inline T c_mul(T a, T b)
-{ return saturate_cast<T>(a * b); }
-template<>
-inline uchar c_mul<uchar>(uchar a, uchar b)
-{ return CV_FAST_CAST_8U(a * b); }
-// scale
-template<typename T1, typename T2>
-static inline T1 c_mul(T1 a, T1 b, T2 scalar)
-{ return saturate_cast<T1>(scalar * (T2)a * b); }
-template<>
-inline uchar c_mul<uchar, float>(uchar a, uchar b, float scalar)
-{ return saturate_cast<uchar>(scalar * CV_8TO32F(a) * CV_8TO32F(b)); }
-
-/** divide & reciprocal **/
-template<typename T1, typename T2>
-static inline T2 c_div(T1 a, T2 b)
-{ return saturate_cast<T2>(a / b); }
-// recip
-template<>
-inline uchar c_div<float, uchar>(float a, uchar b)
-{ return saturate_cast<uchar>(a / CV_8TO32F(b)); }
-// scale
-template<typename T1, typename T2>
-static inline T1 c_div(T1 a, T1 b, T2 scalar)
-{ return saturate_cast<T1>(scalar * (T2)a / b); }
-template<>
-inline uchar c_div<uchar, float>(uchar a, uchar b, float scalar)
-{ return saturate_cast<uchar>(scalar * CV_8TO32F(a) / CV_8TO32F(b)); }
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+#define SIMD_ONLY(expr) expr
+#else
+#define SIMD_ONLY(expr)
+#endif
 
 //=======================================
 // Arithmetic and logical operations
@@ -210,1724 +121,834 @@ inline uchar c_div<uchar, float>(uchar a, uchar b, float scalar)
 
 ///////////////////////////// Operations //////////////////////////////////
 
-// Add
-template<typename T1, typename Tvec>
-struct op_add
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_add(a, b); }
-    static inline T1 r(T1 a, T1 b)
-    { return c_add(a, b); }
-};
+#undef DEFINE_SIMPLE_BINARY_OP
+#undef DEFINE_SIMPLE_BINARY_OP_F16
+#undef DEFINE_SIMPLE_BINARY_OP_NOSIMD
 
-// Subtract
-template<typename T1, typename Tvec>
-struct op_sub
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_sub(a, b); }
-    static inline T1 r(T1 a, T1 b)
-    { return c_sub(a, b); }
-};
+#define DEFINE_SIMPLE_BINARY_OP(opname, T1, Tvec, scalar_op, vec_op) \
+void opname(const T1* src1, size_t step1, \
+            const T1* src2, size_t step2, \
+            T1* dst, size_t step, \
+            int width, int height) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    SIMD_ONLY(int simd_width = VTraits<Tvec>::vlanes();) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    step  /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width) \
+        { \
+            if (x + simd_width > width) { \
+                if (((x == 0) | (dst == src1) | (dst == src2)) != 0) \
+                    break; \
+                x = width - simd_width; \
+            } \
+            vx_store(dst + x, vec_op(vx_load(src1 + x), vx_load(src2 + x))); \
+        }) \
+        for (; x < width; x++) \
+            dst[x] = saturate_cast<T1>(scalar_op(src1[x], src2[x])); \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
+}
 
-// Max & Min
-template<typename T1, typename Tvec>
-struct op_max
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_max(a, b); }
-    static inline T1 r(T1 a, T1 b)
-    { return c_max(a, b); }
-};
+#define DEFINE_SIMPLE_BINARY_OP_16F(opname, T1, scalar_op, vec_op) \
+void opname(const T1* src1, size_t step1, \
+            const T1* src2, size_t step2, \
+            T1* dst, size_t step, \
+            int width, int height) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    SIMD_ONLY(int simd_width = VTraits<v_float32>::vlanes();) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    step  /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width) \
+        { \
+            if (x + simd_width > width) { \
+                if (((x == 0) | (dst == src1) | (dst == src2)) != 0) \
+                    break; \
+                x = width - simd_width; \
+            } \
+            v_pack_store(dst + x, vec_op(vx_load_expand(src1 + x), vx_load_expand(src2 + x))); \
+        }) \
+        for (; x < width; x++) \
+            dst[x] = T1(scalar_op((float)src1[x], (float)src2[x])); \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
+}
 
-template<typename T1, typename Tvec>
-struct op_min
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_min(a, b); }
-    static inline T1 r(T1 a, T1 b)
-    { return c_min(a, b); }
-};
+#define DEFINE_SIMPLE_BINARY_OP_NOSIMD(opname, T1, worktype, scalar_op) \
+void opname(const T1* src1, size_t step1, \
+            const T1* src2, size_t step2, \
+            T1* dst, size_t step, \
+            int width, int height) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    step  /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        for (int x = 0; x < width; x++) \
+            dst[x] = saturate_cast<T1>(scalar_op((worktype)src1[x], (worktype)src2[x])); \
+    } \
+}
 
-// Absolute difference
-template<typename T1, typename Tvec>
-struct op_absdiff
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_absdiff(a, b); }
-    static inline T1 r(T1 a, T1 b)
-    { return c_absdiff(a, b); }
-};
-// Signed absolute difference, 's'
-template<>
-struct op_absdiff<schar, v_int8>
-{
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline v_int8 r(const v_int8& a, const v_int8& b)
-    { return v_absdiffs(a, b); }
+#undef scalar_add
+#define scalar_add(x, y) ((x) + (y))
+#undef scalar_sub
+#define scalar_sub(x, y) ((x) - (y))
+#undef scalar_sub_u64
+#define scalar_sub_u64(x, y) ((x) <= (y) ? 0 : (x) - (y))
+
+#undef DEFINE_SIMPLE_BINARY_OP_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+#define DEFINE_SIMPLE_BINARY_OP_64F(opname, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP(opname, double, v_float64, scalar_op, vec_op)
+#else
+#define DEFINE_SIMPLE_BINARY_OP_64F(opname, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP_NOSIMD(opname, double, double, scalar_op)
 #endif
-    static inline schar r(schar a, schar b)
-    { return c_absdiff(a, b); }
-};
-template<>
-struct op_absdiff<short, v_int16>
+
+#undef DEFINE_SIMPLE_BINARY_OP_ALLTYPES
+#define DEFINE_SIMPLE_BINARY_OP_ALLTYPES(opname, scalar_op, scalar_op_u64, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP(opname##8u, uchar, v_uint8, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP(opname##8s, schar, v_int8, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP(opname##16u, ushort, v_uint16, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP(opname##16s, short, v_int16, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP_NOSIMD(opname##32u, unsigned, int64, scalar_op) \
+    DEFINE_SIMPLE_BINARY_OP(opname##32s, int, v_int32, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP_NOSIMD(opname##64u, uint64, uint64, scalar_op_u64) \
+    DEFINE_SIMPLE_BINARY_OP_NOSIMD(opname##64s, int64, int64, scalar_op) \
+    DEFINE_SIMPLE_BINARY_OP_16F(opname##16f, float16_t, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP_16F(opname##16bf, bfloat16_t, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP(opname##32f, float, v_float32, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP_64F(opname##64f, scalar_op, vec_op)
+
+DEFINE_SIMPLE_BINARY_OP_ALLTYPES(add, scalar_add, scalar_add, v_add)
+DEFINE_SIMPLE_BINARY_OP_ALLTYPES(sub, scalar_sub, scalar_sub_u64, v_sub)
+DEFINE_SIMPLE_BINARY_OP_ALLTYPES(max, std::max, std::max, v_max)
+DEFINE_SIMPLE_BINARY_OP_ALLTYPES(min, std::min, std::min, v_min)
+
+#undef scalar_absdiff
+#define scalar_absdiff(x, y) std::abs((x) - (y))
+#define scalar_absdiffu(x, y) (std::max((x), (y)) - std::min((x), (y)))
+
+DEFINE_SIMPLE_BINARY_OP(absdiff8u, uchar, v_uint8, scalar_absdiff, v_absdiff)
+DEFINE_SIMPLE_BINARY_OP(absdiff8s, schar, v_int8, scalar_absdiff, v_absdiffs)
+DEFINE_SIMPLE_BINARY_OP(absdiff16u, ushort, v_uint16, scalar_absdiff, v_absdiff)
+DEFINE_SIMPLE_BINARY_OP(absdiff16s, short, v_int16, scalar_absdiff, v_absdiffs)
+DEFINE_SIMPLE_BINARY_OP_NOSIMD(absdiff32u, unsigned, unsigned, scalar_absdiffu)
+DEFINE_SIMPLE_BINARY_OP_NOSIMD(absdiff32s, int, int, scalar_absdiff)
+DEFINE_SIMPLE_BINARY_OP_NOSIMD(absdiff64u, uint64, uint64, scalar_absdiffu)
+DEFINE_SIMPLE_BINARY_OP_NOSIMD(absdiff64s, int64, int64, scalar_absdiff)
+DEFINE_SIMPLE_BINARY_OP_16F(absdiff16f, float16_t, scalar_absdiff, v_absdiff)
+DEFINE_SIMPLE_BINARY_OP_16F(absdiff16bf, bfloat16_t, scalar_absdiff, v_absdiff)
+DEFINE_SIMPLE_BINARY_OP(absdiff32f, float, v_float32, scalar_absdiff, v_absdiff)
+DEFINE_SIMPLE_BINARY_OP_64F(absdiff64f, scalar_absdiff, v_absdiff)
+
+#undef DEFINE_BINARY_LOGIC_OP
+#define DEFINE_BINARY_LOGIC_OP(opname, scalar_op, vec_op) \
+void opname(const uchar* src1, size_t step1, \
+            const uchar* src2, size_t step2, \
+            uchar* dst, size_t step, \
+            int width, int height) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    int simd_width = VTraits<v_uint8>::vlanes(); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        for (; x < width; x += simd_width) \
+        { \
+            if (x + simd_width > width) { \
+                if (((x == 0) | (dst == src1) | (dst == src2)) != 0) \
+                    break; \
+                x = width - simd_width; \
+            } \
+            vx_store(dst + x, vec_op(vx_load(src1 + x), vx_load(src2 + x))); \
+        } \
+        for (; x < width; x++) \
+            dst[x] = (uchar)(src1[x] scalar_op src2[x]); \
+    } \
+    vx_cleanup(); \
+}
+
+DEFINE_BINARY_LOGIC_OP(and8u, &, v_and)
+DEFINE_BINARY_LOGIC_OP(or8u, |, v_or)
+DEFINE_BINARY_LOGIC_OP(xor8u, ^, v_xor)
+
+void not8u(const uchar* src1, size_t step1,
+           const uchar*, size_t,
+           uchar* dst, size_t step,
+           int width, int height)
 {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline v_int16 r(const v_int16& a, const v_int16& b)
-    { return v_absdiffs(a, b); }
-#endif
-    static inline short r(short a, short b)
-    { return c_absdiff(a, b); }
-};
-template<>
-struct op_absdiff<int, v_int32>
-{
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline v_int32 r(const v_int32& a, const v_int32& b)
-    { return v_reinterpret_as_s32(v_absdiff(a, b)); }
-#endif
-    static inline int r(int a, int b)
-    { return c_absdiff(a, b); }
-};
-
-// Logical
-template<typename T1, typename Tvec>
-struct op_or
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_or(a, b); }
-    static inline T1 r(T1 a, T1 b)
-    { return a | b; }
-};
-template<typename T1, typename Tvec>
-struct op_xor
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_xor(a, b); }
-    static inline T1 r(T1 a, T1 b)
-    { return a ^ b; }
-};
-template<typename T1, typename Tvec>
-struct op_and
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_and(a, b); }
-    static inline T1 r(T1 a, T1 b)
-    { return a & b; }
-};
-template<typename T1, typename Tvec>
-struct op_not
-{
-    // ignored b from loader level
-    static inline Tvec r(const Tvec& a)
-    { return v_not(a); }
-    static inline T1 r(T1 a, T1)
-    { return ~a; }
-};
-
-//////////////////////////// Loaders /////////////////////////////////
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-
-template< template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
-struct bin_loader
-{
-    typedef OP<T1, Tvec> op;
-
-    static inline void l(const T1* src1, const T1* src2, T1* dst)
-    {
-        Tvec a = vx_load(src1);
-        Tvec b = vx_load(src2);
-        v_store(dst, op::r(a, b));
-    }
-
-    static inline void la(const T1* src1, const T1* src2, T1* dst)
-    {
-        Tvec a = vx_load_aligned(src1);
-        Tvec b = vx_load_aligned(src2);
-        v_store_aligned(dst, op::r(a, b)); // todo: try write without cache
-    }
-
-    static inline void l64(const T1* src1, const T1* src2, T1* dst)
-    {
-        Tvec a = vx_load_low(src1), b = vx_load_low(src2);
-        v_store_low(dst, op::r(a, b));
-    }
-};
-
-// void src2 for operation "not"
-template<typename T1, typename Tvec>
-struct bin_loader<op_not, T1, Tvec>
-{
-    typedef op_not<T1, Tvec> op;
-
-    static inline void l(const T1* src1, const T1*, T1* dst)
-    {
-        Tvec a = vx_load(src1);
-        v_store(dst, op::r(a));
-    }
-
-    static inline void la(const T1* src1, const T1*, T1* dst)
-    {
-        Tvec a = vx_load_aligned(src1);
-        v_store_aligned(dst, op::r(a));
-    }
-
-    static inline void l64(const T1* src1, const T1*, T1* dst)
-    {
-        Tvec a = vx_load_low(src1);
-        v_store_low(dst, op::r(a));
-    }
-};
-
-#endif // CV_SIMD
-
-//////////////////////////// Loops /////////////////////////////////
-
-template<typename T1, typename T2>
-static inline bool is_aligned(const T1* src1, const T1* src2, const T2* dst)
-{ return (((size_t)src1|(size_t)src2|(size_t)dst) & (CV_SIMD_WIDTH - 1)) == 0; }
-
-template<template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
-static void bin_loop(const T1* src1, size_t step1, const T1* src2, size_t step2, T1* dst, size_t step, int width, int height)
-{
-    typedef OP<T1, Tvec> op;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    typedef bin_loader<OP, T1, Tvec> ldr;
-    const int wide_step = VTraits<Tvec>::vlanes();
-    #if !CV_NEON && CV_SIMD_WIDTH == 16
-        const int wide_step_l = wide_step * 2;
-    #else
-        const int wide_step_l = wide_step;
-    #endif
-#endif // CV_SIMD
-
-    step1 /= sizeof(T1);
-    step2 /= sizeof(T1);
-    step  /= sizeof(T1);
-
-    for (; height--; src1 += step1, src2 += step2, dst += step)
-    {
+    CV_INSTRUMENT_REGION();
+    int simd_width = VTraits<v_uint8>::vlanes();
+    for (; --height >= 0; src1 += step1, dst += step) {
         int x = 0;
-
-    #if (CV_SIMD || CV_SIMD_SCALABLE)
-        #if !CV_NEON && !CV_MSA
-        if (is_aligned(src1, src2, dst))
+        for (; x < width; x += simd_width)
         {
-            for (; x <= width - wide_step_l; x += wide_step_l)
-            {
-                ldr::la(src1 + x, src2 + x, dst + x);
-                #if CV_SIMD_WIDTH == 16
-                ldr::la(src1 + x + wide_step, src2 + x + wide_step, dst + x + wide_step);
-                #endif
+            if (x + simd_width > width) {
+                if (((x == 0) | (dst == src1)) != 0)
+                    break;
+                x = width - simd_width;
             }
+            vx_store(dst + x, v_not(vx_load(src1 + x)));
         }
-        else
-        #endif
-            for (; x <= width - wide_step_l; x += wide_step_l)
-            {
-                ldr::l(src1 + x, src2 + x, dst + x);
-                #if !CV_NEON && CV_SIMD_WIDTH == 16
-                ldr::l(src1 + x + wide_step, src2 + x + wide_step, dst + x + wide_step);
-                #endif
-            }
-
-        #if CV_SIMD_WIDTH == 16
-        for (; x <= width - 8/(int)sizeof(T1); x += 8/(int)sizeof(T1))
-        {
-            ldr::l64(src1 + x, src2 + x, dst + x);
-        }
-        #endif
-    #endif // CV_SIMD
-
-    #if CV_ENABLE_UNROLLED || CV_SIMD_WIDTH > 16
-        for (; x <= width - 4; x += 4)
-        {
-            T1 t0 = op::r(src1[x], src2[x]);
-            T1 t1 = op::r(src1[x + 1], src2[x + 1]);
-            dst[x] = t0; dst[x + 1] = t1;
-
-            t0 = op::r(src1[x + 2], src2[x + 2]);
-            t1 = op::r(src1[x + 3], src2[x + 3]);
-            dst[x + 2] = t0; dst[x + 3] = t1;
-        }
-    #endif
-
         for (; x < width; x++)
-            dst[x] = op::r(src1[x], src2[x]);
+            dst[x] = (uchar)(~src1[x]);
     }
-
     vx_cleanup();
 }
-
-#if !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-template<template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
-static void bin_loop_nosimd(const T1* src1, size_t step1, const T1* src2, size_t step2, T1* dst, size_t step, int width, int height)
-{
-    typedef OP<T1, Tvec/*dummy*/> op;
-
-    step1 /= sizeof(T1);
-    step2 /= sizeof(T1);
-    step  /= sizeof(T1);
-
-    for (; height--; src1 += step1, src2 += step2, dst += step)
-    {
-        int x = 0;
-
-        for (; x <= width - 4; x += 4)
-        {
-            T1 t0 = op::r(src1[x], src2[x]);
-            T1 t1 = op::r(src1[x + 1], src2[x + 1]);
-            dst[x] = t0; dst[x + 1] = t1;
-
-            t0 = op::r(src1[x + 2], src2[x + 2]);
-            t1 = op::r(src1[x + 3], src2[x + 3]);
-            dst[x + 2] = t0; dst[x + 3] = t1;
-        }
-
-        for (; x < width; x++)
-            dst[x] = op::r(src1[x], src2[x]);
-    }
-}
-#define BIN_LOOP64F bin_loop_nosimd
-#else
-#define BIN_LOOP64F bin_loop
-#endif //!(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-
-#endif // ARITHM_DEFINITIONS_ONLY
-
-////////////////////////////////////////////////////////////////////////////////////
-
-#ifndef SIMD_GUARD
-#define BIN_ARGS(_T1) const _T1* src1, size_t step1, const _T1* src2, size_t step2, \
-                      _T1* dst, size_t step, int width, int height
-
-#define BIN_ARGS_PASS src1, step1, src2, step2, dst, step, width, height
-#endif // SIMD_GUARD
-
-#undef DECLARE_SIMD_FUN
-#define DECLARE_SIMD_FUN(fun, _T1) void fun(BIN_ARGS(_T1));
-
-#undef DISPATCH_SIMD_FUN
-#define DISPATCH_SIMD_FUN(fun, _T1, _Tvec, _OP)                           \
-    void fun(BIN_ARGS(_T1), void*)                                        \
-    {                                                                     \
-        CV_INSTRUMENT_REGION();                                           \
-        CALL_HAL(fun, __CV_CAT(cv_hal_, fun), BIN_ARGS_PASS)              \
-        ARITHM_CALL_IPP(__CV_CAT(arithm_ipp_, fun), BIN_ARGS_PASS)        \
-        CV_CPU_DISPATCH(fun, (BIN_ARGS_PASS), CV_CPU_DISPATCH_MODES_ALL); \
-    }
-
-#undef DEFINE_SIMD_FUN
-#define DEFINE_SIMD_FUN(fun, _T1, _Tvec, _OP)     \
-    void fun(BIN_ARGS(_T1))                       \
-    {                                             \
-        CV_INSTRUMENT_REGION();                   \
-        bin_loop<_OP, _T1, _Tvec>(BIN_ARGS_PASS); \
-    }
-
-#undef DEFINE_NOSIMD_FUN
-#define DEFINE_NOSIMD_FUN(fun, _T1, _OP)                     \
-    void fun(BIN_ARGS(_T1))                                  \
-    {                                                        \
-        CV_INSTRUMENT_REGION();                              \
-        bin_loop_nosimd<_OP, _T1, v_float64>(BIN_ARGS_PASS); \
-    }
-
-DEFINE_SIMD_ALL(add, op_add)
-DEFINE_SIMD_ALL(sub, op_sub)
-
-DEFINE_SIMD_ALL(min, op_min)
-DEFINE_SIMD_ALL(max, op_max)
-
-DEFINE_SIMD_ALL(absdiff, op_absdiff)
-
-DEFINE_SIMD_U8(or,  op_or)
-DEFINE_SIMD_U8(xor, op_xor)
-DEFINE_SIMD_U8(and, op_and)
-
-// One source!, an exception for operation "not"
-// we could use macros here but it's better to implement it
-// with that way to give more clarification
-// about how macroS "DEFINE_SIMD_*" are works
-
-#if defined(ARITHM_DECLARATIONS_ONLY) || defined(ARITHM_DEFINITIONS_ONLY)
-void not8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height);
-#endif
-#ifdef ARITHM_DEFINITIONS_ONLY
-void not8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height)
-{
-    CV_INSTRUMENT_REGION();
-    bin_loop<op_not, uchar, v_uint8>(src1, step1, src2, step2, dst, step, width, height);
-}
-#endif
-#ifdef ARITHM_DISPATCHING_ONLY
-void not8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void*)
-{
-    CV_INSTRUMENT_REGION();
-    CALL_HAL(not8u, cv_hal_not8u, src1, step1, dst, step, width, height)
-    ARITHM_CALL_IPP(arithm_ipp_not8u, src1, step1, dst, step, width, height)
-    CV_CPU_DISPATCH(not8u, (src1, step1, src2, step2, dst, step, width, height), CV_CPU_DISPATCH_MODES_ALL);
-}
-#endif
 
 //=======================================
 // Compare
 //=======================================
 
-#ifdef ARITHM_DEFINITIONS_ONLY
+#undef DEFINE_CMP_OP_8
+#undef DEFINE_CMP_OP_16
+#undef DEFINE_CMP_OP_16F
+#undef DEFINE_CMP_OP_32
+#undef DEFINE_CMP_OP_64
 
-///////////////////////////// Operations //////////////////////////////////
-
-template<typename T1, typename Tvec>
-struct op_cmplt
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_lt(a, b); }
-    static inline uchar r(T1 a, T1 b)
-    { return (uchar)-(int)(a < b); }
-};
-
-template<typename T1, typename Tvec>
-struct op_cmple
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_le(a, b); }
-    static inline uchar r(T1 a, T1 b)
-    { return (uchar)-(int)(a <= b); }
-};
-
-template<typename T1, typename Tvec>
-struct op_cmpeq
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_eq(a, b); }
-    static inline uchar r(T1 a, T1 b)
-    { return (uchar)-(int)(a == b); }
-};
-
-template<typename T1, typename Tvec>
-struct op_cmpne
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_ne(a, b); }
-    static inline uchar r(T1 a, T1 b)
-    { return (uchar)-(int)(a != b); }
-};
-
-//////////////////////////// Loaders /////////////////////////////////
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-// todo: add support for RW alignment & stream
-template<int nload, template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
-struct cmp_loader_n
-{
-    void l(const T1* src1, const T1* src2, uchar* dst);
-};
-
-template<template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
-struct cmp_loader_n<sizeof(uchar), OP, T1, Tvec>
-{
-    typedef OP<T1, Tvec> op;
-
-    static inline void l(const T1* src1, const T1* src2, uchar* dst)
-    {
-        Tvec a = vx_load(src1);
-        Tvec b = vx_load(src2);
-        v_store(dst, v_reinterpret_as_u8(op::r(a, b)));
-    }
-};
-
-template<template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
-struct cmp_loader_n<sizeof(ushort), OP, T1, Tvec>
-{
-    typedef OP<T1, Tvec> op;
-
-    static inline void l(const T1* src1, const T1* src2, uchar* dst)
-    {
-        const int step = VTraits<Tvec>::vlanes();
-        Tvec c0 = op::r(vx_load(src1), vx_load(src2));
-        Tvec c1 = op::r(vx_load(src1 + step), vx_load(src2 + step));
-        v_store(dst, v_pack_b(v_reinterpret_as_u16(c0), v_reinterpret_as_u16(c1)));
-    }
-};
-
-template<template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
-struct cmp_loader_n<sizeof(unsigned), OP, T1, Tvec>
-{
-    typedef OP<T1, Tvec> op;
-
-    static inline void l(const T1* src1, const T1* src2, uchar* dst)
-    {
-        const int step = VTraits<Tvec>::vlanes();
-        v_uint32 c0 = v_reinterpret_as_u32(op::r(vx_load(src1), vx_load(src2)));
-        v_uint32 c1 = v_reinterpret_as_u32(op::r(vx_load(src1 + step), vx_load(src2 + step)));
-        v_uint32 c2 = v_reinterpret_as_u32(op::r(vx_load(src1 + step * 2), vx_load(src2 + step * 2)));
-        v_uint32 c3 = v_reinterpret_as_u32(op::r(vx_load(src1 + step * 3), vx_load(src2 + step * 3)));
-        v_store(dst, v_pack_b(c0, c1, c2, c3));
-    }
-};
-
-template<template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
-struct cmp_loader_n<sizeof(double), OP, T1, Tvec>
-{
-    typedef OP<T1, Tvec> op;
-
-    static inline void l(const T1* src1, const T1* src2, uchar* dst)
-    {
-        const int step = VTraits<Tvec>::vlanes();
-        v_uint64 c0 = v_reinterpret_as_u64(op::r(vx_load(src1), vx_load(src2)));
-        v_uint64 c1 = v_reinterpret_as_u64(op::r(vx_load(src1 + step), vx_load(src2 + step)));
-        v_uint64 c2 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 2), vx_load(src2 + step * 2)));
-        v_uint64 c3 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 3), vx_load(src2 + step * 3)));
-
-        v_uint64 c4 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 4), vx_load(src2 + step * 4)));
-        v_uint64 c5 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 5), vx_load(src2 + step * 5)));
-        v_uint64 c6 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 6), vx_load(src2 + step * 6)));
-        v_uint64 c7 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 7), vx_load(src2 + step * 7)));
-        v_store(dst, v_pack_b(c0, c1, c2, c3, c4, c5, c6, c7));
-    }
-};
-
-#endif // CV_SIMD
-
-//////////////////////////// Loops /////////////////////////////////
-
-template<template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
-static void cmp_loop(const T1* src1, size_t step1, const T1* src2, size_t step2, uchar* dst, size_t step, int width, int height)
-{
-    typedef OP<T1, Tvec> op;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    typedef cmp_loader_n<sizeof(T1), OP, T1, Tvec> ldr;
-    const int wide_step = VTraits<Tvec>::vlanes() * sizeof(T1);
-#endif // CV_SIMD
-
-    step1 /= sizeof(T1);
-    step2 /= sizeof(T1);
-
-    for (; height--; src1 += step1, src2 += step2, dst += step)
-    {
-        int x = 0;
-
-    #if (CV_SIMD || CV_SIMD_SCALABLE)
-        for (; x <= width - wide_step; x += wide_step)
-        {
-            ldr::l(src1 + x, src2 + x, dst + x);
-        }
-    #endif // CV_SIMD
-
-    #if CV_ENABLE_UNROLLED || CV_SIMD_WIDTH > 16
-        for (; x <= width - 4; x += 4)
-        {
-            uchar t0 = op::r(src1[x], src2[x]);
-            uchar t1 = op::r(src1[x + 1], src2[x + 1]);
-            dst[x] = t0; dst[x + 1] = t1;
-
-            t0 = op::r(src1[x + 2], src2[x + 2]);
-            t1 = op::r(src1[x + 3], src2[x + 3]);
-            dst[x + 2] = t0; dst[x + 3] = t1;
-        }
-    #endif
-
-        for (; x < width; x++)
-            dst[x] = op::r(src1[x], src2[x]);
-    }
-
-    vx_cleanup();
+// comparison for 8-bit types
+#define DEFINE_CMP_OP_8(opname, T1, Tvec, scalar_op, vec_op) \
+static void opname(const T1* src1, size_t step1, \
+                   const T1* src2, size_t step2, \
+                   uchar* dst, size_t step, \
+                   int width, int height) \
+{ \
+    SIMD_ONLY(int simd_width = VTraits<Tvec>::vlanes();) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width) \
+        { \
+            if (x + simd_width > width) { \
+                if (((x == 0) | (dst == (uchar*)src1) | (dst == (uchar*)src2)) != 0) \
+                    break; \
+                x = width - simd_width; \
+            } \
+            vx_store((T1*)(dst + x), vec_op(vx_load(src1 + x), vx_load(src2 + x))); \
+        }) \
+        for (; x < width; x++) \
+            dst[x] = (uchar)-(int)(src1[x] scalar_op src2[x]); \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
 }
 
-template<typename T1, typename Tvec>
-static void cmp_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
-                     uchar* dst, size_t step, int width, int height, int cmpop)
-{
-    switch(cmpop)
-    {
-    case CMP_LT:
-        cmp_loop<op_cmplt, T1, Tvec>(src1, step1, src2, step2, dst, step, width, height);
-        break;
-    case CMP_GT:
-        cmp_loop<op_cmplt, T1, Tvec>(src2, step2, src1, step1, dst, step, width, height);
-        break;
-    case CMP_LE:
-        cmp_loop<op_cmple, T1, Tvec>(src1, step1, src2, step2, dst, step, width, height);
-        break;
-    case CMP_GE:
-        cmp_loop<op_cmple, T1, Tvec>(src2, step2, src1, step1, dst, step, width, height);
-        break;
-    case CMP_EQ:
-        cmp_loop<op_cmpeq, T1, Tvec>(src1, step1, src2, step2, dst, step, width, height);
-        break;
-    default:
-        CV_Assert(cmpop == CMP_NE);
-        cmp_loop<op_cmpne, T1, Tvec>(src1, step1, src2, step2, dst, step, width, height);
-        break;
-    }
+// comparison for 16-bit integer types
+#define DEFINE_CMP_OP_16(opname, T1, Tvec, scalar_op, vec_op) \
+static void opname(const T1* src1, size_t step1, \
+                   const T1* src2, size_t step2, \
+                   uchar* dst, size_t step, \
+                   int width, int height) \
+{ \
+    SIMD_ONLY(int simd_width = VTraits<Tvec>::vlanes();) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width) \
+        { \
+            if (x + simd_width > width) { \
+                if (x == 0) \
+                    break; \
+                x = width - simd_width; \
+            } \
+            v_pack_store((schar*)(dst + x), v_reinterpret_as_s16(vec_op(vx_load(src1 + x), vx_load(src2 + x)))); \
+        }) \
+        for (; x < width; x++) \
+            dst[x] = (uchar)-(int)(src1[x] scalar_op src2[x]); \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
 }
 
-#if !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-template< template<typename T1, typename Tvec> class OP, typename T1>
-static void cmp_loop_nosimd(const T1* src1, size_t step1, const T1* src2, size_t step2, uchar* dst, size_t step, int width, int height)
-{
-    typedef OP<T1, v_int32 /*dummy*/> op;
-
-    step1 /= sizeof(T1);
-    step2 /= sizeof(T1);
-
-    for (; height--; src1 += step1, src2 += step2, dst += step)
-    {
-        int x = 0;
-
-        for (; x <= width - 4; x += 4)
-        {
-            uchar t0 = op::r(src1[x], src2[x]);
-            uchar t1 = op::r(src1[x + 1], src2[x + 1]);
-            dst[x] = t0; dst[x + 1] = t1;
-
-            t0 = op::r(src1[x + 2], src2[x + 2]);
-            t1 = op::r(src1[x + 3], src2[x + 3]);
-            dst[x + 2] = t0; dst[x + 3] = t1;
-        }
-
-        for (; x < width; x++)
-            dst[x] = op::r(src1[x], src2[x]);
-    }
+// comparison for 16-bit floating-point types
+#define DEFINE_CMP_OP_16F(opname, T1, scalar_op, vec_op) \
+static void opname(const T1* src1, size_t step1, \
+                   const T1* src2, size_t step2, \
+                   uchar* dst, size_t step, \
+                   int width, int height) \
+{ \
+    SIMD_ONLY(int simd_width = VTraits<v_float32>::vlanes();) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width*2) \
+        { \
+            if (x + simd_width*2 > width) { \
+                if (x == 0) \
+                    break; \
+                x = width - simd_width*2; \
+            } \
+            auto mask0 = v_reinterpret_as_s32(vec_op(vx_load_expand(src1 + x), \
+                                                     vx_load_expand(src2 + x))); \
+            auto mask1 = v_reinterpret_as_s32(vec_op(vx_load_expand(src1 + x + simd_width), \
+                                                     vx_load_expand(src2 + x + simd_width))); \
+            auto mask = v_pack(mask0, mask1); \
+            v_pack_store((schar*)(dst + x), mask); \
+        }) \
+        for (; x < width; x++) \
+            dst[x] = (uchar)-(int)((float)src1[x] scalar_op (float)src2[x]); \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
 }
-static void cmp_loop_nosimd(const double* src1, size_t step1, const double* src2, size_t step2,
-                            uchar* dst, size_t step, int width, int height, int cmpop)
-{
-    switch(cmpop)
-    {
-    case CMP_LT:
-        cmp_loop_nosimd<op_cmplt, double>(src1, step1, src2, step2, dst, step, width, height);
-        break;
-    case CMP_GT:
-        cmp_loop_nosimd<op_cmplt, double>(src2, step2, src1, step1, dst, step, width, height);
-        break;
-    case CMP_LE:
-        cmp_loop_nosimd<op_cmple, double>(src1, step1, src2, step2, dst, step, width, height);
-        break;
-    case CMP_GE:
-        cmp_loop_nosimd<op_cmple, double>(src2, step2, src1, step1, dst, step, width, height);
-        break;
-    case CMP_EQ:
-        cmp_loop_nosimd<op_cmpeq, double>(src1, step1, src2, step2, dst, step, width, height);
-        break;
-    default:
-        CV_Assert(cmpop == CMP_NE);
-        cmp_loop_nosimd<op_cmpne, double>(src1, step1, src2, step2, dst, step, width, height);
-        break;
-    }
+
+// comparison for 32-bit types
+#define DEFINE_CMP_OP_32(opname, T1, Tvec, scalar_op, vec_op) \
+static void opname(const T1* src1, size_t step1, \
+                   const T1* src2, size_t step2, \
+                   uchar* dst, size_t step, \
+                   int width, int height) \
+{ \
+    SIMD_ONLY(int simd_width = VTraits<Tvec>::vlanes();) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width*2) \
+        { \
+            if (x + simd_width*2 > width) { \
+                if (x == 0) \
+                    break; \
+                x = width - simd_width*2; \
+            } \
+            auto mask0 = v_reinterpret_as_s32(vec_op(vx_load(src1 + x), \
+                                                     vx_load(src2 + x))); \
+            auto mask1 = v_reinterpret_as_s32(vec_op(vx_load(src1 + x + simd_width), \
+                                                     vx_load(src2 + x + simd_width))); \
+            auto mask = v_pack(mask0, mask1); \
+            v_pack_store((schar*)(dst + x), mask); \
+        }) \
+        for (; x < width; x++) \
+            dst[x] = (uchar)-(int)(src1[x] scalar_op src2[x]); \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
 }
-#endif // !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
-#endif // ARITHM_DEFINITIONS_ONLY
+// comparison for 64-bit types; don't bother with SIMD here. Hope, compiler will do it
+#define DEFINE_CMP_OP_64(opname, T1, scalar_op) \
+static void opname(const T1* src1, size_t step1, \
+                   const T1* src2, size_t step2, \
+                   uchar* dst, size_t step, \
+                   int width, int height) \
+{ \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        for (int x = 0; x < width; x++) \
+            dst[x] = (uchar)-(int)(src1[x] scalar_op src2[x]); \
+    } \
+}
 
-/////////////////////////////////////////////////////////////////////////////////////////////
+#undef DEFINE_CMP_OP_ALLTYPES
+#define DEFINE_CMP_OP_ALLTYPES(opname, scalar_op, vec_op) \
+    DEFINE_CMP_OP_8(opname##8u, uchar, v_uint8, scalar_op, vec_op) \
+    DEFINE_CMP_OP_8(opname##8s, schar, v_int8, scalar_op, vec_op) \
+    DEFINE_CMP_OP_16(opname##16u, ushort, v_uint16, scalar_op, vec_op) \
+    DEFINE_CMP_OP_16(opname##16s, short, v_int16, scalar_op, vec_op) \
+    DEFINE_CMP_OP_32(opname##32u, unsigned, v_uint32, scalar_op, vec_op) \
+    DEFINE_CMP_OP_32(opname##32s, int, v_int32, scalar_op, vec_op) \
+    DEFINE_CMP_OP_64(opname##64u, uint64, scalar_op) \
+    DEFINE_CMP_OP_64(opname##64s, int64, scalar_op) \
+    DEFINE_CMP_OP_16F(opname##16f, float16_t, scalar_op, vec_op) \
+    DEFINE_CMP_OP_16F(opname##16bf, bfloat16_t, scalar_op, vec_op) \
+    DEFINE_CMP_OP_32(opname##32f, float, v_float32, scalar_op, vec_op) \
+    DEFINE_CMP_OP_64(opname##64f, double, scalar_op)
 
-#ifndef SIMD_GUARD
-#define CMP_ARGS(_T1) const _T1* src1, size_t step1, const _T1* src2, size_t step2, \
-                           uchar* dst, size_t step, int width, int height
+DEFINE_CMP_OP_ALLTYPES(cmpeq, ==, v_eq)
+DEFINE_CMP_OP_ALLTYPES(cmpne, !=, v_ne)
+DEFINE_CMP_OP_ALLTYPES(cmplt, <, v_lt)
+DEFINE_CMP_OP_ALLTYPES(cmple, <=, v_le)
 
-#define CMP_ARGS_PASS src1, step1, src2, step2, dst, step, width, height
-#endif // SIMD_GUARD
+#undef DEFINE_CMP_OP
+#define DEFINE_CMP_OP(suffix, type) \
+void cmp##suffix(const type* src1, size_t step1, const type* src2, size_t step2, \
+                 uchar* dst, size_t step, int width, int height, int cmpop) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    switch(cmpop) \
+    { \
+    case CMP_LT: \
+        cmplt##suffix(src1, step1, src2, step2, dst, step, width, height); \
+        break; \
+    case CMP_GT: \
+        cmplt##suffix(src2, step2, src1, step1, dst, step, width, height); \
+        break; \
+    case CMP_LE: \
+        cmple##suffix(src1, step1, src2, step2, dst, step, width, height); \
+        break; \
+    case CMP_GE: \
+        cmple##suffix(src2, step2, src1, step1, dst, step, width, height); \
+        break; \
+    case CMP_EQ: \
+        cmpeq##suffix(src1, step1, src2, step2, dst, step, width, height); \
+        break; \
+    default: \
+        CV_Assert(cmpop == CMP_NE); \
+        cmpne##suffix(src1, step1, src2, step2, dst, step, width, height); \
+    } \
+}
 
-#undef DECLARE_SIMD_FUN
-#define DECLARE_SIMD_FUN(fun, _T1) void fun(CMP_ARGS(_T1), int cmpop);
+DEFINE_CMP_OP(8u, uchar)
+DEFINE_CMP_OP(8s, schar)
+DEFINE_CMP_OP(16u, ushort)
+DEFINE_CMP_OP(16s, short)
+DEFINE_CMP_OP(32u, unsigned)
+DEFINE_CMP_OP(32s, int)
+DEFINE_CMP_OP(64u, uint64)
+DEFINE_CMP_OP(64s, int64)
+DEFINE_CMP_OP(16f, float16_t)
+DEFINE_CMP_OP(16bf, bfloat16_t)
+DEFINE_CMP_OP(32f, float)
+DEFINE_CMP_OP(64f, double)
 
-#undef DISPATCH_SIMD_FUN
-#define DISPATCH_SIMD_FUN(fun, _T1, _Tvec, ...)                                          \
-    void fun(CMP_ARGS(_T1), void* _cmpop)                                                \
-    {                                                                                    \
-        CV_INSTRUMENT_REGION();                                                          \
-        CALL_HAL(fun, __CV_CAT(cv_hal_, fun), CMP_ARGS_PASS, *(int*)_cmpop)              \
-        ARITHM_CALL_IPP(__CV_CAT(arithm_ipp_, fun), CMP_ARGS_PASS, *(int*)_cmpop)        \
-        CV_CPU_DISPATCH(fun, (CMP_ARGS_PASS, *(int*)_cmpop), CV_CPU_DISPATCH_MODES_ALL); \
-    }
+//=======================================
+// Mul, Div, Recip, AddWeighted
+//=======================================
 
-#undef DEFINE_SIMD_FUN
-#define DEFINE_SIMD_FUN(fun, _T1, _Tvec, ...)       \
-    void fun(CMP_ARGS(_T1), int cmpop)              \
-    {                                               \
-        CV_INSTRUMENT_REGION();                     \
-        cmp_loop<_T1, _Tvec>(CMP_ARGS_PASS, cmpop); \
-    }
+#undef DEFINE_SCALED_OP_8
+#undef DEFINE_SCALED_OP_16
+#undef DEFINE_SCALED_OP_16F
+#undef DEFINE_SCALED_OP_32
+#undef DEFINE_SCALED_OP_64
 
-#undef DEFINE_NOSIMD_FUN
-#define DEFINE_NOSIMD_FUN(fun, _T1, _Tvec, ...)     \
-    void fun(CMP_ARGS(_T1), int cmpop)              \
-    {                                               \
-        CV_INSTRUMENT_REGION();                     \
-        cmp_loop_nosimd(CMP_ARGS_PASS, cmpop);      \
-    }
+#define DEFINE_SCALED_OP_8(opname, scale_arg, T1, Tvec, scalar_op, vec_op, init, pack_store_op, when_binary) \
+void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
+            T1* dst, size_t step, int width, int height, scale_arg) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    init(); \
+    SIMD_ONLY(int simd_width = VTraits<Tvec>::vlanes()>>1;) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    step /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width) \
+        { \
+            if (x + simd_width > width) { \
+                if (((x == 0) | (dst == src1) | (dst == src2)) != 0) \
+                    break; \
+                x = width - simd_width; \
+            } \
+            v_int16 i1 = v_reinterpret_as_s16(vx_load_expand(src1 + x)); \
+            when_binary(v_int16 i2 = v_reinterpret_as_s16(vx_load_expand(src2 + x))); \
+            v_float32 f1 = v_cvt_f32(v_expand_low(i1)); \
+            when_binary(v_float32 f2 = v_cvt_f32(v_expand_low(i2))); \
+            v_float32 g1 = vec_op(); \
+            f1 = v_cvt_f32(v_expand_high(i1)); \
+            when_binary(f2 = v_cvt_f32(v_expand_high(i2))); \
+            v_float32 g2 = vec_op(); \
+            i1 = v_pack(v_round(g1), v_round(g2)); \
+            pack_store_op(dst + x, i1); \
+        }) \
+        for (; x < width; x++) { \
+            float f1 = (float)src1[x]; \
+            when_binary(float f2 = (float)src2[x]); \
+            dst[x] = saturate_cast<T1>(scalar_op()); \
+        } \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
+}
 
-// todo: try to avoid define dispatcher functions using macros with these such cases
-DEFINE_SIMD_ALL(cmp, void)
+#define DEFINE_SCALED_OP_16(opname, scale_arg, T1, Tvec, scalar_op, vec_op, init, pack_store_op, when_binary) \
+void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
+            T1* dst, size_t step, int width, int height, scale_arg) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    init() \
+    SIMD_ONLY(int simd_width = VTraits<Tvec>::vlanes()>>1;) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    step /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width) \
+        { \
+            if (x + simd_width > width) { \
+                if (((x == 0) | (dst == src1) | (dst == src2)) != 0) \
+                    break; \
+                x = width - simd_width; \
+            } \
+            v_int32 i1 = v_reinterpret_as_s32(vx_load_expand(src1 + x)); \
+            when_binary(v_int32 i2 = v_reinterpret_as_s32(vx_load_expand(src2 + x))); \
+            v_float32 f1 = v_cvt_f32(i1); \
+            when_binary(v_float32 f2 = v_cvt_f32(i2)); \
+            f1 = vec_op(); \
+            i1 = v_round(f1); \
+            pack_store_op(dst + x, i1); \
+        }) \
+        for (; x < width; x++) { \
+            float f1 = (float)src1[x]; \
+            when_binary(float f2 = (float)src2[x]); \
+            dst[x] = saturate_cast<T1>(scalar_op()); \
+        } \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
+}
 
-//=========================================================================
-// scaling helpers for single and dual source
-//
-// Dual: Multiply, Div, AddWeighted
-//
-// Single: Reciprocal
-//
-//=========================================================================
+#define DEFINE_SCALED_OP_16F(opname, scale_arg, T1, scalar_op, vec_op, init, when_binary) \
+void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
+            T1* dst, size_t step, int width, int height, scale_arg) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    init() \
+    SIMD_ONLY(int simd_width = VTraits<v_float32>::vlanes();) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    step /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width) \
+        { \
+            if (x + simd_width > width) { \
+                if (((x == 0) | (dst == src1) | (dst == src2)) != 0) \
+                    break; \
+                x = width - simd_width; \
+            } \
+            v_float32 f1 = vx_load_expand(src1 + x); \
+            when_binary(v_float32 f2 = vx_load_expand(src2 + x)); \
+            f1 = vec_op(); \
+            v_pack_store(dst + x, f1); \
+        }) \
+        for (; x < width; x++) { \
+            float f1 = (float)src1[x]; \
+            when_binary(float f2 = (float)src2[x]); \
+            dst[x] = saturate_cast<T1>(scalar_op()); \
+        } \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
+}
 
-#ifdef ARITHM_DEFINITIONS_ONLY
+#define DEFINE_SCALED_OP_32(opname, scale_arg, T1, Tvec, scalar_op, vec_op, init, load_op, store_op, when_binary) \
+void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
+            T1* dst, size_t step, int width, int height, scale_arg) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    init() \
+    SIMD_ONLY(int simd_width = VTraits<Tvec>::vlanes();) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    step /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width) \
+        { \
+            if (x + simd_width > width) { \
+                if (((x == 0) | (dst == src1) | (dst == src2)) != 0) \
+                    break; \
+                x = width - simd_width; \
+            } \
+            v_float32 f1 = load_op(src1 + x); \
+            when_binary(v_float32 f2 = load_op(src2 + x)); \
+            f1 = vec_op(); \
+            store_op(dst + x, f1); \
+        }) \
+        for (; x < width; x++) { \
+            float f1 = (float)src1[x]; \
+            when_binary(float f2 = (float)src2[x]); \
+            dst[x] = saturate_cast<T1>(scalar_op()); \
+        } \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
+}
 
-//////////////////////////// Loaders ///////////////////////////////
+#define DEFINE_SCALED_OP_64F_(opname, scale_arg, T1, Tvec, scalar_op, vec_op, init, when_binary) \
+void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
+            T1* dst, size_t step, int width, int height, scale_arg) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    init() \
+    SIMD_ONLY(int simd_width = VTraits<Tvec>::vlanes();) \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    step /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        SIMD_ONLY(for (; x < width; x += simd_width) \
+        { \
+            if (x + simd_width > width) { \
+                if (((x == 0) | (dst == src1) | (dst == src2)) != 0) \
+                    break; \
+                x = width - simd_width; \
+            } \
+            v_float64 f1 = vx_load(src1 + x); \
+            when_binary(v_float64 f2 = vx_load(src2 + x)); \
+            f1 = vec_op(); \
+            v_store(dst + x, f1); \
+        }) \
+        for (; x < width; x++) { \
+            double f1 = (double)src1[x]; \
+            when_binary(double f2 = (double)src2[x]); \
+            dst[x] = saturate_cast<T1>(scalar_op()); \
+        } \
+    } \
+    SIMD_ONLY(vx_cleanup();) \
+}
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-// todo: add support for RW alignment & stream
-template<int nload, template<typename T1, typename T2, typename Tvec> class OP, typename T1, typename T2, typename Tvec>
-struct scalar_loader_n
-{
-    void l(const T1* src1, const T1* src2, const T2* scalar, T1* dst);
-    // single source
-    void l(const T1* src1, const T2* scalar, T1* dst);
-};
+#define DEFINE_SCALED_OP_NOSIMD(opname, scale_arg, T1, worktype, scalar_op, init, when_binary) \
+void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
+            T1* dst, size_t step, int width, int height, scale_arg) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    init() \
+    step1 /= sizeof(T1); \
+    step2 /= sizeof(T1); \
+    step /= sizeof(T1); \
+    for (; --height >= 0; src1 += step1, src2 += step2, dst += step) { \
+        int x = 0; \
+        for (; x < width; x++) { \
+            worktype f1 = (worktype)src1[x]; \
+            when_binary(worktype f2 = (worktype)src2[x]); \
+            dst[x] = saturate_cast<T1>(scalar_op()); \
+        } \
+    } \
+}
 
-template<template<typename T1, typename T2, typename Tvec> class OP, typename T1, typename T2, typename Tvec>
-struct scalar_loader_n<sizeof(uchar), OP, T1, T2, Tvec>
-{
-    typedef OP<T1, T2, v_int16> op;
+#define init_muldiv_f32() \
+    float sscale = (float)scale; \
+    SIMD_ONLY(v_float32 vzero = vx_setzero_f32(); \
+              v_float32 vscale = v_add(vx_setall_f32(sscale), vzero);)
+#define init_addw_f32() \
+    float sw1 = (float)weights[0]; \
+    float sw2 = (float)weights[1]; \
+    float sdelta = (float)weights[2];\
+    SIMD_ONLY(v_float32 vw1 = vx_setall_f32(sw1); \
+        v_float32 vw2 = vx_setall_f32(sw2); \
+        v_float32 vdelta = vx_setall_f32(sdelta);)
 
-    static inline void l(const T1* src1, const T1* src2, const T2* scalar, T1* dst)
-    {
-        v_int16 v_src1 = v_reinterpret_as_s16(vx_load_expand(src1));
-        v_int16 v_src2 = v_reinterpret_as_s16(vx_load_expand(src2));
+#undef init_muldiv_nosimd_f32
+#define init_muldiv_nosimd_f32() \
+    float sscale = (float)scale;
+#undef init_addw_nosimd_f32
+#define init_addw_nosimd_f32() \
+    float sw1 = (float)weights[0]; \
+    float sw2 = (float)weights[1]; \
+    float sdelta = (float)weights[2];
 
-        v_int32 t0, t1, t2, t3;
-        v_expand(v_src1, t0, t2);
-        v_expand(v_src2, t1, t3);
-
-        v_float32 f0, f1, f2, f3;
-        f0 = v_cvt_f32(t0);
-        f1 = v_cvt_f32(t1);
-        f2 = v_cvt_f32(t2);
-        f3 = v_cvt_f32(t3);
-
-        f0 = op::r(f0, f1, scalar);
-        f2 = op::r(f2, f3, scalar);
-
-        v_int32 r0 = v_round(f0);
-        v_int32 r1 = v_round(f2);
-
-        store(dst, v_src2, r0, r1);
-    }
-
-    static inline void l(const T1* src1, const T2* scalar, T1* dst)
-    {
-        v_int16 v_src1 = v_reinterpret_as_s16(vx_load_expand(src1));
-
-        v_int32 t0, t1;
-        v_expand(v_src1, t0, t1);
-
-        v_float32 f0, f1;
-        f0 = v_cvt_f32(t0);
-        f1 = v_cvt_f32(t1);
-
-        f0 = op::r(f0, scalar);
-        f1 = op::r(f1, scalar);
-
-        v_int32 r0 = v_round(f0);
-        v_int32 r1 = v_round(f1);
-
-        store(dst, v_src1, r0, r1);
-    }
-
-    static inline void store(uchar* dst, const v_int16& src, const v_int32& a, const v_int32& b)
-    {
-        v_pack_u_store(dst, op::pre(src, v_pack(a, b)));
-    }
-    static inline void store(schar* dst, const v_int16& src, const v_int32& a, const v_int32& b)
-    {
-        v_pack_store(dst, op::pre(src, v_pack(a, b)));
-    }
-};
-
-template<template<typename T1, typename T2, typename Tvec> class OP, typename T1, typename T2, typename Tvec>
-struct scalar_loader_n<sizeof(ushort), OP, T1, T2, Tvec>
-{
-    typedef typename V_RegTraits<Tvec>::w_reg Twvec;
-    typedef OP<T1, T2, Tvec> op;
-
-    static inline void l(const T1* src1, const T1* src2, const T2* scalar, T1* dst)
-    {
-        Tvec v_src1 = vx_load(src1);
-        Tvec v_src2 = vx_load(src2);
-
-        Twvec t0, t1, t2, t3;
-        v_expand(v_src1, t0, t2);
-        v_expand(v_src2, t1, t3);
-
-        v_float32 f0, f1, f2, f3;
-        f0 = v_cvt_f32(v_reinterpret_as_s32(t0));
-        f1 = v_cvt_f32(v_reinterpret_as_s32(t1));
-        f2 = v_cvt_f32(v_reinterpret_as_s32(t2));
-        f3 = v_cvt_f32(v_reinterpret_as_s32(t3));
-
-        f0 = op::r(f0, f1, scalar);
-        f2 = op::r(f2, f3, scalar);
-
-        v_int32 r0 = v_round(f0);
-        v_int32 r1 = v_round(f2);
-
-        store(dst, v_src2, r0, r1);
-    }
-
-    static inline void l(const T1* src1, const T2* scalar, T1* dst)
-    {
-        Tvec v_src1 = vx_load(src1);
-
-        Twvec t0, t1;
-        v_expand(v_src1, t0, t1);
-
-        v_float32 f0, f1;
-        f0 = v_cvt_f32(v_reinterpret_as_s32(t0));
-        f1 = v_cvt_f32(v_reinterpret_as_s32(t1));
-
-        f0 = op::r(f0, scalar);
-        f1 = op::r(f1, scalar);
-
-        v_int32 r0 = v_round(f0);
-        v_int32 r1 = v_round(f1);
-
-        store(dst, v_src1, r0, r1);
-    }
-
-    static inline void store(ushort* dst, const Tvec& src, const v_int32& a, const v_int32& b)
-    {
-        v_store(dst, op::pre(src, v_pack_u(a, b)));
-    }
-    static inline void store(short* dst, const Tvec& src, const v_int32& a, const v_int32& b)
-    {
-        v_store(dst, op::pre(src, v_pack(a, b)));
-    }
-};
-
-template<template<typename T1, typename T2, typename Tvec> class OP, typename T2>
-struct scalar_loader_n<sizeof(int), OP, int, T2, v_int32>
-{
-    typedef OP<int, T2, v_int32> op;
-
-    static inline void l(const int* src1, const int* src2, const T2* scalar, int* dst)
-    {
-        const int step = VTraits<v_int32>::vlanes();
-        v_int32 v_src1 = vx_load(src1);
-        v_int32 v_src2 = vx_load(src2);
-        v_int32 v_src1s = vx_load(src1 + step);
-        v_int32 v_src2s = vx_load(src2 + step);
-
-        v_float32 f0, f1, f2, f3;
-        f0 = v_cvt_f32(v_reinterpret_as_s32(v_src1));
-        f1 = v_cvt_f32(v_reinterpret_as_s32(v_src2));
-        f2 = v_cvt_f32(v_reinterpret_as_s32(v_src1s));
-        f3 = v_cvt_f32(v_reinterpret_as_s32(v_src2s));
-
-        f0 = op::r(f0, f1, scalar);
-        f2 = op::r(f2, f3, scalar);
-
-        v_int32 r0 = v_round(f0);
-        v_int32 r1 = v_round(f2);
-
-        r0 = op::pre(v_src2, r0);
-        r1 = op::pre(v_src2s, r1);
-
-        v_store(dst, r0);
-        v_store(dst + step, r1);
-    }
-
-    static inline void l(const int* src1, const T2* scalar, int* dst)
-    {
-        const int step = VTraits<v_int32>::vlanes();
-        v_int32 v_src1 = vx_load(src1);
-        v_int32 v_src1s = vx_load(src1 + step);
-
-        v_float32 f0, f1;
-        f0 = v_cvt_f32(v_src1);
-        f1 = v_cvt_f32(v_src1s);
-
-        f0 = op::r(f0, scalar);
-        f1 = op::r(f1, scalar);
-
-        v_int32 r0 = v_round(f0);
-        v_int32 r1 = v_round(f1);
-
-        r0 = op::pre(v_src1, r0);
-        r1 = op::pre(v_src1s, r1);
-
-        v_store(dst, r0);
-        v_store(dst + step, r1);
-    }
-};
-
-template<template<typename T1, typename T2, typename Tvec> class OP, typename T2>
-struct scalar_loader_n<sizeof(float), OP, float, T2, v_float32>
-{
-    typedef OP<float, T2, v_float32> op;
-    static inline void l(const float* src1, const float* src2, const T2* scalar, float* dst)
-    {
-        const int step = VTraits<v_float32>::vlanes();
-        v_float32 v_src1 = vx_load(src1);
-        v_float32 v_src2 = vx_load(src2);
-        v_float32 v_src1s = vx_load(src1 + step);
-        v_float32 v_src2s = vx_load(src2 + step);
-
-        v_float32 r0 = op::r(v_src1, v_src2, scalar);
-        v_float32 r1 = op::r(v_src1s, v_src2s, scalar);
-
-        v_store(dst, r0);
-        v_store(dst + step, r1);
-    }
-
-    static inline void l(const float* src1, const T2* scalar, float* dst)
-    {
-        const int step = VTraits<v_float32>::vlanes();
-        v_float32 v_src1 = vx_load(src1);
-        v_float32 v_src1s = vx_load(src1 + step);
-
-        v_float32 r0 = op::r(v_src1, scalar);
-        v_float32 r1 = op::r(v_src1s, scalar);
-
-        v_store(dst, r0);
-        v_store(dst + step, r1);
-    }
-};
-#endif // CV_SIMD
+#undef init_muldiv_nosimd_f64
+#undef init_addw_nosimd_f64
+#define init_muldiv_nosimd_f64() \
+    double sscale = scale;
+#define init_addw_nosimd_f64() \
+    double sw1 = weights[0]; \
+    double sw2 = weights[1]; \
+    double sdelta = weights[2];
 
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-template<template<typename T1, typename T2, typename Tvec> class OP>
-struct scalar_loader_n<sizeof(int), OP, int, double, v_int32>
-{
-    typedef OP<int, float, v_int32> op;
-    typedef OP<double, double, v_float64> op64;
-
-    static inline void l(const int* src1, const int* src2, const double* scalar, int* dst)
-    {
-        const int step = VTraits<v_int32>::vlanes();
-        v_int32 v_src1 = vx_load(src1);
-        v_int32 v_src2 = vx_load(src2);
-        v_int32 v_src1s = vx_load(src1 + step);
-        v_int32 v_src2s = vx_load(src2 + step);
-
-        v_int32 r0 = r(v_src1, v_src2, scalar);
-        v_int32 r1 = r(v_src1s, v_src2s, scalar);
-
-        r0 = op::pre(v_src2, r0);
-        r1 = op::pre(v_src2s, r1);
-
-        v_store(dst, r0);
-        v_store(dst + step, r1);
-    }
-    static inline void l(const int* src1, const double* scalar, int* dst)
-    {
-        const int step = VTraits<v_int32>::vlanes();
-        v_int32 v_src1 = vx_load(src1);
-        v_int32 v_src1s = vx_load(src1 + step);
-
-        v_int32 r0 = r(v_src1, scalar);
-        v_int32 r1 = r(v_src1s, scalar);
-
-        r0 = op::pre(v_src1, r0);
-        r1 = op::pre(v_src1s, r1);
-
-        v_store(dst, r0);
-        v_store(dst + step, r1);
-    }
-
-    static inline v_int32 r(const v_int32& a, const v_int32& b, const double* scalar)
-    {
-        v_float64 f0, f1, f2, f3;
-        f0 = v_cvt_f64(a);
-        f1 = v_cvt_f64_high(a);
-        f2 = v_cvt_f64(b);
-        f3 = v_cvt_f64_high(b);
-
-        v_float64 r0 = op64::r(f0, f2, scalar);
-        v_float64 r1 = op64::r(f1, f3, scalar);
-
-        return v_round(r0, r1);
-    }
-    static inline v_int32 r(const v_int32& a, const double* scalar)
-    {
-        v_float64 f0, f1;
-        f0 = v_cvt_f64(a);
-        f1 = v_cvt_f64_high(a);
-
-        v_float64 r0 = op64::r(f0, scalar);
-        v_float64 r1 = op64::r(f1, scalar);
-
-        return v_round(r0, r1);
-    }
-};
-
-template<template<typename T1, typename T2, typename Tvec> class OP>
-struct scalar_loader_n<sizeof(float), OP, float, double, v_float32>
-{
-    typedef OP<float, float, v_float32> op;
-    typedef OP<double, double, v_float64> op64;
-
-    static inline void l(const float* src1, const float* src2, const double* scalar, float* dst)
-    {
-        const int step = VTraits<v_float32>::vlanes();
-        v_float32 v_src1 = vx_load(src1);
-        v_float32 v_src2 = vx_load(src2);
-        v_float32 v_src1s = vx_load(src1 + step);
-        v_float32 v_src2s = vx_load(src2 + step);
-
-        v_float32 r0 = r(v_src1, v_src2, scalar);
-        v_float32 r1 = r(v_src1s, v_src2s, scalar);
-
-        v_store(dst, r0);
-        v_store(dst + step, r1);
-    }
-    static inline void l(const float* src1, const double* scalar, float* dst)
-    {
-        const int step = VTraits<v_float32>::vlanes();
-        v_float32 v_src1 = vx_load(src1);
-        v_float32 v_src1s = vx_load(src1 + step);
-
-        v_float32 r0 = r(v_src1, scalar);
-        v_float32 r1 = r(v_src1s, scalar);
-
-        v_store(dst, r0);
-        v_store(dst + step, r1);
-    }
-
-    static inline v_float32 r(const v_float32& a, const v_float32& b, const double* scalar)
-    {
-        v_float64 f0, f1, f2, f3;
-        f0 = v_cvt_f64(a);
-        f1 = v_cvt_f64_high(a);
-        f2 = v_cvt_f64(b);
-        f3 = v_cvt_f64_high(b);
-
-        v_float64 r0 = op64::r(f0, f2, scalar);
-        v_float64 r1 = op64::r(f1, f3, scalar);
-
-        return v_cvt_f32(r0, r1);
-    }
-    static inline v_float32 r(const v_float32& a, const double* scalar)
-    {
-        v_float64 f0, f1;
-        f0 = v_cvt_f64(a);
-        f1 = v_cvt_f64_high(a);
-
-        v_float64 r0 = op64::r(f0, scalar);
-        v_float64 r1 = op64::r(f1, scalar);
-
-        return v_cvt_f32(r0, r1);
-    }
-};
-
-template<template<typename T1, typename T2, typename Tvec> class OP>
-struct scalar_loader_n<sizeof(double), OP, double, double, v_float64>
-{
-    typedef OP<double, double, v_float64> op;
-
-    static inline void l(const double* src1, const double* src2, const double* scalar, double* dst)
-    {
-        const int step = VTraits<v_float64>::vlanes();
-        v_float64 v_src1 = vx_load(src1);
-        v_float64 v_src2 = vx_load(src2);
-        v_float64 v_src1s = vx_load(src1 + step);
-        v_float64 v_src2s = vx_load(src2 + step);
-
-        v_float64 r0 = op::r(v_src1, v_src2, scalar);
-        v_float64 r1 = op::r(v_src1s, v_src2s, scalar);
-
-        v_store(dst, r0);
-        v_store(dst + step, r1);
-    }
-    static inline void l(const double* src1, const double* scalar, double* dst)
-    {
-        const int step = VTraits<v_float64>::vlanes();
-        v_float64 v_src1 = vx_load(src1);
-        v_float64 v_src1s = vx_load(src1 + step);
-
-        v_float64 r0 = op::r(v_src1, scalar);
-        v_float64 r1 = op::r(v_src1s, scalar);
-
-        v_store(dst, r0);
-        v_store(dst + step, r1);
-    }
-};
-#endif // (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-
-//////////////////////////// Loops /////////////////////////////////
-
-// dual source
-template<template<typename T1, typename T2, typename Tvec> class OP, typename T1, typename T2, typename Tvec>
-static void scalar_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
-                 T1* dst, size_t step, int width, int height, const T2* scalar)
-{
-    typedef OP<T1, T2, Tvec> op;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    typedef scalar_loader_n<sizeof(T1), OP, T1, T2, Tvec> ldr;
-    const int wide_step = sizeof(T1) > sizeof(ushort) ? VTraits<Tvec>::vlanes() * 2 :
-                          sizeof(T1) == sizeof(uchar) ? VTraits<Tvec>::vlanes() / 2 : VTraits<Tvec>::vlanes();
-#endif // CV_SIMD
-
-    step1 /= sizeof(T1);
-    step2 /= sizeof(T1);
-    step  /= sizeof(T1);
-
-    for (; height--; src1 += step1, src2 += step2, dst += step)
-    {
-        int x = 0;
-
-    #if (CV_SIMD || CV_SIMD_SCALABLE)
-        for (; x <= width - wide_step; x += wide_step)
-        {
-            ldr::l(src1 + x, src2 + x, scalar, dst + x);
-        }
-    #endif // CV_SIMD
-
-    #if CV_ENABLE_UNROLLED || CV_SIMD_WIDTH > 16
-        for (; x <= width - 4; x += 4)
-        {
-            T1 t0 = op::r(src1[x], src2[x], scalar);
-            T1 t1 = op::r(src1[x + 1], src2[x + 1], scalar);
-            dst[x] = t0; dst[x + 1] = t1;
-
-            t0 = op::r(src1[x + 2], src2[x + 2], scalar);
-            t1 = op::r(src1[x + 3], src2[x + 3], scalar);
-            dst[x + 2] = t0; dst[x + 3] = t1;
-        }
-    #endif
-
-        for (; x < width; ++x)
-            dst[x] = op::r(src1[x], src2[x], scalar);
-    }
-
-    vx_cleanup();
-}
-
-// single source
-template<template<typename T1, typename T2, typename Tvec> class OP, typename T1, typename T2, typename Tvec>
-static void scalar_loop(const T1* src1, size_t step1, T1* dst, size_t step, int width, int height, const T2* scalar)
-{
-    typedef OP<T1, T2, Tvec> op;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    typedef scalar_loader_n<sizeof(T1), OP, T1, T2, Tvec> ldr;
-    const int wide_step = sizeof(T1) > sizeof(ushort) ? VTraits<Tvec>::vlanes() * 2 :
-                          sizeof(T1) == sizeof(uchar) ? VTraits<Tvec>::vlanes() / 2 : VTraits<Tvec>::vlanes();
-#endif // CV_SIMD
-
-    step1 /= sizeof(T1);
-    step  /= sizeof(T1);
-
-    for (; height--; src1 += step1, dst += step)
-    {
-        int x = 0;
-
-    #if (CV_SIMD || CV_SIMD_SCALABLE)
-        for (; x <= width - wide_step; x += wide_step)
-        {
-            ldr::l(src1 + x, scalar, dst + x);
-        }
-    #endif // CV_SIMD
-
-    #if CV_ENABLE_UNROLLED || CV_SIMD_WIDTH > 16
-        for (; x <= width - 4; x += 4)
-        {
-            T1 t0 = op::r(src1[x], scalar);
-            T1 t1 = op::r(src1[x + 1], scalar);
-            dst[x] = t0; dst[x + 1] = t1;
-
-            t0 = op::r(src1[x + 2], scalar);
-            t1 = op::r(src1[x + 3], scalar);
-            dst[x + 2] = t0; dst[x + 3] = t1;
-        }
-    #endif
-
-        for (; x < width; ++x)
-            dst[x] = op::r(src1[x], scalar);
-    }
-
-    vx_cleanup();
-}
-
-#if !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-// dual source
-template<template<typename T1, typename T2, typename Tvec> class OP, typename T1, typename T2, typename Tvec>
-static void scalar_loop_nosimd(const T1* src1, size_t step1, const T1* src2, size_t step2,
-                 T1* dst, size_t step, int width, int height, const T2* scalar)
-{
-    typedef OP<T1, T2, Tvec> op;
-
-    step1 /= sizeof(T1);
-    step2 /= sizeof(T1);
-    step  /= sizeof(T1);
-
-    for (; height--; src1 += step1, src2 += step2, dst += step)
-    {
-        int x = 0;
-
-        for (; x <= width - 4; x += 4)
-        {
-            T1 t0 = op::r(src1[x], src2[x], scalar);
-            T1 t1 = op::r(src1[x + 1], src2[x + 1], scalar);
-            dst[x] = t0; dst[x + 1] = t1;
-
-            t0 = op::r(src1[x + 2], src2[x + 2], scalar);
-            t1 = op::r(src1[x + 3], src2[x + 3], scalar);
-            dst[x + 2] = t0; dst[x + 3] = t1;
-        }
-
-        for (; x < width; ++x)
-            dst[x] = op::r(src1[x], src2[x], scalar);
-    }
-}
-
-// single source
-template<template<typename T1, typename T2, typename Tvec> class OP, typename T1, typename T2, typename Tvec>
-static void scalar_loop_nosimd(const T1* src1, size_t step1, T1* dst, size_t step, int width, int height, const T2* scalar)
-{
-    typedef OP<T1, T2, Tvec> op;
-
-    step1 /= sizeof(T1);
-    step  /= sizeof(T1);
-
-    for (; height--; src1 += step1, dst += step)
-    {
-        int x = 0;
-
-        for (; x <= width - 4; x += 4)
-        {
-            T1 t0 = op::r(src1[x], scalar);
-            T1 t1 = op::r(src1[x + 1], scalar);
-            dst[x] = t0; dst[x + 1] = t1;
-
-            t0 = op::r(src1[x + 2], scalar);
-            t1 = op::r(src1[x + 3], scalar);
-            dst[x + 2] = t0; dst[x + 3] = t1;
-        }
-
-        for (; x < width; ++x)
-            dst[x] = op::r(src1[x], scalar);
-    }
-}
-
-#define SCALAR_LOOP64F scalar_loop_nosimd
+#define DEFINE_SCALED_OP_64F(opname, scale_arg, scalar_op, vec_op, init, when_binary) \
+    DEFINE_SCALED_OP_64F_(opname, scale_arg, double, v_float64, scalar_op, vec_op, init, when_binary)
+#define init_muldiv_f64() \
+    double sscale = (double)scale; \
+    SIMD_ONLY(v_float64 vzero = vx_setzero_f64(); \
+              v_float64 vscale = v_add(vx_setall_f64(sscale), vzero);)
+#define init_addw_f64() \
+    double sw1 = weights[0]; \
+    double sw2 = weights[1]; \
+    double sdelta = weights[2];\
+    SIMD_ONLY(v_float64 vw1 = vx_setall_f64(sw1); \
+        v_float64 vw2 = vx_setall_f64(sw2); \
+        v_float64 vdelta = vx_setall_f64(sdelta);)
 #else
-#define SCALAR_LOOP64F scalar_loop
-#endif // !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-
-#endif // ARITHM_DEFINITIONS_ONLY
-
-//=========================================================================
-// Multiply
-//=========================================================================
-
-#ifdef ARITHM_DEFINITIONS_ONLY
-
-///////////////////////////// Operations //////////////////////////////////
-
-template<typename T1, typename Tvec>
-struct op_mul
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_mul(a, b); }
-    static inline T1 r(T1 a, T1 b)
-    { return saturate_cast<T1>(a * b); }
-};
-
-template<typename T1, typename T2, typename Tvec>
-struct op_mul_scale
-{
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline v_float32 r(const v_float32& a, const v_float32& b, const T2* scalar)
-    {
-        const v_float32 v_scalar = vx_setall_f32(*scalar);
-        return v_mul(v_scalar , a , b);
-    }
+#define DEFINE_SCALED_OP_64F(opname, scale_arg, scalar_op, vec_op, init, when_binary) \
+    DEFINE_SCALED_OP_NOSIMD(opname, scale_arg, double, double, scalar_op, init, when_binary)
+#define init_muldiv_f64() init_muldiv_nosimd_f64()
+#define init_addw_f64() init_addw_nosimd_f64()
 #endif
-    static inline T1 r(T1 a, T1 b, const T2* scalar)
-    { return c_mul(a, b, *scalar); }
-    static inline Tvec pre(const Tvec&, const Tvec& res)
-    { return res; }
-};
 
-template<>
-struct op_mul_scale<double, double, v_float64>
-{
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-    static inline v_float64 r(const v_float64& a, const v_float64& b, const double* scalar)
-    {
-        const v_float64 v_scalar = vx_setall_f64(*scalar);
-        return v_mul(v_mul(v_scalar, a), b);
-    }
+#undef scalar_mul
+#undef vec_mul
+#undef iscalar_div
+#undef ivec_div
+#undef fscalar_div
+#undef fvec_div
+#undef scalar_addw
+#undef vec_addw
+#define scalar_mul() ((f1)*(f2)*sscale)
+#define vec_mul() v_mul(v_mul((f1), vscale), (f2))
+#define iscalar_div() ((f2)!=0? (f1)*sscale/(f2) : 0)
+#define ivec_div() v_select(v_eq((f2), vzero), vzero, v_div(v_mul((f1), vscale), (f2)))
+#define fscalar_div() ((f1)*sscale/(f2))
+#define fvec_div() v_div(v_mul((f1), vscale), (f2))
+#define iscalar_recip() ((f1)!=0? sscale/(f1) : 0)
+#define ivec_recip() v_select(v_eq((f1), vzero), vzero, v_div(vscale, (f1)))
+#define fscalar_recip() (sscale/(f1))
+#define fvec_recip() v_div(vscale, (f1))
+#define scalar_addw() ((f1)*sw1 + (f2)*sw2 + sdelta)
+#define vec_addw() v_fma((f1), vw1, v_fma((f2), vw2, vdelta))
+#undef load_as_f32
+#undef store_as_s32
+#define load_as_f32(addr) v_cvt_f32(vx_load(addr))
+#define store_as_s32(addr, x) v_store((addr), v_round(x))
+
+#undef this_is_binary
+#undef this_is_unary
+#define this_is_binary(expr) expr
+#define this_is_unary(expr)
+
+#undef DEFINE_SCALED_OP_ALLTYPES
+#define DEFINE_SCALED_OP_ALLTYPES(opname, scale_arg, iscalar_op, fscalar_op, ivec_op, fvec_op, init, when_binary) \
+    DEFINE_SCALED_OP_8(opname##8u, scale_arg, uchar, v_uint8, iscalar_op, ivec_op, init##_f32, v_pack_u_store, when_binary) \
+    DEFINE_SCALED_OP_8(opname##8s, scale_arg, schar, v_int8, iscalar_op, ivec_op, init##_f32, v_pack_store, when_binary) \
+    DEFINE_SCALED_OP_16(opname##16u, scale_arg, ushort, v_uint16, iscalar_op, ivec_op, init##_f32, v_pack_u_store, when_binary) \
+    DEFINE_SCALED_OP_16(opname##16s, scale_arg, short, v_int16, iscalar_op, ivec_op, init##_f32, v_pack_store, when_binary) \
+    DEFINE_SCALED_OP_NOSIMD(opname##32u, scale_arg, unsigned, double, iscalar_op, init##_nosimd_f64, when_binary) \
+    DEFINE_SCALED_OP_NOSIMD(opname##32s, scale_arg, int, double, iscalar_op, init##_nosimd_f64, when_binary) \
+    DEFINE_SCALED_OP_NOSIMD(opname##64u, scale_arg, uint64, double, iscalar_op, init##_nosimd_f64, when_binary) \
+    DEFINE_SCALED_OP_NOSIMD(opname##64s, scale_arg, int64, double, iscalar_op, init##_nosimd_f64, when_binary) \
+    DEFINE_SCALED_OP_32(opname##32f, scale_arg, float, v_float32, fscalar_op, fvec_op, init##_f32, vx_load, v_store, when_binary) \
+    DEFINE_SCALED_OP_64F(opname##64f, scale_arg, fscalar_op, fvec_op, init##_f64, when_binary) \
+    DEFINE_SCALED_OP_16F(opname##16f, scale_arg, float16_t, fscalar_op, fvec_op, init##_f32, when_binary) \
+    DEFINE_SCALED_OP_16F(opname##16bf, scale_arg, bfloat16_t, fscalar_op, fvec_op, init##_f32, when_binary)
+
+
+DEFINE_SCALED_OP_ALLTYPES(mul, double scale, scalar_mul, scalar_mul, vec_mul, vec_mul, init_muldiv, this_is_binary)
+DEFINE_SCALED_OP_ALLTYPES(div, double scale, iscalar_div, fscalar_div, ivec_div, fvec_div, init_muldiv, this_is_binary)
+DEFINE_SCALED_OP_ALLTYPES(addWeighted, double weights[3], scalar_addw, scalar_addw, vec_addw, vec_addw, init_addw, this_is_binary)
+DEFINE_SCALED_OP_ALLTYPES(recip, double scale, iscalar_recip, fscalar_recip, ivec_recip, fvec_recip, init_muldiv, this_is_unary)
+
 #endif
-    static inline double r(double a, double b, const double* scalar)
-    { return c_mul(a, b, *scalar); }
-    static inline v_float64 pre(const v_float64&, const v_float64& res)
-    { return res; }
-};
 
-//////////////////////////// Loops /////////////////////////////////
+#ifdef ARITHM_DISPATCHING_ONLY
 
-template<typename T1, typename Tvec>
-static void mul_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
-              T1* dst, size_t step, int width, int height, const double* scalar)
-{
-    float fscalar = (float)*scalar;
-    if (std::fabs(fscalar - 1.0f) <= FLT_EPSILON)
-    {
-        bin_loop<op_mul, T1, Tvec>(src1, step1, src2, step2, dst, step, width, height);
-    }
-    else
-    {
-        scalar_loop<op_mul_scale, T1, float, Tvec>(src1, step1, src2, step2,
-            dst, step, width, height, &fscalar);
-    }
+#undef DEFINE_BINARY_OP_DISPATCHER
+#define DEFINE_BINARY_OP_DISPATCHER(opname, decl_type, type) \
+void opname(const decl_type* src1, size_t step1, const decl_type* src2, size_t step2, \
+            decl_type* dst, size_t step, int width, int height, void*) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    CALL_HAL(opname, cv_hal_##opname, src1, step1, src2, step2, dst, step, width, height) \
+    CV_CPU_DISPATCH(opname, ((const type*)src1, step1, (const type*)src2, step2, \
+                            (type*)dst, step, width, height), CV_CPU_DISPATCH_MODES_ALL); \
 }
 
-template<typename T1, typename Tvec>
-static void mul_loop_d(const T1* src1, size_t step1, const T1* src2, size_t step2,
-                T1* dst, size_t step, int width, int height, const double* scalar)
+#define DEFINE_BINARY_OP_DISPATCHER_ALLTYPES(opname) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##8u, uchar, uchar) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##8s, schar, schar) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##16u, ushort, ushort) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##16s, short, short) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##32u, unsigned, unsigned) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##32s, int, int) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##64u, uint64, uint64) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##64s, int64, int64) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##16f, cv_hal_f16, float16_t) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##16bf, cv_hal_bf16, bfloat16_t) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##32f, float, float) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##64f, double, double)
+
+DEFINE_BINARY_OP_DISPATCHER_ALLTYPES(add)
+DEFINE_BINARY_OP_DISPATCHER_ALLTYPES(sub)
+DEFINE_BINARY_OP_DISPATCHER_ALLTYPES(max)
+DEFINE_BINARY_OP_DISPATCHER_ALLTYPES(min)
+DEFINE_BINARY_OP_DISPATCHER_ALLTYPES(absdiff)
+
+DEFINE_BINARY_OP_DISPATCHER(and8u, uchar, uchar)
+DEFINE_BINARY_OP_DISPATCHER(or8u, uchar, uchar)
+DEFINE_BINARY_OP_DISPATCHER(xor8u, uchar, uchar)
+
+void not8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+           uchar* dst, size_t step, int width, int height, void*)
 {
-    if (std::fabs(*scalar - 1.0) <= FLT_EPSILON)
-    {
-        bin_loop<op_mul, T1, Tvec>(src1, step1, src2, step2, dst, step, width, height);
-    }
-    else
-    {
-        SCALAR_LOOP64F<op_mul_scale, T1, double, Tvec>(src1, step1, src2, step2,
-            dst, step, width, height, scalar);
-    }
+    CV_INSTRUMENT_REGION();
+    CALL_HAL(not8u, cv_hal_not8u, src1, step1, dst, step, width, height)
+    CV_CPU_DISPATCH(not8u, (src1, step1, src2, step2, dst, step, width, height), CV_CPU_DISPATCH_MODES_ALL);
 }
 
-template<>
-void mul_loop_d<double, v_float64>(const double* src1, size_t step1, const double* src2, size_t step2,
-                                  double* dst, size_t step, int width, int height, const double* scalar)
-{
-    if (*scalar == 1.0)
-    {
-        BIN_LOOP64F<op_mul, double, v_float64>(src1, step1, src2, step2, dst, step, width, height);
-    }
-    else
-    {
-        SCALAR_LOOP64F<op_mul_scale, double, double, v_float64>(src1, step1, src2, step2,
-            dst, step, width, height, scalar);
-    }
+#undef DEFINE_CMP_OP_DISPATCHER
+#define DEFINE_CMP_OP_DISPATCHER(opname, decl_type, type) \
+void opname(const decl_type* src1, size_t step1, const decl_type* src2, size_t step2, \
+            uchar* dst, size_t step, int width, int height, void* params) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    CV_CPU_DISPATCH(opname, ((const type*)src1, step1, (const type*)src2, step2, \
+            dst, step, width, height, *(int*)params), CV_CPU_DISPATCH_MODES_ALL); \
 }
 
-#endif // ARITHM_DEFINITIONS_ONLY
+DEFINE_CMP_OP_DISPATCHER(cmp8u, uchar, uchar)
+DEFINE_CMP_OP_DISPATCHER(cmp8s, schar, schar)
+DEFINE_CMP_OP_DISPATCHER(cmp16u, ushort, ushort)
+DEFINE_CMP_OP_DISPATCHER(cmp16s, short, short)
+DEFINE_CMP_OP_DISPATCHER(cmp32u, unsigned, unsigned)
+DEFINE_CMP_OP_DISPATCHER(cmp32s, int, int)
+DEFINE_CMP_OP_DISPATCHER(cmp64u, uint64, uint64)
+DEFINE_CMP_OP_DISPATCHER(cmp64s, int64, int64)
+DEFINE_CMP_OP_DISPATCHER(cmp16f, cv_hal_f16, float16_t)
+DEFINE_CMP_OP_DISPATCHER(cmp16bf, cv_hal_bf16, bfloat16_t)
+DEFINE_CMP_OP_DISPATCHER(cmp32f, float, float)
+DEFINE_CMP_OP_DISPATCHER(cmp64f, double, double)
 
-//////////////////////////////////////////////////////////////////////////
-
-#undef SCALAR_ARGS
-#define SCALAR_ARGS(_T1) const _T1* src1, size_t step1, const _T1* src2, size_t step2, \
-                          _T1* dst, size_t step, int width, int height
-
-#undef SCALAR_ARGS_PASS
-#define SCALAR_ARGS_PASS src1, step1, src2, step2, dst, step, width, height
-
-#undef DECLARE_SIMD_FUN
-#define DECLARE_SIMD_FUN(fun, _T1) void fun(SCALAR_ARGS(_T1), const double* scalar);
-
-#undef DISPATCH_SIMD_FUN
-#define DISPATCH_SIMD_FUN(fun, _T1, _Tvec, ...)                          \
-    void fun(SCALAR_ARGS(_T1), void* scalar)                             \
-    {                                                                    \
-        CV_INSTRUMENT_REGION();                                          \
-        CALL_HAL(fun, __CV_CAT(cv_hal_, fun),                            \
-            SCALAR_ARGS_PASS, *(const double*)scalar)                    \
-        ARITHM_CALL_IPP(__CV_CAT(arithm_ipp_, fun),                      \
-            SCALAR_ARGS_PASS, *(const double*)scalar)                    \
-        CV_CPU_DISPATCH(fun, (SCALAR_ARGS_PASS, (const double*)scalar),  \
-            CV_CPU_DISPATCH_MODES_ALL);                                  \
-    }
-
-#undef DEFINE_SIMD_FUN
-#define DEFINE_SIMD_FUN(fun, _T1, _Tvec, op)           \
-    void fun(SCALAR_ARGS(_T1), const double* scalar)   \
-    {                                                  \
-        CV_INSTRUMENT_REGION();                        \
-        op<_T1, _Tvec>(SCALAR_ARGS_PASS, scalar);      \
-    }
-
-#undef DEFINE_NOSIMD_FUN
-#define DEFINE_NOSIMD_FUN(fun, _T1, _OP) \
-    DEFINE_SIMD_FUN(fun, _T1, v_float64, _OP)
-
-DEFINE_SIMD_SAT(mul, mul_loop)
-DEFINE_SIMD_F32(mul, mul_loop_d)
-DEFINE_SIMD_S32(mul, mul_loop_d)
-DEFINE_SIMD_F64(mul, mul_loop_d)
-
-//=========================================================================
-// Div
-//=========================================================================
-
-#ifdef ARITHM_DEFINITIONS_ONLY
-
-///////////////////////////// Operations //////////////////////////////////
-
-template<typename T1, typename Tvec>
-struct op_div_f
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    { return v_div(a, b); }
-    static inline T1 r(T1 a, T1 b)
-    { return a / b; }
-};
-
-template<typename T1, typename T2, typename Tvec>
-struct op_div_scale
-{
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline v_float32 r(const v_float32& a, const v_float32& b, const T2* scalar)
-    {
-        const v_float32 v_scalar = vx_setall_f32(*scalar);
-        return v_div(v_mul(a, v_scalar), b);
-    }
-    static inline Tvec pre(const Tvec& denom, const Tvec& res)
-    {
-        const Tvec v_zero = vx_setall<typename VTraits<Tvec>::lane_type>(0);
-        return v_select(v_eq(denom, v_zero), v_zero, res);
-    }
-#endif
-    static inline T1 r(T1 a, T1 denom, const T2* scalar)
-    {
-        CV_StaticAssert(std::numeric_limits<T1>::is_integer, "");
-        return denom != (T1)0 ? c_div(a, denom, *scalar) : (T1)0;
-    }
-};
-
-template<>
-struct op_div_scale<float, float, v_float32>
-{
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline v_float32 r(const v_float32& a, const v_float32& b, const float* scalar)
-    {
-        const v_float32 v_scalar = vx_setall_f32(*scalar);
-        return v_div(v_mul(a, v_scalar), b);
-    }
-#endif
-    static inline float r(float a, float denom, const float* scalar)
-    { return c_div(a, denom, *scalar); }
-};
-
-template<>
-struct op_div_scale<double, double, v_float64>
-{
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-    static inline v_float64 r(const v_float64& a, const v_float64& b, const double* scalar)
-    {
-        const v_float64 v_scalar = vx_setall_f64(*scalar);
-        return v_div(v_mul(a, v_scalar), b);
-    }
-#endif
-    static inline double r(double a, double denom, const double* scalar)
-    { return c_div(a, denom, *scalar); }
-};
-
-//////////////////////////// Loops /////////////////////////////////
-
-template<typename T1, typename Tvec>
-static void div_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
-              T1* dst, size_t step, int width, int height, const double* scalar)
-{
-    float fscalar = (float)*scalar;
-    // todo: add new intrinsics for integer divide
-    scalar_loop<op_div_scale, T1, float, Tvec>(src1, step1, src2, step2,
-        dst, step, width, height, &fscalar);
+#undef DEFINE_BINARY_OP_W_PARAMS_DISPATCHER
+#define DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname, decl_type, type, read_params, paramname) \
+void opname(const decl_type* src1, size_t step1, const decl_type* src2, size_t step2, \
+            decl_type* dst, size_t step, int width, int height, void* params_) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    read_params; \
+    CALL_HAL(opname, cv_hal_##opname, src1, step1, src2, step2, dst, step, width, height, paramname) \
+    CV_CPU_DISPATCH(opname, ((const type*)src1, step1, (const type*)src2, step2, \
+                            (type*)dst, step, width, height, paramname), CV_CPU_DISPATCH_MODES_ALL); \
 }
 
-template<>
-void div_loop<float, v_float32>(const float* src1, size_t step1, const float* src2, size_t step2,
-                                float* dst, size_t step, int width, int height, const double* scalar)
-{
-    float fscalar = (float)*scalar;
-    if (std::fabs(fscalar - 1.0f) <= FLT_EPSILON)
-    {
-        bin_loop<op_div_f, float, v_float32>(src1, step1, src2, step2, dst, step, width, height);
-    }
-    else
-    {
-        SCALAR_LOOP64F<op_div_scale, float, float, v_float32>(src1, step1, src2, step2,
-            dst, step, width, height, &fscalar);
-    }
+#undef DEFINE_BINARY_OP_W_PARAMS_DISPATCHER_ALLTYPES
+#define DEFINE_BINARY_OP_W_PARAMS_DISPATCHER_ALLTYPES(opname, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##8u, uchar, uchar, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##8s, schar, schar, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##16u, ushort, ushort, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##16s, short, short, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##32u, unsigned, unsigned, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##32s, int, int, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##64u, uint64, uint64, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##64s, int64, int64, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##16f, cv_hal_f16, float16_t, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##16bf, cv_hal_bf16, bfloat16_t, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##32f, float, float, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##64f, double, double, read_params, paramname)
+
+DEFINE_BINARY_OP_W_PARAMS_DISPATCHER_ALLTYPES(mul, double scale = *(double*)params_, scale)
+DEFINE_BINARY_OP_W_PARAMS_DISPATCHER_ALLTYPES(div, double scale = *(double*)params_, scale)
+DEFINE_BINARY_OP_W_PARAMS_DISPATCHER_ALLTYPES(addWeighted, \
+            double w[3]; \
+            w[0]=((double*)params_)[0]; \
+            w[1]=((double*)params_)[1]; \
+            w[2]=((double*)params_)[2];, \
+            w)
+
+#undef DEFINE_UNARY_OP_W_PARAMS_DISPATCHER
+#define DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(opname, decl_type, type, read_params, paramname) \
+void opname(const decl_type* src1, size_t step1, const decl_type*, size_t, \
+            decl_type* dst, size_t step, int width, int height, void* params_) \
+{ \
+    CV_INSTRUMENT_REGION(); \
+    read_params; \
+    CALL_HAL(opname, cv_hal_##opname, src1, step1, dst, step, width, height, paramname) \
+    CV_CPU_DISPATCH(opname, ((const type*)src1, step1, nullptr, 0, \
+                            (type*)dst, step, width, height, paramname), CV_CPU_DISPATCH_MODES_ALL); \
 }
 
-template<>
-void div_loop<double, v_float64>(const double* src1, size_t step1, const double* src2, size_t step2,
-                                double* dst, size_t step, int width, int height, const double* scalar)
-{
-    if (*scalar == 1.0)
-    {
-        BIN_LOOP64F<op_div_f, double, v_float64>(src1, step1, src2, step2, dst, step, width, height);
-    }
-    else
-    {
-        SCALAR_LOOP64F<op_div_scale, double, double, v_float64>(src1, step1, src2, step2,
-            dst, step, width, height, scalar);
-    }
-}
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip8u, uchar, uchar, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip8s, schar, schar, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip16u, ushort, ushort, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip16s, short, short, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip32u, unsigned, unsigned, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip32s, int, int, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip64u, uint64, uint64, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip64s, int64, int64, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip16f, cv_hal_f16, float16_t, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip16bf, cv_hal_bf16, bfloat16_t, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip32f, float, float, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip64f, double, double, double scale = *(double*)params_, scale)
 
-#endif // ARITHM_DEFINITIONS_ONLY
-
-//////////////////////////////////////////////////////////////////////////
-
-DEFINE_SIMD_ALL(div, div_loop)
-
-//=========================================================================
-// AddWeighted
-//=========================================================================
-
-#ifdef ARITHM_DEFINITIONS_ONLY
-
-///////////////////////////// Operations //////////////////////////////////
-
-///// Add scale
-template<typename T1, typename T2, typename Tvec>
-struct op_add_scale
-{
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline v_float32 r(const v_float32& a, const v_float32& b, const T2* scalar)
-    {
-        const v_float32 v_alpha = vx_setall_f32(*scalar);
-        return v_fma(a, v_alpha, b);
-    }
 #endif
-    static inline T1 r(T1 a, T1 b, const T2* scalar)
-    { return c_add(a, b, *scalar); }
-    static inline Tvec pre(const Tvec&, const Tvec& res)
-    { return res; }
-};
-
-template<>
-struct op_add_scale<double, double, v_float64>
-{
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-    static inline v_float64 r(const v_float64& a, const v_float64& b, const double* scalar)
-    {
-        const v_float64 v_alpha = vx_setall_f64(*scalar);
-        return v_fma(a, v_alpha, b);
-    }
-#endif
-    static inline double r(double a, double b, const double* scalar)
-    { return c_add(a, b, *scalar); }
-    static inline v_float64 pre(const v_float64&, const v_float64& res)
-    { return res; }
-};
-
-///// Weighted sum
-template<typename T1, typename T2, typename Tvec>
-struct op_add_weighted
-{
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline v_float32 r(const v_float32& a, const v_float32& b, const T2* scalars)
-    {
-        const v_float32 v_alpha = vx_setall_f32(scalars[0]);
-        const v_float32 v_beta  = vx_setall_f32(scalars[1]);
-        const v_float32 v_gamma = vx_setall_f32(scalars[2]);
-        return v_fma(a, v_alpha, v_fma(b, v_beta, v_gamma));
-    }
-#endif
-    static inline T1 r(T1 a, T1 b, const T2* scalars)
-    { return c_add(a, b, scalars[0], scalars[1], scalars[2]); }
-    static inline Tvec pre(const Tvec&, const Tvec& res)
-    { return res; }
-};
-
-template<>
-struct op_add_weighted<double, double, v_float64>
-{
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-    static inline v_float64 r(const v_float64& a, const v_float64& b, const double* scalars)
-    {
-        const v_float64 v_alpha = vx_setall_f64(scalars[0]);
-        const v_float64 v_beta  = vx_setall_f64(scalars[1]);
-        const v_float64 v_gamma = vx_setall_f64(scalars[2]);
-        return v_fma(a, v_alpha, v_fma(b, v_beta, v_gamma));
-    }
-#endif
-    static inline double r(double a, double b, const double* scalars)
-    { return c_add(a, b, scalars[0], scalars[1], scalars[2]); }
-    static inline v_float64 pre(const v_float64&, const v_float64& res)
-    { return res; }
-};
-
-//////////////////////////// Loops /////////////////////////////////
-
-template<typename T1, typename Tvec>
-static void add_weighted_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
-                       T1* dst, size_t step, int width, int height, const double* scalars)
-{
-    float fscalars[] = {(float)scalars[0], (float)scalars[1], (float)scalars[2]};
-    if (fscalars[1] == 1.0f && fscalars[2] == 0.0f)
-    {
-        scalar_loop<op_add_scale, T1, float, Tvec>(src1, step1, src2, step2,
-            dst, step, width, height, fscalars);
-    }
-    else
-    {
-        scalar_loop<op_add_weighted, T1, float, Tvec>(src1, step1, src2, step2,
-            dst, step, width, height, fscalars);
-    }
-}
-
-template<typename T1, typename Tvec>
-static void add_weighted_loop_d(const T1* src1, size_t step1, const T1* src2, size_t step2,
-                         T1* dst, size_t step, int width, int height, const double* scalars)
-{
-    if (scalars[1] == 1.0 && scalars[2] == 0.0)
-    {
-        SCALAR_LOOP64F<op_add_scale, T1, double, Tvec>(src1, step1, src2, step2,
-            dst, step, width, height, scalars);
-    }
-    else
-    {
-        SCALAR_LOOP64F<op_add_weighted, T1, double, Tvec>(src1, step1, src2, step2,
-            dst, step, width, height, scalars);
-    }
-}
-
-template<>
-void add_weighted_loop_d<double, v_float64>(const double* src1, size_t step1, const double* src2, size_t step2,
-                                            double* dst, size_t step, int width, int height, const double* scalars)
-{
-    if (scalars[1] == 1.0 && scalars[2] == 0.0)
-    {
-        SCALAR_LOOP64F<op_add_scale, double, double, v_float64>(src1, step1, src2, step2,
-            dst, step, width, height, scalars);
-    }
-    else
-    {
-        SCALAR_LOOP64F<op_add_weighted, double, double, v_float64>(src1, step1, src2, step2,
-            dst, step, width, height, scalars);
-    }
-}
-
-#endif // ARITHM_DEFINITIONS_ONLY
-
-//////////////////////////////////////////////////////////////////////////
-
-#undef DISPATCH_SIMD_FUN
-#define DISPATCH_SIMD_FUN(fun, _T1, _Tvec, ...)                          \
-    void fun(SCALAR_ARGS(_T1), void* scalar)                             \
-    {                                                                    \
-        CV_INSTRUMENT_REGION();                                          \
-        CALL_HAL(fun, __CV_CAT(cv_hal_, fun),                            \
-            SCALAR_ARGS_PASS, (const double*)scalar)                     \
-        ARITHM_CALL_IPP(__CV_CAT(arithm_ipp_, fun),                      \
-            SCALAR_ARGS_PASS, (const double*)scalar)                     \
-        CV_CPU_DISPATCH(fun, (SCALAR_ARGS_PASS, (const double*)scalar),  \
-            CV_CPU_DISPATCH_MODES_ALL);                                  \
-    }
-
-DEFINE_SIMD_SAT(addWeighted, add_weighted_loop)
-DEFINE_SIMD_S32(addWeighted, add_weighted_loop_d)
-DEFINE_SIMD_F32(addWeighted, add_weighted_loop_d)
-DEFINE_SIMD_F64(addWeighted, add_weighted_loop_d)
-
-//=======================================
-// Reciprocal
-//=======================================
-
-#ifdef ARITHM_DEFINITIONS_ONLY
-
-///////////////////////////// Operations //////////////////////////////////
-
-template<typename T1, typename T2, typename Tvec>
-struct op_recip
-{
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline v_float32 r(const v_float32& a, const T2* scalar)
-    {
-        const v_float32 v_scalar = vx_setall_f32(*scalar);
-        return v_div(v_scalar, a);
-    }
-    static inline Tvec pre(const Tvec& denom, const Tvec& res)
-    {
-        const Tvec v_zero = vx_setall<typename VTraits<Tvec>::lane_type>(0);
-        return v_select(v_eq(denom, v_zero), v_zero, res);
-    }
-#endif
-    static inline T1 r(T1 denom, const T2* scalar)
-    {
-        CV_StaticAssert(std::numeric_limits<T1>::is_integer, "");
-        return denom != (T1)0 ? c_div(*scalar, denom) : (T1)0;
-    }
-};
-
-template<>
-struct op_recip<float, float, v_float32>
-{
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline v_float32 r(const v_float32& a, const float* scalar)
-    {
-        const v_float32 v_scalar = vx_setall_f32(*scalar);
-        return v_div(v_scalar, a);
-    }
-#endif
-    static inline float r(float denom, const float* scalar)
-    { return c_div(*scalar, denom); }
-};
-
-template<>
-struct op_recip<double, double, v_float64>
-{
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-    static inline v_float64 r(const v_float64& a, const double* scalar)
-    {
-        const v_float64 v_scalar = vx_setall_f64(*scalar);
-        return v_div(v_scalar, a);
-    }
-#endif
-    static inline double r(double denom, const double* scalar)
-    { return c_div(*scalar, denom); }
-};
-
-//////////////////////////// Loops /////////////////////////////////
-
-template<typename T1, typename Tvec>
-static void recip_loop(const T1* src1, size_t step1, T1* dst, size_t step, int width, int height, const double* scalar)
-{
-    float fscalar = (float)*scalar;
-    scalar_loop<op_recip, T1, float, Tvec>(src1, step1, dst, step, width, height, &fscalar);
-}
-
-template<>
-void recip_loop<double, v_float64>(const double* src1, size_t step1, double* dst, size_t step, int width, int height, const double* scalar)
-{
-    SCALAR_LOOP64F<op_recip, double, double, v_float64>(src1, step1, dst, step, width, height, scalar);
-}
-
-#endif // ARITHM_DEFINITIONS_ONLY
-
-//////////////////////////////////////////////////////////////////////////
-
-#undef SCALAR_ARGS
-#define SCALAR_ARGS(_T1) const _T1* src1, size_t step1, _T1* dst, size_t step, int width, int height
-
-#undef SCALAR_ARGS_PASS
-#define SCALAR_ARGS_PASS src1, step1, dst, step, width, height
-
-#undef DISPATCH_SIMD_FUN
-#define DISPATCH_SIMD_FUN(fun, _T1, _Tvec, ...)                          \
-    void fun(const _T1*, size_t, SCALAR_ARGS(_T1), void* scalar)         \
-    {                                                                    \
-        CV_INSTRUMENT_REGION();                                          \
-        CALL_HAL(fun, __CV_CAT(cv_hal_, fun),                            \
-            SCALAR_ARGS_PASS, *(const double*)scalar)                    \
-        ARITHM_CALL_IPP(__CV_CAT(arithm_ipp_, fun),                      \
-            SCALAR_ARGS_PASS, *(const double*)scalar)                    \
-        CV_CPU_DISPATCH(fun, (SCALAR_ARGS_PASS, (const double*)scalar),  \
-            CV_CPU_DISPATCH_MODES_ALL);                                  \
-    }
-
-DEFINE_SIMD_ALL(recip, recip_loop)
 
 #ifndef ARITHM_DISPATCHING_ONLY
     CV_CPU_OPTIMIZATION_NAMESPACE_END
-#endif
-
-#ifndef SIMD_GUARD
-    #define SIMD_GUARD
 #endif
 
 }} // cv::hal::

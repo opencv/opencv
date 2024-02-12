@@ -322,7 +322,8 @@ CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 @param buf Input array or vector of bytes.
 @param flags The same flags as in cv::imread, see cv::ImreadModes.
 @param dst The optional output placeholder for the decoded matrix. It can save the image
-reallocations when the function is called repeatedly for images of the same size.
+reallocations when the function is called repeatedly for images of the same size. In case of decoder
+failure the function returns empty cv::Mat object, but does not release user-provided dst buffer.
 */
 CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
 

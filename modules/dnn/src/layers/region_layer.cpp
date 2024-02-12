@@ -161,7 +161,7 @@ public:
         std::vector<UMat> outputs;
 
         // TODO: implement a logistic activation to classification scores.
-        if (useLogistic || inps.depth() == CV_16S)
+        if (useLogistic || inps.depth() == CV_16F)
             return false;
 
         inps.getUMatVector(inputs);
@@ -232,7 +232,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

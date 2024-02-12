@@ -71,6 +71,8 @@ _PREDEFINED_TYPES = (
                             doc="Required length is 4"),
     AliasTypeNode.sequence_("Rect2i", PrimitiveTypeNode.int_(),
                             doc="Required length is 4"),
+    AliasTypeNode.sequence_("Rect2f", PrimitiveTypeNode.float_(),
+                            doc="Required length is 4"),
     AliasTypeNode.sequence_("Rect2d", PrimitiveTypeNode.float_(),
                             doc="Required length is 4"),
     AliasTypeNode.dict_("Moments", PrimitiveTypeNode.str_("Moments::key"),
