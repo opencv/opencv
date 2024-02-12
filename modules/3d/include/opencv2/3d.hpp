@@ -2785,12 +2785,15 @@ CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, In
 *
 * Currently, the following file formats are supported:
 * -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file) (ONLY TRIANGULATED FACES)
+* -  [Polygon File Format *.ply](https://en.wikipedia.org/wiki/PLY_(file_format))
 * @param filename Name of the file.
 * @param vertices (vector of Point3f) vertex coordinates of a mesh
-* @param normals (vector of Point3f) vertex normals of a mesh
 * @param indices (vector of vectors of int) vertex normals of a mesh
+* @param normals (vector of Point3f) vertex normals of a mesh
+* @param colors (vector of Point3f) vertex colors of a mesh
 */
-CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArrayOfArrays indices);
+CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays indices,
+                           OutputArray normals = noArray(), OutputArray colors = noArray());
 
 /** @brief Saves a mesh to a specified file.
 *
@@ -2799,11 +2802,12 @@ CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputA
 *
 * @param filename Name of the file.
 * @param vertices (vector of Point3f) vertex coordinates of a mesh
-* @param normals (vector of Point3f) vertex normals of a mesh
 * @param indices (vector of vectors of int) vertex normals of a mesh
+* @param normals (vector of Point3f) vertex normals of a mesh
+* @param colors (vector of Point3f) vertex colors of a mesh
 */
-CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices);
-
+CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays indices,
+                           InputArray normals = noArray(), InputArray colors = noArray());
 
 //! @} _3d
 } //end namespace cv
