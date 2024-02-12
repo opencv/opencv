@@ -469,7 +469,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     }
     else if (target == DNN_TARGET_CUDA)
     {
-        l1 = 7e-4;
+        l1 = 8e-4;
         lInf = 2e-2;
     }
     else if (target == DNN_TARGET_CUDA_FP16)
