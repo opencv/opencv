@@ -3070,7 +3070,10 @@ protected:
     {
         bool operator()(const Point2f& a, const Point2f& b) const
         {
-            return a.y < b.y;
+            if (a.y != b.y)
+                return a.y < b.y;
+            else
+                return a.x < b.x;
         }
     };
     struct compareSquare

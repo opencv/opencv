@@ -614,4 +614,21 @@ TEST(Objdetect_QRCode_detectAndDecode, utf8_output)
     EXPECT_NE(decoded_info.find("M\xc3\xbcllheimstrasse"), std::string::npos);
 }
 
+TEST_P(Objdetect_QRCode_detectAndDecodeMulti, detect_regression_24679)
+{
+    const std::string name_current_image = "issue_24679.png";
+    const std::string root = "qrcode/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat img = imread(image_path);
+    const std::string method = GetParam();
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    if (method == "aruco_based") {
+        qrcode = QRCodeDetectorAruco();
+    }
+    std::vector<cv::String> decoded_info;
+    ASSERT_TRUE(qrcode.detectAndDecodeMulti(img, decoded_info));
+    EXPECT_EQ(decoded_info.size(), 4U);
+}
+
 }} // namespace
