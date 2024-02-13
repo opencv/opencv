@@ -697,12 +697,14 @@ CV__DNN_INLINE_NS_BEGIN
          * order is the same as in layersIds
          */
         CV_WRAP void getLayersShapes(const std::vector<MatShape>& netInputShapes,
+                                     const std::vector<MatType>& netInputTypes,
                                      CV_OUT std::vector<int>& layersIds,
                                      CV_OUT std::vector<std::vector<MatShape> >& inLayersShapes,
                                      CV_OUT std::vector<std::vector<MatShape> >& outLayersShapes) const;
 
         /** @overload */
         CV_WRAP void getLayersShapes(const MatShape& netInputShape,
+                                     const MatType& netInputType,
                                      CV_OUT std::vector<int>& layersIds,
                                      CV_OUT std::vector<std::vector<MatShape> >& inLayersShapes,
                                      CV_OUT std::vector<std::vector<MatShape> >& outLayersShapes) const;
@@ -733,15 +735,19 @@ CV__DNN_INLINE_NS_BEGIN
          * @param netInputShapes vector of shapes for all net inputs.
          * @returns computed FLOP.
          */
-        CV_WRAP int64 getFLOPS(const std::vector<MatShape>& netInputShapes) const;
+        CV_WRAP int64 getFLOPS(const std::vector<MatShape>& netInputShapes,
+                               const std::vector<MatType>& netInputTypes) const;
         /** @overload */
-        CV_WRAP int64 getFLOPS(const MatShape& netInputShape) const;
+        CV_WRAP int64 getFLOPS(const MatShape& netInputShape,
+                               const MatType& netInputType) const;
         /** @overload */
         CV_WRAP int64 getFLOPS(const int layerId,
-                               const std::vector<MatShape>& netInputShapes) const;
+                               const std::vector<MatShape>& netInputShapes,
+                               const std::vector<MatType>& netInputTypes) const;
         /** @overload */
         CV_WRAP int64 getFLOPS(const int layerId,
-                               const MatShape& netInputShape) const;
+                               const MatShape& netInputShape,
+                               const MatType& netInputType) const;
 
         /** @brief Returns list of types for layer used in model.
          * @param layersTypes output parameter for returning types.
@@ -761,17 +767,21 @@ CV__DNN_INLINE_NS_BEGIN
          * @param blobs output parameter to store resulting bytes for intermediate blobs.
          */
         void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
+                                          const std::vector<MatType>& netInputTypes,
                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const; // FIXIT: CV_WRAP
         /** @overload */
         CV_WRAP void getMemoryConsumption(const MatShape& netInputShape,
+                                          const MatType& netInputType,
                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
         /** @overload */
         CV_WRAP void getMemoryConsumption(const int layerId,
                                           const std::vector<MatShape>& netInputShapes,
+                                          const std::vector<MatType>& netInputTypes,
                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
         /** @overload */
         CV_WRAP void getMemoryConsumption(const int layerId,
                                           const MatShape& netInputShape,
+                                          const MatType& netInputType,
                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
 
         /** @brief Computes bytes number which are required to store
@@ -782,11 +792,13 @@ CV__DNN_INLINE_NS_BEGIN
          * @param blobs output parameter to store resulting bytes for intermediate blobs.
          */
         void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
+                                          const std::vector<MatType>& netInputTypes,
                                           CV_OUT std::vector<int>& layerIds,
                                           CV_OUT std::vector<size_t>& weights,
                                           CV_OUT std::vector<size_t>& blobs) const; // FIXIT: CV_WRAP
         /** @overload */
         void getMemoryConsumption(const MatShape& netInputShape,
+                                          const MatType& netInputType,
                                           CV_OUT std::vector<int>& layerIds,
                                           CV_OUT std::vector<size_t>& weights,
                                           CV_OUT std::vector<size_t>& blobs) const; // FIXIT: CV_WRAP

@@ -136,9 +136,12 @@ PERF_TEST_P_(Conv1D, conv1d)
     Mat output = net.forward();
 
     MatShape netInputShape = shape(input);
+    cv::dnn::MatType netInputType = input.depth();
+    if (netInputType == CV_32F && targetId == DNN_TARGET_OPENCL_FP16)
+        netInputType = CV_16S;
     size_t weightsMemory = 0, blobsMemory = 0;
-    net.getMemoryConsumption(netInputShape, weightsMemory, blobsMemory);
-    int64 flops = net.getFLOPS(netInputShape);
+    net.getMemoryConsumption(netInputShape, netInputType, weightsMemory, blobsMemory);
+    int64 flops = net.getFLOPS(netInputShape, netInputType);
     CV_Assert(flops > 0);
 
     std::cout

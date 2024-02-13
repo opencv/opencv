@@ -1224,6 +1224,7 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
 
 void Net::Impl::getLayersShapes(
         const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
         std::vector<int>& layersIds,
         std::vector<ShapesVec>& inLayersShapes,
         std::vector<ShapesVec>& outLayersShapes) /*const*/
@@ -1233,8 +1234,7 @@ void Net::Impl::getLayersShapes(
     outLayersShapes.clear();
 
     Impl::LayersShapesMap inOutShapes;
-    CV_CheckEQ(0, 1, "TO DO: add types to GetFlops and GetMemoryConsumption");
-    getLayersShapes(netInputShapes, {}, inOutShapes);
+    getLayersShapes(netInputShapes, netInputTypes, inOutShapes);
 
     for (Impl::LayersShapesMap::const_iterator it = inOutShapes.begin();
             it != inOutShapes.end(); it++)
@@ -1947,12 +1947,13 @@ std::vector<String> Net::Impl::getUnconnectedOutLayersNames() /*const*/
 }
 
 
-int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes) /*const*/
+int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes,
+                          const std::vector<MatType>& netInputTypes) /*const*/
 {
     int64 flops = 0;
     std::vector<int> ids;
     std::vector<std::vector<MatShape>> inShapes, outShapes;
-    getLayersShapes(netInputShapes, ids, inShapes, outShapes);
+    getLayersShapes(netInputShapes, netInputTypes, ids, inShapes, outShapes);
     CV_Assert(inShapes.size() == outShapes.size());
     CV_Assert(inShapes.size() == ids.size());
 
@@ -1967,13 +1968,13 @@ int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes) /*const*/
 
 int64 Net::Impl::getFLOPS(
         const int layerId,
-        const std::vector<MatShape>& netInputShapes) /*const*/
+        const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes) /*const*/
 {
     Impl::MapIdToLayerData::const_iterator layer = layers.find(layerId);
     CV_Assert(layer != layers.end());
 
     LayerShapes shapes;
-    std::vector<MatType> netInputTypes(netInputShapes.size(), CV_32F);
     getLayerShapes(netInputShapes, netInputTypes, layerId, shapes);
 
     return getLayerInstance(const_cast<LayerData&>(layer->second))->getFLOPS(shapes.in, shapes.out);
@@ -1983,6 +1984,7 @@ int64 Net::Impl::getFLOPS(
 void Net::Impl::getMemoryConsumption(
         const int layerId,
         const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         size_t& weights, size_t& blobs) /*const*/
 {
     Impl::MapIdToLayerData::const_iterator layer = layers.find(layerId);
@@ -1997,14 +1999,31 @@ void Net::Impl::getMemoryConsumption(
     }
 
     LayerShapes shapes;
-    std::vector<MatType> netInputTypes(netInputShapes.size(), CV_32F);
     getLayerShapes(netInputShapes, netInputTypes, layerId, shapes);
     const ShapesVec& outLayerShapes = shapes.out;
 
-    // FIXIT netWasQuantized check is not enough - per layer check should be done
-    size_t elemSize = netWasQuantized ? sizeof(char) : sizeof(float);
     for (int i = 0; i < outLayerShapes.size(); i++)
     {
+        size_t elemSize;
+        switch (shapes.outTypes[i]) {
+        case CV_64S:
+            elemSize = 8;
+            break;
+        case CV_32F:
+        case CV_32S:
+            elemSize = 4;
+            break;
+        case CV_16S:
+        case CV_16F:
+            elemSize = 2;
+            break;
+        case CV_8S:
+        case CV_8U:
+            elemSize = 1;
+            break;
+        default:
+            CV_Assert(false);
+        }
         blobs += total(outLayerShapes[i]) * elemSize;
     }
 }
@@ -2012,11 +2031,12 @@ void Net::Impl::getMemoryConsumption(
 
 void Net::Impl::getMemoryConsumption(
         const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         size_t& weights, size_t& blobs) /*const*/
 {
     std::vector<int> layerIds;
     std::vector<size_t> w, b;
-    getMemoryConsumption(netInputShapes, layerIds, w, b);
+    getMemoryConsumption(netInputShapes, netInputTypes, layerIds, w, b);
 
     weights = blobs = 0;
     for (int i = 0; i < layerIds.size(); i++)
@@ -2036,6 +2056,7 @@ int64 Net::Impl::getPerfProfile(std::vector<double>& timings) const
 
 void Net::Impl::getMemoryConsumption(
         const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         std::vector<int>& layerIds, std::vector<size_t>& weights,
         std::vector<size_t>& blobs) /*const*/
 {
@@ -2045,7 +2066,7 @@ void Net::Impl::getMemoryConsumption(
 
     std::vector<std::vector<MatShape>> inLayerShapes, outLayerShapes;
 
-    getLayersShapes(netInputShapes, layerIds, inLayerShapes, outLayerShapes);
+    getLayersShapes(netInputShapes, netInputTypes, layerIds, inLayerShapes, outLayerShapes);
     // FIXIT netWasQuantized check is not enough - per layer check should be done
     size_t elemSize = netWasQuantized ? sizeof(char) : sizeof(float);
     for (int i = 0; i < layerIds.size(); i++)

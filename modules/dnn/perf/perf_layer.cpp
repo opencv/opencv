@@ -267,14 +267,12 @@ PERF_TEST_P_(Layer_Scatter, scatter) {
     int target_id = get<1>(get<3>(GetParam()));
 
     Mat data(shape, CV_32FC1);
-    Mat indices(shape, CV_32FC1);
+    Mat indices(shape, CV_64SC1);
     Mat updates(shape, CV_32FC1);
 
     randn(data, 0.f, 1.f);
     randu(indices, 0, shape[axis]);
     randn(updates, 0.f, 1.f);
-
-    indices.convertTo(indices, CV_32SC1, 1, -1);
 
     Net net;
     LayerParams lp;
@@ -334,7 +332,7 @@ PERF_TEST_P_(Layer_ScatterND, scatterND) {
     std::vector<int> indices_shape(shape);
     indices_shape.push_back(int(shape.size()));
     Mat data(shape, CV_32FC1);
-    Mat indices(indices_shape, CV_32FC1);
+    Mat indices(indices_shape, CV_32SC1);
     Mat updates(shape, CV_32FC1);
 
     randn(data, 0.f, 1.f);
@@ -346,11 +344,11 @@ PERF_TEST_P_(Layer_ScatterND, scatterND) {
     std::vector<int> indices_step;
     for (int i = 0; i < indices.dims; i++)
     {
-        int step = indices.step.p[i] / sizeof(float);
+        int step = indices.step.p[i] / sizeof(int32_t);
         indices_step.push_back(step);
     }
     int t, j, idx, offset_at_idx, offset;
-    auto *indices_ptr = indices.ptr<float>();
+    auto *indices_ptr = indices.ptr<int32_t>();
     for (int i = 0; i < total; i++)
     {
         t = i;
@@ -629,7 +627,7 @@ struct Layer_GatherElements : public TestBaseWithParam<tuple<Backend, Target> >
         int targetId = get<1>(GetParam());
 
         Mat data(data_shape, CV_32FC1);
-        Mat indices(indices_shape, CV_32FC1);
+        Mat indices(indices_shape, CV_64SC1);
 
         randu(data, 0.f, 1.f);
         randu(indices, 0, data_shape[axis]);

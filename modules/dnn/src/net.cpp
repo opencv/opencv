@@ -234,20 +234,23 @@ std::vector<String> Net::getUnconnectedOutLayersNames() const
 }
 
 void Net::getLayersShapes(const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
         std::vector<int>& layersIds,
         std::vector<ShapesVec>& inLayersShapes,
         std::vector<ShapesVec>& outLayersShapes) const
 {
     CV_Assert(impl);
-    return impl->getLayersShapes(netInputShapes, layersIds, inLayersShapes, outLayersShapes);
+    return impl->getLayersShapes(netInputShapes, netInputTypes, layersIds, inLayersShapes, outLayersShapes);
 }
 
 void Net::getLayersShapes(const MatShape& netInputShape,
+        const MatType& netInputType,
         std::vector<int>& layerIds,
         std::vector<ShapesVec>& inLayersShapes,
         std::vector<ShapesVec>& outLayersShapes) const
 {
     getLayersShapes(ShapesVec(1, netInputShape),
+            TypesVec(1, netInputType),
             layerIds, inLayersShapes, outLayersShapes);
 }
 
@@ -274,30 +277,34 @@ void Net::getLayerShapes(const ShapesVec& netInputShapes,
     outLayerShapes = shapes.out;
 }
 
-int64 Net::getFLOPS(const std::vector<MatShape>& netInputShapes) const
+int64 Net::getFLOPS(const std::vector<MatShape>& netInputShapes, const std::vector<MatType>& netInputTypes) const
 {
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
-    return impl->getFLOPS(netInputShapes);
+    return impl->getFLOPS(netInputShapes, netInputTypes);
 }
 
-int64 Net::getFLOPS(const MatShape& netInputShape) const
+int64 Net::getFLOPS(const MatShape& netInputShape, const MatType& netInputType) const
 {
-    return getFLOPS(std::vector<MatShape>(1, netInputShape));
+    return getFLOPS(std::vector<MatShape>(1, netInputShape),
+                    std::vector<MatType>(1, netInputType));
 }
 
 int64 Net::getFLOPS(const int layerId,
-        const std::vector<MatShape>& netInputShapes) const
+        const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes) const
 {
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
-    return impl->getFLOPS(layerId, netInputShapes);
+    return impl->getFLOPS(layerId, netInputShapes, netInputTypes);
 }
 
 int64 Net::getFLOPS(const int layerId,
-        const MatShape& netInputShape) const
+        const MatShape& netInputShape,
+        const MatType& netInputType) const
 {
-    return getFLOPS(layerId, std::vector<MatShape>(1, netInputShape));
+    return getFLOPS(layerId, std::vector<MatShape>(1, netInputShape),
+                    std::vector<MatType>(1, netInputType));
 }
 
 void Net::getLayerTypes(std::vector<String>& layersTypes) const
@@ -316,50 +323,59 @@ int Net::getLayersCount(const String& layerType) const
 
 void Net::getMemoryConsumption(const int layerId,
         const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         size_t& weights, size_t& blobs) const
 {
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
-    return impl->getMemoryConsumption(layerId, netInputShapes, weights, blobs);
+    return impl->getMemoryConsumption(layerId, netInputShapes, netInputTypes, weights, blobs);
 }
 
 void Net::getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         size_t& weights, size_t& blobs) const
 {
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
-    return impl->getMemoryConsumption(netInputShapes, weights, blobs);
+    return impl->getMemoryConsumption(netInputShapes, netInputTypes, weights, blobs);
 }
 
 void Net::getMemoryConsumption(const int layerId,
         const MatShape& netInputShape,
+        const MatType& netInputType,
         size_t& weights, size_t& blobs) const
 {
     getMemoryConsumption(layerId, std::vector<MatShape>(1, netInputShape),
-            weights, blobs);
+        std::vector<MatType>(1, netInputType),
+        weights, blobs);
 }
 
 void Net::getMemoryConsumption(const MatShape& netInputShape,
+        const MatType& netInputType,
         size_t& weights, size_t& blobs) const
 {
     getMemoryConsumption(std::vector<MatShape>(1, netInputShape),
+            std::vector<MatType>(1, netInputType),
             weights, blobs);
 }
 
 void Net::getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         std::vector<int>& layerIds, std::vector<size_t>& weights,
         std::vector<size_t>& blobs) const
 {
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
-    return impl->getMemoryConsumption(netInputShapes, layerIds, weights, blobs);
+    return impl->getMemoryConsumption(netInputShapes, netInputTypes, layerIds, weights, blobs);
 }
 
-void Net::getMemoryConsumption(const MatShape& netInputShape, std::vector<int>& layerIds,
+void Net::getMemoryConsumption(const MatShape& netInputShape, const MatType& netInputType,
+        std::vector<int>& layerIds,
         std::vector<size_t>& weights, std::vector<size_t>& blobs) const
 {
-    getMemoryConsumption(std::vector<MatShape>(1, netInputShape), layerIds,
-            weights, blobs);
+    getMemoryConsumption(std::vector<MatShape>(1, netInputShape),
+            std::vector<MatType>(1, netInputType),
+            layerIds, weights, blobs);
 }
 
 // FIXIT return old value or add get method
