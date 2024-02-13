@@ -267,6 +267,8 @@ public:
             res = std::make_shared<ngraph::op::Elu>(input, 1.0f);
         } else if (type == "MishInt8") {
             res = std::make_shared<ngraph::op::v4::Mish>(input);
+        } else if (type == "HardSwishInt8") {
+            res = std::make_shared<ngraph::op::v4::HSwish>(input);
         } else if (type == "AbsValInt8") {
             res = std::make_shared<ngraph::op::Abs>(input);
         } else if (type == "SigmoidInt8") {
