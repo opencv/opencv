@@ -100,6 +100,8 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
     -Wimplicit-fallthrough             # TBB 2018 under GCC 7+
     -Wmissing-prototypes               # MacOSX, Android/Clang
     -Wundef -Wmissing-declarations     # TBB 2019
+    -Wnon-virtual-dtor                 # oneTBB-2020.2 Android
+    -Wunused-but-set-variable          # oneTBB-2020.2 Android
 )
 
 set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
