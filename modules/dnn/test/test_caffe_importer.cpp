@@ -256,7 +256,7 @@ TEST(Reproducibility_FCN, Accuracy)
 
     std::vector<int> layerIds;
     std::vector<size_t> weights, blobs;
-    net.getMemoryConsumption(shape(1,3,227,227), layerIds, weights, blobs);
+    net.getMemoryConsumption(shape(1,3,227,227), CV_32F, layerIds, weights, blobs);
 
     net.setInput(blobFromImage(sample, 1.0f, Size(500, 500), Scalar(), false), "data");
     Mat out = net.forward("score");

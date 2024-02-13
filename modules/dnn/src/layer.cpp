@@ -181,20 +181,32 @@ void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
 
         inputs.resize(orig_inputs.size());
         for (size_t i = 0; i < orig_inputs.size(); i++)
-            orig_inputs[i].convertTo(inputs[i], CV_32F);
+            if (orig_inputs[i].depth() == CV_16F)
+                orig_inputs[i].convertTo(inputs[i], CV_32F);
+            else
+                inputs[i] = orig_inputs[i];
 
         outputs.resize(orig_outputs.size());
         for (size_t i = 0; i < orig_outputs.size(); i++)
-            outputs[i].create(shape(orig_outputs[i]), CV_32F);
+            if (orig_outputs[i].depth() == CV_16S)
+                outputs[i].create(shape(orig_outputs[i]), CV_32F);
+            else
+                outputs[i] = orig_outputs[i];
 
         internals.resize(orig_internals.size());
         for (size_t i = 0; i < orig_internals.size(); i++)
-            internals[i].create(shape(orig_internals[i]), CV_32F);
+            if (orig_internals[i].depth() == CV_32S)
+                internals[i].create(shape(orig_internals[i]), CV_32F);
+            else
+                internals[i] = orig_internals[i];
 
         forward(inputs, outputs, internals);
 
         for (size_t i = 0; i < outputs.size(); i++)
-            outputs[i].convertTo(orig_outputs[i], CV_16F);
+            if (orig_outputs[i].depth() == CV_16F)
+                outputs[i].convertTo(orig_outputs[i], CV_16F);
+            else
+                outputs[i] = orig_outputs[i];
 
         // sync results back
         outputs_arr.assign(orig_outputs);
