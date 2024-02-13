@@ -60,7 +60,7 @@ class raster_test(NewOpenCVTests):
             col3, col1, col2,
         ], dtype=numpy.float32)
 
-        colors = colors / 255.0
+        self.colors = self.colors / 255.0
 
         self.zNear = 0.1
         self.zFar = 50.0
@@ -74,19 +74,40 @@ class raster_test(NewOpenCVTests):
         self.depth_buf = numpy.ones((700, 700), dtype=numpy.float32) * self.zFar
         self.color_buf = numpy.zeros((700, 700, 3), dtype=numpy.float32)
 
+        self.settings = cv.TriangleRasterizeSettings().setShadingType(cv.RASTERIZE_SHADING_SHADED)
+        self.settings = self.settings.setCullingMode(cv.RASTERIZE_CULLING_NONE)
+
+    def compareResults(self, needRgb, needDepth):
+        if needDepth:
+            depth = self.get_sample('rendering/depth_image_Clipping_700x700_CullNone.png', cv.IMREAD_ANYDEPTH).astype(numpy.float32)
+            depthFactor = 1000.0
+            diff = depth/depthFactor - self.depth_buf
+            norm = numpy.linalg.norm(diff)
+            self.assertLessEqual(norm, 356.0)
+
+        if needRgb:
+            rgb = self.get_sample('rendering/example_image_Clipping_700x700_CullNone_Shaded.png', cv.IMREAD_ANYCOLOR)
+            diff = rgb/255.0 - self.color_buf
+            norm = numpy.linalg.norm(diff)
+            self.assertLessEqual(norm, 11.62)
+
     def test_rasterizeBoth(self):
+        self.prepareData()
         self.color_buf, self.depth_buf = cv.triangleRasterize(self.vertices, self.indices, self.colors, self.color_buf, self.depth_buf,
-                                                              self.cameraPose, self.fovy, self.zNear, self.zFar,
-                                                              cv.TriangleRasterizeSettings().setShadingType(cv.RASTERIZE_SHADING_SHADED))
-        
+                                                              self.cameraPose, self.fovy, self.zNear, self.zFar, self.settings)
+        self.compareResults(needRgb=True, needDepth=True)
+
     def test_rasterizeDepth(self):
+        self.prepareData()
         self.depth_buf = cv.triangleRasterizeDepth(self.vertices, self.indices, self.depth_buf,
-                                                   self.cameraPose, self.fovy, self.zNear, self.zFar,
-                                                   cv.TriangleRasterizeSettings().setShadingType(cv.RASTERIZE_SHADING_SHADED))
+                                                   self.cameraPose, self.fovy, self.zNear, self.zFar, self.settings)
+        self.compareResults(needRgb=False, needDepth=True)
 
     def test_rasterizeColor(self):
+        self.prepareData()
         self.color_buf = cv.triangleRasterizeColor(self.vertices, self.indices, self.colors, self.color_buf,
-                                                   self.cameraPose, self.fovy, self.zNear, self.zFar,
-                                                   cv.TriangleRasterizeSettings().setShadingType(cv.RASTERIZE_SHADING_SHADED))
+                                                   self.cameraPose, self.fovy, self.zNear, self.zFar, self.settings)
+        self.compareResults(needRgb=True, needDepth=False)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
