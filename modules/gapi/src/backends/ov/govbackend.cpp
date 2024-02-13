@@ -105,10 +105,10 @@ static ov::preprocess::ResizeAlgorithm toOVInterp(int interpolation) {
     GAPI_Assert(false);
 }
 
-static std::vector<int> toCV(const ov::Shape &shape) {
+static std::vector<int> toCV(const ov::PartialShape& shape) {
     std::vector<int> result;
     result.reserve(shape.size());
-    for (auto dim : shape) {
+    for (auto dim : shape.get_max_shape()) {
         result.push_back(ade::util::checked_cast<int>(dim));
     }
     return result;
@@ -128,11 +128,10 @@ static int toCV(const ov::element::Type &type) {
 
 static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
     const auto total = mat.total() * mat.channels();
-    if (toCV(tensor.get_element_type()) != mat.depth() ||
-        tensor.get_size()               != total ) {
+    if (toCV(tensor.get_element_type()) != mat.depth()) {
         std::stringstream ss;
         ss << "Failed to copy data from ov::Tensor to cv::Mat."
-           << " Data type or number of elements mismatch."
+           << " Data type of elements mismatch."
            << " cv::Mat: " << cv::descr_of(mat) << " and"
            << " ov::Tensor: " << tensor.get_element_type() << " "
            << tensor.get_shape();
@@ -149,6 +148,30 @@ static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
                     tensor.get_byte_size(),
                     mat.ptr<uint8_t>());
     }
+}
+
+inline cv::Mat wrapOV(const cv::MediaFrame::View& view,
+                      const cv::GFrameDesc& desc) {
+    cv::Mat out;
+    switch (desc.fmt) {
+        case cv::MediaFormat::BGR: {
+            out = cv::Mat(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
+            return out;
+        }
+        case cv::MediaFormat::NV12: {
+            auto y_plane  = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
+            cvtColorTwoPlane(y_plane, uv_plane, out, cv::COLOR_YUV2BGR_NV12);
+            return out;
+        }
+        case cv::MediaFormat::GRAY: {
+            out = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            return out;
+        }
+        default:
+            GAPI_Error("Unsupported media format for OV backend");
+    }
+    GAPI_Error("InternalError");
 }
 
 static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
@@ -177,16 +200,28 @@ static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
     }
 }
 
+static void copyToOV(cv::MediaFrame::View &views, const cv::MediaFrame &frame, ov::Tensor &tensor) {
+    // TODO: Ideally there should be check that mat and tensor
+    // dimensions are compatible.
+    auto matFromFrame = wrapOV(views, frame.desc());
+    copyToOV(matFromFrame, tensor);
+}
+
+void cv::gapi::ov::util::to_ov(const cv::Mat &mat, ::ov::Tensor &tensor) {
+    copyToOV(mat, tensor);
+}
+
+inline ov::Tensor toOV(const cv::Mat &mat,
+                       const ov::PartialShape& shape) {
+    return ov::Tensor(toOV(mat.depth()), shape.get_max_shape(), mat.data);
+}
+
 std::vector<int> cv::gapi::ov::util::to_ocv(const ::ov::Shape &shape) {
     return toCV(shape);
 }
 
 int cv::gapi::ov::util::to_ocv(const ::ov::element::Type &type) {
     return toCV(type);
-}
-
-void cv::gapi::ov::util::to_ov(const cv::Mat &mat, ::ov::Tensor &tensor) {
-    copyToOV(mat, tensor);
 }
 
 void cv::gapi::ov::util::to_ocv(const ::ov::Tensor &tensor, cv::Mat &mat) {
@@ -269,8 +304,12 @@ public:
     }
 
     // Syntax sugar
-          cv::GShape      inShape(std::size_t input) const;
-    const cv::Mat&        inMat  (std::size_t input) const;
+          cv::GShape      inShape (std::size_t input) const;
+    const cv::Mat&        inMat   (std::size_t input) const;
+    const cv::MediaFrame& inFrame (std::size_t input) const;
+
+    using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
+    Views views;
 
     cv::GRunArgP output (std::size_t idx);
     cv::Mat&     outMatR(std::size_t idx);
@@ -355,6 +394,10 @@ const cv::Mat& OVCallContext::inMat(std::size_t input) const {
     return inArg<cv::Mat>(input);
 }
 
+const cv::MediaFrame& OVCallContext::inFrame(std::size_t input) const {
+    return inArg<cv::MediaFrame>(input);
+}
+
 cv::Mat& OVCallContext::outMatR(std::size_t idx) {
     return *cv::util::get<cv::Mat*>(m_results.at(idx));
 }
@@ -393,6 +436,8 @@ cv::GArg OVCallContext::packArg(const cv::GArg &arg) {
     // Note: .at() is intentional for GOpaque as object MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
     case cv::GShape::GOPAQUE:  return cv::GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
+
+    case cv::GShape::GFRAME:  return cv::GArg(m_res.slot<cv::MediaFrame>()[ref.id]);
 
     default:
         cv::util::throw_error(std::logic_error("Unsupported GShape type"));
@@ -597,6 +642,7 @@ static void PostOutputs(::ov::InferRequest             &infer_request,
         ctx->out.meta(output, ctx->getMeta());
         ctx->out.post(std::move(output), ctx->eptr);
     }
+    ctx->views.clear();
 }
 
 class PostOutputsList {
@@ -730,8 +776,18 @@ static cv::Mat preprocess(const cv::Mat     &in_mat,
     return out;
 }
 
+// NB: This function is used to preprocess input image
+// for InferROI, InferList, InferList2 kernels.
+static cv::Mat preprocess(cv::MediaFrame::View &views,
+                          const cv::MediaFrame &frame,
+                          const cv::Rect       &roi,
+                          const ::ov::Shape    &model_shape) {
+    auto matFromFrame = wrapOV(views, frame.desc());
+    return preprocess(matFromFrame, roi, model_shape);
+}
+
 static bool isImage(const cv::GMatDesc &desc,
-                    const ::ov::Shape  &model_shape) {
+                    const ::ov::PartialShape  &model_shape) {
     return (model_shape.size() == 4u)                      &&
            (!desc.isND())  /* dims == 2 */                 &&
            (desc.chan == 1 || desc.chan == 3)              &&
@@ -773,7 +829,7 @@ public:
         const auto explicit_in_model_layout = lookUp(m_input_model_layout, input_name);
         if (explicit_in_model_layout) {
             input_info.model().set_layout(::ov::Layout(*explicit_in_model_layout));
-        } else if (m_model->input(input_name).get_shape().size() == 4u) {
+        } else if (m_model->input(input_name).get_partial_shape().size() == 4u) {
             const auto& input_layout = ::ov::layout::get_layout(m_model->input(input_name));
             if (!input_layout.empty()) {
                 GAPI_LOG_INFO(NULL, "Model input layout " << input_name << " found: " << input_layout.to_string() << ".");
@@ -817,45 +873,132 @@ public:
         }
     }
 
+    void cfgColorFormat(const std::string &input_name) {
+        auto &input_info = m_ppp.input(input_name);
+        input_info.tensor().set_color_format(::ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"});
+    }
+
     // FIXME: Decompose this...
     void cfgPreProcessing(const std::string  &input_name,
                           const cv::GMetaArg &input_meta,
                           const bool         disable_img_resize = false) {
-        GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(input_meta));
-        const auto &matdesc = cv::util::get<cv::GMatDesc>(input_meta);
+        GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(input_meta) ||
+                    cv::util::holds_alternative<cv::GFrameDesc>(input_meta));
+        if (cv::util::holds_alternative<cv::GMatDesc>(input_meta)) {
+            const auto &matdesc = cv::util::get<cv::GMatDesc>(input_meta);
 
-        const auto explicit_in_tensor_layout = lookUp(m_input_tensor_layout, input_name);
-        const auto explicit_in_model_layout  = lookUp(m_input_model_layout, input_name);
-        const auto explicit_resize = lookUp(m_interpolation, input_name);
+            const auto explicit_in_tensor_layout = lookUp(m_input_tensor_layout, input_name);
+            const auto explicit_in_model_layout  = lookUp(m_input_model_layout, input_name);
+            const auto explicit_resize = lookUp(m_interpolation, input_name);
 
-        if (disable_img_resize && explicit_resize.has_value()) {
-            std::stringstream ss;
-            util::throw_error(std::logic_error(
-                "OV Backend: Resize for layer \"" + input_name + "\" will be performed"
-                " on host via OpenCV so explicitly configured resize is prohibited."));
-        }
+            if (disable_img_resize && explicit_resize.has_value()) {
+                std::stringstream ss;
+                util::throw_error(std::logic_error(
+                    "OV Backend: Resize for layer \"" + input_name + "\" will be performed"
+                    " on host via OpenCV so explicitly configured resize is prohibited."));
+            }
 
-        const auto &input_shape = m_model->input(input_name).get_shape();
-        auto &input_info = m_ppp.input(input_name);
+            const auto &input_shape = m_model->input(input_name).get_partial_shape();
+            auto &input_info = m_ppp.input(input_name);
 
-        m_ppp.input(input_name).tensor().set_element_type(toOV(matdesc.depth));
-        if (isImage(matdesc, input_shape)) {
+            m_ppp.input(input_name).tensor().set_element_type(toOV(matdesc.depth));
+            if (isImage(matdesc, input_shape)) {
+                // NB: Image case - all necessary preprocessng is configured automatically.
+                GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is image.");
+                if (explicit_in_tensor_layout &&
+                    *explicit_in_tensor_layout != "NHWC") {
+                    std::stringstream ss;
+                    ss << "OV Backend: Provided tensor layout " << *explicit_in_tensor_layout
+                    << " is not compatible with input data " << matdesc << " for layer \""
+                    << input_name << "\". Expecting NHWC";
+                    util::throw_error(std::logic_error(ss.str()));
+                } else {
+                    input_info.tensor().set_layout(::ov::Layout("NHWC"));
+                }
+
+                if (!disable_img_resize) {
+                    input_info.tensor().set_spatial_static_shape(matdesc.size.height,
+                                                                 matdesc.size.width);
+                    // NB: Even though resize is automatically configured
+                    // user have an opportunity to specify the interpolation algorithm.
+                    auto interp = explicit_resize
+                        ? toOVInterp(*explicit_resize)
+                        : ::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR;
+                    input_info.preprocess().resize(interp);
+                }
+            } else {
+                // NB: Tensor case - resize or layout conversions must be explicitly specified.
+                GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is tensor.");
+
+                if (explicit_resize) {
+                    if (matdesc.isND()) {
+                        // NB: ND case - need to obtain "H" and "W" positions
+                        // in order to configure resize.
+                        const auto model_layout = explicit_in_model_layout
+                            ? ::ov::Layout(*explicit_in_model_layout)
+                            : ::ov::layout::get_layout(m_model->input(input_name));
+                        if (!explicit_in_tensor_layout && model_layout.empty()) {
+                            std::stringstream ss;
+                            ss << "Resize for input layer: " << input_name
+                            << "can't be configured."
+                            << " Failed to extract H and W positions from layout.";
+                            util::throw_error(std::logic_error(ss.str()));
+                        } else {
+                            const auto layout = explicit_in_tensor_layout
+                                ? ::ov::Layout(*explicit_in_tensor_layout) : model_layout;
+                            auto H_idx = ::ov::layout::height_idx(layout);
+                            auto W_idx = ::ov::layout::width_idx(layout);
+                            // NB: If layout is "...HW", H position is -2.
+                            if (H_idx < 0) H_idx = matdesc.dims.size() + H_idx;
+                            if (W_idx < 0) W_idx = matdesc.dims.size() + W_idx;
+                            GAPI_Assert(H_idx >= 0 && H_idx < static_cast<int>(matdesc.dims.size()));
+                            GAPI_Assert(W_idx >= 0 && W_idx < static_cast<int>(matdesc.dims.size()));
+                            input_info.tensor().set_spatial_static_shape(matdesc.dims[H_idx],
+                                                                         matdesc.dims[W_idx]);
+                            input_info.preprocess().resize(toOVInterp(*explicit_resize));
+                        }
+                    } else {
+                        // NB: 2D case - We know exactly where H and W...
+                        input_info.tensor().set_spatial_static_shape(matdesc.size.height,
+                                                                     matdesc.size.width);
+                        input_info.preprocess().resize(toOVInterp(*explicit_resize));
+                    }
+                }
+            }
+        } else if (cv::util::holds_alternative<cv::GFrameDesc>(input_meta)) {
+            const auto &framedesc = cv::util::get<cv::GFrameDesc>(input_meta);
+
+            const auto explicit_in_tensor_layout = lookUp(m_input_tensor_layout, input_name);
+            const auto explicit_in_model_layout  = lookUp(m_input_model_layout, input_name);
+            const auto explicit_resize = lookUp(m_interpolation, input_name);
+
+            if (disable_img_resize && explicit_resize.has_value()) {
+                std::stringstream ss;
+                util::throw_error(std::logic_error(
+                    "OV Backend: Resize for layer \"" + input_name + "\" will be performed"
+                    " on host via OpenCV so explicitly configured resize is prohibited."));
+            }
+
+            const auto &input_shape = m_model->input(input_name).get_partial_shape();
+            auto &input_info = m_ppp.input(input_name);
+
+            m_ppp.input(input_name).tensor().set_element_type(toOV(CV_8U));
             // NB: Image case - all necessary preprocessng is configured automatically.
             GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is image.");
             if (explicit_in_tensor_layout &&
                 *explicit_in_tensor_layout != "NHWC") {
                 std::stringstream ss;
                 ss << "OV Backend: Provided tensor layout " << *explicit_in_tensor_layout
-                   << " is not compatible with input data " << matdesc << " for layer \""
-                   << input_name << "\". Expecting NHWC";
+                << " is not compatible with input data " << framedesc << " for layer \""
+                << input_name << "\". Expecting NHWC";
                 util::throw_error(std::logic_error(ss.str()));
             } else {
                 input_info.tensor().set_layout(::ov::Layout("NHWC"));
             }
 
             if (!disable_img_resize) {
-                input_info.tensor().set_spatial_static_shape(matdesc.size.height,
-                                                             matdesc.size.width);
+                input_info.tensor().set_spatial_static_shape(framedesc.size.height,
+                                                             framedesc.size.width);
                 // NB: Even though resize is automatically configured
                 // user have an opportunity to specify the interpolation algorithm.
                 auto interp = explicit_resize
@@ -863,43 +1006,15 @@ public:
                     : ::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR;
                 input_info.preprocess().resize(interp);
             }
-        } else {
-            // NB: Tensor case - resize or layout conversions must be explicitly specified.
-            GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is tensor.");
-
-            if (explicit_resize) {
-                if (matdesc.isND()) {
-                    // NB: ND case - need to obtain "H" and "W" positions
-                    // in order to configure resize.
-                    const auto model_layout = explicit_in_model_layout
-                        ? ::ov::Layout(*explicit_in_model_layout)
-                        : ::ov::layout::get_layout(m_model->input(input_name));
-                    if (!explicit_in_tensor_layout && model_layout.empty()) {
-                        std::stringstream ss;
-                        ss << "Resize for input layer: " << input_name
-                           << "can't be configured."
-                           << " Failed to extract H and W positions from layout.";
-                        util::throw_error(std::logic_error(ss.str()));
-                    } else {
-                        const auto layout = explicit_in_tensor_layout
-                            ? ::ov::Layout(*explicit_in_tensor_layout) : model_layout;
-                        auto H_idx = ::ov::layout::height_idx(layout);
-                        auto W_idx = ::ov::layout::width_idx(layout);
-                        // NB: If layout is "...HW", H position is -2.
-                        if (H_idx < 0) H_idx = matdesc.dims.size() + H_idx;
-                        if (W_idx < 0) W_idx = matdesc.dims.size() + W_idx;
-                        GAPI_Assert(H_idx >= 0 && H_idx < static_cast<int>(matdesc.dims.size()));
-                        GAPI_Assert(W_idx >= 0 && W_idx < static_cast<int>(matdesc.dims.size()));
-                        input_info.tensor().set_spatial_static_shape(matdesc.dims[H_idx],
-                                                                     matdesc.dims[W_idx]);
-                        input_info.preprocess().resize(toOVInterp(*explicit_resize));
-                    }
-                } else {
-                    // NB: 2D case - We know exactly where H and W...
-                    input_info.tensor().set_spatial_static_shape(matdesc.size.height,
-                                                                 matdesc.size.width);
-                    input_info.preprocess().resize(toOVInterp(*explicit_resize));
-                }
+            if (framedesc.fmt == cv::MediaFormat::NV12) {
+#if INF_ENGINE_RELEASE > 2023000000
+                cv::util::throw_error(std::logic_error(
+                            "OV Backend: cv::MediaFrame with NV12 format is no longer supported"
+                            " because NV12 feature has been deprecated in OpenVINO 1.0 API."
+                            " The last version which supports this is 2023.0"));
+#else
+                cfgColorFormat(input_name);
+#endif
             }
         }
     }
@@ -971,6 +1086,12 @@ struct Infer: public cv::detail::KernelTag {
         GAPI_Assert(uu.params.input_names.size() == in_metas.size()
                     && "Known input layers count doesn't match input meta count");
 
+        const auto &input_name = uu.params.input_names.at(0);
+        const auto &tensor_partial_shape =
+            (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind))
+             ? uu.model->input(input_name).get_tensor().get_partial_shape()
+             : uu.compiled_model.input(input_name).get_tensor().get_partial_shape();
+
         // NB: Pre/Post processing configuration avaiable only for read models.
         if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
             const auto &model_info = cv::util::get<ParamDesc::Model>(uu.params.kind);
@@ -982,7 +1103,6 @@ struct Infer: public cv::detail::KernelTag {
                                             ade::util::toRange(in_metas))) {
                 const auto &input_name = std::get<0>(it);
                 const auto &mm = std::get<1>(it);
-
                 ppp.cfgLayouts(input_name);
                 ppp.cfgPreProcessing(input_name, mm);
                 ppp.cfgScaleMean(input_name, mm);
@@ -996,12 +1116,12 @@ struct Infer: public cv::detail::KernelTag {
             if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
                 const auto &out = uu.model->output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
-                                    toCV(out.get_shape()));
+                                    toCV(out.get_partial_shape()));
             } else {
                 GAPI_Assert(cv::util::holds_alternative<ParamDesc::CompiledModel>(uu.params.kind));
                 const auto &out = uu.compiled_model.output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
-                                    toCV(out.get_shape()));
+                                    toCV(out.get_partial_shape()));
             }
             result.emplace_back(std::move(outm));
         }
@@ -1025,7 +1145,21 @@ struct Infer: public cv::detail::KernelTag {
                             auto input_tensor = infer_request.get_tensor(input_name);
                             // TODO: In some cases wrapping existing data pointer
                             // might be faster than copy. Make it a strategy.
-                            copyToOV(ctx->inMat(i), input_tensor);
+                            cv::Mat inMat;
+                            switch (ctx->inShape(i)) {
+                                case cv::GShape::GMAT: {
+                                    copyToOV(ctx->inMat(i), input_tensor);
+                                    break;
+                                }
+                                case cv::GShape::GFRAME: {
+                                    auto currentFrame = ctx->inFrame(i);
+                                    ctx->views.emplace_back(new cv::MediaFrame::View(currentFrame.access(cv::MediaFrame::Access::R)));
+                                    copyToOV(*(ctx->views.back()), currentFrame, input_tensor);
+                                    break;
+                                }
+                                default:
+                                    GAPI_Assert("Unsupported input shape for OV backend");
+                            }
                         }
                     },
                     std::bind(PostOutputs, _1, _2, ctx)
@@ -1054,15 +1188,19 @@ struct InferROI: public cv::detail::KernelTag {
 
         const auto &input_name = uu.params.input_names.at(0);
         const auto &mm = in_metas.at(1u);
-        GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(mm));
-        const auto &matdesc = cv::util::get<cv::GMatDesc>(mm);
-
+        GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(mm) ||
+                    cv::util::holds_alternative<cv::GFrameDesc>(mm));
         const bool is_model = cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind);
-        const auto &input_shape = is_model ? uu.model->input(input_name).get_shape()
-                                           : uu.compiled_model.input(input_name).get_shape();
-        if (!isImage(matdesc, input_shape)) {
-            util::throw_error(std::runtime_error(
-                "OV Backend: InferROI supports only image as the 1th argument"));
+        const auto &input_shape = is_model ? uu.model->input(input_name).get_partial_shape()
+                                        : uu.compiled_model.input(input_name).get_partial_shape();
+
+        if (cv::util::holds_alternative<cv::GMatDesc>(mm)) {
+            const auto &matdesc = cv::util::get<cv::GMatDesc>(mm);
+
+            if (!isImage(matdesc, input_shape)) {
+                util::throw_error(std::runtime_error(
+                    "OV Backend: InferROI supports only image as the 1th argument"));
+            }
         }
 
         if (is_model) {
@@ -1083,12 +1221,12 @@ struct InferROI: public cv::detail::KernelTag {
             if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
                 const auto &out = uu.model->output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
-                                    toCV(out.get_shape()));
+                                    toCV(out.get_partial_shape()));
             } else {
                 GAPI_Assert(cv::util::holds_alternative<ParamDesc::CompiledModel>(uu.params.kind));
                 const auto &out = uu.compiled_model.output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
-                                    toCV(out.get_shape()));
+                                    toCV(out.get_partial_shape()));
             }
             result.emplace_back(std::move(outm));
         }
@@ -1111,7 +1249,21 @@ struct InferROI: public cv::detail::KernelTag {
                     auto input_tensor = infer_request.get_tensor(input_name);
                     const auto &shape = input_tensor.get_shape();
                     const auto &roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
-                    const auto roi_mat = preprocess(ctx->inMat(1), roi, shape);
+                    cv::Mat roi_mat;
+                    switch (ctx->inShape(1)) {
+                        case cv::GShape::GMAT: {
+                            roi_mat = preprocess(ctx->inMat(1), roi, shape);
+                            break;
+                        }
+                        case cv::GShape::GFRAME: {
+                            auto currentFrame = ctx->inFrame(1);
+                            ctx->views.emplace_back(new cv::MediaFrame::View(currentFrame.access(cv::MediaFrame::Access::R)));
+                            roi_mat = preprocess(*(ctx->views.back()), currentFrame, roi, shape);
+                            break;
+                        }
+                        default:
+                            GAPI_Assert("Unsupported input shape for OV backend");
+                    }
                     copyToOV(roi_mat, input_tensor);
                 },
                 std::bind(PostOutputs, _1, _2, ctx)
@@ -1147,14 +1299,18 @@ struct InferList: public cv::detail::KernelTag {
             size_t idx = 1u;
             for (auto &&input_name : uu.params.input_names) {
                 const auto &mm = in_metas[idx++];
-                GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(mm));
-                const auto &matdesc = cv::util::get<cv::GMatDesc>(mm);
-                const auto &input_shape = uu.model->input(input_name).get_shape();
+                GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(mm) ||
+                            cv::util::holds_alternative<cv::GFrameDesc>(mm));
+                const auto &input_shape = uu.model->input(input_name).get_partial_shape();
 
-                if (!isImage(matdesc, input_shape)) {
-                    util::throw_error(std::runtime_error(
-                        "OV Backend: Only image is supported"
-                        " as the " + std::to_string(idx) + "th argument for InferList"));
+                if (cv::util::holds_alternative<cv::GMatDesc>(mm)) {
+                    const auto &matdesc = cv::util::get<cv::GMatDesc>(mm);
+
+                    if (!isImage(matdesc, input_shape)) {
+                        util::throw_error(std::runtime_error(
+                            "OV Backend: Only image is supported"
+                            " as the " + std::to_string(idx) + "th argument for InferList"));
+                    }
                 }
 
                 ppp.cfgLayouts(input_name);
@@ -1208,7 +1364,21 @@ struct InferList: public cv::detail::KernelTag {
                         const auto &input_name = ctx->uu.params.input_names[0];
                         auto input_tensor = infer_request.get_tensor(input_name);
                         const auto &shape = input_tensor.get_shape();
-                        const auto roi_mat = preprocess(ctx->inMat(1), rc, shape);
+                        cv::Mat roi_mat;
+                        switch (ctx->inShape(1)) {
+                            case cv::GShape::GMAT: {
+                                roi_mat = preprocess(ctx->inMat(1), rc, shape);
+                                break;
+                            }
+                            case cv::GShape::GFRAME: {
+                                auto currentFrame = ctx->inFrame(1);
+                                ctx->views.emplace_back(new cv::MediaFrame::View(currentFrame.access(cv::MediaFrame::Access::R)));
+                                roi_mat = preprocess(*(ctx->views.back()), currentFrame, rc, shape);
+                                break;
+                            }
+                            default:
+                                GAPI_Assert("Unsupported input shape for OV backend");
+                        }
                         copyToOV(roi_mat, input_tensor);
                     },
                     std::bind(callback, std::placeholders::_1, std::placeholders::_2, pos)
@@ -1247,14 +1417,23 @@ struct InferList2: public cv::detail::KernelTag {
 
         const auto &input_name_0 = uu.params.input_names.front();
         const auto &mm_0 = in_metas[0u];
-        const auto &matdesc = cv::util::get<cv::GMatDesc>(mm_0);
+
+        if (!(cv::util::holds_alternative<cv::GMatDesc>(mm_0) ||
+              cv::util::holds_alternative<cv::GFrameDesc>(mm_0))) {
+            util::throw_error(std::runtime_error(
+                        "IE Backend: Unsupported input meta"
+                        " for 0th argument in IE backend"));
+        }
 
         const bool is_model = cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind);
-        const auto &input_shape = is_model ? uu.model->input(input_name_0).get_shape()
-                                           : uu.compiled_model.input(input_name_0).get_shape();
-        if (!isImage(matdesc, input_shape)) {
-            util::throw_error(std::runtime_error(
-                "OV Backend: InferList2 supports only image as the 0th argument"));
+        const auto &input_shape = is_model ? uu.model->input(input_name_0).get_partial_shape()
+                                           : uu.compiled_model.input(input_name_0).get_partial_shape();
+        if (cv::util::holds_alternative<cv::GMatDesc>(mm_0)) {
+            const auto &matdesc = cv::util::get<cv::GMatDesc>(mm_0);
+            if (!isImage(matdesc, input_shape)) {
+                util::throw_error(std::runtime_error(
+                    "OV Backend: InferList2 supports only image as the 0th argument"));
+            }
         }
 
         if (is_model) {
