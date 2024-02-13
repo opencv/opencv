@@ -1612,6 +1612,7 @@ CvWinProperties::~CvWinProperties()
 
 CvWindow::CvWindow(QString name, int arg2)
 {
+    Q_INIT_RESOURCE(window_QT);
     type = type_CvWindow;
 
     param_flags = arg2 & 0x0000000F;
@@ -1661,14 +1662,14 @@ CvWindow::CvWindow(QString name, int arg2)
 
     //Now attach everything
     if (myToolBar)
-        myGlobalLayout->addWidget(myToolBar, Qt::AlignCenter);
+        myGlobalLayout->addWidget(myToolBar, 0, Qt::AlignLeft);
 
-    myGlobalLayout->addWidget(myView->getWidget(), Qt::AlignCenter);
+    myGlobalLayout->addWidget(myView->getWidget(), 0, Qt::AlignCenter);
 
-    myGlobalLayout->addLayout(myBarLayout, Qt::AlignCenter);
+    myGlobalLayout->addLayout(myBarLayout);
 
     if (myStatusBar)
-        myGlobalLayout->addWidget(myStatusBar, Qt::AlignCenter);
+        myGlobalLayout->addWidget(myStatusBar, 0, Qt::AlignLeft);
 
     setLayout(myGlobalLayout);
     show();
@@ -2078,7 +2079,6 @@ void CvWindow::createStatusBar()
 {
     myStatusBar = new QStatusBar(this);
     myStatusBar->setSizeGripEnabled(false);
-    myStatusBar->setFixedHeight(20);
     myStatusBar->setMinimumWidth(1);
     myStatusBar_msg = new QLabel;
 
@@ -2480,6 +2480,10 @@ DefaultViewPort::DefaultViewPort(CvWindow* arg, int arg2) : QGraphicsView(arg), 
 
     setInteractive(false);
     setMouseTracking(true); //receive mouse event everytime
+
+    // #13657 Tab key disables arrow keys
+    // #20215 QT backend: cv::waitKey() and cv::waitKeyEx() do not capture arrow keys once you click on the image or press TAB
+    setFocusPolicy(Qt::NoFocus);
 }
 
 

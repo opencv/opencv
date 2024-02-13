@@ -169,7 +169,7 @@
         "Range": {
             "objc_type": "Range*",
             "to_cpp": "%(n)s.nativeRef",
-            "from_cpp": "[Point3i fromNative:%(n)s]"
+            "from_cpp": "[Range fromNative:%(n)s]"
         },
         "Rect": {
             "objc_type": "Rect2i*",

@@ -959,7 +959,7 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
 
     Mat src = _src.getMat();
     int type = src.type();
-    size_t n = (size_t)src.rows;
+    int n = src.rows;
 
     CV_Assert(src.rows == src.cols);
     CV_Assert(type == CV_32F || type == CV_64F);
@@ -976,26 +976,26 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
     // EigenvalueDecomposition returns transposed and non-sorted eigenvalues
     std::vector<double> eigenvalues64f;
     eigensystem.eigenvalues().copyTo(eigenvalues64f);
-    CV_Assert(eigenvalues64f.size() == n);
+    CV_Assert(eigenvalues64f.size() == (size_t)n);
 
     std::vector<int> sort_indexes(n);
     cv::sortIdx(eigenvalues64f, sort_indexes, SORT_EVERY_ROW | SORT_DESCENDING);
 
     std::vector<double> sorted_eigenvalues64f(n);
-    for (size_t i = 0; i < n; i++) sorted_eigenvalues64f[i] = eigenvalues64f[sort_indexes[i]];
+    for (int i = 0; i < n; i++) sorted_eigenvalues64f[i] = eigenvalues64f[sort_indexes[i]];
 
-    Mat(sorted_eigenvalues64f).convertTo(_evals, type);
+    Mat(n, 1, CV_64F, &sorted_eigenvalues64f[0]).convertTo(_evals, type);
 
     if( _evects.needed() )
     {
         Mat eigenvectors64f = eigensystem.eigenvectors().t(); // transpose
-        CV_Assert((size_t)eigenvectors64f.rows == n);
-        CV_Assert((size_t)eigenvectors64f.cols == n);
-        Mat_<double> sorted_eigenvectors64f((int)n, (int)n, CV_64FC1);
-        for (size_t i = 0; i < n; i++)
+        CV_Assert(eigenvectors64f.rows == n);
+        CV_Assert(eigenvectors64f.cols == n);
+        Mat_<double> sorted_eigenvectors64f(n, n, CV_64FC1);
+        for (int i = 0; i < n; i++)
         {
-            double* pDst = sorted_eigenvectors64f.ptr<double>((int)i);
-            double* pSrc = eigenvectors64f.ptr<double>(sort_indexes[(int)i]);
+            double* pDst = sorted_eigenvectors64f.ptr<double>(i);
+            double* pSrc = eigenvectors64f.ptr<double>(sort_indexes[i]);
             CV_Assert(pSrc != NULL);
             memcpy(pDst, pSrc, n * sizeof(double));
         }

@@ -6,7 +6,7 @@ from common import *
 
 
 def get_args_parser(func_args):
-    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
+    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
                 cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
     targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD,
                cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
@@ -16,7 +16,7 @@ def get_args_parser(func_args):
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument('--input',
                         help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-    parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet'],
+    parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'darknet'],
                         help='Optional name of an origin framework of the model. '
                              'Detect it automatically if it does not set.')
     parser.add_argument('--std', nargs='*', type=float,
@@ -30,7 +30,6 @@ def get_args_parser(func_args):
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
-                             "%d: Halide language (http://halide-lang.org/), "
                              "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
                              "%d: OpenCV implementation, "
                              "%d: VKCOM, "

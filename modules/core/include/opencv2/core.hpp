@@ -349,6 +349,9 @@ be set to the default -1. In this case, the output array will have the same dept
 array, be it src1, src2 or both.
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
+`add(src,X)` means `add(src,(X,X,X,X))`.
+`add(src,(X,))` means `add(src,(X,0,0,0))`.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and number of channels as the input array(s); the
@@ -390,6 +393,9 @@ in the first case, when src1.depth() == src2.depth(), dtype can be set to the de
 case the output array will have the same depth as the input array, be it src1, src2 or both.
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
+`subtract(src,X)` means `subtract(src,(X,X,X,X))`.
+`subtract(src,(X,))` means `subtract(src,(X,0,0,0))`.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array of the same size and the same number of channels as the input array.
@@ -415,6 +421,9 @@ For a not-per-element matrix product, see gemm .
 @note Saturation is not applied when the output array has the depth
 CV_32S. You may even get result of an incorrect sign in the case of
 overflow.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
+`multiply(src,X)` means `multiply(src,(X,X,X,X))`.
+`multiply(src,(X,))` means `multiply(src,(X,0,0,0))`.
 @param src1 first input array.
 @param src2 second input array of the same size and the same type as src1.
 @param dst output array of the same size and type as src1.
@@ -443,6 +452,9 @@ Expect correct IEEE-754 behaviour for floating-point data (with NaN, Inf result 
 
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
+`divide(src,X)` means `divide(src,(X,X,X,X))`.
+`divide(src,(X,))` means `divide(src,(X,0,0,0))`.
 @param src1 first input array.
 @param src2 second input array of the same size and type as src1.
 @param scale scalar factor.
@@ -544,6 +556,8 @@ The format of half precision floating point is defined in IEEE 754-2008.
 
 @param src input array.
 @param dst output array.
+
+@deprecated Use Mat::convertTo with CV_16F instead.
 */
 CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst);
 
@@ -554,6 +568,7 @@ are taken from the input array. That is, the function processes each element of 
 \f[\texttt{dst} (I)  \leftarrow \texttt{lut(src(I) + d)}\f]
 where
 \f[d =  \fork{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}\f]
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for lut.
 @param src input array of 8-bit elements.
 @param lut look-up table of 256 elements; in case of multi-channel input array, the table should
 either have a single channel (in this case the same table is used for all channels) or the same
@@ -575,6 +590,7 @@ CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
 /** @brief Checks for the presence of at least one non-zero array element.
 
 The function returns whether there are non-zero elements in src
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src single-channel array.
 @sa  mean, meanStdDev, norm, minMaxLoc, calcCovarMatrix
 */
@@ -584,6 +600,7 @@ CV_EXPORTS_W bool hasNonZero( InputArray src );
 
 The function returns the number of non-zero elements in src :
 \f[\sum _{I: \; \texttt{src} (I) \ne0 } 1\f]
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src single-channel array.
 @sa  mean, meanStdDev, norm, minMaxLoc, calcCovarMatrix
 */
@@ -612,6 +629,7 @@ or
     // access pixel coordinates
     Point pnt = locations[i];
 @endcode
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src single-channel array
 @param idx the output array, type of cv::Mat or std::vector<Point>, corresponding to non-zero indices in the input
 */
@@ -822,6 +840,7 @@ The function do not work with multi-channel arrays. If you need to find minimum 
 elements across all the channels, use Mat::reshape first to reinterpret the array as
 single-channel. Or you may extract the particular channel using either extractImageCOI , or
 mixChannels , or split .
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
@@ -882,6 +901,7 @@ a single-row or single-column matrix. In OpenCV (following MATLAB) each array ha
 dimensions, i.e. single-column matrix is Mx1 matrix (and therefore minIdx/maxIdx will be
 (i1,0)/(i2,0)) and single-row matrix is 1xN matrix (and therefore minIdx/maxIdx will be
 (0,j1)/(0,j2)).
+@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
@@ -1117,6 +1137,13 @@ CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
  *  @param axis axis that performs a flip on. 0 <= axis < src.dims.
  */
 CV_EXPORTS_W void flipND(InputArray src, OutputArray dst, int axis);
+
+/** @brief Broadcast the given Mat to the given shape.
+ * @param src input array
+ * @param shape target shape. Should be a list of CV_32S numbers. Note that negative values are not supported.
+ * @param dst output array that has the given shape
+ */
+CV_EXPORTS_W void broadcast(InputArray src, InputArray shape, OutputArray dst);
 
 enum RotateFlags {
     ROTATE_90_CLOCKWISE = 0, //!<Rotate 90 degrees clockwise
@@ -1405,6 +1432,9 @@ The function cv::absdiff calculates:
     multi-channel arrays, each channel is processed independently.
 @note Saturation is not applied when the arrays have the depth CV_32S.
 You may even get a negative value in the case of overflow.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
+`absdiff(src,X)` means `absdiff(src,(X,X,X,X))`.
+`absdiff(src,(X,))` means `absdiff(src,(X,0,0,0))`.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and type as input arrays.
@@ -1675,11 +1705,20 @@ elements.
 CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos = 0,
                             double minVal = -DBL_MAX, double maxVal = DBL_MAX);
 
-/** @brief converts NaNs to the given number
-@param a input/output matrix (CV_32F type).
+/** @brief Replaces NaNs by given number
+@param a input/output matrix (CV_32F or CV_64F type)
 @param val value to convert the NaNs
 */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
+
+/** @brief Generates a mask of finite float values, i.e. not NaNs nor Infs.
+
+An element is set to to 255 (all 1-bits) if all channels are finite.
+@param src Input matrix, should contain float or double elements of 1 to 4 channels
+@param mask Output matrix of the same size as input of type CV_8UC1
+*/
+CV_EXPORTS_W void finiteMask(InputArray src, OutputArray mask);
+
 
 /** @brief Performs generalized matrix multiplication.
 
@@ -3164,6 +3203,10 @@ public:
     * @overload
     */
     CV_WRAP void write(FileStorage& fs, const String& name) const;
+#if CV_VERSION_MAJOR < 5
+    /** @deprecated */
+    void write(const Ptr<FileStorage>& fs, const String& name = String()) const;
+#endif
 
     /** @brief Reads algorithm parameters from a file storage
     */

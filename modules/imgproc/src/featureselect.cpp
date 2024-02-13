@@ -262,9 +262,11 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
     }
 
-    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+    Mat(corners).reshape(2, (int)ncorners).
+        convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
     if (_cornersQuality.needed()) {
-        Mat(cornersQuality).convertTo(_cornersQuality, _cornersQuality.fixedType() ? _cornersQuality.type() : CV_32F);
+        Mat(cornersQuality).reshape(1, (int)ncorners).
+            convertTo(_cornersQuality, _cornersQuality.fixedType() ? _cornersQuality.type() : CV_32F);
     }
 
     return true;
@@ -541,9 +543,11 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
     }
 
-    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+    Mat(corners).reshape(2, (int)ncorners).
+        convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
     if (_cornersQuality.needed()) {
-        Mat(cornersQuality).convertTo(_cornersQuality, _cornersQuality.fixedType() ? _cornersQuality.type() : CV_32F);
+        Mat(cornersQuality).reshape(1, (int)ncorners).
+            convertTo(_cornersQuality, _cornersQuality.fixedType() ? _cornersQuality.type() : CV_32F);
     }
 }
 

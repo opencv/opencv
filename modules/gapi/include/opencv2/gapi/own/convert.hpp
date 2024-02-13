@@ -28,10 +28,10 @@ namespace cv
     cv::gapi::own::Mat to_own(Mat&&) = delete;
 
     inline cv::gapi::own::Mat to_own(Mat const& m) {
-        return (m.dims == 2)
+        return (m.dims <= 2)
             ?  cv::gapi::own::Mat{m.rows, m.cols, m.type(), m.data, m.step}
             :  cv::gapi::own::Mat{to_own<int>(m.size), m.type(), m.data};
-    };
+    }
 
 namespace gapi
 {

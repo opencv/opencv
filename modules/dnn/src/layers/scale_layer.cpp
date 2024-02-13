@@ -12,7 +12,6 @@ Implementation of Scale layer.
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
@@ -84,7 +83,6 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_WEBNN && axis >0);
     }
 
@@ -107,7 +105,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -270,95 +268,40 @@ public:
     }
 #endif
 
-    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
-    {
-        switch (node->backendId)
-        {
-            case DNN_BACKEND_HALIDE:
-            {
-#ifdef HAVE_HALIDE
-                auto base = node.dynamicCast<HalideBackendNode>();
-                Halide::Func& input = base->funcs.back();
-                Halide::Var x("x"), y("y"), c("c"), n("n");
-                Halide::Func top = attachHalide(input(x, y, c, n));
-                return Ptr<BackendNode>(new HalideBackendNode(base, top));
-#endif  // HAVE_HALIDE
-                break;
-            }
-        }
-        return Ptr<BackendNode>();
-    }
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        Halide::Buffer<float> input = halideBuffer(inputs[0]);
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = attachHalide(input(x, y, c, n));
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
-
-#ifdef HAVE_HALIDE
-    // attachHalide can work both with Halide::Buffer and Halide::Func. In the
-    // second case it will be a fusion.
-    Halide::Func attachHalide(const Halide::Expr& input)
-    {
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-
-        const int numChannels = blobs[0].total();
-
-        Halide::Expr topExpr = input;
-        if (hasWeights)
-        {
-            auto weights = wrapToHalideBuffer(blobs[0], {numChannels});
-            topExpr *= weights(c);
-        }
-        if (hasBias)
-        {
-            auto bias = wrapToHalideBuffer(blobs.back(), {numChannels});
-            topExpr += bias(c);
-        }
-        top(x, y, c, n) = topExpr;
-        return top;
-    }
-#endif  // HAVE_HALIDE
-
-
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto ieInpNode0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto ieInpNode1 = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
+        ngraph::Output<ngraph::Node> ieInpNode1;
+        if (nodes.size() > 1)
+            ieInpNode1 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
         size_t numChannels = 1;
         if (blobs.empty())
-            for (const size_t& dim : ieInpNode1->get_shape())
+            for (const size_t& dim : ieInpNode1.get_shape())
                 numChannels *= dim;
         else
             numChannels = blobs[0].total();
 
-        std::vector<size_t> shape(ieInpNode0->get_shape().size(), 1);
+        std::vector<size_t> shape(ieInpNode0.get_shape().size(), 1);
         int cAxis = normalize_axis(axis, shape.size());
         shape[cAxis] = numChannels;
 
-        auto node = ieInpNode0;
+        std::shared_ptr<ngraph::Node> node;
         if (hasWeights)
         {
-            auto weight = blobs.empty() ? ieInpNode1 :
+            ngraph::Output<ngraph::Node> weight = blobs.empty() ? ieInpNode1 :
                           std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
 
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
-            node = std::make_shared<ngraph::op::v1::Multiply>(node, weight, ngraph::op::AutoBroadcastType::NUMPY);
+            node = std::make_shared<ngraph::op::v1::Multiply>(ieInpNode0, weight, ngraph::op::AutoBroadcastType::NUMPY);
 #else
-            node = std::make_shared<ngraph::op::v0::Multiply>(node, weight, ngraph::op::AutoBroadcastType::NUMPY);
+            node = std::make_shared<ngraph::op::v0::Multiply>(ieInpNode0, weight, ngraph::op::AutoBroadcastType::NUMPY);
 #endif
         }
         if (hasBias || !hasWeights)
         {
-            std::shared_ptr<ngraph::Node> bias;
+            ngraph::Output<ngraph::Node> bias;
             if (hasBias)
             {
                 bias = blobs.empty() ? ieInpNode1 :

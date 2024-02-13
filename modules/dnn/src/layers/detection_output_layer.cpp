@@ -221,7 +221,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_CUDA && !_groupByClasses) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && !_locPredTransposed && _bboxesNormalized);
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -337,7 +337,7 @@ public:
         std::vector<UMat> outputs;
         outs.getUMatVector(outputs);
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         if (use_half)
         {
             std::vector<UMat> orig_inputs;
@@ -345,7 +345,7 @@ public:
 
             inputs.resize(orig_inputs.size());
             for (size_t i = 0; i < orig_inputs.size(); i++)
-                convertFp16(orig_inputs[i], inputs[i]);
+                orig_inputs[i].convertTo(inputs[i], CV_32F);
         }
         else
         {
@@ -410,7 +410,7 @@ public:
         if (use_half)
         {
             UMat half_umat;
-            convertFp16(umat, half_umat);
+            umat.convertTo(half_umat, CV_16F);
             outs.assign(std::vector<UMat>(1, half_umat));
         }
 
@@ -428,7 +428,7 @@ public:
             CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -1006,9 +1006,30 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 3);
-        auto& box_logits  = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto& class_preds = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-        auto& proposals   = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+        auto box_logits  = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto class_preds = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto proposals   = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+
+        if (_locPredTransposed) {
+            // Convert box predictions from yxYX to xyXY
+            box_logits = std::make_shared<ngraph::op::v1::Reshape>(box_logits,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{3}, std::vector<int32_t>{0, -1, 2}),
+                true
+            );
+            int axis = 2;
+            box_logits = std::make_shared<ngraph::op::v1::Reverse>(box_logits,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &axis),
+                ngraph::op::v1::Reverse::Mode::INDEX
+            );
+        }
+
+        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{2}, std::vector<int32_t>{0, -1});
+        box_logits = std::make_shared<ngraph::op::v1::Reshape>(box_logits, shape, true);
+        class_preds = std::make_shared<ngraph::op::v1::Reshape>(class_preds, shape, true);
+        proposals = std::make_shared<ngraph::op::v1::Reshape>(proposals,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{3}, std::vector<int32_t>{0, _varianceEncodedInTarget ? 1 : 2, -1}),
+            true
+        );
 
         ngraph::op::DetectionOutputAttrs attrs;
         attrs.num_classes                = _numClasses;

@@ -68,7 +68,7 @@ Tensor Tensor::reshape(const char* data, const std::vector<int>& shape, bool all
         return *this;
     }
 
-    CV_Assert(shape.size() > 0 && shape.size() <= 6);
+    CV_Assert(/*shape.size() > 0 &&*/ shape.size() <= 6);
 
     if (shape_ != shape) shape_ = shape;
     if (checkFormat(fmt) && fmt != format_) format_ = fmt;

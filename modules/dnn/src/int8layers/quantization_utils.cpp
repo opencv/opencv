@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_timvx.hpp"
+#include "../ie_ngraph.hpp"
 
 namespace cv
 {
@@ -98,7 +99,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -133,10 +135,10 @@ public:
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
-        if (inputs_.depth() == CV_16S)
+        if (inputs_.depth() == CV_16F)
         {
             UMat inputFp32;
-            convertFp16(inputs[0], inputFp32);
+            inputs[0].convertTo(inputFp32, CV_32F);
             inputs[0] = inputFp32;  // replace
         }
 
@@ -171,6 +173,16 @@ public:
         else
             inputs[0].convertTo(outputs[0], CV_8S, 1.f/scales[0], zeropoints[0]);
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        const auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto quantized = ngraphQuantize(input, scales[0], zeropoints[0]);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(quantized));
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 // Dequantize INT8 Inputs to FP32/FP16
@@ -214,7 +226,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -252,10 +264,7 @@ public:
         UMat outputFp32;
         inputs[0].convertTo(outputFp32, CV_32F, scales[0], -(scales[0]*zeropoints[0]));
 
-        if (outputs_.depth() == CV_16S)
-            convertFp16(outputFp32, outputs[0]);
-        else
-            outputFp32.copyTo(outputs[0]);
+        outputFp32.convertTo(outputs[0], outputs_.depth());
         return true;
     }
 #endif
@@ -285,6 +294,16 @@ public:
         else
             inputs[0].convertTo(outputs[0], CV_32F, scales[0], -(scales[0]*zeropoints[0]));
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        const auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto quantized = ngraphDequantize(input, scales[0], zeropoints[0]);
+        return new InfEngineNgraphNode(quantized);
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 // Rescale/Requantize INT8 Inputs from (scale1, zeropoint1) to (scale2, zeropoint2)

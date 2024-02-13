@@ -147,7 +147,7 @@
 #endif
 
 #if defined(__riscv) && defined(__riscv_vector) && defined(__riscv_vector_071)
-# include<riscv-vector.h>
+# include<riscv_vector.h>
 # define CV_RVV071 1
 #endif
 
@@ -170,6 +170,11 @@
 #ifdef CV_CPU_COMPILE_MSA
 #  include "hal/msa_macros.h"
 #  define CV_MSA 1
+#endif
+
+#ifdef CV_CPU_COMPILE_LSX
+#  include <lsxintrin.h>
+#  define CV_LSX 1
 #endif
 
 #ifdef CV_CPU_COMPILE_LASX
@@ -374,6 +379,10 @@ struct VZeroUpperGuard {
 
 #ifndef CV_RVV
 #  define CV_RVV 0
+#endif
+
+#ifndef CV_LSX
+#  define CV_LSX 0
 #endif
 
 #ifndef CV_LASX

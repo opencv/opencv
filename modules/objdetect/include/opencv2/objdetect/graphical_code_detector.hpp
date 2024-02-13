@@ -66,6 +66,10 @@ public:
     @param decoded_info UTF8-encoded output vector of string or empty vector of string if the codes cannot be decoded.
     @param points optional output vector of vertices of the found graphical code quadrangles. Will be empty if not found.
     @param straight_code The optional vector of images containing binarized codes
+
+    - If there are QR codes encoded with a Structured Append mode on the image and all of them detected and decoded correctly,
+    method writes a full message to position corresponds to 0-th code in a sequence. The rest of QR codes from the same sequence
+    have empty string.
     */
     CV_WRAP bool detectAndDecodeMulti(InputArray img, CV_OUT std::vector<std::string>& decoded_info, OutputArray points = noArray(),
                                       OutputArrayOfArrays straight_code = noArray()) const;

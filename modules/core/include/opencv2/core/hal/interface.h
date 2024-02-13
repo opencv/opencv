@@ -64,6 +64,9 @@ typedef signed char schar;
 #  define CV_BIG_UINT(n)  n##ULL
 #endif
 
+typedef short cv_hal_f16;
+typedef short cv_hal_bf16;
+
 #define CV_USRTYPE1 (void)"CV_USRTYPE1 support has been dropped in OpenCV 4.0"
 
 #define CV_CN_MAX     128

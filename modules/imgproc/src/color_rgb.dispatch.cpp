@@ -20,25 +20,25 @@ namespace cv {
 
 #if NEED_IPP
 
-static const ippiColor2GrayFunc ippiColor2GrayC3Tab[] =
+static const ippiColor2GrayFunc ippiColor2GrayC3Tab[CV_DEPTH_MAX] =
 {
     (ippiColor2GrayFunc)ippiColorToGray_8u_C3C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_C3C1R, 0,
     0, (ippiColor2GrayFunc)ippiColorToGray_32f_C3C1R, 0, 0
 };
 
-static const ippiColor2GrayFunc ippiColor2GrayC4Tab[] =
+static const ippiColor2GrayFunc ippiColor2GrayC4Tab[CV_DEPTH_MAX] =
 {
     (ippiColor2GrayFunc)ippiColorToGray_8u_AC4C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_AC4C1R, 0,
     0, (ippiColor2GrayFunc)ippiColorToGray_32f_AC4C1R, 0, 0
 };
 
-static const ippiGeneralFunc ippiRGB2GrayC3Tab[] =
+static const ippiGeneralFunc ippiRGB2GrayC3Tab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiRGBToGray_8u_C3C1R, 0, (ippiGeneralFunc)ippiRGBToGray_16u_C3C1R, 0,
     0, (ippiGeneralFunc)ippiRGBToGray_32f_C3C1R, 0, 0
 };
 
-static const ippiGeneralFunc ippiRGB2GrayC4Tab[] =
+static const ippiGeneralFunc ippiRGB2GrayC4Tab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiRGBToGray_8u_AC4C1R, 0, (ippiGeneralFunc)ippiRGBToGray_16u_AC4C1R, 0,
     0, (ippiGeneralFunc)ippiRGBToGray_32f_AC4C1R, 0, 0
@@ -137,34 +137,34 @@ static IppStatus CV_STDCALL ippiSwapChannels_32f_C3C4Rf(const Ipp32f* pSrc, int 
 }
 
 // shared
-ippiReorderFunc ippiSwapChannelsC3C4RTab[] =
+ippiReorderFunc ippiSwapChannelsC3C4RTab[CV_DEPTH_MAX] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C3C4Rf, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3C4Rf, 0,
     0, (ippiReorderFunc)ippiSwapChannels_32f_C3C4Rf, 0, 0
 };
 
-static ippiGeneralFunc ippiCopyAC4C3RTab[] =
+static ippiGeneralFunc ippiCopyAC4C3RTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiCopy_8u_AC4C3R, 0, (ippiGeneralFunc)ippiCopy_16u_AC4C3R, 0,
     0, (ippiGeneralFunc)ippiCopy_32f_AC4C3R, 0, 0
 };
 
 // shared
-ippiReorderFunc ippiSwapChannelsC4C3RTab[] =
+ippiReorderFunc ippiSwapChannelsC4C3RTab[CV_DEPTH_MAX] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C4C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4C3R, 0,
     0, (ippiReorderFunc)ippiSwapChannels_32f_C4C3R, 0, 0
 };
 
 // shared
-ippiReorderFunc ippiSwapChannelsC3RTab[] =
+ippiReorderFunc ippiSwapChannelsC3RTab[CV_DEPTH_MAX] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3R, 0,
     0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
 };
 
 #if IPP_VERSION_X100 >= 810
-static ippiReorderFunc ippiSwapChannelsC4RTab[] =
+static ippiReorderFunc ippiSwapChannelsC4RTab[CV_DEPTH_MAX] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4R, 0,
     0, (ippiReorderFunc)ippiSwapChannels_32f_C4R, 0, 0
@@ -428,7 +428,7 @@ bool oclCvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool revers
     OclHelper< Set<3, 4>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("RGB", ocl::imgproc::color_rgb_oclsrc,
-                       format("-D dcn=%d -D bidx=0 -D %s", dcn, reverse ? "REVERSE" : "ORDER")))
+                       format("-D DCN=%d -D BIDX=0 -D %s", dcn, reverse ? "REVERSE" : "ORDER")))
     {
         return false;
     }
@@ -441,7 +441,7 @@ bool oclCvtColorBGR25x5( InputArray _src, OutputArray _dst, int bidx, int gbits 
     OclHelper< Set<3, 4>, Set<2>, Set<CV_8U> > h(_src, _dst, 2);
 
     if(!h.createKernel("RGB2RGB5x5", ocl::imgproc::color_rgb_oclsrc,
-                       format("-D dcn=2 -D bidx=%d -D greenbits=%d", bidx, gbits)))
+                       format("-D DCN=2 -D BIDX=%d -D GREENBITS=%d", bidx, gbits)))
     {
         return false;
     }
@@ -454,7 +454,7 @@ bool oclCvtColor5x52BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, i
     OclHelper< Set<2>, Set<3, 4>, Set<CV_8U> > h(_src, _dst, dcn);
 
     if(!h.createKernel("RGB5x52RGB", ocl::imgproc::color_rgb_oclsrc,
-                       format("-D dcn=%d -D bidx=%d -D greenbits=%d", dcn, bidx, gbits)))
+                       format("-D DCN=%d -D BIDX=%d -D GREENBITS=%d", dcn, bidx, gbits)))
     {
         return false;
     }
@@ -467,7 +467,7 @@ bool oclCvtColor5x52Gray( InputArray _src, OutputArray _dst, int gbits)
     OclHelper< Set<2>, Set<1>, Set<CV_8U> > h(_src, _dst, 1);
 
     if(!h.createKernel("BGR5x52Gray", ocl::imgproc::color_rgb_oclsrc,
-                       format("-D dcn=1 -D bidx=0 -D greenbits=%d", gbits)))
+                       format("-D DCN=1 -D BIDX=0 -D GREENBITS=%d", gbits)))
     {
         return false;
     }
@@ -480,7 +480,7 @@ bool oclCvtColorGray25x5( InputArray _src, OutputArray _dst, int gbits)
     OclHelper< Set<1>, Set<2>, Set<CV_8U> > h(_src, _dst, 2);
 
     if(!h.createKernel("Gray2BGR5x5", ocl::imgproc::color_rgb_oclsrc,
-                        format("-D dcn=2 -D bidx=0 -D greenbits=%d", gbits)))
+                        format("-D DCN=2 -D BIDX=0 -D GREENBITS=%d", gbits)))
     {
         return false;
     }
@@ -494,7 +494,7 @@ bool oclCvtColorBGR2Gray( InputArray _src, OutputArray _dst, int bidx)
 
     int stripeSize = 1;
     if(!h.createKernel("RGB2Gray", ocl::imgproc::color_rgb_oclsrc,
-                       format("-D dcn=1 -D bidx=%d -D STRIPE_SIZE=%d", bidx, stripeSize)))
+                       format("-D DCN=1 -D BIDX=%d -D STRIPE_SIZE=%d", bidx, stripeSize)))
     {
         return false;
     }
@@ -507,7 +507,7 @@ bool oclCvtColorGray2BGR( InputArray _src, OutputArray _dst, int dcn)
 {
     OclHelper< Set<1>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
     if(!h.createKernel("Gray2RGB", ocl::imgproc::color_rgb_oclsrc,
-                       format("-D bidx=0 -D dcn=%d", dcn)))
+                       format("-D BIDX=0 -D DCN=%d", dcn)))
     {
         return false;
     }
@@ -520,7 +520,7 @@ bool oclCvtColorRGBA2mRGBA( InputArray _src, OutputArray _dst)
     OclHelper< Set<4>, Set<4>, Set<CV_8U> > h(_src, _dst, 4);
 
     if(!h.createKernel("RGBA2mRGBA", ocl::imgproc::color_rgb_oclsrc,
-                       "-D dcn=4 -D bidx=3"))
+                       "-D DCN=4 -D BIDX=3"))
     {
         return false;
     }
@@ -533,7 +533,7 @@ bool oclCvtColormRGBA2RGBA( InputArray _src, OutputArray _dst)
     OclHelper< Set<4>, Set<4>, Set<CV_8U> > h(_src, _dst, 4);
 
     if(!h.createKernel("mRGBA2RGBA", ocl::imgproc::color_rgb_oclsrc,
-                       "-D dcn=4 -D bidx=3"))
+                       "-D DCN=4 -D BIDX=3"))
     {
         return false;
     }

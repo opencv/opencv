@@ -38,13 +38,6 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
             CV_Error(Error::StsInternal, "");
 #endif
         }
-        else if (preferableBackend == DNN_BACKEND_HALIDE)
-        {
-            CV_Assert(haveHalide());
-#ifdef HAVE_HALIDE
-            return Ptr<BackendWrapper>(new HalideBackendWrapper(baseBuffer, shape));
-#endif
-        }
         else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         {
             CV_ERROR_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019;
@@ -107,14 +100,6 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     {
         CV_Assert(preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_CPU_FP16 || IS_DNN_OPENCL_TARGET(preferableTarget));
     }
-    else if (preferableBackend == DNN_BACKEND_HALIDE)
-    {
-#ifdef HAVE_HALIDE
-        initHalideBackend();
-#else
-        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Halide");
-#endif
-    }
     else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
         CV_Assert(0 && "Inheritance must be used with OpenVINO backend");
@@ -170,11 +155,19 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         backendId = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;  // = getInferenceEngineBackendTypeParam();
 
-    if (netWasQuantized && backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_TIMVX)
+    if (netWasQuantized && backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_TIMVX &&
+        backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-        CV_LOG_WARNING(NULL, "DNN: Only default and TIMVX backends support quantized networks");
+        CV_LOG_WARNING(NULL, "DNN: Only default, TIMVX and OpenVINO backends support quantized networks");
         backendId = DNN_BACKEND_OPENCV;
     }
+#ifdef HAVE_DNN_NGRAPH
+    if (netWasQuantized && backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2023_0))
+    {
+        CV_LOG_WARNING(NULL, "DNN: OpenVINO 2023.0 and higher is required to supports quantized networks");
+        backendId = DNN_BACKEND_OPENCV;
+    }
+#endif
 
     if (preferableBackend != backendId)
     {
@@ -243,6 +236,14 @@ void Net::Impl::setPreferableTarget(int targetId)
 #endif
 
         clear();
+
+        if (targetId == DNN_TARGET_CPU_FP16)
+        {
+            if (useWinograd) {
+                CV_LOG_INFO(NULL, "DNN: DNN_TARGET_CPU_FP16 is set => Winograd convolution is disabled by default to preserve accuracy. If needed, enable it explicitly using enableWinograd(true).");
+                enableWinograd(false);
+            }
+        }
     }
 }
 

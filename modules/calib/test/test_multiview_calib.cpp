@@ -74,7 +74,7 @@ TEST(multiview_calibration, accuracy) {
 
     const int MAX_SAMPLES = 2000, MAX_FRAMES = 100;
     cv::Mat pattern (board_pattern, true/*copy*/);
-    pattern = pattern.reshape(1).t();
+    pattern = pattern.reshape(1, num_pts).t();
     pattern.row(2) = 2.0; // set approximate depth of object points
     const double ty_min = -2, ty_max = 2, tx_min = -2, tx_max = 2, tz_min = -1, tz_max = 1;
     const double yaw_min = -45, yaw_max = 45, pitch_min = -45, pitch_max = 45, roll_min = -45, roll_max = 45;

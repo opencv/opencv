@@ -72,11 +72,6 @@ static void extend_cvtColor( InputArray _src, OutputArray _dst, int code );
         CV_Error(Error::StsError, "OpenCV TIFF: failed " #call); \
     }
 
-#define CV_TIFF_CHECK_CALL_INFO(call) \
-    if (0 == (call)) { \
-        CV_LOG_INFO(NULL, "OpenCV TIFF(line " << __LINE__ << "): failed optional call: " #call ", ignoring"); \
-    }
-
 #define CV_TIFF_CHECK_CALL_DEBUG(call) \
     if (0 == (call)) { \
         CV_LOG_DEBUG(NULL, "OpenCV TIFF(line " << __LINE__ << "): failed optional call: " #call ", ignoring"); \
@@ -245,7 +240,7 @@ bool TiffDecoder::readHeader()
     if (!tif)
     {
         // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
-        // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+        // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
         if ( !m_buf.empty() )
         {
             m_buf_pos = 0;
@@ -1118,7 +1113,7 @@ public:
     TIFF* open ()
     {
         // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
-        // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+        // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
         return TIFFClientOpen( "", "w", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
                                &TiffEncoderBufHelper::write, &TiffEncoderBufHelper::seek,
                                &TiffEncoderBufHelper::close, &TiffEncoderBufHelper::size,
@@ -1200,7 +1195,7 @@ static bool readParam(const std::vector<int>& params, int key, int& value)
 bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params)
 {
     // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
-    // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+    // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
     TIFF* tif = NULL;
 
     TiffEncoderBufHelper buf_helper(m_buf);

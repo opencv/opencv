@@ -791,7 +791,7 @@ int getThreadNum()
         return 0;
     #endif
 #elif defined HAVE_HPX
-        return (int)(hpx::get_num_worker_threads());
+    return (int)(hpx::get_num_worker_threads());
 #elif defined HAVE_OPENMP
     return omp_get_thread_num();
 #elif defined HAVE_GCD
@@ -912,8 +912,7 @@ int getNumberOfCPUs_()
      * the minimum most value as it has high probablity of being right and safe.
      * Return 1 if we get 0 or not found on all methods.
     */
-#if defined CV_CXX11 \
-    && !defined(__MINGW32__) /* not implemented (2020-03) */ \
+#if !defined(__MINGW32__) /* not implemented (2020-03) */
 
     /*
      * Check for this standard C++11 way, we do not return directly because

@@ -165,7 +165,7 @@ void findNonZero(InputArray _src, OutputArray _idx)
     {
         int j, k = 0;
         const uchar* ptr8 = src.ptr(i);
-        if( depth == CV_8U || depth == CV_8S )
+        if( depth == CV_8U || depth == CV_8S || depth == CV_Bool )
         {
             for( j = 0; j < cols; j++ )
                 if( ptr8[j] != 0 ) buf[k++] = j;
@@ -176,23 +176,35 @@ void findNonZero(InputArray _src, OutputArray _idx)
             for( j = 0; j < cols; j++ )
                 if( ptr16[j] != 0 ) buf[k++] = j;
         }
-        else if( depth == CV_32S )
+        else if( depth == CV_32S || depth == CV_32U )
         {
             const int* ptr32s = (const int*)ptr8;
             for( j = 0; j < cols; j++ )
                 if( ptr32s[j] != 0 ) buf[k++] = j;
         }
+        else if( depth == CV_64S || depth == CV_64U )
+        {
+            const int64* ptr64s = (const int64*)ptr8;
+            for( j = 0; j < cols; j++ )
+                if( ptr64s[j] != 0 ) buf[k++] = j;
+        }
         else if( depth == CV_32F )
         {
-            const float* ptr32f = (const float*)ptr8;
+            const int* ptr32s = (const int*)ptr8;
             for( j = 0; j < cols; j++ )
-                if( ptr32f[j] != 0 ) buf[k++] = j;
+                if( (ptr32s[j]<<1) != 0 ) buf[k++] = j;
+        }
+        else if( depth == CV_16F || depth == CV_16BF )
+        {
+            const ushort* ptr16 = (const ushort*)ptr8;
+            for( j = 0; j < cols; j++ )
+                if( (ptr16[j]<<1) != 0 ) buf[k++] = j;
         }
         else
         {
-            const double* ptr64f = (const double*)ptr8;
+            const int64* ptr64s = (const int64*)ptr8;
             for( j = 0; j < cols; j++ )
-                if( ptr64f[j] != 0 ) buf[k++] = j;
+                if( (ptr64s[j]<<1) != 0 ) buf[k++] = j;
         }
 
         if( k > 0 )

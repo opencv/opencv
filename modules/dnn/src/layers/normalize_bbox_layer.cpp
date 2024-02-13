@@ -112,7 +112,7 @@ public:
         std::vector<UMat> outputs;
         std::vector<UMat> internals;
 
-        if (inputs_.depth() == CV_16S)
+        if (inputs_.depth() == CV_16F)
             return false;
 
         inputs_.getUMatVector(inputs);
@@ -193,7 +193,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -258,6 +258,7 @@ public:
                 {
                     // _scale: _channels x 1
                     CV_Assert(scale.total() == numPlanes);
+                    scale = scale.reshape(1, (int)scale.total());
                     repeat(scale, 1, dst.cols, buffer);
                     multiply(dst, buffer, dst);
                 }
@@ -273,21 +274,21 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        const size_t batch = ieInpNode->get_shape()[0];
-        const size_t numChannels = ieInpNode->get_shape()[1];
+        const size_t batch = ieInpNode.get_shape()[0];
+        const size_t numChannels = ieInpNode.get_shape()[1];
 
         std::vector<int64_t> axes_data;
         if (!acrossSpatial) {
             axes_data.push_back(1);
         } else {
-            axes_data.resize(ieInpNode->get_shape().size() - 1);
+            axes_data.resize(ieInpNode.get_shape().size() - 1);
             std::iota(axes_data.begin(), axes_data.end(), 1);
         }
         auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_data.size()}, axes_data);
         auto norm = std::make_shared<ngraph::op::v0::NormalizeL2>(ieInpNode, axes, epsilon, ngraph::op::EpsMode::ADD);
 
         CV_Assert(blobs.empty() || numChannels == blobs[0].total());
-        std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);
+        std::vector<size_t> shape(ieInpNode.get_shape().size(), 1);
         shape[0] = blobs.empty() ? 1 : batch;
         shape[1] = numChannels;
         if (!blobs.empty())

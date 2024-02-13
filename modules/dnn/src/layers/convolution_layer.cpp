@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
@@ -61,9 +60,6 @@
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
-#endif
-#ifdef HAVE_TENGINE
-#include "../tengine4dnn/include/tengine_graph_convolution.hpp"
 #endif
 
 #ifdef HAVE_CUDA
@@ -143,7 +139,7 @@ public:
         }
 
         const Mat &input = inputs[0];
-        CV_Assert(((input.dims == 3 && kernel_size.size() == 1) || input.dims == 4 || input.dims == 5) && (input.type() == CV_32F || input.type() == CV_16S));
+        CV_Assert(((input.dims == 3 && kernel_size.size() == 1) || input.dims == 4 || input.dims == 5) && (input.type() == CV_32F || input.type() == CV_16F));
         for (size_t i = 0; i < outputs.size(); i++)
         {
             CV_Assert(inputs[i].type() == input.type());
@@ -202,51 +198,9 @@ public:
     }
 
     virtual void fuseWeights(const Mat& w_, const Mat& b_) = 0;
-
-    virtual void applyHalideScheduler(Ptr<BackendNode>& node,
-                                      const std::vector<Mat*> &inputs,
-                                      const std::vector<Mat> &outputs,
-                                      int targetId) const CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        if (targetId != DNN_TARGET_CPU)
-        {
-            Layer::applyHalideScheduler(node, inputs, outputs, targetId);
-            return;
-        }
-        Halide::Var x("x"), y("y"), c("c"), n("n"), tile("tile"), yi("yi"), yo("yo"), co("co"), ci("ci");
-        Halide::Func& top = node.dynamicCast<HalideBackendNode>()->funcs[1];
-        Halide::Func& padded_input = node.dynamicCast<HalideBackendNode>()->funcs[0];
-
-        int outW, outH, outC, outN;
-        getCanonicalSize(outputs[0].size, &outW, &outH, &outC, &outN);
-
-        if (outW == 1 || outH <= 2)
-            return;
-
-        if (is1x1() || outC <= 16)
-            top.reorder(x, c, y)
-               .split(y, yo, yi, 2)
-               .fuse(yo, n, tile)
-               .parallel(tile)
-               .unroll(yi)
-               .vectorize(x, outW >= 16 ? 16 : outW);
-        else
-            top.reorder(x, c, y)
-               .split(y, yo, yi, 2)
-               .split(c, co, ci, 16)
-               .fuse(yo, co, tile).fuse(n, tile, tile)
-               .parallel(tile)
-               .unroll(yi)
-               .vectorize(x, outW >= 16 ? 16 : outW);
-        padded_input.compute_at(top, yi);
-#endif  // HAVE_HALIDE
-    }
 };
 
 
-#define IS_POWER_LAYER(layer) \
-            (!layer.empty() && !layer->type.compare("Power"))
 //TODO: simultaneously convolution and bias addition for cache optimization
 class ConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 {
@@ -265,10 +219,6 @@ public:
     bool newActiv;
     ocl4dnnFusedActiv_t activType;
     float power;
-#endif
-
-#ifdef HAVE_TENGINE
-    teng_graph_t tengine_graph;
 #endif
 
 #ifdef HAVE_CUDA
@@ -290,19 +240,7 @@ public:
         cudaFusionMode = cuda4dnn::ConvolutionConfiguration::FusionMode::NONE;
         cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
 #endif
-#ifdef HAVE_TENGINE
-        tengine_graph=NULL;
-#endif
     }
-#ifdef HAVE_TENGINE
-    ~ConvolutionLayerImpl()
-    {
-        if(NULL != tengine_graph )
-        {
-            tengine_release(tengine_graph);
-        }
-    }
-#endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
@@ -348,10 +286,6 @@ public:
 #endif
         if (backendId == DNN_BACKEND_OPENCV)
             return ksize >= 1 && ksize <= 3;
-#ifdef HAVE_HALIDE
-        if (backendId == DNN_BACKEND_HALIDE)
-            return ksize == 2 && !blobs.empty();
-#endif
 #ifdef HAVE_VULKAN
         if (backendId == DNN_BACKEND_VKCOM)
             return ksize == 2;
@@ -466,13 +400,6 @@ public:
             for(int i = 0; i < numOutput; i++ )
                 biasvec[i] = biasMat.at<float>(i);
         }
-#ifdef HAVE_TENGINE
-        if(NULL != tengine_graph )
-        {
-            tengine_release(tengine_graph);
-            tengine_graph = NULL ;
-        }
-#endif
 #ifdef HAVE_OPENCL
         convolutionOp.release();
 #endif
@@ -710,55 +637,6 @@ public:
         return Ptr<BackendNode>();
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        CV_Assert(!blobs.empty());
-        Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
-
-        const int inpCn = inputBuffer.channels();
-        const int outCn = blobs[0].size[0];
-        const int inpGroupCn = blobs[0].size[1];
-        const int group = inpCn / inpGroupCn;
-        const int outGroupCn = outCn / group;
-
-        Halide::Buffer<float> weights = wrapToHalideBuffer(blobs[0]);
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::Func padded_input(name + "_constant_exterior");
-        if (pad.width || pad.height)
-        {
-            Halide::Func bounded =
-                Halide::BoundaryConditions::constant_exterior(inputBuffer, 0);
-            padded_input(x, y, c, n) = bounded(x, y, c, n);
-        }
-        else
-        {
-            padded_input(x, y, c, n) = inputBuffer(x, y, c, n);
-        }
-
-        Halide::RDom r(0, kernel.width, 0, kernel.height, 0, inpGroupCn);
-        Halide::Expr kx = x * stride.width - pad.width + r.x * dilation.width;
-        Halide::Expr ky = y * stride.height - pad.height + r.y * dilation.height;
-        Halide::Expr kc = r.z;
-        for (int i = 1; i < group; ++i)
-        {
-            kc = select(c < outGroupCn * i, kc, inpGroupCn * i + r.z);
-        }
-        Halide::Expr topExpr = sum(padded_input(kx, ky, kc, n) *
-                                   weights(r.x, r.y, r.z, c));
-        if (hasBias())
-        {
-            Halide::Buffer<float> bias = wrapToHalideBuffer(blobs[1], {outCn});
-            topExpr += bias(c);
-        }
-        top(x, y, c, n) = topExpr;
-        return Ptr<BackendNode>(new HalideBackendNode({ padded_input, top }));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
-
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
                                       const std::vector<Ptr<BackendWrapper> > &outputs,
@@ -848,13 +726,13 @@ public:
         CV_Assert(!blobs.empty());
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::vector<size_t> dims = ieInpNode->get_shape();
+        std::vector<size_t> dims = ieInpNode.get_shape();
         CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
-        std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
+        ngraph::Output<ngraph::Node> ieWeights;
         if (nodes.size() > 1)
-            CV_Assert(ieWeights);  // dynamic_cast should not fail
+            ieWeights = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
         const int inpCn = dims[1];
-        const int inpGroupCn = nodes.size() > 1 ? ieWeights->get_shape()[1] : blobs[0].size[1];
+        const int inpGroupCn = nodes.size() > 1 ? ieWeights.get_shape()[1] : blobs[0].size[1];
         const int group = inpCn / inpGroupCn;
 
         std::vector<size_t> kernel_shape;
@@ -1051,7 +929,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -1065,6 +943,7 @@ public:
             umat_blobs.resize(n);
             for (size_t i = 0; i < n; i++)
             {
+                CV_Assert(!use_half);  // TODO: not implemented
                 inputs[i + 1].copyTo(umat_blobs[i]);
             }
             inputs.resize(1);
@@ -1077,7 +956,7 @@ public:
             for (size_t i = 0; i < n; i++)
             {
                 if (use_half)
-                    convertFp16(blobs[i], umat_blobs[i]);
+                    blobs[i].convertTo(umat_blobs[i], CV_16F);
                 else
                     blobs[i].copyTo(umat_blobs[i]);
             }
@@ -1095,7 +974,7 @@ public:
             config.pads = pads;
             config.stride = stride;
             config.dilation = dilation;
-            if (inputs[0].dims != 4 && inputs[0].dims != umat_blobs[0].dims)
+            if (inputs[0].dims != 4 && inputs[0].dims != (blobs.empty() ? umat_blobs[0].dims : blobs[0].dims))
             {
                 static bool bypassCheck = utils::getConfigurationParameterBool("OPENCV_OCL4DNN_CONVOLUTION_IGNORE_INPUT_DIMS_4_CHECK", false);
                 if (!bypassCheck)
@@ -1107,7 +986,7 @@ public:
                     return false;
                 }
             }
-            config.group = inputs[0].size[1] / umat_blobs[0].size[1];
+            config.group = inputs[0].size[1] / (blobs.empty() ? umat_blobs[0].size[1] : blobs[0].size[1]);
             if (config.group < 1)  // config.group == 0 causes div by zero in ocl4dnn code
             {
                 CV_LOG_WARNING(NULL, "DNN/OpenCL: Unsupported config.group=" << config.group
@@ -1158,7 +1037,7 @@ public:
         if (fusedWeights)
         {
             if (use_half)
-                convertFp16(weightsMat, umat_blobs[0]);
+                weightsMat.convertTo(umat_blobs[0], CV_16F);
             else
                 weightsMat.copyTo(umat_blobs[0]);
             fusedWeights = false;
@@ -1168,7 +1047,7 @@ public:
             if ( umat_blobs.size() < 2 )
                 umat_blobs.resize(2);
             if (use_half)
-                convertFp16(Mat(biasvec, true), umat_blobs[1]);
+                Mat(biasvec, true).convertTo(umat_blobs[1], CV_16F);
             else
                 Mat(biasvec, true).copyTo(umat_blobs[1]);
             convolutionOp->setBias(true);
@@ -1231,7 +1110,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -1305,65 +1184,6 @@ public:
             }
         }
 
-#ifdef HAVE_TENGINE
-        bool tengine_ret = false;
-
-        std::vector<Mat> teng_in, teng_out;
-        inputs_arr.getMatVector(teng_in);
-        outputs_arr.getMatVector(teng_out);
-
-        int inch = teng_in[0].size[1];    // inch
-        int in_h = teng_in[0].size[2];    // in_h
-        int in_w = teng_in[0].size[3];    // in_w
-
-        int out_b = teng_out[0].size[0];  // out batch size
-        int outch = teng_out[0].size[1];  // outch
-        int out_h = teng_out[0].size[2];  // out_h
-        int out_w = teng_out[0].size[3];  // out_w
-
-        float *input_  = teng_in[0].ptr<float>();
-        float *output_ = teng_out[0].ptr<float>();
-        float *kernel_ = weightsMat.ptr<float>();
-        float *teg_bias = &biasvec[0];
-
-        int nstripes = std::max(getNumThreads(), 1);
-
-        /* tengine_init will run when first time. */
-        if(NULL == tengine_graph)
-        {
-            // pads_begin: 0 - pad_top,    1 - pad_left
-            // pads_end:   0 - pad_bottom, 1 - pad_right
-            // pad_h0: pad_top,  pad_h1: pad_bottom
-            // pad_w0: pad_left, pad_w1: pad_right
-            tengine_graph = tengine_init(name.c_str(), input_, inch, ngroups, in_h, in_w,
-                                         output_, out_b, outch, out_h, out_w,
-                                         kernel_, kernel_size.size(), kernel.height, kernel.width,
-                                         teg_bias, stride.height, stride.width,
-                                         pads_begin[0], pads_end[0], pads_begin[1], pads_end[1], dilation.height, dilation.width,
-                                         weightsMat.step1(), padMode, tengine_graph, nstripes);
-            // printf("Init(%s):  input=%p(%d %d %d %d ),output=%p(%d %d %d %d ),kernel=%p(%ld %d %d ), bias=%p ,"
-            //        "stride(%d %d), pad(%d %d %d %d), dilation(%d %d) ,weightsMat=%ld, padMode=%s ,tengine_graph = %p \n",
-            //        name.c_str(),input_, inch, ngroups, in_h, in_w,
-            //        output_, out_b, outch, out_h, out_w,
-            //        kernel_, kernel_size.size(), kernel.height, kernel.width,
-            //        teg_bias, stride.height, stride.width,
-            //        pads_begin[0], pads_end[0], pads_begin[1], pads_end[1], dilation.height, dilation.width,
-            //        weightsMat.step1(), padMode.c_str() ,tengine_graph);
-        }
-        if(NULL != tengine_graph)
-        {
-            tengine_ret = tengine_forward(tengine_graph);
-        }
-        /* activation */
-        if((true == tengine_ret) && activ )
-        {
-            int out_cstep = out_h * out_w;	    // out_cstep
-
-            ActivationLayer* activ_ = activ.get();
-            activ_->forwardSlice(output_, output_, out_cstep, out_cstep, 0, outch);
-        }
-        if(false == tengine_ret)
-#endif
         {
             int nstripes = std::max(getNumThreads(), 1);
             int conv_dim = CONV_2D;
@@ -1591,7 +1411,7 @@ public:
 #endif  // HAVE_INF_ENGINE
         {
             return backendId == DNN_BACKEND_CUDA ||
-            (kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE)) ||
+            (kernel_size.size() == 2 && backendId == DNN_BACKEND_OPENCV) ||
             (kernel_size.size() == 2 && backendId == DNN_BACKEND_CANN);
         }
     }
@@ -1970,7 +1790,7 @@ public:
         std::vector<UMat> outputs;
         std::vector<UMat> internals;
 
-        if (inputs_.depth() == CV_16S)
+        if (inputs_.depth() == CV_16F)
             return false;
 
         inputs_.getUMatVector(inputs);
@@ -2077,7 +1897,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr));
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -2198,60 +2018,6 @@ public:
             preferableTarget, std::move(context->stream), std::move(context->cudnn_handle), config, filtersMat, biasMat);
     }
 #endif
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        CV_Assert(!blobs.empty());
-        Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
-
-        int inW, inH, inC, inN;
-        getCanonicalSize(inputBuffer, &inW, &inH, &inC, &inN);
-        const int outGroupCn = blobs[0].size[1];
-        const int group = numOutput / outGroupCn;
-        const int inpGroupCn = blobs[0].size[0] / group;
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::Func padded_input(name + "_constant_exterior");
-        auto weights = wrapToHalideBuffer(blobs[0]);
-
-        Halide::Func dilated_input("dilated_input");
-        dilated_input(x, y, c, n) = 0.0f;
-        Halide::RDom r1(0, inW, 0, inH);
-        dilated_input(r1.x * stride.width, r1.y * stride.height, c, n) =
-              inputBuffer(r1.x, r1.y, c, n);
-        dilated_input.compute_root();
-
-        Halide::Func bounded =
-            Halide::BoundaryConditions::constant_exterior(dilated_input, 0,
-                                                          0, (inW - 1) * stride.width + 1,
-                                                          0, (inH - 1) * stride.height + 1,
-                                                          0, inC, 0, inN);
-        padded_input(x, y, c, n) = bounded(x, y, c, n);
-
-        Halide::RDom r(0, kernel.width, 0, kernel.height, 0, inpGroupCn);
-        Halide::Expr kx = x + pad.width - r.x;
-        Halide::Expr ky = y + pad.height - r.y;
-        Halide::Expr kInC = r.z;
-        Halide::Expr kOutC = c;
-        for (int i = 1; i < group; ++i)
-        {
-            kInC = select(c < outGroupCn * i, kInC, inpGroupCn * i + r.z);
-            kOutC = select(c < outGroupCn * i, kOutC, c - outGroupCn * i);
-        }
-        Halide::Expr topExpr = sum(padded_input(kx, ky, kInC, n) *
-                                   weights(r.x, r.y, kOutC, kInC));
-        if (hasBias())
-        {
-            auto bias = wrapToHalideBuffer(blobs[1], {numOutput});
-            topExpr += bias(c);
-        }
-        top(x, y, c, n) = topExpr;
-        return Ptr<BackendNode>(new HalideBackendNode({ padded_input, top }));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,

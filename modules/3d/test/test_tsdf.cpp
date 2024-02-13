@@ -295,6 +295,9 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
     Points  points = _points.getMat();
     Normals normals = _normals.getMat();
 
+    Mat goods;
+    finiteMask(points, goods);
+
     Mat_<Vec4b> img = image.getMat();
 
     Range range(0, sz.height);
@@ -306,6 +309,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
                 Vec4b* imgRow = img[y];
                 const ptype* ptsRow = points[y];
                 const ptype* nrmRow = normals[y];
+                const uchar* goodRow = goods.ptr<uchar>(y);
 
                 for (int x = 0; x < sz.width; x++)
                 {
@@ -314,7 +318,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
                     Vec4b color;
 
-                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
+                    if (!goodRow[x])
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }
@@ -352,6 +356,11 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
     Points  points  = _points.getMat();
     Colors  colors  = _colors.getMat();
 
+    Mat goods, goodc, goodp;
+    finiteMask(points, goodp);
+    finiteMask(colors, goodc);
+    goods = goodp & goodc;
+
     Mat_<Vec4b> img = image.getMat();
 
     Range range(0, sz.height);
@@ -361,18 +370,16 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
             for (int y = range.start; y < range.end; y++)
             {
                 Vec4b* imgRow = img[y];
-                const ptype* ptsRow = points[y];
                 const ptype* clrRow = colors[y];
+                const uchar* goodRow = goods.ptr<uchar>(y);
 
                 for (int x = 0; x < sz.width; x++)
                 {
-                    Point3f p = fromPtype(ptsRow[x]);
                     Point3f c = fromPtype(clrRow[x]);
 
                     Vec4b color;
 
-                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z)
-                        || cvIsNaN(c.x) || cvIsNaN(c.y) || cvIsNaN(c.z))
+                    if (!goodRow[x])
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }
@@ -587,33 +594,6 @@ void boundingBoxGrowthTest(bool enableGrowth)
 }
 
 
-static Mat nanMask(Mat img)
-{
-    int depth = img.depth();
-    Mat mask(img.size(), CV_8U);
-    for (int y = 0; y < img.rows; y++)
-    {
-        uchar *maskRow = mask.ptr<uchar>(y);
-        if (depth == CV_32F)
-        {
-            Vec4f *imgrow = img.ptr<Vec4f>(y);
-            for (int x = 0; x < img.cols; x++)
-            {
-                maskRow[x] = (imgrow[x] == imgrow[x]) * 255;
-            }
-        }
-        else if (depth == CV_64F)
-        {
-            Vec4d *imgrow = img.ptr<Vec4d>(y);
-            for (int x = 0; x < img.cols; x++)
-            {
-                maskRow[x] = (imgrow[x] == imgrow[x]) * 255;
-            }
-        }
-    }
-    return mask;
-}
-
 template <typename VT>
 static Mat_<typename VT::value_type> normalsErrorT(Mat_<VT> srcNormals, Mat_<VT> dstNormals)
 {
@@ -725,8 +705,9 @@ void regressionVolPoseRot()
     split(uptsRot, ptsRotCh);
     Mat maskPts0 = ptsCh[2] > 0;
     Mat maskPtsRot = ptsRotCh[2] > 0;
-    Mat maskNrm0 = nanMask(mnrm);
-    Mat maskNrmRot = nanMask(mnrmRot);
+    Mat maskNrm0, maskNrmRot;
+    finiteMask(mnrm, maskNrm0);
+    finiteMask(mnrmRot, maskNrmRot);
     Mat maskPtsDiff, maskNrmDiff;
     cv::bitwise_xor(maskPts0, maskPtsRot, maskPtsDiff);
     cv::bitwise_xor(maskNrm0, maskNrmRot, maskNrmDiff);

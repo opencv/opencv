@@ -89,7 +89,7 @@ public:
     //! conjugation
     Complex conj() const;
 
-    _Tp re, im; //< the real and the imaginary parts
+    _Tp re, im; ///< the real and the imaginary parts
 };
 
 typedef Complex<float> Complexf;
@@ -558,7 +558,7 @@ public:
     //! returns the minimal up-right integer rectangle containing the rotated rectangle
     CV_WRAP Rect boundingRect() const;
     //! returns the minimal (exact) floating point rectangle containing the rotated rectangle, not intended for use with images
-    Rect_<float> boundingRect2f() const;
+    CV_WRAP Rect2f boundingRect2f() const;
     //! returns the rectangle mass center
     CV_PROP_RW Point2f center;
     //! returns width and height of the rectangle
@@ -2028,8 +2028,8 @@ double jaccardDistance(const Rect_<_Tp>& a, const Rect_<_Tp>& b) {
 /** @brief Finds out if there is any intersection between two rectangles
  *
  * mainly useful for language bindings
- * @param rect1 First rectangle
- * @param rect2 Second rectangle
+ * @param a First rectangle
+ * @param b Second rectangle
  * @return the area of the intersection
  */
 CV_EXPORTS_W inline double rectangleIntersectionArea(const Rect2d& a, const Rect2d& b) { return (a & b).area(); }

@@ -24,7 +24,7 @@ struct SumSqr_SIMD
     }
 };
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 template <>
 struct SumSqr_SIMD<uchar, int, int>
@@ -179,7 +179,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             SQT sq0 = sqsum[0];
             for(int i = x; i < len; i++, src += cn )
             {
-                T v = src[0];
+                ST v = (ST)src[0];
                 s0 += v; sq0 += (SQT)v*v;
             }
             sum[0] = s0;
@@ -191,7 +191,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             SQT sq0 = sqsum[0], sq1 = sqsum[1];
             for(int i = x; i < len; i++, src += cn )
             {
-                T v0 = src[0], v1 = src[1];
+                ST v0 = (ST)src[0], v1 = (ST)src[1];
                 s0 += v0; sq0 += (SQT)v0*v0;
                 s1 += v1; sq1 += (SQT)v1*v1;
             }
@@ -204,7 +204,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             SQT sq0 = sqsum[0], sq1 = sqsum[1], sq2 = sqsum[2];
             for(int i = x; i < len; i++, src += cn )
             {
-                T v0 = src[0], v1 = src[1], v2 = src[2];
+                ST v0 = (ST)src[0], v1 = (ST)src[1], v2 = (ST)src[2];
                 s0 += v0; sq0 += (SQT)v0*v0;
                 s1 += v1; sq1 += (SQT)v1*v1;
                 s2 += v2; sq2 += (SQT)v2*v2;
@@ -220,11 +220,11 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             SQT sq0 = sqsum[k], sq1 = sqsum[k+1], sq2 = sqsum[k+2], sq3 = sqsum[k+3];
             for(int i = x; i < len; i++, src += cn )
             {
-                T v0, v1;
-                v0 = src[0], v1 = src[1];
+                ST v0, v1;
+                v0 = (ST)src[0], v1 = (ST)src[1];
                 s0 += v0; sq0 += (SQT)v0*v0;
                 s1 += v1; sq1 += (SQT)v1*v1;
-                v0 = src[2], v1 = src[3];
+                v0 = (ST)src[2], v1 = (ST)src[3];
                 s2 += v0; sq2 += (SQT)v0*v0;
                 s3 += v1; sq3 += (SQT)v1*v1;
             }
@@ -245,7 +245,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
         for( i = 0; i < len; i++ )
             if( mask[i] )
             {
-                T v = src[i];
+                ST v = (ST)src[i];
                 s0 += v; sq0 += (SQT)v*v;
                 nzm++;
             }
@@ -259,7 +259,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
         for( i = 0; i < len; i++, src += 3 )
             if( mask[i] )
             {
-                T v0 = src[0], v1 = src[1], v2 = src[2];
+                ST v0 = (ST)src[0], v1 = (ST)src[1], v2 = (ST)src[2];
                 s0 += v0; sq0 += (SQT)v0*v0;
                 s1 += v1; sq1 += (SQT)v1*v1;
                 s2 += v2; sq2 += (SQT)v2*v2;
@@ -275,7 +275,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             {
                 for( int k = 0; k < cn; k++ )
                 {
-                    T v = src[k];
+                    ST v = (ST)src[k];
                     ST s = sum[k] + v;
                     SQT sq = sqsum[k] + (SQT)v*v;
                     sum[k] = s; sqsum[k] = sq;
@@ -308,13 +308,30 @@ static int sqsum32f( const float* src, const uchar* mask, double* sum, double* s
 static int sqsum64f( const double* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
+static int sqsum16f( const float16_t* src, const uchar* mask, float* sum, double* sqsum, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum16bf( const bfloat16_t* src, const uchar* mask, float* sum, double* sqsum, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum64u( const uint64* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum64s( const int64* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum32u( const unsigned* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
 SumSqrFunc getSumSqrFunc(int depth)
 {
     CV_INSTRUMENT_REGION();
     static SumSqrFunc sumSqrTab[CV_DEPTH_MAX] =
     {
         (SumSqrFunc)GET_OPTIMIZED(sqsum8u), (SumSqrFunc)sqsum8s, (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
-        (SumSqrFunc)sqsum32s, (SumSqrFunc)GET_OPTIMIZED(sqsum32f), (SumSqrFunc)sqsum64f, 0
+        (SumSqrFunc)sqsum32s, (SumSqrFunc)GET_OPTIMIZED(sqsum32f), (SumSqrFunc)sqsum64f,
+        (SumSqrFunc)sqsum16f, (SumSqrFunc)sqsum16bf, 0,
+        (SumSqrFunc)sqsum64u, (SumSqrFunc)sqsum64s, (SumSqrFunc)sqsum32u, 0
     };
 
     return sumSqrTab[depth];

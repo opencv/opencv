@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
@@ -52,6 +51,7 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <opencv2/core/utils/logger.hpp>
+#include "cpu_kernels/softmax.hpp"
 using std::max;
 
 #ifdef HAVE_OPENCL
@@ -75,7 +75,7 @@ public:
 
     SoftMaxLayerImpl(const LayerParams& params)
     {
-        axisRaw = params.get<int>("axis", 1);
+        axisRaw = params.get<int>("axis", -1);
         logSoftMax = params.get<bool>("log_softmax", false);
         setParamsFrom(params);
     }
@@ -115,7 +115,6 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -131,7 +130,7 @@ public:
         std::vector<UMat> outputs;
         std::vector<UMat> internals;
 
-        bool use_half = (inputs_.depth() == CV_16S);
+        bool use_half = (inputs_.depth() == CV_16F);
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
         internals_.getUMatVector(internals);
@@ -216,7 +215,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -225,89 +224,15 @@ public:
         std::vector<Mat> inputs, outputs, internals;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
-        internals_arr.getMatVector(internals);
 
         const Mat &src = inputs[0];
         Mat &dst = outputs[0];
-
         int axis = normalize_axis(axisRaw, src.dims);
-        size_t outerSize = src.total(0, axis), channels = src.size[axis],
-                innerSize = src.total(axis + 1);
 
-        CV_Assert(src.type() == CV_32F);
-        CV_Assert(src.isContinuous() && dst.isContinuous());
-
-        const float *srcPtr = src.ptr<float>();
-        float *dstPtr = dst.ptr<float>();
-        float *bufPtr = internals[0].ptr<float>();
-
-        size_t outerStep = src.total(axis);
-        size_t cnStep = src.total(axis + 1);
-
-        //compute max along axis
-        for (size_t outerDim = 0; outerDim < outerSize; outerDim++)
-        {
-            size_t srcOffset = outerDim * outerStep;
-            size_t bufOffset = outerDim * cnStep;
-
-            memcpy(bufPtr + bufOffset, srcPtr + srcOffset, innerSize * sizeof(float));
-
-            for (size_t cnDim = 1; cnDim < channels; cnDim++)
-            {
-                for (size_t i = 0; i < innerSize; i++)
-                    bufPtr[bufOffset + i] = std::max(bufPtr[bufOffset + i], srcPtr[srcOffset + cnDim * cnStep + i]);
-            }
-        }
-
-        //subtract max
-        for (size_t outerDim = 0; outerDim < outerSize; outerDim++)
-        {
-            size_t srcOffset = outerDim * outerStep;
-            size_t bufOffset = outerDim * cnStep;
-
-            for (size_t cnDim = 0; cnDim < channels; cnDim++)
-            {
-                const int offset = srcOffset + cnDim * cnStep;
-                for (size_t i = 0; i < innerSize; i++)
-                    dstPtr[offset + i] = srcPtr[offset + i] - bufPtr[bufOffset + i];
-            }
-        }
-
-        cv::exp(dst, dst);
-
-        for (size_t outerDim = 0; outerDim < outerSize; outerDim++)
-        {
-            size_t srcOffset = outerDim * outerStep;
-            size_t bufOffset = outerDim * cnStep;
-
-            //sum exp along axis
-            for (size_t i = 0; i < innerSize; i++)
-                bufPtr[bufOffset + i] = 0.f;
-
-            for (size_t cnDim = 0; cnDim < channels; cnDim++)
-            {
-                const int offset = srcOffset + cnDim * cnStep;
-                for (size_t i = 0; i < innerSize; i++)
-                    bufPtr[bufOffset + i] += dstPtr[offset + i];
-            }
-
-            //divide by computed sum
-            for (size_t cnDim = 0; cnDim < channels; cnDim++)
-            {
-                const int offset = srcOffset + cnDim * cnStep;
-                for (size_t i = 0; i < innerSize; i++)
-                    dstPtr[offset + i] /= bufPtr[bufOffset + i];
-            }
-            if (logSoftMax)
-            {
-                for (size_t cnDim = 0; cnDim < channels; cnDim++)
-                {
-                    const int offset = srcOffset + cnDim * cnStep;
-                    for (size_t i = 0; i < innerSize; i++)
-                        dstPtr[offset + i] = log(dstPtr[offset + i]);
-                }
-            }
-        }
+        if(logSoftMax)
+            logSoftmax(dst, src, axis);
+        else
+            softmax(dst, src, axis);
     }
 
 #ifdef HAVE_CUDA
@@ -324,31 +249,6 @@ public:
         return make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(context->cudnn_handle), channel_axis, logSoftMax);
     }
 #endif
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
-        int inW, inH, inC, inN;
-        getCanonicalSize(inputBuffer, &inW, &inH, &inC, &inN);
-
-        if (inW != 1 || inH != 1)
-            CV_Error(cv::Error::StsNotImplemented,
-                     "Halide backend for SoftMax with spatial size "
-                     "more than 1x1 is not implemented");
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-
-        Halide::Func expInput("expInput");
-        Halide::RDom r(0, inW, 0, inH, 0, inC);
-        expInput(x, y, c, n) = exp(inputBuffer(x, y, c, n));
-        Halide::Expr globalSum = sum(expInput(r.x, r.y, r.z, n));
-        top(x, y, c, n) = expInput(x, y, c, n) / globalSum;
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -385,12 +285,12 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        int axis = normalize_axis(axisRaw, ieInpNode->get_shape().size());
-        auto softmax = std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis);
-        if (logSoftMax)
-            return Ptr<BackendNode>(new InfEngineNgraphNode(std::make_shared<ngraph::op::v0::Log>(softmax)));
-
-        return Ptr<BackendNode>(new InfEngineNgraphNode(softmax));
+        int axis = normalize_axis(axisRaw, ieInpNode.get_shape().size());
+        if (logSoftMax) {
+            return new InfEngineNgraphNode(std::make_shared<ngraph::op::v5::LogSoftmax>(ieInpNode, axis));
+        } else {
+            return new InfEngineNgraphNode(std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis));
+        }
     }
 #endif  // HAVE_DNN_NGRAPH
 

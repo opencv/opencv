@@ -71,7 +71,7 @@ inline bool isNaN(cv::Point3f p)
 #if USE_INTRINSICS
 static inline bool isNaN(const cv::v_float32x4& p)
 {
-    return cv::v_check_any(p != p);
+    return cv::v_check_any(v_ne(p, p));
 }
 #endif
 

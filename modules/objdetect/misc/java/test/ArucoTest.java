@@ -104,10 +104,10 @@ public class ArucoTest extends OpenCVTestCase {
         Assert.assertArrayEquals(new int[]{0, 1, 2, 3}, intCharucoIds);
 
         double eps = 0.2;
-        assertArrayEquals(new double[]{cellSize, cellSize}, charucoCorners.get(0, 0), eps);
-        assertArrayEquals(new double[]{2*cellSize, cellSize}, charucoCorners.get(1, 0), eps);
-        assertArrayEquals(new double[]{cellSize, 2*cellSize}, charucoCorners.get(2, 0), eps);
-        assertArrayEquals(new double[]{2*cellSize, 2*cellSize}, charucoCorners.get(3, 0), eps);
+        assertArrayEquals(new double[]{cellSize, cellSize}, charucoCorners.get(0,0), eps);
+        assertArrayEquals(new double[]{2*cellSize, cellSize}, charucoCorners.get(0,1), eps);
+        assertArrayEquals(new double[]{cellSize, 2*cellSize}, charucoCorners.get(0,2), eps);
+        assertArrayEquals(new double[]{2*cellSize, 2*cellSize}, charucoCorners.get(0,3), eps);
     }
 
 }

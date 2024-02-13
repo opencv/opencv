@@ -40,6 +40,8 @@ public:
         model.setPreferableTarget(target);
 
         model.setNmsAcrossClasses(nmsAcrossClasses);
+        if (target == DNN_TARGET_CPU_FP16)
+            model.enableWinograd(false);
 
         std::vector<int> classIds;
         std::vector<float> confidences;
@@ -91,7 +93,7 @@ public:
 
         points = model.estimate(frame, 0.5);
 
-        Mat out = Mat(points).reshape(1);
+        Mat out = Mat(points).reshape(1, (int)points.size());
         normAssert(exp, out, "", norm, norm);
     }
 
@@ -286,8 +288,9 @@ TEST_P(Test_Model, Classify)
 TEST_P(Test_Model, DetectRegion)
 {
     applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
         CV_TEST_TAG_LONG,
-        CV_TEST_TAG_MEMORY_2GB
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -346,8 +349,9 @@ TEST_P(Test_Model, DetectRegion)
 TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
 {
     applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
         CV_TEST_TAG_LONG,
-        CV_TEST_TAG_MEMORY_2GB
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -406,6 +410,8 @@ TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
 
 TEST_P(Test_Model, DetectionOutput)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // Check 'backward_compatible_check || in_out_elements_equal' failed at core/src/op/reshape.cpp:427:
     // While validating node 'v1::Reshape bbox_pred_reshape (ave_bbox_pred_rois[0]:f32{1,8,1,1}, Constant_388[0]:i64{4}) -> (f32{?,?,?,?})' with friendly_name 'bbox_pred_reshape':
@@ -447,14 +453,17 @@ TEST_P(Test_Model, DetectionOutput)
     {
         if (backend == DNN_BACKEND_OPENCV)
             scoreDiff = 4e-3;
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2022010000)
-        else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            scoreDiff = 4e-2;
-#endif
         else
             scoreDiff = 2e-2;
         iouDiff = 1.8e-1;
     }
+#if defined(INF_ENGINE_RELEASE)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+            scoreDiff = 0.05;
+            iouDiff = 0.08;
+        }
+#endif
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
@@ -487,8 +496,8 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
         refBoxes.emplace_back(left, top, width, height);
     }
 
-    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel", false);
-    std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
+    std::string weights_file = _tf("MobileNetSSD_deploy_19e3ec3.caffemodel", false);
+    std::string config_file = _tf("MobileNetSSD_deploy_19e3ec3.prototxt");
 
     Scalar mean = Scalar(127.5, 127.5, 127.5);
     double scale = 1.0 / 127.5;
@@ -508,7 +517,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        scoreDiff = 0.0021;
+        scoreDiff = 0.0028;
         iouDiff = 1e-2;
     }
     float confThreshold = FLT_MIN;
@@ -592,8 +601,8 @@ TEST_P(Test_Model, Detection_normalized)
     std::vector<float> refConfidences = {0.999222f};
     std::vector<Rect2d> refBoxes = {Rect2d(0, 4, 227, 222)};
 
-    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel", false);
-    std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
+    std::string weights_file = _tf("MobileNetSSD_deploy_19e3ec3.caffemodel", false);
+    std::string config_file = _tf("MobileNetSSD_deploy_19e3ec3.prototxt");
 
     Scalar mean = Scalar(127.5, 127.5, 127.5);
     double scale = 1.0 / 127.5;
@@ -626,7 +635,8 @@ TEST_P(Test_Model, Detection_normalized)
 TEST_P(Test_Model, Segmentation)
 {
     applyTestTag(
-        CV_TEST_TAG_MEMORY_2GB
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
     float norm = 0;
@@ -741,6 +751,8 @@ TEST_P(Test_Model, TextRecognitionWithCTCPrefixBeamSearch)
 
 TEST_P(Test_Model, TextDetectionByDB)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     if (target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_CPU_FP16)
@@ -783,6 +795,8 @@ TEST_P(Test_Model, TextDetectionByDB)
 
 TEST_P(Test_Model, TextDetectionByEAST)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     std::string imgPath = _tf("text_det_test2.jpg");
     std::string weightPath = _tf("frozen_east_text_detection.pb", false);
 

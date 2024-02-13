@@ -40,7 +40,8 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
     projectPoints(points3d, rvec, tvec, intrinsics, distortion, points2d);
 
     //add noise
-    Mat noise(1, (int)points2d.size(), CV_32FC2);
+    int sz = (int)points2d.size();
+    Mat noise(1, &sz, CV_32FC2);
     randu(noise, 0, 0.01);
     cv::add(points2d, noise, points2d);
 
@@ -93,7 +94,8 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
     cv::projectPoints(points3d, rvec, tvec, intrinsics, distortion, points2d);
 
     //add noise
-    Mat noise(1, (int)points2d.size(), CV_32FC2);
+    int npoints = (int)points2d.size();
+    Mat noise(1, &npoints, CV_32FC2);
     randu(noise, -0.001, 0.001);
     cv::add(points2d, noise, points2d);
 

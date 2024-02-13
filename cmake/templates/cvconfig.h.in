@@ -53,9 +53,6 @@
 /* Geospatial Data Abstraction Library */
 #cmakedefine HAVE_GDAL
 
-/* Halide support */
-#cmakedefine HAVE_HALIDE
-
 /* Vulkan support */
 #cmakedefine HAVE_VULKAN
 
@@ -77,9 +74,6 @@
 
 /* IJG JPEG codec */
 #cmakedefine HAVE_JPEG
-
-/* libpng/png.h needs to be included */
-#cmakedefine HAVE_LIBPNG_PNG_H
 
 /* GDCM DICOM codec */
 #cmakedefine HAVE_GDCM

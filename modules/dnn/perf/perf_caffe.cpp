@@ -10,8 +10,6 @@
 // because whole output includes Caffe's logs.
 //
 // Note: Be sure that interesting version of Caffe was linked.
-// Note: There is an impact on Halide performance. Comment this tests if you
-//       want to run the last one.
 //
 // How to build Intel-Caffe with MKLDNN backend
 // ============================================
@@ -101,8 +99,8 @@ PERF_TEST(SqueezeNet_v1_1_caffe, CaffePerfTest)
 
 PERF_TEST(MobileNet_SSD, CaffePerfTest)
 {
-    caffe::Net<float>* net = initNet("dnn/MobileNetSSD_deploy.prototxt",
-                                     "dnn/MobileNetSSD_deploy.caffemodel");
+    caffe::Net<float>* net = initNet("dnn/MobileNetSSD_deploy_19e3ec3.prototxt",
+                                     "dnn/MobileNetSSD_deploy_19e3ec3.caffemodel");
     TEST_CYCLE() net->Forward();
     SANITY_CHECK_NOTHING();
 }

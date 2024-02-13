@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
@@ -180,15 +179,11 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         bool tranAorB = transA || transB;
-#ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            return axis == 1 && !tranAorB;
-#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !tranAorB) ||
                (backendId == DNN_BACKEND_WEBNN && axis == 1 && !tranAorB) ||
                backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !tranAorB);
     }
 
@@ -311,7 +306,7 @@ public:
                         }
 
                         v_float32x4 s = v_reduce_sum4(vs0, vs1, vs2, vs3);
-                        s += v_load(biasptr + i);
+                        s = v_add(s, v_load(biasptr + i));
                         v_store(dptr + i, s);
                     }
             #endif
@@ -360,7 +355,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -388,9 +383,9 @@ public:
 
                 if (use_half)
                 {
-                    convertFp16(A, A_fp32);
-                    convertFp16(B, B_fp32);
-                    convertFp16(C, C_fp32);
+                    A.convertTo(A_fp32, CV_32F);
+                    B.convertTo(B_fp32, CV_32F);
+                    C.convertTo(C_fp32, CV_32F);
                 }
                 else
                 {
@@ -401,9 +396,9 @@ public:
                 cv::gemm(A_fp32, B_fp32, 1, noArray(), 0, C_fp32);
                 if (use_half)
                 {
-                    convertFp16(A_fp32, A);
-                    convertFp16(B_fp32, B);
-                    convertFp16(C_fp32, C);
+                    A_fp32.convertTo(A, CV_16F);
+                    B_fp32.convertTo(B, CV_16F);
+                    C_fp32.convertTo(C, CV_16F);
                 }
             }
             return true;
@@ -434,7 +429,7 @@ public:
                 for (int i = 0; i < umat_blobs.size(); i++)
                 {
                     if (!umat_blobs[i].empty())
-                        convertFp16(umat_blobs[i], half_blobs[i]);
+                        umat_blobs[i].convertTo(half_blobs[i], CV_16F);
                 }
             }
 
@@ -458,13 +453,6 @@ public:
                 ret = false;
                 break;
             }
-
-            if (!use_half && bias && (outerSize > 1))
-            {
-                UMat biasOnesMat = UMat::ones(outerSize, 1, umat_blobs[0].type());
-                UMat& biases = umat_blobs[1];
-                cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
-            }
         }
 
         if (ret) return true;
@@ -482,8 +470,8 @@ public:
 
             if (use_half)
             {
-                convertFp16(srcMat, srcMat_fp32);
-                convertFp16(dstMat, dstMat_fp32);
+                srcMat.convertTo(srcMat_fp32, CV_32F);
+                dstMat.convertTo(dstMat_fp32, CV_32F);
             }
             else
             {
@@ -501,8 +489,8 @@ public:
             }
             if (use_half)
             {
-                convertFp16(srcMat_fp32, srcMat);
-                convertFp16(dstMat_fp32, dstMat);
+                srcMat_fp32.convertTo(srcMat, CV_16F);
+                dstMat_fp32.convertTo(dstMat, CV_16F);
             }
         }
 
@@ -518,7 +506,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && !isMatMul,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -630,8 +618,10 @@ public:
 
             if(input_wrapper->getRank() == inp2Dim)
                 return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), oriMat, biasMat_, transA, transB);
-            else
+            else {
+                CV_LOG_INFO(NULL, "DNN/CUDA: no implementation for MatMul with rank " << input_wrapper->getRank());
                 return Ptr<BackendNode>();
+            }
         }
 
         auto flatten_start_axis = normalize_axis(axis, input_wrapper->getRank());
@@ -704,31 +694,6 @@ public:
     }
 #endif
 
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        int inW, inH, inC, inN, outC = blobs[0].size[0];
-        Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
-        getCanonicalSize(inputBuffer, &inW, &inH, &inC, &inN);
-        auto weights = wrapToHalideBuffer(blobs[0], {inW, inH, inC, outC});
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::RDom r(0, inW, 0, inH, 0, inC);
-        Halide::Expr topExpr = sum(inputBuffer(r.x, r.y, r.z, n) *
-                                   weights(r.x, r.y, r.z, c));
-        if (bias)
-        {
-            Halide::Buffer<float> bias = wrapToHalideBuffer(blobs[1], {outC});
-            topExpr += bias(c);
-        }
-        top(x, y, c, n) = topExpr;
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
-
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
                                       const std::vector<Ptr<BackendWrapper> > &outputs,
@@ -800,17 +765,26 @@ public:
         if (nodes.size() == 2)
         {
             auto& inp2 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, false, false);
+            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, transA, transB);
         }
         else
         {
-            std::vector<int64_t> data = {(int64_t)ieInpNode->get_shape()[0], (int64_t)blobs[0].size[1]};
-            auto new_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, data.data());
-            auto inp = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, new_shape, true);
+            std::vector<int> shape(1 + normalize_axis(axis, ieInpNode.get_shape().size()), 0);
+            shape[shape.size() - 1] = -1;
+            auto inp = std::make_shared<ngraph::op::v1::Reshape>(
+                ieInpNode,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{shape.size()}, shape.data()),
+                true
+            );
 
-            std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
+            std::vector<size_t> weight_shape;
+            if (isMatMul) {
+                weight_shape = getShape<size_t>(oriMat);
+            } else {
+                weight_shape = {(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
+            }
             auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
-            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, false, true);
+            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, transA, transB);
         }
 
         if (bias) {

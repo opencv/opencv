@@ -8,20 +8,24 @@
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
 
+#ifndef OPENCV_IPP_MEAN
 #undef HAVE_IPP
 #undef CV_IPP_RUN_FAST
 #define CV_IPP_RUN_FAST(f, ...)
 #undef CV_IPP_RUN
 #define CV_IPP_RUN(c, f, ...)
+#endif // OPENCV_IPP_MEAN
 
 #include "mean.simd.hpp"
 #include "mean.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
+#ifndef OPENCV_IPP_MEAN
 #undef HAVE_IPP
 #undef CV_IPP_RUN_FAST
 #define CV_IPP_RUN_FAST(f, ...)
 #undef CV_IPP_RUN
 #define CV_IPP_RUN(c, f, ...)
+#endif // OPENCV_IPP_MEAN
 
 namespace cv {
 
@@ -36,7 +40,7 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
     if (cn > 4)
         return false;
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
-    if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
+    if( src.dims <= 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
         IppiSize sz = { cols, rows };
         int type = src.type();
@@ -137,20 +141,19 @@ Scalar mean(InputArray _src, InputArray _mask)
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
-    int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
+    int total = (int)it.size, blockSize = total, partialBlockSize = 0;
     int j, count = 0;
-    AutoBuffer<int> _buf;
+    int _buf[CV_CN_MAX];
     int* buf = (int*)&s[0];
-    bool blockSum = depth <= CV_16S;
+    bool partialSumIsInt = depth < CV_32S;
+    bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF;
     size_t esz = 0, nz0 = 0;
 
     if( blockSum )
     {
-        intSumBlockSize = depth <= CV_8S ? (1 << 23) : (1 << 15);
-        blockSize = std::min(blockSize, intSumBlockSize);
-        _buf.allocate(cn);
-        buf = _buf.data();
-
+        partialBlockSize = depth <= CV_8S ? (1 << 23) : (1 << 15);
+        blockSize = std::min(blockSize, partialBlockSize);
+        buf = _buf;
         for( k = 0; k < cn; k++ )
             buf[k] = 0;
         esz = src.elemSize();
@@ -164,12 +167,20 @@ Scalar mean(InputArray _src, InputArray _mask)
             int nz = func( ptrs[0], ptrs[1], (uchar*)buf, bsz, cn );
             count += nz;
             nz0 += nz;
-            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            if( blockSum && (count + blockSize >= partialBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
             {
-                for( k = 0; k < cn; k++ )
-                {
-                    s[k] += buf[k];
-                    buf[k] = 0;
+                if (partialSumIsInt) {
+                    for( k = 0; k < cn; k++ )
+                    {
+                        s[k] += buf[k];
+                        buf[k] = 0;
+                    }
+                } else {
+                    for( k = 0; k < cn; k++ )
+                    {
+                        s[k] += ((float*)buf)[k];
+                        buf[k] = 0;
+                    }
                 }
                 count = 0;
             }
@@ -406,7 +417,7 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
 
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
-    if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
+    if( src.dims <= 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
         Ipp64f mean_temp[3];
         Ipp64f stddev_temp[3];
@@ -535,12 +546,14 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
-    int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
+    int total = (int)it.size, blockSize = total, partialBlockSize = 0;
     int j, count = 0, nz0 = 0;
-    AutoBuffer<double> _buf(cn*4);
-    double *s = (double*)_buf.data(), *sq = s + cn;
+    double _buf[CV_CN_MAX*4];
+    double *s = _buf, *sq = s + cn;
     int *sbuf = (int*)s, *sqbuf = (int*)sq;
-    bool blockSum = depth <= CV_16S, blockSqSum = depth <= CV_8S;
+    bool partialSumIsInt = depth < CV_32S;
+    bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF;
+    bool blockSqSum = depth <= CV_8S;
     size_t esz = 0;
 
     for( k = 0; k < cn; k++ )
@@ -548,8 +561,8 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
 
     if( blockSum )
     {
-        intSumBlockSize = 1 << 15;
-        blockSize = std::min(blockSize, intSumBlockSize);
+        partialBlockSize = 1 << 15;
+        blockSize = std::min(blockSize, partialBlockSize);
         sbuf = (int*)(sq + cn);
         if( blockSqSum )
             sqbuf = sbuf + cn;
@@ -566,12 +579,20 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
             int nz = func( ptrs[0], ptrs[1], (uchar*)sbuf, (uchar*)sqbuf, bsz, cn );
             count += nz;
             nz0 += nz;
-            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            if( blockSum && (count + blockSize >= partialBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
             {
-                for( k = 0; k < cn; k++ )
-                {
-                    s[k] += sbuf[k];
-                    sbuf[k] = 0;
+                if (partialSumIsInt) {
+                    for( k = 0; k < cn; k++ )
+                    {
+                        s[k] += sbuf[k];
+                        sbuf[k] = 0;
+                    }
+                } else {
+                    for( k = 0; k < cn; k++ )
+                    {
+                        s[k] += ((float*)sbuf)[k];
+                        sbuf[k] = 0;
+                    }
                 }
                 if( blockSqSum )
                 {

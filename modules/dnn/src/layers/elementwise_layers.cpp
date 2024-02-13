@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
@@ -155,38 +154,6 @@ public:
         func.finalize();
     }
 
-    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
-    {
-        switch (node->backendId)
-        {
-            case DNN_BACKEND_HALIDE:
-            {
-#ifdef HAVE_HALIDE
-                auto base = node.dynamicCast<HalideBackendNode>();
-                Halide::Func& input = base->funcs.back();
-                Halide::Var x("x"), y("y"), c("c"), n("n");
-                Halide::Func top = (this->name.empty() ? Halide::Func() : Halide::Func(this->name));
-                func.attachHalide(input(x, y, c, n), top);
-                return Ptr<BackendNode>(new HalideBackendNode(base, top));
-#endif  // HAVE_HALIDE
-                break;
-            }
-        }
-        return Ptr<BackendNode>();
-    }
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        Halide::Buffer<float> input = halideBuffer(inputs[0]);
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (this->name.empty() ? Halide::Func() : Halide::Func(this->name));
-        func.attachHalide(input(x, y, c, n), top);
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
-
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
                                       const std::vector<Ptr<BackendWrapper> > &outputs,
@@ -243,7 +210,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget),
                    func.applyOCL(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -351,7 +318,6 @@ struct ReLUFunctor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -370,10 +336,10 @@ struct ReLUFunctor : public BaseFunctor
                 v_float32x4 x1 = v_load(srcptr + i + 4);
                 v_float32x4 x2 = v_load(srcptr + i + 8);
                 v_float32x4 x3 = v_load(srcptr + i + 12);
-                x0 = v_select(x0 >= z, x0, x0*s4);
-                x1 = v_select(x1 >= z, x1, x1*s4);
-                x2 = v_select(x2 >= z, x2, x2*s4);
-                x3 = v_select(x3 >= z, x3, x3*s4);
+                x0 = v_select(v_ge(x0, z), x0, v_mul(x0, s4));
+                x1 = v_select(v_ge(x1, z), x1, v_mul(x1, s4));
+                x2 = v_select(v_ge(x2, z), x2, v_mul(x2, s4));
+                x3 = v_select(v_ge(x3, z), x3, v_mul(x3, s4));
                 v_store(dstptr + i, x0);
                 v_store(dstptr + i + 4, x1);
                 v_store(dstptr + i + 8, x2);
@@ -438,21 +404,6 @@ struct ReLUFunctor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        if (slope)
-        {
-            top(x, y, c, n) = select(input >= 0.0f, input, slope * input);
-        }
-        else
-        {
-            top(x, y, c, n) = max(input, 0.0f);
-        }
-    }
-#endif  // HAVE_HALIDE
-
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
                                 const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -490,7 +441,7 @@ struct ReLUFunctor : public BaseFunctor
 #endif
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         if (slope) {
             auto param = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &slope);
@@ -555,7 +506,6 @@ struct ReLU6Functor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_WEBNN ||
                backendId == DNN_BACKEND_CANN;
     }
@@ -632,14 +582,6 @@ struct ReLU6Functor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = clamp(input, minValue, maxValue);
-    }
-#endif  // HAVE_HALIDE
-
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
                                 const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -674,7 +616,7 @@ struct ReLU6Functor : public BaseFunctor
 
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         return std::make_shared<ngraph::op::Clamp>(node, minValue, maxValue);
     }
@@ -779,13 +721,6 @@ struct BaseDefaultFunctor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#endif  // HAVE_HALIDE
-
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
                                 const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -796,7 +731,7 @@ struct BaseDefaultFunctor : public BaseFunctor
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         CV_Error(Error::StsNotImplemented, "");
     }
@@ -821,13 +756,20 @@ struct GeluFunctor : public BaseDefaultFunctor<GeluFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
     {
         return 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::GeluOp>(target, stream);
+    }
+#endif
 
     int64 getFLOPSPerElement() const { return 100; }
 };
@@ -876,7 +818,6 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -891,14 +832,6 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
         return make_cuda_node<cuda4dnn::TanHOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = tanh(input);
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -922,7 +855,7 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         return std::make_shared<ngraph::op::Tanh>(node);
     }
@@ -942,7 +875,6 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                backendId == DNN_BACKEND_CANN;
     }
@@ -958,14 +890,6 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
         return make_cuda_node<cuda4dnn::SwishOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = input / (1.0f + exp(-input));
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -991,7 +915,7 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         auto sigmoid = std::make_shared<ngraph::op::Sigmoid>(node);
         return std::make_shared<ngraph::op::v1::Multiply>(node, sigmoid);
@@ -1012,7 +936,6 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                backendId == DNN_BACKEND_CANN;
     }
@@ -1037,14 +960,6 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = input * tanh(log(1.0f + exp(input)));
-    }
-#endif  // HAVE_HALIDE
-
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
                                 const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -1067,15 +982,9 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
-        float one = 1.0f;
-        auto constant = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &one);
-        auto exp_node = std::make_shared<ngraph::op::v0::Exp>(node);
-        auto sum = std::make_shared<ngraph::op::v1::Add>(constant, exp_node, ngraph::op::AutoBroadcastType::NUMPY);
-        auto log_node = std::make_shared<ngraph::op::v0::Log>(sum);
-        auto tanh_node = std::make_shared<ngraph::op::Tanh>(log_node);
-        return std::make_shared<ngraph::op::v1::Multiply>(node, tanh_node);
+        return std::make_shared<ngraph::op::v4::Mish>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1097,7 +1006,6 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -1119,14 +1027,6 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
         return make_cuda_node<cuda4dnn::SigmoidOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = 1.0f / (1.0f + exp(-input));
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -1150,7 +1050,7 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         return std::make_shared<ngraph::op::Sigmoid>(node);
     }
@@ -1177,7 +1077,6 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -1197,14 +1096,6 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
         return make_cuda_node<cuda4dnn::ELUOp>(target, stream, alpha);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = select(input >= 0.0f, input, alpha * (exp(input) - 1));
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -1230,7 +1121,7 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         return std::make_shared<ngraph::op::Elu>(node, alpha);
     }
@@ -1254,7 +1145,6 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -1269,14 +1159,6 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
         return make_cuda_node<cuda4dnn::AbsValOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = abs(input);
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -1300,12 +1182,9 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
-        float coeff = -0.999999f;
-        // float coeff = preferableTarget == DNN_TARGET_MYRIAD ? -0.999f : -0.999999f;
-        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeff);
-        return std::make_shared<ngraph::op::PRelu>(node, slope);
+        return std::make_shared<ngraph::op::Abs>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1323,7 +1202,6 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -1361,15 +1239,6 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
     }
 #endif // HAVE_CANN
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        // https://github.com/BVLC/caffe/blame/1.0/src/caffe/layers/bnll_layer.cpp#L17
-        top(x, y, c, n) = max(input, 0) + log(1.0f + exp(-abs(input)));
-    }
-#endif  // HAVE_HALIDE
-
     int64 getFLOPSPerElement() const { return 5; }
 };
 
@@ -1382,7 +1251,7 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1418,14 +1287,6 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
     }
 #endif // HAVE_CANN
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = ceil(input);
-    }
-#endif  // HAVE_HALIDE
-
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1440,7 +1301,6 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA   ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -1477,14 +1337,6 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
     }
 #endif // HAVE_CANN
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = floor(input);
-    }
-#endif  // HAVE_HALIDE
-
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1497,7 +1349,7 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1512,14 +1364,6 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = log(input);
-    }
-#endif  // HAVE_HALIDE
-
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1532,7 +1376,7 @@ struct RoundFunctor : public BaseDefaultFunctor<RoundFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1552,14 +1396,6 @@ struct RoundFunctor : public BaseDefaultFunctor<RoundFunctor>
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = round(input);
-    }
-#endif  // HAVE_HALIDE
-
     int64 getFLOPSPerElement() const { return 2; }
 };
 
@@ -1572,7 +1408,7 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1587,16 +1423,8 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = sqrt(input);
-    }
-#endif  // HAVE_HALIDE
-
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         return std::make_shared<ngraph::op::v0::Sqrt>(node);
     }
@@ -1614,7 +1442,7 @@ struct NotFunctor : public BaseDefaultFunctor<NotFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1628,14 +1456,6 @@ struct NotFunctor : public BaseDefaultFunctor<NotFunctor>
         return make_cuda_node<cuda4dnn::NotOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = floor(1.0f - input);
-    }
-#endif  // HAVE_HALIDE
 
     int64 getFLOPSPerElement() const { return 2; }
 };
@@ -1892,7 +1712,9 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA   ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
@@ -1904,6 +1726,27 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::HardSwishOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::HardSwish>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
     }
 #endif
 
@@ -2217,8 +2060,7 @@ struct PowerFunctor : public BaseFunctor
 #endif
         {
             return backendId == DNN_BACKEND_OPENCV ||
-                   backendId == DNN_BACKEND_CUDA ||
-                   backendId == DNN_BACKEND_HALIDE;
+                   backendId == DNN_BACKEND_CUDA;
         }
     }
 
@@ -2295,23 +2137,6 @@ struct PowerFunctor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Expr topExpr = (scale == 1.0f ? input : input * scale);
-        if (shift)
-        {
-            topExpr += shift;
-        }
-        if (power != 1.0f)
-        {
-            topExpr = pow(topExpr, power);
-        }
-        top(x, y, c, n) = topExpr;
-    }
-#endif  // HAVE_HALIDE
-
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
                                 const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -2322,7 +2147,7 @@ struct PowerFunctor : public BaseFunctor
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         auto scale_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
                                                                  ngraph::Shape{1}, &scale);
@@ -2402,7 +2227,7 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
     bool supportBackend(int backendId, int targetId)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     inline float calculate(float x) const
@@ -2423,16 +2248,8 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = exp(normScale * input + normShift);
-    }
-#endif  // HAVE_HALIDE
-
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         auto scale_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
                                                                  ngraph::Shape{1}, &normScale);
@@ -2471,7 +2288,6 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -2495,10 +2311,10 @@ struct ChannelsPReLUFunctor : public BaseFunctor
                 v_float32x4 x1 = v_load(srcptr + i + 4);
                 v_float32x4 x2 = v_load(srcptr + i + 8);
                 v_float32x4 x3 = v_load(srcptr + i + 12);
-                x0 = v_select(x0 >= z, x0, x0*s4);
-                x1 = v_select(x1 >= z, x1, x1*s4);
-                x2 = v_select(x2 >= z, x2, x2*s4);
-                x3 = v_select(x3 >= z, x3, x3*s4);
+                x0 = v_select(v_ge(x0, z), x0, v_mul(x0, s4));
+                x1 = v_select(v_ge(x1, z), x1, v_mul(x1, s4));
+                x2 = v_select(v_ge(x2, z), x2, v_mul(x2, s4));
+                x3 = v_select(v_ge(x3, z), x3, v_mul(x3, s4));
                 v_store(dstptr + i, x0);
                 v_store(dstptr + i + 4, x1);
                 v_store(dstptr + i + 8, x2);
@@ -2554,15 +2370,6 @@ struct ChannelsPReLUFunctor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        auto weights = wrapToHalideBuffer(scale, {(int)scale.total()});
-        top(x, y, c, n) = select(input >= 0.0f, input, weights(c) * input);
-    }
-#endif  // HAVE_HALIDE
-
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
                                 const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -2591,7 +2398,7 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         const size_t numChannels = scale.total();
         auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numChannels}, scale.data);
@@ -2651,10 +2458,10 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
                 v_float32x4 s1 = v_load(scaleptr + i + 4);
                 v_float32x4 s2 = v_load(scaleptr + i + 8);
                 v_float32x4 s3 = v_load(scaleptr + i + 12);
-                x0 = v_select(x0 >= z, x0, x0*s0);
-                x1 = v_select(x1 >= z, x1, x1*s1);
-                x2 = v_select(x2 >= z, x2, x2*s2);
-                x3 = v_select(x3 >= z, x3, x3*s3);
+                x0 = v_select(v_ge(x0, z), x0, v_mul(x0, s0));
+                x1 = v_select(v_ge(x1, z), x1, v_mul(x1, s1));
+                x2 = v_select(v_ge(x2, z), x2, v_mul(x2, s2));
+                x3 = v_select(v_ge(x3, z), x3, v_mul(x3, s3));
                 v_store(dstptr + i, x0);
                 v_store(dstptr + i + 4, x1);
                 v_store(dstptr + i + 8, x2);
@@ -2671,7 +2478,7 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
     }
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         auto shape = getShape<size_t>(scale);
         auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, scale.ptr<float>());
@@ -2768,11 +2575,6 @@ struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
 
 template<>
 const char* const ReciprocalFunctor::BaseDefaultFunctor<ReciprocalFunctor>::ocl_kernel_name = "ReciprocalForward";
-
-
-#define ACTIVATION_CREATOR_FOR(_Layer, _Functor, ...) \
-Ptr<_Layer> _Layer::create() { \
-    return return Ptr<_Layer>( new ElementWiseLayer<_Functor>(_Functor()) ); }
 
 
 Ptr<ReLULayer> ReLULayer::create(const LayerParams& params)

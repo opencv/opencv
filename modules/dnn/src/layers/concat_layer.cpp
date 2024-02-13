@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
@@ -139,7 +138,6 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
                (backendId == DNN_BACKEND_WEBNN && !padding) ||
                (backendId == DNN_BACKEND_CANN && !padding);
     }
@@ -165,14 +163,14 @@ public:
             for( i = 0; i < ninputs; i++ )
             {
                 Mat& inp = inputs[i];
-                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S || inp.type() == CV_8S) &&
+                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16F || inp.type() == CV_8S) &&
                            inp.dims == 4 && inp.size[0] == output.size[0] &&
                            inp.size[2] == output.size[2] &&
                            inp.size[3] == output.size[3] );
                 nchannels += inp.size[1];
             }
             CV_Assert( nchannels == output.size[1] );
-            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16S || output.type() == CV_8S) );
+            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16F || output.type() == CV_8S) );
 
             cc.chptrs.resize(nchannels*batchsz);
 
@@ -223,7 +221,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -331,29 +329,6 @@ public:
     }
 #endif
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        std::vector<Halide::Buffer<> > inputBuffers = halideBuffers(input);
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        int offset = inputBuffers[0].channels();
-        Halide::Expr topExpr = select(c < offset,
-                                      inputBuffers[0](x, y, c, n),
-                                      inputBuffers[1](x, y, c - offset, n));
-        for (int i = 2; i < input.size(); ++i)
-        {
-            offset += inputBuffers[i - 1].channels();
-            topExpr = select(c < offset, topExpr,
-                             inputBuffers[i](x, y, c - offset, n));
-        }
-        top(x, y, c, n) = topExpr;
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
-
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
                                       const std::vector<Ptr<BackendWrapper> > &outputs,
@@ -392,7 +367,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        const int numDims = nodes[0].dynamicCast<InfEngineNgraphNode>()->node->get_shape().size();
+        const int numDims = nodes[0].dynamicCast<InfEngineNgraphNode>()->node.get_shape().size();
         const int cAxis = normalize_axis(axis, numDims);
         std::vector<size_t> maxDims(numDims, 0);
 
@@ -403,7 +378,7 @@ public:
             auto inp = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
             inp_nodes.push_back(inp);
 
-            std::vector<size_t> inpShape = inp->get_shape();
+            std::vector<size_t> inpShape = inp.get_shape();
             for (int i = 0; i < numDims; ++i)
                 maxDims[i] = std::max(maxDims[i], inpShape[i]);
         }

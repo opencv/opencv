@@ -55,7 +55,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -133,7 +133,7 @@ public:
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto rois = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
-        auto rois_shape = rois->get_shape();
+        auto rois_shape = rois.get_shape();
         std::vector<int64_t> dims(rois_shape.begin(), rois_shape.end()), offsets(4, 0);
         offsets[3] = 2;
         dims[3] = 7;

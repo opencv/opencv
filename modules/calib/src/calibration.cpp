@@ -334,7 +334,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     //std::cout << "dist0:" << _k << std::endl;
 
     std::vector<double> param(nparams, 0.0);
-    Mat paramM(param, false);
+    Mat paramM = Mat(param, false).reshape(1, nparams);
     std::vector<uchar> mask(nparams, (uchar)1);
 
     int solveMethod = DECOMP_EIG;

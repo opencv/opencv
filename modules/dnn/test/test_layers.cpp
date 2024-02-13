@@ -215,7 +215,13 @@ TEST_P(Test_Caffe_layers, InnerProduct)
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
-    testLayerUsingCaffeModels("layer_inner_product", true);
+    double l1 = 0.0, lInf = 0.0;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+    {
+        l1 = 5e-3;
+        lInf = 2e-2;
+    }
+    testLayerUsingCaffeModels("layer_inner_product", true, true, l1, lInf);
 }
 
 TEST_P(Test_Caffe_layers, Pooling_max)
@@ -407,10 +413,12 @@ TEST_P(Test_Caffe_layers, layer_prelu_fc)
 
 TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
 
     Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
@@ -756,11 +764,15 @@ TEST_F(Layer_RNN_Test, get_set_test)
 
 TEST_P(Test_Caffe_layers, Accum)
 {
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     testLayerUsingCaffeModels("accum", false, false, 0.0, 0.0, 2);
     testLayerUsingCaffeModels("accum_ref", false, false, 0.0, 0.0, 2);
+#endif
 }
 
 TEST_P(Test_Caffe_layers, FlowWarp)
@@ -780,27 +792,41 @@ TEST_P(Test_Caffe_layers, ChannelNorm)
 
 TEST_P(Test_Caffe_layers, DataAugmentation)
 {
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     testLayerUsingCaffeModels("data_augmentation", true, false);
     testLayerUsingCaffeModels("data_augmentation_2x1", true, false);
     testLayerUsingCaffeModels("data_augmentation_8x6", true, false);
+#endif
 }
 
 TEST_P(Test_Caffe_layers, Resample)
 {
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend != DNN_BACKEND_OPENCV)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     testLayerUsingCaffeModels("nearest_2inps", false, false, 0.0, 0.0, 2);
     testLayerUsingCaffeModels("nearest", false, false);
+#endif
 }
 
 TEST_P(Test_Caffe_layers, Correlation)
 {
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER,
                      CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     testLayerUsingCaffeModels("correlation", false, false, 0.0, 0.0, 2);
+#endif
 }
 
 TEST_P(Test_Caffe_layers, Convolution2Inputs)
@@ -1587,7 +1613,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -1641,12 +1667,11 @@ private:
     int outWidth, outHeight, zoomFactor;
 };
 
-#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
 TEST_P(Test_Caffe_layers, Interp)
-#else
-TEST_P(Test_Caffe_layers, DISABLED_Interp)  // requires patched protobuf (available in OpenCV source tree only)
-#endif
 {
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
@@ -1670,6 +1695,7 @@ TEST_P(Test_Caffe_layers, DISABLED_Interp)  // requires patched protobuf (availa
 
     // Test an implemented layer.
     testLayerUsingCaffeModels("layer_interp", false, false);
+#endif
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Caffe_layers, dnnBackendsAndTargets());
@@ -2024,7 +2050,7 @@ private:
         net.setPreferableTarget(target);
 
         Mat re;
-        ASSERT_NO_THROW(re = net.forward()); // runtime error
+        re = net.forward();
         auto ptr_re = (float *) re.data;
         for (int i = 0; i < re.total(); i++)
             if (op == "sum"){
@@ -2417,7 +2443,12 @@ public:
 
     static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsForFusionTests()
     {
-        return dnnBackendsAndTargets(false, false, true, false, true, false); // OCV OpenCL + OCV CPU + CUDA
+        return dnnBackendsAndTargets(/* withInferenceEngine = */ false,
+                                     /* obsolete_withHalide = */ false,
+                                     /* withCpuOCV = */ true,
+                                     /* withVkCom = */ false,
+                                     /* withCUDA = */ true,
+                                     /* withNgraph = */false); // OCV OpenCL + OCV CPU + CUDA
     }
 };
 

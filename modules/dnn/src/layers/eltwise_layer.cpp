@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_cann.hpp"
@@ -183,9 +182,7 @@ public:
             return channelsModeInput == ELTWISE_CHANNNELS_SAME;
         }
 
-        return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_HALIDE && op != DIV)  // TODO: not implemented, see PR #15811
-               ;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -590,7 +587,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        if ((inputs_.depth() == CV_16S && op != SUM) || (channelsMode != ELTWISE_CHANNNELS_SAME))
+        if ((inputs_.depth() == CV_16F && op != SUM) || (channelsMode != ELTWISE_CHANNNELS_SAME))
             return false;
 
         if (hasVecInput)
@@ -610,7 +607,7 @@ public:
                         size_t localsize[] = { 128 };
                         size_t globalsize[] = { (size_t)channels / 4 * localsize[0] };
                         String opts;
-                        if (inputs_.depth() == CV_16S)
+                        if (inputs_.depth() == CV_16F)
                             opts = " -DDtype=half -DDtype4=half4 -DDtype8=half8";
                         else
                             opts = " -DDtype=float -DDtype4=float4 -DDtype8=float8";
@@ -636,7 +633,7 @@ public:
                     }
                     else
                     {
-                        if (inputs_.depth() == CV_16S)
+                        if (inputs_.depth() == CV_16F)
                             return false;
 
                         float coeff1 = coeffs.empty() ? 1.f : coeffs[0];
@@ -689,7 +686,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -790,64 +787,6 @@ public:
     }
 #endif
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::Expr topExpr;
-        std::vector<Halide::Buffer<> > inputBuffers = halideBuffers(input);
-        switch (op)
-        {
-            case SUM:
-                if (coeffs.empty())
-                {
-                    topExpr = inputBuffers[0](x, y, c, n) +
-                              inputBuffers[1](x, y, c, n);
-                    for (int i = 2; i < inputBuffers.size(); ++i)
-                        topExpr += inputBuffers[i](x, y, c, n);
-                }
-                else
-                {
-                  topExpr = coeffs[0] * inputBuffers[0](x, y, c, n) +
-                            coeffs[1] * inputBuffers[1](x, y, c, n);
-                  for (int i = 2; i < inputBuffers.size(); ++i)
-                      topExpr += coeffs[i] * inputBuffers[i](x, y, c, n);
-                }
-                break;
-            case PROD:
-                topExpr = inputBuffers[0](x, y, c, n) *
-                          inputBuffers[1](x, y, c, n);
-                for (int i = 2; i < inputBuffers.size(); ++i)
-                    topExpr *= inputBuffers[i](x, y, c, n);
-                break;
-            case DIV:
-                topExpr = inputBuffers[0](x, y, c, n) /
-                          inputBuffers[1](x, y, c, n);
-                for (int i = 2; i < inputBuffers.size(); ++i)
-                    topExpr /= inputBuffers[i](x, y, c, n);
-                break;
-            case MAX:
-                topExpr = max(inputBuffers[0](x, y, c, n),
-                              inputBuffers[1](x, y, c, n));
-                for (int i = 2; i < inputBuffers.size(); ++i)
-                    topExpr = max(topExpr, inputBuffers[i](x, y, c, n));
-                break;
-            case MIN:
-                topExpr = min(inputBuffers[0](x, y, c, n),
-                              inputBuffers[1](x, y, c, n));
-                for (int i = 2; i < inputBuffers.size(); ++i)
-                    topExpr = min(topExpr, inputBuffers[i](x, y, c, n));
-                break;
-            default:
-                return Ptr<BackendNode>();
-        }
-        top(x, y, c, n) = topExpr;
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
-
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
                                       const std::vector<Ptr<BackendWrapper> > &outputs,
@@ -896,12 +835,14 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        CV_Assert(nodes.size() >= 2);
         auto curr_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         if (!coeffs.empty()) {
             auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[0]);
             curr_node = std::make_shared<ngraph::op::v1::Multiply>(curr_node, coeff, ngraph::op::AutoBroadcastType::NUMPY);
         }
 
+        std::shared_ptr<ngraph::Node> res;
         for (size_t i = 1; i < nodes.size(); i++)
         {
             auto next_node = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
@@ -910,15 +851,16 @@ public:
                 next_node = std::make_shared<ngraph::op::v1::Multiply>(next_node, coeff, ngraph::op::AutoBroadcastType::NUMPY);
             }
             switch (op) {
-                case SUM:  curr_node = std::make_shared<ngraph::op::v1::Add>(curr_node, next_node); break;
-                case PROD: curr_node = std::make_shared<ngraph::op::v1::Multiply>(curr_node, next_node); break;
-                case DIV:  curr_node = std::make_shared<ngraph::op::v1::Divide>(curr_node, next_node); break;
-                case MAX:  curr_node = std::make_shared<ngraph::op::v1::Maximum>(curr_node, next_node); break;
-                case MIN:  curr_node = std::make_shared<ngraph::op::v1::Minimum>(curr_node, next_node); break;
+                case SUM:  res = std::make_shared<ngraph::op::v1::Add>(curr_node, next_node); break;
+                case PROD: res = std::make_shared<ngraph::op::v1::Multiply>(curr_node, next_node); break;
+                case DIV:  res = std::make_shared<ngraph::op::v1::Divide>(curr_node, next_node); break;
+                case MAX:  res = std::make_shared<ngraph::op::v1::Maximum>(curr_node, next_node); break;
+                case MIN:  res = std::make_shared<ngraph::op::v1::Minimum>(curr_node, next_node); break;
                 default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
             }
+            curr_node = res;
         }
-        return Ptr<BackendNode>(new InfEngineNgraphNode(curr_node));
+        return Ptr<BackendNode>(new InfEngineNgraphNode(res));
     }
 #endif  // HAVE_DNN_NGRAPH
 

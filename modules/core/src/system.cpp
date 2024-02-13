@@ -120,11 +120,15 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #include <cstdlib>        // std::abort
 #endif
 
-#if defined __ANDROID__ || defined __unix__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__
+#if defined __ANDROID__ || defined __unix__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__ || defined __QNX__
 #  include <unistd.h>
 #  include <fcntl.h>
 #if defined __QNX__
 #  include <sys/elf.h>
+#  include <sys/auxv.h>
+using Elf64_auxv_t = auxv64_t;
+#  include <elfdefinitions.h>
+const uint64_t AT_HWCAP = NT_GNU_HWCAP;
 #else
 #  include <elf.h>
 #endif
@@ -152,6 +156,12 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 # ifndef PPC_FEATURE_HAS_VSX
 #   define PPC_FEATURE_HAS_VSX 0x00000080
 # endif
+#endif
+
+#if defined __loongarch64
+#include "sys/auxv.h"
+#define LA_HWCAP_LSX   (1<<4)
+#define LA_HWCAP_LASX  (1<<5)
 #endif
 
 #if defined _WIN32 || defined WINCE
@@ -245,7 +255,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #include "omp.h"
 #endif
 
-#if defined __unix__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __GLIBC__ || defined __HAIKU__
+#if defined __unix__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __GLIBC__ || defined __HAIKU__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -295,9 +305,7 @@ DECLARE_CV_CPUID_X86
   #endif
 #endif
 
-#if defined CV_CXX11
-  #include <chrono>
-#endif
+#include <chrono>
 
 namespace cv
 {
@@ -408,6 +416,8 @@ struct HWFeatures
 
         g_hwFeatureNames[CPU_NEON] = "NEON";
         g_hwFeatureNames[CPU_NEON_DOTPROD] = "NEON_DOTPROD";
+        g_hwFeatureNames[CPU_NEON_FP16] = "NEON_FP16";
+        g_hwFeatureNames[CPU_NEON_BF16] = "NEON_BF16";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
@@ -425,6 +435,7 @@ struct HWFeatures
 
         g_hwFeatureNames[CPU_RVV] = "RVV";
 
+        g_hwFeatureNames[CPU_LSX]  = "LSX";
         g_hwFeatureNames[CPU_LASX] = "LASX";
     }
 
@@ -553,7 +564,7 @@ struct HWFeatures
         }
     #endif // CV_CPUID_X86
 
-    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNX__
+    #if defined __ANDROID__ || defined __linux__ || defined __QNX__
     #ifdef __aarch64__
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
@@ -566,11 +577,18 @@ struct HWFeatures
 
             while ((size_t)read(cpufile, &auxv, size_auxv_t) == size_auxv_t)
             {
+                // see https://elixir.bootlin.com/linux/latest/source/arch/arm64/include/uapi/asm/hwcap.h
                 if (auxv.a_type == AT_HWCAP)
                 {
-                    have[CV_CPU_NEON_DOTPROD] = (auxv.a_un.a_val & (1 << 20)) != 0;
-                    break;
+                    have[CV_CPU_NEON_DOTPROD] = (auxv.a_un.a_val & (1 << 20)) != 0; // HWCAP_ASIMDDP
+                    have[CV_CPU_NEON_FP16] = (auxv.a_un.a_val & (1 << 10)) != 0; // HWCAP_ASIMDHP
                 }
+#if defined(AT_HWCAP2)
+                else if (auxv.a_type == AT_HWCAP2)
+                {
+                    have[CV_CPU_NEON_BF16] = (auxv.a_un.a_val & (1 << 14)) != 0; // HWCAP2_BF16
+                }
+#endif
             }
 
             close(cpufile);
@@ -597,7 +615,7 @@ struct HWFeatures
         CV_LOG_INFO(NULL, "- FP16 instructions is NOT enabled via build flags");
         #endif
       #endif
-    #elif defined __arm__ && !defined __FreeBSD__
+    #elif defined __arm__
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
@@ -623,16 +641,23 @@ struct HWFeatures
         have[CV_CPU_NEON] = true;
     #endif
     #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
-        have[CV_CPU_FP16] = true;
+        have[CV_CPU_FP16] = have[CV_CPU_NEON_FP16] = true;
     #endif
-    #if (defined __ARM_FEATURE_DOTPROD)
-        int has_feat_dotprod = 0;
-        size_t has_feat_dotprod_size = sizeof(has_feat_dotprod);
-        sysctlbyname("hw.optional.arm.FEAT_DotProd", &has_feat_dotprod, &has_feat_dotprod_size, NULL, 0);
-        if (has_feat_dotprod) {
-            have[CV_CPU_NEON_DOTPROD] = true;
-        }
-    #endif
+    // system.cpp may be compiled w/o special -march=armv8...+dotprod, -march=armv8...+bf16 etc.,
+    // so we check for the features in any case, no mater what are the compile flags.
+    // We check the real hardware capabilities here.
+    int has_feat_dotprod = 0;
+    size_t has_feat_dotprod_size = sizeof(has_feat_dotprod);
+    sysctlbyname("hw.optional.arm.FEAT_DotProd", &has_feat_dotprod, &has_feat_dotprod_size, NULL, 0);
+    if (has_feat_dotprod) {
+        have[CV_CPU_NEON_DOTPROD] = true;
+    }
+    int has_feat_bf16 = 0;
+    size_t has_feat_bf16_size = sizeof(has_feat_bf16);
+    sysctlbyname("hw.optional.arm.FEAT_BF16", &has_feat_bf16, &has_feat_bf16_size, NULL, 0);
+    if (has_feat_bf16) {
+        have[CV_CPU_NEON_BF16] = true;
+    }
     #elif (defined __clang__)
     #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
         have[CV_CPU_NEON] = true;
@@ -689,8 +714,11 @@ struct HWFeatures
         have[CV_CPU_RVV] = true;
     #endif
 
-    #if defined __loongarch_asx
-        have[CV_CPU_LASX] = true;
+    #if defined __loongarch64 && defined __linux__
+        int flag = (int)getauxval(AT_HWCAP);
+
+        have[CV_CPU_LSX] = (flag & LA_HWCAP_LSX) != 0;
+        have[CV_CPU_LASX] = (flag & LA_HWCAP_LASX) != 0;
     #endif
 
         bool skip_baseline_check = false;
@@ -879,50 +907,15 @@ bool useOptimized(void)
 
 int64 getTickCount(void)
 {
-#if defined CV_CXX11
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     return (int64)now.time_since_epoch().count();
-#elif defined _WIN32 || defined WINCE
-    LARGE_INTEGER counter;
-    QueryPerformanceCounter( &counter );
-    return (int64)counter.QuadPart;
-#elif defined __MACH__ && defined __APPLE__
-    return (int64)mach_absolute_time();
-#elif defined __unix__
-    struct timespec tp;
-    clock_gettime(CLOCK_MONOTONIC, &tp);
-    return (int64)tp.tv_sec*1000000000 + tp.tv_nsec;
-#else
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (int64)tv.tv_sec*1000000 + tv.tv_usec;
-#endif
 }
 
 double getTickFrequency(void)
 {
-#if defined CV_CXX11
     using clock_period_t = std::chrono::steady_clock::duration::period;
     double clock_freq = clock_period_t::den / clock_period_t::num;
     return clock_freq;
-#elif defined _WIN32 || defined WINCE
-    LARGE_INTEGER freq;
-    QueryPerformanceFrequency(&freq);
-    return (double)freq.QuadPart;
-#elif defined __MACH__ && defined __APPLE__
-    static double freq = 0;
-    if( freq == 0 )
-    {
-        mach_timebase_info_data_t sTimebaseInfo;
-        mach_timebase_info(&sTimebaseInfo);
-        freq = sTimebaseInfo.denom*1e9/sTimebaseInfo.numer;
-    }
-    return freq;
-#elif defined __unix__
-    return 1e9;
-#else
-    return 1e6;
-#endif
 }
 
 #if defined __GNUC__ && (defined __i386__ || defined __x86_64__ || defined __ppc__)

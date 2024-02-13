@@ -272,19 +272,19 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
         float max_dist_square = 0;
         int next_pt = sampled_cnt;
         int i = sampled_cnt;
-#ifdef CV_SIMD
+#if CV_SIMD
         v_float32 v_last_p_x = vx_setall_f32(last_pt_x);
         v_float32 v_last_p_y = vx_setall_f32(last_pt_y);
         v_float32 v_last_p_z = vx_setall_f32(last_pt_z);
 
-        for (; i <= ori_pts_size - v_float32::nlanes; i += v_float32::nlanes)
+        for (; i <= ori_pts_size - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes())
         {
-            v_float32 vx_diff = v_last_p_x - vx_load(ori_pts_ptr_x + i);
-            v_float32 vy_diff = v_last_p_y - vx_load(ori_pts_ptr_y + i);
-            v_float32 vz_diff = v_last_p_z - vx_load(ori_pts_ptr_z + i);
+            v_float32 vx_diff = v_sub(v_last_p_x, vx_load(ori_pts_ptr_x + i));
+            v_float32 vy_diff = v_sub(v_last_p_y, vx_load(ori_pts_ptr_y + i));
+            v_float32 vz_diff = v_sub(v_last_p_z, vx_load(ori_pts_ptr_z + i));
 
             v_float32 v_next_dist_square =
-                    vx_diff * vx_diff + vy_diff * vy_diff + vz_diff * vz_diff;
+                    v_add(v_add(v_mul(vx_diff, vx_diff), v_mul(vy_diff, vy_diff)), v_mul(vz_diff, vz_diff));
 
             // Update the distance from the points(in C) to S
             float *dist_square_ptr = dist_square + i;
@@ -293,9 +293,9 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
             vx_store(dist_square_ptr, v_dist_square);
 
             // Find a point in C that is the farthest away from S and take it from C to S
-            if (v_check_any(v_dist_square > vx_setall_f32(max_dist_square)))
+            if (v_check_any(v_gt(v_dist_square, vx_setall_f32(max_dist_square))))
             {
-                for (int m = 0; m < v_float32::nlanes; ++m)
+                for (int m = 0; m < VTraits<v_float32>::vlanes(); ++m)
                 {
                     if (dist_square_ptr[m] > max_dist_square)
                     {

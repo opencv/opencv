@@ -621,7 +621,7 @@ public:
             {
                 std::vector<int> inpIdx(dimsNum, 0);
                 std::vector<int> outIdx(dimsNum, 0);
-                if (inpMat.type() == CV_16S)
+                if (inpMat.type() == CV_16F)
                     getSliceRecursive<int16_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
                 else if (inpMat.type() == CV_8S)
                     getSliceRecursive<int8_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
@@ -759,7 +759,7 @@ public:
     {
         CV_Assert_N(nodes.size() <= 2);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        CV_Assert(finalSliceRanges[0].size() == ieInpNode->get_shape().size());
+        CV_Assert(finalSliceRanges[0].size() == ieInpNode.get_shape().size());
 
         std::vector<int64_t> offsets, dims;
         for (int i = 0; i < finalSliceRanges[0].size(); ++i)

@@ -34,6 +34,115 @@ namespace ep {
 
 /**
  * @brief This structure provides functions
+ * that fill inference options for ONNX CoreML Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml-execution-provider
+ */
+struct GAPI_EXPORTS_W_SIMPLE CoreML {
+    /** @brief Class constructor.
+
+    Constructs CoreML parameters.
+
+    */
+    GAPI_WRAP
+    CoreML() = default;
+
+    /** @brief Limit CoreML Execution Provider to run on CPU only.
+
+    This function is used to limit CoreML to run on CPU only.
+    Please follow: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml_flag_use_cpu_only
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    CoreML& cfgUseCPUOnly() {
+        use_cpu_only = true;
+        return *this;
+    }
+
+    /** @brief Enable CoreML EP to run on a subgraph in the body of a control flow ONNX operator (i.e. a Loop, Scan or If operator).
+
+    This function is used to enable CoreML EP to run on
+    a subgraph of a control flow of ONNX operation.
+    Please follow: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml_flag_enable_on_subgraph
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    CoreML& cfgEnableOnSubgraph() {
+        enable_on_subgraph = true;
+        return *this;
+    }
+
+    /** @brief Enable CoreML EP to run only on Apple Neural Engine.
+
+    This function is used to enable CoreML EP to run only on Apple Neural Engine.
+    Please follow: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml_flag_only_enable_device_with_ane
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    CoreML& cfgEnableOnlyNeuralEngine() {
+        enable_only_ane = true;
+        return *this;
+    }
+
+    bool use_cpu_only = false;
+    bool enable_on_subgraph = false;
+    bool enable_only_ane = false;
+};
+
+/**
+ * @brief This structure provides functions
+ * that fill inference options for CUDA Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html#cuda-execution-provider
+ */
+struct GAPI_EXPORTS_W_SIMPLE CUDA {
+    // NB: Used from python.
+    /// @private -- Exclude this constructor from OpenCV documentation
+    GAPI_WRAP
+    CUDA() = default;
+
+    /** @brief Class constructor.
+
+    Constructs CUDA parameters based on device type information.
+
+    @param dev_id Target device id to use.
+    */
+    GAPI_WRAP
+    explicit CUDA(const int dev_id)
+        : device_id(dev_id) {
+    }
+
+    int device_id;
+};
+
+/**
+ * @brief This structure provides functions
+ * that fill inference options for TensorRT Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/TensorRT-ExecutionProvider.html#tensorrt-execution-provider
+ */
+struct GAPI_EXPORTS_W_SIMPLE TensorRT {
+    // NB: Used from python.
+    /// @private -- Exclude this constructor from OpenCV documentation
+    GAPI_WRAP
+    TensorRT() = default;
+
+    /** @brief Class constructor.
+
+    Constructs TensorRT parameters based on device type information.
+
+    @param dev_id Target device id to use.
+    */
+    GAPI_WRAP
+    explicit TensorRT(const int dev_id)
+        : device_id(dev_id) {
+    }
+
+    int device_id;
+};
+
+/**
+ * @brief This structure provides functions
  * that fill inference options for ONNX OpenVINO Execution Provider.
  * Please follow https://onnxruntime.ai/docs/execution-providers/OpenVINO-ExecutionProvider.html#summary-of-options
  */
@@ -139,11 +248,25 @@ public:
     GAPI_WRAP
     explicit DirectML(const int device_id) : ddesc(device_id) { };
 
-    using DeviceDesc = cv::util::variant<int>;
+    /** @brief Class constructor.
+
+    Constructs DirectML parameters based on adapter name.
+
+    @param adapter_name Target adapter_name to use.
+    */
+    GAPI_WRAP
+    explicit DirectML(const std::string &adapter_name) : ddesc(adapter_name) { };
+
+    using DeviceDesc = cv::util::variant<int, std::string>;
     DeviceDesc ddesc;
 };
 
-using EP = cv::util::variant<cv::util::monostate, OpenVINO, DirectML>;
+using EP = cv::util::variant< cv::util::monostate
+                            , OpenVINO
+                            , DirectML
+                            , CoreML
+                            , CUDA
+                            , TensorRT>;
 
 } // namespace ep
 
@@ -239,7 +362,7 @@ public:
         desc.num_out = std::tuple_size<typename Net::OutArgs>::value;
         desc.is_generic = false;
         desc.disable_mem_pattern = false;
-    };
+    }
 
     /** @brief Specifies sequence of network input layers names for inference.
 
@@ -431,6 +554,48 @@ public:
         return *this;
     }
 
+    /** @brief Adds execution provider for runtime.
+
+    The function is used to add ONNX Runtime CoreML Execution Provider options.
+
+    @param ep CoreML Execution Provider options.
+    @see cv::gapi::onnx::ep::CoreML.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgAddExecutionProvider(ep::CoreML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
+
+    /** @brief Adds execution provider for runtime.
+
+    The function is used to add ONNX Runtime CUDA Execution Provider options.
+
+    @param ep CUDA Execution Provider options.
+    @see cv::gapi::onnx::ep::CUDA.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgAddExecutionProvider(ep::CUDA&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
+
+    /** @brief Adds execution provider for runtime.
+
+    The function is used to add ONNX Runtime TensorRT Execution Provider options.
+
+    @param ep TensorRT Execution Provider options.
+    @see cv::gapi::onnx::ep::TensorRT.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgAddExecutionProvider(ep::TensorRT&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
+
     /** @brief Disables the memory pattern optimization.
 
     @return the reference on modified object.
@@ -488,6 +653,21 @@ public:
 
     /** @see onnx::Params::cfgAddExecutionProvider. */
     void cfgAddExecutionProvider(ep::DirectML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+    }
+
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::CoreML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+    }
+
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::CUDA&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+    }
+
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::TensorRT&& ep) {
         desc.execution_providers.emplace_back(std::move(ep));
     }
 

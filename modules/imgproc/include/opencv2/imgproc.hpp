@@ -845,7 +845,41 @@ enum ColorConversionCodes {
     COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA, //!< equivalent to BGGR Bayer pattern
     COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_COLORCVT_MAX  = 143
+    //! RGB to YUV 4:2:2 family
+
+    COLOR_RGB2YUV_UYVY = 143,
+    COLOR_BGR2YUV_UYVY = 144,
+    COLOR_RGB2YUV_Y422 = COLOR_RGB2YUV_UYVY,
+    COLOR_BGR2YUV_Y422 = COLOR_BGR2YUV_UYVY,
+    COLOR_RGB2YUV_UYNV = COLOR_RGB2YUV_UYVY,
+    COLOR_BGR2YUV_UYNV = COLOR_BGR2YUV_UYVY,
+
+    COLOR_RGBA2YUV_UYVY = 145,
+    COLOR_BGRA2YUV_UYVY = 146,
+    COLOR_RGBA2YUV_Y422 = COLOR_RGBA2YUV_UYVY,
+    COLOR_BGRA2YUV_Y422 = COLOR_BGRA2YUV_UYVY,
+    COLOR_RGBA2YUV_UYNV = COLOR_RGBA2YUV_UYVY,
+    COLOR_BGRA2YUV_UYNV = COLOR_BGRA2YUV_UYVY,
+
+    COLOR_RGB2YUV_YUY2 = 147,
+    COLOR_BGR2YUV_YUY2 = 148,
+    COLOR_RGB2YUV_YVYU = 149,
+    COLOR_BGR2YUV_YVYU = 150,
+    COLOR_RGB2YUV_YUYV = COLOR_RGB2YUV_YUY2,
+    COLOR_BGR2YUV_YUYV = COLOR_BGR2YUV_YUY2,
+    COLOR_RGB2YUV_YUNV = COLOR_RGB2YUV_YUY2,
+    COLOR_BGR2YUV_YUNV = COLOR_BGR2YUV_YUY2,
+
+    COLOR_RGBA2YUV_YUY2 = 151,
+    COLOR_BGRA2YUV_YUY2 = 152,
+    COLOR_RGBA2YUV_YVYU = 153,
+    COLOR_BGRA2YUV_YVYU = 154,
+    COLOR_RGBA2YUV_YUYV = COLOR_RGBA2YUV_YUY2,
+    COLOR_BGRA2YUV_YUYV = COLOR_BGRA2YUV_YUY2,
+    COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2,
+    COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2,
+
+    COLOR_COLORCVT_MAX  = 155
 };
 
 //! @addtogroup imgproc_shape
@@ -2247,7 +2281,7 @@ too large, some circles may be missed.
 @param param1 First method-specific parameter. In case of #HOUGH_GRADIENT and #HOUGH_GRADIENT_ALT,
 it is the higher threshold of the two passed to the Canny edge detector (the lower one is twice smaller).
 Note that #HOUGH_GRADIENT_ALT uses #Scharr algorithm to compute image derivatives, so the threshold value
-shough normally be higher, such as 300 or normally exposed and contrasty images.
+should normally be higher, such as 300 or normally exposed and contrasty images.
 @param param2 Second method-specific parameter. In case of #HOUGH_GRADIENT, it is the
 accumulator threshold for the circle centers at the detection stage. The smaller it is, the more
 false circles may be detected. Circles, corresponding to the larger accumulator values, will be
@@ -3719,10 +3753,10 @@ stored in two planes.
 
 This function only supports YUV420 to RGB conversion as of now.
 
-@param src1: 8-bit image (#CV_8U) of the Y plane.
-@param src2: image containing interleaved U/V plane.
-@param dst: output image.
-@param code: Specifies the type of conversion. It can take any of the following values:
+@param src1 8-bit image (#CV_8U) of the Y plane.
+@param src2 image containing interleaved U/V plane.
+@param dst output image.
+@param code Specifies the type of conversion. It can take any of the following values:
 - #COLOR_YUV2BGR_NV12
 - #COLOR_YUV2RGB_NV12
 - #COLOR_YUV2BGRA_NV12
@@ -4456,7 +4490,7 @@ An example using applyColorMap function
 
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
-@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3. If CV_8UC3, then the CV_8UC1 image is generated internally using cv::COLOR_BGR2GRAY.
 @param dst The result is the colormapped source image. Note: Mat::create is called on dst.
 @param colormap The colormap to apply, see #ColormapTypes
 */
@@ -4464,8 +4498,8 @@ CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
 
 /** @brief Applies a user colormap on a given image.
 
-@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
-@param dst The result is the colormapped source image. Note: Mat::create is called on dst.
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3. If CV_8UC3, then the CV_8UC1 image is generated internally using cv::COLOR_BGR2GRAY.
+@param dst The result is the colormapped source image of the same number of channels as userColor. Note: Mat::create is called on dst.
 @param userColor The colormap to apply of type CV_8UC1 or CV_8UC3 and size 256
 */
 CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, InputArray userColor);

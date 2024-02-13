@@ -128,11 +128,7 @@ void pyPopulateArgumentConversionErrors()
         PySafeObject exception_message(PyObject_Str(exception_value));
         std::string message;
         getUnicodeString(exception_message, message);
-#ifdef CV_CXX11
         conversionErrorsTLS.getRef().push_back(std::move(message));
-#else
-        conversionErrorsTLS.getRef().push_back(message);
-#endif
     }
 }
 

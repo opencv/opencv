@@ -76,7 +76,7 @@ TEST_P(HasNonZeroNegZeros, hasNonZeroNegZeros)
 
 INSTANTIATE_TEST_CASE_P(Core, HasNonZeroNegZeros,
     testing::Combine(
-        testing::Values(CV_32FC1, CV_64FC1),
+        testing::Values(CV_32FC1, CV_64FC1, CV_16FC1, CV_16BFC1),
         testing::Values(Size(1, 1), Size(320, 240), Size(127, 113), Size(1, 113))
     )
 );

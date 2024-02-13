@@ -264,7 +264,7 @@ public class ImgprocTest extends OpenCVTestCase {
                 put(5, 0, 100);
             }
         };
-        assertMatEqual(truth, hist, EPS);
+        assertMatEqual(truth, hist.reshape(1, hist.cols()), EPS);
     }
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat2D() {
@@ -319,7 +319,7 @@ public class ImgprocTest extends OpenCVTestCase {
                  0, 25, 29447
                 );
 
-        assertMatEqual(truth, hist3D, EPS);
+        assertMatEqual(truth, hist3D.reshape(3, hist3D.cols()), EPS);
     }
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloatBoolean() {
@@ -429,7 +429,7 @@ public class ImgprocTest extends OpenCVTestCase {
         MatOfInt expHull = new MatOfInt(
                 0, 1, 2, 3
         );
-        assertMatEqual(expHull, hull, EPS);
+        assertMatEqual(expHull, hull.reshape(1, (int)hull.total()), EPS);
     }
 
     public void testConvexHullMatMatBooleanBoolean() {
@@ -449,7 +449,7 @@ public class ImgprocTest extends OpenCVTestCase {
         MatOfInt expHull = new MatOfInt(
                 3, 2, 1, 0
         );
-        assertMatEqual(expHull, hull, EPS);
+        assertMatEqual(expHull, hull.reshape(1, hull.cols()), EPS);
     }
 
     public void testConvexityDefects() {
@@ -468,7 +468,7 @@ public class ImgprocTest extends OpenCVTestCase {
         MatOfInt4 convexityDefects = new MatOfInt4();
         Imgproc.convexityDefects(points, hull, convexityDefects);
 
-        assertMatEqual(new MatOfInt4(3, 0, 5, 3620), convexityDefects);
+        assertMatEqual(new MatOfInt4(3, 0, 5, 3620), convexityDefects.reshape(4, convexityDefects.cols()));
     }
 
     public void testCornerEigenValsAndVecsMatMatIntInt() {
@@ -639,7 +639,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.distanceTransformWithLabels(gray128, dst, labels, Imgproc.DIST_L2, 3);
 
         assertMatEqual(dstLables, labels);
-        assertMatEqual(getMat(CvType.CV_32FC1, 8192), dst, EPS);
+        assertMatEqual(getMat(CvType.CV_32FC1, 65533.805), dst, EPS);
     }
 
     public void testDrawContoursMatListOfMatIntScalar() {
@@ -1105,7 +1105,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         Imgproc.HoughLinesP(img, lines, 1, 3.1415926/180, 100);
 
-        assertEquals(2, lines.rows());
+        assertEquals(2, lines.total());
 
         /*
         Log.d("HoughLinesP", "lines=" + lines);

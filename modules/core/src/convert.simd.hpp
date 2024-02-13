@@ -41,8 +41,8 @@ void cvt16f32f( const float16_t* src, float* dst, int len )
 {
     CV_INSTRUMENT_REGION();
     int j = 0;
-#if CV_SIMD
-    const int VECSZ = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
     for( ; j < len; j += VECSZ )
     {
         if( j > len - VECSZ )
@@ -62,8 +62,8 @@ void cvt32f16f( const float* src, float16_t* dst, int len )
 {
     CV_INSTRUMENT_REGION();
     int j = 0;
-#if CV_SIMD
-    const int VECSZ = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
     for( ; j < len; j += VECSZ )
     {
         if( j > len - VECSZ )
@@ -83,8 +83,8 @@ void cvt32f16bf( const float* src, bfloat16_t* dst, int len )
 {
     CV_INSTRUMENT_REGION();
     int j = 0;
-#if CV_SIMD
-    const int VECSZ = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
     for( ; j < len; j += VECSZ )
     {
         if( j > len - VECSZ )
@@ -153,8 +153,8 @@ cvt_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-#if CV_SIMD
-        const int VECSZ = _Twvec::nlanes*2;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int VECSZ = VTraits<_Twvec>::vlanes()*2;
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )
@@ -182,8 +182,8 @@ cvt_64f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-#if CV_SIMD_64F
-        const int VECSZ = v_float64::nlanes*2;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        const int VECSZ = VTraits<v_float64>::vlanes()*2;
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )
@@ -213,8 +213,8 @@ cvt1_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-#if CV_SIMD
-        const int VECSZ = _Twvec::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int VECSZ = VTraits<_Twvec>::vlanes();
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )

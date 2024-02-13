@@ -115,7 +115,8 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        for (int i = 0, n = outputs.size(); i < n; ++i)
+        size_t i, n = outputs.size();
+        for (i = 0; i < n; ++i)
             if (outputs[i].data != inputs[i].data)
                 inputs[i].copyTo(outputs[i]);
     }
@@ -148,7 +149,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         ngraph::OutputVector inp{ieInpNode};
         auto blank = std::make_shared<ngraph::op::Concat>(inp, 0);
         return Ptr<BackendNode>(new InfEngineNgraphNode(blank));

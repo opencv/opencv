@@ -93,15 +93,7 @@ static void deskew(const Mat& img, Mat& deskewed_img)
 
     float skew = (float)(m.mu11 / m.mu02);
     float M_vals[2][3] = {{1, skew, -0.5f * SZ * skew}, {0, 1, 0}};
-    Mat M(Size(3, 2), CV_32F);
-
-    for (int i = 0; i < M.rows; i++)
-    {
-        for (int j = 0; j < M.cols; j++)
-        {
-            M.at<float>(i, j) = M_vals[i][j];
-        }
-    }
+    Mat M(Size(3, 2), CV_32F, &M_vals[0][0]);
 
     warpAffine(img, deskewed_img, M, Size(SZ, SZ), WARP_INVERSE_MAP | INTER_LINEAR);
 }

@@ -12,7 +12,6 @@ Implementation of padding layer, which adds paddings to input blob.
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_cann.hpp"
@@ -114,7 +113,6 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && dstRanges.size() == 4) ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -129,17 +127,7 @@ public:
 
         if (paddingType == "constant")
         {
-            if (inputs_arr.depth() == CV_16S)
-            {
-                std::vector<float> paddingValue_fp32(1, paddingValue);
-                std::vector<int16_t> paddingValue_fp16(1);
-                cv::convertFp16(paddingValue_fp32, paddingValue_fp16);
-                outputs[0].setTo(paddingValue_fp16[0]);
-            }
-            else if (inputs_arr.depth() == CV_8S)
-                outputs[0].setTo(saturate_cast<int8_t>(paddingValue));
-            else
-                outputs[0].setTo(paddingValue);
+            outputs[0].setTo(paddingValue);
             inputs[0].copyTo(outputs[0](dstRanges));
         }
         else if (paddingType == "reflect" || paddingType == "edge")
@@ -199,27 +187,6 @@ public:
         return make_cuda_node<cuda4dnn::PaddingOp>(preferableTarget, std::move(context->stream), ptype, paddingValue, dstRanges);
     }
 #endif
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        int inW, inH, inC, inN;
-        int minN = std::max(dstRanges[0].start, 0);
-        int minC = std::max(dstRanges[1].start, 0);
-        int minY = std::max(dstRanges[2].start, 0);
-        int minX = std::max(dstRanges[3].start, 0);
-        Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
-        getCanonicalSize(inputBuffer, &inW, &inH, &inC, &inN);
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::Func padded =
-            Halide::BoundaryConditions::constant_exterior(inputBuffer, paddingValue);
-        top(x, y, c, n) = padded(x - minX, y - minY, c - minC, n - minN);
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,

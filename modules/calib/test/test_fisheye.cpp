@@ -206,7 +206,7 @@ TEST_F(fisheyeTest, Homography)
     cv::Mat _objectPoints(objectPoints[0]);
 
     cv::Mat imagePointsNormalized = NormalizePixels(_imagePoints, param).reshape(1).t();
-    _objectPoints = _objectPoints.reshape(1).t();
+    _objectPoints = _objectPoints.reshape(1, (int)_objectPoints.total()).t();
     cv::Mat objectPointsMean, covObjectPoints;
 
     int Np = imagePointsNormalized.cols;

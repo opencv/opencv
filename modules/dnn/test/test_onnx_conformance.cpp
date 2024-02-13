@@ -311,6 +311,8 @@ static const TestCase testConformanceConfig[] = {
     {"test_gridsample_nearest", 2, 1},
     {"test_gridsample_reflection_padding", 2, 1},
     {"test_gridsample_zeros_padding", 2, 1},
+    {"test_group_normalization_epsilon", 3, 1},
+    {"test_group_normalization_example", 3, 1},
     {"test_gru_batchwise", 3, 2},
     {"test_gru_defaults", 3, 1},
     {"test_gru_seq_length", 4, 1},
@@ -339,6 +341,25 @@ static const TestCase testConformanceConfig[] = {
     {"test_isinf_negative", 1, 1},
     {"test_isinf_positive", 1, 1},
     {"test_isnan", 1, 1},
+    {"test_layer_normalization_2d_axis0", 3, 1},
+    {"test_layer_normalization_2d_axis1", 3, 1},
+    {"test_layer_normalization_2d_axis_negative_1", 3, 1},
+    {"test_layer_normalization_2d_axis_negative_2", 3, 1},
+    {"test_layer_normalization_3d_axis0_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis1_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis2_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_1_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_2_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_3_epsilon", 3, 1},
+    {"test_layer_normalization_4d_axis0", 3, 1},
+    {"test_layer_normalization_4d_axis1", 3, 1},
+    {"test_layer_normalization_4d_axis2", 3, 1},
+    {"test_layer_normalization_4d_axis3", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_1", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_2", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_3", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_4", 3, 1},
+    {"test_layer_normalization_default_axis", 3, 1},
     {"test_leakyrelu", 1, 1},
     {"test_leakyrelu_default", 1, 1},
     {"test_leakyrelu_example", 1, 1},
@@ -941,9 +962,6 @@ public:
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
     static std::set<std::string> cpu_deny_list;
-#ifdef HAVE_HALIDE
-    static std::set<std::string> halide_deny_list;
-#endif
 #ifdef HAVE_VULKAN
     static std::set<std::string> vulkan_deny_list;
 #endif
@@ -1018,12 +1036,6 @@ public:
             #include "test_onnx_conformance_layer_filter_opencv_cpu_denylist.inl.hpp"
         };
 
-#ifdef HAVE_HALIDE
-        halide_deny_list = {
-            #include "test_onnx_conformance_layer_filter__halide_denylist.inl.hpp"
-        };
-#endif
-
 #ifdef HAVE_VULKAN
         vulkan_deny_list = {
             #include "test_onnx_conformance_layer_filter__vulkan_denylist.inl.hpp"
@@ -1045,9 +1057,6 @@ std::set<std::string> Test_ONNX_conformance::opencv_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
-#ifdef HAVE_HALIDE
-std::set<std::string> Test_ONNX_conformance::halide_deny_list;
-#endif
 #ifdef HAVE_VULKAN
 std::set<std::string> Test_ONNX_conformance::vulkan_deny_list;
 #endif
@@ -1094,15 +1103,6 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }
     }
-#ifdef HAVE_HALIDE
-    else if (backend == DNN_BACKEND_HALIDE)
-    {
-        if (halide_deny_list.find(name) != halide_deny_list.end())
-        {
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
-        }
-    }
-#endif
 #ifdef HAVE_INF_ENGINE
     else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
@@ -1252,9 +1252,9 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_conformance,
     testing::Combine(
         testing::ValuesIn(testConformanceConfig),
-        dnnBackendsAndTargets(/*withInferenceEngine=*/true, /*withHalide=*/true)
+        dnnBackendsAndTargets(/* withInferenceEngine = */ true)
     ),
     printOnnxConfParams
 );
 
-};
+}

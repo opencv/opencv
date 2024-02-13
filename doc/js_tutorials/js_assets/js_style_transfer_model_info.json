@@ -1,76 +1,44 @@
 {
-    "torch": [
+    "onnx": [
         {
-            "model": "candy.t7",
+            "model": "mosaic-9.onnx",
             "inputSize": "224, 224",
-            "mean": "104, 117, 123",
+            "mean": "0, 0, 0",
             "std": "1",
-            "swapRB": "false",
-            "modelUrl": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models//instance_norm/candy.t7"
+            "swapRB": "true",
+            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/mosaic-9.onnx"
         },
         {
-            "model": "composition_vii.t7",
+            "model": "candy-9.onnx",
             "inputSize": "224, 224",
-            "mean": "104, 117, 123",
+            "mean": "0, 0, 0",
             "std": "1",
-            "swapRB": "false",
-            "modelUrl": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models//eccv16/composition_vii.t7"
+            "swapRB": "true",
+            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/candy-9.onnx"
         },
         {
-            "model": "feathers.t7",
+            "model": "rain-princess-9.onnx",
             "inputSize": "224, 224",
-            "mean": "104, 117, 123",
+            "mean": "0, 0, 0",
             "std": "1",
-            "swapRB": "false",
-            "modelUrl": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models//instance_norm/feathers.t7"
+            "swapRB": "true",
+            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/rain-princess-9.onnx"
         },
         {
-            "model": "la_muse.t7",
+            "model": "udnie-9.onnx",
             "inputSize": "224, 224",
-            "mean": "104, 117, 123",
+            "mean": "0, 0, 0",
             "std": "1",
-            "swapRB": "false",
-            "modelUrl": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models//instance_norm/la_muse.t7"
+            "swapRB": "true",
+            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/udnie-9.onnx"
         },
         {
-            "model": "mosaic.t7",
+            "model": "pointilism-9.onnx",
             "inputSize": "224, 224",
-            "mean": "104, 117, 123",
+            "mean": "0, 0, 0",
             "std": "1",
-            "swapRB": "false",
-            "modelUrl": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models//instance_norm/mosaic.t7"
-        },
-        {
-            "model": "starry_night.t7",
-            "inputSize": "224, 224",
-            "mean": "104, 117, 123",
-            "std": "1",
-            "swapRB": "false",
-            "modelUrl": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models//eccv16/starry_night.t7"
-        },
-        {
-            "model": "the_scream.t7",
-            "inputSize": "224, 224",
-            "mean": "104, 117, 123",
-            "std": "1",
-            "swapRB": "false",
-            "modelUrl": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models//instance_norm/the_scream.t7"
-        },
-        {
-            "model": "the_wave.t7",
-            "inputSize": "224, 224",
-            "mean": "104, 117, 123",
-            "std": "1",
-            "swapRB": "false",
-            "modelUrl": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models//eccv16/the_wave.t7"
-        },
-        {
-            "model": "udnie.t7",
-            "inputSize": "224, 224",
-            "mean": "104, 117, 123",
-            "std": "1",
-            "swapRB": "false",
-            "modelUrl": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models//instance_norm/udnie.t7"
+            "swapRB": "true",
+            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/pointilism-9.onnx"
         }
     ]
 }

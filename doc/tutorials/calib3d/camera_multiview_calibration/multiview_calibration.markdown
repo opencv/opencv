@@ -4,6 +4,7 @@ Multi-view Camera Calibration Tutorial {#tutorial_multiview_camera_calibration}
 @tableofcontents
 
 @prev_tutorial{tutorial_interactive_calibration}
+@next_tutorial{tutorial_usac}
 
 |    |    |
 | -: | :- |

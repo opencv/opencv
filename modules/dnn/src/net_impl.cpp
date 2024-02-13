@@ -104,9 +104,6 @@ void Net::Impl::validateBackendAndTarget()
               preferableTarget == DNN_TARGET_CPU_FP16 ||
               preferableTarget == DNN_TARGET_OPENCL ||
               preferableTarget == DNN_TARGET_OPENCL_FP16);
-    CV_Assert(preferableBackend != DNN_BACKEND_HALIDE ||
-              preferableTarget == DNN_TARGET_CPU ||
-              preferableTarget == DNN_TARGET_OPENCL);
 #ifdef HAVE_WEBNN
     if (preferableBackend == DNN_BACKEND_WEBNN)
     {
@@ -203,16 +200,6 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
         it->second.skip = netInputLayer->skip;
 
         initBackend(blobsToKeep_);
-
-        if (!netWasAllocated)
-        {
-#ifdef HAVE_HALIDE
-            if (preferableBackend == DNN_BACKEND_HALIDE)
-                compileHalide();
-#else
-            CV_Assert(preferableBackend != DNN_BACKEND_HALIDE);
-#endif
-        }
 
         netWasAllocated = true;
 
@@ -514,7 +501,7 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
     CV_Assert(layerShapesIt != layersShapes.end());
 
     if (preferableBackend == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_OPENCL_FP16 && ld.dtype == CV_32F)
-        ld.dtype = CV_16S;
+        ld.dtype = CV_16F;
 
     std::vector<LayerPin> pinsForInternalBlobs;
     blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs);
@@ -572,7 +559,7 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
             preferableTarget == DNN_TARGET_OPENCL_FP16 &&
             layers[0].dtype == CV_32F)
         {
-            layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
+            layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16F);
         }
         inputShapes.push_back(shape(inp));
     }
@@ -656,8 +643,8 @@ void Net::Impl::forwardLayer(LayerData& ld)
                     {
                         UMat& u = umat_outputBlobs[i];
                         Mat m;
-                        if (u.depth() == CV_16S)  // FP16
-                            convertFp16(u, m);
+                        if (u.depth() == CV_16F)  // FP16
+                            u.convertTo(m, CV_32F);
                         else
                             m = u.getMat(ACCESS_READ);
                         if (!checkRange(m))
@@ -679,8 +666,8 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         {
                             UMat& u = umat_inputBlobs[i];
                             Mat m;
-                            if (u.depth() == CV_16S)  // FP16
-                                convertFp16(u, m);
+                            if (u.depth() == CV_16F)  // FP16
+                                u.convertTo(m, CV_32F);
                             else
                                 m = u.getMat(ACCESS_READ);
                             std::cout << "INPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << std::endl;
@@ -690,8 +677,8 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         {
                             UMat& u = umat_outputBlobs[i];
                             Mat m;
-                            if (u.depth() == CV_16S)  // FP16
-                                convertFp16(u, m);
+                            if (u.depth() == CV_16F)  // FP16
+                                u.convertTo(m, CV_32F);
                             else
                                 m = u.getMat(ACCESS_READ);
                             std::cout << "OUTPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << std::endl;
@@ -701,8 +688,8 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         {
                             UMat& u = umat_internalBlobs[i];
                             Mat m;
-                            if (u.depth() == CV_16S)  // FP16
-                                convertFp16(u, m);
+                            if (u.depth() == CV_16F)  // FP16
+                                u.convertTo(m, CV_32F);
                             else
                                 m = u.getMat(ACCESS_READ);
                             std::cout << "INTERNAL " << i << " " << shape(m) << std::endl;
@@ -807,10 +794,6 @@ void Net::Impl::forwardLayer(LayerData& ld)
                     wrapper->copyToHostInBackground();
                 }
 #endif
-            }
-            else if (preferableBackend == DNN_BACKEND_HALIDE)
-            {
-                forwardHalide(ld.outputBlobsWrappers, node);
             }
             else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             {
@@ -918,7 +901,6 @@ AsyncArray Net::Impl::forwardAsync(const String& outputName)
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
-#ifdef CV_CXX11
     String layerName = outputName;
 
     if (layerName.empty())
@@ -939,9 +921,6 @@ AsyncArray Net::Impl::forwardAsync(const String& outputName)
     isAsync = false;
 
     return getBlobAsync(layerName);
-#else
-    CV_Error(Error::StsNotImplemented, "DNN: Asynchronous forward requires build with enabled C++11");
-#endif  // CV_CXX11
 }
 
 
@@ -985,12 +964,12 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
                 ld.outputBlobsWrappers[i]->copyToHost();
             }
         }
-        if (ld.outputBlobs[0].depth() == CV_16S)
+        if (ld.outputBlobs[0].depth() == CV_16F)
         {
             std::vector<Mat>& outputvec = *(std::vector<Mat>*)outputBlobs.getObj();
             outputvec.resize(ld.outputBlobs.size());
             for (int i = 0; i < outputvec.size(); i++)
-                convertFp16(ld.outputBlobs[i], outputvec[i]);
+                ld.outputBlobs[i].convertTo(outputvec[i], CV_32F);
         }
         else
         {
@@ -1013,7 +992,7 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
                 std::vector<UMat> out_vec = OpenCLBackendWrapper::getUMatVector(ld.outputBlobsWrappers);
                 outputvec.resize(out_vec.size());
                 for (int i = 0; i < out_vec.size(); i++)
-                    convertFp16(out_vec[i], outputvec[i]);
+                    out_vec[i].convertTo(outputvec[i], CV_32F);
             }
         }
         else
@@ -1279,7 +1258,7 @@ void Net::Impl::updateLayersShapes()
             preferableTarget == DNN_TARGET_OPENCL_FP16 &&
             inputLayerData.dtype == CV_32F)
         {
-            inp.create(inp.dims, inp.size, CV_16S);
+            inp.create(inp.dims, inp.size, CV_16F);
         }
         inputShapes.push_back(shape(inp));
     }
@@ -1348,10 +1327,10 @@ Mat Net::Impl::getBlob(const LayerPin& pin) const
         ld.outputBlobsWrappers[pin.oid]->copyToHost();
     }
 
-    if (ld.outputBlobs[pin.oid].depth() == CV_16S)
+    if (ld.outputBlobs[pin.oid].depth() == CV_16F)
     {
         Mat output_blob;
-        convertFp16(ld.outputBlobs[pin.oid], output_blob);
+        ld.outputBlobs[pin.oid].convertTo(output_blob, CV_32F);
         return output_blob;
     }
     else
@@ -1566,7 +1545,6 @@ string Net::Impl::dump(bool forceAllocation) const
     switch (prefBackend)
     {
     case DNN_BACKEND_DEFAULT: backend = "DEFAULT/"; break;
-    case DNN_BACKEND_HALIDE: backend = "HALIDE/"; break;
     case DNN_BACKEND_INFERENCE_ENGINE:  // fallthru
     case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019:  // fallthru
     case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: backend = "OpenVINO/"; break;

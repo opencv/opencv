@@ -5,7 +5,6 @@
 #ifndef __OPENCV_DNN_SRC_NET_IMPL_HPP__
 #define __OPENCV_DNN_SRC_NET_IMPL_HPP__
 
-#include "op_halide.hpp"
 #include "op_inf_engine.hpp"
 #include "ie_ngraph.hpp"
 #include "op_vkcom.hpp"
@@ -54,7 +53,6 @@ struct Net::Impl : public detail::NetImplBase
     BlobManager blobManager;
     int preferableBackend;
     int preferableTarget;
-    String halideConfigFile;
     bool hasDynamicShapes;
     // Map host data to backend specific wrapper.
     std::map<void*, Ptr<BackendWrapper>> backendWrappers;
@@ -167,12 +165,6 @@ struct Net::Impl : public detail::NetImplBase
 
     virtual void initBackend(const std::vector<LayerPin>& blobsToKeep_);
 
-    void setHalideScheduler(const String& scheduler);
-#ifdef HAVE_HALIDE
-    void compileHalide();
-    void initHalideBackend();
-#endif
-
 #ifdef HAVE_WEBNN
     void addWebnnOutputs(LayerData& ld);
     void initWebnnBackend(const std::vector<LayerPin>& blobsToKeep_);
@@ -273,11 +265,9 @@ struct Net::Impl : public detail::NetImplBase
 
     Mat getBlob(String outputName) const;
 
-#ifdef CV_CXX11
     virtual AsyncArray getBlobAsync(const LayerPin& pin);
 
     AsyncArray getBlobAsync(String outputName);
-#endif  // CV_CXX11
 
     string dump(bool forceAllocation = false) const;
 

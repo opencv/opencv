@@ -31,7 +31,7 @@ libpng                Portable Network Graphics library.
                       
 libspng               Portable Network Graphics library.
                       The license and copyright notes can be found in libspng/LICENSE.
-                      See libspng home page https://www.libspng.org
+                      See libspng home page https://libspng.org
                       for details and links to the source code
                       
                       WITH_SPNG CMake option must be ON to add libspng support to imgcodecs
@@ -39,7 +39,8 @@ libspng               Portable Network Graphics library.
 libtiff               Tag Image File Format (TIFF) Software
                       Copyright (c) 1988-1997 Sam Leffler
                       Copyright (c) 1991-1997 Silicon Graphics, Inc.
-                      See libtiff home page http://www.libtiff.org/
+                      See libtiff home page #1 http://www.simplesystems.org/libtiff/
+                                            #2 https://libtiff.gitlab.io/libtiff/
                       for details and links to the source code
 
                       WITH_TIFF CMake option must be ON to add libtiff & zlib support to imgcodecs.

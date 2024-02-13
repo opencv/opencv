@@ -82,11 +82,6 @@ public:
         CV_Error(Error::StsNotImplemented, msg);
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-        CV_Error(Error::StsNotImplemented, msg);
-    }
-
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
@@ -104,19 +99,6 @@ public:
             const std::vector<Ptr<BackendWrapper>>& inputs,
             const std::vector<Ptr<BackendWrapper>>& outputs
     ) CV_OVERRIDE
-    {
-        CV_Error(Error::StsNotImplemented, msg);
-    }
-
-    virtual void applyHalideScheduler(Ptr<BackendNode>& node,
-                                      const std::vector<Mat*> &inputs,
-                                      const std::vector<Mat> &outputs,
-                                      int targetId) const CV_OVERRIDE
-    {
-        CV_Error(Error::StsNotImplemented, msg);
-    }
-
-    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
     {
         CV_Error(Error::StsNotImplemented, msg);
     }

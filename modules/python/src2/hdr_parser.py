@@ -92,6 +92,10 @@ class CppHeaderParser(object):
             modlist.append("/IO")
             arg_str = arg_str.replace("CV_IN_OUT", "")
 
+        if "CV_WRAP_FILE_PATH" in arg_str:
+            modlist.append("/PATH")
+            arg_str = arg_str.replace("CV_WRAP_FILE_PATH", "")
+
         isarray = False
         npos = arg_str.find("CV_CARRAY")
         if npos >= 0:
@@ -453,8 +457,7 @@ class CppHeaderParser(object):
                                                  ("CV_INLINE", ""),
                                                  ("CV_DEPRECATED", ""),
                                                  ("CV_DEPRECATED_EXTERNAL", ""),
-                                                 ("CV_NODISCARD_STD", ""),
-                                                 ("CV_NODISCARD", "")]).strip()
+                                                 ("CV_NODISCARD_STD", "")]).strip()
 
         if decl_str.strip().startswith('virtual'):
             virtual_method = True
@@ -537,6 +540,13 @@ class CppHeaderParser(object):
 
         funcname = self.get_dotted_name(funcname)
 
+        # see https://github.com/opencv/opencv/issues/24057
+        is_arithm_op_func = funcname in {"cv.add",
+                                         "cv.subtract",
+                                         "cv.absdiff",
+                                         "cv.multiply",
+                                         "cv.divide"}
+
         if not self.wrap_mode:
             decl = self.parse_func_decl_no_wrap(decl_str, static_method, docstring)
             decl[0] = funcname
@@ -597,6 +607,8 @@ class CppHeaderParser(object):
 
                         if arg_type == "InputArray":
                             arg_type = mat
+                            if is_arithm_op_func:
+                                modlist.append("/AOS") # Arithm Ope Source
                         elif arg_type == "InputOutputArray":
                             arg_type = mat
                             modlist.append("/IO")
@@ -620,6 +632,8 @@ class CppHeaderParser(object):
                                                              ("noArray", arg_type)]).strip()
                     if '/IO' in modlist and '/O' in modlist:
                         modlist.remove('/O')
+                    if (arg_name.lower() == 'filename' or arg_name.lower() == 'filepath') and '/PATH' not in modlist:
+                        modlist.append('/PATH')
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 

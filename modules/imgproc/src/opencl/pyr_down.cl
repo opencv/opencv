@@ -67,7 +67,7 @@
 #error No extrapolation method
 #endif
 
-#if cn != 3
+#if CN != 3
 #define loadpix(addr)  *(__global const T*)(addr)
 #define storepix(val, addr)  *(__global T*)(addr) = (val)
 #define PIXSIZE ((int)sizeof(T))
@@ -77,9 +77,9 @@
 #define PIXSIZE ((int)sizeof(T1)*3)
 #endif
 
-#define SRC(_x,_y) convertToFT(loadpix(srcData + mad24(_y, src_step, PIXSIZE * _x)))
+#define SRC(_x,_y) CONVERT_TO_FT(loadpix(srcData + mad24(_y, src_step, PIXSIZE * _x)))
 
-#if kercn == 4
+#if KERCN == 4
 #define SRC4(_x,_y) convert_float4(vload4(0, srcData + mad24(_y, src_step, PIXSIZE * _x)))
 #endif
 
@@ -107,7 +107,7 @@
     smem[1][col_lcl] = sum1;
 
 
-#if kercn == 4
+#if KERCN == 4
 #define LOAD_LOCAL4(col_gl, col_lcl) \
     sum40 =     co3* SRC4(col_gl, EXTRAPOLATE_(src_y - 2, src_rows));           \
     sum40 = MAD(co2, SRC4(col_gl, EXTRAPOLATE_(src_y - 1, src_rows)), sum40);   \
@@ -131,7 +131,7 @@
 __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, int src_rows, int src_cols,
                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
-    const int x = get_global_id(0)*kercn;
+    const int x = get_global_id(0)*KERCN;
     const int y = 2*get_global_id(1);
 
     __local FT smem[2][LOCAL_SIZE + 4];
@@ -150,7 +150,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     {
 #undef EXTRAPOLATE_
 #define EXTRAPOLATE_(val, maxVal)   val
-#if kercn == 1
+#if KERCN == 1
         col = EXTRAPOLATE(x, src_cols);
         LOAD_LOCAL(col, 2 + get_local_id(0))
 #else
@@ -183,7 +183,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     {
 #undef EXTRAPOLATE_
 #define EXTRAPOLATE_(val, maxVal)   EXTRAPOLATE(val, maxVal)
-#if kercn == 1
+#if KERCN == 1
         col = EXTRAPOLATE(x, src_cols);
         LOAD_LOCAL(col, 2 + get_local_id(0))
 #else
@@ -215,7 +215,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-#if kercn == 1
+#if KERCN == 1
     if (get_local_id(0) < LOCAL_SIZE / 2)
     {
         const int tid2 = get_local_id(0) * 2;
@@ -226,8 +226,8 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
         {
             for (int yin = y, y1 = min(dst_rows, y + 2); yin < y1; yin++)
             {
-#if cn == 1
-#if fdepth <= 5
+#if CN == 1
+#if FDEPTH <= 5
                 FT sum = dot(vload4(0, (__local float*) (&smem) + tid2 + (yin - y) * (LOCAL_SIZE + 4)), (float4)(co3, co2, co1, co2));
 #else
                 FT sum = dot(vload4(0, (__local double*) (&smem) + tid2 + (yin - y) * (LOCAL_SIZE + 4)), (double4)(co3, co2, co1, co2));
@@ -239,7 +239,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
                 sum = MAD(co2, smem[yin - y][2 + tid2 + 1], sum);
 #endif
                 sum = MAD(co3, smem[yin - y][2 + tid2 + 2], sum);
-                storepix(convertToT(sum), dstData + yin * dst_step + dst_x * PIXSIZE);
+                storepix(CONVERT_TO_T(sum), dstData + yin * dst_step + dst_x * PIXSIZE);
             }
         }
     }
@@ -256,7 +256,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
             sum = MAD(co2, smem[yin - y][2 + tid4 - 1], sum);
             sum = MAD(co1, smem[yin - y][2 + tid4    ], sum);
             sum = MAD(co2, smem[yin - y][2 + tid4 + 1], sum);
-            storepix(convertToT(sum), dstData + mad24(yin, dst_step, dst_x * PIXSIZE));
+            storepix(CONVERT_TO_T(sum), dstData + mad24(yin, dst_step, dst_x * PIXSIZE));
 
             dst_x ++;
             sum =     co3* smem[yin - y][2 + tid4 + 4];
@@ -264,7 +264,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
             sum = MAD(co2, smem[yin - y][2 + tid4 + 1], sum);
             sum = MAD(co1, smem[yin - y][2 + tid4 + 2], sum);
             sum = MAD(co2, smem[yin - y][2 + tid4 + 3], sum);
-            storepix(convertToT(sum), dstData + mad24(yin, dst_step, dst_x * PIXSIZE));
+            storepix(CONVERT_TO_T(sum), dstData + mad24(yin, dst_step, dst_x * PIXSIZE));
             dst_x --;
         }
 
@@ -279,7 +279,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
             sum = MAD(co1, smem[yin - y][2 + tid4    ], sum);
             sum = MAD(co2, smem[yin - y][2 + tid4 + 1], sum);
 
-            storepix(convertToT(sum), dstData + mad24(yin, dst_step, dst_x * PIXSIZE));
+            storepix(CONVERT_TO_T(sum), dstData + mad24(yin, dst_step, dst_x * PIXSIZE));
         }
     }
 #endif

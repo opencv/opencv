@@ -15,6 +15,7 @@
 #include "quirc.h"
 #endif
 
+#include <array>
 #include <limits>
 #include <cmath>
 #include <queue>
@@ -55,9 +56,10 @@ static void updatePointsResult(OutputArray points_, const vector<Point2f>& point
         int N = int(points.size() / 4);
         if (N > 0)
         {
-            Mat m_p(N, 4, CV_32FC2, (void*)&points[0]);
+            int nrows = points_.kind() == _InputArray::STD_VECTOR ? 1 : N;
+            Mat m_p(nrows, N*4/nrows, CV_32FC2, (void*)&points[0]);
             int points_type = points_.fixedType() ? points_.type() : CV_32FC2;
-            m_p.reshape(2, points_.rows()).convertTo(points_, points_type);  // Mat layout: N x 4 x 2cn
+            m_p.convertTo(points_, points_type);  // Mat layout: N x 4 x 2cn
         }
         else
         {
@@ -68,19 +70,14 @@ static void updatePointsResult(OutputArray points_, const vector<Point2f>& point
 
 static Point2f intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2)
 {
+    // Try to solve a two lines intersection (a1, a2) and (b1, b2) as a system of equations:
+    // a2 + u * (a1 - a2) = b2 + v * (b1 - b2)
     const float divisor = (a1.x - a2.x) * (b1.y - b2.y) - (a1.y - a2.y) * (b1.x - b2.x);
     const float eps = 0.001f;
     if (abs(divisor) < eps)
         return a2;
-    Point2f result_square_angle(
-                              ((a1.x * a2.y  -  a1.y * a2.x) * (b1.x - b2.x) -
-                               (b1.x * b2.y  -  b1.y * b2.x) * (a1.x - a2.x)) /
-                               divisor,
-                              ((a1.x * a2.y  -  a1.y * a2.x) * (b1.y - b2.y) -
-                               (b1.x * b2.y  -  b1.y * b2.x) * (a1.y - a2.y)) /
-                               divisor
-                              );
-    return result_square_angle;
+    const float u = ((b2.x - a2.x) * (b1.y - b2.y) + (b1.x - b2.x) * (a2.y - b2.y)) / divisor;
+    return a2 + u * (a1 - a2);
 }
 
 //      / | b
@@ -1020,6 +1017,17 @@ public:
     float coeff_expansion = 1.f;
     vector<Point2f> getOriginalPoints() {return original_points;}
     bool useAlignmentMarkers;
+
+    // Structured Append mode generates a sequence of QR codes.
+    // Final message is restored according to the index of the code in sequence.
+    // Different QR codes are grouped by a parity value.
+    bool isStructured() { return mode == QRCodeEncoder::EncodeMode::MODE_STRUCTURED_APPEND; }
+    struct {
+        uint8_t parity = 0;
+        uint8_t sequence_num = 0;
+        uint8_t total_num = 1;
+    } structure_info;
+
 protected:
     double getNumModules();
     Mat getHomography() {
@@ -1072,6 +1080,8 @@ protected:
     std::string result_info;
     uint8_t version, version_size;
     float test_perspective_size;
+    QRCodeEncoder::EncodeMode mode;
+
     struct sortPairAsc
     {
         bool operator()(const std::pair<size_t, double> &a,
@@ -1254,14 +1264,14 @@ bool QRDecode::computeSidesPoints(const vector<Point> &result_integer_hull)
         {
             if (points.front().x > points.back().x)
             {
-                reverse(points.begin(), points.end());
+                std::reverse(points.begin(), points.end());
             }
         }
         else
         {
             if (points.front().y > points.back().y)
             {
-                reverse(points.begin(), points.end());
+                std::reverse(points.begin(), points.end());
             }
         }
         if (points.empty())
@@ -1637,7 +1647,7 @@ bool QRDecode::findPatternsVerticesPoints(vector<vector<Point> > &patterns_verti
             }
             if ((int)min_angle_pnts_indexes.size() == num_vertices) { break; }
         }
-        sort(min_angle_pnts_indexes.begin(), min_angle_pnts_indexes.end());
+        std::sort(min_angle_pnts_indexes.begin(), min_angle_pnts_indexes.end());
 
         vector<Point> contour_vertices_points;
 
@@ -1766,11 +1776,11 @@ bool QRDecode::findTempPatternsAddingPoints(vector<std::pair<int, vector<Point> 
             }
             if (abs(p1.x - p2.x) > abs(p1.y - p2.y))
             {
-                sort(points.begin(), points.end(), sortPointsByX());
+                std::sort(points.begin(), points.end(), sortPointsByX());
             }
             else
             {
-                sort(points.begin(), points.end(), sortPointsByY());
+                std::sort(points.begin(), points.end(), sortPointsByY());
             }
 
             temp_patterns_add_points.push_back(std::pair<int, vector<Point> >(idx_curved_side,points));
@@ -1914,11 +1924,11 @@ void QRDecode::completeAndSortSides()
         Point p2 = it->second.back();
         if (abs(p1.x - p2.x) > abs(p1.y - p2.y))
         {
-            sort(it->second.begin(), it->second.end(), sortPointsByX());
+            std::sort(it->second.begin(), it->second.end(), sortPointsByX());
         }
         else
         {
-            sort(it->second.begin(), it->second.end(), sortPointsByY());
+            std::sort(it->second.begin(), it->second.end(), sortPointsByY());
         }
     }
 }
@@ -2080,8 +2090,8 @@ bool QRDecode::divideIntoEvenSegments(vector<vector<Point2f> > &segments_points)
                 Point2f segment_start = segments_points[i][j];
                 Point2f segment_end   = segments_points[i][j + 1];
                 vector<Point2f>::iterator it_start, it_end, it;
-                it_start = find(spline_lines[i].begin(), spline_lines[i].end(), segment_start);
-                it_end   = find(spline_lines[i].begin(), spline_lines[i].end(), segment_end);
+                it_start = std::find(spline_lines[i].begin(), spline_lines[i].end(), segment_start);
+                it_end   = std::find(spline_lines[i].begin(), spline_lines[i].end(), segment_end);
                 float max_dist_to_line = 0.0;
                 for (it = it_start; it != it_end; it++)
                 {
@@ -2732,8 +2742,62 @@ bool QRDecode::samplingForVersion()
     return true;
 }
 
+static bool checkASCIIcompatible(const uint8_t* str, const size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        uint8_t byte = str[i];
+        if (byte >= 0x80)
+            return false;
+    }
+    return true;
+}
+
+static bool checkUTF8(const uint8_t* str, const size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        uint8_t byte = str[i];
+        if (byte >= 0x80) {
+            // Check that symbol is encoded correctly.
+
+            // Count number of bytes per symbol as a number of leading non-zero bits
+            uint8_t numBytesPerSymbol;
+            if ((byte & 0xe0) == 0xc0)
+                numBytesPerSymbol = 2;
+            else if ((byte & 0xf0) == 0xe0)
+                numBytesPerSymbol = 3;
+            else if ((byte & 0xf8) == 0xf0)
+                numBytesPerSymbol = 4;
+            else
+                return false;
+
+            for (size_t j = 1; j < numBytesPerSymbol; ++j) {
+                if (i + j >= size || (str[i + j] & 0xc0) != 0x80) {
+                    return false;
+                }
+            }
+            i += numBytesPerSymbol - 1;
+        }
+    }
+    return true;
+}
+
+static std::string encodeUTF8_bytesarray(const uint8_t* str, const size_t size) {
+    std::ostringstream res;
+    for (size_t i = 0; i < size; ++i) {
+        uint8_t byte = str[i];
+        if (byte >= 0x80) {
+            res << (char)(0xc0 | (byte >> 6));
+            res << (char)(0x80 | (byte & 0x3f));
+        } else {
+            res << (char)byte;
+        }
+    }
+    return res.str();
+}
+
 bool QRDecode::decodingProcess()
 {
+    QRCodeEncoder::ECIEncodings eci;
+    const uint8_t* payload;
+    size_t payload_len;
 #ifdef HAVE_QUIRC
     if (straight.empty()) { return false; }
 
@@ -2761,20 +2825,87 @@ bool QRDecode::decodingProcess()
 
     if (errorCode != 0) { return false; }
 
-    for (int i = 0; i < qr_code_data.payload_len; i++)
-    {
-        result_info += qr_code_data.payload[i];
-    }
-    return true;
+    CV_LOG_INFO(NULL, "QR: decoded with .version=" << qr_code_data.version << " .data_type=" << qr_code_data.data_type << " .eci=" << qr_code_data.eci << " .payload_len=" << qr_code_data.payload_len)
+
+    mode = static_cast<QRCodeEncoder::EncodeMode>(qr_code_data.data_type);
+    eci = static_cast<QRCodeEncoder::ECIEncodings>(qr_code_data.eci);
+    payload = qr_code_data.payload;
+    payload_len = qr_code_data.payload_len;
 #else
-    return false;
+    auto decoder = QRCodeDecoder::create();
+    if (!decoder->decode(straight, result_info))
+        return false;
+    mode = decoder->mode;
+    eci = decoder->eci;
+    payload = reinterpret_cast<const uint8_t*>(result_info.c_str());
+    payload_len = result_info.size();
+    structure_info.parity = decoder->parity;
+    structure_info.sequence_num = decoder->sequence_num;
+    structure_info.total_num = decoder->total_num;
 #endif
 
+    // Check output string format
+    switch (mode)
+    {
+        case QRCodeEncoder::EncodeMode::MODE_NUMERIC:
+            if (!checkASCIIcompatible(payload, payload_len)) {
+                CV_LOG_INFO(NULL, "QR: DATA_TYPE_NUMERIC payload must be ACSII compatible string");
+                return false;
+            }
+            result_info.assign((const char*)payload, payload_len);
+            return true;
+        case QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC:
+            if (!checkASCIIcompatible(payload, payload_len)) {
+                CV_LOG_INFO(NULL, "QR: DATA_TYPE_ALPHA payload must be ASCII compatible string");
+                return false;
+            }
+            result_info.assign((const char*)payload, payload_len);
+            return true;
+        case QRCodeEncoder::EncodeMode::MODE_BYTE:
+            // https://en.wikipedia.org/wiki/Extended_Channel_Interpretation
+            if (eci == QRCodeEncoder::ECIEncodings::ECI_UTF8) {
+                CV_LOG_INFO(NULL, "QR: payload ECI is UTF-8");
+                if (!checkUTF8(payload, payload_len)) {
+                    CV_LOG_INFO(NULL, "QUIRC_DATA_TYPE_BYTE with UTF-8 ECI must be UTF-8 compatible string");
+                    return false;
+                }
+                result_info.assign((const char*)payload, payload_len);
+            } else if (eci == 25/*ECI_UTF_16BE*/) {
+                CV_LOG_INFO(NULL, "QR: UTF-16BE ECI is not supported");
+                return false;
+            } else if (checkASCIIcompatible(payload, payload_len)) {
+                CV_LOG_INFO(NULL, "QR: payload is ASCII compatible (special handling for symbols encoding is not needed)");
+                result_info.assign((const char*)payload, payload_len);
+            } else {
+                if (checkUTF8(payload, payload_len)) {
+                    CV_LOG_INFO(NULL, "QR: payload QUIRC_DATA_TYPE_BYTE is UTF-8 compatible, return as-is");
+                    result_info.assign((const char*)payload, payload_len);
+                } else {
+                    CV_LOG_INFO(NULL, "QR: assume 1-byte per symbol encoding");
+                    result_info = encodeUTF8_bytesarray(payload, payload_len);
+                }
+            }
+            return true;
+        case QRCodeEncoder::EncodeMode::MODE_KANJI:
+            // FIXIT BUG: we must return UTF-8 compatible string
+            CV_LOG_WARNING(NULL, "QR: Kanji is not supported properly");
+            result_info.assign((const char*)payload, payload_len);
+            return true;
+        case QRCodeEncoder::EncodeMode::MODE_ECI:
+            CV_LOG_WARNING(NULL, "QR: ECI is not supported properly");
+            result_info.assign((const char*)payload, payload_len);
+            return true;
+        case QRCodeEncoder::EncodeMode::MODE_STRUCTURED_APPEND:
+            result_info.assign((const char*)payload, payload_len);
+            return true;
+        default:
+            CV_LOG_WARNING(NULL, "QR: unsupported QR data type");
+            return false;
+    }
 }
 
 bool QRDecode::straightDecodingProcess()
 {
-#ifdef HAVE_QUIRC
     if (!updatePerspective(getHomography()))  { return false; }
     if (!versionDefinition())  { return false; }
     if (useAlignmentMarkers)
@@ -2782,24 +2913,15 @@ bool QRDecode::straightDecodingProcess()
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
     return true;
-#else
-    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
-    return false;
-#endif
 }
 
 bool QRDecode::curvedDecodingProcess()
 {
-#ifdef HAVE_QUIRC
     if (!preparingCurvedQRCodes()) { return false; }
     if (!versionDefinition())  { return false; }
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
     return true;
-#else
-    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
-    return false;
-#endif
 }
 
 QRDecode::QRDecode(bool _useAlignmentMarkers):
@@ -3973,11 +4095,44 @@ bool ImplContour::decodeMulti(
         }
         straight_qrcode.assign(tmp_straight_qrcodes);
     }
+
     decoded_info.clear();
     for (size_t i = 0; i < info.size(); i++)
     {
-       decoded_info.push_back(info[i]);
+        auto& decoder = qrdec[i];
+        if (!decoder.isStructured())
+        {
+            decoded_info.push_back(info[i]);
+            continue;
+        }
+
+        // Store final message corresponding to 0-th code in a sequence.
+        if (decoder.structure_info.sequence_num != 0)
+        {
+            decoded_info.push_back("");
+            continue;
+        }
+
+        cv::String decoded = info[i];
+        for (size_t idx = 1; idx < decoder.structure_info.total_num; ++idx)
+        {
+            auto it = std::find_if(qrdec.begin(), qrdec.end(), [&](QRDecode& dec) {
+                return dec.structure_info.parity == decoder.structure_info.parity &&
+                       dec.structure_info.sequence_num == idx;
+            });
+            if (it != qrdec.end())
+            {
+                decoded += info[it - qrdec.begin()];
+            }
+            else
+            {
+                decoded = "";
+                break;
+            }
+        }
+        decoded_info.push_back(decoded);
     }
+
     alignmentMarkers.resize(src_points.size());
     updateQrCorners.resize(src_points.size()*4ull);
     for (size_t i = 0ull; i < src_points.size(); i++) {
@@ -4382,25 +4537,14 @@ static
 vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, const Mat& img,
                                      const QRCodeDetectorAruco::Params& qrDetectorParameters) {
     vector<QRCode> qrCodes;
-    vector<FinderPatternInfo> patterns;
+    vector<FinderPatternInfo> patterns(corners.size());
     if (img.empty())
         return qrCodes;
     float maxModuleSize = 0.f;
     for (size_t i = 0ull; i < corners.size(); i++) {
         FinderPatternInfo pattern = FinderPatternInfo(corners[i]);
-        // TODO: improve thinning Aruco markers
-        bool isUniq = true;
-        for (const FinderPatternInfo& tmp : patterns) {
-            Point2f dist = pattern.center - tmp.center;
-            if (max(abs(dist.x), abs(dist.y)) < 3.f * tmp.moduleSize) {
-                isUniq = false;
-                break;
-            }
-        }
-        if (isUniq) {
-            patterns.push_back(pattern);
-            maxModuleSize = max(maxModuleSize, patterns.back().moduleSize);
-        }
+        patterns[i] = pattern;
+        maxModuleSize = max(maxModuleSize, pattern.moduleSize);
     }
     const int threshold = cvRound(qrDetectorParameters.minModuleSizeInPyramid * 12.5f) +
                           (cvRound(qrDetectorParameters.minModuleSizeInPyramid * 12.5f) % 2 ? 0 : 1);
