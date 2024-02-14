@@ -64,7 +64,7 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         if (preferableTarget == DNN_TARGET_OPENCL_FP16 && blobs[0].type() == CV_32F)
-            outputs.assign(1, CV_16S);
+            outputs.assign(1, CV_16F);
         else
             outputs.assign(1, blobs[0].depth());
     }

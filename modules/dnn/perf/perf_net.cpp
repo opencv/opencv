@@ -56,7 +56,7 @@ public:
         for (auto& inp : inputs) {
             cv::dnn::MatType t = std::get<0>(inp).depth();
             if (t == CV_32F && target == DNN_TARGET_OPENCL_FP16 && fp16)
-                t = CV_16S;
+                t = CV_16F;
             netMatTypes.push_back(t);
         }
 

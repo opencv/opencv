@@ -64,7 +64,7 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2);
-        CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_16S || inputs[0] == CV_8U);
+        CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_16F || inputs[0] == CV_8U);
         CV_Assert(inputs[1] == CV_64S || inputs[1] == CV_32S);
         outputs.assign(1, inputs[0]);
     }
@@ -159,7 +159,7 @@ public:
             case CV_8U:
                 forward_impl<uint8_t, T_INDEX>(std::forward<Args>(args)...);
                 break;
-            case CV_16S:
+            case CV_16F:
                 forward_impl<int16_t, T_INDEX>(std::forward<Args>(args)...);
                 break;
             case CV_32S:

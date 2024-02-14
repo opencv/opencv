@@ -382,7 +382,6 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
 
     std::vector<MatShape> inpShapes(inputs.size());
     std::vector<MatType> inpTypes(inputs.size());
-    int ddepth = params.get<int>("depth", CV_32F);
     for (size_t i = 0; i < inputs.size(); ++i)
     {
         inpShapes[i] = shape(inputs[i]);

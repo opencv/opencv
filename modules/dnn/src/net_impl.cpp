@@ -557,9 +557,9 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
             if (preferableBackend == DNN_BACKEND_OPENCV &&
                 preferableTarget == DNN_TARGET_OPENCL_FP16)
             {
-                type = CV_16S;
+                type = CV_16F;
                 if (layers[0].dtype == CV_32F)
-                    layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
+                    layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16F);
             }
             if (netWasQuantized && inp.type() == CV_8S) {
                 type = CV_8S;

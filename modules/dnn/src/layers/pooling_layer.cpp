@@ -322,7 +322,7 @@ public:
         UMat& outMat = outputs[0];
         UMat maskMat;
         if (computeMaxIdx)
-            maskMat.create(shape(outputs[1]), use_half ? CV_16S : CV_32F);
+            maskMat.create(shape(outputs[1]), use_half ? CV_16F : CV_32F);
 
         CV_Assert(inpMat.offset == 0 && outMat.offset == 0);
 
@@ -331,7 +331,7 @@ public:
         if (computeMaxIdx) {
             if (use_half) {
                 UMat maskMat32F;
-                convertFp16(maskMat, maskMat32F);
+                maskMat.convertTo(maskMat32F, CV_32F);
                 maskMat32F.convertTo(outputs[1], CV_64S);
             }
             else
@@ -1289,7 +1289,7 @@ public:
             CV_CheckEQ(inputs[0], CV_32F, "Unsupported type");
         else if (preferableTarget == DNN_TARGET_OPENCL_FP16
             || preferableTarget == DNN_TARGET_CPU_FP16)
-            CV_Assert(inputs[0] == CV_16S || inputs[0] == CV_8S);
+            CV_Assert(inputs[0] == CV_16F || inputs[0] == CV_8S);
         else
             CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_8S);
 

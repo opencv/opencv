@@ -75,7 +75,7 @@ public:
         std::vector<MatType>& internals) const
     {
         CV_Assert(inputs.size() >= 2);
-        CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_16S);
+        CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_16F);
         CV_Assert(inputs[1] == CV_64S || inputs[1] == CV_32S);
         outputs.assign(1, inputs[0]);
     }
@@ -98,9 +98,9 @@ public:
             run<float, int32_t>(input, indices, outputs);
         else if (input.type() == CV_32F && indices.type() == CV_64S)
             run<float, int64_t>(input, indices, outputs);
-        else if (input.type() == CV_16S && indices.type() == CV_32S)
+        else if (input.type() == CV_16F && indices.type() == CV_32S)
             run<int16_t, int32_t>(input, indices, outputs);
-        else if (input.type() == CV_16S && indices.type() == CV_64S)
+        else if (input.type() == CV_16F && indices.type() == CV_64S)
             run<int16_t, int64_t>(input, indices, outputs);
     }
 
