@@ -387,7 +387,7 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    std::array<cv::Size, 2> resolutions = { cv::Size {700, 700}, cv::Size {640, 480} };
+    std::array<cv::Size, 4> resolutions = { cv::Size {700, 700}, cv::Size {640, 480}, cv::Size(256, 256), cv::Size(320, 240) };
     for (const auto& res : resolutions)
     {
         for (const auto shadingType : {
