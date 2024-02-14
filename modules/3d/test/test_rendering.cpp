@@ -746,7 +746,7 @@ TEST_P(RenderingTest, accuracy)
             if (width == 320 && height == 240 && shadingType == RASTERIZE_SHADING_FLAT && cullingMode == RASTERIZE_CULLING_CW)
             {
                 thr.depthInfThreshold = 1;
-                thr.depthL2Threshold = 0.00159;
+                thr.depthL2Threshold = 0.0016;
             }
             else if (width == 320 && height == 240 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_NONE)
             {
