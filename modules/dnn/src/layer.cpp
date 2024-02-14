@@ -188,7 +188,7 @@ void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
 
         outputs.resize(orig_outputs.size());
         for (size_t i = 0; i < orig_outputs.size(); i++)
-            if (orig_outputs[i].depth() == CV_16S)
+            if (orig_outputs[i].depth() == CV_16F)
                 outputs[i].create(shape(orig_outputs[i]), CV_32F);
             else
                 outputs[i] = orig_outputs[i];
@@ -264,7 +264,7 @@ void Layer::getTypes(const std::vector<MatType>&inputs,
         if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
             CV_CheckTypeEQ(input, CV_32F, "");
         else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-            CV_CheckType(input, input == CV_16S || input == CV_8S, "");
+            CV_CheckType(input, input == CV_16F || input == CV_8S, "");
         else
             CV_CheckType(input, input == CV_32F || input == CV_8S, "");
 

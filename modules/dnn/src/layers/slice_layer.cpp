@@ -290,7 +290,7 @@ public:
                 CV_CheckEQ(input, CV_32F, "Unsupported type");
             else if (preferableTarget == DNN_TARGET_OPENCL_FP16
                      || preferableTarget == DNN_TARGET_CPU_FP16)
-                CV_Assert(input == CV_16S || input == CV_8S || input == CV_32S || input == CV_64S);
+                CV_Assert(input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S);
             else
                 CV_Assert(input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S);
 
@@ -912,7 +912,7 @@ public:
             if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget  == DNN_TARGET_CUDA)
                 CV_CheckEQ(input, CV_32F, "Unsupported type");
             else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_Assert(input == CV_16S || input == CV_8S || input == CV_32S || input == CV_64S);
+                CV_Assert(input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S);
             else
                 CV_Assert(input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S);
 
