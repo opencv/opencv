@@ -1947,7 +1947,7 @@ vector<vector<float> > QRDecode::computeSpline(const vector<int> &x_arr, const v
     }
     for (int i = 0; i < n - 1; i++)
     {
-        h[i] = static_cast<float>(y_arr[i + 1] - y_arr[i]);
+        h[i] = static_cast<float>(y_arr[i + 1] - y_arr[i]) + std::numeric_limits<float>::epsilon();
     }
     for (int i = 1; i < n - 1; i++)
     {
