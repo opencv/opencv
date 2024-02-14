@@ -637,10 +637,10 @@ struct HWFeatures
         }
     #endif
     #elif (defined __APPLE__)
-    #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
+    #if (defined __ARM_NEON || defined __aarch64__)
         have[CV_CPU_NEON] = true;
     #endif
-    #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
+    #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON))
         have[CV_CPU_FP16] = have[CV_CPU_NEON_FP16] = true;
     #endif
     // system.cpp may be compiled w/o special -march=armv8...+dotprod, -march=armv8...+bf16 etc.,
@@ -659,7 +659,7 @@ struct HWFeatures
         have[CV_CPU_NEON_BF16] = true;
     }
     #elif (defined __clang__)
-    #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
+    #if (defined __ARM_NEON || defined __aarch64__)
         have[CV_CPU_NEON] = true;
         #if (defined __ARM_FP  && ((__ARM_FP & 0x2) != 0))
         have[CV_CPU_FP16] = true;
