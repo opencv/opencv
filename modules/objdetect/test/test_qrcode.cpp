@@ -631,4 +631,20 @@ TEST_P(Objdetect_QRCode_detectAndDecodeMulti, detect_regression_24679)
     EXPECT_EQ(decoded_info.size(), 4U);
 }
 
+TEST(Objdetect_QRCode_detect, detect_regression_24450)
+{
+    const std::string name_current_image = "issue_24450.png";
+    const std::string root = "qrcode/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat img = imread(image_path);
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    std::vector<Point2f> points;
+    ASSERT_TRUE(qrcode.detect(img, points));
+    EXPECT_EQ(points.size(), 4U);
+    img.at<Vec3b>(img.rows - 1, 296) = {};
+    ASSERT_TRUE(qrcode.detect(img, points));
+    EXPECT_EQ(points.size(), 4U);
+}
+
 }} // namespace
