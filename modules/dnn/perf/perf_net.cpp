@@ -47,10 +47,15 @@ public:
         for(auto &inp: inputs){
             netMatShapes.push_back(shape(std::get<0>(inp)));
         }
+
+        bool fp16 = false;
+#ifdef HAVE_OPENCL
+        fp16 = ocl::Device::getDefault().isExtensionSupported("cl_khr_fp16");
+#endif
         std::vector<cv::dnn::MatType> netMatTypes;
         for (auto& inp : inputs) {
             cv::dnn::MatType t = std::get<0>(inp).depth();
-            if (t == CV_32F && target == DNN_TARGET_OPENCL_FP16)
+            if (t == CV_32F && target == DNN_TARGET_OPENCL_FP16 && fp16)
                 t = CV_16S;
             netMatTypes.push_back(t);
         }
