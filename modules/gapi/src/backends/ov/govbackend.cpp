@@ -868,11 +868,6 @@ public:
         }
     }
 
-    void cfgColorFormat(const std::string &input_name) {
-        auto &input_info = m_ppp.input(input_name);
-        input_info.tensor().set_color_format(::ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"});
-    }
-
     // FIXME: Decompose this...
     void cfgPreProcessing(const std::string  &input_name,
                           const cv::GMetaArg &input_meta,
