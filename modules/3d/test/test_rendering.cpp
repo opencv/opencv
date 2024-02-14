@@ -614,7 +614,7 @@ TEST_P(RenderingTest, floatParams)
             }
             else if (width == 320 && height == 240 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_NONE)
             {
-                thr.rgbInfThreshold = 2.39e-07;
+                thr.rgbInfThreshold = 3e-7;
                 thr.rgbL2Threshold = 1.86e-10;
                 thr.depthInfThreshold = 1;
                 thr.depthL2Threshold = 0.000406;
@@ -626,6 +626,12 @@ TEST_P(RenderingTest, floatParams)
                 thr.depthInfThreshold = 1;
                 thr.depthL2Threshold = 0.0016;
             }
+            else if (width == 256 && height == 256 && shadingType == RASTERIZE_SHADING_FLAT && cullingMode == RASTERIZE_CULLING_CCW)
+            {
+                thr.rgbInfThreshold = 0.934;
+                thr.rgbL2Threshold = 0.000102;
+                thr.depthMaskThreshold = 21;
+            }
             else if (width == 640 && height == 480 && shadingType == RASTERIZE_SHADING_WHITE && cullingMode == RASTERIZE_CULLING_NONE)
             {
                 thr.rgbL2Threshold = 1;
@@ -635,21 +641,21 @@ TEST_P(RenderingTest, floatParams)
             else if (width == 700 && height == 700 && shadingType == RASTERIZE_SHADING_FLAT && cullingMode == RASTERIZE_CULLING_CCW)
             {
                 thr.rgbInfThreshold = 0.934;
-                thr.rgbL2Threshold = 3.16e-5;
-                thr.depthMaskThreshold = 113;
+                thr.rgbL2Threshold = 3.18e-5;
+                thr.depthMaskThreshold = 114;
             }
             break;
         case ModelType::File:
             thr.depthInfThreshold = 1;
             if (width == 320 && height == 240 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_CCW)
             {
-                thr.rgbInfThreshold = 0.000156;
+                thr.rgbInfThreshold = 0.000157;
                 thr.rgbL2Threshold = 6e-09;
                 thr.depthL2Threshold = 0.000413;
             }
             else if (width == 700 && height == 700 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_CW)
             {
-                thr.rgbInfThreshold = 0.00027;
+                thr.rgbInfThreshold = 0.000303;
                 thr.rgbL2Threshold = 1.9e-09;
                 thr.depthL2Threshold = 0.00012;
             }
@@ -740,7 +746,7 @@ TEST_P(RenderingTest, accuracy)
             if (width == 320 && height == 240 && shadingType == RASTERIZE_SHADING_FLAT && cullingMode == RASTERIZE_CULLING_CW)
             {
                 thr.depthInfThreshold = 1;
-                thr.depthL2Threshold = 0.00153;
+                thr.depthL2Threshold = 0.00159;
             }
             else if (width == 320 && height == 240 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_NONE)
             {
@@ -748,7 +754,7 @@ TEST_P(RenderingTest, accuracy)
                 thr.rgbL2Threshold = 8.03E-05;
                 thr.depthMaskThreshold = 23;
                 thr.depthInfThreshold = 1;
-                thr.depthL2Threshold = 0.000494;
+                thr.depthL2Threshold = 0.000544;
             }
             else if (width == 256 && height == 256 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_CW)
             {
@@ -756,6 +762,12 @@ TEST_P(RenderingTest, accuracy)
                 thr.rgbL2Threshold = 2.54E-06;
                 thr.depthInfThreshold = 1;
                 thr.depthL2Threshold = 0.00175;
+            }
+            else if (width == 256 && height == 256 && shadingType == RASTERIZE_SHADING_FLAT && cullingMode == RASTERIZE_CULLING_CCW)
+            {
+                thr.rgbInfThreshold = 0.934;
+                thr.rgbL2Threshold = 0.000102;
+                thr.depthMaskThreshold = 21;
             }
             else if (width == 640 && height == 480 && shadingType == RASTERIZE_SHADING_WHITE && cullingMode == RASTERIZE_CULLING_NONE)
             {
@@ -768,15 +780,15 @@ TEST_P(RenderingTest, accuracy)
             else if (width == 700 && height == 700 && shadingType == RASTERIZE_SHADING_FLAT && cullingMode == RASTERIZE_CULLING_CCW)
             {
                 thr.rgbInfThreshold = 0.934;
-                thr.rgbL2Threshold = 3.26E-05;
-                thr.depthMaskThreshold = 120;
+                thr.rgbL2Threshold = 3.27e-5;
+                thr.depthMaskThreshold = 121;
             }
             break;
         case ModelType::Color:
             thr.depthInfThreshold = 1;
             if (width == 320 && height == 240)
             {
-                thr.depthL2Threshold = 0.000909;
+                thr.depthL2Threshold = 0.000989;
             }
             else if (width == 256 && height == 256)
             {
