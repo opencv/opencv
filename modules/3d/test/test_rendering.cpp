@@ -933,18 +933,26 @@ TEST_P(RenderingTest, glCompatibleDepth)
 }
 
 
-INSTANTIATE_TEST_CASE_P(Rendering, RenderingTest, ::testing::Combine(
-    ::testing::Values(std::make_tuple(700, 700), std::make_tuple(640, 480)),
-    ShadingTypeEnum::all(),
-    CullingModeEnum::all(),
-    ModelTypeEnum::all(),
-    // float type
-    //::testing::Values(CV_32F, CV_64F), // not supported yet
-    ::testing::Values(CV_32F), // float type
-    // index type
-    //::testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S) // not supported yet
-    ::testing::Values(CV_32S) // not supported yet
+INSTANTIATE_TEST_CASE_P(Rendering, RenderingTest, ::testing::Values(
+    RenderTestParamType { std::make_tuple(320, 240), RASTERIZE_SHADING_SHADED, RASTERIZE_CULLING_NONE, ModelType::Centered,  CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(256, 256), RASTERIZE_SHADING_SHADED, RASTERIZE_CULLING_NONE, ModelType::Centered,  CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(256, 256), RASTERIZE_SHADING_WHITE,  RASTERIZE_CULLING_NONE, ModelType::Centered,  CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(640, 480), RASTERIZE_SHADING_FLAT,   RASTERIZE_CULLING_NONE, ModelType::Centered,  CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(320, 240), RASTERIZE_SHADING_FLAT,   RASTERIZE_CULLING_CW,   ModelType::Color,     CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(320, 240), RASTERIZE_SHADING_SHADED, RASTERIZE_CULLING_NONE, ModelType::Color,     CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(256, 256), RASTERIZE_SHADING_SHADED, RASTERIZE_CULLING_NONE, ModelType::Color,     CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(256, 256), RASTERIZE_SHADING_WHITE,  RASTERIZE_CULLING_NONE, ModelType::Color,     CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(320, 240), RASTERIZE_SHADING_FLAT,   RASTERIZE_CULLING_CW,   ModelType::Clipping,  CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(320, 240), RASTERIZE_SHADING_SHADED, RASTERIZE_CULLING_NONE, ModelType::Clipping,  CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(256, 256), RASTERIZE_SHADING_FLAT,   RASTERIZE_CULLING_CCW,  ModelType::Clipping,  CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(256, 256), RASTERIZE_SHADING_SHADED, RASTERIZE_CULLING_CW,   ModelType::Clipping,  CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(640, 480), RASTERIZE_SHADING_WHITE,  RASTERIZE_CULLING_NONE, ModelType::Clipping,  CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(700, 700), RASTERIZE_SHADING_FLAT,   RASTERIZE_CULLING_CCW,  ModelType::Clipping,  CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(320, 240), RASTERIZE_SHADING_SHADED, RASTERIZE_CULLING_CCW,  ModelType::File,      CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(256, 256), RASTERIZE_SHADING_FLAT,   RASTERIZE_CULLING_CCW,  ModelType::File,      CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(700, 700), RASTERIZE_SHADING_SHADED, RASTERIZE_CULLING_CW,   ModelType::File,      CV_32F, CV_32S },
+    RenderTestParamType { std::make_tuple(700, 700), RASTERIZE_SHADING_WHITE,  RASTERIZE_CULLING_NONE, ModelType::File,      CV_32F, CV_32S }
 ));
 
-}
-}
+} // namespace ::
+} // namespace opencv_test
