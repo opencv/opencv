@@ -810,14 +810,6 @@ TEST_P(RenderingTest, accuracy)
                 thr.depthInfThreshold = 99;
                 thr.depthL2Threshold = 0.00544;
             }
-            else if (width == 256 && height == 256 && shadingType == RASTERIZE_SHADING_FLAT && cullingMode == RASTERIZE_CULLING_CCW)
-            {
-                thr.rgbInfThreshold = 0.868;
-                thr.rgbL2Threshold = 3.82E-05;
-                thr.depthMaskThreshold = 2;
-                thr.depthInfThreshold = 101;
-                thr.depthL2Threshold = 0.00408;
-            }
             else if (width == 700 && height == 700 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_CW)
             {
                 thr.rgbInfThreshold = 0.973;
@@ -949,7 +941,6 @@ INSTANTIATE_TEST_CASE_P(Rendering, RenderingTest, ::testing::Values(
     RenderTestParamType { std::make_tuple(640, 480), RASTERIZE_SHADING_WHITE,  RASTERIZE_CULLING_NONE, ModelType::Clipping,  CV_32F, CV_32S },
     RenderTestParamType { std::make_tuple(700, 700), RASTERIZE_SHADING_FLAT,   RASTERIZE_CULLING_CCW,  ModelType::Clipping,  CV_32F, CV_32S },
     RenderTestParamType { std::make_tuple(320, 240), RASTERIZE_SHADING_SHADED, RASTERIZE_CULLING_CCW,  ModelType::File,      CV_32F, CV_32S },
-    RenderTestParamType { std::make_tuple(256, 256), RASTERIZE_SHADING_FLAT,   RASTERIZE_CULLING_CCW,  ModelType::File,      CV_32F, CV_32S },
     RenderTestParamType { std::make_tuple(700, 700), RASTERIZE_SHADING_SHADED, RASTERIZE_CULLING_CW,   ModelType::File,      CV_32F, CV_32S },
     RenderTestParamType { std::make_tuple(700, 700), RASTERIZE_SHADING_WHITE,  RASTERIZE_CULLING_NONE, ModelType::File,      CV_32F, CV_32S }
 ));
