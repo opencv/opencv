@@ -7,7 +7,7 @@ import numpy as np
 import math
 import yaml
 from drawer import animation2D, animation3D
-from utils import RandGen, insideImage, eul2rot, saveKDRT, areAllInsideImage, insideImageMask, projectCamera, export2JSON
+from utils import RandGen, insideImage, eul2rot, saveKDRT, areAllInsideImage, insideImageMask, projectCamera, export2JSON, writeMatrix
 from pathlib import Path
 from board import CheckerBoard
 
@@ -185,6 +185,8 @@ def generateAll(cameras, board, num_frames, rand_gen, MAX_RAND_ITERS=10000, save
     points_2d, points_3d = [], []
     valid_frames_per_camera = np.zeros(len(cameras))
     MIN_FRAMES_PER_CAM = int(num_frames * 0.1)
+    R_used = []
+    t_used = []
     for frame in range(MAX_RAND_ITERS):
         R_board = eul2rot([ rand_gen.randRange(board.euler_limit[0][0], board.euler_limit[0][1]),
                             rand_gen.randRange(board.euler_limit[1][0], board.euler_limit[1][1]),
@@ -212,7 +214,9 @@ def generateAll(cameras, board, num_frames, rand_gen, MAX_RAND_ITERS=10000, save
         """
 
         for cam_idx in range(len(cameras)):
-            if not board.isProjectionValid(cam_points_2d[cam_idx]):
+            # Check whether the board is in front of the the image
+            pt_3d = cameras[cam_idx].R @ pts_board + cameras[cam_idx].t
+            if not board.isProjectionValid(cam_points_2d[cam_idx]) or np.min(pt_3d[2]) < 1e-3:
                 cam_points_2d[cam_idx] = -np.ones_like(cam_points_2d[cam_idx])
             elif cameras[cam_idx].noise_scale_img_diag is not None:
                 cam_points_2d[cam_idx] += np.random.normal(0, cameras[cam_idx].img_diag * cameras[cam_idx].noise_scale_img_diag, cam_points_2d[cam_idx].shape)
@@ -233,6 +237,9 @@ def generateAll(cameras, board, num_frames, rand_gen, MAX_RAND_ITERS=10000, save
             points_2d.append(np.stack(cam_points_2d))
             points_3d.append(pts_board)
 
+            R_used.append(R_board)
+            t_used.append(R_board @ (board.t_origin - points_board_mean) + points_board_mean + t_board)
+
             if len(points_2d) >= num_frames and (valid_frames_per_camera >= MIN_FRAMES_PER_CAM).all():
                 print('tried samples', frame)
                 break
@@ -244,7 +251,7 @@ def generateAll(cameras, board, num_frames, rand_gen, MAX_RAND_ITERS=10000, save
     if save_3d_animation is not None: animation3D(board, cameras, points_3d, save_3d_animation, VIDEOS_FPS, VIDEOS_DPI, MAX_FRAMES)
 
     print('number of found frames', len(points_2d))
-    return np.stack(points_2d), np.stack(points_3d)
+    return np.stack(points_2d), np.stack(points_3d), np.stack(R_used), np.stack(t_used)
 
 def createConfigFile(fname, params):
     file = open(fname, 'w')
@@ -313,7 +320,7 @@ def main(cfg_name, save_folder):
 
         checkerboard = CheckerBoard(cfg['BOARD']['WIDTH'], cfg['BOARD']['HEIGHT'], cfg['BOARD']['SQUARE_LEN'], cfg['BOARD']['EULER_LIMIT'], cfg['BOARD']['T_LIMIT'], cfg['BOARD']['T_ORIGIN'])
         cameras = getCamerasFromCfg(cfg)
-        points_2d, points_3d = generateAll(cameras, checkerboard, cfg['MAX_FRAMES'], RandGen(cfg['SEED']), cfg['MAX_RANDOM_ITERS'], save_folder+'plots_projections.mp4', save_folder+'board_cameras.mp4')
+        points_2d, points_3d, R_used, t_used = generateAll(cameras, checkerboard, cfg['MAX_FRAMES'], RandGen(cfg['SEED']), cfg['MAX_RANDOM_ITERS'], save_folder+'plots_projections.mp4', save_folder+'board_cameras.mp4')
 
         for i in range(len(cameras)):
             print('Camera', i)
@@ -327,6 +334,11 @@ def main(cfg_name, save_folder):
         is_fisheye = [cam.is_fisheye for cam in cameras]
         export2JSON(checkerboard.pattern, points_2d, imgs_width_height, is_fisheye, save_folder+'opencv_sample_'+cfg['NAME']+'.json')
         saveKDRT(cameras, save_folder+'gt.txt')
+
+        file = open(save_folder + "gt.txt", "a")
+        for i in range(R_used.shape[0]):
+            writeMatrix(file, R_used[i])
+            writeMatrix(file, t_used[i])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
