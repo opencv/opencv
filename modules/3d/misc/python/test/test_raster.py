@@ -71,22 +71,22 @@ class raster_test(NewOpenCVTests):
         upVector = numpy.array([0.0, 1.0, 0.0], dtype=numpy.float32)
         self.cameraPose = lookAtMatrixCal(position, lookat, upVector)
 
-        self.depth_buf = numpy.ones((700, 700), dtype=numpy.float32) * self.zFar
-        self.color_buf = numpy.zeros((700, 700, 3), dtype=numpy.float32)
+        self.depth_buf = numpy.ones((240, 320), dtype=numpy.float32) * self.zFar
+        self.color_buf = numpy.zeros((240, 320, 3), dtype=numpy.float32)
 
         self.settings = cv.TriangleRasterizeSettings().setShadingType(cv.RASTERIZE_SHADING_SHADED)
         self.settings = self.settings.setCullingMode(cv.RASTERIZE_CULLING_NONE)
 
     def compareResults(self, needRgb, needDepth):
         if needDepth:
-            depth = self.get_sample('rendering/depth_image_Clipping_700x700_CullNone.png', cv.IMREAD_ANYDEPTH).astype(numpy.float32)
+            depth = self.get_sample('rendering/depth_image_Clipping_320x240_CullNone.png', cv.IMREAD_ANYDEPTH).astype(numpy.float32)
             depthFactor = 1000.0
             diff = depth/depthFactor - self.depth_buf
             norm = numpy.linalg.norm(diff)
             self.assertLessEqual(norm, 356.0)
 
         if needRgb:
-            rgb = self.get_sample('rendering/example_image_Clipping_700x700_CullNone_Shaded.png', cv.IMREAD_ANYCOLOR)
+            rgb = self.get_sample('rendering/example_image_Clipping_320x240_CullNone_Shaded.png', cv.IMREAD_ANYCOLOR)
             diff = rgb/255.0 - self.color_buf
             norm = numpy.linalg.norm(diff)
             self.assertLessEqual(norm, 11.62)
