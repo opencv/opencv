@@ -1567,9 +1567,9 @@ Point QRDecode::findClosestZeroPoint(Point2f original_point)
     Point zero_point;
 
     const int step = 2;
-    for (int i = orig_x - step; i >= 0 && i <= orig_x + step; i++)
+    for (int i = std::max(orig_x - step, 0); i >= 0 && i <= std::min(orig_x + step, bin_barcode.cols - 1); i++)
     {
-        for (int j = orig_y - step; j >= 0 && j <= orig_y + step; j++)
+        for (int j = std::max(orig_y - step, 0); j >= 0 && j <= std::min(orig_y + step, bin_barcode.rows - 1); j++)
         {
             Point p(i, j);
             value = bin_barcode.at<uint8_t>(p);
