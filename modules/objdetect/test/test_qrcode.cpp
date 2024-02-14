@@ -631,6 +631,23 @@ TEST_P(Objdetect_QRCode_detectAndDecodeMulti, detect_regression_24679)
     EXPECT_EQ(decoded_info.size(), 4U);
 }
 
+TEST_P(Objdetect_QRCode_detectAndDecodeMulti, detect_regression_24011)
+{
+    const std::string name_current_image = "issue_24011.jpg";
+    const std::string root = "qrcode/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat img = imread(image_path);
+    const std::string method = GetParam();
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    if (method == "aruco_based") {
+        qrcode = QRCodeDetectorAruco();
+    }
+    std::vector<cv::String> decoded_info;
+    ASSERT_TRUE(qrcode.detectAndDecodeMulti(img, decoded_info));
+    EXPECT_EQ(decoded_info.size(), 2U);
+}
+
 TEST(Objdetect_QRCode_detect, detect_regression_24450)
 {
     const std::string name_current_image = "issue_24450.png";
