@@ -657,8 +657,8 @@ TEST_P(Layer_ARG_1d_Test, Accuracy) {
 
     Ptr<ArgLayer> layer = ArgLayer::create(lp);
 
-    std::vector<int> input_shape = {batch_size, 1, 1};
-    std::vector<int> output_shape = {1, 1, 1};
+    std::vector<int> input_shape = {batch_size, 1};
+    std::vector<int> output_shape = {1, 1};
 
     if (batch_size == 0){
         input_shape.erase(input_shape.begin());
@@ -673,7 +673,7 @@ TEST_P(Layer_ARG_1d_Test, Accuracy) {
     cv::Mat output_ref = cv::Mat(output_shape,  CV_32F, 0);
 
     for (int i = 0; i < batch_size; ++i)
-        input.at<float>(i, 0, 0) = static_cast<float>(i + 1);
+        input.at<float>(i, 0) = static_cast<float>(i + 1);
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
