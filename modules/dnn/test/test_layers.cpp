@@ -738,23 +738,25 @@ TEST_P(Layer_ELEMWISE_1d_Test, Accuracy) {
     lp.set("operation", operation);
     Ptr<EltwiseLayer> layer = EltwiseLayer::create(lp);
 
-    std::vector<int> input_shape = {batch_size, 1, 1};
+    std::vector<int> input_shape = {batch_size, 1};
     if (batch_size == 0)
         input_shape.erase(input_shape.begin());
 
     cv::Mat input1 = cv::Mat(input_shape, CV_32F, 1.0);
     cv::Mat input2 = cv::Mat(input_shape, CV_32F, 1.0);
 
-    for (int i = 0; i < batch_size; ++i) {
-        input1.at<float>(i, 0, 0) = static_cast<float>(i + 1);
-        input2.at<float>(i, 0, 0) = static_cast<float>(2 * (i + 1));
+    // fill in the input matrices with different values
+    for (int i = 0; i < batch_size; ++i)
+    {
+        input1.at<float>(i, 0) = static_cast<float>(i);
+        input2.at<float>(i, 0) = static_cast<float>(i + 1);
     }
 
     // dynamicly select the operation
-    cv::Mat output_ref = (operation == "sum") ? input1 + input2 : (operation == "max") \
-                                            ? cv::max(input1, input2) : (operation == "min") \
-                                            ? cv::min(input1, input2) : (operation == "prod") \
-                                            ? input1.mul(input2) : input1 / input2;
+    cv::Mat output_ref = (operation == "sum") ? input1 + input2 :
+                         (operation == "max") ? cv::max(input1, input2) :
+                         (operation == "min") ? cv::min(input1, input2) :
+                         (operation == "prod")  ? input1.mul(input2) : input1 / input2;
 
     std::vector<Mat> inputs{input1, input2};
     std::vector<Mat> outputs;

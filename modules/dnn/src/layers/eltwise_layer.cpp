@@ -191,7 +191,7 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() >= 2);
-        CV_Assert(inputs[0].size() >= 2);
+        CV_Assert(inputs[0].size() >= 1);
         CV_Assert(coeffs.size() == 0 || coeffs.size() == inputs.size());
         CV_Assert(op == SUM || coeffs.size() == 0);
 
@@ -235,13 +235,13 @@ public:
         outputs.assign(1, inputs[0]);
         outputs[0][1] = numChannels;
 
-        if (dims > 2)
+        if (dims >= 1)
         {
             size_t vecIdx = 0;
             bool isVecFound = false;
             for (size_t i = 0; i < inputs.size(); i++)
             {
-                bool allOnes = isAllOnes(inputs[i], 2, dims);
+                bool allOnes = isAllOnes(inputs[i], (dims != 1) ? 2 : 1, dims);
                 if (!allOnes && !isVecFound)
                 {
                     vecIdx = i;
@@ -277,7 +277,7 @@ public:
         for (size_t i = 0; i < inputs.size(); i++)
         {
             MatShape inpShape = shape(inputs[i].size);
-            if (isAllOnes(inpShape, 2, inputs[i].dims))
+            if (isAllOnes(inpShape, 0, inputs[i].dims))
             {
                 hasVecInput = true;
                 return;
@@ -310,11 +310,14 @@ public:
                         int nstripes)
         {
             const EltwiseOp op = self.op;
-            CV_Check(dst.dims, 1 < dst.dims && dst.dims <= 5, ""); CV_CheckTypeEQ(dst.type(), CV_32FC1, ""); CV_Assert(dst.isContinuous());
+            CV_Check(dst.dims, 1 <= dst.dims && dst.dims <= 5, "");
+            CV_CheckTypeEQ(dst.type(), CV_32FC1, "");
+            CV_Assert(dst.isContinuous());
             CV_Assert(self.coeffs.empty() || self.coeffs.size() == (size_t)nsrcs);
             CV_CheckGE(nsrcs, 2, "");
 
-            CV_Assert(self.outputChannels == dst.size[1]);
+            if (dst.dims != 1)
+                CV_Assert(self.outputChannels == dst.size[1]);
 
             EltwiseInvoker p(self);
             p.srcs.resize(nsrcs);
