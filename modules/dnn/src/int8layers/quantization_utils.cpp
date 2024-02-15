@@ -255,7 +255,8 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16
+            || preferableTarget == DNN_TARGET_CPU_FP16)
             outputs.assign(requiredOutputs, CV_16F);
         else
             outputs.assign(requiredOutputs, CV_32F);

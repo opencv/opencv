@@ -438,7 +438,7 @@ public:
                 return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int32_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
             else if (indicesType == CV_64S)
                 return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int64_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
-            
+
             CV_Assert(false);
             return Ptr<BackendNode>();
         }
