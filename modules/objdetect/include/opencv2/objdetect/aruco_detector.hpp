@@ -252,7 +252,7 @@ struct CV_EXPORTS_W_SIMPLE RefineParameters {
      */
     CV_PROP_RW float minRepDistance;
 
-    /** @brief minRepDistance rate of allowed erroneous bits respect to the error correction capability of the used dictionary.
+    /** @brief errorCorrectionRate rate of allowed erroneous bits respect to the error correction capability of the used dictionary.
      *
      * -1 ignores the error correction step.
      */
