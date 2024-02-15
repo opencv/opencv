@@ -481,6 +481,11 @@ bool QRDetect::localization()
         }
     }
 
+    if (list_lines_y.empty())
+    {
+        localization_points.clear();
+    }
+
     bool square_flag = false, local_points_flag = false;
     double triangle_sides[3];
     double triangle_perim, square_area, img_square_area;
