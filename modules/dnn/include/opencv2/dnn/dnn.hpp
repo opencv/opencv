@@ -697,14 +697,14 @@ CV__DNN_INLINE_NS_BEGIN
          * order is the same as in layersIds
          */
         CV_WRAP void getLayersShapes(const std::vector<MatShape>& netInputShapes,
-                                     const std::vector<MatType>& netInputTypes,
+                                     const std::vector<int>& netInputTypes,
                                      CV_OUT std::vector<int>& layersIds,
                                      CV_OUT std::vector<std::vector<MatShape> >& inLayersShapes,
                                      CV_OUT std::vector<std::vector<MatShape> >& outLayersShapes) const;
 
         /** @overload */
         CV_WRAP void getLayersShapes(const MatShape& netInputShape,
-                                     const MatType& netInputType,
+                                     const int& netInputType,
                                      CV_OUT std::vector<int>& layersIds,
                                      CV_OUT std::vector<std::vector<MatShape> >& inLayersShapes,
                                      CV_OUT std::vector<std::vector<MatShape> >& outLayersShapes) const;
@@ -719,14 +719,14 @@ CV__DNN_INLINE_NS_BEGIN
          * order is the same as in layersIds
          */
         void getLayerShapes(const MatShape& netInputShape,
-                                    const MatType& netInputType,
+                                    const int& netInputType,
                                     const int layerId,
                                     CV_OUT std::vector<MatShape>& inLayerShapes,
                                     CV_OUT std::vector<MatShape>& outLayerShapes) const; // FIXIT: CV_WRAP
 
         /** @overload */
         void getLayerShapes(const std::vector<MatShape>& netInputShapes,
-                                    const std::vector<MatType>& netInputTypes,
+                                    const std::vector<int>& netInputTypes,
                                     const int layerId,
                                     CV_OUT std::vector<MatShape>& inLayerShapes,
                                     CV_OUT std::vector<MatShape>& outLayerShapes) const; // FIXIT: CV_WRAP
@@ -792,13 +792,13 @@ CV__DNN_INLINE_NS_BEGIN
          * @param blobs output parameter to store resulting bytes for intermediate blobs.
          */
         void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
-                                          const std::vector<MatType>& netInputTypes,
+                                          const std::vector<int>& netInputTypes,
                                           CV_OUT std::vector<int>& layerIds,
                                           CV_OUT std::vector<size_t>& weights,
                                           CV_OUT std::vector<size_t>& blobs) const; // FIXIT: CV_WRAP
         /** @overload */
         void getMemoryConsumption(const MatShape& netInputShape,
-                                          const MatType& netInputType,
+                                          const int& netInputType,
                                           CV_OUT std::vector<int>& layerIds,
                                           CV_OUT std::vector<size_t>& weights,
                                           CV_OUT std::vector<size_t>& blobs) const; // FIXIT: CV_WRAP
