@@ -72,7 +72,7 @@ public:
         const int requiredOutputs,
         const int requiredInternals,
         std::vector<MatType>& outputs,
-        std::vector<MatType>& internals) const
+        std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() >= 2);
         CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_16F);
