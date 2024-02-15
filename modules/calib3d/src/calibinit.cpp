@@ -234,7 +234,7 @@ public:
         all_quads_count = 0;
     }
 
-    void generateQuads(const cv::Mat& image_, int flags);
+    void generateQuads(const cv::Mat& image_, int flags, int dilations);
 
     bool processQuads(std::vector<cv::Point2f>& out_corners, int &prev_sqr_size);
 
@@ -547,7 +547,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         rectangle( thresh_img_new, Point(0,0), Point(thresh_img_new.cols-1, thresh_img_new.rows-1), Scalar(255,255,255), 3, LINE_8);
 
         detector.reset();
-        detector.generateQuads(thresh_img_new, flags);
+        detector.generateQuads(thresh_img_new, flags, dilations);
         DPRINTF("Quad count: %d/%d", detector.all_quads_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
         SHOW_QUADS("New quads", thresh_img_new, &detector.all_quads[0], detector.all_quads_count);
         if (detector.processQuads(out_corners, prev_sqr_size))
@@ -612,7 +612,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                 rectangle( thresh_img, Point(0,0), Point(thresh_img.cols-1, thresh_img.rows-1), Scalar(255,255,255), 3, LINE_8);
 
                 detector.reset();
-                detector.generateQuads(thresh_img, flags);
+                detector.generateQuads(thresh_img, flags, dilations);
                 DPRINTF("Quad count: %d/%d", detector.all_quads_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
                 SHOW_QUADS("Old quads", thresh_img, &detector.all_quads[0], detector.all_quads_count);
                 if (detector.processQuads(out_corners, prev_sqr_size))
@@ -1755,7 +1755,7 @@ void ChessBoardDetector::findQuadNeighbors()
 // returns corners in clockwise order
 // corners don't necessarily start at same position on quad (e.g.,
 //   top left corner)
-void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
+void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags, int dilations)
 {
     binarized_image = image_;  // save for debug purposes
 
@@ -1880,6 +1880,9 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
             float d = normL2Sqr<float>(q.corners[i]->pt - q.corners[(i+1)&3]->pt);
             q.edge_len = std::min(q.edge_len, d);
         }
+
+        const int edge_len_compensation = 2 * dilations;
+        q.edge_len += 2 * sqrt(q.edge_len) * edge_len_compensation + edge_len_compensation * edge_len_compensation;
     }
 
     all_quads_count = quad_count;
