@@ -328,7 +328,7 @@ struct DataLayer : public Layer
         const int requiredOutputs,
         const int requiredInternals,
         std::vector<MatType>& outputs,
-        std::vector<MatType>& internals) const
+        std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size());
         outputs = inputs;
