@@ -302,13 +302,13 @@ string BarcodeImpl::detectAndDecode(InputArray img, OutputArray points, OutputAr
     CV_UNUSED(straight_code);
     vector<string> decoded_info;
     vector<string> decoded_type;
-    vector<Point> points_;
+    vector<Point2f> points_;
     if (!detectAndDecodeWithType(img, decoded_info, decoded_type, points_))
         return string();
     if (points_.size() < 4 || decoded_info.size() < 1)
         return string();
     points_.resize(4);
-    points.setTo(points_);
+    updatePointsResult(points, points_);
     return decoded_info[0];
 }
 
