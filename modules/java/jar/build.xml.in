@@ -52,7 +52,7 @@
               var pos = url.lastIndexOf('/javadoc/');
               url = pos >= 0 ? (url.substring(0, pos) + '/javadoc/mymath.js') : (window.location.origin + '/mymath.js');
               var script = document.createElement('script');
-              script.src = '@OPENCV_MATHJAX_RELPATH@/MathJax.js?config=TeX-AMS-MML_HTMLorMML,' + url;
+              script.src = '@OPENCV_MATHJAX_RELPATH@/es5/tex-chtml.js,' + url;
               document.getElementsByTagName('head')[0].appendChild(script);
             </script>
          ]]>
