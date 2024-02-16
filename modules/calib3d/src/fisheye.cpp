@@ -799,7 +799,7 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
     }
     else
     {
-        finalParam.Init(Vec2d(max(image_size.width, image_size.height) / CV_PI, max(image_size.width, image_size.height) / CV_PI),
+        finalParam.Init(Vec2d(max(image_size.width, image_size.height) / 2., max(image_size.width, image_size.height) / 2.),
                         Vec2d(image_size.width  / 2.0 - 0.5, image_size.height / 2.0 - 0.5));
     }
 
