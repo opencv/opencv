@@ -94,7 +94,7 @@ You can also download it from
 Explanation
 -----------
 
-####  Load an image
+###  Load an image
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/filter2D_demo.cpp load
@@ -108,7 +108,7 @@ Explanation
 @snippet python/tutorial_code/ImgTrans/Filter2D/filter2D.py load
 @end_toggle
 
-####  Initialize the arguments
+###  Initialize the arguments
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/filter2D_demo.cpp init_arguments
@@ -122,7 +122,7 @@ Explanation
 @snippet python/tutorial_code/ImgTrans/Filter2D/filter2D.py init_arguments
 @end_toggle
 
-##### Loop
+### Loop
 
 Perform an infinite loop updating the kernel size and applying our linear filter to the input
 image. Let's analyze that more in detail:
