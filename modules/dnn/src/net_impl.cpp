@@ -556,7 +556,8 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
         {
             type = CV_32F;
             if (preferableBackend == DNN_BACKEND_OPENCV &&
-                preferableTarget == DNN_TARGET_OPENCL_FP16)
+                (preferableTarget == DNN_TARGET_OPENCL_FP16
+                 || preferableTarget == DNN_TARGET_CPU_FP16))
             {
                 type = CV_16F;
                 if (layers[0].dtype == CV_32F)
