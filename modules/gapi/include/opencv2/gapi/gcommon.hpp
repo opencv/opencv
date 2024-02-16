@@ -249,6 +249,8 @@ template<typename T> struct wrap_serialize
 } // namespace s11n
 } // namespace gapi
 
+/** @} gapi_compile_args */
+
 /**
  * @brief Ask G-API to dump compiled graph in Graphviz format under
  * the given file name.
@@ -261,7 +263,6 @@ struct graph_dump_path
 {
     std::string m_dump_path;
 };
-/** @} */
 
 /**
  * @brief Ask G-API to use threaded executor when cv::GComputation
@@ -276,7 +277,6 @@ struct GAPI_EXPORTS use_threaded_executor
 
     uint32_t num_threads;
 };
-/** @} */
 
 namespace detail
 {

@@ -17,7 +17,7 @@ is volatile at the moment and there may be minor but
 compatibility-breaking changes in the future.
 
 # Contents
-
+gapi
 G-API documentation is organized into the following chapters:
 
 - @subpage gapi_purposes
@@ -40,6 +40,10 @@ G-API documentation is organized into the following chapters:
   contribute.
 
 - API Reference: functions and classes
+
+    - @subpage gapi_ref
+
+      Core G-API classes, data types, backends, etc.
 
     - @subpage gapi_core
 
