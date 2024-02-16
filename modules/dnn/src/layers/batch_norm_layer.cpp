@@ -423,19 +423,6 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
-    {
-        params.set("input_scale", scales[0][0]);
-        params.set("input_zeropoint", zeropoints[0][0]);
-        params.set("eps", epsilon);
-
-        params.blobs.clear();
-        params.blobs.push_back(origin_weights);
-        params.blobs.push_back(origin_bias);
-        return true;
-    }
-
 #ifdef HAVE_WEBNN
     virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {

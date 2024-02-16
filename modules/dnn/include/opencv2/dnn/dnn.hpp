@@ -259,15 +259,6 @@ CV__DNN_INLINE_NS_BEGIN
          */
         virtual void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
 
-        /** @brief Tries to quantize the given layer and compute the quantization parameters required for fixed point implementation.
-         *  @param[in] scales input and output scales.
-         *  @param[in] zeropoints input and output zeropoints.
-         *  @param[out] params Quantized parameters required for fixed point implementation of that layer.
-         *  @returns True if layer can be quantized.
-         */
-        virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                                 const std::vector<std::vector<int> > &zeropoints, LayerParams& params);
-
         /** @brief Given the @p input blobs, computes the output @p blobs.
          *  @param[in]  inputs  the input blobs.
          *  @param[out] outputs allocated output blobs, which will store results of the computation.
@@ -609,27 +600,6 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP_AS(forwardAndRetrieve) void forward(CV_OUT std::vector<std::vector<Mat> >& outputBlobs,
                                                     const std::vector<String>& outBlobNames);
-
-        /** @brief Returns a quantized Net from a floating-point Net.
-         *  @param calibData Calibration data to compute the quantization parameters.
-         *  @param inputsDtype Datatype of quantized net's inputs. Can be CV_32F or CV_8S.
-         *  @param outputsDtype Datatype of quantized net's outputs. Can be CV_32F or CV_8S.
-         *  @param perChannel Quantization granularity of quantized Net. The default is true, that means quantize model
-         *  in per-channel way (channel-wise). Set it false to quantize model in per-tensor way (or tensor-wise).
-         */
-        CV_WRAP Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel=true);
-
-        /** @brief Returns input scale and zeropoint for a quantized Net.
-         *  @param scales output parameter for returning input scales.
-         *  @param zeropoints output parameter for returning input zeropoints.
-         */
-        CV_WRAP void getInputDetails(CV_OUT std::vector<float>& scales, CV_OUT std::vector<int>& zeropoints) const;
-
-        /** @brief Returns output scale and zeropoint for a quantized Net.
-         *  @param scales output parameter for returning output scales.
-         *  @param zeropoints output parameter for returning output zeropoints.
-         */
-        CV_WRAP void getOutputDetails(CV_OUT std::vector<float>& scales, CV_OUT std::vector<int>& zeropoints) const;
 
         /**
          * @brief Ask network to use specific computation backend where it supported.
