@@ -74,12 +74,12 @@ public:
 
     @param pt Projected point
     @param K Camera intrinsic parameters
-            @param R Camera rotation matrix
-            @return Backward-projected point
-            */
-            virtual Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R) = 0;
+    @param R Camera rotation matrix
+    @return Backward-projected point
+    */
+    virtual Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R) = 0;
 
-            /** @brief Builds the projection maps according to the given camera data.
+    /** @brief Builds the projection maps according to the given camera data.
 
     @param src_size Source image size
     @param K Camera intrinsic parameters
