@@ -481,7 +481,7 @@ bool QRDetect::localization()
         }
     }
 
-    if (list_lines_y.empty())
+    if (labels.empty())
     {
         localization_points.clear();
     }
