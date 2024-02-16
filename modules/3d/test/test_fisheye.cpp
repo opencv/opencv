@@ -129,6 +129,34 @@ TEST_F(fisheyeTest, distortUndistortPoints)
     }
 }
 
+TEST_F(fisheyeTest, solvePnP)
+{
+    const int n = 16;
+
+    const cv::Matx33d R_mat ( 9.9756700084424932e-01, 6.9698277640183867e-02, 1.4929569991321144e-03,
+                            -6.9711825162322980e-02, 9.9748249845531767e-01, 1.2997180766418455e-02,
+                            -5.8331736398316541e-04,-1.3069635393884985e-02, 9.9991441852366736e-01);
+
+    const cv::Vec3d T(-9.9217369356044638e-02, 3.1741831972356663e-03, 1.8551007952921010e-04);
+
+    cv::Mat obj_points(1, n, CV_64FC3);
+    theRNG().fill(obj_points, cv::RNG::NORMAL, 2, 1);
+    obj_points = cv::abs(obj_points) * 10;
+
+    cv::Mat R;
+    cv::Rodrigues(R_mat, R);
+    cv::Mat img_points;
+    cv::fisheye::projectPoints(obj_points, img_points, R, T, this->K, this->D);
+
+    cv::Mat rvec_pred;
+    cv::Mat tvec_pred;
+    bool converged = cv::fisheye::solvePnP(obj_points, img_points, this->K, this->D, rvec_pred, tvec_pred);
+    EXPECT_MAT_NEAR(R, rvec_pred, 1e-6);
+    EXPECT_MAT_NEAR(T, tvec_pred, 1e-6);
+
+    ASSERT_TRUE(converged);
+}
+
 TEST_F(fisheyeTest, undistortImage)
 {
     // we use it to reduce patch size for images in testdata

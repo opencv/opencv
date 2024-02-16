@@ -79,7 +79,7 @@ _PREDEFINED_TYPES = (
                         PrimitiveTypeNode.float_("Moments::value")),
     AliasTypeNode.tuple_("RotatedRect",
                          items=(AliasRefTypeNode("Point2f"),
-                                AliasRefTypeNode("Size"),
+                                AliasRefTypeNode("Size2f"),
                                 PrimitiveTypeNode.float_()),
                          doc="Any type providing sequence protocol is supported"),
     AliasTypeNode.tuple_("TermCriteria",
