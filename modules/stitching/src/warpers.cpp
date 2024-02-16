@@ -93,12 +93,10 @@ Point2f PyRotationWarper::warpPoint(const Point2f &pt, InputArray K, InputArray 
     return rw.get()->warpPoint(pt, K, R);
 }
 
-#if CV_VERSION_MAJOR != 4
 Point2f PyRotationWarper::warpPointBackward(const Point2f& pt, InputArray K, InputArray R)
 {
     return rw.get()->warpPointBackward(pt, K, R);
 }
-#endif
 
 Rect PyRotationWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
 {
