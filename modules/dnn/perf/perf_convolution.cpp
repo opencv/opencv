@@ -889,7 +889,8 @@ Net build_net(
     cv::dnn::MatType netInputType = input.depth();
 #ifdef HAVE_OPENCL
     bool fp16 = ocl::Device::getDefault().isExtensionSupported("cl_khr_fp16");
-    if (netInputType == CV_32F && targetId == DNN_TARGET_OPENCL_FP16 && fp16)
+    if (netInputType == CV_32F && fp16
+        && (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16))
         netInputType = CV_16F;
 #endif
     size_t weightsMemory = 0, blobsMemory = 0;
