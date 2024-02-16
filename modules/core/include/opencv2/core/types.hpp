@@ -879,8 +879,11 @@ public:
 
 /** @brief The class defining termination criteria for iterative algorithms.
 
-You can initialize it by default constructor and then override any parameters, or the structure may
-be fully initialized using the advanced variant of the constructor.
+For the purpose of backward compatibility two interfaces are presented now: new one, where all
+checks are hidden inside class and legacy one, which is just structure for storing values, all
+logic lies on user. If you are a user who uses opencv functions with TernCriteria, use the new
+interface to access those functions. If you are a developer who changes the body of opencv
+functions, do a cast of the incoming TermCriteria object
 */
 class CV_EXPORTS TermCriteria
 {
@@ -897,19 +900,64 @@ public:
 
     //! default constructor
     TermCriteria();
+
     /**
-    @param type The type of termination criteria, one of TermCriteria::Type
-    @param maxCount The maximum number of iterations or elements to compute.
-    @param epsilon The desired accuracy or change in parameters at which the iterative algorithm stops.
-    */
+     * @deprecated
+     * @param type The type of termination criteria, one of TermCriteria::Type
+     * @param maxCount The maximum number of iterations or elements to compute.
+     * @param epsilon The desired accuracy or change in parameters at which the iterative algorithm
+     * stops.
+     */
     TermCriteria(int type, int maxCount, double epsilon);
 
+    /**
+     * @param count
+     * @param _epsilon
+     */
+    TermCriteria(int count, double _epsilon);
+
+    /**
+     * Check if flag with according value is set
+     * @deprecated
+     */
     inline bool isValid() const
     {
         const bool isCount = (type & COUNT) && maxCount > 0;
         const bool isEps = (type & EPS) && !cvIsNaN(epsilon);
         return isCount || isEps;
     }
+
+    /**
+     * Convert TermCriteria object from deprecated to actual one
+     * @return isValid() result before conversion
+     */
+    bool fromDeprecated();
+
+    bool checkEpsilonTolerance(double _epsilon) const;
+    bool checkIterationTolerance(int count) const;
+
+    void setEpsilonTolerance(double _epsilon);
+    void setIterationTolerance(int count);
+
+    bool isEpsilonToleranceSet() const;
+    // bool isIterationToleranceSet();
+
+    int getIterationTolerance() const;
+    double getEpsilonTolerance() const;
+
+    /**
+     * Equal to TermCriteria(-1, epsilon)
+     * @param _epsilon
+     * @return
+     */
+    static TermCriteria epsilonToleranceOnly(double _epsilon);
+
+    /**
+     * Equal to TermCriteria(count, -1)
+     * @param count
+     * @return
+     */
+    static TermCriteria iterationToleranceOnly(int count);
 
     int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
     int maxCount; //!< the maximum number of iterations/elements
@@ -2451,6 +2499,111 @@ TermCriteria::TermCriteria()
 inline
 TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
     : type(_type), maxCount(_maxCount), epsilon(_epsilon) {}
+
+inline TermCriteria::TermCriteria(int count, double _epsilon)
+    : type(TermCriteria::MAX_ITER), maxCount(count), epsilon(_epsilon)
+{
+    if (maxCount < 0)
+    {
+        maxCount = std::numeric_limits<int>::max();
+    }
+
+    if (epsilon > 0)
+    {
+        type += TermCriteria::EPS;
+    }
+}
+
+inline bool TermCriteria::fromDeprecated()
+{
+    if (!isValid())
+    {
+        return false;
+    }
+    else
+    {
+        const bool isMaxCount = type & COUNT;
+        const bool isEps = type & EPS;
+
+        if (!isMaxCount)
+        {
+            maxCount = std::numeric_limits<int>::max();
+        }
+
+        if (!isEps)
+        {
+            epsilon = -1;
+        }
+
+        return true;
+    }
+}
+
+inline bool TermCriteria::checkEpsilonTolerance(double _epsilon) const
+{
+    if ((epsilon >= 0) && (_epsilon > epsilon))
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+inline bool TermCriteria::checkIterationTolerance(int count) const
+{
+    if (count > maxCount)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+inline void TermCriteria::setEpsilonTolerance(double _epsilon)
+{
+    epsilon = _epsilon;
+    if (epsilon < 0)
+    {
+        type &= ~TermCriteria::EPS;
+    }
+    else
+    {
+        type |= TermCriteria::EPS;
+    }
+}
+
+inline void TermCriteria::setIterationTolerance(int count)
+{
+    maxCount = count;
+    if (maxCount < 0)
+    {
+        maxCount = std::numeric_limits<int>::max();
+    }
+}
+
+inline double TermCriteria::getEpsilonTolerance() const { return epsilon; }
+
+inline int TermCriteria::getIterationTolerance() const { return maxCount; }
+
+inline bool TermCriteria::isEpsilonToleranceSet() const
+{
+    if (epsilon < 0)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+inline TermCriteria TermCriteria::epsilonToleranceOnly(double _epsilon) { return {-1, _epsilon}; }
+
+inline TermCriteria TermCriteria::iterationToleranceOnly(int count) { return {count, -1}; }
 
 //! @endcond
 
