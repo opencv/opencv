@@ -4082,7 +4082,7 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     - point 2: [ squareLength / 2, -squareLength / 2, 0]
     - point 3: [-squareLength / 2, -squareLength / 2, 0]
     - for all the other flags, number of input points must be >= 4 and object points can be in any configuration.
-    @param TermCriteria Termination criteria for internal undistortPoints call.
+    @param criteria Termination criteria for internal undistortPoints call.
     The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
     thus the input are very similar. Check there and Perspective-n-Points is described in @ref calib3d_solvePnP
     for more information.
