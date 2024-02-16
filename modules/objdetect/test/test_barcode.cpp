@@ -95,6 +95,13 @@ TEST_P(BarcodeDetector_main, interface)
         EXPECT_EQ(1u, expected_lines.count(res));
     }
 
+    {
+        string res = det.detectAndDecode(img, points);
+        ASSERT_FALSE(res.empty());
+        EXPECT_EQ(1u, expected_lines.count(res));
+        EXPECT_EQ(4u, points.size());
+    }
+
     // common interface (multi)
     {
         bool res = det.detectMulti(img, points);
