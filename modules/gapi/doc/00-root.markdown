@@ -55,6 +55,14 @@ G-API documentation is organized into the following chapters:
       Image processing functions: color space conversions, various
       filters, etc.
 
+    - @subpage gapi_video
+
+      Video processing functionality.
+
+    - @subpage gapi_draw
+
+      Drawing and composition functionality
+
 # API Example {#gapi_example}
 
 A very basic example of G-API pipeline is shown below:
