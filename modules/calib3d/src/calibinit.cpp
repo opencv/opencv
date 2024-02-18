@@ -156,7 +156,8 @@ struct ChessBoardQuad
     float edge_len; // quad edge len, in pix^2
     // neighbors and corners are synced, i.e., neighbor 0 shares corner 0
     ChessBoardCorner *corners[4]; // Coordinates of quad corners
-    struct ChessBoardQuad *neighbors[4]; // Pointers of quad neighbors
+    struct ChessBoardQuad *neighbors[4]; // Pointers of quad neighbors. M.b. sparse.
+    // Each neighbors element corresponds to quad corner, but not just sequential index.
 
     ChessBoardQuad(int group_idx_ = -1) :
         count(0),
@@ -530,14 +531,14 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     const int min_dilations = 0;
     const int max_dilations = is_plain ? 0 : 7;
 
-    // Try our standard "1" dilation, but if the pattern is not found, iterate the whole procedure with higher dilations.
-    // This is necessary because some squares simply do not separate properly with a single dilation.  However,
+    // Try our standard "0" and "1" dilations, but if the pattern is not found, iterate the whole procedure with higher dilations.
+    // This is necessary because some squares simply do not separate properly without and with a single dilations. However,
     // we want to use the minimum number of dilations possible since dilations cause the squares to become smaller,
     // making it difficult to detect smaller squares.
     for (int dilations = min_dilations; dilations <= max_dilations; dilations++)
     {
         //USE BINARY IMAGE COMPUTED USING icvBinarizationHistogramBased METHOD
-        if(!is_plain)
+        if(!is_plain && dilations > 0)
             dilate( thresh_img_new, thresh_img_new, Mat(), Point(-1, -1), 1 );
 
         // So we can find rectangles that go to the edge, we draw a white line around the image edge.
@@ -595,13 +596,13 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                     block_size = block_size | 1;
                     // convert to binary
                     adaptiveThreshold( img, thresh_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, block_size, (k/2)*5 );
-                    if (dilations > 0)
-                        dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), dilations-1 );
+                    dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), dilations );
 
                 }
                 else
                 {
-                    dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), 1 );
+                    if (dilations > 0)
+                        dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), 1 );
                 }
                 SHOW("Old binarization", thresh_img);
 
@@ -1701,12 +1702,12 @@ void ChessBoardDetector::findQuadNeighbors()
                     continue;
 
                 // Check that each corner is a neighbor of different quads
-                for(j = 0; j < closest_quad->count; j++ )
+                for(j = 0; j < 4; j++ )
                 {
                     if (closest_quad->neighbors[j] == &cur_quad)
                         break;
                 }
-                if (j < closest_quad->count)
+                if (j < 4)
                     continue;
 
                 // check whether the closest corner to closest_corner

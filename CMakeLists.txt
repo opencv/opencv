@@ -65,6 +65,10 @@ if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)  # CMake 3.9+: `RPATH` settings on macOS do not affect `install_name`.
 endif()
 
+if(POLICY CMP0071)
+  cmake_policy(SET CMP0071 NEW)  # CMake 3.10+: Let `AUTOMOC` and `AUTOUIC` process `GENERATED` files.
+endif()
+
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)  # CMake 3.12+: Include file check macros honor `CMAKE_REQUIRED_LIBRARIES`
 endif()
@@ -1866,6 +1870,7 @@ if(BUILD_opencv_python3)
   else()
     status("    Libraries:"   HAVE_opencv_python3  THEN  "${PYTHON3_LIBRARIES}"                                      ELSE NO)
   endif()
+  status("    Limited API:" PYTHON3_LIMITED_API THEN "YES (ver ${PYTHON3_LIMITED_API_VERSION})"                    ELSE NO)
   status("    numpy:"         PYTHON3_NUMPY_INCLUDE_DIRS THEN "${PYTHON3_NUMPY_INCLUDE_DIRS} (ver ${PYTHON3_NUMPY_VERSION})" ELSE "NO (Python3 wrappers can not be generated)")
   status("    install path:"  HAVE_opencv_python3  THEN "${__INSTALL_PATH_PYTHON3}"                            ELSE "-")
 endif()
@@ -1883,7 +1888,7 @@ if(BUILD_JAVA)
     status("    JNI:"         JNI_INCLUDE_DIRS    THEN "${JNI_INCLUDE_DIRS}"                                       ELSE NO)
   endif()
   status("    Java wrappers:" HAVE_opencv_java                                                            THEN "YES (${OPENCV_JAVA_SDK_BUILD_TYPE})" ELSE NO)
-  status("    Java tests:"    BUILD_TESTS AND opencv_test_java_BINARY_DIR                                 THEN YES ELSE NO)
+  status("    Java tests:"    BUILD_TESTS AND (opencv_test_java_BINARY_DIR OR opencv_test_android_BINARY_DIR) THEN YES ELSE NO)
 endif()
 
 # ========================== Objective-C =======================

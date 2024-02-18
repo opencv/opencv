@@ -52,10 +52,8 @@ public:
     */
     void setException(const cv::Exception& exception);
 
-#ifdef CV_CXX11
     explicit AsyncPromise(AsyncPromise&& o) { p = o.p; o.p = NULL; }
     AsyncPromise& operator=(AsyncPromise&& o) CV_NOEXCEPT { std::swap(p, o.p); return *this; }
-#endif
 
 
     // PImpl

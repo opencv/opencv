@@ -22,6 +22,7 @@
 
 #ifdef HAVE_PROTOBUF
 
+#include <array>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -2442,7 +2443,7 @@ void ONNXImporter::parseCast(LayerParams& layerParams, const opencv_onnx::NodePr
             case opencv_onnx::TensorProto_DataType_FLOAT:   type = CV_32F; break;
             case opencv_onnx::TensorProto_DataType_UINT8:   type = CV_8U; break;
             case opencv_onnx::TensorProto_DataType_UINT16:  type = CV_16U; break;
-            case opencv_onnx::TensorProto_DataType_FLOAT16: type = CV_16S; break;
+            case opencv_onnx::TensorProto_DataType_FLOAT16: type = CV_16F; break;
             case opencv_onnx::TensorProto_DataType_INT8:
             case opencv_onnx::TensorProto_DataType_INT16:
             case opencv_onnx::TensorProto_DataType_INT32:
@@ -2617,6 +2618,7 @@ void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::Node
 
         // Concat-1 has default value for axis is 1: https://github.com/onnx/onnx/blob/master/docs/Changelog.md#Concat-1
         int axis = layerParams.get<int>("axis", 1);
+        axis = normalize_axis(axis, inputShape.size());
         for (size_t i = 0; i < inputs.size(); ++i)
         {
             MatShape targetShape = inputShape;
@@ -4008,6 +4010,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["ScatterElements"] = dispatch["Scatter"] = dispatch["ScatterND"] = &ONNXImporter::parseScatter;
     dispatch["Tile"] = &ONNXImporter::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter::parseLayerNorm;
+    dispatch["GroupNormalization"] = &ONNXImporter::parseInstanceNormalization;
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =

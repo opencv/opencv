@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2023 Intel Corporation
+// Copyright (C) 2018-2024 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -10,7 +10,7 @@
 // (cv::gapi::ie::backend() is still there and is defined always)
 #include "backends/ie/giebackend.hpp"
 
-#ifdef HAVE_INF_ENGINE
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2024000000
 
 #if INF_ENGINE_RELEASE <= 2019010000
 #   error G-API IE module supports only OpenVINO IE >= 2019 R1

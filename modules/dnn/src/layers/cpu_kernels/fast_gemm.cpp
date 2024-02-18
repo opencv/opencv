@@ -385,7 +385,7 @@ void fastGemmBatch(bool trans_a, bool trans_b,
     const auto shape_b = shape(B);
     const auto shape_c = shape(C);
     CV_CheckGE(shape_a.size(), static_cast<size_t>(2), "DNN/fastGemmBatch: A must be n-dimensional (n >= 2)");
-    CV_CheckEQ(shape_b.size(), static_cast<size_t>(2), "DNN/fastGemmBatch: B must be n-dimensional (n >= 2)");
+    CV_CheckGE(shape_b.size(), static_cast<size_t>(2), "DNN/fastGemmBatch: B must be n-dimensional (n >= 2)");
 
     const float *a = A.ptr<const float>();
     const float *b = B.ptr<const float>();

@@ -21,6 +21,9 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
 // Channel-wise Normalization speedup by multi-threading. Scale and bias should have the same shape (C). Input should have dimension >= 3.
 void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon);
 
+// Group-wise Normalization speedup by multi-threading. Scale and bias should have the same shape (C). Input should have dimension >= 3.
+void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, size_t num_groups);
+
 }} // cv::dnn
 
 #endif // OPENCV_DNN_FAST_NORM_HPP
