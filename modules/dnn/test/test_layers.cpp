@@ -618,19 +618,35 @@ TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
     normAssert(h_t_reference, outputs[0]);
 }
 
-TEST(Layer_GATHER_1d_Test, Accuracy) {
+typedef testing::TestWithParam<tuple<int, int>> Layer_GATHER_1d_Test;
+TEST_P(Layer_GATHER_1d_Test, Accuracy) {
+
+    int batch_size = get<0>(GetParam());
+    int axis = get<1>(GetParam());;
 
     LayerParams lp;
     lp.type = "Gather";
     lp.name = "gatherLayer";
-    lp.set("axis", 1);
+    lp.set("axis", axis);
     lp.set("real_ndims", 1);
 
     Ptr<GatherLayer> layer = GatherLayer::create(lp);
 
-    cv::Mat input = cv::Mat::ones(1, 1, CV_32F);
-    cv::Mat indices = cv::Mat::ones(1, 1, CV_32F) * 0;
-    cv::Mat output_ref = cv::Mat::ones(1, 1, CV_32F);
+    std::vector<int> input_shape = {batch_size, 1};
+    std::vector<int> indices_shape = {batch_size, 1};
+    std::vector<int> output_shape = {batch_size, 1};
+
+    if (batch_size == 0){
+        input_shape.erase(input_shape.begin());
+        indices_shape.erase(indices_shape.begin());
+        output_shape.erase(output_shape.begin());
+    } else if (axis != 0) {
+        output_shape[1] = batch_size;
+    }
+
+    cv::Mat input = cv::Mat(input_shape, CV_32F, 1.0);
+    cv::Mat indices = cv::Mat(indices_shape, CV_32F, 0.0);
+    cv::Mat output_ref = cv::Mat(output_shape, CV_32F, 1.0);
 
     std::vector<Mat> inputs{input, indices};
     std::vector<Mat> outputs;
@@ -639,6 +655,10 @@ TEST(Layer_GATHER_1d_Test, Accuracy) {
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_GATHER_1d_Test, Combine(
+/*input blob shape*/    Values(0, 1, 2, 3),
+/*operation*/           Values(0, 1)
+));
 
 typedef testing::TestWithParam<tuple<int, int, std::string>> Layer_ARG_1d_Test;
 TEST_P(Layer_ARG_1d_Test, Accuracy) {
