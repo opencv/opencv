@@ -854,7 +854,7 @@ public:
     CV_WRAP QRCodeDetectorAruco& setDetectorParameters(const QRCodeDetectorAruco::Params& params);
 
     /** @brief Aruco detector parameters are used to search for the finder patterns. */
-    CV_WRAP aruco::DetectorParameters getArucoParameters();
+    CV_WRAP const aruco::DetectorParameters& getArucoParameters() const;
 
     /** @brief Aruco detector parameters are used to search for the finder patterns. */
     CV_WRAP void setArucoParameters(const aruco::DetectorParameters& params);

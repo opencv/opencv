@@ -4615,13 +4615,13 @@ vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, co
 struct PimplQRAruco : public ImplContour {
     QRCodeDetectorAruco::Params qrParams;
     aruco::ArucoDetector arucoDetector;
-    aruco::DetectorParameters arucoParams;
 
     PimplQRAruco() {
         Mat bits = Mat::ones(Size(5, 5), CV_8UC1);
         Mat(bits, Rect(1, 1, 3, 3)).setTo(Scalar(0));
         Mat byteList = aruco::Dictionary::getByteListFromBits(bits);
         aruco::Dictionary dictionary = aruco::Dictionary(byteList, 5, 4);
+        aruco::DetectorParameters arucoParams;
         arucoParams.minMarkerPerimeterRate = 0.02;
         arucoDetector = aruco::ArucoDetector(dictionary, arucoParams);
     }
@@ -4695,12 +4695,12 @@ QRCodeDetectorAruco& QRCodeDetectorAruco::setDetectorParameters(const QRCodeDete
     return *this;
 }
 
-aruco::DetectorParameters QRCodeDetectorAruco::getArucoParameters() {
-    return std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoParams;
+const aruco::DetectorParameters& QRCodeDetectorAruco::getArucoParameters() const {
+    return std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoDetector.getDetectorParameters();
 }
 
 void QRCodeDetectorAruco::setArucoParameters(const aruco::DetectorParameters& params) {
-    std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoParams = params;
+    std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoDetector.setDetectorParameters(params);
 }
 
 }  // namespace
