@@ -887,12 +887,17 @@ Net build_net(
 
     MatShape netInputShape = shape(input);
     cv::dnn::MatType netInputType = input.depth();
+
+    bool fp16 = false;
 #ifdef HAVE_OPENCL
-    bool fp16 = ocl::Device::getDefault().isExtensionSupported("cl_khr_fp16");
+    fp16 = ocl::Device::getDefault().isExtensionSupported("cl_khr_fp16");
+#endif
+#if defined(__arm64__) && __arm64__
+    fp16 = true;
+#endif
     if (netInputType == CV_32F && fp16
         && (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16))
         netInputType = CV_16F;
-#endif
     size_t weightsMemory = 0, blobsMemory = 0;
     net.getMemoryConsumption(netInputShape, netInputType, weightsMemory, blobsMemory);
     int64 flops = net.getFLOPS(netInputShape, netInputType);
