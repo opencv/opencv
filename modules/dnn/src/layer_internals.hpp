@@ -146,14 +146,13 @@ struct DataLayer : public Layer
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                 forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        bool isFP16 = outputs_arr.depth() == CV_16F;
-
         std::vector<Mat> outputs, internals;
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
 
         for (int i = 0; i < inputsData.size(); ++i)
         {
+            bool isFP16 = outputs[i].depth() == CV_16F;
             if (inputsData[i].type() == CV_32S || inputsData[i].type() == CV_64S) {
                 CV_Assert(outputs[i].type() == inputsData[i].type());
                 CV_Assert(means[i] == Scalar() && scaleFactors[i] == 1.0);
@@ -215,13 +214,12 @@ struct DataLayer : public Layer
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
-        bool isFP16 = outputs_.depth() == CV_16F;
-
         std::vector<UMat> outputs;
         outputs_.getUMatVector(outputs);
 
         for (int i = 0; i < inputsData.size(); ++i)
         {
+            bool isFP16 = outputs[i].depth() == CV_16F;
             if (inputsData[i].type() == CV_32S || inputsData[i].type() == CV_64S) {
                 CV_Assert(outputs[i].type() == inputsData[i].type());
                 CV_Assert(means[i] == Scalar() && scaleFactors[i] == 1.0);
