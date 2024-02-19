@@ -196,7 +196,7 @@ void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
 
         internals.resize(orig_internals.size());
         for (size_t i = 0; i < orig_internals.size(); i++)
-            if (orig_internals[i].depth() == CV_32S)
+            if (orig_internals[i].depth() == CV_16F)
                 internals[i].create(shape(orig_internals[i]), CV_32F);
             else
                 internals[i] = orig_internals[i];
