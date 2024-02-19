@@ -52,6 +52,9 @@ public:
 #ifdef HAVE_OPENCL
         fp16 = ocl::Device::getDefault().isExtensionSupported("cl_khr_fp16");
 #endif
+#if defined(__arm64__) && __arm64__
+        fp16 = true;
+#endif
         std::vector<cv::dnn::MatType> netMatTypes;
         for (auto& inp : inputs) {
             cv::dnn::MatType t = std::get<0>(inp).depth();
