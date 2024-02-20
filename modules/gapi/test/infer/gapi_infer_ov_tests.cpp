@@ -351,6 +351,9 @@ struct MediaFrameTestAgeGenderOV: public ::testing::Test {
         cv::resize(m_in_mat, m_in_mat, cv::Size(62, 62));
     }
 
+    cv::Mat m_in_y;
+    cv::Mat m_in_uv;
+
     cv::Mat m_in_mat;
 
     cv::Mat m_out_ov_age;
@@ -435,6 +438,57 @@ TEST_F(MediaFrameTestAgeGenderOV, InferROIGenericMediaInputBGR) {
 
     // Assert
     validate();
+}
+
+class TestMediaNV12 final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_y;
+    cv::Mat m_uv;
+
+public:
+    TestMediaNV12(cv::Mat y, cv::Mat uv) : m_y(y), m_uv(uv) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::NV12, cv::Size(m_y.cols, m_y.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = {
+            m_y.ptr(), m_uv.ptr(), nullptr, nullptr
+        };
+        cv::MediaFrame::View::Strides ss = {
+            m_y.step, m_uv.step, 0u, 0u
+        };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss));
+    }
+};
+
+TEST_F(MediaFrameTestAgeGenderOV, TestMediaNV12AgeGenderOV)
+{
+    cv::GFrame in;
+    cv::GArray<cv::Rect> rr;
+    cv::GArray<cv::GMat> age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(rr, in);
+    cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
+
+    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+    auto pp = cv::gapi::ov::Params<AgeGender> {
+        xml_path, bin_path, device
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+
+    auto m_roi_list = cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96});
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
+    comp.apply(cv::gin(frame, m_roi_list),
+               cv::gout(m_out_gapi_age, m_out_gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_age, m_out_gapi_gender),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 // TODO: Make all of tests below parmetrized to avoid code duplication
