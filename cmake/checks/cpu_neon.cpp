@@ -5,7 +5,7 @@
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
-#elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
+#elif defined(__ARM_NEON)
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #endif
