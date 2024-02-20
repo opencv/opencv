@@ -128,7 +128,8 @@ static int toCV(const ov::element::Type &type) {
 
 static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
     const auto total = mat.total() * mat.channels();
-    if (toCV(tensor.get_element_type()) != mat.depth()) {
+    if (toCV(tensor.get_element_type()) != mat.depth() ||
+        tensor.get_size()               != total) {
         std::stringstream ss;
         ss << "Failed to copy data from ov::Tensor to cv::Mat."
            << " Data type of elements mismatch."
@@ -169,9 +170,9 @@ cv::Mat wrapOV(const cv::MediaFrame::View& view,
             return out;
         }
         default:
-            GAPI_Error("OV Backend: Unsupported media format");
+            return out;
     }
-    GAPI_Error("InternalError");
+    return out;
 }
 
 static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
@@ -206,13 +207,9 @@ static void copyToOV(const cv::MediaFrame &frame, ov::Tensor &tensor) {
     copyToOV(matFromFrame, tensor);
 }
 
-void cv::gapi::ov::util::to_ov(const cv::Mat &mat, ::ov::Tensor &tensor) {
-    copyToOV(mat, tensor);
-}
-
 ov::Tensor toOV(const cv::Mat &mat,
-                const ov::PartialShape& shape) {
-    return ov::Tensor(toOV(mat.depth()), shape.get_max_shape(), mat.data);
+                const ov::Shape& shape) {
+    return ov::Tensor(toOV(mat.depth()), shape, mat.data);
 }
 
 std::vector<int> cv::gapi::ov::util::to_ocv(const ::ov::Shape &shape) {
@@ -221,6 +218,10 @@ std::vector<int> cv::gapi::ov::util::to_ocv(const ::ov::Shape &shape) {
 
 int cv::gapi::ov::util::to_ocv(const ::ov::element::Type &type) {
     return toCV(type);
+}
+
+void cv::gapi::ov::util::to_ov(const cv::Mat &mat, ::ov::Tensor &tensor) {
+    copyToOV(mat, tensor);
 }
 
 void cv::gapi::ov::util::to_ocv(const ::ov::Tensor &tensor, cv::Mat &mat) {
@@ -696,6 +697,22 @@ void PostOutputsList::operator()(::ov::InferRequest &infer_request,
     }
 }
 
+static void copyToOV(std::shared_ptr<OVCallContext> ctx, uint32_t input_idx, ov::Tensor &tensor) {
+    switch (ctx->inShape(input_idx)) {
+        case cv::GShape::GMAT: {
+            copyToOV(ctx->inMat(input_idx), tensor);
+            break;
+        }
+        case cv::GShape::GFRAME: {
+            auto currentFrame = ctx->inFrame(input_idx);
+            copyToOV(currentFrame, tensor);
+            break;
+        }
+        default:
+            GAPI_Assert("Unsupported input shape for OV backend");
+    }
+}
+
 namespace cv {
 namespace gimpl {
 namespace ov {
@@ -779,6 +796,23 @@ static cv::Mat preprocess(const cv::MediaFrame &frame,
     const auto view = cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R));
     auto matFromFrame = wrapOV(view, frame.desc());
     return preprocess(matFromFrame, roi, model_shape);
+}
+
+static cv::Mat preprocess(std::shared_ptr<OVCallContext> ctx,
+                          uint32_t                       input_idx,
+                          const cv::Rect                 &roi,
+                          const ::ov::Shape              &model_shape) {
+    switch (ctx->inShape(input_idx)) {
+        case cv::GShape::GMAT: {
+            return preprocess(ctx->inMat(input_idx), roi, model_shape);
+        }
+        case cv::GShape::GFRAME: {
+            auto currentFrame = ctx->inFrame(input_idx);
+            return preprocess(currentFrame, roi, model_shape);
+        }
+        default:
+            GAPI_Assert("Unsupported input shape for OV backend");
+    }
 }
 
 static bool isImage(const cv::GMatDesc &desc,
@@ -874,112 +908,44 @@ public:
                           const bool         disable_img_resize = false) {
         GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(input_meta) ||
                     cv::util::holds_alternative<cv::GFrameDesc>(input_meta));
-        if (cv::util::holds_alternative<cv::GMatDesc>(input_meta)) {
-            const auto &matdesc = cv::util::get<cv::GMatDesc>(input_meta);
+        auto isMat = cv::util::holds_alternative<cv::GMatDesc>(input_meta);
+        const auto &matdesc = isMat ? cv::util::get<cv::GMatDesc>(input_meta) : cv::GMatDesc();
+        const auto &framedesc = !isMat ? cv::util::get<cv::GFrameDesc>(input_meta) : cv::GFrameDesc();
 
-            const auto explicit_in_tensor_layout = lookUp(m_input_tensor_layout, input_name);
-            const auto explicit_in_model_layout  = lookUp(m_input_model_layout, input_name);
-            const auto explicit_resize = lookUp(m_interpolation, input_name);
+        const auto explicit_in_tensor_layout = lookUp(m_input_tensor_layout, input_name);
+        const auto explicit_in_model_layout  = lookUp(m_input_model_layout, input_name);
+        const auto explicit_resize = lookUp(m_interpolation, input_name);
 
-            if (disable_img_resize && explicit_resize.has_value()) {
-                std::stringstream ss;
-                util::throw_error(std::logic_error(
-                    "OV Backend: Resize for layer \"" + input_name + "\" will be performed"
-                    " on host via OpenCV so explicitly configured resize is prohibited."));
-            }
+        if (disable_img_resize && explicit_resize.has_value()) {
+            std::stringstream ss;
+            util::throw_error(std::logic_error(
+                "OV Backend: Resize for layer \"" + input_name + "\" will be performed"
+                " on host via OpenCV so explicitly configured resize is prohibited."));
+        }
 
-            const auto &input_shape = m_model->input(input_name).get_shape();
-            auto &input_info = m_ppp.input(input_name);
+        const auto &input_shape = m_model->input(input_name).get_shape();
+        auto &input_info = m_ppp.input(input_name);
 
+        if (isMat) {
             m_ppp.input(input_name).tensor().set_element_type(toOV(matdesc.depth));
-            if (isImage(matdesc, input_shape)) {
-                // NB: Image case - all necessary preprocessng is configured automatically.
-                GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is image.");
-                if (explicit_in_tensor_layout &&
-                    *explicit_in_tensor_layout != "NHWC") {
-                    std::stringstream ss;
-                    ss << "OV Backend: Provided tensor layout " << *explicit_in_tensor_layout
-                    << " is not compatible with input data " << matdesc << " for layer \""
-                    << input_name << "\". Expecting NHWC";
-                    util::throw_error(std::logic_error(ss.str()));
-                } else {
-                    input_info.tensor().set_layout(::ov::Layout("NHWC"));
-                }
-
-                if (!disable_img_resize) {
-                    input_info.tensor().set_spatial_static_shape(matdesc.size.height,
-                                                                 matdesc.size.width);
-                    // NB: Even though resize is automatically configured
-                    // user have an opportunity to specify the interpolation algorithm.
-                    auto interp = explicit_resize
-                        ? toOVInterp(*explicit_resize)
-                        : ::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR;
-                    input_info.preprocess().resize(interp);
-                }
-            } else {
-                // NB: Tensor case - resize or layout conversions must be explicitly specified.
-                GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is tensor.");
-
-                if (explicit_resize) {
-                    if (matdesc.isND()) {
-                        // NB: ND case - need to obtain "H" and "W" positions
-                        // in order to configure resize.
-                        const auto model_layout = explicit_in_model_layout
-                            ? ::ov::Layout(*explicit_in_model_layout)
-                            : ::ov::layout::get_layout(m_model->input(input_name));
-                        if (!explicit_in_tensor_layout && model_layout.empty()) {
-                            std::stringstream ss;
-                            ss << "Resize for input layer: " << input_name
-                            << "can't be configured."
-                            << " Failed to extract H and W positions from layout.";
-                            util::throw_error(std::logic_error(ss.str()));
-                        } else {
-                            const auto layout = explicit_in_tensor_layout
-                                ? ::ov::Layout(*explicit_in_tensor_layout) : model_layout;
-                            auto H_idx = ::ov::layout::height_idx(layout);
-                            auto W_idx = ::ov::layout::width_idx(layout);
-                            // NB: If layout is "...HW", H position is -2.
-                            if (H_idx < 0) H_idx = matdesc.dims.size() + H_idx;
-                            if (W_idx < 0) W_idx = matdesc.dims.size() + W_idx;
-                            GAPI_Assert(H_idx >= 0 && H_idx < static_cast<int>(matdesc.dims.size()));
-                            GAPI_Assert(W_idx >= 0 && W_idx < static_cast<int>(matdesc.dims.size()));
-                            input_info.tensor().set_spatial_static_shape(matdesc.dims[H_idx],
-                                                                         matdesc.dims[W_idx]);
-                            input_info.preprocess().resize(toOVInterp(*explicit_resize));
-                        }
-                    } else {
-                        // NB: 2D case - We know exactly where H and W...
-                        input_info.tensor().set_spatial_static_shape(matdesc.size.height,
-                                                                     matdesc.size.width);
-                        input_info.preprocess().resize(toOVInterp(*explicit_resize));
-                    }
-                }
-            }
-        } else if (cv::util::holds_alternative<cv::GFrameDesc>(input_meta)) {
-            const auto &framedesc = cv::util::get<cv::GFrameDesc>(input_meta);
-
-            const auto explicit_in_tensor_layout = lookUp(m_input_tensor_layout, input_name);
-            const auto explicit_in_model_layout  = lookUp(m_input_model_layout, input_name);
-            const auto explicit_resize = lookUp(m_interpolation, input_name);
-
-            if (disable_img_resize && explicit_resize.has_value()) {
-                std::stringstream ss;
-                util::throw_error(std::logic_error(
-                    "OV Backend: Resize for layer \"" + input_name + "\" will be performed"
-                    " on host via OpenCV so explicitly configured resize is prohibited."));
-            }
-
-            const auto &input_shape = m_model->input(input_name).get_shape();
-            auto &input_info = m_ppp.input(input_name);
-
+        } else {
             m_ppp.input(input_name).tensor().set_element_type(toOV(CV_8U));
+        }
+
+        const auto isImg = isMat ? isImage(matdesc, input_shape) : true; // true for cv::MediaFrame
+        if (isImg) {
             // NB: Image case - all necessary preprocessng is configured automatically.
             GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is image.");
-            if (explicit_in_tensor_layout &&
-                *explicit_in_tensor_layout != "NHWC") {
+            if (explicit_in_tensor_layout && *explicit_in_tensor_layout != "NHWC") {
+                std::stringstream desc_str;
+                if (isMat) {
+                    desc_str << matdesc;
+                } else {
+                    desc_str << framedesc;
+                }
                 std::stringstream ss;
                 ss << "OV Backend: Provided tensor layout " << *explicit_in_tensor_layout
-                << " is not compatible with input data " << framedesc << " for layer \""
+                << " is not compatible with input data " << desc_str.str() << " for layer \""
                 << input_name << "\". Expecting NHWC";
                 util::throw_error(std::logic_error(ss.str()));
             } else {
@@ -987,14 +953,57 @@ public:
             }
 
             if (!disable_img_resize) {
-                input_info.tensor().set_spatial_static_shape(framedesc.size.height,
-                                                             framedesc.size.width);
+                if (isMat) {
+                    input_info.tensor().set_spatial_static_shape(matdesc.size.height,
+                                                                 matdesc.size.width);
+                } else {
+                    input_info.tensor().set_spatial_static_shape(framedesc.size.height,
+                                                                 framedesc.size.width);
+                }
                 // NB: Even though resize is automatically configured
                 // user have an opportunity to specify the interpolation algorithm.
                 auto interp = explicit_resize
                     ? toOVInterp(*explicit_resize)
                     : ::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR;
                 input_info.preprocess().resize(interp);
+            }
+        } else {
+            // NB: Tensor case - resize or layout conversions must be explicitly specified.
+            GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is tensor.");
+
+            if (explicit_resize) {
+                if (matdesc.isND()) {
+                    // NB: ND case - need to obtain "H" and "W" positions
+                    // in order to configure resize.
+                    const auto model_layout = explicit_in_model_layout
+                        ? ::ov::Layout(*explicit_in_model_layout)
+                        : ::ov::layout::get_layout(m_model->input(input_name));
+                    if (!explicit_in_tensor_layout && model_layout.empty()) {
+                        std::stringstream ss;
+                        ss << "Resize for input layer: " << input_name
+                        << "can't be configured."
+                        << " Failed to extract H and W positions from layout.";
+                        util::throw_error(std::logic_error(ss.str()));
+                    } else {
+                        const auto layout = explicit_in_tensor_layout
+                            ? ::ov::Layout(*explicit_in_tensor_layout) : model_layout;
+                        auto H_idx = ::ov::layout::height_idx(layout);
+                        auto W_idx = ::ov::layout::width_idx(layout);
+                        // NB: If layout is "...HW", H position is -2.
+                        if (H_idx < 0) H_idx = matdesc.dims.size() + H_idx;
+                        if (W_idx < 0) W_idx = matdesc.dims.size() + W_idx;
+                        GAPI_Assert(H_idx >= 0 && H_idx < static_cast<int>(matdesc.dims.size()));
+                        GAPI_Assert(W_idx >= 0 && W_idx < static_cast<int>(matdesc.dims.size()));
+                        input_info.tensor().set_spatial_static_shape(matdesc.dims[H_idx],
+                                                                        matdesc.dims[W_idx]);
+                        input_info.preprocess().resize(toOVInterp(*explicit_resize));
+                    }
+                } else {
+                    // NB: 2D case - We know exactly where H and W...
+                    input_info.tensor().set_spatial_static_shape(matdesc.size.height,
+                                                                    matdesc.size.width);
+                    input_info.preprocess().resize(toOVInterp(*explicit_resize));
+                }
             }
         }
     }
@@ -1125,20 +1134,7 @@ struct Infer: public cv::detail::KernelTag {
                             auto input_tensor = infer_request.get_tensor(input_name);
                             // TODO: In some cases wrapping existing data pointer
                             // might be faster than copy. Make it a strategy.
-                            cv::Mat inMat;
-                            switch (ctx->inShape(i)) {
-                                case cv::GShape::GMAT: {
-                                    copyToOV(ctx->inMat(i), input_tensor);
-                                    break;
-                                }
-                                case cv::GShape::GFRAME: {
-                                    auto currentFrame = ctx->inFrame(i);
-                                    copyToOV(currentFrame, input_tensor);
-                                    break;
-                                }
-                                default:
-                                    GAPI_Assert("Unsupported input shape for OV backend");
-                            }
+                            copyToOV(ctx, i, input_tensor);
                         }
                     },
                     std::bind(PostOutputs, _1, _2, ctx)
@@ -1228,20 +1224,7 @@ struct InferROI: public cv::detail::KernelTag {
                     auto input_tensor = infer_request.get_tensor(input_name);
                     const auto &shape = input_tensor.get_shape();
                     const auto &roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
-                    cv::Mat roi_mat;
-                    switch (ctx->inShape(1)) {
-                        case cv::GShape::GMAT: {
-                            roi_mat = preprocess(ctx->inMat(1), roi, shape);
-                            break;
-                        }
-                        case cv::GShape::GFRAME: {
-                            auto currentFrame = ctx->inFrame(1);
-                            roi_mat = preprocess(currentFrame, roi, shape);
-                            break;
-                        }
-                        default:
-                            GAPI_Assert("Unsupported input shape for OV backend");
-                    }
+                    cv::Mat roi_mat = preprocess(ctx, 1, roi, shape);
                     copyToOV(roi_mat, input_tensor);
                 },
                 std::bind(PostOutputs, _1, _2, ctx)
@@ -1342,20 +1325,7 @@ struct InferList: public cv::detail::KernelTag {
                         const auto &input_name = ctx->uu.params.input_names[0];
                         auto input_tensor = infer_request.get_tensor(input_name);
                         const auto &shape = input_tensor.get_shape();
-                        cv::Mat roi_mat;
-                        switch (ctx->inShape(1)) {
-                            case cv::GShape::GMAT: {
-                                roi_mat = preprocess(ctx->inMat(1), rc, shape);
-                                break;
-                            }
-                            case cv::GShape::GFRAME: {
-                                auto currentFrame = ctx->inFrame(1);
-                                roi_mat = preprocess(currentFrame, rc, shape);
-                                break;
-                            }
-                            default:
-                                GAPI_Assert("Unsupported input shape for OV backend");
-                        }
+                        cv::Mat roi_mat = preprocess(ctx, 1, rc, shape);
                         copyToOV(roi_mat, input_tensor);
                     },
                     std::bind(callback, std::placeholders::_1, std::placeholders::_2, pos)
