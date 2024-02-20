@@ -2,10 +2,8 @@
 
 int main(int argc, char *argv[])
 {
-
     int value = 50;
     int value2 = 0;
-
 
     namedWindow("main1",WINDOW_NORMAL);
     namedWindow("main2",WINDOW_AUTOSIZE | WINDOW_GUI_NORMAL);
@@ -27,7 +25,6 @@ int main(int argc, char *argv[])
     video.open("files/hockey.avi");
 
     Mat img2,img3;
-
     while( waitKey(33) != 27 )
     {
         img1.convertTo(img2,-1,1,value);
@@ -38,6 +35,5 @@ int main(int argc, char *argv[])
     }
 
     destroyAllWindows();
-
     return 0;
 }
