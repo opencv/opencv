@@ -212,6 +212,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(SigmoidInt8,      ActivationLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(TanHInt8,         ActivationLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(SwishInt8,        ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(HardSwishInt8,    ActivationLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(MishInt8,         ActivationLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(ELUInt8,          ActivationLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(BNLLInt8,         ActivationLayerInt8);

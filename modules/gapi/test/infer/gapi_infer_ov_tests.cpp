@@ -657,6 +657,187 @@ TEST_F(TestAgeGenderListOV, InferList2Generic_Image) {
     validate();
 }
 
+static ov::element::Type toOV(int depth) {
+    switch (depth) {
+    case CV_8U:  return ov::element::u8;
+    case CV_32S: return ov::element::i32;
+    case CV_32F: return ov::element::f32;
+    case CV_16F: return ov::element::f16;
+    default: GAPI_Error("OV Backend: Unsupported data type");
+    }
+    return ov::element::undefined;
+}
+
+struct TestMeanScaleOV : public ::testing::TestWithParam<int>{
+    G_API_NET(IdentityNet, <cv::GMat(cv::GMat)>, "test-identity-net");
+
+    static cv::GComputation create() {
+        cv::GMat in;
+        cv::GMat out;
+        out = cv::gapi::infer<IdentityNet>(in);
+
+        return cv::GComputation{cv::GIn(in), cv::GOut(out)};
+    }
+
+    using Params = cv::gapi::ov::Params<IdentityNet>;
+    static Params params(const std::string &xml_path,
+                         const std::string &bin_path,
+                         const std::string &device) {
+        return Params {
+            xml_path, bin_path, device
+        }.cfgInputModelLayout("NHWC")
+         .cfgOutputLayers({ "output" });
+    }
+
+    TestMeanScaleOV() {
+        initDLDTDataPath();
+
+        m_model_path = findDataFile("gapi/ov/identity_net_100x100.xml");
+        m_weights_path = findDataFile("gapi/ov/identity_net_100x100.bin");
+        m_device_id = "CPU";
+
+        m_ov_model = cv::gapi::ov::wrap::getCore()
+            .read_model(m_model_path, m_weights_path);
+
+        auto input_depth = GetParam();
+        auto input = cv::imread(findDataFile("gapi/gapi_logo.jpg"));
+        input.convertTo(m_in_mat, input_depth);
+    }
+
+    void addPreprocToOV(
+        std::function<void(ov::preprocess::PrePostProcessor&)> f) {
+
+        auto input_depth = GetParam();
+
+        ov::preprocess::PrePostProcessor ppp(m_ov_model);
+        ppp.input().tensor().set_layout(ov::Layout("NHWC"))
+                            .set_element_type(toOV(input_depth))
+                            .set_shape({ 1, 100, 100, 3 });
+        ppp.input().model().set_layout(ov::Layout("NHWC"));
+        f(ppp);
+        m_ov_model = ppp.build();
+    }
+
+    void runOV() {
+        auto compiled_model = cv::gapi::ov::wrap::getCore()
+            .compile_model(m_ov_model, m_device_id);
+        auto infer_request = compiled_model.create_infer_request();
+
+        auto input_tensor = infer_request.get_input_tensor();
+        cv::gapi::ov::util::to_ov(m_in_mat, input_tensor);
+
+        infer_request.infer();
+
+        auto out_tensor = infer_request.get_tensor("output");
+        m_out_mat_ov.create(cv::gapi::ov::util::to_ocv(out_tensor.get_shape()),
+                            cv::gapi::ov::util::to_ocv(out_tensor.get_element_type()));
+        cv::gapi::ov::util::to_ocv(out_tensor, m_out_mat_ov);
+    }
+
+    std::string m_model_path;
+    std::string m_weights_path;
+    std::string m_device_id;
+
+    std::shared_ptr<ov::Model> m_ov_model;
+
+    cv::Mat m_in_mat;
+    cv::Mat m_out_mat_gapi;
+    cv::Mat m_out_mat_ov;
+};
+
+TEST_P(TestMeanScaleOV, Mean)
+{
+    int input_depth = GetParam();
+
+    std::vector<float> mean_values{ 220.1779, 218.9857, 217.8986 };
+
+    // Run OV reference pipeline:
+    {
+        addPreprocToOV([&](ov::preprocess::PrePostProcessor& ppp) {
+            if (input_depth == CV_8U || input_depth == CV_32S) {
+                ppp.input().preprocess().convert_element_type(ov::element::f32);
+            }
+            ppp.input().preprocess().mean(mean_values);
+            });
+        runOV();
+    }
+
+    // Run G-API
+    GComputation comp = create();
+    auto pp = params(m_model_path, m_weights_path, m_device_id);
+    pp.cfgMean(mean_values);
+
+    comp.apply(cv::gin(m_in_mat), cv::gout(m_out_mat_gapi),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate OV results against G-API ones:
+    normAssert(m_out_mat_ov, m_out_mat_gapi, "Test output");
+}
+
+TEST_P(TestMeanScaleOV, Scale)
+{
+    int input_depth = GetParam();
+
+    std::vector<float> scale_values{ 2., 2., 2. };
+
+    // Run OV reference pipeline:
+    {
+        addPreprocToOV([&](ov::preprocess::PrePostProcessor& ppp) {
+            if (input_depth == CV_8U || input_depth == CV_32S) {
+                ppp.input().preprocess().convert_element_type(ov::element::f32);
+            }
+            ppp.input().preprocess().scale(scale_values);
+            });
+        runOV();
+    }
+
+    // Run G-API
+    GComputation comp = create();
+    auto pp = params(m_model_path, m_weights_path, m_device_id);
+    pp.cfgScale(scale_values);
+
+    comp.apply(cv::gin(m_in_mat), cv::gout(m_out_mat_gapi),
+        cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate OV results against G-API ones:
+    normAssert(m_out_mat_ov, m_out_mat_gapi, "Test output");
+}
+
+TEST_P(TestMeanScaleOV, MeanAndScale)
+{
+    int input_depth = GetParam();
+
+    std::vector<float> mean_values{ 220.1779, 218.9857, 217.8986 };
+    std::vector<float> scale_values{ 2., 2., 2. };
+
+    // Run OV reference pipeline:
+    {
+        addPreprocToOV([&](ov::preprocess::PrePostProcessor& ppp) {
+            if (input_depth == CV_8U || input_depth == CV_32S) {
+                ppp.input().preprocess().convert_element_type(ov::element::f32);
+            }
+            ppp.input().preprocess().mean(mean_values);
+            ppp.input().preprocess().scale(scale_values);
+            });
+        runOV();
+    }
+
+    // Run G-API
+    GComputation comp = create();
+    auto pp = params(m_model_path, m_weights_path, m_device_id);
+    pp.cfgMean(mean_values);
+    pp.cfgScale(scale_values);
+
+    comp.apply(cv::gin(m_in_mat), cv::gout(m_out_mat_gapi),
+        cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate OV results against G-API ones:
+    normAssert(m_out_mat_ov, m_out_mat_gapi, "Test output");
+}
+
+INSTANTIATE_TEST_CASE_P(Instantiation, TestMeanScaleOV,
+                        Values(CV_8U, CV_32S, CV_16F, CV_32F));
+
 } // namespace opencv_test
 
 #endif // HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
