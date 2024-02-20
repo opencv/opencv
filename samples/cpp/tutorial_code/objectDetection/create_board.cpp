@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     imageSize.height =
         markersY * (markerLength + markerSeparation) - markerSeparation + 2 * margins;
 
-    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(0);
+    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
     if (parser.has("d")) {
         int dictionaryId = parser.get<int>("d");
         dictionary = aruco::getPredefinedDictionary(aruco::PredefinedDictionaryType(dictionaryId));

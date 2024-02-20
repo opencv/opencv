@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(0);
+    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
     readDictionatyFromCommandLine(parser, dictionary);
 
     aruco::ArucoDetector detector(dictionary, detectorParams);

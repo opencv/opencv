@@ -45,7 +45,7 @@ simply the list of binary codifications of each of its markers.
 The main properties of a dictionary are the dictionary size and the marker size.
 
 - The dictionary size is the number of markers that compose the dictionary.
-- The marker size is the size of those markers (the number of bits).
+- The marker size is the size of those markers (the number of bits/modules).
 
 The aruco module includes some predefined dictionaries covering a range of different dictionary
 sizes and marker sizes.
@@ -77,7 +77,7 @@ cv::imwrite("marker23.png", markerImage);
 First, the `cv::aruco::Dictionary` object is created by choosing one of the predefined dictionaries in the aruco module.
 Concretely, this dictionary is composed of 250 markers and a marker size of 6x6 bits (`cv::aruco::DICT_6X6_250`).
 
-The parameters of `cv::aruco::generateImageMarker` are:
+The parameters of `cv::aruco::generateImageMarker()` are:
 
 - The first parameter is the `cv::aruco::Dictionary` object previously created.
 - The second parameter is the marker id, in this case the marker 23 of the dictionary `cv::aruco::DICT_6X6_250`.
@@ -152,9 +152,9 @@ And these are the marker candidates that have been rejected during the identific
 
 ![Image with rejected candidates](images/singlemarkersrejected.jpg)
 
-In the aruco module, the detection is performed in the `detectMarkers()` function. This function is
+In the aruco module, the detection is performed in the `cv::aruco::ArucoDetector::detectMarkers()` function. This function is
 the most important in the module, since all the rest of the functionality is based on the
-detected markers returned by `detectMarkers()`.
+detected markers returned by `cv::aruco::ArucoDetector::detectMarkers()`.
 
 An example of marker detection:
 
@@ -174,7 +174,7 @@ When you create an `cv::aruco::ArucoDetector` object, you need to pass the follo
 - A dictionary object, in this case one of the predefined dictionaries (`cv::aruco::DICT_6X6_250`).
 - Object of type `cv::aruco::DetectorParameters`. This object includes all parameters that can be customized during the detection process. These parameters will be explained in the next section.
 
-The parameters of `detectMarkers` are:
+The parameters of `cv::aruco::ArucoDetector::detectMarkers()` are:
 
 - The first parameter is the image containing the markers to be detected.
 - The detected markers are stored in the `markerCorners` and `markerIds` structures:
@@ -185,10 +185,10 @@ The parameters of `detectMarkers` are:
 - The final optional parameter, `rejectedCandidates`, is a returned list of marker candidates, i.e.
 shapes that were found and considered but did not contain a valid marker. Each candidate is also
 defined by its four corners, and its format is the same as the `markerCorners` parameter. This
-parameter can be omitted and is only useful for debugging purposes and for ‘refind’ strategies (see `refineDetectedMarkers()` ).
+parameter can be omitted and is only useful for debugging purposes and for ‘refind’ strategies (see `cv::aruco::ArucoDetector::refineDetectedMarkers()`).
 
 
-The next thing you probably want to do after `detectMarkers()` is check that your markers have
+The next thing you probably want to do after `cv::aruco::ArucoDetector::detectMarkers()` is check that your markers have
 been correctly detected. Fortunately, the aruco module provides a function to draw the detected
 markers in the input image, this function is `drawDetectedMarkers()`. For example:
 
@@ -198,7 +198,7 @@ cv::aruco::drawDetectedMarkers(outputImage, markerCorners, markerIds);
 @endcode
 
 - `outputImage ` is the input/output image where the markers will be drawn (it will normally be the same as the image where the markers were detected).
-- `markerCorners` and `markerIds` are the structures of the detected markers returned by the `detectMarkers()` function.
+- `markerCorners` and `markerIds` are the structures of the detected markers returned by the `cv::aruco::ArucoDetector::detectMarkers()` function.
 
 ![Image with detected markers](images/singlemarkersdetection.jpg)
 
@@ -216,7 +216,7 @@ A full working example is included in the `detect_markers.cpp` inside the `sampl
 
 Note: The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like
 @code{.cpp}
--v=/path_to_aruco_tutorials/aruco_detection/images/singlemarkersoriginal.jpg -d=10
+-v=/path_to_opencv/opencv/doc/tutorials/objdetect/aruco_detection/images/singlemarkersoriginal.jpg -d=10
 @endcode
 Parameters for `detect_markers.cpp`:
 @snippet samples/cpp/tutorial_code/objectDetection/detect_markers.cpp aruco_detect_markers_keys
@@ -262,7 +262,7 @@ for (int i = 0; i < nMarkers; i++) {
 }
 @endcode
 
-- The `markerCorners` parameter is the vector of marker corners returned by the `detectMarkers()` function.
+- The `markerCorners` parameter is the vector of marker corners returned by the `cv::aruco::ArucoDetector::detectMarkers()` function.
 - The second parameter is the size of the marker side in meters or in any other unit. Note that the
 translation vectors of the estimated poses will be in the same unit
 - `cameraMatrix` and `distCoeffs` are the camera calibration parameters that were created during the camera calibration process.
@@ -360,8 +360,8 @@ A full working example is included in the `detect_markers.cpp` inside the `sampl
 
 Note: The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like
 @code{.cpp}
--v=/path_to_aruco_tutorials/aruco_detection/images/singlemarkersoriginal.jpg -d=10
--c=/path_to_aruco_samples/tutorial_camera_params.yml
+-v=/path_to_opencv/opencv/doc/tutorials/objdetect/aruco_detection/images/singlemarkersoriginal.jpg -d=10
+-c=/path_to_opencv/opencv/samples/cpp/tutorial_code/objectDetection/tutorial_camera_params.yml
 @endcode
 Parameters for `detect_markers.cpp`:
 @snippet samples/cpp/tutorial_code/objectDetection/detect_markers.cpp aruco_detect_markers_keys

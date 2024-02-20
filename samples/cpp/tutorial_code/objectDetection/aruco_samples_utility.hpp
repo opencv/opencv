@@ -4,7 +4,7 @@
 #include <ctime>
 
 namespace {
-inline static bool readCameraParameters(std::string filename, cv::Mat &camMatrix, cv::Mat &distCoeffs) {
+inline static bool readCameraParameters(const std::string& filename, cv::Mat &camMatrix, cv::Mat &distCoeffs) {
     cv::FileStorage fs(filename, cv::FileStorage::READ);
     if (!fs.isOpened())
         return false;
