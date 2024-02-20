@@ -26,12 +26,12 @@ private:
 public:
     void init(const Mat &src, float detectorThreshDownSamplingLimit);
 
-    void localization(vector<float> detectorWindowSizes, double detectorGradientMagnitudeThresh);
+    void localization(vector<double> detectorWindowSizes, double detectorGradientMagnitudeThresh);
 
     vector<vector<Point2f>> getTransformationPoints()
     { return transformation_points; }
 
-    bool computeTransformationPoints(float detectorThreshNMSBoxes);
+    bool computeTransformationPoints();
 
 protected:
     enum resize_direction

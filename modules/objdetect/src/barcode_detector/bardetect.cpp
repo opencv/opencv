@@ -171,7 +171,7 @@ void Detect::init(const Mat &src, float detectorThreshDownSamplingLimit)
 }
 
 
-void Detect::localization(std::vector<float> detectorWindowSizes, double detectorThreshGradientMagnitude)
+void Detect::localization(std::vector<double> detectorWindowSizes, double detectorThreshGradientMagnitude)
 {
 
     localization_bbox.clear();
@@ -183,7 +183,7 @@ void Detect::localization(std::vector<float> detectorWindowSizes, double detecto
     //static constexpr float SCALE_LIST[] = {0.01f, 0.03f, 0.06f, 0.08f};
     const auto min_side = static_cast<float>(std::min(width, height));
     int window_size;
-    for (const float scale:detectorWindowSizes)
+    for (const double scale:detectorWindowSizes)
     {
         window_size = cvRound(min_side * scale);
         if(window_size == 0) {
@@ -197,7 +197,7 @@ void Detect::localization(std::vector<float> detectorWindowSizes, double detecto
 }
 
 
-bool Detect::computeTransformationPoints(float detectorThreshNMSBoxes)
+bool Detect::computeTransformationPoints()
 {
 
     bbox_indices.clear();
@@ -205,11 +205,19 @@ bool Detect::computeTransformationPoints(float detectorThreshNMSBoxes)
     transformation_points.reserve(bbox_indices.size());
     RotatedRect rect;
     Point2f temp[4];
-    float THRESHOLD_SCORE = float(width * height) / 300.f;
-    if (detectorThreshNMSBoxes > 0)
-    {
-        THRESHOLD_SCORE = detectorThreshNMSBoxes;
-    }
+
+    /**
+     * #24902 resolution invariant barcode detector
+     *
+     * refactor of THRESHOLD_SCORE = float(width * height) / 300.f
+     * wrt to rescaled input size - 300 value needs factorization
+     * only one factor pair matches a common aspect ratio of 4:3 ~ 20x15
+     * decomposing this yields THRESHOLD_SCORE = (width / 20) * (height / 15)
+     * therefore each factor was rescaled based by purpose (refsize was 512)
+     */
+    const float THRESHOLD_WSCALE = (purpose != UNCHANGED) ? 20 : (20 * width / 512.f);
+    const float THRESHOLD_HSCALE = (purpose != UNCHANGED) ? 15 : (15 * height / 512.f);
+    const float THRESHOLD_SCORE = (width / THRESHOLD_WSCALE) * (height / THRESHOLD_HSCALE);
 
     NMSBoxes(localization_bbox, bbox_scores, THRESHOLD_SCORE, 0.1f, bbox_indices);
 
