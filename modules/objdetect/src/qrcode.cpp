@@ -467,16 +467,25 @@ bool QRDetect::localization()
     CV_TRACE_FUNCTION();
     Point2f begin, end;
     vector<Vec3d> list_lines_x = searchHorizontalLines();
-    if( list_lines_x.empty() ) { return false; }
-    vector<Point2f> list_lines_y = separateVerticalLines(list_lines_x);
-    if( list_lines_y.empty() ) { return false; }
-
+    vector<Point2f> list_lines_y;
     Mat labels;
-    kmeans(list_lines_y, 3, labels,
-           TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
-           3, KMEANS_PP_CENTERS, localization_points);
+    if (!list_lines_x.empty())
+    {
+        list_lines_y = separateVerticalLines(list_lines_x);
+        if (!list_lines_y.empty())
+        {
+            kmeans(list_lines_y, 3, labels,
+                TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
+                3, KMEANS_PP_CENTERS, localization_points);
 
-    fixationPoints(localization_points);
+            fixationPoints(localization_points);
+        }
+    }
+
+    if (labels.empty())
+    {
+        localization_points.clear();
+    }
 
     bool square_flag = false, local_points_flag = false;
     double triangle_sides[3];
@@ -1564,9 +1573,9 @@ Point QRDecode::findClosestZeroPoint(Point2f original_point)
     Point zero_point;
 
     const int step = 2;
-    for (int i = orig_x - step; i >= 0 && i <= orig_x + step; i++)
+    for (int i = std::max(orig_x - step, 0); i >= 0 && i <= std::min(orig_x + step, bin_barcode.cols - 1); i++)
     {
-        for (int j = orig_y - step; j >= 0 && j <= orig_y + step; j++)
+        for (int j = std::max(orig_y - step, 0); j >= 0 && j <= std::min(orig_y + step, bin_barcode.rows - 1); j++)
         {
             Point p(i, j);
             value = bin_barcode.at<uint8_t>(p);
@@ -1944,7 +1953,7 @@ vector<vector<float> > QRDecode::computeSpline(const vector<int> &x_arr, const v
     }
     for (int i = 0; i < n - 1; i++)
     {
-        h[i] = static_cast<float>(y_arr[i + 1] - y_arr[i]);
+        h[i] = static_cast<float>(y_arr[i + 1] - y_arr[i]) + std::numeric_limits<float>::epsilon();
     }
     for (int i = 1; i < n - 1; i++)
     {
@@ -3071,7 +3080,10 @@ protected:
     {
         bool operator()(const Point2f& a, const Point2f& b) const
         {
-            return a.y < b.y;
+            if (a.y != b.y)
+                return a.y < b.y;
+            else
+                return a.x < b.x;
         }
     };
     struct compareSquare

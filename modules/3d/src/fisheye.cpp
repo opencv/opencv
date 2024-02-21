@@ -593,4 +593,15 @@ void cv::fisheye::undistortImage(InputArray distorted, OutputArray undistorted,
     cv::remap(distorted, undistorted, map1, map2, INTER_LINEAR, BORDER_CONSTANT);
 }
 
+bool cv::fisheye::solvePnP( InputArray opoints, InputArray ipoints,
+               InputArray cameraMatrix, InputArray distCoeffs,
+               OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess,
+               int flags, TermCriteria criteria)
+{
+
+    Mat imagePointsNormalized;
+    cv::fisheye::undistortPoints(ipoints, imagePointsNormalized, cameraMatrix, distCoeffs, noArray(), cameraMatrix, criteria);
+    return cv::solvePnP(opoints, imagePointsNormalized, cameraMatrix, noArray(), rvec, tvec, useExtrinsicGuess, flags);
+}
+
 } // namespace cv

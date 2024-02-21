@@ -46,18 +46,20 @@ def insideImage(pts, w, h):
 def areAllInsideImage(pts, w, h):
     return insideImageMask(pts, w, h).all()
 
-def writeMatrix(file, M):
+def writeMatrix(file, label, M):
+    file.write("%s:\n" % label)
     for i in range(M.shape[0]):
         for j in range(M.shape[1]):
             file.write(str(M[i,j]) + ('\n' if j == M.shape[1]-1 else ' '))
 
 def saveKDRT(cameras, fname):
     file = open(fname, 'w')
-    for cam in cameras:
-        writeMatrix(file, cam.K)
-        writeMatrix(file, cam.distortion)
-        writeMatrix(file, cam.R)
-        writeMatrix(file, cam.t)
+    for idx, cam in enumerate(cameras):
+        file.write("camera_%d:\n" % idx)
+        writeMatrix(file, "K", cam.K)
+        writeMatrix(file, "distortion", cam.distortion)
+        writeMatrix(file, "R", cam.R)
+        writeMatrix(file, "T", cam.t)
 
 def export2JSON(pattern_points, image_points, image_sizes, is_fisheye, json_file):
     image_points = image_points.transpose(1,0,3,2)

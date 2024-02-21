@@ -1297,59 +1297,6 @@ public:
     }
 #endif
 
-    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
-    {
-        // References - https://arxiv.org/pdf/1712.05877.pdf
-
-        // Quantized convolution with variable weights is not supported.
-        if (blobs.empty())
-            return false;
-
-        float inputScale = scales[0][0], outputScale = scales[1][0];
-        int inputZp = zeropoints[0][0];
-        params.set("input_zeropoint", inputZp);
-        params.set("input_scale", inputScale);
-
-        Mat weightsQuantized(weightsMat.rows, weightsMat.cols, CV_8S);
-        Mat biasQuantized(1, numOutput, CV_32S);
-        Mat outputMultiplier(1, numOutput, CV_32F);
-        bool perChannel = params.get<bool>("per_channel", true);
-
-        if (perChannel) // per-Channel quantization.
-        {
-            for (int i = 0; i < numOutput; i++)
-            {
-                double weightsScale = getWeightScale(weightsMat.row(i));
-
-                weightsMat.row(i).convertTo(weightsQuantized.row(i), CV_8S, 1.f/weightsScale);
-                float biasScale = inputScale * weightsScale;
-                biasQuantized.at<int>(i) = cvRound(biasvec[i]/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
-                outputMultiplier.at<float>(i) = biasScale / outputScale;
-            }
-        }
-        else // per-Tensor quantization.
-        {
-            double weightsScale = getWeightScale(weightsMat);
-
-            weightsMat.convertTo(weightsQuantized, CV_8S, 1.f/weightsScale);
-            float biasScale = inputScale * weightsScale;
-
-            for (int i = 0; i < numOutput; i++)
-            {
-                biasQuantized.at<int>(i) = cvRound(biasvec[i]/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
-                outputMultiplier.at<float>(i) = biasScale / outputScale;
-            }
-        }
-
-        params.blobs.clear();
-        params.set("per_channel", perChannel);
-        params.blobs.push_back(weightsQuantized.reshape(1, shape(blobs[0])));
-        params.blobs.push_back(biasQuantized);
-        params.blobs.push_back(outputMultiplier);
-        return true;
-    }
-
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {

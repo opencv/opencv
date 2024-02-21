@@ -77,15 +77,7 @@ public:
     @param R Camera rotation matrix
     @return Backward-projected point
     */
-#if CV_VERSION_MAJOR == 4
-    virtual Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R)
-    {
-        CV_UNUSED(pt); CV_UNUSED(K); CV_UNUSED(R);
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#else
     virtual Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R) = 0;
-#endif
 
     /** @brief Builds the projection maps according to the given camera data.
 

@@ -342,9 +342,10 @@ namespace cv
 
         Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
-            static const char* numpyTypes[] =
+            static const char* numpyTypes[CV_DEPTH_MAX] =
             {
-                "uint8", "int8", "uint16", "int16", "int32", "float32", "float64", "float16"
+                "uint8", "int8", "uint16", "int16", "int32", "float32", "float64",
+                "float16", "bfloat16", "bool", "uint64", "int64", "uint32"
             };
             char braces[5] = {'[', ']', ',', '[', ']'};
             if (mtx.cols == 1)

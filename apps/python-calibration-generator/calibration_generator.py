@@ -2,6 +2,11 @@
 # It is subject to the license terms in the LICENSE file found in the top-level directory
 # of this distribution and at http://opencv.org/license.html.
 
+# The script generates synthetic data for multi-camera calibration assessment
+# Input: cameras configuration. See config_cv_test.yaml
+# Output: generated object points (3d), image points (2d) for calibration and
+#         board poses ground truth (R, t) for check
+
 import argparse
 import numpy as np
 import math
@@ -10,6 +15,8 @@ from drawer import animation2D, animation3D
 from utils import RandGen, insideImage, eul2rot, saveKDRT, areAllInsideImage, insideImageMask, projectCamera, export2JSON, writeMatrix
 from pathlib import Path
 from board import CheckerBoard
+import os
+import json
 
 class Camera:
     def __init__(self, idx, img_width, img_height, fx_limit, euler_limit, t_limit, is_fisheye, fy_deviation=None, skew=None,
@@ -337,8 +344,15 @@ def main(cfg_name, save_folder):
 
         file = open(save_folder + "gt.txt", "a")
         for i in range(R_used.shape[0]):
-            writeMatrix(file, R_used[i])
-            writeMatrix(file, t_used[i])
+            writeMatrix(file, 'R_%d' % i, R_used[i])
+            writeMatrix(file, 'T_%d' % i, t_used[i])
+
+        poses = dict()
+        for idx in range(len(R_used)):
+            poses['frame_%d' % idx] = {'R': R_used[idx].tolist(), 'T': t_used[idx].tolist()}
+
+        with open(os.path.join(save_folder, "gt_poses.json"), 'wt') as gt:
+            gt.write(json.dumps(poses, indent=4))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

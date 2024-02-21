@@ -2,6 +2,10 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+// The tests are disabled, because on-fly quantization was removed in https://github.com/opencv/opencv/pull/24980
+// To be restored, when test models are quantized outsize of OpenCV
+#if 0
+
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -1389,3 +1393,5 @@ TEST_P(Test_Int8_nets, YOLOv4_tiny)
 INSTANTIATE_TEST_CASE_P(/**/, Test_Int8_nets, dnnBackendsAndTargetsInt8());
 
 }} // namespace
+
+#endif // #if 0
