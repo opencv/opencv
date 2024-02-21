@@ -1769,6 +1769,476 @@ void CV_StereoCalibrationTest_CPP::correct( const Mat& F,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////// Register Cameras ////////////////////////////////////////////////
+
+class CV_CameraRegistrationTest : public cvtest::BaseTest
+{
+public:
+    CV_CameraRegistrationTest();
+    ~CV_CameraRegistrationTest();
+    void clear();
+protected:
+    // covers of tested functions
+    virtual double registerCameraPair( const vector<vector<Point3f> >& objectPoints1,
+        const vector<vector<Point3f> >& objectPoints2,
+        const vector<vector<Point2f> >& imagePoints1,
+        const vector<vector<Point2f> >& imagePoints2,
+        Mat& cameraMatrix1, Mat& distCoeffs1, int cameraModel1,
+        Mat& cameraMatrix2, Mat& distCoeffs2, int cameraModel2,
+        Mat& R, Mat& T,
+        Mat& E, Mat& F,
+        std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+        vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+        TermCriteria criteria, int flags ) = 0;
+
+    virtual double calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
+        const vector<vector<Point2f> >& imagePoints1,
+        const vector<vector<Point2f> >& imagePoints2,
+        Mat& cameraMatrix1, Mat& distCoeffs1,
+        Mat& cameraMatrix2, Mat& distCoeffs2,
+        Size imageSize, Mat& R, Mat& T,
+        Mat& E, Mat& F,
+        std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+        vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+        TermCriteria criteria, int flags ) = 0;
+
+    int compare(double* val, double* refVal, int len,
+                double eps, const char* paramName);
+
+    void run(int);
+};
+
+
+CV_CameraRegistrationTest::CV_CameraRegistrationTest()
+{
+}
+
+
+CV_CameraRegistrationTest::~CV_CameraRegistrationTest()
+{
+    clear();
+}
+
+void CV_CameraRegistrationTest::clear()
+{
+    cvtest::BaseTest::clear();
+}
+
+int CV_CameraRegistrationTest::compare(double* val, double* ref_val, int len,
+                                      double eps, const char* param_name )
+{
+    return cvtest::cmpEps2_64f( ts, val, ref_val, len, eps, param_name );
+}
+
+void CV_CameraRegistrationTest::run( int )
+{
+    const int ntests = 1;
+    const double maxReprojErr = 2;
+    const double maxDiffBtwRmsErrors = 1e-4;
+    const double maxDiffBtwEstErrors = 1e-10;
+    FILE* f = 0;
+
+    for(int testcase = 1; testcase <= ntests; testcase++)
+    {
+        cv::String filepath;
+        char buf[1000];
+        filepath = cv::format("%scv/stereo/case%d/stereo_calib.txt", ts->get_data_path().c_str(), testcase );
+        f = fopen(filepath.c_str(), "rt");
+        Size patternSize;
+        vector<string> imglist;
+
+        if( !f || !fgets(buf, sizeof(buf)-3, f) || sscanf(buf, "%d%d", &patternSize.width, &patternSize.height) != 2 )
+        {
+            ts->printf( cvtest::TS::LOG, "The file %s can not be opened or has invalid content\n", filepath.c_str() );
+            ts->set_failed_test_info( f ? cvtest::TS::FAIL_INVALID_TEST_DATA : cvtest::TS::FAIL_MISSING_TEST_DATA );
+            if (f)
+                fclose(f);
+            return;
+        }
+
+        for(;;)
+        {
+            if( !fgets( buf, sizeof(buf)-3, f ))
+                break;
+            size_t len = strlen(buf);
+            while( len > 0 && isspace(buf[len-1]))
+                buf[--len] = '\0';
+            if( buf[0] == '#')
+                continue;
+            filepath = cv::format("%scv/stereo/case%d/%s", ts->get_data_path().c_str(), testcase, buf );
+            imglist.push_back(string(filepath));
+        }
+        fclose(f);
+
+        if( imglist.size() == 0 || imglist.size() % 2 != 0 )
+        {
+            ts->printf( cvtest::TS::LOG, "The number of images is 0 or an odd number in the case #%d\n", testcase );
+            ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
+            return;
+        }
+
+        int nframes = (int)(imglist.size()/2);
+        int npoints = patternSize.width*patternSize.height;
+        vector<vector<Point3f> > objpt(nframes);
+        vector<vector<Point2f> > imgpt1(nframes);
+        vector<vector<Point2f> > imgpt2(nframes);
+        Size imgsize;
+        int total = 0;
+
+        for( int i = 0; i < nframes; i++ )
+        {
+            Mat left = imread(imglist[i*2]);
+            Mat right = imread(imglist[i*2+1]);
+            if(left.empty() || right.empty())
+            {
+                ts->printf( cvtest::TS::LOG, "Can not load images %s and %s, testcase %d\n",
+                            imglist[i*2].c_str(), imglist[i*2+1].c_str(), testcase );
+                ts->set_failed_test_info( cvtest::TS::FAIL_MISSING_TEST_DATA );
+                return;
+            }
+            imgsize = left.size();
+            bool found1 = findChessboardCorners(left, patternSize, imgpt1[i]);
+            bool found2 = findChessboardCorners(right, patternSize, imgpt2[i]);
+            if(!found1 || !found2)
+            {
+                ts->printf( cvtest::TS::LOG, "The function could not detect boards (%d x %d) on the images %s and %s, testcase %d\n",
+                            patternSize.width, patternSize.height,
+                            imglist[i*2].c_str(), imglist[i*2+1].c_str(), testcase );
+                ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+                return;
+            }
+            total += (int)imgpt1[i].size();
+            for( int j = 0; j < npoints; j++ )
+                objpt[i].push_back(Point3f((float)(j%patternSize.width), (float)(j/patternSize.width), 0.f));
+        }
+
+        vector<RotMat> rotMats1(nframes);
+        vector<Vec3d> transVecs1(nframes);
+        vector<RotMat> rotMats2(nframes);
+        vector<Vec3d> transVecs2(nframes);
+        vector<double> rmsErrorPerView1(nframes);
+        vector<double> rmsErrorPerView2(nframes);
+        vector<double> rmsErrorPerViewFromReprojectedImgPts1(nframes);
+        vector<double> rmsErrorPerViewFromReprojectedImgPts2(nframes);
+
+        Mat M1 = Mat::eye(3,3,CV_64F), M2 = Mat::eye(3,3,CV_64F), D1(5,1,CV_64F), D2(5,1,CV_64F);
+        Mat R_stereo, T_stereo, R_register, T_register;
+        Mat E_stereo, F_stereo, E_register, F_register;
+        M1.at<double>(0,2) = M2.at<double>(0,2)=(imgsize.width-1)*0.5;
+        M1.at<double>(1,2) = M2.at<double>(1,2)=(imgsize.height-1)*0.5;
+        D1 = Scalar::all(0);
+        D2 = Scalar::all(0
+        );
+        // Initialize the intrinsics
+        calibrateStereoCamera(objpt, imgpt1, imgpt2, M1, D1, M2, D2, imgsize, R_stereo, T_stereo, E_stereo, F_stereo,
+            rotMats1, transVecs1, rmsErrorPerView1, rmsErrorPerView2,
+            TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 1e-6),
+            CALIB_SAME_FOCAL_LENGTH
+            //+ CV_CALIB_FIX_ASPECT_RATIO
+            + CALIB_FIX_PRINCIPAL_POINT
+            + CALIB_ZERO_TANGENT_DIST
+            + CALIB_FIX_K3
+            + CALIB_FIX_K4 + CALIB_FIX_K5 //+ CV_CALIB_FIX_K6
+            );
+
+        // Use the fixed intrinsics to esimtate with two different methods
+        double rmsErrorFromStereoCalibStereo = calibrateStereoCamera(objpt, imgpt1, imgpt2, M1, D1, M2, D2, imgsize, R_stereo, T_stereo, E_stereo, F_stereo,
+            rotMats1, transVecs1, rmsErrorPerView1, rmsErrorPerView2,
+            TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 1e-6),
+            CALIB_FIX_INTRINSIC
+            );
+
+        double rmsErrorFromStereoCalibRegister = registerCameraPair(objpt, objpt, imgpt1, imgpt2, M1, D1, CALIB_MODEL_PINHOLE, M2, D2, CALIB_MODEL_PINHOLE, R_register, T_register, E_register, F_register,
+            rotMats2, transVecs2, rmsErrorPerView1, rmsErrorPerView2,
+            TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 1e-6),
+            0
+            );
+
+
+        /* rmsErrorFromStereoCalibRegister /= nframes*npoints; */
+        if (rmsErrorFromStereoCalibRegister > maxReprojErr)
+        {
+            ts->printf(cvtest::TS::LOG, "The average reprojection error is too big (=%g), testcase %d\n",
+                       rmsErrorFromStereoCalibRegister, testcase);
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+            return;
+        }
+
+        double rmsErrorFromReprojectedImgPts = 0.0f;
+        if (rotMats1.empty() || transVecs1.empty())
+        {
+            rmsErrorPerViewFromReprojectedImgPts1 = rmsErrorPerView1;
+            rmsErrorPerViewFromReprojectedImgPts2 = rmsErrorPerView2;
+            rmsErrorFromReprojectedImgPts = rmsErrorFromStereoCalibRegister;
+        }
+        else
+        {
+            size_t totalPoints = 0;
+            double totalErr[2] = { 0, 0 };
+            for (size_t i = 0; i < objpt.size(); ++i) {
+                RotMat r1 = rotMats1[i];
+                Vec3d t1 = transVecs1[i];
+
+                RotMat r2 = Mat(R_register * r1);
+                Mat T2t = R_register * t1;
+                Vec3d t2 = Mat(T2t + T_register);
+
+                vector<Point2f> reprojectedImgPts[2] = { vector<Point2f>(nframes),
+                                                         vector<Point2f>(nframes) };
+                projectPoints(objpt[i], r1, t1, M1, D1, reprojectedImgPts[0]);
+                projectPoints(objpt[i], r2, t2, M2, D2, reprojectedImgPts[1]);
+
+                double viewErr[2];
+                viewErr[0] = cv::norm(imgpt1[i], reprojectedImgPts[0], cv::NORM_L2SQR);
+                viewErr[1] = cv::norm(imgpt2[i], reprojectedImgPts[1], cv::NORM_L2SQR);
+
+                size_t n = objpt[i].size();
+                totalErr[0] += viewErr[0];
+                totalErr[1] += viewErr[1];
+                totalPoints += n;
+
+                rmsErrorPerViewFromReprojectedImgPts1[i] = sqrt(viewErr[0] / n);
+                rmsErrorPerViewFromReprojectedImgPts2[i] = sqrt(viewErr[1] / n);
+            }
+            rmsErrorFromReprojectedImgPts = std::sqrt((totalErr[0] + totalErr[1]) / (2 * totalPoints));
+        }
+
+        if (abs(rmsErrorFromStereoCalibRegister - rmsErrorFromReprojectedImgPts) > maxDiffBtwRmsErrors)
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "The difference of the average reprojection error from the calibration function and from the "
+                       "reprojected image points is too big (|%g - %g| = %g), testcase %d\n",
+                       rmsErrorFromStereoCalibRegister, rmsErrorFromReprojectedImgPts,
+                       (rmsErrorFromStereoCalibRegister - rmsErrorFromReprojectedImgPts), testcase);
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+            return;
+        }
+
+        /* ----- Compare per view rms re-projection errors ----- */
+        CV_Assert(rmsErrorPerView1.size() == (size_t)nframes);
+        CV_Assert(rmsErrorPerViewFromReprojectedImgPts1.size() == (size_t)nframes);
+        CV_Assert(rmsErrorPerView2.size() == (size_t)nframes);
+        CV_Assert(rmsErrorPerViewFromReprojectedImgPts2.size() == (size_t)nframes);
+        int code1 = compare(&rmsErrorPerView1[0], &rmsErrorPerViewFromReprojectedImgPts1[0], nframes,
+                            maxDiffBtwRmsErrors, "per view errors vector");
+        int code2 = compare(&rmsErrorPerView2[0], &rmsErrorPerViewFromReprojectedImgPts2[0], nframes,
+                            maxDiffBtwRmsErrors, "per view errors vector");
+        if (code1 < 0)
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "Some of the per view rms reprojection errors differ between calibration function and reprojected "
+                       "points, for the first camera, testcase %d\n",
+                       testcase);
+            ts->set_failed_test_info(code1);
+            return;
+        }
+        if (code2 < 0)
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "Some of the per view rms reprojection errors differ between calibration function and reprojected "
+                       "points, for the second camera, testcase %d\n",
+                       testcase);
+            ts->set_failed_test_info(code2);
+            return;
+        }
+
+        /* ----- compare the result from stereoCalibrate and registerCameras ----- */
+        if (abs(rmsErrorFromStereoCalibStereo - rmsErrorFromStereoCalibRegister) > maxDiffBtwRmsErrors)
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "The difference of the average reprojection error from the register camera and stero calibration is too large (|%g - %g| = %g), testcase %d\n",
+                       rmsErrorFromStereoCalibStereo, rmsErrorFromStereoCalibRegister,
+                       (rmsErrorFromStereoCalibStereo - rmsErrorFromStereoCalibRegister), testcase);
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+            return;
+        }
+
+        int code3 = compare(&R_stereo.at<double>(0), &R_register.at<double>(0), 9, maxDiffBtwEstErrors, "R vector");
+        int code4 = compare(&T_stereo.at<double>(0), &T_register.at<double>(0), 3, maxDiffBtwEstErrors, "T vector");
+        int code5 = compare(&E_stereo.at<double>(0), &E_register.at<double>(0), 9, maxDiffBtwEstErrors, "E vector");
+        int code6 = compare(&F_stereo.at<double>(0), &F_register.at<double>(0), 9, maxDiffBtwEstErrors, "F vector");
+
+        if (code3 < 0)
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "The estimated R does not match, testcase %d\n",
+                       testcase);
+            ts->set_failed_test_info(code3);
+            return;
+        }
+        if (code4 < 0)
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "The estimated T does not match, testcase %d\n",
+                       testcase);
+            ts->set_failed_test_info(code4);
+            return;
+        }
+        if (code5 < 0)
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "The estimated E does not match, testcase %d\n",
+                       testcase);
+            ts->set_failed_test_info(code5);
+            return;
+        }
+        if (code6 < 0)
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "The estimated F does not match, testcase %d\n",
+                       testcase);
+            ts->set_failed_test_info(code6);
+            return;
+        }
+    }
+}
+
+//-------------------------------- CV_CameraRegistrationTest_CPP ------------------------------
+
+class CV_CameraRegistrationTest_CPP : public CV_CameraRegistrationTest
+{
+public:
+    CV_CameraRegistrationTest_CPP() {}
+protected:
+    virtual double registerCameraPair( const vector<vector<Point3f> >& objectPoints1,
+        const vector<vector<Point3f> >& objectPoints2,
+        const vector<vector<Point2f> >& imagePoints1,
+        const vector<vector<Point2f> >& imagePoints2,
+        Mat& cameraMatrix1, Mat& distCoeffs1, int cameraModel1,
+        Mat& cameraMatrix2, Mat& distCoeffs2, int cameraModel2,
+        Mat& R, Mat& T,
+        Mat& E, Mat& F,
+        std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+        vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+        TermCriteria criteria, int flags );
+
+    virtual double calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
+        const vector<vector<Point2f> >& imagePoints1,
+        const vector<vector<Point2f> >& imagePoints2,
+        Mat& cameraMatrix1, Mat& distCoeffs1,
+        Mat& cameraMatrix2, Mat& distCoeffs2,
+        Size imageSize, Mat& R, Mat& T,
+        Mat& E, Mat& F,
+        std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+        vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+        TermCriteria criteria, int flags );
+};
+double CV_CameraRegistrationTest_CPP::registerCameraPair( const vector<vector<Point3f> >& objectPoints1,
+        const vector<vector<Point3f> >& objectPoints2,
+        const vector<vector<Point2f> >& imagePoints1,
+        const vector<vector<Point2f> >& imagePoints2,
+        Mat& cameraMatrix1, Mat& distCoeffs1, int cameraModel1,
+        Mat& cameraMatrix2, Mat& distCoeffs2, int cameraModel2,
+        Mat& R, Mat& T,
+        Mat& E, Mat& F,
+        std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+        vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+        TermCriteria criteria, int flags )
+{
+
+    vector<Mat> rvecs, tvecs;
+    Mat perViewErrorsMat;
+    double avgErr = registerCameras(objectPoints1, objectPoints2, imagePoints1, imagePoints2,
+                                    cameraMatrix1, distCoeffs1, cameraModel1,
+                                    cameraMatrix2, distCoeffs2, cameraModel2,
+                                    R, T, E, F,
+                                    rvecs, tvecs, perViewErrorsMat,
+                                    flags, criteria);
+
+    size_t numImgs = imagePoints1.size();
+
+    if (perViewErrors1.size() != numImgs)
+    {
+        perViewErrors1.resize(numImgs);
+    }
+    if (perViewErrors2.size() != numImgs)
+    {
+        perViewErrors2.resize(numImgs);
+    }
+
+    for (int i = 0; i < (int)numImgs; i++)
+    {
+        perViewErrors1[i] = perViewErrorsMat.at<double>(i, 0);
+        perViewErrors2[i] = perViewErrorsMat.at<double>(i, 1);
+    }
+
+    if (rotationMatrices.size() != numImgs)
+    {
+        rotationMatrices.resize(numImgs);
+    }
+    if (translationVectors.size() != numImgs)
+    {
+        translationVectors.resize(numImgs);
+    }
+
+    for( size_t i = 0; i < numImgs; i++ )
+    {
+        Mat r9;
+        cv::Rodrigues( rvecs[i], r9 );
+        r9.convertTo(rotationMatrices[i], CV_64F);
+        tvecs[i].convertTo(translationVectors[i], CV_64F);
+    }
+    return avgErr;
+}
+
+double CV_CameraRegistrationTest_CPP::calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
+                                                            const vector<vector<Point2f> >& imagePoints1,
+                                                            const vector<vector<Point2f> >& imagePoints2,
+                                                            Mat& cameraMatrix1, Mat& distCoeffs1,
+                                                            Mat& cameraMatrix2, Mat& distCoeffs2,
+                                                            Size imageSize, Mat& R, Mat& T,
+                                                            Mat& E, Mat& F,
+                                                            std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+                                                            vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+                                                            TermCriteria criteria, int flags )
+{
+    vector<Mat> rvecs, tvecs;
+    Mat perViewErrorsMat;
+    double avgErr = stereoCalibrate( objectPoints, imagePoints1, imagePoints2,
+                                     cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
+                                     imageSize, R, T, E, F,
+                                     rvecs, tvecs, perViewErrorsMat,
+                                     flags, criteria );
+
+    size_t numImgs = imagePoints1.size();
+
+    if (perViewErrors1.size() != numImgs)
+    {
+        perViewErrors1.resize(numImgs);
+    }
+    if (perViewErrors2.size() != numImgs)
+    {
+        perViewErrors2.resize(numImgs);
+    }
+
+    for (int i = 0; i < (int)numImgs; i++)
+    {
+        perViewErrors1[i] = perViewErrorsMat.at<double>(i, 0);
+        perViewErrors2[i] = perViewErrorsMat.at<double>(i, 1);
+    }
+
+    if (rotationMatrices.size() != numImgs)
+    {
+        rotationMatrices.resize(numImgs);
+    }
+    if (translationVectors.size() != numImgs)
+    {
+        translationVectors.resize(numImgs);
+    }
+
+    for( size_t i = 0; i < numImgs; i++ )
+    {
+        Mat r9;
+        cv::Rodrigues( rvecs[i], r9 );
+        r9.convertTo(rotationMatrices[i], CV_64F);
+        tvecs[i].convertTo(translationVectors[i], CV_64F);
+    }
+    return avgErr;
+}
+
+TEST(Calib3d_CameraRegistration_CPP, regression) { CV_CameraRegistrationTest_CPP test; test.safe_run(); }
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 TEST(Calib3d_CalibrateCamera_CPP, regression) { CV_CameraCalibrationTest_CPP test; test.safe_run(); }
 TEST(Calib3d_CalibrationMatrixValues_CPP, accuracy) { CV_CalibrationMatrixValuesTest_CPP test; test.safe_run(); }
 TEST(Calib3d_ProjectPoints_CPP, regression) { CV_ProjectPointsTest_CPP test; test.safe_run(); }

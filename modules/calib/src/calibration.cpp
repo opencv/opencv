@@ -1182,6 +1182,397 @@ static double stereoCalibrateImpl(
     return std::sqrt(reprojErr/(pointsTotal*2));
 }
 
+static double registerCamerasImpl(
+        const Mat& _objectPoints1, const Mat& _objectPoints2,
+        const Mat& _imagePoints1, const Mat& _imagePoints2,
+        const Mat& _npoints1, const Mat& _npoints2,
+        const Mat& _cameraMatrix1, const Mat& _distCoeffs1, int cameraModel1,
+        const Mat& _cameraMatrix2, const Mat& _distCoeffs2, int cameraModel2,
+        Mat matR, Mat matT,
+        Mat matE, Mat matF,
+        Mat rvecs, Mat tvecs,
+        Mat perViewErr, int flags,
+        TermCriteria termCrit )
+{
+    Matx33d A[2];
+    std::vector<Mat> tdists(2);
+    int pointsTotal[2], maxPoints = 0, nparams;
+    pointsTotal[0] = 0;
+    pointsTotal[1] = 0;
+
+    CV_Assert( _imagePoints1.type() == _imagePoints2.type() &&
+               _imagePoints1.depth() == _objectPoints1.depth() &&
+               _imagePoints2.depth() == _objectPoints2.depth() );
+
+    CV_Assert( (_npoints1.cols == 1 || _npoints1.rows == 1) &&
+                _npoints1.type() == CV_32S );
+    CV_Assert( (_npoints2.cols == 1 || _npoints2.rows == 1) &&
+                _npoints2.type() == CV_32S );
+
+    Mat _npoints[2];
+    _npoints[0] = _npoints1;
+    _npoints[1] = _npoints2;
+
+    int nimages = (int)_npoints[0].total();
+    for(int i = 0; i < nimages; i++ )
+    {
+        for (int k = 0; k < 2; k++) {
+            int ni = _npoints[k].at<int>(i);
+            maxPoints = std::max(maxPoints, ni);
+            pointsTotal[k] += ni;
+        }
+    }
+
+    Mat objectPoints[2];
+    Mat imagePoints[2];
+    _objectPoints1.convertTo(objectPoints[0], CV_64F);
+    _objectPoints2.convertTo(objectPoints[1], CV_64F);
+    objectPoints[0] = objectPoints[0].reshape(3, 1);
+    objectPoints[1] = objectPoints[1].reshape(3, 1);
+
+    if( !rvecs.empty() )
+    {
+        int cn = rvecs.channels();
+        int depth = rvecs.depth();
+        CV_Assert(depth == CV_32F || depth == CV_64F);
+        if(((rvecs.rows != nimages || (rvecs.cols*cn != 3 && rvecs.cols*cn != 9)) &&
+             (rvecs.rows != 1 || rvecs.cols != nimages || cn != 3)) )
+            CV_Error( CV_StsBadArg, "the output array of rotation vectors must be 3-channel "
+                "1xn or nx1 array or 1-channel nx3 or nx9 array, where n is the number of views" );
+    }
+    if( !tvecs.empty() )
+    {
+        int cn = tvecs.channels();
+        int depth = tvecs.depth();
+        CV_Assert(depth == CV_32F || depth == CV_64F);
+        if(((tvecs.rows != nimages || tvecs.cols*cn != 3) &&
+             (tvecs.rows != 1 || tvecs.cols != nimages || cn != 3)) )
+            CV_Error( CV_StsBadArg, "the output array of translation vectors must be 3-channel "
+                "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
+    }
+
+    int cameraModels[2] = {cameraModel1, cameraModel2};
+    for(int k = 0; k < 2; k++ )
+    {
+        const Mat& points = k == 0 ? _imagePoints1 : _imagePoints2;
+        const Mat& cameraMatrix = k == 0 ? _cameraMatrix1 : _cameraMatrix2;
+        const Mat& distCoeffs = k == 0 ? _distCoeffs1 : _distCoeffs2;
+
+        int depth = points.depth();
+        int cn = points.channels();
+        CV_Assert( (depth == CV_32F || depth == CV_64F) &&
+                   ((points.rows == pointsTotal[k] && points.cols*cn == 2) ||
+                   (points.rows == 1 && points.cols == pointsTotal[k] && cn == 2)));
+
+        A[k] = Matx33d::eye();
+
+        points.convertTo(imagePoints[k], CV_64F);
+        imagePoints[k] = imagePoints[k].reshape(2, 1);
+
+        cameraMatrix.convertTo(A[k], CV_64F);
+        distCoeffs.convertTo(tdists[k], CV_64F);
+    }
+
+    // we optimize for the inter-camera R(3),t(3)
+    // Param mapping is:
+    // - from 0 next 6: stereo pair Rt, from 6+i*6 next 6: Rt for each ith camera of nimages,
+    nparams = 6*(nimages+1);
+    std::vector<double> param(nparams, 0.);
+
+    // storage for initial [om(R){i}|t{i}] (in order to compute the median for each component)
+    std::vector<double> rtsort(nimages*6);
+    /*
+       Compute initial estimate of pose
+       For each image, compute:
+          R(om) is the rotation matrix of om
+          om(R) is the rotation vector of R
+          R_ref = R(om_right) * R(om_left)'
+          T_ref_list = [T_ref_list; T_right - R_ref * T_left]
+          om_ref_list = {om_ref_list; om(R_ref)]
+       om = median(om_ref_list)
+       T = median(T_ref_list)
+    */
+    int pos[2];
+    pos[0] = 0;
+    pos[1] = 0;
+    for(int i = 0; i < nimages; i++ )
+    {
+        Matx33d R[2];
+        Vec3d rv, T[2];
+        for(int k = 0; k < 2; k++ )
+        {
+            int ni = _npoints[k].at<int>(i);
+
+            Mat objpt_i = objectPoints[k].colRange(pos[k], pos[k] + ni);
+            Mat imgpt_ik = imagePoints[k].colRange(pos[k], pos[k] + ni);
+            if (cameraModels[k] == CALIB_MODEL_PINHOLE)
+                solvePnP(objpt_i, imgpt_ik, A[k], tdists[k], rv, T[k], false, SOLVEPNP_ITERATIVE );
+            else if (cameraModels[k] == CALIB_MODEL_FISHEYE){
+                fisheye::solvePnP(objpt_i, imgpt_ik, A[k], tdists[k], rv, T[k], false, SOLVEPNP_ITERATIVE );
+            }
+            Rodrigues(rv, R[k]);
+
+            if( k == 0 )
+            {
+                // save initial om_left and T_left
+                param[(i+1)*6 + 0] = rv[0];
+                param[(i+1)*6 + 1] = rv[1];
+                param[(i+1)*6 + 2] = rv[2];
+                param[(i+1)*6 + 3] = T[0][0];
+                param[(i+1)*6 + 4] = T[0][1];
+                param[(i+1)*6 + 5] = T[0][2];
+            }
+            pos[k] += ni;
+        }
+        R[0] = R[1]*R[0].t();
+        T[1] -= R[0]*T[0];
+
+        Rodrigues(R[0], rv);
+
+        rtsort[i + nimages*0] = rv[0];
+        rtsort[i + nimages*1] = rv[1];
+        rtsort[i + nimages*2] = rv[2];
+        rtsort[i + nimages*3] = T[1][0];
+        rtsort[i + nimages*4] = T[1][1];
+        rtsort[i + nimages*5] = T[1][2];
+
+    }
+
+    if(flags & CALIB_USE_EXTRINSIC_GUESS)
+    {
+        Vec3d R, T;
+        matT.convertTo(T, CV_64F);
+
+        if( matR.rows == 3 && matR.cols == 3 )
+            Rodrigues(matR, R);
+        else
+            matR.convertTo(R, CV_64F);
+
+        param[0] = R[0];
+        param[1] = R[1];
+        param[2] = R[2];
+        param[3] = T[0];
+        param[4] = T[1];
+        param[5] = T[2];
+    }
+    else
+    {
+        // find the medians and save the first 6 parameters
+        for(int i = 0; i < 6; i++ )
+        {
+            size_t idx = i*nimages;
+            std::nth_element(rtsort.begin() + idx,
+                             rtsort.begin() + idx + nimages/2,
+                             rtsort.begin() + idx + nimages);
+            double h = rtsort[idx + nimages/2];
+            param[i] = (nimages % 2 == 0) ? (h + rtsort[idx + nimages/2 - 1]) * 0.5 : h;
+        }
+    }
+
+    // Preallocated place for callback calculations
+    Mat errBuf( maxPoints*2, 1, CV_64F );
+    Mat JeBuf( maxPoints*2, 6, CV_64F );
+    Mat J_LRBuf( maxPoints*2, 6, CV_64F );
+
+    // auto lmcallback = [&, nimages, cameraModels, _npoints]
+    auto lmcallback = [&, nimages]
+                      (InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
+    {
+        Mat_<double> param_m = _param.getMat();
+        Vec3d om_LR(param_m(0), param_m(1), param_m(2));
+        Vec3d T_LR(param_m(3), param_m(4), param_m(5));
+        Vec3d om[2], T[2];
+        Matx33d dr3dr1, dr3dr2, dt3dr2, dt3dt1, dt3dt2;
+        double reprojErr = 0;
+
+        int ptPos[2];
+        ptPos[0] = 0;
+        ptPos[1] = 0;
+        for(int i = 0; i < nimages; i++ )
+        {
+
+            int idx = (i+1)*6;
+            om[0] = Vec3d(param_m(idx + 0), param_m(idx + 1), param_m(idx + 2));
+            T[0]  = Vec3d(param_m(idx + 3), param_m(idx + 4), param_m(idx + 5));
+
+            if( JtJ_.needed() || JtErr_.needed() )
+                composeRT( om[0], T[0], om_LR, T_LR, om[1], T[1], dr3dr1, noArray(),
+                           dr3dr2, noArray(), noArray(), dt3dt1, dt3dr2, dt3dt2 );
+            else
+                composeRT( om[0], T[0], om_LR, T_LR, om[1], T[1] );
+
+            for(int k = 0; k < 2; k++ )
+            {
+
+                int ni = _npoints[k].at<int>(i);
+                Mat objpt_i = objectPoints[k](Range::all(), Range(ptPos[k], ptPos[k] + ni));
+                Mat err  = errBuf (Range(0, ni*2), Range::all());
+                Mat Je   = JeBuf  (Range(0, ni*2), Range::all());
+                Mat J_LR = J_LRBuf(Range(0, ni*2), Range::all());
+
+                Mat tmpImagePoints = err.reshape(2, 1);
+                Mat dpdrot = Je.colRange(0, 3);
+                Mat dpdt = Je.colRange(3, 6);
+
+                Mat imgpt_ik = imagePoints[k](Range::all(), Range(ptPos[k], ptPos[k] + ni));
+
+                if (cameraModels[k] == CALIB_MODEL_PINHOLE) {
+                    if( JtJ_.needed() || JtErr_.needed() )
+                        projectPoints(objpt_i, om[k], T[k], A[k], tdists[k],
+                                    tmpImagePoints, dpdrot, dpdt, noArray(), noArray(), noArray(), noArray(), 0.);
+                    else
+                        projectPoints(objpt_i, om[k], T[k], A[k], tdists[k], tmpImagePoints);
+                } else if (cameraModels[k] == CALIB_MODEL_FISHEYE) {
+                    if( JtJ_.needed() || JtErr_.needed() ) {
+                        Mat jacobian; // of size num_points*2  x  15 (2 + 2+ 4 + 3 + 3 + 1 ; // f, c, k, om, T, alpha)
+                        fisheye::projectPoints(objpt_i, tmpImagePoints, om[k], T[k], A[k], tdists[k], 0, jacobian);
+                        jacobian.colRange(8, 11).copyTo(dpdrot);
+                        jacobian.colRange(11,14).copyTo(dpdt);
+                    } else
+                        fisheye::projectPoints(objpt_i, tmpImagePoints, om[k], T[k], A[k], tdists[k]);
+                }
+                subtract( tmpImagePoints, imgpt_ik, tmpImagePoints );
+
+                if( JtJ_.needed() )
+                {
+                    Mat JtErr = JtErr_.getMat();
+                    Mat JtJ = JtJ_.getMat();
+                    int eofs = (i+1)*6;
+                    assert( JtJ_.needed() && JtErr_.needed() );
+
+                    if( k == 1 )
+                    {
+                        // d(err_{x|y}R) ~ de3
+                        // convert de3/{dr3,dt3} => de3{dr1,dt1} & de3{dr2,dt2}
+                        for(int p = 0; p < ni*2; p++ )
+                        {
+                            Matx13d de3dr3, de3dt3, de3dr2, de3dt2, de3dr1, de3dt1;
+                            for(int j = 0; j < 3; j++)
+                                de3dr3(j) = Je.at<double>(p, j);
+
+                            for(int j = 0; j < 3; j++)
+                                de3dt3(j) = Je.at<double>(p, 3+j);
+
+                            for(int j = 0; j < 3; j++)
+                                de3dr2(j) = J_LR.at<double>(p, j);
+
+                            for(int j = 0; j < 3; j++)
+                                de3dt2(j) = J_LR.at<double>(p, 3+j);
+
+                            de3dr1 = de3dr3 * dr3dr1;
+                            de3dt1 = de3dt3 * dt3dt1;
+                            de3dr2  = de3dr3 * dr3dr2 + de3dt3 * dt3dr2;
+                            de3dt2  = de3dt3 * dt3dt2;
+
+                            for(int j = 0; j < 3; j++)
+                                Je.at<double>(p, j) = de3dr1(j);
+
+                            for(int j = 0; j < 3; j++)
+                                Je.at<double>(p, 3+j) = de3dt1(j);
+
+                            for(int j = 0; j < 3; j++)
+                                J_LR.at<double>(p, j) = de3dr2(j);
+
+                            for(int j = 0; j < 3; j++)
+                                J_LR.at<double>(p, 3+j) = de3dt2(j);
+                        }
+
+                        JtJ(Rect(0, 0, 6, 6)) += J_LR.t()*J_LR;
+                        JtJ(Rect(eofs, 0, 6, 6)) = J_LR.t()*Je;
+                        JtErr.rowRange(0, 6) += J_LR.t()*err;
+                    }
+
+                    JtJ(Rect(eofs, eofs, 6, 6)) += Je.t()*Je;
+                    JtErr.rowRange(eofs, eofs + 6) += Je.t()*err;
+                }
+
+                double viewErr = norm(err, NORM_L2SQR);
+                if(!perViewErr.empty())
+                    perViewErr.at<double>(i, k) = std::sqrt(viewErr/ni);
+                reprojErr += viewErr;
+                ptPos[k] += ni;
+            }
+        }
+        errnorm = reprojErr;
+        return true;
+    };
+
+    double reprojErr = 0;
+    LevMarq solver(param, lmcallback,
+                    LevMarq::Settings()
+                    .setMaxIterations((unsigned int)termCrit.maxCount)
+                    .setStepNormTolerance(termCrit.epsilon)
+                    .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon));
+    // geodesic not supported for normal callbacks
+    LevMarq::Report r = solver.optimize();
+
+    // If solver failed, then the last calculated perViewErr can be wrong & should be recalculated
+    if (!r.found && !perViewErr.empty())
+    {
+        lmcallback(param, noArray(), noArray(), reprojErr);
+    }
+
+    reprojErr = r.energy;
+
+    // Extract optimized params from the param vector
+
+    Vec3d om_LR(param[0], param[1], param[2]);
+    Vec3d T_LR(param[3], param[4], param[5]);
+    Matx33d R_LR;
+    Rodrigues( om_LR, R_LR );
+    if( matR.rows == 1 || matR.cols == 1 )
+        om_LR.convertTo(matR, matR.depth());
+    else
+        R_LR.convertTo(matR, matR.depth());
+    T_LR.convertTo(matT, matT.depth());
+
+
+    if( !matE.empty() || !matF.empty() )
+    {
+        Matx33d Tx(0, -T_LR[2], T_LR[1],
+                   T_LR[2], 0, -T_LR[0],
+                  -T_LR[1], T_LR[0], 0);
+        Matx33d E = Tx*R_LR;
+        if( !matE.empty() )
+            E.convertTo(matE, matE.depth());
+        if( !matF.empty())
+        {
+            Matx33d iA0 = A[0].inv(), iA1 = A[1].inv();
+            Matx33d F = iA1.t() * E * iA0;
+            F.convertTo(matF, matF.depth(), fabs(F(2,2)) > 0 ? 1./F(2,2) : 1.);
+        }
+    }
+
+    Mat r1d = rvecs.empty() ? Mat() : rvecs.reshape(1, nimages);
+    Mat t1d = tvecs.empty() ? Mat() : tvecs.reshape(1, nimages);
+    for(int i = 0; i < nimages; i++ )
+    {
+        int idx = (i + 1) * 6;
+
+        if( !rvecs.empty() )
+        {
+            Vec3d srcR(param[idx + 0], param[idx + 1], param[idx + 2]);
+            if( rvecs.rows * rvecs.cols * rvecs.channels() == nimages * 9 )
+            {
+                Matx33d rod;
+                Rodrigues(srcR, rod);
+                rod.convertTo(r1d.row(i).reshape(1, 3), rvecs.depth());
+            }
+            else if (rvecs.rows * rvecs.cols * rvecs.channels() == nimages * 3 )
+            {
+                Mat(Mat(srcR).t()).convertTo(r1d.row(i), rvecs.depth());
+            }
+        }
+        if( !tvecs.empty() )
+        {
+            Vec3d srcT(param[idx + 3], param[idx + 4], param[idx + 5]);
+            Mat(Mat(srcT).t()).convertTo(t1d.row(i), tvecs.depth());
+        }
+    }
+
+    return std::sqrt(reprojErr/(pointsTotal[0] + pointsTotal[1]));
+}
+
 static void collectCalibrationData( InputArrayOfArrays objectPoints,
                                     InputArrayOfArrays imagePoints1,
                                     InputArrayOfArrays imagePoints2,
@@ -1705,6 +2096,162 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
     return err;
 }
 
+double registerCameras( InputArrayOfArrays _objectPoints1,
+                        InputArrayOfArrays _objectPoints2,
+                        InputArrayOfArrays _imagePoints1,
+                        InputArrayOfArrays _imagePoints2,
+                        InputArray _cameraMatrix1, InputArray _distCoeffs1, int cameraModel1,
+                        InputArray _cameraMatrix2, InputArray _distCoeffs2, int cameraModel2,
+                        OutputArray _Rmat, OutputArray _Tmat,
+                        OutputArray _Emat, OutputArray _Fmat, int flags,
+                        TermCriteria criteria)
+{
+    if (flags & CALIB_USE_EXTRINSIC_GUESS)
+        CV_Error(Error::StsBadFlag, "registerCameras does not support CALIB_USE_EXTRINSIC_GUESS.");
+
+    Mat Rmat, Tmat;
+    double ret = registerCameras(_objectPoints1, _objectPoints2, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, cameraModel1,
+                                 _cameraMatrix2, _distCoeffs2, cameraModel2, Rmat, Tmat, _Emat, _Fmat,
+                                 noArray(), flags, criteria);
+    Rmat.copyTo(_Rmat);
+    Tmat.copyTo(_Tmat);
+    return ret;
+}
+
+double registerCameras( InputArrayOfArrays _objectPoints1,
+                        InputArrayOfArrays _objectPoints2,
+                        InputArrayOfArrays _imagePoints1,
+                        InputArrayOfArrays _imagePoints2,
+                        InputArray _cameraMatrix1, InputArray _distCoeffs1, int cameraModel1,
+                        InputArray _cameraMatrix2, InputArray _distCoeffs2, int cameraModel2,
+                        InputOutputArray _Rmat, InputOutputArray _Tmat,
+                        OutputArray _Emat, OutputArray _Fmat,
+                        OutputArray _perViewErrors, int flags,
+                        TermCriteria criteria)
+{
+    return registerCameras(_objectPoints1, _objectPoints2, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, cameraModel1,
+                           _cameraMatrix2, _distCoeffs2, cameraModel2, _Rmat, _Tmat, _Emat, _Fmat,
+                           noArray(), noArray(), _perViewErrors, flags, criteria);
+}
+
+double registerCameras( InputArrayOfArrays _objectPoints1,
+                        InputArrayOfArrays _objectPoints2,
+                        InputArrayOfArrays _imagePoints1,
+                        InputArrayOfArrays _imagePoints2,
+                        InputArray _cameraMatrix1, InputArray _distCoeffs1, int cameraModel1,
+                        InputArray _cameraMatrix2, InputArray _distCoeffs2, int cameraModel2,
+                        InputOutputArray _Rmat, InputOutputArray _Tmat,
+                        OutputArray _Emat, OutputArray _Fmat,
+                        OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
+                        OutputArray _perViewErrors, int flags,
+                        TermCriteria criteria)
+{
+    // Only support fisheye camera model and pinhole camera model
+    CV_Assert(cameraModel1 == CALIB_MODEL_FISHEYE || cameraModel1 == CALIB_MODEL_PINHOLE);
+    CV_Assert(cameraModel2 == CALIB_MODEL_FISHEYE || cameraModel2 == CALIB_MODEL_PINHOLE);
+
+    // Two cameras should contain the same number of frames
+    CV_Assert(_objectPoints1.total() == _objectPoints2.total());
+
+    int rtype = CV_64F;
+    Mat cameraMatrix1 = _cameraMatrix1.getMat();
+    Mat cameraMatrix2 = _cameraMatrix2.getMat();
+    Mat distCoeffs1 = _distCoeffs1.getMat();
+    Mat distCoeffs2 = _distCoeffs2.getMat();
+    cameraMatrix1 = prepareCameraMatrix(cameraMatrix1, rtype, flags);
+    cameraMatrix2 = prepareCameraMatrix(cameraMatrix2, rtype, flags);
+
+    int paramNum1 = int(_distCoeffs1.getMat().total()), paramNum2 = int(_distCoeffs2.getMat().total());
+    distCoeffs1 = prepareDistCoeffs(distCoeffs1, rtype, paramNum1);
+    distCoeffs2 = prepareDistCoeffs(distCoeffs2, rtype, paramNum2);
+
+    if(!(flags & CALIB_USE_EXTRINSIC_GUESS))
+    {
+        _Rmat.create(3, 3, rtype);
+        _Tmat.create(3, 1, rtype);
+    }
+
+    int nimages = int(_objectPoints1.total());
+    CV_Assert( nimages > 0 );
+
+    Mat objPt1, objPt2, imgPt1, imgPt2, npoints1, npoints2, rvecLM, tvecLM;
+
+    collectCalibrationData( _objectPoints1, _imagePoints1, noArray(),
+                            objPt1, imgPt1, noArray(), npoints1 );
+    collectCalibrationData( _objectPoints2, _imagePoints2, noArray(),
+                            objPt2, imgPt2, noArray(), npoints2 );
+
+    Mat matR = _Rmat.getMat(), matT = _Tmat.getMat();
+
+    bool E_needed = _Emat.needed(), F_needed = _Fmat.needed();
+    bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
+    bool errors_needed = _perViewErrors.needed();
+
+    Mat matE, matF, matErr;
+    if( E_needed )
+    {
+        _Emat.create(3, 3, rtype);
+        matE = _Emat.getMat();
+    }
+    if( F_needed )
+    {
+        _Fmat.create(3, 3, rtype);
+        matF = _Fmat.getMat();
+    }
+
+    bool rvecs_mat_vec = _rvecs.isMatVector();
+    bool tvecs_mat_vec = _tvecs.isMatVector();
+
+    if( rvecs_needed )
+    {
+        _rvecs.create(nimages, 1, CV_64FC3);
+
+        if( rvecs_mat_vec )
+            rvecLM.create(nimages, 3, CV_64F);
+        else
+            rvecLM = _rvecs.getMat();
+    }
+    if( tvecs_needed )
+    {
+        _tvecs.create(nimages, 1, CV_64FC3);
+
+        if( tvecs_mat_vec )
+            tvecLM.create(nimages, 3, CV_64F);
+        else
+            tvecLM = _tvecs.getMat();
+    }
+
+    if( errors_needed )
+    {
+        _perViewErrors.create(nimages, 2, CV_64F);
+        matErr = _perViewErrors.getMat();
+    }
+
+    double err = registerCamerasImpl(objPt1, objPt2, imgPt1, imgPt2,
+                                    npoints1, npoints2,
+                                    cameraMatrix1, distCoeffs1, cameraModel1,
+                                    cameraMatrix2, distCoeffs2, cameraModel2,
+                                    matR, matT, matE, matF, rvecLM, tvecLM,
+                                    matErr, flags, criteria);
+
+    for(int i = 0; i < nimages; i++ )
+    {
+        if( rvecs_needed && rvecs_mat_vec )
+        {
+            _rvecs.create(3, 1, CV_64F, i, true);
+            Mat rv = _rvecs.getMat(i);
+            Mat(rvecLM.row(i).t()).copyTo(rv);
+        }
+        if( tvecs_needed && tvecs_mat_vec )
+        {
+            _tvecs.create(3, 1, CV_64F, i, true);
+            Mat tv = _tvecs.getMat(i);
+            Mat(tvecLM.row(i).t()).copyTo(tv);
+        }
+    }
+
+    return err;
+}
 }
 
 /* End of file. */
