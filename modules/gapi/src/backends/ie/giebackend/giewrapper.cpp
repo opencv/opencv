@@ -4,7 +4,7 @@
 //
 // Copyright (C) 2020-2024 Intel Corporation
 
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2024000000
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2023010000
 
 #include <vector>
 #include <string>
