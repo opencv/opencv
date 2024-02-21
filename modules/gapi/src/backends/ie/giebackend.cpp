@@ -10,7 +10,7 @@
 // (cv::gapi::ie::backend() is still there and is defined always)
 #include "backends/ie/giebackend.hpp"
 
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2024000000
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2023010000
 
 #if INF_ENGINE_RELEASE <= 2019010000
 #   error G-API IE module supports only OpenVINO IE >= 2019 R1

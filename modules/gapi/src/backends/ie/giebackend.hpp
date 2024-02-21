@@ -10,7 +10,7 @@
 // Include anyway - cv::gapi::ie::backend() still needs to be defined
 #include "opencv2/gapi/infer/ie.hpp"
 
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2024000000
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2023010000
 
 #include <ade/util/algorithm.hpp> // type_list_index
 #include <condition_variable>
