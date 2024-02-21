@@ -1287,8 +1287,7 @@ public:
         CV_Assert(inputs.size());
         if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
             CV_CheckEQ(inputs[0], CV_32F, "Unsupported type");
-        else if (preferableTarget == DNN_TARGET_OPENCL_FP16
-            || preferableTarget == DNN_TARGET_CPU_FP16)
+        else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
             CV_Assert(inputs[0] == CV_16F || inputs[0] == CV_8S);
         else
             CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_8S);
