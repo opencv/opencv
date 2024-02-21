@@ -42,7 +42,7 @@ namespace cv
 #if defined __hexagon__ && defined __clang__
 #pragma clang optimize off
 #endif
-    
+
 class EMEstimatorCallback CV_FINAL : public PointSetRegistrator::Callback
 {
 public:
