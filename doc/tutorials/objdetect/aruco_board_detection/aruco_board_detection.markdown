@@ -58,6 +58,24 @@ And this is another example with the board partially occluded:
 
 As it can be observed, although some markers have not been detected, the board pose can still be estimated from the rest of markers.
 
+Sample video:
+
+@htmlonly
+<iframe width="420" height="315" src="https://www.youtube.com/embed/Q1HlJEjW_j0" frameborder="0" allowfullscreen></iframe>
+@endhtmlonly
+
+A full working example is included in the `detect_board.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
+
+The samples now take input via commandline via the `cv::CommandLineParser`. For this file the example parameters will look like:
+@code{.cpp}
+    -w=5 -h=7 -l=100 -s=10
+    -v=/path_to_opencv/opencv/doc/tutorials/objdetect/aruco_board_detection/gboriginal.jpg
+    -c=/path_to_opencv/opencv/samples/cpp/tutorial_code/objectDetection/tutorial_camera_params.yml
+    -cd=/path_to_opencv/opencv/samples/cpp/tutorial_code/objectDetection/tutorial_dict.yml
+@endcode
+Parameters for `detect_board.cpp`:
+@snippet samples/cpp/tutorial_code/objectDetection/detect_board.cpp aruco_detect_board_keys
+
 Grid board
 -----
 
@@ -99,14 +117,13 @@ in any unit, having in mind that the estimated pose for this board will be measu
 So, this board will be composed by 5x7=35 markers. The ids of each of the markers are assigned, by default, in ascending
 order starting on 0, so they will be 0, 1, 2, ..., 34.
 
-After creating a grid board, we probably want to print it and use it. A function to generate the image
-of a `cv::aruco::GridBoard` is provided in `cv::aruco::GridBoard::generateImage()`:
+After creating a grid board, we probably want to print it and use it.
+There are two ways to do this:
+1. By using the script `doc/patter_tools/gen_pattern.py `, see @subpage tutorial_camera_calibration_pattern.
+2. By using the function `cv::aruco::GridBoard::generateImage()`.
 
+The function `cv::aruco::GridBoard::generateImage()` is provided in cv::aruco::GridBoard class and can be called by using the following code:
 @snippet samples/cpp/tutorial_code/objectDetection/create_board.cpp aruco_generate_board_image
-
-
-A full working example of board creation is included in the `samples/cpp/tutorial_code/objectDetection/create_board.cpp`
-
 
 - The first parameter is the size of the output image in pixels. In this case 600x500 pixels. If this is not proportional
 to the board dimensions, it will be centered on the image.
@@ -115,37 +132,16 @@ to the board dimensions, it will be centered on the image.
 In this case the margin is 10.
 - Finally, the size of the marker border, similarly to `generateImageMarker()` function. The default value is 1.
 
+A full working example of board creation is included in the `samples/cpp/tutorial_code/objectDetection/create_board.cpp`
+
 The output image will be something like this:
 
 ![](images/board.png)
 
-A full working example of board creation is included in the `samples/cpp/tutorial_code/objectDetection/create_board.cpp`.
-
-The samples now take input via commandline via the `cv::CommandLineParser`. For this file the example parameters will look like
+The samples now take input via commandline via the `cv::CommandLineParser`. For this file the example parameters will look like:
 @code{.cpp}
     "_output_path_/aboard.png" -w=5 -h=7 -l=100 -s=10 -d=10
 @endcode
-
-Sample video:
-
-@htmlonly
-<iframe width="420" height="315" src="https://www.youtube.com/embed/Q1HlJEjW_j0" frameborder="0" allowfullscreen></iframe>
-@endhtmlonly
-
-A full working example is included in the `detect_board.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
-
-The samples now take input via commandline via the `cv::CommandLineParser`. For this file the example parameters will look like
-@code{.cpp}
-    -w=5 -h=7 -l=100 -s=10
-    -v=/path_to_opencv/opencv/doc/tutorials/objdetect/aruco_board_detection/gboriginal.jpg
-    -c=/path_to_opencv/opencv/samples/cpp/tutorial_code/objectDetection/tutorial_camera_params.yml
-    -cd=/path_to_opencv/opencv/samples/cpp/tutorial_code/objectDetection/tutorial_dict.yml
-@endcode
-Parameters for `detect_board.cpp`:
-@snippet samples/cpp/tutorial_code/objectDetection/detect_board.cpp aruco_detect_board_keys
-@note To work with examples from the tutorial, you can use camera parameters from `tutorial_camera_params.yml` and
-you need use custom dictionary from `tutorial_dict.yml`.
-An example of usage in `detect_board.cpp`.
 
 Refine marker detection
 -----

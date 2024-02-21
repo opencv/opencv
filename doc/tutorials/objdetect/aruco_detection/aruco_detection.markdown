@@ -102,7 +102,7 @@ The generated image is:
 
 A full working example is included in the `create_marker.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
 
-Note: The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like:
+The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like:
 @code{.cpp}
 "marker23.png" -d=10 -id=23
 @endcode
@@ -144,7 +144,7 @@ And a printout of this image in a photo:
 
 ![Original image with markers](images/singlemarkersoriginal.jpg)
 
-These are the detected markers (in green). Note that some markers are rotated. The small red square indicates the marker’s top left corner.:
+These are the detected markers (in green). Note that some markers are rotated. The small red square indicates the marker’s top left corner:
 
 ![Image with detected markers](images/singlemarkersdetection.jpg)
 
@@ -172,14 +172,16 @@ detector.detectMarkers(inputImage, markerCorners, markerIds, rejectedCandidates)
 When you create an `cv::aruco::ArucoDetector` object, you need to pass the following parameters to the constructor:
 
 - A dictionary object, in this case one of the predefined dictionaries (`cv::aruco::DICT_6X6_250`).
-- Object of type `cv::aruco::DetectorParameters`. This object includes all parameters that can be customized during the detection process. These parameters will be explained in the next section.
+- Object of type `cv::aruco::DetectorParameters`. This object includes all parameters that can be customized during the detection process.
+These parameters will be explained in the next section.
 
 The parameters of `cv::aruco::ArucoDetector::detectMarkers()` are:
 
 - The first parameter is the image containing the markers to be detected.
 - The detected markers are stored in the `markerCorners` and `markerIds` structures:
     - `markerCorners` is the list of corners of the detected markers. For each marker, its four
-    corners are returned in their original order (which is clockwise starting with top left). So, the first corner is the top left corner, followed by the top right, bottom right and bottom left.
+    corners are returned in their original order (which is clockwise starting with top left).
+    So, the first corner is the top left corner, followed by the top right, bottom right and bottom left.
     - `markerIds` is the list of ids of each of the detected markers in `markerCorners`.
     Note that the returned `markerCorners` and `markerIds` vectors have the same size.
 - The final optional parameter, `rejectedCandidates`, is a returned list of marker candidates, i.e.
@@ -214,7 +216,7 @@ output vector of rejected candidates.
 
 A full working example is included in the `detect_markers.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
 
-Note: The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like
+The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like:
 @code{.cpp}
 -v=/path_to_opencv/opencv/doc/tutorials/objdetect/aruco_detection/images/singlemarkersoriginal.jpg -d=10
 @endcode
@@ -242,32 +244,18 @@ If you want to estimate one pose from a set of markers, use ArUco Boards (see th
 Boards** tutorial). Using ArUco boards instead of single markers allows some markers to be occluded.
 
 The camera pose relative to the marker is a 3d transformation from the marker coordinate system to the
-camera coordinate system. It is specified by rotation and translation vectors (see `cv::solvePnP()` function for more
-information).
+camera coordinate system. It is specified by rotation and translation vectors. OpenCV provides `cv::solvePnP()` function to do that.
 
-@code{.cpp}
-cv::Mat cameraMatrix, distCoeffs;
-// You can read camera parameters from tutorial_camera_params.yml
-readCameraParameters(cameraParamsFilename, cameraMatrix, distCoeffs); // This function is implemented in aruco_samples_utility.hpp
+@snippet samples/cpp/tutorial_code/objectDetection/detect_markers.cpp aruco_pose_estimation1
+@snippet samples/cpp/tutorial_code/objectDetection/detect_markers.cpp aruco_pose_estimation2
+@snippet samples/cpp/tutorial_code/objectDetection/detect_markers.cpp aruco_pose_estimation3
 
-std::vector<cv::Vec3d> rvecs, tvecs;
-
-// Set coordinate system
-cv::Mat objPoints(4, 1, CV_32FC3);
-...
-
-// Calculate pose for each marker
-for (int i = 0; i < nMarkers; i++) {
-    solvePnP(objPoints, corners.at(i), cameraMatrix, distCoeffs, rvecs.at(i), tvecs.at(i));
-}
-@endcode
-
-- The `markerCorners` parameter is the vector of marker corners returned by the `cv::aruco::ArucoDetector::detectMarkers()` function.
+- The `corners` parameter is the vector of marker corners returned by the `cv::aruco::ArucoDetector::detectMarkers()` function.
 - The second parameter is the size of the marker side in meters or in any other unit. Note that the
 translation vectors of the estimated poses will be in the same unit
-- `cameraMatrix` and `distCoeffs` are the camera calibration parameters that were created during the camera calibration process.
-- The output parameters `rvecs` and `tvecs` are the rotation and translation vectors respectively, for each of the markers
-in `markerCorners`.
+- `camMatrix` and `distCoeffs` are the camera calibration parameters that were created during the camera calibration process.
+- The output parameters `rvecs` and `tvecs` are the rotation and translation vectors respectively, for each of the detected markers
+in `corners`.
 
 The marker coordinate system that is assumed by this function is placed in the center (by default) or
 in the top left corner of the marker with the Z axis pointing out, as in the following image.
@@ -278,77 +266,14 @@ Axis-color correspondences are X: red, Y: green, Z: blue. Note the axis directio
 OpenCV provides a function to draw the axis as in the image above, so pose estimation can be
 checked:
 
-@code{.cpp}
-inputImage.copyTo(outputImage);
-for (int i = 0; i < rvecs.size(); ++i) {
-    auto rvec = rvecs[i];
-    auto tvec = tvecs[i];
-    cv::drawFrameAxes(outputImage, cameraMatrix, distCoeffs, rvec, tvec, 0.1);
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objectDetection/detect_markers.cpp aruco_draw_pose_estimation
 
-- `outputImage ` is the input/output image where the markers will be drawn (it will normally be the same image where the markers were detected).
-- `cameraMatrix` and `distCoeffs` are the camera calibration parameters.
-- `rvec` and `tvec` are the pose parameters for the marker whose axis is to be drawn.
+- `imageCopy` is the input/output image where the detected markers will be shown.
+- `camMatrix` and `distCoeffs` are the camera calibration parameters.
+- `rvecs[i]` and `tvecs[i]` are the rotation and translation vectors respectively, for each of the detected markers.
 - The last parameter is the length of the axis, in the same unit as tvec (usually meters).
 
-A basic full example for pose estimation from single markers:
-
-@code{.cpp}
-cv::VideoCapture inputVideo;
-inputVideo.open(0);
-
-cv::Mat cameraMatrix, distCoeffs;
-float markerLength = 0.05;
-
-// You can read camera parameters from tutorial_camera_params.yml
-readCameraParameters(cameraParamsFilename, cameraMatrix, distCoeffs); // This function is implemented in aruco_samples_utility.hpp
-
-// Set coordinate system
-cv::Mat objPoints(4, 1, CV_32FC3);
-objPoints.ptr<cv::Vec3f>(0)[0] = cv::Vec3f(-markerLength/2.f, markerLength/2.f, 0);
-objPoints.ptr<cv::Vec3f>(0)[1] = cv::Vec3f(markerLength/2.f, markerLength/2.f, 0);
-objPoints.ptr<cv::Vec3f>(0)[2] = cv::Vec3f(markerLength/2.f, -markerLength/2.f, 0);
-objPoints.ptr<cv::Vec3f>(0)[3] = cv::Vec3f(-markerLength/2.f, -markerLength/2.f, 0);
-
-cv::aruco::DetectorParameters detectorParams = cv::aruco::DetectorParameters();
-cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
-aruco::ArucoDetector detector(dictionary, detectorParams);
-
-while (inputVideo.grab()) {
-    cv::Mat image, imageCopy;
-    inputVideo.retrieve(image);
-    image.copyTo(imageCopy);
-
-    std::vector<int> ids;
-    std::vector<std::vector<cv::Point2f>> corners;
-    detector.detectMarkers(image, corners, ids);
-
-    // If at least one marker detected
-    if (ids.size() > 0) {
-        cv::aruco::drawDetectedMarkers(imageCopy, corners, ids);
-
-        int nMarkers = corners.size();
-        std::vector<cv::Vec3d> rvecs(nMarkers), tvecs(nMarkers);
-
-        // Calculate pose for each marker
-        for (int i = 0; i < nMarkers; i++) {
-            solvePnP(objPoints, corners.at(i), cameraMatrix, distCoeffs, rvecs.at(i), tvecs.at(i));
-        }
-
-        // Draw axis for each marker
-        for(unsigned int i = 0; i < ids.size(); i++) {
-            cv::drawFrameAxes(imageCopy, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 0.1);
-        }
-    }
-
-    // Show resulting image and close window
-    cv::imshow("out", imageCopy);
-    char key = (char) cv::waitKey(waitTime);
-    if (key == 27)
-        break;
-}
-@endcode
+A basic full example for pose estimation from single markers is included in the `detect_markers.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
 
 Sample video:
 
@@ -358,18 +283,13 @@ Sample video:
 
 A full working example is included in the `detect_markers.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
 
-Note: The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like
+The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like:
 @code{.cpp}
 -v=/path_to_opencv/opencv/doc/tutorials/objdetect/aruco_detection/images/singlemarkersoriginal.jpg -d=10
 -c=/path_to_opencv/opencv/samples/cpp/tutorial_code/objectDetection/tutorial_camera_params.yml
 @endcode
 Parameters for `detect_markers.cpp`:
 @snippet samples/cpp/tutorial_code/objectDetection/detect_markers.cpp aruco_detect_markers_keys
-
-@note To work with examples from the tutorial, you can use camera parameters from `tutorial_camera_params.yml`.
-An example of use in `detect_markers.cpp`.
-
-
 
 Selecting a dictionary
 ------
@@ -384,9 +304,7 @@ In general, smaller dictionary sizes and larger marker sizes increase the inter-
 vice versa. However, the detection of markers with larger sizes is more difficult due to the higher
 number of bits that need to be extracted from the image.
 
-For instance, if you need only 10 markers in your application, it is better to use a dictionary composed only of those 10 markers than using a dictionary composed of 1000 markers. The reason is that
-the dictionary composed of 10 markers will have a higher inter-marker distance and, thus, it will be
-more robust to errors.
+For instance, if you need only 10 markers in your application, it is better to use a dictionary composed only of those 10 markers than using a dictionary composed of 1000 markers. The reason is that the dictionary composed of 10 markers will have a higher inter-marker distance and, thus, it will be more robust to errors.
 
 As a consequence, the aruco module includes several ways to select your dictionary of markers, so that
 you can increase your system robustness:
@@ -420,7 +338,7 @@ cv::aruco::Dictionary dictionary = cv::aruco::extendDictionary(36, 5);
 This will generate a customized dictionary composed of 36 markers of 5x5 bits. The process can take several
 seconds, depending on the parameters (it is slower for larger dictionaries and higher numbers of bits).
 
-### Manual dictionary generation
+### Manual dictionary definition
 
 Finally, the dictionary can be configured manually, so that any encoding can be used. To do that,
 the `cv::aruco::Dictionary` object parameters need to be assigned manually. It must be noted that, unless you have
@@ -441,7 +359,7 @@ The `cv::aruco::Dictionary` parameters are:
     }
 @endcode
 
-<code>bytesList</code> is the array that contains all the information about the marker codes. `markerSize` is the size
+`bytesList` is the array that contains all the information about the marker codes. `markerSize` is the size
  of each marker dimension (for instance, 5 for markers with 5x5 bits). Finally, `maxCorrectionBits` is
 the maximum number of erroneous bits that can be corrected during the marker detection. If this value is too
 high, it can lead to a high number of false positives.
@@ -475,9 +393,6 @@ For example:
     }
 @endcode
 
-
-
-
 Detector Parameters
 ------
 
@@ -501,7 +416,7 @@ This thresholding can be customized with the following parameters:
 
 The `adaptiveThreshWinSizeMin` and `adaptiveThreshWinSizeMax` parameters represent the interval where the
 thresholding window sizes (in pixels) are selected for the adaptive thresholding (see OpenCV
-`threshold()` function for more details).
+`threshold()` and `adaptiveThreshold()` functions for more details).
 
 The parameter `adaptiveThreshWinSizeStep` indicates the increments of the window size from
 `adaptiveThreshWinSizeMin` to `adaptiveThreshWinSizeMax`.
@@ -521,20 +436,15 @@ The simplest case is using the same value for `adaptiveThreshWinSizeMin` and
  `adaptiveThreshWinSizeMax`, which produces a single thresholding step. However, it is usually better to use a
  range of values for the window size, although many thresholding steps can also reduce the performance considerably.
 
-Default values:
-
-- `int cv::aruco::DetectorParameters::adaptiveThreshWinSizeMin = 3`
-- `int cv::aruco::DetectorParameters::adaptiveThreshWinSizeMax = 23`
-- `int cv::aruco::DetectorParameters::adaptiveThreshWinSizeStep = 10`
+@see cv::aruco::DetectorParameters::adaptiveThreshWinSizeMin, cv::aruco::DetectorParameters::adaptiveThreshWinSizeMax,
+cv::aruco::DetectorParameters::adaptiveThreshWinSizeStep
 
 #### adaptiveThreshConstant
 
 The `adaptiveThreshConstant` parameter represents the constant value added in the thresholding operation (see OpenCV
-`threshold()` function for more details). Its default value is a good option in most cases.
+`threshold()` and `adaptiveThreshold()` functions for more details). Its default value is a good option in most cases.
 
-Default value:
-
-- `double cv::aruco::DetectorParameters::adaptiveThreshConstant = 7`
+@see cv::aruco::DetectorParameters::adaptiveThreshConstant
 
 
 ### Contour filtering
@@ -553,8 +463,8 @@ hence, not detected.
 
 #### minMarkerPerimeterRate and maxMarkerPerimeterRate
 
-These parameters determine the minimum and maximum size of a marker, specifically the minimum and maximum marker perimeter. They are not specified in absolute pixel values, instead they are
-specified relative to the maximum dimension of the input image.
+These parameters determine the minimum and maximum size of a marker, specifically the minimum and maximum marker perimeter.
+They are not specified in absolute pixel values, instead they are specified relative to the maximum dimension of the input image.
 
 For instance, a image with size 640x480 and a minimum relative marker perimeter of 0.05 will lead
 to a minimum marker perimeter of 640x0.05 = 32 pixels, since 640 is the maximum dimension of the
@@ -568,10 +478,7 @@ A `minMarkerPerimeterRate` value of 0 and a `maxMarkerPerimeterRate` value of 4 
 equivalent to consider all the contours in the image, however this is not recommended for
 performance reasons.
 
-Default values:
-
-- `double cv::aruco::DetectorParameters::minMarkerPerimeterRate = 0.03`
-- `double cv::aruco::DetectorParameters::maxMarkerPerimeterRate = 4.0`
+@see cv::aruco::DetectorParameters::minMarkerPerimeterRate, cv::aruco::DetectorParameters::maxMarkerPerimeterRate
 
 #### polygonalApproxAccuracyRate
 
@@ -586,27 +493,21 @@ would be 100x0.04=5.4 pixels.
 In most cases, the default value works fine, but higher error values could be necessary for highly
 distorted images.
 
-Default value:
-
-- `double cv::aruco::DetectorParameters::polygonalApproxAccuracyRate = 0.05`
+@see cv::aruco::DetectorParameters::polygonalApproxAccuracyRate
 
 #### minCornerDistanceRate
 
 Minimum distance between any pair of corners in the same marker. It is expressed relative to the marker
 perimeter. Minimum distance in pixels is Perimeter * minCornerDistanceRate.
 
-Default value:
-
-- `double cv::aruco::DetectorParameters::minCornerDistanceRate = 0.05`
+@see cv::aruco::DetectorParameters::minCornerDistanceRate
 
 #### minMarkerDistanceRate
 
 Minimum distance between any pair of corners from two different markers. It is expressed relative to
 the minimum marker perimeter of the two markers. If two candidates are too close, the smaller one is ignored.
 
-Default value:
-
-- `double cv::aruco::DetectorParameters::minMarkerDistanceRate = 0.05`
+@see cv::aruco::DetectorParameters::minMarkerDistanceRate
 
 #### minDistanceToBorder
 
@@ -617,10 +518,7 @@ is occluded, the returned corner is usually placed in a wrong position near the 
 If the position of marker corners is important, for instance if you want to do pose estimation, it is
 better to discard any markers whose corners are too close to the image border. Elsewhere, it is not necessary.
 
-Default value:
-
-- `int cv::aruco::DetectorParameters::minDistanceToBorder = 3`
-
+@see cv::aruco::DetectorParameters::minDistanceToBorder
 
 ### Bits Extraction
 
@@ -650,9 +548,7 @@ value of 2 indicates the border has the width of two internal bits.
 This parameter needs to coincide with the border size of the markers you are using. The border size
 can be configured in the marker drawing functions such as `generateImageMarker()`.
 
-Default value:
-
-- `int cv::aruco::DetectorParameters::markerBorderBits = 1`
+@see cv::aruco::DetectorParameters::markerBorderBits
 
 #### minOtsuStdDev
 
@@ -661,9 +557,7 @@ thresholding. If the deviation is low, it probably means that all the square is 
 and applying Otsu does not make sense. If this is the case, all the bits are set to 0 (or 1)
 depending on whether the mean value is higher or lower than 128.
 
-Default value:
-
-- `double cv::aruco::DetectorParameters::minOtsuStdDev = 5.0`
+@see cv::aruco::DetectorParameters::minOtsuStdDev
 
 #### perspectiveRemovePixelPerCell
 
@@ -680,9 +574,7 @@ If the value of `perspectiveRemovePixelPerCell` is 10, then the size of the obta
 A higher value of this parameter can improve the bits extraction process (up to some degree), however it can penalize
 the performance.
 
-Default value:
-
-- `int cv::aruco::DetectorParameters::perspectiveRemovePixelPerCell = 4`
+@see cv::aruco::DetectorParameters::perspectiveRemovePixelPerCell
 
 #### perspectiveRemoveIgnoredMarginPerCell
 
@@ -707,9 +599,7 @@ This parameter is relative to the total size of the cell. For instance if the ce
 value of this parameter is 0.1, a margin of 40*0.1=4 pixels is ignored in the cells. This means that the total
 number of pixels that would be analyzed in each cell would actually be 32x32, instead of 40x40.
 
-Default value:
-
-- `double cv::aruco::DetectorParameters::perspectiveRemoveIgnoredMarginPerCell = 0.13`
+@see cv::aruco::DetectorParameters::perspectiveRemoveIgnoredMarginPerCell
 
 
 ### Marker identification
@@ -723,9 +613,7 @@ The bits of the marker border should be black. This parameter specifies the allo
 bits in the border, i.e. the maximum number of white bits in the border. It is represented
 relative to the total number of bits in the marker.
 
-Default value:
-
-- `double cv::aruco::DetectorParameters::maxErroneousBitsInBorderRate = 0.35`
+@see cv::aruco::DetectorParameters::maxErroneousBitsInBorderRate
 
 #### errorCorrectionRate
 
@@ -737,9 +625,7 @@ For instance, if the allowed number of bits that can be corrected (for the used 
 
 This value is useful to reduce the error correction capabilities in order to avoid false positives.
 
-Default value:
-
-- `double cv::aruco::DetectorParameters::errorCorrectionRate = 0.6`
+@see cv::aruco::DetectorParameters::errorCorrectionRate
 
 
 ### Corner Refinement
@@ -756,9 +642,7 @@ This parameter determines whether the corner subpixel process is performed or no
 if it is being performed. It can be disabled if accurate corners are not necessary. Possible values are
 `CORNER_REFINE_NONE`, `CORNER_REFINE_SUBPIX`, `CORNER_REFINE_CONTOUR`, and `CORNER_REFINE_APRILTAG`.
 
-Default value:
-
-- `int cv::aruco::DetectorParameters::cornerRefinementMethod = CORNER_REFINE_NONE`
+@see cv::aruco::DetectorParameters::cornerRefinementMethod
 
 #### cornerRefinementWinSize
 
@@ -770,9 +654,7 @@ The window size may decrease if the ArUco marker is too small, check cv::aruco::
 The final window size is calculated as: min(cornerRefinementWinSize, averageArucoModuleSize*relativeCornerRefinmentWinSize),
 where averageArucoModuleSize is average module size of ArUco marker in pixels.
 
-Default value:
-
-- `int cv::aruco::DetectorParameters::cornerRefinementWinSize = 5`
+@see cv::aruco::DetectorParameters::cornerRefinementWinSize
 
 #### relativeCornerRefinmentWinSize
 
@@ -783,9 +665,7 @@ where averageArucoModuleSize is average module size of ArUco marker in pixels.
 In the case of markers located far from each other, it may be useful to increase the value of the parameter to 0.4-0.5.
 In the case of markers located close to each other, it may be useful to decrease the parameter value to 0.1-0.2.
 
-Default value:
-
-- `float cv::aruco::DetectorParameters::relativeCornerRefinmentWinSize = 0.3`
+@see cv::aruco::DetectorParameters::relativeCornerRefinmentWinSize
 
 #### cornerRefinementMaxIterations and cornerRefinementMinAccuracy
 
@@ -796,7 +676,4 @@ These two parameters determine the stop criteria of the subpixel refinement proc
 If the number of iterations is too high, it may affect the performance. On the other hand, if it is
 too low, it can result in poor subpixel refinement.
 
-Default values:
-
-- `int cv::aruco::DetectorParameters::cornerRefinementMaxIterations = 30`
-- `double cv::aruco::DetectorParameters::cornerRefinementMinAccuracy = 0.1`
+@see cv::aruco::DetectorParameters::cornerRefinementMaxIterations, cv::aruco::DetectorParameters::cornerRefinementMinAccuracy
