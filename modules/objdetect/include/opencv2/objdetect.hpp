@@ -501,8 +501,6 @@ public:
     */
     virtual void copyTo(HOGDescriptor& c) const;
 
-    /**@example samples/cpp/train_HOG.cpp
-    */
     /** @brief Computes HOG descriptors of given image.
     @param img Matrix of the type CV_8U containing an image where HOG features will be calculated.
     @param descriptors Matrix of the type CV_32F
