@@ -466,19 +466,6 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     return rms;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::fisheye::solvePnP
-
-bool cv::fisheye::solvePnP( InputArray opoints, InputArray ipoints,
-               InputArray cameraMatrix, InputArray distCoeffs,
-               OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess, int flags )
-{
-
-    Mat imagePointsNormalized;
-    cv::fisheye::undistortPoints(ipoints, imagePointsNormalized, cameraMatrix, distCoeffs, noArray(), cameraMatrix);
-    return cv::solvePnP(opoints, imagePointsNormalized, cameraMatrix, noArray(), rvec, tvec, useExtrinsicGuess, flags);
-}
-
 namespace cv{ namespace {
 void subMatrix(const Mat& src, Mat& dst, const std::vector<uchar>& cols, const std::vector<uchar>& rows)
 {
