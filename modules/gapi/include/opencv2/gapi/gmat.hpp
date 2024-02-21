@@ -77,6 +77,13 @@ public:
      */
     GAPI_WRAP GMat();                       // Empty constructor
 
+    /**
+     * @brief Constructs a value-initialized GMat
+     *
+     * Description TBD
+     */
+    GAPI_WRAP explicit GMat(cv::Mat m);
+
     /// @private
     GMat(const GNode &n, std::size_t out);  // Operation result constructor
     /// @private
