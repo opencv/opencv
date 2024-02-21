@@ -161,11 +161,7 @@ PERF_TEST_P_(Conv3D, conv3d)
 #ifdef HAVE_OPENCL
     fp16 = ocl::Device::getDefault().isExtensionSupported("cl_khr_fp16");
 #endif
-#if defined(__arm64__) && __arm64__
-    fp16 = true;
-#endif
-    if (netInputType == CV_32F && fp16
-        && (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16))
+    if (netInputType == CV_32F && fp16 && targetId == DNN_TARGET_OPENCL_FP16)
         netInputType = CV_16F;
     size_t weightsMemory = 0, blobsMemory = 0;
     net.getMemoryConsumption(netInputShape, netInputType, weightsMemory, blobsMemory);

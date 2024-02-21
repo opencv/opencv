@@ -496,7 +496,7 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
     CV_Assert(layerShapesIt != layersShapes.end());
 
     if (preferableBackend == DNN_BACKEND_OPENCV && ld.dtype == CV_32F
-        && (preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_CPU_FP16))
+        && preferableTarget == DNN_TARGET_OPENCL_FP16)
         ld.dtype = CV_16F;
 
     std::vector<LayerPin> pinsForInternalBlobs;
@@ -1290,7 +1290,7 @@ void Net::Impl::updateLayersShapes()
         Mat& inp = inputLayerData.outputBlobs[i];
         CV_Assert(!inp.empty());
         if (preferableBackend == DNN_BACKEND_OPENCV &&  // FIXIT: wrong place for output allocation
-            (preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_CPU_FP16) &&
+            preferableTarget == DNN_TARGET_OPENCL_FP16 &&
             inputLayerData.dtype == CV_32F)
         {
             inp.create(inp.dims, inp.size, CV_16F);
