@@ -273,8 +273,6 @@ checked:
 - `rvecs[i]` and `tvecs[i]` are the rotation and translation vectors respectively, for each of the detected markers.
 - The last parameter is the length of the axis, in the same unit as tvec (usually meters).
 
-A basic full example for pose estimation from single markers is included in the `detect_markers.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
-
 Sample video:
 
 @htmlonly
