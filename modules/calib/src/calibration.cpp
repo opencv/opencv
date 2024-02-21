@@ -1186,8 +1186,8 @@ static double registerCamerasImpl(
         const Mat& _objectPoints1, const Mat& _objectPoints2,
         const Mat& _imagePoints1, const Mat& _imagePoints2,
         const Mat& _npoints1, const Mat& _npoints2,
-        const Mat& _cameraMatrix1, const Mat& _distCoeffs1, int cameraModel1,
-        const Mat& _cameraMatrix2, const Mat& _distCoeffs2, int cameraModel2,
+        const Mat& _cameraMatrix1, const Mat& _distCoeffs1, CameraModel cameraModel1,
+        const Mat& _cameraMatrix2, const Mat& _distCoeffs2, CameraModel cameraModel2,
         Mat matR, Mat matT,
         Mat matE, Mat matF,
         Mat rvecs, Mat tvecs,
@@ -1251,7 +1251,7 @@ static double registerCamerasImpl(
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
 
-    int cameraModels[2] = {cameraModel1, cameraModel2};
+    CameraModel cameraModels[2] = {cameraModel1, cameraModel2};
     for(int k = 0; k < 2; k++ )
     {
         const Mat& points = k == 0 ? _imagePoints1 : _imagePoints2;
@@ -1263,8 +1263,6 @@ static double registerCamerasImpl(
         CV_Assert( (depth == CV_32F || depth == CV_64F) &&
                    ((points.rows == pointsTotal[k] && points.cols*cn == 2) ||
                    (points.rows == 1 && points.cols == pointsTotal[k] && cn == 2)));
-
-        A[k] = Matx33d::eye();
 
         points.convertTo(imagePoints[k], CV_64F);
         imagePoints[k] = imagePoints[k].reshape(2, 1);
@@ -1307,9 +1305,11 @@ static double registerCamerasImpl(
             Mat imgpt_ik = imagePoints[k].colRange(pos[k], pos[k] + ni);
             if (cameraModels[k] == CALIB_MODEL_PINHOLE)
                 solvePnP(objpt_i, imgpt_ik, A[k], tdists[k], rv, T[k], false, SOLVEPNP_ITERATIVE );
-            else if (cameraModels[k] == CALIB_MODEL_FISHEYE){
+            else if (cameraModels[k] == CALIB_MODEL_FISHEYE)
                 fisheye::solvePnP(objpt_i, imgpt_ik, A[k], tdists[k], rv, T[k], false, SOLVEPNP_ITERATIVE );
-            }
+            else
+                CV_Error(CV_StsBadArg, cv::format("Camera type %d is not supported", cameraModels[k]));
+
             Rodrigues(rv, R[k]);
 
             if( k == 0 )
@@ -1324,6 +1324,7 @@ static double registerCamerasImpl(
             }
             pos[k] += ni;
         }
+
         R[0] = R[1]*R[0].t();
         T[1] -= R[0]*T[0];
 
@@ -1335,7 +1336,6 @@ static double registerCamerasImpl(
         rtsort[i + nimages*3] = T[1][0];
         rtsort[i + nimages*4] = T[1][1];
         rtsort[i + nimages*5] = T[1][2];
-
     }
 
     if(flags & CALIB_USE_EXTRINSIC_GUESS)
@@ -1346,7 +1346,10 @@ static double registerCamerasImpl(
         if( matR.rows == 3 && matR.cols == 3 )
             Rodrigues(matR, R);
         else
+        {
+            CV_Assert(matR.total() == 3);
             matR.convertTo(R, CV_64F);
+        }
 
         param[0] = R[0];
         param[1] = R[1];
@@ -1390,7 +1393,6 @@ static double registerCamerasImpl(
         ptPos[1] = 0;
         for(int i = 0; i < nimages; i++ )
         {
-
             int idx = (i+1)*6;
             om[0] = Vec3d(param_m(idx + 0), param_m(idx + 1), param_m(idx + 2));
             T[0]  = Vec3d(param_m(idx + 3), param_m(idx + 4), param_m(idx + 5));
@@ -1403,7 +1405,6 @@ static double registerCamerasImpl(
 
             for(int k = 0; k < 2; k++ )
             {
-
                 int ni = _npoints[k].at<int>(i);
                 Mat objpt_i = objectPoints[k](Range::all(), Range(ptPos[k], ptPos[k] + ni));
                 Mat err  = errBuf (Range(0, ni*2), Range::all());
@@ -1431,6 +1432,7 @@ static double registerCamerasImpl(
                     } else
                         fisheye::projectPoints(objpt_i, tmpImagePoints, om[k], T[k], A[k], tdists[k]);
                 }
+
                 subtract( tmpImagePoints, imgpt_ik, tmpImagePoints );
 
                 if( JtJ_.needed() )
@@ -1493,13 +1495,14 @@ static double registerCamerasImpl(
                 ptPos[k] += ni;
             }
         }
+
         errnorm = reprojErr;
         return true;
     };
 
     double reprojErr = 0;
     LevMarq solver(param, lmcallback,
-                    LevMarq::Settings()
+                   LevMarq::Settings()
                     .setMaxIterations((unsigned int)termCrit.maxCount)
                     .setStepNormTolerance(termCrit.epsilon)
                     .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon));
@@ -1525,7 +1528,6 @@ static double registerCamerasImpl(
     else
         R_LR.convertTo(matR, matR.depth());
     T_LR.convertTo(matT, matT.depth());
-
 
     if( !matE.empty() || !matF.empty() )
     {
@@ -2100,30 +2102,8 @@ double registerCameras( InputArrayOfArrays _objectPoints1,
                         InputArrayOfArrays _objectPoints2,
                         InputArrayOfArrays _imagePoints1,
                         InputArrayOfArrays _imagePoints2,
-                        InputArray _cameraMatrix1, InputArray _distCoeffs1, int cameraModel1,
-                        InputArray _cameraMatrix2, InputArray _distCoeffs2, int cameraModel2,
-                        OutputArray _Rmat, OutputArray _Tmat,
-                        OutputArray _Emat, OutputArray _Fmat, int flags,
-                        TermCriteria criteria)
-{
-    if (flags & CALIB_USE_EXTRINSIC_GUESS)
-        CV_Error(Error::StsBadFlag, "registerCameras does not support CALIB_USE_EXTRINSIC_GUESS.");
-
-    Mat Rmat, Tmat;
-    double ret = registerCameras(_objectPoints1, _objectPoints2, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, cameraModel1,
-                                 _cameraMatrix2, _distCoeffs2, cameraModel2, Rmat, Tmat, _Emat, _Fmat,
-                                 noArray(), flags, criteria);
-    Rmat.copyTo(_Rmat);
-    Tmat.copyTo(_Tmat);
-    return ret;
-}
-
-double registerCameras( InputArrayOfArrays _objectPoints1,
-                        InputArrayOfArrays _objectPoints2,
-                        InputArrayOfArrays _imagePoints1,
-                        InputArrayOfArrays _imagePoints2,
-                        InputArray _cameraMatrix1, InputArray _distCoeffs1, int cameraModel1,
-                        InputArray _cameraMatrix2, InputArray _distCoeffs2, int cameraModel2,
+                        InputArray _cameraMatrix1, InputArray _distCoeffs1, CameraModel cameraModel1,
+                        InputArray _cameraMatrix2, InputArray _distCoeffs2, CameraModel cameraModel2,
                         InputOutputArray _Rmat, InputOutputArray _Tmat,
                         OutputArray _Emat, OutputArray _Fmat,
                         OutputArray _perViewErrors, int flags,
@@ -2138,8 +2118,8 @@ double registerCameras( InputArrayOfArrays _objectPoints1,
                         InputArrayOfArrays _objectPoints2,
                         InputArrayOfArrays _imagePoints1,
                         InputArrayOfArrays _imagePoints2,
-                        InputArray _cameraMatrix1, InputArray _distCoeffs1, int cameraModel1,
-                        InputArray _cameraMatrix2, InputArray _distCoeffs2, int cameraModel2,
+                        InputArray _cameraMatrix1, InputArray _distCoeffs1, CameraModel cameraModel1,
+                        InputArray _cameraMatrix2, InputArray _distCoeffs2, CameraModel cameraModel2,
                         InputOutputArray _Rmat, InputOutputArray _Tmat,
                         OutputArray _Emat, OutputArray _Fmat,
                         OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
