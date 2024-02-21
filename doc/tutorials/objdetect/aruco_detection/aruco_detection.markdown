@@ -295,7 +295,7 @@ Selecting a dictionary
 The aruco module provides the `Dictionary` class to represent a dictionary of markers.
 
 In addition to the marker size and the number of markers in the dictionary, there is another important parameter of the dictionary -
-the inter-marker distance. The inter-marker distance is the minimum distance between dictionary markers
+the inter-marker distance. The inter-marker distance is the minimum Hamming distance between dictionary markers
 that determines the dictionary's ability to detect and correct errors.
 
 In general, smaller dictionary sizes and larger marker sizes increase the inter-marker distance and
@@ -335,6 +335,9 @@ cv::aruco::Dictionary dictionary = cv::aruco::extendDictionary(36, 5);
 
 This will generate a customized dictionary composed of 36 markers of 5x5 bits. The process can take several
 seconds, depending on the parameters (it is slower for larger dictionaries and higher numbers of bits).
+
+Also you could use `aruco_dict_utils.cpp` sample inside the `opencv/samples/cpp`. This sample calculates the minimum Hamming
+distance for the generated dictionary and also allows you to create markers that are resistant to reflection.
 
 ### Manual dictionary definition
 
