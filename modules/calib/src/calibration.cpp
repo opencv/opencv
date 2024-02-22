@@ -70,7 +70,7 @@ static void initIntrinsicParams2D( const Mat& objectPoints,
                imagePoints.type() == CV_64FC2 );
 
     if( objectPoints.rows != 1 || imagePoints.rows != 1 )
-        CV_Error( CV_StsBadSize, "object points and image points must be a single-row matrices" );
+        CV_Error( cv::Error::StsBadSize, "object points and image points must be a single-row matrices" );
 
     Mat_<double> matA(2*nimages, 2);
     Mat_<double> matb(2*nimages, 1, CV_64F );
@@ -177,20 +177,20 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
     // 0. check the parameters & allocate buffers
     if( imageSize.width <= 0 || imageSize.height <= 0 )
-        CV_Error( CV_StsOutOfRange, "image width and height must be positive" );
+        CV_Error( cv::Error::StsOutOfRange, "image width and height must be positive" );
 
     if(flags & CALIB_TILTED_MODEL)
     {
         //when the tilted sensor model is used the distortion coefficients matrix must have 14 parameters
         if (ndistCoeffs != 14)
-            CV_Error( CV_StsBadArg, "The tilted sensor model must have 14 parameters in the distortion matrix" );
+            CV_Error( cv::Error::StsBadArg, "The tilted sensor model must have 14 parameters in the distortion matrix" );
     }
     else
     {
         //when the thin prism model is used the distortion coefficients matrix must have 12 parameters
         if(flags & CALIB_THIN_PRISM_MODEL)
             if (ndistCoeffs != 12)
-                CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
+                CV_Error( cv::Error::StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
     }
 
     if( !rvecs.empty() )
@@ -225,7 +225,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         int ni = npoints.at<int>(i);
         if( ni < 4 )
         {
-            CV_Error_( CV_StsOutOfRange, ("The number of points in the view #%d is < 4", i));
+            CV_Error_( cv::Error::StsOutOfRange, ("The number of points in the view #%d is < 4", i));
         }
         maxPoints = MAX( maxPoints, ni );
         total += ni;
@@ -286,15 +286,15 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     if( flags & CALIB_USE_INTRINSIC_GUESS )
     {
         if( A(0, 0) <= 0 || A(1, 1) <= 0 )
-            CV_Error( CV_StsOutOfRange, "Focal length (fx and fy) must be positive" );
+            CV_Error( cv::Error::StsOutOfRange, "Focal length (fx and fy) must be positive" );
         if( A(0, 2) < 0 || A(0, 2) >= imageSize.width ||
             A(1, 2) < 0 || A(1, 2) >= imageSize.height )
-            CV_Error( CV_StsOutOfRange, "Principal point must be within the image" );
+            CV_Error( cv::Error::StsOutOfRange, "Principal point must be within the image" );
         if( fabs(A(0, 1)) > 1e-5 )
-            CV_Error( CV_StsOutOfRange, "Non-zero skew is not supported by the function" );
+            CV_Error( cv::Error::StsOutOfRange, "Non-zero skew is not supported by the function" );
         if( fabs(A(1, 0)) > 1e-5 || fabs(A(2, 0)) > 1e-5 ||
             fabs(A(2, 1)) > 1e-5 || fabs(A(2,2)-1) > 1e-5 )
-            CV_Error( CV_StsOutOfRange,
+            CV_Error( cv::Error::StsOutOfRange,
                 "The intrinsic matrix must have [fx 0 cx; 0 fy cy; 0 0 1] shape" );
         A(0, 1) = A(1, 0) = A(2, 0) = A(2, 1) = 0.;
         A(2, 2) = 1.;
@@ -304,7 +304,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
             aspectRatio = A(0, 0)/A(1, 1);
 
             if( aspectRatio < minValidAspectRatio || aspectRatio > maxValidAspectRatio )
-                CV_Error( CV_StsOutOfRange,
+                CV_Error( cv::Error::StsOutOfRange,
                     "The specified aspect ratio (= cameraMatrix[0][0] / cameraMatrix[1][1]) is incorrect" );
         }
         distCoeffs.convertTo(_k, CV_64F);
@@ -314,7 +314,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         Scalar mean, sdv;
         meanStdDev(matM, mean, sdv);
         if( fabs(mean[2]) > 1e-5 || fabs(sdv[2]) > 1e-5 )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
             "For non-planar calibration rigs the initial intrinsic matrix must be specified" );
         for(int i = 0; i < total; i++ )
             matM.at<Point3d>(i).z = 0.;
@@ -324,7 +324,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
             aspectRatio = A(0, 0);
             aspectRatio /= A(1, 1);
             if( aspectRatio < minValidAspectRatio || aspectRatio > maxValidAspectRatio )
-                CV_Error( CV_StsOutOfRange,
+                CV_Error( cv::Error::StsOutOfRange,
                     "The specified aspect ratio (= cameraMatrix[0][0] / cameraMatrix[1][1]) is incorrect" );
         }
         initIntrinsicParams2D( matM, _m, npoints, imageSize, A, aspectRatio );
@@ -689,7 +689,7 @@ static double stereoCalibrateImpl(
         if( (depth != CV_32F && depth != CV_64F) ||
             ((rvecs.rows != nimages || (rvecs.cols*cn != 3 && rvecs.cols*cn != 9)) &&
              (rvecs.rows != 1 || rvecs.cols != nimages || cn != 3)) )
-            CV_Error( CV_StsBadArg, "the output array of rotation vectors must be 3-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of rotation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 or nx9 array, where n is the number of views" );
     }
     if( !tvecs.empty() )
@@ -699,7 +699,7 @@ static double stereoCalibrateImpl(
         if( (depth != CV_32F && depth != CV_64F) ||
             ((tvecs.rows != nimages || tvecs.cols*cn != 3) &&
              (tvecs.rows != 1 || tvecs.cols != nimages || cn != 3)) )
-            CV_Error( CV_StsBadArg, "the output array of translation vectors must be 3-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of translation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
 
@@ -1596,17 +1596,17 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
     {
         Mat objectPoint = objectPoints.getMat(i);
         if (objectPoint.empty())
-            CV_Error(CV_StsBadSize, "objectPoints should not contain empty vector of vectors of points");
+            CV_Error(cv::Error::StsBadSize, "objectPoints should not contain empty vector of vectors of points");
         int numberOfObjectPoints = objectPoint.checkVector(3, CV_32F);
         if (numberOfObjectPoints <= 0)
-            CV_Error(CV_StsUnsupportedFormat, "objectPoints should contain vector of vectors of points of type Point3f");
+            CV_Error(cv::Error::StsUnsupportedFormat, "objectPoints should contain vector of vectors of points of type Point3f");
 
         Mat imagePoint1 = imagePoints1.getMat(i);
         if (imagePoint1.empty())
-            CV_Error(CV_StsBadSize, "imagePoints1 should not contain empty vector of vectors of points");
+            CV_Error(cv::Error::StsBadSize, "imagePoints1 should not contain empty vector of vectors of points");
         int numberOfImagePoints = imagePoint1.checkVector(2, CV_32F);
         if (numberOfImagePoints <= 0)
-            CV_Error(CV_StsUnsupportedFormat, "imagePoints1 should contain vector of vectors of points of type Point2f");
+            CV_Error(cv::Error::StsUnsupportedFormat, "imagePoints1 should contain vector of vectors of points of type Point2f");
         CV_CheckEQ(numberOfObjectPoints, numberOfImagePoints, "Number of object and image points must be equal");
 
         total += numberOfObjectPoints;
@@ -1664,14 +1664,14 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
         {
             if( nPointsMat.at<int>(i) != ni )
             {
-                CV_Error( CV_StsBadArg, "All objectPoints[i].size() should be equal when "
+                CV_Error( cv::Error::StsBadArg, "All objectPoints[i].size() should be equal when "
                                         "object-releasing method is requested." );
             }
             Mat ocmp = objPtMat.colRange(ni * i, ni * i + ni) != objPtMat.colRange(0, ni);
             ocmp = ocmp.reshape(1);
             if( countNonZero(ocmp) )
             {
-                CV_Error( CV_StsBadArg, "All objectPoints[i] should be identical when object-releasing"
+                CV_Error( cv::Error::StsBadArg, "All objectPoints[i] should be identical when object-releasing"
                                         " method is requested." );
             }
         }
@@ -1914,7 +1914,7 @@ void calibrationMatrixValues( InputArray _cameraMatrix, Size imageSize,
     CV_INSTRUMENT_REGION();
 
     if(_cameraMatrix.size() != Size(3, 3))
-        CV_Error(CV_StsUnmatchedSizes, "Size of cameraMatrix must be 3x3!");
+        CV_Error(cv::Error::StsUnmatchedSizes, "Size of cameraMatrix must be 3x3!");
 
     Matx33d A;
     _cameraMatrix.getMat().convertTo(A, CV_64F);

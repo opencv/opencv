@@ -173,9 +173,9 @@ void correctMatches( InputArray _F, InputArray _points1, InputArray _points2,
     CV_Assert(points1.size() == points2.size());
     CV_Assert(points1.rows == 1 || points1.cols == 1);
     if (points1.channels() != 2)
-        CV_Error( CV_StsUnmatchedSizes, "The first set of points must contain two channels; one for x and one for y" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "The first set of points must contain two channels; one for x and one for y" );
     if (points2.channels() != 2)
-        CV_Error( CV_StsUnmatchedSizes, "The second set of points must contain two channels; one for x and one for y" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "The second set of points must contain two channels; one for x and one for y" );
 
     _newPoints1.create(points1.size(), points1.type());
     _newPoints2.create(points2.size(), points2.type());

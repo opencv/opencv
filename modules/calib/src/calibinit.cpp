@@ -71,7 +71,6 @@
 
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/flann.hpp"
 
 #include <stack>

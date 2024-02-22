@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
 #include "distortion_model.hpp"
 #include <stdio.h>
 #include <iterator>
@@ -146,7 +145,7 @@ void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
     dst.setZero();
 
     if( depth != CV_32F && depth != CV_64F )
-        CV_Error( CV_StsUnsupportedFormat, "The matrices must have 32f or 64f data type" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "The matrices must have 32f or 64f data type" );
 
     if( v2m )
     {
@@ -532,7 +531,7 @@ void cv::projectPoints( InputArray _objectPoints,
     if(total % 3 != 0)
     {
         //we have stopped support of homogeneous coordinates because it cause ambiguity in interpretation of the input data
-        CV_Error( CV_StsBadArg, "Homogeneous coordinates are not supported" );
+        CV_Error( cv::Error::StsBadArg, "Homogeneous coordinates are not supported" );
     }
     count = total / 3;
     CV_Assert(objpt_depth == CV_32F || objpt_depth == CV_64F);
@@ -560,7 +559,7 @@ void cv::projectPoints( InputArray _objectPoints,
         (rvec.size() == Size(3, 3) ||
         (rvec.rows == 1 && rvec.cols*rvec.channels() == 3) ||
         (rvec.rows == 3 && rvec.cols*rvec.channels() == 1)))) {
-        CV_Error(CV_StsBadArg, "rvec must be 3x3 or 1x3 or 3x1 floating-point array");
+        CV_Error(cv::Error::StsBadArg, "rvec must be 3x3 or 1x3 or 3x1 floating-point array");
     }
 
     if( rvec.size() == Size(3, 3) )
@@ -582,7 +581,7 @@ void cv::projectPoints( InputArray _objectPoints,
     if(!((tvec.depth() == CV_32F || tvec.depth() == CV_64F) &&
         ((tvec.rows == 1 && tvec.cols*tvec.channels() == 3) ||
         (tvec.rows == 3 && tvec.cols*tvec.channels() == 1)))) {
-        CV_Error(CV_StsBadArg, "tvec must be 1x3 or 3x1 floating-point array");
+        CV_Error(cv::Error::StsBadArg, "tvec must be 1x3 or 3x1 floating-point array");
     }
 
     Mat _t(tvec.size(), CV_64FC(tvec.channels()), t);
@@ -591,7 +590,7 @@ void cv::projectPoints( InputArray _objectPoints,
     Mat cameraMatrix = _cameraMatrix.getMat();
 
     if(cameraMatrix.size() != Size(3, 3) || cameraMatrix.channels() != 1)
-        CV_Error( CV_StsBadArg, "Intrinsic parameters must be 3x3 floating-point matrix" );
+        CV_Error( cv::Error::StsBadArg, "Intrinsic parameters must be 3x3 floating-point matrix" );
     Mat _a(3, 3, CV_64F, a);
     cameraMatrix.convertTo(_a, CV_64F);
 
@@ -609,7 +608,7 @@ void cv::projectPoints( InputArray _objectPoints,
         ktotal = (int)distCoeffs.total()*kcn;
         if( (distCoeffs.rows != 1 && distCoeffs.cols != 1) ||
             (ktotal != 4 && ktotal != 5 && ktotal != 8 && ktotal != 12 && ktotal != 14))
-            CV_Error( CV_StsBadArg, cvDistCoeffErr );
+            CV_Error( cv::Error::StsBadArg, cvDistCoeffErr );
 
         Mat _k(distCoeffs.size(), CV_64FC(kcn), k);
         distCoeffs.convertTo(_k, CV_64F);
