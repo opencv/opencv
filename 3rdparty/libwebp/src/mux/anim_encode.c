@@ -593,17 +593,16 @@ int WebPAnimEncoderRefineRect(
     int is_lossless, float quality, int* const x_offset, int* const y_offset,
     int* const width, int* const height) {
   FrameRectangle rect;
-  int right, left, bottom, top;
+  const int right = clip(*x_offset + *width, 0, curr_canvas->width);
+  const int left = clip(*x_offset, 0, curr_canvas->width - 1);
+  const int bottom = clip(*y_offset + *height, 0, curr_canvas->height);
+  const int top = clip(*y_offset, 0, curr_canvas->height - 1);
   if (prev_canvas == NULL || curr_canvas == NULL ||
       prev_canvas->width != curr_canvas->width ||
       prev_canvas->height != curr_canvas->height ||
       !prev_canvas->use_argb || !curr_canvas->use_argb) {
     return 0;
   }
-  right = clip(*x_offset + *width, 0, curr_canvas->width);
-  left = clip(*x_offset, 0, curr_canvas->width - 1);
-  bottom = clip(*y_offset + *height, 0, curr_canvas->height);
-  top = clip(*y_offset, 0, curr_canvas->height - 1);
   rect.x_offset_ = left;
   rect.y_offset_ = top;
   rect.width_ = clip(right - left, 0, curr_canvas->width - rect.x_offset_);

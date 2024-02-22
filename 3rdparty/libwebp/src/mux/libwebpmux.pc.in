@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libwebpmux
+Description: Library for manipulating the WebP graphics format container
+Version: @PACKAGE_VERSION@
+Requires.private: libwebp >= 0.2.0
+Cflags: -I${includedir}
+Libs: -L${libdir} -l@webp_libname_prefix@webpmux
+Libs.private: -lm
