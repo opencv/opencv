@@ -54,7 +54,6 @@ The drawFrameAxes() function can be used to check the obtained pose. For instanc
 And this is another example with the board partially occluded:
 
 ![Board with occlusions](images/gbocclusion.jpg)
-@note The center and direction of the axes has been changed
 
 As it can be observed, although some markers have not been detected, the board pose can still be estimated from the rest of markers.
 
