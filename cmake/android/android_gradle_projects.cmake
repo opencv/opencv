@@ -2,7 +2,7 @@
 set(ANDROID_GRADLE_PLUGIN_VERSION "7.3.1" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
-set(KOTLIN_PLUGIN_VERSION "1.5.20" CACHE STRING "Kotlin Plugin version")
+set(KOTLIN_PLUGIN_VERSION "1.8.20" CACHE STRING "Kotlin Plugin version")
 message(STATUS "Kotlin Plugin version: ${KOTLIN_PLUGIN_VERSION}")
 
 if(BUILD_KOTLIN_EXTENSIONS)
