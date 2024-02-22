@@ -325,5 +325,5 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
         getRectSubPix_Cn_<float, float, float, nop<float>, nop<float> >
         (image.ptr<float>(), image.step, image.size(), patch.ptr<float>(), patch.step, patch.size(), center, cn);
     else
-        CV_Error( CV_StsUnsupportedFormat, "Unsupported combination of input and output formats");
+        CV_Error( cv::Error::StsUnsupportedFormat, "Unsupported combination of input and output formats");
 }

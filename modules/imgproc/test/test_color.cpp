@@ -40,6 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/core/core_c.h"
 
 namespace opencv_test { namespace {
 
@@ -1810,7 +1811,7 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
     else if( depth == CV_16U )
         bayer2BGR_<ushort>(src, dst, fwd_code);
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 }
 
 

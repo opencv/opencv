@@ -111,7 +111,7 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
         scalarToRawData_(s, (double*)_buf, cn, unroll_to);
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat,"");
+        CV_Error(cv::Error::StsUnsupportedFormat,"");
     }
 }
 
@@ -826,7 +826,7 @@ int cv::borderInterpolate( int p, int len, int borderType )
     else if( borderType == BORDER_CONSTANT )
         p = -1;
     else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
+        CV_Error( cv::Error::StsBadArg, "Unknown/unsupported border type" );
     return p;
 }
 

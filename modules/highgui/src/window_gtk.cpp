@@ -737,7 +737,7 @@ CvRect cvGetWindowRect_GTK(const char* name)
     CV_LOCK_MUTEX();
     const auto window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
 
     return cvRect(getImageRect_(window));
 }
@@ -779,7 +779,7 @@ double cvGetModeWindow_GTK(const char* name)//YV
     CV_LOCK_MUTEX();
     const auto window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
 
     double result = window->status;
     return result;
@@ -794,7 +794,7 @@ void cvSetModeWindow_GTK( const char* name, double prop_value)//Yannick Verdie
 
     const auto window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
 
     setModeWindow_(window, (int)prop_value);
 }
@@ -910,11 +910,11 @@ namespace
         // Try double-buffered visual
         glconfig = gdk_gl_config_new_by_mode((GdkGLConfigMode)(GDK_GL_MODE_RGB | GDK_GL_MODE_DEPTH | GDK_GL_MODE_DOUBLE));
         if (!glconfig)
-            CV_Error( CV_OpenGlApiCallError, "Can't Create A GL Device Context" );
+            CV_Error( cv::Error::OpenGlApiCallError, "Can't Create A GL Device Context" );
 
         // Set OpenGL-capability to the widget
         if (!gtk_widget_set_gl_capability(window->widget, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE))
-            CV_Error( CV_OpenGlApiCallError, "Can't Create A GL Device Context" );
+            CV_Error( cv::Error::OpenGlApiCallError, "Can't Create A GL Device Context" );
 
         window->useGl = true;
     }
@@ -925,7 +925,7 @@ namespace
         GdkGLDrawable* gldrawable = gtk_widget_get_gl_drawable(window->widget);
 
         if (!gdk_gl_drawable_gl_begin (gldrawable, glcontext))
-            CV_Error( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
+            CV_Error( cv::Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
 
         glViewport(0, 0, gtk_widget_get_allocated_width(window->widget), gtk_widget_get_allocated_height(window->widget));
 
@@ -1044,7 +1044,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 #ifndef HAVE_OPENGL
     if (flags & cv::WINDOW_OPENGL)
-        CV_Error( CV_OpenGlNotSupported, "Library was built without OpenGL support" );
+        CV_Error( cv::Error::OpenGlNotSupported, "Library was built without OpenGL support" );
 #else
     if (flags & cv::WINDOW_OPENGL)
         createGlContext(window);
@@ -1125,16 +1125,16 @@ void setOpenGLContextImpl(const char* name)
 
     auto window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
 
     if (!window->useGl)
-        CV_Error( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
+        CV_Error( cv::Error::OpenGlNotSupported, "Window doesn't support OpenGL" );
 
     glcontext = gtk_widget_get_gl_context(window->widget);
     gldrawable = gtk_widget_get_gl_drawable(window->widget);
 
     if (!gdk_gl_drawable_make_current(gldrawable, glcontext))
-        CV_Error( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
+        CV_Error( cv::Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
 }
 
 void updateWindowImpl(const char* name)
@@ -1162,7 +1162,7 @@ void setOpenGLDrawCallbackImpl(const char* name, CvOpenGlDrawCallback callback, 
         return;
 
     if (!window->useGl)
-        CV_Error( CV_OpenGlNotSupported, "Window was created without OpenGL context" );
+        CV_Error( cv::Error::OpenGlNotSupported, "Window was created without OpenGL context" );
 
     window->glDrawCallback = callback;
     window->glDrawData = userdata;
@@ -1376,7 +1376,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     CV_Assert(trackbar_name && "NULL trackbar name");
 
     if( count <= 0 )
-        CV_Error( CV_StsOutOfRange, "Bad trackbar maximal value" );
+        CV_Error( cv::Error::StsOutOfRange, "Bad trackbar maximal value" );
 
     CV_LOCK_MUTEX();
 
@@ -1539,7 +1539,7 @@ void setTrackbarPosImpl( const char* trackbar_name, const char* window_name, int
     const auto trackbar = icvFindTrackbarByName(window, trackbar_name);
     if (!trackbar)
     {
-        CV_Error( CV_StsNullPtr, "No trackbar found" );
+        CV_Error( cv::Error::StsNullPtr, "No trackbar found" );
     }
 
     return setTrackbarPos_(trackbar, pos);

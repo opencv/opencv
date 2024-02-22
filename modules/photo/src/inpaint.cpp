@@ -46,7 +46,7 @@
 // */
 
 #include "precomp.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/core/core_c.h"
 #include "opencv2/photo/legacy/constants_c.h"
 
 #undef CV_MAT_ELEM_PTR_FAST
@@ -753,18 +753,18 @@ icvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_
     output_img = cvGetMat( _output_img, &output_hdr );
 
     if( !CV_ARE_SIZES_EQ(input_img,output_img) || !CV_ARE_SIZES_EQ(input_img,inpaint_mask))
-        CV_Error( CV_StsUnmatchedSizes, "All the input and output images must have the same size" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "All the input and output images must have the same size" );
 
     if( (CV_MAT_TYPE(input_img->type) != CV_8U &&
          CV_MAT_TYPE(input_img->type) != CV_16U &&
          CV_MAT_TYPE(input_img->type) != CV_32F &&
         CV_MAT_TYPE(input_img->type) != CV_8UC3) ||
         !CV_ARE_TYPES_EQ(input_img,output_img) )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
         "8-bit, 16-bit unsigned or 32-bit float 1-channel and 8-bit 3-channel input/output images are supported" );
 
     if( CV_MAT_TYPE(inpaint_mask->type) != CV_8UC1 )
-        CV_Error( CV_StsUnsupportedFormat, "The mask must be 8-bit 1-channel image" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "The mask must be 8-bit 1-channel image" );
 
     range = MAX(range,1);
     range = MIN(range,100);

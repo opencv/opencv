@@ -209,7 +209,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
 
         try {
             matcher.clone();
-            fail("Expected CvException (CV_StsNotImplemented)");
+            fail("Expected CvException (cv::Error::StsNotImplemented)");
         } catch (CvException cverr) {
             // expected
         }

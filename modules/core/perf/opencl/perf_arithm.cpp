@@ -975,7 +975,7 @@ OCL_PERF_TEST_P(InRangeFixture, InRange,
 
 ///////////// Normalize ////////////////////////
 
-CV_ENUM(NormalizeModes, CV_MINMAX, CV_L2, CV_L1, CV_C)
+CV_ENUM(NormalizeModes, NORM_MINMAX, NORM_L2, NORM_L1, NORM_INF)
 
 typedef tuple<Size, MatType, NormalizeModes> NormalizeParams;
 typedef TestBaseWithParam<NormalizeParams> NormalizeFixture;
@@ -1232,7 +1232,7 @@ OCL_PERF_TEST_P(PSNRFixture, PSNR,
 
 ///////////// Reduce ////////////////////////
 
-CV_ENUM(ReduceMinMaxOp, CV_REDUCE_MIN, CV_REDUCE_MAX)
+CV_ENUM(ReduceMinMaxOp, REDUCE_MIN, REDUCE_MAX)
 
 typedef tuple<Size, std::pair<MatType, MatType>, int, ReduceMinMaxOp> ReduceMinMaxParams;
 typedef TestBaseWithParam<ReduceMinMaxParams> ReduceMinMaxFixture;

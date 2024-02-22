@@ -1076,7 +1076,7 @@ static bool ocl_morphologyEx(InputArray _src, OutputArray _dst, int op,
             return false;
         break;
     default:
-        CV_Error( CV_StsBadArg, "unknown morphological operation" );
+        CV_Error( cv::Error::StsBadArg, "unknown morphological operation" );
     }
 
     return true;
@@ -1249,7 +1249,7 @@ void morphologyEx( InputArray _src, OutputArray _dst, int op,
         }
         break;
     default:
-        CV_Error( CV_StsBadArg, "unknown morphological operation" );
+        CV_Error( cv::Error::StsBadArg, "unknown morphological operation" );
     }
 }
 

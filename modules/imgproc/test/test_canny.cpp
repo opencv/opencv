@@ -40,6 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/core/core_c.h"
 
 namespace opencv_test { namespace {
 
@@ -290,7 +291,7 @@ int CV_CannyTest::validate_test_results( int test_case_idx )
     int code = cvtest::TS::OK, nz0;
     prepare_to_validation(test_case_idx);
 
-    double err = cvtest::norm(test_mat[OUTPUT][0], test_mat[REF_OUTPUT][0], CV_L1);
+    double err = cvtest::norm(test_mat[OUTPUT][0], test_mat[REF_OUTPUT][0], NORM_L1);
     if( err == 0 )
         return code;
 
@@ -301,7 +302,7 @@ int CV_CannyTest::validate_test_results( int test_case_idx )
         return code;
     }
 
-    nz0 = cvRound(cvtest::norm(test_mat[REF_OUTPUT][0], CV_L1)/255);
+    nz0 = cvRound(cvtest::norm(test_mat[REF_OUTPUT][0], NORM_L1)/255);
     err = (err/255/MAX(nz0,100))*100;
     if( err > 1 )
     {

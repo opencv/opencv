@@ -44,9 +44,9 @@
  */
 
 #include "precomp.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
 #include <limits>
 #include "../3rdparty/mscr/chi_table.h"
+#include "opencv2/core/core_c.h"
 
 namespace cv
 {
