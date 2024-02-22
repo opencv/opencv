@@ -646,7 +646,7 @@ TEST_P(Layer_Gather_1d_Test, Accuracy) {
 
     cv::Mat input = cv::Mat(input_shape, CV_32F, 1.0);
     cv::randu(input, 0.0, 1.0);
-    cv::Mat indices = cv::Mat(indices_shape, CV_32F, 0.0);
+    cv::Mat indices = cv::Mat(indices_shape, CV_32S, 0.0);
     cv::Mat output_ref = cv::Mat(output_shape, CV_32F, input(cv::Range::all(), cv::Range(0, 1)).data);
 
     std::vector<Mat> inputs{input, indices};
