@@ -4,108 +4,107 @@
  * modified by clang-format and won't be substituted.
  */
 
-/* libtiff/tif_config.h.cmake.in.  Not generated, but originated from autoheader.  */
-/* This file must be kept up-to-date with needed substitutions from libtiff/tif_config.h.in. */
+/* libtiff/tif_config.h.in.  Not generated, but originated from autoheader.  */
 
 #include "tiffconf.h"
 
 /* Support CCITT Group 3 & 4 algorithms */
-#cmakedefine CCITT_SUPPORT 1
+#undef CCITT_SUPPORT
 
 /* Pick up YCbCr subsampling info from the JPEG data stream to support files
    lacking the tag (default enabled). */
-#cmakedefine CHECK_JPEG_YCBCR_SUBSAMPLING 1
+#undef CHECK_JPEG_YCBCR_SUBSAMPLING
 
 /* enable partial strip reading for large strips (experimental) */
-#cmakedefine CHUNKY_STRIP_READ_SUPPORT 1
+#undef CHUNKY_STRIP_READ_SUPPORT
 
 /* Support C++ stream API (requires C++ compiler) */
-#cmakedefine CXX_SUPPORT 1
+#undef CXX_SUPPORT
 
-/* enable deferred strip/tile offset/size loading (experimental) */
-#cmakedefine DEFER_STRILE_LOAD 1
+/* enable deferred strip/tile offset/size loading */
+#undef DEFER_STRILE_LOAD
 
 /* Define to 1 if you have the <assert.h> header file. */
-#cmakedefine HAVE_ASSERT_H 1
+#undef HAVE_ASSERT_H
 
-/* Define to 1 if you have the declaration of `optarg', and to 0 if you don't. */
-#cmakedefine HAVE_DECL_OPTARG 1
+/* Define to 1 if you have the declaration of `optarg', and to 0 if you don't.
+   */
+#undef HAVE_DECL_OPTARG
 
 /* Define to 1 if you have the <fcntl.h> header file. */
-#cmakedefine HAVE_FCNTL_H 1
+#undef HAVE_FCNTL_H
 
 /* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
-#cmakedefine HAVE_FSEEKO 1
+#undef HAVE_FSEEKO
 
 /* Define to 1 if you have the `getopt' function. */
-#cmakedefine HAVE_GETOPT 1
+#undef HAVE_GETOPT
 
 /* Define to 1 if you have the <io.h> header file. */
-#cmakedefine HAVE_IO_H 1
+#undef HAVE_IO_H
 
 /* Define to 1 if you have the `jbg_newlen' function. */
-#cmakedefine HAVE_JBG_NEWLEN 1
+#undef HAVE_JBG_NEWLEN
 
 /* Define to 1 if you have the `mmap' function. */
-#cmakedefine HAVE_MMAP 1
+#undef HAVE_MMAP
 
 /* Define to 1 if you have the `setmode' function. */
-#cmakedefine HAVE_SETMODE 1
+#undef HAVE_SETMODE
+
+/* Define to 1 if you have the `snprintf' function. */
+#undef HAVE_SNPRINTF
 
 /* Define to 1 if you have the <strings.h> header file. */
-#cmakedefine HAVE_STRINGS_H 1
+#undef HAVE_STRINGS_H
 
 /* Define to 1 if you have the <sys/types.h> header file. */
-#cmakedefine HAVE_SYS_TYPES_H 1
+#undef HAVE_SYS_TYPES_H
 
 /* Define to 1 if you have the <unistd.h> header file. */
-#cmakedefine HAVE_UNISTD_H 1
+#undef HAVE_UNISTD_H
 
 /* 8/12 bit libjpeg dual mode enabled */
-#cmakedefine JPEG_DUAL_MODE_8_12 1 1
+#undef JPEG_DUAL_MODE_8_12
 
 /* Support LERC compression */
-#cmakedefine LERC_SUPPORT 1
+#undef LERC_SUPPORT
 
 /* 12bit libjpeg primary include file with path */
-#define LIBJPEG_12_PATH "@LIBJPEG_12_PATH@"
+#undef LIBJPEG_12_PATH
 
 /* Support LZMA2 compression */
-#cmakedefine LZMA_SUPPORT 1
+#undef LZMA_SUPPORT
 
 /* Name of package */
-#define PACKAGE "@PACKAGE_NAME@"
+#undef PACKAGE
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
+#undef PACKAGE_BUGREPORT
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "@PACKAGE_NAME@"
+#undef PACKAGE_NAME
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "@PACKAGE_TARNAME@"
+#undef PACKAGE_TARNAME
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL "@PACKAGE_URL@"
+#undef PACKAGE_URL
 
-/* Size of size_t */
-#define SIZEOF_SIZE_T @SIZEOF_SIZE_T@
+/* The size of `size_t', as computed by sizeof. */
+#undef SIZEOF_SIZE_T
 
 /* Default size of the strip in bytes (when strip chopping enabled) */
-#cmakedefine STRIP_SIZE_DEFAULT @STRIP_SIZE_DEFAULT@
+#undef STRIP_SIZE_DEFAULT
 
-/** Maximum number of TIFF IFDs that libtiff can iterate through in a file. */
-#define TIFF_MAX_DIR_COUNT @TIFF_MAX_DIR_COUNT@
+/* Maximum number of TIFF IFDs that libtiff can iterate through in a file. */
+#undef TIFF_MAX_DIR_COUNT
 
 /* define to use win32 IO system */
-#cmakedefine USE_WIN32_FILEIO 1
+#undef USE_WIN32_FILEIO
 
-/* Support WEBP compression */
-#cmakedefine WEBP_SUPPORT 1
-
-/* Support ZSTD compression */
-#cmakedefine ZSTD_SUPPORT 1
-
+/* Support webp compression */
+#undef WEBP_SUPPORT
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
@@ -118,6 +117,23 @@
 #  undef WORDS_BIGENDIAN
 # endif
 #endif
+
+/* Support zstd compression */
+#undef ZSTD_SUPPORT
+
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
+/* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
+#undef _LARGEFILE_SOURCE
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
 
 #if !defined(__MINGW32__)
 #  define TIFF_SIZE_FORMAT "zu"

@@ -1,490 +1,270 @@
-# ----------------------------------------------------------------------------
-#  CMake file for libtiff. See root CMakeLists.txt
+# CMake build for libtiff
 #
-# ----------------------------------------------------------------------------
-project(${TIFF_LIBRARY})
+# Copyright © 2015 Open Microscopy Environment / University of Dundee
+# Written by Roger Leigh <rleigh@codelibre.net>
+#
+# Permission to use, copy, modify, distribute, and sell this software and
+# its documentation for any purpose is hereby granted without fee, provided
+# that (i) the above copyright notices and this permission notice appear in
+# all copies of the software and related documentation, and (ii) the names of
+# Sam Leffler and Silicon Graphics may not be used in any advertising or
+# publicity relating to the software without the specific, prior written
+# permission of Sam Leffler and Silicon Graphics.
+#
+# THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY
+# WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+#
+# IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+# ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+# OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+# WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF
+# LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+# OF THIS SOFTWARE.
 
-include(CheckCSourceCompiles)
-include(CheckFunctionExists)
-include(CheckIncludeFile)
-include(CheckTypeSize)
+# Generate headers
+# and update configuration settings and package / version information.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tif_config.h.cmake.in
+               ${CMAKE_CURRENT_BINARY_DIR}/tif_config.h
+               @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tiffconf.h.cmake.in
+               ${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h
+               @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tiffvers.h.cmake.in
+               ${CMAKE_CURRENT_BINARY_DIR}/tiffvers.h
+               @ONLY)
 
+set(tiff_public_HEADERS
+        tiff.h
+        tiffio.h
+        ${CMAKE_CURRENT_BINARY_DIR}/tiffvers.h
+        ${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h)
 
-# Find libm, if available
-find_library(M_LIBRARY m)
-
-check_include_file(assert.h    HAVE_ASSERT_H)
-if(NOT MSVC)
-  check_include_file(dlfcn.h     HAVE_DLFCN_H)
-endif()
-check_include_file(fcntl.h     HAVE_FCNTL_H)
-check_include_file(inttypes.h  HAVE_INTTYPES_H)
-check_include_file(io.h        HAVE_IO_H)
-check_include_file(limits.h    HAVE_LIMITS_H)
-check_include_file(malloc.h    HAVE_MALLOC_H)
-check_include_file(memory.h    HAVE_MEMORY_H)
-check_include_file(search.h    HAVE_SEARCH_H)
-check_include_file(stdint.h    HAVE_STDINT_H)
-check_include_file(string.h    HAVE_STRING_H)
-if(NOT MSVC)
-  check_include_file(strings.h   HAVE_STRINGS_H)
-  check_include_file(sys/time.h  HAVE_SYS_TIME_H)
-endif()
-check_include_file(sys/types.h HAVE_SYS_TYPES_H)
-if(NOT MSVC)
-  check_include_file(unistd.h    HAVE_UNISTD_H)
-endif()
-
-# Inspired from /usr/share/autoconf/autoconf/c.m4
-foreach(inline_keyword "inline" "__inline__" "__inline")
-  if(NOT DEFINED C_INLINE)
-    set(CMAKE_REQUIRED_DEFINITIONS_SAVE ${CMAKE_REQUIRED_DEFINITIONS})
-    set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
-        "-Dinline=${inline_keyword}")
-    check_c_source_compiles("
-        typedef int foo_t;
-        static inline foo_t static_foo() {return 0;}
-        foo_t foo(){return 0;}
-        int main(int argc, char *argv[]) {return 0;}"
-      C_HAS_${inline_keyword})
-    set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS_SAVE})
-    if(C_HAS_${inline_keyword})
-      set(C_INLINE TRUE)
-      set(INLINE_KEYWORD "${inline_keyword}")
-    endif()
- endif()
-endforeach()
-if(NOT DEFINED C_INLINE)
-  set(INLINE_KEYWORD)
-endif()
+set(tiff_private_HEADERS
+        t4.h
+        tif_dir.h
+        tif_predict.h
+        tiffiop.h
+        uvcode.h
+        ${CMAKE_CURRENT_BINARY_DIR}/tif_config.h)
 
 
-# Check type sizes
-# NOTE: Could be replaced with C99 <stdint.h>
-check_type_size("signed short" SIZEOF_SIGNED_SHORT)
-check_type_size("unsigned short" SIZEOF_UNSIGNED_SHORT)
-check_type_size("signed int" SIZEOF_SIGNED_INT)
-check_type_size("unsigned int" SIZEOF_UNSIGNED_INT)
-check_type_size("signed long" SIZEOF_SIGNED_LONG)
-check_type_size("unsigned long" SIZEOF_UNSIGNED_LONG)
-check_type_size("signed long long" SIZEOF_SIGNED_LONG_LONG)
-check_type_size("unsigned long long" SIZEOF_UNSIGNED_LONG_LONG)
-check_type_size("unsigned char *" SIZEOF_UNSIGNED_CHAR_P)
+add_library(tiff libtiff.def)
+add_library(TIFF::tiff ALIAS tiff)
 
-set(CMAKE_EXTRA_INCLUDE_FILES_SAVE ${CMAKE_EXTRA_INCLUDE_FILES})
-set(CMAKE_EXTRA_INCLUDE_FILES ${CMAKE_EXTRA_INCLUDE_FILES} "stddef.h")
-check_type_size("size_t" SIZEOF_SIZE_T)
-check_type_size("ptrdiff_t" SIZEOF_PTRDIFF_T)
-set(CMAKE_EXTRA_INCLUDE_FILES ${CMAKE_EXTRA_INCLUDE_FILES_SAVE})
+target_sources(tiff PRIVATE
+        ${tiff_public_HEADERS}
+        ${tiff_private_HEADERS}
+        tif_aux.c
+        tif_close.c
+        tif_codec.c
+        tif_color.c
+        tif_compress.c
+        tif_dir.c
+        tif_dirinfo.c
+        tif_dirread.c
+        tif_dirwrite.c
+        tif_dumpmode.c
+        tif_error.c
+        tif_extension.c
+        tif_fax3.c
+        tif_fax3sm.c
+        tif_flush.c
+        tif_getimage.c
+        tif_hash_set.c
+        tif_jbig.c
+        tif_jpeg.c
+        tif_jpeg_12.c
+        tif_lerc.c
+        tif_luv.c
+        tif_lzma.c
+        tif_lzw.c
+        tif_next.c
+        tif_ojpeg.c
+        tif_open.c
+        tif_packbits.c
+        tif_pixarlog.c
+        tif_predict.c
+        tif_print.c
+        tif_read.c
+        tif_strip.c
+        tif_swab.c
+        tif_thunder.c
+        tif_tile.c
+        tif_version.c
+        tif_warning.c
+        tif_webp.c
+        tif_write.c
+        tif_zip.c
+        tif_zstd.c)
 
-set(TIFF_INT8_T "signed char")
-set(TIFF_UINT8_T "unsigned char")
-
-set(TIFF_INT16_T "signed short")
-set(TIFF_UINT16_T "unsigned short")
-
-if(SIZEOF_SIGNED_INT EQUAL 4)
-  set(TIFF_INT32_T "signed int")
-  set(TIFF_INT32_FORMAT "%d")
-elseif(SIZEOF_SIGNED_LONG EQUAL 4)
-  set(TIFF_INT32_T "signed long")
-  set(TIFF_INT32_FORMAT "%ld")
-endif()
-
-if(SIZEOF_UNSIGNED_INT EQUAL 4)
-  set(TIFF_UINT32_T "unsigned int")
-  set(TIFF_UINT32_FORMAT "%u")
-elseif(SIZEOF_UNSIGNED_LONG EQUAL 4)
-  set(TIFF_UINT32_T "unsigned long")
-  set(TIFF_UINT32_FORMAT "%lu")
-endif()
-
-if(SIZEOF_SIGNED_LONG EQUAL 8)
-  set(TIFF_INT64_T "signed long")
-  set(TIFF_INT64_FORMAT "%ld")
-elseif(SIZEOF_SIGNED_LONG_LONG EQUAL 8)
-  set(TIFF_INT64_T "signed long long")
-  if(MINGW)
-    set(TIFF_INT64_FORMAT "%I64d")
-  else()
-    set(TIFF_INT64_FORMAT "%lld")
-  endif()
-endif()
-
-if(SIZEOF_UNSIGNED_LONG EQUAL 8)
-  set(TIFF_UINT64_T "unsigned long")
-  set(TIFF_UINT64_FORMAT "%lu")
-elseif(SIZEOF_UNSIGNED_LONG_LONG EQUAL 8)
-  set(TIFF_UINT64_T "unsigned long long")
-  if(MINGW)
-    set(TIFF_UINT64_FORMAT "%I64u")
-  else()
-    set(TIFF_UINT64_FORMAT "%llu")
-  endif()
-endif()
-
-if(SIZEOF_UNSIGNED_INT EQUAL SIZEOF_SIZE_T)
-  set(TIFF_SIZE_T "unsigned int")
-  set(TIFF_SIZE_FORMAT "%u")
-  set(TIFF_SSIZE_T "signed int")
-  set(TIFF_SSIZE_FORMAT "%d")
-elseif(SIZEOF_UNSIGNED_LONG EQUAL SIZEOF_SIZE_T)
-  set(TIFF_SIZE_T "unsigned long")
-  set(TIFF_SIZE_FORMAT "%lu")
-  set(TIFF_SSIZE_T "signed long")
-  set(TIFF_SSIZE_FORMAT "%ld")
-elseif(SIZEOF_UNSIGNED_LONG_LONG EQUAL SIZEOF_SIZE_T)
-  set(TIFF_SIZE_T "unsigned long")
-  if(MINGW)
-    set(TIFF_SIZE_FORMAT "%I64u")
-    set(TIFF_SSIZE_FORMAT "%I64d")
-  else()
-    set(TIFF_SIZE_FORMAT "%llu")
-    set(TIFF_SSIZE_FORMAT "%lld")
-  endif()
-endif()
-
-if(SIZEOF_SIGNED_INT EQUAL SIZEOF_UNSIGNED_CHAR_P)
-elseif(SIZEOF_SIGNED_LONG EQUAL SIZEOF_UNSIGNED_CHAR_P)
-elseif(SIZEOF_SIGNED_LONG_LONG EQUAL SIZEOF_UNSIGNED_CHAR_P)
-  set(TIFF_SSIZE_T "signed long long")
-  if(MINGW)
-  else()
-  endif()
-endif()
-
-if(NOT SIZEOF_PTRDIFF_T)
-  set(TIFF_PTRDIFF_T "${TIFF_SSIZE_T}")
-  set(TIFF_PTRDIFF_FORMAT "${SSIZE_FORMAT}")
-else()
-  set(TIFF_PTRDIFF_T "ptrdiff_t")
-  set(TIFF_PTRDIFF_FORMAT "%ld")
-endif()
-
-# Nonstandard int types
-if(NOT MSVC)
-  check_type_size(INT8 int8)
-  set(HAVE_INT8 ${INT8})
-  check_type_size(INT16 int16)
-  set(HAVE_INT16 ${INT16})
-  check_type_size(INT32 int32)
-  set(HAVE_INT32 ${INT32})
-endif()
-
-# Check functions
-if(NOT MSVC)
-   set(CMAKE_REQUIRED_LIBRARIES_SAVE ${CMAKE_REQUIRED_LIBRARIES})
-  set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${M_LIBRARY})
-  check_function_exists(floor HAVE_FLOOR)
-  check_function_exists(pow   HAVE_POW)
-  check_function_exists(sqrt  HAVE_SQRT)
-  set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES_SAVE})
-endif()
-
-if(NOT MSVC)
-  check_function_exists(isascii    HAVE_ISASCII)
-  check_function_exists(memset     HAVE_MEMSET)
-  check_function_exists(mmap       HAVE_MMAP)
-  check_function_exists(getopt     HAVE_GETOPT)
-endif()
-check_function_exists(memmove    HAVE_MEMMOVE)
-check_function_exists(setmode    HAVE_SETMODE)
-check_function_exists(strcasecmp HAVE_STRCASECMP)
-check_function_exists(strchr     HAVE_STRCHR)
-check_function_exists(strrchr    HAVE_STRRCHR)
-check_function_exists(strstr     HAVE_STRSTR)
-check_function_exists(strtol     HAVE_STRTOL)
-check_function_exists(strtol     HAVE_STRTOUL)
-check_function_exists(strtoull   HAVE_STRTOULL)
-check_function_exists(lfind      HAVE_LFIND)
-
-# May be inlined, so check it compiles:
-check_c_source_compiles("
-#include <stdio.h>
-int main(void) {
-  char buf[10];
-  snprintf(buf, 10, \"Test %d\", 1);
-  return 0;
-}"
-  HAVE_SNPRINTF)
-
-if(NOT HAVE_SNPRINTF)
-  add_definitions(-DNEED_LIBPORT)
-endif()
-
-# CPU bit order
-set(fillorder FILLORDER_MSB2LSB)
-if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "i.*86.*" OR
-   CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "amd64.*" OR
-   # AMD64 on Windows
-   CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "AMD64" OR
-   CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64.*")
-  set(fillorder FILLORDER_LSB2MSB)
-endif()
-set(HOST_FILLORDER ${fillorder} CACHE STRING "Native CPU bit order")
-mark_as_advanced(HOST_FILLORDER)
-
-# CPU endianness
-include(TestBigEndian)
-test_big_endian(bigendian)
-if(bigendian)
-  set(bigendian ON)
-else()
-  set(bigendian OFF)
-endif()
-set(HOST_BIG_ENDIAN ${bigendian} CACHE STRING "Native CPU bit order")
-mark_as_advanced(HOST_BIG_ENDIAN)
-if(HOST_BIG_ENDIAN)
-  set(HOST_BIG_ENDIAN 1)
-else()
-  set(HOST_BIG_ENDIAN 0)
-endif()
-if(HOST_BIG_ENDIAN)
-  add_definitions(-DWORDS_BIGENDIAN)
-endif()
-
-# IEEE floating point
-set(HAVE_IEEEFP 1 CACHE STRING "IEEE floating point is available")
-mark_as_advanced(HAVE_IEEEFP)
-
-# Large file support
-if(UNIX OR MINGW)
-  if(ANDROID AND (ANDROID_NATIVE_API_LEVEL LESS 21) AND CV_GCC)
-    # Android NDK build problem: 'mmap' issue with GCC and API<21
-  else()
-    # This might not catch every possibility catered for by
-    # AC_SYS_LARGEFILE.
-    add_definitions(-D_FILE_OFFSET_BITS=64)
-    set(FILE_OFFSET_BITS 64)
-  endif()
-endif()
-
-# Documentation install directory (default to cmake project docdir)
-set(LIBTIFF_DOCDIR "${CMAKE_INSTALL_FULL_DOCDIR}")
-
-# Options to enable and disable internal codecs
-
-option(ccitt "support for CCITT Group 3 & 4 algorithms" ON)
-set(CCITT_SUPPORT ${ccitt})
-
-option(packbits "support for Macintosh PackBits algorithm" ON)
-set(PACKBITS_SUPPORT ${packbits})
-
-option(lzw "support for LZW algorithm" ON)
-set(LZW_SUPPORT ${lzw})
-
-option(thunder "support for ThunderScan 4-bit RLE algorithm" ON)
-set(THUNDER_SUPPORT ${thunder})
-
-option(next "support for NeXT 2-bit RLE algorithm" ON)
-set(NEXT_SUPPORT ${next})
-
-option(logluv "support for LogLuv high dynamic range algorithm" ON)
-set(LOGLUV_SUPPORT ${logluv})
-
-# Option for Microsoft Document Imaging
-option(mdi "support for Microsoft Document Imaging" ON)
-set(MDI_SUPPORT ${mdi})
-
-# ZLIB
-set(ZLIB_SUPPORT 0)
-if(ZLIB_LIBRARY)
-  set(ZLIB_SUPPORT 1)
-endif()
-set(ZIP_SUPPORT ${ZLIB_SUPPORT})
-
-set(PIXARLOG_SUPPORT FALSE)
-
-# JPEG
-set(JPEG_SUPPORT FALSE)
-if(HAVE_JPEG)
-  set(JPEG_SUPPORT TRUE)
-  if(TARGET ${JPEG_LIBRARY} AND DEFINED ${JPEG_LIBRARY}_BINARY_DIR)
-    include_directories("${${JPEG_LIBRARY}_BINARY_DIR}")
-  endif()
-  include_directories(${JPEG_INCLUDE_DIR})
-endif()
-
-option(old-jpeg "support for Old JPEG compression (read-only)" OFF)  # OpenCV: changed to OFF
-set(OJPEG_SUPPORT FALSE)
-if(JPEG_SUPPORT AND old-jpeg)
-  set(OJPEG_SUPPORT TRUE)
-endif()
-
-# OpenCV: turned off
-set(JBIG_SUPPORT 0)
-set(LZMA_SUPPORT 0)  # OpenCV: turned off
-set(JPEG12_FOUND FALSE)  # OpenCV: turned off
-set(STRIPCHOP_DEFAULT)
-set(STRIP_SIZE_DEFAULT 8192)
-
-# Win32 IO
-set(win32_io FALSE)
-if(WIN32 AND NOT WINRT)
-  set(win32_io TRUE)
-endif()
-set(USE_WIN32_FILEIO ${win32_io} CACHE BOOL "Use win32 IO system (Microsoft Windows only)")
 if(USE_WIN32_FILEIO)
-  set(USE_WIN32_FILEIO TRUE)
+  target_sources(tiff PRIVATE tif_win32.c)
 else()
-  set(USE_WIN32_FILEIO FALSE)
+  target_sources(tiff PRIVATE tif_unix.c)
 endif()
 
-# Orthogonal features
-
-# OpenCV: turned ON
-set(SUBIFD_SUPPORT 1)
-set(DEFAULT_EXTRASAMPLE_AS_ALPHA 1)
-set(CHECK_JPEG_YCBCR_SUBSAMPLING 1)
-
-if(JPEG_INCLUDE_DIR)
-  list(APPEND TIFF_INCLUDES ${JPEG_INCLUDE_DIR})
-endif()
-if(JPEG12_INCLUDE_DIR)
-  list(APPEND TIFF_INCLUDES ${JPEG12_INCLUDE_DIR})
-endif()
-if(JBIG_INCLUDE_DIR)
-  list(APPEND TIFF_INCLUDES ${JBIG_INCLUDE_DIR})
-endif()
-if(LIBLZMA_INCLUDE_DIRS)
-  list(APPEND TIFF_INCLUDES ${LIBLZMA_INCLUDE_DIRS})
-endif()
-
-# Libraries required by libtiff
-set(TIFF_LIBRARY_DEPS)
-if(M_LIBRARY)
-  list(APPEND TIFF_LIBRARY_DEPS ${M_LIBRARY})
-endif()
-if(ZLIB_LIBRARIES)
-  list(APPEND TIFF_LIBRARY_DEPS ${ZLIB_LIBRARIES})
-endif()
-if(JPEG_LIBRARIES)
-  list(APPEND TIFF_LIBRARY_DEPS ${JPEG_LIBRARIES})
-endif()
-if(JPEG12_LIBRARIES)
-  list(APPEND TIFF_LIBRARY_DEPS ${JPEG12_LIBRARIES})
-endif()
-if(JBIG_LIBRARIES)
-  list(APPEND TIFF_LIBRARY_DEPS ${JBIG_LIBRARIES})
-endif()
-if(LIBLZMA_LIBRARIES)
-  list(APPEND TIFF_LIBRARY_DEPS ${LIBLZMA_LIBRARIES})
-endif()
-
-
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tif_config.h.cmake.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
-               @ONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tiffconf.h.cmake.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h"
-               @ONLY)
-
-ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIRS})
-
-set(lib_srcs
-    tif_aux.c
-    tif_close.c
-    tif_codec.c
-    tif_color.c
-    tif_compress.c
-    tif_dir.c
-    tif_dirinfo.c
-    tif_dirread.c
-    tif_dirwrite.c
-    tif_dumpmode.c
-    tif_error.c
-    tif_extension.c
-    tif_fax3.c
-    tif_fax3sm.c
-    tif_flush.c
-    tif_getimage.c
-    tif_jbig.c
-    tif_jpeg_12.c
-    tif_jpeg.c
-    tif_luv.c
-    tif_lzma.c
-    tif_lzw.c
-    tif_next.c
-    tif_ojpeg.c
-    tif_open.c
-    tif_packbits.c
-    tif_pixarlog.c
-    tif_predict.c
-    tif_print.c
-    tif_read.c
-    tif_strip.c
-    tif_swab.c
-    tif_thunder.c
-    tif_tile.c
-    tif_version.c
-    tif_warning.c
-    tif_webp.c
-    tif_write.c
-    tif_zip.c
-    tif_zstd.c
-    tif_stream.cxx
-    t4.h
-    tif_dir.h
-    tif_fax3.h
-    tiff.h
-    tiffio.h
-    tiffiop.h
-    tiffvers.h
-    tif_predict.h
-    uvcode.h
-    tiffio.hxx
-    "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h"
-    )
-
-if(WIN32 AND NOT HAVE_SNPRINTF)
-  list(APPEND lib_srcs snprintf.c libport.h)
-endif()
-
-if(WIN32 AND NOT WINRT)
-  list(APPEND lib_srcs tif_win32.c)
-else()
-  list(APPEND lib_srcs tif_unix.c)
-endif()
-
-ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef -Wunused -Wsign-compare
-                                   -Wcast-align -Wshadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
-                                   -Wmisleading-indentation
-                                   -Wimplicit-fallthrough
-                                   -Wunused-parameter  # clang
-                                   -Warray-parameter
-                                   -Wstrict-prototypes  # clang15
+target_include_directories(tiff
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PRIVATE
+        ${TIFF_INCLUDES}
 )
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter -Wmissing-prototypes
-    -Wundef  # tiffiop.h: #if __clang_major__ >= 4
-)
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4018 /wd4100 /wd4127 /wd4311 /wd4701 /wd4706) # vs2005
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244) # vs2008
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4267 /wd4305 /wd4306) # vs2008 Win64
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4703) # vs2012
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4456 /wd4457 /wd4312) # vs2015
 
-ocv_warnings_disable(CMAKE_C_FLAGS /wd4267 /wd4244 /wd4018 /wd4311 /wd4312)
+# MSVC specific resource preparation
+if (WIN32 AND MSVC)
+  message(STATUS "Include resource version information for LibTIFF")
+  target_sources(tiff PRIVATE tif_win32_versioninfo.rc)
+  source_group("Resource Files" FILES tif_win32_versioninfo.rc)
+endif ()
 
-add_library(${TIFF_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs})
-target_link_libraries(${TIFF_LIBRARY} ${ZLIB_LIBRARIES})
 
-set_target_properties(${TIFF_LIBRARY}
-    PROPERTIES
-    OUTPUT_NAME "${TIFF_LIBRARY}"
-    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-    COMPILE_PDB_NAME ${TIFF_LIBRARY}
-    COMPILE_PDB_NAME_DEBUG "${TIFF_LIBRARY}${OPENCV_DEBUG_POSTFIX}"
-    ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
-    )
+set(tiff_libs_private_list "") # cmake list
+set(tiff_requires_private "") # cmake string
 
-if(ENABLE_SOLUTION_FOLDERS)
-  set_target_properties(${TIFF_LIBRARY} PROPERTIES FOLDER "3rdparty")
+if(ZIP_SUPPORT)
+  target_link_libraries(tiff PRIVATE ZLIB::ZLIB)
+  string(APPEND tiff_requires_private " zlib")
+endif()
+if(ZIP_SUPPORT AND LIBDEFLATE_SUPPORT)
+  target_link_libraries(tiff PRIVATE Deflate::Deflate)
+  list(APPEND tiff_libs_private_list "${Deflate_LIBRARY}")
+endif()
+if(JPEG_SUPPORT)
+  target_link_libraries(tiff PRIVATE JPEG::JPEG)
+  string(APPEND tiff_requires_private " libjpeg")
+  if(HAVE_JPEGTURBO_DUAL_MODE_8_12)
+    target_compile_definitions(tiff PRIVATE HAVE_JPEGTURBO_DUAL_MODE_8_12)
+  elseif(JPEG_DUAL_MODE_8_12)
+    target_include_directories(tiff PRIVATE ${JPEG12_INCLUDE_DIR})
+    target_link_libraries(tiff PRIVATE ${JPEG12_LIBRARIES})
+  endif()
+endif()
+if(JBIG_SUPPORT)
+  target_link_libraries(tiff PRIVATE JBIG::JBIG)
+  list(APPEND tiff_libs_private_list "${JBIG_LIBRARY}")
+endif()
+if(LERC_SUPPORT)
+  target_link_libraries(tiff PRIVATE LERC::LERC)
+  list(APPEND tiff_libs_private_list "${LERC_LIBRARY}")
+  if(NOT BUILD_SHARED_LIBS)
+    set_target_properties(tiff PROPERTIES COMPILE_DEFINITIONS LERC_STATIC)
+  endif()
+endif()
+if(LZMA_SUPPORT)
+  target_link_libraries(tiff PRIVATE liblzma::liblzma)
+  string(APPEND tiff_requires_private " liblzma")
+endif()
+if(ZSTD_SUPPORT)
+  target_link_libraries(tiff PRIVATE ZSTD::ZSTD)
+  string(APPEND tiff_requires_private " libzstd")
+endif()
+if(WEBP_SUPPORT)
+  target_link_libraries(tiff PRIVATE WebP::webp)
+  string(APPEND tiff_requires_private " libwebp")
+endif()
+if(CMath_LIBRARY)
+  target_link_libraries(tiff PRIVATE CMath::CMath)
+  list(APPEND tiff_libs_private_list "${CMath_LIBRARY}")
 endif()
 
-if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(${TIFF_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
+set(tiff_libs_private_list "${tiff_libs_private_list}" PARENT_SCOPE)
+set(tiff_requires_private "${tiff_requires_private}" PARENT_SCOPE)
+
+set_target_properties(tiff PROPERTIES SOVERSION ${SO_COMPATVERSION})
+if(NOT CYGWIN)
+    # This property causes shared libraries on Linux to have the full version
+    # encoded into their final filename.  We disable this on Cygwin because
+    # it causes cygz-${TIFF_FULL_VERSION}.dll to be created when cygz.dll
+    # seems to be the default.
+    set_target_properties(tiff PROPERTIES VERSION ${SO_VERSION})
+endif()
+if(HAVE_LD_VERSION_SCRIPT)
+  set_target_properties(tiff PROPERTIES LINK_FLAGS
+                        "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libtiff.map")
 endif()
 
-ocv_install_3rdparty_licenses(libtiff COPYRIGHT)
+if(tiff-install)
+  export(TARGETS tiff NAMESPACE TIFF:: FILE "${CMAKE_CURRENT_BINARY_DIR}/libtiffTargets.cmake")
+  install(TARGETS tiff EXPORT TiffTargets
+          RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+  install(FILES ${tiff_public_HEADERS}
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+  set(TIFF_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/tiff)
+  install(EXPORT TiffTargets
+          FILE TiffTargets.cmake
+          NAMESPACE TIFF::
+          DESTINATION ${TIFF_CONFIGDIR}
+  )
+
+  include(CMakePackageConfigHelpers)
+  write_basic_package_version_file(
+    TiffConfigVersion.cmake
+    VERSION ${LIBTIFF_VERSION}
+    COMPATIBILITY SameMajorVersion)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/TiffConfigVersion.cmake DESTINATION ${TIFF_CONFIGDIR})
+
+  configure_file(${PROJECT_SOURCE_DIR}/cmake/TiffConfig.cmake.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/TiffConfig.cmake @ONLY)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/TiffConfig.cmake DESTINATION ${TIFF_CONFIGDIR})
+endif()
+
+if(CXX_SUPPORT)
+  set(tiffxx_HEADERS
+          tiffio.hxx)
+
+  # No .def file for this library.
+  if (WIN32)
+      add_library(tiffxx STATIC ../placeholder.h)
+  else()
+      add_library(tiffxx ../placeholder.h)
+  endif()
+
+  add_library(TIFF::CXX ALIAS tiffxx)
+
+  target_sources(tiffxx PRIVATE
+          ${tiffxx_HEADERS}
+          tif_stream.cxx)
+  target_link_libraries(tiffxx tiff)
+  set_target_properties(tiffxx PROPERTIES SOVERSION ${SO_COMPATVERSION})
+  if(NOT CYGWIN)
+    # This property causes shared libraries on Linux to have the full version
+    # encoded into their final filename.  We disable this on Cygwin because
+    # it causes cygz-${TIFF_FULL_VERSION}.dll to be created when cygz.dll
+    # seems to be the default.
+    set_target_properties(tiffxx PROPERTIES VERSION ${SO_VERSION})
+  endif()
+  if(HAVE_LD_VERSION_SCRIPT)
+    set_target_properties(tiffxx PROPERTIES LINK_FLAGS
+                          "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libtiffxx.map")
+  endif()
+
+  if(tiff-install)
+    install(TARGETS tiffxx
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+    install(FILES ${tiffxx_HEADERS}
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+  endif()
+      
+endif()
+
+if(NOT CMAKE_CROSSCOMPILING)
+  add_executable(tiff_mkg3states ../placeholder.h)
+  target_sources(tiff_mkg3states PRIVATE mkg3states.c tif_fax3.h)
+  target_link_libraries(tiff_mkg3states tiff tiff_port)
+
+  add_custom_target(tiff_faxtable
+          DEPENDS tiff_mkg3states
+          COMMAND ${CMAKE_COMMAND} -E rm "tif_fax3sm.c"
+          COMMAND tiff_mkg3states -b -c const "tif_fax3sm.c"
+          WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
