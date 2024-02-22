@@ -4,7 +4,7 @@ Cascade Classifier {#tutorial_cascade_classifier}
 @tableofcontents
 
 @prev_tutorial{tutorial_optical_flow}
-@next_tutorial{tutorial_traincascade}
+@next_tutorial{tutorial_barcode_detect_and_decode}
 
 |    |    |
 | -: | :- |

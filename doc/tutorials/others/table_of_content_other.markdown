@@ -7,6 +7,5 @@ Other tutorials (objdetect, photo, stitching, video) {#tutorial_table_of_content
 -   video. @subpage tutorial_meanshift
 -   video. @subpage tutorial_optical_flow
 -   objdetect. @subpage tutorial_cascade_classifier
--   objdetect. @subpage tutorial_traincascade
 -   objdetect. @subpage tutorial_barcode_detect_and_decode
 -   ml. @subpage tutorial_introduction_to_pca
