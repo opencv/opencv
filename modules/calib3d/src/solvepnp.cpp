@@ -40,6 +40,8 @@
  //
  //M*/
 
+
+
 #include "precomp.hpp"
 //#include "upnp.h"
 #include "dls.h"
@@ -49,6 +51,8 @@
 #include "ippe.hpp"
 #include "sqpnp.hpp"
 #include "calib3d_c_api.h"
+#include "NewtonPnP.h"
+#include "FramePose/FramePose.h"
 
 #include "usac.hpp"
 
@@ -821,7 +825,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     CV_Assert( ( (npoints >= 4) || (npoints == 3 && flags == SOLVEPNP_ITERATIVE && useExtrinsicGuess)
-                || (npoints >= 3 && flags == SOLVEPNP_SQPNP) )
+                || (npoints >= 3 && flags == SOLVEPNP_SQPNP) || (npoints >= 3 && flags == SOLVEPNP_NPNP))
                && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
 
     opoints = opoints.reshape(3, npoints);
@@ -1014,6 +1018,25 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         sqpnp::PoseSolver solver;
         solver.solve(opoints, undistortedPoints, vec_rvecs, vec_tvecs);
     }
+    else if (flags == SOLVEPNP_NPNP)
+    {
+        FramePose frame_pose;
+
+        cv::Mat rot_vec = Mat::zeros(1,3,CV_64F), rot_mat = Mat::zeros(3,3,CV_64F);
+
+        // -----------------------------------------
+        // Newton PnP:
+        // -----------------------------------------
+        #ifdef HAVE_EIGEN
+        NewtonPnP NewtonPnP(cameraMatrix, distCoeffs);
+        #endif
+        Rodrigues(frame_pose.R, rot_vec);
+
+        vec_rvecs.push_back(rot_vec);
+        vec_tvecs.push_back(frame_pose.t);
+
+        // -----------------------------------------
+    }
     /*else if (flags == SOLVEPNP_DLS)
     {
         Mat undistortedPoints;
@@ -1042,7 +1065,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     }*/
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, "
-            "SOLVEPNP_EPNP, SOLVEPNP_DLS, SOLVEPNP_UPNP, SOLVEPNP_AP3P, SOLVEPNP_IPPE, SOLVEPNP_IPPE_SQUARE or SOLVEPNP_SQPNP");
+            "SOLVEPNP_EPNP, SOLVEPNP_DLS, SOLVEPNP_UPNP, SOLVEPNP_AP3P, SOLVEPNP_IPPE, SOLVEPNP_IPPE_SQUARE ,SOLVEPNP_NPNP or SOLVEPNP_SQPNP");
 
     CV_Assert(vec_rvecs.size() == vec_tvecs.size());
 
