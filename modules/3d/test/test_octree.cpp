@@ -32,8 +32,8 @@ protected:
             pointCloud.push_back(Point3f(_x, _y, _z));
         }
 
-        // Generate Octree From PointCloud.
-        treeTest.create(pointCloud, resolution);
+        // Generate Octree From PointCloud
+        treeTest = Octree::createWithResolution(resolution, pointCloud);
 
         // Randomly generate another 3D point.
         float _x = 10 * (float)rng_Point.uniform(pmin.x, pmax.x)/scale;

@@ -18,22 +18,6 @@
 
 namespace cv
 {
-
-// For nearest neighbor search
-template<typename T>
-struct PQueueElem
-{
-    PQueueElem() : dist(0), t(0) {}
-    PQueueElem(float _dist, T _t) : dist(_dist), t(_t) {}
-    float dist;
-    T t;
-
-    bool operator<(const PQueueElem<T> p1) const
-    {
-        return (this->dist < p1.dist);
-    }
-};
-
 // Forward declaration
 class OctreeKey;
 
@@ -76,11 +60,10 @@ public:
     * to the depth of Octree.
     * @param _size The length of the OctreeNode. In space, every OctreeNode represents a cube.
     * @param _origin The absolute coordinates of the center of the cube.
-    * @param _color THe color attribute of octreeNode.
     * @param _parentIndex The serial number of the child of the current node in the parent node,
     * the range is (-1~7). Among them, only the root node's _parentIndex is -1.
     */
-    OctreeNode(int _depth, double _size, const Point3f& _origin, const Point3f& _color, int _parentIndex);
+    OctreeNode(int _depth, double _size, const Point3f& _origin, int _parentIndex);
 
     //! returns true if the rootNode is NULL.
     bool empty() const;
@@ -92,9 +75,9 @@ public:
     void insertPointRecurse(const Point3f& point, const Point3f &color, int maxDepth,
                             const OctreeKey &key, size_t depthMask);
 
-    void radiusNNSearchRecurse(const Point3f& query, float squareRadius, std::vector<PQueueElem<Point3f> >& candidatePoint) const;
+    void radiusNNSearchRecurse(const Point3f& query, float squareRadius, std::vector<std::tuple<float, Point3f, Point3f>>& candidatePoint) const;
 
-    void KNNSearchRecurse(const Point3f& query, const int K, float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint) const;
+    void KNNSearchRecurse(const Point3f& query, const int K, float& smallestDist, std::vector<std::tuple<float, Point3f, Point3f>>& candidatePoint) const;
 
     //! Contains 8 pointers to its 8 children.
     std::array<Ptr<OctreeNode>, 8> children;
@@ -112,10 +95,8 @@ public:
     //! And the center of cube is `center = origin + Point3f(size/2, size/2, size/2)`.
     Point3f origin;
 
-    //! color attribute of octree node.
-    Point3f color;
     //! RAHTCoefficient of octree node, used for color attribute compression.
-    Point3f RAHTCoefficient=Point3f(0,0,0);
+    Point3f RAHTCoefficient = { };
     //! Number of point cloud in this node.
     int pointNum;
 
@@ -142,6 +123,9 @@ public:
 
     //! Contains pointers to all point cloud data in this node.
     std::vector<Point3f> pointList;
+
+    //! color attribute of octree node.
+    std::vector<Point3f> colorList;
 };
 
 /** @brief Key for pointCloud, used to compute the child node index through bit operations.

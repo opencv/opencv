@@ -2691,30 +2691,17 @@ public:
      * @param withColors Whether to keep per-point colors or not
      * @return resulting Octree
      */
-    static Octree createWithDepth(int maxDepth, const Point3f& origin = { }, bool withColors = false);
-
-    //TODO: different arg order, less overloads
+    static Octree createWithDepth(int maxDepth, double size, const Point3f& origin = { }, bool withColors = false);
 
     /** @overload
      * @brief Create an Octree from the PointCloud data with the specific maxDepth
      * 
-     * @param pointCloud point cloud data, should be 3-channel float array
      * @param maxDepth Max depth of the octree
-     * @return resulting Octree
-     */
-    static Octree createWithDepth(InputArray pointCloud, int maxDepth);
-
-    /** @overload
-     * @brief Create an Octree from the PointCloud data with the specific maxDepth
-     * 
      * @param pointCloud point cloud data, should be 3-channel float array
      * @param colors color attribute of point cloud in the same 3-channel float format
-     * @param maxDepth Max depth of the octree
      * @return resulting Octree
      */
-    static Octree createWithDepth(InputArray pointCloud, InputArray colors, int maxDepth);
-
-    //TODO: different arg order, less overloads
+    static Octree createWithDepth(int maxDepth, InputArray pointCloud, InputArray colors = noArray());
 
     /** @overload
      * @brief Creates an empty Octree with given resolution
@@ -2724,26 +2711,17 @@ public:
      * @param withColors Whether to keep per-point colors or not
      * @return resulting Octree
      */
-    static Octree createWithResolution(double resolution, const Point3f& origin = { }, bool withColors = false);
-
-    /** @overload
-     * @brief Create an Octree from the PointCloud data with the specific resolution
-     * 
-     * @param pointCloud point cloud data, should be 3-channel float array
-     * @param resolution The size of the octree leaf node
-     * @return Octree 
-     */
-    static Octree createWithResolution(InputArray pointCloud, double resolution);
+    static Octree createWithResolution(double resolution, double size, const Point3f& origin = { }, bool withColors = false);
 
      /** @overload
      * @brief Create an Octree from the PointCloud data with the specific resolution
      * 
+     * @param resolution The size of the octree leaf node
      * @param pointCloud point cloud data, should be 3-channel float array
      * @param colors color attribute of point cloud in the same 3-channel float format
-     * @param resolution The size of the octree leaf node
-     * @return Octree 
+     * @return resulting octree
      */
-    static Octree createWithResolution(InputArray pointCloud, InputArray colors, double resolution);
+    static Octree createWithResolution(double resolution, InputArray pointCloud, InputArray colors = noArray());
 
     //! Default destructor
     ~Octree();
@@ -2815,12 +2793,12 @@ public:
     * @param radius Retrieved radius value.
     * @param pointSet Point output. Contains searched points in 3-float format, and output vector is not in order,
     * can be replaced by noArray() if not needed
-    * @param colors Color output. Contains colors corresponding to points in pointSet, can be replaced by noArray() or omitted if not needed
-    * @param squareDistSet Dist output. Contains searched squared distance in floats, and output vector is not in order.
+    * @param colors Color output. Contains colors corresponding to points in pointSet, can be replaced by noArray() if not needed
+    * @param squareDistSet Dist output. Contains searched squared distance in floats, and output vector is not in order,
+    * can be replaced by noArray() if not needed
     * @return the number of searched points.
     */
-    int radiusNNSearch(const Point3f& query, float radius, OutputArray points, OutputArray colors = noArray(),
-                       OutputArray squareDists = noArray()) const;
+    int radiusNNSearch(const Point3f& query, float radius, OutputArray points, OutputArray colors, OutputArray squareDists) const;
 
     /** @brief K Nearest Neighbor Search in Octree.
     *
@@ -2842,12 +2820,11 @@ public:
     * @param K
     * @param pointSet Point output. Contains K points in 3-float format, arranged in order of distance from near to far,
     * can be replaced by noArray() if not needed
-    * @param colors Color output. Contains colors corresponding to points in pointSet, can be replaced by noArray() or omitted if not needed
+    * @param colors Color output. Contains colors corresponding to points in pointSet, can be replaced by noArray() if not needed
     * @param squareDistSet Dist output. Contains K squared distance in floats, arranged in order of distance from near to far,
-    * can be omitted if not needed
+    * can be replaced by noArray() if not needed
     */
-    void KNNSearch(const Point3f& query, const int K, OutputArray points, OutputArray colors = noArray(),
-                   OutputArray squareDists = noArray()) const;
+    void KNNSearch(const Point3f& query, const int K, OutputArray points, OutputArray colors, OutputArray squareDists) const;
 
 protected:
     struct Impl;
