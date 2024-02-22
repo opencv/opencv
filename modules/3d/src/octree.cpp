@@ -615,7 +615,7 @@ void OctreeNode::KNNSearchRecurse(const Point3f& query, const int K,
         {
             return std::get<0>(a) < std::get<0>(b);
         });
-    child = this->children[std::get<0>(priorityQue.back())];
+    child = this->children[std::get<1>(priorityQue.back())];
 
     while (!priorityQue.empty() && child->overlap(query, smallestDist))
     {
