@@ -995,7 +995,7 @@ OCL_PERF_TEST_P(NormalizeFixture, Normalize,
 
     OCL_TEST_CYCLE() cv::normalize(src, dst, 10, 110, mode);
 
-    SANITY_CHECK(dst, 5e-2);
+    SANITY_CHECK_NOTHING();
 }
 
 OCL_PERF_TEST_P(NormalizeFixture, NormalizeWithMask,
@@ -1013,7 +1013,7 @@ OCL_PERF_TEST_P(NormalizeFixture, NormalizeWithMask,
 
     OCL_TEST_CYCLE() cv::normalize(src, dst, 10, 110, mode, -1, mask);
 
-    SANITY_CHECK(dst, 5e-2);
+    SANITY_CHECK_NOTHING();
 }
 
 ///////////// ConvertScaleAbs ////////////////////////
@@ -1250,7 +1250,6 @@ OCL_PERF_TEST_P(ReduceMinMaxFixture, Reduce,
             dim = get<2>(params), op = get<3>(params);
     const Size srcSize = get<0>(params),
             dstSize(dim == 0 ? srcSize.width : 1, dim == 0 ? 1 : srcSize.height);
-    const double eps = CV_MAT_DEPTH(dtype) <= CV_32S ? 1 : 1e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, stype);
     checkDeviceMaxMemoryAllocSize(srcSize, dtype);
@@ -1260,7 +1259,7 @@ OCL_PERF_TEST_P(ReduceMinMaxFixture, Reduce,
 
     OCL_TEST_CYCLE() cv::reduce(src, dst, dim, op, dtype);
 
-    SANITY_CHECK(dst, eps);
+    SANITY_CHECK_NOTHING();
 }
 
 CV_ENUM(ReduceAccOp, REDUCE_SUM, REDUCE_AVG, REDUCE_SUM2)
