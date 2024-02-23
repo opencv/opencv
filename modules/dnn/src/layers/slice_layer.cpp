@@ -271,6 +271,9 @@ public:
         {
             CV_Assert(0 <= axis_rw && axis_rw < inpShape.size());
             int splits = num_split ? num_split : requiredOutputs;
+            std::cout << "splits: " << splits << std::endl;
+            std::cout << "inpShape[axis_rw]: " << inpShape[axis_rw] << std::endl;
+            std::cout << "inpShape: " << inpShape << std::endl;
             CV_Assert(splits > 0 && inpShape[axis_rw] % splits == 0);
             inpShape[axis_rw] /= splits;
             outputs.resize(splits, inpShape);

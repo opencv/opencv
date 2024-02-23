@@ -656,6 +656,54 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scale_1d_Test,
 /*operation*/           Values(0, 1));
 
 
+TEST(Layer_Slice_1d_Test, Accuracy){
+
+    LayerParams lp;
+    lp.type = "Slice";
+    lp.name = "sliceLayer";
+
+    int splits = 2;
+    int length = 4;
+    int batch_size = 0;
+    int axis = 0;
+
+    lp.set("axis", axis);
+    lp.set("num_split", splits);
+
+    Ptr<SliceLayer> layer = SliceLayer::create(lp);
+
+    std::vector<int> input_shape = {batch_size, length};
+    std::vector<int> output_shape = {batch_size, length / splits};
+
+    if (batch_size == 0){
+        input_shape.erase(input_shape.begin());
+        output_shape.erase(output_shape.begin());
+    }
+
+    cv::Mat input = cv::Mat(input_shape, CV_32F, 1.0);
+    cv::randu(input, 0.0, 1.0);
+
+    std::vector<cv::Mat> output_refs;
+
+    for (int i = 0; i < splits; ++i){
+        output_refs.push_back(cv::Mat(output_shape, CV_32F, 1.0));
+        for (int j = 0; j < output_shape[0]; ++j)
+            output_refs[i].at<float>(j) = input.at<float>(i * output_shape[0] + j);
+    }
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    std::cout << "outpus size: " << outputs.size() << std::endl;
+    for (int i = 0; i < splits; ++i){
+        std::cout << "output : " << outputs[i] << std::endl;
+        std::cout << "output_ref : " << output_refs[i] << std::endl;
+        ASSERT_EQ(shape(output_refs[i]), shape(outputs[i]));
+        normAssert(output_refs[i], outputs[i]);
+    }
+}
+
 typedef testing::TestWithParam<tuple<int, int>> Layer_Gather_1d_Test;
 TEST_P(Layer_Gather_1d_Test, Accuracy) {
 
