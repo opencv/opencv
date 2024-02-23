@@ -284,14 +284,14 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1);
+        CV_CheckEQ(inputs.size(), (size_t)1, "");
         for (auto input : inputs)
             if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget  == DNN_TARGET_CUDA)
                 CV_CheckEQ(input, CV_32F, "Unsupported type");
             else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_Assert(input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S);
+                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S, "");
             else
-                CV_Assert(input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S);
+                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S, "");
 
         outputs.assign(requiredOutputs, inputs[0]);
     }
@@ -906,14 +906,14 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 2);
+        CV_CheckEQ(inputs.size(), (size_t)2, "");
         for (auto input : inputs)
             if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget  == DNN_TARGET_CUDA)
-                CV_CheckEQ(input, CV_32F, "Unsupported type");
+                CV_CheckTypeEQ(input, CV_32F, "Unsupported type");
             else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_Assert(input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S);
+                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S, "");
             else
-                CV_Assert(input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S);
+                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S, "");
 
         outputs.assign(requiredOutputs, inputs[0]);
     }
