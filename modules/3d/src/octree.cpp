@@ -161,7 +161,7 @@ bool Octree::insertPoint(const Point3f& point, const Point3f &color)
 
 bool Octree::Impl::insertPoint(const Point3f& point, const Point3f &color)
 {
-    size_t depthMask = (size_t)(1UL << (this->maxDepth - 1));
+    size_t depthMask = (size_t)(1ULL << (this->maxDepth - 1));
 
     if(this->rootNode.empty())
     {
