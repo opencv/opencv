@@ -66,7 +66,7 @@ Module['imread'] = function(imageSource) {
     }
 
     var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    return cv.matFromImageData(imgData);
+    return Module.matFromImageData(imgData);
 };
 
 Module['imshow'] = function(canvasSource, mat) {
@@ -80,27 +80,27 @@ Module['imshow'] = function(canvasSource, mat) {
         throw new Error('Please input the valid canvas element or id.');
         return;
     }
-    if (!(mat instanceof cv.Mat)) {
+    if (!(mat instanceof Module.Mat)) {
         throw new Error('Please input the valid cv.Mat instance.');
         return;
     }
 
     // convert the mat type to cv.CV_8U
-    var img = new cv.Mat();
+    var img = new Module.Mat();
     var depth = mat.type()%8;
-    var scale = depth <= cv.CV_8S? 1.0 : (depth <= cv.CV_32S? 1.0/256.0 : 255.0);
-    var shift = (depth === cv.CV_8S || depth === cv.CV_16S)? 128.0 : 0.0;
-    mat.convertTo(img, cv.CV_8U, scale, shift);
+    var scale = depth <= Module.CV_8S? 1.0 : (depth <= Module.CV_32S? 1.0/256.0 : 255.0);
+    var shift = (depth === Module.CV_8S || depth === Module.CV_16S)? 128.0 : 0.0;
+    mat.convertTo(img, Module.CV_8U, scale, shift);
 
     // convert the img type to cv.CV_8UC4
     switch (img.type()) {
-        case cv.CV_8UC1:
-            cv.cvtColor(img, img, cv.COLOR_GRAY2RGBA);
+        case Module.CV_8UC1:
+            Module.cvtColor(img, img, Module.COLOR_GRAY2RGBA);
             break;
-        case cv.CV_8UC3:
-            cv.cvtColor(img, img, cv.COLOR_RGB2RGBA);
+        case Module.CV_8UC3:
+            Module.cvtColor(img, img, Module.COLOR_RGB2RGBA);
             break;
-        case cv.CV_8UC4:
+        case Module.CV_8UC4:
             break;
         default:
             throw new Error('Bad number of channels (Source image must have 1, 3 or 4 channels)');
@@ -132,11 +132,11 @@ Module['VideoCapture'] = function(videoSource) {
     var ctx = canvas.getContext('2d');
     this.video = video;
     this.read = function(frame) {
-        if (!(frame instanceof cv.Mat)) {
+        if (!(frame instanceof Module.Mat)) {
             throw new Error('Please input the valid cv.Mat instance.');
             return;
         }
-        if (frame.type() !== cv.CV_8UC4) {
+        if (frame.type() !== Module.CV_8UC4) {
             throw new Error('Bad type of input mat: the type should be cv.CV_8UC4.');
             return;
         }
@@ -331,61 +331,61 @@ function TermCriteria() {
 Module['TermCriteria'] = TermCriteria;
 
 Module['matFromArray'] = function(rows, cols, type, array) {
-    var mat = new cv.Mat(rows, cols, type);
+    var mat = new Module.Mat(rows, cols, type);
     switch (type) {
-        case cv.CV_8U:
-        case cv.CV_8UC1:
-        case cv.CV_8UC2:
-        case cv.CV_8UC3:
-        case cv.CV_8UC4: {
+        case Module.CV_8U:
+        case Module.CV_8UC1:
+        case Module.CV_8UC2:
+        case Module.CV_8UC3:
+        case Module.CV_8UC4: {
             mat.data.set(array);
             break;
         }
-        case cv.CV_8S:
-        case cv.CV_8SC1:
-        case cv.CV_8SC2:
-        case cv.CV_8SC3:
-        case cv.CV_8SC4: {
+        case Module.CV_8S:
+        case Module.CV_8SC1:
+        case Module.CV_8SC2:
+        case Module.CV_8SC3:
+        case Module.CV_8SC4: {
             mat.data8S.set(array);
             break;
         }
-        case cv.CV_16U:
-        case cv.CV_16UC1:
-        case cv.CV_16UC2:
-        case cv.CV_16UC3:
-        case cv.CV_16UC4: {
+        case Module.CV_16U:
+        case Module.CV_16UC1:
+        case Module.CV_16UC2:
+        case Module.CV_16UC3:
+        case Module.CV_16UC4: {
             mat.data16U.set(array);
             break;
         }
-        case cv.CV_16S:
-        case cv.CV_16SC1:
-        case cv.CV_16SC2:
-        case cv.CV_16SC3:
-        case cv.CV_16SC4: {
+        case Module.CV_16S:
+        case Module.CV_16SC1:
+        case Module.CV_16SC2:
+        case Module.CV_16SC3:
+        case Module.CV_16SC4: {
             mat.data16S.set(array);
             break;
         }
-        case cv.CV_32S:
-        case cv.CV_32SC1:
-        case cv.CV_32SC2:
-        case cv.CV_32SC3:
-        case cv.CV_32SC4: {
+        case Module.CV_32S:
+        case Module.CV_32SC1:
+        case Module.CV_32SC2:
+        case Module.CV_32SC3:
+        case Module.CV_32SC4: {
             mat.data32S.set(array);
             break;
         }
-        case cv.CV_32F:
-        case cv.CV_32FC1:
-        case cv.CV_32FC2:
-        case cv.CV_32FC3:
-        case cv.CV_32FC4: {
+        case Module.CV_32F:
+        case Module.CV_32FC1:
+        case Module.CV_32FC2:
+        case Module.CV_32FC3:
+        case Module.CV_32FC4: {
             mat.data32F.set(array);
             break;
         }
-        case cv.CV_64F:
-        case cv.CV_64FC1:
-        case cv.CV_64FC2:
-        case cv.CV_64FC3:
-        case cv.CV_64FC4: {
+        case Module.CV_64F:
+        case Module.CV_64FC1:
+        case Module.CV_64FC2:
+        case Module.CV_64FC3:
+        case Module.CV_64FC4: {
             mat.data64F.set(array);
             break;
         }
@@ -397,7 +397,7 @@ Module['matFromArray'] = function(rows, cols, type, array) {
 };
 
 Module['matFromImageData'] = function(imageData) {
-    var mat = new cv.Mat(imageData.height, imageData.width, cv.CV_8UC4);
+    var mat = new Module.Mat(imageData.height, imageData.width, cv.CV_8UC4);
     mat.data.set(imageData.data);
     return mat;
 };
