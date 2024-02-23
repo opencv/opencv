@@ -154,7 +154,7 @@ struct DataLayer : public Layer
         {
             bool isFP16 = outputs[i].depth() == CV_16F;
             if (inputsData[i].type() == CV_32S || inputsData[i].type() == CV_64S) {
-                CV_Assert(outputs[i].type() == inputsData[i].type());
+                CV_CheckTypeEQ(outputs[i].type(), inputsData[i].type(), "");
                 CV_Assert(means[i] == Scalar() && scaleFactors[i] == 1.0);
                 inputsData[i].copyTo(outputs[i]);
                 continue;
@@ -221,7 +221,7 @@ struct DataLayer : public Layer
         {
             bool isFP16 = outputs[i].depth() == CV_16F;
             if (inputsData[i].type() == CV_32S || inputsData[i].type() == CV_64S) {
-                CV_Assert(outputs[i].type() == inputsData[i].type());
+                CV_CheckTypeEQ(outputs[i].type(), inputsData[i].type(), "");
                 CV_Assert(means[i] == Scalar() && scaleFactors[i] == 1.0);
                 inputsData[i].copyTo(outputs[i]);
                 continue;
