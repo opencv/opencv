@@ -131,7 +131,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
         size_t packed_weights_size[3] = {packed_weight_q.size() / num_heads, packed_weight_k.size() / num_heads, packed_weight_v.size() / num_heads};
 
-        Mat gemm_buffer = Mat::zeros(1, int(batch_size * seq_len * hidden_size), CV_32F);
+        Mat gemm_buffer(std::vector<int>{int(batch_size), int(seq_len), int(hidden_size)}, CV_32F);
         auto *Q = gemm_buffer.ptr<float>();
         auto *K = Q + batch_size * seq_len * qkv_hidden_sizes[0];
         auto *V = K + batch_size * seq_len * qkv_hidden_sizes[1];
@@ -178,8 +178,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         }
 
         // Compute softmax(scale * matmul(Q, K))
-        std::vector<int> attention_prob_shape{int(batch_size * num_heads), int(seq_len), int(seq_len)};
-        Mat attention_prob = Mat::zeros(attention_prob_shape.size(), attention_prob_shape.data(), CV_32F);
+        Mat attention_prob(std::vector<int>{int(batch_size * num_heads), int(seq_len), int(seq_len)}, CV_32F);
         {
             auto *output = attention_prob.ptr<float>();
 
@@ -202,12 +201,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                 }
             }, loops * seq_len * qk_head_size * seq_len * (1 / 1024.0));
 
-            // Compute softmax
-            softmax(attention_prob, attention_prob, attention_prob_shape.size() - 1);
+            // Compute softmax on the last dimension
+            softmax(attention_prob, attention_prob, shape(attention_prob).size() - 1);
         }
 
         // Compute np.matmul(attention_prob, V)
-        Mat output_buffer = Mat::zeros(1, int(batch_size * num_heads * seq_len * qkv_head_sizes[2]), CV_32F);
+        Mat output_buffer(std::vector<int>{int(batch_size), int(num_heads), int(seq_len), int(qkv_head_sizes[2])}, CV_32F);
         {
             auto *output = outputs[0].ptr<float>();
             auto *output_buff = output_buffer.ptr<float>();
