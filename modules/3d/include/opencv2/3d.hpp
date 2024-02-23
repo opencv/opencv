@@ -2685,8 +2685,9 @@ public:
 
     /** @overload
      * @brief Creates an empty Octree with given maximum depth
-     * 
+     *
      * @param maxDepth The max depth of the Octree
+     * @param size bounding box size for the Octree
      * @param origin Initial center coordinate
      * @param withColors Whether to keep per-point colors or not
      * @return resulting Octree
@@ -2695,7 +2696,7 @@ public:
 
     /** @overload
      * @brief Create an Octree from the PointCloud data with the specific maxDepth
-     * 
+     *
      * @param maxDepth Max depth of the octree
      * @param pointCloud point cloud data, should be 3-channel float array
      * @param colors color attribute of point cloud in the same 3-channel float format
@@ -2705,8 +2706,9 @@ public:
 
     /** @overload
      * @brief Creates an empty Octree with given resolution
-     * 
+     *
      * @param resolution The size of the octree leaf node
+     * @param size bounding box size for the Octree
      * @param origin Initial center coordinate
      * @param withColors Whether to keep per-point colors or not
      * @return resulting Octree
@@ -2715,7 +2717,7 @@ public:
 
      /** @overload
      * @brief Create an Octree from the PointCloud data with the specific resolution
-     * 
+     *
      * @param resolution The size of the octree leaf node
      * @param pointCloud point cloud data, should be 3-channel float array
      * @param colors color attribute of point cloud in the same 3-channel float format
@@ -2776,9 +2778,9 @@ public:
     * And return the number of searched points.
     * @param query Query point.
     * @param radius Retrieved radius value.
-    * @param pointSet Point output. Contains searched points in 3-float format, and output vector is not in order,
+    * @param points Point output. Contains searched points in 3-float format, and output vector is not in order,
     * can be replaced by noArray() if not needed
-    * @param squareDistSet Dist output. Contains searched squared distance in floats, and output vector is not in order,
+    * @param squareDists Dist output. Contains searched squared distance in floats, and output vector is not in order,
     * can be omitted if not needed
     * @return the number of searched points.
     */
@@ -2791,10 +2793,10 @@ public:
     * And return the number of searched points.
     * @param query Query point.
     * @param radius Retrieved radius value.
-    * @param pointSet Point output. Contains searched points in 3-float format, and output vector is not in order,
+    * @param points Point output. Contains searched points in 3-float format, and output vector is not in order,
     * can be replaced by noArray() if not needed
     * @param colors Color output. Contains colors corresponding to points in pointSet, can be replaced by noArray() if not needed
-    * @param squareDistSet Dist output. Contains searched squared distance in floats, and output vector is not in order,
+    * @param squareDists Dist output. Contains searched squared distance in floats, and output vector is not in order,
     * can be replaced by noArray() if not needed
     * @return the number of searched points.
     */
@@ -2804,10 +2806,10 @@ public:
     *
     * Find the K nearest neighbors to the query point.
     * @param query Query point.
-    * @param K
-    * @param pointSet Point output. Contains K points in 3-float format, arranged in order of distance from near to far,
+    * @param K amount of nearest neighbors to find
+    * @param points Point output. Contains K points in 3-float format, arranged in order of distance from near to far,
     * can be replaced by noArray() if not needed
-    * @param squareDistSet Dist output. Contains K squared distance in floats, arranged in order of distance from near to far,
+    * @param squareDists Dist output. Contains K squared distance in floats, arranged in order of distance from near to far,
     * can be omitted if not needed
     */
     void KNNSearch(const Point3f& query, const int K, OutputArray points, OutputArray squareDists = noArray()) const;
@@ -2817,11 +2819,11 @@ public:
     *
     * Find the K nearest neighbors to the query point.
     * @param query Query point.
-    * @param K
-    * @param pointSet Point output. Contains K points in 3-float format, arranged in order of distance from near to far,
+    * @param K amount of nearest neighbors to find
+    * @param points Point output. Contains K points in 3-float format, arranged in order of distance from near to far,
     * can be replaced by noArray() if not needed
     * @param colors Color output. Contains colors corresponding to points in pointSet, can be replaced by noArray() if not needed
-    * @param squareDistSet Dist output. Contains K squared distance in floats, arranged in order of distance from near to far,
+    * @param squareDists Dist output. Contains K squared distance in floats, arranged in order of distance from near to far,
     * can be replaced by noArray() if not needed
     */
     void KNNSearch(const Point3f& query, const int K, OutputArray points, OutputArray colors, OutputArray squareDists) const;

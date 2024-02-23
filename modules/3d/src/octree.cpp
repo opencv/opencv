@@ -161,7 +161,7 @@ bool Octree::insertPoint(const Point3f& point, const Point3f &color)
 
 bool Octree::Impl::insertPoint(const Point3f& point, const Point3f &color)
 {
-    size_t depthMask = (size_t)(1 << (this->maxDepth - 1));
+    size_t depthMask = (size_t)(1UL << (this->maxDepth - 1));
 
     if(this->rootNode.empty())
     {
@@ -250,7 +250,7 @@ void Octree::Impl::fill(bool useResolution, InputArray _points, InputArray _colo
     // to calculate maxDepth from resolution or vice versa
     if (useResolution)
     {
-        this->maxDepth = ceil(log2(maxSize / this->resolution));
+        this->maxDepth = (int)ceil(log2(maxSize / this->resolution));
     }
     else
     {
@@ -641,7 +641,7 @@ void OctreeNode::KNNSearchRecurse(const Point3f& query, const int K,
                 }
             }
 
-            std::sort(candidatePoint.begin(), candidatePoint.end(), 
+            std::sort(candidatePoint.begin(), candidatePoint.end(),
                 [](const std::tuple<float, Point3f, Point3f>& a, const std::tuple<float, Point3f, Point3f>& b) -> bool
                 {
                     return std::get<0>(a) < std::get<0>(b);
