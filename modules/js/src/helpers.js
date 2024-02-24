@@ -397,7 +397,7 @@ Module['matFromArray'] = function(rows, cols, type, array) {
 };
 
 Module['matFromImageData'] = function(imageData) {
-    var mat = new Module.Mat(imageData.height, imageData.width, cv.CV_8UC4);
+    var mat = new Module.Mat(imageData.height, imageData.width, Module.CV_8UC4);
     mat.data.set(imageData.data);
     return mat;
 };
