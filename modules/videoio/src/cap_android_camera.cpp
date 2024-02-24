@@ -117,10 +117,10 @@ static void OnDeviceError(void* /* ctx */, ACameraDevice* dev, int err) {
             LOGI("Camera in use");
             break;
         case ERROR_CAMERA_SERVICE:
-            LOGI("Fatal Error occured in Camera Service");
+            LOGI("Fatal Error occurred in Camera Service");
             break;
         case ERROR_CAMERA_DEVICE:
-            LOGI("Fatal Error occured in Camera Device");
+            LOGI("Fatal Error occurred in Camera Device");
             break;
         case ERROR_CAMERA_DISABLED:
             LOGI("Camera disabled");
@@ -269,7 +269,7 @@ public:
             if (mStatus != AMEDIA_OK) {
                 if (mStatus == AMEDIA_IMGREADER_NO_BUFFER_AVAILABLE) {
                     // this error is not fatal - we just need to wait for a buffer to become available
-                    LOGW("No Buffer Available error occured - waiting for callback");
+                    LOGW("No Buffer Available error occurred - waiting for callback");
                     waitingCapture = true;
                     captureSuccess = false;
                     auto start = std::chrono::system_clock::now();
