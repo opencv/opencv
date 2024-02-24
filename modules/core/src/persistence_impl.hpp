@@ -242,6 +242,12 @@ public:
     size_t strbufsize;
     size_t strbufpos;
     int lineno;
+
+    // For writeRawData()
+    FileStorage::RealExpressionMethod realExpression;
+    int realPrecision;
+
+    void setRealExpression(const FileStorage::RealExpressionMethod expression, int precision );
 };
 
 }

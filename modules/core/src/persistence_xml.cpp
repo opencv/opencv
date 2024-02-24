@@ -24,8 +24,14 @@ namespace cv
 
 class XMLEmitter : public FileStorageEmitter
 {
+private:
+    FileStorage::RealExpressionMethod realExpressionMethod;
+    int realPrecision;
+
 public:
-    XMLEmitter(FileStorage_API* _fs) : fs(_fs)
+    XMLEmitter(FileStorage_API* _fs) : realExpressionMethod(FileStorage::RealExpressionMethod::Scientific),
+                                       realPrecision(15),
+                                       fs(_fs)
     {
     }
     virtual ~XMLEmitter() {}
@@ -148,7 +154,7 @@ public:
     void write( const char* key, double value )
     {
         char buf[128];
-        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, false ) );
+        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, false, realExpressionMethod, realPrecision ) );
     }
 
     void write(const char* key, const char* str, bool quote)
@@ -353,6 +359,12 @@ public:
     void startNextStream()
     {
         fs->puts( "\n<!-- next stream -->\n" );
+    }
+
+    void setRealExpression( const FileStorage::RealExpressionMethod expression, const int precision )
+    {
+        realExpressionMethod = expression;
+        realPrecision = precision;
     }
 
 protected:

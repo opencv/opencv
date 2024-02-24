@@ -1966,5 +1966,145 @@ TEST(Core_InputOutput, FileStorage_invalid_path_regression_21448_JSON)
     fs.release();
 }
 
+// see https://github.com/opencv/opencv/issues/25073
+typedef testing::TestWithParam< std::string > Core_InputOutput_setRealExpression;
+TEST_P(Core_InputOutput_setRealExpression, Default)
+{
+    cv::String res = "";
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "my_double" << 0.5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("5.0000000000000000e-01"), String::npos ) << res;
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_setRealExpression, Fixed_0)
+{
+    cv::String res = "";
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs.setRealExpression( cv::FileStorage::RealExpressionMethod::Fixed, 5 ) );
+    EXPECT_NO_THROW( fs << "my_double" << 5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("5"),  String::npos ) << res;
+    EXPECT_EQ( res.find("5."),  String::npos ) << res;
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_setRealExpression, Fixed_1)
+{
+    cv::String res = "";
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs.setRealExpression( cv::FileStorage::RealExpressionMethod::Fixed, 1 ) );
+    EXPECT_NO_THROW( fs << "my_double" << 0.5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.5"),  String::npos ) << res;
+    EXPECT_EQ( res.find("0.50"),  String::npos ) << res;
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_setRealExpression, Fixed_5)
+{
+    cv::String res = "";
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs.setRealExpression( cv::FileStorage::RealExpressionMethod::Fixed, 5 ) );
+    EXPECT_NO_THROW( fs << "my_double" << 0.5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.50000"),  String::npos ) << res;
+    EXPECT_EQ( res.find("0.500000"),  String::npos ) << res;
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_setRealExpression, Fixed_18)
+{
+    cv::String res = "";
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs.setRealExpression( cv::FileStorage::RealExpressionMethod::Fixed, 18 ) );
+    EXPECT_NO_THROW( fs << "my_double" << 0.5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.500000000000000000"),  String::npos ) << res;
+    EXPECT_EQ( res.find("0.5000000000000000000"),  String::npos ) << res;
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_setRealExpression, InvalidPrecision)
+{
+    cv::String res = "";
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_ANY_THROW( fs.setRealExpression( cv::FileStorage::RealExpressionMethod::Fixed, -1 ) );
+    EXPECT_ANY_THROW( fs.setRealExpression( cv::FileStorage::RealExpressionMethod::Fixed, 19 ) );
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_setRealExpression, Default_64F)
+{
+    cv::String res = "";
+    cv::Mat src(1,1,CV_64FC1, Scalar::all(0.5));
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "mat" << src );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("5.0000000000000000e-01"), String::npos ) << res;
+    fs.release();
+}
+TEST_P(Core_InputOutput_setRealExpression, Default_32F)
+{
+    cv::String res = "";
+    cv::Mat src(1,1,CV_32FC1, Scalar::all(0.5));
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "mat" << src );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("5.00000000e-01"), String::npos ) << res;
+    fs.release();
+}
+TEST_P(Core_InputOutput_setRealExpression, Default_16F)
+{
+    cv::String res = "";
+    cv::Mat src(1,1,CV_16FC1, Scalar::all(0.5));
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "mat" << src );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("5.0000e-01"), String::npos ) << res;
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_setRealExpression, Fixed_5_64F)
+{
+    cv::String res = "";
+    cv::Mat src(1,1,CV_64FC1, Scalar::all(0.5));
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs.setRealExpression( cv::FileStorage::RealExpressionMethod::Fixed, 5 ) );
+    EXPECT_NO_THROW( fs << "mat" << src );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.50000"), String::npos ) << res;
+    EXPECT_EQ( res.find("0.500000"), String::npos ) << res;
+    fs.release();
+}
+TEST_P(Core_InputOutput_setRealExpression, Fixed_5_32F)
+{
+    cv::String res = "";
+    cv::Mat src(1,1,CV_32FC1, Scalar::all(0.5));
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs.setRealExpression( cv::FileStorage::RealExpressionMethod::Fixed, 5 ) );
+    EXPECT_NO_THROW( fs << "mat" << src );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.50000"), String::npos ) << res;
+    EXPECT_EQ( res.find("0.500000"), String::npos ) << res;
+    fs.release();
+}
+TEST_P(Core_InputOutput_setRealExpression, Fixed_5_16F)
+{
+    cv::String res = "";
+    cv::Mat src(1,1,CV_16FC1, Scalar::all(0.5));
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs.setRealExpression( cv::FileStorage::RealExpressionMethod::Fixed, 5 ) );
+    EXPECT_NO_THROW( fs << "mat" << src );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.50000"), String::npos ) << res;
+    EXPECT_EQ( res.find("0.500000"), String::npos ) << res;
+    fs.release();
+}
+
+INSTANTIATE_TEST_CASE_P(, Core_InputOutput_setRealExpression,
+        Values("test.json", "test.xml", "test.yml") );
+
 
 }} // namespace

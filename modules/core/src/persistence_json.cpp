@@ -10,11 +10,18 @@ namespace cv
 
 class JSONEmitter : public FileStorageEmitter
 {
+private:
+    FileStorage::RealExpressionMethod realExpressionMethod;
+    int realPrecision;
+
 public:
-    JSONEmitter(FileStorage_API* _fs) : fs(_fs)
+    JSONEmitter(FileStorage_API* _fs) : realExpressionMethod(FileStorage::RealExpressionMethod::Scientific),
+                                        realPrecision(15),
+                                        fs(_fs)
     {
     }
     virtual ~JSONEmitter() {}
+
 
     FStructData startWriteStruct( const FStructData& parent, const char* key,
                                   int struct_flags, const char* type_name=0 )
@@ -84,7 +91,7 @@ public:
     void write( const char* key, double value )
     {
         char buf[128];
-        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, true ));
+        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, true, realExpressionMethod, realPrecision ));
     }
 
     void write(const char* key, const char* str, bool quote)
@@ -285,6 +292,12 @@ public:
     {
         fs->puts( "...\n" );
         fs->puts( "---\n" );
+    }
+
+    void setRealExpression( const FileStorage::RealExpressionMethod expression, const int precision )
+    {
+        realExpressionMethod = expression;
+        realPrecision = precision;
     }
 
 protected:

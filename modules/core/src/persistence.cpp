@@ -56,7 +56,9 @@ char* itoa( int _val, char* buffer, int /*radix*/ )
     return ptr;
 }
 
-char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero )
+char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero,
+                      const FileStorage::RealExpressionMethod expression,
+                      int precision)
 {
     Cv64suf val;
     unsigned ieee754_hi;
@@ -74,11 +76,24 @@ char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero
             else
                 snprintf( buf, bufSize, "%d.", ivalue );
         }
-        else
+        else if( expression == FileStorage::RealExpressionMethod::Scientific )
         {
             static const char* fmt = "%.16e";
             char* ptr = buf;
             snprintf( buf, bufSize, fmt, value );
+            if( *ptr == '+' || *ptr == '-' )
+                ptr++;
+            for( ; cv_isdigit(*ptr); ptr++ )
+                ;
+            if( *ptr == ',' )
+                *ptr = '.';
+        }
+        else
+        {
+            CV_CheckEQ( expression, FileStorage::RealExpressionMethod::Fixed, "");
+            static const char* fmt = "%.*lf";
+            char* ptr = buf;
+            snprintf( buf, bufSize, fmt, precision, value );
             if( *ptr == '+' || *ptr == '-' )
                 ptr++;
             for( ; cv_isdigit(*ptr); ptr++ )
@@ -99,7 +114,9 @@ char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero
     return buf;
 }
 
-char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision, bool explicitZero )
+char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision, bool explicitZero,
+                      const FileStorage::RealExpressionMethod expression,
+                      int precision)
 {
     Cv32suf val;
     unsigned ieee754;
@@ -116,13 +133,26 @@ char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision,
             else
                 snprintf( buf, bufSize, "%d.", ivalue );
         }
-        else
+        else if( expression == FileStorage::RealExpressionMethod::Scientific )
         {
             char* ptr = buf;
             if (halfprecision)
                 snprintf(buf, bufSize, "%.4e", value);
             else
                 snprintf(buf, bufSize, "%.8e", value);
+            if( *ptr == '+' || *ptr == '-' )
+                ptr++;
+            for( ; cv_isdigit(*ptr); ptr++ )
+                ;
+            if( *ptr == ',' )
+                *ptr = '.';
+        }
+        else
+        {
+            CV_CheckEQ( expression, FileStorage::RealExpressionMethod::Fixed, "");
+            static const char* fmt = "%.*lf";
+            char* ptr = buf;
+            snprintf( buf, bufSize, fmt, precision, value );
             if( *ptr == '+' || *ptr == '-' )
                 ptr++;
             for( ; cv_isdigit(*ptr); ptr++ )
@@ -405,6 +435,9 @@ void FileStorage::Impl::init() {
 
     filename.clear();
     lineno = 0;
+
+    realExpression = FileStorage::RealExpressionMethod::Scientific;
+    realPrecision = 18;
 }
 
 FileStorage::Impl::Impl(FileStorage *_fs) {
@@ -1121,15 +1154,18 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         data += sizeof(int);
                         break;
                     case CV_32F:
-                        ptr = fs::floatToString(buf, sizeof(buf), *(float *) data, false, explicitZero);
+                        ptr = fs::floatToString(buf, sizeof(buf), *(float *) data, false, explicitZero,
+                                                realExpression, realPrecision);
                         data += sizeof(float);
                         break;
                     case CV_64F:
-                        ptr = fs::doubleToString(buf, sizeof(buf), *(double *) data, explicitZero);
+                        ptr = fs::doubleToString(buf, sizeof(buf), *(double *) data, explicitZero,
+                                                realExpression, realPrecision);
                         data += sizeof(double);
                         break;
                     case CV_16F: /* reference */
-                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(float16_t *) data, true, explicitZero);
+                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(float16_t *) data, true, explicitZero,
+                                                realExpression, realPrecision);
                         data += sizeof(float16_t);
                         break;
                     default:
@@ -1850,6 +1886,13 @@ std::string FileStorage::Impl::getName(size_t nameofs) const {
 
 FileStorage *FileStorage::Impl::getFS() { return fs_ext; }
 
+void FileStorage::Impl::setRealExpression(const FileStorage::RealExpressionMethod expression, int precision )
+{
+    // Parameters has been checked already in FileStorage::setRealExpression()
+    realExpression = expression;
+    realPrecision = precision;
+    getEmitter().setRealExpression(realExpression, realPrecision);
+}
 
 FileStorage::FileStorage()
     : state(0)
@@ -1999,6 +2042,20 @@ String FileStorage::releaseAndGetString()
 void FileStorage::writeRaw( const String& fmt, const void* vec, size_t len )
 {
     p->writeRawData(fmt, (const uchar*)vec, len);
+}
+
+void FileStorage::setRealExpression(const RealExpressionMethod expression, const int precision )
+{
+    CV_Check(expression,
+             ( (expression == FileStorage::RealExpressionMethod::Fixed) ||
+               (expression == FileStorage::RealExpressionMethod::Scientific) ),
+             "");
+    if(expression == FileStorage::RealExpressionMethod::Fixed)
+    {
+        CV_CheckGE(precision, 0,  "");
+        CV_CheckLE(precision, 18, "");
+    }
+    p->setRealExpression(expression, precision);
 }
 
 void FileStorage::writeComment( const String& comment, bool eol_comment )
