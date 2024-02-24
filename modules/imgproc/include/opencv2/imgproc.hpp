@@ -450,6 +450,9 @@ enum ContourApproximationModes {
     CHAIN_APPROX_TC89_KCOS = 4
 };
 
+CV_EXPORTS
+std::vector<Point> approximateChainTC89(std::vector<schar> chain_, const Point &origin, const int method);
+
 /** @brief Shape matching methods
 
 \f$A\f$ denotes object1,\f$B\f$ denotes object2
@@ -4039,6 +4042,9 @@ squares in a list of images (pic1-6.png). Returns sequence of squares detected o
 A program using pyramid scaling, Canny, contours and contour simplification to find
 squares in the input image.
 */
+
+CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours, OutputArray hierarchy);
+CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
 
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
