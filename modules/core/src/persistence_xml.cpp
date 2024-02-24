@@ -24,14 +24,10 @@ namespace cv
 
 class XMLEmitter : public FileStorageEmitter
 {
-private:
-    FileStorage::RealExpressionMethod realExpressionMethod;
-    int realPrecision;
-
 public:
-    XMLEmitter(FileStorage_API* _fs) : realExpressionMethod(FileStorage::RealExpressionMethod::Scientific),
-                                       realPrecision(15),
-                                       fs(_fs)
+    XMLEmitter(FileStorage_API* _fs) : fs(_fs),
+                                       realExpressionMethod(FileStorage::RealExpressionMethod::Scientific),
+                                       realPrecision(18)
     {
     }
     virtual ~XMLEmitter() {}
@@ -369,6 +365,9 @@ public:
 
 protected:
     FileStorage_API* fs;
+private:
+    FileStorage::RealExpressionMethod realExpressionMethod;
+    int realPrecision;
 };
 
 class XMLParser : public FileStorageParser

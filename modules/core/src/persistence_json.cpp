@@ -10,14 +10,10 @@ namespace cv
 
 class JSONEmitter : public FileStorageEmitter
 {
-private:
-    FileStorage::RealExpressionMethod realExpressionMethod;
-    int realPrecision;
-
 public:
-    JSONEmitter(FileStorage_API* _fs) : realExpressionMethod(FileStorage::RealExpressionMethod::Scientific),
-                                        realPrecision(15),
-                                        fs(_fs)
+    JSONEmitter(FileStorage_API* _fs) : fs(_fs),
+                                        realExpressionMethod(FileStorage::RealExpressionMethod::Scientific),
+                                        realPrecision(18)
     {
     }
     virtual ~JSONEmitter() {}
@@ -302,6 +298,9 @@ public:
 
 protected:
     FileStorage_API* fs;
+private:
+    FileStorage::RealExpressionMethod realExpressionMethod;
+    int realPrecision;
 };
 
 class JSONParser : public FileStorageParser
