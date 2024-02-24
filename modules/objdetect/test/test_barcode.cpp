@@ -60,7 +60,10 @@ map<string, BarcodeResult> testResults {
     { "single/book.jpg", {"EAN_13", "9787115279460"} },
     { "single/bottle_1.jpg", {"EAN_13", "6922255451427"} },
     { "single/bottle_2.jpg", {"EAN_13", "6921168509256"} },
-    { "multiple/4_barcodes.jpg", {"EAN_13;EAN_13;EAN_13;EAN_13", "9787564350840;9783319200064;9787118081473;9787122276124"} }
+    { "multiple/4_barcodes.jpg", {"EAN_13;EAN_13;EAN_13;EAN_13", "9787564350840;9783319200064;9787118081473;9787122276124"} },
+    { "multiple/3_ean13_detector_lg.jpg", {"EAN_13;EAN_13;EAN_13;UPC_A", "011210007253;011210009301;8908018075268"} },
+    { "multiple/3_ean13_detector_md.jpg", {"EAN_13;EAN_13;EAN_13;UPC_A", "011210007253;011210009301;8908018075268"} },
+    { "multiple/3_ean13_detector_sm.jpg", {"EAN_13;EAN_13;EAN_13;UPC_A", "011210007253;011210009301;8908018075268"} },
 };
 
 typedef testing::TestWithParam< string > BarcodeDetector_main;
@@ -81,6 +84,19 @@ TEST_P(BarcodeDetector_main, interface)
     vector<Point2f> points;
     vector<string> types;
     vector<string> lines;
+
+    // preset parameters based on filename
+    {
+        if(fname.find("_detector_lg.jpg") != string::npos || fname.find("_detector_sm.jpg") != string::npos)
+        {
+            const float div = float(max(img.size().width, img.size().height)) / 512.f;
+            const vector<double> scales = { 0.01f/div, 0.03f/div, 0.06/div, 0.08/div };
+
+            det.setDownSampleThresh(div * 512.);
+            det.setDetectorScales(scales);
+            det.setGradientThresh(256.f);
+        }
+    }
 
     // common interface (single)
     {
@@ -135,6 +151,39 @@ TEST(BarcodeDetector_base, invalid)
     EXPECT_FALSE(bardet.detectMulti(zero_image, corners));
     corners = std::vector<Point>(4);
     EXPECT_ANY_THROW(bardet.decodeMulti(zero_image, corners, decoded_info));
+}
+
+
+TEST(BarcodeDetector_parameters, regression)
+{
+    const double expected_dt = 1024, expected_gt = 256;
+    const vector<double> expected_ds = {0.1};
+    double dt_value = 0, gt_value = 0;
+    vector<double> ds_value = {0.0};
+
+    auto bardet = barcode::BarcodeDetector();
+
+    bardet.setDownSampleThresh(expected_dt).setDetectorScales(expected_ds).setGradientThresh(expected_gt);
+
+    bardet.getDownSampleThresh(dt_value);
+    bardet.getDetectorScales(ds_value);
+    bardet.getGradientThresh(gt_value);
+
+    EXPECT_EQ(expected_dt, dt_value);
+    EXPECT_EQ(expected_ds, ds_value);
+    EXPECT_EQ(expected_gt, gt_value);
+}
+
+TEST(BarcodeDetector_parameters, invalid)
+{
+    auto bardet = barcode::BarcodeDetector();
+
+    EXPECT_ANY_THROW(bardet.setDownSampleThresh(-1));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<double> {}));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<double> {-1}));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<double> {1.5}));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<double> (17, 0.5)));
+    EXPECT_ANY_THROW(bardet.setGradientThresh(-0.1));
 }
 
 }} // opencv_test::<anonymous>::

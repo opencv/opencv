@@ -374,7 +374,7 @@ bool BarcodeDetector::detectAndDecodeWithType(InputArray img, vector<string> &de
     return p_->detectAndDecodeWithType(img, decoded_info, decoded_type, points_);
 }
 
-void BarcodeDetector::getDownSampleThresh(CV_OUT float& thresh) const
+void BarcodeDetector::getDownSampleThresh(CV_OUT double& thresh) const
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
@@ -382,11 +382,11 @@ void BarcodeDetector::getDownSampleThresh(CV_OUT float& thresh) const
     thresh = p_->detectorThrDownSample;
 }
 
-const BarcodeDetector& BarcodeDetector::setDownSampleThresh(float thresh)
+BarcodeDetector& BarcodeDetector::setDownSampleThresh(double thresh)
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
-    CV_Assert(thresh >= 64.f);
+    CV_Assert(thresh >= 64);
 
     p_->detectorThrDownSample = thresh;
     return *this;
@@ -404,11 +404,15 @@ void BarcodeDetector::getDetectorScales(CV_OUT std::vector<double>& sizes) const
     }
 }
 
-const BarcodeDetector& BarcodeDetector::setDetectorScales(std::vector<double> sizes)
+BarcodeDetector& BarcodeDetector::setDetectorScales(std::vector<double> sizes)
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
-    CV_Assert(sizes.size() >= 1);
+    CV_Assert(sizes.size() > 0 && sizes.size() <= 16);
+
+    for (const double &size : sizes) {
+        CV_Assert(size > 0 && size < 1);
+    }
 
     p_->detectorWindowSizes.resize(sizes.size());
     p_->detectorWindowSizes = sizes;
@@ -424,11 +428,11 @@ void BarcodeDetector::getGradientThresh(CV_OUT double& thresh) const
     thresh = p_->detectorThrGradMagnitude;
 }
 
-const BarcodeDetector& BarcodeDetector::setGradientThresh(double thresh)
+BarcodeDetector& BarcodeDetector::setGradientThresh(double thresh)
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
-    CV_Assert(thresh >= 0.f);
+    CV_Assert(thresh >= 0 && thresh < 1e4);
 
     p_->detectorThrGradMagnitude = thresh;
     return *this;

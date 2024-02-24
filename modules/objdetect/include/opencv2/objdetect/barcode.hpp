@@ -62,13 +62,13 @@ public:
 
      * @param thresh output parameter for returning the value.
      */
-    CV_WRAP void getDownSampleThresh(CV_OUT float& thresh) const;
+    CV_WRAP void getDownSampleThresh(CV_OUT double& thresh) const;
 
     /** @brief Set detector downsampling threshold. Input will be resized if minimum dimension is larger than threshold (default 512)
 
      * @param thresh downsapling limit to apply if min(shape[:2])
      */
-    CV_WRAP const BarcodeDetector& setDownSampleThresh(float thresh);
+    CV_WRAP BarcodeDetector& setDownSampleThresh(double thresh);
 
     /** @brief Returns detector window sizes
 
@@ -80,7 +80,7 @@ public:
 
      * @param sizes window sizes with respect to minimum dimension of image (default [0.01, 0.03, 0.06, 0.08])
      */
-    CV_WRAP const BarcodeDetector& setDetectorScales(std::vector<double> sizes);
+    CV_WRAP BarcodeDetector& setDetectorScales(std::vector<double> sizes);
 
     /** @brief Returns detector gradient magnitude threshold
 
@@ -92,7 +92,7 @@ public:
 
      * @param thresh gradient magnitude threshold (default 64)
      */
-    CV_WRAP const BarcodeDetector& setGradientThresh(double thresh);
+    CV_WRAP BarcodeDetector& setGradientThresh(double thresh);
 };
 //! @}
 
