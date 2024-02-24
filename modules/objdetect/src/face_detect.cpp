@@ -201,28 +201,28 @@ private:
                     face.at<float>(0, 14) = score;
 
                     // Checking if the score meets the threshold before adding the face
-                    if (score >= scoreThreshold) {
-                        // Add the detected face to the faces Mat
-                        float cx = ((c + bbox_v[idx * 4 + 0]) * strides[i]);
-                        float cy = ((r + bbox_v[idx * 4 + 1]) * strides[i]);
-                        float w = exp(bbox_v[idx * 4 + 2]) * strides[i];
-                        float h = exp(bbox_v[idx * 4 + 3]) * strides[i];
+                    if (score < scoreThreshold)
+                        continue;
+                    // Get bounding box
+                    float cx = ((c + bbox_v[idx * 4 + 0]) * strides[i]);
+                    float cy = ((r + bbox_v[idx * 4 + 1]) * strides[i]);
+                    float w = exp(bbox_v[idx * 4 + 2]) * strides[i];
+                    float h = exp(bbox_v[idx * 4 + 3]) * strides[i];
 
-                        float x1 = cx - w / 2.f;
-                        float y1 = cy - h / 2.f;
+                    float x1 = cx - w / 2.f;
+                    float y1 = cy - h / 2.f;
 
-                        face.at<float>(0, 0) = x1;
-                        face.at<float>(0, 1) = y1;
-                        face.at<float>(0, 2) = w;
-                        face.at<float>(0, 3) = h;
+                    face.at<float>(0, 0) = x1;
+                    face.at<float>(0, 1) = y1;
+                    face.at<float>(0, 2) = w;
+                    face.at<float>(0, 3) = h;
 
-                        // Get landmarks
-                        for(int n = 0; n < 5; ++n) {
-                            face.at<float>(0, 4 + 2 * n) = (kps_v[idx * 10 + 2 * n] + c) * strides[i];
-                            face.at<float>(0, 4 + 2 * n + 1) = (kps_v[idx * 10 + 2 * n + 1]+ r) * strides[i];
-                        }
-                        faces.push_back(face);
+                    // Get landmarks
+                    for(int n = 0; n < 5; ++n) {
+                        face.at<float>(0, 4 + 2 * n) = (kps_v[idx * 10 + 2 * n] + c) * strides[i];
+                        face.at<float>(0, 4 + 2 * n + 1) = (kps_v[idx * 10 + 2 * n + 1]+ r) * strides[i];
                     }
+                    faces.push_back(face);
                 }
             }
         }
