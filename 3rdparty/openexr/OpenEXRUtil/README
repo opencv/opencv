@@ -1,0 +1,270 @@
+The OpenEXRUtil Library
+----------------------
+
+The OpenEXRUtil library implements an in-memory image data structure, as
+well as simple function calls for saving images in OpenEXR files, and for
+constructing images from the contents of existing OpenEXR files.
+
+The OpenEXR file format has a fairly large number of options for on-file
+image storage, including arbitrary sets of channels, per-channel pixel
+format selection, sub-sampled channels, multi-resolution images, deep
+images, or storing images as tiles or scan lines.  While reading a simple
+RGBA image does not require a lot of code, reading the contents of an
+arbitrary OpenEXR file, and representing those contents in main memory
+is not trivial.  The OpenEXRUtil library simplifies those tasks.
+
+Image, Image Level, Image Channel
+---------------------------------
+
+An image (class Image) is a container for a set of image levels (class
+ImageLevel), and an image level is a container for a set of image channels
+(class ImageChannel).  An image channel contains an array of pixel values.
+
+For example:
+
+    image --+-- level 0,0 --+-- channel "R" --- pixel data
+            |               |
+            |               +-- channel "G" --- pixel data
+            |               |
+            |               +-- channel "B" --- pixel data
+            |
+            +-- level 1,1 --+-- channel "R" --- pixel data
+            |               |
+            |               +-- channel "G" --- pixel data
+            |               |
+            |               +-- channel "B" --- pixel data
+            |
+            +-- level 2,2 --+-- channel "R" --- pixel data
+                            |
+                            +-- channel "G" --- pixel data
+                            |
+                            +-- channel "B" --- pixel data
+
+An image has a level mode (enum LevelMode), which can be ONE_LEVEL,
+MIPMAP_LEVELS or RIPMAP_LEVELS.  A ONE_LEVEL image contains only a single
+level, but a multi-resolution image, that is, one with level mode set to
+MIPMAP_LEVELS or RIPMAP_LEVELS, contains multiple levels.  The levels are
+analogous to the levels in an OpenEXR file, as described in the "Technical
+Introduction to OpenEXR" document.
+
+Levels are indexed by a pairs of level numbers.  Level (0,0) contains the
+highest-resolution version of the image; level (lx,ly) contains an image
+whose resolution is reduced in x and y by a factor of 2^lx and 2^ly
+respectively.  The level has a data window that indicates the range of
+x and y for which pixel data are stored in the level.
+
+All levels in an image have the same set of image channels.
+
+An image channel has a name (e.g. "R", "Z", or "xVelocity"), a type (HALF,
+FLOAT or UINT) and x and y sampling rates.  A channel stores samples for
+a pixel if the pixel is inside the data window of the level to which the
+channel belongs, and the x and y coordinates of the pixel are divisible by
+the x and y sampling rates of the channel.
+
+An image can be either flat or deep.  In a flat image each channel in each
+level stores at most one value per pixel.  In a deep image each channel in
+each level stores an arbitrary number of values per pixel.  As an exception,
+each level of a deep image has a sample count channel with a single value
+per pixel; this value determines how many values each of the other channels
+in the same level has at the same pixel location.
+
+The Image, ImageLevel and ImageChannel classes are abstract base classes.
+Two sets of classes, one for flat images and one for deep images, are
+derived from the base classes.  The FlatImageChannel and DeepImageChannel
+classes, derived from ImageChannel, are themselves base classes for the
+templates TypedFlatImageChannel<T> and TypedDeepImageChannel<T>:
+
+    Image -> FlatImage
+          -> DeepImage
+
+    ImageLevel -> FlatImageLevel
+               -> DeepImageLevel
+
+
+    ImageChannel -> FlatImageChannel -> TypedFlatImageChannel<T>
+                 -> DeepImageChannel -> TypedDeepImageChannel<T>
+                 -> SampleCountChannel
+
+Channel objects of type TypedFlatImageChannel<T> and TypedDeepImageChannel<T> 
+contain pixel values of type T, where T is either half, float or unsigned int.
+For convenience, the following typedefs are provided:
+
+    typedef TypedFlatImageChannel<half>         FlatHalfChannel;
+    typedef TypedFlatImageChannel<float>        FlatFloatChannel;
+    typedef TypedFlatImageChannel<unsigned int> FlatUIntChannel;
+
+    typedef TypedDeepImageChannel<half>         DeepHalfChannel;
+    typedef TypedDeepImageChannel<float>        DeepFloatChannel;
+    typedef TypedDeepImageChannel<unsigned int> DeepUIntChannel;
+
+
+File I/O
+--------
+
+An Image object can be saved in an OpenEXR file with a single function call:
+
+    saveImage ("foo.exr", myImage);
+
+The saveImage() function automatically creates a flat or a deep image file,
+depending on the type of the image.  All channels and all image levels will
+be saved in the file.
+
+Optionally an OpenEXR Header object can be passed to the saveImage() function;
+this allows application code save custom attributes in the file, and to control
+how the file will be compressed:
+
+    Header myHeader;
+    myHeader.compression() = PIZ_COMPRESSION;
+    myHeader.pixelAspectRatio() = 1.5;
+
+    saveImage ("foo.exr", myHeader, myImage);
+
+Loading an image from an OpenEXR file also requires only one function call,
+either
+
+    Image* myImage = loadImage ("foo.exr");
+
+or
+
+    Header myHeader;
+    Image* myImage = loadImage ("foo.exr", myHeader);
+
+The application owns the image that is returned by the loadImage() call.
+It is the application's responsibility to delete the Image object.
+
+The OpenEXRUtil library also provides versions of the saveImage() and
+loadImage() functions that work only on flat images or only on deep images:
+
+    saveFlatImage()
+    saveFlatScanLineImage()
+    saveFlatTiledImage()
+    saveDeepImage()
+    saveDeepScanLineImage()
+    saveDeepTiledImage()
+
+For details, refer to the ImfFlatImageIO.h and ImfDeepImageIO.h header files.
+
+
+Manipulating Images in Memory
+-----------------------------
+
+Creating a mip-mapped flat image with two channels:
+
+    FlatImage fimg (Box2i (V2i (0, 0), V2i (255, 255)),    // data window
+                    MIPMAP_LEVELS);                        // level mode
+
+    fimg.insertChannel ("R", HALF);
+    fimg.insertChannel ("Z", FLOAT);
+
+Creating a single-level deep image:
+
+    DeepImage dimg (Box2i (V2i (0, 0), V2i (255, 255)),    // data window
+                    ONE_LEVEL);                            // level mode
+
+    dimg.insertChannel ("R", HALF);
+    dimg.insertChannel ("Z", FLOAT);
+
+Reading and writing pixels in level (2,2) of the mip-mapped flat image
+(note: a mip-mapped image contains only levels where the x and y level
+numbers are equal.  For convenience, mip-map levels can be addressed
+using a single level number):
+
+    FlatImageLevel &level = fimg.level (2);
+    FlatHalfChannel &R = level.typedChannel<half> ("R);
+
+    half r1 = R.at (20, 15);    // read pixel (20,15), with bounds checking
+                                // (exception for access outside data window)
+
+    half r2 = R (17, 4);        // read pixel (17,4) without bounds checking
+                                // faster, but crashes for access outside
+                                // data window
+
+    R.at (20, 15) = 2 * r1;     // change pixel value, with and
+    R (17, 4) = 2 * r2;         // without bounds checking
+
+Reading and writing pixels in the single-level deep image:
+
+    DeepImageLevel &level = dimg.level();
+    DeepHalfChannel &R = level.typedChannel<half> ("R);
+
+    // with bounds checking
+
+    unsigned int n1 = R.sampleCounts().at (20, 15);
+    half r1;
+
+    if (n1 > 0)
+        r1 = R.at(20, 15)[n1 - 1];  // read the last sample in pixel (20,15)
+
+    // without bounds checking
+
+    unsigned int n2 = R.sampleCounts()(20, 15);
+    half r2;
+
+    if (n > 0)
+        r2 = R(17, 4)[n2 - 1];     // read the last sample in pixel (17,4)
+
+    // change the value of an existing sample
+
+    if (n1 > 0)
+        R(20,15)[n1 - 1] = r1 * 2;
+
+    // append a new sample to a pixel and set the sample to 3.0
+
+    R.sampleCounts().set (20, 15, n1 + 1);
+    R.(20, 15)[n1] = 3.0;
+
+In addition to functions for reading and writing individual pixels, there
+are functions for accessing a whole row of pixels with a single function
+call.  For details see the ImfFlatImageChannel.h, ImfDeepImageChannel.h
+and ImfSampleCountChannel.h header files in the OpenEXR library:
+
+    T*                   TypedFlatImageChannel<T>::row (int r);
+    const T*             TypedFlatImageChannel<T>::row (int r) const;
+
+    T * const *          TypedDeepImageChannel<T>::row (int r);
+    const T * const *    TypedDeepImageChannel<T>::row (int r) const;
+    const unsigned int * SampleCountChannel::row (int r) const;
+
+To change the number of samples in all pixels in one row of a deep image
+level, use:
+
+    void SampleCountChannel::set (int r, unsigned int newNumSamples[]);
+
+Use an Edit object to temporarily make all sample counts in a deep image
+level editable:
+
+    class SampleCountChannel::Edit;
+
+Miscellaneous Functions:
+------------------------
+
+Change the data window and the level mode of an image (pixel data are not
+preserved across the call):
+
+    void Image::resize (const Box2i &dataWindow, LevelMode levelMode);
+
+Shift the data window in x and y; shift the pixels along with the data window:
+
+    void Image::shiftPixels (int dx, int dy);
+
+Erase a channel, rename a channel, rename multiple channels at the same time:
+
+    void Image::eraseChannel (const string &name);
+    void Image::renameChannel (const string &oldName, const string &newName);
+    void Image::renameChannels (const RenamingMap &oldToNewNames);
+
+Missing Functionality:
+----------------------
+
+At this point, the OpenEXRUtil library cannot read or write multi-part
+files.  A future version of the library should probably define a new class
+MultiPartImage that contains a set of regular images.  The library should
+also define corresponding loadMultiPartImage() and saveMultiPartImage()
+functions.
+
+Sample Code
+-----------
+
+See the exrsave, exrmakescanlines, exrclip utilities.
+
+

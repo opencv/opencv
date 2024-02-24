@@ -1,71 +1,79 @@
-///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2012, Industrial Light & Magic, a division of Lucas
-// Digital Ltd. LLC
-// 
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-// *       Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-// *       Redistributions in binary form must reproduce the above
-// copyright notice, this list of conditions and the following disclaimer
-// in the documentation and/or other materials provided with the
-// distribution.
-// *       Neither the name of Industrial Light & Magic nor the names of
-// its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright Contributors to the OpenEXR Project.
 //
-///////////////////////////////////////////////////////////////////////////
 
 #ifndef INCLUDED_IMATHFORWARD_H
 #define INCLUDED_IMATHFORWARD_H
 
 #include "ImathNamespace.h"
+#include "ImathExport.h"
 
 IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
+
+/// @cond Doxygen_Suppress
 
 //
 // Basic template type declarations.
 //
 
-template <class T> class Box;
-template <class T> class Color3;
-template <class T> class Color4;
-template <class T> class Euler;
-template <class T> class Frustum;
-template <class T> class FrustumTest;
-template <class T> class Interval;
-template <class T> class Line3;
-template <class T> class Matrix33;
-template <class T> class Matrix44;
-template <class T> class Plane3;
-template <class T> class Quat;
-template <class T> class Shear6;
-template <class T> class Sphere3;
-template <class T> class TMatrix;
-template <class T> class TMatrixBase;
-template <class T> class TMatrixData;
-template <class T> class Vec2;
-template <class T> class Vec3;
-template <class T> class Vec4;
+//
+// Note: declarations with attributes generate warnings with
+// -Wattributes or -Wall if the type is already defined, i.e. the
+// header is already included. To avoid the warning, only make the
+// forward declaration if the header has not yet been included.
+//
 
-class Rand32;
-class Rand48;
+#ifndef INCLUDED_IMATHBOX_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Box;
+#endif
+#ifndef INCLUDED_IMATHCOLOR_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Color3;
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Color4;
+#endif
+#ifndef INCLUDED_IMATHEULER_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Euler;
+#endif
+#ifndef INCLUDED_IMATHFRUSTUM_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Frustum;
+#endif
+#ifndef INCLUDED_IMATHFRUSTUMTEST_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE FrustumTest;
+#endif
+#ifndef INCLUDED_IMATHINTERVAL_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Interval;
+#endif
+#ifndef INCLUDED_IMATHLINE_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Line3;
+#endif
+#ifndef INCLUDED_IMATHMATRIX_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Matrix33;
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Matrix44;
+#endif
+#ifndef INCLUDED_IMATHPLANE_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Plane3;
+#endif
+#ifndef INCLUDED_IMATHQUAT_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Quat;
+#endif
+#ifndef INCLUDED_IMATHSHEAR_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Shear6;
+#endif
+#ifndef INCLUDED_IMATHSPHERE_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Sphere3;
+#endif
+#ifndef INCLUDED_IMATHVEC_H
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Vec2;
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Vec3;
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Vec4;
+#endif
+
+#ifndef INCLUDED_IMATHRANDOM_H
+class IMATH_EXPORT_TYPE Rand32;
+class IMATH_EXPORT_TYPE Rand48;
+#endif
+
+/// @endcond
 
 IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 

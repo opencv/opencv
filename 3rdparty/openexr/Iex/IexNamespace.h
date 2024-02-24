@@ -1,36 +1,7 @@
-///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2012, Industrial Light & Magic, a division of Lucas
-// Digital Ltd. LLC
-// 
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-// *       Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-// *       Redistributions in binary form must reproduce the above
-// copyright notice, this list of conditions and the following disclaimer
-// in the documentation and/or other materials provided with the
-// distribution.
-// *       Neither the name of Industrial Light & Magic nor the names of
-// its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) Contributors to the OpenEXR Project.
 //
-///////////////////////////////////////////////////////////////////////////
 
 #ifndef INCLUDED_IEXNAMESPACE_H
 #define INCLUDED_IEXNAMESPACE_H
@@ -72,17 +43,17 @@
 //
 
 //
-// Open Source version of this file pulls in the IlmBaseConfig.h file
+// Open Source version of this file pulls in the IexConfig.h file
 // for the configure time options.
 //
-#include "IlmBaseConfig.h"
+#include "IexConfig.h"
 
 #ifndef IEX_NAMESPACE
-#define IEX_NAMESPACE Iex
+#    define IEX_NAMESPACE Iex
 #endif
 
 #ifndef IEX_INTERNAL_NAMESPACE
-#define IEX_INTERNAL_NAMESPACE IEX_NAMESPACE
+#    define IEX_INTERNAL_NAMESPACE IEX_NAMESPACE
 #endif
 
 //
@@ -92,9 +63,11 @@
 // IEX_NAMESPACE and pulls the internal symbols into the public namespace.
 //
 
-namespace IEX_INTERNAL_NAMESPACE {}
-namespace IEX_NAMESPACE {
-    using namespace IEX_INTERNAL_NAMESPACE;
+namespace IEX_INTERNAL_NAMESPACE
+{}
+namespace IEX_NAMESPACE
+{
+using namespace IEX_INTERNAL_NAMESPACE;
 }
 
 //
@@ -103,10 +76,14 @@ namespace IEX_NAMESPACE {
 // project source code.
 //
 
-#define IEX_INTERNAL_NAMESPACE_HEADER_ENTER namespace IEX_INTERNAL_NAMESPACE {
+#define IEX_INTERNAL_NAMESPACE_HEADER_ENTER                                    \
+    namespace IEX_INTERNAL_NAMESPACE                                           \
+    {
 #define IEX_INTERNAL_NAMESPACE_HEADER_EXIT }
 
-#define IEX_INTERNAL_NAMESPACE_SOURCE_ENTER namespace IEX_INTERNAL_NAMESPACE {
+#define IEX_INTERNAL_NAMESPACE_SOURCE_ENTER                                    \
+    namespace IEX_INTERNAL_NAMESPACE                                           \
+    {
 #define IEX_INTERNAL_NAMESPACE_SOURCE_EXIT }
 
 #endif // INCLUDED_IEXNAMESPACE_H

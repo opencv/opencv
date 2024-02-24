@@ -27,9 +27,9 @@ set(ILMBASE_VERSION_PATCH "0")
 set(ILMBASE_VERSION "${ILMBASE_VERSION_MAJOR}.${ILMBASE_VERSION_MINOR}.${ILMBASE_VERSION_PATCH}")
 set(ILMBASE_VERSION_API ${ILMBASE_VERSION_MAJOR}_${ILMBASE_VERSION_MINOR})
 
-set(OPENEXR_VERSION_MAJOR "2")
-set(OPENEXR_VERSION_MINOR "3")
-set(OPENEXR_VERSION_PATCH "0")
+set(OpenEXR_VERSION_MAJOR "3")
+set(OpenEXR_VERSION_MINOR "2")
+set(OpenEXR_VERSION_PATCH "2")
 
 set(OPENEXR_VERSION "${OPENEXR_VERSION_MAJOR}.${OPENEXR_VERSION_MINOR}.${OPENEXR_VERSION_PATCH}")
 set(OPENEXR_VERSION_API ${OPENEXR_VERSION_MAJOR}_${OPENEXR_VERSION_MINOR})
@@ -65,6 +65,7 @@ set(ILMBASE_PACKAGE_STRING "\"IlmBase ${ILMBASE_VERSION}\"" )
 
 
 set(OPENEXR_VERSION_API "opencv")
+set(OPENEXR_NAMESPACE_CUSTOM 1)
 set(OPENEXR_IMF_INTERNAL_NAMESPACE_CUSTOM 1)
 set(OPENEXR_IMF_INTERNAL_NAMESPACE "Imf_${ILMBASE_VERSION_API}")
 set(OPENEXR_IMF_NAMESPACE_CUSTOM 0)
@@ -73,24 +74,43 @@ set(OPENEXR_IMF_NAMESPACE "Imf")
 set(OPENEXR_VERSION_STRING "\"${OPENEXR_VERSION}\"" )
 set(OPENEXR_PACKAGE_STRING "\"OpenEXR ${OPENEXR_VERSION}\"" )
 
+set(Imath_VERSION_MAJOR "3")
+set(Imath_VERSION_MINOR "1")
+set(Imath_VERSION_PATCH "9")
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/IlmBaseConfig.h.cmakein"
-               "${CMAKE_CURRENT_BINARY_DIR}/IlmBaseConfig.h" @ONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenEXRConfig.h.cmakein"
+set(IMATH_NAMESPACE_CUSTOM 1)
+
+set(IMATH_VERSION "${Imath_VERSION_MAJOR}.${Imath_VERSION_MINOR}.${Imath_VERSION_PATCH}")
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/IlmThreadConfig.h.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/IlmThreadConfig.h" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenEXRConfig.h.in"
                "${CMAKE_CURRENT_BINARY_DIR}/OpenEXRConfig.h" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenEXRConfigInternal.h.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/OpenEXRConfigInternal.h" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/IexConfig.h.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/IexConfig.h" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/IexConfigInternal.h.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/IexConfigInternal.h" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/ImathConfig.h.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/ImathConfig.h" @ONLY)
 
-set(OPENEXR_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/Half"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/Iex"
+set(OPENEXR_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/Iex"
                           "${CMAKE_CURRENT_SOURCE_DIR}/IlmThread"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/OpenEXR"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/OpenEXRCore"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/OpenEXRUtil"
                           "${CMAKE_CURRENT_SOURCE_DIR}/Imath"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/IlmImf"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/libdeflate"
                           "${CMAKE_CURRENT_BINARY_DIR}")
 
 ocv_include_directories("${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIRS} ${OPENEXR_INCLUDE_PATHS})
 
-file(GLOB lib_srcs Half/half.cpp Iex/*.cpp IlmThread/*.cpp Imath/*.cpp IlmImf/*.cpp)
-file(GLOB lib_hdrs Half/*.h Iex/Iex*.h IlmThread/IlmThread*.h Imath/Imath*.h IlmImf/*.h)
-list(APPEND lib_hdrs "${CMAKE_CURRENT_BINARY_DIR}/IlmBaseConfig.h" "${CMAKE_CURRENT_BINARY_DIR}/OpenEXRConfig.h")
+file(GLOB lib_srcs Iex/*.cpp IlmThread/*.cpp OpenEXR/*.cpp OpenEXRCore/*.c OpenEXRUtil/*.cpp Imath/*.cpp libdeflate/lib/*.c libdeflate/lib/arm/*.c libdeflate/lib/x86/*.c)
+file(GLOB lib_hdrs Iex/*.h IlmThread/*.h OpenEXR/*.h OpenEXRCore/*.h OpenEXRUtil/*.h Imath/*.h libdeflate/*.h libdeflate/lib/*.h libdeflate/lib/arm/*.h libdeflate/lib/x86/*.h)
+list(APPEND lib_hdrs "${CMAKE_CURRENT_BINARY_DIR}/IlmThreadConfig.h" 
+                     "${CMAKE_CURRENT_BINARY_DIR}/OpenEXRConfig.h"
+                     "${CMAKE_CURRENT_BINARY_DIR}/IexConfig.h")
 
 if(WIN32)
   ocv_list_filterout(lib_srcs Posix.*cpp)
