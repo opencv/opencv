@@ -24,7 +24,7 @@ private:
 
 
 public:
-    void init(const Mat &src, float detectorThreshDownSamplingLimit);
+    void init(const Mat &src, double detectorThreshDownSamplingLimit);
 
     void localization(vector<double> detectorWindowSizes, double detectorGradientMagnitudeThresh);
 

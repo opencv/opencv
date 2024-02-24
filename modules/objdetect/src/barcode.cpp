@@ -142,7 +142,7 @@ struct BarcodeImpl : public GraphicalCodeDetector::Impl
 public:
     shared_ptr<SuperScale> sr;
     bool use_nn_sr = false;
-    float detectorThrDownSample = 512.f;
+    double detectorThrDownSample = 512.f;
     vector<double> detectorWindowSizes = {0.01f, 0.03f, 0.06f, 0.08f};
     double detectorThrGradMagnitude = 64.f;
 

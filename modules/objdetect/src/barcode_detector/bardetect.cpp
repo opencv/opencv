@@ -136,7 +136,7 @@ static void NMSBoxes(const std::vector<RotatedRect>& bboxes, const std::vector<f
 
 //==============================================================================
 
-void Detect::init(const Mat &src, float detectorThreshDownSamplingLimit)
+void Detect::init(const Mat &src, double detectorThreshDownSamplingLimit)
 {
     const double min_side = std::min(src.size().width, src.size().height);
     if (min_side > detectorThreshDownSamplingLimit)
