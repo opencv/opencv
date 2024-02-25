@@ -191,6 +191,74 @@ static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candida
     }
 }
 
+//              ***********************************************************
+//              ***********************************************************
+static void _findMarkerRectangleContoursNew(const Mat& in, vector<vector<Point2f> >& candidates,
+    vector<vector<Point> >& contoursOut, double minPerimeterRate,
+    double maxPerimeterRate, double accuracyRate,
+    double minCornerDistanceRate, int minDistanceToBorder, int minSize) {
+
+    CV_Assert(minPerimeterRate > 0 && maxPerimeterRate > 0 && accuracyRate > 0 &&
+        minCornerDistanceRate >= 0 && minDistanceToBorder >= 0);
+
+    // calculate maximum and minimum sizes in pixels
+    unsigned int minPerimeterPixels =
+        (unsigned int)(minPerimeterRate * max(in.cols, in.rows));
+    unsigned int maxPerimeterPixels =
+        (unsigned int)(maxPerimeterRate * max(in.cols, in.rows));
+
+    // for aruco3 functionality
+    if (minSize != 0) {
+        minPerimeterPixels = 4 * minSize;
+    }
+
+    vector<vector<Point> > contours;
+    findContours(in, contours, RETR_LIST, CHAIN_APPROX_NONE);
+    // now filter list of contours
+    for (unsigned int i = 0; i < contours.size(); i++) {
+        // check perimeter
+        if (contours[i].size() < minPerimeterPixels || contours[i].size() > maxPerimeterPixels)
+            continue;
+
+        // check is square and is convex
+        vector<Point> approxCurve;
+        approxPolyDP(contours[i], approxCurve, double(contours[i].size()) * accuracyRate, true);
+        if (approxCurve.size() != 4 || !isContourConvex(approxCurve)) continue;
+
+        // check min distance between corners
+        double minDistSq = max(in.cols, in.rows) * max(in.cols, in.rows);
+        for (int j = 0; j < 4; j++) {
+            double d = (double)(approxCurve[j].x - approxCurve[(j + 1) % 4].x) *
+                (double)(approxCurve[j].x - approxCurve[(j + 1) % 4].x) +
+                (double)(approxCurve[j].y - approxCurve[(j + 1) % 4].y) *
+                (double)(approxCurve[j].y - approxCurve[(j + 1) % 4].y);
+            minDistSq = min(minDistSq, d);
+        }
+        double minCornerDistancePixels = double(contours[i].size()) * minCornerDistanceRate;
+        if (minDistSq < minCornerDistancePixels * minCornerDistancePixels) continue;
+
+        // check if it is too near to the image border
+        bool tooNearBorder = false;
+        for (int j = 0; j < 4; j++) {
+            if (approxCurve[j].x < minDistanceToBorder || approxCurve[j].y < minDistanceToBorder ||
+                approxCurve[j].x > in.cols - 1 - minDistanceToBorder ||
+                approxCurve[j].y > in.rows - 1 - minDistanceToBorder)
+                tooNearBorder = true;
+        }
+        if (tooNearBorder) continue;
+
+        // if it passes all the test, add to candidates vector
+        vector<Point2f> currentCandidate;
+        currentCandidate.resize(4);
+        for (int j = 0; j < 4; j++) {
+            currentCandidate[j] = Point2f((float)approxCurve[j].x, (float)approxCurve[j].y);
+        }
+        candidates.push_back(currentCandidate);
+        contoursOut.push_back(contours[i]);
+    }
+}
+//              ***********************************************************
+//              ***********************************************************
 
 /**
   * @brief Assure order of candidate corners is clockwise direction
@@ -315,6 +383,56 @@ static void _detectInitialCandidates(const Mat &grey, vector<vector<Point2f> > &
         }
     }
 }
+
+
+
+//                      ***************************************************************
+//                      ***************************************************************
+
+static void _detectInitialRectangleCandidatesNew(const Mat& grey, vector<vector<Point2f> >& candidates,
+    vector<vector<Point> >& contours,
+    const DetectorParameters& params) {
+
+    CV_Assert(params.adaptiveThreshWinSizeMin >= 3 && params.adaptiveThreshWinSizeMax >= 3);
+    CV_Assert(params.adaptiveThreshWinSizeMax >= params.adaptiveThreshWinSizeMin);
+    CV_Assert(params.adaptiveThreshWinSizeStep > 0);
+
+    // number of window sizes (scales) to apply adaptive thresholding
+    int nScales = (params.adaptiveThreshWinSizeMax - params.adaptiveThreshWinSizeMin) /
+        params.adaptiveThreshWinSizeStep + 1;
+
+    vector<vector<vector<Point2f> > > candidatesArrays((size_t)nScales);
+    vector<vector<vector<Point> > > contoursArrays((size_t)nScales);
+
+    ////for each value in the interval of thresholding window sizes
+    parallel_for_(Range(0, nScales), [&](const Range& range) {
+        const int begin = range.start;
+        const int end = range.end;
+
+        for (int i = begin; i < end; i++) {
+            int currScale = params.adaptiveThreshWinSizeMin + i * params.adaptiveThreshWinSizeStep;
+            // threshold
+            Mat thresh;
+            _threshold(grey, thresh, currScale, params.adaptiveThreshConstant);
+
+            // detect rectangles
+            _findMarkerRectangleContoursNew(thresh, candidatesArrays[i], contoursArrays[i],
+                params.minMarkerPerimeterRate, params.maxMarkerPerimeterRate,
+                params.polygonalApproxAccuracyRate, params.minCornerDistanceRate,
+                params.minDistanceToBorder, params.minSideLengthCanonicalImg);
+        }
+        });
+    // join candidates
+    for (int i = 0; i < nScales; i++) {
+        for (unsigned int j = 0; j < candidatesArrays[i].size(); j++) {
+            candidates.push_back(candidatesArrays[i][j]);
+            contours.push_back(contoursArrays[i][j]);
+        }
+    }
+}
+
+//                      ***************************************************************
+//                      ***************************************************************
 
 
 /**
@@ -664,6 +782,19 @@ struct ArucoDetector::ArucoDetectorImpl {
         _reorderCandidatesCorners(candidates);
     }
 
+    //                      *********************************************
+    //                      *********************************************
+
+    void detectRectangleCandidatesNew(const Mat& grey, vector<vector<Point2f> >& candidates, vector<vector<Point> >& contours) {
+        /// 1. DETECT FIRST SET OF CANDIDATES
+        _detectInitialRectangleCandidatesNew(grey, candidates, contours, detectorParams);
+        /// 2. SORT CORNERS
+        _reorderCandidatesCorners(candidates);
+    }
+
+    //                      *********************************************
+    //                      *********************************************
+
     /**
      * @brief  FILTER OUT NEAR CANDIDATE PAIRS
      *
@@ -1003,6 +1134,88 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
     Mat(ids).copyTo(_ids);
 }
 
+//                          **********************************************************************                      
+//                          **********************************************************************
+
+void ArucoDetector::detectRectangleMarkers(InputArray _image, OutputArrayOfArrays _corners) const {
+    CV_Assert(!_image.empty());
+    DetectorParameters& detectorParams = arucoDetectorImpl->detectorParams;
+    const Dictionary& dictionary = arucoDetectorImpl->dictionary;
+
+
+    Mat grey;
+    _convertToGrey(_image, grey);
+
+    /// Step 1: create image pyramid. Section 3.4. in [1]
+    vector<Mat> grey_pyramid;
+    int closest_pyr_image_idx = 0, num_levels = 0;
+    buildPyramid(grey, grey_pyramid, num_levels);
+
+
+
+    /// STEP 2: Detect marker candidates
+    vector<vector<Point2f> > candidates;
+    vector<vector<Point> > contours;
+    vector<int> ids;
+
+    /// STEP 2.a Detect marker candidates :: using AprilTag
+    if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG) {
+        _apriltag(grey, detectorParams, candidates, contours);
+    }
+    /// STEP 2.b Detect marker candidates :: traditional way
+    else {
+        arucoDetectorImpl->detectCandidates(grey, candidates, contours);
+    }
+
+    /// STEP 2.c FILTER OUT NEAR CANDIDATE PAIRS
+    auto selectedCandidates = arucoDetectorImpl->filterTooCloseCandidates(candidates, contours);
+
+    // copy to output arrays
+    _copyVector2Output(candidates, _corners);
+}
+
+//                          **********************************************************************
+//                          **********************************************************************
+
+void ArucoDetector::detectRectangleMarkersNew(InputArray _image, OutputArrayOfArrays _corners) const {
+
+    CV_Assert(!_image.empty());
+    DetectorParameters& detectorParams = arucoDetectorImpl->detectorParams;
+    const Dictionary& dictionary = arucoDetectorImpl->dictionary;
+
+
+    Mat grey;
+    _convertToGrey(_image, grey);
+
+    /// Step 1: create image pyramid. Section 3.4. in [1]
+    vector<Mat> grey_pyramid;
+    int closest_pyr_image_idx = 0, num_levels = 0;
+    buildPyramid(grey, grey_pyramid, num_levels);
+
+
+
+    /// STEP 2: Detect marker candidates
+    vector<vector<Point2f> > candidates;
+    vector<vector<Point> > contours;
+    vector<int> ids;
+
+    /// STEP 2.a Detect marker candidates :: using AprilTag
+    if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG) {
+        _apriltag(grey, detectorParams, candidates, contours);
+    }
+    /// STEP 2.b Detect marker candidates :: traditional way
+    else {
+        arucoDetectorImpl->detectRectangleCandidatesNew(grey, candidates, contours);
+    }
+
+    /// STEP 2.c FILTER OUT NEAR CANDIDATE PAIRS
+    auto selectedCandidates = arucoDetectorImpl->filterTooCloseCandidates(candidates, contours);
+
+    // copy to output arrays
+    _copyVector2Output(candidates, _corners);
+}
+//                          **********************************************************************
+//                          **********************************************************************
 /**
   * Project board markers that are not included in the list of detected markers
   */
