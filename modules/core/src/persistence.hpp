@@ -87,10 +87,10 @@ namespace fs
 int strcasecmp(const char* str1, const char* str2);
 char* itoa( int _val, char* buffer, int /*radix*/ );
 char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision, bool explicitZero ,
-                      const FileStorage::RealExpressionMethod expression = FileStorage::RealExpressionMethod::Scientific,
+                      const bool isFixed = false,
                       const int precision = 7);
 char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero,
-                      const FileStorage::RealExpressionMethod expression = FileStorage::RealExpressionMethod::Scientific,
+                      const bool isFixed = false,
                       const int precision = 18);
 
 int calcStructSize( const char* dt, int initial_size );
@@ -202,7 +202,7 @@ public:
     virtual void writeScalar(const char* key, const char* value) = 0;
     virtual void writeComment(const char* comment, bool eol_comment) = 0;
     virtual void startNextStream() = 0;
-    virtual void setRealExpression(const FileStorage::RealExpressionMethod expression, int precision ) = 0;
+    virtual void setRealExpression(const bool isFixed, const int precision ) = 0;
 };
 
 class FileStorageParser

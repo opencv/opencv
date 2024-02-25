@@ -244,10 +244,10 @@ public:
     int lineno;
 
     // For writeRawData()
-    FileStorage::RealExpressionMethod realExpression;
+    bool realIsFixed;
     int realPrecision;
 
-    void setRealExpression(const FileStorage::RealExpressionMethod expression, int precision );
+    void setRealExpression(const bool isFixed, int precision );
 };
 
 }

@@ -18,7 +18,7 @@ class YAMLEmitter : public FileStorageEmitter
 {
 public:
     YAMLEmitter(FileStorage_API* _fs) : fs(_fs),
-                                        realExpressionMethod(FileStorage::RealExpressionMethod::Scientific),
+                                        realIsFixed(false),
                                         realPrecision(18)
     {
     }
@@ -112,8 +112,7 @@ public:
     void write( const char* key, double value )
     {
         char buf[128];
-        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, false,
-                     realExpressionMethod, realPrecision ));
+        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, false, realIsFixed, realPrecision ));
     }
 
     void write(const char* key, const char* str, bool quote)
@@ -327,16 +326,16 @@ public:
         fs->puts( "---\n" );
     }
 
-    void setRealExpression( const FileStorage::RealExpressionMethod expression, const int precision )
+    void setRealExpression( const bool isFixed, const int precision )
     {
-        realExpressionMethod = expression;
+        realIsFixed = isFixed;
         realPrecision = precision;
     }
 
 protected:
     FileStorage_API* fs;
 private:
-    FileStorage::RealExpressionMethod realExpressionMethod;
+    bool realIsFixed;
     int realPrecision;
 };
 

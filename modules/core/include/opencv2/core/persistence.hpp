@@ -459,17 +459,15 @@ public:
      */
     CV_WRAP int getFormat() const;
 
-    CV_WRAP enum RealExpressionMethod {
-        Fixed,     //!< Fixed Float (e.g. 0.01)
-        Scientific //!< Scientific Float (e.g. 1e-2)
-    };
-
-    /** @brief Sets real value expression and precision.
-     * @param expression Select expression method for real.
+    /** @brief Sets real value expression as Fixed.
      * @param precision  Set the number of digits.
-     * @warn If sets, the real values(float/harf-float/double) in output files may lost exactness.
+     * @warning If sets, the real values(float/harf-float/double) in output files may lost exactness.
      */
-    CV_WRAP void setRealExpression(const RealExpressionMethod expression, const int precision );
+    CV_WRAP void setFixedExpression(const int precision);
+
+    /** @brief Sets real value expression as Scientific.
+     */
+    CV_WRAP void setScientificExpression();
 
     int state;
     std::string elname;
