@@ -547,7 +547,7 @@ public:
         MatShape realOutputDims = shape(result);
         size_t realProd = std::accumulate(realOutputDims.begin(), realOutputDims.end(), 1, std::multiplies<int>());
 
-        CV_CheckEQ(reqProd, realProd, "Real output can not be shaped in to requred output");
+        CV_CheckEQ(reqProd, realProd, "Real output can not be shaped in to required output");
 
         // reduce dimentions
         result = result.reshape(1, einsumOutDims.size(), einsumOutDims.data());
@@ -1273,18 +1273,19 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
         if (IsTransposeRequired(outputDims.size(), outputPermutation))
         {
             if (IsTransposeReshapeForEinsum(outputPermutation,
-                                            outputDims,
-                                            reshaped_dims))
+                outputDims,
+                reshaped_dims))
             {
                 // See note following the previous call of function IsTransposeReshapeForEinsum.
                 // Covered by ExplicitEinsumAsTensorContractionReshapeFinal.
                 output = output.reshape(1, reshaped_dims.size(), reshaped_dims.data());
             }
-        } else {
-            output = Transpose(
-                output,
-                outputDims,
-                outputPermutation);
+            else {
+                output = Transpose(
+                    output,
+                    outputDims,
+                    outputPermutation);
+            }
         }
     } else {  // This is the final pair - Transpose directly to the output ordering required and copy the contents to the op's output
         // not sure if this finalize shape is needed at all
