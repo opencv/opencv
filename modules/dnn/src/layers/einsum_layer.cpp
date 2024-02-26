@@ -1273,8 +1273,8 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
         if (IsTransposeRequired(outputDims.size(), outputPermutation))
         {
             if (IsTransposeReshapeForEinsum(outputPermutation,
-                outputDims,
-                reshaped_dims))
+                                            outputDims,
+                                            reshaped_dims))
             {
                 // See note following the previous call of function IsTransposeReshapeForEinsum.
                 // Covered by ExplicitEinsumAsTensorContractionReshapeFinal.
