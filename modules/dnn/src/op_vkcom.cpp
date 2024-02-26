@@ -81,7 +81,7 @@ int transFusedActivType(Ptr<ActivationLayer> &actLayer)
 
 void copyToTensor(vkcom::Tensor &dst, const Mat &src)
 {
-    CV_Assert(src.isContinuous() && src.type() == CV_32F);
+    CV_Assert(src.isContinuous());
 
     std::vector<int> mat_shape = shape(src);
 
@@ -91,8 +91,6 @@ void copyToTensor(vkcom::Tensor &dst, const Mat &src)
 
 void copyToMat(Mat &dst, vkcom::Tensor &src)
 {
-    CV_Assert(dst.type() == CV_32F);
-
     std::vector<int> shape = src.getShape();
     void *data = src.map();
     Mat tmp(shape, CV_32F, data);
