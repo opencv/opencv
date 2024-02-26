@@ -83,6 +83,19 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         } else {
             CV_Error(Error::StsBadArg, format("DNN/Attention: invalid output dimension %zu, valid value is 2 or 3", output_ndims));
         }
+
+        const int batch_size_ = input_shape[0], seq_len_ = input_shape[1],
+                  hidden_size_ = weight_shape.back(),
+                  num_heads_ = static_cast<int>(num_heads),
+                  v_head_size_ = static_cast<int>((hidden_size_ - qkv_hidden_sizes[0] - qkv_hidden_sizes[1]) / num_heads);
+
+        MatShape gemm_buffer_shape{batch_size_, seq_len_, hidden_size_},
+                 attention_prob_shape{batch_size_ * num_heads_, seq_len_, seq_len_},
+                 output_buffer_shape{batch_size_ * num_heads_, seq_len_, v_head_size_};
+        internals.assign(1, gemm_buffer_shape);
+        internals.push_back(attention_prob_shape);
+        internals.push_back(output_buffer_shape);
+
         return false;
     }
 
@@ -112,9 +125,10 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             return;
         }
 
-        std::vector<Mat> inputs, outputs;
+        std::vector<Mat> inputs, outputs, internals;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         // prepack weights
         if (!is_prepacked) {
@@ -131,7 +145,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
         size_t packed_weights_size[3] = {packed_weight_q.size() / num_heads, packed_weight_k.size() / num_heads, packed_weight_v.size() / num_heads};
 
-        Mat gemm_buffer(std::vector<int>{int(batch_size), int(seq_len), int(hidden_size)}, CV_32F);
+        // Mat gemm_buffer(std::vector<int>{int(batch_size), int(seq_len), int(hidden_size)}, CV_32F);
+        auto &gemm_buffer = internals[0];
         auto *Q = gemm_buffer.ptr<float>();
         auto *K = Q + batch_size * seq_len * qkv_hidden_sizes[0];
         auto *V = K + batch_size * seq_len * qkv_hidden_sizes[1];
@@ -178,7 +193,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         }
 
         // Compute softmax(scale * matmul(Q, K))
-        Mat attention_prob(std::vector<int>{int(batch_size * num_heads), int(seq_len), int(seq_len)}, CV_32F);
+        // Mat attention_prob(std::vector<int>{int(batch_size * num_heads), int(seq_len), int(seq_len)}, CV_32F);
+        auto &attention_prob = internals[1];
         {
             auto *output = attention_prob.ptr<float>();
 
@@ -206,7 +222,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         }
 
         // Compute np.matmul(attention_prob, V)
-        Mat output_buffer(std::vector<int>{int(batch_size), int(num_heads), int(seq_len), int(qkv_head_sizes[2])}, CV_32F);
+        // Mat output_buffer(std::vector<int>{int(batch_size), int(num_heads), int(seq_len), int(qkv_head_sizes[2])}, CV_32F);
+        auto &output_buffer = internals[2];
         {
             auto *output = outputs[0].ptr<float>();
             auto *output_buff = output_buffer.ptr<float>();
