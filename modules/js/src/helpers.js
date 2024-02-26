@@ -42,6 +42,10 @@ if (typeof Module.FS === 'undefined' && typeof FS !== 'undefined') {
     Module.FS = FS;
 }
 
+if (typeof cv === 'undefined') {
+    var cv = Module;
+}
+
 Module['imread'] = function(imageSource) {
     var img = null;
     if (typeof imageSource === 'string') {
