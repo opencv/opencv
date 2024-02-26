@@ -77,32 +77,33 @@ static double computeReprojectionMSE(const Mat &obj_points_, const Mat &img_poin
     } else {
         r = rvec; t = tvec;
     }
+
     Mat tmpImagePoints, obj_points = obj_points_, img_points = img_points_;
     if (is_fisheye) {
         obj_points = obj_points.reshape(3); // must be 3 channels
         fisheye::projectPoints(obj_points, tmpImagePoints, r, t, K, distortion);
-    } else
+    } else {
         projectPoints(obj_points, r, t, K, distortion, tmpImagePoints);
+    }
+
     if (img_points.channels() != tmpImagePoints.channels())
         img_points = img_points.reshape(tmpImagePoints.channels());
+
     if (img_points.rows != tmpImagePoints.rows)
         img_points = img_points.t();
-    subtract (tmpImagePoints, img_points, tmpImagePoints);
+
+    subtract(tmpImagePoints, img_points, tmpImagePoints);
+
     return norm(tmpImagePoints, NORM_L2SQR) / tmpImagePoints.rows;
 }
 
-// TODO: this function is not debugged yet. the obj_points_ are properly set for the fisheye camera model
 static void computeExtrinsics(const Mat &obj_points_, const Mat &img_points_, const Matx33d &K, const Mat &distortion,
                Vec3d &rvec, Vec3d &tvec, bool is_fisheye) {
     if (is_fisheye) {
-        // TODO: Debugg this part, the pnp solver may not the best choice for estimting extrinsics for fisheye cameras
-        Mat imagePointsNormalized;
-        cv::fisheye::undistortPoints(img_points_, imagePointsNormalized, K, distortion, noArray(), K);
-        solvePnP(obj_points_, imagePointsNormalized, K, noArray(), rvec, tvec, false, SOLVEPNP_ITERATIVE);
+        fisheye::solvePnP(obj_points_, img_points_, K, distortion, rvec, tvec, false, SOLVEPNP_ITERATIVE);
     } else {
         solvePnP(obj_points_, img_points_, K, distortion, rvec, tvec, false, SOLVEPNP_ITERATIVE);
     }
-
 }
 
 static void establishValidPointMap(const std::vector<std::vector<Mat>>& imagePoints,
@@ -141,7 +142,6 @@ static void establishValidPointMap(const std::vector<std::vector<Mat>>& imagePoi
             }
         }
     }
-
 }
 
 static bool maximumSpanningTree (int NUM_CAMERAS, int NUM_FRAMES, const std::vector<std::vector<bool>> &detection_mask,
@@ -306,7 +306,7 @@ static void thresholdPatternCameraAngles (int NUM_PATTERN_PTS, double THR_PATTER
     }
 }
 
-static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pairs,
+static void pairwiseCalibration (const std::vector<std::pair<int,int>> &pairs,
         const std::vector<bool> &is_fisheye_vec, const std::vector<std::vector<Mat>> &objPoints_norm,
         const std::vector<std::vector<Mat>> &imagePoints, const std::vector<std::vector<int>> &overlaps,
         const std::vector<std::vector<bool>> &detection_mask_mat,
@@ -651,6 +651,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
             detection_mask_mat[c][f] = detection_mask_ptr[c*NUM_FRAMES + f] != 0;
         }
     }
+
     // Establish the valid point vector
     std::vector<std::vector<std::vector<bool>>> is_valid_imgpt(NUM_CAMERAS);
     for (int k = 0; k < NUM_CAMERAS; k++) {
@@ -693,7 +694,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         }
     }
 
-    // Establishe the new valid frame count from the refined detection mask
+    // Establish the new valid frame count from the refined detection mask
     for (int c = 0; c < NUM_CAMERAS; c++) {
         is_fisheye_vec[c] = is_fisheye_ptr[c] != 0;
         int num_visible_frames = 0;
@@ -767,13 +768,16 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
             int cnt_valid_frame = 0;
             for (int i = 0; i < NUM_FRAMES; i++) {
                 if (!detection_mask_mat[k][i]) continue;
-                Vec3d rvec, tvec;
 
-                // TODO: change to the correct version of PnP supporting mixed camera models
-                multiview::computeExtrinsics(obj_points_valid[k][cnt_valid_frame], img_points_valid[k][cnt_valid_frame], Ks[k], distortions[k], rvec, tvec, is_fisheye_vec[k]);
-                rvecs_all[k][i] = rvec;
-                tvecs_all[k][i] = tvec;
-                const double err2 = multiview::computeReprojectionMSE(obj_points_valid[k][cnt_valid_frame], img_points_valid[k][cnt_valid_frame], Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
+                if(is_fisheye_vec[k])
+                    fisheye::solvePnP(obj_points_valid[k][cnt_valid_frame], img_points_valid[k][cnt_valid_frame], Ks[k], distortions[k], rvecs_all[k][i], tvecs_all[k][i], false, SOLVEPNP_ITERATIVE);
+                else
+                    solvePnP(obj_points_valid[k][cnt_valid_frame], img_points_valid[k][cnt_valid_frame], Ks[k], distortions[k], rvecs_all[k][i], tvecs_all[k][i], false, SOLVEPNP_ITERATIVE);
+
+                // TODO: Add reprojection error check after solvePnP
+
+                const double err2 = multiview::computeReprojectionMSE(obj_points_valid[k][cnt_valid_frame], img_points_valid[k][cnt_valid_frame],
+                                                                      Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
                 if (camera_rt_errors[i] > err2) {
                     camera_rt_errors[i] = err2;
                     camera_rt_best[i] = k;
@@ -823,7 +827,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
             }
             pairs_mat.copyTo(initializationPairs);
         }
-        multiview::pairwiseStereoCalibration(pairs, is_fisheye_vec, obj_points_valid, img_points_valid,
+        multiview::pairwiseCalibration(pairs, is_fisheye_vec, obj_points_valid, img_points_valid,
             overlaps, detection_mask_mat, Ks, distortions, Rs_vec, Ts_vec, useExtrinsicsGuess);
     }
 
@@ -892,7 +896,6 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         }
         r_store.create(3, 1, CV_64F);
         t_store = Ts.getMat(c);
-        // t_store.create(3, 1, CV_64F);
         if (c == 0) {
             memcpy(r_store.ptr(), Vec3d(0,0,0).val, 3*sizeof(double));
             memcpy(t_store.ptr(), Vec3d(0,0,0).val, 3*sizeof(double));
@@ -945,6 +948,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         if (!is_mat_vec && tvecs0.needed())
             tvecs0_.copyTo(tvecs0);
     }
+
     double sum_errors = 0, cnt_errors = 0;
     if (perFrameErrors.needed()) {
         const bool rvecs_mat_vec = rvecs0.needed() && rvecs0.isMatVector(), tvecs_mat_vec = tvecs0.needed() && tvecs0.isMatVector();
