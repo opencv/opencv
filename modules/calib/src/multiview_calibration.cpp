@@ -326,7 +326,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         }
     }
 
-    std::vector<int> camera_models(NUM_CAMERAS);
+    std::vector<CameraModel> camera_models(NUM_CAMERAS);
     for (int camera = 0; camera < NUM_CAMERAS; camera++) {
         if (is_fisheye_vec[camera]) {
             camera_models[camera] = CALIB_MODEL_FISHEYE;

@@ -685,14 +685,13 @@ TEST_F(fisheyeTest, cameraRegistrationWithPerViewTransformations)
     cv::Vec3d theT;
     cv::Vec4d D1, D2;
 
-
     int flag = 0;
     flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
     flag |= cv::CALIB_CHECK_COND;
     flag |= cv::CALIB_FIX_SKEW;
 
     cv::fisheye::stereoCalibrate(objectPoints, leftPoints, rightPoints,
-                                                              K1, D1, K2, D2, imageSize, theR, theT,flag, cv::TermCriteria(3, 12, 0));
+                                 K1, D1, K2, D2, imageSize, theR, theT,flag, cv::TermCriteria(3, 12, 0));
 
     cv::Mat E, F, perViewErrors;
     std::vector<cv::Mat> rvecs, tvecs;
@@ -738,6 +737,7 @@ TEST_F(fisheyeTest, cameraRegistrationWithPerViewTransformations)
         totalMSError[1] += viewMSError[1];
         totalPoints += n;
     }
+
     double rmsErrorFromReprojectedImgPts = std::sqrt((totalMSError[0] + totalMSError[1]) / (2 * totalPoints));
 
     cv::Matx33d R_correct(   0.9975587205950972,   0.06953016383322372, 0.006492709911733523,

@@ -1769,7 +1769,7 @@ void CV_StereoCalibrationTest_CPP::correct( const Mat& F,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////// Register Cmeras /////////////////////////////////////
+///////////////////////////////// Register Cameras ////////////////////////////////////////////////
 
 class CV_CameraRegistrationTest : public cvtest::BaseTest
 {
@@ -1783,8 +1783,8 @@ protected:
         const vector<vector<Point3f> >& objectPoints2,
         const vector<vector<Point2f> >& imagePoints1,
         const vector<vector<Point2f> >& imagePoints2,
-        Mat& cameraMatrix1, Mat& distCoeffs1, int cameraModel1,
-        Mat& cameraMatrix2, Mat& distCoeffs2, int cameraModel2,
+        Mat& cameraMatrix1, Mat& distCoeffs1, CameraModel cameraModel1,
+        Mat& cameraMatrix2, Mat& distCoeffs2, CameraModel cameraModel2,
         Mat& R, Mat& T,
         Mat& E, Mat& F,
         std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
@@ -1883,7 +1883,6 @@ void CV_CameraRegistrationTest::run( int )
         vector<vector<Point2f> > imgpt1(nframes);
         vector<vector<Point2f> > imgpt2(nframes);
         Size imgsize;
-        int total = 0;
 
         for( int i = 0; i < nframes; i++ )
         {
@@ -1907,7 +1906,6 @@ void CV_CameraRegistrationTest::run( int )
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
                 return;
             }
-            total += (int)imgpt1[i].size();
             for( int j = 0; j < npoints; j++ )
                 objpt[i].push_back(Point3f((float)(j%patternSize.width), (float)(j/patternSize.width), 0.f));
         }
@@ -2104,8 +2102,8 @@ protected:
         const vector<vector<Point3f> >& objectPoints2,
         const vector<vector<Point2f> >& imagePoints1,
         const vector<vector<Point2f> >& imagePoints2,
-        Mat& cameraMatrix1, Mat& distCoeffs1, int cameraModel1,
-        Mat& cameraMatrix2, Mat& distCoeffs2, int cameraModel2,
+        Mat& cameraMatrix1, Mat& distCoeffs1, CameraModel cameraModel1,
+        Mat& cameraMatrix2, Mat& distCoeffs2, CameraModel cameraModel2,
         Mat& R, Mat& T,
         Mat& E, Mat& F,
         std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
@@ -2123,12 +2121,13 @@ protected:
         vector<double>& perViewErrors1, vector<double>& perViewErrors2,
         TermCriteria criteria, int flags );
 };
+
 double CV_CameraRegistrationTest_CPP::registerCameraPair( const vector<vector<Point3f> >& objectPoints1,
         const vector<vector<Point3f> >& objectPoints2,
         const vector<vector<Point2f> >& imagePoints1,
         const vector<vector<Point2f> >& imagePoints2,
-        Mat& cameraMatrix1, Mat& distCoeffs1, int cameraModel1,
-        Mat& cameraMatrix2, Mat& distCoeffs2, int cameraModel2,
+        Mat& cameraMatrix1, Mat& distCoeffs1, CameraModel cameraModel1,
+        Mat& cameraMatrix2, Mat& distCoeffs2, CameraModel cameraModel2,
         Mat& R, Mat& T,
         Mat& E, Mat& F,
         std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
