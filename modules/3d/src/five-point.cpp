@@ -34,6 +34,13 @@
 
 namespace cv {
 
+// for some compilers it takes very long time to compile
+// automatically generated code in EMEstimatorCallback::runKernel(),
+// so we temporarily disable optimizations here
+#if defined __hexagon__ && defined __clang__
+#pragma clang optimize off
+#endif
+
 class EMEstimatorCallback CV_FINAL : public PointSetRegistrator::Callback
 {
 public:
@@ -399,6 +406,10 @@ protected:
     }
 };
 
+// restore optimizations (if any)
+#if defined __hexagon__ && defined __clang__
+#pragma clang optimize on
+#endif
 
 // Find essential matrix given undistorted points and two cameras.
 static Mat findEssentialMat_( InputArray _points1, InputArray _points2,
