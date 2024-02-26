@@ -587,6 +587,348 @@ TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
     normAssert(h_t_reference, outputs[0]);
 }
 
+typedef testing::TestWithParam<tuple<int>> Layer_Scale_1d_Test;
+TEST_P(Layer_Scale_1d_Test, Accuracy)
+{
+    int batch_size = get<0>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Scale";
+    lp.name = "scaleLayer";
+    lp.set("axis", 0);
+    lp.set("mode", "scale");
+    lp.set("bias_term", false);
+    Ptr<ScaleLayer> layer = ScaleLayer::create(lp);
+
+    std::vector<int> input_shape = {batch_size, 3};
+    std::vector<int> output_shape = {batch_size, 3};
+
+    if (batch_size == 0){
+        input_shape.erase(input_shape.begin());
+        output_shape.erase(output_shape.begin());
+    }
+
+    cv::Mat input = cv::Mat(input_shape, CV_32F, 1.0);
+    cv::randn(input, 0.0, 1.0);
+    cv::Mat weight = cv::Mat(output_shape, CV_32F, 2.0);
+
+    std::vector<Mat> inputs{input, weight};
+    std::vector<Mat> outputs;
+
+    cv::Mat output_ref = input.mul(weight);
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scale_1d_Test,
+/*operation*/           Values(0, 1));
+
+
+typedef testing::TestWithParam<tuple<int, int, std::string>> Layer_Scatter_1d_Test;
+TEST_P(Layer_Scatter_1d_Test, Accuracy) {
+
+    int batch_size = get<0>(GetParam());
+    int axis = get<1>(GetParam());
+    std::string opr = get<2>(GetParam());
+
+    // this particular case is left since output reference calculation
+    // is involved. We need only 1D case coverage
+    if (batch_size == 2 && axis == 1 && opr == "add"){
+        return;
+    }
+    // All cases where axis is 0,  batch_size is not 0 and wise versa
+    // are invalid by defenition. So we skip them
+    if (!(axis == 0 && batch_size != 0) && (axis <= batch_size)){
+
+        LayerParams lp;
+        lp.type = "Scatter";
+        lp.name = "addLayer";
+        lp.set("axis", axis);
+        lp.set("reduction", opr);
+        Ptr<ScatterLayer> layer = ScatterLayer::create(lp);
+
+        std::vector<int> input_shape  = {batch_size, 3};
+        std::vector<int> output_shape = {batch_size, 3};
+        std::vector<int> indices_shape = {batch_size, 3};
+
+        if (batch_size == 0){
+            input_shape.erase(input_shape.begin());
+            output_shape.erase(output_shape.begin());
+            indices_shape.erase(indices_shape.begin());
+        }
+
+        cv::Mat input = cv::Mat(input_shape, CV_32F, 1.0);
+        cv::randn(input, 0, 1);
+        std::cout << "\ninput: " << input << " input shape: " << input.size << std::endl;
+
+        std::vector<float> data;
+        if (batch_size <= 1){
+            data = {2, 1, 0};
+        } else {
+            // create indices batch * 3 automatically
+            for (int i = 0; i < batch_size * 3; i++){
+                // craete random int value between 0 and 2
+                data.push_back(rand() % 3);
+            }
+
+        }
+        // create indices with *pointer to data
+        cv::Mat indices = cv::Mat(indices_shape, CV_32F, data.data());
+        std::cout << "\nindicies: " << indices << " indices shape: " << indices.size << std::endl;
+
+
+        cv::Mat output = cv::Mat(output_shape, CV_32F, 0.0);
+        std::cout << "\noutput: " << output << " output shape: " << output.size << std::endl;
+
+        cv::Mat output_ref = cv::Mat(output_shape, CV_32F, 0.0);
+        if (axis == 0){
+            for (int i = 0; i < indices_shape[0]; i++){
+                output_ref.at<float>(indices.at<float>(i)) = input.at<float>(i);
+            }
+        } else if (axis == 1){
+            if (batch_size == 0){
+                for (int i = 0; i < indices_shape[0]; i++){
+                    output_ref.at<float>(0, indices.at<float>(i)) = input.at<float>(i);
+                }
+            } else {
+                for (int i = 0; i < indices_shape[0]; i++){
+                    for (int j = 0; j < indices_shape[1]; j++){
+                        output_ref.at<float>(i, indices.at<float>(i, j)) = input.at<float>(i, j);
+                    }
+                }
+            }
+        }
+
+        if (opr == "add"){
+            output_ref += output;
+        } else if (opr == "mul"){
+            output_ref = output.mul(output_ref);
+        } else if (opr == "max"){
+            cv::max(output_ref, output, output_ref);
+        } else if (opr == "min"){
+            cv::min(output_ref, output, output_ref);
+        }
+
+        std::cout << "\noutput_ref: " << output_ref << " output_ref shape: " << output_ref.size << std::endl;
+
+        std::vector<Mat> inputs{output, indices, input}; // not really clear what the input is
+        std::vector<Mat> outputs;
+
+        runLayer(layer, inputs, outputs);
+        std::cout << "\noutput: " << outputs[0] << " output shape: " << outputs[0].size << std::endl;
+        std::cout << "\noutput_ref: " << output_ref << " output_ref shape: " << output_ref.size << std::endl;
+
+        ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+        std::cout << "axis: " << axis << " batch_size: " << batch_size << std::endl;
+        normAssert(output_ref, outputs[0]);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scatter_1d_Test, Combine(
+/*input blob shape*/    Values(0, 1, 2),
+/*operation*/           Values(0, 1),
+/*reduce*/              Values("none", "add", "mul", "max", "min")
+));
+
+typedef testing::TestWithParam<tuple<int, int>> Layer_Gather_1d_Test;
+TEST_P(Layer_Gather_1d_Test, Accuracy) {
+
+    int batch_size = get<0>(GetParam());
+    int axis = get<1>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Gather";
+    lp.name = "gatherLayer";
+    lp.set("axis", axis);
+    lp.set("real_ndims", 1);
+
+    Ptr<GatherLayer> layer = GatherLayer::create(lp);
+
+    std::vector<int> input_shape = {batch_size, 1};
+    std::vector<int> indices_shape = {1, 1};
+    std::vector<int> output_shape = {batch_size, 1};
+
+    if (batch_size == 0){
+        input_shape.erase(input_shape.begin());
+        indices_shape.erase(indices_shape.begin());
+        output_shape.erase(output_shape.begin());
+    } else if (axis == 0) {
+        output_shape[0] = 1;
+    }
+
+    cv::Mat input = cv::Mat(input_shape, CV_32F, 1.0);
+    cv::randu(input, 0.0, 1.0);
+    cv::Mat indices = cv::Mat(indices_shape, CV_32F, 0.0);
+    cv::Mat output_ref = cv::Mat(output_shape, CV_32F, input(cv::Range::all(), cv::Range(0, 1)).data);
+
+    std::vector<Mat> inputs{input, indices};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_1d_Test, Combine(
+/*input blob shape*/    Values(0, 1, 2, 3),
+/*operation*/           Values(0, 1)
+));
+
+typedef testing::TestWithParam<tuple<int, int, std::string>> Layer_Arg_1d_Test;
+TEST_P(Layer_Arg_1d_Test, Accuracy) {
+
+    int batch_size = get<0>(GetParam());
+    int axis = get<1>(GetParam());
+    std::string operation = get<2>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Arg";
+    lp.name = "arg" + operation + "_Layer";
+    lp.set("op", operation);
+    lp.set("axis", axis);
+    lp.set("keepdims", 1);
+    lp.set("select_last_index", 0);
+
+    Ptr<ArgLayer> layer = ArgLayer::create(lp);
+
+    std::vector<int> input_shape = {batch_size, 1};
+    std::vector<int> output_shape = {1, 1};
+
+    if (batch_size == 0){
+        input_shape.erase(input_shape.begin());
+        output_shape.erase(output_shape.begin());
+    }
+
+    if (axis != 0 && batch_size != 0){
+        output_shape[0] = batch_size;
+    }
+
+    cv::Mat input = cv::Mat(input_shape, CV_32F, 1);
+    cv::Mat output_ref = cv::Mat(output_shape,  CV_32F, 0);
+
+    for (int i = 0; i < batch_size; ++i)
+        input.at<float>(i, 0) = static_cast<float>(i + 1);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Arg_1d_Test, Combine(
+/*input blob shape*/    Values(0, 1, 2, 3),
+/*operation*/           Values(0, 1),
+/*operation*/           Values( "max", "min")
+));
+
+typedef testing::TestWithParam<tuple<int, std::string>> Layer_NaryElemwise_1d_Test;
+TEST_P(Layer_NaryElemwise_1d_Test, Accuracy) {
+
+    int batch_size = get<0>(GetParam());
+    std::string operation = get<1>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = operation + "_Layer";
+    lp.set("operation", operation);
+    Ptr<NaryEltwiseLayer> layer = NaryEltwiseLayer::create(lp);
+
+    std::vector<int> input_shape = {batch_size, 1};
+    if (batch_size == 0)
+        input_shape.erase(input_shape.begin());
+
+    cv::Mat input1 = cv::Mat(input_shape, CV_32F, 0.0);
+    cv::Mat input2 = cv::Mat(input_shape, CV_32F, 0.0);
+    cv::randu(input1, 0.0, 1.0);
+    cv::randu(input2, 0.0, 1.0);
+
+    cv::Mat output_ref;
+    if (operation == "sum") {
+        output_ref = input1 + input2;
+    } else if (operation == "mul") {
+        output_ref = input1.mul(input2);
+    } else if (operation == "div") {
+        output_ref = input1 / input2;
+    } else if (operation == "sub") {
+        output_ref = input1 - input2;
+    } else {
+        output_ref = cv::Mat();
+    }
+    std::vector<Mat> inputs{input1, input2};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    if (!output_ref.empty()) {
+        ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+        normAssert(output_ref, outputs[0]);
+    } else {
+        CV_Error(Error::StsAssert, "Provided operation: " + operation + " is not supported. Please check the test instantiation.");
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_NaryElemwise_1d_Test, Combine(
+/*input blob shape*/    Values(0, 1),
+/*operation*/           Values("div", "mul", "sum", "sub")
+));
+
+typedef testing::TestWithParam<tuple<int, std::string>> Layer_Elemwise_1d_Test;
+TEST_P(Layer_Elemwise_1d_Test, Accuracy) {
+
+    int batch_size = get<0>(GetParam());
+    std::string operation = get<1>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = operation + "_Layer";
+    lp.set("operation", operation);
+    Ptr<EltwiseLayer> layer = EltwiseLayer::create(lp);
+
+    std::vector<int> input_shape = {batch_size, 1};
+    if (batch_size == 0)
+        input_shape.erase(input_shape.begin());
+
+    cv::Mat input1 = cv::Mat(input_shape, CV_32F, 1.0);
+    cv::Mat input2 = cv::Mat(input_shape, CV_32F, 1.0);
+    cv::randu(input1, 0.0, 1.0);
+    cv::randu(input2, 0.0, 1.0);
+
+    // Dynamically select the operation
+    cv::Mat output_ref;
+    if (operation == "sum") {
+        output_ref = input1 + input2;
+    } else if (operation == "max") {
+        output_ref = cv::max(input1, input2);
+    } else if (operation == "min") {
+        output_ref = cv::min(input1, input2);
+    } else if (operation == "prod") {
+        output_ref = input1.mul(input2);
+    } else if (operation == "div") {
+        output_ref = input1 / input2;
+    } else {
+        output_ref = cv::Mat();
+    }
+
+
+    std::vector<Mat> inputs{input1, input2};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+
+    if (!output_ref.empty()) {
+        ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+        normAssert(output_ref, outputs[0]);
+    } else {
+        CV_Error(Error::StsAssert, "Provided operation: " + operation + " is not supported. Please check the test instantiation.");
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Elemwise_1d_Test, Combine(
+/*input blob shape*/    Values(0, 1, 2, 3),
+/*operation*/           Values("div", "prod", "max", "min", "sum")
+));
+
 TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)
 {
     Mat Wx = blobFromNPY(_tf("gru.W.npy"));
