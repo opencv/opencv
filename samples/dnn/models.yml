@@ -25,6 +25,14 @@ yolov8x:
     url: "https://huggingface.co/cabelo/yolov8/resolve/main/yolov8x.onnx?download=true"
     sha1: "462f15d668c046d38e27d3df01fe8142dd004cb4"
   model: "yolov8x.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
 
 # YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
 # YOLO object detection family from Darknet (https://pjreddie.com/darknet/yolo/)
