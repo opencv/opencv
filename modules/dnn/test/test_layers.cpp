@@ -660,7 +660,6 @@ TEST_P(Layer_Scatter_1d_Test, Accuracy) {
 
         cv::Mat input = cv::Mat(input_shape, CV_32F, 1.0);
         cv::randn(input, 0, 1);
-        std::cout << "\ninput: " << input << " input shape: " << input.size << std::endl;
 
         std::vector<float> data;
         if (batch_size <= 1){
@@ -675,11 +674,9 @@ TEST_P(Layer_Scatter_1d_Test, Accuracy) {
         }
         // create indices with *pointer to data
         cv::Mat indices = cv::Mat(indices_shape, CV_32F, data.data());
-        std::cout << "\nindicies: " << indices << " indices shape: " << indices.size << std::endl;
 
 
         cv::Mat output = cv::Mat(output_shape, CV_32F, 0.0);
-        std::cout << "\noutput: " << output << " output shape: " << output.size << std::endl;
 
         cv::Mat output_ref = cv::Mat(output_shape, CV_32F, 0.0);
         if (axis == 0){
@@ -710,17 +707,13 @@ TEST_P(Layer_Scatter_1d_Test, Accuracy) {
             cv::min(output_ref, output, output_ref);
         }
 
-        std::cout << "\noutput_ref: " << output_ref << " output_ref shape: " << output_ref.size << std::endl;
 
         std::vector<Mat> inputs{output, indices, input}; // not really clear what the input is
         std::vector<Mat> outputs;
 
         runLayer(layer, inputs, outputs);
-        std::cout << "\noutput: " << outputs[0] << " output shape: " << outputs[0].size << std::endl;
-        std::cout << "\noutput_ref: " << output_ref << " output_ref shape: " << output_ref.size << std::endl;
 
         ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-        std::cout << "axis: " << axis << " batch_size: " << batch_size << std::endl;
         normAssert(output_ref, outputs[0]);
     }
 }
