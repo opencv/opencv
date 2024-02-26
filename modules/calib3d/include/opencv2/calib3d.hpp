@@ -2360,7 +2360,7 @@ W
 x \\
 y \\
 \texttt{disparity} (x,y) \\
-z
+1
 \end{bmatrix}.\f]
 
 @sa
