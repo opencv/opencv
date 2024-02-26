@@ -1,7 +1,12 @@
 Detection of ArUco Markers {#tutorial_aruco_detection}
-==============================
+==========================
 
 @next_tutorial{tutorial_aruco_board_detection}
+
+|    |    |
+| -: | :- |
+| Original authors | Sergio Garrido, Alexander Panov |
+| Compatibility    | OpenCV >= 4.7.0 |
 
 Pose estimation is of great importance in many computer vision applications: robot navigation,
 augmented reality, and many more. This process is based on finding correspondences between points in
@@ -23,7 +28,7 @@ The aruco functionalities are included in:
 
 
 Markers and Dictionaries
-------
+------------------------
 
 An ArUco marker is a synthetic square marker composed by a wide black border and an inner binary
 matrix which determines its identifier (id). The black border facilitates its fast detection in the
@@ -60,7 +65,7 @@ More information about dictionaries is provided in the "Selecting a dictionary" 
 
 
 Marker Creation
-------
+---------------
 
 Before their detection, markers need to be printed in order to be placed in the environment.
 Marker images can be generated using the `generateImageMarker()` function.
@@ -102,7 +107,8 @@ The generated image is:
 
 A full working example is included in the `create_marker.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
 
-The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like:
+The samples now take input from the command line using cv::CommandLineParser. For this file the example
+parameters will look like:
 @code{.cpp}
 "marker23.png" -d=10 -id=23
 @endcode
@@ -110,7 +116,7 @@ Parameters for `create_marker.cpp`:
 @snippet samples/cpp/tutorial_code/objectDetection/create_marker.cpp aruco_create_markers_keys
 
 Marker Detection
-------
+----------------
 
 Given an image containing ArUco markers, the detection process has to return a list of
 detected markers. Each detected marker includes:
@@ -123,17 +129,17 @@ The marker detection process is comprised of two main steps:
 1. Detection of marker candidates. In this step the image is analyzed in order to find square shapes
 that are candidates to be markers. It begins with an adaptive thresholding to segment the markers,
 then contours are extracted from the thresholded image and those that are not convex or do not
-approximate to a square shape are discarded. Some extra filtering is also applied (removing contours that are
-too small or too big, removing contours too close to each other, etc).
+approximate to a square shape are discarded. Some extra filtering is also applied (removing contours
+that are too small or too big, removing contours too close to each other, etc).
 
 2. After the candidate detection, it is necessary to determine if they are actually markers by
 analyzing their inner codification. This step starts by extracting the marker bits of each marker.
-To do so, a perspective transformation is first applied to obtain the marker in its canonical form. Then, the
-canonical image is thresholded using Otsu to separate white and black bits. The image is divided into
-different cells according to the marker size and the border size. Then the number of black or white
-pixels in each cell is counted to determine if it is a white or a black bit. Finally, the bits
-are analyzed to determine if the marker belongs to the specific dictionary. Error correction
-techniques are employed when necessary.
+To do so, a perspective transformation is first applied to obtain the marker in its canonical form.
+Then, the canonical image is thresholded using Otsu to separate white and black bits. The image
+is divided into different cells according to the marker size and the border size. Then the number
+of black or white pixels in each cell is counted to determine if it is a white or a black bit.
+Finally, the bits are analyzed to determine if the marker belongs to the specific dictionary.
+Error correction techniques are employed when necessary.
 
 
 Consider the following image:
@@ -144,7 +150,8 @@ And a printout of this image in a photo:
 
 ![Original image with markers](images/singlemarkersoriginal.jpg)
 
-These are the detected markers (in green). Note that some markers are rotated. The small red square indicates the marker’s top left corner:
+These are the detected markers (in green). Note that some markers are rotated. The small red square
+indicates the marker’s top left corner:
 
 ![Image with detected markers](images/singlemarkersdetection.jpg)
 
@@ -152,9 +159,9 @@ And these are the marker candidates that have been rejected during the identific
 
 ![Image with rejected candidates](images/singlemarkersrejected.jpg)
 
-In the aruco module, the detection is performed in the `cv::aruco::ArucoDetector::detectMarkers()` function. This function is
-the most important in the module, since all the rest of the functionality is based on the
-detected markers returned by `cv::aruco::ArucoDetector::detectMarkers()`.
+In the aruco module, the detection is performed in the `cv::aruco::ArucoDetector::detectMarkers()`
+function. This function is the most important in the module, since all the rest of the functionality
+is based on the detected markers returned by `cv::aruco::ArucoDetector::detectMarkers()`.
 
 An example of marker detection:
 
@@ -187,20 +194,23 @@ The parameters of `cv::aruco::ArucoDetector::detectMarkers()` are:
 - The final optional parameter, `rejectedCandidates`, is a returned list of marker candidates, i.e.
 shapes that were found and considered but did not contain a valid marker. Each candidate is also
 defined by its four corners, and its format is the same as the `markerCorners` parameter. This
-parameter can be omitted and is only useful for debugging purposes and for ‘refind’ strategies (see `cv::aruco::ArucoDetector::refineDetectedMarkers()`).
+parameter can be omitted and is only useful for debugging purposes and for ‘refind’ strategies
+(see `cv::aruco::ArucoDetector::refineDetectedMarkers()`).
 
 
-The next thing you probably want to do after `cv::aruco::ArucoDetector::detectMarkers()` is check that your markers have
-been correctly detected. Fortunately, the aruco module provides a function to draw the detected
-markers in the input image, this function is `drawDetectedMarkers()`. For example:
+The next thing you probably want to do after `cv::aruco::ArucoDetector::detectMarkers()` is check that
+your markers have been correctly detected. Fortunately, the aruco module provides a function to draw
+the detected markers in the input image, this function is `drawDetectedMarkers()`. For example:
 
 @code{.cpp}
 cv::Mat outputImage = inputImage.clone();
 cv::aruco::drawDetectedMarkers(outputImage, markerCorners, markerIds);
 @endcode
 
-- `outputImage ` is the input/output image where the markers will be drawn (it will normally be the same as the image where the markers were detected).
-- `markerCorners` and `markerIds` are the structures of the detected markers returned by the `cv::aruco::ArucoDetector::detectMarkers()` function.
+- `outputImage ` is the input/output image where the markers will be drawn (it will normally be
+  the same as the image where the markers were detected).
+- `markerCorners` and `markerIds` are the structures of the detected markers returned by the
+  `cv::aruco::ArucoDetector::detectMarkers()` function.
 
 ![Image with detected markers](images/singlemarkersdetection.jpg)
 
@@ -216,7 +226,8 @@ output vector of rejected candidates.
 
 A full working example is included in the `detect_markers.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
 
-The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like:
+The samples now take input from the command line using cv::CommandLineParser. For this file
+the example parameters will look like:
 @code{.cpp}
 -v=/path_to_opencv/opencv/doc/tutorials/objdetect/aruco_detection/images/singlemarkersoriginal.jpg -d=10
 @endcode
@@ -225,15 +236,16 @@ Parameters for `detect_markers.cpp`:
 
 
 Pose Estimation
-------
+---------------
 
 The next thing you'll probably want to do after detecting the markers is to use them to get the camera pose.
 
 To perform camera pose estimation, you need to know your camera's calibration parameters. These are
-the camera matrix and distortion coefficients. If you do not know how to calibrate your camera, you can
-take a look at the `calibrateCamera()` function and the Calibration tutorial of OpenCV. You can also calibrate your camera using the aruco module
-as explained in the **Calibration with ArUco and ChArUco** tutorial. Note that this only needs to be done once unless the
-camera optics are modified (for instance changing its focus).
+the camera matrix and distortion coefficients. If you do not know how to calibrate your camera,
+you can take a look at the `calibrateCamera()` function and the Calibration tutorial of OpenCV.
+You can also calibrate your camera using the aruco module as explained in the **Calibration with ArUco and ChArUco**
+tutorial. Note that this only needs to be done once unless the camera optics are modified
+(for instance changing its focus).
 
 As a result of the calibration, you get a camera matrix: a matrix of 3x3 elements with the
 focal distances and the camera center coordinates (a.k.a intrinsic parameters), and the distortion
@@ -244,7 +256,8 @@ If you want to estimate one pose from a set of markers, use ArUco Boards (see th
 Boards** tutorial). Using ArUco boards instead of single markers allows some markers to be occluded.
 
 The camera pose relative to the marker is a 3d transformation from the marker coordinate system to the
-camera coordinate system. It is specified by rotation and translation vectors. OpenCV provides `cv::solvePnP()` function to do that.
+camera coordinate system. It is specified by rotation and translation vectors. OpenCV provides
+`cv::solvePnP()` function to do that.
 
 @snippet samples/cpp/tutorial_code/objectDetection/detect_markers.cpp aruco_pose_estimation1
 @snippet samples/cpp/tutorial_code/objectDetection/detect_markers.cpp aruco_pose_estimation2
@@ -252,14 +265,16 @@ camera coordinate system. It is specified by rotation and translation vectors. O
 
 - The `corners` parameter is the vector of marker corners returned by the `cv::aruco::ArucoDetector::detectMarkers()` function.
 - The second parameter is the size of the marker side in meters or in any other unit. Note that the
-translation vectors of the estimated poses will be in the same unit
-- `camMatrix` and `distCoeffs` are the camera calibration parameters that were created during the camera calibration process.
-- The output parameters `rvecs` and `tvecs` are the rotation and translation vectors respectively, for each of the detected markers
-in `corners`.
+  translation vectors of the estimated poses will be in the same units.
+- `camMatrix` and `distCoeffs` are the camera calibration parameters that were created during
+  the camera calibration process.
+- The output parameters `rvecs` and `tvecs` are the rotation and translation vectors respectively,
+  for each of the detected markers in `corners`.
 
 The marker coordinate system that is assumed by this function is placed in the center (by default) or
 in the top left corner of the marker with the Z axis pointing out, as in the following image.
-Axis-color correspondences are X: red, Y: green, Z: blue. Note the axis directions of the rotated markers in this image.
+Axis-color correspondences are X: red, Y: green, Z: blue. Note the axis directions of the rotated
+markers in this image.
 
 ![Image with axes drawn](images/singlemarkersaxes.jpg)
 
@@ -275,13 +290,12 @@ checked:
 
 Sample video:
 
-@htmlonly
-<iframe width="420" height="315" src="https://www.youtube.com/embed/IsXWrcB_Hvs" frameborder="0" allowfullscreen></iframe>
-@endhtmlonly
+@youtube{IsXWrcB_Hvs}
 
 A full working example is included in the `detect_markers.cpp` inside the `samples/cpp/tutorial_code/objectDetection/`.
 
-The samples now take input from the command line using cv::CommandLineParser. For this file the example parameters will look like:
+The samples now take input from the command line using cv::CommandLineParser. For this file
+the example parameters will look like:
 @code{.cpp}
 -v=/path_to_opencv/opencv/doc/tutorials/objdetect/aruco_detection/images/singlemarkersoriginal.jpg -d=10
 -c=/path_to_opencv/opencv/samples/cpp/tutorial_code/objectDetection/tutorial_camera_params.yml
@@ -290,19 +304,23 @@ Parameters for `detect_markers.cpp`:
 @snippet samples/cpp/tutorial_code/objectDetection/detect_markers.cpp aruco_detect_markers_keys
 
 Selecting a dictionary
-------
+----------------------
 
 The aruco module provides the `Dictionary` class to represent a dictionary of markers.
 
-In addition to the marker size and the number of markers in the dictionary, there is another important parameter of the dictionary -
-the inter-marker distance. The inter-marker distance is the minimum Hamming distance between dictionary markers
-that determines the dictionary's ability to detect and correct errors.
+In addition to the marker size and the number of markers in the dictionary, there is another important
+parameter of the dictionary - the inter-marker distance. The inter-marker distance is the minimum
+Hamming distance between dictionary markers that determines the dictionary's ability to detect and
+correct errors.
 
 In general, smaller dictionary sizes and larger marker sizes increase the inter-marker distance and
 vice versa. However, the detection of markers with larger sizes is more difficult due to the higher
 number of bits that need to be extracted from the image.
 
-For instance, if you need only 10 markers in your application, it is better to use a dictionary composed only of those 10 markers than using a dictionary composed of 1000 markers. The reason is that the dictionary composed of 10 markers will have a higher inter-marker distance and, thus, it will be more robust to errors.
+For instance, if you need only 10 markers in your application, it is better to use a dictionary composed
+only of those 10 markers than using a dictionary composed of 1000 markers. The reason is that
+the dictionary composed of 10 markers will have a higher inter-marker distance and, thus, it will be
+more robust to errors.
 
 As a consequence, the aruco module includes several ways to select your dictionary of markers, so that
 you can increase your system robustness:
@@ -327,7 +345,8 @@ The list of available predefined dictionaries can be found in the documentation 
 
 ### Automatic dictionary generation
 
-A dictionary can be generated automatically to adjust the desired number of markers and bits to optimize the inter-marker distance:
+A dictionary can be generated automatically to adjust the desired number of markers and bits
+to optimize the inter-marker distance:
 
 @code{.cpp}
 cv::aruco::Dictionary dictionary = cv::aruco::extendDictionary(36, 5);
@@ -336,14 +355,15 @@ cv::aruco::Dictionary dictionary = cv::aruco::extendDictionary(36, 5);
 This will generate a customized dictionary composed of 36 markers of 5x5 bits. The process can take several
 seconds, depending on the parameters (it is slower for larger dictionaries and higher numbers of bits).
 
-Also you could use `aruco_dict_utils.cpp` sample inside the `opencv/samples/cpp`. This sample calculates the minimum Hamming
-distance for the generated dictionary and also allows you to create markers that are resistant to reflection.
+Also you could use `aruco_dict_utils.cpp` sample inside the `opencv/samples/cpp`. This sample calculates
+the minimum Hamming distance for the generated dictionary and also allows you to create markers that are
+resistant to reflection.
 
 ### Manual dictionary definition
 
 Finally, the dictionary can be configured manually, so that any encoding can be used. To do that,
-the `cv::aruco::Dictionary` object parameters need to be assigned manually. It must be noted that, unless you have
-a special reason to do this manually, it is preferable to use one of the previous alternatives.
+the `cv::aruco::Dictionary` object parameters need to be assigned manually. It must be noted that,
+unless you have a special reason to do this manually, it is preferable to use one of the previous alternatives.
 
 The `cv::aruco::Dictionary` parameters are:
 
@@ -395,7 +415,7 @@ For example:
 @endcode
 
 Detector Parameters
-------
+-------------------
 
 One of the parameters of `cv::aruco::ArucoDetector` is a `cv::aruco::DetectorParameters` object. This object
 includes all the options that can be customized during the marker detection process.
@@ -464,8 +484,9 @@ hence, not detected.
 
 #### minMarkerPerimeterRate and maxMarkerPerimeterRate
 
-These parameters determine the minimum and maximum size of a marker, specifically the minimum and maximum marker perimeter.
-They are not specified in absolute pixel values, instead they are specified relative to the maximum dimension of the input image.
+These parameters determine the minimum and maximum size of a marker, specifically the minimum and
+maximum marker perimeter. They are not specified in absolute pixel values, instead they are specified
+relative to the maximum dimension of the input image.
 
 For instance, a image with size 640x480 and a minimum relative marker perimeter of 0.05 will lead
 to a minimum marker perimeter of 640x0.05 = 32 pixels, since 640 is the maximum dimension of the
@@ -535,7 +556,8 @@ This is an example of the image obtained after removing the perspective distorti
 ![Perspective removing](images/removeperspective.jpg)
 
 Then, the image is divided into a grid with the same number of cells as the number of bits in the marker.
-In each cell, the number of black and white pixels are counted to determine the bit value assigned to the cell (from the majority value):
+In each cell, the number of black and white pixels are counted to determine the bit value assigned
+to the cell (from the majority value):
 
 ![Marker cells](images/bitsextraction1.png)
 
@@ -572,8 +594,8 @@ has to be counted twice). The total number of cells is 7x7.
 If the value of `perspectiveRemovePixelPerCell` is 10, then the size of the obtained image will be
 10*7 = 70 -> 70x70 pixels.
 
-A higher value of this parameter can improve the bits extraction process (up to some degree), however it can penalize
-the performance.
+A higher value of this parameter can improve the bits extraction process (up to some degree),
+however it can penalize the performance.
 
 @see cv::aruco::DetectorParameters::perspectiveRemovePixelPerCell
 
