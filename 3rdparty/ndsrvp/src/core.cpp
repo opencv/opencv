@@ -62,13 +62,13 @@ NDSRVP_BINOP_NAME_BULK(min, __nds__v_, __nds__, u, s)
 
 // #### absdiff ####
 
-#define FUNC_ABSDIFF(xlen, srctype, vtype, prefix0, prefix1)                                                               \
-    inline vtype __ndsrvp__v_##prefix0##absdiff##xlen(vtype a, vtype b)                                                    \
-    {                                                                                                                      \
+#define FUNC_ABSDIFF(xlen, srctype, vtype, prefix0, prefix1)                                                            \
+    inline vtype __ndsrvp__v_##prefix0##absdiff##xlen(vtype a, vtype b)                                                 \
+    {                                                                                                                   \
         return __nds__v_##prefix1##sub##xlen(__nds__v_##prefix0##max##xlen(a, b), __nds__v_##prefix0##min##xlen(a, b)); \
-    }                                                                                                                      \
-    inline srctype __ndsrvp__##prefix0##absdiff##xlen(srctype a, srctype b)                                                \
-    {                                                                                                                      \
+    }                                                                                                                   \
+    inline srctype __ndsrvp__##prefix0##absdiff##xlen(srctype a, srctype b)                                             \
+    {                                                                                                                   \
         return __nds__##prefix1##sub##xlen(__nds__##prefix0##max##xlen(a, b), __nds__##prefix0##min##xlen(a, b));       \
     }
 
