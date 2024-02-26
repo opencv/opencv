@@ -422,6 +422,11 @@ enum { CALIB_CB_SYMMETRIC_GRID  = 1,
 
 #define CALIB_NINTRINSIC 18 //!< Maximal size of camera internal parameters (initrinsics) vector
 
+enum CameraModel {
+    CALIB_MODEL_PINHOLE = 0, //!< Pinhole camera model
+    CALIB_MODEL_FISHEYE = 1, //!< Fisheye camera model
+};
+
 enum { CALIB_USE_INTRINSIC_GUESS = 0x00001, //!< Use user provided intrinsics as initial point for optimization.
        CALIB_FIX_ASPECT_RATIO    = 0x00002, //!< Use with CALIB_USE_INTRINSIC_GUESS. The ratio fx/fy stays the same as in the input cameraMatrix.
        CALIB_FIX_PRINCIPAL_POINT = 0x00004, //!< The principal point (cx, cy) stays the same as in the input camera matrix. Image center is used as principal point, if CALIB_USE_INTRINSIC_GUESS is not set.
@@ -1135,6 +1140,97 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
+
+/** @brief Calibrates a camera pair set up. This function finds the extrinsic parameters between the two cameras.
+
+@param objectPoints1 Vector of vectors of the calibration pattern points for camera 1.
+A similar structure as objectPoints in @ref calibrateCamera and for each pattern view,
+both cameras do not need to see the same object points. objectPoints1.size(), imagePoints1.size()
+nees to be equal,as well as objectPoints1[i].size(), imagePoints1[i].size() need to be equal for each i.
+@param objectPoints2 Vector of vectors of the calibration pattern points for camera 2.
+A similar structure as objectPoints1. objectPoints2.size(), and imagePoints2.size() nees to be equal,
+as well as objectPoints2[i].size(), imagePoints2[i].size() need to be equal for each i.
+However, objectPoints1[i].size() and objectPoints2[i].size() are not required to be equal.
+@param imagePoints1 Vector of vectors of the projections of the calibration pattern points,
+observed by the first camera. The same structure as in @ref calibrateCamera.
+@param imagePoints2 Vector of vectors of the projections of the calibration pattern points,
+observed by the second camera. The same structure as in @ref calibrateCamera.
+@param cameraMatrix1 Input/output camera intrinsic matrix for the first camera, the same as in
+@ref calibrateCamera. Furthermore, for the stereo case, additional flags may be used, see below.
+@param distCoeffs1 Input/output vector of distortion coefficients, the same as in
+@ref calibrateCamera.
+@param cameraModel1 Flag reflecting the type of model for camera 1 (pinhole / fisheye):
+- @ref CALIB_MODEL_PINHOLE pinhole camera model
+- @ref CALIB_MODEL_FISHEYE fisheye camera model
+@param cameraMatrix2 Input/output second camera intrinsic matrix for the second camera.
+See description for cameraMatrix1.
+@param distCoeffs2 Input/output lens distortion coefficients for the second camera. See
+description for distCoeffs1.
+@param cameraModel2 Flag reflecting the type of model for camera 2 (pinhole / fisheye).
+See description for cameraModel1.
+@param R Output rotation matrix. Together with the translation vector T, this matrix brings
+points given in the first camera's coordinate system to points in the second camera's
+coordinate system. In more technical terms, the tuple of R and T performs a change of basis
+from the first camera's coordinate system to the second camera's coordinate system. Due to its
+duality, this tuple is equivalent to the position of the first camera with respect to the
+second camera coordinate system.
+@param T Output translation vector, see description above.
+@param E Output essential matrix.
+@param F Output fundamental matrix.
+@param rvecs Output vector of rotation vectors ( @ref Rodrigues ) estimated for each pattern view in the
+coordinate system of the first camera of the stereo pair (e.g. std::vector<cv::Mat>). More in detail, each
+i-th rotation vector together with the corresponding i-th translation vector (see the next output parameter
+description) brings the calibration pattern from the object coordinate space (in which object points are
+specified) to the camera coordinate space of the first camera of the stereo pair. In more technical terms,
+the tuple of the i-th rotation and translation vector performs a change of basis from object coordinate space
+to the camera coordinate space of the first camera of the stereo pair.
+@param tvecs Output vector of translation vectors estimated for each pattern view, see parameter description
+of previous output parameter ( rvecs ).
+@param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
+@param flags Different flags that may be zero or a combination of the following values:
+-   @ref CALIB_USE_EXTRINSIC_GUESS R and T contain valid initial values that are optimized further.
+@param criteria Termination criteria for the iterative optimization algorithm.
+
+The function estimates the transformation between two cameras similar to stereo pair calibration.
+The principle follows closely to @ref stereoCalibrate. To understand the problem of estimating the
+relative pose between a camera pair, please refer to the description there. The difference for
+this function is that, camera intrinsics are not optimized and two cameras are not required
+to have overlapping fields of view as long as they are observing the same calibration target
+and the absolute positions of each object point are known.
+![](pics/register_pair.png)
+The above illustration shows an example where such a case may become relevant.
+Additionally, it supports a camera pair with the mixed model (pinhole / fisheye).
+Similarly to #calibrateCamera, the function minimizes the total re-projection error for all the
+points in all the available views from both cameras.
+@return the final value of the re-projection error.
+
+@sa calibrateCamera, stereoCalibrate
+ */
+CV_EXPORTS_AS(registerCamerasExtended) double registerCameras( InputArrayOfArrays objectPoints1,
+                                     InputArrayOfArrays objectPoints2,
+                                     InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                     InputArray cameraMatrix1, InputArray distCoeffs1,
+                                     CameraModel cameraModel1,
+                                     InputArray cameraMatrix2, InputArray distCoeffs2,
+                                     CameraModel cameraModel2,
+                                     InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     OutputArray perViewErrors,
+                                     int flags = 0,
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
+
+/// @overload
+CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints1,
+                                     InputArrayOfArrays objectPoints2,
+                                     InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                     InputArray cameraMatrix1, InputArray distCoeffs1,
+                                     CameraModel cameraModel1,
+                                     InputArray cameraMatrix2, InputArray distCoeffs2,
+                                     CameraModel cameraModel2,
+                                     InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
+                                     OutputArray perViewErrors,
+                                     int flags = 0,
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
 
 /** @brief Estimates intrinsics and extrinsics (camera pose) for multi-camera system a.k.a multiview calibraton.
 
