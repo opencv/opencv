@@ -55,7 +55,7 @@ static int EncodeLossless(const uint8_t* const data, int width, int height,
   WebPConfig config;
   WebPPicture picture;
 
-  if (!WebPPictureInit(&picture)) return 0;
+  WebPPictureInit(&picture);
   picture.width = width;
   picture.height = height;
   picture.use_argb = 1;

@@ -1,0 +1,43 @@
+AM_CPPFLAGS += -I$(top_builddir) -I$(top_srcdir)
+noinst_LTLIBRARIES = libwebpencode.la
+
+libwebpencode_la_SOURCES =
+libwebpencode_la_SOURCES += alpha_enc.c
+libwebpencode_la_SOURCES += analysis_enc.c
+libwebpencode_la_SOURCES += backward_references_cost_enc.c
+libwebpencode_la_SOURCES += backward_references_enc.c
+libwebpencode_la_SOURCES += backward_references_enc.h
+libwebpencode_la_SOURCES += config_enc.c
+libwebpencode_la_SOURCES += cost_enc.c
+libwebpencode_la_SOURCES += cost_enc.h
+libwebpencode_la_SOURCES += filter_enc.c
+libwebpencode_la_SOURCES += frame_enc.c
+libwebpencode_la_SOURCES += histogram_enc.c
+libwebpencode_la_SOURCES += histogram_enc.h
+libwebpencode_la_SOURCES += iterator_enc.c
+libwebpencode_la_SOURCES += near_lossless_enc.c
+libwebpencode_la_SOURCES += picture_enc.c
+libwebpencode_la_SOURCES += picture_csp_enc.c
+libwebpencode_la_SOURCES += picture_psnr_enc.c
+libwebpencode_la_SOURCES += picture_rescale_enc.c
+libwebpencode_la_SOURCES += picture_tools_enc.c
+libwebpencode_la_SOURCES += predictor_enc.c
+libwebpencode_la_SOURCES += quant_enc.c
+libwebpencode_la_SOURCES += syntax_enc.c
+libwebpencode_la_SOURCES += token_enc.c
+libwebpencode_la_SOURCES += tree_enc.c
+libwebpencode_la_SOURCES += vp8i_enc.h
+libwebpencode_la_SOURCES += vp8l_enc.c
+libwebpencode_la_SOURCES += vp8li_enc.h
+libwebpencode_la_SOURCES += webp_enc.c
+
+libwebpencodeinclude_HEADERS =
+libwebpencodeinclude_HEADERS += ../webp/encode.h
+libwebpencodeinclude_HEADERS += ../webp/types.h
+noinst_HEADERS =
+noinst_HEADERS += ../webp/format_constants.h
+
+libwebpencode_la_LIBADD = ../../sharpyuv/libsharpyuv.la
+libwebpencode_la_LDFLAGS = -lm
+libwebpencode_la_CPPFLAGS = $(AM_CPPFLAGS)
+libwebpencodeincludedir = $(includedir)/webp

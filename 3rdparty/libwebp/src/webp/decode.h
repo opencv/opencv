@@ -251,24 +251,23 @@ typedef enum VP8StatusCode {
 // WebPIDecoder object. This object can be left in a SUSPENDED state if the
 // picture is only partially decoded, pending additional input.
 // Code example:
-/*
-     WebPInitDecBuffer(&output_buffer);
-     output_buffer.colorspace = mode;
-     ...
-     WebPIDecoder* idec = WebPINewDecoder(&output_buffer);
-     while (additional_data_is_available) {
-       // ... (get additional data in some new_data[] buffer)
-       status = WebPIAppend(idec, new_data, new_data_size);
-       if (status != VP8_STATUS_OK && status != VP8_STATUS_SUSPENDED) {
-         break;    // an error occurred.
-       }
-
-       // The above call decodes the current available buffer.
-       // Part of the image can now be refreshed by calling
-       // WebPIDecGetRGB()/WebPIDecGetYUVA() etc.
-     }
-     WebPIDelete(idec);
-*/
+//
+//   WebPInitDecBuffer(&output_buffer);
+//   output_buffer.colorspace = mode;
+//   ...
+//   WebPIDecoder* idec = WebPINewDecoder(&output_buffer);
+//   while (additional_data_is_available) {
+//     // ... (get additional data in some new_data[] buffer)
+//     status = WebPIAppend(idec, new_data, new_data_size);
+//     if (status != VP8_STATUS_OK && status != VP8_STATUS_SUSPENDED) {
+//       break;    // an error occurred.
+//     }
+//
+//     // The above call decodes the current available buffer.
+//     // Part of the image can now be refreshed by calling
+//     // WebPIDecGetRGB()/WebPIDecGetYUVA() etc.
+//   }
+//   WebPIDelete(idec);
 
 // Creates a new incremental decoder with the supplied buffer parameter.
 // This output_buffer can be passed NULL, in which case a default output buffer
@@ -390,7 +389,7 @@ WEBP_EXTERN const WebPDecBuffer* WebPIDecodedArea(
      CHECK(WebPGetFeatures(data, data_size, &config.input) == VP8_STATUS_OK);
 
      // C) Adjust 'config', if needed
-     config.options.no_fancy_upsampling = 1;
+     config.no_fancy_upsampling = 1;
      config.output.colorspace = MODE_BGRA;
      // etc.
 
