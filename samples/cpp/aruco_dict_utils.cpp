@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
     int markerSize = parser.get<int>("markerSize");
     bool checkFlippedMarkers = parser.get<bool>("r");
 
-    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(0);
+    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
 
     if (parser.has("d")) {
         string arucoDictName = parser.get<string>("d");

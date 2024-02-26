@@ -354,7 +354,7 @@ int main(int argc, char* argv[])
     }
     else {
         // default dictionary
-        dictionary = cv::aruco::getPredefinedDictionary(0);
+        dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
     }
     cv::aruco::CharucoBoard ch_board({s.boardSize.width, s.boardSize.height}, s.squareSize, s.markerSize, dictionary);
     cv::aruco::CharucoDetector ch_detector(ch_board);
