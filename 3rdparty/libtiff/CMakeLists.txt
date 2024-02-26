@@ -379,6 +379,9 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tif_config.h.cmake.in"
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tiffconf.h.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h"
                @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tiffvers.h.cmake.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/tiffvers.h"
+               @ONLY)
 
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIRS})
 
