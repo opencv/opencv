@@ -695,10 +695,7 @@ TEST(Layer_Slice_1d_Test, Accuracy){
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
 
-    std::cout << "outpus size: " << outputs.size() << std::endl;
     for (int i = 0; i < splits; ++i){
-        std::cout << "output : " << outputs[i] << std::endl;
-        std::cout << "output_ref : " << output_refs[i] << std::endl;
         ASSERT_EQ(shape(output_refs[i]), shape(outputs[i]));
         normAssert(output_refs[i], outputs[i]);
     }
