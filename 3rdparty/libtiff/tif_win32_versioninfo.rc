@@ -1,0 +1,50 @@
+
+/* clang-format off */
+
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include <windows.h>
+#undef APSTUDIO_HIDDEN_SYMBOLS
+#include <winver.h>
+
+#include "tiffvers.h"
+
+#ifdef _WIN32
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+#pragma code_page(1252)
+#endif //_WIN32
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION TIFFLIB_MAJOR_VERSION,TIFFLIB_MINOR_VERSION,TIFFLIB_MICRO_VERSION,0
+ PRODUCTVERSION TIFFLIB_MAJOR_VERSION,TIFFLIB_MINOR_VERSION,TIFFLIB_MICRO_VERSION,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "000004b0"
+        BEGIN
+            VALUE "CompanyName", "libtiff project"
+            VALUE "FileDescription", "TIFF Library"
+            VALUE "FileVersion", TIFFLIB_VERSION_STR_MAJ_MIN_MIC
+            VALUE "InternalName", "tiff.dll"
+            VALUE "LegalCopyright", "See LICENCE.md"
+            VALUE "OriginalFilename", "tiff.dll"
+            VALUE "ProductName", "LibTIFF"
+            VALUE "ProductVersion", TIFFLIB_VERSION_STR_MAJ_MIN_MIC
+            VALUE "WebPage", "https://libtiff.gitlab.io/libtiff/\0"
+       END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0, 1200
+    END
+END
+
+
