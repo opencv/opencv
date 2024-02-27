@@ -3,7 +3,7 @@ Introduction to Principal Component Analysis (PCA) {#tutorial_introduction_to_pc
 
 @tableofcontents
 
-@prev_tutorial{tutorial_non_linear_svms}
+@prev_tutorial{tutorial_barcode_detect_and_decode}
 
 |    |    |
 | -: | :- |

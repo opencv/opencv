@@ -7,7 +7,6 @@ set(OPENCV_CPP_SAMPLES_REQUIRED_DEPS
   opencv_imgcodecs
   opencv_videoio
   opencv_highgui
-  opencv_ml
   opencv_video
   opencv_objdetect
   opencv_photo
