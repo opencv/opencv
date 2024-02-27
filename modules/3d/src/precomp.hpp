@@ -69,6 +69,7 @@
 #include <atomic>
 #include <functional>
 #include <limits>
+#include <stack>
 #include <vector>
 #include <list>
 #include <set>

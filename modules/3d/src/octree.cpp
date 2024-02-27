@@ -8,10 +8,6 @@
 
 namespace cv{
 
-void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor,
-                     size_t x_key, size_t y_key, size_t z_key,
-                     Ptr<OctreeNode> _node, double resolution, Point3f ori, bool hasColor);
-
 // Locate the OctreeNode corresponding to the input point from the given OctreeNode.
 static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode> node, OctreeKey& key, size_t depthMask);
 
@@ -428,7 +424,58 @@ void Octree::getPointCloudByOctree(OutputArray restorePointCloud, OutputArray re
     Ptr<OctreeNode> root = p->rootNode;
     double resolution = p->resolution;
     std::vector<Point3f> outPts, outColors;
-    getPointRecurse(outPts, outColors, 0, 0, 0, root, resolution, p->origin, p->hasColor);
+
+    std::stack<std::tuple<Ptr<OctreeNode>, size_t, size_t, size_t>> toCheck;
+    toCheck.push({root, 0, 0, 0});
+    while (!toCheck.empty())
+    {
+        auto top = toCheck.top();
+        toCheck.pop();
+        Ptr<OctreeNode> node = std::get<0>(top);
+        size_t x_key = std::get<1>(top);
+        size_t y_key = std::get<2>(top);
+        size_t z_key = std::get<3>(top);
+
+        if (node->isLeaf)
+        {
+            outPts.emplace_back(
+                    (float) (resolution * x_key) + (float) (resolution * 0.5) + p->origin.x,
+                    (float) (resolution * y_key) + (float) (resolution * 0.5) + p->origin.y,
+                    (float) (resolution * z_key) + (float) (resolution * 0.5) + p->origin.z);
+            if (p->hasColor)
+            {
+                Point3f avgColor { };
+                for (const auto& c : node->colorList)
+                {
+                    avgColor += c;
+                }
+                avgColor *= (1.f/(float)node->colorList.size());
+                outColors.emplace_back(avgColor);
+            }
+        }
+        else
+        {
+            unsigned char x_mask = 1;
+            unsigned char y_mask = 2;
+            unsigned char z_mask = 4;
+            for (unsigned char i = 0; i < 8; i++)
+            {
+                size_t x_copy = x_key;
+                size_t y_copy = y_key;
+                size_t z_copy = z_key;
+                if (!node->children[i].empty())
+                {
+                    size_t x_offSet = !!(x_mask & i);
+                    size_t y_offSet = !!(y_mask & i);
+                    size_t z_offSet = !!(z_mask & i);
+                    x_copy = (x_copy << 1) | x_offSet;
+                    y_copy = (y_copy << 1) | y_offSet;
+                    z_copy = (z_copy << 1) | z_offSet;
+                    toCheck.push({node->children[i], x_copy, y_copy, z_copy});
+                }
+            }
+        }
+    }
 
     if (restorePointCloud.needed())
     {
@@ -440,50 +487,6 @@ void Octree::getPointCloudByOctree(OutputArray restorePointCloud, OutputArray re
     }
 }
 
-void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor,
-                     size_t x_key, size_t y_key, size_t z_key,
-                     Ptr<OctreeNode> _node, double resolution, Point3f ori, bool hasColor)
-{
-    OctreeNode node = *_node;
-    if (node.isLeaf)
-    {
-        restorePointCloud.emplace_back(
-                (float) (resolution * x_key) + (float) (resolution * 0.5) + ori.x,
-                (float) (resolution * y_key) + (float) (resolution * 0.5) + ori.y,
-                (float) (resolution * z_key) + (float) (resolution * 0.5) + ori.z);
-        if (hasColor)
-        {
-            Point3f avgColor { };
-            for (const auto& c : node.colorList)
-            {
-                avgColor += c;
-            }
-            avgColor *= (1.f/(float)node.colorList.size());
-            restoreColor.emplace_back(avgColor);
-        }
-        return;
-    }
-    unsigned char x_mask = 1;
-    unsigned char y_mask = 2;
-    unsigned char z_mask = 4;
-    for (unsigned char i = 0; i < 8; i++)
-    {
-        size_t x_copy = x_key;
-        size_t y_copy = y_key;
-        size_t z_copy = z_key;
-        if (!node.children[i].empty())
-        {
-            size_t x_offSet = !!(x_mask & i);
-            size_t y_offSet = !!(y_mask & i);
-            size_t z_offSet = !!(z_mask & i);
-            x_copy = (x_copy << 1) | x_offSet;
-            y_copy = (y_copy << 1) | y_offSet;
-            z_copy = (z_copy << 1) | z_offSet;
-            getPointRecurse(restorePointCloud, restoreColor, x_copy, y_copy, z_copy, node.children[i], resolution,
-                            ori, hasColor);
-        }
-    }
-};
 
 static float SquaredDistance(const Point3f& query, const Point3f& origin)
 {
