@@ -360,6 +360,9 @@ endif()
 set(LIBTIFF_MAJOR_VERSION "4")
 set(LIBTIFF_MINOR_VERSION "6")
 set(LIBTIFF_MICRO_VERSION "0")
+set(LIBTIFF_VERSION "${LIBTIFF_MAJOR_VERSION}.${LIBTIFF_MINOR_VERSION}.${LIBTIFF_MICRO_VERSION}")
+
+set(TIFF_MAX_DIR_COUNT "1048576")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tif_config.h.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
@@ -390,6 +393,8 @@ set(lib_srcs
     tif_fax3sm.c
     tif_flush.c
     tif_getimage.c
+    tif_hash_set.c
+    tif_hash_set.h
     tif_jbig.c
     tif_jpeg_12.c
     tif_jpeg.c
