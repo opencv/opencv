@@ -812,6 +812,8 @@ endif()
 
 include(cmake/OpenCVFindFrameworks.cmake)
 
+add_definitions(-DBUILD_JPEG_TURBO_DISABLE=ON)
+
 include(cmake/OpenCVFindLibsGrfmt.cmake)
 include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
