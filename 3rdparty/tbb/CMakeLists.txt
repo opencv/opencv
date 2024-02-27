@@ -169,6 +169,6 @@ ocv_install_target(tbb EXPORT OpenCVModules
     OPTIONAL
     )
 
-ocv_install_3rdparty_licenses(tbb "${tbb_src_dir}/LICENSE" "${tbb_src_dir}/README")
+ocv_install_3rdparty_licenses(tbb "${tbb_src_dir}/LICENSE.txt" "${tbb_src_dir}/README.md")
 
 ocv_tbb_read_version("${tbb_src_dir}/include" tbb)
