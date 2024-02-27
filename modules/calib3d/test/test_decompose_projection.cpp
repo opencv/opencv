@@ -141,4 +141,23 @@ TEST(Calib3d_DecomposeProjectionMatrix, accuracy)
     test.safe_run();
 }
 
+TEST(Calib3d_DecomposeProjectionMatrix, degenerate_cases)
+{
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 2; j++)
+        {
+            cv::Matx34d P;
+            P(0, i) = 1;
+            P(1, (i + j + 1) % 3) = 1;
+            P(2, (i + 2 * j + 2) % 3) = 1;
+
+            cv::Matx33d K, R;
+            cv::Vec4d t;
+            decomposeProjectionMatrix(P, K, R, t);
+            EXPECT_LT(cv::norm(K * R, P.get_minor<3, 3>(0, 0), cv::NORM_INF), 1e-6);
+        }
+    }
+}
+
 }} // namespace

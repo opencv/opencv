@@ -3188,8 +3188,8 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
     Qx = ( 0  c  s ), c = m33/sqrt(m32^2 + m33^2), s = m32/sqrt(m32^2 + m33^2)
          ( 0 -s  c )
     */
-    s = matM[2][1];
-    c = matM[2][2];
+    s = std::abs(matM[2][1]) > DBL_EPSILON ? matM[2][1] : 0;
+    c = std::abs(matM[2][1]) > DBL_EPSILON ? matM[2][2] : 1;
     z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
     c *= z;
     s *= z;
@@ -3207,8 +3207,8 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
     Qy = ( 0  1  0 ), c = m33/sqrt(m31^2 + m33^2), s = -m31/sqrt(m31^2 + m33^2)
          ( s  0  c )
     */
-    s = -matR[2][0];
-    c = matR[2][2];
+    s = std::abs(matR[2][0]) > DBL_EPSILON ? -matR[2][0] : 0;
+    c = std::abs(matR[2][0]) > DBL_EPSILON ? matR[2][2] : 1;
     z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
     c *= z;
     s *= z;
@@ -3227,8 +3227,8 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
          ( 0  0  1 )
     */
 
-    s = matM[1][0];
-    c = matM[1][1];
+    s = std::abs(matM[1][0]) > DBL_EPSILON ? matM[1][0] : 0;
+    c = std::abs(matM[1][0]) > DBL_EPSILON ? matM[1][1] : 1;
     z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
     c *= z;
     s *= z;
