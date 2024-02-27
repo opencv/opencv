@@ -95,8 +95,8 @@ more details or check out the references in the Additional Resources section.
 
 Haar-cascade Detection in OpenCV
 --------------------------------
-OpenCV provides a training method (see @ref tutorial_traincascade) or pretrained models, that can be read using the @ref cv::CascadeClassifier::load method.
-The pretrained models are located in the data folder in the OpenCV installation or can be found [here](https://github.com/opencv/opencv/tree/5.x/data).
+OpenCV provides pretrained models that can be read using the @ref cv::CascadeClassifier::load method.
+These models are located in the data folder in the OpenCV installation or can be found [here](https://github.com/opencv/opencv/tree/5.x/data).
 
 The following code example will use pretrained Haar cascade models to detect faces and eyes in an image.
 First, a @ref cv::CascadeClassifier is created and the necessary XML file is loaded using the @ref cv::CascadeClassifier::load method.
