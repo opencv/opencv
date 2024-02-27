@@ -331,8 +331,6 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
                           int borderType, const Scalar& _borderValue, const Point& _offset )
 {
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;//expected better performance by bringing it as a local variable,
-                                 //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const T* S0 = _src.ptr<T>();
     T cval[CV_CN_MAX];
@@ -353,12 +351,12 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
     {
         T* D = _dst.ptr<T>(dy);
         const short* XY = _xy.ptr<short>(dy);
-        const int off_y = isRelative ? (offset.y+dy) : 0;
+        const int off_y = isRelative ? (_offset.y+dy) : 0;
         if( cn == 1 )
         {
             for(int dx = 0; dx < dsize.width; dx++ )
             {
-                const int off_x = isRelative ? (offset.x+dx) : 0;
+                const int off_x = isRelative ? (_offset.x+dx) : 0;
                 int sx = XY[dx*2]+off_x, sy = XY[dx*2+1]+off_y;
                 if( (unsigned)sx < width1 && (unsigned)sy < height1 )
                     D[dx] = S0[sy*sstep + sx];
@@ -385,7 +383,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
         {
             for(int dx = 0; dx < dsize.width; dx++, D += cn )
             {
-                const int off_x = isRelative ? (offset.x+dx) : 0;
+                const int off_x = isRelative ? (_offset.x+dx) : 0;
                 int sx = XY[dx*2]+off_x, sy = XY[dx*2+1]+off_y;
                 const T *S;
                 if( (unsigned)sx < width1 && (unsigned)sy < height1 )
@@ -450,9 +448,6 @@ struct RemapVec_8u
                     const ushort* FXY, const void* _wtab, int width, const Point& _offset ) const
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
-        const Point rel_offset = _offset;//expected better performance by bringing it as a local variable,
-                                         //since used in inner loop. We'll have to check perf. test
-
         if( (cn != 1 && cn != 3 && cn != 4) || sstep >= 0x8000 )
             return 0;
 
@@ -500,8 +495,8 @@ struct RemapVec_8u
                        *(unaligned_ushort*)(base + offset[2]), *(unaligned_ushort*)(base + offset[3]), \
                        0, 0, 0, 0)
 
-        const short _rel_offset_x = static_cast<short>(rel_offset.x);
-        const short _rel_offset_y = static_cast<short>(rel_offset.y);
+        const short _rel_offset_x = static_cast<short>(_offset.x);
+        const short _rel_offset_y = static_cast<short>(_offset.y);
         v_int16x8 v_dxy0(_rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y);
         v_int16x8 v_dxy1 = v_dxy0;
         v_dxy0 = v_add(v_dxy0, v_int16x8(0, 0, 1, 0, 2, 0, 3, 0));
@@ -685,8 +680,6 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;//expected better performance by bringing it as a local variable,
-                                 //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr<T>();
@@ -712,11 +705,11 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
         const ushort* FXY = _fxy.ptr<ushort>(dy);
         int X0 = 0;
         bool prevInlier = false;
-        const int off_y = (isRelative ? (offset.y+dy) : 0);
+        const int off_y = (isRelative ? (_offset.y+dy) : 0);
         for(int dx = 0; dx <= dsize.width; dx++ )
         {
             bool curInlier = dx < dsize.width ?
-                (unsigned)XY[dx*2]+(isRelative ? (offset.x+dx) : 0) < width1 &&
+                (unsigned)XY[dx*2]+(isRelative ? (_offset.x+dx) : 0) < width1 &&
                 (unsigned)XY[dx*2+1]+off_y < height1 : !prevInlier;
             if( curInlier == prevInlier )
                 continue;
@@ -728,7 +721,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 
             if( !curInlier )
             {
-                Point subOffset(offset.x+dx, offset.y+dy);
+                Point subOffset(_offset.x+dx, _offset.y+dy);
                 int len = vecOp( _src, D, XY + dx*2, FXY + dx, wtab, X1 - dx, subOffset );
                 D += len*cn;
                 dx += len;
@@ -737,7 +730,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 {
                     for( ; dx < X1; dx++, D++ )
                     {
-                        int sx = XY[dx*2]+(isRelative ? (offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx;
                         *D = castOp(WT(S[0]*w[0] + S[1]*w[1] + S[sstep]*w[2] + S[sstep+1]*w[3]));
@@ -746,7 +739,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else if( cn == 2 )
                     for( ; dx < X1; dx++, D += 2 )
                     {
-                        int sx = XY[dx*2]+(isRelative ? (offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*2;
                         WT t0 = S[0]*w[0] + S[2]*w[1] + S[sstep]*w[2] + S[sstep+2]*w[3];
@@ -756,7 +749,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else if( cn == 3 )
                     for( ; dx < X1; dx++, D += 3 )
                     {
-                        int sx = XY[dx*2]+(isRelative ? (offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*3;
                         WT t0 = S[0]*w[0] + S[3]*w[1] + S[sstep]*w[2] + S[sstep+3]*w[3];
@@ -767,7 +760,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else if( cn == 4 )
                     for( ; dx < X1; dx++, D += 4 )
                     {
-                        int sx = XY[dx*2]+(isRelative ? (offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*4;
                         WT t0 = S[0]*w[0] + S[4]*w[1] + S[sstep]*w[2] + S[sstep+4]*w[3];
@@ -780,7 +773,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else
                     for( ; dx < X1; dx++, D += cn )
                     {
-                        int sx = XY[dx*2]+(isRelative ? (offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*cn;
                         for(int k = 0; k < cn; k++ )
@@ -795,7 +788,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 if (borderType == BORDER_TRANSPARENT) {
                     for (; dx < X1; dx++, D += cn) {
                         if (dx >= dsize.width) continue;
-                        const int sx = XY[dx * 2]+(isRelative ? (offset.x+dx) : 0), sy = XY[dx * 2 + 1]+off_y;
+                        const int sx = XY[dx * 2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx * 2 + 1]+off_y;
                         // If the mapped point is still within bounds, it did not get computed
                         // because it lacked 4 neighbors. Still, it can be computed with an
                         // approximate formula. If it is outside, the point is left untouched.
@@ -826,7 +819,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 if( cn == 1 )
                     for( ; dx < X1; dx++, D++ )
                     {
-                        int sx = XY[dx*2]+(isRelative ? (offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         if( borderType == BORDER_CONSTANT &&
                             (sx >= ssize.width || sx+1 < 0 ||
                              sy >= ssize.height || sy+1 < 0) )
@@ -866,7 +859,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else
                     for( ; dx < X1; dx++, D += cn )
                     {
-                        int sx = XY[dx*2]+(isRelative ? (offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         if( borderType == BORDER_CONSTANT &&
                             (sx >= ssize.width || sx+1 < 0 ||
                              sy >= ssize.height || sy+1 < 0) )
@@ -919,8 +912,6 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;//expected better performance by bringing it as a local variable,
-                                 //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr<T>();
@@ -946,10 +937,10 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
         T* D = _dst.ptr<T>(dy);
         const short* XY = _xy.ptr<short>(dy);
         const ushort* FXY = _fxy.ptr<ushort>(dy);
-        const int off_y = isRelative ? (offset.y+dy) : 0;
+        const int off_y = isRelative ? (_offset.y+dy) : 0;
         for(int dx = 0; dx < dsize.width; dx++, D += cn )
         {
-            const int off_x = isRelative ? (offset.x+dx) : 0;
+            const int off_x = isRelative ? (_offset.x+dx) : 0;
             int sx = XY[dx*2]-1+off_x, sy = XY[dx*2+1]-1+off_y;
             const AT* w = wtab + FXY[dx]*16;
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
@@ -1026,8 +1017,6 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    const Point offset = _offset;//expected better performance by bringing it as a local variable,
-                                 //since used in inner loop. We'll have to check perf. test
     const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr<T>();
@@ -1053,10 +1042,10 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
         T* D = _dst.ptr<T>(dy);
         const short* XY = _xy.ptr<short>(dy);
         const ushort* FXY = _fxy.ptr<ushort>(dy);
-        const int off_y = isRelative ? (offset.y+dy) : 0;
+        const int off_y = isRelative ? (_offset.y+dy) : 0;
         for(int dx = 0; dx < dsize.width; dx++, D += cn )
         {
-            const int off_x = isRelative ? (offset.x+dx) : 0;
+            const int off_x = isRelative ? (_offset.x+dx) : 0;
             int sx = XY[dx*2]-3+off_x, sy = XY[dx*2+1]-3+off_y;
             const AT* w = wtab + FXY[dx]*64;
             const T* S = S0 + sy*sstep + sx*cn;
@@ -1132,11 +1121,11 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
 
 
 typedef void (*RemapNNFunc)(const Mat& _src, Mat& _dst, const Mat& _xy,
-                            int borderType, const Scalar& _borderValue, const Point& offset);
+                            int borderType, const Scalar& _borderValue, const Point& _offset);
 
 typedef void (*RemapFunc)(const Mat& _src, Mat& _dst, const Mat& _xy,
                           const Mat& _fxy, const void* _wtab,
-                          int borderType, const Scalar& _borderValue, const Point& offset);
+                          int borderType, const Scalar& _borderValue, const Point& _offset);
 
 class RemapInvoker :
     public ParallelLoopBody
