@@ -239,10 +239,12 @@ struct DataLayer : public Layer
 
             bool singleMean = true;
             if (mean != Scalar())
+            {
                 for (int j = 1; j < std::min(4, inputData.size[1]) && singleMean; ++j)
                 {
                     singleMean = mean[j] == mean[j - 1];
                 }
+            }
 
             if (singleMean)
             {

@@ -1076,12 +1076,9 @@ TEST_P(Test_int64_sum, basic)
     int64_t a_value = 1000000000000000ll;
     int64_t b_value = 1;
     int64_t result_value = 1000000000000001ll;
-    CV_Assert(int64_t(float(a_value) + float(b_value)) != result_value);
+    EXPECT_NE(int64_t(float(a_value) + float(b_value)), result_value);
 
-    Mat a = Mat::zeros(3, 5, CV_64S);
-    auto a_data = (int64_t *) a.data;
-    for (int i = 0; i < a.total(); i++)
-        a_data[i] = a_value;
+    Mat a(3, 5, CV_64SC1, cv::Scalar_<int64_t>(a_value));
     Mat b = Mat::ones(3, 5, CV_64S);
 
     Net net;
@@ -1104,7 +1101,7 @@ TEST_P(Test_int64_sum, basic)
 
     Mat re;
     re = net.forward();
-    CV_CheckTypeEQ(re.depth(), CV_64S, "");
+    EXPECT_EQ(re.depth(), CV_64S);
     auto ptr_re = (int64_t *) re.data;
     for (int i = 0; i < re.total(); i++)
             ASSERT_EQ(result_value, ptr_re[i]); // sum result should be 1

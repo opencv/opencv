@@ -88,7 +88,7 @@ Mat blobFromNPY(const std::string& path)
     else if (getType(header) == "<i8")
         matType = CV_64S;
     else
-        CV_Assert(false);
+        CV_Error(7893, "Unsupported numpy type");
 
     CV_Assert(getFortranOrder(header) == "False");
     std::vector<int> shape = getShape(header);

@@ -983,10 +983,12 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
             std::vector<Mat>& outputvec = *(std::vector<Mat>*)outputBlobs.getObj();
             outputvec.resize(ld.outputBlobs.size());
             for (int i = 0; i < outputvec.size(); i++)
+            {
                 if (ld.outputBlobs[i].depth() == CV_32S || ld.outputBlobs[i].depth() == CV_64S)
                     outputvec[i] = ld.outputBlobs[i];
                 else
                     ld.outputBlobs[i].convertTo(outputvec[i], CV_32F);
+            }
         }
         else
         {
@@ -2004,29 +2006,7 @@ void Net::Impl::getMemoryConsumption(
     const ShapesVec& outLayerShapes = shapes.out;
 
     for (int i = 0; i < outLayerShapes.size(); i++)
-    {
-        size_t elemSize;
-        switch (shapes.outTypes[i]) {
-        case CV_64S:
-            elemSize = 8;
-            break;
-        case CV_32F:
-        case CV_32S:
-            elemSize = 4;
-            break;
-        case CV_16S:
-        case CV_16F:
-            elemSize = 2;
-            break;
-        case CV_8S:
-        case CV_8U:
-            elemSize = 1;
-            break;
-        default:
-            CV_Assert(false);
-        }
-        blobs += total(outLayerShapes[i]) * elemSize;
-    }
+        blobs += total(outLayerShapes[i]) * CV_ELEM_SIZE(shapes.outTypes[i]);
 }
 
 
