@@ -714,6 +714,8 @@ TEST_P(Layer_Scatter_1d_Test, Accuracy) {
         runLayer(layer, inputs, outputs);
 
         ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+        std::cout << "output: " << outputs[0] << std::endl;
+        std::cout << "output ref: " << output_ref << std::endl;
         normAssert(output_ref, outputs[0]);
     }
 }
