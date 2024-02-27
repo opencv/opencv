@@ -812,7 +812,7 @@ endif()
 
 include(cmake/OpenCVFindFrameworks.cmake)
 
-add_definitions(-DBUILD_JPEG_TURBO_DISABLE=ON)
+set(BUILD_JPEG_TURBO_DISABLE ON)
 
 include(cmake/OpenCVFindLibsGrfmt.cmake)
 include(cmake/OpenCVFindLibsGUI.cmake)
