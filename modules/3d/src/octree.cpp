@@ -112,43 +112,43 @@ Octree::Octree() :
     p(makePtr<Impl>())
 { }
 
-Octree Octree::createWithDepth(int maxDepth, double size, const Point3f& origin, bool withColors)
+Ptr<Octree> Octree::createWithDepth(int maxDepth, double size, const Point3f& origin, bool withColors)
 {
     CV_Assert(maxDepth > 0);
     CV_Assert(size > 0);
 
-    Octree octree;
-    octree.p = makePtr<Impl>(maxDepth, size, origin, /*resolution*/ 0, withColors);
+    Ptr<Octree> octree = makePtr<Octree>();
+    octree->p = makePtr<Impl>(maxDepth, size, origin, /*resolution*/ 0, withColors);
     return octree;
 }
 
-Octree Octree::createWithDepth(int maxDepth, InputArray pointCloud, InputArray colors)
+Ptr<Octree> Octree::createWithDepth(int maxDepth, InputArray pointCloud, InputArray colors)
 {
     CV_Assert(maxDepth > 0);
 
-    Octree octree;
-    octree.p->maxDepth = maxDepth;
-    octree.p->fill(/* useResolution */ false, pointCloud, colors);
+    Ptr<Octree> octree = makePtr<Octree>();
+    octree->p->maxDepth = maxDepth;
+    octree->p->fill(/* useResolution */ false, pointCloud, colors);
     return octree;
 }
 
-Octree Octree::createWithResolution(double resolution, double size, const Point3f& origin, bool withColors)
+Ptr<Octree> Octree::createWithResolution(double resolution, double size, const Point3f& origin, bool withColors)
 {
     CV_Assert(resolution > 0);
     CV_Assert(size > 0);
 
-    Octree octree;
-    octree.p = makePtr<Impl>(/*maxDepth*/ 0, size, origin, resolution, withColors);
+    Ptr<Octree> octree = makePtr<Octree>();
+    octree->p = makePtr<Impl>(/*maxDepth*/ 0, size, origin, resolution, withColors);
     return octree;
 }
 
-Octree Octree::createWithResolution(double resolution, InputArray pointCloud, InputArray colors)
+Ptr<Octree> Octree::createWithResolution(double resolution, InputArray pointCloud, InputArray colors)
 {
     CV_Assert(resolution > 0);
 
-    Octree octree;
-    octree.p->resolution = resolution;
-    octree.p->fill(/* useResolution */ true, pointCloud, colors);
+    Ptr<Octree> octree = makePtr<Octree>();
+    octree->p->resolution = resolution;
+    octree->p->fill(/* useResolution */ true, pointCloud, colors);
     return octree;
 }
 

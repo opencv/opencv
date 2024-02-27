@@ -2676,10 +2676,9 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
  * children[7]: origin == (1, 1, 1), size == 1, furthest from child 0
  */
 
-class CV_EXPORTS Octree {
-
+class CV_EXPORTS_W Octree
+{
 public:
-
     //! Default constructor.
     Octree();
 
@@ -2692,7 +2691,7 @@ public:
      * @param withColors Whether to keep per-point colors or not
      * @return resulting Octree
      */
-    static Octree createWithDepth(int maxDepth, double size, const Point3f& origin = { }, bool withColors = false);
+    CV_WRAP static Ptr<Octree> createWithDepth(int maxDepth, double size, const Point3f& origin = { }, bool withColors = false);
 
     /** @overload
      * @brief Create an Octree from the PointCloud data with the specific maxDepth
@@ -2702,7 +2701,7 @@ public:
      * @param colors color attribute of point cloud in the same 3-channel float format
      * @return resulting Octree
      */
-    static Octree createWithDepth(int maxDepth, InputArray pointCloud, InputArray colors = noArray());
+    CV_WRAP static Ptr<Octree> createWithDepth(int maxDepth, InputArray pointCloud, InputArray colors = noArray());
 
     /** @overload
      * @brief Creates an empty Octree with given resolution
@@ -2713,7 +2712,7 @@ public:
      * @param withColors Whether to keep per-point colors or not
      * @return resulting Octree
      */
-    static Octree createWithResolution(double resolution, double size, const Point3f& origin = { }, bool withColors = false);
+    CV_WRAP static Ptr<Octree> createWithResolution(double resolution, double size, const Point3f& origin = { }, bool withColors = false);
 
      /** @overload
      * @brief Create an Octree from the PointCloud data with the specific resolution
@@ -2723,7 +2722,7 @@ public:
      * @param colors color attribute of point cloud in the same 3-channel float format
      * @return resulting octree
      */
-    static Octree createWithResolution(double resolution, InputArray pointCloud, InputArray colors = noArray());
+    CV_WRAP static Ptr<Octree> createWithResolution(double resolution, InputArray pointCloud, InputArray colors = noArray());
 
     //! Default destructor
     ~Octree();
@@ -2735,23 +2734,23 @@ public:
     * @param color The color attribute of point in Point3f format.
     * @return Returns whether the insertion is successful.
     */
-    bool insertPoint(const Point3f& point, const Point3f& color = { });
+    CV_WRAP bool insertPoint(const Point3f& point, const Point3f& color = { });
 
     /** @brief Determine whether the point is within the space range of the specific cube.
      *
      * @param point The point coordinates.
      * @return If point is in bound, return ture. Otherwise, false.
      */
-    bool isPointInBound(const Point3f& point) const;
+    CV_WRAP bool isPointInBound(const Point3f& point) const;
 
     //! returns true if the rootnode is NULL.
-    bool empty() const;
+    CV_WRAP bool empty() const;
 
     /** @brief Reset all octree parameter.
     *
     *  Clear all the nodes of the octree and initialize the parameters.
     */
-    void clear();
+    CV_WRAP void clear();
 
     /** @brief Delete a given point from the Octree.
     *
@@ -2761,7 +2760,7 @@ public:
     * @param point The point coordinates, comparison is epsilon-based
     * @return return ture if the point is deleted successfully.
     */
-    bool deletePoint(const Point3f& point);
+    CV_WRAP bool deletePoint(const Point3f& point);
 
     /** @brief restore point cloud data from Octree.
     *
@@ -2770,7 +2769,7 @@ public:
     * @param restoredPointCloud The output point cloud data, can be replaced by noArray() if not needed
     * @param restoredColor The color attribute of point cloud data, can be omitted if not needed
     */
-    void getPointCloudByOctree(OutputArray restoredPointCloud, OutputArray restoredColor = noArray());
+    CV_WRAP void getPointCloudByOctree(OutputArray restoredPointCloud, OutputArray restoredColor = noArray());
 
     /** @brief Radius Nearest Neighbor Search in Octree.
     *
@@ -2784,7 +2783,7 @@ public:
     * can be omitted if not needed
     * @return the number of searched points.
     */
-    int radiusNNSearch(const Point3f& query, float radius, OutputArray points, OutputArray squareDists = noArray()) const;
+    CV_WRAP int radiusNNSearch(const Point3f& query, float radius, OutputArray points, OutputArray squareDists = noArray()) const;
 
     /** @overload
     *  @brief Radius Nearest Neighbor Search in Octree.
@@ -2800,7 +2799,7 @@ public:
     * can be replaced by noArray() if not needed
     * @return the number of searched points.
     */
-    int radiusNNSearch(const Point3f& query, float radius, OutputArray points, OutputArray colors, OutputArray squareDists) const;
+    CV_WRAP int radiusNNSearch(const Point3f& query, float radius, OutputArray points, OutputArray colors, OutputArray squareDists) const;
 
     /** @brief K Nearest Neighbor Search in Octree.
     *
@@ -2812,7 +2811,7 @@ public:
     * @param squareDists Dist output. Contains K squared distance in floats, arranged in order of distance from near to far,
     * can be omitted if not needed
     */
-    void KNNSearch(const Point3f& query, const int K, OutputArray points, OutputArray squareDists = noArray()) const;
+    CV_WRAP void KNNSearch(const Point3f& query, const int K, OutputArray points, OutputArray squareDists = noArray()) const;
 
     /** @overload
     *  @brief K Nearest Neighbor Search in Octree.
@@ -2826,7 +2825,7 @@ public:
     * @param squareDists Dist output. Contains K squared distance in floats, arranged in order of distance from near to far,
     * can be replaced by noArray() if not needed
     */
-    void KNNSearch(const Point3f& query, const int K, OutputArray points, OutputArray colors, OutputArray squareDists) const;
+    CV_WRAP void KNNSearch(const Point3f& query, const int K, OutputArray points, OutputArray colors, OutputArray squareDists) const;
 
 protected:
     struct Impl;

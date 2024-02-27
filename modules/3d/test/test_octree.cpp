@@ -54,25 +54,25 @@ public:
 
     size_t pointCloudSize;
     Point3f restPoint;
-    Octree treeTest;
+    Ptr<Octree> treeTest;
     double resolution;
 };
 
 TEST_F(OctreeTest, BasicFunctionTest)
 {
     // Check if the point in Bound.
-    EXPECT_TRUE(treeTest.isPointInBound(restPoint));
-    EXPECT_FALSE(treeTest.isPointInBound(restPoint + Point3f(60, 60, 60)));
+    EXPECT_TRUE(treeTest->isPointInBound(restPoint));
+    EXPECT_FALSE(treeTest->isPointInBound(restPoint + Point3f(60, 60, 60)));
 
     // insert, delete Test.
-    EXPECT_FALSE(treeTest.deletePoint(restPoint));
-    EXPECT_FALSE(treeTest.insertPoint(restPoint + Point3f(60, 60, 60)));
-    EXPECT_TRUE(treeTest.insertPoint(restPoint));
-    EXPECT_TRUE(treeTest.deletePoint(restPoint));
+    EXPECT_FALSE(treeTest->deletePoint(restPoint));
+    EXPECT_FALSE(treeTest->insertPoint(restPoint + Point3f(60, 60, 60)));
+    EXPECT_TRUE(treeTest->insertPoint(restPoint));
+    EXPECT_TRUE(treeTest->deletePoint(restPoint));
 
-    EXPECT_FALSE(treeTest.empty());
-    EXPECT_NO_THROW(treeTest.clear());
-    EXPECT_TRUE(treeTest.empty());
+    EXPECT_FALSE(treeTest->empty());
+    EXPECT_NO_THROW(treeTest->clear());
+    EXPECT_TRUE(treeTest->empty());
 }
 
 TEST_F(OctreeTest, RadiusSearchTest)
@@ -80,7 +80,7 @@ TEST_F(OctreeTest, RadiusSearchTest)
     float radius = 2.0f;
     std::vector<Point3f> outputPoints;
     std::vector<float> outputSquareDist;
-    EXPECT_NO_THROW(treeTest.radiusNNSearch(restPoint, radius, outputPoints, outputSquareDist));
+    EXPECT_NO_THROW(treeTest->radiusNNSearch(restPoint, radius, outputPoints, outputSquareDist));
     EXPECT_EQ(outputPoints.size(),(unsigned int)5);
 
     // The output is unsorted, so let's sort it before checking
@@ -111,7 +111,7 @@ TEST_F(OctreeTest, KNNSearchTest)
     int K = 10;
     std::vector<Point3f> outputPoints;
     std::vector<float> outputSquareDist;
-    EXPECT_NO_THROW(treeTest.KNNSearch(restPoint, K, outputPoints, outputSquareDist));
+    EXPECT_NO_THROW(treeTest->KNNSearch(restPoint, K, outputPoints, outputSquareDist));
 
     // this output should be sorted
     EXPECT_FLOAT_EQ(outputPoints[0].x, -8.118486404418f);
@@ -126,7 +126,7 @@ TEST_F(OctreeTest, KNNSearchTest)
 
 TEST_F(OctreeTest, restoreTest) {
     //restore the pointCloud data from octree.
-    EXPECT_NO_THROW(treeTest.getPointCloudByOctree(restorePointCloudData,restorePointCloudColor));
+    EXPECT_NO_THROW(treeTest->getPointCloudByOctree(restorePointCloudData,restorePointCloudColor));
 
     //The points in same leaf node will be seen as the same point. So if the resolution is small,
     //it will work as a downSampling function.
@@ -135,8 +135,8 @@ TEST_F(OctreeTest, restoreTest) {
     //The distance between the restore point cloud data and origin data should less than resolution.
     std::vector<Point3f> outputPoints;
     std::vector<float> outputSquareDist;
-    EXPECT_NO_THROW(treeTest.getPointCloudByOctree(restorePointCloudData,restorePointCloudColor));
-    EXPECT_NO_THROW(treeTest.KNNSearch(restorePointCloudData[0], 1, outputPoints, outputSquareDist));
+    EXPECT_NO_THROW(treeTest->getPointCloudByOctree(restorePointCloudData,restorePointCloudColor));
+    EXPECT_NO_THROW(treeTest->KNNSearch(restorePointCloudData[0], 1, outputPoints, outputSquareDist));
     EXPECT_LE(abs(outputPoints[0].x-restorePointCloudData[0].x),resolution);
     EXPECT_LE(abs(outputPoints[0].y-restorePointCloudData[0].y),resolution);
     EXPECT_LE(abs(outputPoints[0].z-restorePointCloudData[0].z),resolution);
