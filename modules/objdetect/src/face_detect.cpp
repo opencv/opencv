@@ -200,6 +200,9 @@ private:
                     float score = std::sqrt(cls_score * obj_score);
                     face.at<float>(0, 14) = score;
 
+                    // Checking if the score meets the threshold before adding the face
+                    if (score < scoreThreshold)
+                        continue;
                     // Get bounding box
                     float cx = ((c + bbox_v[idx * 4 + 0]) * strides[i]);
                     float cy = ((r + bbox_v[idx * 4 + 1]) * strides[i]);
