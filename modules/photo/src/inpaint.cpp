@@ -73,6 +73,7 @@ typedef struct CvHeapElem
 {
     float T;
     int i,j;
+    int order;  // to keep insertion order
 
     bool operator > (const CvHeapElem& rhs) const {
         if (T > rhs.T) {
@@ -80,12 +81,7 @@ typedef struct CvHeapElem
         } else if (T < rhs.T) {
             return false;
         }
-        if (i > rhs.i) {
-            return true;
-        } else if (i < rhs.i) {
-            return false;
-        }
-        return j > rhs.j;
+        return order > rhs.order;
     }
 }
 CvHeapElem;
@@ -99,6 +95,7 @@ private:
 
 protected:
     std::priority_queue<CvHeapElem, std::vector<CvHeapElem>,std::greater<CvHeapElem> > queue;
+    int next_order;
 
 public:
     bool Add(const CvMat* f) {
@@ -114,7 +111,8 @@ public:
     }
 
     bool Push(int i, int j, float T) {
-        queue.push({T, i, j});
+        queue.push({T, i, j, next_order});
+        ++next_order;
         return true;
     }
 
@@ -139,7 +137,7 @@ public:
         return true;
     }
 
-    CvPriorityQueueFloat(void) {
+    CvPriorityQueueFloat(void) : queue(), next_order() {
     }
 };
 
