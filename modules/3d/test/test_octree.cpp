@@ -14,10 +14,10 @@ protected:
     void SetUp() override
     {
         pointCloudSize = 1000;
-        resolution=0.0001;
+        resolution = 0.0001;
         int scale;
         Point3i pmin, pmax;
-        scale = 1<<20;
+        scale = 1 << 20;
         pmin = Point3i(-scale, -scale, -scale);
         pmax = Point3i(scale, scale, scale);
 
@@ -113,15 +113,27 @@ TEST_F(OctreeTest, KNNSearchTest)
     std::vector<float> outputSquareDist;
     EXPECT_NO_THROW(treeTest->KNNSearch(restPoint, K, outputPoints, outputSquareDist));
 
-    // this output should be sorted
-    EXPECT_FLOAT_EQ(outputPoints[0].x, -8.118486404418f);
-    EXPECT_FLOAT_EQ(outputPoints[0].y, -0.528564453125f);
-    EXPECT_FLOAT_EQ(outputPoints[1].x, -8.405818939208f);
-    EXPECT_FLOAT_EQ(outputPoints[1].y, -2.991247177124f);
-    EXPECT_FLOAT_EQ(outputPoints[2].x, -8.88461112976f);
-    EXPECT_FLOAT_EQ(outputPoints[2].y, -1.881799697875f);
-    EXPECT_FLOAT_EQ(outputPoints[3].x, -6.551313400268f);
-    EXPECT_FLOAT_EQ(outputPoints[3].y, -0.708484649658f);
+    // The output is unsorted, so let's sort it before checking
+    std::map<float, Point3f> sortResults;
+    for (int i = 0; i < (int)outputPoints.size(); i++)
+    {
+        sortResults[outputSquareDist[i]] = outputPoints[i];
+    }
+
+    std::vector<Point3f> goldVals = {
+        { -8.118486404418f, -0.528564453125f, 0.f },
+        { -8.405818939208f, -2.991247177124f, 0.f },
+        { -8.884611129760f, -1.881799697875f, 0.f },
+        { -6.551313400268f, -0.708484649658f, 0.f }
+    };
+
+    auto it = sortResults.begin();
+    for (int i = 0; i < (int)goldVals.size(); i++, it++)
+    {
+        Point3f p = it->second;
+        EXPECT_FLOAT_EQ(goldVals[i].x, p.x);
+        EXPECT_FLOAT_EQ(goldVals[i].y, p.y);
+    }
 }
 
 TEST_F(OctreeTest, restoreTest) {
@@ -137,9 +149,9 @@ TEST_F(OctreeTest, restoreTest) {
     std::vector<float> outputSquareDist;
     EXPECT_NO_THROW(treeTest->getPointCloudByOctree(restorePointCloudData,restorePointCloudColor));
     EXPECT_NO_THROW(treeTest->KNNSearch(restorePointCloudData[0], 1, outputPoints, outputSquareDist));
-    EXPECT_LE(abs(outputPoints[0].x-restorePointCloudData[0].x),resolution);
-    EXPECT_LE(abs(outputPoints[0].y-restorePointCloudData[0].y),resolution);
-    EXPECT_LE(abs(outputPoints[0].z-restorePointCloudData[0].z),resolution);
+    EXPECT_LE(abs(outputPoints[0].x - restorePointCloudData[0].x), resolution);
+    EXPECT_LE(abs(outputPoints[0].y - restorePointCloudData[0].y), resolution);
+    EXPECT_LE(abs(outputPoints[0].z - restorePointCloudData[0].z), resolution);
 }
 
 } // namespace
