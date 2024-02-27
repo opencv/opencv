@@ -76,7 +76,7 @@ typedef struct CvHeapElem
 
     bool operator > (const CvHeapElem& rhs) const {
         if (T > rhs.T) {
-          return true;
+            return true;
         } else if (T < rhs.T) {
             return false;
         }
@@ -98,7 +98,7 @@ private:
     CvPriorityQueueFloat& operator=(const CvPriorityQueueFloat &); // assign disabled
 
 protected:
-  std::priority_queue<CvHeapElem, std::vector<CvHeapElem>,std::greater<CvHeapElem> > queue;
+    std::priority_queue<CvHeapElem, std::vector<CvHeapElem>,std::greater<CvHeapElem> > queue;
 
 public:
     bool Add(const CvMat* f) {
