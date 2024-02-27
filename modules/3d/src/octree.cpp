@@ -8,11 +8,12 @@
 
 namespace cv{
 
-void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor, size_t x_key, size_t y_key,
-                     size_t z_key, Ptr<OctreeNode> &_node, double resolution, Point3f ori, bool hasColor);
+void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor,
+                     size_t x_key, size_t y_key, size_t z_key,
+                     Ptr<OctreeNode> _node, double resolution, Point3f ori, bool hasColor);
 
 // Locate the OctreeNode corresponding to the input point from the given OctreeNode.
-static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node, OctreeKey& key, size_t depthMask);
+static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode> node, OctreeKey& key, size_t depthMask);
 
 OctreeNode::OctreeNode() :
     children(),
@@ -285,7 +286,7 @@ bool Octree::empty() const
     return p->rootNode.empty();
 }
 
-Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& _node, OctreeKey &key, size_t depthMask)
+Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode> _node, OctreeKey &key, size_t depthMask)
 {
     OctreeNode &node = *_node;
 
@@ -439,9 +440,9 @@ void Octree::getPointCloudByOctree(OutputArray restorePointCloud, OutputArray re
     }
 }
 
-void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor, size_t x_key,
-                     size_t y_key,size_t z_key, Ptr<OctreeNode> &_node, double resolution, Point3f ori,
-                     bool hasColor)
+void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor,
+                     size_t x_key, size_t y_key, size_t z_key,
+                     Ptr<OctreeNode> _node, double resolution, Point3f ori, bool hasColor)
 {
     OctreeNode node = *_node;
     if (node.isLeaf)
