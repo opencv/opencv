@@ -63,6 +63,7 @@ using namespace tiff_dummy_namespace;
 #ifndef _MSC_VER
 namespace numeric_types = tiff_dummy_namespace;
 #elif
+#include <cstdint>
 namespace numeric_types = std;
 #endif
 
