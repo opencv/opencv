@@ -145,7 +145,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
         size_t packed_weights_size[3] = {packed_weight_q.size() / num_heads, packed_weight_k.size() / num_heads, packed_weight_v.size() / num_heads};
 
-        // Mat gemm_buffer(std::vector<int>{int(batch_size), int(seq_len), int(hidden_size)}, CV_32F);
+        // Compute Q/K/V
         auto &gemm_buffer = internals[0];
         auto *Q = gemm_buffer.ptr<float>();
         auto *K = Q + batch_size * seq_len * qkv_hidden_sizes[0];
@@ -192,8 +192,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             parallel_for_(Range(0, loops), fn, nstripes);
         }
 
-        // Compute softmax(scale * matmul(Q, K))
-        // Mat attention_prob(std::vector<int>{int(batch_size * num_heads), int(seq_len), int(seq_len)}, CV_32F);
+        // Compute Softmax(scale * MatMul(Q, K))
         auto &attention_prob = internals[1];
         {
             auto *output = attention_prob.ptr<float>();
@@ -221,8 +220,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             softmax(attention_prob, attention_prob, shape(attention_prob).size() - 1);
         }
 
-        // Compute np.matmul(attention_prob, V)
-        // Mat output_buffer(std::vector<int>{int(batch_size), int(num_heads), int(seq_len), int(qkv_head_sizes[2])}, CV_32F);
+        // Compute MatMul(attention_prob, V)
         auto &output_buffer = internals[2];
         {
             auto *output = outputs[0].ptr<float>();
