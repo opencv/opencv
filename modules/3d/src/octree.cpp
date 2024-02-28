@@ -576,20 +576,17 @@ void OctreeNode::KNNSearchRecurse(const Point3f& query, const int K,
 {
     std::vector<std::pair<float, int>> priorityQue;
 
-    Ptr<OctreeNode> child;
-    float dist = 0;
-    Point3f center; // the OctreeNode Center
-
     // Add the non-empty OctreeNode to priorityQue
     for(size_t i = 0; i < 8; i++)
     {
-        if(!this->children[i].empty())
+        Ptr<OctreeNode> child = this->children[i];
+        if(child)
         {
-            float halfSize = float(this->children[i]->size * 0.5);
+            float halfSize = float(child->size * 0.5);
 
-            center = this->children[i]->origin + Point3f(halfSize, halfSize, halfSize);
+            Point3f center = child->origin + Point3f(halfSize, halfSize, halfSize);
 
-            dist = SquaredDistance(query, center);
+            float dist = SquaredDistance(query, center);
             priorityQue.emplace_back(dist, int(i));
         }
     }
@@ -599,7 +596,7 @@ void OctreeNode::KNNSearchRecurse(const Point3f& query, const int K,
         {
             return std::get<0>(a) < std::get<0>(b);
         });
-    child = this->children[std::get<1>(priorityQue.back())];
+    Ptr<OctreeNode> child = this->children[std::get<1>(priorityQue.back())];
 
     while (!priorityQue.empty() && child->overlap(query, smallestDist))
     {
@@ -611,7 +608,7 @@ void OctreeNode::KNNSearchRecurse(const Point3f& query, const int K,
         {
             for (size_t i = 0; i < child->pointList.size(); i++)
             {
-                dist = SquaredDistance(child->pointList[i], query);
+                float dist = SquaredDistance(child->pointList[i], query);
 
                 if ( dist + dist * std::numeric_limits<float>::epsilon() <= smallestDist )
                 {
