@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
 #include <limits>
+#include <queue>
 
  // Requires CMake flag: DEBUG_opencv_calib3d=ON
 //#define DEBUG_CIRCLES
@@ -1210,11 +1211,16 @@ void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors
     }
   };
 
+  // We can prove that a point has at most 6 neighbors.
+  Neighbor neighbors[6];
+  size_t neighbors_count = 0;
+  std::priority_queue<Neighbor> distance;
+
+
   // optimize the algorithm to O(n^2 \log n) by sort with distance
   for (size_t i = 0; i < keypoints.size(); i++)
   {
     std::priority_queue<Neighbor> distance;
-    std::vector<Neighbor> neighbors;
     for (size_t j = 0; j < keypoints.size(); j++)
     {
       if (i == j)
@@ -1225,13 +1231,14 @@ void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors
       distance.push(Neighbor{ j, dist });
     }
 
+    neighbors_count = 0;
     // We can prove that a point has at most 6 neighbors.
-    while (!distance.empty() && neighbors.size() < 6)
+    while (!distance.empty() && neighbors_count < 6)
     {
       Neighbor candidate = distance.top();
       bool isNeighbor = true;
 
-      for (size_t k = 0; k < neighbors.size(); k++)
+      for (size_t k = 0; k < neighbors_count; k++)
       {
         Point2f vec = keypoints[candidate.idx] - keypoints[neighbors[k].idx];
         double dist = norm(vec);
@@ -1245,13 +1252,14 @@ void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors
 
       if (isNeighbor)
       {
-        neighbors.push_back(candidate);
+        neighbors[neighbors_count] = candidate;
+        neighbors_count++;
       }
 
       distance.pop();
     }
 
-    for (size_t j = 0; j < neighbors.size(); j++)
+    for (size_t j = 0; j < neighbors_count; j++)
     {
       rng.addEdge(i, neighbors[j].idx);
       vectors.push_back(keypoints[i] - keypoints[neighbors[j].idx]);
@@ -1267,7 +1275,6 @@ void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors
     {
       distance.pop();
     }
-    neighbors.clear();
   }
 }
 

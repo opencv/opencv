@@ -48,7 +48,6 @@
 #include <list>
 #include <numeric>
 #include <map>
-#include <queue>
 
 class CirclesGridClusterFinder
 {
