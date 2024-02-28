@@ -490,46 +490,6 @@ bool OctreeNode::overlap(const Point3f& query, float squareRadius) const
     return ( dist + dist * std::numeric_limits<float>::epsilon() ) <= float(temp * 0.25f + squareRadius + sqrt(temp * squareRadius)) ;
 }
 
-void OctreeNode::radiusNNSearchRecurse(const Point3f& query, float squareRadius,
-                                       std::vector<std::tuple<float, Point3f, Point3f>>& candidatePoint) const
-{
-    float dist;
-    Ptr<OctreeNode> child;
-
-    // iterate eight children
-    for(size_t i = 0; i < 8; i++)
-    {
-        if( !this->children[i].empty() && this->children[i]->overlap(query, squareRadius))
-        {
-            if(!this->children[i]->isLeaf)
-            {
-                // Reach the branch node
-                this->children[i]->radiusNNSearchRecurse(query, squareRadius, candidatePoint);
-            }
-            else
-            {
-                // Reach the leaf node
-                child = this->children[i];
-
-                for(size_t j = 0; j < child->pointList.size(); j++)
-                {
-                    Point3f pt = child->pointList[j];
-                    Point3f col;
-                    if (!child->colorList.empty())
-                    {
-                        col = child->colorList[j];
-                    }
-                    dist = SquaredDistance(pt, query);
-                    if(dist + dist * std::numeric_limits<float>::epsilon() <= squareRadius )
-                    {
-                        candidatePoint.emplace_back(dist, pt, col);
-                    }
-                }
-            }
-        }
-    }
-}
-
 
 int Octree::radiusNNSearch(const Point3f& query, float radius, OutputArray pointSet, OutputArray squareDistSet) const
 {
@@ -545,13 +505,48 @@ int Octree::radiusNNSearch(const Point3f& query, float radius, OutputArray point
     {
         float squareRadius = radius * radius;
 
-        std::vector<std::tuple<float, Point3f, Point3f>> candidatePoint;
+        std::vector<std::tuple<float, Point3f, Point3f>> candidatePoints;
 
-        p->rootNode->radiusNNSearchRecurse(query, squareRadius, candidatePoint);
+        std::stack<Ptr<OctreeNode>> toCheck;
+        toCheck.push(p->rootNode);
 
-        for (size_t i = 0; i < candidatePoint.size(); i++)
+        while (!toCheck.empty())
         {
-            auto cp = candidatePoint[i];
+            Ptr<OctreeNode> node = toCheck.top();
+            toCheck.pop();
+            for(size_t i = 0; i < 8; i++)
+            {
+                Ptr<OctreeNode> child = node->children[i];
+                if( child && child->overlap(query, squareRadius))
+                {
+                    if(child->isLeaf)
+                    {
+                        for(size_t j = 0; j < child->pointList.size(); j++)
+                        {
+                            Point3f pt = child->pointList[j];
+                            Point3f col;
+                            if (!child->colorList.empty())
+                            {
+                                col = child->colorList[j];
+                            }
+                            float dist = SquaredDistance(pt, query);
+                            if(dist + dist * std::numeric_limits<float>::epsilon() <= squareRadius)
+                            {
+                                candidatePoints.emplace_back(dist, pt, col);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        toCheck.push(child);
+                    }
+                }
+            }
+        }
+
+        for (size_t i = 0; i < candidatePoints.size(); i++)
+        {
+            auto cp = candidatePoints[i];
             outSqDists.push_back(std::get<0>(cp));
             outPoints.push_back(std::get<1>(cp));
             outColors.push_back(std::get<2>(cp));

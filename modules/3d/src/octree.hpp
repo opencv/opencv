@@ -72,8 +72,6 @@ public:
 
     bool overlap(const Point3f& query, float squareRadius) const;
 
-    void radiusNNSearchRecurse(const Point3f& query, float squareRadius, std::vector<std::tuple<float, Point3f, Point3f>>& candidatePoint) const;
-
     void KNNSearchRecurse(const Point3f& query, const int K, float& smallestDist, std::vector<std::tuple<float, Point3f, Point3f>>& candidatePoint) const;
 
     //! Contains 8 pointers to its 8 children.
