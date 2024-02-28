@@ -104,7 +104,7 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
         case CV_64S:
             return CUDABackendWrapperINT64::create(m);
         default:
-            CV_Error(6342, "Unsupported mat type for CUDA");
+            CV_Error(Error::BadDepth, "Unsupported mat type for CUDA");
         }
 #endif
     }

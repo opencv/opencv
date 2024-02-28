@@ -1104,7 +1104,7 @@ TEST_P(Test_int64_sum, basic)
     EXPECT_EQ(re.depth(), CV_64S);
     auto ptr_re = (int64_t *) re.data;
     for (int i = 0; i < re.total(); i++)
-            ASSERT_EQ(result_value, ptr_re[i]); // sum result should be 1
+        ASSERT_EQ(result_value, ptr_re[i]);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_int64_sum,

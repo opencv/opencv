@@ -76,7 +76,7 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
             case CV_64S:
                 return CUDABackendWrapperINT64::create(baseBuffer, shape);
             default:
-                CV_Error(79874, "Unsupported mat type for CUDA");
+                CV_Error(Error::BadDepth, "Unsupported mat type for CUDA");
             }
 #endif
         }

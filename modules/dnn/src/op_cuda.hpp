@@ -230,7 +230,7 @@ namespace cv { namespace dnn {
             else if (targetId == DNN_TARGET_CUDA)
                 return Ptr<BackendNode>(new NodeType<float>(std::forward<Args>(args)...));
         }
-        CV_Assert(false);
+        CV_Error(Error::BadDepth, "Unsupported mat type");
         return Ptr<BackendNode>();
     }
 
@@ -249,7 +249,7 @@ namespace cv { namespace dnn {
             else if (targetId == DNN_TARGET_CUDA)
                 return Ptr<BackendNode>(new NodeType<float, T_INDEX>(std::forward<Args>(args)...));
         }
-        CV_Assert(false);
+        CV_Error(Error::BadDepth, "Unsupported mat type");
         return Ptr<BackendNode>();
     }
 

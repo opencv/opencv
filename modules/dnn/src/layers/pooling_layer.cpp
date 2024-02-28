@@ -439,7 +439,7 @@ public:
             else if (indicesType == CV_64S)
                 return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int64_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
 
-            CV_Error(65832, "Unsupported indices type");
+            CV_Error(Error::BadDepth, "Unsupported indices type");
             return Ptr<BackendNode>();
         }
 
