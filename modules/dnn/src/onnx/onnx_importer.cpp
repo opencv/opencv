@@ -3935,17 +3935,21 @@ void ONNXImporter::parseAttention(LayerParams& params, const opencv_onnx::NodePr
     CV_CheckEQ(param_qkv_hidden_sizes.size(), 3, "ONNXImporter/parseAttention: qkv_hidden_sizes is must and only have three elements");
 
     for (size_t i = 1; i < node_proto.input_size(); i++) {
-        if (layer_id.find(node_proto.input(i)) == layer_id.end()) {
+        if (constBlobs.find(node_proto.input(i)) != constBlobs.end()) {
             Mat tensor = getBlob(node_proto, i);
 
-            LayerParams const_params;
-            const_params.name = node_proto.input(i);
-            const_params.type = "Const";
-            const_params.blobs.push_back(tensor);
+            if (i == 0) {
+                LayerParams const_params;
+                const_params.name = node_proto.input(i);
+                const_params.type = "Const";
+                const_params.blobs.push_back(tensor);
 
-            opencv_onnx::NodeProto proto;
-            proto.add_output(const_params.name);
-            addLayer(const_params, proto);
+                opencv_onnx::NodeProto proto;
+                proto.add_output(const_params.name);
+                addLayer(const_params, proto);
+            } else {
+                params.blobs.push_back(tensor);
+            }
         }
     }
 
