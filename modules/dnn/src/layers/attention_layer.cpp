@@ -13,19 +13,30 @@ namespace cv { namespace dnn {
 // buffer_shape: [B, S, Dq+Dk+Dv] = [B, S, NH_q + NH_k + NH_v]
 // bias_shape:   [Dq+Dk+Dv]
 // q/k/v_shape:  [B, N, S, H] x 3
-static void SplitQKVBufferWithBias(const float *buffer, const float *bias, float *q, float *k, float *v,
-                                   size_t batch_size, size_t seq_len, size_t num_heads, size_t qk_head_size, size_t v_head_size) {
+static void SplitQKVBuffer(const float *buffer, const float *bias, float *q, float *k, float *v,
+                           size_t batch_size, size_t seq_len, size_t num_heads, size_t qk_head_size, size_t v_head_size) {
     size_t head_size = qk_head_size + qk_head_size + v_head_size,
-           NS = num_heads * seq_len, NSH = num_heads * seq_len * head_size,
-           NHqk = num_heads * qk_head_size, NH = num_heads * head_size,
-           outer_size = batch_size * NS;
+           outer_size = batch_size * num_heads * seq_len;
+    // std::cout << "batch_size=" << batch_size << ", seq_len=" << seq_len << ", num_heads=" << num_heads << ", qk_head_size=" << qk_head_size << ", v_head_size=" << v_head_size << std::endl;
+
+    /*
+    auto *output = gemm_buffer.ptr<float>();
+    const auto *bias = blobs.empty() ? inputs[2].ptr<const float>() : blobs.back().ptr<const float>();
+    size_t output_offset = 0;
+    for (size_t i = 0; i < batch_size * seq_len; i++) {
+        output_offset = i * hidden_size;
+        for (size_t j = 0; j < hidden_size; j++) {
+            output[output_offset + j] += bias[j];
+        }
+    }
+    */
 
     auto worker = [&](const Range &r) {
         for (int i = r.start; i < r.end; i++) {
-            const size_t dst_batch_index = i / NS;
-            const size_t dst_head_index = (i - dst_batch_index * NS) / seq_len;
+            const size_t dst_batch_index = i / (num_heads * seq_len);
+            const size_t dst_head_index = (i - dst_batch_index * seq_len * num_heads) / seq_len;
             const size_t dst_seq_index = i % seq_len;
-            size_t buffer_offset = dst_batch_index * NSH + dst_seq_index * NH;
+            size_t buffer_offset = dst_batch_index * (seq_len * num_heads * head_size) + dst_seq_index * (num_heads * head_size);
 
             // Split for Q and add bias
             std::memcpy(q, buffer + buffer_offset + dst_head_index * qk_head_size, qk_head_size * sizeof(float));
@@ -34,20 +45,21 @@ static void SplitQKVBufferWithBias(const float *buffer, const float *bias, float
             }
             q += qk_head_size;
 
-            // Split for K and add bias
-            std::memcpy(k, buffer + buffer_offset + NHqk + dst_head_index * qk_head_size, qk_head_size * sizeof(float));
+            // Split for K
+            std::memcpy(k, buffer + buffer_offset + num_heads * qk_head_size + dst_head_index * qk_head_size, qk_head_size * sizeof(float));
             for (size_t j = 0; j < qk_head_size; j++) {
-                k[j] += bias[NHqk + dst_head_index * qk_head_size + j];
+                k[j] += bias[num_heads * qk_head_size + dst_head_index * qk_head_size + j];
             }
             k += qk_head_size;
 
-            // Split for V and add bias
-            std::memcpy(v, buffer + buffer_offset + 2 * NHqk + dst_head_index * v_head_size, v_head_size * sizeof(float));
-            for (size_t j = 0; j < v_head_size; j++) {
-                v[j] += bias[2 * NHqk + dst_head_index * v_head_size + j];
+            // Split for V
+            std::memcpy(v, buffer + buffer_offset + 2 * num_heads * qk_head_size + dst_head_index * v_head_size, v_head_size * sizeof(float));
+            for (size_t j = 0; j < qk_head_size; j++) {
+                v[j] += bias[2 * num_heads * qk_head_size + dst_head_index * v_head_size + j];
             }
             v += v_head_size;
         }
+        
     };
     double nstripes = outer_size * (1 / 1024.0);
     parallel_for_(Range(0, outer_size), worker, nstripes);
@@ -122,7 +134,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                  attention_prob_shape{batch_size_ * num_heads_, seq_len_, seq_len_},
                  output_buffer_shape{batch_size_ * num_heads_, seq_len_, v_head_size_};
         internals.assign(1, gemm_buffer_shape);
-        internals.push_back(gemm_buffer_shape);
         internals.push_back(attention_prob_shape);
         internals.push_back(output_buffer_shape);
 
@@ -182,14 +193,17 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                           packed_weight.data(), 0.f, gemm_buffer.ptr<float>(), matmulHelper.ldc, opt);
         }
         // Split and get Q, K, V
-        auto *Q = internals[1].ptr<float>(),
-             *K = Q + batch_size * num_heads * seq_len * qkv_head_sizes[0],
-             *V = K + batch_size * num_heads * seq_len * qkv_head_sizes[1];
+        Mat QMat(std::vector<int>{int(batch_size * num_heads), int(seq_len), int(qkv_head_sizes[0])}, CV_32F),
+            KMat(std::vector<int>{int(batch_size * num_heads), int(seq_len), int(qkv_head_sizes[1])}, CV_32F),
+            VMat(std::vector<int>{int(batch_size * num_heads), int(seq_len), int(qkv_head_sizes[2])}, CV_32F);
         const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
-        SplitQKVBufferWithBias(gemm_buffer.ptr<const float>(), bias.ptr<const float>(), Q, K, V, batch_size, seq_len, num_heads, qkv_head_sizes[0], qkv_head_sizes[2]);
+        SplitQKVBuffer(gemm_buffer.ptr<const float>(), bias.ptr<const float>(), QMat.ptr<float>(), KMat.ptr<float>(), VMat.ptr<float>(), batch_size, seq_len, num_heads, qkv_head_sizes[0], qkv_head_sizes[2]);
+        auto *Q = QMat.ptr<const float>(),
+             *K = KMat.ptr<const float>(),
+             *V = VMat.ptr<const float>();
 
         // Compute softmax(scale * matmul(Q, K))
-        auto &attention_prob = internals[2];
+        auto &attention_prob = internals[1];
         {
             auto *output = attention_prob.ptr<float>();
 
@@ -198,25 +212,26 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             auto qk_head_size = qkv_head_sizes[0];
             auto qk_inner_size = seq_len * qk_head_size;
 
-            // Compute: attention_prob = scale * MatMul(Q, K)
-            // Q: [B, N, S, H]
-            // K: [B, N, S, H] // transB=true
-            // P: [B, N, S, S]
-            std::vector<size_t> AB_offsets(loops), C_offsets(loops);
-            for (size_t i = 0; i < loops; i++) {
-                AB_offsets[i] = i * qk_inner_size;
-                C_offsets[i] = i * seq_len_square;
-            }
-            fastGemmBatch(loops, AB_offsets.data(), AB_offsets.data(), C_offsets.data(),
-                          seq_len, seq_len, qk_head_size, scale, Q, qk_head_size, 1,
-                          K, 1, qk_head_size, 0.f, output, seq_len, opt);
+            // Compute scale * matmul(Q, K)
+            opt.multi_thread = false;
+            parallel_for_(Range(0, loops), [&] (const Range r) {
+                for (int i = r.start; i < r.end; i++) {
+                    const int output_offset = i * seq_len_square;
+
+                    const auto *q = Q + qk_inner_size * i, *k = K + qk_inner_size * i;
+                    fastGemm(false, true, seq_len, qk_head_size, seq_len, qk_head_size,
+                             scale, q, qk_head_size, 1,
+                             k, qk_head_size, 1, 0.f,
+                             output + output_offset, seq_len, opt);
+                }
+            }, loops * seq_len * qk_head_size * seq_len * (1 / 1024.0));
 
             // Compute softmax on the last dimension
             softmax(attention_prob, attention_prob, shape(attention_prob).size() - 1);
         }
 
         // Compute np.matmul(attention_prob, V)
-        auto &output_buffer = internals[3];
+        auto &output_buffer = internals[2];
         {
             auto *output = outputs[0].ptr<float>();
             auto *output_buff = output_buffer.ptr<float>();
