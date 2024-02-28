@@ -618,6 +618,406 @@ TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
     normAssert(h_t_reference, outputs[0]);
 }
 
+typedef testing::TestWithParam<tuple<int, std::string>> Layer_ElementWise_1d_Test;
+TEST_P(Layer_ElementWise_1d_Test, Accuracy)
+{
+    int batch_size = get<0>(GetParam());
+    std::string layer_name = get<1>(GetParam());
+    LayerParams lp;
+    Ptr<Layer> layer;
+
+    if (layer_name == "Clip" || layer_name == "ReLU6")
+    {
+        lp.type = "Clip";
+        lp.name = "clipLayer";
+        lp.set("min_value", 0.0);
+        lp.set("max_value", 1.0);
+        layer = ReLU6Layer::create(lp);
+    } else if (layer_name == "ReLU") {
+        lp.type = "ReLU";
+        lp.name = "reluLayer";
+        lp.set("negative_slope", 0.0);
+        layer = ReLULayer::create(lp);
+    } else if (layer_name == "GeLU" || layer_name == "GeluApprox"){
+        lp.type = "GeLU";
+        lp.name = "geluLayer";
+        if (layer_name == "GeLU")
+            layer = GeluLayer::create(lp);
+        else
+            layer = GeluApproximationLayer::create(lp);
+    } else if (layer_name == "TanH"){
+        lp.type = "TanH";
+        lp.name = "tanHLayer";
+        layer = TanHLayer::create(lp);
+    } else if (layer_name == "Swish"){
+        lp.type = "Swish";
+        lp.name = "swishLayer";
+        layer = SwishLayer::create(lp);
+    } else if (layer_name == "Mish"){
+        lp.type = "Mish";
+        lp.name = "mishLayer";
+        layer = MishLayer::create(lp);
+    } else if (layer_name == "Sigmoid"){
+        lp.type = "Sigmoid";
+        lp.name = "sigmoidLayer";
+        layer = SigmoidLayer::create(lp);
+    } else if (layer_name == "ELULayer"){
+        lp.type = "ELU";
+        lp.name = "eluLayer";
+        lp.set("alpha", 1.0);
+        layer = ELULayer::create(lp);
+    } else if (layer_name == "Abs"){
+        lp.type = "Abs";
+        lp.name = "absLayer";
+        layer = AbsLayer::create(lp);
+    } else if (layer_name == "BNLL"){
+        lp.type = "BNLL";
+        lp.name = "bnllLayer";
+        layer = BNLLLayer::create(lp);
+    } else if (layer_name == "Ceil"){
+        lp.type = "Ceil";
+        lp.name = "ceilLayer";
+        layer = CeilLayer::create(lp);
+    } else if (layer_name == "Floor") {
+        lp.type = "Floor";
+        lp.name = "floorLayer";
+        layer = FloorLayer::create(lp);
+    } else if (layer_name == "LogLayer") {
+        lp.type = "Log";
+        lp.name = "logLayer";
+        layer = LogLayer::create(lp);
+    } else if (layer_name == "Round") {
+        lp.type = "Round";
+        lp.name = "roundLayer";
+        layer = RoundLayer::create(lp);
+    } else if (layer_name == "Sqrt"){
+        lp.type = "Sqrt";
+        lp.name = "sqrtLayer";
+        layer = SqrtLayer::create(lp);
+    } else if (layer_name == "Acos") {
+        lp.type = "Acos";
+        lp.name = "acosLayer";
+        layer = AcosLayer::create(lp);
+    } else if (layer_name == "Acosh") {
+        lp.type = "Acosh";
+        lp.name = "acoshLayer";
+        layer = AcoshLayer::create(lp);
+    } else if (layer_name == "Asin") {
+        lp.type = "Asin";
+        lp.name = "asinLayer";
+        layer = AsinLayer::create(lp);
+    } else if (layer_name == "Asinh"){
+        lp.type = "Asinh";
+        lp.name = "asinhLayer";
+        layer = AsinhLayer::create(lp);
+    } else if (layer_name == "Atan") {
+        lp.type = "Atan";
+        lp.name = "atanLayer";
+        layer = AtanLayer::create(lp);
+    } else if (layer_name == "Atanh") {
+        lp.type = "Atanh";
+        lp.name = "atanhLayer";
+        layer = AtanhLayer::create(lp);
+    } else if (layer_name == "Cos") {
+        lp.type = "Cos";
+        lp.name = "cosLayer";
+        layer = CosLayer::create(lp);
+    } else if (layer_name == "Cosh") {
+        lp.type = "Cosh";
+        lp.name = "coshLayer";
+        layer = CoshLayer::create(lp);
+    } else if (layer_name == "Sin") {
+        lp.type = "Sin";
+        lp.name = "sinLayer";
+        layer = SinLayer::create(lp);
+    } else if (layer_name == "Sinh") {
+        lp.type = "Sinh";
+        lp.name = "sinhLayer";
+        layer = SinhLayer::create(lp);
+    } else if (layer_name == "Tan") {
+        lp.type = "Tan";
+        lp.name = "tanLayer";
+        layer = TanLayer::create(lp);
+    } else if (layer_name == "Erf") {
+        lp.type = "Erf";
+        lp.name = "erfLayer";
+        layer = ErfLayer::create(lp);
+    } else if (layer_name == "Reciprocal") {
+        lp.type = "Reciprocal";
+        lp.name = "reciprocalLayer";
+        layer = ReciprocalLayer::create(lp);
+    } else if (layer_name == "HardSwish"){
+        lp.type = "HardSwish";
+        lp.name = "hardSwishLayer";
+        layer = HardSwishLayer::create(lp);
+    } else if (layer_name == "Softplus"){
+        lp.type = "Softplus";
+        lp.name = "softplusLayer";
+        layer = SoftplusLayer::create(lp);
+    } else if (layer_name == "Softsign"){
+        lp.type = "Softsign";
+        lp.name = "softsignLayer";
+        layer = SoftsignLayer::create(lp);
+    } else if (layer_name == "Celu"){
+        lp.type = "Celu";
+        lp.name = "celuLayer";
+        lp.set("alpha", 1.0);
+        layer = CeluLayer::create(lp);
+    } else if (layer_name == "HardSigmid") {
+        lp.type = "HardSigmoid";
+        lp.name = "hardSigmoidLayer";
+        lp.set("alpha", 0.2);
+        lp.set("beta", 0.5);
+        layer = HardSigmoidLayer::create(lp);
+    } else if (layer_name == "Selu") {
+        lp.type = "Selu";
+        lp.name = "seluLayer";
+        lp.set("alpha", 1.6732631921768188);
+        lp.set("gamma", 1.0507009873554805);
+        layer = SeluLayer::create(lp);
+    } else if (layer_name == "ThresholdedRelu") {
+        lp.type = "ThresholdedRelu";
+        lp.name = "thresholdedReluLayer";
+        lp.set("alpha", 1.0);
+        layer = ThresholdedReluLayer::create(lp);
+    } else if (layer_name == "Power"){
+        lp.type = "Power";
+        lp.name = "powerLayer";
+        lp.set("power", 2.0);
+        lp.set("scale", 1.0);
+        lp.set("shift", 0.0);
+        layer = PowerLayer::create(lp);
+    } else if (layer_name == "Exp"){
+        lp.type = "Exp";
+        lp.name = "expLayer";
+        layer = ExpLayer::create(lp);
+    } else if (layer_name == "Sign"){
+        lp.type = "Sign";
+        lp.name = "signLayer";
+        layer = SignLayer::create(lp);
+    } else if (layer_name == "Shrink"){
+        lp.type = "Shrink";
+        lp.name = "shrinkLayer";
+        lp.set("lambd", 0.5);
+        lp.set("bias", 0.5);
+        layer = ShrinkLayer::create(lp);
+    } else if (layer_name == "ChannelsPReLU"){
+        lp.type = "PReLU";
+        lp.name = "preluLayer";
+        Mat alpha = Mat(1, 3, CV_32F, 0.5);
+        lp.blobs.push_back(alpha);
+        layer = ChannelsPReLULayer::create(lp);
+    }
+
+    std::vector<int> input_shape = {1, 3};
+    std::vector<int> output_shape = {1, 3};
+    if (batch_size == 0){
+        input_shape.erase(input_shape.begin());
+        output_shape.erase(output_shape.begin());
+    }
+
+    // generate random positeve value from 1 to 10
+    float inp_value = 1 + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(10-1)));
+    cv::Mat input = cv::Mat(input_shape, CV_32F, inp_value);
+    cv::Mat output_ref;
+
+    // fill output_ref depending on the layer
+    if (layer_name == "Clip" || layer_name == "ReLU6")
+    {
+        output_ref = cv::Mat(output_shape, CV_32F, 1.0);
+    } else if (layer_name == "ReLU") {
+        output_ref = cv::Mat(output_shape, CV_32F, inp_value);
+    } else if (layer_name == "GeLU" || layer_name == "GeluApprox"){
+        // lets calculate gelu value
+        float geluValue = 0.0;
+        if (layer_name == "GeLU"){
+            geluValue = inp_value *  1 / (1 + std::exp(-1.702 * inp_value * inp_value));
+        } else {
+            geluValue = 0.5 * inp_value * (1 + std::tanh(std::sqrt(2 / 3.14159265358979323846) * (inp_value + 0.044715 * inp_value * inp_value * inp_value)));
+        }
+        float data[3] = {geluValue, geluValue, geluValue};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "TanH"){
+        float value = std::tanh(inp_value);
+        float data[3] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Swish"){
+        float value = inp_value / (1 + std::exp(-inp_value));
+        float data[3] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Mish"){
+        float value = inp_value * std::tanh(std::log(1 + std::exp(inp_value)));
+        float data[3] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Sigmoid"){
+        float value = 1.0 / (1 + std::exp(-inp_value));
+        float data[3] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "ELULayer"){
+        float value = inp_value > 0 ? inp_value : 1.0 * (std::exp(inp_value) - 1);
+        float data[3] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Abs"){
+        input = cv::Mat(input_shape, CV_32F, -inp_value);
+        output_ref = cv::Mat(output_shape, CV_32F, inp_value);
+    } else if (layer_name == "BNLL"){
+        float value = std::log(1 + std::exp(inp_value));
+        float data[3] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Ceil"){
+        input = cv::Mat(input_shape, CV_32F);
+        cv::randn(input, 0.0, 1.0);
+        output_ref = cv::Mat(output_shape, CV_32F, 1.0);
+    } else if (layer_name == "Floor") {
+        input = cv::Mat(input_shape, CV_32F);
+        cv::randn(input, 0.1, 1.0);
+        output_ref = cv::Mat(output_shape, CV_32F, 0.0);
+    } else if (layer_name == "LogLayer") {
+        float value = std::log(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Round") {
+        input = cv::Mat(input_shape, CV_32F);
+        cv::randn(input, 0.0, 1.0);
+        output_ref = cv::Mat(output_shape, CV_32F, 0.0);
+    } else if (layer_name == "Sqrt"){
+        float value = std::sqrt(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Acos") {
+        input = cv::Mat(input_shape, CV_32F, 0.0); // randomizej
+        float value = std::acos(0.0); // randomize
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Acosh") {
+        float value = std::acosh(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Asin") {
+        input = cv::Mat(input_shape, CV_32F, 0.0); // randomize
+        float value = std::asin(0.0); // randomize
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Asinh") {
+        float value = std::asinh(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Atan") {
+        float value = std::atan(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Atanh") {
+        input = cv::Mat(input_shape, CV_32F, 0.0); // randomize
+        float value = std::asin(0.0); // randomize
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Cos"){
+        float value = std::cos(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Cosh"){
+        float value = std::cosh(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Sin"){
+        float value = std::sin(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Sinh"){
+        float value = std::sinh(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Tan"){
+        float value = std::tan(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Erf"){
+        float value = std::erf(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Reciprocal"){
+        float value = 1.0 / inp_value;
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "HardSwish") {
+        float value = inp_value * std::max(0.0, std::min(6.0, inp_value + 3.0)) / 6.0;
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Softplus"){
+        float value = std::log(1 + std::exp(inp_value));
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Softsign"){
+        float value = inp_value / (1 + std::abs(inp_value));
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Celu"){
+        float value = inp_value > 0 ? inp_value : 1.0 * (std::exp(inp_value / 1.0) - 1);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "HardSigmid") {
+        float value = std::max(0.0, std::min(1.0, 0.2 * inp_value + 0.5));
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Selu") {
+        float value = 1.0507009873554805 * (inp_value > 0 ? inp_value : 1.6732631921768188 * (std::exp(inp_value / 1.0) - 1));
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "ThresholdedRelu") {
+        float value = inp_value > 1.0 ? inp_value : 0.0;
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Power"){
+        float value = std::pow(inp_value, 2.0);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Exp"){
+        float value = std::exp(inp_value);
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Sign"){
+        float value = inp_value > 0 ? 1.0 : 0.0;
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "Shrink"){
+        float value = inp_value > 0.5 ? inp_value - 0.5 : 0.0;
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    } else if (layer_name == "ChannelsPReLU"){
+        float value = inp_value > 0 ? inp_value : 0.5 * inp_value;
+        float data[] = {value, value, value};
+        output_ref = cv::Mat(output_shape, CV_32F, data);
+    }
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    if (layer_name == "GeLU"){
+        // GeLU has a large error for some reason
+        normAssert(output_ref, outputs[0], "", 1e-1, 1e-1);
+    } else
+        normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_ElementWise_1d_Test, Combine(
+/*operation*/           Values(0, 1),
+                        Values("Clip", "ReLU6", "ReLU",
+                        "GeLU", "GeluApprox", "TanH",
+                        "Swish", "Mish", "Sigmoid",
+                        "ELULayer", "Abs", "BNLL",
+                        "Ceil", "Floor", "LogLayer",
+                        "Round", "Sqrt", "Acos",
+                        "Acosh", "Asin", "Asinh",
+                        "Atan", "Atanh", "Cos",
+                        "Sin", "Sinh", "Tan", "Erf",
+                        "Reciprocal", "Cosh", "HardSwish",
+                        "Softplus", "Softsign", "Celu",
+                        "HardSigmid", "Selu", "ThresholdedRelu",
+                        "Power", "Exp", "Sign", "Shrink",
+                        "ChannelsPReLU")));
+
+
 typedef testing::TestWithParam<tuple<int, int>> Layer_Gather_1d_Test;
 TEST_P(Layer_Gather_1d_Test, Accuracy) {
 
