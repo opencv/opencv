@@ -8,9 +8,6 @@
 
 namespace cv{
 
-// Locate the OctreeNode corresponding to the input point from the given OctreeNode.
-static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode> node, OctreeKey& key, size_t depthMask);
-
 OctreeNode::OctreeNode() :
     children(),
     depth(0),
@@ -282,38 +279,6 @@ bool Octree::empty() const
     return p->rootNode.empty();
 }
 
-Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode> _node, OctreeKey &key, size_t depthMask)
-{
-    OctreeNode &node = *_node;
-
-    if(node.empty())
-    {
-        return Ptr<OctreeNode>();
-    }
-
-    const float eps = 1e-9f;
-
-    if(node.isLeaf)
-    {
-        for(size_t i = 0; i < node.pointList.size(); i++ )
-        {
-            if(abs(point.x - node.pointList[i].x) < eps &&
-               abs(point.y - node.pointList[i].y) < eps &&
-               abs(point.z - node.pointList[i].z) < eps)
-            {
-                return _node;
-            }
-        }
-        return Ptr<OctreeNode>();
-    }
-
-    size_t childIndex = key.findChildIdxByMask(depthMask);
-    if(!node.children[childIndex].empty())
-    {
-        return index(point, node.children[childIndex], key, depthMask>>1);
-    }
-    return Ptr<OctreeNode>();
-}
 
 bool Octree::isPointInBound(const Point3f& _point) const
 {
@@ -326,9 +291,36 @@ bool Octree::deletePoint(const Point3f& point)
                               (size_t)floor((point.y - this->p->origin.y) / p->resolution),
                               (size_t)floor((point.z - this->p->origin.z) / p->resolution));
     size_t depthMask = (size_t)1 << (p->maxDepth - 1);
-    Ptr<OctreeNode> node = index(point, p->rootNode, key, depthMask);
 
-    if(node.empty())
+    Ptr<OctreeNode> node = p->rootNode;
+    while(node)
+    {
+        if (node->empty())
+        {
+            node = nullptr;
+        }
+        else if (node->isLeaf)
+        {
+            const float eps = 1e-9f;
+            bool found = std::any_of(node->pointList.begin(), node->pointList.end(),
+                [point, eps](const Point3f& pt) -> bool
+                {
+                    return abs(point.x - pt.x) < eps &&
+                           abs(point.y - pt.y) < eps &&
+                           abs(point.z - pt.z) < eps;
+                });
+            if (!found)
+                node = nullptr;
+            break;
+        }
+        else
+        {
+            node = node->children[key.findChildIdxByMask(depthMask)];
+            depthMask = depthMask >> 1;
+        }
+    }
+
+    if(!node)
         return false;
 
     const float eps = 1e-9f;
