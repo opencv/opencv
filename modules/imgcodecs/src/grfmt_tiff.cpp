@@ -678,7 +678,7 @@ bool  TiffDecoder::readData( Mat& img )
                     ( (uint64_t) MAX_TILE_SIZE * 95 / 100)
                 )
                 {
-                    numeric_types::uint16_t planerConfig = (numeric_types::uint16)-1;
+                    uint16_t planerConfig = (numeric_types::uint16)-1;
                     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planerConfig));
 
                     doReadScanline = (!is_tiled) // no tile
@@ -734,7 +734,7 @@ bool  TiffDecoder::readData( Mat& img )
                     MAX_TILE_SIZE * 95 / 100
                 )
                 {
-                    numeric_types::uint16_t planerConfig = (numeric_types::uint16)-1;
+                    uint16_t planerConfig = (numeric_types::uint16)-1;
                     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planerConfig));
 
                     doReadScanline = (!is_tiled) // no tile
