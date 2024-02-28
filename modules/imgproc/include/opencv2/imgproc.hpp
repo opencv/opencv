@@ -274,7 +274,8 @@ enum InterpolationFlags{
     - flag is __not__ set: \f$dst( \rho , \phi ) = src(x,y)\f$
     - flag is set: \f$dst(x,y) = src( \rho , \phi )\f$
     */
-    WARP_INVERSE_MAP     = 16
+    WARP_INVERSE_MAP     = 16,
+    WARP_RELATIVE_MAP    = 32
 };
 
 /** \brief Specify the polar mapping mode
@@ -2510,6 +2511,7 @@ CV_EXPORTS_W void warpPerspective( InputArray src, OutputArray dst,
 The function remap transforms the source image using the specified map:
 
 \f[\texttt{dst} (x,y) =  \texttt{src} (map_x(x,y),map_y(x,y))\f]
+\f[\texttt{dst} (x,y) =  \texttt{src} (x+map_x(x,y),y+map_y(x,y))\f] with WARP_RELATIVE_MAP
 
 where values of pixels with non-integer coordinates are computed using one of available
 interpolation methods. \f$map_x\f$ and \f$map_y\f$ can be encoded as separate floating-point maps
@@ -2529,7 +2531,9 @@ representation to fixed-point for speed.
 @param map2 The second map of y values having the type CV_16UC1, CV_32FC1, or none (empty map
 if map1 is (x,y) points), respectively.
 @param interpolation Interpolation method (see #InterpolationFlags). The methods #INTER_AREA
-and #INTER_LINEAR_EXACT are not supported by this function.
+#INTER_LINEAR_EXACT and #INTER_NEAREST_EXACT are not supported by this function.
+The extra flag WARP_RELATIVE_MAP that can be ORed to the interpolation method
+(e.g. INTER_LINEAR | WARP_RELATIVE_MAP)
 @param borderMode Pixel extrapolation method (see #BorderTypes). When
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.

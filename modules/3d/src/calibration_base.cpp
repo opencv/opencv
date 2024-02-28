@@ -934,8 +934,8 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Marr,
     Qx = ( 0  c  s ), c = m33/sqrt(m32^2 + m33^2), s = m32/sqrt(m32^2 + m33^2)
          ( 0 -s  c )
     */
-    s = M(2, 1);
-    c = M(2, 2);
+    s = std::abs(M(2, 1)) > DBL_EPSILON ? M(2, 1): 0.;
+    c = std::abs(M(2, 1)) > DBL_EPSILON ? M(2, 2): 1.;
     z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
     c *= z;
     s *= z;
@@ -952,8 +952,8 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Marr,
     Qy = ( 0  1  0 ), c = m33/sqrt(m31^2 + m33^2), s = -m31/sqrt(m31^2 + m33^2)
          ( s  0  c )
     */
-    s = -R(2, 0);
-    c = R(2, 2);
+    s = std::abs(R(2, 0)) > DBL_EPSILON ? -R(2, 0): 0.;
+    c = std::abs(R(2, 0)) > DBL_EPSILON ? R(2, 2): 1.;
     z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
     c *= z;
     s *= z;
@@ -971,8 +971,8 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Marr,
          ( 0  0  1 )
     */
 
-    s = M(1, 0);
-    c = M(1, 1);
+    s = std::abs(M(1, 0)) > DBL_EPSILON ? M(1, 0): 0.;
+    c = std::abs(M(1, 0)) > DBL_EPSILON ? M(1, 1): 1.;
     z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
     c *= z;
     s *= z;
