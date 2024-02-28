@@ -1216,11 +1216,9 @@ void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors
   size_t neighbors_count = 0;
   std::priority_queue<Neighbor> distance;
 
-
   // optimize the algorithm to O(n^2 \log n) by sort with distance
   for (size_t i = 0; i < keypoints.size(); i++)
   {
-    std::priority_queue<Neighbor> distance;
     for (size_t j = 0; j < keypoints.size(); j++)
     {
       if (i == j)
