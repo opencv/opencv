@@ -144,19 +144,22 @@ bool VideoCapture_obsensor::retrieveFrame(int outputType, OutputArray frame)
         if (!grabbedDepthFrame_.empty())
         {
             if(OBSENSOR_GEMINI2_PID == streamChannelGroup_.front()->getPid()){
-                grabbedDepthFrame_ = grabbedDepthFrame_*0.2;
+                const double DepthValueScaleGemini2 = 0.2;
+                grabbedDepthFrame_ = grabbedDepthFrame_*DepthValueScaleGemini2;
                 Rect rect(320, 160, 640, 480);
                 grabbedDepthFrame_(rect).copyTo(frame);
             }
             else if(OBSENSOR_ASTRA2_PID == streamChannelGroup_.front()->getPid()){
-                grabbedDepthFrame_ = grabbedDepthFrame_*0.8;
+                const double DepthValueScaleAstra2 = 0.8;
+                grabbedDepthFrame_ = grabbedDepthFrame_*DepthValueScaleAstra2;
                 grabbedDepthFrame_.copyTo(frame);
             }
             else if(OBSENSOR_FEMTO_MEGA_PID == streamChannelGroup_.front()->getPid()){
                 Rect rect(0, 0, 640, 360);
                 grabbedDepthFrame_(rect).copyTo(frame);
             }else if(OBSENSOR_GEMINI2L_PID == streamChannelGroup_.front()->getPid()){
-                grabbedDepthFrame_ = grabbedDepthFrame_*0.2;
+                const double DepthValueScaleGemini2L = 0.2;
+                grabbedDepthFrame_ = grabbedDepthFrame_*DepthValueScaleGemini2L;
                 Rect rect(0, 40, 1280, 720);
                 grabbedDepthFrame_(rect).copyTo(frame);
             }else if(OBSENSOR_GEMINI2XL_PID == streamChannelGroup_.front()->getPid()){

@@ -476,7 +476,7 @@ OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
   VERIFY HAVE_TIMVX)
 # Attention when OBSENSOR_USE_ORBBEC_SDK set to off:
 #   Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
-OCV_OPTION(OBSENSOR_USE_ORBBEC_SDK "Use Orbbec SDK as banckend to support more camera models and platforms (force to ON on MacOS)" OFF)
+OCV_OPTION(OBSENSOR_USE_ORBBEC_SDK "Use Orbbec SDK as backend to support more camera models and platforms (force to ON on MacOS)" OFF)
 OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec 3D Cameras)" ON
   VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT AND NOT MINGW) OR ( UNIX AND NOT APPLE AND NOT ANDROID) OR (APPLE AND AARCH64 AND NOT IOS AND NOT X86_64 AND NOT X86)
   VERIFY HAVE_OBSENSOR)
