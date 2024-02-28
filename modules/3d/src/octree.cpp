@@ -13,7 +13,6 @@ OctreeNode::OctreeNode() :
     depth(0),
     size(0),
     origin(0,0,0),
-    pointNum(0),
     neigh(),
     parentIndex(-1)
 { }
@@ -23,7 +22,6 @@ OctreeNode::OctreeNode(int _depth, double _size, const Point3f &_origin, int _pa
     depth(_depth),
     size(_size),
     origin(_origin),
-    pointNum(0),
     neigh(),
     parentIndex(_parentIndex)
 { }
@@ -172,7 +170,34 @@ bool Octree::Impl::insertPoint(const Point3f& point, const Point3f &color)
                   (size_t)floor((point.y - this->origin.y) / this->resolution),
                   (size_t)floor((point.z - this->origin.z) / this->resolution));
 
-    this->rootNode->insertPointRecurse(point, color, this->maxDepth, key, depthMask);
+    Ptr<OctreeNode> node = this->rootNode;
+    while (node->depth != maxDepth)
+    {
+        double childSize = node->size * 0.5;
+
+        // calculate the index and the origin of child.
+        size_t childIndex = key.findChildIdxByMask(depthMask);
+        size_t xIndex = (childIndex & 1) ? 1 : 0;
+        size_t yIndex = (childIndex & 2) ? 1 : 0;
+        size_t zIndex = (childIndex & 4) ? 1 : 0;
+
+        Point3f childOrigin = node->origin + Point3f(float(xIndex), float(yIndex), float(zIndex)) * float(childSize);
+
+        Ptr<OctreeNode> &childPtr = node->children[childIndex];
+        if (!childPtr)
+        {
+            childPtr = new OctreeNode(node->depth + 1, childSize, childOrigin, int(childIndex));
+            childPtr->parent = node;
+        }
+
+        node = childPtr;
+        depthMask = depthMask >> 1;
+    }
+
+    node->isLeaf = true;
+    node->pointList.push_back(point);
+    node->colorList.push_back(color);
+
     return true;
 }
 
@@ -376,38 +401,6 @@ bool Octree::deletePoint(const Point3f& point)
         }
     }
     return true;
-}
-
-
-void OctreeNode::insertPointRecurse( const Point3f& point,const Point3f &colorVertex, int maxDepth,
-                                     const OctreeKey &key, size_t depthMask)
-{
-    //add point to the leaf node.
-    if (this->depth == maxDepth)
-    {
-        this->isLeaf = true;
-        this->pointNum++;
-        this->pointList.push_back(point);
-        this->colorList.push_back(colorVertex);
-        return;
-    }
-
-    double childSize = this->size * 0.5;
-    //calculate the index and the origin of child.
-    size_t childIndex = key.findChildIdxByMask(depthMask);
-    size_t xIndex = (childIndex & 1) ? 1 : 0;
-    size_t yIndex = (childIndex & 2) ? 1 : 0;
-    size_t zIndex = (childIndex & 4) ? 1 : 0;
-    Point3f childOrigin = this->origin + Point3f(float(xIndex), float(yIndex), float(zIndex)) * float(childSize);
-
-    if (this->children[childIndex].empty())
-    {
-        this->children[childIndex] = new OctreeNode(this->depth + 1, childSize, childOrigin, int(childIndex));
-        this->children[childIndex]->parent = this;
-    }
-
-    this->children[childIndex]->insertPointRecurse( point, colorVertex, maxDepth, key, depthMask >> 1);
-    this->pointNum += 1;
 }
 
 

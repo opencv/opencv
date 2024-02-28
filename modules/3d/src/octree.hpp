@@ -72,9 +72,6 @@ public:
 
     bool overlap(const Point3f& query, float squareRadius) const;
 
-    void insertPointRecurse(const Point3f& point, const Point3f &color, int maxDepth,
-                            const OctreeKey &key, size_t depthMask);
-
     void radiusNNSearchRecurse(const Point3f& query, float squareRadius, std::vector<std::tuple<float, Point3f, Point3f>>& candidatePoint) const;
 
     void KNNSearchRecurse(const Point3f& query, const int K, float& smallestDist, std::vector<std::tuple<float, Point3f, Point3f>>& candidatePoint) const;
@@ -97,8 +94,6 @@ public:
 
     //! RAHTCoefficient of octree node, used for color attribute compression.
     Point3f RAHTCoefficient = { };
-    //! Number of point cloud in this node.
-    int pointNum;
 
     /**  The list of 6 adjacent neighbor node.
         *    index mapping:
