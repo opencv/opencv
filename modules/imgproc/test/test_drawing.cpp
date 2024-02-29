@@ -742,7 +742,7 @@ TEST(Drawing, fillpoly_fully)
             t1.x = (t1.x + offset.x) << (xy_shift - shift);
             t1.y = (t1.y + delta) >> shift;
 
-            if (lineType < CV_AA)
+            if (lineType < cv::LINE_AA)
             {
                 t0.x = (t0.x + (xy_one >> 1)) >> xy_shift;
                 t1.x = (t1.x + (xy_one >> 1)) >> xy_shift;
@@ -831,7 +831,7 @@ PARAM_TEST_CASE(FillPolyFully, unsigned, unsigned, int, int, Point, cv::LineType
             t1.x = (t1.x + offset.x) << (xy_shift - shift);
             t1.y = (t1.y + delta) >> shift;
 
-            if (lineType < CV_AA)
+            if (lineType < cv::LINE_AA)
             {
                 t0.x = (t0.x + (xy_one >> 1)) >> xy_shift;
                 t1.x = (t1.x + (xy_one >> 1)) >> xy_shift;

@@ -1442,18 +1442,18 @@ cv::Rect cv_wl_titlebar::draw(void *data, cv::Size const &size, bool force) {
             cv::putText(
                     buf_, window_->get_title(),
                     origin, title_.face, title_.scale,
-                    CV_RGB(0xff, 0xff, 0xff), title_.thickness, CV_AA
+                    CV_RGB(0xff, 0xff, 0xff), title_.thickness, cv::LINE_AA
             );
         }
 
         buf_(cv::Rect(btn_min_.tl(), cv::Size(titlebar_min_width, size.height))) = bg_color_;
-        cv::line(buf_, btn_cls.tl(), btn_cls.br(), line_color_, 1, CV_AA);
+        cv::line(buf_, btn_cls.tl(), btn_cls.br(), line_color_, 1, cv::LINE_AA);
         cv::line(buf_, btn_cls.tl() + cv::Point(btn_cls.width, 0), btn_cls.br() - cv::Point(btn_cls.width, 0),
-                 line_color_, 1, CV_AA);
-        cv::rectangle(buf_, btn_max.tl(), btn_max.br(), line_color_, 1, CV_AA);
+                 line_color_, 1, cv::LINE_AA);
+        cv::rectangle(buf_, btn_max.tl(), btn_max.br(), line_color_, 1, cv::LINE_AA);
         cv::line(buf_, cv::Point(btn_min_.x + 8, btn_min_.height / 2),
-                 cv::Point(btn_min_.x + btn_min_.width - 8, btn_min_.height / 2), line_color_, 1, CV_AA);
-        cv::line(buf_, cv::Point(0, 0), cv::Point(buf_.size().width, 0), border_color_, 1, CV_AA);
+                 cv::Point(btn_min_.x + btn_min_.width - 8, btn_min_.height / 2), line_color_, 1, cv::LINE_AA);
+        cv::line(buf_, cv::Point(0, 0), cv::Point(buf_.size().width, 0), border_color_, 1, cv::LINE_AA);
 
         write_mat_to_xrgb8888(buf_, data);
         last_size_ = size;
@@ -1657,12 +1657,12 @@ cv::Rect cv_wl_trackbar::draw(void *data, cv::Size const &size, bool force) {
                 data_,
                 (name_ + ": " + std::to_string(slider_.value)),
                 bar_.text_orig, bar_.fontface, bar_.fontscale,
-                CV_RGB(0x00, 0x00, 0x00), bar_.font_thickness, CV_AA);
+                CV_RGB(0x00, 0x00, 0x00), bar_.font_thickness, cv::LINE_AA);
 
-        cv::line(data_, bar_.left, bar_.right, color_.bg, bar_.thickness + 3, CV_AA);
-        cv::line(data_, bar_.left, bar_.right, color_.fg, bar_.thickness, CV_AA);
-        cv::circle(data_, slider_.pos, slider_.radius, color_.fg, -1, CV_AA);
-        cv::circle(data_, slider_.pos, slider_.radius, color_.bg, 1, CV_AA);
+        cv::line(data_, bar_.left, bar_.right, color_.bg, bar_.thickness + 3, cv::LINE_AA);
+        cv::line(data_, bar_.left, bar_.right, color_.fg, bar_.thickness, cv::LINE_AA);
+        cv::circle(data_, slider_.pos, slider_.radius, color_.fg, -1, cv::LINE_AA);
+        cv::circle(data_, slider_.pos, slider_.radius, color_.bg, 1, cv::LINE_AA);
 
         write_mat_to_xrgb8888(data_, data);
         damage = cv::Rect(cv::Point(0, 0), size);

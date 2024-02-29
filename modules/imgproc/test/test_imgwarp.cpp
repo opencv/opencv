@@ -1615,11 +1615,11 @@ TEST(Imgproc_linearPolar, identity)
     {
         linearPolar(src, dst,
             Point2f((N-1) * 0.5f, (N-1) * 0.5f), N * 0.5f,
-            CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR | CV_WARP_INVERSE_MAP);
+            cv::WARP_FILL_OUTLIERS | CV_INTER_LINEAR | cv::WARP_INVERSE_MAP);
 
         linearPolar(dst, src,
             Point2f((N-1) * 0.5f, (N-1) * 0.5f), N * 0.5f,
-            CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR);
+            cv::WARP_FILL_OUTLIERS | CV_INTER_LINEAR);
 
         double psnr = cvtest::PSNR(in(roi), src(roi));
         EXPECT_LE(25, psnr) << "iteration=" << i;
@@ -1656,11 +1656,11 @@ TEST(Imgproc_logPolar, identity)
     {
         logPolar(src, dst,
             Point2f((N-1) * 0.5f, (N-1) * 0.5f), M,
-            CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR | CV_WARP_INVERSE_MAP);
+            cv::WARP_FILL_OUTLIERS | CV_INTER_LINEAR | cv::WARP_INVERSE_MAP);
 
         logPolar(dst, src,
             Point2f((N-1) * 0.5f, (N-1) * 0.5f), M,
-            CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR);
+            cv::WARP_FILL_OUTLIERS | CV_INTER_LINEAR);
 
         double psnr = cvtest::PSNR(in(roi), src(roi));
         EXPECT_LE(25, psnr) << "iteration=" << i;
@@ -1692,11 +1692,11 @@ TEST(Imgproc_warpPolar, identity)
     Rect roi = Rect(0, 0, in.cols - ((N + 19) / 20), in.rows);
     Point2f center = Point2f((N - 1) * 0.5f, (N - 1) * 0.5f);
     double radius = N * 0.5;
-    int flags = CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR;
+    int flags = cv::WARP_FILL_OUTLIERS | CV_INTER_LINEAR;
     // test linearPolar
     for (int ki = 1; ki <= 5; ki++)
     {
-        warpPolar(src, dst, src.size(), center, radius, flags + WARP_POLAR_LINEAR + CV_WARP_INVERSE_MAP);
+        warpPolar(src, dst, src.size(), center, radius, flags + WARP_POLAR_LINEAR + cv::WARP_INVERSE_MAP);
         warpPolar(dst, src, src.size(), center, radius, flags + WARP_POLAR_LINEAR);
 
         double psnr = cv::PSNR(in(roi), src(roi));
@@ -1706,7 +1706,7 @@ TEST(Imgproc_warpPolar, identity)
     src = in.clone();
     for (int ki = 1; ki <= 5; ki++)
     {
-        warpPolar(src, dst, src.size(),center, radius, flags + WARP_POLAR_LOG + CV_WARP_INVERSE_MAP );
+        warpPolar(src, dst, src.size(),center, radius, flags + WARP_POLAR_LOG + cv::WARP_INVERSE_MAP );
         warpPolar(dst, src, src.size(),center, radius, flags + WARP_POLAR_LOG);
 
         double psnr = cv::PSNR(in(roi), src(roi));
