@@ -238,7 +238,8 @@ protected:
     }
 };
 
-} // namespace
+void runLayer(cv::Ptr<cv::dnn::Layer> layer, std::vector<cv::Mat> &inpBlobs, std::vector<cv::Mat> &outBlobs);
 
+} // namespace
 
 #endif
