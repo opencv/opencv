@@ -67,8 +67,10 @@
 #include "opencv2/3d/detail/kinfu_frame.hpp"
 
 #include <atomic>
+#include <algorithm>
 #include <functional>
 #include <limits>
+#include <stack>
 #include <vector>
 #include <list>
 #include <set>
