@@ -21,12 +21,7 @@ endif()
 #
 # Check for unistd.h
 #
-if(NOT MSVC)
-  check_include_file(unistd.h Z_HAVE_UNISTD_H)
-  if(Z_HAVE_UNISTD_H)
-    add_definitions(-DZ_HAVE_UNISTD_H)
-  endif()
-endif()
+check_include_file(unistd.h Z_HAVE_UNISTD_H)
 
 if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
@@ -41,7 +36,6 @@ if(HAVE_OFF64_T)
   add_definitions(-D_LARGEFILE64_SOURCE=1)
 endif()
 
-ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 configure_file(	${CMAKE_CURRENT_SOURCE_DIR}/zconf.h.cmakein
                 ${CMAKE_CURRENT_BINARY_DIR}/zconf.h @ONLY)
 
