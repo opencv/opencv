@@ -701,27 +701,44 @@ TEST_P(Layer_Scatter_1d_Test, Accuracy) {
             }
         }
 
+        std::cout << "\n+++++++ before operation +++++++\n";
+        std::cout << "input: " << input << std::endl;
+        std::cout << "output ref: " << output_ref << std::endl;
+        std::cout << "output: " << output << std::endl;
+        std::cout << "+++++++ before operation +++++++\n";
+
         if (opr == "add"){
             output_ref += output;
         } else if (opr == "mul"){
             output_ref = output.mul(output_ref);
         } else if (opr == "max"){
-            std::cout << "output ref: " << output_ref << std::endl;
-            std::cout << "output: " << output << std::endl;
             cv::max(output_ref, output, output_ref);
         } else if (opr == "min"){
             cv::min(output_ref, output, output_ref);
         }
 
+        std::cout << "\n+++++++ after operation +++++++\n";
+        std::cout << "input: " << input << std::endl;
+        std::cout << "output ref: " << output_ref << std::endl;
+        std::cout << "output: " << output << std::endl;
+        std::cout << "+++++++ after operation +++++++\n";
 
         std::vector<Mat> inputs{output, indices, input}; // not really clear what the input is
         std::vector<Mat> outputs;
 
         runLayer(layer, inputs, outputs);
 
-        ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-        std::cout << "output: " << outputs[0] << std::endl;
+
+        std::cout << "\n+++++++ after running layer+++++++\n";
+        std::cout << "indices: " << indices << std::endl;
+        std::cout << "input: " << input << std::endl;
         std::cout << "output ref: " << output_ref << std::endl;
+        std::cout << "output: " << outputs[0] << std::endl;
+        std::cout << "+++++++ after running layer+++++++\n";
+
+        ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+        // std::cout << "output: " << outputs[0] << std::endl;
+        // std::cout << "output ref: " << output_ref << std::endl;
         normAssert(output_ref, outputs[0]);
     }
 }
