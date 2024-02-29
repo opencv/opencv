@@ -117,6 +117,10 @@
 "test_gathernd_example_float32",
 "test_gathernd_example_int32",
 "test_gathernd_example_int32_batch_dim1",
+"test_gelu_default_1_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_default_2_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_tanh_1_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_tanh_2_expanded", // parser: no corresponding layer for CastLike
 "test_gemm_all_attributes",
 "test_gemm_alpha",
 "test_gemm_beta",
