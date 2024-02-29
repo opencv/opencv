@@ -62,9 +62,12 @@ using namespace tiff_dummy_namespace;
 
 #ifndef _MSC_VER
 namespace numeric_types = tiff_dummy_namespace;
-#elif
+#else
 #include <cstdint>
-namespace numeric_types = std;
+namespace numeric_types {
+    using uint16 = std::uint16_t;
+    using uint32 = std::uint32_t;
+}
 #endif
 
 namespace cv
