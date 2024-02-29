@@ -635,6 +635,7 @@ TEST_P(Layer_Scatter_1d_Test, Accuracy) {
     // this particular case is left since output reference calculation
     // is involved. We need only 1D case coverage
     if (batch_size == 2 && axis == 1 && opr == "add"){
+        std::cout << "skipt test" << std::endl;
         return;
     }
     // All cases where axis is 0,  batch_size is not 0 and wise versa
@@ -658,8 +659,9 @@ TEST_P(Layer_Scatter_1d_Test, Accuracy) {
             indices_shape.erase(indices_shape.begin());
         }
 
-        cv::Mat input = cv::Mat(input_shape, CV_32F, 1.0);
+        cv::Mat input = cv::Mat(input_shape, CV_32F);
         cv::randn(input, 0, 1);
+        cv::pow(input, 2, input);
 
         std::vector<float> data;
         if (batch_size <= 1){
@@ -668,12 +670,14 @@ TEST_P(Layer_Scatter_1d_Test, Accuracy) {
             // create indices batch * 3 automatically
             for (int i = 0; i < batch_size * 3; i++){
                 // craete random int value between 0 and 2
+                std::cout << "created random indices" << std::endl;
                 data.push_back(rand() % 3);
             }
 
         }
         // create indices with *pointer to data
         cv::Mat indices = cv::Mat(indices_shape, CV_32F, data.data());
+        std::cout << "indices: " << indices << std::endl;
 
 
         cv::Mat output = cv::Mat(output_shape, CV_32F, 0.0);
@@ -702,6 +706,8 @@ TEST_P(Layer_Scatter_1d_Test, Accuracy) {
         } else if (opr == "mul"){
             output_ref = output.mul(output_ref);
         } else if (opr == "max"){
+            std::cout << "output ref: " << output_ref << std::endl;
+            std::cout << "output: " << output << std::endl;
             cv::max(output_ref, output, output_ref);
         } else if (opr == "min"){
             cv::min(output_ref, output, output_ref);
