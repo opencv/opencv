@@ -659,9 +659,14 @@ TEST_P(Layer_Scatter_1d_Test, Accuracy) {
             indices_shape.erase(indices_shape.begin());
         }
 
-        cv::Mat input = cv::Mat(input_shape, CV_32F);
-        cv::randn(input, 0, 1);
-        cv::pow(input, 2, input);
+        float dataInp[batch_size * 3];
+        for (int i=0; i < batch_size * 3; i++){
+            dataInp[i] = static_cast<float>(i);
+        }
+
+        cv::Mat input = cv::Mat(input_shape, CV_32F, dataInp);
+        // cv::randn(input, 0, 1);
+        // cv::pow(input, 2, input);
 
         std::vector<float> data;
         if (batch_size <= 1){
