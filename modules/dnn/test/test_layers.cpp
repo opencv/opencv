@@ -618,6 +618,44 @@ TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
     normAssert(h_t_reference, outputs[0]);
 }
 
+typedef testing::TestWithParam<tuple<int>> Layer_Scale_1d_Test;
+TEST_P(Layer_Scale_1d_Test, Accuracy)
+{
+    int batch_size = get<0>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Scale";
+    lp.name = "scaleLayer";
+    lp.set("axis", 0);
+    lp.set("mode", "scale");
+    lp.set("bias_term", false);
+    Ptr<ScaleLayer> layer = ScaleLayer::create(lp);
+
+    std::vector<int> input_shape = {batch_size, 3};
+    std::vector<int> output_shape = {batch_size, 3};
+
+    if (batch_size == 0){
+        input_shape.erase(input_shape.begin());
+        output_shape.erase(output_shape.begin());
+    }
+
+    cv::Mat input = cv::Mat(input_shape, CV_32F, 1.0);
+    cv::randn(input, 0.0, 1.0);
+    cv::Mat weight = cv::Mat(output_shape, CV_32F, 2.0);
+
+    std::vector<Mat> inputs{input, weight};
+    std::vector<Mat> outputs;
+
+    cv::Mat output_ref = input.mul(weight);
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scale_1d_Test,
+/*operation*/           Values(0, 1));
+
+
 typedef testing::TestWithParam<tuple<int, int>> Layer_Gather_1d_Test;
 TEST_P(Layer_Gather_1d_Test, Accuracy) {
 
