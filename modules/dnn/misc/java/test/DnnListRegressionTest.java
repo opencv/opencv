@@ -97,10 +97,11 @@ public class DnnListRegressionTest extends OpenCVTestCase {
         int layerId = 1;
         List<MatOfInt> netInputShapes = new ArrayList();
         netInputShapes.add(new MatOfInt(1, 3, 224, 224));
+        MatOfInt netInputTypes = new MatOfInt(5);
         long[] weights=null;
         long[] blobs=null;
         try {
-            net.getMemoryConsumption(layerId, netInputShapes, weights, blobs);
+            net.getMemoryConsumption(layerId, netInputShapes, netInputTypes, weights, blobs);
         } catch(Exception e) {
             fail("Net getMemoryConsumption failed: " + e.getMessage());
         }
@@ -110,8 +111,9 @@ public class DnnListRegressionTest extends OpenCVTestCase {
         int layerId = 1;
         List<MatOfInt> netInputShapes = new ArrayList();
         netInputShapes.add(new MatOfInt(1, 3, 224, 224));
+        MatOfInt netInputTypes = new MatOfInt(5);
         try {
-            net.getFLOPS(layerId, netInputShapes);
+            net.getFLOPS(layerId, netInputShapes, netInputTypes);
         } catch(Exception e) {
             fail("Net getFLOPS failed: " + e.getMessage());
         }

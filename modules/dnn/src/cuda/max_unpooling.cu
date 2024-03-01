@@ -30,10 +30,10 @@ using namespace cv::dnn::cuda4dnn::csl::device;
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
-        template <class T, std::size_t Order,
+        template <class T, class T_INDEX, std::size_t Order,
         typename std::enable_if<Order == 1 || Order == 2 || Order == 3, bool>::type = true> /* Order has been hardcoded; see code */
         __global__ void max_pooling_with_indices(
-            Span<T> output, Span<T> indices, View<T> input, size_type channels,
+            Span<T> output, Span<T_INDEX> indices, View<T> input, size_type channels,
             array<size_type, Order> out_spatial_dims, array<size_type, Order> in_spatial_dims,
             array<size_type, Order> window_size, array<size_type, Order> strides, array<size_type, Order> padding_left)
         {
@@ -130,9 +130,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             }
         }
 
-        template <class T, std::size_t Order>
+        template <class T, class T_INDEX, std::size_t Order>
         __global__ void max_unpooling(
-            Span<T> output, View<T> input, View<T> indices, size_type channels,
+            Span<T> output, View<T> input, View<T_INDEX> indices, size_type channels,
             array<size_type, Order> out_spatial_dims, array<size_type, Order> in_spatial_dims,
             array<size_type, Order> window_size, array<size_type, Order> strides, array<size_type, Order> padding_left)
         {
@@ -164,15 +164,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                     out_spatial_size *= out_spatial_dims[i];
 
                 index_type outer_offset = (n * channels + c) * out_spatial_size;
-                output[outer_offset + static_cast<index_type>(indices[idx])] = input[idx];
+                output[outer_offset + indices[idx]] = input[idx];
             }
         }
     }
 
-    template <class T, std::size_t Order> static
+    template <class T, class T_INDEX, std::size_t Order> static
     void launch_max_pooling_kernel(
         const Stream& stream,
-        Span<T> output, Span<T> indices, View<T> input, std::size_t channels,
+        Span<T> output, Span<T_INDEX> indices, View<T> input, std::size_t channels,
         const std::vector<std::size_t>& out_spatial_dims, const std::vector<std::size_t>& in_spatial_dims,
         const std::vector<std::size_t>& window_size,
         const std::vector<std::size_t>& strides, const std::vector<std::size_t>& padding_left)
@@ -193,16 +193,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         strides_k.assign(std::begin(strides), std::end(strides));
         padding_left_k.assign(std::begin(padding_left), std::end(padding_left));
 
-        auto kernel = raw::max_pooling_with_indices<T, Order>;
+        auto kernel = raw::max_pooling_with_indices<T, T_INDEX, Order>;
         auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, indices, input, channels,
             out_spatial_dims_k, in_spatial_dims_k, window_size_k, strides_k, padding_left_k);
     }
 
-    template <class T>
+    template <class T, class T_INDEX>
     void max_pooling_with_indices(
         const Stream& stream,
-        TensorSpan<T> output, TensorSpan<T> indices, TensorView<T> input,
+        TensorSpan<T> output, TensorSpan<T_INDEX> indices, TensorView<T> input,
         const std::vector<std::size_t>& window_size, const std::vector<std::size_t>& strides,
         const std::vector<std::size_t>& padding_left)
     {
@@ -224,33 +224,63 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(1 <= order && order <= 3);
         std::size_t channels = input.get_axis_size(1);
         if (order == 3) {
-            launch_max_pooling_kernel<T, 3>(stream, output, indices, input, channels,
+            launch_max_pooling_kernel<T, T_INDEX, 3>(stream, output, indices, input, channels,
                 out_spatial_dims, in_spatial_dims, window_size, strides, padding_left);
         } else if (order == 2) {
-            launch_max_pooling_kernel<T, 2>(stream, output, indices, input, channels,
+            launch_max_pooling_kernel<T, T_INDEX, 2>(stream, output, indices, input, channels,
                 out_spatial_dims, in_spatial_dims, window_size, strides, padding_left);
         } else if (order == 1) {
-            launch_max_pooling_kernel<T, 1>(stream, output, indices, input, channels,
+            launch_max_pooling_kernel<T, T_INDEX, 1>(stream, output, indices, input, channels,
                 out_spatial_dims, in_spatial_dims, window_size, strides, padding_left);
         }
     }
 
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void max_pooling_with_indices(const Stream&,
-        TensorSpan<__half>, TensorSpan<__half>, TensorView<__half>,
+        TensorSpan<__half>, TensorSpan<int32_t>, TensorView<__half>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_pooling_with_indices(const Stream&,
+        TensorSpan<__half>, TensorSpan<int64_t>, TensorView<__half>,
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
 #endif
 
     template void max_pooling_with_indices(const Stream&,
-        TensorSpan<float>, TensorSpan<float>, TensorView<float>,
+        TensorSpan<float>, TensorSpan<int32_t>, TensorView<float>,
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
 
-    template <class T, std::size_t Order> static
+    template void max_pooling_with_indices(const Stream&,
+        TensorSpan<float>, TensorSpan<int64_t>, TensorView<float>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_pooling_with_indices(const Stream&,
+        TensorSpan<int32_t>, TensorSpan<int32_t>, TensorView<int32_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_pooling_with_indices(const Stream&,
+        TensorSpan<int32_t>, TensorSpan<int64_t>, TensorView<int32_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_pooling_with_indices(const Stream&,
+        TensorSpan<int64_t>, TensorSpan<int32_t>, TensorView<int64_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_pooling_with_indices(const Stream&,
+        TensorSpan<int64_t>, TensorSpan<int64_t>, TensorView<int64_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template <class T, class T_INDEX, std::size_t Order> static
     void launch_max_unpooling_kernel(
         const Stream& stream,
-        Span<T> output, View<T> input, View<T> indices, std::size_t channels,
+        Span<T> output, View<T> input, View<T_INDEX> indices, std::size_t channels,
         const std::vector<std::size_t>& out_spatial_dims, const std::vector<std::size_t>& in_spatial_dims,
         const std::vector<std::size_t>& window_size,
         const std::vector<std::size_t>& strides, const std::vector<std::size_t>& padding_left)
@@ -271,16 +301,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         strides_k.assign(std::begin(strides), std::end(strides));
         padding_left_k.assign(std::begin(padding_left), std::end(padding_left));
 
-        auto kernel = raw::max_unpooling<T, Order>;
+        auto kernel = raw::max_unpooling<T, T_INDEX, Order>;
         auto policy = make_policy(kernel, input.size(), 0, stream);
         launch_kernel(kernel, policy, output, input, indices, channels,
             out_spatial_dims_k, in_spatial_dims_k, window_size_k, strides_k, padding_left_k);
     }
 
-    template <class T>
+    template <class T, class T_INDEX>
     void max_unpooling(
         const Stream& stream,
-        TensorSpan<T> output, TensorView<T> input, TensorView<T> indices,
+        TensorSpan<T> output, TensorView<T> input, TensorView<T_INDEX> indices,
         const std::vector<std::size_t>& window_size, const std::vector<std::size_t>& strides,
         const std::vector<std::size_t>& padding_left)
     {
@@ -305,23 +335,53 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(2 <= order && order <= 3);
         std::size_t channels = input.get_axis_size(1);
         if (order == 3) {
-            launch_max_unpooling_kernel<T, 3>(stream, output, input, indices, channels,
+            launch_max_unpooling_kernel<T, T_INDEX, 3>(stream, output, input, indices, channels,
                 out_spatial_dims, in_spatial_dims, window_size, strides, padding_left);
         } else if (order == 2) {
-            launch_max_unpooling_kernel<T, 2>(stream, output, input, indices, channels,
+            launch_max_unpooling_kernel<T, T_INDEX, 2>(stream, output, input, indices, channels,
                 out_spatial_dims, in_spatial_dims, window_size, strides, padding_left);
         }
     }
 
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void max_unpooling(const Stream&,
-        TensorSpan<__half>, TensorView<__half>, TensorView<__half>,
+        TensorSpan<__half>, TensorView<__half>, TensorView<int32_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_unpooling(const Stream&,
+        TensorSpan<__half>, TensorView<__half>, TensorView<int64_t>,
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
 #endif
 
     template void max_unpooling(const Stream&,
-        TensorSpan<float>, TensorView<float>, TensorView<float>,
+        TensorSpan<float>, TensorView<float>, TensorView<int32_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_unpooling(const Stream&,
+        TensorSpan<float>, TensorView<float>, TensorView<int64_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_unpooling(const Stream&,
+        TensorSpan<int32_t>, TensorView<int32_t>, TensorView<int32_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_unpooling(const Stream&,
+        TensorSpan<int32_t>, TensorView<int32_t>, TensorView<int64_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_unpooling(const Stream&,
+        TensorSpan<int64_t>, TensorView<int64_t>, TensorView<int32_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_unpooling(const Stream&,
+        TensorSpan<int64_t>, TensorView<int64_t>, TensorView<int64_t>,
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
 

@@ -46,10 +46,12 @@ bool getParam_DNN_CHECK_NAN_INF_RAISE_ERROR();
 inline namespace detail {
 
 typedef std::vector<MatShape> ShapesVec;
+typedef std::vector<MatType> TypesVec;
 
 struct LayerShapes
 {
     ShapesVec in, out, internal;
+    TypesVec inTypes, outTypes, internalTypes;
     // No guarantees that layer which support in-place computations
     // will be computed in-place (input.data_ptr == output.data_ptr).
     // If layer said that it could work in-place and layers after it

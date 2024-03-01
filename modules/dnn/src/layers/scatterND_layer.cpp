@@ -69,6 +69,19 @@ public:
         return false;
     }
 
+    virtual void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_CheckEQ(inputs.size(), (size_t)3, "");
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_16F || inputs[0] == CV_8U, "");
+        CV_CheckType(inputs[1], inputs[1] == CV_64S || inputs[1] == CV_32S, "");
+        CV_CheckTypeEQ(inputs[2], inputs[0], "");
+        outputs.assign(1, inputs[0]);
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -88,12 +101,12 @@ public:
         const Mat& updates = inputs[2];
         Mat& out = outputs[0];
 
-        typeDispatch(outputs[0].type(), data, indices, updates, out);
+        indexTypeDispatch(outputs[0].type(), indices.type(), data, indices, updates, out);
     }
 
     // NOTE: This impl does not check whether indices have duplicate entries.
     //       The last duplicate entry will overwrite the previous.
-    template<typename T, typename Functor>
+    template<typename T, typename T_INDEX, typename Functor>
     void forward_impl(const Functor &reduce_operation, const Mat &input_mat, const Mat &indices_mat, const Mat &updates_mat, Mat& output_mat) {
         input_mat.copyTo(output_mat);
 
@@ -120,14 +133,14 @@ public:
                    indices_offset = r.start * indices_last_dim,
                    updates_offset = r.start * updates_size;
             for (int i = r.start; i < r.end; i++) {
-                const T* indices = indices_mat.ptr<const T>();
+                const T_INDEX* indices = indices_mat.ptr<const T_INDEX>();
                 const T* updates = updates_mat.ptr<const T>();
                 T* output = output_mat.ptr<T>();
 
                 input_offset = 0;
                 indices += indices_offset;
                 for (int j = 0; j < indices_last_dim; j++) {
-                    int index = static_cast<int>(*(indices + j));
+                    int index = *(indices + j);
                     index = (index + input_mat_shape[j]) % input_mat_shape[j];
                     CV_Assert(index < input_mat_shape[j] && index >= 0);
                     input_offset += index * input_mat_step[j];
@@ -150,25 +163,42 @@ public:
     }
 
     template<typename... Args>
+    inline void indexTypeDispatch(const int type, const int index_type, Args&&... args)
+    {
+        switch (index_type)
+        {
+        case CV_32S:
+            typeDispatch<int32_t>(type, std::forward<Args>(args)...);
+            break;
+        case CV_64S:
+            typeDispatch<int64_t>(type, std::forward<Args>(args)...);
+            break;
+        default:
+            CV_Error(cv::Error::BadDepth, "Unsupported type.");
+        };
+    }
+
+
+    template<typename T_INDEX, typename... Args>
     inline void typeDispatch(const int type, Args&&... args)
     {
         switch (type)
         {
             case CV_8U:
-                reductionDispatch<uint8_t>(std::forward<Args>(args)...);
+                reductionDispatch<uint8_t, T_INDEX>(std::forward<Args>(args)...);
                 break;
             case CV_32S:
-                reductionDispatch<int32_t>(std::forward<Args>(args)...);
+                reductionDispatch<int32_t, T_INDEX>(std::forward<Args>(args)...);
                 break;
             case CV_32F:
-                reductionDispatch<float>(std::forward<Args>(args)...);
+                reductionDispatch<float, T_INDEX>(std::forward<Args>(args)...);
                 break;
             default:
                 CV_Error(cv::Error::BadDepth, "Unsupported type.");
         };
     }
 
-    template<typename T, typename... Args>
+    template<typename T, typename T_INDEX, typename... Args>
     inline void reductionDispatch(Args&&... args)
     {
         switch (reduction)
@@ -176,31 +206,31 @@ public:
             case REDUCTION::NONE:
             {
                 auto rd = [](const T& a, const T& b) { return b; }; // a from input data, b from updates
-                forward_impl<T>(rd, std::forward<Args>(args)...);
+                forward_impl<T, T_INDEX>(rd, std::forward<Args>(args)...);
                 break;
             }
             case REDUCTION::ADD:
             {
                 auto rd = [](const T& a, const T& b) { return a + b; };
-                forward_impl<T>(rd, std::forward<Args>(args)...);
+                forward_impl<T, T_INDEX>(rd, std::forward<Args>(args)...);
                 break;
             }
             case REDUCTION::MUL:
             {
                 auto rd = [](const T& a, const T& b) { return a * b; };
-                forward_impl<T>(rd, std::forward<Args>(args)...);
+                forward_impl<T, T_INDEX>(rd, std::forward<Args>(args)...);
                 break;
             }
             case REDUCTION::MAX:
             {
                 auto rd = [](const T& a, const T& b) { return std::max(a, b); };
-                forward_impl<T>(rd, std::forward<Args>(args)...);
+                forward_impl<T, T_INDEX>(rd, std::forward<Args>(args)...);
                 break;
             }
             case REDUCTION::MIN:
             {
                 auto rd = [](const T& a, const T& b) { return std::min(a, b); };
-                forward_impl<T>(rd, std::forward<Args>(args)...);
+                forward_impl<T, T_INDEX>(rd, std::forward<Args>(args)...);
                 break;
             }
             default:

@@ -31,7 +31,7 @@ public:
 void testInputShapes(const Net& net, const std::vector<Mat>& inps) {
     std::vector<MatShape> inLayerShapes;
     std::vector<MatShape> outLayerShapes;
-    net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+    net.getLayerShapes(MatShape(), CV_32F, 0, inLayerShapes, outLayerShapes);
     ASSERT_EQ(inLayerShapes.size(), inps.size());
 
     for (int i = 0; i < inps.size(); ++i) {
@@ -179,7 +179,7 @@ TEST_P(Test_TFLite, max_unpooling)
     for (int c = 0; c < 32; ++c) {
         float *poolInpData = poolInp.ptr<float>(0, c);
         float *poolOutData = poolOut.ptr<float>(0, c);
-        float *poolIdsData = poolIds.ptr<float>(0, c);
+        int64_t *poolIdsData = poolIds.ptr<int64_t>(0, c);
         float *unpoolInpData = unpoolInp.ptr<float>(0, c);
         float *unpoolOutData = unpoolOut.ptr<float>(0, c);
         for (int y = 0; y < 64; ++y) {
@@ -195,7 +195,7 @@ TEST_P(Test_TFLite, max_unpooling)
                 }
                 EXPECT_EQ(poolInpData[maxIdx], poolOutData[y * 64 + x]) << errMsg;
                 if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
-                    EXPECT_EQ(poolIdsData[y * 64 + x], (float)maxIdx) << errMsg;
+                    EXPECT_EQ(poolIdsData[y * 64 + x], (int64_t)maxIdx) << errMsg;
                 }
                 EXPECT_EQ(unpoolOutData[maxIdx], unpoolInpData[y * 64 + x]) << errMsg;
             }

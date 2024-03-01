@@ -57,6 +57,20 @@ public:
         return false;
     }
 
+    void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16
+            && blobs[0].type() == CV_32F)
+            outputs.assign(1, CV_16F);
+        else
+            outputs.assign(1, blobs[0].depth());
+    }
+
+
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
@@ -171,10 +185,7 @@ public:
 
         CV_Assert(blobs.size() == 1);
         Mat blob = blobs[0];
-        if (blob.type() != CV_32F) {
-            blob.convertTo(blob, CV_32F);
-        }
-        return make_cuda_node<cuda4dnn::ConstOp>(preferableTarget, std::move(context->stream), blob);
+        return make_cuda_node_with_type<cuda4dnn::ConstOp>(preferableTarget, blob.type(), std::move(context->stream), blob);
     }
 #endif
 };

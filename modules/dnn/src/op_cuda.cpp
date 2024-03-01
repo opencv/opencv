@@ -51,7 +51,8 @@ void Net::Impl::initCUDABackend(const std::vector<LayerPin>& blobsToKeep_)
     for (auto& layer : layers)
     {
         auto& ld = layer.second;
-        if (ld.id == 0)
+
+        if (ld.id == 0 && netInputLayer->supportBackend(preferableBackend))
         {
             for (auto& wrapper : ld.inputBlobsWrappers)
             {
