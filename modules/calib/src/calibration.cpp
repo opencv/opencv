@@ -1237,7 +1237,7 @@ static double registerCamerasImpl(
         CV_Assert(depth == CV_32F || depth == CV_64F);
         if(((rvecs.rows != nimages || (rvecs.cols*cn != 3 && rvecs.cols*cn != 9)) &&
              (rvecs.rows != 1 || rvecs.cols != nimages || cn != 3)) )
-            CV_Error( CV_StsBadArg, "the output array of rotation vectors must be 3-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of rotation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 or nx9 array, where n is the number of views" );
     }
     if( !tvecs.empty() )
@@ -1247,7 +1247,7 @@ static double registerCamerasImpl(
         CV_Assert(depth == CV_32F || depth == CV_64F);
         if(((tvecs.rows != nimages || tvecs.cols*cn != 3) &&
              (tvecs.rows != 1 || tvecs.cols != nimages || cn != 3)) )
-            CV_Error( CV_StsBadArg, "the output array of translation vectors must be 3-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of translation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
 
@@ -1308,7 +1308,7 @@ static double registerCamerasImpl(
             else if (cameraModels[k] == CALIB_MODEL_FISHEYE)
                 fisheye::solvePnP(objpt_i, imgpt_ik, A[k], tdists[k], rv, T[k], false, SOLVEPNP_ITERATIVE );
             else
-                CV_Error(CV_StsBadArg, cv::format("Camera type %d is not supported", cameraModels[k]));
+                CV_Error(cv::Error::StsBadArg, cv::format("Camera type %d is not supported", cameraModels[k]));
 
             Rodrigues(rv, R[k]);
 
