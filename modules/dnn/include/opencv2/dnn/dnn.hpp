@@ -690,6 +690,7 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Returns input and output shapes for all layers in loaded model;
          *  preliminary inferencing isn't necessary.
          *  @param netInputShapes shapes for all input blobs in net input layer.
+         *  @param netInputTypes types for all input blobs in net input layer.
          *  @param layersIds output parameter for layer IDs.
          *  @param inLayersShapes output parameter for input layers shapes;
          * order is the same as in layersIds
@@ -712,6 +713,7 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Returns input and output shapes for layer with specified
          * id in loaded model; preliminary inferencing isn't necessary.
          *  @param netInputShape shape input blob in net input layer.
+         *  @param netInputType input type in net input layer.
          *  @param layerId id for layer.
          *  @param inLayerShapes output parameter for input layers shapes;
          * order is the same as in layersIds
@@ -733,6 +735,7 @@ CV__DNN_INLINE_NS_BEGIN
 
         /** @brief Computes FLOP for whole loaded model with specified input shapes.
          * @param netInputShapes vector of shapes for all net inputs.
+         * @param netInputTypes vector of types for all net inputs.
          * @returns computed FLOP.
          */
         CV_WRAP int64 getFLOPS(const std::vector<MatShape>& netInputShapes,
@@ -763,6 +766,7 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Computes bytes number which are required to store
          * all weights and intermediate blobs for model.
          * @param netInputShapes vector of shapes for all net inputs.
+         * @param netInputTypes vector of types for all net inputs.
          * @param weights output parameter to store resulting bytes for weights.
          * @param blobs output parameter to store resulting bytes for intermediate blobs.
          */
@@ -787,6 +791,7 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Computes bytes number which are required to store
          * all weights and intermediate blobs for each layer.
          * @param netInputShapes vector of shapes for all net inputs.
+         * @param netInputTypes vector of types for all net inputs.
          * @param layerIds output vector to save layer IDs.
          * @param weights output parameter to store resulting bytes for weights.
          * @param blobs output parameter to store resulting bytes for intermediate blobs.
