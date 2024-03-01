@@ -103,9 +103,9 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
         /* calc 1-curvature */
         s = abs_diff[reader.code - prev_code + 7];
 
-        if( method <= CV_CHAIN_APPROX_SIMPLE )
+        if( method <= cv::CHAIN_APPROX_SIMPLE )
         {
-            if( method == CV_CHAIN_APPROX_NONE || s != 0 )
+            if( method == cv::CHAIN_APPROX_NONE || s != 0 )
             {
                 CV_WRITE_SEQ_ELEM( pt, writer );
             }
@@ -121,7 +121,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
 
     //CV_Assert( pt.x == chain->origin.x && pt.y == chain->origin.y );
 
-    if( method <= CV_CHAIN_APPROX_SIMPLE )
+    if( method <= cv::CHAIN_APPROX_SIMPLE )
         return cvEndWriteSeq( &writer );
 
     current->next = 0;
@@ -176,7 +176,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
         current->k = --k;
 
         /* determine cosine curvature if it should be used */
-        if( method == CV_CHAIN_APPROX_TC89_KCOS )
+        if( method == cv::CHAIN_APPROX_TC89_KCOS )
         {
             /* calc k-cosine curvature */
             for( j = k, s = 0; j > 0; j-- )
@@ -288,7 +288,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
     }
     while( current != 0 );
 
-    if( method == CV_CHAIN_APPROX_TC89_KCOS )
+    if( method == cv::CHAIN_APPROX_TC89_KCOS )
         goto copy_vect;
 
     /* Pass 4.
@@ -390,7 +390,7 @@ cvApproxChains( CvSeq*              src_seq,
 
     if( !src_seq || !storage )
         CV_Error( CV_StsNullPtr, "" );
-    if( method > CV_CHAIN_APPROX_TC89_KCOS || method <= 0 || minimal_perimeter < 0 )
+    if( method > cv::CHAIN_APPROX_TC89_KCOS || method <= 0 || minimal_perimeter < 0 )
         CV_Error( CV_StsOutOfRange, "" );
 
     while( src_seq != 0 )
@@ -403,10 +403,10 @@ cvApproxChains( CvSeq*              src_seq,
 
             switch( method )
             {
-            case CV_CHAIN_APPROX_NONE:
-            case CV_CHAIN_APPROX_SIMPLE:
-            case CV_CHAIN_APPROX_TC89_L1:
-            case CV_CHAIN_APPROX_TC89_KCOS:
+            case cv::CHAIN_APPROX_NONE:
+            case cv::CHAIN_APPROX_SIMPLE:
+            case cv::CHAIN_APPROX_TC89_L1:
+            case cv::CHAIN_APPROX_TC89_KCOS:
                 contour = icvApproximateChainTC89( (CvChain *) src_seq, sizeof( CvContour ), storage, method );
                 break;
             default:
