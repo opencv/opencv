@@ -63,7 +63,7 @@ protected:
 
 CV_ThreshTest::CV_ThreshTest(int test_type)
 {
-    CV_Assert( (test_type & CV_THRESH_MASK) == 0 );
+    CV_Assert( (test_type & cv::THRESH_MASK) == 0 );
     test_array[INPUT].push_back(NULL);
     test_array[OUTPUT].push_back(NULL);
     test_array[REF_OUTPUT].push_back(NULL);
@@ -84,7 +84,7 @@ void CV_ThreshTest::get_test_array_types_and_sizes( int test_case_idx,
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     depth = depth == 0 ? CV_8U : depth == 1 ? CV_16S : depth == 2 ? CV_16U : depth == 3 ? CV_32F : CV_64F;
 
-    if ( extra_type == CV_THRESH_OTSU )
+    if ( extra_type == cv::THRESH_OTSU )
     {
         depth = cvtest::randInt(rng) % 2 == 0 ? CV_8U : CV_16U;
         cn = 1;
@@ -197,7 +197,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
     int width_n = _src.cols*cn, height = _src.rows;
     int ithresh = cvFloor(thresh);
     int imaxval, ithresh2;
-    if (extra_type == CV_THRESH_OTSU)
+    if (extra_type == cv::THRESH_OTSU)
     {
         thresh = compute_otsu_thresh(_src);
         ithresh = cvFloor(thresh);
@@ -228,7 +228,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
 
     switch( thresh_type )
     {
-    case CV_THRESH_BINARY:
+    case cv::THRESH_BINARY:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -268,7 +268,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_BINARY_INV:
+    case cv::THRESH_BINARY_INV:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -308,7 +308,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_TRUNC:
+    case cv::THRESH_TRUNC:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -363,7 +363,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_TOZERO:
+    case cv::THRESH_TOZERO:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -418,7 +418,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_TOZERO_INV:
+    case cv::THRESH_TOZERO_INV:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -486,7 +486,7 @@ void CV_ThreshTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 TEST(Imgproc_Threshold, accuracy) { CV_ThreshTest test; test.safe_run(); }
-TEST(Imgproc_Threshold, accuracyOtsu) { CV_ThreshTest test(CV_THRESH_OTSU); test.safe_run(); }
+TEST(Imgproc_Threshold, accuracyOtsu) { CV_ThreshTest test(cv::THRESH_OTSU); test.safe_run(); }
 
 BIGDATA_TEST(Imgproc_Threshold, huge)
 {
