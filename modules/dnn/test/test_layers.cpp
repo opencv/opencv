@@ -1797,7 +1797,6 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_ShuffleChannel, Combine(
 
 TEST(Layer_Test_ReduceMean, accuracy_input_0)
 {
-
     vector<int> szData = { 2, 1, 2, 1 ,2 };
     std::vector<float> initData = { 0, 1, 2, 3, 4, 5, 6, 7 };
     Mat inpInitA(szData, CV_32FC1, Mat(initData).data);
@@ -1807,37 +1806,36 @@ TEST(Layer_Test_ReduceMean, accuracy_input_0)
     std::vector<float> resAxes3 = { 0, 1, 2, 3, 4, 5, 6, 7 };
     std::vector<float> resAxes4 = { 0.5, 2.5, 4.5, 6.5 };
     std::vector < vector<float>> resReduceMean = { resAxes0, resAxes1, resAxes2, resAxes3, resAxes4 };
+
+
     for (int i = 0; i < resReduceMean.size(); i++)
     {
         Net net;
         LayerParams lp;
-        lp.set("axes", i);
         lp.set("keepdims", 0);
         lp.type = "Reduce";
         lp.set("reduce", "MEAN");
         lp.name = "testReduceMean";
+        lp.set("axes", i);
         lp.blobs.push_back(inpInitA);
+
         net.addLayerToPrev(lp.name, lp.type, lp);
         net.setInput(inpInitA);
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
         Mat output = net.forward();
-        int nb = 1;
-        vector<int> shape;
+        MatShape gt_shape;
         for (int j = 0; j < szData.size(); j++)
-            if (j != i)
-            {
-                shape.push_back(szData[j]);
-                nb *= szData[j];
-            }
-        for (int j = 0; j < output.dims; j++)
-            CV_Assert(output.size[j] == shape[j]);
+        {
+            if (i == j) continue;
+            gt_shape.push_back(szData[j]);
+        }
 
-        Mat a = output.reshape(1, nb);
+        EXPECT_EQ(gt_shape, shape(output));
+
+        Mat a = output.reshape(1, output.total());
         normAssert(a, Mat(resReduceMean[i]));
-
     }
-
-
 }
 
 
