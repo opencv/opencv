@@ -1642,7 +1642,7 @@ inline int v_signmask(const v_uint64x2& a)
 #if CV_NEON_AARCH64
     const int64x2_t signPosition = {0,1};
     uint64x2_t v0 = vshlq_u64(vshrq_n_u64(a.val, 63), signPosition);
-    uint64_t t0 = vaddvq_u64(v0);
+    int t0 = (int)vaddvq_u64(v0);
     return t0;
 #else // #if CV_NEON_AARCH64
     int64x1_t m0 = vdup_n_s64(0);
