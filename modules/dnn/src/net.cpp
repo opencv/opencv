@@ -13,6 +13,7 @@ CV__DNN_INLINE_NS_BEGIN
 Net::Net()
     : impl(makePtr<Net::Impl>())
 {
+    setPreferableBackend(DNN_BACKEND_DEFAULT);
 }
 
 Net::~Net()
