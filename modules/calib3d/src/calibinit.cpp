@@ -1796,22 +1796,12 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags, int dil
         if (contour_rect.area() < min_area)
             continue;
 
-        std::vector<Point> approx_contour;
+        std::vector<Point> approx_contour = contour;
 
         const int min_approx_level = 1, max_approx_level = MAX_CONTOUR_APPROX;
-        for (int approx_level = min_approx_level; approx_level <= max_approx_level; approx_level++ )
+        for (int approx_level = min_approx_level; approx_contour.size() > 4 && approx_level <= max_approx_level; approx_level++ )
         {
-            approxPolyDP(contour, approx_contour, (float)approx_level, true);
-            if (approx_contour.size() == 4)
-                break;
-
-            // we call this again on its own output, because sometimes
-            // approxPoly() does not simplify as much as it should.
-            std::vector<Point> approx_contour_tmp;
-            std::swap(approx_contour, approx_contour_tmp);
-            approxPolyDP(approx_contour_tmp, approx_contour, (float)approx_level, true);
-            if (approx_contour.size() == 4)
-                break;
+            approxPolyDP(approx_contour, approx_contour, (float)approx_level, true);
         }
 
         // reject non-quadrangles
