@@ -4024,7 +4024,7 @@ void resize(int src_type,
     else if( interpolation == INTER_LINEAR || interpolation == INTER_AREA )
         ksize = 2, func = linear_tab[depth];
     else
-        CV_Error( CV_StsBadArg, "Unknown interpolation method" );
+        CV_Error( cv::Error::StsBadArg, "Unknown interpolation method" );
     ksize2 = ksize/2;
 
     CV_Assert( func != 0 );

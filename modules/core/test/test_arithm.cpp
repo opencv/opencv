@@ -593,7 +593,7 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
             inRange_((const double*)sptr, (const double*)aptr, (const double*)bptr, dptr, total, cn);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(cv::Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -642,7 +642,7 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
             inRangeS_((const double*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(cv::Error::StsUnsupportedFormat, "");
         }
     }
 }

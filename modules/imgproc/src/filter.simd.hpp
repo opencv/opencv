@@ -3039,7 +3039,7 @@ Ptr<BaseRowFilter> getLinearRowFilter(
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<RowFilter<double, double, RowNoVec> >(kernel, anchor);
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
         srcType, bufType));
 }
@@ -3137,7 +3137,7 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
                 (kernel, anchor, delta, symmetryType);
     }
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of buffer format (=%d), and destination format (=%d)",
         bufType, dstType));
 }
@@ -3291,7 +3291,7 @@ Ptr<BaseFilter> getLinearFilter(
         return makePtr<Filter2D<double,
             Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and destination format (=%d)",
         srcType, dstType));
 }

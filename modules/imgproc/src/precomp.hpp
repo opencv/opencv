@@ -112,7 +112,7 @@ inline bool isStorageOrMat(void * arr)
         return true;
     else if (CV_IS_MAT( arr ))
         return false;
-    CV_Error( CV_StsBadArg, "Destination is not CvMemStorage* nor CvMat*" );
+    CV_Error( cv::Error::StsBadArg, "Destination is not CvMemStorage* nor CvMat*" );
 }
 
 

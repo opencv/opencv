@@ -97,7 +97,7 @@ static void DFT_1D( const Mat& _src, Mat& _dst, int flags, const Mat& _wave=Mat(
         }
     }
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 }
 
 
@@ -878,7 +878,7 @@ protected:
             {
                 cout << "actual:\n" << dst << endl << endl;
                 cout << "reference:\n" << dstz << endl << endl;
-                CV_Error(CV_StsError, "");
+                CV_Error(cv::Error::StsError, "");
             }
         }
     }

@@ -307,7 +307,7 @@ void CV_MorphologyBaseTest::prepare_to_validation( int /*test_case_idx*/ )
             cvtest::add( dst, 1, src, -1, Scalar::all(0), dst, dst.type() );
         }
         else
-            CV_Error( CV_StsBadArg, "Unknown operation" );
+            CV_Error( cv::Error::StsBadArg, "Unknown operation" );
     }
 
     cvReleaseStructuringElement( &element );

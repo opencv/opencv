@@ -145,7 +145,7 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     dft_size.width = std::max(getOptimalDFTSize(block_size.width + templ_size.width - 1), 2);
     dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1);
     if( dft_size.width <= 0 || dft_size.height <= 0 )
-        CV_Error( CV_StsOutOfRange, "the input arrays are too big" );
+        CV_Error( cv::Error::StsOutOfRange, "the input arrays are too big" );
 
     // recompute block size
     block_size.width = dft_size.width - templ_size.width + 1;
@@ -602,7 +602,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     dftsize.width = std::max(getOptimalDFTSize(blocksize.width + templ.cols - 1), 2);
     dftsize.height = getOptimalDFTSize(blocksize.height + templ.rows - 1);
     if( dftsize.width <= 0 || dftsize.height <= 0 )
-        CV_Error( CV_StsOutOfRange, "the input arrays are too big" );
+        CV_Error( cv::Error::StsOutOfRange, "the input arrays are too big" );
 
     // recompute block size
     blocksize.width = dftsize.width - templ.cols + 1;

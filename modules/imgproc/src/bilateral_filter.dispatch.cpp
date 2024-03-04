@@ -422,7 +422,7 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
     else if( src.depth() == CV_32F )
         bilateralFilter_32f( src, dst, d, sigmaColor, sigmaSpace, borderType );
     else
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
         "Bilateral filtering is only implemented for 8u and 32f images" );
 }
 

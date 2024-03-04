@@ -182,7 +182,7 @@ bool OpNary::computeGroupCount()
     }
     else
     {
-        CV_Error(CV_StsNotImplemented, "shader type is not supported at compute GroupCount.");
+        CV_Error(cv::Error::StsNotImplemented, "shader type is not supported at compute GroupCount.");
     }
 
     CV_Assert(group_x_ <= MAX_GROUP_COUNT_X);

@@ -101,7 +101,7 @@ static void getSobelKernels( OutputArray _kx, OutputArray _ky,
     Mat ky = _ky.getMat();
 
     if( _ksize % 2 == 0 || _ksize > 31 )
-        CV_Error( CV_StsOutOfRange, "The kernel size must be odd and not larger than 31" );
+        CV_Error( cv::Error::StsOutOfRange, "The kernel size must be odd and not larger than 31" );
     std::vector<int> kerI(std::max(ksizeX, ksizeY) + 1);
 
     CV_Assert( dx >= 0 && dy >= 0 && dx+dy > 0 );
