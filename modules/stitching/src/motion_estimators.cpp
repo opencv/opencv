@@ -962,7 +962,7 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
     else if (kind == WAVE_CORRECT_VERT)
         rg1 = eigen_vecs.row(0).t();
     else
-        CV_Error(CV_StsBadArg, "unsupported kind of wave correction");
+        CV_Error(cv::Error::StsBadArg, "unsupported kind of wave correction");
 
     Mat img_k = Mat::zeros(3, 1, CV_32F);
     for (size_t i = 0; i < rmats.size(); ++i)

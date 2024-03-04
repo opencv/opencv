@@ -574,7 +574,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         CV_Assert( scaleFunc != 0 );
     }
     else
-        CV_Error( CV_StsBadArg, "Unknown distribution type" );
+        CV_Error( cv::Error::StsBadArg, "Unknown distribution type" );
 
     const Mat* arrays[] = {&mat, 0};
     uchar* ptr;

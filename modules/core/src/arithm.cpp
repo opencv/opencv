@@ -209,7 +209,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
             swap(sz1, sz2);
         }
         else if( !checkScalar(*psrc2, type1, kind2, kind1) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                       "The operation is neither 'array op array' (where arrays have the same size and type), "
                       "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
@@ -644,7 +644,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 oclop = OCL_OP_RDIV_SCALE;
         }
         else if( !checkScalar(*psrc2, type1, kind2, kind1) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The operation is neither 'array op array' "
                      "(where arrays have the same size and the same number of channels), "
                      "nor 'array op scalar', nor 'scalar op array'" );
@@ -669,7 +669,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         else
         {
             if( !haveScalar && type1 != type2 )
-                CV_Error(CV_StsBadArg,
+                CV_Error(cv::Error::StsBadArg,
                      "When the input arrays in add/subtract/multiply/divide functions have different types, "
                      "the output array type must be explicitly specified");
             dtype = type1;
@@ -1206,7 +1206,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             return;
         }
         else if(is_src1_scalar == is_src2_scalar)
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The operation is neither 'array op array' (where arrays have the same size and the same type), "
                      "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
@@ -1615,7 +1615,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         ssize != lsize || stype != ltype )
     {
         if( !checkScalar(_lowerb, stype, lkind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The lower boundary is neither an array of the same size and same type as src, nor a scalar");
         lbScalar = true;
     }
@@ -1624,7 +1624,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         ssize != usize || stype != utype )
     {
         if( !checkScalar(_upperb, stype, ukind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The upper boundary is neither an array of the same size and same type as src, nor a scalar");
         ubScalar = true;
     }
@@ -1738,7 +1738,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
         src.size != lb.size || src.type() != lb.type() )
     {
         if( !checkScalar(lb, src.type(), lkind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The lower boundary is neither an array of the same size and same type as src, nor a scalar");
         lbScalar = true;
     }
@@ -1747,7 +1747,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
         src.size != ub.size || src.type() != ub.type() )
     {
         if( !checkScalar(ub, src.type(), ukind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The upper boundary is neither an array of the same size and same type as src, nor a scalar");
         ubScalar = true;
     }

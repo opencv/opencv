@@ -991,7 +991,7 @@ CvBoost::set_params( const CvBoostParams& _params )
     params = _params;
     if( params.boost_type != DISCRETE && params.boost_type != REAL &&
         params.boost_type != LOGIT && params.boost_type != GENTLE )
-        CV_ERROR( CV_StsBadArg, "Unknown/unsupported boosting type" );
+        CV_ERROR( cv::Error::StsBadArg, "Unknown/unsupported boosting type" );
 
     params.weak_count = MAX( params.weak_count, 1 );
     params.weight_trim_rate = MAX( params.weight_trim_rate, 0. );
@@ -1045,7 +1045,7 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
             _sample_idx, _var_type, _missing_mask, _params, true, true );
 
         if( data->get_num_classes() != 2 )
-            CV_ERROR( CV_StsNotImplemented,
+            CV_ERROR( cv::Error::StsNotImplemented,
             "Boosted trees can only be used for 2-class classification." );
         CV_CALL( storage = cvCreateMemStorage() );
         weak = cvCreateSeq( 0, sizeof(CvSeq), sizeof(CvBoostTree*), storage );
@@ -1482,7 +1482,7 @@ CvBoost::get_active_vars( bool absolute_idx )
     __BEGIN__;
 
     if( !weak )
-        CV_ERROR( CV_StsError, "The boosted tree ensemble has not been trained yet" );
+        CV_ERROR( cv::Error::StsError, "The boosted tree ensemble has not been trained yet" );
 
     if( !active_vars || !active_vars_abs )
     {
@@ -1612,13 +1612,13 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
     const float* sample_data;
 
     if( !weak )
-        CV_Error( CV_StsError, "The boosted tree ensemble has not been trained yet" );
+        CV_Error( cv::Error::StsError, "The boosted tree ensemble has not been trained yet" );
 
     if( !CV_IS_MAT(_sample) || CV_MAT_TYPE(_sample->type) != CV_32FC1 ||
         (_sample->cols != 1 && _sample->rows != 1) ||
         (_sample->cols + _sample->rows - 1 != data->var_all && !raw_mode) ||
         (active_vars && _sample->cols + _sample->rows - 1 != active_vars->cols && raw_mode) )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
         "the input sample must be 1d floating-point vector with the same "
         "number of elements as the total number of variables or "
         "as the number of variables used for training" );
@@ -1627,7 +1627,7 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
     {
         if( !CV_IS_MAT(_missing) || !CV_IS_MASK_ARR(_missing) ||
             !CV_ARE_SIZES_EQ(_missing, _sample) )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
             "the missing data mask must be 8-bit vector of the same size as input sample" );
     }
 
@@ -1644,7 +1644,7 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
             CV_MAT_TYPE(weak_responses->type) != CV_32FC1 ||
             (weak_responses->cols != 1 && weak_responses->rows != 1) ||
             weak_responses->cols + weak_responses->rows - 1 != weak_count )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
             "The output matrix of weak classifier responses must be valid "
             "floating-point vector of the same number of components as the length of input slice" );
         wstep = CV_IS_MAT_CONT(weak_responses->type) ? 1 : weak_responses->step/sizeof(float);
@@ -1700,7 +1700,7 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
                     c = a;
                 int ival = cvRound(val);
                 if ( (ival != val) && (!m) )
-                    CV_Error( CV_StsBadArg,
+                    CV_Error( cv::Error::StsBadArg,
                         "one of input categorical variable is not an integer" );
 
                 while( a < b )
@@ -1735,7 +1735,7 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
     else
     {
         if( !CV_IS_MAT_CONT(_sample->type & (_missing ? _missing->type : -1)) )
-            CV_Error( CV_StsBadArg, "In raw mode the input vectors must be continuous" );
+            CV_Error( cv::Error::StsBadArg, "In raw mode the input vectors must be continuous" );
     }
 
     cvStartReadSeq( weak, &reader );
@@ -1951,7 +1951,7 @@ void CvBoost::read_params( cv::FileNode& fnode )
         params.boost_type = temp.empty() ? -1 : (int)temp;
 
     if( params.boost_type < DISCRETE || params.boost_type > GENTLE )
-        CV_ERROR( CV_StsBadArg, "Unknown boosting type" );
+        CV_ERROR( cv::Error::StsBadArg, "Unknown boosting type" );
 
     temp = fnode[ "splitting_criteria" ];
     if( !temp.empty() && temp.isString() )
@@ -1966,7 +1966,7 @@ void CvBoost::read_params( cv::FileNode& fnode )
         params.split_criteria = temp.empty() ? -1 : (int) temp;
 
     if( params.split_criteria < DEFAULT || params.boost_type > SQERR )
-        CV_ERROR( CV_StsBadArg, "Unknown boosting type" );
+        CV_ERROR( cv::Error::StsBadArg, "Unknown boosting type" );
 
     params.weak_count = (int) fnode[ "ntrees" ];
     params.weight_trim_rate = (double)fnode["weight_trimming_rate"];
@@ -1996,13 +1996,13 @@ CvBoost::read( cv::FileNode& node )
 
     trees_fnode =  node[ "trees" ];
     if( trees_fnode.empty() || !trees_fnode.isSeq() )
-        CV_ERROR( CV_StsParseError, "<trees> tag is missing" );
+        CV_ERROR( cv::Error::StsParseError, "<trees> tag is missing" );
 
     reader = trees_fnode.begin();
     ntrees = (int) trees_fnode.size();
 
     if( ntrees != params.weak_count )
-        CV_ERROR( CV_StsUnmatchedSizes,
+        CV_ERROR( cv::Error::StsUnmatchedSizes,
         "The number of trees stored does not match <ntrees> tag value" );
 
     CV_CALL( storage = cvCreateMemStorage() );
@@ -2034,7 +2034,7 @@ CvBoost::write( cv::FileStorage& fs, const char* name ) const
     fs.startWriteStruct( name, cv::FileNode::MAP, CV_TYPE_NAME_ML_BOOSTING );
 
     if( !weak )
-        CV_ERROR( CV_StsBadArg, "The classifier has not been trained yet" );
+        CV_ERROR( cv::Error::StsBadArg, "The classifier has not been trained yet" );
 
     write_params( fs );
     fs.startWriteStruct( "trees", cv::FileNode::SEQ );

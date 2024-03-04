@@ -784,7 +784,7 @@ cvSmooth( const void* srcarr, void* dstarr, int smooth_type,
         cv::bilateralFilter( src, dst, param1, param3, param4, cv::BORDER_REPLICATE );
 
     if( dst.data != dst0.data )
-        CV_Error( CV_StsUnmatchedFormats, "The destination image does not have the proper type" );
+        CV_Error( cv::Error::StsUnmatchedFormats, "The destination image does not have the proper type" );
 }
 
 /* End of file. */
