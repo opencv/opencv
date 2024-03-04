@@ -359,8 +359,8 @@ class AttentionSubGraph : public Subgraph {
             // get attrs - qkv_hidden_sizes
             qkv_hidden_sizes.clear();
             auto fill_qkv_hidden_sizes = [&] (const int slice_node_id) {
-                int slice_start = extractConstant(net, matchedNodesIds[slice_node_id], 1).at<int>(0);
-                int slice_end = extractConstant(net, matchedNodesIds[slice_node_id], 2).at<int>(0);
+                int slice_start = extractConstant(net, matchedNodesIds[slice_node_id], 1).at<int64_t>(0);
+                int slice_end = extractConstant(net, matchedNodesIds[slice_node_id], 2).at<int64_t>(0);
                 if (slice_end == std::numeric_limits<int>::max()) {
                     qkv_hidden_sizes.push_back(0); // workaround for Slice with end=INT_MAX
                 } else {
@@ -374,7 +374,7 @@ class AttentionSubGraph : public Subgraph {
             CV_CheckEQ(qkv_hidden_sizes.size(), static_cast<size_t>(3), "ONNXSimplifier/Attention: invalid qkv hidden sizes");
             CV_CheckEQ(int(qkv_hidden_sizes[0]), int(qkv_hidden_sizes[1]), "ONNXSimplifier/Attention: invalid qkv hidden sizes, q_hidden_size == v_hidden_size is required");
             // get attrs - num_heads, scale
-            num_heads = extractConstant(net, matchedNodesIds[reshape_q], 1).at<int>(1);
+            num_heads = extractConstant(net, matchedNodesIds[reshape_q], 1).at<int64_t>(1);
             scale = extractConstant(net, matchedNodesIds[div_q], 1).at<float>(0);
             output_ndims = extractConstant(net, matchedNodesIds[last_reshape], 1).size[0];
 
@@ -470,8 +470,8 @@ class AttentionSingleHeadSubGraph : public Subgraph {
             // get attrs - qkv_hidden_sizes
             qkv_hidden_sizes.clear();
             auto fill_qkv_hidden_sizes = [&] (const int slice_node_id) {
-                int slice_start = extractConstant(net, matchedNodesIds[slice_node_id], 1).at<int>(0);
-                int slice_end = extractConstant(net, matchedNodesIds[slice_node_id], 2).at<int>(0);
+                int slice_start = extractConstant(net, matchedNodesIds[slice_node_id], 1).at<int64_t>(0);
+                int slice_end = extractConstant(net, matchedNodesIds[slice_node_id], 2).at<int64_t>(0);
                 if (slice_end == std::numeric_limits<int>::max()) {
                     qkv_hidden_sizes.push_back(0); // workaround for Slice with end=INT_MAX
                 } else {
@@ -1222,9 +1222,12 @@ public:
             }
             Mat mat_value = getMatFromTensor(attr.t());
             switch (mat_value.type()) {
-                case CV_32S: {
+                case CV_32S:
                     val = static_cast<int64_t>(mat_value.at<int>());
-                } break;
+                    break;
+                case CV_64S:
+                    val = mat_value.at<int64_t>();
+                    break;
                 default: return 0;
             }
             return 1;
@@ -1700,12 +1703,9 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT64)
     {
-        blob.create(sizes, CV_32SC1);
-        int32_t* dst = reinterpret_cast<int32_t*>(blob.data);
-
         if (!tensor_proto.int64_data().empty()) {
             ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = tensor_proto.int64_data();
-            convertInt64ToInt32(src, dst, blob.total());
+            Mat(sizes, CV_64SC1, (void*)src.data()).copyTo(blob);
         }
         else
         {
@@ -1723,7 +1723,7 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
             }
 #endif
             const int64_t* src = reinterpret_cast<const int64_t*>(val);
-            convertInt64ToInt32(src, dst, blob.total());
+            Mat(sizes, CV_64SC1, (void*)src).copyTo(blob);
         }
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT8 ||

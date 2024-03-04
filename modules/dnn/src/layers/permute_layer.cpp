@@ -190,9 +190,9 @@ public:
             if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
                 CV_CheckTypeEQ(input, CV_32F, "Unsupported type");
             else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_32S, "");
+                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S, "");
             else
-                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_32S, "");
+                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S, "");
         }
 
         outputs.assign(requiredOutputs, inputs[0]);
@@ -392,69 +392,65 @@ public:
         }
         else
         {
-            size_t i, j, count = _count, numAxes = _numAxes;
-            const size_t* newStride = &_newStride[0];
-            const size_t* oldStride = &_oldStride[0];
-            const size_t* order = &_order[0];
-
             for (k = 0; k < ninputs; k++)
             {
-                const Mat& inp = inputs[k];
-                Mat& out = outputs[k];
+                CV_Assert(inputs[k].dims == _numAxes && inputs[k].size == inputs[0].size);
+                CV_Assert(outputs[k].dims == _numAxes && outputs[k].size == outputs[0].size);
 
-                CV_Assert(inp.dims == numAxes && inp.size == inputs[0].size);
-                CV_Assert(out.dims == numAxes && out.size == outputs[0].size);
-
-                CV_Assert(inp.isContinuous() && out.isContinuous());
-                // CV_Assert(inp.type() == CV_32F && out.type() == CV_32F);
-
-                if( numAxes == 4 )
+                switch (inputs[k].depth())
                 {
-                    int nstripes = getNumThreads();
-                    if (inp.type() == CV_8S)
-                        PermuteInvoker<int8_t>::run(inp, out, _order, nstripes);
-                    else
-                        PermuteInvoker<float>::run(inp, out, _order, nstripes);
+                case CV_32F:
+                    forward_impl<float>(inputs[k], outputs[k]);
+                    break;
+                case CV_16F:
+                    forward_impl<int16_t>(inputs[k], outputs[k]);
+                    break;
+                case CV_32S:
+                    forward_impl<int32_t>(inputs[k], outputs[k]);
+                    break;
+                case CV_64S:
+                    forward_impl<int64_t>(inputs[k], outputs[k]);
+                    break;
+                case CV_8S:
+                    forward_impl<int8_t>(inputs[k], outputs[k]);
+                    break;
+                default:
+                    CV_Error(Error::BadDepth, "unsupported mat type");
                 }
-                else
+            }
+        }
+    }
+
+    template <class T>
+    void forward_impl(const Mat& inp, Mat& out)
+    {
+        const size_t* newStride = &_newStride[0];
+        const size_t* oldStride = &_oldStride[0];
+        const size_t* order = &_order[0];
+
+        CV_Assert(inp.isContinuous() && out.isContinuous());
+
+        if( _numAxes == 4 )
+        {
+            int nstripes = getNumThreads();
+            PermuteInvoker<T>::run(inp, out, _order, nstripes);
+        }
+        else
+        {
+            const T *srcData = inp.ptr<T>();
+            T *dstData = out.ptr<T>();
+
+            for (size_t i = 0; i < _count; ++i)
+            {
+                size_t oldPosition = 0;
+                size_t newPosition = i;
+
+                for (size_t j = 0; j < _numAxes; ++j)
                 {
-                    if (inp.type() == CV_8S)
-                    {
-                        const int8_t *srcData = inp.ptr<int8_t>();
-                        int8_t *dstData = out.ptr<int8_t>();
-
-                        for (i = 0; i < count; ++i)
-                        {
-                            size_t oldPosition = 0;
-                            size_t newPosition = i;
-
-                            for (j = 0; j < numAxes; ++j)
-                            {
-                                oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
-                                newPosition %= newStride[j];
-                            }
-                            dstData[i] = srcData[oldPosition];
-                        }
-                    }
-                    else
-                    {
-                        const float *srcData = inp.ptr<float>();
-                        float *dstData = out.ptr<float>();
-
-                        for (i = 0; i < count; ++i)
-                        {
-                            size_t oldPosition = 0;
-                            size_t newPosition = i;
-
-                            for (j = 0; j < numAxes; ++j)
-                            {
-                                oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
-                                newPosition %= newStride[j];
-                            }
-                            dstData[i] = srcData[oldPosition];
-                        }
-                    }
+                    oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
+                    newPosition %= newStride[j];
                 }
+                dstData[i] = srcData[oldPosition];
             }
         }
     }
