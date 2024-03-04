@@ -380,9 +380,10 @@ public:
                         if (unprojected_indices[j] < shape_src[unreduced_axes[j]]) {
                             break;
                         }
-                        unprojected_indices[j] = 0;
+                        unprojected_indices[j] -= shape_src[unreduced_axes[j]];
+                        current_step -= shape_src[unreduced_axes[j]] * steps_src[unreduced_axes[j]];
                         ++unprojected_indices[j - 1];
-                        current_step = steps_src[unreduced_axes[j - 1]];
+                        current_step += steps_src[unreduced_axes[j - 1]];
                     }
                 }
             }
