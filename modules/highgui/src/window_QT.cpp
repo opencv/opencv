@@ -1016,7 +1016,7 @@ double GuiReceiver::isFullScreen(QString name)
     if (!w)
         return -1;
 
-    return w->isFullScreen() ? CV_WINDOW_FULLSCREEN : CV_WINDOW_NORMAL;
+    return w->isFullScreen() ? cv::WINDOW_FULLSCREEN : cv::WINDOW_NORMAL;
 }
 
 
@@ -1702,11 +1702,11 @@ CvWindow::CvWindow(QString name, int arg2)
 
     //3: my view
 #ifndef HAVE_QT_OPENGL
-    if (arg2 & CV_WINDOW_OPENGL)
+    if (arg2 & cv::WINDOW_OPENGL)
         CV_Error( cv::Error::OpenGlNotSupported, "Library was built without OpenGL support" );
     mode_display = CV_MODE_NORMAL;
 #else
-    mode_display = arg2 & CV_WINDOW_OPENGL ? CV_MODE_OPENGL : CV_MODE_NORMAL;
+    mode_display = arg2 & cv::WINDOW_OPENGL ? CV_MODE_OPENGL : CV_MODE_NORMAL;
     if (mode_display == CV_MODE_OPENGL)
         param_gui_mode = CV_GUI_NORMAL;
 #endif
@@ -1837,13 +1837,13 @@ void CvWindow::setPropWindow(int flags)
 
     switch(flags)
     {
-    case CV_WINDOW_NORMAL:
+    case cv::WINDOW_NORMAL:
         myGlobalLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
         param_flags = flags;
 
         break;
 
-    case CV_WINDOW_AUTOSIZE:
+    case cv::WINDOW_AUTOSIZE:
         myGlobalLayout->setSizeConstraint(QLayout::SetFixedSize);
         param_flags = flags;
 
@@ -1856,14 +1856,14 @@ void CvWindow::setPropWindow(int flags)
 
 void CvWindow::toggleFullScreen(int flags)
 {
-    if (isFullScreen() && flags == CV_WINDOW_NORMAL)
+    if (isFullScreen() && flags == cv::WINDOW_NORMAL)
     {
         showTools();
         showNormal();
         return;
     }
 
-    if (!isFullScreen() && flags == CV_WINDOW_FULLSCREEN)
+    if (!isFullScreen() && flags == cv::WINDOW_FULLSCREEN)
     {
         hideTools();
         showFullScreen();
@@ -2013,9 +2013,9 @@ void CvWindow::createGlobalLayout()
 #endif
     setMinimumSize(1, 1);
 
-    if (param_flags == CV_WINDOW_AUTOSIZE)
+    if (param_flags == cv::WINDOW_AUTOSIZE)
         myGlobalLayout->setSizeConstraint(QLayout::SetFixedSize);
-    else if (param_flags == CV_WINDOW_NORMAL)
+    else if (param_flags == cv::WINDOW_NORMAL)
         myGlobalLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
 }
 
@@ -2605,7 +2605,7 @@ void DefaultViewPort::setRatio(int flags)
         return;
 
     //if valid flags
-    if (flags == CV_WINDOW_FREERATIO || flags == CV_WINDOW_KEEPRATIO)
+    if (flags == cv::WINDOW_FREERATIO || flags == cv::WINDOW_KEEPRATIO)
     {
         centralWidget->param_ratio_mode = flags;
         param_keepRatio = flags;
@@ -2816,7 +2816,7 @@ void DefaultViewPort::resizeEvent(QResizeEvent* evnt)
     ratioX = width() / float(image2Draw_mat->cols);
     ratioY = height() / float(image2Draw_mat->rows);
 
-    if (param_keepRatio == CV_WINDOW_KEEPRATIO)//to keep the same aspect ratio
+    if (param_keepRatio == cv::WINDOW_KEEPRATIO)//to keep the same aspect ratio
     {
         QSize newSize = QSize(image2Draw_mat->cols, image2Draw_mat->rows);
         newSize.scale(evnt->size(), Qt::KeepAspectRatio);

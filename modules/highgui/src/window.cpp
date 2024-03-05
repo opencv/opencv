@@ -217,9 +217,9 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
     switch(prop_id)
     {
     //change between fullscreen or not.
-    case CV_WND_PROP_FULLSCREEN:
+    case cv::WND_PROP_FULLSCREEN:
 
-        if (prop_value != CV_WINDOW_NORMAL && prop_value != CV_WINDOW_FULLSCREEN)  // bad argument
+        if (prop_value != cv::WINDOW_NORMAL && prop_value != cv::WINDOW_FULLSCREEN)  // bad argument
             break;
 
         #if defined (HAVE_QT)
@@ -236,13 +236,13 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 
     break;
 
-    case CV_WND_PROP_AUTOSIZE:
+    case cv::WND_PROP_AUTOSIZE:
         #if defined (HAVE_QT)
             cvSetPropWindow_QT(name,prop_value);
         #endif
     break;
 
-    case CV_WND_PROP_ASPECTRATIO:
+    case cv::WND_PROP_ASPECT_RATIO:
         #if defined (HAVE_QT)
             cvSetRatioWindow_QT(name,prop_value);
         #endif
@@ -305,7 +305,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 #else
     switch(prop_id)
     {
-    case CV_WND_PROP_FULLSCREEN:
+    case cv::WND_PROP_FULLSCREEN:
 
         #if defined (HAVE_QT)
             return cvGetModeWindow_QT(name);
@@ -322,7 +322,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_AUTOSIZE:
+    case cv::WND_PROP_AUTOSIZE:
 
         #if defined (HAVE_QT)
             return cvGetPropWindow_QT(name);
@@ -335,7 +335,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_ASPECTRATIO:
+    case cv::WND_PROP_ASPECT_RATIO:
 
         #if defined (HAVE_QT)
             return cvGetRatioWindow_QT(name);
@@ -348,7 +348,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_OPENGL:
+    case cv::WND_PROP_OPENGL:
 
         #if defined (HAVE_QT)
             return cvGetOpenGlProp_QT(name);
@@ -361,7 +361,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_VISIBLE:
+    case cv::WND_PROP_VISIBLE:
         #if defined (HAVE_QT)
             return cvGetPropVisible_QT(name);
         #elif defined(HAVE_WIN32UI)
