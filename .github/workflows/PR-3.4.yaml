@@ -2,8 +2,13 @@ name: PR:3.4
 
 on:
   pull_request:
+    types: [opened, reopened, labeled, unlabeled, synchronize]
     branches:
       - 3.4
+
+concurrency:
+  group: ${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   Ubuntu2004-ARM64:
