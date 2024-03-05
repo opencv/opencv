@@ -9,7 +9,7 @@
 
 #include <string>
 #include <list> // list
-#include <iomanip>  // setw, etc
+#include <iomanip> // setw, etc
 #include <fstream> // ofstream
 #include <memory>
 #include <functional>
@@ -85,7 +85,7 @@ namespace
 
         const auto& backend = *src_g.metadata().get<ActiveBackends>().backends.cbegin();
         const auto& proto = src_g.metadata().get<Protocol>();
-        GIsland::node_set all, in_ops, out_ops, gmat_cvals;
+        GIsland::node_set all, in_ops, out_ops, in_cvals;
 
         all.insert(src_g.nodes().begin(), src_g.nodes().end());
 
@@ -104,19 +104,14 @@ namespace
             if (src_g.metadata(nh).get<NodeType>().t == NodeType::DATA)
             {
                 const auto &d = src_g.metadata(nh).get<Data>();
-                if (d.shape == GShape::GMAT && d.storage == Data::Storage::CONST_VAL) {
+                if (d.storage == Data::Storage::CONST_VAL
+                    && !backend.priv().supportsConst(d.shape)) {
                     // don't put this node into the island's graph - so the island
-                    // executable don't need to handle value-initialized GMat manually.
+                    // executable don't need to handle value-initialized G-type manually.
                     // Still mark its readers as inputs
                     all.erase(nh);
-                    gmat_cvals.insert(nh);
+                    in_cvals.insert(nh);
                     in_ops.insert(nh->outNodes().begin(), nh->outNodes().end());
-
-                    // NB(dm): This may work well not only for GMAT,
-                    // but for other shape kinds too. Our backends
-                    // (not all!) has learned to support the other
-                    // cases, but this support can be dropped in the
-                    // sake of this (universal) approach.
                 }
             }
         }
@@ -129,7 +124,7 @@ namespace
         auto ih = GIslandModel::mkIslandNode(g, std::move(isl));
 
         for (const auto& nh : ade::util::chain(ade::util::toRange(proto.in_nhs),
-                                               ade::util::toRange(gmat_cvals)))
+                                               ade::util::toRange(in_cvals)))
         {
             auto slot = GIslandModel::mkSlotNode(g, nh);
             g.link(slot, ih);
