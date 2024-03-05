@@ -696,9 +696,6 @@ protected:
 
 /////////////////// XML & YAML I/O implementation //////////////////
 
-//! @relates cv::FileStorage
-//! @{
-
 CV_EXPORTS void write( FileStorage& fs, const String& name, int value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, float value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, double value );
@@ -714,11 +711,6 @@ CV_EXPORTS void writeScalar( FileStorage& fs, int value );
 CV_EXPORTS void writeScalar( FileStorage& fs, float value );
 CV_EXPORTS void writeScalar( FileStorage& fs, double value );
 CV_EXPORTS void writeScalar( FileStorage& fs, const String& value );
-
-//! @}
-
-//! @relates cv::FileNode
-//! @{
 
 CV_EXPORTS void read(const FileNode& node, int& value, int default_value);
 CV_EXPORTS void read(const FileNode& node, float& value, float default_value);
@@ -796,10 +788,7 @@ static inline void read(const FileNode& node, Range& value, const Range& default
     value.start = temp.x; value.end = temp.y;
 }
 
-//! @}
-
 /** @brief Writes string to a file storage.
-@relates cv::FileStorage
  */
 CV_EXPORTS FileStorage& operator << (FileStorage& fs, const String& str);
 
@@ -883,9 +872,6 @@ namespace internal
 } // internal
 
 //! @endcond
-
-//! @relates cv::FileStorage
-//! @{
 
 template<typename _Tp> static inline
 void write(FileStorage& fs, const _Tp& value)
@@ -1118,10 +1104,6 @@ static inline void write(FileStorage& fs, const std::vector<DMatch>& vec)
 }
 #endif
 
-//! @} FileStorage
-
-//! @relates cv::FileNode
-//! @{
 
 static inline
 void read(const FileNode& node, bool& value, bool default_value)
@@ -1208,11 +1190,6 @@ void read( const FileNode& node, std::vector<DMatch>& vec, const std::vector<DMa
         read(node, vec);
 }
 
-//! @} FileNode
-
-//! @relates cv::FileStorage
-//! @{
-
 /** @brief Writes data to a file storage.
  */
 template<typename _Tp> static inline
@@ -1244,11 +1221,6 @@ FileStorage& operator << (FileStorage& fs, char* value)
     return (fs << String(value));
 }
 
-//! @} FileStorage
-
-//! @relates cv::FileNodeIterator
-//! @{
-
 /** @brief Reads data from a file storage.
  */
 template<typename _Tp> static inline
@@ -1267,11 +1239,6 @@ FileNodeIterator& operator >> (FileNodeIterator& it, std::vector<_Tp>& vec)
     r(vec, (size_t)INT_MAX);
     return it;
 }
-
-//! @} FileNodeIterator
-
-//! @relates cv::FileNode
-//! @{
 
 /** @brief Reads data from a file storage.
  */
@@ -1323,11 +1290,6 @@ void operator >> (const FileNode& n, DMatch& m)
     it >> m.queryIdx >> m.trainIdx >> m.imgIdx >> m.distance;
 }
 
-//! @} FileNode
-
-//! @relates cv::FileNodeIterator
-//! @{
-
 CV_EXPORTS bool operator == (const FileNodeIterator& it1, const FileNodeIterator& it2);
 CV_EXPORTS bool operator != (const FileNodeIterator& it1, const FileNodeIterator& it2);
 
@@ -1342,8 +1304,6 @@ bool operator < (const FileNodeIterator& it1, const FileNodeIterator& it2)
 {
     return it1.remaining() > it2.remaining();
 }
-
-//! @} FileNodeIterator
 
 } // cv
 

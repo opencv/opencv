@@ -572,8 +572,6 @@ if(OPENCV_DISABLE_FILESYSTEM_SUPPORT)
   add_definitions(-DOPENCV_HAVE_FILESYSTEM_SUPPORT=0)
 endif()
 
-set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
-
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
 # ----------------------------------------------------------------------------
