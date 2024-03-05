@@ -584,7 +584,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
         return contourMoments(mat);
 
     if( cn > 1 )
-        CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
+        CV_Error( cv::Error::StsBadArg, "Invalid image type (must be single-channel)" );
 
     CV_IPP_RUN(!binary, ipp_moments(mat, m), m);
 
@@ -599,7 +599,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
     else if( depth == CV_64F )
         func = momentsInTile<double, double, double>;
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     Mat src0(mat);
 
@@ -730,9 +730,9 @@ CV_IMPL double cvGetSpatialMoment( CvMoments * moments, int x_order, int y_order
     int order = x_order + y_order;
 
     if( !moments )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
     if( (x_order | y_order) < 0 || order > 3 )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     return (&(moments->m00))[order + (order >> 1) + (order > 2) * 2 + y_order];
 }
@@ -743,9 +743,9 @@ CV_IMPL double cvGetCentralMoment( CvMoments * moments, int x_order, int y_order
     int order = x_order + y_order;
 
     if( !moments )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
     if( (x_order | y_order) < 0 || order > 3 )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     return order >= 2 ? (&(moments->m00))[4 + order * 3 + y_order] :
     order == 0 ? moments->m00 : 0;
@@ -768,7 +768,7 @@ CV_IMPL double cvGetNormalizedCentralMoment( CvMoments * moments, int x_order, i
 CV_IMPL void cvGetHuMoments( CvMoments * mState, CvHuMoments * HuState )
 {
     if( !mState || !HuState )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     double m00s = mState->inv_sqrt_m00, m00 = m00s * m00s, s2 = m00 * m00, s3 = s2 * m00s;
 

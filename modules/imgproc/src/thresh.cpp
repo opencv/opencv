@@ -117,7 +117,7 @@ static void threshGeneric(Size roi, const T* src, size_t src_step, T* dst,
         return;
 
     default:
-        CV_Error( CV_StsBadArg, "" ); return;
+        CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 }
 
@@ -719,7 +719,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         }
         break;
     default:
-        CV_Error( CV_StsBadArg, "" ); return;
+        CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 #else
     threshGeneric<short>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
@@ -925,7 +925,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             }
             break;
         default:
-            CV_Error( CV_StsBadArg, "" ); return;
+            CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 #else
     threshGeneric<float>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
@@ -1096,7 +1096,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
         }
         break;
     default:
-        CV_Error(CV_StsBadArg, ""); return;
+        CV_Error(cv::Error::StsBadArg, ""); return;
     }
 #else
     threshGeneric<double>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
@@ -1656,7 +1656,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     else if( src.depth() == CV_64F )
         ;
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     parallel_for_(Range(0, dst.rows),
                   ThresholdRunner(src, dst, thresh, maxval, type),
@@ -1704,7 +1704,7 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         meanfloat.convertTo(mean, src.type());
     }
     else
-        CV_Error( CV_StsBadFlag, "Unknown/unsupported adaptive threshold method" );
+        CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported adaptive threshold method" );
 
     int i, j;
     uchar imaxval = saturate_cast<uchar>(maxValue);
@@ -1718,7 +1718,7 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         for( i = 0; i < 768; i++ )
             tab[i] = (uchar)(i - 255 <= -idelta ? imaxval : 0);
     else
-        CV_Error( CV_StsBadFlag, "Unknown/unsupported threshold type" );
+        CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported threshold type" );
 
     if( src.isContinuous() && mean.isContinuous() && dst.isContinuous() )
     {

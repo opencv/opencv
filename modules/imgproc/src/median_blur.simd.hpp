@@ -867,7 +867,7 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
         else if( src.depth() == CV_32F )
             medianBlur_SortNet<MinMax32f, MinMaxVec32f>( src, dst, ksize );
         else
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(cv::Error::StsUnsupportedFormat, "");
 
         return;
     }

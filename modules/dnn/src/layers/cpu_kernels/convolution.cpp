@@ -450,7 +450,7 @@ Ptr<FastConv> initFastConv(
         }
     }
     else
-        CV_Error(CV_StsUnsupportedFormat, "Unknown convolution type.");
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unknown convolution type.");
 
     // store bias; append some zero's to make sure that
     // we can always read MR elements starting from any valid index

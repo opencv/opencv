@@ -308,7 +308,7 @@ public:
             }
         }
         else
-            CV_Error(CV_StsNotImplemented, "Unknown boosting type");
+            CV_Error(cv::Error::StsNotImplemented, "Unknown boosting type");
 
         /*if( bparams.boostType != Boost::LOGIT )
         {
@@ -387,7 +387,7 @@ public:
     void write( FileStorage& fs ) const CV_OVERRIDE
     {
         if( roots.empty() )
-            CV_Error( CV_StsBadArg, "RTrees have not been trained" );
+            CV_Error( cv::Error::StsBadArg, "RTrees have not been trained" );
 
         writeFormat(fs);
         writeParams(fs);

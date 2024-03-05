@@ -921,7 +921,7 @@ void mulTransposed(InputArray _src, OutputArray _dst, bool ata,
     {
         MulTransposedFunc func = getMulTransposedFunc(stype, dtype, ata);
         if( !func )
-            CV_Error( CV_StsUnsupportedFormat, "" );
+            CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
         func( src, dst, delta, scale );
         completeSymm( dst, false );

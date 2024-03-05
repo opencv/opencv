@@ -643,7 +643,7 @@ void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_conte
     current_test_info.test = test;
     current_test_info.test_case_idx = test_case_idx;
     current_test_info.code = 0;
-    cvSetErrStatus( CV_StsOk );
+    cvSetErrStatus( cv::Error::StsOk );
 }
 
 

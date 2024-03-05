@@ -548,7 +548,7 @@ public:
         {
             // for Conv1d
             if (group != 1)
-                CV_Error( CV_StsNotImplemented, " Grouped Conv1d or Depth-Wise Conv1d are not supported by "
+                CV_Error( cv::Error::StsNotImplemented, " Grouped Conv1d or Depth-Wise Conv1d are not supported by "
                                                 "TimVX Backend. Please try OpenCV Backend.");
             tvConv = graph->CreateOperation<tim::vx::ops::Conv1d>(
                     tvConvWeightShape[2], tvPadType, (uint32_t)kernel_size[0],

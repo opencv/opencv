@@ -1392,7 +1392,7 @@ void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
         shift = 0;
     }
     else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
+        CV_Error( cv::Error::StsBadArg, "Unknown/unsupported norm type" );
 
     CV_OCL_RUN(_dst.isUMat(),
                ocl_normalize(_src, _dst, _mask, rtype, scale, shift))

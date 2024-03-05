@@ -753,7 +753,7 @@ Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int ancho
                                       DilateRowVec64f> >(ksize, anchor);
     }
 
-    CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
+    CV_Error_( cv::Error::StsNotImplemented, ("Unsupported data type (=%d)", type));
 }
 
 Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int anchor)
@@ -801,7 +801,7 @@ Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int
                                          DilateColumnVec64f> >(ksize, anchor);
     }
 
-    CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
+    CV_Error_( cv::Error::StsNotImplemented, ("Unsupported data type (=%d)", type));
 }
 
 Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point anchor)
@@ -838,7 +838,7 @@ Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point a
             return makePtr<MorphFilter<MaxOp<double>, DilateVec64f> >(kernel, anchor);
     }
 
-    CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
+    CV_Error_( cv::Error::StsNotImplemented, ("Unsupported data type (=%d)", type));
 }
 
 #endif

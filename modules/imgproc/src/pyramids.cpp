@@ -1448,7 +1448,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     else if( depth == CV_64F )
         func = pyrDown_< FltCast<double, 8> >;
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     func( src, dst, borderType );
 }
@@ -1551,7 +1551,7 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
     else if( depth == CV_64F )
         func = pyrUp_< FltCast<double, 6> >;
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     func( src, dst, borderType );
 }
@@ -1722,7 +1722,7 @@ CV_IMPL void
 cvReleasePyramid( CvMat*** _pyramid, int extra_layers )
 {
     if( !_pyramid )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( *_pyramid )
         for( int i = 0; i <= extra_layers; i++ )
@@ -1743,7 +1743,7 @@ cvCreatePyramid( const CvArr* srcarr, int extra_layers, double rate,
     CvMat stub, *src = cvGetMat( srcarr, &stub );
 
     if( extra_layers < 0 )
-        CV_Error( CV_StsOutOfRange, "The number of extra layers must be non negative" );
+        CV_Error( cv::Error::StsOutOfRange, "The number of extra layers must be non negative" );
 
     int i, layer_step, elem_size = CV_ELEM_SIZE(src->type);
     cv::Size layer_size, size = cvGetMatSize(src);
@@ -1770,7 +1770,7 @@ cvCreatePyramid( const CvArr* srcarr, int extra_layers, double rate,
         }
 
         if( bufsize < 0 )
-            CV_Error( CV_StsOutOfRange, "The buffer is too small to fit the pyramid" );
+            CV_Error( cv::Error::StsOutOfRange, "The buffer is too small to fit the pyramid" );
         ptr = buf->data.ptr;
     }
 

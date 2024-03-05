@@ -844,7 +844,7 @@ void Canny( InputArray _src, OutputArray _dst,
     }
 
     if ((aperture_size & 1) == 0 || (aperture_size != -1 && (aperture_size < 3 || aperture_size > 7)))
-        CV_Error(CV_StsBadFlag, "Aperture size should be odd between 3 and 7");
+        CV_Error(cv::Error::StsBadFlag, "Aperture size should be odd between 3 and 7");
 
     if (aperture_size == 7)
     {

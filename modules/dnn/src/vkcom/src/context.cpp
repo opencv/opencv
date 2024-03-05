@@ -225,7 +225,7 @@ void Context::createInstance()
 
         if (result != VK_SUCCESS)
         {
-            CV_Error(CV_StsError, "Vulkan: vkEnumerateInstanceLayerProperties failed!");
+            CV_Error(cv::Error::StsError, "Vulkan: vkEnumerateInstanceLayerProperties failed!");
             return;
         }
 
@@ -234,7 +234,7 @@ void Context::createInstance()
 
         if (result != VK_SUCCESS)
         {
-            CV_Error(CV_StsError, "Vulkan: vkEnumerateInstanceLayerProperties failed!");
+            CV_Error(cv::Error::StsError, "Vulkan: vkEnumerateInstanceLayerProperties failed!");
             return;
         }
 
@@ -388,7 +388,7 @@ Context::Context()
     vkEnumeratePhysicalDevices(kInstance, &deviceCount, NULL);
     if (deviceCount == 0)
     {
-        CV_Error(CV_StsError, "Vulkan Backend: could not find a device with vulkan support!");
+        CV_Error(cv::Error::StsError, "Vulkan Backend: could not find a device with vulkan support!");
     }
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
@@ -442,7 +442,7 @@ Context::Context()
     if (!cmdPoolPtr)
         cmdPoolPtr = CommandPool::create(kQueue, kQueueFamilyIndex);
     else
-        CV_Error(CV_StsError, "cmdPoolPtr has been created before!!");
+        CV_Error(cv::Error::StsError, "cmdPoolPtr has been created before!!");
 
     pipelineFactoryPtr = PipelineFactory::create();
 }

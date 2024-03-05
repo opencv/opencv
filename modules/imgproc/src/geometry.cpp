@@ -87,7 +87,7 @@ CV_IMPL void
 cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
 {
     if( !pt )
-        CV_Error( CV_StsNullPtr, "NULL vertex array pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL vertex array pointer" );
     cv::RotatedRect(box).points((cv::Point2f*)pt);
 }
 

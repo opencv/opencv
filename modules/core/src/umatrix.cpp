@@ -539,7 +539,7 @@ void setSize( UMat& m, int _dims, const int* _sz,
             m.step.p[i] = total;
             int64 total1 = (int64)total*s;
             if( (uint64)total1 != (size_t)total1 )
-                CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
+                CV_Error( cv::Error::StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
             total = (size_t)total1;
         }
     }
@@ -965,16 +965,16 @@ UMat UMat::reshape(int new_cn, int new_rows) const
     {
         int total_size = total_width * rows;
         if( !isContinuous() )
-            CV_Error( CV_BadStep,
+            CV_Error( cv::Error::BadStep,
             "The matrix is not continuous, thus its number of rows can not be changed" );
 
         if( (unsigned)new_rows > (unsigned)total_size )
-            CV_Error( CV_StsOutOfRange, "Bad new number of rows" );
+            CV_Error( cv::Error::StsOutOfRange, "Bad new number of rows" );
 
         total_width = total_size / new_rows;
 
         if( total_width * new_rows != total_size )
-            CV_Error( CV_StsBadArg, "The total number of matrix elements "
+            CV_Error( cv::Error::StsBadArg, "The total number of matrix elements "
                                     "is not divisible by the new number of rows" );
 
         hdr.rows = new_rows;
@@ -984,7 +984,7 @@ UMat UMat::reshape(int new_cn, int new_rows) const
     int new_width = total_width / new_cn;
 
     if( new_width * new_cn != total_width )
-        CV_Error( CV_BadNumChannels,
+        CV_Error( cv::Error::BadNumChannels,
         "The total width is not divisible by the new number of channels" );
 
     hdr.cols = new_width;
@@ -1050,13 +1050,13 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
             else if (i < dims)
                 newsz_buf[i] = this->size[i];
             else
-                CV_Error(CV_StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
+                CV_Error(cv::Error::StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
 
             total_elem1 *= (size_t)newsz_buf[i];
         }
 
         if (total_elem1 != total_elem1_ref)
-            CV_Error(CV_StsUnmatchedSizes, "Requested and source matrices have different count of elements");
+            CV_Error(cv::Error::StsUnmatchedSizes, "Requested and source matrices have different count of elements");
 
         UMat hdr = *this;
         hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
@@ -1065,7 +1065,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
         return hdr;
     }
 
-    CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
+    CV_Error(cv::Error::StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
 }
 
 Mat UMat::getMat(AccessFlag accessFlags) const

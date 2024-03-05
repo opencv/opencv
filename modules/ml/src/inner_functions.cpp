@@ -63,7 +63,7 @@ bool StatModel::train(const Ptr<TrainData>& trainData, int )
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!trainData.empty());
-    CV_Error(CV_StsNotImplemented, "");
+    CV_Error(cv::Error::StsNotImplemented, "");
     return false;
 }
 

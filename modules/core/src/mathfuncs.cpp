@@ -1566,7 +1566,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         {
             cv::String value_str;
             value_str << src(cv::Range(badPt.y, badPt.y + 1), cv::Range(badPt.x, badPt.x + 1));
-            CV_Error_( CV_StsOutOfRange,
+            CV_Error_( cv::Error::StsOutOfRange,
             ("the value at (%d, %d)=%s is out of range [%f, %f)", badPt.x, badPt.y, value_str.c_str(), minVal, maxVal));
         }
         return false;

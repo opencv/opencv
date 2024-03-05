@@ -279,7 +279,7 @@ Ptr<Pipeline> PipelineFactory::getPipeline(const std::string& key, const std::ve
     // retrieve spv from SPVMaps with given key
     auto iterSPV  = SPVMaps.find(key);
     if (iterSPV == SPVMaps.end())
-        CV_Error(CV_StsError, "Can not create SPV with the given name:"+key+"!");
+        CV_Error(cv::Error::StsError, "Can not create SPV with the given name:"+key+"!");
 
     const uint32_t* spv = iterSPV->second.first;
     size_t length = iterSPV->second.second;
@@ -292,7 +292,7 @@ Ptr<Pipeline> PipelineFactory::getPipeline(const std::string& key, const std::ve
     }
     else
     {
-        CV_Error(CV_StsError, "Can not Created the VkPipeline "+key);
+        CV_Error(cv::Error::StsError, "Can not Created the VkPipeline "+key);
     }
 
     return pipeline;

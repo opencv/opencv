@@ -377,7 +377,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
     }
 
     if( func == 0 )
-        CV_Error_(CV_StsUnsupportedFormat,
+        CV_Error_(cv::Error::StsUnsupportedFormat,
                   ("The combination of type=%d, dtype=%d and normType=%d is not supported",
                    type, dtype, normType));
 

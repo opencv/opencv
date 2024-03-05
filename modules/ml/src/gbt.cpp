@@ -218,7 +218,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
                 orig_response->data.fl[i] = (float) _responses->data.i[i*step];
         }; break;
         default:
-            CV_Error(CV_StsUnmatchedFormats, "Response should be a 32fC1 or 32sC1 vector.");
+            CV_Error(cv::Error::StsUnmatchedFormats, "Response should be a 32fC1 or 32sC1 vector.");
     }
 
     if (!is_regression)
@@ -283,7 +283,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
                         sample_idx->data.i[active_samples_count++] = i;
 
             } break;
-            default: CV_Error(CV_StsUnmatchedFormats, "_sample_idx should be a 32sC1, 8sC1 or 8uC1 vector.");
+            default: CV_Error(cv::Error::StsUnmatchedFormats, "_sample_idx should be a 32sC1, 8sC1 or 8uC1 vector.");
         }
     }
     else
@@ -1072,7 +1072,7 @@ void CvGBTrees::read_params( CvFileStorage* fs, CvFileNode* fnode )
 
 
     if( params.loss_function_type < SQUARED_LOSS || params.loss_function_type > DEVIANCE_LOSS ||  params.loss_function_type == 2)
-        CV_ERROR( CV_StsBadArg, "Unknown loss function" );
+        CV_ERROR( cv::Error::StsBadArg, "Unknown loss function" );
 
     params.weak_count = cvReadIntByName( fs, fnode, "ensemble_length" );
     params.shrinkage = (float)cvReadRealByName( fs, fnode, "shrinkage", 0.1 );
@@ -1082,7 +1082,7 @@ void CvGBTrees::read_params( CvFileStorage* fs, CvFileNode* fnode )
     {
         class_labels = (CvMat*)cvReadByName( fs, fnode, "class_labels" );
         if( class_labels && !CV_IS_MAT(class_labels))
-            CV_ERROR( CV_StsParseError, "class_labels must stored as a matrix");
+            CV_ERROR( cv::Error::StsParseError, "class_labels must stored as a matrix");
     }
     data->is_classifier = 0;
 
@@ -1105,7 +1105,7 @@ void CvGBTrees::write( CvFileStorage* fs, const char* name ) const
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_GBT );
 
     if( !weak )
-        CV_ERROR( CV_StsBadArg, "The model has not been trained yet" );
+        CV_ERROR( cv::Error::StsBadArg, "The model has not been trained yet" );
 
     write_params( fs );
     cvWriteReal( fs, "base_value", base_value);
@@ -1170,13 +1170,13 @@ void CvGBTrees::read( CvFileStorage* fs, CvFileNode* node )
 
         trees_fnode = cvGetFileNodeByName( fs, node, s.c_str() );
         if( !trees_fnode || !CV_NODE_IS_SEQ(trees_fnode->tag) )
-            CV_ERROR( CV_StsParseError, "<trees_x> tag is missing" );
+            CV_ERROR( cv::Error::StsParseError, "<trees_x> tag is missing" );
 
         cvStartReadSeq( trees_fnode->data.seq, &reader );
         ntrees = trees_fnode->data.seq->total;
 
         if( ntrees != params.weak_count )
-            CV_ERROR( CV_StsUnmatchedSizes,
+            CV_ERROR( cv::Error::StsUnmatchedSizes,
             "The number of trees stored does not match <ntrees> tag value" );
 
         CV_CALL( storage = cvCreateMemStorage() );
