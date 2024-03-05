@@ -81,7 +81,7 @@ Code
 Explanation
 -----------
 
-#### Declare variables
+### Declare variables
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp variables
@@ -95,7 +95,7 @@ Explanation
 @snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py variables
 @end_toggle
 
-#### Load source image
+### Load source image
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp load
@@ -109,7 +109,7 @@ Explanation
 @snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py load
 @end_toggle
 
-#### Reduce noise
+### Reduce noise
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp reduce_noise
@@ -123,7 +123,7 @@ Explanation
 @snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py reduce_noise
 @end_toggle
 
-#### Grayscale
+### Grayscale
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp convert_to_gray
@@ -137,7 +137,7 @@ Explanation
 @snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py convert_to_gray
 @end_toggle
 
-#### Laplacian operator
+### Laplacian operator
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp laplacian
@@ -160,7 +160,7 @@ Explanation
         this example.
     -   *scale*, *delta* and *BORDER_DEFAULT*: We leave them as default values.
 
-#### Convert output to a *CV_8U* image
+### Convert output to a *CV_8U* image
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp convert
@@ -174,7 +174,7 @@ Explanation
 @snippet samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py convert
 @end_toggle
 
-#### Display the result
+### Display the result
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp display

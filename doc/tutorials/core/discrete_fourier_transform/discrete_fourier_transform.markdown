@@ -87,7 +87,7 @@ Fourier Transform too needs to be of a discrete type resulting in a Discrete Fou
 (*DFT*). You'll want to use this whenever you need to determine the structure of an image from a
 geometrical point of view. Here are the steps to follow (in case of a gray scale input image *I*):
 
-#### Expand the image to an optimal size
+### Expand the image to an optimal size
 
 The performance of a DFT is dependent of the image
 size. It tends to be the fastest for image sizes that are multiple of the numbers two, three and
@@ -108,7 +108,7 @@ image (the appended pixels are initialized with zero):
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py expand
 @end_toggle
 
-#### Make place for both the complex and the real values
+### Make place for both the complex and the real values
 
 The result of a Fourier Transform is
 complex. This implies that for each image value the result is two image values (one per
@@ -128,7 +128,7 @@ input image to this type and expand it with another channel to hold the complex 
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py complex_and_real
 @end_toggle
 
-#### Make the Discrete Fourier Transform
+### Make the Discrete Fourier Transform
 It's possible an in-place calculation (same input as
 output):
 
@@ -144,7 +144,7 @@ output):
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py dft
 @end_toggle
 
-#### Transform the real and complex values to magnitude
+### Transform the real and complex values to magnitude
 A complex number has a real (*Re*) and a
 complex (imaginary - *Im*) part. The results of a DFT are complex numbers. The magnitude of a
 DFT is:
@@ -165,7 +165,7 @@ Translated to OpenCV code:
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py magnitude
 @end_toggle
 
-#### Switch to a logarithmic scale
+### Switch to a logarithmic scale
 It turns out that the dynamic range of the Fourier
 coefficients is too large to be displayed on the screen. We have some small and some high
 changing values that we can't observe like this. Therefore the high values will all turn out as
@@ -188,7 +188,7 @@ Translated to OpenCV code:
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py log
 @end_toggle
 
-#### Crop and rearrange
+### Crop and rearrange
 Remember, that at the first step, we expanded the image? Well, it's time
 to throw away the newly introduced values. For visualization purposes we may also rearrange the
 quadrants of the result, so that the origin (zero, zero) corresponds with the image center.
@@ -205,7 +205,7 @@ quadrants of the result, so that the origin (zero, zero) corresponds with the im
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py crop_rearrange
 @end_toggle
 
-#### Normalize
+### Normalize
 This is done again for visualization purposes. We now have the magnitudes,
 however this are still out of our image display range of zero to one. We normalize our values to
 this range using the @ref cv::normalize() function.

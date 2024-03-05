@@ -62,10 +62,6 @@
 @defgroup core Core functionality
 @{
     @defgroup core_basic Basic structures
-    @defgroup core_c C structures and operations
-    @{
-        @defgroup core_c_glue Connections with C++
-    @}
     @defgroup core_array Operations on arrays
     @defgroup core_async Asynchronous API
     @defgroup core_xml XML/YAML Persistence

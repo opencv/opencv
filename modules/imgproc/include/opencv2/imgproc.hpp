@@ -46,143 +46,143 @@
 #include "opencv2/core.hpp"
 
 /**
-  @defgroup imgproc Image Processing
+@defgroup imgproc Image Processing
 
 This module includes image-processing functions.
 
-  @{
+@{
     @defgroup imgproc_filter Image Filtering
 
-Functions and classes described in this section are used to perform various linear or non-linear
-filtering operations on 2D images (represented as Mat's). It means that for each pixel location
-\f$(x,y)\f$ in the source image (normally, rectangular), its neighborhood is considered and used to
-compute the response. In case of a linear filter, it is a weighted sum of pixel values. In case of
-morphological operations, it is the minimum or maximum values, and so on. The computed response is
-stored in the destination image at the same location \f$(x,y)\f$. It means that the output image
-will be of the same size as the input image. Normally, the functions support multi-channel arrays,
-in which case every channel is processed independently. Therefore, the output image will also have
-the same number of channels as the input one.
+    Functions and classes described in this section are used to perform various linear or non-linear
+    filtering operations on 2D images (represented as Mat's). It means that for each pixel location
+    \f$(x,y)\f$ in the source image (normally, rectangular), its neighborhood is considered and used to
+    compute the response. In case of a linear filter, it is a weighted sum of pixel values. In case of
+    morphological operations, it is the minimum or maximum values, and so on. The computed response is
+    stored in the destination image at the same location \f$(x,y)\f$. It means that the output image
+    will be of the same size as the input image. Normally, the functions support multi-channel arrays,
+    in which case every channel is processed independently. Therefore, the output image will also have
+    the same number of channels as the input one.
 
-Another common feature of the functions and classes described in this section is that, unlike
-simple arithmetic functions, they need to extrapolate values of some non-existing pixels. For
-example, if you want to smooth an image using a Gaussian \f$3 \times 3\f$ filter, then, when
-processing the left-most pixels in each row, you need pixels to the left of them, that is, outside
-of the image. You can let these pixels be the same as the left-most image pixels ("replicated
-border" extrapolation method), or assume that all the non-existing pixels are zeros ("constant
-border" extrapolation method), and so on. OpenCV enables you to specify the extrapolation method.
-For details, see #BorderTypes
+    Another common feature of the functions and classes described in this section is that, unlike
+    simple arithmetic functions, they need to extrapolate values of some non-existing pixels. For
+    example, if you want to smooth an image using a Gaussian \f$3 \times 3\f$ filter, then, when
+    processing the left-most pixels in each row, you need pixels to the left of them, that is, outside
+    of the image. You can let these pixels be the same as the left-most image pixels ("replicated
+    border" extrapolation method), or assume that all the non-existing pixels are zeros ("constant
+    border" extrapolation method), and so on. OpenCV enables you to specify the extrapolation method.
+    For details, see #BorderTypes
 
-@anchor filter_depths
-### Depth combinations
-Input depth (src.depth()) | Output depth (ddepth)
---------------------------|----------------------
-CV_8U                     | -1/CV_16S/CV_32F/CV_64F
-CV_16U/CV_16S             | -1/CV_32F/CV_64F
-CV_32F                    | -1/CV_32F
-CV_64F                    | -1/CV_64F
+    @anchor filter_depths
+    ### Depth combinations
+    Input depth (src.depth()) | Output depth (ddepth)
+    --------------------------|----------------------
+    CV_8U                     | -1/CV_16S/CV_32F/CV_64F
+    CV_16U/CV_16S             | -1/CV_32F/CV_64F
+    CV_32F                    | -1/CV_32F
+    CV_64F                    | -1/CV_64F
 
-@note when ddepth=-1, the output image will have the same depth as the source.
+    @note when ddepth=-1, the output image will have the same depth as the source.
 
-@note if you need double floating-point accuracy and using single floating-point input data
-(CV_32F input and CV_64F output depth combination), you can use @ref Mat.convertTo to convert
-the input data to the desired precision.
+    @note if you need double floating-point accuracy and using single floating-point input data
+    (CV_32F input and CV_64F output depth combination), you can use @ref Mat.convertTo to convert
+    the input data to the desired precision.
 
     @defgroup imgproc_transform Geometric Image Transformations
 
-The functions in this section perform various geometrical transformations of 2D images. They do not
-change the image content but deform the pixel grid and map this deformed grid to the destination
-image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from
-destination to the source. That is, for each pixel \f$(x, y)\f$ of the destination image, the
-functions compute coordinates of the corresponding "donor" pixel in the source image and copy the
-pixel value:
+    The functions in this section perform various geometrical transformations of 2D images. They do not
+    change the image content but deform the pixel grid and map this deformed grid to the destination
+    image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from
+    destination to the source. That is, for each pixel \f$(x, y)\f$ of the destination image, the
+    functions compute coordinates of the corresponding "donor" pixel in the source image and copy the
+    pixel value:
 
-\f[\texttt{dst} (x,y)= \texttt{src} (f_x(x,y), f_y(x,y))\f]
+    \f[\texttt{dst} (x,y)= \texttt{src} (f_x(x,y), f_y(x,y))\f]
 
-In case when you specify the forward mapping \f$\left<g_x, g_y\right>: \texttt{src} \rightarrow
-\texttt{dst}\f$, the OpenCV functions first compute the corresponding inverse mapping
-\f$\left<f_x, f_y\right>: \texttt{dst} \rightarrow \texttt{src}\f$ and then use the above formula.
+    In case when you specify the forward mapping \f$\left<g_x, g_y\right>: \texttt{src} \rightarrow
+    \texttt{dst}\f$, the OpenCV functions first compute the corresponding inverse mapping
+    \f$\left<f_x, f_y\right>: \texttt{dst} \rightarrow \texttt{src}\f$ and then use the above formula.
 
-The actual implementations of the geometrical transformations, from the most generic remap and to
-the simplest and the fastest resize, need to solve two main problems with the above formula:
+    The actual implementations of the geometrical transformations, from the most generic remap and to
+    the simplest and the fastest resize, need to solve two main problems with the above formula:
 
-- Extrapolation of non-existing pixels. Similarly to the filtering functions described in the
-previous section, for some \f$(x,y)\f$, either one of \f$f_x(x,y)\f$, or \f$f_y(x,y)\f$, or both
-of them may fall outside of the image. In this case, an extrapolation method needs to be used.
-OpenCV provides the same selection of extrapolation methods as in the filtering functions. In
-addition, it provides the method #BORDER_TRANSPARENT. This means that the corresponding pixels in
-the destination image will not be modified at all.
+    - Extrapolation of non-existing pixels. Similarly to the filtering functions described in the
+    previous section, for some \f$(x,y)\f$, either one of \f$f_x(x,y)\f$, or \f$f_y(x,y)\f$, or both
+    of them may fall outside of the image. In this case, an extrapolation method needs to be used.
+    OpenCV provides the same selection of extrapolation methods as in the filtering functions. In
+    addition, it provides the method #BORDER_TRANSPARENT. This means that the corresponding pixels in
+    the destination image will not be modified at all.
 
-- Interpolation of pixel values. Usually \f$f_x(x,y)\f$ and \f$f_y(x,y)\f$ are floating-point
-numbers. This means that \f$\left<f_x, f_y\right>\f$ can be either an affine or perspective
-transformation, or radial lens distortion correction, and so on. So, a pixel value at fractional
-coordinates needs to be retrieved. In the simplest case, the coordinates can be just rounded to the
-nearest integer coordinates and the corresponding pixel can be used. This is called a
-nearest-neighbor interpolation. However, a better result can be achieved by using more
-sophisticated [interpolation methods](http://en.wikipedia.org/wiki/Multivariate_interpolation) ,
-where a polynomial function is fit into some neighborhood of the computed pixel \f$(f_x(x,y),
-f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$ is taken as the
-interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
-#resize for details.
+    - Interpolation of pixel values. Usually \f$f_x(x,y)\f$ and \f$f_y(x,y)\f$ are floating-point
+    numbers. This means that \f$\left<f_x, f_y\right>\f$ can be either an affine or perspective
+    transformation, or radial lens distortion correction, and so on. So, a pixel value at fractional
+    coordinates needs to be retrieved. In the simplest case, the coordinates can be just rounded to the
+    nearest integer coordinates and the corresponding pixel can be used. This is called a
+    nearest-neighbor interpolation. However, a better result can be achieved by using more
+    sophisticated [interpolation methods](http://en.wikipedia.org/wiki/Multivariate_interpolation) ,
+    where a polynomial function is fit into some neighborhood of the computed pixel \f$(f_x(x,y),
+    f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$ is taken as the
+    interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
+    #resize for details.
 
-@note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
+    @note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
 
     @defgroup imgproc_misc Miscellaneous Image Transformations
     @defgroup imgproc_draw Drawing Functions
 
-Drawing functions work with matrices/images of arbitrary depth. The boundaries of the shapes can be
-rendered with antialiasing (implemented only for 8-bit images for now). All the functions include
-the parameter color that uses an RGB value (that may be constructed with the Scalar constructor )
-for color images and brightness for grayscale images. For color images, the channel ordering is
-normally *Blue, Green, Red*. This is what imshow, imread, and imwrite expect. So, if you form a
-color using the Scalar constructor, it should look like:
+    Drawing functions work with matrices/images of arbitrary depth. The boundaries of the shapes can be
+    rendered with antialiasing (implemented only for 8-bit images for now). All the functions include
+    the parameter color that uses an RGB value (that may be constructed with the Scalar constructor )
+    for color images and brightness for grayscale images. For color images, the channel ordering is
+    normally *Blue, Green, Red*. This is what imshow, imread, and imwrite expect. So, if you form a
+    color using the Scalar constructor, it should look like:
 
-\f[\texttt{Scalar} (blue \_ component, green \_ component, red \_ component[, alpha \_ component])\f]
+    \f[\texttt{Scalar} (blue \_ component, green \_ component, red \_ component[, alpha \_ component])\f]
 
-If you are using your own image rendering and I/O functions, you can use any channel ordering. The
-drawing functions process each channel independently and do not depend on the channel order or even
-on the used color space. The whole image can be converted from BGR to RGB or to a different color
-space using cvtColor .
+    If you are using your own image rendering and I/O functions, you can use any channel ordering. The
+    drawing functions process each channel independently and do not depend on the channel order or even
+    on the used color space. The whole image can be converted from BGR to RGB or to a different color
+    space using cvtColor .
 
-If a drawn figure is partially or completely outside the image, the drawing functions clip it. Also,
-many drawing functions can handle pixel coordinates specified with sub-pixel accuracy. This means
-that the coordinates can be passed as fixed-point numbers encoded as integers. The number of
-fractional bits is specified by the shift parameter and the real point coordinates are calculated as
-\f$\texttt{Point}(x,y)\rightarrow\texttt{Point2f}(x*2^{-shift},y*2^{-shift})\f$ . This feature is
-especially effective when rendering antialiased shapes.
+    If a drawn figure is partially or completely outside the image, the drawing functions clip it. Also,
+    many drawing functions can handle pixel coordinates specified with sub-pixel accuracy. This means
+    that the coordinates can be passed as fixed-point numbers encoded as integers. The number of
+    fractional bits is specified by the shift parameter and the real point coordinates are calculated as
+    \f$\texttt{Point}(x,y)\rightarrow\texttt{Point2f}(x*2^{-shift},y*2^{-shift})\f$ . This feature is
+    especially effective when rendering antialiased shapes.
 
-@note The functions do not support alpha-transparency when the target image is 4-channel. In this
-case, the color[3] is simply copied to the repainted pixels. Thus, if you want to paint
-semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main
-image.
+    @note The functions do not support alpha-transparency when the target image is 4-channel. In this
+    case, the color[3] is simply copied to the repainted pixels. Thus, if you want to paint
+    semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main
+    image.
 
     @defgroup imgproc_color_conversions Color Space Conversions
     @defgroup imgproc_colormap ColorMaps in OpenCV
 
-The human perception isn't built for observing fine changes in grayscale images. Human eyes are more
-sensitive to observing changes between colors, so you often need to recolor your grayscale images to
-get a clue about them. OpenCV now comes with various colormaps to enhance the visualization in your
-computer vision application.
+    The human perception isn't built for observing fine changes in grayscale images. Human eyes are more
+    sensitive to observing changes between colors, so you often need to recolor your grayscale images to
+    get a clue about them. OpenCV now comes with various colormaps to enhance the visualization in your
+    computer vision application.
 
-In OpenCV you only need applyColorMap to apply a colormap on a given image. The following sample
-code reads the path to an image from command line, applies a Jet colormap on it and shows the
-result:
+    In OpenCV you only need applyColorMap to apply a colormap on a given image. The following sample
+    code reads the path to an image from command line, applies a Jet colormap on it and shows the
+    result:
 
-@include snippets/imgproc_applyColorMap.cpp
+    @include snippets/imgproc_applyColorMap.cpp
 
-@see #ColormapTypes
+    @see #ColormapTypes
 
     @defgroup imgproc_subdiv2d Planar Subdivision
 
-The Subdiv2D class described in this section is used to perform various planar subdivision on
-a set of 2D points (represented as vector of Point2f). OpenCV subdivides a plane into triangles
-using the Delaunay's algorithm, which corresponds to the dual graph of the Voronoi diagram.
-In the figure below, the Delaunay's triangulation is marked with black lines and the Voronoi
-diagram with red lines.
+    The Subdiv2D class described in this section is used to perform various planar subdivision on
+    a set of 2D points (represented as vector of Point2f). OpenCV subdivides a plane into triangles
+    using the Delaunay's algorithm, which corresponds to the dual graph of the Voronoi diagram.
+    In the figure below, the Delaunay's triangulation is marked with black lines and the Voronoi
+    diagram with red lines.
 
-![Delaunay triangulation (black) and Voronoi (red)](pics/delaunay_voronoi.png)
+    ![Delaunay triangulation (black) and Voronoi (red)](pics/delaunay_voronoi.png)
 
-The subdivisions can be used for the 3D piece-wise transformation of a plane, morphing, fast
-location of points on the plane, building special graphs (such as NNG,RNG), and so forth.
+    The subdivisions can be used for the 3D piece-wise transformation of a plane, morphing, fast
+    location of points on the plane, building special graphs (such as NNG,RNG), and so forth.
 
     @defgroup imgproc_hist Histograms
     @defgroup imgproc_shape Structural Analysis and Shape Descriptors
@@ -190,7 +190,6 @@ location of points on the plane, building special graphs (such as NNG,RNG), and 
     @defgroup imgproc_feature Feature Detection
     @defgroup imgproc_object Object Detection
     @defgroup imgproc_segmentation Image Segmentation
-    @defgroup imgproc_c C API
     @defgroup imgproc_hal Hardware Acceleration Layer
     @{
         @defgroup imgproc_hal_functions Functions

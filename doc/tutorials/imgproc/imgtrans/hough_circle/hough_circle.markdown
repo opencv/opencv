@@ -74,7 +74,7 @@ Explanation
 
 The image we used can be found [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/smarties.png)
 
-####  Load an image:
+###  Load an image:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp load
@@ -88,7 +88,7 @@ The image we used can be found [here](https://raw.githubusercontent.com/opencv/o
 @snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py load
 @end_toggle
 
-####  Convert it to grayscale:
+###  Convert it to grayscale:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp convert_to_gray
@@ -102,7 +102,7 @@ The image we used can be found [here](https://raw.githubusercontent.com/opencv/o
 @snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py convert_to_gray
 @end_toggle
 
-#### Apply a Median blur to reduce noise and avoid false circle detection:
+### Apply a Median blur to reduce noise and avoid false circle detection:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp reduce_noise
@@ -116,7 +116,7 @@ The image we used can be found [here](https://raw.githubusercontent.com/opencv/o
 @snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py reduce_noise
 @end_toggle
 
-#### Proceed to apply Hough Circle Transform:
+### Proceed to apply Hough Circle Transform:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp houghcircles
@@ -144,7 +144,7 @@ The image we used can be found [here](https://raw.githubusercontent.com/opencv/o
     -   *min_radius = 0*: Minimum radius to be detected. If unknown, put zero as default.
     -   *max_radius = 0*: Maximum radius to be detected. If unknown, put zero as default.
 
-####  Draw the detected circles:
+###  Draw the detected circles:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp draw
@@ -160,7 +160,7 @@ The image we used can be found [here](https://raw.githubusercontent.com/opencv/o
 
 You can see that we will draw the circle(s) on red and the center(s) with a small green dot
 
-####  Display the detected circle(s) and wait for the user to exit the program:
+###  Display the detected circle(s) and wait for the user to exit the program:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp display
