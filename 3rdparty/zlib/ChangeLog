@@ -1,6 +1,16 @@
 
                 ChangeLog file for zlib
 
+Changes in 1.3.1 (22 Jan 2024)
+- Reject overflows of zip header fields in minizip
+- Fix bug in inflateSync() for data held in bit buffer
+- Add LIT_MEM define to use more memory for a small deflate speedup
+- Fix decision on the emission of Zip64 end records in minizip
+- Add bounds checking to ERR_MSG() macro, used by zError()
+- Neutralize zip file traversal attacks in miniunz
+- Fix a bug in ZLIB_DEBUG compiles in check_match()
+- Various portability and appearance improvements
+
 Changes in 1.3 (18 Aug 2023)
 - Remove K&R function definitions and zlib2ansi
 - Fix bug in deflateBound() for level 0 and memLevel 9
