@@ -1377,38 +1377,38 @@ CV_IMPL const char* cvErrorStr( int status )
 
     switch (status)
     {
-    case CV_StsOk :                  return "No Error";
-    case CV_StsBackTrace :           return "Backtrace";
-    case CV_StsError :               return "Unspecified error";
-    case CV_StsInternal :            return "Internal error";
-    case CV_StsNoMem :               return "Insufficient memory";
-    case CV_StsBadArg :              return "Bad argument";
-    case CV_StsNoConv :              return "Iterations do not converge";
-    case CV_StsAutoTrace :           return "Autotrace call";
-    case CV_StsBadSize :             return "Incorrect size of input array";
-    case CV_StsNullPtr :             return "Null pointer";
-    case CV_StsDivByZero :           return "Division by zero occurred";
-    case CV_BadStep :                return "Image step is wrong";
-    case CV_StsInplaceNotSupported : return "Inplace operation is not supported";
-    case CV_StsObjectNotFound :      return "Requested object was not found";
-    case CV_BadDepth :               return "Input image depth is not supported by function";
-    case CV_StsUnmatchedFormats :    return "Formats of input arguments do not match";
-    case CV_StsUnmatchedSizes :      return "Sizes of input arguments do not match";
-    case CV_StsOutOfRange :          return "One of the arguments\' values is out of range";
-    case CV_StsUnsupportedFormat :   return "Unsupported format or combination of formats";
-    case CV_BadCOI :                 return "Input COI is not supported";
-    case CV_BadNumChannels :         return "Bad number of channels";
-    case CV_StsBadFlag :             return "Bad flag (parameter or structure field)";
-    case CV_StsBadPoint :            return "Bad parameter of type CvPoint";
-    case CV_StsBadMask :             return "Bad type of mask argument";
-    case CV_StsParseError :          return "Parsing error";
-    case CV_StsNotImplemented :      return "The function/feature is not implemented";
-    case CV_StsBadMemBlock :         return "Memory block has been corrupted";
-    case CV_StsAssert :              return "Assertion failed";
-    case CV_GpuNotSupported :        return "No CUDA support";
-    case CV_GpuApiCallError :        return "Gpu API call";
-    case CV_OpenGlNotSupported :     return "No OpenGL support";
-    case CV_OpenGlApiCallError :     return "OpenGL API call";
+    case cv::Error::StsOk :                  return "No Error";
+    case cv::Error::StsBackTrace :           return "Backtrace";
+    case cv::Error::StsError :               return "Unspecified error";
+    case cv::Error::StsInternal :            return "Internal error";
+    case cv::Error::StsNoMem :               return "Insufficient memory";
+    case cv::Error::StsBadArg :              return "Bad argument";
+    case cv::Error::StsNoConv :              return "Iterations do not converge";
+    case cv::Error::StsAutoTrace :           return "Autotrace call";
+    case cv::Error::StsBadSize :             return "Incorrect size of input array";
+    case cv::Error::StsNullPtr :             return "Null pointer";
+    case cv::Error::StsDivByZero :           return "Division by zero occurred";
+    case cv::Error::BadStep :                return "Image step is wrong";
+    case cv::Error::StsInplaceNotSupported : return "Inplace operation is not supported";
+    case cv::Error::StsObjectNotFound :      return "Requested object was not found";
+    case cv::Error::BadDepth :               return "Input image depth is not supported by function";
+    case cv::Error::StsUnmatchedFormats :    return "Formats of input arguments do not match";
+    case cv::Error::StsUnmatchedSizes :      return "Sizes of input arguments do not match";
+    case cv::Error::StsOutOfRange :          return "One of the arguments\' values is out of range";
+    case cv::Error::StsUnsupportedFormat :   return "Unsupported format or combination of formats";
+    case cv::Error::BadCOI :                 return "Input COI is not supported";
+    case cv::Error::BadNumChannels :         return "Bad number of channels";
+    case cv::Error::StsBadFlag :             return "Bad flag (parameter or structure field)";
+    case cv::Error::StsBadPoint :            return "Bad parameter of type CvPoint";
+    case cv::Error::StsBadMask :             return "Bad type of mask argument";
+    case cv::Error::StsParseError :          return "Parsing error";
+    case cv::Error::StsNotImplemented :      return "The function/feature is not implemented";
+    case cv::Error::StsBadMemBlock :         return "Memory block has been corrupted";
+    case cv::Error::StsAssert :              return "Assertion failed";
+    case cv::Error::GpuNotSupported :        return "No CUDA support";
+    case cv::Error::GpuApiCallError :        return "Gpu API call";
+    case cv::Error::OpenGlNotSupported :     return "No OpenGL support";
+    case cv::Error::OpenGlApiCallError :     return "OpenGL API call";
     };
 
     snprintf(buf, sizeof(buf), "Unknown %s code %d", status >= 0 ? "status":"error", status);
@@ -1448,29 +1448,29 @@ cvErrorFromIppStatus( int status )
 {
     switch (status)
     {
-    case CV_BADSIZE_ERR:               return CV_StsBadSize;
-    case CV_BADMEMBLOCK_ERR:           return CV_StsBadMemBlock;
-    case CV_NULLPTR_ERR:               return CV_StsNullPtr;
-    case CV_DIV_BY_ZERO_ERR:           return CV_StsDivByZero;
-    case CV_BADSTEP_ERR:               return CV_BadStep;
-    case CV_OUTOFMEM_ERR:              return CV_StsNoMem;
-    case CV_BADARG_ERR:                return CV_StsBadArg;
-    case CV_NOTDEFINED_ERR:            return CV_StsError;
-    case CV_INPLACE_NOT_SUPPORTED_ERR: return CV_StsInplaceNotSupported;
-    case CV_NOTFOUND_ERR:              return CV_StsObjectNotFound;
-    case CV_BADCONVERGENCE_ERR:        return CV_StsNoConv;
-    case CV_BADDEPTH_ERR:              return CV_BadDepth;
-    case CV_UNMATCHED_FORMATS_ERR:     return CV_StsUnmatchedFormats;
-    case CV_UNSUPPORTED_COI_ERR:       return CV_BadCOI;
-    case CV_UNSUPPORTED_CHANNELS_ERR:  return CV_BadNumChannels;
-    case CV_BADFLAG_ERR:               return CV_StsBadFlag;
-    case CV_BADRANGE_ERR:              return CV_StsBadArg;
-    case CV_BADCOEF_ERR:               return CV_StsBadArg;
-    case CV_BADFACTOR_ERR:             return CV_StsBadArg;
-    case CV_BADPOINT_ERR:              return CV_StsBadPoint;
+    case CV_BADSIZE_ERR:               return cv::Error::StsBadSize;
+    case CV_BADMEMBLOCK_ERR:           return cv::Error::StsBadMemBlock;
+    case CV_NULLPTR_ERR:               return cv::Error::StsNullPtr;
+    case CV_DIV_BY_ZERO_ERR:           return cv::Error::StsDivByZero;
+    case CV_BADSTEP_ERR:               return cv::Error::BadStep;
+    case CV_OUTOFMEM_ERR:              return cv::Error::StsNoMem;
+    case CV_BADARG_ERR:                return cv::Error::StsBadArg;
+    case CV_NOTDEFINED_ERR:            return cv::Error::StsError;
+    case CV_INPLACE_NOT_SUPPORTED_ERR: return cv::Error::StsInplaceNotSupported;
+    case CV_NOTFOUND_ERR:              return cv::Error::StsObjectNotFound;
+    case CV_BADCONVERGENCE_ERR:        return cv::Error::StsNoConv;
+    case CV_BADDEPTH_ERR:              return cv::Error::BadDepth;
+    case CV_UNMATCHED_FORMATS_ERR:     return cv::Error::StsUnmatchedFormats;
+    case CV_UNSUPPORTED_COI_ERR:       return cv::Error::BadCOI;
+    case CV_UNSUPPORTED_CHANNELS_ERR:  return cv::Error::BadNumChannels;
+    case CV_BADFLAG_ERR:               return cv::Error::StsBadFlag;
+    case CV_BADRANGE_ERR:              return cv::Error::StsBadArg;
+    case CV_BADCOEF_ERR:               return cv::Error::StsBadArg;
+    case CV_BADFACTOR_ERR:             return cv::Error::StsBadArg;
+    case CV_BADPOINT_ERR:              return cv::Error::StsBadPoint;
 
     default:
-      return CV_StsError;
+      return cv::Error::StsError;
     }
 }
 

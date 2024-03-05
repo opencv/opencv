@@ -2239,7 +2239,7 @@ static const int* getFontData(int fontFace)
         ascii = HersheyScriptComplex;
         break;
     default:
-        CV_Error( CV_StsOutOfRange, "Unknown font type" );
+        CV_Error( cv::Error::StsOutOfRange, "Unknown font type" );
     }
     return ascii;
 }
