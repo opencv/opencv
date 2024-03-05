@@ -134,13 +134,6 @@ static inline int cvAlign( int size, int align )
     return (size + align - 1) & -align;
 }
 
-#ifdef IPL_DEPTH_8U
-static inline cv::Size cvGetMatSize( const CvMat* mat )
-{
-    return cv::Size(mat->cols, mat->rows);
-}
-#endif
-
 namespace cv
 {
 CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int unroll_to = 0);

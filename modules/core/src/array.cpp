@@ -79,7 +79,7 @@ cvSetIPLAllocators( Cv_iplCreateImageHeader createHeader,
         (createROI != 0) + (cloneImage != 0);
 
     if( count != 0 && count != 5 )
-        CV_Error( CV_StsBadArg, "Either all the pointers should be null or "
+        CV_Error( cv::Error::StsBadArg, "Either all the pointers should be null or "
                                  "they all should be non-null" );
 
     CvIPL.createHeader = createHeader;
@@ -118,11 +118,11 @@ cvCreateMatHeader( int rows, int cols, int type )
     type = CV_MAT_TYPE(type);
 
     if( rows < 0 || cols < 0 )
-        CV_Error( CV_StsBadSize, "Non-positive width or height" );
+        CV_Error( cv::Error::StsBadSize, "Non-positive width or height" );
 
     int min_step = CV_ELEM_SIZE(type);
     if( min_step <= 0 )
-        CV_Error( CV_StsUnsupportedFormat, "Invalid matrix type" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Invalid matrix type" );
     min_step *= cols;
 
     CvMat* arr = (CvMat*)cvAlloc( sizeof(*arr));
@@ -146,13 +146,13 @@ cvInitMatHeader( CvMat* arr, int rows, int cols,
                  int type, void* data, int step )
 {
     if( !arr )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( (unsigned)CV_MAT_DEPTH(type) > CV_DEPTH_MAX )
-        CV_Error( CV_BadNumChannels, "" );
+        CV_Error( cv::Error::BadNumChannels, "" );
 
     if( rows < 0 || cols < 0 )
-        CV_Error( CV_StsBadSize, "Non-positive cols or rows" );
+        CV_Error( cv::Error::StsBadSize, "Non-positive cols or rows" );
 
     type = CV_MAT_TYPE( type );
     arr->type = type | CV_MAT_MAGIC_VAL;
@@ -168,7 +168,7 @@ cvInitMatHeader( CvMat* arr, int rows, int cols,
     if( step != CV_AUTOSTEP && step != 0 )
     {
         if( step < min_step )
-            CV_Error( CV_BadStep, "" );
+            CV_Error( cv::Error::BadStep, "" );
         arr->step = step;
     }
     else
@@ -196,7 +196,7 @@ cvReleaseMat( CvMat** array )
         CvMat* arr = *array;
 
         if( !CV_IS_MAT_HDR_Z(arr) && !CV_IS_MATND_HDR(arr) )
-            CV_Error( CV_StsBadFlag, "" );
+            CV_Error( cv::Error::StsBadFlag, "" );
 
         *array = 0;
 
@@ -211,7 +211,7 @@ CV_IMPL CvMat*
 cvCloneMat( const CvMat* src )
 {
     if( !CV_IS_MAT_HDR( src ))
-        CV_Error( CV_StsBadArg, "Bad CvMat header" );
+        CV_Error( cv::Error::StsBadArg, "Bad CvMat header" );
 
     CvMat* dst = cvCreateMatHeader( src->rows, src->cols, src->type );
 
@@ -237,25 +237,25 @@ cvInitMatNDHeader( CvMatND* mat, int dims, const int* sizes,
     int64 esz = CV_ELEM_SIZE(type), step = esz;
 
     if( !mat )
-        CV_Error( CV_StsNullPtr, "NULL matrix header pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL matrix header pointer" );
 
     if( step == 0 )
-        CV_Error( CV_StsUnsupportedFormat, "invalid array data type" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "invalid array data type" );
 
     if( !sizes )
-        CV_Error( CV_StsNullPtr, "NULL <sizes> pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL <sizes> pointer" );
 
     if( dims <= 0 || dims > CV_MAX_DIM )
-        CV_Error( CV_StsOutOfRange,
+        CV_Error( cv::Error::StsOutOfRange,
         "non-positive or too large number of dimensions" );
 
     for( int i = dims - 1; i >= 0; i-- )
     {
         if( sizes[i] < 0 )
-            CV_Error( CV_StsBadSize, "one of dimension sizes is non-positive" );
+            CV_Error( cv::Error::StsBadSize, "one of dimension sizes is non-positive" );
         mat->dim[i].size = sizes[i];
         if( step > INT_MAX )
-            CV_Error( CV_StsOutOfRange, "The array is too big" );
+            CV_Error( cv::Error::StsOutOfRange, "The array is too big" );
         mat->dim[i].step = (int)step;
         step *= sizes[i];
     }
@@ -292,7 +292,7 @@ CV_IMPL CvMatND*
 cvCreateMatNDHeader( int dims, const int* sizes, int type )
 {
     if( dims <= 0 || dims > CV_MAX_DIM )
-        CV_Error( CV_StsOutOfRange,
+        CV_Error( cv::Error::StsOutOfRange,
         "non-positive or too large number of dimensions" );
 
     CvMatND* arr = (CvMatND*)cvAlloc( sizeof(*arr) );
@@ -308,7 +308,7 @@ CV_IMPL CvMatND*
 cvCloneMatND( const CvMatND* src )
 {
     if( !CV_IS_MATND_HDR( src ))
-        CV_Error( CV_StsBadArg, "Bad CvMatND header" );
+        CV_Error( cv::Error::StsBadArg, "Bad CvMatND header" );
 
     CV_Assert( src->dims <= CV_MAX_DIM );
     int sizes[CV_MAX_DIM];
@@ -349,18 +349,18 @@ cvCreateSparseMat( int dims, const int* sizes, int type )
     CvMemStorage* storage;
 
     if( pix_size == 0 )
-        CV_Error( CV_StsUnsupportedFormat, "invalid array data type" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "invalid array data type" );
 
     if( dims <= 0 || dims > CV_MAX_DIM )
-        CV_Error( CV_StsOutOfRange, "bad number of dimensions" );
+        CV_Error( cv::Error::StsOutOfRange, "bad number of dimensions" );
 
     if( !sizes )
-        CV_Error( CV_StsNullPtr, "NULL <sizes> pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL <sizes> pointer" );
 
     for( i = 0; i < dims; i++ )
     {
         if( sizes[i] <= 0 )
-            CV_Error( CV_StsBadSize, "one of dimension sizes is non-positive" );
+            CV_Error( cv::Error::StsBadSize, "one of dimension sizes is non-positive" );
     }
 
     CvSparseMat* arr = (CvSparseMat*)cvAlloc(sizeof(*arr)+MAX(0,dims-CV_MAX_DIM)*sizeof(arr->size[0]));
@@ -400,7 +400,7 @@ cvReleaseSparseMat( CvSparseMat** array )
         CvSparseMat* arr = *array;
 
         if( !CV_IS_SPARSE_MAT_HDR(arr) )
-            CV_Error( CV_StsBadFlag, "" );
+            CV_Error( cv::Error::StsBadFlag, "" );
 
         *array = 0;
 
@@ -417,7 +417,7 @@ CV_IMPL CvSparseMat*
 cvCloneSparseMat( const CvSparseMat* src )
 {
     if( !CV_IS_SPARSE_MAT_HDR(src) )
-        CV_Error( CV_StsBadArg, "Invalid sparse array header" );
+        CV_Error( cv::Error::StsBadArg, "Invalid sparse array header" );
 
     CvSparseMat* dst = cvCreateSparseMat( src->dims, src->size, src->type );
     cvCopy( src, dst );
@@ -432,10 +432,10 @@ cvInitSparseMatIterator( const CvSparseMat* mat, CvSparseMatIterator* iterator )
     int idx;
 
     if( !CV_IS_SPARSE_MAT( mat ))
-        CV_Error( CV_StsBadArg, "Invalid sparse matrix header" );
+        CV_Error( cv::Error::StsBadArg, "Invalid sparse matrix header" );
 
     if( !iterator )
-        CV_Error( CV_StsNullPtr, "NULL iterator pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL iterator pointer" );
 
     iterator->mat = (CvSparseMat*)mat;
     iterator->node = 0;
@@ -469,7 +469,7 @@ icvGetNodePtr( CvSparseMat* mat, const int* idx, int* _type,
         {
             int t = idx[i];
             if( (unsigned)t >= (unsigned)mat->size[i] )
-                CV_Error( CV_StsOutOfRange, "One of indices is out of range" );
+                CV_Error( cv::Error::StsOutOfRange, "One of indices is out of range" );
             hashval = hashval*ICV_SPARSE_MAT_HASH_MULTIPLIER + t;
         }
     }
@@ -563,7 +563,7 @@ icvDeleteNode( CvSparseMat* mat, const int* idx, unsigned* precalc_hashval )
         {
             int t = idx[i];
             if( (unsigned)t >= (unsigned)mat->size[i] )
-                CV_Error( CV_StsOutOfRange, "One of indices is out of range" );
+                CV_Error( cv::Error::StsOutOfRange, "One of indices is out of range" );
             hashval = hashval*ICV_SPARSE_MAT_HASH_MULTIPLIER + t;
         }
     }
@@ -618,7 +618,7 @@ cvCreateData( CvArr* arr )
             return;
 
         if( mat->data.ptr != 0 )
-            CV_Error( CV_StsError, "Data is already allocated" );
+            CV_Error( cv::Error::StsError, "Data is already allocated" );
 
         if( step == 0 )
             step = CV_ELEM_SIZE(mat->type)*mat->cols;
@@ -626,7 +626,7 @@ cvCreateData( CvArr* arr )
         int64 _total_size = (int64)step*mat->rows + sizeof(int) + CV_MALLOC_ALIGN;
         total_size = (size_t)_total_size;
         if(_total_size != (int64)total_size)
-            CV_Error(CV_StsNoMem, "Too big buffer is allocated" );
+            CV_Error(cv::Error::StsNoMem, "Too big buffer is allocated" );
         mat->refcount = (int*)cvAlloc( (size_t)total_size );
         mat->data.ptr = (uchar*)cvAlignPtr( mat->refcount + 1, CV_MALLOC_ALIGN );
         *mat->refcount = 1;
@@ -636,13 +636,13 @@ cvCreateData( CvArr* arr )
         IplImage* img = (IplImage*)arr;
 
         if( img->imageData != 0 )
-            CV_Error( CV_StsError, "Data is already allocated" );
+            CV_Error( cv::Error::StsError, "Data is already allocated" );
 
         if( !CvIPL.allocateData )
         {
             const int64 imageSize_tmp = (int64)img->widthStep*(int64)img->height;
             if( (int64)img->imageSize != imageSize_tmp )
-                CV_Error( CV_StsNoMem, "Overflow for imageSize" );
+                CV_Error( cv::Error::StsNoMem, "Overflow for imageSize" );
             img->imageData = img->imageDataOrigin =
                         (char*)cvAlloc( (size_t)img->imageSize );
         }
@@ -672,7 +672,7 @@ cvCreateData( CvArr* arr )
             return;
 
         if( mat->data.ptr != 0 )
-            CV_Error( CV_StsError, "Data is already allocated" );
+            CV_Error( cv::Error::StsError, "Data is already allocated" );
 
         if( CV_IS_MAT_CONT( mat->type ))
         {
@@ -697,7 +697,7 @@ cvCreateData( CvArr* arr )
         *mat->refcount = 1;
     }
     else
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
 }
 
 
@@ -721,7 +721,7 @@ cvSetData( CvArr* arr, void* data, int step )
         if( step != CV_AUTOSTEP && step != 0 )
         {
             if( step < min_step && data != 0 )
-                CV_Error( CV_BadStep, "" );
+                CV_Error( cv::Error::BadStep, "" );
             mat->step = step;
         }
         else
@@ -742,7 +742,7 @@ cvSetData( CvArr* arr, void* data, int step )
         if( step != CV_AUTOSTEP && img->height > 1 )
         {
             if( step < min_step && data != 0 )
-                CV_Error( CV_BadStep, "" );
+                CV_Error( cv::Error::BadStep, "" );
             img->widthStep = step;
         }
         else
@@ -753,7 +753,7 @@ cvSetData( CvArr* arr, void* data, int step )
         const int64 imageSize_tmp = (int64)img->widthStep*(int64)img->height;
         img->imageSize = (int)imageSize_tmp;
         if( (int64)img->imageSize != imageSize_tmp )
-            CV_Error( CV_StsNoMem, "Overflow for imageSize" );
+            CV_Error( cv::Error::StsNoMem, "Overflow for imageSize" );
         img->imageData = img->imageDataOrigin = (char*)data;
 
         if( (((int)(size_t)data | step) & 7) == 0 &&
@@ -769,7 +769,7 @@ cvSetData( CvArr* arr, void* data, int step )
         int64 cur_step;
 
         if( step != CV_AUTOSTEP )
-            CV_Error( CV_BadStep,
+            CV_Error( cv::Error::BadStep,
             "For multidimensional array only CV_AUTOSTEP is allowed here" );
 
         mat->data.ptr = (uchar*)data;
@@ -778,13 +778,13 @@ cvSetData( CvArr* arr, void* data, int step )
         for( i = mat->dims - 1; i >= 0; i-- )
         {
             if( cur_step > INT_MAX )
-                CV_Error( CV_StsOutOfRange, "The array is too big" );
+                CV_Error( cv::Error::StsOutOfRange, "The array is too big" );
             mat->dim[i].step = (int)cur_step;
             cur_step *= mat->dim[i].size;
         }
     }
     else
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
 }
 
 
@@ -813,9 +813,13 @@ cvReleaseData( CvArr* arr )
         }
     }
     else
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
 }
 
+static inline cv::Size cvGetMatSize( const CvMat* mat )
+{
+    return cv::Size(mat->cols, mat->rows);
+}
 
 // Retrieves essential information about image ROI or CvMat data
 CV_IMPL void
@@ -861,7 +865,7 @@ cvGetRawData( const CvArr* arr, uchar** data, int* step, CvSize* roi_size )
         CvMatND* mat = (CvMatND*)arr;
 
         if( !CV_IS_MAT_CONT( mat->type ))
-            CV_Error( CV_StsBadArg, "Only continuous nD arrays are supported here" );
+            CV_Error( cv::Error::StsBadArg, "Only continuous nD arrays are supported here" );
 
         if( data )
             *data = mat->data.ptr;
@@ -890,7 +894,7 @@ cvGetRawData( const CvArr* arr, uchar** data, int* step, CvSize* roi_size )
         }
     }
     else
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
 }
 
 
@@ -906,7 +910,7 @@ cvGetElemType( const CvArr* arr )
         type = CV_MAKETYPE( IPL2CV_DEPTH(img->depth), img->nChannels );
     }
     else
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
 
     return type;
 }
@@ -960,7 +964,7 @@ cvGetDims( const CvArr* arr, int* sizes )
             memcpy( sizes, mat->size, dims*sizeof(sizes[0]));
     }
     else
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
 
     return dims;
 }
@@ -985,7 +989,7 @@ cvGetDimSize( const CvArr* arr, int index )
             size = mat->cols;
             break;
         default:
-            CV_Error( CV_StsOutOfRange, "bad dimension index" );
+            CV_Error( cv::Error::StsOutOfRange, "bad dimension index" );
         }
     }
     else if( CV_IS_IMAGE( arr ))
@@ -1001,7 +1005,7 @@ cvGetDimSize( const CvArr* arr, int index )
             size = !img->roi ? img->width : img->roi->width;
             break;
         default:
-            CV_Error( CV_StsOutOfRange, "bad dimension index" );
+            CV_Error( cv::Error::StsOutOfRange, "bad dimension index" );
         }
     }
     else if( CV_IS_MATND_HDR( arr ))
@@ -1009,7 +1013,7 @@ cvGetDimSize( const CvArr* arr, int index )
         CvMatND* mat = (CvMatND*)arr;
 
         if( (unsigned)index >= (unsigned)mat->dims )
-            CV_Error( CV_StsOutOfRange, "bad dimension index" );
+            CV_Error( cv::Error::StsOutOfRange, "bad dimension index" );
 
         size = mat->dim[index].size;
     }
@@ -1018,12 +1022,12 @@ cvGetDimSize( const CvArr* arr, int index )
         CvSparseMat* mat = (CvSparseMat*)arr;
 
         if( (unsigned)index >= (unsigned)mat->dims )
-            CV_Error( CV_StsOutOfRange, "bad dimension index" );
+            CV_Error( cv::Error::StsOutOfRange, "bad dimension index" );
 
         size = mat->size[index];
     }
     else
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
 
     return size;
 }
@@ -1058,7 +1062,7 @@ cvGetSize( const CvArr* arr )
         }
     }
     else
-        CV_Error( CV_StsBadArg, "Array should be CvMat or IplImage" );
+        CV_Error( cv::Error::StsBadArg, "Array should be CvMat or IplImage" );
 
     return size;
 }
@@ -1075,14 +1079,14 @@ cvGetSubRect( const CvArr* arr, CvMat* submat, CvRect rect )
         mat = cvGetMat( mat, &stub );
 
     if( !submat )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( (rect.x|rect.y|rect.width|rect.height) < 0 )
-        CV_Error( CV_StsBadSize, "" );
+        CV_Error( cv::Error::StsBadSize, "" );
 
     if( rect.x + rect.width > mat->cols ||
         rect.y + rect.height > mat->rows )
-        CV_Error( CV_StsBadSize, "" );
+        CV_Error( cv::Error::StsBadSize, "" );
 
     {
     /*
@@ -1120,11 +1124,11 @@ cvGetRows( const CvArr* arr, CvMat* submat,
         mat = cvGetMat( mat, &stub );
 
     if( !submat )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( (unsigned)start_row >= (unsigned)mat->rows ||
         (unsigned)end_row > (unsigned)mat->rows || delta_row <= 0 )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     {
     /*
@@ -1172,12 +1176,12 @@ cvGetCols( const CvArr* arr, CvMat* submat, int start_col, int end_col )
         mat = cvGetMat( mat, &stub );
 
     if( !submat )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     cols = mat->cols;
     if( (unsigned)start_col >= (unsigned)cols ||
         (unsigned)end_col > (unsigned)cols )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     {
     /*
@@ -1216,7 +1220,7 @@ cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_1
 
     CV_Assert( scalar && data );
     if( (unsigned)(cn - 1) >= 4 )
-        CV_Error( CV_StsOutOfRange, "The number of channels must be 1, 2, 3 or 4" );
+        CV_Error( cv::Error::StsOutOfRange, "The number of channels must be 1, 2, 3 or 4" );
 
     switch( depth )
     {
@@ -1262,7 +1266,7 @@ cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_1
         break;
     default:
         CV_Assert(0);
-        CV_Error( CV_BadDepth, "" );
+        CV_Error( cv::Error::BadDepth, "" );
     }
 
     if( extend_to_12 )
@@ -1289,7 +1293,7 @@ cvRawDataToScalar( const void* data, int flags, CvScalar* scalar )
     CV_Assert( scalar && data );
 
     if( (unsigned)(cn - 1) >= 4 )
-        CV_Error( CV_StsOutOfRange, "The number of channels must be 1, 2, 3 or 4" );
+        CV_Error( cv::Error::StsOutOfRange, "The number of channels must be 1, 2, 3 or 4" );
 
     memset( scalar->val, 0, sizeof(scalar->val));
 
@@ -1325,7 +1329,7 @@ cvRawDataToScalar( const void* data, int flags, CvScalar* scalar )
         break;
     default:
         CV_Assert(0);
-        CV_Error( CV_BadDepth, "" );
+        CV_Error( cv::Error::BadDepth, "" );
     }
 }
 
@@ -1412,7 +1416,7 @@ cvPtr1D( const CvArr* arr, int idx, int* _type )
         // that the index is within the matrix
         if( (unsigned)idx >= (unsigned)(mat->rows + mat->cols - 1) &&
             (unsigned)idx >= (unsigned)(mat->rows*mat->cols))
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         if( CV_IS_MAT_CONT(mat->type))
         {
@@ -1449,7 +1453,7 @@ cvPtr1D( const CvArr* arr, int idx, int* _type )
             size *= mat->dim[j].size;
 
         if((unsigned)idx >= (unsigned)size )
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         if( CV_IS_MAT_CONT(mat->type))
         {
@@ -1493,7 +1497,7 @@ cvPtr1D( const CvArr* arr, int idx, int* _type )
     }
     else
     {
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
     }
 
     return ptr;
@@ -1512,7 +1516,7 @@ cvPtr2D( const CvArr* arr, int y, int x, int* _type )
 
         if( (unsigned)y >= (unsigned)(mat->rows) ||
             (unsigned)x >= (unsigned)(mat->cols) )
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         type = CV_MAT_TYPE(mat->type);
         if( _type )
@@ -1542,7 +1546,7 @@ cvPtr2D( const CvArr* arr, int y, int x, int* _type )
             {
                 int coi = img->roi->coi;
                 if( !coi )
-                    CV_Error( CV_BadCOI,
+                    CV_Error( cv::Error::BadCOI,
                         "COI must be non-null in case of planar images" );
                 ptr += (coi - 1)*img->imageSize;
             }
@@ -1555,7 +1559,7 @@ cvPtr2D( const CvArr* arr, int y, int x, int* _type )
 
         if( (unsigned)y >= (unsigned)height ||
             (unsigned)x >= (unsigned)width )
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         ptr += y*img->widthStep + x*pix_size;
 
@@ -1563,7 +1567,7 @@ cvPtr2D( const CvArr* arr, int y, int x, int* _type )
         {
             int type = IPL2CV_DEPTH(img->depth);
             if( type < 0 || (unsigned)(img->nChannels - 1) > 3 )
-                CV_Error( CV_StsUnsupportedFormat, "" );
+                CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
             *_type = CV_MAKETYPE( type, img->nChannels );
         }
@@ -1575,7 +1579,7 @@ cvPtr2D( const CvArr* arr, int y, int x, int* _type )
         if( mat->dims != 2 ||
             (unsigned)y >= (unsigned)(mat->dim[0].size) ||
             (unsigned)x >= (unsigned)(mat->dim[1].size) )
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         ptr = mat->data.ptr + (size_t)y*mat->dim[0].step + x*mat->dim[1].step;
         if( _type )
@@ -1589,7 +1593,7 @@ cvPtr2D( const CvArr* arr, int y, int x, int* _type )
     }
     else
     {
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
     }
 
     return ptr;
@@ -1609,7 +1613,7 @@ cvPtr3D( const CvArr* arr, int z, int y, int x, int* _type )
             (unsigned)z >= (unsigned)(mat->dim[0].size) ||
             (unsigned)y >= (unsigned)(mat->dim[1].size) ||
             (unsigned)x >= (unsigned)(mat->dim[2].size) )
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         ptr = mat->data.ptr + (size_t)z*mat->dim[0].step +
               (size_t)y*mat->dim[1].step + x*mat->dim[2].step;
@@ -1624,7 +1628,7 @@ cvPtr3D( const CvArr* arr, int z, int y, int x, int* _type )
     }
     else
     {
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
     }
 
     return ptr;
@@ -1638,7 +1642,7 @@ cvPtrND( const CvArr* arr, const int* idx, int* _type,
 {
     uchar* ptr = 0;
     if( !idx )
-        CV_Error( CV_StsNullPtr, "NULL pointer to indices" );
+        CV_Error( cv::Error::StsNullPtr, "NULL pointer to indices" );
 
     if( CV_IS_SPARSE_MAT( arr ))
         ptr = icvGetNodePtr( (CvSparseMat*)arr, idx,
@@ -1652,7 +1656,7 @@ cvPtrND( const CvArr* arr, const int* idx, int* _type,
         for( i = 0; i < mat->dims; i++ )
         {
             if( (unsigned)idx[i] >= (unsigned)(mat->dim[i].size) )
-                CV_Error( CV_StsOutOfRange, "index is out of range" );
+                CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
             ptr += (size_t)idx[i]*mat->dim[i].step;
         }
 
@@ -1662,7 +1666,7 @@ cvPtrND( const CvArr* arr, const int* idx, int* _type,
     else if( CV_IS_MAT_HDR(arr) || CV_IS_IMAGE_HDR(arr) )
         ptr = cvPtr2D( arr, idx[0], idx[1], _type );
     else
-        CV_Error( CV_StsBadArg, "unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadArg, "unrecognized or unsupported array type" );
 
     return ptr;
 }
@@ -1687,7 +1691,7 @@ cvGet1D( const CvArr* arr, int idx )
         // that the index is within the matrix
         if( (unsigned)idx >= (unsigned)(mat->rows + mat->cols - 1) &&
             (unsigned)idx >= (unsigned)(mat->rows*mat->cols))
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         ptr = mat->data.ptr + (size_t)idx*pix_size;
     }
@@ -1717,7 +1721,7 @@ cvGet2D( const CvArr* arr, int y, int x )
 
         if( (unsigned)y >= (unsigned)(mat->rows) ||
             (unsigned)x >= (unsigned)(mat->cols) )
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         type = CV_MAT_TYPE(mat->type);
         ptr = mat->data.ptr + (size_t)y*mat->step + x*CV_ELEM_SIZE(type);
@@ -1798,7 +1802,7 @@ cvGetReal1D( const CvArr* arr, int idx )
         // that the index is within the matrix
         if( (unsigned)idx >= (unsigned)(mat->rows + mat->cols - 1) &&
             (unsigned)idx >= (unsigned)(mat->rows*mat->cols))
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         ptr = mat->data.ptr + (size_t)idx*pix_size;
     }
@@ -1810,7 +1814,7 @@ cvGetReal1D( const CvArr* arr, int idx )
     if( ptr )
     {
         if( CV_MAT_CN( type ) > 1 )
-            CV_Error( CV_BadNumChannels, "cvGetReal* support only single-channel arrays" );
+            CV_Error( cv::Error::BadNumChannels, "cvGetReal* support only single-channel arrays" );
 
         value = icvGetReal( ptr, type );
     }
@@ -1832,7 +1836,7 @@ cvGetReal2D( const CvArr* arr, int y, int x )
 
         if( (unsigned)y >= (unsigned)(mat->rows) ||
             (unsigned)x >= (unsigned)(mat->cols) )
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         type = CV_MAT_TYPE(mat->type);
         ptr = mat->data.ptr + (size_t)y*mat->step + x*CV_ELEM_SIZE(type);
@@ -1848,7 +1852,7 @@ cvGetReal2D( const CvArr* arr, int y, int x )
     if( ptr )
     {
         if( CV_MAT_CN( type ) > 1 )
-            CV_Error( CV_BadNumChannels, "cvGetReal* support only single-channel arrays" );
+            CV_Error( cv::Error::BadNumChannels, "cvGetReal* support only single-channel arrays" );
 
         value = icvGetReal( ptr, type );
     }
@@ -1876,7 +1880,7 @@ cvGetReal3D( const CvArr* arr, int z, int y, int x )
     if( ptr )
     {
         if( CV_MAT_CN( type ) > 1 )
-            CV_Error( CV_BadNumChannels, "cvGetReal* support only single-channel arrays" );
+            CV_Error( cv::Error::BadNumChannels, "cvGetReal* support only single-channel arrays" );
 
         value = icvGetReal( ptr, type );
     }
@@ -1901,7 +1905,7 @@ cvGetRealND( const CvArr* arr, const int* idx )
     if( ptr )
     {
         if( CV_MAT_CN( type ) > 1 )
-            CV_Error( CV_BadNumChannels, "cvGetReal* support only single-channel arrays" );
+            CV_Error( cv::Error::BadNumChannels, "cvGetReal* support only single-channel arrays" );
 
         value = icvGetReal( ptr, type );
     }
@@ -1928,7 +1932,7 @@ cvSet1D( CvArr* arr, int idx, CvScalar scalar )
         // that the index is within the matrix
         if( (unsigned)idx >= (unsigned)(mat->rows + mat->cols - 1) &&
             (unsigned)idx >= (unsigned)(mat->rows*mat->cols))
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         ptr = mat->data.ptr + (size_t)idx*pix_size;
     }
@@ -1954,7 +1958,7 @@ cvSet2D( CvArr* arr, int y, int x, CvScalar scalar )
 
         if( (unsigned)y >= (unsigned)(mat->rows) ||
             (unsigned)x >= (unsigned)(mat->cols) )
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         type = CV_MAT_TYPE(mat->type);
         ptr = mat->data.ptr + (size_t)y*mat->step + x*CV_ELEM_SIZE(type);
@@ -2020,7 +2024,7 @@ cvSetReal1D( CvArr* arr, int idx, double value )
         // that the index is within the matrix
         if( (unsigned)idx >= (unsigned)(mat->rows + mat->cols - 1) &&
             (unsigned)idx >= (unsigned)(mat->rows*mat->cols))
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         ptr = mat->data.ptr + (size_t)idx*pix_size;
     }
@@ -2030,7 +2034,7 @@ cvSetReal1D( CvArr* arr, int idx, double value )
         ptr = icvGetNodePtr( (CvSparseMat*)arr, &idx, &type, -1, 0 );
 
     if( CV_MAT_CN( type ) > 1 )
-        CV_Error( CV_BadNumChannels, "cvSetReal* support only single-channel arrays" );
+        CV_Error( cv::Error::BadNumChannels, "cvSetReal* support only single-channel arrays" );
 
     if( ptr )
         icvSetReal( value, ptr, type );
@@ -2049,7 +2053,7 @@ cvSetReal2D( CvArr* arr, int y, int x, double value )
 
         if( (unsigned)y >= (unsigned)(mat->rows) ||
             (unsigned)x >= (unsigned)(mat->cols) )
-            CV_Error( CV_StsOutOfRange, "index is out of range" );
+            CV_Error( cv::Error::StsOutOfRange, "index is out of range" );
 
         type = CV_MAT_TYPE(mat->type);
         ptr = mat->data.ptr + (size_t)y*mat->step + x*CV_ELEM_SIZE(type);
@@ -2064,7 +2068,7 @@ cvSetReal2D( CvArr* arr, int y, int x, double value )
         ptr = icvGetNodePtr( (CvSparseMat*)arr, idx, &type, -1, 0 );
     }
     if( CV_MAT_CN( type ) > 1 )
-        CV_Error( CV_BadNumChannels, "cvSetReal* support only single-channel arrays" );
+        CV_Error( cv::Error::BadNumChannels, "cvSetReal* support only single-channel arrays" );
 
     if( ptr )
         icvSetReal( value, ptr, type );
@@ -2085,7 +2089,7 @@ cvSetReal3D( CvArr* arr, int z, int y, int x, double value )
         ptr = icvGetNodePtr( (CvSparseMat*)arr, idx, &type, -1, 0 );
     }
     if( CV_MAT_CN( type ) > 1 )
-        CV_Error( CV_BadNumChannels, "cvSetReal* support only single-channel arrays" );
+        CV_Error( cv::Error::BadNumChannels, "cvSetReal* support only single-channel arrays" );
 
     if( ptr )
         icvSetReal( value, ptr, type );
@@ -2104,7 +2108,7 @@ cvSetRealND( CvArr* arr, const int* idx, double value )
         ptr = icvGetNodePtr( (CvSparseMat*)arr, idx, &type, -1, 0 );
 
     if( CV_MAT_CN( type ) > 1 )
-        CV_Error( CV_BadNumChannels, "cvSetReal* support only single-channel arrays" );
+        CV_Error( cv::Error::BadNumChannels, "cvSetReal* support only single-channel arrays" );
 
     if( ptr )
         icvSetReal( value, ptr, type );
@@ -2141,12 +2145,12 @@ cvGetMat( const CvArr* array, CvMat* mat,
     int coi = 0;
 
     if( !mat || !src )
-        CV_Error( CV_StsNullPtr, "NULL array pointer is passed" );
+        CV_Error( cv::Error::StsNullPtr, "NULL array pointer is passed" );
 
     if( CV_IS_MAT_HDR(src))
     {
         if( !src->data.ptr )
-            CV_Error( CV_StsNullPtr, "The matrix has NULL data pointer" );
+            CV_Error( cv::Error::StsNullPtr, "The matrix has NULL data pointer" );
 
         result = (CvMat*)src;
     }
@@ -2156,11 +2160,11 @@ cvGetMat( const CvArr* array, CvMat* mat,
         int depth, order;
 
         if( img->imageData == 0 )
-            CV_Error( CV_StsNullPtr, "The image has NULL data pointer" );
+            CV_Error( cv::Error::StsNullPtr, "The image has NULL data pointer" );
 
         depth = IPL2CV_DEPTH( img->depth );
         if( depth < 0 )
-            CV_Error( CV_BadDepth, "" );
+            CV_Error( cv::Error::BadDepth, "" );
 
         order = img->dataOrder & (img->nChannels > 1 ? -1 : 0);
 
@@ -2171,7 +2175,7 @@ cvGetMat( const CvArr* array, CvMat* mat,
                 int type = depth;
 
                 if( img->roi->coi == 0 )
-                    CV_Error( CV_StsBadFlag,
+                    CV_Error( cv::Error::StsBadFlag,
                     "Images with planar data layout should be used with COI selected" );
 
                 cvInitMatHeader( mat, img->roi->height,
@@ -2187,7 +2191,7 @@ cvGetMat( const CvArr* array, CvMat* mat,
                 coi = img->roi->coi;
 
                 if( img->nChannels > CV_CN_MAX )
-                    CV_Error( CV_BadNumChannels,
+                    CV_Error( cv::Error::BadNumChannels,
                         "The image is interleaved and has over CV_CN_MAX channels" );
 
                 cvInitMatHeader( mat, img->roi->height, img->roi->width,
@@ -2202,7 +2206,7 @@ cvGetMat( const CvArr* array, CvMat* mat,
             int type = CV_MAKETYPE( depth, img->nChannels );
 
             if( order != IPL_DATA_ORDER_PIXEL )
-                CV_Error( CV_StsBadFlag, "Pixel order should be used with coi == 0" );
+                CV_Error( cv::Error::StsBadFlag, "Pixel order should be used with coi == 0" );
 
             cvInitMatHeader( mat, img->height, img->width, type,
                              img->imageData, img->widthStep );
@@ -2216,10 +2220,10 @@ cvGetMat( const CvArr* array, CvMat* mat,
         int size1 = matnd->dim[0].size, size2 = 1;
 
         if( !src->data.ptr )
-            CV_Error( CV_StsNullPtr, "Input array has NULL data pointer" );
+            CV_Error( cv::Error::StsNullPtr, "Input array has NULL data pointer" );
 
         if( !CV_IS_MAT_CONT( matnd->type ))
-            CV_Error( CV_StsBadArg, "Only continuous nD arrays are supported here" );
+            CV_Error( cv::Error::StsBadArg, "Only continuous nD arrays are supported here" );
 
         if( matnd->dims > 2 )
         {
@@ -2243,7 +2247,7 @@ cvGetMat( const CvArr* array, CvMat* mat,
         result = mat;
     }
     else
-        CV_Error( CV_StsBadFlag, "Unrecognized or unsupported array type" );
+        CV_Error( cv::Error::StsBadFlag, "Unrecognized or unsupported array type" );
 
     if( pCOI )
         *pCOI = coi;
@@ -2261,20 +2265,20 @@ cvReshape( const CvArr* array, CvMat* header,
     int total_width, new_width;
 
     if( !header )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( !CV_IS_MAT( mat ))
     {
         int coi = 0;
         mat = cvGetMat( mat, header, &coi, 1 );
         if( coi )
-            CV_Error( CV_BadCOI, "COI is not supported" );
+            CV_Error( cv::Error::BadCOI, "COI is not supported" );
     }
 
     if( new_cn == 0 )
         new_cn = CV_MAT_CN(mat->type);
     else if( (unsigned)(new_cn - 1) > 3 )
-        CV_Error( CV_BadNumChannels, "" );
+        CV_Error( cv::Error::BadNumChannels, "" );
 
     if( mat != header )
     {
@@ -2298,16 +2302,16 @@ cvReshape( const CvArr* array, CvMat* header,
     {
         int total_size = total_width * mat->rows;
         if( !CV_IS_MAT_CONT( mat->type ))
-            CV_Error( CV_BadStep,
+            CV_Error( cv::Error::BadStep,
             "The matrix is not continuous, thus its number of rows can not be changed" );
 
         if( (unsigned)new_rows > (unsigned)total_size )
-            CV_Error( CV_StsOutOfRange, "Bad new number of rows" );
+            CV_Error( cv::Error::StsOutOfRange, "Bad new number of rows" );
 
         total_width = total_size / new_rows;
 
         if( total_width * new_rows != total_size )
-            CV_Error( CV_StsBadArg, "The total number of matrix elements "
+            CV_Error( cv::Error::StsBadArg, "The total number of matrix elements "
                                     "is not divisible by the new number of rows" );
 
         header->rows = new_rows;
@@ -2317,7 +2321,7 @@ cvReshape( const CvArr* array, CvMat* header,
     new_width = total_width / new_cn;
 
     if( new_width * new_cn != total_width )
-        CV_Error( CV_BadNumChannels,
+        CV_Error( cv::Error::BadNumChannels,
         "The total width is not divisible by the new number of channels" );
 
     header->cols = new_width;
@@ -2336,17 +2340,17 @@ cvGetImage( const CvArr* array, IplImage* img )
     const IplImage* src = (const IplImage*)array;
 
     if( !img )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( !CV_IS_IMAGE_HDR(src) )
     {
         const CvMat* mat = (const CvMat*)src;
 
         if( !CV_IS_MAT_HDR(mat))
-            CV_Error( CV_StsBadFlag, "" );
+            CV_Error( cv::Error::StsBadFlag, "" );
 
         if( mat->data.ptr == 0 )
-            CV_Error( CV_StsNullPtr, "" );
+            CV_Error( cv::Error::StsNullPtr, "" );
 
         int depth = cvIplDepth(mat->type);
 
@@ -2479,19 +2483,19 @@ cvInitImageHeader( IplImage * image, CvSize size, int depth,
     }
 
     if( size.width < 0 || size.height < 0 )
-        CV_Error( CV_BadROISize, "Bad input roi" );
+        CV_Error( cv::Error::BadROISize, "Bad input roi" );
 
     if( (depth != (int)IPL_DEPTH_1U && depth != (int)IPL_DEPTH_8U &&
          depth != (int)IPL_DEPTH_8S && depth != (int)IPL_DEPTH_16U &&
          depth != (int)IPL_DEPTH_16S && depth != (int)IPL_DEPTH_32S &&
          depth != (int)IPL_DEPTH_32F && depth != (int)IPL_DEPTH_64F) ||
          channels < 0 )
-        CV_Error( CV_BadDepth, "Unsupported format" );
+        CV_Error( cv::Error::BadDepth, "Unsupported format" );
     if( origin != CV_ORIGIN_BL && origin != CV_ORIGIN_TL )
-        CV_Error( CV_BadOrigin, "Bad input origin" );
+        CV_Error( cv::Error::BadOrigin, "Bad input origin" );
 
     if( align != 4 && align != 8 )
-        CV_Error( CV_BadAlign, "Bad input align" );
+        CV_Error( cv::Error::BadAlign, "Bad input align" );
 
     image->width = size.width;
     image->height = size.height;
@@ -2513,7 +2517,7 @@ cvInitImageHeader( IplImage * image, CvSize size, int depth,
     const int64 imageSize_tmp = (int64)image->widthStep*(int64)image->height;
     image->imageSize = (int)imageSize_tmp;
     if( (int64)image->imageSize != imageSize_tmp )
-        CV_Error( CV_StsNoMem, "Overflow for imageSize" );
+        CV_Error( cv::Error::StsNoMem, "Overflow for imageSize" );
 
     return image;
 }
@@ -2523,7 +2527,7 @@ CV_IMPL void
 cvReleaseImageHeader( IplImage** image )
 {
     if( !image )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( *image )
     {
@@ -2547,7 +2551,7 @@ CV_IMPL void
 cvReleaseImage( IplImage ** image )
 {
     if( !image )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( *image )
     {
@@ -2621,7 +2625,7 @@ cvGetImageROI( const IplImage* img )
 {
     CvRect rect = {0, 0, 0, 0};
     if( !img )
-        CV_Error( CV_StsNullPtr, "Null pointer to image" );
+        CV_Error( cv::Error::StsNullPtr, "Null pointer to image" );
 
     if( img->roi )
         rect = cvRect( img->roi->xOffset, img->roi->yOffset,
@@ -2640,7 +2644,7 @@ cvSetImageCOI( IplImage* image, int coi )
         CV_Error( CV_HeaderIsNull, "" );
 
     if( (unsigned)coi > (unsigned)(image->nChannels) )
-        CV_Error( CV_BadCOI, "" );
+        CV_Error( cv::Error::BadCOI, "" );
 
     if( image->roi || coi != 0 )
     {
@@ -2672,7 +2676,7 @@ cvCloneImage( const IplImage* src )
     IplImage* dst = 0;
 
     if( !CV_IS_IMAGE_HDR( src ))
-        CV_Error( CV_StsBadArg, "Bad image header" );
+        CV_Error( cv::Error::StsBadArg, "Bad image header" );
 
     if( !CvIPL.cloneImage )
     {
@@ -2718,13 +2722,13 @@ cvCheckTermCriteria( CvTermCriteria criteria, double default_eps,
     crit.epsilon = (float)default_eps;
 
     if( (criteria.type & ~(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER)) != 0 )
-        CV_Error( CV_StsBadArg,
+        CV_Error( cv::Error::StsBadArg,
                   "Unknown type of term criteria" );
 
     if( (criteria.type & CV_TERMCRIT_ITER) != 0 )
     {
         if( criteria.max_iter <= 0 )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                   "Iterations flag is set and maximum number of iterations is <= 0" );
         crit.max_iter = criteria.max_iter;
     }
@@ -2732,13 +2736,13 @@ cvCheckTermCriteria( CvTermCriteria criteria, double default_eps,
     if( (criteria.type & CV_TERMCRIT_EPS) != 0 )
     {
         if( criteria.epsilon < 0 )
-            CV_Error( CV_StsBadArg, "Accuracy flag is set and epsilon is < 0" );
+            CV_Error( cv::Error::StsBadArg, "Accuracy flag is set and epsilon is < 0" );
 
         crit.epsilon = criteria.epsilon;
     }
 
     if( (criteria.type & (CV_TERMCRIT_EPS | CV_TERMCRIT_ITER)) == 0 )
-        CV_Error( CV_StsBadArg,
+        CV_Error( cv::Error::StsBadArg,
                   "Neither accuracy nor maximum iterations "
                   "number flags are set in criteria type" );
 
@@ -2765,7 +2769,7 @@ CV_IMPL void
 cvRelease( void** struct_ptr )
 {
     if( !struct_ptr )
-        CV_Error( CV_StsNullPtr, "NULL double pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL double pointer" );
 
     if( *struct_ptr )
     {
@@ -2774,7 +2778,7 @@ cvRelease( void** struct_ptr )
         else if( CV_IS_IMAGE(*struct_ptr))
             cvReleaseImage((IplImage**)struct_ptr);
         else
-            CV_Error( CV_StsError, "Unknown object type" );
+            CV_Error( cv::Error::StsError, "Unknown object type" );
     }
 }
 

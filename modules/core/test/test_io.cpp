@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
-
+#include "opencv2/core/core_c.h"
 #include <fstream>
 
 namespace opencv_test { namespace {
@@ -118,12 +118,12 @@ protected:
             int cn = cvtest::randInt(rng) % 4 + 1;
             Mat test_mat(cvtest::randInt(rng)%30+1, cvtest::randInt(rng)%30+1, CV_MAKETYPE(depth, cn));
 
-            rng0.fill(test_mat, CV_RAND_UNI, Scalar::all(ranges[depth][0]), Scalar::all(ranges[depth][1]));
+            rng0.fill(test_mat, RNG::UNIFORM, Scalar::all(ranges[depth][0]), Scalar::all(ranges[depth][1]));
             if( depth >= CV_32F )
             {
                 exp(test_mat, test_mat);
                 Mat test_mat_scale(test_mat.size(), test_mat.type());
-                rng0.fill(test_mat_scale, CV_RAND_UNI, Scalar::all(-1), Scalar::all(1));
+                rng0.fill(test_mat_scale, RNG::UNIFORM, Scalar::all(-1), Scalar::all(1));
                 cv::multiply(test_mat, test_mat_scale, test_mat);
             }
 
@@ -136,12 +136,12 @@ protected:
             };
             MatND test_mat_nd(3, sz, CV_MAKETYPE(depth, cn));
 
-            rng0.fill(test_mat_nd, CV_RAND_UNI, Scalar::all(ranges[depth][0]), Scalar::all(ranges[depth][1]));
+            rng0.fill(test_mat_nd, RNG::UNIFORM, Scalar::all(ranges[depth][0]), Scalar::all(ranges[depth][1]));
             if( depth >= CV_32F )
             {
                 exp(test_mat_nd, test_mat_nd);
                 MatND test_mat_scale(test_mat_nd.dims, test_mat_nd.size, test_mat_nd.type());
-                rng0.fill(test_mat_scale, CV_RAND_UNI, Scalar::all(-1), Scalar::all(1));
+                rng0.fill(test_mat_scale, RNG::UNIFORM, Scalar::all(-1), Scalar::all(1));
                 cv::multiply(test_mat_nd, test_mat_scale, test_mat_nd);
             }
 
@@ -421,9 +421,9 @@ protected:
                 fs["g1"] >> og1;
                 CV_Assert( mi2.empty() );
                 CV_Assert( mv2.empty() );
-                CV_Assert( cvtest::norm(Mat(mi3), Mat(mi4), CV_C) == 0 );
+                CV_Assert( cvtest::norm(Mat(mi3), Mat(mi4), NORM_INF) == 0 );
                 CV_Assert( mv4.size() == 1 );
-                double n = cvtest::norm(mv3[0], mv4[0], CV_C);
+                double n = cvtest::norm(mv3[0], mv4[0], NORM_INF);
                 CV_Assert( vudt2.empty() );
                 CV_Assert( vudt3 == vudt4 );
                 CV_Assert( n == 0 );

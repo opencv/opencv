@@ -3,7 +3,7 @@ Barcode Recognition    {#tutorial_barcode_detect_and_decode}
 
 @tableofcontents
 
-@prev_tutorial{tutorial_traincascade}
+@prev_tutorial{tutorial_cascade_classifier}
 @next_tutorial{tutorial_introduction_to_pca}
 
 |    |    |

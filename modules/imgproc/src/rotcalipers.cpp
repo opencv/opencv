@@ -245,7 +245,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
                 base_b = lead_x;
                 break;
             default:
-                CV_Error(CV_StsError, "main_element should be 0, 1, 2 or 3");
+                CV_Error(cv::Error::StsError, "main_element should be 0, 1, 2 or 3");
             }
         }
         /* change base point of main edge */

@@ -44,6 +44,8 @@
 
 namespace cvtest {
 
+using namespace cv;
+
 static int cvTsRodrigues( const CvMat* src, CvMat* dst, CvMat* jacobian )
 {
     int depth;
@@ -223,7 +225,7 @@ static int cvTsRodrigues( const CvMat* src, CvMat* dst, CvMat* jacobian )
         cvMulTransposed( &matR, &matA, 0 );
         cvSetIdentity( &matI );
 
-        if( cvNorm( &matA, &matI, CV_C ) > 1e-3 ||
+        if( cvNorm( &matA, &matI, NORM_INF ) > 1e-3 ||
             fabs( cvDet(&matR) - 1 ) > 1e-3 )
             return 0;
 
@@ -717,7 +719,7 @@ void CV_RodriguesTest::prepare_to_validation( int /*test_case_idx*/ )
     cvtest::Rodrigues( m, vec2, m2v_jac );
     cvtest::copy( vec, vec2 );
 
-    theta0 = cvtest::norm( vec2, CV_L2 );
+    theta0 = cvtest::norm( vec2, NORM_L2 );
     theta1 = fmod( theta0, CV_PI*2 );
 
     if( theta1 > CV_PI )
@@ -727,7 +729,7 @@ void CV_RodriguesTest::prepare_to_validation( int /*test_case_idx*/ )
     if( calc_jacobians )
     {
         //cvInvert( v2m_jac, m2v_jac, CV_SVD );
-        double nrm = cvtest::norm(test_mat[REF_OUTPUT][3], CV_C);
+        double nrm = cvtest::norm(test_mat[REF_OUTPUT][3], NORM_INF);
         if( FLT_EPSILON < nrm && nrm < 1000 )
         {
             gemm( test_mat[OUTPUT][1], test_mat[OUTPUT][3],

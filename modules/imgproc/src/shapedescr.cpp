@@ -357,7 +357,7 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     RotatedRect box;
 
     if( n < 5 )
-        CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
+        CV_Error( cv::Error::StsBadSize, "There should be at least 5 points to fit the ellipse" );
 
     // New fitellipse algorithm, contributed by Dr. Daniel Weiss
     Point2f c(0,0);
@@ -520,7 +520,7 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
     RotatedRect box;
 
     if( n < 5 )
-        CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
+        CV_Error( cv::Error::StsBadSize, "There should be at least 5 points to fit the ellipse" );
 
     Point2f c(0,0);
 
@@ -705,7 +705,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     RotatedRect box;
 
     if( n < 5 )
-        CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
+        CV_Error( cv::Error::StsBadSize, "There should be at least 5 points to fit the ellipse" );
 
     Point2d c(0., 0.);
 

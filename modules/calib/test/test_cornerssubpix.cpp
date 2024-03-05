@@ -40,7 +40,6 @@
  //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
 #include "test_chessboardgenerator.hpp"
 
 namespace opencv_test { namespace {

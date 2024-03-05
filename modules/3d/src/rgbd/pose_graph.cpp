@@ -761,7 +761,7 @@ public:
     {
         if (geo && !useGeo)
         {
-            CV_Error(CV_StsBadArg, "Geodesic acceleration is disabled");
+            CV_Error(cv::Error::StsBadArg, "Geodesic acceleration is disabled");
         }
 
         std::map<size_t, PoseGraphImpl::Node>& nodes = geo ? geoNodes : tempNodes;

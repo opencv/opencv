@@ -758,7 +758,7 @@ double norm( const SparseMat& src, int normType )
             }
     }
     else
-        CV_Error( CV_StsUnsupportedFormat, "Only 32f and 64f are supported" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Only 32f and 64f are supported" );
 
     if( normType == NORM_L2 )
         result = std::sqrt(result);
@@ -821,7 +821,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
             *_maxval = maxval;
     }
     else
-        CV_Error( CV_StsUnsupportedFormat, "Only 32f and 64f are supported" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Only 32f and 64f are supported" );
 
     if( _minidx && minidx )
         for( i = 0; i < d; i++ )
@@ -837,13 +837,13 @@ void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
     CV_INSTRUMENT_REGION();
 
     double scale = 1;
-    if( norm_type == CV_L2 || norm_type == CV_L1 || norm_type == CV_C )
+    if( norm_type == NORM_L2 || norm_type == NORM_L1 || norm_type == NORM_INF )
     {
         scale = norm( src, norm_type );
         scale = scale > DBL_EPSILON ? a/scale : 0.;
     }
     else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
+        CV_Error( cv::Error::StsBadArg, "Unknown/unsupported norm type" );
 
     src.convertTo( dst, -1, scale );
 }

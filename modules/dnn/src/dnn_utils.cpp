@@ -438,7 +438,7 @@ void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect> &rBlob, std
             }
         }
         else
-            CV_Error(CV_StsBadArg, "Unknown padding mode");
+            CV_Error(cv::Error::StsBadArg, "Unknown padding mode");
     }
 }
 
