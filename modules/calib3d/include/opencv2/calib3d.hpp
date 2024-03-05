@@ -433,8 +433,6 @@ R & t \\
     Summary:
     Generic camera model @cite Kannala2006 with perspective projection and without distortion correction
 
-    @defgroup calib3d_c C API
-
   @}
  */
 
