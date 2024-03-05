@@ -1509,7 +1509,7 @@ void cv_wl_viewer::get_preferred_height_for_width(int width, int &minimum, int &
         minimum = natural = image_.size().height;
     } else {
         natural = static_cast<int>(width * aspect_ratio(image_.size()));
-        minimum = (flags_ & CV_WINDOW_FREERATIO ? 0 : natural);
+        minimum = (flags_ & cv::WINDOW_FREERATIO ? 0 : natural);
     }
 }
 
@@ -1548,11 +1548,11 @@ cv::Rect cv_wl_viewer::draw(void *data, cv::Size const &size, bool force) {
         CV_Assert(image_.size() == size);
         write_mat_to_xrgb8888(image_, data);
     } else {
-        if (flags_ & CV_WINDOW_FREERATIO) {
+        if (flags_ & cv::WINDOW_FREERATIO) {
             cv::Mat resized;
             cv::resize(image_, resized, size);
             write_mat_to_xrgb8888(resized, data);
-        } else /* CV_WINDOW_KEEPRATIO */ {
+        } else /* cv::WINDOW_KEEPRATIO */ {
             auto rect = cv::Rect(cv::Point(0, 0), size);
             if (aspect_ratio(size) >= aspect_ratio(image_.size())) {
                 rect.height = static_cast<int>(image_.size().height * ((double) rect.width / image_.size().width));
