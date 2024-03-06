@@ -181,20 +181,32 @@ void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
 
         inputs.resize(orig_inputs.size());
         for (size_t i = 0; i < orig_inputs.size(); i++)
-            orig_inputs[i].convertTo(inputs[i], CV_32F);
+            if (orig_inputs[i].depth() == CV_16F)
+                orig_inputs[i].convertTo(inputs[i], CV_32F);
+            else
+                inputs[i] = orig_inputs[i];
 
         outputs.resize(orig_outputs.size());
         for (size_t i = 0; i < orig_outputs.size(); i++)
-            outputs[i].create(shape(orig_outputs[i]), CV_32F);
+            if (orig_outputs[i].depth() == CV_16F)
+                outputs[i].create(shape(orig_outputs[i]), CV_32F);
+            else
+                outputs[i] = orig_outputs[i];
 
         internals.resize(orig_internals.size());
         for (size_t i = 0; i < orig_internals.size(); i++)
-            internals[i].create(shape(orig_internals[i]), CV_32F);
+            if (orig_internals[i].depth() == CV_16F)
+                internals[i].create(shape(orig_internals[i]), CV_32F);
+            else
+                internals[i] = orig_internals[i];
 
         forward(inputs, outputs, internals);
 
         for (size_t i = 0; i < outputs.size(); i++)
-            outputs[i].convertTo(orig_outputs[i], CV_16F);
+            if (orig_outputs[i].depth() == CV_16F)
+                outputs[i].convertTo(orig_outputs[i], CV_16F);
+            else
+                outputs[i] = orig_outputs[i];
 
         // sync results back
         outputs_arr.assign(orig_outputs);
@@ -238,6 +250,27 @@ bool Layer::getMemoryShapes(const std::vector<MatShape>& inputs,
     CV_Assert(inputs.size());
     outputs.assign(std::max(requiredOutputs, (int)inputs.size()), inputs[0]);
     return false;
+}
+
+void Layer::getTypes(const std::vector<MatType>&inputs,
+                     const int requiredOutputs,
+                     const int requiredInternals,
+                     std::vector<MatType>&outputs,
+                     std::vector<MatType>&internals) const
+{
+    CV_Assert(inputs.size());
+    for (auto input : inputs)
+    {
+        if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
+            CV_CheckTypeEQ(input, CV_32F, "");
+        else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+            CV_CheckType(input, input == CV_16F || input == CV_8S, "");
+        else
+            CV_CheckType(input, input == CV_32F || input == CV_8S, "");
+    }
+
+    outputs.assign(requiredOutputs, inputs[0]);
+    internals.assign(requiredInternals, inputs[0]);
 }
 
 bool Layer::updateMemoryShapes(const std::vector<MatShape>& inputs)

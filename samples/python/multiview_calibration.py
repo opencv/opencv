@@ -31,23 +31,28 @@ def read_gt_rig(file, num_cameras, num_frames):
     tvecs0_gt = []
     with open(file, "r") as f:
         # Read in camera information
-        for cam in range(num_cameras):
+        for _ in range(num_cameras):
+            f.readline() # camera label
             # 3 lines of K
+            f.readline()
             K = np.zeros([3, 3])
             for i in range(3):
                 K[i] = np.array([float(x) for x in f.readline().strip().split(" ")])
             Ks_gt.append(K)
 
             # 1 line of distortion
+            f.readline()
             distortions_gt.append(np.array([float(x) for x in f.readline().strip().split(" ")]))
 
             # 3 line of rotation
+            f.readline()
             R = np.zeros([3, 3])
             for i in range(3):
                 R[i] = np.array([float(x) for x in f.readline().strip().split(" ")])
             rvecs_gt.append(R)
 
             # 1 line of translation
+            f.readline()
             t = np.zeros([3, 1])
             for i in range(3):
                 t[i] = np.array(float(f.readline().strip().split(" ")[0]))
@@ -55,8 +60,9 @@ def read_gt_rig(file, num_cameras, num_frames):
 
         # Read in frame gt
         status = True
-        for frame in range(num_frames):
+        for _ in range(num_frames):
             # 3 line of rotation
+            f.readline()
             R = np.zeros([3, 3])
             for i in range(3):
                 line = f.readline()
@@ -71,6 +77,7 @@ def read_gt_rig(file, num_cameras, num_frames):
             rvecs0_gt.append(R)
 
             # 3 line of translation
+            f.readline()
             t = np.zeros([3, 1])
             for i in range(3):
                 t[i] = np.array(float(f.readline().strip().split(" ")[0]))
@@ -386,7 +393,7 @@ def calibrateFromPoints(
                     image_points_c = [
                         image_points[c][f][:, None] for f in range(num_frames) if len(image_points[c][f]) > 0
                     ]
-                    repr_err_c, K, dist_coeff, rvecs, _ = cv.fisheye.calibrate(
+                    repr_err_c, K, dist_coeff, _, _ = cv.fisheye.calibrate(
                         [pattern_points[:, None]] * len(image_points_c),
                         image_points_c,
                         image_sizes[c],
@@ -741,7 +748,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
         detector_params.cornerRefinementMethod = cv.aruco.CORNER_REFINE_CONTOUR
         refine_params = cv.aruco.RefineParameters()
         detector = cv.aruco.CharucoDetector(board, charuco_params, detector_params, refine_params)
-        charucoCorners, charucoIds, _, _ = detector.detectBoard(cv.cvtColor(img_detection, cv.COLOR_BGR2GRAY))
+        charucoCorners, charucoIds, _, _ = detector.detectBoard(img_detection)
 
         corners = np.ones([grid_size[0] * grid_size[1], 1, 2]) * -1
         ret = (not charucoIds is None) and charucoIds.flatten().size > 3

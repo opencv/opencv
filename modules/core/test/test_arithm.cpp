@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 #include "ref_reduce_arg.impl.hpp"
+#include "opencv2/core/core_c.h"
+
 #include <algorithm>
 
 namespace opencv_test { namespace {
@@ -634,7 +636,7 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
                                             (const cv::bfloat16_t*)bptr, dptr, total, cn);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(cv::Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -699,7 +701,7 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
             inRangeS_((const cv::bfloat16_t*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(cv::Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -1781,7 +1783,7 @@ TEST(Core_ArithmMask, uninitialized)
         }
         Mat d1;
         d.convertTo(d1, depth);
-        EXPECT_LE(cvtest::norm(c, d1, CV_C), DBL_EPSILON);
+        EXPECT_LE(cvtest::norm(c, d1, NORM_INF), DBL_EPSILON);
     }
 
     Mat_<uchar> tmpSrc(100,100);

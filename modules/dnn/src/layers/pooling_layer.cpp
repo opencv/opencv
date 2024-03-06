@@ -320,11 +320,25 @@ public:
         CV_Assert_N(inputs.size() == 1, !outputs.empty(), !computeMaxIdx || outputs.size() == 2);
         UMat& inpMat = inputs[0];
         UMat& outMat = outputs[0];
-        UMat maskMat = computeMaxIdx ? outputs[1] : UMat();
+        UMat maskMat;
+        if (computeMaxIdx)
+            maskMat.create(shape(outputs[1]), use_half ? CV_16F : CV_32F);
 
         CV_Assert(inpMat.offset == 0 && outMat.offset == 0);
 
-        return poolOp->Forward(inpMat, outMat, maskMat);
+        bool result = poolOp->Forward(inpMat, outMat, maskMat);
+
+        if (computeMaxIdx) {
+            if (use_half) {
+                UMat maskMat32F;
+                maskMat.convertTo(maskMat32F, CV_32F);
+                maskMat32F.convertTo(outputs[1], CV_64S);
+            }
+            else
+                maskMat.convertTo(outputs[1], CV_64S);
+        }
+
+        return result;
     }
 #endif
 
@@ -353,8 +367,12 @@ public:
             case MAX:
             {
                 CV_Assert_N(inputs.size() == 1, !computeMaxIdx || outputs.size() == 2);
-                Mat mask = computeMaxIdx ? outputs[1] : Mat();
+                Mat mask;
+                if (computeMaxIdx)
+                    mask.create(shape(outputs[1]), CV_32F);
                 maxPooling(inputs[0], outputs[0], mask);
+                if (computeMaxIdx)
+                    mask.convertTo(outputs[1], CV_64S);
                 break;
             }
             case AVE: case SUM:
@@ -413,7 +431,16 @@ public:
 
             config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
 
-            return make_cuda_node<cuda4dnn::MaxPoolingOp>(preferableTarget, std::move(context->stream), config);
+            int indicesType = outputs[1]->getHostMatDepth();
+            CV_CheckType(indicesType, indicesType == CV_32S || indicesType == CV_64S, "Unsupported indices type");
+
+            if (indicesType == CV_32S)
+                return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int32_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
+            else if (indicesType == CV_64S)
+                return make_cuda_node_with_indices<cuda4dnn::MaxPoolingOp, int64_t>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), config);
+
+            CV_Error(Error::BadDepth, "Unsupported indices type");
+            return Ptr<BackendNode>();
         }
 
         if (input_shape.size() == 3)
@@ -1249,6 +1276,26 @@ public:
         outputs.assign(numOutputs, outShape);
 
         return false;
+    }
+
+    virtual void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
+            CV_CheckTypeEQ(inputs[0], CV_32F, "Unsupported type");
+        else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+            CV_CheckType(inputs[0], inputs[0] == CV_16F || inputs[0] == CV_8S, "");
+        else
+            CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_8S, "");
+
+        outputs.push_back(inputs[0]);
+        if (type == MAX && requiredOutputs == 2) {
+            outputs.push_back(CV_64S);
+        }
     }
 
     bool updateMemoryShapes(const std::vector<MatShape> &inputs) CV_OVERRIDE

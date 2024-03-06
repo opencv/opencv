@@ -42,6 +42,8 @@
 #ifndef _CV_GEOM_H_
 #define _CV_GEOM_H_
 
+#include "opencv2/core/core_c.h"
+
 /* curvature: 0 - 1-curvature, 1 - k-cosine curvature. */
 CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size, CvMemStorage* storage, int method );
 

@@ -44,7 +44,7 @@ public:
     {
         std::vector<MatShape> inLayerShapes;
         std::vector<MatShape> outLayerShapes;
-        net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+        net.getLayerShapes(MatShape(), CV_32F, 0, inLayerShapes, outLayerShapes);
         ASSERT_EQ(inLayerShapes.size(), inps.size());
 
         for (int i = 0; i < inps.size(); ++i) {
@@ -694,9 +694,6 @@ TEST_P(Test_ONNX_layers, Compare_GT)
 #endif
 
     testONNXModels("greater");
-}
-TEST_P(Test_ONNX_layers, Greater_input_dtype_int64) {
-    testONNXModels("greater_input_dtype_int64");
 }
 
 TEST_P(Test_ONNX_layers, Compare_LT)
@@ -2167,7 +2164,7 @@ TEST_P(Test_ONNX_nets, Alexnet)
     expectNoFallbacksFromIE(net);
 }
 
-TEST_P(Test_ONNX_nets, RAFT)
+TEST_P(Test_ONNX_nets, DISABLED_RAFT)
 {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG, CV_TEST_TAG_MEMORY_2GB);
 

@@ -21,9 +21,9 @@ void _copyVector2Output(std::vector<std::vector<Point2f> > &vec, OutputArrayOfAr
 void _copyInput2Vector(InputArrayOfArrays inp, std::vector<std::vector<Point2f> > &vec);
 
 /**
-  * @brief Convert input image to gray if it is a 3-channels image
+  * @brief Convert input image to gray if it is a BGR or BGRA image
   */
-void _convertToGrey(InputArray _in, OutputArray _out);
+void _convertToGrey(InputArray _in, Mat& _out);
 
 template<typename T>
 inline bool readParameter(const std::string& name, T& parameter, const FileNode& node)

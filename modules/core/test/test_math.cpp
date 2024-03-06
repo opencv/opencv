@@ -10,6 +10,7 @@
 #include <float.h>
 #include <math.h>
 #include "opencv2/core/softfloat.hpp"
+#include "opencv2/core/core_c.h"
 
 namespace opencv_test { namespace {
 
@@ -2737,11 +2738,11 @@ TEST(Core_Invert, small)
     cv::Mat b = a.t()*a;
     cv::Mat c, i = Mat_<float>::eye(3, 3);
     cv::invert(b, c, cv::DECOMP_LU); //std::cout << b*c << std::endl;
-    ASSERT_LT( cvtest::norm(b*c, i, CV_C), 0.1 );
+    ASSERT_LT( cvtest::norm(b*c, i, NORM_INF), 0.1 );
     cv::invert(b, c, cv::DECOMP_SVD); //std::cout << b*c << std::endl;
-    ASSERT_LT( cvtest::norm(b*c, i, CV_C), 0.1 );
+    ASSERT_LT( cvtest::norm(b*c, i, NORM_INF), 0.1 );
     cv::invert(b, c, cv::DECOMP_CHOLESKY); //std::cout << b*c << std::endl;
-    ASSERT_LT( cvtest::norm(b*c, i, CV_C), 0.1 );
+    ASSERT_LT( cvtest::norm(b*c, i, NORM_INF), 0.1 );
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////

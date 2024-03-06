@@ -212,7 +212,7 @@ void CV_ProjectPointsTest::prepare_to_validation( int /*test_case_idx*/ )
     cvTsProjectPoints( m, vec2, m2v_jac );
     cvTsCopy( vec, vec2 );
 
-    theta0 = cvtest::norm( cvarrtomat(vec2), 0, CV_L2 );
+    theta0 = cvtest::norm( cvarrtomat(vec2), 0, NORM_L2 );
     theta1 = fmod( theta0, CV_PI*2 );
 
     if( theta1 > CV_PI )
@@ -222,7 +222,7 @@ void CV_ProjectPointsTest::prepare_to_validation( int /*test_case_idx*/ )
     if( calc_jacobians )
     {
         //cvInvert( v2m_jac, m2v_jac, CV_SVD );
-        if( cvtest::norm(cvarrtomat(&test_mat[OUTPUT][3]), 0, CV_C) < 1000 )
+        if( cvtest::norm(cvarrtomat(&test_mat[OUTPUT][3]), 0, NORM_INF) < 1000 )
         {
             cvTsGEMM( &test_mat[OUTPUT][1], &test_mat[OUTPUT][3],
                       1, 0, 0, &test_mat[OUTPUT][4],
@@ -1338,8 +1338,8 @@ void CV_StereoCalibrationTest::run( int )
 
         for( int i = 0; i < nframes; i++ )
         {
-            Mat left = imread(imglist[i*2]);
-            Mat right = imread(imglist[i*2+1]);
+            Mat left = imread(imglist[i*2], IMREAD_GRAYSCALE);
+            Mat right = imread(imglist[i*2+1], IMREAD_GRAYSCALE);
             if(left.empty() || right.empty())
             {
                 ts->printf( cvtest::TS::LOG, "Can not load images %s and %s, testcase %d\n",
@@ -1350,6 +1350,8 @@ void CV_StereoCalibrationTest::run( int )
             imgsize = left.size();
             bool found1 = findChessboardCorners(left, patternSize, imgpt1[i]);
             bool found2 = findChessboardCorners(right, patternSize, imgpt2[i]);
+            cornerSubPix(left, imgpt1[i], Size(5, 5), Size(-1, -1), TermCriteria(TermCriteria::EPS | TermCriteria::MAX_ITER, 30, 0.1));
+            cornerSubPix(right, imgpt2[i], Size(5, 5), Size(-1, -1), TermCriteria(TermCriteria::EPS | TermCriteria::MAX_ITER, 30, 0.1));
             if(!found1 || !found2)
             {
                 ts->printf( cvtest::TS::LOG, "The function could not detect boards (%d x %d) on the images %s and %s, testcase %d\n",

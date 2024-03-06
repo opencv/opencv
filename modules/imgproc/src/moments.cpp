@@ -584,7 +584,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
         return contourMoments(mat);
 
     if( cn > 1 )
-        CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
+        CV_Error( cv::Error::StsBadArg, "Invalid image type (must be single-channel)" );
 
     CV_IPP_RUN(!binary, ipp_moments(mat, m), m);
 
@@ -599,7 +599,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
     else if( depth == CV_64F )
         func = momentsInTile<double, double, double>;
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     Mat src0(mat);
 

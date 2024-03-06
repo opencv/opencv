@@ -4,32 +4,27 @@
 
 #include "precomp.hpp"
 #include "octree.hpp"
-
-#define OCTREE_CHILD_NUM 8
+#include "opencv2/3d.hpp"
 
 namespace cv{
 
-// Locate the OctreeNode corresponding to the input point from the given OctreeNode.
-static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node);
+OctreeNode::OctreeNode() :
+    children(),
+    depth(0),
+    size(0),
+    origin(0,0,0),
+    neigh(),
+    parentIndex(-1)
+{ }
 
-static bool _isPointInBound(const Point3f& _point, const Point3f& _origin, double _size);
-static bool insertPointRecurse( Ptr<OctreeNode>& node,  const Point3f& point, int maxDepth);
-bool deletePointRecurse( Ptr<OctreeNode>& node);
-
-// For Nearest neighbor search.
-template<typename T> struct PQueueElem; // Priority queue
-static void radiusNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, float squareRadius,
-                           std::vector<PQueueElem<Point3f> >& candidatePoint);
-static void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, const int K,
-                      float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint);
-
-OctreeNode::OctreeNode():children(OCTREE_CHILD_NUM, nullptr), depth(0), size(0), origin(0,0,0), parentIndex(-1)
-{
-}
-
-OctreeNode::OctreeNode(int _depth, double _size, const Point3f& _origin, int _parentIndex):children(OCTREE_CHILD_NUM), depth(_depth), size(_size), origin(_origin), parentIndex(_parentIndex)
-{
-}
+OctreeNode::OctreeNode(int _depth, double _size, const Point3f &_origin, int _parentIndex) :
+    children(),
+    depth(_depth),
+    size(_size),
+    origin(_origin),
+    neigh(),
+    parentIndex(_parentIndex)
+{ }
 
 bool OctreeNode::empty() const
 {
@@ -42,7 +37,7 @@ bool OctreeNode::empty() const
     }
     else
     {
-        for(size_t i = 0; i< OCTREE_CHILD_NUM; i++)
+        for(size_t i = 0; i < 8; i++)
         {
             if(!this->children[i].empty())
             {
@@ -53,166 +48,255 @@ bool OctreeNode::empty() const
     }
 }
 
+
 bool OctreeNode::isPointInBound(const Point3f& _point) const
 {
-    return isPointInBound(_point, origin, size);
-}
+    Point3f eps;
+    eps.x = std::max(std::abs(_point.x), std::abs(this->origin.x));
+    eps.y = std::max(std::abs(_point.y), std::abs(this->origin.y));
+    eps.z = std::max(std::abs(_point.z), std::abs(this->origin.z));
+    eps *= std::numeric_limits<float>::epsilon();
+    Point3f ptEps = _point + eps;
+    Point3f upPt = this->origin + eps + Point3f {(float)this->size, (float)this->size, (float)this->size};
 
-bool OctreeNode::isPointInBound(const Point3f& _point, const Point3f& _origin, double _size) const
-{
-    return _isPointInBound(_point, _origin, _size);
-}
-
-bool _isPointInBound(const Point3f& _point, const Point3f& _origin, double _size)
-{
-    float epsX = std::numeric_limits<float>::epsilon() * std::max(std::abs(_point.x), std::abs(_origin.x));
-    float epsY = std::numeric_limits<float>::epsilon() * std::max(std::abs(_point.y), std::abs(_origin.y));
-    float epsZ = std::numeric_limits<float>::epsilon() * std::max(std::abs(_point.z), std::abs(_origin.z));
-
-    if((_point.x + epsX >= _origin.x && _point.y + epsY >= _origin.y && _point.z + epsZ >= _origin.z) &&
-       (_point.x <= _origin.x + _size + epsX && _point.y <= _origin.y + _size + epsY && _point.z <= _origin.z + _size + epsZ))
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return (ptEps.x >= this->origin.x) &&
+           (ptEps.y >= this->origin.y) &&
+           (ptEps.z >= this->origin.z) &&
+           (_point.x <= upPt.x) &&
+           (_point.y <= upPt.y) &&
+           (_point.z <= upPt.z);
 }
 
 struct Octree::Impl
 {
 public:
-    Impl():maxDepth(-1), size(0), origin(0,0,0)
-    {}
+    Impl() : Impl(0, 0, {0, 0, 0}, 0, false) { }
 
-    ~Impl()
-    {}
+    Impl(int _maxDepth, double _size, const Point3f& _origin, double _resolution,
+         bool _hasColor) :
+        maxDepth(_maxDepth),
+        size(_size),
+        origin(_origin),
+        resolution(_resolution),
+        hasColor(_hasColor)
+    { }
 
-    // The pointer to Octree root node.
+    ~Impl() { }
+
+    void fill(bool useResolution, InputArray pointCloud, InputArray colorAttribute);
+    bool insertPoint(const Point3f& point, const Point3f &color);
+
+    // The pointer to Octree root node
     Ptr <OctreeNode> rootNode = nullptr;
-    //! Max depth of the Octree. And depth must be greater than zero
+    //! Max depth of the Octree
     int maxDepth;
-    //! The size of the cube of the .
+    //! The size of the cube
     double size;
-    //! The origin coordinate of root node.
+    //! The origin coordinate of root node
     Point3f origin;
+    //! The size of the leaf node
+    double resolution;
+    //! Whether the point cloud has a color attribute
+    bool hasColor;
 };
 
-Octree::Octree() : p(new Impl)
+Octree::Octree() :
+    p(makePtr<Impl>())
+{ }
+
+Ptr<Octree> Octree::createWithDepth(int maxDepth, double size, const Point3f& origin, bool withColors)
 {
-    p->maxDepth = -1;
-    p->size = 0;
-    p->origin = Point3f(0,0,0);
+    CV_Assert(maxDepth > 0);
+    CV_Assert(size > 0);
+
+    Ptr<Octree> octree = makePtr<Octree>();
+    octree->p = makePtr<Impl>(maxDepth, size, origin, /*resolution*/ 0, withColors);
+    return octree;
 }
 
-Octree::Octree(int _maxDepth, double _size, const Point3f& _origin ) : p(new Impl)
+Ptr<Octree> Octree::createWithDepth(int maxDepth, InputArray pointCloud, InputArray colors)
 {
-    p->maxDepth = _maxDepth;
-    p->size = _size;
-    p->origin = _origin;
+    CV_Assert(maxDepth > 0);
+
+    Ptr<Octree> octree = makePtr<Octree>();
+    octree->p->maxDepth = maxDepth;
+    octree->p->fill(/* useResolution */ false, pointCloud, colors);
+    return octree;
 }
 
-Octree::Octree(const std::vector<Point3f>& _pointCloud, int _maxDepth) : p(new Impl)
+Ptr<Octree> Octree::createWithResolution(double resolution, double size, const Point3f& origin, bool withColors)
 {
-    CV_Assert( _maxDepth > -1 );
-    this->create(_pointCloud, _maxDepth);
+    CV_Assert(resolution > 0);
+    CV_Assert(size > 0);
+
+    Ptr<Octree> octree = makePtr<Octree>();
+    octree->p = makePtr<Impl>(/*maxDepth*/ 0, size, origin, resolution, withColors);
+    return octree;
 }
 
-Octree::Octree(int _maxDepth) : p(new Impl)
+Ptr<Octree> Octree::createWithResolution(double resolution, InputArray pointCloud, InputArray colors)
 {
-    p->maxDepth = _maxDepth;
-    p->size = 0;
-    p->origin = Point3f(0,0,0);
+    CV_Assert(resolution > 0);
+
+    Ptr<Octree> octree = makePtr<Octree>();
+    octree->p->resolution = resolution;
+    octree->p->fill(/* useResolution */ true, pointCloud, colors);
+    return octree;
 }
 
-Octree::~Octree(){}
+Octree::~Octree() { }
 
-bool Octree::insertPoint(const Point3f& point)
+bool Octree::insertPoint(const Point3f& point, const Point3f &color)
 {
-    if(p->rootNode.empty())
+    return p->insertPoint(point, color);
+}
+
+bool Octree::Impl::insertPoint(const Point3f& point, const Point3f &color)
+{
+    size_t depthMask = (size_t)(1ULL << (this->maxDepth - 1));
+
+    if(this->rootNode.empty())
     {
-        p->rootNode = new OctreeNode( 0, p->size, p->origin, -1);
+        this->rootNode = new OctreeNode( 0, this->size, this->origin, -1);
     }
 
-    return insertPointRecurse(p->rootNode, point, p->maxDepth);
-}
-
-
-bool Octree::create(const std::vector<Point3f> &pointCloud, int _maxDepth)
-{
-    if(_maxDepth > -1)
+    bool pointInBoundFlag = this->rootNode->isPointInBound(point);
+    if(this->rootNode->depth == 0 && !pointInBoundFlag)
     {
-        p->maxDepth = _maxDepth;
-    }
-
-    CV_Assert( p->maxDepth > -1 && !pointCloud.empty());
-
-    if(pointCloud.empty())
         return false;
-
-    Point3f maxBound(pointCloud[0]);
-    Point3f minBound(pointCloud[0]);
-    Point3f center, temp;
-
-    // Find center coordinate of PointCloud data.
-    for(size_t idx = 0; idx <pointCloud.size(); idx++)
-    {
-        maxBound.x = max(pointCloud[idx].x, maxBound.x);
-        maxBound.y = max(pointCloud[idx].y, maxBound.y);
-        maxBound.z = max(pointCloud[idx].z, maxBound.z);
-
-        minBound.x = min(pointCloud[idx].x, minBound.x);
-        minBound.y = min(pointCloud[idx].y, minBound.y);
-        minBound.z = min(pointCloud[idx].z, minBound.z);
     }
 
-    center = (maxBound + minBound) * 0.5f;
+    OctreeKey key((size_t)floor((point.x - this->origin.x) / this->resolution),
+                  (size_t)floor((point.y - this->origin.y) / this->resolution),
+                  (size_t)floor((point.z - this->origin.z) / this->resolution));
 
-    temp = center - minBound;
-    float halfSize = std::max(temp.x, std::max(temp.y, temp.z));
-    this->p->origin = center - Point3f(halfSize, halfSize, halfSize);
-    this->p->size = 2 * halfSize;
-
-    // Insert every point in PointCloud data.
-    int cnt=0;
-    for(size_t idx = 0; idx < pointCloud.size(); idx++ )
+    Ptr<OctreeNode> node = this->rootNode;
+    while (node->depth != maxDepth)
     {
-        if(!insertPoint(pointCloud[idx])){
-            cnt++;
-        };
+        double childSize = node->size * 0.5;
+
+        // calculate the index and the origin of child.
+        size_t childIndex = key.findChildIdxByMask(depthMask);
+        size_t xIndex = (childIndex & 1) ? 1 : 0;
+        size_t yIndex = (childIndex & 2) ? 1 : 0;
+        size_t zIndex = (childIndex & 4) ? 1 : 0;
+
+        Point3f childOrigin = node->origin + Point3f(float(xIndex), float(yIndex), float(zIndex)) * float(childSize);
+
+        Ptr<OctreeNode> &childPtr = node->children[childIndex];
+        if (!childPtr)
+        {
+            childPtr = new OctreeNode(node->depth + 1, childSize, childOrigin, int(childIndex));
+            childPtr->parent = node;
+        }
+
+        node = childPtr;
+        depthMask = depthMask >> 1;
     }
 
-    CV_LOG_IF_WARNING(NULL,cnt!=0,"OverAll "<<cnt<<" points has been ignored! The number of point clouds contained in the current octree is "<<pointCloud.size()-cnt);
+    node->isLeaf = true;
+    node->pointList.push_back(point);
+    node->colorList.push_back(color);
+
     return true;
 }
 
-void Octree::setMaxDepth(int _maxDepth)
+
+static Vec6f getBoundingBox(const Mat& points)
 {
-    if(_maxDepth )
-        this->p->maxDepth = _maxDepth;
+    const float mval = std::numeric_limits<float>::max();
+    Vec6f bb(mval, mval, mval, -mval, -mval, -mval);
+
+    for (int i = 0; i < (int)points.total(); i++)
+    {
+        Point3f pt = points.at<Point3f>(i);
+        bb[0] = min(bb[0], pt.x);
+        bb[1] = min(bb[1], pt.y);
+        bb[2] = min(bb[2], pt.z);
+        bb[3] = max(bb[3], pt.x);
+        bb[4] = max(bb[4], pt.y);
+        bb[5] = max(bb[5], pt.z);
+    }
+
+    return bb;
 }
 
-void Octree::setSize(double _size)
+void Octree::Impl::fill(bool useResolution, InputArray _points, InputArray _colors)
 {
-    this->p->size = _size;
-};
+    CV_CheckFalse(_points.empty(), "No points provided");
 
-void Octree::setOrigin(const Point3f& _origin)
-{
-    this->p->origin = _origin;
+    Mat points, colors;
+    int nPoints = 0, nColors = 0;
+
+    int pointType = _points.type();
+    CV_Assert(pointType == CV_32FC1 || pointType == CV_32FC3);
+    points = _points.getMat();
+    // transform 3xN matrix to Nx3, except 3x3
+    if ((_points.channels() == 1) && (_points.rows() == 3) && (_points.cols() != 3))
+    {
+        points = points.t();
+    }
+    // This transposition is performed on 1xN matrix so it's almost free in terms of performance
+    points = points.reshape(3, 1).t();
+    nPoints = (int)points.total();
+
+    if (!_colors.empty())
+    {
+        int colorType = _colors.type();
+        CV_Assert(colorType == CV_32FC1 || colorType == CV_32FC3);
+        colors = _colors.getMat();
+        // transform 3xN matrix to Nx3, except 3x3
+        if ((_colors.channels() == 1) && (_colors.rows() == 3) && (_colors.cols() != 3))
+        {
+            colors = colors.t();
+        }
+        colors = colors.reshape(3, 1).t();
+        nColors = (int)colors.total();
+
+        CV_Assert(nColors == nPoints);
+        this->hasColor = true;
+    }
+
+    Vec6f bbox = getBoundingBox(points);
+    Point3f minBound(bbox[0], bbox[1], bbox[2]);
+    Point3f maxBound(bbox[3], bbox[4], bbox[5]);
+
+    double maxSize = max(max(maxBound.x - minBound.x, maxBound.y - minBound.y), maxBound.z - minBound.z);
+
+    // Extend maxSize to the closest power of 2 that exceeds it for bit operations
+    maxSize = double(1 << int(ceil(log2(maxSize))));
+
+    // to calculate maxDepth from resolution or vice versa
+    if (useResolution)
+    {
+        this->maxDepth = (int)ceil(log2(maxSize / this->resolution));
+    }
+    else
+    {
+        this->resolution = (maxSize / (1 << (this->maxDepth + 1)));
+    }
+
+    this->size = (1 << this->maxDepth) * this->resolution;
+    this->origin = Point3f(float(floor(minBound.x / this->resolution) * this->resolution),
+                           float(floor(minBound.y / this->resolution) * this->resolution),
+                           float(floor(minBound.z / this->resolution) * this->resolution));
+
+    // Insert every point in PointCloud data.
+    for (int idx = 0; idx < nPoints; idx++)
+    {
+        Point3f pt = points.at<Point3f>(idx);
+        Point3f insertColor = this->hasColor ? colors.at<Point3f>(idx) : Point3f { };
+        if (!this->insertPoint(pt, insertColor))
+        {
+            CV_Error(Error::StsBadArg, "The point is out of boundary!");
+        }
+    }
 }
+
 
 void Octree::clear()
 {
-    if(!p->rootNode.empty())
-    {
-        p->rootNode.release();
-    }
-
-    p->size = 0;
-    p->maxDepth = -1;
-    p->origin = Point3f (0,0,0); // origin coordinate
+    p = makePtr<Impl>();
 }
 
 bool Octree::empty() const
@@ -220,189 +304,174 @@ bool Octree::empty() const
     return p->rootNode.empty();
 }
 
-Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& _node)
-{
-    OctreeNode &node = *_node;
-
-    if(node.empty())
-    {
-        return Ptr<OctreeNode>();
-    }
-
-    if(node.isLeaf)
-    {
-        for(size_t i = 0; i < node.pointList.size(); i++ )
-        {
-            if((point.x == node.pointList[i].x) &&
-               (point.y == node.pointList[i].y) &&
-               (point.z == node.pointList[i].z)
-                    )
-            {
-                return _node;
-            }
-        }
-        return Ptr<OctreeNode>();
-    }
-
-    if(node.isPointInBound(point))
-    {
-        double childSize = node.size * 0.5;
-
-        float epsX = std::numeric_limits<float>::epsilon() * std::max(std::abs(point.x), std::abs(node.origin.x));
-        float epsY = std::numeric_limits<float>::epsilon() * std::max(std::abs(point.y), std::abs(node.origin.y));
-        float epsZ = std::numeric_limits<float>::epsilon() * std::max(std::abs(point.z), std::abs(node.origin.z));
-
-        size_t xIndex = point.x <= node.origin.x + float(childSize) + epsX ? 0 : 1;
-        size_t yIndex = point.y <= node.origin.y + float(childSize) + epsY ? 0 : 1;
-        size_t zIndex = point.z <= node.origin.z + float(childSize) + epsZ ? 0 : 1;
-        size_t childIndex = xIndex + yIndex * 2 + zIndex * 4;
-
-        if(!node.children[childIndex].empty())
-        {
-            return index(point, node.children[childIndex]);
-        }
-    }
-    return Ptr<OctreeNode>();
-}
 
 bool Octree::isPointInBound(const Point3f& _point) const
 {
-    return _isPointInBound(_point, p->origin, p->size);
+    return p->rootNode->isPointInBound(_point);
 }
 
 bool Octree::deletePoint(const Point3f& point)
 {
-    Ptr<OctreeNode> node = index(point, p->rootNode);
+    OctreeKey key = OctreeKey((size_t)floor((point.x - this->p->origin.x) / p->resolution),
+                              (size_t)floor((point.y - this->p->origin.y) / p->resolution),
+                              (size_t)floor((point.z - this->p->origin.z) / p->resolution));
+    size_t depthMask = (size_t)1 << (p->maxDepth - 1);
 
-    if(!node.empty())
+    Ptr<OctreeNode> node = p->rootNode;
+    while(node)
     {
-        size_t i = 0;
-        while (!node->pointList.empty() && i < node->pointList.size() )
+        if (node->empty())
         {
-            if((point.x == node->pointList[i].x) &&
-               (point.y == node->pointList[i].y) &&
-               (point.z == node->pointList[i].z)
-                    )
-            {
-                node->pointList.erase(node->pointList.begin() + i);
-            } else{
-                i++;
-            }
+            node = nullptr;
         }
-
-        // If it is the last point cloud in the OctreeNode, recursively delete the node.
-        return deletePointRecurse(node);
-    }
-    else
-    {
-        return false;
-    }
-}
-
-bool deletePointRecurse(Ptr<OctreeNode>& _node)
-{
-    OctreeNode& node = *_node;
-
-    if(_node.empty())
-        return false;
-
-    if(node.isLeaf)
-    {
-        if( !node.pointList.empty())
+        else if (node->isLeaf)
         {
-            Ptr<OctreeNode> parent = node.parent;
-            parent->children[node.parentIndex] = nullptr;
-            _node.release();
-
-            return deletePointRecurse(parent);
+            const float eps = 1e-9f;
+            bool found = std::any_of(node->pointList.begin(), node->pointList.end(),
+                [point, eps](const Point3f& pt) -> bool
+                {
+                    return abs(point.x - pt.x) < eps &&
+                           abs(point.y - pt.y) < eps &&
+                           abs(point.z - pt.z) < eps;
+                });
+            if (!found)
+                node = nullptr;
+            break;
         }
         else
         {
-            return true;
+            node = node->children[key.findChildIdxByMask(depthMask)];
+            depthMask = depthMask >> 1;
         }
     }
-    else
+
+    if(!node)
+        return false;
+
+    const float eps = 1e-9f;
+
+    // we've found a leaf node and delete all verts equal to given one
+    size_t ctr = 0;
+    while (!node->pointList.empty() && ctr < node->pointList.size())
     {
-        bool deleteFlag = true;
-
-        // Only all children was deleted, can we delete the tree node.
-        for(size_t i = 0; i< OCTREE_CHILD_NUM; i++)
+        if (abs(point.x - node->pointList[ctr].x) < eps &&
+            abs(point.y - node->pointList[ctr].y) < eps &&
+            abs(point.z - node->pointList[ctr].z) < eps)
         {
-            if(!node.children[i].empty())
-            {
-                deleteFlag = false;
-                break;
-            }
-        }
-
-        if(deleteFlag)
-        {
-            Ptr<OctreeNode> parent = node.parent;
-            _node.release();
-            return deletePointRecurse(parent);
+            node->pointList.erase(node->pointList.begin() + ctr);
         }
         else
         {
-            return true;
+            ctr++;
         }
     }
+
+    if (node->pointList.empty())
+    {
+        // empty node and its empty parents should be removed
+        OctreeNode *parentPtr = node->parent;
+        int parentdIdx = node->parentIndex;
+
+        while (parentPtr)
+        {
+            parentPtr->children[parentdIdx].release();
+
+            // check if all children were deleted
+            bool deleteFlag = true;
+            for (size_t i = 0; i < 8; i++)
+            {
+                if (!parentPtr->children[i].empty())
+                {
+                    deleteFlag = false;
+                    break;
+                }
+            }
+
+            if (deleteFlag)
+            {
+                // we're at empty node, going up
+                parentdIdx = parentPtr->parentIndex;
+                parentPtr = parentPtr->parent;
+            }
+            else
+            {
+                // reached first non-empty node, stopping
+                parentPtr = nullptr;
+            }
+        }
+    }
+    return true;
 }
 
-bool insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point, int maxDepth)
+
+void Octree::getPointCloudByOctree(OutputArray restorePointCloud, OutputArray restoreColor)
 {
-    OctreeNode& node = *_node;
-    bool pointInBoundFlag = node.isPointInBound(point, node.origin, node.size);
-    if(node.depth==0 && !pointInBoundFlag)
+    Ptr<OctreeNode> root = p->rootNode;
+    double resolution = p->resolution;
+    std::vector<Point3f> outPts, outColors;
+
+    std::stack<std::tuple<Ptr<OctreeNode>, size_t, size_t, size_t>> toCheck;
+    toCheck.push({root, 0, 0, 0});
+    while (!toCheck.empty())
     {
-        CV_Error(Error::StsBadArg, "The point is out of boundary!");
-    }
-    else if (!pointInBoundFlag){
-        return false;
+        auto top = toCheck.top();
+        toCheck.pop();
+        Ptr<OctreeNode> node = std::get<0>(top);
+        size_t x_key = std::get<1>(top);
+        size_t y_key = std::get<2>(top);
+        size_t z_key = std::get<3>(top);
+
+        if (node->isLeaf)
+        {
+            outPts.emplace_back(
+                    (float) (resolution * x_key) + (float) (resolution * 0.5) + p->origin.x,
+                    (float) (resolution * y_key) + (float) (resolution * 0.5) + p->origin.y,
+                    (float) (resolution * z_key) + (float) (resolution * 0.5) + p->origin.z);
+            if (p->hasColor)
+            {
+                Point3f avgColor { };
+                for (const auto& c : node->colorList)
+                {
+                    avgColor += c;
+                }
+                avgColor *= (1.f/(float)node->colorList.size());
+                outColors.emplace_back(avgColor);
+            }
+        }
+        else
+        {
+            unsigned char x_mask = 1;
+            unsigned char y_mask = 2;
+            unsigned char z_mask = 4;
+            for (unsigned char i = 0; i < 8; i++)
+            {
+                size_t x_copy = x_key;
+                size_t y_copy = y_key;
+                size_t z_copy = z_key;
+                if (!node->children[i].empty())
+                {
+                    size_t x_offSet = !!(x_mask & i);
+                    size_t y_offSet = !!(y_mask & i);
+                    size_t z_offSet = !!(z_mask & i);
+                    x_copy = (x_copy << 1) | x_offSet;
+                    y_copy = (y_copy << 1) | y_offSet;
+                    z_copy = (z_copy << 1) | z_offSet;
+                    toCheck.push({node->children[i], x_copy, y_copy, z_copy});
+                }
+            }
+        }
     }
 
-    if(node.depth == maxDepth)
+    if (restorePointCloud.needed())
     {
-        node.isLeaf = true;
-        node.pointList.push_back(point);
-        return true;
+        Mat(outPts).copyTo(restorePointCloud);
     }
-
-    double childSize = node.size * 0.5;
-
-    float epsX = std::numeric_limits<float>::epsilon() * std::max(std::abs(point.x), std::abs(node.origin.x));
-    float epsY = std::numeric_limits<float>::epsilon() * std::max(std::abs(point.y), std::abs(node.origin.y));
-    float epsZ = std::numeric_limits<float>::epsilon() * std::max(std::abs(point.z), std::abs(node.origin.z));
-
-    size_t xIndex = point.x <= node.origin.x + float(childSize) + epsX ? 0 : 1;
-    size_t yIndex = point.y <= node.origin.y + float(childSize) + epsY ? 0 : 1;
-    size_t zIndex = point.z <= node.origin.z + float(childSize) + epsZ ? 0 : 1;
-
-    size_t childIndex = xIndex + yIndex * 2 + zIndex * 4;
-
-    if(node.children[childIndex].empty())
+    if (restoreColor.needed())
     {
-        Point3f childOrigin = node.origin + Point3f(xIndex * float(childSize), yIndex * float(childSize), zIndex * float(childSize));
-        node.children[childIndex] = new OctreeNode(node.depth + 1, childSize, childOrigin, int(childIndex));
-        node.children[childIndex]->parent = _node;
+        Mat(outColors).copyTo(restoreColor);
     }
-    return insertPointRecurse(node.children[childIndex], point, maxDepth);
 }
 
-// For Nearest neighbor search.
-template<typename T>
-struct PQueueElem
-{
-    PQueueElem() : dist(0), t(0) {}
-    PQueueElem(float _dist, T _t) : dist(_dist), t(_t) {}
-    float dist;
-    T t;
-
-    bool
-    operator<(const PQueueElem<T> p1) const
-    {
-        return (this->dist < p1.dist);
-    }
-};
 
 static float SquaredDistance(const Point3f& query, const Point3f& origin)
 {
@@ -410,145 +479,216 @@ static float SquaredDistance(const Point3f& query, const Point3f& origin)
     return diff.dot(diff);
 }
 
-static bool overlap(const OctreeNode& node, const Point3f& query, float squareRadius)
+bool OctreeNode::overlap(const Point3f& query, float squareRadius) const
 {
-    float halfSize = float(node.size * 0.5);
-    Point3f center = node.origin + Point3f( halfSize, halfSize, halfSize );
+    float halfSize = float(this->size * 0.5);
+    Point3f center = this->origin + Point3f( halfSize, halfSize, halfSize );
 
     float dist = SquaredDistance(center, query);
-    float temp = float(node.size) * float(node.size) * 3.0f;
+    float temp = float(this->size) * float(this->size) * 3.0f;
 
     return ( dist + dist * std::numeric_limits<float>::epsilon() ) <= float(temp * 0.25f + squareRadius + sqrt(temp * squareRadius)) ;
 }
 
-void radiusNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, float squareRadius,
-                           std::vector<PQueueElem<Point3f> >& candidatePoint)
+
+int Octree::radiusNNSearch(const Point3f& query, float radius, OutputArray pointSet, OutputArray squareDistSet) const
 {
-    float dist;
-    Ptr<OctreeNode> child;
+    return this->radiusNNSearch(query, radius, pointSet, noArray(), squareDistSet);
+}
 
-    // iterate eight children.
-    for(size_t i = 0; i< OCTREE_CHILD_NUM; i++)
+int Octree::radiusNNSearch(const Point3f& query, float radius, OutputArray points, OutputArray colors, OutputArray squareDists) const
+{
+    std::vector<Point3f> outPoints, outColors;
+    std::vector<float> outSqDists;
+
+    if (!p->rootNode.empty())
     {
-        if( !node->children[i].empty() && overlap(*node->children[i], query, squareRadius))
-        {
-            if(!node->children[i]->isLeaf)
-            {
-                // Reach the branch node.
-                radiusNNSearchRecurse(node->children[i], query, squareRadius, candidatePoint);
-            }
-            else
-            {
-                // Reach the leaf node.
-                child = node->children[i];
+        float squareRadius = radius * radius;
 
-                for(size_t j = 0; j < child->pointList.size(); j++)
+        std::vector<std::tuple<float, Point3f, Point3f>> candidatePoints;
+
+        std::stack<Ptr<OctreeNode>> toCheck;
+        toCheck.push(p->rootNode);
+
+        while (!toCheck.empty())
+        {
+            Ptr<OctreeNode> node = toCheck.top();
+            toCheck.pop();
+            for(size_t i = 0; i < 8; i++)
+            {
+                Ptr<OctreeNode> child = node->children[i];
+                if( child && child->overlap(query, squareRadius))
                 {
-                    dist = SquaredDistance(child->pointList[j], query);
-                    if(dist + dist * std::numeric_limits<float>::epsilon() <= squareRadius )
+                    if(child->isLeaf)
                     {
-                        candidatePoint.emplace_back(dist, child->pointList[j]);
+                        for(size_t j = 0; j < child->pointList.size(); j++)
+                        {
+                            Point3f pt = child->pointList[j];
+                            Point3f col;
+                            if (!child->colorList.empty())
+                            {
+                                col = child->colorList[j];
+                            }
+                            float dist = SquaredDistance(pt, query);
+                            if(dist + dist * std::numeric_limits<float>::epsilon() <= squareRadius)
+                            {
+                                candidatePoints.emplace_back(dist, pt, col);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        toCheck.push(child);
                     }
                 }
             }
         }
-    }
-}
 
-int Octree::radiusNNSearch(const Point3f& query, float radius,
-                           std::vector<Point3f>& pointSet, std::vector<float>& squareDistSet) const
-{
-    if(p->rootNode.empty())
-        return 0;
-    float squareRadius = radius * radius;
-
-    PQueueElem<Point3f> elem;
-    std::vector<PQueueElem<Point3f> > candidatePoint;
-
-    radiusNNSearchRecurse(p->rootNode, query, squareRadius, candidatePoint);
-
-    for(size_t i = 0; i < candidatePoint.size(); i++)
-    {
-        pointSet.push_back(candidatePoint[i].t);
-        squareDistSet.push_back(candidatePoint[i].dist);
-    }
-    return int(pointSet.size());
-}
-
-void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, const int K,
-                      float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint)
-{
-    std::vector<PQueueElem<int> > priorityQue;
-    Ptr<OctreeNode> child;
-    float dist = 0;
-    Point3f center; // the OctreeNode Center
-
-    // Add the non-empty OctreeNode to priorityQue.
-    for(size_t i = 0; i < OCTREE_CHILD_NUM; i++)
-    {
-        if(!node->children[i].empty())
+        for (size_t i = 0; i < candidatePoints.size(); i++)
         {
-            float halfSize = float(node->children[i]->size * 0.5);
+            auto cp = candidatePoints[i];
+            outSqDists.push_back(std::get<0>(cp));
+            outPoints.push_back(std::get<1>(cp));
+            outColors.push_back(std::get<2>(cp));
+        }
+    }
 
-            center = node->children[i]->origin + Point3f(halfSize, halfSize, halfSize);
+    if (points.needed())
+    {
+        Mat(outPoints).copyTo(points);
+    }
+    if (colors.needed())
+    {
+        CV_Assert(this->p->hasColor);
+        Mat(outColors).copyTo(colors);
+    }
+    if (squareDists.needed())
+    {
+        Mat(outSqDists).copyTo(squareDists);
+    }
 
-            dist = SquaredDistance(query, center);
+    return int(outPoints.size());
+}
+
+
+void OctreeNode::KNNSearchRecurse(const Point3f& query, const int K,
+                                  float& smallestDist, std::vector<std::tuple<float, Point3f, Point3f>>& candidatePoint) const
+{
+    std::vector<std::pair<float, int>> priorityQue;
+
+    // Add the non-empty OctreeNode to priorityQue
+    for(size_t i = 0; i < 8; i++)
+    {
+        Ptr<OctreeNode> child = this->children[i];
+        if(child)
+        {
+            float halfSize = float(child->size * 0.5);
+
+            Point3f center = child->origin + Point3f(halfSize, halfSize, halfSize);
+
+            float dist = SquaredDistance(query, center);
             priorityQue.emplace_back(dist, int(i));
         }
     }
 
-    std::sort(priorityQue.rbegin(), priorityQue.rend());
-    child = node->children[priorityQue.back().t];
+    std::sort(priorityQue.rbegin(), priorityQue.rend(),
+        [](const std::pair<float, int>& a, const std::pair<float, int>& b) -> bool
+        {
+            return std::get<0>(a) < std::get<0>(b);
+        });
+    Ptr<OctreeNode> child = this->children[std::get<1>(priorityQue.back())];
 
-    while (!priorityQue.empty() && overlap(*child, query, smallestDist))
+    while (!priorityQue.empty() && child->overlap(query, smallestDist))
     {
         if (!child->isLeaf)
         {
-            KNNSearchRecurse(child, query, K, smallestDist, candidatePoint);
-        } else {
-            for (size_t i = 0; i < child->pointList.size(); i++) {
-                dist = SquaredDistance(child->pointList[i], query);
+            child->KNNSearchRecurse(query, K, smallestDist, candidatePoint);
+        }
+        else
+        {
+            for (size_t i = 0; i < child->pointList.size(); i++)
+            {
+                float dist = SquaredDistance(child->pointList[i], query);
 
-                if ( dist + dist * std::numeric_limits<float>::epsilon() <= smallestDist ) {
-                    candidatePoint.emplace_back(dist, child->pointList[i]);
+                if ( dist + dist * std::numeric_limits<float>::epsilon() <= smallestDist )
+                {
+                    Point3f pt = child->pointList[i];
+                    Point3f col { };
+                    if (child->colorList.empty())
+                    {
+                        col = child->colorList[i];
+                    }
+                    candidatePoint.emplace_back(dist, pt, col);
                 }
             }
 
-            std::sort(candidatePoint.begin(), candidatePoint.end());
+            std::sort(candidatePoint.begin(), candidatePoint.end(),
+                [](const std::tuple<float, Point3f, Point3f>& a, const std::tuple<float, Point3f, Point3f>& b) -> bool
+                {
+                    return std::get<0>(a) < std::get<0>(b);
+                }
+            );
 
-            if (int(candidatePoint.size()) > K) {
+            if (int(candidatePoint.size()) > K)
+            {
                 candidatePoint.resize(K);
             }
 
-            if (int(candidatePoint.size()) == K) {
-                smallestDist = candidatePoint.back().dist;
+            if (int(candidatePoint.size()) == K)
+            {
+                smallestDist = std::get<0>(candidatePoint.back());
             }
         }
 
         priorityQue.pop_back();
 
-        // To next child.
+        // To next child
         if(!priorityQue.empty())
-            child = node->children[priorityQue.back().t];
+        {
+            child = this->children[std::get<1>(priorityQue.back())];
+        }
     }
 }
 
-void Octree::KNNSearch(const Point3f& query, const int K, std::vector<Point3f>& pointSet, std::vector<float>& squareDistSet) const
+
+void Octree::KNNSearch(const Point3f &query, const int K, OutputArray pointSet, OutputArray squareDistSet) const
 {
-    if(p->rootNode.empty())
-        return;
-
-    PQueueElem<Ptr<Point3f> > elem;
-    std::vector<PQueueElem<Point3f> > candidatePoint;
-    float smallestDist = std::numeric_limits<float>::max();
-
-    KNNSearchRecurse(p->rootNode, query, K, smallestDist, candidatePoint);
-
-    for(size_t i = 0; i < candidatePoint.size(); i++)
-    {
-        pointSet.push_back(candidatePoint[i].t);
-        squareDistSet.push_back(candidatePoint[i].dist);
-    }
+    this->KNNSearch(query, K, pointSet, noArray(), squareDistSet);
 }
 
+void Octree::KNNSearch(const Point3f &query, const int K, OutputArray points, OutputArray colors, OutputArray squareDists) const
+{
+    std::vector<Point3f> outPoints, outColors;
+    std::vector<float> outSqDists;
+
+    if (!p->rootNode.empty())
+    {
+        std::vector<std::tuple<float, Point3f, Point3f>> candidatePoints;
+        float smallestDist = std::numeric_limits<float>::max();
+
+        p->rootNode->KNNSearchRecurse(query, K, smallestDist, candidatePoints);
+
+        for(size_t i = 0; i < candidatePoints.size(); i++)
+        {
+            auto cp = candidatePoints[i];
+            outSqDists.push_back(std::get<0>(cp));
+            outPoints.push_back(std::get<1>(cp));
+            outColors.push_back(std::get<2>(cp));
+        }
+    }
+
+    if (points.needed())
+    {
+        Mat(outPoints).copyTo(points);
+    }
+    if (colors.needed())
+    {
+        CV_Assert(this->p->hasColor);
+        Mat(outColors).copyTo(colors);
+    }
+    if (squareDists.needed())
+    {
+        Mat(outSqDists).copyTo(squareDists);
+    }
+}
 }

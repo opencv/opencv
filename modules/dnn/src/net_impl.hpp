@@ -227,33 +227,41 @@ struct Net::Impl : public detail::NetImplBase
 
     void getLayersShapes(
             const ShapesVec& netInputShapes,
+            const TypesVec& netInputTypes,
             std::vector<int>& layersIds,
             std::vector<ShapesVec>& inLayersShapes,
             std::vector<ShapesVec>& outLayersShapes) /*const*/;
 
     void getLayersShapes(const ShapesVec& netInputShapes,
+            const TypesVec& netInputTypes,
             LayersShapesMap& inOutShapes);
 
     void getLayerShapes(const ShapesVec& netInputShapes,
+            const TypesVec& netInputTypes,
             const int layerId,
             LayerShapes& shapes);
 
     void updateLayersShapes();
 
-    int64 getFLOPS(const std::vector<MatShape>& netInputShapes) /*const*/;
+    int64 getFLOPS(const std::vector<MatShape>& netInputShapes,
+                   const std::vector<MatType>& netInputTypes) /*const*/;
     int64 getFLOPS(
             const int layerId,
-            const std::vector<MatShape>& netInputShapes) /*const*/;
+            const std::vector<MatShape>& netInputShapes,
+            const std::vector<MatType>& netInputTypes) /*const*/;
 
     void getMemoryConsumption(
             const int layerId,
             const std::vector<MatShape>& netInputShapes,
+            const std::vector<MatType>& netInputTypes,
             size_t& weights, size_t& blobs) /*const*/;
     void getMemoryConsumption(
             const std::vector<MatShape>& netInputShapes,
+            const std::vector<MatType>& netInputTypes,
             size_t& weights, size_t& blobs) /*const*/;
     void getMemoryConsumption(
             const std::vector<MatShape>& netInputShapes,
+            const std::vector<MatType>& netInputTypes,
             std::vector<int>& layerIds, std::vector<size_t>& weights,
             std::vector<size_t>& blobs) /*const*/;
     int64 getPerfProfile(std::vector<double>& timings) const;

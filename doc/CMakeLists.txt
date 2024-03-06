@@ -16,6 +16,10 @@ endif()
 
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
+  if (DOXYGEN_VERSION VERSION_LESS 1.9.8)
+    message(WARNING "Found doxygen ${DOXYGEN_VERSION}, version 1.9.8 is used for testing, there is
+                     a chance your documentation will look different or have some limitations.")
+  endif()
   add_custom_target(doxygen)
 
   # not documented modules list
@@ -195,6 +199,8 @@ if(DOXYGEN_FOUND)
   # list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty")
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tutorial-utils.js")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_HTML_FILES "${CMAKE_DOXYGEN_HTML_FILES}")
+
+  set(OPENCV_MATHJAX_RELPATH "https://cdn.jsdelivr.net/npm/mathjax@3.0.1" CACHE STRING "URI to a MathJax installation")
 
   set(OPENCV_DOCS_DOT_PATH "" CACHE PATH "Doxygen/DOT_PATH value")
   set(CMAKECONFIG_DOT_PATH "${OPENCV_DOCS_DOT_PATH}")

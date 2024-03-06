@@ -115,6 +115,19 @@ public:
         return false;
     }
 
+    virtual  void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (int i = 1; i < inputs.size(); i++)
+            CV_CheckTypeEQ(inputs[i], inputs[0], "All input types should be equal");
+        outputs.assign(1, inputs[0]);
+    }
+
+
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_TIMVX
@@ -273,7 +286,7 @@ public:
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   inputs_arr.depth() != CV_8S,
+                   (inputs_arr.depth() == CV_32F || inputs_arr.depth() == CV_16F),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         std::vector<Mat> inputs, outputs;
@@ -286,7 +299,7 @@ public:
         if (padding)
             outMat.setTo(paddingValue);
 
-        if( cAxis == 1 && outMat.dims == 4 && !padding)
+        if(cAxis == 1 && outMat.dims == 4 && !padding && (inputs[0].depth() == CV_32F || inputs[0].depth() == CV_8S))
         {
             int nstripes = getNumThreads();
             if (outMat.type() == CV_8S)
@@ -325,7 +338,7 @@ public:
 
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto concat_axis = normalize_axis(axis, input_wrapper->getRank());
-        return make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(context->stream), concat_axis, padding);
+        return make_cuda_node_with_type<cuda4dnn::ConcatOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), concat_axis, padding);
     }
 #endif
 

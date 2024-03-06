@@ -177,7 +177,7 @@ void cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, in
         case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
             break;
         default:
-            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+            CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
             return;
     }
 
@@ -379,7 +379,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             cvtColormRGBA2RGBA(_src, _dst);
             break;
         default:
-            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+            CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
     }
 }
 } //namespace cv

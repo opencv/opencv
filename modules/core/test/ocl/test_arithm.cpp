@@ -1461,7 +1461,7 @@ typedef ArithmTestBase Normalize;
 
 OCL_TEST_P(Normalize, Mat)
 {
-    static int modes[] = { CV_MINMAX, CV_L2, CV_L1, CV_C };
+    static int modes[] = { NORM_MINMAX, NORM_L2, NORM_L1, NORM_INF };
 
     for (int j = 0; j < test_loop_times; j++)
     {

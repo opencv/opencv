@@ -47,13 +47,25 @@ public:
         for(auto &inp: inputs){
             netMatShapes.push_back(shape(std::get<0>(inp)));
         }
-        size_t weightsMemory = 0, blobsMemory = 0;
-        net.getMemoryConsumption(netMatShapes, weightsMemory, blobsMemory);
-        int64 flops = net.getFLOPS(netMatShapes);
-        CV_Assert(flops > 0);
+
+        bool fp16 = false;
+#ifdef HAVE_OPENCL
+        fp16 = ocl::Device::getDefault().isExtensionSupported("cl_khr_fp16");
+#endif
+        std::vector<cv::dnn::MatType> netMatTypes;
+        for (auto& inp : inputs) {
+            cv::dnn::MatType t = std::get<0>(inp).depth();
+            if (t == CV_32F && fp16 && target == DNN_TARGET_OPENCL_FP16)
+                t = CV_16F;
+            netMatTypes.push_back(t);
+        }
 
         net.forward(outputLayer); // warmup
 
+        size_t weightsMemory = 0, blobsMemory = 0;
+        net.getMemoryConsumption(netMatShapes, netMatTypes, weightsMemory, blobsMemory);
+        int64 flops = net.getFLOPS(netMatShapes, netMatTypes);
+        CV_Assert(flops > 0);
         std::cout << "Memory consumption:" << std::endl;
         std::cout << "    Weights(parameters): " << divUp(weightsMemory, 1u<<20) << " Mb" << std::endl;
         std::cout << "    Blobs: " << divUp(blobsMemory, 1u<<20) << " Mb" << std::endl;

@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include "opencv2/core/core_c.h"
 
 namespace opencv_test { namespace {
 
@@ -2114,8 +2115,8 @@ void Core_GraphScanTest::run( int )
 
                     cvReleaseGraphScanner( &scanner );
 
-                    CV_TS_SEQ_CHECK_CONDITION( cvtest::norm(Mat(vtx_mask),CV_L1) == graph->active_count &&
-                                              cvtest::norm(Mat(edge_mask),CV_L1) == graph->edges->active_count,
+                    CV_TS_SEQ_CHECK_CONDITION( cvtest::norm(Mat(vtx_mask),NORM_L1) == graph->active_count &&
+                                              cvtest::norm(Mat(edge_mask),NORM_L1) == graph->edges->active_count,
                                               "Some vertices or edges have not been visited" );
                     update_progressbar();
                 }

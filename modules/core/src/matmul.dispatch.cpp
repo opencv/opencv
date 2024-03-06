@@ -921,7 +921,7 @@ void mulTransposed(InputArray _src, OutputArray _dst, bool ata,
     {
         MulTransposedFunc func = getMulTransposedFunc(stype, dtype, ata);
         if( !func )
-            CV_Error( CV_StsUnsupportedFormat, "" );
+            CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
         func( src, dst, delta, scale );
         completeSymm( dst, false );
@@ -1221,7 +1221,7 @@ cvCalcPCA( const CvArr* data_arr, CvArr* avg_arr, CvArr* eigenvals, CvArr* eigen
     pca.eigenvalues = evals;
     pca.eigenvectors = evects;
 
-    pca(data, (flags & CV_PCA_USE_AVG) ? mean : cv::Mat(),
+    pca(data, (flags & cv::PCA::USE_AVG) ? mean : cv::Mat(),
         flags, !evals.empty() ? evals.rows + evals.cols - 1 : 0);
 
     if( pca.mean.size() == mean.size() )

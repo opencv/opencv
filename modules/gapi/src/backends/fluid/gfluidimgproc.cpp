@@ -10,7 +10,6 @@
 
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/core/traits.hpp>
-#include <opencv2/imgproc/types_c.h>
 
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/imgproc.hpp>

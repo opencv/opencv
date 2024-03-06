@@ -36,12 +36,12 @@
 
 #define CV_WINRT_NO_GUI_ERROR( funcname )       \
 {                                               \
-    cvError( CV_StsNotImplemented, funcname,    \
+    cvError( cv::Error::StsNotImplemented, funcname,    \
     "The function is not implemented. ",        \
     __FILE__, __LINE__ );                       \
 }
 
-#define CV_ERROR( Code, Msg )                                       \
+#define CV_Error( Code, Msg )                                       \
 {                                                                   \
     cvError( (Code), cvFuncName, Msg, __FILE__, __LINE__ );         \
 };
@@ -65,7 +65,7 @@ void showImageImpl(const char* name, const CvArr* arr)
     CvMat stub, *image;
 
     if (!name)
-        CV_ERROR(CV_StsNullPtr, "NULL name");
+        CV_Error(cv::Error::StsNullPtr, "NULL name");
 
     CvWindow* window = HighguiBridge::getInstance().namedWindow(name);
 
@@ -89,7 +89,7 @@ int namedWindowImpl(const char* name, int flags)
     CV_FUNCNAME("namedWindowImpl");
 
     if (!name)
-        CV_ERROR(CV_StsNullPtr, "NULL name");
+        CV_Error(cv::Error::StsNullPtr, "NULL name");
 
     HighguiBridge::getInstance().namedWindow(name);
 
@@ -101,7 +101,7 @@ void destroyWindowImpl(const char* name)
     CV_FUNCNAME("destroyWindowImpl");
 
     if (!name)
-        CV_ERROR(CV_StsNullPtr, "NULL name string");
+        CV_Error(cv::Error::StsNullPtr, "NULL name string");
 
     HighguiBridge::getInstance().destroyWindow(name);
 }
@@ -119,16 +119,16 @@ int createTrackbar2Impl(const char* trackbar_name, const char* window_name,
     int pos = 0;
 
     if (!window_name || !trackbar_name)
-        CV_ERROR(CV_StsNullPtr, "NULL window or trackbar name");
+        CV_Error(cv::Error::StsNullPtr, "NULL window or trackbar name");
 
     if (count < 0)
-        CV_ERROR(CV_StsOutOfRange, "Bad trackbar max value");
+        CV_Error(cv::Error::StsOutOfRange, "Bad trackbar max value");
 
     CvWindow* window = HighguiBridge::getInstance().namedWindow(window_name);
 
     if (!window)
     {
-        CV_ERROR(CV_StsNullPtr, "NULL window");
+        CV_Error(cv::Error::StsNullPtr, "NULL window");
     }
 
     window->createSlider(trackbar_name, val, count, on_notify, userdata);
@@ -143,7 +143,7 @@ void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int 
     CvTrackbar* trackbar = 0;
 
     if (trackbar_name == 0 || window_name == 0)
-        CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+        CV_Error(cv::Error::StsNullPtr, "NULL trackbar or window name");
 
     CvWindow* window = HighguiBridge::getInstance().findWindowByName(window_name);
     if (window)
@@ -160,7 +160,7 @@ void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int 
     if (maxval >= 0)
     {
         if (trackbar_name == 0 || window_name == 0)
-            CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+            CV_Error(cv::Error::StsNullPtr, "NULL trackbar or window name");
 
         CvTrackbar* trackbar = HighguiBridge::getInstance().findTrackbarByName(trackbar_name, window_name);
 
@@ -176,7 +176,7 @@ void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int 
     if (minval >= 0)
     {
         if (trackbar_name == 0 || window_name == 0)
-            CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+            CV_Error(cv::Error::StsNullPtr, "NULL trackbar or window name");
 
         CvTrackbar* trackbar = HighguiBridge::getInstance().findTrackbarByName(trackbar_name, window_name);
 
@@ -192,7 +192,7 @@ int getTrackbarPosImpl(const char* trackbar_name, const char* window_name)
     CV_FUNCNAME("getTrackbarPosImpl");
 
     if (trackbar_name == 0 || window_name == 0)
-        CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+        CV_Error(cv::Error::StsNullPtr, "NULL trackbar or window name");
 
     CvTrackbar* trackbar = HighguiBridge::getInstance().findTrackbarByName(trackbar_name, window_name);
 
@@ -229,7 +229,7 @@ void setMouseCallbackImpl(const char* window_name, CvMouseCallback on_mouse, voi
     CV_FUNCNAME("setMouseCallbackImpl");
 
     if (!window_name)
-        CV_ERROR(CV_StsNullPtr, "NULL window name");
+        CV_Error(cv::Error::StsNullPtr, "NULL window name");
 
     CvWindow* window = HighguiBridge::getInstance().findWindowByName(window_name);
     if (!window)
@@ -256,5 +256,5 @@ void cvSetModeWindow_WinRT(const char* name, double prop_value) {
 
 double cvGetModeWindow_WinRT(const char* name) {
     CV_WINRT_NO_GUI_ERROR("cvGetModeWindow");
-    return CV_StsNotImplemented;
+    return cv::Error::StsNotImplemented;
 }

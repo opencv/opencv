@@ -10,12 +10,13 @@ set(ANDROID_TESTS_SRC_DIRS
 
 set(ANDROID_TESTS_RES_DIR "'${OpenCV_SOURCE_DIR}/modules/java/test/common_test/res'" CACHE INTERNAL "")
 
-list(APPEND TEST_PROJECT_FILES "build.gradle" "CMakeLists.txt" "gradle.properties" "settings.gradle")
+list(APPEND TEST_PROJECT_FILES "CMakeLists.txt" "gradle.properties" "settings.gradle")
 foreach(TEST_PROJECT_FILE ${TEST_PROJECT_FILES})
     file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/${TEST_PROJECT_FILE}" DESTINATION "${OPENCV_ANDROID_TEST_DIR}")
 endforeach()
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/tests_module/AndroidManifest.xml" DESTINATION "${OPENCV_ANDROID_TEST_DIR}/tests_module")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tests_module/build.gradle.in" "${OPENCV_ANDROID_TEST_DIR}/tests_module/build.gradle" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${OPENCV_ANDROID_TEST_DIR}/build.gradle" @ONLY)
 
 file(COPY "${OpenCV_SOURCE_DIR}/platforms/android/gradle-wrapper/gradlew" DESTINATION "${OPENCV_ANDROID_TEST_DIR}")
 file(COPY "${OpenCV_SOURCE_DIR}/platforms/android/gradle-wrapper/gradlew.bat" DESTINATION "${OPENCV_ANDROID_TEST_DIR}")

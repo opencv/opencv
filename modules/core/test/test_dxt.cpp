@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include "opencv2/core/core_c.h"
 
 namespace opencv_test { namespace {
 
@@ -97,7 +98,7 @@ static void DFT_1D( const Mat& _src, Mat& _dst, int flags, const Mat& _wave=Mat(
         }
     }
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 }
 
 
@@ -878,7 +879,7 @@ protected:
             {
                 cout << "actual:\n" << dst << endl << endl;
                 cout << "reference:\n" << dstz << endl << endl;
-                CV_Error(CV_StsError, "");
+                CV_Error(cv::Error::StsError, "");
             }
         }
     }

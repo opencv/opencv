@@ -70,7 +70,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     Size mean_sz;
 
     CV_Assert( data.channels() == 1 );
-    if( flags & CV_PCA_DATA_AS_COL )
+    if( flags & PCA::DATA_AS_COL )
     {
         len = data.rows;
         in_count = data.cols;
@@ -111,8 +111,8 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
 
     if( !(covar_flags & CV_COVAR_NORMAL) )
     {
-        // CV_PCA_DATA_AS_ROW: cols(A)>rows(A). x=A'*y -> x'=y'*A
-        // CV_PCA_DATA_AS_COL: rows(A)>cols(A). x=A''*y -> x'=y'*A'
+        // PCA::DATA_AS_ROW: cols(A)>rows(A). x=A'*y -> x'=y'*A
+        // PCA::DATA_AS_COL: rows(A)>cols(A). x=A''*y -> x'=y'*A'
         Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
         if( data.type() != ctype || tmp_mean.data == mean.data )
         {
@@ -127,7 +127,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
 
         Mat evects1(count, len, ctype);
         gemm( eigenvectors, tmp_data, 1, Mat(), 0, evects1,
-            (flags & CV_PCA_DATA_AS_COL) ? CV_GEMM_B_T : 0);
+            (flags & PCA::DATA_AS_COL) ? CV_GEMM_B_T : 0);
         eigenvectors = evects1;
 
         // normalize eigenvectors
@@ -206,7 +206,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     Size mean_sz;
 
     CV_Assert( data.channels() == 1 );
-    if( flags & CV_PCA_DATA_AS_COL )
+    if( flags & PCA::DATA_AS_COL )
     {
         len = data.rows;
         in_count = data.cols;
@@ -247,8 +247,8 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
 
     if( !(covar_flags & CV_COVAR_NORMAL) )
     {
-        // CV_PCA_DATA_AS_ROW: cols(A)>rows(A). x=A'*y -> x'=y'*A
-        // CV_PCA_DATA_AS_COL: rows(A)>cols(A). x=A''*y -> x'=y'*A'
+        // PCA::DATA_AS_ROW: cols(A)>rows(A). x=A'*y -> x'=y'*A
+        // PCA::DATA_AS_COL: rows(A)>cols(A). x=A''*y -> x'=y'*A'
         Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
         if( data.type() != ctype || tmp_mean.data == mean.data )
         {
@@ -263,7 +263,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
 
         Mat evects1(count, len, ctype);
         gemm( eigenvectors, tmp_data, 1, Mat(), 0, evects1,
-            (flags & CV_PCA_DATA_AS_COL) ? CV_GEMM_B_T : 0);
+            (flags & PCA::DATA_AS_COL) ? CV_GEMM_B_T : 0);
         eigenvectors = evects1;
 
         // normalize all eigenvectors

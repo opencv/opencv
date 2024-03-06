@@ -186,11 +186,6 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
 
         clear();
 
-        if (hasDynamicShapes)
-        {
-            updateLayersShapes();
-        }
-
         this->blobsToKeep = blobsToKeep_;
 
         allocateLayers(blobsToKeep_);
@@ -475,7 +470,7 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
         allocateLayer(*i, layersShapes);
 
     // bind inputs
-    if (ld.id == 0)  // DataLayer
+    if (ld.id == 0 && netInputLayer->supportBackend(preferableBackend))  // DataLayer
     {
         ninputs = netInputLayer->inputsData.size();
         ld.inputBlobsWrappers.resize(ninputs);
@@ -500,7 +495,8 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
 
     CV_Assert(layerShapesIt != layersShapes.end());
 
-    if (preferableBackend == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_OPENCL_FP16 && ld.dtype == CV_32F)
+    if (preferableBackend == DNN_BACKEND_OPENCV && ld.dtype == CV_32F
+        && preferableTarget == DNN_TARGET_OPENCL_FP16)
         ld.dtype = CV_16F;
 
     std::vector<LayerPin> pinsForInternalBlobs;
@@ -522,7 +518,6 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
             inps[i] = *ld.inputBlobs[i];
         }
         layerPtr->finalize(inps, ld.outputBlobs);
-        layerPtr->preferableTarget = preferableTarget;
 #if 0
         std::cout << "\toutputs:";
         size_t noutputs = ld.outputBlobs.size();
@@ -551,20 +546,39 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
 
     CV_Assert(!layers[0].outputBlobs.empty());
     ShapesVec inputShapes;
+    TypesVec inputTypes;
     for (int i = 0; i < layers[0].outputBlobs.size(); i++)
     {
         Mat& inp = layers[0].outputBlobs[i];
         CV_Assert(inp.total());
-        if (preferableBackend == DNN_BACKEND_OPENCV &&
-            preferableTarget == DNN_TARGET_OPENCL_FP16 &&
-            layers[0].dtype == CV_32F)
+        int type = inp.type();
+        if (type != CV_32S && type != CV_64S)
         {
-            layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16F);
+            type = CV_32F;
+            if (preferableBackend == DNN_BACKEND_OPENCV &&
+                preferableTarget == DNN_TARGET_OPENCL_FP16)
+            {
+                type = CV_16F;
+                if (layers[0].dtype == CV_32F)
+                    layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16F);
+            }
+            if (netWasQuantized && inp.type() == CV_8S) {
+                type = CV_8S;
+            }
         }
         inputShapes.push_back(shape(inp));
+        inputTypes.push_back(type);
     }
+
+    for (auto& layer : layers)
+    {
+        auto& ld = layer.second;
+        Ptr<Layer> layerPtr = getLayerInstance(ld);
+        layerPtr->preferableTarget = preferableTarget;
+    }
+
     LayersShapesMap layersShapes;
-    getLayersShapes(inputShapes, layersShapes);
+    getLayersShapes(inputShapes, inputTypes, layersShapes);
 
     blobManager.reset();
     backendWrappers.clear();
@@ -969,7 +983,12 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
             std::vector<Mat>& outputvec = *(std::vector<Mat>*)outputBlobs.getObj();
             outputvec.resize(ld.outputBlobs.size());
             for (int i = 0; i < outputvec.size(); i++)
-                ld.outputBlobs[i].convertTo(outputvec[i], CV_32F);
+            {
+                if (ld.outputBlobs[i].depth() == CV_32S || ld.outputBlobs[i].depth() == CV_64S)
+                    outputvec[i] = ld.outputBlobs[i];
+                else
+                    ld.outputBlobs[i].convertTo(outputvec[i], CV_32F);
+            }
         }
         else
         {
@@ -1079,13 +1098,16 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
         if (!layerData.outputBlobs.empty())
         {
             ShapesVec shapes;
+            TypesVec types;
             for (int i = 0; i < layerData.outputBlobs.size(); i++)
             {
                 Mat& inp = layerData.outputBlobs[i];
                 CV_Assert(!inp.empty());
                 shapes.push_back(shape(inp));
+                types.push_back(inp.type());
             }
             layerShapes.in = shapes;
+            layerShapes.inTypes = types;
         }
         else
         {
@@ -1102,11 +1124,13 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
             if (none)
             {
                 layerShapes.out.clear();
+                layerShapes.outTypes.clear();
                 return;
             }
             else
             {
                 layerShapes.in = inputShapes;
+                layerShapes.inTypes.assign(inputShapes.size(), layerData.dtype);
             }
         }
     }
@@ -1126,7 +1150,9 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
             const int out_port = inputLayerIds[i].oid;
             CV_CheckLT(out_port, (int)it->second.out.size(), "");
             const MatShape& shape = it->second.out[out_port];
+            const MatType& type = it->second.outTypes[out_port];
             layerShapes.in.push_back(shape);
+            layerShapes.inTypes.push_back(type);
         }
     }
     const ShapesVec& is = layerShapes.in;
@@ -1138,7 +1164,11 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
     bool layerSupportInPlace = false;
     try
     {
+        l->updateMemoryShapes(layerShapes.in);
         layerSupportInPlace = l->getMemoryShapes(is, requiredOutputs, os, ints);
+        l->getTypes(layerShapes.inTypes, os.size(), ints.size(), layerShapes.outTypes, layerShapes.internalTypes);
+        CV_CheckEQ(layerShapes.out.size(), layerShapes.outTypes.size(), "Number of shapes and types should be equal");
+        CV_CheckEQ(layerShapes.internal.size(), layerShapes.internalTypes.size(), "Number of shapes and types should be equal");
     }
     catch (const cv::Exception& e)
     {
@@ -1197,6 +1227,7 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
 
 void Net::Impl::getLayersShapes(
         const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
         std::vector<int>& layersIds,
         std::vector<ShapesVec>& inLayersShapes,
         std::vector<ShapesVec>& outLayersShapes) /*const*/
@@ -1206,7 +1237,7 @@ void Net::Impl::getLayersShapes(
     outLayersShapes.clear();
 
     Impl::LayersShapesMap inOutShapes;
-    getLayersShapes(netInputShapes, inOutShapes);
+    getLayersShapes(netInputShapes, netInputTypes, inOutShapes);
 
     for (Impl::LayersShapesMap::const_iterator it = inOutShapes.begin();
             it != inOutShapes.end(); it++)
@@ -1219,11 +1250,13 @@ void Net::Impl::getLayersShapes(
 
 
 void Net::Impl::getLayersShapes(const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
         LayersShapesMap& inOutShapes)
 {
     inOutShapes.clear();
 
     inOutShapes[0].in = netInputShapes;  // insert shape for first input layer
+    inOutShapes[0].inTypes = netInputTypes;
     for (MapIdToLayerData::const_iterator it = layers.begin();
             it != layers.end(); it++)
     {
@@ -1232,11 +1265,13 @@ void Net::Impl::getLayersShapes(const ShapesVec& netInputShapes,
 }
 
 void Net::Impl::getLayerShapes(const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
         const int layerId,
         LayerShapes& shapes)
 {
     LayersShapesMap inOutShapes;
     inOutShapes[0].in = netInputShapes;  // insert shape for first input layer
+    inOutShapes[0].inTypes = netInputTypes;
     getLayerShapesRecursively(layerId, inOutShapes);
     shapes = inOutShapes[layerId];
 }
@@ -1250,6 +1285,7 @@ void Net::Impl::updateLayersShapes()
     CV_Assert(inputLayerData.layerInstance.get() == &inputLayer);
     CV_Assert(!inputLayerData.outputBlobs.empty());
     ShapesVec inputShapes;
+    TypesVec inputTypes;
     for (int i = 0; i < inputLayerData.outputBlobs.size(); i++)
     {
         Mat& inp = inputLayerData.outputBlobs[i];
@@ -1261,10 +1297,12 @@ void Net::Impl::updateLayersShapes()
             inp.create(inp.dims, inp.size, CV_16F);
         }
         inputShapes.push_back(shape(inp));
+        inputTypes.push_back(inp.type());
     }
     CV_LOG_DEBUG(NULL, toString(inputShapes, "Network input shapes"));
     LayersShapesMap layersShapes;
     layersShapes[0].in = inputShapes;
+    layersShapes[0].inTypes = inputTypes;
     for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); it++)
     {
         int layerId = it->first;
@@ -1285,7 +1323,9 @@ void Net::Impl::updateLayersShapes()
                     getLayerShapesRecursively(inputLayerId, layersShapes);
                 }
                 const MatShape& shape = layersShapes[inputLayerId].out[inputPin.oid];
+                const MatType& type = layersShapes[inputLayerId].outTypes[inputPin.oid];
                 layerShapes.in.push_back(shape);
+                layerShapes.inTypes.push_back(type);
             }
             getLayerInstance(layerData)->updateMemoryShapes(layerShapes.in);
         }
@@ -1910,12 +1950,13 @@ std::vector<String> Net::Impl::getUnconnectedOutLayersNames() /*const*/
 }
 
 
-int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes) /*const*/
+int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes,
+                          const std::vector<MatType>& netInputTypes) /*const*/
 {
     int64 flops = 0;
     std::vector<int> ids;
     std::vector<std::vector<MatShape>> inShapes, outShapes;
-    getLayersShapes(netInputShapes, ids, inShapes, outShapes);
+    getLayersShapes(netInputShapes, netInputTypes, ids, inShapes, outShapes);
     CV_Assert(inShapes.size() == outShapes.size());
     CV_Assert(inShapes.size() == ids.size());
 
@@ -1930,13 +1971,14 @@ int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes) /*const*/
 
 int64 Net::Impl::getFLOPS(
         const int layerId,
-        const std::vector<MatShape>& netInputShapes) /*const*/
+        const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes) /*const*/
 {
     Impl::MapIdToLayerData::const_iterator layer = layers.find(layerId);
     CV_Assert(layer != layers.end());
 
     LayerShapes shapes;
-    getLayerShapes(netInputShapes, layerId, shapes);
+    getLayerShapes(netInputShapes, netInputTypes, layerId, shapes);
 
     return getLayerInstance(const_cast<LayerData&>(layer->second))->getFLOPS(shapes.in, shapes.out);
 }
@@ -1945,6 +1987,7 @@ int64 Net::Impl::getFLOPS(
 void Net::Impl::getMemoryConsumption(
         const int layerId,
         const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         size_t& weights, size_t& blobs) /*const*/
 {
     Impl::MapIdToLayerData::const_iterator layer = layers.find(layerId);
@@ -1959,25 +2002,22 @@ void Net::Impl::getMemoryConsumption(
     }
 
     LayerShapes shapes;
-    getLayerShapes(netInputShapes, layerId, shapes);
+    getLayerShapes(netInputShapes, netInputTypes, layerId, shapes);
     const ShapesVec& outLayerShapes = shapes.out;
 
-    // FIXIT netWasQuantized check is not enough - per layer check should be done
-    size_t elemSize = netWasQuantized ? sizeof(char) : sizeof(float);
     for (int i = 0; i < outLayerShapes.size(); i++)
-    {
-        blobs += total(outLayerShapes[i]) * elemSize;
-    }
+        blobs += total(outLayerShapes[i]) * CV_ELEM_SIZE(shapes.outTypes[i]);
 }
 
 
 void Net::Impl::getMemoryConsumption(
         const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         size_t& weights, size_t& blobs) /*const*/
 {
     std::vector<int> layerIds;
     std::vector<size_t> w, b;
-    getMemoryConsumption(netInputShapes, layerIds, w, b);
+    getMemoryConsumption(netInputShapes, netInputTypes, layerIds, w, b);
 
     weights = blobs = 0;
     for (int i = 0; i < layerIds.size(); i++)
@@ -1997,6 +2037,7 @@ int64 Net::Impl::getPerfProfile(std::vector<double>& timings) const
 
 void Net::Impl::getMemoryConsumption(
         const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         std::vector<int>& layerIds, std::vector<size_t>& weights,
         std::vector<size_t>& blobs) /*const*/
 {
@@ -2006,7 +2047,7 @@ void Net::Impl::getMemoryConsumption(
 
     std::vector<std::vector<MatShape>> inLayerShapes, outLayerShapes;
 
-    getLayersShapes(netInputShapes, layerIds, inLayerShapes, outLayerShapes);
+    getLayersShapes(netInputShapes, netInputTypes, layerIds, inLayerShapes, outLayerShapes);
     // FIXIT netWasQuantized check is not enough - per layer check should be done
     size_t elemSize = netWasQuantized ? sizeof(char) : sizeof(float);
     for (int i = 0; i < layerIds.size(); i++)

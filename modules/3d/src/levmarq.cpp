@@ -542,7 +542,7 @@ struct LevMarqDenseLinearBackend : public detail::LevMarqBackend
             }
             else
             {
-                CV_Error(CV_StsBadArg, "Geodesic acceleration is disabled");
+                CV_Error(cv::Error::StsBadArg, "Geodesic acceleration is disabled");
             }
         }
         else
@@ -698,7 +698,7 @@ struct LevMarqDenseLinearBackend : public detail::LevMarqBackend
     {
         if (cb_alt)
         {
-            CV_Error(CV_StsNotImplemented, "Geodesic acceleration is not implemented for normal callbacks, please use \"long\" callbacks");
+            CV_Error(cv::Error::StsNotImplemented, "Geodesic acceleration is not implemented for normal callbacks, please use \"long\" callbacks");
         }
         else
         {
@@ -744,9 +744,9 @@ LevMarq::LevMarq(int nvars, LongCallback callback, const Settings& settings, Inp
                  MatrixType matrixType, VariableType paramType, int nerrs, int solveMethod)
 {
     if (matrixType != MatrixType::AUTO && matrixType != MatrixType::DENSE)
-        CV_Error(CV_StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
+        CV_Error(cv::Error::StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
     if (paramType != VariableType::LINEAR)
-        CV_Error(CV_StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
+        CV_Error(cv::Error::StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
 
     auto backend = makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, nerrs, solveMethod);
     pImpl = makePtr<LevMarq::Impl>(backend, settings);
@@ -756,9 +756,9 @@ LevMarq::LevMarq(int nvars, NormalCallback callback, const Settings& settings, I
                  MatrixType matrixType, VariableType paramType, bool LtoR, int solveMethod)
 {
     if (matrixType != MatrixType::AUTO && matrixType != MatrixType::DENSE)
-        CV_Error(CV_StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
+        CV_Error(cv::Error::StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
     if (paramType != VariableType::LINEAR)
-        CV_Error(CV_StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
+        CV_Error(cv::Error::StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
 
     auto backend = makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, LtoR, solveMethod);
     pImpl = makePtr<LevMarq::Impl>(backend, settings);
@@ -768,9 +768,9 @@ LevMarq::LevMarq(InputOutputArray param, LongCallback callback, const Settings& 
                  MatrixType matrixType, VariableType paramType, int nerrs, int solveMethod)
 {
     if (matrixType != MatrixType::AUTO && matrixType != MatrixType::DENSE)
-        CV_Error(CV_StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
+        CV_Error(cv::Error::StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
     if (paramType != VariableType::LINEAR)
-        CV_Error(CV_StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
+        CV_Error(cv::Error::StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
 
     auto backend = makePtr<LevMarqDenseLinearBackend>(param, callback, mask, nerrs, solveMethod);
     pImpl = makePtr<LevMarq::Impl>(backend, settings);
@@ -780,9 +780,9 @@ LevMarq::LevMarq(InputOutputArray param, NormalCallback callback, const Settings
                  MatrixType matrixType, VariableType paramType, bool LtoR, int solveMethod)
 {
     if (matrixType != MatrixType::AUTO && matrixType != MatrixType::DENSE)
-        CV_Error(CV_StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
+        CV_Error(cv::Error::StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
     if (paramType != VariableType::LINEAR)
-        CV_Error(CV_StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
+        CV_Error(cv::Error::StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
 
     auto backend = makePtr<LevMarqDenseLinearBackend>(param, callback, mask, LtoR, solveMethod);
     pImpl = makePtr<LevMarq::Impl>(backend, settings);

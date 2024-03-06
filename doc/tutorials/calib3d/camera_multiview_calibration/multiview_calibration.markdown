@@ -31,7 +31,7 @@ Introduction
 ----
 Multiview calibration is a very important task in computer vision. It is widely used in 3D reconstruction, structure from motion, autonomous driving, etc. The calibration procedure is often the first step for any vision task that must be done to obtain the intrinsics and extrinsics parameters of the cameras. The accuracy of camera calibration parameters directly influences all further computations and results, hence, estimating precise intrinsics and extrinsics is crucial.
 
-The calibration algorithms require a set of images for each camera, where on the images a calibration pattern (e.g., checkerboard, ChArUco, etc.) is visible and detected. Additionally, to get results with a real scale, the 3D distance between two neighbor points of the calibration pattern grid should be measured. For extrinsics calibration, images must share the calibration pattern obtained from different views. An example setup can be found in the following figure.![img_multiview_calibration_setup](images/multiview_calib.png) Moreover, images that share the pattern grid have to be taken at the same moment, or in other words, cameras must be synchronized. Otherwise, the extrinsics calibration will fail. Note that if each pattern point can be uniquely determined (for example, if a ChArUco target is used, see @ref cv::aruco::CharucoBoard), it is also possible to calibrate based only on partial observation. This is recommended as the overlapping field of view between camera pairs is usually limited in multiview-camera calibration, and it is generally difficult for them to observe the complete pattern at the same time.
+The calibration algorithms require a set of images for each camera, where on the images a calibration pattern (e.g., checkerboard, ChArUco, etc.) is visible and detected. Additionally, to get results with a real scale, the 3D distance between two neighbor points of the calibration pattern grid should be measured. For extrinsics calibration, images must share the calibration pattern obtained from different views. An example setup can be found in the following figure.![img_multiview_calibration_setup](camera_multiview_calibration/images/multiview_calib.png) Moreover, images that share the pattern grid have to be taken at the same moment, or in other words, cameras must be synchronized. Otherwise, the extrinsics calibration will fail. Note that if each pattern point can be uniquely determined (for example, if a ChArUco target is used, see @ref cv::aruco::CharucoBoard), it is also possible to calibrate based only on partial observation. This is recommended as the overlapping field of view between camera pairs is usually limited in multiview-camera calibration, and it is generally difficult for them to observe the complete pattern at the same time.
 
 The intrinsics calibration incorporates the estimation of focal lengths, skew, and the principal point of the camera; these parameters are combined in the intrinsic upper triangular matrix of size 3x3. Additionally, intrinsic calibration includes finding the distortion parameters of the camera.
 
@@ -137,13 +137,13 @@ python3 multiview_calibration.py --help
 ```
 
 The expected output in the Linux terminal for `multiview_calibration_images` data (from `opencv_extra/testdata/python/` generated in Blender) should be the following:
-![](images/terminal-demo.jpg)
+![](camera_multiview_calibration/images/terminal-demo.jpg)
 
 The expected output for real-life calibration images in `opencv_extra/testdata/python/real_multiview_calibration_images` is the following:
-![](images/terminal-real-demo.jpg)
+![](camera_multiview_calibration/images/terminal-real-demo.jpg)
 
 The expected output for real-life calibration images in `opencv_extra/testdata/python/hololens_multiview_calibration_images` is the following
-![](images/terminal-hololens-demo.png)
+![](camera_multiview_calibration/images/terminal-hololens-demo.png)
 The command used
 ```
 python3 multiview_calibration.py --filenames ../../results/hololens/HololensCapture1/output/cam_0.txt,../../results/hololens/HololensCapture1/output/cam_1.txt,../../results/hololens/HololensCapture1/output/cam_2.txt,../../results/hololens/HololensCapture1/output/cam_3.txt --pattern_size 6,10 --pattern_type charuco --fisheye 0,0,0,0 --pattern_distance 0.108 --board_dict_path ../../results/hololens/charuco_dict.json --gt_file ../../results/hololens/HololensCapture1/output/gt.txt
@@ -288,7 +288,7 @@ Practical Debugging Techniques
   -# Camera intrinsics can be better estimated when points are more scattered in the image. The following code can be used to plot out the heat map of the observed point
 
     @snippet samples/python/multiview_calibration.py plot_detection
-    ![condensely scattered](images/count_example.png)
+    ![condensely scattered](camera_multiview_calibration/images/count_example.png)
     The left example is not well scattered while the right example shows a better-scattered pattern
 
   -# Plot out the reprojection error to ensure the result is reasonable
@@ -297,14 +297,14 @@ Practical Debugging Techniques
     @snippet samples/python/multiview_calibration.py vis_intrinsics_error
 
     resulting visualization would look similar to
-    ![distortion error](images/distort_error.png)
+    ![distortion error](camera_multiview_calibration/images/distort_error.png)
 
 -# **Multiview calibration**
   -# Use `plotCamerasPosition` in samples/python/multiview_calibration.py to plot out the graph established for multiview calibration. shows positions of cameras, checkerboard (of a random frame), and pairs of cameras connected by black lines explicitly demonstrating tuples that were used in the initial stage of stereo calibration.
   The dashed gray lines demonstrate the non-spanning tree edges that are also used in the optimization.
   The width of these lines indicates the number of co-visible frames i.e. the strength of connection.
-  It is more desired if the edges in the graph are dense and thick. ![](images/connection_tree.png) For the right tree, the connection for camera four is rather limited and can be strengthened
+  It is more desired if the edges in the graph are dense and thick. ![](camera_multiview_calibration/images/connection_tree.png) For the right tree, the connection for camera four is rather limited and can be strengthened
 
   -# Visulization method for showing the reprojection error with arrows (from a given point to the back-projected one) is provided (see `plotProjection` in samples/python/multiview_calibration.py). The color of the arrows highlights the error values. Additionally, the title reports mean error on this frame and its accuracy among other frames used in calibration.
 
-  ![](images/checkerboard.jpg)
+  ![](camera_multiview_calibration/images/checkerboard.jpg)

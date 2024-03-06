@@ -1628,7 +1628,7 @@ objectPoints[i].size() for each i.
 @param image_size Size of the image used only to initialize the camera intrinsic matrix.
 @param K Output 3x3 floating-point camera intrinsic matrix
 \f$\cameramatrix{A}\f$ . If
-@ref CALIB_USE_INTRINSIC_GUESS is specified, some or all of fx, fy, cx, cy must be
+@ref cv::CALIB_USE_INTRINSIC_GUESS is specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
 @param D Output vector of distortion coefficients \f$\distcoeffsfisheye\f$.
 @param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view.
@@ -1638,19 +1638,19 @@ space (in which object points are specified) to the world coordinate space, that
 position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
 @param tvecs Output vector of translation vectors estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
--   @ref CALIB_USE_INTRINSIC_GUESS  cameraMatrix contains valid initial values of
+-   @ref cv::CALIB_USE_INTRINSIC_GUESS  cameraMatrix contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
 center ( imageSize is used), and focal distances are computed in a least-squares fashion.
--   @ref CALIB_RECOMPUTE_EXTRINSIC  Extrinsic will be recomputed after each iteration
+-   @ref cv::CALIB_RECOMPUTE_EXTRINSIC  Extrinsic will be recomputed after each iteration
 of intrinsic optimization.
--   @ref CALIB_CHECK_COND  The functions will check validity of condition number.
--   @ref CALIB_FIX_SKEW  Skew coefficient (alpha) is set to zero and stay zero.
--   @ref CALIB_FIX_K1,..., @ref CALIB_FIX_K4 Selected distortion coefficients
+-   @ref cv::CALIB_CHECK_COND  The functions will check validity of condition number.
+-   @ref cv::CALIB_FIX_SKEW  Skew coefficient (alpha) is set to zero and stay zero.
+-   @ref cv::CALIB_FIX_K1,..., @ref cv::CALIB_FIX_K4 Selected distortion coefficients
 are set to zeros and stay zero.
--   @ref CALIB_FIX_PRINCIPAL_POINT  The principal point is not changed during the global
-optimization. It stays at the center or at a different location specified when @ref CALIB_USE_INTRINSIC_GUESS is set too.
--   @ref CALIB_FIX_FOCAL_LENGTH The focal length is not changed during the global
-optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \f$f_y\f$ when @ref CALIB_USE_INTRINSIC_GUESS is set too.
+-   @ref cv::CALIB_FIX_PRINCIPAL_POINT  The principal point is not changed during the global
+optimization. It stays at the center or at a different location specified when @ref cv::CALIB_USE_INTRINSIC_GUESS is set too.
+-   @ref cv::CALIB_FIX_FOCAL_LENGTH The focal length is not changed during the global
+optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \f$f_y\f$ when @ref cv::CALIB_USE_INTRINSIC_GUESS is set too.
 @param criteria Termination criteria for the iterative optimization algorithm.
  */
 CV_EXPORTS_W double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
@@ -1666,7 +1666,7 @@ observed by the first camera.
 observed by the second camera.
 @param K1 Input/output first camera intrinsic matrix:
 \f$\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}\f$ , \f$j = 0,\, 1\f$ . If
-any of @ref CALIB_USE_INTRINSIC_GUESS , @ref CALIB_FIX_INTRINSIC are specified,
+any of @ref cv::CALIB_USE_INTRINSIC_GUESS , @ref cv::CALIB_FIX_INTRINSIC are specified,
 some or all of the matrix components must be initialized.
 @param D1 Input/output vector of distortion coefficients \f$\distcoeffsfisheye\f$ of 4 elements.
 @param K2 Input/output second camera intrinsic matrix. The parameter is similar to K1 .
@@ -1685,16 +1685,16 @@ to camera coordinate space of the first camera of the stereo pair.
 @param tvecs Output vector of translation vectors estimated for each pattern view, see parameter description
 of previous output parameter ( rvecs ).
 @param flags Different flags that may be zero or a combination of the following values:
--   @ref CALIB_FIX_INTRINSIC  Fix K1, K2? and D1, D2? so that only R, T matrices
+-   @ref cv::CALIB_FIX_INTRINSIC  Fix K1, K2? and D1, D2? so that only R, T matrices
 are estimated.
--   @ref CALIB_USE_INTRINSIC_GUESS  K1, K2 contains valid initial values of
+-   @ref cv::CALIB_USE_INTRINSIC_GUESS  K1, K2 contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
 center (imageSize is used), and focal distances are computed in a least-squares fashion.
--   @ref CALIB_RECOMPUTE_EXTRINSIC  Extrinsic will be recomputed after each iteration
+-   @ref cv::CALIB_RECOMPUTE_EXTRINSIC  Extrinsic will be recomputed after each iteration
 of intrinsic optimization.
--   @ref CALIB_CHECK_COND  The functions will check validity of condition number.
--   @ref CALIB_FIX_SKEW  Skew coefficient (alpha) is set to zero and stay zero.
--   @ref CALIB_FIX_K1,..., @ref CALIB_FIX_K4 Selected distortion coefficients are set to zeros and stay
+-   @ref cv::CALIB_CHECK_COND  The functions will check validity of condition number.
+-   @ref cv::CALIB_FIX_SKEW  Skew coefficient (alpha) is set to zero and stay zero.
+-   @ref cv::CALIB_FIX_K1,..., @ref cv::CALIB_FIX_K4 Selected distortion coefficients are set to zeros and stay
 zero.
 @param criteria Termination criteria for the iterative optimization algorithm.
  */

@@ -168,6 +168,10 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
 
                 int gx = convert_int_sat_rte(map1[0]);
                 int gy = convert_int_sat_rte(map2[0]);
+                #if WARP_RELATIVE
+                gx += x;
+                gy += y;
+                #endif
 
                 if (NEED_EXTRAPOLATION(gx, gy))
                 {
@@ -210,6 +214,11 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
                 int2 gxy = convert_int2_sat_rte(map[0]);
+                #if WARP_RELATIVE
+                gxy.x += x;
+                gxy.y += y;
+                #endif
+
                 int gx = gxy.x, gy = gxy.y;
 
                 if (NEED_EXTRAPOLATION(gx, gy))
@@ -250,6 +259,11 @@ __kernel void remap_16SC2(__global const uchar * srcptr, int src_step, int src_o
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
                 int2 gxy = convert_int2(map[0]);
+                #if WARP_RELATIVE
+                gxy.x += x;
+                gxy.y += y;
+                #endif
+
                 int gx = gxy.x, gy = gxy.y;
 
                 if (NEED_EXTRAPOLATION(gx, gy))
@@ -296,6 +310,11 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                 int dx = (map2Value & (INTER_TAB_SIZE - 1)) < (INTER_TAB_SIZE >> 1) ? 1 : 0;
                 int dy = (map2Value >> INTER_BITS) < (INTER_TAB_SIZE >> 1) ? 1 : 0;
                 int2 gxy = convert_int2(map1[0]) + (int2)(dx, dy);
+                #if WARP_RELATIVE
+                gxy.x += x;
+                gxy.y += y;
+                #endif
+
                 int gx = gxy.x, gy = gxy.y;
 
                 if (NEED_EXTRAPOLATION(gx, gy))
@@ -349,6 +368,10 @@ __kernel void remap_16SC2_16UC1(__global const uchar * srcptr, int src_step, int
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
                 int2 map_dataA = convert_int2(map1[0]);
+                #if WARP_RELATIVE
+                map_dataA.x += x;
+                map_dataA.y += y;
+                #endif
                 int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
                 int2 map_dataC = (int2)(map_dataA.x, map_dataA.y + 1);
                 int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y + 1);
@@ -414,8 +437,12 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
 
 #if defined BORDER_CONSTANT
                 float xf = map1[0], yf = map2[0];
-                int sx = convert_int_sat_rtz(mad(xf, (float)INTER_TAB_SIZE, 0.5f)) >> INTER_BITS;
-                int sy = convert_int_sat_rtz(mad(yf, (float)INTER_TAB_SIZE, 0.5f)) >> INTER_BITS;
+                int sx = (convert_int_sat_rtz(mad(xf, (float)INTER_TAB_SIZE, 0.5f)) >> INTER_BITS);
+                int sy = (convert_int_sat_rtz(mad(yf, (float)INTER_TAB_SIZE, 0.5f)) >> INTER_BITS);
+                #if WARP_RELATIVE
+                sx += x;
+                sy += y;
+                #endif
 
                 __constant float * coeffs_x = coeffs + ((convert_int_rte(xf * INTER_TAB_SIZE) & (INTER_TAB_SIZE - 1)) << 1);
                 __constant float * coeffs_y = coeffs + ((convert_int_rte(yf * INTER_TAB_SIZE) & (INTER_TAB_SIZE - 1)) << 1);
@@ -456,6 +483,10 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                 storepix(CONVERT_TO_T(sum), dst);
 #else
                 float2 map_data = (float2)(map1[0], map2[0]);
+                #if WARP_RELATIVE
+                map_data.x += x;
+                map_data.y += y;
+                #endif
 
                 int2 map_dataA = convert_int2_sat_rtn(map_data);
                 int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
@@ -520,6 +551,10 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
                 float2 map_data = map[0];
+                #if WARP_RELATIVE
+                map_data.x += x;
+                map_data.y += y;
+                #endif
                 int2 map_dataA = convert_int2_sat_rtn(map_data);
                 int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
                 int2 map_dataC = (int2)(map_dataA.x, map_dataA.y + 1);
