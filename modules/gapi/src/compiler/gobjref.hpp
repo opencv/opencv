@@ -24,6 +24,7 @@ namespace gimpl
     < util::monostate
     , cv::Scalar
     , cv::detail::VectorRef
+    , cv::Mat
     >;
 
     struct RcDesc

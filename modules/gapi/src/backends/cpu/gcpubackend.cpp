@@ -65,6 +65,17 @@ namespace
         {
             return EPtr{new cv::gimpl::GCPUExecutable(graph, compileArgs, nodes)};
         }
+
+        virtual bool supportsConst(cv::GShape shape) const override
+        {
+            // Supports all types of const values
+            return shape == cv::GShape::GOPAQUE
+                || shape == cv::GShape::GSCALAR
+                || shape == cv::GShape::GARRAY;
+            // yes, value-initialized GMats are not supported currently
+            // as in-island data -- compiler will lift these values to the
+            // GIslandModel's SLOT level (will be handled uniformly)
+        }
    };
 }
 
