@@ -30,6 +30,32 @@
         return CV_HAL_ERROR_OK;                                                  \
     }
 
+#define NDSRVP_UNOP_IMPL(hal, srctype, vtype, nlane, parallel, nonparallel) \
+    int ndsrvp_##hal(const srctype* src_data, size_t src_step,              \
+        srctype* dst_data, size_t dst_step,                                 \
+        int width, int height)                                              \
+    {                                                                       \
+        src_step /= sizeof(srctype);                                        \
+        dst_step /= sizeof(srctype);                                        \
+                                                                            \
+        int i, j;                                                           \
+        for (i = 0; i < height; ++i) {                                      \
+            const srctype* src_row = src_data + (src_step * i);             \
+            srctype* dst_row = dst_data + (dst_step * i);                   \
+                                                                            \
+            j = 0;                                                          \
+            for (; j + nlane <= width; j += nlane) {                        \
+                vtype vs##nlane = *(vtype*)(src_row + j);                   \
+                                                                            \
+                *(vtype*)(dst_row + j) = parallel(vs##nlane);               \
+            }                                                               \
+            for (; j < width; j++)                                          \
+                dst_row[j] = nonparallel(src_row[j]);                       \
+        }                                                                   \
+                                                                            \
+        return CV_HAL_ERROR_OK;                                             \
+    }
+
 #define NDSRVP_BINOP_FUNC_BULK(FUNC, unsign0, sign0, unsign1, sign1) \
     FUNC(8, uchar, uint8x8_t, unsign0, unsign1)                      \
     FUNC(8, schar, int8x8_t, sign0, sign1)                           \
@@ -75,3 +101,31 @@ NDSRVP_BINOP_NAME_BULK(min, __nds__v_, __nds__, u, s)
 NDSRVP_BINOP_FUNC_BULK(FUNC_ABSDIFF, u, s, uk, k)
 
 NDSRVP_BINOP_NAME_BULK(absdiff, __ndsrvp__v_, __ndsrvp__, u, s)
+
+// #### bitwise ####
+
+#define FUNC_AND(xlen, srctype, vtype, prefix0, prefix1)                              \
+    inline vtype __ndsrvp__v_##prefix0##and##xlen(vtype a, vtype b) { return a & b; } \
+    inline srctype __ndsrvp__##prefix0##and##xlen(srctype a, srctype b) { return a & b; }
+
+#define FUNC_OR(xlen, srctype, vtype, prefix0, prefix1)                                \
+    inline vtype __ndsrvp__v_##prefix0## or ##xlen(vtype a, vtype b) { return a | b; } \
+    inline srctype __ndsrvp__##prefix0## or ##xlen(srctype a, srctype b) { return a | b; }
+
+#define FUNC_XOR(xlen, srctype, vtype, prefix0, prefix1)                                \
+    inline vtype __ndsrvp__v_##prefix0## xor ##xlen(vtype a, vtype b) { return a ^ b; } \
+    inline srctype __ndsrvp__##prefix0## xor ##xlen(srctype a, srctype b) { return a ^ b; }
+
+#define FUNC_NOT(xlen, srctype, vtype, prefix0, prefix1)                   \
+    inline vtype __ndsrvp__v_##prefix0##not ##xlen(vtype a) { return ~a; } \
+    inline srctype __ndsrvp__##prefix0##not ##xlen(srctype a) { return ~a; }
+
+FUNC_AND(8, uchar, uint8x8_t, u, u)
+FUNC_OR(8, uchar, uint8x8_t, u, u)
+FUNC_XOR(8, uchar, uint8x8_t, u, u)
+FUNC_NOT(8, uchar, uint8x8_t, u, u)
+
+NDSRVP_BINOP_IMPL(and8u, uchar, uint8x8_t, 8, __ndsrvp__v_uand8, __ndsrvp__uand8)
+NDSRVP_BINOP_IMPL(or8u, uchar, uint8x8_t, 8, __ndsrvp__v_uor8, __ndsrvp__uor8)
+NDSRVP_BINOP_IMPL(xor8u, uchar, uint8x8_t, 8, __ndsrvp__v_uxor8, __ndsrvp__uxor8)
+NDSRVP_UNOP_IMPL(not8u, uchar, uint8x8_t, 8, __ndsrvp__v_unot8, __ndsrvp__unot8)

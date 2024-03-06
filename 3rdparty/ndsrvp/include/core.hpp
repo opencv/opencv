@@ -7,6 +7,11 @@
         srctype* dst_data, size_t dst_step,                       \
         int width, int height);
 
+#define NDSRVP_UNOP_DECL(name, srctype, vtype, len)             \
+    int ndsrvp_##name(const srctype* src_data, size_t src_step, \
+        srctype* dst_data, size_t dst_step,                     \
+        int width, int height);
+
 #define NDSRVP_BINOP_DECL_BULK(op)                    \
     NDSRVP_BINOP_DECL(op##8u, uchar, uint8x8_t, 8)    \
     NDSRVP_BINOP_DECL(op##8s, schar, int8x8_t, 8)     \
@@ -110,3 +115,22 @@ NDSRVP_BINOP_DECL_BULK(absdiff)
 
 #undef cv_hal_absdiff32s
 #define cv_hal_absdiff32s ndsrvp_absdiff32s
+
+// #### bitwise ####
+
+NDSRVP_BINOP_DECL(and8u, uchar, uint8x8_t, 8)
+NDSRVP_BINOP_DECL(or8u, uchar, uint8x8_t, 8)
+NDSRVP_BINOP_DECL(xor8u, uchar, uint8x8_t, 8)
+NDSRVP_UNOP_DECL(not8u, uchar, uint8x8_t, 8)
+
+#undef cv_hal_and8u
+#define cv_hal_and8u ndsrvp_and8u
+
+#undef cv_hal_or8u
+#define cv_hal_or8u ndsrvp_or8u
+
+#undef cv_hal_xor8u
+#define cv_hal_xor8u ndsrvp_xor8u
+
+#undef cv_hal_not8u
+#define cv_hal_not8u ndsrvp_not8u
