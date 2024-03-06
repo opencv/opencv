@@ -158,16 +158,15 @@ TEST(BarcodeDetector_parameters, regression)
 {
     const double expected_dt = 1024, expected_gt = 256;
     const vector<double> expected_ds = {0.1};
-    double dt_value = 0, gt_value = 0;
     vector<double> ds_value = {0.0};
 
     auto bardet = barcode::BarcodeDetector();
 
     bardet.setDownSampleThresh(expected_dt).setDetectorScales(expected_ds).setGradientThresh(expected_gt);
 
-    bardet.getDownSampleThresh(dt_value);
+    double dt_value = bardet.getDownSampleThresh();
     bardet.getDetectorScales(ds_value);
-    bardet.getGradientThresh(gt_value);
+    double gt_value = bardet.getGradientThresh();
 
     EXPECT_EQ(expected_dt, dt_value);
     EXPECT_EQ(expected_ds, ds_value);

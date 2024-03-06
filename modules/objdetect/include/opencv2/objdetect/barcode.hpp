@@ -58,11 +58,11 @@ public:
                                       CV_OUT std::vector<std::string> &decoded_type,
                                       OutputArray points = noArray()) const;
 
-    /** @brief Returns detector downsampling threshold.
+    /** @brief Get detector downsampling threshold.
      *
-     * @param thresh output parameter for returning the value.
+     * @return detector downsampling threshold
      */
-    CV_WRAP void getDownSampleThresh(CV_OUT double& thresh) const;
+    CV_WRAP double getDownSampleThresh() const;
 
     /** @brief Set detector downsampling threshold.
      *
@@ -87,13 +87,13 @@ public:
      * If the downsampling limit is increased, filter sizes need to be adjusted in an inversely proportional way.
      * @param sizes box filter sizes, relative to minimum dimension of the image (default [0.01, 0.03, 0.06, 0.08])
      */
-    CV_WRAP BarcodeDetector& setDetectorScales(std::vector<double> sizes);
+    CV_WRAP BarcodeDetector& setDetectorScales(const std::vector<double>& sizes);
 
-    /** @brief Returns detector gradient magnitude threshold.
+    /** @brief Get detector gradient magnitude threshold.
      *
-     * @param thresh output parameter for returning the value.
+     * @return detector gradient magnitude threshold.
      */
-    CV_WRAP void getGradientThresh(CV_OUT double& thresh) const;
+    CV_WRAP double getGradientThresh() const;
 
     /** @brief Set detector gradient magnitude threshold.
      *
