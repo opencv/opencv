@@ -269,10 +269,10 @@ public:
         }
         // set inputs : bias
         auto mat_C = have_bias && const_C ? blobs.back() : Mat::zeros(1, 1, CV_32F);
-        auto &shape_C = shape(mat_C);
+        auto shape_C = shape(mat_C);
         if (real_ndims_C == 1) {
-            int dim = shape_C.back();
-            shape_C.assign(1, std::vector<int>{dim});
+            int dim = static_cast<int>(mat_C.total());
+            shape_C = std::vector<int>{dim};
         }
         auto op_const_C = std::make_shared<CannConstOp>(mat_C.data, mat_C.type(), shape_C, cv::format("%s_b", name.c_str()));
         op->set_input_bias(*(op_const_C->getOp()));
