@@ -217,7 +217,7 @@ camera.
 @param P2 Output 3x4 projection matrix in the new (rectified) coordinate systems for the second
 camera.
 @param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see reprojectImageTo3D ).
-@param flags Operation flags that may be zero or @ref CALIB_ZERO_DISPARITY . If the flag is set,
+@param flags Operation flags that may be zero or @ref cv::CALIB_ZERO_DISPARITY . If the flag is set,
 the function makes the principal points of each camera have the same pixel coordinates in the
 rectified views. And if the flag is not set, the function may still shift the images in the
 horizontal or vertical direction (depending on the orientation of epipolar lines) to maximize the

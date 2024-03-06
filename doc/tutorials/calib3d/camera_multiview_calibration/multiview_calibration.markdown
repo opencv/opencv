@@ -102,10 +102,10 @@ python3 multiview_calibration.py --help
 ```
 
 The expected output in Linux terminal for `multiview_calibration_images` data (from `opencv_extra/testdata/python/` generated in Blender) should be the following:
-![](images/terminal-demo.jpg)
+![](camera_multiview_calibration/images/terminal-demo.jpg)
 
 The expected output for real-life calibration images in `opencv_extra/testdata/python/real_multiview_calibration_images` is the following:
-![](images/terminal-real-demo.jpg)
+![](camera_multiview_calibration/images/terminal-real-demo.jpg)
 
 
 Python visualization
@@ -116,21 +116,21 @@ Firstly, the sample shows positions of cameras, checkerboard (of a random frame)
 If images are not known, then a simple plot with arrows (from given point to the back-projected one) visualizing errors is shown. The color of arrows highlights the error values. Additionally, the title reports mean error on this frame, and its accuracy among other frames used in calibration.
 The following test instances were synthetically generated (see `opencv/apps/python-calibration-generator/calibration_generator.py`):
 
-![](images/1.jpg)
+![](camera_multiview_calibration/images/1.jpg)
 
-![](images/2.jpg)
+![](camera_multiview_calibration/images/2.jpg)
 
 This instance has large Gaussian points noise.
 
-![](images/3.jpg)
+![](camera_multiview_calibration/images/3.jpg)
 
 Another example, with more complex tree structure is here, it shows a weak connection between two groups of cameras.
 
-![](images/4.jpg)
+![](camera_multiview_calibration/images/4.jpg)
 
 If files to images are provided, then the output is an image with plotted arrows:
 
-![](images/checkerboard.png)
+![](camera_multiview_calibration/images/checkerboard.png)
 
 
 Details Of The Algorithm
@@ -153,7 +153,7 @@ Details Of The Algorithm
 * a. To reduce the total number of parameters, all rotation and translation vectors estimated in the first step from intrinsics calibration with the lowest error are transformed to be relative with respect to the root camera.
 * b. The total number of parameters is (NUM_CAMERAS - 1) x (3 + 3) + NUM_FRAMES x (3 + 3), where 3 stands for a rotation vector and 3 for a translation vector. The first part of parameters are extrinsics, and the second part is for rotation and translation vectors per frame.
 * c. Robust function is additionally applied to mitigate impact of outlier points during the optimization. The function has the shape of derivative of Gaussian, or it is $x * exp(-x/s)$ (efficiently implemented by approximation of the `exp`), where `x` is a square pixel error, and `s` is manually pre-defined scale. The choice of this function is that it is increasing on the interval of `0` to `y` pixel error, and it’s decreasing thereafter. The idea is that the function slightly decreases errors until it reaches `y`, and if error is too high (more than `y`) then its robust value limits to `0`. The value of scale factor was found by exhaustive evaluation that forces robust function to almost linearly increase until the robust value of an error is 10 px and decrease afterwards (see graph of the function below). The value itself is equal to 30, but could be modified in OpenCV source code.
-![](images/exp.jpg)
+![](camera_multiview_calibration/images/exp.jpg)
 
 Method Input
 ----
