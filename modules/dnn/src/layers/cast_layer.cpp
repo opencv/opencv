@@ -52,6 +52,7 @@ public:
         CV_CheckEQ(outputs.size(), (size_t)1, "");
 
         inputs[0].convertTo(outputs[0], outputType);
+        return true;
     }
 #endif
 
