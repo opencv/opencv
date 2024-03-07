@@ -124,7 +124,7 @@ namespace cv
 
 static inline void* cvAlignPtr( const void* ptr, int align = 32 )
 {
-    CV_DbgAssert ( (align & (align-1)) == 0 );
+    CV_DbgAssert( (align & (align-1)) == 0 );
     return (void*)( ((size_t)ptr + align - 1) & ~(size_t)(align-1) );
 }
 
