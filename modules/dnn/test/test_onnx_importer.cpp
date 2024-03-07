@@ -2303,7 +2303,7 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
     size_t hwm1 = getTopMemoryUsageMB();
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU)
     {
-        EXPECT_LE(hwm1 - hwm0, 350);
+        EXPECT_LE(hwm1 - hwm0, 350) << "Top allocated memory";
     }
 }
 

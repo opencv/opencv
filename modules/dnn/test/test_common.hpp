@@ -6,6 +6,7 @@
 #define __OPENCV_TEST_COMMON_HPP__
 
 #ifdef _WIN32
+#include <windows.h>
 #include <psapi.h>
 #endif  // _WIN32
 
