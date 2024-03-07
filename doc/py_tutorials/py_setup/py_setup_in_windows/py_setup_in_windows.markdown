@@ -10,10 +10,10 @@ In this tutorial
     - We will learn to setup OpenCV-Python in your Windows system.
 
 Below steps are tested in a Windows 7-64 bit machine with Visual Studio 2010 and Visual Studio 2012.
+
 The screenshots shows VS2012.
 
-Installing OpenCV using pip Package Manager
-------------------------------------------------
+### Installing OpenCV using pip Package Manager
 
 You can also install OpenCV using the Python's pip package manager. The steps to be followed are very simple as follows:
 -# Once you have installed python and pip(which comes along with python) Go to your Command Prompt(for Windows)
@@ -24,8 +24,7 @@ You can also install OpenCV using the Python's pip package manager. The steps to
    and hit enter
 -# pip will automatically install all the necessary dependencies for OpenCV and you're good to go!
 
-Installing OpenCV from prebuilt binaries
-----------------------------------------
+### Installing OpenCV from prebuilt binaries
 
 -#  Below Python packages are to be downloaded and installed to their default locations.
 
@@ -58,8 +57,7 @@ Installing OpenCV from prebuilt binaries
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
 
-Installing OpenCV in Anaconda
--------------------------------
+### Installing OpenCV in Anaconda
 
 To install OpenCV in your Anaconda environment perform the following steps:
 
@@ -73,8 +71,8 @@ To install OpenCV in your Anaconda environment perform the following steps:
 -#   Press Enter
 -#   Press 'y' when prompted and press Enter. This completes the installation.
 
-Building OpenCV from source
----------------------------
+### Building OpenCV from source
+
 
 -#  Download and install Visual Studio and CMake.
 
@@ -169,11 +167,12 @@ Building OpenCV from source
 @note We have installed with no other support like TBB, Eigen, Qt, Documentation etc. It would be
 difficult to explain it here. A more detailed video will be added soon or you can just hack around.
 
-Additional Resources
---------------------
+### Additional Resources
 
-Exercises
----------
 
-If you have a windows machine, compile the OpenCV from source. Do all kinds of hacks. If you meet
-any problem, visit OpenCV forum and explain your problem.
+### Exercises
+
+
+If you have a windows machine, compile the OpenCV from source. Do all kinds of hacks. 
+
+If you meet any problem, visit OpenCV forum and explain your problem.
