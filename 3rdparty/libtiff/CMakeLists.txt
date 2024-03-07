@@ -394,7 +394,6 @@ set(lib_srcs
     tif_flush.c
     tif_getimage.c
     tif_hash_set.c
-    tif_hash_set.h
     tif_jbig.c
     tif_jpeg_12.c
     tif_jpeg.c
@@ -423,11 +422,12 @@ set(lib_srcs
     t4.h
     tif_dir.h
     tif_fax3.h
+    tif_hash_set.h
+    tif_predict.h
     tiff.h
     tiffio.h
     tiffiop.h
     tiffvers.h
-    tif_predict.h
     uvcode.h
     tiffio.hxx
     "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
