@@ -5,6 +5,10 @@
 #ifndef __OPENCV_TEST_COMMON_HPP__
 #define __OPENCV_TEST_COMMON_HPP__
 
+#ifdef _WIN32
+#include <psapi.h>
+#endif  // _WIN32
+
 #include "opencv2/dnn/utils/inference_engine.hpp"
 
 #ifdef HAVE_OPENCL
@@ -230,6 +234,30 @@ public:
     {
         if (backend == DNN_BACKEND_CUDA)
             expectNoFallbacks(net);
+    }
+
+    size_t getTopMemoryUsageMB()
+    {
+#ifdef _WIN32
+        PROCESS_MEMORY_COUNTERS proc;
+        GetProcessMemoryInfo(GetCurrentProcess(), &proc, sizeof(proc));
+        return proc.PeakWorkingSetSize / pow(1024, 2);  // bytes to megabytes
+#else
+        std::ifstream status("/proc/self/status");
+        std::string line, title;
+        while (std::getline(status, line))
+        {
+            std::istringstream iss(line);
+            iss >> title;
+            if (title == "VmHWM:")
+            {
+                size_t mem;
+                iss >> mem;
+                return mem / 1024;
+            }
+        }
+#endif
+        return 0l;
     }
 
 protected:
