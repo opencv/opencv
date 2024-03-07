@@ -163,8 +163,8 @@ TEST(Calib3d_DecomposeProjectionMatrix, degenerate_cases)
 TEST(Calib3d_DecomposeProjectionMatrix, bug_23733)
 {
     cv::Matx34d P(52, -7, 4, 12,
-                    -6, 49, 12, 8,
-                    4, 17, 1, 0);
+                  -6, 49, 12, 8,
+                  4, 17, 1, 0);
     P *= 1e-6;
 
     cv::Matx33d K, R;
