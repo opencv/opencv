@@ -41,11 +41,27 @@ public:
         outputs.assign(1, outputType);
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    {
+        std::vector<UMat> inputs, outputs;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+        CV_CheckEQ(inputs.size(), (size_t)1, "");
+        CV_CheckEQ(outputs.size(), (size_t)1, "");
+
+        inputs[0].convertTo(outputs[0], outputType);
+    }
+#endif
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+            forward_ocl(inputs_arr, outputs_arr, internals_arr));
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
