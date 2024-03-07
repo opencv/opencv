@@ -55,6 +55,7 @@ It is quite easy. But there is a problem with this.
 Apt repositories may not contain the latest version of OpenCV always.
 For example, at the time of writing this tutorial, apt repository contains 2.4.8 while latest OpenCV version is 3.x.
 With respect to Python API, latest version will always contain much better support and latest bug fixes.
+
 So for getting latest source codes preference is next method, i.e. compiling from source.
 Also at some point in time, if you want to contribute to OpenCV, you will need this.
 
