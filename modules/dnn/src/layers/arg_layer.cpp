@@ -64,9 +64,15 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         MatShape inpShape = inputs[0];
+        // no axis for scalar
+        if (inpShape.empty()){
+            CV_Assert(axis == 0);
+        }
 
         const int axis_ = normalize_axis(axis, inpShape);
-        handleKeepDims(inpShape, axis_);
+        // handle dims = 0 situation
+        if (!inpShape.empty())
+            handleKeepDims(inpShape, axis_);
         outputs.assign(1, inpShape);
 
         return false;

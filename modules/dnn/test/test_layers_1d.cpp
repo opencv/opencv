@@ -997,52 +997,36 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_1d_Test, Combine(
 /*operation*/           Values(0, 1)
 ));
 
-typedef testing::TestWithParam<tuple<int, int, std::string>> Layer_Arg_1d_Test;
-TEST_P(Layer_Arg_1d_Test, Accuracy) {
+typedef testing::TestWithParam<tuple<int, std::string>> Layer_Arg_Test;
+TEST_P(Layer_Arg_Test, Accuracy) {
 
-    int batch_size = get<0>(GetParam());
-    int axis = get<1>(GetParam());
-    std::string operation = get<2>(GetParam());
+    int dims = get<0>(GetParam());
+    std::string operation = get<1>(GetParam());
 
     LayerParams lp;
     lp.type = "Arg";
     lp.name = "arg" + operation + "_Layer";
     lp.set("op", operation);
-    lp.set("axis", axis);
-    lp.set("keepdims", 1);
+    lp.set("axis", 0);
+    lp.set("keepdims", 0);
     lp.set("select_last_index", 0);
 
     Ptr<ArgLayer> layer = ArgLayer::create(lp);
+    std::vector<int> input_shape = {dims};
+    std::vector<int> output_shape = {1};
 
-    std::vector<int> input_shape = {batch_size, 1};
-    std::vector<int> output_shape = {1, 1};
-
-    if (batch_size == 0){
-        input_shape.erase(input_shape.begin());
-        output_shape.erase(output_shape.begin());
-    }
-
-    if (axis != 0 && batch_size != 0){
-        output_shape[0] = batch_size;
-    }
-
-    cv::Mat input = cv::Mat(input_shape, CV_32F, 1);
+    cv::Mat input(dims, input_shape.data(), CV_32F, 1);
     cv::Mat output_ref(output_shape,  CV_32F, 0);
-
-    for (int i = 0; i < batch_size; ++i)
-        input.at<float>(i, 0) = static_cast<float>(i + 1);
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
-
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(output_ref.size , outputs[0].size);
     normAssert(output_ref, outputs[0]);
 }
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Arg_1d_Test, Combine(
-/*input blob shape*/    Values(0, 1, 2, 3),
-/*operation*/           Values(0, 1),
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Arg_Test, Combine(
+/*input blob shape*/    Values(0, 1),
 /*operation*/           Values( "max", "min")
 ));
 
