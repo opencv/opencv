@@ -34,8 +34,8 @@ sudo apt-get install python3-pip
 python3 -m pip install opencv-python
 ```
     
-Installing OpenCV-Python from Pre-built Binaries
-------------------------------------------------
+### Installing OpenCV-Python from Pre-built Binaries
+
 This method serves best when using just for programming and developing OpenCV applications.
 Install package [python3-opencv](https://packages.ubuntu.com/focal/python3-opencv) with following command in terminal (as root user).
 
@@ -59,15 +59,15 @@ With respect to Python API, latest version will always contain much better suppo
 So for getting latest source codes preference is next method, i.e. compiling from source.
 Also at some point in time, if you want to contribute to OpenCV, you will need this.
 
-Building OpenCV from source
----------------------------
+### Building OpenCV from source
+
 Compiling from source may seem a little complicated at first, but once you succeeded in it, there is nothing complicated.
 First we will install some dependencies.
 Some are required, some are optional.
 You can skip optional dependencies if you don't want.
 
-Required build dependencies
----------------------------
+### Required build dependencies
+
 We need **CMake** to configure the installation, **GCC** for compilation, **Python-devel** and
 **Numpy** for building Python bindings etc.
 
@@ -105,8 +105,7 @@ to support gtk3:
 sudo apt-get install libgtk-3-dev
 ```
 
-Optional Dependencies
----------------------
+### Optional Dependencies
 
 Above dependencies are sufficient to install OpenCV in your Ubuntu machine.
 But depending upon your requirements, you may need some extra dependencies.
@@ -126,8 +125,8 @@ sudo apt-get install libwebp-dev
 
 @note If you are using Ubuntu 16.04 you can also install ```libjasper-dev``` to add a system level support for the JPEG2000 format.
 
-Downloading OpenCV
-------------------
+### Downloading OpenCV
+
 To download the latest source from OpenCV's [GitHub Repository](https://github.com/opencv/opencv).
 (If you want to contribute to OpenCV choose this. For that, you need to install **Git** first)
 
@@ -147,8 +146,8 @@ $ mkdir build
 $ cd build
 ```
 
-Configuring and Installing
---------------------------
+### Configuring and Installing
+
 Now we have all the required dependencies, let's install OpenCV.
 Installation has to be configured with CMake.
 It specifies which modules are to be installed, installation path, which additional libraries to be used, whether documentation and examples to be compiled etc.
