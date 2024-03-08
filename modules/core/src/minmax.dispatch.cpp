@@ -9,7 +9,6 @@
 #include "stat.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 #include <algorithm>
-#include <iostream>
 
 #include "minmax.simd.hpp"
 #include "minmax.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
@@ -458,7 +457,8 @@ static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, ReduceMode mod
     CV_INSTRUMENT_REGION();
 
     cv::Mat srcMat = src.getMat();
-    axis = (axis + srcMat.dims) % srcMat.dims;
+
+    axis = (srcMat.dims == 0) ? 0 : (axis + srcMat.dims) % srcMat.dims;
     CV_Assert(srcMat.channels() == 1 && axis >= 0 && axis <= srcMat.dims);
     std::vector<int> sizes((srcMat.dims == 0) ? 1 : srcMat.dims);
     std::copy(srcMat.size.p, srcMat.size.p + srcMat.dims, sizes.begin());
