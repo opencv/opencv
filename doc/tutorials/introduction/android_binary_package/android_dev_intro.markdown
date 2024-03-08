@@ -85,7 +85,7 @@ Setup Device for Testing and Debugging
 Usually the recipe above works as expected, but in some cases there are additional actions that must
 be performed. In this section we'll cover some cases.
 
-#### Windows host computer
+### Windows host computer
 
 If you have Windows 10 or higher then you don't have to do additional actions to connect
 a phone and run samples on it. However, earlier Windows versions require a longer procedure:
@@ -163,7 +163,7 @@ a phone and run samples on it. However, earlier Windows versions require a longe
 -#  Now, in Eclipse go Run -\> Run/Debug to run your application in regular or debugging mode.
     Device Chooser will let you choose among the devices.
 
-#### Linux host computer
+### Linux host computer
 
 While the latest Ubuntu versions work well with connected Android devices, there can be issues on older versions.
 However, most of them can be fixed easily. You have to create a new **/etc/udev/rules.d/51-android.rules** configuration file that contains
@@ -184,7 +184,7 @@ R58MB40Q3VP     device
 savuor@rostislav-laptop:~/Android/Sdk/platform-tools$
 ```
 
-#### Mac OS host computer
+### Mac OS host computer
 
 No actions are required, just connect your device via USB and run adb devices to check connection.
 

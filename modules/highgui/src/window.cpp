@@ -1088,17 +1088,17 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 
 void setOpenGLDrawCallbackImpl(const char*, CvOpenGlDrawCallback, void*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 void setOpenGLContextImpl(const char*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 void updateWindowImpl(const char*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 #endif // !HAVE_OPENGL
@@ -1112,52 +1112,52 @@ static const char* NO_QT_ERR_MSG = "The library is compiled without QT support";
 
 cv::QtFont cv::fontQt(const String&, int, Scalar, int,  int, int)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::addText( const Mat&, const String&, Point, const QtFont&)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::addText(const Mat&, const String&, Point, const String&, int, Scalar, int, int, int)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::displayStatusBar(const String&,  const String&, int)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::displayOverlay(const String&,  const String&, int )
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 int cv::startLoop(int (*)(int argc, char *argv[]), int , char**)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::stopLoop()
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::saveWindowParameters(const String&)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::loadWindowParameters(const String&)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 #endif // !HAVE_QT

@@ -40,6 +40,8 @@
 //M*/
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/types_c.h"
+#include "opencv2/core/core_c.h"
 
 using namespace cv;
 
@@ -345,19 +347,19 @@ static CvSeq* cvPointSeqFromMat( int seq_kind, const CvArr* arr,
     CvMat* mat = (CvMat*)arr;
 
     if( !CV_IS_MAT( mat ))
-        CV_Error( CV_StsBadArg, "Input array is not a valid matrix" );
+        CV_Error( cv::Error::StsBadArg, "Input array is not a valid matrix" );
 
     if( CV_MAT_CN(mat->type) == 1 && mat->width == 2 )
         mat = cvReshape(mat, &hdr, 2);
 
     eltype = CV_MAT_TYPE( mat->type );
     if( eltype != CV_32SC2 && eltype != CV_32FC2 )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
         "The matrix can not be converted to point sequence because of "
         "inappropriate element type" );
 
     if( (mat->width != 1 && mat->height != 1) || !CV_IS_MAT_CONT(mat->type))
-        CV_Error( CV_StsBadArg,
+        CV_Error( cv::Error::StsBadArg,
         "The matrix converted to point sequence must be "
         "1-dimensional and continuous" );
 
@@ -384,7 +386,7 @@ static CvRect cvBoundingRect( CvArr* array, int update )
     {
         ptseq = (CvSeq*)array;
         if( !CV_IS_SEQ_POINT_SET( ptseq ))
-            CV_Error( CV_StsBadArg, "Unsupported sequence type" );
+            CV_Error( cv::Error::StsBadArg, "Unsupported sequence type" );
 
         if( ptseq->header_size < (int)sizeof(CvContour))
         {
@@ -403,7 +405,7 @@ static CvRect cvBoundingRect( CvArr* array, int update )
         }
         else if( CV_MAT_TYPE(mat->type) != CV_8UC1 &&
                 CV_MAT_TYPE(mat->type) != CV_8SC1 )
-            CV_Error( CV_StsUnsupportedFormat,
+            CV_Error( cv::Error::StsUnsupportedFormat,
                 "The image/matrix format is not supported by the function" );
         update = 0;
         calculate = 1;
@@ -520,7 +522,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
                      int  method, CvPoint offset, int needFillBorder )
 {
     if( !storage )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     CvMat stub, *mat = cvGetMat( _img, &stub );
 
@@ -529,7 +531,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
 
     if( !((CV_IS_MASK_ARR( mat ) && mode < cv::RETR_FLOODFILL) ||
           (CV_MAT_TYPE(mat->type) == CV_32SC1 && mode == cv::RETR_FLOODFILL)) )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
                   "[Start]FindContours supports only CV_8UC1 images when mode != cv::RETR_FLOODFILL "
                   "otherwise supports CV_32SC1 images only" );
 
@@ -538,10 +540,10 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
     uchar* img = (uchar*)(mat->data.ptr);
 
     if( method < 0 || method > cv::CHAIN_APPROX_TC89_KCOS )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     if( header_size < (int) (method == cv::CHAIN_CODE ? sizeof( CvChain ) : sizeof( CvContour )))
-        CV_Error( CV_StsBadSize, "" );
+        CV_Error( cv::Error::StsBadSize, "" );
 
     CvContourScanner scanner = (CvContourScanner)cvAlloc( sizeof( *scanner ));
     memset( scanner, 0, sizeof(*scanner) );
@@ -1207,7 +1209,7 @@ icvFetchContourEx_32s( int*                 ptr,
 static CvSeq * cvFindNextContour( CvContourScanner scanner )
 {
     if( !scanner )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     CV_Assert(scanner->img_step >= 0);
 
@@ -1490,7 +1492,7 @@ static  CvSeq * cvEndFindContours( CvContourScanner * _scanner )
     CvSeq *first = 0;
 
     if( !_scanner )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
     scanner = *_scanner;
 
     if( scanner )
@@ -1571,6 +1573,11 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j)
     return j;
 }
 
+static inline cv::Size cvGetMatSize( const CvMat* mat )
+{
+    return cv::Size(mat->cols, mat->rows);
+}
+
 static int
 icvFindContoursInInterval( const CvArr* src,
                            /*int minValue, int maxValue,*/
@@ -1615,13 +1622,13 @@ icvFindContoursInInterval( const CvArr* src,
     CvSeq* prev = 0;
 
     if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL storage pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL storage pointer" );
 
     if( !result )
-        CV_Error( CV_StsNullPtr, "NULL double CvSeq pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL double CvSeq pointer" );
 
     if( contourHeaderSize < (int)sizeof(CvContour))
-        CV_Error( CV_StsBadSize, "Contour header size must be >= sizeof(CvContour)" );
+        CV_Error( cv::Error::StsBadSize, "Contour header size must be >= sizeof(CvContour)" );
 
     storage00.reset(cvCreateChildMemStorage(storage));
     storage01.reset(cvCreateChildMemStorage(storage));
@@ -1630,7 +1637,7 @@ icvFindContoursInInterval( const CvArr* src,
 
     mat = cvGetMat( src, &stub );
     if( !CV_IS_MASK_ARR(mat))
-        CV_Error( CV_StsBadArg, "Input array must be 8uC1 or 8sC1" );
+        CV_Error( cv::Error::StsBadArg, "Input array must be 8uC1 or 8sC1" );
     src_data = mat->data.ptr;
     img_step = mat->step;
     img_size = cvGetMatSize(mat);
@@ -1922,14 +1929,14 @@ cvFindContours_Impl( void*  img,  CvMemStorage*  storage,
     int count = -1;
 
     if( !firstContour )
-        CV_Error( CV_StsNullPtr, "NULL double CvSeq pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL double CvSeq pointer" );
 
     *firstContour = 0;
 
     if( method == cv::LINK_RUNS )
     {
         if( offset.x != 0 || offset.y != 0 )
-            CV_Error( CV_StsOutOfRange,
+            CV_Error( cv::Error::StsOutOfRange,
             "Nonzero offset is not supported in cv::LINK_RUNS yet" );
 
         count = icvFindContoursInInterval( img, storage, firstContour, cntHeaderSize );

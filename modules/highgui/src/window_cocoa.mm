@@ -284,14 +284,11 @@ void resizeWindowImpl( const char* name, int width, int height)
 
 void moveWindowImpl( const char* name, int x, int y)
 {
-    CV_FUNCNAME("moveWindowImpl");
-    __BEGIN__;
-
     NSAutoreleasePool* localpool1 = [[NSAutoreleasePool alloc] init];
     CVWindow *window = nil;
 
     if(name == NULL)
-        CV_ERROR( CV_StsNullPtr, "NULL window name" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window name" );
     //cout << "moveWindowImpl"<< endl;
     window = cvGetWindow(name);
     if(window) {
@@ -305,8 +302,6 @@ void moveWindowImpl( const char* name, int x, int y)
         }
     }
     [localpool1 drain];
-
-    __END__;
 }
 
 static int cocoa_CreateTrackbar (const char* trackbar_name,
@@ -314,19 +309,17 @@ static int cocoa_CreateTrackbar (const char* trackbar_name,
                               int* val, int count,
                               CvTrackbarCallback on_notify)
 {
-    CV_FUNCNAME("cocoa_CreateTrackbar");
 
 
     int result = 0;
     CVWindow *window = nil;
     NSAutoreleasePool* localpool2 = nil;
 
-    __BEGIN__;
     if (localpool2 != nil) [localpool2 drain];
     localpool2 = [[NSAutoreleasePool alloc] init];
 
     if(window_name == NULL)
-        CV_ERROR( CV_StsNullPtr, "NULL window name" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window name" );
 
     //cout << "cocoa_CreateTrackbar" << endl ;
     window = cvGetWindow(window_name);
@@ -338,7 +331,6 @@ static int cocoa_CreateTrackbar (const char* trackbar_name,
         result = 1;
     }
     [localpool2 drain];
-    __END__;
     return result;
 }
 
@@ -367,18 +359,15 @@ int createTrackbar2Impl(const char* trackbar_name,
 
 void setMouseCallbackImpl( const char* name, CvMouseCallback function, void* info)
 {
-    CV_FUNCNAME("setMouseCallbackImpl");
-
     CVWindow *window = nil;
     NSAutoreleasePool* localpool3 = nil;
-    __BEGIN__;
     //cout << "setMouseCallbackImpl" << endl;
 
     if (localpool3 != nil) [localpool3 drain];
     localpool3 = [[NSAutoreleasePool alloc] init];
 
     if(name == NULL)
-        CV_ERROR( CV_StsNullPtr, "NULL window name" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window name" );
 
     window = cvGetWindow(name);
     if(window) {
@@ -386,22 +375,16 @@ void setMouseCallbackImpl( const char* name, CvMouseCallback function, void* inf
         [window setMouseParam:info];
     }
     [localpool3 drain];
-
-    __END__;
 }
 
  int getTrackbarPosImpl( const char* trackbar_name, const char* window_name )
 {
-    CV_FUNCNAME("getTrackbarPosImpl");
-
     CVWindow *window = nil;
     int pos = -1;
     NSAutoreleasePool* localpool4 = nil;
-    __BEGIN__;
-
     //cout << "getTrackbarPosImpl" << endl;
     if(trackbar_name == NULL || window_name == NULL)
-        CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
+        CV_Error( cv::Error::StsNullPtr, "NULL trackbar or window name" );
 
     if (localpool4 != nil) [localpool4 drain];
     localpool4 = [[NSAutoreleasePool alloc] init];
@@ -414,25 +397,21 @@ void setMouseCallbackImpl( const char* name, CvMouseCallback function, void* inf
         }
     }
     [localpool4 drain];
-    __END__;
     return pos;
 }
 
 void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int pos)
 {
-    CV_FUNCNAME("setTrackbarPosImpl");
-
     CVWindow *window = nil;
     CVSlider *slider = nil;
     NSAutoreleasePool* localpool5 = nil;
 
-    __BEGIN__;
     //cout << "setTrackbarPosImpl" << endl;
     if(trackbar_name == NULL || window_name == NULL)
-        CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
+        CV_Error( cv::Error::StsNullPtr, "NULL trackbar or window name" );
 
     if(pos < 0)
-        CV_ERROR( CV_StsOutOfRange, "Bad trackbar maximal value" );
+        CV_Error( cv::Error::StsOutOfRange, "Bad trackbar maximal value" );
 
     if (localpool5 != nil) [localpool5 drain];
     localpool5 = [[NSAutoreleasePool alloc] init];
@@ -448,22 +427,17 @@ void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int 
         }
     }
     [localpool5 drain];
-
-    __END__;
 }
 
 void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval)
 {
-    CV_FUNCNAME("setTrackbarMaxImpl");
-
     CVWindow *window = nil;
     CVSlider *slider = nil;
     NSAutoreleasePool* localpool5 = nil;
 
-    __BEGIN__;
     //cout << "setTrackbarPosImpl" << endl;
     if(trackbar_name == NULL || window_name == NULL)
-        CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
+        CV_Error( cv::Error::StsNullPtr, "NULL trackbar or window name" );
 
     if (localpool5 != nil) [localpool5 drain];
     localpool5 = [[NSAutoreleasePool alloc] init];
@@ -480,21 +454,16 @@ void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int 
         }
     }
     [localpool5 drain];
-
-    __END__;
 }
 
 void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval)
 {
-    CV_FUNCNAME("setTrackbarMinImpl");
-
     CVWindow *window = nil;
     CVSlider *slider = nil;
     NSAutoreleasePool* localpool5 = nil;
 
-    __BEGIN__;
     if(trackbar_name == NULL || window_name == NULL)
-        CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
+        CV_Error( cv::Error::StsNullPtr, "NULL trackbar or window name" );
 
     if (localpool5 != nil) [localpool5 drain];
     localpool5 = [[NSAutoreleasePool alloc] init];
@@ -511,8 +480,6 @@ void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int 
         }
     }
     [localpool5 drain];
-
-    __END__;
 }
 
 int namedWindowImpl( const char* name, int flags )
@@ -616,18 +583,15 @@ CvRect cvGetWindowRect_COCOA( const char* name )
     CvRect result = cvRect(-1, -1, -1, -1);
     CVWindow *window = nil;
 
-    CV_FUNCNAME( "cvGetWindowRect_COCOA" );
-
-    __BEGIN__;
     if( name == NULL )
     {
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_Error( cv::Error::StsNullPtr, "NULL name string" );
     }
 
     window = cvGetWindow( name );
     if ( window == NULL )
     {
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
     } else {
         NSRect rect = [window frame];
 #if MAC_OS_X_VERSION_MAX_ALLOWED > MAC_OS_X_VERSION_10_6
@@ -638,8 +602,6 @@ CvRect cvGetWindowRect_COCOA( const char* name )
         NSSize sz = [[[window contentView] image] size];
         result = cvRect(pt.x, pt.y, sz.width, sz.height);
     }
-
-    __END__;
     return result;
 }
 
@@ -648,23 +610,18 @@ double cvGetModeWindow_COCOA( const char* name )
     double result = -1;
     CVWindow *window = nil;
 
-    CV_FUNCNAME( "cvGetModeWindow_COCOA" );
-
-    __BEGIN__;
     if( name == NULL )
     {
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_Error( cv::Error::StsNullPtr, "NULL name string" );
     }
 
     window = cvGetWindow( name );
     if ( window == NULL )
     {
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
     }
 
     result = window.status;
-
-    __END__;
     return result;
 }
 
@@ -678,18 +635,15 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
 
     NSAutoreleasePool* localpool = nil;
 
-    CV_FUNCNAME( "cvSetModeWindow_COCOA" );
-
-    __BEGIN__;
     if( name == NULL )
     {
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_Error( cv::Error::StsNullPtr, "NULL name string" );
     }
 
     window = cvGetWindow(name);
     if ( window == NULL )
     {
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
     }
 
     if ( [window autosize] )
@@ -737,8 +691,6 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
     }
 #endif
     [localpool drain];
-
-    __END__;
 }
 
 double cvGetPropVisible_COCOA(const char* name)
@@ -746,23 +698,19 @@ double cvGetPropVisible_COCOA(const char* name)
     double    result = -1;
     CVWindow* window = nil;
 
-    CV_FUNCNAME("cvGetPropVisible_COCOA");
-
-    __BEGIN__;
     if (name == NULL)
     {
-        CV_ERROR(CV_StsNullPtr, "NULL name string");
+        CV_Error(cv::Error::StsNullPtr, "NULL name string");
     }
 
     window = cvGetWindow(name);
     if (window == NULL)
     {
-        CV_ERROR(CV_StsNullPtr, "NULL window");
+        CV_Error(cv::Error::StsNullPtr, "NULL window");
     }
 
     result = window.isVisible ? 1 : 0;
 
-    __END__;
     return result;
 }
 
@@ -771,23 +719,18 @@ double cvGetPropTopmost_COCOA(const char* name)
     double    result = -1;
     CVWindow* window = nil;
 
-    CV_FUNCNAME("cvGetPropTopmost_COCOA");
-
-    __BEGIN__;
     if (name == NULL)
     {
-        CV_ERROR(CV_StsNullPtr, "NULL name string");
+        CV_Error(cv::Error::StsNullPtr, "NULL name string");
     }
 
     window = cvGetWindow(name);
     if (window == NULL)
     {
-        CV_ERROR(CV_StsNullPtr, "NULL window");
+        CV_Error(cv::Error::StsNullPtr, "NULL window");
     }
 
     result = (window.level == NSStatusWindowLevel) ? 1 : 0;
-
-    __END__;
     return result;
 }
 
@@ -795,23 +738,21 @@ void cvSetPropTopmost_COCOA( const char* name, const bool topmost )
 {
     CVWindow *window = nil;
     NSAutoreleasePool* localpool = nil;
-    CV_FUNCNAME( "cvSetPropTopmost_COCOA" );
 
-    __BEGIN__;
     if( name == NULL )
     {
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_Error( cv::Error::StsNullPtr, "NULL name string" );
     }
 
     window = cvGetWindow(name);
     if ( window == NULL )
     {
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
     }
 
     if (([window styleMask] & NSFullScreenWindowMask))
     {
-        EXIT;
+        return;
     }
 
     localpool = [[NSAutoreleasePool alloc] init];
@@ -825,7 +766,6 @@ void cvSetPropTopmost_COCOA( const char* name, const bool topmost )
         [window makeKeyAndOrderFront:nil];
     }
     [localpool drain];
-    __END__;
 }
 
 void setWindowTitle_COCOA(const cv::String& winname, const cv::String& title)

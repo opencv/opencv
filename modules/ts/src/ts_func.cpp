@@ -1,7 +1,6 @@
 #include "precomp.hpp"
 #include <float.h>
 #include <limits.h>
-#include "opencv2/imgproc/types_c.h"
 
 using namespace cv;
 
@@ -407,7 +406,7 @@ void convert(const Mat& src, cv::OutputArray _dst,
             convertTo((const cv::bfloat16_t*)sptr, dptr, dtype, total, alpha, beta);
             break;
         default:
-            CV_Error(CV_StsNotImplemented, "unknown/unsupported depth");
+            CV_Error(cv::Error::StsNotImplemented, "unknown/unsupported depth");
         }
     }
 }

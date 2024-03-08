@@ -1007,7 +1007,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     else if( depth == CV_32F )
         calcHist_<float>(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 
     ihist.convertTo(hist, CV_32F);
 }
@@ -1184,7 +1184,7 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
     else if( depth == CV_32F )
         calcSparseHist_<float>(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, uniform );
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 
     if( !keepInt )
     {
@@ -1645,7 +1645,7 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
     else if( depth == CV_32F )
         calcBackProj_<float, float>(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, (float)scale, uniform );
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 }
 
 
@@ -1818,7 +1818,7 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
         calcSparseBackProj_<float, float>(ptrs, deltas, imsize, hist, dims, ranges,
                                           _uniranges, (float)scale, uniform );
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 }
 
 #ifdef HAVE_OPENCL
@@ -2224,7 +2224,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             }
         }
         else
-            CV_Error( CV_StsBadArg, "Unknown comparison method" );
+            CV_Error( cv::Error::StsBadArg, "Unknown comparison method" );
     }
 
     if( method == cv::HISTCMP_CHISQR_ALT )
@@ -2363,7 +2363,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         }
     }
     else
-        CV_Error( CV_StsBadArg, "Unknown comparison method" );
+        CV_Error( cv::Error::StsBadArg, "Unknown comparison method" );
 
     if( method == cv::HISTCMP_CHISQR_ALT )
         result *= 2;
@@ -2379,10 +2379,10 @@ void cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform )
     int i, j;
 
     if( !ranges )
-        CV_Error( CV_StsNullPtr, "NULL ranges pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL ranges pointer" );
 
     if( !CV_IS_HIST(hist) )
-        CV_Error( CV_StsBadArg, "Invalid histogram header" );
+        CV_Error( cv::Error::StsBadArg, "Invalid histogram header" );
 
     dims = cvGetDims( hist->bins, size );
     for( i = 0; i < dims; i++ )
@@ -2393,7 +2393,7 @@ void cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform )
         for( i = 0; i < dims; i++ )
         {
             if( !ranges[i] )
-                CV_Error( CV_StsNullPtr, "One of <ranges> elements is NULL" );
+                CV_Error( cv::Error::StsNullPtr, "One of <ranges> elements is NULL" );
             hist->thresh[i][0] = ranges[i][0];
             hist->thresh[i][1] = ranges[i][1];
         }
@@ -2417,13 +2417,13 @@ void cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform )
             float val0 = -FLT_MAX;
 
             if( !ranges[i] )
-                CV_Error( CV_StsNullPtr, "One of <ranges> elements is NULL" );
+                CV_Error( cv::Error::StsNullPtr, "One of <ranges> elements is NULL" );
 
             for( j = 0; j <= size[i]; j++ )
             {
                 float val = ranges[i][j];
                 if( val <= val0 )
-                    CV_Error(CV_StsOutOfRange, "Bin ranges should go in ascenting order");
+                    CV_Error(cv::Error::StsOutOfRange, "Bin ranges should go in ascenting order");
                 val0 = dim_ranges[j] = val;
             }
 

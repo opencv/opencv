@@ -260,12 +260,14 @@ void Layer::getTypes(const std::vector<MatType>&inputs,
 {
     CV_Assert(inputs.size());
     for (auto input : inputs)
+    {
         if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
             CV_CheckTypeEQ(input, CV_32F, "");
         else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
             CV_CheckType(input, input == CV_16F || input == CV_8S, "");
         else
             CV_CheckType(input, input == CV_32F || input == CV_8S, "");
+    }
 
     outputs.assign(requiredOutputs, inputs[0]);
     internals.assign(requiredInternals, inputs[0]);

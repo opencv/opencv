@@ -71,10 +71,10 @@ static void cvStartReadChainPoints( CvChain * chain, CvChainPtReader * reader )
     int i;
 
     if( !chain || !reader )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( chain->elem_size != 1 || chain->header_size < (int)sizeof(CvChain))
-        CV_Error( CV_StsBadSize, "" );
+        CV_Error( cv::Error::StsBadSize, "" );
 
     cvStartReadSeq( (CvSeq *) chain, (CvSeqReader *) reader, 0 );
 
@@ -623,7 +623,7 @@ void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
     //from being used.
     if (epsilon < 0.0 || !(epsilon < 1e30))
     {
-        CV_Error(CV_StsOutOfRange, "Epsilon not valid.");
+        CV_Error(cv::Error::StsOutOfRange, "Epsilon not valid.");
     }
 
     Mat curve = _curve.getMat();
@@ -646,7 +646,7 @@ void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
     else if( depth == CV_32F )
         nout = approxPolyDP_(curve.ptr<Point2f>(), npoints, (Point2f*)buf, closed, epsilon, _stack);
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     Mat(nout, 1, CV_MAKETYPE(depth, 2), buf).copyTo(_approxCurve);
 }

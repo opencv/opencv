@@ -55,7 +55,10 @@
     @defgroup objdetect_barcode Barcode detection and decoding
     @defgroup objdetect_qrcode QRCode detection and encoding
     @defgroup objdetect_dnn_face DNN-based face detection and recognition
-Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
+
+    Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
+
+    @defgroup objdetect_common Common functions and classes
     @defgroup objdetect_aruco ArUco markers and boards detection for robust camera pose estimation
     @{
         ArUco Marker Detection

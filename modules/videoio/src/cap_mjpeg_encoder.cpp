@@ -95,7 +95,7 @@ static bool createEncodeHuffmanTable( const int* src, unsigned* table, int max_s
 
     if( size > max_size )
     {
-        CV_Error(CV_StsOutOfRange, "too big maximum Huffman code size");
+        CV_Error(cv::Error::StsOutOfRange, "too big maximum Huffman code size");
     }
 
     memset( table, 0, size*sizeof(table[0]));
@@ -487,7 +487,7 @@ public:
             colorspace = COLORSPACE_YUV444P;
         }
         else
-            CV_Error(CV_StsBadArg, "Invalid combination of specified video colorspace and the input image colorspace");
+            CV_Error(cv::Error::StsBadArg, "Invalid combination of specified video colorspace and the input image colorspace");
 
         if( !rawstream ) {
             int avi_index = container.getAVIIndex(0, dc);

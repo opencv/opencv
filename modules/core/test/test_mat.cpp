@@ -11,6 +11,7 @@
 
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/bindings_utils.hpp"
+#include "opencv2/core/core_c.h"
 
 namespace opencv_test { namespace {
 
@@ -322,7 +323,7 @@ TEST(Core_PCA, accuracy)
     rng.fill( rPoints, RNG::UNIFORM, Scalar::all(0.0), Scalar::all(1.0) );
     rng.fill( rTestPoints, RNG::UNIFORM, Scalar::all(0.0), Scalar::all(1.0) );
 
-    PCA rPCA( rPoints, Mat(), CV_PCA_DATA_AS_ROW, maxComponents ), cPCA;
+    PCA rPCA( rPoints, Mat(), PCA::DATA_AS_ROW, maxComponents ), cPCA;
 
     // 1. check C++ PCA & ROW
     Mat rPrjTestPoints = rPCA.project( rTestPoints );
@@ -362,7 +363,7 @@ TEST(Core_PCA, accuracy)
     // check pca eigenvalues
     evalEps = 1e-5, evecEps = 5e-3;
     err = cvtest::norm(rPCA.eigenvalues, subEval, NORM_L2 | NORM_RELATIVE);
-    EXPECT_LE(err , evalEps) << "pca.eigenvalues is incorrect (CV_PCA_DATA_AS_ROW)";
+    EXPECT_LE(err , evalEps) << "pca.eigenvalues is incorrect (PCA::DATA_AS_ROW)";
     // check pca eigenvectors
     for(int i = 0; i < subEvec.rows; i++)
     {
@@ -379,7 +380,7 @@ TEST(Core_PCA, accuracy)
             double mval = 0; Point mloc;
             minMaxLoc(tmp, 0, &mval, 0, &mloc);
 
-            EXPECT_LE(err, evecEps) << "pca.eigenvectors is incorrect (CV_PCA_DATA_AS_ROW) at " << i << " "
+            EXPECT_LE(err, evecEps) << "pca.eigenvectors is incorrect (PCA::DATA_AS_ROW) at " << i << " "
                 << cv::format("max diff is %g at (i=%d, j=%d) (%g vs %g)\n",
                         mval, mloc.y, mloc.x, rPCA.eigenvectors.at<float>(mloc.y, mloc.x),
                         subEvec.at<float>(mloc.y, mloc.x))
@@ -399,7 +400,7 @@ TEST(Core_PCA, accuracy)
         err = cvtest::norm(rPrjTestPoints.row(i), prj, NORM_L2 | NORM_RELATIVE);
         if (err < prjEps)
         {
-            EXPECT_LE(err, prjEps) << "bad accuracy of project() (CV_PCA_DATA_AS_ROW)";
+            EXPECT_LE(err, prjEps) << "bad accuracy of project() (PCA::DATA_AS_ROW)";
             continue;
         }
         // check pca backProject
@@ -407,22 +408,22 @@ TEST(Core_PCA, accuracy)
         err = cvtest::norm(rBackPrjTestPoints.row(i), backPrj, NORM_L2 | NORM_RELATIVE);
         if (err > backPrjEps)
         {
-            EXPECT_LE(err, backPrjEps) << "bad accuracy of backProject() (CV_PCA_DATA_AS_ROW)";
+            EXPECT_LE(err, backPrjEps) << "bad accuracy of backProject() (PCA::DATA_AS_ROW)";
             continue;
         }
     }
 
     // 2. check C++ PCA & COL
-    cPCA( rPoints.t(), Mat(), CV_PCA_DATA_AS_COL, maxComponents );
+    cPCA( rPoints.t(), Mat(), PCA::DATA_AS_COL, maxComponents );
     diffPrjEps = 1, diffBackPrjEps = 1;
     Mat ocvPrjTestPoints = cPCA.project(rTestPoints.t());
     err = cvtest::norm(cv::abs(ocvPrjTestPoints), cv::abs(rPrjTestPoints.t()), NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffPrjEps) << "bad accuracy of project() (CV_PCA_DATA_AS_COL)";
+    ASSERT_LE(err, diffPrjEps) << "bad accuracy of project() (PCA::DATA_AS_COL)";
     err = cvtest::norm(cPCA.backProject(ocvPrjTestPoints), rBackPrjTestPoints.t(), NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of backProject() (CV_PCA_DATA_AS_COL)";
+    ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of backProject() (PCA::DATA_AS_COL)";
 
     // 3. check C++ PCA w/retainedVariance
-    cPCA( rPoints.t(), Mat(), CV_PCA_DATA_AS_COL, retainedVariance );
+    cPCA( rPoints.t(), Mat(), PCA::DATA_AS_COL, retainedVariance );
     diffPrjEps = 1, diffBackPrjEps = 1;
     Mat rvPrjTestPoints = cPCA.project(rTestPoints.t());
 
@@ -431,9 +432,9 @@ TEST(Core_PCA, accuracy)
     else
         err = cvtest::norm(cv::abs(rvPrjTestPoints), cv::abs(rPrjTestPoints.colRange(0,cPCA.eigenvectors.rows).t()), NORM_L2 | NORM_RELATIVE);
 
-    ASSERT_LE(err, diffPrjEps) << "bad accuracy of project() (CV_PCA_DATA_AS_COL); retainedVariance=" << retainedVariance;
+    ASSERT_LE(err, diffPrjEps) << "bad accuracy of project() (PCA::DATA_AS_COL); retainedVariance=" << retainedVariance;
     err = cvtest::norm(cPCA.backProject(rvPrjTestPoints), rBackPrjTestPoints.t(), NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of backProject() (CV_PCA_DATA_AS_COL); retainedVariance=" << retainedVariance;
+    ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of backProject() (PCA::DATA_AS_COL); retainedVariance=" << retainedVariance;
 
 #ifdef CHECK_C
     // 4. check C PCA & ROW
@@ -447,14 +448,14 @@ TEST(Core_PCA, accuracy)
     _prjTestPoints = cvMat(prjTestPoints);
     _backPrjTestPoints = cvMat(backPrjTestPoints);
 
-    cvCalcPCA( &_points, &_avg, &_eval, &_evec, CV_PCA_DATA_AS_ROW );
+    cvCalcPCA( &_points, &_avg, &_eval, &_evec, PCA::DATA_AS_ROW );
     cvProjectPCA( &_testPoints, &_avg, &_evec, &_prjTestPoints );
     cvBackProjectPCA( &_prjTestPoints, &_avg, &_evec, &_backPrjTestPoints );
 
     err = cvtest::norm(prjTestPoints, rPrjTestPoints, NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffPrjEps) << "bad accuracy of cvProjectPCA() (CV_PCA_DATA_AS_ROW)";
+    ASSERT_LE(err, diffPrjEps) << "bad accuracy of cvProjectPCA() (PCA::DATA_AS_ROW)";
     err = cvtest::norm(backPrjTestPoints, rBackPrjTestPoints, NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (CV_PCA_DATA_AS_ROW)";
+    ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (PCA::DATA_AS_ROW)";
 
     // 5. check C PCA & COL
     _points = cvMat(cPoints);
@@ -465,14 +466,14 @@ TEST(Core_PCA, accuracy)
     prjTestPoints = prjTestPoints.t(); _prjTestPoints = cvMat(prjTestPoints);
     backPrjTestPoints = backPrjTestPoints.t(); _backPrjTestPoints = cvMat(backPrjTestPoints);
 
-    cvCalcPCA( &_points, &_avg, &_eval, &_evec, CV_PCA_DATA_AS_COL );
+    cvCalcPCA( &_points, &_avg, &_eval, &_evec, PCA::DATA_AS_COL );
     cvProjectPCA( &_testPoints, &_avg, &_evec, &_prjTestPoints );
     cvBackProjectPCA( &_prjTestPoints, &_avg, &_evec, &_backPrjTestPoints );
 
     err = cvtest::norm(cv::abs(prjTestPoints), cv::abs(rPrjTestPoints.t()), NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffPrjEps) << "bad accuracy of cvProjectPCA() (CV_PCA_DATA_AS_COL)";
+    ASSERT_LE(err, diffPrjEps) << "bad accuracy of cvProjectPCA() (PCA::DATA_AS_COL)";
     err = cvtest::norm(backPrjTestPoints, rBackPrjTestPoints.t(), NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (CV_PCA_DATA_AS_COL)";
+    ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (PCA::DATA_AS_COL)";
 #endif
     // Test read and write
     const std::string filename = cv::tempfile("PCA_store.yml");
@@ -599,7 +600,7 @@ static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
     else if( M.type() == CV_64F )
         *(double*)ptr = value;
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 }
 
 #if defined(__GNUC__) && (__GNUC__ == 11 || __GNUC__ == 12 || __GNUC__ == 13)
@@ -651,8 +652,8 @@ void Core_ArrayOpTest::run( int /* start_from */)
         MatND A(3, sz3, CV_32F), B(3, sz3, CV_16SC4);
         CvMatND matA = cvMatND(A), matB = cvMatND(B);
         RNG rng;
-        rng.fill(A, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
-        rng.fill(B, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
+        rng.fill(A, RNG::UNIFORM, Scalar::all(-10), Scalar::all(10));
+        rng.fill(B, RNG::UNIFORM, Scalar::all(-10), Scalar::all(10));
 
         int idx0[] = {3,4,5}, idx1[] = {0, 9, 7};
         float val0 = 130;
@@ -808,7 +809,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         all_vals.resize(nz0);
         all_vals2.resize(nz0);
         Mat_<double> _all_vals(all_vals), _all_vals2(all_vals2);
-        rng.fill(_all_vals, CV_RAND_UNI, Scalar(-1000), Scalar(1000));
+        rng.fill(_all_vals, RNG::UNIFORM, Scalar(-1000), Scalar(1000));
         if( depth == CV_32F )
         {
             Mat _all_vals_f;
@@ -824,9 +825,9 @@ void Core_ArrayOpTest::run( int /* start_from */)
         }
 
         minMaxLoc(_all_vals, &min_val, &max_val);
-        double _norm0 = cv/*test*/::norm(_all_vals, CV_C);
-        double _norm1 = cv/*test*/::norm(_all_vals, CV_L1);
-        double _norm2 = cv/*test*/::norm(_all_vals, CV_L2);
+        double _norm0 = cv/*test*/::norm(_all_vals, NORM_INF);
+        double _norm1 = cv/*test*/::norm(_all_vals, NORM_L1);
+        double _norm2 = cv/*test*/::norm(_all_vals, NORM_L2);
 
         for( i = 0; i < nz0; i++ )
         {
@@ -861,9 +862,9 @@ void Core_ArrayOpTest::run( int /* start_from */)
         SparseMat M3; SparseMat(Md).convertTo(M3, Md.type(), 2);
 
         int nz1 = (int)M.nzcount(), nz2 = (int)M3.nzcount();
-        double norm0 = cv/*test*/::norm(M, CV_C);
-        double norm1 = cv/*test*/::norm(M, CV_L1);
-        double norm2 = cv/*test*/::norm(M, CV_L2);
+        double norm0 = cv/*test*/::norm(M, NORM_INF);
+        double norm1 = cv/*test*/::norm(M, NORM_L1);
+        double norm2 = cv/*test*/::norm(M, NORM_L2);
         double eps = depth == CV_32F ? FLT_EPSILON*100 : DBL_EPSILON*1000;
 
         if( nz1 != nz0 || nz2 != nz0)
