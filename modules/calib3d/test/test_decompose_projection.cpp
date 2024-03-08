@@ -175,7 +175,7 @@ TEST(Calib3d_DecomposeProjectionMatrix, bug_23733)
 
     cv::Matx34d M;
     cv::hconcat(R, -R * cv::Vec3d(t[0] / t[3], t[1] / t[3], t[2] / t[3]), M);
-    
+
     cv::Matx34d P_recompose = K * M;
     EXPECT_LT(cv::norm(P_recompose - P, cv::NORM_INF), 1e-16);
 }
