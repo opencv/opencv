@@ -38,7 +38,10 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        outputs.assign(1, outputType);
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16 && outputType == CV_32F)
+            outputs.assign(1, CV_16F);
+        else
+            outputs.assign(1, outputType);
     }
 
 #ifdef HAVE_OPENCL
