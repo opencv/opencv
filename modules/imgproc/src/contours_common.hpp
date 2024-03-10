@@ -171,11 +171,11 @@ public:
         //       instead of reusing existing vector data
         if (isChain)
         {
-            memcpy(data, &codes[0], codes.size() * 1);
+            memcpy(data, &codes[0], codes.size() * sizeof(codes[0]));
         }
         else
         {
-            memcpy(data, &pts[0], pts.size() * 8);
+            memcpy(data, &pts[0], pts.size() * sizeof(pts[0]));
         }
     }
 };
@@ -188,6 +188,10 @@ typedef TreeIterator<Contour> CIterator;
 void contourTreeToResults(CTree & tree, int res_type,
                           cv::OutputArrayOfArrays &_contours,
                           cv::OutputArray &_hierarchy);
+
+
+
+std::vector<Point> approximateChainTC89(std::vector<schar> chain, const Point &origin, const int method);
 
 } // cv::
 

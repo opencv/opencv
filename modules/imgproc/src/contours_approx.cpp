@@ -5,6 +5,7 @@
 #include "opencv2/core/base.hpp"
 #include "opencv2/core/types.hpp"
 #include "opencv2/imgproc.hpp"
+#include "contours_common.hpp"
 #include <vector>
 
 using namespace std;
@@ -19,7 +20,7 @@ struct ApproxItem
     int s; // 1-curvature
     bool removed;
     ApproxItem() : k(0), s(0), removed(false) {}
-    ApproxItem(Point pt_, int s_) : pt(pt_), k(0), s(s_), removed(false) {}
+    ApproxItem(const Point &pt_, int s_) : pt(pt_), k(0), s(s_), removed(false) {}
 };
 
 static const schar abs_diff[16] = { 1, 2, 3, 4, 3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1 };
@@ -34,6 +35,7 @@ static vector<ApproxItem> pass_0(const vector<schar> & chain, Point pt, bool isA
 {
     vector<ApproxItem> res;
     const size_t len = chain.size();
+    res.reserve(len / 2);
     for (size_t i = 0; i < len; ++i)
     {
         const schar prev = (i == 0) ? chain[len - 1] : chain[i - 1];
@@ -53,6 +55,7 @@ static vector<ApproxItem> pass_0(const vector<schar> & chain, Point pt, bool isA
 static vector<Point> gatherPoints(const vector<ApproxItem> & ares)
 {
     vector<Point> res;
+    res.reserve(ares.size() / 2);
     for (const ApproxItem & item : ares)
     {
         if (item.removed)
@@ -76,7 +79,6 @@ static int calc_support(const vector<ApproxItem> & ares, int i)
         const int i1 = (i >= k) ? (i - k) : (len - k + i);
         const int i2 = (i + k < len) ? (i + k) : (i + k - len);
 
-
         int lk, dk_num;
         int dx, dy;
         dx = ares[i2].pt.x - ares[i1].pt.x;
@@ -88,7 +90,7 @@ static int calc_support(const vector<ApproxItem> & ares, int i)
         /* distance between p_i and the line (p_(i-k), p_(i+k)) */
         dk_num = (ares[i].pt.x - ares[i1].pt.x) * dy - (ares[i].pt.y - ares[i1].pt.y) * dx;
 
-        Cv32suf d;
+        union {  int i; float f; } d;
         d.f = (float) (((double) d_num) * lk - ((double) dk_num) * l);
 
         if( k > 1 && (l >= lk || ((d_num > 0 && d.i <= 0) || (d_num < 0 && d.i >= 0))))
@@ -125,7 +127,7 @@ static int calc_cosine(const vector<ApproxItem> & ares, int i)
             (float) (temp_num /
                      sqrt( ((double)dx1 * dx1 + (double)dy1 * dy1) *
                            ((double)dx2 * dx2 + (double)dy2 * dy2) ));
-        Cv32suf sk;
+        union { int i; float f; } sk;
         sk.f = (float) (temp_num + 1.1);
 
         CV_Assert( 0 <= sk.f && sk.f <= 2.2 );

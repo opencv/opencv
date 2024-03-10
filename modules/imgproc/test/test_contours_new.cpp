@@ -85,7 +85,7 @@ TEST_P(Imgproc_FindContours_Modes1, rectangle)
 
     for (size_t i = 0; i < ITER; ++i)
     {
-        SCOPED_TRACE(cv::format("i=%ld", i));
+        SCOPED_TRACE(cv::format("i=%zu", i));
         const Size sz(rng.uniform(640, 1920), rng.uniform(480, 1080));
         Mat img(sz, CV_8UC1, Scalar::all(0));
         Mat img32s(sz, CV_32SC1, Scalar::all(0));
@@ -211,7 +211,7 @@ TEST_P(Imgproc_FindContours_Modes1, rectangle)
                 ASSERT_EQ(contours.size(), contours_o.size());
                 for (size_t j = 0; j < contours.size(); ++j)
                 {
-                    SCOPED_TRACE(format("contour %lu", j));
+                    SCOPED_TRACE(format("contour %zu", j));
                     EXPECT_MAT_NEAR(Mat(contours[j]), Mat(contours_o[j]), 0);
                 }
                 EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
@@ -224,7 +224,7 @@ TEST_P(Imgproc_FindContours_Modes1, rectangle)
                 ASSERT_EQ(contours.size(), contours_o.size());
                 for (size_t j = 0; j < contours.size(); ++j)
                 {
-                    SCOPED_TRACE(format("contour %lu", j));
+                    SCOPED_TRACE(format("contour %zu", j));
                     EXPECT_MAT_NEAR(Mat(contours[j]), Mat(contours_o[j]), 0);
                 }
                 EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
@@ -286,7 +286,7 @@ TEST_P(Imgproc_FindContours_Modes1, small)
                 ASSERT_EQ(contours.size(), contours_o.size());
                 for (size_t i = 0; i < contours.size(); ++ i)
                 {
-                    SCOPED_TRACE(format("contour %lu", i));
+                    SCOPED_TRACE(format("contour %zu", i));
                     EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
                 }
                 EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
@@ -311,7 +311,7 @@ TEST_P(Imgproc_FindContours_Modes1, small)
                 ASSERT_EQ(contours.size(), contours_o.size());
                 for (size_t i = 0; i < contours.size(); ++ i)
                 {
-                    SCOPED_TRACE(format("contour %lu", i));
+                    SCOPED_TRACE(format("contour %zu", i));
                     EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
                 }
                 EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
@@ -367,7 +367,7 @@ TEST_P(Imgproc_FindContours_Modes1, deep)
                 ASSERT_EQ(contours.size(), contours_o.size());
                 for (size_t i = 0; i < contours.size(); ++ i)
                 {
-                    SCOPED_TRACE(format("contour %lu", i));
+                    SCOPED_TRACE(format("contour %zu", i));
                     EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
                 }
                 EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
@@ -393,7 +393,7 @@ TEST_P(Imgproc_FindContours_Modes1, deep)
                 ASSERT_EQ(contours.size(), contours_o.size());
                 for (size_t i = 0; i < contours.size(); ++ i)
                 {
-                    SCOPED_TRACE(format("contour %lu", i));
+                    SCOPED_TRACE(format("contour %zu", i));
                     EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
                 }
                 EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
@@ -483,7 +483,7 @@ TEST_P(Imgproc_FindContours_Modes2, new_accuracy)
     ASSERT_EQ(contours_o.size(), contours.size());
     for (size_t i = 0; i < contours_o.size(); ++i)
     {
-        SCOPED_TRACE(format("contour = %lu", i));
+        SCOPED_TRACE(format("contour = %zu", i));
         EXPECT_MAT_NEAR(Mat(contours_o[i]), Mat(contours[i]), 0);
     }
     EXPECT_MAT_NEAR(Mat(hierarchy_o), Mat(hierarchy), 0);
@@ -538,7 +538,7 @@ TEST_P(Imgproc_FindContours_Modes2, approx)
         ASSERT_EQ(contours_o.size(), contours.size());
         for (size_t i = 0; i < contours_o.size(); ++i)
         {
-            SCOPED_TRACE(format("c = %d, contour = %lu", c, i));
+            SCOPED_TRACE(format("c = %d, contour = %zu", c, i));
             EXPECT_MAT_NEAR(Mat(contours_o[i]), Mat(contours[i]), 0);
         }
         EXPECT_MAT_NEAR(Mat(hierarchy_o), Mat(hierarchy), 0);
@@ -600,7 +600,7 @@ TEST(Imgproc_FindContours, link_runs)
     ASSERT_EQ(contours_o.size(), contours.size());
     for (size_t i = 0; i < contours_o.size(); ++i)
     {
-        SCOPED_TRACE(format("contour = %lu", i));
+        SCOPED_TRACE(format("contour = %zu", i));
         EXPECT_MAT_NEAR(Mat(contours_o[i]), Mat(contours[i]), 0);
     }
     EXPECT_MAT_NEAR(Mat(hierarchy_o), Mat(hierarchy), 0);

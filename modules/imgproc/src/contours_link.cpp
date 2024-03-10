@@ -277,6 +277,8 @@ void LinkRunner::process(Mat & image)
 
     Point cur_point;
 
+    rns.reserve(sz.height); // optimization, assuming some contours exist
+
     // First line. None of runs is binded
     rns.push_back(LRP());
     int upper_line = (int)rns.size() - 1;
