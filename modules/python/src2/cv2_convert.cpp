@@ -63,38 +63,19 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     if( PyInt_Check(o) )
     {
         double v[] = {static_cast<double>(PyInt_AsLong((PyObject*)o)), 0., 0., 0.};
-        if ( info.arithm_op_src )
-        {
-            // Normally cv.XXX(x) means cv.XXX( (x, 0., 0., 0.) );
-            // However  cv.add(mat,x) means cv::add(mat, (x,x,x,x) ).
-            v[1] = v[0];
-            v[2] = v[0];
-            v[3] = v[0];
-        }
         m = Mat(4, 1, CV_64F, v).clone();
         return true;
     }
     if( PyFloat_Check(o) )
     {
         double v[] = {PyFloat_AsDouble((PyObject*)o), 0., 0., 0.};
-
-       if ( info.arithm_op_src )
-        {
-            // Normally cv.XXX(x) means cv.XXX( (x, 0., 0., 0.) );
-            // However  cv.add(mat,x) means cv::add(mat, (x,x,x,x) ).
-            v[1] = v[0];
-            v[2] = v[0];
-            v[3] = v[0];
-        }
         m = Mat(4, 1, CV_64F, v).clone();
         return true;
     }
     if( PyTuple_Check(o) )
     {
-        // see https://github.com/opencv/opencv/issues/24057
         const int sz  = (int)PyTuple_Size((PyObject*)o);
-        const int sz2 = info.arithm_op_src ? std::max(4, sz) : sz; // Scalar has 4 elements.
-        m = Mat::zeros(sz2, 1, CV_64F);
+        m = Mat::zeros(sz, 1, CV_64F);
         for( int i = 0; i < sz; i++ )
         {
             PyObject* oi = PyTuple_GetItem(o, i);
@@ -258,31 +239,6 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             step[i] = default_step;
             default_step *= size[i];
         }
-    }
-
-    // see https://github.com/opencv/opencv/issues/24057
-    if ( ( info.arithm_op_src ) && ( ndims == 1 ) && ( size[0] <= 4 ) )
-    {
-        const int sz  = size[0]; // Real Data Length(1, 2, 3 or 4)
-        const int sz2 = 4;       // Scalar has 4 elements.
-        m = Mat::zeros(sz2, 1, CV_64F);
-
-        const char *base_ptr = PyArray_BYTES(oarr);
-        for(int i = 0; i < sz; i++ )
-        {
-            PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i);
-            if( PyInt_Check(oi) )
-                m.at<double>(i) = (double)PyInt_AsLong(oi);
-            else if( PyFloat_Check(oi) )
-                m.at<double>(i) = (double)PyFloat_AsDouble(oi);
-            else
-            {
-                failmsg("%s has some non-numerical elements", info.name);
-                m.release();
-                return false;
-            }
-        }
-        return true;
     }
 
     // handle degenerate case

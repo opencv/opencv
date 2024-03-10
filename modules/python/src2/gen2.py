@@ -493,10 +493,6 @@ class ArgInfo(object):
         return '/O' not in self._modifiers
 
     @property
-    def arithm_op_src_arg(self):
-        return '/AOS' in self._modifiers
-
-    @property
     def outputarg(self):
         return '/O' in self._modifiers or '/IO' in self._modifiers
 
@@ -526,7 +522,6 @@ class ArgInfo(object):
 
     def crepr(self):
         arg  = 0x01 if self.outputarg else 0x0
-        arg += 0x02 if self.arithm_op_src_arg else 0x0
         arg += 0x04 if self.pathlike else 0x0
         return "ArgInfo(\"%s\", %d)" % (self.name, arg)
 
@@ -825,9 +820,20 @@ class FuncInfo(object):
                                      flags = 'METH_STATIC' if self.is_static else '0', py_docstring = full_docstring)
 
     def gen_code(self, codegen):
+        # see https://github.com/opencv/opencv/issues/25165
+        # These functions requires manual implementations to custom.
+        # Comment them out to preserve the underlying codes.
+        isEnabled = not self.get_wrapper_name() in {"pyopencv_cv_add",
+                                                    "pyopencv_cv_subtract",
+                                                    "pyopencv_cv_absdiff",
+                                                    "pyopencv_cv_multiply",
+                                                    "pyopencv_cv_divide"};
+        code = ""
+        if not isEnabled :
+            code += "#if 0 // manual implemtation.\n"
         all_classes = codegen.classes
         proto = self.get_wrapper_prototype(codegen)
-        code = "%s\n{\n" % (proto,)
+        code += "%s\n{\n" % (proto,)
         code += "    using namespace %s;\n\n" % self.namespace.replace('.', '::')
 
         selfinfo = None
@@ -1077,6 +1083,9 @@ class FuncInfo(object):
                     break
             else:
                 py_signatures.append(s)
+
+        if not isEnabled:
+            code += "#endif \n"
 
         return code
 

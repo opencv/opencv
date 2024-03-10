@@ -345,9 +345,10 @@ be set to the default -1. In this case, the output array will have the same dept
 array, be it src1, src2 or both.
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
-@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
-`add(src,X)` means `add(src,(X,X,X,X))`.
-`add(src,(X,))` means `add(src,(X,0,0,0))`.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are numpy-tuple.
+Both `add(src,X)` and `add(src,(X))` mean `add(src,(X,X,X,X))`.
+And `add(src,(X,))` means `add(src,(X,0,0,0))`.
+@note (Python) If one of src1/src2 is numpy-tuple, other must be numpy-array.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and number of channels as the input array(s); the
@@ -389,9 +390,10 @@ in the first case, when src1.depth() == src2.depth(), dtype can be set to the de
 case the output array will have the same depth as the input array, be it src1, src2 or both.
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
-@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
-`subtract(src,X)` means `subtract(src,(X,X,X,X))`.
-`subtract(src,(X,))` means `subtract(src,(X,0,0,0))`.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are numpy-tuple.
+Both `subtract(src,X)` and `subtract(src,(X))` mean `subtract(src,(X,X,X,X))`.
+And `subtract(src,(X,))` means `subtract(src,(X,0,0,0))`.
+@note (Python) If one of src1/src2 is numpy-tuple, other must be numpy-array.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array of the same size and the same number of channels as the input array.
@@ -417,9 +419,10 @@ For a not-per-element matrix product, see gemm .
 @note Saturation is not applied when the output array has the depth
 CV_32S. You may even get result of an incorrect sign in the case of
 overflow.
-@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
-`multiply(src,X)` means `multiply(src,(X,X,X,X))`.
-`multiply(src,(X,))` means `multiply(src,(X,0,0,0))`.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are numpy-tuple.
+Both `multiply(src,X)` and `multiply(src,(X))` mean `multiply(src,(X,X,X,X))`.
+And `multiply(src,(X,))` means `multiply(src,(X,0,0,0))`.
+@note (Python) If one of src1/src2 is tuple(to cv::Scalar), other must be array(to cv::Mat).
 @param src1 first input array.
 @param src2 second input array of the same size and the same type as src1.
 @param dst output array of the same size and type as src1.
@@ -448,9 +451,10 @@ Expect correct IEEE-754 behaviour for floating-point data (with NaN, Inf result 
 
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
-@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
-`divide(src,X)` means `divide(src,(X,X,X,X))`.
-`divide(src,(X,))` means `divide(src,(X,0,0,0))`.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are numpy-tuple.
+Both `divide(src,X)` and `divide(src,(X))` mean `divide(src,(X,X,X,X))`.
+And `divide(src,(X,))` means `divide(src,(X,0,0,0))`.
+@note (Python) If one of src1/src2 is numpy-tuple, other must be numpy-array.
 @param src1 first input array.
 @param src2 second input array of the same size and type as src1.
 @param scale scalar factor.
@@ -1422,9 +1426,10 @@ The function cv::absdiff calculates:
     multi-channel arrays, each channel is processed independently.
 @note Saturation is not applied when the arrays have the depth CV_32S.
 You may even get a negative value in the case of overflow.
-@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are tuple/array.
-`absdiff(src,X)` means `absdiff(src,(X,X,X,X))`.
-`absdiff(src,(X,))` means `absdiff(src,(X,0,0,0))`.
+@note (Python) Be careful to difference behaviour between src1/src2 are single number and they are numpy-tuple.
+Both `absdiff(src,X)` and `absdiff(src,(X))` means `absdiff(src,(X,X,X,X))`.
+And `absdiff(src,(X,))` means `absdiff(src,(X,0,0,0))`.
+@note (Python) If one of src1/src2 is numpy-tuple, other must be numpy-array.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and type as input arrays.

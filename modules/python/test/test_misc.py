@@ -916,8 +916,7 @@ class Arguments(NewOpenCVTests):
         src = np.random.randint(20, 40, 8 * 4 * 3).astype(np.uint8).reshape(8, 4, 3)
         operations = get_ocv_arithm_op_table(apply_saturation=False)
         for ocv_op, numpy_op in operations.items():
-            for val in (2, 4, (5, ), (6, 4), (2., 4., 1.),
-                        np.uint8([1, 2, 2]), np.float64([5, 2, 6, 3]),):
+            for val in (2, 4, 2., 4., (5, ), (6, 4), (2., 4., 1.), ):
                 dst = ocv_op(src, val)
                 expected = numpy_op(src, val)
                 # Temporarily allows a difference of 1 for arm64 workaround.
@@ -930,13 +929,22 @@ class Arguments(NewOpenCVTests):
         operations = get_ocv_arithm_op_table(apply_saturation=True)
 
         for ocv_op, numpy_op in operations.items():
-            for val in (10, 4, (40, ), (15, 12), (25., 41., 15.),
-                        np.uint8([1, 2, 20]), np.float64([50, 21, 64, 30]),):
+            for val in (10, 4, 10., 4., (40, ), (15, 12), (25., 41., 15.), ):
                 dst = ocv_op(src, val)
                 expected = numpy_op(src, val)
                 # Temporarily allows a difference of 1 for arm64 workaround.
                 self.assertLess(np.max(np.abs(dst - expected)), 2,
                   msg="Saturated Operation '{}' is failed for {}".format(ocv_op.__name__, val ) )
+
+    # See https://github.com/opencv/opencv/issues/25165
+    def test_arithm_op_regression_25165(self):
+        x = np.uint8([250])
+        expected = [[255]];
+        np.testing.assert_equal(cv.add(x,10), expected)
+        np.testing.assert_equal(cv.add(x,10.), expected)
+        np.testing.assert_equal(cv.add(x,(10)), expected)
+        np.testing.assert_equal(cv.add(x,(10.)), expected)
+        np.testing.assert_equal(cv.add(x,np.uint8([10])), expected)
 
 class CanUsePurePythonModuleFunction(NewOpenCVTests):
     def test_can_get_ocv_version(self):

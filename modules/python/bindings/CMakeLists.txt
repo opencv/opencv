@@ -45,6 +45,13 @@ foreach(m ${OPENCV_PYTHON_MODULES})
   list(APPEND opencv_userdef_hdrs ${userdef_hdrs})
 endforeach(m)
 
+# Fpr supporting custom wrapper functions.
+ocv_list_filterout(opencv_userdef_hdrs "modules/.*/misc/python/pyopencv_custom.hpp")
+foreach(m ${OPENCV_PYTHON_MODULES})
+  file(GLOB userdef_hdrs ${OPENCV_MODULE_${m}_LOCATION}/misc/python/pyopencv_custom.hpp)
+  list(APPEND opencv_userdef_hdrs ${userdef_hdrs})
+endforeach(m)
+
 # header blacklist
 ocv_list_filterout(opencv_hdrs "modules/.*\\\\.h$")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/cuda/")
