@@ -5,6 +5,8 @@
 #include "opencv2/imgproc.hpp"
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/check.hpp"
+#include "opencv2/core/utils/logger.hpp"
 #include <iostream>
 #include <array>
 #include <limits>
@@ -85,7 +87,7 @@ struct Trait<int>
 namespace {
 
 template <typename T>
-static bool icvTraceContour(Mat image, Point start, Point end, bool isHole )
+static bool icvTraceContour(Mat &image, const Point &start, const Point &end, bool isHole )
 {
     const T * stop_ptr = image.ptr<T>(end.y, end.x);
     const size_t step = image.step1();
@@ -118,7 +120,6 @@ static bool icvTraceContour(Mat image, Point start, Point end, bool isHole )
                 if( Trait<T>::checkValue(i4, i0) )
                     break;
             }
-
 
             if (i3 == stop_ptr)
             {
@@ -159,8 +160,8 @@ static bool icvTraceContour(Mat image, Point start, Point end, bool isHole )
 }
 
 template <typename T>
-static void icvFetchContourEx(Mat image,
-                              Point start,
+static void icvFetchContourEx(Mat &image,
+                              const Point &start,
                               T nbd,
                               Contour & res_contour,
                               const bool isDirect)
@@ -337,7 +338,6 @@ shared_ptr<ContourScanner_> ContourScanner_::create(Mat img, int mode, int  meth
     scanner->nbd = 2;
     CNode & root = scanner->tree.newElem();
     CV_Assert(root.self() == 0);
-    root.body.isHole = true;
     root.body.isHole = true;
     root.body.brect = Rect(Point(0, 0), size);
     scanner->ctable.fill(-1);
@@ -631,12 +631,29 @@ void cv::findContours(InputArray _image, OutputArrayOfArrays _contours, OutputAr
 {
     CV_INSTRUMENT_REGION();
 
+    // TODO: remove this block in future
+    if (method == 5 /*CV_LINK_RUNS*/)
+    {
+        CV_LOG_ONCE_WARNING(NULL, "LINK_RUNS mode has been extracted to separate function: cv::findContoursLinkRuns. "
+            "Calling through cv::findContours will be removed in future.");
+        CV_CheckTrue(!_hierarchy.needed() || mode == RETR_CCOMP,
+            "LINK_RUNS mode supports only simplified hierarchy output (mode=RETR_CCOMP)");
+        findContoursLinkRuns(_image, _contours, _hierarchy);
+        return;
+    }
+
+    // TODO: need enum value, need way to return contour starting points with chain codes
+    if (method == 0 /*CV_CHAIN_CODE*/)
+    {
+        CV_LOG_ONCE_WARNING(NULL, "Chain code output is an experimental feature and might change in future!");
+    }
+
     // Sanity check: output must be of type vector<vector<Point>>
     CV_Assert((_contours.kind() == _InputArray::STD_VECTOR_VECTOR)
         || (_contours.kind() == _InputArray::STD_VECTOR_MAT)
         || (_contours.kind() == _InputArray::STD_VECTOR_UMAT));
 
-    const int res_type = (method == CV_CHAIN_CODE) ? CV_8SC1 : CV_32SC2;
+    const int res_type = (method == 0 /*CV_CHAIN_CODE*/) ? CV_8SC1 : CV_32SC2;
     if (!_contours.empty())
     {
         CV_CheckTypeEQ(_contours.type(), res_type,
