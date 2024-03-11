@@ -204,11 +204,11 @@ public:
 
         input = ngraphDequantize(input, input_sc, input_zp);
 
-        ngraph::Output<ngraph::Node> res;
+        ov::Output<ov::Node> res;
         if (logSoftMax) {
-            res = std::make_shared<ngraph::op::v5::LogSoftmax>(input, axis);
+            res = std::make_shared<ov::op::v5::LogSoftmax>(input, axis);
         } else {
-            res = std::make_shared<ngraph::op::v1::Softmax>(input, axis);
+            res = std::make_shared<ov::op::v1::Softmax>(input, axis);
         }
 
         res = ngraphQuantize(res, output_sc, output_zp);

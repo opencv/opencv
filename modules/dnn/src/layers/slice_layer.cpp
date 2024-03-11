@@ -768,14 +768,14 @@ public:
             dims.push_back(finalSliceRanges[0][i].end);
         }
 
-        auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                             ngraph::Shape{offsets.size()}, offsets.data());
-        auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                             ngraph::Shape{dims.size()}, dims.data());
-        auto strides = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                        ngraph::Shape{dims.size()}, std::vector<int64_t>((int64_t)dims.size(), 1));
+        auto lower_bounds = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                                             ov::Shape{offsets.size()}, offsets.data());
+        auto upper_bounds = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                                             ov::Shape{dims.size()}, dims.data());
+        auto strides = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                                        ov::Shape{dims.size()}, std::vector<int64_t>((int64_t)dims.size(), 1));
 
-        auto slice = std::make_shared<ngraph::op::v1::StridedSlice>(ieInpNode,
+        auto slice = std::make_shared<ov::op::v1::StridedSlice>(ieInpNode,
                                       lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(slice));

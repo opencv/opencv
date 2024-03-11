@@ -375,7 +375,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() >= 2);
-        std::vector<ngraph::Output<ngraph::Node>> ieInpNodes(nodes.size());
+        std::vector<ov::Output<ov::Node>> ieInpNodes(nodes.size());
         for (size_t i = 0; i < nodes.size(); i++)
         {
             ieInpNodes[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
@@ -389,9 +389,9 @@ public:
         for (size_t i = 1; i < ieInpNodes.size(); i++)
         {
             switch (op) {
-                case SUM:  res = std::make_shared<ngraph::op::v1::Add>(res, ieInpNodes[i]); break;
-                case PROD: res = std::make_shared<ngraph::op::v1::Multiply>(res, ieInpNodes[i]); break;
-                case MAX:  res = std::make_shared<ngraph::op::v1::Maximum>(res, ieInpNodes[i]); break;
+                case SUM:  res = std::make_shared<ov::op::v1::Add>(res, ieInpNodes[i]); break;
+                case PROD: res = std::make_shared<ov::op::v1::Multiply>(res, ieInpNodes[i]); break;
+                case MAX:  res = std::make_shared<ov::op::v1::Maximum>(res, ieInpNodes[i]); break;
                 default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
             }
         }
