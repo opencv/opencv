@@ -259,10 +259,10 @@ Next, create the directory `src/main/resources` and download this Lena image int
 Make sure it's called `"lena.png"`. Items in the resources directory are available to the Java
 application at runtime.
 
-Next, copy `lbpcascade_frontalface.xml` from `opencv/data/lbpcascades/` into the `resources`
+Next, copy `lbpcascade_frontalface.xml` from `opencv_contrib/modules/xobjdetect/data/lbpcascades/` into the `resources`
 directory:
 @code{.bash}
-cp <opencv_dir>/data/lbpcascades/lbpcascade_frontalface.xml src/main/resources/
+cp <xobjdetect_dir>/data/lbpcascades/lbpcascade_frontalface.xml src/main/resources/
 @endcode
 Now modify src/main/java/HelloOpenCV.java so it contains the following Java code:
 @code{.java}
@@ -273,7 +273,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.xobjdetect.CascadeClassifier;
 
 //
 // Detects faces in an image, draws boxes around them, and writes the results

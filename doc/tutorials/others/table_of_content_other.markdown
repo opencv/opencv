@@ -1,4 +1,4 @@
-Other tutorials (objdetect, photo, stitching, video) {#tutorial_table_of_content_other}
+Other tutorials (photo, stitching, video) {#tutorial_table_of_content_other}
 ========================================================
 
 -   photo. @subpage tutorial_hdr_imaging
