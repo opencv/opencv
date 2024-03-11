@@ -10,39 +10,6 @@
 
 namespace opencv_test { namespace {
 
-template <class T>
-Mat randomIntMatImpl(const std::vector<int> &sizes, int64_t low, int64_t high, int matType)
-{
-    CV_Assert(low < high);
-    CV_Assert(high - low < RAND_MAX);
-
-    Mat m(sizes, matType);
-
-    int size = 1;
-    for (int s: sizes) {
-        size *= s;
-    }
-
-    T* data = m.ptr<T>();
-    for (int i = 0; i < size; ++i)
-    {
-        data[i] = low + std::rand() % (high - low);
-    }
-
-    return m;
-}
-
-Mat randomIntMat(const std::vector<int> &sizes, int64_t low, int64_t high, int matType)
-{
-    if (matType == CV_32S)
-        return randomIntMatImpl<int32_t>(sizes, low, high, matType);
-    else if (matType == CV_64S)
-        return randomIntMatImpl<int64_t>(sizes, low, high, matType);
-    else
-        CV_Error(Error::BadDepth, "Unsupported type");
-    return Mat();
-}
-
 int64_t getValueAt(const Mat &m, const int *indices)
 {
     if (m.type() == CV_32S)
@@ -98,7 +65,6 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_int64_sum,
     dnnBackendsAndTargets()
 );
 
-
 typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Expand_Int;
 TEST_P(Test_Expand_Int, random)
 {
@@ -109,7 +75,8 @@ TEST_P(Test_Expand_Int, random)
 
     std::vector<int> inShape{2, 3, 1, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
-    Mat input = randomIntMat(inShape, low, low + 100, matType);
+    Mat input(inShape, matType);
+    cv::randu(input, low, low + 100);
     std::vector<int> outShape{2, 1, 4, 5};
 
     Net net;
@@ -175,7 +142,8 @@ TEST_P(Test_Permute_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
-    Mat input = randomIntMat(inShape, low, low + 100, matType);
+    Mat input(inShape, matType);
+    cv::randu(input, low, low + 100);
     std::vector<int> order{0, 2, 3, 1};
 
     Net net;
@@ -239,10 +207,12 @@ TEST_P(Test_GatherElements_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
-    Mat input = randomIntMat(inShape, low, low + 100, matType);
+    Mat input(inShape, matType);
+    cv::randu(input, low, low + 100);
 
     std::vector<int> indicesShape{2, 3, 10, 5};
-    Mat indicesMat = randomIntMat(indicesShape, 0, 4, indicesType);
+    Mat indicesMat(indicesShape, indicesType);
+    cv::randu(indicesMat, 0, 4);
 
     Net net;
     LayerParams lp;
@@ -310,7 +280,8 @@ TEST_P(Test_Gather_Int, random)
 
     std::vector<int> inShape{5, 1};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
-    Mat input = randomIntMat(inShape, low, low + 100, matType);
+    Mat input(inShape, matType);
+    cv::randu(input, low, low + 100);
 
     std::vector<int> indices_shape = {1, 1};
     Mat indicesMat = cv::Mat(indices_shape, indicesType, 0.0);
@@ -361,7 +332,8 @@ TEST_P(Test_Cast_Int, random)
     Target target = get<1>(backend_target);
 
     std::vector<int> inShape{2, 3, 4, 5};
-    Mat input = randomIntMat(inShape, 200, 300, inMatType);
+    Mat input(inShape, inMatType);
+    cv::randu(input, 200, 300);
     Mat outputRef;
     input.convertTo(outputRef, outMatType);
 
