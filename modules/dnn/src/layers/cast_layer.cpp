@@ -54,7 +54,17 @@ public:
         CV_CheckEQ(inputs.size(), (size_t)1, "");
         CV_CheckEQ(outputs.size(), (size_t)1, "");
 
-        inputs[0].convertTo(outputs[0], outputType);
+        if ((outputType == CV_16F && inputs[0].depth() != CV_32F) ||
+            (inputs[0].depth() == CV_16F && outputType != CV_32F))
+        {
+            UMat input_32f;
+            inputs[0].convertTo(input_32f, CV_32F);
+            input_32f.convertTo(outputs[0], outputType);
+        }
+        else
+        {
+            inputs[0].convertTo(outputs[0], outputType);
+        }
         return true;
     }
 #endif
