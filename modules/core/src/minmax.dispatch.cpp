@@ -5,7 +5,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
-#include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 #include <algorithm>
