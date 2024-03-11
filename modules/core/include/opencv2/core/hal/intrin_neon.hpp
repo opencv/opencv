@@ -62,9 +62,6 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_SIMD128_64F 0
 #endif
 
-// float16_t workaround
-#define TYPEDEF typedef __fp16 float16_t;
-
 // The following macro checks if the code is being compiled for the
 // AArch64 execution state of Armv8, to enable the 128-bit
 // intrinsics. The macro `__ARM_64BIT_STATE` is the one recommended by
@@ -431,8 +428,8 @@ OPENCV_HAL_IMPL_NEON_INIT(uint64x2, uint64, u64)
 OPENCV_HAL_IMPL_NEON_INIT(int64x2, int64, s64)
 // float16_t workaround
 #define OPENCV_HAL_IMPL_NEON_INIT_1(_Tpv, _Tp, suffix) \
-inline v_##_Tpv v_setzero_##suffix() { TYPEDEF return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
-inline v_##_Tpv v_setall_##suffix(_Tp v) { TYPEDEF return v_##_Tpv(vdupq_n_##suffix(v)); } \
+inline v_##_Tpv v_setzero_##suffix() { typedef __fp16 float16_t; return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
+inline v_##_Tpv v_setall_##suffix(_Tp v) { typedef __fp16 float16_t; return v_##_Tpv(vdupq_n_##suffix(v)); } \
 inline _Tpv##_t vreinterpretq_##suffix##_##suffix(_Tpv##_t v) { return v; } \
 inline v_uint8x16 v_reinterpret_as_u8(const v_##_Tpv& v) { return v_uint8x16(vreinterpretq_u8_##suffix(v.val)); } \
 inline v_int8x16 v_reinterpret_as_s8(const v_##_Tpv& v) { return v_int8x16(vreinterpretq_s8_##suffix(v.val)); } \
@@ -1177,6 +1174,9 @@ OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint8x16, OPENCV_HAL_NOP, u8, u8)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int8x16, vreinterpretq_s8_u8, s8, u8)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint16x8, OPENCV_HAL_NOP, u16, u16)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int16x8, vreinterpretq_s16_u16, s16, u16)
+if __ARM_ARCH > 7
+OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float16x8, vreinterpretq_f16_u16, f16, u16) // no v7
+#endif
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint32x4, OPENCV_HAL_NOP, u32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int32x4, vreinterpretq_s32_u32, s32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float32x4, vreinterpretq_f32_u32, f32, u32)
@@ -1241,6 +1241,10 @@ static inline v_int64x2 v_lt (const v_int64x2& a, const v_int64x2& b)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float64x2, vreinterpretq_f64_u64, f64, u64)
 #endif
 
+#if __ARM_ARCH > 7
+inline v_float16x8 v_not_nan(const v_float16x8& a)
+{ return v_float32x4(vreinterpretq_f16_u16(vceqq_f16(a.val, a.val))); }
+#endif
 inline v_float32x4 v_not_nan(const v_float32x4& a)
 { return v_float32x4(vreinterpretq_f32_u32(vceqq_f32(a.val, a.val))); }
 #if CV_SIMD128_64F
@@ -1264,6 +1268,7 @@ OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int16x8, v_mul_wrap, vmulq_s16)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint8x16, v_absdiff, vabdq_u8)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint16x8, v_absdiff, vabdq_u16)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint32x4, v_absdiff, vabdq_u32)
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float16x8, v_absdiff, vabdq_f16) // no v7
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float32x4, v_absdiff, vabdq_f32)
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_absdiff, vabdq_f64)
@@ -1284,6 +1289,29 @@ inline _Tpvec2 func(const _Tpvec& a, const _Tpvec& b) \
 OPENCV_HAL_IMPL_NEON_BIN_FUNC2(v_int8x16, v_uint8x16, vreinterpretq_u8_s8, v_absdiff, vabdq_s8)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC2(v_int16x8, v_uint16x8, vreinterpretq_u16_s16, v_absdiff, vabdq_s16)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC2(v_int32x4, v_uint32x4, vreinterpretq_u32_s32, v_absdiff, vabdq_s32)
+
+#if __ARM_ARCH > 7
+inline v_float16x8 v_magnitude(const v_float16x8& a, const v_float16x8& b)
+{
+    v_float16x8 x(vaddq_f16(vmulq_f16(a.val, a.val), vmulq_f16(b.val, b.val)));
+    return v_sqrt(x);
+}
+
+inline v_float16x8 v_sqr_magnitude(const v_float16x8& a, const v_float16x8& b)
+{
+    return x(vaddq_f16(vmulq_f16(a.val, a.val), vmulq_f16(b.val, b.val)));
+}
+
+inline v_float16x8 v_fma(const v_float16x8& a, const v_float16x8& b, const v_float16x8& c)
+{
+    return v_float16x8(vfmaq_f16(c.val, a.val, b.val));
+}
+
+inline v_float16x8 v_muladd(const v_float16x8& a, const v_float16x8& b, const v_float16x8& c)
+{
+    return v_fma(a, b, c);
+}
+#endif
 
 inline v_float32x4 v_magnitude(const v_float32x4& a, const v_float32x4& b)
 {
@@ -1387,6 +1415,7 @@ OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint16x8, u16)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int16x8, s16)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int32x4, s32)
+OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float16x8, f16)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float32x4, f32)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint64x2, u64)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int64x2, s64)
@@ -1438,6 +1467,7 @@ OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint32x4, unsigned, u32)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint64x2, uint64, u64)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, s64)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float16x8, __fp16, f16)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float32x4, float, f32)
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, f64)
@@ -1530,6 +1560,8 @@ OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, ushort, max, max, u16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, ushort, min, min, u16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, max, max, s16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, min, min, s16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, max, max, f16) // Might have problem since return type is float16_t
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, min, min, f16) // Might have problem since return type is float16_t
 
 #if CV_NEON_AARCH64
 #define OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
@@ -1737,6 +1769,8 @@ inline int v_signmask(const v_uint16x8& a)
 }
 inline int v_signmask(const v_int16x8& a)
 { return v_signmask(v_reinterpret_as_u16(a)); }
+inline int v_signmask(const v_float16x8& a)
+{ return v_signmask(v_reinterpret_as_f16(a)); }
 
 inline int v_signmask(const v_uint32x4& a)
 {
@@ -1779,6 +1813,7 @@ inline int v_signmask(const v_float64x2& a)
 inline int v_scan_forward(const v_int8x16& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_uint8x16& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_int16x8& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint16x8& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_uint16x8& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_int32x4& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_uint32x4& a) { return trailingZeros32(v_signmask(a)); }
@@ -1834,6 +1869,8 @@ inline bool v_check_all(const v_int8x16& a)
 { return v_check_all(v_reinterpret_as_u8(a)); }
 inline bool v_check_all(const v_int16x8& a)
 { return v_check_all(v_reinterpret_as_u16(a)); }
+inline bool v_check_all(const v_float16x8& a)
+{ return v_check_all(v_reinterpret_as_u16(a)); }
 inline bool v_check_all(const v_int32x4& a)
 { return v_check_all(v_reinterpret_as_u32(a)); }
 inline bool v_check_all(const v_float32x4& a)
@@ -1869,6 +1906,7 @@ OPENCV_HAL_IMPL_NEON_SELECT(v_uint8x16, u8, u8)
 OPENCV_HAL_IMPL_NEON_SELECT(v_int8x16, s8, u8)
 OPENCV_HAL_IMPL_NEON_SELECT(v_uint16x8, u16, u16)
 OPENCV_HAL_IMPL_NEON_SELECT(v_int16x8, s16, u16)
+OPENCV_HAL_IMPL_NEON_SELECT(v_float16x8, f16, u16)
 OPENCV_HAL_IMPL_NEON_SELECT(v_uint32x4, u32, u32)
 OPENCV_HAL_IMPL_NEON_SELECT(v_int32x4, s32, u32)
 OPENCV_HAL_IMPL_NEON_SELECT(v_float32x4, f32, u32)
@@ -1986,6 +2024,9 @@ OPENCV_HAL_IMPL_NEON_UNPACKS(uint8x16, u8)
 OPENCV_HAL_IMPL_NEON_UNPACKS(int8x16, s8)
 OPENCV_HAL_IMPL_NEON_UNPACKS(uint16x8, u16)
 OPENCV_HAL_IMPL_NEON_UNPACKS(int16x8, s16)
+#if CV_NEON_AARCH64
+OPENCV_HAL_IMPL_NEON_UNPACKS(float16x8, f16)
+#endif
 OPENCV_HAL_IMPL_NEON_UNPACKS(uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_UNPACKS(int32x4, s32)
 OPENCV_HAL_IMPL_NEON_UNPACKS(float32x4, f32)
@@ -2010,6 +2051,9 @@ inline v_uint16x8 v_reverse(const v_uint16x8 &a)
 
 inline v_int16x8 v_reverse(const v_int16x8 &a)
 { return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_float16x8 v_reverse(const v_float16x8 &a)
+{ return v_reinterpret_as_f16(v_reverse(v_reinterpret_as_u16(a))); }
 
 inline v_uint32x4 v_reverse(const v_uint32x4 &a)
 {
@@ -2050,6 +2094,7 @@ OPENCV_HAL_IMPL_NEON_EXTRACT(uint8x16, u8)
 OPENCV_HAL_IMPL_NEON_EXTRACT(int8x16, s8)
 OPENCV_HAL_IMPL_NEON_EXTRACT(uint16x8, u16)
 OPENCV_HAL_IMPL_NEON_EXTRACT(int16x8, s16)
+OPENCV_HAL_IMPL_NEON_EXTRACT(float16x8, f16)
 OPENCV_HAL_IMPL_NEON_EXTRACT(uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_EXTRACT(int32x4, s32)
 OPENCV_HAL_IMPL_NEON_EXTRACT(uint64x2, u64)
@@ -2066,6 +2111,7 @@ OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int16x8, short, s16)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float16x8, __fp16, f16) // Might have problem since return type is float16_t
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint32x4, uint, u32)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint64x2, uint64, u64)
@@ -2082,6 +2128,7 @@ OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_int16x8, short, s16)
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_float16x8, __fp16, f16)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint32x4, uint, u32)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint64x2, uint64, u64)
@@ -2089,6 +2136,30 @@ OPENCV_HAL_IMPL_NEON_BROADCAST(v_int64x2, int64, s64)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_float32x4, float, f32)
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_float64x2, double, f64)
+#endif
+
+#if __ARM_ARCH > 7
+inline v_int16x8 v_round(const v_float16x8 &a)
+{
+    return v_int16x8(vcvtnq_s16_f16(a.val));
+}
+
+inline v_int16x8 v_floor(const v_float16x8 &a)
+{
+    int16x8_t a1 = vcvtq_s16_f16(a.val);
+    uint16x8_t mask = vcgtq_f16(vcvtq_f16_s16(a1), a.val);
+    return v_int16x8(vaddq_s16(a1, vreinterpretq_s16_u16(mask)));
+}
+
+inline v_int16x8 v_ceil(const v_float16x8 &a)
+{
+    int16x8_t a1 = vcvtq_s16_f16(a.val);
+    uint16x8_t mask = vcgtq_f16(a.val, vcvtq_f16_s16(a1));
+    return v_int16x8(vsubq_s16(a1, vreinterpretq_s16_u16(mask)));
+}
+
+inline v_int16x8 v_trunc(const v_float16x8 &a)
+{ return v_int16x8(vcvtq_s16_f16(a.val)); }
 #endif
 
 #if CV_SIMD128_64F
@@ -2359,6 +2430,7 @@ OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(int16x8, short, s16)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(float16x8, __fp16, f16)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint32x4, unsigned, u32)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(float32x4, float, f32)
