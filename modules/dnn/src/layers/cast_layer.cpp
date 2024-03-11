@@ -54,10 +54,10 @@ public:
         CV_CheckEQ(inputs.size(), (size_t)1, "");
         CV_CheckEQ(outputs.size(), (size_t)1, "");
 
-        if (inputs[0].depth() == outputType)
+        if (inputs[0].depth() == outputs[0].depth())
             inputs[0].copyTo(outputs[0]);
         else
-            inputs[0].convertTo(outputs[0], outputType);
+            inputs[0].convertTo(outputs[0], outputs[0].depth());
         return true;
     }
 #endif
@@ -77,10 +77,10 @@ public:
         CV_CheckEQ(inputs.size(), (size_t)1, "");
         CV_CheckEQ(outputs.size(), (size_t)1, "");
 
-        if (inputs[0].depth() == outputType)
+        if (inputs[0].depth() == outputs[0].depth())
             inputs[0].copyTo(outputs[0]);
         else
-            inputs[0].convertTo(outputs[0], outputType);
+            inputs[0].convertTo(outputs[0], outputs[0].depth());
     }
 
 private:
