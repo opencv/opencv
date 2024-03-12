@@ -436,7 +436,7 @@ void postprocess(Mat& frame, std::vector<Mat>& outs, Net& net, Size inpSize, Str
 
     // NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     // or NMS is required if number of outputs > 1
-    if (outLayers.size() > 1 || (outLayerType == "Region" || postprocessing == "yolov8" || postprocessing == "yolov3" ) && backend != DNN_BACKEND_OPENCV)
+    if (outLayers.size() > 1 || ((outLayerType == "Region" || postprocessing == "yolov8" || postprocessing == "yolov3") && backend != DNN_BACKEND_OPENCV))
     {
         std::map<int, std::vector<size_t> > class2indices;
         for (size_t i = 0; i < classIds.size(); i++)
