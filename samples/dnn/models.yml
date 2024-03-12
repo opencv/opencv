@@ -34,19 +34,6 @@ yolov8x:
   background_label_id: 0
   sample: "yolo_detector"
 
-yolov5n:
-  load_info:
-    url: "https://github.com/ultralytics/yolov5/releases/download/v7.0/yolov5n.onnx"
-    sha1: "90aa4b5f8e1ba19166f214f3e4258e5d1d05070b"
-  model: "yolov5n.onnx"
-  mean: [0, 0, 0]
-  scale: 0.00392
-  width: 640
-  height: 640
-  rgb: true
-  classes: "object_detection_classes_yolo.txt"
-  sample: "object_detection"
-
 yolov8:
   load_info:
     url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
@@ -60,6 +47,49 @@ yolov8:
   postprocessing: "yolov8"
   classes: "object_detection_classes_yolo.txt"
   sample: "object_detection"
+
+# Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25200
+#yolov4:
+#  load_info:
+#    url: ""
+#    sha1: ""
+#  model: "yolov4.onnx"
+#  mean: [0, 0, 0]
+#  scale: 0.00392
+#  width: 608
+#  height: 608
+#  rgb: true
+#  postprocessing: "yolov3"
+#  classes: "object_detection_classes_yolo.txt"
+#  sample: "object_detection"
+#
+#yolov4-tiny:
+#  load_info:
+#    url: ""
+#    sha1: ""
+#  model: "yolov4-tiny.onnx"
+#  mean: [0, 0, 0]
+#  scale: 0.00392
+#  width: 416
+#  height: 416
+#  rgb: true
+#  postprocessing: "yolov3"
+#  classes: "object_detection_classes_yolo.txt"
+#  sample: "object_detection"
+#
+#yolov3:
+#  load_info:
+#    url: ""
+#    sha1: ""
+#  model: "yolov3.onnx"
+#  mean: [0, 0, 0]
+#  scale: 0.00392
+#  width: 416
+#  height: 416
+#  rgb: true
+#  postprocessing: "yolov3"
+#  classes: "object_detection_classes_yolo.txt"
+#  sample: "object_detection"
 
 # Caffe implementation of SSD model from https://github.com/chuanqi305/MobileNet-SSD
 ssd_caffe:

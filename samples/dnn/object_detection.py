@@ -30,6 +30,7 @@ parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'dldt', 'onnx
                          'Detect it automatically if it does not set.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
 parser.add_argument('--nms', type=float, default=0.4, help='Non-maximum suppression threshold')
+parser.add_argument('--obj_thr', type=float, default=0.5, help='Objectness threshold')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                     help="Choose one of computation backends: "
                          "%d: automatically (by default), "
@@ -90,6 +91,7 @@ outNames = net.getUnconnectedOutLayersNames()
 
 confThreshold = args.thr
 nmsThreshold = args.nms
+objThreshold = args.obj_thr
 
 def postprocess(frame, outs):
     frameHeight = frame.shape[0]
@@ -142,11 +144,11 @@ def postprocess(frame, outs):
                     classIds.append(int(detection[1]) - 1)  # Skip background label
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
-    elif lastLayer.type == 'Region' or args.postprocessing == 'yolov8':
+    elif lastLayer.type == 'Region' or args.postprocessing == 'yolov8' or args.postprocessing == 'yolov3':
         # Network produces output blob with a shape NxC where N is a number of
         # detected objects and C is a number of classes + 4 where the first 4
         # numbers are [center_x, center_y, width, height]
-        if args.postprocessing == 'yolov8':
+        if args.postprocessing == 'yolov8' or args.postprocessing == 'yolov3':
             box_scale_w = frameWidth / args.width
             box_scale_h = frameHeight / args.height
         else:
@@ -156,9 +158,17 @@ def postprocess(frame, outs):
         for out in outs:
             if args.postprocessing == 'yolov8':
                 out = out[0].transpose(1, 0)
+            elif args.postprocessing == 'yolov3':
+                out = out[0]
 
             for detection in out:
-                scores = detection[4:]
+                if args.postprocessing == 'yolov3':
+                    scores = detection[5:]
+                    if detection[4] < confThreshold:
+                        continue
+                else:
+                    scores = detection[4:]
+
                 if args.background_label_id >= 0:
                     scores = np.delete(scores, args.background_label_id)
                 classId = np.argmax(scores)
@@ -179,7 +189,7 @@ def postprocess(frame, outs):
 
     # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     # or NMS is required if number of outputs > 1
-    if len(outNames) > 1 or (lastLayer.type == 'Region' or args.postprocessing == 'yolov8') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+    if len(outNames) > 1 or (lastLayer.type == 'Region' or args.postprocessing == 'yolov8' or args.postprocessing == 'yolov3') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
         indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)

@@ -250,6 +250,9 @@ TEST(readNet, Regression)
     net = readNet(findDataFile("dnn/opencv_face_detector.caffemodel", false),
                   findDataFile("dnn/opencv_face_detector.prototxt"));
     EXPECT_FALSE(net.empty());
+    net = readNet(findDataFile("dnn/tiny-yolov2-voc.onnx"),
+                  findDataFile("", false));
+    EXPECT_FALSE(net.empty());
     net = readNet(findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt"),
                   findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false));
     EXPECT_FALSE(net.empty());

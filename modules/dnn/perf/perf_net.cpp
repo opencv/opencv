@@ -158,6 +158,31 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "ssd_inception_v2_coco_2017_11_17.pbtxt", cv::Size(300, 300));
 }
 
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25200
+#if 0
+PERF_TEST_P_(DNNTestNetwork, YOLOv3) {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
+    processNet("dnn/yolov3.onnx", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLOv4) {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+    if (target == DNN_TARGET_MYRIAD)  // not enough resources
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
+    processNet("dnn/yolov4.onnx", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny) {
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
+    processNet("dnn/yolov4-tiny.onnx", "", inp);
+}
+#endif
+
 PERF_TEST_P_(DNNTestNetwork, YOLOv5) {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     Mat sample = imread(findDataFile("dnn/dog416.png"));

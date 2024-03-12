@@ -804,6 +804,13 @@ CV__DNN_INLINE_NS_BEGIN
         Ptr<Impl> impl;
     };
 
+    /** @brief Reads a network model stored in <a href="http://caffe.berkeleyvision.org">Caffe</a> framework's format.
+      * @param prototxt   path to the .prototxt file with text description of the network architecture.
+      * @param caffeModel path to the .caffemodel file with learned network.
+      * @returns Net object.
+      */
+    CV_EXPORTS_W Net readNetFromCaffe(CV_WRAP_FILE_PATH const String &prototxt, CV_WRAP_FILE_PATH const String &caffeModel = String());
+
     /** @brief Reads a network model stored in Caffe model in memory.
       * @param bufferProto buffer containing the content of the .prototxt file
       * @param bufferModel buffer containing the content of the .caffemodel file
