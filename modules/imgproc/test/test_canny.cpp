@@ -315,3 +315,6 @@ int CV_CannyTest::validate_test_results( int test_case_idx )
 
 TEST(Imgproc_Canny, accuracy) { CV_CannyTest test; test.safe_run(); }
 TEST(Imgproc_Canny, accuracy_deriv) { CV_CannyTest test(true); test.safe_run(); }
+
+}} // namespace
+/* End of file. */
