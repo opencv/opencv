@@ -775,56 +775,62 @@ OPENCV_HAL_IMPL_RVV_SIGNED_SHIFT_OP(v_int32, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_SIGNED_SHIFT_OP(v_int64, VTraits<v_int64>::vlanes())
 
 ////////////// Comparison //////////////
-#define OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, op, intrin, suffix, vl) \
+#define OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, op, intrin, suffix) \
 inline _Tpvec v_##op(const _Tpvec& a, const _Tpvec& b) \
 { \
+    size_t VLEN = VTraits<_Tpvec>::vlanes(); \
     uint64_t ones = -1; \
-    return vmerge(intrin(a, b, vl), vmv_v_x_##suffix##m1(0, vl), ones, vl); \
+    return vmerge(intrin(a, b, VLEN), vmv_v_x_##suffix##m1(0, VLEN), ones, VLEN); \
 }
 
-#define OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, op, intrin, suffix, vl) \
+#define OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, op, intrin, suffix) \
 inline _Tpvec v_##op (const _Tpvec& a, const _Tpvec& b) \
 { \
-    union { uint64 u; double d; } ones; ones.u = -1; \
-    return _Tpvec(vfmerge(intrin(a, b, vl), vfmv_v_f_##suffix##m1(0, vl), ones.d, vl)); \
+    size_t VLEN = VTraits<_Tpvec>::vlanes(); \
+    union { uint64_t u; VTraits<_Tpvec>::lane_type d; } ones; \
+    ones.u = -1; \
+    auto diff = intrin(a, b, VLEN); \
+    auto z = vfmv_v_f_##suffix##m1(0, VLEN); \
+    auto res = vfmerge(diff, z, ones.d, VLEN); \
+    return _Tpvec(res); \
 } //TODO
 
-#define OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(_Tpvec, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, eq, vmseq, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ne, vmsne, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, lt, vmsltu, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, gt, vmsgtu, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, le, vmsleu, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ge, vmsgeu, suffix, vl)
+#define OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(_Tpvec, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, eq, vmseq, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ne, vmsne, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, lt, vmsltu, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, gt, vmsgtu, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, le, vmsleu, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ge, vmsgeu, suffix)
 
-#define OPENCV_HAL_IMPL_RVV_SIGNED_CMP(_Tpvec, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, eq, vmseq, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ne, vmsne, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, lt, vmslt, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, gt, vmsgt, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, le, vmsle, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ge, vmsge, suffix, vl)
+#define OPENCV_HAL_IMPL_RVV_SIGNED_CMP(_Tpvec, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, eq, vmseq, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ne, vmsne, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, lt, vmslt, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, gt, vmsgt, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, le, vmsle, suffix) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ge, vmsge, suffix)
 
-#define OPENCV_HAL_IMPL_RVV_FLOAT_CMP(_Tpvec, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, eq, vmfeq, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, ne, vmfne, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, lt, vmflt, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, gt, vmfgt, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, le, vmfle, suffix, vl) \
-OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, ge, vmfge, suffix, vl)
+#define OPENCV_HAL_IMPL_RVV_FLOAT_CMP(_Tpvec, suffix) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, eq, vmfeq, suffix) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, ne, vmfne, suffix) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, lt, vmflt, suffix) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, gt, vmfgt, suffix) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, le, vmfle, suffix) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, ge, vmfge, suffix)
 
 
-OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint8, u8, VTraits<v_uint8>::vlanes())
-OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint16, u16, VTraits<v_uint16>::vlanes())
-OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint32, u32, VTraits<v_uint32>::vlanes())
-OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint64, u64, VTraits<v_uint64>::vlanes())
-OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int8, i8, VTraits<v_int8>::vlanes())
-OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int16, i16, VTraits<v_int16>::vlanes())
-OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int32, i32, VTraits<v_int32>::vlanes())
-OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int64, i64, VTraits<v_int64>::vlanes())
-OPENCV_HAL_IMPL_RVV_FLOAT_CMP(v_float32, f32, VTraits<v_float32>::vlanes())
+OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint8, u8)
+OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint16, u16)
+OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint32, u32)
+OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint64, u64)
+OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int8, i8)
+OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int16, i16)
+OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int32, i32)
+OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int64, i64)
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP(v_float32, f32)
 #if CV_SIMD_SCALABLE_64F
-OPENCV_HAL_IMPL_RVV_FLOAT_CMP(v_float64, f64, VTraits<v_float64>::vlanes())
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP(v_float64, f64)
 #endif
 
 inline v_float32 v_not_nan(const v_float32& a)
