@@ -386,7 +386,7 @@ void postprocess(Mat& frame, std::vector<Mat>& outs, Net& net, Size inpSize, Str
         int scores_idx = 5;
         int outsizeLast1 = outs[0].size[outs[0].dims - 1];
         for (auto &out: outs) {
-            out = out.reshape(1, out.total() / outsizeLast1);
+            out = out.reshape(1, (int) out.total() / outsizeLast1);
             if (postprocessing == "yolov8")
                 out = out.t();
         }
@@ -415,7 +415,7 @@ void postprocess(Mat& frame, std::vector<Mat>& outs, Net& net, Size inpSize, Str
                 if (confidence > confThreshold)
                 {
                     // Skip object with <= objectness threshold
-                    if(postprocessing == "yolov3" and data[4] <= objThreshold)
+                    if(postprocessing == "yolov3" && data[4] <= objThreshold)
                         continue;
                     int centerX = (int)(data[0] * frameWidth);
                     int centerY = (int)(data[1] * frameHeight);
