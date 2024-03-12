@@ -271,4 +271,36 @@ TEST(Layer_Reshape_Test, Accuracy)
     normAssert(output_ref, outputs[0]);
 }
 
+// WORKING FOR 1D
+typedef testing::TestWithParam<tuple<int>> Layer_Split_Test;
+TEST_P(Layer_Split_Test, Accuracy)
+{
+    LayerParams lp;
+    lp.type = "Split";
+    lp.name = "SplitLayer";
+    int top_count = 2; // 2 is for simplicity
+    lp.set("top_count", top_count);
+    int dims = get<0>(GetParam());
+
+    Ptr<SplitLayer> layer = SplitLayer::create(lp);
+    std::vector<int> input_shape = {dims};
+    std::vector<int> output_shape = {dims};
+
+    Mat input(dims, input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+    cv::Mat output_ref = cv::Mat(dims, output_shape.data(), CV_32F, input.data);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    for (int i = 0; i < top_count; i++)
+    {
+        ASSERT_EQ(shape(output_ref), shape(outputs[i]));
+        normAssert(output_ref, outputs[i]);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Split_Test,
+/*input blob shape*/    Values(0, 1));
+
 }}
