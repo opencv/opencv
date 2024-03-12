@@ -245,4 +245,32 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Elemwise_1d_Test, Combine(
 /*operation*/           Values("div", "prod", "max", "min", "sum")
 ));
 
+// WORKING FOR 1D
+TEST(Layer_Reshape_Test, Accuracy)
+{
+    LayerParams lp;
+    lp.type = "Reshape";
+    lp.name = "ReshapeLayer";
+    lp.set("axis", 0); // Set axis to 0 to start reshaping from the first dimension
+    lp.set("num_axes", -1); // Set num_axes to -1 to indicate all following axes are included in the reshape
+    int newShape[] = {1};
+    lp.set("dim", DictValue::arrayInt(newShape, 1));
+
+    Ptr<ReshapeLayer> layer = ReshapeLayer::create(lp);
+
+    std::vector<int> input_shape = {0};
+    std::vector<int> output_shape = {1};
+
+    Mat input(0, input_shape.data(), CV_32F);
+    randn(input, 0.0, 1.0);
+    Mat output_ref(1, output_shape.data(), CV_32F, input.data);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+
 }}
