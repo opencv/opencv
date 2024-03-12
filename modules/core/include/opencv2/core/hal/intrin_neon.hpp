@@ -2611,6 +2611,44 @@ inline v_uint16x8 v_lut(const ushort* tab, const int* idx) { return v_reinterpre
 inline v_uint16x8 v_lut_pairs(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_pairs((short*)tab, idx)); }
 inline v_uint16x8 v_lut_quads(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_quads((short*)tab, idx)); }
 
+inline v_float16x8 v_lut(const float16_t *tab, const int *idx)
+{
+    const __fp16 *t = (const __fp16*)tab;
+    __fp16 CV_DECL_ALIGNED(32) elems[8] = 
+    {
+        t[idx[0]],
+        t[idx[1]],
+        t[idx[2]],
+        t[idx[3]],
+        t[idx[4]],
+        t[idx[5]],
+        t[idx[6]],
+        t[idx[7]],
+    };
+    return v_float16x8(vld1q_f16(elems));
+}
+inline v_float16x8 v_lut_pairs(const float16_t *tab, const int *idx)
+{
+    const __fp16 *t = (const __fp16*)tab;
+    __fp16 CV_DECL_ALIGNED(32) elems[8] = 
+    {
+        t[idx[0]],
+        t[idx[0] + 1],
+        t[idx[1]],
+        t[idx[1] + 1],
+        t[idx[2]],
+        t[idx[2] + 1],
+        t[idx[3]],
+        t[idx[3] + 1],
+    };
+    return v_float16x8(vld1q_f16(elems));
+}
+inline v_float16x8 v_lut_quads(const float16_t *tab, const int *idx)
+{
+    const __fp16 *t = (const __fp16*)tab;
+    return v_float16x8(vcombine_f16(vld1_f16(t + idx[0]), vld1_f16(t + idx[1])));
+}
+
 inline v_int32x4 v_lut(const int* tab, const int* idx)
 {
     int CV_DECL_ALIGNED(32) elems[4] =
