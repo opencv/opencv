@@ -399,7 +399,7 @@ void postprocess(Mat& frame, std::vector<Mat>& outs, Net& net, Size inpSize, Str
             frameWidth /= (float)inpSize.width;
             frameHeight /= (float)inpSize.height;
         }
-        
+
         for (size_t i = 0; i < outs.size(); ++i)
         {
             // Network produces output blob with a shape NxC where N is a number of
