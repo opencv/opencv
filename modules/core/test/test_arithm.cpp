@@ -2819,6 +2819,37 @@ TEST(Core_Magnitude, regression_19506)
     }
 }
 
+typedef testing::TestWithParam<std::tuple<int, Size> > Core_MagnitudeSqr;
+
+TEST_P(Core_MagnitudeSqr, magnitudeSqr)
+{
+    const int type = std::get<0>(GetParam());
+    const Size size = std::get<1>(GetParam());
+
+    Mat x = Mat(size, type);
+    Mat y = Mat(size, type);
+    randu(x, Scalar::all(-1), Scalar::all(1));
+    randu(y, Scalar::all(-1), Scalar::all(1));
+
+    Mat mag_ref;
+    magnitude(x, y, mag_ref);
+
+    Mat mag2;
+    magnitudeSqr(x, y, mag2);
+
+    Mat mag;
+    sqrt(mag2, mag);
+
+    EXPECT_MAT_NEAR(mag_ref, mag, 1e-6);
+}
+
+INSTANTIATE_TEST_CASE_P(Core, Core_MagnitudeSqr,
+    testing::Combine(
+        testing::Values(CV_32FC1, CV_64FC1),
+        testing::Values(Size(1, 1), Size(320, 240), Size(127, 113), Size(1, 113))
+    )
+);
+
 TEST(Core_CartPolar, inplace)
 {
     RNG& rng = TS::ptr()->get_rng();

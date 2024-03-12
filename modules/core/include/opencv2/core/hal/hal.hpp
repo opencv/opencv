@@ -95,10 +95,14 @@ CV_EXPORTS void fastAtan32f(const float* y, const float* x, float* dst, int n, b
 CV_EXPORTS void fastAtan64f(const double* y, const double* x, double* dst, int n, bool angleInDegrees);
 CV_EXPORTS void magnitude32f(const float* x, const float* y, float* dst, int n);
 CV_EXPORTS void magnitude64f(const double* x, const double* y, double* dst, int n);
+CV_EXPORTS void magnitudeSqr32f(const float* x, const float* y, float* dst, int n);
+CV_EXPORTS void magnitudeSqr64f(const double* x, const double* y, double* dst, int n);
 CV_EXPORTS void sqrt32f(const float* src, float* dst, int len);
 CV_EXPORTS void sqrt64f(const double* src, double* dst, int len);
 CV_EXPORTS void invSqrt32f(const float* src, float* dst, int len);
 CV_EXPORTS void invSqrt64f(const double* src, double* dst, int len);
+
+CV_EXPORTS void sqr64f(const double* src, double* dst, int len);
 
 CV_EXPORTS void split8u(const uchar* src, uchar** dst, int len, int cn );
 CV_EXPORTS void split16u(const ushort* src, ushort** dst, int len, int cn );
@@ -244,6 +248,8 @@ CV_EXPORTS void log(const double* src, double* dst, int n);
 CV_EXPORTS void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
 CV_EXPORTS void magnitude(const float* x, const float* y, float* dst, int n);
 CV_EXPORTS void magnitude(const double* x, const double* y, double* dst, int n);
+CV_EXPORTS void magnitudeSqr(const float* x, const float* y, float* dst, int n);
+CV_EXPORTS void magnitudeSqr(const double* x, const double* y, double* dst, int n);
 CV_EXPORTS void sqrt(const float* src, float* dst, int len);
 CV_EXPORTS void sqrt(const double* src, double* dst, int len);
 CV_EXPORTS void invSqrt(const float* src, float* dst, int len);

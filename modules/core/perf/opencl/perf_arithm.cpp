@@ -305,6 +305,28 @@ OCL_PERF_TEST_P(MagnitudeFixture, Magnitude, ::testing::Combine(
     SANITY_CHECK(dst, 1e-6);
 }
 
+///////////// MagnitudeSqr ////////////////////////
+
+typedef Size_MatType MagnitudeSqrFixture;
+
+OCL_PERF_TEST_P(MagnitudeSqrFixture, MagnitudeSqr, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src1(srcSize, type), src2(srcSize, type),
+            dst(srcSize, type);
+    declare.in(src1, src2, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::magnitudeSqr(src1, src2, dst);
+
+    SANITY_CHECK_NOTHING();
+}
+
 ///////////// Transpose ////////////////////////
 
 typedef Size_MatType TransposeFixture;

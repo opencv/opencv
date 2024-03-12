@@ -300,6 +300,9 @@
 #elif defined OP_MAG
 #define PROCESS_ELEM storedst(hypot(srcelem1, srcelem2))
 
+#elif defined OP_MAG_SQR
+#define PROCESS_ELEM storedst(srcelem1*srcelem1+srcelem2*srcelem2)
+
 #elif defined OP_PHASE_RADIANS
 #define PROCESS_ELEM \
     workT tmp = atan2(srcelem2, srcelem1); \

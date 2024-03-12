@@ -14,10 +14,13 @@ void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool 
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
 void magnitude32f(const float* x, const float* y, float* mag, int len);
 void magnitude64f(const double* x, const double* y, double* mag, int len);
+void magnitudeSqr32f(const float* x, const float* y, float* mag, int len);
+void magnitudeSqr64f(const double* x, const double* y, double* mag, int len);
 void invSqrt32f(const float* src, float* dst, int len);
 void invSqrt64f(const double* src, double* dst, int len);
 void sqrt32f(const float* src, float* dst, int len);
 void sqrt64f(const double* src, double* dst, int len);
+void sqr64f(const double* src, double* dst, int len);
 void exp32f(const float *src, float *dst, int n);
 void exp64f(const double *src, double *dst, int n);
 void log32f(const float *src, float *dst, int n);
@@ -257,6 +260,71 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
     }
 }
 
+void magnitudeSqr32f(const float* x, const float* y, float* mag, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    int i = 0;
+
+#if CV_SIMD || CV_SIMD_SCALABLE
+    const int VECSZ = VTraits<v_float32>::vlanes();
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || mag == x || mag == y )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float32 x0 = vx_load(x + i), x1 = vx_load(x + i + VECSZ);
+        v_float32 y0 = vx_load(y + i), y1 = vx_load(y + i + VECSZ);
+        x0 = v_muladd(x0, x0, v_mul(y0, y0));
+        x1 = v_muladd(x1, x1, v_mul(y1, y1));
+        v_store(mag + i, x0);
+        v_store(mag + i + VECSZ, x1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        float x0 = x[i], y0 = y[i];
+        mag[i] = x0*x0 + y0*y0;
+    }
+}
+
+void magnitudeSqr64f(const double* x, const double* y, double* mag, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    int i = 0;
+
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    const int VECSZ = VTraits<v_float64>::vlanes();
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || mag == x || mag == y )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float64 x0 = vx_load(x + i), x1 = vx_load(x + i + VECSZ);
+        v_float64 y0 = vx_load(y + i), y1 = vx_load(y + i + VECSZ);
+        x0 = v_muladd(x0, x0, v_mul(y0, y0));
+        x1 = v_muladd(x1, x1, v_mul(y1, y1));
+        v_store(mag + i, x0);
+        v_store(mag + i + VECSZ, x1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        double x0 = x[i], y0 = y[i];
+        mag[i] = x0*x0 + y0*y0;
+    }
+}
 
 void invSqrt32f(const float* src, float* dst, int len)
 {
@@ -369,6 +437,36 @@ void sqrt64f(const double* src, double* dst, int len)
 
     for( ; i < len; i++ )
         dst[i] = std::sqrt(src[i]);
+}
+
+void sqr64f(const double* src, double* dst, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    int i = 0;
+
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    const int VECSZ = VTraits<v_float64>::vlanes();
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || src == dst )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float64 x0 = vx_load(src + i), x1 = vx_load(src + i + VECSZ);
+        v_store(dst + i, v_mul(x0, x0));
+        v_store(dst + i + VECSZ, v_mul(x1, x1));
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        const double x0 = src[i];
+        dst[i] = x0*x0;
+    }
 }
 
 // Workaround for ICE in MSVS 2015 update 3 (issue #7795)
