@@ -180,6 +180,43 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
     }
 }
 
+void magnitudeComplex( InputArray src1, OutputArray dst )
+{
+    CV_INSTRUMENT_REGION();
+
+    int depth = src1.depth(), cn = src1.channels();
+    CV_Assert((depth == CV_32F || depth == CV_64F) && (cn == 2));
+
+    //TODO : modify ocl_math_op to support interleaved data
+    //CV_OCL_RUN(dst.isUMat() && src1.dims() <= 2,
+    //           ocl_math_op(src1, cv::noArray(), dst, OCL_OP_MAG))
+
+    Mat XY = src1.getMat();
+    dst.create(XY.dims, XY.size, CV_MAKETYPE(XY.depth(), 1));
+    Mat Mag = dst.getMat();
+
+    const Mat* arrays[] = {&XY, &Mag, 0};
+    uchar* ptrs[2] = {};
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)it.size;
+
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        if( depth == CV_32F )
+        {
+            const float *xy = (const float*)ptrs[0];
+            float *mag = (float*)ptrs[1];
+            hal::magnitude32fc( xy, mag, len );
+        }
+        else
+        {
+            const double *xy = (const double*)ptrs[0];
+            double *mag = (double*)ptrs[1];
+            hal::magnitude64fc( xy, mag, len );
+        }
+    }
+}
+
 void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegrees )
 {
     CV_INSTRUMENT_REGION();
@@ -219,6 +256,48 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
             ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;
             ptrs[2] += len*esz1;
+        }
+    }
+}
+
+void phaseComplex( InputArray src, OutputArray dst, bool angleInDegrees )
+{
+    CV_INSTRUMENT_REGION();
+
+    int depth = src.depth(), cn = src.channels();
+    CV_Assert( (depth == CV_32F || depth == CV_64F) && (cn == 2) );
+
+    /*CV_OCL_RUN(dst.isUMat() && src1.dims() <= 2 && src2.dims() <= 2,
+        ocl_math_op(src1, src2, dst, angleInDegrees ? OCL_OP_PHASE_DEGREES : OCL_OP_PHASE_RADIANS))*/
+
+    Mat XY = src.getMat();
+    dst.create( XY.dims, XY.size, CV_MAKETYPE(depth, 1) );
+    Mat Angle = dst.getMat();
+
+    const Mat* arrays[] = {&XY, &Angle, 0};
+    uchar* ptrs[2] = {};
+    NAryMatIterator it(arrays, ptrs);
+    int j, total = (int)(it.size*cn), blockSize = total;
+    size_t esz1 = XY.elemSize1();
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        for( j = 0; j < total; j += blockSize )
+        {
+            int len = std::min(total - j, blockSize);
+            if( depth == CV_32F )
+            {
+                const float *xy = (const float*)ptrs[0];
+                float *angle = (float*)ptrs[1];
+                hal::fastAtan32fc( xy, angle, len/2, angleInDegrees );
+            }
+            else
+            {
+                const double *xy = (const double*)ptrs[0];
+                double *angle = (double*)ptrs[1];
+                hal::fastAtan64fc(xy, angle, len/2, angleInDegrees);
+            }
+            ptrs[0] += len*esz1;
+            ptrs[1] += len*esz1;
         }
     }
 }

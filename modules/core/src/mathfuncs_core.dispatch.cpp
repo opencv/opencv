@@ -21,6 +21,16 @@ void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool ang
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+void fastAtan32fc(const float *XY, float *angle, int len, bool angleInDegrees )
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(fastAtan32fc, cv_hal_fastAtan32fc, XY, angle, len, angleInDegrees);
+
+    CV_CPU_DISPATCH(fastAtan32fc, (XY, angle, len, angleInDegrees),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees)
 {
     CV_INSTRUMENT_REGION();
@@ -28,6 +38,16 @@ void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool 
     CALL_HAL(fastAtan64f, cv_hal_fastAtan64f, Y, X, angle, len, angleInDegrees);
 
     CV_CPU_DISPATCH(fastAtan64f, (Y, X, angle, len, angleInDegrees),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void fastAtan64fc(const double *XY, double *angle, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(fastAtan64fc, cv_hal_fastAtan64fc, XY, angle, len, angleInDegrees);
+
+    CV_CPU_DISPATCH(fastAtan64fc, (XY, angle, len, angleInDegrees),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
@@ -51,6 +71,20 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+void magnitude32fc(const float* xy, float* mag, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(magnitude32fc, cv_hal_magnitude32fc, xy, mag, len);
+    #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV)//ippicv should implement ippsMagnitude_32fc
+    // SSE42 performance issues
+    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32fc, reinterpret_cast<const Ipp32fc*>(xy), mag, len) >= 0);
+    #endif
+
+    CV_CPU_DISPATCH(magnitude32fc, (xy, mag, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
 void magnitude64f(const double* x, const double* y, double* mag, int len)
 {
     CV_INSTRUMENT_REGION();
@@ -63,6 +97,19 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+void magnitude64fc(const double* xy, double* mag, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(magnitude64fc, cv_hal_magnitude64fc, xy, mag, len);
+    #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV)//ippicv should implement ippsMagnitude_64fc
+    // SSE42 performance issues
+    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64fc, reinterpret_cast<const Ipp64fc*>(xy), mag, len) >= 0);
+    #endif
+
+    CV_CPU_DISPATCH(magnitude64fc, (xy, mag, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
 
 void invSqrt32f(const float* src, float* dst, int len)
 {

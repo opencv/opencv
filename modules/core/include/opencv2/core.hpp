@@ -1664,6 +1664,22 @@ degrees, otherwise, they are measured in radians.
 CV_EXPORTS_W void phase(InputArray x, InputArray y, OutputArray angle,
                         bool angleInDegrees = false);
 
+/** @brief Calculates the rotation angle of 2D vectors.
+
+Same as cv::phase, but x and y are interleaved as complex numbers
+\f[\texttt{angle} (I) =  \texttt{atan2} ( \texttt{y} (I), \texttt{x} (I))\f]
+
+The angle estimation accuracy is about 0.3 degrees. When x(I)=y(I)=0 ,
+the corresponding angle(I) is set to 0.
+@param xy floating-point array of xy-coordinates of the vectors CV_32FC2 or CV_64FC2).
+@param angle output array of vector angles; it has the same size and
+same type as xy .
+@param angleInDegrees when true, the function calculates the angle in
+degrees, otherwise, they are measured in radians.
+*/
+CV_EXPORTS_W void phaseComplex(InputArray xy, OutputArray angle,
+    bool angleInDegrees = false);
+
 /** @brief Calculates the magnitude of 2D vectors.
 
 The function cv::magnitude calculates the magnitude of 2D vectors formed
@@ -1673,9 +1689,19 @@ from the corresponding elements of x and y arrays:
 @param y floating-point array of y-coordinates of the vectors; it must
 have the same size as x.
 @param magnitude output array of the same size and type as x.
-@sa cartToPolar, polarToCart, phase, sqrt
+@sa magnitudeComplex, cartToPolar, polarToCart, phase, phaseComplex, sqrt
 */
 CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
+
+/** @brief Calculates the magnitude of 2D vectors.
+
+Same as cv::magnitude, but x and y are interleaved channels
+\f[\texttt{dst} (I) =  \sqrt{\texttt{x}(I)^2 + \texttt{y}(I)^2}\f]
+@param xy floating-point array of xy-coordinates of the vectors CV_32FC2 or CV_64FC2).
+@param magnitude output array of the same size and type as x.
+@sa magnitude, cartToPolar, polarToCart, phase, phaseComplex, sqrt
+*/
+CV_EXPORTS_W void magnitudeComplex(InputArray xy, OutputArray magnitude);
 
 /** @brief Checks every element of an input array for invalid values.
 
