@@ -8,9 +8,6 @@
 #ifndef OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 #define OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 
-#include <initializer_list>
-#include <assert.h>
-#include <vector>
 #include <opencv2/core/check.hpp>
 
 // RVV intrinsics have been renamed in version 0.11, so we need to include
@@ -417,11 +414,6 @@ inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
 { \
     vse##width(ptr, vslidedown_vx_##suffix##m1(vmv(0, vl), a, hvl, vl), hvl); \
-} \
-inline _Tpvec v_load(std::initializer_list<_Tp> nScalars) \
-{ \
-    assert(nScalars.size() == vl); \
-    return vle##width##_v_##suffix##m1(nScalars.begin(), nScalars.size()); \
 } \
 template<typename... Targs> \
 _Tpvec v_load_##suffix(Targs... nScalars) \
