@@ -173,6 +173,14 @@ TEST_P(UMatBasicTests, base)
     ASSERT_EQ(ub.total(), total);
 }
 
+TEST(UMatBasicTests, copyTo_Empty)
+{
+  cv::Mat A(0, 0, CV_16SC2);
+  cv::UMat B;
+  A.copyTo(B);
+  ASSERT_EQ(A.type(), B.type());
+}
+
 TEST_P(UMatBasicTests, copyTo)
 {
     int i;
