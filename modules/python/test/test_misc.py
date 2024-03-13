@@ -939,7 +939,7 @@ class Arguments(NewOpenCVTests):
     # See https://github.com/opencv/opencv/issues/25165
     def test_arithm_op_regression_25165(self):
         x = np.uint8([250])
-        expected = [[255]];
+        expected = [[255]]
         np.testing.assert_equal(cv.add(x,10), expected)
         np.testing.assert_equal(cv.add(x,10.), expected)
         np.testing.assert_equal(cv.add(x,(10)), expected)
