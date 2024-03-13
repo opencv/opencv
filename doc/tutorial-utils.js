@@ -50,7 +50,7 @@ function addButton(label, buttonName) {
 
 function buttonsToAdd($elements, $heading, $type) {
     if ($elements.length === 0) {
-        $elements = $("" + $type + ":contains(" + $heading.html() + ")").parent().prev("div.newInnerHTML");
+        return;
     }
     var arr = jQuery.makeArray($elements);
     var seen = {};
@@ -72,18 +72,12 @@ function buttonsToAdd($elements, $heading, $type) {
 }
 
 function addTutorialsButtons() {
-    $("h2").each(function() {
-        $heading = $(this);
-        $smallerHeadings = $(this).nextUntil("h2").filter("h3").add($(this).nextUntil("h2").find("h3"));
-        if ($smallerHeadings.length) {
-            $smallerHeadings.each(function() {
-                var $elements = $(this).nextUntil("h2,h3").filter("div.newInnerHTML");
-                buttonsToAdd($elements, $(this), "h3");
-            });
-        } else {
-            var $elements = $(this).nextUntil("h2").filter("div.newInnerHTML");
-            buttonsToAdd($elements, $heading, "h2");
-        }
+    $("h1").each(function() {
+        var $elements = $(this).nextUntil("h1")
+        var $lower = $elements.find("div.newInnerHTML")
+        $elements = $elements.add($lower)
+        $elements = $elements.filter("div.newInnerHTML")
+        buttonsToAdd($elements, $(this), "h1")
     });
     $(".toggleable_button").first().click();
     var $clickDefault = $('.toggleable_button.label_python').first();
