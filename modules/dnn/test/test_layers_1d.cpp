@@ -245,4 +245,42 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Elemwise_1d_Test, Combine(
 /*operation*/           Values("div", "prod", "max", "min", "sum")
 ));
 
+
+TEST(Layer_FullyConnected_1d_Test, Accuracy)
+{
+    LayerParams lp;
+    lp.type = "InnerProduct"; // Use "InnerProduct" which is another name for FullyConnected layers in some contexts
+    lp.name = "InnerProductLayer";
+    lp.set("num_output", 1);
+    lp.set("bias_term", false);
+
+    Mat weights(1, 1, CV_32F, 1.0); // Assuming you want weights initialized to 1 for simplicity
+
+    // The blobs vector in LayerParams holds the weights (and optionally biases)
+    lp.blobs.push_back(weights);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("InnerProduct", lp); // Use a factory method to create the layer instance
+
+    int dims = 0;
+    std::vector<int> input_shape = {1};
+    std::vector<int> output_shape = {1};
+
+    Mat input(dims, input_shape.data(), CV_32F, 3.0); // Initialize input with ones
+    Mat output_ref(dims, output_shape.data(), CV_32F, 3.0);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+
+    // layer->finalize(inputs, outputs); // Prepare the layer for computation (optional depending on implementation)
+    // layer->forward(inputs, outputs); // Run forward pass
+
+    // Assuming you want to check the output
+    // ASSERT_EQ(outputs.size(), 1); // Ensure there is one output
+    // ASSERT_EQ(outputs[0].at<float>(0, 0), expected_value);
+    // ASSERT_EQ(outputs[0], expected_value);
+    normAssert(output_ref, outputs[0]);
+}
+
 }}
