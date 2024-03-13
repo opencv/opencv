@@ -185,6 +185,9 @@ public:
             case CV_32S:
                 reductionDispatch<int32_t, T_INDEX>(std::forward<Args>(args)...);
                 break;
+            case CV_64S:
+                reductionDispatch<int64_t, T_INDEX>(std::forward<Args>(args)...);
+                break;
             case CV_32F:
                 reductionDispatch<float, T_INDEX>(std::forward<Args>(args)...);
                 break;
