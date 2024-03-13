@@ -38,6 +38,7 @@ jobs:
 
   macOS-x64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-x86_64.yaml@main
+    timeout-minutes: 90
 
   iOS:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-iOS.yaml@main
