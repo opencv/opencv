@@ -7,5 +7,5 @@ if [[ "$1" = "${CMAKE_CXX_COMPILER}" ]] ; then
     shift
 fi
 
-export CCACHE_CPP2=true
+export CCACHE_CPP2=false
 exec "${CCACHE_PROGRAM}" "${CMAKE_CXX_COMPILER}" "$@"
