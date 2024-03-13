@@ -2164,7 +2164,7 @@ TEST_P(Test_ONNX_nets, Alexnet)
     expectNoFallbacksFromIE(net);
 }
 
-TEST_P(Test_ONNX_nets, DISABLED_RAFT)
+TEST_P(Test_ONNX_nets, RAFT)
 {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG, CV_TEST_TAG_MEMORY_2GB);
 
