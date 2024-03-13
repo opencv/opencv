@@ -19,20 +19,26 @@ public:
     std::vector<int> input_shape;
     std::vector<int> output_shape;
     float inp_value;
-    cv::Mat input;
+    Mat input;
 
     void SetUp()
     {
         dims = get<0>(GetParam());
-
         input_shape = {dims};
         output_shape = {dims};
 
-
         // generate random positeve value from 1 to 10
         inp_value = 1 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX/(10-1)));
-        input = cv::Mat(dims, input_shape.data(), CV_32F, inp_value);
+        input = Mat(dims, input_shape.data(), CV_32F, inp_value);
     }
+
+    void TestLayer(Ptr<Layer> layer, std::vector<Mat> &inputs, const Mat& output_ref){
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+        normAssert(output_ref, outputs[0]);
+    }
+
 };
 
 TEST_P(Layer_Test, Scale)
@@ -45,18 +51,14 @@ TEST_P(Layer_Test, Scale)
     lp.set("bias_term", false);
     Ptr<ScaleLayer> layer = ScaleLayer::create(lp);
 
-    input = cv::Mat(dims, input_shape.data(), CV_32F);
+    input = Mat(dims, input_shape.data(), CV_32F);
     cv::randn(input, 0.0, 1.0);
-    cv::Mat weight = cv::Mat(dims, output_shape.data(), CV_32F, 2.0);
+    Mat weight = Mat(dims, output_shape.data(), CV_32F, 2.0);
 
     std::vector<Mat> inputs{input, weight};
-    std::vector<Mat> outputs;
+    Mat output_ref = input.mul(weight);
 
-    cv::Mat output_ref = input.mul(weight);
-    runLayer(layer, inputs, outputs);
-
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, ReLU6)
@@ -69,13 +71,10 @@ TEST_P(Layer_Test, ReLU6)
     lp.set("max_value", 1.0);
     Ptr<ReLU6Layer> layer = ReLU6Layer::create(lp);
 
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, 1.0);
+    Mat output_ref(dims, output_shape.data(), CV_32F, 1.0);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Clip)
@@ -88,13 +87,10 @@ TEST_P(Layer_Test, Clip)
     lp.set("max_value", 1.0);
     Ptr<ReLU6Layer> layer = ReLU6Layer::create(lp);
 
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, 1.0);
+    Mat output_ref(dims, output_shape.data(), CV_32F, 1.0);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, ReLU)
@@ -106,13 +102,10 @@ TEST_P(Layer_Test, ReLU)
     lp.set("negative_slope", 0.0);
     Ptr<ReLULayer> layer = ReLULayer::create(lp);
 
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, inp_value);
+    Mat output_ref(dims, output_shape.data(), CV_32F, inp_value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Gelu)
@@ -123,14 +116,11 @@ TEST_P(Layer_Test, Gelu)
     lp.name = "geluLayer";
     Ptr<GeluLayer> layer = GeluLayer::create(lp);
 
-    float geluValue = inp_value * 0.5 * (std::erf(inp_value * 1 / std::sqrt(2.0)) + 1.0);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, geluValue);
+    float value = inp_value * 0.5 * (std::erf(inp_value * 1 / std::sqrt(2.0)) + 1.0);
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, GeluApprox)
@@ -141,14 +131,11 @@ TEST_P(Layer_Test, GeluApprox)
     lp.name = "geluApproxLayer";
     Ptr<GeluApproximationLayer> layer = GeluApproximationLayer::create(lp);
 
-    float geluValue = inp_value * 0.5 * (1.0 + std::tanh(std::sqrt(2.0 / M_PI) * (inp_value + 0.044715 * std::pow(inp_value, 3))));
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, geluValue);
+    float value = inp_value * 0.5 * (1.0 + std::tanh(std::sqrt(2.0 / M_PI) * (inp_value + 0.044715 * std::pow(inp_value, 3))));
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Sigmoid)
@@ -159,14 +146,11 @@ TEST_P(Layer_Test, Sigmoid)
     lp.name = "sigmoidLayer";
     Ptr<SigmoidLayer> layer = SigmoidLayer::create(lp);
 
-    float sigmoidValue = 1.0 / (1.0 + std::exp(-inp_value));
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, sigmoidValue);
+    float value = 1.0 / (1.0 + std::exp(-inp_value));
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
-    std::vector<Mat> outputs;
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Tanh)
@@ -180,13 +164,9 @@ TEST_P(Layer_Test, Tanh)
 
     float value = std::tanh(inp_value);
     Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Swish)
@@ -198,14 +178,10 @@ TEST_P(Layer_Test, Swish)
     Ptr<Layer> layer = SwishLayer::create(lp);
 
     float value = inp_value / (1 + std::exp(-inp_value));
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Mish)
@@ -217,14 +193,10 @@ TEST_P(Layer_Test, Mish)
     Ptr<Layer> layer = MishLayer::create(lp);
 
     float value = inp_value * std::tanh(std::log(1 + std::exp(inp_value)));
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, ELU)
@@ -235,15 +207,12 @@ TEST_P(Layer_Test, ELU)
     lp.name = "eluLayer";
     lp.set("alpha", 1.0);
     Ptr<Layer> layer = ELULayer::create(lp);
+
     float value = inp_value > 0 ? inp_value : std::exp(inp_value) - 1;
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Abs)
@@ -255,14 +224,10 @@ TEST_P(Layer_Test, Abs)
     Ptr<Layer> layer = AbsLayer::create(lp);
 
     float value = std::abs(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, BNLL)
@@ -274,14 +239,10 @@ TEST_P(Layer_Test, BNLL)
     Ptr<Layer> layer = BNLLLayer::create(lp);
 
     float value = std::log(1 + std::exp(inp_value));
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Ceil)
@@ -293,14 +254,10 @@ TEST_P(Layer_Test, Ceil)
     Ptr<Layer> layer = CeilLayer::create(lp);
 
     float value = std::ceil(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Floor)
@@ -312,14 +269,10 @@ TEST_P(Layer_Test, Floor)
     Ptr<Layer> layer = FloorLayer::create(lp);
 
     float value = std::floor(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Log)
@@ -331,14 +284,10 @@ TEST_P(Layer_Test, Log)
     Ptr<Layer> layer = LogLayer::create(lp);
 
     float value = std::log(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Round)
@@ -350,14 +299,10 @@ TEST_P(Layer_Test, Round)
     Ptr<Layer> layer = RoundLayer::create(lp);
 
     float value = std::round(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Sqrt)
@@ -369,14 +314,10 @@ TEST_P(Layer_Test, Sqrt)
     Ptr<Layer> layer = SqrtLayer::create(lp);
 
     float value = std::sqrt(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Acos)
@@ -391,14 +332,10 @@ TEST_P(Layer_Test, Acos)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = std::acos(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Acosh)
@@ -413,14 +350,10 @@ TEST_P(Layer_Test, Acosh)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = std::acosh(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Asin)
@@ -435,14 +368,10 @@ TEST_P(Layer_Test, Asin)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = std::asin(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Asinh)
@@ -457,14 +386,10 @@ TEST_P(Layer_Test, Asinh)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = std::asinh(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Atan)
@@ -479,14 +404,10 @@ TEST_P(Layer_Test, Atan)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = std::atan(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Cos)
@@ -501,14 +422,10 @@ TEST_P(Layer_Test, Cos)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = std::cos(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Cosh)
@@ -523,14 +440,10 @@ TEST_P(Layer_Test, Cosh)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = std::cosh(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Sin)
@@ -545,14 +458,10 @@ TEST_P(Layer_Test, Sin)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = std::sin(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Sinh)
@@ -567,14 +476,10 @@ TEST_P(Layer_Test, Sinh)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = std::sinh(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Tan)
@@ -589,14 +494,10 @@ TEST_P(Layer_Test, Tan)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = std::tan(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Erf)
@@ -611,16 +512,10 @@ TEST_P(Layer_Test, Erf)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float out_value = std::erf(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    std::cout << "output_ref: " << output_ref << std::endl;
-    std::cout << "outputs[0]: " << outputs[0] << std::endl;
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Reciprocal)
@@ -635,14 +530,10 @@ TEST_P(Layer_Test, Reciprocal)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float out_value = 1/inp_value;
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, HardSwish)
@@ -657,14 +548,10 @@ TEST_P(Layer_Test, HardSwish)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float out_value = inp_value * std::max(0.0f, std::min(6.0f, inp_value + 3.0f)) / 6.0f;
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Softplus)
@@ -679,14 +566,10 @@ TEST_P(Layer_Test, Softplus)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float out_value = std::log(1 + std::exp(inp_value));
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, SoftSign)
@@ -701,14 +584,10 @@ TEST_P(Layer_Test, SoftSign)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float out_value = inp_value / (1 + std::abs(inp_value));
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, CELU)
@@ -724,14 +603,10 @@ TEST_P(Layer_Test, CELU)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float out_value = inp_value < 0 ? std::exp(inp_value) - 1 : inp_value;
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, HardSigmoid)
@@ -746,14 +621,10 @@ TEST_P(Layer_Test, HardSigmoid)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float out_value = std::max(0.0f, std::min(1.0f, 0.2f * inp_value + 0.5f));
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, SELU)
@@ -770,15 +641,10 @@ TEST_P(Layer_Test, SELU)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = 1.0507009873554805 * (inp_value > 0 ? inp_value : 1.6732631921768188 * (std::exp(inp_value / 1.0) - 1));
-
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, ThresholdedReLU)
@@ -791,14 +657,10 @@ TEST_P(Layer_Test, ThresholdedReLU)
     Ptr<Layer> layer = ThresholdedReluLayer::create(lp);
 
     float value = inp_value > 1.0 ? inp_value : 0.0;
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Power)
@@ -813,14 +675,10 @@ TEST_P(Layer_Test, Power)
     Ptr<Layer> layer = PowerLayer::create(lp);
 
     float value = std::pow(inp_value, 2.0);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Exp)
@@ -835,14 +693,10 @@ TEST_P(Layer_Test, Exp)
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float out_value = std::exp(inp_value);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Sign)
@@ -853,18 +707,13 @@ TEST_P(Layer_Test, Sign)
     lp.name = "signLayer";
     Ptr<Layer> layer = SignLayer::create(lp);
 
-
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = inp_value > 0 ? 1.0 : 0.0;
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, Shrink)
@@ -877,18 +726,13 @@ TEST_P(Layer_Test, Shrink)
     lp.set("bias", 0.5);
     Ptr<Layer> layer = ShrinkLayer::create(lp);
 
-
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
     float value = inp_value > 0.5 ? inp_value - 0.5 : 0.0;
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 TEST_P(Layer_Test, ChannelsPReLU)
@@ -896,21 +740,16 @@ TEST_P(Layer_Test, ChannelsPReLU)
     LayerParams lp;
 
     lp.type = "ChannelsPReLU";
-    lp.name = "channelsPReLULayer";
+    lp.name = "ChannelsPReLULayer";
     Mat alpha = Mat(1, 3, CV_32F, 0.5);
     lp.blobs.push_back(alpha);
     Ptr<Layer> layer = ChannelsPReLULayer::create(lp);
 
     float value = inp_value > 0 ? inp_value : 0.5 * inp_value;
-
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, value);
-
+    Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
-    std::vector<Mat> outputs;
 
-    runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
-    normAssert(output_ref, outputs[0]);
+    TestLayer(layer, inputs, output_ref);
 }
 
 INSTANTIATE_TEST_CASE_P(, Layer_Test, Values(0, 1));
@@ -923,7 +762,7 @@ TEST_P(Layer_Gather_1d_Test, Accuracy) {
 
     LayerParams lp;
     lp.type = "Gather";
-    lp.name = "gatherLayer";
+    lp.name = "GatherLayer";
     lp.set("axis", axis);
     lp.set("real_ndims", 1);
 
@@ -933,12 +772,11 @@ TEST_P(Layer_Gather_1d_Test, Accuracy) {
     std::vector<int> indices_shape = {1};
     std::vector<int> output_shape = {dims};
 
-    cv::Mat input(dims, input_shape.data(), CV_32F, 1.0);
+    Mat input(dims, input_shape.data(), CV_32F, 1.0);
     cv::randu(input, 0.0, 1.0);
 
-    cv::Mat indices(indices_shape, CV_32SC1, 0.0);
-    cv::Mat output_ref(dims, output_shape.data(), CV_32F, input.at<float>(0, 0));
-    std::cout << output_ref << std::endl;
+    Mat indices(indices_shape, CV_32SC1, 0.0);
+    Mat output_ref(dims, output_shape.data(), CV_32F, input.at<float>(0, 0));
 
     std::vector<Mat> inputs{input, indices};
     std::vector<Mat> outputs;
@@ -970,8 +808,8 @@ TEST_P(Layer_Arg_Test, Accuracy) {
     std::vector<int> input_shape = {dims};
     std::vector<int> output_shape = {1};
 
-    cv::Mat input(dims, input_shape.data(), CV_32F, 1);
-    cv::Mat output_ref(dims, output_shape.data(),  CV_32F, 0);
+    Mat input(dims, input_shape.data(), CV_32F, 1);
+    Mat output_ref(dims, output_shape.data(),  CV_32F, 0);
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
@@ -998,12 +836,12 @@ TEST_P(Layer_NaryElemwise_Test, Accuracy) {
     Ptr<NaryEltwiseLayer> layer = NaryEltwiseLayer::create(lp);
 
     std::vector<int> input_shape = {dims};
-    cv::Mat input1(dims, input_shape.data(), CV_32F, 0.0);
-    cv::Mat input2(dims, input_shape.data(), CV_32F, 0.0);
+    Mat input1(dims, input_shape.data(), CV_32F, 0.0);
+    Mat input2(dims, input_shape.data(), CV_32F, 0.0);
     cv::randu(input1, 0.0, 1.0);
     cv::randu(input2, 0.0, 1.0);
 
-    cv::Mat output_ref;
+    Mat output_ref;
     if (operation == "sum") {
         output_ref = input1 + input2;
     } else if (operation == "mul") {
@@ -1013,7 +851,7 @@ TEST_P(Layer_NaryElemwise_Test, Accuracy) {
     } else if (operation == "sub") {
         output_ref = input1 - input2;
     } else {
-        output_ref = cv::Mat();
+        output_ref = Mat();
     }
     std::vector<Mat> inputs{input1, input2};
     std::vector<Mat> outputs;
@@ -1044,13 +882,13 @@ TEST_P(Layer_Elemwise_Test, Accuracy) {
     Ptr<EltwiseLayer> layer = EltwiseLayer::create(lp);
 
     std::vector<int> input_shape = {dims};
-    cv::Mat input1(dims, input_shape.data(), CV_32F);
-    cv::Mat input2(dims, input_shape.data(), CV_32F);
+    Mat input1(dims, input_shape.data(), CV_32F);
+    Mat input2(dims, input_shape.data(), CV_32F);
     cv::randu(input1, 0.0, 1.0);
     cv::randu(input2, 0.0, 1.0);
 
     // Dynamically select the operation
-    cv::Mat output_ref;
+    Mat output_ref;
     if (operation == "sum") {
         output_ref = input1 + input2;
     } else if (operation == "max") {
@@ -1062,7 +900,7 @@ TEST_P(Layer_Elemwise_Test, Accuracy) {
     } else if (operation == "div") {
         output_ref = input1 / input2;
     } else {
-        output_ref = cv::Mat();
+        output_ref = Mat();
     }
 
     std::vector<Mat> inputs{input1, input2};
