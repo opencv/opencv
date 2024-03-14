@@ -340,6 +340,53 @@ TEST(HoughLines, regression_21983)
     EXPECT_NEAR(lines[0][1], 1.57179642, 1e-4);
 }
 
+TEST(WeightedHoughLines, horizontal)
+{
+    Mat img(25, 25, CV_8UC1, Scalar(0));
+    // draw lines. from top to bottom, stronger to weaker.
+    line(img, Point(0, 6), Point(25, 6), Scalar(255));
+    line(img, Point(0, 12), Point(25, 12), Scalar(254));
+    line(img, Point(0, 18), Point(25, 18), Scalar(253));
+    
+    // detect lines
+    std::vector<Vec2f> lines;
+    int threshold{253*25-1};
+    bool use_edgeval{true};
+    HoughLines(img, lines, 1, CV_PI/180, threshold, 0, 0, 0.0, CV_PI, use_edgeval);
+    
+    // check results
+    ASSERT_EQ(lines.size(), 3U);
+    // detected lines is assumed sorted from stronger to weaker. 
+    EXPECT_EQ(lines[0][0], 6);
+    EXPECT_EQ(lines[1][0], 12);
+    EXPECT_EQ(lines[2][0], 18);
+    EXPECT_NEAR(lines[0][1], CV_PI/2, CV_PI/180 + 1e-6);
+    EXPECT_NEAR(lines[1][1], CV_PI/2, CV_PI/180 + 1e-6);
+    EXPECT_NEAR(lines[2][1], CV_PI/2, CV_PI/180 + 1e-6);
+}
+
+TEST(WeightedHoughLines, diagonal)
+{
+    Mat img(25, 25, CV_8UC1, Scalar(0));
+    // draw lines. 
+    line(img, Point(0, 0), Point(25, 25), Scalar(255));
+    line(img, Point(0, 25), Point(25, 0), Scalar(254));
+    
+    // detect lines
+    std::vector<Vec2f> lines;
+    int threshold{254*25};
+    bool use_edgeval{true};
+    HoughLines(img, lines, 1, CV_PI/180, threshold, 0, 0, 0.0, CV_PI, use_edgeval);
+    
+    // check results
+    ASSERT_EQ(lines.size(), 2U);
+    // detected lines is assumed sorted from stronger to weaker. 
+    EXPECT_EQ(lines[0][0], 0);
+    EXPECT_EQ(lines[1][0], 18);
+    EXPECT_NEAR(lines[0][1], CV_PI*3/4, CV_PI/180 + 1e-6);
+    EXPECT_NEAR(lines[1][1], CV_PI/4, CV_PI/180 + 1e-6);
+}
+
 INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
                                                                            testing::Values( 1, 10 ),
                                                                            testing::Values( 0.05, 0.1 ),
