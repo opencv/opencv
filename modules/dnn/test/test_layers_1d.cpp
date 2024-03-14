@@ -245,7 +245,6 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Elemwise_1d_Test, Combine(
 /*operation*/           Values("div", "prod", "max", "min", "sum")
 ));
 
-// WORKING FOR 1D
 TEST(Layer_Reshape_Test, Accuracy)
 {
     LayerParams lp;
@@ -259,11 +258,10 @@ TEST(Layer_Reshape_Test, Accuracy)
     Ptr<ReshapeLayer> layer = ReshapeLayer::create(lp);
 
     std::vector<int> input_shape = {0};
-    std::vector<int> output_shape = {1};
 
     Mat input(0, input_shape.data(), CV_32F);
     randn(input, 0.0, 1.0);
-    Mat output_ref(1, output_shape.data(), CV_32F, input.data);
+    Mat output_ref(1, newShape, CV_32F, input.data);
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
