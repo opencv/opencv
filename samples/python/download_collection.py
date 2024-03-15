@@ -218,20 +218,27 @@ def get_stanford_model(url : str, name : str, ext: str, dir : str, chunk_size : 
     if model_path.exists():
         print("Model exists")
     else:
-        with open(tmp_model_path, 'xb') as f:
+        # to reduce memory footprint for big models
+        max_size = 1024*1024*16
+        print("Extracting..", end="")
+        with open(tmp_model_path, 'xb') as of:
             if ext=="tar.gz":
                 tar_obj = tarfile.open(archive_path, 'r', encoding='utf-8', errors='surrogateescape')
                 try:
-                    buf = tar_obj.extractfile(internal_path).read()
+                    reader = tar_obj.extractfile(internal_path)
+                    while buf := reader.read(max_size):
+                        of.write(buf)
+                        print(".", end="")
                 except Exception as err:
                     print(err)
                 tar_obj.close()
             elif ext=="ply.gz":
                 with gzip.open(archive_path) as gz:
-                    buf = gz.read()
-            f.write(buf)
+                    while buf := gz.read(max_size):
+                        of.write(buf)
+                        print(".", end="")
         tmp_model_path.rename(model_path)
-        print("Model extracted")
+        print("done")
 
 
 dirname = "dlmodels"
