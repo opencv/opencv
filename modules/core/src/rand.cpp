@@ -195,7 +195,7 @@ randf_64f( double* arr, int len, uint64* state, const Vec2d* p, void*, bool )
     hal::addRNGBias64f(arr, &p[0][0], len);
 }
 
-static void randf_16f( float16_t* arr, int len, uint64* state, const Vec2f* p, float* fbuf, bool )
+static void randf_16f( fp16_t* arr, int len, uint64* state, const Vec2f* p, float* fbuf, bool )
 {
     uint64 temp = *state;
     for( int i = 0; i < len; i++ )

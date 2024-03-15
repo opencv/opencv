@@ -338,15 +338,15 @@ CASE(test_bitshift_right_uint64)
     // no filter
 CASE(test_bitshift_right_uint8)
     // no filter
-CASE(test_cast_BFLOAT16_to_FLOAT)
+CASE(test_cast_Bfp16_to_FLOAT)
     // no filter
 CASE(test_cast_DOUBLE_to_FLOAT)
     // no filter
 CASE(test_cast_DOUBLE_to_FLOAT16)
     // no filter
-CASE(test_cast_FLOAT16_to_DOUBLE)
+CASE(test_cast_fp16_to_DOUBLE)
     // no filter
-CASE(test_cast_FLOAT16_to_FLOAT)
+CASE(test_cast_fp16_to_FLOAT)
     // no filter
 CASE(test_cast_FLOAT_to_BFLOAT16)
     // no filter
@@ -362,9 +362,9 @@ CASE(test_cast_STRING_to_FLOAT)
 #if SKIP_SET_1
     SKIP;
 #endif
-CASE(test_castlike_BFLOAT16_to_FLOAT)
+CASE(test_castlike_Bfp16_to_FLOAT)
     // no filter
-CASE(test_castlike_BFLOAT16_to_FLOAT_expanded)
+CASE(test_castlike_Bfp16_to_FLOAT_expanded)
     // no filter
 CASE(test_castlike_DOUBLE_to_FLOAT)
     // no filter
@@ -374,13 +374,13 @@ CASE(test_castlike_DOUBLE_to_FLOAT16_expanded)
     // no filter
 CASE(test_castlike_DOUBLE_to_FLOAT_expanded)
     // no filter
-CASE(test_castlike_FLOAT16_to_DOUBLE)
+CASE(test_castlike_fp16_to_DOUBLE)
     // no filter
-CASE(test_castlike_FLOAT16_to_DOUBLE_expanded)
+CASE(test_castlike_fp16_to_DOUBLE_expanded)
     // no filter
-CASE(test_castlike_FLOAT16_to_FLOAT)
+CASE(test_castlike_fp16_to_FLOAT)
     // no filter
-CASE(test_castlike_FLOAT16_to_FLOAT_expanded)
+CASE(test_castlike_fp16_to_FLOAT_expanded)
     // no filter
 CASE(test_castlike_FLOAT_to_BFLOAT16)
     // no filter
