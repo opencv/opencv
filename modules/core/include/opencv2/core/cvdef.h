@@ -825,18 +825,6 @@ public:
         result.h = u.h;
         return result;
     }
-    static fp16_t zero()
-    {
-        fp16_t result;
-        result.h = (__fp16)0;
-        return result;
-    }
-    ushort bits() const
-    {
-        Cv16suf u;
-        u.h = h;
-        return u.u;
-    }
 protected:
     __fp16 h;
 
@@ -899,13 +887,6 @@ protected:
         result.w = b;
         return result;
     }
-    static fp16_t zero()
-    {
-        fp16_t result;
-        result.w = (ushort)0;
-        return result;
-    }
-    ushort bits() const { return w; }
 protected:
     ushort w;
 
