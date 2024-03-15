@@ -912,6 +912,8 @@ protected:
 #endif
 };
 
+typedef fp16_t float16_t;
+
 }
 #endif
 
