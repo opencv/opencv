@@ -11,6 +11,8 @@ import zipfile, tarfile, gzip
 if sys.version_info[0] < 3 or sys.version_info[1] < 5:
     raise Exception("Python 3.5 or greater is required. Try running `python3 download_collection.py`")
 
+verbose = False
+
 collection_name = "Scanned Objects by Google Research"
 owner_name = "GoogleResearch"
 
@@ -36,15 +38,16 @@ def print_size(num):
         return "%.3f GiB" % (num / (1 << 30))
 
 def download_model(model_name, dir):
-    print()
-    print("{}: {}".format(model.name, model.description))
-    print("Categories: [", ", ".join(model.categories), "]")
-    print("Size:", print_size(model.filesize))
+    if verbose:
+        print()
+        print("{}: {}".format(model.name, model.description))
+        print("Categories: [", ", ".join(model.categories), "]")
+        print("Size:", print_size(model.filesize))
 
     download_url = base_url + fuel_version + '/{}/models/'.format(owner_name) + model_name + '.zip'
 
-    model_path = Path(dir) / Path(model_name+'.zip')
-    tmp_model_path   = Path(dir) / Path(model_name+'.zip.tmp')
+    archive_path = Path(dir) / Path(model_name+'.zip')
+    tmp_archive_path   = Path(dir) / Path(model_name+'.zip.tmp')
     mesh_path     = Path(dir) / Path(model_name+'.obj')
     tmp_mesh_path = Path(dir) / Path(model_name+'.obj.tmp')
     mtl_path     = Path(dir) / Path('model.mtl')
@@ -52,11 +55,12 @@ def download_model(model_name, dir):
     texture_path     = Path(dir) / Path('texture.png')
     tmp_texture_path = Path(dir) / Path('texture.png.tmp')
 
-    for tmp in [tmp_model_path, tmp_mesh_path, tmp_mtl_path, tmp_texture_path]:
+    for tmp in [tmp_archive_path, tmp_mesh_path, tmp_mtl_path, tmp_texture_path]:
         tmp.unlink(missing_ok=True)
 
-    if model_path.exists():
-        print("Archive exists")
+    if archive_path.exists():
+        if verbose:
+            print("Archive exists")
     else:
         print("URL:", download_url)
         attempt = 1
@@ -68,23 +72,25 @@ def download_model(model_name, dir):
             except requests.exceptions.Timeout:
                 print("Timed out")
                 attempt = attempt + 1
-        with open(tmp_model_path, 'wb') as fd:
+        with open(tmp_archive_path, 'wb') as fd:
             for chunk in download.iter_content(chunk_size=1024*1024):
                 fd.write(chunk)
                 print(".", end="")
-        tmp_model_path.rename(model_path)
+        tmp_archive_path.rename(archive_path)
         print("..downloaded")
 
-    with zipfile.ZipFile(model_path) as z:
+    with zipfile.ZipFile(archive_path) as z:
         if mesh_path.exists():
-            print("OBJ exists")
+            if verbose:
+                print("OBJ exists")
         else:
             with open(tmp_mesh_path, 'wb') as f:
                 f.write(z.read("meshes/model.obj"))
             tmp_mesh_path.rename(mesh_path)
             print("OBJ unpacked")
         if texture_path.exists():
-            print("Texture exists")
+            if verbose:
+                print("Texture exists")
         else:
             with open(tmp_texture_path, 'wb') as f:
                 f.write(z.read("materials/textures/texture.png"))
@@ -92,7 +98,8 @@ def download_model(model_name, dir):
             print("Texture unpacked")
 
     if mtl_path.exists():
-        print("Material exists")
+        if verbose:
+            print("Material exists")
     else:
         mtlFile = """
 # Copyright 2020 Google LLC.
@@ -112,15 +119,18 @@ Kd 1.000000 1.000000 1.000000
             f.writelines(mtlFile)
         tmp_mtl_path.rename(mtl_path)
         print("Material written")
+    return mesh_path, texture_path
 
 def get_thumb(model : ModelData, dir):
+    if verbose:
+        print(model.name)
     img_url = base_url + fuel_version + model.thumb_url
     img_path = Path(dir) / Path(model.name+'.jpg')
     tmp_path = Path(dir) / Path(model.name+'.jpg.tmp')
     tmp_path.unlink(missing_ok=True)
     if img_path.exists():
-        #print("...exists")
-        pass
+        if verbose:
+            print("...exists")
     else:
         print("URL:", img_url)
         attempt = 1
@@ -196,7 +206,8 @@ def get_stanford_model(url : str, name : str, ext: str, dir : str, chunk_size : 
         tmp.unlink(missing_ok=True)
 
     if archive_path.exists():
-        print("Archive exists")
+        if verbose:
+            print("Archive exists")
     else:
         print("URL:", url)
         attempt = 1
@@ -216,7 +227,8 @@ def get_stanford_model(url : str, name : str, ext: str, dir : str, chunk_size : 
         print("..downloaded")
 
     if model_path.exists():
-        print("Model exists")
+        if verbose:
+            print("Model exists")
     else:
         # to reduce memory footprint for big models
         max_size = 1024*1024*16
@@ -239,9 +251,14 @@ def get_stanford_model(url : str, name : str, ext: str, dir : str, chunk_size : 
                         print(".", end="")
         tmp_model_path.rename(model_path)
         print("done")
+    return model_path, ""
 
+
+# ==================================================
 
 dirname = "dlmodels"
+
+all_models = []
 
 print("Getting Google Research models")
 
@@ -274,7 +291,8 @@ print("Downloading models from the {}/{} collection.".format(owner_name, collect
 for model in models:
     model_dir = Path(dirname) / Path(model.name)
     Path(model_dir).mkdir(parents=True, exist_ok=True)
-    download_model(model.name, model_dir)
+    model_path, texture_path = download_model(model.name, model_dir)
+    all_models.append((model_path, texture_path))
 
 print('Done.')
 
@@ -299,8 +317,11 @@ for m in stanford_models:
     name = "stanford_"+s[0]
     ext = s[1]+"."+s[2]
 
-    print(name + ":")
+    if verbose:
+        print(name + ":")
     model_dir = Path(dirname) / Path(name)
     Path(model_dir).mkdir(parents=True, exist_ok=True)
-    get_stanford_model(url, name, ext, model_dir, chunk_size, internal_path)
+    model_path, texture_path = get_stanford_model(url, name, ext, model_dir, chunk_size, internal_path)
+    all_models.append((model_path, texture_path))
+
 
