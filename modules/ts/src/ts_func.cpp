@@ -317,7 +317,7 @@ convertTo(const _Tp* src, void* dst, int dtype,
         convert_(src, (int64_t*)dst, total, alpha, beta);
         break;
     case CV_16F:
-        convert_(src, (cv::float16_t*)dst, total, alpha, beta);
+        convert_(src, (cv::fp16_t*)dst, total, alpha, beta);
         break;
     case CV_16BF:
         convert_(src, (cv::bfloat16_t*)dst, total, alpha, beta);
@@ -400,7 +400,7 @@ void convert(const Mat& src, cv::OutputArray _dst,
             convertTo((const int64_t*)sptr, dptr, dtype, total, alpha, beta);
             break;
         case CV_16F:
-            convertTo((const cv::float16_t*)sptr, dptr, dtype, total, alpha, beta);
+            convertTo((const cv::fp16_t*)sptr, dptr, dtype, total, alpha, beta);
             break;
         case CV_16BF:
             convertTo((const cv::bfloat16_t*)sptr, dptr, dtype, total, alpha, beta);
@@ -1192,8 +1192,8 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
                        &minval, &maxval, &minidx, &maxidx, mptr);
             break;
         case CV_16F:
-            minMaxLoc_<cv::float16_t, float>(
-                    (const cv::float16_t*)sptr, total, startidx,
+            minMaxLoc_<cv::fp16_t, float>(
+                    (const cv::fp16_t*)sptr, total, startidx,
                     &minval, &maxval, &minidx, &maxidx, mptr);
             break;
         case CV_16BF:
@@ -1447,7 +1447,7 @@ double norm(InputArray _src, int normType, InputArray _mask)
             result = norm_((const double*)sptr, total, cn, normType, result, mptr);
             break;
         case CV_16F:
-            result = norm_((const cv::float16_t*)sptr, total, cn, normType, result, mptr);
+            result = norm_((const cv::fp16_t*)sptr, total, cn, normType, result, mptr);
             break;
         case CV_16BF:
             result = norm_((const cv::bfloat16_t*)sptr, total, cn, normType, result, mptr);
@@ -1553,7 +1553,7 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
             result = norm_((const double*)sptr1, (const double*)sptr2, total, cn, normType, result, mptr);
             break;
         case CV_16F:
-            result = norm_((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, total, cn, normType, result, mptr);
+            result = norm_((const cv::fp16_t*)sptr1, (const cv::fp16_t*)sptr2, total, cn, normType, result, mptr);
             break;
         case CV_16BF:
             result = norm_((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, total, cn, normType, result, mptr);
@@ -1849,7 +1849,7 @@ void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
             compare_<double, double>((const double*)sptr1, (const double*)sptr2, dptr, total, cmpop);
             break;
         case CV_16F:
-            compare_<cv::float16_t, float>((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, dptr, total, cmpop);
+            compare_<cv::fp16_t, float>((const cv::fp16_t*)sptr1, (const cv::fp16_t*)sptr2, dptr, total, cmpop);
             break;
         case CV_16BF:
             compare_<cv::bfloat16_t, float>((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, dptr, total, cmpop);
@@ -1911,7 +1911,7 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
             compareS_((const double*)sptr, value, dptr, total, cmpop);
             break;
         case CV_16F:
-            compareS_((const cv::float16_t*)sptr, (float)value, dptr, total, cmpop);
+            compareS_((const cv::fp16_t*)sptr, (float)value, dptr, total, cmpop);
             break;
         case CV_16BF:
             compareS_((const cv::bfloat16_t*)sptr, (float)value, dptr, total, cmpop);
@@ -2657,7 +2657,7 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
             minmax_((const int64*)sptr1, (const int64*)sptr2, (int64*)dptr, total, op);
             break;
         case CV_16F:
-            minmax16f_((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, (cv::float16_t*)dptr, total, op);
+            minmax16f_((const cv::fp16_t*)sptr1, (const cv::fp16_t*)sptr2, (cv::fp16_t*)dptr, total, op);
             break;
         case CV_16BF:
             minmax16f_((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, (cv::bfloat16_t*)dptr, total, op);
@@ -2753,7 +2753,7 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
             minmax_((const double*)sptr1, saturate_cast<double>(val), (double*)dptr, total, op);
             break;
         case CV_16F:
-            minmax_16f((const cv::float16_t*)sptr1, saturate_cast<cv::float16_t>(val), (cv::float16_t*)dptr, total, op);
+            minmax_16f((const cv::fp16_t*)sptr1, saturate_cast<cv::fp16_t>(val), (cv::fp16_t*)dptr, total, op);
             break;
         case CV_16BF:
             minmax_16f((const cv::bfloat16_t*)sptr1, saturate_cast<cv::bfloat16_t>(val), (cv::bfloat16_t*)dptr, total, op);
@@ -2854,7 +2854,7 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
             muldiv_((const double*)sptr1, (const double*)sptr2, (double*)dptr, total, scale, op);
             break;
         case CV_16F:
-            muldiv_16f((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, (cv::float16_t*)dptr, total, scale, op);
+            muldiv_16f((const cv::fp16_t*)sptr1, (const cv::fp16_t*)sptr2, (cv::fp16_t*)dptr, total, scale, op);
             break;
         case CV_16BF:
             muldiv_16f((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, (cv::bfloat16_t*)dptr, total, scale, op);
@@ -2954,7 +2954,7 @@ Scalar mean(const Mat& src, const Mat& mask)
             mean_((const double*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_16F:
-            mean_<cv::float16_t, float>((const cv::float16_t*)sptr, mptr, total, cn, sum, nz);
+            mean_<cv::fp16_t, float>((const cv::fp16_t*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_16BF:
             mean_<cv::bfloat16_t, float>((const cv::bfloat16_t*)sptr, mptr, total, cn, sum, nz);
@@ -3223,7 +3223,7 @@ static void writeElems(std::ostream& out, const void* data, int nelems, int dept
     {
         std::streamsize pp = out.precision();
         out.precision(4);
-        writeElems<cv::float16_t, float>(out, data, nelems, starpos);
+        writeElems<cv::fp16_t, float>(out, data, nelems, starpos);
         out.precision(pp);
     }
     else if(depth == CV_16BF)

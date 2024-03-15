@@ -162,24 +162,24 @@ template<> inline uint64 saturate_cast<uint64>(double v)     { return (int64)rou
 
 
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(float16_t v) { return saturate_cast<_Tp>((float)v); }
+template<typename _Tp> static inline _Tp saturate_cast(fp16_t v) { return saturate_cast<_Tp>((float)v); }
 template<typename _Tp> static inline _Tp saturate_cast(bfloat16_t v) { return saturate_cast<_Tp>((float)v); }
 template<typename _Tp> static inline _Tp saturate_cast(bool v) { return saturate_cast<_Tp>(v ? 1 : 0); }
 
 // in theory, we could use a LUT for 8u/8s->16f conversion,
 // but with hardware support for FP32->FP16 conversion the current approach is preferable
-template<> inline float16_t saturate_cast<float16_t>(uchar v)   { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(schar v)   { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(ushort v)  { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(short v)   { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(unsigned v){ return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(int v)     { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(uint64 v)  { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(int64 v)   { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(float v)   { return float16_t(v); }
-template<> inline float16_t saturate_cast<float16_t>(double v)  { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(float16_t v)  { return v; }
-template<> inline float16_t saturate_cast<float16_t>(bfloat16_t v)  { return float16_t((float)v); }
+template<> inline fp16_t saturate_cast<fp16_t>(uchar v)   { return fp16_t((float)v); }
+template<> inline fp16_t saturate_cast<fp16_t>(schar v)   { return fp16_t((float)v); }
+template<> inline fp16_t saturate_cast<fp16_t>(ushort v)  { return fp16_t((float)v); }
+template<> inline fp16_t saturate_cast<fp16_t>(short v)   { return fp16_t((float)v); }
+template<> inline fp16_t saturate_cast<fp16_t>(unsigned v){ return fp16_t((float)v); }
+template<> inline fp16_t saturate_cast<fp16_t>(int v)     { return fp16_t((float)v); }
+template<> inline fp16_t saturate_cast<fp16_t>(uint64 v)  { return fp16_t((float)v); }
+template<> inline fp16_t saturate_cast<fp16_t>(int64 v)   { return fp16_t((float)v); }
+template<> inline fp16_t saturate_cast<fp16_t>(float v)   { return fp16_t(v); }
+template<> inline fp16_t saturate_cast<fp16_t>(double v)  { return fp16_t((float)v); }
+template<> inline fp16_t saturate_cast<fp16_t>(fp16_t v)  { return v; }
+template<> inline fp16_t saturate_cast<fp16_t>(bfloat16_t v)  { return fp16_t((float)v); }
 
 template<> inline bfloat16_t saturate_cast<bfloat16_t>(uchar v)   { return bfloat16_t((float)v); }
 template<> inline bfloat16_t saturate_cast<bfloat16_t>(schar v)   { return bfloat16_t((float)v); }
@@ -191,7 +191,7 @@ template<> inline bfloat16_t saturate_cast<bfloat16_t>(uint64 v)  { return bfloa
 template<> inline bfloat16_t saturate_cast<bfloat16_t>(int64 v)   { return bfloat16_t((float)v); }
 template<> inline bfloat16_t saturate_cast<bfloat16_t>(float v)   { return bfloat16_t(v); }
 template<> inline bfloat16_t saturate_cast<bfloat16_t>(double v)  { return bfloat16_t((float)v); }
-template<> inline bfloat16_t saturate_cast<bfloat16_t>(float16_t v) { return bfloat16_t((float)v); }
+template<> inline bfloat16_t saturate_cast<bfloat16_t>(fp16_t v) { return bfloat16_t((float)v); }
 template<> inline bfloat16_t saturate_cast<bfloat16_t>(bfloat16_t v) { return v; }
 
 template<> inline bool saturate_cast<bool>(uchar v) { return v != 0; }
@@ -204,7 +204,7 @@ template<> inline bool saturate_cast<bool>(float v){ return v != 0; }
 template<> inline bool saturate_cast<bool>(double v){ return v != 0; }
 template<> inline bool saturate_cast<bool>(uint64_t v){ return v != 0; }
 template<> inline bool saturate_cast<bool>(int64_t v){ return v != 0; }
-template<> inline bool saturate_cast<bool>(float16_t v){ return (float)v != 0; }
+template<> inline bool saturate_cast<bool>(fp16_t v){ return (float)v != 0; }
 template<> inline bool saturate_cast<bool>(bfloat16_t v){ return (float)v != 0; }
 
 //! @}

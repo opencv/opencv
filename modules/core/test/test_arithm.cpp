@@ -628,8 +628,8 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
             inRange_((const double*)sptr, (const double*)aptr, (const double*)bptr, dptr, total, cn);
             break;
         case CV_16F:
-            inRange_<cv::float16_t, float>((const cv::float16_t*)sptr, (const cv::float16_t*)aptr,
-                                           (const cv::float16_t*)bptr, dptr, total, cn);
+            inRange_<cv::fp16_t, float>((const cv::fp16_t*)sptr, (const cv::fp16_t*)aptr,
+                                           (const cv::fp16_t*)bptr, dptr, total, cn);
             break;
         case CV_16BF:
             inRange_<cv::bfloat16_t, float>((const cv::bfloat16_t*)sptr, (const cv::bfloat16_t*)aptr,
@@ -695,7 +695,7 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
             inRangeS_((const double*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         case CV_16F:
-            inRangeS_((const cv::float16_t*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
+            inRangeS_((const cv::fp16_t*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
             break;
         case CV_16BF:
             inRangeS_((const cv::bfloat16_t*)sptr, lbuf.f, rbuf.f, dptr, total, cn);

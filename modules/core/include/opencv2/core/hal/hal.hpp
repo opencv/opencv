@@ -245,8 +245,8 @@ CV_EXPORTS void addWeighted64u( const uint64* src1, size_t step1, const uint64* 
 CV_EXPORTS void addWeighted64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* scalars );
 CV_EXPORTS void addWeighted32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* scalars );
 
-CV_EXPORTS void cvt16f32f( const float16_t* src, float* dst, int len );
-CV_EXPORTS void cvt32f16f( const float* src, float16_t* dst, int len );
+CV_EXPORTS void cvt16f32f( const fp16_t* src, float* dst, int len );
+CV_EXPORTS void cvt32f16f( const float* src, fp16_t* dst, int len );
 CV_EXPORTS void cvt16bf32f( const bfloat16_t* src, float* dst, int len );
 CV_EXPORTS void cvt32f16bf( const float* src, bfloat16_t* dst, int len );
 

@@ -435,10 +435,10 @@ void winofunc_AtXA_8x8_F32(const float* inptr, int inpstep,
 void winofunc_accum_F16(const char* _inwptr, const char* _wptr, char* _outbuf, int Cg, int iblock,
                         const int winoIblock, const int winoKblock, const int winoAtomF16, const int winoNatomF16)
 {
-    typedef __fp16 float16_t;
-    const float16_t* inwptr = (const float16_t*)_inwptr;
-    const float16_t* wptr = (const float16_t*)_wptr;
-    float16_t* outbuf = (float16_t*)_outbuf;
+    typedef __fp16 fp16_t;
+    const fp16_t* inwptr = (const fp16_t*)_inwptr;
+    const fp16_t* wptr = (const fp16_t*)_wptr;
+    fp16_t* outbuf = (fp16_t*)_outbuf;
 
     CV_Assert(winoIblock == 6 && winoKblock == 4 && winoAtomF16 == 8);
 
@@ -591,8 +591,8 @@ void winofunc_accum_F16(const char* _inwptr, const char* _wptr, char* _outbuf, i
 void winofunc_BtXB_8x8_F16(const float * inptr, int inpstep,
                            char * _outptr, int Cg, const int winoIblock, const int winoAtomF16)
 {
-    typedef __fp16 float16_t;
-    float16_t* outptr = (float16_t*)_outptr;
+    typedef __fp16 fp16_t;
+    fp16_t* outptr = (fp16_t*)_outptr;
     float32x4_t x00 = vld1q_f32(inptr), x01 = vld1q_f32(inptr + 4);
     float32x4_t x10 = vld1q_f32(inptr + inpstep), x11 = vld1q_f32(inptr + inpstep + 4);
     float32x4_t x20 = vld1q_f32(inptr + inpstep*2), x21 = vld1q_f32(inptr + inpstep*2 + 4);
@@ -757,8 +757,8 @@ void winofunc_AtXA_8x8_F16(const char* _inptr, int inpstep,
                            float * bpptr, int bpstep, float* outptr, int outstep,
                            float bias, float minval, float maxval, bool ifMinMaxAct)
 {
-    typedef __fp16 float16_t;
-    const float16_t* inptr = (const float16_t*)_inptr;
+    typedef __fp16 fp16_t;
+    const fp16_t* inptr = (const fp16_t*)_inptr;
 
     float32x4_t x00 = vcvt_f32_f16(vld1_f16(inptr)), x01 = vcvt_f32_f16(vld1_f16(inptr + 4));
     float32x4_t x10 = vcvt_f32_f16(vld1_f16(inptr + inpstep)), x11 = vcvt_f32_f16(vld1_f16(inptr + inpstep + 4));

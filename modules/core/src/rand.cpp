@@ -246,7 +246,7 @@ static void randf_16_or_32f( void* dst, int len_, int cn, uint64* state, const V
     *state = temp;
     hal::addRNGBias32f(arr, &p[0][0], len_, cn+1);
     if (depth == CV_16F)
-        hal::cvt32f16f(fbuf, (float16_t*)dst, len);
+        hal::cvt32f16f(fbuf, (fp16_t*)dst, len);
     else if (depth == CV_16BF)
         hal::cvt32f16bf(fbuf, (bfloat16_t*)dst, len);
 }
@@ -478,7 +478,7 @@ randnScale_16_or_32f(float* fbuf, float* dst, int len, int cn,
         }
     }
     if (depth == CV_16F)
-        hal::cvt32f16f(fbuf, (float16_t*)dst, len);
+        hal::cvt32f16f(fbuf, (fp16_t*)dst, len);
     else if (depth == CV_16BF)
         hal::cvt32f16bf(fbuf, (bfloat16_t*)dst, len);
 }

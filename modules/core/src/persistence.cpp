@@ -294,7 +294,7 @@ int calcStructSize( const char* dt, int initial_size )
         case 'n': { elem_max_size = std::max( elem_max_size, sizeof(unsigned) ); break; }
         case 'f': { elem_max_size = std::max( elem_max_size, sizeof(float ) ); break; }
         case 'd': { elem_max_size = std::max( elem_max_size, sizeof(double) ); break; }
-        case 'h': { elem_max_size = std::max( elem_max_size, sizeof(float16_t)); break; }
+        case 'h': { elem_max_size = std::max( elem_max_size, sizeof(fp16_t)); break; }
         case 'H': { elem_max_size = std::max( elem_max_size, sizeof(bfloat16_t)); break; }
         case 'I': { elem_max_size = std::max( elem_max_size, sizeof(int64_t)); break; }
         case 'U': { elem_max_size = std::max( elem_max_size, sizeof(uint64_t)); break; }
@@ -1172,8 +1172,8 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         data += sizeof(double);
                         break;
                     case CV_16F:
-                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(float16_t *) data, true, explicitZero);
-                        data += sizeof(float16_t);
+                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(fp16_t *) data, true, explicitZero);
+                        data += sizeof(fp16_t);
                         break;
                     case CV_16BF:
                         ptr = fs::floatToString(buf, sizeof(buf), (float) *(bfloat16_t *) data, true, explicitZero);
@@ -1856,7 +1856,7 @@ char *FileStorage::Impl::parseBase64(char *ptr, int indent, FileNode &collection
                         node_type = FileNode::REAL;
                         break;
                     case CV_16F:
-                        fval = (float) float16_t::fromBits(base64decoder.getUInt16());
+                        fval = (float) fp16_t::fromBits(base64decoder.getUInt16());
                         node_type = FileNode::REAL;
                         break;
                     default:
@@ -2663,8 +2663,8 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             data += sizeof(double);
                             break;
                         case CV_16F:
-                            *(float16_t*)data = float16_t((float)ival);
-                            data += sizeof(float16_t);
+                            *(fp16_t*)data = fp16_t((float)ival);
+                            data += sizeof(fp16_t);
                             break;
                         case CV_16BF:
                             *(bfloat16_t*)data = bfloat16_t((float)ival);
@@ -2721,8 +2721,8 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             data += sizeof(double);
                             break;
                         case CV_16F:
-                            *(float16_t*)data = float16_t((float)fval);
-                            data += sizeof(float16_t);
+                            *(fp16_t*)data = fp16_t((float)fval);
+                            data += sizeof(fp16_t);
                             break;
                         case CV_16BF:
                             *(bfloat16_t*)data = bfloat16_t((float)fval);
