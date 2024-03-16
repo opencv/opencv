@@ -238,7 +238,9 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             }
             m_hasNormal = true;
         }
-        if (p.name ==  "red" || p.name ==  "green" || p.name ==  "blue")
+        if (p.name ==  "red"   || p.name == "diffuse_red" ||
+            p.name ==  "green" || p.name == "diffuse_green" ||
+            p.name ==  "blue"  || p.name == "diffuse_blue")
         {
             known = true;
             if (p.valType != CV_8U)
@@ -290,6 +292,12 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             {
                 CV_LOG_ERROR(NULL, "List property " << p.name
                              << " should have type uint8 for counter and uint32 for values");
+                good = false;
+            }
+            if (!(p.name == "vertex_index" || p.name == "vertex_indices"))
+            {
+                CV_LOG_ERROR(NULL, "List property should be vertex_index or vertex_indices, "
+                             << p.name << " is not supported");
                 good = false;
             }
         }
@@ -386,11 +394,11 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
             offset = offsetof(VertexFields, ny);
         if (p.name == "nz")
             offset = offsetof(VertexFields, nz);
-        if (p.name == "red")
+        if (p.name == "red"   || p.name == "diffuse_red")
             offset = offsetof(VertexFields, r);
-        if (p.name == "green")
+        if (p.name == "green" || p.name == "diffuse_green")
             offset = offsetof(VertexFields, g);
-        if (p.name == "blue")
+        if (p.name == "blue"  || p.name == "diffuse_blue")
             offset = offsetof(VertexFields, b);
         vertexOffsets[j] = offset;
     }
