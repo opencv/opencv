@@ -13,9 +13,6 @@ if sys.version_info[0] < 3 or sys.version_info[1] < 5:
 
 verbose = False
 
-collection_name = "Scanned Objects by Google Research"
-owner_name = "GoogleResearch"
-
 class ModelData:
     def __init__(self, name : str, description : str, filesize : int, thumb_url : str, categories ) -> None:
         self.name = name
@@ -23,9 +20,6 @@ class ModelData:
         self.filesize = filesize
         self.thumb_url = thumb_url
         self.categories = set(categories)
-
-base_url ='https://fuel.gazebosim.org/'
-fuel_version = '1.0'
 
 def print_size(num):
     if num < 1024:
@@ -36,6 +30,12 @@ def print_size(num):
         return "%.3f MiB" % (num / (1 << 20))
     else:
         return "%.3f GiB" % (num / (1 << 30))
+
+collection_name = "Scanned Objects by Google Research"
+owner_name = "GoogleResearch"
+
+base_url ='https://fuel.gazebosim.org/'
+fuel_version = '1.0'
 
 def download_model(model_name, dir):
     if verbose:
