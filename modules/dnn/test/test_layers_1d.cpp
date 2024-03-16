@@ -271,4 +271,29 @@ TEST(Layer_Reshape_Test, Accuracy)
     normAssert(output_ref, outputs[0]);
 }
 
+TEST(Layer_Expand_Test, Accuracy) {
+
+    int dims = 0;
+    std::vector<int> input_shape = {dims};
+    std::vector<int> target_shape = {dims + 1};
+
+    LayerParams lp;
+    lp.type = "Expand";
+    lp.name = "expandLayer";
+    lp.set("shape", DictValue::arrayInt(&target_shape[0], target_shape.size()));
+
+    Ptr<ExpandLayer> layer = ExpandLayer::create(lp);
+    Mat input(dims, input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+
+    cv::Mat output_ref(target_shape, CV_32F, input.data);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+
 }}
