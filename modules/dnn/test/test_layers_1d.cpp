@@ -567,6 +567,34 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Slice_Test,
                 std::vector<int>({1, 4})
 ));
 
+TEST(Layer_Padding_Test, Accuracy){
+    LayerParams lp;
+    lp.type = "Padding";
+    lp.name = "PaddingLayer";
+    // std::vector<int>paddings = {1};
+    // lp.set("paddings", DictValue::arrayInt(paddings.begin(), paddings.size()));
+    std::vector<int> paddings = {1, 1}; // Pad before and pad after for one dimension
+    lp.set("paddings", DictValue::arrayInt(paddings.data(), paddings.size()));
+    Ptr<PaddingLayer> layer = PaddingLayer::create(lp);
+
+    std::vector<int> input_shape = {0};
+    std::vector<int> output_shape = {1};
+
+    cv::Mat input(0, input_shape.data(), CV_32F, 1.0);
+    // cv::randn(input, 0.0, 1.0);
+
+    float data[] = {0, 1, 0};
+    cv::Mat output_ref(output_shape, CV_32F, data);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+
+
 typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_FullyConnected_Test;
 TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
 {
