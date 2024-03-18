@@ -817,14 +817,6 @@ public:
     hfloat() : h(0) {}
     explicit hfloat(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
-    static hfloat fromBits(ushort w)
-    {
-        Cv16suf u;
-        u.u = w;
-        hfloat result;
-        result.h = u.h;
-        return result;
-    }
 protected:
     __fp16 h;
 
@@ -881,17 +873,32 @@ protected:
     #endif
     }
 
-    static hfloat fromBits(ushort b)
-    {
-        hfloat result;
-        result.w = b;
-        return result;
-    }
 protected:
     ushort w;
 
 #endif
 };
+
+inline hfloat hfloatFromBits(ushort w) {
+#if CV_FP16_TYPE
+    Cv16suf u;
+    u.u = w;
+    hfloat res(float(u.h));
+    return res;
+#else
+    Cv32suf out;
+
+    unsigned t = ((w & 0x7fff) << 13) + 0x38000000;
+    unsigned sign = (w & 0x8000) << 16;
+    unsigned e = w & 0x7c00;
+
+    out.u = t + (1 << 23);
+    out.u = (e >= 0x7c00 ? t + 0x38000000 :
+            e == 0 ? (static_cast<void>(out.f -= 6.103515625e-05f), out.u) : t) | sign;
+    hfloat res(out.f);
+    return res;
+#endif
+}
 
 typedef hfloat float16_t;
 
