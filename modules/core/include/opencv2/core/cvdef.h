@@ -809,19 +809,19 @@ using std::uint64_t;
 namespace cv
 {
 
-class fp16_t
+class hfloat
 {
 public:
 #if CV_FP16_TYPE
 
-    fp16_t() : h(0) {}
-    explicit fp16_t(float x) { h = (__fp16)x; }
+    hfloat() : h(0) {}
+    explicit hfloat(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
-    static fp16_t fromBits(ushort w)
+    static hfloat fromBits(ushort w)
     {
         Cv16suf u;
         u.u = w;
-        fp16_t result;
+        hfloat result;
         result.h = u.h;
         return result;
     }
@@ -829,8 +829,8 @@ protected:
     __fp16 h;
 
 #else
-    fp16_t() : w(0) {}
-    explicit fp16_t(float x)
+    hfloat() : w(0) {}
+    explicit hfloat(float x)
     {
     #if CV_FP16 && CV_AVX2
         __m128 v = _mm_load_ss(&x);
@@ -881,9 +881,9 @@ protected:
     #endif
     }
 
-    static fp16_t fromBits(ushort b)
+    static hfloat fromBits(ushort b)
     {
-        fp16_t result;
+        hfloat result;
         result.w = b;
         return result;
     }
@@ -893,7 +893,7 @@ protected:
 #endif
 };
 
-typedef fp16_t float16_t;
+typedef hfloat float16_t;
 
 }
 #endif

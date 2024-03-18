@@ -1680,14 +1680,14 @@ template<typename R> struct TheTest
         AlignedData<v_float32> data_f32; data_f32.a.clear();
         AlignedData<v_uint16> out;
 
-        R r1 = vx_load_expand((const cv::fp16_t*)data.a.d);
+        R r1 = vx_load_expand((const cv::hfloat*)data.a.d);
         R r2(r1);
         EXPECT_EQ(1.0f, v_get0(r1));
         v_store(data_f32.a.d, r2);
         EXPECT_EQ(-2.0f, data_f32.a.d[VTraits<R>::vlanes() - 1]);
 
         out.a.clear();
-        v_pack_store((cv::fp16_t*)out.a.d, r2);
+        v_pack_store((cv::hfloat*)out.a.d, r2);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             EXPECT_EQ(data.a[i], out.a[i]) << "i=" << i;
@@ -1711,7 +1711,7 @@ template<typename R> struct TheTest
 
         // check some initialization methods
         R r1 = data.u;
-        R r2 = vx_load_expand((const fp16_t*)data.a.d);
+        R r2 = vx_load_expand((const hfloat*)data.a.d);
         R r3(r2);
         EXPECT_EQ(data.u[0], v_get0(r1));
         EXPECT_EQ(data.a[0], v_get0(r2));
