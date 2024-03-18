@@ -494,10 +494,10 @@ void convBlockMR1_F32(int np, const float * a, const float * b, float *c, const 
 void convBlock_F16(int np, const char * _a, const char * _b, char * _c, int ldc, bool init_c, int width,
                     const int convMR_fp16, const int convNR_fp16)
 {
-    typedef __fp16 hfloat;
-    const hfloat* a = (const hfloat*)_a;
-    const hfloat* b = (const hfloat*)_b;
-    hfloat* c = (hfloat*)_c;
+    typedef __fp16 float16_t;
+    const float16_t* a = (const float16_t*)_a;
+    const float16_t* b = (const float16_t*)_b;
+    float16_t* c = (float16_t*)_c;
     CV_Assert(convMR_fp16 == 8 && convNR_fp16 == 24);
 
     float16x8_t c00 = vdupq_n_f16(0), c01 = c00, c02 = c00;
@@ -638,12 +638,12 @@ void convBlock_F16(int np, const char * _a, const char * _b, char * _c, int ldc,
 void convBlockMR1_F16(int np, const char* _a, const char* _b, float *c, const float _bias, bool init_c,
                        const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR_FP16)
 {
-    typedef __fp16 hfloat;
+    typedef __fp16 float16_t;
     CV_Assert(convNR_FP16 == 24); // CONV_NR_FP16 = 24
-    const hfloat* a = (const hfloat*)_a;
-    const hfloat* b = (const hfloat*)_b;
+    const float16_t* a = (const float16_t*)_a;
+    const float16_t* b = (const float16_t*)_b;
 
-    const hfloat bias = (hfloat)_bias;
+    const float16_t bias = (float16_t)_bias;
 
     float16x8_t c0 = vdupq_n_f16(bias), c1 = c0, c2 = c0;
 
