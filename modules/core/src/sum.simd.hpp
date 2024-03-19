@@ -171,7 +171,7 @@ DEFINE_SUM_SIMD_8(schar, int, int, v_int32, vx_load_expand)
 DEFINE_SUM_SIMD_16(ushort, int, int, v_int32, load_u16_as_s32)
 DEFINE_SUM_SIMD_16(short, int, int, v_int32, vx_load_expand)
 DEFINE_SUM_SIMD_16(float16_t, float, int, v_float32, vx_load_expand)
-DEFINE_SUM_SIMD_16(bfloat16_t, float, int, v_float32, vx_load_expand)
+DEFINE_SUM_SIMD_16(bfloat, float, int, v_float32, vx_load_expand)
 
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
@@ -377,8 +377,8 @@ static int sum64f( const double* src, const uchar* mask, double* dst, int len, i
 static int sum16f( const float16_t* src, const uchar* mask, float* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_<float16_t, float, float>(src, mask, dst, len, cn); }
 
-static int sum16bf( const bfloat16_t* src, const uchar* mask, float* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_<bfloat16_t, float, float>(src, mask, dst, len, cn); }
+static int sum16bf( const bfloat* src, const uchar* mask, float* dst, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sum_<bfloat, float, float>(src, mask, dst, len, cn); }
 
 SumFunc getSumFunc(int depth)
 {

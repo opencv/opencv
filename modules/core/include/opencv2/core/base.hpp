@@ -405,7 +405,7 @@ inline unsigned cv_abs(unsigned x) { return x; }
 inline uint64 cv_abs(uint64 x) { return x; }
 inline uint64 cv_abs(int64 x) { return (uint64)std::abs(x); }
 inline float cv_abs(float16_t x) { return std::abs((float)x); }
-inline float cv_abs(bfloat16_t x) { return std::abs((float)x); }
+inline float cv_abs(bfloat x) { return std::abs((float)x); }
 inline int cv_absdiff(uchar x, uchar y) { return (int)std::abs((int)x - (int)y); }
 inline int cv_absdiff(schar x, schar y) { return (int)std::abs((int)x - (int)y); }
 inline int cv_absdiff(ushort x, ushort y) { return (int)std::abs((int)x - (int)y); }
@@ -414,7 +414,7 @@ inline unsigned cv_absdiff(int x, int y) { return (unsigned)(std::max(x, y) - st
 inline unsigned cv_absdiff(unsigned x, unsigned y) { return std::max(x, y) - std::min(x, y); }
 inline uint64 cv_absdiff(uint64 x, uint64 y) { return std::max(x, y) - std::min(x, y); }
 inline float cv_absdiff(float16_t x, float16_t y) { return std::abs((float)x - (float)y); }
-inline float cv_absdiff(bfloat16_t x, bfloat16_t y) { return std::abs((float)x - (float)y); }
+inline float cv_absdiff(bfloat x, bfloat y) { return std::abs((float)x - (float)y); }
 
 template<typename _Tp, typename _AccTp> static inline
 _AccTp normL2Sqr(const _Tp* a, int n)

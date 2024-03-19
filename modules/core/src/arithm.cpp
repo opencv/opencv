@@ -1592,9 +1592,9 @@ struct InRange_SIMD<float16_t>
 };
 
 template <>
-struct InRange_SIMD<bfloat16_t>
+struct InRange_SIMD<bfloat>
 {
-    int operator () (const bfloat16_t * src1, const bfloat16_t * src2, const bfloat16_t * src3,
+    int operator () (const bfloat * src1, const bfloat * src2, const bfloat * src3,
         uchar * dst, int len) const
     {
         int x = 0;
@@ -1718,8 +1718,8 @@ static void inRange16f(const float16_t* src1, size_t step1, const float16_t* src
     inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
-static void inRange16bf(const bfloat16_t* src1, size_t step1, const bfloat16_t* src2, size_t step2,
-                        const bfloat16_t* src3, size_t step3, uchar* dst, size_t step, Size size)
+static void inRange16bf(const bfloat* src1, size_t step1, const bfloat* src2, size_t step2,
+                        const bfloat* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
     inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }

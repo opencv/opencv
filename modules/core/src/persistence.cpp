@@ -295,7 +295,7 @@ int calcStructSize( const char* dt, int initial_size )
         case 'f': { elem_max_size = std::max( elem_max_size, sizeof(float ) ); break; }
         case 'd': { elem_max_size = std::max( elem_max_size, sizeof(double) ); break; }
         case 'h': { elem_max_size = std::max( elem_max_size, sizeof(float16_t)); break; }
-        case 'H': { elem_max_size = std::max( elem_max_size, sizeof(bfloat16_t)); break; }
+        case 'H': { elem_max_size = std::max( elem_max_size, sizeof(bfloat)); break; }
         case 'I': { elem_max_size = std::max( elem_max_size, sizeof(int64_t)); break; }
         case 'U': { elem_max_size = std::max( elem_max_size, sizeof(uint64_t)); break; }
         default:
@@ -1176,8 +1176,8 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         data += sizeof(float16_t);
                         break;
                     case CV_16BF:
-                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(bfloat16_t *) data, true, explicitZero);
-                        data += sizeof(bfloat16_t);
+                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(bfloat *) data, true, explicitZero);
+                        data += sizeof(bfloat);
                         break;
                     default:
                         CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported type");
@@ -2667,8 +2667,8 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             data += sizeof(float16_t);
                             break;
                         case CV_16BF:
-                            *(bfloat16_t*)data = bfloat16_t((float)ival);
-                            data += sizeof(bfloat16_t);
+                            *(bfloat*)data = bfloat((float)ival);
+                            data += sizeof(bfloat);
                             break;
                         default:
                             CV_Error( Error::StsUnsupportedFormat, "Unsupported type" );
@@ -2725,8 +2725,8 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             data += sizeof(float16_t);
                             break;
                         case CV_16BF:
-                            *(bfloat16_t*)data = bfloat16_t((float)fval);
-                            data += sizeof(bfloat16_t);
+                            *(bfloat*)data = bfloat((float)fval);
+                            data += sizeof(bfloat);
                             break;
                         default:
                             CV_Error( Error::StsUnsupportedFormat, "Unsupported type" );

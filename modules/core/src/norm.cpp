@@ -364,7 +364,7 @@ CV_DEF_NORM_ALL(64f, double, double, double, double)
 CV_DEF_NORM_ALL(64u, uint64, uint64, double, double)
 CV_DEF_NORM_ALL(64s, int64, uint64, double, double)
 CV_DEF_NORM_ALL(16f, float16_t, float, float, float)
-CV_DEF_NORM_ALL(16bf, bfloat16_t, float, float, float)
+CV_DEF_NORM_ALL(16bf, bfloat, float, float, float)
 
 typedef int (*NormFunc)(const uchar*, const uchar*, void*, int, int);
 typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, void*, int, int);

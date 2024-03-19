@@ -321,10 +321,10 @@ public:
          };
 };
 
-template<> class DataType<bfloat16_t>
+template<> class DataType<bfloat>
 {
 public:
-    typedef bfloat16_t  value_type;
+    typedef bfloat  value_type;
     typedef float       work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
@@ -431,7 +431,7 @@ template<> class TypeDepth<CV_16F>
 template<> class TypeDepth<CV_16BF>
 {
     enum { depth = CV_16BF };
-    typedef bfloat16_t value_type;
+    typedef bfloat value_type;
 };
 
 template<> class TypeDepth<CV_Bool>
