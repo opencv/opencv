@@ -284,6 +284,132 @@ TEST_P(Test_Model, Classify)
     testClassifyModel(weights_file, config_file, img_path, ref, norm, size);
 }
 
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25200
+#if 0
+TEST_P(Test_Model, DetectRegion)
+{
+    applyTestTag(
+            CV_TEST_TAG_MEMORY_2GB,
+            CV_TEST_TAG_LONG,
+            CV_TEST_TAG_DEBUG_VERYLONG
+    );
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // accuracy
+if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy
+if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+    // FIXIT DNN_BACKEND_INFERENCE_ENGINE is misused
+if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+#endif
+
+#if defined(INF_ENGINE_RELEASE)
+    if (target == DNN_TARGET_MYRIAD
+&& getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+#endif
+
+    std::vector<int> refClassIds = {6, 1, 11};
+    std::vector<float> refConfidences = {0.750469f, 0.780879f, 0.901615f};
+    std::vector<Rect2d> refBoxes = {Rect2d(240, 53, 135, 72),
+                                    Rect2d(112, 109, 192, 200),
+                                    Rect2d(58, 141, 117, 249)};
+
+    std::string img_path = _tf("dog416.png");
+    std::string weights_file = _tf("yolo-voc.weights", false);
+    std::string config_file = _tf("yolo-voc.cfg");
+
+    double scale = 1.0 / 255.0;
+    Size size{416, 416};
+    bool swapRB = true;
+
+    double confThreshold = 0.24;
+    double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
+    double scoreDiff = 8e-5, iouDiff = 1e-5;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
+    {
+        scoreDiff = 1e-2;
+        iouDiff = 1.6e-2;
+    }
+
+    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
+                    refBoxes, scoreDiff, iouDiff, confThreshold, nmsThreshold, size,
+                    Scalar(), scale, swapRB);
+}
+
+TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
+{
+    applyTestTag(
+            CV_TEST_TAG_MEMORY_2GB,
+            CV_TEST_TAG_LONG,
+            CV_TEST_TAG_DEBUG_VERYLONG
+    );
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // accuracy
+if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy
+if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+#endif
+
+#if defined(INF_ENGINE_RELEASE)
+    if (target == DNN_TARGET_MYRIAD
+&& getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+#endif
+
+    std::vector<int> refClassIds = { 6, 11 };
+    std::vector<float> refConfidences = { 0.750469f, 0.901615f };
+    std::vector<Rect2d> refBoxes = { Rect2d(240, 53, 135, 72),
+                                     Rect2d(58, 141, 117, 249) };
+
+    std::string img_path = _tf("dog416.png");
+    std::string weights_file = _tf("yolo-voc.weights", false);
+    std::string config_file = _tf("yolo-voc.cfg");
+
+    double scale = 1.0 / 255.0;
+    Size size{ 416, 416 };
+    bool swapRB = true;
+    bool crop = false;
+    bool nmsAcrossClasses = true;
+
+    double confThreshold = 0.24;
+    double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.15: 0.15;
+    double scoreDiff = 8e-5, iouDiff = 1e-5;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
+    {
+        scoreDiff = 1e-2;
+        iouDiff = 1.6e-2;
+    }
+
+    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
+                    refBoxes, scoreDiff, iouDiff, confThreshold, nmsThreshold, size,
+                    Scalar(), scale, swapRB, crop,
+                    nmsAcrossClasses);
+}
+#endif
+
 TEST_P(Test_Model, DetectionOutput)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
