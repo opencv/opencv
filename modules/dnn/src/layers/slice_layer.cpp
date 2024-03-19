@@ -288,7 +288,7 @@ public:
         for (auto input : inputs)
         {
             if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget  == DNN_TARGET_CUDA)
-                CV_CheckEQ(input, CV_32F, "Unsupported type");
+                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S, "");
             else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
                 CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S, "");
             else
@@ -827,7 +827,7 @@ public:
             offsets.push_back(std::move(offsets_i));
         }
 
-        return make_cuda_node<cuda4dnn::SliceOp>(preferableTarget, std::move(context->stream), std::move(offsets));
+        return make_cuda_node_with_type<cuda4dnn::SliceOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), std::move(offsets));
     }
 #endif
 

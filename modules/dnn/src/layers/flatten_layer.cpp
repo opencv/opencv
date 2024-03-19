@@ -118,6 +118,25 @@ public:
         return true;
     }
 
+    void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+        {
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+                CV_CheckType(input, input == CV_16F || input == CV_32S || input == CV_64S, "");
+            else
+                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S, "");
+        }
+
+        outputs.assign(requiredOutputs, inputs[0]);
+    }
+
+
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
         std::vector<Mat> inputs;
@@ -240,7 +259,7 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        return make_cuda_node<cuda4dnn::ReshapeOp>(preferableTarget, std::move(context->stream));
+        return make_cuda_node_with_type<cuda4dnn::ReshapeOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream));
     }
 #endif
 

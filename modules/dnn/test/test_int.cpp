@@ -137,9 +137,6 @@ TEST_P(Test_Permute_Int, random)
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
 
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
-
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
     Mat input(inShape, matType);
@@ -359,6 +356,142 @@ TEST_P(Test_Cast_Int, random)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Cast_Int, Combine(
     testing::Values(CV_32S, CV_64S),
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets()
+));
+
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Slice_Int;
+TEST_P(Test_Slice_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inputShape{1, 16, 6, 8};
+    std::vector<int> begin{0, 4, 0, 0};
+    std::vector<int> end{1, 8, 6, 8};
+    int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    Mat input(inputShape, matType);
+    cv::randu(input, low, low + 100);
+
+    std::vector<Range> range(4);
+    for (int i = 0; i < 4; ++i)
+        range[i] = Range(begin[i], end[i]);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Slice";
+    lp.name = "testLayer";
+    lp.set("begin", DictValue::arrayInt<int*>(&(begin[0]), 4));
+    lp.set("end", DictValue::arrayInt<int*>(&(end[0]), 4));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    Mat out = net.forward();
+
+    EXPECT_GT(cv::norm(out, NORM_INF), 0);
+    normAssert(out, input(range));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Slice_Int, Combine(
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets()
+));
+
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Reshape_Int;
+TEST_P(Test_Reshape_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    std::vector<int> outShape{2, 3, 2, 10};
+    int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    Mat input(inShape, matType);
+    cv::randu(input, low, low + 100);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Reshape";
+    lp.name = "testLayer";
+    lp.set("dim", DictValue::arrayInt<int*>(&outShape[0], outShape.size()));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size[0], outShape[0]);
+    EXPECT_EQ(re.size[1], outShape[1]);
+    EXPECT_EQ(re.size[2], outShape[2]);
+    EXPECT_EQ(re.size[3], outShape[3]);
+
+    for (int i = 0; i < input.total(); ++i)
+    {
+        if (matType == CV_32S) {
+            EXPECT_EQ(re.ptr<int32_t>()[i], input.ptr<int32_t>()[i]);
+        } else {
+            EXPECT_EQ(re.ptr<int64_t>()[i], input.ptr<int64_t>()[i]);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Reshape_Int, Combine(
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets()
+));
+
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Flatten_Int;
+TEST_P(Test_Flatten_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    Mat input(inShape, matType);
+    cv::randu(input, low, low + 100);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Flatten";
+    lp.name = "testLayer";
+    lp.set("axis", 1);
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    EXPECT_EQ(re.size.dims(), 2);
+    EXPECT_EQ(re.size[0], inShape[0]);
+    EXPECT_EQ(re.size[1], inShape[1] * inShape[2] * inShape[3]);
+
+    for (int i = 0; i < input.total(); ++i)
+    {
+        if (matType == CV_32S) {
+            EXPECT_EQ(re.ptr<int32_t>()[i], input.ptr<int32_t>()[i]);
+        } else {
+            EXPECT_EQ(re.ptr<int64_t>()[i], input.ptr<int64_t>()[i]);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Flatten_Int, Combine(
     testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets()
 ));
