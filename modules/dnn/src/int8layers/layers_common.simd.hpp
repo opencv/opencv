@@ -1481,26 +1481,17 @@ void fastDepthwiseConv( const int8_t* wptr,
                 {
                     vl = __riscv_vsetvl_e8m2(avl);
                     int in_j = out_j * stride_w - pad_l;
-                    vint16m4_t v00 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr0 + in_j, vl), vl),
-                              v01 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr0 + in_j + dilation_w, vl), vl),
-                              v02 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr0 + in_j + dilation_w*2, vl), vl),
-                              v10 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr1 + in_j, vl), vl),
-                              v11 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr1 + in_j + dilation_w, vl), vl),
-                              v12 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr1 + in_j + dilation_w*2, vl), vl),
-                              v20 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr2 + in_j, vl), vl),
-                              v21 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr2 + in_j + dilation_w, vl), vl),
-                              v22 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr2 + in_j + dilation_w*2, vl), vl);
 
                     vint32m8_t vout = __riscv_vmv_v_x_i32m8(biasCopy, vl);
-                    vout = __riscv_vwmacc(vout, w00, v00, vl);
-                    vout = __riscv_vwmacc(vout, w01, v01, vl);
-                    vout = __riscv_vwmacc(vout, w02, v02, vl);
-                    vout = __riscv_vwmacc(vout, w10, v10, vl);
-                    vout = __riscv_vwmacc(vout, w11, v11, vl);
-                    vout = __riscv_vwmacc(vout, w12, v12, vl);
-                    vout = __riscv_vwmacc(vout, w20, v20, vl);
-                    vout = __riscv_vwmacc(vout, w21, v21, vl);
-                    vout = __riscv_vwmacc(vout, w22, v22, vl);
+                    vout = __riscv_vwmacc(vout, w00, __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr0 + in_j               , vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w01, __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr0 + in_j + dilation_w  , vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w02, __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr0 + in_j + dilation_w*2, vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w10, __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr1 + in_j               , vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w11, __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr1 + in_j + dilation_w  , vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w12, __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr1 + in_j + dilation_w*2, vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w20, __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr2 + in_j               , vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w21, __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr2 + in_j + dilation_w  , vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w22, __riscv_vwcvt_x_x_v_i16m4(__riscv_vle8_v_i8m2(imgptr2 + in_j + dilation_w*2, vl), vl), vl);
 
                     vout = __riscv_vfcvt_x(__riscv_vfmul(__riscv_vfcvt_f_x_v_f32m8(vout, vl), mult, vl), vl);
                     vout = __riscv_vadd(vout, outZp, vl);
@@ -1516,35 +1507,23 @@ void fastDepthwiseConv( const int8_t* wptr,
                     vl = __riscv_vsetvl_e8m2(avl);
                     int in_j = out_j * stride_w - pad_l;
 
-                    vint16m4_t v00 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr0+in_j  , 2, vl), vl);
-                    vint16m4_t v01 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr0+in_j+1, 2, vl), vl);
-                    vint16m4_t v02 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr0+in_j+2, 2, vl), vl);
-                    vint16m4_t v10 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr1+in_j  , 2, vl), vl);
-                    vint16m4_t v11 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr1+in_j+1, 2, vl), vl);
-                    vint16m4_t v12 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr1+in_j+2, 2, vl), vl);
-                    vint16m4_t v20 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr2+in_j  , 2, vl), vl);
-                    vint16m4_t v21 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr2+in_j+1, 2, vl), vl);
-                    vint16m4_t v22 = __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr2+in_j+2, 2, vl), vl);
+                    vint32m8_t vout = __riscv_vmv_v_x_i32m8(biasCopy, vl);
 
-                    vint32m8_t vout0 = __riscv_vwmul(v00, w00, vl);
-                    vint32m8_t vout1 = __riscv_vwmul(v01, w01, vl);
-                    vint32m8_t vout2 = __riscv_vwmul(v02, w02, vl);
-                    vout0 = __riscv_vadd(vout0, biasCopy, vl);
+                    vout = __riscv_vwmacc(vout, w00, __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr0+in_j  , 2, vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w01, __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr0+in_j+1, 2, vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w02, __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr0+in_j+2, 2, vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w10, __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr1+in_j  , 2, vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w11, __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr1+in_j+1, 2, vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w12, __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr1+in_j+2, 2, vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w20, __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr2+in_j  , 2, vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w21, __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr2+in_j+1, 2, vl), vl), vl);
+                    vout = __riscv_vwmacc(vout, w22, __riscv_vwcvt_x_x_v_i16m4(__riscv_vlse8_v_i8m2(imgptr2+in_j+2, 2, vl), vl), vl);
 
-                    vout0 = __riscv_vwmacc(vout0, w10, v10, vl);
-                    vout1 = __riscv_vwmacc(vout1, w11, v11, vl);
-                    vout2 = __riscv_vwmacc(vout2, w12, v12, vl);
+                    vout = __riscv_vfcvt_x(__riscv_vfmul(__riscv_vfcvt_f_x_v_f32m8(vout, vl), mult, vl), vl);
+                    vout = __riscv_vadd(vout, outZp, vl);
+                    vout = __riscv_vmin(__riscv_vmax(vout, -128, vl), 127, vl);
 
-                    vout0 = __riscv_vwmacc(vout0, w20, v20, vl);
-                    vout1 = __riscv_vwmacc(vout1, w21, v21, vl);
-                    vout2 = __riscv_vwmacc(vout2, w22, v22, vl);
-
-                    vout0 = __riscv_vadd(__riscv_vadd(vout0, vout1, vl), vout2, vl);
-                    vout0 = __riscv_vfcvt_x(__riscv_vfmul(__riscv_vfcvt_f_x_v_f32m8(vout0, vl), mult, vl), vl);
-                    vout0 = __riscv_vadd(vout0, outZp, vl);
-                    vout0 = __riscv_vmin(__riscv_vmax(vout0, -128, vl), 127, vl);
-
-                    __riscv_vse32_v_i32m8(outptr + out_j, vout0, vl);
+                    __riscv_vse32_v_i32m8(outptr + out_j, vout, vl);
                 }
             }
         }
