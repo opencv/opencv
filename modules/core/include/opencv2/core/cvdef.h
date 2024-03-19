@@ -921,6 +921,7 @@ class bfloat
 {
 public:
     bfloat() : w(0) {}
+
     explicit bfloat(float x)
     {
         Cv32suf in;
@@ -935,19 +936,6 @@ public:
         return out.f;
     }
 
-    static bfloat fromBits(ushort b)
-    {
-        bfloat result;
-        result.w = b;
-        return result;
-    }
-    static bfloat zero()
-    {
-        bfloat result;
-        result.w = (ushort)0;
-        return result;
-    }
-    ushort bits() const { return w; }
 protected:
     ushort w;
 };
