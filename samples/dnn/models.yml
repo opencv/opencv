@@ -36,8 +36,8 @@ yolov8x:
 
 yolov8s:
   load_info:
-    url: "https://huggingface.co/cabelo/yolov8/resolve/main/yolov8s.onnx?download=true"
-    sha1: "2955447f21227398c9bf85cb448216cf429075ec"
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8s.onnx"
+    sha1: "82cd83984396fe929909ecb58212b0e86d0904b1"
   model: "yolov8s.onnx"
   mean: 0.0
   scale: 0.00392
@@ -50,8 +50,8 @@ yolov8s:
 
 yolov8n:
   load_info:
-    url: "https://huggingface.co/cabelo/yolov8/resolve/main/yolov8n.onnx?download=true"
-    sha1: "832c2ce94fe7e51c6bcf95c1add9095d54a59361"
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
+    sha1: "68f864475d06e2ec4037181052739f268eeac38d"
   model: "yolov8n.onnx"
   mean: 0.0
   scale: 0.00392
