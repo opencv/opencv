@@ -263,42 +263,35 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
         auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         const auto &input_shape = ieInpNode.get_shape();
-        std::shared_ptr<ngraph::Node> mvn, result;
+        std::shared_ptr<ov::Node> mvn, result;
 
         // mvn
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2021_2)
-        // https://docs.openvino.ai/2021.4/api/ngraph_python_api/_autosummary/ngraph.opset3.mvn.html?highlight=mvn#ngraph.opset3.mvn
-        bool across_channels = false;
-        bool normalize_variance = true;
-        mvn = std::make_shared<ngraph::op::MVN>(ieInpNode, across_channels, normalize_variance, epsilon);
-#else
         // https://docs.openvino.ai/2023.1/openvino_docs_ops_normalization_MVN_6.html
         std::vector<int64_t> axes_v(input_shape.size() - axis);
         std::iota(axes_v.begin(), axes_v.end(), axis);
-        auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_v.size()}, axes_v.data());
+        auto axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{axes_v.size()}, axes_v.data());
         bool normalize_variance = true;
-        mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normalize_variance, epsilon, ngraph::op::MVNEpsMode::INSIDE_SQRT);
-#endif
+        mvn = std::make_shared<ov::op::v6::MVN>(ieInpNode, axes, normalize_variance, epsilon, ov::op::MVNEpsMode::INSIDE_SQRT);
 
         // layer norm = scale * mvn + bias
         auto scale = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-        ngraph::Output<ngraph::Node> bias;
+        ov::Output<ov::Node> bias;
         if (nodes.size() == 3) {
             bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
         }
         if (axis == -1 || axis == input_shape.size() - 1) { // special case for 1D tensor (2D mat)
             std::vector<int64_t> shared_shape_v(input_shape.size(), 1);
             shared_shape_v.back() = -1;
-            auto shared_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{shared_shape_v.size()}, shared_shape_v.data());
-            scale  = std::make_shared<ngraph::op::v1::Reshape>(scale, shared_shape, true);
+            auto shared_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{shared_shape_v.size()}, shared_shape_v.data());
+            scale  = std::make_shared<ov::op::v1::Reshape>(scale, shared_shape, true);
             if (nodes.size() == 3) {
-                bias  = std::make_shared<ngraph::op::v1::Reshape>(bias, shared_shape, true);
+                bias  = std::make_shared<ov::op::v1::Reshape>(bias, shared_shape, true);
             }
         }
 
-        result = std::make_shared<ngraph::op::v1::Multiply>(mvn, scale);
+        result = std::make_shared<ov::op::v1::Multiply>(mvn, scale);
         if (nodes.size() == 3) {
-            result = std::make_shared<ngraph::op::v1::Add>(result, bias);
+            result = std::make_shared<ov::op::v1::Add>(result, bias);
         }
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(result));

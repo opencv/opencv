@@ -56,6 +56,7 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 
+
 namespace cv
 {
 namespace dnn
@@ -224,9 +225,9 @@ public:
         outputShapeVec.push_back(flattenedDimensionSize);
         outputShapeVec.insert(outputShapeVec.end(), dims.begin() + endAxis + 1, dims.end());
 
-        auto shape   = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                       ngraph::Shape({outputShapeVec.size()}), outputShapeVec.data());
-        auto reshape = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, shape, true);
+        auto shape   = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                       ov::Shape({outputShapeVec.size()}), outputShapeVec.data());
+        auto reshape = std::make_shared<ov::op::v1::Reshape>(ieInpNode, shape, true);
         return Ptr<BackendNode>(new InfEngineNgraphNode(reshape));
     }
 #endif  // HAVE_DNN_NGRAPH
