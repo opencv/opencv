@@ -10,11 +10,7 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-#include <ngraph/op/proposal.hpp>
-#else
-#include <ngraph/op/experimental/layers/proposal.hpp>
-#endif
+#include <openvino/op/proposal.hpp>
 #endif
 
 namespace cv { namespace dnn {
@@ -344,7 +340,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 3);
-        ngraph::op::ProposalAttrs attr;
+        ov::op::v0::Proposal::Attributes attr;
         attr.base_size     = baseSize;
         attr.nms_thresh    = nmsThreshold;
         attr.feat_stride   = featStride;
@@ -367,12 +363,12 @@ public:
         auto& image_shape  = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
 
         CV_Assert_N(image_shape.get_shape().size() == 2, image_shape.get_shape().front() == 1);
-        auto shape   = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                       ngraph::Shape{1},
+        auto shape   = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                       ov::Shape{1},
                        std::vector<int64_t>{(int64_t)image_shape.get_shape().back()});
-        auto reshape = std::make_shared<ngraph::op::v1::Reshape>(image_shape, shape, true);
+        auto reshape = std::make_shared<ov::op::v1::Reshape>(image_shape, shape, true);
 
-        auto proposal = std::make_shared<ngraph::op::Proposal>(class_probs, class_logits, reshape, attr);
+        auto proposal = std::make_shared<ov::op::v0::Proposal>(class_probs, class_logits, reshape, attr);
         return Ptr<BackendNode>(new InfEngineNgraphNode(proposal));
     }
 #endif  // HAVE_DNN_NGRAPH

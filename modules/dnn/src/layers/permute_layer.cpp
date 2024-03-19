@@ -475,9 +475,9 @@ public:
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<int64_t> order(_order.begin(), _order.end());
-        auto tr_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                       ngraph::Shape({order.size()}), order.data());
-        auto transpose = std::make_shared<ngraph::op::Transpose>(ieInpNode, tr_axes);
+        auto tr_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                       ov::Shape({order.size()}), order.data());
+        auto transpose = std::make_shared<ov::op::v1::Transpose>(ieInpNode, tr_axes);
         return Ptr<BackendNode>(new InfEngineNgraphNode(transpose));
     }
 #endif  // HAVE_DNN_NGRAPH

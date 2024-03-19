@@ -11,6 +11,7 @@
 #include <float.h>
 #include <algorithm>
 #include <numeric>
+
 using std::max;
 using std::min;
 
@@ -284,22 +285,22 @@ public:
 
         input = ngraphDequantize(input, input_sc, input_zp);
 
-        ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
+        ov::op::PadType pad_type = ov::op::PadType::EXPLICIT;
         if (!padMode.empty())
-            pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
+            pad_type = padMode == "VALID" ? ov::op::PadType::VALID : ov::op::PadType::SAME_UPPER;
 
-        auto rounding_type = ceilMode ? ngraph::op::RoundingType::CEIL : ngraph::op::RoundingType::FLOOR;
-        ngraph::Output<ngraph::Node> pool;
+        auto rounding_type = ceilMode ? ov::op::RoundingType::CEIL : ov::op::RoundingType::FLOOR;
+        ov::Output<ov::Node> pool;
         if (type == MAX) {
-            pool = std::make_shared<ngraph::op::v1::MaxPool>(input, ngraph::Strides(strides),
-                        ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+            pool = std::make_shared<ov::op::v1::MaxPool>(input, ov::Strides(strides),
+                        ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
                         rounding_type, pad_type);
         } else if (type == AVE) {
-            pool = std::make_shared<ngraph::op::v1::AvgPool>(input, ngraph::Strides(strides),
-                        ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+            pool = std::make_shared<ov::op::v1::AvgPool>(input, ov::Strides(strides),
+                        ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
                         !avePoolPaddedArea, rounding_type, pad_type);
         } else if (type == SUM) {
-            ngraph::Shape inpShape = input.get_shape();
+            ov::Shape inpShape = input.get_shape();
             CV_Assert(inpShape.size() == 2 + kernel_size.size());
             std::vector<int64_t> axes;
             for (size_t i = 0; i < kernel_size.size(); i++)
@@ -307,8 +308,8 @@ public:
                 if (inpShape[2 + i] == kernel_size[i])
                     axes.push_back(2 + i);
             }
-            auto reduction_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes);
-            pool = std::make_shared<ngraph::op::v1::ReduceSum>(input, reduction_axes, true);
+            auto reduction_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{axes.size()}, axes);
+            pool = std::make_shared<ov::op::v1::ReduceSum>(input, reduction_axes, true);
         } else {
             CV_Error(Error::StsNotImplemented, format("INT8 Pooling type: %d", type));
         }

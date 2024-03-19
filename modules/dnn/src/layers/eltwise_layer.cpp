@@ -899,24 +899,24 @@ public:
         CV_Assert(nodes.size() >= 2);
         auto curr_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         if (!coeffs.empty()) {
-            auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[0]);
-            curr_node = std::make_shared<ngraph::op::v1::Multiply>(curr_node, coeff, ngraph::op::AutoBroadcastType::NUMPY);
+            auto coeff = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &coeffs[0]);
+            curr_node = std::make_shared<ov::op::v1::Multiply>(curr_node, coeff, ov::op::AutoBroadcastType::NUMPY);
         }
 
-        std::shared_ptr<ngraph::Node> res;
+        std::shared_ptr<ov::Node> res;
         for (size_t i = 1; i < nodes.size(); i++)
         {
             auto next_node = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
             if (!coeffs.empty()) {
-                auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[i]);
-                next_node = std::make_shared<ngraph::op::v1::Multiply>(next_node, coeff, ngraph::op::AutoBroadcastType::NUMPY);
+                auto coeff = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &coeffs[i]);
+                next_node = std::make_shared<ov::op::v1::Multiply>(next_node, coeff, ov::op::AutoBroadcastType::NUMPY);
             }
             switch (op) {
-                case SUM:  res = std::make_shared<ngraph::op::v1::Add>(curr_node, next_node); break;
-                case PROD: res = std::make_shared<ngraph::op::v1::Multiply>(curr_node, next_node); break;
-                case DIV:  res = std::make_shared<ngraph::op::v1::Divide>(curr_node, next_node); break;
-                case MAX:  res = std::make_shared<ngraph::op::v1::Maximum>(curr_node, next_node); break;
-                case MIN:  res = std::make_shared<ngraph::op::v1::Minimum>(curr_node, next_node); break;
+                case SUM:  res = std::make_shared<ov::op::v1::Add>(curr_node, next_node); break;
+                case PROD: res = std::make_shared<ov::op::v1::Multiply>(curr_node, next_node); break;
+                case DIV:  res = std::make_shared<ov::op::v1::Divide>(curr_node, next_node); break;
+                case MAX:  res = std::make_shared<ov::op::v1::Maximum>(curr_node, next_node); break;
+                case MIN:  res = std::make_shared<ov::op::v1::Minimum>(curr_node, next_node); break;
                 default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
             }
             curr_node = res;
