@@ -640,7 +640,12 @@ TEST_P(Layer_Test, SELU)
 
     input = Mat(dims, input_shape.data(), CV_32F, inp_value);
 
-    float value = 1.0507009873554805 * (inp_value > 0 ? inp_value : 1.6732631921768188 * (std::exp(inp_value / 1.0) - 1));
+    double inp_value_double = static_cast<double>(inp_value); // Ensure the input is treated as double for the computation
+
+    double value_double = 1.0507009873554805 * (inp_value_double > 0 ? inp_value_double : 1.6732631921768188 * (std::exp(inp_value_double / 1.0) - 1));
+
+    float value = static_cast<float>(value_double);
+
     Mat output_ref(dims, output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
