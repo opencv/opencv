@@ -271,24 +271,20 @@ TEST(Layer_Reshape_Test, Accuracy)
     normAssert(output_ref, outputs[0]);
 }
 
-typedef testing::TestWithParam<tuple<int>> Layer_Const_Test;
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Const_Test;
 TEST_P(Layer_Const_Test, Accuracy)
 {
-    int dims = get<0>(GetParam());
+    std::vector<int> input_shape = get<0>(GetParam());
 
     LayerParams lp;
     lp.type = "Const";
     lp.name = "ConstLayer";
 
-    std::vector<int> input_shape;
     Mat constBlob, output_ref;
-    if (dims > 1){
-        input_shape = {1, 10}; // 10 to keep test fast
+    if (input_shape.size() > 1)
         constBlob = Mat(input_shape, CV_32F);
-    } else {
-        input_shape = {dims};
-        constBlob = Mat(dims, input_shape.data(), CV_32F, 1.0);
-    }
+    else
+        constBlob = Mat(input_shape[0], input_shape.data(), CV_32F);
     cv::randn(constBlob, 0.0, 1.0);
     output_ref = constBlob.clone();
 
@@ -302,6 +298,10 @@ TEST_P(Layer_Const_Test, Accuracy)
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Const_Test,
-/* dims */                          Values(0, 1, 2));
+/* dims */                          Values(
+                                        std::vector<int>({0}),
+                                        std::vector<int>({1}),
+                                        std::vector<int>({1, 10}))
+);
 
 }}
