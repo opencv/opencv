@@ -31,6 +31,10 @@ namespace cv { namespace dnn {
 // https://github.com/onnx/onnx/blob/main/docs/Operators.md#LayerNormalization
 class LayerNormLayerImpl CV_FINAL : public LayerNormLayer
 {
+#ifdef HAVE_OPENCL
+    UMat weight_umat, bias_umat;
+#endif
+
 public:
     LayerNormLayerImpl(const LayerParams& params)
     {
@@ -91,6 +95,11 @@ public:
 
         const auto input_shape = shape(inputs[0]);
         axis = normalize_axis(axis, static_cast<int>(input_shape.size()));
+
+#ifdef HAVE_OPENCL
+        weight_umat.release();
+        bias_umat.release();
+#endif
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -115,7 +124,7 @@ public:
         const auto &scale = blobs.empty() ? inputs[1] : blobs.front();
         auto &output = outputs[0];
 
-        if (inputs.size() + blobs.size() == 3) {
+        if ((inputs.size() + blobs.size()) == 3) {
             const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
             fastNorm(input, scale, bias, output, epsilon, static_cast<size_t>(axis));
         } else {
@@ -131,8 +140,22 @@ public:
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
-        const auto &input = inputs[0], &scale = inputs[1]; // &bias = inputs[2]; // bias is optional
+        const auto &input = inputs[0];
         auto &output = outputs[0];
+        if (weight_umat.empty()) {
+            if (blobs.empty()) {
+                weight_umat = inputs[1];
+            } else {
+                blobs.front().copyTo(weight_umat);
+            }
+        }
+        if (bias_umat.empty() && (inputs.size() + blobs.size()) == 3) {
+            if (blobs.empty()) {
+                bias_umat = inputs[2];
+            } else {
+                blobs.back().copyTo(bias_umat);
+            }
+        }
 
         const auto input_shape = shape(input);
         size_t loops = static_cast<size_t>(total(input_shape, 0, axis)),
@@ -181,7 +204,7 @@ public:
         if (!ret) {
             return false;
         }
-        // Calculate instance norm: output = scale * (x - mean) / sqrt(var + eps) + bias
+        // Calculate instance norm: output = weight * (x - mean) / sqrt(var + eps) + bias
         String mvn_kernel_name = format("mvn%d", num_vector);
         build_opt += " -DNORM_VARIANCE -DLAYER_NORM -DKERNEL_MVN";
         ocl::Kernel mvn_kernel(mvn_kernel_name.c_str(), ocl::dnn::mvn_oclsrc, build_opt);
@@ -194,8 +217,8 @@ public:
         mvn_kernel.set(3, (float)epsilon);
         mvn_kernel.set(4, ocl::KernelArg::PtrReadOnly(mean));
         mvn_kernel.set(5, ocl::KernelArg::PtrReadOnly(mean_square));
-        mvn_kernel.set(6, ocl::KernelArg::PtrReadOnly(scale));
-        mvn_kernel.set(7, ocl::KernelArg::PtrReadOnly(bias));
+        mvn_kernel.set(6, ocl::KernelArg::PtrReadOnly(weight_umat));
+        mvn_kernel.set(7, ocl::KernelArg::PtrReadOnly(bias_umat));
         mvn_kernel.set(8, (int)1);
         mvn_kernel.set(9, (float)0.f);
         mvn_kernel.set(10, ocl::KernelArg::PtrWriteOnly(output));
@@ -313,7 +336,6 @@ public:
         return make_cuda_node<cuda4dnn::LayerNormOp>(preferableTarget, std::move(context->stream), axis, epsilon, loops);
     }
 #endif // HAVE_CUDA
-
 };
 
 Ptr<LayerNormLayer> LayerNormLayer::create(const LayerParams& params)
