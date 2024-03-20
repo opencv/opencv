@@ -58,22 +58,24 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         // check shapes of weight and bias if existed
-        // inputs >= 2 (X and Weight are requested, bias is optional)
-        CV_Check(inputs.size(), inputs.size() >= 2 && inputs.size() <= 3, "LayerNorm: require two (x, weight) or three (x, weight, bias) inputs");
+        // inputs >= 2 (X and Weight are required, bias is optional)
+        int num_inputs = inputs.size() + blobs.size();
+        CV_Check(num_inputs, num_inputs >= 2 && num_inputs <= 3, "LayerNorm: require two (x, weight) or three (x, weight, bias) inputs");
 
         auto x_shape = inputs[0];
         int x_ndims = static_cast<int>(x_shape.size());
 
-        auto w_shape = inputs[1];
+        // Weight and bias are either constants or variable
+        auto w_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
         // if axis == last_dim, scale and b are both 1d tensor (represented as 2d mat nx1)
         int w_ndims = static_cast<int>(w_shape.size());
         w_ndims = (axis == x_ndims - 1 && w_ndims == 2) ? w_ndims - 1 : w_ndims;
         CV_CheckEQ(x_ndims - axis, w_ndims, "LayerNorm: shape of weight does not match with given axis and shape of input");
         for (int i = 0; i < w_ndims; ++i)
             CV_CheckEQ(x_shape[axis+i], w_shape[i], "LayerNorm: weight dimensions does not match with input dimensions");
-        if (inputs.size() == static_cast<int>(3))
+        if (num_inputs == 3)
         {
-            auto b_shape = inputs[2];
+            auto b_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
             CV_CheckEQ(w_shape.size(), b_shape.size(), "LayerNorm: shape of weight does not match with shape of bias");
             for (size_t i = 0; i < w_shape.size(); ++i)
                 CV_CheckEQ(w_shape[i], b_shape[i], "LayerNorm: bias dimensions does not match with weight dimensions");
@@ -110,11 +112,11 @@ public:
         outputs_arr.getMatVector(outputs);
 
         const auto &input = inputs[0];
-        const auto &scale = inputs[1];
+        const auto &scale = blobs.empty() ? inputs[1] : blobs.front();
         auto &output = outputs[0];
 
-        if (inputs.size() == 3) {
-            const auto &bias = inputs[2];
+        if (inputs.size() + blobs.size() == 3) {
+            const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
             fastNorm(input, scale, bias, output, epsilon, static_cast<size_t>(axis));
         } else {
             fastNorm(input, scale, output, epsilon, static_cast<size_t>(axis));
