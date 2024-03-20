@@ -635,9 +635,13 @@ bool Jpeg2KOpjDecoderBase::readData( Mat& img )
 
     CV_Assert(inChannels > 0);
     CV_Assert(image_->comps);
-    for (int c = 0; c < inChannels; c++)
-    {
-        const opj_image_comp_t& comp = image_->comps[c];
+   for (int c = 0; c < inChannels; c++) {
+    const opj_image_comp_t& comp = image_->comps[c];
+    
+    
+    if (comp.tdx > 1 || comp.tdy > 1) {
+       
+        
         CV_CheckEQ((int)comp.dx, 1, "OpenJPEG2000: tiles are not supported");
         CV_CheckEQ((int)comp.dy, 1, "OpenJPEG2000: tiles are not supported");
         CV_CheckEQ((int)comp.x0, 0, "OpenJPEG2000: tiles are not supported");
@@ -646,8 +650,8 @@ bool Jpeg2KOpjDecoderBase::readData( Mat& img )
         CV_CheckEQ((int)comp.h, img.rows, "OpenJPEG2000: tiles are not supported");
         CV_Assert(comp.data && "OpenJPEG2000: missing component data (unsupported / broken input)");
     }
-
-    return decode(*image_, img, shift);
+}
+}
 }
 
 } // namespace detail
