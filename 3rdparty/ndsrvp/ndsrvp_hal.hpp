@@ -1,8 +1,7 @@
 #ifndef OPENCV_NDSRVP_HAL_HPP_INCLUDED
 #define OPENCV_NDSRVP_HAL_HPP_INCLUDED
 
-//#include "opencv2/features2d/hal/interface.h"
-#include "opencv2/core/base.hpp"
+#include "opencv2/core.hpp"
 #include <nds_intrinsic.h>
 
 #include "include/core.hpp"
