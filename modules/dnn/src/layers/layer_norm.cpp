@@ -243,15 +243,7 @@ public:
 
         CV_CheckNE(axis, static_cast<int>(input_tensor_desc->GetShape().GetDimNum() - 1), "LayerNorm: CANN does not support axis set as last axis due to 1D mat compatibility issue");
 
-        auto scale_tensor_wrapper = inputs[1].dynamicCast<CannBackendWrapper>();
-        auto scale_tensor_desc = scale_tensor_wrapper->getTensorDesc();
-
-        auto bias_tensor_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
-        auto bias_tensor_desc = bias_tensor_wrapper->getTensorDesc();
-
         auto last_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        auto scale_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
-        auto bias_node = nodes[2].dynamicCast<CannBackendNode>()->getOp();
 
         auto op = std::make_shared<ge::op::LayerNorm>(name);
 
@@ -265,11 +257,31 @@ public:
         op->set_input_x_by_name(*last_node, input_tensor_wrapper->name.c_str());
         op->update_input_desc_x(*input_tensor_desc);
         // set inputs : gamma
-        op->set_input_gamma_by_name(*scale_node, scale_tensor_wrapper->name.c_str());
-        op->update_input_desc_gamma(*scale_tensor_desc);
+        if (blobs.empty()) {
+            auto scale_tensor_wrapper = inputs[1].dynamicCast<CannBackendWrapper>();
+            auto scale_tensor_desc = scale_tensor_wrapper->getTensorDesc();
+            auto scale_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
+            op->set_input_gamma_by_name(*scale_node, scale_tensor_wrapper->name.c_str());
+            op->update_input_desc_gamma(*scale_tensor_desc);
+        } else {
+            const auto &weight_mat = blobs.front();
+            const auto op_const_weight = std::make_shared<CannConstOp>(weight_mat.data, weight_mat.type(), shape(weight_mat), cv::format("%s_w", name.c_str()));
+            op->set_input_gamma(*(op_const_weight->getOp()));
+            op->update_input_desc_gamma(*(op_const_weight->getTensorDesc()));
+        }
         // set inputs : beta
-        op->set_input_beta_by_name(*bias_node, bias_tensor_wrapper->name.c_str());
-        op->update_input_desc_beta(*bias_tensor_desc);
+        if (blobs.empty()) {
+            auto bias_tensor_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
+            auto bias_tensor_desc = bias_tensor_wrapper->getTensorDesc();
+            auto bias_node = nodes[2].dynamicCast<CannBackendNode>()->getOp();
+            op->set_input_beta_by_name(*bias_node, bias_tensor_wrapper->name.c_str());
+            op->update_input_desc_beta(*bias_tensor_desc);
+        } else {
+            const auto &bias_mat = blobs.back();
+            const auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), shape(bias_mat), cv::format("%s_b", name.c_str()));
+            op->set_input_beta(*(op_const_bias->getOp()));
+            op->update_input_desc_beta(*(op_const_bias->getTensorDesc()));
+        }
 
         // set outputs
         auto output_desc_y = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
