@@ -336,7 +336,7 @@ public:
             shared_shape_v.back() = -1;
             auto shared_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{shared_shape_v.size()}, shared_shape_v.data());
             scale = std::make_shared<ov::op::v1::Reshape>(scale, shared_shape, true);
-            if (nodes.size() == 3) {
+            if ((nodes.size() + blobs.size()) == 3) {
                 bias = std::make_shared<ov::op::v1::Reshape>(bias, shared_shape, true);
             }
         }
