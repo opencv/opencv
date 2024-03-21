@@ -25,7 +25,9 @@ namespace cv
 class XMLEmitter : public FileStorageEmitter
 {
 public:
-    XMLEmitter(FileStorage_API* _fs) : fs(_fs)
+    XMLEmitter(FileStorage_API* _fs) : fs(_fs),
+                                       realIsFixed(false),
+                                       realPrecision(18)
     {
     }
     virtual ~XMLEmitter() {}
@@ -148,7 +150,7 @@ public:
     void write( const char* key, double value )
     {
         char buf[128];
-        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, false ) );
+        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, false, realIsFixed, realPrecision ) );
     }
 
     void write(const char* key, const char* str, bool quote)
@@ -355,8 +357,17 @@ public:
         fs->puts( "\n<!-- next stream -->\n" );
     }
 
+    void setRealExpression( const bool isFixed, const int precision )
+    {
+        realIsFixed   = isFixed;
+        realPrecision = precision;
+    }
+
 protected:
     FileStorage_API* fs;
+private:
+    bool realIsFixed;
+    int realPrecision;
 };
 
 class XMLParser : public FileStorageParser

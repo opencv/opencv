@@ -11,10 +11,13 @@ namespace cv
 class JSONEmitter : public FileStorageEmitter
 {
 public:
-    JSONEmitter(FileStorage_API* _fs) : fs(_fs)
+    JSONEmitter(FileStorage_API* _fs) : fs(_fs),
+                                        realIsFixed(false),
+                                        realPrecision(18)
     {
     }
     virtual ~JSONEmitter() {}
+
 
     FStructData startWriteStruct( const FStructData& parent, const char* key,
                                   int struct_flags, const char* type_name=0 )
@@ -84,7 +87,7 @@ public:
     void write( const char* key, double value )
     {
         char buf[128];
-        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, true ));
+        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, true, realIsFixed, realPrecision ));
     }
 
     void write(const char* key, const char* str, bool quote)
@@ -287,8 +290,17 @@ public:
         fs->puts( "---\n" );
     }
 
+    void setRealExpression( const bool isFixed, const int precision )
+    {
+        realIsFixed   = isFixed;
+        realPrecision = precision;
+    }
+
 protected:
     FileStorage_API* fs;
+private:
+    bool realIsFixed;
+    int realPrecision;
 };
 
 class JSONParser : public FileStorageParser

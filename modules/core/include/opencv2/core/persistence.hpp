@@ -459,6 +459,16 @@ public:
      */
     CV_WRAP int getFormat() const;
 
+    /** @brief Sets real value expression as Fixed.
+     * @param precision  Set the number of digits.
+     * @warning If sets, the real values(float/harf-float/double) in output files may lost exactness.
+     */
+    CV_WRAP void setFixedExpression(const int precision);
+
+    /** @brief Sets real value expression as Scientific.
+     */
+    CV_WRAP void setScientificExpression();
+
     int state;
     std::string elname;
 

@@ -242,6 +242,12 @@ public:
     size_t strbufsize;
     size_t strbufpos;
     int lineno;
+
+    // For writeRawData()
+    bool realIsFixed;
+    int realPrecision;
+
+    void setRealExpression(const bool isFixed, int precision );
 };
 
 }
