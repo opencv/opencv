@@ -142,6 +142,12 @@ public:
 
         const auto &input = inputs[0];
         auto &output = outputs[0];
+
+        const auto input_shape = shape(input);
+        size_t loops = static_cast<size_t>(total(input_shape, 0, axis)),
+               norm_size = static_cast<size_t>(total(input_shape, axis));
+        float inv_norm_size = 1.f / norm_size;
+
         if (weight_umat.empty()) {
             if (blobs.empty()) {
                 weight_umat = inputs[1];
@@ -149,20 +155,17 @@ public:
                 blobs.front().copyTo(weight_umat);
             }
         }
-        if (bias_umat.empty() && (inputs.size() + blobs.size()) == 3) {
-            if (blobs.empty()) {
-                bias_umat = inputs[2];
+        if (bias_umat.empty()) {
+            if ((inputs.size() + blobs.size()) == 3) {
+                if (blobs.empty()) {
+                    bias_umat = inputs[2];
+                } else {
+                    blobs.back().copyTo(bias_umat);
+                }
             } else {
-                blobs.back().copyTo(bias_umat);
+                bias_umat = UMat::zeros(norm_size, 1, CV_32F);
             }
         }
-
-        const auto input_shape = shape(input);
-        size_t loops = static_cast<size_t>(total(input_shape, 0, axis)),
-               norm_size = static_cast<size_t>(total(input_shape, axis));
-        float inv_norm_size = 1.f / norm_size;
-
-        const auto &bias = inputs.size() == 3 ? inputs[2] : UMat::zeros(norm_size, 1, CV_32F);
 
         // no fp16 support
         if (input.depth() == CV_16F) {
@@ -301,7 +304,7 @@ public:
         auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         const auto &input_shape = ieInpNode.get_shape();
         std::shared_ptr<ov::Node> mvn, result;
-	ov::Output<ov::Node> scale, bias;
+        ov::Output<ov::Node> scale, bias;
 
         // mvn
         // https://docs.openvino.ai/2023.1/openvino_docs_ops_normalization_MVN_6.html
@@ -312,17 +315,21 @@ public:
         mvn = std::make_shared<ov::op::v6::MVN>(ieInpNode, axes, normalize_variance, epsilon, ov::op::MVNEpsMode::INSIDE_SQRT);
 
         // layer norm = scale * mvn + bias
-	if (blobs.empty()) {
+        if (blobs.empty()) {
             scale = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
             if (nodes.size() == 3) {
                 bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
             }
-	} else {
-	    scale = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape(blobs.front()), blobs.front().data);
-	    if ((nodes.size() + blobs.size()) == 3) {
-	        bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape(blobs.back()), blobs.back().data);
-	    }
-	}
+        } else {
+            auto scale_mat = blobs.front();
+            const auto scale_shape = shape(scale_mat);
+            scale = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(scale_shape.begin(), scale_shape.end()), scale_mat.data);
+            if ((nodes.size() + blobs.size()) == 3) {
+                auto bias_mat = blobs.back();
+                const auto bias_shape = shape(bias_mat);
+                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(bias_shape.begin(), bias_shape.end()), bias_mat.data);
+            }
+        }
         if (axis == -1 || axis == input_shape.size() - 1) { // special case for 1D tensor (2D mat)
             std::vector<int64_t> shared_shape_v(input_shape.size(), 1);
             shared_shape_v.back() = -1;
