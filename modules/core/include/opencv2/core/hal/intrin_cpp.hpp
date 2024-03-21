@@ -3251,7 +3251,7 @@ template<int n> inline v_reg<double, n/2> v_dotprod_expand_fast(const v_reg<int,
 ////// FP16 support ///////
 
 inline v_reg<float, simd128_width / sizeof(float)>
-v_load_expand(const float16_t* ptr)
+v_load_expand(const hfloat* ptr)
 {
     v_reg<float, simd128_width / sizeof(float)> v;
     for( int i = 0; i < v.nlanes; i++ )
@@ -3262,7 +3262,7 @@ v_load_expand(const float16_t* ptr)
 }
 #if CV_SIMD256
 inline v_reg<float, simd256_width / sizeof(float)>
-v256_load_expand(const float16_t* ptr)
+v256_load_expand(const hfloat* ptr)
 {
     v_reg<float, simd256_width / sizeof(float)> v;
     for (int i = 0; i < v.nlanes; i++)
@@ -3274,7 +3274,7 @@ v256_load_expand(const float16_t* ptr)
 #endif
 #if CV_SIMD512
 inline v_reg<float, simd512_width / sizeof(float)>
-v512_load_expand(const float16_t* ptr)
+v512_load_expand(const hfloat* ptr)
 {
     v_reg<float, simd512_width / sizeof(float)> v;
     for (int i = 0; i < v.nlanes; i++)
@@ -3286,11 +3286,11 @@ v512_load_expand(const float16_t* ptr)
 #endif
 
 template<int n> inline void
-v_pack_store(float16_t* ptr, const v_reg<float, n>& v)
+v_pack_store(hfloat* ptr, const v_reg<float, n>& v)
 {
     for( int i = 0; i < v.nlanes; i++ )
     {
-        ptr[i] = float16_t(v.s[i]);
+        ptr[i] = hfloat(v.s[i]);
     }
 }
 

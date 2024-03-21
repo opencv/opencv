@@ -1810,28 +1810,28 @@ OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_float64, vlmul_trunc_u8mf8)
 ////// FP16 support ///////
 
 #if defined(__riscv_zfh) && __riscv_zfh
-inline v_float32 v_load_expand(const float16_t* ptr)
+inline v_float32 v_load_expand(const hfloat* ptr)
 {
     return vfwcvt_f(vle16_v_f16mf2((_Float16*)ptr, VTraits<v_float32>::vlanes()) ,VTraits<v_float32>::vlanes());;
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32& v)
+inline void v_pack_store(hfloat* ptr, const v_float32& v)
 {
     vse16_v_f16mf2((_Float16*)ptr, vfncvt_f_f_w_f16mf2(v, VTraits<v_float32>::vlanes()), VTraits<v_float32>::vlanes());
 }
 #else
-inline v_float32 v_load_expand(const float16_t* ptr)
+inline v_float32 v_load_expand(const hfloat* ptr)
 {
     float buf[32];
     for( int i = 0; i < VTraits<v_float32>::vlanes(); i++ ) buf[i] = (float)ptr[i];
     return v_load(buf);
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32& v)
+inline void v_pack_store(hfloat* ptr, const v_float32& v)
 {
     float buf[32];
     v_store(buf, v);
-    for( int i = 0; i < VTraits<v_float32>::vlanes(); i++ ) ptr[i] = float16_t(buf[i]);
+    for( int i = 0; i < VTraits<v_float32>::vlanes(); i++ ) ptr[i] = hfloat(buf[i]);
 }
 #endif
 ////////////// Rounding //////////////

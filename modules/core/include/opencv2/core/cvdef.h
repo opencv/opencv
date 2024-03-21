@@ -809,40 +809,20 @@ using std::uint64_t;
 namespace cv
 {
 
-class float16_t
+class hfloat
 {
 public:
 #if CV_FP16_TYPE
 
-    float16_t() : h(0) {}
-    explicit float16_t(float x) { h = (__fp16)x; }
+    hfloat() : h(0) {}
+    explicit hfloat(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
-    static float16_t fromBits(ushort w)
-    {
-        Cv16suf u;
-        u.u = w;
-        float16_t result;
-        result.h = u.h;
-        return result;
-    }
-    static float16_t zero()
-    {
-        float16_t result;
-        result.h = (__fp16)0;
-        return result;
-    }
-    ushort bits() const
-    {
-        Cv16suf u;
-        u.h = h;
-        return u.u;
-    }
 protected:
     __fp16 h;
 
 #else
-    float16_t() : w(0) {}
-    explicit float16_t(float x)
+    hfloat() : w(0) {}
+    explicit hfloat(float x)
     {
     #if CV_FP16 && CV_AVX2
         __m128 v = _mm_load_ss(&x);
@@ -893,24 +873,34 @@ protected:
     #endif
     }
 
-    static float16_t fromBits(ushort b)
-    {
-        float16_t result;
-        result.w = b;
-        return result;
-    }
-    static float16_t zero()
-    {
-        float16_t result;
-        result.w = (ushort)0;
-        return result;
-    }
-    ushort bits() const { return w; }
 protected:
     ushort w;
 
 #endif
 };
+
+inline hfloat hfloatFromBits(ushort w) {
+#if CV_FP16_TYPE
+    Cv16suf u;
+    u.u = w;
+    hfloat res(float(u.h));
+    return res;
+#else
+    Cv32suf out;
+
+    unsigned t = ((w & 0x7fff) << 13) + 0x38000000;
+    unsigned sign = (w & 0x8000) << 16;
+    unsigned e = w & 0x7c00;
+
+    out.u = t + (1 << 23);
+    out.u = (e >= 0x7c00 ? t + 0x38000000 :
+            e == 0 ? (static_cast<void>(out.f -= 6.103515625e-05f), out.u) : t) | sign;
+    hfloat res(out.f);
+    return res;
+#endif
+}
+
+typedef hfloat float16_t;
 
 }
 #endif
