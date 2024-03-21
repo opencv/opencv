@@ -261,7 +261,7 @@ static inline void registerGlobalSkipTag(const std::string& tag1, const std::str
 
 class TS;
 
-int64 readSeed(const char* str);
+int64_t readSeed(const char* str);
 
 void randUni( RNG& rng, Mat& a, const Scalar& param1, const Scalar& param2 );
 
@@ -475,10 +475,10 @@ struct TestInfo
     int code;
 
     // seed value right before the data for the failed test case is prepared.
-    uint64 rng_seed;
+    uint64_t rng_seed;
 
     // seed value right before running the test
-    uint64 rng_seed0;
+    uint64_t rng_seed0;
 
     // index of test case, can be then passed to BaseTest::proceed_to_test_case()
     int test_case_idx;
@@ -494,7 +494,7 @@ struct TSParams
     TSParams();
 
     // RNG seed, passed to and updated by every test executed.
-    uint64 rng_seed;
+    uint64_t rng_seed;
 
     // whether to use IPP, MKL etc. or not
     bool use_optimized;
@@ -735,11 +735,11 @@ protected:
     }
 };
 
-extern uint64 param_seed;
+extern uint64_t param_seed;
 
 struct DefaultRngAuto
 {
-    const uint64 old_state;
+    const uint64_t old_state;
 
     DefaultRngAuto() : old_state(cv::theRNG().state) { cv::theRNG().state = cvtest::param_seed; }
     ~DefaultRngAuto() { cv::theRNG().state = old_state; }

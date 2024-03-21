@@ -543,8 +543,8 @@ GAPI_OCV_KERNEL(GCPURGB2YUV422, cv::gapi::imgproc::GRGB2YUV422)
 
         for (int i = 0; i < in.rows; ++i)
         {
-            const uchar* in_line_p  = in.ptr<uchar>(i);
-            uchar* out_line_p = out.ptr<uchar>(i);
+            const unsigned char* in_line_p  = in.ptr<unsigned char>(i);
+            unsigned char* out_line_p = out.ptr<unsigned char>(i);
             cv::gapi::fluid::run_rgb2yuv422_impl(out_line_p, in_line_p, in.cols);
         }
     }

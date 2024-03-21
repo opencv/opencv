@@ -53,7 +53,10 @@
 //#define CV__VALIDATE_UNUNITIALIZED_VARS 1  // C++11 & GCC only
 
 #ifdef __cplusplus
-
+using cv::schar;
+using cv::uchar;
+using cv::int64;
+using cv::uint64;
 #ifdef CV__VALIDATE_UNUNITIALIZED_VARS
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #define CV_STRUCT_INITIALIZER {0,}

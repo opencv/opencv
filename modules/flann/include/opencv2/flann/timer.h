@@ -47,7 +47,7 @@ namespace cvflann
  */
 class StartStopTimer
 {
-    int64 startTime;
+    int64_t startTime;
 
 public:
     /**
@@ -78,7 +78,7 @@ public:
      */
     void stop()
     {
-        int64 stopTime = cv::getTickCount();
+        int64_t stopTime = cv::getTickCount();
         value += ( (double)stopTime - startTime) / cv::getTickFrequency();
     }
 
