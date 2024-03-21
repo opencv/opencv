@@ -268,23 +268,27 @@ public:
             op->set_input_gamma_by_name(*scale_node, scale_tensor_wrapper->name.c_str());
             op->update_input_desc_gamma(*scale_tensor_desc);
         } else {
-            const auto &weight_mat = blobs.front();
-            const auto op_const_weight = std::make_shared<CannConstOp>(weight_mat.data, weight_mat.type(), shape(weight_mat), cv::format("%s_w", name.c_str()));
-            op->set_input_gamma(*(op_const_weight->getOp()));
-            op->update_input_desc_gamma(*(op_const_weight->getTensorDesc()));
+            const auto &scale_mat = blobs.front();
+            const auto op_const_scale = std::make_shared<CannConstOp>(scale_mat.data, scale_mat.type(), shape(scale_mat), cv::format("%s_w", name.c_str()));
+            op->set_input_gamma(*(op_const_scale->getOp()));
+            op->update_input_desc_gamma(*(op_const_scale->getTensorDesc()));
         }
         // set inputs : beta
         if (blobs.empty()) {
-            auto bias_tensor_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
-            auto bias_tensor_desc = bias_tensor_wrapper->getTensorDesc();
-            auto bias_node = nodes[2].dynamicCast<CannBackendNode>()->getOp();
-            op->set_input_beta_by_name(*bias_node, bias_tensor_wrapper->name.c_str());
-            op->update_input_desc_beta(*bias_tensor_desc);
+            if (inputs.size() == 3) {
+                auto bias_tensor_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
+                auto bias_tensor_desc = bias_tensor_wrapper->getTensorDesc();
+                auto bias_node = nodes[2].dynamicCast<CannBackendNode>()->getOp();
+                op->set_input_beta_by_name(*bias_node, bias_tensor_wrapper->name.c_str());
+                op->update_input_desc_beta(*bias_tensor_desc);
+            }
         } else {
-            const auto &bias_mat = blobs.back();
-            const auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), shape(bias_mat), cv::format("%s_b", name.c_str()));
-            op->set_input_beta(*(op_const_bias->getOp()));
-            op->update_input_desc_beta(*(op_const_bias->getTensorDesc()));
+            if ((inputs.size() + blobs.size()) == 3) {
+                const auto &bias_mat = blobs.back();
+                const auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), shape(bias_mat), cv::format("%s_b", name.c_str()));
+                op->set_input_beta(*(op_const_bias->getOp()));
+                op->update_input_desc_beta(*(op_const_bias->getTensorDesc()));
+            }
         }
 
         // set outputs
