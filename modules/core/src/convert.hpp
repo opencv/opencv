@@ -31,7 +31,7 @@ static inline void vx_load_as(const int* ptr, v_float32& a)
 static inline void vx_load_as(const float* ptr, v_float32& a)
 { a = vx_load(ptr); }
 
-static inline void vx_load_as(const float16_t* ptr, v_float32& a)
+static inline void vx_load_as(const hfloat* ptr, v_float32& a)
 { a = vx_load_expand(ptr); }
 
 static inline void v_store_as(ushort* ptr, const v_float32& a)
@@ -46,7 +46,7 @@ static inline void v_store_as(int* ptr, const v_float32& a)
 static inline void v_store_as(float* ptr, const v_float32& a)
 { v_store(ptr, a); }
 
-static inline void v_store_as(float16_t* ptr, const v_float32& a)
+static inline void v_store_as(hfloat* ptr, const v_float32& a)
 { v_pack_store(ptr, a); }
 
 static inline void vx_load_pair_as(const uchar* ptr, v_uint16& a, v_uint16& b)
@@ -150,7 +150,7 @@ static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
 static inline void vx_load_pair_as(const float* ptr, v_float32& a, v_float32& b)
 { a = vx_load(ptr); b = vx_load(ptr + VTraits<v_float32>::vlanes()); }
 
-static inline void vx_load_pair_as(const float16_t* ptr, v_float32& a, v_float32& b)
+static inline void vx_load_pair_as(const hfloat* ptr, v_float32& a, v_float32& b)
 {
     a = vx_load_expand(ptr);
     b = vx_load_expand(ptr + VTraits<v_float32>::vlanes());
@@ -294,7 +294,7 @@ static inline void vx_load_pair_as(const double* ptr, v_float64& a, v_float64& b
     b = vx_load(ptr + VTraits<v_float64>::vlanes());
 }
 
-static inline void vx_load_pair_as(const float16_t* ptr, v_float64& a, v_float64& b)
+static inline void vx_load_pair_as(const hfloat* ptr, v_float64& a, v_float64& b)
 {
     v_float32 v0 = vx_load_expand(ptr);
     a = v_cvt_f64(v0);
@@ -348,7 +348,7 @@ static inline void v_store_pair_as(float* ptr, const v_float64& a, const v_float
     v_store(ptr, v);
 }
 
-static inline void v_store_pair_as(float16_t* ptr, const v_float64& a, const v_float64& b)
+static inline void v_store_pair_as(hfloat* ptr, const v_float64& a, const v_float64& b)
 {
     v_float32 v = v_cvt_f32(a, b);
     v_pack_store(ptr, v);
