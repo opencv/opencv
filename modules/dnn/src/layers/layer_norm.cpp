@@ -341,7 +341,7 @@ public:
         }
 
         result = std::make_shared<ov::op::v1::Multiply>(mvn, scale);
-        if (nodes.size() == 3) {
+        if ((nodes.size() + blobs.size()) == 3) {
             result = std::make_shared<ov::op::v1::Add>(result, bias);
         }
 
