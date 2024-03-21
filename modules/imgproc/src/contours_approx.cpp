@@ -65,7 +65,7 @@ static vector<Point> gatherPoints(const vector<ApproxItem> & ares)
     return res;
 }
 
-static int calc_support(const vector<ApproxItem> & ares, size_t i)
+static size_t calc_support(const vector<ApproxItem> & ares, size_t i)
 {
     const size_t len = ares.size();
     /* determine support region */
