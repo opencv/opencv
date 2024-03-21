@@ -49,7 +49,7 @@ static PointCloudEncoder findEncoder(const String &filename)
 
 #endif
 
-void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals, OutputArray rgb)
+void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals, OutputArray rgb, OutputArray indices)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     auto decoder = findDecoder(filename);
@@ -64,8 +64,9 @@ void loadPointCloud(const String &filename, OutputArray vertices, OutputArray no
     std::vector<Point3f> vec_vertices;
     std::vector<Point3f> vec_normals;
     std::vector<Point3_<uchar>> vec_rgb;
+    std::vector<std::vector<int32_t>> vec_indices;
 
-    decoder->readData(vec_vertices, vec_normals, vec_rgb);
+    decoder->readData(vec_vertices, vec_normals, vec_rgb, vec_indices);
 
     if (!vec_vertices.empty())
         Mat(static_cast<int>(vec_vertices.size()), 1, CV_32FC3, &vec_vertices[0]).copyTo(vertices);
@@ -76,6 +77,14 @@ void loadPointCloud(const String &filename, OutputArray vertices, OutputArray no
     if (!vec_rgb.empty() && rgb.needed())
         Mat(static_cast<int>(vec_rgb.size()), 1, CV_8UC3, &vec_rgb[0]).copyTo(rgb);
 
+    if (!vec_indices.empty())
+    {
+        std::vector<std::vector<int32_t>>& vec = *(std::vector<std::vector<int32_t>>*)indices.getObj();
+        vec.resize(vec_indices.size());
+        for (size_t i = 0; i < vec_indices.size(); ++i) {
+            Mat(1, static_cast<int>(vec_indices[i].size()), CV_32SC1, vec_indices[i].data()).copyTo(vec[i]);
+        }
+    }
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
     CV_UNUSED(vertices);

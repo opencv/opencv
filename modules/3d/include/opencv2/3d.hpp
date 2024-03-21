@@ -2847,7 +2847,7 @@ protected:
 * @param normals (vector of Point3f) Point normals of a point cloud
 * @param rgb (vector of Point3_<uchar>) Point RGB color of a point cloud
 */
-CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray(), OutputArray rgb = noArray());
+CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray(), OutputArray rgb = noArray(), OutputArray indices = noArray());
 
 /** @brief Saves a point cloud to a specified file.
 *
@@ -3021,6 +3021,45 @@ with CW culling and with disabled GL compatibility
 CV_EXPORTS_W void triangleRasterizeColor(InputArray vertices, InputArray indices, InputArray colors, InputOutputArray colorBuf,
                                          InputArray world2cam, double fovY, double zNear, double zFar,
                                          const TriangleRasterizeSettings& settings = TriangleRasterizeSettings());
+
+
+class CV_EXPORTS SpectralCluster {
+public:
+    SpectralCluster(float delta, float eta);
+
+    void cluster(std::vector<int>& result, std::vector<Point3f> vertices, std::vector<std::vector<int32_t>> indices, int k);
+
+private:
+    /* Delta: A real number between 0 and 1 controlling the relative importance of geodesic distance and angle distance.
+     * Usually, delta ∈ [0.01, 0.05] */
+    float delta;
+    /* Eta: A real number between 0 and 1, which gives weight to concavity in clustering
+     * A smaller value of η gives more weight. Usually, eta ∈ [0.1, 0.2]*/
+    float eta;
+
+    static void getLaplacianMat(Mat &in, Mat &out);
+
+    static void getAdjacencyMat(Mat &out, std::vector<std::vector<int32_t>> &indices);
+
+    void getDistanceMat(Mat &in, Mat &out, std::vector<Point3f> &vertices, std::vector<std::vector<int32_t>> &indices);
+
+    static void getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<int32_t>> &indices);
+
+    /* Check the adjacency of two faces */
+    static int isAdjacent(const std::vector<int32_t> &face1, const std::vector<int32_t> &face2);
+
+    /* Calculate the geodesic distance of two triangular faces */
+    static float getGeodesicDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2);
+
+    /* Calculate the angle distance of two triangular faces */
+    float getAngleDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2) const;
+
+    /* Calculate the centroid coordinate of a face */
+    static Point3f calculateFaceCentroid(const std::vector<Point3f>& face);
+
+    /* Calculate the normal vector of a face */
+    static Point3f calculateFaceNormal(const std::vector<Point3f>& face);
+};
 
 //! @} _3d
 } //end namespace cv

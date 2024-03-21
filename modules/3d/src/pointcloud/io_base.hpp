@@ -25,7 +25,7 @@ public:
     virtual ~BasePointCloudDecoder() = default;
 
     virtual void setSource(const String &filename) noexcept;
-    virtual void readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb);
+//    virtual void readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb);
     virtual void readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb, std::vector<std::vector<int32_t>> &indices) = 0;
 
 protected:
