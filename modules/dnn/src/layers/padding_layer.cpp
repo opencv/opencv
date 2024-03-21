@@ -34,11 +34,11 @@ public:
     PaddingLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        if (params.blobs.size() == 1)
-            // ONNX parser supports any type
+        if (params.get<bool>("valueAsBlob", false))
+            // ONNX parser supports any type and stores "value" as blob
             paddingValue = params.blobs[0];
         else
-            // Other parsers support only float
+            // Other parsers support only float type
             paddingValue = Mat(1, 1, CV_32F, params.get<float>("value", 0));
         inputDims = params.get<int>("input_dims", -1);
         paddingType = params.get<String>("type", "constant");

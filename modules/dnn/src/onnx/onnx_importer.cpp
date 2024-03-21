@@ -2403,6 +2403,7 @@ void ONNXImporter::parsePad(LayerParams& layerParams, const opencv_onnx::NodePro
         paddings = paddings.t();
         layerParams.set("paddings", DictValue::arrayInt(paddings.ptr<int>(), paddings.total()));
 
+        layerParams.set("valueAsBlob", true);
         // check for non-null constant_value
         if (node_proto.input_size() == 3 && !node_proto.input(2).empty())
             layerParams.blobs.push_back(getBlob(node_proto, 2));
@@ -3398,6 +3399,7 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
             padLp.type = "PaddingInt8";
             padLp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
             padLp.set("depth", CV_8S);
+            padLp.set("valueAsBlob", true);
             padLp.blobs.push_back(getBlob(node_proto, 2));
 
             opencv_onnx::NodeProto proto;
