@@ -141,6 +141,12 @@ public:
         outputs_.getUMatVector(outputs);
 
         const auto &input = inputs[0];
+
+        // no fp16 support
+        if (input.depth() == CV_16F) {
+            return false;
+        }
+
         auto &output = outputs[0];
 
         const auto input_shape = shape(input);
@@ -165,11 +171,6 @@ public:
             } else {
                 bias_umat = UMat::zeros(norm_size, 1, CV_32F);
             }
-        }
-
-        // no fp16 support
-        if (input.depth() == CV_16F) {
-            return false;
         }
 
         String base_opts = format(" -DT=float -DT4=float4 -Dconvert_T=convert_float4");
