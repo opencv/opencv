@@ -271,22 +271,19 @@ TEST(Layer_Reshape_Test, Accuracy)
     normAssert(output_ref, outputs[0]);
 }
 
-typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Const_Test;
+typedef testing::TestWithParam<tuple<int, std::vector<int>>> Layer_Const_Test;
 TEST_P(Layer_Const_Test, Accuracy)
 {
-    std::vector<int> input_shape = get<0>(GetParam());
+    int dims = get<0>(GetParam());
+    std::vector<int> input_shape = get<1>(GetParam());
 
     LayerParams lp;
     lp.type = "Const";
     lp.name = "ConstLayer";
 
-    Mat constBlob, output_ref;
-    if (input_shape.size() > 1)
-        constBlob = Mat(input_shape, CV_32F);
-    else
-        constBlob = Mat(input_shape[0], input_shape.data(), CV_32F);
+    Mat constBlob = Mat(dims, input_shape.data(), CV_32F);
     cv::randn(constBlob, 0.0, 1.0);
-    output_ref = constBlob.clone();
+    Mat output_ref = constBlob.clone();
 
     lp.blobs.push_back(constBlob);
     Ptr<Layer> layer = ConstLayer::create(lp);
@@ -297,11 +294,11 @@ TEST_P(Layer_Const_Test, Accuracy)
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Const_Test,
-/* dims */                          Values(
-                                        std::vector<int>({0}),
-                                        std::vector<int>({1}),
-                                        std::vector<int>({1, 10}))
-);
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Const_Test, testing::Values(
+    std::make_tuple(0, std::vector<int>({0})),
+    std::make_tuple(1, std::vector<int>({1})),
+    std::make_tuple(2, std::vector<int>({1, 4})),
+    std::make_tuple(2, std::vector<int>({4, 1}))
+    ));
 
 }}
