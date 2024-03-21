@@ -32,13 +32,22 @@
 #if !defined _MSC_VER && !defined __BORLANDC__
 #  if defined __cplusplus && __cplusplus >= 201103L && !defined __APPLE__
 #    include <cstdint>
+#  else
+#    include <stdint.h>
+#  endif
+#endif
+
+#ifdef __cplusplus
+namespace cv {
+#endif
+#if !defined _MSC_VER && !defined __BORLANDC__
+#  if defined __cplusplus && __cplusplus >= 201103L && !defined __APPLE__
 #    ifdef __NEWLIB__
         typedef unsigned int uint;
 #    else
         typedef std::uint32_t uint;
 #    endif
 #  else
-#    include <stdint.h>
      typedef uint32_t uint;
 #  endif
 #else
@@ -62,6 +71,9 @@ typedef signed char schar;
    typedef uint64_t uint64;
 #  define CV_BIG_INT(n)   n##LL
 #  define CV_BIG_UINT(n)  n##ULL
+#endif
+#ifdef __cplusplus
+}  // namespace cv
 #endif
 
 #define CV_USRTYPE1 (void)"CV_USRTYPE1 support has been dropped in OpenCV 4.0"

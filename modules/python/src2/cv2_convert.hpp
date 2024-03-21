@@ -127,8 +127,8 @@ template<> bool pyopencv_to(PyObject* obj, int& value, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const int& value);
 
 // --- int64
-template<> bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo& info);
-template<> PyObject* pyopencv_from(const int64& value);
+template<> bool pyopencv_to(PyObject* obj, int64_t& value, const ArgInfo& info);
+template<> PyObject* pyopencv_from(const int64_t& value);
 
 // There is conflict between "size_t" and "unsigned int".
 // They are the same type on some 32-bit platforms.
@@ -184,8 +184,8 @@ struct PyOpenCV_Converter
 
 
 // --- uchar
-template<> bool pyopencv_to(PyObject* obj, uchar& value, const ArgInfo& info);
-template<> PyObject* pyopencv_from(const uchar& value);
+template<> bool pyopencv_to(PyObject* obj, unsigned char& value, const ArgInfo& info);
+template<> PyObject* pyopencv_from(const unsigned char& value);
 
 // --- char
 template<> bool pyopencv_to(PyObject* obj, char& value, const ArgInfo& info);

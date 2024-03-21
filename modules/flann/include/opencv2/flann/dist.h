@@ -498,7 +498,7 @@ struct HammingLUT
     template<typename Iterator2>
     ResultType operator()(const unsigned char* a, const Iterator2 b, size_t size) const
     {
-        static const uchar popCountTable[] =
+        static const unsigned char popCountTable[] =
         {
             0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
             1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
@@ -521,7 +521,7 @@ struct HammingLUT
     ResultType operator()(const unsigned char* a, const ZeroIterator<unsigned char> b, size_t size) const
     {
         (void)b;
-        static const uchar popCountTable[] =
+        static const unsigned char popCountTable[] =
         {
             0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
             1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
@@ -762,7 +762,7 @@ struct DNAmmingLUT
     template<typename Iterator2>
     ResultType operator()(const unsigned char* a, const Iterator2 b, size_t size) const
     {
-        static const uchar popCountTable[] =
+        static const unsigned char popCountTable[] =
         {
             0, 1, 1, 1, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
             1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
@@ -785,7 +785,7 @@ struct DNAmmingLUT
     ResultType operator()(const unsigned char* a, const ZeroIterator<unsigned char> b, size_t size) const
     {
         (void)b;
-        static const uchar popCountTable[] =
+        static const unsigned char popCountTable[] =
         {
             0, 1, 1, 1, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
             1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
