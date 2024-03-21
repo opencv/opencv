@@ -634,7 +634,7 @@ void cv::findContours(InputArray _image, OutputArrayOfArrays _contours, OutputAr
     // TODO: remove this block in future
     if (method == 5 /*CV_LINK_RUNS*/)
     {
-        CV_LOG_WARNING(NULL, "LINK_RUNS mode has been extracted to separate function: cv::findContoursLinkRuns. "
+        CV_LOG_ONCE_WARNING(NULL, "LINK_RUNS mode has been extracted to separate function: cv::findContoursLinkRuns. "
             "Calling through cv::findContours will be removed in future.");
         CV_CheckTrue(!_hierarchy.needed() || mode == RETR_CCOMP,
             "LINK_RUNS mode supports only simplified hierarchy output (mode=RETR_CCOMP)");
@@ -645,7 +645,7 @@ void cv::findContours(InputArray _image, OutputArrayOfArrays _contours, OutputAr
     // TODO: need enum value, need way to return contour starting points with chain codes
     if (method == 0 /*CV_CHAIN_CODE*/)
     {
-        CV_LOG_WARNING(NULL, "Chain code output is an experimental feature and might change in future!");
+        CV_LOG_ONCE_WARNING(NULL, "Chain code output is an experimental feature and might change in future!");
     }
 
     // Sanity check: output must be of type vector<vector<Point>>
