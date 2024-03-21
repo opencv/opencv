@@ -109,11 +109,9 @@ imgproc = {
     ],
 }
 
-objdetect = {'': ['groupRectangles', 'getPredefinedDictionary', 'extendDictionary',
+objdetect = {'': ['getPredefinedDictionary', 'extendDictionary',
                   'drawDetectedMarkers', 'generateImageMarker', 'drawDetectedCornersCharuco',
                   'drawDetectedDiamonds'],
-             'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
-             'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale'],
              'GraphicalCodeDetector': ['decode', 'detect', 'detectAndDecode', 'detectMulti', 'decodeMulti', 'detectAndDecodeMulti'],
              'QRCodeDetector': ['QRCodeDetector', 'decode', 'detect', 'detectAndDecode', 'detectMulti', 'decodeMulti', 'detectAndDecodeMulti', 'decodeCurved', 'detectAndDecodeCurved', 'setEpsX', 'setEpsY'],
              'aruco_PredefinedDictionaryType': [],

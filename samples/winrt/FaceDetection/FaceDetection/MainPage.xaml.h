@@ -7,7 +7,7 @@
 
 #include "MainPage.g.h"
 #include <opencv2\core\core.hpp>
-#include <opencv2\objdetect.hpp>
+#include <opencv2\xobjdetect.hpp>
 
 
 namespace FaceDetection

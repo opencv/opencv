@@ -71,94 +71,9 @@
 if (typeof module !== 'undefined' && module.exports) {
     // The environment is Node.js
     var cv = require('./opencv.js'); // eslint-disable-line no-var
-    cv.FS_createLazyFile('/', 'haarcascade_frontalface_default.xml', // eslint-disable-line new-cap
-                         'haarcascade_frontalface_default.xml', true, false);
 }
 
 QUnit.module('Object Detection', {});
-QUnit.test('Cascade classification', function(assert) {
-    // Group rectangle
-    {
-        let rectList = new cv.RectVector();
-        let weights = new cv.IntVector();
-        let groupThreshold = 1;
-        const eps = 0.2;
-
-        let rect1 = new cv.Rect(1, 2, 3, 4);
-        let rect2 = new cv.Rect(1, 4, 2, 3);
-
-        rectList.push_back(rect1);
-        rectList.push_back(rect2);
-
-        cv.groupRectangles(rectList, weights, groupThreshold, eps);
-
-
-        rectList.delete();
-        weights.delete();
-    }
-
-    // CascadeClassifier
-    {
-        let classifier = new cv.CascadeClassifier();
-        const modelPath = '/haarcascade_frontalface_default.xml';
-
-        assert.equal(classifier.empty(), true);
-
-
-        classifier.load(modelPath);
-        assert.equal(classifier.empty(), false);
-
-        let image = cv.Mat.eye({height: 10, width: 10}, cv.CV_8UC3);
-        let objects = new cv.RectVector();
-        let numDetections = new cv.IntVector();
-        const scaleFactor = 1.1;
-        const minNeighbors = 3;
-        const flags = 0;
-        const minSize = {height: 0, width: 0};
-        const maxSize = {height: 10, width: 10};
-
-        classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
-                                     minNeighbors, flags, minSize, maxSize);
-
-        // test default parameters
-        classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
-                                     minNeighbors, flags, minSize);
-        classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
-                                     minNeighbors, flags);
-        classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
-                                     minNeighbors);
-        classifier.detectMultiScale2(image, objects, numDetections, scaleFactor);
-
-        classifier.delete();
-        objects.delete();
-        numDetections.delete();
-    }
-
-    // HOGDescriptor
-    {
-        let hog = new cv.HOGDescriptor();
-        let mat = new cv.Mat({height: 10, width: 10}, cv.CV_8UC1);
-        let descriptors = new cv.FloatVector();
-        let locations = new cv.PointVector();
-
-
-        assert.equal(hog.winSize.height, 128);
-        assert.equal(hog.winSize.width, 64);
-        assert.equal(hog.nbins, 9);
-        assert.equal(hog.derivAperture, 1);
-        assert.equal(hog.winSigma, -1);
-        assert.equal(hog.histogramNormType, 0);
-        assert.equal(hog.nlevels, 64);
-
-        hog.nlevels = 32;
-        assert.equal(hog.nlevels, 32);
-
-        hog.delete();
-        mat.delete();
-        descriptors.delete();
-        locations.delete();
-    }
-});
 QUnit.test('QR code detect and decode', function (assert) {
     {
         const detector = new cv.QRCodeDetector();

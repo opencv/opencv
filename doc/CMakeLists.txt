@@ -255,10 +255,10 @@ if(DOXYGEN_FOUND)
   endif()
 
   # copy haar cascade files
-  set(haar_cascade_files "")
-  set(data_harrcascades_path "${OpenCV_SOURCE_DIR}/data/haarcascades/")
-  list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
-  list(APPEND js_assets "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
+  # set(haar_cascade_files "")
+  # set(data_harrcascades_path "${OpenCV_SOURCE_DIR}/data/haarcascades/")
+  # list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
+  # list(APPEND js_assets "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
 
   foreach(f ${js_assets})
     get_filename_component(fname "${f}" NAME)

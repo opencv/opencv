@@ -53,8 +53,6 @@ macro(ocv_add_app directory)
   endif()
 endmacro()
 
-ocv_add_app(annotation)
-ocv_add_app(visualisation)
 ocv_add_app(interactive-calibration)
 ocv_add_app(version)
 ocv_add_app(model-diagnostics)
