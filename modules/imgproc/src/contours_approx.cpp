@@ -67,28 +67,26 @@ static vector<Point> gatherPoints(const vector<ApproxItem> & ares)
 
 static int calc_support(const vector<ApproxItem> & ares, size_t i)
 {
-    size_t k;
-    int d_num = 0;
-    int l = 0;
     const size_t len = ares.size();
     /* determine support region */
-    for( k = 1;; k++ )
+    int d_num = 0;
+    int l = 0;
+    size_t k = 1;
+    for( ;; k++ )
     {
         CV_Assert( k <= len );
         /* calc indices */
-        const int i1 = (i >= k) ? (i - k) : (len - k + i);
-        const int i2 = (i + k < len) ? (i + k) : (i + k - len);
+        const size_t i1 = (i >= k) ? (i - k) : (len - k + i);
+        const size_t i2 = (i + k < len) ? (i + k) : (i + k - len);
 
-        int lk, dk_num;
-        int dx, dy;
-        dx = ares[i2].pt.x - ares[i1].pt.x;
-        dy = ares[i2].pt.y - ares[i1].pt.y;
+        const int dx = ares[i2].pt.x - ares[i1].pt.x;
+        const int dy = ares[i2].pt.y - ares[i1].pt.y;
 
         /* distance between p_(i - k) and p_(i + k) */
-        lk = dx * dx + dy * dy;
+        const int lk = dx * dx + dy * dy;
 
         /* distance between p_i and the line (p_(i-k), p_(i+k)) */
-        dk_num = (ares[i].pt.x - ares[i1].pt.x) * dy - (ares[i].pt.y - ares[i1].pt.y) * dx;
+        const int dk_num = (ares[i].pt.x - ares[i1].pt.x) * dy - (ares[i].pt.y - ares[i1].pt.y) * dx;
 
         union {  int i; float f; } d;
         d.f = (float) (((double) d_num) * lk - ((double) dk_num) * l);
@@ -111,8 +109,8 @@ static int calc_cosine(const vector<ApproxItem> & ares, size_t i)
     /* calc k-cosine curvature */
     for( j = k, s = 0; j > 0; j-- )
     {
-        const int i1 = (i >= j) ? (i - j) : (len - j + i);
-        const int i2 = (i + j < len) ? (i + j) : (i + j - len);
+        const size_t i1 = (i >= j) ? (i - j) : (len - j + i);
+        const size_t i2 = (i + j < len) ? (i + j) : (i + j - len);
 
         const int dx1 = ares[i1].pt.x - ares[i].pt.x;
         const int dy1 = ares[i1].pt.y - ares[i].pt.y;
@@ -147,8 +145,8 @@ static bool calc_nms_cleanup(const vector<ApproxItem> & ares, size_t i)
     size_t j;
     for( j = 1; j <= k2; j++ )
     {
-        const int i1 = (i >= j) ? (i - j) : (len - j + i);
-        const int i2 = (i + j < len) ? (i + j) : (i + j - len);
+        const size_t i1 = (i >= j) ? (i - j) : (len - j + i);
+        const size_t i2 = (i + j < len) ? (i + j) : (i + j - len);
         if (ares[i1].s > s || ares[i2].s > s)
             break;
     }
