@@ -301,6 +301,7 @@ public:
         auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         const auto &input_shape = ieInpNode.get_shape();
         std::shared_ptr<ov::Node> mvn, result;
+	ov::Output<ov::Node> scale, bias;
 
         // mvn
         // https://docs.openvino.ai/2023.1/openvino_docs_ops_normalization_MVN_6.html
@@ -311,18 +312,24 @@ public:
         mvn = std::make_shared<ov::op::v6::MVN>(ieInpNode, axes, normalize_variance, epsilon, ov::op::MVNEpsMode::INSIDE_SQRT);
 
         // layer norm = scale * mvn + bias
-        auto scale = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-        ov::Output<ov::Node> bias;
-        if (nodes.size() == 3) {
-            bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
-        }
+	if (blobs.empty()) {
+            scale = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+            if (nodes.size() == 3) {
+                bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+            }
+	} else {
+	    scale = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape(blobs.front()), blobs.front().data);
+	    if ((nodes.size() + blobs.size()) == 3) {
+	        bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape(blobs.back()), blobs.back().data);
+	    }
+	}
         if (axis == -1 || axis == input_shape.size() - 1) { // special case for 1D tensor (2D mat)
             std::vector<int64_t> shared_shape_v(input_shape.size(), 1);
             shared_shape_v.back() = -1;
             auto shared_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{shared_shape_v.size()}, shared_shape_v.data());
-            scale  = std::make_shared<ov::op::v1::Reshape>(scale, shared_shape, true);
+            scale = std::make_shared<ov::op::v1::Reshape>(scale, shared_shape, true);
             if (nodes.size() == 3) {
-                bias  = std::make_shared<ov::op::v1::Reshape>(bias, shared_shape, true);
+                bias = std::make_shared<ov::op::v1::Reshape>(bias, shared_shape, true);
             }
         }
 
