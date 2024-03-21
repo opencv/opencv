@@ -359,7 +359,10 @@ public:
         auto input_shape = input_wrapper->getShape();
         size_t loops = static_cast<size_t>(total(input_shape, 0, axis));
 
-        return make_cuda_node<cuda4dnn::LayerNormOp>(preferableTarget, std::move(context->stream), axis, epsilon, loops);
+        const auto scale = blobs.empty() ? Mat() : blobs.front(),
+                   bias = blobs.empty() ? Mat() : blobs.back();
+
+        return make_cuda_node<cuda4dnn::LayerNormOp>(preferableTarget, std::move(context->stream), scale, bias, axis, epsilon, loops);
     }
 #endif // HAVE_CUDA
 };
