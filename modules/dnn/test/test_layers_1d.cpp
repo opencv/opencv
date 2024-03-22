@@ -271,4 +271,38 @@ TEST(Layer_Reshape_Test, Accuracy)
     normAssert(output_ref, outputs[0]);
 }
 
+// WORKING FOR 1D
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Permute_Test;
+TEST_P(Layer_Permute_Test, Accuracy_01D)
+{
+    LayerParams lp;
+    lp.type = "Permute";
+    lp.name = "PermuteLayer";
+
+    int order[] = {0}; // Since it's a 0D tensor, the order remains [0]
+    lp.set("order", DictValue::arrayInt(order, 1));
+    Ptr<PermuteLayer> layer = PermuteLayer::create(lp);
+
+    std::vector<int> input_shape = get<0>(GetParam());
+
+    Mat input = Mat(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+    Mat output_ref = Mat(input_shape.size(), input_shape.data(), CV_32F, input.data);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/,  Layer_Permute_Test,
+/*input blob shape*/ testing::Values(
+            std::vector<int>{},
+            std::vector<int>{1},
+            std::vector<int>{1, 4},
+            std::vector<int>{4, 1}
+));
+
 }}
