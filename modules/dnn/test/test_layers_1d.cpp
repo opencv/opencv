@@ -271,7 +271,7 @@ TEST(Layer_Reshape_Test, Accuracy)
 }
 
 typedef testing::TestWithParam<tuple<std::vector<int>, int>> Layer_Softmax_Test;
-TEST_P(Layer_Softmax_Test, Accuracy) {
+TEST_P(Layer_Softmax_Test, Accuracy_01D) {
 
     int axis = get<1>(GetParam());
     std::vector<int> input_shape = get<0>(GetParam());
