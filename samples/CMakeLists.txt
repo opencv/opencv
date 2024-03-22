@@ -128,7 +128,6 @@ add_subdirectory(dnn)
 add_subdirectory(opencl)
 add_subdirectory(sycl)
 # add_subdirectory(opengl)
-# add_subdirectory(openvx)
 add_subdirectory(tapi)
 # add_subdirectory(va_intel)
 
