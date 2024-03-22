@@ -1347,11 +1347,6 @@ protected:
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example samples/cpp/lsd_lines.cpp
-An example using the LineSegmentDetector
-\image html building_lsd.png "Sample output image" width=434 height=300
-*/
-
 /** @brief Line segment detector class
 
 following the algorithm described at @cite Rafael12 .
@@ -1850,9 +1845,6 @@ CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
                           int dx, int dy, double scale = 1, double delta = 0,
                           int borderType = BORDER_DEFAULT );
 
-/** @example samples/cpp/laplace.cpp
-An example using Laplace transformations for edge detection
-*/
 
 /** @brief Calculates the Laplacian of an image.
 
@@ -2474,9 +2466,6 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               int borderMode = BORDER_CONSTANT,
                               const Scalar& borderValue = Scalar());
 
-/** @example samples/cpp/warpPerspective_demo.cpp
-An example program shows using cv::getPerspectiveTransform and cv::warpPerspective for image warping
-*/
 
 /** @brief Applies a perspective transformation to an image.
 
@@ -2687,9 +2676,6 @@ source image. The center must be inside the image.
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
 
-/** @example samples/cpp/polar_transforms.cpp
-An example using the cv::linearPolar and cv::logPolar operations
-*/
 
 /** @brief Remaps an image to semilog-polar coordinates space.
 
@@ -2841,10 +2827,8 @@ the destination image will have the given size therefore the area of the boundin
 \par Reverse mapping
 
 You can get reverse mapping adding #WARP_INVERSE_MAP to `flags`
-\snippet polar_transforms.cpp InverseMap
 
 In addiction, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
-\snippet polar_transforms.cpp InverseCoordinate
 
 @param src Source image.
 @param dst Destination image. It will have same type as src.
@@ -3418,9 +3402,6 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 //! @addtogroup imgproc_segmentation
 //! @{
 
-/** @example samples/cpp/watershed.cpp
-An example using the watershed algorithm
-*/
 
 /** @brief Performs a marker-based image segmentation using the watershed algorithm.
 
@@ -3530,9 +3511,6 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
 //! @addtogroup imgproc_misc
 //! @{
 
-/** @example samples/cpp/distrans.cpp
-An example on using the distance transform
-*/
 
 /** @brief Calculates the distance to the closest zero pixel for each pixel of the source image.
 
@@ -4051,10 +4029,6 @@ CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
 CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
-/** @example samples/cpp/squares.cpp
-A program using pyramid scaling, Canny, contours and contour simplification to find
-squares in a list of images (pic1-6.png). Returns sequence of squares detected on the image.
-*/
 
 /** @example samples/tapi/squares.cpp
 A program using pyramid scaling, Canny, contours and contour simplification to find
@@ -4160,8 +4134,6 @@ The function finds the minimal enclosing circle of a 2D point set using an itera
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
-/** @example samples/cpp/minarea.cpp
-*/
 
 /** @brief Finds a triangle of minimum area enclosing a 2D point set and returns its area.
 
@@ -4488,9 +4460,6 @@ enum ColormapTypes
     COLORMAP_DEEPGREEN = 21  //!< ![deepgreen](pics/colormaps/colorscale_deepgreen.jpg)
 };
 
-/** @example samples/cpp/falsecolor.cpp
-An example using applyColorMap function
-*/
 
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
@@ -4742,9 +4711,6 @@ An example program illustrates the use of cv::findContours and cv::drawContours
 \image html WindowsQtContoursOutput.png "Screenshot of the program"
 */
 
-/** @example samples/cpp/segment_objects.cpp
-An example using drawContours to clean up a background segmentation result
-*/
 
 /** @brief Draws contours outlines or filled contours.
 
