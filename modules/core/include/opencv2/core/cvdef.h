@@ -917,11 +917,12 @@ protected:
 #endif
 };
 
-class bfloat16_t
+class bfloat
 {
 public:
-    bfloat16_t() : w(0) {}
-    explicit bfloat16_t(float x)
+    bfloat() : w(0) {}
+
+    explicit bfloat(float x)
     {
         Cv32suf in;
         in.f = x;
@@ -935,19 +936,6 @@ public:
         return out.f;
     }
 
-    static bfloat16_t fromBits(ushort b)
-    {
-        bfloat16_t result;
-        result.w = b;
-        return result;
-    }
-    static bfloat16_t zero()
-    {
-        bfloat16_t result;
-        result.w = (ushort)0;
-        return result;
-    }
-    ushort bits() const { return w; }
 protected:
     ushort w;
 };

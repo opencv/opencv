@@ -3169,14 +3169,14 @@ inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
 
 /*#define OPENCV_HAL_HAVE_PACK_STORE_BFLOAT16 1
 
-inline v_float32x8 v256_load_expand(const bfloat16_t* ptr)
+inline v_float32x8 v256_load_expand(const bfloat* ptr)
 {
     __m128i bf = _mm_loadu_si128((const __m128i*)ptr);
     __m256i f = _mm256_unpacklo_epi16(_mm256_setzero_si256(), _mm256_castsi128_si256(bf));
     return v_float32x8(_mm256_castsi256_ps(f));
 }
 
-inline void v_pack_store(bfloat16_t* ptr, const v_float32x8& a)
+inline void v_pack_store(bfloat* ptr, const v_float32x8& a)
 {
     __m256i f = _mm256_castps_si256(a.val);
     f = _mm256_packs_epi32(_mm256_srai_epi32(f, 16), f);

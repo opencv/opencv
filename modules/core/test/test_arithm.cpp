@@ -632,8 +632,8 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
                                            (const cv::float16_t*)bptr, dptr, total, cn);
             break;
         case CV_16BF:
-            inRange_<cv::bfloat16_t, float>((const cv::bfloat16_t*)sptr, (const cv::bfloat16_t*)aptr,
-                                            (const cv::bfloat16_t*)bptr, dptr, total, cn);
+            inRange_<cv::bfloat, float>((const cv::bfloat*)sptr, (const cv::bfloat*)aptr,
+                                            (const cv::bfloat*)bptr, dptr, total, cn);
             break;
         default:
             CV_Error(cv::Error::StsUnsupportedFormat, "");
@@ -698,7 +698,7 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
             inRangeS_((const cv::float16_t*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
             break;
         case CV_16BF:
-            inRangeS_((const cv::bfloat16_t*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
+            inRangeS_((const cv::bfloat*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
             break;
         default:
             CV_Error(cv::Error::StsUnsupportedFormat, "");

@@ -23,7 +23,7 @@ void cvt32f16f(const float* src, float16_t* dst, int len)
     CV_CPU_DISPATCH(cvt32f16f, (src, dst, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
-void cvt32f16bf(const float* src, bfloat16_t* dst, int len)
+void cvt32f16bf(const float* src, bfloat* dst, int len)
 {
     CV_INSTRUMENT_REGION();
     CV_CPU_DISPATCH(cvt32f16bf, (src, dst, len),

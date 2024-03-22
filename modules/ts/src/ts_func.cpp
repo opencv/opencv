@@ -320,7 +320,7 @@ convertTo(const _Tp* src, void* dst, int dtype,
         convert_(src, (cv::float16_t*)dst, total, alpha, beta);
         break;
     case CV_16BF:
-        convert_(src, (cv::bfloat16_t*)dst, total, alpha, beta);
+        convert_(src, (cv::bfloat*)dst, total, alpha, beta);
         break;
     case CV_Bool:
         convert_to_bool(src, (bool*)dst, total, alpha, beta);
@@ -403,7 +403,7 @@ void convert(const Mat& src, cv::OutputArray _dst,
             convertTo((const cv::float16_t*)sptr, dptr, dtype, total, alpha, beta);
             break;
         case CV_16BF:
-            convertTo((const cv::bfloat16_t*)sptr, dptr, dtype, total, alpha, beta);
+            convertTo((const cv::bfloat*)sptr, dptr, dtype, total, alpha, beta);
             break;
         default:
             CV_Error(cv::Error::StsNotImplemented, "unknown/unsupported depth");
@@ -1197,8 +1197,8 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
                     &minval, &maxval, &minidx, &maxidx, mptr);
             break;
         case CV_16BF:
-            minMaxLoc_<cv::bfloat16_t, float>(
-                    (const cv::bfloat16_t*)sptr, total, startidx,
+            minMaxLoc_<cv::bfloat, float>(
+                    (const cv::bfloat*)sptr, total, startidx,
                     &minval, &maxval, &minidx, &maxidx, mptr);
             break;
         case CV_64U:
@@ -1450,7 +1450,7 @@ double norm(InputArray _src, int normType, InputArray _mask)
             result = norm_((const cv::float16_t*)sptr, total, cn, normType, result, mptr);
             break;
         case CV_16BF:
-            result = norm_((const cv::bfloat16_t*)sptr, total, cn, normType, result, mptr);
+            result = norm_((const cv::bfloat*)sptr, total, cn, normType, result, mptr);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -1556,7 +1556,7 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
             result = norm_((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, total, cn, normType, result, mptr);
             break;
         case CV_16BF:
-            result = norm_((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, total, cn, normType, result, mptr);
+            result = norm_((const cv::bfloat*)sptr1, (const cv::bfloat*)sptr2, total, cn, normType, result, mptr);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -1852,7 +1852,7 @@ void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
             compare_<cv::float16_t, float>((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, dptr, total, cmpop);
             break;
         case CV_16BF:
-            compare_<cv::bfloat16_t, float>((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, dptr, total, cmpop);
+            compare_<cv::bfloat, float>((const cv::bfloat*)sptr1, (const cv::bfloat*)sptr2, dptr, total, cmpop);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -1914,7 +1914,7 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
             compareS_((const cv::float16_t*)sptr, (float)value, dptr, total, cmpop);
             break;
         case CV_16BF:
-            compareS_((const cv::bfloat16_t*)sptr, (float)value, dptr, total, cmpop);
+            compareS_((const cv::bfloat*)sptr, (float)value, dptr, total, cmpop);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -2660,7 +2660,7 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
             minmax16f_((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, (cv::float16_t*)dptr, total, op);
             break;
         case CV_16BF:
-            minmax16f_((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, (cv::bfloat16_t*)dptr, total, op);
+            minmax16f_((const cv::bfloat*)sptr1, (const cv::bfloat*)sptr2, (cv::bfloat*)dptr, total, op);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -2756,7 +2756,7 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
             minmax_16f((const cv::float16_t*)sptr1, saturate_cast<cv::float16_t>(val), (cv::float16_t*)dptr, total, op);
             break;
         case CV_16BF:
-            minmax_16f((const cv::bfloat16_t*)sptr1, saturate_cast<cv::bfloat16_t>(val), (cv::bfloat16_t*)dptr, total, op);
+            minmax_16f((const cv::bfloat*)sptr1, saturate_cast<cv::bfloat>(val), (cv::bfloat*)dptr, total, op);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -2857,7 +2857,7 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
             muldiv_16f((const cv::float16_t*)sptr1, (const cv::float16_t*)sptr2, (cv::float16_t*)dptr, total, scale, op);
             break;
         case CV_16BF:
-            muldiv_16f((const cv::bfloat16_t*)sptr1, (const cv::bfloat16_t*)sptr2, (cv::bfloat16_t*)dptr, total, scale, op);
+            muldiv_16f((const cv::bfloat*)sptr1, (const cv::bfloat*)sptr2, (cv::bfloat*)dptr, total, scale, op);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -2957,7 +2957,7 @@ Scalar mean(const Mat& src, const Mat& mask)
             mean_<cv::float16_t, float>((const cv::float16_t*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_16BF:
-            mean_<cv::bfloat16_t, float>((const cv::bfloat16_t*)sptr, mptr, total, cn, sum, nz);
+            mean_<cv::bfloat, float>((const cv::bfloat*)sptr, mptr, total, cn, sum, nz);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -3230,7 +3230,7 @@ static void writeElems(std::ostream& out, const void* data, int nelems, int dept
     {
         std::streamsize pp = out.precision();
         out.precision(4);
-        writeElems<cv::bfloat16_t, float>(out, data, nelems, starpos);
+        writeElems<cv::bfloat, float>(out, data, nelems, starpos);
         out.precision(pp);
     }
     else if(depth == CV_32F)

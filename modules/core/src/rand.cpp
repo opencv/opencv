@@ -248,7 +248,7 @@ static void randf_16_or_32f( void* dst, int len_, int cn, uint64* state, const V
     if (depth == CV_16F)
         hal::cvt32f16f(fbuf, (float16_t*)dst, len);
     else if (depth == CV_16BF)
-        hal::cvt32f16bf(fbuf, (bfloat16_t*)dst, len);
+        hal::cvt32f16bf(fbuf, (bfloat*)dst, len);
 }
 
 static void
@@ -480,7 +480,7 @@ randnScale_16_or_32f(float* fbuf, float* dst, int len, int cn,
     if (depth == CV_16F)
         hal::cvt32f16f(fbuf, (float16_t*)dst, len);
     else if (depth == CV_16BF)
-        hal::cvt32f16bf(fbuf, (bfloat16_t*)dst, len);
+        hal::cvt32f16bf(fbuf, (bfloat*)dst, len);
 }
 
 #define DEF_RANDNSCALE_FUNC(suffix, T, PT) \

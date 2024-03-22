@@ -719,13 +719,13 @@ namespace CV__SIMD_NAMESPACE {
     //! @}
 
     #ifndef OPENCV_HAL_HAVE_PACK_STORE_BFLOAT16
-    inline v_float32 vx_load_expand(const bfloat16_t* ptr)
+    inline v_float32 vx_load_expand(const bfloat* ptr)
     {
         v_uint32 v = vx_load_expand((const ushort*)ptr);
         return v_reinterpret_as_f32(v_shl<16>(v));
     }
 
-    inline void v_pack_store(const bfloat16_t* ptr, const v_float32& v)
+    inline void v_pack_store(const bfloat* ptr, const v_float32& v)
     {
         v_int32 iv = v_shr<16>(v_reinterpret_as_s32(v));
         cv::v_pack_store((short*)ptr, iv);
