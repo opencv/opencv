@@ -271,8 +271,8 @@ TEST(Layer_Reshape_Test, Accuracy)
     normAssert(output_ref, outputs[0]);
 }
 
-typedef testing::TestWithParam<tuple<std::tuple<int, std::vector<int>>, std::string>> Layer_Reduce_Test;
-TEST_P(Layer_Reduce_Test, Accuracy)
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Reduce_Test;
+TEST_P(Layer_Reduce_Test, Accuracy_01D)
 {
     auto reduceOperation = [](const cv::Mat& input, const std::string& operation) -> float {
         float result = operation == "max" ? std::numeric_limits<float>::lowest() : 0;
@@ -312,12 +312,10 @@ TEST_P(Layer_Reduce_Test, Accuracy)
         return result;
     };
 
-    auto tup = get<0>(GetParam());
-    int dims = get<0>(tup);
-    std::vector<int> input_shape = get<1>(tup);
+    std::vector<int> input_shape = get<0>(GetParam());
     std::string reduce_operation = get<1>(GetParam());
 
-    if (dims == 2 && reduce_operation == "log_sum") // both output and reference are nans
+    if (input_shape.size() == 2 && reduce_operation == "log_sum") // both output and reference are nans
         return;
 
     LayerParams lp;
@@ -328,24 +326,25 @@ TEST_P(Layer_Reduce_Test, Accuracy)
     lp.set("keepdims", true);
     Ptr<ReduceLayer> layer = ReduceLayer::create(lp);
 
-    cv::Mat input(dims, input_shape.data(), CV_32F, 1.0);
+    cv::Mat input(input_shape.size(), input_shape.data(), CV_32F, 1.0);
     cv::randn(input, 0.0, 1.0);
 
     float out_value = reduceOperation(input, reduce_operation);
 
-    cv::Mat output_ref = cv::Mat(dims, (dims <= 1) ? input_shape.data() : std::vector<int>({1, 1}).data(), CV_32F, out_value);
+    cv::Mat output_ref = cv::Mat(input_shape.size(), (input_shape.size() <= 1) ? input_shape.data() : std::vector<int>({1, 1}).data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Reduce_Test, Combine(
 /*input blob shape*/    Values(
-    std::make_tuple(0, std::vector<int>{0}),
-    std::make_tuple(1, std::vector<int>{1}),
-    std::make_tuple(2, std::vector<int>{1, 4})
+    std::vector<int>({}),
+    std::vector<int>({1}),
+    std::vector<int>({1, 4})
     ),
 /*input blob shape*/    Values("max", "min", "mean", "sum", "sum_square", "l1", "l2", "prod", "log_sum", "log_sum_exp"))
 );
