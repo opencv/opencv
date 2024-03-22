@@ -245,8 +245,8 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Elemwise_1d_Test, Combine(
 /*operation*/           Values("div", "prod", "max", "min", "sum")
 ));
 
-typedef testing::TestWithParam<tuple<int>> Layer_Concat_1d_Test;
-TEST_P(Layer_Concat_1d_Test, Accuracy)
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Concat_Test;
+TEST_P(Layer_Concat_Test, Accuracy_01D)
 {
     LayerParams lp;
     lp.type = "Concat";
@@ -254,14 +254,13 @@ TEST_P(Layer_Concat_1d_Test, Accuracy)
     lp.set("axis", 0);
 
     Ptr<ConcatLayer> layer = ConcatLayer::create(lp);
-    int dims = get<0>(GetParam());
 
-    std::vector<int> input_shape = {dims};
+    std::vector<int> input_shape = get<0>(GetParam());
     std::vector<int> output_shape = {3};
 
-    Mat input1(dims, input_shape.data(), CV_32F, 1.0);
-    Mat input2(dims, input_shape.data(), CV_32F, 2.0);
-    Mat input3(dims, input_shape.data(), CV_32F, 3.0);
+    Mat input1(input_shape.size(), input_shape.data(), CV_32F, 1.0);
+    Mat input2(input_shape.size(), input_shape.data(), CV_32F, 2.0);
+    Mat input3(input_shape.size(), input_shape.data(), CV_32F, 3.0);
 
     float data[] = {1.0, 2.0, 3.0};
     Mat output_ref(output_shape, CV_32F, data);
@@ -273,6 +272,9 @@ TEST_P(Layer_Concat_1d_Test, Accuracy)
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Concat_1d_Test,
-/*input blob shape*/    Values(0, 1));
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Concat_Test,
+/*input blob shape*/    testing::Values(
+    make_tuple(std::vector<int>({})),
+    make_tuple(std::vector<int>({1}))
+));
 }}
