@@ -12,7 +12,7 @@
 
 namespace opencv_test { namespace {
 
-class Layer_Test: public testing::TestWithParam<tuple<int>>
+class Layer_Test_01D: public testing::TestWithParam<tuple<int>>
 {
 public:
     int dims;
@@ -43,7 +43,7 @@ public:
 
 };
 
-TEST_P(Layer_Test, Scale)
+TEST_P(Layer_Test_01D, Scale)
 {
 
     lp.type = "Scale";
@@ -60,7 +60,7 @@ TEST_P(Layer_Test, Scale)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, ReLU6)
+TEST_P(Layer_Test_01D, ReLU6)
 {
 
     lp.type = "ReLU6";
@@ -75,7 +75,7 @@ TEST_P(Layer_Test, ReLU6)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Clip)
+TEST_P(Layer_Test_01D, Clip)
 {
 
     lp.type = "Clip";
@@ -90,7 +90,7 @@ TEST_P(Layer_Test, Clip)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, ReLU)
+TEST_P(Layer_Test_01D, ReLU)
 {
 
     lp.type = "ReLU";
@@ -104,7 +104,7 @@ TEST_P(Layer_Test, ReLU)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Gelu)
+TEST_P(Layer_Test_01D, Gelu)
 {
 
     lp.type = "Gelu";
@@ -118,7 +118,7 @@ TEST_P(Layer_Test, Gelu)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, GeluApprox)
+TEST_P(Layer_Test_01D, GeluApprox)
 {
 
     lp.type = "GeluApprox";
@@ -132,7 +132,7 @@ TEST_P(Layer_Test, GeluApprox)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Sigmoid)
+TEST_P(Layer_Test_01D, Sigmoid)
 {
 
     lp.type = "Sigmoid";
@@ -146,7 +146,7 @@ TEST_P(Layer_Test, Sigmoid)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Tanh)
+TEST_P(Layer_Test_01D, Tanh)
 {
 
     lp.type = "TanH";
@@ -161,7 +161,7 @@ TEST_P(Layer_Test, Tanh)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Swish)
+TEST_P(Layer_Test_01D, Swish)
 {
 
     lp.type = "Swish";
@@ -175,7 +175,7 @@ TEST_P(Layer_Test, Swish)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Mish)
+TEST_P(Layer_Test_01D, Mish)
 {
 
     lp.type = "Mish";
@@ -189,7 +189,7 @@ TEST_P(Layer_Test, Mish)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, ELU)
+TEST_P(Layer_Test_01D, ELU)
 {
 
     lp.type = "ELU";
@@ -204,7 +204,7 @@ TEST_P(Layer_Test, ELU)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Abs)
+TEST_P(Layer_Test_01D, Abs)
 {
 
     lp.type = "Abs";
@@ -218,7 +218,7 @@ TEST_P(Layer_Test, Abs)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, BNLL)
+TEST_P(Layer_Test_01D, BNLL)
 {
 
     lp.type = "BNLL";
@@ -232,7 +232,7 @@ TEST_P(Layer_Test, BNLL)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Ceil)
+TEST_P(Layer_Test_01D, Ceil)
 {
 
     lp.type = "Ceil";
@@ -246,7 +246,7 @@ TEST_P(Layer_Test, Ceil)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Floor)
+TEST_P(Layer_Test_01D, Floor)
 {
 
     lp.type = "Floor";
@@ -260,7 +260,7 @@ TEST_P(Layer_Test, Floor)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Log)
+TEST_P(Layer_Test_01D, Log)
 {
 
     lp.type = "Log";
@@ -274,7 +274,7 @@ TEST_P(Layer_Test, Log)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Round)
+TEST_P(Layer_Test_01D, Round)
 {
 
     lp.type = "Round";
@@ -288,7 +288,7 @@ TEST_P(Layer_Test, Round)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Sqrt)
+TEST_P(Layer_Test_01D, Sqrt)
 {
 
     lp.type = "Sqrt";
@@ -302,7 +302,7 @@ TEST_P(Layer_Test, Sqrt)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Acos)
+TEST_P(Layer_Test_01D, Acos)
 {
 
     lp.type = "Acos";
@@ -319,7 +319,7 @@ TEST_P(Layer_Test, Acos)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Acosh)
+TEST_P(Layer_Test_01D, Acosh)
 {
 
     lp.type = "Acosh";
@@ -333,7 +333,7 @@ TEST_P(Layer_Test, Acosh)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Asin)
+TEST_P(Layer_Test_01D, Asin)
 {
 
     lp.type = "Asin";
@@ -350,7 +350,7 @@ TEST_P(Layer_Test, Asin)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Asinh)
+TEST_P(Layer_Test_01D, Asinh)
 {
 
     lp.type = "Asinh";
@@ -364,7 +364,7 @@ TEST_P(Layer_Test, Asinh)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Atan)
+TEST_P(Layer_Test_01D, Atan)
 {
 
     lp.type = "Atan";
@@ -378,7 +378,7 @@ TEST_P(Layer_Test, Atan)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Cos)
+TEST_P(Layer_Test_01D, Cos)
 {
 
     lp.type = "Cos";
@@ -392,7 +392,7 @@ TEST_P(Layer_Test, Cos)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Cosh)
+TEST_P(Layer_Test_01D, Cosh)
 {
 
     lp.type = "Cosh";
@@ -406,7 +406,7 @@ TEST_P(Layer_Test, Cosh)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Sin)
+TEST_P(Layer_Test_01D, Sin)
 {
 
     lp.type = "Sin";
@@ -420,7 +420,7 @@ TEST_P(Layer_Test, Sin)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Sinh)
+TEST_P(Layer_Test_01D, Sinh)
 {
 
     lp.type = "Sinh";
@@ -434,7 +434,7 @@ TEST_P(Layer_Test, Sinh)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Tan)
+TEST_P(Layer_Test_01D, Tan)
 {
 
     lp.type = "Tan";
@@ -448,7 +448,7 @@ TEST_P(Layer_Test, Tan)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Erf)
+TEST_P(Layer_Test_01D, Erf)
 {
 
     lp.type = "Erf";
@@ -462,7 +462,7 @@ TEST_P(Layer_Test, Erf)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Reciprocal)
+TEST_P(Layer_Test_01D, Reciprocal)
 {
 
     lp.type = "Reciprocal";
@@ -476,7 +476,7 @@ TEST_P(Layer_Test, Reciprocal)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, HardSwish)
+TEST_P(Layer_Test_01D, HardSwish)
 {
 
     lp.type = "HardSwish";
@@ -490,7 +490,7 @@ TEST_P(Layer_Test, HardSwish)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Softplus)
+TEST_P(Layer_Test_01D, Softplus)
 {
 
     lp.type = "Softplus";
@@ -504,7 +504,7 @@ TEST_P(Layer_Test, Softplus)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, SoftSign)
+TEST_P(Layer_Test_01D, SoftSign)
 {
 
     lp.type = "Softsign";
@@ -518,7 +518,7 @@ TEST_P(Layer_Test, SoftSign)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, CELU)
+TEST_P(Layer_Test_01D, CELU)
 {
 
     lp.type = "CELU";
@@ -533,7 +533,7 @@ TEST_P(Layer_Test, CELU)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, HardSigmoid)
+TEST_P(Layer_Test_01D, HardSigmoid)
 {
 
     lp.type = "HardSigmoid";
@@ -547,7 +547,7 @@ TEST_P(Layer_Test, HardSigmoid)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, SELU)
+TEST_P(Layer_Test_01D, SELU)
 {
 
     lp.type = "SELU";
@@ -569,7 +569,7 @@ TEST_P(Layer_Test, SELU)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, ThresholdedReLU)
+TEST_P(Layer_Test_01D, ThresholdedReLU)
 {
 
     lp.type = "ThresholdedReLU";
@@ -584,7 +584,7 @@ TEST_P(Layer_Test, ThresholdedReLU)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Power)
+TEST_P(Layer_Test_01D, Power)
 {
 
     lp.type = "Power";
@@ -601,7 +601,7 @@ TEST_P(Layer_Test, Power)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Exp)
+TEST_P(Layer_Test_01D, Exp)
 {
 
     lp.type = "Exp";
@@ -615,7 +615,7 @@ TEST_P(Layer_Test, Exp)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Sign)
+TEST_P(Layer_Test_01D, Sign)
 {
 
     lp.type = "Sign";
@@ -629,7 +629,7 @@ TEST_P(Layer_Test, Sign)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, Shrink)
+TEST_P(Layer_Test_01D, Shrink)
 {
 
     lp.type = "Shrink";
@@ -645,7 +645,7 @@ TEST_P(Layer_Test, Shrink)
     TestLayer(layer, inputs, output_ref);
 }
 
-TEST_P(Layer_Test, ChannelsPReLU)
+TEST_P(Layer_Test_01D, ChannelsPReLU)
 {
 
     lp.type = "ChannelsPReLU";
@@ -660,10 +660,10 @@ TEST_P(Layer_Test, ChannelsPReLU)
 
     TestLayer(layer, inputs, output_ref);
 }
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Test, Values(0, 1));
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Test_01D, Values(0, 1));
 
-typedef testing::TestWithParam<tuple<int, int>> Layer_Gather_1d_Test;
-TEST_P(Layer_Gather_1d_Test, Accuracy) {
+typedef testing::TestWithParam<tuple<int, int>> Layer_Gather_Test;
+TEST_P(Layer_Gather_Test, Accuracy_01D) {
 
     int dims = get<0>(GetParam());
     int axis = get<1>(GetParam());
@@ -693,13 +693,13 @@ TEST_P(Layer_Gather_1d_Test, Accuracy) {
     ASSERT_EQ(output_ref.size, outputs[0].size);
     normAssert(output_ref, outputs[0]);
 }
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_1d_Test, Combine(
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_Test, Combine(
 /*input blob shape*/    Values(0, 1),
 /*operation*/           Values(0)
 ));
 
 typedef testing::TestWithParam<tuple<int, std::string>> Layer_Arg_Test;
-TEST_P(Layer_Arg_Test, Accuracy) {
+TEST_P(Layer_Arg_Test, Accuracy_01D) {
 
     int dims = get<0>(GetParam());
     std::string operation = get<1>(GetParam());
@@ -732,7 +732,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Arg_Test, Combine(
 ));
 
 typedef testing::TestWithParam<tuple<int, std::string>> Layer_NaryElemwise_Test;
-TEST_P(Layer_NaryElemwise_Test, Accuracy) {
+TEST_P(Layer_NaryElemwise_Test, Accuracy_01D) {
 
     int dims = get<0>(GetParam());
     std::string operation = get<1>(GetParam());
@@ -778,7 +778,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_NaryElemwise_Test, Combine(
 ));
 
 typedef testing::TestWithParam<tuple<int, std::string>> Layer_Elemwise_Test;
-TEST_P(Layer_Elemwise_Test, Accuracy) {
+TEST_P(Layer_Elemwise_Test, Accuracy_01D) {
 
     int dims = get<0>(GetParam());
     std::string operation = get<1>(GetParam());
