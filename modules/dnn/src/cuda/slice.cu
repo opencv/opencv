@@ -199,5 +199,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void slice(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
 #endif
     template void slice(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
+    template void slice(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, std::vector<std::size_t>);
+    template void slice(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, std::vector<std::size_t>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
