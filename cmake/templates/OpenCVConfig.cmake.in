@@ -6,30 +6,22 @@
 #  Usage from an external project:
 #    In your CMakeLists.txt, add these lines:
 #
-#    find_package(OpenCV REQUIRED)
-#    include_directories(${OpenCV_INCLUDE_DIRS}) # Not needed for CMake >= 2.8.11
-#    target_link_libraries(MY_TARGET_NAME ${OpenCV_LIBS})
+#    find_package(@PROJECT_NAME@ REQUIRED)
+#    target_link_libraries(MY_TARGET_NAME PUBLIC @PROJECT_NAME@::opencv)
 #
 #    Or you can search for specific OpenCV modules:
 #
-#    find_package(OpenCV REQUIRED core videoio)
+#    find_package(@PROJECT_NAME@ REQUIRED core videoio)
 #
 #    You can also mark OpenCV components as optional:
 
-#    find_package(OpenCV REQUIRED core OPTIONAL_COMPONENTS viz)
+#    find_package(@PROJECT_NAME@ REQUIRED COMPONENTS core OPTIONAL_COMPONENTS viz)
 #
-#    If the module is found then OPENCV_<MODULE>_FOUND is set to TRUE.
+#    If the module is found then @PROJECT_NAME@_<MODULE>_FOUND is set to TRUE.
 #
 #    This file will define the following variables:
-#      - OpenCV_LIBS                     : The list of all imported targets for OpenCV modules.
-#      - OpenCV_INCLUDE_DIRS             : The OpenCV include directories.
-#      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability.
-#      - OpenCV_ANDROID_NATIVE_API_LEVEL : Minimum required level of Android API.
-#      - OpenCV_VERSION                  : The version of this OpenCV build: "@OPENCV_VERSION_PLAIN@"
-#      - OpenCV_VERSION_MAJOR            : Major version part of OpenCV_VERSION: "@OPENCV_VERSION_MAJOR@"
-#      - OpenCV_VERSION_MINOR            : Minor version part of OpenCV_VERSION: "@OPENCV_VERSION_MINOR@"
-#      - OpenCV_VERSION_PATCH            : Patch version part of OpenCV_VERSION: "@OPENCV_VERSION_PATCH@"
-#      - OpenCV_VERSION_STATUS           : Development status of this build: "@OPENCV_VERSION_STATUS@"
+#      - @PROJECT_NAME@_LIBS                     : The list of all imported targets for OpenCV modules.
+#      - @PROJECT_NAME@_INCLUDE_DIRS             : The OpenCV include directories.
 #
 #    Advanced variables:
 #      - OpenCV_SHARED                   : Use OpenCV as shared library
@@ -38,7 +30,14 @@
 #      - OpenCV_USE_MANGLED_PATHS        : Mangled OpenCV path flag
 #
 #    Deprecated variables:
-#      - OpenCV_VERSION_TWEAK            : Always "0"
+#      - OpenCV_LIBS                     : The list of all imported targets for OpenCV modules.
+#      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability.
+#      - OpenCV_ANDROID_NATIVE_API_LEVEL : Minimum required level of Android API.
+#      - OpenCV_VERSION                  : The version of this OpenCV build: "@OPENCV_VERSION_PLAIN@"
+#      - OpenCV_VERSION_MAJOR            : Major version part of OpenCV_VERSION: "@OPENCV_VERSION_MAJOR@"
+#      - OpenCV_VERSION_MINOR            : Minor version part of OpenCV_VERSION: "@OPENCV_VERSION_MINOR@"
+#      - OpenCV_VERSION_PATCH            : Patch version part of OpenCV_VERSION: "@OPENCV_VERSION_PATCH@"
+#      - OpenCV_VERSION_STATUS           : Development status of this build: "@OPENCV_VERSION_STATUS@"
 #
 # ===================================================================================
 
@@ -49,23 +48,25 @@ SET(OpenCV_VERSION @OPENCV_VERSION_PLAIN@)
 SET(OpenCV_VERSION_MAJOR  @OPENCV_VERSION_MAJOR@)
 SET(OpenCV_VERSION_MINOR  @OPENCV_VERSION_MINOR@)
 SET(OpenCV_VERSION_PATCH  @OPENCV_VERSION_PATCH@)
-SET(OpenCV_VERSION_TWEAK  0)
 SET(OpenCV_VERSION_STATUS "@OPENCV_VERSION_STATUS@")
+
+@PACKAGE_INIT@
 
 include(FindPackageHandleStandardArgs)
 
-if(NOT CMAKE_VERSION VERSION_LESS 2.8.8
-    AND OpenCV_FIND_COMPONENTS  # prevent excessive output
-)
-  # HANDLE_COMPONENTS was introduced in CMake 2.8.8
-  list(APPEND _OpenCV_FPHSA_ARGS HANDLE_COMPONENTS)
-  # The missing components will be handled by the FindPackageHandleStandardArgs
-  # module.
-  set(_OpenCV_HANDLE_COMPONENTS_MANUALLY FALSE)
-else()
-  # The missing components will be handled by this config.
-  set(_OpenCV_HANDLE_COMPONENTS_MANUALLY TRUE)
-endif()
+cmake_minimum_required(VERSION @MIN_VER_CMAKE@)
+#if(NOT CMAKE_VERSION VERSION_LESS 2.8.8
+#    AND OpenCV_FIND_COMPONENTS  # prevent excessive output
+#)
+#  # HANDLE_COMPONENTS was introduced in CMake 2.8.8
+#  list(APPEND _OpenCV_FPHSA_ARGS HANDLE_COMPONENTS)
+#  # The missing components will be handled by the FindPackageHandleStandardArgs
+#  # module.
+ # set(_OpenCV_HANDLE_COMPONENTS_MANUALLY FALSE)
+#else()
+#  # The missing components will be handled by this config.
+#  set(_OpenCV_HANDLE_COMPONENTS_MANUALLY TRUE)
+#endif()
 
 # Extract directory name from full path of the file currently being processed.
 # Note that CMake 2.8.3 introduced CMAKE_CURRENT_LIST_DIR. We reimplement it
@@ -123,7 +124,14 @@ unset(__d)
 
 
 if(NOT TARGET opencv_core)
-  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${OpenCV_MODULES_SUFFIX}.cmake)
+  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules.cmake)
+  # Only expose legacy names if requested
+  if("${OPENCV_EXPOSE_LEGACY_TARGET_NAMES}")
+    message(DEPRECATION "Legacy target names are deprecated. "
+      "Please see the following for recommended usage: "
+      "https://docs.opencv.org/5.x/db/df5/tutorial_linux_gcc_cmake.html")
+    include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModulesNoNamespace.cmake)
+  endif()
 endif()
 
 if(NOT CMAKE_VERSION VERSION_LESS "2.8.11")
@@ -207,19 +215,6 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
   endif()
   list(FIND OpenCV_LIB_COMPONENTS ${__cvcomponent} __cvcomponentIdx)
   if(__cvcomponentIdx LESS 0)
-    if(_OpenCV_HANDLE_COMPONENTS_MANUALLY)
-      # Either the component is required or the user did not set any components at
-      # all. In the latter case, the OpenCV_FIND_REQUIRED_<component> variable
-      # will not be defined since it is not set by this config. So let's assume
-      # the implicitly set components are always required.
-      if(NOT DEFINED OpenCV_FIND_REQUIRED_${__original_cvcomponent} OR
-          OpenCV_FIND_REQUIRED_${__original_cvcomponent})
-        message(FATAL_ERROR "${__cvcomponent} is required but was not found")
-      elseif(NOT OpenCV_FIND_QUIETLY)
-        # The component was marked as optional using OPTIONAL_COMPONENTS
-        message(WARNING "Optional component ${__cvcomponent} was not found")
-      endif()
-    endif(_OpenCV_HANDLE_COMPONENTS_MANUALLY)
     #indicate that module is NOT found
     string(TOUPPER "${__cvcomponent}" __cvcomponentUP)
     set(${__cvcomponentUP}_FOUND "${__cvcomponentUP}_FOUND-NOTFOUND")
@@ -303,6 +298,7 @@ endif()
 # Some macros for samples
 #
 macro(ocv_check_dependencies)
+  # TODO consider deprecating because find_package() already supports component dependencies.
   set(OCV_DEPENDENCIES_FOUND TRUE)
   foreach(d ${ARGN})
     if(NOT TARGET ${d})
@@ -351,5 +347,8 @@ endmacro()
 
 # We do not actually need REQUIRED_VARS to be checked for. Just use the
 # installation directory for the status.
+# TODO this may be unnecessary
 find_package_handle_standard_args(OpenCV REQUIRED_VARS OpenCV_INSTALL_PATH
                                   VERSION_VAR OpenCV_VERSION ${_OpenCV_FPHSA_ARGS})
+
+check_required_components(@PROJECT_NAME@)
