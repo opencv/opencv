@@ -270,17 +270,14 @@ TEST(Layer_Reshape_Test, Accuracy)
     normAssert(output_ref, outputs[0]);
 }
 
-typedef testing::TestWithParam<tuple<tuple<int, std::vector<int>>, int>> Layer_Softmax_Test;
+typedef testing::TestWithParam<tuple<std::vector<int>, int>> Layer_Softmax_Test;
 TEST_P(Layer_Softmax_Test, Accuracy) {
 
-    auto tup = get<0>(GetParam());
     int axis = get<1>(GetParam());
-    int dims = get<0>(tup);
-    std::vector<int> input_shape = get<1>(tup);
-
-    if ((dims == 0 && axis == 1) ||
-        (dims == 2 && input_shape[0] > 1 && axis == 1) ||
-        (input_shape[0] > 1 && axis == 0)) // skip since not valid case
+    std::vector<int> input_shape = get<0>(GetParam());
+    if ((input_shape.size() == 0 && axis == 1) ||
+        (!input_shape.empty() && input_shape.size() == 2 && input_shape[0] > 1 && axis == 1) ||
+        (!input_shape.empty() && input_shape[0] > 1 && axis == 0)) // skip since not valid case
         return;
 
     LayerParams lp;
@@ -289,8 +286,8 @@ TEST_P(Layer_Softmax_Test, Accuracy) {
     lp.set("axis", axis);
     Ptr<SoftmaxLayer> layer = SoftmaxLayer::create(lp);
 
-    Mat input = Mat(dims, input_shape.data(), CV_32F);
-    randn(input, 0.0, 1.0);
+    Mat input = Mat(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
 
     Mat output_ref;
     cv::exp(input, output_ref);
@@ -303,16 +300,17 @@ TEST_P(Layer_Softmax_Test, Accuracy) {
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Softmax_Test, Combine(
 /*input blob shape*/  testing::Values(
-    make_tuple(0, std::vector<int>({0})),
-    make_tuple(1, std::vector<int>({1})),
-    make_tuple(1, std::vector<int>({4})),
-    make_tuple(2, std::vector<int>({1, 4})),
-    make_tuple(2, std::vector<int>({4, 1}))
+    std::vector<int>({}),
+    std::vector<int>({1}),
+    std::vector<int>({4}),
+    std::vector<int>({1, 4}),
+    std::vector<int>({4, 1})
     ),
 /*Axis */testing::Values(0, 1)
                       ));
