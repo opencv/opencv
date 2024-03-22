@@ -164,6 +164,8 @@ set(gapi_srcs
     # OV Backend. FIXME: should be included by CMake
     # if and only if OV support is enabled
     src/backends/ov/govbackend.cpp
+    src/backends/ov/govcvbackend.cpp
+    src/backends/ov/govcv.cpp
 
     # ONNX backend
     src/backends/onnx/gonnxbackend.cpp
