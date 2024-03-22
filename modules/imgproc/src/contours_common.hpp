@@ -8,30 +8,29 @@
 #include "precomp.hpp"
 #include <stack>
 
-namespace cv {
+namespace cv
+{
 
 static const schar MAX_SIZE = 16;
 
-static const cv::Point chainCodeDeltas[8] =
-    { {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
+static const cv::Point chainCodeDeltas[8] = {{1, 0},  {1, -1}, {0, -1}, {-1, -1},
+                                             {-1, 0}, {-1, 1}, {0, 1},  {1, 1}};
 
 static inline int getDelta(schar s, size_t step)
 {
-    CV_DbgAssert(s >=0 && s < 16);
+    CV_DbgAssert(s >= 0 && s < 16);
     const cv::Point res = chainCodeDeltas[s % 8];
     return res.x + res.y * (int)step;
 }
 
-inline schar clamp_direction(schar dir)
-{
-    return std::min(dir, (schar)15);
-}
+inline schar clamp_direction(schar dir) { return std::min(dir, (schar)15); }
 
 template <typename T>
 class TreeNode
 {
 private:
     int self_;
+
 public:
     // tree hierarchy (parent - children)
     int parent;
@@ -42,8 +41,10 @@ public:
     // 2nd linked list - unidirectional - not related to 1st list
     int ctable_next;
     T body;
+
 public:
-    TreeNode(int self) : self_(self), parent(-1), first_child(-1), prev(-1), next(-1), ctable_next(-1)
+    TreeNode(int self)
+        : self_(self), parent(-1), first_child(-1), prev(-1), next(-1), ctable_next(-1)
     {
         CV_Assert(self >= 0);
     }
@@ -55,20 +56,21 @@ class Tree
 {
 private:
     std::vector<TreeNode<T>> nodes;
+
 public:
-    TreeNode<T> & newElem()
+    TreeNode<T>& newElem()
     {
         const size_t idx = nodes.size();
         CV_DbgAssert(idx < (size_t)std::numeric_limits<int>::max());
         nodes.push_back(TreeNode<T>((int)idx));
         return nodes[idx];
     }
-    TreeNode<T> & elem(int idx)
+    TreeNode<T>& elem(int idx)
     {
         CV_DbgAssert(idx >= 0 && (size_t)idx < nodes.size());
         return nodes[(size_t)idx];
     }
-    const TreeNode<T> & elem(int idx) const
+    const TreeNode<T>& elem(int idx) const
     {
         CV_DbgAssert(idx >= 0 && (size_t)idx < nodes.size());
         return nodes[(size_t)idx];
@@ -79,7 +81,7 @@ public:
         {
             while (true)
             {
-                const TreeNode<T> & cur_elem = elem(e);
+                const TreeNode<T>& cur_elem = elem(e);
                 if (cur_elem.next == -1)
                     break;
                 e = cur_elem.next;
@@ -89,8 +91,8 @@ public:
     }
     void addSiblingAfter(int prev, int idx)
     {
-        TreeNode<T> &prev_item = nodes[prev];
-        TreeNode<T> &child = nodes[idx];
+        TreeNode<T>& prev_item = nodes[prev];
+        TreeNode<T>& child = nodes[idx];
         child.parent = prev_item.parent;
         if (prev_item.next != -1)
         {
@@ -102,11 +104,11 @@ public:
     }
     void addChild(int parent_idx, int child_idx)
     {
-        TreeNode<T> &parent = nodes[parent_idx];
-        TreeNode<T> &child = nodes[child_idx];
+        TreeNode<T>& parent = nodes[parent_idx];
+        TreeNode<T>& child = nodes[child_idx];
         if (parent.first_child != -1)
         {
-            TreeNode<T> &fchild_ = nodes[parent.first_child];
+            TreeNode<T>& fchild_ = nodes[parent.first_child];
             fchild_.prev = child_idx;
             child.next = parent.first_child;
         }
@@ -122,20 +124,17 @@ template <typename T>
 class TreeIterator
 {
 public:
-    TreeIterator(Tree<T> & tree_) : tree(tree_)
+    TreeIterator(Tree<T>& tree_) : tree(tree_)
     {
         CV_Assert(!tree.isEmpty());
         levels.push(0);
     }
-    bool isDone() const
-    {
-        return levels.empty();
-    }
-    const TreeNode<T> & getNext_s()
+    bool isDone() const { return levels.empty(); }
+    const TreeNode<T>& getNext_s()
     {
         int idx = levels.top();
         levels.pop();
-        const TreeNode<T> & res = tree.elem(idx);
+        const TreeNode<T>& res = tree.elem(idx);
         int cur = tree.lastSibling(res.first_child);
         while (cur != -1)
         {
@@ -144,9 +143,10 @@ public:
         }
         return res;
     }
+
 private:
     std::stack<int> levels;
-    Tree<T> & tree;
+    Tree<T>& tree;
 };
 
 //==============================================================================
@@ -165,7 +165,7 @@ public:
     void updateBoundingRect() {}
     bool isEmpty() const { return pts.size() == 0 && codes.size() == 0; }
     size_t size() const { return isChain ? codes.size() : pts.size(); }
-    void copyTo(void * data) const
+    void copyTo(void* data) const
     {
         // NOTE: Mat::copyTo doesn't work because it creates new Mat object
         //       instead of reusing existing vector data
@@ -184,15 +184,12 @@ typedef TreeNode<Contour> CNode;
 typedef Tree<Contour> CTree;
 typedef TreeIterator<Contour> CIterator;
 
+void contourTreeToResults(CTree& tree, int res_type, cv::OutputArrayOfArrays& _contours,
+                          cv::OutputArray& _hierarchy);
 
-void contourTreeToResults(CTree & tree, int res_type,
-                          cv::OutputArrayOfArrays &_contours,
-                          cv::OutputArray &_hierarchy);
+std::vector<Point> approximateChainTC89(std::vector<schar> chain, const Point& origin,
+                                        const int method);
 
-
-
-std::vector<Point> approximateChainTC89(std::vector<schar> chain, const Point &origin, const int method);
-
-} // cv::
+} // namespace cv
 
 #endif // OPENCV_CONTOURS_COMMON_HPP

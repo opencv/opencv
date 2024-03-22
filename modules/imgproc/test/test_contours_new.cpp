@@ -9,23 +9,30 @@
 
 #define CHECK_OLD 1
 
-namespace opencv_test { namespace {
+namespace opencv_test
+{
+namespace
+{
 
 // debug function
 template <typename T>
-inline static void print_pts(const T & c) {
-    for (const auto & one_pt : c) {
+inline static void print_pts(const T& c)
+{
+    for (const auto& one_pt : c)
+    {
         cout << one_pt << " ";
     }
     cout << endl;
 }
 
 // debug function
-template<typename T>
-inline static void print_pts_2(vector<T> & cs) {
+template <typename T>
+inline static void print_pts_2(vector<T>& cs)
+{
     int cnt = 0;
     cout << "Contours:" << endl;
-    for (const auto & one_c : cs) {
+    for (const auto& one_c : cs)
+    {
         cout << cnt++ << " : ";
         print_pts(one_c);
     }
@@ -33,29 +40,45 @@ inline static void print_pts_2(vector<T> & cs) {
 
 // draw 1-2 px blob with orientation defined by 'kind'
 template <typename T>
-inline static void drawSmallContour(Mat & img, Point pt, int kind, int color_)
+inline static void drawSmallContour(Mat& img, Point pt, int kind, int color_)
 {
     const T color = static_cast<T>(color_);
     img.at<T>(pt) = color;
     switch (kind)
     {
-        case 1: img.at<T>(pt + Point(1, 0)) = color; break;
-        case 2: img.at<T>(pt + Point(1, -1)) = color; break;
-        case 3: img.at<T>(pt + Point(0, -1)) = color; break;
-        case 4: img.at<T>(pt + Point(-1, -1)) = color; break;
-        case 5: img.at<T>(pt + Point(-1, 0)) = color; break;
-        case 6: img.at<T>(pt + Point(-1, 1)) = color; break;
-        case 7: img.at<T>(pt + Point(0, 1)) = color; break;
-        case 8: img.at<T>(pt + Point(1, 1)) = color; break;
-        default: break;
+        case 1:
+            img.at<T>(pt + Point(1, 0)) = color;
+            break;
+        case 2:
+            img.at<T>(pt + Point(1, -1)) = color;
+            break;
+        case 3:
+            img.at<T>(pt + Point(0, -1)) = color;
+            break;
+        case 4:
+            img.at<T>(pt + Point(-1, -1)) = color;
+            break;
+        case 5:
+            img.at<T>(pt + Point(-1, 0)) = color;
+            break;
+        case 6:
+            img.at<T>(pt + Point(-1, 1)) = color;
+            break;
+        case 7:
+            img.at<T>(pt + Point(0, 1)) = color;
+            break;
+        case 8:
+            img.at<T>(pt + Point(1, 1)) = color;
+            break;
+        default:
+            break;
     }
 }
 
-inline static void drawContours(Mat & img,
-                                const vector<vector<Point>> & contours,
-                                const Scalar & color = Scalar::all(255))
+inline static void drawContours(Mat& img, const vector<vector<Point>>& contours,
+                                const Scalar& color = Scalar::all(255))
 {
-    for (const auto & contour : contours)
+    for (const auto& contour : contours)
     {
         for (size_t n = 0, end = contour.size(); n < end; ++n)
         {
@@ -71,7 +94,6 @@ inline static void drawContours(Mat & img,
 
 // Test parameters - mode + method
 typedef testing::TestWithParam<tuple<int, int>> Imgproc_FindContours_Modes1;
-
 
 // Draw random rectangle and find contours
 //
@@ -89,27 +111,18 @@ TEST_P(Imgproc_FindContours_Modes1, rectangle)
         const Size sz(rng.uniform(640, 1920), rng.uniform(480, 1080));
         Mat img(sz, CV_8UC1, Scalar::all(0));
         Mat img32s(sz, CV_32SC1, Scalar::all(0));
-        const Rect r(
-            Point(rng.uniform(1, sz.width / 2 - 1), rng.uniform(1, sz.height / 2)),
-            Point(rng.uniform(sz.width / 2 - 1, sz.width - 1), rng.uniform(sz.height / 2 - 1, sz.height - 1)));
+        const Rect r(Point(rng.uniform(1, sz.width / 2 - 1), rng.uniform(1, sz.height / 2)),
+                     Point(rng.uniform(sz.width / 2 - 1, sz.width - 1),
+                           rng.uniform(sz.height / 2 - 1, sz.height - 1)));
         rectangle(img, r, Scalar::all(255));
         rectangle(img32s, r, Scalar::all(255), FILLED);
 
-        const vector<Point> ext_ref {
-            r.tl(),
-            r.tl() + Point(0, r.height - 1),
-            r.br() + Point(-1, -1),
-            r.tl() + Point(r.width - 1, 0)
-        };
+        const vector<Point> ext_ref {r.tl(), r.tl() + Point(0, r.height - 1),
+                                     r.br() + Point(-1, -1), r.tl() + Point(r.width - 1, 0)};
         const vector<Point> int_ref {
-            ext_ref[0] + Point(0, 1),
-            ext_ref[0] + Point(1, 0),
-            ext_ref[3] + Point(-1 ,0),
-            ext_ref[3] + Point(0, 1),
-            ext_ref[2] + Point(0, -1),
-            ext_ref[2] + Point(-1, 0),
-            ext_ref[1] + Point(1, 0),
-            ext_ref[1] + Point(0, -1),
+            ext_ref[0] + Point(0, 1), ext_ref[0] + Point(1, 0),  ext_ref[3] + Point(-1, 0),
+            ext_ref[3] + Point(0, 1), ext_ref[2] + Point(0, -1), ext_ref[2] + Point(-1, 0),
+            ext_ref[1] + Point(1, 0), ext_ref[1] + Point(0, -1),
         };
         const size_t ext_perimeter = r.width * 2 + r.height * 2;
         const size_t int_perimeter = ext_perimeter - 4;
@@ -124,11 +137,10 @@ TEST_P(Imgproc_FindContours_Modes1, rectangle)
                 findContours(img32s, chains, hierarchy, mode, method);
             else
                 findContours(img32s, contours, hierarchy, mode, method);
+        else if (method == 0)
+            findContours(img, chains, hierarchy, mode, method);
         else
-            if (method == 0)
-                findContours(img, chains, hierarchy, mode, method);
-            else
-                findContours(img, contours, hierarchy, mode, method);
+            findContours(img, contours, hierarchy, mode, method);
 
         // verify results
         if (mode == RETR_EXTERNAL)
@@ -231,10 +243,8 @@ TEST_P(Imgproc_FindContours_Modes1, rectangle)
             }
         }
 #endif
-
     }
 }
-
 
 // Draw many small 1-2px blobs and find contours
 //
@@ -284,7 +294,7 @@ TEST_P(Imgproc_FindContours_Modes1, small)
                 vector<Vec4i> hierarchy_o;
                 findContours_legacy(img32s, contours_o, hierarchy_o, mode, method);
                 ASSERT_EQ(contours.size(), contours_o.size());
-                for (size_t i = 0; i < contours.size(); ++ i)
+                for (size_t i = 0; i < contours.size(); ++i)
                 {
                     SCOPED_TRACE(format("contour %zu", i));
                     EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
@@ -309,7 +319,7 @@ TEST_P(Imgproc_FindContours_Modes1, small)
                 vector<Vec4i> hierarchy_o;
                 findContours_legacy(img, contours_o, hierarchy_o, mode, method);
                 ASSERT_EQ(contours.size(), contours_o.size());
-                for (size_t i = 0; i < contours.size(); ++ i)
+                for (size_t i = 0; i < contours.size(); ++i)
                 {
                     SCOPED_TRACE(format("contour %zu", i));
                     EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
@@ -320,7 +330,6 @@ TEST_P(Imgproc_FindContours_Modes1, small)
         }
     }
 }
-
 
 // Draw many nested rectangles and find contours
 //
@@ -345,8 +354,8 @@ TEST_P(Imgproc_FindContours_Modes1, deep)
         rect.height -= 4;
     }
     {
-        vector<vector<Point>> contours { { {0, 0}, {1, 1} }};
-        vector<vector<schar>> chains { {1, 2, 3} };
+        vector<vector<Point>> contours {{{0, 0}, {1, 1}}};
+        vector<vector<schar>> chains {{1, 2, 3}};
         vector<Vec4i> hierarchy;
 
         if (mode == RETR_FLOODFILL)
@@ -365,7 +374,7 @@ TEST_P(Imgproc_FindContours_Modes1, deep)
                 vector<Vec4i> hierarchy_o;
                 findContours_legacy(img32s, contours_o, hierarchy_o, mode, method);
                 ASSERT_EQ(contours.size(), contours_o.size());
-                for (size_t i = 0; i < contours.size(); ++ i)
+                for (size_t i = 0; i < contours.size(); ++i)
                 {
                     SCOPED_TRACE(format("contour %zu", i));
                     EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
@@ -391,7 +400,7 @@ TEST_P(Imgproc_FindContours_Modes1, deep)
                 vector<Vec4i> hierarchy_o;
                 findContours_legacy(img, contours_o, hierarchy_o, mode, method);
                 ASSERT_EQ(contours.size(), contours_o.size());
-                for (size_t i = 0; i < contours.size(); ++ i)
+                for (size_t i = 0; i < contours.size(); ++i)
                 {
                     SCOPED_TRACE(format("contour %zu", i));
                     EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
@@ -404,11 +413,11 @@ TEST_P(Imgproc_FindContours_Modes1, deep)
 }
 
 INSTANTIATE_TEST_CASE_P(, Imgproc_FindContours_Modes1,
-    testing::Combine(
-        testing::Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE, RETR_FLOODFILL),
-        testing::Values(0, CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE, CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)
-    )
-);
+                        testing::Combine(testing::Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP,
+                                                         RETR_TREE, RETR_FLOODFILL),
+                                         testing::Values(0, CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE,
+                                                         CHAIN_APPROX_TC89_L1,
+                                                         CHAIN_APPROX_TC89_KCOS)));
 
 //==================================================================================================
 
@@ -421,7 +430,7 @@ TEST_P(Imgproc_FindContours_Modes2, new_accuracy)
     const int mode = get<0>(GetParam());
     const int method = get<1>(GetParam());
 
-    RNG & rng = TS::ptr()->get_rng();
+    RNG& rng = TS::ptr()->get_rng();
     const int blob_count = rng.uniform(1, 10);
     const Size sz(rng.uniform(640, 1920), rng.uniform(480, 1080));
     const int blob_sz = 50;
@@ -445,11 +454,9 @@ TEST_P(Imgproc_FindContours_Modes2, new_accuracy)
     {
         for (int x = 1; x < sz.width - 1; ++x)
         {
-            if (img.at<uchar>(y, x) != 0
-                && (img.at<uchar>(y - 1, x) == 0
-                    || img.at<uchar>(y + 1, x) == 0
-                    || img.at<uchar>(y, x + 1) == 0
-                    || img.at<uchar>(y, x - 1) == 0))
+            if (img.at<uchar>(y, x) != 0 &&
+                (img.at<uchar>(y - 1, x) == 0 || img.at<uchar>(y + 1, x) == 0 ||
+                 img.at<uchar>(y, x + 1) == 0 || img.at<uchar>(y, x - 1) == 0))
             {
                 cont_img.at<uchar>(y, x) = 255;
             }
@@ -495,7 +502,7 @@ TEST_P(Imgproc_FindContours_Modes2, approx)
     const int mode = get<0>(GetParam());
     const int method = get<1>(GetParam());
 
-    const Size sz { 500, 500 };
+    const Size sz {500, 500};
     Mat img = Mat::zeros(sz, CV_8UC1);
 
     for (int c = 0; c < 4; ++c)
@@ -503,7 +510,7 @@ TEST_P(Imgproc_FindContours_Modes2, approx)
         if (c != 0)
         {
             // noise + filter + threshold
-            RNG & rng = TS::ptr()->get_rng();
+            RNG& rng = TS::ptr()->get_rng();
             cvtest::randUni(rng, img, 0, 255);
 
             Mat fimg;
@@ -521,7 +528,7 @@ TEST_P(Imgproc_FindContours_Modes2, approx)
         {
             // circle with cut
             const Point center {250, 250};
-            const int r { 20 };
+            const int r {20};
             const Point cut {r, r};
             circle(img, center, r, Scalar(255), FILLED);
             rectangle(img, center, center + cut, Scalar(0), FILLED);
@@ -550,29 +557,26 @@ TEST_P(Imgproc_FindContours_Modes2, approx)
 // TODO: offset test
 
 // no RETR_FLOODFILL - no CV_32S input images
-INSTANTIATE_TEST_CASE_P(, Imgproc_FindContours_Modes2,
-    testing::Combine(
-        testing::Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE),
-        testing::Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE, CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)
-    )
-);
+INSTANTIATE_TEST_CASE_P(
+    , Imgproc_FindContours_Modes2,
+    testing::Combine(testing::Values(RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE),
+                     testing::Values(CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE, CHAIN_APPROX_TC89_L1,
+                                     CHAIN_APPROX_TC89_KCOS)));
 
 TEST(Imgproc_FindContours, link_runs)
 {
-
-    const Size sz { 500, 500 };
+    const Size sz {500, 500};
     Mat img = Mat::zeros(sz, CV_8UC1);
 
-//    // circle with cut
-//    const Point center {250, 250};
-//    const int r { 20 };
-//    const Point cut {r, r};
-//    circle(img, center, r, Scalar(255), FILLED);
-//    rectangle(img, center, center + cut, Scalar(0), FILLED);
-
+    //    // circle with cut
+    //    const Point center {250, 250};
+    //    const int r { 20 };
+    //    const Point cut {r, r};
+    //    circle(img, center, r, Scalar(255), FILLED);
+    //    rectangle(img, center, center + cut, Scalar(0), FILLED);
 
     // noise + filter + threshold
-    RNG & rng = TS::ptr()->get_rng();
+    RNG& rng = TS::ptr()->get_rng();
     cvtest::randUni(rng, img, 0, 255);
 
     Mat fimg;
@@ -585,13 +589,13 @@ TEST(Imgproc_FindContours, link_runs)
     vector<Vec4i> hierarchy;
     findContoursLinkRuns(img, contours, hierarchy);
 
-//    print_pts_2(contours);
+    //    print_pts_2(contours);
 
-//    Mat res = Mat::zeros(sz, CV_8UC1);
-//    drawContours(res, contours);
-//    imshow("res", res);
-//    imshow("img", img);
-//    waitKey(0);
+    //    Mat res = Mat::zeros(sz, CV_8UC1);
+    //    drawContours(res, contours);
+    //    imshow("res", res);
+    //    imshow("img", img);
+    //    waitKey(0);
 
 #if CHECK_OLD
     vector<vector<Point>> contours_o;
@@ -607,4 +611,5 @@ TEST(Imgproc_FindContours, link_runs)
 #endif
 }
 
-}} // opencv_test::<anonymous>::
+} // namespace
+} // namespace opencv_test
