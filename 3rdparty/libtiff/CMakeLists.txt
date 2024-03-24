@@ -428,7 +428,7 @@ set(lib_srcs
     tiff.h
     tiffio.h
     tiffiop.h
-    tiffvers.h
+    "${CMAKE_CURRENT_BINARY_DIR}/tiffvers.h"
     uvcode.h
     tiffio.hxx
     "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
