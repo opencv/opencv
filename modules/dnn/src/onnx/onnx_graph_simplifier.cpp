@@ -242,6 +242,95 @@ class AdjustSliceAllOptionalInputsSubgraph : public Subgraph {
     size_t num_inputs_;
 };
 
+/* Fusion for biased MatMul.
+
+   Graph before fusion: [Input] -> MatMul -> Add -> [Output]
+
+   Graph after fusion:  [Input] -> MatMul -> [Output]
+                                     \
+                                     bias
+*/
+
+class BiasedMatmulSubgraph : public Subgraph {
+ public:
+    BiasedMatmulSubgraph() {
+        int input = addNodeToMatch("");
+        matmul_id = addNodeToMatch("MatMul", input, addNodeToMatch(""));
+        add_id = addNodeToMatch("Add", addNodeToMatch(""), matmul_id);
+
+        setFusedNode("MatMul", input);
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE {
+        if (Subgraph::match(net, nodeId, matchedNodesIds)) {
+            auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+
+            // get input weight from MatMul
+            {
+                int initializer_id = std::max(onnx_net->getInputInitializerId(matchedNodesIds[matmul_id], 0),
+                                              onnx_net->getInputInitializerId(matchedNodesIds[matmul_id], 1));
+                if (initializer_id != -1) { // Initializer
+                    weight_name = onnx_net->getNameOfInitializer(initializer_id);
+                } else { // Constant layer
+                    const Ptr<ImportNodeWrapper> node = net->getNode(matchedNodesIds[matmul_id]);
+
+                    int constant_id = Subgraph::getInputNodeId(net, node, 0);
+                    auto constant_node = net->getNode(constant_id);
+                    if (constant_node->getType() == "Constant") {
+                        weight_name = node->getInputName(0);
+                    } else {
+                        constant_id = Subgraph::getInputNodeId(net, node, 1);
+                        constant_node = net->getNode(constant_id);
+                        if (constant_node->getType() == "Constant") {
+                            weight_name = node->getInputName(1);
+                        }
+                    }
+                }
+            }
+
+            // get input bias from Add
+            {
+                int initializer_id = std::max(onnx_net->getInputInitializerId(matchedNodesIds[add_id], 0),
+                                              onnx_net->getInputInitializerId(matchedNodesIds[add_id], 1));
+                if (initializer_id != -1) {
+                    bias_name = onnx_net->getNameOfInitializer(initializer_id);
+                } else { // Constant layer
+                    const Ptr<ImportNodeWrapper> node = net->getNode(matchedNodesIds[add_id]);
+
+                    int constant_id = Subgraph::getInputNodeId(net, node, 0);
+                    auto constant_node = net->getNode(constant_id);
+                    if (constant_node->getType() == "Constant") {
+                        bias_name = node->getInputName(0);
+                    } else {
+                        constant_id = Subgraph::getInputNodeId(net, node, 1);
+                        constant_node = net->getNode(constant_id);
+                        if (constant_node->getType() == "Constant") {
+                            bias_name = node->getInputName(1);
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+        return false;
+    }
+
+    virtual void finalize(const Ptr<ImportGraphWrapper>& net,
+                          const Ptr<ImportNodeWrapper>& fusedNode,
+                          std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE {
+        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        // add inputs
+        node->add_input(weight_name);
+        node->add_input(bias_name);
+    }
+
+ private:
+    int matmul_id, add_id;
+    std::string weight_name, bias_name;
+};
+
 /*  The fusion for the multi-head attention from vision transformer.
 
     Abbreviations:
@@ -1558,6 +1647,7 @@ public:
 void simplifySubgraphs(opencv_onnx::GraphProto& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
+    subgraphs.push_back(makePtr<BiasedMatmulSubgraph>());
     subgraphs.push_back(makePtr<AdjustSliceAllOptionalInputsSubgraph>(3));
     subgraphs.push_back(makePtr<AdjustSliceAllOptionalInputsSubgraph>(4));
     subgraphs.push_back(makePtr<GeluSubGraph>());

@@ -3080,6 +3080,10 @@ TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
     testONNXModels("layer_norm_no_fusion");
 }
 
+TEST_P(Test_ONNX_layers, MatMulAddFusion) {
+    testONNXModels("biased_matmul");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

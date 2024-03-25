@@ -34,6 +34,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         trans_b = params.get<bool>("transB", false);
         alpha = params.get<float>("alpha", 1.f);
         beta = params.get<float>("beta", 1.f);
+
+        real_ndims_C = params.get<int>("real_ndims_C", -1);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -48,8 +50,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
-        CV_CheckGE(inputs.size(), static_cast<size_t>(1), "DNN/MatMul: one varible input at least");
-        CV_CheckLE(inputs.size(), static_cast<size_t>(2), "DNN/MatMul: two variable inputs at most");
+        int num_inputs = inputs.size() + blobs.size();
+        CV_CheckGE(num_inputs, 2, "DNN/MatMul: two inputs at least");
+        CV_CheckLE(num_inputs, 3, "DNN/MatMul: three inputs at most");
 
         const auto shape_A = inputs[0], shape_B = blobs.empty() ? inputs[1] : shape(blobs[0]);
         CV_CheckGE(shape_A.size(), static_cast<size_t>(2), "DNN/MatMul: invalid shape of input A");
@@ -64,7 +67,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         int K_B = trans_b ? nB : mB;
         CV_CheckEQ(K_A, K_B, "DNN/MatMul: invalid dimension K");
 
-        // Check legal broadcast. It is legal for sure if A and B are 2d, or one of them is 2d.
+        // Check if inputs are broadcastable.
         MatShape common_shape;
         if (shape_A.size() != 2 || shape_B.size() != 2) {
             const auto &shape_more_dims = shape_A.size() > shape_B.size() ? shape_A : shape_B;
@@ -87,6 +90,24 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             common_shape.resize(2);
             common_shape[0] = M;
             common_shape[1] = N;
+        }
+
+        // Check if bias is broadcastable
+        if (num_inputs == 3) {
+            const auto shape_C = blobs.empty() ? inputs.back() : shape(blobs.back());
+            if (real_ndims_C == 1) { // (1) or (N)
+                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/MatMul: invalid dimension of C");
+            } else if (real_ndims_C >= 2) {
+                const auto &shape_large = common_shape.size() > shape_C.size() ? common_shape : shape_C;
+                const auto &shape_small = common_shape.size() > shape_C.size() ? shape_C : common_shape;
+                size_t diff_dims = shape_large.size() - shape_small.size();
+                for (size_t i = 0; i < shape_small.size(); i++) {
+                    const auto dl = shape_small[i], dm = shape_large[i + diff_dims];
+                    if (dl != 1 && dm != 1 && dl != dm) {
+                        CV_Error(Error::StsBadSize, "DNN/MatMul: invalid shape of C");
+                    }
+                }
+            }
         }
 
         outputs.assign(1, common_shape);
@@ -135,6 +156,27 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         const auto *a = A.ptr<const float>();
         auto *y = Y.ptr<float>();
         std::memset(y, 0, Y.total() * sizeof(float));
+        // add bias if existed
+        if ((inputs.size() + blobs.size()) == 3) {
+            const auto &C = blobs.empty() ? inputs.back() : blobs.back();
+            const auto &shape_Y = shape(Y);
+            if (real_ndims_C == 1) {
+                const auto *c = C.ptr<const float>();
+                const size_t inner_size = shape_Y.back(),
+                             batches = total(Y) / inner_size;
+                parallel_for_(Range(0, batches), [&] (const Range &r) {
+                    
+                    for (int i = r.start; i < r.end; i++) {
+                        const size_t output_offset = i * inner_size;
+                        for (size_t j = 0; j < inner_size; j++) {
+                            y[output_offset + j] = c[j];
+                        }
+                    }
+                }, double(batches * inner_size * (1 / 1024.0)));
+            } else {
+                broadcast(C, shape_Y, Y);
+            }
+        }
 
         if (blobs.empty()) {
             const auto &B = inputs[1];
@@ -311,6 +353,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     bool trans_b;
     float alpha;
     float beta;
+
+    int real_ndims_C;
 
     std::vector<float> packed_input_B;
 
