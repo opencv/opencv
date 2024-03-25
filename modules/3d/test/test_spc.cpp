@@ -1,31 +1,32 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 //
-// Created by jeffery on 24-3-14.
-//
-
+// Author: Zhangjie Chen <zhangjiec01@gmail.com>
 #include "test_precomp.hpp"
+#include <chrono>
 
 namespace opencv_test { namespace {
 
 TEST(SpC, FunctionTest) {
     // load point cloud
     // String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/ptclouds/cube.ply";
-    String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/ptclouds/two_cubes.ply";
-    // String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/ptclouds/bunny/bun_zipper_res4.ply";
-    // String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/ptclouds/SHREC19_lores/models/scan_000.obj";
+//     String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/ptclouds/two_cubes.ply";
+    String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/scan_040_simplified_005.obj";
+//    String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/scan_040_simplified_0005.obj";
     std::vector<cv::Point3f> vertices;
     std::vector<std::vector<int32_t>> indices;
-//    cv::loadMesh(test_file_path, vertices, indices);
     cv::loadPointCloud(test_file_path, vertices, cv::noArray(), cv::noArray(), indices);
 
-    cv::SpectralCluster cluster(0.03, 0.15);
+    cv::SpectralCluster cluster(0.15, 0.22);
 
     std::vector<int> results;
-
-    cluster.cluster(results, vertices, indices, 2);
-
-    std::cout << "Clustering Complete!" << std::endl;
+    auto start = std::chrono::high_resolution_clock::now();
+    cluster.cluster(results, vertices, indices, 7);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << "Clustering Complete! Time used: " << duration << " ms." << std::endl;
 }
-
 }
 }
 
