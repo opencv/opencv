@@ -64,7 +64,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             csl::TensorView<T> bias;
             if (input_bias_tensor.empty()) {
-                if (inputs.size() == 3) {
+                if (inputs.size() >= 3) {
                     auto bias_wrapper = inputs[2].dynamicCast<wrapper_type>();
                     bias = bias_wrapper->getView();
                 }

@@ -77,7 +77,7 @@ public:
         CV_CheckEQ(x_ndims - axis, w_ndims, "LayerNorm: shape of weight does not match with given axis and shape of input");
         for (int i = 0; i < w_ndims; ++i)
             CV_CheckEQ(x_shape[axis+i], w_shape[i], "LayerNorm: weight dimensions does not match with input dimensions");
-        if (num_inputs == 3)
+        if (num_inputs >= 3)
         {
             auto b_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
             CV_CheckEQ(w_shape.size(), b_shape.size(), "LayerNorm: shape of weight does not match with shape of bias");
@@ -124,7 +124,7 @@ public:
         const auto &scale = blobs.empty() ? inputs[1] : blobs.front();
         auto &output = outputs[0];
 
-        if ((inputs.size() + blobs.size()) == 3) {
+        if ((inputs.size() + blobs.size()) >= 3) {
             const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
             fastNorm(input, scale, bias, output, epsilon, static_cast<size_t>(axis));
         } else {
@@ -260,21 +260,14 @@ public:
         // set inputs : x
         op->set_input_x_by_name(*last_node, input_tensor_wrapper->name.c_str());
         op->update_input_desc_x(*input_tensor_desc);
-        // set inputs : gamma
+        // set inputs : gamma & beta
         if (blobs.empty()) {
             auto scale_tensor_wrapper = inputs[1].dynamicCast<CannBackendWrapper>();
             auto scale_tensor_desc = scale_tensor_wrapper->getTensorDesc();
             auto scale_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
             op->set_input_gamma_by_name(*scale_node, scale_tensor_wrapper->name.c_str());
             op->update_input_desc_gamma(*scale_tensor_desc);
-        } else {
-            const auto &scale_mat = blobs.front();
-            const auto op_const_scale = std::make_shared<CannConstOp>(scale_mat.data, scale_mat.type(), shape(scale_mat), cv::format("%s_w", name.c_str()));
-            op->set_input_gamma(*(op_const_scale->getOp()));
-            op->update_input_desc_gamma(*(op_const_scale->getTensorDesc()));
-        }
-        // set inputs : beta
-        if (blobs.empty()) {
+
             if (inputs.size() == 3) {
                 auto bias_tensor_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
                 auto bias_tensor_desc = bias_tensor_wrapper->getTensorDesc();
@@ -283,7 +276,12 @@ public:
                 op->update_input_desc_beta(*bias_tensor_desc);
             }
         } else {
-            if ((inputs.size() + blobs.size()) == 3) {
+            const auto &scale_mat = blobs.front();
+            const auto op_const_scale = std::make_shared<CannConstOp>(scale_mat.data, scale_mat.type(), shape(scale_mat), cv::format("%s_w", name.c_str()));
+            op->set_input_gamma(*(op_const_scale->getOp()));
+            op->update_input_desc_gamma(*(op_const_scale->getTensorDesc()));
+
+            if ((inputs.size() + blobs.size()) >= 3) {
                 const auto &bias_mat = blobs.back();
                 const auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), shape(bias_mat), cv::format("%s_b", name.c_str()));
                 op->set_input_beta(*(op_const_bias->getOp()));
