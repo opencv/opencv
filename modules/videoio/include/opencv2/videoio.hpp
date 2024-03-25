@@ -707,9 +707,6 @@ namespace internal { class VideoCapturePrivateAccessor; }
 
 The class provides C++ API for capturing video from cameras or for reading video files and image sequences.
 
-Here is how the class can be used:
-@include samples/cpp/videocapture_basic.cpp
-
 @note In @ref videoio_c "C API" the black-box structure `CvCapture` is used instead of %VideoCapture.
 @note
 -   (C++) A basic sample on using the %VideoCapture interface can be found at
@@ -991,6 +988,9 @@ class IVideoWriter;
 Check @ref tutorial_video_write "the corresponding tutorial" for more details
 */
 
+/** @example samples/cpp/videowriter_basic.cpp
+An example using VideoWriter class
+*/
 
 /** @brief Video writer class.
 

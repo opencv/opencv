@@ -2827,8 +2827,36 @@ the destination image will have the given size therefore the area of the boundin
 \par Reverse mapping
 
 You can get reverse mapping adding #WARP_INVERSE_MAP to `flags`
+ * This is an example of including code using the documentation comment format:
+ *
+ * \code{.cpp}
+*  // direct transform
+*  warpPolar(src, lin_polar_img, Size(),center, maxRadius, flags); // linear Polar
+ * warpPolar(src, log_polar_img, Size(), center, maxRadius, flags + WARP_POLAR_LOG); // semilog Polar
+ * // inverse transform
+ * warpPolar(lin_polar_img, recovered_lin_polar_img, src.size(), center, maxRadius, flags + WARP_INVERSE_MAP);
+ * warpPolar(log_polar_img, recovered_log_polar, src.size(), center, maxRadius, flags + WARP_POLAR_LOG + WARP_INVERSE_MAP);
+ * \endcode
 
-In addiction, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
+
+In addition, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
+* \code{.cpp}
+double angleRad, magnitude;
+double Kangle = dst.rows / CV_2PI;
+angleRad = phi / Kangle;
+if (flags & WARP_POLAR_LOG)
+{
+double Klog = dst.cols / std::log(maxRadius);
+magnitude = std::exp(rho / Klog);
+}
+else
+{
+double Klin = dst.cols / maxRadius;
+magnitude = rho / Klin;
+}
+int x = cvRound(center.x + magnitude * cos(angleRad));
+int y = cvRound(center.y + magnitude * sin(angleRad));
+* \endcode
 
 @param src Source image.
 @param dst Destination image. It will have same type as src.
