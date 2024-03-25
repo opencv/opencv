@@ -3049,9 +3049,7 @@ private:
 
     static void getLaplacianMat(Mat &in, Mat &out);
 
-    static void getAdjacencyMat(Mat &out, std::vector<std::vector<int32_t>> &indices);
-
-    void getDistanceMat(Mat &in, Mat &out, std::vector<Point3f> &vertices, std::vector<std::vector<int32_t>> &indices);
+    void getDistanceMat(Mat &out, std::vector<Point3f> &vertices, std::vector<std::vector<int32_t>> &indices);
 
     static void getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<int32_t>> &indices);
 
