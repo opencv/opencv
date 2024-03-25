@@ -4230,9 +4230,6 @@ without self-intersections. Otherwise, the function output is undefined.
  */
 CV_EXPORTS_W bool isContourConvex( InputArray contour );
 
-/** @example samples/cpp/intersectExample.cpp
-Examples of how intersectConvexConvex works
-*/
 
 /** @brief Finds intersection of two convex polygons
 
