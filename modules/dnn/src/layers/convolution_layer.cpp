@@ -1299,6 +1299,10 @@ public:
                 fastConvImpl = initFastConv(weightsMat, &biasvec[0], ngroups, K, C, kernel_size, strides,
                                             dilations, pads_begin, pads_end, conv_dim,
                                             preferableTarget == DNN_TARGET_CPU_FP16, canUseWinograd);
+                // This is legal to release weightsMat here as this is not used anymore for
+                // OpenCV inference. If network needs to be reinitialized (new shape, new backend)
+                // a new version of weightsMat is created at .finalize() from original weights
+                weightsMat.release();
             }
 
             runFastConv(inputs[0], outputs[0], fastConvImpl, nstripes, activ, reluslope, fusedAdd);
@@ -1405,6 +1409,7 @@ public:
         params.set("input_zeropoint", inputZp);
         params.set("input_scale", inputScale);
 
+        Mat weightsMat = blobs[0].reshape(1, numOutput);
         Mat weightsQuantized(weightsMat.rows, weightsMat.cols, CV_8S);
         Mat biasQuantized(1, numOutput, CV_32S);
         Mat outputMultiplier(1, numOutput, CV_32F);
