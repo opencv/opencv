@@ -1265,12 +1265,67 @@ typedef uint64 CV_DECL_ALIGNED(1) unaligned_uint64; \
 uint64 v = *(unaligned_uint64*)ptr; \
 return _Tpvec(v_reinterpret_as_##suffix(v_uint64x2(v, (uint64)123456))); \
 }
+#elif defined(__clang__) && defined(__arm__)
+#define OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ \
+typedef _Tp CV_DECL_ALIGNED(1) unaligned_ptr; \
+unaligned_ptr* uptr = (unaligned_ptr*)ptr; \
+return _Tpvec(vcombine_##suffix(vld1_##suffix(uptr), vdup_n_##suffix((_Tp)0))); \
+}
 #else
 #define OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
 inline _Tpvec v_load_low(const _Tp* ptr) \
 { return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr), vdup_n_##suffix((_Tp)0))); }
 #endif
 
+#if defined(__clang__) && defined(__arm__)
+#define OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(_Tpvec, _Tp, suffix) \
+inline _Tpvec v_load(const _Tp* ptr) \
+{ \
+typedef _Tp CV_DECL_ALIGNED(1) unaligned_ptr; \
+unaligned_ptr* uptr = (unaligned_ptr*)ptr; \
+return _Tpvec(vld1q_##suffix(uptr)); \
+} \
+inline _Tpvec v_load_aligned(const _Tp* ptr) \
+{ return _Tpvec(vld1q_##suffix(ptr)); } \
+OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
+inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
+{ \
+typedef _Tp CV_DECL_ALIGNED(1) unaligned_ptr; \
+unaligned_ptr* uptr0 = (unaligned_ptr*)ptr0; \
+unaligned_ptr* uptr1 = (unaligned_ptr*)ptr1; \
+return _Tpvec(vcombine_##suffix(vld1_##suffix(uptr0), vld1_##suffix(uptr1))); \
+} \
+inline void v_store(_Tp* ptr, const _Tpvec& a) \
+{ \
+typedef _Tp CV_DECL_ALIGNED(1) unaligned_ptr; \
+unaligned_ptr* uptr = (unaligned_ptr*)ptr; \
+vst1q_##suffix(uptr, a.val); \
+} \
+inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
+{ vst1q_##suffix(ptr, a.val); } \
+inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a) \
+{ vst1q_##suffix(ptr, a.val); } \
+inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode /*mode*/) \
+{ \
+typedef _Tp CV_DECL_ALIGNED(1) unaligned_ptr; \
+unaligned_ptr* uptr = (unaligned_ptr*)ptr; \
+vst1q_##suffix(uptr, a.val); \
+} \
+inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
+{ \
+typedef _Tp CV_DECL_ALIGNED(1) unaligned_ptr; \
+unaligned_ptr* uptr = (unaligned_ptr*)ptr; \
+vst1_##suffix(uptr, vget_low_##suffix(a.val)); \
+} \
+inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
+{ \
+typedef _Tp CV_DECL_ALIGNED(1) unaligned_ptr; \
+unaligned_ptr* uptr = (unaligned_ptr*)ptr; \
+vst1_##suffix(uptr, vget_high_##suffix(a.val)); \
+}
+#else
 #define OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(_Tpvec, _Tp, suffix) \
 inline _Tpvec v_load(const _Tp* ptr) \
 { return _Tpvec(vld1q_##suffix(ptr)); } \
@@ -1291,6 +1346,7 @@ inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
 { vst1_##suffix(ptr, vget_low_##suffix(a.val)); } \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
 { vst1_##suffix(ptr, vget_high_##suffix(a.val)); }
+#endif
 
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int8x16, schar, s8)
