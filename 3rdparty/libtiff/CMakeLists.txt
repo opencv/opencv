@@ -361,6 +361,7 @@ set(LIBTIFF_MAJOR_VERSION "4")
 set(LIBTIFF_MINOR_VERSION "6")
 set(LIBTIFF_MICRO_VERSION "0")
 set(LIBTIFF_VERSION "${LIBTIFF_MAJOR_VERSION}.${LIBTIFF_MINOR_VERSION}.${LIBTIFF_MICRO_VERSION}")
+file(READ "RELEASE-DATE" LIBTIFF_RELEASE_DATE content)
 
 set(TIFF_MAX_DIR_COUNT "1048576")
 
@@ -427,7 +428,7 @@ set(lib_srcs
     tiff.h
     tiffio.h
     tiffiop.h
-    tiffvers.h
+    "${CMAKE_CURRENT_BINARY_DIR}/tiffvers.h"
     uvcode.h
     tiffio.hxx
     "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
