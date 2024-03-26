@@ -39,7 +39,7 @@ cv::Point2d world2dem( const cv::Point2d&, const cv::Size&);
 
 cv::Point2d pixel2world( const int&, const int&, const cv::Size& );
 
-void add_color( cv::Vec3b& pix, const uchar& b, const uchar& g, const uchar& r );
+void add_color( cv::Vec3b& pix, const uint8_t& b, const uint8_t& g, const uint8_t& r );
 
 
 
@@ -64,7 +64,7 @@ cv::Vec<DATATYPE,N> lerp( cv::Vec<DATATYPE,N> const& minColor,
 
     cv::Vec<DATATYPE,N> output;
     for( int i=0; i<N; i++ ){
-        output[i] = (uchar)(((1-t)*minColor[i]) + (t * maxColor[i]));
+        output[i] = (uint8_t)(((1-t)*minColor[i]) + (t * maxColor[i]));
     }
     return output;
 }
@@ -142,7 +142,7 @@ cv::Point2d pixel2world( const int& x, const int& y, const cv::Size& size ){
 /*
  * Add color to a specific pixel color value
 */
-void add_color( cv::Vec3b& pix, const uchar& b, const uchar& g, const uchar& r ){
+void add_color( cv::Vec3b& pix, const uint8_t& b, const uint8_t& g, const uint8_t& r ){
 
     if( pix[0] + b < 255 && pix[0] + b >= 0 ){ pix[0] += b; }
     if( pix[1] + g < 255 && pix[1] + g >= 0 ){ pix[1] += g; }
