@@ -183,9 +183,9 @@ struct PyOpenCV_Converter
 };
 
 
-// --- uchar
-template<> bool pyopencv_to(PyObject* obj, unsigned char& value, const ArgInfo& info);
-template<> PyObject* pyopencv_from(const unsigned char& value);
+// --- uint8_t
+template<> bool pyopencv_to(PyObject* obj, uint8_t& value, const ArgInfo& info);
+template<> PyObject* pyopencv_from(const uint8_t& value);
 
 // --- char
 template<> bool pyopencv_to(PyObject* obj, char& value, const ArgInfo& info);

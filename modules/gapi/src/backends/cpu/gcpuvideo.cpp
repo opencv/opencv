@@ -38,18 +38,18 @@ GAPI_OCV_KERNEL(GCPUBuildOptFlowPyramid, cv::gapi::video::GBuildOptFlowPyramid)
 
 GAPI_OCV_KERNEL(GCPUCalcOptFlowLK, cv::gapi::video::GCalcOptFlowLK)
 {
-    static void run(const cv::Mat                    &prevImg,
-                    const cv::Mat                    &nextImg,
-                    const std::vector<cv::Point2f>   &prevPts,
-                    const std::vector<cv::Point2f>   &predPts,
-                    const cv::Size                   &winSize,
-                    const cv::Scalar                 &maxLevel,
-                    const cv::TermCriteria           &criteria,
-                          int                         flags,
-                          double                      minEigThresh,
-                          std::vector<cv::Point2f>   &outPts,
-                          std::vector<unsigned char> &status,
-                          std::vector<float>         &err)
+    static void run(const cv::Mat                  &prevImg,
+                    const cv::Mat                  &nextImg,
+                    const std::vector<cv::Point2f> &prevPts,
+                    const std::vector<cv::Point2f> &predPts,
+                    const cv::Size                 &winSize,
+                    const cv::Scalar               &maxLevel,
+                    const cv::TermCriteria         &criteria,
+                          int                       flags,
+                          double                    minEigThresh,
+                          std::vector<cv::Point2f> &outPts,
+                          std::vector<uint8_t>     &status,
+                          std::vector<float>       &err)
     {
         if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
             outPts = predPts;
@@ -60,18 +60,18 @@ GAPI_OCV_KERNEL(GCPUCalcOptFlowLK, cv::gapi::video::GCalcOptFlowLK)
 
 GAPI_OCV_KERNEL(GCPUCalcOptFlowLKForPyr, cv::gapi::video::GCalcOptFlowLKForPyr)
 {
-    static void run(const std::vector<cv::Mat>       &prevPyr,
-                    const std::vector<cv::Mat>       &nextPyr,
-                    const std::vector<cv::Point2f>   &prevPts,
-                    const std::vector<cv::Point2f>   &predPts,
-                    const cv::Size                   &winSize,
-                    const cv::Scalar                 &maxLevel,
-                    const cv::TermCriteria           &criteria,
-                          int                         flags,
-                          double                      minEigThresh,
-                          std::vector<cv::Point2f>   &outPts,
-                          std::vector<unsigned char> &status,
-                          std::vector<float>         &err)
+    static void run(const std::vector<cv::Mat>     &prevPyr,
+                    const std::vector<cv::Mat>     &nextPyr,
+                    const std::vector<cv::Point2f> &prevPts,
+                    const std::vector<cv::Point2f> &predPts,
+                    const cv::Size                 &winSize,
+                    const cv::Scalar               &maxLevel,
+                    const cv::TermCriteria         &criteria,
+                          int                       flags,
+                          double                    minEigThresh,
+                          std::vector<cv::Point2f> &outPts,
+                          std::vector<uint8_t>     &status,
+                          std::vector<float>       &err)
     {
         if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
             outPts = predPts;
