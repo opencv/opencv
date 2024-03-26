@@ -378,7 +378,7 @@ GAPI_OCV_KERNEL(OCVPostProcess, PostProcess) {
         const int h = cls_data_shape[1];
         const int w = cls_data_shape[2];
 
-        std::vector<uchar> pixel_mask(h * w, 0);
+        std::vector<uint8_t> pixel_mask(h * w, 0);
         std::unordered_map<int, int> group_mask;
         std::vector<cv::Point> points;
         for (int i = 0; i < static_cast<int>(pixel_mask.size()); i++) {
@@ -388,7 +388,7 @@ GAPI_OCV_KERNEL(OCVPostProcess, PostProcess) {
                 group_mask[i] = -1;
             }
         }
-        std::vector<uchar> link_mask(link_data.size(), 0);
+        std::vector<uint8_t> link_mask(link_data.size(), 0);
         for (size_t i = 0; i < link_mask.size(); i++) {
             link_mask[i] = link_data[i] >= link_conf_threshold;
         }
@@ -400,9 +400,9 @@ GAPI_OCV_KERNEL(OCVPostProcess, PostProcess) {
                     if (nx == point.x && ny == point.y)
                         continue;
                     if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                        uchar pixel_value = pixel_mask[size_t(ny) * size_t(w) + size_t(nx)];
-                        uchar link_value = link_mask[(size_t(point.y) * size_t(w) + size_t(point.x))
-                                                     *neighbours + neighbour];
+                        uint8_t pixel_value = pixel_mask[size_t(ny) * size_t(w) + size_t(nx)];
+                        uint8_t link_value = link_mask[(size_t(point.y) * size_t(w) + size_t(point.x))
+                                                       *neighbours + neighbour];
                         if (pixel_value && link_value) {
                             join(point.x + point.y * w, nx + ny * w, group_mask);
                         }
