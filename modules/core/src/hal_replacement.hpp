@@ -413,6 +413,24 @@ inline int hal_ni_merge64s(const int64 **src_data, int64 *dst_data, int len, int
 #define cv_hal_merge64s hal_ni_merge64s
 //! @endcond
 
+/**
+@param x source X arrays
+@param y source Y arrays
+@param mag destination magnitude array
+@param angle destination angle array
+@param len length of arrays
+@param angleInDegrees if set to true return angles in degrees, otherwise in radians
+*/
+//! @addtogroup core_hal_interface_fastAtan Atan calculation
+//! @{
+inline int hal_ni_cartToPolar32f(const float* x, const float* y, float* mag, float* angle, int len, bool angleInDegrees) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_cartToPolar64f(const double* x, const double* y, double* mag, double* angle, int len, bool angleInDegrees) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_cartToPolar32f hal_ni_cartToPolar32f
+#define cv_hal_cartToPolar64f hal_ni_cartToPolar64f
+//! @endcond
 
 /**
 @param y source Y arrays
@@ -450,6 +468,24 @@ inline int hal_ni_magnitude64f(const double *x, const double  *y, double *dst, i
 #define cv_hal_magnitude64f hal_ni_magnitude64f
 //! @endcond
 
+/**
+@param mag source magnitude arrays
+@param mag source angle arrays
+@param x destination X array
+@param y destination Y array
+@param len length of arrays
+@param angleInDegrees if set to true interpret angles from degrees, otherwise from radians
+*/
+//! @addtogroup core_hal_interface_fastAtan Atan calculation
+//! @{
+inline int hal_ni_polarToCart32f(const float* mag, const float* angle, float* x, float* y, int len, bool angleInDegrees) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_polarToCart64f(const double* mag, const double* angle, double* x, double* y, int len, bool angleInDegrees) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_polarToCart32f hal_ni_polarToCart32f
+#define cv_hal_polarToCart64f hal_ni_polarToCart64f
+//! @endcond
 
 /**
 @param src source array

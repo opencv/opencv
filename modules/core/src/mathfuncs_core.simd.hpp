@@ -9,6 +9,8 @@ namespace cv { namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 // forward declarations
+void cartToPolar32f(const float *X, const float *Y, float* mag, float *angle, int len, bool angleInDegrees);
+void cartToPolar64f(const double *X, const double *Y, double* mag, double *angle, int len, bool angleInDegrees);
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees);
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
@@ -118,7 +120,81 @@ struct v_atan_f32
 
 } // anonymous::
 
-///////////////////////////////////// ATAN2 ////////////////////////////////////
+static void cartToPolar32f_(const float *X, const float *Y, float *mag, float *angle, int len, bool angleInDegrees )
+{
+    float scale = angleInDegrees ? 1.f : (float)(CV_PI/180);
+    int i = 0;
+#if CV_SIMD
+    const int VECSZ = VTraits<v_float32>::vlanes();
+    v_atan_f32 v(scale);
+
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            // if it's inplace operation, we cannot repeatedly process
+            // the tail for the second time, so we have to use the
+            // scalar code
+            if( i == 0 || angle == X || angle == Y )
+                break;
+            i = len - VECSZ*2;
+        }
+
+        v_float32 x0 = vx_load(X + i);
+        v_float32 y0 = vx_load(Y + i);
+        v_float32 x1 = vx_load(X + i + VECSZ);
+        v_float32 y1 = vx_load(Y + i + VECSZ);
+
+        v_float32 m0 = v_sqrt(v_muladd(x0, x0, v_mul(y0, y0)));
+        v_float32 m1 = v_sqrt(v_muladd(x1, x1, v_mul(y1, y1)));
+
+        v_float32 r0 = v.compute(y0, x0);
+        v_float32 r1 = v.compute(y1, x1);
+
+        v_store(mag + i, m0);
+        v_store(mag + i + VECSZ, m1);
+
+        v_store(angle + i, r0);
+        v_store(angle + i + VECSZ, r1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        float x0 = X[i], y0 = Y[i];
+        mag[i] = std::sqrt(x0*x0 + y0*y0);
+        angle[i] = atan_f32(y0, x0)*scale;
+    }
+}
+
+void cartToPolar32f(const float *X, const float *Y, float *mag, float *angle, int len, bool angleInDegrees )
+{
+    CV_INSTRUMENT_REGION();
+    cartToPolar32f_(X, Y, mag, angle, len, angleInDegrees );
+}
+
+void cartToPolar64f(const double *X, const double *Y, double *mag, double *angle, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    const int BLKSZ = 128;
+    float ybuf[BLKSZ], xbuf[BLKSZ], mbuf[BLKSZ], abuf[BLKSZ];
+    for( int i = 0; i < len; i += BLKSZ )
+    {
+        int j, blksz = std::min(BLKSZ, len - i);
+        for( j = 0; j < blksz; j++ )
+        {
+            xbuf[j] = (float)X[i + j];
+            ybuf[j] = (float)Y[i + j];
+        }
+        cartToPolar32f_(xbuf, ybuf, mbuf, abuf, blksz, angleInDegrees);
+        for( j = 0; j < blksz; j++ )
+            mag[i + j] = mbuf[j];
+        for( j = 0; j < blksz; j++ )
+            angle[i + j] = abuf[j];
+    }
+}
 
 static void fastAtan32f_(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
