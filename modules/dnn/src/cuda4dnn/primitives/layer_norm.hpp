@@ -28,10 +28,19 @@ namespace cv { namespace dnn { namespace cuda4dnn {
      public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        LayerNormOp(csl::Stream stream_, int normalized_axis, float epsilon_, size_t loops)
+        LayerNormOp(csl::Stream stream_, const Mat &scale, const Mat &bias, int normalized_axis, float epsilon_, size_t loops)
             : stream(std::move(stream_)), epsilon(epsilon_) {
             CV_CheckGE(normalized_axis, 0, "LayerNorm/CUDA: axis needs to be normalized");
             axis = static_cast<size_t>(normalized_axis);
+
+            if (!scale.empty()) {
+                input_scale_tensor = csl::makeTensorHeader<T>(scale);
+                csl::copyMatToTensor<T>(scale, input_scale_tensor, stream);
+            }
+            if (!bias.empty()) {
+                input_bias_tensor = csl::makeTensorHeader<T>(bias);
+                csl::copyMatToTensor<T>(bias, input_bias_tensor, stream);
+            }
 
             csl::WorkspaceBuilder builder;
             builder.require<float>(loops);
@@ -43,10 +52,25 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                      const std::vector<cv::Ptr<BackendWrapper>>& outputs,
                      csl::Workspace& workspace) override {
             auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
-            auto scale_wrapper = inputs[1].dynamicCast<wrapper_type>();
-
             auto input = input_wrapper->getView();
-            auto scale = scale_wrapper->getView();
+
+            csl::TensorView<T> scale;
+            if (input_scale_tensor.empty()) {
+                auto scale_wrapper = inputs[1].dynamicCast<wrapper_type>();
+                scale = scale_wrapper->getView();
+            } else {
+                scale = csl::TensorView<T>(input_scale_tensor);
+            }
+
+            csl::TensorView<T> bias;
+            if (input_bias_tensor.empty()) {
+                if (inputs.size() >= 3) {
+                    auto bias_wrapper = inputs[2].dynamicCast<wrapper_type>();
+                    bias = bias_wrapper->getView();
+                }
+            } else {
+                bias = csl::TensorView<T>(input_bias_tensor);
+            }
 
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
@@ -67,9 +91,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
                 kernels::reduce_mean_sqr_sum<T>(stream, mean, inv_stddev, input, norm_size);
                 kernels::compute_normalization_scale(stream, inv_stddev, mean, inv_stddev, norm_size, epsilon);
-                if (inputs.size() == 3) {
-                    auto bias_wrapper = inputs[2].dynamicCast<wrapper_type>();
-                    auto bias = bias_wrapper->getView();
+                if (!bias.empty()) {
                     kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, bias, mean, inv_stddev, norm_size);
                 } else {
                     kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, mean, inv_stddev, norm_size);
@@ -81,6 +103,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
      private:
         csl::Stream stream;
+        csl::Tensor<T> input_scale_tensor;
+        csl::Tensor<T> input_bias_tensor;
 
         float epsilon;
         size_t axis;
