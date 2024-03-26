@@ -14,8 +14,8 @@ void vector_double_to_Mat(std::vector<double>& v_double, cv::Mat& mat);
 void Mat_to_vector_float(cv::Mat& mat, std::vector<float>& v_float);
 void vector_float_to_Mat(std::vector<float>& v_float, cv::Mat& mat);
 
-void Mat_to_vector_uchar(cv::Mat& mat, std::vector<unsigned char>& v_uchar);
-void vector_uchar_to_Mat(std::vector<unsigned char>& v_uchar, cv::Mat& mat);
+void Mat_to_vector_uchar(cv::Mat& mat, std::vector<uint8_t>& v_uchar);
+void vector_uchar_to_Mat(std::vector<uint8_t>& v_uchar, cv::Mat& mat);
 
 void Mat_to_vector_char(cv::Mat& mat, std::vector<char>& v_char);
 void vector_char_to_Mat(std::vector<char>& v_char, cv::Mat& mat);

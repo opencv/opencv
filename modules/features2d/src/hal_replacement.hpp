@@ -72,7 +72,7 @@
    @param height Source image height
    @param type FAST type
 */
-inline int hal_ni_FAST_dense(const unsigned char* src_data, size_t src_step, unsigned char* dst_data, size_t dst_step, int width, int height, cv::FastFeatureDetector::DetectorType type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_FAST_dense(const uint8_t* src_data, size_t src_step, uint8_t* dst_data, size_t dst_step, int width, int height, cv::FastFeatureDetector::DetectorType type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_FAST_dense hal_ni_FAST_dense
@@ -84,7 +84,7 @@ inline int hal_ni_FAST_dense(const unsigned char* src_data, size_t src_step, uns
    @param dst_data,dst_step Destination mask after NMS
    @param width,height Source mask dimensions
 */
-inline int hal_ni_FAST_NMS(const unsigned char* src_data, size_t src_step, unsigned char* dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_FAST_NMS(const uint8_t* src_data, size_t src_step, uint8_t* dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_FAST_NMS hal_ni_FAST_NMS
@@ -102,7 +102,7 @@ inline int hal_ni_FAST_NMS(const unsigned char* src_data, size_t src_step, unsig
    @param nonmax_suppression Indicates if make nonmaxima suppression or not.
    @param type FAST type
 */
-inline int hal_ni_FAST(const unsigned char* src_data, size_t src_step, int width, int height, unsigned char* keypoints_data, size_t* keypoints_count, int threshold, bool nonmax_suppression, int /*cv::FastFeatureDetector::DetectorType*/ type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_FAST(const uint8_t* src_data, size_t src_step, int width, int height, uint8_t* keypoints_data, size_t* keypoints_count, int threshold, bool nonmax_suppression, int /*cv::FastFeatureDetector::DetectorType*/ type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_FAST hal_ni_FAST
