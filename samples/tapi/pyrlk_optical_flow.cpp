@@ -12,7 +12,6 @@
 using namespace std;
 using namespace cv;
 
-typedef unsigned char uchar;
 #define LOOP_NUM 10
 int64 work_begin = 0;
 int64 work_end = 0;
@@ -30,7 +29,7 @@ static double getTime()
     return work_end * 1000. / getTickFrequency();
 }
 
-static void drawArrows(UMat& _frame, const vector<Point2f>& prevPts, const vector<Point2f>& nextPts, const vector<uchar>& status,
+static void drawArrows(UMat& _frame, const vector<Point2f>& prevPts, const vector<Point2f>& nextPts, const vector<uint8_t>& status,
                        Scalar line_color = Scalar(0, 0, 255))
 {
     Mat frame = _frame.getMat(ACCESS_WRITE);
