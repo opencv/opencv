@@ -79,7 +79,7 @@ enum ExifTagName
     INVALID_TAG             = 0xFFFF    ///< Shows that the tag was not recognized
 };
 
-enum Endianess_t
+enum Endianness_t
 {
     INTEL = 0x49,
     MOTO = 0x4D,
@@ -179,7 +179,7 @@ public:
 private:
     std::vector<unsigned char> m_data;
     std::map<int, ExifEntry_t > m_exif;
-    Endianess_t m_format;
+    Endianness_t m_format;
 
     void parseExif();
     bool checkTagMark() const;
@@ -193,7 +193,7 @@ private:
     uint16_t getResolutionUnit( const size_t offset ) const;
     uint16_t getYCbCrPos( const size_t offset ) const;
 
-    Endianess_t getFormat() const;
+    Endianness_t getFormat() const;
 
     ExifEntry_t parseExifEntry( const size_t offset );
 
