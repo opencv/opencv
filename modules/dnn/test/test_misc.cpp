@@ -244,11 +244,7 @@ TEST(blobFromImagesWithParams_4ch, multi_image)
 
 TEST(readNet, Regression)
 {
-    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
-                      findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
-    EXPECT_FALSE(net.empty());
-    net = readNet(findDataFile("dnn/opencv_face_detector.caffemodel", false),
-                  findDataFile("dnn/opencv_face_detector.prototxt"));
+    Net net = readNet(findDataFile("dnn/onnx/models/squeezenet.onnx"), "");
     EXPECT_FALSE(net.empty());
     net = readNet(findDataFile("dnn/tiny-yolo-voc.cfg"),
                   findDataFile("dnn/tiny-yolo-voc.weights", false));
@@ -261,9 +257,7 @@ TEST(readNet, Regression)
 TEST(readNet, do_not_call_setInput)  // https://github.com/opencv/opencv/issues/16618
 {
     // 1. load network
-    const string proto = findDataFile("dnn/squeezenet_v1.1.prototxt");
-    const string model = findDataFile("dnn/squeezenet_v1.1.caffemodel", false);
-    Net net = readNetFromCaffe(proto, model);
+    Net net = readNet(findDataFile("dnn/onnx/models/squeezenet.onnx"), "");
 
     // 2. mistake: no inputs are specified through .setInput()
 
@@ -330,12 +324,11 @@ TEST_P(dump, Regression)
 {
     const int backend  = get<0>(GetParam());
     const int target   = get<1>(GetParam());
-    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
-                      findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
+    Net net = readNet(findDataFile("dnn/onnx/models/squeezenet.onnx"), "");
 
-    ASSERT_EQ(net.getLayerInputs(net.getLayerId("fire2/concat")).size(), 2);
+    ASSERT_EQ(net.getLayerInputs(net.getLayerId("onnx_node_output_0!fire2/concat_1")).size(), 2);
 
-    int size[] = {1, 3, 227, 227};
+    int size[] = {1, 3, 224, 224};
     Mat input = cv::Mat::ones(4, size, CV_32F);
     net.setInput(input);
     net.setPreferableBackend(backend);
