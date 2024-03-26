@@ -37,7 +37,7 @@ static View::stepsT defaultSteps(const cv::GMatDesc& desc) {
 }
 } // anonymous namespace
 
-View::View(const cv::GMatDesc& desc, uchar* data, size_t step, DestroyCallback&& cb)
+View::View(const cv::GMatDesc& desc, uint8_t* data, size_t step, DestroyCallback&& cb)
     : m_desc(checkDesc(desc))
     , m_data(data)
     , m_steps([this, step](){
@@ -51,7 +51,7 @@ View::View(const cv::GMatDesc& desc, uchar* data, size_t step, DestroyCallback&&
     , m_cb(std::move(cb)) {
 }
 
-View::View(const cv::GMatDesc& desc, uchar* data, const stepsT &steps, DestroyCallback&& cb)
+View::View(const cv::GMatDesc& desc, uint8_t* data, const stepsT &steps, DestroyCallback&& cb)
     : m_desc(checkDesc(desc))
     , m_data(data)
     , m_steps(steps == stepsT{} ? defaultSteps(m_desc): steps)
