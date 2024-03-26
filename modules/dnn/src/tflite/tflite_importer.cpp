@@ -67,6 +67,7 @@ private:
     void parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseSplit(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
     void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
@@ -277,6 +278,7 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["QUANTIZE"] = &TFLiteImporter::parseQuantize;
     dispatch["DEQUANTIZE"] = &TFLiteImporter::parseDequantize;
     dispatch["SPLIT"] = &TFLiteImporter::parseSplit;
+    dispatch["FULLY_CONNECTED"] = &TFLiteImporter::parseFullyConnected;
     dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
     return dispatch;
 }
@@ -816,6 +818,16 @@ void TFLiteImporter::parseSplit(const Operator& op, const std::string& opcode, L
     auto options = op.builtin_options_as_SplitOptions();
     CV_Assert(options);
     layerParams.set("num_split", options->num_splits());
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Gemm";
+    int idx = op.inputs()->Get(1);
+    Mat weights = allTensors[idx];
+    layerParams.blobs.resize(1, weights);
+    layerParams.set("transB", true);
+    layerParams.set("constB", true);
     addLayer(layerParams, op);
 }
 
