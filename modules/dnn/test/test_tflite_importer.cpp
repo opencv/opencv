@@ -235,6 +235,10 @@ TEST_P(Test_TFLite, replicate_by_pack) {
     testLayer("replicate_by_pack", l1, lInf);
 }
 
+TEST_P(Test_TFLite, split) {
+    testLayer("split");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace
