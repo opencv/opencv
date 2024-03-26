@@ -1361,7 +1361,7 @@ inline v_float32x4 v_pack_triplets(const v_float32x4& vec)
 
 /////// FP16 support ////////
 
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     vec_ushort8 vf16 = vec_ld_l8((const ushort*)ptr);
 #if CV_VSX3 && defined(vec_extract_fp_from_shorth)
@@ -1388,7 +1388,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
 #endif
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
 // fixme: Is there any builtin op or intrinsic that cover "xvcvsphp"?
 #if CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)

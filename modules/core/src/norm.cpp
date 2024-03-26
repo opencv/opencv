@@ -363,7 +363,7 @@ CV_DEF_NORM_ALL(32f, float, float, double, double)
 CV_DEF_NORM_ALL(64f, double, double, double, double)
 CV_DEF_NORM_ALL(64u, uint64, uint64, double, double)
 CV_DEF_NORM_ALL(64s, int64, uint64, double, double)
-CV_DEF_NORM_ALL(16f, float16_t, float, float, float)
+CV_DEF_NORM_ALL(16f, hfloat, float, float, float)
 CV_DEF_NORM_ALL(16bf, bfloat, float, float, float)
 
 typedef int (*NormFunc)(const uchar*, const uchar*, void*, int, int);

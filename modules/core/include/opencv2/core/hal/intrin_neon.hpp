@@ -429,10 +429,10 @@ OPENCV_HAL_IMPL_NEON_INIT(int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_INIT(uint64x2, uint64, u64)
 OPENCV_HAL_IMPL_NEON_INIT(int64x2, int64, s64)
 #ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-// float16_t workaround
+// hfloat workaround
 #define OPENCV_HAL_IMPL_NEON_INIT_1(_Tpv, _Tp, suffix) \
-inline v_##_Tpv v_setzero_##suffix() { typedef __fp16 float16_t; return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
-inline v_##_Tpv v_setall_##suffix(_Tp v) { typedef __fp16 float16_t; return v_##_Tpv(vdupq_n_##suffix(v)); } \
+inline v_##_Tpv v_setzero_##suffix() { typedef __fp16 hfloat; return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
+inline v_##_Tpv v_setall_##suffix(_Tp v) { typedef __fp16 hfloat; return v_##_Tpv(vdupq_n_##suffix(v)); } \
 inline _Tpv##_t vreinterpretq_##suffix##_##suffix(_Tpv##_t v) { return v; } \
 inline v_uint8x16 v_reinterpret_as_u8(const v_##_Tpv& v) { return v_uint8x16(vreinterpretq_u8_##suffix(v.val)); } \
 inline v_int8x16 v_reinterpret_as_s8(const v_##_Tpv& v) { return v_int8x16(vreinterpretq_s8_##suffix(v.val)); } \
@@ -1425,7 +1425,7 @@ OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint16x8, u16)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int16x8, s16)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int32x4, s32)
-// OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float16x8, f16) // no conversion from int to cv::float16_t
+// OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float16x8, f16) // no conversion from int to cv::hfloat
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float32x4, f32)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint64x2, u64)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int64x2, s64)
@@ -1573,8 +1573,8 @@ OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, ushort, min, min, u16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, max, max, s16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, min, min, s16)
 #ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, max, max, f16) // Might have problem since return type is float16_t
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, min, min, f16) // Might have problem since return type is float16_t
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, max, max, f16) // Might have problem since return type is hfloat
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, min, min, f16) // Might have problem since return type is hfloat
 #endif
 
 #if CV_NEON_AARCH64
@@ -2138,7 +2138,7 @@ OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int16x8, short, s16)
 #ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float16x8, __fp16, f16) // Might have problem since return type is float16_t
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float16x8, __fp16, f16) // Might have problem since return type is hfloat
 #endif
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint32x4, uint, u32)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int32x4, int, s32)
@@ -2476,7 +2476,7 @@ OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(uint64, u64)
 #ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 inline v_float16x8 v_cvt_f16(const v_float32x4 &a)
 {
-    typedef __fp16 float16_t;
+    typedef __fp16 hfloat;
     float16x4_t zero = vdup_n_f16((__fp16)0.0f);
     return v_float16x8(vcombine_f16(vcvt_f16_f32(a.val), zero));
 }
@@ -2646,7 +2646,7 @@ inline v_uint16x8 v_lut_pairs(const ushort* tab, const int* idx) { return v_rein
 inline v_uint16x8 v_lut_quads(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_quads((short*)tab, idx)); }
 
 #ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-inline v_float16x8 v_lut(const float16_t *tab, const int *idx)
+inline v_float16x8 v_lut(const hfloat *tab, const int *idx)
 {
     const __fp16 *t = (const __fp16*)tab;
     __fp16 CV_DECL_ALIGNED(32) elems[8] =
@@ -2662,7 +2662,7 @@ inline v_float16x8 v_lut(const float16_t *tab, const int *idx)
     };
     return v_float16x8(vld1q_f16(elems));
 }
-inline v_float16x8 v_lut_pairs(const float16_t *tab, const int *idx)
+inline v_float16x8 v_lut_pairs(const hfloat *tab, const int *idx)
 {
     const __fp16 *t = (const __fp16*)tab;
     __fp16 CV_DECL_ALIGNED(32) elems[8] =
@@ -2678,7 +2678,7 @@ inline v_float16x8 v_lut_pairs(const float16_t *tab, const int *idx)
     };
     return v_float16x8(vld1q_f16(elems));
 }
-inline v_float16x8 v_lut_quads(const float16_t *tab, const int *idx)
+inline v_float16x8 v_lut_quads(const hfloat *tab, const int *idx)
 {
     const __fp16 *t = (const __fp16*)tab;
     return v_float16x8(vcombine_f16(vld1_f16(t + idx[0]), vld1_f16(t + idx[1])));
@@ -2885,7 +2885,7 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
 
 ////// FP16 support ///////
 #if CV_FP16
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     float16x4_t v =
     #ifndef vld1_f16 // APPLE compiler defines vld1_f16 as macro
@@ -2896,7 +2896,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_float32x4(vcvt_f32_f16(v));
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     float16x4_t hv = vcvt_f16_f32(v.val);
 
@@ -2907,7 +2907,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
     #endif
 }
 #else
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     const int N = 4;
     float buf[N];
@@ -2915,12 +2915,12 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_load(buf);
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     const int N = 4;
     float buf[N];
     v_store(buf, v);
-    for( int i = 0; i < N; i++ ) ptr[i] = float16_t(buf[i]);
+    for( int i = 0; i < N; i++ ) ptr[i] = hfloat(buf[i]);
 }
 #endif
 

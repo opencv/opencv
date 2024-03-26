@@ -2983,7 +2983,7 @@ OPENCV_HAL_IMPL_LASX_LOADSTORE_INTERLEAVE(v_float64x4, double, f64, v_uint64x4, 
 // FP16
 //
 
-inline v_float32x8 v256_load_expand(const float16_t* ptr)
+inline v_float32x8 v256_load_expand(const hfloat* ptr)
 {
 #if CV_FP16
     //1-load128, 2-permi, 3-cvt
@@ -2996,7 +2996,7 @@ inline v_float32x8 v256_load_expand(const float16_t* ptr)
 #endif
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
+inline void v_pack_store(hfloat* ptr, const v_float32x8& a)
 {
 #if CV_FP16
     __m256i ah = __lasx_xvfcvt_h_s(a.val, a.val);
@@ -3005,7 +3005,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
     float CV_DECL_ALIGNED(32) buf[8];
     v_store_aligned(buf, a);
     for (int i = 0; i < 8; i++)
-        ptr[i] = float16_t(buf[i]);
+        ptr[i] = hfloat(buf[i]);
 #endif
 }
 
