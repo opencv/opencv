@@ -142,7 +142,7 @@ int main(int argc, const char ** argv)
                     int binW = histimg.cols / hsize;
                     cv::Mat buf (1, hsize, CV_8UC3);
                     for (int i = 0; i < hsize; i++)
-                        buf.at<cv::Vec3b>(i) = cv::Vec3b(cv::saturate_cast<uchar>(i*180./hsize), 255, 255);
+                        buf.at<cv::Vec3b>(i) = cv::Vec3b(cv::saturate_cast<uint8_t>(i*180./hsize), 255, 255);
                     cv::cvtColor(buf, buf, cv::COLOR_HSV2BGR);
 
                     {
