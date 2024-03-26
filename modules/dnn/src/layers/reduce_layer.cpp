@@ -131,6 +131,16 @@ public:
         return false;
     }
 
+    virtual void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U, "");
+        outputs.assign(1, inputs[0]);
+    }
+
     template <typename T>
     class ReduceBase {
     public:
@@ -491,6 +501,7 @@ public:
         switch (type) {
             case CV_8U: opDispatch<uint8_t>(std::forward<Args>(args)...); break;
             case CV_32S: opDispatch<int32_t>(std::forward<Args>(args)...); break;
+            case CV_64S: opDispatch<int64_t>(std::forward<Args>(args)...); break;
             case CV_32F: opDispatch<float>(std::forward<Args>(args)...); break;
             default: CV_Error(cv::Error::BadDepth, "DNN/Reduce: Unsupported type.");
         }
