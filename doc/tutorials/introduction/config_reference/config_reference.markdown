@@ -623,7 +623,6 @@ Following build options are utilized in `opencv_contrib` modules, as stated [pre
 `WITH_CAROTENE`
 `WITH_CPUFEATURES`
 `WITH_EIGEN`
-`WITH_OPENVX`
 `WITH_DIRECTX`
 `WITH_VA`
 `WITH_LAPACK`

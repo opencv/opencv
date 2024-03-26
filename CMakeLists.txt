@@ -332,9 +332,6 @@ OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" ((WIN32 OR ANDROID OR 
 OCV_OPTION(WITH_OPENGL "Include OpenGL support" OFF
   VISIBLE_IF NOT ANDROID AND NOT WINRT
   VERIFY HAVE_OPENGL)
-OCV_OPTION(WITH_OPENVX "Include OpenVX support" OFF
-  VISIBLE_IF TRUE
-  VERIFY HAVE_OPENVX)
 OCV_OPTION(WITH_OPENNI "Include OpenNI support" OFF
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_OPENNI)
@@ -913,10 +910,6 @@ if(WITH_VTK)
   include(cmake/OpenCVDetectVTK.cmake)
 endif()
 
-if(WITH_OPENVX)
-  include(cmake/FindOpenVX.cmake)
-endif()
-
 if(WITH_QUIRC)
   add_subdirectory(3rdparty/quirc)
   set(HAVE_QUIRC TRUE)
@@ -950,12 +943,6 @@ if(NOT DEFINED OpenCV_HAL)
   set(OpenCV_HAL "OpenCV_HAL")
 endif()
 
-if(HAVE_OPENVX)
-  if(NOT ";${OpenCV_HAL};" MATCHES ";openvx;")
-    set(OpenCV_HAL "openvx;${OpenCV_HAL}")
-  endif()
-endif()
-
 if(WITH_CAROTENE)
   ocv_debug_message(STATUS "Enable carotene acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";carotene;")
@@ -980,10 +967,6 @@ foreach(hal ${OpenCV_HAL})
     else()
       message(STATUS "Carotene: NEON is not available, disabling carotene...")
     endif()
-  elseif(hal STREQUAL "openvx")
-    add_subdirectory(3rdparty/openvx)
-    ocv_hal_register(OPENVX_HAL_LIBRARIES OPENVX_HAL_HEADERS OPENVX_HAL_INCLUDE_DIRS)
-    list(APPEND OpenCV_USED_HAL "openvx (ver ${OPENVX_HAL_VERSION})")
   else()
     ocv_debug_message(STATUS "OpenCV HAL: ${hal} ...")
     ocv_clear_vars(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
@@ -1749,10 +1732,6 @@ endif()
 
 if(WITH_EIGEN OR HAVE_EIGEN)
   status("    Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
-endif()
-
-if(WITH_OPENVX OR HAVE_OPENVX)
-  status("    OpenVX:"     HAVE_OPENVX      THEN "YES (${OPENVX_LIBRARIES})" ELSE "NO")
 endif()
 
 status("    Custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")

@@ -353,9 +353,6 @@ struct CoreTLSData
 //#endif
         useIPP(-1),
         useIPP_NE(-1)
-#ifdef HAVE_OPENVX
-        ,useOpenVX(-1)
-#endif
     {}
 
     RNG rng;
@@ -366,9 +363,6 @@ struct CoreTLSData
 //#endif
     int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
     int useIPP_NE; // 1 - use, 0 - do not use, -1 - auto/not initialized
-#ifdef HAVE_OPENVX
-    int useOpenVX; // 1 - use, 0 - do not use, -1 - auto/not initialized
-#endif
 };
 
 CoreTLSData& getCoreTlsData();

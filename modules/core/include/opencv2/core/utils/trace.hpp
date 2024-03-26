@@ -106,7 +106,6 @@ enum RegionLocationFlag {
 
     REGION_FLAG_IMPL_IPP = (1 << 16),            ///< region is part of IPP code path
     REGION_FLAG_IMPL_OPENCL = (2 << 16),         ///< region is part of OpenCL code path
-    REGION_FLAG_IMPL_OPENVX = (3 << 16),         ///< region is part of OpenVX code path
 
     REGION_FLAG_IMPL_MASK = (15 << 16),
 
