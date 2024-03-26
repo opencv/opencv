@@ -2298,7 +2298,13 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-67; 75], after Softmax [0, 0.98]
+    size_t hwm0 = getTopMemoryUsageMB();
     testONNXModels("resnet50v1", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
+    size_t hwm1 = getTopMemoryUsageMB();
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU)
+    {
+        EXPECT_LE(hwm1 - hwm0, 350) << "Top allocated memory";
+    }
 }
 
 TEST_P(Test_ONNX_nets, ResNet50_Int8)
