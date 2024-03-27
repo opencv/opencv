@@ -813,20 +813,161 @@ private:
     static const char* const ocl_kernel_name;
 };
 
-struct GeluFunctor : public BaseDefaultFunctor<GeluFunctor>
-{
-    typedef GeluLayer Layer;
+namespace {
+    /* Reference from PyTorch
+        https://github.com/pytorch/pytorch/blob/9c50ecc84b9a6e699a7f058891b889aafbf976c7/aten/src/ATen/cpu/vec/vec512/vec512_float.h#L189-L220
+    */
+    constexpr float c_erf_coef0 = 0.3275911f;
+    constexpr float c_erf_coef1 = 1.061405429f;
+    constexpr float c_erf_coef2 = -1.453152027f;
+    constexpr float c_erf_coef3 = 1.421413741f;
+    constexpr float c_erf_coef4 = -0.284496736f;
+    constexpr float c_erf_coef5 = 0.254829592f;
 
-    explicit GeluFunctor() {}
+    inline float erf_approx(float v) {
+        float t = 1.f / fmaf(fabsf(v), c_erf_coef0, 1.f);
+        float r = fmaf(c_erf_coef1, t, c_erf_coef2);
+        r = fmaf(r, t, c_erf_coef3);
+        r = fmaf(r, t, c_erf_coef4);
+        r = fmaf(r, t, c_erf_coef5);
+        r = 1.f - r * t * expf(-v * v);
+        return std::copysignf(r, v);
+    }
 
-    bool supportBackend(int backendId, int)
-    {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // TODO: This is taken from https://github.com/opencv/opencv/pull/24941.
+    //       Remove this once the PR is merged.
+    inline v_float32 v_exp(const v_float32 &x) {
+        const v_float32 _vexp_lo_f32 = vx_setall_f32(-88.3762626647949f);
+        const v_float32 _vexp_hi_f32 = vx_setall_f32(89.f);
+        const v_float32 _vexp_half_fp32 = vx_setall_f32(0.5f);
+        const v_float32 _vexp_one_fp32 = vx_setall_f32(1.f);
+        const v_float32 _vexp_LOG2EF_f32 = vx_setall_f32(1.44269504088896341f);
+        const v_float32 _vexp_C1_f32 = vx_setall_f32(-6.93359375E-1f);
+        const v_float32 _vexp_C2_f32 = vx_setall_f32(2.12194440E-4f);
+        const v_float32 _vexp_p0_f32 = vx_setall_f32(1.9875691500E-4f);
+        const v_float32 _vexp_p1_f32 = vx_setall_f32(1.3981999507E-3f);
+        const v_float32 _vexp_p2_f32 = vx_setall_f32(8.3334519073E-3f);
+        const v_float32 _vexp_p3_f32 = vx_setall_f32(4.1665795894E-2f);
+        const v_float32 _vexp_p4_f32 = vx_setall_f32(1.6666665459E-1f);
+        const v_float32 _vexp_p5_f32 = vx_setall_f32(5.0000001201E-1f);
+        const v_int32 _vexp_bias_s32 = vx_setall_s32(0x7f);
+
+        v_float32 _vexp_, _vexp_x, _vexp_y, _vexp_xx;
+        v_int32 _vexp_mm;
+
+        // compute exponential of x
+        _vexp_x = v_max(x, _vexp_lo_f32);
+        _vexp_x = v_min(_vexp_x, _vexp_hi_f32);
+
+        _vexp_ = v_fma(_vexp_x, _vexp_LOG2EF_f32, _vexp_half_fp32);
+        _vexp_mm = v_floor(_vexp_);
+        _vexp_ = v_cvt_f32(_vexp_mm);
+        _vexp_mm = v_add(_vexp_mm, _vexp_bias_s32);
+        _vexp_mm = v_shl(_vexp_mm, 23);
+
+        _vexp_x = v_fma(_vexp_, _vexp_C1_f32, _vexp_x);
+        _vexp_x = v_fma(_vexp_, _vexp_C2_f32, _vexp_x);
+        _vexp_xx = v_mul(_vexp_x, _vexp_x);
+
+        _vexp_y = v_fma(_vexp_x, _vexp_p0_f32, _vexp_p1_f32);
+        _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p2_f32);
+        _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p3_f32);
+        _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p4_f32);
+        _vexp_y = v_fma(_vexp_y, _vexp_x, _vexp_p5_f32);
+
+        _vexp_y = v_fma(_vexp_y, _vexp_xx, _vexp_x);
+        _vexp_y = v_add(_vexp_y, _vexp_one_fp32);
+        return v_mul(_vexp_y, v_reinterpret_as_f32(_vexp_mm));
+    }
+
+    inline v_float32 v_erf_approx(v_float32 v) {
+        v_float32 coef0 = vx_setall_f32(c_erf_coef0),
+                  coef1 = vx_setall_f32(c_erf_coef1),
+                  coef2 = vx_setall_f32(c_erf_coef2),
+                  coef3 = vx_setall_f32(c_erf_coef3),
+                  coef4 = vx_setall_f32(c_erf_coef4),
+                  coef5 = vx_setall_f32(c_erf_coef5);
+        v_float32 ones = vx_setall_f32(1.0f),
+                  neg_zeros = vx_setall_f32(-0.f),
+                  t = v_abs(v);
+        // sign(v)
+        v_float32 sign_mask = v_and(neg_zeros, v);
+
+        t = v_div(ones, v_fma(coef0, t, ones));
+        v_float32 r = v_fma(coef1, t, coef2);
+        r = v_fma(r, t, coef3);
+        r = v_fma(r, t, coef4);
+        r = v_fma(r, t, coef5);
+        // - v * v
+        v_float32 pow_2 = v_mul(v, v);
+        v_float32 neg_pow_2 = v_xor(neg_zeros, pow_2);
+        // - exp(- v * v)
+        v_float32 exp = v_exp(neg_pow_2);
+        v_float32 neg_exp = v_xor(neg_zeros, exp);
+        v_float32 res = v_mul(t, neg_exp);
+        res = v_fma(r, res, ones);
+        return v_xor(sign_mask, res);
+    }
+#endif
+}
+
+struct GeluFunctor : public BaseFunctor {
+    using Layer = GeluLayer;
+    int vlanes;
+
+    explicit GeluFunctor() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    vlanes = VTraits<v_float32>::vlanes();
+#else
+    vlanes = 1;
+#endif
+    }
+
+    bool supportBackend(int backendId, int) {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
-    inline float calculate(float x) const
-    {
-        return 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            // 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
+            v_float32 half = vx_setall_f32(0.5f),
+                      one = vx_setall_f32(1.0f),
+                      reciprocal_sqrt2 = vx_setall_f32(M_SQRT1_2);
+            for (; i <= len - vlanes; i += vlanes) {
+                if (i + vlanes > len) {
+                    if (i == 0 || i == len) {
+                        break;
+                    }
+                    i = len - vlanes;
+                }
+                v_float32 x0 = vx_load(srcptr + i);
+
+                // t = x * M_SQRT1_2
+                v_float32 t0 = v_mul(reciprocal_sqrt2, x0);
+
+                // t = 1.0f + t
+                t0 = v_add(one, v_erf_approx(t0));
+
+                // x = 0.5 * x
+                x0 = v_mul(half, x0);
+
+                // x = x * t
+                x0 = v_mul(x0, t0);
+
+                vx_store(dstptr + i, x0);
+            }
+#endif
+            // 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
+            for( ; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = 0.5f * x * (1.0f + erf_approx(x * M_SQRT1_2));
+            }
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -836,11 +977,54 @@ struct GeluFunctor : public BaseDefaultFunctor<GeluFunctor>
     }
 #endif
 
+#ifdef HAVE_OPENCL
+    bool initKernel(ocl::Kernel &ker, const UMat &src) const
+    {
+        String buildopt = oclGetTMacro(src);
+
+        if (!ker.create("GeluForward", ocl::dnn::activations_oclsrc, buildopt))
+            return false;
+
+        return true;
+    }
+
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+            CV_Assert(src.isContinuous() && dst.isContinuous() && !src.offset && !dst.offset);
+
+            ocl::Kernel kernel;
+            CV_Assert(initKernel(kernel, src));
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    {
+        return std::make_shared<ngraph::op::Gelu>(node);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
     int64 getFLOPSPerElement() const { return 100; }
 };
-
-template<>
-const char* const BaseDefaultFunctor<GeluFunctor>::ocl_kernel_name = "GeluForward";
 
 namespace GeluApproximationConstants
 {
