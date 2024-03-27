@@ -496,4 +496,69 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Flatten_Int, Combine(
     dnnBackendsAndTargets()
 ));
 
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Tile_Int;
+TEST_P(Test_Tile_Int, DISABLED_random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    Mat input(inShape, matType);
+    cv::randu(input, low, low + 100);
+    std::vector<int> repeats{1, 1, 2, 3};
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Tile";
+    lp.name = "testLayer";
+    lp.set("repeats", DictValue::arrayInt<int*>(repeats.data(), repeats.size()));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size[0], 2);
+    EXPECT_EQ(re.size[1], 3);
+    EXPECT_EQ(re.size[2], 8);
+    EXPECT_EQ(re.size[3], 15);
+
+    std::vector<int> inIndices(4);
+    std::vector<int> reIndices(4);
+    for (int i0 = 0; i0 < re.size[0]; ++i0)
+    {
+        inIndices[0] = i0 % inShape[0];
+        reIndices[0] = i0;
+        for (int i1 = 0; i1 < re.size[1]; ++i1)
+        {
+            inIndices[1] = i1 % inShape[1];
+            reIndices[1] = i1;
+            for (int i2 = 0; i2 < re.size[2]; ++i2)
+            {
+                inIndices[2] = i2 % inShape[2];
+                reIndices[2] = i2;
+                for (int i3 = 0; i3 < re.size[3]; ++i3)
+                {
+                    inIndices[3] = i3 % inShape[3];
+                    reIndices[3] = i3;
+                    EXPECT_EQ(getValueAt(re, reIndices.data()), getValueAt(input, inIndices.data()));
+                }
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Tile_Int, Combine(
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets()
+));
+
+
 }} // namespace
