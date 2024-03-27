@@ -131,5 +131,3 @@ Additional Resources
 2.  Bradski, G.R., "Real time face and object tracking as a component of a perceptual user
     interface," Applications of Computer Vision, 1998. WACV '98. Proceedings., Fourth IEEE Workshop
     on , vol., no., pp.214,219, 19-21 Oct 1998
-
-
