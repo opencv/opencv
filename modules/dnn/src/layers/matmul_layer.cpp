@@ -165,7 +165,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 const size_t inner_size = shape_Y.back(),
                              batches = total(Y) / inner_size;
                 parallel_for_(Range(0, batches), [&] (const Range &r) {
-                    
                     for (int i = r.start; i < r.end; i++) {
                         const size_t output_offset = i * inner_size;
                         for (size_t j = 0; j < inner_size; j++) {
