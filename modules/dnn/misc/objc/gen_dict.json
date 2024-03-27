@@ -39,6 +39,15 @@
             "objc_type": "IntVector*",
             "v_type": "IntVector"
         },
+        "vector_uchar": {
+            "objc_type": "ByteVector*",
+            "to_cpp": "(std::vector<uchar>&)%(n)s.nativeRef",
+            "from_cpp": "[ByteVector fromNative:(std::vector<char>&)%(n)s]",
+            "cast_to": "std::vector<uchar>",
+            "primitive_vector": true,
+            "swift_type": "[UInt8]",
+            "unsigned": true
+        },
         "vector_vector_MatShape": {
             "objc_type": "IntVector*",
             "v_v_type": "IntVector"
