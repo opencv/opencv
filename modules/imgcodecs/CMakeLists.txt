@@ -88,6 +88,11 @@ if(HAVE_GDAL)
   list(APPEND GRFMT_LIBS ${GDAL_LIBRARY})
 endif()
 
+if(HAVE_QOI)
+  ocv_include_directories(${QOI_INCLUDE_DIR})
+  add_definitions(-DHAVE_QOI)
+endif()
+
 if(HAVE_IMGCODEC_HDR)
   add_definitions(-DHAVE_IMGCODEC_HDR)
 endif()
