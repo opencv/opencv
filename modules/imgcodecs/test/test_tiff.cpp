@@ -28,7 +28,7 @@ TEST(Imgcodecs_Tiff, decode_tile16384x16384)
     string file4 = cv::tempfile(".tiff");
 
     std::vector<int> params;
-    params.push_back(TIFFTAG_ROWSPERSTRIP);
+    params.push_back(IMWRITE_TIFF_ROWSPERSTRIP);
     params.push_back(big.rows);
     EXPECT_NO_THROW(cv::imwrite(file4, big, params));
     EXPECT_NO_THROW(cv::imwrite(file3, big.colRange(0, big.cols - 1), params));
@@ -767,7 +767,7 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_RAW)
 
     std::vector<int> params;
     params.push_back(IMWRITE_TIFF_COMPRESSION);
-    params.push_back(1/*COMPRESSION_NONE*/);
+    params.push_back(COMPRESSION_NONE);
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
@@ -824,9 +824,9 @@ TEST(Imgcodecs_Tiff, readWrite_predictor)
         string out = cv::tempfile(".tif");
 
         std::vector<int> params;
-        params.push_back(TIFFTAG_COMPRESSION);
+        params.push_back(IMWRITE_TIFF_COMPRESSION);
         params.push_back(methods[i]);
-        params.push_back(TIFFTAG_PREDICTOR);
+        params.push_back(IMWRITE_TIFF_PREDICTOR);
         params.push_back(PREDICTOR_HORIZONTAL);
 
         EXPECT_NO_THROW(cv::imwrite(out, mat, params));
