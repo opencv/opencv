@@ -268,23 +268,30 @@ class BiasedMatmulSubgraph : public Subgraph {
 
             // get input weight from MatMul
             {
-                int initializer_id = std::max(onnx_net->getInputInitializerId(matchedNodesIds[matmul_id], 0),
-                                              onnx_net->getInputInitializerId(matchedNodesIds[matmul_id], 1));
-                if (initializer_id != -1) { // Initializer
-                    weight_name = onnx_net->getNameOfInitializer(initializer_id);
-                } else { // Constant layer
+                // make sure that input A is not Constant
+                if (onnx_net->getInputInitializerId(matchedNodesIds[matmul_id], 0) <= 0) {
+                    return false;
+                } else {
                     const Ptr<ImportNodeWrapper> node = net->getNode(matchedNodesIds[matmul_id]);
 
                     int constant_id = Subgraph::getInputNodeId(net, node, 0);
                     auto constant_node = net->getNode(constant_id);
                     if (constant_node->getType() == "Constant") {
                         weight_name = node->getInputName(0);
-                    } else {
-                        constant_id = Subgraph::getInputNodeId(net, node, 1);
-                        constant_node = net->getNode(constant_id);
-                        if (constant_node->getType() == "Constant") {
-                            weight_name = node->getInputName(1);
-                        }
+                        return false;
+                    }
+                }
+
+                int initializer_id = onnx_net->getInputInitializerId(matchedNodesIds[matmul_id], 1);
+                if (initializer_id != -1) { // Initializer
+                    weight_name = onnx_net->getNameOfInitializer(initializer_id);
+                } else { // Constant layer
+                    const Ptr<ImportNodeWrapper> node = net->getNode(matchedNodesIds[matmul_id]);
+
+                    int constant_id = Subgraph::getInputNodeId(net, node, 1);
+                    auto constant_node = net->getNode(constant_id);
+                    if (constant_node->getType() == "Constant") {
+                        weight_name = node->getInputName(1);
                     }
                 }
             }
