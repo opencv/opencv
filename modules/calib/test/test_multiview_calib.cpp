@@ -16,7 +16,7 @@ TEST(multiview_calibration, accuracy) {
         cv::Matx33d R_z(cos(z), -sin(z), 0, sin(z), cos(z), 0, 0, 0, 1);
         return cv::Mat(R_z * R_y * R_x);
     };
-    const cv::Size board_size (5,4);
+    const cv::Size board_size (9, 7);
     cv::RNG rng(0);
     const double board_len = 0.08, noise_std = 0.04;
     const int num_cameras = 4, num_pts = board_size.area();
@@ -29,17 +29,30 @@ TEST(multiview_calibration, accuracy) {
     }
     std::vector<bool> is_fisheye(num_cameras, false);
     std::vector<cv::Size> image_sizes(num_cameras);
-    std::vector<cv::Mat> Ks_gt, distortions_gt, Rs_gt, Ts_gt;
+    std::vector<cv::Mat> Ks_gt, distortions_gt, Rs_gt, Ts_gt, rvecs_gt;
     for (int c = 0; c < num_cameras; c++) {
+        // Each camera has 0.5 probability to be a fisheye camera
+        double p = rng.uniform(0., 1.);
+        if (p > 0.5) {
+            is_fisheye[c] = true;
+        }
+
         // generate intrinsics and extrinsics
         image_sizes[c] = cv::Size(rng.uniform(1300, 1500), rng.uniform(900, 1300));
         const double focal = rng.uniform(900.0, 1300.0);
         cv::Matx33d K(focal, 0, (double)image_sizes[c].width/2.,
                     0, focal, (double)image_sizes[c].height/2.,
                     0, 0, 1);
-        cv::Matx<double, 1, 5> dist (rng.uniform(1e-1, 3e-1), rng.uniform(1e-2, 5e-2), rng.uniform(1e-2, 5e-2), rng.uniform(1e-2, 5e-2), rng.uniform(1e-2, 5e-2));
         Ks_gt.emplace_back(cv::Mat(K));
-        distortions_gt.emplace_back(cv::Mat(dist));
+        // set the distortion to be of length 5 if it is a pnihole camera, otherwise, set to be 4
+        if (!is_fisheye[c]) {
+            cv::Matx<double, 1, 5> dist (rng.uniform(1e-1, 3e-1), rng.uniform(1e-2, 5e-2), rng.uniform(1e-2, 5e-2), rng.uniform(1e-2, 5e-2), rng.uniform(1e-2, 5e-2));
+            distortions_gt.emplace_back(cv::Mat(dist));
+        } else {
+            cv::Matx<double, 1, 4> dist (rng.uniform(0., 1e-1), rng.uniform(0., 5e-3), rng.uniform(0., 5e-4), rng.uniform(0., 5e-5));
+            distortions_gt.emplace_back(cv::Mat(dist));
+        }
+
         if (c == 0) {
             // I | 0
             Rs_gt.emplace_back(cv::Mat(cv::Matx33d::eye()));
@@ -54,9 +67,12 @@ TEST(multiview_calibration, accuracy) {
                                                  rng.uniform(ty_min, ty_max),
                                                  rng.uniform(tz_min, tz_max))));
         }
+        cv::Mat rvec;
+        cv::Rodrigues(Rs_gt[c], rvec);
+        rvecs_gt.emplace_back(rvec);
     }
 
-    const int MAX_SAMPLES = 2000, MAX_FRAMES = 50;
+    const int MAX_SAMPLES = 2000, MAX_FRAMES = 100;
     cv::Mat pattern (board_pattern, true/*copy*/);
     pattern = pattern.reshape(1, num_pts).t();
     pattern.row(2) = 2.0; // set approximate depth of object points
@@ -81,6 +97,7 @@ TEST(multiview_calibration, accuracy) {
 
         R.convertTo(R, CV_32F);
         cv::Mat pattern_new = (R * (pattern - centroid * ones) + centroid * ones  + t * ones).t();
+        pattern_new = pattern_new.reshape(3);
 
         std::vector<cv::Mat> img_pts_cams(num_cameras);
         std::vector<uchar> visible(num_cameras, (uchar)0);
@@ -88,9 +105,9 @@ TEST(multiview_calibration, accuracy) {
         for (int c = 0; c < num_cameras; c++) {
             cv::Mat img_pts;
             if (is_fisheye[c]) {
-                cv::fisheye::projectPoints(pattern_new, img_pts, Rs_gt[c], Ts_gt[c], Ks_gt[c], distortions_gt[c]);
+                cv::fisheye::projectPoints(pattern_new, img_pts, rvecs_gt[c], Ts_gt[c], Ks_gt[c], distortions_gt[c]);
             } else {
-                cv::projectPoints(pattern_new, Rs_gt[c], Ts_gt[c], Ks_gt[c], distortions_gt[c], img_pts);
+                cv::projectPoints(pattern_new, rvecs_gt[c], Ts_gt[c], Ks_gt[c], distortions_gt[c], img_pts);
             }
 
             // add normal / Gaussian noise to image points
@@ -98,16 +115,17 @@ TEST(multiview_calibration, accuracy) {
             rng.fill(noise, cv::RNG::NORMAL, 0, noise_std);
             img_pts += noise;
 
-            bool are_all_pts_in_image = true;
-            const auto * const pts = (float *) img_pts.data;
+            auto * const pts = (float *) img_pts.data;
+            int num_valid_pts = num_pts;
             for (int i = 0; i < num_pts; i++) {
                 if (pts[i*2  ] < 0 || pts[i*2  ] > (float)image_sizes[c].width ||
-                    pts[i*2+1] < 0 || pts[i*2+1] > (float)image_sizes[c].height) {
-                    are_all_pts_in_image = false;
-                    break;
+                    pts[i*2+1] < 0 || pts[i*2+1] > (float)image_sizes[c].height ||
+                    pattern_new.at<Point3f>(i).z < 1e-2) {
+                    num_valid_pts--;
+                    pts[i*2  ] = pts[i*2+1] = -1;
                 }
             }
-            if (are_all_pts_in_image) {
+            if (num_valid_pts > 3) { // requires at least 4 pts per image
                 visible[c] = 1;
                 num_visible_patterns += 1;
                 img_pts.copyTo(img_pts_cams[c]);
@@ -136,16 +154,93 @@ TEST(multiview_calibration, accuracy) {
     calibrateMultiview (objPoints, image_points_all, image_sizes, visibility_mat,
        Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false);
 
-    const double K_err_tol = 1e1, dist_tol = 5e-2, R_tol = 1e-2, T_tol = 1e-2;
+    const double angle_tol = 1.*M_PI/180., pos_tol = 5e-2, dist_tol = 5.;
+    const int rows = 10; // Number of rows in the grid
+    const int cols = 10; // Number of columns in the grid
+    const int total_num = rows * cols;
+    cv::Mat xGrid, yGrid;
+
+    std::vector<double> t_x, t_y;
+    for (int i = 0; i < cols; i++) t_x.push_back(double(i));
+    for (int i = 0; i < rows; i++) t_y.push_back(double(i));
+
+    cv::repeat(cv::Mat(t_x).reshape(1,1), rows, 1, xGrid);
+    cv::repeat(cv::Mat(t_y).reshape(1,1).t(), 1, cols, yGrid);
+
+    cv::Mat xGridSingleCol = xGrid.reshape(1, total_num); // Reshape to 1 row and multiple columns
+    cv::Mat yGridSingleCol = yGrid.reshape(1, total_num); // Reshape to 1 row and multiple columns
+
+
+    cv::Mat image_pts;
+    image_pts.create(total_num, 2, CV_64F);
+
+    cv::Mat pt_norm;
+    pt_norm.create(total_num, 3, CV_64F);
+    cv::Mat col = pt_norm.col(2);
+    col.setTo(cv::Scalar(1.));
+
+    std::vector<double> err_dist(total_num);
     for (int c = 0; c < num_cameras; c++) {
-        cv::Mat R;
-        cv::Rodrigues(Rs[c], R);
-        EXPECT_MAT_NEAR(Ks_gt[c], Ks[c], K_err_tol);
         CV_LOG_INFO(NULL, "true  distortions: " << distortions_gt[c]);
         CV_LOG_INFO(NULL, "found distortions: " << distortions[c]);
-        EXPECT_MAT_NEAR(distortions_gt[c], distortions[c], dist_tol);
-        EXPECT_MAT_NEAR(Rs_gt[c], R, R_tol);
-        EXPECT_MAT_NEAR(Ts_gt[c], Ts[c], T_tol);
+
+        // compare the calculated R, T
+        double cos_r = (cv::trace(Rs_gt[c].t() * Rs[c])[0] - 1) / 2.;
+        double angle = std::acos(std::max(std::min(cos_r, 1.), -1.));
+        cv::Mat dist_mat;
+        subtract(Rs_gt[c].t() * Ts_gt[c], Rs[c].t() * Ts[c], dist_mat);
+        double dist = cv::norm(dist_mat);
+        CV_LOG_INFO(NULL, "rotation error: " << angle);
+        CV_LOG_INFO(NULL, "position error: " << dist);
+        ASSERT_NEAR(angle, 0., angle_tol);
+        ASSERT_NEAR(dist, 0., pos_tol);
+
+        // create the respective grids
+        cv::Mat img_pts_col0 = image_pts.col(0);
+        cv::Mat img_pts_col1 = image_pts.col(1);
+        img_pts_col0 = xGridSingleCol * double(image_sizes[c].width) / double(cols);
+        img_pts_col1 = yGridSingleCol * double(image_sizes[c].height) / double(rows);
+
+        image_pts = image_pts.reshape(2);
+
+        // undistort with the estimated intrinsics
+        cv::Mat undist;
+        if (is_fisheye[c]) {
+            cv::fisheye::undistortPoints(image_pts, undist, Ks[c], distortions[c]);
+        } else {
+            cv::undistortPoints(image_pts, undist, Ks[c], distortions[c]);
+        }
+        undist = undist.reshape(1, total_num);
+        cv::Mat pt_norm_col = pt_norm.colRange(0, 2);
+        undist.copyTo(pt_norm_col);
+
+        pt_norm = pt_norm.reshape(3);
+
+        // ndistort with the ground truth intrinsics
+        cv::Mat pt_distorted;
+        if (is_fisheye[c]) {
+            cv::fisheye::projectPoints(pt_norm, pt_distorted, cv::Mat(cv::Vec3d::zeros()), cv::Mat(cv::Vec3d::zeros()), Ks_gt[c], distortions_gt[c]);
+        } else {
+            cv::projectPoints(pt_norm, cv::Mat(cv::Vec3d::zeros()), cv::Mat(cv::Vec3d::zeros()), Ks_gt[c], distortions_gt[c], pt_distorted);
+        }
+
+        subtract(pt_distorted, image_pts, pt_distorted);
+
+        cv::Mat diff;
+        pt_distorted.convertTo(diff, CV_64FC2);
+
+        // compute the difference as error
+        for (int i = 0; i < total_num; i++)
+            err_dist[i] = cv::norm(diff.at<Point2d>(i));
+        size_t n = total_num / 2;
+        std::nth_element(err_dist.begin(), err_dist.begin() + n, err_dist.end());
+
+        ASSERT_NEAR(err_dist[n], 0., dist_tol);
+        CV_LOG_INFO(NULL, "median distortion error: " << err_dist[n]);
+
+        // reshape it back
+        image_pts = image_pts.reshape(1);
+        pt_norm = pt_norm.reshape(1);
     }
 }
 }}
