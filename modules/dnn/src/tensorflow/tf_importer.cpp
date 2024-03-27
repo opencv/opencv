@@ -599,6 +599,7 @@ private:
     void parseExpandDims         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseSquare             (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseArg                (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
+    // void parseShape              (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 
     void parseCustomLayer        (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 };
@@ -680,6 +681,7 @@ TFImporter::DispatchMap TFImporter::buildDispatchMap()
     dispatch["ExpandDims"] = &TFImporter::parseExpandDims;
     dispatch["Square"] = &TFImporter::parseSquare;
     dispatch["ArgMax"] = dispatch["ArgMin"] = &TFImporter::parseArg;
+    // dispatch["Shape"] = &TFImporter::parseShape;
 
     return dispatch;
 }
@@ -1674,7 +1676,10 @@ void TFImporter::parseStridedSlice(tensorflow::GraphDef& net, const tensorflow::
     const int num_inputs = layer.input_size();
 
     CV_CheckEQ(num_inputs, 4, "");
-    Mat begins = getTensorContent(getConstBlob(layer, value_id, 1));
+    Mat begins(1, 1, CV_32SC1, Scalar(0)); // default to be 0 if empty
+    if (value_id.find(layer.input(1)) != value_id.end()) {
+        begins = getTensorContent(getConstBlob(layer, value_id, 1)); // this may be empty if it is a scalar zero
+    }
     Mat ends = getTensorContent(getConstBlob(layer, value_id, 2));
     Mat strides = getTensorContent(getConstBlob(layer, value_id, 3));
     CV_CheckTypeEQ(begins.type(), CV_32SC1, "");
@@ -1747,7 +1752,8 @@ void TFImporter::parseMul(tensorflow::GraphDef& net, const tensorflow::NodeDef& 
         // Multiplication by constant.
         CV_CheckEQ(num_inputs, 2, "");
         Mat scaleMat = getTensorContent(getConstBlob(layer, value_id));
-        CV_Assert(scaleMat.type() == CV_32FC1);
+        // CV_Assert(scaleMat.type() == CV_32FC1); // TODO: convert int32_t to float
+
         if (type == "RealDiv")
         {
             if (constId == 0)
@@ -2698,6 +2704,10 @@ void TFImporter::parseArg(tensorflow::GraphDef& net, const tensorflow::NodeDef& 
     connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
 }
 
+// void TFImporter::parseShape(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams) {
+//     ;
+// }
+
 void TFImporter::parseCustomLayer(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     // Importer does not know how to map this TensorFlow's operation onto OpenCV's layer.
@@ -2918,7 +2928,7 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
         const tensorflow::NodeDef &layer = net.node(li);
         String name = layer.name();
         String type = layer.op();
-
+        
         //CV_LOG_DEBUG(NULL, "DNN/TF: layer_id=" << li << " - '" << name << "' @ " << type);
 
         try
@@ -2974,8 +2984,8 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
             else if (type != "Const")
                 continue;  // only Const parameters are supported
 
-            if (layer.attr().find("value") != layer.attr().end())
-            {
+            if (layer.attr().find("value") != layer.attr().end() &&
+                !isTensorContentEmpty(layer.attr().at("value").tensor())) {
                 CV_Assert(const_layers.insert(std::make_pair(name, li)).second);
             }
             layers_to_ignore.insert(name);
@@ -3048,6 +3058,18 @@ void TFImporter::populateNet()
         << ". Number of nodes = " << netBin.node_size()
     );
 
+    // auto print_net = [](tensorflow::GraphDef& net, std::string tag) {
+    //     std::cout << tag << std::endl;
+    //     int layer_size = net.node_size();
+    //     for (int li = 0; li < layer_size; ++li) {
+    //         const tensorflow::NodeDef& layer = net.node(li);
+    //         std::cout << "id: " << li << ", layer type: " << layer.op() << ", layer: " << layer.name() << std::endl;
+    //     }
+    // };
+
+    // std::cout << "netTxtSize=" << netTxtSize << std::endl;
+
+    // print_net(netBin, "Very beginning!");
     if (netTxtSize)
     {
         CV_LOG_INFO(NULL, "DNN/TF: parsing config"
@@ -3067,14 +3089,19 @@ void TFImporter::populateNet()
     {
         removePhaseSwitches(netBin);
         CV_LOG_DEBUG(NULL, "DNN/TF: removePhaseSwitches(model) => " << netBin.node_size() << " nodes");
+        // print_net(netBin, "After remove Phase Switches");
 
         RemoveIdentityOps(netBin);
         CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
+        // print_net(netBin, "After remove identity ops");
 
         simplifySubgraphs(netBin);
         CV_LOG_DEBUG(NULL, "DNN/TF: simplifySubgraphs(model) => " << netBin.node_size() << " nodes");
+        // print_net(netBin, "After simplify subgraphs");
+
         sortByExecutionOrder(netBin);
         CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(model) => " << netBin.node_size() << " nodes");
+        // print_net(netBin, "After sort execution order");
     }
 
     tensorflow::GraphDef& net = netTxtSize != 0 ? netTxt : netBin;

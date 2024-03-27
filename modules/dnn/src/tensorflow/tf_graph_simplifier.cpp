@@ -631,6 +631,8 @@ public:
     }
 };
 
+// TODO: need to remove this or match only if Shape
+//       has only one output that goes to Reshape
 class ReshapeAsShapeSubgraph : public Subgraph
 {
 public:
@@ -945,6 +947,40 @@ Mat getTensorContentRef_(const tensorflow::TensorProto& tensor)
     }
 
     return m;
+}
+
+bool isTensorContentEmpty(const tensorflow::TensorProto& tensor) {
+    const std::string& content = tensor.tensor_content();
+    switch (tensor.dtype()) {
+#define TF_GRAPH_SIMPLIFIER_CHECK_TENSOR_CONTENT(tf_data_type, data_type, get_val) \
+        case tf_data_type: {                                                       \
+            if (content.empty()) {                                                 \
+                const RepeatedField<data_type>& field = tensor.get_val();          \
+                return field.empty();                                              \
+            } else {                                                               \
+                return false;                                                      \
+            }                                                                      \
+        } break;
+        TF_GRAPH_SIMPLIFIER_CHECK_TENSOR_CONTENT(tensorflow::DT_FLOAT, float, float_val);
+        TF_GRAPH_SIMPLIFIER_CHECK_TENSOR_CONTENT(tensorflow::DT_DOUBLE, double, double_val);
+        TF_GRAPH_SIMPLIFIER_CHECK_TENSOR_CONTENT(tensorflow::DT_INT32, int, int_val);
+        TF_GRAPH_SIMPLIFIER_CHECK_TENSOR_CONTENT(tensorflow::DT_HALF, int32_t, half_val);
+#undef TF_GRAPH_SIMPLIFIER_CHECK_TENSOR_CONTENT
+        case tensorflow::DT_QUINT8:
+        {
+            if (content.empty()) {
+                const std::string& field = tensor.string_val(0);
+                return field.empty();
+            } else {
+                return false;
+            }
+            break;
+        }
+        default:
+            CV_Error(Error::StsError, "Tensor's data type is not supported");
+            break;
+    }
+    return true;
 }
 
 Mat getTensorContent(const tensorflow::TensorProto& tensor, bool forceCopy)
