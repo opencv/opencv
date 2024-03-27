@@ -131,9 +131,3 @@ Additional Resources
 2.  Bradski, G.R., "Real time face and object tracking as a component of a perceptual user
     interface," Applications of Computer Vision, 1998. WACV '98. Proceedings., Fourth IEEE Workshop
     on , vol., no., pp.214,219, 19-21 Oct 1998
-
-Exercises
----------
-
--#  OpenCV comes with a Python [sample](https://github.com/opencv/opencv/blob/5.x/samples/python/camshift.py) for an interactive demo of camshift. Use it, hack it, understand
-    it.
