@@ -24,21 +24,9 @@ TEST( Features2d_Detector_SIFT, regression )
     test.safe_run();
 }
 
-TEST( Features2d_Detector_BRISK, regression )
-{
-    CV_FeatureDetectorTest test( "detector-brisk", BRISK::create() );
-    test.safe_run();
-}
-
 TEST( Features2d_Detector_FAST, regression )
 {
     CV_FeatureDetectorTest test( "detector-fast", FastFeatureDetector::create() );
-    test.safe_run();
-}
-
-TEST( Features2d_Detector_AGAST, regression )
-{
-    CV_FeatureDetectorTest test( "detector-agast", AgastFeatureDetector::create() );
     test.safe_run();
 }
 
@@ -65,24 +53,6 @@ TEST( Features2d_Detector_MSER, DISABLED_regression )
 TEST( Features2d_Detector_ORB, regression )
 {
     CV_FeatureDetectorTest test( "detector-orb", ORB::create() );
-    test.safe_run();
-}
-
-TEST( Features2d_Detector_KAZE, regression )
-{
-    CV_FeatureDetectorTest test( "detector-kaze", KAZE::create() );
-    test.safe_run();
-}
-
-TEST( Features2d_Detector_AKAZE, regression )
-{
-    CV_FeatureDetectorTest test( "detector-akaze", AKAZE::create() );
-    test.safe_run();
-}
-
-TEST( Features2d_Detector_AKAZE_DESCRIPTOR_KAZE, regression )
-{
-    CV_FeatureDetectorTest test( "detector-akaze-with-kaze-desc", AKAZE::create(AKAZE::DESCRIPTOR_KAZE) );
     test.safe_run();
 }
 

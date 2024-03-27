@@ -5,10 +5,6 @@
             "getParams": { "declaration" : [""], "implementation" : [""] }
         }
     },
-    "enum_fix" : {
-        "FastFeatureDetector" : { "DetectorType": "FastDetectorType" },
-        "AgastFeatureDetector" : { "DetectorType": "AgastDetectorType" }
-    },
     "func_arg_fix" : {
         "Feature2D": {
             "(void)compute:(NSArray<Mat*>*)images keypoints:(NSMutableArray<NSMutableArray<KeyPoint*>*>*)keypoints descriptors:(NSMutableArray<Mat*>*)descriptors" : { "compute" : {"name" : "compute2"} },
