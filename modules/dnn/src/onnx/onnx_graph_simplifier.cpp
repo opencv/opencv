@@ -269,7 +269,7 @@ class BiasedMatmulSubgraph : public Subgraph {
             // get input weight from MatMul
             {
                 // make sure that input A is not Constant
-                if (onnx_net->getInputInitializerId(matchedNodesIds[matmul_id], 0) <= 0) {
+                if (onnx_net->getInputInitializerId(matchedNodesIds[matmul_id], 0) >= 0) {
                     return false;
                 } else {
                     const Ptr<ImportNodeWrapper> node = net->getNode(matchedNodesIds[matmul_id]);
@@ -277,7 +277,6 @@ class BiasedMatmulSubgraph : public Subgraph {
                     int constant_id = Subgraph::getInputNodeId(net, node, 0);
                     auto constant_node = net->getNode(constant_id);
                     if (constant_node->getType() == "Constant") {
-                        weight_name = node->getInputName(0);
                         return false;
                     }
                 }
