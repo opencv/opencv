@@ -411,22 +411,21 @@ class AttentionSubGraph : public Subgraph {
     AttentionSubGraph() {
         int input = addNodeToMatch("");
         int transpose = addNodeToMatch("Transpose", input); // tranpose does not make any differences to the accuracy here in this subgraph
-        att_matmul = addNodeToMatch("MatMul", transpose, addNodeToMatch(""));
-        att_add = addNodeToMatch("Add", addNodeToMatch(""), att_matmul);
+        att_matmul = addNodeToMatch("MatMul", transpose, addNodeToMatch(""), addNodeToMatch("")); // add is fused into matmul via BiasedMatMulSubgraph
 
         // v_path
-        slice_v = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
+        slice_v = addNodeToMatch("Slice", std::vector<int>{att_matmul, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int reshape_v = addNodeToMatch("Reshape", slice_v, addNodeToMatch(""));
         int transpose_v = addNodeToMatch("Transpose", reshape_v);
 
         // q_path
-        slice_q = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
+        slice_q = addNodeToMatch("Slice", std::vector<int>{att_matmul, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         reshape_q = addNodeToMatch("Reshape", slice_q, addNodeToMatch(""));
         int transpose_q = addNodeToMatch("Transpose", reshape_q);
         div_q = addNodeToMatch("Div", transpose_q, addNodeToMatch(""));
 
         // k_path
-        slice_k = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
+        slice_k = addNodeToMatch("Slice", std::vector<int>{att_matmul, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int reshape_k = addNodeToMatch("Reshape", slice_k, addNodeToMatch(""));
         int transpose_k = addNodeToMatch("Transpose", reshape_k);
 
@@ -469,7 +468,7 @@ class AttentionSubGraph : public Subgraph {
 
             // get names
             weight_name = getInputName(net, matchedNodesIds[att_matmul], 1);
-            bias_name = getInputName(net, matchedNodesIds[att_add], 0);
+            bias_name = getInputName(net, matchedNodesIds[att_matmul], 2);
             return true;
         }
         return false;
@@ -503,7 +502,7 @@ class AttentionSubGraph : public Subgraph {
     }
 
  private:
-    int att_matmul, att_add;
+    int att_matmul;
     int slice_q, slice_k, slice_v;
     int reshape_q, div_q, last_reshape;
 
@@ -525,20 +524,19 @@ class AttentionSingleHeadSubGraph : public Subgraph {
     AttentionSingleHeadSubGraph() {
         int input = addNodeToMatch("");
         int transpose = addNodeToMatch("Transpose", input); // tranpose does not make any differences to the accuracy here in this subgraph
-        att_matmul = addNodeToMatch("MatMul", transpose, addNodeToMatch(""));
-        att_add = addNodeToMatch("Add", addNodeToMatch(""), att_matmul);
+        att_matmul = addNodeToMatch("MatMul", transpose, addNodeToMatch(""), addNodeToMatch("")); // add is fused into matmul via BiasedMatMulSubgraph
 
         // v_path
-        slice_v = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
+        slice_v = addNodeToMatch("Slice", std::vector<int>{att_matmul, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int transpose_v = addNodeToMatch("Transpose", slice_v);
 
         // q_path
-        slice_q = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
+        slice_q = addNodeToMatch("Slice", std::vector<int>{att_matmul, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int transpose_q = addNodeToMatch("Transpose", slice_q);
         div_q = addNodeToMatch("Div", transpose_q, addNodeToMatch(""));
 
         // k_path
-        slice_k = addNodeToMatch("Slice", std::vector<int>{att_add, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
+        slice_k = addNodeToMatch("Slice", std::vector<int>{att_matmul, addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch(""), addNodeToMatch("")});
         int transpose_k = addNodeToMatch("Transpose", slice_k);
 
         // qk
@@ -580,7 +578,7 @@ class AttentionSingleHeadSubGraph : public Subgraph {
 
             // get names
             weight_name = getInputName(net, matchedNodesIds[att_matmul], 1);
-            bias_name = getInputName(net, matchedNodesIds[att_add], 0);
+            bias_name = getInputName(net, matchedNodesIds[att_matmul], 2);
             return true;
         }
         return false;
@@ -614,7 +612,7 @@ class AttentionSingleHeadSubGraph : public Subgraph {
     }
 
  protected:
-    int att_matmul, att_add;
+    int att_matmul;
     int slice_q, slice_k, slice_v;
     int div_q, last_reshape;
 
