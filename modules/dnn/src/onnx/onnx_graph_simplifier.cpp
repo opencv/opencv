@@ -281,9 +281,11 @@ class BiasedMatmulSubgraph : public Subgraph {
                     }
                 }
 
+                bool is_weight_const = false;
                 int initializer_id = onnx_net->getInputInitializerId(matchedNodesIds[matmul_id], 1);
                 if (initializer_id != -1) { // Initializer
                     weight_name = onnx_net->getNameOfInitializer(initializer_id);
+                    is_weight_const = true;
                 } else { // Constant layer
                     const Ptr<ImportNodeWrapper> node = net->getNode(matchedNodesIds[matmul_id]);
 
@@ -291,16 +293,23 @@ class BiasedMatmulSubgraph : public Subgraph {
                     auto constant_node = net->getNode(constant_id);
                     if (constant_node->getType() == "Constant") {
                         weight_name = node->getInputName(1);
+                        is_weight_const = true;
                     }
+                }
+
+                if (!is_weight_const) {
+                    return false;
                 }
             }
 
             // get input bias from Add
             {
+                bool is_bias_const = false;
                 int initializer_id = std::max(onnx_net->getInputInitializerId(matchedNodesIds[add_id], 0),
                                               onnx_net->getInputInitializerId(matchedNodesIds[add_id], 1));
                 if (initializer_id != -1) {
                     bias_name = onnx_net->getNameOfInitializer(initializer_id);
+                    is_bias_const = true;
                 } else { // Constant layer
                     const Ptr<ImportNodeWrapper> node = net->getNode(matchedNodesIds[add_id]);
 
@@ -308,13 +317,18 @@ class BiasedMatmulSubgraph : public Subgraph {
                     auto constant_node = net->getNode(constant_id);
                     if (constant_node->getType() == "Constant") {
                         bias_name = node->getInputName(0);
+                        is_bias_const = true;
                     } else {
                         constant_id = Subgraph::getInputNodeId(net, node, 1);
                         constant_node = net->getNode(constant_id);
                         if (constant_node->getType() == "Constant") {
                             bias_name = node->getInputName(1);
+                            is_bias_const = true;
                         }
                     }
+                }
+                if (!is_bias_const) {
+                    return false;
                 }
             }
 
