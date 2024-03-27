@@ -161,6 +161,7 @@ class Builder:
         self.opencl = True if config.opencl else False
         self.no_kotlin = True if config.no_kotlin else False
         self.shared = True if config.shared else False
+        self.disable = args.disable
 
     def get_cmake(self):
         if not self.config.use_android_buildtools and check_executable(['cmake', '--version']):
@@ -265,6 +266,10 @@ class Builder:
             cmake_vars['WITH_ANDROID_MEDIANDK'] = "OFF"
 
         cmake_vars.update(abi.cmake_vars)
+
+        if len(self.disable) > 0:
+            cmake_vars.update({'WITH_%s' % f : "OFF" for f in self.disable})
+
         cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
         cmd.append(self.opencvdir)
         execute(cmd)
@@ -375,6 +380,7 @@ if __name__ == "__main__":
     parser.add_argument('--no_kotlin', action="store_true", help="Disable Kotlin extensions")
     parser.add_argument('--shared', action="store_true", help="Build shared libraries")
     parser.add_argument('--no_media_ndk', action="store_true", help="Do not link Media NDK (required for video I/O support)")
+    parser.add_argument('--disable', metavar='FEATURE', default=[], action='append', help='OpenCV features to disable (add WITH_*=OFF). To disable multiple, specify this flag again, e.g. "--disable TBB --disable OPENMP"')
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
