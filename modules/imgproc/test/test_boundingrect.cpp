@@ -140,4 +140,20 @@ void CV_BoundingRectTest::run(int)
 
 TEST (Imgproc_BoundingRect, accuracy) { CV_BoundingRectTest test; test.safe_run(); }
 
+TEST (Imgproc_BoundingRect, bug_24217)
+{
+    for (int image_width = 3; image_width < 20; image_width++)
+    {
+        for (int image_height = 1; image_height < 15; image_height++)
+        {
+            cv::Rect rect(0, image_height - 1, 3, 1);
+
+            cv::Mat image(cv::Size(image_width, image_height), CV_8UC1, cv::Scalar(0));
+            image(rect) = 255;
+
+            ASSERT_EQ(boundingRect(image), rect);
+        }
+    }
+}
+
 }} // namespace
