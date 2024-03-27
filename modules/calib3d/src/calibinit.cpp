@@ -601,13 +601,13 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                     {
                         adaptiveThreshold( img, thresh_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, block_size, (k/2)*5 );
                         dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), dilations );
-                        prev_thresh_img = thresh_img.clone();
+                        thresh_img.copyTo(prev_thresh_img);
                     }
                     else
                     {
                         if (dilations > 0)
                             dilate( prev_thresh_img, prev_thresh_img, Mat(), Point(-1, -1), 1 );
-                        thresh_img = prev_thresh_img.clone();
+                        prev_thresh_img.copyTo(thresh_img);
                     }
                     prev_block_size = block_size;
                 }
