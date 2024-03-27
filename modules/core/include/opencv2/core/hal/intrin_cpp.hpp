@@ -363,6 +363,7 @@ Floating point:
 |reverse            | x | x |
 |extract_n          | x | x |
 |broadcast_element  | x |   |
+|exp                | x | x |
 
  @{ */
 

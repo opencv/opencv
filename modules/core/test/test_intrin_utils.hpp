@@ -1671,6 +1671,82 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    template<typename T>
+    TheTest &__test_exp(T dataMax, T step, T range, double e_thr, double diff_thr, double enlarge_factor) {
+        int n = VTraits<R>::vlanes();
+
+        Data<R> data0, data1, dataInf, dataNegInf, dataMaxVal;
+        for (int i = 0; i < n; ++i) {
+            data0[i] = 0;
+            data1[i] = 1;
+            dataInf[i] = INFINITY;
+            dataNegInf[i] = -INFINITY;
+            dataMaxVal[i] = dataMax;
+        }
+        Data<R> res0 = v_exp((R) data0);
+        Data<R> res1 = v_exp((R) data1);
+        Data<R> resInf = v_exp((R) dataInf);
+        Data<R> resNegInf = v_exp((R) dataNegInf);
+        Data<R> resMaxVal = v_exp((R) dataMaxVal);
+        double e = std::exp(1);
+        for (int j = 0; j < n; ++j) {
+            EXPECT_EQ(1, res0[j]);
+            EXPECT_NEAR(e, res1[j], e_thr);
+            EXPECT_EQ(INFINITY, resInf[j]);
+            EXPECT_EQ(0, resNegInf[j]);
+            EXPECT_LT(resMaxVal[j], INFINITY);
+        }
+
+        for (T i = dataMax + 1 + step; i <= dataMax + 1 + range;) {
+            Data<R> dataPos, dataNeg;
+            for (int j = 0; j < n; ++j) {
+                dataPos[j] = i;
+                dataNeg[j] = -i;
+                i += step;
+            }
+            Data<R> resPos = v_exp(dataPos);
+            Data<R> resNeg = v_exp(dataNeg);
+            for (int j = 0; j < n; ++j) {
+                EXPECT_EQ(INFINITY, resPos[j]);
+                EXPECT_EQ(0, resNeg[j]);
+            }
+        }
+
+        for (int i = 0; i < 10000; i++) {
+            Data<R> dataRand;
+            for (int j = 0; j < n; ++j) {
+                dataRand[j] = (T) (2 * range * (rand() / (double) RAND_MAX - 0.5));
+            }
+            R dRand = dataRand;
+            Data<R> resRand = v_exp(dRand);
+
+            for (int j = 0; j < n; ++j) {
+                SCOPED_TRACE(cv::format("i=%d", j));
+                double std_exp = std::exp(dataRand[j]);
+                if (std_exp > FLT_MAX) {
+                    EXPECT_GT(resRand[j], FLT_MAX * 0.99);
+                } else if (resRand[j] == INFINITY) {
+                    EXPECT_GT(std_exp, FLT_MAX * 0.7);
+                } else {
+                    EXPECT_GE(resRand[j], 0);
+                    EXPECT_LT(std::abs(resRand[j] - std_exp), diff_thr * (std::abs(std_exp) + FLT_MIN * enlarge_factor));
+                }
+            }
+        }
+        return *this;
+    }
+
+    TheTest &test_exp_fp32() {
+        return __test_exp<float>(88.0f, 0.1f, 11.0f, 1e-7, 1e-5, 80000);
+    }
+
+    TheTest &test_exp_fp64() {
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+        return __test_exp<double>(709.0, 0.1, 10.0, 1e-15, 1e-15, 100);
+#else
+        return *this;
+#endif
+    }
 };
 
 #define DUMP_ENTRY(type) printf("SIMD%d: %s\n", 8*VTraits<v_uint8>::vlanes(), CV__TRACE_FUNCTION);
@@ -1984,6 +2060,7 @@ void test_hal_intrin_float32()
         .test_extract_highest()
         .test_broadcast_highest()
         .test_pack_triplets()
+        .test_exp_fp32()
 #if CV_SIMD_WIDTH == 32
         .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
         .test_rotate<4>().test_rotate<5>().test_rotate<6>().test_rotate<7>()
@@ -2014,6 +2091,7 @@ void test_hal_intrin_float64()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
+        .test_exp_fp64()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
 #if CV_SIMD_WIDTH == 32
         .test_extract<2>().test_extract<3>()
