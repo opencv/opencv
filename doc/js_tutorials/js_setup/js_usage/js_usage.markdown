@@ -12,7 +12,7 @@ You can also build your own copy by following the tutorial @ref tutorial_js_setu
 
 First, let's create a simple web page that is able to upload an image.
 
-@code{.js}
+```js
 <!DOCTYPE html>
 <html>
 <head>
@@ -36,7 +36,7 @@ inputElement.addEventListener("change", (e) => {
 </script>
 </body>
 </html>
-@endcode
+```
 
 To run this web page, copy the content above and save to a local index.html file. To run it, open it using your web browser.
 

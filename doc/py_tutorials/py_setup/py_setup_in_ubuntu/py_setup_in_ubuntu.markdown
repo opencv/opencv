@@ -1,10 +1,11 @@
 Install OpenCV-Python in Ubuntu {#tutorial_py_setup_in_ubuntu}
 ===============================
+@tableofcontents
 
-Goals
------
+### Goals
 
 In this tutorial We will learn to setup OpenCV-Python in Ubuntu System.
+
 Below steps are tested for Ubuntu 16.04 and 18.04 (both 64-bit).
 
 OpenCV-Python can be installed in Ubuntu in two ways:
@@ -12,13 +13,35 @@ OpenCV-Python can be installed in Ubuntu in two ways:
 - Compile from the source. In this section, we will see both.
 
 Another important thing is the additional libraries required.
+
 OpenCV-Python requires only **Numpy** (in addition to other dependencies, which we will see later).
+
 But in this tutorials, we also use **Matplotlib** for some easy and nice plotting purposes (which I feel much better compared to OpenCV).
+
 Matplotlib is optional, but highly recommended.
+
 Similarly we will also see **IPython**, an Interactive Python Terminal, which is also highly recommended.
 
-Installing OpenCV-Python from Pre-built Binaries
-------------------------------------------------
+### Installing OpenCV using pip in Ubuntu
+
+These are the steps that will guide you in setting up OpenCV in your Ubuntu system: 
+
+-# Install Python on your system:
+```
+sudo apt-get install python3
+```
+
+-# Install pip:
+```
+sudo apt-get install python3-pip
+```
+
+-# Install OpenCV:
+```
+python3 -m pip install opencv-python
+```
+    
+### Installing OpenCV-Python from Pre-built Binaries
 
 This method serves best when using just for programming and developing OpenCV applications.
 
@@ -27,7 +50,6 @@ Install package [python3-opencv](https://packages.ubuntu.com/focal/python3-openc
 ```
 $ sudo apt-get install python3-opencv
 ```
-
 Open Python IDLE (or IPython) and type following codes in Python terminal.
 
 ```
@@ -36,23 +58,28 @@ print(cv.__version__)
 ```
 
 If the results are printed out without any errors, congratulations !!!
+
 You have installed OpenCV-Python successfully.
 
 It is quite easy. But there is a problem with this.
+
 Apt repositories may not contain the latest version of OpenCV always.
+
 For example, at the time of writing this tutorial, apt repository contains 2.4.8 while latest OpenCV version is 3.x.
+
 With respect to Python API, latest version will always contain much better support and latest bug fixes.
 
 So for getting latest source codes preference is next method, i.e. compiling from source.
+
 Also at some point in time, if you want to contribute to OpenCV, you will need this.
 
-Building OpenCV from source
----------------------------
+### Building OpenCV from source
 
 Compiling from source may seem a little complicated at first, but once you succeeded in it, there is nothing complicated.
-
 First we will install some dependencies.
+
 Some are required, some are optional.
+
 You can skip optional dependencies if you don't want.
 
 ### Required build dependencies
@@ -138,8 +165,11 @@ $ cd build
 ### Configuring and Installing
 
 Now we have all the required dependencies, let's install OpenCV.
+
 Installation has to be configured with CMake.
+
 It specifies which modules are to be installed, installation path, which additional libraries to be used, whether documentation and examples to be compiled etc.
+
 Most of this work are done automatically with well configured default parameters.
 
 Below command is normally used for configuration of OpenCV library build (executed from build folder):

@@ -1,27 +1,34 @@
 Install OpenCV-Python in Fedora {#tutorial_py_setup_in_fedora}
 ===============================
 
-Goals
------
+### Goals
+
 
 In this tutorial
     -   We will learn to setup OpenCV-Python in your Fedora system. Below steps are tested for
         Fedora 18 (64-bit) and Fedora 19 (32-bit).
 
-Introduction
-------------
+### Introduction
 
-OpenCV-Python can be installed in Fedora in two ways, 1) Install from pre-built binaries available
-in fedora repositories, 2) Compile from the source. In this section, we will see both.
 
-Another important thing is the additional libraries required. OpenCV-Python requires only **Numpy**
-(in addition to other dependencies, which we will see later). But in this tutorials, we also use
-**Matplotlib** for some easy and nice plotting purposes (which I feel much better compared to
-OpenCV). Matplotlib is optional, but highly recommended. Similarly we will also see **IPython**, an
-Interactive Python Terminal, which is also highly recommended.
+OpenCV-Python can be installed in Fedora in two ways:
 
-Installing OpenCV-Python from Pre-built Binaries
-------------------------------------------------
+1) Install from pre-built binaries available in fedora repositories
+  
+2) Compile from the source. In this section, we will see both.
+
+Another important thing is the additional libraries required.
+
+OpenCV-Python requires only **Numpy** (in addition to other dependencies, which we will see later). 
+
+But in this tutorials, we also use **Matplotlib** for some easy and nice plotting purposes (which I feel much better compared to OpenCV). 
+
+Matplotlib is optional, but highly recommended.
+
+Similarly we will also see **IPython**, an Interactive Python Terminal, which is also highly recommended.
+
+### Installing OpenCV-Python from Pre-built Binaries
+
 
 Install all packages with following command in terminal as root.
 @code{.sh}
@@ -35,17 +42,20 @@ Open Python IDLE (or IPython) and type following codes in Python terminal.
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
 
-It is quite easy. But there is a problem with this. Yum repositories may not contain the latest
-version of OpenCV always. For example, at the time of writing this tutorial, yum repository contains
-2.4.5 while latest OpenCV version is 2.4.6. With respect to Python API, latest version will always
-contain much better support. Also, there may be chance of problems with camera support, video
-playback etc depending upon the drivers, ffmpeg, gstreamer packages present etc.
+It is quite easy. But there is a problem with this. Yum repositories may not contain the latest version of OpenCV always.
 
-So my personal preference is next method, i.e. compiling from source. Also at some point in time,
-if you want to contribute to OpenCV, you will need this.
+For example, at the time of writing this tutorial, yum repository contains 2.4.5 while latest OpenCV version is 2.4.6. 
 
-Installing OpenCV from source
------------------------------
+With respect to Python API, latest version will always contain much better support.
+
+Also, there may be chance of problems with camera support, video playback etc depending upon the drivers, ffmpeg, gstreamer packages present etc.
+
+So my personal preference is next method, i.e. compiling from source.
+
+Also at some point in time, if you want to contribute to OpenCV, you will need this.
+
+### Installing OpenCV from source
+
 
 Compiling from source may seem a little complicated at first, but once you succeeded in it, there is
 nothing complicated.
@@ -72,13 +82,18 @@ yum install gstreamer-plugins-base-devel
 @endcode
 ### Optional Dependencies
 
-Above dependencies are sufficient to install OpenCV in your fedora machine. But depending upon your
-requirements, you may need some extra dependencies. A list of such optional dependencies are given
-below. You can either leave it or install it, your call :)
+Above dependencies are sufficient to install OpenCV in your fedora machine. 
+
+But depending upon your requirements, you may need some extra dependencies. 
+
+A list of such optional dependencies are given below. 
+
+You can either leave it or install it, your call :)
 
 OpenCV comes with supporting files for image formats like PNG, JPEG, JPEG2000, TIFF, WebP etc. But
-it may be a little old. If you want to get latest libraries, you can install development files for
-these formats.
+it may be a little old. 
+
+If you want to get latest libraries, you can install development files for these formats.
 @code{.sh}
 yum install libpng-devel
 yum install libjpeg-turbo-devel
@@ -237,10 +252,10 @@ make doxygen
 @endcode
 Then open opencv/build/doc/doxygen/html/index.html and bookmark it in the browser.
 
-Additional Resources
---------------------
+### Additional Resources
 
-Exercises
----------
+
+### Exercises
+
 
 -#  Compile OpenCV from source in your Fedora machine.
