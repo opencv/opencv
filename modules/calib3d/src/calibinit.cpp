@@ -583,8 +583,10 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         }
         //if flag CALIB_CB_ADAPTIVE_THRESH is not set it doesn't make sense to iterate over k
         int max_k = useAdaptive ? 6 : 1;
+        Mat prev_thresh_img;
         for (int k = 0; k < max_k && !found; k++)
         {
+            int prev_block_size = -1;
             for (int dilations = min_dilations; dilations <= max_dilations; dilations++)
             {
                 // convert the input grayscale image to binary (black-n-white)
@@ -595,9 +597,18 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                                              : prev_sqr_size * 2);
                     block_size = block_size | 1;
                     // convert to binary
-                    adaptiveThreshold( img, thresh_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, block_size, (k/2)*5 );
-                    dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), dilations );
-
+                    if (block_size != prev_block_size)
+                    {
+                        adaptiveThreshold( img, thresh_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, block_size, (k/2)*5 );
+                        dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), dilations );
+                        thresh_img.copyTo(prev_thresh_img);
+                    }
+                    else if (dilations > 0)
+                    {
+                        dilate( prev_thresh_img, prev_thresh_img, Mat(), Point(-1, -1), 1 );
+                        prev_thresh_img.copyTo(thresh_img);
+                    }
+                    prev_block_size = block_size;
                 }
                 else
                 {
