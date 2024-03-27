@@ -124,6 +124,9 @@ OPENCV_HAL_IMPL_NEON_UTILS_SUFFIX(uint16x8, uint16x4, u16)
 OPENCV_HAL_IMPL_NEON_UTILS_SUFFIX(int16x8,  int16x4,  s16)
 OPENCV_HAL_IMPL_NEON_UTILS_SUFFIX(uint32x4, uint32x2, u32)
 OPENCV_HAL_IMPL_NEON_UTILS_SUFFIX(int32x4,  int32x2,  s32)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_UTILS_SUFFIX(float16x8, float16x4, f16);
+#endif
 OPENCV_HAL_IMPL_NEON_UTILS_SUFFIX(float32x4, float32x2, f32)
 OPENCV_HAL_IMPL_NEON_UTILS_SUFFIX_I64(uint64x2, uint64x1, u64)
 OPENCV_HAL_IMPL_NEON_UTILS_SUFFIX_I64(int64x2,  int64x1,  s64)
@@ -285,6 +288,31 @@ private:
     }
 };
 
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+struct v_float16x8
+{
+    v_float16x8() {}
+    explicit v_float16x8(float16x8_t v) : val(v) {}
+    v_float16x8(__fp16 v0, __fp16 v1, __fp16 v2, __fp16 v3, __fp16 v4, __fp16 v5, __fp16 v6, __fp16 v7)
+    {
+        __fp16 v[] = {v0, v1, v2, v3, v4, v5, v6, v7};
+        val = vld1q_f16(v);
+    }
+    float16x8_t val;
+
+private:
+    friend struct VTraits<v_float16x8>;
+    enum { nlanes = 8 };
+    typedef __fp16 lane_type;
+
+    friend typename VTraits<v_float16x8>::lane_type v_get0<v_float16x8>(const v_float16x8& v);
+    __fp16 get0() const
+    {
+        return vgetq_lane_f16(val, 0);
+    }
+};
+#endif
+
 struct v_float32x4
 {
     v_float32x4() {}
@@ -400,6 +428,37 @@ OPENCV_HAL_IMPL_NEON_INIT(uint32x4, unsigned, u32)
 OPENCV_HAL_IMPL_NEON_INIT(int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_INIT(uint64x2, uint64, u64)
 OPENCV_HAL_IMPL_NEON_INIT(int64x2, int64, s64)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+// hfloat workaround
+#define OPENCV_HAL_IMPL_NEON_INIT_1(_Tpv, _Tp, suffix) \
+inline v_##_Tpv v_setzero_##suffix() { typedef __fp16 hfloat; return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
+inline v_##_Tpv v_setall_##suffix(_Tp v) { typedef __fp16 hfloat; return v_##_Tpv(vdupq_n_##suffix(v)); } \
+inline _Tpv##_t vreinterpretq_##suffix##_##suffix(_Tpv##_t v) { return v; } \
+inline v_uint8x16 v_reinterpret_as_u8(const v_##_Tpv& v) { return v_uint8x16(vreinterpretq_u8_##suffix(v.val)); } \
+inline v_int8x16 v_reinterpret_as_s8(const v_##_Tpv& v) { return v_int8x16(vreinterpretq_s8_##suffix(v.val)); } \
+inline v_uint16x8 v_reinterpret_as_u16(const v_##_Tpv& v) { return v_uint16x8(vreinterpretq_u16_##suffix(v.val)); } \
+inline v_int16x8 v_reinterpret_as_s16(const v_##_Tpv& v) { return v_int16x8(vreinterpretq_s16_##suffix(v.val)); } \
+inline v_uint32x4 v_reinterpret_as_u32(const v_##_Tpv& v) { return v_uint32x4(vreinterpretq_u32_##suffix(v.val)); } \
+inline v_int32x4 v_reinterpret_as_s32(const v_##_Tpv& v) { return v_int32x4(vreinterpretq_s32_##suffix(v.val)); } \
+inline v_uint64x2 v_reinterpret_as_u64(const v_##_Tpv& v) { return v_uint64x2(vreinterpretq_u64_##suffix(v.val)); } \
+inline v_int64x2 v_reinterpret_as_s64(const v_##_Tpv& v) { return v_int64x2(vreinterpretq_s64_##suffix(v.val)); } \
+inline v_float32x4 v_reinterpret_as_f32(const v_##_Tpv& v) { return v_float32x4(vreinterpretq_f32_##suffix(v.val)); }
+OPENCV_HAL_IMPL_NEON_INIT_1(float16x8, __fp16, f16);
+#define OPENCV_HAL_IMPL_NEON_INIT_FP16(_Tpv, suffix) \
+inline v_float16x8 v_reinterpret_as_f16(const v_##_Tpv& v) { return v_float16x8(vreinterpretq_f16_##suffix(v.val)); }
+OPENCV_HAL_IMPL_NEON_INIT_FP16(uint8x16, u8)
+OPENCV_HAL_IMPL_NEON_INIT_FP16(int8x16, s8)
+OPENCV_HAL_IMPL_NEON_INIT_FP16(uint16x8, u16)
+OPENCV_HAL_IMPL_NEON_INIT_FP16(int16x8, s16)
+OPENCV_HAL_IMPL_NEON_INIT_FP16(uint32x4, u32)
+OPENCV_HAL_IMPL_NEON_INIT_FP16(int32x4, s32)
+OPENCV_HAL_IMPL_NEON_INIT_FP16(uint64x2, u64)
+OPENCV_HAL_IMPL_NEON_INIT_FP16(int64x2, s64)
+OPENCV_HAL_IMPL_NEON_INIT_FP16(float32x4, f32)
+#if CV_SIMD128_64F
+OPENCV_HAL_IMPL_NEON_INIT_FP16(float64x2, f64)
+#endif
+#endif
 OPENCV_HAL_IMPL_NEON_INIT(float32x4, float, f32)
 #if CV_SIMD128_64F
 #define OPENCV_HAL_IMPL_NEON_INIT_64(_Tpv, suffix) \
@@ -413,6 +472,9 @@ OPENCV_HAL_IMPL_NEON_INIT_64(uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_INIT_64(int32x4, s32)
 OPENCV_HAL_IMPL_NEON_INIT_64(uint64x2, u64)
 OPENCV_HAL_IMPL_NEON_INIT_64(int64x2, s64)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_INIT_64(float16x8, f16)
+#endif
 OPENCV_HAL_IMPL_NEON_INIT_64(float32x4, f32)
 OPENCV_HAL_IMPL_NEON_INIT_64(float64x2, f64)
 #endif
@@ -525,6 +587,14 @@ OPENCV_HAL_IMPL_NEON_BIN_OP(v_mul, v_int32x4, vmulq_s32)
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_add, v_uint32x4, vaddq_u32)
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_sub, v_uint32x4, vsubq_u32)
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_mul, v_uint32x4, vmulq_u32)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_BIN_OP(v_add, v_float16x8, vaddq_f16) // no v7
+OPENCV_HAL_IMPL_NEON_BIN_OP(v_sub, v_float16x8, vsubq_f16) // no v7
+OPENCV_HAL_IMPL_NEON_BIN_OP(v_mul, v_float16x8, vmulq_f16) // no v7
+#endif
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_BIN_OP(v_div, v_float16x8, vdivq_f16)
+#endif
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_add, v_float32x4, vaddq_f32)
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_sub, v_float32x4, vsubq_f32)
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_mul, v_float32x4, vmulq_f32)
@@ -944,6 +1014,21 @@ OPENCV_HAL_IMPL_NEON_LOGIC_OP(v_int32x4, s32)
 OPENCV_HAL_IMPL_NEON_LOGIC_OP(v_uint64x2, u64)
 OPENCV_HAL_IMPL_NEON_LOGIC_OP(v_int64x2, s64)
 
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+#define OPENCV_HAL_IMPL_NEON_FP16_BIT_OP(bin_op, intrin) \
+inline v_float16x8 bin_op (const v_float16x8& a, const v_float16x8& b) \
+{ \
+    return v_float16x8(vreinterpretq_f16_s16(intrin(vreinterpretq_s16_f16(a.val), vreinterpretq_s16_f16(b.val)))); \
+}
+OPENCV_HAL_IMPL_NEON_FP16_BIT_OP(v_and, vandq_s16)
+OPENCV_HAL_IMPL_NEON_FP16_BIT_OP(v_or, vorrq_s16)
+OPENCV_HAL_IMPL_NEON_FP16_BIT_OP(v_xor, veorq_s16)
+inline v_float16x8 v_not (const v_float16x8& a)
+{
+    return v_float16x8(vreinterpretq_f16_s16(vmvnq_s16(vreinterpretq_s16_f16(a.val))));
+}
+#endif
+
 #define OPENCV_HAL_IMPL_NEON_FLT_BIT_OP(bin_op, intrin) \
 inline v_float32x4 bin_op (const v_float32x4& a, const v_float32x4& b) \
 { \
@@ -958,6 +1043,19 @@ inline v_float32x4 v_not (const v_float32x4& a)
 {
     return v_float32x4(vreinterpretq_f32_s32(vmvnq_s32(vreinterpretq_s32_f32(a.val))));
 }
+
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline v_float16x8 v_sqrt(const v_float16x8& x)
+{
+    return v_float16x8(vsqrtq_f16(x.val));
+}
+
+inline v_float16x8 v_invsqrt(const v_float16x8& x)
+{
+    v_float16x8 one = v_setall_f16(1.0f);
+    return v_div(one, v_sqrt(x));
+}
+#endif
 
 #if CV_SIMD128_64F
 inline v_float32x4 v_sqrt(const v_float32x4& x)
@@ -998,6 +1096,11 @@ OPENCV_HAL_IMPL_NEON_ABS(v_uint32x4, v_int32x4, u32, s32)
 
 inline v_float32x4 v_abs(v_float32x4 x)
 { return v_float32x4(vabsq_f32(x.val)); }
+
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline v_float16x8 v_abs(v_float16x8 x)
+{ return v_float16x8(vabsq_f16(x.val)); } // no v7
+#endif
 
 #if CV_SIMD128_64F
 #define OPENCV_HAL_IMPL_NEON_DBL_BIT_OP(bin_op, intrin) \
@@ -1052,6 +1155,10 @@ OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int32x4, v_min, vminq_s32)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int32x4, v_max, vmaxq_s32)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float32x4, v_min, vminq_f32)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float32x4, v_max, vmaxq_f32)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float16x8, v_min, vminq_f16) // no v7
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float16x8, v_max, vmaxq_f16) // no v7
+#endif
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_min, vminq_f64)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_max, vmaxq_f64)
@@ -1075,6 +1182,9 @@ OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint8x16, OPENCV_HAL_NOP, u8, u8)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int8x16, vreinterpretq_s8_u8, s8, u8)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint16x8, OPENCV_HAL_NOP, u16, u16)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int16x8, vreinterpretq_s16_u16, s16, u16)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float16x8, vreinterpretq_f16_u16, f16, u16) // no v7
+#endif
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint32x4, OPENCV_HAL_NOP, u32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int32x4, vreinterpretq_s32_u32, s32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float32x4, vreinterpretq_f32_u32, f32, u32)
@@ -1139,6 +1249,10 @@ static inline v_int64x2 v_lt (const v_int64x2& a, const v_int64x2& b)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float64x2, vreinterpretq_f64_u64, f64, u64)
 #endif
 
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline v_float16x8 v_not_nan(const v_float16x8& a)
+{ return v_float16x8(vreinterpretq_f16_u16(vceqq_f16(a.val, a.val))); }
+#endif
 inline v_float32x4 v_not_nan(const v_float32x4& a)
 { return v_float32x4(vreinterpretq_f32_u32(vceqq_f32(a.val, a.val))); }
 #if CV_SIMD128_64F
@@ -1162,6 +1276,9 @@ OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int16x8, v_mul_wrap, vmulq_s16)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint8x16, v_absdiff, vabdq_u8)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint16x8, v_absdiff, vabdq_u16)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint32x4, v_absdiff, vabdq_u32)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float16x8, v_absdiff, vabdq_f16) // no v7
+#endif
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float32x4, v_absdiff, vabdq_f32)
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_absdiff, vabdq_f64)
@@ -1182,6 +1299,29 @@ inline _Tpvec2 func(const _Tpvec& a, const _Tpvec& b) \
 OPENCV_HAL_IMPL_NEON_BIN_FUNC2(v_int8x16, v_uint8x16, vreinterpretq_u8_s8, v_absdiff, vabdq_s8)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC2(v_int16x8, v_uint16x8, vreinterpretq_u16_s16, v_absdiff, vabdq_s16)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC2(v_int32x4, v_uint32x4, vreinterpretq_u32_s32, v_absdiff, vabdq_s32)
+
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline v_float16x8 v_magnitude(const v_float16x8& a, const v_float16x8& b)
+{
+    v_float16x8 x(vaddq_f16(vmulq_f16(a.val, a.val), vmulq_f16(b.val, b.val)));
+    return v_sqrt(x);
+}
+
+inline v_float16x8 v_sqr_magnitude(const v_float16x8& a, const v_float16x8& b)
+{
+    return v_float16x8(vaddq_f16(vmulq_f16(a.val, a.val), vmulq_f16(b.val, b.val)));
+}
+
+inline v_float16x8 v_fma(const v_float16x8& a, const v_float16x8& b, const v_float16x8& c)
+{
+    return v_float16x8(vfmaq_f16(c.val, a.val, b.val));
+}
+
+inline v_float16x8 v_muladd(const v_float16x8& a, const v_float16x8& b, const v_float16x8& c)
+{
+    return v_fma(a, b, c);
+}
+#endif
 
 inline v_float32x4 v_magnitude(const v_float32x4& a, const v_float32x4& b)
 {
@@ -1285,6 +1425,7 @@ OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint16x8, u16)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int16x8, s16)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int32x4, s32)
+// OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float16x8, f16) // no conversion from int to cv::hfloat
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float32x4, f32)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint64x2, u64)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int64x2, s64)
@@ -1336,6 +1477,9 @@ OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint32x4, unsigned, u32)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint64x2, uint64, u64)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, s64)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float16x8, __fp16, f16)
+#endif
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float32x4, float, f32)
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, f64)
@@ -1428,6 +1572,10 @@ OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, ushort, max, max, u16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, ushort, min, min, u16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, max, max, s16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, min, min, s16)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, max, max, f16) // Might have problem since return type is hfloat
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, min, min, f16) // Might have problem since return type is hfloat
+#endif
 
 #if CV_NEON_AARCH64
 #define OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
@@ -1635,6 +1783,10 @@ inline int v_signmask(const v_uint16x8& a)
 }
 inline int v_signmask(const v_int16x8& a)
 { return v_signmask(v_reinterpret_as_u16(a)); }
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline int v_signmask(const v_float16x8& a)
+{ return v_signmask(v_reinterpret_as_u16(a)); }
+#endif
 
 inline int v_signmask(const v_uint32x4& a)
 {
@@ -1678,6 +1830,9 @@ inline int v_scan_forward(const v_int8x16& a) { return trailingZeros32(v_signmas
 inline int v_scan_forward(const v_uint8x16& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_int16x8& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_uint16x8& a) { return trailingZeros32(v_signmask(a)); }
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline int v_scan_forward(const v_float16x8& a) { return trailingZeros32(v_signmask(a)); }
+#endif
 inline int v_scan_forward(const v_int32x4& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_uint32x4& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_float32x4& a) { return trailingZeros32(v_signmask(a)); }
@@ -1732,6 +1887,10 @@ inline bool v_check_all(const v_int8x16& a)
 { return v_check_all(v_reinterpret_as_u8(a)); }
 inline bool v_check_all(const v_int16x8& a)
 { return v_check_all(v_reinterpret_as_u16(a)); }
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline bool v_check_all(const v_float16x8& a)
+{ return v_check_all(v_reinterpret_as_u16(a)); }
+#endif
 inline bool v_check_all(const v_int32x4& a)
 { return v_check_all(v_reinterpret_as_u32(a)); }
 inline bool v_check_all(const v_float32x4& a)
@@ -1767,6 +1926,9 @@ OPENCV_HAL_IMPL_NEON_SELECT(v_uint8x16, u8, u8)
 OPENCV_HAL_IMPL_NEON_SELECT(v_int8x16, s8, u8)
 OPENCV_HAL_IMPL_NEON_SELECT(v_uint16x8, u16, u16)
 OPENCV_HAL_IMPL_NEON_SELECT(v_int16x8, s16, u16)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_SELECT(v_float16x8, f16, u16)
+#endif
 OPENCV_HAL_IMPL_NEON_SELECT(v_uint32x4, u32, u32)
 OPENCV_HAL_IMPL_NEON_SELECT(v_int32x4, s32, u32)
 OPENCV_HAL_IMPL_NEON_SELECT(v_float32x4, f32, u32)
@@ -1884,6 +2046,9 @@ OPENCV_HAL_IMPL_NEON_UNPACKS(uint8x16, u8)
 OPENCV_HAL_IMPL_NEON_UNPACKS(int8x16, s8)
 OPENCV_HAL_IMPL_NEON_UNPACKS(uint16x8, u16)
 OPENCV_HAL_IMPL_NEON_UNPACKS(int16x8, s16)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_UNPACKS(float16x8, f16)
+#endif
 OPENCV_HAL_IMPL_NEON_UNPACKS(uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_UNPACKS(int32x4, s32)
 OPENCV_HAL_IMPL_NEON_UNPACKS(float32x4, f32)
@@ -1908,6 +2073,11 @@ inline v_uint16x8 v_reverse(const v_uint16x8 &a)
 
 inline v_int16x8 v_reverse(const v_int16x8 &a)
 { return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline v_float16x8 v_reverse(const v_float16x8 &a)
+{ return v_reinterpret_as_f16(v_reverse(v_reinterpret_as_u16(a))); }
+#endif
 
 inline v_uint32x4 v_reverse(const v_uint32x4 &a)
 {
@@ -1948,6 +2118,9 @@ OPENCV_HAL_IMPL_NEON_EXTRACT(uint8x16, u8)
 OPENCV_HAL_IMPL_NEON_EXTRACT(int8x16, s8)
 OPENCV_HAL_IMPL_NEON_EXTRACT(uint16x8, u16)
 OPENCV_HAL_IMPL_NEON_EXTRACT(int16x8, s16)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_EXTRACT(float16x8, f16)
+#endif
 OPENCV_HAL_IMPL_NEON_EXTRACT(uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_EXTRACT(int32x4, s32)
 OPENCV_HAL_IMPL_NEON_EXTRACT(uint64x2, u64)
@@ -1964,6 +2137,9 @@ OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int16x8, short, s16)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float16x8, __fp16, f16) // Might have problem since return type is hfloat
+#endif
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint32x4, uint, u32)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint64x2, uint64, u64)
@@ -1980,6 +2156,9 @@ OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_int16x8, short, s16)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_float16x8, __fp16, f16)
+#endif
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint32x4, uint, u32)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint64x2, uint64, u64)
@@ -1987,6 +2166,30 @@ OPENCV_HAL_IMPL_NEON_BROADCAST(v_int64x2, int64, s64)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_float32x4, float, f32)
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_float64x2, double, f64)
+#endif
+
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline v_int16x8 v_round(const v_float16x8 &a)
+{
+    return v_int16x8(vcvtnq_s16_f16(a.val));
+}
+
+inline v_int16x8 v_floor(const v_float16x8 &a)
+{
+    int16x8_t a1 = vcvtq_s16_f16(a.val);
+    uint16x8_t mask = vcgtq_f16(vcvtq_f16_s16(a1), a.val);
+    return v_int16x8(vaddq_s16(a1, vreinterpretq_s16_u16(mask)));
+}
+
+inline v_int16x8 v_ceil(const v_float16x8 &a)
+{
+    int16x8_t a1 = vcvtq_s16_f16(a.val);
+    uint16x8_t mask = vcgtq_f16(a.val, vcvtq_f16_s16(a1));
+    return v_int16x8(vsubq_s16(a1, vreinterpretq_s16_u16(mask)));
+}
+
+inline v_int16x8 v_trunc(const v_float16x8 &a)
+{ return v_int16x8(vcvtq_s16_f16(a.val)); }
 #endif
 
 #if CV_SIMD128_64F
@@ -2257,6 +2460,9 @@ OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(int16x8, short, s16)
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(float16x8, __fp16, f16)
+#endif
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint32x4, unsigned, u32)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(float32x4, float, f32)
@@ -2266,6 +2472,23 @@ OPENCV_HAL_IMPL_NEON_INTERLEAVED(float64x2, double, f64)
 
 OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(int64, s64)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(uint64, u64)
+
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline v_float16x8 v_cvt_f16(const v_float32x4 &a)
+{
+    typedef __fp16 hfloat;
+    float16x4_t zero = vdup_n_f16((__fp16)0.0f);
+    return v_float16x8(vcombine_f16(vcvt_f16_f32(a.val), zero));
+}
+inline v_float16x8 v_cvt_f16(const v_float32x4 &a, const v_float32x4 &b)
+{
+    return v_float16x8(vcombine_f16(vcvt_f16_f32(a.val), vcvt_f16_f32(b.val)));
+}
+inline v_float16x8 v_cvt_f16(const v_int16x8 &a)
+{
+    return v_float16x8(vcvtq_f16_s16(a.val));
+}
+#endif
 
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
@@ -2421,6 +2644,46 @@ inline v_int16x8 v_lut_quads(const short* tab, const int* idx)
 inline v_uint16x8 v_lut(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut((short*)tab, idx)); }
 inline v_uint16x8 v_lut_pairs(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_pairs((short*)tab, idx)); }
 inline v_uint16x8 v_lut_quads(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_quads((short*)tab, idx)); }
+
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline v_float16x8 v_lut(const hfloat *tab, const int *idx)
+{
+    const __fp16 *t = (const __fp16*)tab;
+    __fp16 CV_DECL_ALIGNED(32) elems[8] =
+    {
+        t[idx[0]],
+        t[idx[1]],
+        t[idx[2]],
+        t[idx[3]],
+        t[idx[4]],
+        t[idx[5]],
+        t[idx[6]],
+        t[idx[7]],
+    };
+    return v_float16x8(vld1q_f16(elems));
+}
+inline v_float16x8 v_lut_pairs(const hfloat *tab, const int *idx)
+{
+    const __fp16 *t = (const __fp16*)tab;
+    __fp16 CV_DECL_ALIGNED(32) elems[8] =
+    {
+        t[idx[0]],
+        t[idx[0] + 1],
+        t[idx[1]],
+        t[idx[1] + 1],
+        t[idx[2]],
+        t[idx[2] + 1],
+        t[idx[3]],
+        t[idx[3] + 1],
+    };
+    return v_float16x8(vld1q_f16(elems));
+}
+inline v_float16x8 v_lut_quads(const hfloat *tab, const int *idx)
+{
+    const __fp16 *t = (const __fp16*)tab;
+    return v_float16x8(vcombine_f16(vld1_f16(t + idx[0]), vld1_f16(t + idx[1])));
+}
+#endif
 
 inline v_int32x4 v_lut(const int* tab, const int* idx)
 {
@@ -2622,7 +2885,7 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
 
 ////// FP16 support ///////
 #if CV_FP16
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     float16x4_t v =
     #ifndef vld1_f16 // APPLE compiler defines vld1_f16 as macro
@@ -2633,7 +2896,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_float32x4(vcvt_f32_f16(v));
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     float16x4_t hv = vcvt_f16_f32(v.val);
 
@@ -2644,7 +2907,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
     #endif
 }
 #else
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     const int N = 4;
     float buf[N];
@@ -2652,12 +2915,12 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_load(buf);
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     const int N = 4;
     float buf[N];
     v_store(buf, v);
-    for( int i = 0; i < N; i++ ) ptr[i] = float16_t(buf[i]);
+    for( int i = 0; i < N; i++ ) ptr[i] = hfloat(buf[i]);
 }
 #endif
 

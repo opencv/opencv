@@ -2498,7 +2498,7 @@ OPENCV_HAL_IMPL_LSX_LOADSTORE_INTERLEAVE(v_float64x2, double, f64, v_uint64x2, u
 // FP16
 //
 
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
 #if CV_FP16
     return v_float32x4(__lsx_vfcvtl_s_h((__m128)__lsx_vld(ptr, 0)));
@@ -2510,7 +2510,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
 #endif
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& a)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& a)
 {
 #if CV_FP16
     __m128i res = (__m218i)__lsx_vfcvt_h_s(a.val, a.val);
@@ -2519,7 +2519,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& a)
     float CV_DECL_ALIGNED(32) buf[4];
     v_store_aligned(buf, a);
     for (int i = 0; i < 4; i++)
-        ptr[i] = float16_t(buf[i]);
+        ptr[i] = hfloat(buf[i]);
 #endif
 }
 
