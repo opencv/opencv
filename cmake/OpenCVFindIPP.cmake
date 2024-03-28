@@ -84,7 +84,7 @@ endmacro()
 # This macro uses IPP_ROOT_DIR variable
 # TODO Cleanup code after ICV package stabilization
 macro(ipp_detect_version)
-  set(IPP_INCLUDE_DIRS ${IPP_ROOT_DIR}/include)
+  cmake_path(GET IPP_VERSION_FILE PARENT_PATH IPP_INCLUDE_DIRS)
 
   set(__msg)
   if(EXISTS ${IPP_ROOT_DIR}/include/ippicv_redefs.h)
@@ -271,7 +271,9 @@ if(NOT DEFINED IPPROOT)
 endif()
 
 file(TO_CMAKE_PATH "${IPPROOT}" __IPPROOT)
-if(EXISTS "${__IPPROOT}/include/ippversion.h")
+file(GLOB_RECURSE IPP_VERSION_FILE "${__IPPROOT}/include/*ippversion.h")
+
+if(EXISTS ${IPP_VERSION_FILE})
   set(IPP_ROOT_DIR ${__IPPROOT})
   ipp_detect_version()
 endif()
