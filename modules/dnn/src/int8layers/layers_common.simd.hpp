@@ -1366,8 +1366,6 @@ void fastConv( const int8_t* weights, size_t wstep, const int* bias,
             // compute sum of each vs
             vint32m1_t zero = __riscv_vmv_v_x_i32m1(0, e8m1);
             int sum0[FASCONV_BASE_VECSZ], sum1[FASCONV_BASE_VECSZ], sum2[FASCONV_BASE_VECSZ];
-            int vs[16] = {0};
-            __riscv_vse32(vs, vs00, e8m1);
 
             sum0[0] = __riscv_vmv_x(__riscv_vredsum_vs_i32m2_i32m1(vs00, zero, e8m1));
             sum0[1] = __riscv_vmv_x(__riscv_vredsum_vs_i32m2_i32m1(vs01, zero, e8m1));
