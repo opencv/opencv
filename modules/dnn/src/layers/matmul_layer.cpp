@@ -335,7 +335,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         auto input_A_desc = input_A_wrapper->getTensorDesc();
         auto input_A_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
 
-        auto op = std::make_shared<ge::op::BatchMatMul>(name);
+        auto op = std::make_shared<ge::op::BatchMatMulV2>(name);
 
         // set attributes
         op->set_attr_adj_x1(trans_a);
@@ -352,11 +352,31 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             auto input_B_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
             op->set_input_x2_by_name(*input_B_node, "y");
             op->update_input_desc_x2(*input_B_desc);
+            if (inputs.size() >= 3) {
+                auto input_bias_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
+                auto input_bias_desc = input_bias_wrapper->getTensorDesc();
+                auto input_bias_node = nodes[2].dynamicCast<CannBackendNode>()->getOp();
+                op->set_input_bias_by_name(*input_bias_node, "y");
+                op->update_input_desc_bias(*input_bias_desc);
+            }
         } else { // constant input B
             auto B = blobs[0];
             auto const_B_node = std::make_shared<CannConstOp>(B.data, B.type(), shape(B), cv::format("%s_B", name.c_str()));
             op->set_input_x2_by_name(*(const_B_node->getOp()), "y");
             op->update_input_desc_x2(*(const_B_node->getTensorDesc()));
+            if ((inputs.size() + blobs.size()) >= 3) {
+                auto bias_mat = blobs.back();
+                auto bias_shape = shape(bias_mat);
+
+                // reshape if 1d
+                if (real_ndims_C == 1 && bias_shape.front() != 1) {
+                    bias_shape = std::vector<int>{bias_shape.front()};
+                }
+
+                auto const_bias_node = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), bias_shape, cv::format("%s_bias", name.c_str()));
+                op->set_input_bias_by_name(*(const_bias_node->getOp()), "y");
+                op->update_input_desc_bias(*(const_bias_node->getTensorDesc()));
+            }
         }
 
         // set outputs
