@@ -49,6 +49,14 @@ zlib                  General purpose LZ77 compression library
                       Copyright (C) 1995-2022 Jean-loup Gailly and Mark Adler.
                       See zlib home page http://www.zlib.net
                       for details and links to the source code
+
+zlib-ng               zlib data compression library for the next generation systems
+                      (C) 1995-2013 Jean-loup Gailly and Mark Adler
+                      See zlib-ng official GitHub repository
+                      https://github.com/zlib-ng/zlib-ng.git
+                      for details and links to source code
+
+                      WITH_ZLIB_NG CMake option must be ON to use zlib-ng as the zlib implementation.
 ------------------------------------------------------------------------------------
 jasper                JasPer is a collection of software
                       (i.e., a library and application programs) for the coding
