@@ -2869,14 +2869,16 @@ CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, In
 * Currently, the following file formats are supported:
 * -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file) (ONLY TRIANGULATED FACES)
 * -  [Polygon File Format *.ply](https://en.wikipedia.org/wiki/PLY_(file_format))
-* @param filename Name of the file.
-* @param vertices (vector of Point3f) vertex coordinates of a mesh
-* @param indices (vector of vectors of int) vertex normals of a mesh
-* @param normals (vector of Point3f) vertex normals of a mesh
-* @param colors (vector of Point3f) vertex colors of a mesh
+* @param filename Name of the file
+* @param vertices vertex coordinates, each value contains 3 floats
+* @param indices per-face list of vertices, each value is a vector of ints
+* @param normals per-vertex normals, each value contains 3 floats
+* @param colors per-vertex colors, each value contains 3 floats
+* @param texCoords per-vertex texture coordinates, each value contains 2 or 3 floats
 */
 CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays indices,
-                           OutputArray normals = noArray(), OutputArray colors = noArray());
+                           OutputArray normals = noArray(), OutputArray colors = noArray(),
+                           OutputArray texCoords = noArray());
 
 /** @brief Saves a mesh to a specified file.
 *
@@ -2884,13 +2886,14 @@ CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputA
 * File format is chosen based on the filename extension.
 *
 * @param filename Name of the file.
-* @param vertices (vector of Point3f) vertex coordinates of a mesh
-* @param indices (vector of vectors of int) vertex normals of a mesh
-* @param normals (vector of Point3f) vertex normals of a mesh
-* @param colors (vector of Point3f) vertex colors of a mesh
+* @param vertices vertex coordinates, each value contains 3 floats
+* @param indices per-face list of vertices, each value is a vector of ints
+* @param normals per-vertex normals, each value contains 3 floats
+* @param colors per-vertex colors, each value contains 3 floats
+* @param texCoords per-vertex texture coordinates, each value contains 2 or 3 floats
 */
 CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays indices,
-                           InputArray normals = noArray(), InputArray colors = noArray());
+                           InputArray normals = noArray(), InputArray colors = noArray(), InputArray texCoords = noArray());
 
 
 //! Triangle fill settings
