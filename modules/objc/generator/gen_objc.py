@@ -60,6 +60,7 @@ type_dict = {
     "void"    : {"objc_type" : "void", "is_primitive" : True, "swift_type": "Void"},
     "bool"    : {"objc_type" : "BOOL", "is_primitive" : True, "to_cpp": "(bool)%(n)s", "swift_type": "Bool"},
     "char"    : {"objc_type" : "char", "is_primitive" : True, "swift_type": "Int8"},
+    "uchar"   : {"objc_type" : "unsigned char", "is_primitive" : True, "swift_type": "UInt8"},
     "int"     : {"objc_type" : "int", "is_primitive" : True, "out_type" : "int*", "out_type_ptr": "%(n)s", "out_type_ref": "*(int*)(%(n)s)", "swift_type": "Int32"},
     "long"    : {"objc_type" : "long", "is_primitive" : True, "swift_type": "Int"},
     "float"   : {"objc_type" : "float", "is_primitive" : True, "out_type" : "float*", "out_type_ptr": "%(n)s", "out_type_ref": "*(float*)(%(n)s)", "swift_type": "Float"},

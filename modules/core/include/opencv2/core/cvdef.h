@@ -380,6 +380,12 @@ enum CpuFeatures {
 #  define CV_FP16_TYPE 0
 #endif
 
+#ifdef __cplusplus
+using cv::int64;
+using cv::uint64;
+using cv::ushort;
+#endif
+
 typedef union Cv16suf
 {
     short i;

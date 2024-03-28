@@ -49,8 +49,7 @@
 
 using namespace cv::cuda;
 
-typedef unsigned char uchar;
-typedef unsigned short ushort;
+using cv::uchar;
 
 //////////////////////////////////////////////////////////////////////////////////
 //// Non Local Means Denosing

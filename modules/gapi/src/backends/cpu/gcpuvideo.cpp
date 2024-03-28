@@ -48,7 +48,7 @@ GAPI_OCV_KERNEL(GCPUCalcOptFlowLK, cv::gapi::video::GCalcOptFlowLK)
                           int                       flags,
                           double                    minEigThresh,
                           std::vector<cv::Point2f> &outPts,
-                          std::vector<uchar>       &status,
+                          std::vector<uint8_t>     &status,
                           std::vector<float>       &err)
     {
         if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
@@ -70,7 +70,7 @@ GAPI_OCV_KERNEL(GCPUCalcOptFlowLKForPyr, cv::gapi::video::GCalcOptFlowLKForPyr)
                           int                       flags,
                           double                    minEigThresh,
                           std::vector<cv::Point2f> &outPts,
-                          std::vector<uchar>       &status,
+                          std::vector<uint8_t>     &status,
                           std::vector<float>       &err)
     {
         if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
