@@ -11,7 +11,7 @@
 
 namespace opencv_test { namespace {
 
-TEST(PointCloud, LoadObj)
+TEST(PointCloud, LoadPointCloudObj)
 {
     std::vector<cv::Point3f> points_gold = {
         {-5.93915f, -0.13257f, 2.55837f},
@@ -125,21 +125,21 @@ TEST(PointCloud, LoadSavePly)
 
 TEST(PointCloud, LoadSaveMeshObj)
 {
-    std::vector<cv::Point3f> points;
-    std::vector<cv::Point3f> normals;
+    std::vector<cv::Point3f> points, normals, colors;
+    std::vector<cv::Point2f> texCoords;
     std::vector<std::vector<int32_t>> indices;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
     std::string new_path = tempfile("new_mesh.obj");
 
-    cv::loadMesh(folder + "pointcloudio/orig.obj", points, indices, normals);
-    cv::saveMesh(new_path, points, indices, normals);
+    cv::loadMesh(folder + "pointcloudio/orig.obj", points, indices, normals, colors, texCoords);
+    cv::saveMesh(new_path, points, indices, normals, colors, texCoords);
 
-    std::vector<cv::Point3f> points_gold;
-    std::vector<cv::Point3f> normals_gold;
+    std::vector<cv::Point3f> points_gold, normals_gold, colors_gold;
+    std::vector<cv::Point2f> texCoords_gold;
     std::vector<std::vector<int32_t>> indices_gold;
 
-    cv::loadMesh(new_path, points_gold, indices_gold, normals_gold);
+    cv::loadMesh(new_path, points_gold, indices_gold, normals_gold, colors_gold, texCoords_gold);
 
     EXPECT_EQ(normals_gold, normals);
     EXPECT_EQ(points_gold, points);

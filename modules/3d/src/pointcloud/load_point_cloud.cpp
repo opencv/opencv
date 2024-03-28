@@ -122,7 +122,8 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
 #endif
 }
 
-void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays indices, OutputArray normals, OutputArray colors)
+void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays indices,
+              OutputArray normals, OutputArray colors, OutputArray texCoords)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_Assert(vertices.needed());
@@ -142,7 +143,10 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
     std::vector<Point3_<uchar>> vec_rgb;
     std::vector<std::vector<int32_t>> vec_indices;
 
-    decoder->readData(vec_vertices, vec_normals, vec_rgb, vec_indices);
+    std::vector<Point3f> vec_texCoords;
+    int nTexCoords;
+
+    decoder->readData(vec_vertices, vec_normals, vec_rgb, vec_texCoords, nTexCoords, vec_indices, 0);
 
     if (!vec_vertices.empty())
     {
@@ -163,8 +167,36 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
     {
         std::vector<std::vector<int32_t>>& vec = *(std::vector<std::vector<int32_t>>*)indices.getObj();
         vec.resize(vec_indices.size());
-        for (size_t i = 0; i < vec_indices.size(); ++i) {
+        for (size_t i = 0; i < vec_indices.size(); ++i)
+        {
             Mat(1, static_cast<int>(vec_indices[i].size()), CV_32SC1, vec_indices[i].data()).copyTo(vec[i]);
+        }
+    }
+
+    if (texCoords.needed())
+    {
+        int ch = texCoords.channels();
+        Mat texMat = Mat(1, static_cast<int>(vec_texCoords.size()), CV_MAKETYPE(CV_32F, ch), vec_texCoords.data());
+        if (ch == nTexCoords)
+        {
+            texMat.copyTo(texCoords);
+        }
+        else
+        {
+            Mat newTexMat;
+            std::vector<Mat> varr;
+            cv::split(texMat, varr);
+            if (ch == 2 && nTexCoords == 3)
+            {
+                std::vector<Mat> marr = { varr[0], varr[1] };
+                cv::merge(marr, newTexMat);
+            }
+            if (ch == 3 && nTexCoords == 2)
+            {
+                std::vector<Mat> marr = { varr[0], varr[1], Mat::zeros(varr[0].size(), CV_32F) };
+                cv::merge(marr, newTexMat);
+            }
+            newTexMat.copyTo(texCoords);
         }
     }
 
@@ -178,7 +210,8 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
 #endif
 }
 
-void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays indices, InputArray normals, InputArray colors)
+void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays indices,
+              InputArray normals, InputArray colors, InputArray texCoords)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     if (vertices.empty()) {
@@ -217,7 +250,28 @@ void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays in
         mat_indices[i].copyTo(vec_indices[i]);
     }
 
-    encoder->writeData(vec_vertices, vec_normals, vec_rgb, vec_indices);
+    std::vector<Point3f> vec_texCoords;
+    int nTexCoords = 0;
+    if (!texCoords.empty())
+    {
+        nTexCoords = texCoords.channels();
+    }
+    if (nTexCoords == 2)
+    {
+        std::vector<Point2f> vec2_texCoords;
+        texCoords.copyTo(vec2_texCoords);
+        for (size_t i = 0; i < vec2_texCoords.size(); i++)
+        {
+            Point2f p = vec2_texCoords[i];
+            vec_texCoords.push_back({p.x, p.y, 0});
+        }
+    }
+    if (nTexCoords == 3)
+    {
+        texCoords.copyTo(vec_texCoords);
+    }
+
+    encoder->writeData(vec_vertices, vec_normals, vec_rgb, vec_texCoords, nTexCoords, vec_indices);
 
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
