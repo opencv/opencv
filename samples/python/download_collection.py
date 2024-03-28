@@ -8,6 +8,8 @@ import sys, json, requests
 from pathlib import Path
 import zipfile, tarfile, gzip
 
+import cv2 as cv
+
 if sys.version_info[0] < 3 or sys.version_info[1] < 5:
     raise Exception("Python 3.5 or greater is required. Try running `python3 download_collection.py`")
 
@@ -324,4 +326,9 @@ for m in stanford_models:
     model_path, texture_path = get_stanford_model(url, name, ext, model_dir, chunk_size, internal_path)
     all_models.append((model_path, texture_path))
 
+print("\nSubsampling")
+
+for mf, tf in all_models:
+     print(mf, tf)
+     verts, indices, normals, colors = cv.loadMesh(mf)
 
