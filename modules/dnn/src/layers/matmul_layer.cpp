@@ -257,18 +257,37 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
         auto& input_A_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::shared_ptr<ov::Node> matmul;
+        std::shared_ptr<ov::Node> result;
+        ov::Output<ov::Node> bias;
 
-        if (nodes.size() == 2) {
+        if (blobs.empty()) {
             auto &input_B_node = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            matmul = std::make_shared<ov::op::v0::MatMul>(input_A_node, input_B_node, trans_a, trans_b);
+            result = std::make_shared<ov::op::v0::MatMul>(input_A_node, input_B_node, trans_a, trans_b);
+            if (nodes.size() >= 3) {
+                bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+                result = std::make_shared<ov::op::v1::Add>(result, bias);
+            }
         } else {
             auto input_B_shape = getShape<size_t>(blobs[0]);
             auto input_B_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, input_B_shape, blobs[0].data);
-            matmul = std::make_shared<ov::op::v0::MatMul>(input_A_node, input_B_node, trans_a, trans_b);
+            result = std::make_shared<ov::op::v0::MatMul>(input_A_node, input_B_node, trans_a, trans_b);
+            if ((nodes.size() + blobs.size()) >= 3) {
+                auto bias_mat = blobs.back();
+                const auto bias_shape = shape(bias_mat);
+                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(bias_shape.begin(), bias_shape.end()), bias_mat.data);
+
+                // reshape if 1d
+                if (real_ndims_C == 1 && bias_shape.front() != 1) {
+                    std::vector<int64_t> new_bias_shape(1, bias_shape.front());
+                    auto shared_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{new_bias_shape.size()}, new_bias_shape.data());
+                    bias = std::make_shared<ov::op::v1::Reshape>(bias, shared_shape, true);
+                }
+
+                result = std::make_shared<ov::op::v1::Add>(result, bias);
+            }
         }
 
-        return Ptr<BackendNode>(new InfEngineNgraphNode(matmul));
+        return Ptr<BackendNode>(new InfEngineNgraphNode(result));
     }
 #endif // HAVE_DNN_NGRAPH
 
