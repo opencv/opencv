@@ -63,7 +63,7 @@ const std::map<uint32_t, FrameFormat> fourccToOBFormat = {
     {fourCc2Int('M', 'J', 'P', 'G'), FRAME_FORMAT_MJPG},
     {fourCc2Int('Y', '1', '6', ' '), FRAME_FORMAT_Y16},
     {fourCc2Int('Y', '1', '4', ' '), FRAME_FORMAT_Y14},
-    };
+};
 
 StreamType parseUvcDeviceNameToStreamType(const std::string& devName)
 {
