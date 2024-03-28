@@ -13,22 +13,26 @@
 
 namespace cv {
 
-void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb, std::vector<std::vector<int32_t>> &indices)
+void PlyDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3_<uchar>>& rgb,
+                          std::vector<Point3f>& texCoords, int& nTexCoords,
+                          std::vector<std::vector<int32_t>>& indices, int /*flags*/)
 {
     points.clear();
     normals.clear();
     rgb.clear();
+    texCoords.clear();
     indices.clear();
+    nTexCoords = 0;
 
     std::ifstream file(m_filename, std::ios::binary);
-    if (parseHeader(file))
+    if (parseHeader(file, nTexCoords))
     {
-        parseBody(file, points, normals, rgb, indices);
+        parseBody(file, points, normals, rgb, texCoords, indices);
     }
 }
 
 
-bool PlyDecoder::parseHeader(std::ifstream &file)
+bool PlyDecoder::parseHeader(std::ifstream &file, int& nTexCoords)
 {
     std::string s;
     std::getline(file, s);
@@ -211,6 +215,9 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             break;
     }
 
+    std::set<std::string> colorKeys = { "red", "diffuse_red", "green", "diffuse_green", "blue", "diffuse_blue" };
+    std::set<std::string> texCoordKeys = { "texture_u", "s", "texture_v", "t", "texture_w" };
+
     bool good = true;
     m_vertexCount = m_vertexDescription.amount;
     std::map<std::string, int> amtProps;
@@ -238,9 +245,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             }
             m_hasNormal = true;
         }
-        if (p.name ==  "red"   || p.name == "diffuse_red" ||
-            p.name ==  "green" || p.name == "diffuse_green" ||
-            p.name ==  "blue"  || p.name == "diffuse_blue")
+        if (colorKeys.count(p.name) > 0)
         {
             known = true;
             if (p.valType != CV_8U)
@@ -250,6 +255,17 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                 good = false;
             }
             m_hasColour = true;
+        }
+        if (texCoordKeys.count(p.name) > 0)
+        {
+            known = true;
+            if (p.valType != CV_32F)
+            {
+                CV_LOG_ERROR(NULL, "Vertex property " << p.name
+                                                      << " should be float");
+                good = false;
+            }
+            m_hasTexCoord = true;
         }
         if (p.isList)
         {
@@ -279,6 +295,31 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             CV_LOG_ERROR(NULL, "Vertex property " << c << " is not presented in the file");
             good = false;
         }
+    }
+
+    // check for synonyms
+    std::vector<std::pair<std::string, std::string>> synonyms = {
+        {"red", "diffuse_red"},
+        {"green", "diffuse_green"},
+        {"blue", "diffuse_blue"},
+        {"texture_u", "s"},
+        {"texture_v", "t"},
+    };
+    for (const auto& p : synonyms)
+    {
+        std::string a, b;
+        a = p.first; b = p.second;
+        if (amtProps.count(a) + amtProps.count(b) > 1)
+        {
+            CV_LOG_ERROR(NULL, "Vertex property " << a << " should not go with its synonym " << b);
+            good = false;
+        }
+    }
+
+    nTexCoords = 0;
+    for (const auto& k : texCoordKeys)
+    {
+        nTexCoords += amtProps.count(k);
     }
 
     m_faceCount = m_faceDescription.amount;
@@ -350,7 +391,9 @@ uchar readNext<uchar>(std::ifstream &file, DataFormat format)
     return val;
 }
 
-void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb,
+void PlyDecoder::parseBody(std::ifstream &file,
+                           std::vector<Point3f>& points, std::vector<Point3f>& normals,
+                           std::vector<Point3_<uchar>>& rgb, std::vector<Point3f>& texCoords,
                            std::vector<std::vector<int32_t>> &indices)
 {
     points.reserve(m_vertexCount);
@@ -367,12 +410,13 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
     {
         float vx, vy, vz;
         float nx, ny, nz;
+        float u, v, w;
         uchar r, g, b;
     };
 
     union VertexData
     {
-        std::array<uchar, 27> bytes;
+        std::array<uchar, sizeof(VertexFields)> bytes;
         VertexFields vf;
     };
 
@@ -394,6 +438,12 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
             offset = offsetof(VertexFields, ny);
         if (p.name == "nz")
             offset = offsetof(VertexFields, nz);
+        if (p.name == "texture_u" || p.name == "s")
+            offset = offsetof(VertexFields, u);
+        if (p.name == "texture_v" || p.name == "t")
+            offset = offsetof(VertexFields, v);
+        if (p.name == "texture_w")
+            offset = offsetof(VertexFields, w);
         if (p.name == "red"   || p.name == "diffuse_red")
             offset = offsetof(VertexFields, r);
         if (p.name == "green" || p.name == "diffuse_green")
@@ -458,6 +508,10 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
         {
             normals.push_back({ vertexData.vf.nx, vertexData.vf.ny, vertexData.vf.nz });
         }
+        if (m_hasTexCoord)
+        {
+            texCoords.push_back({ vertexData.vf.u, vertexData.vf.v, vertexData.vf.w });
+        }
     }
 
     indices.reserve(m_faceCount);
@@ -512,14 +566,22 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
     }
 }
 
-void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<Point3_<uchar>> &rgb, const std::vector<std::vector<int32_t>> &indices)
+void PlyEncoder::writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3_<uchar>>& rgb,
+                           const std::vector<Point3f>& texCoords, int nTexCoords,
+                           const std::vector<std::vector<int32_t>>& indices)
 {
     std::ofstream file(m_filename, std::ios::binary);
-    if (!file) {
+    if (!file)
+    {
         CV_LOG_ERROR(NULL, "Impossible to open the file: " << m_filename);
         return;
     }
     bool hasNormals = !normals.empty(), hasColor = !rgb.empty();
+    if (texCoords.empty() && nTexCoords > 0)
+    {
+        CV_LOG_ERROR(NULL, "No texture coordinates provided while having nTexCoord > 0");
+        return;
+    }
 
     file << "ply" << std::endl;
     file << "format ascii 1.0" << std::endl;
@@ -544,6 +606,19 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
         file << "property float nz" << std::endl;
     }
 
+    if (nTexCoords > 0)
+    {
+        file << "property float texture_u" << std::endl;
+    }
+    if (nTexCoords > 1)
+    {
+        file << "property float texture_v" << std::endl;
+    }
+    if (nTexCoords > 2)
+    {
+        file << "property float texture_w" << std::endl;
+    }
+
     if (!indices.empty())
     {
         file << "element face " << indices.size() << std::endl;
@@ -562,6 +637,18 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
         if (hasNormals)
         {
             file << " " << std::setprecision(9) << normals[i].x << " " << normals[i].y << " " << normals[i].z;
+        }
+        if (nTexCoords > 0)
+        {
+            file << " " << std::setprecision(9) << texCoords[i].x;
+        }
+        if (nTexCoords > 1)
+        {
+            file << " " << std::setprecision(9) << texCoords[i].y;
+        }
+        if (nTexCoords > 2)
+        {
+            file << " " << std::setprecision(9) << texCoords[i].z;
         }
         file << std::endl;
     }
