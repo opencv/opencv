@@ -165,11 +165,37 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
 
     if (!vec_indices.empty())
     {
-        std::vector<std::vector<int32_t>>& vec = *(std::vector<std::vector<int32_t>>*)indices.getObj();
-        vec.resize(vec_indices.size());
-        for (size_t i = 0; i < vec_indices.size(); ++i)
+        CV_Assert(indices.depth() == CV_32S);
+        if (indices.kind() == _InputArray::KindFlag::STD_VECTOR_VECTOR)
         {
-            Mat(1, static_cast<int>(vec_indices[i].size()), CV_32SC1, vec_indices[i].data()).copyTo(vec[i]);
+            std::vector<std::vector<int32_t>>& vec = *(std::vector<std::vector<int32_t>>*)indices.getObj();
+            vec.resize(vec_indices.size());
+            for (size_t i = 0; i < vec_indices.size(); ++i)
+            {
+                Mat(1, static_cast<int>(vec_indices[i].size()), CV_32SC1, vec_indices[i].data()).copyTo(vec[i]);
+            }
+        }
+        else
+        {
+            CV_Assert(indices.channels() == 3);
+            std::vector<Vec3i>& vec = *(std::vector<Vec3i>*)indices.getObj();
+            for (size_t i = 0; i < vec_indices.size(); ++i)
+            {
+                Vec3i tri;
+                size_t sz = vec_indices[i].size();
+                if (sz != 3)
+                {
+                    CV_Error(Error::StsBadArg, "Face contains " + std::to_string(sz) + " vertices, can not put it into 3-channel indices array");
+                }
+                else
+                {
+                    for (int j = 0; j < 3; j++)
+                    {
+                        tri[j] = vec_indices[i][j];
+                    }
+                }
+                vec[i] = tri;
+            }
         }
     }
 
@@ -241,13 +267,30 @@ void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays in
         colors.getMat().convertTo(vec_rgb, CV_8U, 255.0);
     }
 
-    std::vector<Mat> mat_indices;
-    indices.getMatVector(mat_indices);
-    std::vector<std::vector<int32_t>> vec_indices(mat_indices.size());
-
-    for (size_t i = 0; i < mat_indices.size(); ++i)
+    std::vector<std::vector<int32_t>> vec_indices;
+    CV_Assert(indices.depth() == CV_32S);
+    if (indices.kind() == _InputArray::KindFlag::STD_VECTOR_VECTOR)
     {
-        mat_indices[i].copyTo(vec_indices[i]);
+        std::vector<Mat> mat_indices;
+        indices.getMatVector(mat_indices);
+        vec_indices.resize(mat_indices.size());
+        for (size_t i = 0; i < mat_indices.size(); ++i)
+        {
+            mat_indices[i].copyTo(vec_indices[i]);
+        }
+    }
+    else
+    {
+        CV_Assert(indices.channels() == 3);
+        std::vector<Vec3i>& vec = *(std::vector<Vec3i>*)indices.getObj();
+        vec_indices.resize(vec.size());
+        for (size_t i = 0; i < vec.size(); ++i)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                vec_indices[i].push_back(vec[i][j]);
+            }
+        }
     }
 
     std::vector<Point3f> vec_texCoords;

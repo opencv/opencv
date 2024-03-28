@@ -156,7 +156,7 @@ TEST_P(PlyTest, LoadSaveMesh)
     std::string fname = GetParam();
 
     std::vector<cv::Point3f> points_gold, normals_gold, colors_gold;
-    std::vector<std::vector<int32_t>> indices_gold;
+    std::vector<cv::Vec3i> indices_gold;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
     std::string new_path = tempfile("new_mesh.ply");
@@ -168,7 +168,7 @@ TEST_P(PlyTest, LoadSaveMesh)
     cv::saveMesh(new_path, points_gold, indices_gold, normals_gold, colors_gold);
 
     std::vector<cv::Point3f> points, normals, colors;
-    std::vector<std::vector<int32_t>> indices;
+    std::vector<cv::Vec3i> indices;
     cv::loadMesh(new_path, points, indices, normals, colors);
 
     if (!normals.empty())
