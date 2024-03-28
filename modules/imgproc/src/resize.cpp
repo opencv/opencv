@@ -3372,7 +3372,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         /*interpolation = INTER_AREA*/CV_UNUSED(0); // INTER_AREA is slower
 
     if( !(cn <= 4 &&
-           (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR ||
+           (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_LINEAR_EXACT ||
             (interpolation == INTER_AREA && inv_fx >= 1 && inv_fy >= 1) )) )
         return false;
 
@@ -3492,6 +3492,43 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
             k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
                    (float)inv_fx, (float)inv_fy);
         }
+    }
+    else if (interpolation == INTER_LINEAR_EXACT) {
+        int wdepth = std::max(depth, CV_32S), wtype = CV_MAKETYPE(wdepth, cn);
+
+        char buf[2][50];
+        // Precompute the coefficients and store them in a texture
+        UMat coeffsTex(dsize.height + dsize.width, 2, CV_16SC1);
+        ocl::KernelArg coeffsTexArg = ocl::KernelArg::WriteOnlyNoSize(coeffsTex);
+        k.create("precomputeCoeffs", ocl::imgproc::resize_oclsrc,
+                 format("-D PRECOMPUTE_COEFFS -D depth=%d -D T=%s -D T1=%s "
+                        "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
+                        "-D INTER_RESIZE_COEF_BITS=%d",
+                        depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
+                        ocl::convertTypeStr(depth, wdepth, cn, buf[0], sizeof(buf[0])),
+                        ocl::convertTypeStr(wdepth, depth, cn, buf[1], sizeof(buf[1])),
+                        cn, INTER_RESIZE_COEF_BITS));
+        if (k.empty())
+            return false;
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), coeffsTexArg, (float)inv_fx * 0.5, (float)inv_fy * 0.5);
+        size_t globalThreads[2] = { (size_t)dsize.width, (size_t)dsize.height };
+        if (!k.run(2, globalThreads, NULL, false))
+            return false;
+
+        // Use the texture in the interpolation kernel
+        k.create("resizeLN", ocl::imgproc::resize_oclsrc,
+                 format("-D INTER_LINEAR_EXACT -D depth=%d -D T=%s -D T1=%s "
+                        "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
+                        "-D INTER_RESIZE_COEF_BITS=%d -D USE_TEXTURE",
+                        depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
+                        ocl::convertTypeStr(depth, wdepth, cn, buf[0], sizeof(buf[0])),
+                        ocl::convertTypeStr(wdepth, depth, cn, buf[1], sizeof(buf[1])),
+                        cn, INTER_RESIZE_COEF_BITS));
+        if (k.empty())
+            return false;
+        k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), coeffsTexArg);
+        if (!k.run(2, globalThreads, NULL, false))
+            return false;
     }
     else if (interpolation == INTER_NEAREST)
     {

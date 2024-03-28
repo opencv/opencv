@@ -220,6 +220,78 @@ __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offs
     }
 }
 
+#elif defined INTER_LINEAR_EXACT
+
+__kernel void precomputeCoeffs(__read_only image2d_t src, __write_only image2d_t coeffsTex, float inv_fx, float inv_fy) {
+    int dx = get_global_id(0);
+    int dy = get_global_id(1);
+    int sx, sy;
+    float fxx, fyy;
+    short ialpha, ibeta;
+
+    fxx = (float)((dx + 0.5) * inv_fx * 0.5 - 0.5);
+    fyy = (float)((dy + 0.5) * inv_fy * 0.5 - 0.5);
+
+    sx = floor(fxx);
+    fxx -= sx;
+    if (sx < 0)
+        fxx = 0, sx = 0;
+    if (sx >= get_image_width(src) - 1)
+        fxx = 0, sx = get_image_width(src) - 1;
+
+    sy = floor(fyy);
+    fyy -= sy;
+    if (sy < 0)
+        fyy = 0, sy = 0;
+    if (sy >= get_image_height(src) - 1)
+        fyy = 0, sy = get_image_height(src) - 1;
+
+    ialpha = convert_short_sat_rte((1.f - fxx) * INTER_RESIZE_COEF_SCALE);
+    ibeta = convert_short_sat_rte((1.f - fyy) * INTER_RESIZE_COEF_SCALE);
+
+    write_imagei(coeffsTex, (int2)(dx, 0), (int4)(sx, ialpha, 0, 0));
+    write_imagei(coeffsTex, (int2)(0, dy), (int4)(sy, ibeta, 0, 0));
+}
+
+__kernel void resizeLN(__read_only image2d_t src, __write_only image2d_t dst, __read_only image2d_t coeffsTex) {
+    int dx = get_global_id(0);
+    int dy = get_global_id(1);
+    int sx, sy, sx0, sx1, sy0, sy1;
+    short ialpha0, ialpha1, ibeta0, ibeta1;
+    int4 v0, v1, v2, v3, res;
+    float4 f0, f1, f2, f3, fres;
+
+    sx = read_imagei(coeffsTex, (int2)(dx, 0)).x;
+    ialpha0 = read_imagei(coeffsTex, (int2)(dx, 0)).y;
+    ialpha1 = INTER_RESIZE_COEF_SCALE - ialpha0;
+
+    sy = read_imagei(coeffsTex, (int2)(0, dy)).x;
+    ibeta0 = read_imagei(coeffsTex, (int2)(0, dy)).y;
+    ibeta1 = INTER_RESIZE_COEF_SCALE - ibeta0;
+
+    sx0 = sx * cn;
+    sx1 = sx0 + cn;
+    sy0 = sy * src_stride;
+    sy1 = sy0 + src_stride;
+
+    sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
+    v0 = read_imagei(src, sampler, (int2)(sx0, sy0));
+    v1 = read_imagei(src, sampler, (int2)(sx1, sy0));
+    v2 = read_imagei(src, sampler, (int2)(sx0, sy1));
+    v3 = read_imagei(src, sampler, (int2)(sx1, sy1));
+
+    f0 = convert_float4(v0);
+    f1 = convert_float4(v1);
+    f2 = convert_float4(v2);
+    f3 = convert_float4(v3);
+
+    fres = (f0 * ialpha0 + f1 * ialpha1) * ibeta0 + (f2 * ialpha0 + f3 * ialpha1) * ibeta1;
+    fres = fres * (1.0f / (INTER_RESIZE_COEF_SCALE * INTER_RESIZE_COEF_SCALE));
+
+    res = convert_int4_sat_rte(fres);
+    write_imagei(dst, (int2)(dx + dst_offset, dy + dst_offset), res);
+}
+
 #elif defined INTER_NEAREST
 
 __kernel void resizeNN(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
