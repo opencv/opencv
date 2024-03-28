@@ -2836,16 +2836,19 @@ protected:
 /** @brief Loads a point cloud from a file.
 *
 * The function loads point cloud from the specified file and returns it.
-* If the cloud cannot be read, throws an error
+* If the cloud cannot be read, throws an error.
+* Vertex coordinates, normals and colors are returned as they are saved in the file
+* even if these arrays have different sizes and their elements do not correspond to each other
+* (which is typical for OBJ files for example)
 *
 * Currently, the following file formats are supported:
 * -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file)
 * -  [Polygon File Format *.ply](https://en.wikipedia.org/wiki/PLY_(file_format))
 *
-* @param filename Name of the file.
-* @param vertices (vector of Point3f) Point coordinates of a point cloud
-* @param normals (vector of Point3f) Point normals of a point cloud
-* @param rgb (vector of Point3_<uchar>) Point RGB color of a point cloud
+* @param filename Name of the file
+* @param vertices vertex coordinates, each value contains 3 floats
+* @param normals per-vertex normals, each value contains 3 floats
+* @param rgb per-vertex colors, each value contains 3 floats
 */
 CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray(), OutputArray rgb = noArray());
 
@@ -2854,10 +2857,10 @@ CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, O
 * The function saves point cloud to the specified file.
 * File format is chosen based on the filename extension.
 *
-* @param filename Name of the file.
-* @param vertices (vector of Point3f) Point coordinates of a point cloud
-* @param normals (vector of Point3f) Point normals of a point cloud
-* @param rgb (vector of Point3_<uchar>) Point RGB color of a point cloud
+* @param filename Name of the file
+* @param vertices vertex coordinates, each value contains 3 floats
+* @param normals per-vertex normals, each value contains 3 floats
+* @param rgb per-vertex colors, each value contains 3 floats
 */
 CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray(), InputArray rgb = noArray());
 
@@ -2865,6 +2868,10 @@ CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, In
 *
 * The function loads mesh from the specified file and returns it.
 * If the mesh cannot be read, throws an error
+* Vertex attributes (i.e. space and texture coodinates, normals and colors) are returned in same-sized
+* arrays with corresponding elements having the same indices.
+* This means that if a face uses a vertex with a normal or a texture coordinate with different indices
+* (which is typical for OBJ files for example), this vertex will be duplicated for each face it uses.
 *
 * Currently, the following file formats are supported:
 * -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file) (ONLY TRIANGULATED FACES)
