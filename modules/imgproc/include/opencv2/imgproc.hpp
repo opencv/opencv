@@ -4040,6 +4040,19 @@ A program using pyramid scaling, Canny, contours and contour simplification to f
 squares in the input image.
 */
 
+//! @brief Find contours using link runs algorithm
+//!
+//! This function implements an algorithm different from cv::findContours:
+//! - doesn't allocate temporary image internally, thus it has reduced memory consumption
+//! - supports CV_8UC1 images only
+//! - outputs 2-level hierarhy only (RETR_CCOMP mode)
+//! - doesn't support approximation change other than CHAIN_APPROX_SIMPLE
+//! In all other aspects this function is compatible with cv::findContours.
+CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours, OutputArray hierarchy);
+
+//! @overload
+CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
+
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
 The function cv::approxPolyDP approximates a curve or a polygon with another curve/polygon with less
