@@ -26,6 +26,10 @@ using namespace cv::dnn::cuda4dnn;
 namespace cv { namespace dnn {
 
 class MatMulLayerImpl CV_FINAL : public MatMulLayer {
+#ifdef HAVE_OPENCL
+    UMat weight_umat, bias_umat;
+#endif
+
  public:
     MatMulLayerImpl(const LayerParams& params) {
         setParamsFrom(params);
@@ -130,6 +134,44 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             fastGemmPackB(blobs[0], packed_input_B, trans_b, opt);
             helper.updatePackedBOffsets(packed_input_B.size());
         }
+
+        // broadcast bias if needed
+        if ((inputs.size() + blobs.size()) >= 3 && blobs.size() >= 2) {
+            const auto bias_mat = blobs.back();
+            const auto bias_shape = shape(bias_mat);
+            bool is_broadcast_needed = (total(bias_shape) != total(C_shape) || bias_shape.size() != C_shape.size());
+
+            if (is_broadcast_needed) {
+                Mat broadcast_bias_mat(C_shape, CV_32F);
+                auto *broadcast_bias = broadcast_bias_mat.ptr<float>();
+
+                const auto *bias = bias_mat.ptr<const float>();
+                if (bias_mat.total() == 1) { // [], [1], [1, ...]
+                    float b = (*bias) * beta;
+                    for (size_t i = 0; i < broadcast_bias_mat.total(); i++) {
+                        broadcast_bias[i] = b;
+                    }
+                } else if (real_ndims_C == 1) { // [n]
+                    size_t inner_size = C_shape.back(),
+                        loops = total(C_shape) / inner_size;
+                    for (size_t i = 0; i < loops; i++) {
+                        size_t step = i * inner_size;
+                        for (size_t j = 0; j < inner_size; j++) {
+                            broadcast_bias[step + j] = beta * bias[j];
+                        }
+                    }
+                } else {
+                    broadcast(bias_mat, C_shape, broadcast_bias_mat);
+                }
+
+                blobs.back() = broadcast_bias_mat;
+            }
+        }
+
+#ifdef HAVE_OPENCL
+        weight_umat.release();
+        bias_umat.release();
+#endif
     }
 
     // works like Y = numpy.matmul(A, B)
@@ -158,22 +200,32 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         std::memset(y, 0, Y.total() * sizeof(float));
         // add bias if existed
         if ((inputs.size() + blobs.size()) == 3) {
-            const auto &C = blobs.empty() ? inputs.back() : blobs.back();
             const auto &shape_Y = shape(Y);
-            if (real_ndims_C == 1) {
-                const auto *c = C.ptr<const float>();
-                const size_t inner_size = shape_Y.back(),
-                             batches = total(Y) / inner_size;
-                parallel_for_(Range(0, batches), [&] (const Range &r) {
-                    for (int i = r.start; i < r.end; i++) {
-                        const size_t output_offset = i * inner_size;
-                        for (size_t j = 0; j < inner_size; j++) {
-                            y[output_offset + j] = c[j];
-                        }
+            if (blobs.empty()) { // bias from input
+                const auto &bias_mat = inputs.back();
+                const auto *bias = bias_mat.ptr<const float>();
+                if (bias_mat.total() == 1) { // [], [1], [1, ...]
+                    float b = (*bias) * beta;
+                    for (size_t i = 0; i < Y.total(); i++) {
+                        y[i] = b;
                     }
-                }, double(batches * inner_size * (1 / 1024.0)));
-            } else {
-                broadcast(C, shape_Y, Y);
+                } else if (real_ndims_C == 1) { // [n]
+                    const size_t inner_size = shape_Y.back(),
+                                 batches = total(Y) / inner_size;
+                    parallel_for_(Range(0, batches), [&] (const Range &r) {
+                        for (int i = r.start; i < r.end; i++) {
+                            const size_t output_offset = i * inner_size;
+                            for (size_t j = 0; j < inner_size; j++) {
+                                y[output_offset + j] = beta * bias[j];
+                            }
+                        }
+                    }, double(batches * inner_size * (1 / 1024.0)));
+                } else {
+                    broadcast(bias_mat, shape_Y, Y);
+                }
+            } else { // bias from constant
+                const auto *bias = blobs.back().ptr<const float>();
+                std::memcpy(y, bias, total(shape_Y) * sizeof(float));
             }
         }
 
@@ -199,14 +251,36 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         inputs_arr.getUMatVector(inputs);
         outputs_arr.getUMatVector(outputs);
 
-        const auto &input_A = inputs[0];
-        UMat input_B;
-        if (blobs.empty()) {
-            input_B = inputs[1];
-        } else {
-            blobs[0].copyTo(input_B);
+        // does not support bias as input
+        if (inputs.size() >= 3) {
+            return false;
         }
+
+        const auto &input_A = inputs[0];
         auto &output = outputs[0];
+        const auto output_shape = shape(output);
+
+        if (blobs.empty()) {
+            weight_umat = inputs[1];
+            if ((inputs.size() + blobs.size() >= 3)) {
+                bias_umat = UMat::zeros(output_shape.size(), output_shape.data(), CV_32F);
+            }
+        } else {
+            if (weight_umat.empty()) {
+                blobs.front().copyTo(weight_umat);
+            }
+            if ((inputs.size() + blobs.size() >= 3)) {
+                if (bias_umat.empty()) {
+                    blobs.back().copyTo(bias_umat);
+                }
+            } else {
+                if (bias_umat.empty()) {
+                    bias_umat = UMat::zeros(output_shape.size(), output_shape.data(), CV_32F);
+                }
+            }
+        }
+
+        auto &input_B = weight_umat;
 
         int M = static_cast<int>(helper.M),
             N = static_cast<int>(helper.N),
@@ -222,7 +296,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         UMat A, B, C, A_fp32, B_fp32, C_fp32;
         for (int i = 0; i < batch; i++) {
             A = input_A_2d.row(helper.A_rows[i]).reshape(1, trans_a ? K : M);
-            B = input_B_2d.row(helper.B_rows[i]).reshape(1, trans_b ? K : N);
+            B = input_B_2d.row(helper.B_rows[i]).reshape(1, trans_b ? N : K);
             C = output_2d.row(helper.C_rows[i]).reshape(1, M);
 
             if (trans_a) {
@@ -241,7 +315,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 B_fp32 = B;
                 C_fp32 = C;
             }
-
             cv::gemm(A_fp32, B_fp32, 1.f, noArray(), 0.f, C_fp32);
             if (use_half) {
                 A_fp32.convertTo(A, CV_16F);
@@ -249,6 +322,12 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 C_fp32.convertTo(C, CV_16F);
             }
         }
+
+        // add bias
+        if (!bias_umat.empty()) {
+            cv::add(output, bias_umat, output);
+        }
+
         return true;
     }
 #endif // HAVE_OPENCL
@@ -275,14 +354,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 auto bias_mat = blobs.back();
                 const auto bias_shape = shape(bias_mat);
                 bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(bias_shape.begin(), bias_shape.end()), bias_mat.data);
-
-                // reshape if 1d
-                if (real_ndims_C == 1 && bias_shape.front() != 1) {
-                    std::vector<int64_t> new_bias_shape(1, bias_shape.front());
-                    auto shared_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{new_bias_shape.size()}, new_bias_shape.data());
-                    bias = std::make_shared<ov::op::v1::Reshape>(bias, shared_shape, true);
-                }
-
                 result = std::make_shared<ov::op::v1::Add>(result, bias);
             }
         }
@@ -367,11 +438,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             if ((inputs.size() + blobs.size()) >= 3) {
                 auto bias_mat = blobs.back();
                 auto bias_shape = shape(bias_mat);
-
-                // reshape if 1d
-                if (real_ndims_C == 1 && bias_shape.front() != 1) {
-                    bias_shape = std::vector<int>{bias_shape.front()};
-                }
 
                 auto const_bias_node = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), bias_shape, cv::format("%s_bias", name.c_str()));
                 op->set_input_bias_by_name(*(const_bias_node->getOp()), "y");
