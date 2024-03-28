@@ -2,7 +2,7 @@
  * jquant2.c
  *
  * Copyright (C) 1991-1996, Thomas G. Lane.
- * Modified 2011 by Guido Vollbeding.
+ * Modified 2011-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -1197,8 +1197,8 @@ start_pass_2_quant (j_decompress_ptr cinfo, boolean is_pre_scan)
       ERREXIT1(cinfo, JERR_QUANT_MANY_COLORS, MAXNUMCOLORS);
 
     if (cinfo->dither_mode == JDITHER_FS) {
-      size_t arraysize = (size_t) ((cinfo->output_width + 2) *
-				   (3 * SIZEOF(FSERROR)));
+      size_t arraysize = ((size_t) cinfo->output_width + (size_t) 2)
+	* (3 * SIZEOF(FSERROR));
       /* Allocate Floyd-Steinberg workspace if we didn't already. */
       if (cquantize->fserrors == NULL)
 	cquantize->fserrors = (FSERRPTR) (*cinfo->mem->alloc_large)
@@ -1247,10 +1247,9 @@ jinit_2pass_quantizer (j_decompress_ptr cinfo)
   my_cquantize_ptr cquantize;
   int i;
 
-  cquantize = (my_cquantize_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(my_cquantizer));
-  cinfo->cquantize = (struct jpeg_color_quantizer *) cquantize;
+  cquantize = (my_cquantize_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(my_cquantizer));
+  cinfo->cquantize = &cquantize->pub;
   cquantize->pub.start_pass = start_pass_2_quant;
   cquantize->pub.new_color_map = new_color_map_2_quant;
   cquantize->fserrors = NULL;	/* flag optional arrays not allocated */
@@ -1284,7 +1283,8 @@ jinit_2pass_quantizer (j_decompress_ptr cinfo)
     if (desired > MAXNUMCOLORS)
       ERREXIT1(cinfo, JERR_QUANT_MANY_COLORS, MAXNUMCOLORS);
     cquantize->sv_colormap = (*cinfo->mem->alloc_sarray)
-      ((j_common_ptr) cinfo,JPOOL_IMAGE, (JDIMENSION) desired, (JDIMENSION) 3);
+      ((j_common_ptr) cinfo, JPOOL_IMAGE,
+       (JDIMENSION) desired, (JDIMENSION) 3);
     cquantize->desired = desired;
   } else
     cquantize->sv_colormap = NULL;
@@ -1302,7 +1302,7 @@ jinit_2pass_quantizer (j_decompress_ptr cinfo)
   if (cinfo->dither_mode == JDITHER_FS) {
     cquantize->fserrors = (FSERRPTR) (*cinfo->mem->alloc_large)
       ((j_common_ptr) cinfo, JPOOL_IMAGE,
-       (size_t) ((cinfo->output_width + 2) * (3 * SIZEOF(FSERROR))));
+       ((size_t) cinfo->output_width + (size_t) 2) * (3 * SIZEOF(FSERROR)));
     /* Might as well create the error-limiting table too. */
     init_error_limit(cinfo);
   }

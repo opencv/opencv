@@ -1,7 +1,7 @@
 /*
  * jcarith.c
  *
- * Developed 1997-2019 by Guido Vollbeding.
+ * Developed 1997-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -361,7 +361,7 @@ emit_restart (j_compress_ptr cinfo, int restart_num)
  */
 
 METHODDEF(boolean)
-encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   arith_entropy_ptr entropy = (arith_entropy_ptr) cinfo->entropy;
   unsigned char *st;
@@ -450,7 +450,7 @@ encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   arith_entropy_ptr entropy = (arith_entropy_ptr) cinfo->entropy;
   const int * natural_order;
@@ -557,7 +557,7 @@ encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-encode_mcu_DC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu_DC_refine (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   arith_entropy_ptr entropy = (arith_entropy_ptr) cinfo->entropy;
   unsigned char *st;
@@ -592,7 +592,7 @@ encode_mcu_DC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-encode_mcu_AC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu_AC_refine (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   arith_entropy_ptr entropy = (arith_entropy_ptr) cinfo->entropy;
   const int * natural_order;
@@ -691,7 +691,7 @@ encode_mcu_AC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-encode_mcu (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
+encode_mcu (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   arith_entropy_ptr entropy = (arith_entropy_ptr) cinfo->entropy;
   const int * natural_order;

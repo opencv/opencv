@@ -2,7 +2,7 @@
  * jquant1.c
  *
  * Copyright (C) 1991-1996, Thomas G. Lane.
- * Modified 2011 by Guido Vollbeding.
+ * Modified 2011-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -293,8 +293,7 @@ create_colormap (j_decompress_ptr cinfo)
   /* The colors are ordered in the map in standard row-major order, */
   /* i.e. rightmost (highest-indexed) color changes most rapidly. */
 
-  colormap = (*cinfo->mem->alloc_sarray)
-    ((j_common_ptr) cinfo, JPOOL_IMAGE,
+  colormap = (*cinfo->mem->alloc_sarray) ((j_common_ptr) cinfo, JPOOL_IMAGE,
      (JDIMENSION) total_colors, (JDIMENSION) cinfo->out_color_components);
 
   /* blksize is number of adjacent repeated entries for a component */
@@ -400,9 +399,8 @@ make_odither_array (j_decompress_ptr cinfo, int ncolors)
   int j,k;
   INT32 num,den;
 
-  odither = (ODITHER_MATRIX_PTR)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(ODITHER_MATRIX));
+  odither = (ODITHER_MATRIX_PTR) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(ODITHER_MATRIX));
   /* The inter-value distance for this color is MAXJSAMPLE/(ncolors-1).
    * Hence the dither value for the matrix cell with fill order f
    * (f=0..N-1) should be (N-1-2*f)/(2*N) * MAXJSAMPLE/(ncolors-1).
@@ -531,8 +529,7 @@ quantize_ord_dither (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 
   for (row = 0; row < num_rows; row++) {
     /* Initialize output values to 0 so can process components separately */
-    FMEMZERO((void FAR *) output_buf[row],
-	     (size_t) (width * SIZEOF(JSAMPLE)));
+    FMEMZERO((void FAR *) output_buf[row], (size_t) width * SIZEOF(JSAMPLE));
     row_index = cquantize->row_index;
     for (ci = 0; ci < nc; ci++) {
       input_ptr = input_buf[row] + ci;
@@ -636,8 +633,7 @@ quantize_fs_dither (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 
   for (row = 0; row < num_rows; row++) {
     /* Initialize output values to 0 so can process components separately */
-    FMEMZERO((void FAR *) output_buf[row],
-	     (size_t) (width * SIZEOF(JSAMPLE)));
+    FMEMZERO((void FAR *) output_buf[row], (size_t) width * SIZEOF(JSAMPLE));
     for (ci = 0; ci < nc; ci++) {
       input_ptr = input_buf[row] + ci;
       output_ptr = output_buf[row];
@@ -726,10 +722,10 @@ alloc_fs_workspace (j_decompress_ptr cinfo)
   size_t arraysize;
   int i;
 
-  arraysize = (size_t) ((cinfo->output_width + 2) * SIZEOF(FSERROR));
+  arraysize = ((size_t) cinfo->output_width + (size_t) 2) * SIZEOF(FSERROR);
   for (i = 0; i < cinfo->out_color_components; i++) {
-    cquantize->fserrors[i] = (FSERRPTR)
-      (*cinfo->mem->alloc_large)((j_common_ptr) cinfo, JPOOL_IMAGE, arraysize);
+    cquantize->fserrors[i] = (FSERRPTR) (*cinfo->mem->alloc_large)
+      ((j_common_ptr) cinfo, JPOOL_IMAGE, arraysize);
   }
 }
 
@@ -780,13 +776,12 @@ start_pass_1_quant (j_decompress_ptr cinfo, boolean is_pre_scan)
     if (cquantize->fserrors[0] == NULL)
       alloc_fs_workspace(cinfo);
     /* Initialize the propagated errors to zero. */
-    arraysize = (size_t) ((cinfo->output_width + 2) * SIZEOF(FSERROR));
+    arraysize = ((size_t) cinfo->output_width + (size_t) 2) * SIZEOF(FSERROR);
     for (i = 0; i < cinfo->out_color_components; i++)
       FMEMZERO((void FAR *) cquantize->fserrors[i], arraysize);
     break;
   default:
     ERREXIT(cinfo, JERR_NOT_COMPILED);
-    break;
   }
 }
 
@@ -823,10 +818,9 @@ jinit_1pass_quantizer (j_decompress_ptr cinfo)
 {
   my_cquantize_ptr cquantize;
 
-  cquantize = (my_cquantize_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(my_cquantizer));
-  cinfo->cquantize = (struct jpeg_color_quantizer *) cquantize;
+  cquantize = (my_cquantize_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(my_cquantizer));
+  cinfo->cquantize = &cquantize->pub;
   cquantize->pub.start_pass = start_pass_1_quant;
   cquantize->pub.finish_pass = finish_pass_1_quant;
   cquantize->pub.new_color_map = new_color_map_1_quant;
