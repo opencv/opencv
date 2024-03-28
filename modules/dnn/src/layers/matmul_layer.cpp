@@ -139,7 +139,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         if ((inputs.size() + blobs.size()) >= 3 && blobs.size() >= 2) {
             const auto bias_mat = blobs.back();
             const auto bias_shape = shape(bias_mat);
-            bool is_broadcast_needed = (total(bias_shape) != total(C_shape) || bias_shape.size() != C_shape.size());
+            bool is_broadcast_needed = real_ndims_C == 0 || real_ndims_C == 1 || (total(bias_shape) != total(C_shape) || bias_shape.size() != C_shape.size());
 
             if (is_broadcast_needed) {
                 broadcast_bias = Mat(C_shape, CV_32F);
@@ -163,6 +163,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 } else {
                     broadcast(bias_mat, C_shape, broadcast_bias);
                 }
+            } else {
+                broadcast_bias = blobs.back();
             }
         }
 
