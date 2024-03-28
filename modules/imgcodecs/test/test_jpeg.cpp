@@ -179,8 +179,11 @@ TEST(Imgcodecs_Jpeg, encode_decode_rst_jpeg)
 }
 
 // See https://github.com/opencv/opencv/issues/25274
-TEST(Imgcodecs_Jpeg, regression25274_cmykjpeg)
+typedef testing::TestWithParam<int> Imgcodecs_Jpeg_decode_cmyk;
+TEST_P(Imgcodecs_Jpeg_decode_cmyk, regression25274)
 {
+    const int imread_flag = GetParam();
+
     /*
      * "test_1_c4.jpg" is CMYK-JPEG.
      * $ convert test_1_c3.jpg -colorspace CMYK test_1_c4.jpg
@@ -189,28 +192,29 @@ TEST(Imgcodecs_Jpeg, regression25274_cmykjpeg)
      */
 
     cvtest::TS& ts = *cvtest::TS::ptr();
-    string input = string(ts.get_data_path()) + "readwrite/test_1_c4.jpg";
-    {
-        cv::Mat img = cv::imread(input);
-        ASSERT_FALSE(img.empty());
-        EXPECT_EQ(CV_8UC3, img.type()); // BGR
-    }
-    {
-        cv::Mat img = cv::imread(input, cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(img.empty());
-        EXPECT_EQ(CV_8UC1, img.type()); // GRAY
-    }
-    {
-        cv::Mat img = cv::imread(input, cv::IMREAD_COLOR);
-        ASSERT_FALSE(img.empty());
-        EXPECT_EQ(CV_8UC3, img.type()); // BGR
-    }
-    {
-        cv::Mat img = cv::imread(input, cv::IMREAD_ANYCOLOR);
-        ASSERT_FALSE(img.empty());
-        EXPECT_EQ(CV_8UC3, img.type()); // BGR
-    }
+
+    string  rgb_filename  = string(ts.get_data_path()) + "readwrite/test_1_c3.jpg";
+    cv::Mat rgb_img       = cv::imread(rgb_filename, imread_flag);
+    ASSERT_FALSE(rgb_img.empty());
+
+    string  cmyk_filename = string(ts.get_data_path()) + "readwrite/test_1_c4.jpg";
+    cv::Mat cmyk_img      = cv::imread(cmyk_filename, imread_flag);
+    ASSERT_FALSE(cmyk_img.empty());
+
+    EXPECT_EQ(rgb_img.size(), cmyk_img.size());
+    EXPECT_EQ(rgb_img.type(), cmyk_img.type());
+
+    // Jpeg is lossy compression.
+    // There may be small differences in decoding results by environments.
+    // -> 255 * 1% = 2.55 .
+    EXPECT_EQ(3, cvtest::norm(rgb_img, cmyk_img, NORM_INF));
 }
+
+INSTANTIATE_TEST_CASE_P( /* nothing */,
+                        Imgcodecs_Jpeg_decode_cmyk,
+                        testing::Values(cv::IMREAD_COLOR,
+                                        cv::IMREAD_GRAYSCALE,
+                                        cv::IMREAD_ANYCOLOR));
 
 //==================================================================================================
 
