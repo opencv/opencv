@@ -60,8 +60,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 input_B = csl::TensorView<T>(input_B_tensor);
             }
 
-            
-
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
