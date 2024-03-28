@@ -71,6 +71,7 @@ private:
     void parseSoftmax(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseTranspose(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseGlobalPooling(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
     void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
@@ -286,6 +287,7 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["CAST"] = &TFLiteImporter::parseCast;
     dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
     dispatch["TRANSPOSE"] = &TFLiteImporter::parseTranspose;
+    dispatch["MEAN"] = dispatch["REDUCE_MAX"] = &TFLiteImporter::parseGlobalPooling;
     return dispatch;
 }
 
@@ -762,6 +764,43 @@ void TFLiteImporter::parseTranspose(const Operator& op, const std::string& opcod
     }
 
     addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseGlobalPooling(const Operator& op, const std::string& opcode, LayerParams& layerParams)
+{
+    layerParams.type = "Pooling";
+    if(!opcode.compare("MEAN")) {
+        layerParams.set("pool", "ave");
+    }
+    else if (!opcode.compare("REDUCE_MAX")) {
+        layerParams.set("pool", "max");
+    }
+    else {
+        CV_Error(Error::StsNotImplemented, "Unsupported pooling " + opcode);
+    }
+    layerParams.set("global_pooling", true);
+    auto options = op.builtin_options_as_ReducerOptions();
+    bool keep_dims = options->keep_dims();
+
+    if (!keep_dims) {
+        const std::string name = layerParams.name;
+        layerParams.name = layerParams.name + "_pool2d";
+        addLayer(layerParams, op);
+        LayerParams permFL;
+        permFL.set("axis", 1);
+        permFL.set("end_axis", 3);
+        int FLId = dstNet.addLayerToPrev(name, "Flatten", CV_32F, permFL);
+
+        // Override layer ids mapping
+        int i = 0;
+        for (int idx : *op.outputs()) {
+            layerIds[idx] = std::make_pair(FLId, i++);
+        }
+    }
+    else {
+        addLayer(layerParams, op);
+    }
+
 }
 
 int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::string& permName,
