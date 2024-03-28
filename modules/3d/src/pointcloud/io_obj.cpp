@@ -12,12 +12,25 @@ namespace cv {
 
 std::unordered_set<std::string> ObjDecoder::m_unsupportedKeys;
 
-void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb, std::vector<std::vector<int32_t>> &indices)
+void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3_<uchar>>& rgb)
 {
-    points.clear();
-    normals.clear();
-    rgb.clear();
-    indices.clear();
+    std::vector<Point3f> texCoords;
+    int nTexCoords;
+    std::vector<std::vector<int32_t>> indices;
+    this->readData(points, normals, rgb, texCoords, nTexCoords, indices, READ_AS_IS_FLAG);
+}
+
+void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3_<uchar>>& rgb,
+                          std::vector<Point3f>& texCoords, int& nTexCoords,
+                          std::vector<std::vector<int32_t>>& indices, int flags)
+{
+    std::vector<Point3f> ptsList, nrmList, texCoordList;
+    std::vector<Point3_<uchar>> rgbList;
+    std::vector<std::vector<int32_t>> idxList, texIdxList, normalIdxList;
+
+    nTexCoords = 0;
+
+    bool duplicateVertices = false;
 
     std::ifstream file(m_filename, std::ios::binary);
     if (!file)
@@ -49,7 +62,7 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
             }
             Point3f vertex;
             ss >> vertex.x >> vertex.y >> vertex.z;
-            points.push_back(vertex);
+            ptsList.push_back(vertex);
             if (splitArr.size() == 5 || splitArr.size() == 8)
             {
                 float w;
@@ -59,13 +72,14 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
             if (splitArr.size() >= 7)
             {
                 Point3f color;
-                if (ss.rdbuf()->in_avail() != 0) {
+                if (ss.rdbuf()->in_avail() != 0)
+                {
                     Point3_<uchar> uc_color;
                     ss >> color.x >> color.y >> color.z;
                     uc_color.x = static_cast<uchar>(std::round(255.f * color.x));
                     uc_color.y = static_cast<uchar>(std::round(255.f * color.y));
                     uc_color.z = static_cast<uchar>(std::round(255.f * color.z));
-                    rgb.push_back(uc_color);
+                    rgbList.push_back(uc_color);
                 }
             }
         }
@@ -73,21 +87,71 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
         {
             Point3f normal;
             ss >> normal.x >> normal.y >> normal.z;
-            normals.push_back(normal);
+            nrmList.push_back(normal);
         }
         else if (key == "f")
         {
-            std::vector<int> vertexInd;
+            std::vector<int> vertexInd, normInd, texInd;
             auto tokens = split(s, ' ');
             for (size_t i = 1; i < tokens.size(); i++)
             {
                 auto vertexinfo = split(tokens[i], '/');
-                int index;
-                std::stringstream vs(vertexinfo[0]);
-                vs >> index;
-                vertexInd.push_back(index - 1);
+                std::array<int, 3> idx = { -1, -1, -1 };
+                for (int j = 0; j < (int)vertexinfo.size(); j++)
+                {
+                    try
+                    {
+                        idx[j] = std::stoi(vertexinfo[j]);
+                    }
+                    // std::invalid_exception, std::out_of_range
+                    catch(const std::exception& e)
+                    { }
+                }
+                int vertexIndex   = idx[0];
+                int texCoordIndex = idx[1];
+                int normalIndex   = idx[2];
+
+                if ((vertexIndex != texCoordIndex && texCoordIndex >= 0) ||
+                    (vertexIndex != normalIndex   && normalIndex   >= 0))
+                {
+                    duplicateVertices = !(flags & READ_AS_IS_FLAG);
+                }
+
+                vertexInd.push_back(vertexIndex - 1);
+                normInd.push_back(normalIndex - 1);
+                texInd.push_back(texCoordIndex - 1);
             }
-            indices.push_back(vertexInd);
+            idxList.push_back(vertexInd);
+            texIdxList.push_back(texInd);
+            normalIdxList.push_back(normInd);
+        }
+        else if (key == "vt")
+        {
+            // (u, [v, [w]])
+            auto splitArr = split(s, ' ');
+            int ncoords = splitArr.size() - 1;
+            if (!nTexCoords)
+            {
+                nTexCoords = ncoords;
+                if (nTexCoords < 1 || nTexCoords > 3)
+                {
+                    CV_LOG_ERROR(NULL, "The amount of texture coordinates should be between 1 and 3");
+                    return;
+                }
+            }
+
+            if (ncoords != nTexCoords)
+            {
+                CV_LOG_ERROR(NULL, "All points should have the same number of texture coordinates");
+                return;
+            }
+
+            Vec3f tc;
+            for (int i = 0; i < nTexCoords; i++)
+            {
+                ss >> tc[i];
+            }
+            texCoordList.push_back(tc);
         }
         else
         {
@@ -98,10 +162,53 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
         }
     }
 
+    if (duplicateVertices)
+    {
+        points.clear();
+        normals.clear();
+        rgb.clear();
+        texCoords.clear();
+        indices.clear();
+
+        for (int tri = 0; tri < (int)idxList.size(); tri++)
+        {
+            auto vi = idxList[tri];
+            auto ti = texIdxList[tri];
+            auto ni = normalIdxList[tri];
+
+            std::vector<int32_t> newvi;
+            newvi.reserve(3);
+            for (int i = 0; i < (int)vi.size(); i++)
+            {
+                newvi.push_back((int)points.size());
+                points.push_back(ptsList.at(vi[i]));
+                if (!rgbList.empty())
+                {
+                    rgb.push_back(rgbList.at(vi[i]));
+                }
+
+                texCoords.push_back(texCoordList.at(ti[i]));
+                normals.push_back(nrmList.at(ni[i]));
+            }
+
+            indices.push_back(newvi);
+        }
+    }
+    else
+    {
+        points    = std::move(ptsList);
+        normals   = std::move(nrmList);
+        rgb       = std::move(rgbList);
+        texCoords = std::move(texCoordList);
+        indices   = std::move(idxList);
+    }
+
     file.close();
 }
 
-void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<Point3_<uchar>> &rgb, const std::vector<std::vector<int32_t>> &indices)
+void ObjEncoder::writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3_<uchar>>& rgb,
+                           const std::vector<Point3f>& texCoords, int nTexCoords,
+                           const std::vector<std::vector<int32_t>>& indices)
 {
     std::ofstream file(m_filename, std::ios::binary);
     if (!file) {
@@ -111,6 +218,12 @@ void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector
 
     if (!rgb.empty() && rgb.size() != points.size()) {
         CV_LOG_ERROR(NULL, "Vertices and Colors have different size.");
+        return;
+    }
+
+    if (texCoords.empty() && nTexCoords > 0)
+    {
+        CV_LOG_ERROR(NULL, "No texture coordinates provided while having nTexCoord > 0");
         return;
     }
 
@@ -130,6 +243,20 @@ void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector
     for (const auto& normal : normals)
     {
         file << "vn " << normal.x << " " << normal.y << " " << normal.z << std::endl;
+    }
+
+    for (const auto& tc : texCoords)
+    {
+        file << "vt " << tc.x;
+        if (nTexCoords > 1)
+        {
+            file << " " << tc.y;
+        }
+        if (nTexCoords > 2)
+        {
+            file << " " << tc.z;
+        }
+        file << std::endl;
     }
 
     for (const auto& faceIndices : indices)
