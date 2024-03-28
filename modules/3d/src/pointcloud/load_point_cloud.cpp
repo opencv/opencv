@@ -203,7 +203,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
                         tri[j] = vec_indices[i][j];
                     }
                 }
-                vec[i] = tri;
+                vec.push_back(tri);
             }
         }
     }
