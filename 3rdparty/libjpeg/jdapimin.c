@@ -2,7 +2,7 @@
  * jdapimin.c
  *
  * Copyright (C) 1994-1998, Thomas G. Lane.
- * Modified 2009-2013 by Guido Vollbeding.
+ * Modified 2009-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -114,7 +114,7 @@ jpeg_abort_decompress (j_decompress_ptr cinfo)
 LOCAL(void)
 default_decompress_parms (j_decompress_ptr cinfo)
 {
-  int cid0, cid1, cid2;
+  int cid0, cid1, cid2, cid3;
 
   /* Guess the input colorspace, and set output colorspace accordingly. */
   /* Note application may override our guesses. */
@@ -123,13 +123,16 @@ default_decompress_parms (j_decompress_ptr cinfo)
     cinfo->jpeg_color_space = JCS_GRAYSCALE;
     cinfo->out_color_space = JCS_GRAYSCALE;
     break;
-    
+
   case 3:
     cid0 = cinfo->comp_info[0].component_id;
     cid1 = cinfo->comp_info[1].component_id;
     cid2 = cinfo->comp_info[2].component_id;
 
-    /* First try to guess from the component IDs */
+    /* For robust detection of standard colorspaces
+     * regardless of the presence of special markers,
+     * check component IDs from SOF marker first.
+     */
     if      (cid0 == 0x01 && cid1 == 0x02 && cid2 == 0x03)
       cinfo->jpeg_color_space = JCS_YCbCr;
     else if (cid0 == 0x01 && cid1 == 0x22 && cid2 == 0x23)
@@ -151,7 +154,6 @@ default_decompress_parms (j_decompress_ptr cinfo)
       default:
 	WARNMS1(cinfo, JWRN_ADOBE_XFORM, cinfo->Adobe_transform);
 	cinfo->jpeg_color_space = JCS_YCbCr;	/* assume it's YCbCr */
-	break;
       }
     } else {
       TRACEMS3(cinfo, 1, JTRC_UNKNOWN_IDS, cid0, cid1, cid2);
@@ -160,9 +162,22 @@ default_decompress_parms (j_decompress_ptr cinfo)
     /* Always guess RGB is proper output colorspace. */
     cinfo->out_color_space = JCS_RGB;
     break;
-    
+
   case 4:
-    if (cinfo->saw_Adobe_marker) {
+    cid0 = cinfo->comp_info[0].component_id;
+    cid1 = cinfo->comp_info[1].component_id;
+    cid2 = cinfo->comp_info[2].component_id;
+    cid3 = cinfo->comp_info[3].component_id;
+
+    /* For robust detection of standard colorspaces
+     * regardless of the presence of special markers,
+     * check component IDs from SOF marker first.
+     */
+    if      (cid0 == 0x01 && cid1 == 0x02 && cid2 == 0x03 && cid3 == 0x04)
+      cinfo->jpeg_color_space = JCS_YCCK;
+    else if (cid0 == 0x43 && cid1 == 0x4D && cid2 == 0x59 && cid3 == 0x4B)
+      cinfo->jpeg_color_space = JCS_CMYK;   /* ASCII 'C', 'M', 'Y', 'K' */
+    else if (cinfo->saw_Adobe_marker) {
       switch (cinfo->Adobe_transform) {
       case 0:
 	cinfo->jpeg_color_space = JCS_CMYK;
@@ -173,19 +188,17 @@ default_decompress_parms (j_decompress_ptr cinfo)
       default:
 	WARNMS1(cinfo, JWRN_ADOBE_XFORM, cinfo->Adobe_transform);
 	cinfo->jpeg_color_space = JCS_YCCK;	/* assume it's YCCK */
-	break;
       }
     } else {
-      /* No special markers, assume straight CMYK. */
+      /* Unknown IDs and no special markers, assume straight CMYK. */
       cinfo->jpeg_color_space = JCS_CMYK;
     }
     cinfo->out_color_space = JCS_CMYK;
     break;
-    
+
   default:
     cinfo->jpeg_color_space = JCS_UNKNOWN;
     cinfo->out_color_space = JCS_UNKNOWN;
-    break;
   }
 
   /* Set defaults for other decompression parameters. */
