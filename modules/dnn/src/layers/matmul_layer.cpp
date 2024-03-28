@@ -369,7 +369,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         const auto input_A_shape = shape(*input_A_wrapper->getMat());
         const auto output_shape = shape(*output_wrapper->getMat());
-        if (output_shape.size() != 2) {
+        if ((inputs.size() + blobs.size()) >= 3 || output_shape.size() != 2) {
             return Ptr<BackendNode>();
         }
 
