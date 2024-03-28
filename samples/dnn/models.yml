@@ -198,10 +198,10 @@ faster_rcnn_tf:
 # SqueezeNet v1.1 from https://github.com/DeepScale/SqueezeNet
 squeezenet:
   load_info:
-    url: "https://raw.githubusercontent.com/DeepScale/SqueezeNet/b5c3f1a23713c8b3fd7b801d229f6b04c64374a5/SqueezeNet_v1.1/squeezenet_v1.1.caffemodel"
-    sha1: "3397f026368a45ae236403ccc81cfcbe8ebe1bd0"
-  model: "squeezenet_v1.1.caffemodel"
-  config: "squeezenet_v1.1.prototxt"
+    url: "https://github.com/onnx/models/raw/f884b33c3e2371952aad7ea091898f418c830fe5/vision/classification/squeezenet/model/squeezenet1.0-8.tar.gz"
+    sha1: "57348321d4d460c07c41af814def3abe728b3a03"
+  model: "model.onnx"
+  config: ""
   mean: [0, 0, 0]
   scale: 1.0
   width: 227

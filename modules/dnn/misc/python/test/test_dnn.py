@@ -251,11 +251,11 @@ class dnn_test(NewOpenCVTests):
 
     def test_classification_model(self):
         img_path = self.find_dnn_file("dnn/googlenet_0.png")
-        weights = self.find_dnn_file("dnn/squeezenet_v1.1.caffemodel", required=False)
-        config = self.find_dnn_file("dnn/squeezenet_v1.1.prototxt")
+        weights = self.find_dnn_file("dnn/onnx/models/squeezenet.onnx", required=False)
+        config = ""
         ref = np.load(self.find_dnn_file("dnn/squeezenet_v1.1_prob.npy"))
         if weights is None or config is None:
-            raise unittest.SkipTest("Missing DNN test files (dnn/squeezenet_v1.1.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+            raise unittest.SkipTest("Missing DNN test files (dnn/squeezenet.onnx). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
         frame = cv.imread(img_path)
         model = cv.dnn_ClassificationModel(config, weights)
