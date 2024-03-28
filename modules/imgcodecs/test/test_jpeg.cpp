@@ -178,6 +178,40 @@ TEST(Imgcodecs_Jpeg, encode_decode_rst_jpeg)
     EXPECT_EQ(0, remove(output_normal.c_str()));
 }
 
+// See https://github.com/opencv/opencv/issues/25274
+TEST(Imgcodecs_Jpeg, regression25274_cmykjpeg)
+{
+    /*
+     * "test_1_c4.jpg" is CMYK-JPEG.
+     * $ convert test_1_c3.jpg -colorspace CMYK test_1_c4.jpg
+     * $ identify test_1_c4.jpg
+     * test_1_c4.jpg JPEG 480x640 480x640+0+0 8-bit CMYK 11240B 0.000u 0:00.000
+     */
+
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "readwrite/test_1_c4.jpg";
+    {
+        cv::Mat img = cv::imread(input);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(CV_8UC3, img.type()); // BGR
+    }
+    {
+        cv::Mat img = cv::imread(input, cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(CV_8UC1, img.type()); // GRAY
+    }
+    {
+        cv::Mat img = cv::imread(input, cv::IMREAD_COLOR);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(CV_8UC3, img.type()); // BGR
+    }
+    {
+        cv::Mat img = cv::imread(input, cv::IMREAD_ANYCOLOR);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(CV_8UC3, img.type()); // BGR
+    }
+}
+
 //==================================================================================================
 
 static const uint32_t default_sampling_factor = static_cast<uint32_t>(0x221111);
