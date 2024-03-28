@@ -228,7 +228,7 @@ public:
     {
     public:
         FullyConnected() : srcMat(0), weights(0), biasMat(0), outputMultiplier(0), activationLUT(0), activ(0),
-                           dstMat(0), nstripes(0), outZp(0), useAVX2(false), useAVX512(false), useLASX(false) {}
+                           dstMat(0), nstripes(0), outZp(0), useAVX2(false), useAVX512(false), useLASX(false), useRVV(false) {}
 
         static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat, const Mat& outputMultiplier,
                         const Mat& activationLUT, Mat& dstMat, const ActivationLayerInt8* activ, int nstripes, int outZp)
@@ -253,6 +253,7 @@ public:
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
             p.useLASX = checkHardwareSupport(CPU_LASX);
+            p.useRVV = checkHardwareSupport(CPU_RVV);
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -301,6 +302,11 @@ public:
             #if CV_TRY_LASX
                 if( useLASX )
                     opt_LASX::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
+                else
+            #endif
+            #if CV_TRY_RVV && defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>=11000
+                if( useRVV)
+                    opt_RVV::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
                 else
             #endif
             #if CV_RVP052
@@ -363,6 +369,7 @@ public:
         bool useAVX2;
         bool useAVX512;
         bool useLASX;
+        bool useRVV;
     };
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
