@@ -142,14 +142,14 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             bool is_broadcast_needed = (total(bias_shape) != total(C_shape) || bias_shape.size() != C_shape.size());
 
             if (is_broadcast_needed) {
-                Mat broadcast_bias_mat(C_shape, CV_32F);
-                auto *broadcast_bias = broadcast_bias_mat.ptr<float>();
+                broadcast_bias = Mat(C_shape, CV_32F);
+                auto *broadcast_bias_ptr = broadcast_bias.ptr<float>();
 
                 const auto *bias = bias_mat.ptr<const float>();
                 if (bias_mat.total() == 1) { // [], [1], [1, ...]
                     float b = (*bias) * beta;
-                    for (size_t i = 0; i < broadcast_bias_mat.total(); i++) {
-                        broadcast_bias[i] = b;
+                    for (size_t i = 0; i < broadcast_bias.total(); i++) {
+                        broadcast_bias_ptr[i] = b;
                     }
                 } else if (real_ndims_C == 1) { // [n]
                     size_t inner_size = C_shape.back(),
@@ -157,14 +157,12 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                     for (size_t i = 0; i < loops; i++) {
                         size_t step = i * inner_size;
                         for (size_t j = 0; j < inner_size; j++) {
-                            broadcast_bias[step + j] = beta * bias[j];
+                            broadcast_bias_ptr[step + j] = beta * bias[j];
                         }
                     }
                 } else {
-                    broadcast(bias_mat, C_shape, broadcast_bias_mat);
+                    broadcast(bias_mat, C_shape, broadcast_bias);
                 }
-
-                blobs.back() = broadcast_bias_mat;
             }
         }
 
@@ -224,7 +222,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                     broadcast(bias_mat, shape_Y, Y);
                 }
             } else { // bias from constant
-                const auto *bias = blobs.back().ptr<const float>();
+                const auto *bias = broadcast_bias.ptr<const float>();
                 std::memcpy(y, bias, total(shape_Y) * sizeof(float));
             }
         }
@@ -271,7 +269,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             }
             if ((inputs.size() + blobs.size() >= 3)) {
                 if (bias_umat.empty()) {
-                    blobs.back().copyTo(bias_umat);
+                    broadcast_bias.copyTo(bias_umat);
                 }
             } else {
                 if (bias_umat.empty()) {
@@ -351,9 +349,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             auto input_B_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, input_B_shape, blobs[0].data);
             result = std::make_shared<ov::op::v0::MatMul>(input_A_node, input_B_node, trans_a, trans_b);
             if ((nodes.size() + blobs.size()) >= 3) {
-                auto bias_mat = blobs.back();
-                const auto bias_shape = shape(bias_mat);
-                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(bias_shape.begin(), bias_shape.end()), bias_mat.data);
+                const auto bias_shape = shape(broadcast_bias);
+                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(bias_shape.begin(), bias_shape.end()), broadcast_bias.data);
                 result = std::make_shared<ov::op::v1::Add>(result, bias);
             }
         }
@@ -435,9 +432,14 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             auto const_B_node = std::make_shared<CannConstOp>(B.data, B.type(), shape(B), cv::format("%s_B", name.c_str()));
             op->set_input_x2_by_name(*(const_B_node->getOp()), "y");
             op->update_input_desc_x2(*(const_B_node->getTensorDesc()));
-            if ((inputs.size() + blobs.size()) >= 3) {
+            if ((inputs.size() + blobs.size()) >= 3) { // does not support broadcast bias
                 auto bias_mat = blobs.back();
                 auto bias_shape = shape(bias_mat);
+
+                // reshape if 1d
+                if (real_ndims_C == 1 && bias_shape.front() != 1) {
+                    bias_shape = std::vector<int>{bias_shape.front()};
+                }
 
                 auto const_bias_node = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), bias_shape, cv::format("%s_bias", name.c_str()));
                 op->set_input_bias_by_name(*(const_bias_node->getOp()), "y");
@@ -461,6 +463,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     int real_ndims_C;
 
     std::vector<float> packed_input_B;
+    Mat broadcast_bias;
 
     FastGemmOpt opt;
     MatMulHelper helper;
