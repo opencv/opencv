@@ -69,6 +69,7 @@ private:
     void parseSplit(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseSoftmax(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
     void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
@@ -281,6 +282,7 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["SPLIT"] = &TFLiteImporter::parseSplit;
     dispatch["FULLY_CONNECTED"] = &TFLiteImporter::parseFullyConnected;
     dispatch["SOFTMAX"] = &TFLiteImporter::parseSoftmax;
+    dispatch["CAST"] = &TFLiteImporter::parseCast;
     dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
     return dispatch;
 }
@@ -839,6 +841,11 @@ void TFLiteImporter::parseFullyConnected(const Operator& op, const std::string& 
 
 void TFLiteImporter::parseSoftmax(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Softmax";
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Identity";
     addLayer(layerParams, op);
 }
 
