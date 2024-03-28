@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
 #include <limits>
+#include <queue>
 
  // Requires CMake flag: DEBUG_opencv_calib3d=ON
 //#define DEBUG_CIRCLES
@@ -1204,7 +1205,22 @@ void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors
   rng = Graph(keypoints.size());
   vectors.clear();
 
-  //TODO: use more fast algorithm instead of naive N^3
+  struct Neighbor
+  {
+    size_t idx;
+    double dist;
+    bool operator <(const Neighbor &other) const
+    {
+      return dist > other.dist;
+    }
+  };
+
+  // We can prove that a point has at most 6 neighbors.
+  Neighbor neighbors[6];
+  size_t neighbors_count = 0;
+  std::priority_queue<Neighbor> distance;
+
+  // optimize the algorithm to O(n^2 \log n) by sort with distance
   for (size_t i = 0; i < keypoints.size(); i++)
   {
     for (size_t j = 0; j < keypoints.size(); j++)
@@ -1214,33 +1230,52 @@ void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors
 
       Point2f vec = keypoints[i] - keypoints[j];
       double dist = norm(vec);
+      distance.push(Neighbor{ j, dist });
+    }
 
-      bool isNeighbors = true;
-      for (size_t k = 0; k < keypoints.size(); k++)
+    neighbors_count = 0;
+    // We can prove that a point has at most 6 neighbors.
+    while (!distance.empty() && neighbors_count < 6)
+    {
+      Neighbor candidate = distance.top();
+      bool isNeighbor = true;
+
+      for (size_t k = 0; k < neighbors_count; k++)
       {
-        if (k == i || k == j)
-          continue;
+        Point2f vec = keypoints[candidate.idx] - keypoints[neighbors[k].idx];
+        double dist = norm(vec);
 
-        double dist1 = norm(keypoints[i] - keypoints[k]);
-        double dist2 = norm(keypoints[j] - keypoints[k]);
-        if (dist1 < dist && dist2 < dist)
+        if (dist < candidate.dist)
         {
-          isNeighbors = false;
+          isNeighbor = false;
           break;
         }
       }
 
-      if (isNeighbors)
+      if (isNeighbor)
       {
-        rng.addEdge(i, j);
-        vectors.push_back(keypoints[i] - keypoints[j]);
-        if (drawImage != 0)
-        {
-          line(*drawImage, keypoints[i], keypoints[j], Scalar(255, 0, 0), 2);
-          circle(*drawImage, keypoints[i], 3, Scalar(0, 0, 255), -1);
-          circle(*drawImage, keypoints[j], 3, Scalar(0, 0, 255), -1);
-        }
+        neighbors[neighbors_count] = candidate;
+        neighbors_count++;
       }
+
+      distance.pop();
+    }
+
+    for (size_t j = 0; j < neighbors_count; j++)
+    {
+      rng.addEdge(i, neighbors[j].idx);
+      vectors.push_back(keypoints[i] - keypoints[neighbors[j].idx]);
+      if (drawImage != 0)
+      {
+        line(*drawImage, keypoints[i], keypoints[neighbors[j].idx], Scalar(255, 0, 0), 2);
+        circle(*drawImage, keypoints[i], 3, Scalar(0, 0, 255), -1);
+        circle(*drawImage, keypoints[neighbors[j].idx], 3, Scalar(0, 0, 255), -1);
+      }
+    }
+
+    while (!distance.empty())
+    {
+      distance.pop();
     }
   }
 }
