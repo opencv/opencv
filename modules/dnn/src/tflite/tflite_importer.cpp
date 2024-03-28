@@ -113,7 +113,7 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
     default:
         CV_Error(Error::StsNotImplemented, format("Parse tensor with type %s", EnumNameTensorType(tensor.type())));
     }
-    return Mat(shape, dtype, const_cast<void*>(data));
+    return shape.empty() ? Mat() : Mat(shape, dtype, const_cast<void*>(data));
 }
 
 TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufSize)
