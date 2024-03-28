@@ -3049,12 +3049,9 @@ private:
 
     static void getLaplacianMat(Mat &in, Mat &out);
 
-    void getDistanceMat(Mat &out, std::vector<Point3f> &vertices, std::vector<std::vector<int32_t>> &indices);
+    void getAdjacentDistanceMat(Mat &out, std::vector<Point3f> &vertices, std::vector<std::vector<int32_t>> &indices) const;
 
     static void getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<int32_t>> &indices);
-
-    /* Check the adjacency of two faces */
-    static int isAdjacent(const std::vector<int32_t> &face1, const std::vector<int32_t> &face2);
 
     /* Calculate the geodesic distance of two triangular faces */
     static float getGeodesicDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2);
