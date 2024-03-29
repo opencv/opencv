@@ -402,16 +402,12 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
 bool  JpegDecoder::readData( Mat& img )
 {
     volatile bool result = false;
-    size_t step = img.step;
-    bool color = img.channels() > 1;
+    const bool color = img.channels() > 1;
 
     if( m_state && m_width && m_height )
     {
         jpeg_decompress_struct* cinfo = &((JpegState*)m_state)->cinfo;
         JpegErrorMgr* jerr = &((JpegState*)m_state)->jerr;
-#ifndef JCS_EXTENSIONS
-        JSAMPARRAY buffer = 0;
-#endif
 
         if( setjmp( jerr->setjmp_buffer ) == 0 )
         {
@@ -431,29 +427,30 @@ bool  JpegDecoder::readData( Mat& img )
             }
 #endif
 
-#ifdef JCS_EXTENSIONS
-            if( color )
-            {
-                cinfo->out_color_space = JCS_EXT_BGR;
-                cinfo->out_color_components = 3;
-            }
-            else
-            {
-                cinfo->out_color_space = JCS_GRAYSCALE;
-                cinfo->out_color_components = 1;
-            }
-#else
+            // See https://github.com/opencv/opencv/issues/25274
+            // Conversion CMYK->BGR is not supported in libjpeg-turbo.
+            // So supporting both directly and indirectly is necessary.
+            bool doDirectRead = false;
+
             if( color )
             {
                 if( cinfo->num_components != 4 )
                 {
+#ifdef JCS_EXTENSIONS
+                    cinfo->out_color_space = JCS_EXT_BGR;
+                    cinfo->out_color_components = 3;
+                    doDirectRead = true; // BGR -> BGR
+#else
                     cinfo->out_color_space = JCS_RGB;
                     cinfo->out_color_components = 3;
+                    doDirectRead = false; // RGB -> BGR
+#endif
                 }
                 else
                 {
                     cinfo->out_color_space = JCS_CMYK;
                     cinfo->out_color_components = 4;
+                    doDirectRead = false; // CMYK -> BGR
                 }
             }
             else
@@ -462,14 +459,15 @@ bool  JpegDecoder::readData( Mat& img )
                 {
                     cinfo->out_color_space = JCS_GRAYSCALE;
                     cinfo->out_color_components = 1;
+                    doDirectRead = true; // GRAY -> GRAY
                 }
                 else
                 {
                     cinfo->out_color_space = JCS_CMYK;
                     cinfo->out_color_components = 4;
+                    doDirectRead = false; // CMYK -> GRAY
                 }
             }
-#endif
 
             // Check for Exif marker APP1
             jpeg_saved_marker_ptr exif_marker = NULL;
@@ -496,33 +494,39 @@ bool  JpegDecoder::readData( Mat& img )
 
             jpeg_start_decompress( cinfo );
 
-#ifndef JCS_EXTENSIONS
-            buffer = (*cinfo->mem->alloc_sarray)((j_common_ptr)cinfo,
-                                              JPOOL_IMAGE, m_width*4, 1 );
-#endif
-
-            uchar* data = img.ptr();
-            for( ; m_height--; data += step )
+            if( doDirectRead)
             {
-#ifdef JCS_EXTENSIONS
-                jpeg_read_scanlines( cinfo, &data, 1 );
-#else
-                jpeg_read_scanlines( cinfo, buffer, 1 );
-                if( color )
+                for( int iy = 0 ; iy < m_height; iy ++ )
                 {
-                    if( cinfo->out_color_components == 3 )
-                        icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
-                    else
-                        icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    uchar* data = img.ptr<uchar>(iy);
+                    jpeg_read_scanlines( cinfo, &data, 1 );
                 }
-                else
+            }
+            else
+            {
+                JSAMPARRAY buffer = (*cinfo->mem->alloc_sarray)((j_common_ptr)cinfo,
+                                                                 JPOOL_IMAGE, m_width*4, 1 );
+
+                for( int iy = 0 ; iy < m_height; iy ++ )
                 {
-                    if( cinfo->out_color_components == 1 )
-                        memcpy( data, buffer[0], m_width );
+                    uchar* data = img.ptr<uchar>(iy);
+                    jpeg_read_scanlines( cinfo, buffer, 1 );
+
+                    if( color )
+                    {
+                        if( cinfo->out_color_components == 3 )
+                            icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        else
+                            icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    }
                     else
-                        icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    {
+                        if( cinfo->out_color_components == 1 )
+                            memcpy( data, buffer[0], m_width );
+                        else
+                            icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    }
                 }
-#endif
             }
 
             result = true;
