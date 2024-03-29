@@ -2634,7 +2634,7 @@ TEST_P(Test_ONNX_layers, CumSum)
     testONNXModels("cumsum_3d_dim_2_int64");
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_ReduceSumInt)
+TEST_P(Test_ONNX_layers, ReduceSumInt)
 {
     testONNXModels("reduce_sum_int64");
 }
@@ -2645,7 +2645,7 @@ TEST_P(Test_ONNX_layers, ScatterInt)
     testONNXModels("scatter_int64", npy, 0, 0, false, true, 3);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_TileInt)
+TEST_P(Test_ONNX_layers, TileInt)
 {
     testONNXModels("tile_int32");
     testONNXModels("tile_int64");

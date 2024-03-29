@@ -497,7 +497,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Flatten_Int, Combine(
 ));
 
 typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Tile_Int;
-TEST_P(Test_Tile_Int, DISABLED_random)
+TEST_P(Test_Tile_Int, random)
 {
     int matType = get<0>(GetParam());
     tuple<Backend, Target> backend_target= get<1>(GetParam());
@@ -525,10 +525,10 @@ TEST_P(Test_Tile_Int, DISABLED_random)
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
     EXPECT_EQ(re.size.dims(), 4);
-    EXPECT_EQ(re.size[0], 2);
-    EXPECT_EQ(re.size[1], 3);
-    EXPECT_EQ(re.size[2], 8);
-    EXPECT_EQ(re.size[3], 15);
+    EXPECT_EQ(re.size[0], inShape[0] * repeats[0]);
+    EXPECT_EQ(re.size[1], inShape[1] * repeats[1]);
+    EXPECT_EQ(re.size[2], inShape[2] * repeats[2]);
+    EXPECT_EQ(re.size[3], inShape[3] * repeats[3]);
 
     std::vector<int> inIndices(4);
     std::vector<int> reIndices(4);
@@ -560,5 +560,72 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Tile_Int, Combine(
     dnnBackendsAndTargets()
 ));
 
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Reduce_Int;
+TEST_P(Test_Reduce_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{5, 4, 3, 2};
+    int64_t low = matType == CV_64S ? 1000000000000000ll : 100000000;
+    Mat input(inShape, matType);
+    cv::randu(input, low, low + 100);
+    std::vector<int> axes{1};
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Reduce";
+    lp.name = "testLayer";
+    lp.set("reduce", "SUM");
+    lp.set("keepdims", false);
+    lp.set("axes", DictValue::arrayInt<int*>(axes.data(), axes.size()));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    EXPECT_EQ(re.size.dims(), 3);
+    EXPECT_EQ(re.size[0], inShape[0]);
+    EXPECT_EQ(re.size[1], inShape[2]);
+    EXPECT_EQ(re.size[2], inShape[3]);
+
+    std::vector<int> inIndices(4);
+    std::vector<int> reIndices(3);
+
+    for (int i0 = 0; i0 < re.size[0]; ++i0)
+    {
+        inIndices[0] = i0;
+        reIndices[0] = i0;
+        for (int i1 = 0; i1 < re.size[1]; ++i1)
+        {
+            inIndices[2] = i1;
+            reIndices[1] = i1;
+            for (int i2 = 0; i2 < re.size[2]; ++i2)
+            {
+                inIndices[3] = i2;
+                reIndices[2] = i2;
+
+                int64_t value = 0;
+                for (int j = 0; j < input.size[1]; ++j)
+                {
+                    inIndices[1] = j;
+                    value += getValueAt(input, inIndices.data());
+                }
+                EXPECT_EQ(getValueAt(re, reIndices.data()), value);
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Reduce_Int, Combine(
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets()
+));
 
 }} // namespace
