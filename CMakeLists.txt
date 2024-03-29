@@ -478,9 +478,11 @@ OCV_OPTION(WITH_ONNX "Include Microsoft ONNX Runtime support" OFF
 OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_TIMVX)
-# attention: Astra2, Gemini2, and Gemini2L cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
-OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+/Femto)" ON
-  VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT AND NOT MINGW) OR ( UNIX AND NOT APPLE AND NOT ANDROID)
+# Attention when OBSENSOR_USE_ORBBEC_SDK set to off:
+#   Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
+OCV_OPTION(OBSENSOR_USE_ORBBEC_SDK "Use Orbbec SDK as backend to support more camera models and platforms (force to ON on MacOS)" OFF)
+OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec 3D Cameras)" ON
+  VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT AND NOT MINGW) OR ( UNIX AND NOT APPLE AND NOT ANDROID) OR (APPLE AND AARCH64 AND NOT IOS)
   VERIFY HAVE_OBSENSOR)
 OCV_OPTION(WITH_CANN "Include CANN support" OFF
   VISIBLE_IF TRUE
