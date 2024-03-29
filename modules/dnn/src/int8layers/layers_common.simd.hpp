@@ -1263,11 +1263,11 @@ static const size_t __cv_rvv_e8m1_max = __riscv_vsetvlmax_e8m1();
 static const size_t __cv_rvv_e16m1_max = __riscv_vsetvlmax_e16m1();
 static const size_t __cv_rvv_e32m2_max = __riscv_vsetvlmax_e32m2();
 
-inline vint32m2_t __riscv_vwmacc_vv_i32m2(const vint32m2_t& dst, const vint8m1_t& a, const vint8m1_t& b, size_t vl) {
+inline vint32m2_t __riscv_vwmacc_vv_i32m2(vint32m2_t& dst, const vint8m1_t& a, const vint8m1_t& b, size_t vl) {
     vint16m2_t tmp = __riscv_vwmul(a, b, vl);
-    vint32m2_t res = __riscv_vwadd_wv(dst, __riscv_vget_i16m1(tmp, 0), vl);
-    res = __riscv_vwadd_wv(res,  __riscv_vget_i16m1(tmp, 1), vl > __cv_rvv_e16m1_max ? vl - __cv_rvv_e16m1_max : 0);
-    return res;
+    dst = __riscv_vwadd_wv_i32m2_tu(dst, dst, __riscv_vget_i16m1(tmp, 0), vl);
+    dst = __riscv_vwadd_wv_i32m2_tu(dst, dst, __riscv_vget_i16m1(tmp, 1), vl > __cv_rvv_e16m1_max ? vl - __cv_rvv_e16m1_max : 0);
+    return dst;
 }
 
 enum { FASCONV_BASE_VECSZ = 4 };
