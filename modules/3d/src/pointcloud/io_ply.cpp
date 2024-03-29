@@ -14,7 +14,6 @@
 namespace cv {
 
 static const std::set<std::string> colorKeys = { "red", "diffuse_red", "green", "diffuse_green", "blue", "diffuse_blue" };
-static const std::set<std::string> texCoordKeys = { "texture_u", "s", "texture_v", "t", "texture_w" };
 
 void PlyDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3f>& rgb,
                           std::vector<Point3f>& texCoords, int& nTexCoords,
@@ -218,6 +217,8 @@ bool PlyDecoder::parseHeader(std::ifstream &file, int& nTexCoords)
             break;
     }
 
+    static const std::set<std::string> texCoordKeys = { "texture_u", "s", "texture_v", "t", "texture_w" };
+
     bool good = true;
     m_vertexCount = m_vertexDescription.amount;
     std::map<std::string, int> amtProps;
@@ -319,7 +320,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file, int& nTexCoords)
     nTexCoords = 0;
     for (const auto& k : texCoordKeys)
     {
-        nTexCoords += amtProps.count(k);
+        nTexCoords += (int)(amtProps.count(k));
     }
 
     m_faceCount = m_faceDescription.amount;

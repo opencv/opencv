@@ -94,17 +94,21 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
                 std::array<int, 3> idx = { -1, -1, -1 };
                 for (int j = 0; j < (int)vertexinfo.size(); j++)
                 {
+                    // parsing exception is not an error here:
+                    // it means that face does not use normals or texCoords
                     try
                     {
                         idx[j] = std::stoi(vertexinfo[j]);
                     }
                     // std::invalid_exception, std::out_of_range
-                    catch(const std::exception& e)
+                    catch(const std::exception&)
                     { }
                 }
                 int vertexIndex   = idx[0];
                 int texCoordIndex = idx[1];
                 int normalIndex   = idx[2];
+
+                CV_Assert(vertexIndex > 0);
 
                 if ((vertexIndex != texCoordIndex && texCoordIndex >= 0) ||
                     (vertexIndex != normalIndex   && normalIndex   >= 0))
@@ -124,7 +128,7 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
         {
             // (u, [v, [w]])
             auto splitArr = split(s, ' ');
-            int ncoords = splitArr.size() - 1;
+            int ncoords = (int)splitArr.size() - 1;
             if (!nTexCoords)
             {
                 nTexCoords = ncoords;
