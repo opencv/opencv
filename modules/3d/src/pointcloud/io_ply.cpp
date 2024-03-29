@@ -299,6 +299,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file, int& nTexCoords)
     }
 
     // check for synonyms
+    std::vector<std::pair<int, int>> propCounts;
     std::vector<std::pair<std::string, std::string>> synonyms = {
         {"red", "diffuse_red"},
         {"green", "diffuse_green"},
@@ -310,11 +311,29 @@ bool PlyDecoder::parseHeader(std::ifstream &file, int& nTexCoords)
     {
         std::string a, b;
         a = p.first; b = p.second;
-        if (amtProps.count(a) + amtProps.count(b) > 1)
+        int ca = amtProps.count(a), cb = amtProps.count(b);
+        propCounts.push_back({ca, cb});
+        if (ca + cb > 1)
         {
             CV_LOG_ERROR(NULL, "Vertex property " << a << " should not go with its synonym " << b);
             good = false;
         }
+    }
+    // check for color conventions
+    bool shortColorConv   = propCounts[0].first  || propCounts[1].first  || propCounts[2].first;
+    bool diffuseColorConv = propCounts[0].second || propCounts[1].second || propCounts[2].second;
+    if (shortColorConv && diffuseColorConv)
+    {
+        CV_LOG_ERROR(NULL, "Vertex color properties should not be diffuse and not diffuse at the same time");
+        good = false;
+    }
+    // check for texture conventions
+    bool shortTexConv = propCounts[3].second || propCounts[4].second;
+    bool longTexConv  = propCounts[3].first  || propCounts[4].first;
+    if (shortTexConv && longTexConv)
+    {
+        CV_LOG_ERROR(NULL, "Vertex texture coordinates properties should not be in a short and in a long form at the same time");
+        good = false;
     }
 
     nTexCoords = 0;
