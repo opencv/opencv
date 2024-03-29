@@ -655,8 +655,8 @@ TEST_P(RenderingTest, floatParams)
             }
             else if (width == 700 && height == 700 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_CW)
             {
-                thr.rgbInfThreshold = 0.000303;
-                thr.rgbL2Threshold = 1.9e-09;
+                thr.rgbInfThreshold = 0.000212;
+                thr.rgbL2Threshold = 1.7e-09;
                 thr.depthL2Threshold = 0.000124;
             }
             else if (width == 700 && height == 700 && shadingType == RASTERIZE_SHADING_WHITE && cullingMode == RASTERIZE_CULLING_NONE)
@@ -803,9 +803,9 @@ TEST_P(RenderingTest, accuracy)
         case ModelType::File:
             if (width == 320 && height == 240 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_CCW)
             {
-                thr.rgbInfThreshold = 0.93;
-                thr.rgbL2Threshold = 2.45E-05;
-                thr.depthMaskThreshold = 2;
+                thr.rgbInfThreshold = 0.836;
+                thr.rgbL2Threshold = 2.08e-05;
+                thr.depthMaskThreshold = 1;
                 thr.depthInfThreshold = 99;
                 thr.depthL2Threshold = 0.00544;
             }
@@ -914,7 +914,7 @@ TEST_P(RenderingTest, glCompatibleDepth)
     }
 
     double normL2Diff = cv::norm(depth_buf, convertedDepth, cv::NORM_L2) / (height * width);
-    const double normL2Threshold = 1.e-9;
+    const double normL2Threshold = 5.53e-10;
     EXPECT_LE(normL2Diff, normL2Threshold);
     // add --test_debug to output differences
     if (debugLevel > 0)
