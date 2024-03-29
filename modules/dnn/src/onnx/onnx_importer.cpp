@@ -1961,7 +1961,8 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
 
 void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_) {
     auto node_proto = node_proto_;
-    CV_CheckEQ(node_proto.input_size(), 2, "ONNXImporter/MatMul: two inputs required");
+    CV_CheckGE(node_proto.input_size(), 2, "ONNXImporter/MatMul: two inputs required at least");
+    CV_CheckLE(node_proto.input_size(), 3, "ONNXImporter/MatMul: three inputs required at most");
 
     for (int i = 0; i < node_proto.input_size(); i++) {
         if (constBlobs.find(node_proto.input(i)) == constBlobs.end()) {
@@ -1970,9 +1971,7 @@ void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::Node
 
         Mat blob = getBlob(node_proto, i);
 
-        if (i == 1) {
-            layerParams.blobs.push_back(blob);
-        } else {
+        if (i == 0) {
             LayerParams const_params;
             const_params.name = node_proto.input(i);
             const_params.type = "Const";
@@ -1983,6 +1982,12 @@ void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::Node
             addLayer(const_params, const_node_proto);
 
             node_proto.set_input(i, const_params.name);
+        } else {
+            layerParams.blobs.push_back(blob);
+        }
+
+        if (i == 2 && constBlobsExtraInfo.find(node_proto.input(2)) != constBlobsExtraInfo.end()) {
+            layerParams.set("real_ndims_C", getBlobExtraInfo(node_proto, 2).real_ndims);
         }
     }
 

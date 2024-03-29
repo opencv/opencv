@@ -12,6 +12,8 @@
 #include "../csl/tensor.hpp"
 #include "../csl/tensor_ops.hpp"
 
+#include "../kernels/eltwise_ops.hpp" // for adding bias
+
 #include <opencv2/core.hpp>
 
 #include <utility>
@@ -23,7 +25,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        MatMulBroadcastOp(csl::Stream stream_, csl::cublas::Handle handle, const Mat &B, bool _transA, bool _transB,
+        MatMulBroadcastOp(csl::Stream stream_, csl::cublas::Handle handle, const Mat &B, const Mat &bias, bool _transA, bool _transB,
                  const std::vector<size_t> &A_offsets_, const std::vector<size_t> &B_offsets_, std::vector<size_t> &C_offsets_,
                  size_t batch_)
             : stream(std::move(stream_)), cublasHandle(std::move(handle)), A_offsets(A_offsets_), B_offsets(B_offsets_), C_offsets(C_offsets_), batch(batch_)
@@ -31,6 +33,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             if (!B.empty()) {
                 input_B_tensor = csl::makeTensorHeader<T>(B);
                 csl::copyMatToTensor<T>(B, input_B_tensor, stream);
+            }
+
+            if (!bias.empty()) {
+                bias_tensor = csl::makeTensorHeader<T>(bias);
+                csl::copyMatToTensor<T>(bias, bias_tensor, stream);
             }
 
             transA = _transA;
@@ -42,9 +49,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(((inputs.size() == 2 && input_B_tensor.empty()) ||
-                       (inputs.size() == 1 && !input_B_tensor.empty())) && outputs.size() == 1);
-
             auto input_A_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input_A = input_A_wrapper->getView();
 
@@ -60,12 +64,26 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output = output_wrapper->getSpan();
 
             csl::tensor_ops::gemmBatched<T>(cublasHandle, batch, 0.f, output, C_offsets, 1.f, transA, input_A, A_offsets, transB, input_B, B_offsets);
+
+            // add bias if exists
+            if (!bias_tensor.empty() || inputs.size() >= 3) {
+                csl::TensorView<T> bias;
+                if (bias_tensor.empty()) {
+                    auto bias_wrapper = inputs[2].dynamicCast<wrapper_type>();
+                    bias = bias_wrapper->getView();
+                } else {
+                    bias = csl::TensorView<T>(bias_tensor);
+                }
+
+                kernels::eltwise_sum_2<T>(stream, output, output, bias);
+            }
         }
 
     private:
         csl::Stream stream;
         csl::cublas::Handle cublasHandle;
         csl::Tensor<T> input_B_tensor;
+        csl::Tensor<T> bias_tensor;
         bool transA, transB;
 
         std::vector<size_t> A_offsets;

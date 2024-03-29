@@ -143,4 +143,11 @@ TEST_F(Test_Graph_Simplifier, AttentionSubgraph) {
     test("attention_single_head", "Attention");
 }
 
+TEST_F(Test_Graph_Simplifier, BiasedMatMulSubgraph) {
+    /* Test for 1 subgraphs
+        - BiasedMatMulSubgraph
+    */
+    test("biased_matmul", "MatMul");
+}
+
 }}
