@@ -197,9 +197,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         const auto *a = A.ptr<const float>();
         auto *y = Y.ptr<float>();
-        std::memset(y, 0, Y.total() * sizeof(float));
         // add bias if existed
-        if ((inputs.size() + blobs.size()) == 3) {
+        if ((inputs.size() + blobs.size()) >= 3) {
             const auto &shape_Y = shape(Y);
             if (blobs.empty()) { // bias from input
                 const auto &bias_mat = inputs.back();
@@ -227,6 +226,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 const auto *bias = broadcast_bias.ptr<const float>();
                 std::memcpy(y, bias, total(shape_Y) * sizeof(float));
             }
+        } else {
+            std::memset(y, 0, Y.total() * sizeof(float));
         }
 
         if (blobs.empty()) {
