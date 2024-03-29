@@ -13,7 +13,10 @@
 
 namespace cv {
 
-void PlyDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3_<uchar>>& rgb,
+static const std::set<std::string> colorKeys = { "red", "diffuse_red", "green", "diffuse_green", "blue", "diffuse_blue" };
+static const std::set<std::string> texCoordKeys = { "texture_u", "s", "texture_v", "t", "texture_w" };
+
+void PlyDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3f>& rgb,
                           std::vector<Point3f>& texCoords, int& nTexCoords,
                           std::vector<std::vector<int32_t>>& indices, int /*flags*/)
 {
@@ -215,9 +218,6 @@ bool PlyDecoder::parseHeader(std::ifstream &file, int& nTexCoords)
             break;
     }
 
-    std::set<std::string> colorKeys = { "red", "diffuse_red", "green", "diffuse_green", "blue", "diffuse_blue" };
-    std::set<std::string> texCoordKeys = { "texture_u", "s", "texture_v", "t", "texture_w" };
-
     bool good = true;
     m_vertexCount = m_vertexDescription.amount;
     std::map<std::string, int> amtProps;
@@ -393,7 +393,7 @@ uchar readNext<uchar>(std::ifstream &file, DataFormat format)
 
 void PlyDecoder::parseBody(std::ifstream &file,
                            std::vector<Point3f>& points, std::vector<Point3f>& normals,
-                           std::vector<Point3_<uchar>>& rgb, std::vector<Point3f>& texCoords,
+                           std::vector<Point3f>& rgb, std::vector<Point3f>& texCoords,
                            std::vector<std::vector<int32_t>> &indices)
 {
     points.reserve(m_vertexCount);
@@ -411,7 +411,7 @@ void PlyDecoder::parseBody(std::ifstream &file,
         float vx, vy, vz;
         float nx, ny, nz;
         float u, v, w;
-        uchar r, g, b;
+        float r, g, b;
     };
 
     union VertexData
@@ -484,18 +484,18 @@ void PlyDecoder::parseBody(std::ifstream &file,
             size_t offset = vertexOffsets[j];
             if (offset != (size_t)(-1))
             {
-                switch (p.valType)
+                if (colorKeys.count(p.name) > 0)
                 {
-                case CV_8U: case CV_8S:
-                    *(vertexData.bytes.data() + offset) = (uchar)ival;
-                    break;
-                case CV_32F:
-                    *(float*)(vertexData.bytes.data() + offset) = fval;
-                    break;
-                default:
-                    // the rest are unused
-                    break;
+                    switch (p.valType)
+                    {
+                    case  CV_8U: case  CV_8S: fval = ival / 255.f;   break;
+                    case CV_16U: case CV_16S: fval = ival / 65535.f; break;
+                    case CV_32U: case CV_32S: fval = ival; break;
+                    default: break;
+                    }
                 }
+
+                *(float*)(vertexData.bytes.data() + offset) = fval;
             }
         }
 
@@ -566,7 +566,7 @@ void PlyDecoder::parseBody(std::ifstream &file,
     }
 }
 
-void PlyEncoder::writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3_<uchar>>& rgb,
+void PlyEncoder::writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3f>& rgb,
                            const std::vector<Point3f>& texCoords, int nTexCoords,
                            const std::vector<std::vector<int32_t>>& indices)
 {
@@ -632,7 +632,7 @@ void PlyEncoder::writeData(const std::vector<Point3f>& points, const std::vector
         file << std::setprecision(9) << points[i].x << " " << points[i].y << " " << points[i].z;
         if (hasColor)
         {
-            file << " " << static_cast<int>(rgb[i].x) << " " << static_cast<int>(rgb[i].y) << " " << static_cast<int>(rgb[i].z);
+            file << " " << static_cast<int>(rgb[i].x * 255.f) << " " << static_cast<int>(rgb[i].y * 255.f) << " " << static_cast<int>(rgb[i].z * 255.f);
         }
         if (hasNormals)
         {

@@ -12,7 +12,7 @@ void BasePointCloudDecoder::setSource(const std::string& filename) noexcept
     m_filename = filename;
 }
 
-void BasePointCloudDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb)
+void BasePointCloudDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3f> &rgb)
 {
     std::vector<std::vector<int32_t>> indices;
     std::vector<Point3f> texCoords;
@@ -25,7 +25,7 @@ void BasePointCloudEncoder::setDestination(const std::string& filename) noexcept
     m_filename = filename;
 }
 
-void BasePointCloudEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<Point3_<uchar>> &rgb)
+void BasePointCloudEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<Point3f> &rgb)
 {
     std::vector<std::vector<int32_t>> indices;
     std::vector<Point3f> texCoords;

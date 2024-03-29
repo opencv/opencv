@@ -29,8 +29,8 @@ public:
     virtual ~BasePointCloudDecoder() = default;
 
     virtual void setSource(const std::string& filename) noexcept;
-    virtual void readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3_<uchar>>& rgb);
-    virtual void readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3_<uchar>>& rgb,
+    virtual void readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3f>& rgb);
+    virtual void readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3f>& rgb,
                           std::vector<Point3f>& texCoords, int& nTexCoords,
                           std::vector<std::vector<int32_t>>& indices, int flags) = 0;
 
@@ -45,8 +45,8 @@ public:
     virtual ~BasePointCloudEncoder() = default;
 
     virtual void setDestination(const std::string& filename) noexcept;
-    virtual void writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3_<uchar>>& rgb);
-    virtual void writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3_<uchar>>& rgb,
+    virtual void writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3f>& rgb);
+    virtual void writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3f>& rgb,
                            const std::vector<Point3f>& texCoords, int nTexCoords,
                            const std::vector<std::vector<int32_t>>& indices) = 0;
 

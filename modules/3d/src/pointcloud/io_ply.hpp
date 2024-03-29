@@ -35,14 +35,14 @@ struct ElementDescription
 class PlyDecoder CV_FINAL : public BasePointCloudDecoder
 {
 public:
-    void readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3_<uchar>>& rgb,
+    void readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3f>& rgb,
                   std::vector<Point3f>& texCoords, int& nTexCoords,
                   std::vector<std::vector<int32_t>>& indices, int flags) CV_OVERRIDE;
 
 protected:
     bool parseHeader(std::ifstream &file, int& nTexCoords);
     void parseBody(std::ifstream &file,
-                   std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3_<uchar>>& rgb,
+                   std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3f>& rgb,
                    std::vector<Point3f>& texCoords,
                    std::vector<std::vector<int32_t>>& indices);
 
@@ -59,7 +59,7 @@ protected:
 class PlyEncoder CV_FINAL : public BasePointCloudEncoder
 {
 public:
-    void writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3_<uchar>>& rgb,
+    void writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3f>& rgb,
                    const std::vector<Point3f>& texCoords, int nTexCoords,
                    const std::vector<std::vector<int32_t>>& indices) CV_OVERRIDE;
 

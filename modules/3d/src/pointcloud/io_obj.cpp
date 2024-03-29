@@ -12,7 +12,7 @@ namespace cv {
 
 std::unordered_set<std::string> ObjDecoder::m_unsupportedKeys;
 
-void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3_<uchar>>& rgb)
+void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3f>& rgb)
 {
     std::vector<Point3f> texCoords;
     int nTexCoords;
@@ -20,12 +20,11 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
     this->readData(points, normals, rgb, texCoords, nTexCoords, indices, READ_AS_IS_FLAG);
 }
 
-void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3_<uchar>>& rgb,
+void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& normals, std::vector<Point3f>& rgb,
                           std::vector<Point3f>& texCoords, int& nTexCoords,
                           std::vector<std::vector<int32_t>>& indices, int flags)
 {
-    std::vector<Point3f> ptsList, nrmList, texCoordList;
-    std::vector<Point3_<uchar>> rgbList;
+    std::vector<Point3f> ptsList, nrmList, texCoordList, rgbList;
     std::vector<std::vector<int32_t>> idxList, texIdxList, normalIdxList;
 
     nTexCoords = 0;
@@ -74,12 +73,8 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
                 Point3f color;
                 if (ss.rdbuf()->in_avail() != 0)
                 {
-                    Point3_<uchar> uc_color;
                     ss >> color.x >> color.y >> color.z;
-                    uc_color.x = static_cast<uchar>(std::round(255.f * color.x));
-                    uc_color.y = static_cast<uchar>(std::round(255.f * color.y));
-                    uc_color.z = static_cast<uchar>(std::round(255.f * color.z));
-                    rgbList.push_back(uc_color);
+                    rgbList.push_back(color);
                 }
             }
         }
@@ -206,7 +201,7 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
     file.close();
 }
 
-void ObjEncoder::writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3_<uchar>>& rgb,
+void ObjEncoder::writeData(const std::vector<Point3f>& points, const std::vector<Point3f>& normals, const std::vector<Point3f>& rgb,
                            const std::vector<Point3f>& texCoords, int nTexCoords,
                            const std::vector<std::vector<int32_t>>& indices)
 {
@@ -233,9 +228,9 @@ void ObjEncoder::writeData(const std::vector<Point3f>& points, const std::vector
     for (size_t i = 0; i < points.size(); ++i)
     {
         file << "v " << points[i].x << " " << points[i].y << " " << points[i].z;
-        if (!rgb.empty()) {
-            file << " " << static_cast<float>(rgb[i].x) / 255.f << " " <<
-                static_cast<float>(rgb[i].y) / 255.f  << " " << static_cast<float>(rgb[i].z) / 255.f;
+        if (!rgb.empty())
+        {
+            file << " " << rgb[i].x << " " << rgb[i].y  << " " << rgb[i].z;
         }
         file << std::endl;
     }

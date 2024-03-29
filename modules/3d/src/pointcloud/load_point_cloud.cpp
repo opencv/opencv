@@ -61,20 +61,18 @@ void loadPointCloud(const String &filename, OutputArray vertices, OutputArray no
 
     decoder->setSource(filename);
 
-    std::vector<Point3f> vec_vertices;
-    std::vector<Point3f> vec_normals;
-    std::vector<Point3_<uchar>> vec_rgb;
+    std::vector<Point3f> vec_vertices, vec_normals, vec_rgb;
 
     decoder->readData(vec_vertices, vec_normals, vec_rgb);
 
     if (!vec_vertices.empty())
-        Mat(static_cast<int>(vec_vertices.size()), 1, CV_32FC3, &vec_vertices[0]).copyTo(vertices);
+        Mat(static_cast<int>(vec_vertices.size()), 1, CV_32FC3, vec_vertices.data()).copyTo(vertices);
 
     if (!vec_normals.empty() && normals.needed())
-        Mat(static_cast<int>(vec_normals.size()), 1, CV_32FC3, &vec_normals[0]).copyTo(normals);
+        Mat(static_cast<int>(vec_normals.size()), 1, CV_32FC3, vec_normals.data()).copyTo(normals);
 
     if (!vec_rgb.empty() && rgb.needed())
-        Mat(static_cast<int>(vec_rgb.size()), 1, CV_8UC3, &vec_rgb[0]).copyTo(rgb);
+        Mat(static_cast<int>(vec_rgb.size()), 1, CV_32FC3, vec_rgb.data()).copyTo(rgb);
 
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
@@ -101,15 +99,15 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
 
     encoder->setDestination(filename);
 
-    std::vector<Point3f> vec_vertices(vertices.getMat());
-    std::vector<Point3f> vec_normals;
-    std::vector<Point3_<uchar>> vec_rgb;
+    std::vector<Point3f> vec_vertices(vertices.getMat()), vec_normals, vec_rgb;
 
-    if (!normals.empty()){
+    if (!normals.empty())
+    {
         vec_normals = normals.getMat();
     }
 
-    if (!rgb.empty()){
+    if (!rgb.empty())
+    {
         vec_rgb = rgb.getMat();
     }
     encoder->writeData(vec_vertices, vec_normals, vec_rgb);
@@ -138,9 +136,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
 
     decoder->setSource(filename);
 
-    std::vector<Point3f> vec_vertices;
-    std::vector<Point3f> vec_normals;
-    std::vector<Point3_<uchar>> vec_rgb;
+    std::vector<Point3f> vec_vertices, vec_normals, vec_rgb;
     std::vector<std::vector<int32_t>> vec_indices;
 
     std::vector<Point3f> vec_texCoords;
@@ -160,7 +156,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
 
     if (colors.needed() && !vec_rgb.empty())
     {
-        Mat(1, static_cast<int>(vec_rgb.size()), CV_8UC3, vec_rgb.data()).convertTo(colors, CV_32F, (1.0/255.0));
+        Mat(1, static_cast<int>(vec_rgb.size()), CV_32FC3, vec_rgb.data()).copyTo(colors);
     }
 
     if (!vec_indices.empty())
@@ -254,9 +250,7 @@ void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays in
 
     encoder->setDestination(filename);
 
-    std::vector<Point3f> vec_vertices(vertices.getMat());
-    std::vector<Point3f> vec_normals;
-    std::vector<Point3_<uchar>> vec_rgb;
+    std::vector<Point3f> vec_vertices(vertices.getMat()), vec_normals, vec_rgb;
     if (!normals.empty())
     {
         vec_normals = normals.getMat();
@@ -264,7 +258,7 @@ void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays in
 
     if (!colors.empty())
     {
-        colors.getMat().convertTo(vec_rgb, CV_8U, 255.0);
+        vec_rgb = colors.getMat();
     }
 
     std::vector<std::vector<int32_t>> vec_indices;

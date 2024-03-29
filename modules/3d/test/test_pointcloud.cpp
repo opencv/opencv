@@ -14,36 +14,37 @@ namespace opencv_test { namespace {
 TEST(PointCloud, LoadPointCloudObj)
 {
     std::vector<cv::Point3f> points_gold = {
-        {-5.93915f, -0.13257f, 2.55837f},
-        {-5.93915f, 1.86743f, 2.55837f},
+        {-5.93915f, -0.13257f,  2.55837f},
+        {-5.93915f,  1.86743f,  2.55837f},
         {-5.93915f, -0.13257f, -1.16339f},
-        {-5.93915f, 1.86743f, -1.16339f},
-        {0.399941f, -0.13257f, 2.55837f},
-        {0.399941f, 1.86743f, 2.55837f},
+        {-5.93915f,  1.86743f, -1.16339f},
+        {0.399941f, -0.13257f,  2.55837f},
+        {0.399941f,  1.86743f,  2.55837f},
         {0.399941f, -0.13257f, -1.16339f},
-        {0.399941f, 1.86743f, -1.16339f}};
+        {0.399941f,  1.86743f, -1.16339f}
+    };
 
     std::vector<cv::Point3f> normals_gold = {
-        {-1.0000f, 0.0000f, 0.0000f},
-        {0.0000f, 0.0000f, -1.0000f},
-        {1.0000f, 0.0000f, 0.0000f},
-        {0.0000f, 0.0000f, 1.0000f},
-        {0.0000f, -1.0000f, 0.0000f},
-        {0.0000f, 1.0000f, 0.0000f}};
+        {-1.0000f,  0.0000f,  0.0000f},
+        { 0.0000f,  0.0000f, -1.0000f},
+        { 1.0000f,  0.0000f,  0.0000f},
+        { 0.0000f,  0.0000f,  1.0000f},
+        { 0.0000f, -1.0000f,  0.0000f},
+        { 0.0000f,  1.0000f,  0.0000f}
+    };
 
-    std::vector<cv::Point3_<uchar>> rgb_gold = {
-            {19, 144, 149},
-            {219, 28, 216},
-            {218, 157, 101},
-            {11, 161, 78},
-            {248, 183, 214},
-            {63, 196, 6},
-            {165, 190, 153},
-            {89, 203, 11}};
+    std::vector<cv::Point3f> rgb_gold = {
+        {0.0756f, 0.5651f, 0.5829f},
+        {0.8596f, 0.1105f, 0.8455f},
+        {0.8534f, 0.6143f, 0.3950f},
+        {0.0438f, 0.6308f, 0.3065f},
+        {0.9716f, 0.7170f, 0.8378f},
+        {0.2472f, 0.7701f, 0.0234f},
+        {0.6472f, 0.7467f, 0.5981f},
+        {0.3502f, 0.7954f, 0.0443f}
+    };
 
-    std::vector<cv::Point3f> points;
-    std::vector<cv::Point3f> normals;
-    std::vector<cv::Point3_<uchar>> rgb;
+    std::vector<cv::Point3f> points, normals, rgb;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
     cv::loadPointCloud(folder + "pointcloudio/orig.obj", points, normals, rgb);
@@ -65,8 +66,7 @@ TEST(PointCloud, LoadObjNoNormals)
         {0.399941f, -0.13257f, -1.16339f},
         {0.399941f, 1.86743f, -1.16339f}};
 
-    std::vector<cv::Point3f> points;
-    std::vector<cv::Point3f> normals;
+    std::vector<cv::Point3f> points, normals;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
     cv::loadPointCloud(folder + "pointcloudio/orig_no_norms.obj", points, normals);
@@ -77,9 +77,7 @@ TEST(PointCloud, LoadObjNoNormals)
 
 TEST(PointCloud, SaveObj)
 {
-    std::vector<cv::Point3f> points_gold;
-    std::vector<cv::Point3f> normals_gold;
-    std::vector<cv::Point3_<uchar>> rgb_gold;
+    std::vector<cv::Point3f> points_gold, normals_gold, rgb_gold;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
     auto new_path = tempfile("new.obj");
@@ -87,9 +85,7 @@ TEST(PointCloud, SaveObj)
     cv::loadPointCloud(folder + "pointcloudio/orig.obj", points_gold, normals_gold, rgb_gold);
     cv::savePointCloud(new_path, points_gold, normals_gold, rgb_gold);
 
-    std::vector<cv::Point3f> points;
-    std::vector<cv::Point3f> normals;
-    std::vector<cv::Point3_<uchar>> rgb;
+    std::vector<cv::Point3f> points, normals, rgb;
 
     cv::loadPointCloud(new_path, points, normals, rgb);
 
@@ -101,9 +97,7 @@ TEST(PointCloud, SaveObj)
 
 TEST(PointCloud, LoadSavePly)
 {
-    std::vector<cv::Point3f> points;
-    std::vector<cv::Point3f> normals;
-    std::vector<cv::Point3_<uchar>> rgb;
+    std::vector<cv::Point3f> points, normals, rgb;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
     std::string new_path = tempfile("new.ply");
@@ -111,9 +105,7 @@ TEST(PointCloud, LoadSavePly)
     cv::loadPointCloud(folder + "pointcloudio/orig.ply", points, normals, rgb);
     cv::savePointCloud(new_path, points, normals, rgb);
 
-    std::vector<cv::Point3f> points_gold;
-    std::vector<cv::Point3f> normals_gold;
-    std::vector<cv::Point3_<uchar>> rgb_gold;
+    std::vector<cv::Point3f> points_gold, normals_gold, rgb_gold;
 
     cv::loadPointCloud(new_path, points_gold, normals_gold, rgb_gold);
 
