@@ -826,7 +826,7 @@ void TFLiteImporter::parseSplit(const Operator& op, const std::string& opcode, L
 }
 
 void TFLiteImporter::parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
-    layerParams.type = "MatMul";
+    layerParams.type = "Gemm";
     auto options = op.builtin_options_as_FullyConnectedOptions();
     CV_Assert(options);
 
@@ -834,6 +834,7 @@ void TFLiteImporter::parseFullyConnected(const Operator& op, const std::string& 
     Mat weights = allTensors[idx];
     layerParams.blobs.resize(1, weights);
     layerParams.set("transB", true);
+    layerParams.set("constB", true);
     addLayer(layerParams, op);
     parseFusedActivation(op, options->fused_activation_function());
 }
