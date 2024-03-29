@@ -1229,7 +1229,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     int resUnit = -1, dpiX = -1, dpiY = -1;
 
     readParam(params, IMWRITE_TIFF_COMPRESSION, compression);
-    readParam(params, TIFFTAG_PREDICTOR, predictor);
+    readParam(params, IMWRITE_TIFF_PREDICTOR, predictor);
     readParam(params, IMWRITE_TIFF_RESUNIT, resUnit);
     readParam(params, IMWRITE_TIFF_XDPI, dpiX);
     readParam(params, IMWRITE_TIFF_YDPI, dpiY);
@@ -1318,7 +1318,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         CV_Assert(fileStep > 0);
 
         int rowsPerStrip = (int)((1 << 13) / fileStep);
-        readParam(params, TIFFTAG_ROWSPERSTRIP, rowsPerStrip);
+        readParam(params, IMWRITE_TIFF_ROWSPERSTRIP, rowsPerStrip);
         rowsPerStrip = std::max(1, std::min(height, rowsPerStrip));
 
         int colorspace = channels > 1 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
