@@ -17,6 +17,8 @@ Introduction
 In this tutorial we will compare *AKAZE* and *ORB* local features using them to find matches between
 video frames and track object movements.
 
+\warning You need the <a href="https://github.com/opencv/opencv_contrib">OpenCV contrib modules</a> to be able to use the AKAZE features.
+
 The algorithm is as follows:
 
 -   Detect and describe keypoints on the first frame, manually set object boundaries
