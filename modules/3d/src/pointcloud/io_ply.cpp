@@ -445,7 +445,7 @@ void PlyDecoder::parseBody(std::ifstream &file,
     for (size_t j = 0; j < m_vertexDescription.properties.size(); j++)
     {
         const auto& p = m_vertexDescription.properties[j];
-        size_t offset = 0;
+        size_t offset = (size_t)(-1);
         if (p.name == "x")
             offset = offsetof(VertexFields, vx);
         if (p.name == "y")
