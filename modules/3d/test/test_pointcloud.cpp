@@ -125,6 +125,11 @@ TEST(PointCloud, LoadSaveMeshObj)
     std::string new_path = tempfile("new_mesh.obj");
 
     cv::loadMesh(folder + "pointcloudio/orig.obj", points, indices, normals, colors, texCoords);
+    EXPECT_FALSE(points.empty());
+    EXPECT_FALSE(indices.empty());
+    EXPECT_FALSE(normals.empty());
+    EXPECT_FALSE(colors.empty());
+    EXPECT_FALSE(texCoords.empty());
     cv::saveMesh(new_path, points, indices, normals, colors, texCoords);
 
     std::vector<cv::Point3f> points_gold, normals_gold, colors_gold;
@@ -132,6 +137,11 @@ TEST(PointCloud, LoadSaveMeshObj)
     std::vector<std::vector<int32_t>> indices_gold;
 
     cv::loadMesh(new_path, points_gold, indices_gold, normals_gold, colors_gold, texCoords_gold);
+    EXPECT_FALSE(points_gold.empty());
+    EXPECT_FALSE(indices_gold.empty());
+    EXPECT_FALSE(normals_gold.empty());
+    EXPECT_FALSE(colors_gold.empty());
+    EXPECT_FALSE(texCoords_gold.empty());
 
     EXPECT_EQ(normals_gold, normals);
     EXPECT_EQ(points_gold, points);
