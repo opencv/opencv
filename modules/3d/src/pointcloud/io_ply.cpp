@@ -299,7 +299,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file, int& nTexCoords)
     }
 
     // check for synonyms
-    std::vector<std::pair<int, int>> propCounts;
+    std::vector<std::pair<size_t, size_t>> propCounts;
     std::vector<std::pair<std::string, std::string>> synonyms = {
         {"red", "diffuse_red"},
         {"green", "diffuse_green"},
@@ -311,7 +311,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file, int& nTexCoords)
     {
         std::string a, b;
         a = p.first; b = p.second;
-        int ca = amtProps.count(a), cb = amtProps.count(b);
+        size_t ca = amtProps.count(a), cb = amtProps.count(b);
         propCounts.push_back({ca, cb});
         if (ca + cb > 1)
         {
@@ -510,7 +510,7 @@ void PlyDecoder::parseBody(std::ifstream &file,
                     {
                     case  CV_8U: case  CV_8S: fval = ival / 255.f;   break;
                     case CV_16U: case CV_16S: fval = ival / 65535.f; break;
-                    case CV_32U: case CV_32S: fval = ival; break;
+                    case CV_32U: case CV_32S: fval = (float)ival; break;
                     default: break;
                     }
                 }
