@@ -235,6 +235,18 @@ TEST_P(Test_TFLite, replicate_by_pack) {
     testLayer("replicate_by_pack", l1, lInf);
 }
 
+TEST_P(Test_TFLite, split) {
+    testLayer("split");
+}
+
+TEST_P(Test_TFLite, fully_connected) {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+    testLayer("fully_connected");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace
