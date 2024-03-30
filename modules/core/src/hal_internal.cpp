@@ -119,7 +119,7 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
     long _info[1];
 #else
     int* piv = new int[m];
-    int lda = (int)(a_step / sizeof(fptype)); 
+    int lda = (int)(a_step / sizeof(fptype));
     int _m = m, _n = n;
     int* _info = info;
 #endif
@@ -342,7 +342,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
 
     std::vector<fptype> tmpAMemHolder;
     fptype* tmpA;
-    
+
     if (m == n)
     {
         transpose_square_inplace(a, lda, m);
