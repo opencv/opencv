@@ -207,7 +207,7 @@ TEST_P(Imgcodecs_Jpeg_decode_cmyk, regression25274)
     // Jpeg is lossy compression.
     // There may be small differences in decoding results by environments.
     // -> 255 * 1% = 2.55 .
-    EXPECT_EQ(3, cvtest::norm(rgb_img, cmyk_img, NORM_INF));
+    EXPECT_LE(cvtest::norm(rgb_img, cmyk_img, NORM_INF), 3); // norm() <= 3
 }
 
 INSTANTIATE_TEST_CASE_P( /* nothing */,
