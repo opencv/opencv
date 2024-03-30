@@ -9,9 +9,6 @@ static char* check_fn4 = (char*)sgesdd_;
 int main(int argc, char* argv[])
 {
     (void)argv;
-#if ACCELERATE_NEW_LAPACK
-    printf("ACCELERATE_NEW_LAPACK=1");
-#endif
     if(argc > 1000)
         return check_fn1[0] + check_fn2[0] + check_fn3[0] + check_fn4[0];
     return 0;

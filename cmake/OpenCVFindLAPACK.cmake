@@ -108,11 +108,27 @@ macro(ocv_lapack_check)
 
     set(LAPACK_TRY_COMPILE_DEF "")
     if(LAPACK_IMPL STREQUAL "LAPACK/Apple") # https://github.com/opencv/opencv/issues/24660
-      set(LAPACK_TRY_COMPILE_DEF "-DACCELERATE_NEW_LAPACK")
       # TODO: Need to find a way detecting macOS / iOS versions
       #       enbale if macOS >= 13.3 or iOS >= 16.4
-      # add_compile_definitions(ACCELERATE_NEW_LAPACK)
-      # add_compile_definitions(ACCELERATE_LAPACK_ILP64)
+
+      # Get macOS version
+      execute_process(COMMAND sw_vers -productVersion
+                      OUTPUT_VARIABLE MACOS_VERSION
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+      # Extract major and minor versions
+      string(REGEX MATCHALL "[0-9]+" MACOS_VERSION_NUMBER_LIST ${MACOS_VERSION})
+      list(LENGTH MACOS_VERSION_NUMBER_LIST MACOS_VERSION_NUMBER_LIST_LENGTH)
+      if(MACOS_VERSION_NUMBER_LIST_LENGTH GREATER_EQUAL 2)
+        list(GET MACOS_VERSION_NUMBER_LIST 0 MACOS_MAJOR_VERSION)
+        list(GET MACOS_VERSION_NUMBER_LIST 1 MACOS_MINOR_VERSION)
+      endif()
+      # Enable Accelerate New LAPACK if macOS >= 13.3
+      if(MACOS_MAJOR_VERSION GREATER_EQUAL 13 AND MACOS_MINOR_VERSION GREATER_EQUAL 3)
+        set(LAPACK_TRY_COMPILE_DEF "-DACCELERATE_NEW_LAPACK")
+        add_compile_definitions(ACCELERATE_NEW_LAPACK)
+        add_compile_definitions(ACCELERATE_LAPACK_ILP64)
+      endif()
     endif()
 
     try_compile(__VALID_LAPACK
