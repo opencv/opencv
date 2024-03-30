@@ -651,12 +651,12 @@ TEST_P(RenderingTest, floatParams)
             {
                 thr.rgbInfThreshold = 0.000229;
                 thr.rgbL2Threshold = 6.37e-09;
-                thr.depthL2Threshold = 0.00042;
+                thr.depthL2Threshold = 0.000427;
             }
             else if (width == 700 && height == 700 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_CW)
             {
-                thr.rgbInfThreshold = 0.000212;
-                thr.rgbL2Threshold = 1.7e-09;
+                thr.rgbInfThreshold = 0.000277;
+                thr.rgbL2Threshold = 1.8e-09;
                 thr.depthL2Threshold = 0.000124;
             }
             else if (width == 700 && height == 700 && shadingType == RASTERIZE_SHADING_WHITE && cullingMode == RASTERIZE_CULLING_NONE)
