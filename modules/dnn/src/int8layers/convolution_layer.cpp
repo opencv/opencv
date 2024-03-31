@@ -702,13 +702,14 @@ public:
         bool useAVX2;
         bool useAVX512;
         bool useLASX;
+        bool useRVV;
         int blk_size_cn;
         int inpZp, outZp;
         const std::vector<float>* multiplier;
 
         ParallelConv()
             : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
-              biasvec_(0), activLUT_(0), activ_(0), is1x1_(false), useAVX2(false), useAVX512(false), useLASX(false)
+              biasvec_(0), activLUT_(0), activ_(0), is1x1_(false), useAVX2(false), useAVX512(false), useLASX(false), useRVV(false)
             , blk_size_cn(0), inpZp(0), outZp(0), multiplier(0)
         {}
 
@@ -765,6 +766,7 @@ public:
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX  && isConv2D;
 
             p.useLASX   = checkHardwareSupport(CPU_LASX) && isConv2D;
+            p.useRVV   = checkHardwareSupport(CPU_RVV) && isConv2D;
 
             int kernel_d = isConv3D? kernel_size[0] : 1;
             int kernel_h = isConv1D? 1 : kernel_size[kernel_size.size() - 2];
@@ -966,6 +968,13 @@ public:
                         #if CV_TRY_LASX
                             if(useLASX)
                                 opt_LASX::fastDepthwiseConv(wptr, kernel_h, kernel_w,
+                                    stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
+                                    biasptr, multptr, inptr_, height, width, outptr_, out_d, outH, outW, inpZp, outZp);
+                            else
+                        #endif
+                        #if CV_TRY_RVV && defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>=11000
+                            if(useRVV)
+                                opt_RVV::fastDepthwiseConv(wptr, kernel_h, kernel_w,
                                     stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
                                     biasptr, multptr, inptr_, height, width, outptr_, out_d, outH, outW, inpZp, outZp);
                             else
@@ -1353,6 +1362,12 @@ public:
                     #if CV_TRY_LASX
                         if(useLASX)
                             opt_LASX::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
+                                          outShape, bsz, vsz, vsz_a, outZp, multptr, cn0 == 0, cn1 == inpCn);
+                        else
+                    #endif
+                    #if CV_TRY_RVV && defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>=11000
+                        if(useRVV)
+                            opt_RVV::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
                                           outShape, bsz, vsz, vsz_a, outZp, multptr, cn0 == 0, cn1 == inpCn);
                         else
                     #endif
