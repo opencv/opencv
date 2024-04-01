@@ -145,10 +145,8 @@ static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candida
         minPerimeterPixels = 4*minSize;
     }
 
-    Mat contoursImg;
-    in.copyTo(contoursImg);
     vector<vector<Point> > contours;
-    findContours(contoursImg, contours, RETR_LIST, CHAIN_APPROX_NONE);
+    findContours(in, contours, RETR_LIST, CHAIN_APPROX_NONE);
     // now filter list of contours
     for(unsigned int i = 0; i < contours.size(); i++) {
         // check perimeter
@@ -161,8 +159,7 @@ static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candida
         if(approxCurve.size() != 4 || !isContourConvex(approxCurve)) continue;
 
         // check min distance between corners
-        double minDistSq =
-            max(contoursImg.cols, contoursImg.rows) * max(contoursImg.cols, contoursImg.rows);
+        double minDistSq = max(in.cols, in.rows) * max(in.cols, in.rows);
         for(int j = 0; j < 4; j++) {
             double d = (double)(approxCurve[j].x - approxCurve[(j + 1) % 4].x) *
                            (double)(approxCurve[j].x - approxCurve[(j + 1) % 4].x) +
@@ -177,9 +174,9 @@ static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candida
         bool tooNearBorder = false;
         for(int j = 0; j < 4; j++) {
             if(approxCurve[j].x < minDistanceToBorder || approxCurve[j].y < minDistanceToBorder ||
-               approxCurve[j].x > contoursImg.cols - 1 - minDistanceToBorder ||
-               approxCurve[j].y > contoursImg.rows - 1 - minDistanceToBorder)
-                tooNearBorder = true;
+               approxCurve[j].x > in.cols - 1 - minDistanceToBorder ||
+               approxCurve[j].y > in.rows - 1 - minDistanceToBorder)
+               tooNearBorder = true;
         }
         if(tooNearBorder) continue;
 
@@ -684,7 +681,7 @@ struct ArucoDetector::ArucoDetectorImpl {
         contours.clear();
 
         // sort candidates from big to small
-        std::sort(candidateTree.begin(), candidateTree.end());
+        std::stable_sort(candidateTree.begin(), candidateTree.end());
         // group index for each candidate
         vector<int> groupId(candidateTree.size(), -1);
         vector<vector<size_t> > groupedCandidates;
@@ -728,11 +725,11 @@ struct ArucoDetector::ArucoDetectorImpl {
 
         for (vector<size_t>& grouped : groupedCandidates) {
             if (detectorParams.detectInvertedMarker) // if detectInvertedMarker choose smallest contours
-                std::sort(grouped.begin(), grouped.end(), [](const size_t &a, const size_t &b) {
+                std::stable_sort(grouped.begin(), grouped.end(), [](const size_t &a, const size_t &b) {
                     return a > b;
                 });
             else // if detectInvertedMarker==false choose largest contours
-                std::sort(grouped.begin(), grouped.end());
+                std::stable_sort(grouped.begin(), grouped.end());
             size_t currId = grouped[0];
             isSelectedContours[currId] = true;
             for (size_t i = 1ull; i < grouped.size(); i++) {
@@ -780,7 +777,7 @@ struct ArucoDetector::ArucoDetectorImpl {
         vector<int> idsTmp(ncandidates, -1);
         vector<int> rotated(ncandidates, 0);
         vector<uint8_t> validCandidates(ncandidates, 0);
-        vector<bool> was(ncandidates, false);
+        vector<uint8_t> was(ncandidates, false);
         bool checkCloseContours = true;
 
         int maxDepth = 0;
@@ -883,7 +880,7 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
                 detectorParams.minMarkerLengthRatioOriginalImg == 0.0));
 
     Mat grey;
-    _convertToGrey(_image.getMat(), grey);
+    _convertToGrey(_image, grey);
 
     // Aruco3 functionality is the extension of Aruco.
     // The description can be found in:

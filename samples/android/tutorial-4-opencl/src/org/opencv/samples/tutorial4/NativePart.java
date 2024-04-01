@@ -1,5 +1,6 @@
 package org.opencv.samples.tutorial4;
 
+//![native_part]
 public class NativePart {
     static
     {
@@ -17,3 +18,4 @@ public class NativePart {
     public static native void closeCL();
     public static native void processFrame(int tex1, int tex2, int w, int h, int mode);
 }
+//![native_part]

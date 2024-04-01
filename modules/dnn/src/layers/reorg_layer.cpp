@@ -52,11 +52,7 @@
 #include "../op_inf_engine.hpp"
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-#include <ngraph/op/reorg_yolo.hpp>
-#else
-#include <ngraph/op/experimental/layers/reorg_yolo.hpp>
-#endif
+#include <openvino/op/reorg_yolo.hpp>
 #endif
 
 #include "../op_cuda.hpp"
@@ -184,7 +180,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -205,7 +201,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto reorg = std::make_shared<ngraph::op::ReorgYolo>(ieInpNode, ngraph::Strides{(size_t)reorgStride});
+        auto reorg = std::make_shared<ov::op::v0::ReorgYolo>(ieInpNode, ov::Strides{(size_t)reorgStride});
         return Ptr<BackendNode>(new InfEngineNgraphNode(reorg));
     }
 #endif  // HAVE_DNN_NGRAPH

@@ -433,8 +433,6 @@ R & t \\
     Summary:
     Generic camera model @cite Kannala2006 with perspective projection and without distortion correction
 
-    @defgroup calib3d_c C API
-
   @}
  */
 
@@ -490,7 +488,8 @@ enum { CALIB_CB_ADAPTIVE_THRESH = 1,
        CALIB_CB_EXHAUSTIVE      = 16,
        CALIB_CB_ACCURACY        = 32,
        CALIB_CB_LARGER          = 64,
-       CALIB_CB_MARKER          = 128
+       CALIB_CB_MARKER          = 128,
+       CALIB_CB_PLAIN           = 256
      };
 
 enum { CALIB_CB_SYMMETRIC_GRID  = 1,
@@ -1235,6 +1234,10 @@ square-like shape) to filter out false quads extracted at the contour retrieval 
 -   @ref CALIB_CB_FAST_CHECK Run a fast check on the image that looks for chessboard corners,
 and shortcut the call if none is found. This can drastically speed up the call in the
 degenerate condition when no chessboard is observed.
+-   @ref CALIB_CB_PLAIN All other flags are ignored. The input image is taken as is.
+No image processing is done to improve to find the checkerboard. This has the effect of speeding up the
+execution of the function but could lead to not recognizing the checkerboard if the image
+is not previously binarized in the appropriate manner.
 
 The function attempts to determine whether the input image is a view of the chessboard pattern and
 locate the internal chessboard corners. The function returns a non-zero value if all of the corners
@@ -1594,6 +1597,10 @@ The algorithm performs the following steps:
     \f$c_y\f$ very far from the image center, and/or large differences between \f$f_x\f$ and
     \f$f_y\f$ (ratios of 10:1 or more)), then you are probably using patternSize=cvSize(rows,cols)
     instead of using patternSize=cvSize(cols,rows) in @ref findChessboardCorners.
+
+@note
+    The function may throw exceptions, if unsupported combination of parameters is provided or
+    the system is underconstrained.
 
 @sa
    calibrateCameraRO, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate,
@@ -2974,7 +2981,7 @@ W
 x \\
 y \\
 \texttt{disparity} (x,y) \\
-z
+1
 \end{bmatrix}.\f]
 
 @sa
@@ -4045,6 +4052,45 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
                                   InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
                                   OutputArray R, OutputArray T, int flags = fisheye::CALIB_FIX_INTRINSIC,
                                   TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
+
+    /**
+    @brief Finds an object pose from 3D-2D point correspondences for fisheye camera moodel.
+
+    @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
+    1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
+    @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
+    where N is the number of points. vector\<Point2d\> can be also passed here.
+    @param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
+    @param distCoeffs Input vector of distortion coefficients (4x1/1x4).
+    @param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
+    the model coordinate system to the camera coordinate system.
+    @param tvec Output translation vector.
+    @param useExtrinsicGuess Parameter used for #SOLVEPNP_ITERATIVE. If true (1), the function uses
+    the provided rvec and tvec values as initial approximations of the rotation and translation
+    vectors, respectively, and further optimizes them.
+    @param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
+    This function returns the rotation and the translation vectors that transform a 3D point expressed in the object
+    coordinate frame to the camera coordinate frame, using different methods:
+    - P3P methods (@ref SOLVEPNP_P3P, @ref SOLVEPNP_AP3P): need 4 input points to return a unique solution.
+    - @ref SOLVEPNP_IPPE Input points must be >= 4 and object points must be coplanar.
+    - @ref SOLVEPNP_IPPE_SQUARE Special case suitable for marker pose estimation.
+    Number of input points must be 4. Object points must be defined in the following order:
+    - point 0: [-squareLength / 2,  squareLength / 2, 0]
+    - point 1: [ squareLength / 2,  squareLength / 2, 0]
+    - point 2: [ squareLength / 2, -squareLength / 2, 0]
+    - point 3: [-squareLength / 2, -squareLength / 2, 0]
+    - for all the other flags, number of input points must be >= 4 and object points can be in any configuration.
+    @param criteria Termination criteria for internal undistortPoints call.
+    The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
+    thus the input are very similar. Check there and Perspective-n-Points is described in @ref calib3d_solvePnP
+    for more information.
+    */
+    CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
+                                InputArray cameraMatrix, InputArray distCoeffs,
+                                OutputArray rvec, OutputArray tvec,
+                                bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE,
+                                TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)
+                              );
 
 //! @} calib3d_fisheye
 } // end namespace fisheye

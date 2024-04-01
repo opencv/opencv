@@ -62,10 +62,6 @@
 @defgroup core Core functionality
 @{
     @defgroup core_basic Basic structures
-    @defgroup core_c C structures and operations
-    @{
-        @defgroup core_c_glue Connections with C++
-    @}
     @defgroup core_array Operations on arrays
     @defgroup core_async Asynchronous API
     @defgroup core_xml XML/YAML Persistence
@@ -556,6 +552,8 @@ The format of half precision floating point is defined in IEEE 754-2008.
 
 @param src input array.
 @param dst output array.
+
+@deprecated Use Mat::convertTo with CV_16F instead.
 */
 CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst);
 

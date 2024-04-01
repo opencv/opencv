@@ -166,7 +166,9 @@ TEST(vittrack, accuracy_vittrack)
     cv::TrackerVit::Params params;
     params.net = model;
     cv::Ptr<Tracker> tracker = TrackerVit::create(params);
-    checkTrackingAccuracy(tracker, 0.67);
+    // NOTE: Test threshold was reduced from 0.67 (libjpeg-turbo) to 0.66 (libjpeg 9f),
+    // becase libjpeg and libjpeg-turbo produce slightly different images
+    checkTrackingAccuracy(tracker, 0.66);
 }
 
 }}  // namespace opencv_test::

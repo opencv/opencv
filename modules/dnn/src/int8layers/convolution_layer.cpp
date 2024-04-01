@@ -548,7 +548,7 @@ public:
         {
             // for Conv1d
             if (group != 1)
-                CV_Error( CV_StsNotImplemented, " Grouped Conv1d or Depth-Wise Conv1d are not supported by "
+                CV_Error( cv::Error::StsNotImplemented, " Grouped Conv1d or Depth-Wise Conv1d are not supported by "
                                                 "TimVX Backend. Please try OpenCV Backend.");
             tvConv = graph->CreateOperation<tim::vx::ops::Conv1d>(
                     tvConvWeightShape[2], tvPadType, (uint32_t)kernel_size[0],
@@ -573,8 +573,8 @@ public:
         auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode.get_shape();
         CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
-        CV_Assert(ieInpNode.get_element_type() == ngraph::element::f32);
-        ngraph::Output<ngraph::Node> ieWeights;
+        CV_Assert(ieInpNode.get_element_type() == ov::element::f32);
+        ov::Output<ov::Node> ieWeights;
         if (nodes.size() > 1)
             ieWeights = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
         const int inpCn = dims[1];
@@ -592,18 +592,18 @@ public:
 
         if (nodes.size() == 1)
         {
-            ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::i8, kernel_shape, blobs[0].data);
+            ieWeights = std::make_shared<ov::op::v0::Constant>(ov::element::i8, kernel_shape, blobs[0].data);
         }
         else
         {
-            auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                             ngraph::Shape{kernel_shape.size()}, std::vector<int64_t>(kernel_shape.begin(), kernel_shape.end()));
-            ieWeights  = std::make_shared<ngraph::op::v1::Reshape>(ieWeights, shape, true);
+            auto shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                             ov::Shape{kernel_shape.size()}, std::vector<int64_t>(kernel_shape.begin(), kernel_shape.end()));
+            ieWeights  = std::make_shared<ov::op::v1::Reshape>(ieWeights, shape, true);
         }
 
-        ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
+        ov::op::PadType pad_type = ov::op::PadType::EXPLICIT;
         if (!padMode.empty())
-            pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
+            pad_type = padMode == "VALID" ? ov::op::PadType::VALID : ov::op::PadType::SAME_UPPER;
 
         ieInpNode = ngraphDequantize(ieInpNode, input_sc, input_zp);
 
@@ -627,31 +627,31 @@ public:
             outLows[i] = low * outputMultiplier[i] * output_sc / input_sc;
             outHighs[i] = high * outputMultiplier[i] * output_sc / input_sc;
         }
-        ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::f32);
-        ieWeights = std::make_shared<ngraph::op::FakeQuantize>(ieWeights,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, inpLows.data()),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, inpHighs.data()),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, outLows.data()),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, outHighs.data()),
+        ieWeights = std::make_shared<ov::op::v0::Convert>(ieWeights, ov::element::f32);
+        ieWeights = std::make_shared<ov::op::v0::FakeQuantize>(ieWeights,
+            std::make_shared<ov::op::v0::Constant>(ov::element::f32, quantShape, inpLows.data()),
+            std::make_shared<ov::op::v0::Constant>(ov::element::f32, quantShape, inpHighs.data()),
+            std::make_shared<ov::op::v0::Constant>(ov::element::f32, quantShape, outLows.data()),
+            std::make_shared<ov::op::v0::Constant>(ov::element::f32, quantShape, outHighs.data()),
             256 // levels
         );
 
-        ngraph::Output<ngraph::Node> conv_node;
+        ov::Output<ov::Node> conv_node;
         if (group != 1) {
-            conv_node = std::make_shared<ngraph::op::v1::GroupConvolution>(
+            conv_node = std::make_shared<ov::op::v1::GroupConvolution>(
                                 ieInpNode, ieWeights,
-                                ngraph::Strides(strides),
-                                ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_begin.begin(), pads_begin.end())),
-                                ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_end.begin(),   pads_end.end())),
-                                ngraph::Strides(dilations),
+                                ov::Strides(strides),
+                                ov::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_begin.begin(), pads_begin.end())),
+                                ov::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_end.begin(),   pads_end.end())),
+                                ov::Strides(dilations),
                                 pad_type);
         } else {
-            conv_node = std::make_shared<ngraph::op::v1::Convolution>(
+            conv_node = std::make_shared<ov::op::v1::Convolution>(
                                 ieInpNode, ieWeights,
-                                ngraph::Strides(strides),
-                                ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_begin.begin(), pads_begin.end())),
-                                ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_end.begin(), pads_end.end())),
-                                ngraph::Strides(dilations),
+                                ov::Strides(strides),
+                                ov::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_begin.begin(), pads_begin.end())),
+                                ov::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_end.begin(), pads_end.end())),
+                                ov::Strides(dilations),
                                 pad_type);
         }
 
@@ -659,12 +659,12 @@ public:
         shape[1] = conv_node.get_shape()[1];
         if (biasvec.size() || nodes.size() == 3)
         {
-            std::shared_ptr<ngraph::Node> bias;
+            std::shared_ptr<ov::Node> bias;
             if (nodes.size() == 3)
             {
-                auto bias_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                    ngraph::Shape{shape.size()}, std::vector<int64_t>(shape.begin(), shape.end()));
-                bias = std::make_shared<ngraph::op::v1::Reshape>(nodes[2].dynamicCast<InfEngineNgraphNode>()->node, bias_shape, true);
+                auto bias_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                                    ov::Shape{shape.size()}, std::vector<int64_t>(shape.begin(), shape.end()));
+                bias = std::make_shared<ov::op::v1::Reshape>(nodes[2].dynamicCast<InfEngineNgraphNode>()->node, bias_shape, true);
             }
             else
             {
@@ -672,9 +672,9 @@ public:
                 for (int i = 0; i < numOutput; ++i) {
                     ovBias[i] = (biasvec[i] + input_zp * cv::sum(blobs[0].row(i))[0]) * outputMultiplier[i] * output_sc;
                 }
-                bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), ovBias.data());
+                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape(shape), ovBias.data());
             }
-            conv_node = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
+            conv_node = std::make_shared<ov::op::v1::Add>(conv_node, bias, ov::op::AutoBroadcastType::NUMPY);
         }
 
         conv_node = ngraphQuantize(conv_node, output_sc, output_zp);
@@ -702,13 +702,14 @@ public:
         bool useAVX2;
         bool useAVX512;
         bool useLASX;
+        bool useRVV;
         int blk_size_cn;
         int inpZp, outZp;
         const std::vector<float>* multiplier;
 
         ParallelConv()
             : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
-              biasvec_(0), activLUT_(0), activ_(0), is1x1_(false), useAVX2(false), useAVX512(false), useLASX(false)
+              biasvec_(0), activLUT_(0), activ_(0), is1x1_(false), useAVX2(false), useAVX512(false), useLASX(false), useRVV(false)
             , blk_size_cn(0), inpZp(0), outZp(0), multiplier(0)
         {}
 
@@ -765,6 +766,7 @@ public:
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX  && isConv2D;
 
             p.useLASX   = checkHardwareSupport(CPU_LASX) && isConv2D;
+            p.useRVV   = checkHardwareSupport(CPU_RVV) && isConv2D;
 
             int kernel_d = isConv3D? kernel_size[0] : 1;
             int kernel_h = isConv1D? 1 : kernel_size[kernel_size.size() - 2];
@@ -966,6 +968,20 @@ public:
                         #if CV_TRY_LASX
                             if(useLASX)
                                 opt_LASX::fastDepthwiseConv(wptr, kernel_h, kernel_w,
+                                    stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
+                                    biasptr, multptr, inptr_, height, width, outptr_, out_d, outH, outW, inpZp, outZp);
+                            else
+                        #endif
+                        #if CV_TRY_RVV && defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>=11000
+                            if(useRVV)
+                                opt_RVV::fastDepthwiseConv(wptr, kernel_h, kernel_w,
+                                    stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
+                                    biasptr, multptr, inptr_, height, width, outptr_, out_d, outH, outW, inpZp, outZp);
+                            else
+                        #endif
+                        #if CV_RVP052
+                            if(isConv2D)
+                                opt_RVP052::fastDepthwiseConv(wptr, kernel_h, kernel_w,
                                     stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
                                     biasptr, multptr, inptr_, height, width, outptr_, out_d, outH, outW, inpZp, outZp);
                             else
@@ -1346,6 +1362,18 @@ public:
                     #if CV_TRY_LASX
                         if(useLASX)
                             opt_LASX::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
+                                          outShape, bsz, vsz, vsz_a, outZp, multptr, cn0 == 0, cn1 == inpCn);
+                        else
+                    #endif
+                    #if CV_TRY_RVV && defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>=11000
+                        if(useRVV)
+                            opt_RVV::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
+                                          outShape, bsz, vsz, vsz_a, outZp, multptr, cn0 == 0, cn1 == inpCn);
+                        else
+                    #endif
+                    #if CV_RVP052
+                        if(isConv2D)
+                            opt_RVP052::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
                                           outShape, bsz, vsz, vsz_a, outZp, multptr, cn0 == 0, cn1 == inpCn);
                         else
                     #endif

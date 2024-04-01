@@ -117,10 +117,10 @@ static void OnDeviceError(void* /* ctx */, ACameraDevice* dev, int err) {
             LOGI("Camera in use");
             break;
         case ERROR_CAMERA_SERVICE:
-            LOGI("Fatal Error occured in Camera Service");
+            LOGI("Fatal Error occurred in Camera Service");
             break;
         case ERROR_CAMERA_DEVICE:
-            LOGI("Fatal Error occured in Camera Device");
+            LOGI("Fatal Error occurred in Camera Device");
             break;
         case ERROR_CAMERA_DISABLED:
             LOGI("Camera disabled");
@@ -269,7 +269,7 @@ public:
             if (mStatus != AMEDIA_OK) {
                 if (mStatus == AMEDIA_IMGREADER_NO_BUFFER_AVAILABLE) {
                     // this error is not fatal - we just need to wait for a buffer to become available
-                    LOGW("No Buffer Available error occured - waiting for callback");
+                    LOGW("No Buffer Available error occurred - waiting for callback");
                     waitingCapture = true;
                     captureSuccess = false;
                     auto start = std::chrono::system_clock::now();
@@ -533,6 +533,7 @@ public:
         cachedIndex = index;
         cameraManager = std::shared_ptr<ACameraManager>(ACameraManager_create(), deleter_ACameraManager);
         if (!cameraManager) {
+            LOGE("Cannot create camera manager!");
             return false;
         }
         ACameraIdList* cameraIds = nullptr;
@@ -591,6 +592,7 @@ public:
                 }
             }
         }
+        LOGI("Best resolution match: %dx%d", bestMatchWidth, bestMatchHeight);
 
         ACameraMetadata_const_entry val = { 0, };
         camera_status_t status = ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE, &val);
@@ -654,7 +656,11 @@ public:
             return false;
         }
         sessionOutput = std::shared_ptr<ACaptureSessionOutput>(output, deleter_ACaptureSessionOutput);
-        ACaptureSessionOutputContainer_add(outputContainer.get(), sessionOutput.get());
+        cStatus = ACaptureSessionOutputContainer_add(outputContainer.get(), sessionOutput.get());
+        if (cStatus != ACAMERA_OK) {
+            LOGE("CaptureSessionOutput Container add failed with error code: %d", cStatus);
+            return false;
+        }
         sessionOutputAdded = true;
 
         ACameraOutputTarget* target;

@@ -72,7 +72,7 @@ GAPI_OCV_KERNEL_ST(GTrackFromMatImpl, cv::gapi::ot::GTrackFromMat, vas::ot::Obje
                     std::vector<cv::Rect>& out_tr_rects,
                     std::vector<int32_t>& out_rects_classes,
                     std::vector<uint64_t>& out_tr_ids,
-                    std::vector<TrackingStatus>& out_tr_statuses,
+                    std::vector<int>& out_tr_statuses,
                     vas::ot::ObjectTracker& state)
     {
         std::vector<vas::ot::DetectedObject> detected_objs;
@@ -87,7 +87,7 @@ GAPI_OCV_KERNEL_ST(GTrackFromMatImpl, cv::gapi::ot::GTrackFromMat, vas::ot::Obje
             out_tr_rects.push_back(object.rect);
             out_rects_classes.push_back(object.class_label);
             out_tr_ids.push_back(object.tracking_id);
-            out_tr_statuses.push_back(TrackingStatus(static_cast<int>(object.status)));
+            out_tr_statuses.push_back(static_cast<int>(object.status));
         }
     }
 };
@@ -111,7 +111,7 @@ GAPI_OCV_KERNEL_ST(GTrackFromFrameImpl, cv::gapi::ot::GTrackFromFrame, vas::ot::
                     std::vector<cv::Rect>& out_tr_rects,
                     std::vector<int32_t>& out_rects_classes,
                     std::vector<uint64_t>& out_tr_ids,
-                    std::vector<TrackingStatus>& out_tr_statuses,
+                    std::vector<int>& out_tr_statuses,
                     vas::ot::ObjectTracker& state)
     {
         std::vector<vas::ot::DetectedObject> detected_objs;
@@ -144,7 +144,7 @@ GAPI_OCV_KERNEL_ST(GTrackFromFrameImpl, cv::gapi::ot::GTrackFromFrame, vas::ot::
             out_tr_rects.push_back(object.rect);
             out_rects_classes.push_back(object.class_label);
             out_tr_ids.push_back(object.tracking_id);
-            out_tr_statuses.push_back(TrackingStatus(static_cast<int>(object.status)));
+            out_tr_statuses.push_back(static_cast<int>(object.status));
         }
     }
 };

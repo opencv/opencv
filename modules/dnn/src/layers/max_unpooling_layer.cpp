@@ -75,7 +75,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -200,29 +200,29 @@ public:
         getMemoryShapes(inpShapes, 1, outShapes, internals);
 
         Mat zeros = Mat::zeros(1, total(outShapes[0]), CV_32F);
-        auto zeroInp = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{zeros.total()}, zeros.data);
+        auto zeroInp = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{zeros.total()}, zeros.data);
 
         int newShape = -1;
-        features = std::make_shared<ngraph::op::v1::Reshape>(
+        features = std::make_shared<ov::op::v1::Reshape>(
             features,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &newShape),
+            std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{1}, &newShape),
             true
         );
-        indices = std::make_shared<ngraph::op::v1::Reshape>(
+        indices = std::make_shared<ov::op::v1::Reshape>(
             indices,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &newShape),
+            std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{1}, &newShape),
             true
         );
-        if (indices.get_element_type() != ngraph::element::i32 && indices.get_element_type() != ngraph::element::i64) {
-            indices = std::make_shared<ngraph::op::Convert>(indices, ngraph::element::i64);
+        if (indices.get_element_type() != ov::element::i32 && indices.get_element_type() != ov::element::i64) {
+            indices = std::make_shared<ov::op::v0::Convert>(indices, ov::element::i64);
         }
 
         int axis = 0;
-        std::shared_ptr<ngraph::Node> unpool = std::make_shared<ngraph::op::ScatterElementsUpdate>(zeroInp, indices, features,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &axis));
+        std::shared_ptr<ov::Node> unpool = std::make_shared<ov::op::v3::ScatterElementsUpdate>(zeroInp, indices, features,
+            std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{1}, &axis));
 
-        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{outShapes[0].size()}, outShapes[0].data());
-        unpool = std::make_shared<ngraph::op::v1::Reshape>(unpool, shape, true);
+        auto shape = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{outShapes[0].size()}, outShapes[0].data());
+        unpool = std::make_shared<ov::op::v1::Reshape>(unpool, shape, true);
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(unpool));
     }

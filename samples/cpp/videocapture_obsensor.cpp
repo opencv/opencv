@@ -1,3 +1,7 @@
+/**
+ * attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
+*/
+
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -21,6 +25,11 @@ int main()
     Mat image;
     Mat depthMap;
     Mat adjDepthMap;
+
+    // Minimum depth value
+    const double minVal = 300;
+    // Maximum depth value
+    const double maxVal = 5000;
     while (true)
     {
         // Grab depth map like this:
@@ -36,7 +45,7 @@ int main()
 
             if (obsensorCapture.retrieve(depthMap, CAP_OBSENSOR_DEPTH_MAP))
             {
-                normalize(depthMap, adjDepthMap, 0, 255, NORM_MINMAX, CV_8UC1);
+                depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
                 applyColorMap(adjDepthMap, adjDepthMap, COLORMAP_JET);
                 imshow("DEPTH", adjDepthMap);
             }
@@ -45,7 +54,7 @@ int main()
             static const float alpha = 0.6f;
             if (!image.empty() && !depthMap.empty())
             {
-                normalize(depthMap, adjDepthMap, 0, 255, NORM_MINMAX, CV_8UC1);
+                depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
                 cv::resize(adjDepthMap, adjDepthMap, cv::Size(image.cols, image.rows));
                 for (int i = 0; i < image.rows; i++)
                 {

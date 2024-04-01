@@ -141,18 +141,14 @@
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
-#elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
+#elif defined(__ARM_NEON)
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #endif
 
 #if defined(__riscv) && defined(__riscv_vector) && defined(__riscv_vector_071)
-# include<riscv-vector.h>
+# include<riscv_vector.h>
 # define CV_RVV071 1
-#endif
-
-#if defined(__ARM_NEON__) || defined(__aarch64__)
-#  include <arm_neon.h>
 #endif
 
 #ifdef CV_CPU_COMPILE_VSX
@@ -229,7 +225,7 @@ struct VZeroUpperGuard {
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
-#elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
+#elif defined(__ARM_NEON)
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #elif defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)

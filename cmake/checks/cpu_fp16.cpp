@@ -11,16 +11,17 @@ int test()
     _mm_storel_epi64((__m128i*)dst, v_dst);
     return (int)dst[0];
 }
-#elif defined __GNUC__ && (defined __arm__ || defined __aarch64__)
+#elif (defined __GNUC__ && (defined __arm__ || defined __aarch64__)) /*|| (defined _MSC_VER && defined _M_ARM64)*/
+// Windows + ARM64 case disabled: https://github.com/opencv/opencv/issues/25052
 #include "arm_neon.h"
 int test()
 {
-    const float src[] = { 0.0f, 1.0f, 2.0f, 3.0f };
-    short dst[4];
-    float32x4_t v_src = vld1q_f32(src);
+    const float src[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    short dst[8];
+    float32x4_t v_src = *(float32x4_t*)src;
     float16x4_t v_dst = vcvt_f16_f32(v_src);
-    vst1_f16((__fp16*)dst, v_dst);
-    return dst[0] + dst[1] + dst[2] + dst[3];
+    *(float16x4_t*)dst = v_dst;
+    return (int)dst[0];
 }
 #else
 #error "FP16 is not supported"

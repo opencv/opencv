@@ -210,7 +210,6 @@ Ptr<FastConv> initFastConv(
         {
             conv->weightsBuf_FP16.resize(nweights + VEC_ALIGN);
             auto weightsPtr_FP16 = conv->getWeightsFP16();
-            memset(reinterpret_cast<short*>(weightsPtr_FP16), 0, nweights * sizeof(weightsPtr_FP16[0]));
 
             parallel_for_(Range(0, C), [&](const Range& r0){
                 for(int c = r0.start; c < r0.end; c++)
@@ -222,7 +221,6 @@ Ptr<FastConv> initFastConv(
         {
             conv->weightsBuf.resize(nweights + VEC_ALIGN);
             auto weightsPtr = conv->getWeights();
-            memset(weightsPtr, 0, nweights*sizeof(weightsPtr[0]));
 
             parallel_for_(Range(0, C), [&](const Range& r0) {
                 for(int c = r0.start; c < r0.end; c++)
@@ -276,14 +274,12 @@ Ptr<FastConv> initFastConv(
         {
             conv->weightsWinoBuf_FP16.resize(nweights + VEC_ALIGN);
             wptrWino_FP16 = conv->getWeightsWinoFP16();
-            memset(reinterpret_cast<short*>(wptrWino_FP16), 0, nweights * sizeof(wptrWino_FP16[0]));
         }
         else
 #endif
         {
             conv->weightsWinoBuf.resize(nweights + VEC_ALIGN);
             wptrWino = conv->getWeightsWino();
-            memset(wptrWino, 0, nweights * sizeof(wptrWino[0]));
         }
 
         parallel_for_(Range(0, K), [&](const Range& r0){
@@ -377,14 +373,12 @@ Ptr<FastConv> initFastConv(
         {
             conv->weightsBuf_FP16.resize(nweights_FP16 + VEC_ALIGN);
             weightsPtr_FP16 = conv->getWeightsFP16();
-            memset(reinterpret_cast<short*>(weightsPtr_FP16), 0, nweights_FP16*sizeof(weightsPtr_FP16[0]));
         }
         else
 #endif
         {
             conv->weightsBuf.resize(nweights + VEC_ALIGN);
             weightsPtr = conv->getWeights();
-            memset(weightsPtr, 0, nweights*sizeof(weightsPtr[0]));
         }
 
         // Pack the weight.
@@ -450,7 +444,7 @@ Ptr<FastConv> initFastConv(
         }
     }
     else
-        CV_Error(CV_StsUnsupportedFormat, "Unknown convolution type.");
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unknown convolution type.");
 
     // store bias; append some zero's to make sure that
     // we can always read MR elements starting from any valid index
@@ -492,16 +486,8 @@ static inline void packData8(char*& inpbuf, float*& inptrIn, int& in_w, int& x0,
             for (int k = 0; k < ksize; k++)
             {
                 int k1 = ofstab[k];
-                float32x4_t v0, v1;
-
-                v0[0] = inptrInC[k1];
-                v0[1] = inptrInC[k1 + stride_w];
-                v0[2] = inptrInC[k1 + 2*stride_w];
-                v0[3] = inptrInC[k1 + 3*stride_w];
-                v1[0] = inptrInC[k1 + 4*stride_w];
-                v1[1] = inptrInC[k1 + 5*stride_w];
-                v1[2] = inptrInC[k1 + 6*stride_w];
-                v1[3] = inptrInC[k1 + 7*stride_w];
+                float32x4_t v0 = {inptrInC[k1], inptrInC[k1 + stride_w], inptrInC[k1 + 2*stride_w], inptrInC[k1 + 3*stride_w]};
+                float32x4_t v1 = {inptrInC[k1 + 4*stride_w], inptrInC[k1 + 5*stride_w], inptrInC[k1 + 6*stride_w], inptrInC[k1 + 7*stride_w]};
 
                 vst1q_f16((__fp16*)inpbufC_FP16 + k * CONV_NR_FP16, vcombine_f16(vcvt_f16_f32(v0), vcvt_f16_f32(v1)));
             }
@@ -659,7 +645,6 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                     for (int c = 0; c < Cg; c++, inptr += inp_planesize, inpbuf += CONV_NR_esz)
                     {
                         _cvt32f16f(inptr, (float16_t *)inpbuf, slice_len);
-                        memset(inpbuf + slice_len * esz, 0, (CONV_NR - slice_len) * esz);
                     }
                 }
                 else
@@ -667,7 +652,6 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                 for (int c = 0; c < Cg; c++, inptr += inp_planesize, inpbuf += CONV_NR_esz)
                 {
                     memcpy(inpbuf, inptr, slice_len * esz);
-                    memset(inpbuf + slice_len * esz, 0, (CONV_NR - slice_len) * esz);
                 }
             }
         }
@@ -956,11 +940,8 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                                 {
                                     for (int c = 0; c < Cg; c++, inpbuf_ki_FP16 += CONV_NR, inptr_ki += inp_planesize)
                                     {
-                                        float32x4_t v0, v1;
-                                        v0[0] = inptr_ki[0], v0[1] = inptr_ki[2];
-                                        v0[2] = inptr_ki[4], v0[3] = inptr_ki[6];
-                                        v1[0] = inptr_ki[8], v1[1] = inptr_ki[10];
-                                        v1[2] = inptr_ki[12], v1[3] = inptr_ki[14];
+                                        float32x4_t v0 = {inptr_ki[0], inptr_ki[2], inptr_ki[4], inptr_ki[6]};
+                                        float32x4_t v1 = {inptr_ki[8], inptr_ki[10], inptr_ki[12], inptr_ki[14]};
                                         vst1q_f16((__fp16* )inpbuf_ki_FP16, vcombine_f16(vcvt_f16_f32(v0), vcvt_f16_f32(v1)));
                                     }
                                 }
@@ -989,12 +970,8 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                                 {
                                     for (int c = 0; c < Cg; c++, inpbuf_ki_FP16 += CONV_NR, inptr_ki += inp_planesize)
                                     {
-                                        float32x4_t v0, v1;
-
-                                        v0[0] = inptr_ki[0], v0[1] = inptr_ki[stride_w];
-                                        v0[2] = inptr_ki[stride_w * 2], v0[3] = inptr_ki[stride_w * 3];
-                                        v1[0] = inptr_ki[stride_w * 4], v1[1] = inptr_ki[stride_w * 5];
-                                        v1[2] = inptr_ki[stride_w * 6], v1[3] = inptr_ki[stride_w * 7];
+                                        float32x4_t v0 = {inptr_ki[0], inptr_ki[stride_w], inptr_ki[stride_w * 2], inptr_ki[stride_w * 3]};
+                                        float32x4_t v1 = {inptr_ki[stride_w * 4], inptr_ki[stride_w * 5], inptr_ki[stride_w * 6], inptr_ki[stride_w * 7]};
                                         vst1q_f16((__fp16* )inpbuf_ki_FP16, vcombine_f16(vcvt_f16_f32(v0), vcvt_f16_f32(v1)));
                                     }
                                 }
@@ -1051,9 +1028,7 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                                 {
                                     for (int c = 0; c < Cg; c++, inpbuf_ki_FP16 += CONV_NR, inptr_ki += inp_planesize)
                                     {
-                                        float32x4_t v0;
-                                        v0[0] = inptr_ki[0], v0[1] = inptr_ki[stride_w];
-                                        v0[2] = inptr_ki[stride_w * 2], v0[3] = inptr_ki[stride_w * 3];
+                                        float32x4_t v0 = {inptr_ki[0], inptr_ki[stride_w], inptr_ki[stride_w * 2], inptr_ki[stride_w * 3]};
                                         vst1_f16((__fp16* )inpbuf_ki_FP16, vcvt_f16_f32(v0));
                                     }
                                 }

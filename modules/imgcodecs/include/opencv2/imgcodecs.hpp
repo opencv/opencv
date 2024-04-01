@@ -48,7 +48,6 @@
 /**
   @defgroup imgcodecs Image file reading and writing
   @{
-    @defgroup imgcodecs_c C API
     @defgroup imgcodecs_flags Flags used for image file reading and writing
     @defgroup imgcodecs_ios iOS glue
     @defgroup imgcodecs_macosx MacOS(OSX) glue
@@ -105,6 +104,8 @@ enum ImwriteFlags {
        IMWRITE_TIFF_XDPI           = 257,//!< For TIFF, use to specify the X direction DPI
        IMWRITE_TIFF_YDPI           = 258,//!< For TIFF, use to specify the Y direction DPI
        IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
+       IMWRITE_TIFF_ROWSPERSTRIP   = 278,//!< For TIFF, use to specify the number of rows per strip.
+       IMWRITE_TIFF_PREDICTOR      = 317,//!< For TIFF, use to specify predictor.
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272,//!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
        IMWRITE_AVIF_QUALITY        = 512,//!< For AVIF, it can be a quality between 0 and 100 (the higher the better). Default is 95.
        IMWRITE_AVIF_DEPTH          = 513,//!< For AVIF, it can be 8, 10 or 12. If >8, it is stored/read as CV_32F. Default is 8.
@@ -227,6 +228,17 @@ Currently, the following file formats are supported:
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
+/** @brief Loads an image from a file.
+
+This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts and the return value.
+@param filename Name of file to be loaded.
+@param dst object in which the image will be loaded.
+@param flags Flag that can take values of cv::ImreadModes
+@note
+The image passing through the img parameter can be pre-allocated. The memory is reused if the shape and the type match with the load image.
+ */
+CV_EXPORTS_W void imread( const String& filename, OutputArray dst, int flags = IMREAD_COLOR );
+
 /** @brief Loads a multi-page image from a file.
 
 The function imreadmulti loads a multi-page image from the specified file into a vector of Mat objects.
@@ -297,7 +309,7 @@ It also demonstrates how to save multiple images in a TIFF file:
 CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
               const std::vector<int>& params = std::vector<int>());
 
-/// @overload multi-image overload for bindings
+//! @brief multi-image overload for bindings
 CV_WRAP static inline
 bool imwritemulti(const String& filename, InputArrayOfArrays img,
                   const std::vector<int>& params = std::vector<int>())
@@ -322,7 +334,8 @@ CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 @param buf Input array or vector of bytes.
 @param flags The same flags as in cv::imread, see cv::ImreadModes.
 @param dst The optional output placeholder for the decoded matrix. It can save the image
-reallocations when the function is called repeatedly for images of the same size.
+reallocations when the function is called repeatedly for images of the same size. In case of decoder
+failure the function returns empty cv::Mat object, but does not release user-provided dst buffer.
 */
 CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
 

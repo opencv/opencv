@@ -210,15 +210,8 @@ struct ImageCodecInitializer
 static
 ImageCodecInitializer& getCodecs()
 {
-#ifdef CV_CXX11
     static ImageCodecInitializer g_codecs;
     return g_codecs;
-#else
-    // C++98 doesn't guarantee correctness of multi-threaded initialization of static global variables
-    // (memory leak here is not critical, use C++11 to avoid that)
-    static ImageCodecInitializer* g_codecs = new ImageCodecInitializer();
-    return *g_codecs;
-#endif
 }
 
 /**
@@ -464,7 +457,16 @@ imread_( const String& filename, int flags, Mat& mat )
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
     }
 
-    mat.create( size.height, size.width, type );
+    if (mat.empty())
+    {
+        mat.create( size.height, size.width, type );
+    }
+    else
+    {
+        CV_CheckEQ(size, mat.size(), "");
+        CV_CheckTypeEQ(type, mat.type(), "");
+        CV_Assert(mat.isContinuous());
+    }
 
     // read the image data
     bool success = false;
@@ -639,6 +641,16 @@ Mat imread( const String& filename, int flags )
     return img;
 }
 
+void imread( const String& filename, OutputArray dst, int flags )
+{
+    CV_TRACE_FUNCTION();
+
+    Mat img = dst.getMat();
+
+    /// load the data
+    imread_(filename, flags, img);
+}
+
 /**
 * Read a multi-page image
 *
@@ -807,7 +819,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
 
     ImageDecoder decoder = findDecoder(buf_row);
     if( !decoder )
-        return 0;
+        return false;
 
     int scale_denom = 1;
     if( flags > IMREAD_LOAD_GDAL )
@@ -828,7 +840,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
         filename = tempfile();
         FILE* f = fopen( filename.c_str(), "wb" );
         if( !f )
-            return 0;
+            return false;
         size_t bufSize = buf_row.total()*buf.elemSize();
         if (fwrite(buf_row.ptr(), 1, bufSize, f) != bufSize)
         {
@@ -866,7 +878,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
                 CV_LOG_WARNING(NULL, "unable to remove temporary file:" << filename);
             }
         }
-        return 0;
+        return false;
     }
 
     // established the required input image size
@@ -912,7 +924,6 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
 
     if (!success)
     {
-        mat.release();
         return false;
     }
 
@@ -936,7 +947,8 @@ Mat imdecode( InputArray _buf, int flags )
     CV_TRACE_FUNCTION();
 
     Mat buf = _buf.getMat(), img;
-    imdecode_( buf, flags, img );
+    if (!imdecode_(buf, flags, img))
+        img.release();
 
     return img;
 }
@@ -947,9 +959,10 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
 
     Mat buf = _buf.getMat(), img;
     dst = dst ? dst : &img;
-    imdecode_( buf, flags, *dst );
-
-    return *dst;
+    if (imdecode_(buf, flags, *dst))
+        return *dst;
+    else
+        return cv::Mat();
 }
 
 static bool

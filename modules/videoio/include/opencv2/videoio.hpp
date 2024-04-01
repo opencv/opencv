@@ -108,7 +108,7 @@ enum VideoCaptureAPIs {
        CAP_PVAPI        = 800,          //!< PvAPI, Prosilica GigE SDK
        CAP_OPENNI       = 900,          //!< OpenNI (for Kinect)
        CAP_OPENNI_ASUS  = 910,          //!< OpenNI (for Asus Xtion)
-       CAP_ANDROID      = 1000,         //!< Android - not used
+       CAP_ANDROID      = 1000,         //!< MediaNDK (API Level 21+) and NDK Camera (API level 24+) for Android
        CAP_XIAPI        = 1100,         //!< XIMEA Camera API
        CAP_AVFOUNDATION = 1200,         //!< AVFoundation framework for iOS (OS X Lion will have the same API)
        CAP_GIGANETIX    = 1300,         //!< Smartek Giganetix GigEVisionSDK
@@ -128,7 +128,7 @@ enum VideoCaptureAPIs {
        CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
        CAP_UEYE         = 2500,         //!< uEye Camera API
-       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto)
+       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto, Astra2, Gemini2, Gemini2L, Gemini2XL, Femto Mega) attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
      };
 
 
@@ -960,7 +960,7 @@ public:
     CV_WRAP void setExceptionMode(bool enable) { throwOnFail = enable; }
 
     /// query if exception mode is active
-    CV_WRAP bool getExceptionMode() { return throwOnFail; }
+    CV_WRAP bool getExceptionMode() const { return throwOnFail; }
 
 
     /** @brief Wait for ready frames from VideoCapture.

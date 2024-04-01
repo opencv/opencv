@@ -1359,7 +1359,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color, i
     int pix_size = (int)img.elemSize();
     int delta;
 
-    if (line_type < CV_AA)
+    if (line_type < cv::LINE_AA)
         delta = 0;
     else
         delta = XY_ONE - 1;
@@ -2239,7 +2239,7 @@ static const int* getFontData(int fontFace)
         ascii = HersheyScriptComplex;
         break;
     default:
-        CV_Error( CV_StsOutOfRange, "Unknown font type" );
+        CV_Error( cv::Error::StsOutOfRange, "Unknown font type" );
     }
     return ascii;
 }
@@ -2310,7 +2310,7 @@ void putText( InputOutputArray _img, const String& text, Point org,
     int base_line = -(ascii[0] & 15);
     int hscale = cvRound(fontScale*XY_ONE), vscale = hscale;
 
-    if( line_type == CV_AA && img.depth() != CV_8U )
+    if( line_type == cv::LINE_AA && img.depth() != CV_8U )
         line_type = 8;
 
     if( bottomLeftOrigin )

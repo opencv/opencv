@@ -76,7 +76,7 @@ public:
 
     SoftMaxLayerImpl(const LayerParams& params)
     {
-        axisRaw = params.get<int>("axis", 1);
+        axisRaw = params.get<int>("axis", -1);
         logSoftMax = params.get<bool>("log_softmax", false);
         setParamsFrom(params);
     }
@@ -132,7 +132,7 @@ public:
         std::vector<UMat> outputs;
         std::vector<UMat> internals;
 
-        bool use_half = (inputs_.depth() == CV_16S);
+        bool use_half = (inputs_.depth() == CV_16F);
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
         internals_.getUMatVector(internals);
@@ -217,7 +217,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -314,9 +314,9 @@ public:
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         int axis = normalize_axis(axisRaw, ieInpNode.get_shape().size());
         if (logSoftMax) {
-            return new InfEngineNgraphNode(std::make_shared<ngraph::op::v5::LogSoftmax>(ieInpNode, axis));
+            return new InfEngineNgraphNode(std::make_shared<ov::op::v5::LogSoftmax>(ieInpNode, axis));
         } else {
-            return new InfEngineNgraphNode(std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis));
+            return new InfEngineNgraphNode(std::make_shared<ov::op::v1::Softmax>(ieInpNode, axis));
         }
     }
 #endif  // HAVE_DNN_NGRAPH
