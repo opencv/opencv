@@ -4160,8 +4160,6 @@ The function finds the minimal enclosing circle of a 2D point set using an itera
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
-/** @example samples/cpp/minarea.cpp
-*/
 
 /** @brief Finds a triangle of minimum area enclosing a 2D point set and returns its area.
 
@@ -4196,8 +4194,8 @@ The function compares two shapes. All three implemented methods use the Hu invar
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
 
-/** @example samples/cpp/convexhull.cpp
-An example using the convexHull functionality
+/** @example samples/cpp/geometry.cpp
+An example program illustrates the use of cv::convexHull, cv::fitEllipse, cv::minEnclosingTriangle, cv::minEnclosingCircle and cv::minAreaRect.
 */
 
 /** @brief Finds the convex hull of a point set.
@@ -4278,9 +4276,6 @@ of the other, they are not considered nested and an intersection will be found r
 CV_EXPORTS_W float intersectConvexConvex( InputArray p1, InputArray p2,
                                           OutputArray p12, bool handleNested = true );
 
-/** @example samples/cpp/fitellipse.cpp
-An example using the fitEllipse technique
-*/
 
 /** @brief Fits an ellipse around a set of 2D points.
 
@@ -4737,10 +4732,6 @@ CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const i
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
-/** @example samples/cpp/contours2.cpp
-An example program illustrates the use of cv::findContours and cv::drawContours
-\image html WindowsQtContoursOutput.png "Screenshot of the program"
-*/
 
 /** @example samples/cpp/segment_objects.cpp
 An example using drawContours to clean up a background segmentation result
