@@ -20,6 +20,7 @@
 #include <iostream>
 #include <fstream>
 
+// Including OpenCV core, image processing, and deep neural network modules
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/dnn.hpp>
@@ -27,58 +28,95 @@
 using namespace cv;
 using namespace cv::dnn;
 
-const char* keys =
-    "{ help  h              | | Print help message. }"
-    "{ input i              | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-    "{ detModel dmp         | | Path to a binary .pb file contains trained detector network.}"
-    "{ width                | 320 | Preprocess input image by resizing to a specific width. It should be multiple by 32. }"
-    "{ height               | 320 | Preprocess input image by resizing to a specific height. It should be multiple by 32. }"
-    "{ thr                  | 0.5 | Confidence threshold. }"
-    "{ nms                  | 0.4 | Non-maximum suppression threshold. }"
-    "{ recModel rmp         | | Path to a binary .onnx file contains trained CRNN text recognition model. "
-        "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}"
-    "{ RGBInput rgb         |0| 0: imread with flags=IMREAD_GRAYSCALE; 1: imread with flags=IMREAD_COLOR. }"
-    "{ vocabularyPath vp    | alphabet_36.txt | Path to benchmarks for evaluation. "
-        "Download links are provided in doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown}";
+// Command-line keys to parse the input arguments
+std::string keys =
+    "{ help  h                          | | Print help message. }"
+    "{ input i                     | | Path to an input image. }"
+    "{ detModelPath dmp                 | | Path to a binary model file for detection (East and DB model architectures are supported). }"
+    "{ recModelPath rmp                 | | Path to a binary .onnx model for recognition. }"
+    "{ detModelConfig dmc              | east | Specify detection model config: east/db }"
+    "{ inputHeight ih                   |736| Image height for the model input. Should be multiple of 32. }"
+    "{ inputWidth iw                    |736| Image width for the model input. Should be multiple of 32. }"
+    "{ thr                  | 0.5 | Confidence threshold for EAST detector. }"
+    "{ nms                  | 0.4 | Non-maximum suppression threshold for EAST detector. }"
+    "{ binaryThreshold bt               |0.3| Confidence threshold for the binary map in DB detector. }"
+    "{ polygonThreshold pt              |0.5| Confidence threshold for polygons in DB detector. }"
+    "{ maxCandidate max                 |200| Max candidates for polygons in DB detector. }"
+    "{ unclipRatio ratio                |2.0| Unclip ratio for DB detector. }"
+    "{ RGBInput rgb                     |0| Image read mode: 0 for grayscale, 1 for color. }"
+    "{ vocabularyPath vp                | alphabet_36.txt | Path to vocabulary file. }";
 
+// Function prototype for the four-point perspective transform
 void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);
 
-int main(int argc, char** argv)
-{
-    // Parse command line arguments.
+int main(int argc, char** argv) {
+    // Setting up command-line parser with the specified keys
     CommandLineParser parser(argc, argv, keys);
-    parser.about("Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of "
-                 "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)");
-    if (argc == 1 || parser.has("help"))
-    {
+    parser.about("Text Detection and Recognition using OpenCV");
+
+    // Display help message if no arguments are provided or 'help' is requested
+    if (argc == 1 || parser.has("help")) {
         parser.printMessage();
         return 0;
     }
 
+    // Parsing command-line arguments
+    String detModelPath = parser.get<String>("detModelPath");
+    String detModelConfig = parser.get<String>("detModelConfig");
+    String recModelPath = parser.get<String>("recModelPath");
+    int height = parser.get<int>("inputHeight");
+    int width = parser.get<int>("inputWidth");
+    int imreadRGB = parser.get<int>("RGBInput");
+    String vocPath = parser.get<String>("vocabularyPath");
+    float binThresh = parser.get<float>("binaryThreshold");
+    float polyThresh = parser.get<float>("polygonThreshold");
+    double unclipRatio = parser.get<double>("unclipRatio");
+    uint maxCandidates = parser.get<uint>("maxCandidate");
     float confThreshold = parser.get<float>("thr");
     float nmsThreshold = parser.get<float>("nms");
-    int width = parser.get<int>("width");
-    int height = parser.get<int>("height");
-    int imreadRGB = parser.get<int>("RGBInput");
-    String detModelPath = parser.get<String>("detModel");
-    String recModelPath = parser.get<String>("recModel");
-    String vocPath = parser.get<String>("vocabularyPath");
 
-    if (!parser.check())
-    {
+    // Ensuring the provided arguments are valid
+    if (!parser.check()) {
         parser.printErrors();
         return 1;
     }
 
-    // Load networks.
-    CV_Assert(!detModelPath.empty() && !recModelPath.empty());
-    TextDetectionModel_EAST detector(detModelPath);
-    detector.setConfidenceThreshold(confThreshold)
-            .setNMSThreshold(nmsThreshold);
+    // Asserting detection model path is provided
+    CV_Assert(!detModelPath.empty());
 
-    TextRecognitionModel recognizer(recModelPath);
+    std::vector<std::vector<Point>> detResults;
+    // Reading the input image
+    Mat frame = imread(samples::findFile(parser.get<String>("input")));
 
-    // Load vocabulary
+    // Initializing and configuring the text detection model based on the provided config
+    if (detModelConfig == "east") {
+        // EAST Detector initialization
+        TextDetectionModel_EAST detector(detModelPath);
+        detector.setConfidenceThreshold(confThreshold)
+                .setNMSThreshold(nmsThreshold);
+        // Setting input parameters specific to EAST model
+        detector.setInputParams(1.0, Size(width, height), Scalar(123.68, 116.78, 103.94), true);
+        // Performing text detection
+        detector.detect(frame, detResults);
+    }
+    else if (detModelConfig == "db") {
+        // DB Detector initialization
+        TextDetectionModel_DB detector(detModelPath);
+        detector.setBinaryThreshold(binThresh)
+                .setPolygonThreshold(polyThresh)
+                .setUnclipRatio(unclipRatio)
+                .setMaxCandidates(maxCandidates);
+        // Setting input parameters specific to DB model
+        detector.setInputParams(1.0 / 255.0, Size(width, height), Scalar(122.67891434, 116.66876762, 104.00698793));
+        // Performing text detection
+        detector.detect(frame, detResults);
+    }
+    else {
+        std::cerr << "Unsupported file config for the detector model. Valid values: east/db" << std::endl;
+        return 1;
+    }
+
+    // Reading and storing vocabulary for text recognition
     CV_Assert(!vocPath.empty());
     std::ifstream vocFile;
     vocFile.open(samples::findFile(vocPath));
@@ -88,90 +126,76 @@ int main(int argc, char** argv)
     while (std::getline(vocFile, vocLine)) {
         vocabulary.push_back(vocLine);
     }
+
+    // Initializing text recognition model with the provided model path
+    CV_Assert(!recModelPath.empty());
+    TextRecognitionModel recognizer(recModelPath);
     recognizer.setVocabulary(vocabulary);
     recognizer.setDecodeType("CTC-greedy");
 
-    // Parameters for Recognition
+    // Setting input parameters for the recognition model
     double recScale = 1.0 / 127.5;
-    Scalar recMean = Scalar(127.5, 127.5, 127.5);
+    Scalar recMean = Scalar(127.5);
     Size recInputSize = Size(100, 32);
     recognizer.setInputParams(recScale, recInputSize, recMean);
 
-    // Parameters for Detection
-    double detScale = 1.0;
-    Size detInputSize = Size(width, height);
-    Scalar detMean = Scalar(123.68, 116.78, 103.94);
-    bool swapRB = true;
-    detector.setInputParams(detScale, detInputSize, detMean, swapRB);
-
-    // Open a video file or an image file or a camera stream.
-    VideoCapture cap;
-    bool openSuccess = parser.has("input") ? cap.open(parser.get<String>("input")) : cap.open(0);
-    CV_Assert(openSuccess);
-
-    static const std::string kWinName = "EAST: An Efficient and Accurate Scene Text Detector";
-
-    Mat frame;
-    while (waitKey(1) < 0)
-    {
-        cap >> frame;
-        if (frame.empty())
-        {
-            waitKey();
-            break;
+    // Process detected text regions for recognition
+    Mat frame2 = frame.clone();
+    if (detResults.size() > 0) {
+        // Text Recognition
+        Mat recInput;
+        if (!imreadRGB) {
+            cvtColor(frame, recInput, cv::COLOR_BGR2GRAY);
+        } else {
+            recInput = frame;
         }
+        std::vector< std::vector<Point> > contours;
+        for (uint i = 0; i < detResults.size(); i++) {
+            const auto& quadrangle = detResults[i];
+            CV_CheckEQ(quadrangle.size(), (size_t)4, "");
 
-        std::cout << frame.size << std::endl;
+            contours.emplace_back(quadrangle);
 
-        // Detection
-        std::vector< std::vector<Point> > detResults;
-        detector.detect(frame, detResults);
-        Mat frame2 = frame.clone();
-        if (detResults.size() > 0) {
-            // Text Recognition
-            Mat recInput;
-            if (!imreadRGB) {
-                cvtColor(frame, recInput, cv::COLOR_BGR2GRAY);
-            } else {
-                recInput = frame;
-            }
-            std::vector< std::vector<Point> > contours;
-            for (uint i = 0; i < detResults.size(); i++)
-            {
-                const auto& quadrangle = detResults[i];
-                CV_CheckEQ(quadrangle.size(), (size_t)4, "");
+            std::vector<Point2f> quadrangle_2f;
+            for (int j = 0; j < 4; j++)
+                quadrangle_2f.emplace_back(detResults[i][j]);
 
-                contours.emplace_back(quadrangle);
+            // Cropping the detected text region using a four-point transform
+            Mat cropped;
+            fourPointsTransform(recInput, &quadrangle_2f[0], cropped);
 
-                std::vector<Point2f> quadrangle_2f;
-                for (int j = 0; j < 4; j++)
-                    quadrangle_2f.emplace_back(quadrangle[j]);
+            // Recognizing text from the cropped image
+            std::string recognitionResult = recognizer.recognize(cropped);
+            std::cout << i << ": '" << recognitionResult << "'" << std::endl;
 
-                Mat cropped;
-                fourPointsTransform(recInput, &quadrangle_2f[0], cropped);
-
-                std::string recognitionResult = recognizer.recognize(cropped);
-                std::cout << i << ": '" << recognitionResult << "'" << std::endl;
-
-                putText(frame2, recognitionResult, quadrangle[3], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
-            }
-            polylines(frame2, contours, true, Scalar(0, 255, 0), 2);
+            // Displaying the recognized text on the image
+            putText(frame2, recognitionResult, detResults[i][3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
         }
-        imshow(kWinName, frame2);
+        // Drawing detected text regions on the image
+        polylines(frame2, contours, true, Scalar(0, 255, 0), 2);
+    } else {
+        std::cout << "No Text Detected." << std::endl;
     }
+
+    // Displaying the final image with detected and recognized text
+    imshow("Text Detection and Recognition", frame2);
+    waitKey(0);
+
     return 0;
 }
 
-void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result)
-{
+// Performs a perspective transform for a four-point region
+void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result) {
     const Size outputSize = Size(100, 32);
-
+    // Defining target vertices for the perspective transform
     Point2f targetVertices[4] = {
         Point(0, outputSize.height - 1),
-        Point(0, 0), Point(outputSize.width - 1, 0),
+        Point(0, 0),
+        Point(outputSize.width - 1, 0),
         Point(outputSize.width - 1, outputSize.height - 1)
     };
+    // Computing the perspective transform matrix
     Mat rotationMatrix = getPerspectiveTransform(vertices, targetVertices);
-
+    // Applying the perspective transform to the region
     warpPerspective(frame, result, rotationMatrix, outputSize);
 }
