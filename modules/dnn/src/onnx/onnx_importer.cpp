@@ -2416,7 +2416,7 @@ void ONNXImporter::parsePad(LayerParams& layerParams, const opencv_onnx::NodePro
                 case CV_8S:  padValue = value.ptr<int8_t>()[0];  break;
                 default: CV_Error(Error::BadDepth, "Unsupported type");
             }
-            layerParams.set<double>("value", padValue);
+            layerParams.set<double>("value", (double)padValue);
         }
     }
     addLayer(layerParams, node_proto);
