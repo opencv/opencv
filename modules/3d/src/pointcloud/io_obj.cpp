@@ -90,6 +90,7 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
         {
             // format: "f v0 / t0 / n0 v1 / t1 / n1 v2/t2/n2 ..."
             std::vector<int> vertexInd, normInd, texInd;
+            vertexInd.reserve(3); normInd.reserve(3); texInd.reserve(3);
             auto tokens = split(s, ' ');
             for (size_t i = 1; i < tokens.size(); i++)
             {
