@@ -42,6 +42,8 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
     while (!file.eof())
     {
         std::getline(file, s);
+        // "\r" symbols are not trimmed by default
+        s = trimSpaces(s);
         if (s.empty())
             continue;
         std::stringstream ss(s);
