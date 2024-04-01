@@ -2403,12 +2403,21 @@ void ONNXImporter::parsePad(LayerParams& layerParams, const opencv_onnx::NodePro
         paddings = paddings.t();
         layerParams.set("paddings", DictValue::arrayInt(paddings.ptr<int>(), paddings.total()));
 
-        layerParams.set("valueAsBlob", true);
         // check for non-null constant_value
         if (node_proto.input_size() == 3 && !node_proto.input(2).empty())
-            layerParams.blobs.push_back(getBlob(node_proto, 2));
-        else
-            layerParams.blobs.push_back(Mat::zeros(1, 1, depth));
+        {
+            Mat value = getBlob(node_proto, 2);
+            double padValue = 0;
+            switch(value.depth())
+            {
+                case CV_32F: padValue = value.ptr<float>()[0];   break;
+                case CV_32S: padValue = value.ptr<int32_t>()[0]; break;
+                case CV_64S: padValue = value.ptr<int64_t>()[0]; break;
+                case CV_8S:  padValue = value.ptr<int8_t>()[0];  break;
+                default: CV_Error(Error::BadDepth, "Unsupported type");
+            }
+            layerParams.set<double>("value", padValue);
+        }
     }
     addLayer(layerParams, node_proto);
 }
@@ -3399,8 +3408,7 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
             padLp.type = "PaddingInt8";
             padLp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
             padLp.set("depth", CV_8S);
-            padLp.set("valueAsBlob", true);
-            padLp.blobs.push_back(getBlob(node_proto, 2));
+            padLp.set<double>("value", (double)inp_zp);
 
             opencv_onnx::NodeProto proto;
             proto.add_input(node_proto.input(0));

@@ -34,12 +34,8 @@ public:
     PaddingLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        if (params.get<bool>("valueAsBlob", false))
-            // ONNX parser supports any type and stores "value" as blob
-            paddingValue = params.blobs[0];
-        else
-            // Other parsers support only float type
-            paddingValue = Mat(1, 1, CV_32F, params.get<float>("value", 0));
+        paddingValue = params.get<double>("value", 0);
+        paddingValueFloat = paddingValue; // Workaround for ngraph and cann backends which support only float
         inputDims = params.get<int>("input_dims", -1);
         paddingType = params.get<String>("type", "constant");
 
@@ -206,13 +202,7 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
 
-        Mat padValue;
-        if (preferableTarget == DNN_TARGET_CUDA_FP16)
-            paddingValue.convertTo(padValue, CV_16F);
-        else
-            padValue = paddingValue;
-
-        return make_cuda_node_with_type<cuda4dnn::PaddingOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), ptype, padValue, dstRanges);
+        return make_cuda_node_with_type<cuda4dnn::PaddingOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), ptype, paddingValue, dstRanges);
     }
 #endif
 
@@ -249,7 +239,8 @@ public:
         op->update_input_desc_paddings(*(op_const_paddings->getTensorDesc()));
         // set inputs : constant_values
         std::vector<int> constant_values_shape{1};
-        auto op_const_constant_values = std::make_shared<CannConstOp>(paddingValue.data, paddingValue.type(), constant_values_shape, cv::format("%s_constant_values", name.c_str()));
+        Mat constant_values_mat(1, 1, CV_32F, Scalar(paddingValueFloat));
+        auto op_const_constant_values = std::make_shared<CannConstOp>(constant_values_mat.data, constant_values_mat.type(), constant_values_shape, cv::format("%s_constant_values", name.c_str()));
         op->set_input_constant_values(*(op_const_constant_values->getOp()));
         op->update_input_desc_constant_values(*(op_const_constant_values->getTensorDesc()));
 
@@ -275,7 +266,7 @@ public:
         auto padding_below = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{begins.size()}, begins.data());
         auto padding_above = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{ends.size()}, ends.data());
         auto pad_mode = paddingType == "constant" ? ov::op::PadMode::CONSTANT : ov::op::PadMode::REFLECT; // SYMMETRIC
-        auto arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{}, paddingValue.ptr<float>());;
+        auto arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{}, &paddingValueFloat);;
 
         auto pad = paddingType == "constant" ?
              std::make_shared<ov::op::v1::Pad>(ieInpNode, padding_below, padding_above, arg_pad_value, pad_mode) :
@@ -288,7 +279,8 @@ private:
     std::vector<std::pair<int, int> > paddings;  // Pairs pad before, pad after.
     std::vector<Range> dstRanges;
     int inputDims;
-    Mat paddingValue;
+    double paddingValue;
+    float paddingValueFloat;
     std::string paddingType;
 };
 
