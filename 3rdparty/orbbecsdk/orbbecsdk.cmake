@@ -1,6 +1,6 @@
 function(download_orbbec_sdk root_var)
     set(ORBBECSDK_DOWNLOAD_DIR "${OpenCV_BINARY_DIR}/3rdparty/orbbecsdk")
-    set(ORBBECSDK_FILE_HASH_CMAKE "2624c84837d3416fd8b3e95750e6e725")
+    set(ORBBECSDK_FILE_HASH_CMAKE "e7566fa915a1b0c02640df41891916fe")
     ocv_download(FILENAME "v1.9.4.tar.gz"
                 HASH ${ORBBECSDK_FILE_HASH_CMAKE}
                 URL "https://github.com/orbbec/OrbbecSDK/archive/refs/tags/v1.9.4/"
