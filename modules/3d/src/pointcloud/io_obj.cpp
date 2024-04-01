@@ -107,7 +107,7 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
                         // std::invalid_exception, std::out_of_range
                         catch(const std::exception&)
                         {
-                            CV_LOG_ERROR(NULL, "Failed to parse face index");
+                            CV_LOG_ERROR(NULL, "Failed to parse face index: " + sj);
                             return;
                         }
                     }
