@@ -504,15 +504,9 @@ void PlyDecoder::parseBody(std::ifstream &file,
             size_t offset = vertexOffsets[j];
             if (offset != (size_t)(-1))
             {
-                if (colorKeys.count(p.name) > 0)
+                if (colorKeys.count(p.name) > 0 && p.valType == CV_8U)
                 {
-                    switch (p.valType)
-                    {
-                    case  CV_8U: case  CV_8S: fval = ival / 255.f;   break;
-                    case CV_16U: case CV_16S: fval = ival / 65535.f; break;
-                    case CV_32U: case CV_32S: fval = (float)ival; break;
-                    default: break;
-                    }
+                    fval = ival / 255.f;
                 }
 
                 *(float*)(vertexData.bytes.data() + offset) = fval;
