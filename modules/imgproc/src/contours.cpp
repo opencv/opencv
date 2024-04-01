@@ -250,16 +250,12 @@ static Rect maskBoundingRect( const Mat& img )
         for( ; j < offset; j++ )
             if( _ptr[j] )
             {
+                if( j < xmin )
+                    xmin = j;
+                if( j > xmax )
+                    xmax = j;
                 have_nz = 1;
-                break;
             }
-        if( j < offset )
-        {
-            if( j < xmin )
-                xmin = j;
-            if( j > xmax )
-                xmax = j;
-        }
         if( offset < size.width )
         {
             xmin -= offset;

@@ -200,9 +200,6 @@ if(DOXYGEN_FOUND)
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tutorial-utils.js")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_HTML_FILES "${CMAKE_DOXYGEN_HTML_FILES}")
 
-  set(OPENCV_MATHJAX_RELPATH "https://cdn.jsdelivr.net/npm/mathjax@3.0.1" CACHE STRING "URI to a MathJax installation")
-
-
   if (DOXYGEN_DOT_EXECUTABLE)
     message(STATUS "Found DOT executable: ${DOXYGEN_DOT_EXECUTABLE}")
     set(init_dot_path "${DOXYGEN_DOT_EXECUTABLE}")

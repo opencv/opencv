@@ -582,8 +582,10 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         }
         //if flag CALIB_CB_ADAPTIVE_THRESH is not set it doesn't make sense to iterate over k
         int max_k = useAdaptive ? 6 : 1;
+        Mat prev_thresh_img;
         for (int k = 0; k < max_k && !found; k++)
         {
+            int prev_block_size = -1;
             for (int dilations = min_dilations; dilations <= max_dilations; dilations++)
             {
                 // convert the input grayscale image to binary (black-n-white)
@@ -594,9 +596,18 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                                              : prev_sqr_size * 2);
                     block_size = block_size | 1;
                     // convert to binary
-                    adaptiveThreshold( img, thresh_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, block_size, (k/2)*5 );
-                    dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), dilations );
-
+                    if (block_size != prev_block_size)
+                    {
+                        adaptiveThreshold( img, thresh_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, block_size, (k/2)*5 );
+                        dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), dilations );
+                        thresh_img.copyTo(prev_thresh_img);
+                    }
+                    else if (dilations > 0)
+                    {
+                        dilate( prev_thresh_img, prev_thresh_img, Mat(), Point(-1, -1), 1 );
+                        prev_thresh_img.copyTo(thresh_img);
+                    }
+                    prev_block_size = block_size;
                 }
                 else
                 {
@@ -1795,22 +1806,12 @@ void ChessBoardDetector::generateQuads(const Mat& image_, int flags, int dilatio
         if (contour_rect.area() < min_area)
             continue;
 
-        std::vector<Point> approx_contour;
+        std::vector<Point> approx_contour = contour;
 
         const int min_approx_level = 1, max_approx_level = MAX_CONTOUR_APPROX;
-        for (int approx_level = min_approx_level; approx_level <= max_approx_level; approx_level++ )
+        for (int approx_level = min_approx_level; approx_contour.size() > 4 && approx_level <= max_approx_level; approx_level++ )
         {
-            approxPolyDP(contour, approx_contour, (float)approx_level, true);
-            if (approx_contour.size() == 4)
-                break;
-
-            // we call this again on its own output, because sometimes
-            // approxPoly() does not simplify as much as it should.
-            std::vector<Point> approx_contour_tmp;
-            std::swap(approx_contour, approx_contour_tmp);
-            approxPolyDP(approx_contour_tmp, approx_contour, (float)approx_level, true);
-            if (approx_contour.size() == 4)
-                break;
+            approxPolyDP(approx_contour, approx_contour, (float)approx_level, true);
         }
 
         // reject non-quadrangles

@@ -4,8 +4,20 @@
   from this file in your programs.
 */
 
+/* clang-format off */
+/* clang-format disabled because CMake scripts are very sensitive to the
+ * formatting of this file. configure_file variables of type "@VAR@" are
+ * modified by clang-format and won't be substituted.
+ */
+
 #ifndef _TIFFCONF_
 #define _TIFFCONF_
+
+
+#include <stddef.h>
+#include <stdint.h>
+#include <inttypes.h>
+
 
 /* Signed 16-bit type */
 #define TIFF_INT16_T @TIFF_INT16_T@
@@ -31,23 +43,26 @@
 /* Unsigned 8-bit type */
 #define TIFF_UINT8_T @TIFF_UINT8_T@
 
-/* Unsigned size type */
-#define TIFF_SIZE_T @TIFF_SIZE_T@
-
 /* Signed size type */
 #define TIFF_SSIZE_T @TIFF_SSIZE_T@
 
-/* Pointer difference type */
-#define TIFF_PTRDIFF_T @TIFF_PTRDIFF_T@
-
 /* Compatibility stuff. */
 
-/* Define as 0 or 1 according to the floating point format suported by the
+/* Define as 0 or 1 according to the floating point format supported by the
    machine */
 #cmakedefine HAVE_IEEEFP 1
 
-/* Set the native cpu bit order (FILLORDER_LSB2MSB or FILLORDER_MSB2LSB) */
-#define HOST_FILLORDER @HOST_FILLORDER@
+/* The concept of HOST_FILLORDER is broken. Since libtiff 4.5.1
+ * this macro will always be hardcoded to FILLORDER_LSB2MSB on all
+ * architectures, to reflect past long behavior of doing so on x86 architecture.
+ * Note however that the default FillOrder used by libtiff is FILLORDER_MSB2LSB,
+ * as mandated per the TIFF specification.
+ * The influence of HOST_FILLORDER is only when passing the 'H' mode in
+ * TIFFOpen().
+ * You should NOT rely on this macro to decide the CPU endianness!
+ * This macro will be removed in libtiff 4.6
+ */
+#define HOST_FILLORDER FILLORDER_LSB2MSB
 
 /* Native cpu byte order: 1 if big-endian (Motorola) or 0 if little-endian
    (Intel) */
@@ -61,6 +76,9 @@
 
 /* Support JBIG compression (requires JBIG-KIT library) */
 #cmakedefine JBIG_SUPPORT
+
+/* Support LERC compression */
+#cmakedefine LERC_SUPPORT 1
 
 /* Support LogLuv high dynamic range encoding */
 #cmakedefine LOGLUV_SUPPORT 1
@@ -91,8 +109,8 @@
 #cmakedefine LIBDEFLATE_SUPPORT 1
 
 /* Support strip chopping (whether or not to convert single-strip uncompressed
-   images to mutiple strips of ~8Kb to reduce memory usage) */
-#cmakedefine STRIPCHOP_DEFAULT 1
+   images to multiple strips of ~8Kb to reduce memory usage) */
+#cmakedefine STRIPCHOP_DEFAULT TIFF_STRIPCHOP
 
 /* Enable SubIFD tag (330) support */
 #cmakedefine SUBIFD_SUPPORT 1
@@ -122,3 +140,5 @@
 #define IPTC_SUPPORT
 
 #endif /* _TIFFCONF_ */
+
+/* clang-format on */

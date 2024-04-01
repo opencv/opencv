@@ -613,6 +613,7 @@ bool CvCaptureCAM_V4L::autosetup_capture_mode_v4l2()
             V4L2_PIX_FMT_NV21,
             V4L2_PIX_FMT_SBGGR8,
             V4L2_PIX_FMT_SGBRG8,
+            V4L2_PIX_FMT_SGRBG8,
             V4L2_PIX_FMT_XBGR32,
             V4L2_PIX_FMT_ABGR32,
             V4L2_PIX_FMT_SN9C10X,
@@ -679,6 +680,7 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
     case V4L2_PIX_FMT_SBGGR8:
     case V4L2_PIX_FMT_SN9C10X:
     case V4L2_PIX_FMT_SGBRG8:
+    case V4L2_PIX_FMT_SGRBG8:
     case V4L2_PIX_FMT_RGB24:
     case V4L2_PIX_FMT_Y16:
     case V4L2_PIX_FMT_Y16_BE:
@@ -1487,6 +1489,94 @@ static void sgbrg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, uns
     }
 }
 
+// SGRBG to RGB24
+static void sgrbg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, unsigned char *dst)
+{
+    long int i;
+    unsigned char *rawpt, *scanpt;
+    long int size;
+
+    rawpt = src;
+    scanpt = dst;
+    size = WIDTH*HEIGHT;
+
+    for ( i = 0; i < size; i++ )
+    {
+        if ( (i/WIDTH) % 2 == 0 ) //even row
+        {
+            if ( (i % 2) == 0 ) //even pixel
+            {
+                if ( (i > WIDTH) && ((i % WIDTH) > 0) )
+                {
+                    *scanpt++ = (*(rawpt-WIDTH) + *(rawpt+WIDTH))/2;        /* R */
+                    *scanpt++ = *(rawpt);                                   /* G */
+                    *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;                  /* B */
+                } else
+                {
+                    /* first line or left column */
+
+                    *scanpt++ = *(rawpt+WIDTH);                             /* R */
+                    *scanpt++ = *(rawpt);                                   /* G */
+                    *scanpt++ = *(rawpt+1);                                 /* B */
+                }
+            } else //odd pixel
+            {
+                if ( (i > WIDTH) && ((i % WIDTH) < (WIDTH-1)) )
+                {
+                    *scanpt++ = (*(rawpt-WIDTH-1) + *(rawpt-WIDTH+1) +
+                                 *(rawpt+WIDTH-1) + *(rawpt+WIDTH+1)) / 4;  /* R */
+                    *scanpt++ = (*(rawpt-1) + *(rawpt+1) +
+                                 *(rawpt-WIDTH) + *(rawpt+WIDTH)) / 4;      /* G */
+                    *scanpt++ = *(rawpt);                                   /* B */
+                } else
+                {
+                    /* first line or right column */
+
+                    *scanpt++ = *(rawpt+WIDTH-1);                           /* R */
+                    *scanpt++ = (*(rawpt-1)+*(rawpt+WIDTH))/2;              /* G */
+                    *scanpt++ = *(rawpt);                                   /* B */
+                }
+            }
+        } else
+        { //odd row
+            if ( (i % 2) == 0 ) //even pixel
+            {
+                if ( (i < (WIDTH*(HEIGHT-1))) && ((i % WIDTH) > 0) )
+                {
+                    *scanpt++ = *(rawpt);                                   /* R */
+                    *scanpt++ = (*(rawpt-1) + *(rawpt+1)+
+                                 *(rawpt-WIDTH) + *(rawpt+WIDTH)) / 4;      /* G */
+                    *scanpt++ =  (*(rawpt-WIDTH-1) + *(rawpt-WIDTH+1) +
+                                  *(rawpt+WIDTH-1) + *(rawpt+WIDTH+1)) / 4; /* B */
+                } else
+                {
+                    /* bottom line or left column */
+
+                    *scanpt++ = *(rawpt);                                   /* R */
+                    *scanpt++ =  (*(rawpt+1)+*(rawpt-WIDTH))/2;             /* G */
+                    *scanpt++ =  *(rawpt-WIDTH+1);                          /* B */
+                }
+            } else
+            { //odd pixel
+                if ( i < (WIDTH*(HEIGHT-1)) && ((i % WIDTH) < (WIDTH-1)) )
+                {
+                    *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;                  /* R */
+                    *scanpt++ = *(rawpt);                                   /* G */
+                    *scanpt++ = (*(rawpt-WIDTH)+*(rawpt+WIDTH))/2;          /* B */
+                } else
+                {
+                    /* bottom line or right column */
+
+                    *scanpt++ = (*(rawpt-1));                               /* R */
+                    *scanpt++ = *(rawpt);                                   /* G */
+                    *scanpt++ = (*(rawpt-WIDTH));                           /* B */
+                }
+            }
+        }
+        rawpt++;
+    }
+}
+
 #define CLAMP(x)        ((x)<0?0:((x)>255)?255:(x))
 
 typedef struct {
@@ -1704,6 +1794,10 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         return;
     case V4L2_PIX_FMT_SGBRG8:
         sgbrg2rgb24(imageSize.width, imageSize.height,
+                start, (unsigned char*)frame.imageData);
+        return;
+    case V4L2_PIX_FMT_SGRBG8:
+        sgrbg2rgb24(imageSize.width, imageSize.height,
                 start, (unsigned char*)frame.imageData);
         return;
     default:
