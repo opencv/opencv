@@ -86,6 +86,7 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
         }
         else if (key == "f")
         {
+            // format: "f v0 / t0 / n0 v1 / t1 / n1 v2/t2/n2 ..."
             std::vector<int> vertexInd, normInd, texInd;
             auto tokens = split(s, ' ');
             for (size_t i = 1; i < tokens.size(); i++)
@@ -96,10 +97,13 @@ void ObjDecoder::readData(std::vector<Point3f>& points, std::vector<Point3f>& no
                 {
                     std::string sj = vertexinfo[j];
                     // trimming spaces; as a result s can become empty - this is not an error
-                    size_t st = sj.find_first_not_of(' '), en = sj.find_last_not_of(' ');
-                    sj = sj.substr(st, en - st + 1);
-                    if (!sj.empty())
+                    auto si = std::find_if(sj.begin(),  sj.end(),  [](char c) { return (c >= '0' && c <= '9'); });
+                    auto ei = std::find_if(sj.rbegin(), sj.rend(), [](char c) { return (c >= '0' && c <= '9'); });
+                    if (si != sj.end() && ei != sj.rend())
                     {
+                        auto first = std::distance(si, sj.begin());
+                        auto last  = std::distance(ei, sj.rend());
+                        sj = sj.substr(first, last - first + 1);
                         try
                         {
                             idx[j] = std::stoi(sj);
