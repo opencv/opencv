@@ -177,8 +177,8 @@ public:
         eigen( _LtL, matW, matV );
         _Htemp = _invHnorm*_H0;
         _H0 = _Htemp*_Hnorm2;
-        _H0.convertTo(_model, _H0.type(), 1./_H0.at<double>(2,2) );
-
+        double scale = _H0.at<double>(2,2);
+        _H0.convertTo(_model, _H0.type(), fabs(scale) > DBL_EPSILON ? 1./scale : 1.);
         return 1;
     }
 
@@ -231,8 +231,9 @@ public:
         if( _Jac.needed())
         {
             _Jac.create(count*2, param.rows, CV_64F);
+            _Jac.setTo(0.);
             J = _Jac.getMat();
-            CV_Assert( J.isContinuous() && J.cols == 8 );
+            CV_Assert( J.isContinuous() && J.cols == 9 );
         }
 
         const Point2f* M = src.ptr<Point2f>();
@@ -244,7 +245,7 @@ public:
         for( i = 0; i < count; i++ )
         {
             double Mx = M[i].x, My = M[i].y;
-            double ww = h[6]*Mx + h[7]*My + 1.;
+            double ww = h[6]*Mx + h[7]*My + h[8];
             ww = fabs(ww) > DBL_EPSILON ? 1./ww : 0;
             double xi = (h[0]*Mx + h[1]*My + h[2])*ww;
             double yi = (h[3]*Mx + h[4]*My + h[5])*ww;
@@ -254,9 +255,7 @@ public:
             if( Jptr )
             {
                 Jptr[0] = Mx*ww; Jptr[1] = My*ww; Jptr[2] = ww;
-                Jptr[3] = Jptr[4] = Jptr[5] = 0.;
                 Jptr[6] = -Mx*ww*xi; Jptr[7] = -My*ww*xi;
-                Jptr[8] = Jptr[9] = Jptr[10] = 0.;
                 Jptr[11] = Mx*ww; Jptr[12] = My*ww; Jptr[13] = ww;
                 Jptr[14] = -Mx*ww*yi; Jptr[15] = -My*ww*yi;
 
@@ -419,7 +418,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             dst = dst1;
             if( method == RANSAC || method == LMEDS )
                 cb->runKernel( src, dst, H );
-            Mat H8(8, 1, CV_64F, H.ptr<double>());
+            Mat H8(9, 1, CV_64F, H.ptr<double>());
             LMSolver::create(makePtr<HomographyRefineCallback>(src, dst), 10)->run(H8);
         }
     }
