@@ -126,6 +126,11 @@ std::shared_ptr<UIBackend> createUIBackendGTK();
 std::shared_ptr<UIBackend> createUIBackendQT();
 #endif
 
+#ifdef HAVE_FRAMEBUFFER
+std::shared_ptr<UIBackend> createUIBackendFramebuffer();
+#endif
+
+
 #endif  // BUILD_PLUGIN
 
 }  // namespace highgui_backend

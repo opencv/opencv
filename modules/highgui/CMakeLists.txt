@@ -39,6 +39,17 @@ if(HAVE_WEBP)
   add_definitions(-DHAVE_WEBP)
 endif()
 
+
+if(WITH_FRAMEBUFFER)
+  message(WITH_FRAMEBUFFER="${WITH_FRAMEBUFFER}")
+  add_definitions(-DHAVE_FRAMEBUFFER)
+  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.cpp)
+  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.hpp)
+else()
+  message(WITH_FRAMEBUFFER="${WITH_FRAMEBUFFER}")
+endif()
+
+
 file(GLOB highgui_ext_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
@@ -179,6 +190,9 @@ elseif(HAVE_COCOA)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_cocoa.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
 endif()
+
+
+
 
 if(TARGET ocv.3rdparty.win32ui)
   if("win32ui" IN_LIST HIGHGUI_PLUGIN_LIST OR HIGHGUI_PLUGIN_LIST STREQUAL "all")
