@@ -44,7 +44,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
-#include <opencv2/core.hpp>
+#include "opencv2/core.hpp"
 
 #define CHECK(cond)     for(cv::dnn::GLogWrapper _logger(__FILE__, CV_Func, __LINE__, "CHECK", #cond, cond); _logger.exit(); _logger.check()) _logger.stream()
 #define CHECK_EQ(a, b)  for(cv::dnn::GLogWrapper _logger(__FILE__, CV_Func, __LINE__, "CHECK", #a"="#b, ((a) == (b))); _logger.exit(); _logger.check()) _logger.stream()

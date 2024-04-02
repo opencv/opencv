@@ -1,8 +1,6 @@
 {
     "func_arg_fix" : {
         "Dnn": {
-            "(Net*)readNetFromCaffe:(NSString*)prototxt caffeModel:(NSString*)caffeModel" : { "readNetFromCaffe" : {"name" : "readNetFromCaffeFile"} },
-            "(Net*)readNetFromCaffe:(ByteVector*)bufferProto bufferModel:(ByteVector*)bufferModel" : { "readNetFromCaffe" : {"name" : "readNetFromCaffeBuffer"} },
             "(Net*)readNetFromDarknet:(NSString*)cfgFile darknetModel:(NSString*)darknetModel" : { "readNetFromDarknet" : {"name" : "readNetFromDarknetFile"} },
             "(Net*)readNetFromDarknet:(ByteVector*)bufferCfg bufferModel:(ByteVector*)bufferModel" : { "readNetFromDarknet" : {"name" : "readNetFromDarknetBuffer"} },
             "(Net*)readNetFromONNX:(NSString*)onnxFile" : { "readNetFromONNX" : {"name" : "readNetFromONNXFile"} },

@@ -25,8 +25,7 @@ Implementation of various functions which are related to Tensorflow models readi
 
 #include "tf_io.hpp"
 
-#include "../caffe/caffe_io.hpp"
-#include "../caffe/glog_emulator.hpp"
+#include "tf_io_utils.hpp"
 
 namespace cv {
 namespace dnn {

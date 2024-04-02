@@ -95,33 +95,81 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
-#include "opencv-caffe.pb.h"
 #if defined(__GNUC__) && __GNUC__ >= 5
 #pragma GCC diagnostic pop
 #endif
 
-namespace caffe { using namespace opencv_caffe; } // avoid massive renames from caffe proto package
+#include "../precomp.hpp"
+
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/stubs/common.h>
+#include <google/protobuf/text_format.h>
+#include "opencv2/core.hpp"
+
+#include <map>
+#include <string>
+#include <fstream>
+#include <vector>
+
+#include "glog_emulator.hpp"
 
 namespace cv {
 namespace dnn {
 
-// Read parameters from a file into a NetParameter proto message.
-void ReadNetParamsFromTextFileOrDie(const char* param_file,
-                                    caffe::NetParameter* param);
-void ReadNetParamsFromBinaryFileOrDie(const char* param_file,
-                                      caffe::NetParameter* param);
+using std::string;
+using std::map;
+using namespace ::google::protobuf;
+using namespace ::google::protobuf::io;
 
-// Read parameters from a memory buffer into a NetParammeter proto message.
-void ReadNetParamsFromBinaryBufferOrDie(const char* data, size_t len,
-                                        caffe::NetParameter* param);
-void ReadNetParamsFromTextBufferOrDie(const char* data, size_t len,
-                                      caffe::NetParameter* param);
+static const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
 
-// Utility functions used internally by Caffe and TensorFlow loaders
-bool ReadProtoFromTextFile(const char* filename, ::google::protobuf::Message* proto);
-bool ReadProtoFromBinaryFile(const char* filename, ::google::protobuf::Message* proto);
-bool ReadProtoFromTextBuffer(const char* data, size_t len, ::google::protobuf::Message* proto);
-bool ReadProtoFromBinaryBuffer(const char* data, size_t len, ::google::protobuf::Message* proto);
+bool ReadProtoFromBinary(ZeroCopyInputStream* input, Message *proto) {
+    CodedInputStream coded_input(input);
+#if GOOGLE_PROTOBUF_VERSION >= 3006000
+    coded_input.SetTotalBytesLimit(kProtoReadBytesLimit);
+#else
+    coded_input.SetTotalBytesLimit(kProtoReadBytesLimit, 536870912);
+#endif
+
+    return proto->ParseFromCodedStream(&coded_input);
+}
+
+bool ReadProtoFromTextFile(const char* filename, Message* proto) {
+    std::ifstream fs(filename, std::ifstream::in);
+    CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
+    IstreamInputStream input(&fs);
+    google::protobuf::TextFormat::Parser parser;
+#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
+    parser.AllowUnknownField(true);
+    parser.SetRecursionLimit(1000);
+#endif
+    return parser.Parse(&input, proto);
+}
+
+bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
+    std::ifstream fs(filename, std::ifstream::in | std::ifstream::binary);
+    CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
+    IstreamInputStream raw_input(&fs);
+
+    return ReadProtoFromBinary(&raw_input, proto);
+}
+
+bool ReadProtoFromTextBuffer(const char* data, size_t len, Message* proto) {
+    ArrayInputStream input(data, len);
+    google::protobuf::TextFormat::Parser parser;
+#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
+    parser.AllowUnknownField(true);
+    parser.SetRecursionLimit(1000);
+#endif
+    return parser.Parse(&input, proto);
+}
+
+
+bool ReadProtoFromBinaryBuffer(const char* data, size_t len, Message* proto) {
+    ArrayInputStream raw_input(data, len);
+    return ReadProtoFromBinary(&raw_input, proto);
+}
 
 }
 }

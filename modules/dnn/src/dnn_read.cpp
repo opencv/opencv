@@ -17,12 +17,7 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
     String config = _config;
     const std::string modelExt = model.substr(model.rfind('.') + 1);
     const std::string configExt = config.substr(config.rfind('.') + 1);
-    if (framework == "caffe" || modelExt == "caffemodel" || configExt == "caffemodel" || modelExt == "prototxt" || configExt == "prototxt")
-    {
-        if (modelExt == "prototxt" || configExt == "caffemodel")
-            std::swap(model, config);
-        return readNetFromCaffe(config, model);
-    }
+
     if (framework == "tensorflow" || modelExt == "pb" || configExt == "pb" || modelExt == "pbtxt" || configExt == "pbtxt")
     {
         if (modelExt == "pbtxt" || configExt == "pb")
@@ -60,8 +55,6 @@ Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
     String framework = toLowerCase(_framework);
     if (framework == "onnx")
         return readNetFromONNX(bufferModel);
-    else if (framework == "caffe")
-        return readNetFromCaffe(bufferConfig, bufferModel);
     else if (framework == "tensorflow")
         return readNetFromTensorflow(bufferModel, bufferConfig);
     else if (framework == "darknet")

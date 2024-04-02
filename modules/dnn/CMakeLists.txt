@@ -114,7 +114,7 @@ if(HAVE_PROTOBUF)
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_PROTOBUF=1")
 
   if(PROTOBUF_UPDATE_FILES)
-    file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/caffe/opencv-caffe.proto" "${CMAKE_CURRENT_LIST_DIR}/src/onnx/opencv-onnx.proto")
+    file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/onnx/opencv-onnx.proto")
     set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
     protobuf_generate_cpp(fw_srcs fw_hdrs ${proto_files})
   else()

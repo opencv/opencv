@@ -108,6 +108,7 @@ class dnn_test(NewOpenCVTests):
         return self.find_file(filename, [os.environ.get('OPENCV_DNN_TEST_DATA_PATH', os.getcwd()),
                                          os.environ['OPENCV_TEST_DATA_PATH']],
                               required=required)
+    # TODO: Disabled
 
     def checkIETarget(self, backend, target):
         proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
@@ -217,6 +218,7 @@ class dnn_test(NewOpenCVTests):
         target2 = target2.reshape(1, height, width, 3)  # to NHWC
         normAssert(self, blob, target2)
 
+    # TODO: Disabled
     def test_model(self):
         img_path = self.find_dnn_file("dnn/street.png")
         weights = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", required=False)
@@ -284,44 +286,7 @@ class dnn_test(NewOpenCVTests):
         self.assertTrue(type(out) == tuple, msg='actual type {}'.format(str(type(out))))
         self.assertTrue(np.array(out).shape == (2, 4, 2))
 
-
-    def test_face_detection(self):
-        proto = self.find_dnn_file('dnn/opencv_face_detector.prototxt')
-        model = self.find_dnn_file('dnn/opencv_face_detector.caffemodel', required=False)
-        if proto is None or model is None:
-            raise unittest.SkipTest("Missing DNN test files (dnn/opencv_face_detector.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
-
-        img = self.get_sample('gpu/lbpcascade/er.png')
-        blob = cv.dnn.blobFromImage(img, mean=(104, 177, 123), swapRB=False, crop=False)
-
-        ref = [[0, 1, 0.99520785, 0.80997437, 0.16379407, 0.87996572, 0.26685631],
-               [0, 1, 0.9934696,  0.2831718,  0.50738752, 0.345781,   0.5985168],
-               [0, 1, 0.99096733, 0.13629119, 0.24892329, 0.19756334, 0.3310290],
-               [0, 1, 0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477],
-               [0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494],
-               [0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427,  0.5347801]]
-
-        print('\n')
-        for backend, target in self.dnnBackendsAndTargets:
-            printParams(backend, target)
-
-            net = cv.dnn.readNet(proto, model)
-            net.setPreferableBackend(backend)
-            net.setPreferableTarget(target)
-            net.setInput(blob)
-            out = net.forward().reshape(-1, 7)
-
-            scoresDiff = 4e-3 if target in [cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD] else 1e-5
-            iouDiff = 2e-2 if target in [cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD] else 1e-4
-
-            ref = np.array(ref, np.float32)
-            refClassIds, testClassIds = ref[:, 1], out[:, 1]
-            refScores, testScores = ref[:, 2], out[:, 2]
-            refBoxes, testBoxes = ref[:, 3:], out[:, 3:]
-
-            normAssertDetections(self, refClassIds, refScores, refBoxes, testClassIds,
-                                 testScores, testBoxes, 0.5, scoresDiff, iouDiff)
-
+    # TODO: Disabled
     def test_async(self):
         timeout = 10*1000*10**6  # in nanoseconds (10 sec)
         proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')

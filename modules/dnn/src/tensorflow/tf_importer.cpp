@@ -538,7 +538,6 @@ protected:
     tensorflow::GraphDef netBin;
     // Optional text definition of TensorFlow graph. More flexible than binary format
     // and may be used to build the network using binary format only as a weights storage.
-    // This approach is similar to Caffe's `.prorotxt` and `.caffemodel`.
     tensorflow::GraphDef netTxt;
 
     std::vector<String> netInputsNames;
