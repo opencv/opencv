@@ -26,59 +26,69 @@ struct Trait
 {
 };
 
-static const schar MASK8_RIGHT = '\x80'; // 1000 0000
-static const schar MASK8_NEW   = '\x02'; // 0000 0010 (+2)
-static const schar MASK8_FLAGS = '\xFE'; // 1111 1110 (-2)
-static const schar MASK8_BLACK = '\x01'; // 0000 0001 - black pixel
+static const schar MASK8_RIGHT = '\x80';  // 1000 0000
+static const schar MASK8_NEW = '\x02';  // 0000 0010 (+2)
+static const schar MASK8_FLAGS = '\xFE';  // 1111 1110 (-2)
+static const schar MASK8_BLACK = '\x01';  // 0000 0001 - black pixel
 
-static const schar MASK8_LVAL  = '\x7F'; // 0111 1111 (for table)
+static const schar MASK8_LVAL = '\x7F';  // 0111 1111 (for table)
 
-template<>
+template <>
 struct Trait<schar>
 {
-    static inline bool checkValue(const schar * elem, const schar *) {
+    static inline bool checkValue(const schar* elem, const schar*)
+    {
         return *elem != 0;
     }
-    static inline bool isVal(const schar * elem, const schar *) {
+    static inline bool isVal(const schar* elem, const schar*)
+    {
         return *elem == MASK8_BLACK;
     }
-    static inline bool isRight(const schar * elem, const schar *) {
+    static inline bool isRight(const schar* elem, const schar*)
+    {
         return (*elem & MASK8_RIGHT) != 0;
     }
-    static inline void setRightFlag(schar * elem, const schar *, schar nbd) {
+    static inline void setRightFlag(schar* elem, const schar*, schar nbd)
+    {
         *elem = nbd | MASK8_RIGHT;
     }
-    static inline void setNewFlag(schar * elem, const schar *, schar nbd) {
+    static inline void setNewFlag(schar* elem, const schar*, schar nbd)
+    {
         *elem = nbd;
     }
 };
 
-static const int MASK_RIGHT = 0x80000000; // 100..000
-static const int MASK_NEW   = 0x40000000; // 010..000
-static const int MASK_FLAGS = 0xC0000000; // right + new
-static const int MASK_VAL   = 0x3FFFFFFF; // ~flags - pixel label
+static const int MASK_RIGHT = 0x80000000;  // 100..000
+static const int MASK_NEW = 0x40000000;  // 010..000
+static const int MASK_FLAGS = 0xC0000000;  // right + new
+static const int MASK_VAL = 0x3FFFFFFF;  // ~flags - pixel label
 
 template <>
 struct Trait<int>
 {
-    static inline bool checkValue(const int * elem, const int * elem0) {
+    static inline bool checkValue(const int* elem, const int* elem0)
+    {
         return (*elem & MASK_VAL) == (*elem0 & MASK_VAL);
     }
-    static inline bool isVal(const int * elem, const int * elem0) {
+    static inline bool isVal(const int* elem, const int* elem0)
+    {
         return *elem == (*elem0 & MASK_VAL);
     }
-    static inline bool isRight(const int * elem, const int * elem0) {
+    static inline bool isRight(const int* elem, const int* elem0)
+    {
         return (*elem & MASK_RIGHT) == (*elem0 & MASK8_RIGHT);
     }
-    static inline void setRightFlag(int * elem, const int * elem0, int) {
+    static inline void setRightFlag(int* elem, const int* elem0, int)
+    {
         *elem = (*elem0 & MASK_VAL) | MASK_NEW | MASK_RIGHT;
     }
-    static inline void setNewFlag(int * elem, const int * elem0, int) {
+    static inline void setNewFlag(int* elem, const int* elem0, int)
+    {
         *elem = (*elem0 & MASK_VAL) | MASK_NEW;
     }
 };
 
-} // <anonymous>::
+}  // namespace
 
 
 //==============================================================================
@@ -87,9 +97,9 @@ struct Trait<int>
 namespace {
 
 template <typename T>
-static bool icvTraceContour(Mat &image, const Point &start, const Point &end, bool isHole )
+static bool icvTraceContour(Mat& image, const Point& start, const Point& end, bool isHole)
 {
-    const T * stop_ptr = image.ptr<T>(end.y, end.x);
+    const T* stop_ptr = image.ptr<T>(end.y, end.x);
     const size_t step = image.step1();
     const T *i0 = image.ptr<T>(start.y, start.x), *i1, *i3, *i4 = NULL;
     const schar s_end = isHole ? 0 : 4;
@@ -100,24 +110,24 @@ static bool icvTraceContour(Mat &image, const Point &start, const Point &end, bo
         s = (s - 1) & 7;
         i1 = i0 + getDelta(s, step);
     }
-    while( !Trait<T>::checkValue(i1, i0) && s != s_end );
+    while (!Trait<T>::checkValue(i1, i0) && s != s_end);
 
     i3 = i0;
 
     // check single pixel domain
-    if( s != s_end )
+    if (s != s_end)
     {
         // follow border
-        for( ;; )
+        for (;;)
         {
             CV_Assert(i3 != NULL);
             s = clamp_direction(s);
-            while( s < MAX_SIZE - 1 )
+            while (s < MAX_SIZE - 1)
             {
                 ++s;
                 i4 = i3 + getDelta(s, step);
                 CV_Assert(i4 != NULL);
-                if( Trait<T>::checkValue(i4, i0) )
+                if (Trait<T>::checkValue(i4, i0))
                     break;
             }
 
@@ -131,7 +141,7 @@ static bool icvTraceContour(Mat &image, const Point &start, const Point &end, bo
 
                 // check if this is the last contour
                 // encountered during a raster scan
-                const T *i5;
+                const T* i5;
                 schar t = s;
                 while (true)
                 {
@@ -144,12 +154,12 @@ static bool icvTraceContour(Mat &image, const Point &start, const Point &end, bo
                 }
             }
 
-            if((i4 == i0 && i3 == i1) )
+            if ((i4 == i0 && i3 == i1))
                 break;
 
             i3 = i4;
             s = (s + 4) & 7;
-        } // end of border following loop
+        }  // end of border following loop
     }
     else
     {
@@ -160,10 +170,10 @@ static bool icvTraceContour(Mat &image, const Point &start, const Point &end, bo
 }
 
 template <typename T>
-static void icvFetchContourEx(Mat &image,
-                              const Point &start,
+static void icvFetchContourEx(Mat& image,
+                              const Point& start,
                               T nbd,
-                              Contour & res_contour,
+                              Contour& res_contour,
                               const bool isDirect)
 {
     const size_t step = image.step1();
@@ -180,12 +190,12 @@ static void icvFetchContourEx(Mat &image,
         s = (s - 1) & 7;
         i1 = i0 + getDelta(s, step);
     }
-    while( !Trait<T>::checkValue(i1, i0) && s != s_end );
+    while (!Trait<T>::checkValue(i1, i0) && s != s_end);
 
     if (s == s_end)
     {
         Trait<T>::setRightFlag(i0, i0, nbd);
-        if( !res_contour.isChain )
+        if (!res_contour.isChain)
         {
             res_contour.pts.push_back(pt);
         }
@@ -196,22 +206,22 @@ static void icvFetchContourEx(Mat &image,
         schar prev_s = s ^ 4;
 
         // follow border
-        for( ;; )
+        for (;;)
         {
             s_end = s;
             s = clamp_direction(s);
-            while( s < MAX_SIZE - 1 )
+            while (s < MAX_SIZE - 1)
             {
                 ++s;
                 i4 = i3 + getDelta(s, step);
                 CV_Assert(i4 != NULL);
-                if( Trait<T>::checkValue(i4, i0) )
+                if (Trait<T>::checkValue(i4, i0))
                     break;
             }
             s &= 7;
 
             // check "right" bound
-            if( (unsigned) (s - 1) < (unsigned) s_end )
+            if ((unsigned)(s - 1) < (unsigned)s_end)
             {
                 Trait<T>::setRightFlag(i3, i0, nbd);
             }
@@ -220,33 +230,34 @@ static void icvFetchContourEx(Mat &image,
                 Trait<T>::setNewFlag(i3, i0, nbd);
             }
 
-            if( res_contour.isChain )
+            if (res_contour.isChain)
             {
                 res_contour.codes.push_back(s);
             }
-            else if( s != prev_s || isDirect )
+            else if (s != prev_s || isDirect)
             {
                 res_contour.pts.push_back(pt);
             }
 
-            if( s != prev_s )
+            if (s != prev_s)
             {
                 // update bounds
-                if( pt.x < rect.x )
+                if (pt.x < rect.x)
                     rect.x = pt.x;
-                else if( pt.x > rect.width )
+                else if (pt.x > rect.width)
                     rect.width = pt.x;
 
-                if( pt.y < rect.y )
+                if (pt.y < rect.y)
                     rect.y = pt.y;
-                else if( pt.y > rect.height )
+                else if (pt.y > rect.height)
                     rect.height = pt.y;
             }
 
             prev_s = s;
             pt += chainCodeDeltas[s];
 
-            if( i4 == i0 && i3 == i1 )  break;
+            if (i4 == i0 && i3 == i1)
+                break;
 
             i3 = i4;
             s = (s + 4) & 7;
@@ -257,7 +268,7 @@ static void icvFetchContourEx(Mat &image,
     res_contour.brect = rect;
 }
 
-} // <anonymous>::
+}  // namespace
 
 
 //==============================================================================
@@ -271,36 +282,41 @@ static void icvFetchContourEx(Mat &image,
 struct ContourScanner_
 {
     Mat image;
-    Point offset;             /* ROI offset: coordinates, added to each contour point */
-    Point pt;                 /* current scanner position */
-    Point lnbd;               /* position of the last met contour */
-    schar nbd;                    /* current mark val */
-    int approx_method1;         /* approx method when tracing */
-    int approx_method2;         /* final approx method */
+    Point offset;  // ROI offset: coordinates, added to each contour point
+    Point pt;  // current scanner position
+    Point lnbd;  // position of the last met contour
+    schar nbd;  // current mark val
+    int approx_method1;  // approx method when tracing
+    int approx_method2;  // final approx method
     int mode;
     CTree tree;
     array<int, 128> ctable;
 
 public:
+    ContourScanner_() {}
+    ~ContourScanner_() {}
+    inline bool isInt() const
+    {
+        return (this->mode == CV_RETR_FLOODFILL);
+    }
+    inline bool isSimple() const
+    {
+        return (this->mode == RETR_EXTERNAL || this->mode == RETR_LIST);
+    }
 
-    ContourScanner_() { }
-    ~ContourScanner_() { }
-    inline bool isInt() const { return (this->mode == CV_RETR_FLOODFILL); }
-    inline bool isSimple() const { return (this->mode == RETR_EXTERNAL || this->mode == RETR_LIST); }
-
-    CNode & makeContour(schar &nbd_, const bool is_hole, const int x, const int y);
-    bool contourScan(const int prev, int &p, Point &last_pos, const int x, const int y);
-    int findFirstBoundingContour(const Point &last_pos, const int y, const int lval, int par);
-    int findNextX(int x, int y, int & prev, int & p);
+    CNode& makeContour(schar& nbd_, const bool is_hole, const int x, const int y);
+    bool contourScan(const int prev, int& p, Point& last_pos, const int x, const int y);
+    int findFirstBoundingContour(const Point& last_pos, const int y, const int lval, int par);
+    int findNextX(int x, int y, int& prev, int& p);
     bool findNext();
 
-    static shared_ptr<ContourScanner_> create(Mat img, int mode, int  method, Point offset);
-}; // class ContourScanner_
+    static shared_ptr<ContourScanner_> create(Mat img, int mode, int method, Point offset);
+};  // class ContourScanner_
 
 typedef shared_ptr<ContourScanner_> ContourScanner;
 
 
-shared_ptr<ContourScanner_> ContourScanner_::create(Mat img, int mode, int  method, Point offset)
+shared_ptr<ContourScanner_> ContourScanner_::create(Mat img, int mode, int method, Point offset)
 {
     if (mode == RETR_CCOMP && img.type() == CV_32SC1)
         mode = RETR_FLOODFILL;
@@ -308,22 +324,19 @@ shared_ptr<ContourScanner_> ContourScanner_::create(Mat img, int mode, int  meth
     if (mode == RETR_FLOODFILL)
         CV_CheckTypeEQ(img.type(), CV_32SC1, "RETR_FLOODFILL mode supports only CV_32SC1 images");
     else
-        CV_CheckTypeEQ(img.type(), CV_8UC1, "Modes other than RETR_FLOODFILL and RETR_CCOMP support only CV_8UC1 images");
+        CV_CheckTypeEQ(img.type(),
+                       CV_8UC1,
+                       "Modes other than RETR_FLOODFILL and RETR_CCOMP support only CV_8UC1 "
+                       "images");
 
     CV_Check(mode,
-             mode == RETR_EXTERNAL
-             || mode == RETR_LIST
-             || mode == RETR_CCOMP
-             || mode == RETR_TREE
-             || mode == RETR_FLOODFILL,
+             mode == RETR_EXTERNAL || mode == RETR_LIST || mode == RETR_CCOMP ||
+                 mode == RETR_TREE || mode == RETR_FLOODFILL,
              "Wrong extraction mode");
 
     CV_Check(method,
-             method == 0
-             || method == CHAIN_APPROX_NONE
-             || method == CHAIN_APPROX_SIMPLE
-             || method == CHAIN_APPROX_TC89_L1
-             || method == CHAIN_APPROX_TC89_KCOS,
+             method == 0 || method == CHAIN_APPROX_NONE || method == CHAIN_APPROX_SIMPLE ||
+                 method == CHAIN_APPROX_TC89_L1 || method == CHAIN_APPROX_TC89_KCOS,
              "Wrong approximation method");
 
     Size size = img.size();
@@ -336,25 +349,25 @@ shared_ptr<ContourScanner_> ContourScanner_::create(Mat img, int mode, int  meth
     scanner->pt = Point(1, 1);
     scanner->lnbd = Point(0, 1);
     scanner->nbd = 2;
-    CNode & root = scanner->tree.newElem();
+    CNode& root = scanner->tree.newElem();
     CV_Assert(root.self() == 0);
     root.body.isHole = true;
     root.body.brect = Rect(Point(0, 0), size);
     scanner->ctable.fill(-1);
     scanner->approx_method2 = scanner->approx_method1 = method;
-    if( method == CV_CHAIN_APPROX_TC89_L1 || method == CV_CHAIN_APPROX_TC89_KCOS )
+    if (method == CV_CHAIN_APPROX_TC89_L1 || method == CV_CHAIN_APPROX_TC89_KCOS)
         scanner->approx_method1 = CV_CHAIN_CODE;
     return scanner;
 }
 
-CNode & ContourScanner_::makeContour(schar &nbd_, const bool is_hole, const int x, const int y)
+CNode& ContourScanner_::makeContour(schar& nbd_, const bool is_hole, const int x, const int y)
 {
-    const bool isChain = (this->approx_method1 == CV_CHAIN_CODE); // TODO: get rid of old constant
+    const bool isChain = (this->approx_method1 == CV_CHAIN_CODE);  // TODO: get rid of old constant
     const bool isDirect = (this->approx_method1 == CHAIN_APPROX_NONE);
 
     const Point start_pt(x - (is_hole ? 1 : 0), y);
 
-    CNode & res = tree.newElem();
+    CNode& res = tree.newElem();
     if (isChain)
         res.body.codes.reserve(200);
     else
@@ -364,11 +377,7 @@ CNode & ContourScanner_::makeContour(schar &nbd_, const bool is_hole, const int 
     res.body.origin = start_pt + offset;
     if (isSimple())
     {
-        icvFetchContourEx<schar>(this->image,
-                                 start_pt,
-                                 MASK8_NEW,
-                                 res.body,
-                                 isDirect);
+        icvFetchContourEx<schar>(this->image, start_pt, MASK8_NEW, res.body, isDirect);
     }
     else
     {
@@ -377,11 +386,7 @@ CNode & ContourScanner_::makeContour(schar &nbd_, const bool is_hole, const int 
         {
             const int start_val = this->image.at<int>(start_pt);
             lval = start_val & MASK8_LVAL;
-            icvFetchContourEx<int>(this->image,
-                                   start_pt,
-                                   0,
-                                   res.body,
-                                   isDirect);
+            icvFetchContourEx<int>(this->image, start_pt, 0, res.body, isDirect);
         }
         else
         {
@@ -390,11 +395,7 @@ CNode & ContourScanner_::makeContour(schar &nbd_, const bool is_hole, const int 
             nbd_ = (nbd_ + 1) & MASK8_LVAL;
             if (nbd_ == 0)
                 nbd_ = MASK8_BLACK | MASK8_NEW;
-            icvFetchContourEx<schar>(this->image,
-                                     start_pt,
-                                     lval,
-                                     res.body,
-                                     isDirect);
+            icvFetchContourEx<schar>(this->image, start_pt, lval, res.body, isDirect);
         }
         res.body.brect.x -= this->offset.x;
         res.body.brect.y -= this->offset.y;
@@ -412,7 +413,7 @@ CNode & ContourScanner_::makeContour(schar &nbd_, const bool is_hole, const int 
     return res;
 }
 
-bool ContourScanner_::contourScan(const int prev, int &p, Point &last_pos, const int x, const int y)
+bool ContourScanner_::contourScan(const int prev, int& p, Point& last_pos, const int x, const int y)
 {
     bool is_hole = false;
 
@@ -424,7 +425,7 @@ bool ContourScanner_::contourScan(const int prev, int &p, Point &last_pos, const
             if ((prev & MASK_FLAGS) != 0 || ((p & MASK_FLAGS) != 0))
                 return false;
 
-            if( prev & MASK_FLAGS )
+            if (prev & MASK_FLAGS)
             {
                 last_pos.x = x - 1;
             }
@@ -438,7 +439,7 @@ bool ContourScanner_::contourScan(const int prev, int &p, Point &last_pos, const
             if (p != 0 || prev < 1)
                 return false;
 
-            if( prev & MASK8_FLAGS )
+            if (prev & MASK8_FLAGS)
             {
                 last_pos.x = x - 1;
             }
@@ -446,17 +447,15 @@ bool ContourScanner_::contourScan(const int prev, int &p, Point &last_pos, const
         }
     }
 
-    if (mode == RETR_EXTERNAL
-        && (is_hole || this->image.at<schar>(last_pos) > 0))
+    if (mode == RETR_EXTERNAL && (is_hole || this->image.at<schar>(last_pos) > 0))
     {
         return false;
     }
 
     /* find contour parent */
     int main_parent = -1;
-    if( isSimple()
-        || (!is_hole && (mode == CV_RETR_CCOMP || mode == CV_RETR_FLOODFILL))
-        || last_pos.x <= 0 )
+    if (isSimple() || (!is_hole && (mode == CV_RETR_CCOMP || mode == CV_RETR_FLOODFILL)) ||
+        last_pos.x <= 0)
     {
         main_parent = 0;
     }
@@ -475,7 +474,7 @@ bool ContourScanner_::contourScan(const int prev, int &p, Point &last_pos, const
         // the parent of the contour is the parent of the previous contour else
         // the parent is the previous contour itself.
         {
-            CNode & main_parent_elem = tree.elem(main_parent);
+            CNode& main_parent_elem = tree.elem(main_parent);
             if (main_parent_elem.body.isHole == is_hole)
             {
                 if (main_parent_elem.parent != -1)
@@ -491,7 +490,7 @@ bool ContourScanner_::contourScan(const int prev, int &p, Point &last_pos, const
 
         // hole flag of the parent must differ from the flag of the contour
         {
-            CNode & main_parent_elem = tree.elem(main_parent);
+            CNode& main_parent_elem = tree.elem(main_parent);
             CV_Assert(main_parent_elem.body.isHole != is_hole);
         }
     }
@@ -499,7 +498,7 @@ bool ContourScanner_::contourScan(const int prev, int &p, Point &last_pos, const
     last_pos.x = x - (is_hole ? 1 : 0);
 
     schar nbd_ = this->nbd;
-    CNode & new_contour = makeContour(nbd_, is_hole, x, y);
+    CNode& new_contour = makeContour(nbd_, is_hole, x, y);
     if (new_contour.parent == -1)
     {
         tree.addChild(main_parent, new_contour.self());
@@ -510,36 +509,33 @@ bool ContourScanner_::contourScan(const int prev, int &p, Point &last_pos, const
     return true;
 }
 
-int ContourScanner_::findFirstBoundingContour(const Point &last_pos, const int y, const int lval, int par)
+int ContourScanner_::findFirstBoundingContour(const Point& last_pos,
+                                              const int y,
+                                              const int lval,
+                                              int par)
 {
     const Point end_point(last_pos.x, y);
     int res = par;
     int cur = ctable[lval];
     while (cur != -1)
     {
-        CNode & cur_elem = tree.elem(cur);
+        CNode& cur_elem = tree.elem(cur);
         if (((last_pos.x - cur_elem.body.brect.x) < cur_elem.body.brect.width) &&
             ((last_pos.y - cur_elem.body.brect.y) < cur_elem.body.brect.height))
         {
             if (res != -1)
             {
-                CNode & res_elem = tree.elem(res);
+                CNode& res_elem = tree.elem(res);
                 const Point origin = res_elem.body.origin;
                 const bool isHole = res_elem.body.isHole;
                 if (isInt())
                 {
-                    if (icvTraceContour<int>(this->image,
-                                             origin,
-                                             end_point,
-                                             isHole))
+                    if (icvTraceContour<int>(this->image, origin, end_point, isHole))
                         break;
                 }
                 else
                 {
-                    if (icvTraceContour<schar>(this->image,
-                                               origin,
-                                               end_point,
-                                               isHole))
+                    if (icvTraceContour<schar>(this->image, origin, end_point, isHole))
                         break;
                 }
             }
@@ -550,12 +546,14 @@ int ContourScanner_::findFirstBoundingContour(const Point &last_pos, const int y
     return res;
 }
 
-int ContourScanner_::findNextX(int x, int y, int & prev, int & p)
+int ContourScanner_::findNextX(int x, int y, int& prev, int& p)
 {
     const int width = this->image.size().width - 1;
     if (isInt())
     {
-        for( ; x < width && ((p = this->image.at<int>(y, x)) == prev || (p & MASK_VAL) == (prev & MASK_VAL)); x++ )
+        for (; x < width &&
+               ((p = this->image.at<int>(y, x)) == prev || (p & MASK_VAL) == (prev & MASK_VAL));
+             x++)
             prev = p;
     }
     else
@@ -580,7 +578,7 @@ int ContourScanner_::findNextX(int x, int y, int & prev, int & p)
             }
         }
 #endif
-        for( ; x < width && (p = this->image.at<schar>(y, x)) == prev; x++ )
+        for (; x < width && (p = this->image.at<schar>(y, x)) == prev; x++)
             ;
     }
     return x;
@@ -595,10 +593,10 @@ bool ContourScanner_::findNext()
     Point last_pos = this->lnbd;
     int prev = isInt() ? this->image.at<int>(y, x - 1) : this->image.at<schar>(y, x - 1);
 
-    for( ; y < height; y++ )
+    for (; y < height; y++)
     {
         int p = 0;
-        for( ; x < width; x++ )
+        for (; x < width; x++)
         {
             x = findNextX(x, y, prev, p);
             if (x >= width)
@@ -611,7 +609,7 @@ bool ContourScanner_::findNext()
             else
             {
                 prev = p;
-                if ( (isInt() && (prev & MASK_FLAGS)) || (!isInt() && (prev & MASK8_FLAGS)) )
+                if ((isInt() && (prev & MASK_FLAGS)) || (!isInt() && (prev & MASK8_FLAGS)))
                 {
                     last_pos.x = x;
                 }
@@ -627,17 +625,24 @@ bool ContourScanner_::findNext()
 
 //==============================================================================
 
-void cv::findContours(InputArray _image, OutputArrayOfArrays _contours, OutputArray _hierarchy, int mode, int method, Point offset)
+void cv::findContours(InputArray _image,
+                      OutputArrayOfArrays _contours,
+                      OutputArray _hierarchy,
+                      int mode,
+                      int method,
+                      Point offset)
 {
     CV_INSTRUMENT_REGION();
 
     // TODO: remove this block in future
     if (method == 5 /*CV_LINK_RUNS*/)
     {
-        CV_LOG_ONCE_WARNING(NULL, "LINK_RUNS mode has been extracted to separate function: cv::findContoursLinkRuns. "
-            "Calling through cv::findContours will be removed in future.");
+        CV_LOG_ONCE_WARNING(NULL,
+                            "LINK_RUNS mode has been extracted to separate function: "
+                            "cv::findContoursLinkRuns. "
+                            "Calling through cv::findContours will be removed in future.");
         CV_CheckTrue(!_hierarchy.needed() || mode == RETR_CCOMP,
-            "LINK_RUNS mode supports only simplified hierarchy output (mode=RETR_CCOMP)");
+                     "LINK_RUNS mode supports only simplified hierarchy output (mode=RETR_CCOMP)");
         findContoursLinkRuns(_image, _contours, _hierarchy);
         return;
     }
@@ -645,19 +650,22 @@ void cv::findContours(InputArray _image, OutputArrayOfArrays _contours, OutputAr
     // TODO: need enum value, need way to return contour starting points with chain codes
     if (method == 0 /*CV_CHAIN_CODE*/)
     {
-        CV_LOG_ONCE_WARNING(NULL, "Chain code output is an experimental feature and might change in future!");
+        CV_LOG_ONCE_WARNING(NULL,
+                            "Chain code output is an experimental feature and might change in "
+                            "future!");
     }
 
     // Sanity check: output must be of type vector<vector<Point>>
-    CV_Assert((_contours.kind() == _InputArray::STD_VECTOR_VECTOR)
-        || (_contours.kind() == _InputArray::STD_VECTOR_MAT)
-        || (_contours.kind() == _InputArray::STD_VECTOR_UMAT));
+    CV_Assert((_contours.kind() == _InputArray::STD_VECTOR_VECTOR) ||
+              (_contours.kind() == _InputArray::STD_VECTOR_MAT) ||
+              (_contours.kind() == _InputArray::STD_VECTOR_UMAT));
 
     const int res_type = (method == 0 /*CV_CHAIN_CODE*/) ? CV_8SC1 : CV_32SC2;
     if (!_contours.empty())
     {
-        CV_CheckTypeEQ(_contours.type(), res_type,
-            "Contours must have type CV_8SC1 (chain code) or CV_32SC2 (other methods)");
+        CV_CheckTypeEQ(_contours.type(),
+                       res_type,
+                       "Contours must have type CV_8SC1 (chain code) or CV_32SC2 (other methods)");
     }
 
     if (_hierarchy.needed())
@@ -670,13 +678,19 @@ void cv::findContours(InputArray _image, OutputArrayOfArrays _contours, OutputAr
         threshold(image, image, 0, 1, THRESH_BINARY);
 
     // find contours
-    ContourScanner scanner = ContourScanner_::create( image, mode, method, offset + Point(-1, -1));
-    while (scanner->findNext()) {}
+    ContourScanner scanner = ContourScanner_::create(image, mode, method, offset + Point(-1, -1));
+    while (scanner->findNext())
+    {
+    }
 
     contourTreeToResults(scanner->tree, res_type, _contours, _hierarchy);
 }
 
-void cv::findContours(InputArray _image, OutputArrayOfArrays _contours, int mode, int method, Point offset)
+void cv::findContours(InputArray _image,
+                      OutputArrayOfArrays _contours,
+                      int mode,
+                      int method,
+                      Point offset)
 {
     CV_INSTRUMENT_REGION();
     findContours(_image, _contours, noArray(), mode, method, offset);

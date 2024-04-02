@@ -10,13 +10,13 @@
 using namespace std;
 using namespace cv;
 
-void cv::contourTreeToResults(CTree & tree, int res_type,
-                              OutputArrayOfArrays &_contours,
-                              OutputArray &_hierarchy)
+void cv::contourTreeToResults(CTree& tree,
+                              int res_type,
+                              OutputArrayOfArrays& _contours,
+                              OutputArray& _hierarchy)
 {
     // check if there are no results
-    if (tree.isEmpty()
-        || (tree.elem(0).body.isEmpty() && (tree.elem(0).first_child == -1)))
+    if (tree.isEmpty() || (tree.elem(0).body.isEmpty() && (tree.elem(0).first_child == -1)))
     {
         _contours.clear();
         return;
@@ -35,7 +35,7 @@ void cv::contourTreeToResults(CTree & tree, int res_type,
         CIterator it(tree);
         while (!it.isDone())
         {
-            const CNode & elem = it.getNext_s();
+            const CNode& elem = it.getNext_s();
             CV_Assert(elem.self() != -1);
             if (elem.self() == 0)
                 continue;
@@ -61,14 +61,14 @@ void cv::contourTreeToResults(CTree & tree, int res_type,
         CIterator it(tree);
         while (!it.isDone())
         {
-            const CNode & elem = it.getNext_s();
+            const CNode& elem = it.getNext_s();
             if (elem.self() == 0)
                 continue;
-            Vec4i & h_vec = h_mat.at<Vec4i>(i);
+            Vec4i& h_vec = h_mat.at<Vec4i>(i);
             h_vec = Vec4i(index_mapping.at(elem.next),
-                              index_mapping.at(elem.prev),
-                              index_mapping.at(elem.first_child),
-                              index_mapping.at(elem.parent));
+                          index_mapping.at(elem.prev),
+                          index_mapping.at(elem.first_child),
+                          index_mapping.at(elem.parent));
             ++i;
         }
     }

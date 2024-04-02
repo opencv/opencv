@@ -10,13 +10,21 @@
 namespace cv {
 
 #ifdef __OPENCV_BUILD
-CV_EXPORTS void findContours_legacy( InputArray _image, OutputArrayOfArrays _contours,
-                                  OutputArray _hierarchy, int mode, int method,
-                                  Point offset = Point() );
-CV_EXPORTS void findContours_legacy( InputArray image, OutputArrayOfArrays contours,
-                                  int mode, int method, Point offset = Point());
+
+CV_EXPORTS void findContours_legacy(InputArray _image,
+                                    OutputArrayOfArrays _contours,
+                                    OutputArray _hierarchy,
+                                    int mode,
+                                    int method,
+                                    Point offset = Point());
+CV_EXPORTS void findContours_legacy(InputArray image,
+                                    OutputArrayOfArrays contours,
+                                    int mode,
+                                    int method,
+                                    Point offset = Point());
+
 #endif
 
-} // cv::
+}  // namespace cv
 
-#endif // OPENCV_IMGPROC_DETAIL_LEGACY_HPP
+#endif  // OPENCV_IMGPROC_DETAIL_LEGACY_HPP
