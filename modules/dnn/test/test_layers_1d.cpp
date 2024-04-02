@@ -480,6 +480,85 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scatter_Test, Combine(
 
 
 
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Reduce_Test;
+TEST_P(Layer_Reduce_Test, Accuracy_01D)
+{
+    auto reduceOperation = [](const cv::Mat& input, const std::string& operation) -> float {
+        float result = operation == "max" ? std::numeric_limits<float>::lowest() : 0;
+        float sum = 0;
+        for (int i = 0; i < input.total(); ++i) {
+            float value = input.at<float>(i);
+            if (operation == "max") {
+                result = std::max(result, value);
+            } else if (operation == "min") {
+                if (i == 0 || result > value) result = value;
+            } else if (operation == "mean") {
+                sum += value;
+            } else if (operation == "sum") {
+                result += value;
+            } else if (operation == "sum_square") {
+                result += value * value;
+            } else if (operation == "l1") {
+                result += std::abs(value);
+            } else if (operation == "l2") {
+                result += value * value;
+            } else if (operation == "prod") {
+                result = (i == 0) ? value : result * value;
+            }
+        }
+        if (operation == "mean") {
+            result = sum / input.total();
+        } else if (operation == "l2") {
+            result = std::sqrt(result);
+        } else if (operation == "log_sum" || operation == "log_sum_exp") {
+            for (int i = 0; i < input.total(); ++i) {
+                result += (operation == "log_sum") ? std::log(input.at<float>(i)) : std::exp(input.at<float>(i));
+            }
+            if (operation == "log_sum_exp") {
+                result = std::log(result);
+            }
+        }
+        return result;
+    };
+
+    std::vector<int> input_shape = get<0>(GetParam());
+    std::string reduce_operation = get<1>(GetParam());
+
+    if (input_shape.size() == 2 && reduce_operation == "log_sum") // both output and reference are nans
+        return;
+
+    LayerParams lp;
+    lp.type = "Reduce";
+    lp.name = "reduceLayer";
+    lp.set("reduce", reduce_operation);
+    lp.set("axis", 0);
+    lp.set("keepdims", true);
+    Ptr<ReduceLayer> layer = ReduceLayer::create(lp);
+
+    cv::Mat input(input_shape.size(), input_shape.data(), CV_32F, 1.0);
+    cv::randn(input, 0.0, 1.0);
+
+    float out_value = reduceOperation(input, reduce_operation);
+
+    cv::Mat output_ref = cv::Mat(input_shape.size(), (input_shape.size() <= 1) ? input_shape.data() : std::vector<int>({1, 1}).data(), CV_32F, out_value);
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Reduce_Test, Combine(
+/*input blob shape*/    Values(
+    std::vector<int>({}),
+    std::vector<int>({1}),
+    std::vector<int>({1, 4})
+    ),
+/*input blob shape*/    Values("max", "min", "mean", "sum", "sum_square", "l1", "l2", "prod", "log_sum", "log_sum_exp"))
+);
+
+
 typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Permute_Test;
 TEST_P(Layer_Permute_Test, Accuracy_01D)
 {
