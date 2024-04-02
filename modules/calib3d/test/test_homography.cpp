@@ -718,9 +718,9 @@ TEST(Calib3d_Homography, not_normalized)
     {
         Mat h = findHomography(p1, p2, method);
         for (auto it = h.begin<double>(); it != h.end<double>(); ++it) {
-            ASSERT_FALSE(cvIsNaN(*it)) << format("method %d", method);
+            ASSERT_FALSE(cvIsNaN(*it)) << format("method %d\nResult:\n", method) << h;
         }
-        ASSERT_LE(cv::norm(h, ref, NORM_INF), 1e-8) << format("method %d", method);
+        ASSERT_LE(cv::norm(h, ref, NORM_INF), 1e-8) << format("method %d\nResult:\n", method) << h;
     }
 }
 
