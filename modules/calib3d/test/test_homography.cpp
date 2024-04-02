@@ -714,11 +714,14 @@ TEST(Calib3d_Homography, not_normalized)
         -0.37138043, 0., 0.
     });
 
-    Mat h = findHomography(p1, p2);
-    for (auto it = h.begin<double>(); it != h.end<double>(); ++it) {
-        ASSERT_FALSE(cvIsNaN(*it));
+    for (int method : std::vector<int>({0, RANSAC, LMEDS}))
+    {
+        Mat h = findHomography(p1, p2, method);
+        for (auto it = h.begin<double>(); it != h.end<double>(); ++it) {
+            ASSERT_FALSE(cvIsNaN(*it)) << method;
+        }
+        ASSERT_LE(cv::norm(h, ref, NORM_INF), 1e-8) << method;
     }
-    ASSERT_LE(cv::norm(h, ref, NORM_INF), 1e-8);
 }
 
 }} // namespace

@@ -197,14 +197,15 @@ public:
         const Point2f* M = m1.ptr<Point2f>();
         const Point2f* m = m2.ptr<Point2f>();
         const double* H = model.ptr<double>();
-        float Hf[] = { (float)H[0], (float)H[1], (float)H[2], (float)H[3], (float)H[4], (float)H[5], (float)H[6], (float)H[7] };
+        float Hf[] = { (float)H[0], (float)H[1], (float)H[2], (float)H[3], (float)H[4], (float)H[5], (float)H[6], (float)H[7], (float)H[8] };
 
         _err.create(count, 1, CV_32F);
         float* err = _err.getMat().ptr<float>();
 
         for( i = 0; i < count; i++ )
         {
-            float ww = 1.f/(Hf[6]*M[i].x + Hf[7]*M[i].y + 1.f);
+            float ww = Hf[6]*M[i].x + Hf[7]*M[i].y + Hf[8];
+            ww = fabs(ww) > DBL_EPSILON ? 1./ww : 0;
             float dx = (Hf[0]*M[i].x + Hf[1]*M[i].y + Hf[2])*ww - m[i].x;
             float dy = (Hf[3]*M[i].x + Hf[4]*M[i].y + Hf[5])*ww - m[i].y;
             err[i] = dx*dx + dy*dy;
