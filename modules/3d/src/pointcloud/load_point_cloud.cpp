@@ -161,9 +161,9 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
 
     if (!vec_indices.empty())
     {
-        CV_Assert(indices.depth() == CV_32S);
         if (indices.kind() == _InputArray::KindFlag::STD_VECTOR_VECTOR)
         {
+            CV_Assert(indices.depth() == CV_32S);
             std::vector<std::vector<int32_t>>& vec = *(std::vector<std::vector<int32_t>>*)indices.getObj();
             vec.resize(vec_indices.size());
             for (size_t i = 0; i < vec_indices.size(); ++i)
@@ -173,7 +173,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
         }
         else
         {
-            CV_Assert(indices.channels() == 3);
+            indices.create(1, (int)vec_indices.size(), CV_32SC3);
             std::vector<Vec3i>& vec = *(std::vector<Vec3i>*)indices.getObj();
             for (size_t i = 0; i < vec_indices.size(); ++i)
             {
@@ -190,7 +190,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
                         tri[j] = vec_indices[i][j];
                     }
                 }
-                vec.push_back(tri);
+                vec[i] = tri;
             }
         }
     }
