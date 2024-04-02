@@ -720,6 +720,9 @@ TEST(Calib3d_Homography, not_normalized)
         for (auto it = h.begin<double>(); it != h.end<double>(); ++it) {
             ASSERT_FALSE(cvIsNaN(*it)) << format("method %d\nResult:\n", method) << h;
         }
+        if (h.at<double>(0, 0) * ref.at<double>(0, 0) < 0) {
+            h *= -1;
+        }
         ASSERT_LE(cv::norm(h, ref, NORM_INF), 1e-8) << format("method %d\nResult:\n", method) << h;
     }
 }
