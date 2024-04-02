@@ -349,4 +349,36 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Expand_Test, Combine(
     )
 ));
 
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Concat_Test;
+TEST_P(Layer_Concat_Test, Accuracy_01D)
+{
+    LayerParams lp;
+    lp.type = "Concat";
+    lp.name = "ConcatLayer";
+    lp.set("axis", 0);
+
+    Ptr<ConcatLayer> layer = ConcatLayer::create(lp);
+
+    std::vector<int> input_shape = get<0>(GetParam());
+    std::vector<int> output_shape = {3};
+
+    Mat input1(input_shape.size(), input_shape.data(), CV_32F, 1.0);
+    Mat input2(input_shape.size(), input_shape.data(), CV_32F, 2.0);
+    Mat input3(input_shape.size(), input_shape.data(), CV_32F, 3.0);
+
+    float data[] = {1.0, 2.0, 3.0};
+    Mat output_ref(output_shape, CV_32F, data);
+
+    std::vector<Mat> inputs{input1, input2, input3};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Concat_Test,
+/*input blob shape*/    testing::Values(
+    make_tuple(std::vector<int>({})),
+    make_tuple(std::vector<int>({1}))
+));
 }}
