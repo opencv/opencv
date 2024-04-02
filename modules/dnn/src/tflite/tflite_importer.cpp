@@ -300,6 +300,10 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op) {
             Mat blob = allTensors[idx];
             layerParams.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
         }
+    } else {
+        for (auto& blob : layerParams.blobs) {
+            CV_Assert(blob.u);
+        }
     }
 
     int dtype = CV_32F;
@@ -830,9 +834,6 @@ void TFLiteImporter::parseFullyConnected(const Operator& op, const std::string& 
     auto options = op.builtin_options_as_FullyConnectedOptions();
     CV_Assert(options);
 
-    int idx = op.inputs()->Get(1);
-    Mat weights = allTensors[idx];
-    layerParams.blobs.resize(1, weights);
     layerParams.set("transB", true);
     layerParams.set("constB", true);
     addLayer(layerParams, op);
