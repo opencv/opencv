@@ -92,7 +92,8 @@ public:
         bool inplace = Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         MatShape shape = inputs[0];
         int cAxis = normalize_axis(axisRaw, shape.size());
-        shape[cAxis] = 1;
+        if (!shape.empty())
+            shape[cAxis] = 1;
         internals.assign(1, shape);
         return inplace;
     }
