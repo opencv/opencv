@@ -544,7 +544,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
 
     if( disttype == UNIFORM )
     {
-        _parambuf.allocate((sizeof(DivStruct)+sizeof(double)-1)/sizeof(double) + cn*2 + n1 + n2);
+        _parambuf.allocate((sizeof(DivStruct)+sizeof(double)-1)/sizeof(double) + cn*2 + max(cn, n1) + max(cn, n2));
         double* parambuf = _parambuf.data();
         double* p1 = _param1.ptr<double>();
         double* p2 = _param2.ptr<double>();
@@ -584,6 +584,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                                  depth == CV_8S ? 128. : depth == CV_16S ? 32768. : depth == CV_32U ? (double)UINT_MAX :
                                  depth == CV_32S ? (double)INT_MAX : (double)INT64_MAX);
                 }
+                CV_DbgCheckLT((size_t)(cn*2 + j*2 + 1), _parambuf.size(), "");
                 ip[j][1] = (int64_t)ceil(a);
                 int64_t idiff = ip[j][0] = (int64_t)floor(b) - ip[j][1] - 1;
                 if (idiff < 0)
@@ -650,6 +651,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 Vec2f* fp = (Vec2f*)(parambuf + cn*2);
                 for( j = 0; j < cn; j++ )
                 {
+                    CV_DbgCheckLT((size_t)(cn*2 + j*2 + 1), _parambuf.size(), "");
                     fp[j][0] = (float)(std::min(maxdiff, p2[j] - p1[j])*scale);
                     fp[j][1] = (float)((p2[j] + p1[j])*0.5);
                 }
@@ -660,6 +662,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 Vec2d* dp = (Vec2d*)(parambuf + cn*2);
                 for( j = 0; j < cn; j++ )
                 {
+                    CV_DbgCheckLT((size_t)(cn*2 + j*2 + 1), _parambuf.size(), "");
                     dp[j][0] = std::min(DBL_MAX, p2[j] - p1[j])*scale;
                     dp[j][1] = ((p2[j] + p1[j])*0.5);
                 }
