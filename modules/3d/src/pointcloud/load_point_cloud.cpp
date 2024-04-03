@@ -161,21 +161,34 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
 
     if (!vec_indices.empty())
     {
-        if (indices.kind() == _InputArray::KindFlag::STD_VECTOR_VECTOR)
+        _InputArray::KindFlag kind = indices.kind();
+        int vecsz = (int)vec_indices.size();
+        if (kind == _InputArray::KindFlag::STD_VECTOR_VECTOR)
         {
             CV_Assert(indices.depth() == CV_32S);
             std::vector<std::vector<int32_t>>& vec = *(std::vector<std::vector<int32_t>>*)indices.getObj();
-            vec.resize(vec_indices.size());
-            for (size_t i = 0; i < vec_indices.size(); ++i)
+            vec.resize(vecsz);
+            for (int i = 0; i < vecsz; ++i)
             {
                 Mat(1, static_cast<int>(vec_indices[i].size()), CV_32SC1, vec_indices[i].data()).copyTo(vec[i]);
+            }
+        }
+        // std::array<Mat> has fixed size, unsupported
+        else if (kind == _InputArray::KindFlag::STD_VECTOR_MAT)
+        {
+            indices.create(vecsz, 1, CV_32S);
+            for (int i = 0; i < vecsz; i++)
+            {
+                std::vector<int> vi = vec_indices[i];
+                indices.create(1, vi.size(), CV_32S, i);
+                Mat(vi).copyTo(indices.getMat(i));
             }
         }
         else
         {
             indices.create(1, (int)vec_indices.size(), CV_32SC3);
             std::vector<Vec3i>& vec = *(std::vector<Vec3i>*)indices.getObj();
-            for (size_t i = 0; i < vec_indices.size(); ++i)
+            for (int i = 0; i < vecsz; ++i)
             {
                 Vec3i tri;
                 size_t sz = vec_indices[i].size();
