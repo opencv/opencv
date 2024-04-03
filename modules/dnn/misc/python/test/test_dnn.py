@@ -108,21 +108,22 @@ class dnn_test(NewOpenCVTests):
         return self.find_file(filename, [os.environ.get('OPENCV_DNN_TEST_DATA_PATH', os.getcwd()),
                                          os.environ['OPENCV_TEST_DATA_PATH']],
                               required=required)
-    # TODO: Disabled
 
+    # Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
     def checkIETarget(self, backend, target):
         proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
         model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
         net = cv.dnn.readNet(proto, model)
-        try:
-            net.setPreferableBackend(backend)
-            net.setPreferableTarget(target)
-            inp = np.random.standard_normal([1, 2, 10, 11]).astype(np.float32)
-            net.setInput(inp)
-            net.forward()
-        except BaseException:
-            return False
-        return True
+        # try:
+        #     net.setPreferableBackend(backend)
+        #     net.setPreferableTarget(target)
+        #     inp = np.random.standard_normal([1, 2, 10, 11]).astype(np.float32)
+        #     net.setInput(inp)
+        #     net.forward()
+        # except BaseException:
+        #     return False
+        # return True
+        return False
 
     def test_getAvailableTargets(self):
         targets = cv.dnn.getAvailableTargets(cv.dnn.DNN_BACKEND_OPENCV)
@@ -218,37 +219,37 @@ class dnn_test(NewOpenCVTests):
         target2 = target2.reshape(1, height, width, 3)  # to NHWC
         normAssert(self, blob, target2)
 
-    # TODO: Disabled
-    def test_model(self):
-        img_path = self.find_dnn_file("dnn/street.png")
-        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", required=False)
-        config = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", required=False)
-        if weights is None or config is None:
-            raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy_19e3ec3.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
-
-        frame = cv.imread(img_path)
-        model = cv.dnn_DetectionModel(weights, config)
-        model.setInputParams(size=(300, 300), mean=(127.5, 127.5, 127.5), scale=1.0/127.5)
-
-        iouDiff = 0.05
-        confThreshold = 0.0001
-        nmsThreshold = 0
-        scoreDiff = 1e-3
-
-        classIds, confidences, boxes = model.detect(frame, confThreshold, nmsThreshold)
-
-        refClassIds = (7, 15)
-        refConfidences = (0.9998, 0.8793)
-        refBoxes = ((328, 238, 85, 102), (101, 188, 34, 138))
-
-        normAssertDetections(self, refClassIds, refConfidences, refBoxes,
-                             classIds, confidences, boxes,confThreshold, scoreDiff, iouDiff)
-
-        for box in boxes:
-            cv.rectangle(frame, box, (0, 255, 0))
-            cv.rectangle(frame, np.array(box), (0, 255, 0))
-            cv.rectangle(frame, tuple(box), (0, 255, 0))
-            cv.rectangle(frame, list(box), (0, 255, 0))
+    # Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+    # def test_model(self):
+    #     img_path = self.find_dnn_file("dnn/street.png")
+    #     weights = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", required=False)
+    #     config = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", required=False)
+    #     if weights is None or config is None:
+    #         raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy_19e3ec3.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+    #
+    #     frame = cv.imread(img_path)
+    #     model = cv.dnn_DetectionModel(weights, config)
+    #     model.setInputParams(size=(300, 300), mean=(127.5, 127.5, 127.5), scale=1.0/127.5)
+    #
+    #     iouDiff = 0.05
+    #     confThreshold = 0.0001
+    #     nmsThreshold = 0
+    #     scoreDiff = 1e-3
+    #
+    #     classIds, confidences, boxes = model.detect(frame, confThreshold, nmsThreshold)
+    #
+    #     refClassIds = (7, 15)
+    #     refConfidences = (0.9998, 0.8793)
+    #     refBoxes = ((328, 238, 85, 102), (101, 188, 34, 138))
+    #
+    #     normAssertDetections(self, refClassIds, refConfidences, refBoxes,
+    #                          classIds, confidences, boxes,confThreshold, scoreDiff, iouDiff)
+    #
+    #     for box in boxes:
+    #         cv.rectangle(frame, box, (0, 255, 0))
+    #         cv.rectangle(frame, np.array(box), (0, 255, 0))
+    #         cv.rectangle(frame, tuple(box), (0, 255, 0))
+    #         cv.rectangle(frame, list(box), (0, 255, 0))
 
 
     def test_classification_model(self):
@@ -286,51 +287,51 @@ class dnn_test(NewOpenCVTests):
         self.assertTrue(type(out) == tuple, msg='actual type {}'.format(str(type(out))))
         self.assertTrue(np.array(out).shape == (2, 4, 2))
 
-    # TODO: Disabled
-    def test_async(self):
-        timeout = 10*1000*10**6  # in nanoseconds (10 sec)
-        proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
-        model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
-        if proto is None or model is None:
-            raise unittest.SkipTest("Missing DNN test files (dnn/layers/layer_convolution.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
-
-        print('\n')
-        for backend, target in self.dnnBackendsAndTargets:
-            if backend != cv.dnn.DNN_BACKEND_INFERENCE_ENGINE:
-                continue
-
-            printParams(backend, target)
-
-            netSync = cv.dnn.readNet(proto, model)
-            netSync.setPreferableBackend(backend)
-            netSync.setPreferableTarget(target)
-
-            netAsync = cv.dnn.readNet(proto, model)
-            netAsync.setPreferableBackend(backend)
-            netAsync.setPreferableTarget(target)
-
-            # Generate inputs
-            numInputs = 10
-            inputs = []
-            for _ in range(numInputs):
-                inputs.append(np.random.standard_normal([2, 6, 75, 113]).astype(np.float32))
-
-            # Run synchronously
-            refs = []
-            for i in range(numInputs):
-                netSync.setInput(inputs[i])
-                refs.append(netSync.forward())
-
-            # Run asynchronously. To make test more robust, process inputs in the reversed order.
-            outs = []
-            for i in reversed(range(numInputs)):
-                netAsync.setInput(inputs[i])
-                outs.insert(0, netAsync.forwardAsync())
-
-            for i in reversed(range(numInputs)):
-                ret, result = outs[i].get(timeoutNs=float(timeout))
-                self.assertTrue(ret)
-                normAssert(self, refs[i], result, 'Index: %d' % i, 1e-10)
+    # Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+    # def test_async(self):
+    #     timeout = 10*1000*10**6  # in nanoseconds (10 sec)
+    #     proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
+    #     model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
+    #     if proto is None or model is None:
+    #         raise unittest.SkipTest("Missing DNN test files (dnn/layers/layer_convolution.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+    #
+    #     print('\n')
+    #     for backend, target in self.dnnBackendsAndTargets:
+    #         if backend != cv.dnn.DNN_BACKEND_INFERENCE_ENGINE:
+    #             continue
+    #
+    #         printParams(backend, target)
+    #
+    #         netSync = cv.dnn.readNet(proto, model)
+    #         netSync.setPreferableBackend(backend)
+    #         netSync.setPreferableTarget(target)
+    #
+    #         netAsync = cv.dnn.readNet(proto, model)
+    #         netAsync.setPreferableBackend(backend)
+    #         netAsync.setPreferableTarget(target)
+    #
+    #         # Generate inputs
+    #         numInputs = 10
+    #         inputs = []
+    #         for _ in range(numInputs):
+    #             inputs.append(np.random.standard_normal([2, 6, 75, 113]).astype(np.float32))
+    #
+    #         # Run synchronously
+    #         refs = []
+    #         for i in range(numInputs):
+    #             netSync.setInput(inputs[i])
+    #             refs.append(netSync.forward())
+    #
+    #         # Run asynchronously. To make test more robust, process inputs in the reversed order.
+    #         outs = []
+    #         for i in reversed(range(numInputs)):
+    #             netAsync.setInput(inputs[i])
+    #             outs.insert(0, netAsync.forwardAsync())
+    #
+    #         for i in reversed(range(numInputs)):
+    #             ret, result = outs[i].get(timeoutNs=float(timeout))
+    #             self.assertTrue(ret)
+    #             normAssert(self, refs[i], result, 'Index: %d' % i, 1e-10)
 
     def test_nms(self):
         confs = (1, 1)

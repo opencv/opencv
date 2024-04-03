@@ -120,18 +120,23 @@ PERF_TEST_P_(DNNTestNetwork, Inception_5h)
     processNet("dnn/tensorflow_inception_graph.pb", "", cv::Size(224, 224), "softmax2");
 }
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 PERF_TEST_P_(DNNTestNetwork, SSD)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
     processNet("onnx/models/ssd-12.onnx", "", cv::Size(300, 300));
 }
-// TODO: Disabled
+#endif
+
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1)
 {
     processNet("onnx/models/ssd_mobilenet_v1_12.onnx", "", cv::Size(300, 300));
 }
+#endif
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 {
@@ -148,7 +153,8 @@ PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
     processNet("onnx/models/densenet-12.onnx", "", cv::Size(224, 224));
 }
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
@@ -159,6 +165,7 @@ PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt", cv::Size(368, 368));
 }
+#endif
 
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {

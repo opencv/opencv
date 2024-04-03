@@ -408,7 +408,8 @@ TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
         nmsAcrossClasses);
 }
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(Test_Model, DetectionOutput)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
@@ -469,8 +470,10 @@ TEST_P(Test_Model, DetectionOutput)
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
 }
+#endif
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(Test_Model, DetectionMobilenetSSD)
 {
     Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
@@ -527,6 +530,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
 }
+#endif
 
 TEST_P(Test_Model, Keypoints_pose)
 {
@@ -595,7 +599,8 @@ TEST_P(Test_Model, Keypoints_face)
     testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);
 }
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(Test_Model, Detection_normalized)
 {
     std::string img_path = _tf("grace_hopper_227.png");
@@ -633,8 +638,10 @@ TEST_P(Test_Model, Detection_normalized)
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
 }
+#endif
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(Test_Model, Segmentation)
 {
     applyTestTag(
@@ -686,6 +693,7 @@ TEST_P(Test_Model, Segmentation)
 
     testSegmentationModel(weights_file, "", inp, exp, norm, size, mean, scale, swapRB);
 }
+#endif
 
 TEST_P(Test_Model, TextRecognition)
 {

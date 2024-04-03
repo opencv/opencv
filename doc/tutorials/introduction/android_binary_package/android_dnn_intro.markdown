@@ -11,7 +11,7 @@
 | -: |:--------------------|
 | Original author | Dmitry Kurtaev      |
 | Compatibility | 4.9 <= OpenCV < 5.0 |
-> OpenCV >= 5.0 remove Caffe importer. This tutorial is not compatible with OpenCV 5.0 and later.
+> OpenCV >= 5.0 remove Caffe importer https://github.com/opencv/opencv/issues/25314. This tutorial is not compatible with OpenCV 5.0 and later. 
 
 ## Introduction
 In this tutorial you'll know how to run deep learning networks on Android device

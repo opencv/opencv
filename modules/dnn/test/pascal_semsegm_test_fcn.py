@@ -219,7 +219,7 @@ if __name__ == "__main__":
     df = PASCALDataFetch(args.imgs_dir, args.segm_dir, args.val_names, args.cls_file, prep)
 
     fw = [CaffeModel(args.prototxt, args.caffemodel, args.in_blob, args.out_blob, True),
-          # TODO: Disabled due to lack of support for ONNX models
+          # Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
           # DnnCaffeModel(args.caffemodel, '', args.out_blob)
           ]
 

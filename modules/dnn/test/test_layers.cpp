@@ -697,7 +697,8 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_DWconv_Prelu, Combine(Values(3, 6), Val
 // ./ModelOptimizer -w /path/to/caffemodel -d /path/to/prototxt \
 //                  -p FP32 -i -b ${batch_size} -o /path/to/output/folder
 typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Convolution_DLDT;
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
 {
     const Backend backendId = get<0>(GetParam());
@@ -737,6 +738,7 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     else
         ASSERT_EQ(net.getLayer(outLayers[0])->type, "Result");
 }
+#endif
 
 TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
 {

@@ -152,7 +152,8 @@ TEST_P(DNNTestNetwork, Inception_5h)
     expectNoFallbacksFromCUDA(net);
 }
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
@@ -165,8 +166,10 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
                inp, "detection_out", scoreDiff, iouDiff, detectionConfThresh);
     expectNoFallbacksFromIE(net);
 }
+#endif
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -207,6 +210,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
                 inp, "detection_out", scoreDiff, iouDiff);
     expectNoFallbacksFromIE(net);
 }
+#endif
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 {
@@ -283,7 +287,8 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
     expectNoFallbacksFromIE(net);
 }
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(DNNTestNetwork, SSD)
 {
     applyTestTag(
@@ -316,8 +321,10 @@ TEST_P(DNNTestNetwork, SSD)
                iouDiff, 0.2, false);
     expectNoFallbacksFromIE(net);
 }
+# endif
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(DNNTestNetwork, OpenPose_pose_coco)
 {
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
@@ -335,8 +342,10 @@ TEST_P(DNNTestNetwork, OpenPose_pose_coco)
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }
+#endif
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
 {
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
@@ -355,8 +364,10 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }
+#endif
 
-// TODO: Disabled
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
@@ -373,6 +384,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }
+#endif
 
 TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {
