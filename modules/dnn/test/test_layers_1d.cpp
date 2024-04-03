@@ -595,7 +595,7 @@ TEST_P(Layer_FullyConnected_Test, Accuracy)
 INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
                         testing::Values(
                             std::vector<int>({}),
-                            std::vector<int>({1}),
+                            std::vector<int>({1})
 ));
 
 }}
