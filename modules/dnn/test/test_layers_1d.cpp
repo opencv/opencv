@@ -307,4 +307,46 @@ INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_Split_Test,
                             std::vector<int>({4, 5})
 ));
 
+typedef testing::TestWithParam<tuple<std::vector<int>, std::vector<int>>> Layer_Expand_Test;
+TEST_P(Layer_Expand_Test, Accuracy_ND) {
+
+    std::vector<int> input_shape = get<0>(GetParam());
+    std::vector<int> target_shape = get<1>(GetParam());
+    if (input_shape.size() >= target_shape.size()) // Skip if input shape is already larger than target shape
+        return;
+
+    LayerParams lp;
+    lp.type = "Expand";
+    lp.name = "ExpandLayer";
+    lp.set("shape", DictValue::arrayInt(&target_shape[0], target_shape.size()));
+
+    Ptr<ExpandLayer> layer = ExpandLayer::create(lp);
+    Mat input(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+
+    cv::Mat output_ref(target_shape, CV_32F, input.data);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Expand_Test, Combine(
+/*input blob shape*/ testing::Values(
+        std::vector<int>({}),
+        std::vector<int>({1}),
+        std::vector<int>({1, 1}),
+        std::vector<int>({1, 1, 1})
+    ),
+/*output blob shape*/ testing::Values(
+        std::vector<int>({1}),
+        std::vector<int>({1, 1}),
+        std::vector<int>({1, 1, 1}),
+        std::vector<int>({1, 1, 1, 1})
+    )
+));
+
 }}
