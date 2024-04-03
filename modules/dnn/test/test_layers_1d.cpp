@@ -378,7 +378,7 @@ TEST_P(Layer_Concat_Test, Accuracy_01D)
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Concat_Test,
 /*input blob shape*/    testing::Values(
-    make_tuple(std::vector<int>({})),
-    make_tuple(std::vector<int>({1}))
+    std::vector<int>({}),
+    std::vector<int>({1})
 ));
 }}
