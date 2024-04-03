@@ -7,9 +7,9 @@
 
 @see @ref tutorial_table_of_content_dnn
 
-|    |                     |
-| -: |:--------------------|
-| Original author | Dmitry Kurtaev      |
+|    |    |
+| -: | :- |
+| Original author | Dmitry Kurtaev |
 | Compatibility | 4.9 <= OpenCV < 5.0 |
 > OpenCV >= 5.0 remove Caffe importer https://github.com/opencv/opencv/issues/25314. This tutorial is not compatible with OpenCV 5.0 and later. 
 

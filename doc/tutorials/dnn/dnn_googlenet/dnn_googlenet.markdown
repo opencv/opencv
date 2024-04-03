@@ -5,10 +5,10 @@ Load ONNX framework models  {#tutorial_dnn_googlenet}
 
 @next_tutorial{tutorial_dnn_openvino}
 
-|    |                      |
-| -: |:---------------------|
+|    |    |
+| -: | :- |
 | Original author | Vitaliy Lyudvichenko |
-| Compatibility | OpenCV >= 4.5.4        |
+| Compatibility | OpenCV >= 4.5.4 |
 
 Introduction
 ------------

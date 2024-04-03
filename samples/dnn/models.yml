@@ -200,7 +200,7 @@ squeezenet:
   load_info:
     url: "https://github.com/onnx/models/raw/f884b33c3e2371952aad7ea091898f418c830fe5/vision/classification/squeezenet/model/squeezenet1.0-8.tar.gz"
     sha1: "57348321d4d460c07c41af814def3abe728b3a03"
-  model: "model.onnx"
+  model: "squeezenet.onnx"
   config: ""
   mean: [0, 0, 0]
   scale: 1.0
