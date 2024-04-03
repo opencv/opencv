@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
+
+// Disabled due to the lack of the model support. https://github.com/opencv/opencv/issues/25314
+#if 0
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
@@ -126,3 +129,4 @@ int main(int argc, char **argv)
     waitKey();
     return 0;
 }
+#endif
