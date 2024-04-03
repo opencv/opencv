@@ -360,6 +360,79 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Cast_Int, Combine(
     dnnBackendsAndTargets()
 ));
 
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Pad_Int;
+TEST_P(Test_Pad_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    int64_t low = 1000000;
+    Mat input(inShape, matType);
+    cv::randu(input, low, low + 100);
+    std::vector<int> paddings{0, 0, 0, 0, 1, 0, 0, 1};
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Padding";
+    lp.name = "testLayer";
+    lp.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
+    lp.set<double>("value", 25);
+
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size[0], 2);
+    EXPECT_EQ(re.size[1], 3);
+    EXPECT_EQ(re.size[2], 5);
+    EXPECT_EQ(re.size[3], 6);
+
+    std::vector<int> reIndices(4);
+    std::vector<int> inIndices(4);
+    for (int i0 = 0; i0 < re.size[0]; ++i0)
+    {
+        reIndices[0] = i0;
+        inIndices[0] = i0;
+        for (int i1 = 0; i1 < re.size[1]; ++i1)
+        {
+            reIndices[1] = i1;
+            inIndices[1] = i1;
+            for (int i2 = 0; i2 < re.size[2]; ++i2)
+            {
+                reIndices[2] = i2;
+                inIndices[2] = i2 - 1;
+                for (int i3 = 0; i3 < re.size[3]; ++i3)
+                {
+                    reIndices[3] = i3;
+                    inIndices[3] = i3;
+                    if (i2 < 1 || i3 >= input.size[3])
+                    {
+                        EXPECT_EQ(getValueAt(re, reIndices.data()), 25l);
+                    }
+                    else
+                    {
+                        EXPECT_EQ(getValueAt(re, reIndices.data()), getValueAt(input, inIndices.data()));
+                    }
+                }
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Pad_Int, Combine(
+    testing::Values(CV_32S, CV_64S),
+    dnnBackendsAndTargets()
+));
+
 typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Slice_Int;
 TEST_P(Test_Slice_Int, random)
 {
