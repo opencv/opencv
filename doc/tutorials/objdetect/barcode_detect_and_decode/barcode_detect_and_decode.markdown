@@ -5,9 +5,11 @@ Barcode Recognition    {#tutorial_barcode_detect_and_decode}
 
 @prev_tutorial{tutorial_aruco_board_detection}
 
-|    |    |
-| -: | :- |
-| Compatibility | OpenCV >= 4.8 |
+|    |                     |
+| -: |:--------------------|
+| Compatibility | 4.8 <= OpenCV < 5.0 |
+> OpenCV >= 5.0 remove Caffe importer. This tutorial is not compatible with OpenCV 5.0 and later.
+
 
 Goal
 ----

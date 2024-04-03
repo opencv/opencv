@@ -219,7 +219,9 @@ if __name__ == "__main__":
     df = PASCALDataFetch(args.imgs_dir, args.segm_dir, args.val_names, args.cls_file, prep)
 
     fw = [CaffeModel(args.prototxt, args.caffemodel, args.in_blob, args.out_blob, True),
-          DnnCaffeModel(args.prototxt, args.caffemodel, '', args.out_blob)]
+          # TODO: Disabled due to lack of support for ONNX models
+          # DnnCaffeModel(args.caffemodel, '', args.out_blob)
+          ]
 
     segm_eval = SemSegmEvaluation(args.log)
     segm_eval.process(fw, df)

@@ -634,6 +634,7 @@ TEST_P(Test_Model, Detection_normalized)
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
 }
 
+// TODO: Disabled
 TEST_P(Test_Model, Segmentation)
 {
     applyTestTag(
@@ -675,9 +676,7 @@ TEST_P(Test_Model, Segmentation)
     }
 
     std::string inp = _tf("dog416.png");
-    // TODO: converted manually to ONNX
-    std::string weights_file = _tf("fcn8s-heavy-pascal.");
-    std::string config_file = _tf("fcn8s-heavy-pascal.", false);
+    std::string weights_file = _tf("onnx/models/fcn-resnet50-12.onnx");
     std::string exp = _tf("segmentation_exp.png");
 
     Size size{128, 128};
@@ -685,7 +684,7 @@ TEST_P(Test_Model, Segmentation)
     Scalar mean = Scalar();
     bool swapRB = false;
 
-    testSegmentationModel(weights_file, config_file, inp, exp, norm, size, mean, scale, swapRB);
+    testSegmentationModel(weights_file, "", inp, exp, norm, size, mean, scale, swapRB);
 }
 
 TEST_P(Test_Model, TextRecognition)
