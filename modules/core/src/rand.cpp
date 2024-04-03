@@ -544,7 +544,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
 
     if( disttype == UNIFORM )
     {
-        _parambuf.allocate((sizeof(DivStruct)+sizeof(double)-1)/sizeof(double) + cn*2 + max(cn, n1) + max(cn, n2));
+        _parambuf.allocate(cn*(sizeof(DivStruct)+sizeof(double)-1)/sizeof(double) + cn*4);
         double* parambuf = _parambuf.data();
         double* p1 = _param1.ptr<double>();
         double* p2 = _param2.ptr<double>();
@@ -570,6 +570,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         if( CV_IS_INT_TYPE(depth) )
         {
             Vec2l* ip = (Vec2l*)(parambuf + cn*2);
+            CV_DbgCheckLT((size_t)(cn*4 - 1), _parambuf.size(), "");
             for( j = 0, fast_int_mode = true; j < cn; j++ )
             {
                 double a = std::min(p1[j], p2[j]);
@@ -584,7 +585,6 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                                  depth == CV_8S ? 128. : depth == CV_16S ? 32768. : depth == CV_32U ? (double)UINT_MAX :
                                  depth == CV_32S ? (double)INT_MAX : (double)INT64_MAX);
                 }
-                CV_DbgCheckLT((size_t)(cn*2 + j*2 + 1), _parambuf.size(), "");
                 ip[j][1] = (int64_t)ceil(a);
                 int64_t idiff = ip[j][0] = (int64_t)floor(b) - ip[j][1] - 1;
                 if (idiff < 0)
@@ -616,6 +616,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
             if( !fast_int_mode )
             {
                 DivStruct* ds = (DivStruct*)(ip + cn);
+                CV_DbgCheckLE((void*)(ds + cn), (void*)(parambuf + _parambuf.size()), "Last byte check");
                 for( j = 0; j < cn; j++ )
                 {
                     ds[j].delta = ip[j][1];
@@ -646,12 +647,12 @@ void RNG::fill( InputOutputArray _mat, int disttype,
             // so that a signed 32/64-bit integer X is transformed to
             // the range [param1.val[i], param2.val[i]) using
             // dparam[0][i]*X + dparam[1][i]
+            CV_DbgCheckLT((size_t)(cn*4 - 1), _parambuf.size(), "");
             if( depth != CV_64F )
             {
                 Vec2f* fp = (Vec2f*)(parambuf + cn*2);
                 for( j = 0; j < cn; j++ )
                 {
-                    CV_DbgCheckLT((size_t)(cn*2 + j*2 + 1), _parambuf.size(), "");
                     fp[j][0] = (float)(std::min(maxdiff, p2[j] - p1[j])*scale);
                     fp[j][1] = (float)((p2[j] + p1[j])*0.5);
                 }
@@ -662,7 +663,6 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 Vec2d* dp = (Vec2d*)(parambuf + cn*2);
                 for( j = 0; j < cn; j++ )
                 {
-                    CV_DbgCheckLT((size_t)(cn*2 + j*2 + 1), _parambuf.size(), "");
                     dp[j][0] = std::min(DBL_MAX, p2[j] - p1[j])*scale;
                     dp[j][1] = ((p2[j] + p1[j])*0.5);
                 }
