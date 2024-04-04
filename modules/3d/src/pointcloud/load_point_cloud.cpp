@@ -210,8 +210,8 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
 
     if (texCoords.needed())
     {
-        int ch = texCoords.channels();
-        Mat texMat = Mat(1, static_cast<int>(vec_texCoords.size()), CV_MAKETYPE(CV_32F, ch), vec_texCoords.data());
+        int ch = texCoords.empty() ? 0 : texCoords.channels();
+        Mat texMat = Mat(1, static_cast<int>(vec_texCoords.size()), CV_MAKETYPE(CV_32F, nTexCoords), vec_texCoords.data());
         if (ch == nTexCoords)
         {
             texMat.copyTo(texCoords);
@@ -226,10 +226,14 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
                 std::vector<Mat> marr = { varr[0], varr[1] };
                 cv::merge(marr, newTexMat);
             }
-            if (ch == 3 && nTexCoords == 2)
+            else if (ch == 3 && nTexCoords == 2)
             {
                 std::vector<Mat> marr = { varr[0], varr[1], Mat::zeros(varr[0].size(), CV_32F) };
                 cv::merge(marr, newTexMat);
+            }
+            else
+            {
+                newTexMat = texMat;
             }
             newTexMat.copyTo(texCoords);
         }
