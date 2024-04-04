@@ -381,4 +381,53 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Concat_Test,
     std::vector<int>({}),
     std::vector<int>({1})
 ));
+
+typedef testing::TestWithParam<tuple<std::vector<int>, int>> Layer_Softmax_Test;
+TEST_P(Layer_Softmax_Test, Accuracy_01D) {
+
+    int axis = get<1>(GetParam());
+    std::vector<int> input_shape = get<0>(GetParam());
+    if ((input_shape.size() == 0 && axis == 1) ||
+        (!input_shape.empty() && input_shape.size() == 2 && input_shape[0] > 1 && axis == 1) ||
+        (!input_shape.empty() && input_shape[0] > 1 && axis == 0)) // skip since not valid case
+        return;
+
+    LayerParams lp;
+    lp.type = "Softmax";
+    lp.name = "softmaxLayer";
+    lp.set("axis", axis);
+    Ptr<SoftmaxLayer> layer = SoftmaxLayer::create(lp);
+
+    Mat input = Mat(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+
+    Mat output_ref;
+    cv::exp(input, output_ref);
+    if (axis == 1){
+        cv::divide(output_ref, cv::sum(output_ref), output_ref);
+    } else {
+        cv::divide(output_ref, output_ref, output_ref);
+    }
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Softmax_Test, Combine(
+    /*input blob shape*/
+    testing::Values(
+        std::vector<int>({}),
+        std::vector<int>({1}),
+        std::vector<int>({4}),
+        std::vector<int>({1, 4}),
+        std::vector<int>({4, 1})
+        ),
+    /*Axis */
+    testing::Values(0, 1)
+));
+
 }}
