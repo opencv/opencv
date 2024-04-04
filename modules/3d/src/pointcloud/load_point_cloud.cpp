@@ -180,7 +180,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
             for (int i = 0; i < vecsz; i++)
             {
                 std::vector<int> vi = vec_indices[i];
-                indices.create(1, vi.size(), CV_32S, i);
+                indices.create(1, (int)vi.size(), CV_32S, i);
                 Mat(vi).copyTo(indices.getMat(i));
             }
         }
