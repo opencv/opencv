@@ -108,7 +108,10 @@ public:
                 }
             }
 
-            axisSum += curShape[cAxis];
+            axisSum += (!curShape.empty()) ? curShape[cAxis] : 1;
+        }
+        if (inputs[0].empty()){
+            outputs[0] = MatShape(1);
         }
         outputs[0][cAxis] = axisSum;
         return false;
