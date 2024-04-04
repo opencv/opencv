@@ -2630,6 +2630,25 @@ TEST_P(Test_ONNX_layers, CumSum)
     testONNXModels("cumsum_1d_exclusive_1_reverse");
     testONNXModels("cumsum_2d_dim_1");
     testONNXModels("cumsum_3d_dim_2");
+    testONNXModels("cumsum_3d_dim_2_int32");
+    testONNXModels("cumsum_3d_dim_2_int64");
+}
+
+TEST_P(Test_ONNX_layers, ReduceSumInt)
+{
+    testONNXModels("reduce_sum_int64");
+}
+
+TEST_P(Test_ONNX_layers, ScatterInt)
+{
+    testONNXModels("scatter_int32", npy, 0, 0, false, true, 3);
+    testONNXModels("scatter_int64", npy, 0, 0, false, true, 3);
+}
+
+TEST_P(Test_ONNX_layers, TileInt)
+{
+    testONNXModels("tile_int32");
+    testONNXModels("tile_int64");
 }
 
 static void testYOLO(const std::string& weightPath, const std::vector<int>& refClassIds,

@@ -86,8 +86,8 @@ public:
             {
                 tmp = tmp.reshape(0, dims);
                 tmp = cv::repeat(tmp, 1, rep_i);
-                dims *= out_shape[i];
             }
+            dims *= out_shape[i];
         }
         tmp = tmp.reshape(0, out_shape);
 

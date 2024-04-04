@@ -1194,6 +1194,9 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
     int num_inputs = node_proto.input_size();
     CV_Check(num_inputs, num_inputs >= 1 && num_inputs <= 2, "DNN/ONNX: Reduce layers should have at least one input and at most two inputs");
 
+    if (num_inputs >= 2)
+        CV_CheckTrue(constBlobs.find(node_proto.input(1)) != constBlobs.end(), "Reduce layer doesn't support non contant axes");
+
     // "axes" is turned to one of the inputs since opset 18,
     // except for ReduceSum, which has "axes" input since opset 13.
     if (!layerParams.has("axes") && num_inputs == 2 && constBlobs.find(node_proto.input(1)) != constBlobs.end()) {
