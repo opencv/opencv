@@ -17,6 +17,8 @@
 
 #ifdef HAVE_CAMV4L2
 
+// #define DUMP_CAMERA_FRAME
+
 #include "test_precomp.hpp"
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <linux/videodev2.h>
@@ -113,6 +115,13 @@ TEST_P(videoio_v4l2, formats)
             EXPECT_EQ(sz, img.size());
             EXPECT_EQ(3, img.channels());
             EXPECT_EQ(CV_8U, img.depth());
+#ifdef DUMP_CAMERA_FRAME
+            std::string img_name = "frame_" + fourccToString(params.pixel_format);
+            // V4L2 flag for big-endian formats
+            if(params.pixel_format & (1 << 31))
+                img_name += "-BE";
+            cv::imwrite(img_name + ".png", img);
+#endif
         }
     }
 }
