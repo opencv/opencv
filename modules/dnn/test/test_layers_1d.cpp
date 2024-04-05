@@ -540,7 +540,7 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
 
     float out_value = reduceOperation(input, reduce_operation);
 
-    cv::Mat output_ref = cv::Mat(input_shape.size(), (input_shape.size() <= 1) ? input_shape.data() : std::vector<int>({1, 1}).data(), CV_32F, out_value);
+    cv::Mat output_ref(std::vector<int>(input_shape.size(), 1), CV_32F, out_value);
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
 
