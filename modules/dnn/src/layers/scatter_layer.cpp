@@ -94,6 +94,7 @@ public:
         const Mat& indices = inputs[1];
         const Mat& updates = inputs[2];
         Mat& out = outputs[0];
+
         indexTypeDispatch(outputs[0].type(), indices.type(), data, indices, updates, out);
     }
 
