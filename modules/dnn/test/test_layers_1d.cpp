@@ -430,4 +430,63 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Softmax_Test, Combine(
     testing::Values(0, 1)
 ));
 
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Scatter_Test;
+TEST_P(Layer_Scatter_Test, Accuracy1D) {
+
+    std::vector<int> input_shape = get<0>(GetParam());
+    std::string opr = get<1>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Scatter";
+    lp.name = "addLayer";
+    lp.set("axis", 0);
+    lp.set("reduction", opr);
+    Ptr<ScatterLayer> layer = ScatterLayer::create(lp);
+
+    float data[] = {1, 2, 3, 4};
+    cv::Mat input = cv::Mat(input_shape.size(), input_shape.data(), CV_32F, data);
+    // cv::randn(input, 0.0, 1.0);
+    std::cout << "input: " << input << std::endl;
+
+    int indices[] = {3, 2, 1, 0};
+    cv::Mat indices_mat(input_shape.size(), input_shape.data(), CV_32S, indices);
+    cv::Mat output(input_shape.size(), input_shape.data(), CV_32F, 0.0);
+
+    // create reference output
+    cv::Mat output_ref(input_shape, CV_32F, 0.0);
+    for (int i = 0; i < input_shape[0]; i++){
+        output_ref.at<float>(indices[i]) = input.at<float>(i);
+    }
+    std::cout << "output_ref: " << output_ref << std::endl;
+
+    if (opr == "add"){
+        output_ref += output;
+    } else if (opr == "mul"){
+        output_ref = output.mul(output_ref);
+    } else if (opr == "max"){
+        cv::max(output_ref, output, output_ref);
+    } else if (opr == "min"){
+        cv::min(output_ref, output, output_ref);
+    }
+
+    std::vector<Mat> inputs{output, indices_mat, input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    std::cout << "input: " << input << std::endl;
+    std::cout << "indices: " << indices_mat << std::endl;
+    std::cout << "output[0]: " << outputs[0] << std::endl;
+    std::cout << "output_ref: " << output_ref << std::endl;
+
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scatter_Test, Combine(
+/*input blob shape*/    testing::Values(std::vector<int>{4}),
+/*reduce*/              Values("none", "add", "mul", "max", "min")
+// /*operation*/           testing::Values(0, 1),
+));
+
+
+
 }}
