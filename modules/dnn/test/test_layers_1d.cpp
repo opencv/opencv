@@ -577,7 +577,10 @@ TEST_P(Layer_FullyConnected_Test, Accuracy)
     lp.set("bias_term", false);
     lp.set("axis", 0);
 
-    Mat weights(1, 1, CV_32F, 1.0);
+    RNG& rng = TS::ptr()->get_rng();
+    float inp_value = rng.uniform(0.0, 10.0); // random uniform value
+
+    Mat weights(1, 1, CV_32F, inp_value);
     lp.blobs.push_back(weights);
 
     Ptr<Layer> layer = LayerFactory::createLayerInstance("InnerProduct", lp);
@@ -585,7 +588,7 @@ TEST_P(Layer_FullyConnected_Test, Accuracy)
     std::vector<int> input_shape = get<0>(GetParam());
 
     Mat input(input_shape.size(), input_shape.data(), CV_32F, 3.0);
-    Mat output_ref(input_shape.size(), input_shape.data(), CV_32F, 3.0);
+    Mat output_ref(input_shape.size(), input_shape.data(), CV_32F, inp_value * 3.0);
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
