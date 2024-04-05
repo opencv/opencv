@@ -31,10 +31,10 @@ using namespace cv::dnn;
 // Command-line keys to parse the input arguments
 std::string keys =
     "{ help  h                          | | Print help message. }"
-    "{ input i                     | | Path to an input image. }"
+    "{ input i                     | box.png | Path to an input image. }"
     "{ detModelPath dmp                 | | Path to a binary model file for detection (East and DB model architectures are supported). }"
     "{ recModelPath rmp                 | | Path to a binary .onnx model for recognition. }"
-    "{ detModelConfig dmc              | east | Specify detection model config: east/db }"
+    "{ detModelConfig dmc              | db | Specify detection model config: db/east }"
     "{ inputHeight ih                   |736| Image height for the model input. Should be multiple of 32. }"
     "{ inputWidth iw                    |736| Image width for the model input. Should be multiple of 32. }"
     "{ thr                  | 0.5 | Confidence threshold for EAST detector. }"
@@ -52,7 +52,8 @@ void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result
 int main(int argc, char** argv) {
     // Setting up command-line parser with the specified keys
     CommandLineParser parser(argc, argv, keys);
-    parser.about("Text Detection and Recognition using OpenCV");
+    parser.about("Text Detection and Recognition using OpenCV"
+                 "Example: ./example_dnn_text_detection -rmp=<path to ResNet_CTC.onnx> -dmp=<path to DB_IC15_resnet50.onnx");
 
     // Display help message if no arguments are provided or 'help' is requested
     if (argc == 1 || parser.has("help")) {
