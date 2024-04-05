@@ -991,7 +991,7 @@ class IVideoWriter;
 Check @ref tutorial_video_write "the corresponding tutorial" for more details
 */
 
-/** @example samples/cpp/videowriter_basic.cpp
+/** @example samples/cpp/videowriter.cpp
 An example using VideoCapture and VideoWriter class
 */
 
