@@ -27,7 +27,6 @@ public:
 
         axis = params.get<int>("axis", 0);
         String reduction_name = toLowerCase(params.get<String>("reduction", "none"));
-        std::cout << "reduction_name: " << reduction_name << std::endl;
         if (reduction_name == "none")
             reduction = REDUCTION::NONE;
         else if (reduction_name == "add")
@@ -52,12 +51,6 @@ public:
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        std::cout << "insid ScatterLayerImpl::getMemoryShapes" << std::endl;
-        for (auto &input : inputs)
-        {
-            std::cout << "input shape: " << input << std::endl;
-        }
-
         CV_CheckEQ(inputs.size(), 3ull, "Scatter: require three inputs.");
         CV_CheckEQ(inputs[0].size(), inputs[1].size(), "Scatter: input data should have the same ndim with indices.");
         CV_CheckEQ(inputs[0].size(), inputs[2].size(), "Scatter: input data should have the same ndim with updates.");
@@ -66,7 +59,6 @@ public:
             CV_CheckGE(inputs[0][i], inputs[1][i], "Scatter: each dim of input data should be greater than (or equal to) indices'.");
             CV_CheckEQ(inputs[1][i], inputs[2][i], "Scatter: each dim of indices should be equal to updates'.");
         }
-        std::cout << "output shape: " << inputs[0] << std::endl;
         outputs.assign(1, inputs[0]);
         return false;
     }
@@ -102,10 +94,6 @@ public:
         const Mat& indices = inputs[1];
         const Mat& updates = inputs[2];
         Mat& out = outputs[0];
-
-        std::cout << "output type: " << out.type() << std::endl;
-        std::cout << "data type: " << data.type() << std::endl;
-
         indexTypeDispatch(outputs[0].type(), indices.type(), data, indices, updates, out);
     }
 
@@ -114,7 +102,6 @@ public:
         input_mat.copyTo(output_mat);
 
         const int ndims = input_mat.dims;
-        std::cout << "ndims: " << ndims << std::endl;
 
         const auto &input_mat_shape = shape(input_mat);
         std::vector<size_t> input_mat_step(ndims);
