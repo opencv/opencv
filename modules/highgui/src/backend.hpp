@@ -106,6 +106,7 @@ public:
 
     virtual int waitKeyEx(int delay /*= 0*/) = 0;
     virtual int pollKey() = 0;
+    virtual std::string currentUIFramework() = 0;
 };
 
 std::shared_ptr<UIBackend>& getCurrentUIBackend();

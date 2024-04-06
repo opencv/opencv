@@ -1091,6 +1091,16 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 #endif
 }
 
+std::string cv::currentUIFramework()
+{
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        return backend->currentUIFramework();
+    }
+    return "";
+}
+
 // Without OpenGL
 
 #ifndef HAVE_OPENGL

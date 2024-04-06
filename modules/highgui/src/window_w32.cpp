@@ -3004,6 +3004,11 @@ public:
     {
         return pollKey_W32();
     }
+
+    std::string currentUIFramework()
+    {
+        return "WIN32";
+    }
 };  // Win32BackendUI
 
 static
