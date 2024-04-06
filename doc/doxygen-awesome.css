@@ -228,6 +228,7 @@ h1, h2, h3, h4, h5 {
 
 p, div, table, dl {
     font-size: var(--page-font-size);
+    white-space: normal;
 }
 
 a:link, a:visited, a:hover, a:focus, a:active {
