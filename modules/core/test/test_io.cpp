@@ -1936,5 +1936,53 @@ TEST(Core_InputOutput, FileStorage_invalid_path_regression_21448_JSON)
     fs.release();
 }
 
+// see https://github.com/opencv/opencv/issues/25073
+typedef testing::TestWithParam< std::string > Core_InputOutput_regression_25073;
+
+TEST_P(Core_InputOutput_regression_25073, my_double)
+{
+    cv::String res = "";
+    double my_double = 0.5;
+
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "my_double" << my_double );
+    EXPECT_NO_THROW( fs << "my_int" << 5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.5"), String::npos ) << res; // Found "0.5"
+    EXPECT_EQ( res.find("5.0"), String::npos ) << res; // Not Found "5.000000000000000000e-01"
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_regression_25073, my_float)
+{
+    cv::String res = "";
+    float my_float = 0.5;
+
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "my_float" << my_float );
+    EXPECT_NO_THROW( fs << "my_int" << 5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.5"), String::npos ) << res; // Found "0.5"
+    EXPECT_EQ( res.find("5.0"), String::npos ) << res; // Not Found "5.00000000e-01",
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_regression_25073, my_float16)
+{
+    cv::String res = "";
+    cv::float16_t my_float16(0.5);
+
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "my_float16" << my_float16 );
+    EXPECT_NO_THROW( fs << "my_int" << 5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.5"), String::npos ) << res; // Found "0.5".
+    EXPECT_EQ( res.find("5.0"), String::npos ) << res; // Not Found "5.0000e-01".
+    fs.release();
+}
+
+INSTANTIATE_TEST_CASE_P( /*nothing*/,
+    Core_InputOutput_regression_25073,
+    Values("test.json", "test.xml", "test.yml") );
 
 }} // namespace
