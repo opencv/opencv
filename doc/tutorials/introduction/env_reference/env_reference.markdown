@@ -123,7 +123,7 @@ Some modules have multiple available backends, following variables allow choosin
 | OPENCV_PARALLEL_PRIORITY_LIST | string, `,`-separated | | list of backends in priority order |
 | OPENCV_UI_BACKEND | string | | choose highgui backend for window rendering (one of `GTK`, `GTK3`, `GTK2`, `QT`, `WIN32`) |
 | OPENCV_UI_PRIORITY_${NAME} | num | | set highgui backend priority, default is 1000 |
-| OPENCV_UI_PRIORITY_LIST | string, `,`-separated | | list of hioghgui backends in priority order |
+| OPENCV_UI_PRIORITY_LIST | string, `,`-separated | | list of highgui backends in priority order |
 | OPENCV_VIDEOIO_PRIORITY_${NAME} | num | | set videoio backend priority, default is 1000 |
 | OPENCV_VIDEOIO_PRIORITY_LIST | string, `,`-separated | | list of videoio backends in priority order |
 
