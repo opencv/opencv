@@ -585,8 +585,18 @@ CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
 /** @brief Checks for the presence of at least one non-zero array element.
 
 The function returns whether there are non-zero elements in src
+
+The function do not work with multi-channel arrays. If you need to check non-zero array
+elements across all the channels, use Mat::reshape first to reinterpret the array as
+single-channel. Or you may extract the particular channel using either extractImageCOI , or
+mixChannels , or split .
+
+@note
+- If the location of non-zero array elements is important, @ref findNonZero is helpful.
+- If the count of non-zero array elements is important, @ref countNonZero is helpful.
 @param src single-channel array.
 @sa  mean, meanStdDev, norm, minMaxLoc, calcCovarMatrix
+@sa  findNonZero, countNonZero
 */
 CV_EXPORTS_W bool hasNonZero( InputArray src );
 
@@ -594,8 +604,18 @@ CV_EXPORTS_W bool hasNonZero( InputArray src );
 
 The function returns the number of non-zero elements in src :
 \f[\sum _{I: \; \texttt{src} (I) \ne0 } 1\f]
+
+The function do not work with multi-channel arrays. If you need to count non-zero array
+elements across all the channels, use Mat::reshape first to reinterpret the array as
+single-channel. Or you may extract the particular channel using either extractImageCOI , or
+mixChannels , or split .
+
+@note
+- If only whether there are non-zero elements is important, @ref hasNonZero is helpful.
+- If the location of non-zero array elements is important, @ref findNonZero is helpful.
 @param src single-channel array.
 @sa  mean, meanStdDev, norm, minMaxLoc, calcCovarMatrix
+@sa  findNonZero, hasNonZero
 */
 CV_EXPORTS_W int countNonZero( InputArray src );
 
@@ -622,8 +642,18 @@ or
     // access pixel coordinates
     Point pnt = locations[i];
 @endcode
+
+The function do not work with multi-channel arrays. If you need to find non-zero
+elements across all the channels, use Mat::reshape first to reinterpret the array as
+single-channel. Or you may extract the particular channel using either extractImageCOI , or
+mixChannels , or split .
+
+@note
+- If only count of non-zero array elements is important, @ref countNonZero is helpful.
+- If only whether there are non-zero elements is important, @ref hasNonZero is helpful.
 @param src single-channel array
 @param idx the output array, type of cv::Mat or std::vector<Point>, corresponding to non-zero indices in the input
+@sa  countNonZero, hasNonZero
 */
 CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
 
