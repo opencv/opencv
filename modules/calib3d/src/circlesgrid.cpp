@@ -701,22 +701,26 @@ bool CirclesGridFinder::isDetectionCorrect()
   {
     case CirclesGridFinderParameters::SYMMETRIC_GRID:
     {
-      if (holes.size() != patternSize.height)
+      rotatedGrid = holes.size() != patternSize.height && holes.size() == patternSize.width;
+      if (holes.size() != patternSize.height && holes.size() != patternSize.width)
         return false;
 
-      std::set<size_t> vertices;
+      size_t num_vertices = 0ull;
       for (size_t i = 0; i < holes.size(); i++)
       {
-        if (holes[i].size() != patternSize.width)
-          return false;
-
-        for (size_t j = 0; j < holes[i].size(); j++)
+        if (holes[i].size() != patternSize.width && rotatedGrid == false)
         {
-          vertices.insert(holes[i][j]);
+          return false;
         }
-      }
+        else if (holes[i].size() != patternSize.height && rotatedGrid == true)
+        {
+          rotatedGrid = false;
+          return false;
+        }
 
-      return vertices.size() == patternSize.area();
+        num_vertices += holes[i].size();
+      }
+      return num_vertices == patternSize.area();
     }
 
     case CirclesGridFinderParameters::ASYMMETRIC_GRID:
@@ -1431,12 +1435,32 @@ Size CirclesGridFinder::getDetectedGridSize() const
 void CirclesGridFinder::getHoles(std::vector<Point2f> &outHoles) const
 {
   outHoles.clear();
-
-  for (size_t i = 0; i < holes.size(); i++)
+  if (rotatedGrid == false)
   {
-    for (size_t j = 0; j < holes[i].size(); j++)
+    for (size_t i = 0ull; i < holes.size(); i++)
     {
-      outHoles.push_back(keypoints[holes[i][j]]);
+      for (size_t j = 0ull; j < holes[i].size(); j++)
+      {
+        outHoles.push_back(keypoints[holes[i][j]]);
+      }
+    }
+  }
+  else
+  {
+    bool visit_all = false;
+    size_t j = 0ull;
+    while (visit_all != true)
+    {
+      visit_all = true;
+      for (size_t i = 0ull; i < holes.size(); i++)
+      {
+        if (j < holes[i].size())
+        {
+          outHoles.push_back(keypoints[holes[i][j]]);
+          visit_all = false;
+        }
+      }
+      j++;
     }
   }
 }

@@ -165,7 +165,7 @@ void ExifReader::parseExif()
  *
  * @return INTEL, MOTO or NONE
  */
-Endianess_t ExifReader::getFormat() const
+Endianness_t ExifReader::getFormat() const
 {
     if (m_data.size() < 1)
         return NONE;
