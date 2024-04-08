@@ -3005,7 +3005,7 @@ public:
         return pollKey_W32();
     }
 
-    std::string currentUIFramework()
+    const std::string getName() CV_OVERRIDE
     {
         return "WIN32";
     }

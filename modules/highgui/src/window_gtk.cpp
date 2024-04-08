@@ -2286,6 +2286,11 @@ public:
     {
         return cvWaitKey(1);  // TODO
     }
+
+    const std::string getName() CV_OVERRIDE
+    {
+        return "GTK";
+    }
 };  // GTKBackendUI
 
 static
