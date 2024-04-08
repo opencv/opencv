@@ -3250,20 +3250,20 @@ typedef testing::TestWithParam<perf::MatDepth> NonZeroSupportedMatDepth;
 
 TEST_P(NonZeroSupportedMatDepth, findNonZero)
 {
-    cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
+    cv::Mat src = cv::Mat::zeros(16,16, CV_MAKETYPE(GetParam(), 1));
     vector<Point> pts;
     EXPECT_NO_THROW(findNonZero(src, pts));
 }
 
 TEST_P(NonZeroSupportedMatDepth, countNonZero)
 {
-    cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
+    cv::Mat src = cv::Mat::zeros(16,16, CV_MAKETYPE(GetParam(), 1));
     EXPECT_NO_THROW(countNonZero(src));
 }
 
 TEST_P(NonZeroSupportedMatDepth, hasNonZero)
 {
-    cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
+    cv::Mat src = cv::Mat::zeros(16,16, CV_MAKETYPE(GetParam(), 1));
     EXPECT_NO_THROW(hasNonZero(src));
 }
 
@@ -3295,7 +3295,7 @@ typedef testing::TestWithParam<perf::MatDepth> MinMaxSupportedMatDepth;
 
 TEST_P(MinMaxSupportedMatDepth, minMaxLoc)
 {
-    cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
+    cv::Mat src = cv::Mat::zeros(16,16, CV_MAKETYPE(GetParam(), 1));
     double minV=0.0, maxV=0.0;
     Point minLoc, maxLoc;
     EXPECT_NO_THROW(cv::minMaxLoc(src, &minV, &maxV, &minLoc, &maxLoc));
@@ -3303,7 +3303,7 @@ TEST_P(MinMaxSupportedMatDepth, minMaxLoc)
 
 TEST_P(MinMaxSupportedMatDepth, minMaxIdx)
 {
-    cv::Mat src = cv::Mat(16,16, CV_MAKETYPE(GetParam(), 1));
+    cv::Mat src = cv::Mat::zeros(16,16, CV_MAKETYPE(GetParam(), 1));
     double minV=0.0, maxV=0.0;
     int minIdx=0, maxIdx=0;
     EXPECT_NO_THROW(cv::minMaxIdx(src, &minV, &maxV, &minIdx, &maxIdx));
