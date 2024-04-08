@@ -233,7 +233,7 @@ public:
         outputChannels = numChannels;
 
         outputs.assign(1, inputs[0]);
-        outputs[0][1] = numChannels;
+        outputs[0][(dims == 1) ? 0 : 1] = numChannels;
 
         if (dims >= 1)
         {
