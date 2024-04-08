@@ -35,7 +35,6 @@ public:
     {
         setParamsFrom(params);
         paddingValue = params.get<double>("value", 0);
-        paddingValueFloat = paddingValue; // Workaround for ngraph and cann backends which support only float
         inputDims = params.get<int>("input_dims", -1);
         paddingType = params.get<String>("type", "constant");
 
@@ -239,7 +238,7 @@ public:
         op->update_input_desc_paddings(*(op_const_paddings->getTensorDesc()));
         // set inputs : constant_values
         std::vector<int> constant_values_shape{1};
-        Mat constant_values_mat(1, 1, CV_32F, Scalar(paddingValueFloat));
+        Mat constant_values_mat(1, 1, CV_32F, Scalar(paddingValue));
         auto op_const_constant_values = std::make_shared<CannConstOp>(constant_values_mat.data, constant_values_mat.type(), constant_values_shape, cv::format("%s_constant_values", name.c_str()));
         op->set_input_constant_values(*(op_const_constant_values->getOp()));
         op->update_input_desc_constant_values(*(op_const_constant_values->getTensorDesc()));
@@ -266,7 +265,8 @@ public:
         auto padding_below = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{begins.size()}, begins.data());
         auto padding_above = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{ends.size()}, ends.data());
         auto pad_mode = paddingType == "constant" ? ov::op::PadMode::CONSTANT : ov::op::PadMode::REFLECT; // SYMMETRIC
-        auto arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{}, &paddingValueFloat);;
+        float paddingValueFloat = paddingValue;
+        auto arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{}, &paddingValueFloat);
 
         auto pad = paddingType == "constant" ?
              std::make_shared<ov::op::v1::Pad>(ieInpNode, padding_below, padding_above, arg_pad_value, pad_mode) :
@@ -280,7 +280,6 @@ private:
     std::vector<Range> dstRanges;
     int inputDims;
     double paddingValue;
-    float paddingValueFloat;
     std::string paddingType;
 };
 
