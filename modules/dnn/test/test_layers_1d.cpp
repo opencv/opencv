@@ -568,7 +568,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Slice_Test,
 ));
 
 typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_FullyConnected_Test;
-TEST_P(Layer_FullyConnected_Test, Accuracy)
+TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
 {
     LayerParams lp;
     lp.type = "InnerProduct";
