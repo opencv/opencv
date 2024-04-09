@@ -62,6 +62,12 @@ public:
         const MatShape& inpShape = inputs[0];
         std::cout << "inpShape.size() = " << inpShape << std::endl;
         // std::cout << "paddings: " << paddings << std::endl;
+        if (inpShape.empty()){
+            std::cout << "in the new branch" << std::endl;
+            outputs.resize(1, MatShape(1, paddings.size() + 1));
+            std::cout << "outputs: " << outputs[0] << std::endl;
+            return false;
+        }
         CV_Assert(inpShape.size() >= paddings.size());
 
         CV_Assert(inputDims == -1 || inpShape.size() == inputDims || inpShape.size() > paddings.size());
