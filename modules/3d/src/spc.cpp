@@ -50,9 +50,6 @@ void SpectralCluster::cluster(std::vector<int>& result, std::vector<Point3f> ver
     getAdjacentDistanceMat(distance_mat, vertices, indices);
     STOP_TIMER("Distance Matrix Calculation")
 
-    // for test:
-    showMat<float>("distance matrix", distance_mat);
-
     Mat affinity_mat;
     START_TIMER
     getAffinityMat(distance_mat, affinity_mat, indices);
@@ -110,49 +107,45 @@ void SpectralCluster::getLaplacianMat(Mat &in, Mat &out) {
 }
 
 void SpectralCluster::getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<int32_t>> &indices) {
-    // in: distance matrix from previous step
     int num_faces = int(indices.size());
 
     // using dijkstra algorithm to get the affinity matrix
     out = Mat::ones(num_faces, num_faces, CV_32F) * (double)std::numeric_limits<float>::infinity();
-    // for dijkstra
     struct dist_node {
         int index;
         float distance;
         dist_node(int i, float d) : index(i), distance(d) {}
-        bool operator<(const dist_node& other) const {
-            return distance > other.distance;
-        }
+        bool operator<(const dist_node& other) const { return distance > other.distance; }
     };
 
+    cv::parallel_for_(cv::Range(0, num_faces), [&](const cv::Range& range) {
+        for (int i = range.start; i < range.end; ++i) {
+            std::vector<bool> visited(num_faces, false);
+            std::priority_queue<dist_node> pq;
+            pq.emplace(i, 0);
 
-    for (int i = 0; i < num_faces; ++i) {
-        std::vector<bool> visited(num_faces, false);
-        std::priority_queue<dist_node> pq;
+            while (!pq.empty()) {
+                dist_node current = pq.top();
+                pq.pop();
 
-        pq.emplace(i, 0);
+                if (visited[current.index])
+                    continue;
 
-        while (!pq.empty()) {
-            dist_node current = pq.top();
-            pq.pop();
+                visited[current.index] = true;
 
-            if (visited[current.index])
-                continue;
-
-            visited[current.index] = true;
-
-            for (int neighbor = 0; neighbor < num_faces; ++neighbor) {
-                float weight = in.at<float>(current.index, neighbor);
-                if (weight > 0 && !visited[neighbor]) {
-                    float distance = current.distance + weight;
-                    if (distance < out.at<float>(i, neighbor)) {
-                        out.at<float>(i, neighbor) = distance;
-                        pq.emplace(neighbor, distance);
+                for (int neighbor = 0; neighbor < num_faces; ++neighbor) {
+                    float weight = in.at<float>(current.index, neighbor);
+                    if (weight > 0 && !visited[neighbor]) {
+                        float distance = current.distance + weight;
+                        if (distance < out.at<float>(i, neighbor)) {
+                            out.at<float>(i, neighbor) = distance;
+                            pq.emplace(neighbor, distance);
+                        }
                     }
                 }
             }
         }
-    }
+    });
 
     showMat<float>("dijkstra distance mat", out);
 
@@ -168,13 +161,15 @@ void SpectralCluster::getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<
     for (int i = 0; i < out.rows; ++i) {
         for (int j = 0; j < out.cols; ++j) {
             auto &cur_elem = out.at<float>(i, j);
-            cur_elem = (cur_elem != 0.f) ? exp(-cur_elem / sigma) : 0.f;
+            cur_elem = (cur_elem == 0.f) ? 0.f : exp(-cur_elem / sigma) ;
         }
     }
 
     // Set diagonal elements to 1
-    for (int i = 0; i < num_faces; ++i)
-        out.at<float>(i, i) = 1;
+    cv::parallel_for_(cv::Range(0, num_faces), [&](const cv::Range& range) {
+        for (int i = range.start; i < range.end; ++i)
+            out.at<float>(i, i) = 1;
+    });
 }
 
 void SpectralCluster::getAdjacentDistanceMat(Mat &out, std::vector<Point3f> &vertices, std::vector<std::vector<int32_t>> &indices) const {
@@ -190,8 +185,7 @@ void SpectralCluster::getAdjacentDistanceMat(Mat &out, std::vector<Point3f> &ver
     for (int i = 0; i < num_faces; ++i) {
         const std::vector<int32_t> &face = indices[i];
         for (int j = 0; j < 3; ++j) {
-            int v1 = face[j];
-            int v2 = face[(j + 1) % 3];
+            int v1 = face[j], v2 = face[(j + 1) % 3];
             if (v1 > v2) std::swap(v1, v2);
             auto it = map.find({v1, v2});
             if (it != map.end())
@@ -200,12 +194,11 @@ void SpectralCluster::getAdjacentDistanceMat(Mat &out, std::vector<Point3f> &ver
                 map[{v1, v2}] = std::make_pair(i, -1);
         }
     }
-
     // init
     Mat g_dist_mat = Mat::zeros(num_faces, num_faces, CV_32F);
     Mat a_dist_mat = Mat::zeros(num_faces, num_faces, CV_32F);
     std::vector<Point3f> f1, f2;
-
+    // compute distances
     for (const auto& entry : map) {
         const std::pair<int, int>& adjacent_faces = entry.second;
         if (adjacent_faces.second == -1)
@@ -234,7 +227,7 @@ void SpectralCluster::getAdjacentDistanceMat(Mat &out, std::vector<Point3f> &ver
 float SpectralCluster::getGeodesicDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2) {
     cv::Point3f centroid1 = calculateFaceCentroid(face1);
     cv::Point3f centroid2 = calculateFaceCentroid(face2);
-    return float(norm((centroid1 - centroid2) / 3.f));
+    return float(norm(centroid1 - centroid2))  / 3.f;
 }
 
 Point3f SpectralCluster::calculateFaceCentroid(const std::vector<cv::Point3f>& face) {
@@ -247,9 +240,7 @@ Point3f SpectralCluster::calculateFaceCentroid(const std::vector<cv::Point3f>& f
 float SpectralCluster::getAngleDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2) const {
     cv::Vec3f normal1 = calculateFaceNormal(face1);
     cv::Vec3f normal2 = calculateFaceNormal(face2);
-
     float cos_angle = normal1.dot(normal2);
-
     float angular_distance = 1.0f - cos_angle;
 
     if (cos_angle < 0)
