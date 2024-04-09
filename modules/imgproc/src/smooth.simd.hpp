@@ -1634,6 +1634,15 @@ void vlineSmooth(const FT* const * src, const FT* m, int n, ET* dst, int len)
         dst[i] = val;
     }
 }
+
+inline uint32_t read_pair_as_u32(const ufixedpoint16 * mem)
+{
+    union Cv32sufX2 { uint32_t v32; int16_t v16[2]; } res;
+    res.v16[0] = mem->raw();
+    res.v16[1] = (mem + 1)->raw();
+    return res.v32;
+}
+
 template <>
 void vlineSmooth<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16* m, int n, uint8_t* dst, int len)
 {
@@ -1655,7 +1664,7 @@ void vlineSmooth<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const
         v_int16 v_src00, v_src10, v_src01, v_src11, v_src02, v_src12, v_src03, v_src13;
         v_int16 v_tmp0, v_tmp1;
 
-        v_int16 v_mul = v_reinterpret_as_s16(vx_setall_u32(*((uint32_t*)m)));
+        v_int16 v_mul = v_reinterpret_as_s16(vx_setall_u32(read_pair_as_u32(m)));
 
         const int16_t* src0 = (const int16_t*)src[0] + i;
         const int16_t* src1 = (const int16_t*)src[1] + i;
@@ -1683,7 +1692,7 @@ void vlineSmooth<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const
         int j = 2;
         for (; j < n - 1; j+=2)
         {
-            v_mul = v_reinterpret_as_s16(vx_setall_u32(*((uint32_t*)(m+j))));
+            v_mul = v_reinterpret_as_s16(vx_setall_u32(read_pair_as_u32(m + j)));
 
             const int16_t* srcj0 = (const int16_t*)src[j] + i;
             const int16_t* srcj1 = (const int16_t*)src[j + 1] + i;
