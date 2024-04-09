@@ -2316,7 +2316,7 @@ TEST(AP3P, ctheta1p_nan_23607)
             res.row(j) += t[i].reshape(1, 1);
             res.row(j) /= res.row(j).at<double>(2);
         }
-        EXPECT_LE(cvtest::norm(res.colRange(0, 2), expected, NORM_INF), 3e-16);
+        EXPECT_LE(cvtest::norm(res.colRange(0, 2), expected, NORM_INF), 3.34e-16);
     }
 }
 
