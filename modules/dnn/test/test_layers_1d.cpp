@@ -513,4 +513,58 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/,  Layer_Permute_Test,
             std::vector<int>{4, 1}
 ));
 
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Slice_Test;
+TEST_P(Layer_Slice_Test, Accuracy_1D){
+
+    LayerParams lp;
+    lp.type = "Slice";
+    lp.name = "SliceLayer";
+
+    std::vector<int> input_shape = get<0>(GetParam());
+
+    int splits = 2;
+    int axis = (input_shape.size() > 1 ) ? 1 : 0;
+
+    lp.set("axis", axis);
+    lp.set("num_split", splits);
+
+    Ptr<SliceLayer> layer = SliceLayer::create(lp);
+    std::vector<int> output_shape;
+    if (input_shape.size() > 1)
+        output_shape = {1, input_shape[1] / splits};
+    else
+        output_shape = {input_shape[0] / splits};
+
+    cv::Mat input = cv::Mat(input_shape, CV_32F);
+    cv::randu(input, 0.0, 1.0);
+
+    std::vector<cv::Mat> output_refs;
+    for (int i = 0; i < splits; ++i){
+        output_refs.push_back(cv::Mat(output_shape, CV_32F));
+        if (input_shape.size() > 1 ) {
+            for (int j = 0; j < output_shape[1]; ++j){
+                output_refs[i].at<float>(j) = input.at<float>(i * output_shape[1] + j);
+            }
+        } else {
+            for (int j = 0; j < output_shape[0]; ++j){
+                output_refs[i].at<float>(j) = input.at<float>(i * output_shape[0] + j);
+            }
+        }
+    }
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    for (int i = 0; i < splits; ++i){
+        ASSERT_EQ(shape(output_refs[i]), shape(outputs[i]));
+        normAssert(output_refs[i], outputs[i]);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Slice_Test,
+/*input blob shape*/    testing::Values(
+                std::vector<int>({4}),
+                std::vector<int>({1, 4})
+));
+
 }}
