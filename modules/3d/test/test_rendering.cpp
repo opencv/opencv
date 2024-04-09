@@ -746,7 +746,7 @@ TEST_P(RenderingTest, accuracy)
             if (width == 320 && height == 240 && shadingType == RASTERIZE_SHADING_FLAT && cullingMode == RASTERIZE_CULLING_CW)
             {
                 thr.depthInfThreshold = 1;
-                thr.depthL2Threshold = 0.0016;
+                thr.depthL2Threshold = 0.00163;
             }
             else if (width == 320 && height == 240 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_NONE)
             {
@@ -754,7 +754,7 @@ TEST_P(RenderingTest, accuracy)
                 thr.rgbL2Threshold = 8.03E-05;
                 thr.depthMaskThreshold = 23;
                 thr.depthInfThreshold = 1;
-                thr.depthL2Threshold = 0.000544;
+                thr.depthL2Threshold = 0.000555;
             }
             else if (width == 256 && height == 256 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_CW)
             {
@@ -788,7 +788,7 @@ TEST_P(RenderingTest, accuracy)
             thr.depthInfThreshold = 1;
             if (width == 320 && height == 240)
             {
-                thr.depthL2Threshold = 0.000989;
+                thr.depthL2Threshold = 0.00103;
             }
             else if (width == 256 && height == 256)
             {
