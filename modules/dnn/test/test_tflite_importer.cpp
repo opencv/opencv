@@ -251,6 +251,11 @@ TEST_P(Test_TFLite, fully_connected) {
     testLayer("fully_connected");
 }
 
+TEST_P(Test_TFLite, permute) {
+    testLayer("permutation_3d");
+    testLayer("permutation_4d");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace
