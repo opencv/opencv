@@ -831,7 +831,6 @@ inline int hal_ni_flip(int src_type, const uchar* src_data, size_t src_step, int
 #define cv_hal_flip hal_ni_flip
 //! @endcond
 
-
 /**
    @brief rotate90
    @param src_type source and destination image type
@@ -852,6 +851,20 @@ inline int hal_ni_rotate90(int src_type, const uchar* src_data, size_t src_step,
 
 //! @cond IGNORED
 #define cv_hal_rotate90 hal_ni_rotate90
+//! @endcond
+
+/**
+   @brief Transpose2d
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param src_width,src_height Source image dimensions
+   @param element_size Size of an element in bytes
+*/
+inline int hal_ni_transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width,
+                              int src_height, int element_size) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_transpose2d hal_ni_transpose2d
 //! @endcond
 
 //! @}
