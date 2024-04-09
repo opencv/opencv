@@ -41,7 +41,7 @@ if(MSVC)
     # and IE deprecated code warning C4996
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503 /wd4996)
   endif()
-  if(MSVC_VERSION LESS 1920)  # MSVS 2015/2017
+  if((MSVC_VERSION LESS 1920) OR ARM OR AARCH64) # MSVS 2015/2017 on x86 and ARM
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)  # 'unreachable code'
   endif()
 endif()
