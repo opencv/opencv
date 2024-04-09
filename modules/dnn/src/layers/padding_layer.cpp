@@ -34,7 +34,7 @@ public:
     PaddingLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        paddingValue = params.get<float>("value", 0);
+        paddingValue = params.get<double>("value", 0);
         inputDims = params.get<int>("input_dims", -1);
         paddingType = params.get<String>("type", "constant");
 
@@ -68,6 +68,23 @@ public:
             outputs[0][offset + i] = inpShape[offset + i] + paddings[i].first + paddings[i].second;
         }
         return false;
+    }
+
+    void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_CheckEQ(inputs.size(), 1u, "");
+        if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
+            CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S, "");
+        else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+            CV_CheckType(inputs[0], inputs[0] == CV_16F || inputs[0] == CV_8S || inputs[0] == CV_32S || inputs[0] == CV_64S, "");
+        else
+            CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_8S || inputs[0] == CV_32S || inputs[0] == CV_64S, "");
+
+        outputs.assign(requiredOutputs, inputs[0]);
     }
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
@@ -184,7 +201,7 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
 
-        return make_cuda_node<cuda4dnn::PaddingOp>(preferableTarget, std::move(context->stream), ptype, paddingValue, dstRanges);
+        return make_cuda_node_with_type<cuda4dnn::PaddingOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), ptype, paddingValue, dstRanges);
     }
 #endif
 
@@ -248,7 +265,8 @@ public:
         auto padding_below = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{begins.size()}, begins.data());
         auto padding_above = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{ends.size()}, ends.data());
         auto pad_mode = paddingType == "constant" ? ov::op::PadMode::CONSTANT : ov::op::PadMode::REFLECT; // SYMMETRIC
-        auto arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{}, &paddingValue);;
+        float paddingValueFloat = paddingValue;
+        auto arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{}, &paddingValueFloat);
 
         auto pad = paddingType == "constant" ?
              std::make_shared<ov::op::v1::Pad>(ieInpNode, padding_below, padding_above, arg_pad_value, pad_mode) :
@@ -261,7 +279,7 @@ private:
     std::vector<std::pair<int, int> > paddings;  // Pairs pad before, pad after.
     std::vector<Range> dstRanges;
     int inputDims;
-    float paddingValue;
+    double paddingValue;
     std::string paddingType;
 };
 
