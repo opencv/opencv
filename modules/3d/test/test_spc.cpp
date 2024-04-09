@@ -11,11 +11,11 @@ namespace opencv_test { namespace {
 TEST(SpC, FunctionTest) {
     // load point cloud
 
-    String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/scan_040_simplified_01.obj";
-    String out_put_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/results/040_01_k7.txt";
+    String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/scan_040_simplified_005.obj";
+    String out_put_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/results/040_005_k7.txt";
 
 //    String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/MeshsegBenchmark-1.0/data/obj/1.obj";
-//    String out_put_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/results/1_k7.txt";
+//    String out_put_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/results/1_k14.txt";
 
 
     std::vector<cv::Point3f> vertices;
