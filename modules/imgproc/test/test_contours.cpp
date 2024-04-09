@@ -39,6 +39,7 @@
 //
 //M*/
 
+#include "opencv2/imgproc/types_c.h"
 #include "test_precomp.hpp"
 #include <opencv2/highgui.hpp>
 
@@ -459,7 +460,6 @@ TEST(Imgproc_FindContours, hilbert)
     dilate(img, img, Mat());
     vector<vector<Point> > contours;
     findContours(img, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
-    printf("ncontours = %d, contour[0].npoints=%d\n", (int)contours.size(), (int)contours[0].size());
     img.setTo(Scalar::all(0));
 
     drawContours(img, contours, 0, Scalar::all(255), 1);
@@ -530,9 +530,11 @@ TEST(Imgproc_FindContours, regression_4363_shared_nbd)
 
     if (found)
     {
+        ASSERT_EQ(contours.size(), hierarchy.size());
         EXPECT_LT(hierarchy[index][3], 0) << "Desired result: (7,9) has no parent - Actual result: parent of (7,9) is another contour. index = " << index;
     }
 }
+
 
 TEST(Imgproc_PointPolygonTest, regression_10222)
 {
