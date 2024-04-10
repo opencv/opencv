@@ -92,7 +92,8 @@ class ONNXImporter
 
     void addConstant(const std::string& name, const Mat& blob);
     void addLayer(LayerParams& layerParams,
-                  const opencv_onnx::NodeProto& node_proto);
+                  const opencv_onnx::NodeProto& node_proto,
+                  int num_inputs = std::numeric_limits<int>::max());
     void setParamsDtype(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     void lstm_extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int* blobShape_, int size);
@@ -629,7 +630,8 @@ ONNXImporter::TensorInfo ONNXImporter::getBlobExtraInfo(const std::string& input
 }
 
 void ONNXImporter::addLayer(LayerParams& layerParams,
-                            const opencv_onnx::NodeProto& node_proto)
+                            const opencv_onnx::NodeProto& node_proto,
+                            int num_inputs)
 {
     int depth = layerParams.get<int>("depth", CV_32F);
     int id = dstNet.addLayer(layerParams.name, layerParams.type, depth, layerParams);
@@ -644,7 +646,8 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
 
     std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
     int inpNum = 0;
-    for (int j = 0; j < node_proto.input_size(); j++)
+    num_inputs = std::min(node_proto.input_size(), num_inputs);
+    for (int j = 0; j < num_inputs; j++)
     {
         const std::string& input_name = node_proto.input(j);
         IterLayerId_t layerId = layer_id.find(input_name);
@@ -1818,7 +1821,7 @@ void ONNXImporter::parseClip(LayerParams& layerParams, const opencv_onnx::NodePr
 
     layerParams.set("min_value", layerParams.get<float>("min", min_value));
     layerParams.set("max_value", layerParams.get<float>("max", max_value));
-    addLayer(layerParams, node_proto);
+    addLayer(layerParams, node_proto, 1);
 }
 
 void ONNXImporter::parseLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)

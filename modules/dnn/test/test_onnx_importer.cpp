@@ -3119,6 +3119,10 @@ TEST_P(Test_ONNX_layers, MatMulAddFusion) {
     testONNXModels("biased_matmul", npy, l1, lInf);
 }
 
+TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
+    testONNXModels("clip_div_shared_constant");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

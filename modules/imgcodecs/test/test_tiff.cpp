@@ -9,11 +9,6 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_TIFF
 
-// these defines are used to resolve conflict between tiff.h and opencv2/core/types_c.h
-#define uint64 uint64_hack_
-#define int64 int64_hack_
-#include "tiff.h"
-
 #ifdef __ANDROID__
 // Test disabled as it uses a lot of memory.
 // It is killed with SIGKILL by out of memory killer.
@@ -767,7 +762,7 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_RAW)
 
     std::vector<int> params;
     params.push_back(IMWRITE_TIFF_COMPRESSION);
-    params.push_back(COMPRESSION_NONE);
+    params.push_back(IMWRITE_TIFF_COMPRESSION_NONE);
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
@@ -816,8 +811,9 @@ TEST(Imgcodecs_Tiff, readWrite_predictor)
 
     cv::Mat mat(10, 16, CV_8UC1, (void*)sample_data);
     int methods[] = {
-        COMPRESSION_NONE,     COMPRESSION_LZW,
-        COMPRESSION_PACKBITS, COMPRESSION_DEFLATE,  COMPRESSION_ADOBE_DEFLATE
+        IMWRITE_TIFF_COMPRESSION_NONE,     IMWRITE_TIFF_COMPRESSION_LZW,
+        IMWRITE_TIFF_COMPRESSION_PACKBITS, IMWRITE_TIFF_COMPRESSION_DEFLATE,
+        IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE
     };
     for (size_t i = 0; i < sizeof(methods) / sizeof(int); i++)
     {
@@ -827,7 +823,7 @@ TEST(Imgcodecs_Tiff, readWrite_predictor)
         params.push_back(IMWRITE_TIFF_COMPRESSION);
         params.push_back(methods[i]);
         params.push_back(IMWRITE_TIFF_PREDICTOR);
-        params.push_back(PREDICTOR_HORIZONTAL);
+        params.push_back(IMWRITE_TIFF_PREDICTOR_HORIZONTAL);
 
         EXPECT_NO_THROW(cv::imwrite(out, mat, params));
 
@@ -863,7 +859,7 @@ TEST_P(Imgcodecs_Tiff_Types, readWrite_alltypes)
     {
         std::vector<int> params;
         params.push_back(IMWRITE_TIFF_COMPRESSION);
-        params.push_back(COMPRESSION_LZW);
+        params.push_back(IMWRITE_TIFF_COMPRESSION_LZW);
         ASSERT_NO_THROW(cv::imencode(".tiff", src, bufLZW, params));
 
         Mat dstLZW;
@@ -878,7 +874,7 @@ TEST_P(Imgcodecs_Tiff_Types, readWrite_alltypes)
     {
         std::vector<int> params;
         params.push_back(IMWRITE_TIFF_COMPRESSION);
-        params.push_back(COMPRESSION_NONE);
+        params.push_back(IMWRITE_TIFF_COMPRESSION_NONE);
         ASSERT_NO_THROW(cv::imencode(".tiff", src, bufRAW, params));
 
         Mat dstRAW;

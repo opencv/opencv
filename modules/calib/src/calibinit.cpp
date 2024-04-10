@@ -1641,10 +1641,11 @@ void ChessBoardDetector::findQuadNeighbors()
                 continue;
 
             float min_dist = FLT_MAX;
+            int closest_neighbor_idx = -1;
             int closest_corner_idx = -1;
             ChessBoardQuad *closest_quad = 0;
 
-            Point2f pt = cur_quad.corners[i]->pt;
+            Point2f pt = all_quads_pts[(idx << 2) + i];
 
             // find the closest corner in all other quadrangles
             std::vector<float> query = Mat(pt);
@@ -1664,7 +1665,7 @@ void ChessBoardDetector::findQuadNeighbors()
                 if (q_k.neighbors[j])
                     continue;
 
-                const float dist = normL2Sqr<float>(pt - q_k.corners[j]->pt);
+                const float dist = normL2Sqr<float>(pt - all_quads_pts[neighbor_idx]);
                 if (dist < min_dist &&
                     dist <= cur_quad.edge_len * thresh_scale &&
                     dist <= q_k.edge_len * thresh_scale)
@@ -1679,6 +1680,7 @@ void ChessBoardDetector::findQuadNeighbors()
                         DPRINTF("Incompatible edge lengths");
                         continue;
                     }
+                    closest_neighbor_idx = neighbor_idx;
                     closest_corner_idx = j;
                     closest_quad = &q_k;
                     min_dist = dist;
@@ -1686,7 +1688,7 @@ void ChessBoardDetector::findQuadNeighbors()
             }
 
             // we found a matching corner point?
-            if (closest_corner_idx >= 0 && min_dist < FLT_MAX)
+            if (closest_neighbor_idx >= 0 && closest_corner_idx >= 0 && min_dist < FLT_MAX)
             {
                 CV_Assert(closest_quad);
 
@@ -1698,6 +1700,7 @@ void ChessBoardDetector::findQuadNeighbors()
                 // This is necessary to support small squares where otherwise the wrong
                 // corner will get matched to closest_quad;
                 ChessBoardCorner& closest_corner = *closest_quad->corners[closest_corner_idx];
+                cv::Point2f closest_corner_pt = all_quads_pts[closest_neighbor_idx];
 
                 int j = 0;
                 for (; j < 4; j++)
@@ -1705,7 +1708,7 @@ void ChessBoardDetector::findQuadNeighbors()
                     if (cur_quad.neighbors[j] == closest_quad)
                         break;
 
-                    if (normL2Sqr<float>(closest_corner.pt - cur_quad.corners[j]->pt) < min_dist)
+                    if (normL2Sqr<float>(closest_corner_pt - all_quads_pts[(idx << 2) + j]) < min_dist)
                         break;
                 }
                 if (j < 4)
@@ -1720,9 +1723,8 @@ void ChessBoardDetector::findQuadNeighbors()
                 if (j < 4)
                     continue;
 
-                // check whether the closest corner to closest_corner
-                // is different from cur_quad->corners[i]->pt
-                query = Mat(closest_corner.pt);
+                // check whether the closest corner to closest_corner is different from pt
+                query = Mat(closest_corner_pt);
                 radius = min_dist + 1;
                 neighbors_count = all_quads_pts_index.radiusSearch(query, neighbors_indices, neighbors_dists, radius, search_params);
 
@@ -1740,14 +1742,14 @@ void ChessBoardDetector::findQuadNeighbors()
                     CV_DbgAssert(q);
                     if (!q->neighbors[k])
                     {
-                        if (normL2Sqr<float>(closest_corner.pt - q->corners[k]->pt) < min_dist)
+                        if (normL2Sqr<float>(closest_corner_pt - all_quads_pts[neighbor_idx]) < min_dist)
                             break;
                     }
                 }
                 if (neighbor_idx_idx < neighbors_count)
                     continue;
 
-                closest_corner.pt = (pt + closest_corner.pt) * 0.5f;
+                closest_corner.pt = (pt + closest_corner_pt) * 0.5f;
 
                 // We've found one more corner - remember it
                 cur_quad.count++;
