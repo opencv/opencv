@@ -20,7 +20,6 @@
 #include <iostream>
 #include <fstream>
 
-// Including OpenCV core, image processing, and deep neural network modules
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/dnn.hpp>
@@ -31,7 +30,7 @@ using namespace cv::dnn;
 // Command-line keys to parse the input arguments
 std::string keys =
     "{ help  h                          | | Print help message. }"
-    "{ input i                     | box.png | Path to an input image. }"
+    "{ input i                     | messi5.jpg | Path to an input image. }"
     "{ detModelPath dmp                 | | Path to a binary model file for detection (East and DB model architectures are supported). }"
     "{ recModelPath rmp                 | | Path to a binary .onnx model for recognition. }"
     "{ detModelConfig dmc              | db | Specify detection model config: db/east }"
@@ -141,7 +140,6 @@ int main(int argc, char** argv) {
     recognizer.setInputParams(recScale, recInputSize, recMean);
 
     // Process detected text regions for recognition
-    Mat frame2 = frame.clone();
     if (detResults.size() > 0) {
         // Text Recognition
         Mat recInput;
@@ -170,16 +168,16 @@ int main(int argc, char** argv) {
             std::cout << i << ": '" << recognitionResult << "'" << std::endl;
 
             // Displaying the recognized text on the image
-            putText(frame2, recognitionResult, detResults[i][3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
+            putText(frame, recognitionResult, detResults[i][3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 1.5);
         }
         // Drawing detected text regions on the image
-        polylines(frame2, contours, true, Scalar(0, 255, 0), 2);
+        polylines(frame, contours, true, Scalar(0, 255, 0), 2);
     } else {
         std::cout << "No Text Detected." << std::endl;
     }
 
     // Displaying the final image with detected and recognized text
-    imshow("Text Detection and Recognition", frame2);
+    imshow("Text Detection and Recognition", frame);
     waitKey(0);
 
     return 0;
