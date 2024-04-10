@@ -26,20 +26,28 @@ inline map<string, int> fourccByCodec() {
     return res;
 }
 
-inline map<string, Size> sizeByResolution() {
-    map<string, Size> res;
-    res["720p"] = Size(1280, 720);
-    res["1080p"] = Size(1920, 1080);
-    res["4k"] = Size(3840, 2160);
-    return res;
+// Function to parse resolution string "WxH"
+Size parseResolution(const string& resolution) {
+    stringstream ss(resolution);
+    int width, height;
+    char delimiter;
+
+    ss >> width >> delimiter >> height;
+
+    if (ss.fail() || delimiter != 'x') {
+        throw runtime_error("Invalid resolution format. Please provide in WxH format.");
+    }
+
+    return Size(width, height);
 }
+
 
 int main(int argc, char** argv) {
     const String keys =
         "{help h usage ? |      | Print help message   }"
         "{fps           |30    | fix frame per second for encoding (supported: fps > 0)   }"
-        "{codec         |mjpeg | codec name (supported: 'h264', 'h265', 'mpeg2', 'mpeg4', 'mjpeg', 'vp8')  }"
-        "{resolution    |720p  | video resolution for encoding (supported: '720p', '1080p', '4k') }";
+        "{codec         |mjpeg | Supported codecs depend on OpenCV Configuration. Try one of 'h264', 'h265', 'mpeg2', 'mpeg4', 'mjpeg', 'vp8' }"
+        "{resolution    |1280x720 | Video resolution in WxH format, (e.g., '1920x1080') }";
 
     CommandLineParser parser(argc, argv, keys);
     parser.about("Video Capture and Write with codec and resolution options");
@@ -54,15 +62,14 @@ int main(int argc, char** argv) {
     string resolutionStr = parser.get<string>("resolution");
 
     auto codecMap = fourccByCodec();
-    auto resolutionMap = sizeByResolution();
 
-    if (codecMap.find(codecStr) == codecMap.end() || resolutionMap.find(resolutionStr) == resolutionMap.end()) {
-        cerr << "Invalid codec or resolution!" << endl;
+    if (codecMap.find(codecStr) == codecMap.end()) {
+        cerr << "Invalid codec" << endl;
         return -1;
     }
 
     int codec = codecMap[codecStr];
-    Size resolution = resolutionMap[resolutionStr];
+    Size resolution = parseResolution(resolutionStr);
 
     // Video Capture
     VideoCapture cap(0);
@@ -76,7 +83,7 @@ int main(int argc, char** argv) {
     cout << "Selected Resolution: " << resolutionStr << " (" << resolution.width << "x" << resolution.height << ")" << endl;
 
     // Set up VideoWriter
-    string filename = "./output_new.avi";
+    string filename = "./output.avi";
     VideoWriter writer(filename, codec, fps, resolution, true); // Assuming color video
     if (!writer.isOpened()) {
         cerr << "Could not open the output video file for write\n";

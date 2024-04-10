@@ -130,6 +130,7 @@ int main(int argc, char** argv)
             }
             // Break after 10 seconds of audio capture
             if ((sysTimeCurr - sysTimePrev) / cvTickFreq >= 10) {
+                cout << "Stream closed after 10 seconds timeout" << endl;
                 break;
             }
         } else {
