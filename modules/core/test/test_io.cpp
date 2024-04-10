@@ -1967,13 +1967,13 @@ TEST_P(Core_InputOutput_regression_25073, my_float)
     fs.release();
 }
 
-TEST_P(Core_InputOutput_regression_25073, my_float16)
+TEST_P(Core_InputOutput_regression_25073, my_hfloat)
 {
     cv::String res = "";
-    cv::float16_t my_float16(0.5);
+    cv::hfloat my_hfloat(0.5);
 
     FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
-    EXPECT_NO_THROW( fs << "my_float16" << my_float16 );
+    EXPECT_NO_THROW( fs << "my_hfloat" << my_hfloat );
     EXPECT_NO_THROW( fs << "my_int" << 5 );
     EXPECT_NO_THROW( res = fs.releaseAndGetString() );
     EXPECT_NE( res.find("0.5"), String::npos ) << res; // Found "0.5".
