@@ -1438,7 +1438,7 @@ status("    ZLib:"   ZLIB_FOUND THEN "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRI
 if(WITH_JPEG OR HAVE_JPEG)
   if(NOT HAVE_JPEG)
     status("    JPEG:" NO)
-  elseif(BUILD_JPEG)
+  elseif(BUILD_JPEG OR NOT JPEG_FOUND)
     status("    JPEG:" "build-${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
     if(ENABLE_LIBJPEG_TURBO_SIMD)
       status("      SIMD Support Request:" "YES")
