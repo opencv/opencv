@@ -494,9 +494,6 @@ void convBlockMR1_F32(int np, const float * a, const float * b, float *c, const 
 void convBlock_F16(int np, const char * _a, const char * _b, char * _c, int ldc, bool init_c, int width,
                     const int convMR_fp16, const int convNR_fp16)
 {
-#if !defined(OPENCV_HIDE_FLOAT16_T)
-    typedef __fp16 float16_t;
-#endif
     const __fp16* a = (const __fp16*)_a;
     const __fp16* b = (const __fp16*)_b;
     __fp16* c = (__fp16*)_c;
@@ -640,9 +637,6 @@ void convBlock_F16(int np, const char * _a, const char * _b, char * _c, int ldc,
 void convBlockMR1_F16(int np, const char* _a, const char* _b, float *c, const float _bias, bool init_c,
                        const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR_FP16)
 {
-#if !defined(OPENCV_HIDE_FLOAT16_T)
-    typedef __fp16 float16_t;
-#endif
     CV_Assert(convNR_FP16 == 24); // CONV_NR_FP16 = 24
     const __fp16* a = (const __fp16*)_a;
     const __fp16* b = (const __fp16*)_b;

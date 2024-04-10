@@ -435,9 +435,6 @@ void winofunc_AtXA_8x8_F32(const float* inptr, int inpstep,
 void winofunc_accum_F16(const char* _inwptr, const char* _wptr, char* _outbuf, int Cg, int iblock,
                         const int winoIblock, const int winoKblock, const int winoAtomF16, const int winoNatomF16)
 {
-#if !defined(OPENCV_HIDE_FLOAT16_T)
-    typedef __fp16 float16_t;
-#endif
     const __fp16* inwptr = (const __fp16*)_inwptr;
     const __fp16* wptr = (const __fp16*)_wptr;
     __fp16* outbuf = (__fp16*)_outbuf;
