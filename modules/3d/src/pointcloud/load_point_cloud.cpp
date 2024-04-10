@@ -273,7 +273,8 @@ void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays in
 
     std::vector<std::vector<int32_t>> vec_indices;
     CV_Assert(indices.depth() == CV_32S);
-    if (indices.kind() == _InputArray::KindFlag::STD_VECTOR_VECTOR)
+    if (indices.kind() == _InputArray::KindFlag::STD_VECTOR_VECTOR ||
+        indices.kind() == _InputArray::KindFlag::STD_VECTOR_MAT)
     {
         std::vector<Mat> mat_indices;
         indices.getMatVector(mat_indices);
