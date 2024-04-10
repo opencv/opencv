@@ -591,11 +591,11 @@ TEST_P(Layer_Padding_Test, Accuracy_01D){
     if (input_shape.size() == 0 || input_shape.size() == 1){
         std::cout << "shape output_ref: " << shape(output_ref) << std::endl;
         std::cout << "total: " << output_ref.total() << std::endl;
-        // output_ref = output_ref.reshape(1, {3});
+        std::cout << "output_ref: " << output_ref.size() << std::endl;
+        output_ref = output_ref.reshape(1, (int)output_ref.total());
         output_ref.dims = 1;
+        std::cout << "output_ref: " << output_ref.size() << std::endl;
     }
-    std::cout << "input: " << input << std::endl;
-    std::cout << "output_ref: " << output_ref << std::endl;
     std::cout << "shape output_ref: " << shape(output_ref) << std::endl;
 
     std::vector<Mat> inputs{input};
@@ -604,6 +604,8 @@ TEST_P(Layer_Padding_Test, Accuracy_01D){
     runLayer(layer, inputs, outputs);
     std::cout << "output[0]: " << outputs[0] << std::endl;
     std::cout << "output[0] shape: " << shape(outputs[0]) << std::endl;
+    std::cout << "output_ref: " << output_ref.size() << std::endl;
+    std::cout << "output[0]: " << outputs[0].size() << std::endl;
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
