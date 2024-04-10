@@ -39,7 +39,6 @@
 //
 //M*/
 
-#include "opencv2/imgproc/types_c.h"
 #include "test_precomp.hpp"
 #include <opencv2/highgui.hpp>
 
