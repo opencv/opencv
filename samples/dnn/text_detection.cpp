@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
             std::cout << i << ": '" << recognitionResult << "'" << std::endl;
 
             // Displaying the recognized text on the image
-            putText(frame, recognitionResult, detResults[i][3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 1.5);
+            putText(frame, recognitionResult, detResults[i][3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
         }
         // Drawing detected text regions on the image
         polylines(frame, contours, true, Scalar(0, 255, 0), 2);
