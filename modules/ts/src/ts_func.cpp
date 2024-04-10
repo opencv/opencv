@@ -1465,6 +1465,8 @@ double norm(InputArray _src, int normType, InputArray _mask)
 double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    std::cout << "scr1 size: " << src1.size << std::endl;
+    std::cout << "scr2 size: " << src2.size << std::endl;
     if( src1.depth() == CV_16F || src1.depth() == CV_16BF )
     {
         Mat src1_32f, src2_32f;
@@ -1502,6 +1504,8 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
     normType = normType == NORM_L2SQR ? NORM_L2 : normType;
 
     CV_CheckTypeEQ(src1.type(), src2.type(), "");
+    std::cout << "scr1 size: " << src1.size << std::endl;
+    std::cout << "scr2 size: " << src2.size << std::endl;
     CV_Assert(src1.size == src2.size);
     CV_Assert( mask.empty() || (src1.size == mask.size && mask.type() == CV_8U) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
