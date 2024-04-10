@@ -297,7 +297,7 @@ public:
     ~ContourScanner_() {}
     inline bool isInt() const
     {
-        return (this->mode == CV_RETR_FLOODFILL);
+        return (this->mode == RETR_FLOODFILL);
     }
     inline bool isSimple() const
     {
@@ -355,7 +355,7 @@ shared_ptr<ContourScanner_> ContourScanner_::create(Mat img, int mode, int metho
     root.body.brect = Rect(Point(0, 0), size);
     scanner->ctable.fill(-1);
     scanner->approx_method2 = scanner->approx_method1 = method;
-    if (method == CV_CHAIN_APPROX_TC89_L1 || method == CV_CHAIN_APPROX_TC89_KCOS)
+    if (method == CHAIN_APPROX_TC89_L1 || method == CHAIN_APPROX_TC89_KCOS)
         scanner->approx_method1 = CV_CHAIN_CODE;
     return scanner;
 }
@@ -454,7 +454,7 @@ bool ContourScanner_::contourScan(const int prev, int& p, Point& last_pos, const
 
     /* find contour parent */
     int main_parent = -1;
-    if (isSimple() || (!is_hole && (mode == CV_RETR_CCOMP || mode == CV_RETR_FLOODFILL)) ||
+    if (isSimple() || (!is_hole && (mode == RETR_CCOMP || mode == RETR_FLOODFILL)) ||
         last_pos.x <= 0)
     {
         main_parent = 0;
