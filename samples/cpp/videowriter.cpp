@@ -27,7 +27,7 @@ inline map<string, int> fourccByCodec() {
 }
 
 // Function to parse resolution string "WxH"
-Size parseResolution(const string& resolution) {
+static Size parseResolution(const string& resolution) {
     stringstream ss(resolution);
     int width, height;
     char delimiter;
