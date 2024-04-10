@@ -221,18 +221,18 @@ cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::strin
 
 }
 
-#if !TARGET_OS_VISION
 
 cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
 {
+#if !TARGET_OS_VISION
     CvCaptureCAM* retval = new CvCaptureCAM(index);
     if (retval->didStart())
         return cv::makePtr<cv::LegacyCapture>(retval);
     delete retval;
+#endif
     return 0;
 }
 
-#endif
 
 cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc,
                                                          double fps, const cv::Size &frameSize,
