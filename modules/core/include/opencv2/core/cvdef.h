@@ -900,7 +900,10 @@ inline hfloat hfloatFromBits(ushort w) {
 #endif
 }
 
+// TODO: detect c++ version and define OPENCV_HIDE_FLOAT16_T for c++23 (or above)
+#if !defined(OPENCV_HIDE_FLOAT16_T)
 typedef hfloat float16_t;
+#endif
 
 }
 #endif
