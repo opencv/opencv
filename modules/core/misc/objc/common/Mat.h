@@ -15,7 +15,7 @@
 #import <Foundation/Foundation.h>
 
 #ifdef AVAILABLE_IMGCODECS
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE || TARGET_OS_VISION
 #import <UIKit/UIKit.h>
 #elif TARGET_OS_MAC
 #import <AppKit/AppKit.h>
@@ -197,7 +197,7 @@ CV_EXPORTS @interface Mat : NSObject
 - (instancetype)initWithCGImage:(CGImageRef)image;
 - (instancetype)initWithCGImage:(CGImageRef)image alphaExist:(BOOL)alphaExist;
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE || TARGET_OS_VISION
 
 - (UIImage*)toUIImage;
 - (instancetype)initWithUIImage:(UIImage*)image;
