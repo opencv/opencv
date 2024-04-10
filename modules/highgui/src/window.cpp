@@ -1093,29 +1093,14 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 
 const std::string cv::currentUIFramework()
 {
-#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    CV_TRACE_FUNCTION();
+#if defined(ENABLE_PLUGINS)
     auto backend = getCurrentUIBackend();
     if (backend)
     {
         return backend->getName();
     }
     CV_Error(Error::StsNotImplemented, "The function is not implemented with this GUI. ");
-    return std::string();
-#elif defined(HAVE_WIN32UI)
-    auto backend = getCurrentUIBackend();
-    if (backend)
-    {
-        return backend->getName();
-    }
-    CV_Error(Error::StsNotImplemented, "The function is not implemented with this GUI.");
-#elif defined (HAVE_GTK)
-    auto backend = getCurrentUIBackend();
-    if (backend)
-    {
-        return backend->getName();
-    }
-    CV_Error(Error::StsNotImplemented, "The function is not implemented with this GUI. ");
-    return std::string();
 #elif defined (HAVE_QT)
     return std::string("QT");
 #elif defined (HAVE_COCOA)
