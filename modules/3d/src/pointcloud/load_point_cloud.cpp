@@ -203,40 +203,33 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
                         tri[j] = vec_indices[i][j];
                     }
                 }
-                vec.push_back(tri);
+                vec[i] = tri;
             }
         }
     }
 
     if (texCoords.needed())
     {
-        int ch = texCoords.empty() ? 0 : texCoords.channels();
-        Mat texMat = Mat(1, static_cast<int>(vec_texCoords.size()), CV_MAKETYPE(CV_32F, nTexCoords), vec_texCoords.data());
-        if (ch == nTexCoords)
+        CV_Assert(!texCoords.fixedType() || (texCoords.type() == CV_MAKE_TYPE(CV_32F, nTexCoords)));
+
+        Mat tex3 = Mat(vec_texCoords);
+        std::vector<Mat> varr;
+        cv::split(tex3, varr);
+        std::vector<Mat> marr = { varr[0], varr[1] };
+
+        int ch = texCoords.channels();
+        if (nTexCoords == 3)
         {
-            texMat.copyTo(texCoords);
+            marr.push_back(varr[2]);
         }
-        else
+        else if (nTexCoords == 2)
         {
-            Mat newTexMat;
-            std::vector<Mat> varr;
-            cv::split(texMat, varr);
-            if (ch == 2 && nTexCoords == 3)
+            if (ch == 3)
             {
-                std::vector<Mat> marr = { varr[0], varr[1] };
-                cv::merge(marr, newTexMat);
+                marr.push_back(Mat::zeros(varr[0].size(), CV_32F));
             }
-            else if (ch == 3 && nTexCoords == 2)
-            {
-                std::vector<Mat> marr = { varr[0], varr[1], Mat::zeros(varr[0].size(), CV_32F) };
-                cv::merge(marr, newTexMat);
-            }
-            else
-            {
-                newTexMat = texMat;
-            }
-            newTexMat.copyTo(texCoords);
         }
+        cv::merge(marr, texCoords);
     }
 
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
