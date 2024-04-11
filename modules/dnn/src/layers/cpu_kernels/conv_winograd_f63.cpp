@@ -85,7 +85,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
         // works at FP 16.
         CONV_WINO_ATOM = CONV_WINO_ATOM_F16;
         CONV_WINO_NATOMS = CONV_WINO_NATOMS_F16;
-        esz = sizeof(float16_t);
+        esz = sizeof(__fp16);
     }
 #endif
 

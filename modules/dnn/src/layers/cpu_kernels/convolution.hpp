@@ -62,10 +62,10 @@ struct FastConv
     float* getWeights();
     float* getWeightsWino();
 
-    std::vector<float16_t> weightsBuf_FP16;
-    std::vector<float16_t> weightsWinoBuf_FP16;
-    float16_t* getWeightsFP16();
-    float16_t* getWeightsWinoFP16();
+    std::vector<hfloat> weightsBuf_FP16;
+    std::vector<hfloat> weightsWinoBuf_FP16;
+    hfloat* getWeightsFP16();
+    hfloat* getWeightsWinoFP16();
 
     int conv_type;
     int conv_dim;  // Flag for conv1d, conv2d, or conv3d.
