@@ -79,6 +79,8 @@ public:
             upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 45.0;
+            zNear = 0.1;
+            zFar = 50;
 
             vertices = std::vector<Vec3f>(4, {2.0f, 0, -2.0f});
             colors   = std::vector<Vec3f>(4, {0, 0, 1.0f});
@@ -92,6 +94,8 @@ public:
             upVector = Vec3d( 0.0, 1.0, 0.0);
 
             fovy = 45.0;
+            zNear = 0.1;
+            zFar = 50;
 
             objectPath = objPath;
             std::vector<vector<int>> indvec;
@@ -120,6 +124,8 @@ public:
             upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 45.0;
+            zNear = 0.1;
+            zFar = 50;
 
             vertices =
             {
@@ -153,6 +159,8 @@ public:
             upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 45.0;
+            zNear = 0.1;
+            zFar = 50;
 
             vertices =
             {
@@ -182,6 +190,8 @@ public:
             upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 60.0;
+            zNear = 0.1;
+            zFar = 50;
 
             vertices =
             {
@@ -209,13 +219,15 @@ public:
         }
     }
 
-    ModelData(std::string modelPath, double fov, Vec3d pos, Vec3d center, Vec3d up)
+    ModelData(std::string modelPath, double fov, double near, double far, Vec3d pos, Vec3d center, Vec3d up)
     {
         objectPath = modelPath;
         position = pos;
         lookat   = center;
         upVector = up;
         fovy = fov;
+        zNear = near;
+        zFar = far;
 
         std::vector<vector<int>> indvec;
         loadMesh(objectPath, vertices, indvec);
@@ -240,7 +252,7 @@ public:
     Vec3d lookat;
     Vec3d upVector;
 
-    double fovy;
+    double fovy, zNear, zFar;
 
     std::vector<Vec3f> vertices;
     std::vector<Vec3i> indices;
@@ -319,10 +331,9 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
     data.arr.setColorArray(colors4f);
     data.indices.copyFrom(idxLinear);
 
-    double zNear = 0.1, zFar = 50;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(modelData.fovy, (double)imgSz.width / imgSz.height, zNear, zFar);
+    gluPerspective(modelData.fovy, (double)imgSz.width / imgSz.height, modelData.zNear, modelData.zFar);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -369,7 +380,7 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
         // map from [0, 1] to [zNear, zFar]
         for (auto it = depthImage.begin<float>(); it != depthImage.end<float>(); ++it)
         {
-            *it = (float)(zNear * zFar / (double(*it) * (zNear - zFar) + zFar));
+            *it = (float)(modelData.zNear * modelData.zFar / (double(*it) * (modelData.zNear - modelData.zFar) + modelData.zFar));
         }
         cv::flip(depthImage, depthImage, 0);
         depthImage.convertTo(depthImage, CV_16U, 1000.0);
@@ -400,9 +411,8 @@ int main(int argc, char* argv[])
             "{ lookatz        | 1.0  | (if custom parameters are used) lookup camera direction z }"
             "{ upx            | 1.0  | (if custom parameters are used) up camera direction x }"
             "{ upy            | 1.0  | (if custom parameters are used) up camera direction y }"
-            "{ upz            | 1.0  | (if custom parameters are used) up camera direction z }"
-            "{ resx           | 1.0  | (if custom parameters are used) camera resolution x }"
-            "{ resy           | 1.0  | (if custom parameters are used) camera resolution y }"
+            "{ zNear          | 0.1  | (if custom parameters are used) near z clipping plane }"
+            "{ zFar           |  50  | (if custom parameters are used) far z clipping plane }"
             "{ shading        |      | (if custom parameters are used) shading type: white/flat/shaded }"
             "{ culling        |      | (if custom parameters are used) culling type: none/cw/ccw }"
             "{ colorPath      |      | (if custom parameters are used) output path for color image }"
@@ -439,6 +449,8 @@ int main(int argc, char* argv[])
         Size res;
         res.width  = parser.get<int>("resx");
         res.height = parser.get<int>("resy");
+        double zNear = parser.get<double>("zNear");
+        double zFar  = parser.get<double>("zFar");
 
         std::map<std::string, cv::TriangleShadingType> shadingTxt = {
             { "white",  RASTERIZE_SHADING_WHITE  },
@@ -458,7 +470,7 @@ int main(int argc, char* argv[])
         std::string depthPath = parser.get<std::string>("depthPath");
 
         Mat colorImage, depthImage;
-        ModelData modelData(modelPath, fov, position, lookat, upVector);
+        ModelData modelData(modelPath, fov, zNear, zFar, position, lookat, upVector);
         generateImage(res, shadingType, cullingMode, modelData, colorImage, depthImage);
 
         cv::imwrite(colorPath, colorImage);
