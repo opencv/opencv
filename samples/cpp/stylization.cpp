@@ -1,5 +1,5 @@
 /*
-* npr_demo.cpp
+* stylization.cpp
 *
 * Author:
 * Siddharth Kherada <siddharthkherada27[at]gmail[dot]com>

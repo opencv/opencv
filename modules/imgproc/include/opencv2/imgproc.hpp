@@ -3682,7 +3682,7 @@ CV_EXPORTS_W int floodFill( InputOutputArray image, InputOutputArray mask,
                             Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
                             int flags = 4 );
 
-/** @example samples/cpp/ffilldemo.cpp
+/** @example samples/cpp/floodfill.cpp
 An example using the FloodFill technique
 */
 
