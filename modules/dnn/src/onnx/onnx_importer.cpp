@@ -3005,22 +3005,22 @@ void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Assert(const_id.size() == 3);
 
     Mat startMat = getBlob(node_proto, 0);
-    CV_Assert(startMat.type() == CV_32SC1);
-    int start = startMat.at<int>(0);
+    startMat.convertTo(startMat, CV_32F);
+    float start = startMat.at<float>(0);
 
     Mat limitMat = getBlob(node_proto, 1);
-    CV_Assert(limitMat.type() == CV_32SC1);
-    int limit = limitMat.at<int>(0);
+    limitMat.convertTo(limitMat, CV_32F);
+    float limit = limitMat.at<float>(0);
 
     Mat deltaMat = getBlob(node_proto, 2);
-    CV_Assert(deltaMat.type() == CV_32SC1);
-    int delta = deltaMat.at<int>(0);
+    deltaMat.convertTo(deltaMat, CV_32F);
+    float delta = deltaMat.at<float>(0);
 
     int number_of_elements = std::max(int(std::ceil((limit - start) / delta)), 0);
-    Mat r(number_of_elements, 1, CV_32SC1);
+    Mat r(number_of_elements, 1, CV_32FC1);
     for (int i = 0; i < number_of_elements; i++)
     {
-        r.at<int>(i) = start + (i * delta);
+        r.at<float>(i) = start + (i * delta);
     }
     addConstant(node_proto.output(0), r);
     constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(1)));
