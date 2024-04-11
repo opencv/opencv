@@ -408,7 +408,12 @@ _exit_:
     return code;
 }
 
-TEST(Imgproc_FindContours, accuracy) { CV_FindContourTest test; test.safe_run(); }
+TEST(Imgproc_FindContours, accuracy)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    CV_FindContourTest test;
+    test.safe_run();
+}
 
 //rotate/flip a quadrant appropriately
 static void rot(int n, int *x, int *y, int rx, int ry)
