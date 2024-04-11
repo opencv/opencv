@@ -2997,6 +2997,34 @@ void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx
     addLayer(layerParams, node_proto);
 }
 
+template<typename T>
+Mat runRangeLayer(const Mat& startMat, const Mat& limitMat, const Mat& deltaMat)
+{
+    T start = startMat.at<T>(0);
+    T limit = limitMat.at<T>(0);
+    T delta = deltaMat.at<T>(0);
+
+    int numberOfElements;
+    if (start.depth() == CV_32S || start.depth() == CV_64S) {
+        if (delta > 0)
+            numberOfElements = (limit - start + delta - 1) / delta;
+        else
+            numberOfElements = (start - limit - delta - 1) / -delta;
+    }
+    else
+    {
+        numberOfElements = std::ceil((limit - start) / delta);
+    }
+    numberOfElements = std::max(numberOfElements, 0);
+
+    Mat r(numberOfElements, 1, startMat.type());
+    for (int i = 0; i < number_of_elements; i++)
+    {
+        r.at<T>(i) = start + (i * delta);
+    }
+    return r;
+}
+
 // Currently we only support range with all constant inputs
 void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
@@ -3012,24 +3040,26 @@ void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Assert(const_id.size() == 3);
 
     Mat startMat = getIntBlob(node_proto, 0);
-    CV_Assert(startMat.type() == CV_32SC1);
-    int start = startMat.at<int>(0);
-
     Mat limitMat = getIntBlob(node_proto, 1);
-    CV_Assert(limitMat.type() == CV_32SC1);
-    int limit = limitMat.at<int>(0);
-
     Mat deltaMat = getIntBlob(node_proto, 2);
-    CV_Assert(deltaMat.type() == CV_32SC1);
-    int delta = deltaMat.at<int>(0);
 
-    int number_of_elements = std::max(int(std::ceil((limit - start) / delta)), 0);
-    Mat r(number_of_elements, 1, CV_32SC1);
-    for (int i = 0; i < number_of_elements; i++)
+    Mat result;
+    switch (startMat.depth())
     {
-        r.at<int>(i) = start + (i * delta);
-    }
-    addConstant(node_proto.output(0), r);
+    case CV_32F:
+        result = runRangeLayer<float>(startMat, limitMat, deltaMat);
+        break;
+    case CV_32S:
+        result = runRangeLayer<int32_t>(startMat, limitMat, deltaMat);
+        break;
+    case CV_64S:
+        result = runRangeLayer<int64_t>(startMat, limitMat, deltaMat);
+        break;
+    default:
+        CV_Error(cv::Error::BadDepth, "Unsupported type.");
+    };
+
+    addConstant(node_proto.output(0), result);
     constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(1)));
 }
 
