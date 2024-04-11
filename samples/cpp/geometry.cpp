@@ -33,37 +33,48 @@ string hot_keys =
     "\th - make the convexhull\n"
     "\tt - make the triangle\n"
     "\te - make the ellipse\n"
-    "\ta - make all shapes\n";
+    "\ta - make all shapes\n"
+    "\t0 - use OpenCV's method for ellipse fitting\n"
+    "\t1 - use Approximate Mean Square (AMS) method for ellipse fitting \n"
+    "\t2 - use Direct least square (Direct) method for ellipse fitting\n";
 
 static void help(char** argv)
 {
     cout << "\nThis program demonstrates various shape fitting techniques on a set of points using functions: \n"
-         << "minAreaRect(), minEnclosingTriangle(), minEnclosingCircle(), convexHull(), and ellipse().\n"
-         << "Three methods are used to find the elliptical fits: \n"
-         << "0: fitEllipse (OpenCV), 1: fitEllipseAMS, 2: fitEllipseDirect.\n"
-         << "These can be changed using the trackbar or command line argument.\n\n"
-         << "Usage: " << argv[0] << " [--image_name=<image_path> Default: ellipses.jpg] [--ellipse_method=<0/1/2> -- Default: 0 (OpenCV)]\n\n";
+         << "minAreaRect(), minEnclosingTriangle(), minEnclosingCircle(), convexHull(), and ellipse().\n\n"
+         << "Usage: " << argv[0] << " [--image_name=<image_path> Default: ellipses.jpg]\n\n";
     cout << hot_keys << endl;
 }
 
 void processImage(int, void*);
-void drawShapes(Mat &img, vector<Point> &points);
+void drawShapes(Mat &img, vector<Point> &points, int ellipseMethod, string shape);
 void drawConvexHull(Mat &img, vector<Point> &points);
 void drawMinAreaRect(Mat &img, vector<Point> &points);
-void drawFittedEllipses(Mat &img, vector<Point> &points);
+void drawFittedEllipses(Mat &img, vector<Point> &points, int ellipseMethod);
 void drawMinEnclosingCircle(Mat &img, vector<Point> &points);
 void drawMinEnclosingTriangle(Mat &img, const vector<Point> &points);
 
 // Shape fitting options
 Mat image;
-int sliderPos = 70;
-string shape = "--all";
-int ellipseMethod = 0;
+enum EllipseFittingMethod {
+    OpenCV_Method,
+    AMS_Method,
+    Direct_Method
+};
+
+struct UserData{
+    int sliderPos = 70;
+    string shape = "--all";
+    int ellipseMethod = OpenCV_Method;
+};
+
+const char* keys =
+    "{help h          |      | Show help message }"
+    "{@image          |ellipses.jpg| Path to input image file }";
 
 int main(int argc, char** argv) {
 
-    cv::CommandLineParser parser(argc, argv,
-    "{help h||}{@image|ellipses.jpg|}{ellipse_method|0|Ellipse fitting method: 0 for OpenCV, 1 for AMS, 2 for Direct.}");
+    cv::CommandLineParser parser(argc, argv, keys);
 
     if (parser.has("help"))
     {
@@ -72,7 +83,8 @@ int main(int argc, char** argv) {
     }
 
     help(argv);
-    ellipseMethod = parser.get<int>("ellipse_method");
+
+    UserData userData; // variable to pass all the necessary values to trackbar callback
 
     string filename = parser.get<string>("@image");
     image = imread(samples::findFile(filename), IMREAD_COLOR);  // Read the image from the specified path
@@ -83,24 +95,27 @@ int main(int argc, char** argv) {
     }
 
     namedWindow("Shapes", WINDOW_AUTOSIZE);  // Create a window to display the results
-    createTrackbar("Threshold", "Shapes", NULL, 255, processImage, &sliderPos);  // Create a threshold trackbar
-    setTrackbarPos("Threshold", "Shapes", sliderPos);
+    createTrackbar("Threshold", "Shapes", NULL, 255, processImage, &userData);  // Create a threshold trackbar
+    setTrackbarPos("Threshold", "Shapes", userData.sliderPos);
 
     for(;;) {
         char key = (char)waitKey(0);  // Listen for a key press
         if (key == 'q' || key == 27) break;  // Exit the loop if 'q' or ESC is pressed
 
         switch (key) {
-            case 'h': shape = "--convexhull"; break;
-            case 'a': shape = "--all"; break;
-            case 't': shape = "--triangle"; break;
-            case 'c': shape = "--circle"; break;
-            case 'e': shape = "--ellipse"; break;
-            case 'r': shape = "--rectangle"; break;
+            case 'h': userData.shape = "--convexhull"; break;
+            case 'a': userData.shape = "--all"; break;
+            case 't': userData.shape = "--triangle"; break;
+            case 'c': userData.shape = "--circle"; break;
+            case 'e': userData.shape = "--ellipse"; break;
+            case 'r': userData.shape = "--rectangle"; break;
+            case '0': userData.ellipseMethod = OpenCV_Method; break;
+            case '1': userData.ellipseMethod = AMS_Method; break;
+            case '2': userData.ellipseMethod = Direct_Method; break;
             default: break;  // Do nothing for other keys
         }
 
-        processImage(sliderPos, &sliderPos);  // Process the image with the current settings
+        processImage(userData.sliderPos, &userData);  // Process the image with the current settings
     }
 
     return 0;
@@ -117,17 +132,15 @@ void drawMinEnclosingCircle(Mat &img, vector<Point> &points) {
 
 // Function to draw the minimum enclosing triangle around given points
 void drawMinEnclosingTriangle(Mat &img, const vector<Point> &points) {
-    vector<Point2f> triangle;
+    vector<Point> triangle;
     minEnclosingTriangle(points, triangle);  // Find the enclosing triangle
 
     if (triangle.size() != 3) {
         return;
     }
+    // Use polylines to draw the triangle. The 'true' argument closes the triangle.
+    polylines(img, triangle, true, Scalar(255, 0, 0), 2, LINE_AA);
 
-    // Draw the triangle
-    for (int i = 0; i < 3; i++) {
-        line(img, triangle[i], triangle[(i + 1) % 3], Scalar(255, 0, 0), 2, LINE_AA);
-    }
 }
 
 // Function to draw the minimum area rectangle around given points
@@ -135,9 +148,14 @@ void drawMinAreaRect(Mat &img, vector<Point> &points) {
     RotatedRect box = minAreaRect(points);  // Find the minimum area rectangle
     Point2f vtx[4];
     box.points(vtx);
-    // Draw the rectangle
-    for (int i = 0; i < 4; i++)
-        line(img, vtx[i], vtx[(i+1)%4], Scalar(0, 255, 0), 2, LINE_AA);
+    // Convert Point2f to Point because polylines expects a vector of Point
+    vector<Point> rectPoints;
+    for (int i = 0; i < 4; i++) {
+        rectPoints.push_back(Point(vtx[i].x, vtx[i].y));
+    }
+
+    // Use polylines to draw the rectangle. The 'true' argument closes the loop, drawing a rectangle.
+    polylines(img, rectPoints, true, Scalar(0, 255, 0), 2, LINE_AA);
 }
 
 // Function to draw the convex hull of given points
@@ -154,9 +172,9 @@ inline static bool isGoodBox(const RotatedRect& box) {
 }
 
 // Function to draw fitted ellipses using different methods
-void drawFittedEllipses(Mat &img, vector<Point> &points) {
+void drawFittedEllipses(Mat &img, vector<Point> &points, int ellipseMethod) {
     switch (ellipseMethod) {
-        case 0: // Standard ellipse fitting
+        case OpenCV_Method: // Standard ellipse fitting
             {
                 RotatedRect fittedEllipse = fitEllipse(points);
                 if (isGoodBox(fittedEllipse)) {
@@ -165,7 +183,7 @@ void drawFittedEllipses(Mat &img, vector<Point> &points) {
                 putText(img, "OpenCV", Point(img.cols - 80, 20), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 255), 2, LINE_AA);
             }
             break;
-        case 1: // AMS ellipse fitting
+        case AMS_Method: // AMS ellipse fitting
             {
                 RotatedRect fittedEllipseAMS = fitEllipseAMS(points);
                 if (isGoodBox(fittedEllipseAMS)) {
@@ -174,7 +192,7 @@ void drawFittedEllipses(Mat &img, vector<Point> &points) {
                 putText(img, "AMS", Point(img.cols - 80, 20), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 255), 2, LINE_AA);
             }
             break;
-        case 2: // Direct ellipse fitting
+        case Direct_Method: // Direct ellipse fitting
             {
                 RotatedRect fittedEllipseDirect = fitEllipseDirect(points);
                 if (isGoodBox(fittedEllipseDirect)) {
@@ -197,7 +215,7 @@ void drawFittedEllipses(Mat &img, vector<Point> &points) {
 }
 
 // Function to draw shapes
-void drawShapes(Mat &img, vector<Point> &points) {
+void drawShapes(Mat &img, vector<Point> &points, int ellipseMethod, string shape) {
     if (shape == "--circle") {
         drawMinEnclosingCircle(img, points);
     } else if (shape == "--triangle") {
@@ -207,28 +225,28 @@ void drawShapes(Mat &img, vector<Point> &points) {
     } else if (shape == "--convexhull") {
         drawConvexHull(img, points);
     } else if (shape == "--ellipse"){
-        drawFittedEllipses(img, points);
+        drawFittedEllipses(img, points, ellipseMethod);
     }
     else if (shape == "--all") {
         drawMinEnclosingCircle(img, points);
         drawMinEnclosingTriangle(img, points);
         drawMinAreaRect(img, points);
         drawConvexHull(img, points);
-        drawFittedEllipses(img, points);
+        drawFittedEllipses(img, points, ellipseMethod);
     }
 }
 
 // Main function to process the image based on the current trackbar position
 void processImage(int position, void* userData){
 
-    int* sliderPosition = static_cast<int*>(userData);
+    UserData* data = static_cast<UserData*>(userData);
 
-    *sliderPosition = position;
+    data->sliderPos = position;
 
     Mat processedImg = image.clone();  // Clone the original image for processing
     Mat gray;
     cvtColor(processedImg, gray, COLOR_BGR2GRAY);  // Convert to grayscale
-    threshold(gray, gray, *sliderPosition, 255, THRESH_BINARY);  // Apply binary threshold
+    threshold(gray, gray, data->sliderPos, 255, THRESH_BINARY);  // Apply binary threshold
 
     Mat filteredImg;
     medianBlur(gray, filteredImg, 3);
@@ -240,12 +258,12 @@ void processImage(int position, void* userData){
         return;
     }
 
-    imshow("mask", filteredImg);  // Show the mask
+    imshow("Mask", filteredImg);  // Show the mask
     for (size_t i = 0; i < contours.size(); ++i) {
         if (contours[i].size() < 5) {  // Check if the contour has enough points
             continue;
         }
-        drawShapes(processedImg, contours[i]);
+        drawShapes(processedImg, contours[i], data->ellipseMethod, data->shape);
     }
 
     imshow("Shapes", processedImg);  // Display the processed image with fitted shapes
