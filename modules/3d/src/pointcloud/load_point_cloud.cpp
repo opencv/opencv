@@ -140,7 +140,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
     std::vector<std::vector<int32_t>> vec_indices;
 
     std::vector<Point3f> vec_texCoords;
-    int nTexCoords;
+    int nTexCoords = 0;
 
     decoder->readData(vec_vertices, vec_normals, vec_rgb, vec_texCoords, nTexCoords, vec_indices, 0);
 
@@ -210,26 +210,33 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
 
     if (texCoords.needed())
     {
-        CV_Assert(!texCoords.fixedType() || (texCoords.type() == CV_MAKE_TYPE(CV_32F, nTexCoords)));
-
-        Mat tex3 = Mat(vec_texCoords);
-        std::vector<Mat> varr;
-        cv::split(tex3, varr);
-        std::vector<Mat> marr = { varr[0], varr[1] };
-
-        int ch = texCoords.channels();
-        if (nTexCoords == 3)
+        if (nTexCoords)
         {
-            marr.push_back(varr[2]);
-        }
-        else if (nTexCoords == 2)
-        {
-            if (ch == 3)
+            CV_Assert(!texCoords.fixedType() || (texCoords.type() == CV_MAKE_TYPE(CV_32F, nTexCoords)));
+
+            Mat tex3 = Mat(vec_texCoords);
+            std::vector<Mat> varr;
+            cv::split(tex3, varr);
+            std::vector<Mat> marr = { varr[0], varr[1] };
+
+            int ch = texCoords.channels();
+            if (nTexCoords == 3)
             {
-                marr.push_back(Mat::zeros(varr[0].size(), CV_32F));
+                marr.push_back(varr[2]);
             }
+            else if (nTexCoords == 2)
+            {
+                if (ch == 3)
+                {
+                    marr.push_back(Mat::zeros(varr[0].size(), CV_32F));
+                }
+            }
+            cv::merge(marr, texCoords);
         }
-        cv::merge(marr, texCoords);
+        else
+        {
+            texCoords.clear();
+        }
     }
 
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
