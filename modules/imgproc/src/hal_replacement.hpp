@@ -764,6 +764,29 @@ inline int hal_ni_medianBlur(const uchar* src_data, size_t src_step, uchar* dst_
 //! @endcond
 
 /**
+   @brief Calculate bilateral filter. See https://homepages.inf.ed.ac.uk/rbf/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param depth Depths of source and destination image. Should support CV_8U and CV_32F
+   @param cn Number of channels
+   @param d Diameter of each pixel neighborhood that is used during filtering. If it is non-positive, it is computed from sigmaSpace
+   @param sigma_color Filter sigma in the color space
+   @param sigma_space Filter sigma in the coordinate space. When d>0, it specifies the neighborhood size regardless of sigmaSpace. Otherwise, d is proportional to sigmaSpace
+   @param border_type border mode used to extrapolate pixels outside of the image
+*/
+inline int hal_ni_bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                                  int width, int height, int depth, int cn, int d, double sigma_color, double sigma_space, int border_type)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_bilateralFilter hal_ni_bilateralFilter
+//! @endcond
+
+/**
    @brief Calculates adaptive threshold
    @param src_data Source image data
    @param src_step Source image step
