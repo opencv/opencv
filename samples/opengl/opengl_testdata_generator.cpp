@@ -230,9 +230,8 @@ public:
         zFar = far;
 
         std::vector<vector<int>> indvec;
-        loadMesh(objectPath, vertices, indvec);
-        // using per-vertex normals as colors
-        generateNormals(vertices, indvec, colors);
+
+        loadMesh(objectPath, vertices, indvec, noArray(), colors);
         if (vertices.size() != colors.size())
         {
             std::runtime_error("Model should contain normals for each vertex");
@@ -240,11 +239,6 @@ public:
         for (const auto &vec : indvec)
         {
             indices.push_back({vec[0], vec[1], vec[2]});
-        }
-
-        for (auto &color : colors)
-        {
-            color = Vec3f(abs(color[0]), abs(color[1]), abs(color[2]));
         }
     }
 
