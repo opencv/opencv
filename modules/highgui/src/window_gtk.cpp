@@ -271,7 +271,7 @@ cvImageWidget_get_preferred_width (GtkWidget *widget, gint *minimal_width, gint 
   CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 
   if(image_widget->original_image != NULL) {
-    *minimal_width = (image_widget->flags & CV_WINDOW_AUTOSIZE) != CV_WINDOW_AUTOSIZE ?
+    *minimal_width = (image_widget->flags & cv::WINDOW_AUTOSIZE) != cv::WINDOW_AUTOSIZE ?
       gdk_window_get_width(gtk_widget_get_window(widget)) : image_widget->original_image->cols;
   }
   else {
@@ -295,7 +295,7 @@ cvImageWidget_get_preferred_height (GtkWidget *widget, gint *minimal_height, gin
   CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 
   if(image_widget->original_image != NULL) {
-    *minimal_height = (image_widget->flags & CV_WINDOW_AUTOSIZE) != CV_WINDOW_AUTOSIZE ?
+    *minimal_height = (image_widget->flags & cv::WINDOW_AUTOSIZE) != cv::WINDOW_AUTOSIZE ?
       gdk_window_get_height(gtk_widget_get_window(widget)) : image_widget->original_image->rows;
   }
   else {
@@ -322,7 +322,7 @@ cvImageWidget_size_request (GtkWidget      *widget,
     //printf("cvImageWidget_size_request ");
     // the case the first time cvShowImage called or when AUTOSIZE
     if( image_widget->original_image &&
-        ((image_widget->flags & CV_WINDOW_AUTOSIZE) ||
+        ((image_widget->flags & cv::WINDOW_AUTOSIZE) ||
          (image_widget->flags & CV_WINDOW_NO_IMAGE)))
     {
         //printf("original ");
@@ -351,7 +351,7 @@ static void cvImageWidget_set_size(GtkWidget * widget, int max_width, int max_he
     //printf("cvImageWidget_set_size %d %d\n", max_width, max_height);
 
     // don't allow to set the size
-    if(image_widget->flags & CV_WINDOW_AUTOSIZE) return;
+    if(image_widget->flags & cv::WINDOW_AUTOSIZE) return;
     if(!image_widget->original_image) return;
 
     CvSize scaled_image_size = cvImageWidget_calc_size( image_widget->original_image->cols,
@@ -390,7 +390,7 @@ cvImageWidget_size_allocate (GtkWidget     *widget,
   image_widget = CV_IMAGE_WIDGET (widget);
 
 
-  if( (image_widget->flags & CV_WINDOW_AUTOSIZE)==0 && image_widget->original_image ){
+  if( (image_widget->flags & cv::WINDOW_AUTOSIZE)==0 && image_widget->original_image ){
       // (re) allocated scaled image
       if( image_widget->flags & CV_WINDOW_NO_IMAGE ){
           cvImageWidget_set_size( widget, image_widget->original_image->cols,
@@ -407,7 +407,7 @@ cvImageWidget_size_allocate (GtkWidget     *widget,
       image_widget = CV_IMAGE_WIDGET (widget);
 
       if( image_widget->original_image &&
-              ((image_widget->flags & CV_WINDOW_AUTOSIZE) ||
+              ((image_widget->flags & cv::WINDOW_AUTOSIZE) ||
                (image_widget->flags & CV_WINDOW_NO_IMAGE)) )
       {
 #if defined (GTK_VERSION3)
@@ -744,7 +744,7 @@ CvRect cvGetWindowRect_GTK(const char* name)
     CV_LOCK_MUTEX();
     const auto window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
 
     return cvRect(getImageRect_(window));
 }
@@ -786,7 +786,7 @@ double cvGetModeWindow_GTK(const char* name)//YV
     CV_LOCK_MUTEX();
     const auto window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
 
     double result = window->status;
     return result;
@@ -801,14 +801,14 @@ void cvSetModeWindow_GTK( const char* name, double prop_value)//Yannick Verdie
 
     const auto window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
 
     setModeWindow_(window, (int)prop_value);
 }
 
 static bool setModeWindow_(const std::shared_ptr<CvWindow>& window, int mode)
 {
-    if (window->flags & CV_WINDOW_AUTOSIZE) //if the flag CV_WINDOW_AUTOSIZE is set
+    if (window->flags & cv::WINDOW_AUTOSIZE) //if the flag cv::WINDOW_AUTOSIZE is set
         return false;
 
     //so easy to do fullscreen here, Linux rocks !
@@ -816,17 +816,17 @@ static bool setModeWindow_(const std::shared_ptr<CvWindow>& window, int mode)
     if (window->status == mode)
         return true;
 
-    if (window->status==CV_WINDOW_FULLSCREEN && mode==CV_WINDOW_NORMAL)
+    if (window->status==cv::WINDOW_FULLSCREEN && mode==cv::WINDOW_NORMAL)
     {
         gtk_window_unfullscreen(GTK_WINDOW(window->frame));
-        window->status=CV_WINDOW_NORMAL;
+        window->status=cv::WINDOW_NORMAL;
         return true;
     }
 
-    if (window->status==CV_WINDOW_NORMAL && mode==CV_WINDOW_FULLSCREEN)
+    if (window->status==cv::WINDOW_NORMAL && mode==cv::WINDOW_FULLSCREEN)
     {
         gtk_window_fullscreen(GTK_WINDOW(window->frame));
-        window->status=CV_WINDOW_FULLSCREEN;
+        window->status=cv::WINDOW_FULLSCREEN;
         return true;
     }
 
@@ -859,7 +859,7 @@ double cvGetPropWindowAutoSize_GTK(const char* name)
     if (!window)
         return -1; // keep silence here
 
-    double result = window->flags & CV_WINDOW_AUTOSIZE;
+    double result = window->flags & cv::WINDOW_AUTOSIZE;
     return result;
 }
 
@@ -917,11 +917,11 @@ namespace
         // Try double-buffered visual
         glconfig = gdk_gl_config_new_by_mode((GdkGLConfigMode)(GDK_GL_MODE_RGB | GDK_GL_MODE_DEPTH | GDK_GL_MODE_DOUBLE));
         if (!glconfig)
-            CV_Error( CV_OpenGlApiCallError, "Can't Create A GL Device Context" );
+            CV_Error( cv::Error::OpenGlApiCallError, "Can't Create A GL Device Context" );
 
         // Set OpenGL-capability to the widget
         if (!gtk_widget_set_gl_capability(window->widget, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE))
-            CV_Error( CV_OpenGlApiCallError, "Can't Create A GL Device Context" );
+            CV_Error( cv::Error::OpenGlApiCallError, "Can't Create A GL Device Context" );
 
         window->useGl = true;
     }
@@ -932,7 +932,7 @@ namespace
         GdkGLDrawable* gldrawable = gtk_widget_get_gl_drawable(window->widget);
 
         if (!gdk_gl_drawable_gl_begin (gldrawable, glcontext))
-            CV_Error( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
+            CV_Error( cv::Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
 
         glViewport(0, 0, gtk_widget_get_allocated_width(window->widget), gtk_widget_get_allocated_height(window->widget));
 
@@ -1037,7 +1037,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
     auto window_ptr = std::make_shared<CvWindow>(name);
     CvWindow* window = window_ptr.get();
     window->flags = flags;
-    window->status = CV_WINDOW_NORMAL;//YV
+    window->status = cv::WINDOW_NORMAL;//YV
 
     window->frame = gtk_window_new( GTK_WINDOW_TOPLEVEL );
 
@@ -1049,10 +1049,10 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
     gtk_widget_show( window->paned );
 
 #ifndef HAVE_OPENGL
-    if (flags & CV_WINDOW_OPENGL)
-        CV_Error( CV_OpenGlNotSupported, "Library was built without OpenGL support" );
+    if (flags & cv::WINDOW_OPENGL)
+        CV_Error( cv::Error::OpenGlNotSupported, "Library was built without OpenGL support" );
 #else
-    if (flags & CV_WINDOW_OPENGL)
+    if (flags & cv::WINDOW_OPENGL)
         createGlContext(window);
 
     window->glDrawCallback = 0;
@@ -1097,7 +1097,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
         getGTKWindows().push_back(window_ptr);
     }
 
-    bool b_nautosize = ((flags & CV_WINDOW_AUTOSIZE) == 0);
+    bool b_nautosize = ((flags & cv::WINDOW_AUTOSIZE) == 0);
     gtk_window_set_resizable( GTK_WINDOW(window->frame), b_nautosize );
 
     // allow window to be resized
@@ -1131,16 +1131,16 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
 
     auto window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window" );
 
     if (!window->useGl)
-        CV_Error( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
+        CV_Error( cv::Error::OpenGlNotSupported, "Window doesn't support OpenGL" );
 
     glcontext = gtk_widget_get_gl_context(window->widget);
     gldrawable = gtk_widget_get_gl_drawable(window->widget);
 
     if (!gdk_gl_drawable_make_current(gldrawable, glcontext))
-        CV_Error( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
+        CV_Error( cv::Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
 }
 
 CV_IMPL void cvUpdateWindow(const char* name)
@@ -1168,7 +1168,7 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
         return;
 
     if (!window->useGl)
-        CV_Error( CV_OpenGlNotSupported, "Window was created without OpenGL context" );
+        CV_Error( cv::Error::OpenGlNotSupported, "Window was created without OpenGL context" );
 
     window->glDrawCallback = callback;
     window->glDrawData = userdata;
@@ -1333,7 +1333,7 @@ void resizeWindow_(const std::shared_ptr<CvWindow>& window, int width, int heigh
 {
     CV_Assert(window);
     CvImageWidget* image_widget = CV_IMAGE_WIDGET( window->widget );
-    //if(image_widget->flags & CV_WINDOW_AUTOSIZE)
+    //if(image_widget->flags & cv::WINDOW_AUTOSIZE)
         //EXIT;
 
     gtk_window_set_resizable( GTK_WINDOW(window->frame), 1 );
@@ -1384,7 +1384,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     CV_Assert(trackbar_name && "NULL trackbar name");
 
     if( count <= 0 )
-        CV_Error( CV_StsOutOfRange, "Bad trackbar maximal value" );
+        CV_Error( cv::Error::StsOutOfRange, "Bad trackbar maximal value" );
 
     CV_LOCK_MUTEX();
 
@@ -1557,7 +1557,7 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
     const auto trackbar = icvFindTrackbarByName(window, trackbar_name);
     if (!trackbar)
     {
-        CV_Error( CV_StsNullPtr, "No trackbar found" );
+        CV_Error( cv::Error::StsNullPtr, "No trackbar found" );
     }
 
     return setTrackbarPos_(trackbar, pos);
@@ -1916,7 +1916,7 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
     if( cv_event >= 0 )
     {
         // scale point if image is scaled
-        if( (image_widget->flags & CV_WINDOW_AUTOSIZE)==0 &&
+        if( (image_widget->flags & cv::WINDOW_AUTOSIZE)==0 &&
              image_widget->original_image &&
              image_widget->scaled_image )
         {
@@ -2080,17 +2080,17 @@ public:
         // see cvGetWindowProperty
         switch (prop)
         {
-        case CV_WND_PROP_FULLSCREEN:
+        case cv::WND_PROP_FULLSCREEN:
             return (double)window->status;
 
-        case CV_WND_PROP_AUTOSIZE:
-            return (window->flags & CV_WINDOW_AUTOSIZE) ? 1.0 : 0.0;
+        case cv::WND_PROP_AUTOSIZE:
+            return (window->flags & cv::WINDOW_AUTOSIZE) ? 1.0 : 0.0;
 
-        case CV_WND_PROP_ASPECTRATIO:
+        case cv::WND_PROP_ASPECT_RATIO:
             return getRatioWindow_(window);
 
 #ifdef HAVE_OPENGL
-        case CV_WND_PROP_OPENGL:
+        case cv::WND_PROP_OPENGL:
             return window->useGl ? 1.0 : 0.0;
 #endif
 
@@ -2107,8 +2107,8 @@ public:
         // see cvSetWindowProperty
         switch (prop)
         {
-        case CV_WND_PROP_FULLSCREEN:
-            if (value != CV_WINDOW_NORMAL && value != CV_WINDOW_FULLSCREEN)  // bad arg
+        case cv::WND_PROP_FULLSCREEN:
+            if (value != cv::WINDOW_NORMAL && value != cv::WINDOW_FULLSCREEN)  // bad arg
                 break;
             setModeWindow_(window, value);
             return true;

@@ -316,14 +316,14 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
         if(OBSENSOR_GEMINI2_PID == devInfo_.pid){
             // return default param
             CameraParam param;
-            param.p0[0] = 516.652f;
-            param.p0[1] = 516.692f;
-            param.p0[2] = 322.988f;
-            param.p0[3] = 235.787f;
-            param.p1[0] = 516.652f;
-            param.p1[1] = 516.692f;
-            param.p1[2] = 322.988f;
-            param.p1[3] = 235.787f;
+            param.p0[0] = 519.342f;
+            param.p0[1] = 519.043f;
+            param.p0[2] = 319.41f;
+            param.p0[3] = 240.839f;
+            param.p1[0] = 519.342f;
+            param.p1[1] = 519.043f;
+            param.p1[2] = 319.41f;
+            param.p1[3] = 240.839f;
             param.p6[0] = 640;
             param.p6[1] = 480;
             param.p7[0] = 640;
@@ -421,7 +421,7 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
 
 bool IUvcStreamChannel::initDepthFrameProcessor()
 {
-    if(OBSENSOR_GEMINI2_PID == devInfo_.pid || OBSENSOR_ASTRA2_PID == devInfo_.pid || OBSENSOR_GEMINI2L_PID == devInfo_.pid){
+    if( OBSENSOR_ASTRA2_PID == devInfo_.pid){
         uint8_t* rcvData;
         uint32_t rcvLen;
 
@@ -433,7 +433,19 @@ bool IUvcStreamChannel::initDepthFrameProcessor()
 
         depthFrameProcessor_ = makePtr<DepthFrameUnpacker>();
         return true;
-    }else if(OBSENSOR_GEMINI2XL_PID == devInfo_.pid){
+    }
+    else if(OBSENSOR_GEMINI2_PID == devInfo_.pid || OBSENSOR_GEMINI2L_PID == devInfo_.pid){
+        uint8_t* rcvData;
+        uint32_t rcvLen;
+
+        setXu(2, OB_EXT_CMD7, sizeof(OB_EXT_CMD7));
+        getXu(2, &rcvData, &rcvLen);
+
+        setXu(2, OB_EXT_CMD9, sizeof(OB_EXT_CMD9));
+        getXu(2, &rcvData, &rcvLen);
+        return true;
+    }
+    else if(OBSENSOR_GEMINI2XL_PID == devInfo_.pid){
         uint8_t* rcvData;
         uint32_t rcvLen;
 
@@ -445,7 +457,7 @@ bool IUvcStreamChannel::initDepthFrameProcessor()
 
         return true;
     }
-    else if (streamType_ == OBSENSOR_STREAM_DEPTH && setXu(2, OB_EXT_CMD4, sizeof(OB_EXT_CMD4)))
+    else if(streamType_ == OBSENSOR_STREAM_DEPTH && setXu(2, OB_EXT_CMD4, sizeof(OB_EXT_CMD4)))
     {
         uint8_t* rcvData;
         uint32_t rcvLen;

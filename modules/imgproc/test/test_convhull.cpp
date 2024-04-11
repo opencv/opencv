@@ -747,7 +747,7 @@ int CV_MinAreaRectTest::validate_test_results( int test_case_idx )
         cvCircle(img,cvPoint(cvRound(p[i].x*a+b),cvRound(p[i].y*c+d)), 3, CV_RGB(0,255,0), -1 );
     for( i = 0; i < n; i++ )
         bp[i] = cvPoint(cvRound(box_pt[i].x*a+b),cvRound(box_pt[i].y*c+d));
-    cvPolyLine( img, &bpp, &n, 1, 1, CV_RGB(255,255,0), 1, CV_AA, 0 );
+    cvPolyLine( img, &bpp, &n, 1, 1, CV_RGB(255,255,0), 1, cv::LINE_AA, 0 );
     cvShowImage( "test", img );
     cvWaitKey();
     cvReleaseImage(&img);
@@ -857,7 +857,7 @@ int CV_MinTriangleTest::validate_test_results( int test_case_idx )
         cvCircle(img,cvPoint(cvRound(p[i].x*a+b),cvRound(p[i].y*c+d)), 3, CV_RGB(0,255,0), -1 );
     for( i = 0; i < n; i++ )
         bp[i] = cvPoint(cvRound(triangle[i].x*a+b),cvRound(triangle[i].y*c+d));
-    cvPolyLine( img, &bpp, &n, 1, 1, CV_RGB(255,255,0), 1, CV_AA, 0 );
+    cvPolyLine( img, &bpp, &n, 1, 1, CV_RGB(255,255,0), 1, cv::LINE_AA, 0 );
     cvShowImage( "test", img );
     cvWaitKey();
     cvReleaseImage(&img);

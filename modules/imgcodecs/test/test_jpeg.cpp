@@ -178,6 +178,44 @@ TEST(Imgcodecs_Jpeg, encode_decode_rst_jpeg)
     EXPECT_EQ(0, remove(output_normal.c_str()));
 }
 
+// See https://github.com/opencv/opencv/issues/25274
+typedef testing::TestWithParam<int> Imgcodecs_Jpeg_decode_cmyk;
+TEST_P(Imgcodecs_Jpeg_decode_cmyk, regression25274)
+{
+    const int imread_flag = GetParam();
+
+    /*
+     * "test_1_c4.jpg" is CMYK-JPEG.
+     * $ convert test_1_c3.jpg -colorspace CMYK test_1_c4.jpg
+     * $ identify test_1_c4.jpg
+     * test_1_c4.jpg JPEG 480x640 480x640+0+0 8-bit CMYK 11240B 0.000u 0:00.000
+     */
+
+    cvtest::TS& ts = *cvtest::TS::ptr();
+
+    string  rgb_filename  = string(ts.get_data_path()) + "readwrite/test_1_c3.jpg";
+    cv::Mat rgb_img       = cv::imread(rgb_filename, imread_flag);
+    ASSERT_FALSE(rgb_img.empty());
+
+    string  cmyk_filename = string(ts.get_data_path()) + "readwrite/test_1_c4.jpg";
+    cv::Mat cmyk_img      = cv::imread(cmyk_filename, imread_flag);
+    ASSERT_FALSE(cmyk_img.empty());
+
+    EXPECT_EQ(rgb_img.size(), cmyk_img.size());
+    EXPECT_EQ(rgb_img.type(), cmyk_img.type());
+
+    // Jpeg is lossy compression.
+    // There may be small differences in decoding results by environments.
+    // -> 255 * 1% = 2.55 .
+    EXPECT_LE(cvtest::norm(rgb_img, cmyk_img, NORM_INF), 3); // norm() <= 3
+}
+
+INSTANTIATE_TEST_CASE_P( /* nothing */,
+                        Imgcodecs_Jpeg_decode_cmyk,
+                        testing::Values(cv::IMREAD_COLOR,
+                                        cv::IMREAD_GRAYSCALE,
+                                        cv::IMREAD_ANYCOLOR));
+
 //==================================================================================================
 
 static const uint32_t default_sampling_factor = static_cast<uint32_t>(0x221111);

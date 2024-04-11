@@ -158,20 +158,20 @@ template<> inline uint64 saturate_cast<uint64>(int64 v)      { return (uint64)st
 template<> inline int64 saturate_cast<int64>(uint64 v)       { return (int64)std::min(v, (uint64)LLONG_MAX); }
 
 /** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(float16_t v) { return saturate_cast<_Tp>((float)v); }
+template<typename _Tp> static inline _Tp saturate_cast(hfloat v) { return saturate_cast<_Tp>((float)v); }
 
 // in theory, we could use a LUT for 8u/8s->16f conversion,
 // but with hardware support for FP32->FP16 conversion the current approach is preferable
-template<> inline float16_t saturate_cast<float16_t>(uchar v)   { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(schar v)   { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(ushort v)  { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(short v)   { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(unsigned v){ return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(int v)     { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(uint64 v)  { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(int64 v)   { return float16_t((float)v); }
-template<> inline float16_t saturate_cast<float16_t>(float v)   { return float16_t(v); }
-template<> inline float16_t saturate_cast<float16_t>(double v)  { return float16_t((float)v); }
+template<> inline hfloat saturate_cast<hfloat>(uchar v)   { return hfloat((float)v); }
+template<> inline hfloat saturate_cast<hfloat>(schar v)   { return hfloat((float)v); }
+template<> inline hfloat saturate_cast<hfloat>(ushort v)  { return hfloat((float)v); }
+template<> inline hfloat saturate_cast<hfloat>(short v)   { return hfloat((float)v); }
+template<> inline hfloat saturate_cast<hfloat>(unsigned v){ return hfloat((float)v); }
+template<> inline hfloat saturate_cast<hfloat>(int v)     { return hfloat((float)v); }
+template<> inline hfloat saturate_cast<hfloat>(uint64 v)  { return hfloat((float)v); }
+template<> inline hfloat saturate_cast<hfloat>(int64 v)   { return hfloat((float)v); }
+template<> inline hfloat saturate_cast<hfloat>(float v)   { return hfloat(v); }
+template<> inline hfloat saturate_cast<hfloat>(double v)  { return hfloat((float)v); }
 
 //! @}
 

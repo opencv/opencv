@@ -55,30 +55,29 @@ This module includes photo processing algorithms
     @defgroup photo_denoise Denoising
     @defgroup photo_hdr HDR imaging
 
-This section describes high dynamic range imaging algorithms namely tonemapping, exposure alignment,
-camera calibration with multiple exposures and exposure fusion.
+    This section describes high dynamic range imaging algorithms namely tonemapping, exposure alignment,
+    camera calibration with multiple exposures and exposure fusion.
 
     @defgroup photo_decolor Contrast Preserving Decolorization
 
-Useful links:
+    Useful links:
 
-http://www.cse.cuhk.edu.hk/leojia/projects/color2gray/index.html
+    http://www.cse.cuhk.edu.hk/leojia/projects/color2gray/index.html
 
     @defgroup photo_clone Seamless Cloning
 
-Useful links:
+    Useful links:
 
-https://www.learnopencv.com/seamless-cloning-using-opencv-python-cpp
+    https://www.learnopencv.com/seamless-cloning-using-opencv-python-cpp
 
     @defgroup photo_render Non-Photorealistic Rendering
 
-Useful links:
+    Useful links:
 
-http://www.inf.ufrgs.br/~eslgastal/DomainTransform
+    http://www.inf.ufrgs.br/~eslgastal/DomainTransform
 
-https://www.learnopencv.com/non-photorealistic-rendering-using-opencv-python-c/
+    https://www.learnopencv.com/non-photorealistic-rendering-using-opencv-python-c/
 
-    @defgroup photo_c C API
 @}
   */
 

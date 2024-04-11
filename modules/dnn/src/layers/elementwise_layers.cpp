@@ -490,13 +490,13 @@ struct ReLUFunctor : public BaseFunctor
 #endif
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
         if (slope) {
-            auto param = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &slope);
-            return std::make_shared<ngraph::op::PRelu>(node, param);
+            auto param = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &slope);
+            return std::make_shared<ov::op::v0::PRelu>(node, param);
         }
-        return std::make_shared<ngraph::op::Relu>(node);
+        return std::make_shared<ov::op::v0::Relu>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -674,9 +674,9 @@ struct ReLU6Functor : public BaseFunctor
 
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        return std::make_shared<ngraph::op::Clamp>(node, minValue, maxValue);
+        return std::make_shared<ov::op::v0::Clamp>(node, minValue, maxValue);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -796,7 +796,7 @@ struct BaseDefaultFunctor : public BaseFunctor
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
         CV_Error(Error::StsNotImplemented, "");
     }
@@ -929,9 +929,9 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        return std::make_shared<ngraph::op::Tanh>(node);
+        return std::make_shared<ov::op::v0::Tanh>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -998,10 +998,10 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        auto sigmoid = std::make_shared<ngraph::op::Sigmoid>(node);
-        return std::make_shared<ngraph::op::v1::Multiply>(node, sigmoid);
+        auto sigmoid = std::make_shared<ov::op::v0::Sigmoid>(node);
+        return std::make_shared<ov::op::v1::Multiply>(node, sigmoid);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1074,9 +1074,9 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        return std::make_shared<ngraph::op::v4::Mish>(node);
+        return std::make_shared<ov::op::v4::Mish>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1151,9 +1151,9 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        return std::make_shared<ngraph::op::Sigmoid>(node);
+        return std::make_shared<ov::op::v0::Sigmoid>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1231,9 +1231,9 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        return std::make_shared<ngraph::op::Elu>(node, alpha);
+        return std::make_shared<ov::op::v0::Elu>(node, alpha);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1301,9 +1301,9 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        return std::make_shared<ngraph::op::Abs>(node);
+        return std::make_shared<ov::op::v0::Abs>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1594,9 +1594,9 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 #endif  // HAVE_HALIDE
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        return std::make_shared<ngraph::op::v0::Sqrt>(node);
+        return std::make_shared<ov::op::v0::Sqrt>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -2343,22 +2343,22 @@ struct PowerFunctor : public BaseFunctor
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        auto scale_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &scale);
-        auto shift_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &shift);
+        auto scale_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32,
+                                                                 ov::Shape{1}, &scale);
+        auto shift_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32,
+                                                                 ov::Shape{1}, &shift);
 
-        auto mul = std::make_shared<ngraph::op::v1::Multiply>(scale_node, node, ngraph::op::AutoBroadcastType::NUMPY);
-        auto scale_shift = std::make_shared<ngraph::op::v1::Add>(mul, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
+        auto mul = std::make_shared<ov::op::v1::Multiply>(scale_node, node, ov::op::AutoBroadcastType::NUMPY);
+        auto scale_shift = std::make_shared<ov::op::v1::Add>(mul, shift_node, ov::op::AutoBroadcastType::NUMPY);
 
         if (power == 1)
             return scale_shift;
 
-        auto power_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &power);
-        return std::make_shared<ngraph::op::v1::Power>(scale_shift, power_node, ngraph::op::AutoBroadcastType::NUMPY);
+        auto power_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32,
+                                                                 ov::Shape{1}, &power);
+        return std::make_shared<ov::op::v1::Power>(scale_shift, power_node, ov::op::AutoBroadcastType::NUMPY);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -2453,15 +2453,15 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
 #endif  // HAVE_HALIDE
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        auto scale_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &normScale);
-        auto shift_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &normShift);
-        auto mul = std::make_shared<ngraph::op::v1::Multiply>(scale_node, node, ngraph::op::AutoBroadcastType::NUMPY);
-        auto scale_shift = std::make_shared<ngraph::op::v1::Add>(mul, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
-        return std::make_shared<ngraph::op::v0::Exp>(scale_shift);
+        auto scale_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32,
+                                                                 ov::Shape{1}, &normScale);
+        auto shift_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32,
+                                                                 ov::Shape{1}, &normShift);
+        auto mul = std::make_shared<ov::op::v1::Multiply>(scale_node, node, ov::op::AutoBroadcastType::NUMPY);
+        auto scale_shift = std::make_shared<ov::op::v1::Add>(mul, shift_node, ov::op::AutoBroadcastType::NUMPY);
+        return std::make_shared<ov::op::v0::Exp>(scale_shift);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -2612,11 +2612,11 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
         const size_t numChannels = scale.total();
-        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numChannels}, scale.data);
-        return std::make_shared<ngraph::op::PRelu>(node, slope);
+        auto slope = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{numChannels}, scale.data);
+        return std::make_shared<ov::op::v0::PRelu>(node, slope);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -2692,11 +2692,11 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
     }
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
         auto shape = getShape<size_t>(scale);
-        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, scale.ptr<float>());
-        return std::make_shared<ngraph::op::PRelu>(node, slope);
+        auto slope = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape, scale.ptr<float>());
+        return std::make_shared<ov::op::v0::PRelu>(node, slope);
     }
 #endif  // HAVE_DNN_NGRAPH
 };

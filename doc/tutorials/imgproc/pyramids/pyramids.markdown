@@ -43,7 +43,7 @@ Theory
         pyramid (with less resolution)
 -   In this tutorial we'll use the *Gaussian pyramid*.
 
-#### Gaussian Pyramid
+### Gaussian Pyramid
 
 -   Imagine the pyramid as a set of layers in which the higher the layer, the smaller the size.
 
@@ -100,7 +100,7 @@ Explanation
 
 Let's check the general structure of the program:
 
-#### Load an image
+### Load an image
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp load
@@ -114,7 +114,7 @@ Let's check the general structure of the program:
 @snippet python/tutorial_code/imgProc/Pyramids/pyramids.py load
 @end_toggle
 
-#### Create window
+### Create window
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp show_image
@@ -128,7 +128,7 @@ Let's check the general structure of the program:
 @snippet python/tutorial_code/imgProc/Pyramids/pyramids.py show_image
 @end_toggle
 
-#### Loop
+### Loop
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp loop

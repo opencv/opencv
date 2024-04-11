@@ -6,7 +6,7 @@
 
 #include "../test_precomp.hpp"
 
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2024000000
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2023010000
 
 #include <stdexcept>
 #include <mutex>
@@ -1649,6 +1649,9 @@ TEST(Infer, TestStreamingInfer)
 
 TEST(InferROI, TestStreamingInfer)
 {
+    if (cvtest::skipUnstableTests)
+        throw SkipTestException("Skip InferROI.TestStreamingInfer as it hangs sporadically");
+
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");

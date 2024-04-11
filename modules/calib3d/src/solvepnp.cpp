@@ -1041,7 +1041,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         vec_tvecs.push_back(tvec);
     }*/
     else
-        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, "
+        CV_Error(cv::Error::StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, "
             "SOLVEPNP_EPNP, SOLVEPNP_DLS, SOLVEPNP_UPNP, SOLVEPNP_AP3P, SOLVEPNP_IPPE, SOLVEPNP_IPPE_SQUARE or SOLVEPNP_SQPNP");
 
     CV_Assert(vec_rvecs.size() == vec_tvecs.size());

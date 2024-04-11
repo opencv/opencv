@@ -314,9 +314,9 @@ public:
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         int axis = normalize_axis(axisRaw, ieInpNode.get_shape().size());
         if (logSoftMax) {
-            return new InfEngineNgraphNode(std::make_shared<ngraph::op::v5::LogSoftmax>(ieInpNode, axis));
+            return new InfEngineNgraphNode(std::make_shared<ov::op::v5::LogSoftmax>(ieInpNode, axis));
         } else {
-            return new InfEngineNgraphNode(std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis));
+            return new InfEngineNgraphNode(std::make_shared<ov::op::v1::Softmax>(ieInpNode, axis));
         }
     }
 #endif  // HAVE_DNN_NGRAPH

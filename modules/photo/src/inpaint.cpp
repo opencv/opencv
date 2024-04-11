@@ -45,6 +45,8 @@
 //
 // */
 
+#include <queue>
+
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/photo/legacy/constants_c.h"
@@ -71,8 +73,16 @@ typedef struct CvHeapElem
 {
     float T;
     int i,j;
-    struct CvHeapElem* prev;
-    struct CvHeapElem* next;
+    int order;  // to keep insertion order
+
+    bool operator > (const CvHeapElem& rhs) const {
+        if (T > rhs.T) {
+            return true;
+        } else if (T < rhs.T) {
+            return false;
+        }
+        return order > rhs.order;
+    }
 }
 CvHeapElem;
 
@@ -84,42 +94,10 @@ private:
     CvPriorityQueueFloat& operator=(const CvPriorityQueueFloat &); // assign disabled
 
 protected:
-    CvHeapElem *mem,*empty,*head,*tail;
-    int num,in;
+    std::priority_queue<CvHeapElem, std::vector<CvHeapElem>,std::greater<CvHeapElem> > queue;
+    int next_order;
 
 public:
-    bool Init( const CvMat* f )
-    {
-        int i,j;
-        for( i = num = 0; i < f->rows; i++ )
-        {
-            for( j = 0; j < f->cols; j++ )
-                num += CV_MAT_ELEM(*f,uchar,i,j)!=0;
-        }
-        if (num<=0) return false;
-        mem = (CvHeapElem*)cvAlloc((num+2)*sizeof(CvHeapElem));
-        if (mem==NULL) return false;
-
-        head       = mem;
-        head->i    = head->j = -1;
-        head->prev = NULL;
-        head->next = mem+1;
-        head->T    = -FLT_MAX;
-        empty      = mem+1;
-        for (i=1; i<=num; i++) {
-            mem[i].prev   = mem+i-1;
-            mem[i].next   = mem+i+1;
-            mem[i].i      = -1;
-            mem[i].T      = FLT_MAX;
-        }
-        tail       = mem+i;
-        tail->i    = tail->j = -1;
-        tail->prev = mem+i-1;
-        tail->next = NULL;
-        tail->T    = FLT_MAX;
-        return true;
-    }
-
     bool Add(const CvMat* f) {
         int i,j;
         for (i=0; i<f->rows; i++) {
@@ -133,71 +111,33 @@ public:
     }
 
     bool Push(int i, int j, float T) {
-        CvHeapElem *tmp=empty,*add=empty;
-        if (empty==tail) return false;
-        while (tmp->prev->T>T) tmp = tmp->prev;
-        if (tmp!=empty) {
-            add->prev->next = add->next;
-            add->next->prev = add->prev;
-            empty = add->next;
-            add->prev = tmp->prev;
-            add->next = tmp;
-            add->prev->next = add;
-            add->next->prev = add;
-        } else {
-            empty = empty->next;
-        }
-        add->i = i;
-        add->j = j;
-        add->T = T;
-        in++;
-        //      printf("push i %3d  j %3d  T %12.4e  in %4d\n",i,j,T,in);
+        queue.push({T, i, j, next_order});
+        ++next_order;
         return true;
     }
 
     bool Pop(int *i, int *j) {
-        CvHeapElem *tmp=head->next;
-        if (empty==tmp) return false;
-        *i = tmp->i;
-        *j = tmp->j;
-        tmp->prev->next = tmp->next;
-        tmp->next->prev = tmp->prev;
-        tmp->prev = empty->prev;
-        tmp->next = empty;
-        tmp->prev->next = tmp;
-        tmp->next->prev = tmp;
-        empty = tmp;
-        in--;
-        //      printf("pop  i %3d  j %3d  T %12.4e  in %4d\n",tmp->i,tmp->j,tmp->T,in);
+        if (queue.empty()) {
+            return false;
+        }
+        *i = queue.top().i;
+        *j = queue.top().j;
+        queue.pop();
         return true;
     }
 
     bool Pop(int *i, int *j, float *T) {
-        CvHeapElem *tmp=head->next;
-        if (empty==tmp) return false;
-        *i = tmp->i;
-        *j = tmp->j;
-        *T = tmp->T;
-        tmp->prev->next = tmp->next;
-        tmp->next->prev = tmp->prev;
-        tmp->prev = empty->prev;
-        tmp->next = empty;
-        tmp->prev->next = tmp;
-        tmp->next->prev = tmp;
-        empty = tmp;
-        in--;
-        //      printf("pop  i %3d  j %3d  T %12.4e  in %4d\n",tmp->i,tmp->j,tmp->T,in);
+        if (queue.empty()) {
+            return false;
+        }
+        *i = queue.top().i;
+        *j = queue.top().j;
+        *T = queue.top().T;
+        queue.pop();
         return true;
     }
 
-    CvPriorityQueueFloat(void) {
-        num=in=0;
-        mem=empty=head=tail=NULL;
-    }
-
-    ~CvPriorityQueueFloat(void)
-    {
-        cvFree( &mem );
+    CvPriorityQueueFloat(void) : queue(), next_order() {
     }
 };
 
@@ -753,18 +693,18 @@ icvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_
     output_img = cvGetMat( _output_img, &output_hdr );
 
     if( !CV_ARE_SIZES_EQ(input_img,output_img) || !CV_ARE_SIZES_EQ(input_img,inpaint_mask))
-        CV_Error( CV_StsUnmatchedSizes, "All the input and output images must have the same size" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "All the input and output images must have the same size" );
 
     if( (CV_MAT_TYPE(input_img->type) != CV_8U &&
          CV_MAT_TYPE(input_img->type) != CV_16U &&
          CV_MAT_TYPE(input_img->type) != CV_32F &&
         CV_MAT_TYPE(input_img->type) != CV_8UC3) ||
         !CV_ARE_TYPES_EQ(input_img,output_img) )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
         "8-bit, 16-bit unsigned or 32-bit float 1-channel and 8-bit 3-channel input/output images are supported" );
 
     if( CV_MAT_TYPE(inpaint_mask->type) != CV_8UC1 )
-        CV_Error( CV_StsUnsupportedFormat, "The mask must be 8-bit 1-channel image" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "The mask must be 8-bit 1-channel image" );
 
     range = MAX(range,1);
     range = MIN(range,100);
@@ -786,8 +726,6 @@ icvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_
     cvSet(t,cvScalar(1.0e6f,0,0,0));
     cv::dilate(cv::cvarrToMat(mask), cv::cvarrToMat(band), el_cross, cv::Point(1, 1));
     Heap=cv::makePtr<CvPriorityQueueFloat>();
-    if (!Heap->Init(band))
-        return;
     cvSub(band,mask,band,NULL);
     SET_BORDER1_C1(band,uchar,0);
     if (!Heap->Add(band))
@@ -803,8 +741,6 @@ icvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_
         cv::dilate(cv::cvarrToMat(mask), cv::cvarrToMat(out), el_range);
         cvSub(out,mask,out,NULL);
         Out=cv::makePtr<CvPriorityQueueFloat>();
-        if (!Out->Init(out))
-            return;
         if (!Out->Add(band))
             return;
         cvSub(out,band,out,NULL);

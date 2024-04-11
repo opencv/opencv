@@ -217,9 +217,9 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
     switch(prop_id)
     {
     //change between fullscreen or not.
-    case CV_WND_PROP_FULLSCREEN:
+    case cv::WND_PROP_FULLSCREEN:
 
-        if (prop_value != CV_WINDOW_NORMAL && prop_value != CV_WINDOW_FULLSCREEN)  // bad argument
+        if (prop_value != cv::WINDOW_NORMAL && prop_value != cv::WINDOW_FULLSCREEN)  // bad argument
             break;
 
         #if defined (HAVE_QT)
@@ -236,13 +236,13 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 
     break;
 
-    case CV_WND_PROP_AUTOSIZE:
+    case cv::WND_PROP_AUTOSIZE:
         #if defined (HAVE_QT)
             cvSetPropWindow_QT(name,prop_value);
         #endif
     break;
 
-    case CV_WND_PROP_ASPECTRATIO:
+    case cv::WND_PROP_ASPECT_RATIO:
         #if defined (HAVE_QT)
             cvSetRatioWindow_QT(name,prop_value);
         #endif
@@ -305,7 +305,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 #else
     switch(prop_id)
     {
-    case CV_WND_PROP_FULLSCREEN:
+    case cv::WND_PROP_FULLSCREEN:
 
         #if defined (HAVE_QT)
             return cvGetModeWindow_QT(name);
@@ -322,7 +322,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_AUTOSIZE:
+    case cv::WND_PROP_AUTOSIZE:
 
         #if defined (HAVE_QT)
             return cvGetPropWindow_QT(name);
@@ -335,7 +335,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_ASPECTRATIO:
+    case cv::WND_PROP_ASPECT_RATIO:
 
         #if defined (HAVE_QT)
             return cvGetRatioWindow_QT(name);
@@ -348,7 +348,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_OPENGL:
+    case cv::WND_PROP_OPENGL:
 
         #if defined (HAVE_QT)
             return cvGetOpenGlProp_QT(name);
@@ -361,7 +361,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_VISIBLE:
+    case cv::WND_PROP_VISIBLE:
         #if defined (HAVE_QT)
             return cvGetPropVisible_QT(name);
         #elif defined(HAVE_WIN32UI)
@@ -1097,17 +1097,17 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 
 CV_IMPL void cvSetOpenGlDrawCallback(const char*, CvOpenGlDrawCallback, void*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 CV_IMPL void cvSetOpenGlContext(const char*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 CV_IMPL void cvUpdateWindow(const char*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 #endif // !HAVE_OPENGL
@@ -1176,52 +1176,52 @@ static const char* NO_QT_ERR_MSG = "The library is compiled without QT support";
 
 cv::QtFont cv::fontQt(const String&, int, Scalar, int,  int, int)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::addText( const Mat&, const String&, Point, const QtFont&)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::addText(const Mat&, const String&, Point, const String&, int, Scalar, int, int, int)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::displayStatusBar(const String&,  const String&, int)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::displayOverlay(const String&,  const String&, int )
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 int cv::startLoop(int (*)(int argc, char *argv[]), int , char**)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::stopLoop()
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::saveWindowParameters(const String&)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::loadWindowParameters(const String&)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 #endif

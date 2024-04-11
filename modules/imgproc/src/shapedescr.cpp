@@ -357,7 +357,7 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     RotatedRect box;
 
     if( n < 5 )
-        CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
+        CV_Error( cv::Error::StsBadSize, "There should be at least 5 points to fit the ellipse" );
 
     // New fitellipse algorithm, contributed by Dr. Daniel Weiss
     Point2f c(0,0);
@@ -520,7 +520,7 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
     RotatedRect box;
 
     if( n < 5 )
-        CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
+        CV_Error( cv::Error::StsBadSize, "There should be at least 5 points to fit the ellipse" );
 
     Point2f c(0,0);
 
@@ -705,7 +705,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     RotatedRect box;
 
     if( n < 5 )
-        CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
+        CV_Error( cv::Error::StsBadSize, "There should be at least 5 points to fit the ellipse" );
 
     Point2d c(0., 0.);
 
@@ -1056,16 +1056,12 @@ static Rect maskBoundingRect( const Mat& img )
         for( ; j < offset; j++ )
             if( _ptr[j] )
             {
+                if( j < xmin )
+                    xmin = j;
+                if( j > xmax )
+                    xmax = j;
                 have_nz = 1;
-                break;
             }
-        if( j < offset )
-        {
-            if( j < xmin )
-                xmin = j;
-            if( j > xmax )
-                xmax = j;
-        }
         if( offset < size.width )
         {
             xmin -= offset;
@@ -1364,7 +1360,7 @@ cvContourArea( const void *array, CvSlice slice, int oriented )
     {
         contour = (CvSeq*)array;
         if( !CV_IS_SEQ_POLYLINE( contour ))
-            CV_Error( CV_StsBadArg, "Unsupported sequence type" );
+            CV_Error( cv::Error::StsBadArg, "Unsupported sequence type" );
     }
     else
     {
@@ -1379,7 +1375,7 @@ cvContourArea( const void *array, CvSlice slice, int oriented )
     }
 
     if( CV_SEQ_ELTYPE( contour ) != CV_32SC2 )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
         "Only curves with integer coordinates are supported in case of contour slice" );
     area = icvContourSecArea( contour, slice );
     return oriented ? area : fabs(area);
@@ -1405,7 +1401,7 @@ cvArcLength( const void *array, CvSlice slice, int is_closed )
     {
         contour = (CvSeq*)array;
         if( !CV_IS_SEQ_POLYLINE( contour ))
-            CV_Error( CV_StsBadArg, "Unsupported sequence type" );
+            CV_Error( cv::Error::StsBadArg, "Unsupported sequence type" );
         if( is_closed < 0 )
             is_closed = CV_IS_SEQ_CLOSED( contour );
     }
@@ -1498,7 +1494,7 @@ cvBoundingRect( CvArr* array, int update )
     {
         ptseq = (CvSeq*)array;
         if( !CV_IS_SEQ_POINT_SET( ptseq ))
-            CV_Error( CV_StsBadArg, "Unsupported sequence type" );
+            CV_Error( cv::Error::StsBadArg, "Unsupported sequence type" );
 
         if( ptseq->header_size < (int)sizeof(CvContour))
         {
@@ -1517,7 +1513,7 @@ cvBoundingRect( CvArr* array, int update )
         }
         else if( CV_MAT_TYPE(mat->type) != CV_8UC1 &&
                 CV_MAT_TYPE(mat->type) != CV_8SC1 )
-            CV_Error( CV_StsUnsupportedFormat,
+            CV_Error( cv::Error::StsUnsupportedFormat,
                 "The image/matrix format is not supported by the function" );
         update = 0;
         calculate = 1;

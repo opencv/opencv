@@ -103,9 +103,9 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
         /* calc 1-curvature */
         s = abs_diff[reader.code - prev_code + 7];
 
-        if( method <= CV_CHAIN_APPROX_SIMPLE )
+        if( method <= cv::CHAIN_APPROX_SIMPLE )
         {
-            if( method == CV_CHAIN_APPROX_NONE || s != 0 )
+            if( method == cv::CHAIN_APPROX_NONE || s != 0 )
             {
                 CV_WRITE_SEQ_ELEM( pt, writer );
             }
@@ -121,7 +121,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
 
     //CV_Assert( pt.x == chain->origin.x && pt.y == chain->origin.y );
 
-    if( method <= CV_CHAIN_APPROX_SIMPLE )
+    if( method <= cv::CHAIN_APPROX_SIMPLE )
         return cvEndWriteSeq( &writer );
 
     current->next = 0;
@@ -176,7 +176,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
         current->k = --k;
 
         /* determine cosine curvature if it should be used */
-        if( method == CV_CHAIN_APPROX_TC89_KCOS )
+        if( method == cv::CHAIN_APPROX_TC89_KCOS )
         {
             /* calc k-cosine curvature */
             for( j = k, s = 0; j > 0; j-- )
@@ -288,7 +288,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
     }
     while( current != 0 );
 
-    if( method == CV_CHAIN_APPROX_TC89_KCOS )
+    if( method == cv::CHAIN_APPROX_TC89_KCOS )
         goto copy_vect;
 
     /* Pass 4.
@@ -389,9 +389,9 @@ cvApproxChains( CvSeq*              src_seq,
     CvSeq *dst_seq = 0;
 
     if( !src_seq || !storage )
-        CV_Error( CV_StsNullPtr, "" );
-    if( method > CV_CHAIN_APPROX_TC89_KCOS || method <= 0 || minimal_perimeter < 0 )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
+    if( method > cv::CHAIN_APPROX_TC89_KCOS || method <= 0 || minimal_perimeter < 0 )
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     while( src_seq != 0 )
     {
@@ -403,14 +403,14 @@ cvApproxChains( CvSeq*              src_seq,
 
             switch( method )
             {
-            case CV_CHAIN_APPROX_NONE:
-            case CV_CHAIN_APPROX_SIMPLE:
-            case CV_CHAIN_APPROX_TC89_L1:
-            case CV_CHAIN_APPROX_TC89_KCOS:
+            case cv::CHAIN_APPROX_NONE:
+            case cv::CHAIN_APPROX_SIMPLE:
+            case cv::CHAIN_APPROX_TC89_L1:
+            case cv::CHAIN_APPROX_TC89_KCOS:
                 contour = icvApproximateChainTC89( (CvChain *) src_seq, sizeof( CvContour ), storage, method );
                 break;
             default:
-                CV_Error( CV_StsOutOfRange, "" );
+                CV_Error( cv::Error::StsOutOfRange, "" );
             }
 
             if( contour->total > 0 )
@@ -681,7 +681,7 @@ void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
     //from being used.
     if (epsilon < 0.0 || !(epsilon < 1e30))
     {
-        CV_Error(CV_StsOutOfRange, "Epsilon not valid.");
+        CV_Error(cv::Error::StsOutOfRange, "Epsilon not valid.");
     }
 
     Mat curve = _curve.getMat();
@@ -704,7 +704,7 @@ void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
     else if( depth == CV_32F )
         nout = approxPolyDP_(curve.ptr<Point2f>(), npoints, (Point2f*)buf, closed, epsilon, _stack);
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     Mat(nout, 1, CV_MAKETYPE(depth, 2), buf).copyTo(_approxCurve);
 }
@@ -728,7 +728,7 @@ cvApproxPoly( const void* array, int header_size,
     {
         src_seq = (CvSeq*)array;
         if( !CV_IS_SEQ_POLYLINE( src_seq ))
-            CV_Error( CV_StsBadArg, "Unsupported sequence type" );
+            CV_Error( cv::Error::StsBadArg, "Unsupported sequence type" );
 
         recursive = parameter2;
 
@@ -743,10 +743,10 @@ cvApproxPoly( const void* array, int header_size,
     }
 
     if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL storage pointer " );
+        CV_Error( cv::Error::StsNullPtr, "NULL storage pointer " );
 
     if( header_size < 0 )
-        CV_Error( CV_StsOutOfRange, "header_size is negative. "
+        CV_Error( cv::Error::StsOutOfRange, "header_size is negative. "
                  "Pass 0 to make the destination header_size == input header_size" );
 
     if( header_size == 0 )
@@ -756,12 +756,12 @@ cvApproxPoly( const void* array, int header_size,
     {
         if( CV_IS_SEQ_CHAIN( src_seq ))
         {
-            CV_Error( CV_StsBadArg, "Input curves are not polygonal. "
+            CV_Error( cv::Error::StsBadArg, "Input curves are not polygonal. "
                      "Use cvApproxChains first" );
         }
         else
         {
-            CV_Error( CV_StsBadArg, "Input curves have unknown type" );
+            CV_Error( cv::Error::StsBadArg, "Input curves have unknown type" );
         }
     }
 
@@ -769,10 +769,10 @@ cvApproxPoly( const void* array, int header_size,
         header_size = src_seq->header_size;
 
     if( header_size < (int)sizeof(CvContour) )
-        CV_Error( CV_StsBadSize, "New header size must be non-less than sizeof(CvContour)" );
+        CV_Error( cv::Error::StsBadSize, "New header size must be non-less than sizeof(CvContour)" );
 
     if( method != CV_POLY_APPROX_DP )
-        CV_Error( CV_StsOutOfRange, "Unknown approximation method" );
+        CV_Error( cv::Error::StsOutOfRange, "Unknown approximation method" );
 
     while( src_seq != 0 )
     {
@@ -782,7 +782,7 @@ cvApproxPoly( const void* array, int header_size,
         {
         case CV_POLY_APPROX_DP:
             if( parameter < 0 )
-                CV_Error( CV_StsOutOfRange, "Accuracy must be non-negative" );
+                CV_Error( cv::Error::StsOutOfRange, "Accuracy must be non-negative" );
 
             CV_Assert( CV_SEQ_ELTYPE(src_seq) == CV_32SC2 ||
                       CV_SEQ_ELTYPE(src_seq) == CV_32FC2 );
@@ -804,7 +804,7 @@ cvApproxPoly( const void* array, int header_size,
                 nout = cv::approxPolyDP_((cv::Point2f*)src, npoints,
                                          (cv::Point2f*)dst, closed, parameter, stack);
             else
-                CV_Error( CV_StsUnsupportedFormat, "" );
+                CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
             contour = cvCreateSeq( src_seq->flags, header_size,
                                   src_seq->elem_size, storage );
@@ -812,7 +812,7 @@ cvApproxPoly( const void* array, int header_size,
             }
             break;
         default:
-            CV_Error( CV_StsBadArg, "Invalid approximation method" );
+            CV_Error( cv::Error::StsBadArg, "Invalid approximation method" );
         }
 
         CV_Assert( contour );
