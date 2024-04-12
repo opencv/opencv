@@ -151,7 +151,7 @@ void drawMinAreaRect(Mat &img, vector<Point> &points) {
     // Convert Point2f to Point because polylines expects a vector of Point
     vector<Point> rectPoints;
     for (int i = 0; i < 4; i++) {
-        rectPoints.push_back(Point(vtx[i].x, vtx[i].y));
+        rectPoints.push_back(Point(cvRound(vtx[i].x), cvRound(vtx[i].y)));
     }
 
     // Use polylines to draw the rectangle. The 'true' argument closes the loop, drawing a rectangle.
