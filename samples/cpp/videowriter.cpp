@@ -47,7 +47,8 @@ int main(int argc, char** argv) {
         "{help h usage ? |      | Print help message   }"
         "{fps           |30    | fix frame per second for encoding (supported: fps > 0)   }"
         "{codec         |mjpeg | Supported codecs depend on OpenCV Configuration. Try one of 'h264', 'h265', 'mpeg2', 'mpeg4', 'mjpeg', 'vp8' }"
-        "{resolution    |1280x720 | Video resolution in WxH format, (e.g., '1920x1080') }";
+        "{resolution    |1280x720 | Video resolution in WxH format, (e.g., '1920x1080') }"
+        "{output_filepath    | output.avi | Path to the output video file}";
 
     CommandLineParser parser(argc, argv, keys);
     parser.about("Video Capture and Write with codec and resolution options");
@@ -60,6 +61,7 @@ int main(int argc, char** argv) {
     double fps = parser.get<double>("fps");
     string codecStr = parser.get<string>("codec");
     string resolutionStr = parser.get<string>("resolution");
+    string outputFilepath = parser.get<string>("output_filepath");
 
     auto codecMap = fourccByCodec();
 
@@ -83,14 +85,13 @@ int main(int argc, char** argv) {
     cout << "Selected Resolution: " << resolutionStr << " (" << resolution.width << "x" << resolution.height << ")" << endl;
 
     // Set up VideoWriter
-    string filename = "./output.avi";
-    VideoWriter writer(filename, codec, fps, resolution, true); // Assuming color video
+    VideoWriter writer(outputFilepath, codec, fps, resolution, true); // Assuming color video
     if (!writer.isOpened()) {
         cerr << "Could not open the output video file for write\n";
         return -1;
     }
 
-    cout << "Writing video file: " << filename << endl
+    cout << "Writing video file: " << outputFilepath << endl
          << "Press any key to terminate" << endl;
 
     Mat frame, resizedFrame;
