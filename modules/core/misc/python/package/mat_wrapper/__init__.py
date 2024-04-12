@@ -4,15 +4,16 @@ import numpy as np
 import cv2 as cv
 from typing import TYPE_CHECKING, Any
 
-# Same as cv2.typing.NumPyArrayGeneric, but avoids circular dependencies
+# Same as cv2.typing.NumPyArrayNumeric, but avoids circular dependencies
 if TYPE_CHECKING:
-    _NumPyArrayGeneric = np.ndarray[Any, np.dtype[np.generic]]
+    _NumPyArrayNumeric = np.ndarray[Any, np.dtype[np.integer[Any] | np.floating[Any]]]
 else:
-    _NumPyArrayGeneric = np.ndarray
+    _NumPyArrayNumeric = np.ndarray
 
 # NumPy documentation: https://numpy.org/doc/stable/user/basics.subclassing.html
 
-class Mat(_NumPyArrayGeneric):
+
+class Mat(_NumPyArrayNumeric):
     '''
     cv.Mat wrapper for numpy array.
 
