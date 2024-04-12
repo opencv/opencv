@@ -81,6 +81,7 @@ public:
             fovy = 45.0;
             zNear = 0.1;
             zFar = 50;
+            scaleCoeff = 1000.0;
 
             vertices = std::vector<Vec3f>(4, {2.0f, 0, -2.0f});
             colors   = std::vector<Vec3f>(4, {0, 0, 1.0f});
@@ -96,6 +97,7 @@ public:
             fovy = 45.0;
             zNear = 0.1;
             zFar = 50;
+            scaleCoeff = 1000.0;
 
             objectPath = objPath;
             std::vector<vector<int>> indvec;
@@ -126,6 +128,7 @@ public:
             fovy = 45.0;
             zNear = 0.1;
             zFar = 50;
+            scaleCoeff = 1000.0;
 
             vertices =
             {
@@ -161,6 +164,7 @@ public:
             fovy = 45.0;
             zNear = 0.1;
             zFar = 50;
+            scaleCoeff = 1000.0;
 
             vertices =
             {
@@ -192,6 +196,7 @@ public:
             fovy = 60.0;
             zNear = 0.1;
             zFar = 50;
+            scaleCoeff = 1000.0;
 
             vertices =
             {
@@ -219,7 +224,7 @@ public:
         }
     }
 
-    ModelData(std::string modelPath, double fov, double near, double far, Vec3d pos, Vec3d center, Vec3d up)
+    ModelData(std::string modelPath, double fov, double near, double far, double scale, Vec3d pos, Vec3d center, Vec3d up)
     {
         objectPath = modelPath;
         position = pos;
@@ -228,6 +233,7 @@ public:
         fovy = fov;
         zNear = near;
         zFar = far;
+        scaleCoeff = scale;
 
         std::vector<vector<int>> indvec;
 
@@ -246,7 +252,7 @@ public:
     Vec3d lookat;
     Vec3d upVector;
 
-    double fovy, zNear, zFar;
+    double fovy, zNear, zFar, scaleCoeff;
 
     std::vector<Vec3f> vertices;
     std::vector<Vec3i> indices;
@@ -377,7 +383,7 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
             *it = (float)(modelData.zNear * modelData.zFar / (double(*it) * (modelData.zNear - modelData.zFar) + modelData.zFar));
         }
         cv::flip(depthImage, depthImage, 0);
-        depthImage.convertTo(depthImage, CV_16U, 1000.0);
+        depthImage.convertTo(depthImage, CV_16U, modelData.scaleCoeff);
 
         char key = (char)waitKey(40);
         if (key == 27)
@@ -410,6 +416,7 @@ int main(int argc, char* argv[])
             "{ resy           | 480  | (if custom parameters are used) camera resolution y }"
             "{ zNear          | 0.1  | (if custom parameters are used) near z clipping plane }"
             "{ zFar           |  50  | (if custom parameters are used) far z clipping plane }"
+            "{ scaleCoeff     | 1000 | (if custom parameters are used) scale coefficient for saving depth }"
             "{ shading        |      | (if custom parameters are used) shading type: white/flat/shaded }"
             "{ culling        |      | (if custom parameters are used) culling type: none/cw/ccw }"
             "{ colorPath      |      | (if custom parameters are used) output path for color image }"
@@ -448,6 +455,7 @@ int main(int argc, char* argv[])
         res.height = parser.get<int>("resy");
         double zNear = parser.get<double>("zNear");
         double zFar  = parser.get<double>("zFar");
+        double scaleCoeff = parser.get<double>("scaleCoeff");
 
         std::map<std::string, cv::TriangleShadingType> shadingTxt = {
             { "white",  RASTERIZE_SHADING_WHITE  },
@@ -467,7 +475,7 @@ int main(int argc, char* argv[])
         std::string depthPath = parser.get<std::string>("depthPath");
 
         Mat colorImage, depthImage;
-        ModelData modelData(modelPath, fov, zNear, zFar, position, lookat, upVector);
+        ModelData modelData(modelPath, fov, zNear, zFar, scaleCoeff, position, lookat, upVector);
         generateImage(res, shadingType, cullingMode, modelData, colorImage, depthImage);
 
         cv::imwrite(colorPath, colorImage);
