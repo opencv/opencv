@@ -45,23 +45,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
-    if (parser.has("d")) {
-        int dictionaryId = parser.get<int>("d");
-        dictionary = aruco::getPredefinedDictionary(aruco::PredefinedDictionaryType(dictionaryId));
-    }
-    else if (parser.has("cd")) {
-        FileStorage fs(parser.get<std::string>("cd"), FileStorage::READ);
-        bool readOk = dictionary.readDictionary(fs.root());
-        if(!readOk) {
-            std::cerr << "Invalid dictionary file" << std::endl;
-            return 0;
-        }
-    }
-    else {
-        std::cerr << "Dictionary not specified" << std::endl;
-        return 0;
-    }
+    aruco::Dictionary dictionary = readDictionatyFromCommandLine(parser);
 
     Mat markerImg;
     aruco::generateImageMarker(dictionary, markerId, markerSize, markerImg, borderBits);

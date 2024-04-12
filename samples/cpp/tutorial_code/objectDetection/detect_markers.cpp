@@ -41,15 +41,8 @@ int main(int argc, char *argv[]) {
     bool estimatePose = parser.has("c");
     float markerLength = parser.get<float>("l");
 
-    cv::aruco::DetectorParameters detectorParams;
-    if(parser.has("dp")) {
-        cv::FileStorage fs(parser.get<string>("dp"), FileStorage::READ);
-        bool readOk = detectorParams.readDetectorParameters(fs.root());
-        if(!readOk) {
-            cerr << "Invalid detector parameters file" << endl;
-            return 0;
-        }
-    }
+    aruco::DetectorParameters detectorParams = readDetectorParamsFromCommandLine(parser);
+    aruco::Dictionary dictionary = readDictionatyFromCommandLine(parser);
 
     if (parser.has("refine")) {
         // override cornerRefinementMethod read from config file
@@ -69,33 +62,11 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
-    if (parser.has("d")) {
-        int dictionaryId = parser.get<int>("d");
-        dictionary = aruco::getPredefinedDictionary(aruco::PredefinedDictionaryType(dictionaryId));
-    }
-    else if (parser.has("cd")) {
-        cv::FileStorage fs(parser.get<std::string>("cd"), FileStorage::READ);
-        bool readOk = dictionary.readDictionary(fs.root());
-        if(!readOk) {
-            std::cerr << "Invalid dictionary file" << std::endl;
-            return 0;
-        }
-    }
-    else {
-        std::cerr << "Dictionary not specified" << std::endl;
-        return 0;
-    }
-
     //! [aruco_pose_estimation1]
-    cv::Mat camMatrix, distCoeffs;
+    Mat camMatrix, distCoeffs;
     if(estimatePose) {
         // You can read camera parameters from tutorial_camera_params.yml
-        bool readOk = readCameraParameters(parser.get<string>("c"), camMatrix, distCoeffs);
-        if(!readOk) {
-            cerr << "Invalid camera file" << endl;
-            return 0;
-        }
+        readCameraParamsFromCommandLine(parser, camMatrix, distCoeffs);
     }
     //! [aruco_pose_estimation1]
     //! [aruco_detect_markers]
