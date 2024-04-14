@@ -77,6 +77,7 @@ public:
 
         csl::WorkspaceAllocator allocator(workspace);
         lstm.inference(input, y_output, yc_output, filtersTensor, h0Tensor, c0Tensor, allocator.get_instance());
+        // might need to add reserveSpace here.
     }
 
     std::size_t get_workspace_memory_in_bytes() const noexcept override

@@ -119,12 +119,17 @@ public:
 
         try
         {
-            CUDA4DNN_CHECK_CUDNN(cudnnSetRNNDescriptor_v6(
-                handle.get(), descriptor, hidden_size, num_layers, dropoutDesc.get(),
-                CUDNN_LINEAR_INPUT, bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
-                rnn_mode,
-                algo, //CUDNN_RNN_ALGO_STANDARD,
-                detail::get_data_type<T>()));
+            CUDA4DNN_CHECK_CUDNN(cudnnSetRNNDescriptor_v8(
+           descriptor, algo, rnn_mode,
+          CUDNN_RNN_NO_BIAS, // Where can this come from?
+          bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+          CUDNN_LINEAR_INPUT, detail::get_data_type<T>(),
+          detail::get_data_type<T>(), // CUDNN_RNN_ALGO_STANDARD,
+          CUDNN_DEFAULT_MATH,         // default precision
+          input_size, hidden_size,
+          0, // where can this come from?
+          num_layers, dropoutDesc.get(),
+          0)); // What other flags do we might want here?
         }
         catch (...)
         {
@@ -158,36 +163,23 @@ private:
     cudnnRNNAlgo_t algo{CUDNN_RNN_ALGO_STANDARD};
 };
 
-template<class T>
-size_t getRNNWorkspaceSize(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
-                           const int seqLength, const TensorDescriptorsArray<T> &inputDesc)
-{
-    size_t workSize;
-    CUDA4DNN_CHECK_CUDNN(cudnnGetRNNWorkspaceSize(handle.get(), rnnDesc.get(), seqLength,
-                                                  inputDesc.get().data(), &workSize));
-    return workSize;
-}
-
-template<class T>
+template <class T>
 void LSTMForward(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
-                 const FilterDescriptor<T> &filterDesc, DevicePtr<const T> filterPtr,
-                 const TensorDescriptorsArray<T> &inputDesc, DevicePtr<const T> inputPtr,
-                 const TensorDescriptor<T> &initialHDesc, DevicePtr<const T> initialH,
-                 const TensorDescriptor<T> &initialCDesc, DevicePtr<const T> initialC,
-                 const int seqLength, const TensorDescriptorsArray<T> &outputDesc,
-                 DevicePtr<T> yOutputPtr, DevicePtr<T> ycOutputPtr, WorkspaceInstance workspace)
-{
-    CV_Assert(handle);
-
-    CUDA4DNN_CHECK_CUDNN(cudnnRNNForwardInference(handle.get(), rnnDesc.get(), seqLength,
-                                                  inputDesc.get().data(), inputPtr.get(), // input sequence
-                                                  initialHDesc.get(), initialH.get(),
-                                                  initialCDesc.get(), initialC.get(), // hidden
-                                                  filterDesc.get(), filterPtr.get(), // weights
-                                                  outputDesc.get().data(), yOutputPtr.get(), // output
-                                                  nullptr, nullptr,
-                                                  initialCDesc.get(), ycOutputPtr.get(),
-                                                  static_cast<void*>(workspace.get()), workspace.size_in_bytes()));
+                 cudnnRNNDataDescriptor_t xDesc, DevicePtr<const T> x,
+                 cudnnRNNDataDescriptor_t yDesc, DevicePtr<T> y,
+                 cudnnTensorDescriptor_t hDesc, DevicePtr<const T> hx,
+                 DevicePtr<T> hy, cudnnTensorDescriptor_t cDesc,
+                 DevicePtr<const T> cx, DevicePtr<T> cy, size_t weightSpaceSize,
+                 DevicePtr<const T> weightSpace, WorkspaceInstance workspace,
+                 size_t reserveSpaceSize, DevicePtr<T> reserveSpace) {
+  CV_Assert(handle);
+  CUDA4DNN_CHECK_CUDNN(cudnnRNNForward(
+      handle.get(), rnnDesc.get(), CUDNN_FWD_MODE_INFERENCE,
+      nullptr, // docs say use this as null on >= 8.9.7
+      xDesc, x.get(), yDesc, y.get(), hDesc, hx.get(), hy.get(), cDesc,
+      cx.get(), cy.get(), weightSpaceSize, weightSpace.get(),
+      workspace.size_in_bytes(), workspace.get().get(), reserveSpaceSize,
+      reserveSpace.get()));
 }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */
