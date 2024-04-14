@@ -116,9 +116,9 @@ void CV_InpaintTest::run( int )
 
 TEST(Photo_Inpaint, regression) { CV_InpaintTest test; test.safe_run(); }
 
-typedef testing::TestWithParam<tuple<int> > formats;
+typedef testing::TestWithParam<tuple<perf::MatType> > formats;
 
-TEST_P(formats, 1c)
+TEST_P(formats, basic)
 {
     const int type = get<0>(GetParam());
     Mat src(100, 100, type);
@@ -126,18 +126,18 @@ TEST_P(formats, 1c)
     Mat ref = src.clone();
     Mat dst, mask = Mat::zeros(src.size(), CV_8U);
 
-    circle(src, Point(50, 50), 5, Scalar(200), 6);
-    circle(mask, Point(50, 50), 5, Scalar(200), 6);
+    circle(src, Point(50, 50), 5, Scalar::all(200), 6);
+    circle(mask, Point(50, 50), 5, Scalar::all(200), 6);
     inpaint(src, mask, dst, 10, INPAINT_NS);
 
     Mat dst2;
     inpaint(src, mask, dst2, 10, INPAINT_TELEA);
 
-    ASSERT_LE(cv::norm(dst, ref, NORM_INF), 3.);
-    ASSERT_LE(cv::norm(dst2, ref, NORM_INF), 3.);
+    ASSERT_EQ(cv::norm(dst, ref, NORM_INF), 0.);
+    ASSERT_EQ(cv::norm(dst2, ref, NORM_INF), 0.);
 }
 
-INSTANTIATE_TEST_CASE_P(Photo_Inpaint, formats, testing::Values(CV_32F, CV_16U, CV_8U));
+INSTANTIATE_TEST_CASE_P(Photo_Inpaint, formats, testing::Values(CV_32FC1, CV_16UC1, CV_8UC1, CV_8UC3));
 
 TEST(Photo_InpaintBorders, regression)
 {
