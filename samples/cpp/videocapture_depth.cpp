@@ -78,7 +78,7 @@ static void openni_cam()
 
             if(capture.retrieve(irImage, CAP_OPENNI_IR_IMAGE))
             {
-                const float scaleFactor = 256.0 / 3500;
+                const float scaleFactor = 256.0f / 3500;
                 Mat ir8;
                 irImage.convertTo(ir8, CV_8U, scaleFactor);
                 imshow("IR", ir8);
