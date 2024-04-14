@@ -3017,7 +3017,7 @@ void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeP
     float delta = deltaMat.at<float>(0);
 
     int number_of_elements = std::max(int(std::ceil((limit - start) / delta)), 0);
-    Mat r(number_of_elements, 1, CV_32FC1);
+    Mat r(1, number_of_elements, CV_32FC1); // should be 1d tensor, but Mat doesn't support it
     for (int i = 0; i < number_of_elements; i++)
     {
         r.at<float>(i) = start + (i * delta);
