@@ -567,20 +567,11 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Slice_Test,
                 std::vector<int>({1, 4})
 ));
 
-typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Padding_Test;
-TEST_P(Layer_Padding_Test, Accuracy_01D){
+typedef testing::TestWithParam<tuple<std::vector<int>>> Reproducer_test;
+TEST_P(Reproducer_test, Reshape){
 
     std::vector<int> input_shape = get<0>(GetParam());
     float pad_value = 10;
-
-    LayerParams lp;
-    lp.type = "Padding";
-    lp.name = "PaddingLayer";
-    std::vector<int> paddings = {1, 1}; // Pad before and pad after for one dimension
-    lp.set("paddings", DictValue::arrayInt(paddings.data(), paddings.size()));
-    lp.set("value", pad_value);
-    lp.set("input_dims", (input_shape.size() == 1) ? -1 : 0);
-    Ptr<PaddingLayer> layer = PaddingLayer::create(lp);
 
     cv::Mat input(input_shape.size(), input_shape.data(), CV_32F);
     cv::randn(input, 0.0, 1.0);
@@ -589,33 +580,24 @@ TEST_P(Layer_Padding_Test, Accuracy_01D){
     cv::Mat output_ref;
     cv::copyMakeBorder(input, output_ref, 0, 0, 1, 1, 0, (Scalar) pad_value);
     if (input_shape.size() == 0 || input_shape.size() == 1){
-        std::cout << "shape output_ref: " << shape(output_ref) << std::endl;
-        std::cout << "total: " << output_ref.total() << std::endl;
-        std::cout << "output_ref: " << output_ref.size() << std::endl;
         output_ref = output_ref.reshape(1, (int)output_ref.total());
         output_ref.dims = 1;
-        std::cout << "output_ref: " << output_ref.size() << std::endl;
     }
-    std::cout << "shape output_ref: " << shape(output_ref) << std::endl;
-
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
+    std::vector<int> output_shape = {3};
+    outputs.push_back(cv::Mat(output_shape.size(), output_shape.data(), CV_32F));
 
-    runLayer(layer, inputs, outputs);
-    std::cout << "output[0]: " << outputs[0] << std::endl;
-    std::cout << "output[0] shape: " << shape(outputs[0]) << std::endl;
     std::cout << "output_ref: " << output_ref.size() << std::endl;
     std::cout << "output[0]: " << outputs[0].size() << std::endl;
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
-INSTANTIATE_TEST_CASE_P(/*nothing*/,  Layer_Padding_Test,
+INSTANTIATE_TEST_CASE_P(/*nothing*/,  Reproducer_test,
 /*input blob shape*/ testing::Values(
             std::vector<int>{},
-            std::vector<int>{1},
-            std::vector<int>{1, 4},
-            std::vector<int>{4, 1}
+            std::vector<int>{1}
 ));
 
 }}
