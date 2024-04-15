@@ -1667,8 +1667,7 @@ void ChessBoardDetector::findQuadNeighbors()
                     continue;
 
                 const float dist = normL2Sqr<float>(pt - all_quads_pts[neighbor_idx]);
-                if (dist < min_dist &&
-                    dist <= cur_quad.edge_len * thresh_scale &&
+                if (dist <= cur_quad.edge_len * thresh_scale &&
                     dist <= q_k.edge_len * thresh_scale)
                 {
                     // check edge lengths, make sure they're compatible
@@ -1685,6 +1684,7 @@ void ChessBoardDetector::findQuadNeighbors()
                     closest_corner_idx = j;
                     closest_quad = &q_k;
                     min_dist = dist;
+                    break;
                 }
             }
 
