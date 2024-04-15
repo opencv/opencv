@@ -97,7 +97,9 @@ int main(int argc, char** argv)
 
     int numberOfFrames = 0;
     int numberOfSamples = 0;
-    audioData.resize(numberOfChannels);
+    if (numberOfChannels > 0){
+        audioData.resize(numberOfChannels);
+    }
 
     // Timing for sample and frame capture
     const double cvTickFreq = getTickFrequency();
