@@ -567,4 +567,40 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Slice_Test,
                 std::vector<int>({1, 4})
 ));
 
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_FullyConnected_Test;
+TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
+{
+    LayerParams lp;
+    lp.type = "InnerProduct";
+    lp.name = "InnerProductLayer";
+    lp.set("num_output", 1);
+    lp.set("bias_term", false);
+    lp.set("axis", 0);
+
+    std::vector<int> input_shape = get<0>(GetParam());
+
+    RNG& rng = TS::ptr()->get_rng();
+    float inp_value = rng.uniform(0.0, 10.0);
+    Mat weights(std::vector<int>{total(input_shape), 1}, CV_32F, inp_value);
+    lp.blobs.push_back(weights);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("InnerProduct", lp);
+
+    Mat input(input_shape.size(), input_shape.data(), CV_32F);
+    randn(input, 0, 1);
+    Mat output_ref = input.reshape(1, 1) * weights;
+    output_ref.dims = 1;
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
+                        testing::Values(
+                            std::vector<int>({}),
+                            std::vector<int>({1}),
+                            std::vector<int>({4})
+));
+
 }}

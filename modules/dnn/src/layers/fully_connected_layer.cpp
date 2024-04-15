@@ -167,10 +167,11 @@ public:
             cAxis = normalize_axis(axis, inputsTmp[0]);
         }
 
-        MatShape outShape(cAxis + 1);
+        MatShape outShape((!inputs[0].empty()) ? cAxis + 1 : cAxis);
         for (int i = 0; i < cAxis; ++i)
             outShape[i] = inputsTmp[0][i];
-        outShape.back() = numOutput;
+        if (!inputs[0].empty())
+            outShape.back() = numOutput;
 
         outputs.resize(1, outShape);
         return false;
