@@ -347,8 +347,14 @@ struct MediaFrameTestAgeGenderOV: public ::testing::Test {
         blob_path = "age-gender-recognition-retail-0013.blob";
         image_path = "../samples/data/lena.jpg";
 
+        cv::Size sz{62, 62};
         m_in_mat = cv::imread(image_path);
-        cv::resize(m_in_mat, m_in_mat, cv::Size(62, 62));
+        cv::resize(m_in_mat, m_in_mat, sz);
+
+        m_in_y = cv::Mat{sz, CV_8UC1};
+        cv::randu(m_in_y, 0, 255);
+        m_in_uv = cv::Mat{sz / 2, CV_8UC2};
+        cv::randu(m_in_uv, 0, 255);
     }
 
     cv::Mat m_in_y;
@@ -436,7 +442,6 @@ TEST_F(MediaFrameTestAgeGenderOV, InferROIGenericMediaInputBGR) {
     comp.apply(cv::gin(frame, roi), cv::gout(m_out_gapi_age, m_out_gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
-    // Assert
     validate();
 }
 
@@ -464,31 +469,23 @@ public:
 TEST_F(MediaFrameTestAgeGenderOV, TestMediaNV12AgeGenderOV)
 {
     cv::GFrame in;
-    cv::GArray<cv::Rect> rr;
-    cv::GArray<cv::GMat> age, gender;
-    std::tie(age, gender) = cv::gapi::infer<AgeGender>(rr, in);
-    cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
+    cv::GOpaque<cv::Rect> rr;
+    GInferInputs inputs;
+    inputs["data"] = in;
+    static constexpr const char* tag = "age-gender-generic";
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>(tag, rr, inputs);
+    auto age = outputs.at("age_conv3");
+    auto gender = outputs.at("prob");
+    cv::GComputation comp{cv::GIn(in, rr), cv::GOut(age, gender)};
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
-    auto pp = cv::gapi::ov::Params<AgeGender> {
-        xml_path, bin_path, device
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    auto pp = AGNetROIGenComp::params(xml_path, bin_path, device);
 
-    auto m_roi_list = cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96});
+    cv::Rect roi(cv::Rect(cv::Point{20, 25}, cv::Size{16, 16}));
 
-// NB: NV12 feature has been deprecated in OpenVINO versions higher
-// than 2023.0 so G-API must throw error in that case.
-#if INF_ENGINE_RELEASE <= 2023000000
-    comp.apply(cv::gin(frame, m_roi_list),
-               cv::gout(m_out_gapi_age, m_out_gapi_gender),
-               cv::compile_args(cv::gapi::networks(pp)));
-
-    validate();
-#else
-    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
-                     cv::gout(m_out_gapi_age, m_out_gapi_gender),
-                     cv::compile_args(cv::gapi::networks(pp))));
-#endif
+    EXPECT_NO_THROW(comp.apply(cv::gin(frame, roi),
+                    cv::gout(m_out_gapi_age, m_out_gapi_gender),
+                    cv::compile_args(cv::gapi::networks(pp))));
 }
 
 // TODO: Make all of tests below parmetrized to avoid code duplication
