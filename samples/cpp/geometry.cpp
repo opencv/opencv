@@ -24,7 +24,7 @@
 using namespace cv;
 using namespace std;
 
-string hot_keys =
+const string hot_keys =
     "\n\nHot keys: \n"
     "\tESC - quit the program\n"
     "\tq - quit the program\n"
@@ -47,11 +47,11 @@ static void help(char** argv)
 }
 
 void processImage(int, void*);
-void drawShapes(Mat &img, vector<Point> &points, int ellipseMethod, string shape);
-void drawConvexHull(Mat &img, vector<Point> &points);
-void drawMinAreaRect(Mat &img, vector<Point> &points);
-void drawFittedEllipses(Mat &img, vector<Point> &points, int ellipseMethod);
-void drawMinEnclosingCircle(Mat &img, vector<Point> &points);
+void drawShapes(Mat &img, const vector<Point> &points, int ellipseMethod, string shape);
+void drawConvexHull(Mat &img, const vector<Point> &points);
+void drawMinAreaRect(Mat &img, const vector<Point> &points);
+void drawFittedEllipses(Mat &img, const vector<Point> &points, int ellipseMethod);
+void drawMinEnclosingCircle(Mat &img, const vector<Point> &points);
 void drawMinEnclosingTriangle(Mat &img, const vector<Point> &points);
 
 // Shape fitting options
@@ -62,27 +62,25 @@ enum EllipseFittingMethod {
     Direct_Method
 };
 
-struct UserData{
+struct UserData {
     int sliderPos = 70;
     string shape = "--all";
     int ellipseMethod = OpenCV_Method;
 };
 
 const char* keys =
-    "{help h          |      | Show help message }"
+    "{help h          |            | Show help message }"
     "{@image          |ellipses.jpg| Path to input image file }";
 
 int main(int argc, char** argv) {
 
     cv::CommandLineParser parser(argc, argv, keys);
+    help(argv);
 
     if (parser.has("help"))
     {
-        help(argv);
         return 0;
     }
-
-    help(argv);
 
     UserData userData; // variable to pass all the necessary values to trackbar callback
 
@@ -122,7 +120,7 @@ int main(int argc, char** argv) {
 }
 
 // Function to draw the minimum enclosing circle around given points
-void drawMinEnclosingCircle(Mat &img, vector<Point> &points) {
+void drawMinEnclosingCircle(Mat &img, const vector<Point> &points) {
     Point2f center;
     float radius = 0;
     minEnclosingCircle(points, center, radius);  // Find the enclosing circle
@@ -144,7 +142,7 @@ void drawMinEnclosingTriangle(Mat &img, const vector<Point> &points) {
 }
 
 // Function to draw the minimum area rectangle around given points
-void drawMinAreaRect(Mat &img, vector<Point> &points) {
+void drawMinAreaRect(Mat &img, const vector<Point> &points) {
     RotatedRect box = minAreaRect(points);  // Find the minimum area rectangle
     Point2f vtx[4];
     box.points(vtx);
@@ -159,7 +157,7 @@ void drawMinAreaRect(Mat &img, vector<Point> &points) {
 }
 
 // Function to draw the convex hull of given points
-void drawConvexHull(Mat &img, vector<Point> &points) {
+void drawConvexHull(Mat &img, const vector<Point> &points) {
     vector<Point> hull;
     convexHull(points, hull, false);  // Find the convex hull
     // Draw the convex hull
@@ -172,7 +170,7 @@ inline static bool isGoodBox(const RotatedRect& box) {
 }
 
 // Function to draw fitted ellipses using different methods
-void drawFittedEllipses(Mat &img, vector<Point> &points, int ellipseMethod) {
+void drawFittedEllipses(Mat &img, const vector<Point> &points, int ellipseMethod) {
     switch (ellipseMethod) {
         case OpenCV_Method: // Standard ellipse fitting
             {
@@ -215,7 +213,7 @@ void drawFittedEllipses(Mat &img, vector<Point> &points, int ellipseMethod) {
 }
 
 // Function to draw shapes
-void drawShapes(Mat &img, vector<Point> &points, int ellipseMethod, string shape) {
+void drawShapes(Mat &img, const vector<Point> &points, int ellipseMethod, string shape) {
     if (shape == "--circle") {
         drawMinEnclosingCircle(img, points);
     } else if (shape == "--triangle") {
