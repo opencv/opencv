@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     // Draw all shapes by default
     drawAll(image, rng, width, height, lineType);
     imshow("Drawing Demo", image);
-    char key = waitKey(0);
+    int key = waitKey(0);
 
     while (key != 27) { // 27 is the ASCII code for 'ESC'
         switch (key) {
