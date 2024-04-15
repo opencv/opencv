@@ -109,6 +109,10 @@ namespace cv {
 //! @addtogroup stitching
 //! @{
 
+/** @example samples/cpp/snippets/stitching.cpp
+A basic example on image stitching
+*/
+
 /** @example samples/python/stitching.py
 A basic example on image stitching in Python.
 */

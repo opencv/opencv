@@ -988,7 +988,7 @@ class IVideoWriter;
 Check @ref tutorial_video_write "the corresponding tutorial" for more details
 */
 
-/** @example samples/cpp/videowriter_basic.cpp
+/** @example samples/cpp/snippets/videowriter_basic.cpp
 An example using VideoWriter class
 */
 

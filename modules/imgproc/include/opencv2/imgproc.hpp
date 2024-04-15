@@ -1347,6 +1347,11 @@ protected:
 //! @addtogroup imgproc_feature
 //! @{
 
+/** @example samples/cpp/snippets/lsd_lines.cpp
+An example using the LineSegmentDetector
+\image html building_lsd.png "Sample output image" width=434 height=300
+*/
+
 /** @brief Line segment detector class
 
 following the algorithm described at @cite Rafael12 .
@@ -1845,6 +1850,9 @@ CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
                           int dx, int dy, double scale = 1, double delta = 0,
                           int borderType = BORDER_DEFAULT );
 
+/** @example samples/cpp/snippets/laplace.cpp
+An example using Laplace transformations for edge detection
+*/
 
 /** @brief Calculates the Laplacian of an image.
 
@@ -2466,6 +2474,9 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               int borderMode = BORDER_CONSTANT,
                               const Scalar& borderValue = Scalar());
 
+/** @example samples/cpp/snippets/warpPerspective_demo.cpp
+An example program shows using cv::getPerspectiveTransform and cv::warpPerspective for image warping
+*/
 
 /** @brief Applies a perspective transformation to an image.
 
@@ -2676,6 +2687,9 @@ source image. The center must be inside the image.
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
 
+/** @example samples/cpp/snippets/polar_transforms.cpp
+An example using the cv::linearPolar and cv::logPolar operations
+*/
 
 /** @brief Remaps an image to semilog-polar coordinates space.
 
@@ -2827,36 +2841,10 @@ the destination image will have the given size therefore the area of the boundin
 \par Reverse mapping
 
 You can get reverse mapping adding #WARP_INVERSE_MAP to `flags`
- * This is an example of including code using the documentation comment format:
- *
- * \code{.cpp}
-*  // direct transform
-*  warpPolar(src, lin_polar_img, Size(),center, maxRadius, flags); // linear Polar
- * warpPolar(src, log_polar_img, Size(), center, maxRadius, flags + WARP_POLAR_LOG); // semilog Polar
- * // inverse transform
- * warpPolar(lin_polar_img, recovered_lin_polar_img, src.size(), center, maxRadius, flags + WARP_INVERSE_MAP);
- * warpPolar(log_polar_img, recovered_log_polar, src.size(), center, maxRadius, flags + WARP_POLAR_LOG + WARP_INVERSE_MAP);
- * \endcode
-
+\snippet polar_transforms.cpp InverseMap
 
 In addition, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
-* \code{.cpp}
-double angleRad, magnitude;
-double Kangle = dst.rows / CV_2PI;
-angleRad = phi / Kangle;
-if (flags & WARP_POLAR_LOG)
-{
-double Klog = dst.cols / std::log(maxRadius);
-magnitude = std::exp(rho / Klog);
-}
-else
-{
-double Klin = dst.cols / maxRadius;
-magnitude = rho / Klin;
-}
-int x = cvRound(center.x + magnitude * cos(angleRad));
-int y = cvRound(center.y + magnitude * sin(angleRad));
-* \endcode
+\snippet polar_transforms.cpp InverseCoordinate
 
 @param src Source image.
 @param dst Destination image. It will have same type as src.
@@ -3430,6 +3418,9 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 //! @addtogroup imgproc_segmentation
 //! @{
 
+/** @example samples/cpp/snippets/watershed.cpp
+An example using the watershed algorithm
+*/
 
 /** @brief Performs a marker-based image segmentation using the watershed algorithm.
 
@@ -3539,6 +3530,9 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
 //! @addtogroup imgproc_misc
 //! @{
 
+/** @example samples/cpp/snippets/distrans.cpp
+An example on using the distance transform
+*/
 
 /** @brief Calculates the distance to the closest zero pixel for each pixel of the source image.
 
@@ -4057,6 +4051,10 @@ CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
 CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
+/** @example samples/cpp/snippets/squares.cpp
+A program using pyramid scaling, Canny, contours and contour simplification to find
+squares in a list of images (pic1-6.png). Returns sequence of squares detected on the image.
+*/
 
 /** @example samples/tapi/squares.cpp
 A program using pyramid scaling, Canny, contours and contour simplification to find
@@ -4258,6 +4256,9 @@ without self-intersections. Otherwise, the function output is undefined.
  */
 CV_EXPORTS_W bool isContourConvex( InputArray contour );
 
+/** @example samples/cpp/snippets/intersectExample.cpp
+Examples of how intersectConvexConvex works
+*/
 
 /** @brief Finds intersection of two convex polygons
 
@@ -4485,6 +4486,9 @@ enum ColormapTypes
     COLORMAP_DEEPGREEN = 21  //!< ![deepgreen](pics/colormaps/colorscale_deepgreen.jpg)
 };
 
+/** @example samples/cpp/snippets/falsecolor.cpp
+An example using applyColorMap function
+*/
 
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
@@ -4736,6 +4740,9 @@ An example program illustrates the use of cv::findContours and cv::drawContours
 \image html WindowsQtContoursOutput.png "Screenshot of the program"
 */
 
+/** @example samples/cpp/snippets/segment_objects.cpp
+An example using drawContours to clean up a background segmentation result
+*/
 
 /** @brief Draws contours outlines or filled contours.
 

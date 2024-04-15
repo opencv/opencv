@@ -3065,6 +3065,9 @@ private:
 //! @addtogroup core_cluster
 //!  @{
 
+/** @example samples/cpp/snippets/kmeans.cpp
+An example on K-means clustering
+*/
 
 /** @brief Finds centers of clusters and groups input samples around the clusters.
 
