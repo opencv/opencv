@@ -137,8 +137,7 @@ int main(int argc, char *argv[]) {
             cv::drawFrameAxes(imageCopy, camMatrix, distCoeffs, rvec, tvec, axisLength);
 
         imshow("out", imageCopy);
-        char key = (char)waitKey(waitTime);
-        if(key == 27) break;
+        if(waitKey(waitTime) == 27) break;
     }
     //! [charuco_detect_board_full_sample]
     return 0;

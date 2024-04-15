@@ -1,5 +1,5 @@
 Calibration with ArUco and ChArUco {#tutorial_aruco_calibration}
-==============================
+==================================
 
 @prev_tutorial{tutorial_charuco_diamond_detection}
 @next_tutorial{tutorial_aruco_faq}
@@ -24,7 +24,7 @@ more accurate in comparison to the marker corners. Calibration using a standard 
 employed in those scenarios where the ChArUco boards cannot be employed because of any kind of restriction.
 
 Calibration with ChArUco Boards
-------
+-------------------------------
 
 To calibrate using a ChArUco board, it is necessary to detect the board from different viewpoints, in the
 same way that the standard calibration does with the traditional chessboard pattern. However, due to the
@@ -39,15 +39,18 @@ The example of using `cv::calibrateCamera()` for cv::aruco::CharucoBoard:
 @snippet samples/cpp/tutorial_code/objectDetection/calibrate_camera_charuco.cpp CalibrationWithCharucoBoard2
 @snippet samples/cpp/tutorial_code/objectDetection/calibrate_camera_charuco.cpp CalibrationWithCharucoBoard3
 
-The ChArUco corners and ChArUco identifiers captured on each viewpoint are stored in the vectors `allCharucoCorners` and `allCharucoIds`, one element per viewpoint.
+The ChArUco corners and ChArUco identifiers captured on each viewpoint are stored in the vectors
+`allCharucoCorners` and `allCharucoIds`, one element per viewpoint.
 
-The `calibrateCamera()` function will fill the `cameraMatrix` and `distCoeffs` arrays with the camera calibration parameters. It will return the reprojection
-error obtained from the calibration. The elements in `rvecs` and `tvecs` will be filled with the estimated pose of the camera (respect to the ChArUco board)
-in each of the viewpoints.
+The `calibrateCamera()` function will fill the `cameraMatrix` and `distCoeffs` arrays with the
+camera calibration parameters. It will return the reprojection error obtained from the calibration.
+The elements in `rvecs` and `tvecs` will be filled with the estimated pose of the camera
+(respect to the ChArUco board) in each of the viewpoints.
 
 Finally, the `calibrationFlags` parameter determines some of the options for the calibration.
 
-A full working example is included in the `calibrate_camera_charuco.cpp` inside the `samples/cpp/tutorial_code/objectDetection` folder.
+A full working example is included in the `calibrate_camera_charuco.cpp` inside the
+`samples/cpp/tutorial_code/objectDetection` folder.
 
 The samples now take input via commandline via the `cv::CommandLineParser`. For this file the example
 parameters will look like:
@@ -61,11 +64,12 @@ were obtained by the `img_00.jpg-img_03.jpg` placed from this
 [folder](https://github.com/opencv/opencv_contrib/tree/4.6.0/modules/aruco/tutorials/aruco_calibration/images).
 
 Calibration with ArUco Boards
-------
+-----------------------------
 
-As it has been stated, it is recommended the use of ChAruco boards instead of ArUco boards for camera calibration, since
-ChArUco corners are more accurate than marker corners. However, in some special cases it must be required to use calibration
-based on ArUco boards. As in the previous case, it requires the detections of an ArUco board from different viewpoints.
+As it has been stated, it is recommended the use of ChAruco boards instead of ArUco boards for camera
+calibration, since ChArUco corners are more accurate than marker corners. However, in some special cases
+it must be required to use calibration based on ArUco boards. As in the previous case, it requires
+the detections of an ArUco board from different viewpoints.
 
 ![ArUco calibration viewpoints](images/arucocalibration.jpg)
 
@@ -80,6 +84,5 @@ A full working example is included in the `calibrate_camera.cpp` inside the `sam
 The samples now take input via commandline via the `cv::CommandLineParser`. For this file the example
 parameters will look like:
 @code{.cpp}
-    "camera_calib.txt" -w=5 -h=7 -l=100 -s=10 -d=10
-    -v=path/aruco_videos_or_images
+    "camera_calib.txt" -w=5 -h=7 -l=100 -s=10 -d=10 -v=path/aruco_videos_or_images
 @endcode

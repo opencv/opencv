@@ -11,7 +11,7 @@ const char* about = "Basic marker detection";
 
 //! [aruco_detect_markers_keys]
 const char* keys  =
-        "{d        |       | dictionary: DICT_4X4_50=0, DICT_4X4_100=1, DICT_4X4_250=2,"
+        "{d        | 0     | dictionary: DICT_4X4_50=0, DICT_4X4_100=1, DICT_4X4_250=2,"
         "DICT_4X4_1000=3, DICT_5X5_50=4, DICT_5X5_100=5, DICT_5X5_250=6, DICT_5X5_1000=7, "
         "DICT_6X6_50=8, DICT_6X6_100=9, DICT_6X6_250=10, DICT_6X6_1000=11, DICT_7X7_50=12,"
         "DICT_7X7_100=13, DICT_7X7_250=14, DICT_7X7_1000=15, DICT_ARUCO_ORIGINAL = 16,"
@@ -25,17 +25,21 @@ const char* keys  =
         "{r        |       | show rejected candidates too }"
         "{refine   |       | Corner refinement: CORNER_REFINE_NONE=0, CORNER_REFINE_SUBPIX=1,"
         "CORNER_REFINE_CONTOUR=2, CORNER_REFINE_APRILTAG=3}";
-}
+
 //! [aruco_detect_markers_keys]
+
+const string refineMethods[4] = {
+    "None",
+    "Subpixel",
+    "Contour",
+    "AprilTag"
+};
+
+}
 
 int main(int argc, char *argv[]) {
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
-
-    if(argc < 2) {
-        parser.printMessage();
-        return 0;
-    }
 
     bool showRejected = parser.has("r");
     bool estimatePose = parser.has("c");
@@ -46,9 +50,16 @@ int main(int argc, char *argv[]) {
 
     if (parser.has("refine")) {
         // override cornerRefinementMethod read from config file
-        detectorParams.cornerRefinementMethod = parser.get<aruco::CornerRefineMethod>("refine");
+        int user_method = parser.get<aruco::CornerRefineMethod>("refine");
+        if (user_method < 0 || user_method >= 4)
+        {
+            std::cout << "Corner refinement method should be in range 0..3" << std::endl;
+            return 0;
+        }
+        detectorParams.cornerRefinementMethod = user_method;
     }
-    std::cout << "Corner refinement method (0: None, 1: Subpixel, 2:contour, 3: AprilTag 2): " << (int)detectorParams.cornerRefinementMethod << std::endl;
+
+    std::cout << "Corner refinement method: " << refineMethods[detectorParams.cornerRefinementMethod] << std::endl;
 
     int camId = parser.get<int>("ci");
 

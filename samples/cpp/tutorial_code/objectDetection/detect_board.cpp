@@ -136,9 +136,8 @@ int main(int argc, char *argv[]) {
 
         // Draw results
         image.copyTo(imageCopy);
-        if(!ids.empty()) {
+        if(!ids.empty())
             aruco::drawDetectedMarkers(imageCopy, corners, ids);
-        }
 
         if(showRejected && !rejected.empty())
             aruco::drawDetectedMarkers(imageCopy, rejected, noArray(), Scalar(100, 0, 255));

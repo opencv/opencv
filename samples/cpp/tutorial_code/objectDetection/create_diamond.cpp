@@ -27,9 +27,6 @@ const char* keys  =
 int main(int argc, char *argv[]) {
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
-    if (argc == 1) {
-        parser.printMessage();
-    }
 
     int squareLength = parser.get<int>("sl");
     int markerLength = parser.get<int>("ml");
