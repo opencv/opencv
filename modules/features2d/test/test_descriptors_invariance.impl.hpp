@@ -3,12 +3,13 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "test_invariance_utils.hpp"
+#include <functional>
 
 namespace opencv_test { namespace {
 
 #define SHOW_DEBUG_LOG 1
 
-typedef tuple<std::string, Ptr<FeatureDetector>, Ptr<DescriptorExtractor>, float>
+typedef tuple<std::string, std::function<cv::Ptr<cv::FeatureDetector>()>, std::function<cv::Ptr<cv::DescriptorExtractor>()>, float>
     String_FeatureDetector_DescriptorExtractor_Float_t;
 
 
@@ -61,8 +62,8 @@ protected:
         image0 = imread(filename);
         ASSERT_FALSE(image0.empty()) << "couldn't read input image";
 
-        featureDetector = get<1>(GetParam());
-        descriptorExtractor = get<2>(GetParam());
+        featureDetector = get<1>(GetParam())();
+        descriptorExtractor = get<2>(GetParam())();
         minInliersRatio = get<3>(GetParam());
     }
 
