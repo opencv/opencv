@@ -732,6 +732,7 @@ void TFLiteImporter::parseTranspose(const Operator& op, const std::string& opcod
         // OpenCV operates under the assumption that NCHW format, whereas TFLite defaults to NHWC.
         // Therfore, to align these layouts, the axes of the permutation vector should be adjusted accordingly.
 	// For implementation details, please refer to the disscusion:
+	// https://github.com/opencv/opencv/pull/25297#issuecomment-2049762298
 
         if (perm[0] != 0) {
             CV_Error(Error::StsParseError, "The first axis should not be permuted.");
