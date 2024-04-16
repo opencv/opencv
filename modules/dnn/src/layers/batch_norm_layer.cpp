@@ -165,7 +165,6 @@ public:
     {
         if (inputs[0].empty()) { // Support for 0D input
             outputs.push_back(MatShape()); // Output is also a scalar.
-            std::cout << "output shape: " << outputs[0] << std::endl;
             return true;
         }
 
@@ -173,8 +172,6 @@ public:
         if (!useGlobalStats && inputs[0][0] != 1)
             CV_Error(Error::StsNotImplemented, "Batch normalization in training mode with batch size > 1");
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
-        std::cout << "input shape: " << inputs[0] << std::endl;
-        std::cout << "output shape: " << outputs[0] << std::endl;
         return true;
     }
 
@@ -284,20 +281,6 @@ public:
             Mat &inpBlob = inputs[0];
             Mat &outBlob = outputs[0];
 
-            // float w = (hasWeights ? weights_.at<float>(0) : 1.0f);  // Use first weight or default to 1 if not present
-            // float b = (hasBias ? bias_.at<float>(0) : 0.0f);        // Use first bias or default to 0 if not present
-
-            // float w = weights_.at<float>(0);  // Use first weight or default to 1 if not present
-            // float b = bias_.at<float>(0);        // Use first bias or default to 0 if not present
-
-            // if (inpBlob.dims == 0) {  // Scalar input
-            //     float inpVal = inpBlob.at<float>();
-            //     float outVal = inpVal * w + b;
-            //     outBlob.create(1, &outVal, inpBlob.type());
-            // } else {  // Vector input
-            // inpBlob.convertTo(outBlob, inpBlob.type(), w, b);
-            // }
-
             if (inputs[0].dims == 0) {  // Scalar input
                 float inpVal = inputs[0].at<float>();
                 float outVal = inpVal * weights_.at<float>(0) + bias_.at<float>(0);
@@ -322,15 +305,10 @@ public:
         for (size_t i = 2; i < inpBlob.dims; i++) {
             planeSize *= inpBlob.size[i];
         }
-        std::cout << "planeSize: " << planeSize << std::endl;
-        std::cout << "outpus size: " << outputs.size() << std::endl;
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
             Mat &outBlob = outputs[ii];
-            std::cout << "outBlob shape: " << shape(outBlob) << std::endl;
-            std::cout << "outBlob size: " << outBlob.size << std::endl;
-
             for(int num = 0; num < outBlob.size[0]; num++)
             {
                 for (int n = 0; n < outBlob.size[1]; n++)

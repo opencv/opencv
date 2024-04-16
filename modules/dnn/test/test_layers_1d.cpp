@@ -617,59 +617,25 @@ TEST_P(Layer_BatchNorm_Test, Accuracy_01D)
     lp.set("has_weight", has_weight);
     lp.set("has_bias", has_bias);
 
-    // Set the mean and variance
-    // vector<float> mean = {0.5f};
-    // vector<float> variance = {0.5f};
-    // Mat meanMat(1, mean.size(), CV_32F, mean.data());
-    // Mat varMat(1, variance.size(), CV_32F, variance.data());
     Mat meanMat(input_shape.size(), input_shape.data(), CV_32F, 0.5);
     Mat varMat(input_shape.size(), input_shape.data(), CV_32F, 0.5);
     vector<Mat> blobs = {meanMat, varMat};
-    std::cout << "meanMat: " << meanMat << std::endl;
-    std::cout << "varMat: " << varMat << std::endl;
-
-    // Mat weights, bias;
-    // if (has_weight) {
-    //     weights = Mat(1, mean.size(), CV_32F, 1);
-    //     blobs.push_back(weights);
-    // }
-    // if (has_bias) {
-    //     bias = Mat(1, mean.size(), CV_32F, 0);
-    //     blobs.push_back(bias);
-    // }
     lp.blobs = blobs;
 
     // Create the layer
     Ptr<Layer> layer = BatchNormLayer::create(lp);
 
     Mat input(input_shape.size(), input_shape.data(), CV_32F, 1.0);
-    // cv::randn(input, 0, 1);
-    std::cout << "input: " << input << std::endl;
-    // Mat output_ref = input.reshape(1, 1) * weights;
-    // output_ref.dims = 1;
+    cv::randn(input, 0, 1);
 
-    std::cout << "here" << std::endl;
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
-
-    std::cout << "+++++++++++++++" << std::endl;
-    std::cout << "outputs: " << outputs[0] << std::endl;
-    std::cout << "outputs[0] shape" << shape(outputs[0]) << std::endl;
-    std::cout << "outputs[0] size" << outputs[0].size() << std::endl;
-    std::cout << "outputs[0] type" << outputs[0].type() << std::endl;
 
     //create output_ref to compare with outputs
     Mat output_ref = input.clone();
     cv::sqrt(varMat + 1e-5, varMat);
     output_ref = (output_ref - meanMat) / varMat;
-
-    std::cout << "output_ref: " << output_ref << std::endl;
-    std::cout << "output_ref shape" << shape(output_ref) << std::endl;
-    std::cout << "output_ref size" << output_ref.size() << std::endl;
-    std::cout << "output_ref type" << output_ref.type() << std::endl;
-    std::cout << "+++++++++++++++" << std::endl;
-
 
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
@@ -682,7 +648,6 @@ INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_BatchNorm_Test,
                             std::vector<int>({4}),
                             std::vector<int>({1, 4}),
                             std::vector<int>({4, 1})
-
 ));
 
 
