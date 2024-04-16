@@ -157,52 +157,30 @@ TEST(Photo_InpaintBorders, regression)
     ASSERT_TRUE(countNonZero(diff) == 0);
 }
 
-TEST(Photo_InpaintSmallBorders, regression)
-{
-    Mat img(5, 5, CV_8U);
-    img = 128;
-    img(Rect(1, 1, 3, 3)) = 0;
+typedef testing::TestWithParam<tuple<perf::MatType>> Photo_InpaintSmallBorders;
 
-    Mat mask(5, 5, CV_8U);
-    mask = 0;
+TEST_P(Photo_InpaintSmallBorders, regression)
+{
+    int type = get<0>(GetParam());
+    Mat img(5, 5, type, Scalar::all(128));
+    Mat expected = img.clone();
+
+    Mat mask = Mat::zeros(5, 5, CV_8U);
     mask(Rect(1, 1, 3, 3)) = 255;
 
-    Mat expected(5, 5, img.type());
-    expected = 128;
+    img.setTo(Scalar::all(0), mask);
 
     Mat inpainted, diff;
 
     inpaint(img, mask, inpainted, 1, INPAINT_TELEA);
     cv::absdiff(inpainted, expected, diff);
-    ASSERT_EQ(countNonZero(diff), 0);
+    ASSERT_EQ(countNonZero(diff.reshape(1)), 0);
 
     inpaint(img, mask, inpainted, 1, INPAINT_NS);
     cv::absdiff(inpainted, expected, diff);
-    ASSERT_EQ(countNonZero(diff), 0);
+    ASSERT_EQ(countNonZero(diff.reshape(1)), 0);
 }
 
-TEST(Photo_InpaintSmallBordersC3, regression)
-{
-    Mat img(5, 5, CV_8UC3);
-    img = cv::Scalar(128, 128, 128);
-    img(Rect(1, 1, 3, 3)) = cv::Scalar(0, 0, 0);
-
-    Mat mask(5, 5, CV_8U);
-    mask = 0;
-    mask(Rect(1, 1, 3, 3)) = 255;
-
-    Mat expected(5, 5, img.type());
-    expected = cv::Scalar(128, 128, 128);
-
-    Mat inpainted, diff;
-
-    inpaint(img, mask, inpainted, 1, INPAINT_TELEA);
-    cv::absdiff(inpainted.reshape(1), expected.reshape(1), diff);
-    ASSERT_EQ(countNonZero(diff), 0);
-
-    inpaint(img, mask, inpainted, 1, INPAINT_NS);
-    cv::absdiff(inpainted.reshape(1), expected.reshape(1), diff);
-    ASSERT_EQ(countNonZero(diff), 0);
-}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Photo_InpaintSmallBorders,  Values(CV_8UC1, CV_8UC3));
 
 }} // namespace
