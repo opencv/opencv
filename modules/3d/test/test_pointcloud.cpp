@@ -11,9 +11,9 @@
 
 namespace opencv_test { namespace {
 
-struct OrigObjGoldVals
+struct OriginalObjGoldValues
 {
-    OrigObjGoldVals()
+    OriginalObjGoldValues()
     {
         std::array<float, 6> vals = { -5.93915f, -0.13257f, 2.55837f, 1.86743f, -1.16339f, 0.399941f };
         points =
@@ -118,7 +118,7 @@ struct OrigObjGoldVals
     std::vector<std::vector<int32_t>> indices;
 };
 
-OrigObjGoldVals origGold;
+OriginalObjGoldValues origGold;
 
 TEST(PointCloud, LoadPointCloudObj)
 {
