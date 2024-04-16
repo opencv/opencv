@@ -62,10 +62,10 @@ OCL_TEST_P(Feature2DFixture, DescriptorsSame)
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(AKAZE, Feature2DFixture,
-    testing::Combine(testing::Values([]() { return AKAZE::create(); }), TEST_IMAGES));
+    testing::Combine(testing::Values([]() -> cv::Ptr<cv::Feature2D> { return AKAZE::create(); }), TEST_IMAGES));
 
 OCL_INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, Feature2DFixture,
-    testing::Combine(testing::Values([]() { return AKAZE::create(AKAZE::DESCRIPTOR_KAZE); }), TEST_IMAGES));
+    testing::Combine(testing::Values([]() -> cv::Ptr<cv::Feature2D> { return AKAZE::create(AKAZE::DESCRIPTOR_KAZE); }), TEST_IMAGES));
 
 }//ocl
 }//cvtest
