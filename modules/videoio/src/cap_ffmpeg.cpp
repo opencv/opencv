@@ -223,7 +223,7 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
 
 } // namespace
 
-
+bool InternalFFMpegRegister::av_log_initialized = false;
 
 //==================================================================================================
 
