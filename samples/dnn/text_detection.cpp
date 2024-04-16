@@ -28,22 +28,22 @@ using namespace cv;
 using namespace cv::dnn;
 
 // Command-line keys to parse the input arguments
-std::string keys =
-    "{ help  h                          | | Print help message. }"
-    "{ input i                     | messi5.jpg | Path to an input image. }"
-    "{ detModelPath dmp                 | | Path to a binary model file for detection (East and DB model architectures are supported). }"
-    "{ recModelPath rmp                 | | Path to a binary .onnx model for recognition. }"
-    "{ detModelConfig dmc              | db | Specify detection model config: db/east }"
-    "{ inputHeight ih                   |736| Image height for the model input. Should be multiple of 32. }"
-    "{ inputWidth iw                    |736| Image width for the model input. Should be multiple of 32. }"
-    "{ thr                  | 0.5 | Confidence threshold for EAST detector. }"
-    "{ nms                  | 0.4 | Non-maximum suppression threshold for EAST detector. }"
-    "{ binaryThreshold bt               |0.3| Confidence threshold for the binary map in DB detector. }"
-    "{ polygonThreshold pt              |0.5| Confidence threshold for polygons in DB detector. }"
-    "{ maxCandidate max                 |200| Max candidates for polygons in DB detector. }"
-    "{ unclipRatio ratio                |2.0| Unclip ratio for DB detector. }"
-    "{ RGBInput rgb                     |0| Image read mode: 0 for grayscale, 1 for color. }"
-    "{ vocabularyPath vp                | alphabet_36.txt | Path to vocabulary file. }";
+const std::string keys =
+    "{ help  h                        |     | Print help message. }"
+    "{ input i                        | messi5.jpg | Path to an input image. }"
+    "{ detModelPath dmp               |     | Path to a binary model file for detection (East and DB model architectures are supported). }"
+    "{ recModelPath rmp               |     | Path to a binary .onnx model for recognition. }"
+    "{ detModelConfig dmc             | db  | Specify detection model config: db/east }"
+    "{ inputHeight ih                 | 736 | Image height for the model input. Should be multiple of 32. }"
+    "{ inputWidth iw                  | 736 | Image width for the model input. Should be multiple of 32. }"
+    "{ thr                            | 0.5 | Confidence threshold for EAST detector. }"
+    "{ nms                            | 0.4 | Non-maximum suppression threshold for EAST detector. }"
+    "{ binaryThreshold bt             | 0.3 | Confidence threshold for the binary map in DB detector. }"
+    "{ polygonThreshold pt            | 0.5 | Confidence threshold for polygons in DB detector. }"
+    "{ maxCandidate max               | 200 | Max candidates for polygons in DB detector. }"
+    "{ unclipRatio ratio              | 2.0 | Unclip ratio for DB detector. }"
+    "{ RGBInput rgb                   | 0   | Image read mode: 0 for grayscale, 1 for color. }"
+    "{ vocabularyPath vp              | alphabet_36.txt | Path to vocabulary file. }";
 
 // Function prototype for the four-point perspective transform
 void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);

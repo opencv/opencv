@@ -14,6 +14,7 @@
 In this tutorial, we will introduce the APIs for TextRecognitionModel and TextDetectionModel in detail.
 
 ---
+
 ### TextRecognitionModel
 
 In the current version, @ref cv::dnn::TextRecognitionModel only supports CNN+RNN+CTC based algorithms,
