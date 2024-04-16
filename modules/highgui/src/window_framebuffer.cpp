@@ -2,6 +2,18 @@
 
 #include "opencv2/core/utils/logger.hpp"
 
+#include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <linux/fb.h>
+#include <linux/input.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+
+#include "opencv2/imgproc.hpp"
+
+
 namespace cv { namespace highgui_backend {
   
   std::shared_ptr<UIBackend> createUIBackendFramebuffer()
@@ -9,9 +21,124 @@ namespace cv { namespace highgui_backend {
     return std::make_shared<FramebufferBackend>();
   }
 
+  int FramebufferWindow::fb_open_and_get_info()
+  {
+    int fb_fd = open("/dev/fb0", O_RDWR);
+    if (fb_fd == -1)
+    {
+      std::cerr << "ERROR_OPENING_FB\n";
+      return -1;
+    }
+
+    // Get fixed screen information
+    if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &fix_info)) {
+      std::cerr << "ERROR_READING_FIX_INFO\n";
+      return -1;
+    }
+
+    // Get variable screen information
+    if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &var_info)) {
+      std::cerr << "EERROR_READING_VAR_INFO\n";
+      return -1;
+    }
+
+    return fb_fd;
+  }
+
+  FramebufferWindow::FramebufferWindow()
+  {
+    std::cout  << "FramebufferWindow()" << std::endl;
+    FB_ID = "FramebufferWindow";
+    framebuffrer_id = fb_open_and_get_info();
+    std::cout  << "FramebufferWindow():: id " << framebuffrer_id << std::endl;
+    if(framebuffrer_id == -1) return;
+    
+    fb_w = var_info.xres;
+    fb_h = var_info.yres;
+    y_offset = var_info.yoffset;
+    x_offset = var_info.xoffset;
+    bpp = var_info.bits_per_pixel;
+    line_length = fix_info.line_length;
+    
+    std::cout << "= Framebuffer's width, height, bits per pix:\n" 
+      << fb_w << " " << fb_h << " " << bpp << "\n\n";
+    std::cout << "= Framebuffer's offsets, line length:\n" 
+      << y_offset << " " << x_offset << " " << line_length << "\n\n";
+      
+    // MAP FB TO MEMORY
+    screensize = fb_w * fb_h * bpp / 8;
+    fbPointer = (unsigned char*)
+      mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, 
+        framebuffrer_id, 0);
+    if (fbPointer == MAP_FAILED) {
+        std::cerr << "ERROR_MAP\n";
+        return;
+    }
+
+    backgroundBuff = Mat(fb_h, fb_w, CV_8UC4);
+    int cnt_channel = 4;
+    for (int y = y_offset; y < backgroundBuff.rows + y_offset; y++)
+    {
+        std::memcpy(backgroundBuff.ptr<cv::Vec4b>(y - y_offset), 
+                    fbPointer + y * line_length, 
+                    backgroundBuff.cols * cnt_channel);
+    }
+
+    
+  }
 
   void FramebufferWindow::imshow(InputArray image){
     std::cout  << "FramebufferWindow::imshow(InputArray image)" << std::endl;
+    std::cout  << "InputArray image:: size" << image.size() << std::endl;
+    if (fbPointer == MAP_FAILED) {
+        return;
+    }
+    
+    Mat img;
+    cvtColor(image, img, COLOR_RGB2RGBA);
+    // changing the image size to match the entered width
+    double aspect_ratio = static_cast<double>(img.cols) / img.rows;
+    int new_width = fb_w;
+    int new_height = static_cast<int>(fb_w / aspect_ratio);
+    int cnt_channel = img.channels();
+    
+    std::cout << "= Initial image width and heigth:\n" << img.cols << " " << img.rows << "\n\n";
+    std::cout << "= Image width / heigth:\n" << aspect_ratio << "\n";
+    std::cout << "= Image count of channels:\n" << img.channels() << "\n";
+
+        // RECIZE IMAGE TO MATCH THE FB SIZE
+    if (new_width > fb_w || new_height > fb_h) {
+        if (aspect_ratio > static_cast<double>(fb_w) / fb_h) {
+            new_width = fb_w;
+            new_height = static_cast<int>(fb_w / aspect_ratio);
+        } else {
+            new_height = fb_h;
+            new_width = static_cast<int>(fb_h * aspect_ratio);
+        }
+    }
+    cv::resize(img, img, cv::Size(new_width, new_height), INTER_LINEAR);
+    
+    std::cout << "= Recized image width and heigth:\n" << img.cols << " " <<  img.rows << "\n\n";
+    
+    // RESTORE BACKGROUNG
+    for (int y = y_offset; y < backgroundBuff.rows + y_offset; y++)
+    {
+        std::memcpy(fbPointer + y * line_length, 
+                    backgroundBuff.ptr<cv::Vec4b>(y - y_offset), 
+                    backgroundBuff.cols*cnt_channel);
+    }
+
+
+    
+    // SHOW IMAGE
+    for (int y = y_offset; y < img.rows + y_offset; y++)
+    {
+        std::memcpy(fbPointer + y * line_length, 
+                    img.ptr<cv::Vec4b>(y - y_offset), 
+                    img.cols*cnt_channel);
+    }
+
+
   }
 
   double FramebufferWindow::getProperty(int prop) const{
