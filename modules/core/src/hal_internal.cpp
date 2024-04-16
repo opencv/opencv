@@ -521,6 +521,8 @@ lapack_gemm_c(const fptype *src1, size_t src1_step, const fptype *src2, size_t s
     int lddst = (int)(dst_step / sizeof(std::complex<fptype>));
     int c_m, c_n, d_m;
     CBLAS_TRANSPOSE transA, transB;
+    std::complex<fptype> cAlpha(alpha, 0.0);
+    std::complex<fptype> cBeta(beta, 0.0);
 
     if(flags & CV_HAL_GEMM_2_T)
     {
@@ -582,8 +584,6 @@ lapack_gemm_c(const fptype *src1, size_t src1_step, const fptype *src2, size_t s
     // FIXME: this is a workaround. Support ILP64 in HAL API.
 #if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
     int M = a_m, N = d_n, K = a_n;
-    std::complex<fptype> cAlpha(alpha, 0.0);
-    std::complex<fptype> cBeta(beta, 0.0);
     if(typeid(fptype) == typeid(float)) {
         auto src1_cast = (std::complex<float>*)(src1);
         auto src2_cast = (std::complex<float>*)(src2);

@@ -140,7 +140,6 @@ macro(ocv_lapack_check)
         LINK_LIBRARIES ${LAPACK_LIBRARIES}
         OUTPUT_VARIABLE TRY_OUT
     )
-    message(STATUS "-------------LAPACK valid check: ${TRY_OUT}")
     if(NOT __VALID_LAPACK)
       file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
           "\nLAPACK(${LAPACK_IMPL}) check FAILED:\n"
