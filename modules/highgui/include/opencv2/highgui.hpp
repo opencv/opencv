@@ -285,6 +285,11 @@ The function destroyAllWindows destroys all of the opened HighGUI windows.
  */
 CV_EXPORTS_W void destroyAllWindows();
 
+
+/** @brief HighGUI backend used.
+
+The function return HighGUI backend name used : could be COCOA, GTK, QT, WAYLAND or WIN32UI.
+ */
 CV_EXPORTS_W const std::string currentUIFramework();
 
 CV_EXPORTS_W int startWindowThread();
