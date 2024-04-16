@@ -4,6 +4,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <termios.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <linux/fb.h>
@@ -44,6 +45,7 @@ namespace cv { namespace highgui_backend {
 
     return fb_fd;
   }
+  
 
   FramebufferWindow::FramebufferWindow()
   {
@@ -51,6 +53,7 @@ namespace cv { namespace highgui_backend {
     FB_ID = "FramebufferWindow";
     framebuffrer_id = fb_open_and_get_info();
     std::cout  << "FramebufferWindow():: id " << framebuffrer_id << std::endl;
+    
     if(framebuffrer_id == -1) return;
     
     fb_w = var_info.xres;
@@ -85,6 +88,25 @@ namespace cv { namespace highgui_backend {
     }
 
     
+  }
+  
+  FramebufferWindow::~FramebufferWindow(){
+    
+    if(framebuffrer_id == -1) return;
+    
+    // RESTORE BACKGROUNG
+    int cnt_channel = 4;
+    for (int y = y_offset; y < backgroundBuff.rows + y_offset; y++)
+    {
+      std::memcpy(fbPointer + y * line_length, 
+                  backgroundBuff.ptr<cv::Vec4b>(y - y_offset), 
+                  backgroundBuff.cols*cnt_channel);
+    }
+
+    if (fbPointer != MAP_FAILED) {
+      munmap(fbPointer, screensize);
+    }
+    close(framebuffrer_id);
   }
 
   void FramebufferWindow::imshow(InputArray image){
@@ -196,6 +218,32 @@ namespace cv { namespace highgui_backend {
     std::cout  << "destroy()" << std::endl;
   }
 
+  int FramebufferBackend::OpenInputEvent()
+  {
+    int fd;
+    fd = open("/dev/input/event1", O_RDONLY);
+    if (fd == -1) {
+        std::cerr << "ERROR_OPENING_INPUT\n";
+        return -1;
+    }
+    return fd;
+  }
+
+
+  FramebufferBackend::FramebufferBackend()
+  {
+    eventKey = OpenInputEvent();
+    std::cout  << "FramebufferBackend():: event id " << eventKey << std::endl;
+  }
+  
+  FramebufferBackend::~FramebufferBackend()
+  {
+    if(eventKey != -1)
+    {
+      close(eventKey);
+    }
+  }
+
   void FramebufferBackend::destroyAllWindows() {
     std::cout  << "destroyAllWindows()" << std::endl;
   }
@@ -209,9 +257,85 @@ namespace cv { namespace highgui_backend {
     return std::make_shared<FramebufferWindow>();
   }
 
+  void FramebufferBackend::initTermios(int echo) 
+  {
+    tcgetattr(0, &old); /* grab old terminal i/o settings */
+    current = old; /* make new settings same as old settings */
+    current.c_lflag &= ~ICANON; /* disable buffered i/o */
+    if (echo) {
+        current.c_lflag |= ECHO; /* set echo mode */
+    } else {
+        current.c_lflag &= ~ECHO; /* set no echo mode */
+    }
+    tcsetattr(0, TCSANOW, &current); /* use these new terminal i/o settings now */
+  }
+
+  /* Restore old terminal i/o settings */
+  void FramebufferBackend::resetTermios(void) 
+  {
+    tcsetattr(0, TCSANOW, &old);
+  }
+
+  char FramebufferBackend::getch_(int echo) 
+  {
+    char ch;
+    initTermios(echo);
+    ch = getchar();
+    resetTermios();
+    return ch;
+  }
+
   int FramebufferBackend::waitKeyEx(int delay) {
     std::cout  << "FramebufferBackend::waitKeyEx(int delay "<< delay <<")" << std::endl; 
-    return 0; 
+
+    int code = 0;
+  
+    char ch = getch_(0);
+    std::cout  << "ch 1 " << (int)ch << std::endl;
+    code = ch;
+    
+    if(code == 27)
+    {
+      ch = getch_(0);
+      std::cout  << "ch 2 " << (int)ch << std::endl;
+    //  code = ch * 1000; 
+      ch = getch_(0);
+      std::cout  << "ch 2 " << (int)ch << std::endl;
+    //  code += ch * 1000000; 
+      code = ch;
+    }
+  
+//    struct input_event events;
+//
+//    
+//    ssize_t r = 1;
+//    while(r > 0)
+//    {
+//      std::cout  << "while 1 " << std::endl; 
+//      r = read(eventKey, &events, sizeof(input_event));
+//      std::cout  << "while 1 " << std::endl; 
+//    }
+//    
+//    
+//    
+//    while((r == 0)&& ((delay > 1) || (delay == 0)) )
+//    {
+//      delay--;
+//      usleep(1);
+//      r = read(eventKey, &events, sizeof(input_event));
+//      std::cout  << "while 2 " << std::endl; 
+//
+//      if(r != 0){
+//        code = (events.code);
+//      }
+//    }
+//
+    std::cout  << "waitKeyEx:: code "<< code << std::endl; 
+//    
+//    if(r == 0)
+//      return -1;
+//    
+    return code; 
   }
   int FramebufferBackend::pollKey()  {
     std::cout  << "FramebufferBackend::pollKey()" << std::endl; 
