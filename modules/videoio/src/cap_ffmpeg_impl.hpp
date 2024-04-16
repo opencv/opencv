@@ -926,11 +926,7 @@ public:
         std::unique_lock<cv::Mutex> lock(_mutex, std::defer_lock);
         if(!threadSafe)
             lock.lock();
-        if(av_log_initialized)
-            return;
         static InternalFFMpegRegister instance;
-        initLogger_();  // update logger setup unconditionally (GStreamer's libav plugin may override these settings)
-        av_log_initialized = true;
     }
     static void initLogger_()
     {
@@ -968,6 +964,7 @@ public:
         /* register a callback function for synchronization */
         av_lockmgr_register(&LockCallBack);
 #endif
+        initLogger_();  // update logger setup unconditionally (GStreamer's libav plugin may override these settings)
     }
     ~InternalFFMpegRegister()
     {
@@ -976,9 +973,6 @@ public:
 #endif
         av_log_set_callback(NULL);
     }
-
-private:
-    static bool av_log_initialized;
 };
 
 inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
