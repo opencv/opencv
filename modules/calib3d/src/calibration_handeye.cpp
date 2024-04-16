@@ -727,7 +727,6 @@ void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gr
             Rodrigues(R_gripper2base_[i], R_temp);
             R_temp.convertTo(R, CV_64F);
         }
-            
 
         Mat t = m(Rect(3, 0, 1, 3));
         t_gripper2base_[i].convertTo(t, CV_64F);
@@ -750,7 +749,6 @@ void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gr
             Rodrigues(R_target2cam_[i], R_temp);
             R_temp.convertTo(R, CV_64F);
         }
-            
 
         Mat t = m(Rect(3, 0, 1, 3));
         t_target2cam_[i].convertTo(t, CV_64F);
@@ -930,7 +928,9 @@ void calibrateRobotWorldHandEye(InputArrayOfArrays R_world2cam, InputArrayOfArra
             }
             else
             {
-                Rodrigues(rot, R);
+                cv::Mat R_temp;
+                Rodrigues(rot, R_temp);
+                R_temp.convertTo(R, CV_64F);
                 R_base2gripper_.push_back(R);
             }
             Mat tvec = t_base2gripper_tmp[i];
@@ -948,7 +948,9 @@ void calibrateRobotWorldHandEye(InputArrayOfArrays R_world2cam, InputArrayOfArra
             }
             else
             {
-                Rodrigues(rot, R);
+                cv::Mat R_temp;
+                Rodrigues(rot, R_temp);
+                R_temp.convertTo(R, CV_64F);
                 R_world2cam_.push_back(R);
             }
             Mat tvec = t_world2cam_tmp[i];
