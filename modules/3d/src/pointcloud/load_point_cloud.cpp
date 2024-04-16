@@ -214,24 +214,22 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
         {
             CV_Assert(!texCoords.fixedType() || (texCoords.type() == CV_MAKE_TYPE(CV_32F, nTexCoords)));
 
-            Mat tex3 = Mat(vec_texCoords);
-            std::vector<Mat> varr;
-            cv::split(tex3, varr);
-            std::vector<Mat> marr = { varr[0], varr[1] };
+            Mat tex3(vec_texCoords);
 
-            int ch = texCoords.channels();
             if (nTexCoords == 3)
             {
-                marr.push_back(varr[2]);
+                tex3.copyTo(texCoords);
             }
             else if (nTexCoords == 2)
             {
-                if (ch == 3)
-                {
-                    marr.push_back(Mat::zeros(varr[0].size(), CV_32F));
-                }
+                // if texCoords is empty then channels() can be any number
+                bool has3ch = texCoords.channels() == 3;
+                int ch = has3ch ? 3 : 2;
+                std::vector<int> permut = has3ch ? std::vector<int>{ 0, 0, 1, 1, -1, 2 } : std::vector<int>{ 0, 0, 1, 1 };
+                texCoords.createSameSize(vec_texCoords, CV_MAKE_TYPE(CV_32F, ch));
+                Mat out = texCoords.getMat();
+                cv::mixChannels(tex3, out, permut);
             }
-            cv::merge(marr, texCoords);
         }
         else
         {
@@ -313,13 +311,9 @@ void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays in
     }
     if (nTexCoords == 2)
     {
-        std::vector<Point2f> vec2_texCoords;
-        texCoords.copyTo(vec2_texCoords);
-        for (size_t i = 0; i < vec2_texCoords.size(); i++)
-        {
-            Point2f p = vec2_texCoords[i];
-            vec_texCoords.push_back({p.x, p.y, 0});
-        }
+        // extend by 3rd zero channel
+        vec_texCoords.resize(texCoords.total());
+        cv::mixChannels(texCoords, vec_texCoords, {0, 0, 1, 1, -1, 2});
     }
     if (nTexCoords == 3)
     {
