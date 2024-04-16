@@ -345,10 +345,9 @@ struct MediaFrameTestAgeGenderOV: public ::testing::Test {
         bin_path  = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         device    = "CPU";
         blob_path = "age-gender-recognition-retail-0013.blob";
-        image_path = "../samples/data/lena.jpg";
 
         cv::Size sz{62, 62};
-        m_in_mat = cv::imread(image_path);
+        m_in_mat = cv::Mat(sz, CV_8UC3);
         cv::resize(m_in_mat, m_in_mat, sz);
 
         m_in_y = cv::Mat{sz, CV_8UC1};
