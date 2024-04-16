@@ -7,6 +7,7 @@
 #include <linux/fb.h>
 #include <linux/input.h>
 
+#include <termios.h>
 
 namespace cv { namespace highgui_backend {
 
@@ -33,7 +34,7 @@ class CV_EXPORTS FramebufferWindow : public UIWindow
   
 public:
   FramebufferWindow();
-  virtual ~FramebufferWindow(){}
+  virtual ~FramebufferWindow();
 
   virtual void imshow(InputArray image)override;
 
@@ -67,8 +68,19 @@ public:
 
 class CV_EXPORTS FramebufferBackend: public UIBackend
 {
+  int OpenInputEvent();
+  int eventKey;
+
+  struct termios old, current;
+
+  void initTermios(int echo);
+  void resetTermios(void);
+  char getch_(int echo);
+
 public:
-  virtual ~FramebufferBackend(){}
+  FramebufferBackend();
+
+  virtual ~FramebufferBackend();
 
   virtual void destroyAllWindows()override;
 
