@@ -113,7 +113,6 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
 {
 #if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
     long* piv = new long[m];
-    // long _lda = static_cast<long>(lda);
     long lda = (long)(a_step / sizeof(fptype));
     long _m = static_cast<long>(m), _n = static_cast<long>(n);
     long _info[1];
@@ -512,61 +511,6 @@ lapack_gemm(const fptype *src1, size_t src1_step, const fptype *src2, size_t src
     return CV_HAL_ERROR_OK;
 }
 
-template <typename fptype>
-inline void lapack_gemm_c_kernel(CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB, int M, int N, int K,
-                                 fptype alpha, const fptype *A, int lda, const fptype *B, int ldb,
-                                 fptype beta, fptype *C, int ldc);
-template <>
-inline void lapack_gemm_c_kernel(CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB, int M, int N, int K,
-                                 float alpha, const float *A, int lda, const float *B, int ldb,
-                                 float beta, float *C, int ldc) {
-        std::complex<float> cAlpha(alpha, 0.0), cBeta(beta, 0.0);;
-#if defined (ACCELERATE_NEW_LAPACK)
-        std::vector<std::complex<float>> vsrc1(M * K), vsrc2(K * N), vdst(M * N);
-        for (int i = 0; i < 2 * M * K; i += 2) {
-            float re = A[i], im = A[i + 1];
-            vsrc1.push_back(std::complex<float>(re, im));
-        }
-        for (int i = 0; i < 2 * K * N; i += 2) {
-            float re = B[i], im = B[i + 1];
-            vsrc2.push_back(std::complex<float>(re, im));
-        }
-        cblas_cgemm(CblasRowMajor, transA, transB, M, N, K, &cAlpha, vsrc1.data(), lda, vsrc2.data(), ldb, &cBeta, vdst.data(), ldc);
-        for (int i = 0; i < 2 * M * N; i += 2) {
-            int vdst_index = i / 2;
-            float re = vdst[vdst_index].real(), im = vdst[vdst_index].imag();
-            C[i] = re, C[i + 1] = im;
-        }
-#else
-        cblas_cgemm(CblasRowMajor, transA, transB, M, N, K, (float*)reinterpret_cast<float(&)[2]>(cAlpha), A, lda, B, ldb, (float*)reinterpret_cast<float(&)[2]>(cBeta), C, ldc);
-#endif
-}
-template <>
-inline void lapack_gemm_c_kernel(CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB, int M, int N, int K,
-                                 double alpha, const double *A, int lda, const double *B, int ldb,
-                                 double beta, double *C, int ldc) {
-        std::complex<double> cAlpha(alpha, 0.0), cBeta(beta, 0.0);;
-#if defined (ACCELERATE_NEW_LAPACK)
-        std::vector<std::complex<double>> vsrc1(M * K), vsrc2(K * N), vdst(M * N);
-        for (int i = 0; i < 2 * M * K; i += 2) {
-            double re = A[i], im = A[i + 1];
-            vsrc1.push_back(std::complex<double>(re, im));
-        }
-        for (int i = 0; i < 2 * K * N; i += 2) {
-            double re = B[i], im = B[i + 1];
-            vsrc2.push_back(std::complex<double>(re, im));
-        }
-        cblas_zgemm(CblasRowMajor, transA, transB, M, N, K, &cAlpha, vsrc1.data(), lda, vsrc2.data(), ldb, &cBeta, vdst.data(), ldc);
-        for (int i = 0; i < 2 * M * N; i += 2) {
-            int vdst_index = i / 2;
-            double re = vdst[vdst_index].real(), im = vdst[vdst_index].imag();
-            C[i] = re, C[i + 1] = im;
-        }
-#else
-        cblas_zgemm(CblasRowMajor, transA, transB, M, N, K, (double*)reinterpret_cast<double(&)[2]>(cAlpha), A, lda, B, ldb, (double*)reinterpret_cast<double(&)[2]>(cBeta), C, ldc);
-#endif
-}
-
 template <typename fptype> static inline int
 lapack_gemm_c(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
             const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step, int a_m, int a_n, int d_n, int flags)
@@ -635,7 +579,31 @@ lapack_gemm_c(const fptype *src1, size_t src1_step, const fptype *src2, size_t s
     else if(src3_step == 0 && beta != 0.0)
         set_value((std::complex<fptype>*)dst, lddst, std::complex<fptype>(0.0, 0.0), d_m, d_n);
 
-    lapack_gemm_c_kernel(transA, transB, a_m, d_n, a_n, alpha, src1, ldsrc1, src2, ldsrc2, beta, dst, lddst);
+    // FIXME: this is a workaround. Support ILP64 in HAL API.
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+    int M = a_m, N = d_n, K = a_n;
+    std::complex<fptype> cAlpha(alpha, 0.0);
+    std::complex<fptype> cBeta(beta, 0.0);
+    if(typeid(fptype) == typeid(float)) {
+        auto src1_cast = (std::complex<float>*)(src1);
+        auto src2_cast = (std::complex<float>*)(src2);
+        auto dst_cast = (std::complex<float>*)(dst);
+        long lda = ldsrc1, ldb = ldsrc2, ldc = lddst;
+        cblas_cgemm(CblasRowMajor, transA, transB, M, N, K, (std::complex<float>*)&cAlpha, src1_cast, lda, src2_cast, ldb, (std::complex<float>*)&cBeta, dst_cast, ldc);
+    }
+    else if(typeid(fptype) == typeid(double)) {
+        auto src1_cast = (std::complex<double>*)(src1);
+        auto src2_cast = (std::complex<double>*)(src2);
+        auto dst_cast = (std::complex<double>*)(dst);
+        long lda = ldsrc1, ldb = ldsrc2, ldc = lddst;
+        cblas_zgemm(CblasRowMajor, transA, transB, M, N, K, (std::complex<double>*)&cAlpha, src1_cast, lda, src2_cast, ldb, (std::complex<double>*)&cBeta, dst_cast, ldc);
+    }
+#else
+    if(typeid(fptype) == typeid(float))
+        cblas_cgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, (float*)reinterpret_cast<fptype(&)[2]>(cAlpha), (float*)src1, ldsrc1, (float*)src2, ldsrc2, (float*)reinterpret_cast<fptype(&)[2]>(cBeta), (float*)dst, lddst);
+    else if(typeid(fptype) == typeid(double))
+        cblas_zgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, (double*)reinterpret_cast<fptype(&)[2]>(cAlpha), (double*)src1, ldsrc1, (double*)src2, ldsrc2, (double*)reinterpret_cast<fptype(&)[2]>(cBeta), (double*)dst, lddst);
+#endif
 
     return CV_HAL_ERROR_OK;
 }
