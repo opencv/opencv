@@ -885,7 +885,7 @@ inline int hal_ni_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_d
 //! @endcond
 
 /**
-   @brief Blurs an image using a Gaussian filter.
+   @brief Blurs an image using a generic Gaussian filter.
    @param src_data Source image data
    @param src_step Source image step
    @param dst_data Destination image data
@@ -908,6 +908,29 @@ inline int hal_ni_gaussianBlur(const uchar* src_data, size_t src_step, uchar* ds
 
 //! @cond IGNORED
 #define cv_hal_gaussianBlur hal_ni_gaussianBlur
+//! @endcond
+
+/**
+   @brief Blurs an image using a symmetric Gaussian filter with square kernel and sigma=0.
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param depth Depth of source and destination image
+   @param cn Number of channels
+   @param margin_left Left margins for source image
+   @param margin_top Top margins for source image
+   @param margin_right Right margins for source image
+   @param margin_bottom Bottom margins for source image
+   @param ksize Width of kernel
+   @param border_type Border type
+*/
+inline int hal_ni_gaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, size_t margin_left, size_t margin_top, size_t margin_right, size_t margin_bottom, size_t ksize, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_gaussianBlurBinomial hal_ni_gaussianBlurBinomial
 //! @endcond
 
 /**
