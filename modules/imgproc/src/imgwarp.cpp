@@ -1799,7 +1799,6 @@ void cv::remap( InputArray _src, OutputArray _dst,
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
 
-
     CV_OVX_RUN(
         src.type() == CV_8UC1 && dst.type() == CV_8UC1 &&
         !ovx::skipSmallImages<VX_KERNEL_REMAP>(src.cols, src.rows) &&
@@ -1815,6 +1814,12 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     if( dst.data == src.data )
         src = src.clone();
+
+    if ((map1.type() == CV_32FC1) && (map2.type() == CV_32FC1))
+    {
+        CALL_HAL(remap32f, cv_hal_remap32f, src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+                 map1.ptr<float>(), map1.step, map2.ptr<float>(), map2.step, interpolation, borderType, borderValue.val);
+    }
 
     interpolation &= ~WARP_RELATIVE_MAP;
     if( interpolation == INTER_AREA )
