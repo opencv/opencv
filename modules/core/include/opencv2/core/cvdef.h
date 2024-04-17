@@ -933,10 +933,6 @@ inline hfloat hfloatFromBits(ushort w) {
 #endif
 }
 
-#if !defined(__OPENCV_BUILD) && !(defined __STDCPP_FLOAT16_T__) && !(defined __ARM_NEON)
-typedef hfloat float16_t;
-#endif
-
 class bfloat
 {
 public:
