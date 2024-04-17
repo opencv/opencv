@@ -8,7 +8,7 @@ import numpy as np
 
 def parse_args():
     parser = argparse.ArgumentParser(description='iColor: deep interactive colorization')
-    parser.add_argument('--input', default='ansel_adams3.jpg',help='Path to image or video. Skip to capture frames from camera')
+    parser.add_argument('--input', default='ansel_adams3.jpg',help='Path to image.')
     parser.add_argument('--onnx_model_path', help='Path to onnx model', required=True)
     args = parser.parse_args()
     return args
@@ -33,8 +33,9 @@ if __name__ == '__main__':
 
     # Process each image in the batch (assuming batch processing is needed)
     img=img_l_rs.astype(np.float32)
+    print(img.shape)
     blob = cv.dnn.blobFromImage(img, swapRB=False)  # Adjust swapRB according to your model's training
-
+    print(blob.shape)
     session.setInput(blob)
     result_numpy = np.array(session.forward()[0])
 
