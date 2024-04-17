@@ -5,6 +5,7 @@
 #include "../test_precomp.hpp"
 #include "cvconfig.h"
 #include "opencv2/ts/ocl_test.hpp"
+#include <functional>
 
 #ifdef HAVE_OPENCL
 
@@ -16,7 +17,7 @@ namespace ocl {
     "../stitching/a3.png", \
     "../stitching/s2.jpg")
 
-PARAM_TEST_CASE(Feature2DFixture, Ptr<Feature2D>, std::string)
+PARAM_TEST_CASE(Feature2DFixture, std::function<Ptr<Feature2D>()>, std::string)
 {
     std::string filename;
     Mat image, descriptors;
@@ -27,7 +28,7 @@ PARAM_TEST_CASE(Feature2DFixture, Ptr<Feature2D>, std::string)
 
     virtual void SetUp()
     {
-        feature = GET_PARAM(0);
+        feature = GET_PARAM(0)();
         filename = GET_PARAM(1);
 
         image = readImage(filename);
@@ -61,10 +62,10 @@ OCL_TEST_P(Feature2DFixture, DescriptorsSame)
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(AKAZE, Feature2DFixture,
-    testing::Combine(testing::Values(AKAZE::create()), TEST_IMAGES));
+    testing::Combine(testing::Values([]() { return AKAZE::create(); }), TEST_IMAGES));
 
 OCL_INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, Feature2DFixture,
-    testing::Combine(testing::Values(AKAZE::create(AKAZE::DESCRIPTOR_KAZE)), TEST_IMAGES));
+    testing::Combine(testing::Values([]() { return AKAZE::create(AKAZE::DESCRIPTOR_KAZE); }), TEST_IMAGES));
 
 }//ocl
 }//cvtest
