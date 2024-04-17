@@ -603,4 +603,34 @@ INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
                             std::vector<int>({4})
 ));
 
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Const_Test;
+TEST_P(Layer_Const_Test, Accuracy_01D)
+{
+    std::vector<int> input_shape = get<0>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Const";
+    lp.name = "ConstLayer";
+
+    Mat constBlob = Mat(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(constBlob, 0.0, 1.0);
+    Mat output_ref = constBlob.clone();
+
+    lp.blobs.push_back(constBlob);
+    Ptr<Layer> layer = ConstLayer::create(lp);
+
+    std::vector<Mat> inputs; // No inputs are needed for a ConstLayer
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Const_Test, testing::Values(
+    std::vector<int>({}),
+    std::vector<int>({1}),
+    std::vector<int>({1, 4}),
+    std::vector<int>({4, 1})
+    ));
+
 }}
