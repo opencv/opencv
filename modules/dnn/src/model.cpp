@@ -90,6 +90,11 @@ public:
     {
         swapRB = swapRB_;
     }
+    /*virtual*/
+    void setOutputNames(const std::vector<String>& outNames_)
+    {
+        outNames = outNames_;
+    }
 
     /*virtual*/
     void processFrame(InputArray frame, OutputArrayOfArrays outs)
@@ -201,6 +206,13 @@ Model& Model::setInputSwapRB(bool swapRB)
 {
     CV_DbgAssert(impl);
     impl->setInputSwapRB(swapRB);
+    return *this;
+}
+
+Model& Model::setOutputNames(const std::vector<String>& outNames)
+{
+    CV_DbgAssert(impl);
+    impl->setOutputNames(outNames);
     return *this;
 }
 
@@ -381,7 +393,9 @@ void SegmentationModel::segment(InputArray frame, OutputArray mask)
 {
     std::vector<Mat> outs;
     impl->processFrame(frame, outs);
-    CV_Assert(outs.size() == 1);
+    // default output is the first one
+    if(outs.size() > 1)
+        outs.resize(1);
     Mat score = outs[0];
 
     const int chns = score.size[1];
