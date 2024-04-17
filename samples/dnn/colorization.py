@@ -1,69 +1,77 @@
 # Script is based on https://github.com/richzhang/colorization/blob/master/colorization/colorize.py
-# To download the caffemodel and the prototxt, see: https://github.com/richzhang/colorization/tree/caffe/colorization/models
-# To download pts_in_hull.npy, see: https://github.com/richzhang/colorization/tree/caffe/colorization/resources/pts_in_hull.npy
+# To download the onnx model, see: https://storage.googleapis.com/ailia-models/colorization/colorizer.onnx
+# python colorization.py --onnx_model_path colorizer.onnx --input ansel_adams3.jpg
 import numpy as np
 import argparse
 import cv2 as cv
+import numpy as np
 
 def parse_args():
     parser = argparse.ArgumentParser(description='iColor: deep interactive colorization')
-    parser.add_argument('--input', help='Path to image or video. Skip to capture frames from camera')
-    parser.add_argument('--prototxt', help='Path to colorization_deploy_v2.prototxt', required=True)
-    parser.add_argument('--caffemodel', help='Path to colorization_release_v2.caffemodel', required=True)
-    parser.add_argument('--kernel', help='Path to pts_in_hull.npy', required=True)
-
+    parser.add_argument('--input', default='ansel_adams3.jpg',help='Path to image or video. Skip to capture frames from camera')
+    parser.add_argument('--onnx_model_path', help='Path to onnx model', required=True)
     args = parser.parse_args()
     return args
 
 if __name__ == '__main__':
-    W_in = 224
-    H_in = 224
-    imshowSize = (640, 480)
-
     args = parse_args()
+    img=cv.imread(cv.samples.findFile(args.input))
 
-    # Select desired model
-    net = cv.dnn.readNetFromCaffe(args.prototxt, args.caffemodel)
+    img_lab = cv.cvtColor(img, cv.COLOR_RGB2Lab)
+    img_l = img_lab[:,:,0] # pull out L channel
 
-    pts_in_hull = np.load(args.kernel) # load cluster centers
+    img_rgb_rs = cv.resize(img, (256, 256), interpolation=cv.INTER_CUBIC)
+    img_lab_rs = cv.cvtColor(img_rgb_rs, cv.COLOR_BGR2Lab)
 
-    # populate cluster centers as 1x1 convolution kernel
-    pts_in_hull = pts_in_hull.transpose().reshape(2, 313, 1, 1)
-    net.getLayer(net.getLayerId('class8_ab')).blobs = [pts_in_hull.astype(np.float32)]
-    net.getLayer(net.getLayerId('conv8_313_rh')).blobs = [np.full([1, 313], 2.606, np.float32)]
+    # Optionally normalize Lab output to match skimage's scale
+    img_lab_rs = img_lab_rs.astype(np.float32)  # Convert to float to avoid data overflow
+    img_lab_rs[:, :, 0] *= (100.0 / 255.0)      # Scale L channel to 0-100 range
+    img_l_rs = img_lab_rs[:,:,0]
 
-    if args.input:
-        cap = cv.VideoCapture(args.input)
+    onnx_model_path = args.onnx_model_path  # Update this path to your ONNX model's path
+    session = cv.dnn.readNetFromONNX(onnx_model_path)
+
+    # Process each image in the batch (assuming batch processing is needed)
+    img=img_l_rs.astype(np.float32)
+    blob = cv.dnn.blobFromImage(img, swapRB=False)  # Adjust swapRB according to your model's training
+
+    session.setInput(blob)
+    result_numpy = np.array(session.forward()[0])
+
+    # Assume img_l is the original L channel with shape (H, W)
+    # and result_numpy is the AB channels with shape (2, H, W).
+    # First, correct the shape of result_numpy if needed:
+    if result_numpy.shape[0] == 2:
+        # Transpose result_numpy to shape (H, W, 2)
+        ab = result_numpy.transpose((1, 2, 0))
     else:
-        cap = cv.VideoCapture(0)
+        # If it's already (H, W, 2), assign it directly
+        ab = result_numpy
 
-    while cv.waitKey(1) < 0:
-        hasFrame, frame = cap.read()
-        if not hasFrame:
-            cv.waitKey()
-            break
+    assert img_l.ndim == 2
 
-        img_rgb = (frame[:,:,[2, 1, 0]] * 1.0 / 255).astype(np.float32)
+    # Resize ab to match img_l's dimensions if they are not the same
+    h, w = img_l.shape
+    if ab.shape[:2] != (h, w):
+        ab_resized = cv.resize(ab, (w, h), interpolation=cv.INTER_LINEAR)
+    else:
+        ab_resized = ab
 
-        img_lab = cv.cvtColor(img_rgb, cv.COLOR_RGB2Lab)
-        img_l = img_lab[:,:,0] # pull out L channel
-        (H_orig,W_orig) = img_rgb.shape[:2] # original image size
+    # Expand dimensions of L to match ab's dimensions
+    img_l_expanded = np.expand_dims(img_l, axis=-1)
 
-        # resize image to network input size
-        img_rs = cv.resize(img_rgb, (W_in, H_in)) # resize image to network input size
-        img_lab_rs = cv.cvtColor(img_rs, cv.COLOR_RGB2Lab)
-        img_l_rs = img_lab_rs[:,:,0]
-        img_l_rs -= 50 # subtract 50 for mean-centering
+    # Concatenate L with AB to get the LAB image
+    lab_image = np.concatenate((img_l_expanded, ab_resized), axis=-1)
 
-        net.setInput(cv.dnn.blobFromImage(img_l_rs))
-        ab_dec = net.forward()[0,:,:,:].transpose((1,2,0)) # this is our result
+    # Convert the Lab image to a 32-bit float format
+    lab_image = lab_image.astype(np.float32)
 
-        (H_out,W_out) = ab_dec.shape[:2]
-        ab_dec_us = cv.resize(ab_dec, (W_orig, H_orig))
-        img_lab_out = np.concatenate((img_l[:,:,np.newaxis],ab_dec_us),axis=2) # concatenate with original image L
-        img_bgr_out = np.clip(cv.cvtColor(img_lab_out, cv.COLOR_Lab2BGR), 0, 1)
+    # Normalize L channel to the range [0, 100] and AB channels to the range [-127, 127]
+    lab_image[:, :, 0] *= (100.0 / 255.0)  # Rescale L channel
+    #lab_image[:, :, 1:] -= 128              # Shift AB channels
 
-        frame = cv.resize(frame, imshowSize)
-        cv.imshow('origin', frame)
-        cv.imshow('gray', cv.cvtColor(frame, cv.COLOR_RGB2GRAY))
-        cv.imshow('colorized', cv.resize(img_bgr_out, imshowSize))
+    # Convert the LAB image to BGR
+    image_bgr_out = cv.cvtColor(lab_image, cv.COLOR_Lab2BGR)
+
+    cv.imshow("output image",image_bgr_out)
+    cv.waitKey(0)
