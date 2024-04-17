@@ -4,9 +4,6 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
-#include "opencv2/imgproc/detail/legacy.hpp"
-
-#define CHECK_OLD 1
 
 namespace opencv_test { namespace {
 
@@ -197,38 +194,6 @@ TEST_P(Imgproc_FindContours_Modes1, rectangle)
                 }
             }
         }
-
-#if CHECK_OLD
-        if (method != 0)  // old doesn't support chain codes
-        {
-            if (mode != RETR_FLOODFILL)
-            {
-                vector<vector<Point>> contours_o;
-                vector<Vec4i> hierarchy_o;
-                findContours_legacy(img, contours_o, hierarchy_o, mode, method);
-                ASSERT_EQ(contours.size(), contours_o.size());
-                for (size_t j = 0; j < contours.size(); ++j)
-                {
-                    SCOPED_TRACE(format("contour %zu", j));
-                    EXPECT_MAT_NEAR(Mat(contours[j]), Mat(contours_o[j]), 0);
-                }
-                EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
-            }
-            else
-            {
-                vector<vector<Point>> contours_o;
-                vector<Vec4i> hierarchy_o;
-                findContours_legacy(img32s, contours_o, hierarchy_o, mode, method);
-                ASSERT_EQ(contours.size(), contours_o.size());
-                for (size_t j = 0; j < contours.size(); ++j)
-                {
-                    SCOPED_TRACE(format("contour %zu", j));
-                    EXPECT_MAT_NEAR(Mat(contours[j]), Mat(contours_o[j]), 0);
-                }
-                EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
-            }
-        }
-#endif
     }
 }
 
@@ -276,18 +241,6 @@ TEST_P(Imgproc_FindContours_Modes1, small)
             {
                 findContours(img32s, contours, hierarchy, mode, method);
                 ASSERT_EQ(pts.size() * 2 + extra_contours_32s, contours.size());
-#if CHECK_OLD
-                vector<vector<Point>> contours_o;
-                vector<Vec4i> hierarchy_o;
-                findContours_legacy(img32s, contours_o, hierarchy_o, mode, method);
-                ASSERT_EQ(contours.size(), contours_o.size());
-                for (size_t i = 0; i < contours.size(); ++i)
-                {
-                    SCOPED_TRACE(format("contour %zu", i));
-                    EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
-                }
-                EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
-#endif
             }
         }
         else
@@ -301,18 +254,6 @@ TEST_P(Imgproc_FindContours_Modes1, small)
             {
                 findContours(img, contours, hierarchy, mode, method);
                 ASSERT_EQ(pts.size(), contours.size());
-#if CHECK_OLD
-                vector<vector<Point>> contours_o;
-                vector<Vec4i> hierarchy_o;
-                findContours_legacy(img, contours_o, hierarchy_o, mode, method);
-                ASSERT_EQ(contours.size(), contours_o.size());
-                for (size_t i = 0; i < contours.size(); ++i)
-                {
-                    SCOPED_TRACE(format("contour %zu", i));
-                    EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
-                }
-                EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
-#endif
             }
         }
     }
@@ -357,18 +298,6 @@ TEST_P(Imgproc_FindContours_Modes1, deep)
             {
                 findContours(img32s, contours, hierarchy, mode, method);
                 ASSERT_EQ(2 * NUM, contours.size());
-#if CHECK_OLD
-                vector<vector<Point>> contours_o;
-                vector<Vec4i> hierarchy_o;
-                findContours_legacy(img32s, contours_o, hierarchy_o, mode, method);
-                ASSERT_EQ(contours.size(), contours_o.size());
-                for (size_t i = 0; i < contours.size(); ++i)
-                {
-                    SCOPED_TRACE(format("contour %zu", i));
-                    EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
-                }
-                EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
-#endif
             }
         }
         else
@@ -383,18 +312,6 @@ TEST_P(Imgproc_FindContours_Modes1, deep)
             {
                 findContours(img, contours, hierarchy, mode, method);
                 ASSERT_EQ(expected_count, contours.size());
-#if CHECK_OLD
-                vector<vector<Point>> contours_o;
-                vector<Vec4i> hierarchy_o;
-                findContours_legacy(img, contours_o, hierarchy_o, mode, method);
-                ASSERT_EQ(contours.size(), contours_o.size());
-                for (size_t i = 0; i < contours.size(); ++i)
-                {
-                    SCOPED_TRACE(format("contour %zu", i));
-                    EXPECT_MAT_NEAR(Mat(contours[i]), Mat(contours_o[i]), 0);
-                }
-                EXPECT_MAT_NEAR(Mat(hierarchy), Mat(hierarchy_o), 0);
-#endif
             }
         }
     }
@@ -475,18 +392,6 @@ TEST_P(Imgproc_FindContours_Modes2, new_accuracy)
     {
         EXPECT_EQ(0., diff1);
     }
-#if CHECK_OLD
-    vector<vector<Point>> contours_o;
-    vector<Vec4i> hierarchy_o;
-    findContours(img, contours_o, hierarchy_o, mode, method);
-    ASSERT_EQ(contours_o.size(), contours.size());
-    for (size_t i = 0; i < contours_o.size(); ++i)
-    {
-        SCOPED_TRACE(format("contour = %zu", i));
-        EXPECT_MAT_NEAR(Mat(contours_o[i]), Mat(contours[i]), 0);
-    }
-    EXPECT_MAT_NEAR(Mat(hierarchy_o), Mat(hierarchy), 0);
-#endif
 }
 
 TEST_P(Imgproc_FindContours_Modes2, approx)
@@ -530,18 +435,6 @@ TEST_P(Imgproc_FindContours_Modes2, approx)
         vector<Vec4i> hierarchy;
         findContours(img, contours, hierarchy, mode, method);
 
-#if CHECK_OLD
-        vector<vector<Point>> contours_o;
-        vector<Vec4i> hierarchy_o;
-        findContours_legacy(img, contours_o, hierarchy_o, mode, method);
-        ASSERT_EQ(contours_o.size(), contours.size());
-        for (size_t i = 0; i < contours_o.size(); ++i)
-        {
-            SCOPED_TRACE(format("c = %d, contour = %zu", c, i));
-            EXPECT_MAT_NEAR(Mat(contours_o[i]), Mat(contours[i]), 0);
-        }
-        EXPECT_MAT_NEAR(Mat(hierarchy_o), Mat(hierarchy), 0);
-#endif
         // TODO: check something
     }
 }
@@ -587,19 +480,6 @@ TEST(Imgproc_FindContours, link_runs)
         imshow("img", img);
         waitKey(0);
     }
-
-#if CHECK_OLD
-    vector<vector<Point>> contours_o;
-    vector<Vec4i> hierarchy_o;
-    findContours_legacy(img, contours_o, hierarchy_o, 0, 5);  // CV_LINK_RUNS method
-    ASSERT_EQ(contours_o.size(), contours.size());
-    for (size_t i = 0; i < contours_o.size(); ++i)
-    {
-        SCOPED_TRACE(format("contour = %zu", i));
-        EXPECT_MAT_NEAR(Mat(contours_o[i]), Mat(contours[i]), 0);
-    }
-    EXPECT_MAT_NEAR(Mat(hierarchy_o), Mat(hierarchy), 0);
-#endif
 }
 
 }}  // namespace opencv_test
