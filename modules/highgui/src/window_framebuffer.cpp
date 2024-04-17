@@ -67,7 +67,7 @@ namespace cv { namespace highgui_backend {
       << fb_w << " " << fb_h << " " << bpp << "\n\n";
     std::cout << "= Framebuffer's offsets, line length:\n" 
       << y_offset << " " << x_offset << " " << line_length << "\n\n";
-      
+    
     // MAP FB TO MEMORY
     screensize = fb_w * fb_h * bpp / 8;
     fbPointer = (unsigned char*)
@@ -76,6 +76,11 @@ namespace cv { namespace highgui_backend {
     if (fbPointer == MAP_FAILED) {
         std::cerr << "ERROR_MAP\n";
         return;
+    }
+
+    if(bpp != 32) {
+      std::cerr << "Bits per pixel " << bpp << " is not supported" << std::endl;
+      return;
     }
 
     backgroundBuff = Mat(fb_h, fb_w, CV_8UC4);
@@ -114,6 +119,11 @@ namespace cv { namespace highgui_backend {
     std::cout  << "InputArray image:: size" << image.size() << std::endl;
     if (fbPointer == MAP_FAILED) {
         return;
+    }
+
+    if(bpp != 32) {
+      std::cerr << "Bits per pixel " << bpp << " is not supported" << std::endl;
+      return;
     }
     
     Mat img;
