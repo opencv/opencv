@@ -113,7 +113,7 @@ macro(ocv_lapack_check)
                       OUTPUT_VARIABLE MACOS_VERSION
                       OUTPUT_STRIP_TRAILING_WHITESPACE)
       # Enable Accelerate New LAPACK if macOS >= 13.3
-      if (MACOS_VERSION VERSION_GREATER_EQUAL "13.3")
+      if (MACOS_VERSION VERSION_GREATER "13.3" OR MACOS_VERSION VERSION_EQUAL "13.3")
         set(LAPACK_TRY_COMPILE_DEF "-DACCELERATE_NEW_LAPACK")
         add_compile_definitions(ACCELERATE_NEW_LAPACK)
         add_compile_definitions(ACCELERATE_LAPACK_ILP64)
