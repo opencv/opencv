@@ -280,22 +280,11 @@ public:
         if (inputs[0].dims <= 1) { // Handling for 0D and 1D
             Mat &inpBlob = inputs[0];
             Mat &outBlob = outputs[0];
-
-            if (inputs[0].dims == 0) {  // Scalar input
-                float inpVal = inputs[0].at<float>();
-                float outVal = inpVal * weights_.at<float>(0) + bias_.at<float>(0);
-                outBlob.at<float>(0) = outVal;
-            } else {  // Vector input
-                for (int i = 0; i < inpBlob.size[0]; i++) {
-                    float inpVal = inpBlob.at<float>(i);
-                    float outVal = inpVal * weights_.at<float>(i) + bias_.at<float>(i);
-                    outBlob.at<float>(i) = outVal;
-                }
-            }
+            CV_Assert(inpBlob.total() == weights_.total());
+            cv::multiply(inpBlob, weights_, outBlob);
+            cv::add(outBlob, bias_, outBlob);
             return;
         }
-
-
 
         CV_Assert(blobs.size() >= 2);
         CV_Assert(inputs.size() == 1);
