@@ -22,6 +22,7 @@
 #include "src/webp/encode.h"
 #include "src/webp/format_constants.h"
 #include "src/webp/mux.h"
+#include "src/webp/types.h"
 
 #if defined(_MSC_VER) && _MSC_VER < 1900
 #define snprintf _snprintf
@@ -1398,7 +1399,10 @@ int WebPAnimEncoderAdd(WebPAnimEncoder* enc, WebPPicture* frame, int timestamp,
     }
     config = *encoder_config;
   } else {
-    WebPConfigInit(&config);
+    if (!WebPConfigInit(&config)) {
+      MarkError(enc, "Cannot Init config");
+      return 0;
+    }
     config.lossless = 1;
   }
   assert(enc->curr_canvas_ == NULL);
@@ -1419,12 +1423,14 @@ int WebPAnimEncoderAdd(WebPAnimEncoder* enc, WebPPicture* frame, int timestamp,
 // -----------------------------------------------------------------------------
 // Bitstream assembly.
 
-static int DecodeFrameOntoCanvas(const WebPMuxFrameInfo* const frame,
-                                 WebPPicture* const canvas) {
+WEBP_NODISCARD static int DecodeFrameOntoCanvas(
+    const WebPMuxFrameInfo* const frame, WebPPicture* const canvas) {
   const WebPData* const image = &frame->bitstream;
   WebPPicture sub_image;
   WebPDecoderConfig config;
-  WebPInitDecoderConfig(&config);
+  if (!WebPInitDecoderConfig(&config)) {
+    return 0;
+  }
   WebPUtilClearPic(canvas, NULL);
   if (WebPGetFeatures(image->bytes, image->size, &config.input) !=
       VP8_STATUS_OK) {
@@ -1581,6 +1587,25 @@ int WebPAnimEncoderAssemble(WebPAnimEncoder* enc, WebPData* webp_data) {
 const char* WebPAnimEncoderGetError(WebPAnimEncoder* enc) {
   if (enc == NULL) return NULL;
   return enc->error_str_;
+}
+
+WebPMuxError WebPAnimEncoderSetChunk(
+    WebPAnimEncoder* enc, const char fourcc[4], const WebPData* chunk_data,
+    int copy_data) {
+  if (enc == NULL) return WEBP_MUX_INVALID_ARGUMENT;
+  return WebPMuxSetChunk(enc->mux_, fourcc, chunk_data, copy_data);
+}
+
+WebPMuxError WebPAnimEncoderGetChunk(
+    const WebPAnimEncoder* enc, const char fourcc[4], WebPData* chunk_data) {
+  if (enc == NULL) return WEBP_MUX_INVALID_ARGUMENT;
+  return WebPMuxGetChunk(enc->mux_, fourcc, chunk_data);
+}
+
+WebPMuxError WebPAnimEncoderDeleteChunk(
+    WebPAnimEncoder* enc, const char fourcc[4]) {
+  if (enc == NULL) return WEBP_MUX_INVALID_ARGUMENT;
+  return WebPMuxDeleteChunk(enc->mux_, fourcc);
 }
 
 // -----------------------------------------------------------------------------
