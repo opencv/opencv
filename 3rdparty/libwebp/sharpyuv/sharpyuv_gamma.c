@@ -156,19 +156,19 @@ static float FromLinear709(float linear) {
 }
 
 static float ToLinear470M(float gamma) {
-  return Powf(CLAMP(gamma, 0.f, 1.f), 1.f / 2.2f);
+  return Powf(CLAMP(gamma, 0.f, 1.f), 2.2f);
 }
 
 static float FromLinear470M(float linear) {
-  return Powf(CLAMP(linear, 0.f, 1.f), 2.2f);
+  return Powf(CLAMP(linear, 0.f, 1.f), 1.f / 2.2f);
 }
 
 static float ToLinear470Bg(float gamma) {
-  return Powf(CLAMP(gamma, 0.f, 1.f), 1.f / 2.8f);
+  return Powf(CLAMP(gamma, 0.f, 1.f), 2.8f);
 }
 
 static float FromLinear470Bg(float linear) {
-  return Powf(CLAMP(linear, 0.f, 1.f), 2.8f);
+  return Powf(CLAMP(linear, 0.f, 1.f), 1.f / 2.8f);
 }
 
 static float ToLinearSmpte240(float gamma) {
@@ -194,26 +194,26 @@ static float FromLinearSmpte240(float linear) {
 }
 
 static float ToLinearLog100(float gamma) {
-  return (gamma < 0.01f) ? 0.0f : 1.0f + Log10f(MIN(gamma, 1.f)) / 2.0f;
+  // The function is non-bijective so choose the middle of [0, 0.01].
+  const float mid_interval = 0.01f / 2.f;
+  return (gamma <= 0.0f) ? mid_interval
+                          : Powf(10.0f, 2.f * (MIN(gamma, 1.f) - 1.0f));
 }
 
 static float FromLinearLog100(float linear) {
-  // The function is non-bijective so choose the middle of [0, 0.01].
-  const float mid_interval = 0.01f / 2.f;
-  return (linear <= 0.0f) ? mid_interval
-                          : Powf(10.0f, 2.f * (MIN(linear, 1.f) - 1.0f));
+  return (linear < 0.01f) ? 0.0f : 1.0f + Log10f(MIN(linear, 1.f)) / 2.0f;
 }
 
 static float ToLinearLog100Sqrt10(float gamma) {
-  return (gamma < 0.00316227766f) ? 0.0f
-                                  : 1.0f + Log10f(MIN(gamma, 1.f)) / 2.5f;
+  // The function is non-bijective so choose the middle of [0, 0.00316227766f[.
+  const float mid_interval = 0.00316227766f / 2.f;
+  return (gamma <= 0.0f) ? mid_interval
+                          : Powf(10.0f, 2.5f * (MIN(gamma, 1.f) - 1.0f));
 }
 
 static float FromLinearLog100Sqrt10(float linear) {
-  // The function is non-bijective so choose the middle of [0, 0.00316227766f[.
-  const float mid_interval = 0.00316227766f / 2.f;
-  return (linear < 0.0f) ? mid_interval
-                         : Powf(10.0f, 2.5f * (MIN(linear, 1.f) - 1.0f));
+  return (linear < 0.00316227766f) ? 0.0f
+                                  : 1.0f + Log10f(MIN(linear, 1.f)) / 2.5f;
 }
 
 static float ToLinearIec61966(float gamma) {
@@ -282,11 +282,11 @@ static float FromLinearPq(float linear) {
 }
 
 static float ToLinearSmpte428(float gamma) {
-  return Powf(0.91655527974030934f * MAX(gamma, 0.f), 1.f / 2.6f);
+  return Powf(MAX(gamma, 0.f), 2.6f) / 0.91655527974030934f;
 }
 
 static float FromLinearSmpte428(float linear) {
-  return Powf(MAX(linear, 0.f), 2.6f) / 0.91655527974030934f;
+  return Powf(0.91655527974030934f * MAX(linear, 0.f), 1.f / 2.6f);
 }
 
 // Conversion in BT.2100 requires RGB info. Simplify to gamma correction here.
