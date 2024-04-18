@@ -288,9 +288,11 @@ CV_EXPORTS_W void destroyAllWindows();
 
 /** @brief HighGUI backend used.
 
-The function return HighGUI backend name used : could be COCOA, GTK, QT, WAYLAND or WIN32UI.
+The function returns HighGUI backend name used: could be COCOA, GTK2/3, QT, WAYLAND or WIN32.
+Returns empty string if there is no available UI backend.
  */
 CV_EXPORTS_W const std::string currentUIFramework();
+
 
 CV_EXPORTS_W int startWindowThread();
 

@@ -1094,13 +1094,19 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 const std::string cv::currentUIFramework()
 {
     CV_TRACE_FUNCTION();
-#if defined(ENABLE_PLUGINS)
+
+    // plugin and backend-compatible implementations
     auto backend = getCurrentUIBackend();
     if (backend)
     {
         return backend->getName();
     }
-    CV_Error(Error::StsNotImplemented, "The function is not implemented with this GUI. ");
+
+    // builtin backends
+#if defined(HAVE_WIN32UI)
+    CV_Assert(false); // backend-compatible
+#elif defined (HAVE_GTK)
+    CV_Assert(false); // backend-compatible
 #elif defined (HAVE_QT)
     return std::string("QT");
 #elif defined (HAVE_COCOA)
@@ -1108,7 +1114,7 @@ const std::string cv::currentUIFramework()
 #elif defined (HAVE_WAYLAND)
     return std::string("WAYLAND");
 #else
-    CV_Error(Error::StsNotImplemented, "The function is not implemented with this GUI.");
+    return std::string();
 #endif
 }
 
