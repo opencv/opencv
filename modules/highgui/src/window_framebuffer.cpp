@@ -69,7 +69,8 @@ namespace cv { namespace highgui_backend {
       << y_offset << " " << x_offset << " " << line_length << "\n\n";
     
     // MAP FB TO MEMORY
-    screensize = fb_w * fb_h * bpp / 8;
+    screensize = max((__u32)fb_w, var_info.xres_virtual) * 
+                 max((__u32)fb_h, var_info.yres_virtual) * bpp / 8;
     fbPointer = (unsigned char*)
       mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, 
         framebuffrer_id, 0);
@@ -134,9 +135,9 @@ namespace cv { namespace highgui_backend {
     int new_height = static_cast<int>(fb_w / aspect_ratio);
     int cnt_channel = img.channels();
     
-    std::cout << "= Initial image width and heigth:\n" << img.cols << " " << img.rows << "\n\n";
-    std::cout << "= Image width / heigth:\n" << aspect_ratio << "\n";
-    std::cout << "= Image count of channels:\n" << img.channels() << "\n";
+    //std::cout << "= Initial image width and heigth:\n" << img.cols << " " << img.rows << "\n\n";
+    //std::cout << "= Image width / heigth:\n" << aspect_ratio << "\n";
+    //std::cout << "= Image count of channels:\n" << img.channels() << "\n";
 
         // RECIZE IMAGE TO MATCH THE FB SIZE
     if (new_width > fb_w || new_height > fb_h) {
@@ -272,6 +273,8 @@ namespace cv { namespace highgui_backend {
     tcgetattr(0, &old); /* grab old terminal i/o settings */
     current = old; /* make new settings same as old settings */
     current.c_lflag &= ~ICANON; /* disable buffered i/o */
+    current.c_lflag &= ~ISIG;
+    current.c_cc[VMIN]=1;
     if (echo) {
         current.c_lflag |= ECHO; /* set echo mode */
     } else {
@@ -286,13 +289,26 @@ namespace cv { namespace highgui_backend {
     tcsetattr(0, TCSANOW, &old);
   }
 
-  char FramebufferBackend::getch_(int echo) 
+  int FramebufferBackend::getch_(int echo) 
   {
-    char ch;
+    int ch;
     initTermios(echo);
     ch = getchar();
     resetTermios();
     return ch;
+  }
+  bool FramebufferBackend::kbhit()
+  {
+    int byteswaiting=0;
+    initTermios(0);
+    if ( ioctl(0, FIONREAD, &byteswaiting) < 0)
+    {
+      std::cout  << "               ERR byteswaiting " << std::endl;
+    }
+    resetTermios();
+    std::cout  << "                byteswaiting " << byteswaiting << std::endl;
+    
+    return byteswaiting > 0;
   }
 
   int FramebufferBackend::waitKeyEx(int delay) {
@@ -300,24 +316,18 @@ namespace cv { namespace highgui_backend {
 
     int code = 0;
   
-    char ch = getch_(0);
+    int ch = getch_(0);
     std::cout  << "ch 1 " << (int)ch << std::endl;
     code = ch;
     
-    if(code == 27)
+    while(kbhit())
     {
       ch = getch_(0);
       std::cout  << "ch 2 " << (int)ch << std::endl;
-    //  code = ch * 1000; 
-      ch = getch_(0);
-      std::cout  << "ch 2 " << (int)ch << std::endl;
-    //  code += ch * 1000000; 
       code = ch;
     }
   
 //    struct input_event events;
-//
-//    
 //    ssize_t r = 1;
 //    while(r > 0)
 //    {
