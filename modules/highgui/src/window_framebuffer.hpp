@@ -75,7 +75,8 @@ class CV_EXPORTS FramebufferBackend: public UIBackend
 
   void initTermios(int echo);
   void resetTermios(void);
-  char getch_(int echo);
+  int getch_(int echo);
+  bool kbhit();
 
 public:
   FramebufferBackend();
