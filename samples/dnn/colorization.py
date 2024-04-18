@@ -7,9 +7,31 @@ import cv2 as cv
 import numpy as np
 
 def parse_args():
+    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
+                cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
+    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD,
+               cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
+
     parser = argparse.ArgumentParser(description='iColor: deep interactive colorization')
     parser.add_argument('--input', default='baboon.jpg',help='Path to image.')
     parser.add_argument('--onnx_model_path', help='Path to onnx model', required=True)
+    parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
+                        help="Choose one of computation backends: "
+                             "%d: automatically (by default), "
+                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                             "%d: OpenCV implementation, "
+                             "%d: VKCOM, "
+                             "%d: CUDA" % backends)
+    parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
+                        help='Choose one of target computation devices: '
+                             '%d: CPU target (by default), '
+                             '%d: OpenCL, '
+                             '%d: OpenCL fp16 (half-float precision), '
+                             '%d: NCS2 VPU, '
+                             '%d: HDDL VPU, '
+                             '%d: Vulkan, '
+                             '%d: CUDA, '
+                             '%d: CUDA fp16 (half-float preprocess)'% targets)
     args = parser.parse_args()
     return args
 
@@ -23,6 +45,8 @@ if __name__ == '__main__':
 
     onnx_model_path = args.onnx_model_path  # Update this path to your ONNX model's path
     session = cv.dnn.readNetFromONNX(onnx_model_path)
+    session.setPreferableBackend(args.backend)
+    session.setPreferableTarget(args.target)
 
     # Process each image in the batch (assuming batch processing is needed)
     blob = cv.dnn.blobFromImage(img_gray_rs, swapRB=False)  # Adjust swapRB according to your model's training
