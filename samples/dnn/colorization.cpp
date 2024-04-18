@@ -24,13 +24,31 @@ int main(int argc, char** argv) {
         "To download the onnx model:\n"
         " https://storage.googleapis.com/ailia-models/colorization/colorizer.onnx\n";
 
-    const string keys =
+    string param_keys =
         "{ help h          |     | Print help message. }"
-        "{ input i         | ansel_adams3.jpg | Path to the input image }"
-        "{ onnx_model_path |     | Path to the ONNX model. Required. }"
-        "{ opencl          |     | enable OpenCL }";
+        "{ input i         | baboon.jpg | Path to the input image }"
+        "{ onnx_model_path |     | Path to the ONNX model. Required. }";
 
-    CommandLineParser parser(argc, argv,keys);
+    string backend_keys = format(
+        "{ backend         | 0  | Choose one of computation backends: "
+                                    "%d: automatically (by default), "
+                                    "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                                    "%d: OpenCV implementation, "
+                                    "%d: VKCOM, "
+                                    "%d: CUDA, "
+                                    "%d: WebNN }", cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA, cv::dnn::DNN_BACKEND_WEBNN);
+    string target_keys = format(
+        "{ target          | 0 | Choose one of target computation devices: "
+                              "%d: CPU target (by default), "
+                              "%d: OpenCL, "
+                              "%d: OpenCL fp16 (half-float precision), "
+                              "%d: VPU, "
+                              "%d: Vulkan, "
+                              "%d: CUDA, "
+                              "%d: CUDA fp16 (half-float preprocess) }", cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
+
+    string keys = param_keys+backend_keys+target_keys;
+    CommandLineParser parser(argc, argv, keys);
     parser.about(about);
 
     if (parser.has("help")) {
@@ -40,38 +58,31 @@ int main(int argc, char** argv) {
 
     string inputImagePath = parser.get<string>("input");
     string onnxModelPath = parser.get<string>("onnx_model_path");
+    int backendId = parser.get<int>("backend");
+    int targetId = parser.get<int>("target");
 
     if (onnxModelPath.empty()) {
         cerr << "The path to the ONNX model is required!" << endl;
         return -1;
     }
 
-    Mat img = imread(samples::findFile(inputImagePath));
-    if (img.empty()) {
+    Mat imgGray = imread(samples::findFile(inputImagePath),IMREAD_GRAYSCALE);
+    if (imgGray.empty()) {
         cerr << "Could not read the image: " << inputImagePath << endl;
         return -1;
     }
-    bool useOpenCL = parser.has("opencl");
-
-    // Convert to Lab color space
-    Mat imgLab;
-    cvtColor(img, imgLab, COLOR_BGR2Lab);
-
-    // Extract L channel and resize
-    vector<Mat> labChannels(3);
-    split(imgLab, labChannels);
-
-    Mat imgL = labChannels[0];
+    Mat imgL = imgGray;
     imgL.convertTo(imgL, CV_32F);
+    imgL *= (100.0/255.0);
     Mat imgLResized;
     Mat lab, L, input;
     resize(imgL, imgLResized, Size(256, 256), 0, 0, INTER_CUBIC);
-    imgLResized *= (100.0 / 255.0);  // Scale the L channel to 0-100 range
 
     // Prepare the model
     dnn::Net net = dnn::readNetFromONNX(onnxModelPath);
-    if (useOpenCL)
-        net.setPreferableTarget(DNN_TARGET_OPENCL);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    //! [Read and initialize network]
 
     // Create blob from the image
     Mat blob;
@@ -84,17 +95,17 @@ int main(int argc, char** argv) {
     Size siz(result.size[2], result.size[3]);
     Mat a = Mat(siz, CV_32F, result.ptr(0,0));
     Mat b = Mat(siz, CV_32F, result.ptr(0,1));
-    resize(a, a, img.size());
-    resize(b, b, img.size());
+    resize(a, a, imgGray.size());
+    resize(b, b, imgGray.size());
 
     // merge, and convert back to BGR
-    imgL *= (100.0/255.0);
     Mat color, chn[] = {imgL, a, b};
 
     // Proc
     merge(chn, 3, lab);
     cvtColor(lab, color, COLOR_Lab2BGR);
 
+    imshow("input image", imgGray);
     imshow("output image", color);
     waitKey();
     return 0;
