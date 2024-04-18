@@ -36,6 +36,104 @@ PERF_TEST_P(VectorLength, phase64f, testing::Values(128, 1000, 128*1024, 512*102
     SANITY_CHECK(angle, 5e-5);
 }
 
+Mat randomOrtho(int m, int n)
+{
+    //TODO: fix
+}
+
+typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, int, int, int, bool>> SolveTest;
+
+PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
+    ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
+    ::testing::Values(1, 50, 99, 100),
+    ::testing::Values(CV_32F, CV_64F),
+    ::testing::Values(DECOMP_LU, DECOMP_SVD, DECOMP_EIG, DECOMP_CHOLESKY, DECOMP_QR),
+    ::testing::Bool()
+    ))
+{
+    auto t = GetParam();
+    auto rc = std::get<0>(t);
+    int rows = std::get<0>(rc);
+    int cols = std::get<1>(rc);
+    int rankValue = std::get<2>(t);
+    int mtype = std::get<2>(t);
+    int method = std::get<3>(t);
+    bool normal = std::get<4>(t);
+    if (normal)
+    {
+        method |= DECOMP_NORMAL;
+    }
+    
+    RNG& rng = theRNG();
+    while (next())
+    {
+        Mat a = randomOrtho(rows, cols);
+        Mat b(rows, 1, mtype);
+        rng.fill(b, RNG::UNIFORM, Scalar(-1), Scalar(1));
+        Mat x;
+
+        startTimer();
+        cv::solve(a, b, x, method);
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, int, int>> SvdTest;
+
+PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
+    ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
+    ::testing::Values(1, 50, 99, 100),
+    ::testing::Values(CV_32F, CV_64F)
+    ))
+{
+    auto t = GetParam();
+    auto rc = std::get<0>(t);
+    int rows = std::get<0>(rc);
+    int cols = std::get<1>(rc);
+    int rankValue = std::get<2>(t);
+    int mtype = std::get<2>(t);
+
+    while (next())
+    {
+        Mat a = randomOrtho(rows, cols);
+
+        startTimer();
+        cv::SVD svd(a);
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
+    ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
+    ::testing::Values(1, 50, 99, 100),
+    ::testing::Values(CV_32F, CV_64F)
+    ))
+{
+    auto t = GetParam();
+    auto rc = std::get<0>(t);
+    int rows = std::get<0>(rc);
+    int cols = std::get<1>(rc);
+    int rankValue = std::get<2>(t);
+    int mtype = std::get<2>(t);
+
+    while (next())
+    {
+        Mat a = randomOrtho(rows, cols);
+        cv::SVD svd(a);
+
+        startTimer();
+        
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+
 typedef perf::TestBaseWithParam< testing::tuple<int, int, int> > KMeans;
 
 PERF_TEST_P_(KMeans, single_iter)
