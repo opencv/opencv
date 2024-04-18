@@ -210,18 +210,10 @@ public:
 
         for( i = 0; i < count; i++ )
         {
-            float ww = Hf[6]*M[i].x + Hf[7]*M[i].y + Hf[8];
-            if (std::fabs(ww) > std::numeric_limits<float>::epsilon())
-            {
-                ww = 1.f/ww;
-                float dx = (Hf[0]*M[i].x + Hf[1]*M[i].y + Hf[2])*ww - m[i].x;
-                float dy = (Hf[3]*M[i].x + Hf[4]*M[i].y + Hf[5])*ww - m[i].y;
-                err[i] = dx*dx + dy*dy;
-            }
-            else
-            {
-                err[i] = std::numeric_limits<float>::infinity();
-            }
+            float ww = 1.f/(Hf[6]*M[i].x + Hf[7]*M[i].y + Hf[8]);
+            float dx = (Hf[0]*M[i].x + Hf[1]*M[i].y + Hf[2])*ww - m[i].x;
+            float dy = (Hf[3]*M[i].x + Hf[4]*M[i].y + Hf[5])*ww - m[i].y;
+            err[i] = dx*dx + dy*dy;
         }
     }
 };
@@ -260,7 +252,7 @@ public:
         {
             double Mx = M[i].x, My = M[i].y;
             double ww = h[6]*Mx + h[7]*My + h[8];
-            ww = fabs(ww) > DBL_EPSILON ? 1./ww : std::numeric_limits<double>::infinity();
+            ww = fabs(ww) > DBL_EPSILON ? 1./ww : 0;
             double xi = (h[0]*Mx + h[1]*My + h[2])*ww;
             double yi = (h[3]*Mx + h[4]*My + h[5])*ww;
             errptr[i*2] = xi - m[i].x;
