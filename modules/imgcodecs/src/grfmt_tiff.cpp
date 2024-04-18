@@ -53,12 +53,8 @@
 #include "grfmt_tiff.hpp"
 #include <limits>
 
-// TODO FIXIT Conflict declarations for common types like int64/uint64
-namespace tiff_dummy_namespace {
 #include "tiff.h"
 #include "tiffio.h"
-}
-using namespace tiff_dummy_namespace;
 
 #ifndef _MSC_VER
 namespace numeric_types = tiff_dummy_namespace;
