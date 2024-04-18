@@ -101,6 +101,8 @@ struct TensorInfo {
 using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
 
 class ONNXCompiled {
+    std::string tag;
+
     // ONNX Resources
     // NOTE: Env must live with the session, otherwise segfaults.
     Ort::Env this_env{nullptr};
@@ -127,7 +129,7 @@ class ONNXCompiled {
 
     std::vector<std::string> in_names_without_const;
 public:
-    explicit ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp);
+    explicit ONNXCompiled(const std::string& tag, const gapi::onnx::detail::ParamDesc &pp);
 
     // Extract the information about output layer #i
     cv::GMatDesc outMeta(int i) const;
@@ -470,11 +472,12 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
 struct ONNXUnit {
     static const char *name() { return "ONNXModelConfig"; }
 
-    std::shared_ptr<cv::gimpl::onnx::ONNXCompiled> oc;
-
-    explicit ONNXUnit(const cv::gapi::onnx::detail::ParamDesc &pp)
-        : oc(new cv::gimpl::onnx::ONNXCompiled(pp)) {
+    explicit ONNXUnit(const std::string& _tag, const cv::gapi::onnx::detail::ParamDesc &pp)
+        : tag(_tag), oc(new cv::gimpl::onnx::ONNXCompiled(pp)) {
     }
+
+    std::string tag;
+    std::shared_ptr<cv::gimpl::onnx::ONNXCompiled> oc;
 };
 
 struct ONNXCallContext {
@@ -674,8 +677,8 @@ namespace cv {
 namespace gimpl {
 namespace onnx {
 
-ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
-    : params(pp) {
+ONNXCompiled::ONNXCompiled(const std::string& _tag, const gapi::onnx::detail::ParamDesc &pp)
+    : tag(_tag), params(pp) {
     // Validate input parameters before allocating any resources
     if (params.num_in > 1u && params.num_in != params.input_names.size()) {
         cv::util::throw_error(std::logic_error("Please specify input layer names for "
@@ -888,13 +891,18 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                                               outs[i]));
         }
         auto out_run_names = getCharNames(params.output_names);
-        this_session.Run(Ort::RunOptions{nullptr},
-                         in_run_names.data(),
-                         &in_tensors.front(),
-                         input_names.size(),
-                         out_run_names.data(),
-                         &out_tensors.front(),
-                         params.output_names.size());
+
+        {
+            GAPI_ITT_DYNAMIC_LOCAL_HANDLE(infer_hndl, tag.c_str());
+            GAPI_ITT_AUTO_TRACE_GUARD(infer_hndl);
+            this_session.Run(Ort::RunOptions{nullptr},
+                             in_run_names.data(),
+                             &in_tensors.front(),
+                             input_names.size(),
+                             out_run_names.data(),
+                             &out_tensors.front(),
+                             params.output_names.size());
+        }
     } else {
         // Hard path - run session & user-defined post-processing
         // NOTE: use another list of output names here
