@@ -36,71 +36,174 @@ PERF_TEST_P(VectorLength, phase64f, testing::Values(128, 1000, 128*1024, 512*102
     SANITY_CHECK(angle, 5e-5);
 }
 
-Mat randomOrtho(int m, int n)
+// generates random vectors, performs Gram-Schmidt orthogonalization on them
+Mat randomOrtho(int rows, int ftype, RNG& rng)
 {
-    //TODO: fix
+    Mat result(rows, rows, ftype);
+    rng.fill(result, RNG::UNIFORM, cv::Scalar(-1), cv::Scalar(1));
+
+    for (int i = 0; i < rows; i++)
+    {
+        Mat v = result.row(i);
+
+        for (int j = 0; j < i; j++)
+        {
+            Mat p = result.row(j);
+            v -= p.dot(v) * p;
+        }
+
+        v = v * (1. / cv::norm(v));
+    }
+
+    //DEBUG: check
+    std::cout << "R*R' - I = " << cv::norm(result * result.t() - Mat::eye(rows, rows, ftype)) << std::endl;
+    std::cout << "R'*R - I = " << cv::norm(result.t() * result - Mat::eye(rows, rows, ftype)) << std::endl;
 }
 
-typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, int, int, int, bool>> SolveTest;
+template<typename FType>
+Mat buildRandomMat(int rows, int cols, RNG& rng, int rank)
+{
+    int mtype = cv::traits::Depth<FType>::value;
+    Mat u = randomOrtho(rows, mtype, rng);
+    Mat v = randomOrtho(cols, mtype, rng);
+    Mat s(rows, cols, mtype, Scalar(0));
+
+    std::vector<FType> singVals;
+    rng.fill(singVals, RNG::UNIFORM, Scalar(0), Scalar(10));
+    std::set<FType> setSingVals(singVals.begin(), singVals.end());
+    auto singIter = setSingVals.rbegin();
+    for (int i = 0; i < rank; i++)
+    {
+        s.at<FType>(i, i) = *singIter;
+    }
+
+    Mat A = u * s * v.t();
+}
+
+Mat buildRandomMat(int rows, int cols, int mtype, RNG& rng, int rank)
+{
+    if (mtype == CV_32F)
+    {
+        return buildRandomMat<float>(rows, cols, rng, rank);
+    }
+    else // if (mtype == CV_64F)
+    {
+        return buildRandomMat<double>(rows, cols, rng, rank);
+    }
+}
+
+typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, int, int, int, bool, int>> SolveTest;
 
 PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
-    ::testing::Values(1, 50, 99, 100),
+    ::testing::Values(1, 50, 99, 100), // rankValue
     ::testing::Values(CV_32F, CV_64F),
     ::testing::Values(DECOMP_LU, DECOMP_SVD, DECOMP_EIG, DECOMP_CHOLESKY, DECOMP_QR),
-    ::testing::Bool()
+    ::testing::Bool(), // normal
+    ::testing::Values(0, 1, 100) // solutionsValue
     ))
 {
     auto t = GetParam();
-    auto rc = std::get<0>(t);
+    auto rc            = std::get<0>(t);
+    int rankValue      = std::get<1>(t);
+    int mtype          = std::get<2>(t);
+    int method         = std::get<3>(t);
+    bool normal        = std::get<4>(t);
+    int solutionsValue = std::get<5>(t);
+
     int rows = std::get<0>(rc);
     int cols = std::get<1>(rc);
-    int rankValue = std::get<2>(t);
-    int mtype = std::get<2>(t);
-    int method = std::get<3>(t);
-    bool normal = std::get<4>(t);
+
     if (normal)
     {
         method |= DECOMP_NORMAL;
     }
-    
+
+    int rank = std::min(rows, cols);
+    switch (rankValue)
+    {
+    case  1: rank = 1;  break;
+    case 50: rank /= 2; break;
+    case 99: rank -= 1; break;
+    default: break;
+    }
+
     RNG& rng = theRNG();
     while (next())
     {
-        Mat a = randomOrtho(rows, cols);
-        Mat b(rows, 1, mtype);
-        rng.fill(b, RNG::UNIFORM, Scalar(-1), Scalar(1));
+        Mat A = buildRandomMat(rows, cols, mtype, rng, rank);
         Mat x;
+        Mat b(rows, 1, mtype);
+
+        switch (solutionsValue)
+        {
+        // no solutions, let's make b random
+        case 0: rng.fill(b, RNG::UNIFORM, Scalar(-1), Scalar(1)); break;
+        // exactly 1 solution, let's combine b from A and x
+        case 1:
+        {
+            rng.fill(x, RNG::UNIFORM, Scalar(-10), Scalar(10));
+            b = A * x;
+        }
+        break;
+        // infinitely many solutions, let's make b zero
+        default: b = 0; break;
+        }
 
         startTimer();
-        cv::solve(a, b, x, method);
+        bool solved = cv::solve(A, b, x, method);
         stopTimer();
+
+        //DEBUG
+        if (solved)
+        {
+            std::cout << x << std::endl;
+        }
+        else
+        {
+            std::cout << "not solved" << std::endl;
+        }
     }
 
     SANITY_CHECK_NOTHING();
 }
 
-typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, int, int>> SvdTest;
+typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, int, int, bool>> SvdTest;
 
 PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
     ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
-    ::testing::Values(1, 50, 99, 100),
-    ::testing::Values(CV_32F, CV_64F)
+    ::testing::Values(1, 50, 99, 100), // rankValue
+    ::testing::Values(CV_32F, CV_64F),
+    ::testing::Bool() // needUV
     ))
 {
     auto t = GetParam();
-    auto rc = std::get<0>(t);
+    auto rc       = std::get<0>(t);
+    int rankValue = std::get<1>(t);
+    int mtype     = std::get<2>(t);
+    bool needUV   = std::get<3>(t);
+
     int rows = std::get<0>(rc);
     int cols = std::get<1>(rc);
-    int rankValue = std::get<2>(t);
-    int mtype = std::get<2>(t);
 
+    int rank = std::min(rows, cols);
+    switch (rankValue)
+    {
+    case  1: rank = 1;  break;
+    case 50: rank /= 2; break;
+    case 99: rank -= 1; break;
+    default: break;
+    }
+
+    int flags = needUV ? 0 : SVD::NO_UV;
+
+    RNG& rng = theRNG();
     while (next())
     {
-        Mat a = randomOrtho(rows, cols);
+        Mat A = buildRandomMat(rows, cols, mtype, rng, rank);
 
         startTimer();
-        cv::SVD svd(a);
+        cv::SVD svd(A, flags);
         stopTimer();
     }
 
@@ -109,24 +212,43 @@ PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
 
 PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
     ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
-    ::testing::Values(1, 50, 99, 100),
-    ::testing::Values(CV_32F, CV_64F)
+    ::testing::Values(1, 50, 99, 100), // rankValue
+    ::testing::Values(CV_32F, CV_64F),
+    ::testing::Bool() // needUV
     ))
 {
     auto t = GetParam();
-    auto rc = std::get<0>(t);
+    auto rc       = std::get<0>(t);
+    int rankValue = std::get<1>(t);
+    int mtype     = std::get<2>(t);
+    bool needUV   = std::get<3>(t);
+
     int rows = std::get<0>(rc);
     int cols = std::get<1>(rc);
-    int rankValue = std::get<2>(t);
-    int mtype = std::get<2>(t);
 
+    int rank = std::min(rows, cols);
+    switch (rankValue)
+    {
+    case  1: rank = 1;  break;
+    case 50: rank /= 2; break;
+    case 99: rank -= 1; break;
+    default: break;
+    }
+
+    int flags = needUV ? 0 : SVD::NO_UV;
+
+    RNG& rng = theRNG();
     while (next())
     {
-        Mat a = randomOrtho(rows, cols);
-        cv::SVD svd(a);
+        Mat A = buildRandomMat(rows, cols, mtype, rng, rank);
+        cv::SVD svd(A, flags);
+        // preallocate to not spend time on it during backSubst()
+        Mat dst(cols, 1, mtype);
+        Mat rhs(cols, 1, mtype);
+        rng.fill(rhs, RNG::UNIFORM, Scalar(-10), Scalar(10));
 
         startTimer();
-        
+        svd.backSubst(rhs, dst);
         stopTimer();
     }
 
