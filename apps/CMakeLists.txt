@@ -54,7 +54,7 @@ macro(ocv_add_app directory)
 endmacro()
 
 #ocv_add_app(traincascade)
-#ocv_add_app(createsamples)
+ocv_add_app(createsamples) #temporary
 ocv_add_app(annotation)
 ocv_add_app(visualisation)
 ocv_add_app(interactive-calibration)
