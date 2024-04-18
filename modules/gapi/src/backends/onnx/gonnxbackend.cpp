@@ -19,6 +19,8 @@
 #include <opencv2/gapi/gframe.hpp>
 #include <codecvt> // wstring_convert
 
+#include "utils/itt.hpp"
+
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 #include "logger.hpp"
 
@@ -473,10 +475,9 @@ struct ONNXUnit {
     static const char *name() { return "ONNXModelConfig"; }
 
     explicit ONNXUnit(const std::string& _tag, const cv::gapi::onnx::detail::ParamDesc &pp)
-        : tag(_tag), oc(new cv::gimpl::onnx::ONNXCompiled(pp)) {
+        : oc(new cv::gimpl::onnx::ONNXCompiled(_tag, pp)) {
     }
 
-    std::string tag;
     std::shared_ptr<cv::gimpl::onnx::ONNXCompiled> oc;
 };
 
@@ -1278,7 +1279,7 @@ namespace {
             } // if(is_generic) -- note, the structure is already filled at the user
               // end when a non-generic Params are used
 
-            gm.metadata(nh).set(ONNXUnit{pp});
+            gm.metadata(nh).set(ONNXUnit{op.k.tag, pp});
             gm.metadata(nh).set(ONNXCallable{ki.run});
             gm.metadata(nh).set(CustomMetaFunction{ki.customMetaFunc});
         }
