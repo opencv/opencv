@@ -89,7 +89,7 @@ namespace cv { namespace highgui_backend {
     for (int y = y_offset; y < backgroundBuff.rows + y_offset; y++)
     {
         std::memcpy(backgroundBuff.ptr<cv::Vec4b>(y - y_offset), 
-                    fbPointer + y * line_length, 
+                    fbPointer + y * line_length + x_offset, 
                     backgroundBuff.cols * cnt_channel);
     }
 
@@ -104,7 +104,7 @@ namespace cv { namespace highgui_backend {
     int cnt_channel = 4;
     for (int y = y_offset; y < backgroundBuff.rows + y_offset; y++)
     {
-      std::memcpy(fbPointer + y * line_length, 
+      std::memcpy(fbPointer + y * line_length + x_offset, 
                   backgroundBuff.ptr<cv::Vec4b>(y - y_offset), 
                   backgroundBuff.cols*cnt_channel);
     }
@@ -156,7 +156,7 @@ namespace cv { namespace highgui_backend {
     // RESTORE BACKGROUNG
     for (int y = y_offset; y < backgroundBuff.rows + y_offset; y++)
     {
-        std::memcpy(fbPointer + y * line_length, 
+        std::memcpy(fbPointer + y * line_length + x_offset, 
                     backgroundBuff.ptr<cv::Vec4b>(y - y_offset), 
                     backgroundBuff.cols*cnt_channel);
     }
@@ -166,7 +166,7 @@ namespace cv { namespace highgui_backend {
     // SHOW IMAGE
     for (int y = y_offset; y < img.rows + y_offset; y++)
     {
-        std::memcpy(fbPointer + y * line_length, 
+        std::memcpy(fbPointer + y * line_length + x_offset, 
                     img.ptr<cv::Vec4b>(y - y_offset), 
                     img.cols*cnt_channel);
     }
