@@ -243,16 +243,16 @@ namespace cv { namespace highgui_backend {
 
   FramebufferBackend::FramebufferBackend()
   {
-    eventKey = OpenInputEvent();
-    std::cout  << "FramebufferBackend():: event id " << eventKey << std::endl;
+    //eventKey = OpenInputEvent();
+    //std::cout  << "FramebufferBackend():: event id " << eventKey << std::endl;
   }
   
   FramebufferBackend::~FramebufferBackend()
   {
-    if(eventKey != -1)
-    {
-      close(eventKey);
-    }
+    //if(eventKey != -1)
+    //{
+    //  close(eventKey);
+    //}
   }
 
   void FramebufferBackend::destroyAllWindows() {
