@@ -90,24 +90,40 @@ Mat buildRandomMat(int rows, int cols, int mtype, RNG& rng, int rank)
     }
 }
 
-typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, int, int, int, bool, int>> SolveTest;
+CV_ENUM(SolveDecompEnum, DECOMP_LU, DECOMP_SVD, DECOMP_EIG, DECOMP_CHOLESKY, DECOMP_QR)
+
+enum RankMatrixOptions
+{
+    RANK_HALF, RANK_MINUS_1, RANK_FULL
+};
+
+CV_ENUM(RankEnum, RANK_HALF, RANK_MINUS_1, RANK_FULL)
+
+enum SolutionsOptions
+{
+    NO_SOLUTIONS, ONE_SOLUTION, MANY_SOLUTIONS
+};
+
+CV_ENUM(SolutionsEnum, NO_SOLUTIONS, ONE_SOLUTION, MANY_SOLUTIONS)
+
+typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, RankEnum, MatDepth, SolveDecompEnum, bool, SolutionsEnum>> SolveTest;
 
 PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
-    ::testing::Values(1, 50, 99, 100), // rankValue
+    ::testing::Values(RANK_HALF, RANK_MINUS_1, RANK_FULL),
     ::testing::Values(CV_32F, CV_64F),
     ::testing::Values(DECOMP_LU, DECOMP_SVD, DECOMP_EIG, DECOMP_CHOLESKY, DECOMP_QR),
     ::testing::Bool(), // normal
-    ::testing::Values(0, 1, 100) // solutionsValue
+    ::testing::Values(NO_SOLUTIONS, ONE_SOLUTION, MANY_SOLUTIONS)
     ))
 {
     auto t = GetParam();
-    auto rc            = std::get<0>(t);
-    int rankValue      = std::get<1>(t);
-    int mtype          = std::get<2>(t);
-    int method         = std::get<3>(t);
-    bool normal        = std::get<4>(t);
-    int solutionsValue = std::get<5>(t);
+    auto rc        = std::get<0>(t);
+    auto rankEnum  = std::get<1>(t);
+    int mtype      = std::get<2>(t);
+    int method     = std::get<3>(t);
+    bool normal    = std::get<4>(t);
+    auto solutions = std::get<5>(t);
 
     int rows = std::get<0>(rc);
     int cols = std::get<1>(rc);
@@ -118,11 +134,10 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     }
 
     int rank = std::min(rows, cols);
-    switch (rankValue)
+    switch (rankEnum)
     {
-    case  1: rank = 1;  break;
-    case 50: rank /= 2; break;
-    case 99: rank -= 1; break;
+    case RANK_HALF:    rank /= 2; break;
+    case RANK_MINUS_1: rank -= 1; break;
     default: break;
     }
 
@@ -130,15 +145,15 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     while (next())
     {
         Mat A = buildRandomMat(rows, cols, mtype, rng, rank);
-        Mat x(rows, 1, mtype);
-        Mat b(rows, 1, mtype);
+        Mat x(cols, 1, mtype);
+        Mat b(cols, 1, mtype);
 
-        switch (solutionsValue)
+        switch (solutions)
         {
         // no solutions, let's make b random
-        case 0: rng.fill(b, RNG::UNIFORM, Scalar(-1), Scalar(1)); break;
+        case NO_SOLUTIONS: rng.fill(b, RNG::UNIFORM, Scalar(-1), Scalar(1)); break;
         // exactly 1 solution, let's combine b from A and x
-        case 1:
+        case ONE_SOLUTION:
         {
             rng.fill(x, RNG::UNIFORM, Scalar(-10), Scalar(10));
             b = A * x;
@@ -156,18 +171,18 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     SANITY_CHECK_NOTHING();
 }
 
-typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, int, int, bool>> SvdTest;
+typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, RankEnum, MatDepth, bool>> SvdTest;
 
 PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
     ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
-    ::testing::Values(1, 50, 99, 100), // rankValue
+    ::testing::Values(RANK_HALF, RANK_MINUS_1, RANK_FULL),
     ::testing::Values(CV_32F, CV_64F),
     ::testing::Bool() // needUV
     ))
 {
     auto t = GetParam();
     auto rc       = std::get<0>(t);
-    int rankValue = std::get<1>(t);
+    auto rankEnum = std::get<1>(t);
     int mtype     = std::get<2>(t);
     bool needUV   = std::get<3>(t);
 
@@ -175,11 +190,10 @@ PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
     int cols = std::get<1>(rc);
 
     int rank = std::min(rows, cols);
-    switch (rankValue)
+    switch (rankEnum)
     {
-    case  1: rank = 1;  break;
-    case 50: rank /= 2; break;
-    case 99: rank -= 1; break;
+    case RANK_HALF:    rank /= 2; break;
+    case RANK_MINUS_1: rank -= 1; break;
     default: break;
     }
 
@@ -201,7 +215,7 @@ PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
 
 PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
     ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
-    ::testing::Values(1, 50, 99, 100), // rankValue
+    ::testing::Values(RANK_HALF, RANK_MINUS_1, RANK_FULL),
     ::testing::Values(CV_32F, CV_64F),
     // back substitution has no sense without u and v
     ::testing::Values(true) // needUV
@@ -209,29 +223,26 @@ PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
 {
     auto t = GetParam();
     auto rc       = std::get<0>(t);
-    int rankValue = std::get<1>(t);
+    auto rankEnum = std::get<1>(t);
     int mtype     = std::get<2>(t);
-    bool needUV   = std::get<3>(t);
+    // needUV is unused
 
     int rows = std::get<0>(rc);
     int cols = std::get<1>(rc);
 
     int rank = std::min(rows, cols);
-    switch (rankValue)
+    switch (rankEnum)
     {
-    case  1: rank = 1;  break;
-    case 50: rank /= 2; break;
-    case 99: rank -= 1; break;
+    case RANK_HALF:    rank /= 2; break;
+    case RANK_MINUS_1: rank -= 1; break;
     default: break;
     }
-
-    int flags = needUV ? 0 : SVD::NO_UV;
 
     RNG& rng = theRNG();
     while (next())
     {
         Mat A = buildRandomMat(rows, cols, mtype, rng, rank);
-        cv::SVD svd(A, flags);
+        cv::SVD svd(A);
         // preallocate to not spend time on it during backSubst()
         Mat dst(cols, 1, mtype);
         Mat rhs(cols, 1, mtype);
