@@ -66,16 +66,16 @@ Mat buildRandomMat(int rows, int cols, RNG& rng, int rank)
     Mat v = randomOrtho(cols, mtype, rng);
     Mat s(rows, cols, mtype, Scalar(0));
 
-    std::vector<FType> singVals;
+    std::vector<FType> singVals(rank);
     rng.fill(singVals, RNG::UNIFORM, Scalar(0), Scalar(10));
     std::set<FType> setSingVals(singVals.begin(), singVals.end());
     auto singIter = setSingVals.rbegin();
     for (int i = 0; i < rank; i++)
     {
-        s.at<FType>(i, i) = *singIter;
+        s.at<FType>(i, i) = *singIter++;
     }
 
-    Mat A = u * s * v.t();
+    return u * s * v.t();
 }
 
 Mat buildRandomMat(int rows, int cols, int mtype, RNG& rng, int rank)
@@ -130,7 +130,7 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     while (next())
     {
         Mat A = buildRandomMat(rows, cols, mtype, rng, rank);
-        Mat x;
+        Mat x(rows, 1, mtype);
         Mat b(rows, 1, mtype);
 
         switch (solutionsValue)
