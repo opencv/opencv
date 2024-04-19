@@ -147,6 +147,8 @@ public:
             dType = ov::element::f32;
         } else if (blobs[0].depth() == CV_32S) {
             dType = ov::element::i32;
+        } else if (blobs[0].depth() == CV_64S) {
+            dType = ov::element::i64;
         } else if (blobs[0].depth() == CV_8S) {
             dType = ov::element::i8;
         } else {
@@ -156,9 +158,6 @@ public:
                     std::make_shared<ov::op::v0::Constant>(dType,
                                                            getShape<size_t>(blobs[0]),
                                                            blobs[0].data);
-        if (node->get_element_type() != ov::element::f32) {
-            node = std::make_shared<ov::op::v0::Convert>(node, ov::element::f32);
-        }
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));
     }
 #endif  // HAVE_DNN_NGRAPH

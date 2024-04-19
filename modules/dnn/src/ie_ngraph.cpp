@@ -67,7 +67,28 @@ public:
             for (int j = 0; j < outputs[i].dims; ++j) {
                 shape.push_back(outputs[i].size[j]);
             }
+            // TODO: we can't rely on output mat type, because OpenVINO may change types during compilation
+            // We should run OpenCV layer type inference based on get_input_element_type()
+
+            // switch (outputs[i].depth()) {
+            //     case CV_32F:
+            //         set_output_type(i, ov::element::f32, shape);
+            //         break;
+            //     case CV_8S:
+            //         set_output_type(i, ov::element::i8, shape);
+            //         break;
+            //     case CV_32S:
+            //         set_output_type(i, ov::element::i32, shape);
+            //         break;
+            //     case CV_64S:
+            //         set_output_type(i, ov::element::i64, shape);
+            //         break;
+            //     default:
+            //         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(outputs[i].depth()).c_str()));
+            // }
             set_output_type(i, get_input_element_type(0), shape);
+
+            std::cout << "validate_and_infer_types" << i << " " << get_input_element_type(0) << " " << outputs[i].depth() << "\n";
         }
     }
 
@@ -270,7 +291,20 @@ ov::ParameterVector InfEngineNgraphNet::setInputs(const std::vector<cv::Mat>& in
     for (size_t i = 0; i < inputs.size(); i++)
     {
         std::vector<size_t> shape = getShape<size_t>(inputs[i]);
-        auto inp = std::make_shared<ov::op::v0::Parameter>(ov::element::f32, ov::Shape(shape));
+        std::shared_ptr<ov::op::v0::Parameter> inp;
+        switch(inputs[i].depth()) {
+            case CV_32F:
+                inp = std::make_shared<ov::op::v0::Parameter>(ov::element::f32, ov::Shape(shape));
+                break;
+            case CV_32S:
+                inp = std::make_shared<ov::op::v0::Parameter>(ov::element::i32, ov::Shape(shape));
+                break;
+            case CV_64S:
+                inp = std::make_shared<ov::op::v0::Parameter>(ov::element::i64, ov::Shape(shape));
+                break;
+            default:
+                CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(inputs[i].depth()).c_str()));
+        }
         inp->set_friendly_name(names[i]);
 
         auto it = std::find_if(inputs_vec.begin(), inputs_vec.end(),
@@ -362,7 +396,16 @@ void InfEngineNgraphNet::initPlugin(std::shared_ptr<ov::Model>& net)
 
         std::string ieDevice = isHetero ? ("HETERO:" + device_name + ",CPU") : device_name;
         CV_LOG_INFO(NULL, "DNN/IE: Calling LoadNetwork(device=" << ieDevice << ")...");
+        std::cout << "inputs BEFORE compilation: " << net->inputs() << "\n";
+        std::cout << "outputs BEFORE compilation: " << net->outputs() << "\n";
+        for (auto& node : net->get_ops())
+            std::cout << "nodes BEFORE compile: " << node << "\n";
         netExec = ie.compile_model(net, ieDevice, config);
+        std::cout << "==========================================\n";
+        std::cout << "inputs AFTER compilation: " << netExec.inputs() << "\n";
+        std::cout << "outputs AFTER compilation: " << netExec.outputs() << "\n";
+        for (auto& node : netExec.get_runtime_model()->get_ops())
+            std::cout << "nodes AFTER compile:  " << node << "\n";
     }
     catch (const std::exception& ex)
     {
@@ -435,6 +478,8 @@ ov::Tensor wrapToNgraphBlob(const Mat& m) {
         return ov::Tensor(ov::element::i8, shape, m.data);
     else if (m.type() == CV_32SC1)
         return ov::Tensor(ov::element::i32, shape, m.data);
+    else if (m.type() == CV_64SC1)
+        return ov::Tensor(ov::element::i64, shape, m.data);
     else
         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
 }
@@ -445,6 +490,7 @@ NgraphBackendWrapper::NgraphBackendWrapper(int targetId, const cv::Mat& m)
     , host((Mat*)&m)
 {
     blob = wrapToNgraphBlob(m);
+    hostMatDepth = m.depth();
 }
 
 NgraphBackendWrapper::NgraphBackendWrapper(Ptr<BackendWrapper> wrapper)
