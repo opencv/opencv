@@ -429,21 +429,7 @@ OPENCV_HAL_IMPL_NEON_INIT(int32x4, int, s32)
 OPENCV_HAL_IMPL_NEON_INIT(uint64x2, uint64, u64)
 OPENCV_HAL_IMPL_NEON_INIT(int64x2, int64, s64)
 #ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-// float16_t workaround
-#define OPENCV_HAL_IMPL_NEON_INIT_1(_Tpv, _Tp, suffix) \
-inline v_##_Tpv v_setzero_##suffix() { typedef __fp16 float16_t; return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
-inline v_##_Tpv v_setall_##suffix(_Tp v) { typedef __fp16 float16_t; return v_##_Tpv(vdupq_n_##suffix(v)); } \
-inline _Tpv##_t vreinterpretq_##suffix##_##suffix(_Tpv##_t v) { return v; } \
-inline v_uint8x16 v_reinterpret_as_u8(const v_##_Tpv& v) { return v_uint8x16(vreinterpretq_u8_##suffix(v.val)); } \
-inline v_int8x16 v_reinterpret_as_s8(const v_##_Tpv& v) { return v_int8x16(vreinterpretq_s8_##suffix(v.val)); } \
-inline v_uint16x8 v_reinterpret_as_u16(const v_##_Tpv& v) { return v_uint16x8(vreinterpretq_u16_##suffix(v.val)); } \
-inline v_int16x8 v_reinterpret_as_s16(const v_##_Tpv& v) { return v_int16x8(vreinterpretq_s16_##suffix(v.val)); } \
-inline v_uint32x4 v_reinterpret_as_u32(const v_##_Tpv& v) { return v_uint32x4(vreinterpretq_u32_##suffix(v.val)); } \
-inline v_int32x4 v_reinterpret_as_s32(const v_##_Tpv& v) { return v_int32x4(vreinterpretq_s32_##suffix(v.val)); } \
-inline v_uint64x2 v_reinterpret_as_u64(const v_##_Tpv& v) { return v_uint64x2(vreinterpretq_u64_##suffix(v.val)); } \
-inline v_int64x2 v_reinterpret_as_s64(const v_##_Tpv& v) { return v_int64x2(vreinterpretq_s64_##suffix(v.val)); } \
-inline v_float32x4 v_reinterpret_as_f32(const v_##_Tpv& v) { return v_float32x4(vreinterpretq_f32_##suffix(v.val)); }
-OPENCV_HAL_IMPL_NEON_INIT_1(float16x8, __fp16, f16);
+OPENCV_HAL_IMPL_NEON_INIT(float16x8, __fp16, f16);
 #define OPENCV_HAL_IMPL_NEON_INIT_FP16(_Tpv, suffix) \
 inline v_float16x8 v_reinterpret_as_f16(const v_##_Tpv& v) { return v_float16x8(vreinterpretq_f16_##suffix(v.val)); }
 OPENCV_HAL_IMPL_NEON_INIT_FP16(uint8x16, u8)
@@ -2476,7 +2462,6 @@ OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(uint64, u64)
 #ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 inline v_float16x8 v_cvt_f16(const v_float32x4 &a)
 {
-    typedef __fp16 float16_t;
     float16x4_t zero = vdup_n_f16((__fp16)0.0f);
     return v_float16x8(vcombine_f16(vcvt_f16_f32(a.val), zero));
 }
