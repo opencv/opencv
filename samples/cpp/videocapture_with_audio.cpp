@@ -92,7 +92,7 @@ int main(int argc, char** argv)
     const int numberOfChannels = (int)cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS);
     cout << "Audio Data Depth: " << depthToString((int)cap.get(CAP_PROP_AUDIO_DATA_DEPTH)) << endl;
     cout << "Audio Samples Per Second: " << cap.get(CAP_PROP_AUDIO_SAMPLES_PER_SECOND) << endl;
-    cout << "Total Audio Channels: " << cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS) << endl;
+    cout << "Total Audio Channels: " << numberOfChannels << endl;
     cout << "Total Audio Streams: " << cap.get(CAP_PROP_AUDIO_TOTAL_STREAMS) << endl;
 
     int numberOfFrames = 0;
@@ -109,35 +109,35 @@ int main(int argc, char** argv)
     // Main loop for capturing and displaying frames
     for (;;)
     {
-        if (cap.grab())
-        {
-            // Retrieve video frame
-            cap.retrieve(videoFrame);
-            // Retrieve audio frames for all channels
-            for (int nCh = 0; nCh < numberOfChannels; nCh++)
-            {
-                cap.retrieve(audioFrame, audioBaseIndex + nCh);
-                if (!audioFrame.empty())
-                    audioData[nCh].push_back(audioFrame);
-                numberOfSamples += audioFrame.cols;
-                sysTimeCurr = getTickCount();
-            }
-            // Display video frame
-            if (!videoFrame.empty())
-            {
-                numberOfFrames++;
-                imshow("Video | q or esc to quit", videoFrame);
-                if (waitKey(30) >= 0)
-                    break;  // Exit loop if key is pressed
-            }
-            // Break after 10 seconds of audio capture
-            if ((sysTimeCurr - sysTimePrev) / cvTickFreq >= 10) {
-                cout << "Stream closed after 10 seconds timeout" << endl;
-                break;
-            }
-        } else {
+        if (!cap.grab()) {
             cerr << "Error during frame capture" << endl;
-            break;  // Exit loop on capture error
+            break;
+        }
+
+        bool videoFrameRetrieved = cap.retrieve(videoFrame);
+        if (videoFrameRetrieved) {
+            numberOfFrames++;
+            imshow("Video | q or esc to quit", videoFrame);
+            if (waitKey(30) >= 0)
+                break;
+            cout << "Video frame retrieved successfully. Frame count: " << numberOfFrames << endl;
+        }
+        // Retrieve audio frames for all channels
+        for (int nCh = 0; nCh < numberOfChannels; nCh++) {
+            if (cap.retrieve(audioFrame, audioBaseIndex + nCh)) {
+                if (!audioFrame.empty()) {
+                    audioData[nCh].push_back(audioFrame);
+                    numberOfSamples += audioFrame.cols;
+                    sysTimeCurr = getTickCount();
+                    cout << "Audio frame retrieved successfully. Channel: " << nCh + 1 << " Sample count: " << numberOfSamples << endl;
+                }
+            }
+        }
+
+        // Break after 10 seconds of audio capture
+        if ((sysTimeCurr - sysTimePrev) / cvTickFreq >= 10) {
+            cout << "Stream closed after 10 seconds timeout" << endl;
+            break;
         }
     }
 
