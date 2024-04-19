@@ -198,11 +198,13 @@ PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
     SANITY_CHECK_NOTHING();
 }
 
+
 PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
     ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
     ::testing::Values(1, 50, 99, 100), // rankValue
     ::testing::Values(CV_32F, CV_64F),
-    ::testing::Bool() // needUV
+    // back substitution has no sense without u and v
+    ::testing::Values(true) // needUV
     ))
 {
     auto t = GetParam();
