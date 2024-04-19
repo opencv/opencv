@@ -4,20 +4,6 @@
 # Object detection models.
 ################################################################################
 
-# OpenCV's face detection network
-opencv_fd:
-  load_info:
-    url: "https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel"
-    sha1: "15aa726b4d46d9f023526d85537db81cbc8dd566"
-  model: "opencv_face_detector.caffemodel"
-  config: "opencv_face_detector.prototxt"
-  mean: [104, 177, 123]
-  scale: 1.0
-  width: 300
-  height: 300
-  rgb: false
-  sample: "object_detection"
-
 # YOLOv8 object detection family from ultralytics (https://github.com/ultralytics/ultralytics)
 # Might be used for all YOLOv8n YOLOv8s YOLOv8m YOLOv8l and YOLOv8x
 yolov8x:

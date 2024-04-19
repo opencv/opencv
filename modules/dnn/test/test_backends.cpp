@@ -372,12 +372,11 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     expectNoFallbacksFromCUDA(net);
 }
 
-TEST_P(DNNTestNetwork, opencv_face_detector)
+TEST_P(DNNTestNetwork, YuNet)
 {
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
-    Mat inp = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
-    processNet("dnn/opencv_face_detector.caffemodel", "dnn/opencv_face_detector.prototxt",
-               inp, "detection_out");
+    Mat inp = blobFromImage(img, 1/255.0, Size(320, 320), Scalar(0, 0, 0), false);
+    processNet("dnn/onnx/models/yunet-202303.onnx", "", inp);
     expectNoFallbacksFromIE(net);
 }
 
