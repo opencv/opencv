@@ -1091,6 +1091,33 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 #endif
 }
 
+const std::string cv::currentUIFramework()
+{
+    CV_TRACE_FUNCTION();
+
+    // plugin and backend-compatible implementations
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        return backend->getName();
+    }
+
+    // builtin backends
+#if defined(HAVE_WIN32UI)
+    CV_Assert(false); // backend-compatible
+#elif defined (HAVE_GTK)
+    CV_Assert(false); // backend-compatible
+#elif defined (HAVE_QT)
+    return std::string("QT");
+#elif defined (HAVE_COCOA)
+    return std::string("COCOA");
+#elif defined (HAVE_WAYLAND)
+    return std::string("WAYLAND");
+#else
+    return std::string();
+#endif
+}
+
 // Without OpenGL
 
 #ifndef HAVE_OPENGL
