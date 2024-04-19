@@ -224,15 +224,15 @@ public:
         }
     }
 
-    ModelData(std::string modelPath, double fov, double near, double far, double scale, Vec3d pos, Vec3d center, Vec3d up)
+    ModelData(std::string modelPath, double fov, double nearPlane, double farPlane, double scale, Vec3d pos, Vec3d center, Vec3d up)
     {
         objectPath = modelPath;
         position = pos;
         lookat   = center;
         upVector = up;
         fovy = fov;
-        zNear = near;
-        zFar = far;
+        zNear = nearPlane;
+        zFar = farPlane;
         scaleCoeff = scale;
 
         std::vector<vector<int>> indvec;
