@@ -226,3 +226,147 @@ These C++ sources use standard APIs to access the filesystem and the implementat
 In the browser, this filesystem is emulated in memory while in Node.js there's also the possibility of using the local filesystem directly. This is often preferable since there's no need of copy file's content in memory. This section explains how to do just that, this is, configuring emscripten so files are accessed directly from our local filesystem and relative paths match files relative to the current local directory as expected.
 
 ### The example ###
+
+@code{.js}
+const { Canvas, createCanvas, Image, ImageData, loadImage } = require('canvas');
+const { JSDOM } = require('jsdom');
+const { writeFileSync, existsSync, mkdirSync } = require('fs');
+
+(async () => {
+await loadOpenCV();
+
+const image = await loadImage('./lena.jpg');
+const src = cv.imread(image);
+let srcBGR = new cv.Mat();
+cv.cvtColor(src, srcBGR, cv.COLOR_RGBA2BGR);
+
+// Load the deep learning model file. Notice how we reference local files using relative paths just
+// like we normally would do
+let netDet = new cv.FaceDetectorYN("./face_detection_yunet_2023mar.onnx", "", new cv.Size(320, 320), 0.9, 0.3, 5000);
+netDet.setInputSize(new cv.Size(src.cols, src.rows));
+let out = new cv.Mat();
+netDet.detect(srcBGR, out);
+
+let faces = [];
+for (let i = 0, n = out.data32F.length; i < n; i += 15) {
+  let left = out.data32F[i];
+  let top = out.data32F[i + 1];
+  let right = (out.data32F[i] + out.data32F[i + 2]);
+  let bottom = (out.data32F[i + 1] + out.data32F[i + 3]);
+  left = Math.min(Math.max(0, left), src.cols - 1);
+  top = Math.min(Math.max(0, top), src.rows - 1);
+  right = Math.min(Math.max(0, right), src.cols - 1);
+  bottom = Math.min(Math.max(0, bottom), src.rows - 1);
+
+  if (left < right && top < bottom) {
+    faces.push({
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top,
+      x1: out.data32F[i + 4] < 0 || out.data32F[i + 4] > src.cols - 1 ? -1 : out.data32F[i + 4],
+      y1: out.data32F[i + 5] < 0 || out.data32F[i + 5] > src.rows - 1 ? -1 : out.data32F[i + 5],
+      x2: out.data32F[i + 6] < 0 || out.data32F[i + 6] > src.cols - 1 ? -1 : out.data32F[i + 6],
+      y2: out.data32F[i + 7] < 0 || out.data32F[i + 7] > src.rows - 1 ? -1 : out.data32F[i + 7],
+      x3: out.data32F[i + 8] < 0 || out.data32F[i + 8] > src.cols - 1 ? -1 : out.data32F[i + 8],
+      y3: out.data32F[i + 9] < 0 || out.data32F[i + 9] > src.rows - 1 ? -1 : out.data32F[i + 9],
+      x4: out.data32F[i + 10] < 0 || out.data32F[i + 10] > src.cols - 1 ? -1 : out.data32F[i + 10],
+      y4: out.data32F[i + 11] < 0 || out.data32F[i + 11] > src.rows - 1 ? -1 : out.data32F[i + 11],
+      x5: out.data32F[i + 12] < 0 || out.data32F[i + 12] > src.cols - 1 ? -1 : out.data32F[i + 12],
+      y5: out.data32F[i + 13] < 0 || out.data32F[i + 13] > src.rows - 1 ? -1 : out.data32F[i + 13],
+      confidence: out.data32F[i + 14]
+    })
+  }
+}
+out.delete();
+
+faces.forEach(function(rect) {
+  cv.rectangle(src, {x: rect.x, y: rect.y}, {x: rect.x + rect.width, y: rect.y + rect.height}, [0, 255, 0, 255]);
+  if(rect.x1>0 && rect.y1>0)
+    cv.circle(src, {x: rect.x1, y: rect.y1}, 2, [255, 0, 0, 255], 2)
+  if(rect.x2>0 && rect.y2>0)
+    cv.circle(src, {x: rect.x2, y: rect.y2}, 2, [0, 0, 255, 255], 2)
+  if(rect.x3>0 && rect.y3>0)
+    cv.circle(src, {x: rect.x3, y: rect.y3}, 2, [0, 255, 0, 255], 2)
+  if(rect.x4>0 && rect.y4>0)
+    cv.circle(src, {x: rect.x4, y: rect.y4}, 2, [255, 0, 255, 255], 2)
+  if(rect.x5>0 && rect.y5>0)
+    cv.circle(src, {x: rect.x5, y: rect.y5}, 2, [0, 255, 255, 255], 2)
+});
+
+const canvas = createCanvas(image.width, image.height);
+cv.imshow(canvas, src);
+writeFileSync('output3.jpg', canvas.toBuffer('image/jpeg'));
+src.delete(); srcBGR.delete();
+})();
+
+/**
+ * Loads opencv.js.
+ *
+ * Installs HTML Canvas emulation to support `cv.imread()` and `cv.imshow`
+ *
+ * Mounts given local folder `localRootDir` in emscripten filesystem folder `rootDir`. By default it will mount the local current directory in emscripten `/work` directory. This means that `/work/foo.txt` will be resolved to the local file `./foo.txt`
+ * @param {string} rootDir The directory in emscripten filesystem in which the local filesystem will be mount.
+ * @param {string} localRootDir The local directory to mount in emscripten filesystem.
+ * @returns {Promise} resolved when the library is ready to use.
+ */
+function loadOpenCV(rootDir = '/work', localRootDir = process.cwd()) {
+  if(global.Module && global.Module.onRuntimeInitialized && global.cv && global.cv.imread) {
+   Promise.resolve()
+  }
+  return new Promise(resolve => {
+    installDOM()
+    global.Module = {
+      onRuntimeInitialized() {
+        // We change emscripten current work directory to 'rootDir' so relative paths are resolved
+        // relative to the current local folder, as expected
+        cv.FS.chdir(rootDir)
+        resolve()
+      },
+      preRun() {
+        // preRun() is another callback like onRuntimeInitialized() but is called just before the
+        // library code runs. Here we mount a local folder in emscripten filesystem and we want to
+        // do this before the library is executed so the filesystem is accessible from the start
+        const FS = global.Module.FS
+        // create rootDir if it doesn't exists
+        if(!FS.analyzePath(rootDir).exists) {
+          FS.mkdir(rootDir);
+        }
+        // create localRootFolder if it doesn't exists
+        if(!existsSync(localRootDir)) {
+          mkdirSync(localRootDir, { recursive: true});
+        }
+        // FS.mount() is similar to Linux/POSIX mount operation. It basically mounts an external
+        // filesystem with given format, in given current filesystem directory.
+        FS.mount(FS.filesystems.NODEFS, { root: localRootDir}, rootDir);
+      }
+    };
+    global.cv = require('./opencv.js')
+  });
+}
+
+function installDOM(){
+  const dom = new JSDOM();
+  global.document = dom.window.document;
+  global.Image = Image;
+  global.HTMLCanvasElement = Canvas;
+  global.ImageData = ImageData;
+  global.HTMLImageElement = Image;
+}
+@endcode
+
+### Execute it ###
+
+-   Save the file as `exampleNodeCanvasData.js`.
+-   Make sure the files `face_detection_yunet_2023mar.onnx` are present in project's directory. They can be obtained from [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet).
+-   Make sure a sample image file `lena.jpg` exists in project's directory. It should display people's faces for this example to make sense. The following image is known to work:
+
+![image](js_assets/lena.jpg)
+
+The following command should generate the file `output3.jpg` look the image below:
+
+![image](js_assets/lena_yunet.jpg)
+
+@code{.bash}
+node exampleNodeCanvasData.js
+@endcode
