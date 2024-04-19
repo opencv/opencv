@@ -55,10 +55,6 @@ Mat randomOrtho(int rows, int ftype, RNG& rng)
         v = v * (1. / cv::norm(v));
     }
 
-    //DEBUG: check
-    std::cout << "R*R' - I = " << cv::norm(result * result.t() - Mat::eye(rows, rows, ftype)) << std::endl;
-    std::cout << "R'*R - I = " << cv::norm(result.t() * result - Mat::eye(rows, rows, ftype)) << std::endl;
-
     return result;
 }
 
@@ -153,18 +149,8 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
         }
 
         startTimer();
-        bool solved = cv::solve(A, b, x, method);
+        cv::solve(A, b, x, method);
         stopTimer();
-
-        //DEBUG
-        if (solved)
-        {
-            std::cout << x << std::endl;
-        }
-        else
-        {
-            std::cout << "not solved" << std::endl;
-        }
     }
 
     SANITY_CHECK_NOTHING();
