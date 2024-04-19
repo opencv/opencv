@@ -807,6 +807,14 @@ TEST_P(Test_ONNX_layers, CumSumExclusiveInplace)
     testONNXModels("cumsum_exclusive_inplace");
 }
 
+// Issue: https://github.com/opencv/opencv/issues/25363
+// The issue was addressed in 4.x, but the solution does not fit 5.x design
+TEST_P(Test_ONNX_layers, DISABLED_Range)
+{
+    testONNXModels("range_float");
+    testONNXModels("range_float_negative");
+}
+
 TEST_P(Test_ONNX_layers, Eltwise3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)

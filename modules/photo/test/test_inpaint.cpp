@@ -157,4 +157,30 @@ TEST(Photo_InpaintBorders, regression)
     ASSERT_TRUE(countNonZero(diff) == 0);
 }
 
+typedef testing::TestWithParam<tuple<perf::MatType>> Photo_InpaintSmallBorders;
+
+TEST_P(Photo_InpaintSmallBorders, regression)
+{
+    int type = get<0>(GetParam());
+    Mat img(5, 5, type, Scalar::all(128));
+    Mat expected = img.clone();
+
+    Mat mask = Mat::zeros(5, 5, CV_8U);
+    mask(Rect(1, 1, 3, 3)) = 255;
+
+    img.setTo(Scalar::all(0), mask);
+
+    Mat inpainted, diff;
+
+    inpaint(img, mask, inpainted, 1, INPAINT_TELEA);
+    cv::absdiff(inpainted, expected, diff);
+    ASSERT_EQ(countNonZero(diff.reshape(1)), 0);
+
+    inpaint(img, mask, inpainted, 1, INPAINT_NS);
+    cv::absdiff(inpainted, expected, diff);
+    ASSERT_EQ(countNonZero(diff.reshape(1)), 0);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Photo_InpaintSmallBorders,  Values(CV_8UC1, CV_8UC3));
+
 }} // namespace
