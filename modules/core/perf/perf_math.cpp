@@ -58,6 +58,8 @@ Mat randomOrtho(int rows, int ftype, RNG& rng)
     //DEBUG: check
     std::cout << "R*R' - I = " << cv::norm(result * result.t() - Mat::eye(rows, rows, ftype)) << std::endl;
     std::cout << "R'*R - I = " << cv::norm(result.t() * result - Mat::eye(rows, rows, ftype)) << std::endl;
+
+    return result;
 }
 
 template<typename FType>
