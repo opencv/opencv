@@ -73,9 +73,9 @@ class CV_EXPORTS FramebufferBackend: public UIBackend
 
   struct termios old, current;
 
-  void initTermios(int echo);
+  void initTermios(int echo, int wait);
   void resetTermios(void);
-  int getch_(int echo);
+  int getch_(int echo, int wait);
   bool kbhit();
 
 public:

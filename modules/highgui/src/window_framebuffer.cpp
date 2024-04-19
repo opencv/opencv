@@ -54,7 +54,16 @@ namespace cv { namespace highgui_backend {
     framebuffrer_id = fb_open_and_get_info();
     std::cout  << "FramebufferWindow():: id " << framebuffrer_id << std::endl;
     
-    if(framebuffrer_id == -1) return;
+    if(framebuffrer_id == -1){
+      fb_w = 0;
+      fb_h = 0;
+      y_offset = 0;
+      x_offset = 0;
+      bpp = 0;
+      line_length = 0;
+
+      return;
+    }
     
     fb_w = var_info.xres;
     fb_h = var_info.yres;
@@ -268,13 +277,13 @@ namespace cv { namespace highgui_backend {
     return std::make_shared<FramebufferWindow>();
   }
 
-  void FramebufferBackend::initTermios(int echo) 
+  void FramebufferBackend::initTermios(int echo, int wait) 
   {
     tcgetattr(0, &old); /* grab old terminal i/o settings */
     current = old; /* make new settings same as old settings */
     current.c_lflag &= ~ICANON; /* disable buffered i/o */
     current.c_lflag &= ~ISIG;
-    current.c_cc[VMIN]=1;
+    current.c_cc[VMIN]=wait;
     if (echo) {
         current.c_lflag |= ECHO; /* set echo mode */
     } else {
@@ -289,24 +298,25 @@ namespace cv { namespace highgui_backend {
     tcsetattr(0, TCSANOW, &old);
   }
 
-  int FramebufferBackend::getch_(int echo) 
+  int FramebufferBackend::getch_(int echo, int wait) 
   {
     int ch;
-    initTermios(echo);
+    initTermios(echo, wait);
     ch = getchar();
+    rewind(stdin);
     resetTermios();
     return ch;
   }
   bool FramebufferBackend::kbhit()
   {
     int byteswaiting=0;
-    initTermios(0);
+    initTermios(0, 1);
     if ( ioctl(0, FIONREAD, &byteswaiting) < 0)
     {
       std::cout  << "               ERR byteswaiting " << std::endl;
     }
     resetTermios();
-    std::cout  << "                byteswaiting " << byteswaiting << std::endl;
+//    std::cout  << "                byteswaiting " << byteswaiting << std::endl;
     
     return byteswaiting > 0;
   }
@@ -314,47 +324,48 @@ namespace cv { namespace highgui_backend {
   int FramebufferBackend::waitKeyEx(int delay) {
     std::cout  << "FramebufferBackend::waitKeyEx(int delay "<< delay <<")" << std::endl; 
 
-    int code = 0;
-  
-    int ch = getch_(0);
-    std::cout  << "ch 1 " << (int)ch << std::endl;
-    code = ch;
-    
-    while(kbhit())
+    int code = -1;
+
+    if(delay == 0)
     {
-      ch = getch_(0);
-      std::cout  << "ch 2 " << (int)ch << std::endl;
+      int ch = getch_(0, 1);
+      std::cout  << "ch 1 " << (int)ch << std::endl;
       code = ch;
+      
+      while((ch = getch_(0, 0))>=0)
+      {
+        std::cout  << "ch 2 " << (int)ch << std::endl;
+        code = ch;
+      }
+    } else {
+      if(delay > 0)
+      {
+        bool f_kbhit = false;
+        while(!(f_kbhit = kbhit()) && (delay > 0))
+        {
+          delay -= 10;
+          usleep(10000);
+        }          
+        if(f_kbhit)
+        {
+          std::cout  << "f_kbhit " << true << std::endl;
+          
+          int ch = getch_(0, 1);
+          std::cout  << "d ch 1 " << (int)ch << std::endl;
+          code = ch;
+          
+          while((ch = getch_(0, 0))>=0)
+          {
+            std::cout  << "d ch 2 " << (int)ch << std::endl;
+            code = ch;
+          }
+        }
+
+      }
     }
+    
   
-//    struct input_event events;
-//    ssize_t r = 1;
-//    while(r > 0)
-//    {
-//      std::cout  << "while 1 " << std::endl; 
-//      r = read(eventKey, &events, sizeof(input_event));
-//      std::cout  << "while 1 " << std::endl; 
-//    }
-//    
-//    
-//    
-//    while((r == 0)&& ((delay > 1) || (delay == 0)) )
-//    {
-//      delay--;
-//      usleep(1);
-//      r = read(eventKey, &events, sizeof(input_event));
-//      std::cout  << "while 2 " << std::endl; 
-//
-//      if(r != 0){
-//        code = (events.code);
-//      }
-//    }
-//
     std::cout  << "waitKeyEx:: code "<< code << std::endl; 
-//    
-//    if(r == 0)
-//      return -1;
-//    
     return code; 
   }
   int FramebufferBackend::pollKey()  {
