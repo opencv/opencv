@@ -245,7 +245,7 @@
 "test_nllloss_NCd1d2_with_weight_reduction_mean",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
 // "test_nllloss_NCd1d2_with_weight_reduction_mean_expanded",
 "test_nllloss_NCd1d2_with_weight_reduction_sum", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-// "test_nllloss_NCd1d2_with_weight_reduction_sum_expanded",
+"test_nllloss_NCd1d2_with_weight_reduction_sum_expanded", // Issue::Wrong output on CUDA
 "test_nllloss_NCd1d2_with_weight_reduction_sum_ii", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
 "test_nllloss_NCd1d2_with_weight_reduction_sum_ii_expanded",  // Issue:: Unsupported data type
 "test_nllloss_NCd1d2d3_none_no_weight_negative_ii",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
