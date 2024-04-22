@@ -45,9 +45,20 @@
                        (__GNUC_MINOR__ == 4 && \
                         __GNUC_PATCHLEVEL__ > 0)))
 
+#ifndef CV_HAL_RVV_071_ENABLED
+#  if defined(__THEAD_VERSION__) && defined(__riscv_v) && __riscv_v == 7000
+#    define CV_HAL_RVV_071_ENABLED 1
+#  else
+#    define CV_HAL_RVV_071_ENABLED 0
+#  endif
+#endif
+
+#endif /* GCC version check*/
+
+#if CV_HAL_RVV_071_ENABLED
+
 #include "opencv2/core/hal/interface.h"
 
-#if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic == 7001
 #include <riscv_vector.h>
 
 #undef cv_hal_cvtBGRtoBGR
@@ -133,8 +144,6 @@ static int cvt_hal_BGRtoBGR(const uchar * src_data, size_t src_step, uchar * dst
 
     return CV_HAL_ERROR_OK;
 }
-
-#endif /* RVV 0.7.1 status */
-#endif /* GCC version check*/
+#endif // CV_HAL_RVV_071_ENABLED
 
 #endif
