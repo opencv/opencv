@@ -681,7 +681,7 @@ CASE(test_gemm_alpha)
 CASE(test_gemm_beta)
     // no filter
 CASE(test_gemm_default_matrix_bias)
-    // no filter
+    SKIP; // https://github.com/opencv/opencv/issues/25472
 CASE(test_gemm_default_no_bias)
     // no filter
 CASE(test_gemm_default_scalar_bias)
