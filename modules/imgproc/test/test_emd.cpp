@@ -153,7 +153,7 @@ TEST_P(Imgproc_EMD_dist, random_flow_verify)
     {
         SCOPED_TRACE(cv::format("iter=%zu", iter));
         RNG& rng = TS::ptr()->get_rng();
-        const size_t dims = rng.uniform(1, 10);
+        const int dims = rng.uniform(1, 10);
         Mat w1(rng.uniform(1, 10), dims + 1, CV_32FC1);
         Mat w2(rng.uniform(1, 10), dims + 1, CV_32FC1);
 

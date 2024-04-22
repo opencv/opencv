@@ -92,8 +92,8 @@ struct Node2D
 struct EMDSolver
 {
     static constexpr int MAX_ITERATIONS = 500;
-    static constexpr float CV_EMD_INF = 1e20;
-    static constexpr float CV_EMD_EPS = 1e-5;
+    static constexpr float CV_EMD_INF = 1e20f;
+    static constexpr float CV_EMD_EPS = 1e-5f;
 
     int ssize, dsize;
 
@@ -832,7 +832,7 @@ void EMDSolver::callRussel()
                     /* find the new maximum value in the column */
                     for (cur_u = u_head.next; cur_u != 0; cur_u = cur_u->next)
                     {
-                        float temp = getCost(cur_u - u, j);
+                        float temp = getCost((int)(cur_u - u), j);
 
                         if (max_val < temp)
                             max_val = temp;
@@ -861,7 +861,7 @@ void EMDSolver::callRussel()
                     /* find the new maximum value in the row */
                     for (cur_v = v_head.next; cur_v != 0; cur_v = cur_v->next)
                     {
-                        float temp = getCost(i, cur_v - v);
+                        float temp = getCost(i, (int)(cur_v - v));
 
                         if (max_val < temp)
                             max_val = temp;
