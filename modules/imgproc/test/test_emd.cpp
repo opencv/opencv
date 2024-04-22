@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
+#include "opencv2/imgproc.hpp"
 #include "test_precomp.hpp"
 
 using namespace cv;
@@ -135,12 +136,6 @@ TEST(Imgproc_EMD, distance_types)
                 EXPECT_NEAR(emd0, emd, 1e-6);
             }
         }
-        const vector<DistanceTypes> bad_types {DIST_L12, DIST_FAIR, DIST_WELSCH, DIST_HUBER};
-        for (const auto& dt : bad_types)
-        {
-            SCOPED_TRACE(cv::format("dt=%d", dt));
-            EXPECT_THROW(EMD(w1, w2, dt), cv::Exception);
-        }
     }
 }
 
@@ -192,5 +187,64 @@ TEST_P(Imgproc_EMD_dist, random_flow_verify)
 
 INSTANTIATE_TEST_CASE_P(, Imgproc_EMD_dist, testing::Values(DIST_L1, DIST_L2, DIST_C));
 
+
+TEST(Imgproc_EMD, invalid)
+{
+    Matx<float, 4, 2> w1 {50, 1, 60, 2, 50, 3, 50, 4};
+    Matx<float, 5, 2> w2 {30, 1, 20, 2, 70, 3, 30, 4, 60, 5};
+
+    // empty signature
+    {
+        Mat empty;
+        EXPECT_THROW(EMD(empty, w2, DIST_USER), cv::Exception);
+        EXPECT_THROW(EMD(w1, empty, DIST_USER), cv::Exception);
+    }
+
+    // zero total weight, negative weight
+    {
+        Matx<float, 3, 1> wz {0, 0, 0};
+        Matx<float, 3, 2> wz1 {0, 1, 0, 2, 0, 3};
+        Matx<float, 3, 1> wn {0, 3, -2};
+        Matx<float, 3, 2> wn1 {0, 1, 3, 2, -2, 3};
+        EXPECT_THROW(EMD(wz, w2, DIST_USER), cv::Exception);
+        EXPECT_THROW(EMD(wz1, w2, DIST_USER), cv::Exception);
+        EXPECT_THROW(EMD(wn, w2, DIST_USER), cv::Exception);
+        EXPECT_THROW(EMD(wn1, w2, DIST_USER), cv::Exception);
+    }
+
+    // user distance type, but no cost matrix provided or is wrong
+    {
+        Mat cost(3, 3, CV_32FC1, Scalar::all(0)), cost8u(4, 5, CV_8UC1, Scalar::all(0)), empty;
+        EXPECT_THROW(EMD(w1, w2, DIST_USER, noArray()), cv::Exception);
+        EXPECT_THROW(EMD(w1, w2, DIST_USER, empty), cv::Exception);
+        EXPECT_THROW(EMD(w1, w2, DIST_USER, cost8u), cv::Exception);
+        EXPECT_THROW(EMD(w1, w2, DIST_USER, cost), cv::Exception);
+    }
+
+    // lower_bound is set together with cost
+    {
+        Mat cost(4, 5, CV_32FC1, Scalar::all(0));
+        float bound = 0.f;
+        EXPECT_THROW(EMD(w1, w2, DIST_USER, cost, &bound), cv::Exception);
+    }
+
+    // zero dimensions with non-user distance type
+    const vector<DistanceTypes> good_types {DIST_L1, DIST_L2, DIST_C};
+    for (const auto& dt : good_types)
+    {
+        SCOPED_TRACE(cv::format("dt=%d", dt));
+        Matx<float, 4, 1> w01 {20, 30, 40, 50};
+        Matx<float, 5, 1> w02 {20, 30, 40, 50, 10};
+        EXPECT_THROW(EMD(w01, w02, dt), cv::Exception);
+    }
+
+    // wrong distance type
+    const vector<DistanceTypes> bad_types {DIST_L12, DIST_FAIR, DIST_WELSCH, DIST_HUBER};
+    for (const auto& dt : bad_types)
+    {
+        SCOPED_TRACE(cv::format("dt=%d", dt));
+        EXPECT_THROW(EMD(w1, w2, dt), cv::Exception);
+    }
+}
 
 }}  // namespace opencv_test
