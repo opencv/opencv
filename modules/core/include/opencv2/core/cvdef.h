@@ -822,26 +822,6 @@ public:
     hfloat() : h(0) {}
     explicit hfloat(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
-    static hfloat fromBits(ushort w)
-    {
-        Cv16suf u;
-        u.u = w;
-        hfloat result;
-        result.h = u.h;
-        return result;
-    }
-    static hfloat zero()
-    {
-        hfloat result;
-        result.h = (__fp16)0;
-        return result;
-    }
-    ushort bits() const
-    {
-        Cv16suf u;
-        u.h = h;
-        return u.u;
-    }
 protected:
     __fp16 h;
 
@@ -898,14 +878,6 @@ protected:
     #endif
     }
 
-    static hfloat zero()
-    {
-        hfloat result;
-        result.w = (ushort)0;
-        return result;
-    }
-
-    ushort bits() const { return w; }
 protected:
     ushort w;
 
