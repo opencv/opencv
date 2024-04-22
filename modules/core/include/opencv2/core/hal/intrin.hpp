@@ -499,6 +499,7 @@ using namespace CV__SIMD_NAMESPACE;
 #endif
 namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD CV_SIMD128
+    #define CV_SIMD_FP16 CV_SIMD128_FP16
     #define CV_SIMD_64F CV_SIMD128_64F
     #define CV_SIMD_WIDTH 16
 //! @addtogroup core_hal_intrin
@@ -511,6 +512,10 @@ namespace CV__SIMD_NAMESPACE {
     typedef v_uint16x8  v_uint16;
     //! @brief Maximum available vector register capacity 16-bit signed integer values
     typedef v_int16x8   v_int16;
+    #if CV_SIMD128_FP16
+    //! @brief Maximum available vector register capacity 16-bit floating point values (half precision)
+    typedef v_float16x8 v_float16;
+    #endif
     //! @brief Maximum available vector register capacity 32-bit unsigned integer values
     typedef v_uint32x4  v_uint32;
     //! @brief Maximum available vector register capacity 32-bit signed integer values
@@ -558,6 +563,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_setall_s8(schar v) { return VXPREFIX(_setall_s8)(v); }
     inline v_uint16 vx_setall_u16(ushort v) { return VXPREFIX(_setall_u16)(v); }
     inline v_int16 vx_setall_s16(short v) { return VXPREFIX(_setall_s16)(v); }
+#if CV_SIMD_FP16
+    inline v_float16 vx_setall_f16(__fp16 v) { return VXPREFIX(_setall_f16)(v); }
+#endif
     inline v_int32 vx_setall_s32(int v) { return VXPREFIX(_setall_s32)(v); }
     inline v_uint32 vx_setall_u32(unsigned v) { return VXPREFIX(_setall_u32)(v); }
     inline v_float32 vx_setall_f32(float v) { return VXPREFIX(_setall_f32)(v); }
@@ -575,6 +583,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_setzero_s8() { return VXPREFIX(_setzero_s8)(); }
     inline v_uint16 vx_setzero_u16() { return VXPREFIX(_setzero_u16)(); }
     inline v_int16 vx_setzero_s16() { return VXPREFIX(_setzero_s16)(); }
+#if CV_SIMD_FP16
+    inline v_float16 vx_setzero_f16() { return VXPREFIX(_setzero_f16)(); }
+#endif
     inline v_int32 vx_setzero_s32() { return VXPREFIX(_setzero_s32)(); }
     inline v_uint32 vx_setzero_u32() { return VXPREFIX(_setzero_u32)(); }
     inline v_float32 vx_setzero_f32() { return VXPREFIX(_setzero_f32)(); }
@@ -592,6 +603,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load(const schar * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_uint16 vx_load(const ushort * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_int16 vx_load(const short * ptr) { return VXPREFIX(_load)(ptr); }
+#if CV_SIMD_FP16
+    inline v_float16 vx_load(const __fp16 * ptr) { return VXPREFIX(_load)(ptr); }
+#endif
     inline v_int32 vx_load(const int * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_uint32 vx_load(const unsigned * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_float32 vx_load(const float * ptr) { return VXPREFIX(_load)(ptr); }
@@ -609,6 +623,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_aligned(const schar * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_uint16 vx_load_aligned(const ushort * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_int16 vx_load_aligned(const short * ptr) { return VXPREFIX(_load_aligned)(ptr); }
+#if CV_SIMD_FP16
+    inline v_float16 vx_load_aligned(const __fp16 * ptr) { return VXPREFIX(_load_aligned)(ptr); }
+#endif
     inline v_int32 vx_load_aligned(const int * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_uint32 vx_load_aligned(const unsigned * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_float32 vx_load_aligned(const float * ptr) { return VXPREFIX(_load_aligned)(ptr); }
@@ -626,6 +643,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_low(const schar * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_uint16 vx_load_low(const ushort * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_int16 vx_load_low(const short * ptr) { return VXPREFIX(_load_low)(ptr); }
+#if CV_SIMD_FP16
+    inline v_float16 vx_load_low(const __fp16 * ptr) { return VXPREFIX(_load_low)(ptr); }
+#endif
     inline v_int32 vx_load_low(const int * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_uint32 vx_load_low(const unsigned * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_float32 vx_load_low(const float * ptr) { return VXPREFIX(_load_low)(ptr); }
@@ -643,6 +663,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_halves(const schar * ptr0, const schar * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_uint16 vx_load_halves(const ushort * ptr0, const ushort * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_int16 vx_load_halves(const short * ptr0, const short * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
+#if CV_SIMD_FP16
+    inline v_float16 vx_load_halves(const __fp16 * ptr0, const __fp16 * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
+#endif
     inline v_int32 vx_load_halves(const int * ptr0, const int * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_uint32 vx_load_halves(const unsigned * ptr0, const unsigned * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_float32 vx_load_halves(const float * ptr0, const float * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
@@ -660,6 +683,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_lut(const schar * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_uint16 vx_lut(const ushort * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_int16 vx_lut(const short* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
+#if CV_SIMD_FP16
+    inline v_float16 vx_lut(const __fp16 * ptr, const int * idx) { return VXPREFIX(_lut)(ptr, idx); }
+#endif
     inline v_int32 vx_lut(const int* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_uint32 vx_lut(const unsigned* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_float32 vx_lut(const float* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
@@ -677,6 +703,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_lut_pairs(const schar * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_uint16 vx_lut_pairs(const ushort * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_int16 vx_lut_pairs(const short* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
+#if CV_SIMD_FP16
+    inline v_float16 vx_lut_pairs(const __fp16 * ptr, const int * idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
+#endif
     inline v_int32 vx_lut_pairs(const int* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_uint32 vx_lut_pairs(const unsigned* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_float32 vx_lut_pairs(const float* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
@@ -1180,6 +1209,9 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int16)
     OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32)
     OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64)
+    #if CV_SIMD_FP16
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float16)
+    #endif
     OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32)
     #if CV_SIMD_64F
     OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64)
@@ -1196,6 +1228,9 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint32)
     OPENCV_HAL_WRAP_BIN_OP_MUL(v_int16)
     OPENCV_HAL_WRAP_BIN_OP_MUL(v_int32)
+    #if CV_SIMD_FP16
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_float16)
+    #endif
     OPENCV_HAL_WRAP_BIN_OP_MUL(v_float32)
     #if CV_SIMD_64F
     OPENCV_HAL_WRAP_BIN_OP_MUL(v_float64)
@@ -1215,6 +1250,9 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_EXTRACT(v_int32)
     OPENCV_HAL_WRAP_EXTRACT(v_uint64)
     OPENCV_HAL_WRAP_EXTRACT(v_int64)
+    #if CV_SIMD_FP16
+    OPENCV_HAL_WRAP_EXTRACT(v_float16)
+    #endif
     OPENCV_HAL_WRAP_EXTRACT(v_float32)
     #if CV_SIMD_64F
     OPENCV_HAL_WRAP_EXTRACT(v_float64)
