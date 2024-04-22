@@ -26,7 +26,7 @@ private:
 public:
     void init(const Mat &src, double detectorThreshDownSamplingLimit);
 
-    void localization(vector<double> detectorWindowSizes, double detectorGradientMagnitudeThresh);
+    void localization(const vector<float>& detectorWindowSizes, double detectorGradientMagnitudeThresh);
 
     vector<vector<Point2f>> getTransformationPoints()
     { return transformation_points; }

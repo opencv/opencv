@@ -90,11 +90,11 @@ TEST_P(BarcodeDetector_main, interface)
         if(fname.find("_detector_lg.jpg") != string::npos || fname.find("_detector_sm.jpg") != string::npos)
         {
             const float div = float(max(img.size().width, img.size().height)) / 512.f;
-            const vector<double> scales = { 0.01f/div, 0.03f/div, 0.06/div, 0.08/div };
+            const vector<float> scales = { 0.01f/div, 0.03f/div, 0.06f/div, 0.08f/div };
 
-            det.setDownSampleThresh(div * 512.);
+            det.setDownsamplingThreshold(div * 512.);
             det.setDetectorScales(scales);
-            det.setGradientThresh(256.f);
+            det.setGradientThreshold(256.f);
         }
     }
 
@@ -157,16 +157,16 @@ TEST(BarcodeDetector_base, invalid)
 TEST(BarcodeDetector_parameters, regression)
 {
     const double expected_dt = 1024, expected_gt = 256;
-    const vector<double> expected_ds = {0.1};
-    vector<double> ds_value = {0.0};
+    const vector<float> expected_ds = {0.1f};
+    vector<float> ds_value = {0.0f};
 
     auto bardet = barcode::BarcodeDetector();
 
-    bardet.setDownSampleThresh(expected_dt).setDetectorScales(expected_ds).setGradientThresh(expected_gt);
+    bardet.setDownsamplingThreshold(expected_dt).setDetectorScales(expected_ds).setGradientThreshold(expected_gt);
 
-    double dt_value = bardet.getDownSampleThresh();
+    double dt_value = bardet.getDownsamplingThreshold();
     bardet.getDetectorScales(ds_value);
-    double gt_value = bardet.getGradientThresh();
+    double gt_value = bardet.getGradientThreshold();
 
     EXPECT_EQ(expected_dt, dt_value);
     EXPECT_EQ(expected_ds, ds_value);
@@ -177,12 +177,12 @@ TEST(BarcodeDetector_parameters, invalid)
 {
     auto bardet = barcode::BarcodeDetector();
 
-    EXPECT_ANY_THROW(bardet.setDownSampleThresh(-1));
-    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<double> {}));
-    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<double> {-1}));
-    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<double> {1.5}));
-    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<double> (17, 0.5)));
-    EXPECT_ANY_THROW(bardet.setGradientThresh(-0.1));
+    EXPECT_ANY_THROW(bardet.setDownsamplingThreshold(-1));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<float> {}));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<float> {-1}));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<float> {1.5}));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<float> (17, 0.5)));
+    EXPECT_ANY_THROW(bardet.setGradientThreshold(-0.1));
 }
 
 }} // opencv_test::<anonymous>::

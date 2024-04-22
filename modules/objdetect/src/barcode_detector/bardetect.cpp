@@ -171,7 +171,7 @@ void Detect::init(const Mat &src, double detectorThreshDownSamplingLimit)
 }
 
 
-void Detect::localization(std::vector<double> detectorWindowSizes, double detectorThreshGradientMagnitude)
+void Detect::localization(const std::vector<float>& detectorWindowSizes, double detectorThreshGradientMagnitude)
 {
 
     localization_bbox.clear();
@@ -183,7 +183,7 @@ void Detect::localization(std::vector<double> detectorWindowSizes, double detect
     //static constexpr float SCALE_LIST[] = {0.01f, 0.03f, 0.06f, 0.08f};
     const auto min_side = static_cast<float>(std::min(width, height));
     int window_size;
-    for (const double scale:detectorWindowSizes)
+    for (const float scale: detectorWindowSizes)
     {
         window_size = cvRound(min_side * scale);
         if(window_size == 0) {
@@ -247,12 +247,11 @@ bool Detect::computeTransformationPoints()
 void Detect::preprocess(double detectorGradientMagnitudeThresh)
 {
     Mat scharr_x, scharr_y, temp;
-    double THRESHOLD_MAGNITUDE = detectorGradientMagnitudeThresh;
     Scharr(resized_barcode, scharr_x, CV_32F, 1, 0);
     Scharr(resized_barcode, scharr_y, CV_32F, 0, 1);
     // calculate magnitude of gradient and truncate
     magnitude(scharr_x, scharr_y, temp);
-    threshold(temp, temp, THRESHOLD_MAGNITUDE, 1, THRESH_BINARY);
+    threshold(temp, temp, detectorGradientMagnitudeThresh, 1, THRESH_BINARY);
     temp.convertTo(gradient_magnitude, CV_8U);
     integral(gradient_magnitude, integral_edges, CV_32F);
 

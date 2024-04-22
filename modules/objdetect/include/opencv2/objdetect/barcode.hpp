@@ -62,23 +62,23 @@ public:
      *
      * @return detector downsampling threshold
      */
-    CV_WRAP double getDownSampleThresh() const;
+    CV_WRAP double getDownsamplingThreshold() const;
 
     /** @brief Set detector downsampling threshold.
      *
-     * By default, the detect method resizes the input image to this limit if min(shape[:2]) is greater than the threshold.
+     * By default, the detect method resizes the input image to this limit if the smallest image size is is greater than the threshold.
      * Increasing this value can improve detection accuracy and the number of results at the expense of performance.
      * Correlates with detector scales. Setting this to a large value will disable downsampling.
      * @param thresh downsampling limit to apply (default 512)
      * @see setDetectorScales
      */
-    CV_WRAP BarcodeDetector& setDownSampleThresh(double thresh);
+    CV_WRAP BarcodeDetector& setDownsamplingThreshold(double thresh);
 
     /** @brief Returns detector box filter sizes.
      *
      * @param sizes output parameter for returning the sizes.
      */
-    CV_WRAP void getDetectorScales(CV_OUT std::vector<double>& sizes) const;
+    CV_WRAP void getDetectorScales(CV_OUT std::vector<float>& sizes) const;
 
     /** @brief Set detector box filter sizes.
      *
@@ -87,13 +87,13 @@ public:
      * If the downsampling limit is increased, filter sizes need to be adjusted in an inversely proportional way.
      * @param sizes box filter sizes, relative to minimum dimension of the image (default [0.01, 0.03, 0.06, 0.08])
      */
-    CV_WRAP BarcodeDetector& setDetectorScales(const std::vector<double>& sizes);
+    CV_WRAP BarcodeDetector& setDetectorScales(const std::vector<float>& sizes);
 
     /** @brief Get detector gradient magnitude threshold.
      *
      * @return detector gradient magnitude threshold.
      */
-    CV_WRAP double getGradientThresh() const;
+    CV_WRAP double getGradientThreshold() const;
 
     /** @brief Set detector gradient magnitude threshold.
      *
@@ -102,7 +102,7 @@ public:
      * Values between 16 and 1024 generally work, while too high of a value will remove valid detections.
      * @param thresh gradient magnitude threshold (default 64).
      */
-    CV_WRAP BarcodeDetector& setGradientThresh(double thresh);
+    CV_WRAP BarcodeDetector& setGradientThreshold(double thresh);
 };
 //! @}
 

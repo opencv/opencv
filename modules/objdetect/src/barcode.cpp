@@ -143,7 +143,7 @@ public:
     shared_ptr<SuperScale> sr;
     bool use_nn_sr = false;
     double detectorThrDownSample = 512.f;
-    vector<double> detectorWindowSizes = {0.01f, 0.03f, 0.06f, 0.08f};
+    vector<float> detectorWindowSizes = {0.01f, 0.03f, 0.06f, 0.08f};
     double detectorThrGradMagnitude = 64.f;
 
 public:
@@ -374,7 +374,7 @@ bool BarcodeDetector::detectAndDecodeWithType(InputArray img, vector<string> &de
     return p_->detectAndDecodeWithType(img, decoded_info, decoded_type, points_);
 }
 
-double BarcodeDetector::getDownSampleThresh() const
+double BarcodeDetector::getDownsamplingThreshold() const
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
@@ -382,7 +382,7 @@ double BarcodeDetector::getDownSampleThresh() const
     return p_->detectorThrDownSample;
 }
 
-BarcodeDetector& BarcodeDetector::setDownSampleThresh(double thresh)
+BarcodeDetector& BarcodeDetector::setDownsamplingThreshold(double thresh)
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
@@ -392,7 +392,7 @@ BarcodeDetector& BarcodeDetector::setDownSampleThresh(double thresh)
     return *this;
 }
 
-void BarcodeDetector::getDetectorScales(CV_OUT std::vector<double>& sizes) const
+void BarcodeDetector::getDetectorScales(CV_OUT std::vector<float>& sizes) const
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
@@ -400,7 +400,7 @@ void BarcodeDetector::getDetectorScales(CV_OUT std::vector<double>& sizes) const
     sizes = p_->detectorWindowSizes;
 }
 
-BarcodeDetector& BarcodeDetector::setDetectorScales(const std::vector<double>& sizes)
+BarcodeDetector& BarcodeDetector::setDetectorScales(const std::vector<float>& sizes)
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
@@ -415,7 +415,7 @@ BarcodeDetector& BarcodeDetector::setDetectorScales(const std::vector<double>& s
     return *this;
 }
 
-double BarcodeDetector::getGradientThresh() const
+double BarcodeDetector::getGradientThreshold() const
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
@@ -423,7 +423,7 @@ double BarcodeDetector::getGradientThresh() const
     return p_->detectorThrGradMagnitude;
 }
 
-BarcodeDetector& BarcodeDetector::setGradientThresh(double thresh)
+BarcodeDetector& BarcodeDetector::setGradientThreshold(double thresh)
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
