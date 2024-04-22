@@ -1573,22 +1573,22 @@ template<typename R> struct TheTest
         return *this;
     }
 
-#if 0
     TheTest & test_loadstore_fp16()
     {
+#if CV_SIMD_FP16
         printf("test_loadstore_fp16 ...\n");
         AlignedData<R> data;
         AlignedData<R> out;
 
         // check if addresses are aligned and unaligned respectively
-        EXPECT_EQ((size_t)0, (size_t)&data.a.d % VTraits<R>::max_nlanes);
-        EXPECT_NE((size_t)0, (size_t)&data.u.d % VTraits<R>::max_nlanes);
-        EXPECT_EQ((size_t)0, (size_t)&out.a.d % VTraits<R>::max_nlanes);
-        EXPECT_NE((size_t)0, (size_t)&out.u.d % VTraits<R>::max_nlanes);
+        EXPECT_EQ((size_t)0, (size_t)&data.a.d % (sizeof(typename VTraits<R>::lane_type) * VTraits<R>::vlanes()));
+        EXPECT_NE((size_t)0, (size_t)&data.u.d % (sizeof(typename VTraits<R>::lane_type) * VTraits<R>::vlanes()));
+        EXPECT_EQ((size_t)0, (size_t)&out.a.d % (sizeof(typename VTraits<R>::lane_type) * VTraits<R>::vlanes()));
+        EXPECT_NE((size_t)0, (size_t)&out.u.d % (sizeof(typename VTraits<R>::lane_type) * VTraits<R>::vlanes()));
 
         // check some initialization methods
         R r1 = data.u;
-        R r2 = vx_load_expand((const hfloat*)data.a.d);
+        R r2 = vx_load(data.a.d);
         R r3(r2);
         EXPECT_EQ(data.u[0], v_get0(r1));
         EXPECT_EQ(data.a[0], v_get0(r2));
@@ -1598,11 +1598,13 @@ template<typename R> struct TheTest
         out.a.clear();
         v_store(out.a.d, r1);
         EXPECT_EQ(data.a, out.a);
-
+#endif
         return *this;
     }
+
     TheTest & test_float_cvt_fp16()
     {
+#if CV_SIMD_FP16
         printf("test_float_cvt_fp16 ...\n");
         AlignedData<v_float32> data;
 
@@ -1610,12 +1612,11 @@ template<typename R> struct TheTest
         v_float32 r1 = vx_load(data.a.d);
         v_float16 r2 = v_cvt_f16(r1, vx_setzero_f32());
         v_float32 r3 = v_cvt_f32(r2);
-        EXPECT_EQ(0x3c00, v_get0(r2));
+        EXPECT_EQ(1, v_get0(r2));
         EXPECT_EQ(v_get0(r3), v_get0(r1));
-
+#endif
         return *this;
     }
-#endif
 
     void do_check_cmp64(const Data<R>& dataA, const Data<R>& dataB)
     {
@@ -2029,9 +2030,9 @@ void test_hal_intrin_float16()
 {
     DUMP_ENTRY(v_float16);
 #if CV_FP16
-    TheTest<v_float32>()
-        .test_loadstore_fp16_f32()
+    TheTest<v_float32>().test_loadstore_fp16_f32();
 #if CV_SIMD_FP16
+    TheTest<v_float16>()
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
 #endif
@@ -2040,17 +2041,6 @@ void test_hal_intrin_float16()
     std::cout << "SKIP: CV_FP16 is not available" << std::endl;
 #endif
 }
-
-
-/*#if defined(CV_CPU_DISPATCH_MODE_FP16) && CV_CPU_DISPATCH_MODE == FP16
-void test_hal_intrin_float16()
-{
-    TheTest<v_float16>()
-        .test_loadstore_fp16()
-        .test_float_cvt_fp16()
-        ;
-}
-#endif*/
 
 #endif //CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
