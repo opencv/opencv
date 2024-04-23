@@ -567,7 +567,7 @@ template<typename R> struct TheTest
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             // printf("i = %d, a = %f, b = %f, a / b = %f, c = %f, a / b - c = %f\n", i, dataA[i], dataB[i], dataA[i] / dataB[i], resC[i], (dataA[i] / dataB[i]) - resC[i]);
-            EXPECT_LT((dataA[i] / dataB[i]) - resC[i], 2e-4);
+            EXPECT_LT(std::abs(float((dataA[i] / dataB[i]) - resC[i])), 2e-4);
         }
 #endif
 
