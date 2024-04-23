@@ -782,25 +782,29 @@ static cv::Mat preprocess(const cv::Mat     &in_mat,
 
 // NB: This function is used to preprocess input image
 // for InferROI, InferList, InferList2 kernels.
-static cv::Mat preprocess(const cv::MediaFrame &frame,
-                          const cv::Rect       &roi,
-                          const ::ov::Shape    &model_shape) {
-    const auto view = cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R));
-    auto matFromFrame = wrapOV(view, frame.desc());
-    return preprocess(matFromFrame, roi, model_shape);
+cv::Mat preprocess(MediaFrame::View&     view,
+                   const cv::GFrameDesc& desc,
+                   const cv::Rect&       roi,
+                   const ::ov::Shape     &model_shape) {
+    return preprocess(wrapOV(view, desc), roi, model_shape);
 }
 
-static cv::Mat preprocess(std::shared_ptr<OVCallContext> ctx,
-                          uint32_t                       input_idx,
-                          const cv::Rect                 &roi,
-                          const ::ov::Shape              &model_shape) {
+static void preprocess_and_copy(std::shared_ptr<OVCallContext> ctx,
+                                uint32_t input_idx,
+                                const cv::Rect &roi,
+                                const ::ov::Shape &model_shape,
+                                ::ov::Tensor& tensor) {
     switch (ctx->inShape(input_idx)) {
         case cv::GShape::GMAT: {
-            return preprocess(ctx->inMat(input_idx), roi, model_shape);
+            auto roi_mat = preprocess(ctx->inMat(input_idx), roi, model_shape);
+            copyToOV(roi_mat, tensor);
+            break;
         }
         case cv::GShape::GFRAME: {
             auto currentFrame = ctx->inFrame(input_idx);
-            return preprocess(currentFrame, roi, model_shape);
+            auto view = cv::MediaFrame::View(currentFrame.access(cv::MediaFrame::Access::R));
+            auto roi_mat = preprocess(view, currentFrame.desc(), roi, model_shape);
+            copyToOV(roi_mat, tensor);
         }
         default:
             GAPI_Assert("Unsupported input shape for OV backend");
@@ -1068,8 +1072,6 @@ struct Infer: public cv::detail::KernelTag {
         GAPI_Assert(uu.params.input_names.size() == in_metas.size()
                     && "Known input layers count doesn't match input meta count");
 
-        const auto &input_name = uu.params.input_names.at(0);
-
         // NB: Pre/Post processing configuration avaiable only for read models.
         if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
             const auto &model_info = cv::util::get<ParamDesc::Model>(uu.params.kind);
@@ -1209,8 +1211,7 @@ struct InferROI: public cv::detail::KernelTag {
                     auto input_tensor = infer_request.get_tensor(input_name);
                     const auto &shape = input_tensor.get_shape();
                     const auto &roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
-                    cv::Mat roi_mat = preprocess(ctx, 1, roi, shape);
-                    copyToOV(roi_mat, input_tensor);
+                    preprocess_and_copy(ctx, 1, roi, shape, input_tensor);
                 },
                 std::bind(PostOutputs, _1, _2, ctx)
             }
@@ -1306,8 +1307,7 @@ struct InferList: public cv::detail::KernelTag {
                         const auto &input_name = ctx->uu.params.input_names[0];
                         auto input_tensor = infer_request.get_tensor(input_name);
                         const auto &shape = input_tensor.get_shape();
-                        cv::Mat roi_mat = preprocess(ctx, 1, rc, shape);
-                        copyToOV(roi_mat, input_tensor);
+                        preprocess_and_copy(ctx, 1, rc, shape, input_tensor);
                     },
                     std::bind(callback, std::placeholders::_1, std::placeholders::_2, pos)
                 }
@@ -1349,8 +1349,8 @@ struct InferList2: public cv::detail::KernelTag {
         if (!(cv::util::holds_alternative<cv::GMatDesc>(mm_0) ||
               cv::util::holds_alternative<cv::GFrameDesc>(mm_0))) {
             util::throw_error(std::runtime_error(
-                        "IE Backend: Unsupported input meta"
-                        " for 0th argument in IE backend"));
+                        "OV Backend: Unsupported input meta"
+                        " for 0th argument in OV backend"));
         }
 
         const bool is_model = cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind);
