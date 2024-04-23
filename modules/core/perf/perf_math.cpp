@@ -59,7 +59,7 @@ Mat randomOrtho(int rows, int ftype, RNG& rng)
 }
 
 template<typename FType>
-Mat buildRandomMat(int rows, int cols, RNG& rng, int rank)
+Mat buildRandomMat(int rows, int cols, RNG& rng, int rank, bool symmetrical)
 {
     int mtype = cv::traits::Depth<FType>::value;
     Mat u = randomOrtho(rows, mtype, rng);
@@ -75,18 +75,21 @@ Mat buildRandomMat(int rows, int cols, RNG& rng, int rank)
         s.at<FType>(i, i) = *singIter++;
     }
 
-    return u * s * v.t();
+    if (symmetrical)
+        return u * s * u.t();
+    else
+        return u * s * v.t();
 }
 
-Mat buildRandomMat(int rows, int cols, int mtype, RNG& rng, int rank)
+Mat buildRandomMat(int rows, int cols, int mtype, RNG& rng, int rank, bool symmetrical)
 {
     if (mtype == CV_32F)
     {
-        return buildRandomMat<float>(rows, cols, rng, rank);
+        return buildRandomMat<float>(rows, cols, rng, rank, symmetrical);
     }
     else // if (mtype == CV_64F)
     {
-        return buildRandomMat<double>(rows, cols, rng, rank);
+        return buildRandomMat<double>(rows, cols, rng, rank, symmetrical);
     }
 }
 
@@ -125,8 +128,7 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     bool normal    = std::get<4>(t);
     auto solutions = std::get<5>(t);
 
-    int rows = std::get<0>(rc);
-    int cols = std::get<1>(rc);
+    bool symmetrical = (method == DECOMP_CHOLESKY || method == DECOMP_LU);
 
     if (normal)
     {
