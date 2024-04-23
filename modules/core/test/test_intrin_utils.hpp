@@ -554,6 +554,26 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    // Handle accuracy for fp16
+    TheTest & test_div_fp16()
+    {
+#if CV_SIMD_FP16
+        Data<R> dataA, dataB;
+        dataB.reverse();
+        R a = dataA, b = dataB;
+
+        Data<R> resC = v_div(a, b);
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            // printf("i = %d, a = %f, b = %f, a / b = %f, c = %f, a / b - c = %f\n", i, dataA[i], dataB[i], dataA[i] / dataB[i], resC[i], (dataA[i] / dataB[i]) - resC[i]);
+            EXPECT_LT((dataA[i] / dataB[i]) - resC[i], 2e-4);
+        }
+#endif
+
+        return *this;
+    }
+
     TheTest & test_mul_expand()
     {
         typedef typename V_RegTraits<R>::w_reg Rx2;
@@ -2038,7 +2058,7 @@ void test_hal_intrin_float16()
         .test_interleave()
         .test_addsub()
         .test_mul()
-        // .test_div() // wrong results
+        .test_div_fp16()
         // .test_abs() // compile error
         .test_cmp()
         .test_sqrt_abs()

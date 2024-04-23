@@ -582,11 +582,9 @@ OPENCV_HAL_IMPL_NEON_BIN_OP(v_add, v_uint32x4, vaddq_u32)
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_sub, v_uint32x4, vsubq_u32)
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_mul, v_uint32x4, vmulq_u32)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_BIN_OP(v_add, v_float16x8, vaddq_f16) // no v7
-OPENCV_HAL_IMPL_NEON_BIN_OP(v_sub, v_float16x8, vsubq_f16) // no v7
-OPENCV_HAL_IMPL_NEON_BIN_OP(v_mul, v_float16x8, vmulq_f16) // no v7
-#endif
-#if CV_SIMD128_FP16
+OPENCV_HAL_IMPL_NEON_BIN_OP(v_add, v_float16x8, vaddq_f16)
+OPENCV_HAL_IMPL_NEON_BIN_OP(v_sub, v_float16x8, vsubq_f16)
+OPENCV_HAL_IMPL_NEON_BIN_OP(v_mul, v_float16x8, vmulq_f16)
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_div, v_float16x8, vdivq_f16)
 #endif
 OPENCV_HAL_IMPL_NEON_BIN_OP(v_add, v_float32x4, vaddq_f32)
