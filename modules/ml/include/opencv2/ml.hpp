@@ -45,7 +45,7 @@
 #define OPENCV_ML_HPP
 
 #ifdef __cplusplus
-#  include "opencv2/core.hpp"
+#include "opencv2/core.hpp"
 #endif
 
 #ifdef __cplusplus
