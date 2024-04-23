@@ -173,23 +173,31 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     SANITY_CHECK_NOTHING();
 }
 
-typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, RankEnum, MatDepth, bool>> SvdTest;
+typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, RankEnum, MatDepth, bool, bool>> SvdTest;
 
 PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
-    ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
+    ::testing::Values(std::make_tuple(5, 15), std::make_tuple(32, 32), std::make_tuple(100, 100)),
     ::testing::Values(RANK_HALF, RANK_MINUS_1, RANK_FULL),
     ::testing::Values(CV_32F, CV_64F),
+    ::testing::Bool(), // symmetrical
     ::testing::Bool() // needUV
     ))
 {
     auto t = GetParam();
-    auto rc       = std::get<0>(t);
-    auto rankEnum = std::get<1>(t);
-    int mtype     = std::get<2>(t);
-    bool needUV   = std::get<3>(t);
+    auto rc          = std::get<0>(t);
+    auto rankEnum    = std::get<1>(t);
+    int mtype        = std::get<2>(t);
+    bool symmetrical = std::get<3>(t);
+    bool needUV      = std::get<4>(t);
 
     int rows = std::get<0>(rc);
     int cols = std::get<1>(rc);
+
+    if (symmetrical)
+    {
+        rows = max(rows, cols);
+        cols = rows;
+    }
 
     int rank = std::min(rows, cols);
     switch (rankEnum)
@@ -204,7 +212,7 @@ PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
     RNG& rng = theRNG();
     while (next())
     {
-        Mat A = buildRandomMat(rows, cols, mtype, rng, rank);
+        Mat A = buildRandomMat(rows, cols, mtype, rng, rank, symmetrical);
 
         startTimer();
         cv::SVD svd(A, flags);
