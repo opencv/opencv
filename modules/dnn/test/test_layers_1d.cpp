@@ -603,22 +603,23 @@ INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
                             std::vector<int>({4})
 ));
 
-typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_BatchNorm_Test;
+typedef testing::TestWithParam<std::vector<int>> Layer_BatchNorm_Test;
 TEST_P(Layer_BatchNorm_Test, Accuracy_01D)
 {
-    std::vector<int> input_shape = get<0>(GetParam());
-    bool has_weight = false;
-    bool has_bias = false;
+    std::vector<int> input_shape = GetParam();
 
     // Layer parameters
     LayerParams lp;
     lp.type = "BatchNorm";
     lp.name = "BatchNormLayer";
-    lp.set("has_weight", has_weight);
-    lp.set("has_bias", has_bias);
+    lp.set("has_weight", false);
+    lp.set("has_bias", false);
 
-    Mat meanMat(input_shape.size(), input_shape.data(), CV_32F, 0.5);
-    Mat varMat(input_shape.size(), input_shape.data(), CV_32F, 0.5);
+    RNG& rng = TS::ptr()->get_rng();
+    float inp_value = rng.uniform(0.0, 10.0);
+
+    Mat meanMat(input_shape.size(), input_shape.data(), CV_32F, inp_value);
+    Mat varMat(input_shape.size(), input_shape.data(), CV_32F, inp_value);
     vector<Mat> blobs = {meanMat, varMat};
     lp.blobs = blobs;
 
