@@ -1091,7 +1091,7 @@ inline v_float32x4 v_abs(v_float32x4 x)
 
 #if CV_SIMD128_FP16
 inline v_float16x8 v_abs(v_float16x8 x)
-{ return v_float16x8(vabsq_f16(x.val)); } // no v7
+{ return v_float16x8(vabsq_f16(x.val)); }
 #endif
 
 #if CV_SIMD128_64F
@@ -1148,8 +1148,8 @@ OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int32x4, v_max, vmaxq_s32)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float32x4, v_min, vminq_f32)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float32x4, v_max, vmaxq_f32)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float16x8, v_min, vminq_f16) // no v7
-OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float16x8, v_max, vmaxq_f16) // no v7
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float16x8, v_min, vminq_f16)
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float16x8, v_max, vmaxq_f16)
 #endif
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_min, vminq_f64)
@@ -1175,7 +1175,7 @@ OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int8x16, vreinterpretq_s8_u8, s8, u8)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint16x8, OPENCV_HAL_NOP, u16, u16)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int16x8, vreinterpretq_s16_u16, s16, u16)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float16x8, vreinterpretq_f16_u16, f16, u16) // no v7
+OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float16x8, vreinterpretq_f16_u16, f16, u16)
 #endif
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint32x4, OPENCV_HAL_NOP, u32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int32x4, vreinterpretq_s32_u32, s32, u32)
@@ -1269,7 +1269,7 @@ OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint8x16, v_absdiff, vabdq_u8)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint16x8, v_absdiff, vabdq_u16)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint32x4, v_absdiff, vabdq_u32)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float16x8, v_absdiff, vabdq_f16) // no v7
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float16x8, v_absdiff, vabdq_f16)
 #endif
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float32x4, v_absdiff, vabdq_f32)
 #if CV_SIMD128_64F

@@ -369,6 +369,9 @@ template<typename _Tp> struct V_RegTraits
     CV_DEF_REG_TRAITS(v, v_int8x16, schar, s8, v_uint8x16, v_int16x8, v_int32x4, v_int8x16, void);
     CV_DEF_REG_TRAITS(v, v_uint16x8, ushort, u16, v_uint16x8, v_uint32x4, v_uint64x2, v_int16x8, void);
     CV_DEF_REG_TRAITS(v, v_int16x8, short, s16, v_uint16x8, v_int32x4, v_int64x2, v_int16x8, void);
+#if CV_SIMD128_FP16
+    CV_DEF_REG_TRAITS(v, v_float16x8, __fp16, f16, v_float16x8, v_float32x4, v_float64x2, v_int16x8, v_int16x8);
+#endif
     CV_DEF_REG_TRAITS(v, v_uint32x4, unsigned, u32, v_uint32x4, v_uint64x2, void, v_int32x4, void);
     CV_DEF_REG_TRAITS(v, v_int32x4, int, s32, v_uint32x4, v_int64x2, void, v_int32x4, void);
 #if CV_SIMD128_64F || CV_SIMD128_CPP
