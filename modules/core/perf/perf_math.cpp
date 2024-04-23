@@ -224,7 +224,7 @@ PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
 
 
 PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
-    ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
+    ::testing::Values(std::make_tuple(5, 15), std::make_tuple(32, 32), std::make_tuple(100, 100)),
     ::testing::Values(RANK_HALF, RANK_MINUS_1, RANK_FULL),
     ::testing::Values(CV_32F, CV_64F),
     // back substitution works the same regardless of source matrix properties
