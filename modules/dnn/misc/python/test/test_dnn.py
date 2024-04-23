@@ -286,7 +286,7 @@ class dnn_test(NewOpenCVTests):
 
 
     def test_face_detection(self):
-        model = self.find_dnn_file('dnn/onnx/models/yunet-202303.onnx')
+        model = self.find_dnn_file('dnn/onnx/models/yunet-202303.onnx', required=False)
         if model is None:
             raise unittest.SkipTest("Missing DNN test files (dnn/onnx/models/yunet-202303.onnx). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
