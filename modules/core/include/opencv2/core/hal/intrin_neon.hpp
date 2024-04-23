@@ -561,6 +561,47 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
     return v_float32x4(res);
 }
 
+#if CV_SIMD128_FP16
+// res = m0 * v[0] + m1 * v[1] + ... + m7 * v[7]
+inline v_float16x8 v_matmul(const v_float16x8 &v,
+                            const v_float16x8 &m0, const v_float16x8 &m1,
+                            const v_float16x8 &m2, const v_float16x8 &m3,
+                            const v_float16x8 &m4, const v_float16x8 &m5,
+                            const v_float16x8 &m6, const v_float16x8 &m7)
+{
+    float16x4_t vl = vget_low_f16(v.val), vh = vget_high_f16(v.val);
+    float16x8_t res = vmulq_lane_f16(m0.val, vl, 0);
+    res = vfmaq_lane_f16(res, m1.val, vl, 1);
+    res = vfmaq_lane_f16(res, m2.val, vl, 2);
+    res = vfmaq_lane_f16(res, m3.val, vl, 3);
+    res = vfmaq_lane_f16(res, m4.val, vh, 0);
+    res = vfmaq_lane_f16(res, m5.val, vh, 1);
+    res = vfmaq_lane_f16(res, m6.val, vh, 2);
+    res = vfmaq_lane_f16(res, m7.val, vh, 3);
+    return v_float16x8(res);
+}
+
+// res = m0 * v[0] + m1 * v[1] + ... + m6 * v[6] + a
+inline v_float16x8 v_matmuladd(const v_float16x8 &v,
+                               const v_float16x8 &m0, const v_float16x8 &m1,
+                               const v_float16x8 &m2, const v_float16x8 &m3,
+                               const v_float16x8 &m4, const v_float16x8 &m5,
+                               const v_float16x8 &m6,
+                               const v_float16x8 &a)
+{
+    float16x4_t vl = vget_low_f16(v.val), vh = vget_high_f16(v.val);
+    float16x8_t res = vmulq_lane_f16(m0.val, vl, 0);
+    res = vfmaq_lane_f16(res, m1.val, vl, 1);
+    res = vfmaq_lane_f16(res, m2.val, vl, 2);
+    res = vfmaq_lane_f16(res, m3.val, vl, 3);
+    res = vfmaq_lane_f16(res, m4.val, vh, 0);
+    res = vfmaq_lane_f16(res, m5.val, vh, 1);
+    res = vfmaq_lane_f16(res, m6.val, vh, 2);
+    res = vaddq_f16(res, a.val);
+    return v_float16x8(res);
+}
+#endif
+
 #define OPENCV_HAL_IMPL_NEON_BIN_OP(bin_op, _Tpvec, intrin) \
 inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b) \
 { \

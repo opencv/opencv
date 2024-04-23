@@ -182,6 +182,13 @@ template<> inline void EXPECT_COMPARE_EQ_<double>(const double a, const double b
     EXPECT_DOUBLE_EQ( a, b );
 }
 
+#if CV_SIMD_FP16
+template<> inline void EXPECT_COMPARE_EQ_<__fp16>(const __fp16 a, const __fp16 b)
+{
+    EXPECT_LT(std::abs(float(a - b)), 0.126);
+}
+#endif
+
 // pack functions do not do saturation when converting from 64-bit types
 template<typename T, typename W>
 inline T pack_saturate_cast(W a) { return saturate_cast<T>(a); }
@@ -1535,6 +1542,56 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_matmul_fp16()
+    {
+#if CV_SIMD_FP16
+        Data<R> dataV, data0, data1, data2, data3, data4, data5, data6, data7;
+        data1.reverse();
+        data2 += 2;
+        data3 *= 0.3;
+        data5.reverse();
+        data6 += 1;
+        data7 *= 0.4;
+        R v = dataV, m0 = data0, m1 = data1, m2 = data2, m3 = data3, m4 = data4, m5 = data5, m6 = data6, m7 = data7;
+
+        Data<R> res = v_matmul(v, m0, m1, m2, m3, m4, m5, m6, m7);
+        int i = 0;
+        for (int j = i; j < i + 8; ++j) {
+            SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
+            LaneType val = dataV[i]     * data0[j] +
+                           dataV[i + 1] * data1[j] +
+                           dataV[i + 2] * data2[j] +
+                           dataV[i + 3] * data3[j] +
+                           dataV[i + 4] * data4[j] +
+                           dataV[i + 5] * data5[j] +
+                           dataV[i + 6] * data6[j] +
+                           dataV[i + 7] * data7[j];
+            EXPECT_COMPARE_EQ(val, res[j]);
+            // printf("v_matmul, j=%d, val=%f, res=%f\n", j, val, res[j]);
+        }
+
+        // printf("\n");
+
+        Data<R> resAdd = v_matmuladd(v, m0, m1, m2, m3, m4, m5, m6, m7);
+        i = 0;
+        for (int j = i; j < i + 8; ++j) {
+            SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
+            LaneType val = dataV[i]     * data0[j] +
+                           dataV[i + 1] * data1[j] +
+                           dataV[i + 2] * data2[j] +
+                           dataV[i + 3] * data3[j] +
+                           dataV[i + 4] * data4[j] +
+                           dataV[i + 5] * data5[j] +
+                           dataV[i + 6] * data6[j] +
+                           data7[j];
+            EXPECT_COMPARE_EQ(val, resAdd[j]);
+            // printf("v_matmuladd, j=%d, val=%f, resAdd=%f\n", j, val, resAdd[j]);
+        }
+#endif
+
+        return *this;
+    }
+
     TheTest & test_transpose()
     {
         Data<R> dataA, dataB, dataC, dataD;
@@ -2090,7 +2147,7 @@ void test_hal_intrin_float16()
         .test_mask()
         .test_unpack()
         .test_float_math()
-        // .test_matmul() // compile error
+        .test_matmul_fp16()
         // .test_transpose() // compile error
         // .test_reduce_sum4() // compile error
         // .test_reverse() // compile error
