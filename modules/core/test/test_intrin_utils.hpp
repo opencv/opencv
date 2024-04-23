@@ -2035,6 +2035,28 @@ void test_hal_intrin_float16()
     TheTest<v_float16>()
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
+        .test_interleave()
+        .test_addsub()
+        .test_mul()
+        // .test_div() // wrong results
+        // .test_abs() // compile error
+        .test_cmp()
+        .test_sqrt_abs()
+        .test_min_max()
+        .test_float_absdiff()
+        // .test_reduce() // compile error
+        // .test_reduce_sad() // compile error
+        // .test_mask() // compile error
+        .test_unpack()
+        // .test_float_math() // compile error
+        // .test_matmul() // compile error
+        // .test_transpose() // compile error
+        // .test_reduce_sum4() // compile error
+        // .test_reverse() // compile error
+        .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
+        // .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>() // compile error
+        .test_extract_highest()
+        // .test_pack_triplets() // compile error
 #endif
         ;
 #else
