@@ -2087,9 +2087,7 @@ void test_hal_intrin_float16()
         .test_sqrt_abs()
         .test_min_max()
         .test_float_absdiff()
-        // .test_reduce() // compile error
-        // .test_reduce_sad() // compile error
-        // .test_mask() // compile error
+        .test_mask()
         .test_unpack()
         // .test_float_math() // compile error
         // .test_matmul() // compile error

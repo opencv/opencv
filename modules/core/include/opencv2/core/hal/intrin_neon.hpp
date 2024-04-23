@@ -1882,6 +1882,8 @@ inline bool v_check_all(const v_int16x8& a)
 #if CV_SIMD128_FP16
 inline bool v_check_all(const v_float16x8& a)
 { return v_check_all(v_reinterpret_as_u16(a)); }
+inline bool v_check_any(const v_float16x8& a)
+{ return v_check_any(v_reinterpret_as_u16(a)); }
 #endif
 inline bool v_check_all(const v_int32x4& a)
 { return v_check_all(v_reinterpret_as_u32(a)); }
