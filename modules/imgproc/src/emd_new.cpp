@@ -969,13 +969,12 @@ float cv::EMD(InputArray _sign1,
             CV_CheckEQ(cost.type(), CV_32FC1, "Cost matrix must have type 32FC1");
             CV_CheckTrue(cost.rows == size1 && cost.cols == size2,
                          "Cost matrix size does not match signatures");
-            CV_CheckEQ(lowerBound,
-                       NULL,
-                       "Lower boundary can not be calculated if the cost matrix is used");
+            CV_CheckTrue(lowerBound == NULL,
+                         "Lower boundary can not be calculated if the cost matrix is used");
         }
         else
         {
-            CV_CheckNE(dfunc, NULL, "Dist function must be set if cost matrix is empty");
+            CV_CheckTrue(dfunc == NULL, "Dist function must be set if cost matrix is empty");
         }
     }
     else
