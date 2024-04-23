@@ -603,6 +603,55 @@ INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
                             std::vector<int>({4})
 ));
 
+typedef testing::TestWithParam<std::vector<int>> Layer_BatchNorm_Test;
+TEST_P(Layer_BatchNorm_Test, Accuracy_01D)
+{
+    std::vector<int> input_shape = GetParam();
+
+    // Layer parameters
+    LayerParams lp;
+    lp.type = "BatchNorm";
+    lp.name = "BatchNormLayer";
+    lp.set("has_weight", false);
+    lp.set("has_bias", false);
+
+    RNG& rng = TS::ptr()->get_rng();
+    float inp_value = rng.uniform(0.0, 10.0);
+
+    Mat meanMat(input_shape.size(), input_shape.data(), CV_32F, inp_value);
+    Mat varMat(input_shape.size(), input_shape.data(), CV_32F, inp_value);
+    vector<Mat> blobs = {meanMat, varMat};
+    lp.blobs = blobs;
+
+    // Create the layer
+    Ptr<Layer> layer = BatchNormLayer::create(lp);
+
+    Mat input(input_shape.size(), input_shape.data(), CV_32F, 1.0);
+    cv::randn(input, 0, 1);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    //create output_ref to compare with outputs
+    Mat output_ref = input.clone();
+    cv::sqrt(varMat + 1e-5, varMat);
+    output_ref = (output_ref - meanMat) / varMat;
+
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+
+}
+INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_BatchNorm_Test,
+                        testing::Values(
+                            std::vector<int>({}),
+                            std::vector<int>({4}),
+                            std::vector<int>({1, 4}),
+                            std::vector<int>({4, 1})
+));
+
+
 typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Const_Test;
 TEST_P(Layer_Const_Test, Accuracy_01D)
 {
