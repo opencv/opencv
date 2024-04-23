@@ -219,6 +219,8 @@ PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
     ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
     ::testing::Values(RANK_HALF, RANK_MINUS_1, RANK_FULL),
     ::testing::Values(CV_32F, CV_64F),
+    // back substitution works the same regardless of source matrix properties
+    ::testing::Values(true),
     // back substitution has no sense without u and v
     ::testing::Values(true) // needUV
     ))
@@ -227,7 +229,6 @@ PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
     auto rc       = std::get<0>(t);
     auto rankEnum = std::get<1>(t);
     int mtype     = std::get<2>(t);
-    // needUV is unused
 
     int rows = std::get<0>(rc);
     int cols = std::get<1>(rc);
@@ -243,11 +244,11 @@ PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
     RNG& rng = theRNG();
     while (next())
     {
-        Mat A = buildRandomMat(rows, cols, mtype, rng, rank);
+        Mat A = buildRandomMat(rows, cols, mtype, rng, rank, /* symmetrical */ false);
         cv::SVD svd(A);
         // preallocate to not spend time on it during backSubst()
         Mat dst(cols, 1, mtype);
-        Mat rhs(cols, 1, mtype);
+        Mat rhs(rows, 1, mtype);
         rng.fill(rhs, RNG::UNIFORM, Scalar(-10), Scalar(10));
 
         startTimer();
