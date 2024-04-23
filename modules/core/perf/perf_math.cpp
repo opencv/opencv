@@ -109,10 +109,10 @@ enum SolutionsOptions
 
 CV_ENUM(SolutionsEnum, NO_SOLUTIONS, ONE_SOLUTION, MANY_SOLUTIONS)
 
-typedef perf::TestBaseWithParam<std::tuple<std::tuple<int, int>, RankEnum, MatDepth, SolveDecompEnum, bool, SolutionsEnum>> SolveTest;
+typedef perf::TestBaseWithParam<std::tuple<int, RankEnum, MatDepth, SolveDecompEnum, bool, SolutionsEnum>> SolveTest;
 
 PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
-    ::testing::Values(std::make_tuple(5, 5), std::make_tuple(10, 10), std::make_tuple(100, 100)),
+    ::testing::Values(31, 64, 100),
     ::testing::Values(RANK_HALF, RANK_MINUS_1, RANK_FULL),
     ::testing::Values(CV_32F, CV_64F),
     ::testing::Values(DECOMP_LU, DECOMP_SVD, DECOMP_EIG, DECOMP_CHOLESKY, DECOMP_QR),
@@ -121,7 +121,7 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     ))
 {
     auto t = GetParam();
-    auto rc        = std::get<0>(t);
+    int size       = std::get<0>(t);
     auto rankEnum  = std::get<1>(t);
     int mtype      = std::get<2>(t);
     int method     = std::get<3>(t);
@@ -135,7 +135,7 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
         method |= DECOMP_NORMAL;
     }
 
-    int rank = std::min(rows, cols);
+    int rank = size;
     switch (rankEnum)
     {
     case RANK_HALF:    rank /= 2; break;
@@ -146,9 +146,9 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     RNG& rng = theRNG();
     while (next())
     {
-        Mat A = buildRandomMat(rows, cols, mtype, rng, rank);
-        Mat x(cols, 1, mtype);
-        Mat b(cols, 1, mtype);
+        Mat A = buildRandomMat(size, size, mtype, rng, rank, symmetrical);
+        Mat x(size, 1, mtype);
+        Mat b(size, 1, mtype);
 
         switch (solutions)
         {
