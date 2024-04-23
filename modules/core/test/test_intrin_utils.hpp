@@ -2089,7 +2089,7 @@ void test_hal_intrin_float16()
         .test_float_absdiff()
         .test_mask()
         .test_unpack()
-        // .test_float_math() // compile error
+        .test_float_math()
         // .test_matmul() // compile error
         // .test_transpose() // compile error
         // .test_reduce_sum4() // compile error
