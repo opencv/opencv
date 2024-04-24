@@ -437,29 +437,30 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Softmax_Test, Combine(
     testing::Values(0, 1)
 ));
 
-typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Scatter_Test;
+typedef testing::TestWithParam<std::tuple<std::tuple<int, std::vector<int>>, std::string>> Layer_Scatter_Test;
 TEST_P(Layer_Scatter_Test, Accuracy1D) {
-
-    std::vector<int> input_shape = get<0>(GetParam());
+    auto tup = get<0>(GetParam());
+    int axis = get<0>(tup);
+    std::vector<int> input_shape = get<1>(tup);
     std::string opr = get<1>(GetParam());
 
     LayerParams lp;
     lp.type = "Scatter";
     lp.name = "addLayer";
-    lp.set("axis", 0);
+    lp.set("axis", axis);
     lp.set("reduction", opr);
     Ptr<ScatterLayer> layer = ScatterLayer::create(lp);
 
     cv::Mat input = cv::Mat(input_shape.size(), input_shape.data(), CV_32F);
     cv::randn(input, 0.0, 1.0);
-
+    
     int indices[] = {3, 2, 1, 0};
     cv::Mat indices_mat(input_shape.size(), input_shape.data(), CV_32S, indices);
     cv::Mat output(input_shape.size(), input_shape.data(), CV_32F, 0.0);
 
     // create reference output
     cv::Mat output_ref(input_shape, CV_32F, 0.0);
-    for (int i = 0; i < input_shape[0]; i++){
+    for (int i = 0; i < ((input_shape.size() == 1) ? input_shape[0] : input_shape[1]); i++){
         output_ref.at<float>(indices[i]) = input.at<float>(i);
     }
 
@@ -478,11 +479,12 @@ TEST_P(Layer_Scatter_Test, Accuracy1D) {
     runLayer(layer, inputs, outputs);
     ASSERT_EQ(1, outputs.size());
     ASSERT_EQ(shape(outputs[0]), shape(output_ref));
+    normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scatter_Test, Combine(
-/*input blob shape*/    testing::Values(std::vector<int>{4},
-                                        std::vector<int>{1, 4}),
-/*reduce*/              Values("none", "add", "mul", "max", "min")
+/*input blob shape*/    testing::Values(std::make_tuple(0, std::vector<int>{4}),
+                                        std::make_tuple(1, std::vector<int>{1, 4})),
+/*reduce*/              testing::Values("none", "add", "mul", "max", "min")
 ));
 
 
