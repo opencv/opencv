@@ -87,9 +87,13 @@ Mat buildRandomMat(int rows, int cols, int mtype, RNG& rng, int rank, bool symme
     {
         return buildRandomMat<float>(rows, cols, rng, rank, symmetrical);
     }
-    else // if (mtype == CV_64F)
+    else if (mtype == CV_64F)
     {
         return buildRandomMat<double>(rows, cols, rng, rank, symmetrical);
+    }
+    else
+    {
+        CV_Error(cv::Error::StsBadArg, "This type is not supported");
     }
 }
 
