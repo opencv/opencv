@@ -1005,9 +1005,7 @@ CASE(test_maxpool_3d_default)
     SKIP_NON_CPU;
 #endif
 CASE(test_maxpool_with_argmax_2d_precomputed_pads)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_maxpool_with_argmax_2d_precomputed_strides)
 #if SKIP_SET_1
     SKIP;
