@@ -303,8 +303,8 @@ class dnn_test(NewOpenCVTests):
             model=model,
             config="",
             input_size=img.shape[:2],
-            score_threshold=0.6,
-            nms_threshold=0.3,
+            score_threshold=0.3,
+            nms_threshold=0.45,
             top_k=5000,
         )
 
