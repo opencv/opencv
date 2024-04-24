@@ -1458,7 +1458,9 @@ OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint16x8, u16)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int16x8, s16)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int32x4, s32)
-// OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float16x8, f16) // no conversion from int to cv::float16_t
+#if CV_SIMD128_FP16
+OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float16x8, f16)
+#endif
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float32x4, f32)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint64x2, u64)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int64x2, s64)
@@ -1679,6 +1681,7 @@ inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
 #endif // #if CV_NEON_AARCH64
 }
 
+#if CV_SIMD128_FP16
 inline v_float16x8 v_reduce_sum8(const v_float16x8 &a, const v_float16x8 &b,
                                  const v_float16x8 &c, const v_float16x8 &d,
                                  const v_float16x8 &w, const v_float16x8 &x,
@@ -1694,6 +1697,7 @@ inline v_float16x8 v_reduce_sum8(const v_float16x8 &a, const v_float16x8 &b,
 
     return v_float16x8(vpaddq_f16(abcd, wxyz));
 }
+#endif
 
 inline unsigned v_reduce_sad(const v_uint8x16& a, const v_uint8x16& b)
 {
