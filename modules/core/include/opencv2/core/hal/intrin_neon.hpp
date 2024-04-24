@@ -1608,8 +1608,8 @@ OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, ushort, min, min, u16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, max, max, s16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, min, min, s16)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, max, max, f16) // Might have problem since return type is float16_t
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, min, min, f16) // Might have problem since return type is float16_t
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, max, max, f16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, min, min, f16)
 #endif
 
 #if CV_NEON_AARCH64
@@ -2193,7 +2193,7 @@ OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int16x8, short, s16)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float16x8, __fp16, f16) // Might have problem since return type is float16_t
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float16x8, __fp16, f16)
 #endif
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint32x4, uint, u32)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int32x4, int, s32)
