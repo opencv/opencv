@@ -50,21 +50,20 @@ int main(int argc, char** argv)
 
     // Setup VideoCapture based on user input
     if (isWithAudio) {
+        vector<int> videoParams{ CAP_PROP_AUDIO_STREAM, 0, CAP_PROP_VIDEO_STREAM, 0, CAP_PROP_AUDIO_DATA_DEPTH, CV_16S };
         if (file.empty()) {
             // No input file, extract audio from default device
-            cout << "Extracting audio samples from default device..." << endl;
-            vector<int> micParams{ CAP_PROP_AUDIO_STREAM, 0, CAP_PROP_VIDEO_STREAM, -1, CAP_PROP_AUDIO_DATA_DEPTH, CV_16S };
-            cap.open(0, CAP_ANY, micParams);
+            cout << "Extracting audio samples from default device is only supported via MSMF backend" << endl;
+            cap.open(0, CAP_MSMF, videoParams);
             if (!cap.isOpened()) {
                 cerr << "ERROR! Unable to open camera and microphone" << endl;
                 return -1;
             }
         } else {
             // Open input file for both video and audio
-            vector<int> fileParams{ CAP_PROP_AUDIO_STREAM, 0, CAP_PROP_VIDEO_STREAM, 0, CAP_PROP_AUDIO_DATA_DEPTH, CV_16S };
-            cap.open(file, CAP_ANY, fileParams);
+            cap.open(file, CAP_ANY, videoParams);
             if (!cap.isOpened()) {
-                cerr << "ERROR! Unable to open file: " + file << endl;
+                cerr << "ERROR! Unable to open file" << endl;
                 return -1;
             }
         }
