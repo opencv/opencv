@@ -1648,6 +1648,39 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_reduce_sum8()
+    {
+#if CV_SIMD_FP16
+        Data<R> dataA, dataB, dataC, dataD, dataW, dataX, dataY, dataZ;
+        dataB *= 0.01f;
+        dataC *= 0.001f;
+        dataD *= 0.002f;
+        dataW += 0.1f;
+        dataX *= 0.2f;
+        dataY += 1;
+        dataZ *= 2;
+
+        R a = dataA, b = dataB, c = dataC, d = dataD,
+          w = dataW, x = dataX, y = dataY, z = dataZ;
+        Data<R> res = v_reduce_sum8(a, b, c, d, w, x, y, z);
+
+        for (int i = 0; i < VTraits<R>::vlanes(); i += 8)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_COMPARE_EQ(dataA.sum(i, 8), res[i]);
+            EXPECT_COMPARE_EQ(dataB.sum(i, 8), res[i + 1]);
+            EXPECT_COMPARE_EQ(dataC.sum(i, 8), res[i + 2]);
+            EXPECT_COMPARE_EQ(dataD.sum(i, 8), res[i + 3]);
+            EXPECT_COMPARE_EQ(dataW.sum(i, 8), res[i + 4]);
+            EXPECT_COMPARE_EQ(dataX.sum(i, 8), res[i + 5]);
+            EXPECT_COMPARE_EQ(dataY.sum(i, 8), res[i + 6]);
+            EXPECT_COMPARE_EQ(dataZ.sum(i, 8), res[i + 7]);
+        }
+#endif
+
+        return *this;
+    }
+
     TheTest & test_loadstore_fp16_f32()
     {
         printf("test_loadstore_fp16_f32 ...\n");
@@ -2149,7 +2182,7 @@ void test_hal_intrin_float16()
         .test_float_math()
         .test_matmul_fp16()
         // .test_transpose() // compile error
-        // .test_reduce_sum4() // compile error
+        .test_reduce_sum8()
         // .test_reverse() // compile error
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         // .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>() // compile error

@@ -1679,6 +1679,22 @@ inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
 #endif // #if CV_NEON_AARCH64
 }
 
+inline v_float16x8 v_reduce_sum8(const v_float16x8 &a, const v_float16x8 &b,
+                                 const v_float16x8 &c, const v_float16x8 &d,
+                                 const v_float16x8 &w, const v_float16x8 &x,
+                                 const v_float16x8 &y, const v_float16x8 &z)
+{
+    float16x8_t ab = vpaddq_f16(a.val, b.val); // a0+a1 a2+a3 a4+a5 a6+a7 b0+b1 b2+b3 b4+b5 b6+b7
+    float16x8_t cd = vpaddq_f16(c.val, d.val); // c0+c1 c2+c3 c4+c5 c6+c7 d0+d1 d2+d3 d4+d5 d6+d7
+    float16x8_t wx = vpaddq_f16(w.val, x.val); // w0+w1 w2+w3 w4+w5 w6+w7 x0+x1 x2+x3 x4+x5 x6+x7
+    float16x8_t yz = vpaddq_f16(y.val, z.val); // y0+y1 y2+y3 y4+y5 y6+y7 z0+z1 z2+z3 z4+z5 z6+z7
+
+    float16x8_t abcd = vpaddq_f16(ab, cd); // a0+a1+a2+a3 a4+a5+a6+a7 b0+b1+b2+b3 b4+b5+b6+b7 c0+c1+c2+c3 c4+c5+c6+c7 d0+d1+d2+d3 d4+d5+d6+d7
+    float16x8_t wxyz = vpaddq_f16(wx, yz); // w0+w1+w2+w3 w4+w5+w6+w7 x0+x1+x2+x3 x4+x5+x6+x7 y0+y1+y2+y3 y4+y5+y6+y7 z0+z1+z2+z3 z4+z5+z6+z7
+
+    return v_float16x8(vpaddq_f16(abcd, wxyz));
+}
+
 inline unsigned v_reduce_sad(const v_uint8x16& a, const v_uint8x16& b)
 {
 #if CV_NEON_AARCH64
