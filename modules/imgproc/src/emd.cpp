@@ -57,6 +57,7 @@
     ==========================================================================
 */
 #include "precomp.hpp"
+#include "opencv2/imgproc/detail/legacy.hpp"
 
 #define MAX_ITERATIONS 500
 #define CV_EMD_INF   ((float)1e20)
@@ -1147,7 +1148,7 @@ icvDistC( const float *x, const float *y, void *user_param )
 }
 
 
-float cv::EMD( InputArray _signature1, InputArray _signature2,
+float cv::EMD_legacy( InputArray _signature1, InputArray _signature2,
                int distType, InputArray _cost,
                float* lowerBound, OutputArray _flow )
 {
@@ -1171,7 +1172,7 @@ float cv::EMD( InputArray _signature1, InputArray _signature2,
                        _flow.needed() ? &_cflow : 0, lowerBound, 0 );
 }
 
-float cv::wrapperEMD(InputArray _signature1, InputArray _signature2,
+float cv::wrapperEMD_legacy(InputArray _signature1, InputArray _signature2,
                int distType, InputArray _cost,
                Ptr<float> lowerBound, OutputArray _flow)
 {

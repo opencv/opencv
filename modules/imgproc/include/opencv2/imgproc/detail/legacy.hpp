@@ -23,6 +23,14 @@ CV_EXPORTS void findContours_legacy(InputArray image,
                                     int method,
                                     Point offset = Point());
 
+CV_EXPORTS float EMD_legacy( InputArray _signature1, InputArray _signature2,
+               int distType, InputArray _cost,
+               float* lowerBound, OutputArray _flow );
+
+CV_EXPORTS float wrapperEMD_legacy(InputArray _signature1, InputArray _signature2,
+               int distType, InputArray _cost,
+               Ptr<float> lowerBound, OutputArray _flow);
+
 #endif
 
 }  // namespace cv
