@@ -453,7 +453,7 @@ TEST_P(Layer_Scatter_Test, Accuracy1D) {
 
     cv::Mat input = cv::Mat(input_shape.size(), input_shape.data(), CV_32F);
     cv::randn(input, 0.0, 1.0);
-    
+
     int indices[] = {3, 2, 1, 0};
     cv::Mat indices_mat(input_shape.size(), input_shape.data(), CV_32S, indices);
     cv::Mat output(input_shape.size(), input_shape.data(), CV_32F, 0.0);
@@ -598,12 +598,13 @@ TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
     Mat input(input_shape.size(), input_shape.data(), CV_32F);
     randn(input, 0, 1);
     Mat output_ref = input.reshape(1, 1) * weights;
-    output_ref.dims = 1;
+    output_ref.dims = input_shape.size();
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
     ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
