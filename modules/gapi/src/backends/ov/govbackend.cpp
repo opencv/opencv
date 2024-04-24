@@ -151,7 +151,7 @@ static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
     }
 }
 
-cv::Mat wrapOV(const cv::MediaFrame::View& view,
+static cv::Mat wrapOV(const cv::MediaFrame::View& view,
                const cv::GFrameDesc& desc) {
     cv::Mat out;
     switch (desc.fmt) {
@@ -782,10 +782,10 @@ static cv::Mat preprocess(const cv::Mat     &in_mat,
 
 // NB: This function is used to preprocess input image
 // for InferROI, InferList, InferList2 kernels.
-cv::Mat preprocess(MediaFrame::View&     view,
-                   const cv::GFrameDesc& desc,
-                   const cv::Rect&       roi,
-                   const ::ov::Shape     &model_shape) {
+static cv::Mat preprocess(MediaFrame::View&     view,
+                          const cv::GFrameDesc& desc,
+                          const cv::Rect&       roi,
+                          const ::ov::Shape     &model_shape) {
     return preprocess(wrapOV(view, desc), roi, model_shape);
 }
 
@@ -805,6 +805,7 @@ static void preprocess_and_copy(std::shared_ptr<OVCallContext> ctx,
             auto view = cv::MediaFrame::View(currentFrame.access(cv::MediaFrame::Access::R));
             auto roi_mat = preprocess(view, currentFrame.desc(), roi, model_shape);
             copyToOV(roi_mat, tensor);
+            break;
         }
         default:
             GAPI_Assert("Unsupported input shape for OV backend");
