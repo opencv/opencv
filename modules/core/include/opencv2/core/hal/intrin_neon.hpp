@@ -2382,6 +2382,47 @@ OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(int32x4, s32)
 OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(float32x4, f32)
 #endif // #if CV_NEON_AARCH64
 
+#if CV_SIMD128_FP16
+inline void v_transpose8x8(const v_float16x8 &a0, const v_float16x8 &a1,
+                           const v_float16x8 &a2, const v_float16x8 &a3,
+                           const v_float16x8 &a4, const v_float16x8 &a5,
+                           const v_float16x8 &a6, const v_float16x8 &a7,
+                           v_float16x8 &b0, v_float16x8 &b1,
+                           v_float16x8 &b2, v_float16x8 &b3,
+                           v_float16x8 &b4, v_float16x8 &b5,
+                           v_float16x8 &b6, v_float16x8 &b7)
+{
+    float32x4_t s0 = vreinterpretq_f32_f64(vtrn1q_f64(vreinterpretq_f64_f16(a0.val), vreinterpretq_f64_f16(a4.val)));
+    float32x4_t s1 = vreinterpretq_f32_f64(vtrn1q_f64(vreinterpretq_f64_f16(a1.val), vreinterpretq_f64_f16(a5.val)));
+    float32x4_t s2 = vreinterpretq_f32_f64(vtrn1q_f64(vreinterpretq_f64_f16(a2.val), vreinterpretq_f64_f16(a6.val)));
+    float32x4_t s3 = vreinterpretq_f32_f64(vtrn1q_f64(vreinterpretq_f64_f16(a3.val), vreinterpretq_f64_f16(a7.val)));
+
+    float32x4_t s4 = vreinterpretq_f32_f64(vtrn2q_f64(vreinterpretq_f64_f16(a0.val), vreinterpretq_f64_f16(a4.val)));
+    float32x4_t s5 = vreinterpretq_f32_f64(vtrn2q_f64(vreinterpretq_f64_f16(a1.val), vreinterpretq_f64_f16(a5.val)));
+    float32x4_t s6 = vreinterpretq_f32_f64(vtrn2q_f64(vreinterpretq_f64_f16(a2.val), vreinterpretq_f64_f16(a6.val)));
+    float32x4_t s7 = vreinterpretq_f32_f64(vtrn2q_f64(vreinterpretq_f64_f16(a3.val), vreinterpretq_f64_f16(a7.val)));
+
+    float16x8_t t0 = vreinterpretq_f16_f32(vtrn1q_f32(s0, s2));
+    float16x8_t t1 = vreinterpretq_f16_f32(vtrn1q_f32(s1, s3));
+    float16x8_t t2 = vreinterpretq_f16_f32(vtrn2q_f32(s0, s2));
+    float16x8_t t3 = vreinterpretq_f16_f32(vtrn2q_f32(s1, s3));
+
+    float16x8_t t4 = vreinterpretq_f16_f32(vtrn1q_f32(s4, s6));
+    float16x8_t t5 = vreinterpretq_f16_f32(vtrn1q_f32(s5, s7));
+    float16x8_t t6 = vreinterpretq_f16_f32(vtrn2q_f32(s4, s6));
+    float16x8_t t7 = vreinterpretq_f16_f32(vtrn2q_f32(s5, s7));
+
+    b0.val = vtrn1q_f16(t0, t1);
+    b1.val = vtrn2q_f16(t0, t1);
+    b2.val = vtrn1q_f16(t2, t3);
+    b3.val = vtrn2q_f16(t2, t3);
+    b4.val = vtrn1q_f16(t4, t5);
+    b5.val = vtrn2q_f16(t4, t5);
+    b6.val = vtrn1q_f16(t6, t7);
+    b7.val = vtrn2q_f16(t6, t7);
+}
+#endif
+
 #define OPENCV_HAL_IMPL_NEON_INTERLEAVED(_Tpvec, _Tp, suffix) \
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b) \
 { \

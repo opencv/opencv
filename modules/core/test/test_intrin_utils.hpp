@@ -1627,6 +1627,39 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_transpose8x8_fp16()
+    {
+#if CV_SIMD_FP16
+        Data<R> dataA0, dataA1, dataA2, dataA3, dataA4, dataA5, dataA6, dataA7;
+        dataA1 *= 2;
+        dataA2 *= 4;
+        dataA3 *= 6;
+        dataA4 *= 8;
+        dataA5 *= 10;
+        dataA6 *= 12;
+        dataA7 *= 14;
+
+        R a0 = dataA0, a1 = dataA1, a2 = dataA2, a3 = dataA3,
+          a4 = dataA4, a5 = dataA5, a6 = dataA6, a7 = dataA7;
+        R b0, b1, b2, b3, b4, b5, b6, b7;
+
+        v_transpose8x8(a0, a1, a2, a3, a4, a5, a6, a7,
+                       b0, b1, b2, b3, b4, b5, b6, b7);
+        Data<R> res0 = b0, res1 = b1, res2 = b2, res3 = b3, res4 = b4, res5 = b5, res6 = b6, res7 = b7;
+
+        const Data<R> ref[] = {dataA0, dataA1, dataA2, dataA3, dataA4, dataA5, dataA6, dataA7};
+        const Data<R> res[] = {  res0,   res1,   res2,   res3,   res4,   res5,   res6,   res7};
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
+                EXPECT_EQ(ref[i][j], res[j][i]);
+            }
+        }
+#endif
+
+        return *this;
+    }
+
     TheTest & test_reduce_sum4()
     {
         Data<R> dataA, dataB, dataC, dataD;
@@ -2181,7 +2214,7 @@ void test_hal_intrin_float16()
         .test_unpack()
         .test_float_math()
         .test_matmul_fp16()
-        // .test_transpose() // compile error
+        .test_transpose8x8_fp16()
         .test_reduce_sum8()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
