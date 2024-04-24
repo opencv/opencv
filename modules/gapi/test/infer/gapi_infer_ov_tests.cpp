@@ -319,7 +319,173 @@ struct TestAgeGenderListOV : public BaseAgeGenderOV {
     }
 };
 
+class TestMediaBGR final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_mat;
+    using Cb = cv::MediaFrame::View::Callback;
+    Cb m_cb;
+
+public:
+    explicit TestMediaBGR(cv::Mat m, Cb cb = [](){})
+        : m_mat(m), m_cb(cb) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+        cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
+    }
+};
+
+struct MediaFrameTestAgeGenderOV: public ::testing::Test {
+    MediaFrameTestAgeGenderOV() {
+        initDLDTDataPath();
+        xml_path  = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        bin_path  = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
+        device    = "CPU";
+        blob_path = "age-gender-recognition-retail-0013.blob";
+
+        cv::Size sz{62, 62};
+        m_in_mat = cv::Mat(sz, CV_8UC3);
+        cv::resize(m_in_mat, m_in_mat, sz);
+
+        m_in_y = cv::Mat{sz, CV_8UC1};
+        cv::randu(m_in_y, 0, 255);
+        m_in_uv = cv::Mat{sz / 2, CV_8UC2};
+        cv::randu(m_in_uv, 0, 255);
+    }
+
+    cv::Mat m_in_y;
+    cv::Mat m_in_uv;
+
+    cv::Mat m_in_mat;
+
+    cv::Mat m_out_ov_age;
+    cv::Mat m_out_ov_gender;
+
+    cv::Mat m_out_gapi_age;
+    cv::Mat m_out_gapi_gender;
+
+    std::string xml_path;
+    std::string bin_path;
+    std::string blob_path;
+    std::string device;
+    std::string image_path;
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "typed-age-gender");
+
+    void validate() {
+        normAssert(m_out_ov_age,    m_out_gapi_age,    "0: Test age output");
+        normAssert(m_out_ov_gender, m_out_gapi_gender, "0: Test gender output");
+    }
+}; // MediaFrameTestAgeGenderOV
+
 } // anonymous namespace
+
+TEST_F(MediaFrameTestAgeGenderOV, InferMediaInputBGR)
+{
+    // OpenVINO
+    AGNetOVComp ref(xml_path, bin_path, device);
+    ref.cfgPrePostProcessing([](ov::preprocess::PrePostProcessor &ppp) {
+        ppp.input().tensor().set_element_type(ov::element::u8);
+        ppp.input().tensor().set_layout("NHWC");
+    });
+    ref.compile()(m_in_mat, m_out_ov_age, m_out_ov_gender);
+
+    // G-API
+    cv::GFrame in;
+    cv::GMat age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    cv::GComputation comp{cv::GIn(in), cv::GOut(age, gender)};
+
+    auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
+    auto pp = cv::gapi::ov::Params<AgeGender> {
+        xml_path, bin_path, device
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+
+    comp.apply(cv::gin(frame),
+               cv::gout(m_out_gapi_age, m_out_gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    validate();
+}
+
+TEST_F(MediaFrameTestAgeGenderOV, InferROIGenericMediaInputBGR) {
+    // OpenVINO
+    cv::Rect roi(cv::Rect(cv::Point{20, 25}, cv::Size{16, 16}));
+    auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
+    static constexpr const char* tag = "age-gender-generic";
+
+    // OpenVINO
+    AGNetOVComp ref(xml_path, bin_path, device);
+    ref.cfgPrePostProcessing([](ov::preprocess::PrePostProcessor &ppp) {
+        ppp.input().tensor().set_element_type(ov::element::u8);
+        ppp.input().tensor().set_layout("NHWC");
+    });
+    ref.compile()(m_in_mat, roi, m_out_ov_age, m_out_ov_gender);
+
+    // G-API
+    cv::GFrame in;
+    cv::GOpaque<cv::Rect> rr;
+    GInferInputs inputs;
+    inputs["data"] = in;
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>(tag, rr, inputs);
+    auto age = outputs.at("age_conv3");
+    auto gender = outputs.at("prob");
+    cv::GComputation comp{cv::GIn(in, rr), cv::GOut(age, gender)};
+
+    auto pp = AGNetROIGenComp::params(xml_path, bin_path, device);
+
+    comp.apply(cv::gin(frame, roi), cv::gout(m_out_gapi_age, m_out_gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    validate();
+}
+
+class TestMediaNV12 final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_y;
+    cv::Mat m_uv;
+
+public:
+    TestMediaNV12(cv::Mat y, cv::Mat uv) : m_y(y), m_uv(uv) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::NV12, cv::Size(m_y.cols, m_y.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = {
+            m_y.ptr(), m_uv.ptr(), nullptr, nullptr
+        };
+        cv::MediaFrame::View::Strides ss = {
+            m_y.step, m_uv.step, 0u, 0u
+        };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss));
+    }
+};
+
+TEST_F(MediaFrameTestAgeGenderOV, TestMediaNV12AgeGenderOV)
+{
+    cv::GFrame in;
+    cv::GOpaque<cv::Rect> rr;
+    GInferInputs inputs;
+    inputs["data"] = in;
+    static constexpr const char* tag = "age-gender-generic";
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>(tag, rr, inputs);
+    auto age = outputs.at("age_conv3");
+    auto gender = outputs.at("prob");
+    cv::GComputation comp{cv::GIn(in, rr), cv::GOut(age, gender)};
+
+    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+    auto pp = AGNetROIGenComp::params(xml_path, bin_path, device);
+
+    cv::Rect roi(cv::Rect(cv::Point{20, 25}, cv::Size{16, 16}));
+
+    EXPECT_NO_THROW(comp.apply(cv::gin(frame, roi),
+                    cv::gout(m_out_gapi_age, m_out_gapi_gender),
+                    cv::compile_args(cv::gapi::networks(pp))));
+}
 
 // TODO: Make all of tests below parmetrized to avoid code duplication
 TEST_F(TestAgeGenderOV, Infer_Tensor) {
