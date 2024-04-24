@@ -2187,7 +2187,6 @@ void test_hal_intrin_float16()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
         .test_extract_highest()
-        // .test_pack_triplets() // compile error
 #endif
         ;
 #else
