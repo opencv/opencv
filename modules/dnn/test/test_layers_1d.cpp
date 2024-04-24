@@ -42,8 +42,8 @@ TEST_P(Layer_1d_Test, Scale)
 
     cv::Mat output_ref = input.mul(weight);
     runLayer(layer, inputs, outputs);
-
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
 
@@ -82,7 +82,8 @@ TEST_P(Layer_Gather_1d_Test, Accuracy) {
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_1d_Test, Combine(
@@ -129,7 +130,8 @@ TEST_P(Layer_Arg_1d_Test, Accuracy) {
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
 
@@ -177,7 +179,8 @@ TEST_P(Layer_NaryElemwise_1d_Test, Accuracy) {
 
     runLayer(layer, inputs, outputs);
     if (!output_ref.empty()) {
-        ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+        ASSERT_EQ(1, outputs.size());
+        ASSERT_EQ(shape(outputs[0]), shape(output_ref));
         normAssert(output_ref, outputs[0]);
     } else {
         CV_Error(Error::StsAssert, "Provided operation: " + operation + " is not supported. Please check the test instantiation.");
@@ -233,7 +236,8 @@ TEST_P(Layer_Elemwise_1d_Test, Accuracy) {
     runLayer(layer, inputs, outputs);
 
     if (!output_ref.empty()) {
-        ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+        ASSERT_EQ(1, outputs.size());
+        ASSERT_EQ(shape(outputs[0]), shape(output_ref));
         normAssert(output_ref, outputs[0]);
     } else {
         CV_Error(Error::StsAssert, "Provided operation: " + operation + " is not supported. Please check the test instantiation.");
@@ -245,7 +249,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Elemwise_1d_Test, Combine(
 /*operation*/           Values("div", "prod", "max", "min", "sum")
 ));
 
-TEST(Layer_Reshape_Test, Accuracy)
+TEST(Layer_Reshape_Test, Accuracy_1D)
 {
     LayerParams lp;
     lp.type = "Reshape";
@@ -267,7 +271,8 @@ TEST(Layer_Reshape_Test, Accuracy)
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
 
@@ -291,6 +296,7 @@ TEST_P(Layer_Split_Test, Accuracy_01D)
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
+    ASSERT_EQ(top_count, outputs.size());
     for (int i = 0; i < top_count; i++)
     {
         ASSERT_EQ(shape(output_ref), shape(outputs[i]));
@@ -330,8 +336,8 @@ TEST_P(Layer_Expand_Test, Accuracy_ND) {
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Expand_Test, Combine(
@@ -373,7 +379,8 @@ TEST_P(Layer_Concat_Test, Accuracy_01D)
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Concat_Test,
@@ -412,8 +419,8 @@ TEST_P(Layer_Softmax_Test, Accuracy_01D) {
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
 
@@ -469,8 +476,8 @@ TEST_P(Layer_Scatter_Test, Accuracy1D) {
     std::vector<Mat> inputs{output, indices_mat, input};
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scatter_Test, Combine(
 /*input blob shape*/    testing::Values(std::vector<int>{4},
@@ -501,8 +508,8 @@ TEST_P(Layer_Permute_Test, Accuracy_01D)
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/,  Layer_Permute_Test,
@@ -555,7 +562,7 @@ TEST_P(Layer_Slice_Test, Accuracy_1D){
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
-
+    ASSERT_EQ(splits, outputs.size());
     for (int i = 0; i < splits; ++i){
         ASSERT_EQ(shape(output_refs[i]), shape(outputs[i]));
         normAssert(output_refs[i], outputs[i]);
@@ -594,6 +601,7 @@ TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
+    ASSERT_EQ(1, outputs.size());
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
@@ -638,8 +646,8 @@ TEST_P(Layer_BatchNorm_Test, Accuracy_01D)
     cv::sqrt(varMat + 1e-5, varMat);
     output_ref = (output_ref - meanMat) / varMat;
 
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 
 }
@@ -671,8 +679,8 @@ TEST_P(Layer_Const_Test, Accuracy_01D)
     std::vector<Mat> inputs; // No inputs are needed for a ConstLayer
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Const_Test, testing::Values(
