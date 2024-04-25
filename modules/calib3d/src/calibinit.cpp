@@ -472,12 +472,10 @@ static void icvBinarizationHistogramBased(Mat & img)
 }
 
 static bool findCornerNeighbor(
-    cv::AutoBuffer<ChessBoardQuad>& all_quads,
+    ChessBoardQuad* all_quads,
     const std::vector<Point2f>& all_quads_pts,
     flann::GenericIndex<flann::L2_Simple<float>>& all_quads_pts_index,
     const int idx,
-    const ChessBoardQuad& cur_quad,
-    const int i,
     const cv::Point2f& pt,
     float& min_dist,
     const float radius,
@@ -485,14 +483,12 @@ static bool findCornerNeighbor(
     std::vector<float>& neighbors_dists,
     const float thresh_scale,
     int& closest_quad_idx,
-    ChessBoardQuad*& closest_quad,
     int& closest_corner_idx,
     cv::Point2f& closest_corner_pt)
 {
-    if (cur_quad.neighbors[i])
-        return false;
-
+    const ChessBoardQuad& cur_quad = (const ChessBoardQuad&)all_quads[idx];
     int closest_neighbor_idx = -1;
+    ChessBoardQuad *closest_quad = 0;
 
     // find the closest corner in all other quadrangles
     const std::vector<float> query = Mat(pt);
@@ -1742,25 +1738,25 @@ void ChessBoardDetector::findQuadNeighbors()
         // for each corner of this quadrangle
         for (int i = 0; i < 4; i++)
         {
+            if (cur_quad.neighbors[i])
+                continue;
+
             const cv::Point2f pt = all_quads_pts[(idx << 2) + i];
 
             float min_dist = FLT_MAX;
 
             int closest_quad_idx = -1;
             int closest_corner_idx = -1;
-            ChessBoardQuad *closest_quad = 0;
 
             float radius = cur_quad.edge_len * thresh_scale + 1;
 
             cv::Point2f closest_corner_pt;
 
             bool found = findCornerNeighbor(
-                all_quads,
+                all_quads.data(),
                 all_quads_pts,
                 all_quads_pts_index,
                 idx,
-                cur_quad,
-                i,
                 pt,
                 min_dist,
                 radius,
@@ -1768,31 +1764,25 @@ void ChessBoardDetector::findQuadNeighbors()
                 neighbors_dists,
                 thresh_scale,
                 closest_quad_idx,
-                closest_quad,
                 closest_corner_idx,
                 closest_corner_pt);
 
             if (!found)
                 continue;
 
-            ChessBoardQuad& closest_quad_ref = (ChessBoardQuad&)all_quads[closest_quad_idx];
-
             radius = min_dist + 1;
             min_dist = FLT_MAX;
 
             int closest_closest_quad_idx = -1;
             int closest_closest_corner_idx = -1;
-            ChessBoardQuad *closest_closest_quad = 0;
 
             cv::Point2f closest_closest_corner_pt;
 
             found = findCornerNeighbor(
-                all_quads,
+                all_quads.data(),
                 all_quads_pts,
                 all_quads_pts_index,
                 closest_quad_idx,
-                closest_quad_ref,
-                closest_corner_idx,
                 closest_corner_pt,
                 min_dist,
                 radius,
@@ -1800,7 +1790,6 @@ void ChessBoardDetector::findQuadNeighbors()
                 neighbors_dists,
                 thresh_scale,
                 closest_closest_quad_idx,
-                closest_closest_quad,
                 closest_closest_corner_idx,
                 closest_closest_corner_pt);
 
@@ -1808,11 +1797,11 @@ void ChessBoardDetector::findQuadNeighbors()
                 continue;
 
             if (closest_closest_quad_idx != idx ||
-                closest_closest_quad != &cur_quad ||
                 closest_closest_corner_idx != i ||
                 closest_closest_corner_pt != pt)
                 continue;
 
+            ChessBoardQuad* closest_quad = &all_quads[closest_quad_idx];
             ChessBoardCorner& closest_corner = *closest_quad->corners[closest_corner_idx];
             closest_corner.pt = (pt + closest_corner_pt) * 0.5f;
 
