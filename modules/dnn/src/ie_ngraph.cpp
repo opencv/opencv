@@ -320,20 +320,7 @@ ov::ParameterVector InfEngineNgraphNet::setInputs(const std::vector<cv::Mat>& in
     for (size_t i = 0; i < inputs.size(); i++)
     {
         std::vector<size_t> shape = getShape<size_t>(inputs[i]);
-        std::shared_ptr<ov::op::v0::Parameter> inp;
-        switch(inputs[i].depth()) {
-            case CV_32F:
-                inp = std::make_shared<ov::op::v0::Parameter>(ov::element::f32, ov::Shape(shape));
-                break;
-            case CV_32S:
-                inp = std::make_shared<ov::op::v0::Parameter>(ov::element::i32, ov::Shape(shape));
-                break;
-            case CV_64S:
-                inp = std::make_shared<ov::op::v0::Parameter>(ov::element::i64, ov::Shape(shape));
-                break;
-            default:
-                CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(inputs[i].depth()).c_str()));
-        }
+        auto inp = std::make_shared<ov::op::v0::Parameter>(cvTypeToOvType(inputs[i].depth()), ov::Shape(shape));
         inp->set_friendly_name(names[i]);
 
         auto it = std::find_if(inputs_vec.begin(), inputs_vec.end(),
