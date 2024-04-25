@@ -68,8 +68,8 @@ Mat buildRandomMat(int rows, int cols, RNG& rng, int rank, bool symmetrical)
 
     std::vector<FType> singVals(rank);
     rng.fill(singVals, RNG::UNIFORM, Scalar(0), Scalar(10));
-    std::set<FType> setSingVals(singVals.begin(), singVals.end());
-    auto singIter = setSingVals.rbegin();
+    std::sort(singVals.begin(), singVals.end());
+    auto singIter = singVals.rbegin();
     for (int i = 0; i < rank; i++)
     {
         s.at<FType>(i, i) = *singIter++;
