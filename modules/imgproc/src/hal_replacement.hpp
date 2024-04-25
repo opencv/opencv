@@ -1028,6 +1028,38 @@ inline int hal_ni_canny(const uchar* src_data, size_t src_step, uchar* dst_data,
 #define cv_hal_canny hal_ni_canny
 //! @endcond
 
+/**
+   @brief Calculates all of the moments up to the third order of a polygon or rasterized shape for image
+   @param src_data Source image data
+   @param src_step Source image step
+   @param src_type source pints type
+   @param width Source image width
+   @param height Source image height
+   @param binary If it is true, all non-zero image pixels are treated as 1's
+   @param m Output array of moments (10 values) in the following order:
+    m00, m10, m01, m20, m11, m02, m30, m21, m12, m03.
+   @sa moments
+*/
+inline int hal_ni_imageMoments(const uchar* src_data, size_t src_step, int src_type, int width, int height, bool binary, double m[10])
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Calculates all of the moments up to the third order of a polygon of 2d points
+   @param src_data Source points (Point 2x32f or 2x32s)
+   @param src_size Source points count
+   @param src_type source pints type
+   @param m Output array of moments (10 values) in the following order:
+    m00, m10, m01, m20, m11, m02, m30, m21, m12, m03.
+   @sa moments
+*/
+inline int hal_ni_polygonMoments(const uchar* src_data, size_t src_size, int src_type, double m[10])
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_imageMoments hal_ni_imageMoments
+#define cv_hal_polygonMoments hal_ni_polygonMoments
+//! @endcond
+
 //! @}
 
 #if defined(__clang__)
