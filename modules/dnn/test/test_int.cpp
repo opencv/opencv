@@ -118,7 +118,7 @@ TEST_P(Test_Const_Int, random)
     LayerParams lp;
     lp.type = "NaryEltwise";
     lp.name = "testLayer";
-    lp.set("operation", "sum");
+    lp.set("operation", "add");
     int idSum = net.addLayer(lp.name, lp.type, lp);
 
     net.connect(0, 0, idSum, 0);
@@ -365,6 +365,9 @@ TEST_P(Test_ArgMax_Int, random)
     tuple<Backend, Target> backend_target= get<1>(GetParam());
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // There is a problem with OpenVINO and custom int64 layers. After model compilation the output tensor type changes from int64 to int32
 
     std::vector<int> inShape{5, 4, 3, 2};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 100000000;
@@ -1086,6 +1089,9 @@ TEST_P(Test_Reduce_Int, random)
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
 
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && matType == CV_64S)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // There is a problem with OpenVINO and custom int64 layers. After model compilation the output tensor type changes from int64 to int32
+
     std::vector<int> inShape{5, 4, 3, 2};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 100000000;
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -1151,6 +1157,9 @@ TEST_P(Test_Reduce_Int, two_axes)
     tuple<Backend, Target> backend_target= get<1>(GetParam());
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && matType == CV_64S)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // There is a problem with OpenVINO and custom int64 layers. After model compilation the output tensor type changes from int64 to int32
 
     std::vector<int> inShape{5, 4, 3, 2};
     int64_t low = matType == CV_64S ? 100000000000000ll : 10000000;

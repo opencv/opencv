@@ -142,20 +142,8 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        ov::element::Type dType;
-        if (blobs[0].depth() == CV_32F) {
-            dType = ov::element::f32;
-        } else if (blobs[0].depth() == CV_32S) {
-            dType = ov::element::i32;
-        } else if (blobs[0].depth() == CV_64S) {
-            dType = ov::element::i64;
-        } else if (blobs[0].depth() == CV_8S) {
-            dType = ov::element::i8;
-        } else {
-            CV_Error(Error::StsNotImplemented, format("Unexpected Const data depth: %d", blobs[0].depth()));
-        }
         std::shared_ptr<ov::Node> node =
-                    std::make_shared<ov::op::v0::Constant>(dType,
+                    std::make_shared<ov::op::v0::Constant>(cvTypeToOvType(blobs[0].type()),
                                                            getShape<size_t>(blobs[0]),
                                                            blobs[0].data);
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));

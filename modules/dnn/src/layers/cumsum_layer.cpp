@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
@@ -21,6 +23,12 @@ public:
         exclusive_raw = params.get<int>("exclusive", 0);
         reverse_raw = params.get<int>("reverse", 0);
         setParamsFrom(params);
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -150,6 +158,16 @@ public:
             return axis_mat_int.at<int32_t>(0);
         }
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto axis_node = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &axis_raw);
+        auto cumsum = std::make_shared<ov::op::v0::CumSum>(nodes[0].dynamicCast<InfEngineNgraphNode>()->node, axis_node, exclusive_raw, reverse_raw);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(cumsum));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     int axis_raw;
     int exclusive_raw;

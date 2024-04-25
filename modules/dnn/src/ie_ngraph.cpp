@@ -48,6 +48,43 @@ ngraphWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
     return wrappers;
 }
 
+ov::element::Type cvTypeToOvType(MatType cvType)
+{
+    switch (cvType) {
+        case CV_32F:
+            return ov::element::f32;
+        case CV_8U:
+            return ov::element::u8;
+        case CV_8S:
+            return ov::element::i8;
+        case CV_32S:
+            return ov::element::i32;
+        case CV_64S:
+            return ov::element::i64;
+        default:
+            CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(cvType).c_str()));
+    }
+}
+
+MatType ovTypeToCvType(ov::element::Type ovType)
+{
+    switch (ovType) {
+        case ov::element::f32:
+            return CV_32F;
+        case ov::element::u8:
+            return CV_8U;
+        case ov::element::i8:
+            return CV_8S;
+        case ov::element::i32:
+            return CV_32S;
+        case ov::element::i64:
+            return CV_64S;
+        default:
+            CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", ovType.get_type_name().c_str()));
+    }
+}
+
+
 class NgraphCustomOp: public ov::op::Op {
 public:
     OPENVINO_OP(kOpenCVLayersType);
@@ -60,6 +97,19 @@ public:
 
     void validate_and_infer_types() override
     {
+        std::vector<MatType> inputTypes(get_input_size());
+        std::vector<MatType> internalTypes;
+        std::vector<MatType> outputTypes;
+        for (int i = 0; i < get_input_size(); ++i)
+        {
+            inputTypes[i] = ovTypeToCvType(get_input_element_type(i));
+        }
+        cvLayer->getTypes(inputTypes, outputs.size(), internals.size(), outputTypes, internalTypes);
+        for (int i = 0; i < internals.size(); ++i) {
+            if (internals[i].depth() != internalTypes[i])
+                internals[i] = cv::Mat(shape(internals[i]), internalTypes[i]);
+        }
+
         set_output_size(outputs.size());
         for (int i = 0; i < outputs.size(); ++i)
         {
@@ -67,28 +117,7 @@ public:
             for (int j = 0; j < outputs[i].dims; ++j) {
                 shape.push_back(outputs[i].size[j]);
             }
-            // TODO: we can't rely on output mat type, because OpenVINO may change types during compilation
-            // We should run OpenCV layer type inference based on get_input_element_type()
-
-            // switch (outputs[i].depth()) {
-            //     case CV_32F:
-            //         set_output_type(i, ov::element::f32, shape);
-            //         break;
-            //     case CV_8S:
-            //         set_output_type(i, ov::element::i8, shape);
-            //         break;
-            //     case CV_32S:
-            //         set_output_type(i, ov::element::i32, shape);
-            //         break;
-            //     case CV_64S:
-            //         set_output_type(i, ov::element::i64, shape);
-            //         break;
-            //     default:
-            //         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(outputs[i].depth()).c_str()));
-            // }
-            set_output_type(i, get_input_element_type(0), shape);
-
-            std::cout << "validate_and_infer_types" << i << " " << get_input_element_type(0) << " " << outputs[i].depth() << "\n";
+            set_output_type(i, cvTypeToOvType(outputTypes[i]), shape);
         }
     }
 
@@ -396,16 +425,7 @@ void InfEngineNgraphNet::initPlugin(std::shared_ptr<ov::Model>& net)
 
         std::string ieDevice = isHetero ? ("HETERO:" + device_name + ",CPU") : device_name;
         CV_LOG_INFO(NULL, "DNN/IE: Calling LoadNetwork(device=" << ieDevice << ")...");
-        std::cout << "inputs BEFORE compilation: " << net->inputs() << "\n";
-        std::cout << "outputs BEFORE compilation: " << net->outputs() << "\n";
-        for (auto& node : net->get_ops())
-            std::cout << "nodes BEFORE compile: " << node << "\n";
         netExec = ie.compile_model(net, ieDevice, config);
-        std::cout << "==========================================\n";
-        std::cout << "inputs AFTER compilation: " << netExec.inputs() << "\n";
-        std::cout << "outputs AFTER compilation: " << netExec.outputs() << "\n";
-        for (auto& node : netExec.get_runtime_model()->get_ops())
-            std::cout << "nodes AFTER compile:  " << node << "\n";
     }
     catch (const std::exception& ex)
     {
@@ -470,18 +490,7 @@ void NgraphBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays 
 
 ov::Tensor wrapToNgraphBlob(const Mat& m) {
     std::vector<size_t> shape = getShape<size_t>(m);
-    if (m.type() == CV_32F)
-        return ov::Tensor(ov::element::f32, shape, m.data);
-    else if (m.type() == CV_8U)
-        return ov::Tensor(ov::element::u8, shape, m.data);
-    else if (m.type() == CV_8SC1)
-        return ov::Tensor(ov::element::i8, shape, m.data);
-    else if (m.type() == CV_32SC1)
-        return ov::Tensor(ov::element::i32, shape, m.data);
-    else if (m.type() == CV_64SC1)
-        return ov::Tensor(ov::element::i64, shape, m.data);
-    else
-        CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
+    return ov::Tensor(cvTypeToOvType(m.type()), shape, m.data);
 }
 
 

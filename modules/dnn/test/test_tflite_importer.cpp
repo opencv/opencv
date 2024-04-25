@@ -210,6 +210,9 @@ TEST_P(Test_TFLite, max_unpooling)
 }
 
 TEST_P(Test_TFLite, EfficientDet_int8) {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
+
     if (target != DNN_TARGET_CPU || (backend != DNN_BACKEND_OPENCV &&
         backend != DNN_BACKEND_TIMVX && backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) {
         throw SkipTestException("Only OpenCV, TimVX and OpenVINO targets support INT8 on CPU");

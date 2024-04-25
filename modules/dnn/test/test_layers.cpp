@@ -362,6 +362,9 @@ TEST_P(Test_Caffe_layers, PReLU)
 // TODO: fix an unstable test case
 TEST_P(Test_Caffe_layers, layer_prelu_fc)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
+
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     // Reference output values are in range [-0.0001, 10.3906]

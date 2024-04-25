@@ -161,8 +161,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        ov::OutputVector inp{ieInpNode};
-        auto blank = std::make_shared<ov::op::v0::Concat>(inp, 0);
+        auto blank = std::make_shared<ov::op::v1::ConvertLike>(ieInpNode, ieInpNode);
         return Ptr<BackendNode>(new InfEngineNgraphNode(blank));
     }
 #endif  // HAVE_DNN_NGRAPH
