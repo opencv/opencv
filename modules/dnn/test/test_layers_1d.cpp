@@ -504,19 +504,16 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
                 result += value * value;
             } else if (operation == "prod") {
                 result = (i == 0) ? value : result * value;
+            } else if (operation == "log_sum" || operation == "log_sum_exp") {
+                result += (operation == "log_sum") ? std::log(input.at<float>(i)) : std::exp(input.at<float>(i));
             }
         }
         if (operation == "mean") {
             result = sum / input.total();
         } else if (operation == "l2") {
             result = std::sqrt(result);
-        } else if (operation == "log_sum" || operation == "log_sum_exp") {
-            for (int i = 0; i < input.total(); ++i) {
-                result += (operation == "log_sum") ? std::log(input.at<float>(i)) : std::exp(input.at<float>(i));
-            }
-            if (operation == "log_sum_exp") {
-                result = std::log(result);
-            }
+        } else if (operation == "log_sum_exp") {
+            result = std::log(result);
         }
         return result;
     };
