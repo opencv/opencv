@@ -63,8 +63,11 @@ int main(int argc, const char* argv[])
         {
             cv::cuda::DeviceInfo deviceInfo(0); // Querying the first GPU
             std::cout << "GPU Name: " << deviceInfo.name() << std::endl;
-            std::cout << "Is integrated: " << deviceInfo.isIntegrated() << std::endl;
-            std::cout << "Supports OpenGL: " << deviceInfo.canMapHostMemory() << std::endl;
+            std::cout << "Is integrated: " << (deviceInfo.integrated() ? "True" : "False") << std::endl;
+            std::cout << "Supports OpenGL: " << (deviceInfo.canMapHostMemory() ? "True" : "False") << std::endl;
+            std::cout << "Compute Compatibility: " << deviceInfo.majorVersion()<<"."<< deviceInfo.minorVersion() << std::endl;
+            std::cout << "Total Memory: " << deviceInfo.totalMemory() / (1024.0 * 1024.0) << " MB" << std::endl;
+
         }
         #else
         std::cout << "Environment: CPU" << std::endl;
