@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <opencv2/dnn/shape_utils.hpp>
 #include "../precomp.hpp"
+#include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
 
@@ -304,7 +305,7 @@ public:
     MatShape einsumOutDims; // vector to store output dimentions
 
     // These hold equation subring, left hand side and right it of
-    String lhs_eq, rhs_eq;
+    String lhs_eq, rhs_eq, equation;
 
     // Holds token from left hand side of the equation
     std::vector<String> lhs_eq_tokens;
@@ -378,7 +379,7 @@ public:
     LayerEinsumImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        String equation = params.get<String>("equation");
+        equation = params.get<String>("equation");
         int outputSize = params.get<int>("outputSize");
         numInputs  = params.get<int>("inputSize");
 
@@ -421,6 +422,11 @@ public:
         // calculate output shape
         validateOutputSubscript();
         calculateOutputShape();
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     // getMeoryShapes
@@ -553,6 +559,19 @@ public:
         result = result.reshape(1, einsumOutDims.size(), einsumOutDims.data());
         result.copyTo(outputs[0]);
     } // forward
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >&,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
+        ov::OutputVector inputs(nodes.size());
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            inputs[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+        }
+        auto einsum = std::make_shared<ov::op::v7::Einsum>(inputs, equation);
+        return new InfEngineNgraphNode(einsum);
+    }
+#endif // HAVE_DNN_NGRAPH
+
 }; // EinsumClass
 
 Mat LayerEinsumImpl::reduceSum(Mat& src, MatShape& reduceAxis)

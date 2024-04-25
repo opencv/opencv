@@ -43,7 +43,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     void handleKeepDims(MatShape& shape, const int axis_) const

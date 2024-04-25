@@ -2937,6 +2937,11 @@ public:
     {
         return pollKey_W32();
     }
+
+    const std::string getName() const CV_OVERRIDE
+    {
+        return "WIN32";
+    }
 };  // Win32BackendUI
 
 static

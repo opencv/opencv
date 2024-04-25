@@ -617,7 +617,7 @@ void TFImporter::setPadding(LayerParams &layerParams, const tensorflow::NodeDef 
     padLp.name = layer.name() + "/pad";
     padLp.type = "Padding";
     padLp.set("paddings", DictValue::arrayInt(pads, sizeof(pads) / sizeof(pads[0])));
-    padLp.set("value", value);
+    padLp.set<double>("value", (double)value);
 
     int id = dstNet.addLayer(padLp.name, padLp.type, padLp);
     layer_id[padLp.name] = id;

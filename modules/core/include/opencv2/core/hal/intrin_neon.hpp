@@ -1659,8 +1659,8 @@ inline int v_signmask(const v_uint64x2& a)
 #if CV_NEON_AARCH64
     const int64x2_t signPosition = {0,1};
     uint64x2_t v0 = vshlq_u64(vshrq_n_u64(a.val, 63), signPosition);
-    uint64_t t0 = vaddvq_u64(v0);
-    return (int)t0;
+    int t0 = (int)vaddvq_u64(v0);
+    return t0;
 #else // #if CV_NEON_AARCH64
     int64x1_t m0 = vdup_n_s64(0);
     uint64x2_t v0 = vshlq_u64(vshrq_n_u64(a.val, 63), vcombine_s64(m0, m0));
@@ -2622,7 +2622,7 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
 
 ////// FP16 support ///////
 #if CV_FP16
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     float16x4_t v =
     #ifndef vld1_f16 // APPLE compiler defines vld1_f16 as macro
@@ -2633,7 +2633,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_float32x4(vcvt_f32_f16(v));
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     float16x4_t hv = vcvt_f16_f32(v.val);
 
@@ -2644,7 +2644,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
     #endif
 }
 #else
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     const int N = 4;
     float buf[N];
@@ -2652,12 +2652,12 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_load(buf);
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     const int N = 4;
     float buf[N];
     v_store(buf, v);
-    for( int i = 0; i < N; i++ ) ptr[i] = float16_t(buf[i]);
+    for( int i = 0; i < N; i++ ) ptr[i] = hfloat(buf[i]);
 }
 #endif
 

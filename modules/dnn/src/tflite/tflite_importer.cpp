@@ -66,6 +66,10 @@ private:
     void parseDequantize(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseSplit(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseSoftmax(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
     void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
@@ -109,7 +113,7 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
     default:
         CV_Error(Error::StsNotImplemented, format("Parse tensor with type %s", EnumNameTensorType(tensor.type())));
     }
-    return Mat(shape, dtype, const_cast<void*>(data));
+    return shape.empty() ? Mat() : Mat(shape, dtype, const_cast<void*>(data));
 }
 
 TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufSize)
@@ -275,6 +279,10 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["Convolution2DTransposeBias"] = &TFLiteImporter::parseDeconvolution;
     dispatch["QUANTIZE"] = &TFLiteImporter::parseQuantize;
     dispatch["DEQUANTIZE"] = &TFLiteImporter::parseDequantize;
+    dispatch["SPLIT"] = &TFLiteImporter::parseSplit;
+    dispatch["FULLY_CONNECTED"] = &TFLiteImporter::parseFullyConnected;
+    dispatch["SOFTMAX"] = &TFLiteImporter::parseSoftmax;
+    dispatch["CAST"] = &TFLiteImporter::parseCast;
     dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
     return dispatch;
 }
@@ -291,6 +299,10 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op) {
             }
             Mat blob = allTensors[idx];
             layerParams.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
+        }
+    } else {
+        for (auto& blob : layerParams.blobs) {
+            CV_Assert(blob.u);
         }
     }
 
@@ -806,6 +818,35 @@ void TFLiteImporter::parseDequantize(const Operator& op, const std::string& opco
     getQuantParams(op, inpScale, inpZero, outScale, outZero);
     layerParams.set("scales", inpScale);
     layerParams.set("zeropoints", inpZero);
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseSplit(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Slice";
+    auto options = op.builtin_options_as_SplitOptions();
+    CV_Assert(options);
+    layerParams.set("num_split", options->num_splits());
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Gemm";
+    auto options = op.builtin_options_as_FullyConnectedOptions();
+    CV_Assert(options);
+
+    layerParams.set("transB", true);
+    layerParams.set("constB", true);
+    addLayer(layerParams, op);
+    parseFusedActivation(op, options->fused_activation_function());
+}
+
+void TFLiteImporter::parseSoftmax(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Softmax";
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Identity";
     addLayer(layerParams, op);
 }
 

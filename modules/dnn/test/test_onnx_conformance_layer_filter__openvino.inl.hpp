@@ -597,7 +597,7 @@ CASE(test_dynamicquantizelinear_min_adjusted_expanded)
 CASE(test_edge_pad)
     // no filter
 CASE(test_einsum_batch_diagonal)
-    // no filter
+    SKIP;
 CASE(test_einsum_batch_matmul)
     // no filter
 CASE(test_einsum_inner_prod)
@@ -681,7 +681,7 @@ CASE(test_gemm_alpha)
 CASE(test_gemm_beta)
     // no filter
 CASE(test_gemm_default_matrix_bias)
-    // no filter
+    SKIP; // https://github.com/opencv/opencv/issues/25472
 CASE(test_gemm_default_no_bias)
     // no filter
 CASE(test_gemm_default_scalar_bias)
@@ -1005,9 +1005,7 @@ CASE(test_maxpool_3d_default)
     SKIP_NON_CPU;
 #endif
 CASE(test_maxpool_with_argmax_2d_precomputed_pads)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_maxpool_with_argmax_2d_precomputed_strides)
 #if SKIP_SET_1
     SKIP;

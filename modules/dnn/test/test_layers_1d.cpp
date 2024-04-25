@@ -271,4 +271,415 @@ TEST(Layer_Reshape_Test, Accuracy)
     normAssert(output_ref, outputs[0]);
 }
 
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Split_Test;
+TEST_P(Layer_Split_Test, Accuracy_01D)
+{
+    LayerParams lp;
+    lp.type = "Split";
+    lp.name = "SplitLayer";
+    int top_count = 2; // 2 is for simplicity
+    lp.set("top_count", top_count);
+    Ptr<SplitLayer> layer = SplitLayer::create(lp);
+
+    std::vector<int> input_shape = std::get<0>(GetParam());
+
+    Mat input(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+
+    Mat output_ref = Mat(input_shape.size(), input_shape.data(), CV_32F, input.data);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    for (int i = 0; i < top_count; i++)
+    {
+        ASSERT_EQ(shape(output_ref), shape(outputs[i]));
+        normAssert(output_ref, outputs[i]);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_Split_Test,
+                        testing::Values(
+                            std::vector<int>({}),
+                            std::vector<int>({1}),
+                            std::vector<int>({1, 4}),
+                            std::vector<int>({1, 5}),
+                            std::vector<int>({4, 1}),
+                            std::vector<int>({4, 5})
+));
+
+typedef testing::TestWithParam<tuple<std::vector<int>, std::vector<int>>> Layer_Expand_Test;
+TEST_P(Layer_Expand_Test, Accuracy_ND) {
+
+    std::vector<int> input_shape = get<0>(GetParam());
+    std::vector<int> target_shape = get<1>(GetParam());
+    if (input_shape.size() >= target_shape.size()) // Skip if input shape is already larger than target shape
+        return;
+
+    LayerParams lp;
+    lp.type = "Expand";
+    lp.name = "ExpandLayer";
+    lp.set("shape", DictValue::arrayInt(&target_shape[0], target_shape.size()));
+
+    Ptr<ExpandLayer> layer = ExpandLayer::create(lp);
+    Mat input(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+
+    cv::Mat output_ref(target_shape, CV_32F, input.data);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Expand_Test, Combine(
+/*input blob shape*/ testing::Values(
+        std::vector<int>({}),
+        std::vector<int>({1}),
+        std::vector<int>({1, 1}),
+        std::vector<int>({1, 1, 1})
+    ),
+/*output blob shape*/ testing::Values(
+        std::vector<int>({1}),
+        std::vector<int>({1, 1}),
+        std::vector<int>({1, 1, 1}),
+        std::vector<int>({1, 1, 1, 1})
+    )
+));
+
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Concat_Test;
+TEST_P(Layer_Concat_Test, Accuracy_01D)
+{
+    LayerParams lp;
+    lp.type = "Concat";
+    lp.name = "ConcatLayer";
+    lp.set("axis", 0);
+
+    Ptr<ConcatLayer> layer = ConcatLayer::create(lp);
+
+    std::vector<int> input_shape = get<0>(GetParam());
+    std::vector<int> output_shape = {3};
+
+    Mat input1(input_shape.size(), input_shape.data(), CV_32F, 1.0);
+    Mat input2(input_shape.size(), input_shape.data(), CV_32F, 2.0);
+    Mat input3(input_shape.size(), input_shape.data(), CV_32F, 3.0);
+
+    float data[] = {1.0, 2.0, 3.0};
+    Mat output_ref(output_shape, CV_32F, data);
+
+    std::vector<Mat> inputs{input1, input2, input3};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Concat_Test,
+/*input blob shape*/    testing::Values(
+    std::vector<int>({}),
+    std::vector<int>({1})
+));
+
+typedef testing::TestWithParam<tuple<std::vector<int>, int>> Layer_Softmax_Test;
+TEST_P(Layer_Softmax_Test, Accuracy_01D) {
+
+    int axis = get<1>(GetParam());
+    std::vector<int> input_shape = get<0>(GetParam());
+    if ((input_shape.size() == 0 && axis == 1) ||
+        (!input_shape.empty() && input_shape.size() == 2 && input_shape[0] > 1 && axis == 1) ||
+        (!input_shape.empty() && input_shape[0] > 1 && axis == 0)) // skip since not valid case
+        return;
+
+    LayerParams lp;
+    lp.type = "Softmax";
+    lp.name = "softmaxLayer";
+    lp.set("axis", axis);
+    Ptr<SoftmaxLayer> layer = SoftmaxLayer::create(lp);
+
+    Mat input = Mat(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+
+    Mat output_ref;
+    cv::exp(input, output_ref);
+    if (axis == 1){
+        cv::divide(output_ref, cv::sum(output_ref), output_ref);
+    } else {
+        cv::divide(output_ref, output_ref, output_ref);
+    }
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Softmax_Test, Combine(
+    /*input blob shape*/
+    testing::Values(
+        std::vector<int>({}),
+        std::vector<int>({1}),
+        std::vector<int>({4}),
+        std::vector<int>({1, 4}),
+        std::vector<int>({4, 1})
+        ),
+    /*Axis */
+    testing::Values(0, 1)
+));
+
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Scatter_Test;
+TEST_P(Layer_Scatter_Test, Accuracy1D) {
+
+    std::vector<int> input_shape = get<0>(GetParam());
+    std::string opr = get<1>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Scatter";
+    lp.name = "addLayer";
+    lp.set("axis", 0);
+    lp.set("reduction", opr);
+    Ptr<ScatterLayer> layer = ScatterLayer::create(lp);
+
+    cv::Mat input = cv::Mat(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+
+    int indices[] = {3, 2, 1, 0};
+    cv::Mat indices_mat(input_shape.size(), input_shape.data(), CV_32S, indices);
+    cv::Mat output(input_shape.size(), input_shape.data(), CV_32F, 0.0);
+
+    // create reference output
+    cv::Mat output_ref(input_shape, CV_32F, 0.0);
+    for (int i = 0; i < input_shape[0]; i++){
+        output_ref.at<float>(indices[i]) = input.at<float>(i);
+    }
+
+    if (opr == "add"){
+        output_ref += output;
+    } else if (opr == "mul"){
+        output_ref = output.mul(output_ref);
+    } else if (opr == "max"){
+        cv::max(output_ref, output, output_ref);
+    } else if (opr == "min"){
+        cv::min(output_ref, output, output_ref);
+    }
+
+    std::vector<Mat> inputs{output, indices_mat, input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scatter_Test, Combine(
+/*input blob shape*/    testing::Values(std::vector<int>{4},
+                                        std::vector<int>{1, 4}),
+/*reduce*/              Values("none", "add", "mul", "max", "min")
+));
+
+
+
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Permute_Test;
+TEST_P(Layer_Permute_Test, Accuracy_01D)
+{
+    LayerParams lp;
+    lp.type = "Permute";
+    lp.name = "PermuteLayer";
+
+    int order[] = {0}; // Since it's a 0D tensor, the order remains [0]
+    lp.set("order", DictValue::arrayInt(order, 1));
+    Ptr<PermuteLayer> layer = PermuteLayer::create(lp);
+
+    std::vector<int> input_shape = get<0>(GetParam());
+
+    Mat input = Mat(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+    Mat output_ref = input.clone();
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/,  Layer_Permute_Test,
+/*input blob shape*/ testing::Values(
+            std::vector<int>{},
+            std::vector<int>{1},
+            std::vector<int>{1, 4},
+            std::vector<int>{4, 1}
+));
+
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Slice_Test;
+TEST_P(Layer_Slice_Test, Accuracy_1D){
+
+    LayerParams lp;
+    lp.type = "Slice";
+    lp.name = "SliceLayer";
+
+    std::vector<int> input_shape = get<0>(GetParam());
+
+    int splits = 2;
+    int axis = (input_shape.size() > 1 ) ? 1 : 0;
+
+    lp.set("axis", axis);
+    lp.set("num_split", splits);
+
+    Ptr<SliceLayer> layer = SliceLayer::create(lp);
+    std::vector<int> output_shape;
+    if (input_shape.size() > 1)
+        output_shape = {1, input_shape[1] / splits};
+    else
+        output_shape = {input_shape[0] / splits};
+
+    cv::Mat input = cv::Mat(input_shape, CV_32F);
+    cv::randu(input, 0.0, 1.0);
+
+    std::vector<cv::Mat> output_refs;
+    for (int i = 0; i < splits; ++i){
+        output_refs.push_back(cv::Mat(output_shape, CV_32F));
+        if (input_shape.size() > 1 ) {
+            for (int j = 0; j < output_shape[1]; ++j){
+                output_refs[i].at<float>(j) = input.at<float>(i * output_shape[1] + j);
+            }
+        } else {
+            for (int j = 0; j < output_shape[0]; ++j){
+                output_refs[i].at<float>(j) = input.at<float>(i * output_shape[0] + j);
+            }
+        }
+    }
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    for (int i = 0; i < splits; ++i){
+        ASSERT_EQ(shape(output_refs[i]), shape(outputs[i]));
+        normAssert(output_refs[i], outputs[i]);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Slice_Test,
+/*input blob shape*/    testing::Values(
+                std::vector<int>({4}),
+                std::vector<int>({1, 4})
+));
+
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_FullyConnected_Test;
+TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
+{
+    LayerParams lp;
+    lp.type = "InnerProduct";
+    lp.name = "InnerProductLayer";
+    lp.set("num_output", 1);
+    lp.set("bias_term", false);
+    lp.set("axis", 0);
+
+    std::vector<int> input_shape = get<0>(GetParam());
+
+    RNG& rng = TS::ptr()->get_rng();
+    float inp_value = rng.uniform(0.0, 10.0);
+    Mat weights(std::vector<int>{total(input_shape), 1}, CV_32F, inp_value);
+    lp.blobs.push_back(weights);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("InnerProduct", lp);
+
+    Mat input(input_shape.size(), input_shape.data(), CV_32F);
+    randn(input, 0, 1);
+    Mat output_ref = input.reshape(1, 1) * weights;
+    output_ref.dims = 1;
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
+                        testing::Values(
+                            std::vector<int>({}),
+                            std::vector<int>({1}),
+                            std::vector<int>({4})
+));
+
+typedef testing::TestWithParam<std::vector<int>> Layer_BatchNorm_Test;
+TEST_P(Layer_BatchNorm_Test, Accuracy_01D)
+{
+    std::vector<int> input_shape = GetParam();
+
+    // Layer parameters
+    LayerParams lp;
+    lp.type = "BatchNorm";
+    lp.name = "BatchNormLayer";
+    lp.set("has_weight", false);
+    lp.set("has_bias", false);
+
+    RNG& rng = TS::ptr()->get_rng();
+    float inp_value = rng.uniform(0.0, 10.0);
+
+    Mat meanMat(input_shape.size(), input_shape.data(), CV_32F, inp_value);
+    Mat varMat(input_shape.size(), input_shape.data(), CV_32F, inp_value);
+    vector<Mat> blobs = {meanMat, varMat};
+    lp.blobs = blobs;
+
+    // Create the layer
+    Ptr<Layer> layer = BatchNormLayer::create(lp);
+
+    Mat input(input_shape.size(), input_shape.data(), CV_32F, 1.0);
+    cv::randn(input, 0, 1);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    //create output_ref to compare with outputs
+    Mat output_ref = input.clone();
+    cv::sqrt(varMat + 1e-5, varMat);
+    output_ref = (output_ref - meanMat) / varMat;
+
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+
+}
+INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_BatchNorm_Test,
+                        testing::Values(
+                            std::vector<int>({}),
+                            std::vector<int>({4}),
+                            std::vector<int>({1, 4}),
+                            std::vector<int>({4, 1})
+));
+
+
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Const_Test;
+TEST_P(Layer_Const_Test, Accuracy_01D)
+{
+    std::vector<int> input_shape = get<0>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Const";
+    lp.name = "ConstLayer";
+
+    Mat constBlob = Mat(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(constBlob, 0.0, 1.0);
+    Mat output_ref = constBlob.clone();
+
+    lp.blobs.push_back(constBlob);
+    Ptr<Layer> layer = ConstLayer::create(lp);
+
+    std::vector<Mat> inputs; // No inputs are needed for a ConstLayer
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Const_Test, testing::Values(
+    std::vector<int>({}),
+    std::vector<int>({1}),
+    std::vector<int>({1, 4}),
+    std::vector<int>({4, 1})
+    ));
+
 }}

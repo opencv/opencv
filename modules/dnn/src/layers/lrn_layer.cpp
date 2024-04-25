@@ -408,8 +408,8 @@ public:
             axes.resize(ieInpNode.get_shape().size() - 2);
             std::iota(axes.begin(), axes.end(), 2);
         }
-        auto ngraph_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes.data());
-        auto lrn = std::make_shared<ngraph::op::LRN>(ieInpNode, ngraph_axes, alphaSize, beta, bias, size);
+        auto ngraph_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{axes.size()}, axes.data());
+        auto lrn = std::make_shared<ov::op::v0::LRN>(ieInpNode, ngraph_axes, alphaSize, beta, bias, size);
         return Ptr<BackendNode>(new InfEngineNgraphNode(lrn));
     }
 #endif  // HAVE_DNN_NGRAPH

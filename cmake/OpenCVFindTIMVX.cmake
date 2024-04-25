@@ -1,6 +1,6 @@
 set(TIMVX_INSTALL_DIR "" CACHE PATH "Path to libtim-vx installation")
 set(VIVANTE_SDK_DIR "" CACHE PATH "Path to VIVANTE SDK needed by TIM-VX.")
-set(VIVANTE_SDK_LIB_CANDIDATES "OpenVX;VSC;GAL;ArchModelSw;NNArchPerf" CACHE STRING "VIVANTE SDK library candidates")
+set(VIVANTE_SDK_LIB_CANDIDATES "VSC;GAL;ArchModelSw;NNArchPerf" CACHE STRING "VIVANTE SDK library candidates")
 
 # Ensure VIVANTE SDK library candidates are present in given search path
 function(find_vivante_sdk_libs _viv_notfound _viv_search_path)
