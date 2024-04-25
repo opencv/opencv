@@ -573,9 +573,10 @@ template<typename R> struct TheTest
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            // printf("i = %d, a = %f, b = %f, a / b = %f, c = %f, a / b - c = %f\n", i, dataA[i], dataB[i], dataA[i] / dataB[i], resC[i], (dataA[i] / dataB[i]) - resC[i]);
             EXPECT_LT(std::abs(float((dataA[i] / dataB[i]) - resC[i])), 2e-4);
         }
+#else
+        std::cout << "SKIP: test_div_fp16, CV_SIMD_FP16 is not available" << std::endl;
 #endif
 
         return *this;
@@ -1567,10 +1568,7 @@ template<typename R> struct TheTest
                            dataV[i + 6] * data6[j] +
                            dataV[i + 7] * data7[j];
             EXPECT_COMPARE_EQ(val, res[j]);
-            // printf("v_matmul, j=%d, val=%f, res=%f\n", j, val, res[j]);
         }
-
-        // printf("\n");
 
         Data<R> resAdd = v_matmuladd(v, m0, m1, m2, m3, m4, m5, m6, m7);
         i = 0;
@@ -1585,8 +1583,9 @@ template<typename R> struct TheTest
                            dataV[i + 6] * data6[j] +
                            data7[j];
             EXPECT_COMPARE_EQ(val, resAdd[j]);
-            // printf("v_matmuladd, j=%d, val=%f, resAdd=%f\n", j, val, resAdd[j]);
         }
+#else
+        std::cout << "SKIP: test_matmul_fp16, CV_SIMD_FP16 is not available" << std::endl;
 #endif
 
         return *this;
@@ -1655,6 +1654,8 @@ template<typename R> struct TheTest
                 EXPECT_EQ(ref[i][j], res[j][i]);
             }
         }
+#else
+        std::cout << "SKIP: test_transpose8x8_fp16, CV_SIMD_FP16 is not available" << std::endl;
 #endif
 
         return *this;
@@ -1709,6 +1710,8 @@ template<typename R> struct TheTest
             EXPECT_COMPARE_EQ(dataY.sum(i, 8), res[i + 6]);
             EXPECT_COMPARE_EQ(dataZ.sum(i, 8), res[i + 7]);
         }
+#else
+        std::cout << "SKIP: test_reduce_sum8, CV_SIMD_FP16 is not available" << std::endl;
 #endif
 
         return *this;
@@ -1716,7 +1719,6 @@ template<typename R> struct TheTest
 
     TheTest & test_loadstore_fp16_f32()
     {
-        printf("test_loadstore_fp16_f32 ...\n");
         AlignedData<v_uint16> data; data.a.clear();
         data.a.d[0] = 0x3c00; // 1.0
         data.a.d[VTraits<R>::vlanes() - 1] = (unsigned short)0xc000; // -2.0
@@ -1742,7 +1744,6 @@ template<typename R> struct TheTest
     TheTest & test_loadstore_fp16()
     {
 #if CV_SIMD_FP16
-        printf("test_loadstore_fp16 ...\n");
         AlignedData<R> data;
         AlignedData<R> out;
 
@@ -1764,14 +1765,16 @@ template<typename R> struct TheTest
         out.a.clear();
         v_store(out.a.d, r1);
         EXPECT_EQ(data.a, out.a);
+#else
+        std::cout << "SKIP: test_loadstore_fp16, CV_SIMD_FP16 is not available" << std::endl;
 #endif
+
         return *this;
     }
 
     TheTest & test_float_cvt_fp16()
     {
 #if CV_SIMD_FP16
-        printf("test_float_cvt_fp16 ...\n");
         AlignedData<v_float32> data;
 
         // check conversion
@@ -1780,7 +1783,10 @@ template<typename R> struct TheTest
         v_float32 r3 = v_cvt_f32(r2);
         EXPECT_EQ(1, v_get0(r2));
         EXPECT_EQ(v_get0(r3), v_get0(r1));
+#else
+        std::cout << "SKIP: test_float_cvt_fp16, CV_SIMD_FP16 is not available" << std::endl;
 #endif
+
         return *this;
     }
 

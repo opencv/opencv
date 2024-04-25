@@ -1127,11 +1127,11 @@ OPENCV_HAL_IMPL_NEON_ABS(v_uint8x16, v_int8x16, u8, s8)
 OPENCV_HAL_IMPL_NEON_ABS(v_uint16x8, v_int16x8, u16, s16)
 OPENCV_HAL_IMPL_NEON_ABS(v_uint32x4, v_int32x4, u32, s32)
 
-inline v_float32x4 v_abs(v_float32x4 x)
+inline v_float32x4 v_abs(const v_float32x4 &x)
 { return v_float32x4(vabsq_f32(x.val)); }
 
 #if CV_SIMD128_FP16
-inline v_float16x8 v_abs(v_float16x8 x)
+inline v_float16x8 v_abs(const v_float16x8 &x)
 { return v_float16x8(vabsq_f16(x.val)); }
 #endif
 
