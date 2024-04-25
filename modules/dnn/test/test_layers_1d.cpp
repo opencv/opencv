@@ -553,7 +553,8 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Reduce_Test, Combine(
 /*input blob shape*/    Values(
     std::vector<int>({}),
     std::vector<int>({1}),
-    std::vector<int>({1, 4})
+    std::vector<int>({1, 4}),
+    std::vector<int>({4, 1})
     ),
 /*reduce operation type*/
     Values("max", "min", "mean", "sum", "sum_square", "l1", "l2", "prod", "log_sum", "log_sum_exp"))
