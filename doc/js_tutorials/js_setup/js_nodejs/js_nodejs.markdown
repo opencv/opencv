@@ -346,8 +346,8 @@ faces.forEach(function(rect) {
 
 const canvas = createCanvas(image.width, image.height);
 cv.imshow(canvas, src);
-console.log('The result is saved.')
 writeFileSync('output3.jpg', canvas.toBuffer('image/jpeg'));
+console.log('The result is saved.')
 src.delete(); srcBGR.delete();
 })();
 
