@@ -16,6 +16,8 @@
 #include "backends/common/gbackend.hpp"
 #include "executor/gexecutor.hpp"
 
+#include "utils/itt.hpp"
+
 // GCompiled private implementation ////////////////////////////////////////////
 void cv::GCompiled::Priv::setup(const GMetaArgs &_metaArgs,
                                 const GMetaArgs &_outMetas,
@@ -105,6 +107,8 @@ void cv::GCompiled::operator() (GRunArgs &&ins, GRunArgsP &&outs)
 {
     // FIXME: Check that <ins> matches the protocol!!!
     // FIXME: Check that <outs> matches the protocol
+    GAPI_ITT_STATIC_LOCAL_HANDLE(gcompiled_run_hndl, "cv::GCompiled::operator()");
+    GAPI_ITT_AUTO_TRACE_GUARD(gcompiled_run_hndl);
     m_priv->run(cv::gimpl::GRuntimeArgs{std::move(ins),std::move(outs)});
 }
 

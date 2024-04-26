@@ -1502,6 +1502,9 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
 
 void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                        cv::gimpl::GIslandExecutable::IOutput &out) {
+    GAPI_ITT_STATIC_LOCAL_HANDLE(ov_exec_run_hndl, "cv::gimpl::ov::GOVExecutable::run()");
+    GAPI_ITT_AUTO_TRACE_GUARD(ov_exec_run_hndl);
+
     std::vector<InObj>  input_objs;
     std::vector<OutObj> output_objs;
 

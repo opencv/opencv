@@ -628,6 +628,9 @@ cv::GArg cv::gimpl::onnx::GONNXExecutable::packArg(const cv::GArg &arg) {
 
 void cv::gimpl::onnx::GONNXExecutable::run(std::vector<InObj>  &&input_objs,
                                            std::vector<OutObj> &&output_objs) {
+    GAPI_ITT_STATIC_LOCAL_HANDLE(onnx_exec_run_hndl, "cv::gimpl::onnx::GONNXExecutable::run()");
+    GAPI_ITT_AUTO_TRACE_GUARD(onnx_exec_run_hndl);
+
     // Update resources with run-time information - what this Island
     // has received from user (or from another Island, or mix...)
     // FIXME: Check input/output objects against GIsland protocol
