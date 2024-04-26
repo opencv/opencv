@@ -221,7 +221,7 @@ Hamming norm of a vector
 @param cellSize how many bits of the vector will be added and treated as a single bit, can be 1 (standard Hamming distance), 2 or 4
 @param result pointer to result output
 */
-//! @addtogroup core_hal_interface_compare Hamming distance
+//! @addtogroup core_hal_interface_hamming Hamming distance
 //! @{
 inline int hal_ni_normHamming8u(const uchar* a, int n, int cellSize, int* result) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
@@ -234,7 +234,7 @@ Hamming distance between two vectors
 @param cellSize how many bits of the vectors will be added and treated as a single bit, can be 1 (standard Hamming distance), 2 or 4
 @param result pointer to result output
 */
-//! @addtogroup core_hal_interface_compare Hamming distance
+//! @addtogroup core_hal_interface_hamming Hamming distance
 //! @{
 inline int hal_ni_normHammingDiff8u(const uchar* a, const uchar* b, int n, int cellSize, int* result) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
