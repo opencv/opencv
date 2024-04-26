@@ -807,12 +807,24 @@ TEST_P(Test_ONNX_layers, CumSumExclusiveInplace)
     testONNXModels("cumsum_exclusive_inplace");
 }
 
-// Issue: https://github.com/opencv/opencv/issues/25363
-// The issue was addressed in 4.x, but the solution does not fit 5.x design
-TEST_P(Test_ONNX_layers, DISABLED_Range)
+TEST_P(Test_ONNX_layers, RangeFloat)
 {
     testONNXModels("range_float");
     testONNXModels("range_float_negative");
+}
+
+TEST_P(Test_ONNX_layers, RangeInt32)
+{
+    testONNXModels("range_int32");
+    testONNXModels("range_int32_negative");
+}
+
+TEST_P(Test_ONNX_layers, RangeInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("range_int64");
+    testONNXModels("range_int64_negative");
 }
 
 TEST_P(Test_ONNX_layers, Eltwise3D)
