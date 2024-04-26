@@ -296,25 +296,24 @@ class dnn_test(NewOpenCVTests):
                [1, 259.0921, 229.30713, 31.088186, 39.74022, 0.90490955],
                [1, 405.69778, 87.28158, 33.393406, 42.96226, 0.8996978]]
 
-        net = cv.FaceDetectorYN.create(
-            model=model,
-            config="",
-            input_size=img.shape[:2],
-            score_threshold=0.3,
-            nms_threshold=0.45,
-            top_k=5000,
-        )
-
         print('\n')
         for backend, target in self.dnnBackendsAndTargets:
             printParams(backend, target)
 
+            net = cv.FaceDetectorYN.create(
+                model=model,
+                config="",
+                input_size=img.shape[:2],
+                score_threshold=0.3,
+                nms_threshold=0.45,
+                top_k=5000,
+                backend_id=backend,
+                target_id=target
+            )
+
             out = net.detect(img)
             out = out[1]
             out = out.reshape(-1, 15)
-
-            scoresDiff = 4e-3 if target in [cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD] else 1e-5
-            iouDiff = 2e-2 if target in [cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD] else 1e-4
 
             ref = np.array(ref, np.float32)
             refClassIds, testClassIds = ref[:, 0], np.ones(out.shape[0], np.float32)
@@ -322,7 +321,7 @@ class dnn_test(NewOpenCVTests):
             refBoxes, testBoxes = ref[:, 1:5], out[:, 0:4]
 
             normAssertDetections(self, refClassIds, refScores, refBoxes, testClassIds,
-                                 testScores, testBoxes, 0.5, scoresDiff, iouDiff)
+                                 testScores, testBoxes, 0.5)
 
     def test_async(self):
         timeout = 10*1000*10**6  # in nanoseconds (10 sec)
