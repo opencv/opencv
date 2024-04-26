@@ -241,7 +241,7 @@ const createFileFromUrl = function (path, url, maxRedirects = 10) {
       if (redirectCount > maxRedirects) {
         reject(new Error('Too many redirects'));
       } else {
-        https.get(url, (response) => {
+        let connection = https.get(url, (response) => {
           if (response.statusCode === 200) {
             let data = [];
             response.on('data', (chunk) => {
@@ -257,6 +257,7 @@ const createFileFromUrl = function (path, url, maxRedirects = 10) {
               }
             });
           } else if (response.statusCode === 302 || response.statusCode === 301) {
+            connection.abort();
             download(response.headers.location, redirectCount + 1);
           } else {
             reject(new Error('Failed to load ' + url + ' status: ' + response.statusCode));
