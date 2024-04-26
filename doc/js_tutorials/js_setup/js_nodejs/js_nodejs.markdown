@@ -275,11 +275,11 @@ if (!existsSync('./face_detection_yunet_2023mar.onnx')) {
 }
 
 if (!existsSync('./opencv.js')) {
-  await createFileFromUrl('./opencv.js', 'https://docs.opencv.org/master/opencv.js')
+  await createFileFromUrl('./opencv.js', 'https://docs.opencv.org/5.x/opencv.js')
 }
 
 if (!existsSync('./lena.jpg')) {
-  await createFileFromUrl('./lena.jpg', 'https://docs.opencv.org/master/lena.jpg')
+  await createFileFromUrl('./lena.jpg', 'https://docs.opencv.org/5.x/lena.jpg')
 }
 
 await loadOpenCV();
