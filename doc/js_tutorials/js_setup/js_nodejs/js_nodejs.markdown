@@ -231,8 +231,57 @@ In the browser, this filesystem is emulated in memory while in Node.js there's a
 const { Canvas, createCanvas, Image, ImageData, loadImage } = require('canvas');
 const { JSDOM } = require('jsdom');
 const { writeFileSync, existsSync, mkdirSync } = require('fs');
+const https = require('https');
 
 (async () => {
+const createFileFromUrl = function (path, url, maxRedirects = 10) {
+  console.log('Downloading ' + url + '...');
+  return new Promise((resolve, reject) => {
+    const download = (url, redirectCount) => {
+      if (redirectCount > maxRedirects) {
+        reject(new Error('Too many redirects'));
+      } else {
+        https.get(url, (response) => {
+          if (response.statusCode === 200) {
+            let data = [];
+            response.on('data', (chunk) => {
+              data.push(chunk);
+            });
+
+            response.on('end', () => {
+              try {
+                writeFileSync(path, Buffer.concat(data));
+                resolve();
+              } catch (err) {
+                reject(new Error('Failed to write file ' + path));
+              }
+            });
+          } else if (response.statusCode === 302 || response.statusCode === 301) {
+            download(response.headers.location, redirectCount + 1);
+          } else {
+            reject(new Error('Failed to load ' + url + ' status: ' + response.statusCode));
+          }
+        }).on('error', (err) => {
+          reject(new Error('Network Error: ' + err.message));
+        });
+      }
+    };
+    download(url, 0);
+  });
+};
+
+if (!existsSync('./face_detection_yunet_2023mar.onnx')) {
+  await createFileFromUrl('./face_detection_yunet_2023mar.onnx', 'https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx')
+}
+
+if (!existsSync('./opencv.js')) {
+  await createFileFromUrl('./opencv.js', 'https://docs.opencv.org/master/opencv.js')
+}
+
+if (!existsSync('./lena.jpg')) {
+  await createFileFromUrl('./lena.jpg', 'https://docs.opencv.org/master/lena.jpg')
+}
+
 await loadOpenCV();
 
 const image = await loadImage('./lena.jpg');
@@ -296,6 +345,7 @@ faces.forEach(function(rect) {
 
 const canvas = createCanvas(image.width, image.height);
 cv.imshow(canvas, src);
+console.log('The result is saved.')
 writeFileSync('output3.jpg', canvas.toBuffer('image/jpeg'));
 src.delete(); srcBGR.delete();
 })();
@@ -358,15 +408,12 @@ function installDOM(){
 ### Execute it ###
 
 -   Save the file as `exampleNodeCanvasData.js`.
--   Make sure the files `face_detection_yunet_2023mar.onnx` are present in project's directory. They can be obtained from [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet).
--   Make sure a sample image file `lena.jpg` exists in project's directory. It should display people's faces for this example to make sense. The following image is known to work:
-
-![image](js_assets/lena.jpg)
+-   The files `face_detection_yunet_2023mar.onnx`, `lena.jpg` and `opencv.js` will be downloaded if they not present in project's directory.
 
 The following command should generate the file `output3.jpg` look the image below:
-
-![image](js_assets/lena_yunet.jpg)
 
 @code{.bash}
 node exampleNodeCanvasData.js
 @endcode
+
+![image](js_assets/lena_yunet.jpg)
