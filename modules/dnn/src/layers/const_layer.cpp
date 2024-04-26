@@ -143,7 +143,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         std::shared_ptr<ov::Node> node =
-                    std::make_shared<ov::op::v0::Constant>(cvTypeToOvType(blobs[0].type()),
+                    std::make_shared<ov::op::v0::Constant>(cvTypeToOvType(blobs[0]),
                                                            getShape<size_t>(blobs[0]),
                                                            blobs[0].data);
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));

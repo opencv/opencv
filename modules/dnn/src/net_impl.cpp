@@ -470,8 +470,7 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
         allocateLayer(*i, layersShapes);
 
     // bind inputs for DataLayer
-    if (ld.id == 0 &&
-        (netInputLayer->supportBackend(preferableBackend) || preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH))
+    if (ld.id == 0 && netInputLayer->supportBackend(preferableBackend))
     {
         ninputs = netInputLayer->inputsData.size();
         ld.inputBlobsWrappers.resize(ninputs);

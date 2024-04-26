@@ -66,6 +66,11 @@ ov::element::Type cvTypeToOvType(MatType cvType)
     }
 }
 
+ov::element::Type cvTypeToOvType(const cv::Mat& mat)
+{
+    return cvTypeToOvType(mat.depth());
+}
+
 MatType ovTypeToCvType(ov::element::Type ovType)
 {
     switch (ovType) {
@@ -320,7 +325,7 @@ ov::ParameterVector InfEngineNgraphNet::setInputs(const std::vector<cv::Mat>& in
     for (size_t i = 0; i < inputs.size(); i++)
     {
         std::vector<size_t> shape = getShape<size_t>(inputs[i]);
-        auto inp = std::make_shared<ov::op::v0::Parameter>(cvTypeToOvType(inputs[i].depth()), ov::Shape(shape));
+        auto inp = std::make_shared<ov::op::v0::Parameter>(cvTypeToOvType(inputs[i]), ov::Shape(shape));
         inp->set_friendly_name(names[i]);
 
         auto it = std::find_if(inputs_vec.begin(), inputs_vec.end(),
@@ -477,7 +482,7 @@ void NgraphBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays 
 
 ov::Tensor wrapToNgraphBlob(const Mat& m) {
     std::vector<size_t> shape = getShape<size_t>(m);
-    return ov::Tensor(cvTypeToOvType(m.type()), shape, m.data);
+    return ov::Tensor(cvTypeToOvType(m), shape, m.data);
 }
 
 
