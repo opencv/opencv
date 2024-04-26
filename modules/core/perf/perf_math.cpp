@@ -148,27 +148,31 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     }
 
     RNG& rng = theRNG();
+    Mat A = buildRandomMat(size, size, mtype, rng, rank, symmetrical);
+    Mat x(size, 1, mtype);
+    Mat b(size, 1, mtype);
+
+    switch (solutions)
+    {
+    // no solutions, let's make b random
+    case NO_SOLUTIONS:
+        rng.fill(b, RNG::UNIFORM, Scalar(-1), Scalar(1));
+        break;
+    // exactly 1 solution, let's combine b from A and x
+    case ONE_SOLUTION:
+    {
+        rng.fill(x, RNG::UNIFORM, Scalar(-10), Scalar(10));
+        b = A * x;
+    }
+    break;
+    // infinitely many solutions, let's make b zero
+    default:
+        b = 0;
+        break;
+    }
+
     while (next())
     {
-        Mat A = buildRandomMat(size, size, mtype, rng, rank, symmetrical);
-        Mat x(size, 1, mtype);
-        Mat b(size, 1, mtype);
-
-        switch (solutions)
-        {
-        // no solutions, let's make b random
-        case NO_SOLUTIONS: rng.fill(b, RNG::UNIFORM, Scalar(-1), Scalar(1)); break;
-        // exactly 1 solution, let's combine b from A and x
-        case ONE_SOLUTION:
-        {
-            rng.fill(x, RNG::UNIFORM, Scalar(-10), Scalar(10));
-            b = A * x;
-        }
-        break;
-        // infinitely many solutions, let's make b zero
-        default: b = 0; break;
-        }
-
         startTimer();
         cv::solve(A, b, x, method);
         stopTimer();
@@ -214,10 +218,9 @@ PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
     int flags = needUV ? 0 : SVD::NO_UV;
 
     RNG& rng = theRNG();
+    Mat A = buildRandomMat(rows, cols, mtype, rng, rank, symmetrical);
     while (next())
     {
-        Mat A = buildRandomMat(rows, cols, mtype, rng, rank, symmetrical);
-
         startTimer();
         cv::SVD svd(A, flags);
         stopTimer();
@@ -254,15 +257,15 @@ PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
     }
 
     RNG& rng = theRNG();
+    Mat A = buildRandomMat(rows, cols, mtype, rng, rank, /* symmetrical */ false);
+    cv::SVD svd(A);
+    // preallocate to not spend time on it during backSubst()
+    Mat dst(cols, 1, mtype);
+    Mat rhs(rows, 1, mtype);
+    rng.fill(rhs, RNG::UNIFORM, Scalar(-10), Scalar(10));
+
     while (next())
     {
-        Mat A = buildRandomMat(rows, cols, mtype, rng, rank, /* symmetrical */ false);
-        cv::SVD svd(A);
-        // preallocate to not spend time on it during backSubst()
-        Mat dst(cols, 1, mtype);
-        Mat rhs(rows, 1, mtype);
-        rng.fill(rhs, RNG::UNIFORM, Scalar(-10), Scalar(10));
-
         startTimer();
         svd.backSubst(rhs, dst);
         stopTimer();
