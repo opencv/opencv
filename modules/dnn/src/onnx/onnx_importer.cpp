@@ -3005,7 +3005,7 @@ Mat runRangeLayer(const Mat& startMat, const Mat& limitMat, const Mat& deltaMat)
     T delta = deltaMat.at<T>(0);
 
     int numberOfElements;
-    if (start.depth() == CV_32S || start.depth() == CV_64S) {
+    if (startMat.depth() == CV_32S || startMat.depth() == CV_64S) {
         if (delta > 0)
             numberOfElements = (limit - start + delta - 1) / delta;
         else
@@ -3017,8 +3017,8 @@ Mat runRangeLayer(const Mat& startMat, const Mat& limitMat, const Mat& deltaMat)
     }
     numberOfElements = std::max(numberOfElements, 0);
 
-    Mat r(numberOfElements, 1, startMat.type());
-    for (int i = 0; i < number_of_elements; i++)
+    Mat r(std::vector<int>{numberOfElements}, startMat.type());
+    for (int i = 0; i < numberOfElements; i++)
     {
         r.at<T>(i) = start + (i * delta);
     }
@@ -3039,9 +3039,9 @@ void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeP
     // only supports the case which all inputs are constant
     CV_Assert(const_id.size() == 3);
 
-    Mat startMat = getIntBlob(node_proto, 0);
-    Mat limitMat = getIntBlob(node_proto, 1);
-    Mat deltaMat = getIntBlob(node_proto, 2);
+    Mat startMat = getBlob(node_proto, 0);
+    Mat limitMat = getBlob(node_proto, 1);
+    Mat deltaMat = getBlob(node_proto, 2);
 
     Mat result;
     switch (startMat.depth())
