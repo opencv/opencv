@@ -191,10 +191,10 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_NaryElemwise_1d_Test, Combine(
 /*operation*/           testing::Values("div", "mul", "sum", "sub")
 ));
 
-typedef testing::TestWithParam<tuple<int, std::string>> Layer_Elemwise_1d_Test;
-TEST_P(Layer_Elemwise_1d_Test, Accuracy) {
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Elemwise_1d_Test;
+TEST_P(Layer_Elemwise_1d_Test, Accuracy_01D) {
 
-    int batch_size = get<0>(GetParam());
+    std::vector<int> input_shape = get<0>(GetParam());
     std::string operation = get<1>(GetParam());
 
     LayerParams lp;
@@ -203,12 +203,8 @@ TEST_P(Layer_Elemwise_1d_Test, Accuracy) {
     lp.set("operation", operation);
     Ptr<EltwiseLayer> layer = EltwiseLayer::create(lp);
 
-    std::vector<int> input_shape = {batch_size, 1};
-    if (batch_size == 0)
-        input_shape.erase(input_shape.begin());
-
-    cv::Mat input1 = cv::Mat(input_shape, CV_32F, 1.0);
-    cv::Mat input2 = cv::Mat(input_shape, CV_32F, 1.0);
+    cv::Mat input1(input_shape.size(), input_shape.data(), CV_32F);
+    cv::Mat input2(input_shape.size(), input_shape.data(), CV_32F);
     cv::randu(input1, 0.0, 1.0);
     cv::randu(input2, 0.0, 1.0);
 
@@ -228,12 +224,10 @@ TEST_P(Layer_Elemwise_1d_Test, Accuracy) {
         output_ref = cv::Mat();
     }
 
-
     std::vector<Mat> inputs{input1, input2};
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
-
     if (!output_ref.empty()) {
         ASSERT_EQ(outputs.size(), 1);
         ASSERT_EQ(shape(outputs[0]), shape(output_ref));
@@ -242,10 +236,14 @@ TEST_P(Layer_Elemwise_1d_Test, Accuracy) {
         CV_Error(Error::StsAssert, "Provided operation: " + operation + " is not supported. Please check the test instantiation.");
     }
 }
-
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Elemwise_1d_Test, Combine(
-/*input blob shape*/    Values(0, 1, 2, 3),
-/*operation*/           Values("div", "prod", "max", "min", "sum")
+/*input blob shape*/    testing::Values(
+                                    std::vector<int>({}),
+                                    std::vector<int>({1}),
+                                    std::vector<int>({4}),
+                                    std::vector<int>({1, 4}),
+                                    std::vector<int>({4, 1})),
+/*operation*/           testing::Values("div", "prod", "max", "min", "sum")
 ));
 
 TEST(Layer_Reshape_Test, Accuracy_1D)
