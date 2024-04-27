@@ -25,7 +25,7 @@ Setup
 - (Option) `sudo apt install ninja-build` (or remove `-GNinja` option for cmake command).
 - (Option) `sudo apt install libwayland-egl1` to enable Wayland EGL library.
 
-Get OpenCV from github
+Get OpenCV from Github
 ----------------------
 
 ```bash
@@ -72,17 +72,24 @@ sudo ldconfig
 
 Simple Application to try Wayland highgui-backend
 -------------------------------------------------
-Try this code, so you can see gray window with Wayland highgui-backend.
+Try this code, so you can see name of currentUIFrramework() and OpenCV logo window with Wayland highgui-backend.
 
 
 ```bash
-// g++ main.cpp -o a.out -I /usr/local/opencv4 -lopencv_core -lopencv_highghui
+// g++ main.cpp -o a.out -I /usr/local/include/opencv4 -lopencv_core -lopencv_highgui -lopencv_imgcodecs
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <iostream>
+#include <string>
 
 int main(void)
 {
-  cv::Mat src(240, 320, CV_8UC3, cv::Scalar::all(128) );
+  std::cout << "cv::currentUIFramework() returns " << cv::currentUIFramework() << std::endl;
+
+  cv::Mat src;
+  src = cv::imread("opencv-logo.png");
+
   cv::namedWindow("src");
 
   int key = 0;
@@ -97,5 +104,4 @@ int main(void)
 
 Limitation/Known problem
 ------------------------
-- If calling `namedWindow()` is missing, `imshow()` doesn't work (maybe bug).
-- moveWindows() is not implementated ( See. https://github.com/opencv/opencv/issues/25478 )
+- cv::moveWindow() is not implementated. ( See. https://github.com/opencv/opencv/issues/25478 )
