@@ -25,11 +25,10 @@ Setup
 - (Option) `sudo apt install ninja-build` (or remove `-GNinja` option for cmake command).
 - (Option) `sudo apt install libwayland-egl1` to enable Wayland EGL library.
 
-Get OpenCV from Github
+Get OpenCV from GitHub
 ----------------------
 
 ```bash
-cd work
 mkdir work
 cd work
 git clone --depth=1 https://github.com/opencv/opencv.git
