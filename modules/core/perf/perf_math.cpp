@@ -142,9 +142,9 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
     int rank = size;
     switch (rankEnum)
     {
-    case RANK_HALF:    rank /= 2; break;
-    case RANK_MINUS_1: rank -= 1; break;
-    default: break;
+        case RANK_HALF:    rank /= 2; break;
+        case RANK_MINUS_1: rank -= 1; break;
+        default: break;
     }
 
     RNG& rng = theRNG();
@@ -154,29 +154,28 @@ PERF_TEST_P(SolveTest, randomMat, ::testing::Combine(
 
     switch (solutions)
     {
-    // no solutions, let's make b random
-    case NO_SOLUTIONS:
-        rng.fill(b, RNG::UNIFORM, Scalar(-1), Scalar(1));
+        // no solutions, let's make b random
+        case NO_SOLUTIONS:
+        {
+            rng.fill(b, RNG::UNIFORM, Scalar(-1), Scalar(1));
+        }
         break;
-    // exactly 1 solution, let's combine b from A and x
-    case ONE_SOLUTION:
-    {
-        rng.fill(x, RNG::UNIFORM, Scalar(-10), Scalar(10));
-        b = A * x;
-    }
-    break;
-    // infinitely many solutions, let's make b zero
-    default:
-        b = 0;
+        // exactly 1 solution, let's combine b from A and x
+        case ONE_SOLUTION:
+        {
+            rng.fill(x, RNG::UNIFORM, Scalar(-10), Scalar(10));
+            b = A * x;
+        }
+        break;
+        // infinitely many solutions, let's make b zero
+        default:
+        {
+            b = 0;
+        }
         break;
     }
 
-    while (next())
-    {
-        startTimer();
-        cv::solve(A, b, x, method);
-        stopTimer();
-    }
+    TEST_CYCLE() cv::solve(A, b, x, method);
 
     SANITY_CHECK_NOTHING();
 }
@@ -219,12 +218,7 @@ PERF_TEST_P(SvdTest, decompose, ::testing::Combine(
 
     RNG& rng = theRNG();
     Mat A = buildRandomMat(rows, cols, mtype, rng, rank, symmetrical);
-    while (next())
-    {
-        startTimer();
-        cv::SVD svd(A, flags);
-        stopTimer();
-    }
+    TEST_CYCLE() cv::SVD svd(A, flags);
 
     SANITY_CHECK_NOTHING();
 }
@@ -264,12 +258,7 @@ PERF_TEST_P(SvdTest, backSubst, ::testing::Combine(
     Mat rhs(rows, 1, mtype);
     rng.fill(rhs, RNG::UNIFORM, Scalar(-10), Scalar(10));
 
-    while (next())
-    {
-        startTimer();
-        svd.backSubst(rhs, dst);
-        stopTimer();
-    }
+    TEST_CYCLE() svd.backSubst(rhs, dst);
 
     SANITY_CHECK_NOTHING();
 }
