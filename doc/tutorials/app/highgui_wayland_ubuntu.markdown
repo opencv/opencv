@@ -99,4 +99,3 @@ Limitation/Known problem
 ------------------------
 - If calling `namedWindow()` is missing, `imshow()` doesn't work (maybe bug).
 - moveWindows() is not implementated ( See. https://github.com/opencv/opencv/issues/25478 )
-
