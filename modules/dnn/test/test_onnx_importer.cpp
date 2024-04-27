@@ -804,6 +804,12 @@ TEST_P(Test_ONNX_layers, CumSumExclusiveInplace)
     testONNXModels("cumsum_exclusive_inplace");
 }
 
+TEST_P(Test_ONNX_layers, Range)
+{
+    testONNXModels("range_float");
+    testONNXModels("range_float_negative");
+}
+
 TEST_P(Test_ONNX_layers, Eltwise3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
@@ -1471,6 +1477,8 @@ TEST_P(Test_ONNX_layers, Einsum_2D)
 
 TEST_P(Test_ONNX_layers, Einsum_2D_Ellipses)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("einsum_2d_ellipses", npy, 0, 0, false, false, 2);
 }
 
@@ -1501,6 +1509,8 @@ TEST_P(Test_ONNX_layers, DISABLED_Einsum_HadamardProduct)
 
 TEST_P(Test_ONNX_layers, Einsum_Batch_Diagonal)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
 }
 
@@ -2298,7 +2308,13 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-67; 75], after Softmax [0, 0.98]
+    size_t hwm0 = getTopMemoryUsageMB();
     testONNXModels("resnet50v1", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
+    size_t hwm1 = getTopMemoryUsageMB();
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU)
+    {
+        EXPECT_LE(hwm1 - hwm0, 350) << "Top allocated memory";
+    }
 }
 
 TEST_P(Test_ONNX_nets, ResNet50_Int8)
@@ -3078,6 +3094,16 @@ TEST_P(Test_ONNX_nets, VitTrack) {
 
 TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
     testONNXModels("layer_norm_no_fusion");
+}
+
+TEST_P(Test_ONNX_layers, MatMulAddFusion) {
+    double l1 = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.0018 : default_l1;
+    double lInf = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.011 : default_lInf;
+    testONNXModels("biased_matmul", npy, l1, lInf);
+}
+
+TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
+    testONNXModels("clip_div_shared_constant");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

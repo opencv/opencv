@@ -18,8 +18,6 @@ Implementation of Batch Normalization layer.
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
 
-#include <opencv2/dnn/shape_utils.hpp>
-
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 #endif
@@ -459,14 +457,10 @@ public:
         auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> shape(ieInpNode.get_shape().size(), 1);
         shape[1] = weights_.total();
-        auto weight = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), weights_.data);
-        auto bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), bias_.data);
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
-        auto scale_node = std::make_shared<ngraph::op::v1::Multiply>(ieInpNode, weight, ngraph::op::AutoBroadcastType::NUMPY);
-#else
-        auto scale_node = std::make_shared<ngraph::op::v0::Multiply>(ieInpNode, weight, ngraph::op::AutoBroadcastType::NUMPY);
-#endif
-        auto scale_shift = std::make_shared<ngraph::op::v1::Add>(scale_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
+        auto weight = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape(shape), weights_.data);
+        auto bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape(shape), bias_.data);
+        auto scale_node = std::make_shared<ov::op::v1::Multiply>(ieInpNode, weight, ov::op::AutoBroadcastType::NUMPY);
+        auto scale_shift = std::make_shared<ov::op::v1::Add>(scale_node, bias, ov::op::AutoBroadcastType::NUMPY);
         return Ptr<BackendNode>(new InfEngineNgraphNode(scale_shift));
     }
 #endif  // HAVE_DNN_NGRAPH

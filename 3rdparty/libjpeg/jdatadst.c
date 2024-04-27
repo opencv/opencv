@@ -2,7 +2,7 @@
  * jdatadst.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2009-2019 by Guido Vollbeding.
+ * Modified 2009-2022 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -28,16 +28,16 @@ extern void free JPP((void *ptr));
 
 /* Expanded data destination object for stdio output */
 
+#define OUTPUT_BUF_SIZE  4096	/* choose an efficiently fwrite'able size */
+
 typedef struct {
   struct jpeg_destination_mgr pub; /* public fields */
 
   FILE * outfile;		/* target stream */
-  JOCTET * buffer;		/* start of buffer */
+  JOCTET buffer[OUTPUT_BUF_SIZE]; /* output buffer */
 } my_destination_mgr;
 
 typedef my_destination_mgr * my_dest_ptr;
-
-#define OUTPUT_BUF_SIZE  4096	/* choose an efficiently fwrite'able size */
 
 
 /* Expanded data destination object for memory output */
@@ -64,10 +64,6 @@ METHODDEF(void)
 init_destination (j_compress_ptr cinfo)
 {
   my_dest_ptr dest = (my_dest_ptr) cinfo->dest;
-
-  /* Allocate the output buffer --- it will be released when done with image */
-  dest->buffer = (JOCTET *) (*cinfo->mem->alloc_small)
-    ((j_common_ptr) cinfo, JPOOL_IMAGE, OUTPUT_BUF_SIZE * SIZEOF(JOCTET));
 
   dest->pub.next_output_byte = dest->buffer;
   dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
@@ -187,8 +183,8 @@ term_mem_destination (j_compress_ptr cinfo)
 
 /*
  * Prepare for output to a stdio stream.
- * The caller must have already opened the stream, and is responsible
- * for closing it after finishing compression.
+ * The caller must have already opened the stream,
+ * and is responsible for closing it after finishing compression.
  */
 
 GLOBAL(void)

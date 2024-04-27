@@ -215,6 +215,36 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 //! @endcond
 
 /**
+Hamming norm of a vector
+@param a pointer to vector data
+@param n length of a vector
+@param cellSize how many bits of the vector will be added and treated as a single bit, can be 1 (standard Hamming distance), 2 or 4
+@param result pointer to result output
+*/
+//! @addtogroup core_hal_interface_hamming Hamming distance
+//! @{
+inline int hal_ni_normHamming8u(const uchar* a, int n, int cellSize, int* result) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+/**
+Hamming distance between two vectors
+@param a pointer to first vector data
+@param b pointer to second vector data
+@param n length of vectors
+@param cellSize how many bits of the vectors will be added and treated as a single bit, can be 1 (standard Hamming distance), 2 or 4
+@param result pointer to result output
+*/
+//! @addtogroup core_hal_interface_hamming Hamming distance
+//! @{
+inline int hal_ni_normHammingDiff8u(const uchar* a, const uchar* b, int n, int cellSize, int* result) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_normHamming8u hal_ni_normHamming8u
+#define cv_hal_normHammingDiff8u hal_ni_normHammingDiff8u
+//! @endcond
+
+/**
 Compare: _dst[i] = src1[i] op src2[i]_
 @param src1_data first source image data
 @param src1_step first source image step
@@ -413,6 +443,24 @@ inline int hal_ni_merge64s(const int64 **src_data, int64 *dst_data, int len, int
 #define cv_hal_merge64s hal_ni_merge64s
 //! @endcond
 
+/**
+@param x source X arrays
+@param y source Y arrays
+@param mag destination magnitude array
+@param angle destination angle array
+@param len length of arrays
+@param angleInDegrees if set to true return angles in degrees, otherwise in radians
+*/
+//! @addtogroup core_hal_interface_fastAtan Atan calculation
+//! @{
+inline int hal_ni_cartToPolar32f(const float* x, const float* y, float* mag, float* angle, int len, bool angleInDegrees) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_cartToPolar64f(const double* x, const double* y, double* mag, double* angle, int len, bool angleInDegrees) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_cartToPolar32f hal_ni_cartToPolar32f
+#define cv_hal_cartToPolar64f hal_ni_cartToPolar64f
+//! @endcond
 
 /**
 @param y source Y arrays
@@ -450,6 +498,24 @@ inline int hal_ni_magnitude64f(const double *x, const double  *y, double *dst, i
 #define cv_hal_magnitude64f hal_ni_magnitude64f
 //! @endcond
 
+/**
+@param mag source magnitude arrays
+@param mag source angle arrays
+@param x destination X array
+@param y destination Y array
+@param len length of arrays
+@param angleInDegrees if set to true interpret angles from degrees, otherwise from radians
+*/
+//! @addtogroup core_hal_interface_fastAtan Atan calculation
+//! @{
+inline int hal_ni_polarToCart32f(const float* mag, const float* angle, float* x, float* y, int len, bool angleInDegrees) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_polarToCart64f(const double* mag, const double* angle, double* x, double* y, int len, bool angleInDegrees) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_polarToCart32f hal_ni_polarToCart32f
+#define cv_hal_polarToCart64f hal_ni_polarToCart64f
+//! @endcond
 
 /**
 @param src source array
@@ -795,7 +861,6 @@ inline int hal_ni_flip(int src_type, const uchar* src_data, size_t src_step, int
 #define cv_hal_flip hal_ni_flip
 //! @endcond
 
-
 /**
    @brief rotate90
    @param src_type source and destination image type
@@ -816,6 +881,20 @@ inline int hal_ni_rotate90(int src_type, const uchar* src_data, size_t src_step,
 
 //! @cond IGNORED
 #define cv_hal_rotate90 hal_ni_rotate90
+//! @endcond
+
+/**
+   @brief Transpose2d
+   @param src_data,src_step Source image
+   @param dst_data,dst_step Destination image
+   @param src_width,src_height Source image dimensions
+   @param element_size Size of an element in bytes
+*/
+inline int hal_ni_transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width,
+                              int src_height, int element_size) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_transpose2d hal_ni_transpose2d
 //! @endcond
 
 //! @}

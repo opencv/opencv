@@ -91,7 +91,8 @@ class ONNXImporter
 
     void addConstant(const std::string& name, const Mat& blob);
     void addLayer(LayerParams& layerParams,
-                  const opencv_onnx::NodeProto& node_proto);
+                  const opencv_onnx::NodeProto& node_proto,
+                  int num_inputs = std::numeric_limits<int>::max());
     void setParamsDtype(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     void lstm_extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int* blobShape_, int size);
@@ -617,7 +618,8 @@ ONNXImporter::TensorInfo ONNXImporter::getBlobExtraInfo(const std::string& input
 }
 
 void ONNXImporter::addLayer(LayerParams& layerParams,
-                            const opencv_onnx::NodeProto& node_proto)
+                            const opencv_onnx::NodeProto& node_proto,
+                            int num_inputs)
 {
     int depth = layerParams.get<int>("depth", CV_32F);
     int id = dstNet.addLayer(layerParams.name, layerParams.type, depth, layerParams);
@@ -632,7 +634,8 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
 
     std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
     int inpNum = 0;
-    for (int j = 0; j < node_proto.input_size(); j++)
+    num_inputs = std::min(node_proto.input_size(), num_inputs);
+    for (int j = 0; j < num_inputs; j++)
     {
         const std::string& input_name = node_proto.input(j);
         IterLayerId_t layerId = layer_id.find(input_name);
@@ -1799,7 +1802,7 @@ void ONNXImporter::parseClip(LayerParams& layerParams, const opencv_onnx::NodePr
 
     layerParams.set("min_value", layerParams.get<float>("min", min_value));
     layerParams.set("max_value", layerParams.get<float>("max", max_value));
-    addLayer(layerParams, node_proto);
+    addLayer(layerParams, node_proto, 1);
 }
 
 void ONNXImporter::parseLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1961,7 +1964,8 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
 
 void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_) {
     auto node_proto = node_proto_;
-    CV_CheckEQ(node_proto.input_size(), 2, "ONNXImporter/MatMul: two inputs required");
+    CV_CheckGE(node_proto.input_size(), 2, "ONNXImporter/MatMul: two inputs required at least");
+    CV_CheckLE(node_proto.input_size(), 3, "ONNXImporter/MatMul: three inputs required at most");
 
     for (int i = 0; i < node_proto.input_size(); i++) {
         if (constBlobs.find(node_proto.input(i)) == constBlobs.end()) {
@@ -1970,9 +1974,7 @@ void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::Node
 
         Mat blob = getBlob(node_proto, i);
 
-        if (i == 1) {
-            layerParams.blobs.push_back(blob);
-        } else {
+        if (i == 0) {
             LayerParams const_params;
             const_params.name = node_proto.input(i);
             const_params.type = "Const";
@@ -1983,6 +1985,12 @@ void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::Node
             addLayer(const_params, const_node_proto);
 
             node_proto.set_input(i, const_params.name);
+        } else {
+            layerParams.blobs.push_back(blob);
+        }
+
+        if (i == 2 && constBlobsExtraInfo.find(node_proto.input(2)) != constBlobsExtraInfo.end()) {
+            layerParams.set("real_ndims_C", getBlobExtraInfo(node_proto, 2).real_ndims);
         }
     }
 
@@ -2997,22 +3005,22 @@ void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Assert(const_id.size() == 3);
 
     Mat startMat = getBlob(node_proto, 0);
-    CV_Assert(startMat.type() == CV_32SC1);
-    int start = startMat.at<int>(0);
+    startMat.convertTo(startMat, CV_32F);
+    float start = startMat.at<float>(0);
 
     Mat limitMat = getBlob(node_proto, 1);
-    CV_Assert(limitMat.type() == CV_32SC1);
-    int limit = limitMat.at<int>(0);
+    limitMat.convertTo(limitMat, CV_32F);
+    float limit = limitMat.at<float>(0);
 
     Mat deltaMat = getBlob(node_proto, 2);
-    CV_Assert(deltaMat.type() == CV_32SC1);
-    int delta = deltaMat.at<int>(0);
+    deltaMat.convertTo(deltaMat, CV_32F);
+    float delta = deltaMat.at<float>(0);
 
     int number_of_elements = std::max(int(std::ceil((limit - start) / delta)), 0);
-    Mat r(number_of_elements, 1, CV_32SC1);
+    Mat r(1, number_of_elements, CV_32FC1); // should be 1d tensor, but Mat doesn't support it
     for (int i = 0; i < number_of_elements; i++)
     {
-        r.at<int>(i) = start + (i * delta);
+        r.at<float>(i) = start + (i * delta);
     }
     addConstant(node_proto.output(0), r);
     constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(1)));
@@ -3160,18 +3168,9 @@ void ONNXImporter::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::N
     // constants as constant inputs
     for (size_t i = 1; i < node_proto.input_size(); i++)
     {
-        if (layer_id.find(node_proto.input(i)) == layer_id.end())
-        {
+        if (constBlobs.find(node_proto.input(i)) != constBlobs.end()) {
             Mat blob = getBlob(node_proto, i);
-
-            LayerParams constParams;
-            constParams.name = node_proto.input(i);
-            constParams.type = "Const";
-            constParams.blobs.push_back(blob);
-
-            opencv_onnx::NodeProto proto;
-            proto.add_output(constParams.name);
-            addLayer(constParams, proto);
+            layerParams.blobs.push_back(blob);
         }
     }
 
@@ -3935,17 +3934,9 @@ void ONNXImporter::parseAttention(LayerParams& params, const opencv_onnx::NodePr
     CV_CheckEQ(param_qkv_hidden_sizes.size(), 3, "ONNXImporter/parseAttention: qkv_hidden_sizes is must and only have three elements");
 
     for (size_t i = 1; i < node_proto.input_size(); i++) {
-        if (layer_id.find(node_proto.input(i)) == layer_id.end()) {
-            Mat tensor = getBlob(node_proto, i);
-
-            LayerParams const_params;
-            const_params.name = node_proto.input(i);
-            const_params.type = "Const";
-            const_params.blobs.push_back(tensor);
-
-            opencv_onnx::NodeProto proto;
-            proto.add_output(const_params.name);
-            addLayer(const_params, proto);
+        if (constBlobs.find(node_proto.input(i)) != constBlobs.end()) {
+            Mat blob = getBlob(node_proto, i);
+            params.blobs.push_back(blob);
         }
     }
 
