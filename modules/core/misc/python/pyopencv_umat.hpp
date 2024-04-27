@@ -28,7 +28,7 @@ static void* cv_UMat_context()
 static Mat cv_UMat_get(const UMat* _self)
 {
     Mat m;
-    m.allocator = &g_numpyAllocator;
+    m.allocator = &GetNumpyAllocator();
     _self->copyTo(m);
     return m;
 }
