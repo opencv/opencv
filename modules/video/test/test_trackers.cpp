@@ -51,17 +51,6 @@ TEST_P(DistanceAndOverlap, Scaled_Data_MIL)
     test.run();
 }
 
-TEST_P(DistanceAndOverlap, GOTURN)
-{
-    std::string model = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.prototxt");
-    std::string weights = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.caffemodel", false);
-    cv::TrackerGOTURN::Params params;
-    params.modelTxt = model;
-    params.modelBin = weights;
-    TrackerTest<Tracker, Rect> test(TrackerGOTURN::create(params), dataset, 35, .35f, NoTransform);
-    test.run();
-}
-
 INSTANTIATE_TEST_CASE_P(Tracking, DistanceAndOverlap, TESTSET_NAMES);
 
 static bool checkIOU(const Rect& r0, const Rect& r1, double threshold)
@@ -109,18 +98,6 @@ static void checkTrackingAccuracy(cv::Ptr<Tracker>& tracker, double iouThreshold
         ASSERT_TRUE(res);
         ASSERT_TRUE(checkIOU(roi, targetRois[i], iouThreshold)) << cv::format("Fail at img %d.",i);
     }
-}
-
-TEST(GOTURN, accuracy)
-{
-    std::string model = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.prototxt");
-    std::string weights = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.caffemodel", false);
-    cv::TrackerGOTURN::Params params;
-    params.modelTxt = model;
-    params.modelBin = weights;
-    cv::Ptr<Tracker> tracker = TrackerGOTURN::create(params);
-    // TODO! GOTURN have low accuracy. Try to remove this api at 5.x.
-    checkTrackingAccuracy(tracker, 0.08);
 }
 
 TEST(DaSiamRPN, accuracy)
