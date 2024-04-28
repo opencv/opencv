@@ -22,7 +22,7 @@ number of inliers (i.e. matches that fit in the given homography).
 You can find expanded version of this example here:
 <https://github.com/pablofdezalc/test_kaze_akaze_opencv>
 
-\warning You need the <a href="https://github.com/opencv/opencv_contrib">OpenCV contrib modules</a> to be able to use the AKAZE features.
+\warning You need the [OpenCV contrib module *xfeatures2d*](https://github.com/opencv/opencv_contrib/tree/5.x/modules/xfeatures2d) to be able to use the AKAZE features.
 
 Data
 ----

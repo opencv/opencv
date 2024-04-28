@@ -20,7 +20,7 @@ typedef TestBaseWithParam<tuple<string, int>> stitchExposureCompMultiFeed;
 #if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
 #define TEST_DETECTORS testing::Values("surf", "orb", "akaze")
 #else
-#define TEST_DETECTORS testing::Values("orb", "akaze")
+#define TEST_DETECTORS testing::Values("orb")
 #endif
 #define TEST_EXP_COMP_BS testing::Values(32, 16, 12, 10, 8)
 #define TEST_EXP_COMP_NR_FEED testing::Values(1, 2, 3, 4, 5)
