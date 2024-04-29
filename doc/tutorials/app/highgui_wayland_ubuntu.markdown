@@ -21,7 +21,7 @@ Setup
 -----
 - Setup Ubuntu 24.04.
 - `sudo apt install build-essential git cmake` to build OpenCV.
-- `sudo apt install libwayland-dev wayland-protocol libxkbcommon-dev` to enable Wayland highgui-backend.
+- `sudo apt install libwayland-dev wayland-protocols libxkbcommon-dev` to enable Wayland highgui-backend.
 - (Option) `sudo apt install ninja-build` (or remove `-GNinja` option for cmake command).
 - (Option) `sudo apt install libwayland-egl1` to enable Wayland EGL library.
 
