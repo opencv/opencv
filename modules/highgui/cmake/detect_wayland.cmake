@@ -9,7 +9,7 @@ macro(ocv_wayland_generate protocol_file output_file)
     list(APPEND WAYLAND_PROTOCOL_SOURCES ${output_file}.h ${output_file}.c)
 endmacro()
 
-ocv_clear_vars(HAVE_WAYLAND_CLIENT HAVE_WAYLAND_CURSOR HAVE_XKBCOMMON HAVE_WAYLAND_PROTOCOLS)
+ocv_clear_vars(HAVE_WAYLAND_CLIENT HAVE_WAYLAND_CURSOR HAVE_XKBCOMMON HAVE_WAYLAND_PROTOCOLS HAVE_WAYLAND_EGL)
 if(WITH_WAYLAND)
     ocv_check_modules(WAYLAND_CLIENT wayland-client)
     if(WAYLAND_CLIENT_FOUND)
@@ -31,5 +31,11 @@ if(WITH_WAYLAND)
 
     if(HAVE_WAYLAND_CLIENT AND HAVE_WAYLAND_CURSOR AND HAVE_XKBCOMMON AND HAVE_WAYLAND_PROTOCOLS)
         set(HAVE_WAYLAND TRUE)
+    endif()
+
+    # WAYLAND_EGL is option
+    ocv_check_modules(WAYLAND_EGL wayland-egl)
+    if(WAYLAND_EGL_FOUND)
+        set(HAVE_WAYLAND_EGL ON)
     endif()
 endif()

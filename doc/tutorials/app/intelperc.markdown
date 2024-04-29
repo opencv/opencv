@@ -4,6 +4,7 @@ Using Creative Senz3D and other Intel RealSense SDK compatible depth sensors {#t
 @tableofcontents
 
 @prev_tutorial{tutorial_orbbec_astra}
+@next_tutorial{tutorial_wayland_ubuntu}
 
 ![hardwares](images/realsense.jpg)
 
