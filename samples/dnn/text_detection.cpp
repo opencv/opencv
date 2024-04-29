@@ -24,25 +24,24 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/dnn.hpp>
 
+#include "common.hpp"
+
 using namespace cv;
 using namespace cv::dnn;
 
 // Command-line keys to parse the input arguments
-const std::string keys =
+std::string keys =
     "{ help  h                        |     | Print help message. }"
     "{ input i                        | messi5.jpg | Path to an input image. }"
-    "{ detModelPath dmp               |     | Path to a binary model file for detection (East and DB model architectures are supported). }"
+    "{ @alias      | | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
     "{ recModelPath rmp               |     | Path to a binary .onnx model for recognition. }"
-    "{ detModelConfig dmc             | db  | Specify detection model config: db/east }"
-    "{ inputHeight ih                 | 736 | Image height for the model input. Should be multiple of 32. }"
-    "{ inputWidth iw                  | 736 | Image width for the model input. Should be multiple of 32. }"
     "{ thr                            | 0.5 | Confidence threshold for EAST detector. }"
     "{ nms                            | 0.4 | Non-maximum suppression threshold for EAST detector. }"
     "{ binaryThreshold bt             | 0.3 | Confidence threshold for the binary map in DB detector. }"
     "{ polygonThreshold pt            | 0.5 | Confidence threshold for polygons in DB detector. }"
     "{ maxCandidate max               | 200 | Max candidates for polygons in DB detector. }"
     "{ unclipRatio ratio              | 2.0 | Unclip ratio for DB detector. }"
-    "{ RGBInput rgb                   | 0   | Image read mode: 0 for grayscale, 1 for color. }"
     "{ vocabularyPath vp              | alphabet_36.txt | Path to vocabulary file. }";
 
 // Function prototype for the four-point perspective transform
@@ -51,8 +50,14 @@ void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result
 int main(int argc, char** argv) {
     // Setting up command-line parser with the specified keys
     CommandLineParser parser(argc, argv, keys);
+    const std::string modelName = parser.get<String>("@alias");
+    const std::string zooFile = parser.get<String>("zoo");
+
+    keys += genPreprocArguments(modelName, zooFile);
+
+    parser = CommandLineParser(argc, argv, keys);
     parser.about("Text Detection and Recognition using OpenCV"
-                 "Example: ./example_dnn_text_detection -rmp=<path to ResNet_CTC.onnx> -dmp=<path to DB_IC15_resnet50.onnx");
+                 "Example: ./example_dnn_text_detection modelName(i.e. DB or East) -rmp=<path to ResNet_CTC.onnx>" );
 
     // Display help message if no arguments are provided or 'help' is requested
     if (argc == 1 || parser.has("help")) {
@@ -61,12 +66,11 @@ int main(int argc, char** argv) {
     }
 
     // Parsing command-line arguments
-    String detModelPath = parser.get<String>("detModelPath");
-    String detModelConfig = parser.get<String>("detModelConfig");
+    String detModelPath = findFile(parser.get<String>("model"));
     String recModelPath = parser.get<String>("recModelPath");
-    int height = parser.get<int>("inputHeight");
-    int width = parser.get<int>("inputWidth");
-    int imreadRGB = parser.get<int>("RGBInput");
+    int height = parser.get<int>("height");
+    int width = parser.get<int>("width");
+    bool imreadRGB = parser.get<bool>("rgb");
     String vocPath = parser.get<String>("vocabularyPath");
     float binThresh = parser.get<float>("binaryThreshold");
     float polyThresh = parser.get<float>("polygonThreshold");
@@ -74,6 +78,7 @@ int main(int argc, char** argv) {
     uint maxCandidates = parser.get<uint>("maxCandidate");
     float confThreshold = parser.get<float>("thr");
     float nmsThreshold = parser.get<float>("nms");
+    Scalar mean = parser.get<Scalar>("mean");
 
     // Ensuring the provided arguments are valid
     if (!parser.check()) {
@@ -89,17 +94,17 @@ int main(int argc, char** argv) {
     Mat frame = imread(samples::findFile(parser.get<String>("input")));
 
     // Initializing and configuring the text detection model based on the provided config
-    if (detModelConfig == "east") {
+    if (modelName == "East") {
         // EAST Detector initialization
         TextDetectionModel_EAST detector(detModelPath);
         detector.setConfidenceThreshold(confThreshold)
                 .setNMSThreshold(nmsThreshold);
         // Setting input parameters specific to EAST model
-        detector.setInputParams(1.0, Size(width, height), Scalar(123.68, 116.78, 103.94), true);
+        detector.setInputParams(1.0, Size(width, height), mean, true);
         // Performing text detection
         detector.detect(frame, detResults);
     }
-    else if (detModelConfig == "db") {
+    else if (modelName == "DB") {
         // DB Detector initialization
         TextDetectionModel_DB detector(detModelPath);
         detector.setBinaryThreshold(binThresh)
@@ -107,7 +112,7 @@ int main(int argc, char** argv) {
                 .setUnclipRatio(unclipRatio)
                 .setMaxCandidates(maxCandidates);
         // Setting input parameters specific to DB model
-        detector.setInputParams(1.0 / 255.0, Size(width, height), Scalar(122.67891434, 116.66876762, 104.00698793));
+        detector.setInputParams(1.0 / 255.0, Size(width, height), mean);
         // Performing text detection
         detector.detect(frame, detResults);
     }
