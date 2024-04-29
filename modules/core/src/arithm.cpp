@@ -587,7 +587,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                       InputArray _mask, int dtype, BinaryFuncC* tab, bool muldiv=false,
-                      void* usrdata=0, int oclop=-1 )
+                      void* usrdata=0, int oclop=-1, bool skipConversion = false )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
     _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
@@ -717,9 +717,9 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                ocl_arithm_op(*psrc1, *psrc2, _dst, _mask, wtype,
                usrdata, oclop, haveScalar))
 
-    BinaryFunc cvtsrc1 = type1 == wtype ? 0 : getConvertFunc(type1, wtype);
-    BinaryFunc cvtsrc2 = type2 == type1 ? cvtsrc1 : type2 == wtype ? 0 : getConvertFunc(type2, wtype);
-    BinaryFunc cvtdst = dtype == wtype ? 0 : getConvertFunc(wtype, dtype);
+    BinaryFunc cvtsrc1 = type1 == wtype ? 0 : (skipConversion ? nullptr : getConvertFunc(type1, wtype));
+    BinaryFunc cvtsrc2 = type2 == type1 ? cvtsrc1 : type2 == wtype ? 0 : (skipConversion ? nullptr : getConvertFunc(type2, wtype));
+    BinaryFunc cvtdst = dtype == wtype ? 0 : (skipConversion ? nullptr : getConvertFunc(wtype, dtype));
 
     size_t esz1 = CV_ELEM_SIZE(type1), esz2 = CV_ELEM_SIZE(type2);
     size_t dsz = CV_ELEM_SIZE(dtype), wsz = CV_ELEM_SIZE(wtype);
@@ -949,7 +949,16 @@ void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
 namespace cv
 {
 
-static BinaryFuncC* getMulTab()
+static void mul8uExtendWrapper(const uchar* src1, size_t step1,
+                               const uchar* src2, size_t step2,
+                               uchar* dst, size_t step, int width, int height,
+                               void* usrdata)
+{
+    double scale = *((double*)usrdata);
+    cv_hal_mul8uExtend(src1, step1, src2, step2, (ushort*)dst, step, width, height, scale);
+}
+
+static BinaryFuncC* getMulTab(bool extendMul)
 {
     static BinaryFuncC mulTab[CV_DEPTH_MAX] =
     {
@@ -957,6 +966,28 @@ static BinaryFuncC* getMulTab()
         (BinaryFuncC)cv::hal::mul16s, (BinaryFuncC)cv::hal::mul32s, (BinaryFuncC)cv::hal::mul32f,
         (BinaryFuncC)cv::hal::mul64f, 0
     };
+
+    if (extendMul)
+    {
+        static BinaryFuncC extendMulTab[] =
+        {
+            (BinaryFuncC)mul8uExtendWrapper,
+        };
+
+        // check that HAL function works properly
+        uchar a = 0, b = 0;
+        ushort c = 0;
+        int res = cv_hal_mul8uExtend(/* src1_data */ &a, /* src1_step */ 1, /* src2_data */ &b, /* src2_step */ 1,
+                                     /* dst_data */ &c, /* dst_step */ 1, /* width */ 1, /* height */ 1, /* scale */ 1);
+        if (res == 0)
+        {
+            return extendMulTab;
+        }
+        else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+        {
+            CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8Extend returned %d (0x%08x)", res, res));
+        }
+    }
 
     return mulTab;
 }
@@ -986,12 +1017,16 @@ static BinaryFuncC* getRecipTab()
 }
 
 void multiply(InputArray src1, InputArray src2,
-                  OutputArray dst, double scale, int dtype)
+              OutputArray dst, double scale, int dtype)
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(),
-              true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE);
+    bool extendMul = ((src1.depth() == CV_8U) && (src2.depth() == CV_8U) && (dtype == CV_16U)) ||
+                     ((src1.depth() == CV_8S) && (src2.depth() == CV_8S) && (dtype == CV_16S));
+
+    arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(extendMul),
+              /* muldiv */ true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
+              /*skipConversion*/ extendMul);
 }
 
 void divide(InputArray src1, InputArray src2,
