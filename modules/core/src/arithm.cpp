@@ -958,6 +958,50 @@ static void mul8uExtendWrapper(const uchar* src1, size_t step1,
     cv_hal_mul8uExtend(src1, step1, src2, step2, (ushort*)dst, step, width, height, scale);
 }
 
+static void mul8sExtendWrapper(const uchar* src1, size_t step1,
+                               const uchar* src2, size_t step2,
+                               uchar* dst, size_t step, int width, int height,
+                               void* usrdata)
+{
+    double scale = *((double*)usrdata);
+    cv_hal_mul8sExtend((schar*)src1, step1, (schar*)src2, step2, (short*)dst, step, width, height, scale);
+}
+
+static bool checkHalMulExtend()
+{
+    bool works = true;
+
+    // check that HAL functions are presented and work properly
+    uchar ua = 0, ub = 0;
+    ushort uc = 0;
+    int res;
+    res = cv_hal_mul8uExtend(/* src1_data */ &ua, /* src1_step */ 1, /* src2_data */ &ub, /* src2_step */ 1,
+                             /* dst_data */ &uc, /* dst_step */ 1, /* width */ 1, /* height */ 1, /* scale */ 1);
+    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        works = false;
+    }
+    else if (res != 0)
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8uExtend returned %d (0x%08x)", res, res));
+    }
+
+    schar sa = 0, sb = 0;
+    short sc = 0;
+    res = cv_hal_mul8sExtend(/* src1_data */ &sa, /* src1_step */ 1, /* src2_data */ &sb, /* src2_step */ 1,
+                             /* dst_data */ &sc, /* dst_step */ 1, /* width */ 1, /* height */ 1, /* scale */ 1);
+    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        works = false;
+    }
+    else if (res != 0)
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8sExtend returned %d (0x%08x)", res, res));
+    }
+
+    return works;
+}
+
 static BinaryFuncC* getMulTab(bool extendMul)
 {
     static BinaryFuncC mulTab[CV_DEPTH_MAX] =
@@ -967,29 +1011,12 @@ static BinaryFuncC* getMulTab(bool extendMul)
         (BinaryFuncC)cv::hal::mul64f, 0
     };
 
-    if (extendMul)
+    static BinaryFuncC extendMulTab[] =
     {
-        static BinaryFuncC extendMulTab[] =
-        {
-            (BinaryFuncC)mul8uExtendWrapper,
-        };
+        (BinaryFuncC)mul8uExtendWrapper, (BinaryFuncC)mul8sExtendWrapper,
+    };
 
-        // check that HAL function works properly
-        uchar a = 0, b = 0;
-        ushort c = 0;
-        int res = cv_hal_mul8uExtend(/* src1_data */ &a, /* src1_step */ 1, /* src2_data */ &b, /* src2_step */ 1,
-                                     /* dst_data */ &c, /* dst_step */ 1, /* width */ 1, /* height */ 1, /* scale */ 1);
-        if (res == 0)
-        {
-            return extendMulTab;
-        }
-        else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
-        {
-            CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8Extend returned %d (0x%08x)", res, res));
-        }
-    }
-
-    return mulTab;
+    return extendMul ? extendMulTab : mulTab;
 }
 
 static BinaryFuncC* getDivTab()
@@ -1021,8 +1048,11 @@ void multiply(InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
+    static bool halMulExtendWorks = checkHalMulExtend();
+
     bool extendMul = ((src1.depth() == CV_8U) && (src2.depth() == CV_8U) && (dtype == CV_16U)) ||
                      ((src1.depth() == CV_8S) && (src2.depth() == CV_8S) && (dtype == CV_16S));
+    extendMul = extendMul && halMulExtendWorks;
 
     arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(extendMul),
               /* muldiv */ true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
