@@ -41,9 +41,11 @@ std::string target_keys = cv::format(
 std::string keys = param_keys + backend_keys + target_keys;
 
 using namespace cv;
+using namespace std;
 using namespace dnn;
 
 std::vector<std::string> classes;
+vector<string> listImageFilesInDirectory(const string& directoryPath);
 
 int main(int argc, char** argv)
 {
@@ -112,21 +114,62 @@ int main(int argc, char** argv)
     namedWindow(kWinName, WINDOW_NORMAL);
 
     //! [Open a video file or an image file or a camera stream]
+    // VideoCapture cap;
+    // if (parser.has("input"))
+    //     cap.open(parser.get<String>("input"));
+    // else
+    //     cap.open(0);
+
     VideoCapture cap;
-    if (parser.has("input"))
-        cap.open(parser.get<String>("input"));
-    else
-        cap.open(0);
+    vector<string> imageFiles;
+    size_t currentImageIndex = 0;
+
+    if (parser.has("input")) {
+        string input = parser.get<String>("input");
+
+        if (input.find('.')==string::npos) {
+            // Input is a directory, list all image files
+            imageFiles = listImageFilesInDirectory(input);
+            if (imageFiles.empty()) {
+                cout << "No images found in the directory." << endl;
+                return -1;
+            }
+        } else {
+            // Input is not a directory, try to open as video or image
+            cap.open(input);
+            if (!cap.isOpened()) {
+                cout << "Failed to open the input." << endl;
+                return -1;
+            }
+        }
+    } else {
+        cap.open(0); // Open default camera
+    }
+
     //! [Open a video file or an image file or a camera stream]
 
     // Process frames.
     Mat frame, blob;
-    while (waitKey(1) < 0)
+    while (true)
     {
-        cap >> frame;
+        // cap >> frame;
+        if (!imageFiles.empty()) {
+            // Handling directory of images
+            if (currentImageIndex >= imageFiles.size()) {
+                waitKey();
+                break; // Exit if all images are processed
+            }
+            frame = imread(imageFiles[currentImageIndex++]);
+            if(frame.empty()){
+                cout<<"Cannot open file"<<endl;
+                continue;
+            }
+        } else {
+            // Handling video or single image
+            cap >> frame;
+        }
         if (frame.empty())
         {
-            waitKey();
             break;
         }
 
@@ -208,6 +251,35 @@ int main(int argc, char** argv)
         putText(frame, label, Point(0, 55), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         imshow(kWinName, frame);
+        int key = cv::waitKey(1);
+        if (key == 'q' || key == 27) // Check if 'q' or 'ESC' is pressed
+            break;
     }
     return 0;
+}
+
+
+std::vector<std::string> listImageFilesInDirectory(const std::string& folder_path) {
+    std::vector<std::string> image_paths;
+    std::vector<cv::String> fn;
+
+    // List of file extensions to search for
+    std::vector<std::string> extensions = {"jpg", "jpeg", "png", "bmp", "tif", "tiff"};
+
+    // Loop through each extension, searching for files
+    for (const auto& ext : extensions) {
+        // Create the search pattern for the current extension
+        cv::String searchPattern = folder_path + "/*." + ext;
+
+        // Temporary vector to store results of glob for current extension
+        std::vector<cv::String> temp_fn;
+
+        // Read the images from the directory
+        cv::glob(searchPattern, temp_fn, true); // true to search in subdirectories
+
+        // Add found paths to the main list
+        image_paths.insert(image_paths.end(), temp_fn.begin(), temp_fn.end());
+    }
+
+    return image_paths;
 }
