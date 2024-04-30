@@ -30,17 +30,10 @@ def get_args_parser(func_args):
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument('--input',
                         help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-    parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'darknet'],
-                        help='Optional name of an origin framework of the model. '
-                             'Detect it automatically if it does not set.')
     parser.add_argument('--std', nargs='*', type=float,
                         help='Preprocess input image by dividing on a standard deviation.')
     parser.add_argument('--crop', type=bool, default=False,
                         help='Preprocess input image by dividing on a standard deviation.')
-    parser.add_argument('--initial_width', type=int,
-                        help='Preprocess input image by initial resizing to a specific width.')
-    parser.add_argument('--initial_height', type=int,
-                        help='Preprocess input image by initial resizing to a specific height.')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
@@ -94,7 +87,6 @@ def main(func_args=None):
     winName = 'Deep learning image classification in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_NORMAL)
 
-    # cap = cv.VideoCapture(args.input if args.input else 0)
     isdir = False
 
     if args.input:
@@ -110,7 +102,7 @@ def main(func_args=None):
         else:
             cap = cv.VideoCapture(input_path)
             if not cap.isOpened():
-                print("Failed to open the input.")
+                print("Failed to open the input video")
                 exit(-1)
     else:
         cap = cv.VideoCapture(0)
@@ -130,9 +122,6 @@ def main(func_args=None):
         # Create a 4D blob from a frame.
         inpWidth = args.width if args.width else frame.shape[1]
         inpHeight = args.height if args.height else frame.shape[0]
-
-        if args.initial_width and args.initial_height:
-            frame = cv.resize(frame, (args.initial_width, args.initial_height))
 
         blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=args.crop)
         if args.std:
