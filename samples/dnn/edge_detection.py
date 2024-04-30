@@ -58,7 +58,6 @@ def parse_args():
 
 def preprocess(img):
     # Resize and normalize the image
-    im_h, im_w, _ = img.shape
 
     IMAGE_SIZE = args.image_size
     img = cv.resize(img, (IMAGE_SIZE, IMAGE_SIZE))
