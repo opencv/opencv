@@ -569,8 +569,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         (objectPoints->rows == count && CV_MAT_CN(objectPoints->type)*objectPoints->cols == 3) ||
         (objectPoints->rows == 3 && CV_MAT_CN(objectPoints->type) == 1 && objectPoints->cols == count)))
     {
-        matM.reset(cvCreateMat( objectPoints->rows, objectPoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(objectPoints->type)) ));
-        cvConvert(objectPoints, matM);
+
     }
     else
     {
@@ -585,17 +584,13 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         (imagePoints->rows == count && CV_MAT_CN(imagePoints->type)*imagePoints->cols == 2) ||
         (imagePoints->rows == 2 && CV_MAT_CN(imagePoints->type) == 1 && imagePoints->cols == count)))
     {
-        _m.reset(cvCreateMat( imagePoints->rows, imagePoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(imagePoints->type)) ));
-        cvConvert(imagePoints, _m);
+        
     }
     else
     {
 //        _m = cvCreateMat( 1, count, CV_64FC2 );
         CV_Error( cv::Error::StsBadArg, "Homogeneous coordinates are not supported" );
     }
-
-    M = (CvPoint3D64f*)matM->data.db;
-    m = (CvPoint2D64f*)_m->data.db;
 
     if( (CV_MAT_DEPTH(r_vec->type) != CV_64F && CV_MAT_DEPTH(r_vec->type) != CV_32F) ||
         (((r_vec->rows != 1 && r_vec->cols != 1) ||
@@ -660,6 +655,29 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
             &matTilt, &dMatTiltdTauX, &dMatTiltdTauY);
         }
     }
+
+    float rtMatrix[12] = { R[0], R[1], R[2], t[0],
+                           R[3], R[4], R[5], t[1],
+                           R[6], R[7], R[8], t[2] };
+    float cameraCalibrationMatrix[8] = { fx, fy, cx, cy, k[0], k[1], k[2], k[3] };
+
+    if (CV_MAT_DEPTH(imagePoints->type) == CV_32F && CV_MAT_DEPTH(objectPoints->type) == CV_32F)
+    {
+        CALL_HAL(projectPoints, cv_hal_projectpoints32f, objectPoints->data.fl, objectPoints->step, count,
+                 imagePoints->data.fl, imagePoints->step, rtMatrix, cameraCalibrationMatrix);
+    }
+
+    _m.reset(cvCreateMat( imagePoints->rows, imagePoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(imagePoints->type)) ));
+    cvConvert(imagePoints, _m);
+
+    matM.reset(cvCreateMat( objectPoints->rows, objectPoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(objectPoints->type)) ));
+    cvConvert(objectPoints, matM);
+
+    M = (CvPoint3D64f*)matM->data.db;
+    m = (CvPoint2D64f*)_m->data.db;
+
+    CALL_HAL(projectPoints, cv_hal_projectpoints64f, objectPoints->data.db, objectPoints->step, count,
+             imagePoints->data.db, imagePoints->step, rtMatrix, cameraCalibrationMatrix);
 
     if( dpdr )
     {
