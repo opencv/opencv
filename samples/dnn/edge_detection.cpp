@@ -17,67 +17,11 @@ struct UserData {
             int thrs2 = 200;
         };
 
-// Preprocess the image
-Mat preprocess(const Mat& img, int imageSize) {
-    Mat resizedImg;
-    resize(img, resizedImg, Size(imageSize, imageSize));
-    resizedImg.convertTo(resizedImg, CV_32F);
-    subtract(resizedImg, Scalar(103.939, 116.779, 123.68), resizedImg);
-    return resizedImg;
-}
-
 // Function to apply sigmoid activation
 static void sigmoid(Mat& input) {
     exp(-input, input); // e^-input
     input = 1.0 / (1.0 + input); // 1 / (1 + e^-input)
 }
-
-// Function to process the neural network output to generate edge maps
-pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
-    const float epsilon = 1e-12;
-    vector<Mat> preds;
-    preds.reserve(output.size());
-
-    for (const auto& p : output) {
-        Mat img;
-
-        // Correctly handle 4D tensor assuming it's always in the format [1, 1, height, width]
-        Mat processed;
-        if (p.dims == 4 && p.size[0] == 1 && p.size[1] == 1) {
-            // Use only the spatial dimensions
-            processed = p.reshape(0, {p.size[2], p.size[3]});
-        } else {
-            processed = p.clone();
-        }
-
-        sigmoid(processed);
-
-        double minVal, maxVal;
-        minMaxLoc(processed, &minVal, &maxVal); // Find min and max values
-
-        // Normalize the image to [0, 255]
-        img = (processed - minVal) * 255.0 / (maxVal - minVal + epsilon);
-        img.convertTo(img, CV_8U); // Convert to 8-bit image
-
-        resize(img, img, Size(width, height)); // Resize to the original size
-        preds.push_back(img);
-    }
-
-    Mat fuse = preds.back(); // Last element as the fused result
-
-    // Calculate the average of the predictions
-    Mat ave = Mat::zeros(height, width, CV_32F);
-    for (auto& pred : preds) {
-        Mat temp;
-        pred.convertTo(temp, CV_32F);
-        ave += temp;
-    }
-    ave /= preds.size();
-    ave.convertTo(ave, CV_8U);
-
-    return {fuse, ave}; // Return both fused and average edge maps
-}
-
 
 // Callback for the first threshold adjustment
 static void cannyDetectionThresh1(int position, void* userdata) {
@@ -96,6 +40,9 @@ static void cannyDetectionThresh2(int position, void* userdata) {
     data->thrs2 = position;
     imshow("Output", output);
 }
+
+pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width);
+Mat preprocess(const Mat& img, int imageSize);
 
 int main(int argc, char** argv) {
 
@@ -168,7 +115,10 @@ int main(int argc, char** argv) {
         net.forward(outputs); // Get all output layers
         int originalWidth = image.cols;
         int originalHeight = image.rows;
-        auto [fusedOutput, averageOutput] = postProcess(outputs, originalHeight, originalWidth);
+        pair<Mat, Mat> res = postProcess(outputs, originalHeight, originalWidth);
+        Mat fusedOutput = res.first;
+        Mat averageOutput = res.second;
+
 
         imshow("Input", image);
         imshow("Output", fusedOutput);
@@ -196,4 +146,59 @@ int main(int argc, char** argv) {
     }
 
     return 0;
+}
+
+// Function to process the neural network output to generate edge maps
+pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
+    const float epsilon = 1e-12;
+    vector<Mat> preds;
+    preds.reserve(output.size());
+
+    for (const auto& p : output) {
+        Mat img;
+
+        // Correctly handle 4D tensor assuming it's always in the format [1, 1, height, width]
+        Mat processed;
+        if (p.dims == 4 && p.size[0] == 1 && p.size[1] == 1) {
+            // Use only the spatial dimensions
+            processed = p.reshape(0, {p.size[2], p.size[3]});
+        } else {
+            processed = p.clone();
+        }
+
+        sigmoid(processed);
+
+        double minVal, maxVal;
+        minMaxLoc(processed, &minVal, &maxVal); // Find min and max values
+
+        // Normalize the image to [0, 255]
+        img = (processed - minVal) * 255.0 / (maxVal - minVal + epsilon);
+        img.convertTo(img, CV_8U); // Convert to 8-bit image
+
+        resize(img, img, Size(width, height)); // Resize to the original size
+        preds.push_back(img);
+    }
+
+    Mat fuse = preds.back(); // Last element as the fused result
+
+    // Calculate the average of the predictions
+    Mat ave = Mat::zeros(height, width, CV_32F);
+    for (auto& pred : preds) {
+        Mat temp;
+        pred.convertTo(temp, CV_32F);
+        ave += temp;
+    }
+    ave /= preds.size();
+    ave.convertTo(ave, CV_8U);
+
+    return {fuse, ave}; // Return both fused and average edge maps
+}
+
+// Preprocess the image
+Mat preprocess(const Mat& img, int imageSize) {
+    Mat resizedImg;
+    resize(img, resizedImg, Size(imageSize, imageSize));
+    resizedImg.convertTo(resizedImg, CV_32F);
+    subtract(resizedImg, Scalar(103.939, 116.779, 123.68), resizedImg);
+    return resizedImg;
 }
