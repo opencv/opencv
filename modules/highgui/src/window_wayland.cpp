@@ -2479,10 +2479,15 @@ void setWindowTitle_WAYLAND(const cv::String &winname, const cv::String &title) 
 
 CV_IMPL int cvWaitKey(int delay) {
     int key = -1;
-    auto limit = ch::duration_cast<ch::nanoseconds>(ch::milliseconds(delay));
+    auto limit = ch::duration_cast<ch::nanoseconds>(ch::milliseconds(delay)).count();
     auto start_time = ch::duration_cast<ch::nanoseconds>(
             ch::steady_clock::now().time_since_epoch())
             .count();
+
+    // See https://github.com/opencv/opencv/issues/25501
+    // Too long sleep_for() makes no response to Wayland ping-pong mechanism
+    // So interval is limited to 33ms (1000ms / 30fps).
+    auto sleep_time_min = ch::duration_cast<ch::nanoseconds>(ch::milliseconds(33)).count();
 
     while (true) {
 
@@ -2502,11 +2507,11 @@ CV_IMPL int cvWaitKey(int delay) {
                 .count();
 
         auto elapsed = end_time - start_time;
-        if (limit.count() > 0 && elapsed >= limit.count()) {
+        if (limit > 0 && elapsed >= limit) {
             break;
         }
 
-        auto sleep_time = 64000 - elapsed;
+        auto sleep_time = std::min(limit - elapsed, sleep_time_min);
         if (sleep_time > 0) {
             std::this_thread::sleep_for(ch::nanoseconds(sleep_time));
         }
