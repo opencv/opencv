@@ -84,6 +84,8 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
                        modelName, zooFile, 'c') +
            genArgument("mean", "Preprocess input image by subtracting mean values. Mean values should be in BGR order and delimited by spaces.",
                        modelName, zooFile) +
+           genArgument("std", "Preprocess input image by dividing on a standard deviation.",
+                       modelName, zooFile) +
            genArgument("scale", "Preprocess input image by multiplying on a scale factor.",
                        modelName, zooFile, ' ', "1.0") +
            genArgument("width", "Preprocess input image by resizing to a specific width.",

@@ -30,10 +30,8 @@ def get_args_parser(func_args):
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument('--input',
                         help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-    parser.add_argument('--std', nargs='*', type=float,
-                        help='Preprocess input image by dividing on a standard deviation.')
     parser.add_argument('--crop', type=bool, default=False,
-                        help='Preprocess input image by dividing on a standard deviation.')
+                        help='Center crop the image.')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "

@@ -69,6 +69,8 @@ def add_preproc_args(zoo, parser, sample):
     add_argument(zoo, parser, 'mean', nargs='+', type=float, default=[0, 0, 0],
                  help='Preprocess input image by subtracting mean values. '
                       'Mean values should be in BGR order.')
+    add_argument(zoo, parser, 'std', nargs='+', type=float, default=[0, 0, 0],
+                 help='Preprocess input image by dividing on a standard deviation.')
     add_argument(zoo, parser, 'scale', type=float, default=1.0,
                  help='Preprocess input image by multiplying on a scale factor.')
     add_argument(zoo, parser, 'width', type=int,

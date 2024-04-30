@@ -15,9 +15,7 @@ std::string param_keys =
     "{ input i          | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
     "{ initial_width    | 0 | Preprocess input image by initial resizing to a specific width.}"
     "{ initial_height   | 0 | Preprocess input image by initial resizing to a specific height.}"
-    "{ std              | 0.0 0.0 0.0 | Preprocess input image by dividing on a standard deviation.}"
     "{ crop             | false | Preprocess input image by center cropping.}"
-    "{ framework f      | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
     "{ needSoftmax      | false | Use Softmax to post-process the output of the net.}"
     "{ classes          | | Optional path to a text file with names of classes. }";
 std::string backend_keys = cv::format(
@@ -41,11 +39,9 @@ std::string target_keys = cv::format(
 std::string keys = param_keys + backend_keys + target_keys;
 
 using namespace cv;
-using namespace std;
 using namespace dnn;
 
 std::vector<std::string> classes;
-vector<string> listImageFilesInDirectory(const string& directoryPath);
 
 int main(int argc, char** argv)
 {
@@ -75,7 +71,6 @@ int main(int argc, char** argv)
     int inpHeight = parser.get<int>("height");
     String model = findFile(parser.get<String>("model"));
     String config = findFile(parser.get<String>("config"));
-    String framework = parser.get<String>("framework");
     int backendId = parser.get<int>("backend");
     int targetId = parser.get<int>("target");
     bool needSoftmax = parser.get<bool>("needSoftmax");
@@ -104,7 +99,7 @@ int main(int argc, char** argv)
     CV_Assert(!model.empty());
 
     //! [Read and initialize network]
-    Net net = readNet(model, config, framework);
+    Net net = readNetFromONNX(model);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
     //! [Read and initialize network]
@@ -114,62 +109,21 @@ int main(int argc, char** argv)
     namedWindow(kWinName, WINDOW_NORMAL);
 
     //! [Open a video file or an image file or a camera stream]
-    // VideoCapture cap;
-    // if (parser.has("input"))
-    //     cap.open(parser.get<String>("input"));
-    // else
-    //     cap.open(0);
-
     VideoCapture cap;
-    vector<string> imageFiles;
-    size_t currentImageIndex = 0;
-
-    if (parser.has("input")) {
-        string input = parser.get<String>("input");
-
-        if (input.find('.')==string::npos) {
-            // Input is a directory, list all image files
-            imageFiles = listImageFilesInDirectory(input);
-            if (imageFiles.empty()) {
-                cout << "No images found in the directory." << endl;
-                return -1;
-            }
-        } else {
-            // Input is not a directory, try to open as video or image
-            cap.open(input);
-            if (!cap.isOpened()) {
-                cout << "Failed to open the input." << endl;
-                return -1;
-            }
-        }
-    } else {
-        cap.open(0); // Open default camera
-    }
-
+    if (parser.has("input"))
+        cap.open(parser.get<String>("input"));
+    else
+        cap.open(0);
     //! [Open a video file or an image file or a camera stream]
 
     // Process frames.
     Mat frame, blob;
-    while (true)
+    while (waitKey(1) < 0)
     {
-        // cap >> frame;
-        if (!imageFiles.empty()) {
-            // Handling directory of images
-            if (currentImageIndex >= imageFiles.size()) {
-                waitKey();
-                break; // Exit if all images are processed
-            }
-            frame = imread(imageFiles[currentImageIndex++]);
-            if(frame.empty()){
-                cout<<"Cannot open file"<<endl;
-                continue;
-            }
-        } else {
-            // Handling video or single image
-            cap >> frame;
-        }
+        cap >> frame;
         if (frame.empty())
         {
+            waitKey();
             break;
         }
 
@@ -191,10 +145,6 @@ int main(int argc, char** argv)
 
         //! [Set input blob]
         net.setInput(blob);
-        //! [Set input blob]
-        //! [Make forward pass]
-        // double t_sum = 0.0;
-        // double t;
         int classId;
         double confidence;
         cv::TickMeter timeRecorder;
@@ -218,12 +168,6 @@ int main(int argc, char** argv)
             minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
             classId = classIdPoint.x;
             //! [Get a class with a highest score]
-
-            // Put efficiency information.
-            // std::vector<double> layersTimes;
-            // double freq = getTickFrequency() / 1000;
-            // t = net.getPerfProfile(layersTimes) / freq;
-            // t_sum += t;
         }
         if (needSoftmax == true)
         {
@@ -251,35 +195,6 @@ int main(int argc, char** argv)
         putText(frame, label, Point(0, 55), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         imshow(kWinName, frame);
-        int key = cv::waitKey(1);
-        if (key == 'q' || key == 27) // Check if 'q' or 'ESC' is pressed
-            break;
     }
     return 0;
-}
-
-
-std::vector<std::string> listImageFilesInDirectory(const std::string& folder_path) {
-    std::vector<std::string> image_paths;
-    std::vector<cv::String> fn;
-
-    // List of file extensions to search for
-    std::vector<std::string> extensions = {"jpg", "jpeg", "png", "bmp", "tif", "tiff"};
-
-    // Loop through each extension, searching for files
-    for (const auto& ext : extensions) {
-        // Create the search pattern for the current extension
-        cv::String searchPattern = folder_path + "/*." + ext;
-
-        // Temporary vector to store results of glob for current extension
-        std::vector<cv::String> temp_fn;
-
-        // Read the images from the directory
-        cv::glob(searchPattern, temp_fn, true); // true to search in subdirectories
-
-        // Add found paths to the main list
-        image_paths.insert(image_paths.end(), temp_fn.begin(), temp_fn.end());
-    }
-
-    return image_paths;
 }
