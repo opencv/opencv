@@ -49,12 +49,15 @@ int main(int argc, char** argv) {
     const string about =
         "This sample demonstrates edge detection with dexined and canny edge detection techniques.\n"
         "Script is based on https://github.com/axinc-ai/ailia-models/blob/master/line_segment_detection/dexined/dexined.py"
-        "To download the onnx model, see: https://storage.googleapis.com/ailia-models/dexined/model.onnx";
+        "To download the onnx model, see: https://storage.googleapis.com/ailia-models/dexined/model.onnx"
+        "\n\nOpenCV onnx importer does not process dynamic shape. These need to be substituted with values using:\n\n"
+        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param w --dim_value 640 model.onnx model.sim1.onnx"
+        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param h --dim_value 480 model.sim1.onnx model.sim.onnx";
 
     const string param_keys =
         "{ help h          |            | Print help message. }"
         "{ input i         | baboon.jpg | Path to the input image }"
-        "{ model       |            | Path to the ONNX model. Required. }"
+        "{ model           |            | Path to the ONNX model. Required. }"
         "{ method          |   dexined  | Choose methd: dexined or canny}"
         "{ imageSize       |   512      | Image Size}";
 
