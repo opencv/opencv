@@ -212,7 +212,8 @@ squeezenet:
     url: "https://github.com/onnx/models/raw/main/validated/vision/classification/squeezenet/model/squeezenet1.1-7.onnx?download="
     sha1: "ec31942d17715941bb9b81f3a91dc59def9236be"
   model: "squeezenet1.1-7.onnx"
-  mean: [123.675, 116.28, 103.53]
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
   scale: 0.003921
   width: 224
   height: 224
@@ -239,7 +240,8 @@ resnet:
     sha1: "c3a67b3cb2f0a61a7eb75eb8bd9139c89557cbe0"
   model: "resnet50-v2-7.onnx"
   mean: [123.675, 116.28, 103.53]
-  scale: 0.003921
+  std: [58.395, 57.12, 57.375]
+  scale: 1.0
   width: 256
   height: 256
   rgb: true
