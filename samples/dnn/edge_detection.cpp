@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
 
 // Function to process the neural network output to generate edge maps
 pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
-    const float epsilon = 1e-12;
+    const double epsilon = 1e-12;
     vector<Mat> preds;
     preds.reserve(output.size());
 
@@ -191,7 +191,7 @@ pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
         pred.convertTo(temp, CV_32F);
         ave += temp;
     }
-    ave /= preds.size();
+    ave /= static_cast<float>(preds.size());
     ave.convertTo(ave, CV_8U);
 
     return {fuse, ave}; // Return both fused and average edge maps
