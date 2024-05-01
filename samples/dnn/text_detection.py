@@ -22,34 +22,32 @@
 
 # Import required modules
 import numpy as np
-import cv2 as cv
+import cv2
 import math
 import argparse
 
-############ Add argument parser for command line arguments ############
-parser = argparse.ArgumentParser(
-    description="Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of "
-                "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)"
-                "The OCR model can be obtained from converting the pretrained CRNN model to .onnx format from the github repository https://github.com/meijieru/crnn.pytorch"
-                "Or you can download trained OCR model directly from https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing")
-parser.add_argument('--input',
-                    help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-parser.add_argument('--model', '-m', required=True,
-                    help='Path to a binary .pb file contains trained detector network.')
-parser.add_argument('--ocr', default="crnn.onnx",
-                    help="Path to a binary .pb or .onnx file contains trained recognition network", )
-parser.add_argument('--width', type=int, default=320,
-                    help='Preprocess input image by resizing to a specific width. It should be multiple by 32.')
-parser.add_argument('--height', type=int, default=320,
-                    help='Preprocess input image by resizing to a specific height. It should be multiple by 32.')
-parser.add_argument('--thr', type=float, default=0.5,
-                    help='Confidence threshold.')
-parser.add_argument('--nms', type=float, default=0.4,
-                    help='Non-maximum suppression threshold.')
-args = parser.parse_args()
+# ############ Add argument parser for command line arguments ############
+# parser = argparse.ArgumentParser(
+#     description="Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of "
+#                 "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)"
+#                 "The OCR model can be obtained from converting the pretrained CRNN model to .onnx format from the github repository https://github.com/meijieru/crnn.pytorch"
+#                 "Or you can download trained OCR model directly from https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing")
+# parser.add_argument('--input',
+#                     help='Path to input image or video file. Skip this argument to capture frames from a camera.')
+# parser.add_argument('--model', '-m', required=True,
+#                     help='Path to a binary .pb file contains trained detector network.')
+# parser.add_argument('--ocr', default="crnn.onnx",
+#                     help="Path to a binary .pb or .onnx file contains trained recognition network", )
+# parser.add_argument('--width', type=int, default=320,
+#                     help='Preprocess input image by resizing to a specific width. It should be multiple by 32.')
+# parser.add_argument('--height', type=int, default=320,
+#                     help='Preprocess input image by resizing to a specific height. It should be multiple by 32.')
+# parser.add_argument('--thr', type=float, default=0.5,
+#                     help='Confidence threshold.')
+# parser.add_argument('--nms', type=float, default=0.4,
+#                     help='Non-maximum suppression threshold.')
+# args = parser.parse_args()
 
-
-############ Utility functions ############
 
 def fourPointsTransform(frame, vertices):
     vertices = np.asarray(vertices)
@@ -60,179 +58,102 @@ def fourPointsTransform(frame, vertices):
         [outputSize[0] - 1, 0],
         [outputSize[0] - 1, outputSize[1] - 1]], dtype="float32")
 
-    rotationMatrix = cv.getPerspectiveTransform(vertices, targetVertices)
-    result = cv.warpPerspective(frame, rotationMatrix, outputSize)
+    rotationMatrix = cv2.getPerspectiveTransform(vertices, targetVertices)
+    result = cv2.warpPerspective(frame, rotationMatrix, outputSize)
     return result
 
-
-def decodeText(scores):
-    text = ""
-    alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
-    for i in range(scores.shape[0]):
-        c = np.argmax(scores[i][0])
-        if c != 0:
-            text += alphabet[c - 1]
-        else:
-            text += '-'
-
-    # adjacent same letters as well as background text must be removed to get the final output
-    char_list = []
-    for i in range(len(text)):
-        if text[i] != '-' and (not (i > 0 and text[i] == text[i - 1])):
-            char_list.append(text[i])
-    return ''.join(char_list)
-
-
-def decodeBoundingBoxes(scores, geometry, scoreThresh):
-    detections = []
-    confidences = []
-
-    ############ CHECK DIMENSIONS AND SHAPES OF geometry AND scores ############
-    assert len(scores.shape) == 4, "Incorrect dimensions of scores"
-    assert len(geometry.shape) == 4, "Incorrect dimensions of geometry"
-    assert scores.shape[0] == 1, "Invalid dimensions of scores"
-    assert geometry.shape[0] == 1, "Invalid dimensions of geometry"
-    assert scores.shape[1] == 1, "Invalid dimensions of scores"
-    assert geometry.shape[1] == 5, "Invalid dimensions of geometry"
-    assert scores.shape[2] == geometry.shape[2], "Invalid dimensions of scores and geometry"
-    assert scores.shape[3] == geometry.shape[3], "Invalid dimensions of scores and geometry"
-    height = scores.shape[2]
-    width = scores.shape[3]
-    for y in range(0, height):
-
-        # Extract data from scores
-        scoresData = scores[0][0][y]
-        x0_data = geometry[0][0][y]
-        x1_data = geometry[0][1][y]
-        x2_data = geometry[0][2][y]
-        x3_data = geometry[0][3][y]
-        anglesData = geometry[0][4][y]
-        for x in range(0, width):
-            score = scoresData[x]
-
-            # If score is lower than threshold score, move to next x
-            if (score < scoreThresh):
-                continue
-
-            # Calculate offset
-            offsetX = x * 4.0
-            offsetY = y * 4.0
-            angle = anglesData[x]
-
-            # Calculate cos and sin of angle
-            cosA = math.cos(angle)
-            sinA = math.sin(angle)
-            h = x0_data[x] + x2_data[x]
-            w = x1_data[x] + x3_data[x]
-
-            # Calculate offset
-            offset = ([offsetX + cosA * x1_data[x] + sinA * x2_data[x], offsetY - sinA * x1_data[x] + cosA * x2_data[x]])
-
-            # Find points for rectangle
-            p1 = (-sinA * h + offset[0], -cosA * h + offset[1])
-            p3 = (-cosA * w + offset[0], sinA * w + offset[1])
-            center = (0.5 * (p1[0] + p3[0]), 0.5 * (p1[1] + p3[1]))
-            detections.append((center, (w, h), -1 * angle * 180.0 / math.pi))
-            confidences.append(float(score))
-
-    # Return detections and confidences
-    return [detections, confidences]
+def approximate_to_rectangle(points):
+    contour = np.array(points).reshape((-1, 1, 2)).astype(np.float32)
+    rect = cv2.minAreaRect(contour)
+    box = cv2.boxPoints(rect)
+    box = np.array(np.intp(box), dtype="float32")  # Updated dtype to avoid deprecation warning
+    return box
 
 
 def main():
-    # Read and store arguments
-    confThreshold = args.thr
-    nmsThreshold = args.nms
-    inpWidth = args.width
-    inpHeight = args.height
-    modelDetector = args.model
-    modelRecognition = args.ocr
+    vocPath = "/media/pincambv/hugedrive1/opencv5_gursimar/opencv/samples/data/alphabet_36.txt"
+    recModelPath = "/media/pincambv/hugedrive1/Opencv_required_models/ResNet_CTC.onnx"
+    detModelPath = "/media/pincambv/hugedrive1/Opencv_required_models/DB_IC15_resnet50.onnx"
+    thr = 0.5
+    nms = 0.4
+    binThresh = 0.3
+    polyThresh = 0.5
+    maxCandidates = 200
+    unclipRatio = 2.0
+    inputFile = "/media/pincambv/hugedrive1/opencv5_gursimar/opencv/samples/data/right.jpg"
+    model = "DB"
+    imreadRGB=False
+    width = 736
+    height = 736
+    mean = [122.67891434, 116.66876762, 104.00698793]
 
-    # Load network
-    detector = cv.dnn.readNet(modelDetector)
-    recognizer = cv.dnn.readNet(modelRecognition)
+    frame = cv2.imread(inputFile)
 
-    # Create a new named window
-    kWinName = "EAST: An Efficient and Accurate Scene Text Detector"
-    cv.namedWindow(kWinName, cv.WINDOW_NORMAL)
-    outNames = []
-    outNames.append("feature_fusion/Conv_7/Sigmoid")
-    outNames.append("feature_fusion/concat_3")
+    if(model == "DB"):
+        detector = cv2.dnn_TextDetectionModel_DB(detModelPath)
 
-    # Open a video file or an image file or a camera stream
-    cap = cv.VideoCapture(args.input if args.input else 0)
+        # Set various parameters for the detector
+        detector.setBinaryThreshold(binThresh)
+        detector.setPolygonThreshold(polyThresh)
+        detector.setUnclipRatio(unclipRatio)
+        detector.setMaxCandidates(maxCandidates)
 
-    tickmeter = cv.TickMeter()
-    while cv.waitKey(1) < 0:
-        # Read frame
-        hasFrame, frame = cap.read()
-        if not hasFrame:
-            cv.waitKey()
-            break
+        # Set input parameters specific to the DB model
+        detector.setInputParams(scale=1.0 / 255, size=(width, height), mean=mean)
 
-        # Get frame height and width
-        height_ = frame.shape[0]
-        width_ = frame.shape[1]
-        rW = width_ / float(inpWidth)
-        rH = height_ / float(inpHeight)
+        # Perform text detection
+        detResults = detector.detect(frame)
 
-        # Create a 4D blob from frame.
-        blob = cv.dnn.blobFromImage(frame, 1.0, (inpWidth, inpHeight), (123.68, 116.78, 103.94), True, False)
+    # Open the vocabulary file and read lines into a list
+    with open(vocPath, 'r') as voc_file:
+        vocabulary = [line.strip() for line in voc_file]
 
-        # Run the detection model
-        detector.setInput(blob)
+    # Initialize the text recognition model with the specified model path
+    recognizer = cv2.dnn_TextRecognitionModel(recModelPath)
 
-        tickmeter.start()
-        outs = detector.forward(outNames)
-        tickmeter.stop()
+    # Set the vocabulary for the model
+    recognizer.setVocabulary(vocabulary)
 
-        # Get scores and geometry
-        scores = outs[0]
-        geometry = outs[1]
-        [boxes, confidences] = decodeBoundingBoxes(scores, geometry, confThreshold)
+    # Set the decoding method to 'CTC-greedy'
+    recognizer.setDecodeType("CTC-greedy")
 
-        # Apply NMS
-        indices = cv.dnn.NMSBoxesRotated(boxes, confidences, confThreshold, nmsThreshold)
-        for i in indices:
-            # get 4 corners of the rotated rect
-            vertices = cv.boxPoints(boxes[i])
-            # scale the bounding box coordinates based on the respective ratios
-            for j in range(4):
-                vertices[j][0] *= rW
-                vertices[j][1] *= rH
+    recScale = 1.0 / 127.5
+    recMean = (127.5, 127.5, 127.5)
+    recInputSize = (100, 32)
+    recognizer.setInputParams(scale=recScale, size=recInputSize, mean=recMean)
 
+    if len(detResults) > 0:
+        recInput = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if not imreadRGB else frame.copy()
+        contours = []
 
-            # get cropped image using perspective transform
-            if modelRecognition:
-                cropped = fourPointsTransform(frame, vertices)
-                cropped = cv.cvtColor(cropped, cv.COLOR_BGR2GRAY)
+        for i, (detection, probability) in enumerate(zip(detResults[0], detResults[1])):
+            quadrangle = detection
 
-                # Create a 4D blob from cropped image
-                blob = cv.dnn.blobFromImage(cropped, size=(100, 32), mean=127.5, scalefactor=1 / 127.5)
-                recognizer.setInput(blob)
+            if isinstance(quadrangle, np.ndarray):
+                quadrangle = approximate_to_rectangle(quadrangle)
+                if quadrangle is None or len(quadrangle) != 4:
+                    print("Skipping a quadrangle with incorrect points or transformation failed.")
+                    continue
 
-                # Run the recognition model
-                tickmeter.start()
-                result = recognizer.forward()
-                tickmeter.stop()
+                contours.append(np.array(quadrangle, dtype=np.int32))
+                cropped = fourPointsTransform(recInput, quadrangle)
+                recognitionResult = recognizer.recognize(cropped)
+                print(f"{i}: '{recognitionResult}'")
 
-                # decode the result into text
-                wordRecognized = decodeText(result)
-                cv.putText(frame, wordRecognized, (int(vertices[1][0]), int(vertices[1][1])), cv.FONT_HERSHEY_SIMPLEX,
-                           0.5, (255, 0, 0))
+                try:
+                    text_origin = (int(quadrangle[3][0]), int(quadrangle[3][1]))
+                    cv2.putText(frame, recognitionResult, text_origin, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                except Exception as e:
+                    print("Failed to write text on the frame:", e)
+            else:
+                print("Skipping a detection with invalid format:", quadrangle)
 
-            for j in range(4):
-                p1 = (int(vertices[j][0]), int(vertices[j][1]))
-                p2 = (int(vertices[(j + 1) % 4][0]), int(vertices[(j + 1) % 4][1]))
-                cv.line(frame, p1, p2, (0, 255, 0), 1)
+        cv2.polylines(frame, contours, True, (0, 255, 0), 2)
+    else:
+        print("No Text Detected.")
 
-        # Put efficiency information
-        label = 'Inference time: %.2f ms' % (tickmeter.getTimeMilli())
-        cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-
-        # Display the frame
-        cv.imshow(kWinName, frame)
-        tickmeter.reset()
+    cv2.imshow("Text Detection and Recognition", frame)
+    cv2.waitKey(0)
 
 
 if __name__ == "__main__":
