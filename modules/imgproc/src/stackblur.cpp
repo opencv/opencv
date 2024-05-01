@@ -547,7 +547,7 @@ public:
         }
         else
         {
-            size_t bufSize = CN * (width + radius) * sizeof(TBuf) + 2 * CN * sizeof(TBuf);
+            size_t bufSize = CN * (width + kernelSize) * sizeof(TBuf) + 2 * CN * sizeof(TBuf);
             AutoBuffer<uchar> _buf(bufSize + 16);
             uchar* bufptr = alignPtr(_buf.data(), 16);
             TBuf* diffVal = (TBuf*)bufptr;
