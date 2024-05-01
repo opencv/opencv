@@ -13,11 +13,8 @@ std::string param_keys =
     "{ @alias           | | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo              | models.yml | An optional path to file with preprocessing parameters }"
     "{ input i          | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-    "{ initial_width    | 0 | Preprocess input image by initial resizing to a specific width.}"
-    "{ initial_height   | 0 | Preprocess input image by initial resizing to a specific height.}"
     "{ crop             | false | Preprocess input image by center cropping.}"
-    "{ needSoftmax      | false | Use Softmax to post-process the output of the net.}"
-    "{ classes          | | Optional path to a text file with names of classes. }";
+    "{ needSoftmax      | false | Use Softmax to post-process the output of the net.}";
 std::string backend_keys = cv::format(
     "{ backend          | 0 | Choose one of computation backends: "
                               "%d: automatically (by default), "
@@ -39,9 +36,11 @@ std::string target_keys = cv::format(
 std::string keys = param_keys + backend_keys + target_keys;
 
 using namespace cv;
+using namespace std;
 using namespace dnn;
 
 std::vector<std::string> classes;
+vector<string> listImageFilesInDirectory(const string& directoryPath);
 
 int main(int argc, char** argv)
 {
@@ -60,8 +59,6 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    int rszWidth = parser.get<int>("initial_width");
-    int rszHeight = parser.get<int>("initial_height");
     float scale = parser.get<float>("scale");
     Scalar mean = parser.get<Scalar>("mean");
     Scalar std = parser.get<Scalar>("std");
@@ -70,7 +67,6 @@ int main(int argc, char** argv)
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
     String model = findFile(parser.get<String>("model"));
-    String config = findFile(parser.get<String>("config"));
     int backendId = parser.get<int>("backend");
     int targetId = parser.get<int>("target");
     bool needSoftmax = parser.get<bool>("needSoftmax");
@@ -78,18 +74,17 @@ int main(int argc, char** argv)
     std::cout<<"std: "<<std<<std::endl;
 
     // Open file with classes names.
-    if (parser.has("classes"))
+
+    std::string file = findFile(parser.get<String>("classes"));
+    std::ifstream ifs(file.c_str());
+    if (!ifs.is_open())
+        CV_Error(Error::StsError, "File " + file + " not found");
+    std::string line;
+    while (std::getline(ifs, line))
     {
-        std::string file = parser.get<String>("classes");
-        std::ifstream ifs(file.c_str());
-        if (!ifs.is_open())
-            CV_Error(Error::StsError, "File " + file + " not found");
-        std::string line;
-        while (std::getline(ifs, line))
-        {
-            classes.push_back(line);
-        }
+        classes.push_back(line);
     }
+
 
     if (!parser.check())
     {
@@ -102,34 +97,61 @@ int main(int argc, char** argv)
     Net net = readNetFromONNX(model);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
-    //! [Read and initialize network]
 
     // Create a window
     static const std::string kWinName = "Deep learning image classification in OpenCV";
-    namedWindow(kWinName, WINDOW_NORMAL);
+    cv::namedWindow(kWinName, WINDOW_NORMAL);
 
-    //! [Open a video file or an image file or a camera stream]
+
     VideoCapture cap;
-    if (parser.has("input"))
-        cap.open(parser.get<String>("input"));
-    else
-        cap.open(0);
-    //! [Open a video file or an image file or a camera stream]
+    vector<string> imageFiles;
+    size_t currentImageIndex = 0;
+
+    if (parser.has("input")) {
+        string input = parser.get<String>("input");
+
+        if (input.find('.')==string::npos) {
+            // Input is a directory, list all image files
+            imageFiles = listImageFilesInDirectory(input);
+            if (imageFiles.empty()) {
+                cout << "No images found in the directory." << endl;
+                return -1;
+            }
+        } else {
+            // Input is not a directory, try to open as video or image
+            cap.open(input);
+            if (!cap.isOpened()) {
+                cout << "Failed to open the input." << endl;
+                return -1;
+            }
+        }
+    } else {
+        cap.open(0); // Open default camera
+    }
+
 
     // Process frames.
     Mat frame, blob;
-    while (waitKey(1) < 0)
+    while (true)
     {
-        cap >> frame;
+        if (!imageFiles.empty()) {
+            // Handling directory of images
+            if (currentImageIndex >= imageFiles.size()) {
+                waitKey();
+                break; // Exit if all images are processed
+            }
+            frame = imread(imageFiles[currentImageIndex++]);
+            if(frame.empty()){
+                cout<<"Cannot open file"<<endl;
+                continue;
+            }
+        } else {
+            // Handling video or single image
+            cap >> frame;
+        }
         if (frame.empty())
         {
-            waitKey();
             break;
-        }
-
-        if (rszWidth != 0 && rszHeight != 0)
-        {
-            resize(frame, frame, Size(rszWidth, rszHeight));
         }
 
         //! [Create a 4D blob from a frame]
@@ -145,6 +167,7 @@ int main(int argc, char** argv)
 
         //! [Set input blob]
         net.setInput(blob);
+
         int classId;
         double confidence;
         cv::TickMeter timeRecorder;
@@ -167,7 +190,6 @@ int main(int argc, char** argv)
             Point classIdPoint;
             minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
             classId = classIdPoint.x;
-            //! [Get a class with a highest score]
         }
         if (needSoftmax == true)
         {
@@ -185,16 +207,39 @@ int main(int argc, char** argv)
         }
         std::string label = format("Inference time of 1 round: %.2f ms", t1);
         std::string label2 = format("Average time of 200 rounds: %.2f ms", timeRecorder.getTimeMilli()/200);
-        putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-        putText(frame, label2, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        cv::putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        cv::putText(frame, label2, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         // Print predicted class.
         label = format("%s: %.4f", (classes.empty() ? format("Class #%d", classId).c_str() :
                                                       classes[classId].c_str()),
                                    confidence);
-        putText(frame, label, Point(0, 55), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        cv::putText(frame, label, Point(0, 55), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
-        imshow(kWinName, frame);
+        cv::imshow(kWinName, frame);
+        int key = cv::waitKey(200); // Wait for 1 second
+        if (key == 'q' || key == 27) // Check if 'q' or 'ESC' is pressed
+            break;
     }
     return 0;
+}
+
+
+std::vector<std::string> listImageFilesInDirectory(const std::string& folder_path) {
+    std::vector<std::string> image_paths;
+
+    // OpenCV object for reading the directory
+    cv::Ptr<cv::String> image_paths_cv = new cv::String();
+    std::vector<cv::String> fn;
+    *image_paths_cv = folder_path + "/*.jpg"; // Change the extension according to the image types you want to read
+
+    // Read the images from the directory
+    cv::glob(*image_paths_cv, fn, true); // true to search in subdirectories
+
+    // Loop through the images
+    for (size_t i = 0; i < fn.size(); i++) {
+        image_paths.push_back(fn[i]);
+    }
+
+    return image_paths;
 }
