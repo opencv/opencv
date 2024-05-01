@@ -556,7 +556,10 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         /*!CV_IS_MAT(distCoeffs) ||*/ !CV_IS_MAT(imagePoints) )
         CV_Error( cv::Error::StsBadArg, "One of required arguments is not a valid matrix" );
 
-    int total = objectPoints->rows * objectPoints->cols * CV_MAT_CN(objectPoints->type);
+    int odepth = CV_MAT_DEPTH(objectPoints->type);
+    int ochans = CV_MAT_CN(objectPoints->type);
+    int orows = objectPoints->rows, ocols = objectPoints->cols;
+    int total = orows * ocols * ochans;
     if(total % 3 != 0)
     {
         //we have stopped support of homogeneous coordinates because it cause ambiguity in interpretation of the input data
@@ -564,34 +567,22 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
     }
     count = total / 3;
 
-    if( CV_IS_CONT_MAT(objectPoints->type) &&
-        (CV_MAT_DEPTH(objectPoints->type) == CV_32F || CV_MAT_DEPTH(objectPoints->type) == CV_64F)&&
-        ((objectPoints->rows == 1 && CV_MAT_CN(objectPoints->type) == 3) ||
-        (objectPoints->rows == count && CV_MAT_CN(objectPoints->type)*objectPoints->cols == 3) ||
-        (objectPoints->rows == 3 && CV_MAT_CN(objectPoints->type) == 1 && objectPoints->cols == count)))
-    {
+    CV_Assert(CV_IS_CONT_MAT(objectPoints->type));
+    CV_Assert(odepth == CV_32F || odepth == CV_64F);
+    // Homogeneous coordinates are not supported
+    CV_Assert((orows == 1 && ochans == 3) ||
+              (orows == count && ochans*ocols == 3) ||
+              (orows == 3 && ochans == 1 && ocols == count));
 
-    }
-    else
-    {
-//        matM = cvCreateMat( 1, count, CV_64FC3 );
-//        cvConvertPointsHomogeneous( objectPoints, matM );
-        CV_Error( cv::Error::StsBadArg, "Homogeneous coordinates are not supported" );
-    }
-
-    if( CV_IS_CONT_MAT(imagePoints->type) &&
-        (CV_MAT_DEPTH(imagePoints->type) == CV_32F || CV_MAT_DEPTH(imagePoints->type) == CV_64F) &&
-        ((imagePoints->rows == 1 && CV_MAT_CN(imagePoints->type) == 2) ||
-        (imagePoints->rows == count && CV_MAT_CN(imagePoints->type)*imagePoints->cols == 2) ||
-        (imagePoints->rows == 2 && CV_MAT_CN(imagePoints->type) == 1 && imagePoints->cols == count)))
-    {
-        
-    }
-    else
-    {
-//        _m = cvCreateMat( 1, count, CV_64FC2 );
-        CV_Error( cv::Error::StsBadArg, "Homogeneous coordinates are not supported" );
-    }
+    int idepth = CV_MAT_DEPTH(imagePoints->type);
+    int ichans = CV_MAT_CN(imagePoints->type);
+    int irows = imagePoints->rows, icols = imagePoints->cols;
+    CV_Assert(CV_IS_CONT_MAT(imagePoints->type));
+    CV_Assert(idepth == CV_32F || idepth == CV_64F);
+    // Homogeneous coordinates are not supported
+    CV_Assert((irows == 1 && ichans == 2) ||
+              (irows == count && ichans*icols == 2) ||
+              (irows == 2 && ichans == 1 && icols == count));
 
     if( (CV_MAT_DEPTH(r_vec->type) != CV_64F && CV_MAT_DEPTH(r_vec->type) != CV_32F) ||
         (((r_vec->rows != 1 && r_vec->cols != 1) ||
