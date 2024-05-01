@@ -93,5 +93,7 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
            genArgument("height", "Preprocess input image by resizing to a specific height.",
                        modelName, zooFile, ' ', "-1") +
            genArgument("rgb", "Indicate that model works with RGB input images instead BGR ones.",
+                       modelName, zooFile)+
+           genArgument("classes", "Optional path to a text file with names of classes to label detected objects.",
                        modelName, zooFile);
 }
