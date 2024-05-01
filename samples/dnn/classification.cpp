@@ -217,7 +217,7 @@ int main(int argc, char** argv)
         cv::putText(frame, label, Point(0, 55), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         cv::imshow(kWinName, frame);
-        int key = cv::waitKey(200); // Wait for 1 second
+        int key = cv::waitKey(1000); // Wait for 1 second
         if (key == 'q' || key == 27) // Check if 'q' or 'ESC' is pressed
             break;
     }

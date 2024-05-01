@@ -226,7 +226,8 @@ googlenet:
     url: "https://github.com/onnx/models/raw/main/validated/vision/classification/inception_and_googlenet/googlenet/model/googlenet-3.onnx?download="
     sha1: "16be45885b1802636e30a1490ca3c4d56e5024d7"
   model: "googlenet-3.onnx"
-  mean: [123.675, 116.28, 103.53]
+  mean: [104, 117, 123]
+  std: [1,1,1]
   scale: 1.0
   width: 224
   height: 224
