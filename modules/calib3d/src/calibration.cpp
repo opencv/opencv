@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "hal_replacement.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "distortion_model.hpp"
 #include "calib3d_c_api.h"
@@ -656,10 +657,11 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         }
     }
 
-    float rtMatrix[12] = { R[0], R[1], R[2], t[0],
-                           R[3], R[4], R[5], t[1],
-                           R[6], R[7], R[8], t[2] };
-    float cameraCalibrationMatrix[8] = { fx, fy, cx, cy, k[0], k[1], k[2], k[3] };
+    float rtMatrix[12] = { (float)R[0], (float)R[1], (float)R[2], (float)t[0],
+                           (float)R[3], (float)R[4], (float)R[5], (float)t[1],
+                           (float)R[6], (float)R[7], (float)R[8], (float)t[2] };
+    float cameraCalibrationMatrix[8] = { (float)fx,   (float)fy,   (float)cx,   (float)cy,
+                                         (float)k[0], (float)k[1], (float)k[2], (float)k[3] };
 
     if (CV_MAT_DEPTH(imagePoints->type) == CV_32F && CV_MAT_DEPTH(objectPoints->type) == CV_32F)
     {
