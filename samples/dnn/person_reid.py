@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 '''
-You can download a baseline ReID model and sample input from:
-https://github.com/ReID-Team/ReID_extra_testdata
+This sample detects the query person in the given video file.
 
 Authors of samples and Youtu ReID baseline:
         Xing Sun <winfredsun@tencent.com>
@@ -12,6 +11,17 @@ Authors of samples and Youtu ReID baseline:
 
 Copyright (C) 2020-2021, Tencent.
 Copyright (C) 2020-2021, SUSTech.
+
+
+
+How to use:
+    sample command to run:
+
+        python person_reid.py --query=/path/to/query_image --video=/path/to/video/footage --model=path/to/youtu_reid_baseline_medium.onnx --yolo=/path/to/yolov3.weights --cfg=/path/to/yolov3.cfg
+
+    You can download a baseline ReID model from:
+        https://github.com/ReID-Team/ReID_extra_testdata
+
 '''
 import argparse
 import os.path
@@ -54,10 +64,94 @@ def preprocess(images, height, width):
     input = cv.dnn.blobFromImages(images.astype(np.float32), ddepth = cv.CV_32F)
     return input
 
-def extract_feature(img_dir, model_path, batch_size = 32, resize_h = 384, resize_w = 128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU):
+img_dict = {} # Dictionary to store bounding boxes for corresponding cropped image
+
+def yolo_detector(frame, net, output_layers):
+    global img_dict
+    height, width, channels = frame.shape
+
+    # Create blob from the frame
+    blob = cv.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
+    net.setInput(blob)
+    outs = net.forward(output_layers)
+
+    class_ids = []
+    confidences = []
+    boxes = []
+    for out in outs:
+        for detection in out:
+            scores = detection[5:]
+            class_id = np.argmax(scores)
+            confidence = scores[class_id]
+            if confidence > 0.5 and class_id == 0:  # Filter to detect only 'person'
+                center_x = int(detection[0] * width)
+                center_y = int(detection[1] * height)
+                w = int(detection[2] * width)
+                h = int(detection[3] * height)
+
+                x = int(center_x - w / 2)
+                y = int(center_y - h / 2)
+
+                boxes.append([x, y, w, h])
+                confidences.append(float(confidence))
+                class_ids.append(class_id)
+
+    # Apply Non-Maximum Suppression to reduce overlapping bounding boxes
+    indexes = cv.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
+
+    images = []
+    for i in indexes:
+        x, y, w, h = boxes[i]
+
+        x, y = max(0, x), max(0, y)
+        w, h = min(w, frame.shape[1] - x), min(h, frame.shape[0] - y)
+        crop_img = frame[y:y+h, x:x+w]
+        images.append(crop_img)
+        img_dict[crop_img.tobytes()] = (x, y, w, h)
+    return images
+
+def extract_frames(query_image_path, video_path, model_path, yolo_path, cfg_path, resize_h = 384, resize_w = 128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, batch_size = 32):
+    cap = cv.VideoCapture(video_path)
+
+    net = cv.dnn.readNet(yolo_path, cfg_path)
+    layer_names = net.getLayerNames()
+
+    # Handle different formats of layer outputs from different OpenCV versions
+    try:
+        output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+    except Exception:
+        output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers().flatten()]
+
+    frames = []
+    query_images = [cv.imread(query_image_path)]
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        images = yolo_detector(frame, net, output_layers)
+        query_feat = extract_feature(query_images, model_path, resize_h, resize_w, backend, target, batch_size)
+        gallery_feat = extract_feature(images, model_path, resize_h, resize_w, backend, target, batch_size)
+
+        topk_idx = topk(query_feat, gallery_feat)
+
+        query_img = query_images[0]
+        top_img = images[topk_idx]
+        x, y, w, h = img_dict[top_img.tobytes()]
+        cv.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        cv.putText(frame, "Target", (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+        cv.imshow("Image", frame)
+        if cv.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv.destroyAllWindows()
+    return
+
+def extract_feature(images, model_path, resize_h = 384, resize_w = 128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, batch_size = 32):
     """
-    Extract features from images in a target directory
-    :param img_dir: the input image directory
+    Extract features from images
+    :param images: the input images
     :param model_path: path to ReID model
     :param batch_size: the batch size for each network inference iteration
     :param resize_h: the height of the input image
@@ -66,23 +160,17 @@ def extract_feature(img_dir, model_path, batch_size = 32, resize_h = 384, resize
     :param target: name of computation target
     """
     feat_list = []
-    path_list = os.listdir(img_dir)
-    path_list = [os.path.join(img_dir, img_name) for img_name in path_list]
-    count = 0
 
-    for i in range(0, len(path_list), batch_size):
-        print('Feature Extraction for images in', img_dir, 'Batch:', count, '/', len(path_list))
-        batch = path_list[i : min(i + batch_size, len(path_list))]
-        imgs = read_data(batch)
-        inputs = preprocess(imgs, resize_h, resize_w)
+    for i in range(0, len(images), batch_size):
+        batch = images[i : min(i + batch_size, len(images))]
+        inputs = preprocess(batch, resize_h, resize_w)
 
         feat = run_net(inputs, model_path, backend, target)
 
         feat_list.append(feat)
-        count += batch_size
 
     feats = np.concatenate(feat_list, axis = 0)
-    return feats, path_list
+    return feats
 
 def run_net(inputs, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU):
     """
@@ -99,19 +187,6 @@ def run_net(inputs, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn
     out = net.forward()
     out = np.reshape(out, (out.shape[0], out.shape[1]))
     return out
-
-def read_data(path_list):
-    """
-    Read all images from a directory into a list
-    :param path_list: the list of image path
-    """
-    img_list = []
-    for img_path in path_list:
-        img = cv.imread(img_path)
-        if img is None:
-            continue
-        img_list.append(img)
-    return img_list
 
 def normalize(nparray, order=2, axis=0):
     """
@@ -136,80 +211,26 @@ def similarity(array1, array2):
     dist = np.matmul(array1, array2.T)
     return dist
 
-def topk(query_feat, gallery_feat, topk = 5):
+def topk(query_feat, gallery_feat):
     """
-    Return the index of top K gallery images most similar to the query images
+    Return the index of the top gallery image most similar to the query image
     :param query_feat: array of feature vectors of query images
     :param gallery_feat: array of feature vectors of gallery images
-    :param topk: number of gallery images to return
     """
     sim = similarity(query_feat, gallery_feat)
-    index = np.argsort(-sim, axis = 1)
-    return [i[0:int(topk)] for i in index]
-
-def drawRankList(query_name, gallery_list, output_size = (128, 384)):
-    """
-    Draw the rank list
-    :param query_name: path of the query image
-    :param gallery_name: path of the gallery image
-    "param output_size: the output size of each image in the rank list
-    """
-    def addBorder(im, color):
-        bordersize = 5
-        border = cv.copyMakeBorder(
-            im,
-            top = bordersize,
-            bottom = bordersize,
-            left = bordersize,
-            right = bordersize,
-            borderType = cv.BORDER_CONSTANT,
-            value = color
-        )
-        return border
-    query_img = cv.imread(query_name)
-    query_img = cv.resize(query_img, output_size)
-    query_img = addBorder(query_img, [0, 0, 0])
-    cv.putText(query_img, 'Query', (10, 30), cv.FONT_HERSHEY_COMPLEX, 1., (0,255,0), 2)
-
-    gallery_img_list = []
-    for i, gallery_name in enumerate(gallery_list):
-        gallery_img = cv.imread(gallery_name)
-        gallery_img = cv.resize(gallery_img, output_size)
-        gallery_img = addBorder(gallery_img, [255, 255, 255])
-        cv.putText(gallery_img, 'G%02d'%i, (10, 30), cv.FONT_HERSHEY_COMPLEX, 1., (0,255,0), 2)
-        gallery_img_list.append(gallery_img)
-    ret = np.concatenate([query_img] + gallery_img_list, axis = 1)
-    return ret
-
-
-def visualization(topk_idx, query_names, gallery_names, output_dir = 'vis'):
-    """
-    Visualize the retrieval results with the person ReID model
-    :param topk_idx: the index of ranked gallery images for each query image
-    :param query_names: the list of paths of query images
-    :param gallery_names: the list of paths of gallery images
-    :param output_dir: the path to save the visualize results
-    """
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
-    for i, idx in enumerate(topk_idx):
-        query_name = query_names[i]
-        topk_names = [gallery_names[j] for j in idx]
-        vis_img = drawRankList(query_name, topk_names)
-        output_path = os.path.join(output_dir, '%03d_%s'%(i, os.path.basename(query_name)))
-        cv.imwrite(output_path, vis_img)
+    index = np.argmax(sim, axis=1)[0]
+    return index
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Use this script to run human parsing using JPPNet',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--query_dir', '-q', required=True, help='Path to query image.')
-    parser.add_argument('--gallery_dir', '-g', required=True, help='Path to gallery directory.')
+    parser.add_argument('--query', '-q', required=True, help='Path to target image.')
+    parser.add_argument('--video', '-g', required=True, help='Path to video file.')
+    parser.add_argument('--yolo', required=True, help='Path to yolov3.weights.')
+    parser.add_argument('--cfg', required=True, help='Path to yolov3.cfg.')
     parser.add_argument('--resize_h', default = 256, help='The height of the input for model inference.')
     parser.add_argument('--resize_w', default = 128, help='The width of the input for model inference')
     parser.add_argument('--model', '-m', default='reid.onnx', help='Path to pb model.')
-    parser.add_argument('--visualization_dir', default='vis', help='Path for the visualization results')
-    parser.add_argument('--topk', default=10, help='Number of images visualized in the rank list')
-    parser.add_argument('--batchsize', default=32, help='The batch size of each inference')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
@@ -233,8 +254,4 @@ if __name__ == '__main__':
     if not os.path.isfile(args.model):
         raise OSError("Model not exist")
 
-    query_feat, query_names = extract_feature(args.query_dir, args.model, args.batchsize, args.resize_h, args.resize_w, args.backend, args.target)
-    gallery_feat, gallery_names = extract_feature(args.gallery_dir, args.model, args.batchsize, args.resize_h, args.resize_w, args.backend, args.target)
-
-    topk_idx = topk(query_feat, gallery_feat, args.topk)
-    visualization(topk_idx, query_names, gallery_names, output_dir = args.visualization_dir)
+    extract_frames(args.query, args.video, args.model, args.yolo, args.cfg, args.resize_h, args.resize_w, args.backend, args.target)
