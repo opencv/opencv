@@ -949,22 +949,22 @@ void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
 namespace cv
 {
 
-static void mul8uExtendWrapper(const uchar* src1, size_t step1,
+static void mul8u16uWrapper(const uchar* src1, size_t step1,
                                const uchar* src2, size_t step2,
                                uchar* dst, size_t step, int width, int height,
                                void* usrdata)
 {
     double scale = *((double*)usrdata);
-    cv_hal_mul8uExtend(src1, step1, src2, step2, (ushort*)dst, step, width, height, scale);
+    cv_hal_mul8u16u(src1, step1, src2, step2, (ushort*)dst, step, width, height, scale);
 }
 
-static void mul8sExtendWrapper(const uchar* src1, size_t step1,
+static void mul8s16sWrapper(const uchar* src1, size_t step1,
                                const uchar* src2, size_t step2,
                                uchar* dst, size_t step, int width, int height,
                                void* usrdata)
 {
     double scale = *((double*)usrdata);
-    cv_hal_mul8sExtend((schar*)src1, step1, (schar*)src2, step2, (short*)dst, step, width, height, scale);
+    cv_hal_mul8s16s((schar*)src1, step1, (schar*)src2, step2, (short*)dst, step, width, height, scale);
 }
 
 static bool checkHalMulExtend()
@@ -975,7 +975,7 @@ static bool checkHalMulExtend()
     uchar ua = 0, ub = 0;
     ushort uc = 0;
     int res;
-    res = cv_hal_mul8uExtend(/* src1_data */ &ua, /* src1_step */ 1, /* src2_data */ &ub, /* src2_step */ 1,
+    res = cv_hal_mul8u16u(/* src1_data */ &ua, /* src1_step */ 1, /* src2_data */ &ub, /* src2_step */ 1,
                              /* dst_data */ &uc, /* dst_step */ 1, /* width */ 1, /* height */ 1, /* scale */ 1);
     if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
     {
@@ -983,12 +983,12 @@ static bool checkHalMulExtend()
     }
     else if (res != 0)
     {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8uExtend returned %d (0x%08x)", res, res));
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8u16s returned %d (0x%08x)", res, res));
     }
 
     schar sa = 0, sb = 0;
     short sc = 0;
-    res = cv_hal_mul8sExtend(/* src1_data */ &sa, /* src1_step */ 1, /* src2_data */ &sb, /* src2_step */ 1,
+    res = cv_hal_mul8s16s(/* src1_data */ &sa, /* src1_step */ 1, /* src2_data */ &sb, /* src2_step */ 1,
                              /* dst_data */ &sc, /* dst_step */ 1, /* width */ 1, /* height */ 1, /* scale */ 1);
     if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
     {
@@ -996,7 +996,7 @@ static bool checkHalMulExtend()
     }
     else if (res != 0)
     {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8sExtend returned %d (0x%08x)", res, res));
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8s16s returned %d (0x%08x)", res, res));
     }
 
     return works;
@@ -1013,7 +1013,7 @@ static BinaryFuncC* getMulTab(bool extendMul)
 
     static BinaryFuncC extendMulTab[] =
     {
-        (BinaryFuncC)mul8uExtendWrapper, (BinaryFuncC)mul8sExtendWrapper,
+        (BinaryFuncC)mul8u16uWrapper, (BinaryFuncC)mul8s16sWrapper,
     };
 
     return extendMul ? extendMulTab : mulTab;
