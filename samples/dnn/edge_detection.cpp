@@ -10,7 +10,6 @@
 using namespace cv;
 using namespace cv::dnn;
 using namespace std;
-
 struct UserData {
             Mat gray;
             int thrs1 = 100;
@@ -22,7 +21,6 @@ static void sigmoid(Mat& input) {
     exp(-input, input); // e^-input
     input = 1.0 / (1.0 + input); // 1 / (1 + e^-input)
 }
-
 // Callback for the first threshold adjustment
 static void cannyDetectionThresh1(int position, void* userdata) {
     UserData* data = reinterpret_cast<UserData*>(userdata);
@@ -31,7 +29,6 @@ static void cannyDetectionThresh1(int position, void* userdata) {
     data->thrs1 = position;
     imshow("Output", output);
 }
-
 // Callback for the second threshold adjustment
 static void cannyDetectionThresh2(int position, void* userdata) {
     UserData* data = reinterpret_cast<UserData*>(userdata);
@@ -40,7 +37,6 @@ static void cannyDetectionThresh2(int position, void* userdata) {
     data->thrs2 = position;
     imshow("Output", output);
 }
-
 pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width);
 Mat preprocess(const Mat& img, int imageSize);
 
@@ -69,8 +65,8 @@ int main(int argc, char** argv) {
                                     "%d: VKCOM, "
                                     "%d: CUDA, "
                                     "%d: WebNN }",
-        cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV,
-        cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA, cv::dnn::DNN_BACKEND_WEBNN);
+        DNN_BACKEND_DEFAULT, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV,
+        DNN_BACKEND_VKCOM, DNN_BACKEND_CUDA, DNN_BACKEND_WEBNN);
 
     const string target_keys = format(
         "{ target          | 0 | Choose one of target computation devices: "
@@ -81,9 +77,9 @@ int main(int argc, char** argv) {
                               "%d: Vulkan, "
                               "%d: CUDA, "
                               "%d: CUDA fp16 (half-float preprocess) }",
-        cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16,
-        cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA,
-        cv::dnn::DNN_TARGET_CUDA_FP16);
+        DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16,
+        DNN_TARGET_MYRIAD, DNN_TARGET_VULKAN, DNN_TARGET_CUDA,
+        DNN_TARGET_CUDA_FP16);
 
     const string keys = param_keys + backend_keys + target_keys;
 
@@ -108,12 +104,9 @@ int main(int argc, char** argv) {
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
         Mat preprocessed = preprocess(image, imageSize);
-
         Mat blob = blobFromImage(preprocessed);
         net.setInput(blob);
-
         Mat result = net.forward();
-
         vector<Mat> outputs;
         net.forward(outputs); // Get all output layers
         int originalWidth = image.cols;
@@ -121,33 +114,25 @@ int main(int argc, char** argv) {
         pair<Mat, Mat> res = postProcess(outputs, originalHeight, originalWidth);
         Mat fusedOutput = res.first;
         Mat averageOutput = res.second;
-
-
         imshow("Input", image);
         imshow("Output", fusedOutput);
         waitKey(0);
     } else if (method == "canny") {
         Mat gray;
         cvtColor(image, gray, COLOR_BGR2GRAY);
-
         UserData user_data;
         user_data.gray = gray;
-
         namedWindow("Output", WINDOW_NORMAL);
         namedWindow("Input", WINDOW_NORMAL);
-
          // Create trackbars
         createTrackbar("thrs1", "Output",0, 255, cannyDetectionThresh1, &user_data);
         createTrackbar("thrs2", "Output",0, 255, cannyDetectionThresh2, &user_data);
-
         // Set initial positions of trackbars
         setTrackbarPos("thrs1", "Output", 100);
         setTrackbarPos("thrs2", "Output", 200);
-
         imshow("Input", image);
         waitKey(0);
     }
-
     return 0;
 }
 
@@ -156,10 +141,8 @@ pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
     const double epsilon = 1e-12;
     vector<Mat> preds;
     preds.reserve(output.size());
-
     for (const auto& p : output) {
         Mat img;
-
         // Correctly handle 4D tensor assuming it's always in the format [1, 1, height, width]
         Mat processed;
         if (p.dims == 4 && p.size[0] == 1 && p.size[1] == 1) {
@@ -168,22 +151,13 @@ pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
         } else {
             processed = p.clone();
         }
-
         sigmoid(processed);
-
-        double minVal, maxVal;
-        minMaxLoc(processed, &minVal, &maxVal); // Find min and max values
-
-        // Normalize the image to [0, 255]
-        img = (processed - minVal) * 255.0 / (maxVal - minVal + epsilon);
+        normalize(processed, img, 1.0, 0.0, NORM_MINMAX); //Normalizarion
         img.convertTo(img, CV_8U); // Convert to 8-bit image
-
         resize(img, img, Size(width, height)); // Resize to the original size
         preds.push_back(img);
     }
-
     Mat fuse = preds.back(); // Last element as the fused result
-
     // Calculate the average of the predictions
     Mat ave = Mat::zeros(height, width, CV_32F);
     for (auto& pred : preds) {
@@ -193,10 +167,8 @@ pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
     }
     ave /= static_cast<float>(preds.size());
     ave.convertTo(ave, CV_8U);
-
     return {fuse, ave}; // Return both fused and average edge maps
 }
-
 // Preprocess the image
 Mat preprocess(const Mat& img, int imageSize) {
     Mat resizedImg;
