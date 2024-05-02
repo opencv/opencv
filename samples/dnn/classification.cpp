@@ -132,7 +132,7 @@ int main(int argc, char** argv)
 
     // Process frames.
     Mat frame, blob;
-    while (true)
+    for(;;)
     {
         if (!imageFiles.empty()) {
             // Handling directory of images
@@ -207,16 +207,16 @@ int main(int argc, char** argv)
         }
         std::string label = format("Inference time of 1 round: %.2f ms", t1);
         std::string label2 = format("Average time of 200 rounds: %.2f ms", timeRecorder.getTimeMilli()/200);
-        cv::putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-        cv::putText(frame, label2, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        putText(frame, label2, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         // Print predicted class.
         label = format("%s: %.4f", (classes.empty() ? format("Class #%d", classId).c_str() :
                                                       classes[classId].c_str()),
                                    confidence);
-        cv::putText(frame, label, Point(0, 55), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        putText(frame, label, Point(0, 55), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
-        cv::imshow(kWinName, frame);
+        imshow(kWinName, frame);
         int key = cv::waitKey(1000); // Wait for 1 second
         if (key == 'q' || key == 27) // Check if 'q' or 'ESC' is pressed
             break;
