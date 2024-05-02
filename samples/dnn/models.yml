@@ -230,9 +230,9 @@ fcnresnet101:
 
 DB:
   load_info:
-    url: "https://drive.google.com/uc?export=dowload&id=19YWhArrNccaoSza0CfkXlA8im4-lAGsR"
-    sha1: "1b4dd21a6baa5e3523156776970895bd3db6960a"
-  model: "DB_TD500_resnet50.onnx"
+    url: "https://drive.google.com/uc?export=dowload&id=17_ABp79PlFt9yPCxSaarVc_DKTmrSGGf"
+    sha1: "bef233c28947ef6ec8c663d20a2b326302421fa3"
+  model: "DB_IC15_resnet50.onnx"
   mean: [122.67891434, 116.66876762, 104.00698793]
   scale: 0.00392
   width: 736
@@ -247,7 +247,7 @@ East:
     sha1: "fffabf5ac36f37bddf68e34e84b45f5c4247ed06"
   model: "frozen_east_text_detection.pb"
   mean: [123.68, 116.78, 103.94]
-  scale: 0.00392
+  scale: 1.0
   width: 736
   height: 736
   rgb: false

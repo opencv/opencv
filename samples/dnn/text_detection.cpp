@@ -1,21 +1,26 @@
 /*
-    Text detection model: https://github.com/argman/EAST
-    Download link: https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1
+    Text detection model (EAST): https://github.com/argman/EAST
+    Download link for EAST model: https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1
 
-    Text recognition models can be downloaded directly here:
+    DB detector model:
+    https://drive.google.com/uc?export=download&id=17_ABp79PlFt9yPCxSaarVc_DKTmrSGGf
+
+    CRNN Text recognition model sourced from: https://github.com/meijieru/crnn.pytorch
+    How to convert from .pb to .onnx:
+    Using classes from: https://github.com/meijieru/crnn.pytorch/blob/master/models/crnn.py
+
+    Additional converted ONNX text recognition models available for direct download:
     Download link: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing
-    and doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown
+    These models are taken from: https://github.com/clovaai/deep-text-recognition-benchmark
 
-    How to convert from pb to onnx:
-    Using classes from here: https://github.com/meijieru/crnn.pytorch/blob/master/models/crnn.py
+    Importing and using the CRNN model in PyTorch:
     import torch
     from models.crnn import CRNN
+
     model = CRNN(32, 1, 37, 256)
     model.load_state_dict(torch.load('crnn.pth'))
     dummy_input = torch.randn(1, 1, 32, 100)
     torch.onnx.export(model, dummy_input, "crnn.onnx", verbose=True)
-
-    For more information, please refer to doc/tutorials/dnn/dnn_text_spotting/dnn_text_spotting.markdown and doc/tutorials/dnn/dnn_OCR/dnn_OCR.markdown
 */
 #include <iostream>
 #include <fstream>
@@ -32,7 +37,7 @@ using namespace cv::dnn;
 // Command-line keys to parse the input arguments
 std::string keys =
     "{ help  h                        |     | Print help message. }"
-    "{ input i                        | messi5.jpg | Path to an input image. }"
+    "{ input i                        | right.jpg | Path to an input image. }"
     "{ @alias      | | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
     "{ recModelPath rmp               |     | Path to a binary .onnx model for recognition. }"
