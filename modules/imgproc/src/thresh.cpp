@@ -1559,7 +1559,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         CV_CheckType(src_type, src_type == CV_8UC1 || src_type == CV_16UC1, "THRESH_OTSU mode");
 
         CALL_HAL_RET(thresholdOtsu, cv_hal_threshold_otsu, thresh, src.data, src.step, dst.data, dst.step,
-                     src.cols, src.rows, src_type, src.channels(), maxval, type);
+                     src.cols, src.rows, src_type, maxval, type);
 
         thresh = src.type() == CV_8UC1 ? getThreshVal_Otsu_8u( src )
                                        : getThreshVal_Otsu_16u( src );

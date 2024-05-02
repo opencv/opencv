@@ -865,12 +865,11 @@ inline int hal_ni_threshold(const uchar* src_data, size_t src_step, uchar* dst_d
    @param width Source image width
    @param height Source image height
    @param depth Depths of source and destination image
-   @param cn Number of channels
    @param maxValue Value assigned to the pixels for which the condition is satisfied
    @param thresholdType Thresholding type
    @param thresh Calculated threshold value
 */
-inline int hal_ni_threshold_otsu(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, double maxValue, int thresholdType, double* thresh) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_threshold_otsu(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, double maxValue, int thresholdType, double* thresh) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_threshold_otsu hal_ni_threshold_otsu
