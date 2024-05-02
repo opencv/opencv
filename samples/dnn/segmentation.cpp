@@ -1,5 +1,6 @@
 #include <fstream>
 #include <sstream>
+#include <iostream>
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
@@ -13,29 +14,31 @@ std::string param_keys =
     "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
     "{ device      |  0 | camera device number. }"
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
-    "{ framework f | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
     "{ classes     | | Optional path to a text file with names of classes. }"
     "{ colors      | | Optional path to a text file with colors for an every class. "
-                      "An every color is represented with three values from 0 to 255 in BGR channels order. }";
+    "An every color is represented with three values from 0 to 255 in BGR channels order. }";
 std::string backend_keys = cv::format(
     "{ backend   | 0 | Choose one of computation backends: "
-                       "%d: automatically (by default), "
-                       "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                       "%d: OpenCV implementation, "
-                       "%d: VKCOM, "
-                       "%d: CUDA }", cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA);
+    "%d: automatically (by default), "
+    "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+    "%d: OpenCV implementation, "
+    "%d: VKCOM, "
+    "%d: CUDA }",
+    cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA);
 std::string target_keys = cv::format(
     "{ target    | 0 | Choose one of target computation devices: "
-                       "%d: CPU target (by default), "
-                       "%d: OpenCL, "
-                       "%d: OpenCL fp16 (half-float precision), "
-                       "%d: VPU, "
-                       "%d: Vulkan, "
-                       "%d: CUDA, "
-                       "%d: CUDA fp16 (half-float preprocess) }", cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
+    "%d: CPU target (by default), "
+    "%d: OpenCL, "
+    "%d: OpenCL fp16 (half-float precision), "
+    "%d: VPU, "
+    "%d: Vulkan, "
+    "%d: CUDA, "
+    "%d: CUDA fp16 (half-float preprocess) }",
+    cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
 std::string keys = param_keys + backend_keys + target_keys;
 
 using namespace cv;
+using namespace std;
 using namespace dnn;
 
 std::vector<std::string> classes;
@@ -45,7 +48,7 @@ void showLegend();
 
 void colorizeSegmentation(const Mat &score, Mat &segm);
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
@@ -68,8 +71,6 @@ int main(int argc, char** argv)
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
     String model = findFile(parser.get<String>("model"));
-    String config = findFile(parser.get<String>("config"));
-    String framework = parser.get<String>("framework");
     int backendId = parser.get<int>("backend");
     int targetId = parser.get<int>("target");
 
@@ -114,7 +115,7 @@ int main(int argc, char** argv)
 
     CV_Assert(!model.empty());
     //! [Read and initialize network]
-    Net net = readNet(model, config, framework);
+    Net net = readNetFromONNX(model);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
     //! [Read and initialize network]
@@ -141,11 +142,11 @@ int main(int argc, char** argv)
             waitKey();
             break;
         }
+        cv::imshow("Original Image", frame);
 
         //! [Create a 4D blob from a frame]
         blobFromImage(frame, blob, scale, Size(inpWidth, inpHeight), mean, swapRB, false);
         //! [Create a 4D blob from a frame]
-
         //! [Set input blob]
         net.setInput(blob);
         //! [Set input blob]
@@ -153,11 +154,46 @@ int main(int argc, char** argv)
         Mat score = net.forward();
         //! [Make forward pass]
 
-        Mat segm;
-        colorizeSegmentation(score, segm);
+        cv::Mat mask, saliency_map, foreground_overlay, background_overlay, foreground_segmented;
+        if (modelName == "u2netp")
+        {
 
-        resize(segm, segm, frame.size(), 0, 0, INTER_NEAREST);
-        addWeighted(frame, 0.1, segm, 0.9, 0.0, frame);
+            saliency_map = cv::Mat(score.size[2], score.size[3], CV_32F, score.ptr<float>(0, 0));
+            cv::threshold(saliency_map, mask, 0.5, 255, cv::THRESH_BINARY);
+            cv::resize(mask, mask, cv::Size(frame.cols, frame.rows), 0, 0, cv::INTER_NEAREST);
+            mask.convertTo(mask, CV_8U);
+
+            // Create overlays for foreground and background
+            foreground_overlay = cv::Mat::zeros(frame.size(), frame.type());
+            background_overlay = cv::Mat::zeros(frame.size(), frame.type());
+
+            // Set foreground (object) to red and background to blue
+            for (int i = 0; i < mask.rows; i++)
+            {
+                for (int j = 0; j < mask.cols; j++)
+                {
+                    if (mask.at<uchar>(i, j) == 255)
+                    {
+                        foreground_overlay.at<cv::Vec3b>(i, j) = cv::Vec3b(0, 0, 255); // Red foreground
+                    }
+                    else
+                    {
+                        background_overlay.at<cv::Vec3b>(i, j) = cv::Vec3b(255, 0, 0); // Blue background
+                    }
+                }
+            }
+            // Blend the overlays with the original frame
+            cv::addWeighted(frame, 1, foreground_overlay, 0.5, 0, foreground_segmented);
+            cv::addWeighted(foreground_segmented, 1, background_overlay, 0.5, 0, frame);
+        }
+        else
+        {
+            Mat segm;
+            colorizeSegmentation(score, segm);
+
+            resize(segm, segm, frame.size(), 0, 0, INTER_NEAREST);
+            addWeighted(frame, 0.1, segm, 0.9, 0.0, frame);
+        }
 
         // Put efficiency information.
         std::vector<double> layersTimes;
@@ -194,7 +230,8 @@ void colorizeSegmentation(const Mat &score, Mat &segm)
     else if (chns != (int)colors.size())
     {
         CV_Error(Error::StsError, format("Number of output classes does not match "
-                                         "number of colors (%d != %zu)", chns, colors.size()));
+                                         "number of colors (%d != %zu)",
+                                         chns, colors.size()));
     }
 
     Mat maxCl = Mat::zeros(rows, cols, CV_8UC1);
@@ -239,7 +276,8 @@ void showLegend()
         if ((int)colors.size() != numClasses)
         {
             CV_Error(Error::StsError, format("Number of output classes does not match "
-                                             "number of labels (%zu != %zu)", colors.size(), classes.size()));
+                                             "number of labels (%zu != %zu)",
+                                             colors.size(), classes.size()));
         }
         legend.create(kBlockHeight * numClasses, 200, CV_8UC3);
         for (int i = 0; i < numClasses; i++)
