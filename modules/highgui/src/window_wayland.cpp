@@ -2460,11 +2460,17 @@ CV_IMPL void cvSetMouseCallback(const char *window_name, CvMouseCallback on_mous
 }
 
 CV_IMPL void cvShowImage(const char *name, const CvArr *arr) {
-    auto cv_core = CvWlCore::getInstance();
-    auto window = cv_core.get_window(name);
+    // see https://github.com/opencv/opencv/issues/25497
+    /*
+     * To reuse the result of getInstance() repeatedly looks like better efficient implementation.
+     * However, it defined as static shared_ptr member variable in CvWlCore.
+     * If it reaches out of scope, cv_wl_core::~cv_wl_core() is called and all windows will be destroyed.
+     * For workaround, avoid it.
+     */
+    auto window = CvWlCore::getInstance().get_window(name);
     if (!window) {
-        cv_core.create_window(name, cv::WINDOW_AUTOSIZE);
-        if (!(window = cv_core.get_window(name)))
+        CvWlCore::getInstance().create_window(name, cv::WINDOW_AUTOSIZE);
+        if (!(window = CvWlCore::getInstance().get_window(name)))
             CV_Error_(StsNoMem, ("Failed to create window: %s", name));
     }
 
