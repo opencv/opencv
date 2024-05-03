@@ -12,7 +12,7 @@ using namespace cv;
 using namespace std;
 using namespace dnn;
 
-const string about = 
+const string about =
         "Use this script to run a classification model on a camera stream, video, image or in a directory\n\n"
         "Firstly, download required models using `download_models.py` (if not already done).\n"
         "To run:\n"
@@ -173,7 +173,6 @@ int main(int argc, char** argv)
         timeRecorder.stop();
         t1 = timeRecorder.getTimeMilli();
         timeRecorder.reset();
-    
         string label = format("Inference time of 1 round: %.2f ms", t1);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
         // Print predicted class.
