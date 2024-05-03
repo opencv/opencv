@@ -4,6 +4,8 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -31,7 +33,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -84,6 +87,16 @@ public:
 
         tmp.copyTo(out);
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto repeats_node = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{repeats.size()}, repeats.data());
+        auto tile = std::make_shared<ov::op::v0::Tile>(nodes[0].dynamicCast<InfEngineNgraphNode>()->node, repeats_node);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(tile));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     std::vector<int> repeats;

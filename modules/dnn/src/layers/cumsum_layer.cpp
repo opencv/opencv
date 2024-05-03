@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
@@ -30,6 +32,12 @@ public:
     {
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return exclusive_raw == 0;
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -119,6 +127,36 @@ public:
             return axis_mat_int.at<int32_t>(0);
         }
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        std::shared_ptr<ov::op::v0::CumSum> cumsum;
+        if (nodes.size() == 2)
+        {
+            int32_t axis_shape = 1;
+            auto axis_scalar = std::make_shared<ov::op::v1::Reshape>(
+                nodes[1].dynamicCast<InfEngineNgraphNode>()->node,
+                std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &axis_shape),
+                false);
+            cumsum = std::make_shared<ov::op::v0::CumSum>(
+                nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+                std::make_shared<ov::op::v0::Convert>(axis_scalar, ov::element::i32),
+                exclusive_raw,
+                reverse_raw);
+        }
+        else
+        {
+            cumsum = std::make_shared<ov::op::v0::CumSum>(
+                nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+                std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &axis_raw),
+                exclusive_raw,
+                reverse_raw);
+        }
+        return Ptr<BackendNode>(new InfEngineNgraphNode(cumsum));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     int axis_raw;
     int exclusive_raw;

@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 
 
@@ -20,7 +22,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -112,6 +115,19 @@ public:
             }
         }
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto axisNode = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &m_axis);
+        auto gather = std::make_shared<ov::op::v8::Gather>(
+            nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+            std::make_shared<ov::op::v0::Convert>(nodes[1].dynamicCast<InfEngineNgraphNode>()->node, ov::element::i32),
+            axisNode);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(gather));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     // The axis to gather along

@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv { namespace dnn {
@@ -30,7 +32,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -147,6 +150,25 @@ public:
                 CV_Error(cv::Error::BadDepth, "DNN/GatherElements: Unsupported type.");
         };
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        int32_t indicesBoundValue = nodes[0].dynamicCast<InfEngineNgraphNode>()->node.get_shape()[axis];
+        auto indicesBound = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &indicesBoundValue);
+        auto indices = std::make_shared<ov::op::v0::Convert>(nodes[1].dynamicCast<InfEngineNgraphNode>()->node, ov::element::i32);
+        auto indicesNonNegative = std::make_shared<ov::op::v1::Mod>(
+            std::make_shared<ov::op::v1::Add>(indices, indicesBound),
+            indicesBound);
+
+        auto gatherElements = std::make_shared<ov::op::v6::GatherElements>(
+            nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+            indicesNonNegative,
+            axis);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(gatherElements));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     int axis;
