@@ -22,7 +22,6 @@ static void sigmoid(Mat& input) {
     exp(-input, input);          // e^-input
     input = 1.0 / (1.0 + input); // 1 / (1 + e^-input)
 }
-
 // Callback for the first threshold adjustment
 static void cannyDetectionThresh1(int position, void* userdata) {
     UserData* data = reinterpret_cast<UserData*>(userdata);
@@ -31,7 +30,6 @@ static void cannyDetectionThresh1(int position, void* userdata) {
     data->thrs1 = position;
     imshow("Output", output);
 }
-
 // Callback for the second threshold adjustment
 static void cannyDetectionThresh2(int position, void* userdata) {
     UserData* data = reinterpret_cast<UserData*>(userdata);
@@ -40,7 +38,6 @@ static void cannyDetectionThresh2(int position, void* userdata) {
     data->thrs2 = position;
     imshow("Output", output);
 }
-
 pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width);
 Mat preprocess(const Mat& img, int imageSize);
 
@@ -182,10 +179,8 @@ int main(int argc, char** argv) {
 pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
     vector<Mat> preds;
     preds.reserve(output.size());
-
     for (const auto& p : output) {
         Mat img;
-
         // Correctly handle 4D tensor assuming it's always in the format [1, 1, height, width]
         Mat processed;
         if (p.dims == 4 && p.size[0] == 1 && p.size[1] == 1) {
@@ -194,15 +189,12 @@ pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
         } else {
             processed = p.clone();
         }
-
         sigmoid(processed);
         normalize(processed, img, 0, 255, NORM_MINMAX, CV_8U);
         resize(img, img, Size(width, height)); // Resize to the original size
         preds.push_back(img);
     }
-
     Mat fuse = preds.back(); // Last element as the fused result
-
     // Calculate the average of the predictions
     Mat ave = Mat::zeros(height, width, CV_32F);
     for (auto& pred : preds) {
@@ -212,10 +204,8 @@ pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
     }
     ave /= static_cast<float>(preds.size());
     ave.convertTo(ave, CV_8U);
-
     return {fuse, ave}; // Return both fused and average edge maps
 }
-
 // Preprocess the image
 Mat preprocess(const Mat& img, int imageSize) {
     Mat resizedImg;
