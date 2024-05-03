@@ -315,7 +315,6 @@ public:
 
         if (!have_bias)
             return Ptr<BackendNode>(new InfEngineNgraphNode(nodeAB));
-
         std::shared_ptr<ov::Node> nodeGemm;
         if (beta != 1.0f)
         {
