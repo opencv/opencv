@@ -13,9 +13,6 @@ def parse_args():
     targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD,
                 cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
 
-    # Define supported edge detection methods
-    methods = ("dexined", "canny")
-
     # Set up argument parser
     parser = argparse.ArgumentParser(
             description='This sample shows how to use the '
@@ -47,11 +44,6 @@ def parse_args():
 
     parser.add_argument('--image_size', help='Resize input image to a size', default=512, type=int)
 
-    parser.add_argument('--method', choices=methods, default= "dexined", type=str,
-                        help = 'Choose one of the method : '
-                        '%s: dexined, '
-                        '%s: canny'% methods)
-
     args = parser.parse_args()
 
     return args
@@ -82,9 +74,7 @@ def post_processing(output, shape):
     for p in output:
         img = sigmoid(p)
         img = np.squeeze(img)
-        img = (img - np.min(img)) * 255 / \
-              ((np.max(img) - np.min(img)) + epsilon)
-        img = img.astype(np.uint8)
+        img = cv.normalize(img, None, 0, 255, cv.NORM_MINMAX, cv.CV_8U)
         img = cv.resize(img, (w, h))
         preds.append(img)
 
@@ -111,44 +101,56 @@ def canny_detection_thresh2(position, user_data):
 
 if __name__ == '__main__':
     args = parse_args()
-    method = args.method
+    method = "dexined"
     user_data = {"gray": None, "thrs1": 100, "thrs2": 200}
+
+    # img = cv.imread(cv.samples.findFile(args.input))
+    image = cv.imread(cv.samples.findFile(args.input))
 
     cv.namedWindow('Output', cv.WINDOW_NORMAL)
     cv.namedWindow('Input', cv.WINDOW_NORMAL)
+    cv.imshow("Input", image)
 
-    if method == "canny":
-        # Load and process the image for Canny edge detection
-        img = cv.imread(cv.samples.findFile(args.input))
-        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    while True:
+        if method == "canny":
+            gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+            user_data["gray"] = gray
 
-        user_data["gray"] = gray
+            cv.destroyWindow('Output')
+            cv.namedWindow('Output', cv.WINDOW_NORMAL)
 
-        cv.createTrackbar('thrs1', 'Output', 0, 255, lambda value: canny_detection_thresh1(value, user_data))
-        cv.setTrackbarPos('thrs1', 'Output', 100)
-        cv.createTrackbar('thrs2', 'Output', 0, 255, lambda value: canny_detection_thresh2(value, user_data))
-        cv.setTrackbarPos('thrs2', 'Output', 200)
-        cv.imshow("Input", img)
-        cv.waitKey(0)
+            cv.createTrackbar('thrs1', 'Output', 0, 255, lambda value: canny_detection_thresh1(value, user_data))
+            cv.setTrackbarPos('thrs1', 'Output', 100)
+            cv.createTrackbar('thrs2', 'Output', 0, 255, lambda value: canny_detection_thresh2(value, user_data))
+            cv.setTrackbarPos('thrs2', 'Output', 200)
 
-    elif method == "dexined":
-        # Load the model
-        session = cv.dnn.readNetFromONNX(args.model)
-        session.setPreferableBackend(args.backend)
-        session.setPreferableTarget(args.target)
-        # Load and process the image using DexiNed model
-        orig_img = cv.imread(cv.samples.findFile(args.input))
-        # Prepocess the image
-        img = preprocess(orig_img)
+        elif method == "dexined":
+            cv.destroyWindow('Output')
+            cv.namedWindow('Output', cv.WINDOW_NORMAL)
+            # Load the model
+            session = cv.dnn.readNetFromONNX(args.model)
+            session.setPreferableBackend(args.backend)
+            session.setPreferableTarget(args.target)
 
-        inp = cv.dnn.blobFromImage(img, swapRB=False, crop=False)
+            # Prepocess the image
+            img = preprocess(image)
 
-        session.setInput(inp)
+            inp = cv.dnn.blobFromImage(img, swapRB=False, crop=False)
 
-        out = session.forward()
-        # Post processing on the model output
-        out = post_processing(out, (orig_img.shape[1], orig_img.shape[0]))
+            session.setInput(inp)
 
-        cv.imshow("Input", orig_img)
-        cv.imshow("Output", out[1])
-        cv.waitKey(0)
+            out = session.forward()
+            # Post processing on the model output
+            out = post_processing(out, (image.shape[1], image.shape[0]))
+
+            cv.imshow("Output", out[1])
+
+        key = cv.waitKey(0)
+
+        if key == ord('d') or key == ord('D'):
+            method = "dexined"
+        elif key == ord('c') or key == ord('C'):
+            method = "canny"
+        elif key == 27 or key == ord('q'):
+            break
+    cv.destroyAllWindows()
