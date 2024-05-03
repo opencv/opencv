@@ -573,9 +573,9 @@ static int moments(const cv::Mat& src, bool binary, cv::Moments& m)
     int depth = CV_MAT_DEPTH(type);
 
     if( src.checkVector(2) >= 0 && (depth == CV_32F || depth == CV_32S))
-        status = hal_ni_polygonMoments(src.data, src.total()/2, src.type(), m_data);
+        status = cv_hal_polygonMoments(src.data, src.total()/2, src.type(), m_data);
     else
-        status = hal_ni_imageMoments(src.data, src.step, src.type(), src.cols, src.rows, binary, m_data);
+        status = cv_hal_imageMoments(src.data, src.step, src.type(), src.cols, src.rows, binary, m_data);
 
     if (status == CV_HAL_ERROR_OK)
     {
