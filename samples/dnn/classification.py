@@ -15,7 +15,8 @@ def help():
 
         Sample command:
             python classification.py googlenet --input=path/to/image
-
+        
+        Model path can also be specified using --model argument
         '''
     )
 
