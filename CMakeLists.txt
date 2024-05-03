@@ -490,6 +490,9 @@ OCV_OPTION(WITH_CANN "Include CANN support" OFF
 OCV_OPTION(WITH_FLATBUFFERS "Include Flatbuffers support (required by DNN/TFLite importer)" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_FLATBUFFERS)
+OCV_OPTION(WITH_ZLIB_NG "Use zlib-ng instead of zlib" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_ZLIB_NG)
 
 # OpenCV build components
 # ===================================================
@@ -1424,7 +1427,11 @@ endif()
 # ========================== MEDIA IO ==========================
 status("")
 status("  Media I/O: ")
-status("    ZLib:"   ZLIB_FOUND THEN "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})" ELSE "build (ver ${ZLIB_VERSION_STRING})")
+if(WITH_ZLIB_NG OR HAVE_ZLIB_NG)
+  status("    ZLib-Ng:" "build (zlib ver ${ZLIB_VERSION_STRING}, zlib-ng ver ${ZLIBNG_VERSION_STRING})")
+else()
+  status("    ZLib:"   ZLIB_FOUND THEN "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})" ELSE "build (ver ${ZLIB_VERSION_STRING})")
+endif()
 
 if(WITH_JPEG OR HAVE_JPEG)
   if(NOT HAVE_JPEG)
