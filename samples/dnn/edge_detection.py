@@ -1,6 +1,15 @@
-# Script is based on https://github.com/axinc-ai/ailia-models/blob/master/line_segment_detection/dexined/dexined.py
-# To download the onnx model, see: https://storage.googleapis.com/ailia-models/dexined/model.onnx
-# python edge_detection.py --model model.onnx --input chicky_512.png --method dexined
+'''
+    This sample demonstrates edge detection with Dexined and Canny edge detection techniques.
+    For switching between deep learning based model (Dexined) and Canny edge detector, press 'd' (for Dexined) or 'c' (for Canny) respectively.
+    Script is based on https://github.com/axinc-ai/ailia-models/blob/master/line_segment_detection/dexined/dexined.py
+
+    To download the ONNX model, see:
+    https://storage.googleapis.com/ailia-models/dexined/model.onnx
+
+    OpenCV ONNX importer does not process dynamic shape. These need to be substituted with values using:
+    python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param w --dim_value 640 model.onnx model.sim1.onnx
+    python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param h --dim_value 480 model.sim1.onnx model.sim.onnx
+'''
 import cv2 as cv
 import argparse
 import numpy as np
@@ -13,11 +22,8 @@ def parse_args():
     targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD,
                 cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
 
-    # Set up argument parser
-    parser = argparse.ArgumentParser(
-            description='This sample shows how to use the '
-                        'Dense Extreme Inception Network for Edge Detection (Dexened Edge Detection) (https://arxiv.org/abs/2112.02250)'
-                        'model in Python. Find the pre-trained model at https://storage.googleapis.com/ailia-models/dexined/model.onnx')
+    parser = argparse.ArgumentParser(description="This sample demonstrates edge detection with Dexined and Canny edge detection techniques.\n"
+    "For switching between deep learning based model (Dexined) and Canny edge detector, press 'd' (for Dexined) or 'c' (for Canny) respectively.")
 
     parser.add_argument('--input', help='Path to image', default="chicky_512.png", required= False)
 
@@ -70,7 +76,6 @@ def post_processing(output, shape):
     h, w = shape
 
     preds = []
-    epsilon = 1e-12
     for p in output:
         img = sigmoid(p)
         img = np.squeeze(img)

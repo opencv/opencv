@@ -46,11 +46,11 @@ int main(int argc, char** argv) {
     const string about =
         "This sample demonstrates edge detection with dexined and canny edge detection techniques.\n\n"
         "For switching between deep learning based model(dexined) and canny edge detector, press 'd' (for dexined) or 'c' (for canny) respectively.\n\n"
-        "Script is based on https://github.com/axinc-ai/ailia-models/blob/master/line_segment_detection/dexined/dexined.py"
+        "Script is based on https://github.com/axinc-ai/ailia-models/blob/master/line_segment_detection/dexined/dexined.py\n"
         "To download the onnx model, see: https://storage.googleapis.com/ailia-models/dexined/model.onnx"
         "\n\nOpenCV onnx importer does not process dynamic shape. These need to be substituted with values using:\n\n"
-        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param w --dim_value 640 model.onnx model.sim1.onnx"
-        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param h --dim_value 480 model.sim1.onnx model.sim.onnx";
+        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param w --dim_value 640 model.onnx model.sim1.onnx\n"
+        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param h --dim_value 480 model.sim1.onnx model.sim.onnx\n";
 
     const string param_keys =
         "{ help h          |            | Print help message. }"
