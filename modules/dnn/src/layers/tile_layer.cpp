@@ -98,7 +98,7 @@ public:
         tmp.copyTo(out);
     }
 
-    #ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {

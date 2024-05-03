@@ -163,8 +163,28 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto axis_node = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &axis_raw);
-        auto cumsum = std::make_shared<ov::op::v0::CumSum>(nodes[0].dynamicCast<InfEngineNgraphNode>()->node, axis_node, exclusive_raw, reverse_raw);
+        std::shared_ptr<ov::op::v0::CumSum> cumsum;
+        if (nodes.size() == 2)
+        {
+            int32_t axis_shape = 1;
+            auto axis_scalar = std::make_shared<ov::op::v1::Reshape>(
+                nodes[1].dynamicCast<InfEngineNgraphNode>()->node,
+                std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &axis_shape),
+                false);
+            cumsum = std::make_shared<ov::op::v0::CumSum>(
+                nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+                std::make_shared<ov::op::v0::Convert>(axis_scalar, ov::element::i32),
+                exclusive_raw,
+                reverse_raw);
+        }
+        else
+        {
+            cumsum = std::make_shared<ov::op::v0::CumSum>(
+                nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+                std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &axis_raw),
+                exclusive_raw,
+                reverse_raw);
+        }
         return Ptr<BackendNode>(new InfEngineNgraphNode(cumsum));
     }
 #endif  // HAVE_DNN_NGRAPH
