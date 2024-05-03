@@ -3,10 +3,23 @@
 # ----------------------------------------------------------------------------
 
 # --- zlib (required) ---
-if(BUILD_ZLIB)
-  ocv_clear_vars(ZLIB_FOUND)
+if(WITH_ZLIB_NG)
+  ocv_clear_vars(ZLIB_LIBRARY ZLIB_LIBRARIES ZLIB_INCLUDE_DIR)
+  set(ZLIB_LIBRARY zlib CACHE INTERNAL "")
+  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/zlib-ng")
+  set(ZLIB_INCLUDE_DIR "${${ZLIB_LIBRARY}_BINARY_DIR}" CACHE INTERNAL "")
+  set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
+  set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
+
+  ocv_parse_header_version(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h.in" ZLIB_VERSION)
+  ocv_parse_header_version(ZLIBNG "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h.in" ZLIBNG_VERSION)
+
+  set(HAVE_ZLIB_NG YES)
 else()
-  ocv_clear_internal_cache_vars(ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
+  if(BUILD_ZLIB)
+    ocv_clear_vars(ZLIB_FOUND)
+  else()
+    ocv_clear_internal_cache_vars(ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
   if(ANDROID)
     set(_zlib_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
     set(CMAKE_FIND_LIBRARY_SUFFIXES .so)
@@ -23,18 +36,19 @@ else()
       set(ZLIB_LIBRARY_RELEASE z)
     endif()
   endif()
-endif()
+  endif()
 
-if(NOT ZLIB_FOUND)
-  ocv_clear_vars(ZLIB_LIBRARY ZLIB_LIBRARIES ZLIB_INCLUDE_DIR)
+  if(NOT ZLIB_FOUND)
+    ocv_clear_vars(ZLIB_LIBRARY ZLIB_LIBRARIES ZLIB_INCLUDE_DIR)
 
-  set(ZLIB_LIBRARY zlib CACHE INTERNAL "")
-  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/zlib")
-  set(ZLIB_INCLUDE_DIR "${${ZLIB_LIBRARY}_SOURCE_DIR}" "${${ZLIB_LIBRARY}_BINARY_DIR}" CACHE INTERNAL "")
-  set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
-  set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
+    set(ZLIB_LIBRARY zlib CACHE INTERNAL "")
+    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/zlib")
+    set(ZLIB_INCLUDE_DIR "${${ZLIB_LIBRARY}_SOURCE_DIR}" "${${ZLIB_LIBRARY}_BINARY_DIR}" CACHE INTERNAL "")
+    set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
+    set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
 
-  ocv_parse_header_version(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h" ZLIB_VERSION)
+    ocv_parse_header_version(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h" ZLIB_VERSION)
+  endif()
 endif()
 
 # --- libavif (optional) ---
