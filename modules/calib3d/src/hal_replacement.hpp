@@ -69,33 +69,45 @@
 /**
    @brief Project points from 3D world space to 2D screen space using rotation and translation matrix and camera intrinsic parameters
    @param src_data Pointer to source 3D points array
-   @param src_step Step between consecutive points in 3D points array
+   @param src_step1 Step between X, Y and Z coordinates of the same point in 3D points array
+   @param src_step2 Step between consecutive points in 3D points array
    @param src_size Amount of points in 3D points array
    @param dst_data Pointer to resulting 2D points array
-   @param dst_step Step between consecutive points in 2D resulting array
+   @param dst_step1 Step between x and y coordinates of the same point in resulting 2D array
+   @param dst_step2 Step between consecutive points in resulting 2D array
    @param rt_data Pointer to 3x4 array containing rotation-then-translation matrix
-   @param intrinsics_data Pointer to camera intrinsic parameters vector containing [fx, fy, cx, cy, k0, k1, k2, k3]
+   @param intrinsics_data Pointer to camera intrinsic parameters vector containing [fx, fy, cx, cy]
+   @param distortion_data Distortion coefficients in the same order as in OpenCV, set to zero if not used: [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4, tau_x, tau_y]
 */
-inline int hal_ni_projectpoints32f(const float* src_data, uint32_t src_step, uint32_t src_size, float* dst_data, uint32_t dst_step, const float* rt_data, const float* intrinsics_data) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_project_points32f(const float* src_data, uint32_t src_step1, uint32_t src_step2, uint32_t src_size,
+                                    float* dst_data, uint32_t dst_step1, uint32_t dst_step2,
+                                    const float* rt_data, const float* intrinsics_data, const float* distortion_data)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
-#define cv_hal_projectpoints32f hal_ni_projectpoints32f
+#define cv_hal_project_points32f hal_ni_project_points32f
 //! @endcond
 
 /**
    @brief Project points from 3D world space to 2D screen space using rotation and translation matrix and camera intrinsic parameters
    @param src_data Pointer to source 3D points array
-   @param src_step Step between consecutive points in 3D points array
+   @param src_step1 Step between X, Y and Z coordinates of the same point in 3D points array
+   @param src_step2 Step between consecutive points in 3D points array
    @param src_size Amount of points in 3D points array
    @param dst_data Pointer to resulting 2D points array
-   @param dst_step Step between consecutive points in 2D resulting array
+   @param dst_step1 Step between x and y coordinates of the same point in resulting 2D array
+   @param dst_step2 Step between consecutive points in resulting 2D array
    @param rt_data Pointer to 3x4 array containing rotation-then-translation matrix
-   @param intrinsics_data Pointer to camera intrinsic parameters vector containing [fx, fy, cx, cy, k0, k1, k2, k3]
+   @param intrinsics_data Pointer to camera intrinsic parameters vector containing [fx, fy, cx, cy]
+   @param distortion_data Distortion coefficients in the same order as in OpenCV, set to zero if not used: [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4, tau_x, tau_y]
 */
-inline int hal_ni_projectpoints64f(const double* src_data, uint32_t src_step, uint32_t src_size, double* dst_data, uint32_t dst_step, const float* rt_data, const float* intrinsics_data) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_project_points64f(const double* src_data, uint32_t src_step1, uint32_t src_step2, uint32_t src_size,
+                                    double* dst_data, uint32_t dst_step1, uint32_t dst_step2,
+                                    const double* rt_data, const double* intrinsics_data, const double* distortion_data)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
-#define cv_hal_projectpoints64f hal_ni_projectpoints64f
+#define cv_hal_project_points64f hal_ni_project_points64f
 //! @endcond
 
 //! @}

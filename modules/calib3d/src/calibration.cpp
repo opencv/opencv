@@ -648,16 +648,21 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         }
     }
 
-    float rtMatrix[12] = { (float)R[0], (float)R[1], (float)R[2], (float)t[0],
-                           (float)R[3], (float)R[4], (float)R[5], (float)t[1],
-                           (float)R[6], (float)R[7], (float)R[8], (float)t[2] };
-    float cameraCalibrationMatrix[8] = { (float)fx,   (float)fy,   (float)cx,   (float)cy,
-                                         (float)k[0], (float)k[1], (float)k[2], (float)k[3] };
-
-    if (CV_MAT_DEPTH(imagePoints->type) == CV_32F && CV_MAT_DEPTH(objectPoints->type) == CV_32F)
+    if (idepth == CV_32F && odepth == CV_32F)
     {
-        CALL_HAL(projectPoints, cv_hal_projectpoints32f, objectPoints->data.fl, objectPoints->step, count,
-                 imagePoints->data.fl, imagePoints->step, rtMatrix, cameraCalibrationMatrix);
+        float rtMatrix[12] = { (float)R[0], (float)R[1], (float)R[2], (float)t[0],
+                               (float)R[3], (float)R[4], (float)R[5], (float)t[1],
+                               (float)R[6], (float)R[7], (float)R[8], (float)t[2] };
+
+        float cameraIntrinsics[4] = { (float)fx, (float)fy, (float)cx, (float)cy };
+        float cameraDistortion[14];
+        for (int ctr = 0; ctr < 14; ctr++)
+        {
+            cameraDistortion[ctr] = (float)k[ctr];
+        }
+
+        CALL_HAL(projectPoints, cv_hal_project_points32f, objectPoints->data.fl, sizeof(float), objectPoints->step, count,
+                 imagePoints->data.fl, sizeof(float), imagePoints->step, rtMatrix, cameraIntrinsics, cameraDistortion);
     }
 
     _m.reset(cvCreateMat( imagePoints->rows, imagePoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(imagePoints->type)) ));
@@ -669,8 +674,17 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
     M = (CvPoint3D64f*)matM->data.db;
     m = (CvPoint2D64f*)_m->data.db;
 
-    CALL_HAL(projectPoints, cv_hal_projectpoints64f, objectPoints->data.db, objectPoints->step, count,
-             imagePoints->data.db, imagePoints->step, rtMatrix, cameraCalibrationMatrix);
+    if (idepth == CV_64F && odepth == CV_64F)
+    {
+        double rtMatrix[12] = { R[0], R[1], R[2], t[0],
+                                R[3], R[4], R[5], t[1],
+                                R[6], R[7], R[8], t[2] };
+
+        double cameraIntrinsics[4] = { fx, fy, cx, cy };
+
+        CALL_HAL(projectPoints, cv_hal_project_points64f, objectPoints->data.db, sizeof(double), objectPoints->step, count,
+                 imagePoints->data.db, sizeof(double), imagePoints->step, rtMatrix, cameraIntrinsics, k);
+    }
 
     if( dpdr )
     {
