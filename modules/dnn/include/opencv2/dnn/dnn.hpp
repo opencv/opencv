@@ -1444,6 +1444,11 @@ CV__DNN_INLINE_NS_BEGIN
          */
          CV_WRAP Model& setInputSwapRB(bool swapRB);
 
+         /** @brief Set output names for frame.
+          *  @param[in] outNames Names for output layers.
+         */
+         CV_WRAP Model& setOutputNames(const std::vector<String>& outNames);
+
          /** @brief Set preprocessing parameters for frame.
          *  @param[in] size New input size.
          *  @param[in] mean Scalar with mean values which are subtracted from channels.
