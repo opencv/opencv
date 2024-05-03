@@ -1,16 +1,6 @@
 {
     "caffe": [
         {
-            "model": "alexnet",
-            "mean": "104, 117, 123",
-            "std": "1",
-            "swapRB": "false",
-            "needSoftmax": "false",
-            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/classification_classes_ILSVRC2012.txt",
-            "modelUrl": "http://dl.caffe.berkeleyvision.org/bvlc_alexnet.caffemodel",
-            "configUrl": "https://raw.githubusercontent.com/BVLC/caffe/master/models/bvlc_alexnet/deploy.prototxt"
-        },
-        {
             "model": "densenet",
             "mean": "127.5, 127.5, 127.5",
             "std": "0.007843",
@@ -60,6 +50,17 @@
             "needSoftmax": "false",
             "labelsUrl": "https://raw.githubusercontent.com/petewarden/tf_ios_makefile_example/master/data/imagenet_comp_graph_label_strings.txt",
             "modelUrl": "https://raw.githubusercontent.com/petewarden/tf_ios_makefile_example/master/data/tensorflow_inception_graph.pb"
+        }
+    ],
+    "onnx": [
+        {
+            "model": "alexnet",
+            "mean": "104, 117, 123",
+            "std": "1",
+            "swapRB": "false",
+            "needSoftmax": "false",
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/classification_classes_ILSVRC2012.txt",
+            "modelUrl": "https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/alexnet/model/bvlcalexnet-8.onnx"
         }
     ]
 }

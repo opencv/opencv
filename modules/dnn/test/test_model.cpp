@@ -275,13 +275,12 @@ TEST_P(Test_Model, Classify)
     std::pair<int, float> ref(652, 0.641789);
 
     std::string img_path = _tf("grace_hopper_227.png");
-    std::string config_file = _tf("bvlc_alexnet.prototxt");
-    std::string weights_file = _tf("bvlc_alexnet.caffemodel", false);
+    std::string model_file = _tf("onnx/models/alexnet.onnx", false);
 
     Size size{227, 227};
     float norm = 1e-4;
 
-    testClassifyModel(weights_file, config_file, img_path, ref, norm, size);
+    testClassifyModel(model_file, "", img_path, ref, norm, size);
 }
 
 

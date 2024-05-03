@@ -155,6 +155,20 @@ class DnnCaffeModel(Framework):
         self.net.setInput(input_blob, self.in_blob_name)
         return self.net.forward(self.out_blob_name)
 
+class DNNOnnxModel(Framework):
+    net = object
+
+    def __init__(self, onnx_file, in_blob_name, out_blob_name):
+        self.net = cv.dnn.readNetFromONNX(onnx_file)
+        self.in_blob_name = in_blob_name
+        self.out_blob_name = out_blob_name
+
+    def get_name(self):
+        return 'DNN (ONNX)'
+
+    def get_output(self, input_blob):
+        self.net.setInput(input_blob, self.in_blob_name)
+        return self.net.forward(self.out_blob_name)
 
 class ClsAccEvaluation:
     log = sys.stdout
@@ -229,6 +243,8 @@ if __name__ == "__main__":
                                         "https://github.com/BVLC/caffe/blob/master/models/bvlc_alexnet/deploy.prototxt")
     parser.add_argument("--caffemodel", help="path to caffemodel file, download it here: "
                                              "http://dl.caffe.berkeleyvision.org/bvlc_alexnet.caffemodel")
+    parser.add_argument("--onnxmodel", help="path to onnx model file, download it here: "
+                                            "https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/alexnet/model/bvlcalexnet-8.onnx")
     parser.add_argument("--log", help="path to logging file")
     parser.add_argument("--mean", help="path to ImageNet mean blob caffe file, imagenet_mean.binaryproto file from"
                                        "this archive: http://dl.caffe.berkeleyvision.org/caffe_ilsvrc12.tar.gz")
@@ -241,7 +257,7 @@ if __name__ == "__main__":
     data_fetcher = MeanBlobFetch(args.frame_size, args.mean, args.imgs_dir)
 
     frameworks = [CaffeModel(args.prototxt, args.caffemodel, args.in_blob, args.out_blob),
-                  DnnCaffeModel(args.prototxt, args.caffemodel, '', args.out_blob)]
+                  DNNOnnxModel(args.onnxmodel, args.in_blob, args.out_blob)]
 
     acc_eval = ClsAccEvaluation(args.log, args.img_cls_file, args.batch_size)
     acc_eval.process(frameworks, data_fetcher)

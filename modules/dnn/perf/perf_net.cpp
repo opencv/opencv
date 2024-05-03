@@ -96,7 +96,7 @@ public:
 
 PERF_TEST_P_(DNNTestNetwork, AlexNet)
 {
-    processNet("dnn/bvlc_alexnet.caffemodel", "dnn/bvlc_alexnet.prototxt", cv::Size(227, 227));
+    processNet("onnx/models/alexnet.onnx", "", cv::Size(227, 227));
 }
 
 PERF_TEST_P_(DNNTestNetwork, GoogLeNet)

@@ -104,8 +104,7 @@ TEST_P(DNNTestNetwork, DISABLED_YOLOv8n) {
 TEST_P(DNNTestNetwork, AlexNet)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB);
-    processNet("dnn/bvlc_alexnet.caffemodel", "dnn/bvlc_alexnet.prototxt",
-               Size(227, 227), "prob");
+    processNet("dnn/onnx/models/alexnet.onnx", "", Size(224, 224), "prob_1");
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }

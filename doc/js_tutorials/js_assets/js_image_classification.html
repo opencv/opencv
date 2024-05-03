@@ -123,6 +123,10 @@ labelsUrl = "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dn
 main = async function() {
     const labels = await loadLables(labelsUrl);
     const input = getBlobFromImage(inputSize, mean, std, swapRB, 'canvasInput');
+
+    // correct the model path if it is a onnx model
+    if(modelPath.endsWith('.onnx')) configPath = modelPath;
+
     let net = cv.readNet(configPath, modelPath);
     net.setInput(input);
     const start = performance.now();

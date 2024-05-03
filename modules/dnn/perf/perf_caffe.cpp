@@ -65,14 +65,6 @@ static caffe::Net<float>* initNet(std::string proto, std::string weights)
     return net;
 }
 
-PERF_TEST(AlexNet_caffe, CaffePerfTest)
-{
-    caffe::Net<float>* net = initNet("dnn/bvlc_alexnet.prototxt",
-                                     "dnn/bvlc_alexnet.caffemodel");
-    TEST_CYCLE() net->Forward();
-    SANITY_CHECK_NOTHING();
-}
-
 PERF_TEST(GoogLeNet_caffe, CaffePerfTest)
 {
     caffe::Net<float>* net = initNet("dnn/bvlc_googlenet.prototxt",
