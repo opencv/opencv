@@ -661,7 +661,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
             cameraDistortion[ctr] = (float)k[ctr];
         }
 
-        CALL_HAL(projectPoints, cv_hal_project_points32f, objectPoints->data.fl, sizeof(float), objectPoints->step, count,
+        CALL_HAL(projectPoints, cv_hal_project_points_pinhole32f, objectPoints->data.fl, sizeof(float), objectPoints->step, count,
                  imagePoints->data.fl, sizeof(float), imagePoints->step, rtMatrix, cameraIntrinsics, cameraDistortion);
     }
 
@@ -682,7 +682,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
 
         double cameraIntrinsics[4] = { fx, fy, cx, cy };
 
-        CALL_HAL(projectPoints, cv_hal_project_points64f, objectPoints->data.db, sizeof(double), objectPoints->step, count,
+        CALL_HAL(projectPoints, cv_hal_project_points_pinhole64f, objectPoints->data.db, sizeof(double), objectPoints->step, count,
                  imagePoints->data.db, sizeof(double), imagePoints->step, rtMatrix, cameraIntrinsics, k);
     }
 
