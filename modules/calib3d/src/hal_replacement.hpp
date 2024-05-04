@@ -79,9 +79,9 @@
    @param intrinsics_data Pointer to camera intrinsic parameters vector containing [fx, fy, cx, cy]
    @param distortion_data Distortion coefficients in the same order as in OpenCV, set to zero if not used: [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4, tau_x, tau_y]
 */
-inline int hal_ni_project_points_pinhole32f(const float* src_data, uint32_t src_step1, uint32_t src_step2, uint32_t src_size,
-                                    float* dst_data, uint32_t dst_step1, uint32_t dst_step2,
-                                    const float* rt_data, const float* intrinsics_data, const float* distortion_data)
+inline int hal_ni_project_points_pinhole32f(const float* src_data, size_t src_step1, size_t src_step2, size_t src_size,
+                                            float* dst_data, size_t dst_step1, size_t dst_step2,
+                                            const float* rt_data, const float* intrinsics_data, const float* distortion_data)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
@@ -101,9 +101,9 @@ inline int hal_ni_project_points_pinhole32f(const float* src_data, uint32_t src_
    @param intrinsics_data Pointer to camera intrinsic parameters vector containing [fx, fy, cx, cy]
    @param distortion_data Distortion coefficients in the same order as in OpenCV, set to zero if not used: [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4, tau_x, tau_y]
 */
-inline int hal_ni_project_points_pinhole64f(const double* src_data, uint32_t src_step1, uint32_t src_step2, uint32_t src_size,
-                                    double* dst_data, uint32_t dst_step1, uint32_t dst_step2,
-                                    const double* rt_data, const double* intrinsics_data, const double* distortion_data)
+inline int hal_ni_project_points_pinhole64f(const double* src_data, size_t src_step1, size_t src_step2, size_t src_size,
+                                            double* dst_data, size_t dst_step1, size_t dst_step2,
+                                            const double* rt_data, const double* intrinsics_data, const double* distortion_data)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
