@@ -10,12 +10,12 @@
 namespace cv { namespace cv_hal_rvv {
 
 #undef cv_hal_cvtBGRtoBGR
-#define cv_hal_cvtBGRtoBGR cv_hal_rvv::cvtBGRtoBGR
+#define cv_hal_cvtBGRtoBGR cv::cv_hal_rvv::cvtBGRtoBGR
 
-static unsigned char index_array_32 [32] 
+const static unsigned char index_array_32 [32]
                         { 2, 1, 0, 3, 6, 5, 4, 7, 10, 9, 8, 11, 14, 13, 12, 15, 18, 17, 16, 19, 22, 21, 20, 23, 26, 25, 24, 27, 30, 29, 28, 31  };
 
-static unsigned char index_array_24 [24]
+const static unsigned char index_array_24 [24]
                         { 2, 1, 0, 5, 4, 3, 8, 7, 6, 11, 10, 9, 14, 13, 12, 17, 16, 15, 20, 19, 18, 23, 22, 21  };
 
 static void BGRAtoBGRA(const unsigned char* src, unsigned char * dst, unsigned char * index, int n, int scn, int dcn, int vsize_pixels, const int vsize)
