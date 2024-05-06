@@ -144,7 +144,7 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 
 PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
 {
-    processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", cv::Size(224, 224));
+    processNet("dnn/onnx/models/densenet121.onnx", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)

@@ -1,16 +1,6 @@
 {
     "caffe": [
         {
-            "model": "densenet",
-            "mean": "127.5, 127.5, 127.5",
-            "std": "0.007843",
-            "swapRB": "false",
-            "needSoftmax": "true",
-            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/classification_classes_ILSVRC2012.txt",
-            "modelUrl": "https://drive.google.com/open?id=0B7ubpZO7HnlCcHlfNmJkU2VPelE",
-            "configUrl": "https://raw.githubusercontent.com/shicai/DenseNet-Caffe/master/DenseNet_121.prototxt"
-        },
-        {
             "model": "googlenet",
             "mean": "104, 117, 123",
             "std": "1",
@@ -61,6 +51,15 @@
             "needSoftmax": "false",
             "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/classification_classes_ILSVRC2012.txt",
             "modelUrl": "https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/alexnet/model/bvlcalexnet-8.onnx"
+        },
+        {
+            "model": "densenet",
+            "mean": "127.5, 127.5, 127.5",
+            "std": "0.007843",
+            "swapRB": "false",
+            "needSoftmax": "true",
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/classification_classes_ILSVRC2012.txt",
+            "modelUrl": "https://github.com/onnx/models/raw/491ce05590abb7551d7fae43c067c060eeb575a6/validated/vision/classification/densenet-121/model/densenet-12.onnx"
         }
     ]
 }
