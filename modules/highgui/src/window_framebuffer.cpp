@@ -26,7 +26,7 @@ namespace cv { namespace highgui_backend {
   {
     FB_ID = "FramebufferWindow";
     
-    WindowRest = Rect(0,0, backend.getFBwidth(), backend.getFBheight());
+    windowRect = Rect(0,0, backend.getFBwidth(), backend.getFBheight());
     
   }
   
@@ -47,8 +47,8 @@ namespace cv { namespace highgui_backend {
     
     Mat img;
     cvtColor(image, img, COLOR_RGB2RGBA);
-    int new_width = WindowRest.width;
-    int new_height = WindowRest.height;
+    int new_width = windowRect.width;
+    int new_height = windowRect.height;
     int cnt_channel = img.channels();
     
     cv::resize(img, img, cv::Size(new_width, new_height), INTER_LINEAR);
@@ -60,13 +60,13 @@ namespace cv { namespace highgui_backend {
     int y_offset = backend.getFBYOffset();
     int line_length = backend.getFBLineLength();
     
-    int showRows = min((WindowRest.y + img.rows), backend.getFBheight()) - WindowRest.y;
-    int showCols = min((WindowRest.x + img.cols), backend.getFBwidth())  - WindowRest.x;
+    int showRows = min((windowRect.y + img.rows), backend.getFBheight()) - windowRect.y;
+    int showCols = min((windowRect.x + img.cols), backend.getFBwidth())  - windowRect.x;
     
     for (int y = y_offset; y < showRows + y_offset; y++)
     {
-        std::memcpy(backend.getFBPointer() + (y + WindowRest.y) * line_length + 
-                    x_offset + WindowRest.x, 
+        std::memcpy(backend.getFBPointer() + (y + windowRect.y) * line_length + 
+                    x_offset + windowRect.x, 
                     img.ptr<cv::Vec4b>(y - y_offset), 
                     showCols*cnt_channel);
     }
@@ -85,18 +85,18 @@ namespace cv { namespace highgui_backend {
 
   void FramebufferWindow::resize(int width, int height){
     std::cout  << "FramebufferWindow::resize(int width "<< width <<", int height "<< height <<")" << std::endl;
-    WindowRest.width = width;
-    WindowRest.height = height;
+    windowRect.width = width;
+    windowRect.height = height;
   }
   void FramebufferWindow::move(int x, int y) {
     std::cout  << "FramebufferWindow::move(int x "<< x <<", int y "<< y <<")" << std::endl;
-    WindowRest.x = x;
-    WindowRest.y = y;
+    windowRect.x = x;
+    windowRect.y = y;
   }
 
   Rect FramebufferWindow::getImageRect() const {
     std::cout  << "FramebufferWindow::getImageRect()" << std::endl; 
-    return WindowRest;
+    return windowRect;
   }
 
   void FramebufferWindow::setTitle(const std::string& title) {
@@ -281,7 +281,7 @@ namespace cv { namespace highgui_backend {
   {
     if(framebuffrer_id == -1) return;
     
-    // RESTORE BACKGROUNG
+    // RectORE BACKGROUNG
     int cnt_channel = 4;
     for (int y = y_offset; y < backgroundBuff.rows + y_offset; y++)
     {
@@ -325,7 +325,7 @@ namespace cv { namespace highgui_backend {
     tcsetattr(0, TCSANOW, &current); /* use these new terminal i/o settings now */
   }
 
-  /* Restore old terminal i/o settings */
+  /* Rectore old terminal i/o settings */
   void FramebufferBackend::resetTermios(void) 
   {
     tcsetattr(0, TCSANOW, &old);

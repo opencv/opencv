@@ -16,7 +16,7 @@ class CV_EXPORTS FramebufferWindow : public UIWindow
 {
   FramebufferBackend &backend;
   std::string FB_ID;
-  Rect WindowRest;
+  Rect windowRect;
 
 public:
   FramebufferWindow(FramebufferBackend &backend);
