@@ -47,36 +47,37 @@ TEST_P(Layer_1d_Test, Scale)
     normAssert(output_ref, outputs[0]);
 }
 
-typedef testing::TestWithParam<tuple<int, int>> Layer_Gather_1d_Test;
+typedef testing::TestWithParam<tuple<std::vector<int>, int>> Layer_Gather_1d_Test;
 TEST_P(Layer_Gather_1d_Test, Accuracy) {
 
-    int batch_size = get<0>(GetParam());
+    std::vector<int> input_shape = get<0>(GetParam());
     int axis = get<1>(GetParam());
+
+    // skip case when axis > input shape
+    if (axis > input_shape.size())
+        return;
 
     LayerParams lp;
     lp.type = "Gather";
-    lp.name = "gatherLayer";
+    lp.name = "GatherLayer";
     lp.set("axis", axis);
     lp.set("real_ndims", 1);
-
     Ptr<GatherLayer> layer = GatherLayer::create(lp);
 
-    std::vector<int> input_shape = {batch_size, 1};
-    std::vector<int> indices_shape = {1, 1};
-    std::vector<int> output_shape = {batch_size, 1};
-
-    if (batch_size == 0){
-        input_shape.erase(input_shape.begin());
-        indices_shape.erase(indices_shape.begin());
-        output_shape.erase(output_shape.begin());
-    } else if (axis == 0) {
-        output_shape[0] = 1;
-    }
-
-    cv::Mat input = cv::Mat(input_shape, CV_32F, 1.0);
+    cv::Mat input(input_shape.size(), input_shape.data(), CV_32F);
     cv::randu(input, 0.0, 1.0);
-    cv::Mat indices = cv::Mat(indices_shape, CV_32S, 0.0);
-    cv::Mat output_ref = cv::Mat(output_shape, CV_32F, input(cv::Range::all(), cv::Range(0, 1)).data);
+
+    std::vector<int> indices_shape = {1};
+    cv::Mat indices = cv::Mat(indices_shape.size(), indices_shape.data(), CV_32S, 0.0);
+
+    cv::Mat output_ref;
+    if (input_shape.size() == 0 || input_shape.size() == 1){
+        output_ref = input;
+    } else if (axis == 0){
+        output_ref = input.row(0);
+    } else if (axis == 1){
+        output_ref = input.col(0);
+    }
 
     std::vector<Mat> inputs{input, indices};
     std::vector<Mat> outputs;
@@ -87,8 +88,13 @@ TEST_P(Layer_Gather_1d_Test, Accuracy) {
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_1d_Test, Combine(
-/*input blob shape*/    Values(0, 1, 2, 3),
-/*operation*/           Values(0, 1)
+/*input blob shape*/    testing::Values(
+                                std::vector<int>({}),
+                                std::vector<int>({1}),
+                                std::vector<int>({1, 4}),
+                                std::vector<int>({4, 4})
+                                ),
+/*operation*/           testing::Values(0, 1)
 ));
 
 template <typename T>
