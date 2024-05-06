@@ -12,13 +12,13 @@ namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_cvtBGRtoBGR
 #define cv_hal_cvtBGRtoBGR cv::cv_hal_rvv::cvtBGRtoBGR
 
-const static unsigned char index_array_32 [32]
+static const unsigned char index_array_32 [32]
                         { 2, 1, 0, 3, 6, 5, 4, 7, 10, 9, 8, 11, 14, 13, 12, 15, 18, 17, 16, 19, 22, 21, 20, 23, 26, 25, 24, 27, 30, 29, 28, 31  };
 
-const static unsigned char index_array_24 [24]
+static const unsigned char index_array_24 [24]
                         { 2, 1, 0, 5, 4, 3, 8, 7, 6, 11, 10, 9, 14, 13, 12, 17, 16, 15, 20, 19, 18, 23, 22, 21  };
 
-static void BGRAtoBGRA(const unsigned char* src, unsigned char * dst, unsigned char * index, int n, int scn, int dcn, int vsize_pixels, const int vsize)
+static void BGRAtoBGRA(const unsigned char* src, unsigned char * dst, const unsigned char * index, int n, int scn, int dcn, int vsize_pixels, const int vsize)
 {
     vuint8m2_t vec_index = vle8_v_u8m2(index, vsize);
 
@@ -64,21 +64,18 @@ static int cvtBGRtoBGR(const unsigned char * src_data, size_t src_step, unsigned
         const int vsize_pixels = 8;
         const int vsize = vsize_pixels*scn;
 
-        unsigned char* index;
         if (scn == 4)
         {
-            index = index_array_32;
             for (int i = 0; i < height; i++, src_data += src_step, dst_data += dst_step)
             {
-                BGRAtoBGRA(src_data, dst_data, index, width, scn, dcn, vsize_pixels, 32);
+                BGRAtoBGRA(src_data, dst_data, index_array_32, width, scn, dcn, vsize_pixels, 32);
             }
         }
         else
         {
-            index = index_array_24;
             for (int i = 0; i < height; i++, src_data += src_step, dst_data += dst_step)
             {
-                BGRAtoBGRA(src_data, dst_data, index, width, scn, dcn, vsize_pixels, 24);
+                BGRAtoBGRA(src_data, dst_data, index_array_24, width, scn, dcn, vsize_pixels, 24);
             }
         }
     }
