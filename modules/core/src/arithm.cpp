@@ -967,41 +967,6 @@ static void mul8s16sWrapper(const uchar* src1, size_t step1,
     cv_hal_mul8s16s((schar*)src1, step1, (schar*)src2, step2, (short*)dst, step, width, height, scale);
 }
 
-static bool checkHalMulExtend()
-{
-    bool works = true;
-
-    // check that HAL functions are presented and work properly
-    uchar ua = 0, ub = 0;
-    ushort uc = 0;
-    int res;
-    res = cv_hal_mul8u16u(/* src1_data */ &ua, /* src1_step */ 1, /* src2_data */ &ub, /* src2_step */ 1,
-                             /* dst_data */ &uc, /* dst_step */ 1, /* width */ 1, /* height */ 1, /* scale */ 1);
-    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-    {
-        works = false;
-    }
-    else if (res != 0)
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8u16s returned %d (0x%08x)", res, res));
-    }
-
-    schar sa = 0, sb = 0;
-    short sc = 0;
-    res = cv_hal_mul8s16s(/* src1_data */ &sa, /* src1_step */ 1, /* src2_data */ &sb, /* src2_step */ 1,
-                             /* dst_data */ &sc, /* dst_step */ 1, /* width */ 1, /* height */ 1, /* scale */ 1);
-    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-    {
-        works = false;
-    }
-    else if (res != 0)
-    {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8s16s returned %d (0x%08x)", res, res));
-    }
-
-    return works;
-}
-
 static BinaryFuncC* getMulTab(bool extendMul)
 {
     static BinaryFuncC mulTab[CV_DEPTH_MAX] =
@@ -1048,11 +1013,11 @@ void multiply(InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    static bool halMulExtendWorks = checkHalMulExtend();
+    static bool halMul8to16available = (cv_hal_mul8u16u != hal_ni_mul8u16u) && (cv_hal_mul8s16s != hal_ni_mul8s16s);
 
     bool extendMul = ((src1.depth() == CV_8U) && (src2.depth() == CV_8U) && (dtype == CV_16U)) ||
                      ((src1.depth() == CV_8S) && (src2.depth() == CV_8S) && (dtype == CV_16S));
-    extendMul = extendMul && halMulExtendWorks;
+    extendMul = extendMul && halMul8to16available;
 
     arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(extendMul),
               /* muldiv */ true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
