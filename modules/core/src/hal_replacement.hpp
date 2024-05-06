@@ -844,6 +844,27 @@ inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, i
 //! @endcond
 
 /**
+   @brief calculates the mean and the standard deviation of array elements independently for each channel
+   @param src_data Source image
+   @param src_step Source image
+   @param width Source image dimensions
+   @param height Source image dimensions
+   @param src_type Type of source image
+   @param mean_val Array of per-channel mean values. May be nullptr, if mean value is not required.
+   @param stddev_val Array of per-channel standard deviation values. May be nullptr, if stddev value is not required.
+   @param mask Specified array region.
+   @param mask_step Mask array step.
+   @sa meanStdDev
+*/
+inline int hal_ni_meanStdDev(const uchar* src_data, size_t src_step, int width, int height,
+                             int src_type, double* mean_val, double* stddev_val, uchar* mask, size_t mask_step)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_meanStdDev hal_ni_meanStdDev
+//! @endcond
+
+/**
    @brief hal_flip
    @param src_type source and destination image type
    @param src_data source image data
