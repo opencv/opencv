@@ -30,7 +30,7 @@ public:
     {
         CV_CheckEQ(inputs.size(), 2ull, "");
         MatShape inpShape = inputs[0];
-        if (inpShape.size() == 0  || inpShape.size() == 1){
+        if (inpShape.size() == 0 ){
             outputs.assign(1, inpShape);
             return false;
         }
