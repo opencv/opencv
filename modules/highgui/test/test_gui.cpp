@@ -48,9 +48,11 @@ inline void verify_size(const std::string &nm, const cv::Mat &img)
 {
     EXPECT_NO_THROW(imshow(nm, img));
     EXPECT_EQ(-1, waitKey(200));
+#ifndef HAVE_WAYLAND // Wayland backend is not supported getWindowImageRect().
     Rect rc;
     EXPECT_NO_THROW(rc = getWindowImageRect(nm));
     EXPECT_EQ(rc.size(), img.size());
+#endif // HAVE_WAYLAND
 }
 
 #if (!defined(ENABLE_PLUGINS) \

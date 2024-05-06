@@ -50,6 +50,9 @@ list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${n
 set(OPENCV_HIGHGUI_BUILTIN_BACKEND "")
 
 if(WITH_WAYLAND AND HAVE_WAYLAND)
+  # To optimize Mat to XRGB8888 conversion.
+  ocv_add_dispatched_file(write_mat_to_xrgb8888 SSE4_1 AVX2 NEON)
+
   set(OPENCV_HIGHGUI_BUILTIN_BACKEND "Wayland")
   add_definitions(-DHAVE_WAYLAND)
 
@@ -63,6 +66,7 @@ if(WITH_WAYLAND AND HAVE_WAYLAND)
 
   list(APPEND highgui_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/window_wayland.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/write_mat_to_xrgb8888.dispatch.cpp
     ${WAYLAND_PROTOCOL_SOURCES}
   )
   list(APPEND HIGHGUI_LIBRARIES "${WAYLAND_CLIENT_LINK_LIBRARIES};${WAYLAND_CURSOR_LINK_LIBRARIES};${XKBCOMMON_LINK_LIBRARIES}")

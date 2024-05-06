@@ -36,6 +36,9 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include "opencv2/core/utils/logger.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+
+#include "write_mat_to_xrgb8888.hpp"
 
 /*                              */
 /*  OpenCV highgui internals    */
@@ -69,6 +72,7 @@ class cv_wl_core;
 using std::weak_ptr;
 using std::shared_ptr;
 using namespace cv::Error;
+using namespace cv::impl;
 namespace ch = std::chrono;
 
 #define throw_system_error(errmsg, errnum) \
@@ -84,22 +88,6 @@ static int xkb_keysym_to_ascii(xkb_keysym_t keysym) {
     return static_cast<int>(keysym & 0xff);
 }
 
-
-static void draw_xrgb8888(void *d, uint8_t a, uint8_t r, uint8_t g, uint8_t b) {
-    *((uint32_t *) d) = ((a << 24) | (r << 16) | (g << 8) | b);
-}
-
-static void write_mat_to_xrgb8888(cv::Mat const &img, void *data) {
-    CV_Assert(data != nullptr);
-    CV_Assert(img.isContinuous());
-
-    for (int y = 0; y < img.rows; y++) {
-        for (int x = 0; x < img.cols; x++) {
-            auto p = img.at<cv::Vec3b>(y, x);
-            draw_xrgb8888((char *) data + (y * img.cols + x) * 4, 0x00, p[2], p[1], p[0]);
-        }
-    }
-}
 
 class epoller {
 public:
@@ -232,10 +220,10 @@ private:
             &handle_pointer_axis, &handle_pointer_frame,
             &handle_pointer_axis_source, &handle_pointer_axis_stop,
             &handle_pointer_axis_discrete,
-#if WL_POINTER_AXIS_VALUE120_SINCE_VERSION >= 8
+#ifdef WL_POINTER_AXIS_VALUE120_SINCE_VERSION
             &handle_axis_value120,
 #endif
-#if WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION >= 9
+#ifdef WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION
             &handle_axis_relative_direction,
 #endif
     };
@@ -284,7 +272,7 @@ private:
         CV_UNUSED(discrete);
     }
 
-#if WL_POINTER_AXIS_VALUE120_SINCE_VERSION >= 8
+#ifdef WL_POINTER_AXIS_VALUE120_SINCE_VERSION
     static void
     handle_axis_value120(void *data, struct wl_pointer *wl_pointer, uint32_t axis, int32_t value120) {
         CV_UNUSED(data);
@@ -294,7 +282,7 @@ private:
     }
 #endif
 
-#if WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION >= 9
+#ifdef WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION
     static void
     handle_axis_relative_direction(void *data, struct wl_pointer *wl_pointer, uint32_t axis, uint32_t direction) {
         CV_UNUSED(data);
@@ -686,7 +674,7 @@ public:
 
     void show_image(cv::Mat const &image);
 
-    void create_trackbar(std::string const &name, int *value, int count, CvTrackbarCallback2 on_change, void *userdata);
+    int create_trackbar(std::string const &name, int *value, int count, CvTrackbarCallback2 on_change, void *userdata);
 
     weak_ptr<cv_wl_trackbar> get_trackbar(std::string const &) const;
 
@@ -723,10 +711,10 @@ private:
     struct xdg_toplevel *xdg_toplevel_;
     struct xdg_toplevel_listener xdgtop_listener_{
             &handle_toplevel_configure, &handle_toplevel_close,
-#if XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION >= 4
+#ifdef XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION
             &handle_toplevel_configure_bounds,
 #endif
-#if XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION >= 5
+#ifdef XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION
             &handle_toplevel_wm_capabilities,
 #endif
     };
@@ -775,7 +763,7 @@ private:
 
     static void handle_toplevel_close(void *data, struct xdg_toplevel *surface);
 
-#if XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION >= 4
+#ifdef XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION
     static void
     handle_toplevel_configure_bounds(void *data, struct xdg_toplevel *xdg_toplevel, int32_t width, int32_t height)
     {
@@ -786,7 +774,7 @@ private:
     }
 #endif
 
-#if XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION >= 5
+#ifdef XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION
     static void
     handle_toplevel_wm_capabilities(void *data, struct xdg_toplevel *xdg_toplevel, struct wl_array *capabilities)
     {
@@ -1527,13 +1515,7 @@ cv_wl_viewer::cv_wl_viewer(cv_wl_window *window, int flags)
 }
 
 void cv_wl_viewer::set_image(cv::Mat const &image) {
-    if (image.type() == CV_8UC1) {
-        cv::Mat bgr;
-        cv::cvtColor(image, bgr, CV_GRAY2BGR);
-        image_ = bgr.clone();
-    } else {
-        image_ = image.clone();
-    }
+    image_ = image.clone();
     image_changed_ = true;
 }
 
@@ -1642,6 +1624,11 @@ cv_wl_trackbar::cv_wl_trackbar(cv_wl_window *window, std::string name,
     on_change_.value = value;
     on_change_.data = data;
     on_change_.callback = on_change;
+
+    // initilize slider_.value if value is not nullptr.
+    if (value != nullptr){
+        set_pos(*value);
+    }
 }
 
 std::string const &cv_wl_trackbar::name() const {
@@ -1657,6 +1644,12 @@ void cv_wl_trackbar::set_pos(int value) {
         slider_.value = value;
         slider_moved_ = true;
         window_->show();
+
+        // Update user-ptr value and call on_change() function if cv_wl_trackbar::draw() is not called.
+        if(slider_moved_) {
+            on_change_.update(slider_.value);
+            on_change_.call(slider_.value);
+        }
     }
 }
 
@@ -1666,6 +1659,12 @@ void cv_wl_trackbar::set_max(int maxval) {
         slider_.value = maxval;
         slider_moved_ = true;
         window_->show();
+
+        // Update user-ptr and call on_change() function if cv_wl_trackbar::draw() is not called.
+        if(slider_moved_) {
+            on_change_.update(slider_.value);
+            on_change_.call(slider_.value);
+        }
     }
 }
 
@@ -1836,8 +1835,9 @@ void cv_wl_window::show_image(cv::Mat const &image) {
     this->show();
 }
 
-void cv_wl_window::create_trackbar(std::string const &name, int *value, int count, CvTrackbarCallback2 on_change,
+int cv_wl_window::create_trackbar(std::string const &name, int *value, int count, CvTrackbarCallback2 on_change,
                                    void *userdata) {
+    int ret = 0;
     auto exists = this->get_trackbar(name).lock();
     if (!exists) {
         auto trackbar =
@@ -1846,7 +1846,9 @@ void cv_wl_window::create_trackbar(std::string const &name, int *value, int coun
                 );
         widgets_.emplace_back(trackbar);
         widget_geometries_.emplace_back(0, 0, 0, 0);
+        ret = 1;
     }
+    return ret;
 }
 
 weak_ptr<cv_wl_trackbar> cv_wl_window::get_trackbar(std::string const &trackbar_name) const {
@@ -2402,6 +2404,13 @@ CV_IMPL void cvResizeWindow(const char *name, int width, int height) {
         throw_system_error("Could not get window name", errno)
 }
 
+CvRect cvGetWindowRect_WAYLAND(const char* name)
+{
+    CV_UNUSED(name);
+    CV_LOG_ONCE_WARNING(nullptr, "Function not implemented: User cannot get window rect in Wayland");
+    return cvRect(-1, -1, -1, -1);
+}
+
 CV_IMPL int cvCreateTrackbar(const char *name_bar, const char *window_name, int *value, int count,
                              CvTrackbarCallback on_change) {
     CV_UNUSED(name_bar);
@@ -2416,10 +2425,11 @@ CV_IMPL int cvCreateTrackbar(const char *name_bar, const char *window_name, int 
 
 CV_IMPL int cvCreateTrackbar2(const char *trackbar_name, const char *window_name, int *val, int count,
                               CvTrackbarCallback2 on_notify, void *userdata) {
+    int ret = 0;
     if (auto window = CvWlCore::getInstance().get_window(window_name))
-        window->create_trackbar(trackbar_name, val, count, on_notify, userdata);
+        ret = window->create_trackbar(trackbar_name, val, count, on_notify, userdata);
 
-    return 0;
+    return ret;
 }
 
 CV_IMPL int cvGetTrackbarPos(const char *trackbar_name, const char *window_name) {
