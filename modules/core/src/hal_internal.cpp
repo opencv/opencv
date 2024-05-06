@@ -112,16 +112,17 @@ template <typename fptype> static inline int
 lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int* info)
 {
 #if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
-    long* piv = new long[m];
+    cv::AutoBuffer<long> piv_buff(m);
     long lda = (long)(a_step / sizeof(fptype));
     long _m = static_cast<long>(m), _n = static_cast<long>(n);
     long _info[1];
 #else
-    int* piv = new int[m];
+    cv::AutoBuffer<int> piv_buff(m);
     int lda = (int)(a_step / sizeof(fptype));
     int _m = m, _n = n;
     int* _info = info;
 #endif
+    auto piv = piv_buff.data();
 
     transpose_square_inplace(a, lda, m);
 
@@ -172,7 +173,6 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
     else
         *info = 0; //in opencv LU function zero means error
 
-    delete[] piv;
     return CV_HAL_ERROR_OK;
 }
 
@@ -238,7 +238,7 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     long ldv = (long)(v_step / sizeof(fptype));
     long ldu = (long)(u_step / sizeof(fptype));
     long lwork = -1;
-    long* iworkBuf = new long[8*std::min(m, n)];
+    cv::AutoBuffer<long> iworkBuf_(8 * std::min(m, n));
 #else
     int _m = m, _n = n;
     int* _info = info;
@@ -246,8 +246,9 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     int ldv = (int)(v_step / sizeof(fptype));
     int ldu = (int)(u_step / sizeof(fptype));
     int lwork = -1;
-    int* iworkBuf = new int[8*std::min(m, n)];
+    cv::AutoBuffer<int> iworkBuf_(8 * std::min(m, n));
 #endif
+    auto iworkBuf = iworkBuf_.data();
     fptype work1 = 0;
 
     //A already transposed and m>=n
@@ -313,7 +314,6 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
         delete[] u;
     }
 
-    delete[] iworkBuf;
     delete[] buffer;
     return CV_HAL_ERROR_OK;
 }
