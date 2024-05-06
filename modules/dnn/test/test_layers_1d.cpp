@@ -91,16 +91,23 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_1d_Test, Combine(
 /*operation*/           Values(0, 1)
 ));
 
-typedef testing::TestWithParam<tuple<int, int, std::string>> Layer_Arg_1d_Test;
-TEST_P(Layer_Arg_1d_Test, Accuracy) {
-
-    int batch_size = get<0>(GetParam());
-    int axis = get<1>(GetParam());
-    std::string operation = get<2>(GetParam());
+template <typename T>
+int arg_op(const std::vector<T>& vec, const std::string& operation) {
+    if (operation == "max") {
+        return static_cast<int>(std::distance(vec.begin(), std::max_element(vec.begin(), vec.end())));
+    } else {
+        return static_cast<int>(std::distance(vec.begin(), std::min_element(vec.begin(), vec.end())));
+    }
+}
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Arg_1d_Test;
+TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
+    std::vector<int> input_shape = get<0>(GetParam());
+    std::string operation = get<1>(GetParam());
 
     LayerParams lp;
     lp.type = "Arg";
     lp.name = "arg" + operation + "_Layer";
+    int axis = (input_shape.size() == 0 || input_shape.size() == 1 ) ? 0 : 1;
     lp.set("op", operation);
     lp.set("axis", axis);
     lp.set("keepdims", 1);
@@ -108,23 +115,29 @@ TEST_P(Layer_Arg_1d_Test, Accuracy) {
 
     Ptr<ArgLayer> layer = ArgLayer::create(lp);
 
-    std::vector<int> input_shape = {batch_size, 1};
-    std::vector<int> output_shape = {1, 1};
-
-    if (batch_size == 0){
-        input_shape.erase(input_shape.begin());
-        output_shape.erase(output_shape.begin());
+    cv::Mat input = cv::Mat(input_shape.size(), input_shape.data(), CV_32F);
+    for (int i = 0; i < input.total(); i++){
+        input.at<float>(i) = i;
     }
 
-    if (axis != 0 && batch_size != 0){
-        output_shape[0] = batch_size;
+    // create reference output with required shape and values
+    cv::Mat output_ref;
+    if (input_shape.size() == 2 ){
+        int rows = input_shape[0];
+        int cols = input_shape[1];
+        std::vector<int> ref_output(rows);
+        for (int i = 0; i < rows; i++) {
+            std::vector<float> row_vec(cols);
+            for (int j = 0; j < cols; j++) {
+                row_vec[j] = input.at<float>(i, j);
+            }
+            ref_output[i] = arg_op(row_vec, operation);
+        }
+        output_ref = cv::Mat(rows, (axis == 1) ? 1 : cols, CV_32FC1, ref_output.data());
+    } else if (input_shape.size() <= 1) {
+        int index = arg_op(std::vector<float>(input.begin<float>(), input.end<float>()), operation);
+        output_ref = cv::Mat(input_shape.size(), input_shape.data(), CV_32FC1, &index);
     }
-
-    cv::Mat input = cv::Mat(input_shape, CV_32F, 1);
-    cv::Mat output_ref = cv::Mat(output_shape,  CV_32F, 0);
-
-    for (int i = 0; i < batch_size; ++i)
-        input.at<float>(i, 0) = static_cast<float>(i + 1);
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
@@ -136,8 +149,12 @@ TEST_P(Layer_Arg_1d_Test, Accuracy) {
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Arg_1d_Test, Combine(
-/*input blob shape*/    Values(0, 1, 2, 3),
-/*operation*/           Values(0, 1),
+/*input blob shape*/    testing::Values(
+                                std::vector<int>({}),
+                                std::vector<int>({1}),
+                                std::vector<int>({1, 4}),
+                                std::vector<int>({4, 4})
+                                ),
 /*operation*/           Values( "max", "min")
 ));
 
