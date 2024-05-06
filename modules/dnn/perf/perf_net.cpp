@@ -111,7 +111,7 @@ PERF_TEST_P_(DNNTestNetwork, ResNet_50)
 
 PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
 {
-    processNet("dnn/squeezenet_v1.1.caffemodel", "dnn/squeezenet_v1.1.prototxt", cv::Size(227, 227));
+    processNet("dnn/onnx/models/squeezenet.onnx", "", cv::Size(227, 227));
 }
 
 PERF_TEST_P_(DNNTestNetwork, Inception_5h)

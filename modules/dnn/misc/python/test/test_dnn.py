@@ -251,16 +251,16 @@ class dnn_test(NewOpenCVTests):
 
     def test_classification_model(self):
         img_path = self.find_dnn_file("dnn/googlenet_0.png")
-        weights = self.find_dnn_file("dnn/squeezenet_v1.1.caffemodel", required=False)
-        config = self.find_dnn_file("dnn/squeezenet_v1.1.prototxt")
-        ref = np.load(self.find_dnn_file("dnn/squeezenet_v1.1_prob.npy"))
-        if weights is None or config is None:
-            raise unittest.SkipTest("Missing DNN test files (dnn/squeezenet_v1.1.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+        model = self.find_dnn_file("dnn/onnx/models/squeezenet.onnx", required=False)
+        ref = np.load(self.find_dnn_file("dnn/squeezenet_v1.0_prob.npy"))
 
         frame = cv.imread(img_path)
-        model = cv.dnn_ClassificationModel(config, weights)
-        model.setInputSize(227, 227)
+        model = cv.dnn_ClassificationModel(model)
+        model.setInputSize(224, 224)
         model.setInputCrop(True)
+        model.setInputMean((123.675, 116.779, 103.939))
+        model.setInputScale((0.0171, 0.0175, 0.0174))
+        model.setInputSwapRB(True)
 
         out = model.predict(frame)
         normAssert(self, out, ref)

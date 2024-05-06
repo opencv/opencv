@@ -122,10 +122,9 @@ TEST_P(DNNTestNetwork, ResNet_50)
     expectNoFallbacksFromCUDA(net);
 }
 
-TEST_P(DNNTestNetwork, SqueezeNet_v1_1)
+TEST_P(DNNTestNetwork, SqueezeNet_v1)
 {
-    processNet("dnn/squeezenet_v1.1.caffemodel", "dnn/squeezenet_v1.1.prototxt",
-               Size(227, 227), "prob");
+    processNet("dnn/onnx/models/squeezenet.onnx", "", Size(224, 224));
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }

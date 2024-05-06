@@ -196,15 +196,14 @@ faster_rcnn_tf:
 # SqueezeNet v1.1 from https://github.com/DeepScale/SqueezeNet
 squeezenet:
   load_info:
-    url: "https://raw.githubusercontent.com/DeepScale/SqueezeNet/b5c3f1a23713c8b3fd7b801d229f6b04c64374a5/SqueezeNet_v1.1/squeezenet_v1.1.caffemodel"
-    sha1: "3397f026368a45ae236403ccc81cfcbe8ebe1bd0"
-  model: "squeezenet_v1.1.caffemodel"
-  config: "squeezenet_v1.1.prototxt"
-  mean: [0, 0, 0]
-  scale: 1.0
-  width: 227
-  height: 227
-  rgb: false
+      url: "https://github.com/onnx/models/raw/491ce05590abb7551d7fae43c067c060eeb575a6/validated/vision/classification/squeezenet/model/squeezenet1.1-7.onnx"
+      sha1: "ec31942d17715941bb9b81f3a91dc59def9236be"
+  model: "squeezenet1.1-7.onnx"
+  mean: [123.675, 116.779, 103.939]
+  scale: [0.0171, 0.0175, 0.0174]
+  width: 224
+  height: 224
+  rgb: true
   classes: "classification_classes_ILSVRC2012.txt"
   sample: "classification"
 
@@ -214,7 +213,7 @@ googlenet:
     url: "https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/inception_and_googlenet/googlenet/model/googlenet-8.onnx"
     sha1: "534a16d7e2472f6a9a1925a5ee6c9abc2f5c02b0"
   model: "googlenet-8.onnx"
-  mean: [104, 117, 123]
+  mean: [103.939, 116.779, 123.675]
   scale: 1.0
   width: 224
   height: 224

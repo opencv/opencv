@@ -1,16 +1,6 @@
 {
     "caffe": [
         {
-            "model": "squeezenet",
-            "mean": "104, 117, 123",
-            "std": "1",
-            "swapRB": "false",
-            "needSoftmax": "false",
-            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/classification_classes_ILSVRC2012.txt",
-            "modelUrl": "https://raw.githubusercontent.com/forresti/SqueezeNet/master/SqueezeNet_v1.0/squeezenet_v1.0.caffemodel",
-            "configUrl": "https://raw.githubusercontent.com/forresti/SqueezeNet/master/SqueezeNet_v1.0/deploy.prototxt"
-        },
-        {
             "model": "VGG",
             "mean": "104, 117, 123",
             "std": "1",
@@ -53,12 +43,21 @@
         },
         {
             "model": "googlenet",
-            "mean": "104, 117, 123",
+            "mean": "103.939, 116.779, 123.675",
             "std": "1",
             "swapRB": "false",
             "needSoftmax": "false",
             "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/classification_classes_ILSVRC2012.txt",
             "modelUrl": "https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/inception_and_googlenet/googlenet/model/googlenet-8.onnx"
+        },
+        {
+            "model": "squeezenet",
+            "mean": "123.675, 116.779, 103.939",
+            "std": "0.0171, 0.0175, 0.0174",
+            "swapRB": "true",
+            "needSoftmax": "false",
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/classification_classes_ILSVRC2012.txt",
+            "modelUrl": "https://github.com/onnx/models/raw/491ce05590abb7551d7fae43c067c060eeb575a6/validated/vision/classification/squeezenet/model/squeezenet1.1-7.onnx"
         }
     ]
 }
