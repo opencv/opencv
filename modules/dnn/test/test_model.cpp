@@ -676,7 +676,7 @@ TEST_P(Test_Model, Segmentation)
     }
 
     std::string inp = _tf("dog416.png");
-    std::string weights_file = _tf("onnx/models/fcn-resnet50-12.onnx");
+    std::string weights_file = _tf("onnx/models/fcn-resnet50-12.onnx", false);
     std::string exp = _tf("segmentation_exp.png");
 
     Size size{128, 128};
