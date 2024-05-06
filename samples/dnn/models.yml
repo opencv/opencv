@@ -211,10 +211,9 @@ squeezenet:
 # Googlenet from https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet
 googlenet:
   load_info:
-    url: "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel"
-    sha1: "405fc5acd08a3bb12de8ee5e23a96bec22f08204"
-  model: "bvlc_googlenet.caffemodel"
-  config: "bvlc_googlenet.prototxt"
+    url: "https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/inception_and_googlenet/googlenet/model/googlenet-8.onnx"
+    sha1: "534a16d7e2472f6a9a1925a5ee6c9abc2f5c02b0"
+  model: "googlenet-8.onnx"
   mean: [104, 117, 123]
   scale: 1.0
   width: 224

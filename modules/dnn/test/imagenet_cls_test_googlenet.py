@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import os
 import argparse
-from imagenet_cls_test_alexnet import MeanChannelsFetch, CaffeModel, DnnCaffeModel, ClsAccEvaluation
+from imagenet_cls_test_alexnet import MeanChannelsFetch, CaffeModel, DNNOnnxModel, ClsAccEvaluation
 try:
     import caffe
 except ImportError:
@@ -23,6 +23,8 @@ if __name__ == "__main__":
                                         "https://github.com/BVLC/caffe/blob/master/models/bvlc_alexnet/deploy.prototxt")
     parser.add_argument("--caffemodel", help="path to caffemodel file, download it here: "
                                              "http://dl.caffe.berkeleyvision.org/bvlc_alexnet.caffemodel")
+    parser.add_argument("--onnxmodel", help="path to ONNX model file, download it here: "
+                                            "https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/inception_and_googlenet/googlenet/model/googlenet-8.onnx")
     parser.add_argument("--log", help="path to logging file")
     parser.add_argument("--batch_size", help="size of images in batch", default=500, type=int)
     parser.add_argument("--frame_size", help="size of input image", default=224, type=int)
@@ -33,7 +35,7 @@ if __name__ == "__main__":
     data_fetcher = MeanChannelsFetch(args.frame_size, args.imgs_dir)
 
     frameworks = [CaffeModel(args.prototxt, args.caffemodel, args.in_blob, args.out_blob),
-                  DnnCaffeModel(args.prototxt, args.caffemodel, '', args.out_blob)]
+                  DNNOnnxModel(args.onnxmodel, args.in_blob, args.out_blob)]
 
     acc_eval = ClsAccEvaluation(args.log, args.img_cls_file, args.batch_size)
     acc_eval.process(frameworks, data_fetcher)

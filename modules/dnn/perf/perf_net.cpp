@@ -101,7 +101,7 @@ PERF_TEST_P_(DNNTestNetwork, AlexNet)
 
 PERF_TEST_P_(DNNTestNetwork, GoogLeNet)
 {
-    processNet("dnn/bvlc_googlenet.caffemodel", "dnn/bvlc_googlenet.prototxt", cv::Size(224, 224));
+    processNet("onnx/models/googlenet.onnx", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, ResNet_50)

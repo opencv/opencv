@@ -134,8 +134,7 @@ TEST_P(DNNTestNetwork, GoogLeNet)
 {
     applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
 
-    processNet("dnn/bvlc_googlenet.caffemodel", "dnn/bvlc_googlenet.prototxt",
-               Size(224, 224), "prob");
+    processNet("dnn/onnx/models/googlenet.onnx", "", Size(224, 224), "prob_1");
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }

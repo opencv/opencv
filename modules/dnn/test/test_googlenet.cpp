@@ -60,8 +60,7 @@ TEST_P(Reproducibility_GoogLeNet, Batching)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (targetId == DNN_TARGET_CPU_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
-                               findDataFile("dnn/bvlc_googlenet.caffemodel", false));
+    Net net = readNet(findDataFile("dnn/onnx/models/googlenet.onnx", false), "");
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
@@ -79,8 +78,8 @@ TEST_P(Reproducibility_GoogLeNet, Batching)
     inpMats.push_back( imread(_tf("googlenet_1.png")) );
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
-    net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false), "data");
-    Mat out = net.forward("prob");
+    net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false));
+    Mat out = net.forward("prob_1");
 
     Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
     normAssert(out, ref);
@@ -93,25 +92,24 @@ TEST_P(Reproducibility_GoogLeNet, IntermediateBlobs)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (targetId == DNN_TARGET_CPU_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
-                               findDataFile("dnn/bvlc_googlenet.caffemodel", false));
+    Net net = readNet(findDataFile("dnn/onnx/models/googlenet.onnx", false), "");
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
     std::vector<String> blobsNames;
-    blobsNames.push_back("conv1/7x7_s2");
-    blobsNames.push_back("conv1/relu_7x7");
-    blobsNames.push_back("inception_4c/1x1");
-    blobsNames.push_back("inception_4c/relu_1x1");
+    blobsNames.push_back("onnx_node_output_0!conv1/7x7_s2_1");
+    blobsNames.push_back("onnx_node_output_0!conv1/7x7_s2_2");
+    blobsNames.push_back("onnx_node_output_0!inception_4c/1x1_1");
+    blobsNames.push_back("onnx_node_output_0!inception_4c/1x1_2");
     std::vector<Mat> outs;
     Mat in = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(), Scalar(), false);
-    net.setInput(in, "data");
+    net.setInput(in);
     net.forward(outs, blobsNames);
     CV_Assert(outs.size() == blobsNames.size());
 
     for (size_t i = 0; i < blobsNames.size(); i++)
     {
-        std::string filename = blobsNames[i];
+        std::string filename = blobsNames[i].substr(blobsNames[i].find('!') + 1);
         std::replace( filename.begin(), filename.end(), '/', '#');
         Mat ref = blobFromNPY(_tf("googlenet_" + filename + ".npy"));
 
@@ -126,8 +124,7 @@ TEST_P(Reproducibility_GoogLeNet, SeveralCalls)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (targetId == DNN_TARGET_CPU_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
-                               findDataFile("dnn/bvlc_googlenet.caffemodel", false));
+    Net net = readNet(findDataFile("dnn/onnx/models/googlenet.onnx", false), "");
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
@@ -136,21 +133,21 @@ TEST_P(Reproducibility_GoogLeNet, SeveralCalls)
     inpMats.push_back( imread(_tf("googlenet_1.png")) );
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
-    net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false), "data");
+    net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false));
     Mat out = net.forward();
 
     Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
     normAssert(out, ref);
 
     std::vector<String> blobsNames;
-    blobsNames.push_back("conv1/7x7_s2");
+    blobsNames.push_back("onnx_node_output_0!conv1/7x7_s2_1");
     std::vector<Mat> outs;
     Mat in = blobFromImage(inpMats[0], 1.0f, Size(), Scalar(), false);
-    net.setInput(in, "data");
+    net.setInput(in);
     net.forward(outs, blobsNames);
     CV_Assert(outs.size() == blobsNames.size());
 
-    ref = blobFromNPY(_tf("googlenet_conv1#7x7_s2.npy"));
+    ref = blobFromNPY(_tf("googlenet_conv1#7x7_s2_1.npy"));
 
     normAssert(outs[0], ref, "", 1E-4, 1E-2);
 }
