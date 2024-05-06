@@ -742,7 +742,7 @@ TEST(Drawing, fillpoly_fully)
             t1.x = (t1.x + offset.x) << (xy_shift - shift);
             t1.y = (t1.y + delta) >> shift;
 
-            if (lineType < CV_AA)
+            if (lineType < cv::LINE_AA)
             {
                 t0.x = (t0.x + (xy_one >> 1)) >> xy_shift;
                 t1.x = (t1.x + (xy_one >> 1)) >> xy_shift;
@@ -831,7 +831,7 @@ PARAM_TEST_CASE(FillPolyFully, unsigned, unsigned, int, int, Point, cv::LineType
             t1.x = (t1.x + offset.x) << (xy_shift - shift);
             t1.y = (t1.y + delta) >> shift;
 
-            if (lineType < CV_AA)
+            if (lineType < cv::LINE_AA)
             {
                 t0.x = (t0.x + (xy_one >> 1)) >> xy_shift;
                 t1.x = (t1.x + (xy_one >> 1)) >> xy_shift;
@@ -912,5 +912,20 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(LINE_4, LINE_8, LINE_AA)
     )
 );
+
+TEST(Drawing, circle_overflow)
+{
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+    cv::Mat1b matrix = cv::Mat1b::zeros(600, 600);
+    cv::Scalar kBlue = cv::Scalar(0, 0, 255);
+    cv::circle(matrix, cv::Point(275, -2147483318), 2147483647, kBlue, 1, 8, 0);
+}
+
+TEST(Drawing, circle_memory_access)
+{
+    cv::Mat1b matrix = cv::Mat1b::zeros(10, 10);
+    cv::Scalar kBlue = cv::Scalar(0, 0, 255);
+    cv::circle(matrix, cv::Point(-1, -1), 0, kBlue, 2, 8, 16);
+}
 
 }} // namespace

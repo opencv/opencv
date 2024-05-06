@@ -68,7 +68,7 @@
   // nothing, intrinsics/asm code is not supported
 #else
   #if ((defined _MSC_VER && defined _M_X64) \
-      || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__)) \
+      || (defined __GNUC__ && defined __SSE2__)) \
       && !defined(OPENCV_SKIP_INCLUDE_EMMINTRIN_H)
     #include <emmintrin.h>
   #endif
@@ -84,7 +84,7 @@
   #if defined(CV_INLINE_ROUND_FLT)
     // user-specified version
     // CV_INLINE_ROUND_DBL should be defined too
-  #elif defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__
+  #elif defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON) && !defined __SOFTFP__
     // 1. general scheme
     #define ARM_ROUND(_value, _asm_string) \
         int res; \
@@ -201,7 +201,7 @@ cvRound( double value )
 {
 #if defined CV_INLINE_ROUND_DBL
     CV_INLINE_ROUND_DBL(value);
-#elif (defined _MSC_VER && defined _M_X64) && !defined(__CUDACC__)
+#elif ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __SSE2__)) && !defined(__CUDACC__)
     __m128d t = _mm_set_sd( value );
     return _mm_cvtsd_si32(t);
 #elif defined _MSC_VER && defined _M_IX86
@@ -323,7 +323,7 @@ CV_INLINE int cvRound(float value)
 {
 #if defined CV_INLINE_ROUND_FLT
     CV_INLINE_ROUND_FLT(value);
-#elif (defined _MSC_VER && defined _M_X64) && !defined(__CUDACC__)
+#elif ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __SSE2__)) && !defined(__CUDACC__)
     __m128 t = _mm_set_ss( value );
     return _mm_cvtss_si32(t);
 #elif defined _MSC_VER && defined _M_IX86
@@ -354,7 +354,7 @@ CV_INLINE int cvFloor( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_floorf(value);
-#elif defined __loongarch
+#elif defined __loongarch__
     int i;
     float tmp;
     __asm__ ("ftintrm.w.s     %[tmp],    %[in]       \n\t"
@@ -381,7 +381,7 @@ CV_INLINE int cvCeil( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_ceilf(value);
-#elif defined __loongarch
+#elif defined __loongarch__
     int i;
     float tmp;
     __asm__ ("ftintrp.w.s     %[tmp],    %[in]       \n\t"

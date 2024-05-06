@@ -62,7 +62,7 @@ namespace opencv_test
     class InRangePerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class Split3PerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
     class Split4PerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
-    class Merge3PerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+    class Merge3PerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class Merge4PerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
     class RemapPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class FlipPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};

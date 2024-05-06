@@ -52,15 +52,16 @@
 #include "opencv2/core.hpp"
 
 #if defined _MSC_VER && _MSC_VER >= 1200
+#ifndef NOMINMAX
 #define NOMINMAX // fix https://github.com/opencv/opencv/issues/17548
+#endif
 #pragma warning( disable: 4714 ) //__forceinline is not inlined
 #pragma warning( disable: 4127 ) //conditional expression is constant
 #pragma warning( disable: 4244 ) //conversion from '__int64' to 'int', possible loss of data
 #endif
 
 #if !defined(OPENCV_DISABLE_EIGEN_TENSOR_SUPPORT)
-#if EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3 \
-    && defined(CV_CXX11) && defined(CV_CXX_STD_ARRAY)
+#if EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3
 #include <unsupported/Eigen/CXX11/Tensor>
 #define OPENCV_EIGEN_TENSOR_SUPPORT 1
 #endif  // EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3

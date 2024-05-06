@@ -348,7 +348,7 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
     const int MAX_LEVELS = 8;
 
     if( (unsigned)max_level > (unsigned)MAX_LEVELS )
-        CV_Error( CV_StsOutOfRange, "The number of pyramid levels is too large or negative" );
+        CV_Error( cv::Error::StsOutOfRange, "The number of pyramid levels is too large or negative" );
 
     std::vector<cv::Mat> src_pyramid(max_level+1);
     std::vector<cv::Mat> dst_pyramid(max_level+1);
@@ -365,13 +365,13 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
 
 
     if( src0.type() != CV_8UC3 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 3-channel images are supported" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Only 8-bit, 3-channel images are supported" );
 
     if( src0.type() != dst0.type() )
-        CV_Error( CV_StsUnmatchedFormats, "The input and output images must have the same type" );
+        CV_Error( cv::Error::StsUnmatchedFormats, "The input and output images must have the same type" );
 
     if( src0.size() != dst0.size() )
-        CV_Error( CV_StsUnmatchedSizes, "The input and output images must have the same size" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "The input and output images must have the same size" );
 
     if( !(termcrit.type & CV_TERMCRIT_ITER) )
         termcrit.maxCount = 5;

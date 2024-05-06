@@ -69,9 +69,7 @@ CV__DNN_INLINE_NS_BEGIN
      */
     enum Backend
     {
-        //! DNN_BACKEND_DEFAULT equals to DNN_BACKEND_INFERENCE_ENGINE if
-        //! OpenCV is built with Intel OpenVINO or
-        //! DNN_BACKEND_OPENCV otherwise.
+        //! DNN_BACKEND_DEFAULT equals to OPENCV_DNN_BACKEND_DEFAULT, which can be defined using CMake or a configuration parameter
         DNN_BACKEND_DEFAULT = 0,
         DNN_BACKEND_HALIDE,
         DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel OpenVINO computational backend
@@ -106,6 +104,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_CUDA_FP16,
         DNN_TARGET_HDDL,
         DNN_TARGET_NPU,
+        DNN_TARGET_CPU_FP16, // Only the ARM platform is supported. Low precision computing, accelerate model inference.
     };
 
     /**
@@ -329,7 +328,7 @@ CV__DNN_INLINE_NS_BEGIN
 
         virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
-        virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs);
+        virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs, std::vector<Ptr<BackendWrapper> > &outputs);
 
         virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
@@ -485,7 +484,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  Networks imported from Intel's Model Optimizer are launched in Intel's Inference Engine
          *  backend.
          */
-        CV_WRAP static Net readFromModelOptimizer(const String& xml, const String& bin);
+        CV_WRAP static Net readFromModelOptimizer(CV_WRAP_FILE_PATH const String& xml, CV_WRAP_FILE_PATH const String& bin);
 
         /** @brief Create a network from Intel's Model Optimizer in-memory buffers with intermediate representation (IR).
          *  @param[in] bufferModelConfig buffer with model's configuration.
@@ -518,7 +517,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param path   path to output file with .dot extension
          *  @see dump()
          */
-        CV_WRAP void dumpToFile(const String& path);
+        CV_WRAP void dumpToFile(CV_WRAP_FILE_PATH const String& path);
         /** @brief Adds new layer to the net.
          *  @param name   unique name of the adding layer.
          *  @param type   typename of the adding layer (type must be registered in LayerRegister).
@@ -687,9 +686,6 @@ CV__DNN_INLINE_NS_BEGIN
          * @brief Ask network to use specific computation backend where it supported.
          * @param[in] backendId backend identifier.
          * @see Backend
-         *
-         * If OpenCV is compiled with Intel's Inference Engine library, DNN_BACKEND_DEFAULT
-         * means DNN_BACKEND_INFERENCE_ENGINE. Otherwise it equals to DNN_BACKEND_OPENCV.
          */
         CV_WRAP void setPreferableBackend(int backendId);
 
@@ -893,9 +889,8 @@ CV__DNN_INLINE_NS_BEGIN
     *  @param cfgFile      path to the .cfg file with text description of the network architecture.
     *  @param darknetModel path to the .weights file with learned network.
     *  @returns Network object that ready to do forward, throw an exception in failure cases.
-    *  @returns Net object.
     */
-    CV_EXPORTS_W Net readNetFromDarknet(const String &cfgFile, const String &darknetModel = String());
+    CV_EXPORTS_W Net readNetFromDarknet(CV_WRAP_FILE_PATH const String &cfgFile, CV_WRAP_FILE_PATH const String &darknetModel = String());
 
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
      *  @param bufferCfg   A buffer contains a content of .cfg file with text description of the network architecture.
@@ -920,7 +915,7 @@ CV__DNN_INLINE_NS_BEGIN
       * @param caffeModel path to the .caffemodel file with learned network.
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromCaffe(const String &prototxt, const String &caffeModel = String());
+    CV_EXPORTS_W Net readNetFromCaffe(CV_WRAP_FILE_PATH const String &prototxt, CV_WRAP_FILE_PATH const String &caffeModel = String());
 
     /** @brief Reads a network model stored in Caffe model in memory.
       * @param bufferProto buffer containing the content of the .prototxt file
@@ -949,7 +944,7 @@ CV__DNN_INLINE_NS_BEGIN
       *               let us make it more flexible.
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromTensorflow(const String &model, const String &config = String());
+    CV_EXPORTS_W Net readNetFromTensorflow(CV_WRAP_FILE_PATH const String &model, CV_WRAP_FILE_PATH const String &config = String());
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
       * @param bufferModel buffer containing the content of the pb file
@@ -974,7 +969,7 @@ CV__DNN_INLINE_NS_BEGIN
       * @param model  path to the .tflite file with binary flatbuffers description of the network architecture
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromTFLite(const String &model);
+    CV_EXPORTS_W Net readNetFromTFLite(CV_WRAP_FILE_PATH const String &model);
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @param bufferModel buffer containing the content of the tflite file
@@ -1016,7 +1011,7 @@ CV__DNN_INLINE_NS_BEGIN
      *
      * Also some equivalents of these classes from cunn, cudnn, and fbcunn may be successfully imported.
      */
-     CV_EXPORTS_W Net readNetFromTorch(const String &model, bool isBinary = true, bool evaluate = true);
+     CV_EXPORTS_W Net readNetFromTorch(CV_WRAP_FILE_PATH const String &model, bool isBinary = true, bool evaluate = true);
 
      /**
       * @brief Read deep learning network represented in one of the supported formats.
@@ -1026,14 +1021,14 @@ CV__DNN_INLINE_NS_BEGIN
       *                  * `*.pb` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.t7` | `*.net` (Torch, http://torch.ch/)
       *                  * `*.weights` (Darknet, https://pjreddie.com/darknet/)
-      *                  * `*.bin` (DLDT, https://software.intel.com/openvino-toolkit)
+      *                  * `*.bin` | `*.onnx` (OpenVINO, https://software.intel.com/openvino-toolkit)
       *                  * `*.onnx` (ONNX, https://onnx.ai/)
       * @param[in] config Text file contains network configuration. It could be a
       *                   file with the following extensions:
       *                  * `*.prototxt` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pbtxt` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.cfg` (Darknet, https://pjreddie.com/darknet/)
-      *                  * `*.xml` (DLDT, https://software.intel.com/openvino-toolkit)
+      *                  * `*.xml` (OpenVINO, https://software.intel.com/openvino-toolkit)
       * @param[in] framework Explicit framework name tag to determine a format.
       * @returns Net object.
       *
@@ -1042,7 +1037,7 @@ CV__DNN_INLINE_NS_BEGIN
       * @ref readNetFromTorch or @ref readNetFromDarknet. An order of @p model and @p config
       * arguments does not matter.
       */
-     CV_EXPORTS_W Net readNet(const String& model, const String& config = "", const String& framework = "");
+     CV_EXPORTS_W Net readNet(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config = "", const String& framework = "");
 
      /**
       * @brief Read deep learning network represented in one of the supported formats.
@@ -1069,7 +1064,7 @@ CV__DNN_INLINE_NS_BEGIN
      *  backend.
      */
     CV_EXPORTS_W
-    Net readNetFromModelOptimizer(const String &xml, const String &bin);
+    Net readNetFromModelOptimizer(CV_WRAP_FILE_PATH const String &xml, CV_WRAP_FILE_PATH const String &bin = "");
 
     /** @brief Load a network from Intel's Model Optimizer intermediate representation.
      *  @param[in] bufferModelConfig Buffer contains XML configuration with network's topology.
@@ -1098,7 +1093,7 @@ CV__DNN_INLINE_NS_BEGIN
      *  @param onnxFile path to the .onnx file with text description of the network architecture.
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
      */
-    CV_EXPORTS_W Net readNetFromONNX(const String &onnxFile);
+    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile);
 
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
@@ -1121,7 +1116,7 @@ CV__DNN_INLINE_NS_BEGIN
      *  @param path to the .pb file with input tensor.
      *  @returns Mat.
      */
-    CV_EXPORTS_W Mat readTensorFromONNX(const String& path);
+    CV_EXPORTS_W Mat readTensorFromONNX(CV_WRAP_FILE_PATH const String& path);
 
     /** @brief Creates 4-dimensional blob from image. Optionally resizes and crops @p image from center,
      *  subtract @p mean values, scales values by @p scalefactor, swap Blue and Red channels.
@@ -1217,7 +1212,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP Image2BlobParams();
         CV_WRAP Image2BlobParams(const Scalar& scalefactor, const Size& size = Size(), const Scalar& mean = Scalar(),
                             bool swapRB = false, int ddepth = CV_32F, DataLayout datalayout = DNN_LAYOUT_NCHW,
-                            ImagePaddingMode mode = DNN_PMODE_NULL);
+                            ImagePaddingMode mode = DNN_PMODE_NULL, Scalar borderValue = 0.0);
 
         CV_PROP_RW Scalar scalefactor; //!< scalefactor multiplier for input image values.
         CV_PROP_RW Size size;    //!< Spatial size for output image.
@@ -1226,6 +1221,21 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW int ddepth;   //!< Depth of output blob. Choose CV_32F or CV_8U.
         CV_PROP_RW DataLayout datalayout; //!< Order of output dimensions. Choose DNN_LAYOUT_NCHW or DNN_LAYOUT_NHWC.
         CV_PROP_RW ImagePaddingMode paddingmode;   //!< Image padding mode. @see ImagePaddingMode.
+        CV_PROP_RW Scalar borderValue;   //!< Value used in padding mode for padding.
+
+        /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
+         *  @param rBlob rect in blob coordinates.
+         *  @param size original input image size.
+         *  @returns rectangle in original image coordinates.
+         */
+        CV_WRAP Rect blobRectToImageRect(const Rect &rBlob, const Size &size);
+
+        /** @brief Get rectangle coordinates in original image system from rectangle in blob coordinates.
+         *  @param rBlob rect in blob coordinates.
+         *  @param rImg result rect in image coordinates.
+         *  @param size original input image size.
+         */
+        CV_WRAP void blobRectsToImageRects(const std::vector<Rect> &rBlob, CV_OUT std::vector<Rect>& rImg, const Size& size);
     };
 
     /** @brief Creates 4-dimensional blob from image with given params.
@@ -1279,7 +1289,7 @@ CV__DNN_INLINE_NS_BEGIN
      *       is taken from NVidia's Caffe fork: https://github.com/NVIDIA/caffe.
      *       So the resulting model may be used there.
      */
-    CV_EXPORTS_W void shrinkCaffeModel(const String& src, const String& dst,
+    CV_EXPORTS_W void shrinkCaffeModel(CV_WRAP_FILE_PATH const String& src, CV_WRAP_FILE_PATH const String& dst,
                                        const std::vector<String>& layersTypes = std::vector<String>());
 
     /** @brief Create a text representation for a binary network stored in protocol buffer format.
@@ -1288,7 +1298,7 @@ CV__DNN_INLINE_NS_BEGIN
      *
      *  @note To reduce output file size, trained weights are not included.
      */
-    CV_EXPORTS_W void writeTextGraph(const String& model, const String& output);
+    CV_EXPORTS_W void writeTextGraph(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& output);
 
     /** @brief Performs non maximum suppression given boxes and corresponding scores.
 
@@ -1393,7 +1403,7 @@ CV__DNN_INLINE_NS_BEGIN
           * @param[in] model Binary file contains trained weights.
           * @param[in] config Text file contains network configuration.
           */
-         CV_WRAP Model(const String& model, const String& config = "");
+         CV_WRAP Model(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config = "");
 
          /**
           * @brief Create model from deep learning network.
@@ -1434,6 +1444,11 @@ CV__DNN_INLINE_NS_BEGIN
          */
          CV_WRAP Model& setInputSwapRB(bool swapRB);
 
+         /** @brief Set output names for frame.
+          *  @param[in] outNames Names for output layers.
+         */
+         CV_WRAP Model& setOutputNames(const std::vector<String>& outNames);
+
          /** @brief Set preprocessing parameters for frame.
          *  @param[in] size New input size.
          *  @param[in] mean Scalar with mean values which are subtracted from channels.
@@ -1462,6 +1477,9 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP Model& setPreferableBackend(dnn::Backend backendId);
          /// @sa Net::setPreferableTarget
          CV_WRAP Model& setPreferableTarget(dnn::Target targetId);
+
+         /// @sa Net::enableWinograd
+         CV_WRAP Model& enableWinograd(bool useWinograd);
 
          CV_DEPRECATED_EXTERNAL
          operator Net&() const { return getNetwork_(); }
@@ -1495,7 +1513,7 @@ CV__DNN_INLINE_NS_BEGIN
           * @param[in] model Binary file contains trained weights.
           * @param[in] config Text file contains network configuration.
           */
-          CV_WRAP ClassificationModel(const String& model, const String& config = "");
+          CV_WRAP ClassificationModel(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config = "");
 
          /**
           * @brief Create model from deep learning network.
@@ -1545,7 +1563,7 @@ CV__DNN_INLINE_NS_BEGIN
           * @param[in] model Binary file contains trained weights.
           * @param[in] config Text file contains network configuration.
           */
-          CV_WRAP KeypointsModel(const String& model, const String& config = "");
+          CV_WRAP KeypointsModel(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config = "");
 
          /**
           * @brief Create model from deep learning network.
@@ -1577,7 +1595,7 @@ CV__DNN_INLINE_NS_BEGIN
           * @param[in] model Binary file contains trained weights.
           * @param[in] config Text file contains network configuration.
           */
-          CV_WRAP SegmentationModel(const String& model, const String& config = "");
+          CV_WRAP SegmentationModel(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config = "");
 
          /**
           * @brief Create model from deep learning network.
@@ -1608,7 +1626,7 @@ CV__DNN_INLINE_NS_BEGIN
           * @param[in] model Binary file contains trained weights.
           * @param[in] config Text file contains network configuration.
           */
-         CV_WRAP DetectionModel(const String& model, const String& config = "");
+         CV_WRAP DetectionModel(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config = "");
 
          /**
           * @brief Create model from deep learning network.
@@ -1674,7 +1692,7 @@ public:
      * @param[in] config Text file contains network configuration
      */
     CV_WRAP inline
-    TextRecognitionModel(const std::string& model, const std::string& config = "")
+    TextRecognitionModel(CV_WRAP_FILE_PATH const std::string& model, CV_WRAP_FILE_PATH const std::string& config = "")
         : TextRecognitionModel(readNet(model, config)) { /* nothing */ }
 
     /**
@@ -1829,7 +1847,7 @@ public:
      * @param[in] config Text file contains network configuration.
      */
     CV_WRAP inline
-    TextDetectionModel_EAST(const std::string& model, const std::string& config = "")
+    TextDetectionModel_EAST(CV_WRAP_FILE_PATH const std::string& model, CV_WRAP_FILE_PATH const std::string& config = "")
         : TextDetectionModel_EAST(readNet(model, config)) { /* nothing */ }
 
     /**
@@ -1890,7 +1908,7 @@ public:
      * @param[in] config Text file contains network configuration.
      */
     CV_WRAP inline
-    TextDetectionModel_DB(const std::string& model, const std::string& config = "")
+    TextDetectionModel_DB(CV_WRAP_FILE_PATH const std::string& model, CV_WRAP_FILE_PATH const std::string& config = "")
         : TextDetectionModel_DB(readNet(model, config)) { /* nothing */ }
 
     CV_WRAP TextDetectionModel_DB& setBinaryThreshold(float binaryThreshold);

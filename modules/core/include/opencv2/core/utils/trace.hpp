@@ -70,11 +70,11 @@ public:
     struct LocationExtraData;
     struct LocationStaticStorage
     {
-        LocationExtraData** ppExtra;   //< implementation specific data
-        const char* name;              //< region name (function name or other custom name)
-        const char* filename;          //< source code filename
-        int line;                      //< source code line
-        int flags;                     //< flags (implementation code path: Plain, IPP, OpenCL)
+        LocationExtraData** ppExtra;   ///< implementation specific data
+        const char* name;              ///< region name (function name or other custom name)
+        const char* filename;          ///< source code filename
+        int line;                      ///< source code line
+        int flags;                     ///< flags (implementation code path: Plain, IPP, OpenCL)
     };
 
     Region(const LocationStaticStorage& location);
@@ -100,18 +100,18 @@ private:
 
 //! Specify region flags
 enum RegionLocationFlag {
-    REGION_FLAG_FUNCTION = (1 << 0),             //< region is function (=1) / nested named region (=0)
-    REGION_FLAG_APP_CODE = (1 << 1),             //< region is Application code (=1) / OpenCV library code (=0)
-    REGION_FLAG_SKIP_NESTED = (1 << 2),          //< avoid processing of nested regions
+    REGION_FLAG_FUNCTION = (1 << 0),             ///< region is function (=1) / nested named region (=0)
+    REGION_FLAG_APP_CODE = (1 << 1),             ///< region is Application code (=1) / OpenCV library code (=0)
+    REGION_FLAG_SKIP_NESTED = (1 << 2),          ///< avoid processing of nested regions
 
-    REGION_FLAG_IMPL_IPP = (1 << 16),            //< region is part of IPP code path
-    REGION_FLAG_IMPL_OPENCL = (2 << 16),         //< region is part of OpenCL code path
-    REGION_FLAG_IMPL_OPENVX = (3 << 16),         //< region is part of OpenVX code path
+    REGION_FLAG_IMPL_IPP = (1 << 16),            ///< region is part of IPP code path
+    REGION_FLAG_IMPL_OPENCL = (2 << 16),         ///< region is part of OpenCL code path
+    REGION_FLAG_IMPL_OPENVX = (3 << 16),         ///< region is part of OpenVX code path
 
     REGION_FLAG_IMPL_MASK = (15 << 16),
 
     REGION_FLAG_REGION_FORCE = (1 << 30),
-    REGION_FLAG_REGION_NEXT = (1 << 31),         //< close previous region (see #CV_TRACE_REGION_NEXT macro)
+    REGION_FLAG_REGION_NEXT = (1 << 31),         ///< close previous region (see #CV_TRACE_REGION_NEXT macro)
 
     ENUM_REGION_FLAG_FORCE_INT = INT_MAX
 };

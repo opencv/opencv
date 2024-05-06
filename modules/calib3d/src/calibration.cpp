@@ -254,32 +254,32 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
     CvMat matJ = cvMat( 3, 9, CV_64F, J );
 
     if( !CV_IS_MAT(src) )
-        CV_Error( !src ? CV_StsNullPtr : CV_StsBadArg, "Input argument is not a valid matrix" );
+        CV_Error( !src ? cv::Error::StsNullPtr : cv::Error::StsBadArg, "Input argument is not a valid matrix" );
 
     if( !CV_IS_MAT(dst) )
-        CV_Error( !dst ? CV_StsNullPtr : CV_StsBadArg,
+        CV_Error( !dst ? cv::Error::StsNullPtr : cv::Error::StsBadArg,
         "The first output argument is not a valid matrix" );
 
     int depth = CV_MAT_DEPTH(src->type);
     int elem_size = CV_ELEM_SIZE(depth);
 
     if( depth != CV_32F && depth != CV_64F )
-        CV_Error( CV_StsUnsupportedFormat, "The matrices must have 32f or 64f data type" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "The matrices must have 32f or 64f data type" );
 
     if( !CV_ARE_DEPTHS_EQ(src, dst) )
-        CV_Error( CV_StsUnmatchedFormats, "All the matrices must have the same data type" );
+        CV_Error( cv::Error::StsUnmatchedFormats, "All the matrices must have the same data type" );
 
     if( jacobian )
     {
         if( !CV_IS_MAT(jacobian) )
-            CV_Error( CV_StsBadArg, "Jacobian is not a valid matrix" );
+            CV_Error( cv::Error::StsBadArg, "Jacobian is not a valid matrix" );
 
         if( !CV_ARE_DEPTHS_EQ(src, jacobian) || CV_MAT_CN(jacobian->type) != 1 )
-            CV_Error( CV_StsUnmatchedFormats, "Jacobian must have 32fC1 or 64fC1 datatype" );
+            CV_Error( cv::Error::StsUnmatchedFormats, "Jacobian must have 32fC1 or 64fC1 datatype" );
 
         if( (jacobian->rows != 9 || jacobian->cols != 3) &&
             (jacobian->rows != 3 || jacobian->cols != 9))
-            CV_Error( CV_StsBadSize, "Jacobian must be 3x9 or 9x3" );
+            CV_Error( cv::Error::StsBadSize, "Jacobian must be 3x9 or 9x3" );
     }
 
     if( src->cols == 1 || src->rows == 1 )
@@ -287,10 +287,10 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
         int step = src->rows > 1 ? src->step / elem_size : 1;
 
         if( src->rows + src->cols*CV_MAT_CN(src->type) - 1 != 3 )
-            CV_Error( CV_StsBadSize, "Input matrix must be 1x3, 3x1 or 3x3" );
+            CV_Error( cv::Error::StsBadSize, "Input matrix must be 1x3, 3x1 or 3x3" );
 
         if( dst->rows != 3 || dst->cols != 3 || CV_MAT_CN(dst->type) != 1 )
-            CV_Error( CV_StsBadSize, "Output matrix must be 3x3, single-channel floating point matrix" );
+            CV_Error( cv::Error::StsBadSize, "Output matrix must be 3x3, single-channel floating point matrix" );
 
         Point3d r;
         if( depth == CV_32F )
@@ -368,7 +368,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
 
         if( (dst->rows != 1 || dst->cols*CV_MAT_CN(dst->type) != 3) &&
             (dst->rows != 3 || dst->cols != 1 || CV_MAT_CN(dst->type) != 1))
-            CV_Error( CV_StsBadSize, "Output matrix must be 1x3 or 3x1" );
+            CV_Error( cv::Error::StsBadSize, "Output matrix must be 1x3 or 3x1" );
 
         Matx33d R = cvarrToMat(src);
 
@@ -490,7 +490,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
     }
     else
     {
-        CV_Error(CV_StsBadSize, "Input matrix must be 1x3 or 3x1 for a rotation vector, or 3x3 for a rotation matrix");
+        CV_Error(cv::Error::StsBadSize, "Input matrix must be 1x3 or 3x1 for a rotation vector, or 3x3 for a rotation matrix");
     }
 
     if( jacobian )
@@ -553,13 +553,13 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
     if( !CV_IS_MAT(objectPoints) || !CV_IS_MAT(r_vec) ||
         !CV_IS_MAT(t_vec) || !CV_IS_MAT(A) ||
         /*!CV_IS_MAT(distCoeffs) ||*/ !CV_IS_MAT(imagePoints) )
-        CV_Error( CV_StsBadArg, "One of required arguments is not a valid matrix" );
+        CV_Error( cv::Error::StsBadArg, "One of required arguments is not a valid matrix" );
 
     int total = objectPoints->rows * objectPoints->cols * CV_MAT_CN(objectPoints->type);
     if(total % 3 != 0)
     {
         //we have stopped support of homogeneous coordinates because it cause ambiguity in interpretation of the input data
-        CV_Error( CV_StsBadArg, "Homogeneous coordinates are not supported" );
+        CV_Error( cv::Error::StsBadArg, "Homogeneous coordinates are not supported" );
     }
     count = total / 3;
 
@@ -576,7 +576,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
     {
 //        matM = cvCreateMat( 1, count, CV_64FC3 );
 //        cvConvertPointsHomogeneous( objectPoints, matM );
-        CV_Error( CV_StsBadArg, "Homogeneous coordinates are not supported" );
+        CV_Error( cv::Error::StsBadArg, "Homogeneous coordinates are not supported" );
     }
 
     if( CV_IS_CONT_MAT(imagePoints->type) &&
@@ -591,7 +591,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
     else
     {
 //        _m = cvCreateMat( 1, count, CV_64FC2 );
-        CV_Error( CV_StsBadArg, "Homogeneous coordinates are not supported" );
+        CV_Error( cv::Error::StsBadArg, "Homogeneous coordinates are not supported" );
     }
 
     M = (CvPoint3D64f*)matM->data.db;
@@ -601,7 +601,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         (((r_vec->rows != 1 && r_vec->cols != 1) ||
         r_vec->rows*r_vec->cols*CV_MAT_CN(r_vec->type) != 3) &&
         ((r_vec->rows != 3 && r_vec->cols != 3) || CV_MAT_CN(r_vec->type) != 1)))
-        CV_Error( CV_StsBadArg, "Rotation must be represented by 1x3 or 3x1 "
+        CV_Error( cv::Error::StsBadArg, "Rotation must be represented by 1x3 or 3x1 "
                   "floating-point rotation vector, or 3x3 rotation matrix" );
 
     if( r_vec->rows == 3 && r_vec->cols == 3 )
@@ -621,7 +621,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
     if( (CV_MAT_DEPTH(t_vec->type) != CV_64F && CV_MAT_DEPTH(t_vec->type) != CV_32F) ||
         (t_vec->rows != 1 && t_vec->cols != 1) ||
         t_vec->rows*t_vec->cols*CV_MAT_CN(t_vec->type) != 3 )
-        CV_Error( CV_StsBadArg,
+        CV_Error( cv::Error::StsBadArg,
             "Translation vector must be 1x3 or 3x1 floating-point vector" );
 
     _t = cvMat( t_vec->rows, t_vec->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(t_vec->type)), t );
@@ -629,7 +629,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
 
     if( (CV_MAT_TYPE(A->type) != CV_64FC1 && CV_MAT_TYPE(A->type) != CV_32FC1) ||
         A->rows != 3 || A->cols != 3 )
-        CV_Error( CV_StsBadArg, "Intrinsic parameters must be 3x3 floating-point matrix" );
+        CV_Error( cv::Error::StsBadArg, "Intrinsic parameters must be 3x3 floating-point matrix" );
 
     cvConvert( A, &_a );
     fx = a[0]; fy = a[4];
@@ -649,7 +649,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
             distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) != 8 &&
             distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) != 12 &&
             distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) != 14) )
-            CV_Error( CV_StsBadArg, cvDistCoeffErr );
+            CV_Error( cv::Error::StsBadArg, cvDistCoeffErr );
 
         _k = cvMat( distCoeffs->rows, distCoeffs->cols,
                     CV_MAKETYPE(CV_64F,CV_MAT_CN(distCoeffs->type)), k );
@@ -667,7 +667,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
             (CV_MAT_TYPE(dpdr->type) != CV_32FC1 &&
             CV_MAT_TYPE(dpdr->type) != CV_64FC1) ||
             dpdr->rows != count*2 || dpdr->cols != 3 )
-            CV_Error( CV_StsBadArg, "dp/drot must be 2Nx3 floating-point matrix" );
+            CV_Error( cv::Error::StsBadArg, "dp/drot must be 2Nx3 floating-point matrix" );
 
         if( CV_MAT_TYPE(dpdr->type) == CV_64FC1 )
         {
@@ -685,7 +685,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
             (CV_MAT_TYPE(dpdt->type) != CV_32FC1 &&
             CV_MAT_TYPE(dpdt->type) != CV_64FC1) ||
             dpdt->rows != count*2 || dpdt->cols != 3 )
-            CV_Error( CV_StsBadArg, "dp/dT must be 2Nx3 floating-point matrix" );
+            CV_Error( cv::Error::StsBadArg, "dp/dT must be 2Nx3 floating-point matrix" );
 
         if( CV_MAT_TYPE(dpdt->type) == CV_64FC1 )
         {
@@ -702,7 +702,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         if( !CV_IS_MAT(dpdf) ||
             (CV_MAT_TYPE(dpdf->type) != CV_32FC1 && CV_MAT_TYPE(dpdf->type) != CV_64FC1) ||
             dpdf->rows != count*2 || dpdf->cols != 2 )
-            CV_Error( CV_StsBadArg, "dp/df must be 2Nx2 floating-point matrix" );
+            CV_Error( cv::Error::StsBadArg, "dp/df must be 2Nx2 floating-point matrix" );
 
         if( CV_MAT_TYPE(dpdf->type) == CV_64FC1 )
         {
@@ -719,7 +719,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         if( !CV_IS_MAT(dpdc) ||
             (CV_MAT_TYPE(dpdc->type) != CV_32FC1 && CV_MAT_TYPE(dpdc->type) != CV_64FC1) ||
             dpdc->rows != count*2 || dpdc->cols != 2 )
-            CV_Error( CV_StsBadArg, "dp/dc must be 2Nx2 floating-point matrix" );
+            CV_Error( cv::Error::StsBadArg, "dp/dc must be 2Nx2 floating-point matrix" );
 
         if( CV_MAT_TYPE(dpdc->type) == CV_64FC1 )
         {
@@ -736,10 +736,10 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         if( !CV_IS_MAT(dpdk) ||
             (CV_MAT_TYPE(dpdk->type) != CV_32FC1 && CV_MAT_TYPE(dpdk->type) != CV_64FC1) ||
             dpdk->rows != count*2 || (dpdk->cols != 14 && dpdk->cols != 12 && dpdk->cols != 8 && dpdk->cols != 5 && dpdk->cols != 4 && dpdk->cols != 2) )
-            CV_Error( CV_StsBadArg, "dp/df must be 2Nx14, 2Nx12, 2Nx8, 2Nx5, 2Nx4 or 2Nx2 floating-point matrix" );
+            CV_Error( cv::Error::StsBadArg, "dp/df must be 2Nx14, 2Nx12, 2Nx8, 2Nx5, 2Nx4 or 2Nx2 floating-point matrix" );
 
         if( !distCoeffs )
-            CV_Error( CV_StsNullPtr, "distCoeffs is NULL while dpdk is not" );
+            CV_Error( cv::Error::StsNullPtr, "distCoeffs is NULL while dpdk is not" );
 
         if( CV_MAT_TYPE(dpdk->type) == CV_64FC1 )
         {
@@ -756,7 +756,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         if( !CV_IS_MAT( dpdo ) || ( CV_MAT_TYPE( dpdo->type ) != CV_32FC1
                                     && CV_MAT_TYPE( dpdo->type ) != CV_64FC1 )
             || dpdo->rows != count * 2 || dpdo->cols != count * 3 )
-            CV_Error( CV_StsBadArg, "dp/do must be 2Nx3N floating-point matrix" );
+            CV_Error( cv::Error::StsBadArg, "dp/do must be 2Nx3N floating-point matrix" );
 
         if( CV_MAT_TYPE( dpdo->type ) == CV_64FC1 )
         {
@@ -1283,10 +1283,10 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
         CV_MAT_TYPE(objectPoints->type) != CV_64FC3) ||
         (CV_MAT_TYPE(imagePoints->type) != CV_32FC2 &&
         CV_MAT_TYPE(imagePoints->type) != CV_64FC2) )
-        CV_Error( CV_StsUnsupportedFormat, "Both object points and image points must be 2D" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Both object points and image points must be 2D" );
 
     if( objectPoints->rows != 1 || imagePoints->rows != 1 )
-        CV_Error( CV_StsBadSize, "object points and image points must be a single-row matrices" );
+        CV_Error( cv::Error::StsBadSize, "object points and image points must be a single-row matrices" );
 
     matA.reset(cvCreateMat( 2*nimages, 2, CV_64F ));
     _b.reset(cvCreateMat( 2*nimages, 1, CV_64F ));
@@ -1395,27 +1395,27 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     // 0. check the parameters & allocate buffers
     if( !CV_IS_MAT(objectPoints) || !CV_IS_MAT(imagePoints) ||
         !CV_IS_MAT(npoints) || !CV_IS_MAT(cameraMatrix) || !CV_IS_MAT(distCoeffs) )
-        CV_Error( CV_StsBadArg, "One of required vector arguments is not a valid matrix" );
+        CV_Error( cv::Error::StsBadArg, "One of required vector arguments is not a valid matrix" );
 
     if( imageSize.width <= 0 || imageSize.height <= 0 )
-        CV_Error( CV_StsOutOfRange, "image width and height must be positive" );
+        CV_Error( cv::Error::StsOutOfRange, "image width and height must be positive" );
 
     if( CV_MAT_TYPE(npoints->type) != CV_32SC1 ||
         (npoints->rows != 1 && npoints->cols != 1) )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
             "the array of point counters must be 1-dimensional integer vector" );
     if(flags & CALIB_TILTED_MODEL)
     {
         //when the tilted sensor model is used the distortion coefficients matrix must have 14 parameters
         if (distCoeffs->cols*distCoeffs->rows != 14)
-            CV_Error( CV_StsBadArg, "The tilted sensor model must have 14 parameters in the distortion matrix" );
+            CV_Error( cv::Error::StsBadArg, "The tilted sensor model must have 14 parameters in the distortion matrix" );
     }
     else
     {
         //when the thin prism model is used the distortion coefficients matrix must have 12 parameters
         if(flags & CALIB_THIN_PRISM_MODEL)
             if (distCoeffs->cols*distCoeffs->rows != 12)
-                CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
+                CV_Error( cv::Error::StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
     }
 
     nimages = npoints->rows*npoints->cols;
@@ -1428,7 +1428,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
             (CV_MAT_DEPTH(rvecs->type) != CV_32F && CV_MAT_DEPTH(rvecs->type) != CV_64F) ||
             ((rvecs->rows != nimages || (rvecs->cols*cn != 3 && rvecs->cols*cn != 9)) &&
             (rvecs->rows != 1 || rvecs->cols != nimages || cn != 3)) )
-            CV_Error( CV_StsBadArg, "the output array of rotation vectors must be 3-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of rotation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 or nx9 array, where n is the number of views" );
     }
 
@@ -1439,7 +1439,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
             (CV_MAT_DEPTH(tvecs->type) != CV_32F && CV_MAT_DEPTH(tvecs->type) != CV_64F) ||
             ((tvecs->rows != nimages || tvecs->cols*cn != 3) &&
             (tvecs->rows != 1 || tvecs->cols != nimages || cn != 3)) )
-            CV_Error( CV_StsBadArg, "the output array of translation vectors must be 3-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of translation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
 
@@ -1454,7 +1454,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
             (stdDevs->rows != 1 || stdDevs->cols != (nimages*6 + NINTRINSIC) || cn != 1)) )
 #define STR__(x) #x
 #define STR_(x) STR__(x)
-            CV_Error( CV_StsBadArg, "the output array of standard deviations vectors must be 1-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of standard deviations vectors must be 1-channel "
                 "1x(n*6 + NINTRINSIC) or (n*6 + NINTRINSIC)x1 array, where n is the number of views,"
                 " NINTRINSIC = " STR_(CV_CALIB_NINTRINSIC));
     }
@@ -1462,7 +1462,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     if( (CV_MAT_TYPE(cameraMatrix->type) != CV_32FC1 &&
         CV_MAT_TYPE(cameraMatrix->type) != CV_64FC1) ||
         cameraMatrix->rows != 3 || cameraMatrix->cols != 3 )
-        CV_Error( CV_StsBadArg,
+        CV_Error( cv::Error::StsBadArg,
             "Intrinsic parameters must be 3x3 floating-point matrix" );
 
     if( (CV_MAT_TYPE(distCoeffs->type) != CV_32FC1 &&
@@ -1473,14 +1473,14 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
         distCoeffs->cols*distCoeffs->rows != 8 &&
         distCoeffs->cols*distCoeffs->rows != 12 &&
         distCoeffs->cols*distCoeffs->rows != 14) )
-        CV_Error( CV_StsBadArg, cvDistCoeffErr );
+        CV_Error( cv::Error::StsBadArg, cvDistCoeffErr );
 
     for( i = 0; i < nimages; i++ )
     {
         ni = npoints->data.i[i*npstep];
         if( ni < 4 )
         {
-            CV_Error_( CV_StsOutOfRange, ("The number of points in the view #%d is < 4", i));
+            CV_Error_( cv::Error::StsOutOfRange, ("The number of points in the view #%d is < 4", i));
         }
         maxPoints = MAX( maxPoints, ni );
         total += ni;
@@ -1493,7 +1493,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
             (CV_MAT_DEPTH(newObjPoints->type) != CV_32F && CV_MAT_DEPTH(newObjPoints->type) != CV_64F) ||
             ((newObjPoints->rows != maxPoints || newObjPoints->cols*cn != 3) &&
             (newObjPoints->rows != 1 || newObjPoints->cols != maxPoints || cn != 3)) )
-            CV_Error( CV_StsBadArg, "the output array of refined object points must be 3-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of refined object points must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of object points per view" );
     }
 
@@ -1504,7 +1504,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
             (CV_MAT_DEPTH(stdDevs->type) != CV_32F && CV_MAT_DEPTH(stdDevs->type) != CV_64F) ||
             ((stdDevs->rows != (nimages*6 + NINTRINSIC + maxPoints*3) || stdDevs->cols*cn != 1) &&
             (stdDevs->rows != 1 || stdDevs->cols != (nimages*6 + NINTRINSIC + maxPoints*3) || cn != 1)) )
-            CV_Error( CV_StsBadArg, "the output array of standard deviations vectors must be 1-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of standard deviations vectors must be 1-channel "
                 "1x(n*6 + NINTRINSIC + m*3) or (n*6 + NINTRINSIC + m*3)x1 array, where n is the number of views,"
                 " NINTRINSIC = " STR_(CV_CALIB_NINTRINSIC) ", m is the number of object points per view");
     }
@@ -1544,15 +1544,15 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     {
         cvConvert( cameraMatrix, &matA );
         if( A(0, 0) <= 0 || A(1, 1) <= 0 )
-            CV_Error( CV_StsOutOfRange, "Focal length (fx and fy) must be positive" );
+            CV_Error( cv::Error::StsOutOfRange, "Focal length (fx and fy) must be positive" );
         if( A(0, 2) < 0 || A(0, 2) >= imageSize.width ||
             A(1, 2) < 0 || A(1, 2) >= imageSize.height )
-            CV_Error( CV_StsOutOfRange, "Principal point must be within the image" );
+            CV_Error( cv::Error::StsOutOfRange, "Principal point must be within the image" );
         if( fabs(A(0, 1)) > 1e-5 )
-            CV_Error( CV_StsOutOfRange, "Non-zero skew is not supported by the function" );
+            CV_Error( cv::Error::StsOutOfRange, "Non-zero skew is not supported by the function" );
         if( fabs(A(1, 0)) > 1e-5 || fabs(A(2, 0)) > 1e-5 ||
             fabs(A(2, 1)) > 1e-5 || fabs(A(2,2)-1) > 1e-5 )
-            CV_Error( CV_StsOutOfRange,
+            CV_Error( cv::Error::StsOutOfRange,
                 "The intrinsic matrix must have [fx 0 cx; 0 fy cy; 0 0 1] shape" );
         A(0, 1) = A(1, 0) = A(2, 0) = A(2, 1) = 0.;
         A(2, 2) = 1.;
@@ -1562,7 +1562,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
             aspectRatio = A(0, 0)/A(1, 1);
 
             if( aspectRatio < minValidAspectRatio || aspectRatio > maxValidAspectRatio )
-                CV_Error( CV_StsOutOfRange,
+                CV_Error( cv::Error::StsOutOfRange,
                     "The specified aspect ratio (= cameraMatrix[0][0] / cameraMatrix[1][1]) is incorrect" );
         }
         cvConvert( distCoeffs, &_k );
@@ -1572,7 +1572,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
         Scalar mean, sdv;
         meanStdDev(matM, mean, sdv);
         if( fabs(mean[2]) > 1e-5 || fabs(sdv[2]) > 1e-5 )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
             "For non-planar calibration rigs the initial intrinsic matrix must be specified" );
         for( i = 0; i < total; i++ )
             matM.at<Point3d>(i).z = 0.;
@@ -1582,7 +1582,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
             aspectRatio = cvmGet(cameraMatrix,0,0);
             aspectRatio /= cvmGet(cameraMatrix,1,1);
             if( aspectRatio < minValidAspectRatio || aspectRatio > maxValidAspectRatio )
-                CV_Error( CV_StsOutOfRange,
+                CV_Error( cv::Error::StsOutOfRange,
                     "The specified aspect ratio (= cameraMatrix[0][0] / cameraMatrix[1][1]) is incorrect" );
         }
         CvMat _matM = cvMat(matM), m = cvMat(_m);
@@ -1673,7 +1673,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     Mat mask = cvarrToMat(solver.mask);
     int nparams_nz = countNonZero(mask);
     if (nparams_nz >= 2 * total)
-        CV_Error_(CV_StsBadArg,
+        CV_Error_(cv::Error::StsBadArg,
                   ("There should be less vars to optimize (having %d) than the number of residuals (%d = 2 per point)", nparams_nz, 2 * total));
 
     // 2. initialize extrinsic parameters
@@ -1889,10 +1889,10 @@ CV_IMPL double cvCalibrateCamera4( const CvMat* objectPoints,
                     CvMat* rvecs, CvMat* tvecs, CvMat* newObjPoints, int flags, CvTermCriteria termCrit )
 {
     if( !CV_IS_MAT(npoints) )
-        CV_Error( CV_StsBadArg, "npoints is not a valid matrix" );
+        CV_Error( cv::Error::StsBadArg, "npoints is not a valid matrix" );
     if( CV_MAT_TYPE(npoints->type) != CV_32SC1 ||
         (npoints->rows != 1 && npoints->cols != 1) )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
             "the array of point counters must be 1-dimensional integer vector" );
 
     bool releaseObject = iFixedPoint > 0 && iFixedPoint < npoints->data.i[0] - 1;
@@ -1903,7 +1903,7 @@ CV_IMPL double cvCalibrateCamera4( const CvMat* objectPoints,
     if( releaseObject )
     {
         if( !CV_IS_MAT(objectPoints) )
-            CV_Error( CV_StsBadArg, "objectPoints is not a valid matrix" );
+            CV_Error( cv::Error::StsBadArg, "objectPoints is not a valid matrix" );
         Mat matM;
         if(CV_MAT_CN(objectPoints->type) == 3) {
             matM = cvarrToMat(objectPoints);
@@ -1917,14 +1917,14 @@ CV_IMPL double cvCalibrateCamera4( const CvMat* objectPoints,
         {
             if( npoints->data.i[i * npstep] != ni )
             {
-                CV_Error( CV_StsBadArg, "All objectPoints[i].size() should be equal when "
+                CV_Error( cv::Error::StsBadArg, "All objectPoints[i].size() should be equal when "
                                         "object-releasing method is requested." );
             }
             Mat ocmp = matM.colRange(ni * i, ni * i + ni) != matM.colRange(0, ni);
             ocmp = ocmp.reshape(1);
             if( countNonZero(ocmp) )
             {
-                CV_Error( CV_StsBadArg, "All objectPoints[i] should be identical when object-releasing"
+                CV_Error( cv::Error::StsBadArg, "All objectPoints[i] should be identical when object-releasing"
                                         " method is requested." );
             }
         }
@@ -1941,10 +1941,10 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
 {
     /* Validate parameters. */
     if(calibMatr == 0)
-        CV_Error(CV_StsNullPtr, "Some of parameters is a NULL pointer!");
+        CV_Error(cv::Error::StsNullPtr, "Some of parameters is a NULL pointer!");
 
     if(!CV_IS_MAT(calibMatr))
-        CV_Error(CV_StsUnsupportedFormat, "Input parameters must be matrices!");
+        CV_Error(cv::Error::StsUnsupportedFormat, "Input parameters must be matrices!");
 
     double dummy = .0;
     Point2d pp;
@@ -2023,7 +2023,7 @@ static double cvStereoCalibrateImpl( const CvMat* _objectPoints, const CvMat* _i
             (CV_MAT_DEPTH(rvecs->type) != CV_32F && CV_MAT_DEPTH(rvecs->type) != CV_64F) ||
             ((rvecs->rows != nimages || (rvecs->cols*cn != 3 && rvecs->cols*cn != 9)) &&
             (rvecs->rows != 1 || rvecs->cols != nimages || cn != 3)) )
-            CV_Error( CV_StsBadArg, "the output array of rotation vectors must be 3-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of rotation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 or nx9 array, where n is the number of views" );
     }
 
@@ -2034,7 +2034,7 @@ static double cvStereoCalibrateImpl( const CvMat* _objectPoints, const CvMat* _i
             (CV_MAT_DEPTH(tvecs->type) != CV_32F && CV_MAT_DEPTH(tvecs->type) != CV_64F) ||
             ((tvecs->rows != nimages || tvecs->cols*cn != 3) &&
             (tvecs->rows != 1 || tvecs->cols != nimages || cn != 3)) )
-            CV_Error( CV_StsBadArg, "the output array of translation vectors must be 3-channel "
+            CV_Error( cv::Error::StsBadArg, "the output array of translation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
 
@@ -2699,19 +2699,19 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
     if( alpha >= 0 )
     {
         double s0 = std::max(std::max(std::max((double)cx1/(cx1_0 - inner1.x), (double)cy1/(cy1_0 - inner1.y)),
-                            (double)(newImgSize.width - cx1)/(inner1.x + inner1.width - cx1_0)),
-                        (double)(newImgSize.height - cy1)/(inner1.y + inner1.height - cy1_0));
+                            (double)(newImgSize.width - 1 - cx1)/(inner1.x + inner1.width - cx1_0)),
+                        (double)(newImgSize.height - 1 - cy1)/(inner1.y + inner1.height - cy1_0));
         s0 = std::max(std::max(std::max(std::max((double)cx2/(cx2_0 - inner2.x), (double)cy2/(cy2_0 - inner2.y)),
-                         (double)(newImgSize.width - cx2)/(inner2.x + inner2.width - cx2_0)),
-                     (double)(newImgSize.height - cy2)/(inner2.y + inner2.height - cy2_0)),
+                         (double)(newImgSize.width - 1 - cx2)/(inner2.x + inner2.width - cx2_0)),
+                     (double)(newImgSize.height - 1 - cy2)/(inner2.y + inner2.height - cy2_0)),
                  s0);
 
         double s1 = std::min(std::min(std::min((double)cx1/(cx1_0 - outer1.x), (double)cy1/(cy1_0 - outer1.y)),
-                            (double)(newImgSize.width - cx1)/(outer1.x + outer1.width - cx1_0)),
-                        (double)(newImgSize.height - cy1)/(outer1.y + outer1.height - cy1_0));
+                            (double)(newImgSize.width - 1 - cx1)/(outer1.x + outer1.width - cx1_0)),
+                        (double)(newImgSize.height - 1 - cy1)/(outer1.y + outer1.height - cy1_0));
         s1 = std::min(std::min(std::min(std::min((double)cx2/(cx2_0 - outer2.x), (double)cy2/(cy2_0 - outer2.y)),
-                         (double)(newImgSize.width - cx2)/(outer2.x + outer2.width - cx2_0)),
-                     (double)(newImgSize.height - cy2)/(outer2.y + outer2.height - cy2_0)),
+                         (double)(newImgSize.width - 1 - cx2)/(outer2.x + outer2.width - cx2_0)),
+                     (double)(newImgSize.height - 1 - cy2)/(outer2.y + outer2.height - cy2_0)),
                  s1);
 
         s = s0*(1 - alpha) + s1*alpha;
@@ -3188,9 +3188,9 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
     Qx = ( 0  c  s ), c = m33/sqrt(m32^2 + m33^2), s = m32/sqrt(m32^2 + m33^2)
          ( 0 -s  c )
     */
-    s = matM[2][1];
-    c = matM[2][2];
-    z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
+    s = std::abs(matM[2][1]) > DBL_EPSILON ? matM[2][1] : 0;
+    c = std::abs(matM[2][1]) > DBL_EPSILON ? matM[2][2] : 1;
+    z = 1./std::sqrt(c * c + s * s);
     c *= z;
     s *= z;
 
@@ -3207,9 +3207,9 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
     Qy = ( 0  1  0 ), c = m33/sqrt(m31^2 + m33^2), s = -m31/sqrt(m31^2 + m33^2)
          ( s  0  c )
     */
-    s = -matR[2][0];
-    c = matR[2][2];
-    z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
+    s = std::abs(matR[2][0]) > DBL_EPSILON ? -matR[2][0] : 0;
+    c = std::abs(matR[2][0]) > DBL_EPSILON ? matR[2][2] : 1;
+    z = 1./std::sqrt(c * c + s * s);
     c *= z;
     s *= z;
 
@@ -3227,9 +3227,9 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
          ( 0  0  1 )
     */
 
-    s = matM[1][0];
-    c = matM[1][1];
-    z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
+    s = std::abs(matM[1][0]) > DBL_EPSILON ? matM[1][0] : 0;
+    c = std::abs(matM[1][0]) > DBL_EPSILON ? matM[1][1] : 1;
+    z = 1./std::sqrt(c * c + s * s);
     c *= z;
     s *= z;
 
@@ -3344,19 +3344,19 @@ cvDecomposeProjectionMatrix( const CvMat *projMatr, CvMat *calibMatr,
 
     /* Validate parameters. */
     if(projMatr == 0 || calibMatr == 0 || rotMatr == 0 || posVect == 0)
-        CV_Error(CV_StsNullPtr, "Some of parameters is a NULL pointer!");
+        CV_Error(cv::Error::StsNullPtr, "Some of parameters is a NULL pointer!");
 
     if(!CV_IS_MAT(projMatr) || !CV_IS_MAT(calibMatr) || !CV_IS_MAT(rotMatr) || !CV_IS_MAT(posVect))
-        CV_Error(CV_StsUnsupportedFormat, "Input parameters must be matrices!");
+        CV_Error(cv::Error::StsUnsupportedFormat, "Input parameters must be matrices!");
 
     if(projMatr->cols != 4 || projMatr->rows != 3)
-        CV_Error(CV_StsUnmatchedSizes, "Size of projection matrix must be 3x4!");
+        CV_Error(cv::Error::StsUnmatchedSizes, "Size of projection matrix must be 3x4!");
 
     if(calibMatr->cols != 3 || calibMatr->rows != 3 || rotMatr->cols != 3 || rotMatr->rows != 3)
-        CV_Error(CV_StsUnmatchedSizes, "Size of calibration and rotation matrices must be 3x3!");
+        CV_Error(cv::Error::StsUnmatchedSizes, "Size of calibration and rotation matrices must be 3x3!");
 
     if(posVect->cols != 1 || posVect->rows != 4)
-        CV_Error(CV_StsUnmatchedSizes, "Size of position vector must be 4x1!");
+        CV_Error(cv::Error::StsUnmatchedSizes, "Size of position vector must be 4x1!");
 
     /* Compute position vector. */
     cvSetZero(&tmpProjMatr); // Add zero row to make matrix square.
@@ -3402,17 +3402,17 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
     {
         Mat objectPoint = objectPoints.getMat(i);
         if (objectPoint.empty())
-            CV_Error(CV_StsBadSize, "objectPoints should not contain empty vector of vectors of points");
+            CV_Error(cv::Error::StsBadSize, "objectPoints should not contain empty vector of vectors of points");
         int numberOfObjectPoints = objectPoint.checkVector(3, CV_32F);
         if (numberOfObjectPoints <= 0)
-            CV_Error(CV_StsUnsupportedFormat, "objectPoints should contain vector of vectors of points of type Point3f");
+            CV_Error(cv::Error::StsUnsupportedFormat, "objectPoints should contain vector of vectors of points of type Point3f");
 
         Mat imagePoint1 = imagePoints1.getMat(i);
         if (imagePoint1.empty())
-            CV_Error(CV_StsBadSize, "imagePoints1 should not contain empty vector of vectors of points");
+            CV_Error(cv::Error::StsBadSize, "imagePoints1 should not contain empty vector of vectors of points");
         int numberOfImagePoints = imagePoint1.checkVector(2, CV_32F);
         if (numberOfImagePoints <= 0)
-            CV_Error(CV_StsUnsupportedFormat, "imagePoints1 should contain vector of vectors of points of type Point2f");
+            CV_Error(cv::Error::StsUnsupportedFormat, "imagePoints1 should contain vector of vectors of points of type Point2f");
         CV_CheckEQ(numberOfObjectPoints, numberOfImagePoints, "Number of object and image points must be equal");
 
         total += numberOfObjectPoints;
@@ -3467,14 +3467,14 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
         {
             if( npoints.at<int>(i) != ni )
             {
-                CV_Error( CV_StsBadArg, "All objectPoints[i].size() should be equal when "
+                CV_Error( cv::Error::StsBadArg, "All objectPoints[i].size() should be equal when "
                                         "object-releasing method is requested." );
             }
             Mat ocmp = objPtMat.colRange(ni * i, ni * i + ni) != objPtMat.colRange(0, ni);
             ocmp = ocmp.reshape(1);
             if( countNonZero(ocmp) )
             {
-                CV_Error( CV_StsBadArg, "All objectPoints[i] should be identical when object-releasing"
+                CV_Error( cv::Error::StsBadArg, "All objectPoints[i] should be identical when object-releasing"
                                         " method is requested." );
             }
         }
@@ -3884,7 +3884,7 @@ void cv::calibrationMatrixValues( InputArray _cameraMatrix, Size imageSize,
     CV_INSTRUMENT_REGION();
 
     if(_cameraMatrix.size() != Size(3, 3))
-        CV_Error(CV_StsUnmatchedSizes, "Size of cameraMatrix must be 3x3!");
+        CV_Error(cv::Error::StsUnmatchedSizes, "Size of cameraMatrix must be 3x3!");
 
     Matx33d K = _cameraMatrix.getMat();
 

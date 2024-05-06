@@ -612,7 +612,7 @@ TEST(Charuco, testBoardSubpixelCoords)
     cv::GaussianBlur(gray, gray, Size(5, 5), 1.0);
 
     aruco::DetectorParameters params;
-    params.cornerRefinementMethod = cv::aruco::CORNER_REFINE_APRILTAG;
+    params.cornerRefinementMethod = (int)cv::aruco::CORNER_REFINE_APRILTAG;
 
     aruco::CharucoParameters charucoParameters;
     charucoParameters.cameraMatrix = K;
@@ -636,7 +636,7 @@ TEST(Charuco, issue_14014)
     Mat img = imread(imgPath);
 
     aruco::DetectorParameters detectorParams;
-    detectorParams.cornerRefinementMethod = aruco::CORNER_REFINE_SUBPIX;
+    detectorParams.cornerRefinementMethod = (int)aruco::CORNER_REFINE_SUBPIX;
     detectorParams.cornerRefinementMinAccuracy = 0.01;
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_7X7_250), detectorParams);
     aruco::CharucoBoard board(Size(8, 5), 0.03455f, 0.02164f, detector.getDictionary());
@@ -650,7 +650,7 @@ TEST(Charuco, issue_14014)
     EXPECT_EQ(Size(4, 1), corners[0].size()); // check dimension of detected corners
 
     size_t numRejPoints = rejectedPoints.size();
-    ASSERT_EQ(rejectedPoints.size(), 26ull); // optional check to track regressions
+    ASSERT_EQ(rejectedPoints.size(), 24ull); // optional check to track regressions
     EXPECT_EQ(Size(4, 1), rejectedPoints[0].size()); // check dimension of detected corners
 
     detector.refineDetectedMarkers(img, board, corners, ids, rejectedPoints);
@@ -687,6 +687,191 @@ TEST(Charuco, testmatchImagePoints)
         EXPECT_EQ(chessboardPoints[i].x, objPoints[i].x);
         EXPECT_EQ(chessboardPoints[i].y, objPoints[i].y);
     }
+}
+
+typedef testing::TestWithParam<int> CharucoDraw;
+INSTANTIATE_TEST_CASE_P(/**/, CharucoDraw, testing::Values(CV_8UC2, CV_8SC2, CV_16UC2, CV_16SC2, CV_32SC2, CV_32FC2, CV_64FC2));
+TEST_P(CharucoDraw, testDrawDetected) {
+    vector<vector<Point>> detected_golds = {{Point(20, 20), Point(80, 20), Point(80, 80), Point2f(20, 80)}};
+    Point center_gold = (detected_golds[0][0] + detected_golds[0][1] + detected_golds[0][2] + detected_golds[0][3]) / 4;
+    int type = GetParam();
+    vector<Mat> detected(detected_golds[0].size(), Mat(4, 1, type));
+    // copy detected_golds to detected with any 2 channels type
+    for (size_t i = 0ull; i < detected_golds[0].size(); i++) {
+        detected[0].row((int)i) = Scalar(detected_golds[0][i].x, detected_golds[0][i].y);
+    }
+    vector<vector<Point>> contours;
+    Point detectedCenter;
+    Moments m;
+    Mat img;
+
+    // check drawDetectedMarkers
+    img = Mat::zeros(100, 100, CV_8UC1);
+    ASSERT_NO_THROW(aruco::drawDetectedMarkers(img, detected, noArray(), Scalar(255, 255, 255)));
+    // check that the marker borders are painted
+    findContours(img, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    ASSERT_EQ(contours.size(), 1ull);
+    m = moments(contours[0]);
+    detectedCenter = Point(cvRound(m.m10/m.m00), cvRound(m.m01/m.m00));
+    ASSERT_EQ(detectedCenter, center_gold);
+
+
+    // check drawDetectedCornersCharuco
+    img = Mat::zeros(100, 100, CV_8UC1);
+    ASSERT_NO_THROW(aruco::drawDetectedCornersCharuco(img, detected[0], noArray(), Scalar(255, 255, 255)));
+    // check that the 4 charuco corners are painted
+    findContours(img, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    ASSERT_EQ(contours.size(), 4ull);
+    for (size_t i = 0ull; i < 4ull; i++) {
+        m = moments(contours[i]);
+        detectedCenter = Point(cvRound(m.m10/m.m00), cvRound(m.m01/m.m00));
+        // detectedCenter must be in detected_golds
+        ASSERT_TRUE(find(detected_golds[0].begin(), detected_golds[0].end(), detectedCenter) != detected_golds[0].end());
+    }
+
+
+    // check drawDetectedDiamonds
+    img = Mat::zeros(100, 100, CV_8UC1);
+    ASSERT_NO_THROW(aruco::drawDetectedDiamonds(img, detected, noArray(), Scalar(255, 255, 255)));
+    // check that the diamonds borders are painted
+    findContours(img, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    ASSERT_EQ(contours.size(), 1ull);
+    m = moments(contours[0]);
+    detectedCenter = Point(cvRound(m.m10/m.m00), cvRound(m.m01/m.m00));
+    ASSERT_EQ(detectedCenter, center_gold);
+}
+
+typedef testing::TestWithParam<cv::Size> CharucoBoard;
+INSTANTIATE_TEST_CASE_P(/**/, CharucoBoard, testing::Values(Size(3, 2), Size(3, 2), Size(6, 2), Size(2, 6),
+                                                            Size(3, 4), Size(4, 3), Size(7, 3), Size(3, 7)));
+TEST_P(CharucoBoard, testWrongSizeDetection)
+{
+    cv::Size boardSize = GetParam();
+    ASSERT_FALSE(boardSize.width == boardSize.height);
+    aruco::CharucoBoard board(boardSize, 1.f, 0.5f, aruco::getPredefinedDictionary(aruco::DICT_4X4_50));
+
+    vector<int> detectedCharucoIds, detectedArucoIds;
+    vector<Point2f> detectedCharucoCorners;
+    vector<vector<Point2f>> detectedArucoCorners;
+    Mat boardImage;
+    board.generateImage(boardSize*40, boardImage);
+
+    swap(boardSize.width, boardSize.height);
+    aruco::CharucoDetector detector(aruco::CharucoBoard(boardSize, 1.f, 0.5f, aruco::getPredefinedDictionary(aruco::DICT_4X4_50)));
+    // try detect board with wrong size
+    detector.detectBoard(boardImage, detectedCharucoCorners, detectedCharucoIds, detectedArucoCorners, detectedArucoIds);
+
+    // aruco markers must be found
+    ASSERT_EQ(detectedArucoIds.size(), board.getIds().size());
+    ASSERT_EQ(detectedArucoCorners.size(), board.getIds().size());
+    // charuco corners should not be found in board with wrong size
+    ASSERT_TRUE(detectedCharucoCorners.empty());
+    ASSERT_TRUE(detectedCharucoIds.empty());
+}
+
+TEST(CharucoBoardGenerate, issue_24806)
+{
+    aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_1000);
+    const float squareLength = 13.f, markerLength = 10.f;
+    const Size boardSize(7ull, 4ull);
+    const aruco::CharucoBoard board(boardSize, squareLength, markerLength, dict);
+    const int marginSize = 24;
+    Mat boardImg;
+
+    // generate chessboard image
+    board.generateImage(Size(400, 300), boardImg, marginSize);
+    // This condition checks that the width of the image determines the dimensions of the chessboard in this test
+    CV_Assert((float)(boardImg.cols) / (float)boardSize.width <=
+              (float)(boardImg.rows) / (float)boardSize.height);
+
+    // prepare data for chessboard image test
+    Mat noMarginsImg = boardImg(Range(marginSize, boardImg.rows - marginSize),
+                                Range(marginSize, boardImg.cols - marginSize));
+    const float pixInSquare = (float)(noMarginsImg.cols) / (float)boardSize.width;
+
+    Size pixInChessboard(cvRound(pixInSquare*boardSize.width), cvRound(pixInSquare*boardSize.height));
+    const Point startChessboard((noMarginsImg.cols - pixInChessboard.width) / 2,
+                                (noMarginsImg.rows - pixInChessboard.height) / 2);
+    Mat chessboardZoneImg = noMarginsImg(Rect(startChessboard, pixInChessboard));
+
+    // B - black pixel, W - white pixel
+    // chessboard corner 1:
+    // B W
+    // W B
+    Mat goldCorner1 = (Mat_<uint8_t>(2, 2) <<
+        0, 255,
+        255, 0);
+    // B - black pixel, W - white pixel
+    // chessboard corner 2:
+    // W B
+    // B W
+    Mat goldCorner2 = (Mat_<uint8_t>(2, 2) <<
+        255, 0,
+        0, 255);
+
+    // test chessboard corners in generated image
+    for (const Point3f& p: board.getChessboardCorners()) {
+        Point2f chessCorner(pixInSquare*(p.x/squareLength),
+                            pixInSquare*(p.y/squareLength));
+        Mat winCorner = chessboardZoneImg(Rect(Point(cvRound(chessCorner.x) - 1, cvRound(chessCorner.y) - 1), Size(2, 2)));
+        bool eq = (cv::countNonZero(goldCorner1 != winCorner) == 0) || (cv::countNonZero(goldCorner2 != winCorner) == 0);
+        ASSERT_TRUE(eq);
+    }
+    // TODO: fix aruco generateImage and add test aruco corners for generated image
+}
+
+TEST(Charuco, testSeveralBoardsWithCustomIds)
+{
+    Size res{500, 500};
+    Mat K = (Mat_<double>(3,3) <<
+        0.5*res.width, 0, 0.5*res.width,
+        0, 0.5*res.height, 0.5*res.height,
+        0, 0, 1);
+
+    Mat expected_corners = (Mat_<float>(9,2) <<
+        200, 200,
+        250, 200,
+        300, 200,
+        200, 250,
+        250, 250,
+        300, 250,
+        200, 300,
+        250, 300,
+        300, 300
+    );
+
+
+    aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
+    vector<int> ids1 = {0, 1, 33, 3, 4, 5, 6, 8}, ids2 = {7, 9, 44, 11, 12, 13, 14, 15};
+    aruco::CharucoBoard board1(Size(4, 4), 1.f, .8f, dict, ids1), board2(Size(4, 4), 1.f, .8f, dict, ids2);
+
+    // generate ChArUco board
+    Mat gray;
+    {
+        Mat gray1, gray2;
+        board1.generateImage(Size(res.width, res.height), gray1, 150);
+        board2.generateImage(Size(res.width, res.height), gray2, 150);
+        hconcat(gray1, gray2, gray);
+    }
+
+    aruco::CharucoParameters charucoParameters;
+    charucoParameters.cameraMatrix = K;
+    aruco::CharucoDetector detector1(board1, charucoParameters), detector2(board2, charucoParameters);
+
+    vector<int> ids;
+    vector<Mat> corners;
+    Mat c_ids1, c_ids2, c_corners1, c_corners2;
+
+    detector1.detectBoard(gray, c_corners1, c_ids1, corners, ids);
+    detector2.detectBoard(gray, c_corners2, c_ids2, corners, ids);
+
+    ASSERT_EQ(ids.size(), size_t(16));
+    ASSERT_EQ(c_corners1.rows, expected_corners.rows);
+    EXPECT_NEAR(0, cvtest::norm(expected_corners, c_corners1.reshape(1), NORM_INF), 3e-1);
+
+    ASSERT_EQ(c_corners2.rows, expected_corners.rows);
+    expected_corners.col(0) += 500;
+    EXPECT_NEAR(0, cvtest::norm(expected_corners, c_corners2.reshape(1), NORM_INF), 3e-1);
 }
 
 }} // namespace

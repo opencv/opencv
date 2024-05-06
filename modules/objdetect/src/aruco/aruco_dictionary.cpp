@@ -258,6 +258,8 @@ Dictionary getPredefinedDictionary(PredefinedDictionaryType name) {
     static const Dictionary DICT_APRILTAG_36h10_DATA = Dictionary(Mat(2320, (6 * 6 + 7) / 8, CV_8UC4, (uchar*)DICT_APRILTAG_36h10_BYTES), 6, 0);
     static const Dictionary DICT_APRILTAG_36h11_DATA = Dictionary(Mat(587, (6 * 6 + 7) / 8, CV_8UC4, (uchar*)DICT_APRILTAG_36h11_BYTES), 6, 0);
 
+    static const Dictionary DICT_ARUCO_MIP_36h12_DATA = Dictionary(Mat(250, (6 * 6 + 7) / 8, CV_8UC4, (uchar*)DICT_ARUCO_MIP_36h12_BYTES), 6, 12);
+
     switch(name) {
 
     case DICT_ARUCO_ORIGINAL:
@@ -308,6 +310,8 @@ Dictionary getPredefinedDictionary(PredefinedDictionaryType name) {
     case DICT_APRILTAG_36h11:
         return Dictionary(DICT_APRILTAG_36h11_DATA);
 
+    case DICT_ARUCO_MIP_36h12:
+        return Dictionary(DICT_ARUCO_MIP_36h12_DATA);
     }
     return Dictionary(DICT_4X4_50_DATA);
 }
@@ -351,6 +355,7 @@ static int _getSelfDistance(const Mat &marker) {
 
 
 Dictionary extendDictionary(int nMarkers, int markerSize, const Dictionary &baseDictionary, int randomSeed) {
+    CV_Assert(nMarkers > 0);
     RNG rng((uint64)(randomSeed));
 
     Dictionary out = Dictionary(Mat(), markerSize);
@@ -366,7 +371,7 @@ Dictionary extendDictionary(int nMarkers, int markerSize, const Dictionary &base
     // if baseDictionary is provided, calculate its intermarker distance
     if(baseDictionary.bytesList.rows > 0) {
         CV_Assert(baseDictionary.markerSize == markerSize);
-        out.bytesList = baseDictionary.bytesList.clone();
+        out.bytesList = baseDictionary.bytesList.rowRange(0, min(nMarkers, baseDictionary.bytesList.rows)).clone();
 
         int minDistance = markerSize * markerSize + 1;
         for(int i = 0; i < out.bytesList.rows; i++) {

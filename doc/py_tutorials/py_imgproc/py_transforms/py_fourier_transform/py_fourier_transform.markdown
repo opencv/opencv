@@ -80,7 +80,7 @@ using **np.ifft2()** function. The result, again, will be a complex number. You 
 absolute value.
 @code{.py}
 rows, cols = img.shape
-crow,ccol = rows//2 , cols//2
+crow, ccol = rows//2, cols//2
 fshift[crow-30:crow+31, ccol-30:ccol+31] = 0
 f_ishift = np.fft.ifftshift(fshift)
 img_back = np.fft.ifft2(f_ishift)
@@ -146,7 +146,7 @@ content, and 0 at HF region.
 
 @code{.py}
 rows, cols = img.shape
-crow,ccol = rows/2 , cols/2
+crow, ccol = rows//2, cols//2
 
 # create a mask first, center square is 1, remaining all zeros
 mask = np.zeros((rows,cols,2),np.uint8)

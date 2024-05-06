@@ -51,19 +51,19 @@ CV_IMPL CvSeq* cvPointSeqFromMat( int seq_kind, const CvArr* arr,
     CvMat* mat = (CvMat*)arr;
 
     if( !CV_IS_MAT( mat ))
-        CV_Error( CV_StsBadArg, "Input array is not a valid matrix" );
+        CV_Error( cv::Error::StsBadArg, "Input array is not a valid matrix" );
 
     if( CV_MAT_CN(mat->type) == 1 && mat->width == 2 )
         mat = cvReshape(mat, &hdr, 2);
 
     eltype = CV_MAT_TYPE( mat->type );
     if( eltype != CV_32SC2 && eltype != CV_32FC2 )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
         "The matrix can not be converted to point sequence because of "
         "inappropriate element type" );
 
     if( (mat->width != 1 && mat->height != 1) || !CV_IS_MAT_CONT(mat->type))
-        CV_Error( CV_StsBadArg,
+        CV_Error( cv::Error::StsBadArg,
         "The matrix converted to point sequence must be "
         "1-dimensional and continuous" );
 

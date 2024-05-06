@@ -6,6 +6,7 @@
 #include "layers_common.hpp"
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
+#include "../ie_ngraph.hpp"
 
 namespace cv
 {
@@ -72,7 +73,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -185,6 +187,59 @@ public:
         }
         return flops;
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        std::vector<ov::Output<ov::Node>> ieInpNodes(nodes.size());
+        for (int i = 0; i < nodes.size(); ++i) {
+            ieInpNodes[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+        }
+
+        ieInpNodes[0] = ngraphDequantize(ieInpNodes[0], inp_sc[0], inp_zp[0]);
+
+        CV_Assert(!blobs.empty() || ieInpNodes.size() == 1 + (int)hasWeights + (int)hasBias);
+
+        ov::Output<ov::Node> weights, bias;
+        if (blobs.empty()) {
+            if (hasWeights)
+                weights = ieInpNodes[1];
+            if (hasBias)
+                bias = ieInpNodes[1 + (int)hasWeights];
+        } else {
+            std::vector<size_t> shape = ieInpNodes[0].get_shape();
+            int cAxis = normalize_axis(axis, shape.size());
+
+            size_t numWeights = blobs[0].total();
+            for (int i = 0; i < cAxis; ++i) {
+                shape[i] = 1;
+            }
+            for (int i = cAxis; i < shape.size(); ++i) {
+                if (numWeights == 1) {
+                    shape[i] = 1;
+                }
+                numWeights = std::max(numWeights / shape[i], (size_t)1);
+            }
+
+            if (hasWeights)
+                weights = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape, blobs[0].data);
+            if (hasBias)
+                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape, blobs[(int)hasWeights].data);
+        }
+
+        ov::Output<ov::Node> res = ieInpNodes[0];
+        if (hasWeights) {
+            res = std::make_shared<ov::op::v1::Multiply>(res, weights);
+        }
+        if (hasBias) {
+            res = std::make_shared<ov::op::v1::Add>(res, bias);
+        }
+
+        res = ngraphQuantize(res, output_sc, output_zp);
+
+        return new InfEngineNgraphNode(res);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     bool hasWeights;

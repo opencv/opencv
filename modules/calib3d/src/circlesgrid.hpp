@@ -186,6 +186,7 @@ private:
 
   const cv::Size_<size_t> patternSize;
   cv::CirclesGridFinderParameters parameters;
+  bool rotatedGrid = false;
 
   CirclesGridFinder& operator=(const CirclesGridFinder&);
   CirclesGridFinder(const CirclesGridFinder&);

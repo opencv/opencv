@@ -83,7 +83,7 @@ void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point
                 points2f[i] = keypoints[idx].pt;
             else
             {
-                CV_Error( CV_StsBadArg, "keypointIndexes has element < 0. TODO: process this case" );
+                CV_Error( cv::Error::StsBadArg, "keypointIndexes has element < 0. TODO: process this case" );
                 //points2f[i] = Point2f(-1, -1);
             }
         }
@@ -184,6 +184,11 @@ void RotatedRect::points(Point2f pt[]) const
     pt[2].y = 2*center.y - pt[0].y;
     pt[3].x = 2*center.x - pt[1].x;
     pt[3].y = 2*center.y - pt[1].y;
+}
+
+void RotatedRect::points(std::vector<Point2f>& pts) const {
+    pts.resize(4);
+    points(pts.data());
 }
 
 Rect RotatedRect::boundingRect() const

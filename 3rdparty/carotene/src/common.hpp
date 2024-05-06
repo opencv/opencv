@@ -58,6 +58,17 @@
 
 namespace CAROTENE_NS { namespace internal {
 
+#ifndef CAROTENE_NEON_ARCH
+#    if defined(__aarch64__) || defined(__aarch32__)
+#        define CAROTENE_NEON_ARCH 8
+#    else
+#        define CAROTENE_NEON_ARCH 7
+#    endif
+#endif
+#if ( !defined(__aarch64__) && !defined(__aarch32__) ) && (CAROTENE_NEON_ARCH == 8 )
+#    error("ARMv7 doen't support A32/A64 Neon instructions")
+#endif
+
 inline void prefetch(const void *ptr, size_t offset = 32*10)
 {
 #if defined __GNUC__

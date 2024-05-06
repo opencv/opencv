@@ -39,7 +39,8 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
     if(!fusion || (preferableBackend != DNN_BACKEND_OPENCV &&
                     preferableBackend != DNN_BACKEND_CUDA &&
                     preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
-                    preferableBackend != DNN_BACKEND_TIMVX))
+                    preferableBackend != DNN_BACKEND_TIMVX &&
+                    preferableBackend != DNN_BACKEND_VKCOM))
        return;
 
 #if 0  // FIXIT mode without fusion is broken due to unsupported layers and handling of "custom" nodes
@@ -111,7 +112,8 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                     break;
             }
 
-            if (preferableBackend != DNN_BACKEND_OPENCV && preferableBackend != DNN_BACKEND_CUDA)
+            if (preferableBackend != DNN_BACKEND_OPENCV && preferableBackend != DNN_BACKEND_CUDA
+                && preferableBackend != DNN_BACKEND_VKCOM)
                 continue;  // Go to the next layer.
 
             // TODO: OpenCL target support more fusion styles.
@@ -140,6 +142,28 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 Ptr<ActivationLayer> nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
                 if (nextActivLayer.empty())
                     break;
+
+                // For now, Vulkan target support fusion with activation of ReLU/ReLU6
+                if (IS_DNN_VULKAN_TARGET(preferableTarget))
+                {
+                    if (nextData->type == "ReLU")
+                    {
+                        Ptr<ReLULayer> nextReLULayer = nextData->layerInstance.dynamicCast<ReLULayer>();
+                        CV_Assert(nextReLULayer);
+                        if (nextReLULayer->negativeSlope != 0.0f)
+                            break; // Skip LeakyReLU
+                    }
+                    else if (nextData->type == "ReLU6")
+                    {
+                        Ptr<ReLU6Layer> nextReLU6Layer = nextData->layerInstance.dynamicCast<ReLU6Layer>();
+                        CV_Assert(nextReLU6Layer);
+
+                        if( fabs(nextReLU6Layer->minValue) > FLT_EPSILON || fabs(nextReLU6Layer->maxValue - 6.0f) > FLT_EPSILON)
+                            break; // Skip ReLU6 if the minValue != 0 or maxValue != 6.
+                    }
+                    else
+                        break;
+                }
 
                 if (currLayer->setActivation(nextActivLayer))
                 {
@@ -170,8 +194,8 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 // To avoid the order like: conv + activ + add, if we found the conv has been fused with activ, we break.
                 Ptr<ConvolutionLayer> convLayer = ld.layerInstance.dynamicCast<ConvolutionLayer>();
 
-                // Only Conv2D without fusion Activation supports this fusion, other-wise, we skip.
-                if (!convLayer->isConv2D || convLayer->fusedActivation)
+                // Only Convolution layer without fusion Activation supports this fusion, other-wise, we skip.
+                if (convLayer->fusedActivation)
                     break;
 
                 // For now, there are currently two layers in OpenCV that run the Add operator.
@@ -186,7 +210,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 if (!nextData->params.has("operation") || toLowerCase(nextData->params.get<String>("operation")) != "add")
                 {
                     CV_LOG_DEBUG(NULL, "DNN/CPU: fusion with NaryEltwise or Eltwise Layer operation is not supported: "
-                        << nextData->params.get<String>("operation"));
+                        << toLowerCase(nextData->params.get<String>("operation", "sum")));
                     break;
                 }
 
@@ -704,6 +728,10 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                     if(inp_i_data->skip || inp_i_data->consumers.size() != 1)
                         break;
 #ifdef HAVE_CUDA
+                    /* Risk: Not every operation in "NaryEltwise" is supported in the CUDA backend. There is a chance
+                             that Concat's output is filled with data in both host and device, leading to data missing.
+                             See https://github.com/opencv/opencv/issues/24721 for more details.
+                    */
                     if (preferableBackend == DNN_BACKEND_CUDA &&
                         (inp_i_data->layerInstance->supportBackend(DNN_BACKEND_CUDA) == false ||
                          (inp_i_data->layerInstance->type != "Convolution" &&

@@ -209,7 +209,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
             swap(sz1, sz2);
         }
         else if( !checkScalar(*psrc2, type1, kind2, kind1) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                       "The operation is neither 'array op array' (where arrays have the same size and type), "
                       "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
@@ -644,7 +644,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 oclop = OCL_OP_RDIV_SCALE;
         }
         else if( !checkScalar(*psrc2, type1, kind2, kind1) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The operation is neither 'array op array' "
                      "(where arrays have the same size and the same number of channels), "
                      "nor 'array op scalar', nor 'scalar op array'" );
@@ -669,7 +669,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         else
         {
             if( !haveScalar && type1 != type2 )
-                CV_Error(CV_StsBadArg,
+                CV_Error(cv::Error::StsBadArg,
                      "When the input arrays in add/subtract/multiply/divide functions have different types, "
                      "the output array type must be explicitly specified");
             dtype = type1;
@@ -1206,7 +1206,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             return;
         }
         else if(is_src1_scalar == is_src2_scalar)
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The operation is neither 'array op array' (where arrays have the same size and the same type), "
                      "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
@@ -1332,7 +1332,7 @@ struct InRange_SIMD
     }
 };
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 template <>
 struct InRange_SIMD<uchar>
@@ -1341,7 +1341,7 @@ struct InRange_SIMD<uchar>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = v_uint8::nlanes;
+        const int width = VTraits<v_uint8>::vlanes();
 
         for (; x <= len - width; x += width)
         {
@@ -1349,7 +1349,7 @@ struct InRange_SIMD<uchar>
             v_uint8 low = vx_load(src2 + x);
             v_uint8 high = vx_load(src3 + x);
 
-            v_store(dst + x, (values >= low) & (high >= values));
+            v_store(dst + x, v_and(v_ge(values, low), v_ge(high, values)));
         }
         vx_cleanup();
         return x;
@@ -1363,7 +1363,7 @@ struct InRange_SIMD<schar>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = v_int8::nlanes;
+        const int width = VTraits<v_int8>::vlanes();
 
         for (; x <= len - width; x += width)
         {
@@ -1371,7 +1371,7 @@ struct InRange_SIMD<schar>
             v_int8 low = vx_load(src2 + x);
             v_int8 high = vx_load(src3 + x);
 
-            v_store((schar*)(dst + x), (values >= low) & (high >= values));
+            v_store((schar*)(dst + x), v_and(v_ge(values, low), v_ge(high, values)));
         }
         vx_cleanup();
         return x;
@@ -1385,7 +1385,7 @@ struct InRange_SIMD<ushort>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = v_uint16::nlanes * 2;
+        const int width = VTraits<v_uint16>::vlanes() * 2;
 
         for (; x <= len - width; x += width)
         {
@@ -1393,11 +1393,11 @@ struct InRange_SIMD<ushort>
             v_uint16 low1 = vx_load(src2 + x);
             v_uint16 high1 = vx_load(src3 + x);
 
-            v_uint16 values2 = vx_load(src1 + x + v_uint16::nlanes);
-            v_uint16 low2 = vx_load(src2 + x + v_uint16::nlanes);
-            v_uint16 high2 = vx_load(src3 + x + v_uint16::nlanes);
+            v_uint16 values2 = vx_load(src1 + x + VTraits<v_uint16>::vlanes());
+            v_uint16 low2 = vx_load(src2 + x + VTraits<v_uint16>::vlanes());
+            v_uint16 high2 = vx_load(src3 + x + VTraits<v_uint16>::vlanes());
 
-            v_store(dst + x, v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
+            v_store(dst + x, v_pack(v_and(v_ge(values1, low1), v_ge(high1, values1)), v_and(v_ge(values2, low2), v_ge(high2, values2))));
         }
         vx_cleanup();
         return x;
@@ -1411,7 +1411,7 @@ struct InRange_SIMD<short>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = (int)v_int16::nlanes * 2;
+        const int width = (int)VTraits<v_int16>::vlanes() * 2;
 
         for (; x <= len - width; x += width)
         {
@@ -1419,11 +1419,11 @@ struct InRange_SIMD<short>
             v_int16 low1 = vx_load(src2 + x);
             v_int16 high1 = vx_load(src3 + x);
 
-            v_int16 values2 = vx_load(src1 + x + v_int16::nlanes);
-            v_int16 low2 = vx_load(src2 + x + v_int16::nlanes);
-            v_int16 high2 = vx_load(src3 + x + v_int16::nlanes);
+            v_int16 values2 = vx_load(src1 + x + VTraits<v_int16>::vlanes());
+            v_int16 low2 = vx_load(src2 + x + VTraits<v_int16>::vlanes());
+            v_int16 high2 = vx_load(src3 + x + VTraits<v_int16>::vlanes());
 
-            v_store((schar*)(dst + x), v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
+            v_store((schar*)(dst + x), v_pack(v_and(v_ge(values1, low1), v_ge(high1, values1)), v_and(v_ge(values2, low2), v_ge(high2, values2))));
         }
         vx_cleanup();
         return x;
@@ -1437,7 +1437,7 @@ struct InRange_SIMD<int>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = (int)v_int32::nlanes * 2;
+        const int width = (int)VTraits<v_int32>::vlanes() * 2;
 
         for (; x <= len - width; x += width)
         {
@@ -1445,11 +1445,11 @@ struct InRange_SIMD<int>
             v_int32 low1 = vx_load(src2 + x);
             v_int32 high1 = vx_load(src3 + x);
 
-            v_int32 values2 = vx_load(src1 + x + v_int32::nlanes);
-            v_int32 low2 = vx_load(src2 + x + v_int32::nlanes);
-            v_int32 high2 = vx_load(src3 + x + v_int32::nlanes);
+            v_int32 values2 = vx_load(src1 + x + VTraits<v_int32>::vlanes());
+            v_int32 low2 = vx_load(src2 + x + VTraits<v_int32>::vlanes());
+            v_int32 high2 = vx_load(src3 + x + VTraits<v_int32>::vlanes());
 
-            v_pack_store(dst + x, v_reinterpret_as_u16(v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2))));
+            v_pack_store(dst + x, v_reinterpret_as_u16(v_pack(v_and(v_ge(values1, low1), v_ge(high1, values1)), v_and(v_ge(values2, low2), v_ge(high2, values2)))));
         }
         vx_cleanup();
         return x;
@@ -1463,7 +1463,7 @@ struct InRange_SIMD<float>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = (int)v_float32::nlanes * 2;
+        const int width = (int)VTraits<v_float32>::vlanes() * 2;
 
         for (; x <= len - width; x += width)
         {
@@ -1471,12 +1471,12 @@ struct InRange_SIMD<float>
             v_float32 low1 = vx_load(src2 + x);
             v_float32 high1 = vx_load(src3 + x);
 
-            v_float32 values2 = vx_load(src1 + x + v_float32::nlanes);
-            v_float32 low2 = vx_load(src2 + x + v_float32::nlanes);
-            v_float32 high2 = vx_load(src3 + x + v_float32::nlanes);
+            v_float32 values2 = vx_load(src1 + x + VTraits<v_float32>::vlanes());
+            v_float32 low2 = vx_load(src2 + x + VTraits<v_float32>::vlanes());
+            v_float32 high2 = vx_load(src3 + x + VTraits<v_float32>::vlanes());
 
-            v_pack_store(dst + x, v_pack(v_reinterpret_as_u32(values1 >= low1) & v_reinterpret_as_u32(high1 >= values1),
-                                         v_reinterpret_as_u32(values2 >= low2) & v_reinterpret_as_u32(high2 >= values2)));
+            v_pack_store(dst + x, v_pack(v_and(v_reinterpret_as_u32(v_ge(values1, low1)), v_reinterpret_as_u32(v_ge(high1, values1))),
+                                         v_and(v_reinterpret_as_u32(v_ge(values2, low2)), v_reinterpret_as_u32(v_ge(high2, values2)))));
         }
         vx_cleanup();
         return x;
@@ -1615,7 +1615,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         ssize != lsize || stype != ltype )
     {
         if( !checkScalar(_lowerb, stype, lkind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The lower boundary is neither an array of the same size and same type as src, nor a scalar");
         lbScalar = true;
     }
@@ -1624,7 +1624,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         ssize != usize || stype != utype )
     {
         if( !checkScalar(_upperb, stype, ukind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The upper boundary is neither an array of the same size and same type as src, nor a scalar");
         ubScalar = true;
     }
@@ -1643,7 +1643,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     if (kercn % cn != 0)
         kercn = cn;
     int colsPerWI = kercn / cn;
-    String opts = format("%s-D cn=%d -D srcT=%s -D srcT1=%s -D dstT=%s -D kercn=%d -D depth=%d%s -D colsPerWI=%d",
+    String opts = format("%s-D CN=%d -D SRC_T=%s -D SRC_T1=%s -D DST_T=%s -D KERCN=%d -D DEPTH=%d%s -D COLS_PER_WI=%d",
                            haveScalar ? "-D HAVE_SCALAR " : "", cn, ocl::typeToStr(CV_MAKE_TYPE(sdepth, kercn)),
                            ocl::typeToStr(sdepth), ocl::typeToStr(CV_8UC(colsPerWI)), kercn, sdepth,
                            doubleSupport ? " -D DOUBLE_SUPPORT" : "", colsPerWI);
@@ -1738,7 +1738,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
         src.size != lb.size || src.type() != lb.type() )
     {
         if( !checkScalar(lb, src.type(), lkind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The lower boundary is neither an array of the same size and same type as src, nor a scalar");
         lbScalar = true;
     }
@@ -1747,7 +1747,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
         src.size != ub.size || src.type() != ub.type() )
     {
         if( !checkScalar(ub, src.type(), ukind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The upper boundary is neither an array of the same size and same type as src, nor a scalar");
         ubScalar = true;
     }

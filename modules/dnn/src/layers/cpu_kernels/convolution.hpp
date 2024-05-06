@@ -10,42 +10,39 @@
 #ifndef CONV_PRAM
 #define CONV_PRAM
 #if CV_NEON && CV_NEON_AARCH64  // 32 registers.
-#define CONV_MR 4
-#define CONV_NR 28
-#elif CV_NEON              // 16 registers.
-#define CONV_MR 4
-#define CONV_NR 12
-#else // SIMD 128, AVX or AVX2
-#define CONV_MR 4
-#define CONV_NR 24
+#define CONV_MR_FP32 4
+#define CONV_NR_FP32 28
+
+// The FP16 can only be supported by ARM64 and with FP16 FMA supported.
+#if CV_FP16 && CV_TRY_NEON_FP16 // check FP16 FMA.
+#define CONV_ARM_FP16 1
 #endif
 
-// Winograd Params
+#ifdef CONV_ARM_FP16
+// Currently, only ARM 64 support FP16.
+#define CONV_MR_FP16 8
+#define CONV_NR_FP16 24
+#endif
+
+#elif CV_NEON              // 16 registers.
+#define CONV_MR_FP32 4
+#define CONV_NR_FP32 12
+#else // SIMD 128, AVX or AVX2
+#define CONV_MR_FP32 4
+#define CONV_NR_FP32 24
+#endif
+
 enum {
     CONV_WINO_STEP=6,
     CONV_WINO_KSIZE=3,
-    CONV_WINO_SIZE=CONV_WINO_STEP+CONV_WINO_KSIZE-1, // 8
+    CONV_WINO_SIZE=CONV_WINO_STEP+CONV_WINO_KSIZE - 1, // 8
     CONV_WINO_AREA=CONV_WINO_SIZE*CONV_WINO_SIZE,
-
-    CONV_WINO_KBLOCK = 4,
-#if (CV_NEON && CV_NEON_AARCH64) || CV_TRY_AVX || CV_TRY_AVX2
-    CONV_WINO_IBLOCK = 6,
-#else
-    CONV_WINO_IBLOCK = 3,
-#endif
-
-#if CV_TRY_AVX || CV_TRY_AVX2
-    CONV_WINO_ATOM_F32 = 8,
-#else
-    CONV_WINO_ATOM_F32 = 4,
-#endif
-
-    CONV_WINO_NATOMS_F32 = CONV_WINO_AREA / CONV_WINO_ATOM_F32, // for AVX2, it is 8, otherwise, it's 16.
 };
 
 // NOTE that: CONV_TYPE_DEPTHWISE is for 3x3 depthwise conv, and others depthwise will be set as CONV_TYPE_DEPTHWISE_REMAIN.
 enum { CONV_TYPE_GENERIC=0, CONV_TYPE_DEPTHWISE=1, CONV_TYPE_WINOGRAD3X3=2, CONV_TYPE_DEPTHWISE_REMAIN=3 };
 enum { CONV_1D = 0, CONV_2D = 1, CONV_3D = 2 };
+
 #endif
 
 namespace cv {
@@ -60,12 +57,19 @@ struct FastConv
     int pad_top, pad_bottom, pad_left, pad_right, pad_front, pad_behind;
 
     std::vector<float> weightsBuf;     // For generic Conv 2D
-    float* weightsBufPtr;
     std::vector<float> weightsWinoBuf; // For Winograd F(6x6, 3x3).
-    float* weightsWinoBufPtr;
     std::vector<float> biasBuf;
+    float* getWeights();
+    float* getWeightsWino();
+
+    std::vector<hfloat> weightsBuf_FP16;
+    std::vector<hfloat> weightsWinoBuf_FP16;
+    hfloat* getWeightsFP16();
+    hfloat* getWeightsWinoFP16();
+
     int conv_type;
     int conv_dim;  // Flag for conv1d, conv2d, or conv3d.
+    bool useFP16 = false; // Only ARMv8 is supported.
 #if CV_SIMD128
     bool useSIMD128 = true;
 #else
@@ -95,6 +99,7 @@ Ptr<FastConv> initFastConv(
         const std::vector<size_t>& pads_begin,
         const std::vector<size_t>& pads_end,
         int conv_dim,
+        const bool useFP16,
         bool useWinograd);
 
 // It contains different computing branches, like winograd, 1x1 conv.
@@ -106,6 +111,32 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
 
 int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv, int ntasks,
                   float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct);
+
+// Work around of NEON, the following functions are only used internally.
+namespace opt_NEON {
+#if CV_NEON
+void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR);
+
+void convBlockMR1_F32(int np, const float* a, const float* b, float* c, const float bias, bool init_c,
+                      const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR);
+
+#if CV_NEON_AARCH64
+/* Accumulate */
+void winofunc_accum_F32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock,
+                    const int winoIblock, const int winoKblock, const int winoAtom, const int winoNatom);
+
+/*Input transform*/
+void winofunc_BtXB_8x8_F32(const float* inptr, int inpstep,
+                       float* outptr, int Cg, const int winoIblock, const int winoAtom);
+
+/*Output transform*/
+void winofunc_AtXA_8x8_F32(const float* inptr, int inpstep,
+                       float* bpptr, int bpstep, float* outptr, int outstep,
+                       float bias, float minval, float maxval, bool ifMinMaxAct);
+#endif // CV_NEON_AARCH64
+#endif // CV_NEON
+} // namespace opt_NEON.
+
 
 } // namespace dnn
 } // namespace cv

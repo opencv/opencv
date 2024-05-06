@@ -46,6 +46,9 @@ from cv_build_utils import execute, print_error, get_xcode_major, get_xcode_sett
 
 IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
 
+CURRENT_FILE_DIR = os.path.dirname(__file__)
+
+
 class Builder:
     def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, disable, enablenonfree, targets, debug, debug_info, framework_name, run_tests, build_docs, swiftdisabled):
         self.opencv = os.path.abspath(opencv)
@@ -115,7 +118,7 @@ class Builder:
             if xcode_ver >= 7 and target[1] == 'Catalyst':
                 sdk_path = check_output(["xcodebuild", "-version", "-sdk", "macosx", "Path"]).decode('utf-8').rstrip()
                 c_flags = [
-                    "-target %s-apple-ios13.0-macabi" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
+                    "-target %s-apple-ios14.0-macabi" % target[0],  # e.g. x86_64-apple-ios13.2-macabi # -mmacosx-version-min=10.15
                     "-isysroot %s" % sdk_path,
                     "-iframework %s/System/iOSSupport/System/Library/Frameworks" % sdk_path,
                     "-isystem %s/System/iOSSupport/usr/include" % sdk_path,
@@ -254,9 +257,9 @@ class Builder:
         toolchain = self.getToolchain(arch, target)
         cmakecmd = self.getCMakeArgs(arch, target) + \
             (["-DCMAKE_TOOLCHAIN_FILE=%s" % toolchain] if toolchain is not None else [])
-        if target.lower().startswith("iphoneos"):
+        if target.lower().startswith("iphoneos") or target.lower().startswith("xros"):
             cmakecmd.append("-DCPU_BASELINE=DETECT")
-        if target.lower().startswith("iphonesimulator"):
+        if target.lower().startswith("iphonesimulator") or target.lower().startswith("xrsimulator"):
             build_arch = check_output(["uname", "-m"]).decode('utf-8').rstrip()
             if build_arch != arch:
                 print("build_arch (%s) != arch (%s)" % (build_arch, arch))
@@ -341,7 +344,7 @@ class Builder:
     def makeDynamicLib(self, builddir):
         target = builddir[(builddir.rfind("build-") + 6):]
         target_platform = target[(target.rfind("-") + 1):]
-        is_device = target_platform == "iphoneos" or target_platform == "catalyst"
+        is_device = target_platform == "iphoneos" or target_platform == "visionos" or target_platform == "catalyst"
         framework_dir = os.path.join(builddir, "install", "lib", self.framework_name + ".framework")
         if not os.path.exists(framework_dir):
             os.makedirs(framework_dir)
@@ -358,7 +361,7 @@ class Builder:
             link_target = target[:target.find("-")] + "-apple-ios" + os.environ['IPHONEOS_DEPLOYMENT_TARGET'] + ("-simulator" if target.endswith("simulator") else "")
         else:
             if target_platform == "catalyst":
-                link_target = "%s-apple-ios13.0-macabi" % target[:target.find("-")]
+                link_target = "%s-apple-ios14.0-macabi" % target[:target.find("-")]
             else:
                 link_target = "%s-apple-darwin" % target[:target.find("-")]
         bitcode_flags = ["-fembed-bitcode", "-Xlinker", "-bitcode_verify"] if is_device and not self.bitcodedisabled else []
@@ -379,7 +382,7 @@ class Builder:
                 "-framework", "CoreImage", "-framework", "CoreMedia", "-framework", "QuartzCore",
                 "-framework", "Accelerate", "-framework", "OpenCL",
             ]
-        elif target_platform == "iphoneos" or target_platform == "iphonesimulator":
+        elif target_platform == "iphoneos" or target_platform == "iphonesimulator" or  target_platform == "xros" or target_platform == "xrsimulator":
             framework_options = [
                 "-iframework", "%s/System/iOSSupport/System/Library/Frameworks" % sdk_dir,
                 "-framework", "AVFoundation", "-framework", "CoreGraphics",
@@ -477,6 +480,9 @@ class Builder:
                 s = os.path.join(*l[0])
                 d = os.path.join(framework_dir, *l[1])
                 os.symlink(s, d)
+        # Copy Apple privacy manifest
+        shutil.copyfile(os.path.join(CURRENT_FILE_DIR, "PrivacyInfo.xcprivacy"),
+                        os.path.join(resdir, "PrivacyInfo.xcprivacy"))
 
     def copy_samples(self, outdir):
         return

@@ -101,7 +101,6 @@ public:
      * Print log message
      * @param level Log level
      * @param fmt Message format
-     * @return
      */
     static int log(int level, const char* fmt, ...)
     {

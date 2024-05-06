@@ -44,6 +44,8 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "filter.hpp"
 
+#include <cstddef>
+
 #if defined(CV_CPU_BASELINE_MODE)
 #if IPP_VERSION_X100 >= 710
 #define USE_IPP_SEP_FILTERS 1
@@ -84,7 +86,6 @@ Ptr<BaseFilter> getLinearFilter(
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-typedef int CV_DECL_ALIGNED(1) unaligned_int;
 #define VEC_ALIGN CV_MALLOC_ALIGN
 
 int FilterEngine__start(FilterEngine& this_, const Size &_wholeSize, const Size &sz, const Point &ofs)
@@ -304,7 +305,7 @@ void FilterEngine__apply(FilterEngine& this_, const Mat& src, Mat& dst, const Si
     FilterEngine__start(this_, wsz, src.size(), ofs);
     int y = this_.startY - ofs.y;
     FilterEngine__proceed(this_,
-            src.ptr() + y*src.step,
+            src.ptr() + y * (ptrdiff_t)src.step,
             (int)src.step,
             this_.endY - this_.startY,
             dst.ptr(),
@@ -347,7 +348,7 @@ struct FilterNoVec
 };
 
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 ///////////////////////////////////// 8u-16s & 8u-8u //////////////////////////////////
 
@@ -381,7 +382,7 @@ struct RowVec_8u32s
 
         if( smallValues )
         {
-            for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+            for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes() )
             {
                 const uchar* src = _src + i;
                 v_int32 s0 = vx_setzero_s32();
@@ -394,27 +395,27 @@ struct RowVec_8u32s
                     v_int32 f = vx_setall_s32((_kx[k] & 0xFFFF) | (_kx[k + 1] << 16));
                     v_uint8 x0, x1;
                     v_zip(vx_load(src), vx_load(src + cn), x0, x1);
-                    s0 += v_dotprod(v_reinterpret_as_s16(v_expand_low(x0)), v_reinterpret_as_s16(f));
-                    s1 += v_dotprod(v_reinterpret_as_s16(v_expand_high(x0)), v_reinterpret_as_s16(f));
-                    s2 += v_dotprod(v_reinterpret_as_s16(v_expand_low(x1)), v_reinterpret_as_s16(f));
-                    s3 += v_dotprod(v_reinterpret_as_s16(v_expand_high(x1)), v_reinterpret_as_s16(f));
+                    s0 = v_add(s0, v_dotprod(v_reinterpret_as_s16(v_expand_low(x0)), v_reinterpret_as_s16(f)));
+                    s1 = v_add(s1, v_dotprod(v_reinterpret_as_s16(v_expand_high(x0)), v_reinterpret_as_s16(f)));
+                    s2 = v_add(s2, v_dotprod(v_reinterpret_as_s16(v_expand_low(x1)), v_reinterpret_as_s16(f)));
+                    s3 = v_add(s3, v_dotprod(v_reinterpret_as_s16(v_expand_high(x1)), v_reinterpret_as_s16(f)));
                 }
                 if (k < _ksize)
                 {
                     v_int32 f = vx_setall_s32(_kx[k]);
                     v_uint16 x0, x1;
                     v_expand(vx_load(src), x0, x1);
-                    s0 += v_dotprod(v_reinterpret_as_s16(v_expand_low(x0)), v_reinterpret_as_s16(f));
-                    s1 += v_dotprod(v_reinterpret_as_s16(v_expand_high(x0)), v_reinterpret_as_s16(f));
-                    s2 += v_dotprod(v_reinterpret_as_s16(v_expand_low(x1)), v_reinterpret_as_s16(f));
-                    s3 += v_dotprod(v_reinterpret_as_s16(v_expand_high(x1)), v_reinterpret_as_s16(f));
+                    s0 = v_add(s0, v_dotprod(v_reinterpret_as_s16(v_expand_low(x0)), v_reinterpret_as_s16(f)));
+                    s1 = v_add(s1, v_dotprod(v_reinterpret_as_s16(v_expand_high(x0)), v_reinterpret_as_s16(f)));
+                    s2 = v_add(s2, v_dotprod(v_reinterpret_as_s16(v_expand_low(x1)), v_reinterpret_as_s16(f)));
+                    s3 = v_add(s3, v_dotprod(v_reinterpret_as_s16(v_expand_high(x1)), v_reinterpret_as_s16(f)));
                 }
                 v_store(dst + i, s0);
-                v_store(dst + i + v_int32::nlanes, s1);
-                v_store(dst + i + 2*v_int32::nlanes, s2);
-                v_store(dst + i + 3*v_int32::nlanes, s3);
+                v_store(dst + i + VTraits<v_int32>::vlanes(), s1);
+                v_store(dst + i + 2*VTraits<v_int32>::vlanes(), s2);
+                v_store(dst + i + 3*VTraits<v_int32>::vlanes(), s3);
             }
-            if( i <= width - v_uint16::nlanes )
+            if( i <= width - VTraits<v_uint16>::vlanes() )
             {
                 const uchar* src = _src + i;
                 v_int32 s0 = vx_setzero_s32();
@@ -425,22 +426,22 @@ struct RowVec_8u32s
                     v_int32 f = vx_setall_s32((_kx[k] & 0xFFFF) | (_kx[k + 1] << 16));
                     v_uint16 x0, x1;
                     v_zip(vx_load_expand(src), vx_load_expand(src + cn), x0, x1);
-                    s0 += v_dotprod(v_reinterpret_as_s16(x0), v_reinterpret_as_s16(f));
-                    s1 += v_dotprod(v_reinterpret_as_s16(x1), v_reinterpret_as_s16(f));
+                    s0 = v_add(s0, v_dotprod(v_reinterpret_as_s16(x0), v_reinterpret_as_s16(f)));
+                    s1 = v_add(s1, v_dotprod(v_reinterpret_as_s16(x1), v_reinterpret_as_s16(f)));
                 }
                 if( k < _ksize )
                 {
                     v_int32 f = vx_setall_s32(_kx[k]);
                     v_uint32 x0, x1;
                     v_expand(vx_load_expand(src), x0, x1);
-                    s0 += v_dotprod(v_reinterpret_as_s16(x0), v_reinterpret_as_s16(f));
-                    s1 += v_dotprod(v_reinterpret_as_s16(x1), v_reinterpret_as_s16(f));
+                    s0 = v_add(s0, v_dotprod(v_reinterpret_as_s16(x0), v_reinterpret_as_s16(f)));
+                    s1 = v_add(s1, v_dotprod(v_reinterpret_as_s16(x1), v_reinterpret_as_s16(f)));
                 }
                 v_store(dst + i, s0);
-                v_store(dst + i + v_int32::nlanes, s1);
-                i += v_uint16::nlanes;
+                v_store(dst + i + VTraits<v_int32>::vlanes(), s1);
+                i += VTraits<v_uint16>::vlanes();
             }
-            if( i <= width - v_uint32::nlanes )
+            if( i <= width - VTraits<v_uint32>::vlanes() )
             {
                 v_int32 d = vx_setzero_s32();
                 k = 0;
@@ -450,12 +451,12 @@ struct RowVec_8u32s
                     v_int32 f = vx_setall_s32((_kx[k] & 0xFFFF) | (_kx[k + 1] << 16));
                     v_uint32 x0, x1;
                     v_zip(vx_load_expand_q(src), vx_load_expand_q(src + cn), x0, x1);
-                    d += v_dotprod(v_pack(v_reinterpret_as_s32(x0), v_reinterpret_as_s32(x1)), v_reinterpret_as_s16(f));
+                    d = v_add(d, v_dotprod(v_pack(v_reinterpret_as_s32(x0), v_reinterpret_as_s32(x1)), v_reinterpret_as_s16(f)));
                 }
                 if (k < _ksize)
-                    d += v_dotprod(v_reinterpret_as_s16(vx_load_expand_q(src)), v_reinterpret_as_s16(vx_setall_s32(_kx[k])));
+                    d = v_add(d, v_dotprod(v_reinterpret_as_s16(vx_load_expand_q(src)), v_reinterpret_as_s16(vx_setall_s32(_kx[k]))));
                 v_store(dst + i, d);
-                i += v_uint32::nlanes;
+                i += VTraits<v_uint32>::vlanes();
             }
         }
         return i;
@@ -478,7 +479,7 @@ struct RowVec_8u32f
         float* dst = (float*)_dst;
         const float* _kx = kernel.ptr<float>();
         width *= cn;
-        for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+        for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes() )
         {
             v_float32 s0 = vx_setzero_f32();
             v_float32 s1 = vx_setzero_f32();
@@ -490,18 +491,18 @@ struct RowVec_8u32f
                 v_float32 f = vx_setall_f32(_kx[k]);
                 const uchar* src = (const uchar*)_src + i + k * cn;
                 v_float32 vs_ll = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src)));
-                v_float32 vs_lh = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + v_float32::nlanes)));
-                v_float32 vs_hl = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + 2*v_float32::nlanes)));
-                v_float32 vs_hh = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + 3*v_float32::nlanes)));
+                v_float32 vs_lh = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + VTraits<v_float32>::vlanes())));
+                v_float32 vs_hl = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + 2*VTraits<v_float32>::vlanes())));
+                v_float32 vs_hh = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + 3*VTraits<v_float32>::vlanes())));
                 s0 = v_muladd(vs_ll, f, s0);
                 s1 = v_muladd(vs_lh, f, s1);
                 s2 = v_muladd(vs_hl, f, s2);
                 s3 = v_muladd(vs_hh, f, s3);
             }
             v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            v_store(dst + i + 2*v_float32::nlanes, s2);
-            v_store(dst + i + 3*v_float32::nlanes, s3);
+            v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+            v_store(dst + i + 2*VTraits<v_float32>::vlanes(), s2);
+            v_store(dst + i + 3*VTraits<v_float32>::vlanes(), s3);
         }
         return i;
     }
@@ -551,7 +552,7 @@ struct SymmRowSmallVec_8u32s
             {
                 if( kx[0] == 2 && kx[1] == 1 )
                 {
-                    for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes, src += v_uint8::nlanes )
+                    for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes(), src += VTraits<v_uint8>::vlanes() )
                     {
                         v_uint16 x0l, x0h, x1l, x1h, x2l, x2h;
                         v_expand(vx_load(src - cn), x0l, x0h);
@@ -560,29 +561,29 @@ struct SymmRowSmallVec_8u32s
                         x1l = v_add_wrap(v_add_wrap(x1l, x1l), v_add_wrap(x0l, x2l));
                         x1h = v_add_wrap(v_add_wrap(x1h, x1h), v_add_wrap(x0h, x2h));
                         v_store(dst + i, v_reinterpret_as_s32(v_expand_low(x1l)));
-                        v_store(dst + i + v_int32::nlanes, v_reinterpret_as_s32(v_expand_high(x1l)));
-                        v_store(dst + i + 2*v_int32::nlanes, v_reinterpret_as_s32(v_expand_low(x1h)));
-                        v_store(dst + i + 3*v_int32::nlanes, v_reinterpret_as_s32(v_expand_high(x1h)));
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), v_reinterpret_as_s32(v_expand_high(x1l)));
+                        v_store(dst + i + 2*VTraits<v_int32>::vlanes(), v_reinterpret_as_s32(v_expand_low(x1h)));
+                        v_store(dst + i + 3*VTraits<v_int32>::vlanes(), v_reinterpret_as_s32(v_expand_high(x1h)));
                     }
-                    if( i <= width - v_uint16::nlanes )
+                    if( i <= width - VTraits<v_uint16>::vlanes() )
                     {
                         v_uint16 x = vx_load_expand(src);
                         x = v_add_wrap(v_add_wrap(x, x), v_add_wrap(vx_load_expand(src - cn), vx_load_expand(src + cn)));
                         v_store(dst + i, v_reinterpret_as_s32(v_expand_low(x)));
-                        v_store(dst + i + v_int32::nlanes, v_reinterpret_as_s32(v_expand_high(x)));
-                        i += v_uint16::nlanes; src += v_uint16::nlanes;
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), v_reinterpret_as_s32(v_expand_high(x)));
+                        i += VTraits<v_uint16>::vlanes(); src += VTraits<v_uint16>::vlanes();
                     }
-                    if( i <= width - v_uint32::nlanes )
+                    if( i <= width - VTraits<v_uint32>::vlanes() )
                     {
                         v_uint32 x = vx_load_expand_q(src);
-                        x = (x + x) + vx_load_expand_q(src - cn) + vx_load_expand_q(src + cn);
+                        x = v_add(v_add(v_add(x, x), vx_load_expand_q(src - cn)), vx_load_expand_q(src + cn));
                         v_store(dst + i, v_reinterpret_as_s32(x));
-                        i += v_uint32::nlanes;
+                        i += VTraits<v_uint32>::vlanes();
                     }
                 }
                 else if( kx[0] == -2 && kx[1] == 1 )
                 {
-                    for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes, src += v_uint8::nlanes )
+                    for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes(), src += VTraits<v_uint8>::vlanes() )
                     {
                         v_uint16 x0l, x0h, x1l, x1h, x2l, x2h;
                         v_expand(vx_load(src - cn), x0l, x0h);
@@ -591,31 +592,31 @@ struct SymmRowSmallVec_8u32s
                         x1l = v_sub_wrap(v_add_wrap(x0l, x2l), v_add_wrap(x1l, x1l));
                         x1h = v_sub_wrap(v_add_wrap(x0h, x2h), v_add_wrap(x1h, x1h));
                         v_store(dst + i, v_expand_low(v_reinterpret_as_s16(x1l)));
-                        v_store(dst + i + v_int32::nlanes, v_expand_high(v_reinterpret_as_s16(x1l)));
-                        v_store(dst + i + 2*v_int32::nlanes, v_expand_low(v_reinterpret_as_s16(x1h)));
-                        v_store(dst + i + 3*v_int32::nlanes, v_expand_high(v_reinterpret_as_s16(x1h)));
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), v_expand_high(v_reinterpret_as_s16(x1l)));
+                        v_store(dst + i + 2*VTraits<v_int32>::vlanes(), v_expand_low(v_reinterpret_as_s16(x1h)));
+                        v_store(dst + i + 3*VTraits<v_int32>::vlanes(), v_expand_high(v_reinterpret_as_s16(x1h)));
                     }
-                    if( i <= width - v_uint16::nlanes )
+                    if( i <= width - VTraits<v_uint16>::vlanes() )
                     {
                         v_uint16 x = vx_load_expand(src);
                         x = v_sub_wrap(v_add_wrap(vx_load_expand(src - cn), vx_load_expand(src + cn)), v_add_wrap(x, x));
                         v_store(dst + i, v_expand_low(v_reinterpret_as_s16(x)));
-                        v_store(dst + i + v_int32::nlanes, v_expand_high(v_reinterpret_as_s16(x)));
-                        i += v_uint16::nlanes; src += v_uint16::nlanes;
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), v_expand_high(v_reinterpret_as_s16(x)));
+                        i += VTraits<v_uint16>::vlanes(); src += VTraits<v_uint16>::vlanes();
                     }
-                    if( i <= width - v_uint32::nlanes )
+                    if( i <= width - VTraits<v_uint32>::vlanes() )
                     {
                         v_int32 x = v_reinterpret_as_s32(vx_load_expand_q(src));
-                        x = v_reinterpret_as_s32(vx_load_expand_q(src - cn) + vx_load_expand_q(src + cn)) - (x + x);
+                        x = v_sub(v_reinterpret_as_s32(v_add(vx_load_expand_q(src - cn), vx_load_expand_q(src + cn))), v_add(x, x));
                         v_store(dst + i, x);
-                        i += v_uint32::nlanes;
+                        i += VTraits<v_uint32>::vlanes();
                     }
                 }
                 else
                 {
                     v_int16 k0 = vx_setall_s16((short)kx[0]);
                     v_int16 k1 = vx_setall_s16((short)kx[1]);
-                    for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes, src += v_uint8::nlanes )
+                    for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes(), src += VTraits<v_uint8>::vlanes() )
                     {
                         v_uint16 x0l, x0h, x1l, x1h, x2l, x2h;
                         v_expand(vx_load(src - cn), x0l, x0h);
@@ -626,34 +627,34 @@ struct SymmRowSmallVec_8u32s
                         v_int16 x0, x1;
                         v_mul_expand(v_reinterpret_as_s16(x1l), k0, dl, dh);
                         v_zip(v_reinterpret_as_s16(x0l), v_reinterpret_as_s16(x2l), x0, x1);
-                        dl += v_dotprod(x0, k1);
-                        dh += v_dotprod(x1, k1);
+                        dl = v_add(dl, v_dotprod(x0, k1));
+                        dh = v_add(dh, v_dotprod(x1, k1));
                         v_store(dst + i, dl);
-                        v_store(dst + i + v_int32::nlanes, dh);
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), dh);
 
                         v_mul_expand(v_reinterpret_as_s16(x1h), k0, dl, dh);
                         v_zip(v_reinterpret_as_s16(x0h), v_reinterpret_as_s16(x2h), x0, x1);
-                        dl += v_dotprod(x0, k1);
-                        dh += v_dotprod(x1, k1);
-                        v_store(dst + i + 2*v_int32::nlanes, dl);
-                        v_store(dst + i + 3*v_int32::nlanes, dh);
+                        dl = v_add(dl, v_dotprod(x0, k1));
+                        dh = v_add(dh, v_dotprod(x1, k1));
+                        v_store(dst + i + 2*VTraits<v_int32>::vlanes(), dl);
+                        v_store(dst + i + 3*VTraits<v_int32>::vlanes(), dh);
                     }
-                    if ( i <= width - v_uint16::nlanes )
+                    if ( i <= width - VTraits<v_uint16>::vlanes() )
                     {
                         v_int32 dl, dh;
                         v_mul_expand(v_reinterpret_as_s16(vx_load_expand(src)), k0, dl, dh);
                         v_int16 x0, x1;
                         v_zip(v_reinterpret_as_s16(vx_load_expand(src - cn)), v_reinterpret_as_s16(vx_load_expand(src + cn)), x0, x1);
-                        dl += v_dotprod(x0, k1);
-                        dh += v_dotprod(x1, k1);
+                        dl = v_add(dl, v_dotprod(x0, k1));
+                        dh = v_add(dh, v_dotprod(x1, k1));
                         v_store(dst + i, dl);
-                        v_store(dst + i + v_int32::nlanes, dh);
-                        i += v_uint16::nlanes; src += v_uint16::nlanes;
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), dh);
+                        i += VTraits<v_uint16>::vlanes(); src += VTraits<v_uint16>::vlanes();
                     }
-                    if ( i <= width - v_uint32::nlanes )
+                    if ( i <= width - VTraits<v_uint32>::vlanes() )
                     {
-                        v_store(dst + i, v_muladd(v_reinterpret_as_s32(vx_load_expand_q(src)), vx_setall_s32(kx[0]), v_reinterpret_as_s32(vx_load_expand_q(src - cn) + vx_load_expand_q(src + cn)) * vx_setall_s32(kx[1])));
-                        i += v_uint32::nlanes;
+                        v_store(dst + i, v_muladd(v_reinterpret_as_s32(vx_load_expand_q(src)), vx_setall_s32(kx[0]), v_mul(v_reinterpret_as_s32(v_add(vx_load_expand_q(src - cn), vx_load_expand_q(src + cn))), vx_setall_s32(kx[1]))));
+                        i += VTraits<v_uint32>::vlanes();
                     }
                 }
             }
@@ -661,7 +662,7 @@ struct SymmRowSmallVec_8u32s
             {
                 if( kx[0] == -2 && kx[1] == 0 && kx[2] == 1 )
                 {
-                    for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes, src += v_uint8::nlanes )
+                    for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes(), src += VTraits<v_uint8>::vlanes() )
                     {
                         v_uint16 x0l, x0h, x1l, x1h, x2l, x2h;
                         v_expand(vx_load(src - 2*cn), x0l, x0h);
@@ -670,31 +671,31 @@ struct SymmRowSmallVec_8u32s
                         x1l = v_sub_wrap(v_add_wrap(x0l, x2l), v_add_wrap(x1l, x1l));
                         x1h = v_sub_wrap(v_add_wrap(x0h, x2h), v_add_wrap(x1h, x1h));
                         v_store(dst + i, v_expand_low(v_reinterpret_as_s16(x1l)));
-                        v_store(dst + i + v_int32::nlanes, v_expand_high(v_reinterpret_as_s16(x1l)));
-                        v_store(dst + i + 2*v_int32::nlanes, v_expand_low(v_reinterpret_as_s16(x1h)));
-                        v_store(dst + i + 3*v_int32::nlanes, v_expand_high(v_reinterpret_as_s16(x1h)));
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), v_expand_high(v_reinterpret_as_s16(x1l)));
+                        v_store(dst + i + 2*VTraits<v_int32>::vlanes(), v_expand_low(v_reinterpret_as_s16(x1h)));
+                        v_store(dst + i + 3*VTraits<v_int32>::vlanes(), v_expand_high(v_reinterpret_as_s16(x1h)));
                     }
-                    if( i <= width - v_uint16::nlanes )
+                    if( i <= width - VTraits<v_uint16>::vlanes() )
                     {
                         v_uint16 x = vx_load_expand(src);
                         x = v_sub_wrap(v_add_wrap(vx_load_expand(src - 2*cn), vx_load_expand(src + 2*cn)), v_add_wrap(x, x));
                         v_store(dst + i, v_expand_low(v_reinterpret_as_s16(x)));
-                        v_store(dst + i + v_int32::nlanes, v_expand_high(v_reinterpret_as_s16(x)));
-                        i += v_uint16::nlanes; src += v_uint16::nlanes;
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), v_expand_high(v_reinterpret_as_s16(x)));
+                        i += VTraits<v_uint16>::vlanes(); src += VTraits<v_uint16>::vlanes();
                     }
-                    if( i <= width - v_uint32::nlanes )
+                    if( i <= width - VTraits<v_uint32>::vlanes() )
                     {
                         v_int32 x = v_reinterpret_as_s32(vx_load_expand_q(src));
-                        x = v_reinterpret_as_s32(vx_load_expand_q(src - 2*cn) + vx_load_expand_q(src + 2*cn)) - (x + x);
+                        x = v_sub(v_reinterpret_as_s32(v_add(vx_load_expand_q(src - 2 * cn), vx_load_expand_q(src + 2 * cn))), v_add(x, x));
                         v_store(dst + i, x);
-                        i += v_uint32::nlanes;
+                        i += VTraits<v_uint32>::vlanes();
                     }
                 }
                 else
                 {
                     v_int16 k0 = vx_setall_s16((short)(kx[0]));
                     v_int16 k12 = v_reinterpret_as_s16(vx_setall_s32((kx[1] & 0xFFFF) | (kx[2] << 16)));
-                    for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes, src += v_uint8::nlanes )
+                    for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes(), src += VTraits<v_uint8>::vlanes() )
                     {
                         v_int32 x0, x1, x2, x3;
                         v_uint16 x0l, x0h, x1l, x1h, x2l, x2h, x3l, x3h;
@@ -708,45 +709,45 @@ struct SymmRowSmallVec_8u32s
                         v_expand(vx_load(src + cn), x1l, x1h);
                         v_expand(vx_load(src - 2*cn), x2l, x2h);
                         v_expand(vx_load(src + 2*cn), x3l, x3h);
-                        v_zip(v_reinterpret_as_s16(x0l + x1l), v_reinterpret_as_s16(x2l + x3l), xl, xh);
-                        x0 += v_dotprod(xl, k12);
-                        x1 += v_dotprod(xh, k12);
-                        v_zip(v_reinterpret_as_s16(x0h + x1h), v_reinterpret_as_s16(x2h + x3h), xl, xh);
-                        x2 += v_dotprod(xl, k12);
-                        x3 += v_dotprod(xh, k12);
+                        v_zip(v_reinterpret_as_s16(v_add(x0l, x1l)), v_reinterpret_as_s16(v_add(x2l, x3l)), xl, xh);
+                        x0 = v_add(x0, v_dotprod(xl, k12));
+                        x1 = v_add(x1, v_dotprod(xh, k12));
+                        v_zip(v_reinterpret_as_s16(v_add(x0h, x1h)), v_reinterpret_as_s16(v_add(x2h, x3h)), xl, xh);
+                        x2 = v_add(x2, v_dotprod(xl, k12));
+                        x3 = v_add(x3, v_dotprod(xh, k12));
 
                         v_store(dst + i, x0);
-                        v_store(dst + i + v_int32::nlanes, x1);
-                        v_store(dst + i + 2*v_int32::nlanes, x2);
-                        v_store(dst + i + 3*v_int32::nlanes, x3);
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), x1);
+                        v_store(dst + i + 2*VTraits<v_int32>::vlanes(), x2);
+                        v_store(dst + i + 3*VTraits<v_int32>::vlanes(), x3);
                     }
-                    if( i <= width - v_uint16::nlanes )
+                    if( i <= width - VTraits<v_uint16>::vlanes() )
                     {
                         v_int32 x1, x2;
                         v_mul_expand(v_reinterpret_as_s16(vx_load_expand(src)), k0, x1, x2);
 
                         v_int16 xl, xh;
-                        v_zip(v_reinterpret_as_s16(vx_load_expand(src - cn) + vx_load_expand(src + cn)), v_reinterpret_as_s16(vx_load_expand(src - 2*cn) + vx_load_expand(src + 2*cn)), xl, xh);
-                        x1 += v_dotprod(xl, k12);
-                        x2 += v_dotprod(xh, k12);
+                        v_zip(v_reinterpret_as_s16(v_add(vx_load_expand(src - cn), vx_load_expand(src + cn))), v_reinterpret_as_s16(v_add(vx_load_expand(src - 2 * cn), vx_load_expand(src + 2 * cn))), xl, xh);
+                        x1 = v_add(x1, v_dotprod(xl, k12));
+                        x2 = v_add(x2, v_dotprod(xh, k12));
 
                         v_store(dst + i, x1);
-                        v_store(dst + i + v_int32::nlanes, x2);
-                        i += v_uint16::nlanes, src += v_uint16::nlanes;
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), x2);
+                        i += VTraits<v_uint16>::vlanes(), src += VTraits<v_uint16>::vlanes();
                     }
-                    if( i <= width - v_uint32::nlanes )
+                    if( i <= width - VTraits<v_uint32>::vlanes() )
                     {
                         v_store(dst + i, v_muladd(v_reinterpret_as_s32(vx_load_expand_q(src)), vx_setall_s32(kx[0]),
-                                         v_muladd(v_reinterpret_as_s32(vx_load_expand_q(src - cn) + vx_load_expand_q(src + cn)), vx_setall_s32(kx[1]),
-                                                  v_reinterpret_as_s32(vx_load_expand_q(src - 2*cn) + vx_load_expand_q(src + 2*cn)) * vx_setall_s32(kx[2]))));
-                        i += v_uint32::nlanes;
+                                         v_muladd(v_reinterpret_as_s32(v_add(vx_load_expand_q(src - cn), vx_load_expand_q(src + cn))), vx_setall_s32(kx[1]),
+                                                  v_mul(v_reinterpret_as_s32(v_add(vx_load_expand_q(src - 2 * cn), vx_load_expand_q(src + 2 * cn))), vx_setall_s32(kx[2])))));
+                        i += VTraits<v_uint32>::vlanes();
                     }
                 }
             }
             else
             {
                 v_int16 k0 = vx_setall_s16((short)(kx[0]));
-                for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes, src += v_uint8::nlanes )
+                for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes(), src += VTraits<v_uint8>::vlanes() )
                 {
                     v_uint8 v_src = vx_load(src);
                     v_int32 s0, s1, s2, s3;
@@ -762,12 +763,12 @@ struct SymmRowSmallVec_8u32s
                         v_uint8 v_src3 = vx_load(src + j + cn);
 
                         v_int16 xl, xh;
-                        v_zip(v_reinterpret_as_s16(v_expand_low(v_src0) + v_expand_low(v_src2)), v_reinterpret_as_s16(v_expand_low(v_src1) + v_expand_low(v_src3)), xl, xh);
-                        s0 += v_dotprod(xl, k12);
-                        s1 += v_dotprod(xh, k12);
-                        v_zip(v_reinterpret_as_s16(v_expand_high(v_src0) + v_expand_high(v_src2)), v_reinterpret_as_s16(v_expand_high(v_src1) + v_expand_high(v_src3)), xl, xh);
-                        s2 += v_dotprod(xl, k12);
-                        s3 += v_dotprod(xh, k12);
+                        v_zip(v_reinterpret_as_s16(v_add(v_expand_low(v_src0), v_expand_low(v_src2))), v_reinterpret_as_s16(v_add(v_expand_low(v_src1), v_expand_low(v_src3))), xl, xh);
+                        s0 = v_add(s0, v_dotprod(xl, k12));
+                        s1 = v_add(s1, v_dotprod(xh, k12));
+                        v_zip(v_reinterpret_as_s16(v_add(v_expand_high(v_src0), v_expand_high(v_src2))), v_reinterpret_as_s16(v_add(v_expand_high(v_src1), v_expand_high(v_src3))), xl, xh);
+                        s2 = v_add(s2, v_dotprod(xl, k12));
+                        s3 = v_add(s3, v_dotprod(xh, k12));
                     }
                     if( k < _ksize / 2 + 1 )
                     {
@@ -778,48 +779,48 @@ struct SymmRowSmallVec_8u32s
 
                         v_int16 xl, xh;
                         v_zip(v_reinterpret_as_s16(v_expand_low(v_src0)), v_reinterpret_as_s16(v_expand_low(v_src1)), xl, xh);
-                        s0 += v_dotprod(xl, k1);
-                        s1 += v_dotprod(xh, k1);
+                        s0 = v_add(s0, v_dotprod(xl, k1));
+                        s1 = v_add(s1, v_dotprod(xh, k1));
                         v_zip(v_reinterpret_as_s16(v_expand_high(v_src0)), v_reinterpret_as_s16(v_expand_high(v_src1)), xl, xh);
-                        s2 += v_dotprod(xl, k1);
-                        s3 += v_dotprod(xh, k1);
+                        s2 = v_add(s2, v_dotprod(xl, k1));
+                        s3 = v_add(s3, v_dotprod(xh, k1));
                     }
                     v_store(dst + i, s0);
-                    v_store(dst + i + v_int32::nlanes, s1);
-                    v_store(dst + i + 2*v_int32::nlanes, s2);
-                    v_store(dst + i + 3*v_int32::nlanes, s3);
+                    v_store(dst + i + VTraits<v_int32>::vlanes(), s1);
+                    v_store(dst + i + 2*VTraits<v_int32>::vlanes(), s2);
+                    v_store(dst + i + 3*VTraits<v_int32>::vlanes(), s3);
                 }
-                if( i <= width - v_uint16::nlanes )
+                if( i <= width - VTraits<v_uint16>::vlanes() )
                 {
                     v_int32 s0, s1;
                     v_mul_expand(v_reinterpret_as_s16(vx_load_expand(src)), k0, s0, s1);
                     for (k = 1, j = cn; k <= _ksize / 2 - 1; k+=2, j += 2*cn)
                     {
                         v_int16 xl, xh;
-                        v_zip(v_reinterpret_as_s16(vx_load_expand(src - j) + vx_load_expand(src + j)), v_reinterpret_as_s16(vx_load_expand(src - j - cn) + vx_load_expand(src + j + cn)), xl, xh);
+                        v_zip(v_reinterpret_as_s16(v_add(vx_load_expand(src - j), vx_load_expand(src + j))), v_reinterpret_as_s16(v_add(vx_load_expand(src - j - cn), vx_load_expand(src + j + cn))), xl, xh);
                         v_int16 k12 = v_reinterpret_as_s16(vx_setall_s32((kx[k] & 0xFFFF) | (kx[k+1] << 16)));
-                        s0 += v_dotprod(xl, k12);
-                        s1 += v_dotprod(xh, k12);
+                        s0 = v_add(s0, v_dotprod(xl, k12));
+                        s1 = v_add(s1, v_dotprod(xh, k12));
                     }
                     if ( k < _ksize / 2 + 1 )
                     {
                         v_int16 xl, xh;
                         v_zip(v_reinterpret_as_s16(vx_load_expand(src - j)), v_reinterpret_as_s16(vx_load_expand(src + j)), xl, xh);
                         v_int16 k1 = vx_setall_s16((short)(kx[k]));
-                        s0 += v_dotprod(xl, k1);
-                        s1 += v_dotprod(xh, k1);
+                        s0 = v_add(s0, v_dotprod(xl, k1));
+                        s1 = v_add(s1, v_dotprod(xh, k1));
                     }
                     v_store(dst + i, s0);
-                    v_store(dst + i + v_int32::nlanes, s1);
-                    i += v_uint16::nlanes; src += v_uint16::nlanes;
+                    v_store(dst + i + VTraits<v_int32>::vlanes(), s1);
+                    i += VTraits<v_uint16>::vlanes(); src += VTraits<v_uint16>::vlanes();
                 }
-                if( i <= width - v_uint32::nlanes )
+                if( i <= width - VTraits<v_uint32>::vlanes() )
                 {
-                    v_int32 s0 = v_reinterpret_as_s32(vx_load_expand_q(src)) * vx_setall_s32(kx[0]);
+                    v_int32 s0 = v_mul(v_reinterpret_as_s32(vx_load_expand_q(src)), vx_setall_s32(kx[0]));
                     for( k = 1, j = cn; k < _ksize / 2 + 1; k++, j += cn )
-                        s0 = v_muladd(v_reinterpret_as_s32(vx_load_expand_q(src - j) + vx_load_expand_q(src + j)), vx_setall_s32(kx[k]), s0);
+                        s0 = v_muladd(v_reinterpret_as_s32(v_add(vx_load_expand_q(src - j), vx_load_expand_q(src + j))), vx_setall_s32(kx[k]), s0);
                     v_store(dst + i, s0);
-                    i += v_uint32::nlanes;
+                    i += VTraits<v_uint32>::vlanes();
                 }
             }
         }
@@ -829,7 +830,7 @@ struct SymmRowSmallVec_8u32s
             {
                 if( kx[0] == 0 && kx[1] == 1 )
                 {
-                    for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes, src += v_uint8::nlanes )
+                    for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes(), src += VTraits<v_uint8>::vlanes() )
                     {
                         v_uint16 x0l, x0h, x2l, x2h;
                         v_expand(vx_load(src - cn), x0l, x0h);
@@ -837,27 +838,27 @@ struct SymmRowSmallVec_8u32s
                         v_int16 dl = v_reinterpret_as_s16(v_sub_wrap(x2l, x0l));
                         v_int16 dh = v_reinterpret_as_s16(v_sub_wrap(x2h, x0h));
                         v_store(dst + i, v_expand_low(dl));
-                        v_store(dst + i + v_int32::nlanes, v_expand_high(dl));
-                        v_store(dst + i + 2*v_int32::nlanes, v_expand_low(dh));
-                        v_store(dst + i + 3*v_int32::nlanes, v_expand_high(dh));
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), v_expand_high(dl));
+                        v_store(dst + i + 2*VTraits<v_int32>::vlanes(), v_expand_low(dh));
+                        v_store(dst + i + 3*VTraits<v_int32>::vlanes(), v_expand_high(dh));
                     }
-                    if( i <= width - v_uint16::nlanes )
+                    if( i <= width - VTraits<v_uint16>::vlanes() )
                     {
                         v_int16 dl = v_reinterpret_as_s16(v_sub_wrap(vx_load_expand(src + cn), vx_load_expand(src - cn)));
                         v_store(dst + i, v_expand_low(dl));
-                        v_store(dst + i + v_int32::nlanes, v_expand_high(dl));
-                        i += v_uint16::nlanes; src += v_uint16::nlanes;
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), v_expand_high(dl));
+                        i += VTraits<v_uint16>::vlanes(); src += VTraits<v_uint16>::vlanes();
                     }
-                    if (i <= width - v_uint32::nlanes)
+                    if (i <= width - VTraits<v_uint32>::vlanes())
                     {
-                        v_store(dst + i, v_reinterpret_as_s32(vx_load_expand_q(src + cn)) - v_reinterpret_as_s32(vx_load_expand_q(src - cn)));
-                        i += v_uint32::nlanes;
+                        v_store(dst + i, v_sub(v_reinterpret_as_s32(vx_load_expand_q(src + cn)), v_reinterpret_as_s32(vx_load_expand_q(src - cn))));
+                        i += VTraits<v_uint32>::vlanes();
                     }
                 }
                 else
                 {
                     v_int16 k0 = v_reinterpret_as_s16(vx_setall_s32((kx[1] & 0xFFFF) | (-kx[1] << 16)));
-                    for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes, src += v_uint8::nlanes )
+                    for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes(), src += VTraits<v_uint8>::vlanes() )
                     {
                         v_uint16 x0l, x0h, x2l, x2h;
                         v_expand(vx_load(src - cn), x0l, x0h);
@@ -865,30 +866,30 @@ struct SymmRowSmallVec_8u32s
                         v_int16 xl, xh;
                         v_zip(v_reinterpret_as_s16(x2l), v_reinterpret_as_s16(x0l), xl, xh);
                         v_store(dst + i, v_dotprod(xl, k0));
-                        v_store(dst + i + v_int32::nlanes, v_dotprod(xh, k0));
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), v_dotprod(xh, k0));
                         v_zip(v_reinterpret_as_s16(x2h), v_reinterpret_as_s16(x0h), xl, xh);
-                        v_store(dst + i + 2*v_int32::nlanes, v_dotprod(xl, k0));
-                        v_store(dst + i + 3*v_int32::nlanes, v_dotprod(xh, k0));
+                        v_store(dst + i + 2*VTraits<v_int32>::vlanes(), v_dotprod(xl, k0));
+                        v_store(dst + i + 3*VTraits<v_int32>::vlanes(), v_dotprod(xh, k0));
                     }
-                    if( i <= width - v_uint16::nlanes )
+                    if( i <= width - VTraits<v_uint16>::vlanes() )
                     {
                         v_int16 xl, xh;
                         v_zip(v_reinterpret_as_s16(vx_load_expand(src + cn)), v_reinterpret_as_s16(vx_load_expand(src - cn)), xl, xh);
                         v_store(dst + i, v_dotprod(xl, k0));
-                        v_store(dst + i + v_int32::nlanes, v_dotprod(xh, k0));
-                        i += v_uint16::nlanes; src += v_uint16::nlanes;
+                        v_store(dst + i + VTraits<v_int32>::vlanes(), v_dotprod(xh, k0));
+                        i += VTraits<v_uint16>::vlanes(); src += VTraits<v_uint16>::vlanes();
                     }
-                    if (i <= width - v_uint32::nlanes)
+                    if (i <= width - VTraits<v_uint32>::vlanes())
                     {
-                        v_store(dst + i, v_muladd(v_reinterpret_as_s32(vx_load_expand_q(src + cn)), vx_setall_s32(kx[1]), v_reinterpret_as_s32(vx_load_expand_q(src - cn)) * vx_setall_s32(-kx[1])));
-                        i += v_uint32::nlanes;
+                        v_store(dst + i, v_muladd(v_reinterpret_as_s32(vx_load_expand_q(src + cn)), vx_setall_s32(kx[1]), v_mul(v_reinterpret_as_s32(vx_load_expand_q(src - cn)), vx_setall_s32(-kx[1]))));
+                        i += VTraits<v_uint32>::vlanes();
                     }
                 }
             }
             else if( _ksize == 5 )
             {
                 v_int16 k0 = v_reinterpret_as_s16(vx_setall_s32((kx[1] & 0xFFFF) | (kx[2] << 16)));
-                for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes, src += v_uint8::nlanes )
+                for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes(), src += VTraits<v_uint8>::vlanes() )
                 {
                     v_uint16 x0l, x0h, x1l, x1h, x2l, x2h, x3l, x3h;
                     v_expand(vx_load(src - cn), x0l, x0h);
@@ -898,31 +899,31 @@ struct SymmRowSmallVec_8u32s
                     v_int16 x0, x1;
                     v_zip(v_reinterpret_as_s16(v_sub_wrap(x2l, x0l)), v_reinterpret_as_s16(v_sub_wrap(x3l, x1l)), x0, x1);
                     v_store(dst + i, v_dotprod(x0, k0));
-                    v_store(dst + i + v_int32::nlanes, v_dotprod(x1, k0));
+                    v_store(dst + i + VTraits<v_int32>::vlanes(), v_dotprod(x1, k0));
                     v_zip(v_reinterpret_as_s16(v_sub_wrap(x2h, x0h)), v_reinterpret_as_s16(v_sub_wrap(x3h, x1h)), x0, x1);
-                    v_store(dst + i + 2*v_int32::nlanes, v_dotprod(x0, k0));
-                    v_store(dst + i + 3*v_int32::nlanes, v_dotprod(x1, k0));
+                    v_store(dst + i + 2*VTraits<v_int32>::vlanes(), v_dotprod(x0, k0));
+                    v_store(dst + i + 3*VTraits<v_int32>::vlanes(), v_dotprod(x1, k0));
                 }
-                if( i <= width - v_uint16::nlanes )
+                if( i <= width - VTraits<v_uint16>::vlanes() )
                 {
                     v_int16 x0, x1;
                     v_zip(v_reinterpret_as_s16(v_sub_wrap(vx_load_expand(src + cn), vx_load_expand(src - cn))),
                           v_reinterpret_as_s16(v_sub_wrap(vx_load_expand(src + 2*cn), vx_load_expand(src - 2*cn))), x0, x1);
                     v_store(dst + i, v_dotprod(x0, k0));
-                    v_store(dst + i + v_int32::nlanes, v_dotprod(x1, k0));
-                    i += v_uint16::nlanes; src += v_uint16::nlanes;
+                    v_store(dst + i + VTraits<v_int32>::vlanes(), v_dotprod(x1, k0));
+                    i += VTraits<v_uint16>::vlanes(); src += VTraits<v_uint16>::vlanes();
                 }
-                if( i <= width - v_uint32::nlanes )
+                if( i <= width - VTraits<v_uint32>::vlanes() )
                 {
-                    v_store(dst + i, v_muladd(v_reinterpret_as_s32(vx_load_expand_q(src + cn)) - v_reinterpret_as_s32(vx_load_expand_q(src - cn)), vx_setall_s32(kx[1]),
-                                             (v_reinterpret_as_s32(vx_load_expand_q(src + 2*cn)) - v_reinterpret_as_s32(vx_load_expand_q(src - 2*cn))) * vx_setall_s32(kx[2])));
-                    i += v_uint32::nlanes;
+                    v_store(dst + i, v_muladd(v_sub(v_reinterpret_as_s32(vx_load_expand_q(src + cn)), v_reinterpret_as_s32(vx_load_expand_q(src - cn))), vx_setall_s32(kx[1]),
+                                             v_mul(v_sub(v_reinterpret_as_s32(vx_load_expand_q(src + 2 * cn)), v_reinterpret_as_s32(vx_load_expand_q(src - 2 * cn))), vx_setall_s32(kx[2]))));
+                    i += VTraits<v_uint32>::vlanes();
                 }
             }
             else
             {
                 v_int16 k0 = vx_setall_s16((short)(kx[0]));
-                for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes, src += v_uint8::nlanes )
+                for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes(), src += VTraits<v_uint8>::vlanes() )
                 {
                     v_uint8 v_src = vx_load(src);
                     v_int32 s0, s1, s2, s3;
@@ -939,11 +940,11 @@ struct SymmRowSmallVec_8u32s
 
                         v_int16 xl, xh;
                         v_zip(v_reinterpret_as_s16(v_sub_wrap(v_expand_low(v_src2), v_expand_low(v_src0))), v_reinterpret_as_s16(v_sub_wrap(v_expand_low(v_src3), v_expand_low(v_src1))), xl, xh);
-                        s0 += v_dotprod(xl, k12);
-                        s1 += v_dotprod(xh, k12);
+                        s0 = v_add(s0, v_dotprod(xl, k12));
+                        s1 = v_add(s1, v_dotprod(xh, k12));
                         v_zip(v_reinterpret_as_s16(v_sub_wrap(v_expand_high(v_src2), v_expand_high(v_src0))), v_reinterpret_as_s16(v_sub_wrap(v_expand_high(v_src3), v_expand_high(v_src1))), xl, xh);
-                        s2 += v_dotprod(xl, k12);
-                        s3 += v_dotprod(xh, k12);
+                        s2 = v_add(s2, v_dotprod(xl, k12));
+                        s3 = v_add(s3, v_dotprod(xh, k12));
                     }
                     if( k < _ksize / 2 + 1 )
                     {
@@ -953,18 +954,18 @@ struct SymmRowSmallVec_8u32s
 
                         v_int16 xl, xh;
                         v_zip(v_reinterpret_as_s16(v_expand_low(v_src1)), v_reinterpret_as_s16(v_expand_low(v_src0)), xl, xh);
-                        s0 += v_dotprod(xl, k12);
-                        s1 += v_dotprod(xh, k12);
+                        s0 = v_add(s0, v_dotprod(xl, k12));
+                        s1 = v_add(s1, v_dotprod(xh, k12));
                         v_zip(v_reinterpret_as_s16(v_expand_high(v_src1)), v_reinterpret_as_s16(v_expand_high(v_src0)), xl, xh);
-                        s2 += v_dotprod(xl, k12);
-                        s3 += v_dotprod(xh, k12);
+                        s2 = v_add(s2, v_dotprod(xl, k12));
+                        s3 = v_add(s3, v_dotprod(xh, k12));
                     }
                     v_store(dst + i, s0);
-                    v_store(dst + i + v_int32::nlanes, s1);
-                    v_store(dst + i + 2*v_int32::nlanes, s2);
-                    v_store(dst + i + 3*v_int32::nlanes, s3);
+                    v_store(dst + i + VTraits<v_int32>::vlanes(), s1);
+                    v_store(dst + i + 2*VTraits<v_int32>::vlanes(), s2);
+                    v_store(dst + i + 3*VTraits<v_int32>::vlanes(), s3);
                 }
-                if( i <= width - v_uint16::nlanes )
+                if( i <= width - VTraits<v_uint16>::vlanes() )
                 {
                     v_int32 s0, s1;
                     v_mul_expand(v_reinterpret_as_s16(vx_load_expand(src)), k0, s0, s1);
@@ -973,28 +974,28 @@ struct SymmRowSmallVec_8u32s
                         v_int16 xl, xh;
                         v_zip(v_reinterpret_as_s16(v_sub_wrap(vx_load_expand(src + j), vx_load_expand(src - j))), v_reinterpret_as_s16(v_sub_wrap(vx_load_expand(src + j + cn), vx_load_expand(src - j - cn))), xl, xh);
                         v_int16 k12 = v_reinterpret_as_s16(vx_setall_s32((kx[k] & 0xFFFF) | (kx[k + 1] << 16)));
-                        s0 += v_dotprod(xl, k12);
-                        s1 += v_dotprod(xh, k12);
+                        s0 = v_add(s0, v_dotprod(xl, k12));
+                        s1 = v_add(s1, v_dotprod(xh, k12));
                     }
                     if( k < _ksize / 2 + 1 )
                     {
                         v_int16 k1 = v_reinterpret_as_s16(vx_setall_s32((kx[k] & 0xFFFF) | (-kx[k] << 16)));
                         v_int16 xl, xh;
                         v_zip(v_reinterpret_as_s16(vx_load_expand(src + j)), v_reinterpret_as_s16(vx_load_expand(src - j)), xl, xh);
-                        s0 += v_dotprod(xl, k1);
-                        s1 += v_dotprod(xh, k1);
+                        s0 = v_add(s0, v_dotprod(xl, k1));
+                        s1 = v_add(s1, v_dotprod(xh, k1));
                     }
                     v_store(dst + i, s0);
-                    v_store(dst + i + v_int32::nlanes, s1);
-                    i += v_uint16::nlanes; src += v_uint16::nlanes;
+                    v_store(dst + i + VTraits<v_int32>::vlanes(), s1);
+                    i += VTraits<v_uint16>::vlanes(); src += VTraits<v_uint16>::vlanes();
                 }
-                if( i <= width - v_uint32::nlanes )
+                if( i <= width - VTraits<v_uint32>::vlanes() )
                 {
-                    v_int32 s0 = v_reinterpret_as_s32(vx_load_expand_q(src)) * vx_setall_s32(kx[0]);
+                    v_int32 s0 = v_mul(v_reinterpret_as_s32(vx_load_expand_q(src)), vx_setall_s32(kx[0]));
                     for (k = 1, j = cn; k < _ksize / 2 + 1; k++, j += cn)
-                        s0 = v_muladd(v_reinterpret_as_s32(vx_load_expand_q(src + j)) - v_reinterpret_as_s32(vx_load_expand_q(src - j)), vx_setall_s32(kx[k]), s0);
+                        s0 = v_muladd(v_sub(v_reinterpret_as_s32(vx_load_expand_q(src + j)), v_reinterpret_as_s32(vx_load_expand_q(src - j))), vx_setall_s32(kx[k]), s0);
                     v_store(dst + i, s0);
-                    i += v_uint32::nlanes;
+                    i += VTraits<v_uint32>::vlanes();
                 }
             }
         }
@@ -1036,120 +1037,91 @@ struct SymmColumnVec_32s8u
         {
             v_float32 f0 = vx_setall_f32(ky[0]);
             v_float32 f1 = vx_setall_f32(ky[1]);
-            for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+            for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes() )
             {
                 const int* S = src[0] + i;
                 v_float32 s0 = v_muladd(v_cvt_f32(vx_load(S)), f0, d4);
-                v_float32 s1 = v_muladd(v_cvt_f32(vx_load(S + v_int32::nlanes)), f0, d4);
-                v_float32 s2 = v_muladd(v_cvt_f32(vx_load(S + 2*v_int32::nlanes)), f0, d4);
-                v_float32 s3 = v_muladd(v_cvt_f32(vx_load(S + 3*v_int32::nlanes)), f0, d4);
+                v_float32 s1 = v_muladd(v_cvt_f32(vx_load(S + VTraits<v_int32>::vlanes())), f0, d4);
+                v_float32 s2 = v_muladd(v_cvt_f32(vx_load(S + 2*VTraits<v_int32>::vlanes())), f0, d4);
+                v_float32 s3 = v_muladd(v_cvt_f32(vx_load(S + 3*VTraits<v_int32>::vlanes())), f0, d4);
                 const int* S0 = src[1] + i;
                 const int* S1 = src[-1] + i;
-                s0 = v_muladd(v_cvt_f32(vx_load(S0) + vx_load(S1)), f1, s0);
-                s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) + vx_load(S1 + v_int32::nlanes)), f1, s1);
-                s2 = v_muladd(v_cvt_f32(vx_load(S0 + 2 * v_int32::nlanes) + vx_load(S1 + 2 * v_int32::nlanes)), f1, s2);
-                s3 = v_muladd(v_cvt_f32(vx_load(S0 + 3 * v_int32::nlanes) + vx_load(S1 + 3 * v_int32::nlanes)), f1, s3);
+                s0 = v_muladd(v_cvt_f32(v_add(vx_load(S0), vx_load(S1))), f1, s0);
+                s1 = v_muladd(v_cvt_f32(v_add(vx_load(S0 + VTraits<v_int32>::vlanes()), vx_load(S1 + VTraits<v_int32>::vlanes()))), f1, s1);
+                s2 = v_muladd(v_cvt_f32(v_add(vx_load(S0 + 2 * VTraits<v_int32>::vlanes()), vx_load(S1 + 2 * VTraits<v_int32>::vlanes()))), f1, s2);
+                s3 = v_muladd(v_cvt_f32(v_add(vx_load(S0 + 3 * VTraits<v_int32>::vlanes()), vx_load(S1 + 3 * VTraits<v_int32>::vlanes()))), f1, s3);
                 for( k = 2; k <= ksize2; k++ )
                 {
                     v_float32 f = vx_setall_f32(ky[k]);
                     S0 = src[k] + i;
                     S1 = src[-k] + i;
-                    s0 = v_muladd(v_cvt_f32(vx_load(S0) + vx_load(S1)), f, s0);
-                    s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) + vx_load(S1 + v_int32::nlanes)), f, s1);
-                    s2 = v_muladd(v_cvt_f32(vx_load(S0 + 2*v_int32::nlanes) + vx_load(S1 + 2*v_int32::nlanes)), f, s2);
-                    s3 = v_muladd(v_cvt_f32(vx_load(S0 + 3*v_int32::nlanes) + vx_load(S1 + 3*v_int32::nlanes)), f, s3);
+                    s0 = v_muladd(v_cvt_f32(v_add(vx_load(S0), vx_load(S1))), f, s0);
+                    s1 = v_muladd(v_cvt_f32(v_add(vx_load(S0 + VTraits<v_int32>::vlanes()), vx_load(S1 + VTraits<v_int32>::vlanes()))), f, s1);
+                    s2 = v_muladd(v_cvt_f32(v_add(vx_load(S0 + 2 * VTraits<v_int32>::vlanes()), vx_load(S1 + 2 * VTraits<v_int32>::vlanes()))), f, s2);
+                    s3 = v_muladd(v_cvt_f32(v_add(vx_load(S0 + 3 * VTraits<v_int32>::vlanes()), vx_load(S1 + 3 * VTraits<v_int32>::vlanes()))), f, s3);
                 }
                 v_store(dst + i, v_pack_u(v_pack(v_round(s0), v_round(s1)), v_pack(v_round(s2), v_round(s3))));
             }
-            if( i <= width - v_uint16::nlanes )
+            if( i <= width - VTraits<v_uint16>::vlanes() )
             {
                 const int* S = src[0] + i;
                 v_float32 s0 = v_muladd(v_cvt_f32(vx_load(S)), f0, d4);
-                v_float32 s1 = v_muladd(v_cvt_f32(vx_load(S + v_int32::nlanes)), f0, d4);
+                v_float32 s1 = v_muladd(v_cvt_f32(vx_load(S + VTraits<v_int32>::vlanes())), f0, d4);
                 const int* S0 = src[1] + i;
                 const int* S1 = src[-1] + i;
-                s0 = v_muladd(v_cvt_f32(vx_load(S0) + vx_load(S1)), f1, s0);
-                s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) + vx_load(S1 + v_int32::nlanes)), f1, s1);
+                s0 = v_muladd(v_cvt_f32(v_add(vx_load(S0), vx_load(S1))), f1, s0);
+                s1 = v_muladd(v_cvt_f32(v_add(vx_load(S0 + VTraits<v_int32>::vlanes()), vx_load(S1 + VTraits<v_int32>::vlanes()))), f1, s1);
                 for( k = 2; k <= ksize2; k++ )
                 {
                     v_float32 f = vx_setall_f32(ky[k]);
                     S0 = src[k] + i;
                     S1 = src[-k] + i;
-                    s0 = v_muladd(v_cvt_f32(vx_load(S0) + vx_load(S1)), f, s0);
-                    s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) + vx_load(S1 + v_int32::nlanes)), f, s1);
+                    s0 = v_muladd(v_cvt_f32(v_add(vx_load(S0), vx_load(S1))), f, s0);
+                    s1 = v_muladd(v_cvt_f32(v_add(vx_load(S0 + VTraits<v_int32>::vlanes()), vx_load(S1 + VTraits<v_int32>::vlanes()))), f, s1);
                 }
                 v_pack_u_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-                i += v_uint16::nlanes;
-            }
-#if CV_SIMD_WIDTH > 16
-            while( i <= width - v_int32x4::nlanes )
-#else
-            if( i <= width - v_int32x4::nlanes )
-#endif
-            {
-                v_float32x4 s0 = v_muladd(v_cvt_f32(v_load(src[0] + i)), v_setall_f32(ky[0]), v_setall_f32(delta));
-                s0 = v_muladd(v_cvt_f32(v_load(src[1] + i) + v_load(src[-1] + i)), v_setall_f32(ky[1]), s0);
-                for( k = 2; k <= ksize2; k++ )
-                    s0 = v_muladd(v_cvt_f32(v_load(src[k] + i) + v_load(src[-k] + i)), v_setall_f32(ky[k]), s0);
-                v_int32x4 s32 = v_round(s0);
-                v_int16x8 s16 = v_pack(s32, s32);
-                *(unaligned_int*)(dst + i) = v_reinterpret_as_s32(v_pack_u(s16, s16)).get0();
-                i += v_int32x4::nlanes;
+                i += VTraits<v_uint16>::vlanes();
             }
         }
         else
         {
             v_float32 f1 = vx_setall_f32(ky[1]);
-            for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+            for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes() )
             {
                 const int* S0 = src[1] + i;
                 const int* S1 = src[-1] + i;
-                v_float32 s0 = v_muladd(v_cvt_f32(vx_load(S0) - vx_load(S1)), f1, d4);
-                v_float32 s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) - vx_load(S1 + v_int32::nlanes)), f1, d4);
-                v_float32 s2 = v_muladd(v_cvt_f32(vx_load(S0 + 2 * v_int32::nlanes) - vx_load(S1 + 2 * v_int32::nlanes)), f1, d4);
-                v_float32 s3 = v_muladd(v_cvt_f32(vx_load(S0 + 3 * v_int32::nlanes) - vx_load(S1 + 3 * v_int32::nlanes)), f1, d4);
+                v_float32 s0 = v_muladd(v_cvt_f32(v_sub(vx_load(S0), vx_load(S1))), f1, d4);
+                v_float32 s1 = v_muladd(v_cvt_f32(v_sub(vx_load(S0 + VTraits<v_int32>::vlanes()), vx_load(S1 + VTraits<v_int32>::vlanes()))), f1, d4);
+                v_float32 s2 = v_muladd(v_cvt_f32(v_sub(vx_load(S0 + 2 * VTraits<v_int32>::vlanes()), vx_load(S1 + 2 * VTraits<v_int32>::vlanes()))), f1, d4);
+                v_float32 s3 = v_muladd(v_cvt_f32(v_sub(vx_load(S0 + 3 * VTraits<v_int32>::vlanes()), vx_load(S1 + 3 * VTraits<v_int32>::vlanes()))), f1, d4);
                 for ( k = 2; k <= ksize2; k++ )
                 {
                     v_float32 f = vx_setall_f32(ky[k]);
                     S0 = src[k] + i;
                     S1 = src[-k] + i;
-                    s0 = v_muladd(v_cvt_f32(vx_load(S0) - vx_load(S1)), f, s0);
-                    s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) - vx_load(S1 + v_int32::nlanes)), f, s1);
-                    s2 = v_muladd(v_cvt_f32(vx_load(S0 + 2*v_int32::nlanes) - vx_load(S1 + 2*v_int32::nlanes)), f, s2);
-                    s3 = v_muladd(v_cvt_f32(vx_load(S0 + 3*v_int32::nlanes) - vx_load(S1 + 3*v_int32::nlanes)), f, s3);
+                    s0 = v_muladd(v_cvt_f32(v_sub(vx_load(S0), vx_load(S1))), f, s0);
+                    s1 = v_muladd(v_cvt_f32(v_sub(vx_load(S0 + VTraits<v_int32>::vlanes()), vx_load(S1 + VTraits<v_int32>::vlanes()))), f, s1);
+                    s2 = v_muladd(v_cvt_f32(v_sub(vx_load(S0 + 2 * VTraits<v_int32>::vlanes()), vx_load(S1 + 2 * VTraits<v_int32>::vlanes()))), f, s2);
+                    s3 = v_muladd(v_cvt_f32(v_sub(vx_load(S0 + 3 * VTraits<v_int32>::vlanes()), vx_load(S1 + 3 * VTraits<v_int32>::vlanes()))), f, s3);
                 }
                 v_store(dst + i, v_pack_u(v_pack(v_round(s0), v_round(s1)), v_pack(v_round(s2), v_round(s3))));
             }
-            if( i <= width - v_uint16::nlanes )
+            if( i <= width - VTraits<v_uint16>::vlanes() )
             {
                 const int* S0 = src[1] + i;
                 const int* S1 = src[-1] + i;
-                v_float32 s0 = v_muladd(v_cvt_f32(vx_load(S0) - vx_load(S1)), f1, d4);
-                v_float32 s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) - vx_load(S1 + v_int32::nlanes)), f1, d4);
+                v_float32 s0 = v_muladd(v_cvt_f32(v_sub(vx_load(S0), vx_load(S1))), f1, d4);
+                v_float32 s1 = v_muladd(v_cvt_f32(v_sub(vx_load(S0 + VTraits<v_int32>::vlanes()), vx_load(S1 + VTraits<v_int32>::vlanes()))), f1, d4);
                 for ( k = 2; k <= ksize2; k++ )
                 {
                     v_float32 f = vx_setall_f32(ky[k]);
                     S0 = src[k] + i;
                     S1 = src[-k] + i;
-                    s0 = v_muladd(v_cvt_f32(vx_load(S0) - vx_load(S1)), f, s0);
-                    s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) - vx_load(S1 + v_int32::nlanes)), f, s1);
+                    s0 = v_muladd(v_cvt_f32(v_sub(vx_load(S0), vx_load(S1))), f, s0);
+                    s1 = v_muladd(v_cvt_f32(v_sub(vx_load(S0 + VTraits<v_int32>::vlanes()), vx_load(S1 + VTraits<v_int32>::vlanes()))), f, s1);
                 }
                 v_pack_u_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-                i += v_uint16::nlanes;
-            }
-#if CV_SIMD_WIDTH > 16
-            while( i <= width - v_int32x4::nlanes )
-#else
-            if( i <= width - v_int32x4::nlanes )
-#endif
-            {
-                v_float32x4 s0 = v_muladd(v_cvt_f32(v_load(src[1] + i) - v_load(src[-1] + i)), v_setall_f32(ky[1]), v_setall_f32(delta));
-                for (k = 2; k <= ksize2; k++)
-                    s0 = v_muladd(v_cvt_f32(v_load(src[k] + i) - v_load(src[-k] + i)), v_setall_f32(ky[k]), s0);
-                v_int32x4 s32 = v_round(s0);
-                v_int16x8 s16 = v_pack(s32, s32);
-                *(unaligned_int*)(dst + i) = v_reinterpret_as_s32(v_pack_u(s16, s16)).get0();
-                i += v_int32x4::nlanes;
+                i += VTraits<v_uint16>::vlanes();
             }
         }
         return i;
@@ -1185,31 +1157,31 @@ struct SymmColumnVec_32f8u
 
         if( symmetrical )
         {
-            for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+            for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes() )
             {
                 v_float32 v_ky0 = vx_setall_f32(ky[0]);
                 v_float32 v32_delta = vx_setall_f32(delta);
                 const float* S = src[0] + i;
                 v_float32 s0 = v_muladd(v_ky0, vx_load(S), v32_delta);
-                v_float32 s1 = v_muladd(v_ky0, vx_load(S + v_float32::nlanes), v32_delta);
-                v_float32 s2 = v_muladd(v_ky0, vx_load(S + 2*v_float32::nlanes), v32_delta);
-                v_float32 s3 = v_muladd(v_ky0, vx_load(S + 3*v_float32::nlanes), v32_delta);
+                v_float32 s1 = v_muladd(v_ky0, vx_load(S + VTraits<v_float32>::vlanes()), v32_delta);
+                v_float32 s2 = v_muladd(v_ky0, vx_load(S + 2*VTraits<v_float32>::vlanes()), v32_delta);
+                v_float32 s3 = v_muladd(v_ky0, vx_load(S + 3*VTraits<v_float32>::vlanes()), v32_delta);
                 for( k = 1; k <= ksize2; k++ )
                 {
                     v_float32 v_kyk = vx_setall_f32(ky[k]);
                     const float* S0 = src[k] + i;
                     const float* S1 = src[-k] + i;
-                    s0 = v_muladd(v_kyk, vx_load(S0) + vx_load(S1), s0);
-                    s1 = v_muladd(v_kyk, vx_load(S0 + v_float32::nlanes) + vx_load(S1 + v_float32::nlanes), s1);
-                    s2 = v_muladd(v_kyk, vx_load(S0 + 2*v_float32::nlanes) + vx_load(S1 + 2*v_float32::nlanes), s2);
-                    s3 = v_muladd(v_kyk, vx_load(S0 + 3*v_float32::nlanes) + vx_load(S1 + 3*v_float32::nlanes), s3);
+                    s0 = v_muladd(v_kyk, v_add(vx_load(S0), vx_load(S1)), s0);
+                    s1 = v_muladd(v_kyk, v_add(vx_load(S0 + VTraits<v_float32>::vlanes()), vx_load(S1 + VTraits<v_float32>::vlanes())), s1);
+                    s2 = v_muladd(v_kyk, v_add(vx_load(S0 + 2 * VTraits<v_float32>::vlanes()), vx_load(S1 + 2 * VTraits<v_float32>::vlanes())), s2);
+                    s3 = v_muladd(v_kyk, v_add(vx_load(S0 + 3 * VTraits<v_float32>::vlanes()), vx_load(S1 + 3 * VTraits<v_float32>::vlanes())), s3);
                 }
                 v_store(_dst + i, v_pack_u(v_pack(v_round(s0), v_round(s1)), v_pack(v_round(s2), v_round(s3))));
             }
         }
         else
         {
-            for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+            for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes() )
             {
                 v_float32 s0 = vx_setall_f32(delta);
                 v_float32 s1 = vx_setall_f32(delta);
@@ -1220,10 +1192,10 @@ struct SymmColumnVec_32f8u
                     v_float32 v_kyk = vx_setall_f32(ky[k]);
                     const float* S0 = src[k] + i;
                     const float* S1 = src[-k] + i;
-                    s0 = v_muladd(v_kyk, vx_load(S0) - vx_load(S1), s0);
-                    s1 = v_muladd(v_kyk, vx_load(S0 + v_float32::nlanes) - vx_load(S1 + v_float32::nlanes), s1);
-                    s2 = v_muladd(v_kyk, vx_load(S0 + 2*v_float32::nlanes) - vx_load(S1 + 2*v_float32::nlanes), s2);
-                    s3 = v_muladd(v_kyk, vx_load(S0 + 3*v_float32::nlanes) - vx_load(S1 + 3*v_float32::nlanes), s3);
+                    s0 = v_muladd(v_kyk, v_sub(vx_load(S0), vx_load(S1)), s0);
+                    s1 = v_muladd(v_kyk, v_sub(vx_load(S0 + VTraits<v_float32>::vlanes()), vx_load(S1 + VTraits<v_float32>::vlanes())), s1);
+                    s2 = v_muladd(v_kyk, v_sub(vx_load(S0 + 2 * VTraits<v_float32>::vlanes()), vx_load(S1 + 2 * VTraits<v_float32>::vlanes())), s2);
+                    s3 = v_muladd(v_kyk, v_sub(vx_load(S0 + 3 * VTraits<v_float32>::vlanes()), vx_load(S1 + 3 * VTraits<v_float32>::vlanes())), s3);
                 }
                 v_store(_dst + i, v_pack_u(v_pack(v_round(s0), v_round(s1)), v_pack(v_round(s2), v_round(s3))));
             }
@@ -1266,55 +1238,52 @@ struct SymmColumnSmallVec_32s16s
         {
             if( ky[0] == 2 && ky[1] == 1 )
             {
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+                for( ; i <= width - 2*VTraits<v_int16>::vlanes(); i += 2*VTraits<v_int16>::vlanes() )
                 {
                     v_int32 s0 = vx_load(S1 + i);
-                    v_int32 s1 = vx_load(S1 + i + v_int32::nlanes);
-                    v_int32 s2 = vx_load(S1 + i + 2*v_int32::nlanes);
-                    v_int32 s3 = vx_load(S1 + i + 3*v_int32::nlanes);
-                    v_store(dst + i, v_pack(vx_load(S0 + i) + vx_load(S2 + i) + (s0 + s0), vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes) + (s1 + s1)) + d8);
-                    v_store(dst + i + v_int16::nlanes, v_pack(vx_load(S0 + i + 2*v_int32::nlanes) + vx_load(S2 + i + 2*v_int32::nlanes) + (s2 + s2),
-                                                              vx_load(S0 + i + 3*v_int32::nlanes) + vx_load(S2 + i + 3*v_int32::nlanes) + (s3 + s3)) + d8);
+                    v_int32 s1 = vx_load(S1 + i + VTraits<v_int32>::vlanes());
+                    v_int32 s2 = vx_load(S1 + i + 2*VTraits<v_int32>::vlanes());
+                    v_int32 s3 = vx_load(S1 + i + 3*VTraits<v_int32>::vlanes());
+                    v_store(dst + i, v_add(v_pack(v_add(v_add(vx_load(S0 + i), vx_load(S2 + i)), v_add(s0, s0)), v_add(v_add(vx_load(S0 + i + VTraits<v_int32>::vlanes()), vx_load(S2 + i + VTraits<v_int32>::vlanes())), v_add(s1, s1))), d8));
+                    v_store(dst + i + VTraits<v_int16>::vlanes(), v_add(v_pack(v_add(v_add(vx_load(S0 + i + 2 * VTraits<v_int32>::vlanes()), vx_load(S2 + i + 2 * VTraits<v_int32>::vlanes())), v_add(s2, s2)), v_add(v_add(vx_load(S0 + i + 3 * VTraits<v_int32>::vlanes()), vx_load(S2 + i + 3 * VTraits<v_int32>::vlanes())), v_add(s3, s3))), d8));
                 }
-                if( i <= width - v_int16::nlanes )
+                if( i <= width - VTraits<v_int16>::vlanes() )
                 {
                     v_int32 sl = vx_load(S1 + i);
-                    v_int32 sh = vx_load(S1 + i + v_int32::nlanes);
-                    v_store(dst + i, v_pack(vx_load(S0 + i) + vx_load(S2 + i) + (sl + sl), vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes) + (sh + sh)) + d8);
-                    i += v_int16::nlanes;
+                    v_int32 sh = vx_load(S1 + i + VTraits<v_int32>::vlanes());
+                    v_store(dst + i, v_add(v_pack(v_add(v_add(vx_load(S0 + i), vx_load(S2 + i)), v_add(sl, sl)), v_add(v_add(vx_load(S0 + i + VTraits<v_int32>::vlanes()), vx_load(S2 + i + VTraits<v_int32>::vlanes())), v_add(sh, sh))), d8));
+                    i += VTraits<v_int16>::vlanes();
                 }
-                if( i <= width - v_int32::nlanes )
+                if( i <= width - VTraits<v_int32>::vlanes() )
                 {
                     v_int32 s = vx_load(S1 + i);
-                    v_pack_store(dst + i, vx_load(S0 + i) + vx_load(S2 + i) + vx_setall_s32(d) + (s + s));
-                    i += v_int32::nlanes;
+                    v_pack_store(dst + i, v_add(v_add(v_add(vx_load(S0 + i), vx_load(S2 + i)), vx_setall_s32(d)), v_add(s, s)));
+                    i += VTraits<v_int32>::vlanes();
                 }
             }
             else if( ky[0] == -2 && ky[1] == 1 )
             {
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+                for( ; i <= width - 2*VTraits<v_int16>::vlanes(); i += 2*VTraits<v_int16>::vlanes() )
                 {
                     v_int32 s0 = vx_load(S1 + i);
-                    v_int32 s1 = vx_load(S1 + i + v_int32::nlanes);
-                    v_int32 s2 = vx_load(S1 + i + 2*v_int32::nlanes);
-                    v_int32 s3 = vx_load(S1 + i + 3*v_int32::nlanes);
-                    v_store(dst + i, v_pack(vx_load(S0 + i) + vx_load(S2 + i) - (s0 + s0),
-                                            vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes) - (s1 + s1)) + d8);
-                    v_store(dst + i + v_int16::nlanes, v_pack(vx_load(S0 + i + 2*v_int32::nlanes) + vx_load(S2 + i + 2*v_int32::nlanes) - (s2 + s2),
-                                                              vx_load(S0 + i + 3*v_int32::nlanes) + vx_load(S2 + i + 3*v_int32::nlanes) - (s3 + s3)) + d8);
+                    v_int32 s1 = vx_load(S1 + i + VTraits<v_int32>::vlanes());
+                    v_int32 s2 = vx_load(S1 + i + 2*VTraits<v_int32>::vlanes());
+                    v_int32 s3 = vx_load(S1 + i + 3*VTraits<v_int32>::vlanes());
+                    v_store(dst + i, v_add(v_pack(v_sub(v_add(vx_load(S0 + i), vx_load(S2 + i)), v_add(s0, s0)), v_sub(v_add(vx_load(S0 + i + VTraits<v_int32>::vlanes()), vx_load(S2 + i + VTraits<v_int32>::vlanes())), v_add(s1, s1))), d8));
+                    v_store(dst + i + VTraits<v_int16>::vlanes(), v_add(v_pack(v_sub(v_add(vx_load(S0 + i + 2 * VTraits<v_int32>::vlanes()), vx_load(S2 + i + 2 * VTraits<v_int32>::vlanes())), v_add(s2, s2)), v_sub(v_add(vx_load(S0 + i + 3 * VTraits<v_int32>::vlanes()), vx_load(S2 + i + 3 * VTraits<v_int32>::vlanes())), v_add(s3, s3))), d8));
                 }
-                if( i <= width - v_int16::nlanes )
+                if( i <= width - VTraits<v_int16>::vlanes() )
                 {
                     v_int32 sl = vx_load(S1 + i);
-                    v_int32 sh = vx_load(S1 + i + v_int32::nlanes);
-                    v_store(dst + i, v_pack(vx_load(S0 + i) + vx_load(S2 + i) - (sl + sl), vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes) - (sh + sh)) + d8);
-                    i += v_int16::nlanes;
+                    v_int32 sh = vx_load(S1 + i + VTraits<v_int32>::vlanes());
+                    v_store(dst + i, v_add(v_pack(v_sub(v_add(vx_load(S0 + i), vx_load(S2 + i)), v_add(sl, sl)), v_sub(v_add(vx_load(S0 + i + VTraits<v_int32>::vlanes()), vx_load(S2 + i + VTraits<v_int32>::vlanes())), v_add(sh, sh))), d8));
+                    i += VTraits<v_int16>::vlanes();
                 }
-                if( i <= width - v_int32::nlanes )
+                if( i <= width - VTraits<v_int32>::vlanes() )
                 {
                     v_int32 s = vx_load(S1 + i);
-                    v_pack_store(dst + i, vx_load(S0 + i) + vx_load(S2 + i) + vx_setall_s32(d) - (s + s));
-                    i += v_int32::nlanes;
+                    v_pack_store(dst + i, v_sub(v_add(v_add(vx_load(S0 + i), vx_load(S2 + i)), vx_setall_s32(d)), v_add(s, s)));
+                    i += VTraits<v_int32>::vlanes();
                 }
             }
 #if CV_NEON
@@ -1322,46 +1291,46 @@ struct SymmColumnSmallVec_32s16s
             {
                 v_int32 k0 = vx_setall_s32((int)ky[0]), k1 = vx_setall_s32((int)ky[1]);
                 v_int32 d4 = vx_setall_s32(d);
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+                for( ; i <= width - 2*VTraits<v_int16>::vlanes(); i += 2*VTraits<v_int16>::vlanes() )
                 {
-                    v_store(dst + i, v_pack(v_muladd(vx_load(S0 + i) + vx_load(S2 + i), k1, v_muladd(vx_load(S1 + i), k0, d4)),
-                                            v_muladd(vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + v_int32::nlanes), k0, d4))));
-                    v_store(dst + i + v_int16::nlanes, v_pack(v_muladd(vx_load(S0 + i + 2*v_int32::nlanes) + vx_load(S2 + i + 2*v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + 2*v_int32::nlanes), k0, d4)),
-                                                              v_muladd(vx_load(S0 + i + 3*v_int32::nlanes) + vx_load(S2 + i + 3*v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + 3*v_int32::nlanes), k0, d4))));
+                    v_store(dst + i, v_pack(v_muladd(v_add(vx_load(S0 + i), vx_load(S2 + i)), k1, v_muladd(vx_load(S1 + i), k0, d4)),
+                                            v_muladd(v_add(vx_load(S0 + i + VTraits<v_int32>::vlanes()), vx_load(S2 + i + VTraits<v_int32>::vlanes())), k1, v_muladd(vx_load(S1 + i + VTraits<v_int32>::vlanes()), k0, d4))));
+                    v_store(dst + i + VTraits<v_int16>::vlanes(), v_pack(v_muladd(v_add(vx_load(S0 + i + 2 * VTraits<v_int32>::vlanes()), vx_load(S2 + i + 2 * VTraits<v_int32>::vlanes())), k1, v_muladd(vx_load(S1 + i + 2*VTraits<v_int32>::vlanes()), k0, d4)),
+                                                              v_muladd(v_add(vx_load(S0 + i + 3 * VTraits<v_int32>::vlanes()), vx_load(S2 + i + 3 * VTraits<v_int32>::vlanes())), k1, v_muladd(vx_load(S1 + i + 3*VTraits<v_int32>::vlanes()), k0, d4))));
                 }
-                if( i <= width - v_int16::nlanes )
+                if( i <= width - VTraits<v_int16>::vlanes() )
                 {
-                    v_store(dst + i, v_pack(v_muladd(vx_load(S0 + i) + vx_load(S2 + i), k1, v_muladd(vx_load(S1 + i), k0, d4)),
-                                            v_muladd(vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + v_int32::nlanes), k0, d4))));
-                    i += v_int16::nlanes;
+                    v_store(dst + i, v_pack(v_muladd(v_add(vx_load(S0 + i), vx_load(S2 + i)), k1, v_muladd(vx_load(S1 + i), k0, d4)),
+                                            v_muladd(v_add(vx_load(S0 + i + VTraits<v_int32>::vlanes()), vx_load(S2 + i + VTraits<v_int32>::vlanes())), k1, v_muladd(vx_load(S1 + i + VTraits<v_int32>::vlanes()), k0, d4))));
+                    i += VTraits<v_int16>::vlanes();
                 }
-                if( i <= width - v_int32::nlanes )
+                if( i <= width - VTraits<v_int32>::vlanes() )
                 {
-                    v_pack_store(dst + i, v_muladd(vx_load(S0 + i) + vx_load(S2 + i), k1, v_muladd(vx_load(S1 + i), k0, d4)));
-                    i += v_int32::nlanes;
+                    v_pack_store(dst + i, v_muladd(v_add(vx_load(S0 + i), vx_load(S2 + i)), k1, v_muladd(vx_load(S1 + i), k0, d4)));
+                    i += VTraits<v_int32>::vlanes();
                 }
             }
 #endif
             else
             {
                 v_float32 k0 = vx_setall_f32(ky[0]), k1 = vx_setall_f32(ky[1]);
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+                for( ; i <= width - 2*VTraits<v_int16>::vlanes(); i += 2*VTraits<v_int16>::vlanes() )
                 {
-                    v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S0 + i) + vx_load(S2 + i)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i)), k0, df4))),
-                                            v_round(v_muladd(v_cvt_f32(vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + v_int32::nlanes)), k0, df4)))));
-                    v_store(dst + i + v_int16::nlanes, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S0 + i + 2*v_int32::nlanes) + vx_load(S2 + i + 2*v_int32::nlanes)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + 2*v_int32::nlanes)), k0, df4))),
-                                                              v_round(v_muladd(v_cvt_f32(vx_load(S0 + i + 3*v_int32::nlanes) + vx_load(S2 + i + 3*v_int32::nlanes)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + 3*v_int32::nlanes)), k0, df4)))));
+                    v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(v_add(vx_load(S0 + i), vx_load(S2 + i))), k1, v_muladd(v_cvt_f32(vx_load(S1 + i)), k0, df4))),
+                                            v_round(v_muladd(v_cvt_f32(v_add(vx_load(S0 + i + VTraits<v_int32>::vlanes()), vx_load(S2 + i + VTraits<v_int32>::vlanes()))), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + VTraits<v_int32>::vlanes())), k0, df4)))));
+                    v_store(dst + i + VTraits<v_int16>::vlanes(), v_pack(v_round(v_muladd(v_cvt_f32(v_add(vx_load(S0 + i + 2 * VTraits<v_int32>::vlanes()), vx_load(S2 + i + 2 * VTraits<v_int32>::vlanes()))), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + 2*VTraits<v_int32>::vlanes())), k0, df4))),
+                                                              v_round(v_muladd(v_cvt_f32(v_add(vx_load(S0 + i + 3 * VTraits<v_int32>::vlanes()), vx_load(S2 + i + 3 * VTraits<v_int32>::vlanes()))), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + 3*VTraits<v_int32>::vlanes())), k0, df4)))));
                 }
-                if( i <= width - v_int16::nlanes )
+                if( i <= width - VTraits<v_int16>::vlanes() )
                 {
-                    v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S0 + i) + vx_load(S2 + i)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i)), k0, df4))),
-                                            v_round(v_muladd(v_cvt_f32(vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + v_int32::nlanes)), k0, df4)))));
-                    i += v_int16::nlanes;
+                    v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(v_add(vx_load(S0 + i), vx_load(S2 + i))), k1, v_muladd(v_cvt_f32(vx_load(S1 + i)), k0, df4))),
+                                            v_round(v_muladd(v_cvt_f32(v_add(vx_load(S0 + i + VTraits<v_int32>::vlanes()), vx_load(S2 + i + VTraits<v_int32>::vlanes()))), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + VTraits<v_int32>::vlanes())), k0, df4)))));
+                    i += VTraits<v_int16>::vlanes();
                 }
-                if( i <= width - v_int32::nlanes )
+                if( i <= width - VTraits<v_int32>::vlanes() )
                 {
-                    v_pack_store(dst + i, v_round(v_muladd(v_cvt_f32(vx_load(S0 + i) + vx_load(S2 + i)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i)), k0, df4))));
-                    i += v_int32::nlanes;
+                    v_pack_store(dst + i, v_round(v_muladd(v_cvt_f32(v_add(vx_load(S0 + i), vx_load(S2 + i))), k1, v_muladd(v_cvt_f32(vx_load(S1 + i)), k0, df4))));
+                    i += VTraits<v_int32>::vlanes();
                 }
             }
         }
@@ -1371,42 +1340,42 @@ struct SymmColumnSmallVec_32s16s
             {
                 if( ky[1] < 0 )
                     std::swap(S0, S2);
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+                for( ; i <= width - 2*VTraits<v_int16>::vlanes(); i += 2*VTraits<v_int16>::vlanes() )
                 {
-                    v_store(dst + i, v_pack(vx_load(S2 + i) - vx_load(S0 + i), vx_load(S2 + i + v_int32::nlanes) - vx_load(S0 + i + v_int32::nlanes)) + d8);
-                    v_store(dst + i + v_int16::nlanes, v_pack(vx_load(S2 + i + 2*v_int32::nlanes) - vx_load(S0 + i + 2*v_int32::nlanes), vx_load(S2 + i + 3*v_int32::nlanes) - vx_load(S0 + i + 3*v_int32::nlanes)) + d8);
+                    v_store(dst + i, v_add(v_pack(v_sub(vx_load(S2 + i), vx_load(S0 + i)), v_sub(vx_load(S2 + i + VTraits<v_int32>::vlanes()), vx_load(S0 + i + VTraits<v_int32>::vlanes()))), d8));
+                    v_store(dst + i + VTraits<v_int16>::vlanes(), v_add(v_pack(v_sub(vx_load(S2 + i + 2 * VTraits<v_int32>::vlanes()), vx_load(S0 + i + 2 * VTraits<v_int32>::vlanes())), v_sub(vx_load(S2 + i + 3 * VTraits<v_int32>::vlanes()), vx_load(S0 + i + 3 * VTraits<v_int32>::vlanes()))), d8));
                 }
-                if( i <= width - v_int16::nlanes )
+                if( i <= width - VTraits<v_int16>::vlanes() )
                 {
-                    v_store(dst + i, v_pack(vx_load(S2 + i) - vx_load(S0 + i), vx_load(S2 + i + v_int32::nlanes) - vx_load(S0 + i + v_int32::nlanes)) + d8);
-                    i += v_int16::nlanes;
+                    v_store(dst + i, v_add(v_pack(v_sub(vx_load(S2 + i), vx_load(S0 + i)), v_sub(vx_load(S2 + i + VTraits<v_int32>::vlanes()), vx_load(S0 + i + VTraits<v_int32>::vlanes()))), d8));
+                    i += VTraits<v_int16>::vlanes();
                 }
-                if( i <= width - v_int32::nlanes )
+                if( i <= width - VTraits<v_int32>::vlanes() )
                 {
-                    v_pack_store(dst + i, vx_load(S2 + i) - vx_load(S0 + i) + vx_setall_s32(d));
-                    i += v_int32::nlanes;
+                    v_pack_store(dst + i, v_add(v_sub(vx_load(S2 + i), vx_load(S0 + i)), vx_setall_s32(d)));
+                    i += VTraits<v_int32>::vlanes();
                 }
             }
             else
             {
                 v_float32 k1 = vx_setall_f32(ky[1]);
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+                for( ; i <= width - 2*VTraits<v_int16>::vlanes(); i += 2*VTraits<v_int16>::vlanes() )
                 {
-                    v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S2 + i) - vx_load(S0 + i)), k1, df4)),
-                                            v_round(v_muladd(v_cvt_f32(vx_load(S2 + i + v_int32::nlanes) - vx_load(S0 + i + v_int32::nlanes)), k1, df4))));
-                    v_store(dst + i + v_int16::nlanes, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S2 + i + 2*v_int32::nlanes) - vx_load(S0 + i + 2*v_int32::nlanes)), k1, df4)),
-                                                              v_round(v_muladd(v_cvt_f32(vx_load(S2 + i + 3*v_int32::nlanes) - vx_load(S0 + i + 3*v_int32::nlanes)), k1, df4))));
+                    v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(v_sub(vx_load(S2 + i), vx_load(S0 + i))), k1, df4)),
+                                            v_round(v_muladd(v_cvt_f32(v_sub(vx_load(S2 + i + VTraits<v_int32>::vlanes()), vx_load(S0 + i + VTraits<v_int32>::vlanes()))), k1, df4))));
+                    v_store(dst + i + VTraits<v_int16>::vlanes(), v_pack(v_round(v_muladd(v_cvt_f32(v_sub(vx_load(S2 + i + 2 * VTraits<v_int32>::vlanes()), vx_load(S0 + i + 2 * VTraits<v_int32>::vlanes()))), k1, df4)),
+                                                              v_round(v_muladd(v_cvt_f32(v_sub(vx_load(S2 + i + 3 * VTraits<v_int32>::vlanes()), vx_load(S0 + i + 3 * VTraits<v_int32>::vlanes()))), k1, df4))));
                 }
-                if( i <= width - v_int16::nlanes )
+                if( i <= width - VTraits<v_int16>::vlanes() )
                 {
-                    v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S2 + i) - vx_load(S0 + i)), k1, df4)),
-                                            v_round(v_muladd(v_cvt_f32(vx_load(S2 + i + v_int32::nlanes) - vx_load(S0 + i + v_int32::nlanes)), k1, df4))));
-                    i += v_int16::nlanes;
+                    v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(v_sub(vx_load(S2 + i), vx_load(S0 + i))), k1, df4)),
+                                            v_round(v_muladd(v_cvt_f32(v_sub(vx_load(S2 + i + VTraits<v_int32>::vlanes()), vx_load(S0 + i + VTraits<v_int32>::vlanes()))), k1, df4))));
+                    i += VTraits<v_int16>::vlanes();
                 }
-                if( i <= width - v_int32::nlanes )
+                if( i <= width - VTraits<v_int32>::vlanes() )
                 {
-                    v_pack_store(dst + i, v_round(v_muladd(v_cvt_f32(vx_load(S2 + i) - vx_load(S0 + i)), k1, df4)));
-                    i += v_int32::nlanes;
+                    v_pack_store(dst + i, v_round(v_muladd(v_cvt_f32(v_sub(vx_load(S2 + i), vx_load(S0 + i))), k1, df4)));
+                    i += VTraits<v_int32>::vlanes();
                 }
             }
         }
@@ -1438,7 +1407,7 @@ struct RowVec_16s32f
         const float* _kx = kernel.ptr<float>();
         width *= cn;
 
-        for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+        for( ; i <= width - 2*VTraits<v_int16>::vlanes(); i += 2*VTraits<v_int16>::vlanes() )
         {
             const short* src = (const short*)_src + i;
             v_float32 s0 = vx_setzero_f32();
@@ -1449,18 +1418,18 @@ struct RowVec_16s32f
             {
                 v_float32 f = vx_setall_f32(_kx[k]);
                 v_int16 xl = vx_load(src);
-                v_int16 xh = vx_load(src + v_int16::nlanes);
+                v_int16 xh = vx_load(src + VTraits<v_int16>::vlanes());
                 s0 = v_muladd(v_cvt_f32(v_expand_low(xl)), f, s0);
                 s1 = v_muladd(v_cvt_f32(v_expand_high(xl)), f, s1);
                 s2 = v_muladd(v_cvt_f32(v_expand_low(xh)), f, s2);
                 s3 = v_muladd(v_cvt_f32(v_expand_high(xh)), f, s3);
             }
             v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            v_store(dst + i + 2*v_float32::nlanes, s2);
-            v_store(dst + i + 3*v_float32::nlanes, s3);
+            v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+            v_store(dst + i + 2*VTraits<v_float32>::vlanes(), s2);
+            v_store(dst + i + 3*VTraits<v_float32>::vlanes(), s3);
         }
-        if( i <= width - v_int16::nlanes )
+        if( i <= width - VTraits<v_int16>::vlanes() )
         {
             const short* src = (const short*)_src + i;
             v_float32 s0 = vx_setzero_f32();
@@ -1473,17 +1442,17 @@ struct RowVec_16s32f
                 s1 = v_muladd(v_cvt_f32(v_expand_high(x)), f, s1);
             }
             v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            i += v_int16::nlanes;
+            v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+            i += VTraits<v_int16>::vlanes();
         }
-        if( i <= width - v_float32::nlanes )
+        if( i <= width - VTraits<v_float32>::vlanes() )
         {
             const short* src = (const short*)_src + i;
             v_float32 s0 = vx_setzero_f32();
             for( k = 0; k < _ksize; k++, src += cn )
                 s0 = v_muladd(v_cvt_f32(vx_load_expand(src)), vx_setall_f32(_kx[k]), s0);
             v_store(dst + i, s0);
-            i += v_float32::nlanes;
+            i += VTraits<v_float32>::vlanes();
         }
         return i;
     }
@@ -1522,92 +1491,92 @@ struct SymmColumnVec_32f16s
         {
             v_float32 k0 = vx_setall_f32(ky[0]);
             v_float32 k1 = vx_setall_f32(ky[1]);
-            for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+            for( ; i <= width - 2*VTraits<v_int16>::vlanes(); i += 2*VTraits<v_int16>::vlanes() )
             {
                 v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
-                v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), k0, d4);
-                v_float32 s2 = v_muladd(vx_load(src[0] + i + 2*v_float32::nlanes), k0, d4);
-                v_float32 s3 = v_muladd(vx_load(src[0] + i + 3*v_float32::nlanes), k0, d4);
-                s0 = v_muladd(vx_load(src[1] + i) + vx_load(src[-1] + i), k1, s0);
-                s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) + vx_load(src[-1] + i + v_float32::nlanes), k1, s1);
-                s2 = v_muladd(vx_load(src[1] + i + 2*v_float32::nlanes) + vx_load(src[-1] + i + 2*v_float32::nlanes), k1, s2);
-                s3 = v_muladd(vx_load(src[1] + i + 3*v_float32::nlanes) + vx_load(src[-1] + i + 3*v_float32::nlanes), k1, s3);
+                v_float32 s1 = v_muladd(vx_load(src[0] + i + VTraits<v_float32>::vlanes()), k0, d4);
+                v_float32 s2 = v_muladd(vx_load(src[0] + i + 2*VTraits<v_float32>::vlanes()), k0, d4);
+                v_float32 s3 = v_muladd(vx_load(src[0] + i + 3*VTraits<v_float32>::vlanes()), k0, d4);
+                s0 = v_muladd(v_add(vx_load(src[1] + i), vx_load(src[-1] + i)), k1, s0);
+                s1 = v_muladd(v_add(vx_load(src[1] + i + VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + VTraits<v_float32>::vlanes())), k1, s1);
+                s2 = v_muladd(v_add(vx_load(src[1] + i + 2 * VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + 2 * VTraits<v_float32>::vlanes())), k1, s2);
+                s3 = v_muladd(v_add(vx_load(src[1] + i + 3 * VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + 3 * VTraits<v_float32>::vlanes())), k1, s3);
                 for( k = 2; k <= ksize2; k++ )
                 {
                     v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) + vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
-                    s2 = v_muladd(vx_load(src[k] + i + 2*v_float32::nlanes) + vx_load(src[-k] + i + 2*v_float32::nlanes), k2, s2);
-                    s3 = v_muladd(vx_load(src[k] + i + 3*v_float32::nlanes) + vx_load(src[-k] + i + 3*v_float32::nlanes), k2, s3);
+                    s0 = v_muladd(v_add(vx_load(src[k] + i), vx_load(src[-k] + i)), k2, s0);
+                    s1 = v_muladd(v_add(vx_load(src[k] + i + VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + VTraits<v_float32>::vlanes())), k2, s1);
+                    s2 = v_muladd(v_add(vx_load(src[k] + i + 2 * VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + 2 * VTraits<v_float32>::vlanes())), k2, s2);
+                    s3 = v_muladd(v_add(vx_load(src[k] + i + 3 * VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + 3 * VTraits<v_float32>::vlanes())), k2, s3);
                 }
                 v_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-                v_store(dst + i + v_int16::nlanes, v_pack(v_round(s2), v_round(s3)));
+                v_store(dst + i + VTraits<v_int16>::vlanes(), v_pack(v_round(s2), v_round(s3)));
             }
-            if( i <= width - v_int16::nlanes )
+            if( i <= width - VTraits<v_int16>::vlanes() )
             {
                 v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
-                v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), k0, d4);
-                s0 = v_muladd(vx_load(src[1] + i) + vx_load(src[-1] + i), k1, s0);
-                s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) + vx_load(src[-1] + i + v_float32::nlanes), k1, s1);
+                v_float32 s1 = v_muladd(vx_load(src[0] + i + VTraits<v_float32>::vlanes()), k0, d4);
+                s0 = v_muladd(v_add(vx_load(src[1] + i), vx_load(src[-1] + i)), k1, s0);
+                s1 = v_muladd(v_add(vx_load(src[1] + i + VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + VTraits<v_float32>::vlanes())), k1, s1);
                 for( k = 2; k <= ksize2; k++ )
                 {
                     v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) + vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
+                    s0 = v_muladd(v_add(vx_load(src[k] + i), vx_load(src[-k] + i)), k2, s0);
+                    s1 = v_muladd(v_add(vx_load(src[k] + i + VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + VTraits<v_float32>::vlanes())), k2, s1);
                 }
                 v_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-                i += v_int16::nlanes;
+                i += VTraits<v_int16>::vlanes();
             }
-            if( i <= width - v_float32::nlanes )
+            if( i <= width - VTraits<v_float32>::vlanes() )
             {
                 v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
-                s0 = v_muladd(vx_load(src[1] + i) + vx_load(src[-1] + i), k1, s0);
+                s0 = v_muladd(v_add(vx_load(src[1] + i), vx_load(src[-1] + i)), k1, s0);
                 for( k = 2; k <= ksize2; k++ )
-                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), vx_setall_f32(ky[k]), s0);
+                    s0 = v_muladd(v_add(vx_load(src[k] + i), vx_load(src[-k] + i)), vx_setall_f32(ky[k]), s0);
                 v_pack_store(dst + i, v_round(s0));
-                i += v_float32::nlanes;
+                i += VTraits<v_float32>::vlanes();
             }
         }
         else
         {
             v_float32 k1 = vx_setall_f32(ky[1]);
-            for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+            for( ; i <= width - 2*VTraits<v_int16>::vlanes(); i += 2*VTraits<v_int16>::vlanes() )
             {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
-                v_float32 s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) - vx_load(src[-1] + i + v_float32::nlanes), k1, d4);
-                v_float32 s2 = v_muladd(vx_load(src[1] + i + 2*v_float32::nlanes) - vx_load(src[-1] + i + 2*v_float32::nlanes), k1, d4);
-                v_float32 s3 = v_muladd(vx_load(src[1] + i + 3*v_float32::nlanes) - vx_load(src[-1] + i + 3*v_float32::nlanes), k1, d4);
+                v_float32 s0 = v_muladd(v_sub(vx_load(src[1] + i), vx_load(src[-1] + i)), k1, d4);
+                v_float32 s1 = v_muladd(v_sub(vx_load(src[1] + i + VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + VTraits<v_float32>::vlanes())), k1, d4);
+                v_float32 s2 = v_muladd(v_sub(vx_load(src[1] + i + 2 * VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + 2 * VTraits<v_float32>::vlanes())), k1, d4);
+                v_float32 s3 = v_muladd(v_sub(vx_load(src[1] + i + 3 * VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + 3 * VTraits<v_float32>::vlanes())), k1, d4);
                 for( k = 2; k <= ksize2; k++ )
                 {
                     v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) - vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
-                    s2 = v_muladd(vx_load(src[k] + i + 2*v_float32::nlanes) - vx_load(src[-k] + i + 2*v_float32::nlanes), k2, s2);
-                    s3 = v_muladd(vx_load(src[k] + i + 3*v_float32::nlanes) - vx_load(src[-k] + i + 3*v_float32::nlanes), k2, s3);
+                    s0 = v_muladd(v_sub(vx_load(src[k] + i), vx_load(src[-k] + i)), k2, s0);
+                    s1 = v_muladd(v_sub(vx_load(src[k] + i + VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + VTraits<v_float32>::vlanes())), k2, s1);
+                    s2 = v_muladd(v_sub(vx_load(src[k] + i + 2 * VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + 2 * VTraits<v_float32>::vlanes())), k2, s2);
+                    s3 = v_muladd(v_sub(vx_load(src[k] + i + 3 * VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + 3 * VTraits<v_float32>::vlanes())), k2, s3);
                 }
                 v_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-                v_store(dst + i + v_int16::nlanes, v_pack(v_round(s2), v_round(s3)));
+                v_store(dst + i + VTraits<v_int16>::vlanes(), v_pack(v_round(s2), v_round(s3)));
             }
-            if( i <= width - v_int16::nlanes )
+            if( i <= width - VTraits<v_int16>::vlanes() )
             {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
-                v_float32 s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) - vx_load(src[-1] + i + v_float32::nlanes), k1, d4);
+                v_float32 s0 = v_muladd(v_sub(vx_load(src[1] + i), vx_load(src[-1] + i)), k1, d4);
+                v_float32 s1 = v_muladd(v_sub(vx_load(src[1] + i + VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + VTraits<v_float32>::vlanes())), k1, d4);
                 for( k = 2; k <= ksize2; k++ )
                 {
                     v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) - vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
+                    s0 = v_muladd(v_sub(vx_load(src[k] + i), vx_load(src[-k] + i)), k2, s0);
+                    s1 = v_muladd(v_sub(vx_load(src[k] + i + VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + VTraits<v_float32>::vlanes())), k2, s1);
                 }
                 v_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-                i += v_int16::nlanes;
+                i += VTraits<v_int16>::vlanes();
             }
-            if( i <= width - v_float32::nlanes )
+            if( i <= width - VTraits<v_float32>::vlanes() )
             {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
+                v_float32 s0 = v_muladd(v_sub(vx_load(src[1] + i), vx_load(src[-1] + i)), k1, d4);
                 for( k = 2; k <= ksize2; k++ )
-                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), vx_setall_f32(ky[k]), s0);
+                    s0 = v_muladd(v_sub(vx_load(src[k] + i), vx_load(src[-k] + i)), vx_setall_f32(ky[k]), s0);
                 v_pack_store(dst + i, v_round(s0));
-                i += v_float32::nlanes;
+                i += VTraits<v_float32>::vlanes();
             }
         }
 
@@ -1680,52 +1649,52 @@ struct RowVec_32f
         }
 #endif
         v_float32 k0 = vx_setall_f32(_kx[0]);
-        for( ; i <= width - 4*v_float32::nlanes; i += 4*v_float32::nlanes )
+        for( ; i <= width - 4*VTraits<v_float32>::vlanes(); i += 4*VTraits<v_float32>::vlanes() )
         {
             const float* src = src0 + i;
-            v_float32 s0 = vx_load(src) * k0;
-            v_float32 s1 = vx_load(src + v_float32::nlanes) * k0;
-            v_float32 s2 = vx_load(src + 2*v_float32::nlanes) * k0;
-            v_float32 s3 = vx_load(src + 3*v_float32::nlanes) * k0;
+            v_float32 s0 = v_mul(vx_load(src), k0);
+            v_float32 s1 = v_mul(vx_load(src + VTraits<v_float32>::vlanes()), k0);
+            v_float32 s2 = v_mul(vx_load(src + 2 * VTraits<v_float32>::vlanes()), k0);
+            v_float32 s3 = v_mul(vx_load(src + 3 * VTraits<v_float32>::vlanes()), k0);
             src += cn;
             for( k = 1; k < _ksize; k++, src += cn )
             {
                 v_float32 k1 = vx_setall_f32(_kx[k]);
                 s0 = v_muladd(vx_load(src), k1, s0);
-                s1 = v_muladd(vx_load(src + v_float32::nlanes), k1, s1);
-                s2 = v_muladd(vx_load(src + 2*v_float32::nlanes), k1, s2);
-                s3 = v_muladd(vx_load(src + 3*v_float32::nlanes), k1, s3);
+                s1 = v_muladd(vx_load(src + VTraits<v_float32>::vlanes()), k1, s1);
+                s2 = v_muladd(vx_load(src + 2*VTraits<v_float32>::vlanes()), k1, s2);
+                s3 = v_muladd(vx_load(src + 3*VTraits<v_float32>::vlanes()), k1, s3);
             }
             v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            v_store(dst + i + 2*v_float32::nlanes, s2);
-            v_store(dst + i + 3*v_float32::nlanes, s3);
+            v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+            v_store(dst + i + 2*VTraits<v_float32>::vlanes(), s2);
+            v_store(dst + i + 3*VTraits<v_float32>::vlanes(), s3);
         }
-        if( i <= width - 2*v_float32::nlanes )
+        if( i <= width - 2*VTraits<v_float32>::vlanes() )
         {
             const float* src = src0 + i;
-            v_float32 s0 = vx_load(src) * k0;
-            v_float32 s1 = vx_load(src + v_float32::nlanes) * k0;
+            v_float32 s0 = v_mul(vx_load(src), k0);
+            v_float32 s1 = v_mul(vx_load(src + VTraits<v_float32>::vlanes()), k0);
             src += cn;
             for( k = 1; k < _ksize; k++, src += cn )
             {
                 v_float32 k1 = vx_setall_f32(_kx[k]);
                 s0 = v_muladd(vx_load(src), k1, s0);
-                s1 = v_muladd(vx_load(src + v_float32::nlanes), k1, s1);
+                s1 = v_muladd(vx_load(src + VTraits<v_float32>::vlanes()), k1, s1);
             }
             v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            i += 2*v_float32::nlanes;
+            v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+            i += 2*VTraits<v_float32>::vlanes();
         }
-        if( i <= width - v_float32::nlanes )
+        if( i <= width - VTraits<v_float32>::vlanes() )
         {
             const float* src = src0 + i;
-            v_float32 s0 = vx_load(src) * k0;
+            v_float32 s0 = v_mul(vx_load(src), k0);
             src += cn;
             for( k = 1; k < _ksize; k++, src += cn )
                 s0 = v_muladd(vx_load(src), vx_setall_f32(_kx[k]), s0);
             v_store(dst + i, s0);
-            i += v_float32::nlanes;
+            i += VTraits<v_float32>::vlanes();
         }
         return i;
     }
@@ -1804,28 +1773,28 @@ struct SymmRowSmallVec_32f
                 {
 #if CV_FMA3 || CV_AVX2
                     v_float32 k0 = vx_setall_f32(kx[0]);
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
-                        v_store(dst + i, v_muladd(vx_load(src), k0, vx_load(src - cn) + vx_load(src + cn)));
+                    for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
+                        v_store(dst + i, v_muladd(vx_load(src), k0, v_add(vx_load(src - cn), vx_load(src + cn))));
 #else
                     if( kx[0] > 0 )
-                        for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
+                        for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
                         {
                             v_float32 x = vx_load(src);
-                            v_store(dst + i, vx_load(src - cn) + vx_load(src + cn) + (x + x));
+                            v_store(dst + i, v_add(vx_load(src - cn), vx_load(src + cn), x , x));
                         }
                     else
-                        for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
+                        for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
                         {
                             v_float32 x = vx_load(src);
-                            v_store(dst + i, vx_load(src - cn) + vx_load(src + cn) - (x + x));
+                            v_store(dst + i, v_sub(v_add(vx_load(src - cn), vx_load(src + cn)), v_add(x, x)));
                         }
 #endif
                 }
                 else
                 {
                     v_float32 k0 = vx_setall_f32(kx[0]), k1 = vx_setall_f32(kx[1]);
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
-                        v_store(dst + i, v_muladd(vx_load(src), k0, (vx_load(src - cn) + vx_load(src + cn)) * k1));
+                    for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
+                        v_store(dst + i, v_muladd(vx_load(src), k0, v_mul(v_add(vx_load(src - cn), vx_load(src + cn)), k1)));
                 }
             }
             else if( _ksize == 5 )
@@ -1834,21 +1803,21 @@ struct SymmRowSmallVec_32f
                 {
 #if CV_FMA3 || CV_AVX2
                     v_float32 k0 = vx_setall_f32(-2);
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
-                        v_store(dst + i, v_muladd(vx_load(src), k0, vx_load(src - 2*cn) + vx_load(src + 2*cn)));
+                    for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
+                        v_store(dst + i, v_muladd(vx_load(src), k0, v_add(vx_load(src - 2 * cn), vx_load(src + 2 * cn))));
 #else
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
+                    for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
                     {
                         v_float32 x = vx_load(src);
-                        v_store(dst + i, vx_load(src - 2*cn) + vx_load(src + 2*cn) - (x + x));
+                        v_store(dst + i, v_sub(v_add(vx_load(src - 2*cn), vx_load(src + 2*cn)), v_add(x, x)));
                     }
 #endif
                 }
                 else
                 {
                     v_float32 k0 = vx_setall_f32(kx[0]), k1 = vx_setall_f32(kx[1]), k2 = vx_setall_f32(kx[2]);
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
-                        v_store(dst + i, v_muladd(vx_load(src + 2*cn) + vx_load(src - 2*cn), k2, v_muladd(vx_load(src), k0, (vx_load(src - cn) + vx_load(src + cn)) * k1)));
+                    for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
+                        v_store(dst + i, v_muladd(v_add(vx_load(src + 2 * cn), vx_load(src - 2 * cn)), k2, v_muladd(vx_load(src), k0, v_mul(v_add(vx_load(src - cn), vx_load(src + cn)), k1))));
                 }
             }
         }
@@ -1857,20 +1826,20 @@ struct SymmRowSmallVec_32f
             if( _ksize == 3 )
             {
                 if( kx[0] == 0 && kx[1] == 1 )
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
-                        v_store(dst + i, vx_load(src + cn) - vx_load(src - cn));
+                    for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
+                        v_store(dst + i, v_sub(vx_load(src + cn), vx_load(src - cn)));
                 else
                 {
                     v_float32 k1 = vx_setall_f32(kx[1]);
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
-                        v_store(dst + i, (vx_load(src + cn) - vx_load(src - cn)) * k1);
+                    for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
+                        v_store(dst + i, v_mul(v_sub(vx_load(src + cn), vx_load(src - cn)), k1));
                 }
             }
             else if( _ksize == 5 )
             {
                 v_float32 k1 = vx_setall_f32(kx[1]), k2 = vx_setall_f32(kx[2]);
-                for ( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
-                    v_store(dst + i, v_muladd(vx_load(src + 2*cn) - vx_load(src - 2*cn), k2, (vx_load(src + cn) - vx_load(src - cn)) * k1));
+                for ( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
+                    v_store(dst + i, v_muladd(v_sub(vx_load(src + 2 * cn), vx_load(src - 2 * cn)), k2, v_mul(v_sub(vx_load(src + cn), vx_load(src - cn)), k1)));
             }
         }
         return i;
@@ -1959,46 +1928,46 @@ struct SymmColumnVec_32f
 #endif
             const v_float32 d4 = vx_setall_f32(delta);
             const v_float32 k0 = vx_setall_f32(ky[0]);
-            for( ; i <= width - 4*v_float32::nlanes; i += 4*v_float32::nlanes )
+            for( ; i <= width - 4*VTraits<v_float32>::vlanes(); i += 4*VTraits<v_float32>::vlanes() )
             {
                 v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
-                v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), k0, d4);
-                v_float32 s2 = v_muladd(vx_load(src[0] + i + 2*v_float32::nlanes), k0, d4);
-                v_float32 s3 = v_muladd(vx_load(src[0] + i + 3*v_float32::nlanes), k0, d4);
+                v_float32 s1 = v_muladd(vx_load(src[0] + i + VTraits<v_float32>::vlanes()), k0, d4);
+                v_float32 s2 = v_muladd(vx_load(src[0] + i + 2*VTraits<v_float32>::vlanes()), k0, d4);
+                v_float32 s3 = v_muladd(vx_load(src[0] + i + 3*VTraits<v_float32>::vlanes()), k0, d4);
                 for( k = 1; k <= ksize2; k++ )
                 {
                     v_float32 k1 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), k1, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) + vx_load(src[-k] + i + v_float32::nlanes), k1, s1);
-                    s2 = v_muladd(vx_load(src[k] + i + 2*v_float32::nlanes) + vx_load(src[-k] + i + 2*v_float32::nlanes), k1, s2);
-                    s3 = v_muladd(vx_load(src[k] + i + 3*v_float32::nlanes) + vx_load(src[-k] + i + 3*v_float32::nlanes), k1, s3);
+                    s0 = v_muladd(v_add(vx_load(src[k] + i), vx_load(src[-k] + i)), k1, s0);
+                    s1 = v_muladd(v_add(vx_load(src[k] + i + VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + VTraits<v_float32>::vlanes())), k1, s1);
+                    s2 = v_muladd(v_add(vx_load(src[k] + i + 2 * VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + 2 * VTraits<v_float32>::vlanes())), k1, s2);
+                    s3 = v_muladd(v_add(vx_load(src[k] + i + 3 * VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + 3 * VTraits<v_float32>::vlanes())), k1, s3);
                 }
                 v_store(dst + i, s0);
-                v_store(dst + i + v_float32::nlanes, s1);
-                v_store(dst + i + 2*v_float32::nlanes, s2);
-                v_store(dst + i + 3*v_float32::nlanes, s3);
+                v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+                v_store(dst + i + 2*VTraits<v_float32>::vlanes(), s2);
+                v_store(dst + i + 3*VTraits<v_float32>::vlanes(), s3);
             }
-            if( i <= width - 2*v_float32::nlanes )
+            if( i <= width - 2*VTraits<v_float32>::vlanes() )
             {
                 v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
-                v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), k0, d4);
+                v_float32 s1 = v_muladd(vx_load(src[0] + i + VTraits<v_float32>::vlanes()), k0, d4);
                 for( k = 1; k <= ksize2; k++ )
                 {
                     v_float32 k1 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), k1, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) + vx_load(src[-k] + i + v_float32::nlanes), k1, s1);
+                    s0 = v_muladd(v_add(vx_load(src[k] + i), vx_load(src[-k] + i)), k1, s0);
+                    s1 = v_muladd(v_add(vx_load(src[k] + i + VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + VTraits<v_float32>::vlanes())), k1, s1);
                 }
                 v_store(dst + i, s0);
-                v_store(dst + i + v_float32::nlanes, s1);
-                i += 2*v_float32::nlanes;
+                v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+                i += 2*VTraits<v_float32>::vlanes();
             }
-            if( i <= width - v_float32::nlanes )
+            if( i <= width - VTraits<v_float32>::vlanes() )
             {
                 v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
                 for( k = 1; k <= ksize2; k++ )
-                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), vx_setall_f32(ky[k]), s0);
+                    s0 = v_muladd(v_add(vx_load(src[k] + i), vx_load(src[-k] + i)), vx_setall_f32(ky[k]), s0);
                 v_store(dst + i, s0);
-                i += v_float32::nlanes;
+                i += VTraits<v_float32>::vlanes();
             }
         }
         else
@@ -2040,46 +2009,46 @@ struct SymmColumnVec_32f
 #endif
             const v_float32 d4 = vx_setall_f32(delta);
             const v_float32 k1 = vx_setall_f32(ky[1]);
-            for( ; i <= width - 4*v_float32::nlanes; i += 4*v_float32::nlanes )
+            for( ; i <= width - 4*VTraits<v_float32>::vlanes(); i += 4*VTraits<v_float32>::vlanes() )
             {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
-                v_float32 s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) - vx_load(src[-1] + i + v_float32::nlanes), k1, d4);
-                v_float32 s2 = v_muladd(vx_load(src[1] + i + 2*v_float32::nlanes) - vx_load(src[-1] + i + 2*v_float32::nlanes), k1, d4);
-                v_float32 s3 = v_muladd(vx_load(src[1] + i + 3*v_float32::nlanes) - vx_load(src[-1] + i + 3*v_float32::nlanes), k1, d4);
+                v_float32 s0 = v_muladd(v_sub(vx_load(src[1] + i), vx_load(src[-1] + i)), k1, d4);
+                v_float32 s1 = v_muladd(v_sub(vx_load(src[1] + i + VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + VTraits<v_float32>::vlanes())), k1, d4);
+                v_float32 s2 = v_muladd(v_sub(vx_load(src[1] + i + 2 * VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + 2 * VTraits<v_float32>::vlanes())), k1, d4);
+                v_float32 s3 = v_muladd(v_sub(vx_load(src[1] + i + 3 * VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + 3 * VTraits<v_float32>::vlanes())), k1, d4);
                 for( k = 2; k <= ksize2; k++ )
                 {
                     v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) - vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
-                    s2 = v_muladd(vx_load(src[k] + i + 2*v_float32::nlanes) - vx_load(src[-k] + i + 2*v_float32::nlanes), k2, s2);
-                    s3 = v_muladd(vx_load(src[k] + i + 3*v_float32::nlanes) - vx_load(src[-k] + i + 3*v_float32::nlanes), k2, s3);
+                    s0 = v_muladd(v_sub(vx_load(src[k] + i), vx_load(src[-k] + i)), k2, s0);
+                    s1 = v_muladd(v_sub(vx_load(src[k] + i + VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + VTraits<v_float32>::vlanes())), k2, s1);
+                    s2 = v_muladd(v_sub(vx_load(src[k] + i + 2 * VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + 2 * VTraits<v_float32>::vlanes())), k2, s2);
+                    s3 = v_muladd(v_sub(vx_load(src[k] + i + 3 * VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + 3 * VTraits<v_float32>::vlanes())), k2, s3);
                 }
                 v_store(dst + i, s0);
-                v_store(dst + i + v_float32::nlanes, s1);
-                v_store(dst + i + 2*v_float32::nlanes, s2);
-                v_store(dst + i + 3*v_float32::nlanes, s3);
+                v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+                v_store(dst + i + 2*VTraits<v_float32>::vlanes(), s2);
+                v_store(dst + i + 3*VTraits<v_float32>::vlanes(), s3);
             }
-            if( i <= width - 2*v_float32::nlanes )
+            if( i <= width - 2*VTraits<v_float32>::vlanes() )
             {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
-                v_float32 s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) - vx_load(src[-1] + i + v_float32::nlanes), k1, d4);
+                v_float32 s0 = v_muladd(v_sub(vx_load(src[1] + i), vx_load(src[-1] + i)), k1, d4);
+                v_float32 s1 = v_muladd(v_sub(vx_load(src[1] + i + VTraits<v_float32>::vlanes()), vx_load(src[-1] + i + VTraits<v_float32>::vlanes())), k1, d4);
                 for( k = 2; k <= ksize2; k++ )
                 {
                     v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) - vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
+                    s0 = v_muladd(v_sub(vx_load(src[k] + i), vx_load(src[-k] + i)), k2, s0);
+                    s1 = v_muladd(v_sub(vx_load(src[k] + i + VTraits<v_float32>::vlanes()), vx_load(src[-k] + i + VTraits<v_float32>::vlanes())), k2, s1);
                 }
                 v_store(dst + i, s0);
-                v_store(dst + i + v_float32::nlanes, s1);
-                i += 2*v_float32::nlanes;
+                v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+                i += 2*VTraits<v_float32>::vlanes();
             }
-            if( i <= width - v_float32::nlanes )
+            if( i <= width - VTraits<v_float32>::vlanes() )
             {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
+                v_float32 s0 = v_muladd(v_sub(vx_load(src[1] + i), vx_load(src[-1] + i)), k1, d4);
                 for( k = 2; k <= ksize2; k++ )
-                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), vx_setall_f32(ky[k]), s0);
+                    s0 = v_muladd(v_sub(vx_load(src[k] + i), vx_load(src[-k] + i)), vx_setall_f32(ky[k]), s0);
                 v_store(dst + i, s0);
-                i += v_float32::nlanes;
+                i += VTraits<v_float32>::vlanes();
             }
         }
         return i;
@@ -2121,28 +2090,28 @@ struct SymmColumnSmallVec_32f
             {
 #if CV_FMA3 || CV_AVX2
                 v_float32 k0 = vx_setall_f32(ky[0]);
-                for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
-                    v_store(dst + i, v_muladd(vx_load(S1 + i), k0, vx_load(S0 + i) + vx_load(S2 + i) + d4));
+                for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes() )
+                    v_store(dst + i, v_muladd(vx_load(S1 + i), k0, v_add(v_add(vx_load(S0 + i), vx_load(S2 + i)), d4)));
 #else
                 if(ky[0] > 0)
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
+                    for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes() )
                     {
                         v_float32 x = vx_load(S1 + i);
-                        v_store(dst + i, vx_load(S0 + i) + vx_load(S2 + i) + d4 + (x + x));
+                        v_store(dst + i, v_add(vx_load(S0 + i), vx_load(S2 + i), d4, x, x));
                     }
                 else
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
+                    for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes() )
                     {
                         v_float32 x = vx_load(S1 + i);
-                        v_store(dst + i, vx_load(S0 + i) + vx_load(S2 + i) + d4 - (x + x));
+                        v_store(dst + i, v_sub(v_add(vx_load(S0 + i), vx_load(S2 + i), d4), v_add(x, x)));
                     }
 #endif
             }
             else
             {
                 v_float32 k0 = vx_setall_f32(ky[0]), k1 = vx_setall_f32(ky[1]);
-                for ( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
-                    v_store(dst + i, v_muladd(vx_load(S0 + i) + vx_load(S2 + i), k1, v_muladd(vx_load(S1 + i), k0, d4)));
+                for ( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes() )
+                    v_store(dst + i, v_muladd(v_add(vx_load(S0 + i), vx_load(S2 + i)), k1, v_muladd(vx_load(S1 + i), k0, d4)));
             }
         }
         else
@@ -2151,14 +2120,14 @@ struct SymmColumnSmallVec_32f
             {
                 if( ky[1] < 0 )
                     std::swap(S0, S2);
-                for ( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
-                    v_store(dst + i, vx_load(S2 + i) - vx_load(S0 + i) + d4);
+                for ( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes() )
+                    v_store(dst + i, v_add(v_sub(vx_load(S2 + i), vx_load(S0 + i)), d4));
             }
             else
             {
                 v_float32 k1 = vx_setall_f32(ky[1]);
-                for ( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
-                    v_store(dst + i, v_muladd(vx_load(S2 + i) - vx_load(S0 + i), k1, d4));
+                for ( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes() )
+                    v_store(dst + i, v_muladd(v_sub(vx_load(S2 + i), vx_load(S0 + i)), k1, d4));
             }
         }
         return i;
@@ -2197,7 +2166,7 @@ struct FilterVec_8u
 
         v_float32 d4 = vx_setall_f32(delta);
         v_float32 f0 = vx_setall_f32(kf[0]);
-        for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+        for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes() )
         {
             v_uint16 xl, xh;
             v_expand(vx_load(src[0] + i), xl, xh);
@@ -2221,7 +2190,7 @@ struct FilterVec_8u
             }
             v_store(dst + i, v_pack_u(v_pack(v_round(s0), v_round(s1)), v_pack(v_round(s2), v_round(s3))));
         }
-        if( i <= width - v_uint16::nlanes )
+        if( i <= width - VTraits<v_uint16>::vlanes() )
         {
             v_uint32 x0, x1;
             v_expand(vx_load_expand(src[0] + i), x0, x1);
@@ -2235,21 +2204,7 @@ struct FilterVec_8u
                 s1 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(x1)), f, s1);
             }
             v_pack_u_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-            i += v_uint16::nlanes;
-        }
-#if CV_SIMD_WIDTH > 16
-        while( i <= width - v_int32x4::nlanes )
-#else
-        if( i <= width - v_int32x4::nlanes )
-#endif
-        {
-            v_float32x4 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(src[0] + i))), v_setall_f32(kf[0]), v_setall_f32(delta));
-            for( k = 1; k < nz; k++ )
-                s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(src[k] + i))), v_setall_f32(kf[k]), s0);
-            v_int32x4 s32 = v_round(s0);
-            v_int16x8 s16 = v_pack(s32, s32);
-            *(unaligned_int*)(dst + i) = v_reinterpret_as_s32(v_pack_u(s16, s16)).get0();
-            i += v_int32x4::nlanes;
+            i += VTraits<v_uint16>::vlanes();
         }
         return i;
     }
@@ -2284,7 +2239,7 @@ struct FilterVec_8u16s
 
         v_float32 d4 = vx_setall_f32(delta);
         v_float32 f0 = vx_setall_f32(kf[0]);
-        for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+        for( ; i <= width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes() )
         {
             v_uint16 xl, xh;
             v_expand(vx_load(src[0] + i), xl, xh);
@@ -2302,9 +2257,9 @@ struct FilterVec_8u16s
                 s3 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_high(xh))), f, s3);
             }
             v_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-            v_store(dst + i + v_int16::nlanes, v_pack(v_round(s2), v_round(s3)));
+            v_store(dst + i + VTraits<v_int16>::vlanes(), v_pack(v_round(s2), v_round(s3)));
         }
-        if( i <= width - v_uint16::nlanes )
+        if( i <= width - VTraits<v_uint16>::vlanes() )
         {
             v_uint16 x = vx_load_expand(src[0] + i);
             v_float32 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_low(x))), f0, d4);
@@ -2317,15 +2272,15 @@ struct FilterVec_8u16s
                 s1 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_high(x))), f, s1);
             }
             v_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-            i += v_uint16::nlanes;
+            i += VTraits<v_uint16>::vlanes();
         }
-        if( i <= width - v_int32::nlanes )
+        if( i <= width - VTraits<v_int32>::vlanes() )
         {
             v_float32 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src[0] + i))), f0, d4);
             for( k = 1; k < nz; k++ )
                 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src[k] + i))), vx_setall_f32(kf[k]), s0);
             v_pack_store(dst + i, v_round(s0));
-            i += v_int32::nlanes;
+            i += VTraits<v_int32>::vlanes();
         }
         return i;
     }
@@ -2358,46 +2313,46 @@ struct FilterVec_32f
 
         v_float32 d4 = vx_setall_f32(delta);
         v_float32 f0 = vx_setall_f32(kf[0]);
-        for( ; i <= width - 4*v_float32::nlanes; i += 4*v_float32::nlanes )
+        for( ; i <= width - 4*VTraits<v_float32>::vlanes(); i += 4*VTraits<v_float32>::vlanes() )
         {
             v_float32 s0 = v_muladd(vx_load(src[0] + i), f0, d4);
-            v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), f0, d4);
-            v_float32 s2 = v_muladd(vx_load(src[0] + i + 2*v_float32::nlanes), f0, d4);
-            v_float32 s3 = v_muladd(vx_load(src[0] + i + 3*v_float32::nlanes), f0, d4);
+            v_float32 s1 = v_muladd(vx_load(src[0] + i + VTraits<v_float32>::vlanes()), f0, d4);
+            v_float32 s2 = v_muladd(vx_load(src[0] + i + 2*VTraits<v_float32>::vlanes()), f0, d4);
+            v_float32 s3 = v_muladd(vx_load(src[0] + i + 3*VTraits<v_float32>::vlanes()), f0, d4);
             for( k = 1; k < nz; k++ )
             {
                 v_float32 f1 = vx_setall_f32(kf[k]);
                 s0 = v_muladd(vx_load(src[k] + i), f1, s0);
-                s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes), f1, s1);
-                s2 = v_muladd(vx_load(src[k] + i + 2*v_float32::nlanes), f1, s2);
-                s3 = v_muladd(vx_load(src[k] + i + 3*v_float32::nlanes), f1, s3);
+                s1 = v_muladd(vx_load(src[k] + i + VTraits<v_float32>::vlanes()), f1, s1);
+                s2 = v_muladd(vx_load(src[k] + i + 2*VTraits<v_float32>::vlanes()), f1, s2);
+                s3 = v_muladd(vx_load(src[k] + i + 3*VTraits<v_float32>::vlanes()), f1, s3);
             }
             v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            v_store(dst + i + 2*v_float32::nlanes, s2);
-            v_store(dst + i + 3*v_float32::nlanes, s3);
+            v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+            v_store(dst + i + 2*VTraits<v_float32>::vlanes(), s2);
+            v_store(dst + i + 3*VTraits<v_float32>::vlanes(), s3);
         }
-        if( i <= width - 2*v_float32::nlanes )
+        if( i <= width - 2*VTraits<v_float32>::vlanes() )
         {
             v_float32 s0 = v_muladd(vx_load(src[0] + i), f0, d4);
-            v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), f0, d4);
+            v_float32 s1 = v_muladd(vx_load(src[0] + i + VTraits<v_float32>::vlanes()), f0, d4);
             for( k = 1; k < nz; k++ )
             {
                 v_float32 f1 = vx_setall_f32(kf[k]);
                 s0 = v_muladd(vx_load(src[k] + i), f1, s0);
-                s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes), f1, s1);
+                s1 = v_muladd(vx_load(src[k] + i + VTraits<v_float32>::vlanes()), f1, s1);
             }
             v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            i += 2*v_float32::nlanes;
+            v_store(dst + i + VTraits<v_float32>::vlanes(), s1);
+            i += 2*VTraits<v_float32>::vlanes();
         }
-        if( i <= width - v_float32::nlanes )
+        if( i <= width - VTraits<v_float32>::vlanes() )
         {
             v_float32 s0 = v_muladd(vx_load(src[0] + i), f0, d4);
             for( k = 1; k < nz; k++ )
                 s0 = v_muladd(vx_load(src[k] + i), vx_setall_f32(kf[k]), s0);
             v_store(dst + i, s0);
-            i += v_float32::nlanes;
+            i += VTraits<v_float32>::vlanes();
         }
         return i;
     }
@@ -3040,7 +2995,7 @@ Ptr<BaseRowFilter> getLinearRowFilter(
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<RowFilter<double, double, RowNoVec> >(kernel, anchor);
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
         srcType, bufType));
 }
@@ -3138,7 +3093,7 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
                 (kernel, anchor, delta, symmetryType);
     }
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of buffer format (=%d), and destination format (=%d)",
         bufType, dstType));
 }
@@ -3292,7 +3247,7 @@ Ptr<BaseFilter> getLinearFilter(
         return makePtr<Filter2D<double,
             Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and destination format (=%d)",
         srcType, dstType));
 }

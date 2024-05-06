@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2024 Intel Corporation
 
 #ifndef OPENCV_GAPI_GIEBACKEND_HPP
 #define OPENCV_GAPI_GIEBACKEND_HPP
@@ -10,7 +10,7 @@
 // Include anyway - cv::gapi::ie::backend() still needs to be defined
 #include "opencv2/gapi/infer/ie.hpp"
 
-#ifdef HAVE_INF_ENGINE
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2023010000
 
 #include <ade/util/algorithm.hpp> // type_list_index
 #include <condition_variable>

@@ -311,6 +311,8 @@ static const TestCase testConformanceConfig[] = {
     {"test_gridsample_nearest", 2, 1},
     {"test_gridsample_reflection_padding", 2, 1},
     {"test_gridsample_zeros_padding", 2, 1},
+    {"test_group_normalization_epsilon", 3, 1},
+    {"test_group_normalization_example", 3, 1},
     {"test_gru_batchwise", 3, 2},
     {"test_gru_defaults", 3, 1},
     {"test_gru_seq_length", 4, 1},
@@ -339,6 +341,25 @@ static const TestCase testConformanceConfig[] = {
     {"test_isinf_negative", 1, 1},
     {"test_isinf_positive", 1, 1},
     {"test_isnan", 1, 1},
+    {"test_layer_normalization_2d_axis0", 3, 1},
+    {"test_layer_normalization_2d_axis1", 3, 1},
+    {"test_layer_normalization_2d_axis_negative_1", 3, 1},
+    {"test_layer_normalization_2d_axis_negative_2", 3, 1},
+    {"test_layer_normalization_3d_axis0_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis1_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis2_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_1_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_2_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_3_epsilon", 3, 1},
+    {"test_layer_normalization_4d_axis0", 3, 1},
+    {"test_layer_normalization_4d_axis1", 3, 1},
+    {"test_layer_normalization_4d_axis2", 3, 1},
+    {"test_layer_normalization_4d_axis3", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_1", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_2", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_3", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_4", 3, 1},
+    {"test_layer_normalization_default_axis", 3, 1},
     {"test_leakyrelu", 1, 1},
     {"test_leakyrelu_default", 1, 1},
     {"test_leakyrelu_example", 1, 1},
@@ -957,7 +978,7 @@ public:
         backend = get<0>(get<1>(GetParam()));
         target = get<1>(get<1>(GetParam()));
 
-        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
         {
             default_l1 = 7e-3;
             default_lInf = 2e-2;
@@ -1257,4 +1278,4 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_conformance,
     printOnnxConfParams
 );
 
-};
+}

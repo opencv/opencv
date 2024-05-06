@@ -6,6 +6,8 @@
 #include "cv2_numpy.hpp"
 #include <vector>
 #include <string>
+#include <unordered_map>
+#include <map>
 #include <type_traits>  // std::enable_if
 
 extern PyTypeObject* pyopencv_Mat_TypePtr;
@@ -154,6 +156,33 @@ struct PyOpenCV_Converter
     }
 };
 
+// There is conflict between "uint64_t" and "size_t".
+// They are the same type on some 32-bit platforms.
+template<typename T>
+struct PyOpenCV_Converter
+    < T, typename std::enable_if< std::is_same<uint64_t, T>::value && !std::is_same<uint64_t, size_t>::value >::type >
+{
+    static inline PyObject* from(const uint64_t& value)
+    {
+        return PyLong_FromUnsignedLongLong(value);
+    }
+
+    static inline bool to(PyObject* obj, uint64_t& value, const ArgInfo& info)
+    {
+        CV_UNUSED(info);
+        if(!obj || obj == Py_None)
+            return true;
+        if(PyInt_Check(obj))
+            value = (uint64_t)PyInt_AsUnsignedLongLongMask(obj);
+        else if(PyLong_Check(obj))
+            value = (uint64_t)PyLong_AsUnsignedLongLong(obj);
+        else
+            return false;
+        return value != (uint64_t)-1 || !PyErr_Occurred();
+    }
+};
+
+
 // --- uchar
 template<> bool pyopencv_to(PyObject* obj, uchar& value, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const uchar& value);
@@ -185,6 +214,8 @@ template<> PyObject* pyopencv_from(const cv::Size_<float>& sz);
 // --- Rect
 template<> bool pyopencv_to(PyObject* obj, cv::Rect& r, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Rect& r);
+template<> bool pyopencv_to(PyObject* obj, cv::Rect2f& r, const ArgInfo& info);
+template<> PyObject* pyopencv_from(const cv::Rect2f& r);
 template<> bool pyopencv_to(PyObject* obj, cv::Rect2d& r, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Rect2d& r);
 
@@ -203,6 +234,8 @@ template<> bool pyopencv_to(PyObject* obj, cv::Point2f& p, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Point2f& p);
 template<> bool pyopencv_to(PyObject* obj, cv::Point2d& p, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Point2d& p);
+template<> bool pyopencv_to(PyObject* obj, cv::Point3i& p, const ArgInfo& info);
+template<> PyObject* pyopencv_from(const cv::Point3i& p);
 template<> bool pyopencv_to(PyObject* obj, cv::Point3f& p, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Point3f& p);
 template<> bool pyopencv_to(PyObject* obj, cv::Point3d& p, const ArgInfo& info);
@@ -261,6 +294,43 @@ template <typename Tp>
 PyObject* pyopencv_from(const std::vector<Tp>& value)
 {
     return pyopencvVecConverter<Tp>::from(value);
+}
+
+template<typename K, typename V>
+bool pyopencv_to(PyObject *obj, std::map<K,V> &map, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+
+    PyObject* py_key = nullptr;
+    PyObject* py_value = nullptr;
+    Py_ssize_t pos = 0;
+
+    if (!PyDict_Check(obj)) {
+        failmsg("Can't parse '%s'. Input argument isn't dict or"
+                " an instance of subtype of the dict type", info.name);
+        return false;
+    }
+
+    while(PyDict_Next(obj, &pos, &py_key, &py_value))
+    {
+        K cpp_key;
+        if (!pyopencv_to(py_key, cpp_key, ArgInfo("key", 0))) {
+            failmsg("Can't parse dict key. Key on position %lu has a wrong type", pos);
+            return false;
+        }
+
+        V cpp_value;
+        if (!pyopencv_to(py_value, cpp_value, ArgInfo("value", 0))) {
+            failmsg("Can't parse dict value. Value on position %lu has a wrong type", pos);
+            return false;
+        }
+
+        map.emplace(cpp_key, cpp_value);
+    }
+    return true;
 }
 
 template <typename Tp>

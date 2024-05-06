@@ -85,50 +85,8 @@ It provides easy interface to:
         created. Then, a new button is attached to it.
 
     See below the example used to generate the figure:
-    @code
-        int main(int argc, char *argv[])
-        {
 
-            int value = 50;
-            int value2 = 0;
-
-
-            namedWindow("main1",WINDOW_NORMAL);
-            namedWindow("main2",WINDOW_AUTOSIZE | WINDOW_GUI_NORMAL);
-            createTrackbar( "track1", "main1", &value, 255,  NULL);
-
-            String nameb1 = "button1";
-            String nameb2 = "button2";
-
-            createButton(nameb1,callbackButton,&nameb1,QT_CHECKBOX,1);
-            createButton(nameb2,callbackButton,NULL,QT_CHECKBOX,0);
-            createTrackbar( "track2", NULL, &value2, 255, NULL);
-            createButton("button5",callbackButton1,NULL,QT_RADIOBOX,0);
-            createButton("button6",callbackButton2,NULL,QT_RADIOBOX,1);
-
-            setMouseCallback( "main2",on_mouse,NULL );
-
-            Mat img1 = imread("files/flower.jpg");
-            VideoCapture video;
-            video.open("files/hockey.avi");
-
-            Mat img2,img3;
-
-            while( waitKey(33) != 27 )
-            {
-                img1.convertTo(img2,-1,1,value);
-                video >> img3;
-
-                imshow("main1",img2);
-                imshow("main2",img3);
-            }
-
-            destroyAllWindows();
-
-            return 0;
-        }
-    @endcode
-
+    @include highgui_qt.cpp
 
     @defgroup highgui_winrt WinRT support
 
@@ -139,36 +97,34 @@ It provides easy interface to:
 
     See below the example used to generate the figure:
     @code
-        void sample_app::MainPage::ShowWindow()
+    void sample_app::MainPage::ShowWindow()
+    {
+        static cv::String windowName("sample");
+        cv::winrt_initContainer(this->cvContainer);
+        cv::namedWindow(windowName); // not required
+
+        cv::Mat image = cv::imread("Assets/sample.jpg");
+        cv::Mat converted = cv::Mat(image.rows, image.cols, CV_8UC4);
+        cv::cvtColor(image, converted, COLOR_BGR2BGRA);
+        cv::imshow(windowName, converted); // this will create window if it hasn't been created before
+
+        int state = 42;
+        cv::TrackbarCallback callback = [](int pos, void* userdata)
         {
-            static cv::String windowName("sample");
-            cv::winrt_initContainer(this->cvContainer);
-            cv::namedWindow(windowName); // not required
-
-            cv::Mat image = cv::imread("Assets/sample.jpg");
-            cv::Mat converted = cv::Mat(image.rows, image.cols, CV_8UC4);
-            cv::cvtColor(image, converted, COLOR_BGR2BGRA);
-            cv::imshow(windowName, converted); // this will create window if it hasn't been created before
-
-            int state = 42;
-            cv::TrackbarCallback callback = [](int pos, void* userdata)
-            {
-                if (pos == 0) {
-                    cv::destroyWindow(windowName);
-                }
-            };
-            cv::TrackbarCallback callbackTwin = [](int pos, void* userdata)
-            {
-                if (pos >= 70) {
-                    cv::destroyAllWindows();
-                }
-            };
-            cv::createTrackbar("Sample trackbar", windowName, &state, 100, callback);
-            cv::createTrackbar("Twin brother", windowName, &state, 100, callbackTwin);
-        }
+            if (pos == 0) {
+                cv::destroyWindow(windowName);
+            }
+        };
+        cv::TrackbarCallback callbackTwin = [](int pos, void* userdata)
+        {
+            if (pos >= 70) {
+                cv::destroyAllWindows();
+            }
+        };
+        cv::createTrackbar("Sample trackbar", windowName, &state, 100, callback);
+        cv::createTrackbar("Twin brother", windowName, &state, 100, callbackTwin);
+    }
     @endcode
-
-    @defgroup highgui_c C API
 @}
 */
 
@@ -300,9 +256,7 @@ You can call cv::destroyWindow or cv::destroyAllWindows to close the window and 
 memory usage. For a simple program, you do not really have to call these functions because all the
 resources and windows of the application are closed automatically by the operating system upon exit.
 
-@note
-
-Qt backend supports additional flags:
+@note Qt backend supports additional flags:
  -   **WINDOW_NORMAL or WINDOW_AUTOSIZE:** WINDOW_NORMAL enables you to resize the
      window, whereas WINDOW_AUTOSIZE adjusts automatically the window size to fit the
      displayed image (see imshow ), and you cannot change the window size manually.
@@ -331,13 +285,20 @@ The function destroyAllWindows destroys all of the opened HighGUI windows.
  */
 CV_EXPORTS_W void destroyAllWindows();
 
+
+/** @brief HighGUI backend used.
+
+The function returns HighGUI backend name used: could be COCOA, GTK2/3, QT, WAYLAND or WIN32.
+Returns empty string if there is no available UI backend.
+ */
+CV_EXPORTS_W const std::string currentUIFramework();
+
+
 CV_EXPORTS_W int startWindowThread();
 
 /** @brief Similar to #waitKey, but returns full key code.
 
-@note
-
-Key code is implementation specific and depends on used backend: QT/GTK/Win32/etc
+@note Key code is implementation specific and depends on used backend: QT/GTK/Win32/etc
 
 */
 CV_EXPORTS_W int waitKeyEx(int delay = 0);
@@ -404,11 +365,7 @@ For example, **waitKey(0)** will display the window infinitely until any keypres
 for image display). **waitKey(25)** will display a frame and wait approximately 25 ms for a key
 press (suitable for displaying a video frame-by-frame). To remove the window, use cv::destroyWindow.
 
-@note
-
-[__Windows Backend Only__] Pressing Ctrl+C will copy the image to the clipboard.
-
-[__Windows Backend Only__] Pressing Ctrl+S will show a dialog to save the image.
+@note [__Windows Backend Only__] Pressing Ctrl+C will copy the image to the clipboard. Pressing Ctrl+S will show a dialog to save the image.
 
 @param winname Name of the window.
 @param mat Image to be shown.
@@ -417,10 +374,8 @@ CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
 
 /** @brief Resizes the window to the specified size
 
-@note
-
--   The specified window size is for the image area. Toolbars are not counted.
--   Only windows created without cv::WINDOW_AUTOSIZE flag can be resized.
+@note The specified window size is for the image area. Toolbars are not counted.
+Only windows created without cv::WINDOW_AUTOSIZE flag can be resized.
 
 @param winname Window name.
 @param width The new window width.
@@ -502,9 +457,7 @@ For cv::EVENT_MOUSEWHEEL positive and negative values mean forward and backward 
 respectively. For cv::EVENT_MOUSEHWHEEL, where available, positive and negative values mean right and
 left scrolling, respectively.
 
-@note
-
-Mouse-wheel events are currently supported only on Windows and Cocoa
+@note Mouse-wheel events are currently supported only on Windows and Cocoa.
 
 @param flags The mouse callback flags parameter.
  */
@@ -559,9 +512,7 @@ and range, assigns a variable value to be a position synchronized with the track
 the callback function onChange to be called on the trackbar position change. The created trackbar is
 displayed in the specified window winname.
 
-@note
-
-[__Qt Backend Only__] winname can be empty if the trackbar should be attached to the
+@note [__Qt Backend Only__] winname can be empty if the trackbar should be attached to the
 control panel.
 
 Clicking the label of each trackbar enables editing the trackbar values manually.
@@ -587,9 +538,7 @@ CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,
 
 The function returns the current position of the specified trackbar.
 
-@note
-
-[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
+@note [__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -601,9 +550,7 @@ CV_EXPORTS_W int getTrackbarPos(const String& trackbarname, const String& winnam
 
 The function sets the position of the specified trackbar in the specified window.
 
-@note
-
-[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
+@note [__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -616,9 +563,7 @@ CV_EXPORTS_W void setTrackbarPos(const String& trackbarname, const String& winna
 
 The function sets the maximum position of the specified trackbar in the specified window.
 
-@note
-
-[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
+@note [__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -631,9 +576,7 @@ CV_EXPORTS_W void setTrackbarMax(const String& trackbarname, const String& winna
 
 The function sets the minimum position of the specified trackbar in the specified window.
 
-@note
-
-[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
+@note [__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.

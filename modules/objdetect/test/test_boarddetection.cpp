@@ -26,7 +26,7 @@ class CV_ArucoBoardPose : public cvtest::BaseTest {
         params.minDistanceToBorder = 3;
         if (arucoAlgParams == ArucoAlgParams::USE_ARUCO3) {
             params.useAruco3Detection = true;
-            params.cornerRefinementMethod = aruco::CORNER_REFINE_SUBPIX;
+            params.cornerRefinementMethod = (int)aruco::CORNER_REFINE_SUBPIX;
             params.minSideLengthCanonicalImg = 16;
             params.errorCorrectionRate = 0.8;
         }
@@ -137,7 +137,7 @@ class CV_ArucoRefine : public cvtest::BaseTest {
         aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_6X6_250);
         aruco::DetectorParameters params;
         params.minDistanceToBorder = 3;
-        params.cornerRefinementMethod = aruco::CORNER_REFINE_SUBPIX;
+        params.cornerRefinementMethod = (int)aruco::CORNER_REFINE_SUBPIX;
         if (arucoAlgParams == ArucoAlgParams::USE_ARUCO3)
             params.useAruco3Detection = true;
         aruco::RefineParameters refineParams(10.f, 3.f, true);
@@ -316,6 +316,14 @@ TEST(CV_ArucoGenerateBoard, regression_1226) {
     {
         board.generateImage(sz, mat, 0, 1);
     });
+}
+
+TEST(CV_ArucoDictionary, extendDictionary) {
+    aruco::Dictionary base_dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_250);
+    aruco::Dictionary custom_dictionary = aruco::extendDictionary(150, 4, base_dictionary);
+
+    ASSERT_EQ(custom_dictionary.bytesList.rows, 150);
+    ASSERT_EQ(cv::norm(custom_dictionary.bytesList, base_dictionary.bytesList.rowRange(0, 150)), 0.);
 }
 
 }} // namespace

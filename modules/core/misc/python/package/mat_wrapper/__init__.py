@@ -1,12 +1,19 @@
 __all__ = []
 
-import sys
 import numpy as np
 import cv2 as cv
+from typing import TYPE_CHECKING, Any
+
+# Same as cv2.typing.NumPyArrayNumeric, but avoids circular dependencies
+if TYPE_CHECKING:
+    _NumPyArrayNumeric = np.ndarray[Any, np.dtype[np.integer[Any] | np.floating[Any]]]
+else:
+    _NumPyArrayNumeric = np.ndarray
 
 # NumPy documentation: https://numpy.org/doc/stable/user/basics.subclassing.html
 
-class Mat(np.ndarray):
+
+class Mat(_NumPyArrayNumeric):
     '''
     cv.Mat wrapper for numpy array.
 

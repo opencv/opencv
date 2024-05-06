@@ -22,130 +22,6 @@ void test_hal_intrin_float16();
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-template <typename R> struct Data;
-template <int N> struct initializer;
-
-#if CV_SIMD_SCALABLE
-template <> struct initializer<128>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31],
-        d[32], d[33], d[34], d[35], d[36], d[37], d[38], d[39], d[40], d[41], d[42], d[43], d[44], d[45], d[46], d[47],
-        d[48], d[49], d[50], d[51], d[52], d[53], d[54], d[55], d[56], d[57], d[58], d[59], d[60], d[61], d[62], d[63],
-        d[64], d[65], d[66], d[67], d[68], d[69], d[70], d[71], d[72], d[73], d[74], d[75], d[76], d[77], d[78], d[79],
-        d[80], d[81], d[82], d[83], d[84], d[85], d[86], d[87], d[88], d[89], d[90], d[91], d[92], d[93], d[94], d[95],
-        d[96], d[97], d[98], d[99], d[100], d[101], d[102], d[103], d[104], d[105], d[106], d[107], d[108], d[109], d[110], d[111],
-        d[112], d[113], d[114], d[115], d[116], d[117], d[118], d[119], d[120], d[121], d[122], d[123], d[124], d[125], d[126], d[127]});
-    }
-};
-
-template <> struct initializer<64>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31],
-        d[32], d[33], d[34], d[35], d[36], d[37], d[38], d[39], d[40], d[41], d[42], d[43], d[44], d[45], d[46], d[47],
-        d[48], d[49], d[50], d[51], d[52], d[53], d[54], d[55], d[56], d[57], d[58], d[59], d[60], d[61], d[62], d[63]});
-    }
-};
-
-template <> struct initializer<32>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31]});
-    }
-};
-
-template <> struct initializer<16>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]});
-    }
-};
-
-template <> struct initializer<8>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]});
-    }
-};
-
-template <> struct initializer<4>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3]});
-    }
-};
-
-template <> struct initializer<2>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1]});
-    }
-};
-
-#else
-template <> struct initializer<64>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31],
-        d[32], d[33], d[34], d[35], d[36], d[37], d[38], d[39], d[40], d[41], d[42], d[43], d[44], d[45], d[46], d[47],
-        d[48], d[49], d[50], d[51], d[52], d[53], d[54], d[55], d[56], d[57], d[58], d[59], d[60], d[61], d[62], d[63]);
-    }
-};
-
-template <> struct initializer<32>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31]);
-    }
-};
-
-template <> struct initializer<16>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
-    }
-};
-
-template <> struct initializer<8>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
-    }
-};
-
-template <> struct initializer<4>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3]);
-    }
-};
-
-template <> struct initializer<2>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1]);
-    }
-};
-#endif
 //==================================================================================================
 
 template <typename R> struct Data
@@ -168,7 +44,8 @@ template <typename R> struct Data
     }
     operator R () const
     {
-        return initializer<VTraits<R>::max_nlanes>().init(*this);
+        CV_Assert(VTraits<R>::vlanes() <= VTraits<R>::max_nlanes);
+        return vx_load(d);
     }
     Data<R> & operator=(const R & r)
     {
@@ -1475,12 +1352,15 @@ template<typename R> struct TheTest
     TheTest & test_float_math()
     {
         typedef typename V_RegTraits<R>::round_reg Ri;
-        Data<R> data1, data2, data3;
+        Data<R> data1, data1_border, data2, data3;
+        // See https://github.com/opencv/opencv/issues/24213
+        data1_border *= 0.5;
         data1 *= 1.1;
         data2 += 10;
-        R a1 = data1, a2 = data2, a3 = data3;
+        R a1 = data1, a1_border = data1_border, a2 = data2, a3 = data3;
 
         Data<Ri> resB = v_round(a1),
+                 resB_border = v_round(a1_border),
                  resC = v_trunc(a1),
                  resD = v_floor(a1),
                  resE = v_ceil(a1);
@@ -1493,6 +1373,7 @@ template<typename R> struct TheTest
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(cvRound(data1[i]), resB[i]);
+            EXPECT_EQ(cvRound(data1_border[i]), resB_border[i]);
             EXPECT_EQ((typename VTraits<Ri>::lane_type)data1[i], resC[i]);
             EXPECT_EQ(cvFloor(data1[i]), resD[i]);
             EXPECT_EQ(cvCeil(data1[i]), resE[i]);
@@ -1676,14 +1557,14 @@ template<typename R> struct TheTest
         AlignedData<v_float32> data_f32; data_f32.a.clear();
         AlignedData<v_uint16> out;
 
-        R r1 = vx_load_expand((const cv::float16_t*)data.a.d);
+        R r1 = vx_load_expand((const cv::hfloat*)data.a.d);
         R r2(r1);
         EXPECT_EQ(1.0f, v_get0(r1));
         v_store(data_f32.a.d, r2);
         EXPECT_EQ(-2.0f, data_f32.a.d[VTraits<R>::vlanes() - 1]);
 
         out.a.clear();
-        v_pack_store((cv::float16_t*)out.a.d, r2);
+        v_pack_store((cv::hfloat*)out.a.d, r2);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             EXPECT_EQ(data.a[i], out.a[i]) << "i=" << i;
@@ -1707,7 +1588,7 @@ template<typename R> struct TheTest
 
         // check some initialization methods
         R r1 = data.u;
-        R r2 = vx_load_expand((const float16_t*)data.a.d);
+        R r2 = vx_load_expand((const hfloat*)data.a.d);
         R r3(r2);
         EXPECT_EQ(data.u[0], v_get0(r1));
         EXPECT_EQ(data.a[0], v_get0(r2));
@@ -1741,13 +1622,8 @@ template<typename R> struct TheTest
         R a = dataA;
         R b = dataB;
 
-#if CV_SIMD_SCALABLE
         Data<R> dataEQ = v_eq(a, b);
         Data<R> dataNE = v_ne(a, b);
-#else
-        Data<R> dataEQ = (a == b);
-        Data<R> dataNE = (a != b);
-#endif
 
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
@@ -2048,6 +1924,7 @@ void test_hal_intrin_uint64()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
+        .test_popcount()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
         ;
 }
@@ -2069,6 +1946,7 @@ void test_hal_intrin_int64()
         .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
         .test_cvt64_double()
+        .test_popcount()
         ;
 }
 

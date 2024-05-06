@@ -90,7 +90,7 @@ public:
      */
     CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
 
-    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to “protected” (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     Board();
 
     struct Impl;
@@ -122,7 +122,7 @@ public:
     CV_WRAP float getMarkerLength() const;
     CV_WRAP float getMarkerSeparation() const;
 
-    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to “protected” (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     GridBoard();
 };
 
@@ -166,11 +166,11 @@ public:
      */
     CV_WRAP std::vector<Point3f> getChessboardCorners() const;
 
-    /** @brief get CharucoBoard::nearestMarkerIdx
+    /** @brief get CharucoBoard::nearestMarkerIdx, for each charuco corner, nearest marker index in ids array
      */
     CV_PROP std::vector<std::vector<int> > getNearestMarkerIdx() const;
 
-    /** @brief get CharucoBoard::nearestMarkerCorners
+    /** @brief get CharucoBoard::nearestMarkerCorners, for each charuco corner, nearest marker corner id of each marker
      */
     CV_PROP std::vector<std::vector<int> > getNearestMarkerCorners() const;
 
@@ -187,7 +187,7 @@ public:
      */
     CV_WRAP bool checkCharucoCornersCollinear(InputArray charucoIds) const;
 
-    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to “protected” (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     CharucoBoard();
 };
 

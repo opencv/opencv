@@ -231,7 +231,13 @@ private:
             &handle_pointer_motion, &handle_pointer_button,
             &handle_pointer_axis, &handle_pointer_frame,
             &handle_pointer_axis_source, &handle_pointer_axis_stop,
-            &handle_pointer_axis_discrete
+            &handle_pointer_axis_discrete,
+#if WL_POINTER_AXIS_VALUE120_SINCE_VERSION >= 8
+            &handle_axis_value120,
+#endif
+#if WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION >= 9
+            &handle_axis_relative_direction,
+#endif
     };
     cv_wl_window *focus_window_{};
 
@@ -277,6 +283,27 @@ private:
         CV_UNUSED(axis);
         CV_UNUSED(discrete);
     }
+
+#if WL_POINTER_AXIS_VALUE120_SINCE_VERSION >= 8
+    static void
+    handle_axis_value120(void *data, struct wl_pointer *wl_pointer, uint32_t axis, int32_t value120) {
+        CV_UNUSED(data);
+        CV_UNUSED(wl_pointer);
+        CV_UNUSED(axis);
+        CV_UNUSED(value120);
+    }
+#endif
+
+#if WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION >= 9
+    static void
+    handle_axis_relative_direction(void *data, struct wl_pointer *wl_pointer, uint32_t axis, uint32_t direction) {
+        CV_UNUSED(data);
+        CV_UNUSED(wl_pointer);
+        CV_UNUSED(axis);
+        CV_UNUSED(direction);
+    }
+#endif
+
 };
 
 class cv_wl_keyboard {
@@ -695,7 +722,13 @@ private:
     };
     struct xdg_toplevel *xdg_toplevel_;
     struct xdg_toplevel_listener xdgtop_listener_{
-            &handle_toplevel_configure, &handle_toplevel_close
+            &handle_toplevel_configure, &handle_toplevel_close,
+#if XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION >= 4
+            &handle_toplevel_configure_bounds,
+#endif
+#if XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION >= 5
+            &handle_toplevel_wm_capabilities,
+#endif
     };
     bool wait_for_configure_ = true;
 
@@ -741,6 +774,27 @@ private:
     static void handle_toplevel_configure(void *, struct xdg_toplevel *, int32_t, int32_t, struct wl_array *);
 
     static void handle_toplevel_close(void *data, struct xdg_toplevel *surface);
+
+#if XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION >= 4
+    static void
+    handle_toplevel_configure_bounds(void *data, struct xdg_toplevel *xdg_toplevel, int32_t width, int32_t height)
+    {
+        CV_UNUSED(data);
+        CV_UNUSED(xdg_toplevel);
+        CV_UNUSED(width);
+        CV_UNUSED(height);
+    }
+#endif
+
+#if XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION >= 5
+    static void
+    handle_toplevel_wm_capabilities(void *data, struct xdg_toplevel *xdg_toplevel, struct wl_array *capabilities)
+    {
+        CV_UNUSED(data);
+        CV_UNUSED(xdg_toplevel);
+        CV_UNUSED(capabilities);
+    }
+#endif
 
     static void handle_frame_callback(void *data, struct wl_callback *cb, uint32_t time);
 };
@@ -1055,7 +1109,7 @@ void cv_wl_keyboard::handle_kb_keymap(void *data, struct wl_keyboard *kb, uint32
     } catch (std::exception &e) {
         if (keyboard->xkb_.keymap)
             xkb_keymap_unref(keyboard->xkb_.keymap);
-        std::cerr << "OpenCV Error: " << e.what() << std::endl;
+        CV_LOG_ERROR(NULL, "OpenCV Error: " << e.what());
     }
 
     close(fd);
@@ -1442,18 +1496,18 @@ cv::Rect cv_wl_titlebar::draw(void *data, cv::Size const &size, bool force) {
             cv::putText(
                     buf_, window_->get_title(),
                     origin, title_.face, title_.scale,
-                    CV_RGB(0xff, 0xff, 0xff), title_.thickness, CV_AA
+                    CV_RGB(0xff, 0xff, 0xff), title_.thickness, cv::LINE_AA
             );
         }
 
         buf_(cv::Rect(btn_min_.tl(), cv::Size(titlebar_min_width, size.height))) = bg_color_;
-        cv::line(buf_, btn_cls.tl(), btn_cls.br(), line_color_, 1, CV_AA);
+        cv::line(buf_, btn_cls.tl(), btn_cls.br(), line_color_, 1, cv::LINE_AA);
         cv::line(buf_, btn_cls.tl() + cv::Point(btn_cls.width, 0), btn_cls.br() - cv::Point(btn_cls.width, 0),
-                 line_color_, 1, CV_AA);
-        cv::rectangle(buf_, btn_max.tl(), btn_max.br(), line_color_, 1, CV_AA);
+                 line_color_, 1, cv::LINE_AA);
+        cv::rectangle(buf_, btn_max.tl(), btn_max.br(), line_color_, 1, cv::LINE_AA);
         cv::line(buf_, cv::Point(btn_min_.x + 8, btn_min_.height / 2),
-                 cv::Point(btn_min_.x + btn_min_.width - 8, btn_min_.height / 2), line_color_, 1, CV_AA);
-        cv::line(buf_, cv::Point(0, 0), cv::Point(buf_.size().width, 0), border_color_, 1, CV_AA);
+                 cv::Point(btn_min_.x + btn_min_.width - 8, btn_min_.height / 2), line_color_, 1, cv::LINE_AA);
+        cv::line(buf_, cv::Point(0, 0), cv::Point(buf_.size().width, 0), border_color_, 1, cv::LINE_AA);
 
         write_mat_to_xrgb8888(buf_, data);
         last_size_ = size;
@@ -1509,7 +1563,7 @@ void cv_wl_viewer::get_preferred_height_for_width(int width, int &minimum, int &
         minimum = natural = image_.size().height;
     } else {
         natural = static_cast<int>(width * aspect_ratio(image_.size()));
-        minimum = (flags_ & CV_WINDOW_FREERATIO ? 0 : natural);
+        minimum = (flags_ & cv::WINDOW_FREERATIO ? 0 : natural);
     }
 }
 
@@ -1548,11 +1602,11 @@ cv::Rect cv_wl_viewer::draw(void *data, cv::Size const &size, bool force) {
         CV_Assert(image_.size() == size);
         write_mat_to_xrgb8888(image_, data);
     } else {
-        if (flags_ & CV_WINDOW_FREERATIO) {
+        if (flags_ & cv::WINDOW_FREERATIO) {
             cv::Mat resized;
             cv::resize(image_, resized, size);
             write_mat_to_xrgb8888(resized, data);
-        } else /* CV_WINDOW_KEEPRATIO */ {
+        } else /* cv::WINDOW_KEEPRATIO */ {
             auto rect = cv::Rect(cv::Point(0, 0), size);
             if (aspect_ratio(size) >= aspect_ratio(image_.size())) {
                 rect.height = static_cast<int>(image_.size().height * ((double) rect.width / image_.size().width));
@@ -1657,12 +1711,12 @@ cv::Rect cv_wl_trackbar::draw(void *data, cv::Size const &size, bool force) {
                 data_,
                 (name_ + ": " + std::to_string(slider_.value)),
                 bar_.text_orig, bar_.fontface, bar_.fontscale,
-                CV_RGB(0x00, 0x00, 0x00), bar_.font_thickness, CV_AA);
+                CV_RGB(0x00, 0x00, 0x00), bar_.font_thickness, cv::LINE_AA);
 
-        cv::line(data_, bar_.left, bar_.right, color_.bg, bar_.thickness + 3, CV_AA);
-        cv::line(data_, bar_.left, bar_.right, color_.fg, bar_.thickness, CV_AA);
-        cv::circle(data_, slider_.pos, slider_.radius, color_.fg, -1, CV_AA);
-        cv::circle(data_, slider_.pos, slider_.radius, color_.bg, 1, CV_AA);
+        cv::line(data_, bar_.left, bar_.right, color_.bg, bar_.thickness + 3, cv::LINE_AA);
+        cv::line(data_, bar_.left, bar_.right, color_.fg, bar_.thickness, cv::LINE_AA);
+        cv::circle(data_, slider_.pos, slider_.radius, color_.fg, -1, cv::LINE_AA);
+        cv::circle(data_, slider_.pos, slider_.radius, color_.bg, 1, cv::LINE_AA);
 
         write_mat_to_xrgb8888(data_, data);
         damage = cv::Rect(cv::Point(0, 0), size);
@@ -2406,11 +2460,17 @@ CV_IMPL void cvSetMouseCallback(const char *window_name, CvMouseCallback on_mous
 }
 
 CV_IMPL void cvShowImage(const char *name, const CvArr *arr) {
-    auto cv_core = CvWlCore::getInstance();
-    auto window = cv_core.get_window(name);
+    // see https://github.com/opencv/opencv/issues/25497
+    /*
+     * To reuse the result of getInstance() repeatedly looks like better efficient implementation.
+     * However, it defined as static shared_ptr member variable in CvWlCore.
+     * If it reaches out of scope, cv_wl_core::~cv_wl_core() is called and all windows will be destroyed.
+     * For workaround, avoid it.
+     */
+    auto window = CvWlCore::getInstance().get_window(name);
     if (!window) {
-        cv_core.create_window(name, cv::WINDOW_AUTOSIZE);
-        if (!(window = cv_core.get_window(name)))
+        CvWlCore::getInstance().create_window(name, cv::WINDOW_AUTOSIZE);
+        if (!(window = CvWlCore::getInstance().get_window(name)))
             CV_Error_(StsNoMem, ("Failed to create window: %s", name));
     }
 
@@ -2425,10 +2485,15 @@ void setWindowTitle_WAYLAND(const cv::String &winname, const cv::String &title) 
 
 CV_IMPL int cvWaitKey(int delay) {
     int key = -1;
-    auto limit = ch::duration_cast<ch::nanoseconds>(ch::milliseconds(delay));
+    auto limit = ch::duration_cast<ch::nanoseconds>(ch::milliseconds(delay)).count();
     auto start_time = ch::duration_cast<ch::nanoseconds>(
             ch::steady_clock::now().time_since_epoch())
             .count();
+
+    // See https://github.com/opencv/opencv/issues/25501
+    // Too long sleep_for() makes no response to Wayland ping-pong mechanism
+    // So interval is limited to 33ms (1000ms / 30fps).
+    auto sleep_time_min = ch::duration_cast<ch::nanoseconds>(ch::milliseconds(33)).count();
 
     while (true) {
 
@@ -2448,11 +2513,11 @@ CV_IMPL int cvWaitKey(int delay) {
                 .count();
 
         auto elapsed = end_time - start_time;
-        if (limit.count() > 0 && elapsed >= limit.count()) {
+        if (limit > 0 && elapsed >= limit) {
             break;
         }
 
-        auto sleep_time = 64000 - elapsed;
+        auto sleep_time = std::min(limit - elapsed, sleep_time_min);
         if (sleep_time > 0) {
             std::this_thread::sleep_for(ch::nanoseconds(sleep_time));
         }

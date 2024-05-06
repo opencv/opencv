@@ -9,6 +9,9 @@
 
 #ifdef HAVE_ONNX
 
+#include "backends/onnx/dml_ep.hpp"
+#include "backends/onnx/coreml_ep.hpp"
+
 #include <ade/util/algorithm.hpp> // any_of
 #include <ade/util/zip_range.hpp>
 #include <opencv2/gapi/infer.hpp>
@@ -142,6 +145,96 @@ public:
     // Run with the assigned inputs/outputs
     void run();
 };
+
+static void addCUDAExecutionProvider(Ort::SessionOptions *session_options,
+                                     const cv::gapi::onnx::ep::CUDA &cuda_ep) {
+     OrtCUDAProviderOptions options{};
+     options.device_id = cuda_ep.device_id;
+
+     try {
+        session_options->AppendExecutionProvider_CUDA(options);
+     } catch (const std::exception &e) {
+         std::stringstream ss;
+         ss << "ONNX Backend: Failed to enable CUDA"
+            << " Execution Provider: " << e.what();
+         cv::util::throw_error(std::runtime_error(ss.str()));
+     }
+}
+
+static void addTensorRTExecutionProvider(Ort::SessionOptions *session_options,
+                                         const cv::gapi::onnx::ep::TensorRT &trt_ep) {
+     OrtTensorRTProviderOptions options{};
+     options.device_id = trt_ep.device_id;
+
+     try {
+        session_options->AppendExecutionProvider_TensorRT(options);
+     } catch (const std::exception &e) {
+         std::stringstream ss;
+         ss << "ONNX Backend: Failed to enable TensorRT"
+            << " Execution Provider: " << e.what();
+         cv::util::throw_error(std::runtime_error(ss.str()));
+     }
+}
+
+static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
+                                         const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
+     OrtOpenVINOProviderOptions options{};
+     options.device_type = ov_ep.device_type.c_str();
+     options.cache_dir = ov_ep.cache_dir.c_str();
+     options.num_of_threads = ov_ep.num_of_threads;
+     options.enable_opencl_throttling = ov_ep.enable_opencl_throttling;
+     options.enable_dynamic_shapes = ov_ep.enable_dynamic_shapes;
+     options.context = nullptr;
+
+     try {
+        session_options->AppendExecutionProvider_OpenVINO(options);
+     } catch (const std::exception &e) {
+         std::stringstream ss;
+         ss << "ONNX Backend: Failed to enable OpenVINO"
+            << " Execution Provider: " << e.what();
+         cv::util::throw_error(std::runtime_error(ss.str()));
+     }
+}
+
+static void addExecutionProvider(Ort::SessionOptions          *session_options,
+                                 const cv::gapi::onnx::ep::EP &execution_provider) {
+    namespace ep = cv::gapi::onnx::ep;
+    switch (execution_provider.index()) {
+        case ep::EP::index_of<ep::OpenVINO>(): {
+             GAPI_LOG_INFO(NULL, "OpenVINO Execution Provider is added.");
+             const auto &ov_ep = cv::util::get<ep::OpenVINO>(execution_provider);
+             addOpenVINOExecutionProvider(session_options, ov_ep);
+             break;
+        }
+        case ep::EP::index_of<ep::DirectML>(): {
+            GAPI_LOG_INFO(NULL, "DirectML Execution Provider is added.");
+            const auto &dml_ep = cv::util::get<ep::DirectML>(execution_provider);
+            addDMLExecutionProvider(session_options, dml_ep);
+            break;
+        }
+        case ep::EP::index_of<ep::CoreML>(): {
+            GAPI_LOG_INFO(NULL, "CoreML Execution Provider is added.");
+            const auto &coreml_ep = cv::util::get<ep::CoreML>(execution_provider);
+            addCoreMLExecutionProvider(session_options, coreml_ep);
+            break;
+        }
+        case ep::EP::index_of<ep::CUDA>(): {
+            GAPI_LOG_INFO(NULL, "CUDA Execution Provider is added.");
+            const auto &cuda_ep = cv::util::get<ep::CUDA>(execution_provider);
+            addCUDAExecutionProvider(session_options, cuda_ep);
+            break;
+        }
+        case ep::EP::index_of<ep::TensorRT>(): {
+            GAPI_LOG_INFO(NULL, "TensorRT Execution Provider is added.");
+            const auto &trt_ep = cv::util::get<ep::TensorRT>(execution_provider);
+            addTensorRTExecutionProvider(session_options, trt_ep);
+            break;
+        }
+        default:
+            GAPI_LOG_INFO(NULL, "CPU Execution Provider is added.");
+            break;
+    }
+}
 
 } // namespace onnx
 } // namespace gimpl
@@ -284,6 +377,7 @@ inline void preprocess(const cv::Mat& src,
         cv::resize(csc, rsz, cv::Size(new_w, new_h));
         if (src.depth() == CV_8U && type == CV_32F) {
             rsz.convertTo(pp, type, ti.normalize ? 1.f / 255 : 1.f);
+
             if (ti.mstd.has_value()) {
                 pp -= ti.mstd->mean;
                 pp /= ti.mstd->stdev;
@@ -591,9 +685,16 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
         cv::util::throw_error(std::logic_error("Please specify output layer names for "
                                                + params.model_path));
     }
-
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
+    GAPI_LOG_INFO(NULL, "Adding Execution Providers for \"" << pp.model_path << "\"");
+    for (const auto &ep : pp.execution_providers) {
+        cv::gimpl::onnx::addExecutionProvider(&session_options, ep);
+    }
+
+    if (pp.disable_mem_pattern) {
+        session_options.DisableMemPattern();
+    }
     this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
 #ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);
@@ -1143,24 +1244,31 @@ namespace {
             if (pp.is_generic) {
                 auto& info = cv::util::any_cast<cv::detail::InOutInfo>(op.params);
 
-                for (const auto& a : info.in_names)
+                for (const auto& layer_name : info.in_names)
                 {
-                    pp.input_names.push_back(a);
-                }
-                // Adding const input is necessary because the definition of input_names
-                // includes const input.
-                for (const auto& a : pp.const_inputs)
-                {
-                    pp.input_names.push_back(a.first);
+                    pp.input_names.push_back(layer_name);
+                    if (!pp.generic_mstd.empty()) {
+                        const auto &ms = pp.generic_mstd.at(layer_name);
+                        pp.mean.push_back(ms.first);
+                        pp.stdev.push_back(ms.second);
+                    }
+                    if (!pp.generic_norm.empty()) {
+                        pp.normalize.push_back(pp.generic_norm.at(layer_name));
+                    }
                 }
                 pp.num_in = info.in_names.size();
+
+                // Incorporate extra parameters associated with input layer names
+                // FIXME(DM): The current form assumes ALL input layers require
+                // this information, this is obviously not correct
 
                 for (const auto& a : info.out_names)
                 {
                     pp.output_names.push_back(a);
                 }
                 pp.num_out = info.out_names.size();
-            }
+            } // if(is_generic) -- note, the structure is already filled at the user
+              // end when a non-generic Params are used
 
             gm.metadata(nh).set(ONNXUnit{pp});
             gm.metadata(nh).set(ONNXCallable{ki.run});

@@ -1,0 +1,116 @@
+plugins {
+    id 'com.android.library'
+    id 'maven-publish'
+    id 'kotlin-android'
+}
+
+android {
+    namespace 'org.opencv'
+    compileSdk ${COMPILE_SDK}
+
+    defaultConfig {
+        minSdk ${MIN_SDK}
+        targetSdk ${TARGET_SDK}
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            cmake {
+                cppFlags ""
+                arguments "-DANDROID_STL=${LIB_TYPE}"
+            }
+        }
+        ndk {
+            abiFilters ${ABI_FILTERS}
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_${JAVA_VERSION}
+        targetCompatibility JavaVersion.VERSION_${JAVA_VERSION}
+    }
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+        }
+    }
+    buildFeatures {
+        prefabPublishing true
+        buildConfig true
+    }
+    prefab {
+        ${LIB_NAME} {
+            headers "src/main/cpp/include"
+        }
+    }
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java']
+            //jniLibs.srcDirs = ['libs']
+        }
+    }
+
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+}
+
+publishing {
+    publications {
+        release(MavenPublication) {
+            // Builds aar, sources jar and javadoc jar from project sources and creates maven
+            groupId = 'org.opencv'
+            artifactId = '${PACKAGE_NAME}'
+            version = '${OPENCV_VERSION}'
+            afterEvaluate {
+                from components.release
+            }
+        }
+        modified(MavenPublication) {
+            // Creates maven from opencv-release.aar
+            groupId = 'org.opencv'
+            artifactId = '${PACKAGE_NAME}'
+            version = '${OPENCV_VERSION}'
+            artifact("opencv-release.aar")
+            pom {
+                name = "OpenCV"
+                description = "Open Source Computer Vision Library"
+                url = "https://opencv.org/"
+                licenses {
+                    license {
+                        name = "The Apache License, Version 2.0"
+                        url = "https://github.com/opencv/opencv/blob/master/LICENSE"
+                    }
+                }
+                developers {
+                    developer {
+                        id = "admin"
+                        name = "OpenCV Team"
+                        email = "admin@opencv.org"
+                    }
+                }
+                scm {
+                    connection = "scm:git:https://github.com/opencv/opencv.git"
+                    url = "https://github.com/opencv/opencv"
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'myrepo'
+            url = "${project.buildDir}/repo"
+        }
+    }
+}
+
+dependencies {
+}

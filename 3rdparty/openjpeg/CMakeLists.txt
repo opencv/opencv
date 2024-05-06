@@ -14,12 +14,15 @@ project(openjpeg C)
 ocv_warnings_disable(CMAKE_C_FLAGS
     -Wimplicit-const-int-float-conversion  # clang
     -Wunused-but-set-variable # clang15
+    -Wmissing-prototypes # clang, function opj_t1_ht_decode_cblk
+    -Wmissing-declarations # gcc, function opj_t1_ht_decode_cblk
+    -Wdocumentation # clang
 )
 
 #-----------------------------------------------------------------------------
 # OPENJPEG version number, useful for packaging and doxygen doc:
 set(OPENJPEG_VERSION_MAJOR 2)
-set(OPENJPEG_VERSION_MINOR 4)
+set(OPENJPEG_VERSION_MINOR 5)
 set(OPENJPEG_VERSION_BUILD 0)
 set(OPENJPEG_VERSION
   "${OPENJPEG_VERSION_MAJOR}.${OPENJPEG_VERSION_MINOR}.${OPENJPEG_VERSION_BUILD}")
@@ -45,6 +48,7 @@ set(PACKAGE_VERSION
 #   2.3.0 |  7
 #   2.3.1 |  7
 #   2.4.0 |  7
+#   2.5.0 |  7
 # above is the recommendation by the OPJ team. If you really need to override this default,
 # you can specify your own OPENJPEG_SOVERSION at cmake configuration time:
 # cmake -DOPENJPEG_SOVERSION:STRING=42 /path/to/openjpeg
@@ -92,8 +96,10 @@ endif()
 
 #-----------------------------------------------------------------------------
 # Big endian test:
+if (NOT EMSCRIPTEN)
 include(TestBigEndian)
 test_big_endian(OPJ_BIG_ENDIAN)
+endif()
 
 #-----------------------------------------------------------------------------
 # opj_config.h generation (1/2)

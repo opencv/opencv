@@ -71,6 +71,8 @@ inline bool swapBlue(int code)
     case COLOR_YUV2BGR_UYVY: case COLOR_YUV2BGRA_UYVY: case COLOR_YUV2BGR_YUY2:
     case COLOR_YUV2BGRA_YUY2:  case COLOR_YUV2BGR_YVYU: case COLOR_YUV2BGRA_YVYU:
     case COLOR_BGR2YUV_IYUV: case COLOR_BGRA2YUV_IYUV: case COLOR_BGR2YUV_YV12: case COLOR_BGRA2YUV_YV12:
+    case COLOR_BGR2YUV_UYVY:   case COLOR_BGRA2YUV_UYVY: case COLOR_BGR2YUV_YUY2:
+    case COLOR_BGRA2YUV_YUY2:  case COLOR_BGR2YUV_YVYU:  case COLOR_BGRA2YUV_YVYU:
         return false;
     default:
         return true;
@@ -124,6 +126,13 @@ inline int dstChannels(int code)
 
             return 3;
 
+        case COLOR_RGB2YUV_UYVY: case COLOR_BGR2YUV_UYVY: case COLOR_RGB2YUV_YVYU: case COLOR_BGR2YUV_YVYU:
+        case COLOR_RGB2YUV_YUY2: case COLOR_BGR2YUV_YUY2:
+        case COLOR_RGBA2YUV_UYVY: case COLOR_BGRA2YUV_UYVY: case COLOR_RGBA2YUV_YVYU: case COLOR_BGRA2YUV_YVYU:
+        case COLOR_RGBA2YUV_YUY2: case COLOR_BGRA2YUV_YUY2:
+
+            return 2;
+
         default:
             return 0;
     }
@@ -159,6 +168,7 @@ inline int uIndex(int code)
             return 2;
 
         case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU: case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
+        case COLOR_RGB2YUV_YVYU: case COLOR_BGR2YUV_YVYU: case COLOR_RGBA2YUV_YVYU: case COLOR_BGRA2YUV_YVYU:
         case COLOR_RGB2YUV_IYUV: case COLOR_BGR2YUV_IYUV: case COLOR_RGBA2YUV_IYUV: case COLOR_BGRA2YUV_IYUV:
         case COLOR_YUV2BGR_NV21:  case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21:
         case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGRA_YV12: case COLOR_YUV2RGBA_YV12:
@@ -169,6 +179,8 @@ inline int uIndex(int code)
         case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV: case COLOR_YUV2BGRA_IYUV: case COLOR_YUV2RGBA_IYUV:
         case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
         case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2:
+        case COLOR_RGB2YUV_UYVY: case COLOR_BGR2YUV_UYVY: case COLOR_RGBA2YUV_UYVY: case COLOR_BGRA2YUV_UYVY:
+        case COLOR_RGB2YUV_YUY2: case COLOR_BGR2YUV_YUY2: case COLOR_RGBA2YUV_YUY2: case COLOR_BGRA2YUV_YUY2:
 
             return 0;
 
@@ -265,7 +277,7 @@ struct OclHelper
         int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
         int pxPerWIx = 1;
 
-        cv::String baseOptions = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+        cv::String baseOptions = format("-D SRC_DEPTH=%d -D SCN=%d -D PIX_PER_WI_Y=%d ",
                                         src.depth(), src.channels(), pxPerWIy);
 
         switch (sizePolicy)
@@ -529,6 +541,7 @@ bool oclCvtColorBGR2YUV( InputArray _src, OutputArray _dst, int bidx );
 bool oclCvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx );
 
 bool oclCvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx, int yidx );
+bool oclCvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx, int yidx );
 bool oclCvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx );
 bool oclCvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx );
 bool oclCvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, int bidx, int uidx );
@@ -547,6 +560,7 @@ void cvtColorBGR2YUV( InputArray _src, OutputArray _dst, bool swapb, bool crcb);
 void cvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool crcb);
 
 void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx, int ycn);
+void cvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, bool swapb, int uidx, int ycn);
 void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx );
 void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int dcn, bool swapb, int uidx );
 void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx );

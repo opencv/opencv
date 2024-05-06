@@ -199,21 +199,6 @@ public:
     Mat tvec;
 };
 
-UsacParams::UsacParams()
-{
-    confidence = 0.99;
-    isParallel = false;
-    loIterations = 5;
-    loMethod = LocalOptimMethod::LOCAL_OPTIM_INNER_LO;
-    loSampleSize = 14;
-    maxIterations = 5000;
-    neighborsSearch = NeighborSearchMethod::NEIGH_GRID;
-    randomGeneratorState = 0;
-    sampler = SamplingMethod::SAMPLING_UNIFORM;
-    score = ScoreMethod::SCORE_METHOD_MSAC;
-    threshold = 1.5;
-}
-
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                     InputArray _cameraMatrix, InputArray _distCoeffs,
                     OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
@@ -407,7 +392,7 @@ bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
     usac::setParameters(model_params, cameraMatrix.empty() ? usac::EstimationMethod::P6P :
         usac::EstimationMethod::P3P, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model_params, imagePoints, objectPoints, model_params->getRandomGeneratorState(),
+    if (usac::run(model_params, imagePoints, objectPoints,
             ransac_output, cameraMatrix, noArray(), distCoeffs, noArray())) {
         if (inliers.needed()) {
             const auto &inliers_mask = ransac_output->getInliersMask();
@@ -1056,7 +1041,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         vec_tvecs.push_back(tvec);
     }*/
     else
-        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, "
+        CV_Error(cv::Error::StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, "
             "SOLVEPNP_EPNP, SOLVEPNP_DLS, SOLVEPNP_UPNP, SOLVEPNP_AP3P, SOLVEPNP_IPPE, SOLVEPNP_IPPE_SQUARE or SOLVEPNP_SQPNP");
 
     CV_Assert(vec_rvecs.size() == vec_tvecs.size());

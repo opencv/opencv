@@ -51,7 +51,7 @@
 
 #ifdef _MSC_VER
 #pragma warning( push )
-#pragma warning( disable: 4127 )
+#pragma warning( disable: 4127 5054 )
 #endif
 
 #if defined(CV_SKIP_DISABLE_CLANG_ENUM_WARNINGS)

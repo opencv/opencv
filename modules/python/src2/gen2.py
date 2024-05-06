@@ -1,15 +1,33 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import hdr_parser, sys, re, os
+import hdr_parser, sys, re
 from string import Template
-from pprint import pprint
 from collections import namedtuple
+from itertools import chain
+
+from typing_stubs_generator import TypingStubsGenerator
 
 if sys.version_info[0] >= 3:
     from io import StringIO
+
 else:
     from cStringIO import StringIO
+
+if sys.version_info >= (3, 6):
+    from typing_stubs_generation import SymbolName
+else:
+    SymbolName = namedtuple('SymbolName', ('namespaces', 'classes', 'name'))
+
+    def parse_symbol_name(cls, full_symbol_name, known_namespaces):
+        chunks = full_symbol_name.split('.')
+        namespaces, name = chunks[:-1], chunks[-1]
+        classes = []
+        while len(namespaces) > 0 and '.'.join(namespaces) not in known_namespaces:
+            classes.insert(0, namespaces.pop())
+        return cls(tuple(namespaces), tuple(classes), name)
+
+    setattr(SymbolName, "parse", classmethod(parse_symbol_name))
 
 
 forbidden_arg_types = ["void*"]
@@ -91,7 +109,7 @@ gen_template_set_prop_from_map = Template("""
     if( PyMapping_HasKeyString(src, (char*)"$propname") )
     {
         tmp = PyMapping_GetItemString(src, (char*)"$propname");
-        ok = tmp && pyopencv_to_safe(tmp, dst.$propname, ArgInfo("$propname", false));
+        ok = tmp && pyopencv_to_safe(tmp, dst.$propname, ArgInfo("$propname", 0));
         Py_DECREF(tmp);
         if(!ok) return false;
     }""")
@@ -145,7 +163,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
-    return pyopencv_to_safe(value, p->v${access}${member}, ArgInfo("value", false)) ? 0 : -1;
+    return pyopencv_to_safe(value, p->v${access}${member}, ArgInfo("value", 0)) ? 0 : -1;
 }
 """)
 
@@ -163,7 +181,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
         return -1;
     }
-    return pyopencv_to_safe(value, _self_${access}${member}, ArgInfo("value", false)) ? 0 : -1;
+    return pyopencv_to_safe(value, _self_${access}${member}, ArgInfo("value", 0)) ? 0 : -1;
 }
 """)
 
@@ -182,6 +200,7 @@ ${variant}
     }
 """)
 
+
 class FormatStrings:
     string = 's'
     unsigned_char = 'b'
@@ -197,9 +216,9 @@ class FormatStrings:
     double = 'd'
     object = 'O'
 
+
 ArgTypeInfo = namedtuple('ArgTypeInfo',
-                        ['atype', 'format_str', 'default_value',
-                         'strict_conversion'])
+                         ['atype', 'format_str', 'default_value', 'strict_conversion'])
 # strict_conversion is False by default
 ArgTypeInfo.__new__.__defaults__ = (False,)
 
@@ -212,6 +231,8 @@ simple_argtype_mapping = {
     "c_string": ArgTypeInfo("char*", FormatStrings.string, '(char*)""'),
     "string": ArgTypeInfo("std::string", FormatStrings.object, None, True),
     "Stream": ArgTypeInfo("Stream", FormatStrings.object, 'Stream::Null()', True),
+    "cuda_Stream": ArgTypeInfo("cuda::Stream", FormatStrings.object, "cuda::Stream::Null()", True),
+    "cuda_GpuMat": ArgTypeInfo("cuda::GpuMat", FormatStrings.object, "cuda::GpuMat()", True),
     "UMat": ArgTypeInfo("UMat", FormatStrings.object, 'UMat()', True),  # FIXIT: switch to CV_EXPORTS_W_SIMPLE as UMat is already a some kind of smart pointer
 }
 
@@ -256,12 +277,16 @@ class ClassProp(object):
 class ClassInfo(object):
     def __init__(self, name, decl=None, codegen=None):
         # Scope name can be a module or other class e.g. cv::SimpleBlobDetector::Params
-        scope_name, self.original_name = name.rsplit(".", 1)
+        self.original_scope_name, self.original_name = name.rsplit(".", 1)
 
         # In case scope refer the outer class exported with different name
         if codegen:
-            scope_name = codegen.get_export_scope_name(scope_name)
-        self.scope_name = re.sub(r"^cv\.?", "", scope_name)
+            self.export_scope_name = codegen.get_export_scope_name(
+                self.original_scope_name
+            )
+        else:
+            self.export_scope_name = self.original_scope_name
+        self.export_scope_name = re.sub(r"^cv\.?", "", self.export_scope_name)
 
         self.export_name = self.original_name
 
@@ -312,8 +337,8 @@ class ClassInfo(object):
 
     @property
     def wname(self):
-        if len(self.scope_name) > 0:
-            return self.scope_name.replace(".", "_") + "_" + self.export_name
+        if len(self.export_scope_name) > 0:
+            return self.export_scope_name.replace(".", "_") + "_" + self.export_name
 
         return self.export_name
 
@@ -322,16 +347,16 @@ class ClassInfo(object):
         return self.class_id
 
     @property
-    def full_scope_name(self):
-        return "cv." + self.scope_name if len(self.scope_name) else "cv"
+    def full_export_scope_name(self):
+        return "cv." + self.export_scope_name if len(self.export_scope_name) else "cv"
 
     @property
     def full_export_name(self):
-        return self.full_scope_name + "." + self.export_name
+        return self.full_export_scope_name + "." + self.export_name
 
     @property
     def full_original_name(self):
-        return self.full_scope_name + "." + self.original_name
+        return self.original_scope_name + "." + self.original_name
 
     @property
     def has_export_alias(self):
@@ -407,7 +432,7 @@ class ClassInfo(object):
         if self.constructor is not None:
             constructor_name = self.constructor.get_wrapper_name()
 
-        return 'CVPY_TYPE({}, {}, {}, {}, {}, {}, "{}");\n'.format(
+        return 'CVPY_TYPE({}, {}, {}, {}, {}, {}, "{}")\n'.format(
             self.export_name,
             self.class_id,
             self.cname if self.issimple else "Ptr<{}>".format(self.cname),
@@ -415,7 +440,7 @@ class ClassInfo(object):
             baseptr,
             constructor_name,
             # Leading dot is required to provide correct class naming
-            "." + self.scope_name if len(self.scope_name) > 0 else self.scope_name
+            "." + self.export_scope_name if len(self.export_scope_name) > 0 else self.export_scope_name
         )
 
 
@@ -468,8 +493,16 @@ class ArgInfo(object):
         return '/O' not in self._modifiers
 
     @property
+    def arithm_op_src_arg(self):
+        return '/AOS' in self._modifiers
+
+    @property
     def outputarg(self):
         return '/O' in self._modifiers or '/IO' in self._modifiers
+
+    @property
+    def pathlike(self):
+        return '/PATH' in self._modifiers
 
     @property
     def returnarg(self):
@@ -486,14 +519,20 @@ class ArgInfo(object):
         return self.enclosing_arg.name + '.' + self.name
 
     def isbig(self):
-        return self.tp in ["Mat", "vector_Mat", "cuda::GpuMat", "GpuMat", "vector_GpuMat", "UMat", "vector_UMat"] # or self.tp.startswith("vector")
+        return self.tp in ["Mat", "vector_Mat",
+                           "cuda::GpuMat", "cuda_GpuMat", "GpuMat",
+                           "vector_GpuMat", "vector_cuda_GpuMat",
+                           "UMat", "vector_UMat"] # or self.tp.startswith("vector")
 
     def crepr(self):
-        return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
+        arg  = 0x01 if self.outputarg else 0x0
+        arg += 0x02 if self.arithm_op_src_arg else 0x0
+        arg += 0x04 if self.pathlike else 0x0
+        return "ArgInfo(\"%s\", %d)" % (self.name, arg)
 
 
 def find_argument_class_info(argument_type, function_namespace,
-                            function_class_name, known_classes):
+                             function_class_name, known_classes):
     # type: (str, str, str, dict[str, ClassInfo]) -> ClassInfo | None
     """Tries to find corresponding class info for the provided argument type
 
@@ -576,6 +615,10 @@ class FuncVariant(object):
                     self.array_counters[c] = [ainfo.name]
             self.args.append(ainfo)
         self.init_pyproto(namespace, classname, known_classes)
+
+    def is_arg_optional(self, py_arg_index):
+        # type: (FuncVariant, int) -> bool
+        return py_arg_index >= len(self.py_arglist) - self.py_noptargs
 
     def init_pyproto(self, namespace, classname, known_classes):
         # string representation of argument list, with '[', ']' symbols denoting optional arguments, e.g.
@@ -1021,7 +1064,7 @@ class FuncInfo(object):
             else:
                 py_name = classinfo.full_export_name + "." + self.variants[0].wname
 
-            if not self.is_static:
+            if not self.is_static and not self.isconstructor:
                 cname = classinfo.cname + '::' + cname
         else:
             py_name = '.'.join([self.namespace, self.variants[0].wname])
@@ -1053,6 +1096,7 @@ class PythonWrapperGenerator(object):
         self.namespaces = {}
         self.consts = {}
         self.enums = {}
+        self.typing_stubs_generator = TypingStubsGenerator()
         self.code_include = StringIO()
         self.code_enums = StringIO()
         self.code_types = StringIO()
@@ -1099,26 +1143,19 @@ class PythonWrapperGenerator(object):
         return original_scope_name
 
     def split_decl_name(self, name):
-        chunks = name.split('.')
-        namespace = chunks[:-1]
-        classes = []
-        while namespace and '.'.join(namespace) not in self.parser.namespaces:
-            classes.insert(0, namespace.pop())
-        return namespace, classes, chunks[-1]
-
+        return SymbolName.parse(name, self.parser.namespaces)
 
     def add_const(self, name, decl):
         cname = name.replace('.','::')
         namespace, classes, name = self.split_decl_name(name)
         namespace = '.'.join(namespace)
-        name = '_'.join(classes+[name])
+        name = '_'.join(chain(classes, (name, )))
         ns = self.namespaces.setdefault(namespace, Namespace())
         if name in ns.consts:
             print("Generator error: constant %s (cname=%s) already exists" \
                 % (name, cname))
             sys.exit(-1)
         ns.consts[name] = cname
-
         value = decl[1]
         py_name = '.'.join([namespace, name])
         py_signatures = self.py_signatures.setdefault(cname, [])
@@ -1126,20 +1163,31 @@ class PythonWrapperGenerator(object):
         #print(cname + ' => ' + str(py_name) + ' (value=' + value + ')')
 
     def add_enum(self, name, decl):
+        enumeration_name = SymbolName.parse(name, self.parser.namespaces)
+        is_scoped_enum = decl[0].startswith("enum class") \
+            or decl[0].startswith("enum struct")
+
         wname = normalize_class_name(name)
         if wname.endswith("<unnamed>"):
             wname = None
         else:
             self.enums[wname] = name
         const_decls = decl[3]
-
+        enum_entries = {}
         for decl in const_decls:
-            name = decl[0]
-            self.add_const(name.replace("const ", "").strip(), decl)
+            enum_entries[decl[0].split(".")[-1]] = decl[1]
+
+            self.add_const(decl[0].replace("const ", "").strip(), decl)
+
+        # Extra enumerations tracking is required to generate stubs for
+        # all enumerations, including <unnamed> once, otherwise they
+        # will be forgiven
+        self.typing_stubs_generator.add_enum(enumeration_name, is_scoped_enum,
+                                             enum_entries)
 
     def add_func(self, decl):
         namespace, classes, barename = self.split_decl_name(decl[0])
-        cname = "::".join(namespace+classes+[barename])
+        cname = "::".join(chain(namespace, classes, (barename, )))
         name = barename
         classname = ''
         bareclassname = ''
@@ -1166,7 +1214,7 @@ class PythonWrapperGenerator(object):
                 return
 
         if isconstructor:
-            name = "_".join(classes[:-1]+[name])
+            name = "_".join(chain(classes[:-1], (name, )))
 
         if is_static:
             # Add it as a method to the class
@@ -1175,7 +1223,7 @@ class PythonWrapperGenerator(object):
             func.add_variant(decl, self.classes, isphantom)
 
             # Add it as global function
-            g_name = "_".join(classes+[name])
+            g_name = "_".join(chain(classes, (name, )))
             w_classes = []
             for i in range(0, len(classes)):
                 classes_i = classes[:i+1]
@@ -1187,10 +1235,15 @@ class PythonWrapperGenerator(object):
                 w_classes.append(w_classname)
             g_wname = "_".join(w_classes+[name])
             func_map = self.namespaces.setdefault(namespace_str, Namespace()).funcs
+            # Static functions should be called using class names, not like
+            # module-level functions, so first step is to remove them from
+            # type hints.
+            self.typing_stubs_generator.add_ignored_function_name(g_name)
             # Exports static function with internal name (backward compatibility)
             func = func_map.setdefault(g_name, FuncInfo("", g_name, cname, isconstructor, namespace_str, False))
             func.add_variant(decl, self.classes, isphantom)
             if g_wname != g_name:  # TODO OpenCV 5.0
+                self.typing_stubs_generator.add_ignored_function_name(g_wname)
                 wfunc = func_map.setdefault(g_wname, FuncInfo("", g_wname, cname, isconstructor, namespace_str, False))
                 wfunc.add_variant(decl, self.classes, isphantom)
         else:
@@ -1206,7 +1259,6 @@ class PythonWrapperGenerator(object):
 
         if classname and isconstructor:
             self.classes[classname].constructor = func
-
 
     def gen_namespace(self, ns_name):
         ns = self.namespaces[ns_name]
@@ -1244,7 +1296,7 @@ class PythonWrapperGenerator(object):
         code = ""
         if re.sub(r"^cv\.", "", enum_name) != wname:
             code += "typedef {0} {1};\n".format(cname, wname)
-        code += "CV_PY_FROM_ENUM({0});\nCV_PY_TO_ENUM({0});\n\n".format(wname)
+        code += "CV_PY_FROM_ENUM({0})\nCV_PY_TO_ENUM({0})\n\n".format(wname)
         self.code_enums.write(code)
 
     def save(self, path, name, buf):
@@ -1259,6 +1311,7 @@ class PythonWrapperGenerator(object):
     def gen(self, srcfiles, output_path):
         self.clear()
         self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True)
+
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
@@ -1355,22 +1408,35 @@ class PythonWrapperGenerator(object):
         for decl_idx, name, classinfo in classlist1:
             if classinfo.ismap:
                 continue
+
             def _registerType(classinfo):
                 if classinfo.decl_idx in published_types:
                     #print(classinfo.decl_idx, classinfo.name, ' - already published')
-                    return
+                    # If class already registered it means that there is
+                    # a correponding node in the AST. This check is partically
+                    # useful for base classes.
+                    return self.typing_stubs_generator.find_class_node(
+                        classinfo, self.parser.namespaces
+                    )
                 published_types.add(classinfo.decl_idx)
+
+                # Registering a class means creation of the AST node from the
+                # given class information
+                class_node = self.typing_stubs_generator.create_class_node(
+                    classinfo, self.parser.namespaces
+                )
 
                 if classinfo.base and classinfo.base in self.classes:
                     base_classinfo = self.classes[classinfo.base]
-                    #print(classinfo.decl_idx, classinfo.name, ' - request publishing of base type ', base_classinfo.decl_idx, base_classinfo.name)
-                    _registerType(base_classinfo)
+                    # print(classinfo.decl_idx, classinfo.name, ' - request publishing of base type ', base_classinfo.decl_idx, base_classinfo.name)
+                    base_node = _registerType(base_classinfo)
+                    class_node.add_base(base_node)
 
-                #print(classinfo.decl_idx, classinfo.name, ' - published!')
+                # print(classinfo.decl_idx, classinfo.name, ' - published!')
                 self.code_type_publish.write(classinfo.gen_def(self))
+                return class_node
 
             _registerType(classinfo)
-
 
         # step 3: generate the code for all the global functions
         for ns_name, ns in sorted(self.namespaces.items()):
@@ -1381,6 +1447,10 @@ class PythonWrapperGenerator(object):
                     continue
                 code = func.gen_code(self)
                 self.code_funcs.write(code)
+                # If function is not ignored - create an AST node for it
+                if name not in self.typing_stubs_generator.type_hints_ignored_functions:
+                    self.typing_stubs_generator.create_function_node(func)
+
             self.gen_namespace(ns_name)
             self.code_ns_init.write('CVPY_MODULE("{}", {});\n'.format(ns_name[2:], normalize_class_name(ns_name)))
 
@@ -1396,6 +1466,10 @@ class PythonWrapperGenerator(object):
         for name, constinfo in constlist:
             self.gen_const_reg(constinfo)
 
+        # All symbols are collected and AST is reconstructed, generating
+        # typing stubs...
+        self.typing_stubs_generator.generate(output_path)
+
         # That's it. Now save all the files
         self.save(output_path, "pyopencv_generated_include.h", self.code_include)
         self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
@@ -1405,6 +1479,7 @@ class PythonWrapperGenerator(object):
         self.save(output_path, "pyopencv_generated_modules.h", self.code_ns_init)
         self.save(output_path, "pyopencv_generated_modules_content.h", self.code_ns_reg)
         self.save_json(output_path, "pyopencv_signatures.json", self.py_signatures)
+
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list

@@ -127,6 +127,34 @@ class dnn_test(NewOpenCVTests):
         targets = cv.dnn.getAvailableTargets(cv.dnn.DNN_BACKEND_OPENCV)
         self.assertTrue(cv.dnn.DNN_TARGET_CPU in targets)
 
+    def test_blobRectsToImageRects(self):
+        paramNet = cv.dnn.Image2BlobParams()
+        paramNet.size = (226, 226)
+        paramNet.ddepth = cv.CV_32F
+        paramNet.mean = [0.485, 0.456, 0.406]
+        paramNet.scalefactor = [0.229, 0.224, 0.225]
+        paramNet.swapRB = False
+        paramNet.datalayout = cv.dnn.DNN_LAYOUT_NCHW
+        paramNet.paddingmode = cv.dnn.DNN_PMODE_LETTERBOX
+        rBlob = np.zeros(shape=(20, 4), dtype=np.int32)
+        rImg = paramNet.blobRectsToImageRects(rBlob, (356, 356))
+        self.assertTrue(type(rImg[0, 0])==np.int32)
+        self.assertTrue(rImg.shape==(20, 4))
+
+    def test_blobRectToImageRect(self):
+        paramNet = cv.dnn.Image2BlobParams()
+        paramNet.size = (226, 226)
+        paramNet.ddepth = cv.CV_32F
+        paramNet.mean = [0.485, 0.456, 0.406]
+        paramNet.scalefactor = [0.229, 0.224, 0.225]
+        paramNet.swapRB = False
+        paramNet.datalayout = cv.dnn.DNN_LAYOUT_NCHW
+        paramNet.paddingmode = cv.dnn.DNN_PMODE_LETTERBOX
+        rBlob = np.zeros(shape=(20, 4), dtype=np.int32)
+        rImg = paramNet.blobRectToImageRect((0, 0, 0, 0), (356, 356))
+        self.assertTrue(type(rImg[0])==int)
+
+
     def test_blobFromImage(self):
         np.random.seed(324)
 
@@ -191,10 +219,10 @@ class dnn_test(NewOpenCVTests):
 
     def test_model(self):
         img_path = self.find_dnn_file("dnn/street.png")
-        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy.caffemodel", required=False)
-        config = self.find_dnn_file("dnn/MobileNetSSD_deploy.prototxt", required=False)
+        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", required=False)
+        config = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", required=False)
         if weights is None or config is None:
-            raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+            raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy_19e3ec3.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
         frame = cv.imread(img_path)
         model = cv.dnn_DetectionModel(weights, config)
@@ -445,6 +473,12 @@ class dnn_test(NewOpenCVTests):
             real_output = net.forward()
 
             normAssert(self, real_output, gold_output, "", getDefaultThreshold(target))
+
+    def test_scalefactor_assign(self):
+        params = cv.dnn.Image2BlobParams()
+        self.assertEqual(params.scalefactor, (1.0, 1.0, 1.0, 1.0))
+        params.scalefactor = 2.0
+        self.assertEqual(params.scalefactor, (2.0, 0.0, 0.0, 0.0))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

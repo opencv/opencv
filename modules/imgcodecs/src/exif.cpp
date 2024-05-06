@@ -133,7 +133,7 @@ bool ExifReader::parseExif(unsigned char* data, const size_t size)
  * @brief Filling m_exif member with exif directory elements
  *          This is internal function and is not exposed to client
  *
- *  @return The function doesn't return any value. In case of unsuccessful parsing
+ *  The function doesn't return any value. In case of unsuccessful parsing
  *      the m_exif member is not filled up
  */
 void ExifReader::parseExif()
@@ -165,7 +165,7 @@ void ExifReader::parseExif()
  *
  * @return INTEL, MOTO or NONE
  */
-Endianess_t ExifReader::getFormat() const
+Endianness_t ExifReader::getFormat() const
 {
     if (m_data.size() < 1)
         return NONE;

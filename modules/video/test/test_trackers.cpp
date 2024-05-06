@@ -160,4 +160,15 @@ TEST(NanoTrack, accuracy_NanoTrack_V2)
     checkTrackingAccuracy(tracker, 0.69);
 }
 
+TEST(vittrack, accuracy_vittrack)
+{
+    std::string model = cvtest::findDataFile("dnn/onnx/models/vitTracker.onnx");
+    cv::TrackerVit::Params params;
+    params.net = model;
+    cv::Ptr<Tracker> tracker = TrackerVit::create(params);
+    // NOTE: Test threshold was reduced from 0.67 (libjpeg-turbo) to 0.66 (libjpeg 9f),
+    // becase libjpeg and libjpeg-turbo produce slightly different images
+    checkTrackingAccuracy(tracker, 0.66);
+}
+
 }}  // namespace opencv_test::

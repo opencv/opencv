@@ -31,8 +31,8 @@ const char* keys =
     "{ help  h              | | Print help message. }"
     "{ input i              | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
     "{ detModel dmp         | | Path to a binary .pb file contains trained detector network.}"
-    "{ width                | 320 | Preprocess input image by resizing to a specific width. It should be multiple by 32. }"
-    "{ height               | 320 | Preprocess input image by resizing to a specific height. It should be multiple by 32. }"
+    "{ width                | 320 | Preprocess input image by resizing to a specific width. It should be a multiple of 32. }"
+    "{ height               | 320 | Preprocess input image by resizing to a specific height. It should be a multiple of 32. }"
     "{ thr                  | 0.5 | Confidence threshold. }"
     "{ nms                  | 0.4 | Non-maximum suppression threshold. }"
     "{ recModel rmp         | | Path to a binary .onnx file contains trained CRNN text recognition model. "
@@ -126,7 +126,7 @@ int main(int argc, char** argv)
         // Detection
         std::vector< std::vector<Point> > detResults;
         detector.detect(frame, detResults);
-
+        Mat frame2 = frame.clone();
         if (detResults.size() > 0) {
             // Text Recognition
             Mat recInput;
@@ -153,11 +153,11 @@ int main(int argc, char** argv)
                 std::string recognitionResult = recognizer.recognize(cropped);
                 std::cout << i << ": '" << recognitionResult << "'" << std::endl;
 
-                putText(frame, recognitionResult, quadrangle[3], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
+                putText(frame2, recognitionResult, quadrangle[3], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
             }
-            polylines(frame, contours, true, Scalar(0, 255, 0), 2);
+            polylines(frame2, contours, true, Scalar(0, 255, 0), 2);
         }
-        imshow(kWinName, frame);
+        imshow(kWinName, frame2);
     }
     return 0;
 }

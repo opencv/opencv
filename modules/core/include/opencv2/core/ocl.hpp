@@ -127,6 +127,11 @@ public:
     CV_WRAP int singleFPConfig() const;
     CV_WRAP int halfFPConfig() const;
 
+    /// true if 'cl_khr_fp64' extension is available
+    CV_WRAP bool hasFP64() const;
+    /// true if 'cl_khr_fp16' extension is available
+    CV_WRAP bool hasFP16() const;
+
     CV_WRAP bool endianLittle() const;
     CV_WRAP bool errorCorrectionSupport() const;
 
@@ -779,7 +784,7 @@ public:
     void start();
     void stop();
 
-    uint64 durationNS() const; //< duration in nanoseconds
+    uint64 durationNS() const; ///< duration in nanoseconds
 
 protected:
     struct Impl;

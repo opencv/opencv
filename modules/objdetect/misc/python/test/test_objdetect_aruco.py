@@ -186,6 +186,39 @@ class aruco_objdetect_test(NewOpenCVTests):
         self.assertEqual((1, 4, 2), refine_corners[0].shape)
         np.testing.assert_array_equal(corners, refine_corners)
 
+    def test_charuco_refine(self):
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_50)
+        board_size = (3, 4)
+        board = cv.aruco.CharucoBoard(board_size, 1., .7, aruco_dict)
+        aruco_detector = cv.aruco.ArucoDetector(aruco_dict)
+        charuco_detector = cv.aruco.CharucoDetector(board)
+        cell_size = 100
+        image = board.generateImage((cell_size*board_size[0], cell_size*board_size[1]))
+        camera = np.array([[1, 0, 0.5],
+                           [0, 1, 0.5],
+                           [0, 0, 1]])
+        dist = np.array([0, 0, 0, 0, 0], dtype=np.float32).reshape(1, -1)
+
+        # generate gold corners of the ArUco markers for the test
+        gold_corners = np.array(board.getObjPoints())[:, :, 0:2]*cell_size
+
+        # detect corners
+        markerCorners, markerIds, _ = aruco_detector.detectMarkers(image)
+
+        # test refine
+        rejected = [markerCorners[-1]]
+        markerCorners, markerIds = markerCorners[:-1], markerIds[:-1]
+        markerCorners, markerIds, _, _ = aruco_detector.refineDetectedMarkers(image, board, markerCorners, markerIds,
+                                                                              rejected, cameraMatrix=camera, distCoeffs=dist)
+
+        charucoCorners, charucoIds, _, _ = charuco_detector.detectBoard(image, markerCorners=markerCorners,
+                                                                        markerIds=markerIds)
+        self.assertEqual(len(charucoIds), 6)
+        self.assertEqual(len(markerIds), 6)
+
+        for i, id in enumerate(markerIds.reshape(-1)):
+            np.testing.assert_allclose(gold_corners[id], markerCorners[i].reshape(4, 2), 0.01, 1.)
+
     def test_write_read_dictionary(self):
         try:
             aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_5X5_50)
@@ -237,6 +270,27 @@ class aruco_objdetect_test(NewOpenCVTests):
         for i in range(0, 4):
             self.assertEqual(charucoIds[i], i)
         np.testing.assert_allclose(gold_corners, charucoCorners.reshape(-1, 2), 0.01, 0.1)
+
+    def test_detect_diamonds(self):
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250)
+        board_size = (3, 3)
+        board = cv.aruco.CharucoBoard(board_size, 1.0, .8, aruco_dict)
+        charuco_detector = cv.aruco.CharucoDetector(board)
+        cell_size = 120
+
+        image = board.generateImage((cell_size*board_size[0], cell_size*board_size[1]))
+
+        list_gold_corners = [(cell_size, cell_size), (2*cell_size, cell_size), (2*cell_size, 2*cell_size),
+                             (cell_size, 2*cell_size)]
+        gold_corners = np.array(list_gold_corners, dtype=np.float32)
+
+        diamond_corners, diamond_ids, marker_corners, marker_ids = charuco_detector.detectDiamonds(image)
+
+        self.assertEqual(diamond_ids.size, 4)
+        self.assertEqual(marker_ids.size, 4)
+        for i in range(0, 4):
+            self.assertEqual(diamond_ids[0][0][i], i)
+        np.testing.assert_allclose(gold_corners, np.array(diamond_corners, dtype=np.float32).reshape(-1, 2), 0.01, 0.1)
 
     # check no segfault when cameraMatrix or distCoeffs are not initialized
     def test_charuco_no_segfault_params(self):
@@ -339,6 +393,70 @@ class aruco_objdetect_test(NewOpenCVTests):
         self.assertEqual(img_points.shape[0], obj_points.shape[0])
         self.assertEqual(2, img_points.shape[2])
         np.testing.assert_array_equal(chessboard_corners, obj_points[:, :, :2].reshape(-1, 2))
+
+    def test_draw_detected_markers(self):
+        detected_points = [[[10, 10], [50, 10], [50, 50], [10, 50]]]
+        img = np.zeros((60, 60), dtype=np.uint8)
+
+        # add extra dimension in Python to create Nx4 Mat with 2 channels
+        points1 = np.array(detected_points).reshape(-1, 4, 1, 2)
+        img = cv.aruco.drawDetectedMarkers(img, points1, borderColor=255)
+
+        # check that the marker borders are painted
+        contours, _ = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        self.assertEqual(len(contours), 1)
+        self.assertEqual(img[10, 10], 255)
+        self.assertEqual(img[50, 10], 255)
+        self.assertEqual(img[50, 50], 255)
+        self.assertEqual(img[10, 50], 255)
+
+        # must throw Exception without extra dimension
+        points2 = np.array(detected_points)
+        with self.assertRaises(Exception):
+            img = cv.aruco.drawDetectedMarkers(img, points2, borderColor=255)
+
+    def test_draw_detected_charuco(self):
+        detected_points = [[[10, 10], [50, 10], [50, 50], [10, 50]]]
+        img = np.zeros((60, 60), dtype=np.uint8)
+
+        # add extra dimension in Python to create Nx1 Mat with 2 channels
+        points = np.array(detected_points).reshape(-1, 1, 2)
+        img = cv.aruco.drawDetectedCornersCharuco(img, points, cornerColor=255)
+
+        # check that the 4 charuco corners are painted
+        contours, _ = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        self.assertEqual(len(contours), 4)
+        for contour in contours:
+            center_x = round(np.average(contour[:, 0, 0]))
+            center_y = round(np.average(contour[:, 0, 1]))
+            center = [center_x, center_y]
+            self.assertTrue(center in detected_points[0])
+
+        # must throw Exception without extra dimension
+        points2 = np.array(detected_points)
+        with self.assertRaises(Exception):
+            img = cv.aruco.drawDetectedCornersCharuco(img, points2, borderColor=255)
+
+    def test_draw_detected_diamonds(self):
+        detected_points = [[[10, 10], [50, 10], [50, 50], [10, 50]]]
+        img = np.zeros((60, 60), dtype=np.uint8)
+
+        # add extra dimension in Python to create Nx4 Mat with 2 channels
+        points = np.array(detected_points).reshape(-1, 4, 1, 2)
+        img = cv.aruco.drawDetectedDiamonds(img, points, borderColor=255)
+
+        # check that the diamonds borders are painted
+        contours, _ = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        self.assertEqual(len(contours), 1)
+        self.assertEqual(img[10, 10], 255)
+        self.assertEqual(img[50, 10], 255)
+        self.assertEqual(img[50, 50], 255)
+        self.assertEqual(img[10, 50], 255)
+
+        # must throw Exception without extra dimension
+        points2 = np.array(detected_points)
+        with self.assertRaises(Exception):
+            img = cv.aruco.drawDetectedDiamonds(img, points2, borderColor=255)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

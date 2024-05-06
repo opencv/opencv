@@ -53,12 +53,8 @@
 #include "grfmt_tiff.hpp"
 #include <limits>
 
-// TODO FIXIT Conflict declarations for common types like int64/uint64
-namespace tiff_dummy_namespace {
 #include "tiff.h"
 #include "tiffio.h"
-}
-using namespace tiff_dummy_namespace;
 
 namespace cv
 {
@@ -70,11 +66,6 @@ static void extend_cvtColor( InputArray _src, OutputArray _dst, int code );
     if (0 == (call)) { \
         CV_LOG_WARNING(NULL, "OpenCV TIFF(line " << __LINE__ << "): failed " #call); \
         CV_Error(Error::StsError, "OpenCV TIFF: failed " #call); \
-    }
-
-#define CV_TIFF_CHECK_CALL_INFO(call) \
-    if (0 == (call)) { \
-        CV_LOG_INFO(NULL, "OpenCV TIFF(line " << __LINE__ << "): failed optional call: " #call ", ignoring"); \
     }
 
 #define CV_TIFF_CHECK_CALL_DEBUG(call) \
@@ -245,7 +236,7 @@ bool TiffDecoder::readHeader()
     if (!tif)
     {
         // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
-        // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+        // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
         if ( !m_buf.empty() )
         {
             m_buf_pos = 0;
@@ -269,8 +260,8 @@ bool TiffDecoder::readHeader()
 
     if (tif)
     {
-        uint32 wdth = 0, hght = 0;
-        uint16 photometric = 0;
+        uint32_t wdth = 0, hght = 0;
+        uint16_t photometric = 0;
 
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &wdth));
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &hght));
@@ -278,7 +269,7 @@ bool TiffDecoder::readHeader()
 
         {
             bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
-            uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
+            uint16_t bpp = 8, ncn = isGrayScale ? 1 : 3;
             if (0 == TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp))
             {
                 // TIFF bi-level images don't require TIFFTAG_BITSPERSAMPLE tag
@@ -301,7 +292,7 @@ bool TiffDecoder::readHeader()
                 (ncn != 1 && ncn != 3 && ncn != 4)))
                 bpp = 8;
 
-            uint16 sample_format = SAMPLEFORMAT_UINT;
+            uint16_t sample_format = SAMPLEFORMAT_UINT;
             TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &sample_format);
             int wanted_channels = normalizeChannelsNumber(ncn);
             switch (bpp)
@@ -383,7 +374,7 @@ bool TiffDecoder::nextPage()
            readHeader();
 }
 
-static void fixOrientationPartial(Mat &img, uint16 orientation)
+static void fixOrientationPartial(Mat &img, uint16_t orientation)
 {
     switch(orientation) {
         case ORIENTATION_RIGHTTOP:
@@ -439,7 +430,7 @@ static void fixOrientationFull(Mat &img, int orientation)
  * For 8 bit some corrections are done by TIFFReadRGBAStrip/Tile already.
  * Not so for 16/32/64 bit.
  */
-static void fixOrientation(Mat &img, uint16 orientation, bool isOrientationFull)
+static void fixOrientation(Mat &img, uint16_t orientation, bool isOrientationFull)
 {
     if( isOrientationFull )
     {
@@ -600,7 +591,7 @@ bool  TiffDecoder::readData( Mat& img )
     CV_Assert(!m_tif.empty());
     TIFF* tif = (TIFF*)m_tif.get();
 
-    uint16 photometric = (uint16)-1;
+    uint16_t photometric = (uint16_t)-1;
     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric));
 
     if (m_hdr && depth >= CV_32F)
@@ -616,14 +607,14 @@ bool  TiffDecoder::readData( Mat& img )
     {
         int is_tiled = TIFFIsTiled(tif) != 0;
         bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
-        uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
+        uint16_t bpp = 8, ncn = isGrayScale ? 1 : 3;
         if (0 == TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp))
         {
             // TIFF bi-level images don't require TIFFTAG_BITSPERSAMPLE tag
             bpp = 1;
         }
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
-        uint16 img_orientation = ORIENTATION_TOPLEFT;
+        uint16_t img_orientation = ORIENTATION_TOPLEFT;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
         constexpr const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
@@ -633,7 +624,7 @@ bool  TiffDecoder::readData( Mat& img )
         int wanted_channels = normalizeChannelsNumber(img.channels());
         bool doReadScanline = false;
 
-        uint32 tile_width0 = m_width, tile_height0 = 0;
+        uint32_t tile_width0 = m_width, tile_height0 = 0;
 
         if (is_tiled)
         {
@@ -651,7 +642,7 @@ bool  TiffDecoder::readData( Mat& img )
                 tile_width0 = m_width;
 
             if (tile_height0 == 0 ||
-                    (!is_tiled && tile_height0 == std::numeric_limits<uint32>::max()) )
+                    (!is_tiled && tile_height0 == std::numeric_limits<uint32_t>::max()) )
                 tile_height0 = m_height;
 
             const int TILE_MAX_WIDTH = (1 << 24);
@@ -676,7 +667,7 @@ bool  TiffDecoder::readData( Mat& img )
                     ( (uint64_t) MAX_TILE_SIZE * 95 / 100)
                 )
                 {
-                    uint16_t planerConfig = (uint16)-1;
+                    uint16_t planerConfig = (uint16_t)-1;
                     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planerConfig));
 
                     doReadScanline = (!is_tiled) // no tile
@@ -732,7 +723,7 @@ bool  TiffDecoder::readData( Mat& img )
                     MAX_TILE_SIZE * 95 / 100
                 )
                 {
-                    uint16_t planerConfig = (uint16)-1;
+                    uint16_t planerConfig = (uint16_t)-1;
                     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planerConfig));
 
                     doReadScanline = (!is_tiled) // no tile
@@ -816,7 +807,7 @@ bool  TiffDecoder::readData( Mat& img )
                             uchar* bstart = src_buffer;
                             if (doReadScanline)
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32*)src_buffer, y) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32_t*)src_buffer, y) >= 0);
 
                                 if ( isNeedConvert16to8 )
                                 {
@@ -838,11 +829,11 @@ bool  TiffDecoder::readData( Mat& img )
                             }
                             else if (!is_tiled)
                             {
-                                CV_TIFF_CHECK_CALL(TIFFReadRGBAStrip(tif, y, (uint32*)src_buffer));
+                                CV_TIFF_CHECK_CALL(TIFFReadRGBAStrip(tif, y, (uint32_t*)src_buffer));
                             }
                             else
                             {
-                                CV_TIFF_CHECK_CALL(TIFFReadRGBATile(tif, x, y, (uint32*)src_buffer));
+                                CV_TIFF_CHECK_CALL(TIFFReadRGBATile(tif, x, y, (uint32_t*)src_buffer));
                                 // Tiles fill the buffer from the bottom up
                                 bstart += (tile_height0 - tile_height) * tile_width0 * 4;
                             }
@@ -936,15 +927,15 @@ bool  TiffDecoder::readData( Mat& img )
                         {
                             if (doReadScanline)
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32*)src_buffer, y) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32_t*)src_buffer, y) >= 0);
                             }
                             else if (!is_tiled)
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, (uint32*)src_buffer, src_buffer_size) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, (uint32_t*)src_buffer, src_buffer_size) >= 0);
                             }
                             else
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, (uint32*)src_buffer, src_buffer_size) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, (uint32_t*)src_buffer, src_buffer_size) >= 0);
                             }
 
                             for (int i = 0; i < tile_height; i++)
@@ -1118,7 +1109,7 @@ public:
     TIFF* open ()
     {
         // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
-        // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+        // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
         return TIFFClientOpen( "", "w", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
                                &TiffEncoderBufHelper::write, &TiffEncoderBufHelper::seek,
                                &TiffEncoderBufHelper::close, &TiffEncoderBufHelper::size,
@@ -1200,7 +1191,7 @@ static bool readParam(const std::vector<int>& params, int key, int& value)
 bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params)
 {
     // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
-    // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+    // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
     TIFF* tif = NULL;
 
     TiffEncoderBufHelper buf_helper(m_buf);
@@ -1224,7 +1215,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     int resUnit = -1, dpiX = -1, dpiY = -1;
 
     readParam(params, IMWRITE_TIFF_COMPRESSION, compression);
-    readParam(params, TIFFTAG_PREDICTOR, predictor);
+    readParam(params, IMWRITE_TIFF_PREDICTOR, predictor);
     readParam(params, IMWRITE_TIFF_RESUNIT, resUnit);
     readParam(params, IMWRITE_TIFF_XDPI, dpiX);
     readParam(params, IMWRITE_TIFF_YDPI, dpiY);
@@ -1261,7 +1252,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         int page_compression = compression;
 
         int bitsPerChannel = -1;
-        uint16 sample_format = SAMPLEFORMAT_INT;
+        uint16_t sample_format = SAMPLEFORMAT_INT;
         switch (depth)
         {
             case CV_8U:
@@ -1313,7 +1304,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         CV_Assert(fileStep > 0);
 
         int rowsPerStrip = (int)((1 << 13) / fileStep);
-        readParam(params, TIFFTAG_ROWSPERSTRIP, rowsPerStrip);
+        readParam(params, IMWRITE_TIFF_ROWSPERSTRIP, rowsPerStrip);
         rowsPerStrip = std::max(1, std::min(height, rowsPerStrip));
 
         int colorspace = channels > 1 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;

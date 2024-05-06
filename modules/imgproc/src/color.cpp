@@ -90,6 +90,20 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         return oclCvtColorOnePlaneYUV2BGR(_src, _dst, dcn, bidx, uidx, yidx);
     }
+    case COLOR_RGB2YUV_UYVY: case COLOR_BGR2YUV_UYVY: case COLOR_RGBA2YUV_UYVY: case COLOR_BGRA2YUV_UYVY:
+    case COLOR_RGB2YUV_YUY2: case COLOR_BGR2YUV_YUY2: case COLOR_RGB2YUV_YVYU: case COLOR_BGR2YUV_YVYU:
+    case COLOR_RGBA2YUV_YUY2: case COLOR_BGRA2YUV_YUY2: case COLOR_RGBA2YUV_YVYU: case COLOR_BGRA2YUV_YVYU:
+    {
+        int yidx = (code==COLOR_RGB2YUV_UYVY || code==COLOR_RGBA2YUV_UYVY ||
+                    code==COLOR_BGR2YUV_UYVY || code==COLOR_BGRA2YUV_UYVY) ? 1 : 0;
+        int uidx = (code==COLOR_RGB2YUV_YVYU || code==COLOR_RGBA2YUV_YVYU ||
+                    code==COLOR_BGR2YUV_YVYU || code==COLOR_BGRA2YUV_YVYU) ? 2 : 0;
+        uidx = 1 - yidx + uidx;
+
+        bool res = oclCvtColorOnePlaneBGR2YUV(_src, _dst, dcn, bidx, uidx, yidx);
+
+        return res;
+    }
     case COLOR_BGR2YCrCb:
     case COLOR_RGB2YCrCb:
         return oclCvtColorBGR2YCrCb(_src, _dst, bidx);
@@ -163,7 +177,7 @@ void cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, in
         case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
             break;
         default:
-            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+            CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
             return;
     }
 
@@ -339,6 +353,19 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 break;
             }
 
+        case COLOR_RGB2YUV_UYVY: case COLOR_BGR2YUV_UYVY: case COLOR_RGBA2YUV_UYVY: case COLOR_BGRA2YUV_UYVY:
+        case COLOR_RGB2YUV_YUY2: case COLOR_BGR2YUV_YUY2: case COLOR_RGB2YUV_YVYU: case COLOR_BGR2YUV_YVYU:
+        case COLOR_RGBA2YUV_YUY2: case COLOR_BGRA2YUV_YUY2: case COLOR_RGBA2YUV_YVYU: case COLOR_BGRA2YUV_YVYU:
+            //http://www.fourcc.org/yuv.php#UYVY
+            //http://www.fourcc.org/yuv.php#YUY2
+            //http://www.fourcc.org/yuv.php#YVYU
+            {
+                int ycn  = (code==COLOR_RGB2YUV_UYVY ||  code==COLOR_BGR2YUV_UYVY ||
+                            code==COLOR_RGBA2YUV_UYVY || code==COLOR_BGRA2YUV_UYVY) ? 1 : 0;
+                cvtColorOnePlaneBGR2YUV(_src, _dst, swapBlue(code), uIndex(code), ycn);
+                break;
+            }
+
         case COLOR_YUV2GRAY_UYVY:
         case COLOR_YUV2GRAY_YUY2:
             cvtColorYUV2Gray_ch(_src, _dst, code == COLOR_YUV2GRAY_UYVY ? 1 : 0);
@@ -352,7 +379,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             cvtColormRGBA2RGBA(_src, _dst);
             break;
         default:
-            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+            CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
     }
 }
 } //namespace cv
