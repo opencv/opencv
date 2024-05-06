@@ -96,17 +96,17 @@ public:
 
 PERF_TEST_P_(DNNTestNetwork, AlexNet)
 {
-    processNet("onnx/models/alexnet.onnx", "", cv::Size(227, 227));
+    processNet("dnn/onnx/models/alexnet.onnx", "", cv::Size(227, 227));
 }
 
 PERF_TEST_P_(DNNTestNetwork, GoogLeNet)
 {
-    processNet("onnx/models/googlenet.onnx", "", cv::Size(224, 224));
+    processNet("dnn/onnx/models/googlenet.onnx", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, ResNet_50)
 {
-    processNet("onnx/models/resnet50v1.onnx", "", cv::Size(224, 224));
+    processNet("dnn/onnx/models/resnet50v1.onnx", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
