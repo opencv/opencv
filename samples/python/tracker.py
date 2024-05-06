@@ -3,8 +3,6 @@
 Tracker demo
 
 For usage download models by following links
-For GOTURN:
-    goturn.prototxt and goturn.caffemodel: https://github.com/opencv/opencv_extra/tree/c4219d5eb3105ed8e634278fad312a1a8d2c182d/testdata/tracking
 For DaSiamRPN:
     network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
     kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
@@ -12,10 +10,10 @@ For DaSiamRPN:
 For NanoTrack:
     nanotrack_backbone: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx
     nanotrack_headneck: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx
-
+For VitTrack:
+    vitTracker: https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_vittrack/object_tracking_vittrack_2023sep.onnx
 USAGE:
     tracker.py [-h] [--input INPUT] [--tracker_algo TRACKER_ALGO]
-                    [--goturn GOTURN] [--goturn_model GOTURN_MODEL]
                     [--dasiamrpn_net DASIAMRPN_NET]
                     [--dasiamrpn_kernel_r1 DASIAMRPN_KERNEL_R1]
                     [--dasiamrpn_kernel_cls1 DASIAMRPN_KERNEL_CLS1]
@@ -46,11 +44,6 @@ class App(object):
     def createTracker(self):
         if self.trackerAlgorithm == 'mil':
             tracker = cv.TrackerMIL_create()
-        elif self.trackerAlgorithm == 'goturn':
-            params = cv.TrackerGOTURN_Params()
-            params.modelTxt = self.args.goturn
-            params.modelBin = self.args.goturn_model
-            tracker = cv.TrackerGOTURN_create(params)
         elif self.trackerAlgorithm == 'dasiamrpn':
             params = cv.TrackerDaSiamRPN_Params()
             params.model = self.args.dasiamrpn_net
@@ -67,7 +60,7 @@ class App(object):
             params.net = args.vittrack_net
             tracker = cv.TrackerVit_create(params)
         else:
-            sys.exit("Tracker {} is not recognized. Please use one of three available: mil, goturn, dasiamrpn, nanotrack.".format(self.trackerAlgorithm))
+            sys.exit("Tracker {} is not recognized. Please use one of three available: mil, dasiamrpn, nanotrack.".format(self.trackerAlgorithm))
         return tracker
 
     def initializeTracker(self, image):
@@ -131,9 +124,7 @@ if __name__ == '__main__':
     print(__doc__)
     parser = argparse.ArgumentParser(description="Run tracker")
     parser.add_argument("--input", type=str, default="vtest.avi", help="Path to video source")
-    parser.add_argument("--tracker_algo", type=str, default="nanotrack", help="One of available tracking algorithms: mil, goturn, dasiamrpn, nanotrack, vittrack")
-    parser.add_argument("--goturn", type=str, default="goturn.prototxt", help="Path to GOTURN architecture")
-    parser.add_argument("--goturn_model", type=str, default="goturn.caffemodel", help="Path to GOTERN model")
+    parser.add_argument("--tracker_algo", type=str, default="nanotrack", help="One of available tracking algorithms: mil, dasiamrpn, nanotrack, vittrack")
     parser.add_argument("--dasiamrpn_net", type=str, default="dasiamrpn_model.onnx", help="Path to onnx model of DaSiamRPN net")
     parser.add_argument("--dasiamrpn_kernel_r1", type=str, default="dasiamrpn_kernel_r1.onnx", help="Path to onnx model of DaSiamRPN kernel_r1")
     parser.add_argument("--dasiamrpn_kernel_cls1", type=str, default="dasiamrpn_kernel_cls1.onnx", help="Path to onnx model of DaSiamRPN kernel_cls1")

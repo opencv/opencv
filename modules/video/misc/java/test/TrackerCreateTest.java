@@ -8,7 +8,7 @@ import org.opencv.core.Rect;
 import org.opencv.test.OpenCVTestCase;
 
 import org.opencv.video.Tracker;
-import org.opencv.video.TrackerGOTURN;
+import org.opencv.video.TrackerVit;
 import org.opencv.video.TrackerMIL;
 
 public class TrackerCreateTest extends OpenCVTestCase {
@@ -19,9 +19,9 @@ public class TrackerCreateTest extends OpenCVTestCase {
     }
 
 
-    public void testCreateTrackerGOTURN() {
+    public void testCreateTrackerVit() {
         try {
-            Tracker tracker = TrackerGOTURN.create();
+            Tracker tracker = TrackerVit.create();
             assert(tracker != null);
         } catch (CvException e) {
             // expected, model files may be missing
