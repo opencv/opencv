@@ -93,10 +93,13 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_1d_Test, Combine(
 
 template <typename T>
 int arg_op(const std::vector<T>& vec, const std::string& operation) {
+    CV_Assert(!vec.empty());
     if (operation == "max") {
         return static_cast<int>(std::distance(vec.begin(), std::max_element(vec.begin(), vec.end())));
-    } else {
+    } else if (operation == "min") {
         return static_cast<int>(std::distance(vec.begin(), std::min_element(vec.begin(), vec.end())));
+    } else {
+        CV_Error(Error::StsAssert, "Provided operation: " + operation + " is not supported. Please check the test instantiation.");
     }
 }
 typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Arg_1d_Test;
@@ -122,10 +125,11 @@ TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
 
     // create reference output with required shape and values
     cv::Mat output_ref;
+    std::vector<int> ref_output;
     if (input_shape.size() == 2 ){
         int rows = input_shape[0];
         int cols = input_shape[1];
-        std::vector<int> ref_output(rows);
+        ref_output.resize(rows);
         for (int i = 0; i < rows; i++) {
             std::vector<float> row_vec(cols);
             for (int j = 0; j < cols; j++) {
@@ -143,7 +147,7 @@ TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
     std::vector<Mat> outputs;
 
     runLayer(layer, inputs, outputs);
-    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(1, outputs.size());
     ASSERT_EQ(shape(outputs[0]), shape(output_ref));
     normAssert(output_ref, outputs[0]);
 }
