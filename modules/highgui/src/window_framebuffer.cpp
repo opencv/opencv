@@ -22,7 +22,132 @@ namespace cv { namespace highgui_backend {
     return std::make_shared<FramebufferBackend>();
   }
 
-  int FramebufferWindow::fb_open_and_get_info()
+  FramebufferWindow::FramebufferWindow(FramebufferBackend &_backend): backend(_backend)
+  {
+    FB_ID = "FramebufferWindow";
+    
+    WindowRest = Rect(0,0, backend.getFBwidth(), backend.getFBheight());
+    
+  }
+  
+  FramebufferWindow::~FramebufferWindow(){
+  }
+
+  void FramebufferWindow::imshow(InputArray image){
+    std::cout  << "FramebufferWindow::imshow(InputArray image)" << std::endl;
+    std::cout  << "InputArray image:: size" << image.size() << std::endl;
+    if (backend.getFBPointer() == MAP_FAILED) {
+        return;
+    }
+
+    if(backend.getFBbpp() != 32) {
+      std::cerr << "Bits per pixel " << backend.getFBbpp() << " is not supported" << std::endl;
+      return;
+    }
+    
+    Mat img;
+    cvtColor(image, img, COLOR_RGB2RGBA);
+    int new_width = WindowRest.width;
+    int new_height = WindowRest.height;
+    int cnt_channel = img.channels();
+    
+    cv::resize(img, img, cv::Size(new_width, new_height), INTER_LINEAR);
+    
+    std::cout << "= Recized image width and heigth:\n" << img.cols << " " <<  img.rows << "\n\n";
+        
+    // SHOW IMAGE
+    int x_offset = backend.getFBXOffset();
+    int y_offset = backend.getFBYOffset();
+    int line_length = backend.getFBLineLength();
+    
+    int showRows = min((WindowRest.y + img.rows), backend.getFBheight()) - WindowRest.y;
+    int showCols = min((WindowRest.x + img.cols), backend.getFBwidth())  - WindowRest.x;
+    
+    for (int y = y_offset; y < showRows + y_offset; y++)
+    {
+        std::memcpy(backend.getFBPointer() + (y + WindowRest.y) * line_length + 
+                    x_offset + WindowRest.x, 
+                    img.ptr<cv::Vec4b>(y - y_offset), 
+                    showCols*cnt_channel);
+    }
+
+
+  }
+
+  double FramebufferWindow::getProperty(int prop) const{
+    std::cout  << "FramebufferWindow::getProperty(int prop:" << prop <<")"<< std::endl; 
+    return 0.0;
+  }
+  bool FramebufferWindow::setProperty(int prop, double value) {
+    std::cout  << "FramebufferWindow::setProperty(int prop "<< prop <<", double value "<<value<<")" << std::endl; 
+    return false;
+  }
+
+  void FramebufferWindow::resize(int width, int height){
+    std::cout  << "FramebufferWindow::resize(int width "<< width <<", int height "<< height <<")" << std::endl;
+    WindowRest.width = width;
+    WindowRest.height = height;
+  }
+  void FramebufferWindow::move(int x, int y) {
+    std::cout  << "FramebufferWindow::move(int x "<< x <<", int y "<< y <<")" << std::endl;
+    WindowRest.x = x;
+    WindowRest.y = y;
+  }
+
+  Rect FramebufferWindow::getImageRect() const {
+    std::cout  << "FramebufferWindow::getImageRect()" << std::endl; 
+    return WindowRest;
+  }
+
+  void FramebufferWindow::setTitle(const std::string& title) {
+    std::cout  << "FramebufferWindow::setTitle(... "<< title <<")" << std::endl;
+  }
+
+  void FramebufferWindow::setMouseCallback(MouseCallback onMouse, void* userdata ){
+    std::cout  << "FramebufferWindow::setMouseCallback(...)" << std::endl;
+  }
+
+  std::shared_ptr<UITrackbar> FramebufferWindow::createTrackbar(
+      const std::string& name,
+      int count,
+      TrackbarCallback onChange,
+      void* userdata
+  ){
+    return nullptr;
+  }
+
+  std::shared_ptr<UITrackbar> FramebufferWindow::findTrackbar(const std::string& name){
+    return nullptr;
+  }
+  
+  const std::string& FramebufferWindow::getID() const  { 
+    std::cout  << "getID())" << std::endl; return FB_ID;
+  }
+
+  bool FramebufferWindow::isActive() const {
+    std::cout  << "isActive()" << std::endl; 
+    return true;
+  }
+
+  void FramebufferWindow::destroy() {
+    std::cout  << "destroy()" << std::endl;
+  }
+
+  int FramebufferBackend::OpenInputEvent()
+  {
+    int fd;
+    fd = open("/dev/input/event1", O_RDONLY);
+    if (fd == -1) {
+        std::cerr << "ERROR_OPENING_INPUT\n";
+        return -1;
+    }
+    return fd;
+  }
+
+
+// !!##FramebufferBackend
+
+  int FramebufferBackend::fb_open_and_get_info()
   {
     int fb_fd = open("/dev/fb0", O_RDWR);
     if (fb_fd == -1)
@@ -45,12 +170,59 @@ namespace cv { namespace highgui_backend {
 
     return fb_fd;
   }
-  
 
-  FramebufferWindow::FramebufferWindow()
+  fb_var_screeninfo &FramebufferBackend::getVarInfo()
   {
-    std::cout  << "FramebufferWindow()" << std::endl;
-    FB_ID = "FramebufferWindow";
+      return var_info;
+  }
+  fb_fix_screeninfo &FramebufferBackend::getFixInfo()
+  {
+    return fix_info;
+  }
+  int FramebufferBackend::getFramebuffrerID()
+  {
+    return framebuffrer_id;
+  }
+  int FramebufferBackend::getFBwidth()
+  {
+    return fb_w;
+  }
+  int FramebufferBackend::getFBheight()
+  {
+    return fb_h;
+  }
+  int FramebufferBackend::getFBXOffset()
+  {
+    return x_offset;
+  }
+  int FramebufferBackend::getFBYOffset()
+  {
+    return y_offset;
+  }
+  int FramebufferBackend::getFBbpp()
+  {
+    return bpp;
+  }
+  int FramebufferBackend::getFBLineLength()
+  {
+    return line_length;
+  }
+  unsigned char* FramebufferBackend::getFBPointer()
+  {
+    return fbPointer;
+  }
+  Mat& FramebufferBackend::getBackgroundBuff()
+  {
+    return backgroundBuff;
+  }
+
+
+
+
+
+  FramebufferBackend::FramebufferBackend()
+  {
+    std::cout  << "FramebufferBackend()" << std::endl;
     framebuffrer_id = fb_open_and_get_info();
     std::cout  << "FramebufferWindow():: id " << framebuffrer_id << std::endl;
     
@@ -102,11 +274,11 @@ namespace cv { namespace highgui_backend {
                     backgroundBuff.cols * cnt_channel);
     }
 
-    
+
   }
   
-  FramebufferWindow::~FramebufferWindow(){
-    
+  FramebufferBackend::~FramebufferBackend()
+  {
     if(framebuffrer_id == -1) return;
     
     // RESTORE BACKGROUNG
@@ -122,146 +294,7 @@ namespace cv { namespace highgui_backend {
       munmap(fbPointer, screensize);
     }
     close(framebuffrer_id);
-  }
 
-  void FramebufferWindow::imshow(InputArray image){
-    std::cout  << "FramebufferWindow::imshow(InputArray image)" << std::endl;
-    std::cout  << "InputArray image:: size" << image.size() << std::endl;
-    if (fbPointer == MAP_FAILED) {
-        return;
-    }
-
-    if(bpp != 32) {
-      std::cerr << "Bits per pixel " << bpp << " is not supported" << std::endl;
-      return;
-    }
-    
-    Mat img;
-    cvtColor(image, img, COLOR_RGB2RGBA);
-    // changing the image size to match the entered width
-    double aspect_ratio = static_cast<double>(img.cols) / img.rows;
-    int new_width = fb_w;
-    int new_height = static_cast<int>(fb_w / aspect_ratio);
-    int cnt_channel = img.channels();
-    
-    //std::cout << "= Initial image width and heigth:\n" << img.cols << " " << img.rows << "\n\n";
-    //std::cout << "= Image width / heigth:\n" << aspect_ratio << "\n";
-    //std::cout << "= Image count of channels:\n" << img.channels() << "\n";
-
-        // RECIZE IMAGE TO MATCH THE FB SIZE
-    if (new_width > fb_w || new_height > fb_h) {
-        if (aspect_ratio > static_cast<double>(fb_w) / fb_h) {
-            new_width = fb_w;
-            new_height = static_cast<int>(fb_w / aspect_ratio);
-        } else {
-            new_height = fb_h;
-            new_width = static_cast<int>(fb_h * aspect_ratio);
-        }
-    }
-    cv::resize(img, img, cv::Size(new_width, new_height), INTER_LINEAR);
-    
-    std::cout << "= Recized image width and heigth:\n" << img.cols << " " <<  img.rows << "\n\n";
-    
-    // RESTORE BACKGROUNG
-    for (int y = y_offset; y < backgroundBuff.rows + y_offset; y++)
-    {
-        std::memcpy(fbPointer + y * line_length + x_offset, 
-                    backgroundBuff.ptr<cv::Vec4b>(y - y_offset), 
-                    backgroundBuff.cols*cnt_channel);
-    }
-
-
-    
-    // SHOW IMAGE
-    for (int y = y_offset; y < img.rows + y_offset; y++)
-    {
-        std::memcpy(fbPointer + y * line_length + x_offset, 
-                    img.ptr<cv::Vec4b>(y - y_offset), 
-                    img.cols*cnt_channel);
-    }
-
-
-  }
-
-  double FramebufferWindow::getProperty(int prop) const{
-    std::cout  << "FramebufferWindow::getProperty(int prop:" << prop <<")"<< std::endl; 
-    return 0.0;
-  }
-  bool FramebufferWindow::setProperty(int prop, double value) {
-    std::cout  << "FramebufferWindow::setProperty(int prop "<< prop <<", double value "<<value<<")" << std::endl; 
-    return false;
-  }
-
-  void FramebufferWindow::resize(int width, int height){
-    std::cout  << "FramebufferWindow::resize(int width "<< width <<", int height "<< height <<")" << std::endl;
-  }
-  void FramebufferWindow::move(int x, int y) {
-    std::cout  << "FramebufferWindow::move(int x "<< x <<", int y "<< y <<")" << std::endl;
-  }
-
-  Rect FramebufferWindow::getImageRect() const {
-    std::cout  << "FramebufferWindow::getImageRect()" << std::endl; 
-    return Rect(10,10,100,100);
-  }
-
-  void FramebufferWindow::setTitle(const std::string& title) {
-    std::cout  << "FramebufferWindow::setTitle(... "<< title <<")" << std::endl;
-  }
-
-  void FramebufferWindow::setMouseCallback(MouseCallback onMouse, void* userdata ){
-    std::cout  << "FramebufferWindow::setMouseCallback(...)" << std::endl;
-  }
-
-  std::shared_ptr<UITrackbar> FramebufferWindow::createTrackbar(
-      const std::string& name,
-      int count,
-      TrackbarCallback onChange,
-      void* userdata
-  ){
-    return nullptr;
-  }
-
-  std::shared_ptr<UITrackbar> FramebufferWindow::findTrackbar(const std::string& name){
-    return nullptr;
-  }
-  
-  const std::string& FramebufferWindow::getID() const  { 
-    std::cout  << "getID())" << std::endl; return FB_ID;
-  }
-
-  bool FramebufferWindow::isActive() const {
-    std::cout  << "isActive()" << std::endl; 
-    return true;
-  }
-
-  void FramebufferWindow::destroy() {
-    std::cout  << "destroy()" << std::endl;
-  }
-
-  int FramebufferBackend::OpenInputEvent()
-  {
-    int fd;
-    fd = open("/dev/input/event1", O_RDONLY);
-    if (fd == -1) {
-        std::cerr << "ERROR_OPENING_INPUT\n";
-        return -1;
-    }
-    return fd;
-  }
-
-
-  FramebufferBackend::FramebufferBackend()
-  {
-    //eventKey = OpenInputEvent();
-    //std::cout  << "FramebufferBackend():: event id " << eventKey << std::endl;
-  }
-  
-  FramebufferBackend::~FramebufferBackend()
-  {
-    //if(eventKey != -1)
-    //{
-    //  close(eventKey);
-    //}
   }
 
   void FramebufferBackend::destroyAllWindows() {
@@ -274,7 +307,7 @@ namespace cv { namespace highgui_backend {
       int flags
   ){
     std::cout  << "FramebufferBackend::createWindow("<< winname <<", "<<flags<<")" << std::endl;
-    return std::make_shared<FramebufferWindow>();
+    return std::make_shared<FramebufferWindow>(*this);
   }
 
   void FramebufferBackend::initTermios(int echo, int wait) 
@@ -316,7 +349,6 @@ namespace cv { namespace highgui_backend {
       std::cout  << "               ERR byteswaiting " << std::endl;
     }
     resetTermios();
-//    std::cout  << "                byteswaiting " << byteswaiting << std::endl;
     
     return byteswaiting > 0;
   }

@@ -11,29 +11,15 @@
 
 namespace cv { namespace highgui_backend {
 
+class FramebufferBackend;
 class CV_EXPORTS FramebufferWindow : public UIWindow
 {
-  fb_var_screeninfo var_info;
-  fb_fix_screeninfo fix_info;
-
+  FramebufferBackend &backend;
   std::string FB_ID;
-  
-  int fb_open_and_get_info();
-  int framebuffrer_id;
-  
-  int fb_w;
-  int fb_h;
-  int y_offset;
-  int x_offset;
-  int bpp;
-  int line_length;
-  long int screensize;
-  unsigned char* fbPointer;
-  
-  Mat backgroundBuff;
-  
+  Rect WindowRest;
+
 public:
-  FramebufferWindow();
+  FramebufferWindow(FramebufferBackend &backend);
   virtual ~FramebufferWindow();
 
   virtual void imshow(InputArray image)override;
@@ -77,8 +63,38 @@ class CV_EXPORTS FramebufferBackend: public UIBackend
   void resetTermios(void);
   int getch_(int echo, int wait);
   bool kbhit();
+  
 
+  fb_var_screeninfo var_info;
+  fb_fix_screeninfo fix_info;
+  int fb_w;
+  int fb_h;
+  int y_offset;
+  int x_offset;
+  int bpp;
+  int line_length;
+  long int screensize;
+  unsigned char* fbPointer;
+  Mat backgroundBuff;
+
+  
+  int fb_open_and_get_info();
+  int framebuffrer_id;
+  
 public:
+
+  fb_var_screeninfo &getVarInfo();
+  fb_fix_screeninfo &getFixInfo();
+  int getFramebuffrerID();
+  int getFBwidth();
+  int getFBheight();
+  int getFBXOffset();
+  int getFBYOffset();
+  int getFBbpp();
+  int getFBLineLength();
+  unsigned char* getFBPointer();
+  Mat& getBackgroundBuff();
+
   FramebufferBackend();
 
   virtual ~FramebufferBackend();
