@@ -106,7 +106,7 @@ PERF_TEST_P_(DNNTestNetwork, GoogLeNet)
 
 PERF_TEST_P_(DNNTestNetwork, ResNet_50)
 {
-    processNet("dnn/ResNet-50-model.caffemodel", "dnn/ResNet-50-deploy.prototxt", cv::Size(224, 224));
+    processNet("onnx/models/resnet50v1.onnx", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
