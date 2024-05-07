@@ -215,6 +215,25 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 //! @endcond
 
 /**
+Lookup table replacement
+@param src_data Source image data
+@param src_step Source image step
+@param lut_data Pointer to lookup table of 256 elements
+@param dst_data Destination data
+@param dst_step Destination step
+@param width Width of images
+@param height Height of images
+*/
+//! @addtogroup core_hal_interface_lut Lookup table
+//! @{
+inline int hal_ni_lut8u(const uchar *src_data, size_t src_step, const uchar* lut_data, uchar *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_lut8u hal_ni_lut8u
+//! @endcond
+
+/**
 Hamming norm of a vector
 @param a pointer to vector data
 @param n length of a vector
