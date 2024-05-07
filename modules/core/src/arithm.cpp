@@ -1031,11 +1031,11 @@ void multiply(InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    static bool halMul8to16available = (cv_hal_mul8u16u != hal_ni_mul8u16u) && (cv_hal_mul8s16s != hal_ni_mul8s16s);
+    static bool hal8u16uAvailable = cv_hal_mul8u16u != hal_ni_mul8u16u;
+    static bool hal8s16sAvailable = cv_hal_mul8s16s != hal_ni_mul8s16s;
 
-    bool extendMul = ((src1.depth() == CV_8U) && (src2.depth() == CV_8U) && (dtype == CV_16U)) ||
-                     ((src1.depth() == CV_8S) && (src2.depth() == CV_8S) && (dtype == CV_16S));
-    extendMul = extendMul && halMul8to16available;
+    bool extendMul = (hal8u16uAvailable && (src1.depth() == CV_8U) && (src2.depth() == CV_8U) && (dtype == CV_16U)) ||
+                     (hal8s16sAvailable && (src1.depth() == CV_8S) && (src2.depth() == CV_8S) && (dtype == CV_16S));
 
     arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(extendMul),
               /* muldiv */ true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
