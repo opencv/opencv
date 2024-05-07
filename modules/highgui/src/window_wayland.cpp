@@ -2326,6 +2326,7 @@ std::string const &cv_wl_core::get_window_name(void *handle) {
 }
 
 bool cv_wl_core::create_window(std::string const &name, int flags) {
+    CV_CheckTrue(display_ != nullptr, "Display is not connected.");
     auto window = std::make_shared<cv_wl_window>(display_, name, flags);
     auto result = windows_.insert(std::make_pair(name, window));
     handles_[window.get()] = window->get_title();
