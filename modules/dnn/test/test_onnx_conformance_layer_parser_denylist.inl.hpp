@@ -180,13 +180,13 @@
 "test_max_int16", // Issue:: Unsupported data type
 // "test_max_int32",
 // "test_max_int64",
-"test_max_int8", // Issue:: Unkonwn error
+// "test_max_int8", // Issue:: Unkonwn error
 // "test_max_one_input",
 // "test_max_two_inputs",
 "test_max_uint16", // Issue:: Unsupported data type
 "test_max_uint32", // Issue:: Unsupported data type
 "test_max_uint64", // Issue:: Unsupported data type
-"test_max_uint8", // Issue:: Unkonwn error
+// "test_max_uint8", // Issue:: Unkonwn error
 "test_mean_example", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!result" of type "Mean" in function 'getLayerInstance'
 "test_mean_one_input",  // ---- same as above ---
 "test_mean_two_inputs",  // ---- same as above ---
@@ -197,23 +197,23 @@
 "test_min_int16",  // Issue:: Unsupported data type
 // "test_min_int32",
 // "test_min_int64",
-"test_min_int8", // Issue:: Unkonwn error
+// "test_min_int8", // Issue:: Unkonwn error
 // "test_min_one_input",
 // "test_min_two_inputs",
 "test_min_uint16", // Issue:: Unsupported data type
 "test_min_uint32", // Issue:: Unkonwn error
 "test_min_uint64", // Issue:: Unsupported data type
-"test_min_uint8", // Issue:: Unkonwn error
+// "test_min_uint8", // Issue:: Unkonwn error
 // "test_mod_broadcast",
 // "test_mod_int64_fmod",
 "test_mod_mixed_sign_int16", // Issue:: Unkonwn error
 // "test_mod_mixed_sign_int32",
 // "test_mod_mixed_sign_int64",
-"test_mod_mixed_sign_int8", // Issue:: Unkonwn error
+// "test_mod_mixed_sign_int8", // Issue:: Unkonwn error
 "test_mod_uint16", // Issue:: Unkonwn error
 "test_mod_uint32", // ---- same as above ---
 "test_mod_uint64", // ---- same as above ---
-"test_mod_uint8", // ---- same as above ---
+// "test_mod_uint8", // ---- same as above ---
 "test_momentum", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple", // ---- same as above ---
 // "test_mul_example",

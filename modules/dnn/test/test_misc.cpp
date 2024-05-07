@@ -451,7 +451,7 @@ TEST_P(setInput, normalization)
 INSTANTIATE_TEST_CASE_P(/**/, setInput, Combine(
   Values(1.0f, 1.0 / 127.5),
   Values(Vec3f(), Vec3f(50, 50, 50), Vec3f(10, 50, 140)),
-  Values(CV_32F, CV_8U),
+  Values(CV_32F),
   dnnBackendsAndTargets()
 ));
 
@@ -1059,8 +1059,8 @@ TEST_P(Test_two_inputs, basic)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_two_inputs, Combine(
-    Values(CV_32F, CV_8U),
-    Values(CV_32F, CV_8U),
+    Values(CV_32F),
+    Values(CV_32F),
     dnnBackendsAndTargets()
 ));
 

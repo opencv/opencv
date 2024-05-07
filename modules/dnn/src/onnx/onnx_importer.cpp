@@ -4116,7 +4116,7 @@ Mat readTensorFromONNX(const String& path)
     {
         CV_Error(Error::StsUnsupportedFormat, cv::format("Failed to parse ONNX data: %s", path.c_str()));
     }
-    Mat mat = getMatFromTensor(tensor_proto);
+    Mat mat = getMatFromTensor(tensor_proto, false);
     releaseONNXTensor(tensor_proto);
     return mat;
 }
