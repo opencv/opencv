@@ -949,22 +949,40 @@ void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
 namespace cv
 {
 
+static BinaryFuncC* getMulTab(bool extendMul);
+
 static void mul8u16uWrapper(const uchar* src1, size_t step1,
-                               const uchar* src2, size_t step2,
-                               uchar* dst, size_t step, int width, int height,
-                               void* usrdata)
+                            const uchar* src2, size_t step2,
+                            uchar* dst, size_t step, int width, int height,
+                            void* usrdata)
 {
     double scale = *((double*)usrdata);
-    cv_hal_mul8u16u(src1, step1, src2, step2, (ushort*)dst, step, width, height, scale);
+    CALL_HAL(mul8u16u, cv_hal_mul8u16u, src1, step1, src2, step2, (ushort*)dst, step, width, height, scale);
+
+    // fallback if HAL does not work
+    Mat src1Arr(height, width, CV_8UC1, const_cast<uchar*>(src1), step1);
+    Mat src2Arr(height, width, CV_8UC1, const_cast<uchar*>(src2), step2);
+    Mat dstArr(height, width, CV_16UC1, dst, step);
+    arithm_op(src1Arr, src2Arr, dstArr, noArray(), CV_16U, getMulTab(false),
+              /* muldiv */ true, usrdata, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
+              /*skipConversion*/ false);
 }
 
 static void mul8s16sWrapper(const uchar* src1, size_t step1,
-                               const uchar* src2, size_t step2,
-                               uchar* dst, size_t step, int width, int height,
-                               void* usrdata)
+                            const uchar* src2, size_t step2,
+                            uchar* dst, size_t step, int width, int height,
+                            void* usrdata)
 {
     double scale = *((double*)usrdata);
-    cv_hal_mul8s16s((schar*)src1, step1, (schar*)src2, step2, (short*)dst, step, width, height, scale);
+    CALL_HAL(mul8s16s, cv_hal_mul8s16s, (schar*)src1, step1, (schar*)src2, step2, (short*)dst, step, width, height, scale);
+
+    // fallback if HAL does not work
+    Mat src1Arr(height, width, CV_8SC1, const_cast<uchar*>(src1), step1);
+    Mat src2Arr(height, width, CV_8SC1, const_cast<uchar*>(src2), step2);
+    Mat dstArr(height, width, CV_16SC1, dst, step);
+    arithm_op(src1Arr, src2Arr, dstArr, noArray(), CV_16S, getMulTab(false),
+              /* muldiv */ true, usrdata, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
+              /*skipConversion*/ false);
 }
 
 static BinaryFuncC* getMulTab(bool extendMul)
