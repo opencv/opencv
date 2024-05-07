@@ -13,25 +13,29 @@ namespace cv {
 namespace impl {
 void write_mat_to_xrgb8888(cv::Mat const &img_, void *data)
 {
-    cv::Mat img;
+    // Validate destination data.
+    CV_CheckFalse((data == nullptr), "Destination Address must not be nullptr.");
 
-    // The supported Mat depth is according to imshow() specification.
-    const int depth = CV_MAT_DEPTH(img_.type());
+    // Validate source img parameters.
+    CV_CheckFalse(img_.empty(), "Source Mat must not be empty.");
     const int ncn   = img_.channels();
-    const int mtype = CV_MAKE_TYPE(CV_8U, ncn);
-
     CV_CheckType(img_.type(),
         ( (ncn == 1) || (ncn == 3) || (ncn == 4)),
         "Unsupported channels, please convert to 1, 3 or 4 channels"
     );
 
-    CV_CheckType(img_.type(),
+    // The supported Mat depth is according to imshow() specification.
+    const int depth = CV_MAT_DEPTH(img_.type());
+    CV_CheckDepth(img_.type(),
         ( (depth == CV_8U)  || (depth == CV_8S)  ||
           (depth == CV_16U) || (depth == CV_16S) ||
           (depth == CV_32F) || (depth == CV_64F) ),
         "Unsupported depth, please convert to CV_8U"
     );
 
+    // Convert to CV_8U
+    cv::Mat img;
+    const int mtype = CV_MAKE_TYPE(CV_8U, ncn);
     switch(CV_MAT_DEPTH(depth))
     {
     case CV_8U:
@@ -58,8 +62,42 @@ void write_mat_to_xrgb8888(cv::Mat const &img_, void *data)
         // it cannot be reachable.
         break;
     }
+    CV_CheckDepthEQ(CV_MAT_DEPTH(img.type()), CV_8U, "img should be CV_8U");
 
-    CV_CPU_DISPATCH(write_mat_to_xrgb8888, (img, data), CV_CPU_DISPATCH_MODES_ALL);
+    int img_rows = img.rows;
+    int img_cols = img.cols;
+
+    // Reshape to reduce calling img.ptr() and CV_CPU_DISPATCH()
+    if(img.isContinuous())
+    {
+        img_cols *= img_rows;
+        img_rows = 1;
+    }
+
+    // Convert to xrgb8888
+    uint8_t* dst = (uint8_t*)data;
+    for(int y = 0; y < img_rows; y++, dst+=img_cols * 4)
+    {
+        const uint8_t* src = img.ptr(y);
+        switch (ncn)
+        {
+        case 1:
+            CV_CPU_DISPATCH(write_g8_to_xrgb8888, (src, dst, img_cols), CV_CPU_DISPATCH_MODES_ALL);
+            break;
+
+        case 3:
+            CV_CPU_DISPATCH(write_bgr888_to_xrgb8888, (src, dst, img_cols), CV_CPU_DISPATCH_MODES_ALL);
+            break;
+
+        case 4:
+            CV_CPU_DISPATCH(write_bgra8888_to_xrgb8888, (src, dst, img_cols), CV_CPU_DISPATCH_MODES_ALL);
+            break;
+
+        default:
+            // it cannot be reachable.
+            break;
+        }
+    }
 }
 
 } // namespace impl
