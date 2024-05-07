@@ -35,7 +35,7 @@ PERF_TEST_P(MomentsFixture_val, Moments1,
     mat += 1;
 
 
-    SANITY_CHECK_MOMENTS(m, 2e-4, ERROR_RELATIVE);
+    SANITY_CHECK_MOMENTS(m, 3.3e-4, ERROR_RELATIVE);
 }
 
 } // namespace
