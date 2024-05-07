@@ -141,9 +141,11 @@ TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
             for (int j = 0; j < cols; j++) {
                 row_vec[j] = input.at<float>(i, j);
             }
-            ref_output[i] = arg_op(row_vec, operation);
+            ref_output[i] = (int) arg_op(row_vec, operation);
         }
-        output_ref = cv::Mat(rows, (axis == 1) ? 1 : cols, CV_32FC1, ref_output.data());
+        std::cout << "ref_output :" << ref_output << std::endl;
+        output_ref = cv::Mat(rows, (axis == 1) ? 1 : cols, CV_32S, ref_output.data());
+        std::cout << "output_ref :" << output_ref << std::endl;
     } else if (input_shape.size() <= 1) {
         int index = arg_op(std::vector<float>(input.begin<float>(), input.end<float>()), operation);
         output_ref = cv::Mat(input_shape.size(), input_shape.data(), CV_32FC1, &index);
@@ -155,6 +157,12 @@ TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
     runLayer(layer, inputs, outputs);
     ASSERT_EQ(1, outputs.size());
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    // convert output_ref to float to match the output type
+    output_ref.convertTo(output_ref, CV_32FC1);
+
+
+    std::cout << "output_ref: " << output_ref << std::endl;
+    std::cout << "outputs[0]: " << outputs[0] << std::endl;
     normAssert(output_ref, outputs[0]);
 }
 
