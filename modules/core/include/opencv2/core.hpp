@@ -912,11 +912,8 @@ CV_EXPORTS_W void reduceArgMax(InputArray src, OutputArray dst, int axis, bool l
 
 The function cv::minMaxIdx finds the minimum and maximum element values and their positions. The
 extremums are searched across the whole array or, if mask is not an empty array, in the specified
-array region. The function does not work with multi-channel arrays. If you need to find minimum or
-maximum elements across all the channels, use Mat::reshape first to reinterpret the array as
-single-channel. Or you may extract the particular channel using either extractImageCOI, or
-mixChannels, or split. In case of a sparse matrix, the minimum is found among non-zero elements
-only.
+array region. In case of a sparse matrix, the minimum is found among non-zero elements
+only. Multi-channel input is supported without mask and extremums indexes (should be nullptr).
 @note When minIdx is not NULL, it must have at least 2 elements (as well as maxIdx), even if src is
 a single-row or single-column matrix. In OpenCV (following MATLAB) each array has at least 2
 dimensions, i.e. single-column matrix is Mx1 matrix (and therefore minIdx/maxIdx will be
