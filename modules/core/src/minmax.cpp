@@ -1515,13 +1515,21 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         if (cn == 1)
         {
             CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols, src.rows, src.depth(), minVal, maxVal,
-                    minIdx, maxIdx, mask.data);
+                     minIdx, maxIdx, mask.data);
         }
         else
         {
             int _minIdx, _maxIdx;
             CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows, src.depth(), minVal, maxVal,
-                    &_minIdx, &_maxIdx, nullptr);
+                     &_minIdx, &_maxIdx, nullptr);
+        }
+    }
+    else
+    {
+        if (src.isContinuous())
+        {
+            CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, 0, src.total(), 1, src.depth(), minVal, maxVal,
+                     minIdx, maxIdx, mask.data);
         }
     }
 
