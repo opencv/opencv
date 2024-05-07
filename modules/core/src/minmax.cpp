@@ -1510,18 +1510,18 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
+    int _minIdx, _maxIdx;
+    int* min_offset = (cn == 1) ? minIdx : &_minIdx;
+    int* max_offset = (cn == 1) ? maxIdx : &_maxIdx;
     if (src.dims <= 2)
     {
-        int _minIdx, _maxIdx;
-        int* min_offset = (cn == 1) ? minIdx : &_minIdx;
-        int* max_offset = (cn == 1) ? maxIdx : &_maxIdx;
         CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows, src.depth(),
                     minVal, maxVal, min_offset, max_offset, mask.data);
     }
     else if (src.isContinuous())
     {
-        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, 0, src.total()*cn, 1, src.depth(),
-                 minVal, maxVal, minIdx, maxIdx, mask.data);
+        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, 0, (int)src.total()*cn, 1, src.depth(),
+                 minVal, maxVal, min_offset, max_offset, mask.data);
     }
 
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MINMAXLOC>(src.cols, src.rows),
