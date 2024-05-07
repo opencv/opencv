@@ -1034,24 +1034,6 @@ bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
             src.copyTo(dst);
             return true;
         }
-        else if (format == "GRAY8")
-        {
-            CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
-            CV_CheckGE(step, (size_t)frame_width, "");
-            Mat src(sz, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
-            src.copyTo(dst);
-            return true;
-        }
-        else if (format == "GRAY16_LE" || format == "GRAY16_BE")
-        {
-            CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
-            CV_CheckGE(step, (size_t)frame_width, "");
-            Mat src(sz, CV_16UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
-            src.copyTo(dst);
-            return true;
-        }
         else if (format == "BGRA" || format == "RGBA" || format == "BGRX" || format == "RGBX")
         {
             CV_CheckEQ((int)n_planes, 1, "");
@@ -1105,6 +1087,24 @@ bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
             srcY.copyTo(dst_(Rect(0, 0, frame_width, frame_height)));
             src1.copyTo(Mat(sz2, CV_8UC1, dst_.ptr<uchar>(frame_height)));
             src2.copyTo(Mat(sz2, CV_8UC1, dst_.ptr<uchar>(frame_height) + src1.total()));
+            return true;
+        }
+        else if (format == "GRAY8")
+        {
+            CV_CheckEQ((int)n_planes, 1, "");
+            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
+            CV_CheckGE(step, (size_t)frame_width, "");
+            Mat src(sz, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
+            src.copyTo(dst);
+            return true;
+        }
+        else if (format == "GRAY16_LE" || format == "GRAY16_BE")
+        {
+            CV_CheckEQ((int)n_planes, 1, "");
+            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
+            CV_CheckGE(step, (size_t)frame_width, "");
+            Mat src(sz, CV_16UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
+            src.copyTo(dst);
             return true;
         }
         else
@@ -1618,7 +1618,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
     {
         //do not emit signals: all calls will be synchronous and blocking
         gst_app_sink_set_emit_signals (GST_APP_SINK(sink.get()), FALSE);
-        caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg"));
+        caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR, BGRx}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg"));
     }
     if (audioStream >= 0)
     {
