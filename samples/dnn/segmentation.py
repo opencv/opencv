@@ -91,10 +91,8 @@ while cv.waitKey(1) < 0:
         break
 
     cv.imshow("Original Image", frame)
-
     frameHeight = frame.shape[0]
     frameWidth = frame.shape[1]
-
     # Create a 4D blob from a frame.
     inpWidth = args.width if args.width else frameWidth
     inpHeight = args.height if args.height else frameHeight
@@ -104,35 +102,29 @@ while cv.waitKey(1) < 0:
     score = net.forward()
 
     if args.alias == 'u2netp':
-        saliency_map = score[0][0]
-        _, mask = cv.threshold(saliency_map, 0.5, 255, cv.THRESH_BINARY)
-        mask = cv.resize(mask, (frame.shape[1], frame.shape[0]), interpolation=cv.INTER_NEAREST)
+        mask = score[0][0]
         mask = mask.astype(np.uint8)
-
+        _, mask = cv.threshold(mask, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+        mask = cv.resize(mask, (frame.shape[1], frame.shape[0]), interpolation=cv.INTER_AREA)
         # Create overlays for foreground and background
         foreground_overlay = np.zeros_like(frame, dtype=np.uint8)
         background_overlay = np.zeros_like(frame, dtype=np.uint8)
-
         # Set foreground (object) to red and background to blue
         foreground_overlay[mask == 255] = [0, 0, 255]  # Red foreground
         background_overlay[mask == 0] = [255, 0, 0]    # Blue background
-
         # Blend the overlays with the original frame
         foreground_segmented = cv.addWeighted(frame, 1, foreground_overlay, 0.5, 0)
         frame = cv.addWeighted(foreground_segmented, 1, background_overlay, 0.5, 0)
-
     else:
         numClasses = score.shape[1]
         height = score.shape[2]
         width = score.shape[3]
-
         # Draw segmentation
         if not colors:
             # Generate colors
             colors = [np.array([0, 0, 0], np.uint8)]
             for i in range(1, numClasses):
                 colors.append((colors[i - 1] + np.random.randint(0, 256, [3], np.uint8)) / 2)
-
         classIds = np.argmax(score[0], axis=0)
         segm = np.stack([colors[idx] for idx in classIds.flatten()])
         segm = segm.reshape(height, width, 3)
