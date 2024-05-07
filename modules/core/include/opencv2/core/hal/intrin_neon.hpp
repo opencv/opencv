@@ -61,13 +61,10 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #else
 #define CV_SIMD128_64F 0
 #endif
-#if defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
-    #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-        #define CV_SIMD128_FP16 1
-    #endif
-#endif
-#if !defined (__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) || !__ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-#define CV_SIMD128_FP16 0
+#if defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    #define CV_SIMD128_FP16 1
+#else
+    #define CV_SIMD128_FP16 0
 #endif
 
 // The following macro checks if the code is being compiled for the
@@ -2244,7 +2241,9 @@ inline v_int16x8 v_ceil(const v_float16x8 &a)
 }
 
 inline v_int16x8 v_trunc(const v_float16x8 &a)
-{ return v_int16x8(vcvtq_s16_f16(a.val)); }
+{
+    return v_int16x8(vcvtq_s16_f16(a.val));
+}
 #endif
 
 #if CV_SIMD128_64F
