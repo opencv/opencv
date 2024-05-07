@@ -30,27 +30,29 @@ How to use:
 
 using namespace cv;
 using namespace cv::dnn;
+using namespace std;
 
-std::string param_keys =
-    "{help    h  |                 | show help message}"
-    "{model   m  |                 | network model}"
-    "{query q    |                 | path to target image}"
-    "{video v    |                 | video file path}"
-    "{yolo       |                 | Path to yolov3.weights}"
-    "{cfg        |                 | Path to yolov3.cfg}"
-    "{batch_size | 32              | batch size of each inference}"
-    "{resize_h   | 256             | resize input to specific height}"
-    "{resize_w   | 128             | resize input to specific width}";
+const string param_keys =
+    "{help    h  |      | show help message}"
+    "{model   m  |      | network model}"
+    "{query q    |      | path to target image}"
+    "{video v    |      | video file path}"
+    "{yolo       |      | Path to yolov3.weights}"
+    "{cfg        |      | Path to yolov3.cfg}"
+    "{batch_size | 32   | batch size of each inference}"
+    "{resize_h   | 256  | resize input to specific height}"
+    "{resize_w   | 128  | resize input to specific width}";
 
-std::string backend_keys = cv::format(
+const string backend_keys = cv::format(
     "{ backend   | 0 | Choose one of computation backends: "
     "%d: automatically (by default), "
     "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
     "%d: OpenCV implementation, "
     "%d: VKCOM, "
     "%d: CUDA }",
-    cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA);
-std::string target_keys = cv::format(
+    DNN_BACKEND_DEFAULT, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV, DNN_BACKEND_VKCOM, DNN_BACKEND_CUDA);
+
+const string target_keys = cv::format(
     "{ target    | 0 | Choose one of target computation devices: "
     "%d: CPU target (by default), "
     "%d: OpenCL, "
@@ -59,8 +61,9 @@ std::string target_keys = cv::format(
     "%d: Vulkan, "
     "%d: CUDA, "
     "%d: CUDA fp16 (half-float preprocess) }",
-    cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
-std::string keys = param_keys + backend_keys + target_keys;
+    DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16, DNN_TARGET_MYRIAD, DNN_TARGET_VULKAN, DNN_TARGET_CUDA, DNN_TARGET_CUDA_FP16);
+
+string keys = param_keys + backend_keys + target_keys;
 
 namespace cv
 {
@@ -85,9 +88,9 @@ namespace cv
             return ret;
         }
 
-        static std::vector<float> normalization(const std::vector<float> &feature)
+        static vector<float> normalization(const vector<float> &feature)
         {
-            std::vector<float> ret;
+            vector<float> ret;
             float sum = 0.0;
             for (int i = 0; i < (int)feature.size(); i++)
             {
@@ -101,11 +104,11 @@ namespace cv
             return ret;
         }
 
-        static void extractFeatures(std::vector<cv::Mat> &imglist, Net *net, const int &batch_size, const int &resize_h, const int &resize_w, std::vector<std::vector<float>> &features)
+        static void extractFeatures(vector<cv::Mat> &imglist, Net *net, const int &batch_size, const int &resize_h, const int &resize_w, vector<vector<float>> &features)
         {
             for (int st = 0; st < (int)imglist.size(); st += batch_size)
             {
-                std::vector<Mat> batch;
+                vector<Mat> batch;
                 for (int delta = 0; delta < batch_size && st + delta < (int)imglist.size(); delta++)
                 {
                     Mat img = imglist[st + delta];
@@ -116,7 +119,7 @@ namespace cv
                 Mat out = net->forward();
                 for (int i = 0; i < (int)out.size().height; i++)
                 {
-                    std::vector<float> temp_feature;
+                    vector<float> temp_feature;
                     for (int j = 0; j < (int)out.size().width; j++)
                     {
                         temp_feature.push_back(out.at<float>(i, j));
@@ -127,7 +130,7 @@ namespace cv
             return;
         }
 
-        static float similarity(const std::vector<float> &feature1, const std::vector<float> &feature2)
+        static float similarity(const vector<float> &feature1, const vector<float> &feature2)
         {
             float result = 0.0;
             for (int i = 0; i < (int)feature1.size(); i++)
@@ -137,7 +140,7 @@ namespace cv
             return result;
         }
 
-        static int getTopK(const std::vector<std::vector<float>> &queryFeatures, const std::vector<std::vector<float>> &galleryFeatures)
+        static int getTopK(const vector<vector<float>> &queryFeatures, const vector<vector<float>> &galleryFeatures)
         {
             if (queryFeatures.empty() || galleryFeatures.empty())
                 return -1; // No valid index if either feature list is empty
@@ -145,7 +148,7 @@ namespace cv
             int bestIndex = -1;
             float maxSimilarity = -1.0;
 
-            const std::vector<float> &query = queryFeatures[0];
+            const vector<float> &query = queryFeatures[0];
 
             for (int j = 0; j < (int)galleryFeatures.size(); j++)
             {
@@ -168,24 +171,24 @@ namespace cv
             }
         };
 
-        std::map<cv::Mat, cv::Rect, MatComparator> imgDict;
+        map<cv::Mat, cv::Rect, MatComparator> imgDict;
 
-        static std::vector<cv::Mat> yoloDetector(cv::Mat &frame, cv::dnn::Net &net, std::vector<cv::String> &outputLayers)
+        static vector<cv::Mat> yoloDetector(cv::Mat &frame, Net &net, vector<cv::String> &outputLayers)
         {
             int height = frame.rows;
             int width = frame.cols;
 
             // Create a blob from the frame
             cv::Mat blob;
-            cv::dnn::blobFromImage(frame, blob, 0.00392, cv::Size(416, 416), cv::Scalar(0, 0, 0), true, false, CV_32F);
+            blobFromImage(frame, blob, 0.00392, cv::Size(416, 416), cv::Scalar(0, 0, 0), true, false, CV_32F);
 
             net.setInput(blob);
-            std::vector<cv::Mat> outs;
+            vector<cv::Mat> outs;
             net.forward(outs, outputLayers);
 
-            std::vector<int> class_ids;
-            std::vector<float> confidences;
-            std::vector<cv::Rect> boxes;
+            vector<int> class_ids;
+            vector<float> confidences;
+            vector<cv::Rect> boxes;
 
             for (size_t i = 0; i < outs.size(); ++i)
             {
@@ -215,17 +218,17 @@ namespace cv
             }
 
             // Apply Non-Maximum Suppression to reduce overlapping bounding boxes
-            std::vector<int> indices;
-            cv::dnn::NMSBoxes(boxes, confidences, 0.5, 0.4, indices);
+            vector<int> indices;
+            NMSBoxes(boxes, confidences, 0.5, 0.4, indices);
 
-            std::vector<cv::Mat> images;
+            vector<cv::Mat> images;
             for (int index : indices)
             {
                 cv::Rect box = boxes[index];
-                box.x = std::max(0, box.x);
-                box.y = std::max(0, box.y);
-                box.width = std::min(box.width, width - box.x);
-                box.height = std::min(box.height, height - box.y);
+                box.x = max(0, box.x);
+                box.y = max(0, box.y);
+                box.width = min(box.width, width - box.x);
+                box.height = min(box.height, height - box.y);
                 cv::Mat crop_img = frame(box);
                 images.push_back(crop_img);
                 imgDict[crop_img] = box;
@@ -234,34 +237,34 @@ namespace cv
             return images;
         }
 
-        static void extractFrames(const std::string &queryImgPath, const std::string &videoPath, Net *reidNet, const std::string &yoloPath, const std::string &cfgPath, int resize_h = 384, int resize_w = 128, int batch_size = 32)
+        static void extractFrames(const string &queryImgPath, const string &videoPath, Net *reidNet, const string &yoloPath, const string &cfgPath, int resize_h = 384, int resize_w = 128, int batch_size = 32)
         {
             cv::VideoCapture cap(videoPath);
             if (!cap.isOpened())
             {
-                std::cerr << "Error: Video could not be opened." << std::endl;
+                cerr << "Error: Video could not be opened." << endl;
                 return;
             }
 
-            cv::dnn::Net net = cv::dnn::readNet(yoloPath, cfgPath);
-            std::vector<cv::String> layerNames = net.getLayerNames();
+            Net net = readNet(yoloPath, cfgPath);
+            vector<cv::String> layerNames = net.getLayerNames();
 
-            std::vector<int> out_layers_indices = net.getUnconnectedOutLayers();
-            std::vector<cv::String> outputLayers;
+            vector<int> out_layers_indices = net.getUnconnectedOutLayers();
+            vector<cv::String> outputLayers;
             for (int index : out_layers_indices)
             {
                 outputLayers.push_back(layerNames[index - 1]);
             }
 
-            std::vector<cv::Mat> frames;
+            vector<cv::Mat> frames;
 
             cv::Mat queryImg = cv::imread(queryImgPath);
             if (queryImg.empty())
             {
-                std::cerr << "Error: Query image could not be loaded." << std::endl;
+                cerr << "Error: Query image could not be loaded." << endl;
                 return;
             }
-            std::vector<cv::Mat> queryImages = {queryImg};
+            vector<cv::Mat> queryImages = {queryImg};
 
             cv::Mat frame;
             while (true)
@@ -271,10 +274,10 @@ namespace cv
                     break;
                 }
 
-                std::vector<cv::Mat> detectedImages = yoloDetector(frame, net, outputLayers);
-                std::vector<std::vector<float>> queryFeatures;
+                vector<cv::Mat> detectedImages = yoloDetector(frame, net, outputLayers);
+                vector<vector<float>> queryFeatures;
                 extractFeatures(queryImages, reidNet, batch_size, resize_h, resize_w, queryFeatures);
-                std::vector<std::vector<float>> galleryFeatures;
+                vector<vector<float>> galleryFeatures;
                 extractFeatures(detectedImages, reidNet, batch_size, resize_h, resize_w, galleryFeatures);
 
                 int topk_idx = getTopK(queryFeatures, galleryFeatures);
@@ -312,11 +315,11 @@ int main(int argc, char **argv)
     parser = CommandLineParser(argc, argv, keys);
     parser.about("Use this script to run ReID networks using OpenCV.");
 
-    const std::string modelPath = parser.get<String>("model");
-    const std::string queryImagePath = parser.get<String>("query");
-    const std::string videoPath = parser.get<String>("video");
-    const std::string yoloPath = parser.get<String>("yolo");
-    const std::string cfgPath = parser.get<String>("cfg");
+    const string modelPath = parser.get<String>("model");
+    const string queryImagePath = parser.get<String>("query");
+    const string videoPath = parser.get<String>("video");
+    const string yoloPath = parser.get<String>("yolo");
+    const string cfgPath = parser.get<String>("cfg");
     const int backend = parser.get<int>("backend");
     const int target = parser.get<int>("target");
     const int batch_size = parser.get<int>("batch_size");
