@@ -1512,25 +1512,16 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     if (src.dims <= 2)
     {
-        if (cn == 1)
-        {
-            CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols, src.rows, src.depth(), minVal, maxVal,
-                     minIdx, maxIdx, mask.data);
-        }
-        else
-        {
-            int _minIdx, _maxIdx;
-            CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows, src.depth(), minVal, maxVal,
-                     &_minIdx, &_maxIdx, nullptr);
-        }
+        int _minIdx, _maxIdx;
+        int* min_offset = (cn == 1) ? minIdx : &_minIdx;
+        int* max_offset = (cn == 1) ? maxIdx : &_maxIdx;
+        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows, src.depth(),
+                    minVal, maxVal, min_offset, max_offset, mask.data);
     }
-    else
+    else if (src.isContinuous())
     {
-        if (src.isContinuous())
-        {
-            CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, 0, src.total(), 1, src.depth(), minVal, maxVal,
-                     minIdx, maxIdx, mask.data);
-        }
+        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, 0, src.total()*cn, 1, src.depth(),
+                 minVal, maxVal, minIdx, maxIdx, mask.data);
     }
 
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MINMAXLOC>(src.cols, src.rows),
