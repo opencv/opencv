@@ -40,7 +40,6 @@ public:
 
         CV_Assert(params.has("paddings"));
         const DictValue& paddingsParam = params.get("paddings");
-        std::cout << (paddingsParam.size() & 1) << std::endl;
         CV_Assert((paddingsParam.size() & 1) == 0);
 
         paddings.resize(paddingsParam.size() / 2);
@@ -58,14 +57,9 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 1);
-        std::cout << "inputs.size() = " << inputs.size() << std::endl;
         const MatShape& inpShape = inputs[0];
-        std::cout << "inpShape.size() = " << inpShape << std::endl;
-        // std::cout << "paddings: " << paddings << std::endl;
         if (inpShape.empty()){
-            std::cout << "in the new branch" << std::endl;
-            outputs.resize(1, MatShape(1, paddings.size() + 1));
-            std::cout << "outputs: " << outputs[0] << std::endl;
+            outputs.resize(1, MatShape(1, paddings.size() * 2 + 1));
             return false;
         }
         CV_Assert(inpShape.size() >= paddings.size());

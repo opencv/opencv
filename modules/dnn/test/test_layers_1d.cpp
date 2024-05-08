@@ -585,28 +585,38 @@ TEST_P(Layer_Padding_Test, Accuracy_01D){
     cv::Mat input(input_shape.size(), input_shape.data(), CV_32F);
     cv::randn(input, 0.0, 1.0);
 
-    // create a refence
-    cv::Mat output_ref;
-    cv::copyMakeBorder(input, output_ref, 0, 0, 1, 1, 0, (Scalar) pad_value);
-    if (input_shape.size() == 0 || input_shape.size() == 1){
-        std::cout << "shape output_ref: " << shape(output_ref) << std::endl;
-        std::cout << "total: " << output_ref.total() << std::endl;
-        std::cout << "output_ref: " << output_ref.size() << std::endl;
-        output_ref = output_ref.reshape(1, (int)output_ref.total());
-        output_ref.dims = 1;
-        std::cout << "output_ref: " << output_ref.size() << std::endl;
+
+    // Fill in the padding values manually
+    // Create output ref shape depending on the input shape and input_dims
+    std::vector<int> output_shape;
+    if (input_shape.size() == 0){
+        output_shape = {1 + paddings[0] + paddings[1]};
+    } else if (input_shape.size() == 1){
+        output_shape = {input_shape[0] + paddings[0] + paddings[1]};
+    } else {
+        output_shape = {input_shape[0], input_shape[1] + paddings[0] + paddings[1]};
     }
-    std::cout << "shape output_ref: " << shape(output_ref) << std::endl;
+
+    cv::Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, pad_value);
+
+    if (input_shape.size() == 0){
+        output_ref.at<float>(1) = input.at<float>(0);
+    } else if (input_shape.size() == 1){
+        for (int i = 0; i < input_shape[0]; ++i){
+            output_ref.at<float>(i + 1) = input.at<float>(i);
+        }
+    } else {
+        for (int i = 0; i < input_shape[0]; ++i){
+            for (int j = 0; j < input_shape[1]; ++j){
+                output_ref.at<float>(i, j + 1) = input.at<float>(i, j);
+            }
+        }
+    }
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
-
     runLayer(layer, inputs, outputs);
-    std::cout << "output[0]: " << outputs[0] << std::endl;
-    std::cout << "output[0] shape: " << shape(outputs[0]) << std::endl;
-    std::cout << "output_ref: " << output_ref.size() << std::endl;
-    std::cout << "output[0]: " << outputs[0].size() << std::endl;
-    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(1, outputs.size());
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
