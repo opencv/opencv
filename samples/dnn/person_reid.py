@@ -17,7 +17,7 @@ Copyright (C) 2020-2021, SUSTech.
 How to use:
     sample command to run:
 
-        python person_reid.py --query=/path/to/query_image --video=/path/to/video/footage --model=path/to/youtu_reid_baseline_medium.onnx --yolo=/path/to/yolov3.weights --cfg=/path/to/yolov3.cfg
+        python person_reid.py --query=/path/to/query_image --video=/path/to/video/footage --model=path/to/youtu_reid_baseline_medium.onnx --yolo=/path/to/yolov8.onnx
 
     You can download a baseline ReID model from:
         https://github.com/ReID-Team/ReID_extra_testdata
@@ -66,42 +66,53 @@ def preprocess(images, height, width):
 
 img_dict = {} # Dictionary to store bounding boxes for corresponding cropped image
 
-def yolo_detector(frame, net, output_layers):
+def yolo_detector(frame, net):
     global img_dict
     height, width, channels = frame.shape
 
-    # Create blob from the frame
-    blob = cv.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
+    length = max((height, width))
+    image = np.zeros((length, length, 3), np.uint8)
+    image[0:height, 0:width] = frame
+
+    scale = length/640
+    # Create blob from the frame with correct scale factor and size for the model
+
+    blob = cv.dnn.blobFromImage(image, scalefactor=1 / 255, size=(640, 640), swapRB=True)
     net.setInput(blob)
-    outs = net.forward(output_layers)
+    outputs = net.forward()
 
-    class_ids = []
-    confidences = []
+    outputs = np.array([cv.transpose(outputs[0])])
+    rows = outputs.shape[1]
+
     boxes = []
-    for out in outs:
-        for detection in out:
-            scores = detection[5:]
-            class_id = np.argmax(scores)
-            confidence = scores[class_id]
-            if confidence > 0.5 and class_id == 0:  # Filter to detect only 'person'
-                center_x = int(detection[0] * width)
-                center_y = int(detection[1] * height)
-                w = int(detection[2] * width)
-                h = int(detection[3] * height)
+    scores = []
+    class_ids = []
 
-                x = int(center_x - w / 2)
-                y = int(center_y - h / 2)
+    for i in range(rows):
+        classes_scores = outputs[0][i][4:]
+        (minScore, maxScore, minClassLoc, (x, maxClassIndex)) = cv.minMaxLoc(classes_scores)
+        if maxScore >= 0.25:
+            box = [
+                outputs[0][i][0] - (0.5 * outputs[0][i][2]),
+                outputs[0][i][1] - (0.5 * outputs[0][i][3]),
+                outputs[0][i][2],
+                outputs[0][i][3],
+            ]
+            boxes.append(box)
+            scores.append(maxScore)
+            class_ids.append(maxClassIndex)
 
-                boxes.append([x, y, w, h])
-                confidences.append(float(confidence))
-                class_ids.append(class_id)
 
-    # Apply Non-Maximum Suppression to reduce overlapping bounding boxes
-    indexes = cv.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
+    # Apply Non-Maximum Suppression
+    indexes = cv.dnn.NMSBoxes(boxes, scores, 0.25, 0.45, 0.5)
 
     images = []
     for i in indexes:
         x, y, w, h = boxes[i]
+        x = round(x*scale)
+        y = round(y*scale)
+        w = round(w*scale)
+        h = round(h*scale)
 
         x, y = max(0, x), max(0, y)
         w, h = min(w, frame.shape[1] - x), min(h, frame.shape[0] - y)
@@ -110,17 +121,10 @@ def yolo_detector(frame, net, output_layers):
         img_dict[crop_img.tobytes()] = (x, y, w, h)
     return images
 
-def extract_frames(query_image_path, video_path, model_path, yolo_path, cfg_path, resize_h = 384, resize_w = 128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, batch_size = 32):
+def extract_frames(query_image_path, video_path, model_path, yolo_path, resize_h = 384, resize_w = 128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, batch_size = 32):
     cap = cv.VideoCapture(video_path)
 
-    net = cv.dnn.readNet(yolo_path, cfg_path)
-    layer_names = net.getLayerNames()
-
-    # Handle different formats of layer outputs from different OpenCV versions
-    try:
-        output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
-    except Exception:
-        output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers().flatten()]
+    net = cv.dnn.readNet(yolo_path)
 
     frames = []
     query_images = [cv.imread(query_image_path)]
@@ -128,7 +132,7 @@ def extract_frames(query_image_path, video_path, model_path, yolo_path, cfg_path
         ret, frame = cap.read()
         if not ret:
             break
-        images = yolo_detector(frame, net, output_layers)
+        images = yolo_detector(frame, net)
         query_feat = extract_feature(query_images, model_path, resize_h, resize_w, backend, target, batch_size)
         gallery_feat = extract_feature(images, model_path, resize_h, resize_w, backend, target, batch_size)
 
@@ -226,8 +230,7 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--query', '-q', required=True, help='Path to target image.')
     parser.add_argument('--video', '-g', required=True, help='Path to video file.')
-    parser.add_argument('--yolo', required=True, help='Path to yolov3.weights.')
-    parser.add_argument('--cfg', required=True, help='Path to yolov3.cfg.')
+    parser.add_argument('--yolo', required=True, help='Path to yolov8.onnx.')
     parser.add_argument('--resize_h', default = 256, help='The height of the input for model inference.')
     parser.add_argument('--resize_w', default = 128, help='The width of the input for model inference')
     parser.add_argument('--model', '-m', default='reid.onnx', help='Path to pb model.')
@@ -254,4 +257,4 @@ if __name__ == '__main__':
     if not os.path.isfile(args.model):
         raise OSError("Model not exist")
 
-    extract_frames(args.query, args.video, args.model, args.yolo, args.cfg, args.resize_h, args.resize_w, args.backend, args.target)
+    extract_frames(args.query, args.video, args.model, args.yolo, args.resize_h, args.resize_w, args.backend, args.target)
