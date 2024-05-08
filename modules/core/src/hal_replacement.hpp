@@ -221,7 +221,7 @@ For 8s input type 128 is added to LUT index
 Destination should have the same element type and number of channels as lookup table elements
 @param src_data Source image data
 @param src_step Source image step
-@param src_channels Number of channels in source image
+@param src_type Sorce image type
 @param lut_data Pointer to lookup table
 @param lut_channel_size Size of each channel in bytes
 @param lut_channels Number of channels in lookup table
@@ -229,16 +229,15 @@ Destination should have the same element type and number of channels as lookup t
 @param dst_step Destination step
 @param width Width of images
 @param height Height of images
+@sa LUT
 */
 //! @addtogroup core_hal_interface_lut Lookup table
 //! @{
-inline int hal_ni_lut8u(const uchar *src_data, size_t src_step, size_t src_channels, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_lut8s(const schar *src_data, size_t src_step, size_t src_channels, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_lut(const uchar *src_data, size_t src_step, size_t src_type, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
 
 //! @cond IGNORED
-#define cv_hal_lut8u hal_ni_lut8u
-#define cv_hal_lut8s hal_ni_lut8s
+#define cv_hal_lut hal_ni_lut
 //! @endcond
 
 /**
