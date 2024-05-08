@@ -65,32 +65,32 @@ class CV_EXPORTS FramebufferBackend: public UIBackend
   bool kbhit();
   
 
-  fb_var_screeninfo var_info;
-  fb_fix_screeninfo fix_info;
-  int fb_w;
-  int fb_h;
-  int y_offset;
-  int x_offset;
-  int bpp;
-  int line_length;
-  long int screensize;
+  fb_var_screeninfo varInfo;
+  fb_fix_screeninfo fixInfo;
+  int fbWidth;
+  int fbHeight;
+  int fbXOffset;
+  int fbYOffset;
+  int fbBitsPerPixel;
+  int fbLineLength;
+  long int fbScreenSize;
   unsigned char* fbPointer;
   Mat backgroundBuff;
 
   
-  int fb_open_and_get_info();
-  int framebuffrer_id;
+  int fbOpenAndGetInfo();
+  int fbID;
   
 public:
 
   fb_var_screeninfo &getVarInfo();
   fb_fix_screeninfo &getFixInfo();
   int getFramebuffrerID();
-  int getFBwidth();
-  int getFBheight();
+  int getFBWidth();
+  int getFBHeight();
   int getFBXOffset();
   int getFBYOffset();
-  int getFBbpp();
+  int getFBBitsPerPixel();
   int getFBLineLength();
   unsigned char* getFBPointer();
   Mat& getBackgroundBuff();

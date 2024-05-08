@@ -41,12 +41,9 @@ endif()
 
 
 if(WITH_FRAMEBUFFER)
-  message(WITH_FRAMEBUFFER="${WITH_FRAMEBUFFER}")
   add_definitions(-DHAVE_FRAMEBUFFER)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.cpp)
   list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.hpp)
-else()
-  message(WITH_FRAMEBUFFER="${WITH_FRAMEBUFFER}")
 endif()
 
 
