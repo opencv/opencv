@@ -57,14 +57,34 @@ namespace cv { namespace highgui_backend {
         << backend.getFBBitsPerPixel() << " is not supported" );
       return;
     }
+
+    Mat img(image.getMat());
+    switch(img.channels()){
+      case 1:
+        if(img.type() == CV_8UC1)
+        {
+          cvtColor(img, img, cv::COLOR_GRAY2RGB); 
+        } 
+        else
+        {
+          CV_LOG_ERROR(NULL, "UI: Image type " 
+            << cv::typeToString(image.type()) << " is not supported" );
+        }
+      break;
+      case 3:
+        convertToShow(img, img);
+      break;
+      case 4:
+        convertToShow(img, img, true);
+      break;
+    }
+    cvtColor(img, img, COLOR_RGB2BGRA);
     
-    Mat img;
-    cvtColor(image, img, COLOR_RGB2RGBA);
-    int new_width = windowRect.width;
-    int new_height = windowRect.height;
-    int cnt_channel = img.channels();
+    int newWidth = windowRect.width;
+    int newHeight = windowRect.height;
+    int cntChannel = img.channels();
     
-    cv::resize(img, img, cv::Size(new_width, new_height), INTER_LINEAR);
+    cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
     
     CV_LOG_INFO(NULL, "UI: Formated image: "
       << cv::typeToString(img.type()) << " size " << img.size());
@@ -82,7 +102,7 @@ namespace cv { namespace highgui_backend {
         std::memcpy(backend.getFBPointer() + (y + windowRect.y) * lineLength + 
                     xOffset + windowRect.x, 
                     img.ptr<cv::Vec4b>(y - yOffset), 
-                    showCols * cnt_channel);
+                    showCols * cntChannel);
     }
   }
 
@@ -218,6 +238,23 @@ namespace cv { namespace highgui_backend {
     // Get variable screen information
     if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &varInfo)) {
       CV_LOG_ERROR(NULL, "UI: can't read var info for framebuffer");
+      return -1;
+    }
+    
+    CV_LOG_INFO(NULL, "UI: framebuffer info: \n" 
+      << "   red offset " <<    varInfo.red.offset << " length " <<   varInfo.red.length << "\n"
+      << " green offset " <<  varInfo.green.offset << " length " << varInfo.green.length << "\n"
+      << "  blue offset " <<   varInfo.blue.offset << " length " <<  varInfo.blue.length << "\n"
+      << "transp offset " << varInfo.transp.offset << " length " <<varInfo.transp.length << "\n"
+      << "bits_per_pixel " << varInfo.bits_per_pixel);
+      
+    if((  varInfo.red.offset != 16) && (  varInfo.red.length != 8) &&
+       (varInfo.green.offset != 8 ) && (varInfo.green.length != 8) &&
+       ( varInfo.blue.offset != 0 ) && ( varInfo.blue.length != 8) && 
+       (varInfo.bits_per_pixel != 32) )
+    {
+      close(fb_fd);
+      CV_LOG_ERROR(NULL, "UI: Framebuffer format is not supported (use BGRA format with bits_per_pixel = 32)");
       return -1;
     }
 
