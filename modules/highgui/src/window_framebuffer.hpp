@@ -54,8 +54,8 @@ public:
 
 class CV_EXPORTS FramebufferBackend: public UIBackend
 {
-  int OpenInputEvent();
-  int eventKey;
+//  int OpenInputEvent();
+//  int eventKey;
 
   struct termios old, current;
 

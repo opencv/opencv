@@ -1,6 +1,13 @@
 #include "window_framebuffer.hpp"
 
-#include "opencv2/core/utils/logger.hpp"
+#include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/logger.defines.hpp>
+#ifdef NDEBUG
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
+#else
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
+#endif
+#include <opencv2/core/utils/logger.hpp>
 
 #include <unistd.h>
 #include <stdio.h>
@@ -159,20 +166,38 @@ namespace cv { namespace highgui_backend {
 
 // !!##FramebufferBackend
 
-  int FramebufferBackend::OpenInputEvent()
+//  int FramebufferBackend::OpenInputEvent()
+//  {
+//    int fd;
+//    fd = open("/dev/input/event1", O_RDONLY);
+//    if (fd == -1) {
+//        std::cerr << "ERROR_OPENING_INPUT\n";
+//        return -1;
+//    }
+//    return fd;
+//  }
+
+  static
+  std::string& getFBFileName()
   {
-    int fd;
-    fd = open("/dev/input/event1", O_RDONLY);
-    if (fd == -1) {
-        std::cerr << "ERROR_OPENING_INPUT\n";
-        return -1;
-    }
-    return fd;
+    static std::string fbFileNameFB = 
+      cv::utils::getConfigurationParameterString("FRAMEBUFFER", "");
+    static std::string fbFileNameOpenCV = 
+      cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FRAMEBUFFER", "");
+    static std::string fbFileNameDef = "/dev/fb0";
+    
+    if(!fbFileNameOpenCV.empty()) return fbFileNameOpenCV;
+    if(!fbFileNameFB.empty()) return fbFileNameFB;
+    return fbFileNameDef;
   }
+
 
   int FramebufferBackend::fbOpenAndGetInfo()
   {
-    int fb_fd = open("/dev/fb0", O_RDWR);
+    std::string fbFileName = getFBFileName();
+    CV_LOG_INFO(NULL, "UI: FramebufferWindow::The following is used as a framebuffer file: \n" << fbFileName);
+    
+    int fb_fd = open(fbFileName.c_str(), O_RDWR);
     if (fb_fd == -1)
     {
       CV_LOG_WARNING(NULL, "UI: can't open framebuffer");
