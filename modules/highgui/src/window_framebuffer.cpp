@@ -48,12 +48,12 @@ namespace cv { namespace highgui_backend {
       << cv::typeToString(image.type()) << " size " << image.size());
 
     if (backend.getFBPointer() == MAP_FAILED) {
-      CV_LOG_WARNING(NULL, "UI: Framebuffer is not mapped");
+      CV_LOG_ERROR(NULL, "UI: Framebuffer is not mapped");
       return;
     }
 
     if(backend.getFBBitsPerPixel() != 32) {
-      CV_LOG_WARNING(NULL, "UI: Framebuffer with bits per pixel = " 
+      CV_LOG_ERROR(NULL, "UI: Framebuffer with bits per pixel = " 
         << backend.getFBBitsPerPixel() << " is not supported" );
       return;
     }
@@ -89,12 +89,16 @@ namespace cv { namespace highgui_backend {
   double FramebufferWindow::getProperty(int prop) const
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::getProperty(int prop: " << prop << ")");
+    CV_LOG_WARNING(NULL, "UI: getProperty (not supported)");
+
     return 0.0;
   }
   bool FramebufferWindow::setProperty(int prop, double value) 
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::setProperty(int prop " 
       << prop << ", value " << value << ")");
+    CV_LOG_WARNING(NULL, "UI: setProperty (not supported)");
+
     return false;
   }
 
@@ -121,6 +125,7 @@ namespace cv { namespace highgui_backend {
   void FramebufferWindow::setTitle(const std::string& title) 
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::setTitle(" << title << ")");
+    CV_LOG_WARNING(NULL, "UI: setTitle (not supported)");
   }
 
   void FramebufferWindow::setMouseCallback(MouseCallback onMouse, void* userdata )
@@ -200,19 +205,19 @@ namespace cv { namespace highgui_backend {
     int fb_fd = open(fbFileName.c_str(), O_RDWR);
     if (fb_fd == -1)
     {
-      CV_LOG_WARNING(NULL, "UI: can't open framebuffer");
+      CV_LOG_ERROR(NULL, "UI: can't open framebuffer");
       return -1;
     }
 
     // Get fixed screen information
     if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &fixInfo)) {
-      CV_LOG_WARNING(NULL, "UI: can't read fix info for framebuffer");
+      CV_LOG_ERROR(NULL, "UI: can't read fix info for framebuffer");
      return -1;
     }
 
     // Get variable screen information
     if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &varInfo)) {
-      CV_LOG_WARNING(NULL, "UI: can't read var info for framebuffer");
+      CV_LOG_ERROR(NULL, "UI: can't read var info for framebuffer");
       return -1;
     }
 
@@ -303,7 +308,7 @@ namespace cv { namespace highgui_backend {
         fbID, 0);
         
     if (fbPointer == MAP_FAILED) {
-      CV_LOG_WARNING(NULL, "UI: can't mmap framebuffer");
+      CV_LOG_ERROR(NULL, "UI: can't mmap framebuffer");
       return;
     }
 
@@ -393,7 +398,7 @@ namespace cv { namespace highgui_backend {
     initTermios(0, 1);
     if ( ioctl(0, FIONREAD, &byteswaiting) < 0)
     {
-      CV_LOG_WARNING(NULL, "UI: Framebuffer ERR byteswaiting" );
+      CV_LOG_ERROR(NULL, "UI: Framebuffer ERR byteswaiting" );
     }
     resetTermios();
     
