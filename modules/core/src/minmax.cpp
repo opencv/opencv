@@ -1517,25 +1517,21 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     }
     else if (src.isContinuous())
     {
-        int min_offset[2];
-        int max_offset[2];
         int res = cv_hal_minMaxIdx(src.data, 0, (int)src.total()*cn, 1, src.depth(),
-                                   minVal, maxVal, min_offset, max_offset, mask.data);
-
-        if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
-        {
-            CV_Error_(cv::Error::StsInternal,
-            ("HAL implementation minMaxIdx ==> " CVAUX_STR(cv_hal_minMaxIdx) " returned %d (0x%08x)", res, res));
-        }
+                                   minVal, maxVal, minIdx, maxIdx, mask.data);
 
         if (res == CV_HAL_ERROR_OK)
         {
-            if( minIdx )
-                ofs2idx(src, min_offset[0], minIdx);
-            if( maxIdx )
-                ofs2idx(src, max_offset[0], maxIdx);
-
+            if (minIdx)
+                ofs2idx(src, minIdx[0], minIdx);
+            if (maxIdx)
+                ofs2idx(src, maxIdx[0], maxIdx);
             return;
+        }
+        else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+        {
+            CV_Error_(cv::Error::StsInternal,
+            ("HAL implementation minMaxIdx ==> " CVAUX_STR(cv_hal_minMaxIdx) " returned %d (0x%08x)", res, res));
         }
     }
 
