@@ -2506,8 +2506,9 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
     CV_INSTRUMENT_REGION();
     CV_Assert( thickness <= MAX_THICKNESS );
     const size_t ncontours = _contours.total();
-    if( !ncontours )
+    if (!ncontours)
         return;
+    CV_Assert(ncontours <= (size_t)std::numeric_limits<int>::max());
     if (lineType == cv::LINE_AA && _image.depth() != CV_8U)
         lineType = 8;
     Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
@@ -2516,7 +2517,7 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
     {
         double color_buf[4] {};
         scalarToRawData(color, color_buf, _image.type(), 0 );
-        size_t i = 0, end = ncontours;
+        int i = 0, end = (int)ncontours;
         if (contourIdx >= 0)
         {
             i = contourIdx;
@@ -2524,12 +2525,12 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
         }
         for (; i < end; ++i)
         {
-            Mat cnt = _contours.getMat((int)i);
+            Mat cnt = _contours.getMat(i);
             if (cnt.empty())
                 continue;
-            const size_t npoints = cnt.checkVector(2, CV_32S);
+            const int npoints = cnt.checkVector(2, CV_32S);
             CV_Assert(npoints > 0);
-            for (size_t j = 0; j < npoints; ++j)
+            for (int j = 0; j < npoints; ++j)
             {
                 const bool isLastIter = j == npoints - 1;
                 const Point pt1 = cnt.at<Point>(j);
@@ -2540,7 +2541,7 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
     }
     else // filled polygons
     {
-        size_t i = 0, end = ncontours;
+        int i = 0, end = ncontours;
         if (contourIdx >= 0)
         {
             i = contourIdx;
