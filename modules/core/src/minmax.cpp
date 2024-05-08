@@ -1510,18 +1510,29 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
-    int _minIdx, _maxIdx;
-    int* min_offset = (cn == 1) ? minIdx : &_minIdx;
-    int* max_offset = (cn == 1) ? maxIdx : &_maxIdx;
     if (src.dims <= 2)
     {
-        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows, src.depth(),
-                    minVal, maxVal, min_offset, max_offset, mask.data);
+        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows,
+                 src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data);
     }
     else if (src.isContinuous())
     {
-        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, 0, (int)src.total()*cn, 1, src.depth(),
-                 minVal, maxVal, min_offset, max_offset, mask.data);
+        int res = cv_hal_minMaxIdx(src.data, 0, (int)src.total()*cn, 1, src.depth(),
+                                   minVal, maxVal, minIdx, maxIdx, mask.data);
+
+        if (res == CV_HAL_ERROR_OK)
+        {
+            if (minIdx)
+                ofs2idx(src, minIdx[0], minIdx);
+            if (maxIdx)
+                ofs2idx(src, maxIdx[0], maxIdx);
+            return;
+        }
+        else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+        {
+            CV_Error_(cv::Error::StsInternal,
+            ("HAL implementation minMaxIdx ==> " CVAUX_STR(cv_hal_minMaxIdx) " returned %d (0x%08x)", res, res));
+        }
     }
 
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MINMAXLOC>(src.cols, src.rows),
