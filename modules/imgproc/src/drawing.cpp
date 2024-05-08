@@ -2541,7 +2541,7 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
     }
     else // filled polygons
     {
-        int i = 0, end = ncontours;
+        int i = 0, end = (int)ncontours;
         if (contourIdx >= 0)
         {
             i = contourIdx;
