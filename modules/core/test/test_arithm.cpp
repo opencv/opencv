@@ -2446,6 +2446,32 @@ TEST(Core_minMaxIdx, regression_9207_2)
     EXPECT_EQ(14, maxIdx[1]);
 }
 
+TEST(Core_MinMaxIdx, MatND)
+{
+    const int shape[3] = {5,5,3};
+    cv::Mat src = cv::Mat(3, shape, CV_8UC1);
+    src.setTo(1);
+    src.data[1] = 0;
+    src.data[5*5*3-2] = 2;
+
+    int minIdx[3];
+    int maxIdx[3];
+    double minVal, maxVal;
+
+    cv::minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx);
+
+    EXPECT_EQ(0, minVal);
+    EXPECT_EQ(2, maxVal);
+
+    EXPECT_EQ(0, minIdx[0]);
+    EXPECT_EQ(0, minIdx[1]);
+    EXPECT_EQ(1, minIdx[2]);
+
+    EXPECT_EQ(4, maxIdx[0]);
+    EXPECT_EQ(4, maxIdx[1]);
+    EXPECT_EQ(1, maxIdx[2]);
+}
+
 TEST(Core_Set, regression_11044)
 {
     Mat testFloat(Size(3, 3), CV_32FC1);
@@ -2806,7 +2832,6 @@ TEST(Core_MinMaxIdx, rows_overflow)
             "    max=" << maxVal0 << " vs " << maxVal;
     }
 }
-
 
 TEST(Core_Magnitude, regression_19506)
 {
