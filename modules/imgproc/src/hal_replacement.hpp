@@ -904,7 +904,7 @@ inline int hal_ni_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_d
 //! @endcond
 
 /**
-   @brief Performs threshold filtering using threshold estimated by Otsu algorithm
+   @brief Equalizes the histogram of a grayscale image
    @param src_data Source image data
    @param src_step Source image step
    @param dst_data Destination image data
