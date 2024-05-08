@@ -377,7 +377,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(src.cols, src.rows),
                openvx_LUT(src, dst, lut))
 
-    CALL_HAL(lut8u, cv_hal_lut8u, src.data, src.step, lut.data, dst.data, dst.step, src.rows, src.cols);
+    CALL_HAL(lut8u, cv_hal_lut8u, src.data, src.step, cn, lut.data, dst.data, dst.step, src.rows, src.cols);
 
 #if !IPP_DISABLE_PERF_LUT
     CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
