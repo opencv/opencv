@@ -216,10 +216,14 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 
 /**
 Lookup table replacement
+Table consists of 256 elements of a size from 1 to 8 bytes having 1 channel or src_channels
+Destination should have the same element type and number of channels as lookup table elements
 @param src_data Source image data
 @param src_step Source image step
-@param channels Number of channels in source image
-@param lut_data Pointer to lookup table of 256*channels elements
+@param src_channels Number of channels in source image
+@param lut_data Pointer to lookup table
+@param lut_channel_size Size of each channel in bytes
+@param lut_channels Number of channels in lookup table
 @param dst_data Destination data
 @param dst_step Destination step
 @param width Width of images
@@ -227,7 +231,7 @@ Lookup table replacement
 */
 //! @addtogroup core_hal_interface_lut Lookup table
 //! @{
-inline int hal_ni_lut8u(const uchar *src_data, size_t src_step, size_t channels, const uchar* lut_data, uchar *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_lut8u(const uchar *src_data, size_t src_step, size_t src_channels, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
 
 //! @cond IGNORED
