@@ -41,15 +41,16 @@ std::string param_keys =
     "{resize_h   | 256             | resize input to specific height}"
     "{resize_w   | 128             | resize input to specific width}";
 
-std::string backend_keys = cv::format(
+const string backend_keys = cv::format(
     "{ backend   | 0 | Choose one of computation backends: "
     "%d: automatically (by default), "
     "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
     "%d: OpenCV implementation, "
     "%d: VKCOM, "
     "%d: CUDA }",
-    cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA);
-std::string target_keys = cv::format(
+    DNN_BACKEND_DEFAULT, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV, DNN_BACKEND_VKCOM, DNN_BACKEND_CUDA);
+
+const string target_keys = cv::format(
     "{ target    | 0 | Choose one of target computation devices: "
     "%d: CPU target (by default), "
     "%d: OpenCL, "
@@ -58,8 +59,9 @@ std::string target_keys = cv::format(
     "%d: Vulkan, "
     "%d: CUDA, "
     "%d: CUDA fp16 (half-float preprocess) }",
-    cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
-std::string keys = param_keys + backend_keys + target_keys;
+    DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16, DNN_TARGET_MYRIAD, DNN_TARGET_VULKAN, DNN_TARGET_CUDA, DNN_TARGET_CUDA_FP16);
+
+string keys = param_keys + backend_keys + target_keys;
 
 static Mat preprocess(const Mat &img)
 {
