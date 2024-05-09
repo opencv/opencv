@@ -1,5 +1,15 @@
 # To use Inference Engine backend, specify location of plugins:
 # source /opt/intel/computer_vision_sdk/bin/setupvars.sh
+
+'''
+    This sample demonstrates the use of pretrained openpose networks with opencv's dnn module.
+
+    To convert .caffemodel and .prototxt to .onnx model, follow these steps:
+
+    [pip install mmdnn]
+
+    [mmconvert -sf caffe -iw path/to/caffemodel --inputNetwork path/to/prototxt -df onnx -om path/for/onnx/model]
+'''
 import cv2 as cv
 import numpy as np
 import argparse
@@ -9,8 +19,7 @@ parser = argparse.ArgumentParser(
                     'from https://github.com/CMU-Perceptual-Computing-Lab/openpose project using OpenCV. '
                     'The sample and model are simplified and could be used for a single person on the frame.')
 parser.add_argument('--input', help='Path to image or video. Skip to capture frames from camera')
-parser.add_argument('--proto', help='Path to .prototxt')
-parser.add_argument('--model', help='Path to .caffemodel')
+parser.add_argument('--model', help='Path to .onnx model')
 parser.add_argument('--dataset', help='Specify what kind of model was trained. '
                                       'It could be (COCO, MPI, HAND) depends on dataset.')
 parser.add_argument('--thr', default=0.1, type=float, help='Threshold value for pose parts heat map')
@@ -67,7 +76,7 @@ inWidth = args.width
 inHeight = args.height
 inScale = args.scale
 
-net = cv.dnn.readNet(cv.samples.findFile(args.proto), cv.samples.findFile(args.model))
+net = cv.dnn.readNet(cv.samples.findFile(args.model))
 
 cap = cv.VideoCapture(args.input if args.input else 0)
 
@@ -79,9 +88,10 @@ while cv.waitKey(1) < 0:
 
     frameWidth = frame.shape[1]
     frameHeight = frame.shape[0]
-    inp = cv.dnn.blobFromImage(frame, inScale, (inWidth, inHeight),
-                              (0, 0, 0), swapRB=False, crop=False)
-    net.setInput(inp)
+    blob = cv.dnn.blobFromImage(frame, inScale, (inWidth, inHeight), (0, 0, 0), swapRB=True, crop=False)
+
+    blob = blob.transpose(0, 2, 3, 1)
+    net.setInput(blob)
     out = net.forward()
 
     assert(len(BODY_PARTS) <= out.shape[1])

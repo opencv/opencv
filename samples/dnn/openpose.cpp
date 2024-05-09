@@ -1,5 +1,11 @@
 //
-//  this sample demonstrates the use of pretrained openpose networks with opencv's dnn module.
+//  This sample demonstrates the use of pretrained openpose networks with opencv's dnn module.
+//
+//  To convert .caffemodel and .prototxt to .onnx model, follow these steps:
+//
+//  [pip install mmdnn]
+//
+//  [mmconvert -sf caffe -iw path/to/caffemodel --inputNetwork path/to/prototxt -df onnx -om path/for/onnx/model]
 //
 //  it can be used for body pose detection, using either the COCO model(18 parts):
 //  http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/coco/pose_iter_440000.caffemodel
@@ -58,8 +64,7 @@ int main(int argc, char **argv)
 {
     CommandLineParser parser(argc, argv,
         "{ h help           | false     | print this help message }"
-        "{ p proto          |           | (required) model configuration, e.g. hand/pose.prototxt }"
-        "{ m model          |           | (required) model weights, e.g. hand/pose_iter_102000.caffemodel }"
+        "{ m model          |           | path to .onnx model }"
         "{ i image          |           | (required) path to image file (containing a single person, or hand) }"
         "{ d dataset        |           | specify what kind of model was trained. It could be (COCO, MPI, HAND) depends on dataset. }"
         "{ width            |  368      | Preprocess input image by resizing to a specific width. }"
@@ -68,8 +73,7 @@ int main(int argc, char **argv)
         "{ s scale          |  0.003922 | scale for blob }"
     );
 
-    String modelTxt = samples::findFile(parser.get<string>("proto"));
-    String modelBin = samples::findFile(parser.get<string>("model"));
+    String model = samples::findFile(parser.get<string>("model"));
     String imageFile = samples::findFile(parser.get<String>("image"));
     String dataset = parser.get<String>("dataset");
     int W_in = parser.get<int>("width");
@@ -77,7 +81,7 @@ int main(int argc, char **argv)
     float thresh = parser.get<float>("threshold");
     float scale  = parser.get<float>("scale");
 
-    if (parser.get<bool>("help") || modelTxt.empty() || modelBin.empty() || imageFile.empty())
+    if (parser.get<bool>("help") || model.empty() || imageFile.empty())
     {
         cout << "A sample app to demonstrate human or hand pose detection with a pretrained OpenPose dnn." << endl;
         parser.printMessage();
@@ -95,7 +99,7 @@ int main(int argc, char **argv)
     }
 
     // read the network model
-    Net net = readNet(modelBin, modelTxt);
+    Net net = readNetFromONNX(model);
     // and the image
     Mat img = imread(imageFile);
     if (img.empty())
@@ -103,10 +107,14 @@ int main(int argc, char **argv)
         std::cerr << "Can't read image from the file: " << imageFile << std::endl;
         exit(-1);
     }
-
     // send it through the network
-    Mat inputBlob = blobFromImage(img, scale, Size(W_in, H_in), Scalar(0, 0, 0), false, false);
-    net.setInput(inputBlob);
+    Mat blob = blobFromImage(img, scale, Size(W_in, H_in), Scalar(0, 0, 0), false, false);
+
+    std::vector<int> order = {0, 2, 3, 1};
+    Mat outBlob; // inp: NCHW, out: NHWC
+    transposeND(blob, order, outBlob);
+
+    net.setInput(outBlob);
     Mat result = net.forward();
     // the result is an array of "heatmaps", the probability of a body part being in location x,y
 
