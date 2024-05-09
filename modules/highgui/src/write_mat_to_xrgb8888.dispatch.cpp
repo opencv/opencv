@@ -79,24 +79,7 @@ void write_mat_to_xrgb8888(cv::Mat const &img_, void *data)
     for(int y = 0; y < img_rows; y++, dst+=img_cols * 4)
     {
         const uint8_t* src = img.ptr(y);
-        switch (ncn)
-        {
-        case 1:
-            CV_CPU_DISPATCH(write_g8_to_xrgb8888, (src, dst, img_cols), CV_CPU_DISPATCH_MODES_ALL);
-            break;
-
-        case 3:
-            CV_CPU_DISPATCH(write_bgr888_to_xrgb8888, (src, dst, img_cols), CV_CPU_DISPATCH_MODES_ALL);
-            break;
-
-        case 4:
-            CV_CPU_DISPATCH(write_bgra8888_to_xrgb8888, (src, dst, img_cols), CV_CPU_DISPATCH_MODES_ALL);
-            break;
-
-        default:
-            // it cannot be reachable.
-            break;
-        }
+        CV_CPU_DISPATCH(write_raw_to_xrgb8888, (src, dst, img_cols, ncn), CV_CPU_DISPATCH_MODES_ALL);
     }
 }
 

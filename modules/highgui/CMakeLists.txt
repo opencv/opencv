@@ -51,7 +51,7 @@ set(OPENCV_HIGHGUI_BUILTIN_BACKEND "")
 
 if(WITH_WAYLAND AND HAVE_WAYLAND)
   # To optimize Mat to XRGB8888 conversion.
-  ocv_add_dispatched_file(write_mat_to_xrgb8888 SSE4_1 AVX2 NEON)
+  ocv_add_dispatched_file(write_mat_to_xrgb8888 SSE4_1 AVX2 AVX512_SKX NEON LASX RVV)
 
   set(OPENCV_HIGHGUI_BUILTIN_BACKEND "Wayland")
   add_definitions(-DHAVE_WAYLAND)
