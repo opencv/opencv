@@ -711,6 +711,7 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
 
     // create output_ref to compare with outputs
     cv::Mat output_ref;
+    int size[] = {1};
     if (equation == ",->"){
         output_ref = input1.mul(input2);
     }else if (equation == "i, i->i"){
@@ -725,12 +726,14 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
         output_ref = input1.mul(input2);
         if (input_shape[0] == 1){
             cv::Scalar sum = cv::sum(output_ref);
-            output_ref = cv::Mat(1, (int[]){1}, CV_32F, sum[0]);
+            output_ref = cv::Mat(1, size, CV_32F, sum[0]);
         } else if (input_shape[1] == 1){
-            output_ref = output_ref.reshape(1, 1, (int[]){input_shape[0]});
+            size[0] = input_shape[0];
+            output_ref = output_ref.reshape(1, 1, size);
         } else {
             cv::reduce(output_ref, output_ref, 1, cv::REDUCE_SUM, CV_32F);
-            output_ref = output_ref.reshape(1, 1, (int[]){input_shape[0]});
+            size[0] = input_shape[0];
+            output_ref = output_ref.reshape(1, 1, size);
         }
     } else {
         output_ref = cv::Mat();
