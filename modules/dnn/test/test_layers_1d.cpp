@@ -711,7 +711,9 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
 
     // create output_ref to compare with outputs
     cv::Mat output_ref;
-    if (equation == "i, i->i"){
+    if (equation == ",->"){
+        output_ref = input1.mul(input2);
+    }else if (equation == "i, i->i"){
         output_ref = input1.mul(input2);
     } else if (equation == "i, i->"){
         output_ref = input1.mul(input2);
@@ -739,7 +741,7 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Einsum_Test, testing::Values(
-    // std::make_tuple(std::vector<int>({}), std::string(",->")), // 0D cases are not supported by Einsum layer
+    std::make_tuple(std::vector<int>({}), std::string(",->")),
     std::make_tuple(std::vector<int>({1}), std::string("i, i->i")),
     std::make_tuple(std::vector<int>({1}), std::string("i, i->")),
     std::make_tuple(std::vector<int>({4}), std::string("i, i->i")),
