@@ -1248,7 +1248,15 @@ void setUseOpenCL(bool flag)
     }
 }
 
-
+#ifdef HAVE_CLBLAST
+bool haveClblast() {
+    return true;
+}
+#else
+bool haveClblast() {
+    return false;
+}
+#endif
 
 #ifdef HAVE_CLAMDBLAS
 

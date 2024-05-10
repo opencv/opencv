@@ -45,6 +45,7 @@
 #include <opencv2/core/utils/logger.hpp>
 
 #include "opencl_kernels_core.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clblast.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clblas.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "intel_gpu_gemm.inl.hpp"
@@ -58,6 +59,138 @@ namespace cv
 /****************************************************************************************\
 *                                         GEMM                                           *
 \****************************************************************************************/
+
+#ifdef HAVE_CLBLAST
+
+// matD = alpha * matA * matB + beta * matC
+static bool ocl_gemm_clblast(InputArray matA, InputArray matB, double alpha,
+                             InputArray matC, double beta, OutputArray matD, int flags) {
+    int type = matA.type(), depth = CV_MAT_DEPTH(type), esz = CV_ELEM_SIZE(type);
+    bool haveC = matC.kind() != cv::_InputArray::NONE;
+    CV_CheckEQ(matB.type(), type, "Type of matB does not match the type of matA");
+    if (haveC) {
+        CV_CheckEQ(matC.type(), type, "Type of matC does not match the type of matA");
+    }
+    auto &device = ocl::Device::getDefault();
+    bool SupportFP64 = device.hasFP64(),
+         SupportFP16 = device.hasFP16();
+    if (!SupportFP64 && depth == CV_64F) {
+        return false;
+    }
+    if (!SupportFP16 && depth == CV_16F) {
+        return false;
+    }
+
+    Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
+    bool transA_ = (flags & GEMM_1_T) != 0, transB_ = (flags & GEMM_2_T) != 0, transC_ = (flags & GEMM_3_T) != 0;
+
+    if (transA_) {
+        sizeA = Size(sizeA.height, sizeA.width);
+    }
+    if (transB_) {
+        sizeB = Size(sizeB.height, sizeB.width);
+    }
+    if (haveC && transC_) {
+        sizeC = Size(sizeC.height, sizeC.width);
+    }
+
+    Size sizeD(sizeB.width, sizeA.height);
+
+    CV_CheckEQ(sizeA.width, sizeB.height, "Invalid dimension for matrix multiplification");
+    if (haveC) { // TODO: support matC broadcasting
+        CV_CheckTrue(sizeC == sizeD, "Shape of matC is not equal to the shape of matD");
+    }
+
+    matD.create(sizeD, type);
+    if (matA.offset() % esz != 0 || matA.step() % esz != 0 ||
+        matB.offset() % esz != 0 || matB.step() % esz != 0 ||
+        (haveC && (matC.offset() % esz != 0 || matC.step() % esz != 0)) )
+        return false;
+
+    UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();
+    if (!ocl::internal::isCLBuffer(A) || !ocl::internal::isCLBuffer(B) || !ocl::internal::isCLBuffer(D)) {
+        return false;
+    }
+    if (haveC) {
+        UMat C = matC.getUMat();
+        if (!ocl::internal::isCLBuffer(C))
+            return false;
+
+        if (transC_) {
+            transpose(matC, D);
+        } else {
+            matC.copyTo(D);
+        }
+    } else {
+        D.setTo(Scalar::all(0));
+    }
+
+    int M = sizeD.height, N = sizeD.width, K = sizeA.width;
+    int lda = static_cast<int>(A.step / esz),
+        ldb = static_cast<int>(B.step / esz),
+        ldc = static_cast<int>(D.step / esz);
+    int offsetA = static_cast<int>(A.offset / esz),
+        offsetB = static_cast<int>(B.offset / esz),
+        offsetC = static_cast<int>(D.offset / esz);
+
+    cl_command_queue queue = (cl_command_queue)ocl::Queue::getDefault().ptr();
+    CLBlastTranspose transA = transA_ ? CLBlastTransposeYes : CLBlastTransposeNo,
+                     transB = transB_ ? CLBlastTransposeYes : CLBlastTransposeNo;
+    CLBlastLayout layout = CLBlastLayoutRowMajor;
+    CLBlastStatusCode status = CLBlastUnknownError;
+
+    if (type == CV_32FC1) {
+        status = CLBlastSgemm(layout, transA, transB, M, N, K,
+                              (float)alpha,
+                              (const cl_mem)A.handle(ACCESS_READ), offsetA, lda,
+                              (const cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
+                              (float)beta,
+                              (cl_mem)D.handle(ACCESS_RW), offsetC, ldc,
+                              &queue, NULL);
+    } else if (type == CV_64FC1) {
+        status = CLBlastDgemm(layout, transA, transB, M, N, K,
+                              alpha,
+                              (const cl_mem)A.handle(ACCESS_READ), offsetA, lda,
+                              (const cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
+                              beta,
+                              (cl_mem)D.handle(ACCESS_RW), offsetC, ldc,
+                              &queue, NULL);
+    } else if (type == CV_32FC2) {
+        cl_float2 alpha2{{(cl_float)alpha, 0.f}};
+        cl_float2 beta2{{(cl_float)beta, 0.f}};
+        status = CLBlastCgemm(layout, transA, transB, M, N, K,
+                              alpha2,
+                              (const cl_mem)A.handle(ACCESS_READ), offsetA, lda,
+                              (const cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
+                              beta2,
+                              (cl_mem)D.handle(ACCESS_RW), offsetC, ldc,
+                              &queue, NULL);
+    } else if (type == CV_64FC2) {
+        cl_double2 alpha2{{alpha, 0}};
+        cl_double2 beta2{{beta, 0}};
+        status = CLBlastZgemm(layout, transA, transB, M, N, K,
+                              alpha2,
+                              (const cl_mem)A.handle(ACCESS_READ), offsetA, lda,
+                              (const cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
+                              beta2,
+                              (cl_mem)D.handle(ACCESS_RW), offsetC, ldc,
+                              &queue, NULL);
+    } else if (type == CV_16FC1) {
+        status = CLBlastHgemm(layout, transA, transB, M, N, K,
+                              (cl_half)alpha,
+                              (const cl_mem)A.handle(ACCESS_READ), offsetA, lda,
+                              (const cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
+                              (cl_half)beta,
+                              (cl_mem)D.handle(ACCESS_RW), offsetC, ldc,
+                              &queue, NULL);
+    } else {
+        CV_Error(Error::StsUnsupportedFormat, "");
+    }
+
+    return status == CLBlastSuccess;
+}
+
+#endif
 
 #ifdef HAVE_CLAMDBLAS
 
@@ -338,6 +471,11 @@ void gemm64fc(const double* src1, size_t src1_step, const double* src2, size_t s
 void gemm(InputArray matA, InputArray matB, double alpha,
           InputArray matC, double beta, OutputArray _matD, int flags)
 {
+#ifdef HAVE_CLBLAST
+    CV_OCL_RUN(ocl::haveClblast() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 && _matD.isUMat(),
+        ocl_gemm_clblast(matA, matB, alpha, matC, beta, _matD, flags))
+#endif
+
 #ifdef HAVE_CLAMDBLAS
     CV_OCL_RUN(ocl::haveAmdBlas() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 && _matD.isUMat() &&
         matA.cols() > 20 && matA.rows() > 20 && matB.cols() > 20, // since it works incorrect for small sizes

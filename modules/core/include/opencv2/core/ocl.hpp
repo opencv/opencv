@@ -53,6 +53,7 @@ namespace cv { namespace ocl {
 
 CV_EXPORTS_W bool haveOpenCL();
 CV_EXPORTS_W bool useOpenCL();
+CV_EXPORTS_W bool haveClblast();
 CV_EXPORTS_W bool haveAmdBlas();
 CV_EXPORTS_W bool haveAmdFft();
 CV_EXPORTS_W void setUseOpenCL(bool flag);

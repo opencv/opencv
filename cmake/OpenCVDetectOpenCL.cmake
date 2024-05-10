@@ -79,6 +79,19 @@ if(OPENCL_FOUND)
     endif()
   endif()
 
+  if(WITH_CLBLAST)
+    find_path(CLBLAST_INCLUDE_DIR
+              NAMES clblast_c.h
+              HINTS ENV CLBLAST_INSTALL_DIR
+              PATH_SUFFIXES include
+              DOC "CLBlast include directory")
+
+    if(CLBLAST_INCLUDE_DIR)
+      set(HAVE_CLBLAST 1)
+      list(APPEND OPENCL_INCLUDE_DIRS "${CLBLAST_INCLUDE_DIR}")
+    endif()
+  endif()
+
   # check WITH_OPENCL_D3D11_NV is located in OpenCVDetectDirectX.cmake file
 
   if(WITH_VA_INTEL AND HAVE_VA)
