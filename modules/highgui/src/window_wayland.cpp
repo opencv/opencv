@@ -36,9 +36,6 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include "opencv2/core/utils/logger.hpp"
-#include "opencv2/core/hal/intrin.hpp"
-
-#include "write_mat_to_xrgb8888.hpp"
 
 /*                              */
 /*  OpenCV highgui internals    */
@@ -72,7 +69,6 @@ class cv_wl_core;
 using std::weak_ptr;
 using std::shared_ptr;
 using namespace cv::Error;
-using namespace cv::impl;
 namespace ch = std::chrono;
 
 #define throw_system_error(errmsg, errnum) \
@@ -86,6 +82,86 @@ namespace ch = std::chrono;
 
 static int xkb_keysym_to_ascii(xkb_keysym_t keysym) {
     return static_cast<int>(keysym & 0xff);
+}
+
+static void write_mat_to_xrgb8888(cv::Mat const &img_, void *data) {
+    // Validate destination data.
+    CV_CheckFalse((data == nullptr), "Destination Address must not be nullptr.");
+
+    // Validate source img parameters.
+    CV_CheckFalse(img_.empty(), "Source Mat must not be empty.");
+    const int ncn   = img_.channels();
+    CV_CheckType(img_.type(),
+        ( (ncn == 1) || (ncn == 3) || (ncn == 4)),
+        "Unsupported channels, please convert to 1, 3 or 4 channels"
+    );
+
+    // The supported Mat depth is according to imshow() specification.
+    const int depth = CV_MAT_DEPTH(img_.type());
+    CV_CheckDepth(img_.type(),
+        ( (depth == CV_8U)  || (depth == CV_8S)  ||
+          (depth == CV_16U) || (depth == CV_16S) ||
+          (depth == CV_32F) || (depth == CV_64F) ),
+        "Unsupported depth, please convert to CV_8U"
+    );
+
+    // Convert to CV_8U
+    cv::Mat img;
+    const int mtype = CV_MAKE_TYPE(CV_8U, ncn);
+    switch(CV_MAT_DEPTH(depth))
+    {
+    case CV_8U:
+        img = img_; // do nothing.
+        break;
+    case CV_8S:
+        // [-128,127] -> [0,255]
+        img_.convertTo(img, mtype, 1.0, 128);
+        break;
+    case CV_16U:
+        // [0,65535] -> [0,255]
+        img_.convertTo(img, mtype, 1.0/255. );
+        break;
+    case CV_16S:
+        // [-32768,32767] -> [0,255]
+        img_.convertTo(img, mtype, 1.0/255. , 128);
+        break;
+    case CV_32F:
+    case CV_64F:
+        // [0, 1] -> [0,255]
+        img_.convertTo(img, mtype, 255.);
+        break;
+    default:
+        // it cannot be reachable.
+        break;
+    }
+    CV_CheckDepthEQ(CV_MAT_DEPTH(img.type()), CV_8U, "img should be CV_8U");
+
+    // XRGB8888 in Little Endian(Wayland Request) = [B8:G8:R8:X8] in data array.
+    // X is not used to show. So we can use cvtColor() with GRAY2BGRA or BGR2BGRA.
+    if(ncn == 1)
+    {
+        cv::Mat dst(img.size(), CV_MAKE_TYPE(CV_8U, 4), (uint8_t*)data);
+        cvtColor(img, dst, cv::COLOR_GRAY2BGRA);
+    }
+    else if(ncn == 3)
+    {
+        cv::Mat dst(img.size(), CV_MAKE_TYPE(CV_8U, 4), (uint8_t*)data);
+        cvtColor(img, dst, cv::COLOR_BGR2BGRA);
+    }
+    else
+    {
+        CV_CheckTrue(ncn==4, "Unexpected channels");
+        const bool isContinuous = img.isContinuous();
+        const int img_cols = (!isContinuous) ? (img.cols) : (img.cols * img.rows);
+        const int img_rows = (!isContinuous) ? (img.rows) : (1);
+
+        uint8_t* dst = (uint8_t*)data;
+        for(int y = 0; y < img_rows; y++, dst+=img_cols * 4)
+        {
+            const uint8_t* src = img.ptr(y);
+            memcpy(dst, src, img_cols * 4);
+        }
+    }
 }
 
 
