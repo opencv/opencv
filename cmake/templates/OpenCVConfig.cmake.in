@@ -53,6 +53,7 @@ SET(OpenCV_VERSION_TWEAK  0)
 SET(OpenCV_VERSION_STATUS "@OPENCV_VERSION_STATUS@")
 
 include(FindPackageHandleStandardArgs)
+include(CMakeFindDependencyMacro)
 
 if(NOT CMAKE_VERSION VERSION_LESS 2.8.8
     AND OpenCV_FIND_COMPONENTS  # prevent excessive output
@@ -93,6 +94,7 @@ if(NOT COMMAND find_host_program)
 endif()
 
 
+@ZLIB_CONFIGCMAKE@
 @CUDA_CONFIGCMAKE@
 @ANDROID_CONFIGCMAKE@
 

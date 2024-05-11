@@ -11,6 +11,10 @@ else()
   set(OpenCV_USE_MANGLED_PATHS_CONFIGCMAKE FALSE)
 endif()
 
+if(ZLIB_FOUND)
+  ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-ZLIB.cmake.in" ZLIB_CONFIGCMAKE @ONLY)
+endif()
+
 if(HAVE_CUDA)
   if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
     ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-CUDALanguage.cmake.in" CUDA_CONFIGCMAKE @ONLY)
