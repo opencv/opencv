@@ -472,7 +472,7 @@ void gemm(InputArray matA, InputArray matB, double alpha,
           InputArray matC, double beta, OutputArray _matD, int flags)
 {
 #ifdef HAVE_CLBLAST
-    CV_OCL_RUN(ocl::haveClblast() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 && _matD.isUMat(),
+    CV_OCL_RUN(matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 && _matD.isUMat(),
         ocl_gemm_clblast(matA, matB, alpha, matC, beta, _matD, flags))
 #endif
 
