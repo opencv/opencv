@@ -69,6 +69,7 @@ namespace cv { namespace highgui_backend {
         {
           CV_LOG_ERROR(NULL, "UI: Image type " 
             << cv::typeToString(image.type()) << " is not supported" );
+            return;
         }
       break;
       case 3:

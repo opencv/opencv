@@ -70,6 +70,9 @@ TEST(Highgui_GUI, regression)
 
     EXPECT_NO_THROW(destroyAllWindows());
     ASSERT_NO_THROW(namedWindow(window_name));
+#if defined HAVE_FRAMEBUFFER
+    ASSERT_NO_THROW(resizeWindow(window_name, 800, 600));
+#endif
     const vector<int> channels = {1, 3, 4};
     const vector<int> depths = {CV_8U, CV_8S, CV_16U, CV_16S, CV_32F, CV_64F};
     for(int cn : channels)
@@ -138,7 +141,8 @@ static void Foo(int, void* counter)
         && !defined HAVE_WIN32UI \
         && !defined HAVE_WAYLAND \
     ) \
-    || defined(__APPLE__)  // test fails on Mac (cocoa)
+    || defined(__APPLE__)  /* test fails on Mac (cocoa) */ \
+    || defined HAVE_FRAMEBUFFER /* trackbar is not supported */
 TEST(Highgui_GUI, DISABLED_trackbar_unsafe)
 #else
 TEST(Highgui_GUI, trackbar_unsafe)
@@ -178,7 +182,8 @@ void testTrackbarCallback(int pos, void* param)
         && !defined HAVE_WIN32UI \
         && !defined HAVE_WAYLAND \
     ) \
-    || defined(__APPLE__)  // test fails on Mac (cocoa)
+    || defined(__APPLE__) /* test fails on Mac (cocoa) */ \
+    || defined HAVE_FRAMEBUFFER /* trackbar is not supported */
 TEST(Highgui_GUI, DISABLED_trackbar)
 #else
 TEST(Highgui_GUI, trackbar)
