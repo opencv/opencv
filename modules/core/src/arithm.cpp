@@ -920,6 +920,32 @@ static BinaryFuncC* getAddTab()
     return addTab;
 }
 
+static int sub8u32fWrapper(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                           uchar* dst, size_t step, int width, int height, void* )
+{
+    int res = cv_hal_sub8u32f(src1, step1, src2, step2, (float *)dst, step, width, height);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation sub8u32f ==> " CVAUX_STR(cv_hal_sub8u32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static int sub8s32fWrapper(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                           uchar* dst, size_t step, int width, int height, void* )
+{
+    int res = cv_hal_sub8s32f((schar*)src1, step1, (schar*)src2, step2, (float *)dst, step, width, height);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation sub8s32f ==> " CVAUX_STR(cv_hal_sub8s32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
 static BinaryFuncC* getSubTab()
 {
     static BinaryFuncC subTab[CV_DEPTH_MAX] =
@@ -932,6 +958,22 @@ static BinaryFuncC* getSubTab()
     };
 
     return subTab;
+}
+
+static ExtendedTypeFunc getSubExtFunc(int src1Type, int src2Type, int dstType)
+{
+    if (src1Type == CV_8U && src2Type == CV_8U && dstType == CV_32F)
+    {
+        return sub8u32fWrapper;
+    }
+    else if (src1Type == CV_8S && src2Type == CV_8S && dstType == CV_32F)
+    {
+        return sub8s32fWrapper;
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
 static BinaryFuncC* getAbsDiffTab()
@@ -959,11 +1001,13 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
 }
 
 void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
-               InputArray mask, int dtype )
+                   InputArray mask, int dtype )
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(_src1, _src2, _dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB );
+    ExtendedTypeFunc subExtFunc = getSubExtFunc(_src1.depth(), _src2.depth(), dtype < 0 ? _dst.depth() : dtype);
+    arithm_op(_src1, _src2, _dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB,
+              /* extendedFunc */ subExtFunc);
 }
 
 void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
