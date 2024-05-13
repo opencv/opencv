@@ -137,33 +137,22 @@ static void write_mat_to_xrgb8888(cv::Mat const &img_, void *data) {
     CV_CheckDepthEQ(CV_MAT_DEPTH(img.type()), CV_8U, "img should be CV_8U");
 
     // XRGB8888 in Little Endian(Wayland Request) = [B8:G8:R8:X8] in data array.
-    // X is not used to show. So we can use cvtColor() with GRAY2BGRA or BGR2BGRA.
+    // X is not used to show. So we can use cvtColor() with GRAY2BGRA or BGR2BGRA or copyTo().
+    cv::Mat dst(img.size(), CV_MAKE_TYPE(CV_8U, 4), (uint8_t*)data);
     if(ncn == 1)
     {
-        cv::Mat dst(img.size(), CV_MAKE_TYPE(CV_8U, 4), (uint8_t*)data);
         cvtColor(img, dst, cv::COLOR_GRAY2BGRA);
     }
     else if(ncn == 3)
     {
-        cv::Mat dst(img.size(), CV_MAKE_TYPE(CV_8U, 4), (uint8_t*)data);
         cvtColor(img, dst, cv::COLOR_BGR2BGRA);
     }
     else
     {
         CV_CheckTrue(ncn==4, "Unexpected channels");
-        const bool isContinuous = img.isContinuous();
-        const int img_cols = (!isContinuous) ? (img.cols) : (img.cols * img.rows);
-        const int img_rows = (!isContinuous) ? (img.rows) : (1);
-
-        uint8_t* dst = (uint8_t*)data;
-        for(int y = 0; y < img_rows; y++, dst+=img_cols * 4)
-        {
-            const uint8_t* src = img.ptr(y);
-            memcpy(dst, src, img_cols * 4);
-        }
+        img.copyTo(dst);
     }
 }
-
 
 class epoller {
 public:

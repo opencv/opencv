@@ -400,7 +400,7 @@ CV_EXPORTS_W void resizeWindow(const String& winname, const cv::Size& size);
 @param x The new x-coordinate of the window.
 @param y The new y-coordinate of the window.
 
-@note [__Wayland Backend Only__] This function is not supported by the wayland protocol limitation.
+@note [__Wayland Backend Only__] This function is not supported by the Wayland protocol limitation.
  */
 CV_EXPORTS_W void moveWindow(const String& winname, int x, int y);
 
@@ -443,7 +443,7 @@ The function getWindowImageRect returns the client screen coordinates, width and
 
 @sa resizeWindow moveWindow
 
-@note [__Wayland Backend Only__] This function is not supported by the wayland protocol limitation.
+@note [__Wayland Backend Only__] This function is not supported by the Wayland protocol limitation.
  */
 CV_EXPORTS_W Rect getWindowImageRect(const String& winname);
 
