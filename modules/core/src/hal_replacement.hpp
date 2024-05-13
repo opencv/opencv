@@ -215,6 +215,32 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 //! @endcond
 
 /**
+Lookup table replacement
+Table consists of 256 elements of a size from 1 to 8 bytes having 1 channel or src_channels
+For 8s input type 128 is added to LUT index
+Destination should have the same element type and number of channels as lookup table elements
+@param src_data Source image data
+@param src_step Source image step
+@param src_type Sorce image type
+@param lut_data Pointer to lookup table
+@param lut_channel_size Size of each channel in bytes
+@param lut_channels Number of channels in lookup table
+@param dst_data Destination data
+@param dst_step Destination step
+@param width Width of images
+@param height Height of images
+@sa LUT
+*/
+//! @addtogroup core_hal_interface_lut Lookup table
+//! @{
+inline int hal_ni_lut(const uchar *src_data, size_t src_step, size_t src_type, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_lut hal_ni_lut
+//! @endcond
+
+/**
 Hamming norm of a vector
 @param a pointer to vector data
 @param n length of a vector

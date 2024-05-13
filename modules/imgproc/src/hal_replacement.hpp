@@ -904,6 +904,21 @@ inline int hal_ni_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_d
 //! @endcond
 
 /**
+   @brief Equalizes the histogram of a grayscale image
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+*/
+inline int hal_ni_equalize_hist(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_equalize_hist hal_ni_equalize_hist
+//! @endcond
+
+/**
    @brief Blurs an image using a generic Gaussian filter.
    @param src_data Source image data
    @param src_step Source image step
