@@ -48,6 +48,16 @@ inline void verify_size(const std::string &nm, const cv::Mat &img)
 {
     EXPECT_NO_THROW(imshow(nm, img));
     EXPECT_EQ(-1, waitKey(200));
+
+    // see https://github.com/opencv/opencv/issues/25550
+    // Wayland backend is not supported getWindowImageRect().
+    string framework;
+    EXPECT_NO_THROW(framework = currentUIFramework());
+    if(framework == "WAYLAND")
+    {
+       return;
+    }
+
     Rect rc;
     EXPECT_NO_THROW(rc = getWindowImageRect(nm));
     EXPECT_EQ(rc.size(), img.size());
