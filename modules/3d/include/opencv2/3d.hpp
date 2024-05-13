@@ -3031,20 +3031,24 @@ public:
 
 private:
     /* Delta: A real number between 0 and 1 controlling the relative importance of geodesic distance and angle distance.
-     * Usually, delta ∈ [0.01, 0.05] */
+     * Usually, 0 < delta < 0.2 */
     float delta;
     /* Eta: A real number between 0 and 1, which gives weight to concavity in clustering
-     * A smaller value of η gives more weight. Usually, eta ∈ [0.1, 0.2]*/
+     * Usually, 0 < eta < 0.1 */
     float eta;
 
+    /* Compute the degree matrix and normalize the affinity matrix */
     static void getLaplacianMat(Mat &in, Mat &out);
 
+    /* Compute distance of all pairs of adjacent faces */
     void getAdjacentDistanceMat(Mat &out, std::vector<Point3f> &vertices, std::vector<std::vector<int32_t>> &indices) const;
 
+    /* Compute distance of all pairs of non-adjacent faces */
     static void getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<int32_t>> &indices);
 
     /* Calculate the geodesic distance of two triangular faces */
-    static float getGeodesicDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2);
+    static float getGeodesicDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2,
+                                     const std::pair<Point3f, Point3f> &edge);
 
     /* Calculate the angle distance of two triangular faces */
     float getAngleDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2) const;

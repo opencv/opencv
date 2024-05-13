@@ -4,50 +4,26 @@
 //
 // Author: Zhangjie Chen <zhangjiec01@gmail.com>
 #include "test_precomp.hpp"
-#include <chrono>
 
 namespace opencv_test { namespace {
 
 TEST(SpC, FunctionTest) {
     // load point cloud
-
-    String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/scan_040_simplified_005.obj";
-    String out_put_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/results/040_005_k7.txt";
-
-//    String test_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/MeshsegBenchmark-1.0/data/obj/1.obj";
-//    String out_put_file_path = "/home/jeffery/Desktop/Sustech/Thesis/data/results/1_k14.txt";
-
+    auto folder = cvtest::TS::ptr()->get_data_path();
+    String test_file_path = folder + "pointcloudio/two_cubes.ply";
 
     std::vector<cv::Point3f> vertices;
     std::vector<std::vector<int32_t>> indices;
     cv::loadPointCloud(test_file_path, vertices, cv::noArray(), cv::noArray(), indices);
-
-    cv::SpectralCluster cluster(0.15, 0.22);
+    cv::SpectralCluster cluster(0.1, 0.1);
 
     std::vector<int> results;
-    auto start = std::chrono::high_resolution_clock::now();
-    cluster.cluster(results, vertices, indices, 7);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "Clustering Complete! Time used: " << duration << " ms." << std::endl;
+    cluster.cluster(results, vertices, indices, 2);
+    std::vector<int> truth_value = {0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0};
 
-    String output;
-    std::ofstream outfile(out_put_file_path);
-    if (outfile.is_open()) {
-        for (size_t i = 0; i < results.size(); ++i) {
-            outfile << results[i];
-            output += std::to_string(results[i]);
-            if (i != results.size() - 1) {
-                outfile << ",";
-                output += ',';
-            }
-        }
-        outfile.close();
-        std::cout << "Results have been written to " << out_put_file_path << std::endl;
-        std::cout << "Results: " << output << std::endl;
-    } else {
-        std::cerr << "Unable to open file: " << out_put_file_path << std::endl;
-    }
+    for (size_t i = 0; i < results.size(); ++i)
+        CV_Assert(results[i] == truth_value[i]);
+
 }
 }
 }
