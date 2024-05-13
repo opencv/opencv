@@ -33,10 +33,11 @@ static void BGRAtoBGRA(const unsigned char* src, unsigned char * dst, const unsi
 
     for ( ; i < n; i++, src += scn, dst += dcn )
     {
-        dst[2] = src[0];
-        dst[1] = src[1];
-        dst[0] = src[2];
-        dst[3] = src[3];
+        unsigned char t0 = src[0], t1 = src[1], t2 = src[2], t3 = src[3];
+        dst[2] = t0;
+        dst[1] = t1;
+        dst[0] = t2;
+        dst[3] = t3;
     }
 }
 
