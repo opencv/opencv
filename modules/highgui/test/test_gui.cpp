@@ -218,7 +218,7 @@ TEST(Highgui_GUI, small_width_image)
     EXPECT_NO_THROW(destroyAllWindows());
     ASSERT_NO_THROW(namedWindow(window_name));
     ASSERT_NO_THROW(imshow(window_name, src));
-    ASSERT_NO_THROW(waitKey(1000));
+    EXPECT_NO_THROW(waitKey(10));
     EXPECT_NO_THROW(destroyAllWindows());
 }
 
