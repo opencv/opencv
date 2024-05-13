@@ -94,7 +94,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_1d_Test, Combine(
                                 std::vector<int>({1, 4}),
                                 std::vector<int>({4, 4})
                                 ),
-/*operation*/           testing::Values(0, 1)
+/*axis*/           testing::Values(0, 1)
 ));
 
 template <typename T>
