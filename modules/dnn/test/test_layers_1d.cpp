@@ -110,7 +110,7 @@ int arg_op(const std::vector<T>& vec, const std::string& operation) {
 }
 // Test for ArgLayer is disabled because there problem in runLayer function related to type assignment
 typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Arg_1d_Test;
-TEST_P(Layer_Arg_1d_Test, DISABLED_Accuracy_01D) {
+TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
     std::vector<int> input_shape = get<0>(GetParam());
     std::string operation = get<1>(GetParam());
 
@@ -157,7 +157,7 @@ TEST_P(Layer_Arg_1d_Test, DISABLED_Accuracy_01D) {
     ASSERT_EQ(1, outputs.size());
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     // convert output_ref to float to match the output type
-    output_ref.convertTo(output_ref, CV_32FC1);
+    output_ref.convertTo(output_ref, CV_64SC1);
     normAssert(output_ref, outputs[0]);
 }
 
