@@ -98,7 +98,7 @@ struct EMDSolver
     int ssize, dsize;
 
     float* cost_buf;
-    Node2D* data_x;
+    AutoBuffer<Node2D, 0> data_x;
     Node2D* end_x;
     Node2D* enter_x;
     char* is_x;
@@ -149,7 +149,7 @@ public:
     }
 
     EMDSolver() :
-        ssize(0), dsize(0), cost_buf(0), data_x(0), end_x(0), enter_x(0), is_x(0), rows_x(0),
+        ssize(0), dsize(0), cost_buf(0), end_x(0), enter_x(0), is_x(0), rows_x(0),
         cols_x(0), u(0), v(0), idx1(0), idx2(0), loop(0), is_used(0), s(0), d(0), delta(0),
         weight(0), max_cost(0)
     {
@@ -217,14 +217,15 @@ bool EMDSolver::init(const Mat& sign1,
     area2.allocate(this->delta, ssize * dsize);
     area2.allocate(this->cost_buf, ssize * dsize);
     area2.allocate(this->is_x, ssize * dsize);
-    area2.allocate(this->data_x, ssize + dsize, 64);
     area2.allocate(this->rows_x, ssize, 64);
     area2.allocate(this->cols_x, dsize, 64);
     area2.allocate(this->loop, ssize + dsize + 1, 64);
     area2.commit();
     area2.zeroFill();
 
-    this->end_x = this->data_x;
+    this->data_x.allocate(ssize + dsize);
+
+    this->end_x = this->data_x.data();
     this->max_cost = calcCost(sign1, sign2, dims, dfunc, cost);
     callRussel();
     this->enter_x = (this->end_x)++;
@@ -413,8 +414,8 @@ void EMDSolver::solve()
 double EMDSolver::calcFlow(Mat* flow_) const
 {
     double result = 0.;
-    Node2D* xp = 0;
-    for (xp = data_x; xp < end_x; xp++)
+    const Node2D* xp = 0;
+    for (xp = data_x.data(); xp < end_x; xp++)
     {
         float val = xp->val;
         const int i = xp->i;
@@ -673,7 +674,7 @@ int EMDSolver::findLoop() const
     memset(is_used, 0, this->ssize + this->dsize);
 
     Node2D* new_x = loop[0] = enter_x;
-    is_used[enter_x - data_x] = 1;
+    is_used[enter_x - data_x.data()] = 1;
     int steps = 1;
 
     do
@@ -682,14 +683,14 @@ int EMDSolver::findLoop() const
         {
             /* find an unused x in the row */
             new_x = this->rows_x[new_x->i];
-            while (new_x != 0 && is_used[new_x - data_x])
+            while (new_x != 0 && is_used[new_x - data_x.data()])
                 new_x = new_x->next[0];
         }
         else
         {
             /* find an unused x in the column, or the entering x */
             new_x = this->cols_x[new_x->j];
-            while (new_x != 0 && is_used[new_x - data_x] && new_x != enter_x)
+            while (new_x != 0 && is_used[new_x - data_x.data()] && new_x != enter_x)
                 new_x = new_x->next[1];
             if (new_x == enter_x)
                 break;
@@ -699,7 +700,7 @@ int EMDSolver::findLoop() const
         {
             /* add x to the loop */
             loop[steps++] = new_x;
-            is_used[new_x - data_x] = 1;
+            is_used[new_x - data_x.data()] = 1;
         }
         else /* didn't find the next x */
         {
@@ -712,18 +713,18 @@ int EMDSolver::findLoop() const
                 {
                     new_x = new_x->next[i];
                 }
-                while (new_x != 0 && is_used[new_x - data_x]);
+                while (new_x != 0 && is_used[new_x - data_x.data()]);
 
                 if (new_x == 0)
                 {
-                    is_used[loop[--steps] - data_x] = 0;
+                    is_used[loop[--steps] - data_x.data()] = 0;
                 }
             }
             while (new_x == 0 && steps > 0);
 
-            is_used[loop[steps - 1] - data_x] = 0;
+            is_used[loop[steps - 1] - data_x.data()] = 0;
             loop[steps - 1] = new_x;
-            is_used[new_x - data_x] = 1;
+            is_used[new_x - data_x.data()] = 1;
         }
     }
     while (steps > 0);
