@@ -682,6 +682,48 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Const_Test, testing::Values(
     std::vector<int>({4, 1})
     ));
 
+typedef testing::TestWithParam<std::vector<int>> Layer_Tile_Test;
+TEST_P(Layer_Tile_Test, Accuracy_01D){
+
+    std::vector<int> input_shape = GetParam();
+    std::vector<int> repeats = {2, 2};
+
+    LayerParams lp;
+    lp.type = "Tile";
+    lp.name = "TileLayer";
+    lp.set("repeats", DictValue::arrayInt(repeats.data(), repeats.size()));
+    Ptr<TileLayer> layer = TileLayer::create(lp);
+
+    cv::Mat input = cv::Mat(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0, 1);
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+
+    // Manually create the expected output for verification
+    cv::Mat output_ref = input.clone();
+    for (int i = 0; i < repeats.size(); ++i) {
+        cv::Mat tmp;
+        cv::repeat(output_ref, (i == 0 ? repeats[i] : 1), (i == 1 ? repeats[i] : 1), tmp);
+        output_ref = tmp;
+    }
+
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(outputs[0]), shape(output_ref));
+    normAssert(output_ref, outputs[0]);
+
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Tile_Test,
+/*input blob shape*/    testing::Values(
+        std::vector<int>({}),
+        std::vector<int>({2}),
+        std::vector<int>({2, 1}),
+        std::vector<int>({1, 2}),
+        std::vector<int>({2, 2})
+        ));
+
 typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Einsum_Test;
 TEST_P(Layer_Einsum_Test, Accuracy_01D)
 {
