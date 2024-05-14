@@ -1438,7 +1438,7 @@ macro(ocv_parse_header_version LIBNAME HDR_PATH LIBVER)
     file(STRINGS "${HDR_PATH}" ${LIBNAME}_H REGEX "^#define[ \t]+${LIBVER}[ \t]+\"[^\"]*\".*$" LIMIT_COUNT 1)
   endif()
   if(${LIBNAME}_H)
-    string(REGEX REPLACE "^.*[ \t]${LIBVER}[ \t]+\"([0-9\.]+)\"$" "\\1" ${LIBNAME}_VERSION_STRING "${${LIBNAME}_H}")
+    string(REGEX REPLACE "^.*[ \t]${LIBVER}[ \t]+\"(.+)\"$" "\\1" ${LIBNAME}_VERSION_STRING "${${LIBNAME}_H}")
   endif()
 endmacro()
 
