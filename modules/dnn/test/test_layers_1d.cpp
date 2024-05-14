@@ -131,6 +131,7 @@ TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
     }
 
     // create reference output with required shape and values
+    int index;
     cv::Mat output_ref;
     std::vector<int> ref_output;
     if (input_shape.size() == 2 ){
@@ -146,7 +147,7 @@ TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
         }
         output_ref = cv::Mat(rows, (axis == 1) ? 1 : cols, CV_32S, ref_output.data());
     } else if (input_shape.size() <= 1) {
-        int index = arg_op(std::vector<float>(input.begin<float>(), input.end<float>()), operation);
+        index = arg_op(std::vector<float>(input.begin<float>(), input.end<float>()), operation);
         output_ref = cv::Mat(input_shape.size(), input_shape.data(), CV_32FC1, &index);
     }
 
