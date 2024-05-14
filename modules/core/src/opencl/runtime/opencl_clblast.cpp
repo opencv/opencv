@@ -18,9 +18,12 @@
             opencl_module = GetModuleHandleA("clblast.dll");
             if (!opencl_module) {
                 opencl_module = LoadLibraryA("clblast.dll");
-                if (!opencl_module)
-                    return NULL;
             }
+        }
+
+        if (!opencl_module) {
+            printf("Cannot load clblast.dll. Set PATH to the directory containing it.\n");
+            return NULL;
         }
         return (void*)GetProcAddress(opencl_module, name);
     }
@@ -41,7 +44,12 @@
             h = dlopen("libclblast.dylib", RTLD_LAZY | RTLD_GLOBAL);
             #endif
             if (!h) {
-                printf("handle is null\n");
+                #if defined (__linux__)
+                printf("Cannot load libclblast.so. Set LD_LIBRARY_PATH to the directory containing it.\n");
+                #endif
+                #if defined (__APPLE__)
+                printf("Cannot load libclblast.dylib. Set DYLD_LIBRARY_PATH to the directory containing it.\n");
+                #endif
                 return NULL;
             }
         }
