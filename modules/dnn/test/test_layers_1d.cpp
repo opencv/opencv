@@ -723,7 +723,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Tile_Test,
         std::vector<int>({1, 2}),
         std::vector<int>({2, 2})
         ));
-        
+
 typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Einsum_Test;
 TEST_P(Layer_Einsum_Test, Accuracy_01D)
 {
