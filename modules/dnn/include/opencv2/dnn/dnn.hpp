@@ -518,6 +518,11 @@ CV__DNN_INLINE_NS_BEGIN
          *  @see dump()
          */
         CV_WRAP void dumpToFile(CV_WRAP_FILE_PATH const String& path);
+        /** @brief Dump net structure, hyperparameters, backend, target and fusion to pbtxt file
+         *  @param path   path to output file with .pbtxt extension
+        */
+        CV_WRAP void dumpToPbtxt(CV_WRAP_FILE_PATH const String& path);
+
         /** @brief Adds new layer to the net.
          *  @param name   unique name of the adding layer.
          *  @param type   typename of the adding layer (type must be registered in LayerRegister).

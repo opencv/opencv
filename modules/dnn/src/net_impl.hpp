@@ -278,6 +278,7 @@ struct Net::Impl : public detail::NetImplBase
     AsyncArray getBlobAsync(String outputName);
 
     string dump(bool forceAllocation = false) const;
+    string dumpToPbtxt(bool forceAllocation = false) const;
 
     void dumpNetworkToFile() const;
 
