@@ -359,9 +359,7 @@ public:
         for (auto input : inputs)
         {
             CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
-            if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S, "Unsupported type");
-            else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
                 CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
             else
                 CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
