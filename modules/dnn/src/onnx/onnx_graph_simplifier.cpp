@@ -1868,6 +1868,11 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
                 Mat(sizes, CV_8U, val).copyTo(blob);
         }
     }
+    else if (datatype == opencv_onnx::TensorProto_DataType_BOOL)
+    {
+        char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+        Mat(sizes, CV_Bool, val).copyTo(blob);
+    }
     else
     {
         std::string errorMsg = "Unsupported data type: " +

@@ -355,6 +355,22 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
+        if (op == OPERATION::WHERE)
+        {
+            CV_CheckTypeEQ(inputs[0], CV_Bool, "");
+            CV_CheckTypeEQ(inputs[1], inputs[2], "");
+            outputs.assign(1, inputs[1]);
+            return;
+        }
+
+        if (op == OPERATION::AND || op == OPERATION::OR || op == OPERATION::XOR)
+        {
+            CV_CheckTypeEQ(inputs[0], CV_Bool, "");
+            CV_CheckTypeEQ(inputs[1], CV_Bool, "");
+            outputs.assign(1, CV_Bool);
+            return;
+        }
+
         CV_Assert(inputs.size());
         for (auto input : inputs)
         {
@@ -365,11 +381,14 @@ public:
                 CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
         }
 
-        outputs.assign(requiredOutputs, inputs[0]);
+        if (op == OPERATION::EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL || op == OPERATION::LESS || op == OPERATION::LESS_EQUAL)
+            outputs.assign(1, CV_Bool);
+        else
+            outputs.assign(requiredOutputs, inputs[0]);
     }
 
 
-    template <typename T, typename Functor>
+    template <typename T, typename RESULT_T, typename Functor>
     void binary_forward_impl(
             int ndims, const std::vector<int>& shape,
             const char* data1, const std::vector<size_t>& step1,
@@ -385,7 +404,7 @@ public:
         if (ndims >= 1) {
             dp1 = step1[ndims-1]/sizeof(T);
             dp2 = step2[ndims-1]/sizeof(T);
-            dp = step[ndims-1]/sizeof(T);
+            dp = step[ndims-1]/sizeof(RESULT_T);
             n1 = shape[ndims-1];
 
             if (ndims >= 2) {
@@ -417,7 +436,7 @@ public:
             {
                 const T* ptr1 = (const T*)ptr1_;
                 const T* ptr2 = (const T*)ptr2_;
-                T* ptr = (T*)ptr_;
+                RESULT_T* ptr = (RESULT_T*)ptr_;
                 if (dp1 == 1 && dp2 == 1 && dp == 1) {
                     for(int i1 = 0; i1 < n1; i1++)
                         ptr[i1] = op(ptr1[i1], ptr2[i1]);
@@ -437,14 +456,14 @@ public:
         }
     }
 
-    template <typename T, typename Functor>
+    template <typename T, typename RESULT_T,  typename Functor>
     void binary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
     {
         const Mat& a = inputs[0];
         const Mat& b = inputs[1];
         Mat& out = outputs[0];
         CV_Assert(helper.shapes.size() == 3 && helper.steps.size() == 3);
-        binary_forward_impl<T, Functor>(
+        binary_forward_impl<T, RESULT_T, Functor>(
                 helper.max_ndims, helper.shapes[0], a.ptr<char>(), helper.steps[1],
                 b.ptr<char>(), helper.steps[2], out.ptr<char>(), helper.steps[0],
                 f);
@@ -551,7 +570,7 @@ public:
                 f, scale, helper.ninputs, helper.max_ndims, helper.shapes[0], inp, out, helper.steps, helper.ptrs);
     }
 
-    template <typename T, typename Functor>
+    template <typename T_INP1, typename T_INP2, typename T_INP3, typename T_OUT, typename Functor>
     void trinary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
     {
         const Mat& a = inputs[0];
@@ -561,13 +580,13 @@ public:
 
         CV_Assert(helper.shapes.size() == 4 && helper.steps.size() == 4);
 
-        trinary_forward_impl<T, Functor>(
+        trinary_forward_impl<T_INP1, T_INP2, T_INP3, T_OUT, Functor>(
                 helper.max_ndims, helper.shapes[0], a.ptr<char>(), helper.steps[1], b.ptr<char>(), helper.steps[2],
                 c.ptr<char>(), helper.steps[3], out.ptr<char>(), helper.steps[0],
                 f);
     }
 
-    template <typename T, typename Functor>
+    template <typename T_INP1, typename T_INP2, typename T_INP3, typename T_OUT, typename Functor>
     void trinary_forward_impl(
             int ndims, const std::vector<int>& shape,
             const char* data1, const std::vector<size_t>& step1,
@@ -577,10 +596,10 @@ public:
             const Functor& op)
     {
         assert(ndims >= 2);
-        size_t dp1 = step1[ndims-1]/sizeof(T);
-        size_t dp2 = step2[ndims-1]/sizeof(T);
-        size_t dp3 = step3[ndims-1]/sizeof(T);
-        size_t dp = step[ndims-1]/sizeof(T);
+        size_t dp1 = step1[ndims-1]/sizeof(T_INP1);
+        size_t dp2 = step2[ndims-1]/sizeof(T_INP2);
+        size_t dp3 = step3[ndims-1]/sizeof(T_INP3);
+        size_t dp = step[ndims-1]/sizeof(T_OUT);
         int k, n1 = shape[ndims-1], n2 = shape[ndims-2];
         size_t plane_idx, nplanes = 1;
         for (k = 0; k < ndims-2; k++) nplanes *= shape[k];
@@ -608,10 +627,10 @@ public:
                                             ptr3_ += step3[ndims-2],
                                             ptr_ += step[ndims-2])
             {
-                const T* ptr1 = (const T*)ptr1_;
-                const T* ptr2 = (const T*)ptr2_;
-                const T* ptr3 = (const T*)ptr3_;
-                T* ptr = (T*)ptr_;
+                const T_INP1* ptr1 = (const T_INP1*)ptr1_;
+                const T_INP2* ptr2 = (const T_INP2*)ptr2_;
+                const T_INP3* ptr3 = (const T_INP3*)ptr3_;
+                T_OUT* ptr = (T_OUT*)ptr_;
 
                 if (dp1 == 1 && dp2 == 1 && dp3 == 1 && dp == 1)
                 {
@@ -644,7 +663,7 @@ public:
         outputs_arr.getMatVector(outputs);
 
         // TODO: assert types
-        typeDispatch(outputs[0].type(), inputs.size(), inputs, outputs);
+        typeDispatch(inputs.back().type(), inputs.size(), inputs, outputs);
     }
 
     template<typename T, typename... Args>
@@ -655,43 +674,43 @@ public:
             case OPERATION::EQUAL:
             {
                 auto equal = [](const T &a, const T &b) { return a == b; };
-                binary_forward<T>(equal, std::forward<Args>(args)...);
+                binary_forward<T, bool>(equal, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::GREATER:
             {
                 auto greater = [](const T &a, const T &b) { return a > b; };
-                binary_forward<T>(greater, std::forward<Args>(args)...);
+                binary_forward<T, bool>(greater, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::GREATER_EQUAL:
             {
                 auto greater_equal = [](const T &a, const T &b) { return a >= b; };
-                binary_forward<T>(greater_equal, std::forward<Args>(args)...);
+                binary_forward<T, bool>(greater_equal, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::LESS:
             {
                 auto less = [](const T &a, const T &b) { return a < b; };
-                binary_forward<T>(less, std::forward<Args>(args)...);
+                binary_forward<T, bool>(less, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::LESS_EQUAL:
             {
                 auto less_equal = [](const T &a, const T &b) { return a <= b; };
-                binary_forward<T>(less_equal, std::forward<Args>(args)...);
+                binary_forward<T, bool>(less_equal, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::POW:
             {
                 auto pow = [] (const T& a, const T& b) { return std::pow(a, b); };
-                binary_forward<T>(pow, std::forward<Args>(args)...);
+                binary_forward<T, T>(pow, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::BITSHIFT:
             {
                 auto bitshift = [] (const uint8_t &a, const uint8_t &b) { return a << b; };
-                binary_forward<T>(bitshift, std::forward<Args>(args)...);
+                binary_forward<T, T>(bitshift, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::MAX:
@@ -715,25 +734,25 @@ public:
             case OPERATION::MOD:
             {
                 auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
-                binary_forward<T>(mod, std::forward<Args>(args)...);
+                binary_forward<T, T>(mod, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::FMOD:
             {
                 auto fmod = [](const T &a, const T &b) { return std::fmod(a, b); };
-                binary_forward<T>(fmod, std::forward<Args>(args)...);
+                binary_forward<T, T>(fmod, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::PROD:
             {
                 auto prod = [](const T &a, const T &b) { return a * b; };
-                binary_forward<T>(prod, std::forward<Args>(args)...);
+                binary_forward<T, T>(prod, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::SUB:
             {
                 auto sub = [](const T &a, const T &b) { return a - b; };
-                binary_forward<T>(sub, std::forward<Args>(args)...);
+                binary_forward<T, T>(sub, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::SUM:
@@ -745,37 +764,47 @@ public:
             case OPERATION::ADD:
             {
                 auto add = [](const T &a, const T &b) { return a + b; };
-                binary_forward<T>(add, std::forward<Args>(args)...);
+                binary_forward<T, T>(add, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::DIV:
             {
                 auto div = [](const T &a, const T &b) { return a / b; };
-                binary_forward<T>(div, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::AND:
-            {
-                auto op_and = [](const uint8_t &a, const uint8_t &b) { return a & b; };
-                binary_forward<T>(op_and, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::OR:
-            {
-                auto op_or = [](const uint8_t &a, const uint8_t &b) { return a | b; };
-                binary_forward<T>(op_or, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::XOR:
-            {
-                auto op_xor = [](const uint8_t &a, const uint8_t &b) { return a ^ b; };
-                binary_forward<T>(op_xor, std::forward<Args>(args)...);
+                binary_forward<T, T>(div, std::forward<Args>(args)...);
                 break;
             }
             case OPERATION::WHERE:
             {
-                auto op_where = [](const T &a, const T &b, const T &c) { return a ? b : c; };
-                trinary_forward<T>(op_where, std::forward<Args>(args)...);
+                auto op_where = [](const bool &a, const T &b, const T &c) { return a ? b : c; };
+                trinary_forward<bool, T, T, T>(op_where, std::forward<Args>(args)...);
+                break;
+            }
+            default:
+                CV_Error(Error::StsBadArg, "Unsupported operation.");
+        };
+    }
+
+    template<typename... Args>
+    inline void boolOpDispatch(size_t ninputs, Args&&... args)
+    {
+        switch (op)
+        {
+            case OPERATION::AND:
+            {
+                auto op_and = [](const bool &a, const bool &b) { return a && b; };
+                binary_forward<bool, bool>(op_and, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::OR:
+            {
+                auto op_or = [](const bool &a, const bool &b) { return a || b; };
+                binary_forward<bool, bool>(op_or, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::XOR:
+            {
+                auto op_xor = [](const bool &a, const bool &b) { return a != b; };
+                binary_forward<bool, bool>(op_xor, std::forward<Args>(args)...);
                 break;
             }
             default:
@@ -788,6 +817,10 @@ public:
     {
         switch (type)
         {
+            case CV_Bool:
+                helper.reInit(sizeof(uint8_t));
+                boolOpDispatch(std::forward<Args>(args)...);
+                break;
             case CV_8U:
                 // TODO: integrate with type inference
                 helper.reInit(sizeof(uint8_t));

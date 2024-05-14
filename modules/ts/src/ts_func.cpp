@@ -1416,6 +1416,9 @@ double norm(InputArray _src, int normType, InputArray _mask)
 
         switch( depth )
         {
+        case CV_Bool:
+            result = norm_((const bool*)sptr, total, cn, normType, result, mptr);
+            break;
         case CV_8U:
             result = norm_((const uchar*)sptr, total, cn, normType, result, mptr);
             break;
@@ -1522,6 +1525,9 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 
         switch( depth )
         {
+        case CV_Bool:
+            result = norm_((const bool*)sptr1, (const bool*)sptr2, total, cn, normType, result, mptr);
+            break;
         case CV_8U:
             result = norm_((const uchar*)sptr1, (const uchar*)sptr2, total, cn, normType, result, mptr);
             break;

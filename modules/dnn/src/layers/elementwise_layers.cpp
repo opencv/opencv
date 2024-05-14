@@ -1372,33 +1372,6 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 template<>
 const char* const BaseDefaultFunctor<SqrtFunctor>::ocl_kernel_name = "SqrtForward";
 
-struct NotFunctor : public BaseDefaultFunctor<NotFunctor>
-{
-    typedef NotLayer Layer;
-
-    bool supportBackend(int backendId, int)
-    {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
-    }
-
-    inline float calculate(float x) const
-    {
-        return floor(1.f - x);
-    }
-
-#ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
-    {
-        return make_cuda_node<cuda4dnn::NotOp>(target, stream);
-    }
-#endif
-
-    int64 getFLOPSPerElement() const { return 2; }
-};
-
-template<>
-const char* const BaseDefaultFunctor<NotFunctor>::ocl_kernel_name = "NotForward";
-
 struct AcosFunctor : public BaseDefaultFunctor<AcosFunctor>
 {
     typedef AcosLayer Layer;
@@ -2645,14 +2618,6 @@ Ptr<RoundLayer> RoundLayer::create(const LayerParams& params)
 Ptr<SqrtLayer> SqrtLayer::create(const LayerParams& params)
 {
     Ptr<SqrtLayer> l(new ElementWiseLayer<SqrtFunctor>());
-    l->setParamsFrom(params);
-
-    return l;
-}
-
-Ptr<NotLayer> NotLayer::create(const LayerParams& params)
-{
-    Ptr<NotLayer> l(new ElementWiseLayer<NotFunctor>());
     l->setParamsFrom(params);
 
     return l;
