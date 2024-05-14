@@ -798,6 +798,8 @@ public:
     */
     CV_WRAP explicit VideoCapture(int index, int apiPreference, const std::vector<int>& params);
 
+    CV_WRAP explicit VideoCapture(const std::vector<uchar>& buffer, int apiPreference = CAP_ANY);
+
     /** @brief Default destructor
 
     The method first calls VideoCapture::release to close the already opened file or camera.
@@ -851,6 +853,9 @@ public:
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
     CV_WRAP virtual bool open(int index, int apiPreference, const std::vector<int>& params);
+
+    CV_WRAP virtual bool open(const std::vector<uchar>& buffer, int apiPreference = CAP_ANY);
+    CV_WRAP virtual bool open(const std::vector<uchar>& buffer, int apiPreference, const std::vector<int>& params);
 
     /** @brief Returns true if video capturing has been initialized already.
 

@@ -21,5 +21,13 @@ class Bindings(NewOpenCVTests):
         for backend in backends:
             self.check_name(cv.videoio_registry.getBackendName(backend))
 
+    def test_capture_buffer(self):
+        with open(self.find_file("cv/video/768x576.avi"), "rb") as f:
+            cap = cv.VideoCapture(f.read())
+            self.assertTrue(cap.isOpened())
+            hasFrame, frame = cap.read()
+            self.assertTrue(hasFrame)
+            self.assertEqual(frame.shape, (576, 768, 3))
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
