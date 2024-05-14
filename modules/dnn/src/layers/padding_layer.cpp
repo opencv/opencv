@@ -59,7 +59,8 @@ public:
         CV_Assert(inputs.size() == 1);
         const MatShape& inpShape = inputs[0];
         if (inpShape.empty()){
-            outputs.resize(1, MatShape(1, paddings.size() * 2 + 1));
+            CV_Assert(paddings.size() == 1);
+            outputs.resize(1, MatShape(1, paddings[0].first + paddings[0].second + 1));
             return false;
         }
         CV_Assert(inpShape.size() >= paddings.size());

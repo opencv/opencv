@@ -576,7 +576,7 @@ TEST_P(Layer_Padding_Test, Accuracy_01D){
     LayerParams lp;
     lp.type = "Padding";
     lp.name = "PaddingLayer";
-    std::vector<int> paddings = {1, 1}; // Pad before and pad after for one dimension
+    std::vector<int> paddings = {5, 3}; // Pad before and pad after for one dimension
     lp.set("paddings", DictValue::arrayInt(paddings.data(), paddings.size()));
     lp.set("value", pad_value);
     lp.set("input_dims", (input_shape.size() == 1) ? -1 : 0);
@@ -600,15 +600,15 @@ TEST_P(Layer_Padding_Test, Accuracy_01D){
     cv::Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, pad_value);
 
     if (input_shape.size() == 0){
-        output_ref.at<float>(1) = input.at<float>(0);
+        output_ref.at<float>(paddings[0]) = input.at<float>(0);
     } else if (input_shape.size() == 1){
         for (int i = 0; i < input_shape[0]; ++i){
-            output_ref.at<float>(i + 1) = input.at<float>(i);
+            output_ref.at<float>(i + paddings[0]) = input.at<float>(i);
         }
     } else {
         for (int i = 0; i < input_shape[0]; ++i){
             for (int j = 0; j < input_shape[1]; ++j){
-                output_ref.at<float>(i, j + 1) = input.at<float>(i, j);
+                output_ref.at<float>(i, j + paddings[0]) = input.at<float>(i, j);
             }
         }
     }
