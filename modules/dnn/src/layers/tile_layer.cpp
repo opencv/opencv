@@ -42,14 +42,20 @@ public:
         CV_CheckEQ(inputs.size(), 1ull, "Tile: one input is expected");
 
         // repeats must have the same length as input's dimension number
-        // FIXIT: it breaks when the input is 1d tensor (represented as 2d mat with size=2 in opencv dnn)
-        CV_CheckEQ(inputs[0].size(), repeats.size(), "Tile: repeats must be a 1D tensor of the same length as input's dimension number");
-
-        outputs.assign(1, inputs[0]);
-        for (int i = 0; i < repeats.size(); i++)
-        {
-            outputs[0][i] *= repeats[i];
+        if (inputs[0].size() > 1) {
+            CV_CheckEQ(inputs[0].size(), repeats.size(), "Tile: repeats must be a 1D tensor of the same length as input's dimension number");
+            outputs.assign(1, inputs[0]);
+            for (int i = 0; i < repeats.size(); i++)
+            {
+                outputs[0][i] *= repeats[i];
+            }
+        } else {
+            CV_CheckGE((int)repeats.size(), 1, "Tile: Provide at least one repeat along any dimension");
+            outputs.assign(1, repeats);
+            if (inputs[0].size() == 1)
+                outputs[0][repeats.size() - 1] *= inputs[0][0];
         }
+
         return false;
     }
 
@@ -79,18 +85,26 @@ public:
         MatShape out_shape = shape(out);
         int rep_i, ndims = data.dims;
         int dims = 1;
-        for (int i = 0; i < ndims; i++)
-        {
-            rep_i = repeats[i];
-            if (rep_i != 1)
+        if (ndims > 1){
+            for (int i = 0; i < ndims; i++)
             {
-                tmp = tmp.reshape(0, dims);
-                tmp = cv::repeat(tmp, 1, rep_i);
+                rep_i = repeats[i];
+                if (rep_i != 1)
+                {
+                    tmp = tmp.reshape(0, dims);
+                    tmp = cv::repeat(tmp, 1, rep_i);
+                }
+                dims *= out_shape[i];
             }
-            dims *= out_shape[i];
+            tmp = tmp.reshape(0, out_shape);
+        } else {
+            for (int i = 0; i < repeats.size(); i++){
+                tmp = tmp.reshape(0, dims);
+                tmp = cv::repeat(tmp, repeats[i], 1);
+                dims *= out_shape[i];
+            }
+            tmp = tmp.reshape(0, out_shape);
         }
-        tmp = tmp.reshape(0, out_shape);
-
         tmp.copyTo(out);
     }
 
