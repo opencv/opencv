@@ -1024,4 +1024,44 @@ INSTANTIATE_TEST_CASE_P(videoio, videowriter_acceleration, testing::Combine(
         testing::ValuesIn(hw_use_umat)
 ));
 
+
+typedef testing::TestWithParam<VideoCaptureAPIs> buffer_capture;
+TEST_P(buffer_capture, read)
+{
+    VideoCaptureAPIs apiPref = GetParam();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    VideoCapture cap;
+    String video_file = BunnyParameters::getFilename(String(".avi"));
+
+    // Read file content
+    std::vector<uint8_t> buffer;
+    std::ifstream ifs(video_file.c_str(), std::ios::in | std::ios::binary);
+    ASSERT_TRUE(ifs.is_open());
+    ifs.seekg(0, std::ios::end);
+    const size_t sz = ifs.tellg();
+    buffer.resize(sz);
+    ifs.seekg(0, std::ios::beg);
+    ifs.read((char*)buffer.data(), sz);
+    ASSERT_FALSE(ifs.fail());
+
+    EXPECT_NO_THROW(cap.open(buffer, apiPref));
+    EXPECT_TRUE(cap.isOpened());
+
+    const int numFrames = 10;
+    Mat frames[numFrames];
+    Mat hardCopies[numFrames];
+    for(int i = 0; i < numFrames; i++)
+    {
+        ASSERT_NO_THROW(cap >> frames[i]);
+        EXPECT_FALSE(frames[i].empty());
+        hardCopies[i] = frames[i].clone();
+    }
+
+    for(int i = 0; i < numFrames; i++)
+        EXPECT_EQ(0, cv::norm(frames[i], hardCopies[i], NORM_INF)) << i;
+}
+INSTANTIATE_TEST_CASE_P(videoio, buffer_capture, testing::ValuesIn(backend_params));
+
 } // namespace
