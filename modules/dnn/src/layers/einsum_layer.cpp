@@ -65,12 +65,12 @@ static Mat Transpose(
 
 
 bool IsTransposeRequired(size_t input_rank, const std::vector<size_t>& permutation) {
-    CV_Assert(input_rank == permutation.size());
 
     // No transpose required for scalars
-    if (input_rank == 0){
+    if (input_rank == 0 || permutation.size() == 0){
         return false;
     }
+    CV_Assert(input_rank == permutation.size());
 
     // Weeds out cases where permutation is something like [0, 1, 2] for a 3D input and so on
     bool transpose_required = false;
@@ -616,6 +616,10 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         // variable to hold processed version of the original input
         MatShape input_dims = shape(input);
 
+        if (inputSubscriptIndices.empty()){
+            homogenizedInputDims.emplace_back(MatShape(numLetterIndices, 1));
+            continue;
+        }
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
         // There should be subscript index (subscript label) for each dim of the input
@@ -870,6 +874,9 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
     // Check if number of tokens in equal to number of inputs.
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
     int num_input_tensors = inputs.size();
+    if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",") ) {
+        return;
+    }
     CV_CheckEQ(static_cast<int>(lhs_eq_tokens.size()), num_input_tensors,
         "Number of input tensors does not match the number of subscripts in the input equation");
 
@@ -1363,7 +1370,12 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         }
 
         output = Mat(M, N, reshapedInput1.type());
-        fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, output, opt);
+        if (shape(reshapedInput1).empty() && shape(reshapedInput2).empty())
+        {
+            output = reshapedInput1.mul(reshapedInput2); // fastGemm does not support 0D * 0D multiplication
+        } else {
+            fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, output, opt);
+        }
 
         output = output.reshape(1, {1, M, N});
     }

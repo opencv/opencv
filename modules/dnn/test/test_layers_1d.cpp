@@ -682,4 +682,79 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Const_Test, testing::Values(
     std::vector<int>({4, 1})
     ));
 
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Einsum_Test;
+TEST_P(Layer_Einsum_Test, Accuracy_01D)
+{
+    auto tup = GetParam();
+    std::vector<int> input_shape = std::get<0>(tup);
+    std::string equation = std::get<1>(tup);
+
+    LayerParams lp;
+    lp.type = "Einsum";
+    lp.name = "EinsumLayer";
+    lp.set("equation", equation);
+    lp.set("inputSize", 2);
+    lp.set("outputSize", 1);
+    lp.set("inputShapes0", DictValue::arrayInt(&input_shape[0], input_shape.size()));
+    lp.set("inputShapes1", DictValue::arrayInt(&input_shape[0], input_shape.size()));
+
+    Ptr<Layer> layer = EinsumLayer::create(lp);
+
+    cv::Mat input1(input_shape.size(), input_shape.data(), CV_32F);
+    cv::Mat input2(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input1, 0.0, 1.0); cv::randn(input2, 0.0, 1.0);
+
+    std::vector<Mat> inputs = {input1, input2};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(1, outputs.size());
+
+    // create output_ref to compare with outputs
+    cv::Mat output_ref;
+    int size[] = {1};
+    if (equation == ",->"){
+        output_ref = input1.mul(input2);
+    }else if (equation == "i, i->i"){
+        output_ref = input1.mul(input2);
+    } else if (equation == "i, i->"){
+        output_ref = input1.mul(input2);
+        cv::Scalar sum = cv::sum(output_ref);
+        output_ref = cv::Mat(0, nullptr, CV_32F, sum[0]);
+    } else if (equation == "ij, ij->ij"){
+        output_ref = input1.mul(input2);
+    } else if (equation == "ij, ij->i"){
+        output_ref = input1.mul(input2);
+        if (input_shape[0] == 1){
+            cv::Scalar sum = cv::sum(output_ref);
+            output_ref = cv::Mat(1, size, CV_32F, sum[0]);
+        } else if (input_shape[1] == 1){
+            size[0] = input_shape[0];
+            output_ref = output_ref.reshape(1, 1, size);
+        } else {
+            cv::reduce(output_ref, output_ref, 1, cv::REDUCE_SUM, CV_32F);
+            size[0] = input_shape[0];
+            output_ref = output_ref.reshape(1, 1, size);
+        }
+    } else {
+        output_ref = cv::Mat();
+    }
+
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Einsum_Test, testing::Values(
+    std::make_tuple(std::vector<int>({}), std::string(",->")),
+    std::make_tuple(std::vector<int>({1}), std::string("i, i->i")),
+    std::make_tuple(std::vector<int>({1}), std::string("i, i->")),
+    std::make_tuple(std::vector<int>({4}), std::string("i, i->i")),
+    std::make_tuple(std::vector<int>({4}), std::string("i, i->")),
+    std::make_tuple(std::vector<int>({1, 4}), std::string("ij, ij->ij")),
+    std::make_tuple(std::vector<int>({4, 1}), std::string("ij, ij->ij")),
+    std::make_tuple(std::vector<int>({1, 4}), std::string("ij, ij->i")),
+    std::make_tuple(std::vector<int>({4, 1}), std::string("ij, ij->i")),
+    std::make_tuple(std::vector<int>({4, 4}), std::string("ij, ij->i"))
+    ));
+
+
 }}
