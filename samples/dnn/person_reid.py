@@ -12,8 +12,6 @@ Authors of samples and Youtu ReID baseline:
 Copyright (C) 2020-2021, Tencent.
 Copyright (C) 2020-2021, SUSTech.
 
-
-
 How to use:
     sample command to run:
 

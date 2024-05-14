@@ -74,7 +74,7 @@ static Mat preprocess(const Mat &img)
         {
             for (int c = 0; c < 3; c++)
             {
-                ret.at<Vec3f>(y, x)[c] = (float)((img.at<Vec3b>(y, x)[c] / 255.0 - mean[2 - c]) / std[2 - c]);
+                ret.at<Vec3f>(y,x)[c] = (float)((img.at<Vec3b>(y,x)[c] / 255.0 - mean[2 - c]) / std[2 - c]);
             }
         }
     }
@@ -107,7 +107,7 @@ static void extractFeatures(std::vector<cv::Mat> &imglist, Net *net, const int &
             Mat img = imglist[st + delta];
             batch.push_back(preprocess(img));
         }
-        Mat blob = dnn::blobFromImages(batch, 1.0, Size(resize_w, resize_h), Scalar(0.0, 0.0, 0.0), true, false, CV_32F);
+        Mat blob = dnn::blobFromImages(batch, 1.0, Size(resize_w, resize_h), Scalar(0.0,0.0,0.0), true, false, CV_32F);
         net->setInput(blob);
         Mat out = net->forward();
         for (int i = 0; i < (int)out.size().height; i++)
@@ -115,7 +115,7 @@ static void extractFeatures(std::vector<cv::Mat> &imglist, Net *net, const int &
             std::vector<float> temp_feature;
             for (int j = 0; j < (int)out.size().width; j++)
             {
-                temp_feature.push_back(out.at<float>(i, j));
+                temp_feature.push_back(out.at<float>(i,j));
             }
             features.push_back(normalization(temp_feature));
         }
