@@ -69,7 +69,7 @@ try \
 } \
 catch (const cv::Exception& e) \
 { \
-    printf("%s\n", e.msg.c_str()); \
+    CV_UNUSED(e); /* TODO: Add some logging here */ \
 }
 #endif
 

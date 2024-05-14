@@ -67,17 +67,17 @@ static bool ocl_gemm_clblast(InputArray matA, InputArray matB, double alpha,
                              InputArray matC, double beta, OutputArray matD, int flags) {
     int type = matA.type(), depth = CV_MAT_DEPTH(type), esz = CV_ELEM_SIZE(type);
     bool haveC = matC.kind() != cv::_InputArray::NONE;
-    CV_CheckEQ(matB.type(), type, "Type of matB does not match the type of matA");
+    CV_CheckTypeEQ(matB.type(), type, "Type of matB does not match the type of matA");
     if (haveC) {
         CV_CheckEQ(matC.type(), type, "Type of matC does not match the type of matA");
     }
-    auto &device = ocl::Device::getDefault();
-    bool SupportFP64 = device.hasFP64(),
-         SupportFP16 = device.hasFP16();
-    if (!SupportFP64 && depth == CV_64F) {
+    const auto &device = ocl::Device::getDefault();
+    bool supportFP64 = device.hasFP64(),
+         supportFP16 = device.hasFP16();
+    if (!supportFP64 && depth == CV_64F) {
         return false;
     }
-    if (!SupportFP16 && depth == CV_16F) {
+    if (!supportFP16 && depth == CV_16F) {
         return false;
     }
 
@@ -96,15 +96,17 @@ static bool ocl_gemm_clblast(InputArray matA, InputArray matB, double alpha,
 
     Size sizeD(sizeB.width, sizeA.height);
 
-    CV_CheckEQ(sizeA.width, sizeB.height, "Invalid dimension for matrix multiplification");
+    CV_CheckEQ(sizeA.width, sizeB.height, "Invalid dimension for matrix multiplication");
     if (haveC) { // TODO: support matC broadcasting
-        CV_CheckTrue(sizeC == sizeD, "Shape of matC is not equal to the shape of matD");
+        CV_CheckEQ(sizeC, sizeD, "Shape of matC is not equal to the shape of matD");
     }
 
     matD.create(sizeD, type);
-    if (matA.offset() % esz != 0 || matA.step() % esz != 0 ||
-        matB.offset() % esz != 0 || matB.step() % esz != 0 ||
-        (haveC && (matC.offset() % esz != 0 || matC.step() % esz != 0)) )
+    if (matA.offset() % esz != 0 || matA.step() % esz != 0)
+        return false;
+    if (matB.offset() % esz != 0 || matB.step() % esz != 0)
+        return false;
+    if (haveC && (matC.offset() % esz != 0 || matC.step() % esz != 0))
         return false;
 
     UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();

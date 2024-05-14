@@ -1248,6 +1248,8 @@ void setUseOpenCL(bool flag)
     }
 }
 
+
+
 #ifdef HAVE_CLAMDBLAS
 
 class AmdBlasHelper
