@@ -1029,7 +1029,7 @@ typedef testing::TestWithParam<VideoCaptureAPIs> buffer_capture;
 TEST_P(buffer_capture, read)
 {
     VideoCaptureAPIs apiPref = GetParam();
-    if (!videoio_registry::hasBackend(apiPref))
+    if (!videoio_registry::hasBackend(apiPref) || apiPref == CAP_OPENCV_MJPEG)
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
 
     VideoCapture cap;
