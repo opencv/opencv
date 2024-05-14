@@ -103,6 +103,9 @@
 /* OpenGL support*/
 #cmakedefine HAVE_OPENGL
 
+/* QT+OPENGL support*/
+#cmakedefine HAVE_QT_OPENGL
+
 /* PNG codec */
 #cmakedefine HAVE_PNG
 

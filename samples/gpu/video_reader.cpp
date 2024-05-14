@@ -5,10 +5,11 @@
 
 #if defined(HAVE_OPENCV_CUDACODEC)
 
+#include <algorithm>
+#include <iostream>
+#include <numeric>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <numeric>
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/opengl.hpp>
@@ -22,16 +23,16 @@ int main(int argc, const char* argv[])
 
     const std::string fname(argv[1]);
     cv::VideoCapture reader(fname);
-    cv::Size imageSize{(int)reader.get(cv::CAP_PROP_FRAME_WIDTH),
-        (int)reader.get(cv::CAP_PROP_FRAME_HEIGHT)};
 
     cv::namedWindow("CPU", cv::WINDOW_NORMAL);
-#if defined(HAVE_OPENGL)
-    cv::namedWindow("GPU", cv::WINDOW_OPENGL);
+#if defined(HAVE_QT_OPENGL)
+    cv::namedWindow("GPU - QT with opengl", cv::WINDOW_OPENGL);
+    cv::Size const imageSize{(int)reader.get(cv::CAP_PROP_FRAME_WIDTH),
+        (int)reader.get(cv::CAP_PROP_FRAME_HEIGHT)};
+    cv::resizeWindow("GPU - QT with opengl", imageSize);
 #else
-    cv::namedWindow("GPU");
+    cv::namedWindow("GPU", cv::WINDOW_NORMAL);
 #endif
-    cv::resizeWindow("GPU", imageSize);
 
     cv::TickMeter tm;
     cv::Mat frame;
@@ -51,8 +52,8 @@ int main(int argc, const char* argv[])
         if (!d_reader->nextFrame(d_frame))
             break;
 
-#if defined(HAVE_OPENGL)
-        cv::imshow("GPU", d_frame);
+#if defined(HAVE_QT_OPENGL)
+        cv::imshow("GPU - QT with opengl", d_frame);
 #else
         d_frame.download(frame);
         cv::imshow("GPU", frame);
