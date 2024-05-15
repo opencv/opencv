@@ -6,6 +6,9 @@
 
 namespace opencv_test
 {
+
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
+
 using namespace perf;
 
 typedef perf::TestBaseWithParam<std::string> PNG;
@@ -37,5 +40,7 @@ PERF_TEST(PNG, encode)
 
     SANITY_CHECK_NOTHING();
 }
+
+#endif // HAVE_PNG
 
 } // namespace

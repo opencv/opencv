@@ -303,6 +303,7 @@ TEST(Imgcodecs_Image, write_umat)
     EXPECT_EQ(0, remove(dst_name.c_str()));
 }
 
+#ifdef HAVE_TIFF
 TEST(Imgcodecs_Image, multipage_collection_size)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -479,6 +480,7 @@ TEST(ImgCodecs, multipage_collection_two_iterator_operatorpp)
          EXPECT_TRUE(cv::norm(img1, img[i], NORM_INF) == 0);
     }
 }
+#endif
 
 
 TEST(Imgcodecs_Params, imwrite_regression_22752)
