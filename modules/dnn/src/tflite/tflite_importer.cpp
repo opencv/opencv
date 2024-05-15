@@ -70,6 +70,7 @@ private:
     void parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseSoftmax(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseTranspose(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
     void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
@@ -284,6 +285,7 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["SOFTMAX"] = &TFLiteImporter::parseSoftmax;
     dispatch["CAST"] = &TFLiteImporter::parseCast;
     dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
+    dispatch["TRANSPOSE"] = &TFLiteImporter::parseTranspose;
     return dispatch;
 }
 
@@ -716,6 +718,49 @@ void TFLiteImporter::parseResize(const Operator& op, const std::string& opcode, 
     Mat shape = allTensors[op.inputs()->Get(1)].reshape(1, 1);
     layerParams.set("height", shape.at<int>(0, 0));
     layerParams.set("width", shape.at<int>(0, 1));
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseTranspose(const Operator& op, const std::string& opcode, LayerParams& layerParams)
+{
+    layerParams.type = "Permute";
+    std::vector<int> perm = allTensors[op.inputs()->Get(1)];
+
+    DataLayout inpLayout = layouts[op.inputs()->Get(0)];
+    if (inpLayout == DNN_LAYOUT_NHWC && perm.size() == 4) {
+
+        // OpenCV operates under the assumption that NCHW format, whereas TFLite defaults to NHWC.
+        // Therfore, to align these layouts, the axes of the permutation vector should be adjusted accordingly.
+        // For implementation details, please refer to the disscusion:
+        // https://github.com/opencv/opencv/pull/25297#issuecomment-2049762298
+
+        if (perm[0] != 0) {
+            CV_Error(Error::StsParseError, "The first axis should not be permuted.");
+        }
+        if (perm[1] == 1 && perm[2] == 2 && perm[3] == 3) {
+            std::vector<int> orderLP = {0, 1, 2, 3};
+            layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+            layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NCHW;
+        }
+        else if (perm[1] == 1 && perm[2] == 3 && perm[3] == 2) {
+            std::vector<int> orderLP = {0, 3, 2, 1};
+            layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+        }
+        else if (perm[1] == 2 && perm[2] == 1 && perm[3] == 3) {
+            std::vector<int> orderLP = {0, 1, 3, 2};
+            layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+            layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NCHW;
+        }
+        else if (perm[1] == 2 && perm[2] == 3 && perm[3] == 1) {
+            std::vector<int> orderLP = {0, 2, 3, 1};
+            layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+        }
+
+    }
+    else {
+        layerParams.set("order", DictValue::arrayInt<int*>(perm.data(), perm.size()));
+    }
+
     addLayer(layerParams, op);
 }
 
