@@ -1830,7 +1830,7 @@ string Net::Impl::dump(bool forceAllocation) const
     return out.str();
 }
 
-static void dumpShapeToString(std::ostringstream &out, const Mat &m, const int num_indent_spaces = 4) {
+static void dumpTensorToString(std::ostringstream &out, const Mat &m, const int num_indent_spaces = 4) {
     string indent_spaces(num_indent_spaces, ' ');
 
     int type = 1;
@@ -1842,11 +1842,15 @@ static void dumpShapeToString(std::ostringstream &out, const Mat &m, const int n
         case CV_16U: type = 4; break;
         case CV_16S: type = 5; break;
         case CV_32S: type = 6; break;
-        // case CV_64S: type = 7; break;
-        // case CV_STR: type = 8; break;
-        // case CV_BOOL: type = 9; break;
+/*
+#if OPENCV_VERSION_MAJOR > 4
+        case CV_64S: type = 7; break;
+        case CV_STR: type = 8; break;
+        case CV_BOOL: type = 9; break;
+#endif
+*/
         case CV_16F: type = 10; break;
-        // don't use default
+        default: CV_Error(Error::StsUnsupportedFormat, "Type of mat is not supported");
     }
     const auto &mshape = shape(m);
 
@@ -2005,8 +2009,8 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
                 out << indent_spaces << "input {\n"
                     << indent_spaces << format("  name: \"%s\"\n", name.c_str());
                 // Add shape
-                if (ld.outputBlobs.empty()) {
-                    dumpShapeToString(out, ld.outputBlobs[i], num_indent_spaces + 2);
+                if (!ld.outputBlobs.empty()) {
+                    dumpTensorToString(out, ld.outputBlobs[i], num_indent_spaces + 2);
                 }
                 out << indent_spaces << "}\n"; // input{}
             }
@@ -2015,7 +2019,7 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
                 << indent_spaces << format("  name: \"%s\"\n", ld.name.c_str());
             // Add shape
             if (!ld.outputBlobs.empty()) {
-                dumpShapeToString(out, ld.outputBlobs.front(), num_indent_spaces + 2);
+                dumpTensorToString(out, ld.outputBlobs.front(), num_indent_spaces + 2);
             }
             out << indent_spaces << "}\n"; // output{}
         } else {
@@ -2064,7 +2068,7 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
     for (std::map<String, Mat*>::const_iterator iter = value_info.begin(); iter != value_info.end(); iter++) {
         out << indent_spaces << "value_info {\n"
             << indent_spaces << format("  name: \"%s\"\n", iter->first.c_str());
-        dumpShapeToString(out, *(iter->second), num_indent_spaces + 2);
+        dumpTensorToString(out, *(iter->second), num_indent_spaces + 2);
         out << indent_spaces << "}\n"; // value_info{}
     }
     out << "}\n"; // graph{}
