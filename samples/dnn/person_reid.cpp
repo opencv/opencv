@@ -14,7 +14,8 @@ Copyright (C) 2020-2021, SUSTech.
 How to use:
     sample command to run:
 
-        ./person_reid --query=/path/to/query/image --video=/path/to/videofile --model=path/to/youtu_reid_baseline_medium.onnx --yolo=path/to/yolov8n.onnx
+        ./person_reid --video=/path/to/videofile --model=path/to/youtu_reid_baseline_medium.onnx --yolo=path/to/yolov8n.onnx
+    The system will ask you to mark the person to be tracked
 
     You can download a baseline ReID model from:
         https://github.com/ReID-Team/ReID_extra_testdata
@@ -28,20 +29,23 @@ How to use:
 #include <opencv2/highgui.hpp>
 #include <opencv2/dnn.hpp>
 
+#include "common.hpp"
+
 using namespace cv;
 using namespace cv::dnn;
 using namespace std;
 
-std::string param_keys =
-    "{help    h  |                 | show help message}"
-    "{model   m  |                 | network model}"
-    "{query q    |                 | Path to target image. Skip this argument to select target in the video frame.}"
-    "{video v    |                 | video file path}"
-    "{yolo       |                 | Path to yolov8.onnx}"
-    "{resize_h   | 256             | resize input to specific height}"
-    "{resize_w   | 128             | resize input to specific width}";
+const string param_keys =
+    "{help    h  |           | show help message}"
+    "{model   m  |           | network model}"
+    "{query   q  |           | Path to target image. Skip this argument to select target in the video frame.}"
+    "{batch_size |    32     | batch size of each inference}"
+    "{video   v  | vtest.avi | video file path}"
+    "{yolo       |           | Path to yolov8n.onnx}"
+    "{resize_h   |    256    | resize input to specific height}"
+    "{resize_w   |    128    | resize input to specific width}";
 
-const string backend_keys = cv::format(
+const string backend_keys = format(
     "{ backend   | 0 | Choose one of computation backends: "
     "%d: automatically (by default), "
     "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
@@ -50,7 +54,7 @@ const string backend_keys = cv::format(
     "%d: CUDA }",
     DNN_BACKEND_DEFAULT, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV, DNN_BACKEND_VKCOM, DNN_BACKEND_CUDA);
 
-const string target_keys = cv::format(
+const string target_keys = format(
     "{ target    | 0 | Choose one of target computation devices: "
     "%d: CPU target (by default), "
     "%d: OpenCL, "
@@ -62,6 +66,53 @@ const string target_keys = cv::format(
     DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16, DNN_TARGET_MYRIAD, DNN_TARGET_VULKAN, DNN_TARGET_CUDA, DNN_TARGET_CUDA_FP16);
 
 string keys = param_keys + backend_keys + target_keys;
+
+
+struct MatComparator
+{
+    bool operator()(const Mat &a, const Mat &b) const
+    {
+        return a.data < b.data; // This is a simple pointer comparison, not content!
+    }
+};
+
+// Global variable for drawing function to select target
+map<Mat, Rect, MatComparator> imgDict;
+bool drawing = false;
+int ix = -1, iy = -1;
+Rect rect;
+
+void extractFrames(const string& queryImgPath, const string& videoPath, Net* reidNet, const string& yoloPath, int resize_h, int resize_w, int batch_size);
+
+int main(int argc, char **argv)
+{
+    CommandLineParser parser(argc, argv, keys);
+
+    if (argc == 1 || parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
+    parser = CommandLineParser(argc, argv, keys);
+    parser.about("Use this script to run ReID networks using OpenCV.");
+
+    const string modelPath = parser.get<String>("model");
+    const string queryImagePath = parser.get<String>("query");
+    const string videoPath = findFile(parser.get<String>("video"));
+    const string yoloPath = parser.get<String>("yolo");
+    const int batch_size = parser.get<int>("batch_size");
+    const int backend = parser.get<int>("backend");
+    const int target = parser.get<int>("target");
+    const int resize_h = parser.get<int>("resize_h");
+    const int resize_w = parser.get<int>("resize_w");
+
+    Net net = readNet(modelPath);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    extractFrames(queryImagePath, videoPath, &net, yoloPath, resize_h, resize_w, batch_size);
+    return 0;
+}
 
 static Mat preprocess(const Mat &img)
 {
@@ -81,9 +132,9 @@ static Mat preprocess(const Mat &img)
     return ret;
 }
 
-static std::vector<float> normalization(const std::vector<float> &feature)
+static vector<float> normalization(const vector<float> &feature)
 {
-    std::vector<float> ret;
+    vector<float> ret;
     float sum = 0.0;
     for (int i = 0; i < (int)feature.size(); i++)
     {
@@ -97,22 +148,22 @@ static std::vector<float> normalization(const std::vector<float> &feature)
     return ret;
 }
 
-static void extractFeatures(std::vector<cv::Mat> &imglist, Net *net, const int &resize_h, const int &resize_w, std::vector<std::vector<float>> &features, int batch_size=32)
+static void extractFeatures(vector<Mat> &imglist, Net *net, const int &resize_h, const int &resize_w, vector<vector<float>> &features, int batch_size=32)
 {
     for (int st = 0; st < (int)imglist.size(); st += batch_size)
     {
-        std::vector<Mat> batch;
+        vector<Mat> batch;
         for (int delta = 0; delta < batch_size && st + delta < (int)imglist.size(); delta++)
         {
             Mat img = imglist[st + delta];
             batch.push_back(preprocess(img));
         }
-        Mat blob = dnn::blobFromImages(batch, 1.0, Size(resize_w, resize_h), Scalar(0.0,0.0,0.0), true, false, CV_32F);
+        Mat blob = blobFromImages(batch, 1.0, Size(resize_w, resize_h), Scalar(0.0,0.0,0.0), true, false, CV_32F);
         net->setInput(blob);
         Mat out = net->forward();
         for (int i = 0; i < (int)out.size().height; i++)
         {
-            std::vector<float> temp_feature;
+            vector<float> temp_feature;
             for (int j = 0; j < (int)out.size().width; j++)
             {
                 temp_feature.push_back(out.at<float>(i,j));
@@ -123,7 +174,7 @@ static void extractFeatures(std::vector<cv::Mat> &imglist, Net *net, const int &
     return;
 }
 
-static float similarity(const std::vector<float> &feature1, const std::vector<float> &feature2)
+static float similarity(const vector<float> &feature1, const vector<float> &feature2)
 {
     float result = 0.0;
     for (int i = 0; i < (int)feature1.size(); i++)
@@ -133,7 +184,7 @@ static float similarity(const std::vector<float> &feature1, const std::vector<fl
     return result;
 }
 
-static int getTopK(const std::vector<std::vector<float>> &queryFeatures, const std::vector<std::vector<float>> &galleryFeatures)
+static int getTopK(const vector<vector<float>> &queryFeatures, const vector<vector<float>> &galleryFeatures)
 {
     if (queryFeatures.empty() || galleryFeatures.empty())
         return -1; // No valid index if either feature list is empty
@@ -141,7 +192,7 @@ static int getTopK(const std::vector<std::vector<float>> &queryFeatures, const s
     int bestIndex = -1;
     float maxSimilarity = -1.0;
 
-    const std::vector<float> &query = queryFeatures[0];
+    const vector<float> &query = queryFeatures[0];
 
     for (int j = 0; j < (int)galleryFeatures.size(); j++)
     {
@@ -156,54 +207,41 @@ static int getTopK(const std::vector<std::vector<float>> &queryFeatures, const s
     return bestIndex;
 }
 
-struct MatComparator
-{
-    bool operator()(const cv::Mat &a, const cv::Mat &b) const
-    {
-        return a.data < b.data; // This is a simple pointer comparison, not content!
-    }
-};
-
-std::map<cv::Mat, cv::Rect, MatComparator> imgDict;
-bool drawing = false;
-int ix = -1, iy = -1;
-cv::Rect rect;
-
-static std::vector<cv::Mat> yoloDetector(cv::Mat &frame, cv::dnn::Net &net)
+static vector<Mat> yoloDetector(Mat &frame, Net &net)
 {
     int height = frame.rows;
     int width = frame.cols;
 
-    int length = std::max(height, width);
+    int length = max(height, width);
 
-    cv:: Mat image = cv::Mat::zeros(cv::Size(length, length), frame.type());
+     Mat image = Mat::zeros(Size(length, length), frame.type());
 
-    frame.copyTo(image(cv::Rect(0, 0, width, height)));
+    frame.copyTo(image(Rect(0, 0, width, height)));
 
     // Calculate the scale
     double scale = static_cast<double>(length) / 640.0;
 
-    cv::Mat blob;
-    cv::dnn::blobFromImage(image, blob, 1.0/255.0, cv::Size(640, 640), cv::Scalar(), true, false, CV_32F);
+    Mat blob;
+    blobFromImage(image, blob, 1.0/255.0, Size(640, 640), Scalar(), true, false, CV_32F);
     net.setInput(blob);
 
-    std::vector<cv::Mat> outputs;
+    vector<Mat> outputs;
     net.forward(outputs);
-    cv::Mat reshapedMatrix = outputs[0].reshape(0, 84);  // Reshape to 2D (84 rows, 8400 columns)
+    Mat reshapedMatrix = outputs[0].reshape(0, 84);  // Reshape to 2D (84 rows, 8400 columns)
 
-    cv::Mat outputTransposed;
-    cv::transpose(reshapedMatrix, outputTransposed);
+    Mat outputTransposed;
+    transpose(reshapedMatrix, outputTransposed);
 
     int rows = outputTransposed.rows;
 
-    std::vector<cv::Rect2d> boxes;
-    std::vector<float> scores;
-    std::vector<int> class_ids;
+    vector<Rect2d> boxes;
+    vector<float> scores;
+    vector<int> class_ids;
 
     for (int i = 0; i < rows; i++) {
         double minScore, maxScore;
-        cv::Point minClassLoc, maxClassLoc;
-        cv::minMaxLoc(outputTransposed.row(i).colRange(4, outputTransposed.cols), &minScore, &maxScore, &minClassLoc, &maxClassLoc);
+        Point minClassLoc, maxClassLoc;
+        minMaxLoc(outputTransposed.row(i).colRange(4, outputTransposed.cols), &minScore, &maxScore, &minClassLoc, &maxClassLoc);
 
         if (maxScore >= 0.25) {
             double centerX = outputTransposed.at<float>(i, 0);
@@ -211,7 +249,7 @@ static std::vector<cv::Mat> yoloDetector(cv::Mat &frame, cv::dnn::Net &net)
             double w = outputTransposed.at<float>(i, 2);
             double h = outputTransposed.at<float>(i, 3);
 
-            cv::Rect2d box(
+            Rect2d box(
                 centerX - 0.5 * w, // x
                 centerY - 0.5 * h, // y
                 w, // width
@@ -224,10 +262,10 @@ static std::vector<cv::Mat> yoloDetector(cv::Mat &frame, cv::dnn::Net &net)
     }
 
     // Apply Non-Maximum Suppression
-    std::vector<int> indexes;
+    vector<int> indexes;
     NMSBoxes(boxes, scores, 0.25, 0.45, indexes, 0.5, 1);
 
-    std::vector<cv::Mat> images;
+    vector<Mat> images;
     for (int index : indexes) {
         int x = round(boxes[index].x * scale);
         int y = round(boxes[index].y * scale);
@@ -235,14 +273,14 @@ static std::vector<cv::Mat> yoloDetector(cv::Mat &frame, cv::dnn::Net &net)
         int h = round(boxes[index].height * scale);
 
         // Make sure the box is within the frame
-        x = std::max(0, x);
-        y = std::max(0, y);
-        w = std::min(w, frame.cols - x);
-        h = std::min(h, frame.rows - y);
+        x = max(0, x);
+        y = max(0, y);
+        w = min(w, frame.cols - x);
+        h = min(h, frame.rows - y);
 
         // Crop the image
-        cv::Rect roi(x, y, w, h); // Define a region of interest
-        cv::Mat crop_img = frame(roi); // Crop the region from the frame
+        Rect roi(x, y, w, h); // Define a region of interest
+        Mat crop_img = frame(roi); // Crop the region from the frame
         images.push_back(crop_img);
         imshow("cropped", crop_img);
         imgDict[crop_img] = roi;
@@ -252,61 +290,61 @@ static std::vector<cv::Mat> yoloDetector(cv::Mat &frame, cv::dnn::Net &net)
 }
 
 static void drawRectangle(int event, int x, int y, int, void* param) {
-    cv::Mat& img = *(cv::Mat*)param;
+    Mat& img = *(Mat*)param;
 
     switch (event) {
-        case cv::EVENT_LBUTTONDOWN:
+        case EVENT_LBUTTONDOWN:
             drawing = true;
             ix = x;
             iy = y;
             break;
 
-        case cv::EVENT_MOUSEMOVE:
+        case EVENT_MOUSEMOVE:
             if (drawing) {
-                cv::Mat img_copy = img.clone();
-                cv::rectangle(img_copy, cv::Point(ix, iy), cv::Point(x, y), cv::Scalar(0, 255, 0), 2);
-                cv::imshow("TRACKING", img_copy);
+                Mat img_copy = img.clone();
+                rectangle(img_copy, Point(ix, iy), Point(x, y), Scalar(0, 255, 0), 2);
+                imshow("TRACKING", img_copy);
             }
             break;
 
-        case cv::EVENT_LBUTTONUP:
+        case EVENT_LBUTTONUP:
             drawing = false;
-            rect = cv::Rect(cv::Point(ix, iy), cv::Point(x, y));
-            cv::rectangle(img, rect, cv::Scalar(0, 255, 0), 2);
-            cv::imshow("TRACKING", img);
+            rect = Rect(Point(ix, iy), Point(x, y));
+            rectangle(img, rect, Scalar(0, 255, 0), 2);
+            imshow("TRACKING", img);
             break;
     }
 }
 
-static void extractFrames(const std::string& queryImgPath, const std::string& videoPath, cv::dnn::Net* reidNet, const std::string& yoloPath, int resize_h = 384, int resize_w = 128) {
-    cv::VideoCapture cap(videoPath);
+void extractFrames(const string& queryImgPath, const string& videoPath, Net* reidNet, const string& yoloPath, int resize_h = 384, int resize_w = 128, int batch_size = 32) {
+    VideoCapture cap(videoPath);
     if (!cap.isOpened()) {
-        std::cerr << "Error: Video could not be opened." << std::endl;
+        cerr << "Error: Video could not be opened." << endl;
         return;
     }
 
-    cv::dnn::Net net = cv::dnn::readNetFromONNX(yoloPath);
-    std::vector<cv::Mat> queryImages;
+    Net net = readNetFromONNX(yoloPath);
+    vector<Mat> queryImages;
 
-    cv::Mat queryImg;
+    Mat queryImg;
     if (!queryImgPath.empty()) {
-        queryImg = cv::imread(queryImgPath);
+        queryImg = imread(queryImgPath);
         if (queryImg.empty()) {
-            std::cerr << "Error: Query image could not be loaded." << std::endl;
+            cerr << "Error: Query image could not be loaded." << endl;
             return;
         }
         queryImages.push_back(queryImg);
     } else {
-        cv::Mat firstFrame;
+        Mat firstFrame;
         cap.read(firstFrame);
         if (firstFrame.empty()) {
-            std::cerr << "Error reading the video" << std::endl;
+            cerr << "Error reading the video" << endl;
             return;
         }
 
-        cv::putText(firstFrame, "Draw Bounding Box on Target", cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 0, 0), 2);
-        cv::imshow("TRACKING", firstFrame);
-        cv::setMouseCallback("TRACKING", drawRectangle, &firstFrame);
+        putText(firstFrame, "Draw Bounding Box on Target", Point(10, 30), FONT_HERSHEY_SIMPLEX, 0.6, Scalar(255, 0, 0), 2);
+        imshow("TRACKING", firstFrame);
+        setMouseCallback("TRACKING", drawRectangle, &firstFrame);
 
         for(;;) {
             if (rect.width > 0 && rect.height > 0) {
@@ -314,70 +352,38 @@ static void extractFrames(const std::string& queryImgPath, const std::string& vi
                 queryImages.push_back(queryImg);
                 break;
             }
-            if (cv::waitKey(1) == 'q' || cv::waitKey(1) == 27) {
+            if (waitKey(1) == 'q' || waitKey(1) == 27) {
                 return;
             }
         }
     }
 
-    cv::Mat frame;
+    Mat frame;
     for(;;) {
         if (!cap.read(frame) || frame.empty()) {
             break;
         }
-
-        // Placeholder for yoloDetector, extractFeatures, and getTopK implementations
-        std::vector<cv::Mat> detectedImages = yoloDetector(frame, net);
-        std::vector<std::vector<float>> queryFeatures;
-        extractFeatures(queryImages, reidNet, resize_h, resize_w, queryFeatures);
-        std::vector<std::vector<float>> galleryFeatures;
-        extractFeatures(detectedImages, reidNet, resize_h, resize_w, galleryFeatures);
-
+        vector<Mat> detectedImages = yoloDetector(frame, net);
+        vector<vector<float>> queryFeatures;
+        extractFeatures(queryImages, reidNet, resize_h, resize_w, queryFeatures, batch_size);
+        vector<vector<float>> galleryFeatures;
+        extractFeatures(detectedImages, reidNet, resize_h, resize_w, galleryFeatures, batch_size);
 
         int topk_idx = getTopK(queryFeatures, galleryFeatures);
         if (topk_idx != -1 && static_cast<int>(detectedImages.size()) > topk_idx) {
-            cv::Mat topImg = detectedImages[topk_idx];
-            cv::Rect bbox = imgDict[topImg];
-            cv::rectangle(frame, bbox, cv::Scalar(0, 0, 255), 2);
-            cv::putText(frame, "Target", cv::Point(bbox.x, bbox.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2);
+            Mat topImg = detectedImages[topk_idx];
+            Rect bbox = imgDict[topImg];
+            rectangle(frame, bbox, Scalar(0, 0, 255), 2);
+            putText(frame, "Target", Point(bbox.x, bbox.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 255), 2);
         }
 
-        cv::putText(frame, "Tracking", cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 0, 0), 2);
-        cv::imshow("TRACKING", frame);
-        if (cv::waitKey(1) == 'q' || cv::waitKey(1) == 27) {
+        putText(frame, "Tracking", Point(10, 30), FONT_HERSHEY_SIMPLEX, 0.6, Scalar(255, 0, 0), 2);
+        imshow("TRACKING", frame);
+        if (waitKey(1) == 'q' || waitKey(1) == 27) {
             break;
         }
     }
 
     cap.release();
-    cv::destroyAllWindows();
-}
-
-int main(int argc, char **argv)
-{
-    CommandLineParser parser(argc, argv, keys);
-
-    if (argc == 1 || parser.has("help"))
-    {
-        parser.printMessage();
-        return 0;
-    }
-    parser = CommandLineParser(argc, argv, keys);
-    parser.about("Use this script to run ReID networks using OpenCV.");
-
-    const std::string modelPath = parser.get<String>("model");
-    const std::string queryImagePath = parser.get<String>("query");
-    const std::string videoPath = parser.get<String>("video");
-    const std::string yoloPath = parser.get<String>("yolo");
-    const int backend = parser.get<int>("backend");
-    const int target = parser.get<int>("target");
-    const int resize_h = parser.get<int>("resize_h");
-    const int resize_w = parser.get<int>("resize_w");
-
-    dnn::Net net = dnn::readNet(modelPath);
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    extractFrames(queryImagePath, videoPath, &net, yoloPath, resize_h, resize_w);
-    return 0;
+    destroyAllWindows();
 }
