@@ -565,6 +565,9 @@ struct CvCapture_FFMPEG
     int64_t           pts_in_fps_time_base;
     int64_t           dts_delay_in_fps_time_base;
 
+    AVIOContext     * avio_context;
+    AVBufferRef       avio_buffer;
+
     AVPacket          packet;
     Image_FFMPEG      frame;
     struct SwsContext *img_convert_ctx;
@@ -630,6 +633,7 @@ void CvCapture_FFMPEG::init()
 
     avcodec = 0;
     context = 0;
+    avio_context = 0;
     frame_number = 0;
     eps_zero = 0.000025;
 
@@ -730,6 +734,12 @@ void CvCapture_FFMPEG::close()
 #else
         av_bitstream_filter_close(bsfc);
 #endif
+    }
+
+    if (avio_context)
+    {
+        av_free(avio_context->buffer);
+        avio_context_free(&avio_context);
     }
 
     init();
@@ -1021,20 +1031,6 @@ static bool isThreadSafe() {
     return threadSafe;
 }
 
-struct buffer_data {
-    const uint8_t *ptr;
-    size_t size;
-};
-static int read_packet(void *opaque, uint8_t *buf, int buf_size)
-{
-    struct buffer_data *bd = (struct buffer_data *)opaque;
-    buf_size = FFMIN(buf_size, bd->size);
-    memcpy(buf, bd->ptr, buf_size);
-    bd->ptr  += buf_size;
-    bd->size -= buf_size;
-    return buf_size;
-}
-
 bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters& params)
 {
     return open(_filename, {}, params);
@@ -1171,28 +1167,28 @@ bool CvCapture_FFMPEG::open(const char* _filename, const std::vector<uchar>& buf
       input_format = av_find_input_format(entry->value);
     }
 
-    int err = -1;
-    if (_filename)
+    if (!buffer.empty())
     {
-        err = avformat_open_input(&ic, _filename, input_format, &dict);
-    }
-    else if (!buffer.empty())
-    {
-        // TODO: clean allocated memory
-        auto bd = new buffer_data();
-        bd->size = buffer.size();
-        bd->ptr = buffer.data();
+        avio_buffer.size = buffer.size();
+        avio_buffer.data = const_cast<uint8_t*>(buffer.data());
 
         size_t avio_ctx_buffer_size = 4096;
         uint8_t* avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
         CV_Assert(avio_ctx_buffer);
-        AVIOContext *avio_ctx = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size,
-                                                   0, bd, &read_packet, NULL, NULL);
-        CV_Assert(avio_ctx);
-        ic->pb = avio_ctx;
-
-        err = avformat_open_input(&ic, NULL, input_format, &dict);
+        avio_context = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, &avio_buffer,
+            [](void *opaque, uint8_t *buf, int buf_size) -> int {
+                auto src = reinterpret_cast<AVBufferRef*>(opaque);
+                buf_size = FFMIN(buf_size, src->size);
+                memcpy(buf, src->data, buf_size);
+                src->data += buf_size;
+                src->size -= buf_size;
+                return buf_size;
+            },
+            NULL, NULL);
+        CV_Assert(avio_context);
+        ic->pb = avio_context;
     }
+    int err = avformat_open_input(&ic, _filename, input_format, &dict);
 
     if (err < 0)
     {
