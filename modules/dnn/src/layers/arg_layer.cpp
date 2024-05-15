@@ -66,7 +66,8 @@ public:
         MatShape inpShape = inputs[0];
 
         const int axis_ = normalize_axis(axis, inpShape);
-        handleKeepDims(inpShape, axis_);
+        if (!inpShape.empty())
+            handleKeepDims(inpShape, axis_);
         outputs.assign(1, inpShape);
 
         return false;
