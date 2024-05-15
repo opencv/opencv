@@ -200,9 +200,14 @@ inline static vuint32mf2_t vmul(const vuint32mf2_t & op1, uint32_t op2, size_t v
     return vmul_vx_u32mf2(op1, op2, vl);
 }
 
-inline static vuint32mf2_t vreinterpret_u32mf2(vint32mf2_t val)
+inline static vuint32mf2_t vreinterpret_u32mf2(const vint32mf2_t& val)
 {
     return vreinterpret_v_i32mf2_u32mf2(val);
+}
+
+inline static vuint32mf2_t vreinterpret_u32mf2(const vuint16mf2_t& val)
+{
+    return vreinterpret_v_u16mf2_u32mf2(val);
 }
 
 #endif //OPENCV_HAL_INTRIN_RVV_COMPAT_OVERLOAD_HPP

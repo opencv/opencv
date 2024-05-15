@@ -281,7 +281,7 @@ template<typename R> struct TheTest
         v_uint64 vu64 = v_reinterpret_as_u64(r1); out.a.clear(); v_store((uint64*)out.a.d, vu64); EXPECT_EQ(data.a, out.a);
         v_int64 vs64 = v_reinterpret_as_s64(r1); out.a.clear(); v_store((int64*)out.a.d, vs64); EXPECT_EQ(data.a, out.a);
         v_float32 vf32 = v_reinterpret_as_f32(r1); out.a.clear(); v_store((float*)out.a.d, vf32); EXPECT_EQ(data.a, out.a);
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         v_float64 vf64 = v_reinterpret_as_f64(r1); out.a.clear(); v_store((double*)out.a.d, vf64); EXPECT_EQ(data.a, out.a);
 #endif
 
@@ -747,7 +747,7 @@ template<typename R> struct TheTest
 
     TheTest & test_dotprod_expand_f64()
     {
-    #if CV_SIMD_64F
+    #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         Data<R> dataA, dataB;
         dataA += std::numeric_limits<LaneType>::max() - VTraits<R>::vlanes();
         dataB += std::numeric_limits<LaneType>::min();
@@ -1405,7 +1405,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_cvt64()
     {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         typedef v_float64 Rt;
         Data<R> dataA;
         dataA *= 1.1;
@@ -1431,7 +1431,7 @@ template<typename R> struct TheTest
 
     TheTest & test_cvt64_double()
     {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         Data<R> dataA(std::numeric_limits<LaneType>::max()),
                 dataB(std::numeric_limits<LaneType>::min());
         dataB += VTraits<R>::vlanes();
@@ -1994,7 +1994,7 @@ void test_hal_intrin_float32()
 void test_hal_intrin_float64()
 {
     DUMP_ENTRY(v_float64);
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     TheTest<v_float64>()
         .test_loadstore()
         .test_addsub()
