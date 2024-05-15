@@ -420,6 +420,8 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP String name; //!< Name of the layer instance, can be used for logging or other internal purposes.
         CV_PROP String type; //!< Type name which was used for creating layer by layer factory.
         CV_PROP int preferableTarget; //!< prefer target for layer forwarding
+        CV_PROP bool dynamicShape; //!< true when a previous layer has a dynamic shape
+
 
         Layer();
         explicit Layer(const LayerParams &params);      //!< Initializes only #name, #type and #blobs fields.
@@ -828,7 +830,6 @@ CV__DNN_INLINE_NS_BEGIN
          * @return overall ticks for model inference.
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
-
 
         struct Impl;
         inline Impl* getImpl() const { return impl.get(); }

@@ -4,7 +4,6 @@
 
 // Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
-
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -121,7 +120,8 @@ protected:
     std::map<std::string, TensorInfo> constBlobsExtraInfo;
 
     std::map<std::string, MatShape> outShapes;  // List of internal blobs shapes.
-    bool hasDynamicShapes;  // Whether the model has inputs with dynamic shapes
+    bool hasDynamicInputShapes;  // Whether the model has inputs with dynamic shapes
+    bool hasDynamicLayerShapes;  // Whether the model has layer(s) with dynamic shapes
     typedef std::map<std::string, MatShape>::iterator IterShape_t;
 
     std::map<std::string, LayerInfo> layer_id;
@@ -268,7 +268,7 @@ ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
     , onnx_opset(0)
     , useLegacyNames(getParamUseLegacyNames())
 {
-    hasDynamicShapes = false;
+    hasDynamicInputShapes = false;
     CV_Assert(onnxFile);
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFile);
 
@@ -292,7 +292,7 @@ ONNXImporter::ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
     , onnx_opset(0)
     , useLegacyNames(getParamUseLegacyNames())
 {
-    hasDynamicShapes = false;
+    hasDynamicInputShapes = false;
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing in-memory ONNX model (" << sizeBuffer << " bytes)");
 
     struct _Buf : public std::streambuf
@@ -593,7 +593,7 @@ Mat ONNXImporter::getBlob(const std::string& input_name)
     std::map<std::string, Mat>::const_iterator constBlob = constBlobs.find(input_name);
     if (constBlob == constBlobs.end())
     {
-        CV_Error(Error::StsBadArg, std::string("Blob ") + input_name + " not found in const blobs");
+        return Mat();// CV_Error(Error::StsBadArg, std::string("Blob ") + input_name + " not found in const blobs");
     }
     return constBlob->second;
 }
@@ -601,6 +601,8 @@ Mat ONNXImporter::getBlob(const std::string& input_name)
 Mat ONNXImporter::getIntBlob(const opencv_onnx::NodeProto& node_proto, int index)
 {
     Mat blob = getBlob(node_proto, index);
+    if (blob.empty())
+        return blob;
     if (blob.depth() == CV_32S)
         return blob;
     if (blob.depth() == CV_64S) {
@@ -647,6 +649,7 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
     std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
     int inpNum = 0;
     num_inputs = std::min(node_proto.input_size(), num_inputs);
+    bool dynamic_shape = false;
     for (int j = 0; j < num_inputs; j++)
     {
         const std::string& input_name = node_proto.input(j);
@@ -656,13 +659,22 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
             ++inpNum;
             // Collect input shapes.
             IterShape_t shapeIt = outShapes.find(input_name);
-            CV_Assert(shapeIt != outShapes.end());
-            layerInpShapes.push_back(shapeIt->second);
+            if (shapeIt != outShapes.end())
+                layerInpShapes.push_back(shapeIt->second);
         }
     }
     // Compute shape of output blob for this layer.
     Ptr<Layer> layer = dstNet.getLayer(id);  // FIXIT: avoid instantiation of layers during the import stage
+    if (layer->dynamicShape)
+        dynamic_shape = true;
     layer->getMemoryShapes(layerInpShapes, 0, layerOutShapes, layerInternalShapes);
+    if (dynamic_shape)
+    {
+        layer->dynamicShape = dynamic_shape;
+        layerParams.set("dynamicShape", true);
+        layer->setParamsFrom(layerParams);
+        hasDynamicLayerShapes = true;
+    }
     for (int i = 0; i < node_proto.output_size() && i < (int)layerOutShapes.size(); ++i)
     {
         const std::string& output_name = node_proto.output(i);
@@ -823,7 +835,6 @@ void ONNXImporter::populateNet()
     parseOperatorSet();
 
     simplifySubgraphs(*graph_proto);
-
     const int layersSize = graph_proto->node_size();
     CV_LOG_DEBUG(NULL, "DNN/ONNX: graph simplified to " << layersSize << " nodes");
 
@@ -861,13 +872,13 @@ void ONNXImporter::populateNet()
             // NHW, NCHW(NHWC), NCDHW(NDHWC); do not set this flag if only N is dynamic
             if (dimension.has_dim_param() && !(j == 0 && inpShape.size() >= 3))
             {
-                hasDynamicShapes = true;
+                hasDynamicInputShapes = true;
             }
         }
         bool isInitialized = ((constBlobs.find(name) != constBlobs.end()));
         CV_LOG_IF_DEBUG(NULL, !isInitialized, "DNN/ONNX: input[" << i << " as '" << name << "'] shape=" << toString(inpShape));
         CV_LOG_IF_VERBOSE(NULL, 0, isInitialized, "DNN/ONNX: pre-initialized input[" << i << " as '" << name << "'] shape=" << toString(inpShape));
-        if (dim_size > 0 && !hasDynamicShapes)  // FIXIT result is not reliable for models with multiple inputs
+        if (dim_size > 0 && !hasDynamicInputShapes)  // FIXIT result is not reliable for models with multiple inputs
         {
             inpShape[0] = std::max(inpShape[0], 1); // It's OK to have undetermined batch size
         }
@@ -881,7 +892,7 @@ void ONNXImporter::populateNet()
     }
 
     dstNet.setInputsNames(netInputs);
-    if (!hasDynamicShapes)
+    if (!hasDynamicInputShapes)
     {
         for (int i = 0; i < netInputs.size(); ++i)
             dstNet.setInputShape(netInputs[i], outShapes[netInputs[i]]);
@@ -1004,7 +1015,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
 
         layerParams.name = name;
         layerParams.type = layer_type;
-        layerParams.set("has_dynamic_shapes", hasDynamicShapes);
+        layerParams.set("has_dynamic_shapes", hasDynamicInputShapes);
 
         setParamsDtype(layerParams, node_proto);
 
@@ -2151,7 +2162,7 @@ void ONNXImporter::parseSqueeze(LayerParams& layerParams, const opencv_onnx::Nod
     {
         layerParams.type = "Reshape";
         layerParams.set("dim", DictValue::arrayInt(&outShape[0], outShape.size()));
-        if (hasDynamicShapes)
+        if (hasDynamicInputShapes)
         {
             std::vector<int> dynamicAxes;
             std::vector<int> inputIndices;
@@ -2302,7 +2313,7 @@ void ONNXImporter::parseUnsqueeze(LayerParams& layerParams, const opencv_onnx::N
     outShape.insert(outShape.begin() + axis, 1);
     layerParams.type = (depth == CV_8S) ? "ReshapeInt8" : "Reshape";
     layerParams.set("dim", DictValue::arrayInt(&outShape[0], outShape.size()));
-    if (hasDynamicShapes)
+    if (hasDynamicInputShapes)
     {
         std::vector<int> dynamicAxes;
         std::vector<int> inputIndices;
@@ -2405,24 +2416,32 @@ void ONNXImporter::parsePad(LayerParams& layerParams, const opencv_onnx::NodePro
     {
         // Paddings are in order begin0, begin1, .. beginN, end0, end1, ..., endN.
         // We need to shuffle it to begin0, end0, begin1, end1, ...
-        Mat paddings = getIntBlob(node_proto, 1).reshape(1, 2);
-        paddings = paddings.t();
-        layerParams.set("paddings", DictValue::arrayInt(paddings.ptr<int>(), paddings.total()));
-
-        // check for non-null constant_value
-        if (node_proto.input_size() == 3 && !node_proto.input(2).empty())
+        Mat paddings = getIntBlob(node_proto, 1);
+        if (paddings.empty())
         {
-            Mat value = getBlob(node_proto, 2);
-            double padValue = 0;
-            switch(value.depth())
+            layerParams.set("dynamic_shape", true);
+        }
+        else
+        {
+            paddings = paddings.reshape(1, 2);
+            paddings = paddings.t();
+            layerParams.set("paddings", DictValue::arrayInt(paddings.ptr<int>(), paddings.total()));
+
+            // check for non-null constant_value
+            if (node_proto.input_size() == 3 && !node_proto.input(2).empty())
             {
+                Mat value = getBlob(node_proto, 2);
+                double padValue = 0;
+                switch (value.depth())
+                {
                 case CV_32F: padValue = value.ptr<float>()[0];   break;
                 case CV_32S: padValue = value.ptr<int32_t>()[0]; break;
                 case CV_64S: padValue = value.ptr<int64_t>()[0]; break;
                 case CV_8S:  padValue = value.ptr<int8_t>()[0];  break;
                 default: CV_Error(Error::BadDepth, "Unsupported type");
+                }
+                layerParams.set<double>("value", (double)padValue);
             }
-            layerParams.set<double>("value", (double)padValue);
         }
     }
     addLayer(layerParams, node_proto);

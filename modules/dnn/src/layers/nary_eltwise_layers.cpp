@@ -634,6 +634,26 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        if (dynamicShape)
+        {
+            std::vector<Mat> inputs, outputs;
+            inputs_arr.getMatVector(inputs);
+            outputs_arr.getMatVector(outputs);
+            std::vector<MatShape> inpShape;
+            for (int i = 0; i < inputs.size(); i++)
+            {
+                MatShape xi(inputs[i].dims);
+                for (int j = 0; j < inputs[i].dims; j++)
+                    xi[j] = inputs[i].size[j];
+                inpShape.push_back(xi);
+            }
+            MatShape outShape = findCommonShape(inpShape);
+            outputs_arr.create(1, 1, inputs[0].type());
+            std::vector<Mat>& vec = *(std::vector<Mat>*)outputs_arr.getObj();
+            vec[0] = Mat(outShape, inputs[0].type());
+            outputs_arr.getMatVector(outputs);
+            finalize(inputs, outputs);
+        }
         if (inputs_arr.depth() == CV_16F)
         {
             helper.reInit(sizeof(float));

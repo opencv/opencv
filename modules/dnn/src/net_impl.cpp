@@ -728,9 +728,15 @@ void Net::Impl::forwardLayer(LayerData& ld)
                 for (int i = 0; i < ld.inputBlobs.size(); ++i)
                 {
                     inps[i] = *ld.inputBlobs[i];
+                    const LayerData loid = getLayerData(ld.inputBlobsId[i].lid);
+                    if (loid.dynamicShape)
+                        layer->dynamicShape = true;
                 }
                 layer->forward(inps, ld.outputBlobs, ld.internals);
-
+                if (layer->dynamicShape)
+                {
+                    ld.dynamicShape = true;
+                }
                 if (getParam_DNN_CHECK_NAN_INF())
                 {
                     bool fail = false;
@@ -872,10 +878,10 @@ void Net::Impl::forwardToLayer(LayerData& ld, bool clearFlags)
     // forward parents
     for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end() && (it->second.id < ld.id); ++it)
     {
-        LayerData& ld = it->second;
-        if (ld.flag)
+        LayerData& ldIt = it->second;
+        if (ldIt.flag)
             continue;
-        forwardLayer(ld);
+        forwardLayer(ldIt);
     }
 
     // forward itself

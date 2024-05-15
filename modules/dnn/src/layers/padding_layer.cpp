@@ -8,7 +8,6 @@
 /*
 Implementation of padding layer, which adds paddings to input blob.
 */
-
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
@@ -37,7 +36,11 @@ public:
         paddingValue = params.get<double>("value", 0);
         inputDims = params.get<int>("input_dims", -1);
         paddingType = params.get<String>("type", "constant");
-
+        dynamicShape = params.has("dynamic_shape");
+        if (dynamicShape)
+        {
+            return;
+        }
         CV_Assert(params.has("paddings"));
         const DictValue& paddingsParam = params.get("paddings");
         CV_Assert((paddingsParam.size() & 1) == 0);
@@ -56,6 +59,13 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        if (dynamicShape)
+        {
+            CV_Assert(inputs.size() == 2);
+            const MatShape& inpShape = inputs[0];
+            outputs.resize(1, inpShape);
+            return false;
+        }
         CV_Assert(inputs.size() == 1);
         const MatShape& inpShape = inputs[0];
         CV_Assert(inpShape.size() >= paddings.size());
@@ -76,7 +86,7 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_CheckEQ(inputs.size(), 1u, "");
+        // Why? CV_CheckEQ(inputs.size(), 1u, "");
         if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
             CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S, "");
         else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
@@ -141,6 +151,40 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+
+        if (dynamicShape)
+        {
+            std::vector<int> outSize;
+            for (int i = 0; i < inputs[0].dims; i++)
+                outSize.push_back(inputs[0].size[i]);
+
+            paddings.resize(inputs[1].total() / 2);
+            if (inputs[1].type() ==CV_32F)
+                for (int i = 0; i < paddings.size(); ++i)
+                {
+                    paddings[i].first = inputs[1].at<float>(i * 2);  // Pad before.
+                    outSize[i] += paddings[i].first;
+                    paddings[i].second = inputs[1].at<float>(i * 2 + 1);  // Pad after.
+                    outSize[i] += paddings[i].second;
+                    CV_Assert_N(paddings[i].first >= 0, paddings[i].second >= 0);
+                }
+            else if (inputs[1].type() == CV_32S)
+                for (int i = 0; i < paddings.size(); ++i)
+                {
+                    paddings[i].first = inputs[1].at<int>(i * 2);  // Pad before.
+                    outSize[i] += paddings[i].first;
+                    paddings[i].second = inputs[1].at<int>(i * 2 + 1);  // Pad after.
+                    outSize[i] += paddings[i].second;
+                    CV_Assert_N(paddings[i].first >= 0, paddings[i].second >= 0);
+                }
+            else
+                CV_Error(Error::StsNotImplemented, "Unsupported type for padding values.");
+            outputs_arr.create(1,1, inputs[0].type());
+            std::vector<Mat>& vec = *(std::vector<Mat>*)outputs_arr.getObj();
+            vec[0] = Mat(outSize, inputs[0].type());
+            outputs_arr.getMatVector(outputs);
+            finalize(inputs_arr, outputs_arr);
+        }
 
         if (paddingType == "constant")
         {

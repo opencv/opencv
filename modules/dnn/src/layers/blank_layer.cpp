@@ -119,6 +119,15 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        if (dynamicShape)
+        {
+            std::vector<Mat> inputs, outputs;
+            inputs_arr.getMatVector(inputs);
+            outputs_arr.getMatVector(outputs);
+            outputs_arr.create(1, 1, inputs[0].type());
+            std::vector<Mat>& vec = *(std::vector<Mat>*)outputs_arr.getObj();
+            vec[0] = Mat(inputs[0].size(), inputs[0].type());
+        }
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 

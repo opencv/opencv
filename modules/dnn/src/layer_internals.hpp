@@ -47,6 +47,7 @@ struct LayerData
         , dtype(CV_32F)
         , skip(false)
         , flag(0)
+        , dynamicShape(false)
     {}
     LayerData(int _id, const String& _name, const String& _type, const int& _dtype, LayerParams& _params)
         : id(_id)
@@ -56,6 +57,7 @@ struct LayerData
         , params(_params)
         , skip(false)
         , flag(0)
+        , dynamicShape(false)
     {
         CV_TRACE_FUNCTION();
 
@@ -95,6 +97,7 @@ struct LayerData
     bool skip;
 
     int flag;
+    bool dynamicShape;
 
 
     void resetAllocation()

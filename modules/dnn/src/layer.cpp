@@ -9,7 +9,7 @@ namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 
-Layer::Layer() { preferableTarget = DNN_TARGET_CPU; }
+Layer::Layer() { preferableTarget = DNN_TARGET_CPU; dynamicShape=false;}
 
 Layer::Layer(const LayerParams& params)
     : blobs(params.blobs)
@@ -17,6 +17,7 @@ Layer::Layer(const LayerParams& params)
     , type(params.type)
 {
     preferableTarget = DNN_TARGET_CPU;
+    dynamicShape = false;
 }
 
 void Layer::setParamsFrom(const LayerParams& params)
@@ -24,6 +25,8 @@ void Layer::setParamsFrom(const LayerParams& params)
     blobs = params.blobs;
     name = params.name;
     type = params.type;
+    if (params.has("dynamicShape"))
+        dynamicShape = true;
 }
 
 int Layer::inputNameToIndex(String)

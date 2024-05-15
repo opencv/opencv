@@ -401,5 +401,6 @@ int64 Net::getPerfProfile(std::vector<double>& timings)
     return impl->getPerfProfile(timings);
 }
 
+
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
