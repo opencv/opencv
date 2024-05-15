@@ -977,11 +977,15 @@ static int mul8u16uWrapper(const uchar* src1, size_t step1,
                            uchar* dst, size_t step, int width, int height,
                            void* usrdata)
 {
-    double scale = *((double*)usrdata);
-    CALL_HAL(mul8u16u, cv_hal_mul8u16u, src1, step1, src2, step2, (ushort*)dst, step, width, height, scale);
-
-    // the fallback implementation should be used then
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    double scale = *((double *)usrdata);
+    int res = cv_hal_mul8u16u(src1, step1, src2, step2, (ushort *)dst, step, width, height, scale);
+    if (res == 0 || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8u16u ==> " CVAUX_STR(cv_hal_mul8u16u)
+                                           " returned %d (0x%08x)", res, res));
+    }
 }
 
 static int mul8s16sWrapper(const uchar* src1, size_t step1,
@@ -990,10 +994,14 @@ static int mul8s16sWrapper(const uchar* src1, size_t step1,
                            void* usrdata)
 {
     double scale = *((double*)usrdata);
-    CALL_HAL(mul8s16s, cv_hal_mul8s16s, (schar*)src1, step1, (schar*)src2, step2, (short*)dst, step, width, height, scale);
-
-    // the fallback implementation should be used then
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    int res = cv_hal_mul8s16s((schar *)src1, step1, (schar *)src2, step2, (short *)dst, step, width, height, scale);
+    if (res == 0 || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8s16s ==> " CVAUX_STR(cv_hal_mul8s16s)
+                                           " returned %d (0x%08x)", res, res));
+    }
 }
 
 static BinaryFuncC* getMulTab()
