@@ -567,6 +567,67 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Slice_Test,
                 std::vector<int>({1, 4})
 ));
 
+typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Padding_Test;
+TEST_P(Layer_Padding_Test, Accuracy_01D){
+
+    std::vector<int> input_shape = get<0>(GetParam());
+    float pad_value = 10;
+
+    LayerParams lp;
+    lp.type = "Padding";
+    lp.name = "PaddingLayer";
+    std::vector<int> paddings = {5, 3}; // Pad before and pad after for one dimension
+    lp.set("paddings", DictValue::arrayInt(paddings.data(), paddings.size()));
+    lp.set("value", pad_value);
+    lp.set("input_dims", (input_shape.size() == 1) ? -1 : 0);
+    Ptr<PaddingLayer> layer = PaddingLayer::create(lp);
+
+    cv::Mat input(input_shape.size(), input_shape.data(), CV_32F);
+    cv::randn(input, 0.0, 1.0);
+
+
+    // Fill in the padding values manually
+    // Create output ref shape depending on the input shape and input_dims
+    std::vector<int> output_shape;
+    if (input_shape.size() == 0){
+        output_shape = {1 + paddings[0] + paddings[1]};
+    } else if (input_shape.size() == 1){
+        output_shape = {input_shape[0] + paddings[0] + paddings[1]};
+    } else {
+        output_shape = {input_shape[0], input_shape[1] + paddings[0] + paddings[1]};
+    }
+
+    cv::Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, pad_value);
+
+    if (input_shape.size() == 0){
+        output_ref.at<float>(paddings[0]) = input.at<float>(0);
+    } else if (input_shape.size() == 1){
+        for (int i = 0; i < input_shape[0]; ++i){
+            output_ref.at<float>(i + paddings[0]) = input.at<float>(i);
+        }
+    } else {
+        for (int i = 0; i < input_shape[0]; ++i){
+            for (int j = 0; j < input_shape[1]; ++j){
+                output_ref.at<float>(i, j + paddings[0]) = input.at<float>(i, j);
+            }
+        }
+    }
+
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(1, outputs.size());
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/,  Layer_Padding_Test,
+/*input blob shape*/ testing::Values(
+            std::vector<int>{},
+            std::vector<int>{1},
+            std::vector<int>{1, 4},
+            std::vector<int>{4, 1}
+));
+
 typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_FullyConnected_Test;
 TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
 {
