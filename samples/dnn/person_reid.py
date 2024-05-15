@@ -15,7 +15,7 @@ Copyright (C) 2020-2021, SUSTech.
 How to use:
     sample command to run:
 
-        python person_reid.py --query=/path/to/query_image --video=/path/to/video/footage --model=path/to/youtu_reid_baseline_medium.onnx --yolo=/path/to/yolov8.onnx
+        python person_reid.py --query=/path/to/query_image(optional) --video=/path/to/video/footage --model=path/to/youtu_reid_baseline_medium.onnx --yolo=/path/to/yolov8.onnx
 
     You can download a baseline ReID model from:
         https://github.com/ReID-Team/ReID_extra_testdata

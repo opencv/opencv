@@ -82,7 +82,7 @@ bool drawing = false;
 int ix = -1, iy = -1;
 Rect rect;
 
-void extractFrames(const string& queryImgPath, const string& videoPath, Net* reidNet, const string& yoloPath, int resize_h, int resize_w, int batch_size);
+static void extractFrames(const string& queryImgPath, const string& videoPath, Net* reidNet, const string& yoloPath, int resize_h, int resize_w, int batch_size);
 
 int main(int argc, char **argv)
 {
@@ -282,7 +282,6 @@ static vector<Mat> yoloDetector(Mat &frame, Net &net)
         Rect roi(x, y, w, h); // Define a region of interest
         Mat crop_img = frame(roi); // Crop the region from the frame
         images.push_back(crop_img);
-        imshow("cropped", crop_img);
         imgDict[crop_img] = roi;
     }
 
