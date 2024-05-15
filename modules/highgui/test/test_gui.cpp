@@ -206,8 +206,7 @@ TEST(Highgui_GUI, trackbar)
 }
 
 // See https://github.com/opencv/opencv/issues/25560
-#if (!defined(ENABLE_PLUGINS) \
-      && !defined HAVE_WAYLAND )
+#if !defined(ENABLE_PLUGINS)
 TEST(Highgui_GUI, DISABLED_small_width_image)
 #else
 TEST(Highgui_GUI, small_width_image)
