@@ -16,22 +16,22 @@ std::string param_keys =
     "{ crop             | false | Preprocess input image by center cropping.}"
     "{ needSoftmax      | false | Use Softmax to post-process the output of the net.}";
 std::string backend_keys = cv::format(
-    "{ backend          | 0 | Choose one of computation backends: "
-                              "%d: automatically (by default), "
-                              "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                              "%d: OpenCV implementation, "
-                              "%d: VKCOM, "
-                              "%d: CUDA, "
-                              "%d: WebNN }", cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA, cv::dnn::DNN_BACKEND_WEBNN);
+    "{ backend          | default | Choose one of computation backends: "
+                              "default: automatically (by default), "
+                              "inference_engine: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                              "openvino: OpenCV implementation, "
+                              "vkcom: VKCOM, "
+                              "cuda: CUDA, "
+                              "webnn: WebNN }");
 std::string target_keys = cv::format(
-    "{ target           | 0 | Choose one of target computation devices: "
-                              "%d: CPU target (by default), "
-                              "%d: OpenCL, "
-                              "%d: OpenCL fp16 (half-float precision), "
-                              "%d: VPU, "
-                              "%d: Vulkan, "
-                              "%d: CUDA, "
-                              "%d: CUDA fp16 (half-float preprocess) }", cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
+    "{ target           | cpu | Choose one of target computation devices: "
+                              "cpu: CPU target (by default), "
+                              "opencl: OpenCL, "
+                              "opencl_fp16: OpenCL fp16 (half-float precision), "
+                              "vpu: VPU, "
+                              "vulkan: Vulkan, "
+                              "cuda: CUDA, "
+                              "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
 std::string keys = param_keys + backend_keys + target_keys;
 
@@ -67,8 +67,8 @@ int main(int argc, char** argv)
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
     String model = findFile(parser.get<String>("model"));
-    int backendId = parser.get<int>("backend");
-    int targetId = parser.get<int>("target");
+    String backend = parser.get<String>("backend");
+    String target = parser.get<String>("target");
     bool needSoftmax = parser.get<bool>("needSoftmax");
     std::cout<<"mean: "<<mean<<std::endl;
     std::cout<<"std: "<<std<<std::endl;
@@ -95,14 +95,15 @@ int main(int argc, char** argv)
 
     //! [Read and initialize network]
     Net net = readNetFromONNX(model);
-    net.setPreferableBackend(backendId);
-    net.setPreferableTarget(targetId);
+    net.setPreferableBackend(getBackendID(backend));
+    net.setPreferableTarget(getTargetID(target));
+    //! [Read and initialize network]
 
     // Create a window
     static const std::string kWinName = "Deep learning image classification in OpenCV";
     cv::namedWindow(kWinName, WINDOW_NORMAL);
 
-
+    //! [Open a video file or an image file or a camera stream]
     VideoCapture cap;
     vector<string> imageFiles;
     size_t currentImageIndex = 0;
@@ -128,6 +129,7 @@ int main(int argc, char** argv)
     } else {
         cap.open(0); // Open default camera
     }
+    //! [Open a video file or an image file or a camera stream]
 
 
     // Process frames.
@@ -167,6 +169,7 @@ int main(int argc, char** argv)
 
         //! [Set input blob]
         net.setInput(blob);
+        //! [Set input blob]
 
         int classId;
         double confidence;
@@ -185,11 +188,13 @@ int main(int argc, char** argv)
             timeRecorder.start();
             prob = net.forward();
             timeRecorder.stop();
+            //! [Make forward pass]
 
             //! [Get a class with a highest score]
             Point classIdPoint;
             minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
             classId = classIdPoint.x;
+            //! [Get a class with a highest score]
         }
         if (needSoftmax == true)
         {

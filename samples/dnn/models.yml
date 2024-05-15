@@ -223,11 +223,11 @@ squeezenet:
 
 googlenet:
   load_info:
-    url: "https://github.com/onnx/models/raw/main/validated/vision/classification/inception_and_googlenet/googlenet/model/googlenet-3.onnx?download="
-    sha1: "16be45885b1802636e30a1490ca3c4d56e5024d7"
-  model: "googlenet-3.onnx"
-  mean: [104, 117, 123]
-  std: [1,1,1]
+    url: "https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/inception_and_googlenet/googlenet/model/googlenet-8.onnx"
+    sha1: "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+  model: "googlenet-8.onnx"
+  mean: [103.939, 116.779, 123.675]
+  std: [1, 1, 1]
   scale: 1.0
   width: 224
   height: 224

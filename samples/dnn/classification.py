@@ -20,10 +20,8 @@ def help():
     )
 
 def get_args_parser(func_args):
-    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
-                cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
-    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD,
-               cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
+    backends = ("default", "inference_engine", "openvino", "vkcom", "cuda", "webnn")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
@@ -32,23 +30,25 @@ def get_args_parser(func_args):
                         help='Path to input image or video file. Skip this argument to capture frames from a camera.')
     parser.add_argument('--crop', type=bool, default=False,
                         help='Center crop the image.')
-    parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
-                        help="Choose one of computation backends: "
-                             "%d: automatically (by default), "
-                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                             "%d: OpenCV implementation, "
-                             "%d: VKCOM, "
-                             "%d: CUDA" % backends)
-    parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
-                        help='Choose one of target computation devices: '
-                             '%d: CPU target (by default), '
-                             '%d: OpenCL, '
-                             '%d: OpenCL fp16 (half-float precision), '
-                             '%d: NCS2 VPU, '
-                             '%d: HDDL VPU, '
-                             '%d: Vulkan, '
-                             '%d: CUDA, '
-                             '%d: CUDA fp16 (half-float preprocess)'% targets)
+    parser.add_argument('--backend', default="default", type=str, choices=backends,
+                    help="Choose one of computation backends: "
+                         "default: automatically (by default), "
+                         "inference_engine: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                         "openvino: OpenCV implementation, "
+                         "vkcom: VKCOM, "
+                         "cuda: CUDA, "
+                         "webnn: WebNN")
+    parser.add_argument('--target', default="cpu", type=str, choices=targets,
+                    help="Choose one of target computation devices: "
+                         "cpu: CPU target (by default), "
+                         "opencl: OpenCL, "
+                         "opencl_fp16: OpenCL fp16 (half-float precision), "
+                         "ncs2_vpu: NCS2 VPU, "
+                         "hddl_vpu: HDDL VPU, "
+                         "vulkan: Vulkan, "
+                         "cuda: CUDA, "
+                         "cuda_fp16: CUDA fp16 (half-float preprocess)")
+
 
     args, _ = parser.parse_known_args()
     add_preproc_args(args.zoo, parser, 'classification')
@@ -78,9 +78,11 @@ def main(func_args=None):
             classes = f.read().rstrip('\n').split('\n')
 
     # Load a network
+
     net = cv.dnn.readNet(args.model)
-    net.setPreferableBackend(args.backend)
-    net.setPreferableTarget(args.target)
+
+    net.setPreferableBackend(get_backend_id(args.backend))
+    net.setPreferableTarget(get_target_id(args.target))
 
     winName = 'Deep learning image classification in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_NORMAL)

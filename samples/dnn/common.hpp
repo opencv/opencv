@@ -10,6 +10,39 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
 
 std::string findFile(const std::string& filename);
 
+inline int getBackendID(const String& backend) {
+    std::map<String, int> backendIDs = {
+        {"default", 0},
+        {"inference_engine", 1},
+        {"openvino", 2},
+        {"vkcom", 3},
+        {"cuda", 4},
+        {"webnn", 5}
+    };
+    if(backendIDs.find(backend) != backendIDs.end()){
+        return backendIDs[backend];
+    }else {
+        throw std::invalid_argument("Invalid backend name: " + backend);
+    }
+}
+
+inline int getTargetID(const String& target) {
+    std::map<String, int> targetIDs = {
+        {"cpu", 0},
+        {"opencl", 1},
+        {"opencl_fp16", 2},
+        {"vpu", 3},
+        {"vulkan", 4},
+        {"cuda", 5},
+        {"cuda_fp16", 6}
+    };
+    if(targetIDs.find(target) != targetIDs.end()){
+        return targetIDs[target];
+    }else {
+        throw std::invalid_argument("Invalid target name: " + target);
+    }
+}
+
 std::string genArgument(const std::string& argName, const std::string& help,
                         const std::string& modelName, const std::string& zooFile,
                         char key, std::string defaultVal)

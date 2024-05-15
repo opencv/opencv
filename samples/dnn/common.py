@@ -116,3 +116,33 @@ def findFile(filename):
               '/opencv_extra/testdata in OPENCV_DNN_TEST_DATA_PATH environment '
               'variable or pass a full path to model.')
         exit(0)
+
+def get_backend_id(backend_name):
+    backend_ids = {
+        "default": 0,
+        "inference_engine": 1,
+        "openvino": 2,
+        "vkcom": 3,
+        "cuda": 4
+    }
+
+    if backend_name not in backend_ids:
+        raise ValueError(f"Invalid backend name: {backend_name}")
+
+    return backend_ids[backend_name]
+
+def get_target_id(target_name):
+    target_ids = {
+        "cpu": 0,
+        "opencl": 1,
+        "opencl_fp16": 2,
+        "ncs2_vpu": 3,
+        "hddl_vpu": 4,
+        "vulkan": 5,
+        "cuda": 6,
+        "cuda_fp16": 7
+    }
+    if target_name not in target_ids:
+        raise ValueError(f"Invalid target name: {target_name}")
+
+    return target_ids[target_name]

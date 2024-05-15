@@ -1,4 +1,4 @@
-Load Caffe framework models  {#tutorial_dnn_googlenet}
+Load ONNX framework models  {#tutorial_dnn_googlenet}
 ===========================
 
 @tableofcontents
@@ -8,13 +8,13 @@ Load Caffe framework models  {#tutorial_dnn_googlenet}
 |    |    |
 | -: | :- |
 | Original author | Vitaliy Lyudvichenko |
-| Compatibility | OpenCV >= 3.3 |
+| Compatibility | OpenCV >= 4.5.4 |
 
 Introduction
 ------------
 
 In this tutorial you will learn how to use opencv_dnn module for image classification by using
-GoogLeNet trained network from [Caffe model zoo](http://caffe.berkeleyvision.org/model_zoo.html).
+GoogLeNet trained network from [ONNX model zoo](https://github.com/onnx/models/).
 
 We will demonstrate results of this example on the following picture.
 ![Buran space shuttle](dnn/images/space_shuttle.jpg)
@@ -30,20 +30,17 @@ Explanation
 -----------
 
 -# Firstly, download GoogLeNet model files:
-   [bvlc_googlenet.prototxt  ](https://github.com/opencv/opencv_extra/blob/5.x/testdata/dnn/bvlc_googlenet.prototxt) and
-   [bvlc_googlenet.caffemodel](http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel)
+   @code
+   python download_models.py googlenet
+   @endcode
 
    Also you need file with names of [ILSVRC2012](http://image-net.org/challenges/LSVRC/2012/browse-synsets) classes:
    [classification_classes_ILSVRC2012.txt](https://github.com/opencv/opencv/blob/5.x/samples/data/dnn/classification_classes_ILSVRC2012.txt).
 
    Put these files into working dir of this program example.
 
--# Read and initialize network using path to .prototxt and .caffemodel files
+-# Read and initialize network using path to .onnx file
    @snippet dnn/classification.cpp Read and initialize network
-
-   You can skip an argument `framework` if one of the files `model` or `config` has an
-   extension `.caffemodel` or `.prototxt`.
-   This way function cv::dnn::readNet can automatically detects a model's format.
 
 -# Read input image and convert to the blob, acceptable by GoogleNet
    @snippet dnn/classification.cpp Open a video file or an image file or a camera stream
@@ -53,7 +50,7 @@ Explanation
    @snippet dnn/classification.cpp Create a 4D blob from a frame
    We convert the image to a 4-dimensional blob (so-called batch) with `1x3x224x224` shape
    after applying necessary pre-processing like resizing and mean subtraction
-   `(-104, -117, -123)` for each blue, green and red channels correspondingly using cv::dnn::blobFromImage function.
+   for each blue, green and red channels correspondingly using cv::dnn::blobFromImage function.
 
 -# Pass the blob to the network
    @snippet dnn/classification.cpp Set input blob
@@ -69,6 +66,6 @@ Explanation
 
 -# Run an example from command line
    @code
-   ./example_dnn_classification --model=bvlc_googlenet.caffemodel --config=bvlc_googlenet.prototxt --width=224 --height=224 --classes=classification_classes_ILSVRC2012.txt --input=space_shuttle.jpg --mean="104 117 123"
+   ./example_dnn_classification googlenet
    @endcode
    For our image we get prediction of class `space shuttle` with more than 99% sureness.
