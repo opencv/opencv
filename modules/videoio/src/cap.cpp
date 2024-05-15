@@ -89,6 +89,13 @@ VideoCapture::VideoCapture(const std::vector<uchar>& buffer, int apiPreference)
     open(buffer, apiPreference);
 }
 
+VideoCapture::VideoCapture(const std::vector<uchar>& buffer, int apiPreference, const std::vector<int>& params)
+    : throwOnFail(false)
+{
+    CV_TRACE_FUNCTION();
+    open(buffer, apiPreference, params);
+}
+
 VideoCapture::VideoCapture(int index, int apiPreference) : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
@@ -250,7 +257,7 @@ bool VideoCapture::open(const std::vector<uchar>& buffer, int apiPreference, con
     }
 
     const VideoCaptureParameters parameters(params);
-    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
+    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByBuffer();
     for (size_t i = 0; i < backends.size(); i++)
     {
         const VideoBackendInfo& info = backends[i];
@@ -336,7 +343,7 @@ bool VideoCapture::open(const std::vector<uchar>& buffer, int apiPreference, con
         if (found)
         {
             CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
-                                            "but can't be used to capture by name",
+                                            "but can't be used to capture by buffer",
                                             cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(apiPreference)).c_str()));
         }
     }

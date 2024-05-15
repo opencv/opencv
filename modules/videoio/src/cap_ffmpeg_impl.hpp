@@ -1038,7 +1038,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 
 bool CvCapture_FFMPEG::open(const std::vector<uchar>& buffer, const VideoCaptureParameters& params)
 {
-    return open(NULL, buffer, params);
+    return open(nullptr, buffer, params);
 }
 
 bool CvCapture_FFMPEG::open(const char* _filename, const std::vector<uchar>& buffer, const VideoCaptureParameters& params)

@@ -35,6 +35,9 @@ CV_EXPORTS_W std::vector<VideoCaptureAPIs> getCameraBackends();
 /** @brief Returns list of available backends which works via `cv::VideoCapture(filename)` */
 CV_EXPORTS_W std::vector<VideoCaptureAPIs> getStreamBackends();
 
+/** @brief Returns list of available backends which works via `cv::VideoCapture(buffer)` */
+CV_EXPORTS_W std::vector<VideoCaptureAPIs> getBufferBackends();
+
 /** @brief Returns list of available backends which works via `cv::VideoWriter()` */
 CV_EXPORTS_W std::vector<VideoCaptureAPIs> getWriterBackends();
 

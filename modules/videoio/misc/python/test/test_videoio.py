@@ -22,6 +22,9 @@ class Bindings(NewOpenCVTests):
             self.check_name(cv.videoio_registry.getBackendName(backend))
 
     def test_capture_buffer(self):
+        if not cv.videoio_registry.getBufferBackends():
+            raise self.skipTest("No available backends")
+
         with open(self.find_file("cv/video/768x576.avi"), "rb") as f:
             cap = cv.VideoCapture(f.read())
             self.assertTrue(cap.isOpened())

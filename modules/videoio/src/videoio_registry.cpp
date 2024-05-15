@@ -61,7 +61,7 @@ namespace {
 static const struct VideoBackendInfo builtin_backends[] =
 {
 #ifdef HAVE_FFMPEG
-    DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER, cvCreateFileCapture_FFMPEG_proxy, 0, cvCreateBufferCapture_FFMPEG_proxy, cvCreateVideoWriter_FFMPEG_proxy)
+    DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_CAPTURE_BY_BUFFER | MODE_WRITER, cvCreateFileCapture_FFMPEG_proxy, 0, cvCreateBufferCapture_FFMPEG_proxy, cvCreateVideoWriter_FFMPEG_proxy)
 #elif defined(ENABLE_PLUGINS) || defined(HAVE_FFMPEG_WRAPPER)
     DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER)
 #endif
@@ -331,6 +331,17 @@ public:
         }
         return result;
     }
+    inline std::vector<VideoBackendInfo> getAvailableBackends_CaptureByBuffer() const
+    {
+        std::vector<VideoBackendInfo> result;
+        for (size_t i = 0; i < enabledBackends.size(); i++)
+        {
+            const VideoBackendInfo& info = enabledBackends[i];
+            if (info.mode & MODE_CAPTURE_BY_BUFFER)
+                result.push_back(info);
+        }
+        return result;
+    }
     inline std::vector<VideoBackendInfo> getAvailableBackends_Writer() const
     {
         std::vector<VideoBackendInfo> result;
@@ -356,6 +367,11 @@ std::vector<VideoBackendInfo> getAvailableBackends_CaptureByIndex()
 std::vector<VideoBackendInfo> getAvailableBackends_CaptureByFilename()
 {
     const std::vector<VideoBackendInfo> result = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByFilename();
+    return result;
+}
+std::vector<VideoBackendInfo> getAvailableBackends_CaptureByBuffer()
+{
+    const std::vector<VideoBackendInfo> result = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByBuffer();
     return result;
 }
 std::vector<VideoBackendInfo> getAvailableBackends_Writer()
@@ -423,6 +439,15 @@ std::vector<VideoCaptureAPIs> getStreamBackends()
         result.push_back((VideoCaptureAPIs)backends[i].id);
     return result;
 
+}
+
+std::vector<VideoCaptureAPIs> getBufferBackends()
+{
+    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByBuffer();
+    std::vector<VideoCaptureAPIs> result;
+    for (size_t i = 0; i < backends.size(); i++)
+        result.push_back((VideoCaptureAPIs)backends[i].id);
+    return result;
 }
 
 std::vector<VideoCaptureAPIs> getWriterBackends()

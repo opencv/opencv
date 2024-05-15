@@ -1029,8 +1029,11 @@ typedef testing::TestWithParam<VideoCaptureAPIs> buffer_capture;
 TEST_P(buffer_capture, read)
 {
     VideoCaptureAPIs apiPref = GetParam();
-    if (!videoio_registry::hasBackend(apiPref) || apiPref == CAP_OPENCV_MJPEG)
+    std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getBufferBackends();
+    if (!videoio_registry::hasBackend(apiPref))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+    if (std::find(supportedAPIs.begin(), supportedAPIs.end(), apiPref) == supportedAPIs.end())
+        throw SkipTestException(cv::String("Backend is not supported: ") + cv::videoio_registry::getBackendName(apiPref));
 
     VideoCapture cap;
     String video_file = BunnyParameters::getFilename(String(".avi"));
