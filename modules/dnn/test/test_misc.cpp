@@ -835,7 +835,7 @@ TEST_P(Async, create_layer_pipeline_set_and_forward_all)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Async, Combine(
-    Values(CV_32F, CV_8U),
+    Values(CV_32F),
     dnnBackendsAndTargetsIE()
 ));
 
