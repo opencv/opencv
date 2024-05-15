@@ -214,7 +214,7 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief This interface class allows to build new Layers - are building blocks of networks.
      *
-     * Each class, derived from Layer, must implement allocate() methods to declare own outputs and forward() to compute outputs.
+     * Each class, derived from Layer, must implement forward() methods to compute outputs.
      * Also before using the new layer into networks you must register your layer by using one of @ref dnnLayerFactory "LayerFactory" macros.
      */
     class CV_EXPORTS_W Layer : public Algorithm
