@@ -229,7 +229,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param[in]  input  vector of already allocated input blobs
          *  @param[out] output vector of already allocated output blobs
          *
-         * If this method is called after network has allocated all memory for input and output blobs
+         * This method is called after network has allocated all memory for input and output blobs
          * and before inferencing.
          */
         CV_DEPRECATED_EXTERNAL
@@ -239,7 +239,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param[in]  inputs  vector of already allocated input blobs
          *  @param[out] outputs vector of already allocated output blobs
          *
-         * If this method is called after network has allocated all memory for input and output blobs
+         * This method is called after network has allocated all memory for input and output blobs
          * and before inferencing.
          */
         CV_WRAP virtual void finalize(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
