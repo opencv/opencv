@@ -215,6 +215,21 @@ TEST(Highgui_GUI, trackbar)
     EXPECT_NO_THROW(destroyAllWindows());
 }
 
+// See https://github.com/opencv/opencv/issues/25560
+#if !defined(ENABLE_PLUGINS)
+TEST(Highgui_GUI, DISABLED_small_width_image)
+#else
+TEST(Highgui_GUI, small_width_image)
+#endif
+{
+    const std::string window_name("trackbar_test_window");
+    cv::Mat src(1,1,CV_8UC3,cv::Scalar(0));
+    EXPECT_NO_THROW(destroyAllWindows());
+    ASSERT_NO_THROW(namedWindow(window_name));
+    ASSERT_NO_THROW(imshow(window_name, src));
+    EXPECT_NO_THROW(waitKey(10));
+    EXPECT_NO_THROW(destroyAllWindows());
+}
 
 TEST(Highgui_GUI, currentUIFramework)
 {
