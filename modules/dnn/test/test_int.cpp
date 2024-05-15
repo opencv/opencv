@@ -31,6 +31,8 @@ TEST_P(Test_NaryEltwise_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input1(inShape, matType);
     cv::randu(input1, low, low + 100);
     Mat input2(inShape, matType);
@@ -40,7 +42,7 @@ TEST_P(Test_NaryEltwise_Int, random)
     LayerParams lp;
     lp.type = "NaryEltwise";
     lp.name = "testLayer";
-    lp.set("operation", "sum");
+    lp.set("operation", "add");
     int id = net.addLayerToPrev(lp.name, lp.type, lp);
     net.connect(0, 1, id, 1);
 
@@ -98,6 +100,8 @@ TEST_P(Test_Const_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input1(inShape, matType);
     cv::randu(input1, low, low + 100);
     Mat inputConst(inShape, matType);
@@ -114,7 +118,7 @@ TEST_P(Test_Const_Int, random)
     LayerParams lp;
     lp.type = "NaryEltwise";
     lp.name = "testLayer";
-    lp.set("operation", "sum");
+    lp.set("operation", "add");
     int idSum = net.addLayer(lp.name, lp.type, lp);
 
     net.connect(0, 0, idSum, 0);
@@ -170,6 +174,8 @@ TEST_P(Test_ScatterND_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
 
@@ -275,6 +281,8 @@ TEST_P(Test_Concat_Int, random)
     Target target = get<1>(backend_target);
 
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     std::vector<int> inShape1{2, 3, 4, 5};
     Mat input1(inShape1, matType);
     cv::randu(input1, low, low + 100);
@@ -358,8 +366,13 @@ TEST_P(Test_ArgMax_Int, random)
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
 
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // There is a problem with OpenVINO and custom int64 layers. After model compilation the output tensor type changes from int64 to int32
+
     std::vector<int> inShape{5, 4, 3, 2};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 100000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
 
@@ -433,6 +446,8 @@ TEST_P(Test_Blank_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
 
@@ -490,6 +505,8 @@ TEST_P(Test_Expand_Int, random)
 
     std::vector<int> inShape{2, 3, 1, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
     std::vector<int> outShape{2, 1, 4, 5};
@@ -554,6 +571,8 @@ TEST_P(Test_Permute_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
     std::vector<int> order{0, 2, 3, 1};
@@ -619,6 +638,8 @@ TEST_P(Test_GatherElements_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
 
@@ -692,6 +713,8 @@ TEST_P(Test_Gather_Int, random)
 
     std::vector<int> inShape{5, 1};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
 
@@ -784,7 +807,9 @@ TEST_P(Test_Pad_Int, random)
     Target target = get<1>(backend_target);
 
     std::vector<int> inShape{2, 3, 4, 5};
-    int64_t low = 1000000;
+    int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
     std::vector<int> paddings{0, 0, 0, 0, 1, 0, 0, 1};
@@ -860,6 +885,8 @@ TEST_P(Test_Slice_Int, random)
     std::vector<int> begin{0, 4, 0, 0};
     std::vector<int> end{1, 8, 6, 8};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inputShape, matType);
     cv::randu(input, low, low + 100);
 
@@ -900,6 +927,8 @@ TEST_P(Test_Reshape_Int, random)
     std::vector<int> inShape{2, 3, 4, 5};
     std::vector<int> outShape{2, 3, 2, 10};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
 
@@ -948,6 +977,8 @@ TEST_P(Test_Flatten_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
 
@@ -994,6 +1025,8 @@ TEST_P(Test_Tile_Int, random)
 
     std::vector<int> inShape{2, 3, 4, 5};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 1000000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 1000000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
     std::vector<int> repeats{1, 1, 2, 3};
@@ -1056,13 +1089,19 @@ TEST_P(Test_Reduce_Int, random)
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
 
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && matType == CV_64S)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // There is a problem with OpenVINO and custom int64 layers. After model compilation the output tensor type changes from int64 to int32
+
     std::vector<int> inShape{5, 4, 3, 2};
     int64_t low = matType == CV_64S ? 1000000000000000ll : 100000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 100000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
     std::vector<int> axes{1};
 
     Net net;
+
     LayerParams lp;
     lp.type = "Reduce";
     lp.name = "testLayer";
@@ -1119,8 +1158,13 @@ TEST_P(Test_Reduce_Int, two_axes)
     Backend backend = get<0>(backend_target);
     Target target = get<1>(backend_target);
 
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && matType == CV_64S)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // There is a problem with OpenVINO and custom int64 layers. After model compilation the output tensor type changes from int64 to int32
+
     std::vector<int> inShape{5, 4, 3, 2};
     int64_t low = matType == CV_64S ? 100000000000000ll : 10000000;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        low = 10000000; // Looks like OpenVINO uses int32 internal values for int64 operations
     Mat input(inShape, matType);
     cv::randu(input, low, low + 100);
     std::vector<int> axes{1, 3};

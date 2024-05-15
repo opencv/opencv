@@ -570,6 +570,7 @@ public:
         CV_Assert(!blobs.empty());
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         CV_CheckTypeEQ(weightsMat.type(), CV_8S, "");
+        CV_CheckTypeEQ(blobs[0].type(), CV_8S, "");
         auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode.get_shape();
         CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
@@ -581,7 +582,7 @@ public:
         const int inpGroupCn = nodes.size() > 1 ? ieWeights.get_shape()[1] : blobs[0].size[1];
         const int group = inpCn / inpGroupCn;
 
-        std::vector<size_t> kernel_shape;
+        std::vector<int64_t> kernel_shape;
         if (group != 1)
         {
             kernel_shape.push_back(group);
@@ -592,7 +593,7 @@ public:
 
         if (nodes.size() == 1)
         {
-            ieWeights = std::make_shared<ov::op::v0::Constant>(ov::element::i8, kernel_shape, blobs[0].data);
+            ieWeights = std::make_shared<ov::op::v0::Constant>(ov::element::i8, ov::Shape(kernel_shape.begin(), kernel_shape.end()), blobs[0].data);
         }
         else
         {
@@ -655,7 +656,7 @@ public:
                                 pad_type);
         }
 
-        std::vector<size_t> shape(conv_node.get_shape().size(), 1);
+        std::vector<int64_t> shape(conv_node.get_shape().size(), 1);
         shape[1] = conv_node.get_shape()[1];
         if (biasvec.size() || nodes.size() == 3)
         {
@@ -672,7 +673,7 @@ public:
                 for (int i = 0; i < numOutput; ++i) {
                     ovBias[i] = (biasvec[i] + input_zp * cv::sum(blobs[0].row(i))[0]) * outputMultiplier[i] * output_sc;
                 }
-                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape(shape), ovBias.data());
+                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape(shape.begin(), shape.end()), ovBias.data());
             }
             conv_node = std::make_shared<ov::op::v1::Add>(conv_node, bias, ov::op::AutoBroadcastType::NUMPY);
         }

@@ -469,8 +469,8 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
     for (std::set<int>::const_iterator i = ld.inputLayersId.begin(); i != ld.inputLayersId.end(); i++)
         allocateLayer(*i, layersShapes);
 
-    // bind inputs
-    if (ld.id == 0 && netInputLayer->supportBackend(preferableBackend))  // DataLayer
+    // bind inputs for DataLayer
+    if (ld.id == 0 && netInputLayer->supportBackend(preferableBackend))
     {
         ninputs = netInputLayer->inputsData.size();
         ld.inputBlobsWrappers.resize(ninputs);
@@ -1467,6 +1467,7 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
     {
         ld.outputBlobsWrappers[pin.oid]->setHostDirty();
     }
+
     netInputLayer->scaleFactors[pin.oid] = scalefactor;
     netInputLayer->means[pin.oid] = mean;
     netWasAllocated = netWasAllocated && oldShape;
