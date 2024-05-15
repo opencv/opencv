@@ -977,7 +977,7 @@ static int mul8u16uWrapper(const uchar* src1, size_t step1,
                            uchar* dst, size_t step, int width, int height,
                            void* usrdata)
 {
-    double scale = *((double *)usrdata);
+    double scale = *((double*)usrdata);
     int res = cv_hal_mul8u16u(src1, step1, src2, step2, (ushort *)dst, step, width, height, scale);
     if (res == 0 || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
         return res;
