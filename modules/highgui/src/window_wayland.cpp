@@ -623,6 +623,9 @@ private:
     cv::Rect last_img_area_;
     bool image_changed_ = false;
 
+    int real_img_width = 0;
+    cv::Scalar const outarea_color_ = CV_RGB(0, 0, 0);
+
     void *param_ = nullptr;
     CvMouseCallback callback_ = nullptr;
 };
@@ -1582,6 +1585,28 @@ cv_wl_viewer::cv_wl_viewer(cv_wl_window *window, int flags)
 void cv_wl_viewer::set_image(cv::Mat const &image) {
     image_ = image.clone();
     image_changed_ = true;
+
+    // See https://github.com/opencv/opencv/issues/25560
+    // If image_ width is too small enough to show title and buttons, expand it.
+
+    // Keep real image width to limit x position for callback functions
+    real_img_width = image_.size().width;
+
+    // Minimum width of title is not defined, so use button width * 3 instead of it.
+    const int view_min_width = cv_wl_titlebar::btn_width * 3 + cv_wl_titlebar::titlebar_min_width;
+
+    const int margin = view_min_width - real_img_width;
+    if(margin > 0)
+    {
+        copyMakeBorder(image_,               // src
+                       image_,               // dst
+                       0,                    // top
+                       0,                    // bottom
+                       0,                    // left
+                       margin,               // right
+                       cv::BORDER_CONSTANT,  // borderType
+                       outarea_color_ );     // value(color)
+    }
 }
 
 void cv_wl_viewer::set_mouse_callback(CvMouseCallback callback, void *param) {
@@ -1634,6 +1659,8 @@ void cv_wl_viewer::on_mouse(int event, cv::Point const &p, int flag) {
             int x = static_cast<int>((p.x - last_img_area_.x) * ((double) image_.size().width / last_img_area_.width));
             int y = static_cast<int>((p.y - last_img_area_.y) *
                                      ((double) image_.size().height / last_img_area_.height));
+
+            x = cv::min(x, real_img_width);
             callback_(event, x, y, flag, param_);
         }
     }
