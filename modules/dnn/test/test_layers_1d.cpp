@@ -824,11 +824,13 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Tile_Test,
         std::vector<int>({2, 2})
         ));
 
-typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Einsum_Test;
+typedef testing::TestWithParam<tuple<tuple<std::vector<int>, std::vector<int>>, std::string>> Layer_Einsum_Test;
 TEST_P(Layer_Einsum_Test, Accuracy_01D)
 {
     auto tup = GetParam();
-    std::vector<int> input_shape = std::get<0>(tup);
+    auto shape_tup = std::get<0>(tup);
+    std::vector<int> input_shape1 = std::get<0>(shape_tup);
+    std::vector<int> input_shape2 = std::get<1>(shape_tup);
     std::string equation = std::get<1>(tup);
 
     LayerParams lp;
@@ -837,13 +839,13 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
     lp.set("equation", equation);
     lp.set("inputSize", 2);
     lp.set("outputSize", 1);
-    lp.set("inputShapes0", DictValue::arrayInt(&input_shape[0], input_shape.size()));
-    lp.set("inputShapes1", DictValue::arrayInt(&input_shape[0], input_shape.size()));
+    lp.set("inputShapes0", DictValue::arrayInt(&input_shape1[0], input_shape1.size()));
+    lp.set("inputShapes1", DictValue::arrayInt(&input_shape2[0], input_shape2.size()));
 
     Ptr<Layer> layer = EinsumLayer::create(lp);
 
-    cv::Mat input1(input_shape.size(), input_shape.data(), CV_32F);
-    cv::Mat input2(input_shape.size(), input_shape.data(), CV_32F);
+    cv::Mat input1(input_shape1.size(), input_shape1.data(), CV_32F);
+    cv::Mat input2(input_shape2.size(), input_shape2.data(), CV_32F);
     cv::randn(input1, 0.0, 1.0); cv::randn(input2, 0.0, 1.0);
 
     std::vector<Mat> inputs = {input1, input2};
@@ -854,27 +856,29 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
     // create output_ref to compare with outputs
     cv::Mat output_ref;
     int size[] = {1};
-    if (equation == ",->"){
+    if(equation == ",->" || equation == "i,->i" || equation == ",i->i" || equation == "ij,->ij"){
         output_ref = input1.mul(input2);
-    }else if (equation == "i, i->i"){
+        if (equation == ",i->i")
+            output_ref = output_ref.reshape(1, 1, size);
+    } else if (equation == "i,i->i"){
         output_ref = input1.mul(input2);
-    } else if (equation == "i, i->"){
+    } else if (equation == "i,i->"){
         output_ref = input1.mul(input2);
         cv::Scalar sum = cv::sum(output_ref);
         output_ref = cv::Mat(0, nullptr, CV_32F, sum[0]);
-    } else if (equation == "ij, ij->ij"){
+    } else if (equation == "ij,ij->ij"){
         output_ref = input1.mul(input2);
-    } else if (equation == "ij, ij->i"){
+    } else if (equation == "ij,ij->i"){
         output_ref = input1.mul(input2);
-        if (input_shape[0] == 1){
+        if (input_shape1[0] == 1){
             cv::Scalar sum = cv::sum(output_ref);
             output_ref = cv::Mat(1, size, CV_32F, sum[0]);
-        } else if (input_shape[1] == 1){
-            size[0] = input_shape[0];
+        } else if (input_shape1[1] == 1){
+            size[0] = input_shape1[0];
             output_ref = output_ref.reshape(1, 1, size);
         } else {
             cv::reduce(output_ref, output_ref, 1, cv::REDUCE_SUM, CV_32F);
-            size[0] = input_shape[0];
+            size[0] = input_shape1[0];
             output_ref = output_ref.reshape(1, 1, size);
         }
     } else {
@@ -886,16 +890,20 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Einsum_Test, testing::Values(
-    std::make_tuple(std::vector<int>({}), std::string(",->")),
-    std::make_tuple(std::vector<int>({1}), std::string("i, i->i")),
-    std::make_tuple(std::vector<int>({1}), std::string("i, i->")),
-    std::make_tuple(std::vector<int>({4}), std::string("i, i->i")),
-    std::make_tuple(std::vector<int>({4}), std::string("i, i->")),
-    std::make_tuple(std::vector<int>({1, 4}), std::string("ij, ij->ij")),
-    std::make_tuple(std::vector<int>({4, 1}), std::string("ij, ij->ij")),
-    std::make_tuple(std::vector<int>({1, 4}), std::string("ij, ij->i")),
-    std::make_tuple(std::vector<int>({4, 1}), std::string("ij, ij->i")),
-    std::make_tuple(std::vector<int>({4, 4}), std::string("ij, ij->i"))
+    std::make_tuple(std::make_tuple(std::vector<int>({}), std::vector<int>({})), std::string(",->")),
+    std::make_tuple(std::make_tuple(std::vector<int>({1}), std::vector<int>({})), std::string("i,->i")),
+    std::make_tuple(std::make_tuple(std::vector<int>({}), std::vector<int>({1})), std::string(",i->i")),
+    std::make_tuple(std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({})), std::string("ij,->ij")),
+    // std::make_tuple(std::make_tuple(std::vector<int>({}), std::vector<int>({4, 1})), std::string(",ij->ij")), // mul function of arithm_op can not handle cases with different number of channels
+    std::make_tuple(std::make_tuple(std::vector<int>({1}), std::vector<int>({1})), std::string("i,i->i")),
+    std::make_tuple(std::make_tuple(std::vector<int>({1}), std::vector<int>({1})), std::string("i,i->")),
+    std::make_tuple(std::make_tuple(std::vector<int>({4}), std::vector<int>({4})), std::string("i,i->i")),
+    std::make_tuple(std::make_tuple(std::vector<int>({4}), std::vector<int>({4})), std::string("i,i->")),
+    std::make_tuple(std::make_tuple(std::vector<int>({1, 4}), std::vector<int>({1, 4})), std::string("ij,ij->ij")),
+    std::make_tuple(std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({4, 1})), std::string("ij,ij->ij")),
+    std::make_tuple(std::make_tuple(std::vector<int>({1, 4}), std::vector<int>({1, 4})), std::string("ij,ij->i")),
+    std::make_tuple(std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({4, 1})), std::string("ij,ij->i")),
+    std::make_tuple(std::make_tuple(std::vector<int>({4, 4}), std::vector<int>({4, 4})), std::string("ij,ij->i"))
     ));
 
 
