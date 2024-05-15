@@ -227,14 +227,13 @@ googlenet:
 # Semantic segmentation models.
 ################################################################################
 
-fcn8s:
+fcnresnet50:
   load_info:
-    url: "http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel"
-    sha1: "c449ea74dd7d83751d1357d6a8c323fcf4038962"
-  model: "fcn8s-heavy-pascal.caffemodel"
-  config: "fcn8s-heavy-pascal.prototxt"
-  mean: [0, 0, 0]
-  scale: 1.0
+    url: "https://github.com/onnx/models/raw/491ce05590abb7551d7fae43c067c060eeb575a6/validated/vision/object_detection_segmentation/fcn/model/fcn-resnet50-12.onnx"
+    sha1: "1bb0c7e0034038969aecc6251166f1612a139230"
+  model: "fcn-resnet50-12.onnx"
+  mean: [103.5, 116.2, 123.6]
+  scale: 0.019
   width: 500
   height: 500
   rgb: false
@@ -250,4 +249,16 @@ fcnresnet101:
   width: 500
   height: 500
   rgb: false
+  sample: "segmentation"
+
+u2netp:
+  load_info:
+    url: "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx"
+    sha1: "0a99236f0d5c1916a99a8c401b23e5ef32038606"
+  model: "u2netp.onnx"
+  mean: [123.6, 116.2, 103.5]
+  scale: 0.019
+  width: 320
+  height: 320
+  rgb: true
   sample: "segmentation"
