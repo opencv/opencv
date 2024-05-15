@@ -585,9 +585,14 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 #endif
 
+typedef int (*ExtendedTypeFunc)(const uchar* src1, size_t step1,
+                                const uchar* src2, size_t step2,
+                                uchar* dst, size_t step, int width, int height,
+                                void*);
+
 static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                       InputArray _mask, int dtype, BinaryFuncC* tab, bool muldiv=false,
-                      void* usrdata=0, int oclop=-1, bool skipConversion = false )
+                      void* usrdata=0, int oclop=-1, ExtendedTypeFunc extendedFunc = nullptr )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
     _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
@@ -617,9 +622,13 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
-        BinaryFuncC func = tab[depth1];
-        CV_Assert(func);
-        func(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, usrdata);
+        if (extendedFunc(src1.ptr(), src1.step, src2.ptr(), src2.step,
+                         dst.ptr(), dst.step, sz.width, sz.height, usrdata) != 0)
+        {
+            BinaryFuncC func = tab[depth1];
+            CV_Assert(func);
+            func(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, usrdata);
+        }
         return;
     }
 
@@ -717,9 +726,9 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                ocl_arithm_op(*psrc1, *psrc2, _dst, _mask, wtype,
                usrdata, oclop, haveScalar))
 
-    BinaryFunc cvtsrc1 = type1 == wtype ? 0 : (skipConversion ? nullptr : getConvertFunc(type1, wtype));
-    BinaryFunc cvtsrc2 = type2 == type1 ? cvtsrc1 : type2 == wtype ? 0 : (skipConversion ? nullptr : getConvertFunc(type2, wtype));
-    BinaryFunc cvtdst = dtype == wtype ? 0 : (skipConversion ? nullptr : getConvertFunc(wtype, dtype));
+    BinaryFunc cvtsrc1 = type1 == wtype ? 0 : getConvertFunc(type1, wtype);
+    BinaryFunc cvtsrc2 = type2 == type1 ? cvtsrc1 : type2 == wtype ? 0 : getConvertFunc(type2, wtype);
+    BinaryFunc cvtdst = dtype == wtype ? 0 : getConvertFunc(wtype, dtype);
 
     size_t esz1 = CV_ELEM_SIZE(type1), esz2 = CV_ELEM_SIZE(type2);
     size_t dsz = CV_ELEM_SIZE(dtype), wsz = CV_ELEM_SIZE(wtype);
@@ -750,14 +759,22 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         _buf.allocate(bufesz*blocksize + 64);
         buf = _buf.data();
         if( cvtsrc1 )
+        {
             buf1 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
+        }
         if( cvtsrc2 )
+        {
             buf2 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
+        }
         wbuf = maskbuf = buf;
         if( cvtdst )
+        {
             buf = alignPtr(buf + blocksize*wsz, 16);
+        }
         if( haveMask )
+        {
             maskbuf = buf;
+        }
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
@@ -767,38 +784,44 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 Size bszn(bsz*cn, 1);
                 const uchar *sptr1 = ptrs[0], *sptr2 = ptrs[1];
                 uchar* dptr = ptrs[2];
-                if( cvtsrc1 )
+                // try to perform operation with conversion in one call
+                // if fail, use converter functions
+                uchar* opconverted = haveMask ? maskbuf : dptr;
+                if (!extendedFunc || extendedFunc(sptr1, 1, sptr2, 1, opconverted, (!haveMask),
+                                                  bszn.width, bszn.height, usrdata) != 0)
                 {
-                    cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
-                    sptr1 = buf1;
-                }
-                if( ptrs[0] == ptrs[1] )
-                    sptr2 = sptr1;
-                else if( cvtsrc2 )
-                {
-                    cvtsrc2( sptr2, 1, 0, 1, buf2, 1, bszn, 0 );
-                    sptr2 = buf2;
+                    if( cvtsrc1 )
+                    {
+                        cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
+                        sptr1 = buf1;
+                    }
+                    if( ptrs[0] == ptrs[1] )
+                    {
+                        sptr2 = sptr1;
+                    }
+                    else if( cvtsrc2 )
+                    {
+                        cvtsrc2( sptr2, 1, 0, 1, buf2, 1, bszn, 0 );
+                        sptr2 = buf2;
+                    }
+
+                    uchar* fdst = (haveMask || cvtdst) ? wbuf : dptr;
+                    func(sptr1, 1, sptr2, 1, fdst, (!haveMask && !cvtdst), bszn.width, bszn.height, usrdata);
+
+                    if (cvtdst)
+                    {
+                        uchar* cdst = haveMask ? maskbuf : dptr;
+                        cvtdst( wbuf, 1, 0, 1, cdst, 1, bszn, 0 );
+                    }
+                    opconverted = cvtdst ? maskbuf : wbuf;
                 }
 
-                if( !haveMask && !cvtdst )
-                    func( sptr1, 1, sptr2, 1, dptr, 1, bszn.width, bszn.height, usrdata );
-                else
+                if (haveMask)
                 {
-                    func( sptr1, 1, sptr2, 1, wbuf, 0, bszn.width, bszn.height, usrdata );
-                    if( !haveMask )
-                        cvtdst( wbuf, 1, 0, 1, dptr, 1, bszn, 0 );
-                    else if( !cvtdst )
-                    {
-                        copymask( wbuf, 1, ptrs[3], 1, dptr, 1, Size(bsz, 1), &dsz );
-                        ptrs[3] += bsz;
-                    }
-                    else
-                    {
-                        cvtdst( wbuf, 1, 0, 1, maskbuf, 1, bszn, 0 );
-                        copymask( maskbuf, 1, ptrs[3], 1, dptr, 1, Size(bsz, 1), &dsz );
-                        ptrs[3] += bsz;
-                    }
+                    copymask(opconverted, 1, ptrs[3], 1, dptr, 1, Size(bsz, 1), &dsz);
+                    ptrs[3] += bsz;
                 }
+
                 ptrs[0] += bsz*esz1; ptrs[1] += bsz*esz2; ptrs[2] += bsz*dsz;
             }
         }
@@ -949,43 +972,31 @@ void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
 namespace cv
 {
 
-static BinaryFuncC* getMulTab(bool extendMul);
-
-static void mul8u16uWrapper(const uchar* src1, size_t step1,
-                            const uchar* src2, size_t step2,
-                            uchar* dst, size_t step, int width, int height,
-                            void* usrdata)
+static int mul8u16uWrapper(const uchar* src1, size_t step1,
+                           const uchar* src2, size_t step2,
+                           uchar* dst, size_t step, int width, int height,
+                           void* usrdata)
 {
     double scale = *((double*)usrdata);
     CALL_HAL(mul8u16u, cv_hal_mul8u16u, src1, step1, src2, step2, (ushort*)dst, step, width, height, scale);
 
-    // fallback if HAL does not work
-    Mat src1Arr(height, width, CV_8UC1, const_cast<uchar*>(src1), step1);
-    Mat src2Arr(height, width, CV_8UC1, const_cast<uchar*>(src2), step2);
-    Mat dstArr(height, width, CV_16UC1, dst, step);
-    arithm_op(src1Arr, src2Arr, dstArr, noArray(), CV_16U, getMulTab(false),
-              /* muldiv */ true, usrdata, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
-              /*skipConversion*/ false);
+    // the fallback implementation should be used then
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
-static void mul8s16sWrapper(const uchar* src1, size_t step1,
-                            const uchar* src2, size_t step2,
-                            uchar* dst, size_t step, int width, int height,
-                            void* usrdata)
+static int mul8s16sWrapper(const uchar* src1, size_t step1,
+                           const uchar* src2, size_t step2,
+                           uchar* dst, size_t step, int width, int height,
+                           void* usrdata)
 {
     double scale = *((double*)usrdata);
     CALL_HAL(mul8s16s, cv_hal_mul8s16s, (schar*)src1, step1, (schar*)src2, step2, (short*)dst, step, width, height, scale);
 
-    // fallback if HAL does not work
-    Mat src1Arr(height, width, CV_8SC1, const_cast<uchar*>(src1), step1);
-    Mat src2Arr(height, width, CV_8SC1, const_cast<uchar*>(src2), step2);
-    Mat dstArr(height, width, CV_16SC1, dst, step);
-    arithm_op(src1Arr, src2Arr, dstArr, noArray(), CV_16S, getMulTab(false),
-              /* muldiv */ true, usrdata, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
-              /*skipConversion*/ false);
+    // the fallback implementation should be used then
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
-static BinaryFuncC* getMulTab(bool extendMul)
+static BinaryFuncC* getMulTab()
 {
     static BinaryFuncC mulTab[CV_DEPTH_MAX] =
     {
@@ -994,12 +1005,23 @@ static BinaryFuncC* getMulTab(bool extendMul)
         (BinaryFuncC)cv::hal::mul64f, 0
     };
 
-    static BinaryFuncC extendMulTab[] =
-    {
-        (BinaryFuncC)mul8u16uWrapper, (BinaryFuncC)mul8s16sWrapper,
-    };
+    return mulTab;
+}
 
-    return extendMul ? extendMulTab : mulTab;
+static ExtendedTypeFunc getMulExtFunc(int src1Type, int src2Type, int dstType)
+{
+    if (src1Type == CV_8U && src2Type == CV_8U && dstType == CV_16U)
+    {
+        return mul8u16uWrapper;
+    }
+    else if (src1Type == CV_8U && src2Type == CV_8S && dstType == CV_16S)
+    {
+        return mul8s16sWrapper;
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
 static BinaryFuncC* getDivTab()
@@ -1031,15 +1053,10 @@ void multiply(InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    static bool hal8u16uAvailable = cv_hal_mul8u16u != hal_ni_mul8u16u;
-    static bool hal8s16sAvailable = cv_hal_mul8s16s != hal_ni_mul8s16s;
-
-    bool extendMul = (hal8u16uAvailable && (src1.depth() == CV_8U) && (src2.depth() == CV_8U) && (dtype == CV_16U)) ||
-                     (hal8s16sAvailable && (src1.depth() == CV_8S) && (src2.depth() == CV_8S) && (dtype == CV_16S));
-
-    arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(extendMul),
+    ExtendedTypeFunc mulExtFunc = getMulExtFunc(src1.depth(), src2.depth(), dtype);
+    arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(),
               /* muldiv */ true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
-              /*skipConversion*/ extendMul);
+              /* extendedFunc */ mulExtFunc );
 }
 
 void divide(InputArray src1, InputArray src2,
