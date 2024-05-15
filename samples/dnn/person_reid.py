@@ -43,6 +43,10 @@ targets = (cv.dnn.DNN_TARGET_CPU,
 
 MEAN = (0.485, 0.456, 0.406)
 STD = (0.229, 0.224, 0.225)
+drawing = False
+ix, iy = -1, -1
+rect = None
+img_dict = {} # Dictionary to store bounding boxes for corresponding cropped image
 
 def preprocess(images, height, width):
     """
@@ -61,8 +65,6 @@ def preprocess(images, height, width):
 
     input = cv.dnn.blobFromImages(images.astype(np.float32), ddepth = cv.CV_32F)
     return input
-
-img_dict = {} # Dictionary to store bounding boxes for corresponding cropped image
 
 def yolo_detector(frame, net):
     global img_dict
@@ -119,13 +121,51 @@ def yolo_detector(frame, net):
         img_dict[crop_img.tobytes()] = (x, y, w, h)
     return images
 
-def extract_frames(query_image_path, video_path, model_path, yolo_path, resize_h = 384, resize_w = 128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, batch_size = 32):
+def draw_rectangle(event, x, y, flags, param):
+    global ix, iy, drawing, rect
+
+    if event == cv.EVENT_LBUTTONDOWN:
+        drawing = True
+        ix, iy = x, y
+
+    elif event == cv.EVENT_MOUSEMOVE:
+        if drawing:
+            img_copy = param[0].copy()
+            cv.rectangle(img_copy, (ix, iy), (x, y), (0, 255, 0), 2)
+            cv.imshow('TRACKING', img_copy)
+
+    elif event == cv.EVENT_LBUTTONUP:
+        drawing = False
+        rect = (ix, iy, x, y)
+        cv.rectangle(param[0], (ix, iy), (x, y), (0, 255, 0), 2)
+        cv.imshow('TRACKING', param[0])
+
+def extract_frames(query_image_path, video_path, model_path, yolo_path, resize_h=384, resize_w=128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, batch_size=32):
     cap = cv.VideoCapture(video_path)
-
     net = cv.dnn.readNet(yolo_path)
+    query_images = []
 
-    frames = []
-    query_images = [cv.imread(query_image_path)]
+    if query_image_path:
+        query_images = [cv.imread(query_image_path)]
+    else:
+        ret, first_frame = cap.read()
+        if not ret:
+            print("Error reading the video")
+            return
+        cv.putText(first_frame, "Draw Bounding Box on Target", (10, 30), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+        cv.imshow('TRACKING', first_frame)
+        cv.setMouseCallback('TRACKING', draw_rectangle, [first_frame])
+
+        while True:
+            if rect:
+                break
+            if cv.waitKey(1) & 0xFF == ord('q'):
+                return
+
+        x1, y1, x2, y2 = rect
+        query_image = first_frame[y1:y2, x1:x2]
+        query_images = [query_image]
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -136,13 +176,13 @@ def extract_frames(query_image_path, video_path, model_path, yolo_path, resize_h
 
         topk_idx = topk(query_feat, gallery_feat)
 
-        query_img = query_images[0]
         top_img = images[topk_idx]
         x, y, w, h = img_dict[top_img.tobytes()]
         cv.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
         cv.putText(frame, "Target", (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-        cv.imshow("Image", frame)
+        cv.putText(frame, "Tracking", (10, 30), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+        cv.imshow("TRACKING", frame)
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
 
@@ -226,7 +266,7 @@ def topk(query_feat, gallery_feat):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Use this script to run human parsing using JPPNet',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--query', '-q', required=True, help='Path to target image.')
+    parser.add_argument('--query', '-q', help='Path to target image. Skip this argument to select target in the video frame.')
     parser.add_argument('--video', '-g', required=True, help='Path to video file.')
     parser.add_argument('--yolo', required=True, help='Path to yolov8.onnx.')
     parser.add_argument('--resize_h', default = 256, help='The height of the input for model inference.')

@@ -35,7 +35,7 @@ using namespace std;
 std::string param_keys =
     "{help    h  |                 | show help message}"
     "{model   m  |                 | network model}"
-    "{query q    |                 | path to target image}"
+    "{query q    |                 | Path to target image. Skip this argument to select target in the video frame.}"
     "{video v    |                 | video file path}"
     "{yolo       |                 | Path to yolov8.onnx}"
     "{resize_h   | 256             | resize input to specific height}"
@@ -97,12 +97,12 @@ static std::vector<float> normalization(const std::vector<float> &feature)
     return ret;
 }
 
-static void extractFeatures(std::vector<cv::Mat> &imglist, Net *net, const int &resize_h, const int &resize_w, std::vector<std::vector<float>> &features)
+static void extractFeatures(std::vector<cv::Mat> &imglist, Net *net, const int &resize_h, const int &resize_w, std::vector<std::vector<float>> &features, int batch_size=32)
 {
-    for (int st = 0; st < (int)imglist.size(); st += 32)
+    for (int st = 0; st < (int)imglist.size(); st += batch_size)
     {
         std::vector<Mat> batch;
-        for (int delta = 0; delta < 32 && st + delta < (int)imglist.size(); delta++)
+        for (int delta = 0; delta < batch_size && st + delta < (int)imglist.size(); delta++)
         {
             Mat img = imglist[st + delta];
             batch.push_back(preprocess(img));
@@ -165,6 +165,9 @@ struct MatComparator
 };
 
 std::map<cv::Mat, cv::Rect, MatComparator> imgDict;
+bool drawing = false;
+int ix = -1, iy = -1;
+cv::Rect rect;
 
 static std::vector<cv::Mat> yoloDetector(cv::Mat &frame, cv::dnn::Net &net)
 {
@@ -241,59 +244,107 @@ static std::vector<cv::Mat> yoloDetector(cv::Mat &frame, cv::dnn::Net &net)
         cv::Rect roi(x, y, w, h); // Define a region of interest
         cv::Mat crop_img = frame(roi); // Crop the region from the frame
         images.push_back(crop_img);
+        imshow("cropped", crop_img);
         imgDict[crop_img] = roi;
     }
 
     return images;
 }
 
-static void extractFrames(const std::string &queryImgPath, const std::string &videoPath, Net *reidNet, const std::string &yoloPath, int resize_h = 384, int resize_w = 128)
-{
+static void drawRectangle(int event, int x, int y, int, void* param) {
+    cv::Mat& img = *(cv::Mat*)param;
+
+    switch (event) {
+        case cv::EVENT_LBUTTONDOWN:
+            drawing = true;
+            ix = x;
+            iy = y;
+            break;
+
+        case cv::EVENT_MOUSEMOVE:
+            if (drawing) {
+                cv::Mat img_copy = img.clone();
+                cv::rectangle(img_copy, cv::Point(ix, iy), cv::Point(x, y), cv::Scalar(0, 255, 0), 2);
+                cv::imshow("TRACKING", img_copy);
+            }
+            break;
+
+        case cv::EVENT_LBUTTONUP:
+            drawing = false;
+            rect = cv::Rect(cv::Point(ix, iy), cv::Point(x, y));
+            cv::rectangle(img, rect, cv::Scalar(0, 255, 0), 2);
+            cv::imshow("TRACKING", img);
+            break;
+    }
+}
+
+static void extractFrames(const std::string& queryImgPath, const std::string& videoPath, cv::dnn::Net* reidNet, const std::string& yoloPath, int resize_h = 384, int resize_w = 128) {
     cv::VideoCapture cap(videoPath);
-    if (!cap.isOpened())
-    {
+    if (!cap.isOpened()) {
         std::cerr << "Error: Video could not be opened." << std::endl;
         return;
     }
 
     cv::dnn::Net net = cv::dnn::readNetFromONNX(yoloPath);
+    std::vector<cv::Mat> queryImages;
 
-    std::vector<cv::Mat> frames;
+    cv::Mat queryImg;
+    if (!queryImgPath.empty()) {
+        queryImg = cv::imread(queryImgPath);
+        if (queryImg.empty()) {
+            std::cerr << "Error: Query image could not be loaded." << std::endl;
+            return;
+        }
+        queryImages.push_back(queryImg);
+    } else {
+        cv::Mat firstFrame;
+        cap.read(firstFrame);
+        if (firstFrame.empty()) {
+            std::cerr << "Error reading the video" << std::endl;
+            return;
+        }
 
-    cv::Mat queryImg = cv::imread(queryImgPath);
-    if (queryImg.empty())
-    {
-        std::cerr << "Error: Query image could not be loaded." << std::endl;
-        return;
+        cv::putText(firstFrame, "Draw Bounding Box on Target", cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 0, 0), 2);
+        cv::imshow("TRACKING", firstFrame);
+        cv::setMouseCallback("TRACKING", drawRectangle, &firstFrame);
+
+        for(;;) {
+            if (rect.width > 0 && rect.height > 0) {
+                queryImg = firstFrame(rect).clone();
+                queryImages.push_back(queryImg);
+                break;
+            }
+            if (cv::waitKey(1) == 'q' || cv::waitKey(1) == 27) {
+                return;
+            }
+        }
     }
-    std::vector<cv::Mat> queryImages = {queryImg};
 
     cv::Mat frame;
-    for(;;)
-    {
-        if (!cap.read(frame) || frame.empty())
-        {
+    for(;;) {
+        if (!cap.read(frame) || frame.empty()) {
             break;
         }
 
+        // Placeholder for yoloDetector, extractFeatures, and getTopK implementations
         std::vector<cv::Mat> detectedImages = yoloDetector(frame, net);
         std::vector<std::vector<float>> queryFeatures;
         extractFeatures(queryImages, reidNet, resize_h, resize_w, queryFeatures);
         std::vector<std::vector<float>> galleryFeatures;
         extractFeatures(detectedImages, reidNet, resize_h, resize_w, galleryFeatures);
 
+
         int topk_idx = getTopK(queryFeatures, galleryFeatures);
-        if (topk_idx != -1 && static_cast<int>(detectedImages.size()) > topk_idx) //Check if topk_idx is valid
-        {
+        if (topk_idx != -1 && static_cast<int>(detectedImages.size()) > topk_idx) {
             cv::Mat topImg = detectedImages[topk_idx];
             cv::Rect bbox = imgDict[topImg];
             cv::rectangle(frame, bbox, cv::Scalar(0, 0, 255), 2);
             cv::putText(frame, "Target", cv::Point(bbox.x, bbox.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2);
         }
 
-        cv::imshow("Image", frame);
-        if (cv::waitKey(1) == 'q' || cv::waitKey(1) == 27)
-        {
+        cv::putText(frame, "Tracking", cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 0, 0), 2);
+        cv::imshow("TRACKING", frame);
+        if (cv::waitKey(1) == 'q' || cv::waitKey(1) == 27) {
             break;
         }
     }
@@ -301,7 +352,6 @@ static void extractFrames(const std::string &queryImgPath, const std::string &vi
     cap.release();
     cv::destroyAllWindows();
 }
-
 
 int main(int argc, char **argv)
 {
