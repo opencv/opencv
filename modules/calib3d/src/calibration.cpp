@@ -632,7 +632,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         int ddepth = CV_MAT_DEPTH(distCoeffs->type);
         int dchans = CV_MAT_CN(distCoeffs->type);
         int drows = distCoeffs->rows, dcols = distCoeffs->cols;
-        delems = distCoeffs->rows * distCoeffs->cols * dchans;
+        delems = drows * dcols * dchans;
         CV_Assert((ddepth == CV_32F || ddepth == CV_64F) &&
                   (drows == 1 || dcols == 1) &&
                   (delems == 4 || delems == 5 || delems == 8 || delems == 12 || delems == 14));
