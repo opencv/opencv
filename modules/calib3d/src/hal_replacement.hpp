@@ -68,19 +68,24 @@
 
 /**
    @brief Project points from 3D world space to 2D screen space using rotation and translation matrix and camera intrinsic parameters
-   @param src_data Pointer to source 3D points array
-   @param src_step1 Step between X, Y and Z coordinates of the same point in 3D points array
-   @param src_step2 Step between consecutive points in 3D points array
-   @param src_size Amount of points in 3D points array
-   @param dst_data Pointer to resulting 2D points array
-   @param dst_step1 Step between x and y coordinates of the same point in resulting 2D array
-   @param dst_step2 Step between consecutive points in resulting 2D array
+   @param x_data Pointer to X coordinates array
+   @param x_step Step between consecutive X coordinates
+   @param y_data Pointer to Y coordinates array
+   @param y_step Step between consecutive Y coordinates
+   @param z_data Pointer to Z coordinates array
+   @param z_step Step between consecutive Z coordinates
+   @param src_size Amount of 3D points
+   @param px_data Pointer to resulting projected x coordinates
+   @param px_step Step between consecutive projected x coordinates
+   @param py_data Pointer to resulting projected y coordinates
+   @param py_step Step between consecutive projected y coordinates
    @param rt_data Pointer to 3x4 array containing rotation-then-translation matrix
    @param intrinsics_data Pointer to camera intrinsic parameters vector containing [fx, fy, cx, cy]
    @param distortion_data Distortion coefficients in the same order as in OpenCV, set to zero if not used: [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4, tau_x, tau_y]
 */
-inline int hal_ni_project_points_pinhole32f(const float* src_data, size_t src_step1, size_t src_step2, size_t src_size,
-                                            float* dst_data, size_t dst_step1, size_t dst_step2,
+inline int hal_ni_project_points_pinhole32f(const float* x_data, size_t x_step, const float* y_data, size_t y_step,
+                                            const float* z_data, size_t z_step, size_t src_size,
+                                            float* px_data, size_t px_step, float* py_data, size_t py_step,
                                             const float* rt_data, const float* intrinsics_data, const float* distortion_data)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
@@ -90,19 +95,24 @@ inline int hal_ni_project_points_pinhole32f(const float* src_data, size_t src_st
 
 /**
    @brief Project points from 3D world space to 2D screen space using rotation and translation matrix and camera intrinsic parameters
-   @param src_data Pointer to source 3D points array
-   @param src_step1 Step between X, Y and Z coordinates of the same point in 3D points array
-   @param src_step2 Step between consecutive points in 3D points array
-   @param src_size Amount of points in 3D points array
-   @param dst_data Pointer to resulting 2D points array
-   @param dst_step1 Step between x and y coordinates of the same point in resulting 2D array
-   @param dst_step2 Step between consecutive points in resulting 2D array
+   @param x_data Pointer to X coordinates array
+   @param x_step Step between consecutive X coordinates
+   @param y_data Pointer to Y coordinates array
+   @param y_step Step between consecutive Y coordinates
+   @param z_data Pointer to Z coordinates array
+   @param z_step Step between consecutive Z coordinates
+   @param src_size Amount of 3D points
+   @param px_data Pointer to resulting projected x coordinates
+   @param px_step Step between consecutive projected x coordinates
+   @param py_data Pointer to resulting projected y coordinates
+   @param py_step Step between consecutive projected y coordinates
    @param rt_data Pointer to 3x4 array containing rotation-then-translation matrix
    @param intrinsics_data Pointer to camera intrinsic parameters vector containing [fx, fy, cx, cy]
    @param distortion_data Distortion coefficients in the same order as in OpenCV, set to zero if not used: [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4, tau_x, tau_y]
 */
-inline int hal_ni_project_points_pinhole64f(const double* src_data, size_t src_step1, size_t src_step2, size_t src_size,
-                                            double* dst_data, size_t dst_step1, size_t dst_step2,
+inline int hal_ni_project_points_pinhole64f(const double* x_data, size_t x_step, const double* y_data, size_t y_step,
+                                            const double* z_data, size_t z_step, size_t src_size,
+                                            double* px_data, size_t px_step, double* py_data, size_t py_step,
                                             const double* rt_data, const double* intrinsics_data, const double* distortion_data)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 

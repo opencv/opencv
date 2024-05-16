@@ -661,8 +661,14 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
             cameraDistortion[ctr] = (float)k[ctr];
         }
 
-        CALL_HAL(projectPoints, cv_hal_project_points_pinhole32f, objectPoints->data.fl, sizeof(float), objectPoints->step, count,
-                 imagePoints->data.fl, sizeof(float), imagePoints->step, rtMatrix, cameraIntrinsics, cameraDistortion);
+        CALL_HAL(projectPoints, cv_hal_project_points_pinhole32f,
+                 objectPoints->data.fl + 0, sizeof(float),
+                 objectPoints->data.fl + 1, sizeof(float),
+                 objectPoints->data.fl + 2, sizeof(float),
+                 count,
+                 imagePoints->data.fl + 0, sizeof(float),
+                 imagePoints->data.fl + 1, sizeof(float),
+                 rtMatrix, cameraIntrinsics, cameraDistortion);
     }
 
     _m.reset(cvCreateMat( imagePoints->rows, imagePoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(imagePoints->type)) ));
@@ -682,8 +688,14 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
 
         double cameraIntrinsics[4] = { fx, fy, cx, cy };
 
-        CALL_HAL(projectPoints, cv_hal_project_points_pinhole64f, objectPoints->data.db, sizeof(double), objectPoints->step, count,
-                 imagePoints->data.db, sizeof(double), imagePoints->step, rtMatrix, cameraIntrinsics, k);
+        CALL_HAL(projectPoints, cv_hal_project_points_pinhole64f,
+                 objectPoints->data.db + 0, sizeof(double),
+                 objectPoints->data.db + 1, sizeof(double),
+                 objectPoints->data.db + 2, sizeof(double),
+                 count,
+                 imagePoints->data.db + 0, sizeof(double),
+                 imagePoints->data.db + 1, sizeof(double),
+                 rtMatrix, cameraIntrinsics, k);
     }
 
     if( dpdr )
