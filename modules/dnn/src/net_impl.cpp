@@ -1842,14 +1842,20 @@ static void dumpTensorToString(std::ostringstream &out, const Mat &m, const int 
         case CV_16U: type = 4; break;
         case CV_16S: type = 5; break;
         case CV_32S: type = 6; break;
-/*
-#if OPENCV_VERSION_MAJOR > 4
+#if CV_VERSION_MAJOR > 4
         case CV_64S: type = 7; break;
-        case CV_STR: type = 8; break;
+        // STRING: 8
         case CV_BOOL: type = 9; break;
 #endif
-*/
         case CV_16F: type = 10; break;
+        case CV_64F: type = 11; break;
+#if CV_VERSION_MAJOR > 4
+        case CV_32U: type = 12; break;
+        case CV_64U: type = 13; break;
+        // COMPLEX64: 14
+        // COMPLEX128: 15
+        case CV_16BF: type = 16; break;
+#endif
         default: CV_Error(Error::StsUnsupportedFormat, "Type of mat is not supported");
     }
     const auto &mshape = shape(m);
@@ -1964,7 +1970,9 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
         std::string backend = "Unknown";
         switch (backendId) {
             case DNN_BACKEND_DEFAULT:   backend = "DEFAULT"; break;
+            #if CV_VERSION_MAJOR <= 4
             case DNN_BACKEND_HALIDE:    backend = "HALIDE"; break;
+            #endif
             case DNN_BACKEND_INFERENCE_ENGINE:  // fallthru
             case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019:  // fallthru
             case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: backend = "OpenVINO"; break;
