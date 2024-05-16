@@ -867,7 +867,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 const uchar* extSptr2 = sptr2;
                 if( swapped12 )
                     std::swap(extSptr1, extSptr1);
-                
+
                 // try to perform operation with conversion in one call
                 // if fail, use converter functions
                 uchar* opconverted = haveMask ? maskbuf : dptr;
@@ -899,7 +899,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                     copymask(opconverted, 1, ptrs[2], 1, dptr, 1, Size(bsz, 1), &dsz);
                     ptrs[2] += bsz;
                 }
-                
+
                 ptrs[0] += bsz*esz1; ptrs[1] += bsz*dsz;
             }
         }
