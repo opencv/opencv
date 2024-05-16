@@ -518,8 +518,6 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
 }
 
 
-static const char* cvDistCoeffErr = "Distortion coefficients must be 1x4, 4x1, 1x5, 5x1, 1x8, 8x1, 1x12, 12x1, 1x14 or 14x1 floating-point vector";
-
 static void cvProjectPoints2Internal( const CvMat* objectPoints,
                   const CvMat* r_vec,
                   const CvMat* t_vec,
@@ -625,26 +623,24 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
     if( fixedAspectRatio )
         fx = fy*aspectRatio;
 
+    int delems = 0;
     if( distCoeffs )
     {
-        if( !CV_IS_MAT(distCoeffs) ||
-            (CV_MAT_DEPTH(distCoeffs->type) != CV_64F &&
-            CV_MAT_DEPTH(distCoeffs->type) != CV_32F) ||
-            (distCoeffs->rows != 1 && distCoeffs->cols != 1) ||
-            (distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) != 4 &&
-            distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) != 5 &&
-            distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) != 8 &&
-            distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) != 12 &&
-            distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) != 14) )
-            CV_Error( cv::Error::StsBadArg, cvDistCoeffErr );
+        CV_Assert(CV_IS_MAT(distCoeffs));
 
-        _k = cvMat( distCoeffs->rows, distCoeffs->cols,
-                    CV_MAKETYPE(CV_64F,CV_MAT_CN(distCoeffs->type)), k );
+        int ddepth = CV_MAT_DEPTH(distCoeffs->type);
+        int dchans = CV_MAT_CN(distCoeffs->type);
+        int drows = distCoeffs->rows, dcols = distCoeffs->cols;
+        delems = distCoeffs->rows * distCoeffs->cols * dchans;
+        CV_Assert((ddepth == CV_32F || ddepth == CV_64F) &&
+                  (drows == 1 || dcols == 1) &&
+                  (delems == 4 || delems == 5 || delems == 8 || delems == 12 || delems == 14));
+
+        _k = cvMat( drows, dcols, CV_MAKETYPE(CV_64F, dchans), k );
         cvConvert( distCoeffs, &_k );
         if(k[12] != 0 || k[13] != 0)
         {
-          detail::computeTiltProjectionMatrix(k[12], k[13],
-            &matTilt, &dMatTiltdTauX, &dMatTiltdTauY);
+            detail::computeTiltProjectionMatrix(k[12], k[13], &matTilt, &dMatTiltdTauX, &dMatTiltdTauY);
         }
     }
 
