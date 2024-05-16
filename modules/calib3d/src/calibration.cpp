@@ -660,6 +660,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
 
         switch (delems)
         {
+        case  0: break;
         case  4: // [k_1, k_2, p_1, p_2]
             intr.amt_k = 2; intr.amt_p = 2;
             break;
@@ -670,10 +671,10 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
             intr.amt_k = 6; intr.amt_p = 2;
             break;
         case 12: // [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4]
-            intr.amt_k = 3; intr.amt_p = 2; intr.amt_s = 4;
+            intr.amt_k = 6; intr.amt_p = 2; intr.amt_s = 4;
             break;
         case 14: // [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4, tau_x, tau_y]
-            intr.amt_k = 3; intr.amt_p = 2; intr.amt_s = 4; intr.use_tau = true;
+            intr.amt_k = 6; intr.amt_p = 2; intr.amt_s = 4; intr.use_tau = true;
             break;
         default:
             CV_Error(cv::Error::StsInternal, "Wrong number of distortion coefficients");
@@ -724,8 +725,10 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
             .k = {}, .amt_k = 0, .p = {}, .amt_p = 0, .s = {}, .amt_s = 0,
             .tau_x = 0, .tau_y = 0, .use_tau = false
         };
+
         switch (delems)
         {
+        case  0: break;
         case  4: // [k_1, k_2, p_1, p_2]
             intr.amt_k = 2; intr.amt_p = 2;
             break;
@@ -736,10 +739,10 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
             intr.amt_k = 6; intr.amt_p = 2;
             break;
         case 12: // [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4]
-            intr.amt_k = 3; intr.amt_p = 2; intr.amt_s = 4;
+            intr.amt_k = 6; intr.amt_p = 2; intr.amt_s = 4;
             break;
         case 14: // [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4, tau_x, tau_y]
-            intr.amt_k = 3; intr.amt_p = 2; intr.amt_s = 4; intr.use_tau = true;
+            intr.amt_k = 6; intr.amt_p = 2; intr.amt_s = 4; intr.use_tau = true;
             break;
         default:
             CV_Error(cv::Error::StsInternal, "Wrong number of distortion coefficients");
