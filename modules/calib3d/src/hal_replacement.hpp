@@ -93,24 +93,17 @@ struct cv_camera_intrinsics_pinhole_32f
 
 /**
    @brief Project points from 3D world space to 2D screen space using rotation and translation matrix and camera intrinsic parameters
-   @param x_data Pointer to X coordinates array
-   @param x_step Step between consecutive X coordinates
-   @param y_data Pointer to Y coordinates array
-   @param y_step Step between consecutive Y coordinates
-   @param z_data Pointer to Z coordinates array
-   @param z_step Step between consecutive Z coordinates
-   @param src_size Amount of 3D points
-   @param px_data Pointer to resulting projected x coordinates
-   @param px_step Step between consecutive projected x coordinates
-   @param py_data Pointer to resulting projected y coordinates
-   @param py_step Step between consecutive projected y coordinates
+   @param src_data Pointer to 3D points array with coordinates interleaved as X, Y, Z, X, Y, Z,..
+   @param src_step Step between consecutive 3D points
+   @param src_size Amount of points
+   @param dst_data Pointer to resulting projected 2D points with coordinates interleaved as u, v, u, v,..
+   @param dst_step Step between consecutive projected 2D points
    @param rt_data Pointer to 3x4 array containing rotation-then-translation matrix
    @param intr_data Pointer to camera intrinsics structure
 */
-inline int hal_ni_project_points_pinhole32f(const float* x_data, size_t x_step, const float* y_data, size_t y_step,
-                                            const float* z_data, size_t z_step, size_t src_size,
-                                            float* px_data, size_t px_step, float* py_data, size_t py_step,
-                                            const float* rt_data, const cv_camera_intrinsics_pinhole_32f* intr_data)
+inline int hal_ni_project_points_pinhole32f(const float* src_data, size_t src_step, size_t src_size,
+                                            float* dst_data, size_t dst_step, const float* rt_data,
+                                            const cv_camera_intrinsics_pinhole_32f* intr_data)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
@@ -144,24 +137,17 @@ struct cv_camera_intrinsics_pinhole_64f
 
 /**
    @brief Project points from 3D world space to 2D screen space using rotation and translation matrix and camera intrinsic parameters
-   @param x_data Pointer to X coordinates array
-   @param x_step Step between consecutive X coordinates
-   @param y_data Pointer to Y coordinates array
-   @param y_step Step between consecutive Y coordinates
-   @param z_data Pointer to Z coordinates array
-   @param z_step Step between consecutive Z coordinates
-   @param src_size Amount of 3D points
-   @param px_data Pointer to resulting projected x coordinates
-   @param px_step Step between consecutive projected x coordinates
-   @param py_data Pointer to resulting projected y coordinates
-   @param py_step Step between consecutive projected y coordinates
+   @param src_data Pointer to 3D points array with coordinates interleaved as X, Y, Z, X, Y, Z,..
+   @param src_step Step between consecutive 3D points
+   @param src_size Amount of points
+   @param dst_data Pointer to resulting projected 2D points with coordinates interleaved as u, v, u, v,..
+   @param dst_step Step between consecutive projected 2D points
    @param rt_data Pointer to 3x4 array containing rotation-then-translation matrix
    @param intr_data Pointer to camera intrinsics structure
 */
-inline int hal_ni_project_points_pinhole64f(const double* x_data, size_t x_step, const double* y_data, size_t y_step,
-                                            const double* z_data, size_t z_step, size_t src_size,
-                                            double* px_data, size_t px_step, double* py_data, size_t py_step,
-                                            const double* rt_data, const cv_camera_intrinsics_pinhole_64f* intr_data)
+inline int hal_ni_project_points_pinhole64f(const double* src_data, size_t src_step, size_t src_size,
+                                            double* dst_data, size_t dst_step, const double* rt_data,
+                                            const cv_camera_intrinsics_pinhole_64f* intr_data)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED

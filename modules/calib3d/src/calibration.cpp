@@ -698,12 +698,8 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         intr.tau_y = (float)k[13];
 
         CALL_HAL(projectPoints, cv_hal_project_points_pinhole32f,
-                 objectPoints->data.fl + 0, sizeof(float),
-                 objectPoints->data.fl + 1, sizeof(float),
-                 objectPoints->data.fl + 2, sizeof(float),
-                 count,
-                 imagePoints->data.fl + 0, sizeof(float),
-                 imagePoints->data.fl + 1, sizeof(float),
+                 objectPoints->data.fl, objectPoints->step, count,
+                 imagePoints->data.fl, imagePoints->step,
                  rtMatrix, &intr);
     }
 
@@ -768,12 +764,8 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         intr.tau_y = k[13];
 
         CALL_HAL(projectPoints, cv_hal_project_points_pinhole64f,
-                 objectPoints->data.db + 0, sizeof(double),
-                 objectPoints->data.db + 1, sizeof(double),
-                 objectPoints->data.db + 2, sizeof(double),
-                 count,
-                 imagePoints->data.db + 0, sizeof(double),
-                 imagePoints->data.db + 1, sizeof(double),
+                 objectPoints->data.db, objectPoints->step, count,
+                 imagePoints->data.db, imagePoints->step,
                  rtMatrix, &intr);
     }
 
