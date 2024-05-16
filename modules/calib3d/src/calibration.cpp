@@ -651,12 +651,9 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
                                (float)R[3], (float)R[4], (float)R[5], (float)t[1],
                                (float)R[6], (float)R[7], (float)R[8], (float)t[2] };
 
-        cv_camera_intrinsics_pinhole_32f intr =
-        {
-            .fx = (float)fx, .fy = (float)fy, .cx = (float)cx, .cy = (float)cy,
-            .k = {}, .amt_k = 0, .p = {}, .amt_p = 0, .s = {}, .amt_s = 0,
-            .tau_x = 0, .tau_y = 0, .use_tau = false
-        };
+        cv_camera_intrinsics_pinhole_32f intr;
+        intr.fx = (float)fx; intr.fy = (float)fy;
+        intr.cx = (float)cx; intr.cy = (float)cy;
 
         switch (delems)
         {
@@ -719,12 +716,9 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
                                 R[3], R[4], R[5], t[1],
                                 R[6], R[7], R[8], t[2] };
 
-        cv_camera_intrinsics_pinhole_64f intr =
-        {
-            .fx = fx, .fy = fy, .cx = cx, .cy = cy,
-            .k = {}, .amt_k = 0, .p = {}, .amt_p = 0, .s = {}, .amt_s = 0,
-            .tau_x = 0, .tau_y = 0, .use_tau = false
-        };
+        cv_camera_intrinsics_pinhole_64f intr;
+        intr.fx = fx; intr.fy = fy;
+        intr.cx = cx; intr.cy = cy;
 
         switch (delems)
         {
