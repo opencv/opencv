@@ -517,6 +517,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
     return 1;
 }
 
+static const char* cvDistCoeffErr = "Distortion coefficients must be 1x4, 4x1, 1x5, 5x1, 1x8, 8x1, 1x12, 12x1, 1x14 or 14x1 floating-point vector";
 
 static void cvProjectPoints2Internal( const CvMat* objectPoints,
                   const CvMat* r_vec,
@@ -650,11 +651,13 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
                                (float)R[3], (float)R[4], (float)R[5], (float)t[1],
                                (float)R[6], (float)R[7], (float)R[8], (float)t[2] };
 
-        cv_camera_intrinsics_pinhole_32f intr = 
+        cv_camera_intrinsics_pinhole_32f intr =
         {
             .fx = (float)fx, .fy = (float)fy, .cx = (float)cx, .cy = (float)cy,
-            .amt_k = 0, .amt_p = 0, .amt_s = 0, .use_tau = false
+            .k = {}, .amt_k = 0, .p = {}, .amt_p = 0, .s = {}, .amt_s = 0,
+            .tau_x = 0, .tau_y = 0, .use_tau = false
         };
+
         switch (delems)
         {
         case  4: // [k_1, k_2, p_1, p_2]
@@ -722,7 +725,8 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         cv_camera_intrinsics_pinhole_64f intr = 
         {
             .fx = fx, .fy = fy, .cx = cx, .cy = cy,
-            .amt_k = 0, .amt_p = 0, .amt_s = 0, .use_tau = false
+            .k = {}, .amt_k = 0, .p = {}, .amt_p = 0, .s = {}, .amt_s = 0,
+            .tau_x = 0, .tau_y = 0, .use_tau = false
         };
         switch (delems)
         {
