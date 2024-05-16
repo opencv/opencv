@@ -65,13 +65,20 @@ namespace cv
 // matD = alpha * matA * matB + beta * matC
 static bool ocl_gemm_clblast(InputArray matA, InputArray matB, double alpha,
                              InputArray matC, double beta, OutputArray matD, int flags) {
+    const auto &device = ocl::Device::getDefault();
+    auto vendorName = ocl::Device::getDefault().vendorName();
+    if (vendorName.find("Apple") != std::string::npos ||
+        vendorName.find("Intel") != std::string::npos) {
+        return false;
+    }
+
     int type = matA.type(), depth = CV_MAT_DEPTH(type), esz = CV_ELEM_SIZE(type);
     bool haveC = matC.kind() != cv::_InputArray::NONE;
     CV_CheckTypeEQ(matB.type(), type, "Type of matB does not match the type of matA");
     if (haveC) {
         CV_CheckEQ(matC.type(), type, "Type of matC does not match the type of matA");
     }
-    const auto &device = ocl::Device::getDefault();
+
     bool supportFP64 = device.hasFP64(),
          supportFP16 = device.hasFP16();
     if (!supportFP64 && depth == CV_64F) {
