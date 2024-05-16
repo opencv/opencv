@@ -144,16 +144,16 @@ static bool ocl_gemm_clblast(InputArray matA, InputArray matB, double alpha,
     if (type == CV_32FC1) {
         status = CLBlastSgemm(layout, transA, transB, M, N, K,
                               (float)alpha,
-                              (const cl_mem)A.handle(ACCESS_READ), offsetA, lda,
-                              (const cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
+                              (cl_mem)A.handle(ACCESS_READ), offsetA, lda,
+                              (cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
                               (float)beta,
                               (cl_mem)D.handle(ACCESS_RW), offsetC, ldc,
                               &queue, NULL);
     } else if (type == CV_64FC1) {
         status = CLBlastDgemm(layout, transA, transB, M, N, K,
                               alpha,
-                              (const cl_mem)A.handle(ACCESS_READ), offsetA, lda,
-                              (const cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
+                              (cl_mem)A.handle(ACCESS_READ), offsetA, lda,
+                              (cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
                               beta,
                               (cl_mem)D.handle(ACCESS_RW), offsetC, ldc,
                               &queue, NULL);
@@ -162,8 +162,8 @@ static bool ocl_gemm_clblast(InputArray matA, InputArray matB, double alpha,
         cl_float2 beta2{{(cl_float)beta, 0.f}};
         status = CLBlastCgemm(layout, transA, transB, M, N, K,
                               alpha2,
-                              (const cl_mem)A.handle(ACCESS_READ), offsetA, lda,
-                              (const cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
+                              (cl_mem)A.handle(ACCESS_READ), offsetA, lda,
+                              (cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
                               beta2,
                               (cl_mem)D.handle(ACCESS_RW), offsetC, ldc,
                               &queue, NULL);
@@ -172,16 +172,16 @@ static bool ocl_gemm_clblast(InputArray matA, InputArray matB, double alpha,
         cl_double2 beta2{{beta, 0}};
         status = CLBlastZgemm(layout, transA, transB, M, N, K,
                               alpha2,
-                              (const cl_mem)A.handle(ACCESS_READ), offsetA, lda,
-                              (const cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
+                              (cl_mem)A.handle(ACCESS_READ), offsetA, lda,
+                              (cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
                               beta2,
                               (cl_mem)D.handle(ACCESS_RW), offsetC, ldc,
                               &queue, NULL);
     } else if (type == CV_16FC1) {
         status = CLBlastHgemm(layout, transA, transB, M, N, K,
                               (cl_half)alpha,
-                              (const cl_mem)A.handle(ACCESS_READ), offsetA, lda,
-                              (const cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
+                              (cl_mem)A.handle(ACCESS_READ), offsetA, lda,
+                              (cl_mem)B.handle(ACCESS_READ), offsetB, ldb,
                               (cl_half)beta,
                               (cl_mem)D.handle(ACCESS_RW), offsetC, ldc,
                               &queue, NULL);
