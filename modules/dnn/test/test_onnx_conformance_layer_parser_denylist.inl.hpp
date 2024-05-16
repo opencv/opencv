@@ -94,8 +94,6 @@
 "test_dynamicquantizelinear_min_adjusted_expanded",  // ---- same as above ---
 "test_edge_pad", // Issue::Parser::Weights are required as inputs
 "test_einsum_inner_prod", // Issue::Output shape does not match with reference
-"test_equal", // Issue:: Unsupported data type BOOL
-"test_equal_bcast", // ---- same as above ---
 "test_expand_dim_changed", // Issue:: Unkonwn error
 "test_expand_dim_unchanged", // Issue:: Unkonwn error
 "test_eyelike_populate_off_main_diagonal", // Issues::Layer::Can't create layer::Can't create layer "onnx_node_output_0!y" of type "EyeLike" in function 'getLayerInstance'

@@ -103,24 +103,6 @@ public:
         }
     }
 
-    void reInit(size_t newElemSize) {
-        std::vector<size_t> newElemSizes(elemsize.size(), newElemSize);
-        reInit(newElemSizes);
-    }
-
-    void reInit(std::vector<size_t> newElemSizes) {
-        for (size_t array_index = 0; array_index < orig_steps.size(); array_index++) {
-            auto &step = orig_steps[array_index];
-            int esz = elemsize[array_index];
-            int new_esz = newElemSizes[array_index];
-            for (size_t step_index = 0; step_index < step.size(); step_index++) {
-                step[step_index] = static_cast<size_t>(step[step_index] / esz * new_esz);
-            }
-            elemsize[array_index] = newElemSizes[array_index];
-        }
-        prepare_for_broadcast_op();
-    }
-
     bool prepare_for_broadcast_op()
     {
         int i, j, k;
@@ -653,7 +635,6 @@ public:
 
         if (inputs_arr.depth() == CV_16F)
         {
-            helper.reInit(sizeof(float));
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
         }
@@ -818,20 +799,15 @@ public:
         switch (type)
         {
             case CV_Bool:
-                helper.reInit(sizeof(uint8_t));
                 boolOpDispatch(std::forward<Args>(args)...);
                 break;
             case CV_8U:
-                // TODO: integrate with type inference
-                helper.reInit(sizeof(uint8_t));
                 opDispatch<uint8_t>(std::forward<Args>(args)...);
                 break;
             case CV_8S:
                 opDispatch<int8_t>(std::forward<Args>(args)...);
                 break;
             case CV_32S:
-                // TODO: integrate with type inference
-                helper.reInit(sizeof(int32_t));
                 opDispatch<int32_t>(std::forward<Args>(args)...);
                 break;
             case CV_64S:
