@@ -459,10 +459,6 @@ static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, ReduceMode mod
     int dims = std::max(1, srcMat.dims);
     axis = (axis + dims) % dims;
     CV_Assert(srcMat.channels() == 1 && axis >= 0 && axis <= srcMat.dims);
-
-    int dims = std::max(1, srcMat.dims);
-    axis = (axis + dims) % dims;
-    CV_Assert(srcMat.channels() == 1 && axis >= 0 && axis < dims);
     std::vector<int> sizes(dims);
     std::copy(srcMat.size.p, srcMat.size.p + srcMat.dims, sizes.begin());
     if(!sizes.empty())

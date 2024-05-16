@@ -662,7 +662,7 @@ TEST_P(Layer_Test_01D, ChannelsPReLU)
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Test_01D, Values(0, 1));
 
-typedef testing::TestWithParam<tuple<std::vector<int>, int>> Layer_Gather_1d_Test;
+typedef testing::TestWithParam<tuple<std::vector<int>, int>> Layer_Gather_Test;
 TEST_P(Layer_Gather_Test, Accuracy_01D) {
 
     std::vector<int> input_shape = get<0>(GetParam());
@@ -702,7 +702,7 @@ TEST_P(Layer_Gather_Test, Accuracy_01D) {
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);
 }
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_1d_Test, Combine(
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Gather_Test, Combine(
 /*input blob shape*/    testing::Values(
                                 std::vector<int>({}),
                                 std::vector<int>({1}),
