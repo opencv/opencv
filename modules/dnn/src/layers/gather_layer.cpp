@@ -39,8 +39,8 @@ public:
         }
 
         const int axis = normalize_axis(m_axis, inpShape);
-
-        inpShape.erase(inpShape.begin() + axis);
+        if (!inpShape.empty())
+            inpShape.erase(inpShape.begin() + axis);
         auto end = m_real_ndims == -1 ? inputs[1].end() : inputs[1].begin() + m_real_ndims;
         inpShape.insert(inpShape.begin() + axis, inputs[1].begin(), end);
         outputs.assign(1, inpShape);
