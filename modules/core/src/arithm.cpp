@@ -1076,7 +1076,7 @@ void multiply(InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    ExtendedTypeFunc mulExtFunc = getMulExtFunc(src1.depth(), src2.depth(), dtype);
+    ExtendedTypeFunc mulExtFunc = getMulExtFunc(src1.depth(), src2.depth(), dtype < 0 ? dst.depth() : dtype);
     arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(),
               /* muldiv */ true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
               /* extendedFunc */ mulExtFunc );
