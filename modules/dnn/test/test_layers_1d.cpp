@@ -724,8 +724,8 @@ int arg_op(const std::vector<T>& vec, const std::string& operation) {
     }
 }
 // Test for ArgLayer is disabled because there problem in runLayer function related to type assignment
-typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Arg_1d_Test;
-TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Arg_Test;
+TEST_P(Layer_Arg_Test, Accuracy_01D) {
     std::vector<int> input_shape = get<0>(GetParam());
     std::string operation = get<1>(GetParam());
 
@@ -734,8 +734,8 @@ TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
     lp.name = "arg" + operation + "_Layer";
     int axis = (input_shape.size() == 0 || input_shape.size() == 1 ) ? 0 : 1;
     lp.set("op", operation);
-    lp.set("axis", 0);
-    lp.set("keepdims", 0);
+    lp.set("axis", axis);
+    lp.set("keepdims", 1);
     lp.set("select_last_index", 0);
 
     Ptr<ArgLayer> layer = ArgLayer::create(lp);
@@ -768,6 +768,7 @@ TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
+
     runLayer(layer, inputs, outputs);
     ASSERT_EQ(1, outputs.size());
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
@@ -776,7 +777,7 @@ TEST_P(Layer_Arg_1d_Test, Accuracy_01D) {
     normAssert(output_ref, outputs[0]);
 }
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Arg_1d_Test, Combine(
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Arg_Test, Combine(
 /*input blob shape*/    testing::Values(
                                 std::vector<int>({}),
                                 std::vector<int>({1}),
@@ -803,7 +804,7 @@ TEST_P(Layer_NaryElemwise_1d_Test, Accuracy) {
     cv::randu(input1, 0.0, 1.0);
     cv::randu(input2, 0.0, 1.0);
 
-    Mat output_ref;
+    cv::Mat output_ref;
     if (operation == "sum") {
         output_ref = input1 + input2;
     } else if (operation == "mul") {
@@ -813,7 +814,7 @@ TEST_P(Layer_NaryElemwise_1d_Test, Accuracy) {
     } else if (operation == "sub") {
         output_ref = input1 - input2;
     } else {
-        output_ref = Mat();
+        output_ref = cv::Mat();
     }
     std::vector<Mat> inputs{input1, input2};
     std::vector<Mat> outputs;
@@ -854,7 +855,7 @@ TEST_P(Layer_Elemwise_1d_Test, Accuracy_01D) {
     cv::randu(input2, 0.0, 1.0);
 
     // Dynamically select the operation
-    Mat output_ref;
+    cv::Mat output_ref;
     if (operation == "sum") {
         output_ref = input1 + input2;
     } else if (operation == "max") {
@@ -866,7 +867,7 @@ TEST_P(Layer_Elemwise_1d_Test, Accuracy_01D) {
     } else if (operation == "div") {
         output_ref = input1 / input2;
     } else {
-        output_ref = Mat();
+        output_ref = cv::Mat();
     }
 
     std::vector<Mat> inputs{input1, input2};
