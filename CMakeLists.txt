@@ -13,7 +13,6 @@ FATAL: In-source builds are not allowed.
 ")
 endif()
 
-
 include(cmake/OpenCVMinDepVersions.cmake)
 
 if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
@@ -258,6 +257,8 @@ OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VERIFY HAVE_CAP_IOS)
 OCV_OPTION(WITH_CAROTENE "Use NVidia carotene acceleration library for ARM platform" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (ARM OR AARCH64) AND NOT IOS AND NOT XROS)
+OCV_OPTION(WITH_KLEIDICV "Use KleidiCV library for ARM platforms" OFF
+  VISIBLE_IF (AARCH64 AND (ANDROID OR UNIX AND NOT IOS AND NOT XROS)))
 OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
   VISIBLE_IF ANDROID
   VERIFY HAVE_CPUFEATURES)
@@ -490,6 +491,9 @@ OCV_OPTION(WITH_CANN "Include CANN support" OFF
 OCV_OPTION(WITH_FLATBUFFERS "Include Flatbuffers support (required by DNN/TFLite importer)" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_FLATBUFFERS)
+OCV_OPTION(WITH_ZLIB_NG "Use zlib-ng instead of zlib" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_ZLIB_NG)
 
 # OpenCV build components
 # ===================================================
@@ -963,6 +967,13 @@ if(HAVE_OPENVX)
   endif()
 endif()
 
+if(WITH_KLEIDICV)
+  ocv_debug_message(STATUS "Enable KleidiCV acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";kleidicv;")
+    set(OpenCV_HAL "kleidicv;${OpenCV_HAL}")
+  endif()
+endif()
+
 if(WITH_CAROTENE)
   ocv_debug_message(STATUS "Enable carotene acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";carotene;")
@@ -987,6 +998,10 @@ foreach(hal ${OpenCV_HAL})
     else()
       message(STATUS "Carotene: NEON is not available, disabling carotene...")
     endif()
+  elseif(hal STREQUAL "kleidicv")
+    add_subdirectory(3rdparty/kleidicv)
+    ocv_hal_register(KLEIDICV_HAL_LIBRARIES KLEIDICV_HAL_HEADERS KLEIDICV_HAL_INCLUDE_DIRS)
+    list(APPEND OpenCV_USED_HAL "KleidiCV (ver ${KLEIDICV_HAL_VERSION})")
   elseif(hal STREQUAL "openvx")
     add_subdirectory(3rdparty/openvx)
     ocv_hal_register(OPENVX_HAL_LIBRARIES OPENVX_HAL_HEADERS OPENVX_HAL_INCLUDE_DIRS)
@@ -1366,21 +1381,12 @@ status("")
 status("  GUI: " "${OPENCV_HIGHGUI_BUILTIN_BACKEND}")
 
 if(WITH_WAYLAND OR HAVE_WAYLAND)
-  if(HAVE_WAYLAND_CLIENT)
-    status("    Wayland Client:" "YES (ver ${WAYLAND_CLIENT_VERSION})")
-  endif()
-  if(HAVE_WAYLAND_CURSOR)
-    status("    Wayland Cursor:" "YES (ver ${WAYLAND_CURSOR_VERSION})")
-  endif()
-  if(HAVE_WAYLAND_PROTOCOL)
-    status("    Wayland Protocol:" "YES (ver ${WAYLAND_PROTOCOL_VERSION})")
-  endif()
-  if(HAVE_WAYLAND_EGL)
-    status("    Wayland EGL:" "YES (ver ${WAYLAND_EGL_VERSION})")
-  endif()
-  if(HAVE_XKBCOMMON)
-    status("    Xkbcommon:" "YES (ver ${XKBCOMMON_VERSION})")
-  endif()
+  status("    Wayland:" HAVE_WAYLAND THEN "(Experimental) YES" ELSE "NO")
+  status("      Wayland Client:" HAVE_WAYLAND_CLIENT THEN "YES (ver ${WAYLAND_CLIENT_VERSION})" ELSE "NO")
+  status("      Wayland Cursor:" HAVE_WAYLAND_CURSOR THEN "YES (ver ${WAYLAND_CURSOR_VERSION})" ELSE "NO")
+  status("      Wayland Protocols:" HAVE_WAYLAND_PROTOCOLS THEN "YES (ver ${WAYLAND_PROTOCOLS_VERSION})" ELSE "NO")
+  status("      Xkbcommon:" HAVE_XKBCOMMON THEN "YES (ver ${XKBCOMMON_VERSION})" ELSE "NO")
+  status("      Wayland EGL(Option):" HAVE_WAYLAND_EGL THEN "YES (ver ${WAYLAND_EGL_VERSION})" ELSE "NO")
 endif()
 
 if(WITH_QT OR HAVE_QT)
@@ -1433,12 +1439,16 @@ endif()
 # ========================== MEDIA IO ==========================
 status("")
 status("  Media I/O: ")
-status("    ZLib:"   ZLIB_FOUND THEN "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})" ELSE "build (ver ${ZLIB_VERSION_STRING})")
+if(WITH_ZLIB_NG OR HAVE_ZLIB_NG)
+  status("    ZLib-Ng:" "build (zlib ver ${ZLIB_VERSION_STRING}, zlib-ng ver ${ZLIBNG_VERSION_STRING})")
+else()
+  status("    ZLib:"   ZLIB_FOUND THEN "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})" ELSE "build (ver ${ZLIB_VERSION_STRING})")
+endif()
 
 if(WITH_JPEG OR HAVE_JPEG)
   if(NOT HAVE_JPEG)
     status("    JPEG:" NO)
-  elseif(BUILD_JPEG)
+  elseif(BUILD_JPEG OR NOT JPEG_FOUND)
     status("    JPEG:" "build-${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
     if(ENABLE_LIBJPEG_TURBO_SIMD)
       status("      SIMD Support Request:" "YES")

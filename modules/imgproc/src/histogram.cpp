@@ -3452,6 +3452,8 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_EQUALIZE_HISTOGRAM>(src.cols, src.rows),
                openvx_equalize_hist(src, dst))
 
+    CALL_HAL(equalizeHist, cv_hal_equalize_hist, src.data, src.step, dst.data, dst.step, src.cols, src.rows);
+
     Mutex histogramLockInstance;
 
     const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;

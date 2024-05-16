@@ -2286,6 +2286,19 @@ public:
     {
         return cvWaitKey(1);  // TODO
     }
+
+    const std::string getName() const CV_OVERRIDE
+    {
+#if GTK_MAJOR_VERSION == 2
+        return "GTK2";
+#elif GTK_MAJOR_VERSION == 3
+        return "GTK3";
+#elif GTK_MAJOR_VERSION == 4
+        return "GTK4";
+#else
+#error "Unsupported GTK version"
+#endif
+    }
 };  // GTKBackendUI
 
 static
