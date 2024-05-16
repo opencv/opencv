@@ -719,7 +719,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
                                 R[3], R[4], R[5], t[1],
                                 R[6], R[7], R[8], t[2] };
 
-        cv_camera_intrinsics_pinhole_64f intr = 
+        cv_camera_intrinsics_pinhole_64f intr =
         {
             .fx = fx, .fy = fy, .cx = cx, .cy = cy,
             .k = {}, .amt_k = 0, .p = {}, .amt_p = 0, .s = {}, .amt_s = 0,
