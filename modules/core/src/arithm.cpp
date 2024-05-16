@@ -811,7 +811,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                     if (cvtdst)
                     {
                         uchar* cdst = haveMask ? maskbuf : dptr;
-                        cvtdst( wbuf, 1, 0, 1, cdst, 1, bszn, 0 );
+                        cvtdst(wbuf, 1, 0, 1, cdst, 1, bszn, 0);
                     }
                     opconverted = cvtdst ? maskbuf : wbuf;
                 }
@@ -837,13 +837,19 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         _buf.allocate(bufesz*blocksize + 64);
         buf = _buf.data();
         if( cvtsrc1 )
-            buf1 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
+        {
+            buf1 = buf, buf = alignPtr(buf + blocksize * wsz, 16);
+        }
         buf2 = buf; buf = alignPtr(buf + blocksize*wsz, 16);
         wbuf = maskbuf = buf;
         if( cvtdst )
-            buf = alignPtr(buf + blocksize*wsz, 16);
+        {
+            buf = alignPtr(buf + blocksize * wsz, 16);
+        }
         if( haveMask )
+        {
             maskbuf = buf;
+        }
 
         convertAndUnrollScalar( src2, wtype, buf2, blocksize);
 
@@ -857,34 +863,43 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 const uchar* sptr2 = buf2;
                 uchar* dptr = ptrs[1];
 
-                if( cvtsrc1 )
-                {
-                    cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
-                    sptr1 = buf1;
-                }
-
+                const uchar* extSptr1 = sptr1;
+                const uchar* extSptr2 = sptr2;
                 if( swapped12 )
-                    std::swap(sptr1, sptr2);
-
-                if( !haveMask && !cvtdst )
-                    func( sptr1, 1, sptr2, 1, dptr, 1, bszn.width, bszn.height, usrdata );
-                else
+                    std::swap(extSptr1, extSptr1);
+                
+                // try to perform operation with conversion in one call
+                // if fail, use converter functions
+                uchar* opconverted = haveMask ? maskbuf : dptr;
+                if (!extendedFunc || extendedFunc(extSptr1, 1, extSptr2, 1, opconverted, 1,
+                                                  bszn.width, bszn.height, usrdata) != 0)
                 {
-                    func( sptr1, 1, sptr2, 1, wbuf, 1, bszn.width, bszn.height, usrdata );
-                    if( !haveMask )
-                        cvtdst( wbuf, 1, 0, 1, dptr, 1, bszn, 0 );
-                    else if( !cvtdst )
+                    if( cvtsrc1 )
                     {
-                        copymask( wbuf, 1, ptrs[2], 1, dptr, 1, Size(bsz, 1), &dsz );
-                        ptrs[2] += bsz;
+                        cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
+                        sptr1 = buf1;
                     }
-                    else
+
+                    if( swapped12 )
+                        std::swap(sptr1, sptr2);
+
+                    uchar* fdst = ( haveMask || cvtdst ) ? wbuf : dptr;
+                    func( sptr1, 1, sptr2, 1, fdst, 1, bszn.width, bszn.height, usrdata );
+
+                    if (cvtdst)
                     {
-                        cvtdst( wbuf, 1, 0, 1, maskbuf, 1, bszn, 0 );
-                        copymask( maskbuf, 1, ptrs[2], 1, dptr, 1, Size(bsz, 1), &dsz );
-                        ptrs[2] += bsz;
+                        uchar* cdst = haveMask ? maskbuf : dptr;
+                        cvtdst(wbuf, 1, 0, 1, cdst, 1, bszn, 0);
                     }
+                    opconverted = cvtdst ? maskbuf : wbuf;
                 }
+
+                if (haveMask)
+                {
+                    copymask(opconverted, 1, ptrs[2], 1, dptr, 1, Size(bsz, 1), &dsz);
+                    ptrs[2] += bsz;
+                }
+                
                 ptrs[0] += bsz*esz1; ptrs[1] += bsz*dsz;
             }
         }
