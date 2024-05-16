@@ -12,10 +12,9 @@
 
 namespace opencv_test { namespace {
 
-class Layer_Test_01D: public testing::TestWithParam<tuple<int>>
+class Layer_Test_01D: public testing::TestWithParam<tuple<std::vector<int>>>
 {
 public:
-    int dims;
     std::vector<int> input_shape;
     std::vector<int> output_shape;
     float inp_value;
@@ -24,14 +23,13 @@ public:
 
     void SetUp()
     {
-        dims = get<0>(GetParam());
-        input_shape = {dims};
-        output_shape = {dims};
+        input_shape = get<0>(GetParam());
+        output_shape = input_shape;
 
         // generate random positeve value from 1 to 10
         RNG& rng = TS::ptr()->get_rng();
         inp_value = rng.uniform(1.0, 10.0); // random uniform value
-        input = Mat(dims, input_shape.data(), CV_32F, inp_value);
+        input = Mat(input_shape.size(), input_shape.data(), CV_32F, inp_value);
     }
 
     void TestLayer(Ptr<Layer> layer, std::vector<Mat> &inputs, const Mat& output_ref){
@@ -53,7 +51,7 @@ TEST_P(Layer_Test_01D, Scale)
     lp.set("bias_term", false);
     Ptr<ScaleLayer> layer = ScaleLayer::create(lp);
 
-    Mat weight = Mat(dims, output_shape.data(), CV_32F, 2.0);
+    Mat weight = Mat(output_shape.size(), output_shape.data(), CV_32F, 2.0);
     std::vector<Mat> inputs{input, weight};
     Mat output_ref = input.mul(weight);
 
@@ -69,7 +67,7 @@ TEST_P(Layer_Test_01D, ReLU6)
     lp.set("max_value", 1.0);
     Ptr<ReLU6Layer> layer = ReLU6Layer::create(lp);
 
-    Mat output_ref(dims, output_shape.data(), CV_32F, 1.0);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, 1.0);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -84,7 +82,7 @@ TEST_P(Layer_Test_01D, Clip)
     lp.set("max_value", 1.0);
     Ptr<ReLU6Layer> layer = ReLU6Layer::create(lp);
 
-    Mat output_ref(dims, output_shape.data(), CV_32F, 1.0);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, 1.0);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -98,7 +96,7 @@ TEST_P(Layer_Test_01D, ReLU)
     lp.set("negative_slope", 0.0);
     Ptr<ReLULayer> layer = ReLULayer::create(lp);
 
-    Mat output_ref(dims, output_shape.data(), CV_32F, inp_value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, inp_value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -112,7 +110,7 @@ TEST_P(Layer_Test_01D, Gelu)
     Ptr<GeluLayer> layer = GeluLayer::create(lp);
 
     float value = inp_value * 0.5 * (std::erf(inp_value * 1 / std::sqrt(2.0)) + 1.0);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -126,7 +124,7 @@ TEST_P(Layer_Test_01D, GeluApprox)
     Ptr<GeluApproximationLayer> layer = GeluApproximationLayer::create(lp);
 
     float value = inp_value * 0.5 * (1.0 + std::tanh(std::sqrt(2.0 / M_PI) * (inp_value + 0.044715 * std::pow(inp_value, 3))));
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -140,7 +138,7 @@ TEST_P(Layer_Test_01D, Sigmoid)
     Ptr<SigmoidLayer> layer = SigmoidLayer::create(lp);
 
     float value = 1.0 / (1.0 + std::exp(-inp_value));
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -155,7 +153,7 @@ TEST_P(Layer_Test_01D, Tanh)
 
 
     float value = std::tanh(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -169,7 +167,7 @@ TEST_P(Layer_Test_01D, Swish)
     Ptr<Layer> layer = SwishLayer::create(lp);
 
     float value = inp_value / (1 + std::exp(-inp_value));
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -183,7 +181,7 @@ TEST_P(Layer_Test_01D, Mish)
     Ptr<Layer> layer = MishLayer::create(lp);
 
     float value = inp_value * std::tanh(std::log(1 + std::exp(inp_value)));
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -198,7 +196,7 @@ TEST_P(Layer_Test_01D, ELU)
     Ptr<Layer> layer = ELULayer::create(lp);
 
     float value = inp_value > 0 ? inp_value : std::exp(inp_value) - 1;
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -212,7 +210,7 @@ TEST_P(Layer_Test_01D, Abs)
     Ptr<Layer> layer = AbsLayer::create(lp);
 
     float value = std::abs(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -226,7 +224,7 @@ TEST_P(Layer_Test_01D, BNLL)
     Ptr<Layer> layer = BNLLLayer::create(lp);
 
     float value = std::log(1 + std::exp(inp_value));
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -240,7 +238,7 @@ TEST_P(Layer_Test_01D, Ceil)
     Ptr<Layer> layer = CeilLayer::create(lp);
 
     float value = std::ceil(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -254,7 +252,7 @@ TEST_P(Layer_Test_01D, Floor)
     Ptr<Layer> layer = FloorLayer::create(lp);
 
     float value = std::floor(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -268,7 +266,7 @@ TEST_P(Layer_Test_01D, Log)
     Ptr<Layer> layer = LogLayer::create(lp);
 
     float value = std::log(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -282,7 +280,7 @@ TEST_P(Layer_Test_01D, Round)
     Ptr<Layer> layer = RoundLayer::create(lp);
 
     float value = std::round(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -296,7 +294,7 @@ TEST_P(Layer_Test_01D, Sqrt)
     Ptr<Layer> layer = SqrtLayer::create(lp);
 
     float value = std::sqrt(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -310,10 +308,10 @@ TEST_P(Layer_Test_01D, Acos)
     Ptr<Layer> layer = AcosLayer::create(lp);
 
     inp_value = 0.5 + static_cast <float> (inp_value) / (static_cast <float> (RAND_MAX/(1-0.5)));
-    input = Mat(dims, input_shape.data(), CV_32F, inp_value);
+    input = Mat(input_shape.size(), input_shape.data(), CV_32F, inp_value);
 
     float value = std::acos(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -327,7 +325,7 @@ TEST_P(Layer_Test_01D, Acosh)
     Ptr<Layer> layer = AcoshLayer::create(lp);
 
     float value = std::acosh(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -341,10 +339,10 @@ TEST_P(Layer_Test_01D, Asin)
     Ptr<Layer> layer = AsinLayer::create(lp);
 
     inp_value = 0.5 + static_cast <float> (inp_value) / (static_cast <float> (RAND_MAX/(1-0.5)));
-    input = Mat(dims, input_shape.data(), CV_32F, inp_value);
+    input = Mat(input_shape.size(), input_shape.data(), CV_32F, inp_value);
 
     float value = std::asin(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -358,7 +356,7 @@ TEST_P(Layer_Test_01D, Asinh)
     Ptr<Layer> layer = AsinhLayer::create(lp);
 
     float value = std::asinh(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -372,7 +370,7 @@ TEST_P(Layer_Test_01D, Atan)
     Ptr<Layer> layer = AtanLayer::create(lp);
 
     float value = std::atan(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -386,7 +384,7 @@ TEST_P(Layer_Test_01D, Cos)
     Ptr<Layer> layer = CosLayer::create(lp);
 
     float value = std::cos(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -400,7 +398,7 @@ TEST_P(Layer_Test_01D, Cosh)
     Ptr<Layer> layer = CoshLayer::create(lp);
 
     float value = std::cosh(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -414,7 +412,7 @@ TEST_P(Layer_Test_01D, Sin)
     Ptr<Layer> layer = SinLayer::create(lp);
 
     float value = std::sin(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -428,7 +426,7 @@ TEST_P(Layer_Test_01D, Sinh)
     Ptr<Layer> layer = SinhLayer::create(lp);
 
     float value = std::sinh(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -442,7 +440,7 @@ TEST_P(Layer_Test_01D, Tan)
     Ptr<Layer> layer = TanLayer::create(lp);
 
     float value = std::tan(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -456,7 +454,7 @@ TEST_P(Layer_Test_01D, Erf)
     Ptr<Layer> layer = ErfLayer::create(lp);
 
     float out_value = std::erf(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -470,7 +468,7 @@ TEST_P(Layer_Test_01D, Reciprocal)
     Ptr<Layer> layer = ReciprocalLayer::create(lp);
 
     float out_value = 1/inp_value;
-    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -484,7 +482,7 @@ TEST_P(Layer_Test_01D, HardSwish)
     Ptr<Layer> layer = HardSwishLayer::create(lp);
 
     float out_value = inp_value * std::max(0.0f, std::min(6.0f, inp_value + 3.0f)) / 6.0f;
-    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -498,7 +496,7 @@ TEST_P(Layer_Test_01D, Softplus)
     Ptr<Layer> layer = SoftplusLayer::create(lp);
 
     float out_value = std::log(1 + std::exp(inp_value));
-    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -512,7 +510,7 @@ TEST_P(Layer_Test_01D, SoftSign)
     Ptr<Layer> layer = SoftsignLayer::create(lp);
 
     float out_value = inp_value / (1 + std::abs(inp_value));
-    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -527,7 +525,7 @@ TEST_P(Layer_Test_01D, CELU)
     Ptr<Layer> layer = CeluLayer::create(lp);
 
     float out_value = inp_value < 0 ? std::exp(inp_value) - 1 : inp_value;
-    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -541,7 +539,7 @@ TEST_P(Layer_Test_01D, HardSigmoid)
     Ptr<Layer> layer = HardSigmoidLayer::create(lp);
 
     float out_value = std::max(0.0f, std::min(1.0f, 0.2f * inp_value + 0.5f));
-    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -563,7 +561,7 @@ TEST_P(Layer_Test_01D, SELU)
 
     float value = static_cast<float>(value_double);
 
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -578,7 +576,7 @@ TEST_P(Layer_Test_01D, ThresholdedReLU)
     Ptr<Layer> layer = ThresholdedReluLayer::create(lp);
 
     float value = inp_value > 1.0 ? inp_value : 0.0;
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -595,7 +593,7 @@ TEST_P(Layer_Test_01D, Power)
     Ptr<Layer> layer = PowerLayer::create(lp);
 
     float value = std::pow(inp_value, 2.0);
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -609,7 +607,7 @@ TEST_P(Layer_Test_01D, Exp)
     Ptr<Layer> layer = ExpLayer::create(lp);
 
     float out_value = std::exp(inp_value);
-    Mat output_ref(dims, output_shape.data(), CV_32F, out_value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, out_value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -623,7 +621,7 @@ TEST_P(Layer_Test_01D, Sign)
     Ptr<Layer> layer = SignLayer::create(lp);
 
     float value = inp_value > 0 ? 1.0 : 0.0;
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -639,7 +637,7 @@ TEST_P(Layer_Test_01D, Shrink)
     Ptr<Layer> layer = ShrinkLayer::create(lp);
 
     float value = inp_value > 0.5 ? inp_value - 0.5 : 0.0;
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
@@ -655,12 +653,16 @@ TEST_P(Layer_Test_01D, ChannelsPReLU)
     Ptr<Layer> layer = ChannelsPReLULayer::create(lp);
 
     float value = inp_value > 0 ? inp_value : 0.5 * inp_value;
-    Mat output_ref(dims, output_shape.data(), CV_32F, value);
+    Mat output_ref(output_shape.size(), output_shape.data(), CV_32F, value);
     std::vector<Mat> inputs{input};
 
     TestLayer(layer, inputs, output_ref);
 }
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Test_01D, Values(0, 1));
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Test_01D,
+        testing::Values(
+            std::vector<int>{},
+            std::vector<int>{1}
+        ));
 
 typedef testing::TestWithParam<tuple<std::vector<int>, int>> Layer_Gather_Test;
 TEST_P(Layer_Gather_Test, Accuracy_01D) {
