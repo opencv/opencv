@@ -6,20 +6,28 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/3d.hpp"
+#include <opencv2/core/utils/logger.hpp>
 #include "queue"
 #include "unordered_map"
 
 namespace cv{
 
-SpectralCluster::SpectralCluster(float delta_val, float eta_val) : delta(delta_val), eta(eta_val) {}
+SpectralCluster::SpectralCluster(float delta_val, float eta_val) {
+    if (delta_val < 0 || delta_val > 1)
+        CV_LOG_ERROR(NULL, "delta must be between 0 and 1.");
+    if (eta < 0 || eta > 1)
+        CV_LOG_ERROR(NULL, "eta must be between 0 and 1.");
+    this->delta = delta_val;
+    this->eta = eta_val;
+}
 
 
-void SpectralCluster::cluster(std::vector<int>& result, std::vector<Point3f> vertices,
-                              std::vector<std::vector<int32_t>> indices, int k) {
-    // check parameters
+void SpectralCluster::cluster(std::vector<cv::Point3f> &vertices, std::vector<std::vector<int32_t>> &indices, int k,
+                              OutputArray result) {
     CV_Assert(k > 1);
-    CV_Assert(!vertices.empty());
-    CV_Assert(!indices.empty());
+    for (const auto & index : indices)
+        if (index.size() != 3)
+            CV_LOG_ERROR(NULL, "Face element has more/less than 3 vertices");
 
     Mat distance_mat;
     getAdjacentDistanceMat(distance_mat, vertices, indices);
@@ -31,23 +39,27 @@ void SpectralCluster::cluster(std::vector<int>& result, std::vector<Point3f> ver
     getLaplacianMat(affinity_mat, laplacian_mat);
 
     // eigen decomposition
-    Mat eigen_values;
-    Mat eigen_vectors;
+    Mat eigen_values, eigen_vectors;
     eigen(laplacian_mat, eigen_values, eigen_vectors);
     eigen_vectors = eigen_vectors.rowRange(0, k);
     Mat eigen_vectors_t;
     eigen_vectors_t = eigen_vectors.t();
 
     // normalize each row
-    for (int i = 0; i < eigen_vectors_t.rows; ++i)
-        eigen_vectors_t.row(i) /= static_cast<float>(norm(eigen_vectors_t.row(i)));
+    float norm_val;
+    for (int i = 0; i < eigen_vectors_t.rows; ++i) {
+        norm_val = static_cast<float>(norm(eigen_vectors_t.row(i)));
+        norm_val = norm_val > std::numeric_limits<float>::epsilon() ? norm_val : std::numeric_limits<float>::epsilon();
+        eigen_vectors_t.row(i) /= norm_val;
+    }
 
-    result.clear();
-
-    // clustering on the eigenvectors:
-    cv::kmeans(eigen_vectors_t, k, result,
+    Mat label_result;
+    cv::kmeans(eigen_vectors_t, k, label_result,
                TermCriteria(TermCriteria::EPS + TermCriteria::MAX_ITER, 10, 1.0),
                5, KMEANS_PP_CENTERS);
+
+    if (result.needed())
+        label_result.copyTo(result);
 }
 
 void SpectralCluster::getLaplacianMat(Mat &in, Mat &out) {

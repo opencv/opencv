@@ -2850,7 +2850,7 @@ protected:
 * @param normals per-vertex normals, each value contains 3 floats
 * @param rgb per-vertex colors, each value contains 3 floats
 */
-CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray(), OutputArray rgb = noArray(), OutputArray indices = noArray());
+CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray(), OutputArray rgb = noArray());
 
 /** @brief Saves a point cloud to a specified file.
 *
@@ -3032,19 +3032,28 @@ CV_EXPORTS_W void triangleRasterizeColor(InputArray vertices, InputArray indices
                                          InputArray world2cam, double fovY, double zNear, double zFar,
                                          const TriangleRasterizeSettings& settings = TriangleRasterizeSettings());
 
-
+/** @brief Mesh Spectral Cluster
+*/
 class CV_EXPORTS SpectralCluster {
 public:
-    SpectralCluster(float delta, float eta);
+    /** @brief Mesh Spectral Cluster
 
-    void cluster(std::vector<int>& result, std::vector<Point3f> vertices, std::vector<std::vector<int32_t>> indices, int k);
+    @param delta A float number between 0 and 1 controlling the relative importance of geodesic distance and angle distance.
+    Usually, 0 < delta < 0.2
+    @param eta A float number between 0 and 1, which gives weight to concavity in clustering. Usually, 0 < eta < 0.1
+    */
+    SpectralCluster(float delta=0.1, float eta=0.05);
+
+    /** @brief Cluster the input mesh into k segments
+    @param vertices vertices coordinates array, should contain values of Point3f
+    @param indices triangle vertices index array, 3 per triangle. Each index indicates a vertex in a vertices array.
+    @param k integer, indicates number of segments
+    @param result output labels
+    */
+    void cluster(std::vector<cv::Point3f> &vertices, std::vector<std::vector<int32_t>> &indices, int k, OutputArray result);
 
 private:
-    /* Delta: A real number between 0 and 1 controlling the relative importance of geodesic distance and angle distance.
-     * Usually, 0 < delta < 0.2 */
     float delta;
-    /* Eta: A real number between 0 and 1, which gives weight to concavity in clustering
-     * Usually, 0 < eta < 0.1 */
     float eta;
 
     /* Compute the degree matrix and normalize the affinity matrix */
