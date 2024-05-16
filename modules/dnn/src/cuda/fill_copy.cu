@@ -67,6 +67,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void fill(const Stream&, Span<__half>, __half);
 #endif
     template void fill(const Stream&, Span<float>, float);
+    template void fill(const Stream&, Span<int8_t>, int8_t);
+    template void fill(const Stream&, Span<uint8_t>, uint8_t);
     template void fill(const Stream&, Span<int>, int);
     template void fill(const Stream&, Span<int64_t>, int64_t);
 
@@ -95,6 +97,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void copy(const Stream&, Span<__half>, View<__half>);
 #endif
     template void copy(const Stream&, Span<float>, View<float>);
+    template void copy(const Stream&, Span<int8_t>, View<int8_t>);
+    template void copy(const Stream&, Span<uint8_t>, View<uint8_t>);
     template void copy(const Stream&, Span<int32_t>, View<int32_t>);
     template void copy(const Stream&, Span<int64_t>, View<int64_t>);
 

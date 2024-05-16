@@ -154,9 +154,10 @@ struct DataLayer : public Layer
         for (int i = 0; i < inputsData.size(); ++i)
         {
             bool isFP16 = outputs[i].depth() == CV_16F;
-            if (inputsData[i].type() == CV_32S || inputsData[i].type() == CV_64S) {
+            if (inputsData[i].type() != CV_32F)
+            {
                 CV_CheckTypeEQ(outputs[i].type(), inputsData[i].type(), "");
-                CV_Assert(means[i] == Scalar() && scaleFactors[i] == 1.0);
+                CV_CheckTrue(means[i] == Scalar() && scaleFactors[i] == 1.0, "Input mean and scale are supported only for float32 input");
                 inputsData[i].copyTo(outputs[i]);
                 continue;
             }
@@ -221,9 +222,10 @@ struct DataLayer : public Layer
         for (int i = 0; i < inputsData.size(); ++i)
         {
             bool isFP16 = outputs[i].depth() == CV_16F;
-            if (inputsData[i].type() == CV_32S || inputsData[i].type() == CV_64S) {
+            if (inputsData[i].type() != CV_32F)
+            {
                 CV_CheckTypeEQ(outputs[i].type(), inputsData[i].type(), "");
-                CV_Assert(means[i] == Scalar() && scaleFactors[i] == 1.0);
+                CV_CheckTrue(means[i] == Scalar() && scaleFactors[i] == 1.0, "Input mean and scale are supported only for float32 input");
                 inputsData[i].copyTo(outputs[i]);
                 continue;
             }

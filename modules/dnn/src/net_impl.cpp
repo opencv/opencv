@@ -552,7 +552,7 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
         Mat& inp = layers[0].outputBlobs[i];
         CV_Assert(inp.total());
         int type = inp.type();
-        if (type != CV_32S && type != CV_64S)
+        if (type == CV_32F)
         {
             type = CV_32F;
             if (preferableBackend == DNN_BACKEND_OPENCV &&
@@ -561,9 +561,6 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
                 type = CV_16F;
                 if (layers[0].dtype == CV_32F)
                     layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16F);
-            }
-            if (netWasQuantized && inp.type() == CV_8S) {
-                type = CV_8S;
             }
         }
         inputShapes.push_back(shape(inp));
