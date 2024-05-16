@@ -2064,7 +2064,7 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
             out << indent_spaces << "}\n"; // node{}
         }
     }
-    // TODO: Add value_info
+    // Add value_info
     for (std::map<String, Mat*>::const_iterator iter = value_info.begin(); iter != value_info.end(); iter++) {
         out << indent_spaces << "value_info {\n"
             << indent_spaces << format("  name: \"%s\"\n", iter->first.c_str());

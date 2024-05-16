@@ -520,6 +520,9 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP void dumpToFile(CV_WRAP_FILE_PATH const String& path);
         /** @brief Dump net structure, hyperparameters, backend, target and fusion to pbtxt file
          *  @param path   path to output file with .pbtxt extension
+         *
+         *  Use Netron (https://netron.app) to open the target file to visualize the model.
+         *  Call method after setInput(). To see correct backend, target and fusion run after forward().
         */
         CV_WRAP void dumpToPbtxt(CV_WRAP_FILE_PATH const String& path);
 
