@@ -38,8 +38,8 @@ static void cannyDetectionThresh2(int position, void* userdata) {
     data->thrs2 = position;
     imshow("Output", output);
 }
-pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width);
-Mat preprocess(const Mat& img, int imageSize);
+static pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width);
+static cv::Mat preprocess(const Mat& img, int imageSize);
 
 int main(int argc, char** argv) {
 
@@ -104,18 +104,24 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    string method = "dexined";
+    string method = "canny";
     namedWindow("Input", WINDOW_NORMAL);
     imshow("Input", image);
     namedWindow("Output", WINDOW_NORMAL);
 
+    Net net;
+    if(onnxModel != ""){
+        net = readNetFromONNX(onnxModel);
+    }
+    else{
+        cout << "[INFO]: ONNX model file not provided. The 'dexined' method (DNN-based) will not be available." << endl;
+    }
     for (;;){
-        if (method == "dexined")
+        if (method == "dexined" && onnxModel != "")
         {
             destroyWindow("Output");
             namedWindow("Output", WINDOW_NORMAL);
 
-            Net net = readNetFromONNX(onnxModel);
             net.setPreferableBackend(backend);
             net.setPreferableTarget(target);
             Mat preprocessed = preprocess(image, imageSize);
