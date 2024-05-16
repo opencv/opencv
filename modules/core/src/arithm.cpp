@@ -622,8 +622,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
-        if (extendedFunc(src1.ptr(), src1.step, src2.ptr(), src2.step,
-                         dst.ptr(), dst.step, sz.width, sz.height, usrdata) != 0)
+        if (!extendedFunc || extendedFunc(src1.ptr(), src1.step, src2.ptr(), src2.step,
+                                          dst.ptr(), dst.step, sz.width, sz.height, usrdata) != 0)
         {
             BinaryFuncC func = tab[depth1];
             CV_Assert(func);
@@ -979,7 +979,7 @@ static int mul8u16uWrapper(const uchar* src1, size_t step1,
 {
     double scale = *((double*)usrdata);
     int res = cv_hal_mul8u16u(src1, step1, src2, step2, (ushort *)dst, step, width, height, scale);
-    if (res == 0 || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
         return res;
     else
     {
@@ -995,7 +995,7 @@ static int mul8s16sWrapper(const uchar* src1, size_t step1,
 {
     double scale = *((double*)usrdata);
     int res = cv_hal_mul8s16s((schar *)src1, step1, (schar *)src2, step2, (short *)dst, step, width, height, scale);
-    if (res == 0 || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
         return res;
     else
     {
