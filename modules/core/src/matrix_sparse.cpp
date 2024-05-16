@@ -389,6 +389,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     if( alpha == 1 )
     {
         ConvertData cvtfunc = getConvertElem(type(), rtype);
+        CV_Assert(cvtfunc);
         for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -399,6 +400,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     else
     {
         ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
+        CV_Assert(cvtfunc);
         for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();

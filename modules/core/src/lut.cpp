@@ -330,7 +330,7 @@ public:
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
-        CV_DbgAssert(*ok);
+        CV_Assert(*ok);
 
         const int row0 = range.start;
         const int row1 = range.end;
