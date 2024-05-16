@@ -311,7 +311,7 @@ static int sqsum64f( const double* src, const uchar* mask, double* sum, double* 
 SumSqrFunc getSumSqrFunc(int depth)
 {
     CV_INSTRUMENT_REGION();
-    static SumSqrFunc sumSqrTab[] =
+    static SumSqrFunc sumSqrTab[CV_DEPTH_MAX] =
     {
         (SumSqrFunc)GET_OPTIMIZED(sqsum8u), (SumSqrFunc)sqsum8s, (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
         (SumSqrFunc)sqsum32s, (SumSqrFunc)GET_OPTIMIZED(sqsum32f), (SumSqrFunc)sqsum64f, 0

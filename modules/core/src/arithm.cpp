@@ -329,7 +329,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
 
 static BinaryFuncC* getMaxTab()
 {
-    static BinaryFuncC maxTab[] =
+    static BinaryFuncC maxTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16s),
@@ -343,7 +343,7 @@ static BinaryFuncC* getMaxTab()
 
 static BinaryFuncC* getMinTab()
 {
-    static BinaryFuncC minTab[] =
+    static BinaryFuncC minTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16s),
@@ -868,7 +868,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 static BinaryFuncC* getAddTab()
 {
-    static BinaryFuncC addTab[] =
+    static BinaryFuncC addTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16s),
@@ -882,7 +882,7 @@ static BinaryFuncC* getAddTab()
 
 static BinaryFuncC* getSubTab()
 {
-    static BinaryFuncC subTab[] =
+    static BinaryFuncC subTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16s),
@@ -896,7 +896,7 @@ static BinaryFuncC* getSubTab()
 
 static BinaryFuncC* getAbsDiffTab()
 {
-    static BinaryFuncC absDiffTab[] =
+    static BinaryFuncC absDiffTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16s),
@@ -949,7 +949,7 @@ namespace cv
 
 static BinaryFuncC* getMulTab()
 {
-    static BinaryFuncC mulTab[] =
+    static BinaryFuncC mulTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)cv::hal::mul8u, (BinaryFuncC)cv::hal::mul8s, (BinaryFuncC)cv::hal::mul16u,
         (BinaryFuncC)cv::hal::mul16s, (BinaryFuncC)cv::hal::mul32s, (BinaryFuncC)cv::hal::mul32f,
@@ -961,7 +961,7 @@ static BinaryFuncC* getMulTab()
 
 static BinaryFuncC* getDivTab()
 {
-    static BinaryFuncC divTab[] =
+    static BinaryFuncC divTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)cv::hal::div8u, (BinaryFuncC)cv::hal::div8s, (BinaryFuncC)cv::hal::div16u,
         (BinaryFuncC)cv::hal::div16s, (BinaryFuncC)cv::hal::div32s, (BinaryFuncC)cv::hal::div32f,
@@ -973,7 +973,7 @@ static BinaryFuncC* getDivTab()
 
 static BinaryFuncC* getRecipTab()
 {
-    static BinaryFuncC recipTab[] =
+    static BinaryFuncC recipTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)cv::hal::recip8u, (BinaryFuncC)cv::hal::recip8s, (BinaryFuncC)cv::hal::recip16u,
         (BinaryFuncC)cv::hal::recip16s, (BinaryFuncC)cv::hal::recip32s, (BinaryFuncC)cv::hal::recip32f,
@@ -1021,7 +1021,7 @@ UMat UMat::mul(InputArray m, double scale) const
 
 static BinaryFuncC* getAddWeightedTab()
 {
-    static BinaryFuncC addWeightedTab[] =
+    static BinaryFuncC addWeightedTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8s), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16u),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16s), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted32s), (BinaryFuncC)cv::hal::addWeighted32f,
@@ -1052,7 +1052,7 @@ namespace cv
 
 static BinaryFuncC getCmpFunc(int depth)
 {
-    static BinaryFuncC cmpTab[] =
+    static BinaryFuncC cmpTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16s),
@@ -1588,7 +1588,7 @@ typedef void (*InRangeFunc)( const uchar* src1, size_t step1, const uchar* src2,
 
 static InRangeFunc getInRangeFunc(int depth)
 {
-    static InRangeFunc inRangeTab[] =
+    static InRangeFunc inRangeTab[CV_DEPTH_MAX] =
     {
         (InRangeFunc)GET_OPTIMIZED(inRange8u), (InRangeFunc)GET_OPTIMIZED(inRange8s), (InRangeFunc)GET_OPTIMIZED(inRange16u),
         (InRangeFunc)GET_OPTIMIZED(inRange16s), (InRangeFunc)GET_OPTIMIZED(inRange32s), (InRangeFunc)GET_OPTIMIZED(inRange32f),

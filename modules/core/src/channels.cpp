@@ -79,7 +79,7 @@ typedef void (*MixChannelsFunc)( const void** src, const int* sdelta,
 
 static MixChannelsFunc getMixchFunc(int depth)
 {
-    static MixChannelsFunc mixchTab[] =
+    static MixChannelsFunc mixchTab[CV_DEPTH_MAX] =
     {
         mixChannels8u, mixChannels8u, mixChannels16u,
         mixChannels16u, mixChannels32s, mixChannels32s,
