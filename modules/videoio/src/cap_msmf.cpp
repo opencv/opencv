@@ -747,6 +747,7 @@ public:
     bool configureHW(const cv::VideoCaptureParameters& params);
     virtual bool open(int, const cv::VideoCaptureParameters* params);
     virtual bool open(const cv::String&, const cv::VideoCaptureParameters* params);
+    virtual bool open(const std::vector<uchar>&, const cv::VideoCaptureParameters* params);
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
@@ -1272,6 +1273,70 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCapturePar
         if (configureOutput())
         {
             filename = _filename;
+            frameStep = captureVideoFormat.getFrameStep();
+            PROPVARIANT var;
+            HRESULT hr;
+            if (SUCCEEDED(hr = videoFileSource->GetPresentationAttribute((DWORD)MF_SOURCE_READER_MEDIASOURCE, MF_PD_DURATION, &var)) &&
+                var.vt == VT_UI8)
+            {
+                duration = var.uhVal.QuadPart;
+                PropVariantClear(&var);
+            }
+            else
+                duration = 0;
+        }
+    }
+    if (isOpen && !openFinalize_(params))
+    {
+        close();
+        return false;
+    }
+    if (isOpen)
+    {
+        if (audioStream != -1)
+        {
+            if (!checkAudioProperties())
+                return false;
+            if (videoStream != -1)
+            {
+                isOpen = grabFrame();
+                if (isOpen)
+                    grabIsDone = true;
+            }
+        }
+    }
+    return isOpen;
+}
+
+bool CvCapture_MSMF::open(const std::vector<uchar>& buffer, const cv::VideoCaptureParameters* params)
+{
+    close();
+    if (buffer.empty())
+        return false;
+
+    if (params)
+    {
+        configureHW(*params);
+        if (!(configureStreams(*params) && setAudioProperties(*params)))
+            return false;
+    }
+
+    IStream* s = SHCreateMemStream(buffer.data(), buffer.size());
+    if (!s)
+        return false;
+    IMFByteStream *bs = nullptr;
+    MFCreateMFByteStreamOnStream(s, &bs);
+    if (!bs)
+        return false;
+
+    // Set source reader parameters
+    _ComPtr<IMFAttributes> attr = getDefaultSourceConfig();
+    if (SUCCEEDED(MFCreateSourceReaderFromByteStream(bs, attr.Get(), &videoFileSource)))
+    {
+        isOpen = true;
+        usedVideoSampleTime = 0;
+        if (configureOutput())
+        {
             frameStep = captureVideoFormat.getFrameStep();
             PROPVARIANT var;
             HRESULT hr;
@@ -2381,6 +2446,18 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename,
     if (capture)
     {
         capture->open(filename, &params);
+        if (capture->isOpened())
+            return capture;
+    }
+    return cv::Ptr<cv::IVideoCapture>();
+}
+
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const std::vector<uchar>& buffer, const cv::VideoCaptureParameters& params)
+{
+    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
+    if (capture)
+    {
+        capture->open(buffer, &params);
         if (capture->isOpened())
             return capture;
     }

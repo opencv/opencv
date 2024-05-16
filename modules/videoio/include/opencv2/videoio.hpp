@@ -803,7 +803,7 @@ public:
 
     @param buffer bytes array with a raw video file content
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
-    implementation if multiple are available. Supported backends: cv::CAP_FFMPEG
+    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
 
     @sa cv::VideoCaptureAPIs
     */
