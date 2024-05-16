@@ -615,11 +615,12 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         // variable to hold processed version of the original input
         MatShape input_dims = shape(input);
-
-        if (inputSubscriptIndices.empty()){
+        if (input_dims.empty()){
             homogenizedInputDims.emplace_back(MatShape(numLetterIndices, 1));
+            ++inputIter;
             continue;
         }
+
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
         // There should be subscript index (subscript label) for each dim of the input
