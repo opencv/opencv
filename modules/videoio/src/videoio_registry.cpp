@@ -63,7 +63,7 @@ static const struct VideoBackendInfo builtin_backends[] =
 #ifdef HAVE_FFMPEG
     DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_CAPTURE_BY_BUFFER | MODE_WRITER, cvCreateFileCapture_FFMPEG_proxy, 0, cvCreateBufferCapture_FFMPEG_proxy, cvCreateVideoWriter_FFMPEG_proxy)
 #elif defined(ENABLE_PLUGINS) || defined(HAVE_FFMPEG_WRAPPER)
-    DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER)
+    DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_CAPTURE_BY_BUFFER | MODE_WRITER)
 #endif
 
 #ifdef HAVE_GSTREAMER
@@ -527,6 +527,24 @@ std::string getStreamBackendPluginVersion(VideoCaptureAPIs api,
     CV_Error(Error::StsError, "Unknown or wrong backend ID");
 }
 
+std::string getBufferBackendPluginVersion(VideoCaptureAPIs api,
+    CV_OUT int& version_ABI,
+    CV_OUT int& version_API
+)
+{
+    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByBuffer();
+    for (size_t i = 0; i < backends.size(); i++)
+    {
+        const VideoBackendInfo& info = backends[i];
+        if (api == info.id)
+        {
+            CV_Assert(!info.backendFactory.empty());
+            CV_Assert(!info.backendFactory->isBuiltIn());
+            return getCapturePluginVersion(info.backendFactory, version_ABI, version_API);
+        }
+    }
+    CV_Error(Error::StsError, "Unknown or wrong backend ID");
+}
 
 /** @brief Returns description and ABI/API version of videoio plugin's writer interface */
 std::string getWriterBackendPluginVersion(VideoCaptureAPIs api,

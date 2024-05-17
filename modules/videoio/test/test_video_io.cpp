@@ -1035,6 +1035,15 @@ TEST_P(buffer_capture, read)
     if (std::find(supportedAPIs.begin(), supportedAPIs.end(), apiPref) == supportedAPIs.end())
         throw SkipTestException(cv::String("Backend is not supported: ") + cv::videoio_registry::getBackendName(apiPref));
 
+    if (!videoio_registry::isBackendBuiltIn(apiPref))
+    {
+        int pluginABI, pluginAPI;
+        videoio_registry::getBufferBackendPluginVersion(apiPref, pluginABI, pluginAPI);
+        if (pluginABI < 1 || pluginABI == 1 && pluginAPI < 2)
+            throw SkipTestException(format("Buffer capture supported since ABI/API = 1/2. %s plugin is %d/%d",
+                                           cv::videoio_registry::getBackendName(apiPref).c_str(), pluginABI, pluginAPI));
+    }
+
     VideoCapture cap;
     String video_file = BunnyParameters::getFilename(String(".avi"));
 
@@ -1050,7 +1059,7 @@ TEST_P(buffer_capture, read)
     ASSERT_FALSE(ifs.fail());
 
     EXPECT_NO_THROW(cap.open(buffer, apiPref));
-    EXPECT_TRUE(cap.isOpened());
+    ASSERT_TRUE(cap.isOpened());
 
     const int numFrames = 10;
     Mat frames[numFrames];

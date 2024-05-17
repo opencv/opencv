@@ -61,6 +61,13 @@ CV_EXPORTS_W std::string getStreamBackendPluginVersion(
     CV_OUT int& version_API
 );
 
+/** @brief Returns description and ABI/API version of videoio plugin's buffer capture interface */
+CV_EXPORTS_W std::string getBufferBackendPluginVersion(
+    VideoCaptureAPIs api,
+    CV_OUT int& version_ABI,
+    CV_OUT int& version_API
+);
+
 /** @brief Returns description and ABI/API version of videoio plugin's writer interface */
 CV_EXPORTS_W std::string getWriterBackendPluginVersion(
     VideoCaptureAPIs api,

@@ -452,12 +452,28 @@ class PluginCapture : public cv::IVideoCapture
 public:
     static
     Ptr<PluginCapture> create(const OpenCV_VideoIO_Capture_Plugin_API* plugin_api,
-            const std::string &filename, int camera, const VideoCaptureParameters& params)
+            const std::string &filename, const std::vector<uchar> &buffer, int camera, const VideoCaptureParameters& params)
     {
         CV_Assert(plugin_api);
         CV_Assert(plugin_api->v0.Capture_release);
 
         CvPluginCapture capture = NULL;
+        if (!buffer.empty() && plugin_api->api_header.api_version >= 2 && plugin_api->v2.Capture_open_with_params)
+        {
+            std::vector<int> vint_params = params.getIntVector();
+            int* c_params = vint_params.data();
+            unsigned n_params = (unsigned)(vint_params.size() / 2);
+
+            if (CV_ERROR_OK == plugin_api->v2.Capture_open_with_params(
+                    filename.empty() ? 0 : filename.c_str(), camera, buffer.data(), buffer.size(),
+                    c_params, n_params, &capture))
+            {
+                CV_Assert(capture);
+                return makePtr<PluginCapture>(plugin_api, capture);
+            }
+        }
+        else if (!buffer.empty())
+            return Ptr<PluginCapture>();
 
         if (plugin_api->api_header.api_version >= 1 && plugin_api->v1.Capture_open_with_params)
         {
@@ -662,7 +678,7 @@ Ptr<IVideoCapture> PluginBackend::createCapture(int camera, const VideoCapturePa
     try
     {
         if (capture_api_)
-            return PluginCapture::create(capture_api_, std::string(), camera, params); //.staticCast<IVideoCapture>();
+            return PluginCapture::create(capture_api_, std::string(), {}, camera, params); //.staticCast<IVideoCapture>();
         if (plugin_api_)
         {
             Ptr<IVideoCapture> cap = legacy::PluginCapture::create(plugin_api_, std::string(), camera); //.staticCast<IVideoCapture>();
@@ -686,7 +702,7 @@ Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename, con
     try
     {
         if (capture_api_)
-            return PluginCapture::create(capture_api_, filename, 0, params); //.staticCast<IVideoCapture>();
+            return PluginCapture::create(capture_api_, filename, {}, 0, params); //.staticCast<IVideoCapture>();
         if (plugin_api_)
         {
             Ptr<IVideoCapture> cap = legacy::PluginCapture::create(plugin_api_, filename, 0); //.staticCast<IVideoCapture>();
@@ -705,9 +721,23 @@ Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename, con
     return Ptr<IVideoCapture>();
 }
 
-Ptr<IVideoCapture> PluginBackend::createCapture(const std::vector<uchar>&, const VideoCaptureParameters&) const
+Ptr<IVideoCapture> PluginBackend::createCapture(const std::vector<uchar>& buffer, const VideoCaptureParameters& params) const
 {
-    CV_Error(Error::StsNotImplemented, "Capture by buffer with plugin");
+    try
+    {
+        if (capture_api_)
+            return PluginCapture::create(capture_api_, std::string(), buffer, 0, params); //.staticCast<IVideoCapture>();
+        if (plugin_api_)
+        {
+            CV_Error(Error::StsNotImplemented, "Legacy plugin API for buffer capture");
+        }
+    }
+    catch (...)
+    {
+        CV_LOG_DEBUG(NULL, "Video I/O: can't open buffer capture");
+        throw;
+    }
+    return Ptr<IVideoCapture>();
 }
 
 Ptr<IVideoWriter> PluginBackend::createWriter(const std::string& filename, int fourcc, double fps,

@@ -13,7 +13,7 @@
 /// increased for backward-compatible changes, e.g. add new function
 /// Caller API <= Plugin API -> plugin is fully compatible
 /// Caller API > Plugin API -> plugin is not fully compatible, caller should use extra checks to use plugins with older API
-#define CAPTURE_API_VERSION 1
+#define CAPTURE_API_VERSION 2
 
 /// increased for incompatible changes, e.g. remove function argument
 /// Caller ABI == Plugin ABI -> plugin is compatible
@@ -121,6 +121,27 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_1_api_entries
         CV_OUT CvPluginCapture* handle);
 }; // OpenCV_VideoIO_Capture_Plugin_API_v1_1_api_entries
 
+struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
+{
+    /** @brief Open video capture with parameters
+
+    @param filename File name or NULL to use camera_index or buffer instead
+    @param camera_index Camera index (used if filename == NULL and buffer == NULL)
+    @param buffer Memory buffer pointer (used if filename == NULL)
+    @param buffer_size Memory buffer size
+    @param params pointer on 2*n_params array of 'key,value' pairs
+    @param n_params number of passed parameters
+    @param[out] handle pointer on Capture handle
+
+    @note API-CALL 9, API-Version == 1
+     */
+    CvResult (CV_API_CALL *Capture_open_with_params)(
+        const char* filename, int camera_index,
+        const unsigned char* buffer, unsigned int buffer_size,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginCapture* handle);
+}; // OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
+
 typedef struct OpenCV_VideoIO_Capture_Plugin_API_v1_0
 {
     OpenCV_API_Header api_header;
@@ -134,7 +155,17 @@ typedef struct OpenCV_VideoIO_Capture_Plugin_API_v1_1
     struct OpenCV_VideoIO_Capture_Plugin_API_v1_1_api_entries v1;
 } OpenCV_VideoIO_Capture_Plugin_API_v1_1;
 
-#if CAPTURE_ABI_VERSION == 1 && CAPTURE_API_VERSION == 1
+typedef struct OpenCV_VideoIO_Capture_Plugin_API_v1_2
+{
+    OpenCV_API_Header api_header;
+    struct OpenCV_VideoIO_Capture_Plugin_API_v1_0_api_entries v0;
+    struct OpenCV_VideoIO_Capture_Plugin_API_v1_1_api_entries v1;
+    struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries v2;
+} OpenCV_VideoIO_Capture_Plugin_API_v1_2;
+
+#if CAPTURE_ABI_VERSION == 1 && CAPTURE_API_VERSION == 2
+typedef struct OpenCV_VideoIO_Capture_Plugin_API_v1_2 OpenCV_VideoIO_Capture_Plugin_API;
+#elif CAPTURE_ABI_VERSION == 1 && CAPTURE_API_VERSION == 1
 typedef struct OpenCV_VideoIO_Capture_Plugin_API_v1_1 OpenCV_VideoIO_Capture_Plugin_API;
 #elif CAPTURE_ABI_VERSION == 1 && CAPTURE_API_VERSION == 0
 typedef struct OpenCV_VideoIO_Capture_Plugin_API_v1_0 OpenCV_VideoIO_Capture_Plugin_API;
