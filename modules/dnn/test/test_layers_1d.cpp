@@ -45,7 +45,7 @@ TEST_P(Layer_Test_01D, Scale)
 {
 
     lp.type = "Scale";
-    lp.name = "scaleLayer";
+    lp.name = "ScaleLayer";
     lp.set("axis", 0);
     lp.set("mode", "scale");
     lp.set("bias_term", false);
@@ -77,7 +77,7 @@ TEST_P(Layer_Test_01D, Clip)
 {
 
     lp.type = "Clip";
-    lp.name = "clipLayer";
+    lp.name = "ClipLayer";
     lp.set("min_value", 0.0);
     lp.set("max_value", 1.0);
     Ptr<ReLU6Layer> layer = ReLU6Layer::create(lp);
@@ -92,7 +92,7 @@ TEST_P(Layer_Test_01D, ReLU)
 {
 
     lp.type = "ReLU";
-    lp.name = "reluLayer";
+    lp.name = "ReluLayer";
     lp.set("negative_slope", 0.0);
     Ptr<ReLULayer> layer = ReLULayer::create(lp);
 
@@ -106,7 +106,7 @@ TEST_P(Layer_Test_01D, Gelu)
 {
 
     lp.type = "Gelu";
-    lp.name = "geluLayer";
+    lp.name = "GeluLayer";
     Ptr<GeluLayer> layer = GeluLayer::create(lp);
 
     float value = inp_value * 0.5 * (std::erf(inp_value * 1 / std::sqrt(2.0)) + 1.0);
@@ -120,7 +120,7 @@ TEST_P(Layer_Test_01D, GeluApprox)
 {
 
     lp.type = "GeluApprox";
-    lp.name = "geluApproxLayer";
+    lp.name = "GeluApproxLayer";
     Ptr<GeluApproximationLayer> layer = GeluApproximationLayer::create(lp);
 
     float value = inp_value * 0.5 * (1.0 + std::tanh(std::sqrt(2.0 / M_PI) * (inp_value + 0.044715 * std::pow(inp_value, 3))));
@@ -134,7 +134,7 @@ TEST_P(Layer_Test_01D, Sigmoid)
 {
 
     lp.type = "Sigmoid";
-    lp.name = "sigmoidLayer";
+    lp.name = "SigmoidLayer";
     Ptr<SigmoidLayer> layer = SigmoidLayer::create(lp);
 
     float value = 1.0 / (1.0 + std::exp(-inp_value));
@@ -191,7 +191,7 @@ TEST_P(Layer_Test_01D, ELU)
 {
 
     lp.type = "ELU";
-    lp.name = "eluLayer";
+    lp.name = "EluLayer";
     lp.set("alpha", 1.0);
     Ptr<Layer> layer = ELULayer::create(lp);
 
@@ -206,7 +206,7 @@ TEST_P(Layer_Test_01D, Abs)
 {
 
     lp.type = "Abs";
-    lp.name = "absLayer";
+    lp.name = "AbsLayer";
     Ptr<Layer> layer = AbsLayer::create(lp);
 
     float value = std::abs(inp_value);
@@ -220,7 +220,7 @@ TEST_P(Layer_Test_01D, BNLL)
 {
 
     lp.type = "BNLL";
-    lp.name = "bnllLayer";
+    lp.name = "BNLLLayer";
     Ptr<Layer> layer = BNLLLayer::create(lp);
 
     float value = std::log(1 + std::exp(inp_value));
@@ -234,7 +234,7 @@ TEST_P(Layer_Test_01D, Ceil)
 {
 
     lp.type = "Ceil";
-    lp.name = "ceilLayer";
+    lp.name = "CeilLayer";
     Ptr<Layer> layer = CeilLayer::create(lp);
 
     float value = std::ceil(inp_value);
@@ -248,7 +248,7 @@ TEST_P(Layer_Test_01D, Floor)
 {
 
     lp.type = "Floor";
-    lp.name = "floorLayer";
+    lp.name = "FloorLayer";
     Ptr<Layer> layer = FloorLayer::create(lp);
 
     float value = std::floor(inp_value);
@@ -262,7 +262,7 @@ TEST_P(Layer_Test_01D, Log)
 {
 
     lp.type = "Log";
-    lp.name = "logLayer";
+    lp.name = "LogLayer";
     Ptr<Layer> layer = LogLayer::create(lp);
 
     float value = std::log(inp_value);
@@ -276,7 +276,7 @@ TEST_P(Layer_Test_01D, Round)
 {
 
     lp.type = "Round";
-    lp.name = "roundLayer";
+    lp.name = "RoundLayer";
     Ptr<Layer> layer = RoundLayer::create(lp);
 
     float value = std::round(inp_value);
@@ -290,7 +290,7 @@ TEST_P(Layer_Test_01D, Sqrt)
 {
 
     lp.type = "Sqrt";
-    lp.name = "sqrtLayer";
+    lp.name = "SqrtLayer";
     Ptr<Layer> layer = SqrtLayer::create(lp);
 
     float value = std::sqrt(inp_value);
@@ -304,7 +304,7 @@ TEST_P(Layer_Test_01D, Acos)
 {
 
     lp.type = "Acos";
-    lp.name = "acosLayer";
+    lp.name = "AcosLayer";
     Ptr<Layer> layer = AcosLayer::create(lp);
 
     inp_value = 0.5 + static_cast <float> (inp_value) / (static_cast <float> (RAND_MAX/(1-0.5)));
@@ -321,7 +321,7 @@ TEST_P(Layer_Test_01D, Acosh)
 {
 
     lp.type = "Acosh";
-    lp.name = "acoshLayer";
+    lp.name = "AcoshLayer";
     Ptr<Layer> layer = AcoshLayer::create(lp);
 
     float value = std::acosh(inp_value);
@@ -335,7 +335,7 @@ TEST_P(Layer_Test_01D, Asin)
 {
 
     lp.type = "Asin";
-    lp.name = "asinLayer";
+    lp.name = "AsinLayer";
     Ptr<Layer> layer = AsinLayer::create(lp);
 
     inp_value = 0.5 + static_cast <float> (inp_value) / (static_cast <float> (RAND_MAX/(1-0.5)));
@@ -352,7 +352,7 @@ TEST_P(Layer_Test_01D, Asinh)
 {
 
     lp.type = "Asinh";
-    lp.name = "asinhLayer";
+    lp.name = "AsinhLayer";
     Ptr<Layer> layer = AsinhLayer::create(lp);
 
     float value = std::asinh(inp_value);
@@ -366,7 +366,7 @@ TEST_P(Layer_Test_01D, Atan)
 {
 
     lp.type = "Atan";
-    lp.name = "atanLayer";
+    lp.name = "AtanLayer";
     Ptr<Layer> layer = AtanLayer::create(lp);
 
     float value = std::atan(inp_value);
@@ -380,7 +380,7 @@ TEST_P(Layer_Test_01D, Cos)
 {
 
     lp.type = "Cos";
-    lp.name = "cosLayer";
+    lp.name = "CosLayer";
     Ptr<Layer> layer = CosLayer::create(lp);
 
     float value = std::cos(inp_value);
@@ -394,7 +394,7 @@ TEST_P(Layer_Test_01D, Cosh)
 {
 
     lp.type = "Cosh";
-    lp.name = "coshLayer";
+    lp.name = "CoshLayer";
     Ptr<Layer> layer = CoshLayer::create(lp);
 
     float value = std::cosh(inp_value);
@@ -408,7 +408,7 @@ TEST_P(Layer_Test_01D, Sin)
 {
 
     lp.type = "Sin";
-    lp.name = "sinLayer";
+    lp.name = "SinLayer";
     Ptr<Layer> layer = SinLayer::create(lp);
 
     float value = std::sin(inp_value);
@@ -422,7 +422,7 @@ TEST_P(Layer_Test_01D, Sinh)
 {
 
     lp.type = "Sinh";
-    lp.name = "sinhLayer";
+    lp.name = "SinhLayer";
     Ptr<Layer> layer = SinhLayer::create(lp);
 
     float value = std::sinh(inp_value);
@@ -436,7 +436,7 @@ TEST_P(Layer_Test_01D, Tan)
 {
 
     lp.type = "Tan";
-    lp.name = "tanLayer";
+    lp.name = "TanLayer";
     Ptr<Layer> layer = TanLayer::create(lp);
 
     float value = std::tan(inp_value);
@@ -450,7 +450,7 @@ TEST_P(Layer_Test_01D, Erf)
 {
 
     lp.type = "Erf";
-    lp.name = "erfLayer";
+    lp.name = "ErfLayer";
     Ptr<Layer> layer = ErfLayer::create(lp);
 
     float out_value = std::erf(inp_value);
@@ -464,7 +464,7 @@ TEST_P(Layer_Test_01D, Reciprocal)
 {
 
     lp.type = "Reciprocal";
-    lp.name = "reciprocalLayer";
+    lp.name = "ReciprocalLayer";
     Ptr<Layer> layer = ReciprocalLayer::create(lp);
 
     float out_value = 1/inp_value;
@@ -478,7 +478,7 @@ TEST_P(Layer_Test_01D, HardSwish)
 {
 
     lp.type = "HardSwish";
-    lp.name = "hardSwishLayer";
+    lp.name = "HardSwishLayer";
     Ptr<Layer> layer = HardSwishLayer::create(lp);
 
     float out_value = inp_value * std::max(0.0f, std::min(6.0f, inp_value + 3.0f)) / 6.0f;
@@ -492,7 +492,7 @@ TEST_P(Layer_Test_01D, Softplus)
 {
 
     lp.type = "Softplus";
-    lp.name = "softplusLayer";
+    lp.name = "SoftplusLayer";
     Ptr<Layer> layer = SoftplusLayer::create(lp);
 
     float out_value = std::log(1 + std::exp(inp_value));
@@ -506,7 +506,7 @@ TEST_P(Layer_Test_01D, SoftSign)
 {
 
     lp.type = "Softsign";
-    lp.name = "softsignLayer";
+    lp.name = "SoftsignLayer";
     Ptr<Layer> layer = SoftsignLayer::create(lp);
 
     float out_value = inp_value / (1 + std::abs(inp_value));
@@ -520,7 +520,7 @@ TEST_P(Layer_Test_01D, CELU)
 {
 
     lp.type = "CELU";
-    lp.name = "celuLayer";
+    lp.name = "CeluLayer";
     lp.set("alpha", 1.0);
     Ptr<Layer> layer = CeluLayer::create(lp);
 
@@ -535,7 +535,7 @@ TEST_P(Layer_Test_01D, HardSigmoid)
 {
 
     lp.type = "HardSigmoid";
-    lp.name = "hardSigmoidLayer";
+    lp.name = "HardSigmoidLayer";
     Ptr<Layer> layer = HardSigmoidLayer::create(lp);
 
     float out_value = std::max(0.0f, std::min(1.0f, 0.2f * inp_value + 0.5f));
@@ -549,7 +549,7 @@ TEST_P(Layer_Test_01D, SELU)
 {
 
     lp.type = "SELU";
-    lp.name = "seluLayer";
+    lp.name = "SeluLayer";
     lp.set("alpha", 1.6732631921768188);
     lp.set("gamma", 1.0507009873554805);
     Ptr<Layer> layer = SeluLayer::create(lp);
@@ -570,8 +570,8 @@ TEST_P(Layer_Test_01D, SELU)
 TEST_P(Layer_Test_01D, ThresholdedReLU)
 {
 
-    lp.type = "ThresholdedReLU";
-    lp.name = "thresholdedReluLayer";
+    lp.type = "ThresholdedRelu";
+    lp.name = "ThresholdedReluLayer";
     lp.set("alpha", 1.0);
     Ptr<Layer> layer = ThresholdedReluLayer::create(lp);
 
@@ -586,7 +586,7 @@ TEST_P(Layer_Test_01D, Power)
 {
 
     lp.type = "Power";
-    lp.name = "powerLayer";
+    lp.name = "PowerLayer";
     lp.set("power", 2.0);
     lp.set("scale", 1.0);
     lp.set("shift", 0.0);
@@ -603,7 +603,7 @@ TEST_P(Layer_Test_01D, Exp)
 {
 
     lp.type = "Exp";
-    lp.name = "expLayer";
+    lp.name = "ExpLayer";
     Ptr<Layer> layer = ExpLayer::create(lp);
 
     float out_value = std::exp(inp_value);
@@ -617,7 +617,7 @@ TEST_P(Layer_Test_01D, Sign)
 {
 
     lp.type = "Sign";
-    lp.name = "signLayer";
+    lp.name = "SignLayer";
     Ptr<Layer> layer = SignLayer::create(lp);
 
     float value = inp_value > 0 ? 1.0 : 0.0;
@@ -631,7 +631,7 @@ TEST_P(Layer_Test_01D, Shrink)
 {
 
     lp.type = "Shrink";
-    lp.name = "shrinkLayer";
+    lp.name = "ShrinkLayer";
     lp.set("lambda", 0.5);
     lp.set("bias", 0.5);
     Ptr<Layer> layer = ShrinkLayer::create(lp);
@@ -733,7 +733,7 @@ TEST_P(Layer_Arg_Test, Accuracy_01D) {
 
     LayerParams lp;
     lp.type = "Arg";
-    lp.name = "arg" + operation + "_Layer";
+    lp.name = "Arg" + operation + "_Layer";
     int axis = (input_shape.size() == 0 || input_shape.size() == 1 ) ? 0 : 1;
     lp.set("op", operation);
     lp.set("axis", axis);
@@ -796,7 +796,7 @@ TEST_P(Layer_NaryElemwise_1d_Test, Accuracy) {
     std::string operation = get<1>(GetParam());
 
     LayerParams lp;
-    lp.type = "Eltwise";
+    lp.type = "NaryEltwise";
     lp.name = operation + "_Layer";
     lp.set("operation", operation);
     Ptr<NaryEltwiseLayer> layer = NaryEltwiseLayer::create(lp);
@@ -1091,7 +1091,7 @@ TEST_P(Layer_Scatter_Test, Accuracy1D) {
 
     LayerParams lp;
     lp.type = "Scatter";
-    lp.name = "addLayer";
+    lp.name = "ScatterLayer";
     lp.set("axis", axis);
     lp.set("reduction", opr);
     Ptr<ScatterLayer> layer = ScatterLayer::create(lp);
