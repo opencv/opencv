@@ -373,11 +373,11 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
     if( src0.size() != dst0.size() )
         CV_Error( cv::Error::StsUnmatchedSizes, "The input and output images must have the same size" );
 
-    if( !(termcrit.type & CV_TERMCRIT_ITER) )
+    if( !(termcrit.type & TermCriteria::MAX_ITER) )
         termcrit.maxCount = 5;
     termcrit.maxCount = MAX(termcrit.maxCount,1);
     termcrit.maxCount = MIN(termcrit.maxCount,100);
-    if( !(termcrit.type & CV_TERMCRIT_EPS) )
+    if( !(termcrit.type & TermCriteria::EPS) )
         termcrit.epsilon = 1.f;
     termcrit.epsilon = MAX(termcrit.epsilon, 0.f);
 
