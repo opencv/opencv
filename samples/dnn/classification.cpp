@@ -8,14 +8,27 @@
 
 #include "common.hpp"
 
-std::string param_keys =
-    "{ help  h          | | Print help message. }"
-    "{ @alias           | | An alias name of model to extract preprocessing parameters from models.yml file. }"
-    "{ zoo              | models.yml | An optional path to file with preprocessing parameters }"
-    "{ input i          | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-    "{ crop             | false | Preprocess input image by center cropping.}"
-    "{ needSoftmax      | false | Use Softmax to post-process the output of the net.}";
-std::string backend_keys = cv::format(
+using namespace cv;
+using namespace std;
+using namespace dnn;
+
+const string about =
+        "Use this script to run a classification model on a camera stream, video, image or in a directory\n\n"
+        "Firstly, download required models using `download_models.py` (if not already done).\n"
+        "To run:\n"
+        "\t ./example_dnn_classification model_name --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)\n"
+        "Sample command:\n"
+        "\t ./example_dnn_classification googlenet --input=path/to/image \n"
+        "Model path can also be specified using --model argument";
+
+const string param_keys =
+    "{ help  h         |            | Print help message. }"
+    "{ @alias          |            | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ zoo             | models.yml | An optional path to file with preprocessing parameters }"
+    "{ input i         |            | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+    "{ crop            |   false    | Preprocess input image by center cropping.}";
+
+const string backend_keys = format(
     "{ backend          | default | Choose one of computation backends: "
                               "default: automatically (by default), "
                               "inference_engine: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
@@ -23,7 +36,8 @@ std::string backend_keys = cv::format(
                               "vkcom: VKCOM, "
                               "cuda: CUDA, "
                               "webnn: WebNN }");
-std::string target_keys = cv::format(
+
+const string target_keys = format(
     "{ target           | cpu | Choose one of target computation devices: "
                               "cpu: CPU target (by default), "
                               "opencl: OpenCL, "
@@ -33,26 +47,21 @@ std::string target_keys = cv::format(
                               "cuda: CUDA, "
                               "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-std::string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + backend_keys + target_keys;
 
-using namespace cv;
-using namespace std;
-using namespace dnn;
-
-std::vector<std::string> classes;
-vector<string> listImageFilesInDirectory(const string& directoryPath);
+vector<string> classes;
+static vector<string> listImageFilesInDirectory(const string& directoryPath);
 
 int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
-    const std::string modelName = parser.get<String>("@alias");
-    const std::string zooFile = parser.get<String>("zoo");
+    const string modelName = parser.get<String>("@alias");
+    const string zooFile = findFile(parser.get<String>("zoo"));
 
     keys += genPreprocArguments(modelName, zooFile);
-
     parser = CommandLineParser(argc, argv, keys);
-    parser.about("Use this script to run classification deep learning networks using OpenCV.");
+    parser.about(about);
     if (argc == 1 || parser.has("help"))
     {
         parser.printMessage();
@@ -69,30 +78,23 @@ int main(int argc, char** argv)
     String model = findFile(parser.get<String>("model"));
     String backend = parser.get<String>("backend");
     String target = parser.get<String>("target");
-    bool needSoftmax = parser.get<bool>("needSoftmax");
-    std::cout<<"mean: "<<mean<<std::endl;
-    std::cout<<"std: "<<std<<std::endl;
 
     // Open file with classes names.
-
-    std::string file = findFile(parser.get<String>("classes"));
-    std::ifstream ifs(file.c_str());
+    string file = findFile(parser.get<String>("classes"));
+    ifstream ifs(file.c_str());
     if (!ifs.is_open())
         CV_Error(Error::StsError, "File " + file + " not found");
-    std::string line;
-    while (std::getline(ifs, line))
+    string line;
+    while (getline(ifs, line))
     {
         classes.push_back(line);
     }
-
-
     if (!parser.check())
     {
         parser.printErrors();
         return 1;
     }
     CV_Assert(!model.empty());
-
     //! [Read and initialize network]
     Net net = readNetFromONNX(model);
     net.setPreferableBackend(getBackendID(backend));
@@ -101,7 +103,7 @@ int main(int argc, char** argv)
 
     // Create a window
     static const std::string kWinName = "Deep learning image classification in OpenCV";
-    cv::namedWindow(kWinName, WINDOW_NORMAL);
+    namedWindow(kWinName, WINDOW_NORMAL);
 
     //! [Open a video file or an image file or a camera stream]
     VideoCapture cap;
@@ -131,8 +133,6 @@ int main(int argc, char** argv)
     }
     //! [Open a video file or an image file or a camera stream]
 
-
-    // Process frames.
     Mat frame, blob;
     for(;;)
     {
@@ -155,10 +155,8 @@ int main(int argc, char** argv)
         {
             break;
         }
-
         //! [Create a 4D blob from a frame]
         blobFromImage(frame, blob, scale, Size(inpWidth, inpHeight), mean, swapRB, crop);
-
         // Check std values.
         if (std.val[0] != 0.0 && std.val[1] != 0.0 && std.val[2] != 0.0)
         {
@@ -166,85 +164,55 @@ int main(int argc, char** argv)
             divide(blob, std, blob);
         }
         //! [Create a 4D blob from a frame]
-
         //! [Set input blob]
         net.setInput(blob);
         //! [Set input blob]
 
         int classId;
         double confidence;
-        cv::TickMeter timeRecorder;
+        TickMeter timeRecorder;
         timeRecorder.reset();
         Mat prob = net.forward();
         double t1;
+        //! [Make forward pass]
         timeRecorder.start();
         prob = net.forward();
         timeRecorder.stop();
+        //! [Make forward pass]
+
+        //! [Get a class with a highest score]
+        Point classIdPoint;
+        minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
+        classId = classIdPoint.x;
+        //! [Get a class with a highest score]
         t1 = timeRecorder.getTimeMilli();
-
         timeRecorder.reset();
-        for(int i = 0; i < 200; i++) {
-            //! [Make forward pass]
-            timeRecorder.start();
-            prob = net.forward();
-            timeRecorder.stop();
-            //! [Make forward pass]
-
-            //! [Get a class with a highest score]
-            Point classIdPoint;
-            minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
-            classId = classIdPoint.x;
-            //! [Get a class with a highest score]
-        }
-        if (needSoftmax == true)
-        {
-            float maxProb = 0.0;
-            float sum = 0.0;
-            Mat softmaxProb;
-
-            maxProb = *std::max_element(prob.begin<float>(), prob.end<float>());
-            cv::exp(prob-maxProb, softmaxProb);
-            sum = (float)cv::sum(softmaxProb)[0];
-            softmaxProb /= sum;
-            Point classIdPoint;
-            minMaxLoc(softmaxProb.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
-            classId = classIdPoint.x;
-        }
-        std::string label = format("Inference time of 1 round: %.2f ms", t1);
-        std::string label2 = format("Average time of 200 rounds: %.2f ms", timeRecorder.getTimeMilli()/200);
+        string label = format("Inference time of 1 round: %.2f ms", t1);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-        putText(frame, label2, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-
         // Print predicted class.
         label = format("%s: %.4f", (classes.empty() ? format("Class #%d", classId).c_str() :
-                                                      classes[classId].c_str()),
-                                   confidence);
-        putText(frame, label, Point(0, 55), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-
+                        classes[classId].c_str()),confidence);
+        putText(frame, label, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
         imshow(kWinName, frame);
-        int key = cv::waitKey(1000); // Wait for 1 second
+        int key = waitKey(1000); // Wait for 1 second
         if (key == 'q' || key == 27) // Check if 'q' or 'ESC' is pressed
             break;
     }
     return 0;
 }
 
-
-std::vector<std::string> listImageFilesInDirectory(const std::string& folder_path) {
-    std::vector<std::string> image_paths;
-
+vector<std::string> listImageFilesInDirectory(const string& folder_path) {
+    vector<string> image_paths;
     // OpenCV object for reading the directory
-    cv::Ptr<cv::String> image_paths_cv = new cv::String();
-    std::vector<cv::String> fn;
+    Ptr<String> image_paths_cv = new String();
+    vector<String> fn;
     *image_paths_cv = folder_path + "/*.jpg"; // Change the extension according to the image types you want to read
-
     // Read the images from the directory
-    cv::glob(*image_paths_cv, fn, true); // true to search in subdirectories
+    glob(*image_paths_cv, fn, true); // true to search in subdirectories
 
     // Loop through the images
     for (size_t i = 0; i < fn.size(); i++) {
         image_paths.push_back(fn[i]);
     }
-
     return image_paths;
 }
