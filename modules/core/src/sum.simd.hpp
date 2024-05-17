@@ -434,7 +434,7 @@ static int sum64f( const double* src, const uchar* mask, double* dst, int len, i
 
 SumFunc getSumFunc(int depth)
 {
-    static SumFunc sumTab[] =
+    static SumFunc sumTab[CV_DEPTH_MAX] =
     {
         (SumFunc)GET_OPTIMIZED(sum8u), (SumFunc)sum8s,
         (SumFunc)sum16u, (SumFunc)sum16s,

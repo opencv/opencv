@@ -68,7 +68,7 @@ static void LUT8u_64f( const uchar* src, const double* lut, double* dst, int len
 
 typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn );
 
-static LUTFunc lutTab[] =
+static LUTFunc lutTab[CV_DEPTH_MAX] =
 {
     (LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_8s, (LUTFunc)LUT8u_16u, (LUTFunc)LUT8u_16s,
     (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, 0
@@ -330,7 +330,7 @@ public:
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
-        CV_DbgAssert(*ok);
+        CV_Assert(*ok);
 
         const int row0 = range.start;
         const int row1 = range.end;
