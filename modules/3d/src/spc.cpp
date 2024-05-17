@@ -218,4 +218,4 @@ Point3f SpectralCluster::calculateFaceNormal(const std::vector<Point3f>& face) {
     normal /= cv::norm(normal);
     return normal;
 }
-};
+}

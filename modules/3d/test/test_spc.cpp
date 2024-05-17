@@ -26,4 +26,3 @@ TEST(SpC, FunctionTest) {
 }
 }
 }
-
