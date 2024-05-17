@@ -651,7 +651,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
             if( binary )
             {
                 cv::Mat tmp(tileSize, CV_8U, nzbuf);
-                cv::compare( src, 0, tmp, CV_CMP_NE );
+                cv::compare( src, 0, tmp, cv::CMP_NE );
                 src = tmp;
             }
 
