@@ -85,7 +85,7 @@ class DownloadInstance:
         print('  hash check failed - loading')
         assert self.loader
         try:
-            self.loader.load(self.filename, self.save_dir)
+            self.loader.load(self.filename, self.sha, self.save_dir)
             print(' done')
             print(' file {}'.format(self.filename))
             if self.sha is None:
