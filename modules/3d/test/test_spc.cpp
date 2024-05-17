@@ -16,7 +16,7 @@ TEST(SpC, FunctionTest) {
 
     cv::loadMesh(test_file_path, vertices, indices);
     // init class instance
-    cv::SpectralCluster cluster(0.1, 0.1);
+    cv::SpectralCluster cluster(0.1f, 0.1f);
 
     cluster.cluster(vertices, indices, 2, results);
 
