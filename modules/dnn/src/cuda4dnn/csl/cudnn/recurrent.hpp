@@ -119,6 +119,7 @@ public:
 
         try
         {
+#if CUDNN_MAJOR >= 9
             CUDA4DNN_CHECK_CUDNN(cudnnSetRNNDescriptor_v8(
                                     descriptor, algo, rnn_mode,
                                     CUDNN_RNN_NO_BIAS, // Where can this come from?
@@ -130,6 +131,14 @@ public:
                                     0, // where can this come from?
                                     num_layers, dropoutDesc.get(),
                                     0)); // What other flags do we might want here?
+#else
+            CUDA4DNN_CHECK_CUDNN(cudnnSetRNNDescriptor_v6(
+                                    handle.get(), descriptor, hidden_size, num_layers, dropoutDesc.get(),
+                                    CUDNN_LINEAR_INPUT, bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+                                    rnn_mode,
+                                    algo, //CUDNN_RNN_ALGO_STANDARD,
+                                    detail::get_data_type<T>()));
+#endif
         }
         catch (...)
         {
