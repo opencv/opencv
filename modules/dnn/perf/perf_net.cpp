@@ -109,7 +109,7 @@ PERF_TEST_P_(DNNTestNetwork, ResNet_50)
     processNet("dnn/onnx/models/resnet50v1.onnx", "", cv::Size(224, 224));
 }
 
-PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
+PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1)
 {
     processNet("dnn/onnx/models/squeezenet.onnx", "", cv::Size(227, 227));
 }
