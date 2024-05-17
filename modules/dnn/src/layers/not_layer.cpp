@@ -4,6 +4,8 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 
 
 namespace cv { namespace dnn {
@@ -18,7 +20,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -60,6 +63,15 @@ public:
         for (int i = 0; i < size; ++i)
             output[i] = !input[i];
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto node = std::make_shared<ov::op::v1::LogicalNot>(nodes[0].dynamicCast<InfEngineNgraphNode>()->node);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(node));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 };
 

@@ -61,6 +61,8 @@ ov::element::Type cvTypeToOvType(MatType cvType)
             return ov::element::i32;
         case CV_64S:
             return ov::element::i64;
+        case CV_Bool:
+            return ov::element::boolean;
         default:
             CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(cvType).c_str()));
     }
@@ -84,6 +86,8 @@ MatType ovTypeToCvType(ov::element::Type ovType)
             return CV_32S;
         case ov::element::i64:
             return CV_64S;
+        case ov::element::boolean:
+            return CV_Bool;
         default:
             CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", ovType.get_type_name().c_str()));
     }

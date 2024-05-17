@@ -263,8 +263,15 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return (op == OPERATION::ADD ||
                     op == OPERATION::PROD ||
+                    op == OPERATION::EQUAL ||
+                    op == OPERATION::GREATER ||
                     op == OPERATION::GREATER_EQUAL ||
+                    op == OPERATION::LESS ||
                     op == OPERATION::LESS_EQUAL ||
+                    op == OPERATION::AND ||
+                    op == OPERATION::OR ||
+                    op == OPERATION::XOR ||
+                    op == OPERATION::WHERE ||
                     op == OPERATION::MOD ||
                     op == OPERATION::FMOD
             );
@@ -925,11 +932,16 @@ public:
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 2);
+        if (op == OPERATION::WHERE)
+            CV_CheckEQ(inputs.size(), 3u, "");
+        else
+            CV_CheckEQ(inputs.size(), 2u, "");
         auto& inp0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto& inp1 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
-        if (inp0.get_element_type() != inp1.get_element_type()) {
+        if (op != OPERATION::WHERE && inp0.get_element_type() != inp1.get_element_type()) {
+            CV_Assert(inp0.get_element_type() == ov::element::f16 || inp0.get_element_type() == ov::element::f32);
+            CV_Assert(inp1.get_element_type() == ov::element::f16 || inp1.get_element_type() == ov::element::f32);
             auto dtype = preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_MYRIAD ?
                         ov::element::f16 : ov::element::f32;
             if (inp0.get_element_type() != dtype)
@@ -943,10 +955,27 @@ public:
             node = std::make_shared<ov::op::v1::Add>(inp0, inp1);
         else if (op == OPERATION::PROD)
             node = std::make_shared<ov::op::v1::Multiply>(inp0, inp1);
+        else if (op == OPERATION::EQUAL)
+            node = std::make_shared<ov::op::v1::Equal>(inp0, inp1);
+        else if (op == OPERATION::GREATER)
+            node = std::make_shared<ov::op::v1::Greater>(inp0, inp1);
         else if (op == OPERATION::GREATER_EQUAL)
             node = std::make_shared<ov::op::v1::GreaterEqual>(inp0, inp1);
+        else if (op == OPERATION::LESS)
+            node = std::make_shared<ov::op::v1::Less>(inp0, inp1);
         else if (op == OPERATION::LESS_EQUAL)
             node = std::make_shared<ov::op::v1::LessEqual>(inp0, inp1);
+        else if (op == OPERATION::AND)
+            node = std::make_shared<ov::op::v1::LogicalAnd>(inp0, inp1);
+        else if (op == OPERATION::OR)
+            node = std::make_shared<ov::op::v1::LogicalOr>(inp0, inp1);
+        else if (op == OPERATION::XOR)
+            node = std::make_shared<ov::op::v1::LogicalXor>(inp0, inp1);
+        else if (op == OPERATION::WHERE)
+        {
+            auto& inp2 = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+            node = std::make_shared<ov::op::v1::Select>(inp0, inp1, inp2);
+        }
         // Ideally we should do this but int32 internal blobs are converted to float32 data type in inference.
         // TODO: Remove data type convertion when we have type inference.
         else if (op == OPERATION::MOD) {
