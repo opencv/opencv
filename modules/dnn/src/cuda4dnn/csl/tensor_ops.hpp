@@ -545,8 +545,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
               seqLenArr,
               nullptr); // Should we fill out padding here?
             dropoutDesc = DropoutDescriptor(cudnnHandle, params.dropout);
-            filterDesc = FilterDescriptor(params.weights_shape);
-            rnnDesc = RNNDescriptor(cudnnHandle, params.type, params.hiddenSize,
+//             filterDesc = FilterDescriptor(params.weights_shape);
+            rnnDesc = RNNDescriptor(cudnnHandle, params.type, params.inputSize, params.hiddenSize,
                                     params.numLayers, params.bidirectional, dropoutDesc);
 
             int num_direction = params.bidirectional ? 2 : 1;

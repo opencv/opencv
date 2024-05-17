@@ -97,7 +97,7 @@ public:
 
     /**
     */
-    RNNDescriptor(const Handle &handle, RNNMode mode, int hidden_size, int num_layers,
+    RNNDescriptor(const Handle &handle, RNNMode mode, int input_size, int hidden_size, int num_layers,
                   bool bidirectional, const DropoutDescriptor &dropoutDesc)
     {
         CUDA4DNN_CHECK_CUDNN(cudnnCreateRNNDescriptor(&descriptor));
@@ -120,16 +120,16 @@ public:
         try
         {
             CUDA4DNN_CHECK_CUDNN(cudnnSetRNNDescriptor_v8(
-           descriptor, algo, rnn_mode,
-          CUDNN_RNN_NO_BIAS, // Where can this come from?
-          bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
-          CUDNN_LINEAR_INPUT, detail::get_data_type<T>(),
-          detail::get_data_type<T>(), // CUDNN_RNN_ALGO_STANDARD,
-          CUDNN_DEFAULT_MATH,         // default precision
-          input_size, hidden_size,
-          0, // where can this come from?
-          num_layers, dropoutDesc.get(),
-          0)); // What other flags do we might want here?
+                                    descriptor, algo, rnn_mode,
+                                    CUDNN_RNN_NO_BIAS, // Where can this come from?
+                                    bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+                                    CUDNN_LINEAR_INPUT, detail::get_data_type<T>(),
+                                    detail::get_data_type<T>(), // CUDNN_RNN_ALGO_STANDARD,
+                                    CUDNN_DEFAULT_MATH,         // default precision
+                                    input_size, hidden_size,
+                                    0, // where can this come from?
+                                    num_layers, dropoutDesc.get(),
+                                    0)); // What other flags do we might want here?
         }
         catch (...)
         {
