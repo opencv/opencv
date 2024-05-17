@@ -654,6 +654,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         cv_camera_intrinsics_pinhole_32f intr;
         intr.fx = (float)fx; intr.fy = (float)fy;
         intr.cx = (float)cx; intr.cy = (float)cy;
+        intr.amt_k = 0; intr.amt_p = 0; intr.amt_s = 0; intr.use_tau = false;
 
         switch (delems)
         {
@@ -687,7 +688,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         intr.p[0] = (float)k[2];
         intr.p[1] = (float)k[3];
 
-        for (int ctr = 0; ctr < intr.amt_s; ctr++)
+        for (int ctr = 0; ctr < 4; ctr++)
         {
             intr.s[ctr] = (float)k[8+ctr];
         }
@@ -719,6 +720,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         cv_camera_intrinsics_pinhole_64f intr;
         intr.fx = fx; intr.fy = fy;
         intr.cx = cx; intr.cy = cy;
+        intr.amt_k = 0; intr.amt_p = 0; intr.amt_s = 0; intr.use_tau = false;
 
         switch (delems)
         {
@@ -752,7 +754,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
         intr.p[0] = k[2];
         intr.p[1] = k[3];
 
-        for (int ctr = 0; ctr < intr.amt_s; ctr++)
+        for (int ctr = 0; ctr < 4; ctr++)
         {
             intr.s[ctr] = k[8+ctr];
         }
