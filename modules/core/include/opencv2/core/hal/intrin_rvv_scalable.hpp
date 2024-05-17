@@ -1884,7 +1884,9 @@ inline v_int32 v_round(const v_float64& a)
 
 inline v_int32 v_round(const v_float64& a, const v_float64& b)
 {
-    return vfncvt_x(vset(vlmul_ext_f64m2(vfadd(a, 1e-6, VTraits<v_float64>::vlanes())), 1, b), VTraits<v_float32>::vlanes());
+    // return vfncvt_x(vset(vlmul_ext_f64m2(vfadd(a, 1e-6, VTraits<v_float64>::vlanes())), 1, b), VTraits<v_float32>::vlanes());
+    // Fix https://github.com/opencv/opencv/issues/24746
+    return vfncvt_x(vset(vlmul_ext_f64m2(a), 1, b), VTraits<v_float32>::vlanes());
 }
 
 inline v_int32 v_floor(const v_float64& a)

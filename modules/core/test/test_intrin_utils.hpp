@@ -1385,6 +1385,33 @@ template<typename R> struct TheTest
 
         return *this;
     }
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    TheTest & test_round_pair_f64()
+    {
+        typedef typename V_RegTraits<R>::round_reg Ri;
+        Data<R> data1, data1_border, data2;
+        // See https://github.com/opencv/opencv/issues/24213
+        // https://github.com/opencv/opencv/issues/24163
+        // https://github.com/opencv/opencv/pull/24271
+        data1_border *= 0.5;
+        data1 *= 1.1;
+        data2 += 10;
+        R a1 = data1, a1_border = data1_border, a2 = data2;
+
+        Data<Ri> resA = v_round(a1, a1),
+                 resB = v_round(a1_border, a1_border),
+                 resC = v_round(a2, a2);
+
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+        {
+            EXPECT_EQ(cvRound(data1[i]), resA[i]);
+            EXPECT_EQ(cvRound(data1_border[i]), resB[i]);
+            EXPECT_EQ(cvRound(data2[i]), resC[i]);
+        }
+
+        return *this;
+    }
+#endif
 
     TheTest & test_float_cvt32()
     {
@@ -2008,6 +2035,7 @@ void test_hal_intrin_float64()
         .test_mask()
         .test_unpack()
         .test_float_math()
+        .test_round_pair_f64()
         .test_float_cvt32()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
