@@ -87,11 +87,17 @@ const string all_images[] =
     "readwrite/uint16-mono2.dcm",
     "readwrite/uint8-rgb.dcm",
 #endif
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
     "readwrite/color_palette_alpha.png",
+#endif
+#ifdef HAVE_TIFF
     "readwrite/multipage.tif",
+#endif
     "readwrite/ordinary.bmp",
     "readwrite/rle8.bmp",
+#ifdef HAVE_JPEG
     "readwrite/test_1_c1.jpg",
+#endif
 #ifdef HAVE_IMGCODEC_HDR
     "readwrite/rle.hdr"
 #endif
