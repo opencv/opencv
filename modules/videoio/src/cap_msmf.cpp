@@ -1321,7 +1321,7 @@ bool CvCapture_MSMF::open(const std::vector<uchar>& buffer, const cv::VideoCaptu
             return false;
     }
 
-    IStream* s = SHCreateMemStream(buffer.data(), buffer.size());
+    IStream* s = SHCreateMemStream(buffer.data(), static_cast<UINT32>(buffer.size()));
     if (!s)
         return false;
     IMFByteStream *bs = nullptr;

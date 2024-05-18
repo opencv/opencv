@@ -82,13 +82,6 @@ VideoCapture::VideoCapture(const String& filename, int apiPreference, const std:
     open(filename, apiPreference, params);
 }
 
-VideoCapture::VideoCapture(const std::vector<uchar>& buffer, int apiPreference)
-    : throwOnFail(false)
-{
-    CV_TRACE_FUNCTION();
-    open(buffer, apiPreference);
-}
-
 VideoCapture::VideoCapture(const std::vector<uchar>& buffer, int apiPreference, const std::vector<int>& params)
     : throwOnFail(false)
 {
@@ -240,11 +233,6 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
     }
 
     return false;
-}
-
-bool VideoCapture::open(const std::vector<uchar>& buffer, int apiPreference)
-{
-    return open(buffer, apiPreference, std::vector<int>());
 }
 
 bool VideoCapture::open(const std::vector<uchar>& buffer, int apiPreference, const std::vector<int>& params)

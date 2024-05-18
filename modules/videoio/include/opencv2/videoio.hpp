@@ -799,17 +799,6 @@ public:
     CV_WRAP explicit VideoCapture(int index, int apiPreference, const std::vector<int>& params);
 
     /** @overload
-    @brief  Opens a video file stored in memory buffer.
-
-    @param buffer bytes array with a raw video file content
-    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
-
-    @sa cv::VideoCaptureAPIs
-    */
-    CV_WRAP explicit VideoCapture(const std::vector<uchar>& buffer, int apiPreference = CAP_ANY);
-
-    /** @overload
     @brief Opens a video file stored in memory buffer.
 
     The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
@@ -870,17 +859,6 @@ public:
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
     CV_WRAP virtual bool open(int index, int apiPreference, const std::vector<int>& params);
-
-    /** @brief  Opens a video file stored in memory buffer.
-
-    @overload
-
-    Parameters are same as the constructor VideoCapture(const String& filename, int apiPreference = CAP_ANY)
-    @return `true` if the file has been successfully opened
-
-    The method first calls VideoCapture::release to close the already opened file or camera.
-     */
-    CV_WRAP virtual bool open(const std::vector<uchar>& buffer, int apiPreference = CAP_ANY);
 
     /** @brief  Opens a video file stored in memory buffer.
 

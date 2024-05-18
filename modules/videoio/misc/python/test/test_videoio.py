@@ -26,7 +26,7 @@ class Bindings(NewOpenCVTests):
             raise self.skipTest("No available backends")
 
         with open(self.find_file("cv/video/768x576.avi"), "rb") as f:
-            cap = cv.VideoCapture(f.read())
+            cap = cv.VideoCapture(f.read(), cv.CAP_ANY, [])
             self.assertTrue(cap.isOpened())
             hasFrame, frame = cap.read()
             self.assertTrue(hasFrame)

@@ -1039,7 +1039,7 @@ TEST_P(buffer_capture, read)
     {
         int pluginABI, pluginAPI;
         videoio_registry::getBufferBackendPluginVersion(apiPref, pluginABI, pluginAPI);
-        if (pluginABI < 1 || pluginABI == 1 && pluginAPI < 2)
+        if (pluginABI < 1 || (pluginABI == 1 && pluginAPI < 2))
             throw SkipTestException(format("Buffer capture supported since ABI/API = 1/2. %s plugin is %d/%d",
                                            cv::videoio_registry::getBackendName(apiPref).c_str(), pluginABI, pluginAPI));
     }
@@ -1058,7 +1058,7 @@ TEST_P(buffer_capture, read)
     ifs.read((char*)buffer.data(), sz);
     ASSERT_FALSE(ifs.fail());
 
-    EXPECT_NO_THROW(cap.open(buffer, apiPref));
+    EXPECT_NO_THROW(cap.open(buffer, apiPref, {}));
     ASSERT_TRUE(cap.isOpened());
 
     const int numFrames = 10;
