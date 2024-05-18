@@ -133,7 +133,7 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
     @param n_params number of passed parameters
     @param[out] handle pointer on Capture handle
 
-    @note API-CALL 9, API-Version == 1
+    @note API-CALL 9, API-Version == 2
      */
     CvResult (CV_API_CALL *Capture_open_with_params)(
         const char* filename, int camera_index,

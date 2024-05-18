@@ -526,8 +526,6 @@ inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
 
 struct CvCapture_FFMPEG
 {
-    bool open(const char* filename, const VideoCaptureParameters& params);
-    bool open(const uint8_t* buffer, size_t buffer_size, const VideoCaptureParameters& params);
     bool open(const char* filename, const uint8_t* buffer, size_t buffer_size, const VideoCaptureParameters& params);
     void close();
 
@@ -1029,16 +1027,6 @@ static bool isThreadSafe() {
         CV_LOG_WARNING(NULL, "VIDEOIO/FFMPEG: OPENCV_FFMPEG_IS_THREAD_SAFE == 1, all OpenCV locks removed, relying on FFmpeg to provide thread safety.  If FFmpeg is not thread safe isOpened() may return false when multiple threads try to call open() at the same time.");
     }
     return threadSafe;
-}
-
-bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters& params)
-{
-    return open(_filename, nullptr, 0, params);
-}
-
-bool CvCapture_FFMPEG::open(const uint8_t* buffer, size_t buffer_size, const VideoCaptureParameters& params)
-{
-    return open(nullptr, buffer, buffer_size, params);
 }
 
 bool CvCapture_FFMPEG::open(const char* _filename, const uint8_t* buffer, size_t buffer_size, const VideoCaptureParameters& params)
@@ -3340,7 +3328,7 @@ CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, con
     if (!capture)
         return 0;
     capture->init();
-    if (capture->open(filename, params))
+    if (capture->open(filename, nullptr, 0, params))
         return capture;
 
     capture->close();
@@ -3356,7 +3344,7 @@ CvCapture_FFMPEG* cvCreateBufferCaptureWithParams_FFMPEG(const uint8_t* buffer, 
     if (!capture)
         return 0;
     capture->init();
-    if (capture->open(buffer, buffer_size, params))
+    if (capture->open(nullptr, buffer, buffer_size, params))
         return capture;
 
     capture->close();

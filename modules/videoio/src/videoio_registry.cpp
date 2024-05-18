@@ -91,7 +91,7 @@ static const struct VideoBackendInfo builtin_backends[] =
 #ifdef HAVE_MSMF
     DECLARE_STATIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_CAPTURE_BY_BUFFER | MODE_WRITER, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateVideoWriter_MSMF)
 #elif defined(ENABLE_PLUGINS) && defined(_WIN32)
-    DECLARE_DYNAMIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_WRITER)
+    DECLARE_DYNAMIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_CAPTURE_BY_BUFFER | MODE_WRITER)
 #endif
 
 #ifdef HAVE_DSHOW
