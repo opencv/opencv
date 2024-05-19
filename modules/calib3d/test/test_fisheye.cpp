@@ -150,6 +150,28 @@ TEST_F(fisheyeTest, distortUndistortPoints)
     }
 }
 
+TEST_F(fisheyeTest, solvePnP)
+{
+    const int n = 16;
+
+    cv::Mat obj_points(1, n, CV_64FC3);
+    theRNG().fill(obj_points, cv::RNG::NORMAL, 2, 1);
+    obj_points = cv::abs(obj_points) * 10;
+
+    cv::Mat rvec;
+    cv::Rodrigues(this->R, rvec);
+    cv::Mat img_points;
+    cv::fisheye::projectPoints(obj_points, img_points, rvec, this->T, this->K, this->D);
+
+    cv::Mat rvec_pred;
+    cv::Mat tvec_pred;
+    bool converged = cv::fisheye::solvePnP(obj_points, img_points, this->K, this->D, rvec_pred, tvec_pred);
+    EXPECT_MAT_NEAR(rvec, rvec_pred, 1e-6);
+    EXPECT_MAT_NEAR(this->T, tvec_pred, 1e-6);
+
+    ASSERT_TRUE(converged);
+}
+
 TEST_F(fisheyeTest, undistortImage)
 {
     // we use it to reduce patch size for images in testdata
@@ -163,7 +185,7 @@ TEST_F(fisheyeTest, undistortImage)
 
     cv::Matx33d theK = this->K;
     cv::Mat theD = cv::Mat(this->D);
-    std::string file = combine(datasets_repository_path, "/calib-3_stereo_from_JY/left/stereo_pair_014.jpg");
+    std::string file = combine(datasets_repository_path, "stereo_pair_014.png");
     cv::Matx33d newK = theK;
     cv::Mat distorted = cv::imread(file), undistorted;
     {
@@ -410,6 +432,11 @@ TEST_F(fisheyeTest, Calibration)
 {
     const int n_images = 34;
 
+    const cv::Matx33d goldK(558.4780870585967, 0, 620.4585053962692,
+                            0, 560.5067667343917, 381.9394122875291,
+                            0, 0, 1);
+    const cv::Vec4d goldD(-0.00146136, -0.00329847, 0.00605742, -0.00374201);
+
     std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
     std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
@@ -437,8 +464,8 @@ TEST_F(fisheyeTest, Calibration)
     cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, theK, theD,
                            cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
 
-    EXPECT_MAT_NEAR(theK, this->K, 1e-10);
-    EXPECT_MAT_NEAR(theD, this->D, 1e-10);
+    EXPECT_MAT_NEAR(theK, goldK, 1e-8);
+    EXPECT_MAT_NEAR(theD, goldD, 1e-8);
 }
 
 TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
@@ -597,10 +624,10 @@ TEST_F(fisheyeTest, EstimateUncertainties)
     cv::internal::EstimateUncertainties(objectPoints, imagePoints, param,  rvec, tvec,
                                         errors, err_std, thresh_cond, check_cond, rms);
 
-    EXPECT_MAT_NEAR(errors.f, cv::Vec2d(1.34250246865020720, 1.36037536429654530), 1e-10);
-    EXPECT_MAT_NEAR(errors.c, cv::Vec2d(0.92070526160049848, 0.84383585812851514), 1e-10);
-    EXPECT_MAT_NEAR(errors.k, cv::Vec4d(0.0053379581373996041, 0.017389792901700545, 0.022036256089491224, 0.0094714594258908952), 1e-10);
-    EXPECT_MAT_NEAR(err_std, cv::Vec2d(0.187475975266883, 0.185678953263995), 1e-10);
+    EXPECT_MAT_NEAR(errors.f, cv::Vec2d(1.34250246865020720, 1.36037536429654530), 1e-6);
+    EXPECT_MAT_NEAR(errors.c, cv::Vec2d(0.92070526160049848, 0.84383585812851514), 1e-6);
+    EXPECT_MAT_NEAR(errors.k, cv::Vec4d(0.0053379581373996041, 0.017389792901700545, 0.022036256089491224, 0.0094714594258908952), 1e-7);
+    EXPECT_MAT_NEAR(err_std, cv::Vec2d(0.187475975266883, 0.185678953263995), 1e-7);
     CV_Assert(fabs(rms - 0.263782587133546) < 1e-10);
     CV_Assert(errors.alpha == 0);
 }

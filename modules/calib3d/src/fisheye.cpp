@@ -799,7 +799,7 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
     }
     else
     {
-        finalParam.Init(Vec2d(max(image_size.width, image_size.height) / CV_PI, max(image_size.width, image_size.height) / CV_PI),
+        finalParam.Init(Vec2d(max(image_size.width, image_size.height) / 2., max(image_size.width, image_size.height) / 2.),
                         Vec2d(image_size.width  / 2.0 - 0.5, image_size.height / 2.0 - 0.5));
     }
 
@@ -1146,6 +1146,20 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     }
 
     return rms;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// cv::fisheye::solvePnP
+
+bool cv::fisheye::solvePnP( InputArray opoints, InputArray ipoints,
+               InputArray cameraMatrix, InputArray distCoeffs,
+               OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess,
+               int flags, TermCriteria criteria)
+{
+
+    Mat imagePointsNormalized;
+    cv::fisheye::undistortPoints(ipoints, imagePointsNormalized, cameraMatrix, distCoeffs, noArray(), cameraMatrix, criteria);
+    return cv::solvePnP(opoints, imagePointsNormalized, cameraMatrix, noArray(), rvec, tvec, useExtrinsicGuess, flags);
 }
 
 namespace cv{ namespace {

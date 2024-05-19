@@ -3469,7 +3469,7 @@ Ptr<DFT2D> DFT2D::create(int width, int height, int depth,
     {
         if(width == 1 && nonzero_rows > 0 )
         {
-            CV_Error( CV_StsNotImplemented,
+            CV_Error( cv::Error::StsNotImplemented,
             "This mode (using nonzero_rows with a single-column matrix) breaks the function's logic, so it is prohibited.\n"
             "For fast convolution/correlation use 2-column matrix or single-row matrix instead" );
         }
@@ -4317,7 +4317,7 @@ public:
             if( len != prev_len )
             {
                 if( len > 1 && (len & 1) )
-                    CV_Error( CV_StsNotImplemented, "Odd-size DCT\'s are not implemented" );
+                    CV_Error( cv::Error::StsNotImplemented, "Odd-size DCT\'s are not implemented" );
 
                 opt.nf = DFTFactorize( len, opt.factors );
                 bool inplace_transform = opt.factors[0] == opt.factors[opt.nf-1];
@@ -4363,7 +4363,7 @@ struct ReplacementDCT2D : public hal::DCT2D
     ReplacementDCT2D() : context(0), isInitialized(false) {}
     bool init(int width, int height, int depth, int flags)
     {
-        int res = hal_ni_dctInit2D(&context, width, height, depth, flags);
+        int res = cv_hal_dctInit2D(&context, width, height, depth, flags);
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
     }

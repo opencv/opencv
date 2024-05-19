@@ -299,6 +299,36 @@ inline int hal_ni_warpPerspective(int src_type, const uchar *src_data, size_t sr
 //! @endcond
 
 /**
+   @brief hal_remap with floating point maps
+   @param src_type source and destination image type
+   @param src_data source image data
+   @param src_step source image step
+   @param src_width source image width
+   @param src_height source image height
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param dst_width destination image width
+   @param dst_height destination image height
+   @param mapx map for x values
+   @param mapx_step mapx matrix step
+   @param mapy map for y values
+   @param mapy_step mapy matrix step
+   @param interpolation interpolation mode (CV_HAL_INTER_NEAREST, ...)
+   @param border_type border processing mode (CV_HAL_BORDER_REFLECT, ...)
+   @param border_value values to use for CV_HAL_BORDER_CONSTANT mode
+   @sa cv::remap
+ */
+inline int hal_ni_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+                           uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+                           float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
+                           int interpolation, int border_type, const double border_value[4])
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_remap32f hal_ni_remap32f
+//! @endcond
+
+/**
    @brief hal_cvtBGRtoBGR
    @param src_data source image data
    @param src_step source image step
@@ -764,6 +794,29 @@ inline int hal_ni_medianBlur(const uchar* src_data, size_t src_step, uchar* dst_
 //! @endcond
 
 /**
+   @brief Calculate bilateral filter. See https://homepages.inf.ed.ac.uk/rbf/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param depth Depths of source and destination image. Should support CV_8U and CV_32F
+   @param cn Number of channels
+   @param d Diameter of each pixel neighborhood that is used during filtering. If it is non-positive, it is computed from sigmaSpace
+   @param sigma_color Filter sigma in the color space
+   @param sigma_space Filter sigma in the coordinate space. When d>0, it specifies the neighborhood size regardless of sigmaSpace. Otherwise, d is proportional to sigmaSpace
+   @param border_type border mode used to extrapolate pixels outside of the image
+*/
+inline int hal_ni_bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                                  int width, int height, int depth, int cn, int d, double sigma_color, double sigma_space, int border_type)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_bilateralFilter hal_ni_bilateralFilter
+//! @endcond
+
+/**
    @brief Calculates adaptive threshold
    @param src_data Source image data
    @param src_step Source image step
@@ -804,6 +857,25 @@ inline int hal_ni_threshold(const uchar* src_data, size_t src_step, uchar* dst_d
 //! @endcond
 
 /**
+   @brief Performs threshold filtering using threshold estimated by Otsu algorithm
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param depth Depths of source and destination image
+   @param maxValue Value assigned to the pixels for which the condition is satisfied
+   @param thresholdType Thresholding type
+   @param thresh Calculated threshold value
+*/
+inline int hal_ni_threshold_otsu(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, double maxValue, int thresholdType, double* thresh) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_threshold_otsu hal_ni_threshold_otsu
+//! @endcond
+
+/**
    @brief Calculate box filter
    @param src_data Source image data
    @param src_step Source image step
@@ -832,7 +904,22 @@ inline int hal_ni_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_d
 //! @endcond
 
 /**
-   @brief Blurs an image using a Gaussian filter.
+   @brief Equalizes the histogram of a grayscale image
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+*/
+inline int hal_ni_equalize_hist(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_equalize_hist hal_ni_equalize_hist
+//! @endcond
+
+/**
+   @brief Blurs an image using a generic Gaussian filter.
    @param src_data Source image data
    @param src_step Source image step
    @param dst_data Destination image data
@@ -855,6 +942,29 @@ inline int hal_ni_gaussianBlur(const uchar* src_data, size_t src_step, uchar* ds
 
 //! @cond IGNORED
 #define cv_hal_gaussianBlur hal_ni_gaussianBlur
+//! @endcond
+
+/**
+   @brief Blurs an image using a symmetric Gaussian filter with square kernel and sigma=0.
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param depth Depth of source and destination image
+   @param cn Number of channels
+   @param margin_left Left margins for source image
+   @param margin_top Top margins for source image
+   @param margin_right Right margins for source image
+   @param margin_bottom Bottom margins for source image
+   @param ksize Width of kernel
+   @param border_type Border type
+*/
+inline int hal_ni_gaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, size_t margin_left, size_t margin_top, size_t margin_right, size_t margin_bottom, size_t ksize, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_gaussianBlurBinomial hal_ni_gaussianBlurBinomial
 //! @endcond
 
 /**
@@ -950,6 +1060,38 @@ inline int hal_ni_canny(const uchar* src_data, size_t src_step, uchar* dst_data,
 
 //! @cond IGNORED
 #define cv_hal_canny hal_ni_canny
+//! @endcond
+
+/**
+   @brief Calculates all of the moments up to the third order of a polygon or rasterized shape for image
+   @param src_data Source image data
+   @param src_step Source image step
+   @param src_type source pints type
+   @param width Source image width
+   @param height Source image height
+   @param binary If it is true, all non-zero image pixels are treated as 1's
+   @param m Output array of moments (10 values) in the following order:
+    m00, m10, m01, m20, m11, m02, m30, m21, m12, m03.
+   @sa moments
+*/
+inline int hal_ni_imageMoments(const uchar* src_data, size_t src_step, int src_type, int width, int height, bool binary, double m[10])
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Calculates all of the moments up to the third order of a polygon of 2d points
+   @param src_data Source points (Point 2x32f or 2x32s)
+   @param src_size Source points count
+   @param src_type source pints type
+   @param m Output array of moments (10 values) in the following order:
+    m00, m10, m01, m20, m11, m02, m30, m21, m12, m03.
+   @sa moments
+*/
+inline int hal_ni_polygonMoments(const uchar* src_data, size_t src_size, int src_type, double m[10])
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_imageMoments hal_ni_imageMoments
+#define cv_hal_polygonMoments hal_ni_polygonMoments
 //! @endcond
 
 //! @}

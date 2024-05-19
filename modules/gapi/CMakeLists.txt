@@ -41,7 +41,7 @@ if(MSVC)
     # and IE deprecated code warning C4996
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503 /wd4996)
   endif()
-  if(MSVC_VERSION LESS 1920)  # MSVS 2015/2017
+  if((MSVC_VERSION LESS 1920) OR ARM OR AARCH64) # MSVS 2015/2017 on x86 and ARM
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)  # 'unreachable code'
   endif()
 endif()
@@ -79,6 +79,7 @@ set(gapi_srcs
     src/api/gframe.cpp
     src/api/gkernel.cpp
     src/api/gbackend.cpp
+    src/api/gcommon.cpp
     src/api/gproto.cpp
     src/api/gnode.cpp
     src/api/gcall.cpp
@@ -121,8 +122,10 @@ set(gapi_srcs
     src/executor/gabstractstreamingexecutor.cpp
     src/executor/gexecutor.cpp
     src/executor/gtbbexecutor.cpp
+    src/executor/gthreadedexecutor.cpp
     src/executor/gstreamingexecutor.cpp
     src/executor/gasync.cpp
+    src/executor/thread_pool.cpp
 
     # CPU Backend (currently built-in)
     src/backends/cpu/gcpubackend.cpp

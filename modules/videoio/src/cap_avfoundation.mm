@@ -221,18 +221,18 @@ cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::strin
 
 }
 
-#if !TARGET_OS_VISION
 
 cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
 {
+#if !TARGET_OS_VISION
     CvCaptureCAM* retval = new CvCaptureCAM(index);
     if (retval->didStart())
         return cv::makePtr<cv::LegacyCapture>(retval);
     delete retval;
+#endif
     return 0;
 }
 
-#endif
 
 cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc,
                                                          double fps, const cv::Size &frameSize,
@@ -824,7 +824,7 @@ CvCaptureFile::CvCaptureFile(const char* filename) {
 
 // Available since iOS 15
 #if TARGET_OS_VISION || (defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 150000)
-    if (@available(iOS 15, visionOS 1, *)) {
+    if (@available(iOS 15, *)) {
         [mAsset loadTracksWithMediaType:AVMediaTypeVideo completionHandler:^(NSArray<AVAssetTrack *>* tracks, NSError* err) {
             if (err != nil) {
                 handleTracks(tracks, filename);
@@ -1311,7 +1311,7 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int
 #if TARGET_OS_VISION || (defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
     }else if(fourcc == CV_FOURCC('H','2','6','5') || fourcc == CV_FOURCC('h','v','c','1') ||
             fourcc == CV_FOURCC('H','E','V','C') || fourcc == CV_FOURCC('h','e','v','c')){
-        if (@available(iOS 11, visionOS 1, *)) {
+        if (@available(iOS 11, *)) {
             codec = [AVVideoCodecTypeHEVC copy];
         } else {
             codec = [AVVideoCodecTypeH264 copy];

@@ -163,7 +163,7 @@ void TrackerVitImpl::init(InputArray image_, const Rect &boundingBox_)
     preprocess(crop, blob, templateSize);
     net.setInput(blob, "template");
     Size size(16, 16);
-    hanningWindow = hann2d(size, false);
+    hanningWindow = hann2d(size, true);
     rect_last = boundingBox_;
 }
 
@@ -184,7 +184,7 @@ bool TrackerVitImpl::update(InputArray image_, Rect &boundingBoxRes)
     Mat size_map = outs[1].reshape(0, {2, 16, 16});
     Mat offset_map = outs[2].reshape(0, {2, 16, 16});
 
-    multiply(conf_map, (1.0 - hanningWindow), conf_map);
+    multiply(conf_map, hanningWindow, conf_map);
 
     double maxVal;
     Point maxLoc;

@@ -121,8 +121,6 @@
 "test_gemm_all_attributes",
 "test_gemm_alpha",
 "test_gemm_beta",
-"test_gemm_default_matrix_bias",
-"test_gemm_default_no_bias",
 "test_gemm_default_scalar_bias",
 "test_gemm_default_single_elem_vector_bias",
 "test_gemm_default_vector_bias",

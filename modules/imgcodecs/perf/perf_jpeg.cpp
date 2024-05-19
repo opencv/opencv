@@ -5,6 +5,9 @@
 
 namespace opencv_test
 {
+
+#ifdef HAVE_JPEG
+
 using namespace perf;
 
 PERF_TEST(JPEG, Decode)
@@ -34,5 +37,7 @@ PERF_TEST(JPEG, Encode)
 
     SANITY_CHECK_NOTHING();
 }
+
+#endif // HAVE_JPEG
 
 } // namespace

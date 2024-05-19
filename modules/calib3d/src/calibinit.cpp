@@ -156,7 +156,8 @@ struct ChessBoardQuad
     float edge_len; // quad edge len, in pix^2
     // neighbors and corners are synced, i.e., neighbor 0 shares corner 0
     ChessBoardCorner *corners[4]; // Coordinates of quad corners
-    struct ChessBoardQuad *neighbors[4]; // Pointers of quad neighbors
+    struct ChessBoardQuad *neighbors[4]; // Pointers of quad neighbors. M.b. sparse.
+    // Each neighbors element corresponds to quad corner, but not just sequential index.
 
     ChessBoardQuad(int group_idx_ = -1) :
         count(0),
@@ -233,7 +234,7 @@ public:
         all_quads_count = 0;
     }
 
-    void generateQuads(const cv::Mat& image_, int flags);
+    void generateQuads(const cv::Mat& image_, int flags, int dilations);
 
     bool processQuads(std::vector<cv::Point2f>& out_corners, int &prev_sqr_size);
 
@@ -530,14 +531,14 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     const int min_dilations = 0;
     const int max_dilations = is_plain ? 0 : 7;
 
-    // Try our standard "1" dilation, but if the pattern is not found, iterate the whole procedure with higher dilations.
-    // This is necessary because some squares simply do not separate properly with a single dilation.  However,
+    // Try our standard "0" and "1" dilations, but if the pattern is not found, iterate the whole procedure with higher dilations.
+    // This is necessary because some squares simply do not separate properly without and with a single dilations. However,
     // we want to use the minimum number of dilations possible since dilations cause the squares to become smaller,
     // making it difficult to detect smaller squares.
     for (int dilations = min_dilations; dilations <= max_dilations; dilations++)
     {
         //USE BINARY IMAGE COMPUTED USING icvBinarizationHistogramBased METHOD
-        if(!is_plain)
+        if(!is_plain && dilations > 0)
             dilate( thresh_img_new, thresh_img_new, Mat(), Point(-1, -1), 1 );
 
         // So we can find rectangles that go to the edge, we draw a white line around the image edge.
@@ -546,7 +547,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         rectangle( thresh_img_new, Point(0,0), Point(thresh_img_new.cols-1, thresh_img_new.rows-1), Scalar(255,255,255), 3, LINE_8);
 
         detector.reset();
-        detector.generateQuads(thresh_img_new, flags);
+        detector.generateQuads(thresh_img_new, flags, dilations);
         DPRINTF("Quad count: %d/%d", detector.all_quads_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
         SHOW_QUADS("New quads", thresh_img_new, &detector.all_quads[0], detector.all_quads_count);
         if (detector.processQuads(out_corners, prev_sqr_size))
@@ -582,8 +583,10 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         }
         //if flag CALIB_CB_ADAPTIVE_THRESH is not set it doesn't make sense to iterate over k
         int max_k = useAdaptive ? 6 : 1;
+        Mat prev_thresh_img;
         for (int k = 0; k < max_k && !found; k++)
         {
+            int prev_block_size = -1;
             for (int dilations = min_dilations; dilations <= max_dilations; dilations++)
             {
                 // convert the input grayscale image to binary (black-n-white)
@@ -594,14 +597,23 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                                              : prev_sqr_size * 2);
                     block_size = block_size | 1;
                     // convert to binary
-                    adaptiveThreshold( img, thresh_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, block_size, (k/2)*5 );
-                    if (dilations > 0)
-                        dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), dilations-1 );
-
+                    if (block_size != prev_block_size)
+                    {
+                        adaptiveThreshold( img, thresh_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, block_size, (k/2)*5 );
+                        dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), dilations );
+                        thresh_img.copyTo(prev_thresh_img);
+                    }
+                    else if (dilations > 0)
+                    {
+                        dilate( prev_thresh_img, prev_thresh_img, Mat(), Point(-1, -1), 1 );
+                        prev_thresh_img.copyTo(thresh_img);
+                    }
+                    prev_block_size = block_size;
                 }
                 else
                 {
-                    dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), 1 );
+                    if (dilations > 0)
+                        dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), 1 );
                 }
                 SHOW("Old binarization", thresh_img);
 
@@ -611,7 +623,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                 rectangle( thresh_img, Point(0,0), Point(thresh_img.cols-1, thresh_img.rows-1), Scalar(255,255,255), 3, LINE_8);
 
                 detector.reset();
-                detector.generateQuads(thresh_img, flags);
+                detector.generateQuads(thresh_img, flags, dilations);
                 DPRINTF("Quad count: %d/%d", detector.all_quads_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
                 SHOW_QUADS("Old quads", thresh_img, &detector.all_quads[0], detector.all_quads_count);
                 if (detector.processQuads(out_corners, prev_sqr_size))
@@ -1630,10 +1642,11 @@ void ChessBoardDetector::findQuadNeighbors()
                 continue;
 
             float min_dist = FLT_MAX;
+            int closest_neighbor_idx = -1;
             int closest_corner_idx = -1;
             ChessBoardQuad *closest_quad = 0;
 
-            cv::Point2f pt = cur_quad.corners[i]->pt;
+            cv::Point2f pt = all_quads_pts[(idx << 2) + i];
 
             // find the closest corner in all other quadrangles
             std::vector<float> query = Mat(pt);
@@ -1653,9 +1666,8 @@ void ChessBoardDetector::findQuadNeighbors()
                 if (q_k.neighbors[j])
                     continue;
 
-                const float dist = normL2Sqr<float>(pt - q_k.corners[j]->pt);
-                if (dist < min_dist &&
-                    dist <= cur_quad.edge_len * thresh_scale &&
+                const float dist = normL2Sqr<float>(pt - all_quads_pts[neighbor_idx]);
+                if (dist <= cur_quad.edge_len * thresh_scale &&
                     dist <= q_k.edge_len * thresh_scale)
                 {
                     // check edge lengths, make sure they're compatible
@@ -1668,14 +1680,16 @@ void ChessBoardDetector::findQuadNeighbors()
                         DPRINTF("Incompatible edge lengths");
                         continue;
                     }
+                    closest_neighbor_idx = neighbor_idx;
                     closest_corner_idx = j;
                     closest_quad = &q_k;
                     min_dist = dist;
+                    break;
                 }
             }
 
             // we found a matching corner point?
-            if (closest_corner_idx >= 0 && min_dist < FLT_MAX)
+            if (closest_neighbor_idx >= 0 && closest_corner_idx >= 0 && min_dist < FLT_MAX)
             {
                 CV_Assert(closest_quad);
 
@@ -1687,6 +1701,7 @@ void ChessBoardDetector::findQuadNeighbors()
                 // This is necessary to support small squares where otherwise the wrong
                 // corner will get matched to closest_quad;
                 ChessBoardCorner& closest_corner = *closest_quad->corners[closest_corner_idx];
+                cv::Point2f closest_corner_pt = all_quads_pts[closest_neighbor_idx];
 
                 int j = 0;
                 for (; j < 4; j++)
@@ -1694,24 +1709,23 @@ void ChessBoardDetector::findQuadNeighbors()
                     if (cur_quad.neighbors[j] == closest_quad)
                         break;
 
-                    if (normL2Sqr<float>(closest_corner.pt - cur_quad.corners[j]->pt) < min_dist)
+                    if (normL2Sqr<float>(closest_corner_pt - all_quads_pts[(idx << 2) + j]) < min_dist)
                         break;
                 }
                 if (j < 4)
                     continue;
 
                 // Check that each corner is a neighbor of different quads
-                for(j = 0; j < closest_quad->count; j++ )
+                for(j = 0; j < 4; j++ )
                 {
                     if (closest_quad->neighbors[j] == &cur_quad)
                         break;
                 }
-                if (j < closest_quad->count)
+                if (j < 4)
                     continue;
 
-                // check whether the closest corner to closest_corner
-                // is different from cur_quad->corners[i]->pt
-                query = Mat(closest_corner.pt);
+                // check whether the closest corner to closest_corner is different from pt
+                query = Mat(closest_corner_pt);
                 radius = min_dist + 1;
                 neighbors_count = all_quads_pts_index.radiusSearch(query, neighbors_indices, neighbors_dists, radius, search_params);
 
@@ -1729,14 +1743,14 @@ void ChessBoardDetector::findQuadNeighbors()
                     CV_DbgAssert(q);
                     if (!q->neighbors[k])
                     {
-                        if (normL2Sqr<float>(closest_corner.pt - q->corners[k]->pt) < min_dist)
+                        if (normL2Sqr<float>(closest_corner_pt - all_quads_pts[neighbor_idx]) < min_dist)
                             break;
                     }
                 }
                 if (neighbor_idx_idx < neighbors_count)
                     continue;
 
-                closest_corner.pt = (pt + closest_corner.pt) * 0.5f;
+                closest_corner.pt = (pt + closest_corner_pt) * 0.5f;
 
                 // We've found one more corner - remember it
                 cur_quad.count++;
@@ -1754,7 +1768,7 @@ void ChessBoardDetector::findQuadNeighbors()
 // returns corners in clockwise order
 // corners don't necessarily start at same position on quad (e.g.,
 //   top left corner)
-void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
+void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags, int dilations)
 {
     binarized_image = image_;  // save for debug purposes
 
@@ -1795,22 +1809,12 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
         if (contour_rect.area() < min_area)
             continue;
 
-        std::vector<Point> approx_contour;
+        std::vector<Point> approx_contour = contour;
 
         const int min_approx_level = 1, max_approx_level = MAX_CONTOUR_APPROX;
-        for (int approx_level = min_approx_level; approx_level <= max_approx_level; approx_level++ )
+        for (int approx_level = min_approx_level; approx_contour.size() > 4 && approx_level <= max_approx_level; approx_level++ )
         {
-            approxPolyDP(contour, approx_contour, (float)approx_level, true);
-            if (approx_contour.size() == 4)
-                break;
-
-            // we call this again on its own output, because sometimes
-            // approxPoly() does not simplify as much as it should.
-            std::vector<Point> approx_contour_tmp;
-            std::swap(approx_contour, approx_contour_tmp);
-            approxPolyDP(approx_contour_tmp, approx_contour, (float)approx_level, true);
-            if (approx_contour.size() == 4)
-                break;
+            approxPolyDP(approx_contour, approx_contour, (float)approx_level, true);
         }
 
         // reject non-quadrangles
@@ -1879,6 +1883,9 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
             float d = normL2Sqr<float>(q.corners[i]->pt - q.corners[(i+1)&3]->pt);
             q.edge_len = std::min(q.edge_len, d);
         }
+
+        const int edge_len_compensation = 2 * dilations;
+        q.edge_len += 2 * sqrt(q.edge_len) * edge_len_compensation + edge_len_compensation * edge_len_compensation;
     }
 
     all_quads_count = quad_count;

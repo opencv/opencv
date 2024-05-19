@@ -26,6 +26,10 @@ cv::GMat::GMat(const GNode &n, std::size_t out)
 {
 }
 
+cv::GMat::GMat(cv::Mat m)
+    : m_priv(new GOrigin(GShape::GMAT, cv::gimpl::ConstVal(m))) {
+}
+
 cv::GOrigin& cv::GMat::priv()
 {
     return *m_priv;

@@ -2029,7 +2029,7 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_d
     case 401: cvtPtr = cvtYUV420sp2RGB<0, 1, 4>; break;
     case 420: cvtPtr = cvtYUV420sp2RGB<2, 0, 4>; break;
     case 421: cvtPtr = cvtYUV420sp2RGB<2, 1, 4>; break;
-    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 
     cvtPtr(dst_data, dst_step, dst_width, dst_height, y_data, y_step, uv_data, uv_step);
@@ -2069,7 +2069,7 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
     case 32: cvtPtr = cvtYUV420p2RGB<2, 3>; break;
     case 40: cvtPtr = cvtYUV420p2RGB<0, 4>; break;
     case 42: cvtPtr = cvtYUV420p2RGB<2, 4>; break;
-    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 
     cvtPtr(dst_data, dst_step, dst_width, dst_height, src_step, src_data, u, v, ustepIdx, vstepIdx);
@@ -2139,7 +2139,7 @@ void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
     case 4200: cvtPtr = cvtYUV422toRGB<2,0,0,4>; break;
     case 4201: cvtPtr = cvtYUV422toRGB<2,0,1,4>; break;
     case 4210: cvtPtr = cvtYUV422toRGB<2,1,0,4>; break;
-    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 
     cvtPtr(dst_data, dst_step, src_data, src_step, width, height);
@@ -2168,7 +2168,7 @@ void cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step,
     case 4200: cvtPtr = cvtRGBtoYUV422<2,0,0,4>; break;
     case 4201: cvtPtr = cvtRGBtoYUV422<2,0,1,4>; break;
     case 4210: cvtPtr = cvtRGBtoYUV422<2,1,0,4>; break;
-    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 
     cvtPtr(dst_data, dst_step, src_data, src_step, width, height);

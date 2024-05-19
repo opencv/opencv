@@ -2,7 +2,7 @@
 set(ANDROID_GRADLE_PLUGIN_VERSION "7.3.1" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
-set(KOTLIN_PLUGIN_VERSION "1.5.20" CACHE STRING "Kotlin Plugin version")
+set(KOTLIN_PLUGIN_VERSION "1.8.20" CACHE STRING "Kotlin Plugin version")
 message(STATUS "Kotlin Plugin version: ${KOTLIN_PLUGIN_VERSION}")
 
 if(BUILD_KOTLIN_EXTENSIONS)
@@ -141,6 +141,8 @@ if (gradle.opencv_source == 'sdk_path') {
 ")
 
 ocv_check_environment_variables(OPENCV_GRADLE_VERBOSE_OPTIONS)
+ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
+separate_arguments(OPENCV_GRADLE_VERBOSE_OPTIONS UNIX_COMMAND "${OPENCV_GRADLE_VERBOSE_OPTIONS}")
 
 macro(add_android_project target path)
   get_filename_component(__dir "${path}" NAME)
@@ -175,7 +177,6 @@ include ':${__dir}'
   if (BUILD_ANDROID_EXAMPLES)
     # build apk
     set(APK_FILE "${ANDROID_BUILD_BASE_DIR}/${__dir}/build/outputs/apk/release/${__dir}-${ANDROID_ABI}-release-unsigned.apk")
-    ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
     add_custom_command(
         OUTPUT "${APK_FILE}" "${OPENCV_DEPHELPER}/android_sample_${__dir}"
         COMMAND ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} "${__dir}:assemble"
@@ -221,20 +222,9 @@ include ':${__dir}'
   configure_file("${path}/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/${__dir}/build.gradle" @ONLY)
   install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/${__dir}/build.gradle" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}/${__dir}" COMPONENT samples)
 
-  # HACK: AAR packages generated from current OpenCV project has incomple prefab part
-  # and cannot be used for native linkage against OpenCV.
-  # Alternative way to build AAR: https://github.com/opencv/opencv/blob/4.x/platforms/android/build_java_shared_aar.py
-  if("${__dir}" STREQUAL "tutorial-2-mixedprocessing" OR "${__dir}" STREQUAL "tutorial-4-opencl")
-    file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
-if (gradle.opencv_source == 'sdk_path') {
-    include ':${__dir}'
-}
-")
-  else()
-    file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
+  file(APPEND "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
 include ':${__dir}'
 ")
-  endif()
 
 endmacro()
 

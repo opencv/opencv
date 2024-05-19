@@ -1708,7 +1708,7 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
         else if( depth == CV_16U )
             Bayer2Gray_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst, code);
         else
-            CV_Error(CV_StsUnsupportedFormat, "Bayer->Gray demosaicing only supports 8u and 16u types");
+            CV_Error(cv::Error::StsUnsupportedFormat, "Bayer->Gray demosaicing only supports 8u and 16u types");
         break;
 
     case COLOR_BayerBG2BGRA: case COLOR_BayerGB2BGRA: case COLOR_BayerRG2BGRA: case COLOR_BayerGR2BGRA:
@@ -1735,7 +1735,7 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
                 else if( depth == CV_16U )
                     Bayer2RGB_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst_, code);
                 else
-                    CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB demosaicing only supports 8u and 16u types");
+                    CV_Error(cv::Error::StsUnsupportedFormat, "Bayer->RGB demosaicing only supports 8u and 16u types");
             }
             else
             {
@@ -1758,11 +1758,11 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
         else if (depth == CV_16U)
             Bayer2RGB_EdgeAware_T<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst, code);
         else
-            CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB Edge-Aware demosaicing only currently supports 8u and 16u types");
+            CV_Error(cv::Error::StsUnsupportedFormat, "Bayer->RGB Edge-Aware demosaicing only currently supports 8u and 16u types");
 
         break;
 
     default:
-        CV_Error( CV_StsBadFlag, "Unknown / unsupported color conversion code" );
+        CV_Error( cv::Error::StsBadFlag, "Unknown / unsupported color conversion code" );
     }
 }

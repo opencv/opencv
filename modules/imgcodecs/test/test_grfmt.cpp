@@ -87,11 +87,17 @@ const string all_images[] =
     "readwrite/uint16-mono2.dcm",
     "readwrite/uint8-rgb.dcm",
 #endif
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
     "readwrite/color_palette_alpha.png",
+#endif
+#ifdef HAVE_TIFF
     "readwrite/multipage.tif",
+#endif
     "readwrite/ordinary.bmp",
     "readwrite/rle8.bmp",
+#ifdef HAVE_JPEG
     "readwrite/test_1_c1.jpg",
+#endif
 #ifdef HAVE_IMGCODEC_HDR
     "readwrite/rle.hdr"
 #endif
@@ -480,6 +486,19 @@ TEST(Imgcodecs, write_parameter_type)
     cv::Matx<uchar, 10, 10> matx;
     EXPECT_NO_THROW(cv::imwrite(tmp_file, matx)) << "* Failed with cv::Matx";
     EXPECT_EQ(0, remove(tmp_file.c_str()));
+}
+
+TEST(Imgcodecs, imdecode_user_buffer)
+{
+    cv::Mat encoded = cv::Mat::zeros(1, 1024, CV_8UC1);
+    cv::Mat user_buffer(1, 1024, CV_8UC1);
+    cv::Mat result = cv::imdecode(encoded, IMREAD_ANYCOLOR, &user_buffer);
+    EXPECT_TRUE(result.empty());
+    // the function does not release user-provided buffer
+    EXPECT_FALSE(user_buffer.empty());
+
+    result = cv::imdecode(encoded, IMREAD_ANYCOLOR);
+    EXPECT_TRUE(result.empty());
 }
 
 }} // namespace
