@@ -7,8 +7,8 @@
     https://storage.googleapis.com/ailia-models/dexined/model.onnx
 
     OpenCV ONNX importer does not process dynamic shape. These need to be substituted with values using:
-    python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param w --dim_value 640 model.onnx model.sim1.onnx
-    python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param h --dim_value 480 model.sim1.onnx model.sim.onnx
+    python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param w --dim_value 512 model.onnx model.sim1.onnx
+    python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param h --dim_value 512 model.sim1.onnx model.sim.onnx
 '''
 import cv2 as cv
 import argparse
@@ -25,9 +25,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description="This sample demonstrates edge detection with Dexined and Canny edge detection techniques.\n"
     "For switching between deep learning based model (Dexined) and Canny edge detector, press 'd' (for Dexined) or 'c' (for Canny) respectively.")
 
-    parser.add_argument('--input', help='Path to image', default="chicky_512.png", required= False)
+    parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.', default=0, required= False)
 
-    parser.add_argument('--model', help='Path to onnx model', required=True)
+    parser.add_argument('--model', help='Path to onnx model', required=False)
 
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                             help="Choose one of computation backends: "
@@ -56,7 +56,6 @@ def parse_args():
 
 def preprocess(img):
     # Resize and normalize the image
-
     IMAGE_SIZE = args.image_size
     img = cv.resize(img, (IMAGE_SIZE, IMAGE_SIZE))
 
@@ -103,59 +102,88 @@ def canny_detection_thresh2(position, user_data):
     user_data["thrs2"] =  position
     cv.imshow('Output', out)
 
+def setupCannyWindow(image, user_data):
+    cv.destroyWindow('Output')
+    cv.namedWindow('Output', cv.WINDOW_NORMAL)
+    cv.moveWindow('Output', 200, 50)
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    user_data["gray"] = gray
+
+    cv.createTrackbar('thrs1', 'Output', 0, 255, lambda value: canny_detection_thresh1(value, user_data))
+    cv.setTrackbarPos('thrs1', 'Output', 100)
+    cv.createTrackbar('thrs2', 'Output', 0, 255, lambda value: canny_detection_thresh2(value, user_data))
+    cv.setTrackbarPos('thrs2', 'Output', 200)
+
+# Load the model
+def loadModel(args):
+    net = cv.dnn.readNetFromONNX(args.model)
+    net.setPreferableBackend(args.backend)
+    net.setPreferableTarget(args.target)
+    return net
 
 if __name__ == '__main__':
     args = parse_args()
-    method = "dexined"
     user_data = {"gray": None, "thrs1": 100, "thrs2": 200}
-
-    # img = cv.imread(cv.samples.findFile(args.input))
-    image = cv.imread(cv.samples.findFile(args.input))
-
-    cv.namedWindow('Output', cv.WINDOW_NORMAL)
+    cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
+    if not cap.isOpened():
+        print("Failed to open the input video")
+        exit(-1)
     cv.namedWindow('Input', cv.WINDOW_NORMAL)
-    cv.imshow("Input", image)
+    cv.namedWindow('Output', cv.WINDOW_NORMAL)
+    cv.moveWindow('Output', 200, 50)
 
-    while True:
+    image_size = args.image_size
+
+    if args.model:
+        method = "dexined"
+    else:
+        print("[WARN] Model file not provided, cannot use dexined")
+        method = "canny"
+        dummy = np.zeros((image_size, image_size, 3), dtype = "uint8")
+        setupCannyWindow(dummy, user_data)
+
+    net = None
+    if method == "dexined":
+        net = loadModel(args)
+    while cv.waitKey(1) < 0:
+        hasFrame, image = cap.read()
+        if not hasFrame:
+            print("Press any key to exit")
+            cv.waitKey(0)
+            break
         if method == "canny":
             gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
             user_data["gray"] = gray
-
-            cv.destroyWindow('Output')
-            cv.namedWindow('Output', cv.WINDOW_NORMAL)
-
-            cv.createTrackbar('thrs1', 'Output', 0, 255, lambda value: canny_detection_thresh1(value, user_data))
-            cv.setTrackbarPos('thrs1', 'Output', 100)
-            cv.createTrackbar('thrs2', 'Output', 0, 255, lambda value: canny_detection_thresh2(value, user_data))
-            cv.setTrackbarPos('thrs2', 'Output', 200)
-
+            canny_detection_thresh1(user_data["thrs1"], user_data)
         elif method == "dexined":
+            # Preprocess the image
+            img =  preprocess(image.copy())
+            inp = cv.dnn.blobFromImage(img, swapRB=False, crop=False)
+            net.setInput(inp)
+            out = net.forward()
+            # Post processing on the model output
+            out = post_processing(out, image.shape[:2])
+            # Put efficiency information.
+            t, _ = net.getPerfProfile()
+            label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
+            cv.putText(image, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+            cv.putText(out[1], label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
+            cv.imshow("Output", out[1])
+        cv.imshow("Input", image)
+        key = cv.waitKey(30)
+        if key == ord('d') or key == ord('D'):
+            if args.model:
+                method = "dexined"
+            else:
+                print("[WARN] Provide model file using --model to use dexined")
+            if session is None:
+                session = loadModel(args)
             cv.destroyWindow('Output')
             cv.namedWindow('Output', cv.WINDOW_NORMAL)
-            # Load the model
-            session = cv.dnn.readNetFromONNX(args.model)
-            session.setPreferableBackend(args.backend)
-            session.setPreferableTarget(args.target)
-
-            # Prepocess the image
-            img = preprocess(image)
-
-            inp = cv.dnn.blobFromImage(img, swapRB=False, crop=False)
-
-            session.setInput(inp)
-
-            out = session.forward()
-            # Post processing on the model output
-            out = post_processing(out, (image.shape[1], image.shape[0]))
-
-            cv.imshow("Output", out[1])
-
-        key = cv.waitKey(0)
-
-        if key == ord('d') or key == ord('D'):
-            method = "dexined"
+            cv.moveWindow('Output', 200, 50)
         elif key == ord('c') or key == ord('C'):
             method = "canny"
+            setupCannyWindow(image, user_data)
         elif key == 27 or key == ord('q'):
             break
     cv.destroyAllWindows()
