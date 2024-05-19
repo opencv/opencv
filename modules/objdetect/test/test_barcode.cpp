@@ -61,9 +61,6 @@ map<string, BarcodeResult> testResults {
     { "single/bottle_1.jpg", {"EAN_13", "6922255451427"} },
     { "single/bottle_2.jpg", {"EAN_13", "6921168509256"} },
     { "multiple/4_barcodes.jpg", {"EAN_13;EAN_13;EAN_13;EAN_13", "9787564350840;9783319200064;9787118081473;9787122276124"} },
-    { "multiple/3_ean13_detector_lg.jpg", {"EAN_13;EAN_13;EAN_13;UPC_A", "011210007253;011210009301;8908018075268"} },
-    { "multiple/3_ean13_detector_md.jpg", {"EAN_13;EAN_13;EAN_13;UPC_A", "011210007253;011210009301;8908018075268"} },
-    { "multiple/3_ean13_detector_sm.jpg", {"EAN_13;EAN_13;EAN_13;UPC_A", "011210007253;011210009301;8908018075268"} },
 };
 
 typedef testing::TestWithParam< string > BarcodeDetector_main;
@@ -84,19 +81,6 @@ TEST_P(BarcodeDetector_main, interface)
     vector<Point2f> points;
     vector<string> types;
     vector<string> lines;
-
-    // preset parameters based on filename
-    {
-        if(fname.find("_detector_lg.jpg") != string::npos || fname.find("_detector_sm.jpg") != string::npos)
-        {
-            const float div = float(max(img.size().width, img.size().height)) / 512.f;
-            const vector<float> scales = { 0.01f/div, 0.03f/div, 0.06f/div, 0.08f/div };
-
-            det.setDownsamplingThreshold(div * 512.);
-            det.setDetectorScales(scales);
-            det.setGradientThreshold(256.f);
-        }
-    }
 
     // common interface (single)
     {
@@ -160,6 +144,57 @@ TEST(BarcodeDetector_base, invalid)
     EXPECT_ANY_THROW(bardet.decodeMulti(zero_image, corners, decoded_info));
 }
 
+struct ParamStruct
+{
+    double down_thresh;
+    vector<float> scales;
+    double grad_thresh;
+    unsigned res_count;
+};
+
+inline static std::ostream &operator<<(std::ostream &out, const ParamStruct &p)
+{
+    out << "(" << p.down_thresh << ", ";
+    for(float val : p.scales)
+        out << val << ", ";
+    out << p.grad_thresh << ")";
+    return out;
+}
+
+ParamStruct param_list[] = {
+    { 512, {0.01f, 0.03f, 0.06f, 0.08f}, 64, 4 }, // default values -> 4 codes
+    { 512, {0.01f, 0.03f, 0.06f, 0.08f}, 1024, 2 },
+    { 512, {0.01f, 0.03f, 0.06f, 0.08f}, 2048, 0 },
+    { 128, {0.01f, 0.03f, 0.06f, 0.08f}, 64, 3 },
+    { 64, {0.01f, 0.03f, 0.06f, 0.08f}, 64, 2 },
+    { 128, {0.0000001f}, 64, 1 },
+    { 128, {0.0000001f, 0.0001f}, 64, 1 },
+    { 128, {0.0000001f, 0.1f}, 64, 1 },
+    { 512, {0.0000001f}, 64, 1 },
+};
+
+typedef testing::TestWithParam<ParamStruct> BarcodeDetector_parameters_tune;
+
+TEST_P(BarcodeDetector_parameters_tune, accuracy)
+{
+    const ParamStruct param = GetParam();
+
+    const string fname = "multiple/4_barcodes.jpg";
+    const string image_path = findDataFile(string("barcode/") + fname);
+
+    const Mat img = imread(image_path);
+    ASSERT_FALSE(img.empty()) << "Can't read image: " << image_path;
+
+    auto bardet = barcode::BarcodeDetector();
+    bardet.setDownsamplingThreshold(param.down_thresh);
+    bardet.setDetectorScales(param.scales);
+    bardet.setGradientThreshold(param.grad_thresh);
+    vector<Point2f> points;
+    bardet.detectMulti(img, points);
+    EXPECT_EQ(points.size() / 4, param.res_count);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, BarcodeDetector_parameters_tune, testing::ValuesIn(param_list));
 
 TEST(BarcodeDetector_parameters, regression)
 {
