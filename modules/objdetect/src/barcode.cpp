@@ -406,7 +406,7 @@ BarcodeDetector& BarcodeDetector::setDetectorScales(const std::vector<float>& si
     CV_Assert(p_);
     CV_Assert(sizes.size() > 0 && sizes.size() <= 16);
 
-    for (const double &size : sizes) {
+    for (const float &size : sizes) {
         CV_Assert(size > 0 && size < 1);
     }
 
