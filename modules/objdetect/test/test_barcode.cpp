@@ -170,7 +170,7 @@ ParamStruct param_list[] = {
     { 128, {0.0000001f}, 64, 1 },
     { 128, {0.0000001f, 0.0001f}, 64, 1 },
     { 128, {0.0000001f, 0.1f}, 64, 1 },
-    { 512, {0.0000001f}, 64, 1 },
+    { 512, {0.1f}, 64, 0 },
 };
 
 typedef testing::TestWithParam<ParamStruct> BarcodeDetector_parameters_tune;
