@@ -1266,14 +1266,12 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const uint8_t* buffer, si
     bool succeeded = false;
     if (!_filename.empty())
     {
-        // Set source reader parameters
         cv::AutoBuffer<wchar_t> unicodeFileName(_filename.length() + 1);
         MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName.data(), (int)_filename.length() + 1);
         succeeded = SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName.data(), attr.Get(), &videoFileSource));
     }
     else if (buffer)
     {
-
         IStream* s = SHCreateMemStream(buffer, static_cast<UINT32>(buffer_size));
         if (!s)
             return false;
@@ -2751,9 +2749,8 @@ typedef CvCapture_MSMF CaptureT;
 typedef CvVideoWriter_MSMF WriterT;
 
 static
-CvResult CV_API_CALL cv_capture_open_with_params_v2(
+CvResult CV_API_CALL cv_capture_open_with_params(
     const char* filename, int camera_index,
-    const unsigned char* buffer, unsigned buffer_size,
     int* params, unsigned n_params,
     CV_OUT CvPluginCapture* handle
 )
@@ -2769,8 +2766,6 @@ CvResult CV_API_CALL cv_capture_open_with_params_v2(
         bool res;
         if (filename)
             res = cap->open(std::string(filename), nullptr, 0, &parameters);
-        else if (buffer)
-            res = cap->open(std::string(), buffer, buffer_size, &parameters);
         else
             res = cap->open(camera_index, &parameters);
         if (res)
@@ -2793,13 +2788,40 @@ CvResult CV_API_CALL cv_capture_open_with_params_v2(
 }
 
 static
-CvResult CV_API_CALL cv_capture_open_with_params(
-    const char* filename, int camera_index,
+CvResult CV_API_CALL cv_capture_open_buffer(
+    const unsigned char* buffer, unsigned buffer_size,
     int* params, unsigned n_params,
     CV_OUT CvPluginCapture* handle
 )
 {
-    return cv_capture_open_with_params_v2(filename, camera_index, nullptr, 0, params, n_params, handle);
+    if (!handle)
+        return CV_ERROR_FAIL;
+    if (!buffer)
+        return CV_ERROR_FAIL;
+    *handle = NULL;
+    CaptureT* cap = 0;
+    try
+    {
+        cv::VideoCaptureParameters parameters(params, n_params);
+        cap = new CaptureT();
+        bool res = cap->open(std::string(), buffer, buffer_size, &parameters);
+        if (res)
+        {
+            *handle = (CvPluginCapture)cap;
+            return CV_ERROR_OK;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
+    }
+    if (cap)
+        delete cap;
+    return CV_ERROR_FAIL;
 }
 
 static
@@ -3073,7 +3095,7 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
         /*  8*/cv::cv_capture_open_with_params,
     },
     {
-        /*  9*/cv::cv_capture_open_with_params_v2,
+        /*  9*/cv::cv_capture_open_buffer,
     }
 };
 

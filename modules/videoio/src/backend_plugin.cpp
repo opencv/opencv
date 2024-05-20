@@ -458,14 +458,14 @@ public:
         CV_Assert(plugin_api->v0.Capture_release);
 
         CvPluginCapture capture = NULL;
-        if (!buffer.empty() && plugin_api->api_header.api_version >= 2 && plugin_api->v2.Capture_open_with_params)
+        if (!buffer.empty() && plugin_api->api_header.api_version >= 2 && plugin_api->v2.Capture_open_buffer)
         {
             std::vector<int> vint_params = params.getIntVector();
             int* c_params = vint_params.data();
             unsigned n_params = (unsigned)(vint_params.size() / 2);
 
-            if (CV_ERROR_OK == plugin_api->v2.Capture_open_with_params(
-                    filename.empty() ? 0 : filename.c_str(), camera, buffer.data(), static_cast<uint32_t>(buffer.size()),
+            if (CV_ERROR_OK == plugin_api->v2.Capture_open_buffer(
+                    buffer.data(), static_cast<uint32_t>(buffer.size()),
                     c_params, n_params, &capture))
             {
                 CV_Assert(capture);

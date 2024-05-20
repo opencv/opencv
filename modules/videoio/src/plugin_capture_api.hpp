@@ -123,11 +123,9 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_1_api_entries
 
 struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
 {
-    /** @brief Open video capture with parameters
+    /** @brief Open video capture from buffer with parameters
 
-    @param filename File name or NULL to use camera_index or buffer instead
-    @param camera_index Camera index (used if filename == NULL and buffer == NULL)
-    @param buffer Memory buffer pointer (used if filename == NULL)
+    @param buffer Memory buffer pointer
     @param buffer_size Memory buffer size
     @param params pointer on 2*n_params array of 'key,value' pairs
     @param n_params number of passed parameters
@@ -135,8 +133,7 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
 
     @note API-CALL 9, API-Version == 2
      */
-    CvResult (CV_API_CALL *Capture_open_with_params)(
-        const char* filename, int camera_index,
+    CvResult (CV_API_CALL *Capture_open_buffer)(
         const unsigned char* buffer, unsigned int buffer_size,
         int* params, unsigned n_params,
         CV_OUT CvPluginCapture* handle);
