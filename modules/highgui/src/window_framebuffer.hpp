@@ -63,9 +63,6 @@ public:
 
 class CV_EXPORTS FramebufferBackend: public UIBackend
 {
-//  int OpenInputEvent();
-//  int eventKey;
-
   OpenCVFBMode mode;
 
   struct termios old, current;

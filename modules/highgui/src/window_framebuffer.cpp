@@ -201,7 +201,7 @@ namespace cv { namespace highgui_backend {
     {
         std::memcpy(backend.getFBPointer() + (y + windowRect.y) * lineLength + 
                     xOffset + windowRect.x, 
-                    img.ptr<cv::Vec4b>(y - yOffset + start_y_w) + start_x_w * cntChannel, 
+                    img.ptr<unsigned char>(y - yOffset + start_y_w) + start_x_w * cntChannel, 
                     showCols * cntChannel);
     }
   }
@@ -266,24 +266,24 @@ namespace cv { namespace highgui_backend {
     CV_LOG_WARNING(NULL, "UI: setTitle (not supported)");
   }
 
-  void FramebufferWindow::setMouseCallback(MouseCallback onMouse, void* userdata )
+  void FramebufferWindow::setMouseCallback(MouseCallback /*onMouse*/, void* /*userdata*/ )
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::setMouseCallback(...)");
     CV_LOG_WARNING(NULL, "UI: setMouseCallback (not supported)");
   }
 
   std::shared_ptr<UITrackbar> FramebufferWindow::createTrackbar(
-      const std::string& name,
-      int count,
-      TrackbarCallback onChange,
-      void* userdata)
+      const std::string& /*name*/,
+      int /*count*/,
+      TrackbarCallback /*onChange*/,
+      void* /*userdata*/)
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::createTrackbar(...)");
     CV_LOG_WARNING(NULL, "UI: createTrackbar (not supported)");
     return nullptr;
   }
 
-  std::shared_ptr<UITrackbar> FramebufferWindow::findTrackbar(const std::string& name)
+  std::shared_ptr<UITrackbar> FramebufferWindow::findTrackbar(const std::string& /*name*/)
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::findTrackbar(...)");
     CV_LOG_WARNING(NULL, "UI: findTrackbar (not supported)");
@@ -479,7 +479,8 @@ namespace cv { namespace highgui_backend {
     int cnt_channel = 4;
     for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
     {
-      std::memcpy(backgroundBuff.ptr<cv::Vec4b>(y - fbYOffset), 
+      unsigned char* backgroundPtr = backgroundBuff.ptr<unsigned char>(y - fbYOffset);
+      std::memcpy(backgroundPtr, 
                   fbPointer + y * fbLineLength + fbXOffset, 
                   backgroundBuff.cols * cnt_channel);
     }
