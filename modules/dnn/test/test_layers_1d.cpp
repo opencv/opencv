@@ -824,14 +824,13 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Tile_Test,
         std::vector<int>({2, 2})
         ));
 
-typedef testing::TestWithParam<tuple<tuple<std::vector<int>, std::vector<int>>, std::string>> Layer_Einsum_Test;
+typedef testing::TestWithParam<tuple<std::vector<int>, std::vector<int>, std::string>> Layer_Einsum_Test;
 TEST_P(Layer_Einsum_Test, Accuracy_01D)
 {
     auto tup = GetParam();
-    auto shape_tup = std::get<0>(tup);
-    std::vector<int> input_shape1 = std::get<0>(shape_tup);
-    std::vector<int> input_shape2 = std::get<1>(shape_tup);
-    std::string equation = std::get<1>(tup);
+    std::vector<int> input_shape1 = std::get<0>(tup);
+    std::vector<int> input_shape2 = std::get<1>(tup);
+    std::string equation = std::get<2>(tup);
 
     LayerParams lp;
     lp.type = "Einsum";
