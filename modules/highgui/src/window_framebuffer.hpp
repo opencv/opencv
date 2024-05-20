@@ -11,6 +11,12 @@
 
 namespace cv { namespace highgui_backend {
 
+enum OpenCVFBMode{
+  FB_MODE_EMU,
+  FB_MODE_FB,
+  FB_MODE_XVFB
+};
+
 class FramebufferBackend;
 class CV_EXPORTS FramebufferWindow : public UIWindow
 {
@@ -60,6 +66,8 @@ class CV_EXPORTS FramebufferBackend: public UIBackend
 //  int OpenInputEvent();
 //  int eventKey;
 
+  OpenCVFBMode mode;
+
   struct termios old, current;
 
   void initTermios(int echo, int wait);
@@ -97,6 +105,7 @@ public:
   int getFBLineLength();
   unsigned char* getFBPointer();
   Mat& getBackgroundBuff();
+  OpenCVFBMode getMode();
 
   FramebufferBackend();
 

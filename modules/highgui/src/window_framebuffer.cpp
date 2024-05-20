@@ -29,6 +29,30 @@ namespace cv { namespace highgui_backend {
     return std::make_shared<FramebufferBackend>();
   }
 
+  static std::string& getFBMode()
+  {
+    static std::string fbModeOpenCV = 
+      cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FB_MODE", "");
+    static std::string fbModeDef = "FB";
+    
+    if(!fbModeOpenCV.empty()) return fbModeOpenCV;
+    return fbModeDef;
+  }
+
+  static std::string& getFBFileName()
+  {
+    static std::string fbFileNameFB = 
+      cv::utils::getConfigurationParameterString("FRAMEBUFFER", "");
+    static std::string fbFileNameOpenCV = 
+      cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FB_DEVICE", "");
+    static std::string fbFileNameDef = "/dev/fb0";
+    
+    if(!fbFileNameOpenCV.empty()) return fbFileNameOpenCV;
+    if(!fbFileNameFB.empty()) return fbFileNameFB;
+    return fbFileNameDef;
+  }
+
+
   FramebufferWindow::FramebufferWindow(FramebufferBackend &_backend, int _flags): 
     backend(_backend), flags(_flags)
   {
@@ -52,17 +76,6 @@ namespace cv { namespace highgui_backend {
       
     if((currentImg.size().width <= 0) && (currentImg.size().height <= 0))
     {  
-      return;
-    }
-
-    if (backend.getFBPointer() == MAP_FAILED) {
-      CV_LOG_ERROR(NULL, "UI: Framebuffer is not mapped");
-      return;
-    }
-
-    if(backend.getFBBitsPerPixel() != 32) {
-      CV_LOG_ERROR(NULL, "UI: Framebuffer with bits per pixel = " 
-        << backend.getFBBitsPerPixel() << " is not supported" );
       return;
     }
 
@@ -140,9 +153,25 @@ namespace cv { namespace highgui_backend {
         CV_Assert(0);
     }
     
-    
     CV_LOG_INFO(NULL, "UI: Formated image: "
       << cv::typeToString(img.type()) << " size " << img.size());
+
+    if(backend.getMode() == FB_MODE_EMU)
+    {
+      CV_LOG_WARNING(NULL, "UI: FramebufferWindow::imshow is used in EMU mode");
+      return;
+    }
+
+    if (backend.getFBPointer() == MAP_FAILED) {
+      CV_LOG_ERROR(NULL, "UI: Framebuffer is not mapped");
+      return;
+    }
+
+    if(backend.getFBBitsPerPixel() != 32) {
+      CV_LOG_ERROR(NULL, "UI: Framebuffer with bits per pixel = " 
+        << backend.getFBBitsPerPixel() << " is not supported" );
+      return;
+    }
         
     // SHOW IMAGE
     int xOffset = backend.getFBXOffset();
@@ -280,20 +309,6 @@ namespace cv { namespace highgui_backend {
 
 // !!##FramebufferBackend
 
-  static std::string& getFBFileName()
-  {
-    static std::string fbFileNameFB = 
-      cv::utils::getConfigurationParameterString("FRAMEBUFFER", "");
-    static std::string fbFileNameOpenCV = 
-      cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FRAMEBUFFER", "");
-    static std::string fbFileNameDef = "/dev/fb0";
-    
-    if(!fbFileNameOpenCV.empty()) return fbFileNameOpenCV;
-    if(!fbFileNameFB.empty()) return fbFileNameFB;
-    return fbFileNameDef;
-  }
-
-
   int FramebufferBackend::fbOpenAndGetInfo()
   {
     std::string fbFileName = getFBFileName();
@@ -382,20 +397,48 @@ namespace cv { namespace highgui_backend {
   {
     return backgroundBuff;
   }
+  OpenCVFBMode FramebufferBackend::getMode()
+  {
+    return mode;
+  }
 
-  FramebufferBackend::FramebufferBackend()
+  FramebufferBackend::FramebufferBackend():mode(FB_MODE_EMU)
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::FramebufferBackend()");
-    fbID = fbOpenAndGetInfo();
-    CV_LOG_INFO(NULL, "UI: FramebufferWindow::fbID " << fbID);
     
+    std::string fbModeStr = getFBMode();
+    
+    if(fbModeStr == "EMU")
+    {
+      mode = FB_MODE_EMU;
+    }
+    if(fbModeStr == "FB")
+    {
+      mode = FB_MODE_FB;
+    }
+    if(fbModeStr == "XVFB")
+    {
+      mode = FB_MODE_XVFB;
+    }
+
+    fbID = -1;
+    if(mode == FB_MODE_FB)
+    {
+      fbID = fbOpenAndGetInfo();
+    }
+    
+    CV_LOG_INFO(NULL, "UI: FramebufferWindow::fbID " << fbID);
+  
     if(fbID == -1){
+      mode = FB_MODE_EMU;
       fbWidth = 0;
       fbHeight = 0;
       fbXOffset = 0;
       fbYOffset = 0;
       fbBitsPerPixel = 0;
       fbLineLength = 0;
+      
+      CV_LOG_WARNING(NULL, "UI: FramebufferWindow is used in EMU mode");
       return;
     }
     
@@ -538,30 +581,26 @@ namespace cv { namespace highgui_backend {
         code = ch;
       }
     } else {
-      if(delay > 0)
+      bool f_kbhit = false;
+      while(!(f_kbhit = kbhit()) && (delay > 0))
       {
-        bool f_kbhit = false;
-        while(!(f_kbhit = kbhit()) && (delay > 0))
-        {
-          delay -= 1;
-          usleep(1000);
-        }          
-        if(f_kbhit)
-        {
-          CV_LOG_INFO(NULL, "UI: FramebufferBackend kbhit is True ");
+        delay -= 1;
+        usleep(1000);
+      }          
+      if(f_kbhit)
+      {
+        CV_LOG_INFO(NULL, "UI: FramebufferBackend kbhit is True ");
 
-          int ch = getch_(0, 1);
-          CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " << (int)ch);
+        int ch = getch_(0, 1);
+        CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " << (int)ch);
+        code = ch;
+        
+        while((ch = getch_(0, 0))>=0)
+        {
+          CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " 
+            << (int)ch << " (additional code on <stdin>)");
           code = ch;
-          
-          while((ch = getch_(0, 0))>=0)
-          {
-            CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " 
-              << (int)ch << " (additional code on <stdin>)");
-            code = ch;
-          }
         }
-
       }
     }
     
