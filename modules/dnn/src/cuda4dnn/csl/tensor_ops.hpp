@@ -559,7 +559,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             csl::WorkspaceBuilder builder;
             size_t workSpaceSize;
             CUDA4DNN_CHECK_CUDNN(cudnnGetRNNTempSpaceSizes(
-                                    handle.get(), rnnDesc.get(), CUDNN_FWD_MODE_INFERENCE,
+                                    cudnnHandle.get(), rnnDesc.get(), CUDNN_FWD_MODE_INFERENCE,
                                     xDesc, &workSpaceSize, &reserveSpaceSize));
 
             builder.require(workSpaceSize);

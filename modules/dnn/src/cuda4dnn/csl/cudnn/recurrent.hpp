@@ -181,14 +181,15 @@ void LSTMForward(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
                  DevicePtr<const T> cx, DevicePtr<T> cy, size_t weightSpaceSize,
                  DevicePtr<const T> weightSpace, WorkspaceInstance workspace,
                  size_t reserveSpaceSize, DevicePtr<T> reserveSpace) {
-  CV_Assert(handle);
-  CUDA4DNN_CHECK_CUDNN(cudnnRNNForward(
-      handle.get(), rnnDesc.get(), CUDNN_FWD_MODE_INFERENCE,
-      nullptr, // docs say use this as null on >= 8.9.7
-      xDesc, x.get(), yDesc, y.get(), hDesc, hx.get(), hy.get(), cDesc,
-      cx.get(), cy.get(), weightSpaceSize, weightSpace.get(),
-      workspace.size_in_bytes(), workspace.get().get(), reserveSpaceSize,
-      reserveSpace.get()));
+    CV_Assert(handle);
+
+    CUDA4DNN_CHECK_CUDNN(cudnnRNNForward(
+        handle.get(), rnnDesc.get(), CUDNN_FWD_MODE_INFERENCE,
+        nullptr, // docs say use this as null on >= 8.9.1
+        xDesc, x.get(), yDesc, y.get(), hDesc, hx.get(), hy.get(), cDesc,
+        cx.get(), cy.get(), weightSpaceSize, weightSpace.get(),
+        workspace.size_in_bytes(), workspace.get().get(), reserveSpaceSize,
+        reserveSpace.get()));
 }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */
