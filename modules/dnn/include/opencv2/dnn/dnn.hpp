@@ -1014,6 +1014,13 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile);
 
+    /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a> with dynamic input layer.
+     *  @param onnxFile path to the .onnx file with text description of the network architecture.
+     *  @param val litteral value to substitute in onnx model by number.
+     *  @returns Network object that ready to do forward, throw an exception in failure cases.
+     */
+    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String& onnxFile, std::map<std::string, int> val);
+
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer memory address of the first byte of the buffer.

@@ -107,6 +107,7 @@ class ONNXImporter
 public:
     ONNXImporter(Net& net, const char *onnxFile);
     ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer);
+    ONNXImporter(Net& net, const char* onnxFile, std::map<std::string, int>& valSubstitute);
 
     void populateNet();
 
@@ -245,6 +246,41 @@ protected:
 
 ONNXLayerHandler::ONNXLayerHandler(ONNXImporter* importer_) : importer(importer_){}
 
+opencv_onnx::ValueInfoProto fixedDynamicShape(opencv_onnx::ValueInfoProto& node, std::map<std::string, int>& valSubstitute)
+{
+    opencv_onnx::ValueInfoProto newNode;
+    opencv_onnx::TypeProto* tp = new opencv_onnx::TypeProto();
+    opencv_onnx::TypeProto_Tensor* tpt = new opencv_onnx::TypeProto_Tensor();
+    opencv_onnx::TensorShapeProto* shapeNew = new opencv_onnx::TensorShapeProto();;
+    shapeNew->Clear();
+    shapeNew->clear_dim();
+
+    newNode.CopyFrom(node);
+    newNode.set_allocated_type(tp);
+    tp->set_allocated_tensor_type(tpt);
+    tpt->set_allocated_shape(shapeNew);
+
+    for (int j = 0; j < node.type().tensor_type().shape().dim_size(); j++)
+    {
+        auto dim_src = node.type().tensor_type().shape().dim()[j];
+        auto x = shapeNew->add_dim();
+
+        if (dim_src.has_dim_param())
+        {
+            if (valSubstitute.find(dim_src.dim_param()) != valSubstitute.end())
+            {
+                std::string key(dim_src.dim_param());
+                x->set_dim_value(valSubstitute[key]);
+            }
+        }
+        else
+        {
+            x->set_dim_value(dim_src.dim_value());
+        }
+    }
+    return newNode;
+}
+
 void ONNXLayerHandler::fillRegistry(const opencv_onnx::GraphProto &net)
 {
     int layersSize = net.node_size();
@@ -310,6 +346,108 @@ ONNXImporter::ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
     if (!model_proto.ParseFromIstream(&input))
         CV_Error(Error::StsUnsupportedFormat, "Failed to parse onnx model from in-memory byte array.");
 
+    populateNet();
+}
+
+ONNXImporter::ONNXImporter(Net& net, const char* onnxFile, std::map<std::string, int>& valSubstitute)
+    : layerHandler(DNN_DIAGNOSTICS_RUN ? new ONNXLayerHandler(this) : nullptr)
+    , dstNet(net)
+    , onnx_opset(0)
+    , useLegacyNames(getParamUseLegacyNames())
+{
+    hasDynamicShapes = false;
+    CV_Assert(onnxFile);
+    CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFile);
+
+    std::fstream input(onnxFile, std::ios::in | std::ios::binary);
+    if (!input)
+    {
+        CV_Error(Error::StsBadArg, cv::format("Can't read ONNX file: %s", onnxFile));
+    }
+
+    if (!model_proto.ParseFromIstream(&input))
+    {
+        CV_Error(Error::StsUnsupportedFormat, cv::format("Failed to parse ONNX model: %s", onnxFile));
+    }
+
+    CV_Assert(model_proto.has_graph());
+    opencv_onnx::ModelProto model_proto_dst;
+    opencv_onnx::GraphProto* graph_proto_src = model_proto.mutable_graph();
+    opencv_onnx::GraphProto* graph_proto_dst = model_proto_dst.mutable_graph();
+    std::string framework_version, framework_name;
+    if (model_proto.has_producer_name())
+    {
+        framework_name = model_proto.producer_name();
+        std::string* s = new std::string(framework_name);
+        model_proto_dst.set_allocated_producer_name(s);
+    }
+    if (model_proto.has_producer_version())
+    {
+        framework_version = model_proto.producer_version();
+        std::string* s = new std::string(framework_version);
+        model_proto_dst.set_allocated_producer_version(s);
+    }
+    if (model_proto.has_doc_string())
+        model_proto_dst.set_doc_string(model_proto.doc_string());
+    if (model_proto.has_ir_version())
+        model_proto_dst.set_ir_version(model_proto.ir_version());
+    if (model_proto.has_domain())
+    {
+        model_proto_dst.set_domain(model_proto.domain());
+    }
+    if (model_proto.has_model_version())
+    {
+        model_proto_dst.set_model_version(model_proto.model_version());
+    }
+    for (int i = 0; i < model_proto.metadata_props_size(); i++)
+    {
+        auto meta_src = model_proto.metadata_props(i);
+        auto meta_dst = model_proto_dst.add_metadata_props();
+        meta_dst->CopyFrom(meta_src);
+    }
+    for (int i = 0; i < model_proto.opset_import_size(); i++)
+    {
+        auto op_src = model_proto.opset_import(i);
+        auto op_dst = model_proto_dst.add_opset_import();
+        op_dst->CopyFrom(op_src);
+    }
+
+    for (int i = 0; i < graph_proto_src->input_size(); i++)
+    {
+        auto node = graph_proto_src->input(i);
+        auto newNode = fixedDynamicShape(node, valSubstitute);
+        auto node_dst = graph_proto_dst->add_input();
+        node_dst->CopyFrom(newNode);
+
+    }
+
+    for (int i = 0; i < graph_proto_src->output_size(); i++)
+    {
+        auto node = graph_proto_src->output(i);
+        auto newNode = fixedDynamicShape(node, valSubstitute);
+        auto node_dst = graph_proto_dst->add_output();
+        node_dst->CopyFrom(newNode);
+    }
+    for (int i = 0; i < graph_proto_src->node_size(); i++)
+    {
+        auto node = graph_proto_src->node(i);
+        auto node_dst = graph_proto_dst->add_node();
+        node_dst->CopyFrom(node);
+    }
+    for (int i = 0; i < graph_proto_src->initializer_size(); i++)
+    {
+        auto init = graph_proto_src->initializer(i);
+        auto init_dst = graph_proto_dst->add_initializer();
+        init_dst->CopyFrom(init);
+    }
+    for (int i = 0; i < graph_proto_src->value_info_size(); i++)
+    {
+        auto value = graph_proto_src->value_info(i);
+        auto value_dst = graph_proto_dst->add_value_info();
+        value_dst->CopyFrom(value);
+    }
+    model_proto.Clear();
+    model_proto.CopyFrom(model_proto_dst);
     populateNet();
 }
 
@@ -4093,6 +4231,11 @@ Net readNetFromONNX(const String& onnxFile)
     return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
 }
 
+Net readNetFromONNX(const String& onnxFile, std::map<std::string, int> val)
+{
+    return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str(), val);
+}
+
 Net readNetFromONNX(const char* buffer, size_t sizeBuffer)
 {
     return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
@@ -4120,6 +4263,7 @@ Mat readTensorFromONNX(const String& path)
     releaseONNXTensor(tensor_proto);
     return mat;
 }
+
 
 #else  // HAVE_PROTOBUF
 
