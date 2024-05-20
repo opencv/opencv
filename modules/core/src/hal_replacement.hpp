@@ -95,6 +95,9 @@ inline int hal_ni_sub16s(const short *src1_data, size_t src1_step, const short *
 inline int hal_ni_sub32s(const int *src1_data, size_t src1_step, const int *src2_data, size_t src2_step, int *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_sub32f(const float *src1_data, size_t src1_step, const float *src2_data, size_t src2_step, float *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_sub64f(const double *src1_data, size_t src1_step, const double *src2_data, size_t src2_step, double *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+inline int hal_ni_sub8u32f(const uchar *src1_data, size_t src1_step, const uchar *src2_data, size_t src2_step, float *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_sub8s32f(const schar *src1_data, size_t src1_step, const schar *src2_data, size_t src2_step, float *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
 
 /**
@@ -187,6 +190,8 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 #define cv_hal_sub32s hal_ni_sub32s
 #define cv_hal_sub32f hal_ni_sub32f
 #define cv_hal_sub64f hal_ni_sub64f
+#define cv_hal_sub8u32f hal_ni_sub8u32f
+#define cv_hal_sub8s32f hal_ni_sub8s32f
 #define cv_hal_max8u hal_ni_max8u
 #define cv_hal_max8s hal_ni_max8s
 #define cv_hal_max16u hal_ni_max16u
