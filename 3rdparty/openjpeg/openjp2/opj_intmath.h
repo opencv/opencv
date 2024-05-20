@@ -174,6 +174,17 @@ static INLINE OPJ_UINT32  opj_uint_ceildiv(OPJ_UINT32  a, OPJ_UINT32  b)
 }
 
 /**
+Divide an integer and round upwards
+@return Returns a divided by b
+*/
+static INLINE OPJ_UINT32  opj_uint64_ceildiv_res_uint32(OPJ_UINT64 a,
+        OPJ_UINT64 b)
+{
+    assert(b);
+    return (OPJ_UINT32)((a + b - 1) / b);
+}
+
+/**
 Divide an integer by a power of 2 and round upwards
 @return Returns a divided by 2^b
 */

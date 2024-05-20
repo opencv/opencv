@@ -144,6 +144,11 @@ static void opj_close_from_file(void* p_user_data)
 /* ---------------------------------------------------------------------- */
 #ifdef _WIN32
 #ifndef OPJ_STATIC
+
+/* declaration to avoid warning: no previous prototype for 'DllMain' */
+BOOL APIENTRY
+DllMain(HINSTANCE hModule, DWORD ul_reason_for_call, LPVOID lpReserved);
+
 BOOL APIENTRY
 DllMain(HINSTANCE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
@@ -433,7 +438,7 @@ OPJ_BOOL OPJ_CALLCONV opj_setup_decoder(opj_codec_t *p_codec,
     return OPJ_FALSE;
 }
 
-OPJ_API OPJ_BOOL OPJ_CALLCONV opj_decoder_set_strict_mode(opj_codec_t *p_codec,
+OPJ_BOOL OPJ_CALLCONV opj_decoder_set_strict_mode(opj_codec_t *p_codec,
         OPJ_BOOL strict)
 {
     if (p_codec) {
