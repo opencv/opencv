@@ -418,7 +418,6 @@ ONNXImporter::ONNXImporter(Net& net, const char* onnxFile, std::map<std::string,
         auto newNode = fixedDynamicShape(node, valSubstitute);
         auto node_dst = graph_proto_dst->add_input();
         node_dst->CopyFrom(newNode);
-
     }
 
     for (int i = 0; i < graph_proto_src->output_size(); i++)
