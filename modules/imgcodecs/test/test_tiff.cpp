@@ -1209,12 +1209,14 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
     {
         SCOPED_TRACE("Edge Cases");
         vector<Mat> multi_pages;
-        bool res = imreadmulti(filename, multi_pages, 0, 0);
-        // If we asked for 0 images and we successfully read 0 images should this be false ?
-        ASSERT_TRUE(res == false);
-        ASSERT_EQ((size_t)0, multi_pages.size());
-        res = imreadmulti(filename, multi_pages, 0, 123123);
+        bool res = imreadmulti(filename, multi_pages, 0, 1); // first, we read the first page into multi_pages
+        res = imreadmulti(filename, multi_pages, 0, 0);
+        // If we asked for 0 images and we successfully read 0 images should this be true ?
         ASSERT_TRUE(res == true);
+        ASSERT_EQ((size_t)1, multi_pages.size());
+        // If we asked for more images than multipage page count and we successfully read existing images should this be false ?
+        res = imreadmulti(filename, multi_pages, 1, 10);
+        ASSERT_TRUE(res == false);
         ASSERT_EQ((size_t)6, multi_pages.size());
     }
 

@@ -49,6 +49,11 @@ TEST_P(Imgcodecs_Resize, imread_reduce_flags)
         ASSERT_FALSE(img.empty());
         EXPECT_EQ(cols, img.cols);
         EXPECT_EQ(rows, img.rows);
+
+        Mat new_img;
+        EXPECT_EQ(IMREAD_SUCCESS, imread(file_name, new_img, imread_flag));
+        EXPECT_EQ(cols, new_img.cols);
+        EXPECT_EQ(rows, new_img.rows);
     }
 }
 

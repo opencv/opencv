@@ -183,6 +183,7 @@ JpegDecoder::JpegDecoder()
     m_state = 0;
     m_f = 0;
     m_buf_supported = true;
+    m_scale_denom = -1;
 }
 
 
@@ -249,9 +250,9 @@ bool  JpegDecoder::readHeader()
             jpeg_save_markers(&state->cinfo, APP1, 0xffff);
             jpeg_read_header( &state->cinfo, TRUE );
 
-            state->cinfo.scale_num=1;
+            state->cinfo.scale_num = 1;
             state->cinfo.scale_denom = m_scale_denom;
-            m_scale_denom=1; // trick! to know which decoder used scale_denom see imread_
+            m_scale_denom = -1; // trick! to know which decoder used scale_denom see imread_
             jpeg_calc_output_dimensions(&state->cinfo);
             m_width = state->cinfo.output_width;
             m_height = state->cinfo.output_height;
@@ -529,6 +530,7 @@ bool  JpegDecoder::readData( Mat& img )
                 }
             }
 
+            m_result_code = cinfo->err->msg_code == 117 ? 117 : 0;
             result = true;
             jpeg_finish_decompress( cinfo );
         }

@@ -218,10 +218,11 @@ ImageCodecInitializer& getCodecs()
  * Find the decoders
  *
  * @param[in] filename File to search
+ * @param[out] result_code. See cv::ImreadResults
  *
  * @return Image decoder to parse image file.
 */
-static ImageDecoder findDecoder( const String& filename ) {
+static ImageDecoder findDecoder( const String& filename, int& result_code ) {
 
     size_t i, maxlen = 0;
 
@@ -239,6 +240,7 @@ static ImageDecoder findDecoder( const String& filename ) {
     /// in the event of a failure, return an empty image decoder
     if( !f ) {
         CV_LOG_WARNING(NULL, "imread_('" << filename << "'): can't open/read file: check file path/integrity");
+        result_code = IMREAD_FILE_NOT_OPENED;
         return ImageDecoder();
     }
 
@@ -256,6 +258,7 @@ static ImageDecoder findDecoder( const String& filename ) {
     }
 
     /// If no decoder was found, return base type
+    result_code = IMREAD_UNKNOWN_FILE_TYPE;
     return ImageDecoder();
 }
 
@@ -381,28 +384,33 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, Mat& img)
  *
  * @param[in] filename File to load
  * @param[in] flags Flags
- * @param[in] mat Reference to C++ Mat object (If LOAD_MAT)
- *
+ * @param[in] mat Reference to C++ Mat object
+ * @param     index a variable used when loading multipage images
 */
-static bool
-imread_( const String& filename, int flags, Mat& mat )
+static int
+imread_( const String& filename, int flags, Mat& mat, int index = 0 )
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
+    int result_code;
 
 #ifdef HAVE_GDAL
     if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
         decoder = GdalDecoder().newDecoder();
     }else{
 #endif
-        decoder = findDecoder( filename );
+        decoder = findDecoder( filename, result_code );
 #ifdef HAVE_GDAL
     }
 #endif
 
-    /// if no decoder was found, return nothing.
+    /// if no decoder was found, return result_code.
     if( !decoder ){
-        return 0;
+        if ( mat.type() == CV_32S )
+        {
+            mat.at<int>(0, 0) = 0;
+        }
+        return result_code;
     }
 
     int scale_denom = 1;
@@ -417,7 +425,7 @@ imread_( const String& filename, int flags, Mat& mat )
     }
 
     /// set the scale_denom in the driver
-    decoder->setScale( scale_denom );
+    int initial_scale_denom = decoder->setScale( scale_denom );
 
     /// set the filename in the driver
     decoder->setSource( filename );
@@ -426,7 +434,7 @@ imread_( const String& filename, int flags, Mat& mat )
     {
         // read the header to make sure it succeeds
         if( !decoder->readHeader() )
-            return 0;
+            return IMREAD_READ_HEADER_ERROR;
     }
     catch (const cv::Exception& e)
     {
@@ -439,185 +447,98 @@ imread_( const String& filename, int flags, Mat& mat )
         return 0;
     }
 
+    int pageCount = decoder->getPageCount();
 
-    // established the required input image size
-    Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
+    if ( index > pageCount )
+        return IMREAD_READ_DATA_ERROR;
 
-    // grab the decoded type
-    int type = decoder->type();
-    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
+    if ( mat.type() == CV_32S )     // that means the function called by imquery() only for reading header
     {
-        if( (flags & IMREAD_ANYDEPTH) == 0 )
-            type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
+        mat.at<int>(0, 0) = pageCount;
 
-        if( (flags & IMREAD_COLOR) != 0 ||
-           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
+        for( int i = 0; i < pageCount; i++ )
+        {
+            mat.push_back( decoder->type() );
+            mat.push_back( decoder->width() );
+            mat.push_back( decoder->height() );
+            mat.push_back( initial_scale_denom < 0 ? 1 : 0 );
+            decoder->nextPage();
+        }
+        return IMREAD_SUCCESS;
+    }
+
+    int counter = 0;
+
+    for (;;)
+    {
+        if ( counter == index )
+        {
+            // established the required input image size
+            Size size = validateInputImageSize( Size( decoder->width(), decoder->height() ) );
+
+            // grab the decoded type
+            int type = decoder->type();
+            if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED)
+            {
+                if ((flags & IMREAD_ANYDEPTH) == 0)
+                    type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
+
+                if ((flags & IMREAD_COLOR) != 0 ||
+                    ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
+                    type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
+                else
+                    type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
+            }
+
+            mat.create(size.height, size.width, type);
+
+            // read the image data
+            bool success = false;
+            try
+            {
+                if (decoder->readData(mat))
+                    success = true;
+            }
+            catch (const cv::Exception& e)
+            {
+                std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+            }
+            catch (...)
+            {
+                std::cerr << "imread_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+            }
+
+            if (!success)
+            {
+                mat.release();
+                return IMREAD_READ_DATA_ERROR;
+            }
+
+            if (decoder->setScale(scale_denom) > 1) // if decoder is JpegDecoder then decoder->setScale always returns 1
+            {
+                resize(mat, mat, Size(size.width / scale_denom, size.height / scale_denom), 0, 0, INTER_LINEAR_EXACT);
+            }
+
+            /// optionally rotate the data if EXIF orientation flag says so
+            if (!mat.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
+            {
+                ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+            }
+
+            return decoder->getResultCode();
+        }
+
+        if (!decoder->nextPage())
+        {
+            break;
+        }
         else
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
+            counter++;
     }
 
-    if (mat.empty())
-    {
-        mat.create( size.height, size.width, type );
-    }
-    else
-    {
-        CV_CheckEQ(size, mat.size(), "");
-        CV_CheckTypeEQ(type, mat.type(), "");
-        CV_Assert(mat.isContinuous());
-    }
-
-    // read the image data
-    bool success = false;
-    try
-    {
-        if (decoder->readData(mat))
-            success = true;
-    }
-    catch (const cv::Exception& e)
-    {
-        CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read data: " << e.what());
-    }
-    catch (...)
-    {
-        CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read data: unknown exception");
-    }
-    if (!success)
-    {
-        mat.release();
-        return false;
-    }
-
-    if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
-    {
-        resize( mat, mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
-    }
-
-    /// optionally rotate the data if EXIF orientation flag says so
-    if (!mat.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-    {
-        ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
-    }
-
-    return true;
+    return decoder->getResultCode();
 }
 
-
-static bool
-imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int start, int count)
-{
-    /// Search for the relevant decoder to handle the imagery
-    ImageDecoder decoder;
-
-    CV_CheckGE(start, 0, "Start index cannont be < 0");
-
-#ifdef HAVE_GDAL
-    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
-        decoder = GdalDecoder().newDecoder();
-    }
-    else {
-#endif
-        decoder = findDecoder(filename);
-#ifdef HAVE_GDAL
-    }
-#endif
-
-    /// if no decoder was found, return nothing.
-    if (!decoder) {
-        return 0;
-    }
-
-    if (count < 0) {
-        count = std::numeric_limits<int>::max();
-    }
-
-    /// set the filename in the driver
-    decoder->setSource(filename);
-
-    // read the header to make sure it succeeds
-    try
-    {
-        // read the header to make sure it succeeds
-        if (!decoder->readHeader())
-            return 0;
-    }
-    catch (const cv::Exception& e)
-    {
-        CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: " << e.what());
-        return 0;
-    }
-    catch (...)
-    {
-        CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: unknown exception");
-        return 0;
-    }
-
-    int current = start;
-
-    while (current > 0)
-    {
-        if (!decoder->nextPage())
-        {
-            return false;
-        }
-        --current;
-    }
-
-    while (current < count)
-    {
-        // grab the decoded type
-        int type = decoder->type();
-        if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED)
-        {
-            if ((flags & IMREAD_ANYDEPTH) == 0)
-                type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
-
-            if ((flags & IMREAD_COLOR) != 0 ||
-                ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
-                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-            else
-                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
-        }
-
-        // established the required input image size
-        Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
-
-        // read the image data
-        Mat mat(size.height, size.width, type);
-        bool success = false;
-        try
-        {
-            if (decoder->readData(mat))
-                success = true;
-        }
-        catch (const cv::Exception& e)
-        {
-            CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: " << e.what());
-        }
-        catch (...)
-        {
-            CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: unknown exception");
-        }
-        if (!success)
-            break;
-
-        // optionally rotate the data if EXIF' orientation flag says so
-        if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
-        {
-            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
-        }
-
-        mats.push_back(mat);
-        if (!decoder->nextPage())
-        {
-            break;
-        }
-        ++current;
-    }
-
-    return !mats.empty();
-}
 
 /**
  * Read an image
@@ -652,6 +573,39 @@ void imread( const String& filename, OutputArray dst, int flags )
 }
 
 /**
+ * Read an image into specified OutputArray
+ *
+ * @param[in] filename Name of file to be loaded.
+ * @param[in] image OutputArray where the image data will be loaded.
+ * @param[in] flags Flag that can take values of cv::ImreadModes
+ * @param index page index to be loaded for multipage image files.
+*/
+int imread(const String& filename, OutputArray image, int flags, int index)
+{
+    CV_TRACE_FUNCTION();
+
+    if ( image.kind() == _InputArray::MAT ) {
+        Mat& img = image.getMatRef();
+        return imread_( filename, flags, img, index );
+    } else {
+       Mat img;
+       int ret = imread_( filename, flags, img, index );
+
+       if ( ret == IMREAD_SUCCESS )
+            img.copyTo( image );
+       return ret;
+    }
+}
+
+imquery::imquery( const String& filename, int flags )
+{
+    m_filename = filename;
+    Mat info( 1, 1, CV_32S );
+    m_result_code = imread_( filename, flags, info );
+    info.copyTo( m_pagesInfo );
+};
+
+/**
 * Read a multi-page image
 *
 *  This function merely calls the actual implementation above and returns itself.
@@ -661,11 +615,12 @@ void imread( const String& filename, OutputArray dst, int flags )
 * @param[in] flags Flags you wish to set.
 *
 */
-bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
+bool imreadmulti( const String& filename, std::vector<Mat>& mats, int flags )
 {
     CV_TRACE_FUNCTION();
 
-    return imreadmulti_(filename, flags, mats, 0, -1);
+    imquery iminfo( filename, flags );
+    return imreadmulti( filename, mats, 0, iminfo.page_count(), flags );
 }
 
 
@@ -673,27 +628,27 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int 
 {
     CV_TRACE_FUNCTION();
 
-    return imreadmulti_(filename, flags, mats, start, count);
-}
+    int counter = 0;
+    for (int i = start; i < start+count; i++)
+    {
+        Mat page;
+        imread_(filename, flags, page, i);
 
-static
-size_t imcount_(const String& filename, int flags)
-{
-    try{
-        ImageCollection collection(filename, flags);
-        return collection.size();
-    } catch(cv::Exception const& e) {
-        // Reading header or finding decoder for the filename is failed
-        CV_LOG_ERROR(NULL, "imcount_('" << filename << "'): can't read header or can't find decoder: " << e.what());
+        if (!page.empty() || ((flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL))
+        {
+            counter++;
+            mats.push_back(page);
+        }
     }
-    return 0;
+    return counter == count;
 }
 
 size_t imcount(const String& filename, int flags)
 {
     CV_TRACE_FUNCTION();
 
-    return imcount_(filename, flags);
+    imquery iminfo( filename, flags );
+    return iminfo.page_count();
 }
 
 
@@ -759,7 +714,7 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
         if (!isMultiImg)
             code = encoder->write( write_vec[0], params );
         else
-            code = encoder->writemulti( write_vec, params ); //to be implemented
+            code = encoder->writemulti( write_vec, params );
 
         if (!code)
         {
@@ -1202,7 +1157,8 @@ bool imencode( const String& ext, InputArray _image,
 
 bool haveImageReader( const String& filename )
 {
-    ImageDecoder decoder = cv::findDecoder(filename);
+    int result_code;
+    ImageDecoder decoder = cv::findDecoder(filename, result_code);
     return !decoder.empty();
 }
 

@@ -64,6 +64,8 @@ public:
 
     int width() const { return m_width; }
     int height() const { return m_height; }
+    int getResultCode() const { return m_result_code; }
+    int getPageCount() const { return m_page_count; }
     virtual int type() const { return m_type; }
 
     ExifEntry_t getExifTag(const ExifTagName tag) const;
@@ -85,6 +87,8 @@ protected:
     int  m_height; // height of the image ( filled by readHeader )
     int  m_type;
     int  m_scale_denom;
+    int  m_page_count;
+    int  m_result_code;
     String m_filename;
     String m_signature;
     Mat m_buf;
