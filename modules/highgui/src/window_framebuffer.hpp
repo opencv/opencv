@@ -17,9 +17,12 @@ class CV_EXPORTS FramebufferWindow : public UIWindow
   FramebufferBackend &backend;
   std::string FB_ID;
   Rect windowRect;
+  
+  int flags;
+  Mat currentImg;
 
 public:
-  FramebufferWindow(FramebufferBackend &backend);
+  FramebufferWindow(FramebufferBackend &backend, int flags);
   virtual ~FramebufferWindow();
 
   virtual void imshow(InputArray image)override;
@@ -105,7 +108,7 @@ public:
   virtual std::shared_ptr<UIWindow> createWindow(
       const std::string& winname,
       int flags
-  );
+  )override;
 
   virtual int waitKeyEx(int delay /*= 0*/)override;
   virtual int pollKey() override; 

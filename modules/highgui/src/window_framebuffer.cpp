@@ -29,7 +29,8 @@ namespace cv { namespace highgui_backend {
     return std::make_shared<FramebufferBackend>();
   }
 
-  FramebufferWindow::FramebufferWindow(FramebufferBackend &_backend): backend(_backend)
+  FramebufferWindow::FramebufferWindow(FramebufferBackend &_backend, int _flags): 
+    backend(_backend), flags(_flags)
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::FramebufferWindow()");
     FB_ID = "FramebufferWindow";
@@ -43,9 +44,16 @@ namespace cv { namespace highgui_backend {
 
   void FramebufferWindow::imshow(InputArray image)
   {
+    currentImg = image.getMat();
+    
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::imshow(InputArray image)");
     CV_LOG_INFO(NULL, "UI: InputArray image: "
       << cv::typeToString(image.type()) << " size " << image.size());
+      
+    if((currentImg.size().width <= 0) && (currentImg.size().height <= 0))
+    {  
+      return;
+    }
 
     if (backend.getFBPointer() == MAP_FAILED) {
       CV_LOG_ERROR(NULL, "UI: Framebuffer is not mapped");
@@ -61,16 +69,23 @@ namespace cv { namespace highgui_backend {
     Mat img(image.getMat());
     switch(img.channels()){
       case 1:
-        if(img.type() == CV_8UC1)
+        switch(img.type())
         {
-          cvtColor(img, img, cv::COLOR_GRAY2RGB); 
-        } 
-        else
-        {
-          CV_LOG_ERROR(NULL, "UI: Image type " 
-            << cv::typeToString(image.type()) << " is not supported" );
-            return;
+        case CV_8S:
+            cv::convertScaleAbs(img, img, 1, 127);
+            break;
+        case CV_16S:
+            cv::convertScaleAbs(img, img, 1/255., 127);
+            break;
+        case CV_16U:
+            cv::convertScaleAbs(img, img, 1/255.);
+            break;
+        case CV_32F:
+        case CV_64F: // assuming image has values in range [0, 1)
+            img.convertTo(img, CV_8U, 255., 0.);
+            break;
         }
+        cvtColor(img, img, cv::COLOR_GRAY2RGB); 
       break;
       case 3:
         convertToShow(img, img);
@@ -84,8 +99,47 @@ namespace cv { namespace highgui_backend {
     int newWidth = windowRect.width;
     int newHeight = windowRect.height;
     int cntChannel = img.channels();
+    cv::Size imgSize = currentImg.size();
     
-    cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
+    switch(flags)
+    {
+      case WINDOW_FREERATIO:
+      {
+        cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
+      }
+      break;
+      case WINDOW_AUTOSIZE: // WINDOW_FULLSCREEN
+      {
+        windowRect.width  = imgSize.width;
+        windowRect.height = imgSize.height;
+      }
+      break;
+//      case WINDOW_FULLSCREEN:
+//        windowRect.width = backend.getFBWidth();
+//        windowRect.height = backend.getFBHeight();
+//        newWidth = windowRect.width;
+//        newHeight = windowRect.height;
+//        cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
+//      break;
+      case WINDOW_NORMAL: // WINDOW_KEEPRATIO
+      {
+        double aspect_ratio = ((double)img.cols) / img.rows;
+        newWidth  = windowRect.width;
+        newHeight = (int)(windowRect.width / aspect_ratio);
+
+        if (newHeight > windowRect.height) {
+          newWidth = (int)(windowRect.height * aspect_ratio);
+          newHeight = windowRect.height;
+        }
+        cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
+      }
+      break;
+      
+      default:
+        CV_LOG_ERROR(NULL, "UI: FB window flag not supported");
+        CV_Assert(0);
+    }
+    
     
     CV_LOG_INFO(NULL, "UI: Formated image: "
       << cv::typeToString(img.type()) << " size " << img.size());
@@ -95,14 +149,30 @@ namespace cv { namespace highgui_backend {
     int yOffset = backend.getFBYOffset();
     int lineLength = backend.getFBLineLength();
     
-    int showRows = min((windowRect.y + img.rows), backend.getFBHeight()) - windowRect.y;
-    int showCols = min((windowRect.x + img.cols), backend.getFBWidth())  - windowRect.x;
+    int showRows = min((windowRect.y + img.rows), backend.getFBHeight());
+    int showCols = min((windowRect.x + img.cols), backend.getFBWidth());
+    
+    int dx_w = windowRect.x;
+    int dy_w = windowRect.y;
+
+    int start_y_w = 0;
+    int start_x_w = 0;
+    
+    if(dy_w < 0) start_y_w = -dy_w;
+    if(dx_w < 0) start_x_w = -dx_w;
+    
+    if(dy_w < 0) dy_w = 0;
+    if(dx_w < 0) dx_w = 0;
+    
+    showRows -= dy_w;
+    showCols -= dx_w;
+    
     
     for (int y = yOffset; y < showRows + yOffset; y++)
     {
         std::memcpy(backend.getFBPointer() + (y + windowRect.y) * lineLength + 
                     xOffset + windowRect.x, 
-                    img.ptr<cv::Vec4b>(y - yOffset), 
+                    img.ptr<cv::Vec4b>(y - yOffset + start_y_w) + start_x_w * cntChannel, 
                     showCols * cntChannel);
     }
   }
@@ -127,14 +197,32 @@ namespace cv { namespace highgui_backend {
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::resize(int width " 
       << width <<", height " << height << ")");
-    windowRect.width = width;
-    windowRect.height = height;
+    
+    CV_Assert(width > 0);
+    CV_Assert(height > 0);
+    
+    if(flags != WINDOW_AUTOSIZE)
+    {
+      windowRect.width = width;
+      windowRect.height = height;
+      
+      if((currentImg.size().width > 0) && (currentImg.size().height > 0))
+      {  
+        imshow(currentImg);
+      }
+    }
   }
   void FramebufferWindow::move(int x, int y) 
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::move(int x " << x << ", y " << y <<")");
+
     windowRect.x = x;
     windowRect.y = y;
+
+    if((currentImg.size().width > 0) && (currentImg.size().height > 0))
+    {  
+      imshow(currentImg);
+    }
   }
 
   Rect FramebufferWindow::getImageRect() const 
@@ -192,19 +280,7 @@ namespace cv { namespace highgui_backend {
 
 // !!##FramebufferBackend
 
-//  int FramebufferBackend::OpenInputEvent()
-//  {
-//    int fd;
-//    fd = open("/dev/input/event1", O_RDONLY);
-//    if (fd == -1) {
-//        std::cerr << "ERROR_OPENING_INPUT\n";
-//        return -1;
-//    }
-//    return fd;
-//  }
-
-  static
-  std::string& getFBFileName()
+  static std::string& getFBFileName()
   {
     static std::string fbFileNameFB = 
       cv::utils::getConfigurationParameterString("FRAMEBUFFER", "");
@@ -398,7 +474,7 @@ namespace cv { namespace highgui_backend {
   {
     CV_LOG_INFO(NULL, "UI: FramebufferBackend::createWindow(" 
       << winname << ", " << flags << ")");
-    return std::make_shared<FramebufferWindow>(*this);
+    return std::make_shared<FramebufferWindow>(*this, flags);
   }
 
   void FramebufferBackend::initTermios(int echo, int wait) 
@@ -449,7 +525,7 @@ namespace cv { namespace highgui_backend {
 
     int code = -1;
 
-    if(delay == 0)
+    if(delay <= 0)
     {
       int ch = getch_(0, 1);
       CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " << (int)ch);
@@ -467,8 +543,8 @@ namespace cv { namespace highgui_backend {
         bool f_kbhit = false;
         while(!(f_kbhit = kbhit()) && (delay > 0))
         {
-          delay -= 10;
-          usleep(10000);
+          delay -= 1;
+          usleep(1000);
         }          
         if(f_kbhit)
         {
@@ -496,7 +572,27 @@ namespace cv { namespace highgui_backend {
   int FramebufferBackend::pollKey()
   {
     CV_LOG_INFO(NULL, "UI: FramebufferBackend::pollKey()");
-    return 0;
+    int code = -1;
+    bool f_kbhit = false;
+    f_kbhit = kbhit();
+
+    if(f_kbhit)
+    {
+      CV_LOG_INFO(NULL, "UI: FramebufferBackend kbhit is True ");
+
+      int ch = getch_(0, 1);
+      CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " << (int)ch);
+      code = ch;
+      
+      while((ch = getch_(0, 0))>=0)
+      {
+        CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " 
+          << (int)ch << " (additional code on <stdin>)");
+        code = ch;
+      }
+    }
+    
+    return code;
   }
 
 
