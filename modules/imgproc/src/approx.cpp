@@ -908,7 +908,7 @@ struct changes
 /*
   returns intersection point and extra area
 */
-int recalculation(std::vector<neighbours>& hull, int vertex_id, float& area_, float& x, float& y)
+static int recalculation(std::vector<neighbours>& hull, int vertex_id, float& area_, float& x, float& y)
 {
     cv::Point2f vertex = hull[vertex_id].point,
         next_vertex = hull[hull[vertex_id].next].point,
@@ -934,7 +934,7 @@ int recalculation(std::vector<neighbours>& hull, int vertex_id, float& area_, fl
     return 0;
 }
 
-void update(std::vector<neighbours>& hull, int vertex_id)
+static void update(std::vector<neighbours>& hull, int vertex_id)
 {
     neighbours& v1 = hull[vertex_id], & removed = hull[v1.next], & v2 = hull[removed.next];
 
@@ -974,12 +974,18 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
         curve = _curve.getMat();
     }
 
-    CV_Assert(curve.cols == 1);
-    CV_Assert(curve.rows >= side);
+    CV_Assert((curve.cols == 1 && curve.rows >= side)
+        || (curve.rows == 1 && curve.cols >= side));
+
+    curve = curve.t();
+    if (curve.rows == 1)
+    {
+        curve = curve.t();
+    }
 
     std::vector<neighbours> hull(curve.rows);
     int size = curve.rows;
-    std::priority_queue<changes, std::vector<changes>, std::greater<>> areas;
+    std::priority_queue<changes, std::vector<changes>, std::greater<changes>> areas;
     float extra_area = 0, max_extra_area = epsilon_percentage * contourArea(_curve);
 
     if (curve.depth() == CV_32S)
