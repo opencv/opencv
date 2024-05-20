@@ -890,20 +890,20 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Einsum_Test, testing::Values(
-    std::make_tuple(std::make_tuple(std::vector<int>({}), std::vector<int>({})), std::string(",->")),
-    std::make_tuple(std::make_tuple(std::vector<int>({1}), std::vector<int>({})), std::string("i,->i")),
-    std::make_tuple(std::make_tuple(std::vector<int>({}), std::vector<int>({1})), std::string(",i->i")),
-    std::make_tuple(std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({})), std::string("ij,->ij")),
-    // std::make_tuple(std::make_tuple(std::vector<int>({}), std::vector<int>({4, 1})), std::string(",ij->ij")), // mul function of arithm_op can not handle cases with different number of channels
-    std::make_tuple(std::make_tuple(std::vector<int>({1}), std::vector<int>({1})), std::string("i,i->i")),
-    std::make_tuple(std::make_tuple(std::vector<int>({1}), std::vector<int>({1})), std::string("i,i->")),
-    std::make_tuple(std::make_tuple(std::vector<int>({4}), std::vector<int>({4})), std::string("i,i->i")),
-    std::make_tuple(std::make_tuple(std::vector<int>({4}), std::vector<int>({4})), std::string("i,i->")),
-    std::make_tuple(std::make_tuple(std::vector<int>({1, 4}), std::vector<int>({1, 4})), std::string("ij,ij->ij")),
-    std::make_tuple(std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({4, 1})), std::string("ij,ij->ij")),
-    std::make_tuple(std::make_tuple(std::vector<int>({1, 4}), std::vector<int>({1, 4})), std::string("ij,ij->i")),
-    std::make_tuple(std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({4, 1})), std::string("ij,ij->i")),
-    std::make_tuple(std::make_tuple(std::vector<int>({4, 4}), std::vector<int>({4, 4})), std::string("ij,ij->i"))
+    std::make_tuple(std::vector<int>({}), std::vector<int>({}), ",->"),
+    std::make_tuple(std::vector<int>({1}), std::vector<int>({}), "i,->i"),
+    std::make_tuple(std::vector<int>({}), std::vector<int>({1}), ",i->i"),
+    std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({}), "ij,->ij"),
+    // std::make_tuple(std::vector<int>({}), std::vector<int>({4, 1}), ",ij->ij")), // mul function of arithm_op can not handle cases with different number of channels
+    std::make_tuple(std::vector<int>({1}), std::vector<int>({1}), "i,i->i"),
+    std::make_tuple(std::vector<int>({1}), std::vector<int>({1}), "i,i->"),
+    std::make_tuple(std::vector<int>({4}), std::vector<int>({4}), "i,i->i"),
+    std::make_tuple(std::vector<int>({4}), std::vector<int>({4}), "i,i->"),
+    std::make_tuple(std::vector<int>({1, 4}), std::vector<int>({1, 4}), "ij,ij->ij"),
+    std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({4, 1}), "ij,ij->ij"),
+    std::make_tuple(std::vector<int>({1, 4}), std::vector<int>({1, 4}), "ij,ij->i"),
+    std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({4, 1}), "ij,ij->i"),
+    std::make_tuple(std::vector<int>({4, 4}), std::vector<int>({4, 4}), "ij,ij->i")
     ));
 
 
