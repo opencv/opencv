@@ -45,7 +45,7 @@ std::vector<BackendInfo>& getBuiltinBackendsInfo()
 #endif
 
 #ifdef HAVE_FRAMEBUFFER
-        DECLARE_STATIC_BACKEND("Framebuffer", createUIBackendFramebuffer)
+        DECLARE_STATIC_BACKEND("FB", createUIBackendFramebuffer)
 #endif
 
 
