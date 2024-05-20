@@ -38,12 +38,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
-
-typedef int OPJ_BOOL;
-#define OPJ_TRUE 1
-#define OPJ_FALSE 0
-
-#include "opj_stdint.h"
+#include <stdint.h>
 
 typedef int8_t   OPJ_INT8;
 typedef uint8_t  OPJ_UINT8;
@@ -53,6 +48,9 @@ typedef int32_t  OPJ_INT32;
 typedef uint32_t OPJ_UINT32;
 typedef int64_t  OPJ_INT64;
 typedef uint64_t OPJ_UINT64;
+typedef int OPJ_BOOL;
+#define OPJ_TRUE 1
+#define OPJ_FALSE 0
 
 //************************************************************************/
 /** @brief HT decoding tables, as given in the standard

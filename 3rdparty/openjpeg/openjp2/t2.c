@@ -167,9 +167,9 @@ static OPJ_BOOL opj_t2_init_seg(opj_tcd_cblk_dec_t* cblk,
 static void opj_t2_putcommacode(opj_bio_t *bio, OPJ_INT32 n)
 {
     while (--n >= 0) {
-        opj_bio_write(bio, 1, 1);
+        opj_bio_putbit(bio, 1);
     }
-    opj_bio_write(bio, 0, 1);
+    opj_bio_putbit(bio, 0);
 }
 
 static OPJ_UINT32 opj_t2_getcommacode(opj_bio_t *bio)
@@ -184,7 +184,7 @@ static OPJ_UINT32 opj_t2_getcommacode(opj_bio_t *bio)
 static void opj_t2_putnumpasses(opj_bio_t *bio, OPJ_UINT32 n)
 {
     if (n == 1) {
-        opj_bio_write(bio, 0, 1);
+        opj_bio_putbit(bio, 0);
     } else if (n == 2) {
         opj_bio_write(bio, 2, 2);
     } else if (n <= 5) {
@@ -801,7 +801,7 @@ static OPJ_BOOL opj_t2_encode_packet(OPJ_UINT32 tileno,
         }
     }
 #endif
-    opj_bio_write(bio, packet_empty ? 0 : 1, 1);           /* Empty header bit */
+    opj_bio_putbit(bio, packet_empty ? 0 : 1);           /* Empty header bit */
 
     /* Writing Packet header */
     band = res->bands;
@@ -849,7 +849,7 @@ static OPJ_BOOL opj_t2_encode_packet(OPJ_UINT32 tileno,
             if (!cblk->numpasses) {
                 opj_tgt_encode(bio, prc->incltree, cblkno, (OPJ_INT32)(layno + 1));
             } else {
-                opj_bio_write(bio, layer->numpasses != 0, 1);
+                opj_bio_putbit(bio, layer->numpasses != 0);
             }
 
             /* if cblk not included, go to the next cblk  */
@@ -978,7 +978,9 @@ static OPJ_BOOL opj_t2_encode_packet(OPJ_UINT32 tileno,
                 return OPJ_FALSE;
             }
 
-            memcpy(c, layer->data, layer->len);
+            if (p_t2_mode == FINAL_PASS) {
+                memcpy(c, layer->data, layer->len);
+            }
             cblk->numpasses += layer->numpasses;
             c += layer->len;
             length -= layer->len;
@@ -1227,9 +1229,17 @@ static OPJ_BOOL opj_t2_read_packet_header(opj_t2_t* p_t2,
                 while (!opj_tgt_decode(l_bio, l_prc->imsbtree, cblkno, (OPJ_INT32)i)) {
                     ++i;
                 }
-
                 l_cblk->Mb = (OPJ_UINT32)l_band->numbps;
-                l_cblk->numbps = (OPJ_UINT32)l_band->numbps + 1 - i;
+                if ((OPJ_UINT32)l_band->numbps + 1 < i) {
+                    /* Not totally sure what we should do in that situation,
+                     * but that avoids the integer overflow of
+                     * https://github.com/uclouvain/openjpeg/pull/1488
+                     * while keeping the regression test suite happy.
+                     */
+                    l_cblk->numbps = (OPJ_UINT32)(l_band->numbps + 1 - (int)i);
+                } else {
+                    l_cblk->numbps = (OPJ_UINT32)l_band->numbps + 1 - i;
+                }
                 l_cblk->numlenbits = 3;
             }
 
@@ -1590,6 +1600,7 @@ static OPJ_BOOL opj_t2_skip_packet_data(opj_t2_t* p_t2,
                                       "skip: segment too long (%d) with max (%d) for codeblock %d (p=%d, b=%d, r=%d, c=%d)\n",
                                       l_seg->newlen, p_max_length, cblkno, p_pi->precno, bandno, p_pi->resno,
                                       p_pi->compno);
+                        return OPJ_TRUE;
                     }
                 }
 
