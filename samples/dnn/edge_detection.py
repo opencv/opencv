@@ -176,8 +176,8 @@ if __name__ == '__main__':
                 method = "dexined"
             else:
                 print("[WARN] Provide model file using --model to use dexined")
-            if session is None:
-                session = loadModel(args)
+            if net is None:
+                net = loadModel(args)
             cv.destroyWindow('Output')
             cv.namedWindow('Output', cv.WINDOW_NORMAL)
             cv.moveWindow('Output', 200, 50)
