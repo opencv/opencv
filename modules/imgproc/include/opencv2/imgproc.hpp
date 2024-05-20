@@ -1886,7 +1886,7 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example samples/dnn/edge_detection.cpp
+/** @example samples/cpp/snippets/edge.cpp
 This program demonstrates usage of the Canny edge detector
 
 Check @ref tutorial_canny_detector "the corresponding tutorial" for more details
