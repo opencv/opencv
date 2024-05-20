@@ -1213,7 +1213,8 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
     else {
 #endif
-    m_decoder = findDecoder(filename);
+    int result_code;
+    m_decoder = findDecoder(filename, result_code);
 #ifdef HAVE_GDAL
     }
 #endif
@@ -1236,7 +1237,7 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
     else {
 #endif
-    m_decoder = findDecoder(m_filename);
+    m_decoder = findDecoder(m_filename, result_code);
 #ifdef HAVE_GDAL
     }
 #endif
@@ -1325,7 +1326,8 @@ void ImageCollection::Impl::reset() {
     }
     else {
 #endif
-    m_decoder = findDecoder(m_filename);
+    int result_code;
+    m_decoder = findDecoder(m_filename, result_code);
 #ifdef HAVE_GDAL
     }
 #endif
