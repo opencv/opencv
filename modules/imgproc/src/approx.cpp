@@ -926,7 +926,8 @@ static int recalculation(std::vector<neighbours>& hull, int vertex_id, float& ar
     float t = (curr_edge.x * next_edge.y - curr_edge.y * next_edge.x) / cross;
     cv::Point2f intersection = vertex + cv::Point2f(prev_edge.x * t, prev_edge.y * t);
 
-    float area = 0.5f * abs((next_vertex.x - vertex.x) * (intersection.y - vertex.y) - (intersection.x - vertex.x) * (next_vertex.y - vertex.y));
+    float area = 0.5f * abs((next_vertex.x - vertex.x) * (intersection.y - vertex.y)
+        - (intersection.x - vertex.x) * (next_vertex.y - vertex.y));
 
     area_ = area;
     x = intersection.x;
@@ -986,14 +987,14 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
     std::vector<neighbours> hull(curve.rows);
     int size = curve.rows;
     std::priority_queue<changes, std::vector<changes>, std::greater<changes>> areas;
-    float extra_area = 0, max_extra_area = epsilon_percentage * contourArea(_curve);
+    float extra_area = 0, max_extra_area = epsilon_percentage * static_cast<float>(contourArea(_curve));
 
     if (curve.depth() == CV_32S)
     {
         for (int i = 0; i < size; ++i)
         {
             Point t = curve.at<cv::Point>(i, 0);
-            hull[i] = neighbours(i + 1, i - 1, Point2f(t.x, t.y));
+            hull[i] = neighbours(i + 1, i - 1, Point2f(static_cast<float>(t.x), static_cast<float>(t.y)));
         }
     }
     else
@@ -1072,7 +1073,9 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
         {
             if (hull[i].relevant != -1)
             {
-                Point t = Point(round(hull[i].point.x), round(hull[i].point.y));
+                Point t = Point(static_cast<int>(round(hull[i].point.x)),
+                                static_cast<int>(round(hull[i].point.y)));
+
                 buf.at<Point>(0, last_free) = t;
                 last_free++;
             }
