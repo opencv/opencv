@@ -2,7 +2,7 @@
 ; jidctflt.asm - floating-point IDCT (SSE & MMX)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2016, D. R. Commander.
+; Copyright (C) 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -23,18 +23,18 @@
 
 ; --------------------------------------------------------------------------
 
-%macro unpcklps2 2  ; %1=(0 1 2 3) / %2=(4 5 6 7) => %1=(0 1 4 5)
+%macro UNPCKLPS2 2  ; %1=(0 1 2 3) / %2=(4 5 6 7) => %1=(0 1 4 5)
     shufps      %1, %2, 0x44
 %endmacro
 
-%macro unpckhps2 2  ; %1=(0 1 2 3) / %2=(4 5 6 7) => %1=(2 3 6 7)
+%macro UNPCKHPS2 2  ; %1=(0 1 2 3) / %2=(4 5 6 7) => %1=(2 3 6 7)
     shufps      %1, %2, 0xEE
 %endmacro
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_idct_float_sse)
 
 EXTN(jconst_idct_float_sse):
@@ -46,7 +46,7 @@ PD_M2_613      times 4 dd -2.613125929752753055713286
 PD_0_125       times 4 dd  0.125        ; 1/8
 PB_CENTERJSAMP times 8 db  CENTERJSAMPLE
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -88,7 +88,7 @@ EXTN(jsimd_idct_float_sse):
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
+    GET_GOT     ebx                     ; get GOT address
 
     ; ---- Pass 1: process columns from input, store into work array.
 
@@ -97,7 +97,7 @@ EXTN(jsimd_idct_float_sse):
     mov         esi, JCOEFPTR [coef_block(eax)]  ; inptr
     lea         edi, [workspace]                 ; FAST_FLOAT *wsptr
     mov         ecx, DCTSIZE/4                   ; ctr
-    alignx      16, 7
+    ALIGNX      16, 7
 .columnloop:
 %ifndef NO_ZERO_COLUMN_TEST_FLOAT_SSE
     mov         eax, dword [DWBLOCK(1,0,esi,SIZEOF_JCOEF)]
@@ -149,7 +149,7 @@ EXTN(jsimd_idct_float_sse):
     movaps      XMMWORD [XMMBLOCK(3,0,edi,SIZEOF_FAST_FLOAT)], xmm3
     movaps      XMMWORD [XMMBLOCK(3,1,edi,SIZEOF_FAST_FLOAT)], xmm3
     jmp         near .nextcolumn
-    alignx      16, 7
+    ALIGNX      16, 7
 %endif
 .columnDCT:
 
@@ -325,11 +325,11 @@ EXTN(jsimd_idct_float_sse):
     unpckhps    xmm4, xmm0              ; xmm4=(42 52 43 53)
 
     movaps      xmm3, xmm6              ; transpose coefficients(phase 2)
-    unpcklps2   xmm6, xmm7              ; xmm6=(00 10 20 30)
-    unpckhps2   xmm3, xmm7              ; xmm3=(01 11 21 31)
+    UNPCKLPS2   xmm6, xmm7              ; xmm6=(00 10 20 30)
+    UNPCKHPS2   xmm3, xmm7              ; xmm3=(01 11 21 31)
     movaps      xmm0, xmm1              ; transpose coefficients(phase 2)
-    unpcklps2   xmm1, xmm2              ; xmm1=(02 12 22 32)
-    unpckhps2   xmm0, xmm2              ; xmm0=(03 13 23 33)
+    UNPCKLPS2   xmm1, xmm2              ; xmm1=(02 12 22 32)
+    UNPCKHPS2   xmm0, xmm2              ; xmm0=(03 13 23 33)
 
     movaps      xmm7, XMMWORD [wk(0)]   ; xmm7=(60 70 61 71)
     movaps      xmm2, XMMWORD [wk(1)]   ; xmm2=(62 72 63 73)
@@ -340,11 +340,11 @@ EXTN(jsimd_idct_float_sse):
     movaps      XMMWORD [XMMBLOCK(3,0,edi,SIZEOF_FAST_FLOAT)], xmm0
 
     movaps      xmm6, xmm5              ; transpose coefficients(phase 2)
-    unpcklps2   xmm5, xmm7              ; xmm5=(40 50 60 70)
-    unpckhps2   xmm6, xmm7              ; xmm6=(41 51 61 71)
+    UNPCKLPS2   xmm5, xmm7              ; xmm5=(40 50 60 70)
+    UNPCKHPS2   xmm6, xmm7              ; xmm6=(41 51 61 71)
     movaps      xmm3, xmm4              ; transpose coefficients(phase 2)
-    unpcklps2   xmm4, xmm2              ; xmm4=(42 52 62 72)
-    unpckhps2   xmm3, xmm2              ; xmm3=(43 53 63 73)
+    UNPCKLPS2   xmm4, xmm2              ; xmm4=(42 52 62 72)
+    UNPCKHPS2   xmm3, xmm2              ; xmm3=(43 53 63 73)
 
     movaps      XMMWORD [XMMBLOCK(0,1,edi,SIZEOF_FAST_FLOAT)], xmm5
     movaps      XMMWORD [XMMBLOCK(1,1,edi,SIZEOF_FAST_FLOAT)], xmm6
@@ -372,7 +372,7 @@ EXTN(jsimd_idct_float_sse):
     mov         edi, JSAMPARRAY [output_buf(eax)]  ; (JSAMPROW *)
     mov         eax, JDIMENSION [output_col(eax)]
     mov         ecx, DCTSIZE/4                     ; ctr
-    alignx      16, 7
+    ALIGNX      16, 7
 .rowloop:
 
     ; -- Even part
@@ -536,7 +536,7 @@ EXTN(jsimd_idct_float_sse):
     punpckldq   mm5, mm6                ; mm5=(20 21 22 23 24 25 26 27)
     punpckhdq   mm4, mm6                ; mm4=(30 31 32 33 34 35 36 37)
 
-    pushpic     ebx                     ; save GOT address
+    PUSHPIC     ebx                     ; save GOT address
 
     mov         edx, JSAMPROW [edi+0*SIZEOF_JSAMPROW]
     mov         ebx, JSAMPROW [edi+1*SIZEOF_JSAMPROW]
@@ -547,7 +547,7 @@ EXTN(jsimd_idct_float_sse):
     movq        MMWORD [edx+eax*SIZEOF_JSAMPLE], mm5
     movq        MMWORD [ebx+eax*SIZEOF_JSAMPLE], mm4
 
-    poppic      ebx                     ; restore GOT address
+    POPPIC      ebx                     ; restore GOT address
 
     add         esi, byte 4*SIZEOF_FAST_FLOAT  ; wsptr
     add         edi, byte 4*SIZEOF_JSAMPROW
