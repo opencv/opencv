@@ -176,20 +176,26 @@ template <class T>
 void LSTMForward(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
                  cudnnRNNDataDescriptor_t xDesc, DevicePtr<const T> x,
                  cudnnRNNDataDescriptor_t yDesc, DevicePtr<T> y,
-                 cudnnTensorDescriptor_t hDesc, DevicePtr<const T> hx,
-                 DevicePtr<T> hy, cudnnTensorDescriptor_t cDesc,
-                 DevicePtr<const T> cx, DevicePtr<T> cy, size_t weightSpaceSize,
-                 DevicePtr<const T> weightSpace, WorkspaceInstance workspace,
-                 size_t reserveSpaceSize, DevicePtr<T> reserveSpace) {
+                 cudnnTensorDescriptor_t hDesc, DevicePtr<const T> hx, DevicePtr<T> hy,
+                 cudnnTensorDescriptor_t cDesc, DevicePtr<const T> cx, DevicePtr<T> cy,
+                 size_t weightSpaceSize, DevicePtr<const T> weightSpace,
+                 size_t cudnn_WorkspaceSize, DevicePtr<T> cudnn_Workspace,
+                 size_t reserveSpaceSize, DevicePtr<T> reserveSpace)
+{
     CV_Assert(handle);
+
+    std::cout << "cudnn_WorkspaceSize: " << cudnn_WorkspaceSize << std::endl;
+    std::cout << "reserveSpaceSize: " << reserveSpaceSize << std::endl;
 
     CUDA4DNN_CHECK_CUDNN(cudnnRNNForward(
         handle.get(), rnnDesc.get(), CUDNN_FWD_MODE_INFERENCE,
         nullptr, // docs say use this as null on >= 8.9.1
-        xDesc, x.get(), yDesc, y.get(), hDesc, hx.get(), hy.get(), cDesc,
-        cx.get(), cy.get(), weightSpaceSize, weightSpace.get(),
-        workspace.size_in_bytes(), workspace.get().get(), reserveSpaceSize,
-        reserveSpace.get()));
+        xDesc, x.get(), yDesc, y.get(),
+        hDesc, hx.get(), hy.get(),
+        cDesc, cx.get(), cy.get(),
+        weightSpaceSize, weightSpace.get(),
+        cudnn_WorkspaceSize, cudnn_Workspace.get(),
+        reserveSpaceSize, reserveSpace.get()));
 }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */

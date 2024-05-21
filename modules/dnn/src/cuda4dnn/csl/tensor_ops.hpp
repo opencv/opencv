@@ -556,23 +556,30 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
             // Get amount of work space required to execute the RNN described by rnnDesc
             // with input dimensions defined by inputDesc
-            csl::WorkspaceBuilder builder;
-            size_t workSpaceSize;
             CUDA4DNN_CHECK_CUDNN(cudnnGetRNNTempSpaceSizes(
                                     cudnnHandle.get(), rnnDesc.get(), CUDNN_FWD_MODE_INFERENCE,
                                     xDesc, &workSpaceSize, &reserveSpaceSize));
 
-            builder.require(workSpaceSize);
+            std::cout << "workSpaceSize from cudnn: " << workSpaceSize << std::endl;
+            std::cout << "reserveSpaceSize from cudnn: " << reserveSpaceSize << std::endl;
+            csl::WorkspaceBuilder builder;
+            builder.require<T>(workSpaceSize);
+            builder.require<T>(reserveSpaceSize);
             scratch_mem_in_bytes = builder.required_workspace_size();
+            std::cout << "scratch_mem_in_bytes: " << scratch_mem_in_bytes << std::endl;
         }
 
         LSTM& operator=(const LSTM&) = delete;
         LSTM& operator=(LSTM&&) = default;
 
         void inference(TensorView<T> input, TensorSpan<T> y_output, TensorSpan<T> yc_output, TensorView<T> filters,
-                       TensorView<T> h0, TensorView<T> c0, WorkspaceInstance workspace)
+                       TensorView<T> h0, TensorView<T> c0, csl::Workspace& workspace)
         {
             size_t weightSpaceSize = sizeof(typename TensorView<T>::value_type) * filters.size();
+
+            auto ws_allocator = csl::WorkspaceAllocator(workspace);
+            auto workspaceData = ws_allocator.get_span<T>(workSpaceSize);
+            auto reserveSpaceData = ws_allocator.get_span<T>(reserveSpaceSize);
 
             cudnn::LSTMForward<T>(cudnnHandle, rnnDesc, xDesc, input.get(), cyDesc,
                                   y_output.get(), h0TensorDesc.get(), h0.get(),
@@ -582,9 +589,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                                   yc_output.get(),       // maps to cy
                                   weightSpaceSize,
                                   filters.get(),          // maps to weightSpace
-                                  workspace,              // workSpaceSize and workSpace
+                                  workSpaceSize,
+                                  workspaceData.data(),   // workSpaceSize and workSpace
                                   reserveSpaceSize,       // reserveSpaceSize
-                                  DevicePtr<T>(nullptr)); // reserveSpace
+                                  reserveSpaceData.data()
+                                 );
         }
 
         std::size_t get_workspace_memory_in_bytes() const noexcept { return scratch_mem_in_bytes; }
@@ -597,7 +606,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         RNNDescriptor rnnDesc;
         DropoutDescriptor dropoutDesc;
 
-        size_t weightSpaceSize, reserveSpaceSize;
+        size_t weightSpaceSize, workSpaceSize, reserveSpaceSize;
 
         TensorDescriptor h0TensorDesc, c0TensorDesc;
 
