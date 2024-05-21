@@ -2038,9 +2038,6 @@ void ONNXImporter::parseConv(LayerParams& layerParams, const opencv_onnx::NodePr
             layerParams.blobs.push_back(getBlob(node_proto, j));
         }
     }
-    bool b = layerParams.blobs.empty();
-    auto idx = node_proto.input(1);
-    Mat xx = layerParams.blobs[0];
     int outCn = layerParams.blobs.empty() ? outShapes[node_proto.input(1)][0] : layerParams.blobs[0].size[0];
     layerParams.set("num_output", outCn);
 
