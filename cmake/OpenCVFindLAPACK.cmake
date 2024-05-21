@@ -106,11 +106,26 @@ macro(ocv_lapack_check)
       list(APPEND __link_directories ${LAPACK_LINK_LIBRARIES})
     endif()
 
+    set(LAPACK_TRY_COMPILE_DEF "")
+    if(LAPACK_IMPL STREQUAL "LAPACK/Apple" AND NOT IOS) # https://github.com/opencv/opencv/issues/24660
+      # Get macOS version
+      execute_process(COMMAND sw_vers -productVersion
+                      OUTPUT_VARIABLE MACOS_VERSION
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+      # Enable Accelerate New LAPACK if macOS >= 13.3
+      if (MACOS_VERSION VERSION_GREATER "13.3" OR MACOS_VERSION VERSION_EQUAL "13.3")
+        set(LAPACK_TRY_COMPILE_DEF "-DACCELERATE_NEW_LAPACK")
+        add_compile_definitions(ACCELERATE_NEW_LAPACK)
+        add_compile_definitions(ACCELERATE_LAPACK_ILP64)
+      endif()
+    endif()
+
     try_compile(__VALID_LAPACK
         "${OpenCV_BINARY_DIR}"
         "${OpenCV_SOURCE_DIR}/cmake/checks/lapack_check.cpp"
         CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${LAPACK_INCLUDE_DIR}\;${CMAKE_BINARY_DIR}"
                     "-DLINK_DIRECTORIES:STRING=${__link_directories}"
+        COMPILE_DEFINITIONS ${LAPACK_TRY_COMPILE_DEF}
         LINK_LIBRARIES ${LAPACK_LIBRARIES}
         OUTPUT_VARIABLE TRY_OUT
     )
