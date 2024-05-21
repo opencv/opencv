@@ -615,11 +615,12 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         // variable to hold processed version of the original input
         MatShape input_dims = shape(input);
-
-        if (inputSubscriptIndices.empty()){
+        if (input_dims.empty()){
             homogenizedInputDims.emplace_back(MatShape(numLetterIndices, 1));
+            ++inputIter;
             continue;
         }
+
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
         // There should be subscript index (subscript label) for each dim of the input
@@ -877,8 +878,10 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
     if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",") ) {
         return;
     }
-    CV_CheckEQ(static_cast<int>(lhs_eq_tokens.size()), num_input_tensors,
-        "Number of input tensors does not match the number of subscripts in the input equation");
+    // if we have only one token and two inputs lets skip the check
+    if (lhs_eq_tokens.size() > 1)
+        CV_CheckEQ(static_cast<int>(lhs_eq_tokens.size()), num_input_tensors,
+            "Number of input tensors does not match the number of subscripts in the input equation");
 
     int inputIdx = 0;
     for (const auto& token : lhs_eq_tokens)
@@ -1370,7 +1373,9 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         }
 
         output = Mat(M, N, reshapedInput1.type());
-        if (shape(reshapedInput1).empty() && shape(reshapedInput2).empty())
+        if ((shape(reshapedInput1).empty() && shape(reshapedInput2).empty())  ||
+            (shape(reshapedInput1).empty() && !shape(reshapedInput2).empty()) ||
+            (!shape(reshapedInput1).empty() && shape(reshapedInput2).empty()))
         {
             output = reshapedInput1.mul(reshapedInput2); // fastGemm does not support 0D * 0D multiplication
         } else {
