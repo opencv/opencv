@@ -83,11 +83,17 @@ class CV_EXPORTS FramebufferBackend: public UIBackend
   int fbLineLength;
   long int fbScreenSize;
   unsigned char* fbPointer;
+  unsigned int fbPointer_dist;
   Mat backgroundBuff;
 
   
   int fbOpenAndGetInfo();
   int fbID;
+
+  unsigned int xvfb_len_header;
+  unsigned int xvfb_len_colors;
+  unsigned int xvfb_len_pixmap;
+  int XvfbOpenAndGetInfo();
   
 public:
 

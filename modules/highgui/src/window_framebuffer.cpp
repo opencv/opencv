@@ -21,6 +21,7 @@
 
 #include "opencv2/imgproc.hpp"
 
+#include "XWDFile.h"
 
 namespace cv { namespace highgui_backend {
   
@@ -68,7 +69,7 @@ namespace cv { namespace highgui_backend {
 
   void FramebufferWindow::imshow(InputArray image)
   {
-    currentImg = image.getMat();
+    currentImg = image.getMat().clone();
     
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::imshow(InputArray image)");
     CV_LOG_INFO(NULL, "UI: InputArray image: "
@@ -79,7 +80,7 @@ namespace cv { namespace highgui_backend {
       return;
     }
 
-    Mat img(image.getMat());
+    Mat img(image.getMat().clone());
     switch(img.channels()){
       case 1:
         switch(img.type())
@@ -350,6 +351,94 @@ namespace cv { namespace highgui_backend {
       return -1;
     }
 
+    fbWidth        = varInfo.xres;
+    fbHeight       = varInfo.yres;
+    fbXOffset      = varInfo.yoffset;
+    fbYOffset      = varInfo.xoffset;
+    fbBitsPerPixel = varInfo.bits_per_pixel;
+    fbLineLength   = fixInfo.line_length;
+
+    // MAP FB TO MEMORY
+    fbScreenSize = max((__u32)fbWidth , varInfo.xres_virtual) * 
+                   max((__u32)fbHeight, varInfo.yres_virtual) * 
+                   fbBitsPerPixel / 8;
+                 
+    fbPointer = (unsigned char*)
+      mmap(0, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, 
+        fbID, 0);
+        
+    if (fbPointer == MAP_FAILED) {
+      CV_LOG_ERROR(NULL, "UI: can't mmap framebuffer");
+      return -1;
+    }
+
+    return fb_fd;
+  }
+  
+  int FramebufferBackend::XvfbOpenAndGetInfo()
+  {
+    std::string fbFileName = getFBFileName();
+    CV_LOG_INFO(NULL, "UI: FramebufferWindow::The following is used as a framebuffer file: \n" << fbFileName);
+    
+    int fb_fd = open(fbFileName.c_str(), O_RDWR);
+    if (fb_fd == -1)
+    {
+      CV_LOG_ERROR(NULL, "UI: can't open framebuffer");
+      return -1;
+    }
+
+    XWDFileHeader *xwd_header;
+    
+    xwd_header = (XWDFileHeader*) mmap(NULL, sizeof(XWDFileHeader), PROT_READ, MAP_SHARED, fb_fd, 0);
+
+    if (xwd_header == MAP_FAILED) {
+      CV_LOG_ERROR(NULL, "UI: can't mmap xwd header");
+      return -1;
+    }
+    
+    if( C32INT(&(xwd_header->pixmap_format)) != ZPixmap ){
+      CV_LOG_ERROR(NULL, "Unsupported pixmap format: " << xwd_header->pixmap_format);
+      return -1;
+    }
+
+    if( xwd_header->xoffset != 0 ){
+      CV_LOG_ERROR(NULL, "UI: Unsupported xoffset value: " << xwd_header->xoffset );
+      return -1;
+    }
+    
+    unsigned int r = C32INT(&(xwd_header->  red_mask));
+    unsigned int g = C32INT(&(xwd_header->green_mask));
+    unsigned int b = C32INT(&(xwd_header-> blue_mask));
+
+    fbWidth        = C32INT(&(xwd_header->pixmap_width));
+    fbHeight       = C32INT(&(xwd_header->pixmap_height));
+    fbXOffset      = 0;
+    fbYOffset      = 0;
+    fbLineLength   = C32INT(&(xwd_header->bytes_per_line));
+    fbBitsPerPixel = C32INT(&(xwd_header->bits_per_pixel));
+    
+    CV_LOG_INFO(NULL, "UI: XVFB info: \n" 
+      << "   red_mask " << r << "\n"
+      << " green_mask " << g << "\n"
+      << "  blue_mask " << b << "\n"
+      << "bits_per_pixel " << fbBitsPerPixel);
+    
+    if((r != 16711680 ) && (g != 65280 ) && (b != 255 ) && 
+       (fbBitsPerPixel != 32) ){
+      CV_LOG_ERROR(NULL, "UI: Framebuffer format is not supported (use BGRA format with bits_per_pixel = 32)");
+      return -1;
+    }
+
+    xvfb_len_header = C32INT(&(xwd_header->header_size));
+    xvfb_len_colors = sizeof(XWDColor) * C32INT(&(xwd_header->ncolors));
+    xvfb_len_pixmap = C32INT(&(xwd_header->bytes_per_line)) * C32INT(&(xwd_header->pixmap_height));
+    munmap(xwd_header, sizeof(XWDFileHeader));
+
+    fbScreenSize = xvfb_len_header + xvfb_len_colors + xvfb_len_pixmap;
+    xwd_header = (XWDFileHeader*) mmap(NULL, fbScreenSize,  PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
+    fbPointer = (unsigned char*)xwd_header ;
+    fbPointer_dist = xvfb_len_header + xvfb_len_colors;
+
     return fb_fd;
   }
 
@@ -391,7 +480,7 @@ namespace cv { namespace highgui_backend {
   }
   unsigned char* FramebufferBackend::getFBPointer()
   {
-    return fbPointer;
+    return fbPointer + fbPointer_dist;
   }
   Mat& FramebufferBackend::getBackgroundBuff()
   {
@@ -402,7 +491,7 @@ namespace cv { namespace highgui_backend {
     return mode;
   }
 
-  FramebufferBackend::FramebufferBackend():mode(FB_MODE_EMU)
+  FramebufferBackend::FramebufferBackend():mode(FB_MODE_EMU), fbPointer_dist(0)
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::FramebufferBackend()");
     
@@ -411,14 +500,17 @@ namespace cv { namespace highgui_backend {
     if(fbModeStr == "EMU")
     {
       mode = FB_MODE_EMU;
+      CV_LOG_WARNING(NULL, "UI: FramebufferWindow is trying to use EMU mode");
     }
     if(fbModeStr == "FB")
     {
       mode = FB_MODE_FB;
+      CV_LOG_WARNING(NULL, "UI: FramebufferWindow is trying to use FB mode");
     }
     if(fbModeStr == "XVFB")
     {
       mode = FB_MODE_XVFB;
+      CV_LOG_WARNING(NULL, "UI: FramebufferWindow is trying to use XVFB mode");
     }
 
     fbID = -1;
@@ -426,13 +518,17 @@ namespace cv { namespace highgui_backend {
     {
       fbID = fbOpenAndGetInfo();
     }
+    if(mode == FB_MODE_XVFB)
+    {
+      fbID = XvfbOpenAndGetInfo();
+    }
     
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::fbID " << fbID);
   
     if(fbID == -1){
       mode = FB_MODE_EMU;
-      fbWidth = 0;
-      fbHeight = 0;
+      fbWidth = 10;
+      fbHeight = 10;
       fbXOffset = 0;
       fbYOffset = 0;
       fbBitsPerPixel = 0;
@@ -442,12 +538,6 @@ namespace cv { namespace highgui_backend {
       return;
     }
     
-    fbWidth        = varInfo.xres;
-    fbHeight       = varInfo.yres;
-    fbXOffset      = varInfo.yoffset;
-    fbYOffset      = varInfo.xoffset;
-    fbBitsPerPixel = varInfo.bits_per_pixel;
-    fbLineLength   = fixInfo.line_length;
     
     CV_LOG_INFO(NULL, "UI: Framebuffer's width, height, bits per pix: " 
       << fbWidth << " " << fbHeight << " " << fbBitsPerPixel);
@@ -455,25 +545,6 @@ namespace cv { namespace highgui_backend {
     CV_LOG_INFO(NULL, "UI: Framebuffer's offsets (x, y), line length: " 
       << fbXOffset << " " << fbYOffset << " " << fbLineLength);
     
-    // MAP FB TO MEMORY
-    fbScreenSize = max((__u32)fbWidth , varInfo.xres_virtual) * 
-                   max((__u32)fbHeight, varInfo.yres_virtual) * 
-                   fbBitsPerPixel / 8;
-                 
-    fbPointer = (unsigned char*)
-      mmap(0, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, 
-        fbID, 0);
-        
-    if (fbPointer == MAP_FAILED) {
-      CV_LOG_ERROR(NULL, "UI: can't mmap framebuffer");
-      return;
-    }
-
-    if(fbBitsPerPixel != 32) {
-      CV_LOG_WARNING(NULL, "UI: Framebuffer with bits per pixel = " 
-        << fbBitsPerPixel << " is not supported" );
-      return;
-    }
 
     backgroundBuff = Mat(fbHeight, fbWidth, CV_8UC4);
     int cnt_channel = 4;
@@ -500,6 +571,7 @@ namespace cv { namespace highgui_backend {
                   backgroundBuff.cols * cnt_channel);
     }
 
+    
     if (fbPointer != MAP_FAILED) {
       munmap(fbPointer, fbScreenSize);
     }
