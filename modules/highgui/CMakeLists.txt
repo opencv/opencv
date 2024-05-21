@@ -44,6 +44,8 @@ if(WITH_FRAMEBUFFER)
   add_definitions(-DHAVE_FRAMEBUFFER)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.cpp)
   list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.hpp)
+  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/XWDFile.h)
+  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/Xmd.h)
 endif()
 
 
