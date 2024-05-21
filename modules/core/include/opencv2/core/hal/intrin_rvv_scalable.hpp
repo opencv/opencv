@@ -1536,7 +1536,7 @@ inline void v_zip(const v_float64& a0, const v_float64& a1, v_float64& b0, v_flo
         vor(vzext_vf2(idx0, VTraits<v_float64>::vlanes()), \
             vreinterpret_u32mf2(vslide1up(vreinterpret_u16mf2(vzext_vf2(idx1, VTraits<v_float64>::vlanes())), 0, VTraits<v_uint32>::vlanes())), \
             VTraits<v_uint32>::vlanes())));
-#if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>11999
+#if 0
     vfloat64m2_t temp = __riscv_vcreate_v_f64m1_f64m2(a0, a1);
 #else // TODO: clean up when RVV Intrinsic is frozen.
     vfloat64m2_t temp = vlmul_ext_f64m2(a0);
