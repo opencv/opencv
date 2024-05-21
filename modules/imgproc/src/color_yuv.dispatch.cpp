@@ -115,6 +115,9 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// 4:2:0, two planes in one array: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int dst_width, int dst_height,
@@ -129,6 +132,9 @@ void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
             dst_width, dst_height, dcn, swapBlue, uIdx);
 }
 
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int dst_width, int dst_height,
@@ -139,6 +145,9 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src
     cvtTwoPlaneYUVtoBGR(y_data, src_step, uv_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
 }
 
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
                          uchar * dst_data, size_t dst_step,
                          int dst_width, int dst_height,
@@ -153,6 +162,9 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_d
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                            uchar * dst_data, size_t dst_step,
                            int dst_width, int dst_height,
@@ -166,6 +178,9 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
                            uchar * dst_data, size_t dst_step,
                            int width, int height,
@@ -179,6 +194,9 @@ void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
                          uchar * y_data, uchar * uv_data, size_t dst_step,
                          int width, int height,
@@ -193,6 +211,9 @@ void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// 4:2:2 interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int width, int height,
@@ -206,6 +227,9 @@ void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// 4:2:2 interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 14-bit fixed-point arithmetics is used
 void cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int width, int height,
