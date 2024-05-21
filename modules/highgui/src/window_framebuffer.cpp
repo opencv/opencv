@@ -128,13 +128,6 @@ namespace cv { namespace highgui_backend {
         windowRect.height = imgSize.height;
       }
       break;
-//      case WINDOW_FULLSCREEN:
-//        windowRect.width = backend.getFBWidth();
-//        windowRect.height = backend.getFBHeight();
-//        newWidth = windowRect.width;
-//        newHeight = windowRect.height;
-//        cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
-//      break;
       case WINDOW_NORMAL: // WINDOW_KEEPRATIO
       {
         double aspect_ratio = ((double)img.cols) / img.rows;
@@ -165,12 +158,6 @@ namespace cv { namespace highgui_backend {
 
     if (backend.getFBPointer() == MAP_FAILED) {
       CV_LOG_ERROR(NULL, "UI: Framebuffer is not mapped");
-      return;
-    }
-
-    if(backend.getFBBitsPerPixel() != 32) {
-      CV_LOG_ERROR(NULL, "UI: Framebuffer with bits per pixel = " 
-        << backend.getFBBitsPerPixel() << " is not supported" );
       return;
     }
         
@@ -214,6 +201,7 @@ namespace cv { namespace highgui_backend {
 
     return 0.0;
   }
+
   bool FramebufferWindow::setProperty(int prop, double value) 
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::setProperty(int prop " 
@@ -308,7 +296,7 @@ namespace cv { namespace highgui_backend {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::destroy()");
   }
 
-// !!##FramebufferBackend
+//FramebufferBackend
 
   int FramebufferBackend::fbOpenAndGetInfo()
   {
@@ -446,46 +434,57 @@ namespace cv { namespace highgui_backend {
   {
       return varInfo;
   }
+
   fb_fix_screeninfo &FramebufferBackend::getFixInfo()
   {
     return fixInfo;
   }
+
   int FramebufferBackend::getFramebuffrerID()
   {
     return fbID;
   }
+
   int FramebufferBackend::getFBWidth()
   {
     return fbWidth;
   }
+
   int FramebufferBackend::getFBHeight()
   {
     return fbHeight;
   }
+
   int FramebufferBackend::getFBXOffset()
   {
     return fbXOffset;
   }
+
   int FramebufferBackend::getFBYOffset()
   {
     return fbYOffset;
   }
+
   int FramebufferBackend::getFBBitsPerPixel()
   {
     return fbBitsPerPixel;
   }
+
   int FramebufferBackend::getFBLineLength()
   {
     return fbLineLength;
   }
+
   unsigned char* FramebufferBackend::getFBPointer()
   {
     return fbPointer + fbPointer_dist;
   }
+
   Mat& FramebufferBackend::getBackgroundBuff()
   {
     return backgroundBuff;
   }
+
   OpenCVFBMode FramebufferBackend::getMode()
   {
     return mode;
@@ -576,7 +575,6 @@ namespace cv { namespace highgui_backend {
       munmap(fbPointer, fbScreenSize);
     }
     close(fbID);
-
   }
 
   void FramebufferBackend::destroyAllWindows() {
@@ -622,6 +620,7 @@ namespace cv { namespace highgui_backend {
     resetTermios();
     return ch;
   }
+  
   bool FramebufferBackend::kbhit()
   {
     int byteswaiting=0;
@@ -653,7 +652,9 @@ namespace cv { namespace highgui_backend {
           << (int)ch << " (additional code on <stdin>)");
         code = ch;
       }
-    } else {
+    } 
+    else 
+    {
       bool f_kbhit = false;
       while(!(f_kbhit = kbhit()) && (delay > 0))
       {
@@ -706,7 +707,6 @@ namespace cv { namespace highgui_backend {
     
     return code;
   }
-
 
 }
 }
