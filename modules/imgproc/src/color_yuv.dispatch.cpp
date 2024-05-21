@@ -403,6 +403,9 @@ void cvtColorYUV2BGR(InputArray _src, OutputArray _dst, int dcn, bool swapb, boo
                      h.depth, dcn, swapb, crcb);
 }
 
+// 4:2:2 interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx, int ycn)
 {
     CvtHelper< Set<2>, Set<3, 4>, Set<CV_8U>, FROM_UYVY > h(_src, _dst, dcn);
@@ -411,6 +414,9 @@ void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool s
                              dcn, swapb, uidx, ycn);
 }
 
+// 4:2:2 interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 14-bit fixed-point arithmetics is used
 void cvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, bool swapb, int uidx, int ycn)
 {
     CvtHelper< Set<3, 4>, Set<2>, Set<CV_8U>, TO_UYVY > h(_src, _dst, 2);
@@ -426,6 +432,9 @@ void cvtColorYUV2Gray_ch( InputArray _src, OutputArray _dst, int coi )
     extractChannel(_src, _dst, coi);
 }
 
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, bool swapb, int uidx)
 {
     CvtHelper< Set<3, 4>, Set<1>, Set<CV_8U>, TO_YUV > h(_src, _dst, 1);
@@ -448,6 +457,9 @@ void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
     h.src(Range(0, h.dstSz.height), Range::all()).copyTo(h.dst);
 }
 
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx)
 {
     if(dcn <= 0) dcn = 3;
@@ -457,9 +469,10 @@ void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool
                                dcn, swapb, uidx);
 }
 
-// http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
-// http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
-
+// 4:2:0, two planes in one array: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+// see also: http://www.fourcc.org/yuv.php#NV21, http://www.fourcc.org/yuv.php#NV12
 void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx )
 {
     if(dcn <= 0) dcn = 3;
@@ -469,6 +482,9 @@ void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool s
                              dcn, swapb, uidx);
 }
 
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int dcn, bool swapb, int uidx )
 {
     int stype = _ysrc.type();
