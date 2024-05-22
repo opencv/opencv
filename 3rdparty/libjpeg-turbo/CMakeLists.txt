@@ -1,5 +1,13 @@
 project(${JPEG_LIBRARY} C)
 
+macro(boolean_number var)
+  if(${var})
+    set(${var} 1 ${ARGN})
+  else()
+    set(${var} 0 ${ARGN})
+  endif()
+endmacro()
+
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-64-to-32 -Wimplicit-fallthrough)
 
 set(VERSION 3.0.3)
@@ -124,6 +132,8 @@ set(JPEG_LIB_VERSION 62)
 set(JPEG_LIB_VERSION "${VERSION}-${JPEG_LIB_VERSION}" PARENT_SCOPE)
 
 set(THREAD_LOCAL "")  # WITH_TURBOJPEG is not used
+
+add_definitions(-DNO_GETENV -DNO_PUTENV)
 
 if(MSVC)
   add_definitions(-W3 -wd4996 -wd4018)
