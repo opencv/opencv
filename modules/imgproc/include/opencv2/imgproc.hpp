@@ -641,112 +641,150 @@ enum ColorConversionCodes {
     COLOR_YUV2BGR      = 84,
     COLOR_YUV2RGB      = 85,
 
-    //! YUV 4:2:0 family to RGB
-    COLOR_YUV2RGB_NV12  = 90,
-    COLOR_YUV2BGR_NV12  = 91,
-    COLOR_YUV2RGB_NV21  = 92,
-    COLOR_YUV2BGR_NV21  = 93,
-    COLOR_YUV420sp2RGB  = COLOR_YUV2RGB_NV21,
-    COLOR_YUV420sp2BGR  = COLOR_YUV2BGR_NV21,
+    COLOR_YUV2RGB_NV12  = 90, //!< convert between YUV NV12 and RGB, YUV is 4:2:0 (U and V are 2x2 subsampled), two planes (in one or separate arrays):
+                              //!< Y [16, 235], U/V interleaved [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGR_NV12  = 91, //!< convert between YUV NV12 and BGR, YUV is 4:2:0 (U and V are 2x2 subsampled), two planes (in one or separate arrays):
+                              //!< Y [16, 235], U/V interleaved [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGB_NV21  = 92, //!< convert between YUV NV21 and RGB, YUV is 4:2:0 (U and V are 2x2 subsampled), two planes (in one or separate arrays):
+                              //!< Y [16, 235], V/U interleaved [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGR_NV21  = 93, //!< convert between YUV NV21 and BGR, YUV is 4:2:0 (U and V are 2x2 subsampled), two planes (in one or separate arrays):
+                              //!< Y [16, 235], V/U interleaved [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV420sp2RGB  = COLOR_YUV2RGB_NV21, //!< synonym to NV21
+    COLOR_YUV420sp2BGR  = COLOR_YUV2BGR_NV21, //!< synonym to NV21
 
-    COLOR_YUV2RGBA_NV12 = 94,
-    COLOR_YUV2BGRA_NV12 = 95,
-    COLOR_YUV2RGBA_NV21 = 96,
-    COLOR_YUV2BGRA_NV21 = 97,
-    COLOR_YUV420sp2RGBA = COLOR_YUV2RGBA_NV21,
-    COLOR_YUV420sp2BGRA = COLOR_YUV2BGRA_NV21,
+    COLOR_YUV2RGBA_NV12 = 94, //!< convert between YUV NV12 and RGBA, YUV is 4:2:0 (U and V are 2x2 subsampled), two planes (in one or separate arrays):
+                              //!< Y [16, 235], U/V interleaved [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGRA_NV12 = 95, //!< convert between YUV NV12 and BGRA, YUV is 4:2:0 (U and V are 2x2 subsampled), two planes (in one or separate arrays):
+                              //!< Y [16, 235], U/V interleaved [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGBA_NV21 = 96, //!< convert between YUV NV21 and RGBA, YUV is 4:2:0 (U and V are 2x2 subsampled), two planes (in one or separate arrays):
+                              //!< Y [16, 235], V/U interleaved [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGRA_NV21 = 97, //!< convert between YUV NV21 and BGRA, YUV is 4:2:0 (U and V are 2x2 subsampled), two planes (in one or separate arrays):
+                              //!< Y [16, 235], V/U interleaved [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV420sp2RGBA = COLOR_YUV2RGBA_NV21, //!< synonym to NV21
+    COLOR_YUV420sp2BGRA = COLOR_YUV2BGRA_NV21, //!< synonym to NV21
 
-    COLOR_YUV2RGB_YV12  = 98,
-    COLOR_YUV2BGR_YV12  = 99,
-    COLOR_YUV2RGB_IYUV  = 100,
-    COLOR_YUV2BGR_IYUV  = 101,
-    COLOR_YUV2RGB_I420  = COLOR_YUV2RGB_IYUV,
-    COLOR_YUV2BGR_I420  = COLOR_YUV2BGR_IYUV,
-    COLOR_YUV420p2RGB   = COLOR_YUV2RGB_YV12,
-    COLOR_YUV420p2BGR   = COLOR_YUV2BGR_YV12,
+    COLOR_YUV2RGB_YV12  =  98, //!< convert between YUV YV12 and RGB, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], V and U [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGR_YV12  =  99, //!< convert between YUV YV12 and BGR, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], V and U [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGB_IYUV  = 100, //!< convert between YUV IYUV and RGB, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGR_IYUV  = 101, //!< convert between YUV IYUV and BGR, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGB_I420  = COLOR_YUV2RGB_IYUV, //!< synonym to IYUV
+    COLOR_YUV2BGR_I420  = COLOR_YUV2BGR_IYUV, //!< synonym to IYUV
+    COLOR_YUV420p2RGB   = COLOR_YUV2RGB_YV12, //!< synonym to YV12
+    COLOR_YUV420p2BGR   = COLOR_YUV2BGR_YV12, //!< synonym to YV12
 
-    COLOR_YUV2RGBA_YV12 = 102,
-    COLOR_YUV2BGRA_YV12 = 103,
-    COLOR_YUV2RGBA_IYUV = 104,
-    COLOR_YUV2BGRA_IYUV = 105,
-    COLOR_YUV2RGBA_I420 = COLOR_YUV2RGBA_IYUV,
-    COLOR_YUV2BGRA_I420 = COLOR_YUV2BGRA_IYUV,
-    COLOR_YUV420p2RGBA  = COLOR_YUV2RGBA_YV12,
-    COLOR_YUV420p2BGRA  = COLOR_YUV2BGRA_YV12,
+    COLOR_YUV2RGBA_YV12 = 102, //!< convert between YUV YV12 and RGBA, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], V and U [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGRA_YV12 = 103, //!< convert between YUV YV12 and BGRA, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], V and U [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGBA_IYUV = 104, //!< convert between YUV YV12 and RGBA, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGRA_IYUV = 105, //!< convert between YUV YV12 and BGRA, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGBA_I420 = COLOR_YUV2RGBA_IYUV, //!< synonym to IYUV
+    COLOR_YUV2BGRA_I420 = COLOR_YUV2BGRA_IYUV, //!< synonym to IYUV
+    COLOR_YUV420p2RGBA  = COLOR_YUV2RGBA_YV12, //!< synonym to YV12
+    COLOR_YUV420p2BGRA  = COLOR_YUV2BGRA_YV12, //!< synonym to YV12
 
-    COLOR_YUV2GRAY_420  = 106,
-    COLOR_YUV2GRAY_NV21 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_NV12 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_YV12 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_IYUV = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_I420 = COLOR_YUV2GRAY_420,
-    COLOR_YUV420sp2GRAY = COLOR_YUV2GRAY_420,
-    COLOR_YUV420p2GRAY  = COLOR_YUV2GRAY_420,
+    COLOR_YUV2GRAY_420  = 106, //!< extract Y channel from YUV 4:2:0 image
+    COLOR_YUV2GRAY_NV21 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_NV12 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_YV12 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_IYUV = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_I420 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV420sp2GRAY = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV420p2GRAY  = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
 
-    //! YUV 4:2:2 family to RGB
-    COLOR_YUV2RGB_UYVY = 107,
-    COLOR_YUV2BGR_UYVY = 108,
-    //COLOR_YUV2RGB_VYUY = 109,
-    //COLOR_YUV2BGR_VYUY = 110,
-    COLOR_YUV2RGB_Y422 = COLOR_YUV2RGB_UYVY,
-    COLOR_YUV2BGR_Y422 = COLOR_YUV2BGR_UYVY,
-    COLOR_YUV2RGB_UYNV = COLOR_YUV2RGB_UYVY,
-    COLOR_YUV2BGR_UYNV = COLOR_YUV2BGR_UYVY,
+    COLOR_YUV2RGB_UYVY = 107, //!< convert between YUV UYVY and RGB, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as U/Y1/V/Y2:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGR_UYVY = 108, //!< convert between YUV UYVY and BGR, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as U/Y1/V/Y2:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    //COLOR_YUV2RGB_VYUY = 109, //!< convert between YUV VYUY and RGB, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as V/Y1/U/Y2:
+                                //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    //COLOR_YUV2BGR_VYUY = 110, //!< convert between YUV VYUY and BGR, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as V/Y1/U/Y2:
+                                //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGB_Y422 = COLOR_YUV2RGB_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGR_Y422 = COLOR_YUV2BGR_UYVY, //!< synonym to UYVY
+    COLOR_YUV2RGB_UYNV = COLOR_YUV2RGB_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGR_UYNV = COLOR_YUV2BGR_UYVY, //!< synonym to UYVY
 
-    COLOR_YUV2RGBA_UYVY = 111,
-    COLOR_YUV2BGRA_UYVY = 112,
-    //COLOR_YUV2RGBA_VYUY = 113,
-    //COLOR_YUV2BGRA_VYUY = 114,
-    COLOR_YUV2RGBA_Y422 = COLOR_YUV2RGBA_UYVY,
-    COLOR_YUV2BGRA_Y422 = COLOR_YUV2BGRA_UYVY,
-    COLOR_YUV2RGBA_UYNV = COLOR_YUV2RGBA_UYVY,
-    COLOR_YUV2BGRA_UYNV = COLOR_YUV2BGRA_UYVY,
+    COLOR_YUV2RGBA_UYVY = 111, //!< convert between YUV UYVY and RGBA, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as U/Y1/V/Y2:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGRA_UYVY = 112, //!< convert between YUV UYVY and BGRA, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as U/Y1/V/Y2:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    //COLOR_YUV2RGBA_VYUY = 113, //!< convert between YUV VYUY and RGBA, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as V/Y1/U/Y2:
+                                 //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    //COLOR_YUV2BGRA_VYUY = 114, //!< convert between YUV VYUY and BGRA, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as V/Y1/U/Y2:
+                                 //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGBA_Y422 = COLOR_YUV2RGBA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGRA_Y422 = COLOR_YUV2BGRA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2RGBA_UYNV = COLOR_YUV2RGBA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGRA_UYNV = COLOR_YUV2BGRA_UYVY, //!< synonym to UYVY
 
-    COLOR_YUV2RGB_YUY2 = 115,
-    COLOR_YUV2BGR_YUY2 = 116,
-    COLOR_YUV2RGB_YVYU = 117,
-    COLOR_YUV2BGR_YVYU = 118,
-    COLOR_YUV2RGB_YUYV = COLOR_YUV2RGB_YUY2,
-    COLOR_YUV2BGR_YUYV = COLOR_YUV2BGR_YUY2,
-    COLOR_YUV2RGB_YUNV = COLOR_YUV2RGB_YUY2,
-    COLOR_YUV2BGR_YUNV = COLOR_YUV2BGR_YUY2,
+    COLOR_YUV2RGB_YUY2 = 115, //!< convert between YUV YUY2 and RGB, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/U/Y2/V:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGR_YUY2 = 116, //!< convert between YUV YUY2 and BGR, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/U/Y2/V:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGB_YVYU = 117, //!< convert between YUV YVYU and RGB, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/V/Y2/U:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGR_YVYU = 118, //!< convert between YUV YVYU and BGR, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/V/Y2/U:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGB_YUYV = COLOR_YUV2RGB_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGR_YUYV = COLOR_YUV2BGR_YUY2, //!< synonym to YUY2
+    COLOR_YUV2RGB_YUNV = COLOR_YUV2RGB_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGR_YUNV = COLOR_YUV2BGR_YUY2, //!< synonym to YUY2
 
-    COLOR_YUV2RGBA_YUY2 = 119,
-    COLOR_YUV2BGRA_YUY2 = 120,
-    COLOR_YUV2RGBA_YVYU = 121,
-    COLOR_YUV2BGRA_YVYU = 122,
-    COLOR_YUV2RGBA_YUYV = COLOR_YUV2RGBA_YUY2,
-    COLOR_YUV2BGRA_YUYV = COLOR_YUV2BGRA_YUY2,
-    COLOR_YUV2RGBA_YUNV = COLOR_YUV2RGBA_YUY2,
-    COLOR_YUV2BGRA_YUNV = COLOR_YUV2BGRA_YUY2,
+    COLOR_YUV2RGBA_YUY2 = 119, //!< convert between YUV YUY2 and RGBA, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/U/Y2/V:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGRA_YUY2 = 120, //!< convert between YUV YUY2 and BGRA, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/U/Y2/V:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGBA_YVYU = 121, //!< convert between YUV YVYU and RGBA, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/V/Y2/U:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2BGRA_YVYU = 122, //!< convert between YUV YVYU and BGRA, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/V/Y2/U:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_YUV2RGBA_YUYV = COLOR_YUV2RGBA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGRA_YUYV = COLOR_YUV2BGRA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2RGBA_YUNV = COLOR_YUV2RGBA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGRA_YUNV = COLOR_YUV2BGRA_YUY2, //!< synonym to YUY2
 
-    COLOR_YUV2GRAY_UYVY = 123,
-    COLOR_YUV2GRAY_YUY2 = 124,
-    //CV_YUV2GRAY_VYUY    = CV_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_Y422 = COLOR_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_UYNV = COLOR_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_YVYU = COLOR_YUV2GRAY_YUY2,
-    COLOR_YUV2GRAY_YUYV = COLOR_YUV2GRAY_YUY2,
-    COLOR_YUV2GRAY_YUNV = COLOR_YUV2GRAY_YUY2,
+    COLOR_YUV2GRAY_UYVY = 123, //!< extract channel from YUV 4:2:2 image
+    COLOR_YUV2GRAY_YUY2 = 124, //!< extract channel from YUV 4:2:2 image
+    //CV_YUV2GRAY_VYUY  = CV_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    COLOR_YUV2GRAY_Y422 = COLOR_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    COLOR_YUV2GRAY_UYNV = COLOR_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    COLOR_YUV2GRAY_YVYU = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
+    COLOR_YUV2GRAY_YUYV = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
+    COLOR_YUV2GRAY_YUNV = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
 
     //! alpha premultiplication
     COLOR_RGBA2mRGBA    = 125,
     COLOR_mRGBA2RGBA    = 126,
 
-    //! RGB to YUV 4:2:0 family
-    COLOR_RGB2YUV_I420  = 127,
-    COLOR_BGR2YUV_I420  = 128,
-    COLOR_RGB2YUV_IYUV  = COLOR_RGB2YUV_I420,
-    COLOR_BGR2YUV_IYUV  = COLOR_BGR2YUV_I420,
+    COLOR_RGB2YUV_I420  = 127, //!< convert between RGB and YUV I420, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_BGR2YUV_I420  = 128, //!< convert between BGR and YUV I420, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_RGB2YUV_IYUV  = COLOR_RGB2YUV_I420, //!< synonym to I420
+    COLOR_BGR2YUV_IYUV  = COLOR_BGR2YUV_I420, //!< synonym to I420
 
-    COLOR_RGBA2YUV_I420 = 129,
-    COLOR_BGRA2YUV_I420 = 130,
-    COLOR_RGBA2YUV_IYUV = COLOR_RGBA2YUV_I420,
-    COLOR_BGRA2YUV_IYUV = COLOR_BGRA2YUV_I420,
-    COLOR_RGB2YUV_YV12  = 131,
-    COLOR_BGR2YUV_YV12  = 132,
-    COLOR_RGBA2YUV_YV12 = 133,
-    COLOR_BGRA2YUV_YV12 = 134,
+
+    COLOR_RGBA2YUV_I420 = 129, //!< convert between RGBA and YUV I420, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_BGRA2YUV_I420 = 130, //!< convert between BGRA and YUV I420, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_RGBA2YUV_IYUV = COLOR_RGBA2YUV_I420, //!< synonym to I420
+    COLOR_BGRA2YUV_IYUV = COLOR_BGRA2YUV_I420, //!< synonym to I420
+    COLOR_RGB2YUV_YV12  = 131, //!< convert between RGB and YUV YV12, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], V and U [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_BGR2YUV_YV12  = 132, //!< convert between BGR and YUV YV12, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], V and U [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_RGBA2YUV_YV12 = 133, //!< convert between RGBA and YUV YV12, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], V and U [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
+    COLOR_BGRA2YUV_YV12 = 134, //!< convert between BGRA and YUV YV12, YUV is 4:2:0 (U and V are 2x2 subsampled), three planes in one array:
+                               //!< Y [16, 235], V and U [16, 240], 8 bit only, calculations are done in 20-bit fixed-point arithmetics
 
     //! Demosaicing, see @ref color_convert_bayer "color conversions" for additional information
     COLOR_BayerBG2BGR = 46, //!< equivalent to RGGB Bayer pattern
@@ -842,39 +880,49 @@ enum ColorConversionCodes {
     COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA, //!< equivalent to BGGR Bayer pattern
     COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA, //!< equivalent to GBRG Bayer pattern
 
-    //! RGB to YUV 4:2:2 family
+    COLOR_RGB2YUV_UYVY = 143, //!< convert between RGB and YUV UYVU, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as U/Y1/V/Y2:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_BGR2YUV_UYVY = 144, //!< convert between BGR and YUV UYVU, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as U/Y1/V/Y2:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_RGB2YUV_Y422 = COLOR_RGB2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGR2YUV_Y422 = COLOR_BGR2YUV_UYVY, //!< synonym to UYVY
+    COLOR_RGB2YUV_UYNV = COLOR_RGB2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGR2YUV_UYNV = COLOR_BGR2YUV_UYVY, //!< synonym to UYVY
 
-    COLOR_RGB2YUV_UYVY = 143,
-    COLOR_BGR2YUV_UYVY = 144,
-    COLOR_RGB2YUV_Y422 = COLOR_RGB2YUV_UYVY,
-    COLOR_BGR2YUV_Y422 = COLOR_BGR2YUV_UYVY,
-    COLOR_RGB2YUV_UYNV = COLOR_RGB2YUV_UYVY,
-    COLOR_BGR2YUV_UYNV = COLOR_BGR2YUV_UYVY,
+    COLOR_RGBA2YUV_UYVY = 145, //!< convert between RGBA and YUV UYVU, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as U/Y1/V/Y2:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_BGRA2YUV_UYVY = 146, //!< convert between BGRA and YUV UYVU, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as U/Y1/V/Y2:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_RGBA2YUV_Y422 = COLOR_RGBA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGRA2YUV_Y422 = COLOR_BGRA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_RGBA2YUV_UYNV = COLOR_RGBA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGRA2YUV_UYNV = COLOR_BGRA2YUV_UYVY, //!< synonym to UYVY
 
-    COLOR_RGBA2YUV_UYVY = 145,
-    COLOR_BGRA2YUV_UYVY = 146,
-    COLOR_RGBA2YUV_Y422 = COLOR_RGBA2YUV_UYVY,
-    COLOR_BGRA2YUV_Y422 = COLOR_BGRA2YUV_UYVY,
-    COLOR_RGBA2YUV_UYNV = COLOR_RGBA2YUV_UYVY,
-    COLOR_BGRA2YUV_UYNV = COLOR_BGRA2YUV_UYVY,
+    COLOR_RGB2YUV_YUY2 = 147, //!< convert between RGB and YUV YUY2, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/U/Y2/V:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_BGR2YUV_YUY2 = 148, //!< convert between BGR and YUV YUY2, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/U/Y2/V:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_RGB2YUV_YVYU = 149, //!< convert between RGB and YUV YVYU, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/V/Y2/U:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_BGR2YUV_YVYU = 150, //!< convert between BGR and YUV YVYU, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/V/Y2/U:
+                              //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_RGB2YUV_YUYV = COLOR_RGB2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGR2YUV_YUYV = COLOR_BGR2YUV_YUY2, //!< synonym to YUY2
+    COLOR_RGB2YUV_YUNV = COLOR_RGB2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGR2YUV_YUNV = COLOR_BGR2YUV_YUY2, //!< synonym to YUY2
 
-    COLOR_RGB2YUV_YUY2 = 147,
-    COLOR_BGR2YUV_YUY2 = 148,
-    COLOR_RGB2YUV_YVYU = 149,
-    COLOR_BGR2YUV_YVYU = 150,
-    COLOR_RGB2YUV_YUYV = COLOR_RGB2YUV_YUY2,
-    COLOR_BGR2YUV_YUYV = COLOR_BGR2YUV_YUY2,
-    COLOR_RGB2YUV_YUNV = COLOR_RGB2YUV_YUY2,
-    COLOR_BGR2YUV_YUNV = COLOR_BGR2YUV_YUY2,
-
-    COLOR_RGBA2YUV_YUY2 = 151,
-    COLOR_BGRA2YUV_YUY2 = 152,
-    COLOR_RGBA2YUV_YVYU = 153,
-    COLOR_BGRA2YUV_YVYU = 154,
-    COLOR_RGBA2YUV_YUYV = COLOR_RGBA2YUV_YUY2,
-    COLOR_BGRA2YUV_YUYV = COLOR_BGRA2YUV_YUY2,
-    COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2,
-    COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2,
+    COLOR_RGBA2YUV_YUY2 = 151, //!< convert between RGBA and YUV YUY2, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/U/Y2/V:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_BGRA2YUV_YUY2 = 152, //!< convert between BGRA and YUV YUY2, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/U/Y2/V:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_RGBA2YUV_YVYU = 153, //!< convert between RGBA and YUV YVYU, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/V/Y2/U:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_BGRA2YUV_YVYU = 154, //!< convert between BGRA and YUV YVYU, YUV is 4:2:2 (U and V are 2x1 horizontally subsampled) interleaved as Y1/V/Y2/U:
+                               //!< Y [16, 235], U and V [16, 240], 8 bit only, calculations are done in 14-bit fixed-point arithmetics
+    COLOR_RGBA2YUV_YUYV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGRA2YUV_YUYV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
 
     COLOR_COLORCVT_MAX  = 155
 };
