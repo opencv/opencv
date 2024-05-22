@@ -139,10 +139,6 @@ if(MSVC)
   add_definitions(-W3 -wd4996 -wd4018)
 endif()
 
-configure_file(jversion.h.in jversion.h)
-configure_file(jconfig.h.in jconfig.h)
-configure_file(jconfigint.h.in jconfigint.h)
-
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(JPEG16_SOURCES jcapistd.c jccolor.c jcdiffct.c jclossls.c jcmainct.c
@@ -215,6 +211,10 @@ if(WITH_SIMD)
   endif()
   set(SIMD_TARGET_OBJECTS $<TARGET_OBJECTS:simd>)
 endif()
+
+configure_file(jversion.h.in jversion.h)
+configure_file(jconfig.h.in jconfig.h)
+configure_file(jconfigint.h.in jconfigint.h)
 
 ocv_list_add_prefix(JPEG16_SOURCES src/)
 ocv_list_add_prefix(JPEG12_SOURCES src/)
