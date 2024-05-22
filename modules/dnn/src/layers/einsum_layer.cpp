@@ -498,7 +498,7 @@ public:
             } else {
                 // Check if there is a pre-processed version of this input
                 // If so assign it to result
-                if (!preProcessedInputs[0].empty())
+                if (!preProcessedInputs.empty() && !preProcessedInputs[0].empty())
                 {
                     result = preProcessedInputs[0];
                 }
@@ -541,7 +541,7 @@ public:
                 // Use either the preprocessed inputs (if it is available) or the corresponding raw inputs
                 result = pairwiseOperandProcess(!result.empty() ? result : rawInputs[0],
                                                 !result.empty() ? tmpResult : homogenizedInputDims[0],
-                                                !preProcessedInputs[input].empty() ? preProcessedInputs[input] : rawInputs[input],
+                                                (!preProcessedInputs.empty() && !preProcessedInputs[input].empty()) ? preProcessedInputs[input] : rawInputs[input],
                                                 homogenizedInputDims[input],
                                                 reducedDims,
                                                 isFinalPair);
