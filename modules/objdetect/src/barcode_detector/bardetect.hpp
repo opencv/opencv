@@ -24,9 +24,9 @@ private:
 
 
 public:
-    void init(const Mat &src);
+    void init(const Mat &src, double detectorThreshDownSamplingLimit);
 
-    void localization();
+    void localization(const vector<float>& detectorWindowSizes, double detectorGradientMagnitudeThresh);
 
     vector<vector<Point2f>> getTransformationPoints()
     { return transformation_points; }
@@ -44,7 +44,7 @@ protected:
     int height, width;
     Mat resized_barcode, gradient_magnitude, coherence, orientation, edge_nums, integral_x_sq, integral_y_sq, integral_xy, integral_edges;
 
-    void preprocess();
+    void preprocess(double detectorThreshGradientMagnitude);
 
     void calCoherence(int window_size);
 

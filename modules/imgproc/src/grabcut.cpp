@@ -389,14 +389,14 @@ static void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM 
         int num_clusters = GMM::componentsCount;
         num_clusters = std::min(num_clusters, (int)bgdSamples.size());
         kmeans( _bgdSamples, num_clusters, bgdLabels,
-                TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+                TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
     }
     {
         Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_32FC1, &fgdSamples[0][0] );
         int num_clusters = GMM::componentsCount;
         num_clusters = std::min(num_clusters, (int)fgdSamples.size());
         kmeans( _fgdSamples, num_clusters, fgdLabels,
-                TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+                TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
     }
 
     bgdGMM.initLearning();

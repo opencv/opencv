@@ -299,7 +299,7 @@ DEF_CVT_SCALE_FUNC(16f,    cvt1_32f, hfloat, hfloat, float)
 
 BinaryFunc getCvtScaleAbsFunc(int depth)
 {
-    static BinaryFunc cvtScaleAbsTab[] =
+    static BinaryFunc cvtScaleAbsTab[CV_DEPTH_MAX] =
     {
         (BinaryFunc)cvtScaleAbs8u, (BinaryFunc)cvtScaleAbs8s8u, (BinaryFunc)cvtScaleAbs16u8u,
         (BinaryFunc)cvtScaleAbs16s8u, (BinaryFunc)cvtScaleAbs32s8u, (BinaryFunc)cvtScaleAbs32f8u,
@@ -311,7 +311,7 @@ BinaryFunc getCvtScaleAbsFunc(int depth)
 
 BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
 {
-    static BinaryFunc cvtScaleTab[][8] =
+    static BinaryFunc cvtScaleTab[CV_DEPTH_MAX][CV_DEPTH_MAX] =
     {
         {
             (BinaryFunc)GET_OPTIMIZED(cvtScale8u), (BinaryFunc)GET_OPTIMIZED(cvtScale8s8u), (BinaryFunc)GET_OPTIMIZED(cvtScale16u8u),

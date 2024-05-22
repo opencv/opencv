@@ -372,7 +372,7 @@ DEF_CPY_FUNC(64s,    int64)
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth)
 {
-    static BinaryFunc cvtTab[][8] =
+    static BinaryFunc cvtTab[CV_DEPTH_MAX][CV_DEPTH_MAX] =
     {
         {
             (cvt8u), (cvt8s8u), (cvt16u8u),
