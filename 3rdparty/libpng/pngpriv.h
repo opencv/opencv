@@ -1,7 +1,7 @@
 
 /* pngpriv.h - private declarations for use inside libpng
  *
- * Copyright (c) 2018-2019 Cosmin Truta
+ * Copyright (c) 2018-2024 Cosmin Truta
  * Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson
  * Copyright (c) 1996-1997 Andreas Dilger
  * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
@@ -36,7 +36,7 @@
  * still required (as of 2011-05-02.)
  */
 #ifndef _POSIX_SOURCE
-# define _POSIX_SOURCE 1 /* Just the POSIX 1003.1 and C89 APIs */
+#  define _POSIX_SOURCE 1 /* Just the POSIX 1003.1 and C89 APIs */
 #endif
 
 #ifndef PNG_VERSION_INFO_ONLY
@@ -174,7 +174,7 @@
 #     else /* !defined __ARM_NEON__ */
          /* The 'intrinsics' code simply won't compile without this -mfpu=neon:
           */
-#        if !defined(__aarch64__)
+#        if !defined(__aarch64__) && !defined(_M_ARM64)
             /* The assembler code currently does not work on ARM64 */
 #          define PNG_ARM_NEON_IMPLEMENTATION 2
 #        endif /* __aarch64__ */
@@ -185,13 +185,29 @@
       /* Use the intrinsics code by default. */
 #     define PNG_ARM_NEON_IMPLEMENTATION 1
 #  endif
+#else /* PNG_ARM_NEON_OPT == 0 */
+#     define PNG_ARM_NEON_IMPLEMENTATION 0
 #endif /* PNG_ARM_NEON_OPT > 0 */
 
 #ifndef PNG_MIPS_MSA_OPT
-#  if defined(__mips_msa) && (__mips_isa_rev >= 5) && defined(PNG_ALIGNED_MEMORY_SUPPORTED)
+#  if defined(__mips_msa) && (__mips_isa_rev >= 5) && \
+   defined(PNG_ALIGNED_MEMORY_SUPPORTED)
 #     define PNG_MIPS_MSA_OPT 2
 #  else
 #     define PNG_MIPS_MSA_OPT 0
+#  endif
+#endif
+
+#ifndef PNG_MIPS_MMI_OPT
+#  ifdef PNG_MIPS_MMI
+#    if defined(__mips_loongson_mmi) && (_MIPS_SIM == _ABI64) && \
+     defined(PNG_ALIGNED_MEMORY_SUPPORTED)
+#       define PNG_MIPS_MMI_OPT 1
+#    else
+#       define PNG_MIPS_MMI_OPT 0
+#    endif
+#  else
+#    define PNG_MIPS_MMI_OPT 0
 #  endif
 #endif
 
@@ -203,13 +219,21 @@
 #  endif
 #endif
 
+#ifndef PNG_LOONGARCH_LSX_OPT
+#  if defined(__loongarch_sx)
+#     define PNG_LOONGARCH_LSX_OPT 1
+#  else
+#     define PNG_LOONGARCH_LSX_OPT 0
+#  endif
+#endif
+
 #ifndef PNG_INTEL_SSE_OPT
 #   ifdef PNG_INTEL_SSE
       /* Only check for SSE if the build configuration has been modified to
        * enable SSE optimizations.  This means that these optimizations will
        * be off by default.  See contrib/intel for more details.
        */
-#     if defined(__SSE4_1__) || defined(__AVX__) || defined(__SSSE3__) || \
+#      if defined(__SSE4_1__) || defined(__AVX__) || defined(__SSSE3__) || \
        defined(__SSE2__) || defined(_M_X64) || defined(_M_AMD64) || \
        (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
 #         define PNG_INTEL_SSE_OPT 1
@@ -246,7 +270,6 @@
 #endif
 
 #if PNG_MIPS_MSA_OPT > 0
-#  define PNG_FILTER_OPTIMIZATIONS png_init_filter_functions_msa
 #  ifndef PNG_MIPS_MSA_IMPLEMENTATION
 #     if defined(__mips_msa)
 #        if defined(__clang__)
@@ -262,14 +285,41 @@
 
 #  ifndef PNG_MIPS_MSA_IMPLEMENTATION
 #     define PNG_MIPS_MSA_IMPLEMENTATION 1
+#     define PNG_FILTER_OPTIMIZATIONS png_init_filter_functions_mips
 #  endif
+#else
+#  define PNG_MIPS_MSA_IMPLEMENTATION 0
 #endif /* PNG_MIPS_MSA_OPT > 0 */
+
+#if PNG_MIPS_MMI_OPT > 0
+#  ifndef PNG_MIPS_MMI_IMPLEMENTATION
+#     if defined(__mips_loongson_mmi) && (_MIPS_SIM == _ABI64)
+#        define PNG_MIPS_MMI_IMPLEMENTATION 2
+#     else /* !defined __mips_loongson_mmi  || _MIPS_SIM != _ABI64 */
+#        define PNG_MIPS_MMI_IMPLEMENTATION 0
+#     endif /* __mips_loongson_mmi  && _MIPS_SIM == _ABI64 */
+#  endif /* !PNG_MIPS_MMI_IMPLEMENTATION */
+
+#   if PNG_MIPS_MMI_IMPLEMENTATION > 0
+#      define PNG_FILTER_OPTIMIZATIONS png_init_filter_functions_mips
+#   endif
+#else
+#   define PNG_MIPS_MMI_IMPLEMENTATION 0
+#endif /* PNG_MIPS_MMI_OPT > 0 */
 
 #if PNG_POWERPC_VSX_OPT > 0
 #  define PNG_FILTER_OPTIMIZATIONS png_init_filter_functions_vsx
 #  define PNG_POWERPC_VSX_IMPLEMENTATION 1
+#else
+#  define PNG_POWERPC_VSX_IMPLEMENTATION 0
 #endif
 
+#if PNG_LOONGARCH_LSX_OPT > 0
+#   define PNG_FILTER_OPTIMIZATIONS png_init_filter_functions_lsx
+#   define PNG_LOONGARCH_LSX_IMPLEMENTATION 1
+#else
+#   define PNG_LOONGARCH_LSX_IMPLEMENTATION 0
+#endif
 
 /* Is this a build of a DLL where compilation of the object modules requires
  * different preprocessor settings to those required for a simple library?  If
@@ -492,16 +542,7 @@
    static_cast<type>(static_cast<const void*>(value))
 #else
 #  define png_voidcast(type, value) (value)
-#  ifdef _WIN64
-#     ifdef __GNUC__
-         typedef unsigned long long png_ptruint;
-#     else
-         typedef unsigned __int64 png_ptruint;
-#     endif
-#  else
-      typedef unsigned long png_ptruint;
-#  endif
-#  define png_constcast(type, value) ((type)(png_ptruint)(const void*)(value))
+#  define png_constcast(type, value) ((type)(void*)(const void*)(value))
 #  define png_aligncast(type, value) ((void*)(value))
 #  define png_aligncastconst(type, value) ((const void*)(value))
 #endif /* __cplusplus */
@@ -517,18 +558,8 @@
     */
 #  include <float.h>
 
-#  if (defined(__MWERKS__) && defined(macintosh)) || defined(applec) || \
-    defined(THINK_C) || defined(__SC__) || defined(TARGET_OS_MAC)
-   /* We need to check that <math.h> hasn't already been included earlier
-    * as it seems it doesn't agree with <fp.h>, yet we should really use
-    * <fp.h> if possible.
-    */
-#    if !defined(__MATH_H__) && !defined(__MATH_H) && !defined(__cmath__)
-#      include <fp.h>
-#    endif
-#  else
-#    include <math.h>
-#  endif
+#  include <math.h>
+
 #  if defined(_AMIGA) && defined(__SASC) && defined(_M68881)
    /* Amiga SAS/C: We must include builtin FPU functions when compiling using
     * MATH=68881
@@ -543,9 +574,8 @@
 #  include <alloc.h>
 #endif
 
-#if defined(WIN32) || defined(_Windows) || defined(_WINDOWS) || \
-    defined(_WIN32) || defined(__WIN32__)
-#  include <windows.h>  /* defines _WINDOWS_ macro */
+#if defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#  include <windows.h>
 #endif
 #endif /* PNG_VERSION_INFO_ONLY */
 
@@ -554,24 +584,20 @@
  * functions that are passed far data must be model-independent.
  */
 
-/* Memory model/platform independent fns */
+/* Platform-independent functions */
 #ifndef PNG_ABORT
-#  ifdef _WINDOWS_
-#    define PNG_ABORT() ExitProcess(0)
-#  else
-#    define PNG_ABORT() abort()
-#  endif
+#  define PNG_ABORT() abort()
 #endif
 
 /* These macros may need to be architecture dependent. */
-#define PNG_ALIGN_NONE   0 /* do not use data alignment */
-#define PNG_ALIGN_ALWAYS 1 /* assume unaligned accesses are OK */
+#define PNG_ALIGN_NONE      0 /* do not use data alignment */
+#define PNG_ALIGN_ALWAYS    1 /* assume unaligned accesses are OK */
 #ifdef offsetof
-#  define PNG_ALIGN_OFFSET 2 /* use offsetof to determine alignment */
+#  define PNG_ALIGN_OFFSET  2 /* use offsetof to determine alignment */
 #else
 #  define PNG_ALIGN_OFFSET -1 /* prevent the use of this */
 #endif
-#define PNG_ALIGN_SIZE   3 /* use sizeof to determine alignment */
+#define PNG_ALIGN_SIZE      3 /* use sizeof to determine alignment */
 
 #ifndef PNG_ALIGN_TYPE
    /* Default to using aligned access optimizations and requiring alignment to a
@@ -585,26 +611,25 @@
    /* This is used because in some compiler implementations non-aligned
     * structure members are supported, so the offsetof approach below fails.
     * Set PNG_ALIGN_SIZE=0 for compiler combinations where unaligned access
-    * is good for performance.  Do not do this unless you have tested the result
-    * and understand it.
+    * is good for performance.  Do not do this unless you have tested the
+    * result and understand it.
     */
-#  define png_alignof(type) (sizeof (type))
+#  define png_alignof(type) (sizeof(type))
 #else
 #  if PNG_ALIGN_TYPE == PNG_ALIGN_OFFSET
-#     define png_alignof(type) offsetof(struct{char c; type t;}, t)
+#    define png_alignof(type) offsetof(struct{char c; type t;}, t)
 #  else
-#     if PNG_ALIGN_TYPE == PNG_ALIGN_ALWAYS
-#        define png_alignof(type) (1)
-#     endif
-      /* Else leave png_alignof undefined to prevent use thereof */
+#    if PNG_ALIGN_TYPE == PNG_ALIGN_ALWAYS
+#      define png_alignof(type) 1
+#    endif
+     /* Else leave png_alignof undefined to prevent use thereof */
 #  endif
 #endif
 
-/* This implicitly assumes alignment is always to a power of 2. */
+/* This implicitly assumes alignment is always a multiple of 2. */
 #ifdef png_alignof
-#  define png_isaligned(ptr, type)\
-   (((type)((const char*)ptr-(const char*)0) & \
-   (type)(png_alignof(type)-1)) == 0)
+#  define png_isaligned(ptr, type) \
+   (((type)(size_t)((const void*)(ptr)) & (type)(png_alignof(type)-1)) == 0)
 #else
 #  define png_isaligned(ptr, type) 0
 #endif
@@ -635,7 +660,7 @@
 #define PNG_BACKGROUND_IS_GRAY     0x800U
 #define PNG_HAVE_PNG_SIGNATURE    0x1000U
 #define PNG_HAVE_CHUNK_AFTER_IDAT 0x2000U /* Have another chunk after IDAT */
-                   /*             0x4000U (unused) */
+#define PNG_WROTE_eXIf            0x4000U
 #define PNG_IS_READ_STRUCT        0x8000U /* Else is a write struct */
 
 /* Flags for the transformations the PNG library does on the image data */
@@ -1315,7 +1340,7 @@ PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_neon,(png_row_infop
     row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
 #endif
 
-#if PNG_MIPS_MSA_OPT > 0
+#if PNG_MIPS_MSA_IMPLEMENTATION == 1
 PNG_INTERNAL_FUNCTION(void,png_read_filter_row_up_msa,(png_row_infop row_info,
     png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
 PNG_INTERNAL_FUNCTION(void,png_read_filter_row_sub3_msa,(png_row_infop
@@ -1329,6 +1354,23 @@ PNG_INTERNAL_FUNCTION(void,png_read_filter_row_avg4_msa,(png_row_infop
 PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth3_msa,(png_row_infop
     row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
 PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_msa,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+#endif
+
+#if PNG_MIPS_MMI_IMPLEMENTATION > 0
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_up_mmi,(png_row_infop row_info,
+    png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_sub3_mmi,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_sub4_mmi,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_avg3_mmi,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_avg4_mmi,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth3_mmi,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_mmi,(png_row_infop
     row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
 #endif
 
@@ -1361,6 +1403,23 @@ PNG_INTERNAL_FUNCTION(void,png_read_filter_row_avg4_sse2,(png_row_infop
 PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth3_sse2,(png_row_infop
     row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
 PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_sse2,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+#endif
+
+#if PNG_LOONGARCH_LSX_IMPLEMENTATION == 1
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_up_lsx,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_sub3_lsx,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_sub4_lsx,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_avg3_lsx,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_avg4_lsx,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth3_lsx,(png_row_infop
+    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_lsx,(png_row_infop
     row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
 #endif
 
@@ -1919,7 +1978,7 @@ PNG_INTERNAL_FUNCTION(void,png_ascii_from_fixed,(png_const_structrp png_ptr,
  */
 #define PNG_FP_INVALID  512  /* Available for callers as a distinct value */
 
-/* Result codes for the parser (boolean - true meants ok, false means
+/* Result codes for the parser (boolean - true means ok, false means
  * not ok yet.)
  */
 #define PNG_FP_MAYBE      0  /* The number may be valid in the future */
@@ -1955,7 +2014,7 @@ PNG_INTERNAL_FUNCTION(void,png_ascii_from_fixed,(png_const_structrp png_ptr,
  * the problem character.)  This has not been tested within libpng.
  */
 PNG_INTERNAL_FUNCTION(int,png_check_fp_number,(png_const_charp string,
-   size_t size, int *statep, png_size_tp whereami),PNG_EMPTY);
+   size_t size, int *statep, size_t *whereami),PNG_EMPTY);
 
 /* This is the same but it checks a complete string and returns true
  * only if it just contains a floating point number.  As of 1.5.4 this
@@ -2103,15 +2162,25 @@ PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_neon,
    (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
 #endif
 
-#if PNG_MIPS_MSA_OPT > 0
-PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_msa,
+#if PNG_MIPS_MSA_IMPLEMENTATION == 1
+PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_mips,
    (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
 #endif
+
+#  if PNG_MIPS_MMI_IMPLEMENTATION > 0
+PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_mips,
+   (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
+#  endif
 
 #  if PNG_INTEL_SSE_IMPLEMENTATION > 0
 PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_sse2,
    (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
 #  endif
+#endif
+
+#if PNG_LOONGARCH_LSX_OPT > 0
+PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_lsx,
+    (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
 #endif
 
 PNG_INTERNAL_FUNCTION(png_uint_32, png_check_keyword, (png_structrp png_ptr,
