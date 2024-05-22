@@ -30,7 +30,12 @@ jobs:
           node-version: '18'
       - name: Run build-wrapper
         run: |
+          rm -rf build
+          mkdir build
+          cd build
+          cmake ..
           cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
+          cd ..
       - name: Run sonar-scanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
