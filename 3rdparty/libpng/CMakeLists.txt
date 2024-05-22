@@ -30,14 +30,13 @@ file(GLOB lib_hdrs *.h)
 # to check CMAKE_OSX_ARCHITECTURES to identify which hardware-specific flags to
 # enable. Note that this will fail if you attempt to build a universal binary in
 # a single CMake invocation.
-if (APPLE AND CMAKE_OSX_ARCHITECTURES)
+if(APPLE AND CMAKE_OSX_ARCHITECTURES)
   set(TARGET_ARCH ${CMAKE_OSX_ARCHITECTURES})
 else()
   set(TARGET_ARCH ${CMAKE_SYSTEM_PROCESSOR})
 endif()
 
-OCV_OPTION(PNG_HARDWARE_OPTIMIZATIONS "Enable Hardware Optimizations, if available for this platform" (NOT CV_DISABLE_OPTIMIZATION)
-  VISIBLE_IF BUILD_PNG)
+OCV_OPTION(PNG_HARDWARE_OPTIMIZATIONS "Enable Hardware Optimizations, if available for this platform" (NOT CV_DISABLE_OPTIMIZATION))
 
 if(PNG_HARDWARE_OPTIMIZATIONS)
 
