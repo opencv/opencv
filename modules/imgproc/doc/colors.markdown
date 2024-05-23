@@ -53,7 +53,7 @@ Y, Cr, and Cb cover the whole value range.
 @anchor color_convert_rgb_yuv_42x
 RGB <-> YUV with subsampling
 ------------------------------
-Both RGB and YUV values are 8-bit only.
+Only 8-bit values are supported.
 The coefficients correspond to BT.601 standard with resulting values Y [16, 235], U and V [16, 240] centered at 128.
 
 Two subsampling schemes are supported: 4:2:0 (Fourcc codes NV12, NV21, YV12, I420 and synonimic)
@@ -65,7 +65,7 @@ of a source image.
 In 4:2:0 scheme U and V values are averaged over 2x2 squares, i.e. only 1 U and 1 V value is saved per each 4 pixels.
 U and V values are saved interleaved into a separate plane (NV12, NV21) or into two separate semi-planes (YV12, I420).
 
-In 4:2:2 scheme U and V values are averaged horizontally over each pair of pixels, i.e. only 1 U and 1 v value is saved
+In 4:2:2 scheme U and V values are averaged horizontally over each pair of pixels, i.e. only 1 U and 1 V value is saved
 per each 2 pixels. U and V values are saved interleaved with Y values for both pixels according to its Fourcc code.
 
 Note that different conversions are perfomed with different precision for speed or compatibility purposes. For example,
