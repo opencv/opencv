@@ -378,7 +378,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
                openvx_LUT(src, dst, lut))
 
     CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,
-             lut.elemSize1(), lutcn, dst.data, dst.step, src.rows, src.cols);
+             lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
 
 #if !IPP_DISABLE_PERF_LUT
     CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
