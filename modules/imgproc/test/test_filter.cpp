@@ -772,9 +772,8 @@ void CV_BlurTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_BlurTest::run_func()
 {
-    cvSmooth( inplace ? test_array[OUTPUT][0] : test_array[INPUT][0],
-              test_array[OUTPUT][0], normalize ? CV_BLUR : CV_BLUR_NO_SCALE,
-              aperture_size.width, aperture_size.height );
+    cv::boxFilter(inplace ? test_mat[OUTPUT][0] : test_mat[INPUT][0], test_mat[OUTPUT][0],
+                  -1, aperture_size, cv::Point(-1, -1), normalize, cv::BORDER_REPLICATE);
 }
 
 
