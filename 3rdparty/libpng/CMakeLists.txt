@@ -3,11 +3,7 @@
 #
 # ----------------------------------------------------------------------------
 
-if(ENABLE_NEON)
-  project(${PNG_LIBRARY} C ASM)
-else()
-  project(${PNG_LIBRARY} C)
-endif()
+project(${PNG_LIBRARY} C)
 
 if(UNIX AND NOT APPLE AND NOT BEOS AND NOT HAIKU AND NOT EMSCRIPTEN)
   find_library(M_LIBRARY m)
@@ -59,6 +55,7 @@ if(TARGET_ARCH MATCHES "^(ARM|arm|aarch)")
   elseif(NOT PNG_ARM_NEON STREQUAL "off")
     list(APPEND lib_srcs arm/arm_init.c arm/filter_neon_intrinsics.c arm/palette_neon_intrinsics.c)
     if(NOT MSVC)
+      enable_language(ASM)
       list(APPEND lib_srcs arm/filter_neon.S)
     endif()
     if(PNG_ARM_NEON STREQUAL "on")
