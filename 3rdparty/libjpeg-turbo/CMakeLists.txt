@@ -195,6 +195,8 @@ check_type_size("size_t" SIZE_T)
 check_type_size("unsigned long" UNSIGNED_LONG)
 
 if(ENABLE_LIBJPEG_TURBO_SIMD)
+  # force use C++ intrinsics for OpenCV build
+  set(NEON_INTRINSICS 1)
   add_subdirectory(src/simd)
   if(NEON_INTRINSICS)
     add_definitions(-DNEON_INTRINSICS)
