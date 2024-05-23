@@ -8,7 +8,7 @@ macro(boolean_number var)
   endif()
 endmacro()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-64-to-32 -Wimplicit-fallthrough)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-64-to-32 -Wimplicit-fallthrough -Wunused-variable)
 
 set(VERSION 3.0.3)
 set(COPYRIGHT_YEAR "1991-2024")
@@ -223,8 +223,6 @@ ocv_list_add_prefix(JPEG12_SOURCES src/)
 ocv_list_add_prefix(JPEG_SOURCES src/)
 
 set(JPEG_SOURCES ${JPEG_SOURCES} ${SIMD_OBJS})
-
-#add_library(${JPEG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${JPEG_SOURCES} $<TARGET_OBJECTS:simd> ${SIMD_OBJS})
 
 add_library(jpeg12-static OBJECT ${JPEG12_SOURCES})
 set_property(TARGET jpeg12-static PROPERTY COMPILE_FLAGS
