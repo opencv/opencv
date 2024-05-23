@@ -50,6 +50,37 @@ where
 Y, Cr, and Cb cover the whole value range.
 @see cv::COLOR_BGR2YCrCb, cv::COLOR_RGB2YCrCb, cv::COLOR_YCrCb2BGR, cv::COLOR_YCrCb2RGB
 
+@anchor color_convert_rgb_yuv_42x
+RGB <-> YUV with subsampling
+------------------------------
+Both RGB and YUV values are 8-bit only.
+The coefficients correspond to BT.601 standard with resulting values Y [16, 235], U and V [16, 240] centered at 128.
+
+Two subsampling schemes are supported: 4:2:0 (Fourcc codes NV12, NV21, YV12, I420 and synonimic)
+and 4:2:2 (Fourcc codes UYVY, YUY2, YVYU and synonimic).
+
+In both subsampling schemes Y values are written for each pixel so that Y plane is in fact a scaled and biased gray version
+of a source image.
+
+In 4:2:0 scheme U and V values are averaged over 2x2 squares, i.e. only 1 U and 1 V value is saved per each 4 pixels.
+U and V values are saved interleaved into a separate plane (NV12, NV21) or into two separate semi-planes (YV12, I420).
+
+In 4:2:2 scheme U and V values are averaged horizontally over each pair of pixels, i.e. only 1 U and 1 v value is saved
+per each 2 pixels. U and V values are saved interleaved with Y values for both pixels according to its Fourcc code.
+
+Note that different conversions are perfomed with different precision for speed or compatibility purposes. For example,
+RGB to YUV 4:2:2 is converted using 14-bit fixed-point arithmetics while other conversions use 20 bits.
+
+\f[R \leftarrow 1.164 \cdot (Y - 16) + 1.596 \cdot (V - 128)\f]
+\f[G \leftarrow 1.164 \cdot (Y - 16) - 0.813 \cdot (V - 128) - 0.391 \cdot (U - 128)\f]
+\f[B \leftarrow 1.164 \cdot (Y - 16) + 2.018 \cdot (U - 128)\f]
+
+\f[Y \leftarrow (R \cdot 0.299 + G \cdot 0.587 + B \cdot 0.114) \cdot \frac{235 - 16}{256} + 16 \f]
+\f[U \leftarrow -0.148 \cdot R_{avg} - 0.291 \cdot G_{avg} + 0.439 \cdot B_{avg} + 128 \f]
+\f[V \leftarrow  0.439 \cdot R_{avg} - 0.368 \cdot G_{avg} - 0.071 \cdot B_{avg} + 128 \f]
+
+@see cv::COLOR_YUV2RGB_NV12, cv::COLOR_YUV2RGBA_YUY2, cv::COLOR_BGR2YUV_YV12 and similar ones
+
 @anchor color_convert_rgb_hsv
 RGB <-> HSV
 -----------
