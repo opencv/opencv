@@ -8,7 +8,15 @@ macro(boolean_number var)
   endif()
 endmacro()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-64-to-32 -Wimplicit-fallthrough -Wunused-variable)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-64-to-32 -Wimplicit-fallthrough)
+if(APPLE)
+  ocv_warnings_disable(-Wunused-variable) # NEON flags are not used on Mac
+endif()
+
+if(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
+  # src/jchuff.c:1042:22: warning: writing 1 byte into a region of size 0 [-Wstringop-overflow=]
+  ocv_warnings_disable(-Wstringop-overflow)
+endif()
 
 set(VERSION 3.0.3)
 set(COPYRIGHT_YEAR "1991-2024")
