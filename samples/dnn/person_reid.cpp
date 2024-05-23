@@ -158,21 +158,68 @@ static void extractFeatures(vector<Mat> &imglist, Net *net, const int &resize_h,
             Mat img = imglist[st + delta];
             batch.push_back(preprocess(img));
         }
+        cout << "batch " << batch.size() << endl;
+
         Mat blob = blobFromImages(batch, 1.0, Size(resize_w, resize_h), Scalar(0.0,0.0,0.0), true, false, CV_32F);
         net->setInput(blob);
         Mat out = net->forward();
-        for (int i = 0; i < (int)out.size().height; i++)
+
+        cout << "dtype " << out.type() << out.size[1]  << endl;
+        for (int i = 0; i < out.size[0]; i++)
         {
             vector<float> temp_feature;
-            for (int j = 0; j < (int)out.size().width; j++)
+            for (int j = 0; j < out.size[1]; j++)
             {
-                temp_feature.push_back(out.at<float>(i,j));
+                int indices[] = {i, j, 0, 0};
+                float value = out.at<float>(indices);
+                // cout << "feat " << j << " " << value << endl;
+                temp_feature.push_back(value);
+                // exit(0);
             }
             features.push_back(normalization(temp_feature));
         }
+        cout << "features len  " << features.size() << endl;
     }
     return;
 }
+
+float calculateNorm(const std::vector<float>& vec, int order) {
+    float sum = 0.0f;
+    for (float v : vec) {
+        sum += std::pow(std::abs(v), order);
+    }
+    return std::pow(sum, 1.0f / order);
+}
+
+// Function to normalize a vector
+std::vector<float> normalize(const std::vector<float>& feature, int order = 2) {
+    float norm = calculateNorm(feature, order);
+    std::vector<float> normalized(feature.size());
+
+    for (size_t i = 0; i < feature.size(); ++i) {
+        normalized[i] = feature[i] / (norm + std::numeric_limits<float>::epsilon());
+    }
+
+    return normalized;
+}
+
+
+float matmul(const vector<float>& feature1, const vector<float>& feature2) {
+
+    cv::Mat array1 = cv::Mat(feature1).reshape(1, 1);
+
+    cv::Mat array2 = cv::Mat(feature2).reshape(1, 1);
+
+    cv::Mat array2_T;
+    cv::transpose(array2, array2_T);
+
+    cv::Mat dist = array1 * array2_T;
+
+    float result = dist.at<float>(0, 0);
+
+    return result;
+}
+
 
 static float similarity(const vector<float> &feature1, const vector<float> &feature2)
 {
@@ -180,7 +227,12 @@ static float similarity(const vector<float> &feature1, const vector<float> &feat
     for (int i = 0; i < (int)feature1.size(); i++)
     {
         result += feature1[i] * feature2[i];
+        // result += matmul(feature1, feature2);
     }
+
+    // std::vector<float> normalized_feature1 = normalize(feature1);
+    // std::vector<float> normalized_feature2 = normalize(feature2);
+    // float result = matmul(normalized_feature1, normalized_feature2);
     return result;
 }
 
@@ -194,14 +246,17 @@ static int getTopK(const vector<vector<float>> &queryFeatures, const vector<vect
 
     const vector<float> &query = queryFeatures[0];
 
+    cout << "galleryFeatures.size() " << galleryFeatures.size() << endl;
     for (int j = 0; j < (int)galleryFeatures.size(); j++)
-    {
+    {   cout << "value after normalization " << galleryFeatures[0][10] << endl;
         float currentSimilarity = similarity(query, galleryFeatures[j]);
+        cout << "top k " << j << " " << currentSimilarity << " " << maxSimilarity << endl;
         if (currentSimilarity > maxSimilarity)
         {
             maxSimilarity = currentSimilarity;
             bestIndex = j;
         }
+        cout << "top k 22222 " << j << " " << maxSimilarity << " " << bestIndex << endl;
     }
 
     return bestIndex;
@@ -263,7 +318,9 @@ static vector<Mat> yoloDetector(Mat &frame, Net &net)
 
     // Apply Non-Maximum Suppression
     vector<int> indexes;
-    NMSBoxes(boxes, scores, 0.25, 0.45, indexes, 0.5, 1);
+    // cout << "class_ids length" << class_ids.size() << endl;
+    NMSBoxes(boxes, scores, 0.25, 0.45, indexes, 0.5, 0);
+    // cout << "indexes length" << indexes.size() << endl;
 
     vector<Mat> images;
     for (int index : indexes) {
@@ -358,16 +415,31 @@ void extractFrames(const string& queryImgPath, const string& videoPath, Net* rei
     }
 
     Mat frame;
+    int c = 0;
     for(;;) {
         if (!cap.read(frame) || frame.empty()) {
             break;
         }
         vector<Mat> detectedImages = yoloDetector(frame, net);
+        cout << "FRAME :: " << c << endl;
+        cout << detectedImages.size() << endl;
+        // for (size_t i = 0; i < detectedImages.size(); ++i) {
+        //     string windowName = "Detected Image " + to_string(i);
+        //     imshow(windowName, detectedImages[i]);
+
+        //     // Wait for a key press indefinitely
+        //     waitKey(0);
+
+        //     // Destroy the window after displaying the image
+        //     destroyWindow(windowName);
+        // }
+
         vector<vector<float>> queryFeatures;
         extractFeatures(queryImages, reidNet, resize_h, resize_w, queryFeatures, batch_size);
         vector<vector<float>> galleryFeatures;
         extractFeatures(detectedImages, reidNet, resize_h, resize_w, galleryFeatures, batch_size);
-
+        cout << "detectedImages ---------" << detectedImages.size() << endl;
+        cout << "galleryFeatures ---------" << galleryFeatures.size() << endl;
         int topk_idx = getTopK(queryFeatures, galleryFeatures);
         if (topk_idx != -1 && static_cast<int>(detectedImages.size()) > topk_idx) {
             Mat topImg = detectedImages[topk_idx];
@@ -381,6 +453,7 @@ void extractFrames(const string& queryImgPath, const string& videoPath, Net* rei
         if (waitKey(1) == 'q' || waitKey(1) == 27) {
             break;
         }
+        c = c+1;
     }
 
     cap.release();
