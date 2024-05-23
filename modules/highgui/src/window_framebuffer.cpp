@@ -353,7 +353,7 @@ namespace cv { namespace highgui_backend {
                  
     fbPointer = (unsigned char*)
       mmap(0, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, 
-        fbID, 0);
+        fb_fd, 0);
         
     if (fbPointer == MAP_FAILED) {
       CV_LOG_ERROR(NULL, "UI: can't mmap framebuffer");
