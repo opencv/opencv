@@ -1015,7 +1015,7 @@ struct YCrCb2RGB_i<ushort>
 
 ///////////////////////////////////// YUV420 -> RGB /////////////////////////////////////
 
-static const int ITUR_BT_601_CY = 1220542;
+static const int ITUR_BT_601_CY  = 1220542;
 static const int ITUR_BT_601_CUB = 2116026;
 static const int ITUR_BT_601_CUG = -409993;
 static const int ITUR_BT_601_CVG = -852492;
@@ -1023,14 +1023,14 @@ static const int ITUR_BT_601_CVR = 1673527;
 static const int ITUR_BT_601_SHIFT = 20;
 
 // Coefficients for RGB to YUV420p conversion
-static const int ITUR_BT_601_CRY =  269484;
-static const int ITUR_BT_601_CGY =  528482;
-static const int ITUR_BT_601_CBY =  102760;
-static const int ITUR_BT_601_CRU = -155188;
-static const int ITUR_BT_601_CGU = -305135;
-static const int ITUR_BT_601_CBU =  460324;
-static const int ITUR_BT_601_CGV = -385875;
-static const int ITUR_BT_601_CBV = -74448;
+static const int ITUR_BT_601_CRY =  269484; // 0.299055 * (236-16)/256 * (1 << ITUR_BT_601_SHIFT)
+static const int ITUR_BT_601_CGY =  528482; // 0.586472 * (236-16)/256 * (1 << ITUR_BT_601_SHIFT)
+static const int ITUR_BT_601_CBY =  102760; // 0.114035 * (236-16)/256 * (1 << ITUR_BT_601_SHIFT)
+static const int ITUR_BT_601_CRU = -155188; // -0.148 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CGU = -305135; // -0.291 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CBU =  460324; //  0.439 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CGV = -385875; // -0.368 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CBV =  -74448; // -0.071 * (1 << (ITUR_BT_601_SHIFT-1))
 
 //R = 1.164(Y - 16) + 1.596(V - 128)
 //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
@@ -1870,9 +1870,9 @@ static const int RGB2YUV422_SHIFT = 14;
 // and rounding to the nearest integer so that resulting values are in these bounds:
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 
-static const int R2Y422 =  4211; // 0.299077 * (235 - 16) / 256 * 16384
-static const int G2Y422 =  8258; // 0.586505 * (235 - 16) / 256 * 16384
-static const int B2Y422 =  1606; // 0.114062 * (235 - 16) / 256 * 16384
+static const int R2Y422 =  4211; // 0.299077 * (236 - 16) / 256 * 16384
+static const int G2Y422 =  8258; // 0.586506 * (236 - 16) / 256 * 16384
+static const int B2Y422 =  1606; // 0.114062 * (236 - 16) / 256 * 16384
 
 static const int R2U422 = -1212; // -0.148 * 8192
 static const int G2U422 = -2384; // -0.291 * 8192

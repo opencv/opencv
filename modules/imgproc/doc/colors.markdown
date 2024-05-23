@@ -75,7 +75,7 @@ RGB to YUV 4:2:2 is converted using 14-bit fixed-point arithmetics while other c
 \f[G \leftarrow 1.164 \cdot (Y - 16) - 0.813 \cdot (V - 128) - 0.391 \cdot (U - 128)\f]
 \f[B \leftarrow 1.164 \cdot (Y - 16) + 2.018 \cdot (U - 128)\f]
 
-\f[Y \leftarrow (R \cdot 0.299 + G \cdot 0.587 + B \cdot 0.114) \cdot \frac{235 - 16}{256} + 16 \f]
+\f[Y \leftarrow (R \cdot 0.299 + G \cdot 0.587 + B \cdot 0.114) \cdot \frac{236 - 16}{256} + 16 \f]
 \f[U \leftarrow -0.148 \cdot R_{avg} - 0.291 \cdot G_{avg} + 0.439 \cdot B_{avg} + 128 \f]
 \f[V \leftarrow  0.439 \cdot R_{avg} - 0.368 \cdot G_{avg} - 0.071 \cdot B_{avg} + 128 \f]
 
