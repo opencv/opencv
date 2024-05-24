@@ -67,7 +67,7 @@ If \f$H<0\f$ then \f$H \leftarrow H+360\f$ . On output \f$0 \leq V \leq 1\f$, \f
 
 The values are then converted to the destination data type:
 - 8-bit images: \f$V  \leftarrow 255 V, S  \leftarrow 255 S, H  \leftarrow H/2  \text{(to fit to 0 to 255)}\f$
-- 16-bit images: (currently not supported) \f$V <- 65535 V, S <- 65535 S, H <- H\f$
+- 16-bit images: (currently not supported) \f$V \leftarrow 65535 V, S \leftarrow 65535 S, H \leftarrow H\f$
 - 32-bit images: H, S, and V are left as is
 
 @see cv::COLOR_BGR2HSV, cv::COLOR_RGB2HSV, cv::COLOR_HSV2BGR, cv::COLOR_HSV2RGB
@@ -92,7 +92,7 @@ If \f$H<0\f$ then \f$H \leftarrow H+360\f$ . On output \f$0 \leq L \leq 1\f$, \f
 
 The values are then converted to the destination data type:
 - 8-bit images:  \f$V  \leftarrow 255 \cdot V, S  \leftarrow 255 \cdot S, H  \leftarrow H/2 \; \text{(to fit to 0 to 255)}\f$
-- 16-bit images: (currently not supported)  \f$V <- 65535 \cdot V, S <- 65535 \cdot S, H <- H\f$
+- 16-bit images: (currently not supported)  \f$V \leftarrow 65535 \cdot V, S \leftarrow 65535 \cdot S, H \leftarrow H\f$
 - 32-bit images: H, S, V are left as is
 
 @see cv::COLOR_BGR2HLS, cv::COLOR_RGB2HLS, cv::COLOR_HLS2BGR, cv::COLOR_HLS2RGB
