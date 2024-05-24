@@ -831,6 +831,7 @@ struct ConvertScaleAbsOp : public BaseElemWiseOp
 
 namespace reference {
 
+// does not support inplace operation
 static void flip(const Mat& src, Mat& dst, int flipcode)
 {
     CV_Assert(src.dims == 2);
@@ -854,18 +855,19 @@ static void flip(const Mat& src, Mat& dst, int flipcode)
 
 static void rotate(const Mat& src, Mat& dst, int rotateMode)
 {
+    Mat tmp;
     switch (rotateMode)
     {
     case ROTATE_90_CLOCKWISE:
-        cvtest::transpose(src, dst);
-        reference::flip(dst, dst, 1);
+        cvtest::transpose(src, tmp);
+        reference::flip(tmp, dst, 1);
         break;
     case ROTATE_180:
         reference::flip(src, dst, -1);
         break;
     case ROTATE_90_COUNTERCLOCKWISE:
-        cvtest::transpose(src, dst);
-        reference::flip(dst, dst, 0);
+        cvtest::transpose(src, tmp);
+        reference::flip(tmp, dst, 0);
         break;
     default:
         break;
