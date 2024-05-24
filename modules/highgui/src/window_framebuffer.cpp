@@ -118,8 +118,10 @@ namespace cv { namespace highgui_backend {
     
     if(flags & WINDOW_AUTOSIZE)
     {
-        windowRect.width  = imgSize.width;
-        windowRect.height = imgSize.height;
+      windowRect.width  = imgSize.width;
+      windowRect.height = imgSize.height;
+      newWidth = windowRect.width;
+      newHeight = windowRect.height;
     }
     
     if(flags & WINDOW_FREERATIO)
