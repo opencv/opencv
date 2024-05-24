@@ -14,9 +14,9 @@ namespace cv{
 
 SpectralCluster::SpectralCluster(float delta_val, float eta_val) {
     if (delta_val < 0 || delta_val > 1)
-        CV_LOG_ERROR(NULL, "delta must be between 0 and 1.");
+        CV_LOG_ERROR(NULL, "delta must be between 0 and 1.")
     if (eta < 0 || eta > 1)
-        CV_LOG_ERROR(NULL, "eta must be between 0 and 1.");
+        CV_LOG_ERROR(NULL, "eta must be between 0 and 1.")
     this->delta = delta_val;
     this->eta = eta_val;
 }
@@ -27,7 +27,7 @@ void SpectralCluster::cluster(std::vector<cv::Point3f> &vertices, std::vector<st
     CV_Assert(k > 1);
     for (const auto & index : indices)
         if (index.size() != 3)
-            CV_LOG_ERROR(NULL, "Face element has more/less than 3 vertices");
+            CV_LOG_ERROR(NULL, "Face element has more/less than 3 vertices")
 
     Mat distance_mat;
     getAdjacentDistanceMat(distance_mat, vertices, indices);
@@ -88,7 +88,7 @@ void SpectralCluster::getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<
         for (int i = range.start; i < range.end; ++i) {
             std::vector<bool> visited(num_faces, false);
             std::priority_queue<dist_node> pq;
-            pq.emplace(i, 0);
+            pq.emplace(i, 0.f);
 
             while (!pq.empty()) {
                 dist_node current = pq.top();
@@ -129,7 +129,7 @@ void SpectralCluster::getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<
     // set diagonal elements to 1
     cv::parallel_for_(cv::Range(0, num_faces), [&](const cv::Range& range) {
         for (int i = range.start; i < range.end; ++i)
-            out.at<float>(i, i) = 1;
+            out.at<float>(i, i) = 1.f;
     });
 }
 
