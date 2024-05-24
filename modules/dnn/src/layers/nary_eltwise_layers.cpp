@@ -123,7 +123,6 @@ public:
 
     bool prepare_for_broadcast_op()
     {
-        // std::cout << "Run prepare_for_broadcast_op" << std::endl;
         int i, j, k;
 
         // step 1.
@@ -143,10 +142,6 @@ public:
                     return false;
             }
         }
-        // std::cout << "Step1: "
-        //           << "\tshapes[0]=" << this->shapes[0] << ", steps[0]=" << this->steps[0] << std::endl
-        //           << "\tshapes[1]=" << this->shapes[1] << ", steps[1]=" << this->steps[1] << std::endl
-        //           << "\tshapes[2]=" << this->shapes[2] << ", steps[2]=" << this->steps[2] << std::endl;
 
         // step 3. Let's do the flattening first,
         // since we'd need proper values of steps to check continuity.
@@ -176,10 +171,6 @@ public:
                 }
             }
         }
-        // std::cout << "Step2: "
-        //           << "\tshapes[0]=" << this->shapes[0] << ", steps[0]=" << this->steps[0] << std::endl
-        //           << "\tshapes[1]=" << this->shapes[1] << ", steps[1]=" << this->steps[1] << std::endl
-        //           << "\tshapes[2]=" << this->shapes[2] << ", steps[2]=" << this->steps[2] << std::endl;
 
         // step 2. Set some step's to 0's.
         for (i = this->max_ndims-1; i >= j; i--) {
@@ -192,10 +183,7 @@ public:
                 this->shapes[k][i] = 1;
             }
         }
-        // std::cout << "Step3: j=" << j << std::endl
-        //           << "\tshapes[0]=" << this->shapes[0] << ", steps[0]=" << this->steps[0] << std::endl
-        //           << "\tshapes[1]=" << this->shapes[1] << ", steps[1]=" << this->steps[1] << std::endl
-        //           << "\tshapes[2]=" << this->shapes[2] << ", steps[2]=" << this->steps[2] << std::endl;
+
         return true;
     }
 };
@@ -369,12 +357,11 @@ public:
             const Functor& op)
     {
         assert(ndims >= 2);
-        size_t dp1 = step1[ndims-1]/sizeof(T);
-        size_t dp2 = step2[ndims-1]/sizeof(T);
-        size_t dp = step[ndims-1]/sizeof(T);
-        int k, plane_size = shape[ndims-1];
-        size_t nplanes = 1;
-        for (k = 0; k < ndims-1; k++) nplanes *= shape[k];
+        size_t dp1 = step1.back() / sizeof(T);
+        size_t dp2 = step2.back() / sizeof(T);
+        size_t dp = step.back() / sizeof(T);
+        int plane_size = shape.back();
+        int nplanes = std::accumulate(shape.begin(), shape.end() - 1, 1, std::multiplies<int>());
 
         if (nplanes == 1) { // parallelize within the plane
             const T* ptr1 = (const T*)data1;
@@ -382,19 +369,23 @@ public:
             T* ptr = (T*)data;
             auto worker = [&](const Range &r) {
                 if (dp1 == 1 && dp2 == 1 && dp == 1) {
-                    for(int i1 = r.start; i1 < r.end; i1++)
-                        ptr[i1] = op(ptr1[i1], ptr2[i1]);
+                    for(int i = r.start; i < r.end; i++) {
+                        ptr[i] = op(ptr1[i], ptr2[i]);
+                    }
                 } else if (dp1 == 1 && dp2 == 0 && dp == 1){
                     T x2 = *ptr2;
-                    for(int i1 = r.start; i1 < r.end; i1++)
-                        ptr[i1] = op(ptr1[i1], x2);
+                    for(int i = r.start; i < r.end; i++) {
+                        ptr[i] = op(ptr1[i], x2);
+                    }
                 } else if (dp1 == 0 && dp2 == 1 && dp == 1){
                     T x1 = *ptr1;
-                    for(int i1 = r.start; i1 < r.end; i1++)
-                        ptr[i1] = op(x1, ptr2[i1]);
+                    for(int i = r.start; i < r.end; i++) {
+                        ptr[i] = op(x1, ptr2[i]);
+                    }
                 } else {
-                    for(int i1 = r.start; i1 < r.end; i1++, ptr1 += dp1, ptr2 += dp2, ptr += dp)
+                    for(int i = r.start; i < r.end; i++, ptr1 += dp1, ptr2 += dp2, ptr += dp) {
                         *ptr = op(*ptr1, *ptr2);
+                    }
                 }
             };
 
@@ -406,13 +397,13 @@ public:
                     const char* ptr1_ = data1;
                     const char* ptr2_ = data2;
                     char* ptr_ = data;
-                    int idx = plane_idx;
-                    for (k = ndims-2; k >= 0; k--) {
-                        int next_idx = idx/shape[k];
-                        int i_k = (int)(idx - next_idx*shape[k]);
-                        ptr1_ += i_k*step1[k];
-                        ptr2_ += i_k*step2[k];
-                        ptr_ += i_k*step[k];
+                    size_t idx = plane_idx;
+                    for (int k = ndims - 2; k >= 0; k--) {
+                        size_t next_idx = idx / shape[k];
+                        size_t i_k = (int)(idx - next_idx * shape[k]);
+                        ptr1_ += i_k * step1[k];
+                        ptr2_ += i_k * step2[k];
+                        ptr_ += i_k * step[k];
                         idx = next_idx;
                     }
 
@@ -420,19 +411,23 @@ public:
                     const T* ptr2 = (const T*)ptr2_;
                     T* ptr = (T*)ptr_;
                     if (dp1 == 1 && dp2 == 1 && dp == 1) {
-                        for(int i1 = 0; i1 < plane_size; i1++)
-                            ptr[i1] = op(ptr1[i1], ptr2[i1]);
+                        for(int i = 0; i < plane_size; i++) {
+                            ptr[i] = op(ptr1[i], ptr2[i]);
+                        }
                     } else if (dp1 == 1 && dp2 == 0 && dp == 1){
                         T x2 = *ptr2;
-                        for(int i1 = 0; i1 < plane_size; i1++)
-                            ptr[i1] = op(ptr1[i1], x2);
+                        for(int i = 0; i < plane_size; i++) {
+                            ptr[i] = op(ptr1[i], x2);
+                        }
                     } else if (dp1 == 0 && dp2 == 1 && dp == 1){
                         T x1 = *ptr1;
-                        for(int i1 = 0; i1 < plane_size; i1++)
-                            ptr[i1] = op(x1, ptr2[i1]);
+                        for(int i = 0; i < plane_size; i++) {
+                            ptr[i] = op(x1, ptr2[i]);
+                        }
                     } else {
-                        for(int i1 = 0; i1 < plane_size; i1++, ptr1 += dp1, ptr2 += dp2, ptr += dp)
+                        for(int i = 0; i < plane_size; i++, ptr1 += dp1, ptr2 += dp2, ptr += dp) {
                             *ptr = op(*ptr1, *ptr2);
+                        }
                     }
                 }
             };
