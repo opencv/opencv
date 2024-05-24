@@ -2,7 +2,6 @@
 
 #include "sampler.cpp"
 
-
 namespace opencv_test { namespace {
 
 int desired_pointSize = 15;
