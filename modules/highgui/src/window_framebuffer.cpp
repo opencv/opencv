@@ -115,38 +115,36 @@ namespace cv { namespace highgui_backend {
     int cntChannel = img.channels();
     cv::Size imgSize = currentImg.size();
     
-    switch(flags)
+    
+    if(flags & WINDOW_AUTOSIZE)
     {
-      case WINDOW_FREERATIO:
-      {
-        cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
-      }
-      break;
-      case WINDOW_AUTOSIZE: // WINDOW_FULLSCREEN
-      {
         windowRect.width  = imgSize.width;
         windowRect.height = imgSize.height;
-      }
-      break;
-      case WINDOW_NORMAL: // WINDOW_KEEPRATIO
-      {
-        double aspect_ratio = ((double)img.cols) / img.rows;
-        newWidth  = windowRect.width;
-        newHeight = (int)(windowRect.width / aspect_ratio);
-
-        if (newHeight > windowRect.height) {
-          newWidth = (int)(windowRect.height * aspect_ratio);
-          newHeight = windowRect.height;
-        }
-        cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
-      }
-      break;
-      
-      default:
-        CV_LOG_ERROR(NULL, "UI: FB window flag not supported");
-        CV_Assert(0);
     }
     
+    if(flags & WINDOW_FREERATIO)
+    {
+      newWidth = windowRect.width;
+      newHeight = windowRect.height;
+    }
+    
+    if(flags & WINDOW_KEEPRATIO)
+    {
+      double aspect_ratio = ((double)img.cols) / img.rows;
+      newWidth  = windowRect.width;
+      newHeight = (int)(windowRect.width / aspect_ratio);
+
+      if (newHeight > windowRect.height) {
+        newWidth = (int)(windowRect.height * aspect_ratio);
+        newHeight = windowRect.height;
+      }
+    }
+
+    if((newWidth != img.cols) && (newHeight != img.rows))
+    {
+      cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
+    }    
+        
     CV_LOG_INFO(NULL, "UI: Formated image: "
       << cv::typeToString(img.type()) << " size " << img.size());
 
@@ -219,7 +217,7 @@ namespace cv { namespace highgui_backend {
     CV_Assert(width > 0);
     CV_Assert(height > 0);
     
-    if(flags != WINDOW_AUTOSIZE)
+    if(flags & WINDOW_AUTOSIZE)
     {
       windowRect.width = width;
       windowRect.height = height;
@@ -526,8 +524,8 @@ namespace cv { namespace highgui_backend {
   
     if(fbID == -1){
       mode = FB_MODE_EMU;
-      fbWidth = 10;
-      fbHeight = 10;
+      fbWidth = 1024;
+      fbHeight = 768;
       fbXOffset = 0;
       fbYOffset = 0;
       fbBitsPerPixel = 0;
