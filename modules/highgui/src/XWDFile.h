@@ -38,23 +38,29 @@ in this Software without prior written authorization from The Open Group.
 #ifndef XWDFILE_H
 #define XWDFILE_H
 
+// replaced "#include <X11/Xmd.h>" with "#include "Xmd.h""
 #include "Xmd.h"
 
 #define XWD_FILE_VERSION 7
 #define sz_XWDheader 100
 #define sz_XWDColor 12
 
-#define C32INT(ptr) ((((unsigned char*)ptr)[0] << 24) | (((unsigned char*)ptr)[1] << 16) | (((unsigned char*)ptr)[2] << 8) | (((unsigned char*)ptr)[3] << 0))
-
 /*****************************************************************
- *  IMAGING
+ *  Start. Added from <X11/X.h>
  *****************************************************************/
+
+#define C32INT(ptr) ((((unsigned char*)ptr)[0] << 24) | (((unsigned char*)ptr)[1] << 16) | (((unsigned char*)ptr)[2] << 8) | (((unsigned char*)ptr)[3] << 0))
 
 /* ImageFormat -- PutImage, GetImage */
 
 #define XYBitmap		0	/* depth 1, XYFormat */
 #define XYPixmap		1	/* depth == drawable depth */
 #define ZPixmap			2	/* depth == drawable depth */
+
+/*****************************************************************
+ *  End. Added from <X11/X.h>
+ *****************************************************************/
+
 
 typedef CARD32 xwdval;		/* for old broken programs */
 
