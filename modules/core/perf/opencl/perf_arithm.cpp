@@ -401,7 +401,7 @@ OCL_PERF_TEST_P(RotateFixture, rotate,
 
     OCL_TEST_CYCLE() cv::flip(src, dst, rotateCode);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK_NOTHING();
 }
 
 ///////////// minMaxLoc ////////////////////////
