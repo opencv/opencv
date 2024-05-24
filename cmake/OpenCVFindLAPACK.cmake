@@ -108,19 +108,12 @@ macro(ocv_lapack_check)
 
     set(LAPACK_TRY_COMPILE_DEF "")
     if(LAPACK_IMPL STREQUAL "LAPACK/Apple" AND NOT IOS) # https://github.com/opencv/opencv/issues/24660
-      # Get macOS version
-      execute_process(COMMAND sw_vers -productVersion
-                      OUTPUT_VARIABLE MACOS_VERSION
-                      OUTPUT_STRIP_TRAILING_WHITESPACE)
-      # Compatibility for deployment on old macOS
+      # Enable Accelerate New LAPACK if target macOS >= 13.3
       if(${CMAKE_OSX_DEPLOYMENT_TARGET} VERSION_GREATER "13.3" OR ${CMAKE_OSX_DEPLOYMENT_TARGET} VERSION_EQUAL "13.3")
-        # Enable Accelerate New LAPACK if macOS >= 13.3
-        if(MACOS_VERSION VERSION_GREATER "13.3" OR MACOS_VERSION VERSION_EQUAL "13.3")
-          message(STATUS "LAPACK(${LAPACK_IMPL}): Accelerate New LAPACK is enabled.")
-          set(LAPACK_TRY_COMPILE_DEF "-DACCELERATE_NEW_LAPACK")
-          add_compile_definitions(ACCELERATE_NEW_LAPACK)
-          add_compile_definitions(ACCELERATE_LAPACK_ILP64)
-        endif()
+        message(STATUS "LAPACK(${LAPACK_IMPL}): Accelerate New LAPACK is enabled.")
+        set(LAPACK_TRY_COMPILE_DEF "-DACCELERATE_NEW_LAPACK")
+        add_compile_definitions(ACCELERATE_NEW_LAPACK)
+        add_compile_definitions(ACCELERATE_LAPACK_ILP64)
       endif()
     endif()
 
