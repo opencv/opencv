@@ -166,8 +166,8 @@ namespace cv { namespace highgui_backend {
     int yOffset = backend.getFBYOffset();
     int lineLength = backend.getFBLineLength();
     
-    int showRows = min((windowRect.y + img.rows), backend.getFBHeight());
-    int showCols = min((windowRect.x + img.cols), backend.getFBWidth());
+    int showRows = min((windowRect.y + img.rows), backend.getFBHeight() - yOffset);
+    int showCols = min((windowRect.x + img.cols), backend.getFBWidth() - xOffset);
     
     int dx_w = windowRect.x;
     int dy_w = windowRect.y;
