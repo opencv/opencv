@@ -1,4 +1,6 @@
-#include "../sampler.hpp"
+#include "test_precomp.hpp"
+
+namespace opencv_test { namespace {
 
 int desired_pointSize = 15;
 
