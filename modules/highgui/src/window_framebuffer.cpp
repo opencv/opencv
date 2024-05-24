@@ -562,16 +562,16 @@ namespace cv { namespace highgui_backend {
     if(fbID == -1) return;
     
     // RESTORE BACKGROUNG
-    int cnt_channel = 4;
-    for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
-    {
-      std::memcpy(fbPointer + y * fbLineLength + fbXOffset, 
-                  backgroundBuff.ptr<cv::Vec4b>(y - fbYOffset), 
-                  backgroundBuff.cols * cnt_channel);
-    }
-
-    
     if (fbPointer != MAP_FAILED) {
+
+      int cnt_channel = 4;
+      for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
+      {
+        std::memcpy(fbPointer + y * fbLineLength + fbXOffset, 
+                    backgroundBuff.ptr<cv::Vec4b>(y - fbYOffset), 
+                    backgroundBuff.cols * cnt_channel);
+      }
+
       munmap(fbPointer, fbScreenSize);
     }
     close(fbID);
