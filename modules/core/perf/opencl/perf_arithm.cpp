@@ -399,7 +399,7 @@ OCL_PERF_TEST_P(RotateFixture, rotate,
     UMat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::flip(src, dst, rotateCode);
+    OCL_TEST_CYCLE() cv::rotate(src, dst, rotateCode);
 
     SANITY_CHECK_NOTHING();
 }
