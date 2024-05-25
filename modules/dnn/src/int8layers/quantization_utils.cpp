@@ -35,29 +35,94 @@ static void broadcast1D2TargetMat(Mat& data, const MatShape& targetShape, int ax
     }
 }
 
+static void block_repeat(InputArray src, int axis, int repetitions, OutputArray dst)
+{
+    CV_Assert(src.getObj() != dst.getObj());
+    CV_Assert(axis >= 0 && axis < src.dims());
+    CV_Assert(repetitions > 1);
+
+    Mat src_mat = src.getMat();
+    Mat dst_mat;
+
+    MatShape sshape = shape(src_mat);
+    MatShape dshape = sshape;
+
+    size_t dtype_bytes = src_mat.elemSize();
+    int chunk_size = dtype_bytes;
+    int num_chunks = 1;
+
+    dshape[axis] *= repetitions;
+
+    for (int i = axis+1; i < src.dims(); ++i)
+        chunk_size*=sshape[i];
+
+    for (int i = 0; i <= axis; ++i)
+        num_chunks*=sshape[i];
+
+    dst.create(src.dims(), dshape.data(), src.type());
+    dst_mat = dst.getMat();
+
+
+    for (int i = 0; i < repetitions; ++i) {
+        size_t src_offset = 0;
+        size_t dst_offset = i * chunk_size;
+
+        for (int j = 0; j < num_chunks; ++j) {
+            memcpy(dst_mat.data + dst_offset, src_mat.data + src_offset, chunk_size);
+            src_offset += chunk_size;
+            dst_offset += chunk_size * repetitions;
+        }
+    }
+}
+
+template <typename T>
+static void copyDataToMat(Mat& mat, const std::vector<T>& data){
+    float * matPtr = mat.ptr<float>(0);
+    const int len = data.size();
+
+    for (int i = 0; i < len; i++)
+        matPtr[i] = (float) data[i];
+}
+
+template <typename T>
+static void broadcastBlockedMatrix(Mat& mat, const std::vector<T>& data, const MatShape& targetShape, int axis, int block_size){
+    CV_Assert(targetShape[axis] % block_size == 0 && block_size <= targetShape[axis]);
+    
+    MatShape subTargetShape(targetShape);
+    subTargetShape[axis] = static_cast<int>(subTargetShape[axis] / block_size);
+    Mat tmpMat(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
+
+    copyDataToMat(tmpMat,data);
+    block_repeat(tmpMat, axis, block_size, mat);
+}
+
+template <typename T>
+static void broadcastStandardMatrix(Mat& mat, const std::vector<T>& data, const MatShape& targetShape, int axis)
+{
+    MatShape subTargetShape(targetShape.size(), 1);
+    subTargetShape[axis] = data.size();
+    mat.create(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
+
+    copyDataToMat(mat,data);
+    broadcast1D2TargetMat(mat, targetShape, axis);
+}
+
+
 static void broadcastScaleAndZeropoint(Mat& scalesMat, Mat& zeropointsMat, const std::vector<float>& scales,
-                                       const std::vector<int>& zeropoints, const MatShape& targetShape, int axis)
+                                       const std::vector<int>& zeropoints, const MatShape& targetShape, int axis, int block_size)
 {
     // broad cast the scales and zeropoint to the input shape.
-    MatShape subTargetShape(targetShape.size(), 1);
-    subTargetShape[axis] = scales.size();
 
-    zeropointsMat.create(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
-    scalesMat.create(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
-
-    const int len = scales.size();
-    // Deep copy the scales and zeropoint data and prevent the original data from being changed.
-
-    float * scalePtr = scalesMat.ptr<float>(0);
-    for (int i = 0; i < len; i++)
-        scalePtr[i] = scales[i];
-
-    float * zpPtr = zeropointsMat.ptr<float>(0);
-    for (int i = 0; i < len; i++)
-        zpPtr[i] = (float )zeropoints[i];
-
-    broadcast1D2TargetMat(scalesMat, targetShape, axis);
-    broadcast1D2TargetMat(zeropointsMat, targetShape, axis);
+    if (block_size == 0)
+    {
+        broadcastStandardMatrix(zeropointsMat, zeropoints, targetShape, axis);
+        broadcastStandardMatrix(scalesMat, scales, targetShape, axis);
+    }
+    else
+    {
+        broadcastBlockedMatrix(zeropointsMat, zeropoints, targetShape, axis, block_size);
+        broadcastBlockedMatrix(scalesMat, scales, targetShape, axis, block_size);
+    }
 }
 
 // Quantize FP32/FP16 Inputs to INT8
@@ -65,6 +130,7 @@ class QuantizeLayerImpl CV_FINAL : public QuantizeLayer
 {
 public:
     int axis;
+    int block_size;
     bool is1D;
     Mat scalesMat, zeropointsMat; // Saving the broadcasetd scales data.
 
@@ -72,6 +138,11 @@ public:
     {
         is1D = params.get<bool>("is1D", false);
         axis = params.get<int>("axis", 1);
+        block_size = params.get<int>("block_size", 0);
+
+        // not is1D -> block_size = 0
+        CV_Assert(is1D || block_size == 0);
+
         if (!is1D)
         {
             scales.push_back(params.get<float>("scales", 1.0f));
@@ -124,7 +195,7 @@ public:
         if (is1D)
         {
             MatShape inputShape = shape(inputs[0]);
-            broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis);
+            broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis, block_size);
         }
     }
 
@@ -190,6 +261,7 @@ class DequantizeLayerImpl CV_FINAL : public DequantizeLayer
 {
 public:
     int axis;
+    int block_size;
     bool is1D;
     Mat scalesMat, zeropointsMat; // Saving the broadcasetd scales data.
 
@@ -197,6 +269,10 @@ public:
     {
         is1D = params.get<bool>("is1D", false);
         axis = params.get<int>("axis", 1);
+        block_size = params.get<int>("block_size", 0);
+
+        // not is1D -> block_size = 0
+        CV_Assert(is1D || block_size == 0);
 
         if (!is1D)
         {
@@ -250,7 +326,7 @@ public:
         if (is1D)
         {
             MatShape inputShape = shape(inputs[0]);
-            broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis);
+            broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis, block_size);
         }
     }
 
