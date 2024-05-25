@@ -2,7 +2,7 @@
 ; jcsample.asm - downsampling (64-bit SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2009, 2016, D. R. Commander.
+; Copyright (C) 2009, 2016, 2024, D. R. Commander.
 ; Copyright (C) 2018, Matthias Räncker.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
@@ -43,10 +43,10 @@
     GLOBAL_FUNCTION(jsimd_h2v1_downsample_sse2)
 
 EXTN(jsimd_h2v1_downsample_sse2):
+    ENDBR64
     push        rbp
-    mov         rax, rsp
     mov         rbp, rsp
-    collect_args 6
+    COLLECT_ARGS 6
 
     mov         ecx, r13d
     shl         rcx, 3                  ; imul rcx,DCTSIZE (rcx = output_cols)
@@ -160,7 +160,7 @@ EXTN(jsimd_h2v1_downsample_sse2):
     jg          near .rowloop
 
 .return:
-    uncollect_args 6
+    UNCOLLECT_ARGS 6
     pop         rbp
     ret
 
@@ -188,10 +188,10 @@ EXTN(jsimd_h2v1_downsample_sse2):
     GLOBAL_FUNCTION(jsimd_h2v2_downsample_sse2)
 
 EXTN(jsimd_h2v2_downsample_sse2):
+    ENDBR64
     push        rbp
-    mov         rax, rsp
     mov         rbp, rsp
-    collect_args 6
+    COLLECT_ARGS 6
 
     mov         ecx, r13d
     shl         rcx, 3                  ; imul rcx,DCTSIZE (rcx = output_cols)
@@ -321,7 +321,7 @@ EXTN(jsimd_h2v2_downsample_sse2):
     jg          near .rowloop
 
 .return:
-    uncollect_args 6
+    UNCOLLECT_ARGS 6
     pop         rbp
     ret
 

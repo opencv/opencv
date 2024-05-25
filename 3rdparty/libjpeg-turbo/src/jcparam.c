@@ -4,8 +4,10 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1998, Thomas G. Lane.
  * Modified 2003-2008 by Guido Vollbeding.
+ * Lossless JPEG Modifications:
+ * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2018, D. R. Commander.
+ * Copyright (C) 2009-2011, 2018, 2023, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -202,7 +204,6 @@ jpeg_set_defaults(j_compress_ptr cinfo)
   cinfo->scale_num = 1;         /* 1:1 scaling */
   cinfo->scale_denom = 1;
 #endif
-  cinfo->data_precision = BITS_IN_JSAMPLE;
   /* Set up two quantization tables using default quality of 75 */
   jpeg_set_quality(cinfo, 75, TRUE);
   /* Set up two Huffman tables */
@@ -232,7 +233,7 @@ jpeg_set_defaults(j_compress_ptr cinfo)
    * tables will be computed.  This test can be removed if default tables
    * are supplied that are valid for the desired precision.
    */
-  if (cinfo->data_precision > 8)
+  if (cinfo->data_precision == 12 && !cinfo->arith_code)
     cinfo->optimize_coding = TRUE;
 
   /* By default, use the simpler non-cosited sampling alignment */
@@ -296,7 +297,10 @@ jpeg_default_colorspace(j_compress_ptr cinfo)
   case JCS_EXT_BGRA:
   case JCS_EXT_ABGR:
   case JCS_EXT_ARGB:
-    jpeg_set_colorspace(cinfo, JCS_YCbCr);
+    if (cinfo->master->lossless)
+      jpeg_set_colorspace(cinfo, JCS_RGB);
+    else
+      jpeg_set_colorspace(cinfo, JCS_YCbCr);
     break;
   case JCS_YCbCr:
     jpeg_set_colorspace(cinfo, JCS_YCbCr);
@@ -475,6 +479,11 @@ jpeg_simple_progression(j_compress_ptr cinfo)
   if (cinfo->global_state != CSTATE_START)
     ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
 
+  if (cinfo->master->lossless) {
+    cinfo->master->lossless = FALSE;
+    jpeg_default_colorspace(cinfo);
+  }
+
   /* Figure space needed for script.  Calculation must match code below! */
   if (ncomps == 3 && cinfo->jpeg_color_space == JCS_YCbCr) {
     /* Custom script for YCbCr color images. */
@@ -539,3 +548,38 @@ jpeg_simple_progression(j_compress_ptr cinfo)
 }
 
 #endif /* C_PROGRESSIVE_SUPPORTED */
+
+
+#ifdef C_LOSSLESS_SUPPORTED
+
+/*
+ * Enable lossless mode.
+ */
+
+GLOBAL(void)
+jpeg_enable_lossless(j_compress_ptr cinfo, int predictor_selection_value,
+                     int point_transform)
+{
+  /* Safety check to ensure start_compress not called yet. */
+  if (cinfo->global_state != CSTATE_START)
+    ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
+
+  cinfo->master->lossless = TRUE;
+  cinfo->Ss = predictor_selection_value;
+  cinfo->Se = 0;
+  cinfo->Ah = 0;
+  cinfo->Al = point_transform;
+
+  /* The JPEG spec simply gives the range 0..15 for Al (Pt), but that seems
+   * wrong: the upper bound ought to depend on data precision.  Perhaps they
+   * really meant 0..N-1 for N-bit precision, which is what we allow here.
+   * Values greater than or equal to the data precision will result in a blank
+   * image.
+   */
+  if (cinfo->Ss < 1 || cinfo->Ss > 7 ||
+      cinfo->Al < 0 || cinfo->Al >= cinfo->data_precision)
+    ERREXIT4(cinfo, JERR_BAD_PROGRESSION,
+             cinfo->Ss, cinfo->Se, cinfo->Ah, cinfo->Al);
+}
+
+#endif /* C_LOSSLESS_SUPPORTED */

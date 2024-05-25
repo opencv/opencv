@@ -3,6 +3,8 @@
  *
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1998, Thomas G. Lane.
+ * Lossless JPEG Modifications:
+ * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
  * Copyright (C) 2012, 2015, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
@@ -237,7 +239,8 @@ get_soi(j_decompress_ptr cinfo)
 
 
 LOCAL(boolean)
-get_sof(j_decompress_ptr cinfo, boolean is_prog, boolean is_arith)
+get_sof(j_decompress_ptr cinfo, boolean is_prog, boolean is_lossless,
+        boolean is_arith)
 /* Process a SOFn marker */
 {
   JLONG length;
@@ -246,6 +249,7 @@ get_sof(j_decompress_ptr cinfo, boolean is_prog, boolean is_arith)
   INPUT_VARS(cinfo);
 
   cinfo->progressive_mode = is_prog;
+  cinfo->master->lossless = is_lossless;
   cinfo->arith_code = is_arith;
 
   INPUT_2BYTES(cinfo, length, return FALSE);
@@ -990,32 +994,40 @@ read_markers(j_decompress_ptr cinfo)
 
     case M_SOF0:                /* Baseline */
     case M_SOF1:                /* Extended sequential, Huffman */
-      if (!get_sof(cinfo, FALSE, FALSE))
+      if (!get_sof(cinfo, FALSE, FALSE, FALSE))
         return JPEG_SUSPENDED;
       break;
 
     case M_SOF2:                /* Progressive, Huffman */
-      if (!get_sof(cinfo, TRUE, FALSE))
+      if (!get_sof(cinfo, TRUE, FALSE, FALSE))
+        return JPEG_SUSPENDED;
+      break;
+
+    case M_SOF3:                /* Lossless, Huffman */
+      if (!get_sof(cinfo, FALSE, TRUE, FALSE))
         return JPEG_SUSPENDED;
       break;
 
     case M_SOF9:                /* Extended sequential, arithmetic */
-      if (!get_sof(cinfo, FALSE, TRUE))
+      if (!get_sof(cinfo, FALSE, FALSE, TRUE))
         return JPEG_SUSPENDED;
       break;
 
     case M_SOF10:               /* Progressive, arithmetic */
-      if (!get_sof(cinfo, TRUE, TRUE))
+      if (!get_sof(cinfo, TRUE, FALSE, TRUE))
+        return JPEG_SUSPENDED;
+      break;
+
+    case M_SOF11:               /* Lossless, arithmetic */
+      if (!get_sof(cinfo, FALSE, TRUE, TRUE))
         return JPEG_SUSPENDED;
       break;
 
     /* Currently unsupported SOFn types */
-    case M_SOF3:                /* Lossless, Huffman */
     case M_SOF5:                /* Differential sequential, Huffman */
     case M_SOF6:                /* Differential progressive, Huffman */
     case M_SOF7:                /* Differential lossless, Huffman */
     case M_JPG:                 /* Reserved for JPEG extensions */
-    case M_SOF11:               /* Lossless, arithmetic */
     case M_SOF13:               /* Differential sequential, arithmetic */
     case M_SOF14:               /* Differential progressive, arithmetic */
     case M_SOF15:               /* Differential lossless, arithmetic */

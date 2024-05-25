@@ -9,60 +9,52 @@
 /* libjpeg-turbo version in integer form */
 #define LIBJPEG_TURBO_VERSION_NUMBER  @LIBJPEG_TURBO_VERSION_NUMBER@
 
-/* Support arithmetic encoding */
+/* Support arithmetic encoding when using 8-bit samples */
 #cmakedefine C_ARITH_CODING_SUPPORTED 1
 
-/* Support arithmetic decoding */
+/* Support arithmetic decoding when using 8-bit samples */
 #cmakedefine D_ARITH_CODING_SUPPORTED 1
 
 /* Support in-memory source/destination managers */
-#cmakedefine MEM_SRCDST_SUPPORTED 1
+#define MEM_SRCDST_SUPPORTED  1
 
-/* Use accelerated SIMD routines. */
+/* Use accelerated SIMD routines when using 8-bit samples */
 #cmakedefine WITH_SIMD 1
 
-/*
- * Define BITS_IN_JSAMPLE as either
- *   8   for 8-bit sample values (the usual setting)
- *   12  for 12-bit sample values
- * Only 8 and 12 are legal data precisions for lossy JPEG according to the
- * JPEG standard, and the IJG code does not support anything else!
- * We do not support run-time selection of data precision, sorry.
+/* This version of libjpeg-turbo supports run-time selection of data precision,
+ * so BITS_IN_JSAMPLE is no longer used to specify the data precision at build
+ * time.  However, some downstream software expects the macro to be defined.
+ * Since 12-bit data precision is an opt-in feature that requires explicitly
+ * calling 12-bit-specific libjpeg API functions and using 12-bit-specific data
+ * types, the unmodified portion of the libjpeg API still behaves as if it were
+ * built for 8-bit precision, and JSAMPLE is still literally an 8-bit data
+ * type.  Thus, it is correct to define BITS_IN_JSAMPLE to 8 here.
  */
+#ifndef BITS_IN_JSAMPLE
+#define BITS_IN_JSAMPLE  8
+#endif
 
-#define BITS_IN_JSAMPLE  @BITS_IN_JSAMPLE@      /* use 8 or 12 */
+#ifdef _WIN32
 
-/* Define to 1 if you have the <locale.h> header file. */
-#cmakedefine HAVE_LOCALE_H 1
+#undef RIGHT_SHIFT_IS_UNSIGNED
 
-/* Define to 1 if you have the <stddef.h> header file. */
-#cmakedefine HAVE_STDDEF_H 1
+/* Define "boolean" as unsigned char, not int, per Windows custom */
+#ifndef __RPCNDR_H__            /* don't conflict if rpcndr.h already read */
+typedef unsigned char boolean;
+#endif
+#define HAVE_BOOLEAN            /* prevent jmorecfg.h from redefining it */
 
-/* Define to 1 if you have the <stdlib.h> header file. */
-#cmakedefine HAVE_STDLIB_H 1
+/* Define "INT32" as int, not long, per Windows custom */
+#if !(defined(_BASETSD_H_) || defined(_BASETSD_H))   /* don't conflict if basetsd.h already read */
+typedef short INT16;
+typedef signed int INT32;
+#endif
+#define XMD_H                   /* prevent jmorecfg.h from redefining it */
 
-/* Define if you need to include <sys/types.h> to get size_t. */
-#cmakedefine NEED_SYS_TYPES_H 1
-
-/* Define if you have BSD-like bzero and bcopy in <strings.h> rather than
-   memset/memcpy in <string.h>. */
-#cmakedefine NEED_BSD_STRINGS 1
-
-/* Define to 1 if the system has the type `unsigned char'. */
-#cmakedefine HAVE_UNSIGNED_CHAR 1
-
-/* Define to 1 if the system has the type `unsigned short'. */
-#cmakedefine HAVE_UNSIGNED_SHORT 1
-
-/* Compiler does not support pointers to undefined structures. */
-#cmakedefine INCOMPLETE_TYPES_BROKEN 1
+#else
 
 /* Define if your (broken) compiler shifts signed values as if they were
    unsigned. */
 #cmakedefine RIGHT_SHIFT_IS_UNSIGNED 1
 
-/* Define to empty if `const' does not conform to ANSI C. */
-/* #undef const */
-
-/* Define to `unsigned int' if <sys/types.h> does not define. */
-/* #undef size_t */
+#endif

@@ -1,9 +1,10 @@
 ;
 ; jchuff-sse2.asm - Huffman entropy encoding (64-bit SSE2)
 ;
-; Copyright (C) 2009-2011, 2014-2016, 2019, 2021, D. R. Commander.
+; Copyright (C) 2009-2011, 2014-2016, 2019, 2021, 2023-2024, D. R. Commander.
 ; Copyright (C) 2015, Matthieu Darbois.
 ; Copyright (C) 2018, Matthias Räncker.
+; Copyright (C) 2023, Aliaksiej Kandracienka.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -38,7 +39,7 @@ endstruc
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_huff_encode_one_block)
 
 EXTN(jconst_huff_encode_one_block):
@@ -48,7 +49,7 @@ jpeg_mask_bits dd 0x0000, 0x0001, 0x0003, 0x0007
                dd 0x00ff, 0x01ff, 0x03ff, 0x07ff
                dd 0x0fff, 0x1fff, 0x3fff, 0x7fff
 
-    alignz      32
+    ALIGNZ      32
 
 times 1 << 14 db 15
 times 1 << 13 db 14
@@ -66,7 +67,8 @@ times 1 <<  2 db  3
 times 1 <<  1 db  2
 times 1 <<  0 db  1
 times 1       db  0
-jpeg_nbits_table:
+GLOBAL_DATA(jpeg_nbits_table)
+EXTN(jpeg_nbits_table):
 times 1       db  0
 times 1 <<  0 db  1
 times 1 <<  1 db  2
@@ -85,10 +87,10 @@ times 1 << 13 db 14
 times 1 << 14 db 15
 times 1 << 15 db 16
 
-    alignz      32
+    ALIGNZ      32
 
 %define NBITS(x)      nbits_base + x
-%define MASK_BITS(x)  NBITS((x) * 4) + (jpeg_mask_bits - jpeg_nbits_table)
+%define MASK_BITS(x)  NBITS((x) * 4) + (jpeg_mask_bits - EXTN(jpeg_nbits_table))
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -208,15 +210,15 @@ times 1 << 15 db 16
 ; rax - buffer
 ; rbx - temp
 ; rcx - nbits
-; rdx - block --> free_bits
+; rdx - code
 ; rsi - nbits_base
 ; rdi - t
-; rbp - code
 ; r8  - dctbl --> code_temp
 ; r9  - actbl
 ; r10 - state
 ; r11 - index
 ; r12 - put_buffer
+; r15 - block --> free_bits
 
 %define buffer       rax
 %ifdef WIN64
@@ -231,12 +233,11 @@ times 1 << 15 db 16
 %define nbitsq       rcx
 %define nbits        ecx
 %define nbitsb       cl
-%define block        rdx
+%define codeq        rdx
+%define code         edx
 %define nbits_base   rsi
 %define t            rdi
 %define td           edi
-%define codeq        rbp
-%define code         ebp
 %define dctbl        r8
 %define actbl        r9
 %define state        r10
@@ -244,6 +245,7 @@ times 1 << 15 db 16
 %define indexd       r11d
 %define put_buffer   r12
 %define put_bufferd  r12d
+%define block        r15
 
 ; Step 1: Re-arrange input data according to jpeg_natural_order
 ; xx 01 02 03 04 05 06 07      xx 01 08 16 09 02 03 10
@@ -259,6 +261,9 @@ times 1 << 15 db 16
     GLOBAL_FUNCTION(jsimd_huff_encode_one_block_sse2)
 
 EXTN(jsimd_huff_encode_one_block_sse2):
+    ENDBR64
+    push        rbp
+    mov         rbp, rsp
 
 %ifdef WIN64
 
@@ -266,15 +271,15 @@ EXTN(jsimd_huff_encode_one_block_sse2):
 ; rdx = JOCTET *buffer
 ; r8 = JCOEFPTR block
 ; r9 = int last_dc_val
-; [rax+48] = c_derived_tbl *dctbl
-; [rax+56] = c_derived_tbl *actbl
+; [rbp+48] = c_derived_tbl *dctbl
+; [rbp+56] = c_derived_tbl *actbl
 
                                                           ;X: X = code stream
     mov         buffer, rdx
+    push        r15
     mov         block, r8
     movups      xmm3, XMMWORD [block + 0 * SIZEOF_WORD]   ;D: w3 = xx 01 02 03 04 05 06 07
     push        rbx
-    push        rbp
     movdqa      xmm0, xmm3                                ;A: w0 = xx 01 02 03 04 05 06 07
     push        rsi
     push        rdi
@@ -284,12 +289,10 @@ EXTN(jsimd_huff_encode_one_block_sse2):
     movsx       code, word [block]                        ;Z:     code = block[0];
     pxor        xmm4, xmm4                                ;A: w4[i] = 0;
     sub         code, r9d                                 ;Z:     code -= last_dc_val;
-    mov         dctbl, POINTER [rsp+6*8+4*8]
-    mov         actbl, POINTER [rsp+6*8+5*8]
+    mov         dctbl, POINTER [rbp+48]
+    mov         actbl, POINTER [rbp+56]
     punpckldq   xmm0, xmm1                                ;A: w0 = xx 01 08 09 02 03 10 11
-    lea         nbits_base, [rel jpeg_nbits_table]
-    add         rsp, -DCTSIZE2 * SIZEOF_WORD
-    mov         t, rsp
+    lea         nbits_base, [rel EXTN(jpeg_nbits_table)]
 
 %else
 
@@ -301,22 +304,26 @@ EXTN(jsimd_huff_encode_one_block_sse2):
 ; r9 = c_derived_tbl *actbl
 
                                                           ;X: X = code stream
+    push        r15
+    mov         block, rdx
     movups      xmm3, XMMWORD [block + 0 * SIZEOF_WORD]   ;D: w3 = xx 01 02 03 04 05 06 07
     push        rbx
-    push        rbp
     movdqa      xmm0, xmm3                                ;A: w0 = xx 01 02 03 04 05 06 07
     push        r12
     mov         state, rdi
     mov         buffer, rsi
     movups      xmm1, XMMWORD [block + 8 * SIZEOF_WORD]   ;B: w1 = 08 09 10 11 12 13 14 15
     movsx       codeq, word [block]                       ;Z:     code = block[0];
-    lea         nbits_base, [rel jpeg_nbits_table]
+    lea         nbits_base, [rel EXTN(jpeg_nbits_table)]
     pxor        xmm4, xmm4                                ;A: w4[i] = 0;
     sub         codeq, rcx                                ;Z:     code -= last_dc_val;
     punpckldq   xmm0, xmm1                                ;A: w0 = xx 01 08 09 02 03 10 11
-    lea         t, [rsp - DCTSIZE2 * SIZEOF_WORD]         ;   use red zone for t_
 
 %endif
+
+    ; Allocate stack space for t array, and realign stack.
+    add         rsp, -DCTSIZE2 * SIZEOF_WORD - 8
+    mov         t, rsp
 
     pshuflw     xmm0, xmm0, 11001001b                     ;A: w0 = 01 08 xx 09 02 03 10 11
     pinsrw      xmm0, word [block + 16 * SIZEOF_WORD], 2  ;A: w0 = 01 08 16 09 02 03 10 11
@@ -443,9 +450,9 @@ EXTN(jsimd_huff_encode_one_block_sse2):
     pinsrw      xmm5, word [block + 29 * SIZEOF_WORD], 7  ;E: w5 = 42 49 56 57 50 43 36 29
                                                           ;        (Row 4, offset 1)
 %undef block
-%define free_bitsq  rdx
-%define free_bitsd  edx
-%define free_bitsb  dl
+%define free_bitsq  r15
+%define free_bitsd  r15d
+%define free_bitsb  r15b
     pcmpeqw     xmm1, xmm0                                ;F: w1[i] = (w1[i] == 0 ? -1 : 0);
     shl         tempq, 48                                 ;Z:     temp <<= 48;
     pxor        xmm2, xmm2                                ;E: w2[i] = 0;
@@ -534,12 +541,8 @@ EXTN(jsimd_huff_encode_one_block_sse2):
     test        index, index
     jnz         .BLOOP                                    ;   } while (index != 0);
 .ELOOP:                                                   ; }  /* index != 0 */
-    sub         td, esp                                   ; t -= (WIN64: &t_[0], UNIX: &t_[64]);
-%ifdef WIN64
+    sub         td, esp                                   ; t -= &t_[0];
     cmp         td, (DCTSIZE2 - 2) * SIZEOF_WORD          ; if (t != 62)
-%else
-    cmp         td, -2 * SIZEOF_WORD                      ; if (t != -2)
-%endif
     je          .EFN                                      ; {
     movzx       nbits, byte [actbl + c_derived_tbl.ehufsi + 0]
                                                           ;   nbits = actbl->ehufsi[0];
@@ -556,18 +559,17 @@ EXTN(jsimd_huff_encode_one_block_sse2):
                                                           ; state->cur.put_buffer.simd = put_buffer;
     mov         byte [state + working_state.cur.free_bits], free_bitsb
                                                           ; state->cur.free_bits = free_bits;
-%ifdef WIN64
-    sub         rsp, -DCTSIZE2 * SIZEOF_WORD
+    sub         rsp, -DCTSIZE2 * SIZEOF_WORD - 8
     pop         r12
+%ifdef WIN64
     pop         rdi
     pop         rsi
-    pop         rbp
     pop         rbx
 %else
-    pop         r12
-    pop         rbp
     pop         rbx
 %endif
+    pop         r15
+    pop         rbp
     ret
 
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

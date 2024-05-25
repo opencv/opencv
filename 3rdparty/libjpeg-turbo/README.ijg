@@ -43,7 +43,7 @@ User documentation:
   change.log        Version-to-version change highlights.
 Programmer and internal documentation:
   libjpeg.txt       How to use the JPEG library in your own programs.
-  example.txt       Sample code for calling the JPEG library.
+  example.c         Sample code for calling the JPEG library.
   structure.txt     Overview of the JPEG library's internal structure.
   coderules.txt     Coding style rules --- please read if you contribute code.
 
@@ -68,17 +68,17 @@ other abrupt features may not compress well with JPEG, and a higher JPEG
 quality may have to be used to avoid visible compression artifacts with such
 images.
 
-JPEG is lossy, meaning that the output pixels are not necessarily identical to
-the input pixels.  However, on photographic content and other "smooth" images,
-very good compression ratios can be obtained with no visible compression
-artifacts, and extremely high compression ratios are possible if you are
-willing to sacrifice image quality (by reducing the "quality" setting in the
-compressor.)
+JPEG is normally lossy, meaning that the output pixels are not necessarily
+identical to the input pixels.  However, on photographic content and other
+"smooth" images, very good compression ratios can be obtained with no visible
+compression artifacts, and extremely high compression ratios are possible if
+you are willing to sacrifice image quality (by reducing the "quality" setting
+in the compressor.)
 
-This software implements JPEG baseline, extended-sequential, and progressive
-compression processes.  Provision is made for supporting all variants of these
-processes, although some uncommon parameter settings aren't implemented yet.
-We have made no provision for supporting the hierarchical or lossless
+This software implements JPEG baseline, extended-sequential, progressive, and
+lossless compression processes.  Provision is made for supporting all variants
+of these processes, although some uncommon parameter settings aren't
+implemented yet.  We have made no provision for supporting the hierarchical
 processes defined in the standard.
 
 We provide a set of library routines for reading and writing JPEG image files,
@@ -241,7 +241,7 @@ This software implements ITU T.81 | ISO/IEC 10918 with some extensions from
 ITU T.871 | ISO/IEC 10918-5 (JPEG File Interchange Format-- see REFERENCES).
 Informally, the term "JPEG image" or "JPEG file" most often refers to JFIF or
 a subset thereof, but there are other formats containing the name "JPEG" that
-are incompatible with the DCT-based JPEG standard or with JFIF (for instance,
+are incompatible with the original JPEG standard or with JFIF (for instance,
 JPEG 2000 and JPEG XR).  This software therefore does not support these
 formats.  Indeed, one of the original reasons for developing this free software
 was to help force convergence on a common, interoperable format standard for

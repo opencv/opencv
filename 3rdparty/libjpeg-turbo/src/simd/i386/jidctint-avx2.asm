@@ -2,7 +2,7 @@
 ; jidctint.asm - accurate integer IDCT (AVX2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2009, 2016, 2018, 2020, D. R. Commander.
+; Copyright (C) 2009, 2016, 2018, 2020, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -65,7 +65,7 @@ F_3_072 equ DESCALE(3299298341, 30 - CONST_BITS)  ; FIX(3.072711026)
 ; %1-%4: Input/output registers
 ; %5-%8: Temp registers
 
-%macro dotranspose 8
+%macro DOTRANSPOSE 8
     ; %5=(00 10 20 30 40 50 60 70  01 11 21 31 41 51 61 71)
     ; %6=(03 13 23 33 43 53 63 73  02 12 22 32 42 52 62 72)
     ; %7=(04 14 24 34 44 54 64 74  05 15 25 35 45 55 65 75)
@@ -118,7 +118,7 @@ F_3_072 equ DESCALE(3299298341, 30 - CONST_BITS)  ; FIX(3.072711026)
 ; %5-%12: Temp registers
 ; %9:     Pass (1 or 2)
 
-%macro dodct 13
+%macro DODCT 13
     ; -- Even part
 
     ; (Original)
@@ -250,7 +250,7 @@ F_3_072 equ DESCALE(3299298341, 30 - CONST_BITS)  ; FIX(3.072711026)
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_idct_islow_avx2)
 
 EXTN(jconst_idct_islow_avx2):
@@ -269,7 +269,7 @@ PB_CENTERJSAMP             times 32 db  CENTERJSAMPLE
 PW_1_NEG1                  times 8  dw  1
                            times 8  dw -1
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -303,13 +303,13 @@ EXTN(jsimd_idct_islow_avx2):
     mov         [esp], eax
     mov         ebp, esp                     ; ebp = aligned ebp
     lea         esp, [wk(0)]
-    pushpic     ebx
+    PUSHPIC     ebx
 ;   push        ecx                     ; unused
 ;   push        edx                     ; need not be preserved
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
+    GET_GOT     ebx                     ; get GOT address
 
     ; ---- Pass 1: process columns.
 
@@ -353,7 +353,7 @@ EXTN(jsimd_idct_islow_avx2):
     vpshufd     ymm3, ymm4, 0xFF        ; ymm3=col3_7=(03 03 03 03 03 03 03 03  07 07 07 07 07 07 07 07)
 
     jmp         near .column_end
-    alignx      16, 7
+    ALIGNX      16, 7
 %endif
 .columnDCT:
 
@@ -371,10 +371,10 @@ EXTN(jsimd_idct_islow_avx2):
     vperm2i128  ymm2, ymm5, ymm7, 0x20  ; ymm2=in2_6
     vperm2i128  ymm3, ymm7, ymm6, 0x31  ; ymm3=in7_5
 
-    dodct ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, XMMWORD [wk(0)], XMMWORD [wk(1)], XMMWORD [wk(2)], XMMWORD [wk(3)], 1
+    DODCT ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, XMMWORD [wk(0)], XMMWORD [wk(1)], XMMWORD [wk(2)], XMMWORD [wk(3)], 1
     ; ymm0=data0_1, ymm1=data3_2, ymm2=data4_5, ymm3=data7_6
 
-    dotranspose ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
+    DOTRANSPOSE ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
     ; ymm0=data0_4, ymm1=data1_5, ymm2=data2_6, ymm3=data3_7
 
 .column_end:
@@ -395,10 +395,10 @@ EXTN(jsimd_idct_islow_avx2):
     vperm2i128  ymm4, ymm3, ymm1, 0x31  ; ymm3=in7_5
     vperm2i128  ymm1, ymm3, ymm1, 0x20  ; ymm1=in3_1
 
-    dodct ymm0, ymm1, ymm2, ymm4, ymm3, ymm5, ymm6, ymm7, XMMWORD [wk(0)], XMMWORD [wk(1)], XMMWORD [wk(2)], XMMWORD [wk(3)], 2
+    DODCT ymm0, ymm1, ymm2, ymm4, ymm3, ymm5, ymm6, ymm7, XMMWORD [wk(0)], XMMWORD [wk(1)], XMMWORD [wk(2)], XMMWORD [wk(3)], 2
     ; ymm0=data0_1, ymm1=data3_2, ymm2=data4_5, ymm4=data7_6
 
-    dotranspose ymm0, ymm1, ymm2, ymm4, ymm3, ymm5, ymm6, ymm7
+    DOTRANSPOSE ymm0, ymm1, ymm2, ymm4, ymm3, ymm5, ymm6, ymm7
     ; ymm0=data0_4, ymm1=data1_5, ymm2=data2_6, ymm4=data3_7
 
     vpacksswb   ymm0, ymm0, ymm1        ; ymm0=data01_45
@@ -442,7 +442,7 @@ EXTN(jsimd_idct_islow_avx2):
     pop         esi
 ;   pop         edx                     ; need not be preserved
 ;   pop         ecx                     ; unused
-    poppic      ebx
+    POPPIC      ebx
     mov         esp, ebp                ; esp <- aligned ebp
     pop         esp                     ; esp <- original ebp
     pop         ebp

@@ -4,8 +4,11 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1998, Thomas G. Lane.
  * Modified 2002-2009 by Guido Vollbeding.
+ * Lossless JPEG Modifications:
+ * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2013-2014, 2016-2017, 2020, D. R. Commander.
+ * Copyright (C) 2009-2011, 2013-2014, 2016-2017, 2020, 2022-2023,
+             D. R. Commander.
  * Copyright (C) 2015, Google, Inc.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -43,6 +46,13 @@ extern "C" {
  * if you want to be compatible.
  */
 
+/* NOTE: In lossless mode, an MCU contains one or more samples rather than one
+ * or more 8x8 DCT blocks, so the term "data unit" is used to generically
+ * describe a sample in lossless mode or an 8x8 DCT block in lossy mode.  To
+ * preserve backward API/ABI compatibility, the field and macro names retain
+ * the "block" terminology.
+ */
+
 #define DCTSIZE             8   /* The basic DCT block is 8x8 samples */
 #define DCTSIZE2            64  /* DCTSIZE squared; # of elements in a block */
 #define NUM_QUANT_TBLS      4   /* Quantization tables are numbered 0..3 */
@@ -57,9 +67,9 @@ extern "C" {
  * we strongly discourage changing C_MAX_BLOCKS_IN_MCU; just because Adobe
  * sometimes emits noncompliant files doesn't mean you should too.
  */
-#define C_MAX_BLOCKS_IN_MCU   10 /* compressor's limit on blocks per MCU */
+#define C_MAX_BLOCKS_IN_MCU   10 /* compressor's limit on data units/MCU */
 #ifndef D_MAX_BLOCKS_IN_MCU
-#define D_MAX_BLOCKS_IN_MCU   10 /* decompressor's limit on blocks per MCU */
+#define D_MAX_BLOCKS_IN_MCU   10 /* decompressor's limit on data units/MCU */
 #endif
 
 
@@ -69,6 +79,20 @@ extern "C" {
 typedef JSAMPLE *JSAMPROW;      /* ptr to one image row of pixel samples. */
 typedef JSAMPROW *JSAMPARRAY;   /* ptr to some rows (a 2-D sample array) */
 typedef JSAMPARRAY *JSAMPIMAGE; /* a 3-D sample array: top index is color */
+
+typedef J12SAMPLE *J12SAMPROW;      /* ptr to one image row of 12-bit pixel
+                                       samples. */
+typedef J12SAMPROW *J12SAMPARRAY;   /* ptr to some 12-bit sample rows (a 2-D
+                                       12-bit sample array) */
+typedef J12SAMPARRAY *J12SAMPIMAGE; /* a 3-D 12-bit sample array: top index is
+                                       color */
+
+typedef J16SAMPLE *J16SAMPROW;      /* ptr to one image row of 16-bit pixel
+                                       samples. */
+typedef J16SAMPROW *J16SAMPARRAY;   /* ptr to some 16-bit sample rows (a 2-D
+                                       16-bit sample array) */
+typedef J16SAMPARRAY *J16SAMPIMAGE; /* a 3-D 16-bit sample array: top index is
+                                       color */
 
 typedef JCOEF JBLOCK[DCTSIZE2]; /* one block of coefficients */
 typedef JBLOCK *JBLOCKROW;      /* pointer to one row of coefficient blocks */
@@ -135,17 +159,20 @@ typedef struct {
   /* Remaining fields should be treated as private by applications. */
 
   /* These values are computed during compression or decompression startup: */
-  /* Component's size in DCT blocks.
-   * Any dummy blocks added to complete an MCU are not counted; therefore
-   * these values do not depend on whether a scan is interleaved or not.
+  /* Component's size in data units.
+   * In lossy mode, any dummy blocks added to complete an MCU are not counted;
+   * therefore these values do not depend on whether a scan is interleaved or
+   * not.  In lossless mode, these are always equal to the image width and
+   * height.
    */
   JDIMENSION width_in_blocks;
   JDIMENSION height_in_blocks;
-  /* Size of a DCT block in samples.  Always DCTSIZE for compression.
-   * For decompression this is the size of the output from one DCT block,
+  /* Size of a data unit in samples.  Always DCTSIZE for lossy compression.
+   * For lossy decompression this is the size of the output from one DCT block,
    * reflecting any scaling we choose to apply during the IDCT step.
-   * Values from 1 to 16 are supported.
-   * Note that different components may receive different IDCT scalings.
+   * Values from 1 to 16 are supported.  Note that different components may
+   * receive different IDCT scalings.  In lossless mode, this is always equal
+   * to 1.
    */
 #if JPEG_LIB_VERSION >= 70
   int DCT_h_scaled_size;
@@ -156,8 +183,10 @@ typedef struct {
   /* The downsampled dimensions are the component's actual, unpadded number
    * of samples at the main buffer (preprocessing/compression interface), thus
    * downsampled_width = ceil(image_width * Hi/Hmax)
-   * and similarly for height.  For decompression, IDCT scaling is included, so
+   * and similarly for height.  For lossy decompression, IDCT scaling is
+   * included, so
    * downsampled_width = ceil(image_width * Hi/Hmax * DCT_[h_]scaled_size/DCTSIZE)
+   * In lossless mode, these are always equal to the image width and height.
    */
   JDIMENSION downsampled_width;  /* actual width in samples */
   JDIMENSION downsampled_height; /* actual height in samples */
@@ -169,12 +198,12 @@ typedef struct {
 
   /* These values are computed before starting a scan of the component. */
   /* The decompressor output side may not use these variables. */
-  int MCU_width;                /* number of blocks per MCU, horizontally */
-  int MCU_height;               /* number of blocks per MCU, vertically */
+  int MCU_width;                /* number of data units per MCU, horizontally */
+  int MCU_height;               /* number of data units per MCU, vertically */
   int MCU_blocks;               /* MCU_width * MCU_height */
   int MCU_sample_width;         /* MCU width in samples, MCU_width*DCT_[h_]scaled_size */
-  int last_col_width;           /* # of non-dummy blocks across in last MCU */
-  int last_row_height;          /* # of non-dummy blocks down in last MCU */
+  int last_col_width;           /* # of non-dummy data units across in last MCU */
+  int last_row_height;          /* # of non-dummy data units down in last MCU */
 
   /* Saved quantization table for component; NULL if none yet saved.
    * See jdinput.c comments about the need for this information.
@@ -192,8 +221,12 @@ typedef struct {
 typedef struct {
   int comps_in_scan;            /* number of components encoded in this scan */
   int component_index[MAX_COMPS_IN_SCAN]; /* their SOF/comp_info[] indexes */
-  int Ss, Se;                   /* progressive JPEG spectral selection parms */
-  int Ah, Al;                   /* progressive JPEG successive approx. parms */
+  int Ss, Se;                   /* progressive JPEG spectral selection parms
+                                   (Ss is the predictor selection value in
+                                   lossless mode) */
+  int Ah, Al;                   /* progressive JPEG successive approx. parms
+                                   (Al is the point transform value in lossless
+                                   mode) */
 } jpeg_scan_info;
 
 /* The decompressor can save APPn and COM markers in a list of these: */
@@ -238,7 +271,8 @@ typedef enum {
   JCS_EXT_BGRA,           /* blue/green/red/alpha */
   JCS_EXT_ABGR,           /* alpha/blue/green/red */
   JCS_EXT_ARGB,           /* alpha/red/green/blue */
-  JCS_RGB565              /* 5-bit red/6-bit green/5-bit blue */
+  JCS_RGB565              /* 5-bit red/6-bit green/5-bit blue
+                             [decompression only] */
 } J_COLOR_SPACE;
 
 /* DCT/IDCT algorithm options. */
@@ -419,11 +453,13 @@ struct jpeg_compress_struct {
   int min_DCT_v_scaled_size;    /* smallest DCT_v_scaled_size of any component */
 #endif
 
-  JDIMENSION total_iMCU_rows;   /* # of iMCU rows to be input to coef ctlr */
-  /* The coefficient controller receives data in units of MCU rows as defined
-   * for fully interleaved scans (whether the JPEG file is interleaved or not).
-   * There are v_samp_factor * DCTSIZE sample rows of each component in an
-   * "iMCU" (interleaved MCU) row.
+  JDIMENSION total_iMCU_rows;   /* # of iMCU rows to be input to coefficient or
+                                   difference controller */
+  /* The coefficient or difference controller receives data in units of MCU
+   * rows as defined for fully interleaved scans (whether the JPEG file is
+   * interleaved or not).  In lossy mode, there are v_samp_factor * DCTSIZE
+   * sample rows of each component in an "iMCU" (interleaved MCU) row.  In
+   * lossless mode, total_iMCU_rows is always equal to the image height.
    */
 
   /*
@@ -437,12 +473,13 @@ struct jpeg_compress_struct {
   JDIMENSION MCUs_per_row;      /* # of MCUs across the image */
   JDIMENSION MCU_rows_in_scan;  /* # of MCU rows in the image */
 
-  int blocks_in_MCU;            /* # of DCT blocks per MCU */
+  int blocks_in_MCU;            /* # of data units per MCU */
   int MCU_membership[C_MAX_BLOCKS_IN_MCU];
   /* MCU_membership[i] is index in cur_comp_info of component owning */
-  /* i'th block in an MCU */
+  /* i'th data unit in an MCU */
 
-  int Ss, Se, Ah, Al;           /* progressive JPEG parameters for scan */
+  int Ss, Se, Ah, Al;           /* progressive/lossless JPEG parameters for
+                                   scan */
 
 #if JPEG_LIB_VERSION >= 80
   int block_size;               /* the basic DCT block size: 1..16 */
@@ -537,7 +574,12 @@ struct jpeg_decompress_struct {
    * The map has out_color_components rows and actual_number_of_colors columns.
    */
   int actual_number_of_colors;  /* number of entries in use */
-  JSAMPARRAY colormap;          /* The color map as a 2-D pixel array */
+  JSAMPARRAY colormap;          /* The color map as a 2-D pixel array
+                                   If data_precision is 12 or 16, then this is
+                                   actually a J12SAMPARRAY or a J16SAMPARRAY,
+                                   so callers must type-cast it in order to
+                                   read/write 12-bit or 16-bit samples from/to
+                                   the array. */
 
   /* State variables: these variables indicate the progress of decompression.
    * The application may examine these but must not modify them.
@@ -647,15 +689,21 @@ struct jpeg_decompress_struct {
 #endif
 
   JDIMENSION total_iMCU_rows;   /* # of iMCU rows in image */
-  /* The coefficient controller's input and output progress is measured in
-   * units of "iMCU" (interleaved MCU) rows.  These are the same as MCU rows
-   * in fully interleaved JPEG scans, but are used whether the scan is
-   * interleaved or not.  We define an iMCU row as v_samp_factor DCT block
-   * rows of each component.  Therefore, the IDCT output contains
+  /* The coefficient or difference controller's input and output progress is
+   * measured in units of "iMCU" (interleaved MCU) rows.  These are the same as
+   * MCU rows in fully interleaved JPEG scans, but are used whether the scan is
+   * interleaved or not.  In lossy mode, we define an iMCU row as v_samp_factor
+   * DCT block rows of each component.  Therefore, the IDCT output contains
    * v_samp_factor*DCT_[v_]scaled_size sample rows of a component per iMCU row.
+   * In lossless mode, total_iMCU_rows is always equal to the image height.
    */
 
-  JSAMPLE *sample_range_limit;  /* table for fast range-limiting */
+  JSAMPLE *sample_range_limit;  /* table for fast range-limiting
+                                   If data_precision is 12 or 16, then this is
+                                   actually a J12SAMPLE pointer or a J16SAMPLE
+                                   pointer, so callers must type-cast it in
+                                   order to read 12-bit or 16-bit samples from
+                                   the array. */
 
   /*
    * These fields are valid during any one scan.
@@ -669,12 +717,13 @@ struct jpeg_decompress_struct {
   JDIMENSION MCUs_per_row;      /* # of MCUs across the image */
   JDIMENSION MCU_rows_in_scan;  /* # of MCU rows in the image */
 
-  int blocks_in_MCU;            /* # of DCT blocks per MCU */
+  int blocks_in_MCU;            /* # of data units per MCU */
   int MCU_membership[D_MAX_BLOCKS_IN_MCU];
   /* MCU_membership[i] is index in cur_comp_info of component owning */
-  /* i'th block in an MCU */
+  /* i'th data unit in an MCU */
 
-  int Ss, Se, Ah, Al;           /* progressive JPEG parameters for scan */
+  int Ss, Se, Ah, Al;           /* progressive/lossless JPEG parameters for
+                                   scan */
 
 #if JPEG_LIB_VERSION >= 80
   /* These fields are derived from Se of first SOS marker.
@@ -835,6 +884,11 @@ struct jpeg_memory_mgr {
   void *(*alloc_small) (j_common_ptr cinfo, int pool_id, size_t sizeofobject);
   void *(*alloc_large) (j_common_ptr cinfo, int pool_id,
                         size_t sizeofobject);
+  /* If cinfo->data_precision is 12 or 16, then this method and the
+   * access_virt_sarray method actually return a J12SAMPARRAY or a
+   * J16SAMPARRAY, so callers must type-cast the return value in order to
+   * read/write 12-bit or 16-bit samples from/to the array.
+   */
   JSAMPARRAY (*alloc_sarray) (j_common_ptr cinfo, int pool_id,
                               JDIMENSION samplesperrow, JDIMENSION numrows);
   JBLOCKARRAY (*alloc_barray) (j_common_ptr cinfo, int pool_id,
@@ -916,13 +970,11 @@ EXTERN(void) jpeg_destroy_decompress(j_decompress_ptr cinfo);
 EXTERN(void) jpeg_stdio_dest(j_compress_ptr cinfo, FILE *outfile);
 EXTERN(void) jpeg_stdio_src(j_decompress_ptr cinfo, FILE *infile);
 
-#if JPEG_LIB_VERSION >= 80 || defined(MEM_SRCDST_SUPPORTED)
 /* Data source and destination managers: memory buffers. */
 EXTERN(void) jpeg_mem_dest(j_compress_ptr cinfo, unsigned char **outbuffer,
                            unsigned long *outsize);
 EXTERN(void) jpeg_mem_src(j_decompress_ptr cinfo,
                           const unsigned char *inbuffer, unsigned long insize);
-#endif
 
 /* Default parameter setup for compression */
 EXTERN(void) jpeg_set_defaults(j_compress_ptr cinfo);
@@ -942,6 +994,9 @@ EXTERN(void) jpeg_add_quant_table(j_compress_ptr cinfo, int which_tbl,
                                   const unsigned int *basic_table,
                                   int scale_factor, boolean force_baseline);
 EXTERN(int) jpeg_quality_scaling(int quality);
+EXTERN(void) jpeg_enable_lossless(j_compress_ptr cinfo,
+                                  int predictor_selection_value,
+                                  int point_transform);
 EXTERN(void) jpeg_simple_progression(j_compress_ptr cinfo);
 EXTERN(void) jpeg_suppress_tables(j_compress_ptr cinfo, boolean suppress);
 EXTERN(JQUANT_TBL *) jpeg_alloc_quant_table(j_common_ptr cinfo);
@@ -953,6 +1008,12 @@ EXTERN(void) jpeg_start_compress(j_compress_ptr cinfo,
 EXTERN(JDIMENSION) jpeg_write_scanlines(j_compress_ptr cinfo,
                                         JSAMPARRAY scanlines,
                                         JDIMENSION num_lines);
+EXTERN(JDIMENSION) jpeg12_write_scanlines(j_compress_ptr cinfo,
+                                          J12SAMPARRAY scanlines,
+                                          JDIMENSION num_lines);
+EXTERN(JDIMENSION) jpeg16_write_scanlines(j_compress_ptr cinfo,
+                                          J16SAMPARRAY scanlines,
+                                          JDIMENSION num_lines);
 EXTERN(void) jpeg_finish_compress(j_compress_ptr cinfo);
 
 #if JPEG_LIB_VERSION >= 70
@@ -963,6 +1024,9 @@ EXTERN(void) jpeg_calc_jpeg_dimensions(j_compress_ptr cinfo);
 /* Replaces jpeg_write_scanlines when writing raw downsampled data. */
 EXTERN(JDIMENSION) jpeg_write_raw_data(j_compress_ptr cinfo, JSAMPIMAGE data,
                                        JDIMENSION num_lines);
+EXTERN(JDIMENSION) jpeg12_write_raw_data(j_compress_ptr cinfo,
+                                         J12SAMPIMAGE data,
+                                         JDIMENSION num_lines);
 
 /* Write a special marker.  See libjpeg.txt concerning safe usage. */
 EXTERN(void) jpeg_write_marker(j_compress_ptr cinfo, int marker,
@@ -998,15 +1062,28 @@ EXTERN(boolean) jpeg_start_decompress(j_decompress_ptr cinfo);
 EXTERN(JDIMENSION) jpeg_read_scanlines(j_decompress_ptr cinfo,
                                        JSAMPARRAY scanlines,
                                        JDIMENSION max_lines);
+EXTERN(JDIMENSION) jpeg12_read_scanlines(j_decompress_ptr cinfo,
+                                         J12SAMPARRAY scanlines,
+                                         JDIMENSION max_lines);
+EXTERN(JDIMENSION) jpeg16_read_scanlines(j_decompress_ptr cinfo,
+                                         J16SAMPARRAY scanlines,
+                                         JDIMENSION max_lines);
 EXTERN(JDIMENSION) jpeg_skip_scanlines(j_decompress_ptr cinfo,
                                        JDIMENSION num_lines);
+EXTERN(JDIMENSION) jpeg12_skip_scanlines(j_decompress_ptr cinfo,
+                                         JDIMENSION num_lines);
 EXTERN(void) jpeg_crop_scanline(j_decompress_ptr cinfo, JDIMENSION *xoffset,
                                 JDIMENSION *width);
+EXTERN(void) jpeg12_crop_scanline(j_decompress_ptr cinfo, JDIMENSION *xoffset,
+                                  JDIMENSION *width);
 EXTERN(boolean) jpeg_finish_decompress(j_decompress_ptr cinfo);
 
 /* Replaces jpeg_read_scanlines when reading raw downsampled data. */
 EXTERN(JDIMENSION) jpeg_read_raw_data(j_decompress_ptr cinfo, JSAMPIMAGE data,
                                       JDIMENSION max_lines);
+EXTERN(JDIMENSION) jpeg12_read_raw_data(j_decompress_ptr cinfo,
+                                        J12SAMPIMAGE data,
+                                        JDIMENSION max_lines);
 
 /* Additional entry points for buffered-image mode. */
 EXTERN(boolean) jpeg_has_multiple_scans(j_decompress_ptr cinfo);

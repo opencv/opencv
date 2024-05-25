@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1998, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015, D. R. Commander.
+ * Copyright (C) 2015, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -64,10 +64,10 @@
  * The dequantized coefficients are not integers because the AA&N scaling
  * factors have been incorporated.  We represent them scaled up by PASS1_BITS,
  * so that the first and second IDCT rounds have the same input scaling.
- * For 8-bit JSAMPLEs, we choose IFAST_SCALE_BITS = PASS1_BITS so as to
+ * For 8-bit samples, we choose IFAST_SCALE_BITS = PASS1_BITS so as to
  * avoid a descaling shift; this compromises accuracy rather drastically
  * for small quantization table entries, but it saves a lot of shifts.
- * For 12-bit JSAMPLEs, there's no hope of using 16x16 multiplies anyway,
+ * For 12-bit samples, there's no hope of using 16x16 multiplies anyway,
  * so we use a much larger scaling factor to preserve accuracy.
  *
  * A final compromise is to represent the multiplicative constants to only
@@ -168,9 +168,9 @@
  */
 
 GLOBAL(void)
-jpeg_idct_ifast(j_decompress_ptr cinfo, jpeg_component_info *compptr,
-                JCOEFPTR coef_block, JSAMPARRAY output_buf,
-                JDIMENSION output_col)
+_jpeg_idct_ifast(j_decompress_ptr cinfo, jpeg_component_info *compptr,
+                 JCOEFPTR coef_block, _JSAMPARRAY output_buf,
+                 JDIMENSION output_col)
 {
   DCTELEM tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
   DCTELEM tmp10, tmp11, tmp12, tmp13;
@@ -178,8 +178,8 @@ jpeg_idct_ifast(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   JCOEFPTR inptr;
   IFAST_MULT_TYPE *quantptr;
   int *wsptr;
-  JSAMPROW outptr;
-  JSAMPLE *range_limit = IDCT_range_limit(cinfo);
+  _JSAMPROW outptr;
+  _JSAMPLE *range_limit = IDCT_range_limit(cinfo);
   int ctr;
   int workspace[DCTSIZE2];      /* buffers data between passes */
   SHIFT_TEMPS                   /* for DESCALE */
@@ -296,7 +296,7 @@ jpeg_idct_ifast(j_decompress_ptr cinfo, jpeg_component_info *compptr,
     if (wsptr[1] == 0 && wsptr[2] == 0 && wsptr[3] == 0 && wsptr[4] == 0 &&
         wsptr[5] == 0 && wsptr[6] == 0 && wsptr[7] == 0) {
       /* AC terms all zero */
-      JSAMPLE dcval =
+      _JSAMPLE dcval =
         range_limit[IDESCALE(wsptr[0], PASS1_BITS + 3) & RANGE_MASK];
 
       outptr[0] = dcval;

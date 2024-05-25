@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1994, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2022, D. R. Commander.
+ * Copyright (C) 2022-2023, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -43,6 +43,18 @@
  * functions with Visual Studio builds without the need to scatter #ifdefs
  * throughout the code base.
  */
+
+
+#ifdef _MSC_VER
+
+#define SNPRINTF(str, n, format, ...) \
+  _snprintf_s(str, n, _TRUNCATE, format, ##__VA_ARGS__)
+
+#else
+
+#define SNPRINTF  snprintf
+
+#endif
 
 
 #ifndef NO_GETENV
@@ -110,6 +122,8 @@ static INLINE int GETENV_S(char *buffer, size_t buffer_size, const char *name)
 #define PUTENV_S(name, value)  _putenv_s(name, value)
 
 #else
+
+#include <errno.h>
 
 /* This provides a similar interface to the Microsoft _putenv_s() function, but
  * other than parameter validation, it has no advantages over setenv().

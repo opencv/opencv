@@ -2,7 +2,7 @@
 ; jdmrgext.asm - merged upsampling/color conversion (AVX2)
 ;
 ; Copyright 2009, 2012 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2012, 2016, D. R. Commander.
+; Copyright (C) 2012, 2016, 2024, D. R. Commander.
 ; Copyright (C) 2015, Intel Corporation.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
@@ -50,15 +50,15 @@ EXTN(jsimd_h2v1_merged_upsample_avx2):
     mov         [esp], eax
     mov         ebp, esp                     ; ebp = aligned ebp
     lea         esp, [wk(0)]
-    pushpic     eax                     ; make a room for GOT address
+    PUSHPIC     eax                     ; make a room for GOT address
     push        ebx
 ;   push        ecx                     ; need not be preserved
 ;   push        edx                     ; need not be preserved
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
-    movpic      POINTER [gotptr], ebx   ; save GOT address
+    GET_GOT     ebx                     ; get GOT address
+    MOVPIC      POINTER [gotptr], ebx   ; save GOT address
 
     mov         ecx, JDIMENSION [output_width(eax)]  ; col
     test        ecx, ecx
@@ -79,9 +79,9 @@ EXTN(jsimd_h2v1_merged_upsample_avx2):
 
     pop         ecx                     ; col
 
-    alignx      16, 7
+    ALIGNX      16, 7
 .columnloop:
-    movpic      eax, POINTER [gotptr]   ; load GOT address (eax)
+    MOVPIC      eax, POINTER [gotptr]   ; load GOT address (eax)
 
     vmovdqu     ymm6, YMMWORD [ebx]     ; ymm6=Cb(0123456789ABCDEFGHIJKLMNOPQRSTUV)
     vmovdqu     ymm7, YMMWORD [edx]     ; ymm7=Cr(0123456789ABCDEFGHIJKLMNOPQRSTUV)
@@ -168,13 +168,13 @@ EXTN(jsimd_h2v1_merged_upsample_avx2):
 
     mov         al, 2                   ; Yctr
     jmp         short .Yloop_1st
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .Yloop_2nd:
     vmovdqa     ymm0, YMMWORD [wk(1)]   ; ymm0=(R-Y)H
     vmovdqa     ymm2, YMMWORD [wk(2)]   ; ymm2=(G-Y)H
     vmovdqa     ymm4, YMMWORD [wk(0)]   ; ymm4=(B-Y)H
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .Yloop_1st:
     vmovdqu     ymm7, YMMWORD [esi]     ; ymm7=Y(0123456789ABCDEFGHIJKLMNOPQRSTUV)
@@ -301,7 +301,7 @@ EXTN(jsimd_h2v1_merged_upsample_avx2):
     add         ebx, byte SIZEOF_YMMWORD  ; inptr1
     add         edx, byte SIZEOF_YMMWORD  ; inptr2
     jmp         near .columnloop
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .column_st64:
     lea         ecx, [ecx+ecx*2]            ; imul ecx, RGB_PIXELSIZE
@@ -445,7 +445,7 @@ EXTN(jsimd_h2v1_merged_upsample_avx2):
     add         ebx, byte SIZEOF_YMMWORD  ; inptr1
     add         edx, byte SIZEOF_YMMWORD  ; inptr2
     jmp         near .columnloop
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .column_st64:
     cmp         ecx, byte SIZEOF_YMMWORD/2

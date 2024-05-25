@@ -1,8 +1,10 @@
 /*
  * jcapistd.c
  *
+ * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * This file is part of the Independent JPEG Group's software.
+ * libjpeg-turbo Modifications:
+ * Copyright (C) 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -18,7 +20,10 @@
 #define JPEG_INTERNALS
 #include "jinclude.h"
 #include "jpeglib.h"
+#include "jsamplecomp.h"
 
+
+#if BITS_IN_JSAMPLE == 8
 
 /*
  * Compression initialization.
@@ -51,12 +56,14 @@ jpeg_start_compress(j_compress_ptr cinfo, boolean write_all_tables)
   jinit_compress_master(cinfo);
   /* Set up for the first pass */
   (*cinfo->master->prepare_for_pass) (cinfo);
-  /* Ready for application to drive first pass through jpeg_write_scanlines
-   * or jpeg_write_raw_data.
+  /* Ready for application to drive first pass through _jpeg_write_scanlines
+   * or _jpeg_write_raw_data.
    */
   cinfo->next_scanline = 0;
   cinfo->global_state = (cinfo->raw_data_in ? CSTATE_RAW_OK : CSTATE_SCANNING);
 }
+
+#endif
 
 
 /*
@@ -67,7 +74,7 @@ jpeg_start_compress(j_compress_ptr cinfo, boolean write_all_tables)
  * the data destination module has requested suspension of the compressor,
  * or if more than image_height scanlines are passed in.
  *
- * Note: we warn about excess calls to jpeg_write_scanlines() since
+ * Note: we warn about excess calls to _jpeg_write_scanlines() since
  * this likely signals an application programmer error.  However,
  * excess scanlines passed in the last valid call are *silently* ignored,
  * so that the application need not adjust num_lines for end-of-image
@@ -75,10 +82,14 @@ jpeg_start_compress(j_compress_ptr cinfo, boolean write_all_tables)
  */
 
 GLOBAL(JDIMENSION)
-jpeg_write_scanlines(j_compress_ptr cinfo, JSAMPARRAY scanlines,
-                     JDIMENSION num_lines)
+_jpeg_write_scanlines(j_compress_ptr cinfo, _JSAMPARRAY scanlines,
+                      JDIMENSION num_lines)
 {
+#if BITS_IN_JSAMPLE != 16 || defined(C_LOSSLESS_SUPPORTED)
   JDIMENSION row_ctr, rows_left;
+
+  if (cinfo->data_precision != BITS_IN_JSAMPLE)
+    ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
 
   if (cinfo->global_state != CSTATE_SCANNING)
     ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
@@ -93,9 +104,9 @@ jpeg_write_scanlines(j_compress_ptr cinfo, JSAMPARRAY scanlines,
   }
 
   /* Give master control module another chance if this is first call to
-   * jpeg_write_scanlines.  This lets output of the frame/scan headers be
+   * _jpeg_write_scanlines.  This lets output of the frame/scan headers be
    * delayed so that application can write COM, etc, markers between
-   * jpeg_start_compress and jpeg_write_scanlines.
+   * jpeg_start_compress and _jpeg_write_scanlines.
    */
   if (cinfo->master->call_pass_startup)
     (*cinfo->master->pass_startup) (cinfo);
@@ -106,11 +117,17 @@ jpeg_write_scanlines(j_compress_ptr cinfo, JSAMPARRAY scanlines,
     num_lines = rows_left;
 
   row_ctr = 0;
-  (*cinfo->main->process_data) (cinfo, scanlines, &row_ctr, num_lines);
+  (*cinfo->main->_process_data) (cinfo, scanlines, &row_ctr, num_lines);
   cinfo->next_scanline += row_ctr;
   return row_ctr;
+#else
+  ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  return 0;
+#endif
 }
 
+
+#if BITS_IN_JSAMPLE != 16
 
 /*
  * Alternate entry point to write raw data.
@@ -118,10 +135,16 @@ jpeg_write_scanlines(j_compress_ptr cinfo, JSAMPARRAY scanlines,
  */
 
 GLOBAL(JDIMENSION)
-jpeg_write_raw_data(j_compress_ptr cinfo, JSAMPIMAGE data,
-                    JDIMENSION num_lines)
+_jpeg_write_raw_data(j_compress_ptr cinfo, _JSAMPIMAGE data,
+                     JDIMENSION num_lines)
 {
   JDIMENSION lines_per_iMCU_row;
+
+  if (cinfo->data_precision != BITS_IN_JSAMPLE)
+    ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+
+  if (cinfo->master->lossless)
+    ERREXIT(cinfo, JERR_NOTIMPL);
 
   if (cinfo->global_state != CSTATE_RAW_OK)
     ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
@@ -138,9 +161,9 @@ jpeg_write_raw_data(j_compress_ptr cinfo, JSAMPIMAGE data,
   }
 
   /* Give master control module another chance if this is first call to
-   * jpeg_write_raw_data.  This lets output of the frame/scan headers be
+   * _jpeg_write_raw_data.  This lets output of the frame/scan headers be
    * delayed so that application can write COM, etc, markers between
-   * jpeg_start_compress and jpeg_write_raw_data.
+   * jpeg_start_compress and _jpeg_write_raw_data.
    */
   if (cinfo->master->call_pass_startup)
     (*cinfo->master->pass_startup) (cinfo);
@@ -151,7 +174,7 @@ jpeg_write_raw_data(j_compress_ptr cinfo, JSAMPIMAGE data,
     ERREXIT(cinfo, JERR_BUFFER_SIZE);
 
   /* Directly compress the row. */
-  if (!(*cinfo->coef->compress_data) (cinfo, data)) {
+  if (!(*cinfo->coef->_compress_data) (cinfo, data)) {
     /* If compressor did not consume the whole row, suspend processing. */
     return 0;
   }
@@ -160,3 +183,5 @@ jpeg_write_raw_data(j_compress_ptr cinfo, JSAMPIMAGE data,
   cinfo->next_scanline += lines_per_iMCU_row;
   return lines_per_iMCU_row;
 }
+
+#endif /* BITS_IN_JSAMPLE != 16 */

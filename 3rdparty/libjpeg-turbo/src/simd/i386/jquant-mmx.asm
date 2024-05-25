@@ -2,7 +2,7 @@
 ; jquant.asm - sample data conversion and quantization (MMX)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2016, D. R. Commander.
+; Copyright (C) 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -52,7 +52,7 @@ EXTN(jsimd_convsamp_mmx):
     mov         eax, JDIMENSION [start_col]
     mov         edi, POINTER [workspace]       ; (DCTELEM *)
     mov         ecx, DCTSIZE/4
-    alignx      16, 7
+    ALIGNX      16, 7
 .convloop:
     mov         ebx, JSAMPROW [esi+0*SIZEOF_JSAMPROW]  ; (JSAMPLE *)
     mov         edx, JSAMPROW [esi+1*SIZEOF_JSAMPROW]  ; (JSAMPLE *)
@@ -157,10 +157,10 @@ EXTN(jsimd_quantize_mmx):
     mov         edx, POINTER [divisors]
     mov         edi, JCOEFPTR [coef_block]
     mov         ah, 2
-    alignx      16, 7
+    ALIGNX      16, 7
 .quantloop1:
     mov         al, DCTSIZE2/8/2
-    alignx      16, 7
+    ALIGNX      16, 7
 .quantloop2:
     movq        mm2, MMWORD [MMBLOCK(0,0,esi,SIZEOF_DCTELEM)]
     movq        mm3, MMWORD [MMBLOCK(0,1,esi,SIZEOF_DCTELEM)]

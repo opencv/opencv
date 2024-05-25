@@ -2,7 +2,7 @@
 ; jidctflt.asm - floating-point IDCT (3DNow! & MMX)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2016, D. R. Commander.
+; Copyright (C) 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -24,7 +24,7 @@
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_idct_float_3dnow)
 
 EXTN(jconst_idct_float_3dnow):
@@ -36,7 +36,7 @@ PD_2_613        times 2 dd 2.613125929752753055713286
 PD_RNDINT_MAGIC times 2 dd 100663296.0  ; (float)(0x00C00000 << 3)
 PB_CENTERJSAMP  times 8 db CENTERJSAMPLE
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -78,7 +78,7 @@ EXTN(jsimd_idct_float_3dnow):
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
+    GET_GOT     ebx                     ; get GOT address
 
     ; ---- Pass 1: process columns from input, store into work array.
 
@@ -87,21 +87,21 @@ EXTN(jsimd_idct_float_3dnow):
     mov         esi, JCOEFPTR [coef_block(eax)]  ; inptr
     lea         edi, [workspace]                 ; FAST_FLOAT *wsptr
     mov         ecx, DCTSIZE/2                   ; ctr
-    alignx      16, 7
+    ALIGNX      16, 7
 .columnloop:
 %ifndef NO_ZERO_COLUMN_TEST_FLOAT_3DNOW
     mov         eax, dword [DWBLOCK(1,0,esi,SIZEOF_JCOEF)]
     or          eax, dword [DWBLOCK(2,0,esi,SIZEOF_JCOEF)]
     jnz         short .columnDCT
 
-    pushpic     ebx                     ; save GOT address
+    PUSHPIC     ebx                     ; save GOT address
     mov         ebx, dword [DWBLOCK(3,0,esi,SIZEOF_JCOEF)]
     mov         eax, dword [DWBLOCK(4,0,esi,SIZEOF_JCOEF)]
     or          ebx, dword [DWBLOCK(5,0,esi,SIZEOF_JCOEF)]
     or          eax, dword [DWBLOCK(6,0,esi,SIZEOF_JCOEF)]
     or          ebx, dword [DWBLOCK(7,0,esi,SIZEOF_JCOEF)]
     or          eax, ebx
-    poppic      ebx                     ; restore GOT address
+    POPPIC      ebx                     ; restore GOT address
     jnz         short .columnDCT
 
     ; -- AC terms all zero
@@ -127,7 +127,7 @@ EXTN(jsimd_idct_float_3dnow):
     movq        MMWORD [MMBLOCK(1,2,edi,SIZEOF_FAST_FLOAT)], mm1
     movq        MMWORD [MMBLOCK(1,3,edi,SIZEOF_FAST_FLOAT)], mm1
     jmp         near .nextcolumn
-    alignx      16, 7
+    ALIGNX      16, 7
 %endif
 .columnDCT:
 
@@ -293,7 +293,7 @@ EXTN(jsimd_idct_float_3dnow):
     mov         edi, JSAMPARRAY [output_buf(eax)]  ; (JSAMPROW *)
     mov         eax, JDIMENSION [output_col(eax)]
     mov         ecx, DCTSIZE/2                     ; ctr
-    alignx      16, 7
+    ALIGNX      16, 7
 .rowloop:
 
     ; -- Even part
@@ -420,14 +420,14 @@ EXTN(jsimd_idct_float_3dnow):
     punpckldq   mm6, mm4                ; mm6=(00 01 02 03 04 05 06 07)
     punpckhdq   mm7, mm4                ; mm7=(10 11 12 13 14 15 16 17)
 
-    pushpic     ebx                     ; save GOT address
+    PUSHPIC     ebx                     ; save GOT address
 
     mov         edx, JSAMPROW [edi+0*SIZEOF_JSAMPROW]
     mov         ebx, JSAMPROW [edi+1*SIZEOF_JSAMPROW]
     movq        MMWORD [edx+eax*SIZEOF_JSAMPLE], mm6
     movq        MMWORD [ebx+eax*SIZEOF_JSAMPLE], mm7
 
-    poppic      ebx                     ; restore GOT address
+    POPPIC      ebx                     ; restore GOT address
 
     add         esi, byte 2*SIZEOF_FAST_FLOAT  ; wsptr
     add         edi, byte 2*SIZEOF_JSAMPROW

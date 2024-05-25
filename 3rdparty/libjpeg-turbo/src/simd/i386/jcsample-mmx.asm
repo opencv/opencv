@@ -2,7 +2,7 @@
 ; jcsample.asm - downsampling (MMX)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2016, D. R. Commander.
+; Copyright (C) 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -69,7 +69,7 @@ EXTN(jsimd_h2v1_downsample_mmx):
 
     cld
     mov         esi, JSAMPARRAY [input_data(ebp)]  ; input_data
-    alignx      16, 7
+    ALIGNX      16, 7
 .expandloop:
     push        eax
     push        ecx
@@ -104,7 +104,7 @@ EXTN(jsimd_h2v1_downsample_mmx):
 
     mov         esi, JSAMPARRAY [input_data(ebp)]   ; input_data
     mov         edi, JSAMPARRAY [output_data(ebp)]  ; output_data
-    alignx      16, 7
+    ALIGNX      16, 7
 .rowloop:
     push        ecx
     push        edi
@@ -112,7 +112,7 @@ EXTN(jsimd_h2v1_downsample_mmx):
 
     mov         esi, JSAMPROW [esi]     ; inptr
     mov         edi, JSAMPROW [edi]     ; outptr
-    alignx      16, 7
+    ALIGNX      16, 7
 .columnloop:
 
     movq        mm0, MMWORD [esi+0*SIZEOF_MMWORD]
@@ -212,7 +212,7 @@ EXTN(jsimd_h2v2_downsample_mmx):
 
     cld
     mov         esi, JSAMPARRAY [input_data(ebp)]  ; input_data
-    alignx      16, 7
+    ALIGNX      16, 7
 .expandloop:
     push        eax
     push        ecx
@@ -247,7 +247,7 @@ EXTN(jsimd_h2v2_downsample_mmx):
 
     mov         esi, JSAMPARRAY [input_data(ebp)]   ; input_data
     mov         edi, JSAMPARRAY [output_data(ebp)]  ; output_data
-    alignx      16, 7
+    ALIGNX      16, 7
 .rowloop:
     push        ecx
     push        edi
@@ -256,7 +256,7 @@ EXTN(jsimd_h2v2_downsample_mmx):
     mov         edx, JSAMPROW [esi+0*SIZEOF_JSAMPROW]  ; inptr0
     mov         esi, JSAMPROW [esi+1*SIZEOF_JSAMPROW]  ; inptr1
     mov         edi, JSAMPROW [edi]                    ; outptr
-    alignx      16, 7
+    ALIGNX      16, 7
 .columnloop:
 
     movq        mm0, MMWORD [edx+0*SIZEOF_MMWORD]

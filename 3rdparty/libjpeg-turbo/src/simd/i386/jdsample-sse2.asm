@@ -2,7 +2,7 @@
 ; jdsample.asm - upsampling (SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2016, D. R. Commander.
+; Copyright (C) 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -19,7 +19,7 @@
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_fancy_upsample_sse2)
 
 EXTN(jconst_fancy_upsample_sse2):
@@ -30,7 +30,7 @@ PW_THREE times 8 dw 3
 PW_SEVEN times 8 dw 7
 PW_EIGHT times 8 dw 8
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -61,13 +61,13 @@ PW_EIGHT times 8 dw 8
 EXTN(jsimd_h2v1_fancy_upsample_sse2):
     push        ebp
     mov         ebp, esp
-    pushpic     ebx
+    PUSHPIC     ebx
 ;   push        ecx                     ; need not be preserved
 ;   push        edx                     ; need not be preserved
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
+    GET_GOT     ebx                     ; get GOT address
 
     mov         eax, JDIMENSION [downsamp_width(ebp)]  ; colctr
     test        eax, eax
@@ -80,7 +80,7 @@ EXTN(jsimd_h2v1_fancy_upsample_sse2):
     mov         esi, JSAMPARRAY [input_data(ebp)]    ; input_data
     mov         edi, POINTER [output_data_ptr(ebp)]
     mov         edi, JSAMPARRAY [edi]                ; output_data
-    alignx      16, 7
+    ALIGNX      16, 7
 .rowloop:
     push        eax                     ; colctr
     push        edi
@@ -103,14 +103,14 @@ EXTN(jsimd_h2v1_fancy_upsample_sse2):
     and         eax, byte -SIZEOF_XMMWORD
     cmp         eax, byte SIZEOF_XMMWORD
     ja          short .columnloop
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .columnloop_last:
     pcmpeqb     xmm6, xmm6
     pslldq      xmm6, (SIZEOF_XMMWORD-1)
     pand        xmm6, XMMWORD [esi+0*SIZEOF_XMMWORD]
     jmp         short .upsample
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .columnloop:
     movdqa      xmm6, XMMWORD [esi+1*SIZEOF_XMMWORD]
@@ -185,7 +185,7 @@ EXTN(jsimd_h2v1_fancy_upsample_sse2):
     pop         esi
 ;   pop         edx                     ; need not be preserved
 ;   pop         ecx                     ; need not be preserved
-    poppic      ebx
+    POPPIC      ebx
     pop         ebp
     ret
 
@@ -223,15 +223,15 @@ EXTN(jsimd_h2v2_fancy_upsample_sse2):
     mov         [esp], eax
     mov         ebp, esp                     ; ebp = aligned ebp
     lea         esp, [wk(0)]
-    pushpic     eax                     ; make a room for GOT address
+    PUSHPIC     eax                     ; make a room for GOT address
     push        ebx
 ;   push        ecx                     ; need not be preserved
 ;   push        edx                     ; need not be preserved
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
-    movpic      POINTER [gotptr], ebx   ; save GOT address
+    GET_GOT     ebx                     ; get GOT address
+    MOVPIC      POINTER [gotptr], ebx   ; save GOT address
 
     mov         edx, eax                ; edx = original ebp
     mov         eax, JDIMENSION [downsamp_width(edx)]  ; colctr
@@ -245,7 +245,7 @@ EXTN(jsimd_h2v2_fancy_upsample_sse2):
     mov         esi, JSAMPARRAY [input_data(edx)]    ; input_data
     mov         edi, POINTER [output_data_ptr(edx)]
     mov         edi, JSAMPARRAY [edi]                ; output_data
-    alignx      16, 7
+    ALIGNX      16, 7
 .rowloop:
     push        eax                     ; colctr
     push        ecx
@@ -275,8 +275,8 @@ EXTN(jsimd_h2v2_fancy_upsample_sse2):
     movdqa      xmm1, XMMWORD [ecx+0*SIZEOF_XMMWORD]  ; xmm1=row[-1][0]
     movdqa      xmm2, XMMWORD [esi+0*SIZEOF_XMMWORD]  ; xmm2=row[+1][0]
 
-    pushpic     ebx
-    movpic      ebx, POINTER [gotptr]   ; load GOT address
+    PUSHPIC     ebx
+    MOVPIC      ebx, POINTER [gotptr]   ; load GOT address
 
     pxor        xmm3, xmm3              ; xmm3=(all 0's)
     movdqa      xmm4, xmm0
@@ -311,19 +311,19 @@ EXTN(jsimd_h2v2_fancy_upsample_sse2):
     movdqa      XMMWORD [wk(0)], xmm1
     movdqa      XMMWORD [wk(1)], xmm2
 
-    poppic      ebx
+    POPPIC      ebx
 
     add         eax, byte SIZEOF_XMMWORD-1
     and         eax, byte -SIZEOF_XMMWORD
     cmp         eax, byte SIZEOF_XMMWORD
     ja          short .columnloop
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .columnloop_last:
     ; -- process the last column block
 
-    pushpic     ebx
-    movpic      ebx, POINTER [gotptr]   ; load GOT address
+    PUSHPIC     ebx
+    MOVPIC      ebx, POINTER [gotptr]   ; load GOT address
 
     pcmpeqb     xmm1, xmm1
     pslldq      xmm1, (SIZEOF_XMMWORD-2)
@@ -336,7 +336,7 @@ EXTN(jsimd_h2v2_fancy_upsample_sse2):
     movdqa      XMMWORD [wk(3)], xmm2   ; xmm2=(-- -- -- -- -- -- -- 15)
 
     jmp         near .upsample
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .columnloop:
     ; -- process the next column block
@@ -345,8 +345,8 @@ EXTN(jsimd_h2v2_fancy_upsample_sse2):
     movdqa      xmm1, XMMWORD [ecx+1*SIZEOF_XMMWORD]  ; xmm1=row[-1][1]
     movdqa      xmm2, XMMWORD [esi+1*SIZEOF_XMMWORD]  ; xmm2=row[+1][1]
 
-    pushpic     ebx
-    movpic      ebx, POINTER [gotptr]   ; load GOT address
+    PUSHPIC     ebx
+    MOVPIC      ebx, POINTER [gotptr]   ; load GOT address
 
     pxor        xmm3, xmm3              ; xmm3=(all 0's)
     movdqa      xmm4, xmm0
@@ -485,7 +485,7 @@ EXTN(jsimd_h2v2_fancy_upsample_sse2):
     movdqa      XMMWORD [edi+0*SIZEOF_XMMWORD], xmm1
     movdqa      XMMWORD [edi+1*SIZEOF_XMMWORD], xmm0
 
-    poppic      ebx
+    POPPIC      ebx
 
     sub         eax, byte SIZEOF_XMMWORD
     add         ecx, byte 1*SIZEOF_XMMWORD  ; inptr1(above)
@@ -558,7 +558,7 @@ EXTN(jsimd_h2v1_upsample_sse2):
     mov         esi, JSAMPARRAY [input_data(ebp)]    ; input_data
     mov         edi, POINTER [output_data_ptr(ebp)]
     mov         edi, JSAMPARRAY [edi]                ; output_data
-    alignx      16, 7
+    ALIGNX      16, 7
 .rowloop:
     push        edi
     push        esi
@@ -566,7 +566,7 @@ EXTN(jsimd_h2v1_upsample_sse2):
     mov         esi, JSAMPROW [esi]     ; inptr
     mov         edi, JSAMPROW [edi]     ; outptr
     mov         eax, edx                ; colctr
-    alignx      16, 7
+    ALIGNX      16, 7
 .columnloop:
 
     movdqa      xmm0, XMMWORD [esi+0*SIZEOF_XMMWORD]
@@ -596,7 +596,7 @@ EXTN(jsimd_h2v1_upsample_sse2):
     add         esi, byte 2*SIZEOF_XMMWORD  ; inptr
     add         edi, byte 4*SIZEOF_XMMWORD  ; outptr
     jmp         short .columnloop
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .nextrow:
     pop         esi
@@ -655,7 +655,7 @@ EXTN(jsimd_h2v2_upsample_sse2):
     mov         esi, JSAMPARRAY [input_data(ebp)]    ; input_data
     mov         edi, POINTER [output_data_ptr(ebp)]
     mov         edi, JSAMPARRAY [edi]                ; output_data
-    alignx      16, 7
+    ALIGNX      16, 7
 .rowloop:
     push        edi
     push        esi
@@ -664,7 +664,7 @@ EXTN(jsimd_h2v2_upsample_sse2):
     mov         ebx, JSAMPROW [edi+0*SIZEOF_JSAMPROW]  ; outptr0
     mov         edi, JSAMPROW [edi+1*SIZEOF_JSAMPROW]  ; outptr1
     mov         eax, edx                               ; colctr
-    alignx      16, 7
+    ALIGNX      16, 7
 .columnloop:
 
     movdqa      xmm0, XMMWORD [esi+0*SIZEOF_XMMWORD]
@@ -699,7 +699,7 @@ EXTN(jsimd_h2v2_upsample_sse2):
     add         ebx, byte 4*SIZEOF_XMMWORD  ; outptr0
     add         edi, byte 4*SIZEOF_XMMWORD  ; outptr1
     jmp         short .columnloop
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .nextrow:
     pop         esi

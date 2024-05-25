@@ -2,8 +2,8 @@
  * jsimd_powerpc.c
  *
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
- * Copyright (C) 2009-2011, 2014-2016, 2018, D. R. Commander.
- * Copyright (C) 2015-2016, 2018, Matthieu Darbois.
+ * Copyright (C) 2009-2011, 2014-2016, 2018, 2022, D. R. Commander.
+ * Copyright (C) 2015-2016, 2018, 2022, Matthieu Darbois.
  *
  * Based on the x86 SIMD extension for IJG JPEG library,
  * Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -27,11 +27,12 @@
 #include "../../jsimddct.h"
 #include "../jsimd.h"
 
-#include <stdio.h>
-#include <string.h>
 #include <ctype.h>
 
-#if defined(__OpenBSD__)
+#if defined(__APPLE__)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#elif defined(__OpenBSD__)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <machine/cpu.h>
@@ -40,7 +41,7 @@
 #include <sys/auxv.h>
 #endif
 
-static unsigned int simd_support = ~0;
+static THREAD_LOCAL unsigned int simd_support = ~0;
 
 #if !defined(__ALTIVEC__) && (defined(__linux__) || defined(ANDROID) || defined(__ANDROID__))
 
@@ -108,8 +109,6 @@ parse_proc_cpuinfo(int bufsize)
 
 /*
  * Check what SIMD accelerations are supported.
- *
- * FIXME: This code is racy under a multi-threaded environment.
  */
 LOCAL(void)
 init_simd(void)
@@ -121,6 +120,10 @@ init_simd(void)
   int bufsize = 1024; /* an initial guess for the line buffer size limit */
 #elif defined(__amigaos4__)
   uint32 altivec = 0;
+#elif defined(__APPLE__)
+  int mib[2] = { CTL_HW, HW_VECTORUNIT };
+  int altivec;
+  size_t len = sizeof(altivec);
 #elif defined(__OpenBSD__)
   int mib[2] = { CTL_MACHDEP, CPU_ALTIVEC };
   int altivec;
@@ -134,7 +137,7 @@ init_simd(void)
 
   simd_support = 0;
 
-#if defined(__ALTIVEC__) || defined(__APPLE__)
+#if defined(__ALTIVEC__)
   simd_support |= JSIMD_ALTIVEC;
 #elif defined(__linux__) || defined(ANDROID) || defined(__ANDROID__)
   while (!parse_proc_cpuinfo(bufsize)) {
@@ -146,7 +149,7 @@ init_simd(void)
   IExec->GetCPUInfoTags(GCIT_VectorUnit, &altivec, TAG_DONE);
   if (altivec == VECTORTYPE_ALTIVEC)
     simd_support |= JSIMD_ALTIVEC;
-#elif defined(__OpenBSD__)
+#elif defined(__APPLE__) || defined(__OpenBSD__)
   if (sysctl(mib, 2, &altivec, &len, NULL, 0) == 0 && altivec != 0)
     simd_support |= JSIMD_ALTIVEC;
 #elif defined(__FreeBSD__)
@@ -862,7 +865,7 @@ jsimd_can_encode_mcu_AC_first_prepare(void)
 GLOBAL(void)
 jsimd_encode_mcu_AC_first_prepare(const JCOEF *block,
                                   const int *jpeg_natural_order_start, int Sl,
-                                  int Al, JCOEF *values, size_t *zerobits)
+                                  int Al, UJCOEF *values, size_t *zerobits)
 {
 }
 
@@ -875,7 +878,7 @@ jsimd_can_encode_mcu_AC_refine_prepare(void)
 GLOBAL(int)
 jsimd_encode_mcu_AC_refine_prepare(const JCOEF *block,
                                    const int *jpeg_natural_order_start, int Sl,
-                                   int Al, JCOEF *absvalues, size_t *bits)
+                                   int Al, UJCOEF *absvalues, size_t *bits)
 {
   return 0;
 }
