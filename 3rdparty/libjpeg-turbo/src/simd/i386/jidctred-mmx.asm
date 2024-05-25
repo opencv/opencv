@@ -2,7 +2,7 @@
 ; jidctred.asm - reduced-size IDCT (MMX)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2016, D. R. Commander.
+; Copyright (C) 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -69,7 +69,7 @@ F_3_624 equ DESCALE(3891787747, 30 - CONST_BITS)  ; FIX(3.624509785)
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_idct_red_mmx)
 
 EXTN(jconst_idct_red_mmx):
@@ -87,7 +87,7 @@ PD_DESCALE_P1_2 times 2 dd  1 << (DESCALE_P1_2 - 1)
 PD_DESCALE_P2_2 times 2 dd  1 << (DESCALE_P2_2 - 1)
 PB_CENTERJSAMP  times 8 db  CENTERJSAMPLE
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -124,13 +124,13 @@ EXTN(jsimd_idct_4x4_mmx):
     mov         [esp], eax
     mov         ebp, esp                    ; ebp = aligned ebp
     lea         esp, [workspace]
-    pushpic     ebx
+    PUSHPIC     ebx
 ;   push        ecx                     ; need not be preserved
 ;   push        edx                     ; need not be preserved
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
+    GET_GOT     ebx                     ; get GOT address
 
     ; ---- Pass 1: process columns from input, store into work array.
 
@@ -139,7 +139,7 @@ EXTN(jsimd_idct_4x4_mmx):
     mov         esi, JCOEFPTR [coef_block(eax)]  ; inptr
     lea         edi, [workspace]                 ; JCOEF *wsptr
     mov         ecx, DCTSIZE/4                   ; ctr
-    alignx      16, 7
+    ALIGNX      16, 7
 .columnloop:
 %ifndef NO_ZERO_COLUMN_TEST_4X4_MMX
     mov         eax, dword [DWBLOCK(1,0,esi,SIZEOF_JCOEF)]
@@ -181,7 +181,7 @@ EXTN(jsimd_idct_4x4_mmx):
     movq        MMWORD [MMBLOCK(2,0,edi,SIZEOF_JCOEF)], mm2
     movq        MMWORD [MMBLOCK(3,0,edi,SIZEOF_JCOEF)], mm3
     jmp         near .nextcolumn
-    alignx      16, 7
+    ALIGNX      16, 7
 %endif
 .columnDCT:
 
@@ -479,7 +479,7 @@ EXTN(jsimd_idct_4x4_mmx):
     pop         esi
 ;   pop         edx                     ; need not be preserved
 ;   pop         ecx                     ; need not be preserved
-    poppic      ebx
+    POPPIC      ebx
     mov         esp, ebp                ; esp <- aligned ebp
     pop         esp                     ; esp <- original ebp
     pop         ebp
@@ -512,7 +512,7 @@ EXTN(jsimd_idct_2x2_mmx):
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
+    GET_GOT     ebx                     ; get GOT address
 
     ; ---- Pass 1: process columns from input.
 

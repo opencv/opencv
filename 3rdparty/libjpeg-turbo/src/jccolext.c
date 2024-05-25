@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2012, 2015, D. R. Commander.
+ * Copyright (C) 2009-2012, 2015, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -29,15 +29,16 @@
 
 INLINE
 LOCAL(void)
-rgb_ycc_convert_internal(j_compress_ptr cinfo, JSAMPARRAY input_buf,
-                         JSAMPIMAGE output_buf, JDIMENSION output_row,
+rgb_ycc_convert_internal(j_compress_ptr cinfo, _JSAMPARRAY input_buf,
+                         _JSAMPIMAGE output_buf, JDIMENSION output_row,
                          int num_rows)
 {
+#if BITS_IN_JSAMPLE != 16
   my_cconvert_ptr cconvert = (my_cconvert_ptr)cinfo->cconvert;
   register int r, g, b;
   register JLONG *ctab = cconvert->rgb_ycc_tab;
-  register JSAMPROW inptr;
-  register JSAMPROW outptr0, outptr1, outptr2;
+  register _JSAMPROW inptr;
+  register _JSAMPROW outptr0, outptr1, outptr2;
   register JDIMENSION col;
   JDIMENSION num_cols = cinfo->image_width;
 
@@ -48,26 +49,29 @@ rgb_ycc_convert_internal(j_compress_ptr cinfo, JSAMPARRAY input_buf,
     outptr2 = output_buf[2][output_row];
     output_row++;
     for (col = 0; col < num_cols; col++) {
-      r = inptr[RGB_RED];
-      g = inptr[RGB_GREEN];
-      b = inptr[RGB_BLUE];
+      r = RANGE_LIMIT(inptr[RGB_RED]);
+      g = RANGE_LIMIT(inptr[RGB_GREEN]);
+      b = RANGE_LIMIT(inptr[RGB_BLUE]);
       inptr += RGB_PIXELSIZE;
-      /* If the inputs are 0..MAXJSAMPLE, the outputs of these equations
+      /* If the inputs are 0.._MAXJSAMPLE, the outputs of these equations
        * must be too; we do not need an explicit range-limiting operation.
        * Hence the value being shifted is never negative, and we don't
        * need the general RIGHT_SHIFT macro.
        */
       /* Y */
-      outptr0[col] = (JSAMPLE)((ctab[r + R_Y_OFF] + ctab[g + G_Y_OFF] +
-                                ctab[b + B_Y_OFF]) >> SCALEBITS);
+      outptr0[col] = (_JSAMPLE)((ctab[r + R_Y_OFF] + ctab[g + G_Y_OFF] +
+                                 ctab[b + B_Y_OFF]) >> SCALEBITS);
       /* Cb */
-      outptr1[col] = (JSAMPLE)((ctab[r + R_CB_OFF] + ctab[g + G_CB_OFF] +
-                                ctab[b + B_CB_OFF]) >> SCALEBITS);
+      outptr1[col] = (_JSAMPLE)((ctab[r + R_CB_OFF] + ctab[g + G_CB_OFF] +
+                                 ctab[b + B_CB_OFF]) >> SCALEBITS);
       /* Cr */
-      outptr2[col] = (JSAMPLE)((ctab[r + R_CR_OFF] + ctab[g + G_CR_OFF] +
-                                ctab[b + B_CR_OFF]) >> SCALEBITS);
+      outptr2[col] = (_JSAMPLE)((ctab[r + R_CR_OFF] + ctab[g + G_CR_OFF] +
+                                 ctab[b + B_CR_OFF]) >> SCALEBITS);
     }
   }
+#else
+  ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
+#endif
 }
 
 
@@ -83,15 +87,16 @@ rgb_ycc_convert_internal(j_compress_ptr cinfo, JSAMPARRAY input_buf,
 
 INLINE
 LOCAL(void)
-rgb_gray_convert_internal(j_compress_ptr cinfo, JSAMPARRAY input_buf,
-                          JSAMPIMAGE output_buf, JDIMENSION output_row,
+rgb_gray_convert_internal(j_compress_ptr cinfo, _JSAMPARRAY input_buf,
+                          _JSAMPIMAGE output_buf, JDIMENSION output_row,
                           int num_rows)
 {
+#if BITS_IN_JSAMPLE != 16
   my_cconvert_ptr cconvert = (my_cconvert_ptr)cinfo->cconvert;
   register int r, g, b;
   register JLONG *ctab = cconvert->rgb_ycc_tab;
-  register JSAMPROW inptr;
-  register JSAMPROW outptr;
+  register _JSAMPROW inptr;
+  register _JSAMPROW outptr;
   register JDIMENSION col;
   JDIMENSION num_cols = cinfo->image_width;
 
@@ -100,15 +105,18 @@ rgb_gray_convert_internal(j_compress_ptr cinfo, JSAMPARRAY input_buf,
     outptr = output_buf[0][output_row];
     output_row++;
     for (col = 0; col < num_cols; col++) {
-      r = inptr[RGB_RED];
-      g = inptr[RGB_GREEN];
-      b = inptr[RGB_BLUE];
+      r = RANGE_LIMIT(inptr[RGB_RED]);
+      g = RANGE_LIMIT(inptr[RGB_GREEN]);
+      b = RANGE_LIMIT(inptr[RGB_BLUE]);
       inptr += RGB_PIXELSIZE;
       /* Y */
-      outptr[col] = (JSAMPLE)((ctab[r + R_Y_OFF] + ctab[g + G_Y_OFF] +
-                               ctab[b + B_Y_OFF]) >> SCALEBITS);
+      outptr[col] = (_JSAMPLE)((ctab[r + R_Y_OFF] + ctab[g + G_Y_OFF] +
+                                ctab[b + B_Y_OFF]) >> SCALEBITS);
     }
   }
+#else
+  ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
+#endif
 }
 
 
@@ -119,12 +127,12 @@ rgb_gray_convert_internal(j_compress_ptr cinfo, JSAMPARRAY input_buf,
 
 INLINE
 LOCAL(void)
-rgb_rgb_convert_internal(j_compress_ptr cinfo, JSAMPARRAY input_buf,
-                         JSAMPIMAGE output_buf, JDIMENSION output_row,
+rgb_rgb_convert_internal(j_compress_ptr cinfo, _JSAMPARRAY input_buf,
+                         _JSAMPIMAGE output_buf, JDIMENSION output_row,
                          int num_rows)
 {
-  register JSAMPROW inptr;
-  register JSAMPROW outptr0, outptr1, outptr2;
+  register _JSAMPROW inptr;
+  register _JSAMPROW outptr0, outptr1, outptr2;
   register JDIMENSION col;
   JDIMENSION num_cols = cinfo->image_width;
 

@@ -2,7 +2,7 @@
 ; jcgray.asm - grayscale colorspace conversion (MMX)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2011, 2016, D. R. Commander.
+; Copyright (C) 2011, 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -29,7 +29,7 @@ F_0_337 equ (F_0_587 - F_0_250)  ; FIX(0.58700) - FIX(0.25000)
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_rgb_gray_convert_mmx)
 
 EXTN(jconst_rgb_gray_convert_mmx):
@@ -38,7 +38,7 @@ PW_F0299_F0337 times 2 dw F_0_299, F_0_337
 PW_F0114_F0250 times 2 dw F_0_114, F_0_250
 PD_ONEHALF     times 2 dd (1 << (SCALEBITS - 1))
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
