@@ -281,7 +281,7 @@ template<typename R> struct TheTest
         v_uint64 vu64 = v_reinterpret_as_u64(r1); out.a.clear(); v_store((uint64*)out.a.d, vu64); EXPECT_EQ(data.a, out.a);
         v_int64 vs64 = v_reinterpret_as_s64(r1); out.a.clear(); v_store((int64*)out.a.d, vs64); EXPECT_EQ(data.a, out.a);
         v_float32 vf32 = v_reinterpret_as_f32(r1); out.a.clear(); v_store((float*)out.a.d, vf32); EXPECT_EQ(data.a, out.a);
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         v_float64 vf64 = v_reinterpret_as_f64(r1); out.a.clear(); v_store((double*)out.a.d, vf64); EXPECT_EQ(data.a, out.a);
 #endif
 
@@ -747,7 +747,7 @@ template<typename R> struct TheTest
 
     TheTest & test_dotprod_expand_f64()
     {
-    #if CV_SIMD_64F
+    #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         Data<R> dataA, dataB;
         dataA += std::numeric_limits<LaneType>::max() - VTraits<R>::vlanes();
         dataB += std::numeric_limits<LaneType>::min();
@@ -1385,6 +1385,33 @@ template<typename R> struct TheTest
 
         return *this;
     }
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    TheTest & test_round_pair_f64()
+    {
+        typedef typename V_RegTraits<R>::round_reg Ri;
+        Data<R> data1, data1_border, data2;
+        // See https://github.com/opencv/opencv/issues/24213
+        // https://github.com/opencv/opencv/issues/24163
+        // https://github.com/opencv/opencv/pull/24271
+        data1_border *= 0.5;
+        data1 *= 1.1;
+        data2 += 10;
+        R a1 = data1, a1_border = data1_border, a2 = data2;
+
+        Data<Ri> resA = v_round(a1, a1),
+                 resB = v_round(a1_border, a1_border),
+                 resC = v_round(a2, a2);
+
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+        {
+            EXPECT_EQ(cvRound(data1[i]), resA[i]);
+            EXPECT_EQ(cvRound(data1_border[i]), resB[i]);
+            EXPECT_EQ(cvRound(data2[i]), resC[i]);
+        }
+
+        return *this;
+    }
+#endif
 
     TheTest & test_float_cvt32()
     {
@@ -1405,7 +1432,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_cvt64()
     {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         typedef v_float64 Rt;
         Data<R> dataA;
         dataA *= 1.1;
@@ -1431,7 +1458,7 @@ template<typename R> struct TheTest
 
     TheTest & test_cvt64_double()
     {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         Data<R> dataA(std::numeric_limits<LaneType>::max()),
                 dataB(std::numeric_limits<LaneType>::min());
         dataB += VTraits<R>::vlanes();
@@ -1994,7 +2021,7 @@ void test_hal_intrin_float32()
 void test_hal_intrin_float64()
 {
     DUMP_ENTRY(v_float64);
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     TheTest<v_float64>()
         .test_loadstore()
         .test_addsub()
@@ -2008,6 +2035,7 @@ void test_hal_intrin_float64()
         .test_mask()
         .test_unpack()
         .test_float_math()
+        .test_round_pair_f64()
         .test_float_cvt32()
         .test_reverse()
         .test_extract<0>().test_extract<1>()

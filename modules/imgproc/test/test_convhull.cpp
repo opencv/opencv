@@ -1956,12 +1956,6 @@ int CV_ContourMomentsTest::validate_test_results( int test_case_idx )
 
     if( code < 0 )
     {
-#if 0
-        cvCmpS( img, 0, img, CV_CMP_GT );
-        cvNamedWindow( "test", 1 );
-        cvShowImage( "test", img );
-        cvWaitKey();
-#endif
         ts->set_failed_test_info( code );
     }
 

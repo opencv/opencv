@@ -1807,7 +1807,7 @@ CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
  * @note Input should be continuous single-channel matrix.
  * @param src input array.
  * @param order a permutation of [0,1,..,N-1] where N is the number of axes of src.
- * The i’th axis of dst will correspond to the axis numbered order[i] of the input.
+ * The i'th axis of dst will correspond to the axis numbered order[i] of the input.
  * @param dst output array of the same type as src.
  */
 CV_EXPORTS_W void transposeND(InputArray src, const std::vector<int>& order, OutputArray dst);

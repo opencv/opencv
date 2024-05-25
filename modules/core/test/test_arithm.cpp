@@ -831,6 +831,7 @@ struct ConvertScaleAbsOp : public BaseElemWiseOp
 
 namespace reference {
 
+// does not support inplace operation
 static void flip(const Mat& src, Mat& dst, int flipcode)
 {
     CV_Assert(src.dims == 2);
@@ -852,6 +853,26 @@ static void flip(const Mat& src, Mat& dst, int flipcode)
     }
 }
 
+static void rotate(const Mat& src, Mat& dst, int rotateMode)
+{
+    Mat tmp;
+    switch (rotateMode)
+    {
+    case ROTATE_90_CLOCKWISE:
+        cvtest::transpose(src, tmp);
+        reference::flip(tmp, dst, 1);
+        break;
+    case ROTATE_180:
+        reference::flip(src, dst, -1);
+        break;
+    case ROTATE_90_COUNTERCLOCKWISE:
+        cvtest::transpose(src, tmp);
+        reference::flip(tmp, dst, 0);
+        break;
+    default:
+        break;
+    }
+}
 
 static void setIdentity(Mat& dst, const Scalar& s)
 {
@@ -896,6 +917,32 @@ struct FlipOp : public BaseElemWiseOp
         return 0;
     }
     int flipcode;
+};
+
+struct RotateOp : public BaseElemWiseOp
+{
+    RotateOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) { rotatecode = 0; }
+    void getRandomSize(RNG& rng, vector<int>& size)
+    {
+        cvtest::randomSize(rng, 2, 2, ARITHM_MAX_SIZE_LOG, size);
+    }
+    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        cv::rotate(src[0], dst, rotatecode);
+    }
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        reference::rotate(src[0], dst, rotatecode);
+    }
+    void generateScalars(int, RNG& rng)
+    {
+        rotatecode = rng.uniform(0, 3);
+    }
+    double getMaxErr(int)
+    {
+        return 0;
+    }
+    int rotatecode;
 };
 
 struct TransposeOp : public BaseElemWiseOp
@@ -1550,6 +1597,7 @@ INSTANTIATE_TEST_CASE_P(Core_InRangeS, ElemWiseTest, ::testing::Values(ElemWiseO
 INSTANTIATE_TEST_CASE_P(Core_InRange, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new InRangeOp)));
 
 INSTANTIATE_TEST_CASE_P(Core_Flip, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new FlipOp)));
+INSTANTIATE_TEST_CASE_P(Core_Rotate, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new RotateOp)));
 INSTANTIATE_TEST_CASE_P(Core_Transpose, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new TransposeOp)));
 INSTANTIATE_TEST_CASE_P(Core_SetIdentity, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new SetIdentityOp)));
 
@@ -2446,6 +2494,32 @@ TEST(Core_minMaxIdx, regression_9207_2)
     EXPECT_EQ(14, maxIdx[1]);
 }
 
+TEST(Core_MinMaxIdx, MatND)
+{
+    const int shape[3] = {5,5,3};
+    cv::Mat src = cv::Mat(3, shape, CV_8UC1);
+    src.setTo(1);
+    src.data[1] = 0;
+    src.data[5*5*3-2] = 2;
+
+    int minIdx[3];
+    int maxIdx[3];
+    double minVal, maxVal;
+
+    cv::minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx);
+
+    EXPECT_EQ(0, minVal);
+    EXPECT_EQ(2, maxVal);
+
+    EXPECT_EQ(0, minIdx[0]);
+    EXPECT_EQ(0, minIdx[1]);
+    EXPECT_EQ(1, minIdx[2]);
+
+    EXPECT_EQ(4, maxIdx[0]);
+    EXPECT_EQ(4, maxIdx[1]);
+    EXPECT_EQ(1, maxIdx[2]);
+}
+
 TEST(Core_Set, regression_11044)
 {
     Mat testFloat(Size(3, 3), CV_32FC1);
@@ -2806,7 +2880,6 @@ TEST(Core_MinMaxIdx, rows_overflow)
             "    max=" << maxVal0 << " vs " << maxVal;
     }
 }
-
 
 TEST(Core_Magnitude, regression_19506)
 {

@@ -2,7 +2,8 @@
 ; jfdctint.asm - accurate integer FDCT (64-bit SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2009, 2016, 2020, D. R. Commander.
+; Copyright (C) 2009, 2016, 2020, 2024, D. R. Commander.
+; Copyright (C) 2023, Aliaksiej Kandracienka.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -63,7 +64,7 @@ F_3_072 equ DESCALE(3299298341, 30 - CONST_BITS)  ; FIX(3.072711026)
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_fdct_islow_sse2)
 
 EXTN(jconst_fdct_islow_sse2):
@@ -80,7 +81,7 @@ PD_DESCALE_P1  times 4 dd  1 << (DESCALE_P1 - 1)
 PD_DESCALE_P2  times 4 dd  1 << (DESCALE_P2 - 1)
 PW_DESCALE_P2X times 8 dw  1 << (PASS1_BITS - 1)
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -94,21 +95,22 @@ PW_DESCALE_P2X times 8 dw  1 << (PASS1_BITS - 1)
 
 ; r10 = DCTELEM *data
 
-%define wk(i)   rbp - (WK_NUM - (i)) * SIZEOF_XMMWORD  ; xmmword wk[WK_NUM]
+%define wk(i)   r15 - (WK_NUM - (i)) * SIZEOF_XMMWORD  ; xmmword wk[WK_NUM]
 %define WK_NUM  6
 
     align       32
     GLOBAL_FUNCTION(jsimd_fdct_islow_sse2)
 
 EXTN(jsimd_fdct_islow_sse2):
+    ENDBR64
     push        rbp
-    mov         rax, rsp                     ; rax = original rbp
-    sub         rsp, byte 4
+    mov         rbp, rsp
+    push        r15
     and         rsp, byte (-SIZEOF_XMMWORD)  ; align to 128 bits
-    mov         [rsp], rax
-    mov         rbp, rsp                     ; rbp = aligned rbp
-    lea         rsp, [wk(0)]
-    collect_args 1
+    ; Allocate stack space for wk array.  r15 is used to access it.
+    mov         r15, rsp
+    sub         rsp, byte (SIZEOF_XMMWORD * WK_NUM)
+    COLLECT_ARGS 1
 
     ; ---- Pass 1: process rows.
 
@@ -608,9 +610,9 @@ EXTN(jsimd_fdct_islow_sse2):
     movdqa      XMMWORD [XMMBLOCK(5,0,rdx,SIZEOF_DCTELEM)], xmm1
     movdqa      XMMWORD [XMMBLOCK(3,0,rdx,SIZEOF_DCTELEM)], xmm3
 
-    uncollect_args 1
-    mov         rsp, rbp                ; rsp <- aligned rbp
-    pop         rsp                     ; rsp <- original rbp
+    UNCOLLECT_ARGS 1
+    lea         rsp, [rbp-8]
+    pop         r15
     pop         rbp
     ret
 

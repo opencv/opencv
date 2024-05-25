@@ -13,7 +13,6 @@ FATAL: In-source builds are not allowed.
 ")
 endif()
 
-
 include(cmake/OpenCVMinDepVersions.cmake)
 
 if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
@@ -83,6 +82,10 @@ endif()
 
 if(POLICY CMP0146)
   cmake_policy(SET CMP0146 OLD)  # CMake 3.27+: use CMake FindCUDA if available.
+endif()
+
+if(POLICY CMP0148)
+  cmake_policy(SET CMP0148 OLD)  # CMake 3.27+: use CMake FindPythonInterp and FindPythonLib if available.
 endif()
 
 #
@@ -258,6 +261,8 @@ OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VERIFY HAVE_CAP_IOS)
 OCV_OPTION(WITH_CAROTENE "Use NVidia carotene acceleration library for ARM platform" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (ARM OR AARCH64) AND NOT IOS AND NOT XROS)
+OCV_OPTION(WITH_KLEIDICV "Use KleidiCV library for ARM platforms" OFF
+  VISIBLE_IF (AARCH64 AND (ANDROID OR UNIX AND NOT IOS AND NOT XROS)))
 OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
   VISIBLE_IF ANDROID
   VERIFY HAVE_CPUFEATURES)
@@ -966,6 +971,13 @@ if(HAVE_OPENVX)
   endif()
 endif()
 
+if(WITH_KLEIDICV)
+  ocv_debug_message(STATUS "Enable KleidiCV acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";kleidicv;")
+    set(OpenCV_HAL "kleidicv;${OpenCV_HAL}")
+  endif()
+endif()
+
 if(WITH_CAROTENE)
   ocv_debug_message(STATUS "Enable carotene acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";carotene;")
@@ -990,6 +1002,10 @@ foreach(hal ${OpenCV_HAL})
     else()
       message(STATUS "Carotene: NEON is not available, disabling carotene...")
     endif()
+  elseif(hal STREQUAL "kleidicv")
+    add_subdirectory(3rdparty/kleidicv)
+    ocv_hal_register(KLEIDICV_HAL_LIBRARIES KLEIDICV_HAL_HEADERS KLEIDICV_HAL_INCLUDE_DIRS)
+    list(APPEND OpenCV_USED_HAL "KleidiCV (ver ${KLEIDICV_HAL_VERSION})")
   elseif(hal STREQUAL "openvx")
     add_subdirectory(3rdparty/openvx)
     ocv_hal_register(OPENVX_HAL_LIBRARIES OPENVX_HAL_HEADERS OPENVX_HAL_INCLUDE_DIRS)
@@ -1473,6 +1489,30 @@ if(WITH_SPNG)
   endif()
 elseif(WITH_PNG OR HAVE_PNG)
   status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION_STRING})" ELSE "build (ver ${PNG_VERSION_STRING})")
+  if(BUILD_PNG AND PNG_HARDWARE_OPTIMIZATIONS)
+    status("      SIMD Support Request:" "YES")
+    if(PNG_INTEL_SSE)
+    status("      SIMD Support:" "YES (Intel SSE)")
+  elseif(PNG_POWERPC_VSX)
+    status("      SIMD Support:" "YES (PowerPC VSX)")
+  elseif(PNG_ARM_NEON)
+    status("      SIMD Support:" "YES (Arm NEON)")
+  elseif(PNG_MIPS_MSA OR PNG_MIPS_MMI)
+    if(PNG_MIPS_MSA AND PNG_MIPS_MMI)
+      status("      SIMD Support:" "YES (Mips MSA & MMI)")
+    elseif(PNG_MIPS_MSA AND NOT PNG_MIPS_MMI)
+      status("      SIMD Support:" "YES (Mips MSA)")
+    else()
+      status("      SIMD Support:" "YES (Mips MMI)")
+    endif()
+  elseif(PNG_LOONGARCH_LSX)
+    status("      SIMD Support:" "YES (LoongArch LSX)")
+  else()
+    status("      SIMD Support:" "NO")
+  endif()
+  elseif(BUILD_PNG)
+    status("      SIMD Support Request:" "NO")
+  endif()
 endif()
 
 if(WITH_TIFF OR HAVE_TIFF)
