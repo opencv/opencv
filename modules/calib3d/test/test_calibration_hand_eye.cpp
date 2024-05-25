@@ -756,4 +756,110 @@ TEST(Calib3d_CalibrateRobotWorldHandEye, regression)
     }
 }
 
+TEST(Calib3d_CalibrateHandEye, regression_24871)
+{
+    std::vector<Mat> R_target2cam, t_target2cam;
+    std::vector<Mat> R_gripper2base, t_gripper2base;
+    Mat T_true_cam2gripper;
+
+    T_true_cam2gripper = (cv::Mat_<double>(4, 4) <<  0,  0, -1, 0.1,
+                                                     1,  0,  0, 0.2,
+                                                     0, -1,  0, 0.3,
+                                                     0,  0,  0, 1);
+
+    R_target2cam.push_back((cv::Mat_<double>(3, 3) <<
+            0.04964505493834381, 0.5136826827431226, 0.8565427426404346,
+            -0.3923117691818854, 0.7987004864191318, -0.4562554205214679,
+            -0.9184916136152514, -0.3133809733274676, 0.2411752915926112));
+    t_target2cam.push_back((cv::Mat_<double>(3, 1) <<
+            -1.588728904724121,
+            0.07843752950429916,
+            -1.002813339233398));
+
+    R_gripper2base.push_back((cv::Mat_<double>(3, 3) <<
+            -0.4143743581399177, -0.6105088815982459, -0.6749613298595637,
+            -0.1598851232573451, -0.6812625208693498, 0.71436554019614,
+            -0.895952364066927, 0.4039310376145889, 0.1846864320259794));
+    t_gripper2base.push_back((cv::Mat_<double>(3, 1) <<
+            -1.249274406461827,
+            -1.916570771580279,
+            2.005069553422765));
+
+    R_target2cam.push_back((cv::Mat_<double>(3, 3) <<
+            -0.3048000068139332, 0.6971848192711539, 0.6488684640388026,
+            -0.9377589344241749, -0.3387497187353627, -0.07652979135179161,
+            0.1664486009369332, -0.6318084803439735, 0.7570422097951847));
+    t_target2cam.push_back((cv::Mat_<double>(3, 1) <<
+            -1.906493663787842,
+            -0.07281044125556946,
+            0.6088893413543701));
+
+    R_gripper2base.push_back((cv::Mat_<double>(3, 3) <<
+            0.7262439860936567, -0.201662933718935, -0.6571923111439066,
+            -0.4640017362244384, -0.8491808316335328, -0.2521791108852766,
+            -0.5072199339965884, 0.4880819361030014, -0.7102844234575628));
+    t_gripper2base.push_back((cv::Mat_<double>(3, 1) <<
+            -0.7375172846804027,
+            -2.579760910816792,
+            1.336561572270101));
+
+    R_target2cam.push_back((cv::Mat_<double>(3, 3) <<
+            -0.590234879685801, -0.7051138289845309, -0.3929850823848928,
+            0.6017371069678565, -0.7088332765096816, 0.3680595606834615,
+            -0.5380847896941907, -0.01923211603859842, 0.8426712792141644));
+    t_target2cam.push_back((cv::Mat_<double>(3, 1) <<
+            -0.9809040427207947,
+            -0.2707894444465637,
+            -0.2577074766159058));
+
+    R_gripper2base.push_back((cv::Mat_<double>(3, 3) <<
+            0.2541996332132083, 0.6186461729765909, 0.7434106934499181,
+            0.2194912986375709, 0.711701808961156, -0.6673111005698995,
+            -0.9419161938817396, 0.3328024155303503, 0.04512688689130734));
+    t_gripper2base.push_back((cv::Mat_<double>(3, 1) <<
+            -1.040123533893404,
+            -0.1303773962721222,
+            1.068029475621886));
+
+    R_target2cam.push_back((cv::Mat_<double>(3, 3) <<
+            0.7643667483125168, -0.08523002870239212, 0.63912386614923,
+            -0.2583463792779588, 0.8676987164647345, 0.424683512464778,
+            -0.5907627462764713, -0.489729292214425, 0.6412211770980741));
+    t_target2cam.push_back((cv::Mat_<double>(3, 1) <<
+            -1.58987033367157,
+            -1.924914002418518,
+            -0.3109001517295837));
+
+    R_gripper2base.push_back((cv::Mat_<double>(3, 3) <<
+            0.116348305340805, -0.9917998080681939, 0.0528792261688552,
+            -0.2760629007224059, 0.01884966191381591, 0.9609547154213178,
+            -0.9540714578526358, -0.1264034452126562, -0.2716060057313114));
+    t_gripper2base.push_back((cv::Mat_<double>(3, 1) <<
+            -2.551899142554571,
+            -2.986937398237611,
+            1.317613923218308));
+
+    Mat R_true_cam2gripper;
+    Mat t_true_cam2gripper;
+    R_true_cam2gripper = T_true_cam2gripper(Rect(0, 0, 3, 3));
+    t_true_cam2gripper = T_true_cam2gripper(Rect(3, 0, 1, 3));
+
+    std::vector<HandEyeCalibrationMethod> methods = {CALIB_HAND_EYE_TSAI,
+                                                     CALIB_HAND_EYE_PARK,
+                                                     CALIB_HAND_EYE_HORAUD,
+                                                     CALIB_HAND_EYE_ANDREFF,
+                                                     CALIB_HAND_EYE_DANIILIDIS};
+
+    for (auto method : methods) {
+        SCOPED_TRACE(cv::format("method=%s", getMethodName(method).c_str()));
+
+        Matx33d R_cam2gripper_est;
+        Matx31d t_cam2gripper_est;
+        calibrateHandEye(R_gripper2base, t_gripper2base, R_target2cam, t_target2cam, R_cam2gripper_est, t_cam2gripper_est, method);
+
+        EXPECT_TRUE(cv::norm(R_cam2gripper_est - R_true_cam2gripper) < 1e-9);
+        EXPECT_TRUE(cv::norm(t_cam2gripper_est - t_true_cam2gripper) < 1e-9);
+    }
+}
+
 }} // namespace
