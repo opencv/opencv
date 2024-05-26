@@ -587,7 +587,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 typedef int (*ScalarFunc)(const uchar* src, size_t step_src,
                           uchar* dst, size_t step_dst, int width, int height,
-                          void* scalar);
+                          void* scalar, bool scalarIsFirst);
 
 typedef int (*ExtendedTypeFunc)(const uchar* src1, size_t step1,
                                 const uchar* src2, size_t step2,
@@ -855,12 +855,6 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             maskbuf = buf;
         }
 
-        //TODO:
-        //1. check that scalar has size 1
-        //2. try to call scalarFunc
-        //3. if failed then fallback to existing code
-        //4. and then call copymask
-
         convertAndUnrollScalar( src2, wtype, buf2, blocksize);
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -878,30 +872,36 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 if( swapped12 )
                     std::swap(extSptr1, extSptr1);
 
-                // try to perform operation with conversion in one call
-                // if fail, use converter functions
+                // try to perform operation in 1 call, fallback to classic way if fail
                 uchar* opconverted = haveMask ? maskbuf : dptr;
-                if (!extendedFunc || extendedFunc(extSptr1, 1, extSptr2, 1, opconverted, 1,
-                                                  bszn.width, bszn.height, usrdata) != 0)
+                if (!scalarFunc || src2.total() != 1 ||
+                    scalarFunc(extSptr1, 1, opconverted, 1, bszn.width, bszn.height, (void*)extSptr2, swapped12) != 0)
                 {
-                    if( cvtsrc1 )
+                    // try to perform operation with conversion in one call
+                    // if fail, use converter functions
+
+                    if (!extendedFunc || extendedFunc(extSptr1, 1, extSptr2, 1, opconverted, 1,
+                                                    bszn.width, bszn.height, usrdata) != 0)
                     {
-                        cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
-                        sptr1 = buf1;
+                        if( cvtsrc1 )
+                        {
+                            cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
+                            sptr1 = buf1;
+                        }
+
+                        if( swapped12 )
+                            std::swap(sptr1, sptr2);
+
+                        uchar* fdst = ( haveMask || cvtdst ) ? wbuf : dptr;
+                        func( sptr1, 1, sptr2, 1, fdst, 1, bszn.width, bszn.height, usrdata );
+
+                        if (cvtdst)
+                        {
+                            uchar* cdst = haveMask ? maskbuf : dptr;
+                            cvtdst(wbuf, 1, 0, 1, cdst, 1, bszn, 0);
+                        }
+                        opconverted = cvtdst ? maskbuf : wbuf;
                     }
-
-                    if( swapped12 )
-                        std::swap(sptr1, sptr2);
-
-                    uchar* fdst = ( haveMask || cvtdst ) ? wbuf : dptr;
-                    func( sptr1, 1, sptr2, 1, fdst, 1, bszn.width, bszn.height, usrdata );
-
-                    if (cvtdst)
-                    {
-                        uchar* cdst = haveMask ? maskbuf : dptr;
-                        cvtdst(wbuf, 1, 0, 1, cdst, 1, bszn, 0);
-                    }
-                    opconverted = cvtdst ? maskbuf : wbuf;
                 }
 
                 if (haveMask)
@@ -930,7 +930,8 @@ static BinaryFuncC* getAddTab()
     return addTab;
 }
 
-static int addScalar32f32fWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height, void* scalar)
+static int addScalar32f32fWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                  void* scalar, bool /*scalarIsFirst*/)
 {
     int res = cv_hal_addScalar32f32f((const float*)src, step_src, (float *)dst, step_dst, width, height, (const float*)scalar);
     if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
