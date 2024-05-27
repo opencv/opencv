@@ -121,22 +121,31 @@ public:
         {
 #if CUDNN_MAJOR >= 9
             CUDA4DNN_CHECK_CUDNN(cudnnSetRNNDescriptor_v8(
-                                    descriptor, algo, rnn_mode,
-                                    CUDNN_RNN_NO_BIAS, // Where can this come from?
+                                    descriptor,
+                                    algo,
+                                    rnn_mode,
+                                    CUDNN_RNN_DOUBLE_BIAS,
                                     bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
                                     CUDNN_LINEAR_INPUT, detail::get_data_type<T>(),
-                                    detail::get_data_type<T>(), // CUDNN_RNN_ALGO_STANDARD,
-                                    CUDNN_DEFAULT_MATH,         // default precision
-                                    input_size, hidden_size,
-                                    0, // where can this come from?
-                                    num_layers, dropoutDesc.get(),
+                                    detail::get_data_type<T>(),
+                                    detail::get_data_type<T>() == CUDNN_DATA_HALF ? CUDNN_TENSOR_OP_MATH : CUDNN_DEFAULT_MATH,
+                                    input_size,
+                                    hidden_size,
+                                    hidden_size,
+                                    num_layers,
+                                    dropoutDesc.get(),
                                     0)); // What other flags do we might want here?
 #else
             CUDA4DNN_CHECK_CUDNN(cudnnSetRNNDescriptor_v6(
-                                    handle.get(), descriptor, hidden_size, num_layers, dropoutDesc.get(),
-                                    CUDNN_LINEAR_INPUT, bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+                                    handle.get(),
+                                    descriptor,
+                                    hidden_size,
+                                    num_layers,
+                                    dropoutDesc.get(),
+                                    CUDNN_LINEAR_INPUT,
+                                    bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
                                     rnn_mode,
-                                    algo, //CUDNN_RNN_ALGO_STANDARD,
+                                    algo,
                                     detail::get_data_type<T>()));
 #endif
         }
@@ -172,6 +181,7 @@ private:
     cudnnRNNAlgo_t algo{CUDNN_RNN_ALGO_STANDARD};
 };
 
+#if CUDNN_MAJOR >= 9
 template <class T>
 void LSTMForward(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
                  cudnnRNNDataDescriptor_t xDesc, DevicePtr<const T> x,
@@ -197,6 +207,30 @@ void LSTMForward(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
         cudnn_WorkspaceSize, cudnn_Workspace.get(),
         reserveSpaceSize, reserveSpace.get()));
 }
+
+#else
+template<class T>
+void LSTMForward(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
+                 const FilterDescriptor<T> &filterDesc, DevicePtr<const T> filterPtr,
+                 const TensorDescriptorsArray<T> &inputDesc, DevicePtr<const T> inputPtr,
+                 const TensorDescriptor<T> &initialHDesc, DevicePtr<const T> initialH,
+                 const TensorDescriptor<T> &initialCDesc, DevicePtr<const T> initialC,
+                 const int seqLength, const TensorDescriptorsArray<T> &outputDesc,
+                 DevicePtr<T> yOutputPtr, DevicePtr<T> ycOutputPtr, WorkspaceInstance workspace)
+{
+    CV_Assert(handle);
+
+    CUDA4DNN_CHECK_CUDNN(cudnnRNNForwardInference(handle.get(), rnnDesc.get(), seqLength,
+                                                  inputDesc.get().data(), inputPtr.get(), // input sequence
+                                                  initialHDesc.get(), initialH.get(),
+                                                  initialCDesc.get(), initialC.get(), // hidden
+                                                  filterDesc.get(), filterPtr.get(), // weights
+                                                  outputDesc.get().data(), yOutputPtr.get(), // output
+                                                  nullptr, nullptr,
+                                                  initialCDesc.get(), ycOutputPtr.get(),
+                                                  static_cast<void*>(workspace.get()), workspace.size_in_bytes()));
+}
+#endif
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */
 
