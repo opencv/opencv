@@ -288,7 +288,7 @@ public:
 #ifdef HAVE_VULKAN
         if (backendId == DNN_BACKEND_VKCOM)
             return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::SUB ||
-                   op == OPERATION::DIV ;
+                   op == OPERATION::DIV;
 #endif
 
         if (backendId == DNN_BACKEND_CUDA) {
