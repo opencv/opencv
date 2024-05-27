@@ -45,13 +45,12 @@ in this Software without prior written authorization from The Open Group.
 #define sz_XWDheader 100
 #define sz_XWDColor 12
 
+// Added macro to convert big-endian numbers to local representation
+#define C32INT(ptr) ((((unsigned char*)ptr)[0] << 24) | (((unsigned char*)ptr)[1] << 16) | (((unsigned char*)ptr)[2] << 8) | (((unsigned char*)ptr)[3] << 0))
+
 /*****************************************************************
  *  Start. Added from <X11/X.h>
  *****************************************************************/
-
-#define C32INT(ptr) ((((unsigned char*)ptr)[0] << 24) | (((unsigned char*)ptr)[1] << 16) | (((unsigned char*)ptr)[2] << 8) | (((unsigned char*)ptr)[3] << 0))
-
-/* ImageFormat -- PutImage, GetImage */
 
 #define XYBitmap		0	/* depth 1, XYFormat */
 #define XYPixmap		1	/* depth == drawable depth */
