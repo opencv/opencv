@@ -562,13 +562,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                                     cudnnHandle.get(), rnnDesc.get(), CUDNN_FWD_MODE_INFERENCE,
                                     xDesc, &workSpaceSize, &reserveSpaceSize));
 
-            std::cout << "workSpaceSize from cudnn: " << workSpaceSize << std::endl;
-            std::cout << "reserveSpaceSize from cudnn: " << reserveSpaceSize << std::endl;
             csl::WorkspaceBuilder builder;
             builder.require<T>(workSpaceSize);
             builder.require<T>(reserveSpaceSize);
-            scratch_mem_in_bytes = builder.required_workspace_size();
-            std::cout << "scratch_mem_in_bytes: " << scratch_mem_in_bytes << std::endl;
+            scratch_mem_in_bytes = builder.required_workspace_size();            
         }
 #else
         LSTM(cudnn::Handle handle, const params_type& params)
