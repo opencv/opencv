@@ -50,7 +50,7 @@
 "test_maxpool_with_argmax_2d_precomputed_strides",
 "test_maxunpool_export_with_output_shape",  // exception during net.forward() call
 "test_mul_uint8",  // output type mismatch
-"test_sub_bcast",
+"test_sub_bcast", // 1d support is required
 "test_sub_uint8",  // output type mismatch
 "test_upsample_nearest",
 "test_div_bcast", // remove when 1D Mat is supported

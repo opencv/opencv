@@ -334,9 +334,11 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        for (size_t i = 0; i < inputs.size(); i++) {
-            if (inputs[i].depth() != outputs[0].depth()) {
-                CV_Error(Error::BadDepth, cv::format("NaryEltwiseLayer: Data type mismatch, input %zu of type %d, output of type %d", i, inputs[i].depth(), outputs[0].depth()));
+        if (op != OPERATION::POW) {
+            for (size_t i = 0; i < inputs.size(); i++) {
+                if (inputs[i].depth() != outputs[0].depth()) {
+                    CV_Error(Error::BadDepth, cv::format("NaryEltwiseLayer: Data type mismatch, input %zu of type %d, output of type %d", i, inputs[i].depth(), outputs[0].depth()));
+                }
             }
         }
 
