@@ -115,7 +115,6 @@ namespace cv { namespace highgui_backend {
     int cntChannel = img.channels();
     cv::Size imgSize = currentImg.size();
     
-    
     if(flags & WINDOW_AUTOSIZE)
     {
       windowRect.width  = imgSize.width;
@@ -129,8 +128,7 @@ namespace cv { namespace highgui_backend {
       newWidth = windowRect.width;
       newHeight = windowRect.height;
     }
-    
-    if(flags & WINDOW_KEEPRATIO)
+    else //WINDOW_KEEPRATIO
     {
       double aspect_ratio = ((double)img.cols) / img.rows;
       newWidth  = windowRect.width;
@@ -166,8 +164,8 @@ namespace cv { namespace highgui_backend {
     int yOffset = backend.getFBYOffset();
     int lineLength = backend.getFBLineLength();
     
-    int showRows = min((windowRect.y + img.rows), backend.getFBHeight() - yOffset);
-    int showCols = min((windowRect.x + img.cols), backend.getFBWidth() - xOffset);
+    int showRows = min((windowRect.y + img.rows), backend.getFBHeight());
+    int showCols = min((windowRect.x + img.cols), backend.getFBWidth());
     
     int dx_w = windowRect.x;
     int dy_w = windowRect.y;
@@ -184,11 +182,9 @@ namespace cv { namespace highgui_backend {
     showRows -= dy_w;
     showCols -= dx_w;
     
-    
     for (int y = yOffset; y < showRows + yOffset; y++)
     {
-        std::memcpy(backend.getFBPointer() + (y + windowRect.y) * lineLength + 
-                    xOffset + windowRect.x, 
+        std::memcpy(backend.getFBPointer() + (y + dy_w) * lineLength + xOffset + dx_w, 
                     img.ptr<unsigned char>(y - yOffset + start_y_w) + start_x_w * cntChannel, 
                     showCols * cntChannel);
     }
@@ -219,7 +215,7 @@ namespace cv { namespace highgui_backend {
     CV_Assert(width > 0);
     CV_Assert(height > 0);
     
-    if(flags & WINDOW_AUTOSIZE)
+    if(!(flags & WINDOW_AUTOSIZE))
     {
       windowRect.width = width;
       windowRect.height = height;
@@ -339,16 +335,16 @@ namespace cv { namespace highgui_backend {
       return -1;
     }
 
-    fbWidth        = varInfo.xres;
-    fbHeight       = varInfo.yres;
+    fbWidth        = varInfo.xres_virtual;
+    fbHeight       = varInfo.yres_virtual;
     fbXOffset      = varInfo.yoffset;
     fbYOffset      = varInfo.xoffset;
     fbBitsPerPixel = varInfo.bits_per_pixel;
     fbLineLength   = fixInfo.line_length;
 
     // MAP FB TO MEMORY
-    fbScreenSize = max((__u32)fbWidth , varInfo.xres_virtual) * 
-                   max((__u32)fbHeight, varInfo.yres_virtual) * 
+    fbScreenSize = max(varInfo.xres, varInfo.xres_virtual) * 
+                   max(varInfo.yres, varInfo.yres_virtual) * 
                    fbBitsPerPixel / 8;
                  
     fbPointer = (unsigned char*)
