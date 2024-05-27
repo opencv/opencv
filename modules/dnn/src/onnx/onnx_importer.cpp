@@ -2851,14 +2851,6 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         };
     }
 
-    // element-wise layers that can have >=1 inputs but actually have one input
-    if (node_proto.input_size() == 1 && (op_type == "max" || op_type == "min" || op_type == "mean" || op_type == "sum"))
-    {
-        layerParams.type = "Identity";
-        addLayer(layerParams, node_proto);
-        return;
-    }
-
     auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
         if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
             transpose(t, t);

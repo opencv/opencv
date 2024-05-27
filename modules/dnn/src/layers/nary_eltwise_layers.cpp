@@ -334,6 +334,10 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        if (inputs.size() == 1) {
+            return;
+        }
+
         if (op != OPERATION::POW) {
             for (size_t i = 0; i < inputs.size(); i++) {
                 if (inputs[i].depth() != outputs[0].depth()) {
@@ -351,8 +355,12 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        MatShape outShape = findCommonShape(inputs);
-        outputs.assign(1, outShape);
+        if (inputs.size() == 1) {
+            outputs.assign(1, inputs.front());
+        } else {
+            MatShape outShape = findCommonShape(inputs);
+            outputs.assign(1, outShape);
+        }
         return false;
     }
 
@@ -661,6 +669,7 @@ public:
 
         if (inputs.size() == 1) {
             inputs[0].copyTo(outputs[0]);
+            return;
         }
 
         typeDispatch(outputs[0].type(), inputs.size(), inputs, outputs);
