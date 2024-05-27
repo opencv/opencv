@@ -73,7 +73,6 @@ public:
         csl::TensorSpan<T> yc_output = yc_output_wrapper.empty() ? csl::TensorSpan<T>() : yc_output_wrapper->getSpan();
 
         lstm.inference(input, y_output, yc_output, filtersTensor, h0Tensor, c0Tensor, workspace);
-        // might need to add reserveSpace here.
     }
 
     std::size_t get_workspace_memory_in_bytes() const noexcept override
