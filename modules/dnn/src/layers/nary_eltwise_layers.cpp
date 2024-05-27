@@ -49,8 +49,7 @@ public:
     std::vector<std::vector<size_t>> steps;
     std::vector<size_t> elemsize;
 
-    NaryEltwiseHelper() {
-    }
+    NaryEltwiseHelper() {}
 
     void init(const std::vector<Mat>& inputs, const std::vector<Mat>& outputs)
     {
@@ -576,8 +575,7 @@ public:
         Elementwise ternary operator (like where) which takes three operands
     */
     template <typename T, typename Functor>
-    void ternary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
-    {
+    void ternary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs) {
         const Mat& a = inputs[0];
         const Mat& b = inputs[1];
         const Mat& c = inputs[2];
@@ -585,10 +583,11 @@ public:
 
         CV_Assert(helper.shapes.size() == 4 && helper.steps.size() == 4);
 
-        ternary_forward_impl<T, Functor>(
-                helper.max_ndims, helper.shapes[0], a.ptr<char>(), helper.steps[1], b.ptr<char>(), helper.steps[2],
-                c.ptr<char>(), helper.steps[3], out.ptr<char>(), helper.steps[0],
-                f);
+        ternary_forward_impl<T, Functor>(helper.max_ndims, helper.shapes[0],
+                                         a.ptr<char>(), helper.steps[1],
+                                         b.ptr<char>(), helper.steps[2],
+                                         c.ptr<char>(), helper.steps[3],
+                                         out.ptr<char>(), helper.steps[0], f);
     }
 
     template <typename T, typename Functor>
@@ -597,57 +596,99 @@ public:
             const char* data1, const std::vector<size_t>& step1,
             const char* data2, const std::vector<size_t>& step2,
             const char* data3, const std::vector<size_t>& step3,
-            char* data, const std::vector<size_t>& step,
-            const Functor& op)
-    {
-        assert(ndims >= 2);
-        size_t dp1 = step1[ndims-1]/sizeof(T);
-        size_t dp2 = step2[ndims-1]/sizeof(T);
-        size_t dp3 = step3[ndims-1]/sizeof(T);
-        size_t dp = step[ndims-1]/sizeof(T);
-        int k, n1 = shape[ndims-1], n2 = shape[ndims-2];
-        size_t plane_idx, nplanes = 1;
-        for (k = 0; k < ndims-2; k++) nplanes *= shape[k];
+            char* data, const std::vector<size_t>& step, const Functor& op) {
+        CV_Assert(ndims >= 2);
+        size_t dp1 = step1.back() / sizeof(T);
+        size_t dp2 = step2.back() / sizeof(T);
+        size_t dp3 = step3.back() / sizeof(T);
+        size_t dp = step.back() / sizeof(T);
+        int plane_size = shape.back();
+        int nplanes = std::accumulate(shape.begin(), shape.end() - 1, 1, std::multiplies<int>());
 
-        for (plane_idx = 0; plane_idx < nplanes; plane_idx++)
-        {
-            const char* ptr1_ = data1;
-            const char* ptr2_ = data2;
-            const char* ptr3_ = data3;
-            char* ptr_ = data;
-            size_t idx = plane_idx;
-            for (k = ndims-3; k >= 0; k--)
-            {
-                size_t next_idx = idx/shape[k];
-                int i_k = (int)(idx - next_idx*shape[k]);
-                ptr1_ += i_k*step1[k];
-                ptr2_ += i_k*step2[k];
-                ptr3_ += i_k*step3[k];
-                ptr_ += i_k*step[k];
-                idx = next_idx;
-            }
-
-            for (int i2 = 0; i2 < n2; i2++, ptr1_ += step1[ndims-2],
-                                            ptr2_ += step2[ndims-2],
-                                            ptr3_ += step3[ndims-2],
-                                            ptr_ += step[ndims-2])
-            {
-                const T* ptr1 = (const T*)ptr1_;
-                const T* ptr2 = (const T*)ptr2_;
-                const T* ptr3 = (const T*)ptr3_;
-                T* ptr = (T*)ptr_;
-
-                if (dp1 == 1 && dp2 == 1 && dp3 == 1 && dp == 1)
-                {
-                    for(int i1 = 0; i1 < n1; i1++)
-                        ptr[i1] = op(ptr1[i1], ptr2[i1], ptr3[i1]);
-                }
-                else
-                {
-                    for(int i1 = 0; i1 < n1; i1++, ptr1 += dp1, ptr2 += dp2, ptr3 += dp3, ptr += dp)
+        if (nplanes == 1) {
+            const T *ptr1 = (const T*)data1;
+            const T *ptr2 = (const T*)data2;
+            const T *ptr3 = (const T*)data3;
+            T* ptr = (T*)data;
+            auto worker = [&](const Range &r) {
+                if (dp1 == 1 && dp2 == 1 && dp3 == 1 && dp == 1) {
+                    for (int i = r.start; i < r.end; i++) {
+                        ptr[i] = op(ptr1[i], ptr2[i], ptr3[i]);
+                    }
+                } else if (dp1 == 0 && dp2 == 1 && dp3 == 1 && dp == 1){
+                    T x1 = *ptr1;
+                    for (int i = r.start; i < r.end; i++) {
+                        ptr[i] = op(x1, ptr2[i], ptr3[i]);
+                    }
+                } else if (dp1 == 1 && dp2 == 0 && dp3 == 1 && dp == 1){
+                    T x2 = *ptr2;
+                    for (int i = r.start; i < r.end; i++) {
+                        ptr[i] = op(ptr1[i], x2, ptr3[i]);
+                    }
+                } else if (dp1 == 1 && dp2 == 1 && dp3 == 1 && dp == 1) {
+                    T x3 = *ptr3;
+                    for (int i = r.start; i < r.end; i++) {
+                        ptr[i] = op(ptr1[i], ptr2[i], x3);
+                    }
+                } else {
+                    for(int i = r.start; i < r.end; i++, ptr1 += dp1, ptr2 += dp2, ptr3 += dp3, ptr += dp) {
                         *ptr = op(*ptr1, *ptr2, *ptr3);
+                    }
                 }
-            }
+            };
+            double nstripes = getNumThreads();
+            parallel_for_(Range(0, plane_size), worker, nstripes);
+        } else {
+            auto worker = [&](const Range &r) {
+                for (int plane_idx = r.start; plane_idx < r.end; plane_idx++) {
+                    const char* ptr1_ = data1;
+                    const char* ptr2_ = data2;
+                    const char* ptr3_ = data3;
+                    char* ptr_ = data;
+                    size_t idx = plane_idx;
+                    for (int k = ndims - 2; k >= 0; k--)
+                    {
+                        size_t next_idx = idx / shape[k];
+                        int i_k = (int)(idx - next_idx * shape[k]);
+                        ptr1_ += i_k * step1[k];
+                        ptr2_ += i_k * step2[k];
+                        ptr3_ += i_k * step3[k];
+                        ptr_ += i_k * step[k];
+                        idx = next_idx;
+                    }
+
+                    const T *ptr1 = (const T*)ptr1_;
+                    const T *ptr2 = (const T*)ptr2_;
+                    const T *ptr3 = (const T*)ptr3_;
+                    T* ptr = (T*)ptr_;
+                    if (dp1 == 1 && dp2 == 1 && dp3 == 1 && dp == 1) {
+                        for (int i = 0; i < plane_size; i++) {
+                            ptr[i] = op(ptr1[i], ptr2[i], ptr3[i]);
+                        }
+                    } else if (dp1 == 0 && dp2 == 1 && dp3 == 1 && dp == 1){
+                        T x1 = *ptr1;
+                        for (int i = 0; i < plane_size; i++) {
+                            ptr[i] = op(x1, ptr2[i], ptr3[i]);
+                        }
+                    } else if (dp1 == 1 && dp2 == 0 && dp3 == 1 && dp == 1){
+                        T x2 = *ptr2;
+                        for (int i = 0; i < plane_size; i++) {
+                            ptr[i] = op(ptr1[i], x2, ptr3[i]);
+                        }
+                    } else if (dp1 == 1 && dp2 == 1 && dp3 == 1 && dp == 1) {
+                        T x3 = *ptr3;
+                        for (int i = 0; i < plane_size; i++) {
+                            ptr[i] = op(ptr1[i], ptr2[i], x3);
+                        }
+                    } else {
+                        for(int i = 0; i < plane_size; i++, ptr1 += dp1, ptr2 += dp2, ptr3 += dp3, ptr += dp) {
+                            *ptr = op(*ptr1, *ptr2, *ptr3);
+                        }
+                    }
+                }
+            };
+            double nstripes = getNumThreads();
+            parallel_for_(Range(0, nplanes), worker, nstripes);
         }
     }
 
