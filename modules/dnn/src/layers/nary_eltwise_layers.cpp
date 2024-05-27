@@ -334,8 +334,14 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        for (size_t i = 0; i < inputs.size(); i++) {
+            if (inputs[i].depth() != outputs[0].depth()) {
+                CV_Error(Error::BadDepth, cv::format("NaryEltwiseLayer: Data type mismatch, input %zu of type %d, output of type %d", i, inputs[i].depth(), outputs[0].depth()));
+            }
+        }
+
         helper.init(inputs, outputs);
-        CV_Assert(helper.prepare_for_broadcast_op());
+        CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -436,6 +442,9 @@ public:
         }
     }
 
+    /*
+        Elementwise binary operator (like +, -, x, /, etc.) which takes two operands
+    */
     template <typename T, typename Functor>
     void binary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
     {
@@ -451,28 +460,28 @@ public:
 
     template<typename T, typename Functor>
     void nary_forward_impl(
-        const Functor& f, const T scale, int ninputs, int ndims, const std::vector<int>& shape,
+        const Functor& op, const T scale, int ninputs, int ndims, const std::vector<int>& shape,
         const char** inp, char* out,
         const std::vector<std::vector<size_t>>& steps, std::vector<char*>& ptrs)
     {
         CV_Assert(ndims >= 2);
-        size_t dp = steps[0][ndims-1]/sizeof(T);
-        size_t dp1 = steps[1][ndims-1]/sizeof(T);
-        size_t dp2 = steps[2][ndims-1]/sizeof(T);
+        size_t dp = steps[0].back() / sizeof(T);
+        size_t dp1 = steps[1].back() / sizeof(T);
+        size_t dp2 = steps[2].back() / sizeof(T);
 
         enum { BLOCK_SIZE = 1024 };
         T blck[BLOCK_SIZE];
 
-        int k, i, di1=0, n1 = shape[ndims-1], n2 = shape[ndims-2];
+        int i, di1=0, plane_size = shape.back(), n2 = shape[ndims - 2];
         int second = ninputs == 1 ? 1 : 2;
-        size_t plane_idx, nplanes = 1;
-        for (k = 0; k < ndims-2; k++) nplanes *= shape[k];
+        size_t nplanes = 1;
+        for (int k = 0; k < ndims-2; k++) nplanes *= shape[k];
 
-        for (plane_idx = 0; plane_idx < nplanes; plane_idx++) {
+        for (size_t plane_idx = 0; plane_idx < nplanes; plane_idx++) {
             ptrs[0] = out;
             for (i = 0; i < ninputs; i++) ptrs[i+1] = (char*)inp[i];
             size_t idx = plane_idx;
-            for (k = ndims-3; k >= 0; k--) {
+            for (int k = ndims-2; k >= 0; k--) {
                 size_t next_idx = idx/shape[k];
                 int i_k = (int)(idx - next_idx*shape[k]);
                 for (i = 0; i < ninputs; i++)
@@ -486,23 +495,23 @@ public:
                 T* ptr = (T*)(ptrs[0] + steps[0][ndims-2]*i2);
                 if (ninputs <= 2) {
                     if (dp1 == 1 && dp2 == 1) {
-                        for (int i1 = 0; i1 < n1; i1++)
-                            ptr[i1] = saturate_cast<T>(f(ptr1[i1], ptr2[i1])*scale);
+                        for (int i1 = 0; i1 < plane_size; i1++)
+                            ptr[i1] = saturate_cast<T>(op(ptr1[i1], ptr2[i1])*scale);
                     } else {
-                        for(int i1 = 0; i1 < n1; i1++, ptr1 += dp1, ptr2 += dp2, ptr += dp)
-                            *ptr = saturate_cast<T>(f(*ptr1, *ptr2)*scale);
+                        for(int i1 = 0; i1 < plane_size; i1++, ptr1 += dp1, ptr2 += dp2, ptr += dp)
+                            *ptr = saturate_cast<T>(op(*ptr1, *ptr2)*scale);
                     }
                 } else {
-                    for (int i1 = 0; i1 < n1; i1 += di1, ptr += di1) {
-                        di1 = BLOCK_SIZE < n1-i1 ? BLOCK_SIZE : n1-i1;
+                    for (int i1 = 0; i1 < plane_size; i1 += di1, ptr += di1) {
+                        di1 = BLOCK_SIZE < plane_size-i1 ? BLOCK_SIZE : plane_size-i1;
                         if (dp1 == 1 && dp2 == 1) {
                             for (int j = 0; j < di1; j++)
-                                blck[j] = f(ptr1[j], ptr2[j]);
+                                blck[j] = op(ptr1[j], ptr2[j]);
                             ptr1 += di1;
                             ptr2 += di1;
                         } else {
                             for(int j = 0; j < di1; j++, ptr1 += dp1, ptr2 += dp2)
-                                blck[j] = f(*ptr1, *ptr2);
+                                blck[j] = op(*ptr1, *ptr2);
                         }
                         for(i = 2; i < ninputs; i++) {
                             int dp_i = steps[i+1][ndims-1]/sizeof(T);
@@ -511,18 +520,18 @@ public:
                             if (dp_i == 1) {
                                 if (i < ninputs-1) {
                                     for (int j = 0; j < di1; j++)
-                                        blck[j] = f(blck[j], ptr_i[j]);
+                                        blck[j] = op(blck[j], ptr_i[j]);
                                 } else {
                                     for (int j = 0; j < di1; j++)
-                                        ptr[j] = saturate_cast<T>(f(blck[j], ptr_i[j]) * scale);
+                                        ptr[j] = saturate_cast<T>(op(blck[j], ptr_i[j]) * scale);
                                 }
                             } else {
                                 if (i < ninputs-1) {
                                     for (int j = 0; j < di1; j++, ptr_i += dp_i)
-                                        blck[j] = f(blck[j], *ptr_i);
+                                        blck[j] = op(blck[j], *ptr_i);
                                 } else {
                                     for (int j = 0; j < di1; j++, ptr_i += dp_i)
-                                        ptr[j] = saturate_cast<T>(f(blck[j], *ptr_i) * scale);
+                                        ptr[j] = saturate_cast<T>(op(blck[j], *ptr_i) * scale);
                                 }
                             }
                         }
@@ -532,6 +541,9 @@ public:
         }
     }
 
+    /*
+        Elementwise nary operator (like sum, mean, etc.) which takes at least one operand
+    */
     template <typename T, typename Functor>
     void nary_forward(
         const Functor& f, T scale,
@@ -550,8 +562,11 @@ public:
                 f, scale, helper.ninputs, helper.max_ndims, helper.shapes[0], inp, out, helper.steps, helper.ptrs);
     }
 
+    /*
+        Elementwise ternary operator (like where) which takes three operands
+    */
     template <typename T, typename Functor>
-    void trinary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
+    void ternary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
     {
         const Mat& a = inputs[0];
         const Mat& b = inputs[1];
@@ -560,14 +575,14 @@ public:
 
         CV_Assert(helper.shapes.size() == 4 && helper.steps.size() == 4);
 
-        trinary_forward_impl<T, Functor>(
+        ternary_forward_impl<T, Functor>(
                 helper.max_ndims, helper.shapes[0], a.ptr<char>(), helper.steps[1], b.ptr<char>(), helper.steps[2],
                 c.ptr<char>(), helper.steps[3], out.ptr<char>(), helper.steps[0],
                 f);
     }
 
     template <typename T, typename Functor>
-    void trinary_forward_impl(
+    void ternary_forward_impl(
             int ndims, const std::vector<int>& shape,
             const char* data1, const std::vector<size_t>& step1,
             const char* data2, const std::vector<size_t>& step2,
@@ -642,143 +657,145 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        // TODO: assert types
+        if (inputs.size() == 1) {
+            inputs[0].copyTo(outputs[0]);
+        }
+
         typeDispatch(outputs[0].type(), inputs.size(), inputs, outputs);
     }
 
     template<typename T, typename... Args>
     inline void opDispatch(size_t ninputs, Args&&... args)
     {
-        switch (op)
-        {
-            case OPERATION::EQUAL:
-            {
-                auto equal = [](const T &a, const T &b) { return a == b; };
-                binary_forward<T>(equal, std::forward<Args>(args)...);
-                break;
+        if (ninputs == 2) { // Operators that take two operands
+            switch (op) {
+                case OPERATION::AND: {
+                    auto op_and = [](const uint8_t &a, const uint8_t &b) { return a & b; };
+                    binary_forward<T>(op_and, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::EQUAL: {
+                    auto equal = [](const T &a, const T &b) { return a == b; };
+                    binary_forward<T>(equal, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::GREATER: {
+                    auto greater = [](const T &a, const T &b) { return a > b; };
+                    binary_forward<T>(greater, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::GREATER_EQUAL: {
+                    auto greater_equal = [](const T &a, const T &b) { return a >= b; };
+                    binary_forward<T>(greater_equal, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::LESS: {
+                    auto less = [](const T &a, const T &b) { return a < b; };
+                    binary_forward<T>(less, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::LESS_EQUAL: {
+                    auto less_equal = [](const T &a, const T &b) { return a <= b; };
+                    binary_forward<T>(less_equal, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::OR: {
+                    auto op_or = [](const uint8_t &a, const uint8_t &b) { return a | b; };
+                    binary_forward<T>(op_or, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::POW: {
+                    auto pow = [] (const T& a, const T& b) { return std::pow(a, b); };
+                    binary_forward<T>(pow, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::XOR: {
+                    auto op_xor = [](const uint8_t &a, const uint8_t &b) { return a ^ b; };
+                    binary_forward<T>(op_xor, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::BITSHIFT: {
+                    auto bitshift = [] (const uint8_t &a, const uint8_t &b) { return a << b; };
+                    binary_forward<T>(bitshift, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MAX: {
+                    auto max = [](const T &a, const T &b) { return std::max(a, b); };
+                    binary_forward<T>(max, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MEAN: {
+                    auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
+                    binary_forward<T>(mean, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MIN: {
+                    auto min = [](const T &a, const T &b) { return std::min(a, b); };
+                    binary_forward<T>(min, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MOD: {
+                    auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
+                    binary_forward<T>(mod, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::FMOD: {
+                    auto fmod = [](const T &a, const T &b) { return std::fmod(a, b); };
+                    binary_forward<T>(fmod, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::PROD: {
+                    auto prod = [](const T &a, const T &b) { return a * b; };
+                    binary_forward<T>(prod, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::SUB: {
+                    auto sub = [](const T &a, const T &b) { return a - b; };
+                    binary_forward<T>(sub, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::ADD:
+                case OPERATION::SUM: {
+                    auto sum = [](const T &a, const T &b) { return a + b; };
+                    binary_forward<T>(sum, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::DIV: {
+                    auto div = [](const T &a, const T &b) { return a / b; };
+                    binary_forward<T>(div, std::forward<Args>(args)...);
+                    break;
+                }
+                default: CV_Error(Error::StsBadArg, "Unsupported operation");
             }
-            case OPERATION::GREATER:
+        } else if (ninputs == 3 && op == OPERATION::WHERE) { // Operators that take three operands
+            auto where = [](const T &a, const T &b, const T &c) { return a ? b : c; };
+            ternary_forward<T>(where, std::forward<Args>(args)...);
+        } else { // Operators that can take multiple (>= 3) operands
+            switch (op)
             {
-                auto greater = [](const T &a, const T &b) { return a > b; };
-                binary_forward<T>(greater, std::forward<Args>(args)...);
-                break;
+                case OPERATION::MAX: {
+                    auto max = [](const T &a, const T &b) { return std::max(a, b); };
+                    nary_forward<T>(max, T{1}, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MEAN: {
+                    auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
+                    nary_forward<T>(mean, T{1} / ninputs, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MIN: {
+                    auto min = [](const T &a, const T &b) { return std::min(a, b); };
+                    nary_forward<T>(min, T{1}, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::SUM: {
+                    auto sum = [](const T &a, const T &b) { return a + b; };
+                    nary_forward<T>(sum, T{1}, std::forward<Args>(args)...);
+                    break;
+                }
+                default:
+                    CV_Error(Error::StsBadArg, "Unsupported operation.");
             }
-            case OPERATION::GREATER_EQUAL:
-            {
-                auto greater_equal = [](const T &a, const T &b) { return a >= b; };
-                binary_forward<T>(greater_equal, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::LESS:
-            {
-                auto less = [](const T &a, const T &b) { return a < b; };
-                binary_forward<T>(less, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::LESS_EQUAL:
-            {
-                auto less_equal = [](const T &a, const T &b) { return a <= b; };
-                binary_forward<T>(less_equal, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::POW:
-            {
-                auto pow = [] (const T& a, const T& b) { return std::pow(a, b); };
-                binary_forward<T>(pow, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::BITSHIFT:
-            {
-                auto bitshift = [] (const uint8_t &a, const uint8_t &b) { return a << b; };
-                binary_forward<T>(bitshift, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::MAX:
-            {
-                auto max = [](const T &a, const T &b) { return std::max(a, b); };
-                nary_forward<T>(max, T{1}, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::MEAN:
-            {
-                auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
-                nary_forward<T>(mean, T{1} / ninputs, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::MIN:
-            {
-                auto min = [](const T &a, const T &b) { return std::min(a, b); };
-                nary_forward<T>(min, T{1}, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::MOD:
-            {
-                auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
-                binary_forward<T>(mod, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::FMOD:
-            {
-                auto fmod = [](const T &a, const T &b) { return std::fmod(a, b); };
-                binary_forward<T>(fmod, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::PROD:
-            {
-                auto prod = [](const T &a, const T &b) { return a * b; };
-                binary_forward<T>(prod, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::SUB:
-            {
-                auto sub = [](const T &a, const T &b) { return a - b; };
-                binary_forward<T>(sub, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::SUM:
-            {
-                auto sum = [](const T &a, const T &b) { return a + b; };
-                nary_forward<T>(sum, T{1}, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::ADD:
-            {
-                auto add = [](const T &a, const T &b) { return a + b; };
-                binary_forward<T>(add, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::DIV:
-            {
-                auto div = [](const T &a, const T &b) { return a / b; };
-                binary_forward<T>(div, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::AND:
-            {
-                auto op_and = [](const uint8_t &a, const uint8_t &b) { return a & b; };
-                binary_forward<T>(op_and, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::OR:
-            {
-                auto op_or = [](const uint8_t &a, const uint8_t &b) { return a | b; };
-                binary_forward<T>(op_or, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::XOR:
-            {
-                auto op_xor = [](const uint8_t &a, const uint8_t &b) { return a ^ b; };
-                binary_forward<T>(op_xor, std::forward<Args>(args)...);
-                break;
-            }
-            case OPERATION::WHERE:
-            {
-                auto op_where = [](const T &a, const T &b, const T &c) { return a ? b : c; };
-                trinary_forward<T>(op_where, std::forward<Args>(args)...);
-                break;
-            }
-            default:
-                CV_Error(Error::StsBadArg, "Unsupported operation.");
         };
     }
 
