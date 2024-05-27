@@ -249,7 +249,9 @@ set_target_properties(${JPEG_LIBRARY}
   )
 
 if(ENABLE_SOLUTION_FOLDERS)
-  set_target_properties(${JPEG_LIBRARY} PROPERTIES FOLDER "3rdparty")
+  set_target_properties(${JPEG_LIBRARY} PROPERTIES FOLDER "3rdparty/jpeg")
+  set_target_properties(jpeg12-static PROPERTIES FOLDER "3rdparty/jpeg")
+  set_target_properties(jpeg16-static PROPERTIES FOLDER "3rdparty/jpeg")
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
