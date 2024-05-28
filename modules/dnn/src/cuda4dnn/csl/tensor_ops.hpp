@@ -565,7 +565,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             csl::WorkspaceBuilder builder;
             builder.require<T>(workSpaceSize);
             builder.require<T>(reserveSpaceSize);
-            scratch_mem_in_bytes = builder.required_workspace_size();            
+            scratch_mem_in_bytes = builder.required_workspace_size();
         }
 #else
         LSTM(cudnn::Handle handle, const params_type& params)
