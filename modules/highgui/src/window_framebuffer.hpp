@@ -12,118 +12,118 @@
 namespace cv { namespace highgui_backend {
 
 enum OpenCVFBMode{
-  FB_MODE_EMU,
-  FB_MODE_FB,
-  FB_MODE_XVFB
+    FB_MODE_EMU,
+    FB_MODE_FB,
+    FB_MODE_XVFB
 };
 
 class FramebufferBackend;
 class CV_EXPORTS FramebufferWindow : public UIWindow
 {
-  FramebufferBackend &backend;
-  std::string FB_ID;
-  Rect windowRect;
-  
-  int flags;
-  Mat currentImg;
+    FramebufferBackend &backend;
+    std::string FB_ID;
+    Rect windowRect;
+    
+    int flags;
+    Mat currentImg;
 
 public:
-  FramebufferWindow(FramebufferBackend &backend, int flags);
-  virtual ~FramebufferWindow();
+    FramebufferWindow(FramebufferBackend &backend, int flags);
+    virtual ~FramebufferWindow();
 
-  virtual void imshow(InputArray image)override;
+    virtual void imshow(InputArray image)override;
 
-  virtual double getProperty(int prop) const override;
-  virtual bool setProperty(int prop, double value)override;
+    virtual double getProperty(int prop) const override;
+    virtual bool setProperty(int prop, double value)override;
 
-  virtual void resize(int width, int height)override;
-  virtual void move(int x, int y)override;
+    virtual void resize(int width, int height)override;
+    virtual void move(int x, int y)override;
 
-  virtual Rect getImageRect() const override;
+    virtual Rect getImageRect() const override;
 
-  virtual void setTitle(const std::string& title)override;
+    virtual void setTitle(const std::string& title)override;
 
-  virtual void setMouseCallback(MouseCallback onMouse, void* userdata /*= 0*/) override ;
+    virtual void setMouseCallback(MouseCallback onMouse, void* userdata /*= 0*/) override ;
 
-  virtual std::shared_ptr<UITrackbar> createTrackbar(
-      const std::string& name,
-      int count,
-      TrackbarCallback onChange /*= 0*/,
-      void* userdata /*= 0*/
-  )override;
+    virtual std::shared_ptr<UITrackbar> createTrackbar(
+            const std::string& name,
+            int count,
+            TrackbarCallback onChange /*= 0*/,
+            void* userdata /*= 0*/
+    )override;
 
-  virtual std::shared_ptr<UITrackbar> findTrackbar(const std::string& name)override;
-  
-  virtual const std::string& getID() const override;
+    virtual std::shared_ptr<UITrackbar> findTrackbar(const std::string& name)override;
+    
+    virtual const std::string& getID() const override;
 
-  virtual bool isActive() const override;
+    virtual bool isActive() const override;
 
-  virtual void destroy() override;
-};  // FramebufferWindow
+    virtual void destroy() override;
+};    // FramebufferWindow
 
 class CV_EXPORTS FramebufferBackend: public UIBackend
 {
-  OpenCVFBMode mode;
+    OpenCVFBMode mode;
 
-  struct termios old, current;
+    struct termios old, current;
 
-  void initTermios(int echo, int wait);
-  void resetTermios(void);
-  int getch_(int echo, int wait);
-  bool kbhit();
-  
+    void initTermios(int echo, int wait);
+    void resetTermios(void);
+    int getch_(int echo, int wait);
+    bool kbhit();
+    
 
-  fb_var_screeninfo varInfo;
-  fb_fix_screeninfo fixInfo;
-  int fbWidth;
-  int fbHeight;
-  int fbXOffset;
-  int fbYOffset;
-  int fbBitsPerPixel;
-  int fbLineLength;
-  long int fbScreenSize;
-  unsigned char* fbPointer;
-  unsigned int fbPointer_dist;
-  Mat backgroundBuff;
+    fb_var_screeninfo varInfo;
+    fb_fix_screeninfo fixInfo;
+    int fbWidth;
+    int fbHeight;
+    int fbXOffset;
+    int fbYOffset;
+    int fbBitsPerPixel;
+    int fbLineLength;
+    long int fbScreenSize;
+    unsigned char* fbPointer;
+    unsigned int fbPointer_dist;
+    Mat backgroundBuff;
 
-  
-  int fbOpenAndGetInfo();
-  int fbID;
+    
+    int fbOpenAndGetInfo();
+    int fbID;
 
-  unsigned int xvfb_len_header;
-  unsigned int xvfb_len_colors;
-  unsigned int xvfb_len_pixmap;
-  int XvfbOpenAndGetInfo();
-  
+    unsigned int xvfb_len_header;
+    unsigned int xvfb_len_colors;
+    unsigned int xvfb_len_pixmap;
+    int XvfbOpenAndGetInfo();
+    
 public:
 
-  fb_var_screeninfo &getVarInfo();
-  fb_fix_screeninfo &getFixInfo();
-  int getFramebuffrerID();
-  int getFBWidth();
-  int getFBHeight();
-  int getFBXOffset();
-  int getFBYOffset();
-  int getFBBitsPerPixel();
-  int getFBLineLength();
-  unsigned char* getFBPointer();
-  Mat& getBackgroundBuff();
-  OpenCVFBMode getMode();
+    fb_var_screeninfo &getVarInfo();
+    fb_fix_screeninfo &getFixInfo();
+    int getFramebuffrerID();
+    int getFBWidth();
+    int getFBHeight();
+    int getFBXOffset();
+    int getFBYOffset();
+    int getFBBitsPerPixel();
+    int getFBLineLength();
+    unsigned char* getFBPointer();
+    Mat& getBackgroundBuff();
+    OpenCVFBMode getMode();
 
-  FramebufferBackend();
+    FramebufferBackend();
 
-  virtual ~FramebufferBackend();
+    virtual ~FramebufferBackend();
 
-  virtual void destroyAllWindows()override;
+    virtual void destroyAllWindows()override;
 
-  // namedWindow
-  virtual std::shared_ptr<UIWindow> createWindow(
-      const std::string& winname,
-      int flags
-  )override;
+    // namedWindow
+    virtual std::shared_ptr<UIWindow> createWindow(
+            const std::string& winname,
+            int flags
+    )override;
 
-  virtual int waitKeyEx(int delay /*= 0*/)override;
-  virtual int pollKey() override; 
+    virtual int waitKeyEx(int delay /*= 0*/)override;
+    virtual int pollKey() override; 
 };
 
 }
