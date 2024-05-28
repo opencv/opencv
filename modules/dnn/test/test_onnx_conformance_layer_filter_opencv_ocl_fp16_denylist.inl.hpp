@@ -14,6 +14,7 @@
 "test_maxpool_2d_same_upper",
 "test_maxpool_2d_strides",
 "test_maxpool_3d_default",
+"test_pow", // fp16 accuracy issue
 "test_softmax_large_number",
 "test_softmax_large_number_expanded",
 "test_split_equal_parts_1d",

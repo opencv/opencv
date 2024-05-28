@@ -333,10 +333,6 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        if (inputs.size() == 1) {
-            return;
-        }
-
         if (op != OPERATION::POW) {
             for (size_t i = 0; i < inputs.size(); i++) {
                 if (inputs[i].depth() != outputs[0].depth()) {
