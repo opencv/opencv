@@ -178,16 +178,15 @@ static void addTensorRTExecutionProvider(Ort::SessionOptions *session_options,
 
 static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
                                          const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
-     OrtOpenVINOProviderOptions options{};
-     options.device_type = ov_ep.device_type.c_str();
-     options.cache_dir = ov_ep.cache_dir.c_str();
-     options.num_of_threads = ov_ep.num_of_threads;
-     options.enable_opencl_throttling = ov_ep.enable_opencl_throttling;
-     options.enable_dynamic_shapes = ov_ep.enable_dynamic_shapes;
-     options.context = nullptr;
-
+     std::unordered_map<std::string, std::string> options{};
+     options["device_type"] = ov_ep.device_type.c_str();
+     options["cache_dir"] = ov_ep.cache_dir.c_str();
+     options["num_of_threads"] = 4;
+     options["enable_opencl_throttling"] = "false";
+     options["enable_dynamic_shapes"] = "false";
+     options["context"] = nullptr;
      try {
-        session_options->AppendExecutionProvider_OpenVINO(options);
+        session_options->AppendExecutionProvider("OpenVINO", options);
      } catch (const std::exception &e) {
          std::stringstream ss;
          ss << "ONNX Backend: Failed to enable OpenVINO"
