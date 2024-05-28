@@ -95,8 +95,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 case EltwiseOpType::MOD: kernels::eltwise_mod_2<T>(stream, output, input_x, input_y); break;
                 case EltwiseOpType::FMOD: kernels::eltwise_fmod_2<T>(stream, output, input_x, input_y); break;
                 }
-            }
-            else
+            } else if (inputs.size() == 1) {
+                auto input_wrapper_0 = inputs[0].dynamicCast<wrapper_type>();
+                auto input_0 = input_wrapper_0->getView();
+                csl::tensor_ops::copy(stream, output, input_0);
+            } else
             {
                 auto input_wrapper_0 = inputs[0].dynamicCast<wrapper_type>();
                 auto input_0 = input_wrapper_0->getView();
