@@ -1105,7 +1105,12 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     {
         if (opencv_deny_list.find(name) != opencv_deny_list.end())
         {
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+            // TODO: refactor this filter list as openvino filter list does
+            if (name == "test_pow") {
+                default_lInf = 0.00013; // Expected: (normInf) <= (lInf), actual: 0.00012207 vs 0.0001
+            } else {
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+            }
         }
         if ((target == DNN_TARGET_OPENCL_FP16) && (opencl_fp16_deny_list.find(name) != opencl_fp16_deny_list.end()))
         {
