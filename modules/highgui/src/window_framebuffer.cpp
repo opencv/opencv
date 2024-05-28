@@ -257,7 +257,7 @@ namespace cv { namespace highgui_backend {
 
         CV_Assert(width > 0);
         CV_Assert(height > 0);
-        
+
         if(!(flags & WINDOW_AUTOSIZE))
         {
             windowRect.width = width;
@@ -648,10 +648,10 @@ namespace cv { namespace highgui_backend {
         current.c_lflag &= ~ICANON;
         current.c_lflag &= ~ISIG;
         current.c_cc[VMIN]=wait;
-        if (echo) 
+        if (echo)
         {
             current.c_lflag |= ECHO;
-        } 
+        }
         else 
         {
             current.c_lflag &= ~ECHO;

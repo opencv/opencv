@@ -121,7 +121,7 @@ public:
     )override;
 
     virtual int waitKeyEx(int delay /*= 0*/)override;
-    virtual int pollKey() override; 
+    virtual int pollKey() override;
 };
 
 }
