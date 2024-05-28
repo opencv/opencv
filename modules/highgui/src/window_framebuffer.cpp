@@ -162,31 +162,74 @@ namespace cv { namespace highgui_backend {
     // SHOW IMAGE
     int xOffset = backend.getFBXOffset();
     int yOffset = backend.getFBYOffset();
+    int fbHeight = backend.getFBHeight();
+    int fbWidth  = backend.getFBWidth();
     int lineLength = backend.getFBLineLength();
     
-    int showRows = min((windowRect.y + img.rows), backend.getFBHeight());
-    int showCols = min((windowRect.x + img.cols), backend.getFBWidth());
-    
-    int dx_w = windowRect.x;
-    int dy_w = windowRect.y;
+    int img_start_x;
+    int img_start_y;
+    int img_end_x;
+    int img_end_y;
+    int fb_start_x;
+    int fb_start_y;
 
-    int start_y_w = 0;
-    int start_x_w = 0;
-    
-    if(dy_w < 0) start_y_w = -dy_w;
-    if(dx_w < 0) start_x_w = -dx_w;
-    
-    if(dy_w < 0) dy_w = 0;
-    if(dx_w < 0) dx_w = 0;
-    
-    showRows -= dy_w;
-    showCols -= dx_w;
-    
-    for (int y = yOffset; y < showRows + yOffset; y++)
+    if(windowRect.y - yOffset < 0) 
+    {  
+      img_start_y = - (windowRect.y - yOffset); 
+    }
+    else 
+    {  
+      img_start_y = 0;
+    }
+    if( windowRect.x - xOffset < 0 ) 
+    {  
+      img_start_x = - (windowRect.x - xOffset); 
+    }
+    else 
     {
-        std::memcpy(backend.getFBPointer() + (y + dy_w) * lineLength + xOffset + dx_w, 
-                    img.ptr<unsigned char>(y - yOffset + start_y_w) + start_x_w * cntChannel, 
-                    showCols * cntChannel);
+      img_start_x = 0;
+    }
+    
+    if( windowRect.y + yOffset + img.rows > fbHeight ) 
+    {
+      img_end_y = fbHeight - windowRect.y - yOffset; 
+    }
+    else 
+    {
+      img_end_y = img.rows;
+    }
+    if( windowRect.x + xOffset + img.cols > fbWidth  ) 
+    {
+      img_end_x = fbWidth  - windowRect.x - xOffset; 
+    }
+    else 
+    {
+      img_end_x = img.cols;
+    }
+    
+    if( windowRect.y + yOffset >= 0 ) 
+    {
+      fb_start_y = windowRect.y + yOffset; 
+    }
+    else 
+    {
+      fb_start_y = 0;
+    }
+    if( windowRect.x + xOffset >= 0 ) 
+    {
+      fb_start_x = windowRect.x + xOffset; 
+    }
+    else 
+    {
+      fb_start_x = 0;
+    }
+    
+    for (int y = img_start_y; y < img_end_y; y++)
+    {
+      std::memcpy(backend.getFBPointer() + 
+                  (fb_start_y + y - img_start_y) * lineLength + fb_start_x, 
+                  img.ptr<unsigned char>(y) + img_start_x * cntChannel, 
+                  (img_end_x - img_start_x) * cntChannel);
     }
   }
 
@@ -220,7 +263,7 @@ namespace cv { namespace highgui_backend {
       windowRect.width = width;
       windowRect.height = height;
       
-      if((currentImg.size().width > 0) && (currentImg.size().height > 0))
+      if((currentImg.cols > 0) && (currentImg.rows > 0))
       {  
         imshow(currentImg);
       }
@@ -233,7 +276,7 @@ namespace cv { namespace highgui_backend {
     windowRect.x = x;
     windowRect.y = y;
 
-    if((currentImg.size().width > 0) && (currentImg.size().height > 0))
+    if((currentImg.cols > 0) && (currentImg.rows > 0))
     {  
       imshow(currentImg);
     }
@@ -307,13 +350,15 @@ namespace cv { namespace highgui_backend {
     }
 
     // Get fixed screen information
-    if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &fixInfo)) {
+    if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &fixInfo)) 
+    {
       CV_LOG_ERROR(NULL, "UI: can't read fix info for framebuffer");
      return -1;
     }
 
     // Get variable screen information
-    if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &varInfo)) {
+    if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &varInfo)) 
+    {
       CV_LOG_ERROR(NULL, "UI: can't read var info for framebuffer");
       return -1;
     }
@@ -335,10 +380,10 @@ namespace cv { namespace highgui_backend {
       return -1;
     }
 
-    fbWidth        = varInfo.xres_virtual;
-    fbHeight       = varInfo.yres_virtual;
-    fbXOffset      = varInfo.yoffset;
-    fbYOffset      = varInfo.xoffset;
+    fbWidth        = varInfo.xres;
+    fbHeight       = varInfo.yres;
+    fbXOffset      = varInfo.xoffset;
+    fbYOffset      = varInfo.yoffset;
     fbBitsPerPixel = varInfo.bits_per_pixel;
     fbLineLength   = fixInfo.line_length;
 
@@ -375,17 +420,20 @@ namespace cv { namespace highgui_backend {
     
     xwd_header = (XWDFileHeader*) mmap(NULL, sizeof(XWDFileHeader), PROT_READ, MAP_SHARED, fb_fd, 0);
 
-    if (xwd_header == MAP_FAILED) {
+    if (xwd_header == MAP_FAILED) 
+    {
       CV_LOG_ERROR(NULL, "UI: can't mmap xwd header");
       return -1;
     }
     
-    if( C32INT(&(xwd_header->pixmap_format)) != ZPixmap ){
+    if( C32INT(&(xwd_header->pixmap_format)) != ZPixmap )
+    {
       CV_LOG_ERROR(NULL, "Unsupported pixmap format: " << xwd_header->pixmap_format);
       return -1;
     }
 
-    if( xwd_header->xoffset != 0 ){
+    if( xwd_header->xoffset != 0 )
+    {
       CV_LOG_ERROR(NULL, "UI: Unsupported xoffset value: " << xwd_header->xoffset );
       return -1;
     }
@@ -408,7 +456,8 @@ namespace cv { namespace highgui_backend {
       << "bits_per_pixel " << fbBitsPerPixel);
     
     if((r != 16711680 ) && (g != 65280 ) && (b != 255 ) && 
-       (fbBitsPerPixel != 32) ){
+       (fbBitsPerPixel != 32) )
+    {
       CV_LOG_ERROR(NULL, "UI: Framebuffer format is not supported (use BGRA format with bits_per_pixel = 32)");
       return -1;
     }
@@ -486,7 +535,7 @@ namespace cv { namespace highgui_backend {
     return mode;
   }
 
-  FramebufferBackend::FramebufferBackend():mode(FB_MODE_EMU), fbPointer_dist(0)
+  FramebufferBackend::FramebufferBackend():mode(FB_MODE_FB), fbPointer_dist(0)
   {
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::FramebufferBackend()");
     
@@ -545,9 +594,8 @@ namespace cv { namespace highgui_backend {
     int cnt_channel = 4;
     for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
     {
-      unsigned char* backgroundPtr = backgroundBuff.ptr<unsigned char>(y - fbYOffset);
-      std::memcpy(backgroundPtr, 
-                  fbPointer + y * fbLineLength + fbXOffset, 
+      std::memcpy(backgroundBuff.ptr<unsigned char>(y - fbYOffset), 
+                  getFBPointer() + y * fbLineLength + fbXOffset, 
                   backgroundBuff.cols * cnt_channel);
     }
   }
@@ -563,7 +611,7 @@ namespace cv { namespace highgui_backend {
       int cnt_channel = 4;
       for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
       {
-        std::memcpy(fbPointer + y * fbLineLength + fbXOffset, 
+        std::memcpy(getFBPointer() + y * fbLineLength + fbXOffset, 
                     backgroundBuff.ptr<cv::Vec4b>(y - fbYOffset), 
                     backgroundBuff.cols * cnt_channel);
       }
@@ -594,10 +642,13 @@ namespace cv { namespace highgui_backend {
     current.c_lflag &= ~ICANON;       // disable buffered i/o 
     current.c_lflag &= ~ISIG;
     current.c_cc[VMIN]=wait;
-    if (echo) {
-        current.c_lflag |= ECHO;      // set echo mode
-    } else {
-        current.c_lflag &= ~ECHO;     // set no echo mode
+    if (echo) 
+    {
+      current.c_lflag |= ECHO;      // set echo mode
+    } 
+    else 
+    {
+      current.c_lflag &= ~ECHO;     // set no echo mode
     }
     tcsetattr(0, TCSANOW, &current);  // use these new terminal i/o settings now
   }
