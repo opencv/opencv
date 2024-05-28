@@ -99,7 +99,7 @@ namespace cv { namespace highgui_backend {
                     img.convertTo(img, CV_8U, 255., 0.);
                 break;
                 }
-                cvtColor(img, img, cv::COLOR_GRAY2RGB); 
+                cvtColor(img, img, cv::COLOR_GRAY2RGB);
             break;
             case 3:
                 convertToShow(img, img);
@@ -175,7 +175,7 @@ namespace cv { namespace highgui_backend {
 
         if(windowRect.y - yOffset < 0)
         {
-            img_start_y = - (windowRect.y - yOffset); 
+            img_start_y = - (windowRect.y - yOffset);
         }
         else
         {
@@ -183,7 +183,7 @@ namespace cv { namespace highgui_backend {
         }
         if(windowRect.x - xOffset < 0)
         {
-            img_start_x = - (windowRect.x - xOffset); 
+            img_start_x = - (windowRect.x - xOffset);
         }
         else
         {
@@ -194,7 +194,7 @@ namespace cv { namespace highgui_backend {
         {
             img_end_y = fbHeight - windowRect.y - yOffset;
         }
-        else 
+        else
         {
             img_end_y = img.rows;
         }
@@ -243,7 +243,7 @@ namespace cv { namespace highgui_backend {
 
     bool FramebufferWindow::setProperty(int prop, double value)
     {
-        CV_LOG_INFO(NULL, "UI: FramebufferWindow::setProperty(int prop " 
+        CV_LOG_INFO(NULL, "UI: FramebufferWindow::setProperty(int prop "
             << prop << ", value " << value << ")");
         CV_LOG_WARNING(NULL, "UI: setProperty (not supported)");
 
@@ -352,7 +352,7 @@ namespace cv { namespace highgui_backend {
         }
 
         // Get fixed screen information
-        if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &fixInfo)) 
+        if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &fixInfo))
         {
             CV_LOG_ERROR(NULL, "UI: can't read fix info for framebuffer");
             return -1;
@@ -430,7 +430,7 @@ namespace cv { namespace highgui_backend {
             CV_LOG_ERROR(NULL, "UI: can't mmap xwd header");
             return -1;
         }
-        
+
         if( C32INT(&(xwd_header->pixmap_format)) != ZPixmap )
         {
             CV_LOG_ERROR(NULL, "Unsupported pixmap format: " << xwd_header->pixmap_format);
@@ -652,7 +652,7 @@ namespace cv { namespace highgui_backend {
         {
             current.c_lflag |= ECHO;
         }
-        else 
+        else
         {
             current.c_lflag &= ~ECHO;
         }
