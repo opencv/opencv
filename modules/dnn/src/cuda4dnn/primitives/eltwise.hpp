@@ -62,7 +62,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() >= 2);
             CV_Assert(outputs.size() == 1);
 
             CV_Assert(coeffs.size() == 0 || op == EltwiseOpType::SUM);
