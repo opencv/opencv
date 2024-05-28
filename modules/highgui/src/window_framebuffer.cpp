@@ -32,36 +32,36 @@ namespace cv { namespace highgui_backend {
 
     static std::string& getFBMode()
     {
-        static std::string fbModeOpenCV = 
+        static std::string fbModeOpenCV =
             cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FB_MODE", "");
         static std::string fbModeDef = "FB";
-        
+
         if(!fbModeOpenCV.empty()) return fbModeOpenCV;
         return fbModeDef;
     }
 
     static std::string& getFBFileName()
     {
-        static std::string fbFileNameFB = 
+        static std::string fbFileNameFB =
             cv::utils::getConfigurationParameterString("FRAMEBUFFER", "");
-        static std::string fbFileNameOpenCV = 
+        static std::string fbFileNameOpenCV =
             cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FB_DEVICE", "");
         static std::string fbFileNameDef = "/dev/fb0";
-        
+
         if(!fbFileNameOpenCV.empty()) return fbFileNameOpenCV;
         if(!fbFileNameFB.empty()) return fbFileNameFB;
         return fbFileNameDef;
     }
 
 
-    FramebufferWindow::FramebufferWindow(FramebufferBackend &_backend, int _flags): 
+    FramebufferWindow::FramebufferWindow(FramebufferBackend &_backend, int _flags):
         backend(_backend), flags(_flags)
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::FramebufferWindow()");
         FB_ID = "FramebufferWindow";
         windowRect = Rect(0,0, backend.getFBWidth(), backend.getFBHeight());
     }
-    
+
     FramebufferWindow::~FramebufferWindow()
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::~FramebufferWindow()");
@@ -70,13 +70,13 @@ namespace cv { namespace highgui_backend {
     void FramebufferWindow::imshow(InputArray image)
     {
         currentImg = image.getMat().clone();
-        
+
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::imshow(InputArray image)");
         CV_LOG_INFO(NULL, "UI: InputArray image: "
             << cv::typeToString(image.type()) << " size " << image.size());
-            
+
         if((currentImg.size().width <= 0) && (currentImg.size().height <= 0))
-        {    
+        {
             return;
         }
 
@@ -109,12 +109,12 @@ namespace cv { namespace highgui_backend {
             break;
         }
         cvtColor(img, img, COLOR_RGB2BGRA);
-        
+
         int newWidth = windowRect.width;
         int newHeight = windowRect.height;
         int cntChannel = img.channels();
         cv::Size imgSize = currentImg.size();
-        
+
         if(flags & WINDOW_AUTOSIZE)
         {
             windowRect.width    = imgSize.width;
@@ -122,7 +122,7 @@ namespace cv { namespace highgui_backend {
             newWidth = windowRect.width;
             newHeight = windowRect.height;
         }
-        
+
         if(flags & WINDOW_FREERATIO)
         {
             newWidth = windowRect.width;
@@ -143,8 +143,8 @@ namespace cv { namespace highgui_backend {
         if((newWidth != img.cols) && (newHeight != img.rows))
         {
             cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
-        }        
-                
+        }
+
         CV_LOG_INFO(NULL, "UI: Formated image: "
             << cv::typeToString(img.type()) << " size " << img.size());
 
@@ -158,14 +158,14 @@ namespace cv { namespace highgui_backend {
             CV_LOG_ERROR(NULL, "UI: Framebuffer is not mapped");
             return;
         }
-                
+
         // SHOW IMAGE
         int xOffset = backend.getFBXOffset();
         int yOffset = backend.getFBYOffset();
         int fbHeight = backend.getFBHeight();
         int fbWidth    = backend.getFBWidth();
         int lineLength = backend.getFBLineLength();
-        
+
         int img_start_x;
         int img_start_y;
         int img_end_x;
@@ -173,62 +173,62 @@ namespace cv { namespace highgui_backend {
         int fb_start_x;
         int fb_start_y;
 
-        if(windowRect.y - yOffset < 0) 
-        {    
+        if(windowRect.y - yOffset < 0)
+        {
             img_start_y = - (windowRect.y - yOffset); 
         }
-        else 
-        {    
+        else
+        {
             img_start_y = 0;
         }
-        if(windowRect.x - xOffset < 0) 
-        {    
+        if(windowRect.x - xOffset < 0)
+        {
             img_start_x = - (windowRect.x - xOffset); 
         }
-        else 
+        else
         {
             img_start_x = 0;
         }
-        
-        if(windowRect.y + yOffset + img.rows > fbHeight) 
+
+        if(windowRect.y + yOffset + img.rows > fbHeight)
         {
-            img_end_y = fbHeight - windowRect.y - yOffset; 
+            img_end_y = fbHeight - windowRect.y - yOffset;
         }
         else 
         {
             img_end_y = img.rows;
         }
-        if(windowRect.x + xOffset + img.cols > fbWidth) 
+        if(windowRect.x + xOffset + img.cols > fbWidth)
         {
-            img_end_x = fbWidth    - windowRect.x - xOffset; 
+            img_end_x = fbWidth    - windowRect.x - xOffset;
         }
-        else 
+        else
         {
             img_end_x = img.cols;
         }
-        
-        if(windowRect.y + yOffset >= 0) 
+
+        if(windowRect.y + yOffset >= 0)
         {
-            fb_start_y = windowRect.y + yOffset; 
+            fb_start_y = windowRect.y + yOffset;
         }
-        else 
+        else
         {
             fb_start_y = 0;
         }
-        if(windowRect.x + xOffset >= 0) 
+        if(windowRect.x + xOffset >= 0)
         {
-            fb_start_x = windowRect.x + xOffset; 
+            fb_start_x = windowRect.x + xOffset;
         }
-        else 
+        else
         {
             fb_start_x = 0;
         }
-        
+
         for (int y = img_start_y; y < img_end_y; y++)
         {
-            std::memcpy(backend.getFBPointer() + 
-                        (fb_start_y + y - img_start_y) * lineLength + fb_start_x, 
-                        img.ptr<unsigned char>(y) + img_start_x * cntChannel, 
+            std::memcpy(backend.getFBPointer() +
+                        (fb_start_y + y - img_start_y) * lineLength + fb_start_x,
+                        img.ptr<unsigned char>(y) + img_start_x * cntChannel,
                         (img_end_x - img_start_x) * cntChannel);
         }
     }
@@ -241,7 +241,7 @@ namespace cv { namespace highgui_backend {
         return 0.0;
     }
 
-    bool FramebufferWindow::setProperty(int prop, double value) 
+    bool FramebufferWindow::setProperty(int prop, double value)
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::setProperty(int prop " 
             << prop << ", value " << value << ")");
@@ -252,9 +252,9 @@ namespace cv { namespace highgui_backend {
 
     void FramebufferWindow::resize(int width, int height)
     {
-        CV_LOG_INFO(NULL, "UI: FramebufferWindow::resize(int width " 
+        CV_LOG_INFO(NULL, "UI: FramebufferWindow::resize(int width "
             << width <<", height " << height << ")");
-        
+
         CV_Assert(width > 0);
         CV_Assert(height > 0);
         
@@ -262,14 +262,15 @@ namespace cv { namespace highgui_backend {
         {
             windowRect.width = width;
             windowRect.height = height;
-            
+
             if((currentImg.cols > 0) && (currentImg.rows > 0))
-            {    
+            {
                 imshow(currentImg);
             }
         }
     }
-    void FramebufferWindow::move(int x, int y) 
+
+    void FramebufferWindow::move(int x, int y)
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::move(int x " << x << ", y " << y <<")");
 
@@ -277,18 +278,18 @@ namespace cv { namespace highgui_backend {
         windowRect.y = y;
 
         if((currentImg.cols > 0) && (currentImg.rows > 0))
-        {    
+        {
             imshow(currentImg);
         }
     }
 
-    Rect FramebufferWindow::getImageRect() const 
+    Rect FramebufferWindow::getImageRect() const
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::getImageRect()");
         return windowRect;
     }
 
-    void FramebufferWindow::setTitle(const std::string& title) 
+    void FramebufferWindow::setTitle(const std::string& title)
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::setTitle(" << title << ")");
         CV_LOG_WARNING(NULL, "UI: setTitle (not supported)");
@@ -317,20 +318,20 @@ namespace cv { namespace highgui_backend {
         CV_LOG_WARNING(NULL, "UI: findTrackbar (not supported)");
         return nullptr;
     }
-    
-    const std::string& FramebufferWindow::getID() const    
-    { 
+
+    const std::string& FramebufferWindow::getID() const
+    {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::getID()");
         return FB_ID;
     }
 
-    bool FramebufferWindow::isActive() const 
+    bool FramebufferWindow::isActive() const
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::isActive()");
         return true;
     }
 
-    void FramebufferWindow::destroy() 
+    void FramebufferWindow::destroy()
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::destroy()");
     }
@@ -342,7 +343,7 @@ namespace cv { namespace highgui_backend {
         std::string fbFileName = getFBFileName();
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::The following is used as a framebuffer file: \n"
                     << fbFileName);
-        
+
         int fb_fd = open(fbFileName.c_str(), O_RDWR);
         if (fb_fd == -1)
         {
@@ -354,30 +355,30 @@ namespace cv { namespace highgui_backend {
         if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &fixInfo)) 
         {
             CV_LOG_ERROR(NULL, "UI: can't read fix info for framebuffer");
-         return -1;
+            return -1;
         }
 
         // Get variable screen information
-        if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &varInfo)) 
+        if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &varInfo))
         {
             CV_LOG_ERROR(NULL, "UI: can't read var info for framebuffer");
             return -1;
         }
-        
-        CV_LOG_INFO(NULL, "UI: framebuffer info: \n" 
+
+        CV_LOG_INFO(NULL, "UI: framebuffer info: \n"
           << "   red offset " <<  varInfo.red.offset  << " length " <<   varInfo.red.length << "\n"
           << " green offset " <<varInfo.green.offset  << " length " << varInfo.green.length << "\n"
           << "  blue offset " << varInfo.blue.offset  << " length " <<  varInfo.blue.length << "\n"
           << "transp offset " <<varInfo.transp.offset << " length " <<varInfo.transp.length << "\n"
           << "bits_per_pixel "<<varInfo.bits_per_pixel);
-            
-        if((    varInfo.red.offset != 16) && (    varInfo.red.length != 8) &&
-             (varInfo.green.offset != 8 ) && (varInfo.green.length != 8) &&
-             ( varInfo.blue.offset != 0 ) && ( varInfo.blue.length != 8) && 
-             (varInfo.bits_per_pixel != 32) )
+
+        if(  (varInfo.red.offset != 16) && (  varInfo.red.length != 8) &&
+           (varInfo.green.offset != 8 ) && (varInfo.green.length != 8) &&
+           ( varInfo.blue.offset != 0 ) && ( varInfo.blue.length != 8) &&
+           (varInfo.bits_per_pixel != 32) )
         {
             close(fb_fd);
-            CV_LOG_ERROR(NULL, 
+            CV_LOG_ERROR(NULL,
               "UI: Framebuffer format is not supported "
               << "(use BGRA format with bits_per_pixel = 32)");
             return -1;
@@ -391,13 +392,13 @@ namespace cv { namespace highgui_backend {
         fbLineLength   = fixInfo.line_length;
 
         // MAP FB TO MEMORY
-        fbScreenSize = max(varInfo.xres, varInfo.xres_virtual) * 
-                           max(varInfo.yres, varInfo.yres_virtual) * 
+        fbScreenSize = max(varInfo.xres, varInfo.xres_virtual) *
+                           max(varInfo.yres, varInfo.yres_virtual) *
                            fbBitsPerPixel / 8;
-                                 
+
         fbPointer = (unsigned char*)
             mmap(0, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
-                
+
         if (fbPointer == MAP_FAILED) {
             CV_LOG_ERROR(NULL, "UI: can't mmap framebuffer");
             return -1;
@@ -405,13 +406,13 @@ namespace cv { namespace highgui_backend {
 
         return fb_fd;
     }
-    
+
     int FramebufferBackend::XvfbOpenAndGetInfo()
     {
         std::string fbFileName = getFBFileName();
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::The following is used as a framebuffer file: \n"
           << fbFileName);
-        
+
         int fb_fd = open(fbFileName.c_str(), O_RDWR);
         if (fb_fd == -1)
         {
@@ -420,11 +421,11 @@ namespace cv { namespace highgui_backend {
         }
 
         XWDFileHeader *xwd_header;
-        
-        xwd_header = (XWDFileHeader*) 
-          mmap(NULL, sizeof(XWDFileHeader), PROT_READ, MAP_SHARED, fb_fd, 0);
 
-        if (xwd_header == MAP_FAILED) 
+        xwd_header = (XWDFileHeader*)
+            mmap(NULL, sizeof(XWDFileHeader), PROT_READ, MAP_SHARED, fb_fd, 0);
+
+        if (xwd_header == MAP_FAILED)
         {
             CV_LOG_ERROR(NULL, "UI: can't mmap xwd header");
             return -1;
@@ -441,8 +442,8 @@ namespace cv { namespace highgui_backend {
             CV_LOG_ERROR(NULL, "UI: Unsupported xoffset value: " << xwd_header->xoffset );
             return -1;
         }
-        
-        unsigned int r = C32INT(&(xwd_header->    red_mask));
+
+        unsigned int r = C32INT(&(xwd_header->  red_mask));
         unsigned int g = C32INT(&(xwd_header->green_mask));
         unsigned int b = C32INT(&(xwd_header-> blue_mask));
 
@@ -452,15 +453,15 @@ namespace cv { namespace highgui_backend {
         fbYOffset      = 0;
         fbLineLength   = C32INT(&(xwd_header->bytes_per_line));
         fbBitsPerPixel = C32INT(&(xwd_header->bits_per_pixel));
-        
-        CV_LOG_INFO(NULL, "UI: XVFB info: \n" 
+
+        CV_LOG_INFO(NULL, "UI: XVFB info: \n"
             << "   red_mask " << r << "\n"
             << " green_mask " << g << "\n"
             << "  blue_mask " << b << "\n"
             << "bits_per_pixel " << fbBitsPerPixel);
-        
-        if((r != 16711680 ) && (g != 65280 ) && (b != 255 ) && 
-             (fbBitsPerPixel != 32) )
+
+        if((r != 16711680 ) && (g != 65280 ) && (b != 255 ) &&
+           (fbBitsPerPixel != 32))
         {
             CV_LOG_ERROR(NULL, "UI: Framebuffer format is not supported "
               << "(use BGRA format with bits_per_pixel = 32)");
@@ -469,14 +470,14 @@ namespace cv { namespace highgui_backend {
 
         xvfb_len_header = C32INT(&(xwd_header->header_size));
         xvfb_len_colors = sizeof(XWDColor) * C32INT(&(xwd_header->ncolors));
-        xvfb_len_pixmap = C32INT(&(xwd_header->bytes_per_line)) * 
+        xvfb_len_pixmap = C32INT(&(xwd_header->bytes_per_line)) *
           C32INT(&(xwd_header->pixmap_height));
         munmap(xwd_header, sizeof(XWDFileHeader));
 
         fbScreenSize = xvfb_len_header + xvfb_len_colors + xvfb_len_pixmap;
-        xwd_header = (XWDFileHeader*) 
-          mmap(NULL, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
-        fbPointer = (unsigned char*)xwd_header ;
+        xwd_header = (XWDFileHeader*)
+            mmap(NULL, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
+        fbPointer = (unsigned char*)xwd_header;
         fbPointer_dist = xvfb_len_header + xvfb_len_colors;
 
         return fb_fd;
@@ -484,7 +485,7 @@ namespace cv { namespace highgui_backend {
 
     fb_var_screeninfo &FramebufferBackend::getVarInfo()
     {
-            return varInfo;
+        return varInfo;
     }
 
     fb_fix_screeninfo &FramebufferBackend::getFixInfo()
@@ -545,9 +546,9 @@ namespace cv { namespace highgui_backend {
     FramebufferBackend::FramebufferBackend():mode(FB_MODE_FB), fbPointer_dist(0)
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::FramebufferBackend()");
-        
+
         std::string fbModeStr = getFBMode();
-        
+
         if(fbModeStr == "EMU")
         {
             mode = FB_MODE_EMU;
@@ -573,9 +574,9 @@ namespace cv { namespace highgui_backend {
         {
             fbID = XvfbOpenAndGetInfo();
         }
-        
+
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::fbID " << fbID);
-    
+
         if(fbID == -1){
             mode = FB_MODE_EMU;
             fbWidth = 1024;
@@ -584,42 +585,40 @@ namespace cv { namespace highgui_backend {
             fbYOffset = 0;
             fbBitsPerPixel = 0;
             fbLineLength = 0;
-            
+
             CV_LOG_WARNING(NULL, "UI: FramebufferWindow is used in EMU mode");
             return;
         }
-        
-        
-        CV_LOG_INFO(NULL, "UI: Framebuffer's width, height, bits per pix: " 
+
+        CV_LOG_INFO(NULL, "UI: Framebuffer's width, height, bits per pix: "
             << fbWidth << " " << fbHeight << " " << fbBitsPerPixel);
 
-        CV_LOG_INFO(NULL, "UI: Framebuffer's offsets (x, y), line length: " 
+        CV_LOG_INFO(NULL, "UI: Framebuffer's offsets (x, y), line length: "
             << fbXOffset << " " << fbYOffset << " " << fbLineLength);
-        
 
         backgroundBuff = Mat(fbHeight, fbWidth, CV_8UC4);
         int cnt_channel = 4;
         for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
         {
-            std::memcpy(backgroundBuff.ptr<unsigned char>(y - fbYOffset), 
-                        getFBPointer() + y * fbLineLength + fbXOffset, 
+            std::memcpy(backgroundBuff.ptr<unsigned char>(y - fbYOffset),
+                        getFBPointer() + y * fbLineLength + fbXOffset,
                         backgroundBuff.cols * cnt_channel);
         }
     }
-    
+
     FramebufferBackend::~FramebufferBackend()
     {
         CV_LOG_INFO(NULL, "UI: FramebufferBackend::~FramebufferBackend()");
         if(fbID == -1) return;
-        
+
         // RESTORE BACKGROUNG
         if (fbPointer != MAP_FAILED) {
 
             int cnt_channel = 4;
             for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
             {
-                std::memcpy(getFBPointer() + y * fbLineLength + fbXOffset, 
-                            backgroundBuff.ptr<cv::Vec4b>(y - fbYOffset), 
+                std::memcpy(getFBPointer() + y * fbLineLength + fbXOffset,
+                            backgroundBuff.ptr<cv::Vec4b>(y - fbYOffset),
                             backgroundBuff.cols * cnt_channel);
             }
 
@@ -637,12 +636,12 @@ namespace cv { namespace highgui_backend {
             const std::string& winname,
             int flags)
     {
-        CV_LOG_INFO(NULL, "UI: FramebufferBackend::createWindow(" 
+        CV_LOG_INFO(NULL, "UI: FramebufferBackend::createWindow("
             << winname << ", " << flags << ")");
         return std::make_shared<FramebufferWindow>(*this, flags);
     }
 
-    void FramebufferBackend::initTermios(int echo, int wait) 
+    void FramebufferBackend::initTermios(int echo, int wait)
     {
         tcgetattr(0, &old);
         current = old;
@@ -660,12 +659,12 @@ namespace cv { namespace highgui_backend {
         tcsetattr(0, TCSANOW, &current);
     }
 
-    void FramebufferBackend::resetTermios(void) 
+    void FramebufferBackend::resetTermios(void)
     {
         tcsetattr(0, TCSANOW, &old);
     }
 
-    int FramebufferBackend::getch_(int echo, int wait) 
+    int FramebufferBackend::getch_(int echo, int wait)
     {
         int ch;
         initTermios(echo, wait);
@@ -674,7 +673,7 @@ namespace cv { namespace highgui_backend {
         resetTermios();
         return ch;
     }
-    
+
     bool FramebufferBackend::kbhit()
     {
         int byteswaiting=0;
@@ -684,11 +683,11 @@ namespace cv { namespace highgui_backend {
             CV_LOG_ERROR(NULL, "UI: Framebuffer ERR byteswaiting" );
         }
         resetTermios();
-        
+
         return byteswaiting > 0;
     }
 
-    int FramebufferBackend::waitKeyEx(int delay) 
+    int FramebufferBackend::waitKeyEx(int delay)
     {
         CV_LOG_INFO(NULL, "UI: FramebufferBackend::waitKeyEx(int delay = " << delay << ")");
 
@@ -699,22 +698,22 @@ namespace cv { namespace highgui_backend {
             int ch = getch_(0, 1);
             CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " << (int)ch);
             code = ch;
-            
+
             while((ch = getch_(0, 0))>=0)
             {
-                CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " 
+                CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = "
                     << (int)ch << " (additional code on <stdin>)");
                 code = ch;
             }
-        } 
-        else 
+        }
+        else
         {
             bool f_kbhit = false;
             while(!(f_kbhit = kbhit()) && (delay > 0))
             {
                 delay -= 1;
                 usleep(1000);
-            }                    
+            }
             if(f_kbhit)
             {
                 CV_LOG_INFO(NULL, "UI: FramebufferBackend kbhit is True ");
@@ -722,20 +721,20 @@ namespace cv { namespace highgui_backend {
                 int ch = getch_(0, 1);
                 CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " << (int)ch);
                 code = ch;
-                
+
                 while((ch = getch_(0, 0))>=0)
                 {
-                    CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " 
+                    CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = "
                         << (int)ch << " (additional code on <stdin>)");
                     code = ch;
                 }
             }
         }
-        
+
         CV_LOG_INFO(NULL, "UI: FramebufferBackend::waitKeyEx() result code = " << code);
-        return code; 
+        return code;
     }
-    
+
     int FramebufferBackend::pollKey()
     {
         CV_LOG_INFO(NULL, "UI: FramebufferBackend::pollKey()");
@@ -750,15 +749,15 @@ namespace cv { namespace highgui_backend {
             int ch = getch_(0, 1);
             CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " << (int)ch);
             code = ch;
-            
+
             while((ch = getch_(0, 0))>=0)
             {
-                CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " 
+                CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = "
                     << (int)ch << " (additional code on <stdin>)");
                 code = ch;
             }
         }
-        
+
         return code;
     }
 

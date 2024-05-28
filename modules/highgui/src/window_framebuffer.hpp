@@ -23,7 +23,7 @@ class CV_EXPORTS FramebufferWindow : public UIWindow
     FramebufferBackend &backend;
     std::string FB_ID;
     Rect windowRect;
-    
+
     int flags;
     Mat currentImg;
 
@@ -31,35 +31,35 @@ public:
     FramebufferWindow(FramebufferBackend &backend, int flags);
     virtual ~FramebufferWindow();
 
-    virtual void imshow(InputArray image)override;
+    virtual void imshow(InputArray image) override;
 
     virtual double getProperty(int prop) const override;
-    virtual bool setProperty(int prop, double value)override;
+    virtual bool setProperty(int prop, double value) override;
 
-    virtual void resize(int width, int height)override;
-    virtual void move(int x, int y)override;
+    virtual void resize(int width, int height) override;
+    virtual void move(int x, int y) override;
 
     virtual Rect getImageRect() const override;
 
-    virtual void setTitle(const std::string& title)override;
+    virtual void setTitle(const std::string& title) override;
 
-    virtual void setMouseCallback(MouseCallback onMouse, void* userdata /*= 0*/) override ;
+    virtual void setMouseCallback(MouseCallback onMouse, void* userdata /*= 0*/) override;
 
     virtual std::shared_ptr<UITrackbar> createTrackbar(
             const std::string& name,
             int count,
             TrackbarCallback onChange /*= 0*/,
             void* userdata /*= 0*/
-    )override;
+    ) override;
 
-    virtual std::shared_ptr<UITrackbar> findTrackbar(const std::string& name)override;
-    
+    virtual std::shared_ptr<UITrackbar> findTrackbar(const std::string& name) override;
+
     virtual const std::string& getID() const override;
 
     virtual bool isActive() const override;
 
     virtual void destroy() override;
-};    // FramebufferWindow
+}; // FramebufferWindow
 
 class CV_EXPORTS FramebufferBackend: public UIBackend
 {
@@ -71,7 +71,6 @@ class CV_EXPORTS FramebufferBackend: public UIBackend
     void resetTermios(void);
     int getch_(int echo, int wait);
     bool kbhit();
-    
 
     fb_var_screeninfo varInfo;
     fb_fix_screeninfo fixInfo;
@@ -86,7 +85,6 @@ class CV_EXPORTS FramebufferBackend: public UIBackend
     unsigned int fbPointer_dist;
     Mat backgroundBuff;
 
-    
     int fbOpenAndGetInfo();
     int fbID;
 
@@ -94,7 +92,7 @@ class CV_EXPORTS FramebufferBackend: public UIBackend
     unsigned int xvfb_len_colors;
     unsigned int xvfb_len_pixmap;
     int XvfbOpenAndGetInfo();
-    
+
 public:
 
     fb_var_screeninfo &getVarInfo();
