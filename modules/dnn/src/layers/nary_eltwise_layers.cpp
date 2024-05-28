@@ -983,6 +983,15 @@ public:
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        // In case only one input
+        if (inputs.size() == 1) {
+            auto &ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+            ngraph::OutputVector inp{ieInpNode};
+            auto blank = std::make_shared<ngraph::op::Concat>(inp, 0);
+            return Ptr<BackendNode>(new InfEngineNgraphNode(blank));
+        }
+
+        // TODO: Support multiple (>=3) inputs
         CV_Assert(inputs.size() == 2);
         auto& inp0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto& inp1 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
