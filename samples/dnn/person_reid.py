@@ -68,7 +68,7 @@ def preprocess(images, height, width):
 
 def yolo_detector(frame, net):
     global img_dict
-    height, width, channels = frame.shape
+    height, width, _ = frame.shape
 
     length = max((height, width))
     image = np.zeros((length, length, 3), np.uint8)
@@ -90,7 +90,7 @@ def yolo_detector(frame, net):
 
     for i in range(rows):
         classes_scores = outputs[0][i][4:]
-        (minScore, maxScore, minClassLoc, (x, maxClassIndex)) = cv.minMaxLoc(classes_scores)
+        (_, maxScore, _, (x, maxClassIndex)) = cv.minMaxLoc(classes_scores)
         if maxScore >= 0.25:
             box = [
                 outputs[0][i][0] - (0.5 * outputs[0][i][2]),
