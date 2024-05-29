@@ -156,7 +156,7 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
 
     Constructs OpenVINO parameters based on device type information.
 
-    @param dev_type Target device type to use. ("CPU_FP32", "GPU_FP16", etc)
+    @param dev_type Target device type to use. ("CPU", "GPU", "GPU.0" etc)
     */
     GAPI_WRAP
     explicit OpenVINO(const std::string &dev_type)
@@ -219,6 +219,44 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
         enable_dynamic_shapes = true;
         return *this;
     }
+
+    /**
+    * @brief Configures OpenVINO Execution Provider parameters using a map of options.
+    *
+    * This function allows setting multiple configuration options for the OpenVINO Execution Provider
+    * by passing a map of key-value pairs, where the key is the name of the option and the value is
+    * the setting for that option. The function will throw an error if an attempt is made to set an
+    * option that has already been set or if an unknown option is provided.
+    * 
+    * @param params A map of parameter names and their corresponding string values.
+    * @return Reference to this `OpenVINO` structure after applying the configuration.
+    * @throws std::runtime_error if a parameter is already set or if an unknown option is encountered.
+    */
+    GAPI_WRAP
+    OpenVINO& cfgParamsMap(const std::unordered_map<std::string, std::string>& params) {
+    for (const auto& kv : params) {
+        if (kv.first == "device_type") {
+            if (!device_type.empty()) throw std::runtime_error("device_type is already set");
+            device_type = kv.second;
+        } else if (kv.first == "cache_dir") {
+            if (!cache_dir.empty()) throw std::runtime_error("cache_dir is already set");
+            cache_dir = kv.second;
+        } else if (kv.first == "num_threads") {
+            if (num_of_threads != 0) throw std::runtime_error("num_threads is already set");
+            num_of_threads = std::stoul(kv.second);
+        } else if (kv.first == "enable_opencl_throttling") {
+            if (enable_opencl_throttling) throw std::runtime_error("enable_opencl_throttling is already set");
+            enable_opencl_throttling = (kv.second == "True" || kv.second == "true");
+        } else if (kv.first == "enable_dynamic_shapes") {
+            if (enable_dynamic_shapes) throw std::runtime_error("enable_dynamic_shapes is already set");
+            enable_dynamic_shapes = (kv.second == "True" || kv.second == "true");
+        } else {
+            // Handle unknown options or throw an error
+            throw std::runtime_error("Unknown configuration option: " + kv.first);
+        }
+    }
+    return *this;
+}
 
     std::string device_type;
     std::string cache_dir;
