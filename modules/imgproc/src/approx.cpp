@@ -861,14 +861,16 @@ cvApproxPoly( const void* array, int header_size,
     return dst_seq;
 }
 
+enum class PointStatus : int8_t
+{
+    REMOVED = -1,
+    RECALCULATE = 0,
+    CALCULATED = 1
+};
+
 struct neighbours
 {
-    /*
-        if relevant = -1, point has been removed
-        if relevant = 0,  the intersection in the heap must be recalculated
-        if relevant = 1,  intersection has been calculated
-    */
-    short relevant;
+    PointStatus pointStatus;
     cv::Point2f point;
     int next;
     int prev;
@@ -878,7 +880,7 @@ struct neighbours
         next = next_;
         prev = prev_;
         point = point_;
-        relevant = 1;
+        pointStatus = PointStatus::CALCULATED;
     }
 };
 
@@ -939,10 +941,10 @@ static void update(std::vector<neighbours>& hull, int vertex_id)
 {
     neighbours& v1 = hull[vertex_id], & removed = hull[v1.next], & v2 = hull[removed.next];
 
-    removed.relevant = -1;
-    v1.relevant = 0;
-    v2.relevant = 0;
-    hull[v1.prev].relevant = 0;
+    removed.pointStatus = PointStatus::REMOVED;
+    v1.pointStatus = PointStatus::RECALCULATE;
+    v2.pointStatus = PointStatus::RECALCULATE;
+    hull[v1.prev].pointStatus = PointStatus::RECALCULATE;
     v1.next = removed.next;
     v2.prev = removed.prev;
 }
@@ -953,6 +955,8 @@ static void update(std::vector<neighbours>& hull, int vertex_id)
 void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
     int side, float epsilon_percentage, bool make_hull)
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert(epsilon_percentage > 0 || epsilon_percentage == -1);
     CV_Assert(side > 2);
     CV_Assert(_approxCurve.type() == CV_32FC2
@@ -1029,11 +1033,11 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
         changes base = areas.top();
         int vertex_id = base.vertex;
 
-        if (hull[vertex_id].relevant == -1)
+        if (hull[vertex_id].pointStatus == PointStatus::REMOVED)
         {
             areas.pop();
         }
-        else if (hull[vertex_id].relevant == 0)
+        else if (hull[vertex_id].pointStatus == PointStatus::RECALCULATE)
         {
             float area, new_x, new_y;
             areas.pop();
@@ -1045,7 +1049,7 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
             }
 
             areas.push(changes(area, vertex_id, Point2f(new_x, new_y)));
-            hull[vertex_id].relevant = 1;
+            hull[vertex_id].pointStatus = PointStatus::CALCULATED;
         }
         else
         {
@@ -1071,7 +1075,7 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
     {
         for (int i = 0; i < curve.rows; ++i)
         {
-            if (hull[i].relevant != -1)
+            if (hull[i].pointStatus != PointStatus::REMOVED)
             {
                 Point t = Point(static_cast<int>(round(hull[i].point.x)),
                                 static_cast<int>(round(hull[i].point.y)));
@@ -1085,7 +1089,7 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
     {
         for (int i = 0; i < curve.rows; ++i)
         {
-            if (hull[i].relevant != -1)
+            if (hull[i].pointStatus != PointStatus::REMOVED)
             {
                 buf.at<Point2f>(0, last_free) = hull[i].point;
                 last_free++;
