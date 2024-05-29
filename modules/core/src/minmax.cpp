@@ -849,9 +849,8 @@ static MinMaxIdxFunc getMinmaxTab(int depth)
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {
     int i, d = a.dims;
-    if( ofs > 0 )
+    if( ofs != (size_t)(-1) )
     {
-        ofs--;
         for( i = d-1; i >= 0; i-- )
         {
             int sz = a.size[i];
@@ -1558,11 +1557,11 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
 
-    size_t minidx = 0, maxidx = 0;
+    size_t minidx = (size_t)(-1), maxidx = (size_t)(-1);
     int iminval = INT_MAX, imaxval = INT_MIN;
     float  fminval = std::numeric_limits<float>::infinity(),  fmaxval = -fminval;
     double dminval = std::numeric_limits<double>::infinity(), dmaxval = -dminval;
-    size_t startidx = 1;
+    size_t startidx = 0;
     int *minval = &iminval, *maxval = &imaxval;
     int planeSize = (int)it.size*cn;
 
@@ -1574,20 +1573,31 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     for( size_t i = 0; i < it.nplanes; i++, ++it, startidx += planeSize )
         func( ptrs[0], ptrs[1], minval, maxval, &minidx, &maxidx, planeSize, startidx );
 
+    // When there's no mask, min/max offset can be unset if all values are NaN or max/min
+    // => set offset to first element
+    // When mask is present, tracking first enabled element in it is too hard
+    // => leave offset unset as is
     if (!src.empty() && mask.empty())
     {
-        if( minidx == 0 )
-            minidx = 1;
-        if( maxidx == 0 )
-            maxidx = 1;
+        if( minidx == (size_t)(-1) )
+            minidx = 0;
+        if( maxidx == (size_t)(-1) )
+            maxidx = 0;
     }
 
-    if( minidx == 0 )
-        dminval = dmaxval = 0;
+    if( minidx == (size_t)(-1))
+        dminval = 0;
     else if( depth == CV_32F )
-        dminval = fminval, dmaxval = fmaxval;
+        dminval = fminval;
     else if( depth <= CV_32S )
-        dminval = iminval, dmaxval = imaxval;
+        dminval = iminval;
+
+    if( maxidx == (size_t)(-1))
+        dmaxval = 0;
+    else if( depth == CV_32F )
+        dmaxval = fmaxval;
+    else if( depth <= CV_32S )
+        dmaxval = imaxval;
 
     if( minVal )
         *minVal = dminval;
