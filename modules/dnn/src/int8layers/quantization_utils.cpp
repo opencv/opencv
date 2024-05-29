@@ -87,7 +87,7 @@ static void copyDataToMat(Mat& mat, const std::vector<T>& data){
 template <typename T>
 static void broadcastBlockedMatrix(Mat& mat, const std::vector<T>& data, const MatShape& targetShape, int axis, int block_size){
     CV_Assert(targetShape[axis] % block_size == 0 && block_size <= targetShape[axis]);
-    
+
     MatShape subTargetShape(targetShape);
     subTargetShape[axis] = static_cast<int>(subTargetShape[axis] / block_size);
     Mat tmpMat(subTargetShape.size(), subTargetShape.data(), CV_32FC1);

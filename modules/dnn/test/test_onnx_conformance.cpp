@@ -1182,7 +1182,7 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
             Mat output = readTensorFromONNX(findDataFile(prefix + cv::format("/test_data_set_0/output_%d.pb", i)));
             ref_outputs.push_back(output);
         }
-        
+
         //cout << "Parse model..." << endl;
         net = readNetFromONNX(model_path);
         if (net.empty())
