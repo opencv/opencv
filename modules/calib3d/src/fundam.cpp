@@ -261,11 +261,11 @@ public:
             if( Jptr )
             {
                 Jptr[0] = Mx*ww; Jptr[1] = My*ww; Jptr[2] = ww;
-                Jptr[6] = -Mx*ww*xi; Jptr[7] = -My*ww*xi;
-                Jptr[11] = Mx*ww; Jptr[12] = My*ww; Jptr[13] = ww;
-                Jptr[14] = -Mx*ww*yi; Jptr[15] = -My*ww*yi;
+                Jptr[6] = -Mx*ww*xi; Jptr[7] = -My*ww*xi; Jptr[8] = -ww*xi;
+                Jptr[12] = Mx*ww; Jptr[13] = My*ww; Jptr[14] = ww;
+                Jptr[15] = -Mx*ww*yi; Jptr[16] = -My*ww*yi; Jptr[17] = -ww*yi;
 
-                Jptr += 16;
+                Jptr += 18;
             }
         }
 
@@ -274,7 +274,7 @@ public:
 
     Mat src, dst;
 };
-} // end namesapce cv
+} // end namespace cv
 
 namespace cv{
 static bool createAndRunRHORegistrator(double confidence,
