@@ -12,14 +12,8 @@ namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_cvtBGRtoBGR
 #define cv_hal_cvtBGRtoBGR cv::cv_hal_rvv::cvtBGRtoBGR
 
-static const unsigned char index_array_32_no_shuffle [32]
-                        { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
-
 static const unsigned char index_array_32 [32]
                         { 2, 1, 0, 3, 6, 5, 4, 7, 10, 9, 8, 11, 14, 13, 12, 15, 18, 17, 16, 19, 22, 21, 20, 23, 26, 25, 24, 27, 30, 29, 28, 31  };
-
-static const unsigned char index_array_24_no_shuffle [24]
-                        { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
 
 static const unsigned char index_array_24 [24]
                         { 2, 1, 0, 5, 4, 3, 8, 7, 6, 11, 10, 9, 14, 13, 12, 17, 16, 15, 20, 19, 18, 23, 22, 21  };
@@ -33,7 +27,7 @@ static void vBGRtoBGR(const unsigned char* src, unsigned char * dst, const unsig
     for ( ; i <= n-vsize; i += vsize_pixels, src += vsize, dst += vsize)
     {
         vuint8m2_t vec_src = vle8_v_u8m2(src, vsize);
-        vuint8m2_t vec_dst = vrgather_vv_u8m2(vec_src, vec_index, vsize);
+        vuint8m2_t vec_dst = bi == 2 ? vrgather_vv_u8m2(vec_src, vec_index, vsize) : vec_src;
         vse8_v_u8m2(dst, vec_dst, vsize);
     }
 
@@ -81,15 +75,15 @@ static int cvtBGRtoBGR(const unsigned char * src_data, size_t src_step, unsigned
 
         if (scn == 4)
         {
-            const unsigned char* index_array = swapBlue ? index_array_32 : index_array_32_no_shuffle;
+            //const unsigned char* index_array = swapBlue ? index_array_32 : index_array_32_no_shuffle;
             for (int i = 0; i < height; i++, src_data += src_step, dst_data += dst_step)
             {
-                vBGRtoBGR(src_data, dst_data, index_array, width, scn, dcn, blueIdx, vsize_pixels, 32);
+                vBGRtoBGR(src_data, dst_data, index_array_32, width, scn, dcn, blueIdx, vsize_pixels, 32);
             }
         }
         else
         {
-            const unsigned char* index_array = swapBlue ? index_array_24 : index_array_24_no_shuffle;
+            //const unsigned char* index_array = swapBlue ? index_array_24 : index_array_24_no_shuffle;
             for (int i = 0; i < height; i++, src_data += src_step, dst_data += dst_step)
             {
                 vBGRtoBGR(src_data, dst_data, index_array_24, width, scn, dcn, blueIdx, vsize_pixels, 24);
