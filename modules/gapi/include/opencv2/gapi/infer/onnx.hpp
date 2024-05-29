@@ -232,7 +232,6 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     * @return Reference to this `OpenVINO` structure after applying the configuration.
     * @throws std::runtime_error if a parameter is already set or if an unknown option is encountered.
     */
-    GAPI_WRAP
     OpenVINO& cfgParamsMap(const std::unordered_map<std::string, std::string>& params) {
     for (const auto& kv : params) {
         if (kv.first == "device_type") {
