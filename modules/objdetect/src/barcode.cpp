@@ -29,13 +29,16 @@ static bool checkBarInputImage(InputArray img, Mat &gray)
 {
     CV_Assert(!img.empty());
     CV_CheckDepthEQ(img.depth(), CV_8U, "");
-    if (img.cols() <= 40 || img.rows() <= 40)
+    constexpr int minDimensionSize = 40;
+    if (img.cols() <= minDimensionSize || img.rows() <= minDimensionSize)
     {
-        return false; // image data is not enough for providing reliable results
+        return false; // Image data is not enough for providing reliable results
     }
-    int incn = img.channels();
-    CV_Check(incn, incn == 1 || incn == 3 || incn == 4, "");
-    if (incn == 3 || incn == 4)
+
+    const int numChannels = img.channels();
+    CV_Check(numChannels, numChannels == 1 || numChannels == 3 || numChannels == 4, "");
+
+    if (numChannels == 3 || numChannels == 4)
     {
         cvtColor(img, gray, COLOR_BGR2GRAY);
     }
@@ -45,6 +48,7 @@ static bool checkBarInputImage(InputArray img, Mat &gray)
     }
     return true;
 }
+
 
 static void updatePointsResult(OutputArray points_, const vector<Point2f> &points)
 {
@@ -80,10 +84,15 @@ inline const array<shared_ptr<AbsDecoder>, 2> &getDecoders()
 class BarDecode
 {
 public:
-    void init(const vector<Mat> &bar_imgs_);
+    BarDecode() = default;
+    explicit BarDecode(vector<Mat> bar_imgs_) : bar_imgs(std::move(bar_imgs_)) {}
 
-    const vector<Result> &getDecodeInformation()
-    { return result_info; }
+    void init(vector<Mat> bar_imgs_);
+
+    const vector<Result> &getDecodeInformation() const
+    { 
+        return result_info; 
+    }
 
     bool decodeMultiplyProcess();
 
@@ -92,9 +101,9 @@ private:
     vector<Result> result_info;
 };
 
-void BarDecode::init(const vector<Mat> &bar_imgs_)
+void BarDecode::init(vector<Mat> bar_imgs_)
 {
-    bar_imgs = bar_imgs_;
+    bar_imgs = std::move(bar_imgs_);
 }
 
 bool BarDecode::decodeMultiplyProcess()
