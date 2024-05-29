@@ -1427,7 +1427,7 @@ int ChessBoardDetector::checkQuadGroup(const std::vector<ChessBoardQuad*>& quad_
     }
 
     if (corner_count != pattern_size.width*pattern_size.height)
-      goto finalize;
+        goto finalize;
 
 {
     ChessBoardCorner* first = NULL, *first2 = NULL;

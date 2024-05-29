@@ -1401,15 +1401,6 @@ void CV_StereoCalibrationTest::run( int )
             bool found1 = findChessboardCorners(left, patternSize, imgpt1[i]);
             bool found2 = findChessboardCorners(right, patternSize, imgpt2[i]);
 
-            Mat leftGrey = left;
-            if(left.channels() != 1) cv::cvtColor(left, leftGrey, cv::COLOR_BGR2GRAY);
-
-            Mat rightGrey = right;
-            if(right.channels() != 1) cv::cvtColor(right, rightGrey, cv::COLOR_BGR2GRAY);
-          
-            cv::cornerSubPix(leftGrey,  imgpt1[i], cv::Size(6,6), cv::Size(-1,-1), cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 15, 0.1));
-            cv::cornerSubPix(rightGrey, imgpt2[i], cv::Size(6,6), cv::Size(-1,-1), cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 15, 0.1));
-
             if(!found1 || !found2)
             {
                 ts->printf( cvtest::TS::LOG, "The function could not detect boards (%d x %d) on the images %s and %s, testcase %d\n",
