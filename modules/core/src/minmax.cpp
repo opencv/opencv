@@ -849,7 +849,7 @@ static MinMaxIdxFunc getMinmaxTab(int depth)
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {
     int i, d = a.dims;
-    if( ofs != (size_t)(-1) )
+    if( ofs != SIZE_MAX )
     {
         for( i = d-1; i >= 0; i-- )
         {
@@ -1526,7 +1526,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
             srcHalHeight = 1;
         }
 
-        size_t minOffset = (size_t)(-1), maxOffset = (size_t)(-1);
+        size_t minOffset = SIZE_MAX, maxOffset = SIZE_MAX;
         int res = cv_hal_minMaxIdx(src.data, srcHalStep, srcHalWidth, srcHalHeight, src.depth(),
                                    minVal, maxVal, &minOffset, &maxOffset, mask.data);
 
@@ -1579,20 +1579,20 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     // => leave offset unset as is
     if (!src.empty() && mask.empty())
     {
-        if( minidx == (size_t)(-1) )
+        if( minidx == SIZE_MAX )
             minidx = 0;
-        if( maxidx == (size_t)(-1) )
+        if( maxidx == SIZE_MAX )
             maxidx = 0;
     }
 
-    if( minidx == (size_t)(-1))
+    if( minidx == SIZE_MAX)
         dminval = 0;
     else if( depth == CV_32F )
         dminval = fminval;
     else if( depth <= CV_32S )
         dminval = iminval;
 
-    if( maxidx == (size_t)(-1))
+    if( maxidx == SIZE_MAX)
         dmaxval = 0;
     else if( depth == CV_32F )
         dmaxval = fmaxval;
