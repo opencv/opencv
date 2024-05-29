@@ -38,8 +38,31 @@ static void cannyDetectionThresh2(int position, void* userdata) {
     data->thrs2 = position;
     imshow("Output", output);
 }
+
+// Load Model
+static void loadModel(const string modelPath, int backend, int target, Net &net){
+    net = readNetFromONNX(modelPath);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+}
+
+static void setupCannyWindow(const Mat &image, UserData &user_data){
+    destroyWindow("Output");
+    namedWindow("Output", WINDOW_NORMAL);
+    moveWindow("Output", 200, 50);
+    Mat gray;
+    cvtColor(image, gray, COLOR_BGR2GRAY);
+    user_data.gray = gray;
+    // Create trackbars
+    createTrackbar("thrs1", "Output", 0, 255, cannyDetectionThresh1, &user_data);
+    createTrackbar("thrs2", "Output", 0, 255, cannyDetectionThresh2, &user_data);
+
+    // Set initial positions of trackbars
+    setTrackbarPos("thrs1", "Output", 100);
+    setTrackbarPos("thrs2", "Output", 200);
+
+}
 static pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width);
-static cv::Mat preprocess(const Mat& img, int imageSize);
 
 int main(int argc, char** argv) {
 
@@ -49,14 +72,14 @@ int main(int argc, char** argv) {
         "Script is based on https://github.com/axinc-ai/ailia-models/blob/master/line_segment_detection/dexined/dexined.py\n"
         "To download the onnx model, see: https://storage.googleapis.com/ailia-models/dexined/model.onnx"
         "\n\nOpenCV onnx importer does not process dynamic shape. These need to be substituted with values using:\n\n"
-        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param w --dim_value 640 model.onnx model.sim1.onnx\n"
-        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param h --dim_value 480 model.sim1.onnx model.sim.onnx\n";
+        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param w --dim_value 512 model.onnx model.sim1.onnx\n"
+        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param h --dim_value 512 model.sim1.onnx model.sim.onnx\n";
 
     const string param_keys =
-        "{ help h          |            | Print help message. }"
-        "{ input i         | baboon.jpg | Path to the input image }"
-        "{ model           |            | Path to the ONNX model. Required. }"
-        "{ imageSize       |   512      | Image Size}";
+        "{ help h          |        | Print help message. }"
+        "{ input i         |        | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+        "{ model           |        | Path to the ONNX model. Required. }"
+        "{ imageSize       |   512  | Image Size}";
 
     const string backend_keys = format(
         "{ backend         | 0 | Choose one of computation backends: "
@@ -66,8 +89,8 @@ int main(int argc, char** argv) {
         "%d: VKCOM, "
         "%d: CUDA, "
         "%d: WebNN }",
-        cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV,
-        cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA, cv::dnn::DNN_BACKEND_WEBNN);
+        DNN_BACKEND_DEFAULT, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV,
+        DNN_BACKEND_VKCOM, DNN_BACKEND_CUDA, DNN_BACKEND_WEBNN);
 
     const string target_keys = format(
         "{ target          | 0 | Choose one of target computation devices: "
@@ -78,17 +101,16 @@ int main(int argc, char** argv) {
         "%d: Vulkan, "
         "%d: CUDA, "
         "%d: CUDA fp16 (half-float preprocess) }",
-        cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16,
-        cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA,
-        cv::dnn::DNN_TARGET_CUDA_FP16);
+        DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16,
+        DNN_TARGET_MYRIAD, DNN_TARGET_VULKAN, DNN_TARGET_CUDA,
+        DNN_TARGET_CUDA_FP16);
 
     const string keys = param_keys + backend_keys + target_keys;
 
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
 
-    string inputImagePath = parser.get<string>("input");
-    string onnxModel = parser.get<string>("model");
+    const string modelPath = parser.get<string>("model");
     int backend = parser.get<int>("backend");
     int target = parser.get<int>("target");
     int imageSize = parser.get<int>("imageSize");
@@ -98,39 +120,43 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    Mat image = imread(samples::findFile(inputImagePath));
-    if (image.empty()) {
-        cout << "Could not read the image: " << inputImagePath << endl;
-        return 1;
-    }
+    VideoCapture cap;
+    if (parser.has("input"))
+        cap.open(samples::findFile(parser.get<String>("input")));
+    else
+        cap.open(0);
 
     string method = "canny";
     namedWindow("Input", WINDOW_NORMAL);
-    imshow("Input", image);
     namedWindow("Output", WINDOW_NORMAL);
-
+    moveWindow("Output", 200, 0);
+    // Check if the 'modelPath' string is empty and set the 'method' accordingly
+    string method;
     Net net;
-    if(onnxModel != ""){
-        net = readNetFromONNX(onnxModel);
-    }
-    else{
-        cout << "[INFO]: ONNX model file not provided. The 'dexined' method (DNN-based) will not be available." << endl;
+    Mat image, gray;
+    UserData user_data;
+
+    if (modelPath.empty()) {
+        cout << "[WARN] Model file not provided, cannot use dexined." << endl;
+        method = "canny";
+        Mat dummy = Mat::zeros(imageSize, imageSize, CV_8UC3);
+        setupCannyWindow(dummy, user_data);
+    } else {
+        method = "dexined";
+        loadModel(modelPath, backend, target, net);
     }
     for (;;){
-        if (method == "dexined" && onnxModel != "")
+        cap >> image;
+        if (image.empty())
         {
-            destroyWindow("Output");
-            namedWindow("Output", WINDOW_NORMAL);
-
-            net.setPreferableBackend(backend);
-            net.setPreferableTarget(target);
-            Mat preprocessed = preprocess(image, imageSize);
-
-            Mat blob = blobFromImage(preprocessed);
+            cout << "Press any key to exit" << endl;
+            waitKey();
+            break;
+        }
+        if (method == "dexined")
+        {
+            Mat blob = blobFromImage(image, 1.0, Size(imageSize, imageSize), Scalar(103.939, 116.779, 123.68), false, false, CV_32F);
             net.setInput(blob);
-
-            Mat result = net.forward();
-
             vector<Mat> outputs;
             net.forward(outputs); // Get all output layers
             int originalWidth = image.cols;
@@ -138,39 +164,31 @@ int main(int argc, char** argv) {
             pair<Mat, Mat> res = postProcess(outputs, originalHeight, originalWidth);
             Mat fusedOutput = res.first;
             Mat averageOutput = res.second;
-
             imshow("Output", fusedOutput);
         }
         else if (method == "canny")
         {
-            Mat gray;
             cvtColor(image, gray, COLOR_BGR2GRAY);
-
-            UserData user_data;
             user_data.gray = gray;
-
-            destroyWindow("Output");
-            namedWindow("Output", WINDOW_NORMAL);
-
-            // Create trackbars
-            createTrackbar("thrs1", "Output", 0, 255, cannyDetectionThresh1, &user_data);
-            createTrackbar("thrs2", "Output", 0, 255, cannyDetectionThresh2, &user_data);
-
-            // Set initial positions of trackbars
-            setTrackbarPos("thrs1", "Output", 100);
-            setTrackbarPos("thrs2", "Output", 200);
-
+            cannyDetectionThresh1(user_data.thrs1, &user_data);
         }
-
-        int key = waitKey(0);
+        imshow("Input", image);
+        int key = waitKey(30);
 
         if (key == 'd' || key == 'D')
         {
-            method = "dexined";
+            if (!modelPath.empty())
+                method = "dexined";
+            if (net.empty())
+                loadModel(modelPath, backend, target, net);
+            namedWindow("Input", WINDOW_NORMAL);
+            namedWindow("Output", WINDOW_NORMAL);
+            moveWindow("Output", 200, 0);
         }
         else if (key == 'c' || key == 'C')
         {
             method = "canny";
+            setupCannyWindow(image, user_data);
         }
         else if (key == 27 || key == 'q')
         { // Escape key to exit
@@ -182,10 +200,10 @@ int main(int argc, char** argv) {
 }
 
 // Function to process the neural network output to generate edge maps
-pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
+static pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
     vector<Mat> preds;
     preds.reserve(output.size());
-    for (const auto& p : output) {
+    for (const Mat &p : output) {
         Mat img;
         // Correctly handle 4D tensor assuming it's always in the format [1, 1, height, width]
         Mat processed;
@@ -203,7 +221,7 @@ pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
     Mat fuse = preds.back(); // Last element as the fused result
     // Calculate the average of the predictions
     Mat ave = Mat::zeros(height, width, CV_32F);
-    for (auto& pred : preds) {
+    for (Mat &pred : preds) {
         Mat temp;
         pred.convertTo(temp, CV_32F);
         ave += temp;
@@ -211,12 +229,4 @@ pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
     ave /= static_cast<float>(preds.size());
     ave.convertTo(ave, CV_8U);
     return {fuse, ave}; // Return both fused and average edge maps
-}
-// Preprocess the image
-Mat preprocess(const Mat& img, int imageSize) {
-    Mat resizedImg;
-    resize(img, resizedImg, Size(imageSize, imageSize));
-    resizedImg.convertTo(resizedImg, CV_32F);
-    subtract(resizedImg, Scalar(103.939, 116.779, 123.68), resizedImg);
-    return resizedImg;
 }
