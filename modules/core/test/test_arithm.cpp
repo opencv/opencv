@@ -1614,6 +1614,31 @@ INSTANTIATE_TEST_CASE_P(Core_reduceArgMinMax, ElemWiseTest, ::testing::Values(El
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new CartToPolarToCartOp)));
 
 
+typedef std::tuple<int, std::tuple<int, int>> SomeType;
+class ArithmExtendTest : public ::testing::TestWithParam<SomeType>
+{
+public:
+    enum {ADD = 0, SUB = 1, MUL = 2, DIV = 3};
+};
+
+TEST_P(ArithmExtendTest, accuracy)
+{
+    auto p = GetParam();
+    int op = std::get<0>(p);
+    int srcType = std::get<0>(std::get<1>(p));
+    int dstType = std::get<1>(std::get<1>(p));
+
+    //TODO: test itself
+}
+
+INSTANTIATE_TEST_CASE_P(Core_AddExtend, ArithmExtendTest, ::testing::Combine(
+                        ::testing::Values(ArithmExtendTest::ADD),
+                        ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
+                                          std::tuple<int, int>{CV_8S, CV_16S},
+                                          std::tuple<int, int>{CV_8U, CV_32F})
+                        ));
+
+
 TEST(Core_ArithmMask, uninitialized)
 {
             RNG& rng = theRNG();
