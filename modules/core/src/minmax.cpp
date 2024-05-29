@@ -1557,7 +1557,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
 
-    size_t minidx = (size_t)(-1), maxidx = (size_t)(-1);
+    size_t minidx = SIZE_MAX, maxidx = SIZE_MAX;
     int iminval = INT_MAX, imaxval = INT_MIN;
     float  fminval = std::numeric_limits<float>::infinity(),  fmaxval = -fminval;
     double dminval = std::numeric_limits<double>::infinity(), dmaxval = -dminval;
