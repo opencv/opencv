@@ -224,6 +224,7 @@ static const TestCase testConformanceConfig[] = {
     {"test_depthtospace_example", 1, 1},
     {"test_dequantizelinear", 3, 1},
     {"test_dequantizelinear_axis", 3, 1},
+    {"test_dequantizelinear_blocked", 1, 1},
     {"test_det_2d", 1, 1},
     {"test_det_nd", 1, 1},
     {"test_div", 2, 1},
@@ -556,6 +557,7 @@ static const TestCase testConformanceConfig[] = {
     {"test_qlinearmatmul_3D", 8, 1},
     {"test_quantizelinear", 3, 1},
     {"test_quantizelinear_axis", 3, 1},
+    {"test_quantizelinear_blocked", 1, 1},
     {"test_range_float_type_positive_delta", 3, 1},
     {"test_range_float_type_positive_delta_expanded", 3, 1},
     {"test_range_int32_type_negative_delta", 3, 1},
@@ -1180,7 +1182,7 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
             Mat output = readTensorFromONNX(findDataFile(prefix + cv::format("/test_data_set_0/output_%d.pb", i)));
             ref_outputs.push_back(output);
         }
-
+        
         //cout << "Parse model..." << endl;
         net = readNetFromONNX(model_path);
         if (net.empty())

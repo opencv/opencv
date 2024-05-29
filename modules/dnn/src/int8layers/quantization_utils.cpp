@@ -237,7 +237,7 @@ public:
         {
             Mat inputTmp;
             divide(inputs[0], scalesMat, inputTmp);
-            subtract(inputTmp, zeropointsMat, inputTmp);
+            add(inputTmp, zeropointsMat, inputTmp);
 
             inputTmp.convertTo(outputs[0], CV_8S);
         }
