@@ -11,8 +11,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "visionOS")
 endif()
 
 if(DEFINED _apple_device_min_target_os_version AND
-   (${CMAKE_OSX_DEPLOYMENT_TARGET} VERSION_GREATER ${_apple_device_min_target_os_version} OR
-    ${CMAKE_OSX_DEPLOYMENT_TARGET} VERSION_EQUAL ${_apple_device_min_target_os_version}))
+   ("${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_GREATER ${_apple_device_min_target_os_version} OR
+    "${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_EQUAL ${_apple_device_min_target_os_version}))
   set(_apple_device_has_required_min_os_version ON)
 else()
   set(_apple_device_has_required_min_os_version OFF)
