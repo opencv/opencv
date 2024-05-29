@@ -2887,8 +2887,8 @@ TEST(Core_MinMaxIdx, non_continuous)
     Mat small = big(Range(8, 8+16), Range(8, 8+16));
 
     small = 50;
-    small.at<float>(8, 8) = 100;
-    small.at<float>(9, 9) = 25;
+    small.at<float>(6, 7) = 100;
+    small.at<float>(8, 9) = 25;
 
     double minVal = 0, maxVal = 0;
     int minIdx[CV_MAX_DIM] = { 0 }, maxIdx[CV_MAX_DIM] = { 0 };
@@ -2897,10 +2897,10 @@ TEST(Core_MinMaxIdx, non_continuous)
     ASSERT_FLOAT_EQ(minVal, 25);
     ASSERT_FLOAT_EQ(maxVal, 100);
 
-    ASSERT_EQ(minIdx[0], 9);
+    ASSERT_EQ(minIdx[0], 8);
     ASSERT_EQ(minIdx[1], 9);
-    ASSERT_EQ(maxIdx[0], 8);
-    ASSERT_EQ(maxIdx[1], 8);
+    ASSERT_EQ(maxIdx[0], 6);
+    ASSERT_EQ(maxIdx[1], 7);
 }
 
 TEST(Core_Magnitude, regression_19506)
