@@ -25,7 +25,6 @@
 '''
 import os
 import cv2
-import math
 import argparse
 import numpy as np
 from common import *
@@ -53,12 +52,10 @@ def get_args_parser():
                         help='Unclip ratio for DB detector.')
     parser.add_argument('--vocabulary_path', default='alphabet_36.txt',
                         help='Path to vocabulary file.')
-    parser.add_argument('--model_name', default='DB',
-                        help='Choose model_name DB or EAST')
     args, _ = parser.parse_known_args()
     add_preproc_args(args.zoo, parser, 'text_detection')
     parser = argparse.ArgumentParser(parents=[parser],
-                                        description='Use this script to run classification deep learning networks using OpenCV.',
+                                        description='Text Detection and Recognition using OpenCV.',
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     return parser.parse_args()
 
@@ -83,7 +80,7 @@ def main():
 
     frame = cv2.imread(args.input)
 
-    if(args.model_name == "DB"):
+    if(args.alias == "DB"):
         # DB Detector initialization
         detector = cv2.dnn_TextDetectionModel_DB(args.model)
         detector.setBinaryThreshold(args.binary_threshold)
@@ -94,7 +91,7 @@ def main():
         detector.setInputParams(scale=args.scale, size=(args.width, args.height), mean=args.mean)
         # Performing text detection
         detResults = detector.detect(frame)
-    elif(args.model_name == "EAST"):
+    elif(args.alias == "East"):
         # EAST Detector initialization
         detector = cv2.dnn_TextDetectionModel_EAST(args.model)
         detector.setConfidenceThreshold(args.thr)

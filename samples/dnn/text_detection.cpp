@@ -37,9 +37,9 @@ using namespace cv::dnn;
 // Command-line keys to parse the input arguments
 std::string keys =
     "{ help  h                        |     | Print help message. }"
-    "{ input i                        | right.jpg | Path to an input image. }"
-    "{ @alias      | | An alias name of model to extract preprocessing parameters from models.yml file. }"
-    "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
+    "{ input i                        | box_in_scene.png | Path to an input image. }"
+    "{ @alias                         |     | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ zoo                            | models.yml | An optional path to file with preprocessing parameters }"
     "{ recModelPath rmp               |     | Path to a binary .onnx model for recognition. }"
     "{ thr                            | 0.5 | Confidence threshold for EAST detector. }"
     "{ nms                            | 0.4 | Non-maximum suppression threshold for EAST detector. }"
@@ -50,7 +50,7 @@ std::string keys =
     "{ vocabularyPath vp              | alphabet_36.txt | Path to vocabulary file. }";
 
 // Function prototype for the four-point perspective transform
-void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);
+static void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);
 
 int main(int argc, char** argv) {
     // Setting up command-line parser with the specified keys
@@ -194,7 +194,7 @@ int main(int argc, char** argv) {
 }
 
 // Performs a perspective transform for a four-point region
-void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result) {
+static void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result) {
     const Size outputSize = Size(100, 32);
     // Defining target vertices for the perspective transform
     Point2f targetVertices[4] = {

@@ -244,7 +244,7 @@ DB:
 East:
   load_info:
     url: "https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1"
-    sha1: "fffabf5ac36f37bddf68e34e84b45f5c4247ed06"
+    sha1: "3ca8233d6edd748f7ed23246c8ca24cbf696bb94"
   model: "frozen_east_text_detection.pb"
   mean: [123.68, 116.78, 103.94]
   scale: 1.0
