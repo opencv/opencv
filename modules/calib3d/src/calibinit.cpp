@@ -481,7 +481,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     bool found = false;
 
-    const bool  = (flags & CALIB_CB_PLAIN) != 0;
+    const bool is_plain = (flags & CALIB_CB_PLAIN) != 0;
 
     if (is_plain && flags & CALIB_CB_ADAPTIVE_THRESH)
         CV_Error(Error::StsOutOfRange, "CALIB_CB_PLAIN defined CALIB_CB_ADAPTIVE_THRESH ignored");
