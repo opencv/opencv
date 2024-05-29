@@ -431,6 +431,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 
     if( result )
     {
+        H.convertTo(H, H.type(), scaleFor(H.at<double>(2,2)));
         if( _mask.needed() )
             tempMask.copyTo(_mask);
     }
