@@ -50,12 +50,15 @@ static void updatePointsResult(OutputArray points_, const vector<Point2f> &point
 {
     if (points_.needed())
     {
-        int N = int(points.size() / 4);
-        if (N > 0)
+        constexpr int divisor = 4;
+        int numPoints = static_cast<int>(points.size() / divisor);
+        if (numPoints > 0)
         {
-            Mat m_p(N, 4, CV_32FC2, (void *) &points[0]);
-            int points_type = points_.fixedType() ? points_.type() : CV_32FC2;
-            m_p.reshape(2, points_.rows()).convertTo(points_, points_type);  // Mat layout: N x 4 x 2cn
+            // Create a matrix from the points vector
+            Mat pointsMatrix(numPoints, divisor, CV_32FC2, static_cast<void *>(const_cast<Point2f *>(&points[0])));
+            int pointsType = points_.fixedType() ? points_.type() : CV_32FC2;
+            // Reshape the matrix and convert its type
+            pointsMatrix.reshape(2, points_.rows()).convertTo(points_, pointsType);  // Mat layout: numPoints x 4 x 2cn
         }
         else
         {
