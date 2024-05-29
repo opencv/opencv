@@ -91,13 +91,19 @@ outNames = net.getUnconnectedOutLayersNames()
 confThreshold = args.thr
 nmsThreshold = args.nms
 
+def get_color(class_id):
+    r = min((class_id >> 0 & 1) * 128 + (class_id >> 3 & 1) * 64 + (class_id >> 6 & 1) * 32 + 80, 255)
+    g = min((class_id >> 1 & 1) * 128 + (class_id >> 4 & 1) * 64 + (class_id >> 7 & 1) * 32 + 40, 255)
+    b = min((class_id >> 2 & 1) * 128 + (class_id >> 5 & 1) * 64 + (class_id >> 8 & 1) * 32 + 40, 255)
+    return (int(b), int(g), int(r))
+
 def postprocess(frame, outs):
     frameHeight = frame.shape[0]
     frameWidth = frame.shape[1]
 
     def drawPred(classId, conf, left, top, right, bottom):
         # Draw a bounding box.
-        cv.rectangle(frame, (left, top), (right, bottom), (0, 255, 0))
+        cv.rectangle(frame, (left, top), (right, bottom), get_color(classId))
 
         label = '%.2f' % conf
 
@@ -204,7 +210,7 @@ def postprocess(frame, outs):
 
 # Process inputs
 winName = 'Deep learning object detection in OpenCV'
-cv.namedWindow(winName, cv.WINDOW_NORMAL)
+cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)
 
 def callback(pos):
     global confThreshold
@@ -319,13 +325,14 @@ while cv.waitKey(1) < 0:
         # Put efficiency information.
         if predictionsQueue.counter > 1:
             label = 'Camera: %.2f FPS' % (framesQueue.getFPS())
-            cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv.rectangle(frame, (0, 0), (150, 50), (255,255,255), cv.FILLED)
+            cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
             label = 'Network: %.2f FPS' % (predictionsQueue.getFPS())
-            cv.putText(frame, label, (0, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv.putText(frame, label, (0, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
             label = 'Skipped frames: %d' % (framesQueue.counter - predictionsQueue.counter)
-            cv.putText(frame, label, (0, 45), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv.putText(frame, label, (0, 45), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
         cv.imshow(winName, frame)
     except queue.Empty:

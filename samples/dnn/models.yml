@@ -31,8 +31,8 @@ yolov8x:
   height: 640
   rgb: true
   classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "yolo_detector"
+  postprocessing: "yolov8"
+  sample: "object_detection"
 
 yolov8s:
   load_info:
@@ -45,8 +45,8 @@ yolov8s:
   height: 640
   rgb: true
   classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "yolo_detector"
+  postprocessing: "yolov8"
+  sample: "object_detection"
 
 yolov8n:
   load_info:
@@ -59,8 +59,8 @@ yolov8n:
   height: 640
   rgb: true
   classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "yolo_detector"
+  postprocessing: "yolov8"
+  sample: "object_detection"
 
 yolov8m:
   load_info:
@@ -73,8 +73,8 @@ yolov8m:
   height: 640
   rgb: true
   classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "yolo_detector"
+  postprocessing: "yolov8"
+  sample: "object_detection"
 
 # YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
 # YOLO object detection family from Darknet (https://pjreddie.com/darknet/yolo/)
