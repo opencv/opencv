@@ -1510,23 +1510,33 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
-    if (src.dims <= 2)
+    // HAL call
+    if (src.dims <= 2 || src.isContinuous())
     {
-        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows,
-                 src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data);
-    }
-    else if (src.isContinuous())
-    {
-        int res = cv_hal_minMaxIdx(src.data, 0, (int)src.total()*cn, 1, src.depth(),
-                                   minVal, maxVal, minIdx, maxIdx, mask.data);
+        int srcHalStep, srcHalWidth, srcHalHeight;
+        if (src.dims <= 2)
+        {
+            srcHalStep   = src.step;
+            srcHalWidth  = src.cols * cn;
+            srcHalHeight = src.rows;
+        }
+        else // pass it like one continuous row
+        {
+            srcHalStep   = 0;
+            srcHalWidth  = (int)src.total()*cn;
+            srcHalHeight = 1;
+        }
+
+        size_t minOffset = (size_t)(-1), maxOffset = (size_t)(-1);
+        int res = cv_hal_minMaxIdx(src.data, srcHalStep, srcHalWidth, srcHalHeight, src.depth(),
+                                   minVal, maxVal, &minOffset, &maxOffset, mask.data);
 
         if (res == CV_HAL_ERROR_OK)
         {
-            // minIdx[0] and minIdx[0] are always 0 for "flatten" version
             if (minIdx)
-                ofs2idx(src, minIdx[1], minIdx);
+                ofs2idx(src, minOffset, minIdx);
             if (maxIdx)
-                ofs2idx(src, maxIdx[1], maxIdx);
+                ofs2idx(src, maxOffset, maxIdx);
             return;
         }
         else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
