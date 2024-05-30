@@ -44,7 +44,6 @@ public:
     std::vector<int> all_ndims;
     std::vector<std::vector<int>> orig_shapes;
     std::vector<std::vector<size_t>> orig_steps;
-    std::vector<char*> ptrs;
     std::vector<std::vector<int>> shapes;
     std::vector<std::vector<size_t>> steps;
     std::vector<size_t> elemsize;
@@ -58,7 +57,6 @@ public:
         all_ndims.clear();
         orig_shapes.clear();
         orig_steps.clear();
-        ptrs.clear();
         shapes.clear();
         steps.clear();
         elemsize.clear();
@@ -80,7 +78,6 @@ public:
 
         shapes = std::vector<std::vector<int>>(narrays, std::vector<int>(max_ndims, 0));
         steps = std::vector<std::vector<size_t>>(narrays, std::vector<size_t>(max_ndims, 0));
-        ptrs = std::vector<char*>(narrays, nullptr);
 
         for(i = 0; i <= ninputs; i++) {
             all_ndims.push_back(i == 0 ? out_ndims : inp_ndims[i-1]);
@@ -467,7 +464,7 @@ public:
     void nary_forward_impl(
         const Functor& op, const T scale, int ninputs, int ndims, const std::vector<int>& shape,
         const char** inp, char* out,
-        const std::vector<std::vector<size_t>>& steps, std::vector<char*>& ptrs)
+        const std::vector<std::vector<size_t>>& steps)
     {
         CV_Assert(ndims >= 2);
         size_t dp  = steps[0].back() / sizeof(T);
@@ -478,6 +475,8 @@ public:
         int nplanes = std::accumulate(shape.begin(), shape.end() - 1, 1, std::multiplies<int>());
 
         if (nplanes == 1) { // parallel within the plane
+            AutoBuffer<char> buf_ptrs(steps.size());
+            auto ptrs = (char**)buf_ptrs.data();
             ptrs[0] = out;
             for (int i = 0; i < ninputs; i++) {
                 ptrs[i+1] = (char*)inp[i];
@@ -522,6 +521,8 @@ public:
             parallel_for_(Range(0, plane_size), worker, nstripes);
         } else { // parallel across the plane
             auto worker = [&](const Range &r) {
+                AutoBuffer<char> buf_ptrs(steps.size());
+                auto ptrs = (char**)buf_ptrs.data();
                 for (int plane_idx = r.start; plane_idx < r.end; plane_idx++) {
                     ptrs[0] = out;
                     for (int i = 0; i < ninputs; i++) ptrs[i+1] = (char*)inp[i];
@@ -593,8 +594,7 @@ public:
         // collect output info
         char* out = outputs[0].ptr<char>();
 
-        nary_forward_impl<T>(
-                f, scale, helper.ninputs, helper.max_ndims, helper.shapes[0], inp, out, helper.steps, helper.ptrs);
+        nary_forward_impl<T>(f, scale, helper.ninputs, helper.max_ndims, helper.shapes[0], inp, out, helper.steps);
     }
 
     /*
