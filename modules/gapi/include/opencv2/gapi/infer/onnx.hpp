@@ -163,6 +163,17 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
         : device_type(dev_type) {
     }
 
+    /** @brief Class constructor.
+
+    Constructs OpenVINO parameters based on map of options passed.
+
+    * @param params A map of parameter names and their corresponding string values.
+    */
+    GAPI_WRAP
+    explicit OpenVINO(const std::unordered_map<std::string, std::string>& params)
+        : params_map(params), is_initialized_from_map(true) {
+    }
+
     /** @brief Specifies OpenVINO Execution Provider cache dir.
 
     This function is used to explicitly specify the path to save and load
@@ -173,6 +184,9 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgCacheDir(const std::string &dir) {
+        if (is_initialized_from_map) {
+            throw std::runtime_error("ep::OpenVINO cannot be changed if created from the parameters map.");
+        } 
         cache_dir = dir;
         return *this;
     }
@@ -187,6 +201,9 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgNumThreads(size_t nthreads) {
+        if (is_initialized_from_map) {
+            throw std::runtime_error("ep::OpenVINO cannot be changed if created from the parameters map.");
+        } 
         num_of_threads = nthreads;
         return *this;
     }
@@ -200,6 +217,9 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgEnableOpenCLThrottling() {
+        if (is_initialized_from_map) {
+            throw std::runtime_error("ep::OpenVINO cannot be changed if created from the parameters map.");
+        } 
         enable_opencl_throttling = true;
         return *this;
     }
@@ -216,24 +236,10 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgEnableDynamicShapes() {
+        if (is_initialized_from_map) {
+            throw std::runtime_error("ep::OpenVINO cannot be changed if created from the parameters map.");
+        } 
         enable_dynamic_shapes = true;
-        return *this;
-    }
-
-    /** @brief Configures OpenVINO Execution Provider parameters using a map of options.
-     *
-     * This function allows setting multiple configuration options for the OpenVINO Execution Provider
-     * by passing a map of key-value pairs. It updates the ParamsMap with the new parameters.
-     *
-     * @param params A map of parameter names and their corresponding string values.
-     * @return Reference to this `OpenVINO` structure after applying the configuration.
-     */
-    GAPI_WRAP
-    OpenVINO& cfgParamsMap(const std::unordered_map<std::string, std::string>& params) {
-        // Update the ParamsMap with the new configuration
-        for (const auto& kv : params) {
-            ParamsMap[kv.first] = kv.second;
-        }
         return *this;
     }
 
@@ -242,7 +248,8 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     size_t num_of_threads = 0;
     bool enable_opencl_throttling = false;
     bool enable_dynamic_shapes = false;
-    std::unordered_map<std::string, std::string> ParamsMap;
+    bool is_initialized_from_map = false;
+    std::unordered_map<std::string, std::string> params_map;
 };
 
 /**
