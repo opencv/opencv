@@ -426,12 +426,12 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                 cb->runKernel( src, dst, H );
             Mat H8(9, 1, CV_64F, H.ptr<double>());
             LMSolver::create(makePtr<HomographyRefineCallback>(src, dst), 10)->run(H8);
+            H.convertTo(H, H.type(), scaleFor(H.at<double>(2,2)));
         }
     }
 
     if( result )
     {
-        H.convertTo(H, H.type(), scaleFor(H.at<double>(2,2)));
         if( _mask.needed() )
             tempMask.copyTo(_mask);
     }
