@@ -1017,7 +1017,7 @@ public:
         if (inputs.size() == 1) {
             auto &ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
             ngraph::OutputVector inp{ieInpNode};
-            auto blank = std::make_shared<ngraph::op::v0::Concat>(inp, 0);
+            auto blank = std::make_shared<ov::op::v0::Concat>(inp, 0);
             return Ptr<BackendNode>(new InfEngineNgraphNode(blank));
         }
 
