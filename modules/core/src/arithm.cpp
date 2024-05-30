@@ -678,7 +678,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                      "(where arrays have the same size and the same number of channels), "
                      "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
-        CV_Assert(type2 == CV_64F && (sz2.height == 1 || sz2.height == 4));
+        CV_Assert((type2 == CV_64F || type2 == CV_32F) && (sz2.height == 1 || sz2.height == 4));
 
         if (!muldiv)
         {
@@ -1565,9 +1565,9 @@ struct InRange_SIMD<float>
 };
 
 template <>
-struct InRange_SIMD<float16_t>
+struct InRange_SIMD<hfloat>
 {
-    int operator () (const float16_t * src1, const float16_t * src2, const float16_t * src3,
+    int operator () (const hfloat * src1, const hfloat * src2, const hfloat * src3,
         uchar * dst, int len) const
     {
         int x = 0;
@@ -1712,8 +1712,8 @@ static void inRange64f(const double* src1, size_t step1, const double* src2, siz
     inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
-static void inRange16f(const float16_t* src1, size_t step1, const float16_t* src2, size_t step2,
-                       const float16_t* src3, size_t step3, uchar* dst, size_t step, Size size)
+static void inRange16f(const hfloat* src1, size_t step1, const hfloat* src2, size_t step2,
+                       const hfloat* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
     inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }

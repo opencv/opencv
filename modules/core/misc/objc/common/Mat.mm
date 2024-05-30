@@ -951,7 +951,7 @@ template<typename T> int putData(NSArray<NSNumber*>* indices, cv::Mat* mat, int 
     return [MatConverters convertCGImageRefToMat:image alphaExist:alphaExist];
 }
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE || TARGET_OS_VISION
 
 -(UIImage*)toUIImage {
     return [MatConverters converMatToUIImage:self];

@@ -370,7 +370,7 @@ public:
     static CV_ALWAYS_INLINE ufixedpoint16 one() { return ufixedpoint16((uint16_t)(1 << fixedShift)); }
 
     static CV_ALWAYS_INLINE ufixedpoint16 fromRaw(uint16_t v) { return ufixedpoint16(v); }
-    CV_ALWAYS_INLINE uint16_t raw() { return val; }
+    CV_ALWAYS_INLINE uint16_t raw() const { return val; }
 };
 
 }

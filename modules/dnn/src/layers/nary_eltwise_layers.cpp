@@ -359,9 +359,7 @@ public:
         for (auto input : inputs)
         {
             CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
-            if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S, "Unsupported type");
-            else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
                 CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
             else
                 CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
@@ -924,32 +922,32 @@ public:
 
         if (inp0.get_element_type() != inp1.get_element_type()) {
             auto dtype = preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_MYRIAD ?
-                        ngraph::element::f16 : ngraph::element::f32;
+                        ov::element::f16 : ov::element::f32;
             if (inp0.get_element_type() != dtype)
-                inp0 = std::make_shared<ngraph::op::v0::Convert>(inp0, dtype);
+                inp0 = std::make_shared<ov::op::v0::Convert>(inp0, dtype);
             if (inp1.get_element_type() != dtype)
-                inp1 = std::make_shared<ngraph::op::v0::Convert>(inp1, dtype);
+                inp1 = std::make_shared<ov::op::v0::Convert>(inp1, dtype);
         }
 
-        std::shared_ptr<ngraph::Node> node;
+        std::shared_ptr<ov::Node> node;
         if (op == OPERATION::ADD)
-            node = std::make_shared<ngraph::op::v1::Add>(inp0, inp1);
+            node = std::make_shared<ov::op::v1::Add>(inp0, inp1);
         else if (op == OPERATION::PROD)
-            node = std::make_shared<ngraph::op::v1::Multiply>(inp0, inp1);
+            node = std::make_shared<ov::op::v1::Multiply>(inp0, inp1);
         else if (op == OPERATION::GREATER_EQUAL)
-            node = std::make_shared<ngraph::op::v1::GreaterEqual>(inp0, inp1);
+            node = std::make_shared<ov::op::v1::GreaterEqual>(inp0, inp1);
         else if (op == OPERATION::LESS_EQUAL)
-            node = std::make_shared<ngraph::op::v1::LessEqual>(inp0, inp1);
+            node = std::make_shared<ov::op::v1::LessEqual>(inp0, inp1);
         // Ideally we should do this but int32 internal blobs are converted to float32 data type in inference.
         // TODO: Remove data type convertion when we have type inference.
         else if (op == OPERATION::MOD) {
-            auto inp0_i64 = std::make_shared<ngraph::op::Convert>(inp0, ngraph::element::i64);
-            auto inp1_i64 = std::make_shared<ngraph::op::Convert>(inp1, ngraph::element::i64);
-            auto mod = std::make_shared<ngraph::op::v1::FloorMod>(inp0_i64, inp1_i64);
-            node = std::make_shared<ngraph::op::Convert>(mod, ngraph::element::f32);
+            auto inp0_i64 = std::make_shared<ov::op::v0::Convert>(inp0, ov::element::i64);
+            auto inp1_i64 = std::make_shared<ov::op::v0::Convert>(inp1, ov::element::i64);
+            auto mod = std::make_shared<ov::op::v1::FloorMod>(inp0_i64, inp1_i64);
+            node = std::make_shared<ov::op::v0::Convert>(mod, ov::element::f32);
         }
         else if (op == OPERATION::FMOD)
-            node = std::make_shared<ngraph::op::v1::Mod>(inp0, inp1);
+            node = std::make_shared<ov::op::v1::Mod>(inp0, inp1);
         else
             CV_Error(Error::StsNotImplemented, "Operation is not implemented for nGraph backend");
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));

@@ -112,17 +112,6 @@ foreach(f ${test_files})
   list(APPEND opencv_test_js_file_deps "${test_dir}/${f}" "${opencv_test_js_bin_dir}/${f}")
 endforeach()
 
-# copy test data
-set(test_data "haarcascade_frontalface_default.xml")
-set(test_data_path "${PROJECT_SOURCE_DIR}/../../data/haarcascades/${test_data}")
-
-add_custom_command(OUTPUT "${opencv_test_js_bin_dir}/${test_data}"
-                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_data_path}" "${opencv_test_js_bin_dir}/${test_data}"
-                   DEPENDS "${test_data_path}"
-                   COMMENT "Copying ${test_data}"
-                  )
-list(APPEND opencv_test_js_file_deps "${test_data_path}" "${opencv_test_js_bin_dir}/${test_data}")
-
 add_custom_target(${PROJECT_NAME}_test
                   DEPENDS ${OCV_JS_PATH} ${opencv_test_js_file_deps})
 

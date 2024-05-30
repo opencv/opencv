@@ -5,7 +5,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
-#include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 #include <algorithm>
@@ -457,12 +456,14 @@ static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, ReduceMode mod
     CV_INSTRUMENT_REGION();
 
     cv::Mat srcMat = src.getMat();
-    axis = (axis + srcMat.dims) % srcMat.dims;
-    CV_Assert(srcMat.channels() == 1 && axis >= 0 && axis < srcMat.dims);
+    int dims = std::max(1, srcMat.dims);
+    axis = (axis + dims) % dims;
+    CV_Assert(srcMat.channels() == 1 && axis >= 0 && axis <= srcMat.dims);
 
     std::vector<int> sizes(srcMat.dims);
     std::copy(srcMat.size.p, srcMat.size.p + srcMat.dims, sizes.begin());
-    sizes[axis] = 1;
+    if(!sizes.empty())
+        sizes[axis] = 1;
 
     dst.create(srcMat.dims, sizes.data(), CV_32SC1); // indices
     cv::Mat dstMat = dst.getMat();

@@ -103,7 +103,6 @@ class Builder:
                "-DWITH_WEBP=OFF",
                "-DWITH_OPENEXR=OFF",
                "-DWITH_OPENGL=OFF",
-               "-DWITH_OPENVX=OFF",
                "-DWITH_OPENNI=OFF",
                "-DWITH_OPENNI2=OFF",
                "-DWITH_PNG=OFF",

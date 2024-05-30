@@ -94,8 +94,9 @@ void generateSphere(OutputArray sphere_pts, const vector<float> &model, float th
         // Let r change then generate thickness
         float r = i < sphere_num ? model[3] : rng.uniform(model[3] - thr, model[3] + thr);
         // Generate a random vector and normalize it.
+        // Note: these vectors are not spread uniformly across the sphere
         Vec3f vec(rng.uniform(limit[0], limit[1]), rng.uniform(limit[2], limit[3]),
-                rng.uniform(limit[4], limit[5]));
+                  rng.uniform(limit[4], limit[5]));
         float l = sqrt(vec.dot(vec));
         // Normalizes it to have a magnitude of r
         vec /= l / r;

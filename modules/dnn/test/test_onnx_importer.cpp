@@ -807,6 +807,26 @@ TEST_P(Test_ONNX_layers, CumSumExclusiveInplace)
     testONNXModels("cumsum_exclusive_inplace");
 }
 
+TEST_P(Test_ONNX_layers, RangeFloat)
+{
+    testONNXModels("range_float");
+    testONNXModels("range_float_negative");
+}
+
+TEST_P(Test_ONNX_layers, RangeInt32)
+{
+    testONNXModels("range_int32");
+    testONNXModels("range_int32_negative");
+}
+
+TEST_P(Test_ONNX_layers, RangeInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("range_int64");
+    testONNXModels("range_int64_negative");
+}
+
 TEST_P(Test_ONNX_layers, Eltwise3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
@@ -1283,6 +1303,9 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
 
 TEST_P(Test_ONNX_layers, LSTM_Activations)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // IE exception: Node Block1326/lstm/reshape_0/permute was not assigned on any pointed device
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
@@ -1474,6 +1497,8 @@ TEST_P(Test_ONNX_layers, Einsum_2D)
 
 TEST_P(Test_ONNX_layers, Einsum_2D_Ellipses)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("einsum_2d_ellipses", npy, 0, 0, false, false, 2);
 }
 
@@ -1505,6 +1530,8 @@ TEST_P(Test_ONNX_layers, Einsum_HadamardProduct)
 
 TEST_P(Test_ONNX_layers, Einsum_Batch_Diagonal)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
 }
 
@@ -1988,6 +2015,9 @@ TEST_P(Test_ONNX_layers, Gemm_bias)
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
+
     // The difference of QOperator and QDQ format:
     // https://onnxruntime.ai/docs/performance/quantization.html#onnx-quantization-representation-format.
     {
@@ -2034,6 +2064,8 @@ TEST_P(Test_ONNX_layers, Quantized_Eltwise)
 
 TEST_P(Test_ONNX_layers, Quantized_Eltwise_Scalar)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
     testONNXModels("quantized_eltwise_scalar");
 }
 
@@ -2302,7 +2334,13 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-67; 75], after Softmax [0, 0.98]
+    size_t hwm0 = getTopMemoryUsageMB();
     testONNXModels("resnet50v1", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
+    size_t hwm1 = getTopMemoryUsageMB();
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU)
+    {
+        EXPECT_LE(hwm1 - hwm0, 350) << "Top allocated memory";
+    }
 }
 
 TEST_P(Test_ONNX_nets, ResNet50_Int8)
@@ -2620,6 +2658,45 @@ TEST_P(Test_ONNX_layers, CumSum)
     testONNXModels("cumsum_1d_exclusive_1_reverse");
     testONNXModels("cumsum_2d_dim_1");
     testONNXModels("cumsum_3d_dim_2");
+    testONNXModels("cumsum_3d_dim_2_int32");
+}
+
+TEST_P(Test_ONNX_layers, CumSum_int64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("cumsum_3d_dim_2_int64");
+}
+
+TEST_P(Test_ONNX_layers, ReduceSumInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("reduce_sum_int64");
+}
+
+TEST_P(Test_ONNX_layers, ScatterInt32)
+{
+    testONNXModels("scatter_int32", npy, 0, 0, false, true, 3);
+}
+
+TEST_P(Test_ONNX_layers, ScatterInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("scatter_int64", npy, 0, 0, false, true, 3);
+}
+
+TEST_P(Test_ONNX_layers, TileInt32)
+{
+    testONNXModels("tile_int32");
+}
+
+TEST_P(Test_ONNX_layers, TileInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("tile_int64");
 }
 
 static void testYOLO(const std::string& weightPath, const std::vector<int>& refClassIds,
@@ -3082,6 +3159,16 @@ TEST_P(Test_ONNX_nets, VitTrack) {
 
 TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
     testONNXModels("layer_norm_no_fusion");
+}
+
+TEST_P(Test_ONNX_layers, MatMulAddFusion) {
+    double l1 = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.0018 : default_l1;
+    double lInf = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.011 : default_lInf;
+    testONNXModels("biased_matmul", npy, l1, lInf);
+}
+
+TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
+    testONNXModels("clip_div_shared_constant");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

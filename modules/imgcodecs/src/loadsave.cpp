@@ -457,7 +457,16 @@ imread_( const String& filename, int flags, Mat& mat )
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
     }
 
-    mat.create( size.height, size.width, type );
+    if (mat.empty())
+    {
+        mat.create( size.height, size.width, type );
+    }
+    else
+    {
+        CV_CheckEQ(size, mat.size(), "");
+        CV_CheckTypeEQ(type, mat.type(), "");
+        CV_Assert(mat.isContinuous());
+    }
 
     // read the image data
     bool success = false;
@@ -630,6 +639,16 @@ Mat imread( const String& filename, int flags )
 
     /// return a reference to the data
     return img;
+}
+
+void imread( const String& filename, OutputArray dst, int flags )
+{
+    CV_TRACE_FUNCTION();
+
+    Mat img = dst.getMat();
+
+    /// load the data
+    imread_(filename, flags, img);
 }
 
 /**

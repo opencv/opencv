@@ -53,7 +53,6 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/utils/buffer_area.private.hpp"
 
-#include "opencv2/core/openvx/ovx_defs.hpp"
 #include "resize.hpp"
 
 #include "opencv2/core/softfloat.hpp"

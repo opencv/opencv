@@ -205,4 +205,23 @@ TEST(Highgui_GUI, trackbar)
     EXPECT_NO_THROW(destroyAllWindows());
 }
 
+
+TEST(Highgui_GUI, currentUIFramework)
+{
+    auto framework = currentUIFramework();
+    std::cout << "UI framework: \"" << framework << "\"" << std::endl;
+#if (!defined(ENABLE_PLUGINS) \
+        && !defined HAVE_GTK \
+        && !defined HAVE_QT \
+        && !defined HAVE_WIN32UI \
+        && !defined HAVE_COCOA \
+        && !defined HAVE_WAYLAND \
+    )
+    EXPECT_TRUE(framework.empty());
+#elif !defined(ENABLE_PLUGINS)
+    EXPECT_GT(framework.size(), 0);  // builtin backends
+#endif
+}
+
+
 }} // namespace

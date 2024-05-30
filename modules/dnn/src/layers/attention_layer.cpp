@@ -63,10 +63,11 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
-        CV_CheckEQ(inputs.size(), static_cast<size_t>(3), "DNN/Attention: three inputs are required");
+        int num_inputs = inputs.size() + blobs.size();
+        CV_CheckEQ(num_inputs, 3, "DNN/Attention: three inputs are required");
         const auto &input_shape = inputs[0];
-        const auto &weight_shape = inputs[1];
-        const auto &bias_shape = inputs[2];
+        const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
+        const auto &bias_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
 
         CV_CheckEQ(input_shape.size(), static_cast<size_t>(3), "DNN/Attention: invalid input dimension");
         CV_CheckEQ(weight_shape.size(), static_cast<size_t>(2), "DNN/Attention: invalid weight dimension");
@@ -109,10 +110,20 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         seq_len = static_cast<size_t>(input_shape[1]);
         input_hidden_size = static_cast<size_t>(input_shape[2]);
 
-        const auto weight_shape = shape(inputs[1]);
+        const auto &weight = blobs.empty() ? inputs[1] : blobs.front();
+        const auto weight_shape = shape(weight);
         hidden_size = weight_shape[1];
         qkv_hidden_sizes[2] = hidden_size - qkv_hidden_sizes[0] - qkv_hidden_sizes[1];
         qkv_head_sizes[2] = static_cast<size_t>(qkv_hidden_sizes[2] / num_heads);
+
+        if (!blobs.empty()) {
+            const auto *weight_data = weight.ptr<const float>();
+            packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data,                                             hidden_size, packed_weight_q, opt);
+            packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0],                       hidden_size, packed_weight_k, opt);
+            packWeight(num_heads, qkv_head_sizes[2], input_hidden_size, weight_data + qkv_hidden_sizes[0] + qkv_hidden_sizes[1], hidden_size, packed_weight_v, opt);
+
+            is_prepacked = true;
+        }
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
@@ -132,8 +143,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
         // prepack weights
         if (!is_prepacked) {
-            // prepack
-            const auto &weight = inputs[1];
+            const auto &weight = blobs.empty() ? inputs[1] : blobs.front();
             const auto *weight_data = weight.ptr<const float>();
             packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data,                                             hidden_size, packed_weight_q, opt);
             packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0],                       hidden_size, packed_weight_k, opt);
@@ -153,7 +163,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         float *QKV[3] = {Q, K, V}; // Q, K, V: [B, N, S, H]
         {
             const auto &input = inputs[0];
-            const auto &bias = inputs[2];
+            const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
             const auto *input_data = input.ptr<const float>();
             const auto *bias_data = bias.ptr<const float>();
 
