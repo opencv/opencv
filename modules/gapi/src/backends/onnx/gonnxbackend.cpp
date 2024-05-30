@@ -187,11 +187,11 @@ static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
         }
         options[key] = value;
      };
-     checkAndAddOption("device_type", ov_ep.device_type.c_str());
-     checkAndAddOption("cache_dir", ov_ep.cache_dir.c_str());
-     checkAndAddOption("num_of_threads", ov_ep.num_of_threads);
-     checkAndAddOption("enable_opencl_throttling", ov_ep.enable_opencl_throttling);
-     checkAndAddOption("enable_dynamic_shapes", ov_ep.enable_dynamic_shapes);
+     checkAndAddOption("device_type", ov_ep.device_type);
+     checkAndAddOption("cache_dir", ov_ep.cache_dir);
+     checkAndAddOption("num_of_threads", std::to_string(ov_ep.num_of_threads));
+     checkAndAddOption("enable_opencl_throttling", std::to_string(ov_ep.enable_opencl_throttling));
+     checkAndAddOption("enable_dynamic_shapes", std::to_string(ov_ep.enable_dynamic_shapes));
      options["context"] = nullptr;
      try {
         session_options->AppendExecutionProvider("OpenVINO", options);
