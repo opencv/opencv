@@ -123,7 +123,7 @@ def main():
         recInput = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if not args.rgb else frame.copy()
         contours = []
 
-        for i, (quadrangle, probability) in enumerate(zip(detResults[0], detResults[1])):
+        for i, (quadrangle, _) in enumerate(zip(detResults[0], detResults[1])):
             if isinstance(quadrangle, np.ndarray):
                 quadrangle = np.array(quadrangle).astype(np.float32)
 

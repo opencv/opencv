@@ -279,7 +279,6 @@ DB:
   rgb: false
   sample: "text_detection"
 
-
 East:
   load_info:
     url: "https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1"
