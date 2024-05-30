@@ -250,7 +250,7 @@ fcnresnet101:
   height: 500
   rgb: false
   sample: "segmentation"
-  
+
 u2netp:
   load_info:
     url: "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx"
