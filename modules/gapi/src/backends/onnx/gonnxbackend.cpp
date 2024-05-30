@@ -178,12 +178,20 @@ static void addTensorRTExecutionProvider(Ort::SessionOptions *session_options,
 
 static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
                                          const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
-     std::unordered_map<std::string, std::string> options{};
-     options["device_type"] = ov_ep.device_type.c_str();
-     options["cache_dir"] = ov_ep.cache_dir.c_str();
-     options["num_of_threads"] = ov_ep.num_of_threads;
-     options["enable_opencl_throttling"] = ov_ep.enable_opencl_throttling;
-     options["enable_dynamic_shapes"] = ov_ep.enable_dynamic_shapes;
+     std::unordered_map<std::string, std::string> options = ov_ep.ParamsMap;
+    
+     auto checkAndAddOption = [&options](const std::string& key, const std::string& value) {
+        if (value.empty()) return;
+        if (options.find(key) != options.end()) {
+            throw std::runtime_error("Collision detected: Option '" + key + "' is already set in ParamsMap");
+        }
+        options[key] = value;
+     };
+     checkAndAddOption("device_type", ov_ep.device_type.c_str());
+     checkAndAddOption("cache_dir", ov_ep.cache_dir.c_str());
+     checkAndAddOption("num_of_threads", ov_ep.num_of_threads);
+     checkAndAddOption("enable_opencl_throttling", ov_ep.enable_opencl_throttling);
+     checkAndAddOption("enable_dynamic_shapes", ov_ep.enable_dynamic_shapes);
      options["context"] = nullptr;
      try {
         session_options->AppendExecutionProvider("OpenVINO", options);
