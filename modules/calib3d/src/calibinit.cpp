@@ -484,13 +484,13 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     const bool is_plain = (flags & CALIB_CB_PLAIN) != 0;
 
     if (is_plain && flags & CALIB_CB_ADAPTIVE_THRESH)
-        CV_Error(Error::StsOutOfRange, "CALIB_CB_PLAIN defined CALIB_CB_ADAPTIVE_THRESH ignored");
+        fprintf( stderr, "CALIB_CB_PLAIN defined CALIB_CB_ADAPTIVE_THRESH ignored");
   
     if (is_plain && flags & CALIB_CB_FAST_CHECK)
-      CV_Error(Error::StsOutOfRange, "CALIB_CB_PLAIN defined CALIB_CB_FAST_CHECK ignored");
+      fprintf( stderr, "CALIB_CB_PLAIN defined CALIB_CB_FAST_CHECK ignored");
 
     if (is_plain && flags & CALIB_CB_NORMALIZE_IMAGE)
-      CV_Error(Error::StsOutOfRange, "CALIB_CB_PLAIN defined CALIB_CB_NORMALIZE_IMAGE ignored");
+      fprintf( stderr, "CALIB_CB_PLAIN defined CALIB_CB_NORMALIZE_IMAGE ignored");
 
     int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Mat img = image_.getMat();
