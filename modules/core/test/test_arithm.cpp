@@ -216,6 +216,30 @@ struct MulOp : public BaseElemWiseOp
     }
 };
 
+struct MulSOp : public BaseElemWiseOp
+{
+    MulSOp() : BaseElemWiseOp(1, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    void getValueRange(int depth, double& minval, double& maxval)
+    {
+        minval = depth < CV_32S ? cvtest::getMinVal(depth) : depth == CV_32S ? -1000000 : -1000.;
+        maxval = depth < CV_32S ? cvtest::getMaxVal(depth) : depth == CV_32S ? 1000000 : 1000.;
+        minval = std::max(minval, -30000.);
+        maxval = std::min(maxval, 30000.);
+    }
+    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        cv::multiply(src[0], alpha, dst);
+    }
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        cvtest::multiply(src[0], Mat(), dst, alpha);
+    }
+    double getMaxErr(int depth)
+    {
+        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
+    }
+};
+
 struct DivOp : public BaseElemWiseOp
 {
     DivOp() : BaseElemWiseOp(2, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
@@ -1613,31 +1637,103 @@ INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWise
 INSTANTIATE_TEST_CASE_P(Core_reduceArgMinMax, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new reduceArgMinMaxOp)));
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new CartToPolarToCartOp)));
 
+// Mixed Type Arithmetic Operations
 
-typedef std::tuple<int, std::tuple<int, int>> SomeType;
-class ArithmExtendTest : public ::testing::TestWithParam<SomeType>
-{
-public:
-    enum {ADD = 0, SUB = 1, MUL = 2, DIV = 3};
-};
+typedef std::tuple<ElemWiseOpPtr, std::tuple<int, int>> SomeType;
+class ArithmExtendTest : public ::testing::TestWithParam<SomeType> {};
 
 TEST_P(ArithmExtendTest, accuracy)
 {
     auto p = GetParam();
-    int op = std::get<0>(p);
-    int srcType = std::get<0>(std::get<1>(p));
-    int dstType = std::get<1>(std::get<1>(p));
+    ElemWiseOpPtr op = std::get<0>(p);
+    int srcDepth = std::get<0>(std::get<1>(p));
+    int dstDepth = std::get<1>(std::get<1>(p));
 
-    //TODO: test itself
+    int testIdx = 0;
+    RNG rng((uint64)ARITHM_RNG_SEED);
+    for( testIdx = 0; testIdx < ARITHM_NTESTS; testIdx++ )
+    {
+        vector<int> size;
+        op->getRandomSize(rng, size);
+        bool haveMask = ((op->flags & BaseElemWiseOp::SUPPORT_MASK) != 0) && rng.uniform(0, 4) == 0;
+
+        double minval=0, maxval=0;
+        op->getValueRange(srcDepth, minval, maxval);
+        int i, ninputs = op->ninputs;
+        vector<Mat> src(ninputs);
+        for( i = 0; i < ninputs; i++ )
+            src[i] = cvtest::randomMat(rng, size, srcDepth, minval, maxval, true);
+        Mat dst0, dst, mask;
+        if( haveMask )
+        {
+            bool multiChannelMask = false;
+            int masktype = CV_8UC1;
+            mask = cvtest::randomMat(rng, size, masktype, 0, 2, true);
+        }
+
+        if(haveMask || ninputs == 0)
+        {
+            dst0 = cvtest::randomMat(rng, size, dstDepth, minval, maxval, false);
+            dst = cvtest::randomMat(rng, size, dstDepth, minval, maxval, true);
+            cvtest::copy(dst, dst0);
+        }
+        op->generateScalars(dstDepth, rng);
+
+        op->refop(src, dst0, mask);
+        op->op(src, dst, mask);
+
+        double maxErr = op->getMaxErr(dstDepth);
+        ASSERT_PRED_FORMAT2(cvtest::MatComparator(maxErr, op->context), dst0, dst) << "\nsrc[0] ~ " <<
+            cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << "\ntestCase #" << testIdx << "\n";
+    }
 }
 
-INSTANTIATE_TEST_CASE_P(Core_AddExtend, ArithmExtendTest, ::testing::Combine(
-                        ::testing::Values(ArithmExtendTest::ADD),
-                        ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
-                                          std::tuple<int, int>{CV_8S, CV_16S},
-                                          std::tuple<int, int>{CV_8U, CV_32F})
-                        ));
 
+INSTANTIATE_TEST_CASE_P(Core_AddExtend, ArithmExtendTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddOp)),
+                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
+                                                             std::tuple<int, int>{CV_8S, CV_16S},
+                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_AddScalarExtend, ArithmExtendTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddSOp)),
+                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
+                                                             std::tuple<int, int>{CV_8S, CV_16S},
+                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_AddWeightedExtend, ArithmExtendTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddWeightedOp)),
+                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
+                                                             std::tuple<int, int>{CV_8S, CV_16S},
+                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_SubExtend, ArithmExtendTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new SubOp)),
+                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
+                                                             std::tuple<int, int>{CV_8S, CV_16S},
+                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_SubScalarMinusArgExtend, ArithmExtendTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new SubRSOp)),
+                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
+                                                             std::tuple<int, int>{CV_8S, CV_16S},
+                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_MulExtend, ArithmExtendTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new MulOp)),
+                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
+                                                             std::tuple<int, int>{CV_8S, CV_16S},
+                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_MulScalarExtend, ArithmExtendTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new MulSOp)),
+                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
+                                                             std::tuple<int, int>{CV_8S, CV_16S},
+                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_DivExtend, ArithmExtendTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new DivOp)),
+                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
+                                                             std::tuple<int, int>{CV_8S, CV_16S},
+                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_RecipExtend, ArithmExtendTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new RecipOp)),
+                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
+                                                             std::tuple<int, int>{CV_8S, CV_16S},
+                                                             std::tuple<int, int>{CV_8U, CV_32F})));
 
 TEST(Core_ArithmMask, uninitialized)
 {
