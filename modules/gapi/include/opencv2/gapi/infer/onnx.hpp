@@ -248,8 +248,8 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     size_t num_of_threads = 0;
     bool enable_opencl_throttling = false;
     bool enable_dynamic_shapes = false;
-    bool is_initialized_from_map = false;
     std::unordered_map<std::string, std::string> params_map;
+    bool is_initialized_from_map = false;
 };
 
 /**
