@@ -250,6 +250,13 @@ struct DivOp : public BaseElemWiseOp
     {
         int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
         cv::divide(src[0], src[1], dst, alpha, dtype);
+        if (flags & MIXED_TYPE)
+        {
+            // div by zero result is implementation-defined
+            // since it may involve conversions to/from intermediate format
+            Mat zeroMask = src[1] == 0;
+            dst.setTo(0, zeroMask);
+        }
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
@@ -269,6 +276,13 @@ struct RecipOp : public BaseElemWiseOp
     {
         int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
         cv::divide(alpha, src[0], dst, dtype);
+        if (flags & MIXED_TYPE)
+        {
+            // div by zero result is implementation-defined
+            // since it may involve conversions to/from intermediate format
+            Mat zeroMask = src[0] == 0;
+            dst.setTo(0, zeroMask);
+        }
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
