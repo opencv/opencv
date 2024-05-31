@@ -1695,49 +1695,56 @@ TEST_P(ArithmExtendTest, accuracy)
 
 INSTANTIATE_TEST_CASE_P(Core_AddExtend, ArithmExtendTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddOp)),
-                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
-                                                             std::tuple<int, int>{CV_8S, CV_16S},
-                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
 INSTANTIATE_TEST_CASE_P(Core_AddScalarExtend, ArithmExtendTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddSOp)),
-                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
-                                                             std::tuple<int, int>{CV_8S, CV_16S},
-                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
 INSTANTIATE_TEST_CASE_P(Core_AddWeightedExtend, ArithmExtendTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddWeightedOp)),
-                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
-                                                             std::tuple<int, int>{CV_8S, CV_16S},
-                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
 INSTANTIATE_TEST_CASE_P(Core_SubExtend, ArithmExtendTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new SubOp)),
-                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
-                                                             std::tuple<int, int>{CV_8S, CV_16S},
-                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
 INSTANTIATE_TEST_CASE_P(Core_SubScalarMinusArgExtend, ArithmExtendTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new SubRSOp)),
-                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
-                                                             std::tuple<int, int>{CV_8S, CV_16S},
-                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
 INSTANTIATE_TEST_CASE_P(Core_MulExtend, ArithmExtendTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new MulOp)),
-                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
-                                                             std::tuple<int, int>{CV_8S, CV_16S},
-                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
 INSTANTIATE_TEST_CASE_P(Core_MulScalarExtend, ArithmExtendTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new MulSOp)),
-                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
-                                                             std::tuple<int, int>{CV_8S, CV_16S},
-                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
 INSTANTIATE_TEST_CASE_P(Core_DivExtend, ArithmExtendTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new DivOp)),
-                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
-                                                             std::tuple<int, int>{CV_8S, CV_16S},
-                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
 INSTANTIATE_TEST_CASE_P(Core_RecipExtend, ArithmExtendTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new RecipOp)),
-                                           ::testing::Values(std::tuple<int, int>{CV_8U, CV_16U},
-                                                             std::tuple<int, int>{CV_8S, CV_16S},
-                                                             std::tuple<int, int>{CV_8U, CV_32F})));
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
 
 TEST(Core_ArithmMask, uninitialized)
 {
