@@ -1643,7 +1643,7 @@ INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(
 
 // Mixed Type Arithmetic Operations
 
-typedef std::tuple<ElemWiseOpPtr, std::tuple<int, int>> SomeType;
+typedef std::tuple<ElemWiseOpPtr, std::tuple<cvtest::MatDepth, cvtest::MatDepth>> SomeType;
 class ArithmExtendTest : public ::testing::TestWithParam<SomeType> {};
 
 TEST_P(ArithmExtendTest, accuracy)
@@ -1671,17 +1671,13 @@ TEST_P(ArithmExtendTest, accuracy)
         Mat dst0, dst, mask;
         if( haveMask )
         {
-            bool multiChannelMask = false;
-            int masktype = CV_8UC1;
-            mask = cvtest::randomMat(rng, size, masktype, 0, 2, true);
+            mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, true);
         }
 
-        if(haveMask || ninputs == 0)
-        {
-            dst0 = cvtest::randomMat(rng, size, dstDepth, minval, maxval, false);
-            dst = cvtest::randomMat(rng, size, dstDepth, minval, maxval, true);
-            cvtest::copy(dst, dst0);
-        }
+        dst0 = cvtest::randomMat(rng, size, dstDepth, minval, maxval, false);
+        dst = cvtest::randomMat(rng, size, dstDepth, minval, maxval, true);
+        cvtest::copy(dst, dst0);
+
         op->generateScalars(dstDepth, rng);
 
         op->refop(src, dst0, mask);
