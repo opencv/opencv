@@ -178,14 +178,13 @@ static void addTensorRTExecutionProvider(Ort::SessionOptions *session_options,
 
 static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
                                          const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
-
      std::unordered_map<std::string, std::string> options;
 
      try {
         // If the OpenVINO Execution Provider object was initialized with a parameters map,
-        // those parameters are used directly. 
-        // Otherwise, the function constructs the options map from the individual member 
-        // variables of the OpenVINO object. 
+        // those parameters are used directly.
+        // Otherwise, the function constructs the options map from the individual member
+        // variables of the OpenVINO object.
         if (ov_ep.params_map.empty()) {
             options = {
                 {"device_type", ov_ep.device_type},

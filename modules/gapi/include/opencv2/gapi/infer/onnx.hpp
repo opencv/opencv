@@ -186,9 +186,9 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     GAPI_WRAP
     OpenVINO& cfgCacheDir(const std::string &dir) {
         if (!params_map.empty()) {
-            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if" 
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
                                                    "created from the parameters map."));
-        } 
+        }
         cache_dir = dir;
         return *this;
     }
@@ -204,9 +204,9 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     GAPI_WRAP
     OpenVINO& cfgNumThreads(size_t nthreads) {
         if (!params_map.empty()) {
-            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if" 
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
                                                    "created from the parameters map."));
-        } 
+        }
         num_of_threads = nthreads;
         return *this;
     }
@@ -221,9 +221,9 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     GAPI_WRAP
     OpenVINO& cfgEnableOpenCLThrottling() {
         if (!params_map.empty()) {
-            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if" 
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
                                                    "created from the parameters map."));
-        } 
+        }
         enable_opencl_throttling = true;
         return *this;
     }
@@ -241,9 +241,9 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     GAPI_WRAP
     OpenVINO& cfgEnableDynamicShapes() {
         if (!params_map.empty()) {
-            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if" 
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
                                                    "created from the parameters map."));
-        } 
+        }
         enable_dynamic_shapes = true;
         return *this;
     }
