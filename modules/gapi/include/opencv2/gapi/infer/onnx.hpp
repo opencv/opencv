@@ -11,6 +11,7 @@
 #include <string>
 #include <array>
 #include <tuple> // tuple, tuple_size
+#include <map>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>
@@ -170,7 +171,7 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     * @param params A map of parameter names and their corresponding string values.
     */
     GAPI_WRAP
-    explicit OpenVINO(const std::unordered_map<std::string, std::string>& params)
+    explicit OpenVINO(const std::map<std::string, std::string>& params)
         : params_map(params), is_initialized_from_map(true) {
     }
 
@@ -248,7 +249,7 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     size_t num_of_threads = 0;
     bool enable_opencl_throttling = false;
     bool enable_dynamic_shapes = false;
-    std::unordered_map<std::string, std::string> params_map;
+    std::map<std::string, std::string> params_map;
     bool is_initialized_from_map = false;
 };
 

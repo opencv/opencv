@@ -178,15 +178,21 @@ static void addTensorRTExecutionProvider(Ort::SessionOptions *session_options,
 
 static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
                                          const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
-     std::unordered_map<std::string, std::string> options = ov_ep.params_map.empty() ? std::unordered_map<std::string, std::string>{
-            {"device_type", ov_ep.device_type},
-            {"cache_dir", ov_ep.cache_dir},
-            {"num_of_threads", ov_ep.num_of_threads > 0 ? std::to_string(ov_ep.num_of_threads) : ""},
-            {"enable_opencl_throttling", ov_ep.enable_opencl_throttling ? "True" : "False"},
-            {"enable_dynamic_shapes", ov_ep.enable_dynamic_shapes ? "True" : "False"},
-        } : ov_ep.params_map;
-    
+
+     std::unordered_map<std::string, std::string> options;
+     
      try {
+        if (ov_ep.params_map.empty()) {
+            options = {
+                {"device_type", ov_ep.device_type},
+                {"cache_dir", ov_ep.cache_dir},
+                {"num_of_threads", ov_ep.num_of_threads > 0 ? std::to_string(ov_ep.num_of_threads) : ""},
+                {"enable_opencl_throttling", ov_ep.enable_opencl_throttling ? "True" : "False"},
+                {"enable_dynamic_shapes", ov_ep.enable_dynamic_shapes ? "True" : "False"},
+            };
+        } else {
+            options.insert(ov_ep.params_map.begin(), ov_ep.params_map.end());
+        }
         session_options->AppendExecutionProvider("OpenVINO", options);
      } catch (const std::exception &e) {
          std::stringstream ss;
