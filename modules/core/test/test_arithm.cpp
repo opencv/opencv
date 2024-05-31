@@ -148,10 +148,8 @@ struct AddSOp : public BaseAddOp
     AddSOp() : BaseAddOp(1, FIX_ALPHA+FIX_BETA+SUPPORT_MASK, 1, 0, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
-        if( mask.empty() )
-            cv::add(src[0], gamma, dst);
-        else
-            cv::add(src[0], gamma, dst, mask);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::add(src[0], gamma, dst, mask, dtype);
     }
 };
 
@@ -188,7 +186,8 @@ struct AddWeightedOp : public BaseAddOp
     AddWeightedOp() : BaseAddOp(2, REAL_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cv::addWeighted(src[0], alpha, src[1], beta, gamma[0], dst);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::addWeighted(src[0], alpha, src[1], beta, gamma[0], dst, dtype);
     }
     double getMaxErr(int depth)
     {
