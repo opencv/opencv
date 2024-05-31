@@ -248,10 +248,10 @@ static void pass_cleanup(vector<ApproxItem>& ares, size_t start_idx)
 
                     if (s1 > s2 || (s1 == s2 && ares[prev].k <= ares[i].k))
                         /* remove second */
-                        clear_until(ares, prev, get_next_idx(ares, i));
+                        ares[i].removed = true;
                     else
                         /* remove first */
-                        clear_until(ares, get_next_idx(ares, first), i);
+                        ares[prev].removed = true;
                 }
                 else
                 {
