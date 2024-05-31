@@ -1681,9 +1681,9 @@ TEST_P(ArithmExtendTest, accuracy)
 
         double minval=0, maxval=0;
         op->getValueRange(srcDepth, minval, maxval);
-        int i, ninputs = op->ninputs;
+        int ninputs = op->ninputs;
         vector<Mat> src(ninputs);
-        for( i = 0; i < ninputs; i++ )
+        for(int i = 0; i < ninputs; i++ )
             src[i] = cvtest::randomMat(rng, size, srcDepth, minval, maxval, true);
         Mat dst0, dst, mask;
         if( haveMask )
