@@ -135,10 +135,8 @@ struct SubOp : public BaseAddOp
     SubOp() : BaseAddOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK, 1, -1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
-        if( mask.empty() )
-            cv::subtract(src[0], src[1], dst);
-        else
-            cv::subtract(src[0], src[1], dst, mask);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::subtract(src[0], src[1], dst, mask, dtype);
     }
 };
 
@@ -159,10 +157,8 @@ struct SubRSOp : public BaseAddOp
     SubRSOp() : BaseAddOp(1, FIX_ALPHA+FIX_BETA+SUPPORT_MASK, -1, 0, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
-        if( mask.empty() )
-            cv::subtract(gamma, src[0], dst);
-        else
-            cv::subtract(gamma, src[0], dst, mask);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::subtract(gamma, src[0], dst, mask, dtype);
     }
 };
 
