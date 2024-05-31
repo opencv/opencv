@@ -79,6 +79,8 @@ private:
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId, int dtype);
     int addReshapeLayer(const std::vector<int>& shape, int axis, int num_axes,
                         const std::string& name, const std::pair<int, int>& inpId, int dtype);
+    int addFlattenLayer(int axis, int end_axis, const std::string& name, const std::pair<int, int>& inpId, int dtype);
+
     inline bool isInt8(const Operator& op);
     inline void getQuantParams(const Operator& op, float& inpScale, int& inpZero, float& outScale, int& outZero);
 };
@@ -769,10 +771,10 @@ void TFLiteImporter::parseTranspose(const Operator& op, const std::string& opcod
 void TFLiteImporter::parseGlobalPooling(const Operator& op, const std::string& opcode, LayerParams& layerParams)
 {
     layerParams.type = "Pooling";
-    if(!opcode.compare("MEAN")) {
+    if(opcode == "MEAN") {
         layerParams.set("pool", "ave");
     }
-    else if (!opcode.compare("REDUCE_MAX")) {
+    else if (opcode == "REDUCE_MAX") {
         layerParams.set("pool", "max");
     }
     else {
@@ -783,24 +785,18 @@ void TFLiteImporter::parseGlobalPooling(const Operator& op, const std::string& o
     bool keep_dims = options->keep_dims();
 
     if (!keep_dims) {
-        const std::string name = layerParams.name;
-        layerParams.name = layerParams.name + "_pool2d";
+        const auto name = layerParams.name;
+        layerParams.name += "/global_pooling";
         addLayer(layerParams, op);
-        LayerParams permFL;
-        permFL.set("axis", 1);
-        permFL.set("end_axis", 3);
-        int FLId = dstNet.addLayerToPrev(name, "Flatten", CV_32F, permFL);
 
-        // Override layer ids mapping
-        int i = 0;
-        for (int idx : *op.outputs()) {
-            layerIds[idx] = std::make_pair(FLId, i++);
-        }
+        int out = op.outputs()->Get(0);
+        auto outId = layerIds[out];
+        int flattenId = addFlattenLayer(1, -1, name, outId, isInt8(op) ? CV_8S : CV_32F);
+        layerIds[out] = std::make_pair(flattenId, 0);
     }
     else {
         addLayer(layerParams, op);
     }
-
 }
 
 int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::string& permName,
@@ -821,6 +817,16 @@ int TFLiteImporter::addReshapeLayer(const std::vector<int>& shape, int axis, int
     lp.set("dim", DictValue::arrayInt<const int*>(shape.data(), shape.size()));
     lp.set("num_axes", num_axes);
     int id = dstNet.addLayer(name, "Reshape", dtype, lp);
+    dstNet.connect(inpId.first, inpId.second, id, 0);
+    return id;
+}
+
+int TFLiteImporter::addFlattenLayer(int axis, int end_axis, const std::string& name, const std::pair<int, int>& inpId, int dtype)
+{
+    LayerParams lp;
+    lp.set("axis", axis);
+    lp.set("end_axis", end_axis);
+    int id = dstNet.addLayer(name, "Flatten", dtype, lp);
     dstNet.connect(inpId.first, inpId.second, id, 0);
     return id;
 }
