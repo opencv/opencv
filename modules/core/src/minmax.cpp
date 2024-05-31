@@ -1515,7 +1515,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         int srcHalStep, srcHalWidth, srcHalHeight;
         if (src.dims <= 2)
         {
-            srcHalStep   = src.step;
+            srcHalStep   = (int)src.step;
             srcHalWidth  = src.cols * cn;
             srcHalHeight = src.rows;
         }

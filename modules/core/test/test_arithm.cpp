@@ -2894,8 +2894,8 @@ TEST(Core_MinMaxIdx, non_continuous)
     int minIdx[CV_MAX_DIM] = { 0 }, maxIdx[CV_MAX_DIM] = { 0 };
     cv::minMaxIdx(small, &minVal, &maxVal, minIdx, maxIdx);
 
-    ASSERT_FLOAT_EQ(minVal, 25);
-    ASSERT_FLOAT_EQ(maxVal, 100);
+    ASSERT_DOUBLE_EQ(minVal, 25);
+    ASSERT_DOUBLE_EQ(maxVal, 100);
 
     ASSERT_EQ(minIdx[0], 8);
     ASSERT_EQ(minIdx[1], 9);
