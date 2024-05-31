@@ -252,7 +252,6 @@ void LinkRunner::establishLinks(int& prev_point,
             lower_run = rns[rns[lower_run].next].next;
             continue;
         }
-        rns[rns[lower_run].next] = rns[rns[lower_run].next];
         rns[lower_run].link = rns[lower_run].next;
 
         // First point of contour
@@ -269,7 +268,6 @@ void LinkRunner::establishLinks(int& prev_point,
             upper_run = rns[rns[upper_run].next].next;
             continue;
         }
-        rns[rns[upper_run].next] = rns[rns[upper_run].next];
         rns[rns[upper_run].next].link = upper_run;
         upper_run = rns[rns[upper_run].next].next;
     }
