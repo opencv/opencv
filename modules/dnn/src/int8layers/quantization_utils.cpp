@@ -114,7 +114,7 @@ static void broadcastStandardMatrix(Mat& mat, const std::vector<T>& data, const 
     mat.create(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
 
     copyVecToMat(mat,data);
-    
+
     broadcast1D2TargetMat(mat, targetShape, axis);
 }
 
