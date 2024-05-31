@@ -3312,10 +3312,20 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     CV_Assert(node_proto.input_size() == 2 || node_proto.input_size() == 3);
     layerParams.type = (node_proto.op_type() == "QuantizeLinear") ? "Quantize" : "Dequantize";
     int axis = layerParams.get<int>("axis", 1);
-    int block_size = layerParams.get<int>("block_size", 0);
     // For QuantizeLinear and DequantizeLinear, the scale and zeropoint can be a Scalar (per-tensor quantized)
     // or 1-D tensor (per-channel quantized).
     bool is1D = false;
+
+    if (layerParams.type == "Quantize")
+        layerParams.set("depth", CV_8S);
+    else // Dequantize
+        layerParams.set("depth", CV_32F);
+
+    // If scale is not defined as a constant blob, it is considered an external input.
+    if(constBlobs.find(node_proto.input(1)) == constBlobs.end()){
+        addLayer(layerParams, node_proto);
+        return;
+    }
 
     Mat scaleMat = getBlob(node_proto, 1);
     if(scaleMat.total() > 1) is1D = true;
@@ -3344,7 +3354,6 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
 
         layerParams.set("is1D", true);
         layerParams.set("axis", axis);
-        layerParams.set("block_size", block_size);
         layerParams.set("scales", DictValue::arrayReal(scales.data(), scales.size()));
         layerParams.set("zeropoints", DictValue::arrayInt(zeropoints.data(), zeropoints.size()));
     }
@@ -3355,15 +3364,9 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
         float scale = getScalarFromMat<float>(scaleMat);
 
         layerParams.set("is1D", false);
-        layerParams.set("block_size", block_size);
         layerParams.set("scales", scale);
         layerParams.set("zeropoints", zeropoint);
     }
-
-    if (layerParams.type == "Quantize")
-        layerParams.set("depth", CV_8S);
-    else // Dequantize
-        layerParams.set("depth", CV_32F);
 
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end()) // Variable input.
     {

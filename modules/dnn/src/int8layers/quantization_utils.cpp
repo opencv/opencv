@@ -76,12 +76,21 @@ static void block_repeat(InputArray src, int axis, int repetitions, OutputArray 
 }
 
 template <typename T>
-static void copyDataToMat(Mat& mat, const std::vector<T>& data){
+static void copyVecToMat(Mat& mat, const std::vector<T>& data){
     float * matPtr = mat.ptr<float>(0);
     const int len = data.size();
 
     for (int i = 0; i < len; i++)
         matPtr[i] = (float) data[i];
+}
+
+template <typename T>
+static void copyMatToVec(const Mat& mat, std::vector<T>& data){
+    const float * matPtr = mat.ptr<float>(0);
+    const int len = mat.total();
+    data.clear();
+    for (int i = 0; i < len; i++)
+        data.push_back(matPtr[i]);
 }
 
 template <typename T>
@@ -92,7 +101,8 @@ static void broadcastBlockedMatrix(Mat& mat, const std::vector<T>& data, const M
     subTargetShape[axis] = static_cast<int>(subTargetShape[axis] / block_size);
     Mat tmpMat(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
 
-    copyDataToMat(tmpMat,data);
+    copyVecToMat(tmpMat,data);
+
     block_repeat(tmpMat, axis, block_size, mat);
 }
 
@@ -103,7 +113,8 @@ static void broadcastStandardMatrix(Mat& mat, const std::vector<T>& data, const 
     subTargetShape[axis] = data.size();
     mat.create(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
 
-    copyDataToMat(mat,data);
+    copyVecToMat(mat,data);
+    
     broadcast1D2TargetMat(mat, targetShape, axis);
 }
 
@@ -139,9 +150,6 @@ public:
         is1D = params.get<bool>("is1D", false);
         axis = params.get<int>("axis", 1);
         block_size = params.get<int>("block_size", 0);
-
-        // not is1D -> block_size = 0
-        CV_Assert(is1D || block_size == 0);
 
         if (!is1D)
         {
@@ -179,7 +187,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1);
+        CV_Assert(inputs.size() == 1 || inputs.size() == 3);
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return false;
     }
@@ -217,6 +225,37 @@ public:
         return true;
     }
 #endif
+    void processInputOutput(std::vector<Mat>& inputs, std::vector<Mat>& outputs)
+    {
+        CV_Assert(inputs.size() == 1 || inputs.size() == 2 || inputs.size() == 3);
+
+        // Scale and zeropoint taken as input
+        if (inputs.size() > 1)
+        {
+            scalesMat = inputs[1];
+
+            copyMatToVec(scalesMat, scales);
+
+            if(scalesMat.total() > 1) is1D = true;
+
+
+            if (inputs.size() > 2)
+            {
+                zeropointsMat = inputs[2];
+                CV_Assert(zeropointsMat.total() ==  scalesMat.total());
+                copyMatToVec(zeropointsMat, zeropoints);
+            }
+
+            if (is1D)
+            {
+                MatShape inputShape = shape(inputs[0]);
+                broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis, block_size);
+            }
+        }
+
+        if (outputs[0].depth() != CV_8S)
+            outputs[0].convertTo(outputs[0], CV_8S);
+    }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
@@ -230,8 +269,10 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        if (outputs[0].depth() != CV_8S)
-            outputs[0].convertTo(outputs[0], CV_8S);
+        processInputOutput(inputs, outputs);
+
+        // not is1D -> block_size = 0
+        CV_Assert(is1D || block_size == 0);
 
         if (is1D)
         {
@@ -271,9 +312,6 @@ public:
         axis = params.get<int>("axis", 1);
         block_size = params.get<int>("block_size", 0);
 
-        // not is1D -> block_size = 0
-        CV_Assert(is1D || block_size == 0);
-
         if (!is1D)
         {
             scales.push_back(params.get<float>("scales", 1.0f));
@@ -310,7 +348,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1);
+        CV_Assert(inputs.size() == 1 || inputs.size() == 3);
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return false;
     }
@@ -345,6 +383,37 @@ public:
     }
 #endif
 
+    void processInputOutput(std::vector<Mat>& inputs, std::vector<Mat>& outputs)
+    {
+        CV_Assert(inputs.size() == 1 || inputs.size() == 2 || inputs.size() == 3);
+
+        // Scale and zeropoint taken as input
+        if (inputs.size() > 1)
+        {
+            scalesMat = inputs[1];
+
+            copyMatToVec(scalesMat, scales);
+
+            if(scalesMat.total() > 1) is1D = true;
+
+            if (inputs.size() > 2)
+            {
+                zeropointsMat = inputs[2];
+                CV_Assert(zeropointsMat.total() ==  scalesMat.total());
+                copyMatToVec(zeropointsMat, zeropoints);
+            }
+
+            if (is1D)
+            {
+                MatShape inputShape = shape(inputs[0]);
+                broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis, block_size);
+            }
+        }
+
+        if (outputs[0].depth() != CV_32F)
+            outputs[0].convertTo(outputs[0], CV_32F);
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -357,8 +426,10 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        if (outputs[0].depth() != CV_32F)
-            outputs[0].convertTo(outputs[0], CV_32F);
+        processInputOutput(inputs, outputs);
+
+        // not is1D -> block_size = 0
+        CV_Assert(is1D || block_size == 0);
 
         if (is1D)
         {
