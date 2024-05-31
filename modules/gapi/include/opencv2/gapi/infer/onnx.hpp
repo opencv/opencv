@@ -11,6 +11,7 @@
 #include <string>
 #include <array>
 #include <tuple> // tuple, tuple_size
+#include <map>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>
@@ -156,11 +157,22 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
 
     Constructs OpenVINO parameters based on device type information.
 
-    @param dev_type Target device type to use. ("CPU_FP32", "GPU_FP16", etc)
+    @param dev_type Target device type to use. ("CPU", "GPU", "GPU.0" etc)
     */
     GAPI_WRAP
     explicit OpenVINO(const std::string &dev_type)
         : device_type(dev_type) {
+    }
+
+    /** @brief Class constructor.
+
+    Constructs OpenVINO parameters based on map of options passed.
+
+    * @param params A map of parameter names and their corresponding string values.
+    */
+    GAPI_WRAP
+    explicit OpenVINO(const std::map<std::string, std::string>& params)
+        : params_map(params) {
     }
 
     /** @brief Specifies OpenVINO Execution Provider cache dir.
@@ -173,6 +185,10 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgCacheDir(const std::string &dir) {
+        if (!params_map.empty()) {
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
+                                                   "created from the parameters map."));
+        }
         cache_dir = dir;
         return *this;
     }
@@ -187,6 +203,10 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgNumThreads(size_t nthreads) {
+        if (!params_map.empty()) {
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
+                                                   "created from the parameters map."));
+        }
         num_of_threads = nthreads;
         return *this;
     }
@@ -200,6 +220,10 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgEnableOpenCLThrottling() {
+        if (!params_map.empty()) {
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
+                                                   "created from the parameters map."));
+        }
         enable_opencl_throttling = true;
         return *this;
     }
@@ -216,6 +240,10 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgEnableDynamicShapes() {
+        if (!params_map.empty()) {
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
+                                                   "created from the parameters map."));
+        }
         enable_dynamic_shapes = true;
         return *this;
     }
@@ -225,6 +253,7 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     size_t num_of_threads = 0;
     bool enable_opencl_throttling = false;
     bool enable_dynamic_shapes = false;
+    std::map<std::string, std::string> params_map;
 };
 
 /**
