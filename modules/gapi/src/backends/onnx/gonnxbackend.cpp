@@ -180,8 +180,12 @@ static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
                                          const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
 
      std::unordered_map<std::string, std::string> options;
-     
+
      try {
+        // If the OpenVINO Execution Provider object was initialized with a parameters map,
+        // those parameters are used directly. 
+        // Otherwise, the function constructs the options map from the individual member 
+        // variables of the OpenVINO object. 
         if (ov_ep.params_map.empty()) {
             options = {
                 {"device_type", ov_ep.device_type},
@@ -193,6 +197,7 @@ static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
         } else {
             options.insert(ov_ep.params_map.begin(), ov_ep.params_map.end());
         }
+        //  AppendExecutionProvider function expects a const std::unordered_map as its second argument
         session_options->AppendExecutionProvider("OpenVINO", options);
      } catch (const std::exception &e) {
          std::stringstream ss;
