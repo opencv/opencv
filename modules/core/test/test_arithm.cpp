@@ -203,11 +203,13 @@ struct MulOp : public BaseElemWiseOp
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cv::multiply(src[0], src[1], dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::multiply(src[0], src[1], dst, alpha, dtype);
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cvtest::multiply(src[0], src[1], dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cvtest::multiply(src[0], src[1], dst, alpha, dtype);
     }
     double getMaxErr(int depth)
     {
@@ -227,11 +229,13 @@ struct MulSOp : public BaseElemWiseOp
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cv::multiply(src[0], alpha, dst);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::multiply(src[0], alpha, dst, /* scale */ 1.0, dtype);
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cvtest::multiply(src[0], Mat(), dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cvtest::multiply(Mat(), src[0], dst, alpha, dtype);
     }
     double getMaxErr(int depth)
     {
@@ -244,11 +248,13 @@ struct DivOp : public BaseElemWiseOp
     DivOp() : BaseElemWiseOp(2, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cv::divide(src[0], src[1], dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::divide(src[0], src[1], dst, alpha, dtype);
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cvtest::divide(src[0], src[1], dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cvtest::divide(src[0], src[1], dst, alpha, dtype);
     }
     double getMaxErr(int depth)
     {
@@ -261,11 +267,13 @@ struct RecipOp : public BaseElemWiseOp
     RecipOp() : BaseElemWiseOp(1, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cv::divide(alpha, src[0], dst);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::divide(alpha, src[0], dst, dtype);
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cvtest::divide(Mat(), src[0], dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cvtest::divide(Mat(), src[0], dst, alpha, dtype);
     }
     double getMaxErr(int depth)
     {
