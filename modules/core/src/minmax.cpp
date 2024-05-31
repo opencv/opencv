@@ -1527,8 +1527,8 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         }
 
         size_t minOffset = SIZE_MAX, maxOffset = SIZE_MAX;
-        int res = cv_hal_minMaxIdx(src.data, srcHalStep, srcHalWidth, srcHalHeight, src.depth(),
-                                   minVal, maxVal, &minOffset, &maxOffset, mask.data);
+        int res = cv_hal_minMaxOffset(src.data, srcHalStep, srcHalWidth, srcHalHeight, src.depth(),
+                                      minVal, maxVal, &minOffset, &maxOffset, mask.data);
 
         if (res == CV_HAL_ERROR_OK)
         {
@@ -1541,7 +1541,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
         {
             CV_Error_(cv::Error::StsInternal,
-            ("HAL implementation minMaxIdx ==> " CVAUX_STR(cv_hal_minMaxIdx) " returned %d (0x%08x)", res, res));
+            ("HAL implementation minMaxOffset ==> " CVAUX_STR(cv_hal_minMaxOffset) " returned %d (0x%08x)", res, res));
         }
     }
 
