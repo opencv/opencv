@@ -160,11 +160,7 @@ PARAM_TEST_CASE(WarpTest_cols4_Base, MatType, Interpolation, bool, bool)
     }
 };
 
-/////warpAffine
-
-typedef WarpTestBase WarpAffine;
-
-/////warpAffine
+//// warpAffine
 
 typedef WarpTestBase WarpAffine;
 
@@ -338,6 +334,116 @@ OCL_TEST(Resize, overflow_21198)
     UMat dst_u;
     cv::resize(src_u, dst_u, Size(1024, 1024), 0, 0, INTER_LINEAR);
     EXPECT_LE(cv::norm(dst_u, dst, NORM_INF), 1.0f);
+}
+
+PARAM_TEST_CASE(ResizeOnnx, MatType, double, double, int, bool, int)
+{
+    int type, interpolation;
+    int widthMultiple;
+    double fx, fy;
+    bool useRoi;
+    Mat middle;
+
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
+
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        fx = GET_PARAM(1);
+        fy = GET_PARAM(2);
+        interpolation = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+        widthMultiple = GET_PARAM(5);
+    }
+
+    void random_roi()
+    {
+        CV_Assert(fx > 0 && fy > 0);
+
+        Size srcRoiSize = randomSize(10, MAX_VALUE), dstRoiSize;
+        // Make sure the width is a multiple of the requested value, and no more
+        srcRoiSize.width += widthMultiple - 1 - (srcRoiSize.width - 1) % widthMultiple;
+        dstRoiSize.width = cvRound(srcRoiSize.width * fx);
+        dstRoiSize.height = cvRound(srcRoiSize.height * fy);
+
+        if (dstRoiSize.empty())
+        {
+            random_roi();
+            return;
+        }
+
+        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, srcRoiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
+
+#if 0
+        // if nearest test failed, maybe the fma issue, try open this #if
+        // set pixels' value to their coordinate
+        if ((interpolation & INTER_SAMPLER_MASK) == INTER_NEAREST)
+        {
+            int channel = CV_MAT_CN(type);
+            middle.create(src.rows, src.cols, CV_16SC(channel));
+            for (int h = 0; h < src.rows; ++h)
+            {
+                for (int c = 0; c < channel; c += 2)
+                {
+                    // even x; odd y
+                    short* S = middle.ptr<short>(h) + c;
+                    for (int w = 0; w < src.cols; ++w, S += channel)
+                        S[0] = static_cast<short>(w);
+                }
+                for (int c = 1; c < channel; c += 2)
+                {
+                    // even x; odd y
+                    short* S = middle.ptr<short>(h) + c;
+                    for (int w = 0; w < src.cols; ++w, S += channel)
+                        S[0] = static_cast<short>(h);
+                }
+            }
+            middle.convertTo(src, type);
+            src_roi = src(Rect(srcBorder.lef, srcBorder.top, srcRoiSize.width, srcRoiSize.height));
+        }
+#endif
+        Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, dstRoiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
+    }
+};
+
+OCL_TEST_P(ResizeOnnx, Mat)
+{
+    Size whole;
+    Point offset;
+    Mat host, host_roi;
+    int cn = CV_MAT_CN(type);
+    int depth = CV_MAT_DEPTH(type);
+    double eps = depth <= CV_32S ? integerEps : 5e-2;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::resizeOnnx(src_roi, dst_roi,
+            dst_roi.size(), Point2d(fx, fy), interpolation));
+        OCL_ON(cv::resizeOnnx(usrc_roi, udst_roi,
+            dst_roi.size(), Point2d(fx, fy), interpolation));
+
+        dst_roi.locateROI(whole, offset);
+        udst.copyTo(host);
+        host_roi = host(Rect(offset, dst_roi.size()));
+        if (cn <= 4 && depth != CV_8S && depth != CV_32S)
+            OCL_EXPECT_MAT_N_DIFF(dst, eps);
+        else
+        {
+            // more strict than OCL_EXPECT_MAT_N_DIFF
+            double dif = cv::norm(dst_roi, host_roi, NORM_INF);
+            EXPECT_LE(dif, eps)
+                << "Size: " << src_roi.size()
+                << ", NormInf: " << dif << std::endl;
+        }
+    }
 }
 
 
@@ -580,6 +686,44 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResizeArea, Resize, Combine(
                             Values(0.7, 0.4, 0.5),
                             Values(0.3, 0.6, 0.5),
                             Values((Interpolation)INTER_AREA),
+                            Bool(),
+                            Values(1, 16)));
+
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpAlias, ResizeOnnx, Combine(
+                            Values(
+                                CV_8UC1, CV_8SC2, CV_8UC(5), CV_8SC(7),
+                                CV_16UC1, CV_16SC3, CV_16UC(9), CV_16SC(10),
+                                CV_32FC1, CV_32FC4, CV_32FC(11)),
+                            Values(0.5, 0.31, 1.4),
+                            Values(0.5, 0.73, 3.7),
+                            Values((int)(INTER_LINEAR), (int)(INTER_CUBIC)),
+                            Bool(),
+                            Values(1, 16)));
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpAntiAlias, ResizeOnnx, Combine(
+                            Values(
+                                CV_8UC1, CV_8SC2, CV_8UC(5), CV_8SC(7),
+                                CV_16UC1, CV_16SC3, CV_16UC(9), CV_16SC(10),
+                                CV_32FC1, CV_32FC4, CV_32FC(11)),
+                            Values(0.5, 0.27, 2.6),
+                            Values(0.5, 0.71, 4.1),
+                            Values(
+                                (int)(INTER_ANTIALIAS | INTER_LINEAR),
+                                (int)(INTER_ANTIALIAS | INTER_CUBIC )),
+                            Bool(),
+                            Values(1, 16)));
+
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpNearest, ResizeOnnx, Combine(
+                            Values(
+                                CV_8UC1, CV_8SC2, CV_8UC4, CV_8SC(7),
+                                CV_16UC1, CV_16SC3, CV_16UC(9), CV_32SC(10),
+                                CV_32FC1, CV_32FC4, CV_32FC(11)),
+                            Values(0.5, 0.27, 2.6),
+                            Values(0.5, 0.71, 4.1),
+                            Values(
+                                (int)(INTER_NEAREST | INTER_NEAREST_PREFER_FLOOR),
+                                (int)(INTER_NEAREST | INTER_NEAREST_PREFER_CEIL),
+                                (int)(INTER_NEAREST | INTER_NEAREST_CEIL),
+                                (int)(INTER_NEAREST | INTER_NEAREST_FLOOR)),
                             Bool(),
                             Values(1, 16)));
 
