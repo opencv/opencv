@@ -698,10 +698,10 @@ PERF_TEST_P_(ArithmMixedTest, reciprocal)
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , ArithmMixedTest,
     testing::Combine(
         testing::Values(szVGA, sz720p, sz1080p),
-        testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
-                        std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
-                        std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
-                        std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F}
+        testing::Values(std::tuple<perf::MatType, perf::MatType>{CV_8U, CV_16U},
+                        std::tuple<perf::MatType, perf::MatType>{CV_8S, CV_16S},
+                        std::tuple<perf::MatType, perf::MatType>{CV_8U, CV_32F},
+                        std::tuple<perf::MatType, perf::MatType>{CV_8S, CV_32F}
             )
     )
 );
