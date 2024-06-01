@@ -172,7 +172,7 @@ struct ScaleAddOp : public BaseAddOp
     }
     double getMaxErr(int depth)
     {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-4 : 1e-12;
+        return depth < CV_32F ? 1 : depth == CV_32F ? 3e-5 : 1e-12;
     }
 };
 
@@ -184,10 +184,6 @@ struct AddWeightedOp : public BaseAddOp
     {
         int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
         cv::addWeighted(src[0], alpha, src[1], beta, gamma[0], dst, dtype);
-    }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-10;
     }
 };
 
@@ -211,10 +207,6 @@ struct MulOp : public BaseElemWiseOp
         int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
         cvtest::multiply(src[0], src[1], dst, alpha, dtype);
     }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
-    }
 };
 
 struct MulSOp : public BaseElemWiseOp
@@ -236,10 +228,6 @@ struct MulSOp : public BaseElemWiseOp
     {
         int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
         cvtest::multiply(Mat(), src[0], dst, alpha, dtype);
-    }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
     }
 };
 
@@ -263,10 +251,6 @@ struct DivOp : public BaseElemWiseOp
         int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
         cvtest::divide(src[0], src[1], dst, alpha, dtype);
     }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
-    }
 };
 
 struct RecipOp : public BaseElemWiseOp
@@ -288,10 +272,6 @@ struct RecipOp : public BaseElemWiseOp
     {
         int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
         cvtest::divide(Mat(), src[0], dst, alpha, dtype);
-    }
-    double getMaxErr(int depth)
-    {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
     }
 };
 
