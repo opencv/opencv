@@ -1510,25 +1510,27 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     Mat src = _src.getMat(), mask = _mask.getMat();
 
     // HAL call
-    if (src.dims <= 2 || src.isContinuous())
+    if (src.dims <= 2 || (src.isContinuous() && (mask.empty() || mask.isContinuous())))
     {
-        int srcHalStep, srcHalWidth, srcHalHeight;
+        int srcHalStep, srcHalWidth, srcHalHeight, maskHalStep;
         if (src.dims <= 2)
         {
             srcHalStep   = (int)src.step;
             srcHalWidth  = src.cols * cn;
             srcHalHeight = src.rows;
+            maskHalStep  = (int)mask.step;
         }
         else // pass it like one continuous row
         {
             srcHalStep   = 0;
             srcHalWidth  = (int)src.total()*cn;
             srcHalHeight = 1;
+            maskHalStep  = 0;
         }
 
         size_t minOffset = SIZE_MAX, maxOffset = SIZE_MAX;
         int res = cv_hal_minMaxOffset(src.data, srcHalStep, srcHalWidth, srcHalHeight, src.depth(),
-                                      minVal, maxVal, &minOffset, &maxOffset, mask.data);
+                                      minVal, maxVal, &minOffset, &maxOffset, mask.data, maskHalStep);
 
         if (res == CV_HAL_ERROR_OK)
         {

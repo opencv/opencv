@@ -886,9 +886,11 @@ inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, i
    @param minOffset Pointer to the returned minimum element offset in the array
    @param maxOffset Pointer to the returned maximum element offset in the array
    @param mask_data Mask data pointer
+   @param mask_step Mask step between rows
 */
 inline int hal_ni_minMaxOffset(const uchar* src_data, size_t src_step, int width, int height, int depth, double* minVal, double* maxVal,
-                               size_t* minOffset, size_t* maxOffset, const uchar* mask_data) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                               size_t* minOffset, size_t* maxOffset, const uchar* mask_data, size_t mask_step)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_minMaxIdx hal_ni_minMaxIdx
