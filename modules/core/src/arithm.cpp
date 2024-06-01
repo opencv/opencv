@@ -1081,7 +1081,7 @@ static ExtendedTypeFunc getMulExtFunc(int src1Type, int src2Type, int dstType)
     {
         return mul8u16uWrapper;
     }
-    else if (src1Type == CV_8U && src2Type == CV_8S && dstType == CV_16S)
+    else if (src1Type == CV_8S && src2Type == CV_8S && dstType == CV_16S)
     {
         return mul8s16sWrapper;
     }
