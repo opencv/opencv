@@ -470,14 +470,14 @@ PERF_TEST_P_(ArithmMixedTest, add)
     declare.in(a, b, WARMUP_RNG).out(c);
     declare.time(50);
 
-    if (CV_MAT_DEPTH(srcType) == CV_32S)
+    if (CV_MAT_DEPTH(dstType) == CV_32S)
     {
         //see ticket 1529: add can be without saturation on 32S
         a /= 2;
         b /= 2;
     }
 
-    TEST_CYCLE() cv::add(a, b, c);
+    TEST_CYCLE() cv::add(a, b, c, /* mask */ noArray(), dstType);
 
     SANITY_CHECK_NOTHING();
 }
@@ -489,20 +489,20 @@ PERF_TEST_P_(ArithmMixedTest, addScalarDouble)
     int srcType = get<0>(get<1>(p));
     int dstType = get<1>(get<1>(p));
 
-    cv::Mat a = Mat(sz, type);
+    cv::Mat a = Mat(sz, srcType);
     cv::Scalar b;
-    cv::Mat c = Mat(sz, type);
+    cv::Mat c = Mat(sz, dstType);
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
-    if (CV_MAT_DEPTH(type) == CV_32S)
+    if (CV_MAT_DEPTH(dstType) == CV_32S)
     {
         //see ticket 1529: add can be without saturation on 32S
         a /= 2;
         b /= 2;
     }
 
-    TEST_CYCLE() cv::add(a, b, c);
+    TEST_CYCLE() cv::add(a, b, c, /* mask */ noArray(), dstType);
 
     SANITY_CHECK_NOTHING();
 }
@@ -514,24 +514,24 @@ PERF_TEST_P_(ArithmMixedTest, addScalarSameType)
     int srcType = get<0>(get<1>(p));
     int dstType = get<1>(get<1>(p));
 
-    cv::Mat a = Mat(sz, type);
+    cv::Mat a = Mat(sz, srcType);
     cv::Scalar b;
-    cv::Mat c = Mat(sz, type);
+    cv::Mat c = Mat(sz, dstType);
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
-    if (CV_MAT_DEPTH(type) < CV_32S)
+    if (CV_MAT_DEPTH(dstType) < CV_32S)
     {
         b = Scalar(1, 0, 3, 4); // don't pass non-integer values for 8U/8S/16U/16S processing
     }
-    else if (CV_MAT_DEPTH(type) == CV_32S)
+    else if (CV_MAT_DEPTH(dstType) == CV_32S)
     {
         //see ticket 1529: add can be without saturation on 32S
         a /= 2;
         b = Scalar(1, 0, -3, 4); // don't pass non-integer values for 32S processing
     }
 
-    TEST_CYCLE() cv::add(a, b, c, noArray(), type);
+    TEST_CYCLE() cv::add(a, b, c, /* mask */ noArray(), dstType);
 
     SANITY_CHECK_NOTHING();
 }
@@ -543,20 +543,20 @@ PERF_TEST_P_(ArithmMixedTest, subtract)
     int srcType = get<0>(get<1>(p));
     int dstType = get<1>(get<1>(p));
 
-    cv::Mat a = Mat(sz, type);
-    cv::Mat b = Mat(sz, type);
-    cv::Mat c = Mat(sz, type);
+    cv::Mat a = Mat(sz, srcType);
+    cv::Mat b = Mat(sz, srcType);
+    cv::Mat c = Mat(sz, dstType);
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
-    if (CV_MAT_DEPTH(type) == CV_32S)
+    if (CV_MAT_DEPTH(dstType) == CV_32S)
     {
         //see ticket 1529: subtract can be without saturation on 32S
         a /= 2;
         b /= 2;
     }
 
-    TEST_CYCLE() cv::subtract(a, b, c);
+    TEST_CYCLE() cv::subtract(a, b, c, /* mask */ noArray(), dstType);
 
     SANITY_CHECK_NOTHING();
 }
@@ -568,20 +568,20 @@ PERF_TEST_P_(ArithmMixedTest, subtractScalarDouble)
     int srcType = get<0>(get<1>(p));
     int dstType = get<1>(get<1>(p));
 
-    cv::Mat a = Mat(sz, type);
+    cv::Mat a = Mat(sz, srcType);
     cv::Scalar b;
-    cv::Mat c = Mat(sz, type);
+    cv::Mat c = Mat(sz, dstType);
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
-    if (CV_MAT_DEPTH(type) == CV_32S)
+    if (CV_MAT_DEPTH(dstType) == CV_32S)
     {
         //see ticket 1529: subtract can be without saturation on 32S
         a /= 2;
         b /= 2;
     }
 
-    TEST_CYCLE() cv::subtract(a, b, c);
+    TEST_CYCLE() cv::subtract(a, b, c, /* mask */ noArray(), dstType);
 
     SANITY_CHECK_NOTHING();
 }
@@ -593,24 +593,24 @@ PERF_TEST_P_(ArithmMixedTest, subtractScalarSameType)
     int srcType = get<0>(get<1>(p));
     int dstType = get<1>(get<1>(p));
 
-    cv::Mat a = Mat(sz, type);
+    cv::Mat a = Mat(sz, srcType);
     cv::Scalar b;
-    cv::Mat c = Mat(sz, type);
+    cv::Mat c = Mat(sz, dstType);
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
-    if (CV_MAT_DEPTH(type) < CV_32S)
+    if (CV_MAT_DEPTH(dstType) < CV_32S)
     {
         b = Scalar(1, 0, 3, 4); // don't pass non-integer values for 8U/8S/16U/16S processing
     }
-    else if (CV_MAT_DEPTH(type) == CV_32S)
+    else if (CV_MAT_DEPTH(dstType) == CV_32S)
     {
         //see ticket 1529: subtract can be without saturation on 32S
         a /= 2;
         b = Scalar(1, 0, -3, 4); // don't pass non-integer values for 32S processing
     }
 
-    TEST_CYCLE() cv::subtract(a, b, c, noArray(), type);
+    TEST_CYCLE() cv::subtract(a, b, c, /* mask */ noArray(), dstType);
 
     SANITY_CHECK_NOTHING();
 }
@@ -622,17 +622,17 @@ PERF_TEST_P_(ArithmMixedTest, multiply)
     int srcType = get<0>(get<1>(p));
     int dstType = get<1>(get<1>(p));
 
-    cv::Mat a(sz, type), b(sz, type), c(sz, type);
+    cv::Mat a(sz, srcType), b(sz, srcType), c(sz, dstType);
 
     declare.in(a, b, WARMUP_RNG).out(c);
-    if (CV_MAT_DEPTH(type) == CV_32S)
+    if (CV_MAT_DEPTH(dstType) == CV_32S)
     {
         //According to docs, saturation is not applied when result is 32bit integer
         a /= (2 << 16);
         b /= (2 << 16);
     }
 
-    TEST_CYCLE() cv::multiply(a, b, c);
+    TEST_CYCLE() cv::multiply(a, b, c, /* scale */ 1.0, dstType);
 
     SANITY_CHECK_NOTHING();
 }
@@ -644,19 +644,19 @@ PERF_TEST_P_(ArithmMixedTest, multiplyScale)
     int srcType = get<0>(get<1>(p));
     int dstType = get<1>(get<1>(p));
 
-    cv::Mat a(sz, type), b(sz, type), c(sz, type);
+    cv::Mat a(sz, srcType), b(sz, srcType), c(sz, dstType);
     double scale = 0.5;
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
-    if (CV_MAT_DEPTH(type) == CV_32S)
+    if (CV_MAT_DEPTH(dstType) == CV_32S)
     {
         //According to docs, saturation is not applied when result is 32bit integer
         a /= (2 << 16);
         b /= (2 << 16);
     }
 
-    TEST_CYCLE() cv::multiply(a, b, c, scale);
+    TEST_CYCLE() cv::multiply(a, b, c, scale, dstType);
 
     SANITY_CHECK_NOTHING();
 }
@@ -668,12 +668,12 @@ PERF_TEST_P_(ArithmMixedTest, divide)
     int srcType = get<0>(get<1>(p));
     int dstType = get<1>(get<1>(p));
 
-    cv::Mat a(sz, type), b(sz, type), c(sz, type);
+    cv::Mat a(sz, srcType), b(sz, srcType), c(sz, dstType);
     double scale = 0.5;
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
-    TEST_CYCLE() cv::divide(a, b, c, scale);
+    TEST_CYCLE() cv::divide(a, b, c, scale, dstType);
 
     SANITY_CHECK_NOTHING();
 }
@@ -685,12 +685,12 @@ PERF_TEST_P_(ArithmMixedTest, reciprocal)
     int srcType = get<0>(get<1>(p));
     int dstType = get<1>(get<1>(p));
 
-    cv::Mat b(sz, type), c(sz, type);
+    cv::Mat b(sz, srcType), c(sz, dstType);
     double scale = 0.5;
 
     declare.in(b, WARMUP_RNG).out(c);
 
-    TEST_CYCLE() cv::divide(scale, b, c);
+    TEST_CYCLE() cv::divide(scale, b, c, dstType);
 
     SANITY_CHECK_NOTHING();
 }
