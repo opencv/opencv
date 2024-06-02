@@ -300,8 +300,8 @@ Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool 
 Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double maxVal, bool useRoi);
 void add(const Mat& a, double alpha, const Mat& b, double beta,
                       Scalar gamma, Mat& c, int ctype, bool calcAbs=false);
-void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1);
-void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1);
+void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1, int ctype=-1);
+void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1, int ctype=-1);
 
 void convert(const Mat& src, cv::OutputArray dst, int dtype, double alpha=1, double beta=0);
 void copy(const Mat& src, Mat& dst, const Mat& mask=Mat(), bool invertMask=false);
