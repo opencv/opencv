@@ -21317,6 +21317,13 @@ AssertionResult CmpHelperEQFailure(const char* lhs_expression,
                    false);
 }
 
+// See https://github.com/opencv/opencv/issues/25674
+// Disable optimization for workaround to mis-branch for GCC14.
+#if defined(__GNUC__) && (__GNUC__ == 14)
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+#endif
+
 // The helper function for {ASSERT|EXPECT}_EQ.
 template <typename T1, typename T2>
 AssertionResult CmpHelperEQ(const char* lhs_expression,
@@ -21329,6 +21336,10 @@ AssertionResult CmpHelperEQ(const char* lhs_expression,
 
   return CmpHelperEQFailure(lhs_expression, rhs_expression, lhs, rhs);
 }
+
+#if defined(__GNUC__) && (__GNUC__ == 14)
+#pragma GCC pop_options
+#endif
 
 // With this overloaded version, we allow anonymous enums to be used
 // in {ASSERT|EXPECT}_EQ when compiled with gcc 4, as anonymous enums
