@@ -177,5 +177,35 @@ def bootstrap():
 
     if DEBUG: print('OpenCV loader: DONE')
 
+    # Th code for the COLOR_GRAY2HSV function
+    import cv2
+
+    def cvtColor(src, code, dst=None, dstCn=None):
+        """
+        Converts an image from one color space to another.
+
+        Args:
+            src: The input image.
+            code: The color space conversion code. See the description below.
+            dst: The output image of the same size and depth as src.
+            dstCn: The number of channels in the destination image; if the parameter is 0,
+                the number of channels is derived automatically from src and code.
+
+        Returns:
+            The converted image.
+        """
+        if code == cv2.COLOR_GRAY2HSV:
+            # Convert grayscale to BGR
+            gray_bgr = cv2.cvtColor(src, cv2.COLOR_GRAY2BGR)
+            
+            # Convert BGR to HSV
+            hsv_img = cv2.cvtColor(gray_bgr, cv2.COLOR_BGR2HSV)
+            
+            return hsv_img
+        else:
+            return cv2.cvtColor(src, code, dst, dstCn)
+
+    # Adding the COLOR_GRAY2HSV constant
+    COLOR_GRAY2HSV = 66
 
 bootstrap()
