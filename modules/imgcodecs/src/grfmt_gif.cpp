@@ -59,7 +59,7 @@ bool GifDecoder::readHeader() {
             globalColorTableSize = 1 << ((flags & 0x07) + 1);
             globalColorTable.allocate(3 * globalColorTableSize);
             for (int i = 0; i < 3 * globalColorTableSize; i++) {
-                globalColorTable[i] = m_strm.getByte();
+                globalColorTable[i] = (uchar)m_strm.getByte();
             }
         }
     } catch (...) {
@@ -114,14 +114,14 @@ bool GifDecoder::readData(Mat &img) {
     }
     lastImage.release();
 
-    uchar flags = m_strm.getByte();
+    auto flags = (uchar)m_strm.getByte();
     localColorTableSize = 0;
     if (flags & 0x80) {
         // local color table
         localColorTableSize = 1 << ((flags & 0x07) + 1);
         localColorTable.allocate(3 * localColorTableSize);
         for (int i = 0; i < 3 * localColorTableSize; i++) {
-            localColorTable[i] = m_strm.getByte();
+            localColorTable[i] = (uchar)m_strm.getByte();
         }
     }
 
@@ -194,27 +194,27 @@ bool GifDecoder::nextPage() {
 void GifDecoder::readExtensions() {
     uchar len;
     while (!(m_strm.getByte() ^ 0x21)) {
-        uchar extensionType = m_strm.getByte();
+        uchar extensionType = (uchar)m_strm.getByte();
 
         // read graphic control extension
         // the scope of this extension is the next image or plain text extension
         hasTransparentColor = false;
         opMode = GifOpMode::GRFMT_GIF_Nothing;// default value
         if (!(extensionType ^ 0xF9)) {
-            len = m_strm.getByte();
+            len = (uchar)m_strm.getByte();
             CV_Assert(len == 4);
-            uchar flags = m_strm.getByte();
+            uchar flags = (uchar)m_strm.getByte();
             m_strm.getWord(); // delay time, not used
             opMode = (GifOpMode)((flags & 0x1C) >> 2);
             hasTransparentColor = flags & 0x01;
-            transparentColor = m_strm.getByte();
+            transparentColor = (uchar)m_strm.getByte();
         }
 
         // skip other kinds of extensions
-        len = m_strm.getByte();
+        len = (uchar)m_strm.getByte();
         while (len) {
             m_strm.skip(len);
-            len = m_strm.getByte();
+            len = (uchar)m_strm.getByte();
         }
     }
     // roll back to the block identifier
@@ -267,7 +267,7 @@ bool GifDecoder::lzwDecode() {
     int idx = 0;
     int leftBits = 0;
     uint32_t src = 0;
-    uchar blockLen = m_strm.getByte();
+    uchar blockLen = (uchar)m_strm.getByte();
     while (blockLen) {
         if (leftBits < lzwCodeSize) {
             src |= m_strm.getByte() << leftBits;
@@ -307,7 +307,7 @@ bool GifDecoder::lzwDecode() {
             // output code
             // 1. renew the lzw extra table
             if (code < colorTableSize) {
-                lzwExtraTable[lzwTableSize].suffix = code;
+                lzwExtraTable[lzwTableSize].suffix = (uchar)code;
                 lzwTableSize ++;
                 lzwExtraTable[lzwTableSize].prefix = new uchar[1];
                 * lzwExtraTable[lzwTableSize].prefix = (uchar)code;
@@ -328,7 +328,7 @@ bool GifDecoder::lzwDecode() {
 
             // 2. output to the code stream
             if (code < colorTableSize) {
-                currentImageCodeStream[idx++] = code;
+                currentImageCodeStream[idx++] = (uchar)code;
             } else {
                 for (int i = 0; i < lzwExtraTable[code].length - 1; i++) {
                     currentImageCodeStream[idx++] = lzwExtraTable[code].prefix[i];
@@ -351,7 +351,7 @@ bool GifDecoder::lzwDecode() {
 
         // go to the next block if this block has been read out
         if (!blockLen) {
-            blockLen = m_strm.getByte();
+            blockLen = (uchar)m_strm.getByte();
         }
     }
 

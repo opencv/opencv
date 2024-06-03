@@ -10,7 +10,8 @@ TEST(Imgcodecs_Gif, read_gif_multi)
     const string filename = root+"gifsuite/imreadmulti_test/output.gif";
     vector<cv::Mat> img_vec;
     cv::imreadmulti(filename, img_vec,0,161);
-    EXPECT_EQ(img_vec.size(),161);
+    const long unsigned int expected_size=161;
+    EXPECT_EQ(img_vec.size(), expected_size);
     for(long unsigned int i=0;i<img_vec.size();i++){
         cv::Mat img=img_vec[i];
         const string xml_filename=root+"gifsuite/imreadmulti_test/frame"+std::to_string(i+1)+".xml";
