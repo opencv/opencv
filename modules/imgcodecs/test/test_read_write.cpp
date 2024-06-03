@@ -52,6 +52,25 @@ TEST_P(Imgcodecs_Resize, imread_reduce_flags)
     }
 }
 
+TEST_P(Imgcodecs_Resize, imread_with_output_array)
+{
+    const string file_name = findDataFile(get<0>(get<0>(GetParam())));
+    const Size imageSize = get<1>(get<0>(GetParam()));
+
+    const int imread_flag = get<0>(get<1>(GetParam()));
+    const int scale = get<1>(get<1>(GetParam()));
+
+    const int cols = imageSize.width / scale;
+    const int rows = imageSize.height / scale;
+    {
+        Mat img;
+        imread(file_name, img, imread_flag);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cols, img.cols);
+        EXPECT_EQ(rows, img.rows);
+    }
+}
+
 //==================================================================================================
 
 TEST_P(Imgcodecs_Resize, imdecode_reduce_flags)
@@ -220,34 +239,6 @@ void test_image_io(const Mat& image, const std::string& fname, const std::string
 #endif
 }
 
-TEST_P(Imgcodecs_Image, read_with_output_array_given)
-{
-    const string ext = this->GetParam();
-    const string fname = cv::tempfile(ext.c_str());
-
-    double psnrThreshold = 100;
-    if (ext == "jpg")
-        psnrThreshold = 32;
-#if defined(HAVE_JASPER)
-    if (ext == "jp2")
-        psnrThreshold = 95;
-#elif defined(HAVE_OPENJPEG)
-    if (ext == "jp2")
-        psnrThreshold = 35;
-#endif
-
-    Mat image = generateTestImageBGR();
-    vector<uchar> buf;
-    ASSERT_NO_THROW(imencode("." + ext, image, buf));
-    ASSERT_NO_THROW(imwrite(fname, image));
-
-    Mat loaded;
-    imread(fname, loaded, IMREAD_COLOR);
-    EXPECT_FALSE(loaded.empty());
-
-    EXPECT_EQ(0, remove(fname.c_str()));
-}
-
 TEST_P(Imgcodecs_Image, read_write_BGR)
 {
     const string ext = this->GetParam();
@@ -264,7 +255,9 @@ TEST_P(Imgcodecs_Image, read_write_BGR)
         psnrThreshold = 35;
 #endif
 
-    Mat image = generateTestImageBGR();   
+    Mat image = generateTestImageBGR();
+    EXPECT_NO_THROW(test_image_io(image, fname, ext, IMREAD_COLOR, psnrThreshold));
+
     EXPECT_EQ(0, remove(fname.c_str()));
 }
 
