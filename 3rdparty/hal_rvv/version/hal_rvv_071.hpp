@@ -18,7 +18,7 @@ static const unsigned char index_array_32 [32]
 static const unsigned char index_array_24 [24]
                         { 2, 1, 0, 5, 4, 3, 8, 7, 6, 11, 10, 9, 14, 13, 12, 17, 16, 15, 20, 19, 18, 23, 22, 21  };
 
-static void vBGRtoBGR(const unsigned char* src, unsigned char * dst, const unsigned char * index, int n, int scn, int dcn, int bi, int vsize_pixels, const int vsize)
+static void vBGRtoBGR(const unsigned char* src, unsigned char * dst, const unsigned char * index, int n, int scn, int dcn, int vsize_pixels, const int vsize)
 {
     vuint8m2_t vec_index = vle8_v_u8m2(index, vsize);
 
@@ -27,16 +27,16 @@ static void vBGRtoBGR(const unsigned char* src, unsigned char * dst, const unsig
     for ( ; i <= n-vsize; i += vsize_pixels, src += vsize, dst += vsize)
     {
         vuint8m2_t vec_src = vle8_v_u8m2(src, vsize);
-        vuint8m2_t vec_dst = bi == 2 ? vrgather_vv_u8m2(vec_src, vec_index, vsize) : vec_src;
+        vuint8m2_t vec_dst = vrgather_vv_u8m2(vec_src, vec_index, vsize);
         vse8_v_u8m2(dst, vec_dst, vsize);
     }
 
     for ( ; i < n; i++, src += scn, dst += dcn )
     {
         unsigned char t0 = src[0], t1 = src[1], t2 = src[2];
-        dst[bi  ] = t0;
-        dst[1]    = t1;
-        dst[bi^2] = t2;
+        dst[2] = t0;
+        dst[1] = t1;
+        dst[0] = t2;
         if(dcn == 4)
         {
             unsigned char d = src[3];
@@ -71,22 +71,25 @@ static int cvtBGRtoBGR(const unsigned char * src_data, size_t src_step, unsigned
     const int blueIdx = swapBlue ? 2 : 0;
     if (scn == dcn)
     {
+        if (!swapBlue)
+        {
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
         const int vsize_pixels = 8;
 
         if (scn == 4)
         {
-            //const unsigned char* index_array = swapBlue ? index_array_32 : index_array_32_no_shuffle;
             for (int i = 0; i < height; i++, src_data += src_step, dst_data += dst_step)
             {
-                vBGRtoBGR(src_data, dst_data, index_array_32, width, scn, dcn, blueIdx, vsize_pixels, 32);
+                vBGRtoBGR(src_data, dst_data, index_array_32, width, scn, dcn, vsize_pixels, 32);
             }
         }
         else
         {
-            //const unsigned char* index_array = swapBlue ? index_array_24 : index_array_24_no_shuffle;
             for (int i = 0; i < height; i++, src_data += src_step, dst_data += dst_step)
             {
-                vBGRtoBGR(src_data, dst_data, index_array_24, width, scn, dcn, blueIdx, vsize_pixels, 24);
+                vBGRtoBGR(src_data, dst_data, index_array_24, width, scn, dcn, vsize_pixels, 24);
             }
         }
     }
