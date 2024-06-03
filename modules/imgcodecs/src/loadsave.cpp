@@ -641,14 +641,14 @@ Mat imread( const String& filename, int flags )
     return img;
 }
 
-void imread( const String& filename, OutputArray dst, int flags )
+bool imread( const String& filename, OutputArray dst, int flags )
 {
     CV_TRACE_FUNCTION();
 
     Mat& img = dst.getMatRef();
 
     /// load the data
-    imread_(filename, flags, img);
+    return imread_(filename, flags, img);
 }
 
 /**
