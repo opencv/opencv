@@ -221,6 +221,26 @@ public:
 
     int all_quads_count;
 
+    struct NeighborsFinder {
+        const float thresh_scale = 1.f;
+        ChessBoardDetector& detector;
+        std::vector<int> neighbors_indices;
+        std::vector<float> neighbors_dists;
+        std::vector<Point2f> all_quads_pts;
+        Ptr<flann::GenericIndex<flann::L2_Simple<float>>> p_all_quads_pts_index;
+
+        NeighborsFinder(ChessBoardDetector& detector);
+
+        bool findCornerNeighbor(
+            const int idx,
+            const cv::Point2f& pt,
+            float& min_dist,
+            const float radius,
+            int& closest_quad_idx,
+            int& closest_corner_idx,
+            cv::Point2f& closest_corner_pt);
+    };
+
     ChessBoardDetector(const Size& pattern_size_) :
         pattern_size(pattern_size_),
         all_quads_count(0)
@@ -471,22 +491,35 @@ static void icvBinarizationHistogramBased(Mat & img)
     }
 }
 
-static bool findCornerNeighbor(
-    ChessBoardQuad* all_quads,
-    const std::vector<Point2f>& all_quads_pts,
-    flann::GenericIndex<flann::L2_Simple<float>>& all_quads_pts_index,
+ChessBoardDetector::NeighborsFinder::NeighborsFinder(ChessBoardDetector& _detector): detector(_detector) {
+    const int all_corners_count = detector.all_quads_count * 4;
+    neighbors_indices.resize(all_corners_count);
+    neighbors_dists.resize(all_corners_count);
+    all_quads_pts.reserve(all_corners_count);
+    for (int idx = 0; idx < detector.all_quads_count; idx++)
+    {
+        const ChessBoardQuad& cur_quad = (const ChessBoardQuad&)detector.all_quads[idx];
+        for (int i = 0; i < 4; i++)
+            all_quads_pts.push_back(cur_quad.corners[i]->pt);
+    }
+    const cvflann::KDTreeSingleIndexParams index_params;
+    p_all_quads_pts_index = makePtr<flann::GenericIndex<flann::L2_Simple<float>>>
+                            (Mat(all_quads_pts).reshape(1, all_corners_count), index_params);
+}
+
+bool ChessBoardDetector::NeighborsFinder::findCornerNeighbor(
     const int idx,
     const cv::Point2f& pt,
     float& min_dist,
     const float radius,
-    std::vector<int>& neighbors_indices,
-    std::vector<float>& neighbors_dists,
-    const float thresh_scale,
     int& closest_quad_idx,
     int& closest_corner_idx,
     cv::Point2f& closest_corner_pt)
 {
-    const ChessBoardQuad& cur_quad = (const ChessBoardQuad&)all_quads[idx];
+    ChessBoardQuad* p_all_quads = detector.all_quads.data();
+    flann::GenericIndex<flann::L2_Simple<float>>& all_quads_pts_index = *p_all_quads_pts_index;
+
+    const ChessBoardQuad& cur_quad = (const ChessBoardQuad&)p_all_quads[idx];
     int closest_neighbor_idx = -1;
     ChessBoardQuad *closest_quad = 0;
 
@@ -502,7 +535,7 @@ static bool findCornerNeighbor(
         if (k == idx)
             continue;
 
-        ChessBoardQuad& q_k = all_quads[k];
+        ChessBoardQuad& q_k = p_all_quads[k];
         const int j = neighbor_idx & 3;
         if (q_k.neighbors[j])
             continue;
@@ -1707,25 +1740,7 @@ finalize:
 
 void ChessBoardDetector::findQuadNeighbors()
 {
-    const float thresh_scale = 1.f;
-
-    const int all_corners_count = all_quads_count * 4;
-
-    std::vector<Point2f> all_quads_pts;
-    all_quads_pts.reserve(all_corners_count);
-    for (int idx = 0; idx < all_quads_count; idx++)
-    {
-        const ChessBoardQuad& cur_quad = (const ChessBoardQuad&)all_quads[idx];
-        for (int i = 0; i < 4; i++)
-            all_quads_pts.push_back(cur_quad.corners[i]->pt);
-    }
-
-    const cvflann::KDTreeSingleIndexParams index_params;
-    flann::GenericIndex<flann::L2_Simple<float>> all_quads_pts_index(Mat(all_quads_pts).reshape(1, all_corners_count), index_params);
-
-    // find quad neighbors
-    std::vector<int> neighbors_indices(all_corners_count);
-    std::vector<float> neighbors_dists(all_corners_count);
+    NeighborsFinder neighborsFinder(*this);
     for (int idx = 0; idx < all_quads_count; idx++)
     {
         ChessBoardQuad& cur_quad = (ChessBoardQuad&)all_quads[idx];
@@ -1741,28 +1756,22 @@ void ChessBoardDetector::findQuadNeighbors()
             if (cur_quad.neighbors[i])
                 continue;
 
-            const cv::Point2f pt = all_quads_pts[(idx << 2) + i];
+            const cv::Point2f pt = neighborsFinder.all_quads_pts[(idx << 2) + i];
 
             float min_dist = FLT_MAX;
 
             int closest_quad_idx = -1;
             int closest_corner_idx = -1;
 
-            float radius = cur_quad.edge_len * thresh_scale + 1;
+            float radius = cur_quad.edge_len * neighborsFinder.thresh_scale + 1;
 
             cv::Point2f closest_corner_pt;
 
-            bool found = findCornerNeighbor(
-                all_quads.data(),
-                all_quads_pts,
-                all_quads_pts_index,
+            bool found = neighborsFinder.findCornerNeighbor(
                 idx,
                 pt,
                 min_dist,
                 radius,
-                neighbors_indices,
-                neighbors_dists,
-                thresh_scale,
                 closest_quad_idx,
                 closest_corner_idx,
                 closest_corner_pt);
@@ -1778,17 +1787,11 @@ void ChessBoardDetector::findQuadNeighbors()
 
             cv::Point2f closest_closest_corner_pt;
 
-            found = findCornerNeighbor(
-                all_quads.data(),
-                all_quads_pts,
-                all_quads_pts_index,
+            found = neighborsFinder.findCornerNeighbor(
                 closest_quad_idx,
                 closest_corner_pt,
                 min_dist,
                 radius,
-                neighbors_indices,
-                neighbors_dists,
-                thresh_scale,
                 closest_closest_quad_idx,
                 closest_closest_corner_idx,
                 closest_closest_corner_pt);
