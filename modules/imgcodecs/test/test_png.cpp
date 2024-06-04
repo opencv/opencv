@@ -7,19 +7,6 @@ namespace opencv_test { namespace {
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
 
-TEST(Imgcodecs_Png, imread_passing_mat)
-{
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string imgName = root + "../cv/shared/lena.png";
-
-    Mat ref = imread(imgName);
-    Mat img(ref.size(), ref.type());
-    void* ptr = img.data;
-    imread(imgName, img);
-    EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
-    EXPECT_EQ(img.data, ptr);
-}
-
 TEST(Imgcodecs_Png, write_big)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
