@@ -761,5 +761,9 @@ namespace cv { namespace highgui_backend {
         return code;
     }
 
+    const std::string FramebufferBackend::getName() const
+    {
+        return "FB";
+    }
 }
 }

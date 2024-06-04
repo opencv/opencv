@@ -122,6 +122,8 @@ public:
 
     virtual int waitKeyEx(int delay /*= 0*/)override;
     virtual int pollKey() override;
+
+    virtual const std::string getName() const override;
 };
 
 }
