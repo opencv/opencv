@@ -765,5 +765,6 @@ namespace cv { namespace highgui_backend {
     {
         return "FB";
     }
+
 }
 }
