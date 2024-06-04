@@ -33,7 +33,7 @@ namespace cv { namespace highgui_backend {
     static std::string& getFBMode()
     {
         static std::string fbModeOpenCV =
-            cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FB_MODE", "");
+        cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FB_MODE", "");
         static std::string fbModeDef = "FB";
 
         if(!fbModeOpenCV.empty()) return fbModeOpenCV;
@@ -43,9 +43,9 @@ namespace cv { namespace highgui_backend {
     static std::string& getFBFileName()
     {
         static std::string fbFileNameFB =
-            cv::utils::getConfigurationParameterString("FRAMEBUFFER", "");
+        cv::utils::getConfigurationParameterString("FRAMEBUFFER", "");
         static std::string fbFileNameOpenCV =
-            cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FB_DEVICE", "");
+        cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FB_DEVICE", "");
         static std::string fbFileNameDef = "/dev/fb0";
 
         if(!fbFileNameOpenCV.empty()) return fbFileNameOpenCV;
@@ -73,7 +73,7 @@ namespace cv { namespace highgui_backend {
 
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::imshow(InputArray image)");
         CV_LOG_INFO(NULL, "UI: InputArray image: "
-            << cv::typeToString(image.type()) << " size " << image.size());
+        << cv::typeToString(image.type()) << " size " << image.size());
 
         if((currentImg.size().width <= 0) && (currentImg.size().height <= 0))
         {
@@ -107,6 +107,10 @@ namespace cv { namespace highgui_backend {
             case 4:
                 convertToShow(img, img, true);
             break;
+            default:
+                CV_LOG_ERROR(NULL, "UI: imshow can't convert image to show");
+                CV_Assert(img.channels() < 1);
+                CV_Assert(img.channels() > 4);
         }
         cvtColor(img, img, COLOR_RGB2BGRA);
 
@@ -117,7 +121,7 @@ namespace cv { namespace highgui_backend {
 
         if(flags & WINDOW_AUTOSIZE)
         {
-            windowRect.width    = imgSize.width;
+            windowRect.width = imgSize.width;
             windowRect.height = imgSize.height;
             newWidth = windowRect.width;
             newHeight = windowRect.height;
@@ -146,7 +150,7 @@ namespace cv { namespace highgui_backend {
         }
 
         CV_LOG_INFO(NULL, "UI: Formated image: "
-            << cv::typeToString(img.type()) << " size " << img.size());
+        << cv::typeToString(img.type()) << " size " << img.size());
 
         if(backend.getMode() == FB_MODE_EMU)
         {
@@ -227,9 +231,9 @@ namespace cv { namespace highgui_backend {
         for (int y = img_start_y; y < img_end_y; y++)
         {
             std::memcpy(backend.getFBPointer() +
-                        (fb_start_y + y - img_start_y) * lineLength + fb_start_x,
-                        img.ptr<unsigned char>(y) + img_start_x * cntChannel,
-                        (img_end_x - img_start_x) * cntChannel);
+            (fb_start_y + y - img_start_y) * lineLength + fb_start_x,
+            img.ptr<unsigned char>(y) + img_start_x * cntChannel,
+            (img_end_x - img_start_x) * cntChannel);
         }
     }
 
@@ -244,7 +248,7 @@ namespace cv { namespace highgui_backend {
     bool FramebufferWindow::setProperty(int prop, double value)
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::setProperty(int prop "
-            << prop << ", value " << value << ")");
+        << prop << ", value " << value << ")");
         CV_LOG_WARNING(NULL, "UI: setProperty (not supported)");
 
         return false;
@@ -253,7 +257,7 @@ namespace cv { namespace highgui_backend {
     void FramebufferWindow::resize(int width, int height)
     {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::resize(int width "
-            << width <<", height " << height << ")");
+        << width <<", height " << height << ")");
 
         CV_Assert(width > 0);
         CV_Assert(height > 0);
@@ -342,7 +346,7 @@ namespace cv { namespace highgui_backend {
     {
         std::string fbFileName = getFBFileName();
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::The following is used as a framebuffer file: \n"
-                    << fbFileName);
+        << fbFileName);
 
         int fb_fd = open(fbFileName.c_str(), O_RDWR);
         if (fb_fd == -1)
@@ -366,11 +370,11 @@ namespace cv { namespace highgui_backend {
         }
 
         CV_LOG_INFO(NULL, "UI: framebuffer info: \n"
-          << "   red offset " <<  varInfo.red.offset  << " length " <<   varInfo.red.length << "\n"
-          << " green offset " <<varInfo.green.offset  << " length " << varInfo.green.length << "\n"
-          << "  blue offset " << varInfo.blue.offset  << " length " <<  varInfo.blue.length << "\n"
-          << "transp offset " <<varInfo.transp.offset << " length " <<varInfo.transp.length << "\n"
-          << "bits_per_pixel "<<varInfo.bits_per_pixel);
+        << "   red offset " <<  varInfo.red.offset  << " length " <<   varInfo.red.length << "\n"
+        << " green offset " <<varInfo.green.offset  << " length " << varInfo.green.length << "\n"
+        << "  blue offset " << varInfo.blue.offset  << " length " <<  varInfo.blue.length << "\n"
+        << "transp offset " <<varInfo.transp.offset << " length " <<varInfo.transp.length << "\n"
+        << "bits_per_pixel "<<varInfo.bits_per_pixel);
 
         if(  (varInfo.red.offset != 16) && (  varInfo.red.length != 8) &&
            (varInfo.green.offset != 8 ) && (varInfo.green.length != 8) &&
@@ -378,9 +382,8 @@ namespace cv { namespace highgui_backend {
            (varInfo.bits_per_pixel != 32) )
         {
             close(fb_fd);
-            CV_LOG_ERROR(NULL,
-              "UI: Framebuffer format is not supported "
-              << "(use BGRA format with bits_per_pixel = 32)");
+            CV_LOG_ERROR(NULL, "UI: Framebuffer format is not supported "
+            << "(use BGRA format with bits_per_pixel = 32)");
             return -1;
         }
 
@@ -393,11 +396,11 @@ namespace cv { namespace highgui_backend {
 
         // MAP FB TO MEMORY
         fbScreenSize = max(varInfo.xres, varInfo.xres_virtual) *
-                           max(varInfo.yres, varInfo.yres_virtual) *
-                           fbBitsPerPixel / 8;
+        max(varInfo.yres, varInfo.yres_virtual) *
+        fbBitsPerPixel / 8;
 
         fbPointer = (unsigned char*)
-            mmap(0, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
+        mmap(0, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
 
         if (fbPointer == MAP_FAILED) {
             CV_LOG_ERROR(NULL, "UI: can't mmap framebuffer");
@@ -411,7 +414,7 @@ namespace cv { namespace highgui_backend {
     {
         std::string fbFileName = getFBFileName();
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::The following is used as a framebuffer file: \n"
-          << fbFileName);
+        << fbFileName);
 
         int fb_fd = open(fbFileName.c_str(), O_RDWR);
         if (fb_fd == -1)
@@ -423,7 +426,7 @@ namespace cv { namespace highgui_backend {
         XWDFileHeader *xwd_header;
 
         xwd_header = (XWDFileHeader*)
-            mmap(NULL, sizeof(XWDFileHeader), PROT_READ, MAP_SHARED, fb_fd, 0);
+        mmap(NULL, sizeof(XWDFileHeader), PROT_READ, MAP_SHARED, fb_fd, 0);
 
         if (xwd_header == MAP_FAILED)
         {
@@ -447,36 +450,38 @@ namespace cv { namespace highgui_backend {
         unsigned int g = C32INT(&(xwd_header->green_mask));
         unsigned int b = C32INT(&(xwd_header-> blue_mask));
 
-        fbWidth        = C32INT(&(xwd_header->pixmap_width));
-        fbHeight       = C32INT(&(xwd_header->pixmap_height));
-        fbXOffset      = 0;
-        fbYOffset      = 0;
-        fbLineLength   = C32INT(&(xwd_header->bytes_per_line));
+        fbWidth = C32INT(&(xwd_header->pixmap_width));
+        fbHeight = C32INT(&(xwd_header->pixmap_height));
+        fbXOffset = 0;
+        fbYOffset = 0;
+        fbLineLength = C32INT(&(xwd_header->bytes_per_line));
         fbBitsPerPixel = C32INT(&(xwd_header->bits_per_pixel));
 
         CV_LOG_INFO(NULL, "UI: XVFB info: \n"
-            << "   red_mask " << r << "\n"
-            << " green_mask " << g << "\n"
-            << "  blue_mask " << b << "\n"
-            << "bits_per_pixel " << fbBitsPerPixel);
+        << "   red_mask " << r << "\n"
+        << " green_mask " << g << "\n"
+        << "  blue_mask " << b << "\n"
+        << "bits_per_pixel " << fbBitsPerPixel);
 
         if((r != 16711680 ) && (g != 65280 ) && (b != 255 ) &&
            (fbBitsPerPixel != 32))
         {
             CV_LOG_ERROR(NULL, "UI: Framebuffer format is not supported "
-              << "(use BGRA format with bits_per_pixel = 32)");
+            << "(use BGRA format with bits_per_pixel = 32)");
             return -1;
         }
 
         xvfb_len_header = C32INT(&(xwd_header->header_size));
         xvfb_len_colors = sizeof(XWDColor) * C32INT(&(xwd_header->ncolors));
         xvfb_len_pixmap = C32INT(&(xwd_header->bytes_per_line)) *
-          C32INT(&(xwd_header->pixmap_height));
+        C32INT(&(xwd_header->pixmap_height));
+
         munmap(xwd_header, sizeof(XWDFileHeader));
 
         fbScreenSize = xvfb_len_header + xvfb_len_colors + xvfb_len_pixmap;
         xwd_header = (XWDFileHeader*)
-            mmap(NULL, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
+        mmap(NULL, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
+
         fbPointer = (unsigned char*)xwd_header;
         fbPointer_dist = xvfb_len_header + xvfb_len_colors;
 
@@ -591,18 +596,18 @@ namespace cv { namespace highgui_backend {
         }
 
         CV_LOG_INFO(NULL, "UI: Framebuffer's width, height, bits per pix: "
-            << fbWidth << " " << fbHeight << " " << fbBitsPerPixel);
+        << fbWidth << " " << fbHeight << " " << fbBitsPerPixel);
 
         CV_LOG_INFO(NULL, "UI: Framebuffer's offsets (x, y), line length: "
-            << fbXOffset << " " << fbYOffset << " " << fbLineLength);
+        << fbXOffset << " " << fbYOffset << " " << fbLineLength);
 
         backgroundBuff = Mat(fbHeight, fbWidth, CV_8UC4);
         int cnt_channel = 4;
         for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
         {
             std::memcpy(backgroundBuff.ptr<unsigned char>(y - fbYOffset),
-                        getFBPointer() + y * fbLineLength + fbXOffset,
-                        backgroundBuff.cols * cnt_channel);
+            getFBPointer() + y * fbLineLength + fbXOffset,
+            backgroundBuff.cols * cnt_channel);
         }
     }
 
@@ -618,8 +623,8 @@ namespace cv { namespace highgui_backend {
             for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
             {
                 std::memcpy(getFBPointer() + y * fbLineLength + fbXOffset,
-                            backgroundBuff.ptr<cv::Vec4b>(y - fbYOffset),
-                            backgroundBuff.cols * cnt_channel);
+                backgroundBuff.ptr<cv::Vec4b>(y - fbYOffset),
+                backgroundBuff.cols * cnt_channel);
             }
 
             munmap(fbPointer, fbScreenSize);
@@ -633,11 +638,11 @@ namespace cv { namespace highgui_backend {
 
     // namedWindow
     std::shared_ptr<UIWindow> FramebufferBackend::createWindow(
-            const std::string& winname,
-            int flags)
+        const std::string& winname,
+        int flags)
     {
         CV_LOG_INFO(NULL, "UI: FramebufferBackend::createWindow("
-            << winname << ", " << flags << ")");
+        << winname << ", " << flags << ")");
         return std::make_shared<FramebufferWindow>(*this, flags);
     }
 
@@ -702,7 +707,7 @@ namespace cv { namespace highgui_backend {
             while((ch = getch_(0, 0))>=0)
             {
                 CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = "
-                    << (int)ch << " (additional code on <stdin>)");
+                << (int)ch << " (additional code on <stdin>)");
                 code = ch;
             }
         }
@@ -725,7 +730,7 @@ namespace cv { namespace highgui_backend {
                 while((ch = getch_(0, 0))>=0)
                 {
                     CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = "
-                        << (int)ch << " (additional code on <stdin>)");
+                    << (int)ch << " (additional code on <stdin>)");
                     code = ch;
                 }
             }
@@ -753,7 +758,7 @@ namespace cv { namespace highgui_backend {
             while((ch = getch_(0, 0))>=0)
             {
                 CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = "
-                    << (int)ch << " (additional code on <stdin>)");
+                << (int)ch << " (additional code on <stdin>)");
                 code = ch;
             }
         }
