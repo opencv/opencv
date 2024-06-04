@@ -289,7 +289,7 @@ int CV_FindContourTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
 
-    cvCmpS( img[0], 0, img[0], CV_CMP_GT );
+    cvCmpS( img[0], 0, img[0], cv::CMP_GT );
 
     if( count != count2 )
     {

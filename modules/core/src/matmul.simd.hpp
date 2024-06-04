@@ -1792,7 +1792,7 @@ diagtransform_64f(const double* src, double* dst, const double* m, int len, int 
 
 TransformFunc getTransformFunc(int depth)
 {
-    static TransformFunc transformTab[] =
+    static TransformFunc transformTab[CV_DEPTH_MAX] =
     {
         (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
         (TransformFunc)transform_16s, (TransformFunc)transform_32s, (TransformFunc)transform_32f,
@@ -1804,7 +1804,7 @@ TransformFunc getTransformFunc(int depth)
 
 TransformFunc getDiagTransformFunc(int depth)
 {
-    static TransformFunc diagTransformTab[] =
+    static TransformFunc diagTransformTab[CV_DEPTH_MAX] =
     {
         (TransformFunc)diagtransform_8u, (TransformFunc)diagtransform_8s, (TransformFunc)diagtransform_16u,
         (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,

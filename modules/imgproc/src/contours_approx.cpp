@@ -231,7 +231,7 @@ static void pass_cleanup(vector<ApproxItem>& ares, size_t start_idx)
 
     const size_t len = ares.size();
     size_t first = start_idx;
-    for (size_t i = start_idx, prev = i; i < len; ++i)
+    for (size_t i = start_idx, prev = start_idx; i < len; ++i)
     {
         ApproxItem& item = ares[i];
         if (item.removed)
@@ -248,10 +248,10 @@ static void pass_cleanup(vector<ApproxItem>& ares, size_t start_idx)
 
                     if (s1 > s2 || (s1 == s2 && ares[prev].k <= ares[i].k))
                         /* remove second */
-                        clear_until(ares, get_next_idx(ares, prev), get_next_idx(ares, i));
+                        ares[i].removed = true;
                     else
                         /* remove first */
-                        clear_until(ares, first, i);
+                        ares[prev].removed = true;
                 }
                 else
                 {
@@ -259,7 +259,6 @@ static void pass_cleanup(vector<ApproxItem>& ares, size_t start_idx)
                     clear_until(ares, first, i);
                 }
             }
-            clear_until(ares, first, i);
             first = i;
             count = 1;
         }
