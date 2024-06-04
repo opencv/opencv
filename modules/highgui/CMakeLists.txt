@@ -39,14 +39,6 @@ if(HAVE_WEBP)
   add_definitions(-DHAVE_WEBP)
 endif()
 
-if(WITH_FRAMEBUFFER)
-  add_definitions(-DHAVE_FRAMEBUFFER)
-  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.cpp)
-  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.hpp)
-  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/XWDFile.h)
-  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/Xmd.h)
-endif()
-
 file(GLOB highgui_ext_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
@@ -56,6 +48,15 @@ file(GLOB highgui_ext_hdrs
 list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
 
 set(OPENCV_HIGHGUI_BUILTIN_BACKEND "")
+
+if(WITH_FRAMEBUFFER)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "FB")
+  add_definitions(-DHAVE_FRAMEBUFFER)
+  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.cpp)
+  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.hpp)
+  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/XWDFile.h)
+  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/Xmd.h)
+endif()
 
 if(WITH_WAYLAND AND HAVE_WAYLAND)
   set(OPENCV_HIGHGUI_BUILTIN_BACKEND "Wayland")
