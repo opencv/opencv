@@ -119,11 +119,11 @@ def findFile(filename):
 
 def get_backend_id(backend_name):
     backend_ids = {
-        "default": 0,
-        "inference_engine": 1,
-        "openvino": 2,
-        "vkcom": 3,
-        "cuda": 4
+        "default": cv.dnn.DNN_BACKEND_DEFAULT,
+        "openvino": cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
+        "opencv": cv.dnn.DNN_BACKEND_OPENCV,
+        "vkcom": cv.dnn.DNN_BACKEND_VKCOM,
+        "cuda": cv.dnn.DNN_BACKEND_CUDA
     }
 
     if backend_name not in backend_ids:
@@ -133,14 +133,14 @@ def get_backend_id(backend_name):
 
 def get_target_id(target_name):
     target_ids = {
-        "cpu": 0,
-        "opencl": 1,
-        "opencl_fp16": 2,
-        "ncs2_vpu": 3,
-        "hddl_vpu": 4,
-        "vulkan": 5,
-        "cuda": 6,
-        "cuda_fp16": 7
+        "cpu": cv.dnn.DNN_TARGET_CPU,
+        "opencl": cv.dnn.DNN_TARGET_OPENCL,
+        "opencl_fp16": cv.dnn.DNN_TARGET_OPENCL_FP16,
+        "ncs2_vpu": cv.dnn.DNN_TARGET_MYRIAD,
+        "hddl_vpu": cv.dnn.DNN_TARGET_HDDL,
+        "vulkan": cv.dnn.DNN_TARGET_VULKAN,
+        "cuda": cv.dnn.DNN_TARGET_CUDA,
+        "cuda_fp16": cv.dnn.DNN_TARGET_CUDA_FP16
     }
     if target_name not in target_ids:
         raise ValueError(f"Invalid target name: {target_name}")

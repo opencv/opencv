@@ -31,8 +31,8 @@ const string param_keys =
 const string backend_keys = format(
     "{ backend          | default | Choose one of computation backends: "
                               "default: automatically (by default), "
-                              "inference_engine: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                              "openvino: OpenCV implementation, "
+                              "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                              "opencv: OpenCV implementation, "
                               "vkcom: VKCOM, "
                               "cuda: CUDA, "
                               "webnn: WebNN }");

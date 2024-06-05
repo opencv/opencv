@@ -20,7 +20,7 @@ def help():
     )
 
 def get_args_parser(func_args):
-    backends = ("default", "inference_engine", "openvino", "vkcom", "cuda", "webnn")
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
     targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
 
     parser = argparse.ArgumentParser(add_help=False)
@@ -33,8 +33,8 @@ def get_args_parser(func_args):
     parser.add_argument('--backend', default="default", type=str, choices=backends,
                     help="Choose one of computation backends: "
                          "default: automatically (by default), "
-                         "inference_engine: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                         "openvino: OpenCV implementation, "
+                         "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                         "opencv: OpenCV implementation, "
                          "vkcom: VKCOM, "
                          "cuda: CUDA, "
                          "webnn: WebNN")

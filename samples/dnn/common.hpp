@@ -12,12 +12,12 @@ std::string findFile(const std::string& filename);
 
 inline int getBackendID(const String& backend) {
     std::map<String, int> backendIDs = {
-        {"default", 0},
-        {"inference_engine", 1},
-        {"openvino", 2},
-        {"vkcom", 3},
-        {"cuda", 4},
-        {"webnn", 5}
+        {"default", cv::dnn::DNN_BACKEND_DEFAULT},
+        {"openvino", cv::dnn::DNN_BACKEND_INFERENCE_ENGINE},
+        {"opencv", cv::dnn::DNN_BACKEND_OPENCV},
+        {"vkcom", cv::dnn::DNN_BACKEND_VKCOM},
+        {"cuda", cv::dnn::DNN_BACKEND_CUDA},
+        {"webnn", cv::dnn::DNN_BACKEND_WEBNN}
     };
     if(backendIDs.find(backend) != backendIDs.end()){
         return backendIDs[backend];
@@ -28,13 +28,13 @@ inline int getBackendID(const String& backend) {
 
 inline int getTargetID(const String& target) {
     std::map<String, int> targetIDs = {
-        {"cpu", 0},
-        {"opencl", 1},
-        {"opencl_fp16", 2},
-        {"vpu", 3},
-        {"vulkan", 4},
-        {"cuda", 5},
-        {"cuda_fp16", 6}
+        {"cpu", cv::dnn::DNN_TARGET_CPU},
+        {"opencl", cv::dnn::DNN_TARGET_OPENCL},
+        {"opencl_fp16", cv::dnn::DNN_TARGET_OPENCL_FP16},
+        {"vpu", cv::dnn::DNN_TARGET_MYRIAD},
+        {"vulkan", cv::dnn::DNN_TARGET_VULKAN},
+        {"cuda", cv::dnn::DNN_TARGET_CUDA},
+        {"cuda_fp16", cv::dnn::DNN_TARGET_CUDA_FP16}
     };
     if(targetIDs.find(target) != targetIDs.end()){
         return targetIDs[target];
