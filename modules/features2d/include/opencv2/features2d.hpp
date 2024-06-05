@@ -70,6 +70,13 @@
     @{
         @defgroup features2d_hal_interface Interface
     @}
+
+    @defgroup feature2d_annoy Approximate Nearest Neighbors Search in Multi-Dimensional Spaces
+
+    This section documents OpenCV's interface to the Annoy. Annoy (Approximate Nearest Neighbors Oh Yeah)
+    is a library to search for points in space that are close to a given query point. It also creates
+    large read-only file-based data structures that are mmapped into memory so that many processes may
+    share the same data.
   @}
  */
 
@@ -984,7 +991,8 @@ public:
         BRUTEFORCE_L1         = 3,
         BRUTEFORCE_HAMMING    = 4,
         BRUTEFORCE_HAMMINGLUT = 5,
-        BRUTEFORCE_SL2        = 6
+        BRUTEFORCE_SL2        = 6,
+        ANNOYBASED            = 7
     };
 
     virtual ~DescriptorMatcher();
@@ -1262,6 +1270,14 @@ protected:
 
     int normType;
     bool crossCheck;
+};
+
+/** @brief Annoy-based descriptor mathcer.
+
+*/
+class CV_EXPORTS_W AnnoyBasedMatcher : public DescriptorMatcher
+{
+
 };
 
 #if defined(HAVE_OPENCV_FLANN) || defined(CV_DOXYGEN)
@@ -1581,5 +1597,7 @@ protected:
 //! @} features2d_category
 
 } /* namespace cv */
+
+#include "opencv2/features2d/annoy.hpp"
 
 #endif
