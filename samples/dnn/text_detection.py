@@ -22,6 +22,8 @@
     dummy_input = torch.randn(1, 1, 32, 100)
     torch.onnx.export(model, dummy_input, "crnn.onnx", verbose=True)
 
+    Usage: python text_detection.py DB --ocr=<path to recognition model>
+
 '''
 import os
 import cv2
@@ -36,8 +38,8 @@ def get_args_parser():
                         help='Path to input image or video file. Skip this argument to capture frames from a camera.')
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
-    parser.add_argument('--ocr', default="crnn.onnx",
-                        help="Path to a .onnx file contains trained recognition network", )
+    parser.add_argument('--ocr',
+                        help="Path to a .onnx file contains trained recognition network", required=True)
     parser.add_argument('--thr', type=float, default=0.5,
                         help='Confidence threshold.')
     parser.add_argument('--nms', type=float, default=0.4,

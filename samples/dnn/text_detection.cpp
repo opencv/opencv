@@ -21,6 +21,8 @@
     model.load_state_dict(torch.load('crnn.pth'))
     dummy_input = torch.randn(1, 1, 32, 100)
     torch.onnx.export(model, dummy_input, "crnn.onnx", verbose=True)
+
+    Usage: ./example_dnn_text_detection DB -ocr=<path to recognition model>
 */
 #include <iostream>
 #include <fstream>
@@ -40,7 +42,7 @@ std::string keys =
     "{ input i                        | box_in_scene.png | Path to an input image. }"
     "{ @alias                         |     | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo                            | models.yml | An optional path to file with preprocessing parameters }"
-    "{ recModelPath rmp               |     | Path to a binary .onnx model for recognition. }"
+    "{ recModelPath ocr               |     | Path to a binary .onnx model for recognition. }"
     "{ thr                            | 0.5 | Confidence threshold for EAST detector. }"
     "{ nms                            | 0.4 | Non-maximum suppression threshold for EAST detector. }"
     "{ binaryThreshold bt             | 0.3 | Confidence threshold for the binary map in DB detector. }"
@@ -62,7 +64,7 @@ int main(int argc, char** argv) {
 
     parser = CommandLineParser(argc, argv, keys);
     parser.about("Text Detection and Recognition using OpenCV"
-                 "Example: ./example_dnn_text_detection modelName(i.e. DB or East) -rmp=<path to ResNet_CTC.onnx>" );
+                 "Example: ./example_dnn_text_detection modelName(i.e. DB or East) -ocr=<path to ResNet_CTC.onnx>" );
 
     // Display help message if no arguments are provided or 'help' is requested
     if (argc == 1 || parser.has("help")) {
