@@ -26,18 +26,18 @@ using namespace dnn;
 using namespace std;
 
 const string param_keys =
-    "{ help  h     | | Print help message. }"
-    "{ @alias      | | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ help  h     |            | Print help message. }"
+    "{ @alias      |            | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
-    "{ device      |  0 | camera device number. }"
-    "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
-    "{ classes     | | Optional path to a text file with names of classes to label detected objects. }"
-    "{ thr         | .5 | Confidence threshold. }"
-    "{ nms         | .4 | Non-maximum suppression threshold. }"
-    "{ async       | 0 | Number of asynchronous forwards at the same time. "
+    "{ device      |  0         | camera device number. }"
+    "{ input i     |            | Path to input image or video file. Skip this argument to capture frames from a camera. }"
+    "{ classes     |            | Optional path to a text file with names of classes to label detected objects. }"
+    "{ thr         | .5         | Confidence threshold. }"
+    "{ nms         | .4         | Non-maximum suppression threshold. }"
+    "{ async       | 0          | Number of asynchronous forwards at the same time. "
                         "Choose 0 for synchronous mode }"
-    "{ padvalue    | 114.0 | padding value. }"
-    "{ paddingmode | 2 | Choose one of computation backends: "
+    "{ padvalue    | 114.0      | padding value. }"
+    "{ paddingmode | 2          | Choose one of computation backends: "
                          "0: resize to required input size without extra processing, "
                          "1: Image will be cropped after resize, "
                          "2: Resize image to the desired size while preserving the aspect ratio of original image }";
@@ -170,13 +170,13 @@ int main(int argc, char** argv)
     paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
     //![preprocess_params]
     CV_Assert(parser.has("model"));
-    string modelPath = findFile(parser.get<String>("model"));
-    string configPath = findFile(parser.get<String>("config"));
+    const string modelPath = findFile(parser.get<String>("model"));
+    const string configPath = findFile(parser.get<String>("config"));
     framework = modelPath.substr(modelPath.rfind('.') + 1);
 
     if (parser.has("classes"))
     {
-        string file = findFile(parser.get<String>("classes"));
+        const string file = findFile(parser.get<String>("classes"));
         ifstream ifs(file.c_str());
         if (!ifs.is_open())
             CV_Error(Error::StsError, "File " + file + " not found");
@@ -328,9 +328,7 @@ int main(int argc, char** argv)
         net.forward(outs, net.getUnconnectedOutLayersNames());
         //![forward]
 
-        //![postprocess]
         postprocess(frame, outs, net, backend);
-        //![postprocess]
 
         // Put efficiency information.
         vector<double> layersTimes;
