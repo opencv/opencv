@@ -135,11 +135,11 @@ namespace cv { namespace highgui_backend {
         else //WINDOW_KEEPRATIO
         {
             double aspect_ratio = ((double)img.cols) / img.rows;
-            newWidth  = windowRect.width;
+            newWidth = windowRect.width;
             newHeight = (int)(windowRect.width / aspect_ratio);
 
             if (newHeight > windowRect.height) {
-                newWidth  = (int)(windowRect.height * aspect_ratio);
+                newWidth = (int)(windowRect.height * aspect_ratio);
                 newHeight = windowRect.height;
             }
         }
@@ -167,7 +167,7 @@ namespace cv { namespace highgui_backend {
         int xOffset = backend.getFBXOffset();
         int yOffset = backend.getFBYOffset();
         int fbHeight = backend.getFBHeight();
-        int fbWidth    = backend.getFBWidth();
+        int fbWidth = backend.getFBWidth();
         int lineLength = backend.getFBLineLength();
 
         int img_start_x;
@@ -204,7 +204,7 @@ namespace cv { namespace highgui_backend {
         }
         if(windowRect.x + xOffset + img.cols > fbWidth)
         {
-            img_end_x = fbWidth    - windowRect.x - xOffset;
+            img_end_x = fbWidth - windowRect.x - xOffset;
         }
         else
         {
@@ -370,15 +370,15 @@ namespace cv { namespace highgui_backend {
         }
 
         CV_LOG_INFO(NULL, "UI: framebuffer info: \n"
-        << "   red offset " <<  varInfo.red.offset  << " length " <<   varInfo.red.length << "\n"
-        << " green offset " <<varInfo.green.offset  << " length " << varInfo.green.length << "\n"
-        << "  blue offset " << varInfo.blue.offset  << " length " <<  varInfo.blue.length << "\n"
-        << "transp offset " <<varInfo.transp.offset << " length " <<varInfo.transp.length << "\n"
-        << "bits_per_pixel "<<varInfo.bits_per_pixel);
+        << "   red offset  " << varInfo.red.offset << " length " << varInfo.red.length << "\n"
+        << " green offset  " << varInfo.green.offset << " length " << varInfo.green.length << "\n"
+        << "  blue offset  " << varInfo.blue.offset << " length " << varInfo.blue.length << "\n"
+        << "transp offset  " << varInfo.transp.offset << " length " <<varInfo.transp.length << "\n"
+        << "bits_per_pixel " << varInfo.bits_per_pixel);
 
-        if(  (varInfo.red.offset != 16) && (  varInfo.red.length != 8) &&
-           (varInfo.green.offset != 8 ) && (varInfo.green.length != 8) &&
-           ( varInfo.blue.offset != 0 ) && ( varInfo.blue.length != 8) &&
+        if((varInfo.red.offset != 16) && (varInfo.red.length != 8) &&
+           (varInfo.green.offset != 8) && (varInfo.green.length != 8) &&
+           (varInfo.blue.offset != 0) && (varInfo.blue.length != 8) &&
            (varInfo.bits_per_pixel != 32) )
         {
             close(fb_fd);
@@ -387,12 +387,12 @@ namespace cv { namespace highgui_backend {
             return -1;
         }
 
-        fbWidth        = varInfo.xres;
-        fbHeight       = varInfo.yres;
-        fbXOffset      = varInfo.xoffset;
-        fbYOffset      = varInfo.yoffset;
+        fbWidth = varInfo.xres;
+        fbHeight = varInfo.yres;
+        fbXOffset = varInfo.xoffset;
+        fbYOffset = varInfo.yoffset;
         fbBitsPerPixel = varInfo.bits_per_pixel;
-        fbLineLength   = fixInfo.line_length;
+        fbLineLength = fixInfo.line_length;
 
         // MAP FB TO MEMORY
         fbScreenSize = max(varInfo.xres, varInfo.xres_virtual) *
@@ -446,9 +446,9 @@ namespace cv { namespace highgui_backend {
             return -1;
         }
 
-        unsigned int r = C32INT(&(xwd_header->  red_mask));
+        unsigned int r = C32INT(&(xwd_header->red_mask));
         unsigned int g = C32INT(&(xwd_header->green_mask));
-        unsigned int b = C32INT(&(xwd_header-> blue_mask));
+        unsigned int b = C32INT(&(xwd_header->blue_mask));
 
         fbWidth = C32INT(&(xwd_header->pixmap_width));
         fbHeight = C32INT(&(xwd_header->pixmap_height));
@@ -602,12 +602,12 @@ namespace cv { namespace highgui_backend {
         << fbXOffset << " " << fbYOffset << " " << fbLineLength);
 
         backgroundBuff = Mat(fbHeight, fbWidth, CV_8UC4);
-        int cnt_channel = 4;
+        int cntChannel = 4;
         for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
         {
             std::memcpy(backgroundBuff.ptr<unsigned char>(y - fbYOffset),
-            getFBPointer() + y * fbLineLength + fbXOffset * 4,
-            backgroundBuff.cols * cnt_channel);
+            getFBPointer() + y * fbLineLength + fbXOffset * cntChannel,
+            backgroundBuff.cols * cntChannel);
         }
     }
 
@@ -619,12 +619,12 @@ namespace cv { namespace highgui_backend {
         // RESTORE BACKGROUNG
         if (fbPointer != MAP_FAILED) {
 
-            int cnt_channel = 4;
+            int cntChannel = 4;
             for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
             {
-                std::memcpy(getFBPointer() + y * fbLineLength + fbXOffset * 4,
+                std::memcpy(getFBPointer() + y * fbLineLength + fbXOffset * cntChannel,
                 backgroundBuff.ptr<cv::Vec4b>(y - fbYOffset),
-                backgroundBuff.cols * cnt_channel);
+                backgroundBuff.cols * cntChannel);
             }
 
             munmap(fbPointer, fbScreenSize);
@@ -652,7 +652,7 @@ namespace cv { namespace highgui_backend {
         current = old;
         current.c_lflag &= ~ICANON;
         current.c_lflag &= ~ISIG;
-        current.c_cc[VMIN]=wait;
+        current.c_cc[VMIN] = wait;
         if (echo)
         {
             current.c_lflag |= ECHO;
@@ -681,7 +681,7 @@ namespace cv { namespace highgui_backend {
 
     bool FramebufferBackend::kbhit()
     {
-        int byteswaiting=0;
+        int byteswaiting = 0;
         initTermios(0, 1);
         if ( ioctl(0, FIONREAD, &byteswaiting) < 0)
         {
