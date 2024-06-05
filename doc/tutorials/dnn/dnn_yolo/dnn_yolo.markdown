@@ -134,13 +134,12 @@ Once we have our ONNX graph of the model, we just simply can run with OpenCV's s
 3. Run the following command:
 
 @code{.cpp}
-./bin/example_dnn_yolo_detector --input=<path_to_your_input_file> \
+./bin/example_dnn_object_detection --input=<path_to_your_input_file> \
                                 --classes=<path_to_class_names_file> \
                                 --thr=<confidence_threshold> \
                                 --nms=<non_maximum_suppression_threshold> \
                                 --mean=<mean_normalization_value> \
                                 --scale=<scale_factor> \
-                                --yolo=<yolo_model_version> \
                                 --padvalue=<padding_value> \
                                 --paddingmode=<padding_mode> \
                                 --backend=<computation_backend> \
@@ -192,7 +191,7 @@ cd ..
 export OPENCV_TEST_DATA_PATH=$(pwd)
 cd <build directory of OpenCV>
 
-./bin/example_dnn_yolo_detector --model=onnx/models/yolov8n.onnx --yolo=yolov8 --mean=0.0 --scale=0.003921568627 --paddingmode=2 --padvalue=144.0 --thr=0.5 --nms=0.4 --rgb=0
+./bin/example_dnn_object_detection --model=onnx/models/yolov8n.onnx --yolo=yolov8 --mean=0.0 --scale=0.003921568627 --paddingmode=2 --padvalue=144.0 --thr=0.5 --nms=0.4 --rgb=0
 @endcode
 
 
@@ -203,30 +202,30 @@ module this is also quite easy to achieve. Below we will outline the sample impl
 
 - Import required libraries
 
-@snippet samples/dnn/yolo_detector.cpp includes
+@snippet samples/dnn/object_detection.cpp includes
 
 - Read ONNX graph and create neural network model:
 
-@snippet samples/dnn/yolo_detector.cpp read_net
+@snippet samples/dnn/object_detection.cpp read_net
 
 - Read image and pre-process it:
 
-@snippet samples/dnn/yolo_detector.cpp preprocess_params
-@snippet samples/dnn/yolo_detector.cpp preprocess_call
-@snippet samples/dnn/yolo_detector.cpp preprocess_call_func
+@snippet samples/dnn/object_detection.cpp preprocess_params
+@snippet samples/dnn/object_detection.cpp preprocess_call
+@snippet samples/dnn/object_detection.cpp preprocess_call_func
 
 - Inference:
 
-@snippet samples/dnn/yolo_detector.cpp forward_buffers
-@snippet samples/dnn/yolo_detector.cpp forward
+@snippet samples/dnn/object_detection.cpp forward_buffers
+@snippet samples/dnn/object_detection.cpp forward
 
 - Post-Processing
 
 All post-processing steps are implemented in function `yoloPostProcess`. Please pay attention,
 that NMS step is not included into onnx graph. Sample uses OpenCV function for it.
 
-@snippet samples/dnn/yolo_detector.cpp postprocess
+@snippet samples/dnn/object_detection.cpp postprocess
 
 - Draw predicted boxes
 
-@snippet samples/dnn/yolo_detector.cpp draw_boxes
+@snippet samples/dnn/object_detection.cpp draw_boxes

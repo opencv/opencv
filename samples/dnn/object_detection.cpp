@@ -188,12 +188,10 @@ int main(int argc, char** argv)
     }
     //![read_net]
     Net net = readNet(modelPath, configPath);
-
     int backend = parser.get<int>("backend");
     net.setPreferableBackend(backend);
     net.setPreferableTarget(parser.get<int>("target"));
     //![read_net]
-    vector<String> outNames = net.getUnconnectedOutLayersNames();
 
     // Create a window
     static const string kWinName = "Deep learning object detection in OpenCV";
@@ -260,7 +258,7 @@ int main(int argc, char** argv)
                 else
                 {
                     vector<Mat> outs;
-                    net.forward(outs, outNames);
+                    net.forward(outs, net.getUnconnectedOutLayersNames());
                     predictionsQueue.push(outs);
                 }
             }
@@ -323,11 +321,11 @@ int main(int argc, char** argv)
         }
         //![preprocess_call_func]
         preprocess(frame, net, Size(inpWidth, inpHeight));
-        preprocess_call_func
+        //![preprocess_call_func]
 
         //![forward]
         vector<Mat> outs;
-        net.forward(outs, outNames);
+        net.forward(outs, net.getUnconnectedOutLayersNames());
         //![forward]
 
         //![postprocess]
@@ -357,6 +355,7 @@ void preprocess(const Mat& frame, Net& net, Size inpSize)
         blobFromImage(frame, inp, scale, size, meanv, swapRB, false, CV_32F);
     }
     else{
+        //![preprocess_call]
         Image2BlobParams imgParams(
             scale,
             size,
@@ -368,6 +367,7 @@ void preprocess(const Mat& frame, Net& net, Size inpSize)
             paddingValue);
 
         inp = blobFromImageWithParams(frame, imgParams);
+        //![preprocess_call]
     }
 
     // Set the blob as the network input
@@ -546,10 +546,15 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend)
     }
     else if (outLayerType == "Identity")
     {
+        //![forward_buffers]
         vector<int> keep_classIds;
         vector<float> keep_confidences;
         vector<Rect2d> keep_boxes;
+        //![forward_buffers]
+
+        //![postprocess]
         yoloPostProcessing(outs, keep_classIds, keep_confidences, keep_boxes, confThreshold, nmsThreshold, "yolov8");
+        //![postprocess]
 
         for (size_t i = 0; i < keep_classIds.size(); ++i)
         {
