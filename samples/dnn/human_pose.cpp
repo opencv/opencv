@@ -107,14 +107,17 @@ int main(int argc, char **argv)
         std::cerr << "Can't read image from the file: " << imageFile << std::endl;
         exit(-1);
     }
-    // send it through the network
-    Mat blob = blobFromImage(img, scale, Size(W_in, H_in), Scalar(0, 0, 0), false, false);
-
-    std::vector<int> order = {0, 2, 3, 1};
-    Mat outBlob; // inp: NCHW, out: NHWC
-    transposeND(blob, order, outBlob);
-
-    net.setInput(outBlob);
+    // Create Image2BlobParams object
+    Image2BlobParams imgParams(
+        scale,
+        Size(W_in, H_in),
+        Scalar(0, 0, 0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NHWC);
+    // Create a 4D blob from the image
+    Mat blob = blobFromImageWithParams(img, imgParams);
+    net.setInput(blob);
     Mat result = net.forward();
     // the result is an array of "heatmaps", the probability of a body part being in location x,y
 

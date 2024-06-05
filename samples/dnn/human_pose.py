@@ -88,9 +88,16 @@ while cv.waitKey(1) < 0:
 
     frameWidth = frame.shape[1]
     frameHeight = frame.shape[0]
-    blob = cv.dnn.blobFromImage(frame, inScale, (inWidth, inHeight), (0, 0, 0), swapRB=True, crop=False)
 
-    blob = blob.transpose(0, 2, 3, 1)
+    img_params = cv.dnn_Image2BlobParams(
+        inScale,
+        (inWidth, inHeight),
+        (0, 0, 0),
+        True,
+        cv.CV_32F,
+        cv.dnn.DNN_LAYOUT_NHWC
+    )
+    blob = cv.dnn.blobFromImageWithParams(frame, img_params)
     net.setInput(blob)
     out = net.forward()
 
