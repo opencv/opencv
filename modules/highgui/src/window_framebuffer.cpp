@@ -231,7 +231,7 @@ namespace cv { namespace highgui_backend {
         for (int y = img_start_y; y < img_end_y; y++)
         {
             std::memcpy(backend.getFBPointer() +
-            (fb_start_y + y - img_start_y) * lineLength + fb_start_x,
+            (fb_start_y + y - img_start_y) * lineLength + fb_start_x * cntChannel,
             img.ptr<unsigned char>(y) + img_start_x * cntChannel,
             (img_end_x - img_start_x) * cntChannel);
         }
@@ -606,7 +606,7 @@ namespace cv { namespace highgui_backend {
         for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
         {
             std::memcpy(backgroundBuff.ptr<unsigned char>(y - fbYOffset),
-            getFBPointer() + y * fbLineLength + fbXOffset,
+            getFBPointer() + y * fbLineLength + fbXOffset * 4,
             backgroundBuff.cols * cnt_channel);
         }
     }
@@ -622,7 +622,7 @@ namespace cv { namespace highgui_backend {
             int cnt_channel = 4;
             for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
             {
-                std::memcpy(getFBPointer() + y * fbLineLength + fbXOffset,
+                std::memcpy(getFBPointer() + y * fbLineLength + fbXOffset * 4,
                 backgroundBuff.ptr<cv::Vec4b>(y - fbYOffset),
                 backgroundBuff.cols * cnt_channel);
             }
