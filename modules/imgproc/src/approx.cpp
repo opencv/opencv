@@ -875,7 +875,7 @@ struct neighbours
     int next;
     int prev;
 
-    neighbours(int next_ = -1, int prev_ = -1, cv::Point2f point_ = { -1, -1 })
+    explicit neighbours(int next_ = -1, int prev_ = -1, const cv::Point2f& point_ = { -1, -1 })
     {
         next = next_;
         prev = prev_;
@@ -890,7 +890,7 @@ struct changes
     int vertex;
     cv::Point2f intersection;
 
-    changes(float area_, int vertex_, cv::Point2f intersection_)
+    explicit changes(float area_, int vertex_, const cv::Point2f& intersection_)
     {
         area = area_;
         vertex = vertex_;
@@ -910,7 +910,7 @@ struct changes
 /*
   returns intersection point and extra area
 */
-static int recalculation(std::vector<neighbours>& hull, int vertex_id, float& area_, float& x, float& y)
+static void recalculation(std::vector<neighbours>& hull, int vertex_id, float& area_, float& x, float& y)
 {
     cv::Point2f vertex = hull[vertex_id].point,
         next_vertex = hull[hull[vertex_id].next].point,
@@ -923,7 +923,12 @@ static int recalculation(std::vector<neighbours>& hull, int vertex_id, float& ar
 
     float cross = prev_edge.x * next_edge.y - prev_edge.y * next_edge.x;
     if (abs(cross) < 1e-8)
-        return -1;
+    {
+        area_ = FLT_MAX;
+        x = -1;
+        y = -1;
+        return;
+    }
 
     float t = (curr_edge.x * next_edge.y - curr_edge.y * next_edge.x) / cross;
     cv::Point2f intersection = vertex + cv::Point2f(prev_edge.x * t, prev_edge.y * t);
@@ -934,7 +939,6 @@ static int recalculation(std::vector<neighbours>& hull, int vertex_id, float& ar
     area_ = area;
     x = intersection.x;
     y = intersection.y;
-    return 0;
 }
 
 static void update(std::vector<neighbours>& hull, int vertex_id)
@@ -981,11 +985,10 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
 
     CV_Assert((curve.cols == 1 && curve.rows >= side)
         || (curve.rows == 1 && curve.cols >= side));
-
-    curve = curve.t();
+ 
     if (curve.rows == 1)
     {
-        curve = curve.t();
+        curve = curve.reshape(0, curve.cols);
     }
 
     std::vector<neighbours> hull(curve.rows);
@@ -1017,12 +1020,7 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
         for (int vertex_id = 0; vertex_id < size; ++vertex_id)
         {
             float area, new_x, new_y;
-
-            if (recalculation(hull, vertex_id, area, new_x, new_y) == -1)
-            {
-                area = 1e+38f;
-                new_x = -1; new_y = -1;
-            }
+            recalculation(hull, vertex_id, area, new_x, new_y);
 
             areas.push(changes(area, vertex_id, Point2f(new_x, new_y)));
         }
@@ -1041,12 +1039,7 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
         {
             float area, new_x, new_y;
             areas.pop();
-
-            if (recalculation(hull, vertex_id, area, new_x, new_y) == -1)
-            {
-                area = 1e+38f;
-                new_x = -1; new_y = -1;
-            }
+            recalculation(hull, vertex_id, area, new_x, new_y);
 
             areas.push(changes(area, vertex_id, Point2f(new_x, new_y)));
             hull[vertex_id].pointStatus = PointStatus::CALCULATED;
