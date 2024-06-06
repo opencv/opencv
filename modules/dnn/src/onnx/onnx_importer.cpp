@@ -2839,7 +2839,7 @@ void ONNXImporter::parseCumSum(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
-// "Equal" "Greater" "Less" "Pow" "Add" "Sub" "Mul" "Div" "Sum" "Min" "Max" "GreaterOrEqual" "LessOrEqual"
+// "Equal" "Greater" "Less" "Pow" "Add" "Sub" "Mul" "Div" "Sum" "Min" "Max" "GreaterOrEqual" "LessOrEqual" "And" "Or" "Xor"
 void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
@@ -4038,7 +4038,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
-            dispatch["LessOrEqual"] = dispatch["Mod"] = &ONNXImporter::parseElementWise;
+            dispatch["LessOrEqual"] = dispatch["Mod"] = dispatch["And"] = dispatch["Or"] = dispatch["Xor"] = &ONNXImporter::parseElementWise;
 
     dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
     dispatch["Where"] = &ONNXImporter::parseElementWise;

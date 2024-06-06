@@ -4,14 +4,6 @@
 "test_adagrad_multiple", // ---- same as above ---
 "test_adam",  // Issues::Layer::Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Adam" in function 'getLayerInstance'
 "test_adam_multiple", // ---- same as above ---
-"test_and2d", // Issue:: Unsupported data type BOOL
-"test_and3d", // Issue:: Unsupported data type BOOL
-"test_and4d", // Issue:: Unsupported data type BOOL
-"test_and_bcast3v1d", // Issue:: Unsupported data type BOOL
-"test_and_bcast3v2d", // Issue:: Unsupported data type BOOL
-"test_and_bcast4v2d", // Issue:: Unsupported data type BOOL
-"test_and_bcast4v3d", // Issue:: Unsupported data type BOOL
-"test_and_bcast4v4d", // Issue:: Unsupported data type BOOL
 "test_basic_convinteger", // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_batchnorm_epsilon", // Issue:: Unkonwn error::Blob mean not found in const blobs in function 'getBlob'
 "test_batchnorm_epsilon_training_mode",  // ---- same as above ---
@@ -102,8 +94,6 @@
 "test_dynamicquantizelinear_min_adjusted_expanded",  // ---- same as above ---
 "test_edge_pad", // Issue::Parser::Weights are required as inputs
 "test_einsum_inner_prod", // Issue::Output shape does not match with reference
-"test_equal", // Issue:: Unsupported data type BOOL
-"test_equal_bcast", // ---- same as above ---
 "test_expand_dim_changed", // Issue:: Unkonwn error
 "test_expand_dim_unchanged", // Issue:: Unkonwn error
 "test_eyelike_populate_off_main_diagonal", // Issues::Layer::Can't create layer::Can't create layer "onnx_node_output_0!y" of type "EyeLike" in function 'getLayerInstance'
@@ -121,12 +111,6 @@
 "test_gemm_default_zero_bias",  // Issue::Wrong output
 "test_gemm_transposeA", // Issue::Wrong output
 "test_gemm_transposeB",  // Issue::Wrong output
-"test_greater", // Issue:: Unsupported data type BOOL
-"test_greater_bcast", // ---- same as above ---
-"test_greater_equal", // ---- same as above ---
-"test_greater_equal_bcast", // ---- same as above ---
-"test_greater_equal_bcast_expanded", // ---- same as above ---
-"test_greater_equal_expanded", // ---- same as above ---
 "test_gridsample", // Issues::Layer::Can't create layer "onnx_node_output_0!Y" of type "GridSample" in function 'getLayerInstance'
 "test_gridsample_aligncorners_true", // ---- same as above ---
 "test_gridsample_bicubic", // ---- same as above ---
@@ -155,12 +139,6 @@
 "test_isinf_negative", // Issue:: Unsupported data type BOOL
 "test_isinf_positive", // Issue:: Unsupported data type BOOL
 "test_isnan", // Issue:: Unsupported data type BOOL
-"test_less", // Issue:: Unsupported data type BOOL
-"test_less_bcast", // Issue:: Unsupported data type BOOL
-"test_less_equal", // Issue:: Unsupported data type BOOL
-"test_less_equal_bcast", // Issue:: Unsupported data type BOOL
-"test_less_equal_bcast_expanded", // Issue:: Unsupported data type BOOL
-"test_less_equal_expanded", // Issue:: Unsupported data type BOOL
 "test_loop11", // Issue:: Unsupported data type BOOL
 "test_loop13_seq", // Issue:: Unsupported data type BOOL
 "test_loop16_seq_none", // Issue:: Unsupported data type BOOL
@@ -228,9 +206,6 @@
 "test_nonmaxsuppression_two_batches", // ---- same as above ---
 "test_nonmaxsuppression_two_classes", // ---- same as above ---
 "test_nonzero_example", // Issue:: Unsupported data type: BOOL
-"test_not_2d",  // ---- same as above ---
-"test_not_3d", // ---- same as above ---
-"test_not_4d", // ---- same as above ---
 "test_onehot_negative_indices", // Issue:: Layer does not exist (OneHot) :: Can't create layer "onnx_node_output_0!y" of type "OneHot" in function 'getLayerInstance'
 "test_onehot_with_axis", // ---- same as above ---
 "test_onehot_with_negative_axis", // ---- same as above ---
@@ -239,14 +214,6 @@
 "test_optional_get_element_sequence", // ---- same as above ---
 "test_optional_has_element", // Issue:: Unsupported data type BOOL
 "test_optional_has_element_empty", // ---- same as above ---
-"test_or2d",
-"test_or3d", // ---- same as above ---
-"test_or4d", // ---- same as above ---
-"test_or_bcast3v1d",
-"test_or_bcast3v2d", // ---- same as above ---
-"test_or_bcast4v2d", // ---- same as above ---
-"test_or_bcast4v3d", // ---- same as above ---
-"test_or_bcast4v4d", // ---- same as above ---
 "test_pow_types_float", // Issue:: Unsupported data type
 "test_pow_types_float32_int32", // ---- same as above ---
 "test_pow_types_float32_int64", // ---- same as above ---
@@ -471,16 +438,6 @@
 "test_unsqueeze_three_axes",  // ---- same as above ---
 "test_unsqueeze_two_axes",   // ---- same as above ---)
 "test_unsqueeze_unsorted_axes",  // ---- same as above ---)
-"test_where_example", // Issue:: Parser: Unsupported data type: BOOL in function 'getMatFromTensor'
-"test_where_long_example",  // ---- same as above ---
-"test_xor2d", // Issue:: Parser: Unsupported data type: BOOL in function 'getMatFromTensor'
-"test_xor3d",  // ---- same as above ---
-"test_xor4d",  // ---- same as above ---
-"test_xor_bcast3v1d",  // ---- same as above ---
-"test_xor_bcast3v2d",  // ---- same as above ---
-"test_xor_bcast4v2d",  // ---- same as above ---
-"test_xor_bcast4v3d",  // ---- same as above ---
-"test_xor_bcast4v4d",  // ---- same as above ---
 // // Cumsum related issue: https://github.com/opencv/opencv/issues/24437
 "test_cumsum_1d", //Issue:: output shape creation mismatch
 "test_cumsum_1d_exclusive",  // ---- same as above ---

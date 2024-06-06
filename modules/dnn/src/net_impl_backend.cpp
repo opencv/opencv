@@ -62,7 +62,7 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
         {
             CV_Assert(haveCUDA());
 #ifdef HAVE_CUDA
-            CV_CheckType(host.depth(), host.depth() == CV_32F || host.depth() == CV_8S || host.depth() == CV_8U || host.depth() == CV_32S || host.depth() == CV_64S, "Unsupported type for CUDA");
+            CV_CheckType(host.depth(), host.depth() == CV_32F || host.depth() == CV_8S || host.depth() == CV_8U || host.depth() == CV_32S || host.depth() == CV_64S || host.depth() == CV_Bool, "Unsupported type for CUDA");
             CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
             switch (host.depth())
             {
@@ -79,6 +79,8 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
                 return CUDABackendWrapperINT32::create(baseBuffer, shape);
             case CV_64S:
                 return CUDABackendWrapperINT64::create(baseBuffer, shape);
+            case CV_Bool:
+                return CUDABackendWrapperBOOL::create(baseBuffer, shape);
             default:
                 CV_Error(Error::BadDepth, "Unsupported mat type for CUDA");
             }
