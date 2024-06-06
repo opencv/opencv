@@ -282,6 +282,35 @@ TEST(Imgcodecs_Image, regression_9376)
     EXPECT_EQ(32, m.rows);
 }
 
+TEST(Imgcodecs_Image, imread_overload)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string imgName = findDataFile("../highgui/readwrite/ordinary.bmp");
+
+    Mat ref = imread(imgName);
+    ASSERT_FALSE(ref.empty());
+    {
+        Mat img(ref.size(), ref.type(), Scalar::all(0)); // existing image
+        void * ptr = img.data;
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+        EXPECT_EQ(img.data, ptr); // no reallocation
+    }
+    {
+        Mat img; // empty image
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+    }
+    {
+        UMat img; // empty UMat
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+    }
+}
+
 //==================================================================================================
 
 TEST(Imgcodecs_Image, write_umat)
