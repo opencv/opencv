@@ -866,12 +866,14 @@ TEST(Charuco, testSeveralBoardsWithCustomIds)
     detector2.detectBoard(gray, c_corners2, c_ids2, corners, ids);
 
     ASSERT_EQ(ids.size(), size_t(16));
-    ASSERT_EQ(c_corners1.rows, expected_corners.rows);
-    EXPECT_NEAR(0, cvtest::norm(expected_corners, c_corners1.reshape(1), NORM_INF), 3e-1);
+    // In 4.x detectBoard() returns the charuco corners in a 2D Mat with shape (N_corners, 1)
+    // In 5.x, after PR #23473, detectBoard() returns the charuco corners in a 1D Mat with shape (1, N_corners)
+    ASSERT_EQ(expected_corners.total(), c_corners1.total()*c_corners1.channels());
+    EXPECT_NEAR(0., cvtest::norm(expected_corners.reshape(1, 1), c_corners1.reshape(1, 1), NORM_INF), 3e-1);
 
-    ASSERT_EQ(c_corners2.rows, expected_corners.rows);
+    ASSERT_EQ(expected_corners.total(), c_corners2.total()*c_corners2.channels());
     expected_corners.col(0) += 500;
-    EXPECT_NEAR(0, cvtest::norm(expected_corners, c_corners2.reshape(1), NORM_INF), 3e-1);
+    EXPECT_NEAR(0., cvtest::norm(expected_corners.reshape(1, 1), c_corners2.reshape(1, 1), NORM_INF), 3e-1);
 }
 
 }} // namespace
