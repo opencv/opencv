@@ -187,7 +187,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1 || inputs.size() == 3);
+        CV_Assert(inputs.size() == 1 || inputs.size() == 2 || inputs.size() == 3);
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return false;
     }
@@ -348,7 +348,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1 || inputs.size() == 3);
+        CV_Assert(inputs.size() == 1 || inputs.size() == 2 || inputs.size() == 3);
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return false;
     }
