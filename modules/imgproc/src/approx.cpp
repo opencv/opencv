@@ -985,7 +985,7 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
 
     CV_Assert((curve.cols == 1 && curve.rows >= side)
         || (curve.rows == 1 && curve.cols >= side));
- 
+
     if (curve.rows == 1)
     {
         curve = curve.reshape(0, curve.cols);

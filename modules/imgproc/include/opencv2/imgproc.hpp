@@ -4068,8 +4068,7 @@ It uses a greedy algorithm for contracting two vertices into one in such a way t
 Straight lines formed by each edge of the convex contour are drawn and the areas of the resulting triangles are considered.
 Each vertex will lie either on the original contour or outside it.
 
-The algorithm based on the paper
-<https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1fbd43f3827fffeb76641a9c5ab5b625eb5a75ba>.
+The algorithm based on the paper @cite LowIlie2003 .
 
 @param curve Input vector of a 2D points stored in std::vector or Mat, points must be float or integer.
 @param approxCurve Result of the approximation. The type is vector of a 2D point (Point2f or Point) in std::vector or Mat.
