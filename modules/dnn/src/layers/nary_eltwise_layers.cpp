@@ -357,13 +357,10 @@ public:
     }
 
     template <typename T, typename Functor>
-    void binary_forward_impl(
-            int ndims, const std::vector<int>& shape,
-            const char* data1, const std::vector<size_t>& step1,
-            const char* data2, const std::vector<size_t>& step2,
-            char* data, const std::vector<size_t>& step,
-            const Functor& op)
-    {
+    void binary_forward_impl(const Functor& op, int ndims, const std::vector<int>& shape,
+                             const char* data1, const std::vector<size_t>& step1,
+                             const char* data2, const std::vector<size_t>& step2,
+                             char* data, const std::vector<size_t>& step, size_t block_size) {
         assert(ndims >= 2);
         size_t dp1 = step1.back() / sizeof(T);
         size_t dp2 = step2.back() / sizeof(T);
@@ -397,7 +394,7 @@ public:
                 }
             };
 
-            double nstripes = getNumThreads();
+            double nstripes = plane_size * (1.0 / double(block_size));
             parallel_for_(Range(0, plane_size), worker, nstripes);
         } else { // parallelize across planes
             auto worker = [&](const Range &r) {
@@ -439,7 +436,7 @@ public:
                     }
                 }
             };
-            double nstripes = getNumThreads();
+            double nstripes = nplanes * (1.0 / double(block_size));
             parallel_for_(Range(0, nplanes), worker, nstripes);
         }
     }
@@ -448,24 +445,18 @@ public:
         Elementwise binary operator (like +, -, x, /, etc.) which takes two operands
     */
     template <typename T, typename Functor>
-    void binary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
-    {
+    void binary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs, size_t block_size = 6e6) {
         const Mat& a = inputs[0];
         const Mat& b = inputs[1];
         Mat& out = outputs[0];
         CV_Assert(helper.shapes.size() == 3 && helper.steps.size() == 3);
-        binary_forward_impl<T, Functor>(
-                helper.max_ndims, helper.shapes[0], a.ptr<char>(), helper.steps[1],
-                b.ptr<char>(), helper.steps[2], out.ptr<char>(), helper.steps[0],
-                f);
+        binary_forward_impl<T, Functor>(f, helper.max_ndims, helper.shapes[0], a.ptr<char>(), helper.steps[1],
+                                        b.ptr<char>(), helper.steps[2], out.ptr<char>(), helper.steps[0], block_size);
     }
 
     template<typename T, typename Functor>
-    void nary_forward_impl(
-        const Functor& op, const T scale, int ninputs, int ndims, const std::vector<int>& shape,
-        const char** inp, char* out,
-        const std::vector<std::vector<size_t>>& steps)
-    {
+    void nary_forward_impl(const Functor& op, const T scale, int ninputs, int ndims, const std::vector<int>& shape,
+                           const char** inp, char* out, const std::vector<std::vector<size_t>>& steps, size_t block_size) {
         CV_Assert(ndims >= 2);
         size_t dp  = steps[0].back() / sizeof(T);
         size_t dp1 = steps[1].back() / sizeof(T);
@@ -474,7 +465,7 @@ public:
         int plane_size = shape.back();
         int nplanes = std::accumulate(shape.begin(), shape.end() - 1, 1, std::multiplies<int>());
 
-        if (nplanes == 1) { // parallel within the plane
+        if (nplanes == 1) { // parallelize within the plane
             AutoBuffer<char> buf_ptrs(steps.size());
             auto ptrs = (char**)buf_ptrs.data();
             ptrs[0] = out;
@@ -517,9 +508,9 @@ public:
                     }
                 }
             };
-            double nstripes = getNumThreads();
+            double nstripes = plane_size * (1.0 / double(block_size));
             parallel_for_(Range(0, plane_size), worker, nstripes);
-        } else { // parallel across the plane
+        } else { // parallelize across the plane
             auto worker = [&](const Range &r) {
                 AutoBuffer<char> buf_ptrs(steps.size());
                 auto ptrs = (char**)buf_ptrs.data();
@@ -572,7 +563,7 @@ public:
                     }
                 }
             };
-            double nstripes = getNumThreads();
+            double nstripes = nplanes * (1.0 / double(block_size));
             parallel_for_(Range(0, nplanes), worker, nstripes);
         }
     }
@@ -581,11 +572,9 @@ public:
         Elementwise nary operator (like sum, mean, etc.) which takes at least one operand
     */
     template <typename T, typename Functor>
-    void nary_forward(
-        const Functor& f, T scale,
-        const std::vector<Mat>& inputs, std::vector<Mat>& outputs
-        )
-    {
+    void nary_forward(const Functor& f, T scale,
+                      const std::vector<Mat>& inputs, std::vector<Mat>& outputs,
+                      size_t block_size = 6e6) {
         // collect all input info
         std::vector<const char*> v_inp;
         std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp), [] (const Mat& m) { return m.template ptr<const char>(); });
@@ -594,14 +583,14 @@ public:
         // collect output info
         char* out = outputs[0].ptr<char>();
 
-        nary_forward_impl<T>(f, scale, helper.ninputs, helper.max_ndims, helper.shapes[0], inp, out, helper.steps);
+        nary_forward_impl<T, Functor>(f, scale, helper.ninputs, helper.max_ndims, helper.shapes[0], inp, out, helper.steps, block_size);
     }
 
     /*
         Elementwise ternary operator (like where) which takes three operands
     */
     template <typename T, typename Functor>
-    void ternary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs) {
+    void ternary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs, size_t block_size = 6e6) {
         const Mat& a = inputs[0];
         const Mat& b = inputs[1];
         const Mat& c = inputs[2];
@@ -609,20 +598,20 @@ public:
 
         CV_Assert(helper.shapes.size() == 4 && helper.steps.size() == 4);
 
-        ternary_forward_impl<T, Functor>(helper.max_ndims, helper.shapes[0],
+        ternary_forward_impl<T, Functor>(f, helper.max_ndims, helper.shapes[0],
                                          a.ptr<char>(), helper.steps[1],
                                          b.ptr<char>(), helper.steps[2],
                                          c.ptr<char>(), helper.steps[3],
-                                         out.ptr<char>(), helper.steps[0], f);
+                                         out.ptr<char>(), helper.steps[0], block_size);
     }
 
     template <typename T, typename Functor>
     void ternary_forward_impl(
-            int ndims, const std::vector<int>& shape,
+            const Functor& op, int ndims, const std::vector<int>& shape,
             const char* data1, const std::vector<size_t>& step1,
             const char* data2, const std::vector<size_t>& step2,
             const char* data3, const std::vector<size_t>& step3,
-            char* data, const std::vector<size_t>& step, const Functor& op) {
+            char* data, const std::vector<size_t>& step, size_t block_size) {
         CV_Assert(ndims >= 2);
         size_t dp1 = step1.back() / sizeof(T);
         size_t dp2 = step2.back() / sizeof(T);
@@ -631,7 +620,7 @@ public:
         int plane_size = shape.back();
         int nplanes = std::accumulate(shape.begin(), shape.end() - 1, 1, std::multiplies<int>());
 
-        if (nplanes == 1) {
+        if (nplanes == 1) { // parallelize within the plane
             const T *ptr1 = (const T*)data1;
             const T *ptr2 = (const T*)data2;
             const T *ptr3 = (const T*)data3;
@@ -662,9 +651,9 @@ public:
                     }
                 }
             };
-            double nstripes = getNumThreads();
+            double nstripes = plane_size * (1.0 / double(block_size));
             parallel_for_(Range(0, plane_size), worker, nstripes);
-        } else {
+        } else { // parallelize across planes
             auto worker = [&](const Range &r) {
                 for (int plane_idx = r.start; plane_idx < r.end; plane_idx++) {
                     const char* ptr1_ = data1;
@@ -713,7 +702,7 @@ public:
                     }
                 }
             };
-            double nstripes = getNumThreads();
+            double nstripes = nplanes * (1.0 / double(block_size));
             parallel_for_(Range(0, nplanes), worker, nstripes);
         }
     }
@@ -784,7 +773,7 @@ public:
                 }
                 case OPERATION::POW: {
                     auto pow = [] (const T& a, const T& b) { return std::pow(a, b); };
-                    binary_forward<T>(pow, std::forward<Args>(args)...);
+                    binary_forward<T>(pow, std::forward<Args>(args)..., 1e5);
                     break;
                 }
                 case OPERATION::XOR: {
