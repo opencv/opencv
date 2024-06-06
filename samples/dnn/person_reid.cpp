@@ -257,7 +257,7 @@ static vector<Mat> yoloDetector(Mat &frame, Net &net)
                 h // height
             );
             boxes.push_back(box);
-            scores.push_back(maxScore);
+            scores.push_back(static_cast<float>(maxScore));
             class_ids.push_back(maxClassLoc.x); // x location gives the index
         }
     }
@@ -268,11 +268,10 @@ static vector<Mat> yoloDetector(Mat &frame, Net &net)
 
     vector<Mat> images;
     for (int index : indexes) {
-        int x = round(boxes[index].x * scale);
-        int y = round(boxes[index].y * scale);
-        int w = round(boxes[index].width * scale);
-        int h = round(boxes[index].height * scale);
-
+        int x = static_cast<int>(round(boxes[index].x * scale));
+        int y = static_cast<int>(round(boxes[index].y * scale));
+        int w = static_cast<int>(round(boxes[index].width * scale));
+        int h = static_cast<int>(round(boxes[index].height * scale));
         // Make sure the box is within the frame
         x = max(0, x);
         y = max(0, y);
