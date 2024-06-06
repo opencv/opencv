@@ -264,7 +264,7 @@ static vector<Mat> yoloDetector(Mat &frame, Net &net)
 
     // Apply Non-Maximum Suppression
     vector<int> indexes;
-    NMSBoxes(boxes, scores, 0.25, 0.45, indexes, 0.5, 0);
+    NMSBoxes(boxes, scores, 0.25f, 0.45f, indexes, 0.5f, 0);
 
     vector<Mat> images;
     for (int index : indexes) {
