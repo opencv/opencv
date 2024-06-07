@@ -72,6 +72,22 @@ PyObject* pyopencv_from(const dnn::LayerParams& lp)
 }
 
 template<>
+bool pyopencv_to(PyObject *o, dnn::LayerParams &lp, const ArgInfo& info)
+{
+    CV_Assert(PyDict_Check(o));
+    PyObject *key, *value;
+    Py_ssize_t pos = 0;
+    std::string keyName;
+    while (PyDict_Next(o, &pos, &key, &value)) {
+        getUnicodeString(key, keyName);
+        dnn::DictValue dv;
+        pyopencv_to(value, dv, info);
+        lp.set(keyName, dv);
+    }
+    return true;
+}
+
+template<>
 PyObject* pyopencv_from(const std::vector<dnn::Target> &t)
 {
     return pyopencv_from(std::vector<int>(t.begin(), t.end()));

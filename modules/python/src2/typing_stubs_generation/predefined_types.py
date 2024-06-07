@@ -194,6 +194,13 @@ _PREDEFINED_TYPES = (
         export_name="ExtractMetaCallback"
     ),
     AliasTypeNode.class_("LayerId", "DictValue"),
+    AliasTypeNode.dict_("LayerParams",
+                        key_type=PrimitiveTypeNode.str_(),
+                        value_type=UnionTypeNode("DictValue", items=(
+                            PrimitiveTypeNode.int_(),
+                            PrimitiveTypeNode.float_(),
+                            PrimitiveTypeNode.str_())
+                        )),
     PrimitiveTypeNode.int_("cvflann_flann_distance_t"),
     PrimitiveTypeNode.int_("flann_flann_distance_t"),
     PrimitiveTypeNode.int_("cvflann_flann_algorithm_t"),

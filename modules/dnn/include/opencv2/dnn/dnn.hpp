@@ -533,7 +533,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param params parameters which will be used to initialize the creating layer.
          *  @returns unique identifier of created layer, or -1 if a failure will happen.
          */
-        int addLayer(const String &name, const String &type, const int &dtype, LayerParams &params);
+        CV_WRAP int addLayer(const String &name, const String &type, const int &dtype, LayerParams &params);
 
         /** @overload Datatype of output blobs set to default CV_32F */
         int addLayer(const String &name, const String &type, LayerParams &params);
@@ -541,7 +541,7 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Adds new layer and connects its first input to the first output of previously added layer.
          *  @see addLayer()
          */
-        int addLayerToPrev(const String &name, const String &type, const int &dtype, LayerParams &params);
+        CV_WRAP int addLayerToPrev(const String &name, const String &type, const int &dtype, LayerParams &params);
 
         /** @overload */
         int addLayerToPrev(const String &name, const String &type, LayerParams &params);
