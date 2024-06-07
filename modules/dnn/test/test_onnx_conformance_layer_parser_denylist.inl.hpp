@@ -59,10 +59,10 @@
 "test_clip_inbounds",  // ---- same as above ---
 "test_clip_outbounds",  // ---- same as above ---
 "test_clip_splitbounds",  // ---- same as above ---
-// "test_compress_0", // Issue::Can't create layer "onnx_node_output_0!output" of type "Compress" in function 'getLayerInstance'
-// "test_compress_1", // ---- same as above ---
-// "test_compress_default_axis", // ---- same as above ---
-// "test_compress_negative_axis", // ---- same as above ---
+"test_compress_0", // Issue::Can't create layer "onnx_node_output_0!output" of type "Compress" in function 'getLayerInstance'
+"test_compress_1", // ---- same as above ---
+"test_compress_default_axis", // ---- same as above ---
+"test_compress_negative_axis", // ---- same as above ---
 "test_constant",  // Issue::Wrong output
 "test_constant_pad",  // Issue:: Unkonwn error
 "test_constantofshape_float_ones", // Issue::Parser::Weights are required as inputs
@@ -84,8 +84,8 @@
 "test_dequantizelinear_axis", // Issue::Parser::Weights are required as inputs
 "test_det_2d", // Issue:: Unkonwn error
 "test_det_nd", // Issue:: Unkonwn error
-// "test_dropout_default_mask", // Issue::cvtest::norm::wrong data type
-// "test_dropout_default_mask_ratio", // ---- same as above ---
+"test_dropout_default_mask", // Issue::cvtest::norm::wrong data type
+"test_dropout_default_mask_ratio", // ---- same as above ---
 "test_dynamicquantizelinear", // Issue:: Unkonwn error
 "test_dynamicquantizelinear_expanded", // ---- same as above ---
 "test_dynamicquantizelinear_max_adjusted",  // ---- same as above ---
@@ -132,16 +132,16 @@
 "test_hardmax_one_hot",  // ---- same as above ---
 "test_identity_opt", //  23221 illegal hardware instruction
 "test_identity_sequence",  // Issue:: Unkonwn error
-// "test_if", // Issue::'Graph' is not supported in function 'getLayerParams'
-// "test_if_opt", // Issue::Failed to allocate 17059022683624350 bytes in function 'OutOfMemoryError'
-// "test_if_seq", // Issue::typeProto.has_tensor_type() in function 'dumpValueInfoProto'
-// "test_isinf", // Issue::Can't create layer "onnx_node_output_0!y" of type "IsInf" in function 'getLayerInstance'
-// "test_isinf_negative", //-- same as above ---
-// "test_isinf_positive", //-- same as above ---
-// "test_isnan", // -- same as above ---
-// "test_loop11", // Issue::'Graph' is not supported in function 'getLayerParams'
-// "test_loop13_seq", // Issue::typeProto.has_tensor_type() in function 'populateNet'
-// "test_loop16_seq_none", // Issue::Failed to allocate 179812654996800 bytes in function 'OutOfMemoryError'
+"test_if", // Issue::'Graph' is not supported in function 'getLayerParams'
+"test_if_opt", // Issue::Failed to allocate 17059022683624350 bytes in function 'OutOfMemoryError'
+"test_if_seq", // Issue::typeProto.has_tensor_type() in function 'dumpValueInfoProto'
+"test_isinf", // Issue::Can't create layer "onnx_node_output_0!y" of type "IsInf" in function 'getLayerInstance'
+"test_isinf_negative", //-- same as above ---
+"test_isinf_positive", //-- same as above ---
+"test_isnan", // -- same as above ---
+"test_loop11", // Issue::'Graph' is not supported in function 'getLayerParams'
+"test_loop13_seq", // Issue::typeProto.has_tensor_type() in function 'populateNet'
+"test_loop16_seq_none", // Issue::Failed to allocate 179812654996800 bytes in function 'OutOfMemoryError'
 "test_lstm_batchwise", // Issues::Parser:: !name.empty() && constBlobs.count(name) == 1 in function 'parseLSTM'
 "test_lstm_defaults", // ---- same as above ---
 "test_lstm_with_initial_bias", // ---- same as above ---
@@ -205,14 +205,14 @@
 "test_nonmaxsuppression_suppress_by_IOU_and_scores", // ---- same as above ---
 "test_nonmaxsuppression_two_batches", // ---- same as above ---
 "test_nonmaxsuppression_two_classes", // ---- same as above ---
-// "test_nonzero_example", // Issue::Can't create layer "onnx_node_output_0!result" of type "NonZero" in function 'getLayerInstance'
+"test_nonzero_example", // Issue::Can't create layer "onnx_node_output_0!result" of type "NonZero" in function 'getLayerInstance'
 "test_onehot_negative_indices", // Issue:: Layer does not exist (OneHot) :: Can't create layer "onnx_node_output_0!y" of type "OneHot" in function 'getLayerInstance'
 "test_onehot_with_axis", // ---- same as above ---
 "test_onehot_with_negative_axis", // ---- same as above ---
 "test_onehot_without_axis", // ---- same as above ---
 "test_optional_get_element", // Issue::out of memory :: Failed to allocate 1044051907127083008 bytes in function 'OutOfMemoryError'
 "test_optional_get_element_sequence", // ---- same as above ---
-// "test_optional_has_element", // Issue::typeProto.has_tensor_type() in function 'populateNet'
+"test_optional_has_element", // Issue::typeProto.has_tensor_type() in function 'populateNet'
 "test_optional_has_element_empty", // ---- same as above ---
 "test_pow_types_float", // Issue:: Unsupported data type
 "test_pow_types_float32_int32", // ---- same as above ---
@@ -402,12 +402,12 @@
 "test_top_k", // Issue:: Parser: Can't create layer "onnx_node_output_0!values" of type "TopK" in function 'getLayerInstance'
 "test_top_k_negative_axis",  // ---- same as above ---
 "test_top_k_smallest",  // ---- same as above ---
-// "test_training_dropout", // Issue::cvtest::norm::wrong data type
-// "test_training_dropout_default",  // ---- same as above ---
-// "test_training_dropout_default_mask",  // ---- same as above ---
-// "test_training_dropout_mask",  // ---- same as above ---
-// "test_training_dropout_zero_ratio",  // ---- same as above ---
-// "test_training_dropout_zero_ratio_mask",  // ---- same as above ---
+"test_training_dropout", // Issue::cvtest::norm::wrong data type
+"test_training_dropout_default",  // ---- same as above ---
+"test_training_dropout_default_mask",  // ---- same as above ---
+"test_training_dropout_mask",  // ---- same as above ---
+"test_training_dropout_zero_ratio",  // ---- same as above ---
+"test_training_dropout_zero_ratio_mask",  // ---- same as above ---
 "test_tril", // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "Trilu" in function 'getLayerInstance'
 "test_tril_neg",  // ---- same as above ---
 "test_tril_one_row_neg",  // ---- same as above ---
