@@ -127,11 +127,11 @@ Building OpenCV.js from Source
     @note
     It requires `doxygen` installed in your development environment.
 
--#  [optional] To build tests, append `--disable_wasm --build_test ` option.
+-#  [optional] To build tests, append `--build_test ` option.
 
     For example:
     @code{.bash}
-    emcmake python ./opencv/platforms/js/build_js.py build_js --disable_wasm --build_test
+    emcmake python ./opencv/platforms/js/build_js.py build_js --build_test
     @endcode
 
 -#  [optional] To enable OpenCV contrib modules append `--cmake_option="-DOPENCV_EXTRA_MODULES_PATH=/path/to/opencv_contrib/modules/"`
@@ -151,7 +151,7 @@ Building OpenCV.js from Source
 Running OpenCV.js Tests
 ---------------------------------------
 
-Remember to launch the build command passing `--disable_wasm --build_test` as mentioned previously. This will generate test source code ready to run together with `opencv.js` file in `build_js/bin`
+Remember to launch the build command passing `--build_test` as mentioned previously. This will generate test source code ready to run together with `opencv.js` file in `build_js/bin`
 
 ### Manually in your browser
 

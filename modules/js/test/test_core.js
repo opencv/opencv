@@ -4,7 +4,7 @@
 
 QUnit.module('Core', {});
 
-test('test_LUT', function(assert) {
+QUnit.test('test_LUT', function(assert) {
     // test LUT
     {
         let src = cv.matFromArray(3, 3, cv.CV_8UC1, [255, 128, 0, 0, 128, 255, 1, 2, 254]);
