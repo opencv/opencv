@@ -783,9 +783,9 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             cinfo.comp_info[1].h_samp_factor = 1;
         }
 
-#if JPEG_LIB_VERSION >= 70
         if (luma_quality >= 0 && chroma_quality >= 0)
         {
+#if JPEG_LIB_VERSION >= 70
             cinfo.q_scale_factor[0] = jpeg_quality_scaling(luma_quality);
             cinfo.q_scale_factor[1] = jpeg_quality_scaling(chroma_quality);
             if ( luma_quality != chroma_quality )
@@ -797,8 +797,11 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 cinfo.comp_info[1].h_samp_factor = 1;
             }
             jpeg_default_qtables( &cinfo, TRUE );
-        }
+#else
+            // See https://github.com/opencv/opencv/issues/25646
+            CV_LOG_ONCE_WARNING(NULL, cv::format("IMWRITE_JPEG_LUMA/CHROMA_QUALITY are not supported bacause JPEG_LIB_VERSION < 70."));
 #endif // #if JPEG_LIB_VERSION >= 70
+        }
 
         jpeg_start_compress( &cinfo, TRUE );
 

@@ -1,7 +1,7 @@
 ;
 ; jccolor.asm - colorspace conversion (64-bit SSE2)
 ;
-; Copyright (C) 2009, 2016, D. R. Commander.
+; Copyright (C) 2009, 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -32,7 +32,7 @@ F_0_337 equ (F_0_587 - F_0_250)  ; FIX(0.58700) - FIX(0.25000)
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_rgb_ycc_convert_sse2)
 
 EXTN(jconst_rgb_ycc_convert_sse2):
@@ -45,7 +45,7 @@ PD_ONEHALFM1_CJ times 4 dd  (1 << (SCALEBITS - 1)) - 1 + \
                             (CENTERJSAMPLE << SCALEBITS)
 PD_ONEHALF      times 4 dd  (1 << (SCALEBITS - 1))
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT

@@ -3,6 +3,7 @@
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2016, D. R. Commander.
+; Copyright (C) 2023, Aliaksiej Kandracienka.
 ;
 ; Based on
 ; x86 SIMD extension for IJG JPEG library
@@ -31,6 +32,8 @@
     GLOBAL_FUNCTION(jpeg_simd_cpu_support)
 
 EXTN(jpeg_simd_cpu_support):
+    push        rbp
+    mov         rbp, rsp
     push        rbx
     push        rdi
 
@@ -79,6 +82,7 @@ EXTN(jpeg_simd_cpu_support):
 
     pop         rdi
     pop         rbx
+    pop         rbp
     ret
 
 ; For some reason, the OS X linker does not honor the request to align the

@@ -155,7 +155,12 @@ public:
         const auto &eigen_vectors = eigen_solver.eigenvectors();
         const auto &eigen_values = eigen_solver.eigenvalues();
 #else
+
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+        long mat_order = 27, info, lda = 27, ldvl = 1, ldvr = 27, lwork = 500;
+#else
         int mat_order = 27, info, lda = 27, ldvl = 1, ldvr = 27, lwork = 500;
+#endif
         double wr[27], wi[27] = {0}; // 27 = mat_order
         std::vector<double> work(lwork), eig_vecs(729);
         char jobvl = 'N', jobvr = 'V'; // only left eigen vectors are computed
