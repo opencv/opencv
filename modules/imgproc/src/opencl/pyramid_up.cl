@@ -1,6 +1,6 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at https://opencv.org/license/.
+// of this distribution and at http://opencv.org/license.html.
 
 __constant float kx[] = { 0.125, 0.5, 0.75, 0.5, 0.125 };
 __constant float ky[] = { 0.125, 0.5, 0.75, 0.5, 0.125 };

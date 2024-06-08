@@ -1,6 +1,6 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at https://opencv.org/license/.
+// of this distribution and at http://opencv.org/license.html.
 
 __kernel void boxFilter3x3_8UC1_cols16_rows2(__global const uint* src, int src_step,
                                              __global uint* dst, int dst_step, int rows, int cols

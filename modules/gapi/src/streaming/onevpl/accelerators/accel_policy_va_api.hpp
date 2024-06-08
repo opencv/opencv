@@ -1,6 +1,6 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at https://opencv.org/license/.
+// of this distribution and at http://opencv.org/license.html.
 
 #ifndef GAPI_STREAMING_ONEVPL_ACCELERATORS_ACCEL_POLICY_VA_API_HPP
 #define GAPI_STREAMING_ONEVPL_ACCELERATORS_ACCEL_POLICY_VA_API_HPP
