@@ -2,21 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-function test(name, test_body) {
-    if (cv instanceof Promise) {
-        QUnit.test(name, (assert) => {
-            const done = assert.async();
-            cv.then((ready_cv) => {
-                cv = ready_cv;
-                test_body(assert)
-                done();
-            });
-        });
-    } else {
-        QUnit.test(name, test_body);
-    }
-}
-
 QUnit.module('Core', {});
 
 test('test_LUT', function(assert) {
