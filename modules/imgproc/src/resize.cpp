@@ -3698,7 +3698,7 @@ class ResizeOnnxInvoker : public ParallelLoopBody
     VResize vresize;
 
     ResizeOnnxInvoker& operator =(ResizeOnnxInvoker const&);
-    
+
 public:
     typedef typename HResize::value_type T;
     typedef typename HResize::buf_type WT;
@@ -3710,7 +3710,6 @@ public:
         CV_CheckLE(ctrl.ksize, MAX_ESIZE, "resampler kernel's size is too larger");
         CV_Check(ctrl.is_fixpt, !(ctrl.is_fixpt && ctrl.is_double), "can not be both types");
         // prefer static_assert, but how ?
-#ifdef CV_CXX11
         // check generic resize
         if (ctrl.is_fixpt)
         {
@@ -3754,7 +3753,6 @@ public:
         CV_Check(sizeof(IdxT) * 10 + sizeof(WT),
             (std::is_same<IdxT, typename std::common_type<IdxT, WT>::type>::value),
             "something wrong");
-#endif
     }
 
     void hori_antialias_accumulate(T const* S, IdxT* L) const
@@ -3800,7 +3798,7 @@ public:
                 L[di + 2] += S[si + 2] * alpha;
                 L[di + 3] += S[si + 3] * alpha;
             }
-        else 
+        else
             for (int k = 0; k < len; ++k)
             {
                 int di = ctrl.xtab[k].di;
@@ -3817,7 +3815,7 @@ public:
         int dwidth = dst.cols * cn;
 #ifdef CV_CXX11
         constexpr bool same_wt_idxt = std::is_same<WT, IdxT>::value;
-#else 
+#else
         bool const same_wt_idxt = false;
 #endif
         for (int i = 0; i < count; ++i)
@@ -3917,7 +3915,7 @@ public:
         {
             if (ctrl.xkanti)
                 vert_antialias_hori_antialias(dy, L, A);
-            else 
+            else
                 vert_antialias_hori_generic(dy, Lw, A);
         }
     }
@@ -3966,7 +3964,7 @@ public:
             {
                 if (ctrl.xkanti)
                     hori_antialias_lines(srows + k0, rows + k0, L, ksize - k0);
-                else 
+                else
                     hori_generic_lines(srows + k0, rows + k0, ksize - k0);
             }
             vresize(const_cast<WT const**>(rows), dst.template ptr<T>(dy), beta, dwidth);
@@ -4321,10 +4319,10 @@ static void ocl_resizeOnnxTable(int srclen, int dstlen, int esz,
         float sum = 0.f;
         for (int i = start; i < end; ++i)
         {
-            float x = fabs(i - ratio) * scale;
+            float x = fabsf(i - ratio) * scale;
             if (sampler == INTER_LINEAR)
                 x = min(max(x, 0.f), 1.f);
-            else 
+            else
             {
                 if (x <= 1)
                     x = ((A + 2) * x - (A + 3)) * x * x + 1;
@@ -4351,7 +4349,7 @@ static void ocl_resizeOnnxTable(int srclen, int dstlen, int esz,
 static char const* ocl_resizeOnnx_typeToString(int type, char* buf, size_t size)
 {
     // typeToStr CV_Assert will failed
-    static char const* tab[CV_64F + 1] = 
+    static char const* tab[CV_64F + 1] =
         { "uchar", "char", "ushort", "short", "int", "float", "double" };
     int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if (cn == 1)
@@ -4388,9 +4386,6 @@ static bool ocl_resizeOnnx(InputArray _src, OutputArray _dst,
     int nearest = interpolation & INTER_NEAREST_MODE_MASK;
     int antialias = interpolation & INTER_ANTIALIAS_MASK;
     Point2f scale = static_cast<Point2f>(scaled);
-    if (depth > CV_64F)
-        return false;
-
     ocl::Kernel k;
     UMat src = _src.getUMat(), dst = _dst.getUMat();
     size_t globalsize[] = {static_cast<size_t>(dst.cols), static_cast<size_t>(dst.rows)};
@@ -4398,6 +4393,9 @@ static bool ocl_resizeOnnx(InputArray _src, OutputArray _dst,
     int pixel_size = static_cast<int>(src.elemSize());
     int T = depth, VT = type;
     String buildopts, errmsg;
+    // opencv ocl kernel use int for step and offset
+    if (depth > CV_64F || src.size[0] * src.step[0] > INT_MAX)
+        return false;
 
     if (sampler == INTER_NEAREST)
     {

@@ -50,7 +50,6 @@ __kernel void resizeOnnx_nearest(
     if (dx < dst_cols && dy < dst_rows)
     {
         float fx = fma(dx, m00 , m01), fy = fma(dy, m10, m11);
-    
 #if defined(INTER_NEAREST_PREFER_FLOOR) || defined(INTER_NEAREST_CEIL)
         // x, y will >= 0, so `round toward positive infinity' is equivalent to ceil
         int sx = convert_int_rtp(fx + offset);
@@ -121,13 +120,14 @@ __kernel void resizeOnnx_linear(
         VT d0 = TO_VEC_TYPE((u0 * v0) * s0 + (u1 * v0) * s1 + (u0 * v1) * s2 + (u1 * v1) * s3);
         storepix(d0, D);
 #else
+        W coeff[4] = { u0 * v0, u1 * v0, u0 * v1, u1 * v1 };
         for (int i = 0; i < channel; ++i)
         {
             W s0 = TO_WORK(((__global T const*)(S0))[i]);
             W s1 = TO_WORK(((__global T const*)(S1))[i]);
             W s2 = TO_WORK(((__global T const*)(S2))[i]);
             W s3 = TO_WORK(((__global T const*)(S3))[i]);
-            W d0 = (u0 * v0) * s0 + (u1 * v0) * s1 + (u0 * v1) * s2 + (u1 * v1) * s3;
+            W d0 = coeff[0] * s0 + coeff[1] * s1 + coeff[2] * s2 + coeff[3] * s3;
             ((__global T*)(D))[i] = TO_TYPE(d0);
         }
 #endif
@@ -271,10 +271,10 @@ __kernel void resizeOnnx_cubic(
         for (int y = ystart; y <= ylimit; ++y)
         {
             int yoffset = clamp(y, 0, src_rows - 1) * src_step + src_offset;
-            VW line = (VW)(0);
+            VW sline = (VW)(0);
             for (int x = 0; x < 4; ++x)
-                line += (VW)(xcoeff[x]) * TO_VEC_WORK(loadpix(srcptr + yoffset + xoffset[x]));
-            sum += line * (VW)(cubicCoeff(A, A2, A3, y - fy));
+                sline += (VW)(xcoeff[x]) * TO_VEC_WORK(loadpix(srcptr + yoffset + xoffset[x]));
+            sum += sline * (VW)(cubicCoeff(A, A2, A3, y - fy));
         }
         storepix(TO_VEC_TYPE(sum), D);
 #else
@@ -290,11 +290,11 @@ __kernel void resizeOnnx_cubic(
             W sum = 0;
             for (int y = 0; y < 4; ++y)
             {
-                W line = 0;
+                W sline = 0;
                 for (int x = 0; x < 4; ++x)
-                    line += xcoeff[x] * TO_WORK(((__global T const*)
+                    sline += xcoeff[x] * TO_WORK(((__global T const*)
                                                 (srcptr + yoffset[y] + xoffset[x]))[i]);
-                sum += line * ycoeff[y];
+                sum += sline * ycoeff[y];
             }
             ((__global T*)(D))[i] = TO_TYPE(sum);
         }
@@ -329,10 +329,10 @@ __kernel void resizeOnnx_table(
         {
             // offset is already clamped. xoffset is given by uchar
             __global const uchar* S = (srcptr + yoffset[y] * src_step + src_offset);
-            VW line = (VW)(0);
+            VW sline = (VW)(0);
             for (int x = dx; x < xstride; x += dst_cols)
-                line += xcoeff[x] * TO_VEC_WORK(loadpix(S + xoffset[x]));
-            sum += line * ycoeff[y];
+                sline += xcoeff[x] * TO_VEC_WORK(loadpix(S + xoffset[x]));
+            sum += sline * ycoeff[y];
         }
         storepix(TO_VEC_TYPE(sum), D);
 #else
@@ -342,10 +342,10 @@ __kernel void resizeOnnx_table(
             for (int y = dy; y < ystride; y += dst_rows)
             {
                 __global const uchar* S = (srcptr + yoffset[y] * src_step + src_offset);
-                W line = 0;
+                W sline = 0;
                 for (int x = dx; x < xstride; x += dst_cols)
-                    line += xcoeff[x] * TO_WORK(((__global T const*)(S + xoffset[x]))[i]);
-                sum += line * ycoeff[y];
+                    sline += xcoeff[x] * TO_WORK(((__global T const*)(S + xoffset[x]))[i]);
+                sum += sline * ycoeff[y];
             }
             ((__global T*)(D))[i] = TO_TYPE(sum);
         }
@@ -353,7 +353,7 @@ __kernel void resizeOnnx_table(
     }
 }
 
-#else 
+#else
 
 #error "empty kernel"
 

@@ -235,7 +235,7 @@ TEST(ResizeOnnx, downsample_sizes_linear_pytorch_half_pixel)
         Size(4, 4), Size(1, 3), Size(1, 3), Point2d(),
         -0.75f, Rect2d(),
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-        {   
+        {
             1.6666666,
             7.0      ,
             12.333333,
@@ -495,4 +495,3 @@ TEST(ResizeOnnx, upsample_sizes_nearest_round_prefer_ceil_asymmetric)
 }
 
 }}
-
