@@ -2,14 +2,24 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-if (typeof module !== 'undefined' && module.exports) {
-    // The environment is Node.js
-    var cv = require('./opencv.js'); // eslint-disable-line no-var
+function test(name, test_body) {
+    if (cv instanceof Promise) {
+        QUnit.test(name, (assert) => {
+            const done = assert.async();
+            cv.then((ready_cv) => {
+                cv = ready_cv;
+                test_body(assert)
+                done();
+            });
+        });
+    } else {
+        QUnit.test(name, test_body);
+    }
 }
 
 QUnit.module('Core', {});
 
-QUnit.test('test_LUT', function(assert) {
+test('test_LUT', function(assert) {
     // test LUT
     {
         let src = cv.matFromArray(3, 3, cv.CV_8UC1, [255, 128, 0, 0, 128, 255, 1, 2, 254]);

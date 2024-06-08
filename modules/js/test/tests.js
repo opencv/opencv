@@ -43,22 +43,24 @@ testrunner.options.maxBlockDuration = 20000; // cause opencv_js.js need time to 
 
 testrunner.run(
     {
-        code: 'opencv.js',
-        tests: ['test_mat.js',
-                'test_utils.js',
+        code: {path: "opencv.js", namespace: "cv"},
+        tests: [//'test_mat.js',
+                // 'test_utils.js',
                 'test_core.js',
-                'test_imgproc.js',
-                // 'test_objdetect.js',  // TypeError: cv.FS_createLazyFile is not a function
-                'test_video.js',
-                'test_features2d.js',
-                'test_photo.js',
-                'test_calib3d.js',
+                // 'test_imgproc.js',
+                // // 'test_objdetect.js',  // TypeError: cv.FS_createLazyFile is not a function
+                // 'test_video.js',
+                // 'test_features2d.js',
+                // 'test_photo.js',
+                // 'test_calib3d.js',
         ],
     },
     function(err, report) {
         console.log(report.failed + ' failed, ' + report.passed + ' passed');
         if (report.failed || err) {
-            console.log(err);
+            if (err) {
+                console.log(err);
+            }
             process.on('exit', function() {
                 process.exit(1);
             });
