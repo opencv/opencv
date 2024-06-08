@@ -5,10 +5,10 @@
 if (cv instanceof Promise) {
     QUnit.test("init_cv", (assert) => {
         const done = assert.async();
+        assert.ok(true);
         cv.then((ready_cv) => {
             cv = ready_cv;
             done();
         });
-        assert.ok(true);
     });
 }

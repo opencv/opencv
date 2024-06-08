@@ -49,7 +49,7 @@ testrunner.run(
                 'test_utils.js',
                 'test_core.js',
                 'test_imgproc.js',
-                // 'test_objdetect.js',  // TypeError: cv.FS_createLazyFile is not a function
+                'test_objdetect.js',
                 'test_video.js',
                 'test_features2d.js',
                 'test_photo.js',

@@ -127,7 +127,7 @@ Building OpenCV.js from Source
     @note
     It requires `doxygen` installed in your development environment.
 
--#  [optional] To build tests, append `--build_test ` option.
+-#  [optional] To build tests, append `--build_test` option.
 
     For example:
     @code{.bash}
