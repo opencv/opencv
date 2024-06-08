@@ -1,6 +1,6 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html.
+// of this distribution and at https://opencv.org/license/.
 // Usage: opencv_test_videoio --gtest_also_run_disabled_tests
 
 #include "test_precomp.hpp"

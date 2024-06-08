@@ -1,5 +1,5 @@
 // This file is a part of OpenCV project.
-// See opencv/LICENSE and http://opencv.org/license.html for the actual licensing terms.
+// See opencv/LICENSE and https://opencv.org/license/ for the actual licensing terms.
 // See also opencv/doc/LICENSE_CHANGE_NOTICE.txt. Below is the original license:
 
 /*********************************************************************
