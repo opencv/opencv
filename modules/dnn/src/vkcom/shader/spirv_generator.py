@@ -13,7 +13,7 @@ dir = "./"
 license_decl = \
 '// This file is part of OpenCV project.\n'\
 '// It is subject to the license terms in the LICENSE file found in the top-level directory\n'\
-'// of this distribution and at http://opencv.org/license.html.\n\n'
+'// of this distribution and at https://opencv.org/license/.\n\n'
 
 precomp = '#include \"../../precomp.hpp\"\n'
 ns_head = '\nnamespace cv { namespace dnn { namespace vkcom {\n\n'

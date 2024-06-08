@@ -1,6 +1,6 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html.
+// of this distribution and at https://opencv.org/license/.
 //
 // Copyright (c) 2006-2010, Rob Hess <hess@eecs.oregonstate.edu>
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
