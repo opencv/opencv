@@ -36,7 +36,7 @@ namespace cv { namespace highgui_backend {
         cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FB_MODE", "");
         static std::string fbModeDef = "FB";
 
-        if(!fbModeOpenCV.empty()) return fbModeOpenCV;
+        if (!fbModeOpenCV.empty()) return fbModeOpenCV;
         return fbModeDef;
     }
 
@@ -48,8 +48,8 @@ namespace cv { namespace highgui_backend {
         cv::utils::getConfigurationParameterString("OPENCV_HIGHGUI_FB_DEVICE", "");
         static std::string fbFileNameDef = "/dev/fb0";
 
-        if(!fbFileNameOpenCV.empty()) return fbFileNameOpenCV;
-        if(!fbFileNameFB.empty()) return fbFileNameFB;
+        if (!fbFileNameOpenCV.empty()) return fbFileNameOpenCV;
+        if (!fbFileNameFB.empty()) return fbFileNameFB;
         return fbFileNameDef;
     }
 
@@ -75,29 +75,30 @@ namespace cv { namespace highgui_backend {
         CV_LOG_INFO(NULL, "UI: InputArray image: "
         << cv::typeToString(image.type()) << " size " << image.size());
 
-        if((currentImg.size().width <= 0) && (currentImg.size().height <= 0))
+        if ((currentImg.size().width <= 0) && (currentImg.size().height <= 0))
         {
             return;
         }
 
         Mat img(image.getMat().clone());
-        switch(img.channels()){
+        switch (img.channels())
+        {
             case 1:
                 switch(img.type())
                 {
-                case CV_8S:
-                    cv::convertScaleAbs(img, img, 1, 127);
-                break;
-                case CV_16S:
-                    cv::convertScaleAbs(img, img, 1/255., 127);
-                break;
-                case CV_16U:
-                    cv::convertScaleAbs(img, img, 1/255.);
-                break;
-                case CV_32F:
-                case CV_64F: // assuming image has values in range [0, 1)
-                    img.convertTo(img, CV_8U, 255., 0.);
-                break;
+                    case CV_8S:
+                        cv::convertScaleAbs(img, img, 1, 127);
+                    break;
+                    case CV_16S:
+                        cv::convertScaleAbs(img, img, 1/255., 127);
+                    break;
+                    case CV_16U:
+                        cv::convertScaleAbs(img, img, 1/255.);
+                    break;
+                    case CV_32F:
+                    case CV_64F: // assuming image has values in range [0, 1)
+                        img.convertTo(img, CV_8U, 255., 0.);
+                    break;
                 }
                 cvtColor(img, img, cv::COLOR_GRAY2RGB);
             break;
@@ -119,7 +120,7 @@ namespace cv { namespace highgui_backend {
         int cntChannel = img.channels();
         cv::Size imgSize = currentImg.size();
 
-        if(flags & WINDOW_AUTOSIZE)
+        if (flags & WINDOW_AUTOSIZE)
         {
             windowRect.width = imgSize.width;
             windowRect.height = imgSize.height;
@@ -127,7 +128,7 @@ namespace cv { namespace highgui_backend {
             newHeight = windowRect.height;
         }
 
-        if(flags & WINDOW_FREERATIO)
+        if (flags & WINDOW_FREERATIO)
         {
             newWidth = windowRect.width;
             newHeight = windowRect.height;
@@ -138,13 +139,14 @@ namespace cv { namespace highgui_backend {
             newWidth = windowRect.width;
             newHeight = (int)(windowRect.width / aspect_ratio);
 
-            if (newHeight > windowRect.height) {
+            if (newHeight > windowRect.height)
+            {
                 newWidth = (int)(windowRect.height * aspect_ratio);
                 newHeight = windowRect.height;
             }
         }
 
-        if((newWidth != img.cols) && (newHeight != img.rows))
+        if ((newWidth != img.cols) && (newHeight != img.rows))
         {
             cv::resize(img, img, cv::Size(newWidth, newHeight), INTER_LINEAR);
         }
@@ -152,13 +154,14 @@ namespace cv { namespace highgui_backend {
         CV_LOG_INFO(NULL, "UI: Formated image: "
         << cv::typeToString(img.type()) << " size " << img.size());
 
-        if(backend.getMode() == FB_MODE_EMU)
+        if (backend.getMode() == FB_MODE_EMU)
         {
             CV_LOG_WARNING(NULL, "UI: FramebufferWindow::imshow is used in EMU mode");
             return;
         }
 
-        if (backend.getFBPointer() == MAP_FAILED) {
+        if (backend.getFBPointer() == MAP_FAILED)
+        {
             CV_LOG_ERROR(NULL, "UI: Framebuffer is not mapped");
             return;
         }
@@ -177,7 +180,7 @@ namespace cv { namespace highgui_backend {
         int fb_start_x;
         int fb_start_y;
 
-        if(windowRect.y - yOffset < 0)
+        if (windowRect.y - yOffset < 0)
         {
             img_start_y = - (windowRect.y - yOffset);
         }
@@ -185,7 +188,7 @@ namespace cv { namespace highgui_backend {
         {
             img_start_y = 0;
         }
-        if(windowRect.x - xOffset < 0)
+        if (windowRect.x - xOffset < 0)
         {
             img_start_x = - (windowRect.x - xOffset);
         }
@@ -194,7 +197,7 @@ namespace cv { namespace highgui_backend {
             img_start_x = 0;
         }
 
-        if(windowRect.y + yOffset + img.rows > fbHeight)
+        if (windowRect.y + yOffset + img.rows > fbHeight)
         {
             img_end_y = fbHeight - windowRect.y - yOffset;
         }
@@ -202,7 +205,7 @@ namespace cv { namespace highgui_backend {
         {
             img_end_y = img.rows;
         }
-        if(windowRect.x + xOffset + img.cols > fbWidth)
+        if (windowRect.x + xOffset + img.cols > fbWidth)
         {
             img_end_x = fbWidth - windowRect.x - xOffset;
         }
@@ -211,7 +214,7 @@ namespace cv { namespace highgui_backend {
             img_end_x = img.cols;
         }
 
-        if(windowRect.y + yOffset >= 0)
+        if (windowRect.y + yOffset >= 0)
         {
             fb_start_y = windowRect.y + yOffset;
         }
@@ -219,7 +222,7 @@ namespace cv { namespace highgui_backend {
         {
             fb_start_y = 0;
         }
-        if(windowRect.x + xOffset >= 0)
+        if (windowRect.x + xOffset >= 0)
         {
             fb_start_x = windowRect.x + xOffset;
         }
@@ -262,12 +265,12 @@ namespace cv { namespace highgui_backend {
         CV_Assert(width > 0);
         CV_Assert(height > 0);
 
-        if(!(flags & WINDOW_AUTOSIZE))
+        if (!(flags & WINDOW_AUTOSIZE))
         {
             windowRect.width = width;
             windowRect.height = height;
 
-            if((currentImg.cols > 0) && (currentImg.rows > 0))
+            if ((currentImg.cols > 0) && (currentImg.rows > 0))
             {
                 imshow(currentImg);
             }
@@ -281,7 +284,7 @@ namespace cv { namespace highgui_backend {
         windowRect.x = x;
         windowRect.y = y;
 
-        if((currentImg.cols > 0) && (currentImg.rows > 0))
+        if ((currentImg.cols > 0) && (currentImg.rows > 0))
         {
             imshow(currentImg);
         }
@@ -376,10 +379,10 @@ namespace cv { namespace highgui_backend {
         << "transp offset  " << varInfo.transp.offset << " length " <<varInfo.transp.length << "\n"
         << "bits_per_pixel " << varInfo.bits_per_pixel);
 
-        if((varInfo.red.offset != 16) && (varInfo.red.length != 8) &&
-           (varInfo.green.offset != 8) && (varInfo.green.length != 8) &&
-           (varInfo.blue.offset != 0) && (varInfo.blue.length != 8) &&
-           (varInfo.bits_per_pixel != 32) )
+        if ((varInfo.red.offset != 16) && (varInfo.red.length != 8) &&
+            (varInfo.green.offset != 8) && (varInfo.green.length != 8) &&
+            (varInfo.blue.offset != 0) && (varInfo.blue.length != 8) &&
+            (varInfo.bits_per_pixel != 32) )
         {
             close(fb_fd);
             CV_LOG_ERROR(NULL, "UI: Framebuffer format is not supported "
@@ -402,7 +405,8 @@ namespace cv { namespace highgui_backend {
         fbPointer = (unsigned char*)
         mmap(0, fbScreenSize, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
 
-        if (fbPointer == MAP_FAILED) {
+        if (fbPointer == MAP_FAILED)
+        {
             CV_LOG_ERROR(NULL, "UI: can't mmap framebuffer");
             return -1;
         }
@@ -434,13 +438,13 @@ namespace cv { namespace highgui_backend {
             return -1;
         }
 
-        if( C32INT(&(xwd_header->pixmap_format)) != ZPixmap )
+        if (C32INT(&(xwd_header->pixmap_format)) != ZPixmap)
         {
             CV_LOG_ERROR(NULL, "Unsupported pixmap format: " << xwd_header->pixmap_format);
             return -1;
         }
 
-        if( xwd_header->xoffset != 0 )
+        if (xwd_header->xoffset != 0)
         {
             CV_LOG_ERROR(NULL, "UI: Unsupported xoffset value: " << xwd_header->xoffset );
             return -1;
@@ -463,8 +467,8 @@ namespace cv { namespace highgui_backend {
         << "  blue_mask " << b << "\n"
         << "bits_per_pixel " << fbBitsPerPixel);
 
-        if((r != 16711680 ) && (g != 65280 ) && (b != 255 ) &&
-           (fbBitsPerPixel != 32))
+        if ((r != 16711680 ) && (g != 65280 ) && (b != 255 ) &&
+            (fbBitsPerPixel != 32))
         {
             CV_LOG_ERROR(NULL, "UI: Framebuffer format is not supported "
             << "(use BGRA format with bits_per_pixel = 32)");
@@ -554,35 +558,36 @@ namespace cv { namespace highgui_backend {
 
         std::string fbModeStr = getFBMode();
 
-        if(fbModeStr == "EMU")
+        if (fbModeStr == "EMU")
         {
             mode = FB_MODE_EMU;
             CV_LOG_WARNING(NULL, "UI: FramebufferWindow is trying to use EMU mode");
         }
-        if(fbModeStr == "FB")
+        if (fbModeStr == "FB")
         {
             mode = FB_MODE_FB;
             CV_LOG_WARNING(NULL, "UI: FramebufferWindow is trying to use FB mode");
         }
-        if(fbModeStr == "XVFB")
+        if (fbModeStr == "XVFB")
         {
             mode = FB_MODE_XVFB;
             CV_LOG_WARNING(NULL, "UI: FramebufferWindow is trying to use XVFB mode");
         }
 
         fbID = -1;
-        if(mode == FB_MODE_FB)
+        if (mode == FB_MODE_FB)
         {
             fbID = fbOpenAndGetInfo();
         }
-        if(mode == FB_MODE_XVFB)
+        if (mode == FB_MODE_XVFB)
         {
             fbID = XvfbOpenAndGetInfo();
         }
 
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::fbID " << fbID);
 
-        if(fbID == -1){
+        if (fbID == -1)
+        {
             mode = FB_MODE_EMU;
             fbWidth = 1024;
             fbHeight = 768;
@@ -617,8 +622,8 @@ namespace cv { namespace highgui_backend {
         if(fbID == -1) return;
 
         // RESTORE BACKGROUNG
-        if (fbPointer != MAP_FAILED) {
-
+        if (fbPointer != MAP_FAILED)
+        {
             int cntChannel = 4;
             for (int y = fbYOffset; y < backgroundBuff.rows + fbYOffset; y++)
             {
@@ -674,7 +679,10 @@ namespace cv { namespace highgui_backend {
         int ch;
         initTermios(echo, wait);
         ch = getchar();
-        if(ch < 0) rewind(stdin);
+        if (ch < 0)
+        {
+            rewind(stdin);
+        }
         resetTermios();
         return ch;
     }
@@ -683,7 +691,7 @@ namespace cv { namespace highgui_backend {
     {
         int byteswaiting = 0;
         initTermios(0, 1);
-        if ( ioctl(0, FIONREAD, &byteswaiting) < 0)
+        if (ioctl(0, FIONREAD, &byteswaiting) < 0)
         {
             CV_LOG_ERROR(NULL, "UI: Framebuffer ERR byteswaiting" );
         }
@@ -698,13 +706,13 @@ namespace cv { namespace highgui_backend {
 
         int code = -1;
 
-        if(delay <= 0)
+        if (delay <= 0)
         {
             int ch = getch_(0, 1);
             CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " << (int)ch);
             code = ch;
 
-            while((ch = getch_(0, 0))>=0)
+            while ((ch = getch_(0, 0)) >= 0)
             {
                 CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = "
                 << (int)ch << " (additional code on <stdin>)");
@@ -714,12 +722,12 @@ namespace cv { namespace highgui_backend {
         else
         {
             bool f_kbhit = false;
-            while(!(f_kbhit = kbhit()) && (delay > 0))
+            while (!(f_kbhit = kbhit()) && (delay > 0))
             {
                 delay -= 1;
                 usleep(1000);
             }
-            if(f_kbhit)
+            if (f_kbhit)
             {
                 CV_LOG_INFO(NULL, "UI: FramebufferBackend kbhit is True ");
 
@@ -727,7 +735,7 @@ namespace cv { namespace highgui_backend {
                 CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " << (int)ch);
                 code = ch;
 
-                while((ch = getch_(0, 0))>=0)
+                while ((ch = getch_(0, 0)) >= 0)
                 {
                     CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = "
                     << (int)ch << " (additional code on <stdin>)");
@@ -747,7 +755,7 @@ namespace cv { namespace highgui_backend {
         bool f_kbhit = false;
         f_kbhit = kbhit();
 
-        if(f_kbhit)
+        if (f_kbhit)
         {
             CV_LOG_INFO(NULL, "UI: FramebufferBackend kbhit is True ");
 
@@ -755,7 +763,7 @@ namespace cv { namespace highgui_backend {
             CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = " << (int)ch);
             code = ch;
 
-            while((ch = getch_(0, 0))>=0)
+            while ((ch = getch_(0, 0)) >= 0)
             {
                 CV_LOG_INFO(NULL, "UI: FramebufferBackend::getch_() take value = "
                 << (int)ch << " (additional code on <stdin>)");

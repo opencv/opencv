@@ -48,7 +48,6 @@ std::vector<BackendInfo>& getBuiltinBackendsInfo()
         DECLARE_STATIC_BACKEND("FB", createUIBackendFramebuffer)
 #endif
 
-
 #if 0  // TODO
 #ifdef HAVE_QT
         DECLARE_STATIC_BACKEND("QT", createUIBackendQT)

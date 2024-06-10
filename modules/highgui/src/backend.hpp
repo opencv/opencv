@@ -131,7 +131,6 @@ std::shared_ptr<UIBackend> createUIBackendQT();
 std::shared_ptr<UIBackend> createUIBackendFramebuffer();
 #endif
 
-
 #endif  // BUILD_PLUGIN
 
 }  // namespace highgui_backend
