@@ -113,6 +113,9 @@ namespace cv {
 A basic example on image stitching
 */
 
+/** @example samples/python/snippets/stitching.py
+A basic example on image stitching in Python.
+*/
 
 /** @example samples/cpp/stitching_detailed.cpp
 A detailed example on image stitching
