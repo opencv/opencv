@@ -338,18 +338,18 @@ OCL_TEST(Resize, overflow_21198)
 
 PARAM_TEST_CASE(ResizeOnnx, MatType, double, double, int, bool, int)
 {
-    int type, interpolation;
+    int depth, interpolation;
     int widthMultiple;
     double fx, fy;
     bool useRoi;
-    Mat middle;
 
-    TEST_DECLARE_INPUT_PARAMETER(src);
-    TEST_DECLARE_OUTPUT_PARAMETER(dst);
+    Rect src_loc, dst_loc;
+    Mat src, dst, src_roi, dst_roi;
+    UMat gsrc, gdst, gsrc_roi, gdst_roi;
 
     virtual void SetUp()
     {
-        type = GET_PARAM(0);
+        depth = GET_PARAM(0);
         fx = GET_PARAM(1);
         fy = GET_PARAM(2);
         interpolation = GET_PARAM(3);
@@ -357,95 +357,69 @@ PARAM_TEST_CASE(ResizeOnnx, MatType, double, double, int, bool, int)
         widthMultiple = GET_PARAM(5);
     }
 
-    void random_roi()
+    void random_submat(int type,
+        Size& size, Rect& roi, Mat& mat, Mat& sub, UMat& gmat, UMat& gsub)
     {
-        CV_Assert(fx > 0 && fy > 0);
+        int border = useRoi ? 65 : 0;
+        roi.x = randomInt(0, border);
+        roi.y = randomInt(0, border);
+        roi.width = size.width;
+        roi.height = size.height;
+        size.width += roi.x + randomInt(0, border);
+        size.height += roi.y + randomInt(0, border);
+        mat = randomMat(size, type, -127, 127);
+        mat.copyTo(gmat);
+        sub = mat(roi);
+        gsub = gmat(roi);
+    }
 
-        Size srcRoiSize = randomSize(10, MAX_VALUE), dstRoiSize;
-        // Make sure the width is a multiple of the requested value, and no more
-        srcRoiSize.width += widthMultiple - 1 - (srcRoiSize.width - 1) % widthMultiple;
-        dstRoiSize.width = cvRound(srcRoiSize.width * fx);
-        dstRoiSize.height = cvRound(srcRoiSize.height * fy);
-
-        if (dstRoiSize.empty())
+    void random_roi(int type)
+    {
+        Size srcSize, dstSize;
+        int minSize = min(fx, fy) < 1.0 ? 10 : 1;
+        while (dstSize.empty())
         {
-            random_roi();
-            return;
+            srcSize = randomSize(minSize, 129);
+            srcSize.width += widthMultiple - 1 - (srcSize.width - 1) % widthMultiple;
+            dstSize.width = cvRound(srcSize.width * fx);
+            dstSize.height = cvRound(srcSize.height * fy);
         }
 
-        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(src, src_roi, srcRoiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
-
-#if 0
-        // if nearest test failed, maybe the fma issue, try open this #if
-        // set pixels' value to their coordinate
-        if ((interpolation & INTER_SAMPLER_MASK) == INTER_NEAREST)
-        {
-            int channel = CV_MAT_CN(type);
-            middle.create(src.rows, src.cols, CV_16SC(channel));
-            for (int h = 0; h < src.rows; ++h)
-            {
-                for (int c = 0; c < channel; c += 2)
-                {
-                    // even x; odd y
-                    short* S = middle.ptr<short>(h) + c;
-                    for (int w = 0; w < src.cols; ++w, S += channel)
-                        S[0] = static_cast<short>(w);
-                }
-                for (int c = 1; c < channel; c += 2)
-                {
-                    // even x; odd y
-                    short* S = middle.ptr<short>(h) + c;
-                    for (int w = 0; w < src.cols; ++w, S += channel)
-                        S[0] = static_cast<short>(h);
-                }
-            }
-            middle.convertTo(src, type);
-            src_roi = src(Rect(srcBorder.lef, srcBorder.top, srcRoiSize.width, srcRoiSize.height));
-        }
-#endif
-        Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(dst, dst_roi, dstRoiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
-
-        UMAT_UPLOAD_INPUT_PARAMETER(src);
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
+        random_submat(type, srcSize, src_loc, src, src_roi, gsrc, gsrc_roi);
+        random_submat(type, dstSize, dst_loc, dst, dst_roi, gdst, gdst_roi);
     }
 };
 
 OCL_TEST_P(ResizeOnnx, Mat)
 {
-    Size whole;
-    Point offset;
     Mat host, host_roi;
-    int cn = CV_MAT_CN(type);
-    int depth = CV_MAT_DEPTH(type);
     double eps = depth <= CV_32S ? integerEps : 5e-2;
 
-    for (int j = 0; j < test_loop_times; j++)
+    // loop on channel to reduce the number of test
+    for (int cn = 1; cn <= 6; ++cn)
     {
-        random_roi();
-
-        OCL_OFF(cv::resizeOnnx(src_roi, dst_roi,
-            dst_roi.size(), Point2d(fx, fy), interpolation));
-        OCL_ON(cv::resizeOnnx(usrc_roi, udst_roi,
-            dst_roi.size(), Point2d(fx, fy), interpolation));
-
-        dst_roi.locateROI(whole, offset);
-        udst.copyTo(host);
-        host_roi = host(Rect(offset, dst_roi.size()));
-        if (cn <= 4 && depth != CV_8S && depth != CV_32S)
-            OCL_EXPECT_MAT_N_DIFF(dst, eps);
-        else
+        int type = CV_MAKETYPE(depth, cn);
+        for (int j = 0; j < test_loop_times; ++j)
         {
-            // more strict than OCL_EXPECT_MAT_N_DIFF
-            double dif = cv::norm(dst_roi, host_roi, NORM_INF);
-            EXPECT_LE(dif, eps)
-                << "Size: " << src_roi.size()
-                << ", NormInf: " << dif << std::endl;
+            random_roi(type);
+
+            OCL_OFF(cv::resizeOnnx(src_roi, dst_roi,
+                dst_roi.size(), Point2d(fx, fy), interpolation));
+            OCL_ON(cv::resizeOnnx(gsrc_roi, gdst_roi,
+                dst_roi.size(), Point2d(fx, fy), interpolation));
+
+            // copy whole gdst to make sure that
+            // we really use the given roi memory and not allocate a new one
+            gdst.copyTo(host);
+            host_roi = host(dst_loc);
+            string info = cv::format(
+                "fail on type %sC%d src %dx%d dst %dx%d src_roi %dx%d dst_roi %dx%d",
+                depthToString(depth), cn, src.cols, src.rows, dst.cols, dst.rows,
+                src_roi.cols, src_roi.rows, dst_roi.cols, dst_roi.rows);
+            EXPECT_LE(cv::norm(dst_roi, host_roi, NORM_INF), eps) << info;
         }
     }
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // remap
@@ -689,23 +663,18 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResizeArea, Resize, Combine(
                             Bool(),
                             Values(1, 16)));
 
-OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpAlias, ResizeOnnx, Combine(
-                            Values(
-                                CV_8UC1, CV_8SC2, CV_8UC(5), CV_8SC(7),
-                                CV_16UC1, CV_16SC3, CV_16UC(9), CV_16SC(10),
-                                CV_32FC1, CV_32FC4, CV_32FC(11)),
-                            Values(0.5, 0.31, 1.4),
-                            Values(0.5, 0.73, 3.7),
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, ResizeOnnx, Combine(
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32F),
+                            Values(0.4, 0.27, 1.6),
+                            Values(0.5, 0.71, 2.7),
                             Values((int)(INTER_LINEAR), (int)(INTER_CUBIC)),
                             Bool(),
                             Values(1, 16)));
+
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpAntiAlias, ResizeOnnx, Combine(
-                            Values(
-                                CV_8UC1, CV_8SC2, CV_8UC(5), CV_8SC(7),
-                                CV_16UC1, CV_16SC3, CV_16UC(9), CV_16SC(10),
-                                CV_32FC1, CV_32FC4, CV_32FC(11)),
-                            Values(0.5, 0.27, 2.6),
-                            Values(0.5, 0.71, 4.1),
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32F),
+                            Values(0.4, 0.27, 1.6),
+                            Values(0.5, 0.71, 2.7),
                             Values(
                                 (int)(INTER_ANTIALIAS | INTER_LINEAR),
                                 (int)(INTER_ANTIALIAS | INTER_CUBIC )),
@@ -713,12 +682,9 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpAntiAlias, ResizeOnnx, Combine(
                             Values(1, 16)));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpNearest, ResizeOnnx, Combine(
-                            Values(
-                                CV_8UC1, CV_8SC2, CV_8UC4, CV_8SC(7),
-                                CV_16UC1, CV_16SC3, CV_16UC(9), CV_32SC(10),
-                                CV_32FC1, CV_32FC4, CV_32FC(11)),
-                            Values(0.5, 0.27, 2.6),
-                            Values(0.5, 0.71, 4.1),
+                            Values(CV_8S, CV_16S, CV_32F, CV_64F),
+                            Values(0.4, 0.27, 1.6),
+                            Values(0.5, 0.71, 2.7),
                             Values(
                                 (int)(INTER_NEAREST | INTER_NEAREST_PREFER_FLOOR),
                                 (int)(INTER_NEAREST | INTER_NEAREST_PREFER_CEIL),

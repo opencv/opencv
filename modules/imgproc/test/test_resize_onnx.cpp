@@ -43,10 +43,10 @@ struct ResizeOnnx
         Mat iS(szsrc, CV_64F, insrc.data());
         Mat iR(szref, CV_64F, inref.data());
         Mat S = iS, R = iR, nS, nR;
-        double alpha[6] = {1, 1, 5, 5, -1, -3};
-        double  beta[6] = {0, 7, 0, 7, +0, -7};
+        double alpha[8] = {1, -1, 5, 5, 0, -3, -2, +4};
+        double  beta[8] = {0, -0, 0, 7, 7, -7, -6, +6};
         RNG rng;
-        for (int cn = 1; cn <= 6; ++cn)
+        for (int cn = 1; cn <= 8; ++cn)
         {
             if (cn > 1)
             {
@@ -59,7 +59,7 @@ struct ResizeOnnx
             {
                 double eps = (depth <= CV_32S) ? 1.0 : 1e-3;
                 int type = CV_MAKETYPE(depth, cn);
-                string errinfo = "failed on type " + typeToString(type);
+                string errinfo = "fail on type " + typeToString(type);
                 Mat src, ref, dst;
                 rand_roi(rng, src, szsrc, type);
                 if (szdst.area())

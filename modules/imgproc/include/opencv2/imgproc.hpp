@@ -281,14 +281,11 @@ enum InterpolationFlags {
 //! ONNX Resize Flags
 enum ResizeONNXFlags
 {
-    // static_assert((1 << INTER_COORDINATE_SHIFT) > INTER_MAX, "");
-    // https://github.com/onnx/onnx/blob/main/docs/Operators.md#Resize
-
     INTER_SAMPLER_SHIFT        = 0,
-    INTER_SAMPLER_BIT          = 4,
+    INTER_SAMPLER_BIT          = 3,
     INTER_SAMPLER_MASK         = ((1 << INTER_SAMPLER_BIT) - 1) << INTER_SAMPLER_SHIFT,
 
-    INTER_COORDINATE_SHIFT     = 4,
+    INTER_COORDINATE_SHIFT     = INTER_SAMPLER_SHIFT + INTER_SAMPLER_BIT,
     INTER_COORDINATE_BIT       = 3,
     INTER_COORDINATE_MASK      = ((1 << INTER_COORDINATE_BIT) - 1) << INTER_COORDINATE_SHIFT,
     /** x_original = (x_resized + 0.5) / scale - 0.5 */
@@ -305,8 +302,8 @@ enum ResizeONNXFlags
     /** x_original = x_resized / scale */
     INTER_ASYMMETRIC           = 4 << INTER_COORDINATE_SHIFT,
     /** x_original = length_resized > 1
-     * ? start_x * (length_original - 1) + x_resized * (end_x - start_x) * (length_original - 1) / (length_resized - 1)
-     * : 0.5 * (start_x + end_x) * (length_original - 1) */
+            ? start_x * (length_original - 1) + x_resized * (end_x - start_x) * (length_original - 1) / (length_resized - 1)
+            : 0.5 * (start_x + end_x) * (length_original - 1) */
     INTER_TF_CROP_RESIZE       = 5 << INTER_COORDINATE_SHIFT,
 
     INTER_NEAREST_MODE_SHIFT   = INTER_COORDINATE_SHIFT + INTER_COORDINATE_BIT,
@@ -2468,12 +2465,12 @@ CV_EXPORTS_W void resize( InputArray src, OutputArray dst,
                           int interpolation = INTER_LINEAR );
 
 /** @brief onnx resize op
+
 https://github.com/onnx/onnx/blob/main/docs/Operators.md#Resize
 https://github.com/onnx/onnx/blob/main/onnx/reference/ops/op_resize.py
-
 Not support `exclude_outside` and `extrapolation_value` yet.
 
-To get a similar result to resize, give dsize and:
+To get a similar result to `cv::resize`, give dsize and:
     INTER_NEAREST : ASYMMETRIC + NEAREST_FLOOR
     INTER_LINEAR  : HALF_PIXEL
     INTER_CUBIC   : HALF_PIXEL + cubicCoeff(-0.75)
@@ -2490,9 +2487,8 @@ To get a similar result to resize, give dsize and:
 
 @sa  resize
  */
-CV_EXPORTS_W void resizeOnnx(
-    InputArray src, OutputArray dst, Size dsize, Point2d scale = Point2d(),
-    int interpolation = INTER_LINEAR | INTER_HALF_PIXEL,
+CV_EXPORTS_W void resizeOnnx(InputArray src, OutputArray dst, Size dsize,
+    Point2d scale = Point2d(), int interpolation = INTER_LINEAR | INTER_HALF_PIXEL,
     float cubicCoeff = -0.75f, Rect2d const& roi = Rect2d());
 
 /** @brief Applies an affine transformation to an image.

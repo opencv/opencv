@@ -67,22 +67,20 @@ __kernel void resizeOnnx_nearest(
 
 #if PIXEL_SIZE == 1
         *D = *S;
-#elif PIXEL_SIZE == 2 || PIXEL_SIZE == 4 || PIXEL_SIZE == 8 || PIXEL_SIZE == 16
-        *(__global VT*)(D) = *(__global const VT*)(S);
+#elif PIXEL_SIZE == 2
+        *(__global ushort*)(D) = *(__global const ushort*)(S);
 #elif PIXEL_SIZE == 3
         vstore3(vload3(0, S), 0, D);
+#elif PIXEL_SIZE == 4
+        *(__global uint*)(D) = *(__global const uint*)(S);
 #elif PIXEL_SIZE == 6
         vstore3(vload3(0, (__global ushort const*)(S)), 0, (__global ushort*)(D));
+#elif PIXEL_SIZE == 8
+        *(__global uint2*)(D) = *(__global const uint2*)(S);
 #elif PIXEL_SIZE == 12
         vstore3(vload3(0, (__global const uint*)(S)), 0, (__global uint*)(D));
-#elif PIXEL_SIZE == 24
-        vstore3(vload3(0, (__global ulong const*)(S)), 0, (__global ulong*)(D));
-#elif PIXEL_SIZE == 32
-        *(__global uint8*)(D) = *(__global uint8 const*)(S);
-#elif PIXEL_SIZE == 64
-        *(__global uint16*)(D) = *(__global uint16 const*)(S);
-#elif PIXEL_SIZE == 128
-        *(__global ulong16*)(D) = *(__global ulong16 const*)(S);
+#elif PIXEL_SIZE == 16
+        *(__global uint4*)(D) = *(__global const uint4*)(S);
 #else
         for (int i = 0; i < pixel_size; ++i)
             D[i] = S[i];
@@ -114,7 +112,7 @@ __kernel void resizeOnnx_linear(
         __global uchar const* S2 = srcptr + (y1 * src_step + mad24(x0, pixel_size, src_offset));
         __global uchar const* S3 = srcptr + (y1 * src_step + mad24(x1, pixel_size, src_offset));
         __global uchar      * D  = dstptr + (dy * dst_step + mad24(dx, pixel_size, dst_offset));
-#if CN == 1 || CN == 2 || CN == 3 || CN == 4 || CN == 8 || CN == 16
+#if CN == 1 || CN == 2 || CN == 3 || CN == 4
         VW s0 = TO_VEC_WORK(loadpix(S0)); VW s1 = TO_VEC_WORK(loadpix(S1));
         VW s2 = TO_VEC_WORK(loadpix(S2)); VW s3 = TO_VEC_WORK(loadpix(S3));
         VT d0 = TO_VEC_TYPE((u0 * v0) * s0 + (u1 * v0) * s1 + (u0 * v1) * s2 + (u1 * v1) * s3);
@@ -154,7 +152,7 @@ __kernel void resizeOnnx_linear_antialias(
         int ix = convert_int_rtn(fx), iy = convert_int_rtn(fy);
         float rx = fx - ix, ry = fy - iy;
         __global uchar* D = dstptr + dy * dst_step + mad24(dx, pixel_size, dst_offset);
-#if CN == 1 || CN == 2 || CN == 3 || CN == 4 || CN == 8 || CN == 16
+#if CN == 1 || CN == 2 || CN == 3 || CN == 4
         VW sumval = (VW)(0);
         float weight = 0;
         for (int h = ystart; h < yend; ++h)
@@ -266,7 +264,7 @@ __kernel void resizeOnnx_cubic(
             xcoeff [x - xstart] = cubicCoeff(A, A2, A3, x - fx);
         }
         __global uchar* D = dstptr + (dy * dst_step + mad24(dx, pixel_size, dst_offset));
-#if CN == 1 || CN == 2 || CN == 3 || CN == 4 || CN == 8 || CN == 16
+#if CN == 1 || CN == 2 || CN == 3 || CN == 4
         VW sum = (VW)(0);
         for (int y = ystart; y <= ylimit; ++y)
         {
@@ -322,13 +320,14 @@ __kernel void resizeOnnx_table(
         __global int const* yoffset = xoffset + xstride;
         __global float const* xcoeff = (__global float const*)(yoffset + ystride);
         __global float const* ycoeff = (__global float const*)(xcoeff + xstride);
-#if CN == 1 || CN == 2 || CN == 3 || CN == 4 || CN == 8 || CN == 16
+#if CN == 1 || CN == 2 || CN == 3 || CN == 4
         VW sum = (VW)(0);
         // exact ykanti / xkanti loops
         for (int y = dy; y < ystride; y += dst_rows)
         {
-            // offset is already clamped. xoffset is given by uchar
-            __global const uchar* S = (srcptr + yoffset[y] * src_step + src_offset);
+            // offset is already clamped
+            // xoffset is given by uchar, yoffset already multiply by src_step
+            __global const uchar* S = srcptr + yoffset[y] + src_offset;
             VW sline = (VW)(0);
             for (int x = dx; x < xstride; x += dst_cols)
                 sline += xcoeff[x] * TO_VEC_WORK(loadpix(S + xoffset[x]));
@@ -341,7 +340,7 @@ __kernel void resizeOnnx_table(
             W sum = 0;
             for (int y = dy; y < ystride; y += dst_rows)
             {
-                __global const uchar* S = (srcptr + yoffset[y] * src_step + src_offset);
+                __global const uchar* S = (srcptr + yoffset[y] + src_offset);
                 W sline = 0;
                 for (int x = dx; x < xstride; x += dst_cols)
                     sline += xcoeff[x] * TO_WORK(((__global T const*)(S + xoffset[x]))[i]);

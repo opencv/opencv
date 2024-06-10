@@ -1356,36 +1356,36 @@ public:
                 break;
             case 2:
                 for (; x < width; ++x)
-                    reinterpret_cast<short*>(D)[x] = *(reinterpret_cast<short const*>(S + x_ofs[x]));
+                    reinterpret_cast<ushort*>(D)[x] = *(reinterpret_cast<ushort const*>(S + x_ofs[x]));
                 break;
             case 3:
                 for (; x < width; ++x, D += 3)
                 {
-                    const uchar* _tS = S + x_ofs[x];
+                    uchar const* _tS = S + x_ofs[x];
                     D[0] = _tS[0]; D[1] = _tS[1]; D[2] = _tS[2];
                 }
                 break;
             case 4:
                 for (; x < width; ++x)
-                    reinterpret_cast<int*>(D)[x] = *(reinterpret_cast<int const*>(S + x_ofs[x]));
+                    reinterpret_cast<uint*>(D)[x] = *(reinterpret_cast<uint const*>(S + x_ofs[x]));
                 break;
             case 6:
                 for (; x < width; ++x, D += 6)
                 {
-                    short const* _tS = reinterpret_cast<short const*>(S + x_ofs[x]);
-                    short* _tD = reinterpret_cast<short*>(D);
+                    ushort const* _tS = reinterpret_cast<ushort const*>(S + x_ofs[x]);
+                    ushort* _tD = reinterpret_cast<ushort*>(D);
                     _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
                 }
                 break;
             case 8:
                 for (; x < width; ++x)
-                    reinterpret_cast<int64*>(D)[x] = *(reinterpret_cast<int64 const*>(S + x_ofs[x]));
+                    reinterpret_cast<uint64*>(D)[x] = *(reinterpret_cast<uint64 const*>(S + x_ofs[x]));
                 break;
             case 12:
                 for (; x < width; ++x, D += 12)
                 {
-                    int const* _tS = reinterpret_cast<int const*>(S + x_ofs[x]);
-                    int* _tD = reinterpret_cast<int*>(D);
+                    uint const* _tS = reinterpret_cast<uint const*>(S + x_ofs[x]);
+                    uint* _tD = reinterpret_cast<uint*>(D);
                     _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
                 }
                 break;
@@ -3465,7 +3465,8 @@ public:
     int xmin, xmax;
 
 private:
-    void cubic_coeffs_antialias(int dstlen, int cn, float srcpos, float scale, int srclen, float A, TabIdx* elem)
+    void cubicCoeffsAntiAlias(
+        int dstlen, int cn, float srcpos, float scale, int srclen, float A, TabIdx* elem)
     {
         scale = min(scale, 1.f);
         int index = cvFloor(srcpos);
@@ -3497,7 +3498,7 @@ private:
         }
     }
 
-    void cubic_coeffs(float x, float A, float* coeffs)
+    void cubicCoeffs(float x, float A, float* coeffs)
     {
         coeffs[0] = A * ((((x + 1) - 5) * (x + 1) + 8) * (x + 1) - 4);
         coeffs[1] = ((A + 2) * x - (A + 3)) * x * x + 1;
@@ -3505,7 +3506,8 @@ private:
         coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
     }
 
-    void linear_coeffs_antialias(int dstlen, int cn, float srcpos, float scale, int srclen, TabIdx* elem)
+    void linearCoeffsAntialias(
+        int dstlen, int cn, float srcpos, float scale, int srclen, TabIdx* elem)
     {
         scale = min(scale, 1.f);
         int index = cvFloor(srcpos);
@@ -3532,7 +3534,7 @@ private:
         }
     }
 
-    void linear_coeffs(float x, float* coeffs)
+    void linearCoeffs(float x, float* coeffs)
     {
         coeffs[0] = 1.f - x;
         coeffs[1] = x;
@@ -3570,16 +3572,17 @@ private:
         area.commit();
         CV_CheckLE(ksize, MAX_ESIZE, "resampler kernel's size is too larger");
 
-        if (antialias)
+        // when upsampling, `antialias` is same to `generic`, so use `generic` to speed up
+        if (antialias && scaled.x < 1.0)
         {
             float a = M(0, 0), b = M(0, 1);
             for (int d = 0; d < dsize.width; ++d)
             {
                 float f = fmaf(static_cast<float>(d), a, b);
                 if (sampler == INTER_LINEAR)
-                    linear_coeffs_antialias(d, cn, f, scale.x, ssize.width, xtab + d * xkanti);
+                    linearCoeffsAntialias(d, cn, f, scale.x, ssize.width, xtab + d * xkanti);
                 else // if (sampler == INTER_CUBIC)
-                    cubic_coeffs_antialias(d, cn, f, scale.x, ssize.width, cubicCoeff, xtab + d * xkanti);
+                    cubicCoeffsAntiAlias(d, cn, f, scale.x, ssize.width, cubicCoeff, xtab + d * xkanti);
             }
         }
         else
@@ -3608,9 +3611,9 @@ private:
                 for (int k = 0; k < cn; ++k)
                     xofs[cn * d + k] = cn * s + k;
                 if (sampler == INTER_LINEAR)
-                    linear_coeffs(f, cbuf);
+                    linearCoeffs(f, cbuf);
                 else // if (sampler == INTER_CUBIC)
-                    cubic_coeffs(f, cubicCoeff, cbuf);
+                    cubicCoeffs(f, cubicCoeff, cbuf);
                 if (is_fixpt)
                 {
                     short* coeffs = reinterpret_cast<short*>(xcoeffs) + cn * ksize * d;
@@ -3638,16 +3641,16 @@ private:
             }
         }
 
-        if (antialias)
+        if (antialias && scaled.y < 1.0)
         {
             float a = M(1, 0), b = M(1, 1);
             for (int d = 0; d < dsize.height; ++d)
             {
                 float f = fmaf(static_cast<float>(d), a, b);
                 if (sampler == INTER_LINEAR)
-                    linear_coeffs_antialias(d, 1, f, scale.y, ssize.height, ytab + d * ykanti);
+                    linearCoeffsAntialias(d, 1, f, scale.y, ssize.height, ytab + d * ykanti);
                 else // if (sampler == INTER_CUBIC)
-                    cubic_coeffs_antialias(d, 1, f, scale.y, ssize.height, cubicCoeff, ytab + d * ykanti);
+                    cubicCoeffsAntiAlias(d, 1, f, scale.y, ssize.height, cubicCoeff, ytab + d * ykanti);
             }
         }
         else
@@ -3662,9 +3665,9 @@ private:
                 f -= s;
                 yofs[d] = s;
                 if (sampler == INTER_LINEAR)
-                    linear_coeffs(f, cbuf);
+                    linearCoeffs(f, cbuf);
                 else // if (sampler == INTER_CUBIC)
-                    cubic_coeffs(f, cubicCoeff, cbuf);
+                    cubicCoeffs(f, cubicCoeff, cbuf);
                 if (is_fixpt)
                 {
                     short* coeffs = reinterpret_cast<short*>(ycoeffs) + 1 * ksize * d;
@@ -3755,7 +3758,7 @@ public:
             "something wrong");
     }
 
-    void hori_antialias_accumulate(T const* S, IdxT* L) const
+    void horiAntialiasAccumulate(T const* S, IdxT* L) const
     {
         IdxT alpha;
         int const cn = dst.channels();
@@ -3809,15 +3812,11 @@ public:
             }
     }
 
-    void hori_antialias_lines(T const** srcptr, WT** dstptr, IdxT* L, int count) const
+    void horiAntialiasLines(T const** srcptr, WT** dstptr, IdxT* L, int count) const
     {
         int cn = dst.channels();
         int dwidth = dst.cols * cn;
-#ifdef CV_CXX11
-        constexpr bool same_wt_idxt = std::is_same<WT, IdxT>::value;
-#else
-        bool const same_wt_idxt = false;
-#endif
+        bool const same_wt_idxt = std::is_same<WT, IdxT>::value;
         for (int i = 0; i < count; ++i)
         {
             T const* S = srcptr[i];
@@ -3825,7 +3824,7 @@ public:
             if (same_wt_idxt)
                 L = reinterpret_cast<IdxT*>(dstptr[i]);
             memset(L, 0, sizeof(IdxT) * dwidth);
-            hori_antialias_accumulate(S, L);
+            horiAntialiasAccumulate(S, L);
             if (!same_wt_idxt)
             {
                 WT* D = dstptr[i];
@@ -3844,7 +3843,7 @@ public:
         }
     }
 
-    void hori_generic_lines(T const** srcptr, WT** dstptr, int count) const
+    void horiGenericLines(T const** srcptr, WT** dstptr, int count) const
     {
         int cn = src.channels();
         int ssize = src.cols * cn;
@@ -3857,53 +3856,7 @@ public:
             ssize, dsize, cn, xmin, xmax);
     }
 
-    void vert_antialias_hori_antialias(int dy, IdxT* L, IdxT* A) const
-    {
-        // the start and end of ytab
-        int dwidth = dst.channels() * dst.cols;
-        int tstart = dy * ctrl.ykanti, tend = tstart + ctrl.ykanti;
-        memset(A, 0, dwidth * sizeof(IdxT));
-        for (int t = tstart; t < tend; ++t)
-        {
-            IdxT beta;
-            int sy = ctrl.ytab[t].si;
-            CV_CheckEQ(dy, ctrl.ytab[t].di, "something wrong");
-            ctrl.ytab[t].as(beta);
-            memset(L, 0, dwidth * sizeof(IdxT));
-            hori_antialias_accumulate(src.template ptr<T>(sy), L);
-            for (int w = 0; w < dwidth; ++w)
-                A[w] += L[w] * beta;
-        }
-        T* D = dst.template ptr<T>(dy);
-        for (int w = 0; w < dwidth; ++w)
-            D[w] = saturate_cast<T>(A[w]);
-    }
-
-    void vert_antialias_hori_generic(int dy, WT* L, IdxT* A) const
-    {
-        // FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS> cast;
-        int dwidth = dst.channels() * dst.cols;
-        int tstart = dy * ctrl.ykanti, tend = tstart + ctrl.ykanti;
-        memset(A, 0, dwidth * sizeof(IdxT));
-        for (int t = tstart; t < tend; ++t)
-        {
-            IdxT beta;
-            int sy = ctrl.ytab[t].si;
-            CV_CheckEQ(dy, ctrl.ytab[t].di, "something wrong");
-            ctrl.ytab[t].as(beta);
-            T const* S = src.template ptr<T>(sy);
-            hori_generic_lines(&S, &L, 1);
-            if (ctrl.is_fixpt)
-                beta /= INTER_RESIZE_COEF_SCALE;
-            for (int w = 0; w < dwidth; ++w)
-                A[w] += L[w] * beta;
-        }
-        T* D = dst.template ptr<T>(dy);
-        for (int w = 0; w < dwidth; ++w)
-            D[w] = saturate_cast<T>(A[w]);
-    }
-
-    void vert_antialias(Range const& range) const
+    void vertAntialias(Range const& range) const
     {
         int cn = dst.channels();
         int dwidth = dst.cols * cn;
@@ -3913,14 +3866,38 @@ public:
         WT* Lw = reinterpret_cast<WT*>(L);
         for (int dy = range.start; dy < range.end; ++dy)
         {
-            if (ctrl.xkanti)
-                vert_antialias_hori_antialias(dy, L, A);
-            else
-                vert_antialias_hori_generic(dy, Lw, A);
+            int tstart = dy * ctrl.ykanti, tend = tstart + ctrl.ykanti;
+            memset(A, 0, dwidth * sizeof(IdxT));
+            for (int t = tstart; t < tend; ++t)
+            {
+                IdxT beta;
+                int sy = ctrl.ytab[t].si;
+                CV_CheckEQ(dy, ctrl.ytab[t].di, "something wrong");
+                ctrl.ytab[t].as(beta);
+                T const* S = src.template ptr<T>(sy);
+                if (ctrl.xkanti)
+                {
+                    memset(L, 0, dwidth * sizeof(IdxT));
+                    horiAntialiasAccumulate(S, L);
+                    for (int w = 0; w < dwidth; ++w)
+                        A[w] += L[w] * beta;
+                }
+                else
+                {
+                    horiGenericLines(&S, &Lw, 1);
+                    if (ctrl.is_fixpt)
+                        beta /= INTER_RESIZE_COEF_SCALE;
+                    for (int w = 0; w < dwidth; ++w)
+                        A[w] += Lw[w] * beta;
+                }
+            }
+            T* D = dst.template ptr<T>(dy);
+            for (int w = 0; w < dwidth; ++w)
+                D[w] = saturate_cast<T>(A[w]);
         }
     }
 
-    void vert_generic(Range const& range) const
+    void vertGeneric(Range const& range) const
     {
         int ksize = ctrl.ksize, ksize2 = ksize / 2;
         int cn = src.channels();
@@ -3963,9 +3940,9 @@ public:
             if (k0 < ksize)
             {
                 if (ctrl.xkanti)
-                    hori_antialias_lines(srows + k0, rows + k0, L, ksize - k0);
+                    horiAntialiasLines(srows + k0, rows + k0, L, ksize - k0);
                 else
-                    hori_generic_lines(srows + k0, rows + k0, ksize - k0);
+                    horiGenericLines(srows + k0, rows + k0, ksize - k0);
             }
             vresize(const_cast<WT const**>(rows), dst.template ptr<T>(dy), beta, dwidth);
         }
@@ -3974,9 +3951,9 @@ public:
     virtual void operator() (Range const& range) const CV_OVERRIDE
     {
         if (ctrl.ykanti)
-            vert_antialias(range);
+            vertAntialias(range);
         else
-            vert_generic(range);
+            vertGeneric(range);
     }
 };
 
@@ -4003,7 +3980,7 @@ typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
                                 const DecimateAlpha* ytab, int ytab_size,
                                 const int* yofs);
 
-typedef void (*ResizeOnnxFunc)(Mat const& src, Mat& dst, ResizeOnnxCtrl const&);
+typedef void (*ResizeOnnxFunc)(Mat const& src, Mat& dst, ResizeOnnxCtrl const& ctrl);
 
 
 static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, DecimateAlpha* tab )
@@ -4517,7 +4494,7 @@ static bool ocl_resizeOnnx(InputArray _src, OutputArray _dst,
         float* ycoeff = reinterpret_cast<float*>(xcoeff + xstride);
         ocl_resizeOnnxTable(src.cols, dst.cols, pixel_size,
             sampler, M(0, 0), M(0, 1), cubicCoeff, scale.x, xoffset, xcoeff);
-        ocl_resizeOnnxTable(src.rows, dst.rows, 1,
+        ocl_resizeOnnxTable(src.rows, dst.rows, static_cast<int>(src.step[0]),
             sampler, M(1, 0), M(1, 1), cubicCoeff, scale.y, yoffset, ycoeff);
         UMat utable;
         Mat(1, tabsize, CV_32S, table.data()).copyTo(utable);
@@ -5175,6 +5152,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 void cv::resizeOnnx(InputArray _src, OutputArray _dst,
     Size dsize, Point2d scale, int interpolation, float cubicCoeff, Rect2d const& roi)
 {
+    static_assert((1 << INTER_SAMPLER_BIT) >= INTER_MAX, "");
     CV_INSTRUMENT_REGION();
 
     Size ssize = _src.size();
@@ -5185,7 +5163,7 @@ void cv::resizeOnnx(InputArray _src, OutputArray _dst,
     {
         CV_CheckGT(scale.x, 0.0, "scale must > 0 if no dsize given");
         CV_CheckGT(scale.y, 0.0, "scale must > 0 if no dsize given");
-        // https://github.com/onnx/onnx/blob/main/onnx/reference/ops/op_resize.py#L365
+        // https://github.com/onnx/onnx/blob/main/onnx/reference/ops/op_resize.py
         // output_size = (scale_factors * np.array(data.shape)).astype(int)
         dsize.width  = static_cast<int>(scale.x * ssize.width );
         dsize.height = static_cast<int>(scale.y * ssize.height);
@@ -5196,8 +5174,8 @@ void cv::resizeOnnx(InputArray _src, OutputArray _dst,
         scale.y = static_cast<double>(dsize.height) / ssize.height;
     }
     CV_CheckFalse(dsize.empty(), "dst size must not empty");
-    CV_CheckGT(scale.x, 0.0, "computed scale <= 0 with given dsize");
-    CV_CheckGT(scale.y, 0.0, "computed scale <= 0 with given dsize");
+    CV_CheckGT(scale.x, 0.0, "require computed or given scale > 0");
+    CV_CheckGT(scale.y, 0.0, "require computed or given scale > 0");
 
     int sampler = interpolation & INTER_SAMPLER_MASK;
     int nearest = interpolation & INTER_NEAREST_MODE_MASK;
@@ -5237,6 +5215,9 @@ void cv::resizeOnnx(InputArray _src, OutputArray _dst,
         _src.copyTo(_dst);
         return;
     }
+    // Antialias is applied when downsampling
+    if (scale.x >= 1.0 && scale.y >= 1.0)
+        interpolation &= ~INTER_ANTIALIAS_MASK;
 
     // Fake reference to source. Resolves issue 13577 in case of src == dst.
     UMat srcUMat;
