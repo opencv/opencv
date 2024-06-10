@@ -2,7 +2,7 @@
 ; jdmrgext.asm - merged upsampling/color conversion (SSE2)
 ;
 ; Copyright 2009, 2012 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2012, 2016, D. R. Commander.
+; Copyright (C) 2012, 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -49,15 +49,15 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
     mov         [esp], eax
     mov         ebp, esp                     ; ebp = aligned ebp
     lea         esp, [wk(0)]
-    pushpic     eax                     ; make a room for GOT address
+    PUSHPIC     eax                     ; make a room for GOT address
     push        ebx
 ;   push        ecx                     ; need not be preserved
 ;   push        edx                     ; need not be preserved
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
-    movpic      POINTER [gotptr], ebx   ; save GOT address
+    GET_GOT     ebx                     ; get GOT address
+    MOVPIC      POINTER [gotptr], ebx   ; save GOT address
 
     mov         ecx, JDIMENSION [output_width(eax)]  ; col
     test        ecx, ecx
@@ -78,9 +78,9 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
 
     pop         ecx                     ; col
 
-    alignx      16, 7
+    ALIGNX      16, 7
 .columnloop:
-    movpic      eax, POINTER [gotptr]   ; load GOT address (eax)
+    MOVPIC      eax, POINTER [gotptr]   ; load GOT address (eax)
 
     movdqa      xmm6, XMMWORD [ebx]     ; xmm6=Cb(0123456789ABCDEF)
     movdqa      xmm7, XMMWORD [edx]     ; xmm7=Cr(0123456789ABCDEF)
@@ -173,13 +173,13 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
 
     mov         al, 2                   ; Yctr
     jmp         short .Yloop_1st
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .Yloop_2nd:
     movdqa      xmm0, XMMWORD [wk(1)]   ; xmm0=(R-Y)H
     movdqa      xmm2, XMMWORD [wk(2)]   ; xmm2=(G-Y)H
     movdqa      xmm4, XMMWORD [wk(0)]   ; xmm4=(B-Y)H
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .Yloop_1st:
     movdqa      xmm7, XMMWORD [esi]     ; xmm7=Y(0123456789ABCDEF)
@@ -280,7 +280,7 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
     add         ebx, byte SIZEOF_XMMWORD  ; inptr1
     add         edx, byte SIZEOF_XMMWORD  ; inptr2
     jmp         near .columnloop
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .column_st32:
     lea         ecx, [ecx+ecx*2]            ; imul ecx, RGB_PIXELSIZE
@@ -395,7 +395,7 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
     add         ebx, byte SIZEOF_XMMWORD  ; inptr1
     add         edx, byte SIZEOF_XMMWORD  ; inptr2
     jmp         near .columnloop
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .column_st32:
     cmp         ecx, byte SIZEOF_XMMWORD/2

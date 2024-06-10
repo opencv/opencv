@@ -8,3 +8,4 @@ Application utils (highgui, imgcodecs, videoio modules) {#tutorial_table_of_cont
 -   @subpage tutorial_kinect_openni
 -   @subpage tutorial_orbbec_astra
 -   @subpage tutorial_intelperc
+-   @subpage tutorial_wayland_ubuntu

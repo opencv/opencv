@@ -206,7 +206,7 @@ static void initInterTab1D(int method, float* tab, int tabsz)
             interpolateLanczos4( i*scale, tab );
     }
     else
-        CV_Error( CV_StsBadArg, "Unknown interpolation method" );
+        CV_Error( cv::Error::StsBadArg, "Unknown interpolation method" );
 }
 
 
@@ -223,7 +223,7 @@ static const void* initInterTab2D( int method, bool fixpt )
     else if( method == INTER_LANCZOS4 )
         tab = Lanczos4Tab_f[0][0], itab = Lanczos4Tab_i[0][0], ksize=8;
     else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported interpolation type" );
+        CV_Error( cv::Error::StsBadArg, "Unknown/unsupported interpolation type" );
 
     if( !inittab[method] )
     {
@@ -326,9 +326,9 @@ static inline int clip(int x, int a, int b)
 *                       General warping (affine, perspective, remap)                     *
 \****************************************************************************************/
 
-template<typename T>
+template<typename T, bool isRelative>
 static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
-                          int borderType, const Scalar& _borderValue )
+                          int borderType, const Scalar& _borderValue, const Point& _offset )
 {
     Size ssize = _src.size(), dsize = _dst.size();
     const int cn = _src.channels();
@@ -341,7 +341,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
 
     unsigned width1 = ssize.width, height1 = ssize.height;
 
-    if( _dst.isContinuous() && _xy.isContinuous() )
+    if( _dst.isContinuous() && _xy.isContinuous() && !isRelative )
     {
         dsize.width *= dsize.height;
         dsize.height = 1;
@@ -351,12 +351,13 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
     {
         T* D = _dst.ptr<T>(dy);
         const short* XY = _xy.ptr<short>(dy);
-
+        const int off_y = isRelative ? (_offset.y+dy) : 0;
         if( cn == 1 )
         {
             for(int dx = 0; dx < dsize.width; dx++ )
             {
-                int sx = XY[dx*2], sy = XY[dx*2+1];
+                const int off_x = isRelative ? (_offset.x+dx) : 0;
+                int sx = XY[dx*2]+off_x, sy = XY[dx*2+1]+off_y;
                 if( (unsigned)sx < width1 && (unsigned)sy < height1 )
                     D[dx] = S0[sy*sstep + sx];
                 else
@@ -382,7 +383,8 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
         {
             for(int dx = 0; dx < dsize.width; dx++, D += cn )
             {
-                int sx = XY[dx*2], sy = XY[dx*2+1];
+                const int off_x = isRelative ? (_offset.x+dx) : 0;
+                int sx = XY[dx*2]+off_x, sy = XY[dx*2+1]+off_y;
                 const T *S;
                 if( (unsigned)sx < width1 && (unsigned)sy < height1 )
                 {
@@ -427,11 +429,11 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
     }
 }
 
-
+template<bool>
 struct RemapNoVec
 {
     int operator()( const Mat&, void*, const short*, const ushort*,
-                    const void*, int ) const { return 0; }
+                    const void*, int, cv::Point& ) const { return 0; }
 };
 
 #if CV_SIMD128
@@ -439,13 +441,13 @@ struct RemapNoVec
 typedef unsigned short CV_DECL_ALIGNED(1) unaligned_ushort;
 typedef int CV_DECL_ALIGNED(1) unaligned_int;
 
+template<bool isRelative>
 struct RemapVec_8u
 {
     int operator()( const Mat& _src, void* _dst, const short* XY,
-                    const ushort* FXY, const void* _wtab, int width ) const
+                    const ushort* FXY, const void* _wtab, int width, const Point& _offset ) const
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
-
         if( (cn != 1 && cn != 3 && cn != 4) || sstep >= 0x8000 )
             return 0;
 
@@ -493,12 +495,25 @@ struct RemapVec_8u
                        *(unaligned_ushort*)(base + offset[2]), *(unaligned_ushort*)(base + offset[3]), \
                        0, 0, 0, 0)
 
+        const short _rel_offset_x = static_cast<short>(_offset.x);
+        const short _rel_offset_y = static_cast<short>(_offset.y);
+        v_int16x8 v_dxy0(_rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y, _rel_offset_x, _rel_offset_y);
+        v_int16x8 v_dxy1 = v_dxy0;
+        v_dxy0 = v_add(v_dxy0, v_int16x8(0, 0, 1, 0, 2, 0, 3, 0));
+        v_dxy1 = v_add(v_dxy1, v_int16x8(4, 0, 5, 0, 6, 0, 7, 0));
         if( cn == 1 )
         {
             for( ; x <= width - 8; x += 8 )
             {
                 v_int16x8 _xy0 = v_load(XY + x*2);
                 v_int16x8 _xy1 = v_load(XY + x*2 + 8);
+                if (isRelative)
+                {
+                    const short x_s16 = static_cast<short>(x);
+                    v_int16x8 v_dxy01(x_s16, 0, x_s16, 0, x_s16, 0, x_s16, 0);
+                    _xy0 = v_add(_xy0, v_add(v_dxy01, v_dxy0));
+                    _xy1 = v_add(_xy1, v_add(v_dxy01, v_dxy1));
+                }
                 v_int32x4 v0, v1, v2, v3, a0, b0, c0, d0, a1, b1, c1, d1, a2, b2, c2, d2;
 
                 v_int32x4 xy0 = v_dotprod( _xy0, xy2ofs );
@@ -545,6 +560,12 @@ struct RemapVec_8u
             {
                 v_int16x8 u0, v0, u1, v1;
                 v_int16x8 _xy0 = v_load(XY + x * 2);
+                if (isRelative)
+                {
+                    const short x_s16 = static_cast<short>(x);
+                    v_int16x8 v_dxy01(x_s16, 0, x_s16, 0, x_s16, 0, x_s16, 0);
+                    _xy0 = v_add(_xy0, v_add(v_dxy01, v_dxy0));
+                }
 
                 v_int32x4 xy0 = v_dotprod(_xy0, xy2ofs);
                 v_store(iofs0, xy0);
@@ -595,10 +616,17 @@ struct RemapVec_8u
             for( ; x <= width - 4; x += 4, D += 16 )
             {
                 v_int16x8 _xy0 = v_load(XY + x * 2);
+                if (isRelative)
+                {
+                    const short x_s16 = static_cast<short>(x);
+                    v_int16x8 v_dxy01(x_s16, 0, x_s16, 0, x_s16, 0, x_s16, 0);
+                    _xy0 = v_add(_xy0, v_add(v_dxy01, v_dxy0));
+                }
                 v_int16x8 u0, v0, u1, v1;
 
                 v_int32x4 xy0 = v_dotprod( _xy0, xy2ofs );
                 v_store(iofs0, xy0);
+
                 int offset0 = FXY[x] * 16;
                 int offset1 = FXY[x + 1] * 16;
                 int offset2 = FXY[x + 2] * 16;
@@ -640,15 +668,14 @@ struct RemapVec_8u
 
 #else
 
-typedef RemapNoVec RemapVec_8u;
+template<bool isRelative> using RemapVec_8u = RemapNoVec<isRelative>;
 
 #endif
 
-
-template<class CastOp, class VecOp, typename AT>
+template<class CastOp, class VecOp, typename AT, bool isRelative>
 static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                            const Mat& _fxy, const void* _wtab,
-                           int borderType, const Scalar& _borderValue )
+                           int borderType, const Scalar& _borderValue, const Point& _offset )
 {
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
@@ -678,12 +705,12 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
         const ushort* FXY = _fxy.ptr<ushort>(dy);
         int X0 = 0;
         bool prevInlier = false;
-
+        const int off_y = (isRelative ? (_offset.y+dy) : 0);
         for(int dx = 0; dx <= dsize.width; dx++ )
         {
             bool curInlier = dx < dsize.width ?
-                (unsigned)XY[dx*2] < width1 &&
-                (unsigned)XY[dx*2+1] < height1 : !prevInlier;
+                (unsigned)XY[dx*2]+(isRelative ? (_offset.x+dx) : 0) < width1 &&
+                (unsigned)XY[dx*2+1]+off_y < height1 : !prevInlier;
             if( curInlier == prevInlier )
                 continue;
 
@@ -694,7 +721,8 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 
             if( !curInlier )
             {
-                int len = vecOp( _src, D, XY + dx*2, FXY + dx, wtab, X1 - dx );
+                Point subOffset(_offset.x+dx, _offset.y+dy);
+                int len = vecOp( _src, D, XY + dx*2, FXY + dx, wtab, X1 - dx, subOffset );
                 D += len*cn;
                 dx += len;
 
@@ -702,7 +730,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 {
                     for( ; dx < X1; dx++, D++ )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx;
                         *D = castOp(WT(S[0]*w[0] + S[1]*w[1] + S[sstep]*w[2] + S[sstep+1]*w[3]));
@@ -711,7 +739,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else if( cn == 2 )
                     for( ; dx < X1; dx++, D += 2 )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*2;
                         WT t0 = S[0]*w[0] + S[2]*w[1] + S[sstep]*w[2] + S[sstep+2]*w[3];
@@ -721,7 +749,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else if( cn == 3 )
                     for( ; dx < X1; dx++, D += 3 )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*3;
                         WT t0 = S[0]*w[0] + S[3]*w[1] + S[sstep]*w[2] + S[sstep+3]*w[3];
@@ -732,7 +760,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else if( cn == 4 )
                     for( ; dx < X1; dx++, D += 4 )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*4;
                         WT t0 = S[0]*w[0] + S[4]*w[1] + S[sstep]*w[2] + S[sstep+4]*w[3];
@@ -745,7 +773,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else
                     for( ; dx < X1; dx++, D += cn )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*cn;
                         for(int k = 0; k < cn; k++ )
@@ -760,7 +788,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 if (borderType == BORDER_TRANSPARENT) {
                     for (; dx < X1; dx++, D += cn) {
                         if (dx >= dsize.width) continue;
-                        const int sx = XY[dx * 2], sy = XY[dx * 2 + 1];
+                        const int sx = XY[dx * 2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx * 2 + 1]+off_y;
                         // If the mapped point is still within bounds, it did not get computed
                         // because it lacked 4 neighbors. Still, it can be computed with an
                         // approximate formula. If it is outside, the point is left untouched.
@@ -791,7 +819,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 if( cn == 1 )
                     for( ; dx < X1; dx++, D++ )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         if( borderType == BORDER_CONSTANT &&
                             (sx >= ssize.width || sx+1 < 0 ||
                              sy >= ssize.height || sy+1 < 0) )
@@ -831,7 +859,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else
                     for( ; dx < X1; dx++, D += cn )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         if( borderType == BORDER_CONSTANT &&
                             (sx >= ssize.width || sx+1 < 0 ||
                              sy >= ssize.height || sy+1 < 0) )
@@ -876,10 +904,10 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 }
 
 
-template<class CastOp, typename AT, int ONE>
+template<class CastOp, typename AT, int ONE, bool isRelative>
 static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
                           const Mat& _fxy, const void* _wtab,
-                          int borderType, const Scalar& _borderValue )
+                          int borderType, const Scalar& _borderValue, const Point& _offset )
 {
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
@@ -898,7 +926,7 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
 
     unsigned width1 = std::max(ssize.width-3, 0), height1 = std::max(ssize.height-3, 0);
 
-    if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() )
+    if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() && !isRelative )
     {
         dsize.width *= dsize.height;
         dsize.height = 1;
@@ -909,10 +937,11 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
         T* D = _dst.ptr<T>(dy);
         const short* XY = _xy.ptr<short>(dy);
         const ushort* FXY = _fxy.ptr<ushort>(dy);
-
+        const int off_y = isRelative ? (_offset.y+dy) : 0;
         for(int dx = 0; dx < dsize.width; dx++, D += cn )
         {
-            int sx = XY[dx*2]-1, sy = XY[dx*2+1]-1;
+            const int off_x = isRelative ? (_offset.x+dx) : 0;
+            int sx = XY[dx*2]-1+off_x, sy = XY[dx*2+1]-1+off_y;
             const AT* w = wtab + FXY[dx]*16;
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
@@ -980,10 +1009,10 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
 }
 
 
-template<class CastOp, typename AT, int ONE>
+template<class CastOp, typename AT, int ONE, bool isRelative>
 static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                            const Mat& _fxy, const void* _wtab,
-                           int borderType, const Scalar& _borderValue )
+                           int borderType, const Scalar& _borderValue, const Point& _offset )
 {
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
@@ -1002,7 +1031,7 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
 
     unsigned width1 = std::max(ssize.width-7, 0), height1 = std::max(ssize.height-7, 0);
 
-    if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() )
+    if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() && !isRelative )
     {
         dsize.width *= dsize.height;
         dsize.height = 1;
@@ -1013,10 +1042,11 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
         T* D = _dst.ptr<T>(dy);
         const short* XY = _xy.ptr<short>(dy);
         const ushort* FXY = _fxy.ptr<ushort>(dy);
-
+        const int off_y = isRelative ? (_offset.y+dy) : 0;
         for(int dx = 0; dx < dsize.width; dx++, D += cn )
         {
-            int sx = XY[dx*2]-3, sy = XY[dx*2+1]-3;
+            const int off_x = isRelative ? (_offset.x+dx) : 0;
+            int sx = XY[dx*2]-3+off_x, sy = XY[dx*2+1]-3+off_y;
             const AT* w = wtab + FXY[dx]*64;
             const T* S = S0 + sy*sstep + sx*cn;
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
@@ -1091,11 +1121,11 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
 
 
 typedef void (*RemapNNFunc)(const Mat& _src, Mat& _dst, const Mat& _xy,
-                            int borderType, const Scalar& _borderValue );
+                            int borderType, const Scalar& _borderValue, const Point& _offset);
 
 typedef void (*RemapFunc)(const Mat& _src, Mat& _dst, const Mat& _xy,
                           const Mat& _fxy, const void* _wtab,
-                          int borderType, const Scalar& _borderValue);
+                          int borderType, const Scalar& _borderValue, const Point& _offset);
 
 class RemapInvoker :
     public ParallelLoopBody
@@ -1186,7 +1216,7 @@ public:
                             }
                         }
                     }
-                    nnfunc( *src, dpart, bufxy, borderType, borderValue );
+                    nnfunc( *src, dpart, bufxy, borderType, borderValue, Point(x, y) );
                     continue;
                 }
 
@@ -1293,7 +1323,7 @@ public:
                         }
                     }
                 }
-                ifunc(*src, dpart, bufxy, bufa, ctab, borderType, borderValue);
+                ifunc(*src, dpart, bufxy, bufa, ctab, borderType, borderValue, Point(x, y));
             }
         }
     }
@@ -1315,6 +1345,9 @@ private:
 static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, InputArray _map2,
                       int interpolation, int borderType, const Scalar& borderValue)
 {
+    const bool hasRelativeFlag = ((interpolation & WARP_RELATIVE_MAP) != 0);
+    interpolation &= ~WARP_RELATIVE_MAP;
+
     const ocl::Device & dev = ocl::Device::getDefault();
     int cn = _src.channels(), type = _src.type(), depth = _src.depth(),
             rowsPerWI = dev.isIntel() ? 4 : 1;
@@ -1354,9 +1387,10 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     static const char * const interMap[] = { "INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_LINEAR", "INTER_LANCZOS" };
     static const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                            "BORDER_REFLECT_101", "BORDER_TRANSPARENT" };
-    String buildOptions = format("-D %s -D %s -D T=%s -D ROWS_PER_WI=%d",
+    String buildOptions = format("-D %s -D %s -D T=%s -D ROWS_PER_WI=%d -D WARP_RELATIVE=%d",
                                  interMap[interpolation], borderMap[borderType],
-                                 ocl::typeToStr(type), rowsPerWI);
+                                 ocl::typeToStr(type), rowsPerWI,
+                                 hasRelativeFlag ? 1 : 0);
 
     if (interpolation != INTER_NEAREST)
     {
@@ -1415,7 +1449,7 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
     size_t h = dsize.height;
     String buildOptions;
     unsigned mem_size = 32;
-    if (flags & CV_WARP_INVERSE_MAP)
+    if (flags & cv::WARP_INVERSE_MAP)
     {
         buildOptions = "-D InverseMap";
     }
@@ -1430,7 +1464,7 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
     ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
     ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
 
-    if (!(flags & CV_WARP_INVERSE_MAP))
+    if (!(flags & cv::WARP_INVERSE_MAP))
     {
 
 
@@ -1461,14 +1495,14 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
     size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
     size_t localThreads[2] = { mem_size , mem_size };
     k.run(2, globalThreads, localThreads, false);
-    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     return true;
 }
 static bool ocl_logPolar(InputArray _src, OutputArray _dst,
     Point2f center, double M, int flags)
 {
     if (M <= 0)
-        CV_Error(CV_StsOutOfRange, "M should be >0");
+        CV_Error(cv::Error::StsOutOfRange, "M should be >0");
     UMat src_with_border; // don't scope this variable (it holds image data)
 
     UMat mapx, mapy, r, cp_sp;
@@ -1484,7 +1518,7 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
     size_t h = dsize.height;
     String buildOptions;
     unsigned mem_size = 32;
-    if (flags & CV_WARP_INVERSE_MAP)
+    if (flags & cv::WARP_INVERSE_MAP)
     {
         buildOptions = "-D InverseMap";
     }
@@ -1501,7 +1535,7 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
     ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
     ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
 
-    if (!(flags & CV_WARP_INVERSE_MAP))
+    if (!(flags & cv::WARP_INVERSE_MAP))
     {
 
 
@@ -1532,7 +1566,7 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
     size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
     size_t localThreads[2] = { mem_size , mem_size };
     k.run(2, globalThreads, localThreads, false);
-    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     return true;
 }
 #endif
@@ -1615,12 +1649,12 @@ static bool openvx_remap(Mat src, Mat dst, Mat map1, Mat map2, int interpolation
     }
     catch (const ivx::RuntimeError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
+        CV_Error(cv::Error::StsInternal, e.what());
         return false;
     }
     catch (const ivx::WrapperError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
+        CV_Error(cv::Error::StsInternal, e.what());
         return false;
     }
     return true;
@@ -1687,38 +1721,73 @@ void cv::remap( InputArray _src, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION();
 
-    static RemapNNFunc nn_tab[] =
+    const bool hasRelativeFlag = ((interpolation & WARP_RELATIVE_MAP) != 0);
+
+    static RemapNNFunc nn_tab[2][8] =
     {
-        remapNearest<uchar>, remapNearest<schar>, remapNearest<ushort>, remapNearest<short>,
-        remapNearest<int>, remapNearest<float>, remapNearest<double>, 0
+        {
+            remapNearest<uchar, false>, remapNearest<schar, false>, remapNearest<ushort, false>, remapNearest<short, false>,
+            remapNearest<int, false>, remapNearest<float, false>, remapNearest<double, false>, 0
+        },
+        {
+            remapNearest<uchar, true>, remapNearest<schar, true>, remapNearest<ushort, true>, remapNearest<short, true>,
+            remapNearest<int, true>, remapNearest<float, true>, remapNearest<double, true>, 0
+        }
     };
 
-    static RemapFunc linear_tab[] =
+    static RemapFunc linear_tab[2][8] =
     {
-        remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u, short>, 0,
-        remapBilinear<Cast<float, ushort>, RemapNoVec, float>,
-        remapBilinear<Cast<float, short>, RemapNoVec, float>, 0,
-        remapBilinear<Cast<float, float>, RemapNoVec, float>,
-        remapBilinear<Cast<double, double>, RemapNoVec, float>, 0
+        {
+            remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<false>, short, false>, 0,
+            remapBilinear<Cast<float, ushort>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<float, short>, RemapNoVec<false>, float, false>, 0,
+            remapBilinear<Cast<float, float>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<double, double>, RemapNoVec<false>, float, false>, 0
+        },
+        {
+            remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<true>, short, true>, 0,
+            remapBilinear<Cast<float, ushort>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<float, short>, RemapNoVec<true>, float, true>, 0,
+            remapBilinear<Cast<float, float>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<double, double>, RemapNoVec<true>, float, true>, 0
+        }
     };
 
-    static RemapFunc cubic_tab[] =
+    static RemapFunc cubic_tab[2][8] =
     {
-        remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE>, 0,
-        remapBicubic<Cast<float, ushort>, float, 1>,
-        remapBicubic<Cast<float, short>, float, 1>, 0,
-        remapBicubic<Cast<float, float>, float, 1>,
-        remapBicubic<Cast<double, double>, float, 1>, 0
-    };
+        {
+            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
+            remapBicubic<Cast<float, ushort>, float, 1, false>,
+            remapBicubic<Cast<float, short>, float, 1, false>, 0,
+            remapBicubic<Cast<float, float>, float, 1, false>,
+            remapBicubic<Cast<double, double>, float, 1, false>, 0
+        },
+        {
+            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
+            remapBicubic<Cast<float, ushort>, float, 1, true>,
+            remapBicubic<Cast<float, short>, float, 1, true>, 0,
+            remapBicubic<Cast<float, float>, float, 1, true>,
+            remapBicubic<Cast<double, double>, float, 1, true>, 0
+        }
+};
 
-    static RemapFunc lanczos4_tab[] =
+    static RemapFunc lanczos4_tab[2][8] =
     {
-        remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE>, 0,
-        remapLanczos4<Cast<float, ushort>, float, 1>,
-        remapLanczos4<Cast<float, short>, float, 1>, 0,
-        remapLanczos4<Cast<float, float>, float, 1>,
-        remapLanczos4<Cast<double, double>, float, 1>, 0
-    };
+        {
+            remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
+            remapLanczos4<Cast<float, ushort>, float, 1, false>,
+            remapLanczos4<Cast<float, short>, float, 1, false>, 0,
+            remapLanczos4<Cast<float, float>, float, 1, false>,
+            remapLanczos4<Cast<double, double>, float, 1, false>, 0
+        },
+        {
+            remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
+            remapLanczos4<Cast<float, ushort>, float, 1, true>,
+            remapLanczos4<Cast<float, short>, float, 1, true>, 0,
+            remapLanczos4<Cast<float, float>, float, 1, true>,
+            remapLanczos4<Cast<double, double>, float, 1, true>, 0
+        }
+};
 
     CV_Assert( !_map1.empty() );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
@@ -1730,7 +1799,6 @@ void cv::remap( InputArray _src, OutputArray _dst,
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
 
-
     CV_OVX_RUN(
         src.type() == CV_8UC1 && dst.type() == CV_8UC1 &&
         !ovx::skipSmallImages<VX_KERNEL_REMAP>(src.cols, src.rows) &&
@@ -1738,7 +1806,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
         ((map1.type() == CV_32FC2 && map2.empty() && map1.size == dst.size) ||
          (map1.type() == CV_32FC1 && map2.type() == CV_32FC1 && map1.size == dst.size && map2.size == dst.size) ||
          (map1.empty() && map2.type() == CV_32FC2 && map2.size == dst.size)) &&
-        ((borderType & BORDER_ISOLATED) != 0 || !src.isSubmatrix()),
+        ((borderType & BORDER_ISOLATED) != 0 || !src.isSubmatrix()) &&
+        !hasRelativeFlag,
         openvx_remap(src, dst, map1, map2, interpolation, borderValue));
 
     CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
@@ -1746,6 +1815,13 @@ void cv::remap( InputArray _src, OutputArray _dst,
     if( dst.data == src.data )
         src = src.clone();
 
+    if ((map1.type() == CV_32FC1) && (map2.type() == CV_32FC1))
+    {
+        CALL_HAL(remap32f, cv_hal_remap32f, src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+                 map1.ptr<float>(), map1.step, map2.ptr<float>(), map2.step, interpolation, borderType, borderValue.val);
+    }
+
+    interpolation &= ~WARP_RELATIVE_MAP;
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
@@ -1798,25 +1874,26 @@ void cv::remap( InputArray _src, OutputArray _dst,
     bool fixpt = depth == CV_8U;
     bool planar_input = false;
 
+    const int relativeOptionIndex = (hasRelativeFlag ? 1 : 0);
     if( interpolation == INTER_NEAREST )
     {
-        nnfunc = nn_tab[depth];
+        nnfunc = nn_tab[relativeOptionIndex][depth];
         CV_Assert( nnfunc != 0 );
     }
     else
     {
         if( interpolation == INTER_LINEAR )
-            ifunc = linear_tab[depth];
+            ifunc = linear_tab[relativeOptionIndex][depth];
         else if( interpolation == INTER_CUBIC ){
-            ifunc = cubic_tab[depth];
+            ifunc = cubic_tab[relativeOptionIndex][depth];
             CV_Assert( _src.channels() <= 4 );
         }
         else if( interpolation == INTER_LANCZOS4 ){
-            ifunc = lanczos4_tab[depth];
+            ifunc = lanczos4_tab[relativeOptionIndex][depth];
             CV_Assert( _src.channels() <= 4 );
         }
         else
-            CV_Error( CV_StsBadArg, "Unknown interpolation method" );
+            CV_Error( cv::Error::StsBadArg, "Unknown interpolation method" );
         CV_Assert( ifunc != 0 );
         ctab = initInterTab2D( interpolation, fixpt );
     }
@@ -2164,7 +2241,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
             }
         }
         else
-            CV_Error( CV_StsNotImplemented, "Unsupported combination of input/output matrices" );
+            CV_Error( cv::Error::StsNotImplemented, "Unsupported combination of input/output matrices" );
     }
 }
 
@@ -3538,7 +3615,7 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
         iM[istep] = A21; iM[istep+1] = A22; iM[istep+2] = b2;
     }
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 }
 
 cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst, int solveMethod)
@@ -3563,7 +3640,7 @@ cvWarpAffine( const CvArr* srcarr, CvArr* dstarr, const CvMat* marr,
     cv::Mat matrix = cv::cvarrToMat(marr);
     CV_Assert( src.type() == dst.type() );
     cv::warpAffine( src, dst, matrix, dst.size(), flags,
-        (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
+        (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
         fillval );
 }
 
@@ -3575,7 +3652,7 @@ cvWarpPerspective( const CvArr* srcarr, CvArr* dstarr, const CvMat* marr,
     cv::Mat matrix = cv::cvarrToMat(marr);
     CV_Assert( src.type() == dst.type() );
     cv::warpPerspective( src, dst, matrix, dst.size(), flags,
-        (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
+        (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
         fillval );
 }
 
@@ -3588,7 +3665,7 @@ cvRemap( const CvArr* srcarr, CvArr* dstarr,
     cv::Mat mapx = cv::cvarrToMat(_mapx), mapy = cv::cvarrToMat(_mapy);
     CV_Assert( src.type() == dst.type() && dst.size() == mapx.size() );
     cv::remap( src, dst, mapx, mapy, flags & cv::INTER_MAX,
-        (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
+        (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
         fillval );
     CV_Assert( dst0.data == dst.data );
 }
@@ -3672,7 +3749,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
     mapy.create(dsize, CV_32F);
     bool semiLog = (flags & WARP_POLAR_LOG) != 0;
 
-    if (!(flags & CV_WARP_INVERSE_MAP))
+    if (!(flags & cv::WARP_INVERSE_MAP))
     {
         CV_Assert(!dsize.empty());
         double Kangle = CV_2PI / dsize.height;
@@ -3712,7 +3789,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                 my[rho] = (float)y;
             }
         }
-        remap(_src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+        remap(_src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     }
     else
     {
@@ -3765,7 +3842,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
             }
         }
         remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
-              (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+              (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     }
 }
 

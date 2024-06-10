@@ -598,10 +598,10 @@ static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
     else if( M.type() == CV_64F )
         *(double*)ptr = value;
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 }
 
-#if defined(__GNUC__) && (__GNUC__ == 11 || __GNUC__ == 12 || __GNUC__ == 13)
+#if defined(__GNUC__) && (__GNUC__ >= 11)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif

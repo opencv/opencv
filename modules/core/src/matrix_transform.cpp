@@ -269,6 +269,8 @@ void transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
+    CALL_HAL(transpose2d, cv_hal_transpose2d, src.data, src.step, dst.data, dst.step, src.cols, src.rows, esz);
+
     CV_IPP_RUN_FAST(ipp_transpose(src, dst))
 
     if( dst.data == src.data )

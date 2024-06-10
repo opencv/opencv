@@ -57,7 +57,7 @@ public class KAZEDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "%YAML:1.0\n---\nformat: 3\nname: \"Feature2D.KAZE\"\nextended: 0\nupright: 0\nthreshold: 1.0000000474974513e-03\noctaves: 4\nsublevels: 4\ndiffusivity: 1\n";
+        String truth = "%YAML:1.0\n---\nformat: 3\nname: \"Feature2D.KAZE\"\nextended: 0\nupright: 0\nthreshold: 0.0010000000474974513\noctaves: 4\nsublevels: 4\ndiffusivity: 1\n";
         String actual = readFile(filename);
         actual = actual.replaceAll("e([+-])0(\\d\\d)", "e$1$2"); // NOTE: workaround for different platforms double representation
         assertEquals(truth, actual);

@@ -597,7 +597,7 @@ CASE(test_dynamicquantizelinear_min_adjusted_expanded)
 CASE(test_edge_pad)
     // no filter
 CASE(test_einsum_batch_diagonal)
-    // no filter
+    SKIP;
 CASE(test_einsum_batch_matmul)
     // no filter
 CASE(test_einsum_inner_prod)

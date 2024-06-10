@@ -79,7 +79,7 @@ typedef void (*MixChannelsFunc)( const void** src, const int* sdelta,
 
 static MixChannelsFunc getMixchFunc(int depth)
 {
-    static MixChannelsFunc mixchTab[] =
+    static MixChannelsFunc mixchTab[CV_DEPTH_MAX] =
     {
         mixChannels8u, mixChannels8u, mixChannels16u,
         mixChannels16u, mixChannels32s, mixChannels32s,
@@ -146,6 +146,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     NAryMatIterator it(arrays, ptrs, (int)(nsrcs + ndsts));
     int total = (int)it.size, blocksize = std::min(total, (int)((BLOCK_SIZE + esz1-1)/esz1));
     MixChannelsFunc func = getMixchFunc(depth);
+    CV_Assert(func);
 
     for( i = 0; i < it.nplanes; i++, ++it )
     {

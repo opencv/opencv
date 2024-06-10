@@ -2,7 +2,7 @@
 ; jfdctflt.asm - floating-point FDCT (SSE)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2016, D. R. Commander.
+; Copyright (C) 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -34,7 +34,7 @@
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_fdct_float_sse)
 
 EXTN(jconst_fdct_float_sse):
@@ -44,7 +44,7 @@ PD_0_707 times 4 dd 0.707106781186547524400844
 PD_0_541 times 4 dd 0.541196100146196984399723
 PD_1_306 times 4 dd 1.306562964876376527856643
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -74,19 +74,19 @@ EXTN(jsimd_fdct_float_sse):
     mov         [esp], eax
     mov         ebp, esp                     ; ebp = aligned ebp
     lea         esp, [wk(0)]
-    pushpic     ebx
+    PUSHPIC     ebx
 ;   push        ecx                     ; need not be preserved
 ;   push        edx                     ; need not be preserved
 ;   push        esi                     ; unused
 ;   push        edi                     ; unused
 
-    get_GOT     ebx                     ; get GOT address
+    GET_GOT     ebx                     ; get GOT address
 
     ; ---- Pass 1: process rows.
 
     mov         edx, POINTER [data(eax)]  ; (FAST_FLOAT *)
     mov         ecx, DCTSIZE/4
-    alignx      16, 7
+    ALIGNX      16, 7
 .rowloop:
 
     movaps      xmm0, XMMWORD [XMMBLOCK(2,0,edx,SIZEOF_FAST_FLOAT)]
@@ -222,7 +222,7 @@ EXTN(jsimd_fdct_float_sse):
 
     mov         edx, POINTER [data(eax)]  ; (FAST_FLOAT *)
     mov         ecx, DCTSIZE/4
-    alignx      16, 7
+    ALIGNX      16, 7
 .columnloop:
 
     movaps      xmm0, XMMWORD [XMMBLOCK(2,0,edx,SIZEOF_FAST_FLOAT)]
@@ -358,7 +358,7 @@ EXTN(jsimd_fdct_float_sse):
 ;   pop         esi                     ; unused
 ;   pop         edx                     ; need not be preserved
 ;   pop         ecx                     ; need not be preserved
-    poppic      ebx
+    POPPIC      ebx
     mov         esp, ebp                ; esp <- aligned ebp
     pop         esp                     ; esp <- original ebp
     pop         ebp

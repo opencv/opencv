@@ -90,7 +90,7 @@ private:
         openni::Status status = openni::OpenNI::initialize();
         if (status != openni::STATUS_OK)
         {
-            CV_Error(CV_StsError, std::string("Failed to initialize:") + openni::OpenNI::getExtendedError());
+            CV_Error(cv::Error::StsError, std::string("Failed to initialize:") + openni::OpenNI::getExtendedError());
         }
     }
 
@@ -274,7 +274,7 @@ CvCapture_OpenNI2::CvCapture_OpenNI2(int index, const char * filename) :
                 deviceURI = ldevs[index].getUri();
             else
             {
-                CV_Error(CV_StsError, "OpenCVKinect2: Device index exceeds the number of available OpenNI devices");
+                CV_Error(cv::Error::StsError, "OpenCVKinect2: Device index exceeds the number of available OpenNI devices");
             }
         }
     }
@@ -287,7 +287,7 @@ CvCapture_OpenNI2::CvCapture_OpenNI2(int index, const char * filename) :
     status = device.open(deviceURI);
     if (status != openni::STATUS_OK)
     {
-        CV_Error(CV_StsError, std::string("OpenCVKinect2: Failed to open device: ") + openni::OpenNI::getExtendedError());
+        CV_Error(cv::Error::StsError, std::string("OpenCVKinect2: Failed to open device: ") + openni::OpenNI::getExtendedError());
     }
 
     toggleStream(CV_DEPTH_STREAM, true);
@@ -361,7 +361,7 @@ void CvCapture_OpenNI2::toggleStream(int stream, bool toggle)
                     if (status != openni::STATUS_OK)
                     {
                         streams[stream].destroy();
-                        CV_Error(CV_StsError, std::string("OpenCVKinect2 : Couldn't set ") +
+                        CV_Error(cv::Error::StsError, std::string("OpenCVKinect2 : Couldn't set ") +
                                  stream_names[stream] + std::string(" stream output mode: ") +
                                  std::string(openni::OpenNI::getExtendedError()));
                     }
@@ -373,14 +373,14 @@ void CvCapture_OpenNI2::toggleStream(int stream, bool toggle)
             if (status != openni::STATUS_OK)
             {
                 streams[stream].destroy();
-                CV_Error(CV_StsError, std::string("CvCapture_OpenNI2::CvCapture_OpenNI2 : Couldn't start ") +
+                CV_Error(cv::Error::StsError, std::string("CvCapture_OpenNI2::CvCapture_OpenNI2 : Couldn't start ") +
                          stream_names[stream] + std::string(" stream: ") +
                          std::string(openni::OpenNI::getExtendedError()));
             }
         }
         else
         {
-            CV_Error(CV_StsError, std::string("CvCapture_OpenNI2::CvCapture_OpenNI2 : Couldn't find ") +
+            CV_Error(cv::Error::StsError, std::string("CvCapture_OpenNI2::CvCapture_OpenNI2 : Couldn't find ") +
                      stream_names[stream] + " stream: " +
                      std::string(openni::OpenNI::getExtendedError()));
         }
@@ -1026,7 +1026,7 @@ inline void getBGRImageFromMetaData( const openni::VideoFrameRef& imageMetaData,
 {
    cv::Mat bufferImage;
    if( imageMetaData.getVideoMode().getPixelFormat() != openni::PIXEL_FORMAT_RGB888 )
-        CV_Error( CV_StsUnsupportedFormat, "Unsupported format of grabbed image." );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Unsupported format of grabbed image." );
 
    bgrImage.create(imageMetaData.getHeight(), imageMetaData.getWidth(), CV_8UC3);
    bufferImage.create(imageMetaData.getHeight(), imageMetaData.getWidth(), CV_8UC3);
@@ -1049,7 +1049,7 @@ inline void getGrayImageFromMetaData(const openni::VideoFrameRef& imageMetaData,
     }
     else
     {
-        CV_Error(CV_StsUnsupportedFormat, "Unsupported format of grabbed image.");
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported format of grabbed image.");
     }
 }
 

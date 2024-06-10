@@ -2,7 +2,7 @@
  * jdinput.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2002-2013 by Guido Vollbeding.
+ * Modified 2002-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -330,7 +330,6 @@ initial_setup (j_decompress_ptr cinfo)
     default:
       ERREXIT4(cinfo, JERR_BAD_PROGRESSION,
 	       cinfo->Ss, cinfo->Se, cinfo->Ah, cinfo->Al);
-      break;
     }
 
   /* We initialize DCT_scaled_size and min_DCT_scaled_size to block_size.
@@ -391,16 +390,16 @@ per_scan_setup (j_decompress_ptr cinfo)
 {
   int ci, mcublks, tmp;
   jpeg_component_info *compptr;
-  
+
   if (cinfo->comps_in_scan == 1) {
-    
+
     /* Noninterleaved (single-component) scan */
     compptr = cinfo->cur_comp_info[0];
-    
+
     /* Overall image size in MCUs */
     cinfo->MCUs_per_row = compptr->width_in_blocks;
     cinfo->MCU_rows_in_scan = compptr->height_in_blocks;
-    
+
     /* For noninterleaved scan, always one block per MCU */
     compptr->MCU_width = 1;
     compptr->MCU_height = 1;
@@ -413,28 +412,26 @@ per_scan_setup (j_decompress_ptr cinfo)
     tmp = (int) (compptr->height_in_blocks % compptr->v_samp_factor);
     if (tmp == 0) tmp = compptr->v_samp_factor;
     compptr->last_row_height = tmp;
-    
+
     /* Prepare array describing MCU composition */
     cinfo->blocks_in_MCU = 1;
     cinfo->MCU_membership[0] = 0;
-    
+
   } else {
-    
+
     /* Interleaved (multi-component) scan */
     if (cinfo->comps_in_scan <= 0 || cinfo->comps_in_scan > MAX_COMPS_IN_SCAN)
       ERREXIT2(cinfo, JERR_COMPONENT_COUNT, cinfo->comps_in_scan,
 	       MAX_COMPS_IN_SCAN);
-    
+
     /* Overall image size in MCUs */
     cinfo->MCUs_per_row = (JDIMENSION)
       jdiv_round_up((long) cinfo->image_width,
 		    (long) (cinfo->max_h_samp_factor * cinfo->block_size));
-    cinfo->MCU_rows_in_scan = (JDIMENSION)
-      jdiv_round_up((long) cinfo->image_height,
-		    (long) (cinfo->max_v_samp_factor * cinfo->block_size));
-    
+    cinfo->MCU_rows_in_scan = cinfo->total_iMCU_rows;
+
     cinfo->blocks_in_MCU = 0;
-    
+
     for (ci = 0; ci < cinfo->comps_in_scan; ci++) {
       compptr = cinfo->cur_comp_info[ci];
       /* Sampling factors give # of blocks of component in each MCU */
@@ -457,7 +454,7 @@ per_scan_setup (j_decompress_ptr cinfo)
 	cinfo->MCU_membership[cinfo->blocks_in_MCU++] = ci;
       }
     }
-    
+
   }
 }
 
@@ -501,9 +498,8 @@ latch_quant_tables (j_decompress_ptr cinfo)
 	cinfo->quant_tbl_ptrs[qtblno] == NULL)
       ERREXIT1(cinfo, JERR_NO_QUANT_TABLE, qtblno);
     /* OK, save away the quantization table */
-    qtbl = (JQUANT_TBL *)
-      (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				  SIZEOF(JQUANT_TBL));
+    qtbl = (JQUANT_TBL *) (*cinfo->mem->alloc_small)
+      ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(JQUANT_TBL));
     MEMCOPY(qtbl, cinfo->quant_tbl_ptrs[qtblno], SIZEOF(JQUANT_TBL));
     compptr->quant_table = qtbl;
   }
@@ -644,9 +640,8 @@ jinit_input_controller (j_decompress_ptr cinfo)
   my_inputctl_ptr inputctl;
 
   /* Create subobject in permanent pool */
-  inputctl = (my_inputctl_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-				SIZEOF(my_input_controller));
+  inputctl = (my_inputctl_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_PERMANENT, SIZEOF(my_input_controller));
   cinfo->inputctl = &inputctl->pub;
   /* Initialize method pointers */
   inputctl->pub.consume_input = consume_markers;

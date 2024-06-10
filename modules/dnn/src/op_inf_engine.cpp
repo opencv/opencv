@@ -10,7 +10,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_INF_ENGINE
-#include <ie_extension.h>
+#include <openvino/core/extension.hpp>
 #elif defined(ENABLE_PLUGINS)
 // using plugin API
 #include "backend.hpp"
@@ -39,60 +39,6 @@ cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
 
 CV__DNN_INLINE_NS_END
 
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-namespace InferenceEngine {
-
-CNNNetwork::CNNNetwork() {}
-
-CNNNetwork::CNNNetwork(std::shared_ptr<ov::Model> model) : model(model) {}
-
-std::shared_ptr<ov::Model> CNNNetwork::getFunction() const {
-    return model;
-}
-
-void CNNNetwork::serialize(const std::string& xmlPath, const std::string& binPath) {
-    ov::pass::Serialize(xmlPath, binPath).run_on_model(model);
-}
-
-void CNNNetwork::reshape(const std::map<std::string, std::vector<size_t> >& shapes) {
-    std::map<std::string, ov::PartialShape> partialShapes;
-    for (const auto& it : shapes) {
-        ov::PartialShape shape;
-        shape.insert(shape.begin(), it.second.begin(), it.second.end());
-        partialShapes.insert({it.first, shape});
-    }
-    model->reshape(partialShapes);
-}
-
-std::vector<std::string> Core::GetAvailableDevices() {
-    return get_available_devices();
-}
-
-void Core::UnregisterPlugin(const std::string& id) {
-    unload_plugin(id);
-}
-
-CNNNetwork Core::ReadNetwork(const std::string& xmlPath, const std::string& binPath) {
-    return read_model(xmlPath, binPath);
-}
-
-ExecutableNetwork Core::LoadNetwork(CNNNetwork net, const std::string& device,
-                                    const std::map<std::string, std::string>& config) {
-    ov::AnyMap props;
-    for (const auto& it : config) {
-        props.insert(it);
-    }
-    return compile_model(net.getFunction(), device, props);
-}
-
-ExecutableNetwork::ExecutableNetwork() {}
-
-ExecutableNetwork::ExecutableNetwork(const ov::CompiledModel& copy) : CompiledModel(copy) {}
-
-ov::InferRequest ExecutableNetwork::CreateInferRequest() { return create_infer_request(); }
-
-}  // namespace InferenceEngine
-
 Mat infEngineBlobToMat(const ov::Tensor& blob)
 {
     std::vector<size_t> dims = blob.get_shape();
@@ -118,67 +64,40 @@ void infEngineBlobsToMats(const ov::TensorVector& blobs,
         mats[i] = infEngineBlobToMat(blobs[i]);
 }
 
-#else
-
-Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
-{
-    // NOTE: Inference Engine sizes are reversed.
-    std::vector<size_t> dims = blob->getTensorDesc().getDims();
-    std::vector<int> size(dims.begin(), dims.end());
-    auto precision = blob->getTensorDesc().getPrecision();
-
-    int type = -1;
-    switch (precision)
-    {
-        case InferenceEngine::Precision::FP32: type = CV_32F; break;
-        case InferenceEngine::Precision::U8: type = CV_8U; break;
-        default:
-            CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
-    }
-    return Mat(size, type, (void*)blob->buffer());
-}
-
-void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
-                          std::vector<Mat>& mats)
-{
-    mats.resize(blobs.size());
-    for (int i = 0; i < blobs.size(); ++i)
-        mats[i] = infEngineBlobToMat(blobs[i]);
-}
-#endif // OpenVINO >= 2022.1
 
 static bool init_IE_plugins()
 {
     // load and hold IE plugins
-    static InferenceEngine::Core* init_core = new InferenceEngine::Core();  // 'delete' is never called
-    (void)init_core->GetAvailableDevices();
+    static ov::Core* init_core = new ov::Core();  // 'delete' is never called
+    (void)init_core->get_available_devices();
     return true;
 }
-static InferenceEngine::Core& retrieveIECore(const std::string& id, std::map<std::string, std::shared_ptr<InferenceEngine::Core> >& cores)
+static ov::Core& retrieveIECore(const std::string& id, std::map<std::string, std::shared_ptr<ov::Core> >& cores)
 {
     AutoLock lock(getInitializationMutex());
-    std::map<std::string, std::shared_ptr<InferenceEngine::Core> >::iterator i = cores.find(id);
+    std::map<std::string, std::shared_ptr<ov::Core> >::iterator i = cores.find(id);
     if (i == cores.end())
     {
-        std::shared_ptr<InferenceEngine::Core> core = std::make_shared<InferenceEngine::Core>();
+        std::shared_ptr<ov::Core> core = std::make_shared<ov::Core>();
         cores[id] = core;
         return *core.get();
     }
     return *(i->second).get();
 }
-static InferenceEngine::Core& create_IE_Core_instance(const std::string& id)
+static ov::Core& create_IE_Core_instance(const std::string& id)
 {
-    static std::map<std::string, std::shared_ptr<InferenceEngine::Core> > cores;
+    static std::map<std::string, std::shared_ptr<ov::Core> > cores;
     return retrieveIECore(id, cores);
 }
-static InferenceEngine::Core& create_IE_Core_pointer(const std::string& id)
+static ov::Core& create_IE_Core_pointer(const std::string& id)
 {
     // load and hold IE plugins
-    static std::map<std::string, std::shared_ptr<InferenceEngine::Core> >* cores =
-            new std::map<std::string, std::shared_ptr<InferenceEngine::Core> >();
+    static std::map<std::string, std::shared_ptr<ov::Core> >* cores =
+            new std::map<std::string, std::shared_ptr<ov::Core> >();
     return retrieveIECore(id, *cores);
 }
-InferenceEngine::Core& getCore(const std::string& id)
+
+ov::Core& getCore(const std::string& id)
 {
     // to make happy memory leak tools use:
     // - OPENCV_DNN_INFERENCE_ENGINE_HOLD_PLUGINS=0
@@ -195,7 +114,7 @@ InferenceEngine::Core& getCore(const std::string& id)
 #endif
             );
 
-    InferenceEngine::Core& core = param_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
+    ov::Core& core = param_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
             ? create_IE_Core_pointer(id)
             : create_IE_Core_instance(id);
     return core;
@@ -204,17 +123,13 @@ InferenceEngine::Core& getCore(const std::string& id)
 
 static bool detectArmPlugin_()
 {
-    InferenceEngine::Core& ie = getCore("CPU");
-    const std::vector<std::string> devices = ie.GetAvailableDevices();
+    ov::Core& ie = getCore("CPU");
+    const std::vector<std::string> devices = ie.get_available_devices();
     for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
     {
         if (i->find("CPU") != std::string::npos)
         {
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
             const std::string name = ie.get_property(*i, ov::device::full_name);
-#else
-            const std::string name = ie.GetMetric(*i, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
-#endif
             CV_LOG_INFO(NULL, "CPU plugin: " << name);
             return name.find("arm_compute::NEON") != std::string::npos;
         }
@@ -228,17 +143,13 @@ static bool detectMyriadX_(const std::string& device)
     AutoLock lock(getInitializationMutex());
 
     // Lightweight detection
-    InferenceEngine::Core& ie = getCore(device);
-    const std::vector<std::string> devices = ie.GetAvailableDevices();
+    ov::Core& ie = getCore(device);
+    const std::vector<std::string> devices = ie.get_available_devices();
     for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
     {
         if (i->find(device) != std::string::npos)
         {
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
             const std::string name = ie.get_property(*i, ov::device::full_name);
-#else
-            const std::string name = ie.GetMetric(*i, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
-#endif
             CV_LOG_INFO(NULL, "Myriad device: " << name);
             return name.find("MyriadX") != std::string::npos || name.find("Myriad X") != std::string::npos || name.find("HDDL") != std::string::npos;
         }
@@ -259,11 +170,11 @@ void resetMyriadDevice()
 
     AutoLock lock(getInitializationMutex());
 
-    InferenceEngine::Core& ie = getCore("MYRIAD");
+    ov::Core& ie = getCore("MYRIAD");
     try
     {
-        ie.UnregisterPlugin("MYRIAD");
-        ie.UnregisterPlugin("HETERO");
+        ie.unload_plugin("MYRIAD");
+        ie.unload_plugin("HETERO");
     }
     catch (...) {}
 #endif  // HAVE_INF_ENGINE
@@ -276,11 +187,11 @@ void releaseHDDLPlugin()
 
     AutoLock lock(getInitializationMutex());
 
-    InferenceEngine::Core& ie = getCore("HDDL");
+    ov::Core& ie = getCore("HDDL");
     try
     {
-        ie.UnregisterPlugin("HDDL");
-        ie.UnregisterPlugin("HETERO");
+        ie.unload_plugin("HDDL");
+        ie.unload_plugin("HETERO");
     }
     catch (...) {}
 #endif  // HAVE_INF_ENGINE
@@ -351,7 +262,7 @@ namespace openvino {
 bool checkTarget(Target target)
 {
     // Lightweight detection
-    const std::vector<std::string> devices = getCore("").GetAvailableDevices();
+    const std::vector<std::string> devices = getCore("").get_available_devices();
     for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
     {
         if (std::string::npos != i->find("MYRIAD") && target == DNN_TARGET_MYRIAD)

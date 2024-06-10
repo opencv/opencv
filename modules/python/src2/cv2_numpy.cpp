@@ -6,8 +6,6 @@
 #include "cv2_numpy.hpp"
 #include "cv2_util.hpp"
 
-NumpyAllocator g_numpyAllocator;
-
 using namespace cv;
 
 UMatData* NumpyAllocator::allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const

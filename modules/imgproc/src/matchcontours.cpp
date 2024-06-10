@@ -158,7 +158,7 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
         }
         break;
     default:
-        CV_Error( CV_StsBadArg, "Unknown comparison method" );
+        CV_Error( cv::Error::StsBadArg, "Unknown comparison method" );
     }
 
     //If anyA and anyB are both true, the result is correct.

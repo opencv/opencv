@@ -369,9 +369,9 @@ public:
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
         std::vector<int64_t> out(outShapes[0].begin(), outShapes[0].end());
-        auto shape   = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                       ngraph::Shape{out.size()}, out.data());
-        auto reshape = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, shape, true);
+        auto shape   = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                       ov::Shape{out.size()}, out.data());
+        auto reshape = std::make_shared<ov::op::v1::Reshape>(ieInpNode, shape, true);
         return Ptr<BackendNode>(new InfEngineNgraphNode(reshape));
     }
 #endif  // HAVE_DNN_NGRAPH

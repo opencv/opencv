@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv { namespace dnn {
@@ -27,8 +29,10 @@ public:
         const_input_1d = params.get("const_input_1d", false);
     }
 
-    virtual bool supportBackend(int backendId) CV_OVERRIDE {
-        return backendId == DNN_BACKEND_OPENCV;
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -136,6 +140,25 @@ public:
             cv::broadcast(inputs[0], target_shape, outputs[0]);
         }
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto input_shape = nodes[0].dynamicCast<InfEngineNgraphNode>()->node.get_shape();
+        CV_CheckGE(target_shape.size(), input_shape.size(), "");
+
+        std::vector<int32_t> output_shape(target_shape.begin(), target_shape.end());
+        for (int i = 1; i < input_shape.size() + 1; ++i)
+            output_shape[output_shape.size() - i] = std::max(
+                (int32_t)input_shape[input_shape.size() - i],
+                output_shape[output_shape.size() - i]);
+
+        auto shape_node = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{output_shape.size()}, output_shape.data());
+        auto expand = std::make_shared<ov::op::v3::Broadcast>(nodes[0].dynamicCast<InfEngineNgraphNode>()->node, shape_node);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(expand));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     MatShape target_shape;

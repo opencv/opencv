@@ -2,7 +2,7 @@
 ; jdcolor.asm - colorspace conversion (64-bit SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2009, 2016, D. R. Commander.
+; Copyright (C) 2009, 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -31,7 +31,7 @@ F_0_228 equ (131072 - F_1_772)  ; FIX(2) - FIX(1.77200)
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_ycc_rgb_convert_sse2)
 
 EXTN(jconst_ycc_rgb_convert_sse2):
@@ -42,7 +42,7 @@ PW_MF0344_F0285 times 4 dw -F_0_344, F_0_285
 PW_ONE          times 8 dw  1
 PD_ONEHALF      times 4 dd  1 << (SCALEBITS - 1)
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT

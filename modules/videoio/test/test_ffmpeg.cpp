@@ -266,8 +266,7 @@ TEST_P(videoio_container_get, read)
     ASSERT_EQ(bitrate, bitrateProp);
     const double fpsProp = container.get(CAP_PROP_FPS);
     ASSERT_EQ(fps, fpsProp);
-    // remove when PR fixing raw video CAP_PROP_POS_MSEC return value is merged and windows dll is updated
-#ifndef _WIN32
+
     vector<int> displayTimeMs;
     int iFrame = 1;
     while (container.grab()) {
@@ -283,7 +282,6 @@ TEST_P(videoio_container_get, read)
     const int frameTimeMs = static_cast<int>(1000.0 / fps);
     ASSERT_NEAR(frameTimeMs, *minTimeMsIt, 1);
     ASSERT_NEAR(frameTimeMs, *maxTimeMsIt, 1);
-#endif
 }
 
 const videoio_container_get_params_t videoio_container_get_params[] =

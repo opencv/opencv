@@ -117,7 +117,7 @@ static void threshGeneric(Size roi, const T* src, size_t src_step, T* dst,
         return;
 
     default:
-        CV_Error( CV_StsBadArg, "" ); return;
+        CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 }
 
@@ -719,7 +719,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         }
         break;
     default:
-        CV_Error( CV_StsBadArg, "" ); return;
+        CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 #else
     threshGeneric<short>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
@@ -925,7 +925,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             }
             break;
         default:
-            CV_Error( CV_StsBadArg, "" ); return;
+            CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 #else
     threshGeneric<float>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
@@ -1096,7 +1096,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
         }
         break;
     default:
-        CV_Error(CV_StsBadArg, ""); return;
+        CV_Error(cv::Error::StsBadArg, ""); return;
     }
 #else
     threshGeneric<double>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
@@ -1545,25 +1545,30 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
 
     Mat src = _src.getMat();
-    int automatic_thresh = (type & ~CV_THRESH_MASK);
+
+    _dst.create( src.size(), src.type() );
+    Mat dst = _dst.getMat();
+
+    int automatic_thresh = (type & ~cv::THRESH_MASK);
     type &= THRESH_MASK;
 
-    CV_Assert( automatic_thresh != (CV_THRESH_OTSU | CV_THRESH_TRIANGLE) );
-    if( automatic_thresh == CV_THRESH_OTSU )
+    CV_Assert( automatic_thresh != (cv::THRESH_OTSU | cv::THRESH_TRIANGLE) );
+    if( automatic_thresh == cv::THRESH_OTSU )
     {
         int src_type = src.type();
         CV_CheckType(src_type, src_type == CV_8UC1 || src_type == CV_16UC1, "THRESH_OTSU mode");
+
+        CALL_HAL_RET(thresholdOtsu, cv_hal_threshold_otsu, thresh, src.data, src.step, dst.data, dst.step,
+                     src.cols, src.rows, src_type, maxval, type);
+
         thresh = src.type() == CV_8UC1 ? getThreshVal_Otsu_8u( src )
                                        : getThreshVal_Otsu_16u( src );
     }
-    else if( automatic_thresh == CV_THRESH_TRIANGLE )
+    else if( automatic_thresh == cv::THRESH_TRIANGLE )
     {
         CV_Assert( src.type() == CV_8UC1 );
         thresh = getThreshVal_Triangle_8u( src );
     }
-
-    _dst.create( src.size(), src.type() );
-    Mat dst = _dst.getMat();
 
     if( src.depth() == CV_8U )
     {
@@ -1656,7 +1661,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     else if( src.depth() == CV_64F )
         ;
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     parallel_for_(Range(0, dst.rows),
                   ThresholdRunner(src, dst, thresh, maxval, type),
@@ -1704,21 +1709,21 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         meanfloat.convertTo(mean, src.type());
     }
     else
-        CV_Error( CV_StsBadFlag, "Unknown/unsupported adaptive threshold method" );
+        CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported adaptive threshold method" );
 
     int i, j;
     uchar imaxval = saturate_cast<uchar>(maxValue);
     int idelta = type == THRESH_BINARY ? cvCeil(delta) : cvFloor(delta);
     uchar tab[768];
 
-    if( type == CV_THRESH_BINARY )
+    if( type == cv::THRESH_BINARY )
         for( i = 0; i < 768; i++ )
             tab[i] = (uchar)(i - 255 > -idelta ? imaxval : 0);
-    else if( type == CV_THRESH_BINARY_INV )
+    else if( type == cv::THRESH_BINARY_INV )
         for( i = 0; i < 768; i++ )
             tab[i] = (uchar)(i - 255 <= -idelta ? imaxval : 0);
     else
-        CV_Error( CV_StsBadFlag, "Unknown/unsupported threshold type" );
+        CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported threshold type" );
 
     if( src.isContinuous() && mean.isContinuous() && dst.isContinuous() )
     {

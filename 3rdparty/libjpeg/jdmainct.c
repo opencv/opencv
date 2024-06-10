@@ -2,7 +2,7 @@
  * jdmainct.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2002-2016 by Guido Vollbeding.
+ * Modified 2002-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -170,21 +170,22 @@ alloc_funny_pointers (j_decompress_ptr cinfo)
   /* Get top-level space for component array pointers.
    * We alloc both arrays with one call to save a few cycles.
    */
-  mainp->xbuffer[0] = (JSAMPIMAGE)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				cinfo->num_components * 2 * SIZEOF(JSAMPARRAY));
+  mainp->xbuffer[0] = (JSAMPIMAGE) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE,
+     cinfo->num_components * 2 * SIZEOF(JSAMPARRAY));
   mainp->xbuffer[1] = mainp->xbuffer[0] + cinfo->num_components;
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
+    if (! compptr->component_needed)
+      continue;			/* skip uninteresting component */
     rgroup = (compptr->v_samp_factor * compptr->DCT_v_scaled_size) /
       cinfo->min_DCT_v_scaled_size; /* height of a row group of component */
     /* Get space for pointer lists --- M+4 row groups in each list.
      * We alloc both pointer lists with one call to save a few cycles.
      */
-    xbuf = (JSAMPARRAY)
-      (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				  2 * (rgroup * (M + 4)) * SIZEOF(JSAMPROW));
+    xbuf = (JSAMPARRAY) (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo,
+      JPOOL_IMAGE, 2 * (rgroup * (M + 4)) * SIZEOF(JSAMPROW));
     xbuf += rgroup;		/* want one row group at negative offsets */
     mainp->xbuffer[0][ci] = xbuf;
     xbuf += rgroup * (M + 4);
@@ -210,6 +211,8 @@ make_funny_pointers (j_decompress_ptr cinfo)
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
+    if (! compptr->component_needed)
+      continue;			/* skip uninteresting component */
     rgroup = (compptr->v_samp_factor * compptr->DCT_v_scaled_size) /
       cinfo->min_DCT_v_scaled_size; /* height of a row group of component */
     xbuf0 = mainp->xbuffer[0][ci];
@@ -250,6 +253,8 @@ set_wraparound_pointers (j_decompress_ptr cinfo)
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
+    if (! compptr->component_needed)
+      continue;			/* skip uninteresting component */
     rgroup = (compptr->v_samp_factor * compptr->DCT_v_scaled_size) /
       cinfo->min_DCT_v_scaled_size; /* height of a row group of component */
     xbuf0 = mainp->xbuffer[0][ci];
@@ -278,6 +283,8 @@ set_bottom_pointers (j_decompress_ptr cinfo)
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
+    if (! compptr->component_needed)
+      continue;			/* skip uninteresting component */
     /* Count sample rows in one iMCU row and in one row group */
     iMCUheight = compptr->v_samp_factor * compptr->DCT_v_scaled_size;
     rgroup = iMCUheight / cinfo->min_DCT_v_scaled_size;
@@ -333,7 +340,6 @@ start_pass_main (j_decompress_ptr cinfo, J_BUF_MODE pass_mode)
 #endif
   default:
     ERREXIT(cinfo, JERR_BAD_BUFFER_MODE);
-    break;
   }
 }
 
@@ -344,9 +350,8 @@ start_pass_main (j_decompress_ptr cinfo, J_BUF_MODE pass_mode)
  */
 
 METHODDEF(void)
-process_data_simple_main (j_decompress_ptr cinfo,
-			  JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
-			  JDIMENSION out_rows_avail)
+process_data_simple_main (j_decompress_ptr cinfo, JSAMPARRAY output_buf,
+			  JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail)
 {
   my_main_ptr mainp = (my_main_ptr) cinfo->main;
 
@@ -375,9 +380,8 @@ process_data_simple_main (j_decompress_ptr cinfo,
  */
 
 METHODDEF(void)
-process_data_context_main (j_decompress_ptr cinfo,
-			   JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
-			   JDIMENSION out_rows_avail)
+process_data_context_main (j_decompress_ptr cinfo, JSAMPARRAY output_buf,
+			   JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail)
 {
   my_main_ptr mainp = (my_main_ptr) cinfo->main;
 
@@ -449,13 +453,12 @@ process_data_context_main (j_decompress_ptr cinfo,
 #ifdef QUANT_2PASS_SUPPORTED
 
 METHODDEF(void)
-process_data_crank_post (j_decompress_ptr cinfo,
-			 JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
-			 JDIMENSION out_rows_avail)
+process_data_crank_post (j_decompress_ptr cinfo, JSAMPARRAY output_buf,
+			 JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail)
 {
   (*cinfo->post->post_process_data) (cinfo, (JSAMPIMAGE) NULL,
-				     (JDIMENSION *) NULL, (JDIMENSION) 0,
-				     output_buf, out_row_ctr, out_rows_avail);
+			(JDIMENSION *) NULL, (JDIMENSION) 0,
+			output_buf, out_row_ctr, out_rows_avail);
 }
 
 #endif /* QUANT_2PASS_SUPPORTED */
@@ -472,9 +475,8 @@ jinit_d_main_controller (j_decompress_ptr cinfo, boolean need_full_buffer)
   int ci, rgroup, ngroups;
   jpeg_component_info *compptr;
 
-  mainp = (my_main_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(my_main_controller));
+  mainp = (my_main_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(my_main_controller));
   cinfo->main = &mainp->pub;
   mainp->pub.start_pass = start_pass_main;
 
@@ -497,6 +499,8 @@ jinit_d_main_controller (j_decompress_ptr cinfo, boolean need_full_buffer)
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
+    if (! compptr->component_needed)
+      continue;			/* skip uninteresting component */
     rgroup = (compptr->v_samp_factor * compptr->DCT_v_scaled_size) /
       cinfo->min_DCT_v_scaled_size; /* height of a row group of component */
     mainp->buffer[ci] = (*cinfo->mem->alloc_sarray)

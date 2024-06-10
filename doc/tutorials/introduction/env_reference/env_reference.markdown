@@ -6,7 +6,7 @@ OpenCV environment variables reference {#tutorial_env_reference}
 
 @tableofcontents
 
-### Introduction
+## Introduction
 
 OpenCV can change its behavior depending on the runtime environment:
 - enable extra debugging output or performance tracing
@@ -18,7 +18,7 @@ OpenCV can change its behavior depending on the runtime environment:
 - ⭐ marks most popular variables
 - variables with names like this `VAR_${NAME}` describes family of variables, where `${NAME}` should be changed to one of predefined values, e.g. `VAR_TBB`, `VAR_OPENMP`, ...
 
-##### Setting environment variable in Windows
+### Setting environment variable in Windows
 In terminal or cmd-file (bat-file):
 ```.bat
 set MY_ENV_VARIABLE=true
@@ -30,7 +30,7 @@ In GUI:
 - In new window click on the "Environment variables" button
 - Add an entry to the "User variables" list
 
-##### Setting environment variable in Linux
+### Setting environment variable in Linux
 
 In terminal or shell script:
 ```.sh
@@ -42,16 +42,22 @@ or as a single command:
 MY_ENV_VARIABLE=true ./my_app
 ```
 
-##### Setting environment variable in Python
+### Setting environment variable in Python
 
 ```.py
 import os
-os.environ["MY_ENV_VARIABLE"] = True
+os.environ["MY_ENV_VARIABLE"] = "True" # value must be a string
 import cv2 # variables set after this may not have effect
 ```
 
+@note This method may not work on all operating systems and/or Python distributions. For example, it works on Ubuntu Linux with system Python interpreter, but doesn't work on Windows 10 with the official Python package. It depends on the ability of a process to change its own environment (OpenCV uses `getenv` from C++ runtime to read variables).
 
-### Types
+@note See also:
+- https://docs.python.org/3.12/library/os.html#os.environ
+- https://stackoverflow.com/questions/69199708/setenvironmentvariable-does-not-seem-to-set-values-that-can-be-retrieved-by-ge
+
+
+## Types
 
 - _non-null_ - set to anything to enable feature, in some cases can be interpreted as other types (e.g. path)
 - _bool_ - `1`, `True`, `true`, `TRUE` / `0`, `False`, `false`, `FALSE`
@@ -61,7 +67,7 @@ import cv2 # variables set after this may not have effect
 - _paths_ - `;`-separated on Windows, `:`-separated on others
 
 
-### General, core
+## General, core
 | name | type | default | description |
 |------|------|---------|-------------|
 | OPENCV_SKIP_CPU_BASELINE_CHECK | non-null | | do not check that current CPU supports all features used by the build (baseline) |
@@ -84,14 +90,14 @@ Links:
 - https://github.com/opencv/opencv/wiki/CPU-optimizations-build-options
 
 
-### Logging
+## Logging
 | name | type | default | description |
 |------|------|---------|-------------|
 | ⭐ OPENCV_LOG_LEVEL | string | | logging level (see accepted values below) |
 | OPENCV_LOG_TIMESTAMP | bool | true | logging with timestamps |
 | OPENCV_LOG_TIMESTAMP_NS | bool | false | add nsec to logging timestamps |
 
-##### Levels:
+### Levels
 - `0`, `O`, `OFF`, `S`, `SILENT`, `DISABLE`, `DISABLED`
 - `F`, `FATAL`
 - `E`, `ERROR`
@@ -101,7 +107,7 @@ Links:
 - `V`, `VERBOSE`
 
 
-### core/parallel_for
+## core/parallel_for
 | name | type | default | description |
 |------|------|---------|-------------|
 | ⭐ OPENCV_FOR_THREADS_NUM | num | 0 | set number of threads |
@@ -112,7 +118,7 @@ Links:
 | OPENCV_FOR_OPENMP_DYNAMIC_DISABLE | bool | false | use single OpenMP thread |
 
 
-### backends
+## backends
 OPENCV_LEGACY_WAITKEY
 Some modules have multiple available backends, following variables allow choosing specific backend or changing default priorities in which backends will be probed (e.g. when opening a video file).
 
@@ -123,12 +129,12 @@ Some modules have multiple available backends, following variables allow choosin
 | OPENCV_PARALLEL_PRIORITY_LIST | string, `,`-separated | | list of backends in priority order |
 | OPENCV_UI_BACKEND | string | | choose highgui backend for window rendering (one of `GTK`, `GTK3`, `GTK2`, `QT`, `WIN32`) |
 | OPENCV_UI_PRIORITY_${NAME} | num | | set highgui backend priority, default is 1000 |
-| OPENCV_UI_PRIORITY_LIST | string, `,`-separated | | list of hioghgui backends in priority order |
+| OPENCV_UI_PRIORITY_LIST | string, `,`-separated | | list of highgui backends in priority order |
 | OPENCV_VIDEOIO_PRIORITY_${NAME} | num | | set videoio backend priority, default is 1000 |
 | OPENCV_VIDEOIO_PRIORITY_LIST | string, `,`-separated | | list of videoio backends in priority order |
 
 
-### plugins
+## plugins
 Some external dependencies can be detached into a dynamic library, which will be loaded at runtime (plugin). Following variables allow changing default search locations and naming pattern for these plugins.
 | name | type | default | description |
 |------|------|---------|-------------|
@@ -141,7 +147,7 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_VIDEOIO_PLUGIN_PATH | paths | | directories to search for _videoio_ plugins |
 | OPENCV_VIDEOIO_PLUGIN_${NAME} | string, glob | | _videoio_ plugin library name (glob) |
 
-### OpenCL
+## OpenCL
 
 **Note:** OpenCL device specification format is `<Platform>:<CPU|GPU|ACCELERATOR|nothing=GPU/CPU>:<deviceName>`, e.g. `AMD:GPU:`
 
@@ -170,7 +176,7 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_OPENCL_FORCE | bool | false | force running OpenCL kernel even if usual conditions are not met (e.g. dst.isUMat) |
 | OPENCV_OPENCL_PERF_CHECK_BYPASS | bool | false | force running OpenCL kernel even if usual performance-related conditions are not met (e.g. image is very small) |
 
-##### SVM (Shared Virtual Memory) - disabled by default
+### SVM (Shared Virtual Memory) - disabled by default
 | name | type | default | description |
 |------|------|---------|-------------|
 | OPENCV_OPENCL_SVM_DISABLE | bool | false | disable SVM |
@@ -179,11 +185,11 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_OPENCL_SVM_CAPABILITIES_MASK | num | | |
 | OPENCV_OPENCL_SVM_BUFFERPOOL_LIMIT | num | | same as OPENCV_OPENCL_BUFFERPOOL_LIMIT, but for SVM buffers |
 
-##### Links:
+### Links:
 - https://github.com/opencv/opencv/wiki/OpenCL-optimizations
 
 
-### Tracing/Profiling
+## Tracing/Profiling
 | name | type | default | description |
 |------|------|---------|-------------|
 | ⭐ OPENCV_TRACE | bool | false | enable trace |
@@ -196,11 +202,11 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_TRACE_ITT_PARENT | bool | false | set parentID for ITT task |
 | OPENCV_TRACE_ITT_SET_THREAD_NAME | bool | false | set name for OpenCV's threads "OpenCVThread-%03d" |
 
-##### Links:
+### Links:
 - https://github.com/opencv/opencv/wiki/Profiling-OpenCV-Applications
 
 
-##### Cache
+## Cache
 **Note:** Default tmp location is `%TMPDIR%` (Windows); `$XDG_CACHE_HOME`, `$HOME/.cache`, `/var/tmp`, `/tmp` (others)
 | name | type | default | description |
 |------|------|---------|-------------|
@@ -210,7 +216,7 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_OPENCL_CACHE_DIR | path | default tmp location | cache directory for OpenCL kernels cache (subdirectory `opencl_cache`) |
 
 
-### dnn
+## dnn
 **Note:** In the table below `dump_base_name` equals to `ocv_dnn_net_%05d_%02d` where first argument is internal network ID and the second - dump level.
 | name | type | default | description |
 |------|------|---------|-------------|
@@ -240,7 +246,7 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_OCL4DNN_TUNING_RAISE_CHECK_ERROR | bool | false | raise exception on errors (auto-tuning) |
 
 
-### Tests
+## Tests
 | name | type | default | description |
 |------|------|---------|-------------|
 | ⭐ OPENCV_TEST_DATA_PATH | dir path | | set test data search location (e.g. `/home/user/opencv_extra/testdata`) |
@@ -254,11 +260,11 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_PERF_VALIDATION_DIR | dir path | | location of files read/written by `--perf_read_validation_results`/`--perf_write_validation_results` |
 | ⭐ OPENCV_PYTEST_FILTER | string (glob) | | test filter for Python tests |
 
-##### Links:
+### Links:
 * https://github.com/opencv/opencv/wiki/QA_in_OpenCV
 
 
-### videoio
+## videoio
 **Note:** extra FFmpeg options should be pased in form `key;value|key;value|key;value`, for example `hwaccel;cuvid|video_codec;h264_cuvid|vsync;0` or `vcodec;x264|vprofile;high|vlevel;4.0`
 
 | name | type | default | description |
@@ -288,7 +294,7 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_VIDEOWRITER_DEBUG | bool | false | enable debug messages for VideoWriter |
 | ⭐ OPENCV_VIDEOIO_DEBUG | bool | false | debug messages for both VideoCapture and VideoWriter |
 
-##### videoio tests
+### videoio tests
 | name | type | default | description |
 |------|------|---------|-------------|
 | OPENCV_TEST_VIDEOIO_BACKEND_REQUIRE_FFMPEG | | | test app will exit if no FFmpeg backend is available |
@@ -297,14 +303,14 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_TEST_CAMERA_%d_FPS | num | | fps to set for N-th camera (0-based index) (waitAny_V4L test) |
 
 
-### gapi
+## gapi
 | name | type | default | description |
 |------|------|---------|-------------|
 | ⭐ GRAPH_DUMP_PATH | file path | | dump graph (dot format) |
 | PIPELINE_MODELS_PATH | dir path | | pipeline_modeling_tool sample application uses this var |
 | OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND | bool | true (Windows, Apple), false (others) | similar to OPENCV_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND |
 
-##### gapi tests/samples
+### gapi tests/samples
 | name | type | default | description |
 |------|------|---------|-------------|
 | PLAIDML_DEVICE | string | | specific to PlaidML backend test |
@@ -312,12 +318,12 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_GAPI_ONNX_MODEL_PATH | dir path | | search location for ONNX models test |
 | OPENCV_TEST_FREETYPE_FONT_PATH | file path | | location of TrueType font for one of tests |
 
-##### Links:
+### Links:
 * https://github.com/opencv/opencv/wiki/Using-G-API-with-OpenVINO-Toolkit
 * https://github.com/opencv/opencv/wiki/Using-G-API-with-MS-ONNX-Runtime
 
 
-### highgui
+## highgui
 
 | name | type | default | description |
 |------|------|---------|-------------|
@@ -325,14 +331,14 @@ Some external dependencies can be detached into a dynamic library, which will be
 | $XDG_RUNTIME_DIR | | | Wayland backend specific - create shared memory-mapped file for interprocess communication (named `opencv-shared-??????`) |
 
 
-### imgproc
+## imgproc
 | name | type | default | description |
 |------|------|---------|-------------|
 | OPENCV_OPENCL_IMGPROC_MORPH_SPECIAL_KERNEL | bool | true (Apple), false (others) | use special OpenCL kernel for small morph kernel (Intel devices) |
 | OPENCV_GAUSSIANBLUR_CHECK_BITEXACT_KERNELS | bool | false | validate Gaussian kernels before running (src is CV_16U, bit-exact version) |
 
 
-### imgcodecs
+## imgcodecs
 | name | type | default | description |
 |------|------|---------|-------------|
 | OPENCV_IMGCODECS_AVIF_MAX_FILE_SIZE | num | 64MB | limit input AVIF size |

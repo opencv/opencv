@@ -50,6 +50,8 @@
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/hal/hal.hpp"
+#include "opencv2/core/check.hpp"
+#include "opencv2/core/utils/buffer_area.private.hpp"
 #include "opencv2/imgproc/hal/hal.hpp"
 #include "hal_replacement.hpp"
 
@@ -59,6 +61,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <float.h>
+#include <stack>
 
 #define GET_OPTIMIZED(func) (func)
 
@@ -112,7 +115,7 @@ inline bool isStorageOrMat(void * arr)
         return true;
     else if (CV_IS_MAT( arr ))
         return false;
-    CV_Error( CV_StsBadArg, "Destination is not CvMemStorage* nor CvMat*" );
+    CV_Error( cv::Error::StsBadArg, "Destination is not CvMemStorage* nor CvMat*" );
 }
 
 

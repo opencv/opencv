@@ -55,11 +55,7 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-#include <ngraph/op/detection_output.hpp>
-#else
-#include <ngraph/op/experimental/layers/detection_output.hpp>
-#endif
+#include <openvino/op/detection_output.hpp>
 #endif
 
 #ifdef HAVE_CUDA
@@ -1012,26 +1008,26 @@ public:
 
         if (_locPredTransposed) {
             // Convert box predictions from yxYX to xyXY
-            box_logits = std::make_shared<ngraph::op::v1::Reshape>(box_logits,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{3}, std::vector<int32_t>{0, -1, 2}),
+            box_logits = std::make_shared<ov::op::v1::Reshape>(box_logits,
+                std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{3}, std::vector<int32_t>{0, -1, 2}),
                 true
             );
             int axis = 2;
-            box_logits = std::make_shared<ngraph::op::v1::Reverse>(box_logits,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &axis),
-                ngraph::op::v1::Reverse::Mode::INDEX
+            box_logits = std::make_shared<ov::op::v1::Reverse>(box_logits,
+                std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{1}, &axis),
+                ov::op::v1::Reverse::Mode::INDEX
             );
         }
 
-        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{2}, std::vector<int32_t>{0, -1});
-        box_logits = std::make_shared<ngraph::op::v1::Reshape>(box_logits, shape, true);
-        class_preds = std::make_shared<ngraph::op::v1::Reshape>(class_preds, shape, true);
-        proposals = std::make_shared<ngraph::op::v1::Reshape>(proposals,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{3}, std::vector<int32_t>{0, _varianceEncodedInTarget ? 1 : 2, -1}),
+        auto shape = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{2}, std::vector<int32_t>{0, -1});
+        box_logits = std::make_shared<ov::op::v1::Reshape>(box_logits, shape, true);
+        class_preds = std::make_shared<ov::op::v1::Reshape>(class_preds, shape, true);
+        proposals = std::make_shared<ov::op::v1::Reshape>(proposals,
+            std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{3}, std::vector<int32_t>{0, _varianceEncodedInTarget ? 1 : 2, -1}),
             true
         );
 
-        ngraph::op::DetectionOutputAttrs attrs;
+        ov::op::v0::DetectionOutput::Attributes attrs;
         attrs.num_classes                = _numClasses;
         attrs.background_label_id        = _backgroundLabelId;
         attrs.top_k                      = _topK > 0 ? _topK : _keepTopK;
@@ -1044,7 +1040,7 @@ public:
         attrs.code_type                  = std::string{"caffe.PriorBoxParameter." + _codeType};
         attrs.normalized                 = true;
 
-        auto det_out = std::make_shared<ngraph::op::DetectionOutput>(box_logits, class_preds,
+        auto det_out = std::make_shared<ov::op::v0::DetectionOutput>(box_logits, class_preds,
                        proposals, attrs);
         return Ptr<BackendNode>(new InfEngineNgraphNode(det_out));
     }
