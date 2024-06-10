@@ -252,18 +252,18 @@ void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int fla
             if( !conjB )
                 for( j = j0; j < j1; j += 2 )
                 {
-                    double denom = (double)(dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps);
-                    double re = (double)(dataA[j]*dataB[j] + dataA[j+1]*dataB[j+1]);
-                    double im = (double)(dataA[j+1]*dataB[j] - dataA[j]*dataB[j+1]);
+                    double denom = (double)dataB[j]*dataB[j] + (double)dataB[j+1]*dataB[j+1] + (double)eps;
+                    double re = (double)dataA[j]*dataB[j] + (double)dataA[j+1]*dataB[j+1];
+                    double im = (double)dataA[j+1]*dataB[j] - (double)dataA[j]*dataB[j+1];
                     dataC[j] = (float)(re / denom);
                     dataC[j+1] = (float)(im / denom);
                 }
             else
                 for( j = j0; j < j1; j += 2 )
                 {
-                    double denom = (double)(dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps);
-                    double re = (double)(dataA[j]*dataB[j] - dataA[j+1]*dataB[j+1]);
-                    double im = (double)(dataA[j+1]*dataB[j] + dataA[j]*dataB[j+1]);
+                    double denom = (double)dataB[j]*dataB[j] + (double)dataB[j+1]*dataB[j+1] + (double)eps;
+                    double re = (double)dataA[j]*dataB[j] - (double)dataA[j+1]*dataB[j+1];
+                    double im = (double)dataA[j+1]*dataB[j] + (double)dataA[j]*dataB[j+1];
                     dataC[j] = (float)(re / denom);
                     dataC[j+1] = (float)(im / denom);
                 }
