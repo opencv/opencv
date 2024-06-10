@@ -68,15 +68,15 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+var haarcascade_data = undefined;
 if (typeof module !== 'undefined' && module.exports) {
     // The environment is Node.js
-    // TODO: TypeError: cv.FS_createLazyFile is not a function
-    // cv.FS_createLazyFile('/', 'haarcascade_frontalface_default.xml', // eslint-disable-line new-cap
-    //                      'haarcascade_frontalface_default.xml', true, false);
+    let fs = require("fs");
+    haarcascade_data = fs.readFileSync("haarcascade_frontalface_default.xml");
 }
 
 QUnit.module('Object Detection', {});
-QUnit.skip('Cascade classification', function(assert) {
+QUnit.test('Cascade classification', function(assert) {
     // Group rectangle
     {
         let rectList = new cv.RectVector();
@@ -99,6 +99,10 @@ QUnit.skip('Cascade classification', function(assert) {
 
     // CascadeClassifier
     {
+        if (haarcascade_data) {
+            cv.FS_createDataFile("/", "haarcascade_frontalface_default.xml", haarcascade_data, true, false, false);
+        }
+
         let classifier = new cv.CascadeClassifier();
         const modelPath = '/haarcascade_frontalface_default.xml';
 
