@@ -268,9 +268,9 @@ class Builder:
 
         if self.hwasan and "arm64" in abi.name:
             hwasan_flags = "-fno-omit-frame-pointer -fsanitize=hwaddress"
-            cmake_vars['CMAKE_CXX_FLAGS_DEBUG']    = hwasan_flags
-            cmake_vars['CMAKE_C_FLAGS_DEBUG']      = hwasan_flags
-            cmake_vars['CMAKE_LINKER_FLAGS_DEBUG'] = hwasan_flags
+            for s in ['CMAKE_CXX_FLAGS_DEBUG',   'CMAKE_C_FLAGS_DEBUG',   'CMAKE_LINKER_FLAGS_DEBUG',
+                      'CMAKE_CXX_FLAGS_RELEASE', 'CMAKE_C_FLAGS_RELEASE', 'CMAKE_LINKER_FLAGS_RELEASE']:
+                cmake_vars[s] = hwasan_flags
 
         cmake_vars.update(abi.cmake_vars)
 
