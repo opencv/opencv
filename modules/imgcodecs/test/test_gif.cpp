@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
 
+#ifdef HAVE_IMGCODEC_GIF
+
 namespace opencv_test { namespace {
 TEST(Imgcodecs_Gif, read_gif_multi)
 {
@@ -202,3 +204,5 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Gif_GifSuite_SingleFrame,
                         testing::ValuesIn(gifsuite_files_singleframe));
 }//opencv_test
 }//namespace
+
+#endif //HAVE_IMGCODEC_GIF

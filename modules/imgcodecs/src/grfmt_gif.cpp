@@ -5,6 +5,7 @@
 #include "precomp.hpp"
 #include "grfmt_gif.hpp"
 
+#ifdef HAVE_IMGCODEC_GIF
 namespace cv
 {
 //////////////////////////////////////////////////////////////////////
@@ -370,3 +371,5 @@ void GifDecoder::close() {
     m_strm.close();
 }
 }
+
+#endif

@@ -4,6 +4,7 @@
 
 #ifndef OPENCV_GRFMT_GIF_HPP
 #define OPENCV_GRFMT_GIF_HPP
+#ifdef HAVE_IMGCODEC_GIF
 
 #include "grfmt_base.hpp"
 
@@ -71,4 +72,5 @@ protected:
 };
 } // namespace cv
 
+#endif // HAVE_IMGCODEC_GIF
 #endif //OPENCV_GRFMT_GIF_HPP
