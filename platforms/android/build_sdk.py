@@ -266,7 +266,7 @@ class Builder:
         if no_media_ndk:
             cmake_vars['WITH_ANDROID_MEDIANDK'] = "OFF"
 
-        if self.hwasan:
+        if self.hwasan and "arm64" in abi.name:
             hwasan_flags = "-fno-omit-frame-pointer -fsanitize=hwaddress"
             cmake_vars['CMAKE_CXX_FLAGS_DEBUG']    = hwasan_flags
             cmake_vars['CMAKE_C_FLAGS_DEBUG']      = hwasan_flags
