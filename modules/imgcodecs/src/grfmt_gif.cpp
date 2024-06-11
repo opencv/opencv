@@ -41,7 +41,10 @@ bool GifDecoder::readHeader() {
     }
 
     try {
-        m_strm.skip(6);// Skip the signature: GIF87a or GIF89a
+//        m_strm.skip(6);// Skip the signature: GIF87a or GIF89a
+        String signature(6, ' ');
+        m_strm.getBytes((uchar*)signature.data(), 6);
+        CV_Assert(signature == R"(GIF87a)" || signature == R"(GIF89a)");
 
         // #1: read logical screen descriptor
         m_width = m_strm.getWord();
