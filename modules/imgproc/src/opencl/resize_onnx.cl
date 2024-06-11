@@ -138,16 +138,12 @@ __kernel void resizeOnnx_linear_antialias(
     __global uchar const* srcptr, int src_step, int src_offset, int src_rows, int src_cols,
     __global uchar      * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
     int pixel_size, int channel, float m00, float m01, float m10, float m11,
-    float xscale, float yscale)
+    float xscale, float yscale, int xstart, int ystart, int xend, int yend)
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
     if (dx < dst_cols && dy < dst_rows)
     {
-        int xstart = convert_int_rtn(-1.f / xscale) + 1;
-        int xend = 2 - xstart;
-        int ystart = convert_int_rtn(-1.f / yscale) + 1;
-        int yend = 2 - ystart;
         float fx = fma(dx, m00, m01), fy = fma(dy, m10, m11);
         int ix = convert_int_rtn(fx), iy = convert_int_rtn(fy);
         float rx = fx - ix, ry = fy - iy;
@@ -307,14 +303,13 @@ __kernel void resizeOnnx_cubic(
 __kernel void resizeOnnx_table(
     __global uchar const* srcptr, int src_step, int src_offset, int src_rows, int src_cols,
     __global uchar      * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-    int pixel_size, int channel, int xkanti, int ykanti, __global int const* table)
+    int pixel_size, int channel, int xkanti, int ykanti, int xstride, int ystride,
+    __global int const* table)
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
     if (dx < dst_cols && dy < dst_rows)
     {
-        int xstride = xkanti * dst_cols;
-        int ystride = ykanti * dst_rows;
         __global uchar* D = dstptr + (dy * dst_step + mad24(dx, pixel_size, dst_offset));
         __global int const* xoffset = table;
         __global int const* yoffset = xoffset + xstride;
