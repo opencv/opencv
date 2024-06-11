@@ -158,6 +158,7 @@ class Builder:
         self.debug = True if config.debug else False
         self.debug_info = True if config.debug_info else False
         self.no_samples_build = True if config.no_samples_build else False
+        self.hwasan = True if config.hwasan else False
         self.opencl = True if config.opencl else False
         self.no_kotlin = True if config.no_kotlin else False
         self.shared = True if config.shared else False
@@ -264,6 +265,12 @@ class Builder:
 
         if no_media_ndk:
             cmake_vars['WITH_ANDROID_MEDIANDK'] = "OFF"
+
+        if self.hwasan and "arm64" in abi.name:
+            hwasan_flags = "-fno-omit-frame-pointer -fsanitize=hwaddress"
+            cmake_vars['CMAKE_CXX_FLAGS_DEBUG']    = hwasan_flags
+            cmake_vars['CMAKE_C_FLAGS_DEBUG']      = hwasan_flags
+            cmake_vars['CMAKE_LINKER_FLAGS_DEBUG'] = hwasan_flags
 
         cmake_vars.update(abi.cmake_vars)
 
@@ -380,6 +387,7 @@ if __name__ == "__main__":
     parser.add_argument('--no_kotlin', action="store_true", help="Disable Kotlin extensions")
     parser.add_argument('--shared', action="store_true", help="Build shared libraries")
     parser.add_argument('--no_media_ndk', action="store_true", help="Do not link Media NDK (required for video I/O support)")
+    parser.add_argument('--hwasan', action="store_true", help="Enable Hardware Address Sanitizer on ARM64")
     parser.add_argument('--disable', metavar='FEATURE', default=[], action='append', help='OpenCV features to disable (add WITH_*=OFF). To disable multiple, specify this flag again, e.g. "--disable TBB --disable OPENMP"')
     args = parser.parse_args()
 
