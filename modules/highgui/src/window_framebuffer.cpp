@@ -166,7 +166,6 @@ namespace cv { namespace highgui_backend {
             return;
         }
 
-        // SHOW IMAGE
         int xOffset = backend.getFBXOffset();
         int yOffset = backend.getFBYOffset();
         int fbHeight = backend.getFBHeight();
@@ -240,20 +239,15 @@ namespace cv { namespace highgui_backend {
         }
     }
 
-    double FramebufferWindow::getProperty(int prop) const
+    double FramebufferWindow::getProperty(int /*prop*/) const
     {
-        CV_LOG_INFO(NULL, "UI: FramebufferWindow::getProperty(int prop: " << prop << ")");
         CV_LOG_WARNING(NULL, "UI: getProperty (not supported)");
-
         return 0.0;
     }
 
-    bool FramebufferWindow::setProperty(int prop, double value)
+    bool FramebufferWindow::setProperty(int /*prop*/, double /*value*/)
     {
-        CV_LOG_INFO(NULL, "UI: FramebufferWindow::setProperty(int prop "
-        << prop << ", value " << value << ")");
         CV_LOG_WARNING(NULL, "UI: setProperty (not supported)");
-
         return false;
     }
 
@@ -296,15 +290,13 @@ namespace cv { namespace highgui_backend {
         return windowRect;
     }
 
-    void FramebufferWindow::setTitle(const std::string& title)
+    void FramebufferWindow::setTitle(const std::string& /*title*/)
     {
-        CV_LOG_INFO(NULL, "UI: FramebufferWindow::setTitle(" << title << ")");
         CV_LOG_WARNING(NULL, "UI: setTitle (not supported)");
     }
 
     void FramebufferWindow::setMouseCallback(MouseCallback /*onMouse*/, void* /*userdata*/)
     {
-        CV_LOG_INFO(NULL, "UI: FramebufferWindow::setMouseCallback(...)");
         CV_LOG_WARNING(NULL, "UI: setMouseCallback (not supported)");
     }
 
@@ -314,14 +306,12 @@ namespace cv { namespace highgui_backend {
             TrackbarCallback /*onChange*/,
             void* /*userdata*/)
     {
-        CV_LOG_INFO(NULL, "UI: FramebufferWindow::createTrackbar(...)");
         CV_LOG_WARNING(NULL, "UI: createTrackbar (not supported)");
         return nullptr;
     }
 
     std::shared_ptr<UITrackbar> FramebufferWindow::findTrackbar(const std::string& /*name*/)
     {
-        CV_LOG_INFO(NULL, "UI: FramebufferWindow::findTrackbar(...)");
         CV_LOG_WARNING(NULL, "UI: findTrackbar (not supported)");
         return nullptr;
     }
@@ -343,8 +333,6 @@ namespace cv { namespace highgui_backend {
         CV_LOG_INFO(NULL, "UI: FramebufferWindow::destroy()");
     }
 
-//FramebufferBackend
-
     int FramebufferBackend::fbOpenAndGetInfo()
     {
         std::string fbFileName = getFBFileName();
@@ -358,14 +346,12 @@ namespace cv { namespace highgui_backend {
             return -1;
         }
 
-        // Get fixed screen information
         if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &fixInfo))
         {
             CV_LOG_ERROR(NULL, "UI: can't read fix info for framebuffer");
             return -1;
         }
 
-        // Get variable screen information
         if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &varInfo))
         {
             CV_LOG_ERROR(NULL, "UI: can't read var info for framebuffer");
@@ -397,7 +383,6 @@ namespace cv { namespace highgui_backend {
         fbBitsPerPixel = varInfo.bits_per_pixel;
         fbLineLength = fixInfo.line_length;
 
-        // MAP FB TO MEMORY
         fbScreenSize = max(varInfo.xres, varInfo.xres_virtual) *
         max(varInfo.yres, varInfo.yres_virtual) *
         fbBitsPerPixel / 8;
@@ -589,8 +574,8 @@ namespace cv { namespace highgui_backend {
         if (fbID == -1)
         {
             mode = FB_MODE_EMU;
-            fbWidth = 1024;
-            fbHeight = 768;
+            fbWidth = 640;
+            fbHeight = 480;
             fbXOffset = 0;
             fbYOffset = 0;
             fbBitsPerPixel = 0;
@@ -621,7 +606,6 @@ namespace cv { namespace highgui_backend {
         CV_LOG_INFO(NULL, "UI: FramebufferBackend::~FramebufferBackend()");
         if(fbID == -1) return;
 
-        // RESTORE BACKGROUNG
         if (fbPointer != MAP_FAILED)
         {
             int cntChannel = 4;
