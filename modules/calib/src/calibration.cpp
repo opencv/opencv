@@ -1863,7 +1863,7 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
             rvecM, tvecM,
             newObjPt,
             stdDeviationsM,
-            errorsM, flags, cvTermCriteria(criteria));
+            errorsM, flags, criteria);
 
     if( stddev_needed )
     {

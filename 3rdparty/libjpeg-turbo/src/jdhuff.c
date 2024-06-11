@@ -3,8 +3,10 @@
  *
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
+ * Lossless JPEG Modifications:
+ * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2016, 2018-2019, D. R. Commander.
+ * Copyright (C) 2009-2011, 2016, 2018-2019, 2022, D. R. Commander.
  * Copyright (C) 2018, Matthias Räncker.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -24,8 +26,8 @@
 #define JPEG_INTERNALS
 #include "jinclude.h"
 #include "jpeglib.h"
-#include "jdhuff.h"             /* Declarations shared with jdphuff.c */
-#include "jpegcomp.h"
+#include "jdhuff.h"             /* Declarations shared with jd*huff.c */
+#include "jpegapicomp.h"
 #include "jstdhuff.c"
 
 
@@ -134,7 +136,7 @@ start_pass_huff_decoder(j_decompress_ptr cinfo)
  * Compute the derived values for a Huffman table.
  * This routine also performs some validation checks on the table.
  *
- * Note this is also used by jdphuff.c.
+ * Note this is also used by jdphuff.c and jdlhuff.c.
  */
 
 GLOBAL(void)
@@ -245,14 +247,14 @@ jpeg_make_d_derived_tbl(j_decompress_ptr cinfo, boolean isDC, int tblno,
 
   /* Validate symbols as being reasonable.
    * For AC tables, we make no check, but accept all byte values 0..255.
-   * For DC tables, we require the symbols to be in range 0..15.
-   * (Tighter bounds could be applied depending on the data depth and mode,
-   * but this is sufficient to ensure safe decoding.)
+   * For DC tables, we require the symbols to be in range 0..15 in lossy mode
+   * and 0..16 in lossless mode.  (Tighter bounds could be applied depending on
+   * the data depth and mode, but this is sufficient to ensure safe decoding.)
    */
   if (isDC) {
     for (i = 0; i < numsymbols; i++) {
       int sym = htbl->huffval[i];
-      if (sym < 0 || sym > 15)
+      if (sym < 0 || sym > (cinfo->master->lossless ? 16 : 15))
         ERREXIT(cinfo, JERR_BAD_HUFF_TABLE);
     }
   }
@@ -260,7 +262,7 @@ jpeg_make_d_derived_tbl(j_decompress_ptr cinfo, boolean isDC, int tblno,
 
 
 /*
- * Out-of-line code for bit fetching (shared with jdphuff.c).
+ * Out-of-line code for bit fetching (shared with jdphuff.c and jdlhuff.c).
  * See jdhuff.h for info about usage.
  * Note: current values of get_buffer and bits_left are passed as parameters,
  * but are returned in the corresponding fields of the state struct.

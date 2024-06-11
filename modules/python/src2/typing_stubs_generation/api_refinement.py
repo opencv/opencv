@@ -325,6 +325,7 @@ def _find_argument_index(arguments: Sequence[FunctionNode.Arg],
 NODES_TO_REFINE = {
     SymbolName(("cv", ), (), "resize"): make_optional_arg("dsize"),
     SymbolName(("cv", ), (), "calcHist"): make_optional_arg("mask"),
+    SymbolName(("cv", ), (), "floodFill"): make_optional_arg("mask"),
 }
 
 ERROR_CLASS_PROPERTIES = (

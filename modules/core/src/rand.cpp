@@ -271,7 +271,7 @@ randf_64f( double* arr, int len_, int cn, uint64* state, const Vec2d* p, void*, 
 typedef void (*RandFunc)(uchar* arr, int len, int cn, uint64* state,
                          const void* p, void* tempbuf, int flags);
 
-static RandFunc randTab[][CV_DEPTH_MAX] =
+static RandFunc randTab[CV_DEPTH_MAX][CV_DEPTH_MAX] =
 {
     {
         (RandFunc)randi_8u, (RandFunc)randi_8s, (RandFunc)randi_16u,

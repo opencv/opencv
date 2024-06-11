@@ -84,20 +84,73 @@ static int xkb_keysym_to_ascii(xkb_keysym_t keysym) {
     return static_cast<int>(keysym & 0xff);
 }
 
+static void write_mat_to_xrgb8888(cv::Mat const &img_, void *data) {
+    // Validate destination data.
+    CV_CheckFalse((data == nullptr), "Destination Address must not be nullptr.");
 
-static void draw_xrgb8888(void *d, uint8_t a, uint8_t r, uint8_t g, uint8_t b) {
-    *((uint32_t *) d) = ((a << 24) | (r << 16) | (g << 8) | b);
-}
+    // Validate source img parameters.
+    CV_CheckFalse(img_.empty(), "Source Mat must not be empty.");
+    const int ncn   = img_.channels();
+    CV_CheckType(img_.type(),
+        ( (ncn == 1) || (ncn == 3) || (ncn == 4)),
+        "Unsupported channels, please convert to 1, 3 or 4 channels"
+    );
 
-static void write_mat_to_xrgb8888(cv::Mat const &img, void *data) {
-    CV_Assert(data != nullptr);
-    CV_Assert(img.isContinuous());
+    // The supported Mat depth is according to imshow() specification.
+    const int depth = CV_MAT_DEPTH(img_.type());
+    CV_CheckDepth(img_.type(),
+        ( (depth == CV_8U)  || (depth == CV_8S)  ||
+          (depth == CV_16U) || (depth == CV_16S) ||
+          (depth == CV_32F) || (depth == CV_64F) ),
+        "Unsupported depth, please convert to CV_8U"
+    );
 
-    for (int y = 0; y < img.rows; y++) {
-        for (int x = 0; x < img.cols; x++) {
-            auto p = img.at<cv::Vec3b>(y, x);
-            draw_xrgb8888((char *) data + (y * img.cols + x) * 4, 0x00, p[2], p[1], p[0]);
-        }
+    // Convert to CV_8U
+    cv::Mat img;
+    const int mtype = CV_MAKE_TYPE(CV_8U, ncn);
+    switch(CV_MAT_DEPTH(depth))
+    {
+    case CV_8U:
+        img = img_; // do nothing.
+        break;
+    case CV_8S:
+        // [-128,127] -> [0,255]
+        img_.convertTo(img, mtype, 1.0, 128);
+        break;
+    case CV_16U:
+        // [0,65535] -> [0,255]
+        img_.convertTo(img, mtype, 1.0/255. );
+        break;
+    case CV_16S:
+        // [-32768,32767] -> [0,255]
+        img_.convertTo(img, mtype, 1.0/255. , 128);
+        break;
+    case CV_32F:
+    case CV_64F:
+        // [0, 1] -> [0,255]
+        img_.convertTo(img, mtype, 255.);
+        break;
+    default:
+        // it cannot be reachable.
+        break;
+    }
+    CV_CheckDepthEQ(CV_MAT_DEPTH(img.type()), CV_8U, "img should be CV_8U");
+
+    // XRGB8888 in Little Endian(Wayland Request) = [B8:G8:R8:X8] in data array.
+    // X is not used to show. So we can use cvtColor() with GRAY2BGRA or BGR2BGRA or copyTo().
+    cv::Mat dst(img.size(), CV_MAKE_TYPE(CV_8U, 4), (uint8_t*)data);
+    if(ncn == 1)
+    {
+        cvtColor(img, dst, cv::COLOR_GRAY2BGRA);
+    }
+    else if(ncn == 3)
+    {
+        cvtColor(img, dst, cv::COLOR_BGR2BGRA);
+    }
+    else
+    {
+        CV_CheckTrue(ncn==4, "Unexpected channels");
+        img.copyTo(dst);
     }
 }
 
@@ -231,7 +284,13 @@ private:
             &handle_pointer_motion, &handle_pointer_button,
             &handle_pointer_axis, &handle_pointer_frame,
             &handle_pointer_axis_source, &handle_pointer_axis_stop,
-            &handle_pointer_axis_discrete
+            &handle_pointer_axis_discrete,
+#ifdef WL_POINTER_AXIS_VALUE120_SINCE_VERSION
+            &handle_axis_value120,
+#endif
+#ifdef WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION
+            &handle_axis_relative_direction,
+#endif
     };
     cv_wl_window *focus_window_{};
 
@@ -277,6 +336,27 @@ private:
         CV_UNUSED(axis);
         CV_UNUSED(discrete);
     }
+
+#ifdef WL_POINTER_AXIS_VALUE120_SINCE_VERSION
+    static void
+    handle_axis_value120(void *data, struct wl_pointer *wl_pointer, uint32_t axis, int32_t value120) {
+        CV_UNUSED(data);
+        CV_UNUSED(wl_pointer);
+        CV_UNUSED(axis);
+        CV_UNUSED(value120);
+    }
+#endif
+
+#ifdef WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION
+    static void
+    handle_axis_relative_direction(void *data, struct wl_pointer *wl_pointer, uint32_t axis, uint32_t direction) {
+        CV_UNUSED(data);
+        CV_UNUSED(wl_pointer);
+        CV_UNUSED(axis);
+        CV_UNUSED(direction);
+    }
+#endif
+
 };
 
 class cv_wl_keyboard {
@@ -543,6 +623,9 @@ private:
     cv::Rect last_img_area_;
     bool image_changed_ = false;
 
+    int real_img_width = 0;
+    cv::Scalar const outarea_color_ = CV_RGB(0, 0, 0);
+
     void *param_ = nullptr;
     CvMouseCallback callback_ = nullptr;
 };
@@ -659,7 +742,7 @@ public:
 
     void show_image(cv::Mat const &image);
 
-    void create_trackbar(std::string const &name, int *value, int count, CvTrackbarCallback2 on_change, void *userdata);
+    int create_trackbar(std::string const &name, int *value, int count, CvTrackbarCallback2 on_change, void *userdata);
 
     weak_ptr<cv_wl_trackbar> get_trackbar(std::string const &) const;
 
@@ -695,7 +778,13 @@ private:
     };
     struct xdg_toplevel *xdg_toplevel_;
     struct xdg_toplevel_listener xdgtop_listener_{
-            &handle_toplevel_configure, &handle_toplevel_close
+            &handle_toplevel_configure, &handle_toplevel_close,
+#ifdef XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION
+            &handle_toplevel_configure_bounds,
+#endif
+#ifdef XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION
+            &handle_toplevel_wm_capabilities,
+#endif
     };
     bool wait_for_configure_ = true;
 
@@ -741,6 +830,27 @@ private:
     static void handle_toplevel_configure(void *, struct xdg_toplevel *, int32_t, int32_t, struct wl_array *);
 
     static void handle_toplevel_close(void *data, struct xdg_toplevel *surface);
+
+#ifdef XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION
+    static void
+    handle_toplevel_configure_bounds(void *data, struct xdg_toplevel *xdg_toplevel, int32_t width, int32_t height)
+    {
+        CV_UNUSED(data);
+        CV_UNUSED(xdg_toplevel);
+        CV_UNUSED(width);
+        CV_UNUSED(height);
+    }
+#endif
+
+#ifdef XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION
+    static void
+    handle_toplevel_wm_capabilities(void *data, struct xdg_toplevel *xdg_toplevel, struct wl_array *capabilities)
+    {
+        CV_UNUSED(data);
+        CV_UNUSED(xdg_toplevel);
+        CV_UNUSED(capabilities);
+    }
+#endif
 
     static void handle_frame_callback(void *data, struct wl_callback *cb, uint32_t time);
 };
@@ -1473,14 +1583,30 @@ cv_wl_viewer::cv_wl_viewer(cv_wl_window *window, int flags)
 }
 
 void cv_wl_viewer::set_image(cv::Mat const &image) {
-    if (image.type() == CV_8UC1) {
-        cv::Mat bgr;
-        cv::cvtColor(image, bgr, cv::COLOR_GRAY2BGR);
-        image_ = bgr.clone();
-    } else {
-        image_ = image.clone();
-    }
+    image_ = image.clone();
     image_changed_ = true;
+
+    // See https://github.com/opencv/opencv/issues/25560
+    // If image_ width is too small enough to show title and buttons, expand it.
+
+    // Keep real image width to limit x position for callback functions
+    real_img_width = image_.size().width;
+
+    // Minimum width of title is not defined, so use button width * 3 instead of it.
+    const int view_min_width = cv_wl_titlebar::btn_width * 3 + cv_wl_titlebar::titlebar_min_width;
+
+    const int margin = view_min_width - real_img_width;
+    if(margin > 0)
+    {
+        copyMakeBorder(image_,               // src
+                       image_,               // dst
+                       0,                    // top
+                       0,                    // bottom
+                       0,                    // left
+                       margin,               // right
+                       cv::BORDER_CONSTANT,  // borderType
+                       outarea_color_ );     // value(color)
+    }
 }
 
 void cv_wl_viewer::set_mouse_callback(CvMouseCallback callback, void *param) {
@@ -1533,6 +1659,8 @@ void cv_wl_viewer::on_mouse(int event, cv::Point const &p, int flag) {
             int x = static_cast<int>((p.x - last_img_area_.x) * ((double) image_.size().width / last_img_area_.width));
             int y = static_cast<int>((p.y - last_img_area_.y) *
                                      ((double) image_.size().height / last_img_area_.height));
+
+            x = cv::min(x, real_img_width);
             callback_(event, x, y, flag, param_);
         }
     }
@@ -1588,6 +1716,11 @@ cv_wl_trackbar::cv_wl_trackbar(cv_wl_window *window, std::string name,
     on_change_.value = value;
     on_change_.data = data;
     on_change_.callback = on_change;
+
+    // initilize slider_.value if value is not nullptr.
+    if (value != nullptr){
+        set_pos(*value);
+    }
 }
 
 std::string const &cv_wl_trackbar::name() const {
@@ -1603,6 +1736,12 @@ void cv_wl_trackbar::set_pos(int value) {
         slider_.value = value;
         slider_moved_ = true;
         window_->show();
+
+        // Update user-ptr value and call on_change() function if cv_wl_trackbar::draw() is not called.
+        if(slider_moved_) {
+            on_change_.update(slider_.value);
+            on_change_.call(slider_.value);
+        }
     }
 }
 
@@ -1612,6 +1751,12 @@ void cv_wl_trackbar::set_max(int maxval) {
         slider_.value = maxval;
         slider_moved_ = true;
         window_->show();
+
+        // Update user-ptr and call on_change() function if cv_wl_trackbar::draw() is not called.
+        if(slider_moved_) {
+            on_change_.update(slider_.value);
+            on_change_.call(slider_.value);
+        }
     }
 }
 
@@ -1782,8 +1927,9 @@ void cv_wl_window::show_image(cv::Mat const &image) {
     this->show();
 }
 
-void cv_wl_window::create_trackbar(std::string const &name, int *value, int count, CvTrackbarCallback2 on_change,
+int cv_wl_window::create_trackbar(std::string const &name, int *value, int count, CvTrackbarCallback2 on_change,
                                    void *userdata) {
+    int ret = 0;
     auto exists = this->get_trackbar(name).lock();
     if (!exists) {
         auto trackbar =
@@ -1792,7 +1938,9 @@ void cv_wl_window::create_trackbar(std::string const &name, int *value, int coun
                 );
         widgets_.emplace_back(trackbar);
         widget_geometries_.emplace_back(0, 0, 0, 0);
+        ret = 1;
     }
+    return ret;
 }
 
 weak_ptr<cv_wl_trackbar> cv_wl_window::get_trackbar(std::string const &trackbar_name) const {
@@ -2270,6 +2418,7 @@ std::string const &cv_wl_core::get_window_name(void *handle) {
 }
 
 bool cv_wl_core::create_window(std::string const &name, int flags) {
+    CV_CheckTrue(display_ != nullptr, "Display is not connected.");
     auto window = std::make_shared<cv_wl_window>(display_, name, flags);
     auto result = windows_.insert(std::make_pair(name, window));
     handles_[window.get()] = window->get_title();
@@ -2336,8 +2485,15 @@ void resizeWindowImpl(const char *name, int width, int height) {
         throw_system_error("Could not get window name", errno)
 }
 
-int createTrackbar2Impl(const char *trackbar_name, const char *window_name, int *val, int count,
-                              CvTrackbarCallback2 on_notify, void *userdata) {
+CvRect cvGetWindowRect_WAYLAND(const char* name)
+{
+    CV_UNUSED(name);
+    CV_LOG_ONCE_WARNING(nullptr, "Function not implemented: User cannot get window rect in Wayland");
+    return cvRect(-1, -1, -1, -1);
+}
+
+CV_IMPL int createTrackbar2Impl(const char *trackbar_name, const char *window_name, int *val, int count,
+                                CvTrackbarCallback2 on_notify, void *userdata) {
     if (auto window = CvWlCore::getInstance().get_window(window_name))
         window->create_trackbar(trackbar_name, val, count, on_notify, userdata);
 
@@ -2382,11 +2538,17 @@ void setMouseCallbackImpl(const char *window_name, CvMouseCallback on_mouse, voi
 }
 
 void showImageImpl(const char *name, const CvArr *arr) {
-    auto cv_core = CvWlCore::getInstance();
-    auto window = cv_core.get_window(name);
+    // see https://github.com/opencv/opencv/issues/25497
+    /*
+     * To reuse the result of getInstance() repeatedly looks like better efficient implementation.
+     * However, it defined as static shared_ptr member variable in CvWlCore.
+     * If it reaches out of scope, cv_wl_core::~cv_wl_core() is called and all windows will be destroyed.
+     * For workaround, avoid it.
+     */
+    auto window = CvWlCore::getInstance().get_window(name);
     if (!window) {
-        cv_core.create_window(name, cv::WINDOW_AUTOSIZE);
-        if (!(window = cv_core.get_window(name)))
+        CvWlCore::getInstance().create_window(name, cv::WINDOW_AUTOSIZE);
+        if (!(window = CvWlCore::getInstance().get_window(name)))
             CV_Error_(StsNoMem, ("Failed to create window: %s", name));
     }
 
@@ -2401,10 +2563,15 @@ void setWindowTitle_WAYLAND(const cv::String &winname, const cv::String &title) 
 
 int waitKeyImpl(int delay) {
     int key = -1;
-    auto limit = ch::duration_cast<ch::nanoseconds>(ch::milliseconds(delay));
+    auto limit = ch::duration_cast<ch::nanoseconds>(ch::milliseconds(delay)).count();
     auto start_time = ch::duration_cast<ch::nanoseconds>(
             ch::steady_clock::now().time_since_epoch())
             .count();
+
+    // See https://github.com/opencv/opencv/issues/25501
+    // Too long sleep_for() makes no response to Wayland ping-pong mechanism
+    // So interval is limited to 33ms (1000ms / 30fps).
+    auto sleep_time_min = ch::duration_cast<ch::nanoseconds>(ch::milliseconds(33)).count();
 
     while (true) {
 
@@ -2424,11 +2591,11 @@ int waitKeyImpl(int delay) {
                 .count();
 
         auto elapsed = end_time - start_time;
-        if (limit.count() > 0 && elapsed >= limit.count()) {
+        if (limit > 0 && elapsed >= limit) {
             break;
         }
 
-        auto sleep_time = 64000 - elapsed;
+        auto sleep_time = std::min(limit - elapsed, sleep_time_min);
         if (sleep_time > 0) {
             std::this_thread::sleep_for(ch::nanoseconds(sleep_time));
         }

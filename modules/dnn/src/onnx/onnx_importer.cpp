@@ -1217,7 +1217,12 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
 
 void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    MatShape inpShape = outShapes[node_proto.input(0)];
+    MatShape inpShape;
+    if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+        inpShape = shape(getBlob(node_proto, 0));
+    else {
+        inpShape = outShapes[node_proto.input(0)];
+    }
     int dims = inpShape.size();
     std::vector<int> begin(dims, 0);
     std::vector<int> end(dims, INT_MAX);

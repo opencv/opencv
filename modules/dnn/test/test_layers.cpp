@@ -276,6 +276,11 @@ TEST_P(Test_Caffe_layers, Dropout)
 
 TEST_P(Test_Caffe_layers, Concat)
 {
+    if (cvtest::skipUnstableTests && (backend == DNN_BACKEND_VKCOM))
+    {
+        throw SkipTestException("Test_Caffe_layers.Concat test produces unstable result with Vulkan");
+    }
+
 #if defined(INF_ENGINE_RELEASE)
 #if INF_ENGINE_VER_MAJOR_GE(2019010000) && INF_ENGINE_VER_MAJOR_LT(2019020000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)

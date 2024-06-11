@@ -1,3 +1,26 @@
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  set(_apple_device_min_target_os_version "13.3")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(_apple_device_min_target_os_version "16.4")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "watchOS")
+  set(_apple_device_min_target_os_version "9.4")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+  set(_apple_device_min_target_os_version "16.4")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "visionOS")
+  set(_apple_device_min_target_os_version "1.0")
+endif()
+
+if(DEFINED _apple_device_min_target_os_version AND
+   ("${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_GREATER "${_apple_device_min_target_os_version}" OR
+    "${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_EQUAL "${_apple_device_min_target_os_version}"))
+  set(_apple_device_has_required_min_os_version ON)
+else()
+  set(_apple_device_has_required_min_os_version OFF)
+endif()
+
+OCV_OPTION(OPENCV_OSX_USE_ACCELERATE_NEW_LAPACK "Use new BLAS/LAPACK interfaces from Accelerate framework on Apple platform" _apple_device_has_required_min_os_version
+  VISIBLE_IF APPLE)
+
 macro(_find_header_file_in_dirs VAR NAME)
   unset(${VAR})
   unset(${VAR} CACHE)
@@ -99,11 +122,20 @@ macro(ocv_lapack_run_check)
     list(APPEND __link_directories ${LAPACK_LINK_LIBRARIES})
   endif()
 
+    set(LAPACK_TRY_COMPILE_DEF "")
+    if(LAPACK_IMPL STREQUAL "LAPACK/Apple" AND OPENCV_OSX_USE_ACCELERATE_NEW_LAPACK)
+      message(STATUS "LAPACK(${LAPACK_IMPL}): Accelerate New LAPACK is enabled.")
+      set(LAPACK_TRY_COMPILE_DEF "-DACCELERATE_NEW_LAPACK")
+      add_compile_definitions(ACCELERATE_NEW_LAPACK)
+      add_compile_definitions(ACCELERATE_LAPACK_ILP64)
+    endif()
+
   try_compile(__VALID_LAPACK
       "${OpenCV_BINARY_DIR}"
       "${OpenCV_SOURCE_DIR}/cmake/checks/lapack_check.cpp"
       CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${LAPACK_INCLUDE_DIR}\;${CMAKE_BINARY_DIR}"
                   "-DLINK_DIRECTORIES:STRING=${__link_directories}"
+        COMPILE_DEFINITIONS ${LAPACK_TRY_COMPILE_DEF}
       LINK_LIBRARIES ${LAPACK_LIBRARIES}
       OUTPUT_VARIABLE TRY_OUT
   )

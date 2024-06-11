@@ -435,6 +435,8 @@ cv::Rect cv::getWindowImageRect(const String& winname)
         return cvGetWindowRect_GTK(winname.c_str());
     #elif defined (HAVE_COCOA)
         return cvGetWindowRect_COCOA(winname.c_str());
+    #elif defined (HAVE_WAYLAND)
+        return cvGetWindowRect_WAYLAND(winname.c_str());
     #else
         return Rect(-1, -1, -1, -1);
     #endif

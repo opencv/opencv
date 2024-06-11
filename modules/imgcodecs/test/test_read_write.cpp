@@ -282,6 +282,35 @@ TEST(Imgcodecs_Image, regression_9376)
     EXPECT_EQ(32, m.rows);
 }
 
+TEST(Imgcodecs_Image, imread_overload)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string imgName = findDataFile("../highgui/readwrite/ordinary.bmp");
+
+    Mat ref = imread(imgName);
+    ASSERT_FALSE(ref.empty());
+    {
+        Mat img(ref.size(), ref.type(), Scalar::all(0)); // existing image
+        void * ptr = img.data;
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+        EXPECT_EQ(img.data, ptr); // no reallocation
+    }
+    {
+        Mat img; // empty image
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+    }
+    {
+        UMat img; // empty UMat
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+    }
+}
+
 //==================================================================================================
 
 TEST(Imgcodecs_Image, write_umat)
@@ -303,6 +332,7 @@ TEST(Imgcodecs_Image, write_umat)
     EXPECT_EQ(0, remove(dst_name.c_str()));
 }
 
+#ifdef HAVE_TIFF
 TEST(Imgcodecs_Image, multipage_collection_size)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -479,6 +509,7 @@ TEST(ImgCodecs, multipage_collection_two_iterator_operatorpp)
          EXPECT_TRUE(cv::norm(img1, img[i], NORM_INF) == 0);
     }
 }
+#endif
 
 
 TEST(Imgcodecs_Params, imwrite_regression_22752)

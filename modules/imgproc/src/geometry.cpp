@@ -639,15 +639,16 @@ static Rect pointSetBoundingRect( const Mat& points )
         return Rect();
 
 #if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, loop tail related.
-    const int64_t* pts = points.ptr<int64_t>();
-
     if( !is_float )
     {
+        const int32_t* pts = points.ptr<int32_t>();
+        int64_t firstval = 0;
+        std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
         v_int32 minval, maxval;
-        minval = maxval = v_reinterpret_as_s32(vx_setall_s64(*pts)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        minval = maxval = v_reinterpret_as_s32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
         for( i = 1; i <= npoints - VTraits<v_int32>::vlanes()/2; i+= VTraits<v_int32>::vlanes()/2 )
         {
-            v_int32 ptXY2 = v_reinterpret_as_s32(vx_load(pts + i));
+            v_int32 ptXY2 = vx_load(pts + 2 * i);
             minval = v_min(ptXY2, minval);
             maxval = v_max(ptXY2, maxval);
         }
@@ -655,7 +656,7 @@ static Rect pointSetBoundingRect( const Mat& points )
         maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
         if( i <= npoints - VTraits<v_int32>::vlanes()/4 )
         {
-            v_int32 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + i))));
+            v_int32 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + 2 * i))));
             minval = v_min(ptXY, minval);
             maxval = v_max(ptXY, maxval);
             i += VTraits<v_int64>::vlanes()/2;
@@ -673,10 +674,10 @@ static Rect pointSetBoundingRect( const Mat& points )
         if( i < npoints )
         {
             v_int32x4 minval2, maxval2;
-            minval2 = maxval2 = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+            minval2 = maxval2 = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + 2 * i))));
             for( i++; i < npoints; i++ )
             {
-                v_int32x4 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+                v_int32x4 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + 2 * i))));
                 minval2 = v_min(ptXY, minval2);
                 maxval2 = v_max(ptXY, maxval2);
             }
@@ -689,11 +690,14 @@ static Rect pointSetBoundingRect( const Mat& points )
     }
     else
     {
+        const float* pts = points.ptr<float>();
+        int64_t firstval = 0;
+        std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
         v_float32 minval, maxval;
-        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(*pts)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
         for( i = 1; i <= npoints - VTraits<v_float32>::vlanes()/2; i+= VTraits<v_float32>::vlanes()/2 )
         {
-            v_float32 ptXY2 = v_reinterpret_as_f32(vx_load(pts + i));
+            v_float32 ptXY2 = vx_load(pts + 2 * i);
             minval = v_min(ptXY2, minval);
             maxval = v_max(ptXY2, maxval);
         }
@@ -701,7 +705,7 @@ static Rect pointSetBoundingRect( const Mat& points )
         maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
         if( i <= npoints - VTraits<v_float32>::vlanes()/4 )
         {
-            v_float32 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + i))));
+            v_float32 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + 2 * i))));
             minval = v_min(ptXY, minval);
             maxval = v_max(ptXY, maxval);
             i += VTraits<v_float32>::vlanes()/4;
@@ -719,10 +723,10 @@ static Rect pointSetBoundingRect( const Mat& points )
         if( i < npoints )
         {
             v_float32x4 minval2, maxval2;
-            minval2 = maxval2 = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+            minval2 = maxval2 = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + 2 * i))));
             for( i++; i < npoints; i++ )
             {
-                v_float32x4 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+                v_float32x4 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + 2 * i))));
                 minval2 = v_min(ptXY, minval2);
                 maxval2 = v_max(ptXY, maxval2);
             }

@@ -2154,7 +2154,7 @@ static void showSaveDialog(CvWindow& window)
 #ifdef HAVE_TIFF
                       "TIFF Files (*.tiff;*.tif)\0*.tiff;*.tif\0"
 #endif
-#ifdef HAVE_JASPER
+#if defined(HAVE_JASPER) || defined(HAVE_OPENJPEG)
                       "JPEG-2000 files (*.jp2)\0*.jp2\0"
 #endif
 #ifdef HAVE_WEBP
