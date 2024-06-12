@@ -83,12 +83,10 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_CheckEQ(inputs.size(), 1u, "");
-        if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-            CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S, "");
-        else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-            CV_CheckType(inputs[0], inputs[0] == CV_16F || inputs[0] == CV_8S || inputs[0] == CV_32S || inputs[0] == CV_64S, "");
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+            CV_CheckType(inputs[0], inputs[0] == CV_16F || inputs[0] == CV_8S || inputs[0] == CV_8U || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_Bool, "");
         else
-            CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_8S || inputs[0] == CV_32S || inputs[0] == CV_64S, "");
+            CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_8S || inputs[0] == CV_8U || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_Bool, "");
 
         outputs.assign(requiredOutputs, inputs[0]);
     }
@@ -207,7 +205,10 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
 
-        return make_cuda_node_with_type<cuda4dnn::PaddingOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), ptype, paddingValue, dstRanges);
+        if (inputs[0]->getHostMatDepth() == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::PaddingOp>(std::move(context->stream), ptype, paddingValue, dstRanges);
+        else
+            return make_cuda_node_with_type<cuda4dnn::PaddingOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), ptype, paddingValue, dstRanges);
     }
 #endif
 
@@ -275,8 +276,10 @@ public:
         std::shared_ptr<ov::op::v0::Constant> arg_pad_value;
         float paddingValueFloat = paddingValue;
         int8_t paddingValueInt8 = paddingValue;
+        uint8_t paddingValueUInt8 = paddingValue;
         int32_t paddingValueInt32 = paddingValue;
         int64_t paddingValueInt64 = paddingValue;
+        bool paddingValueBool = paddingValue;
         switch(ieInpNode.get_element_type())
         {
             case ov::element::f32:
@@ -285,11 +288,17 @@ public:
             case ov::element::i8:
                 arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::i8, ov::Shape{}, &paddingValueInt8);
                 break;
+            case ov::element::u8:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::u8, ov::Shape{}, &paddingValueUInt8);
+                break;
             case ov::element::i32:
                 arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &paddingValueInt32);
                 break;
             case ov::element::i64:
                 arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{}, &paddingValueInt64);
+                break;
+            case ov::element::boolean:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::boolean, ov::Shape{}, &paddingValueBool);
                 break;
             default:
                 CV_Error(Error::BadDepth, "");

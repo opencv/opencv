@@ -67,7 +67,7 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_CheckEQ(inputs.size(), (size_t)2, "");
-        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U, "");
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U || inputs[0] == CV_8S || inputs[0] == CV_Bool, "");
         CV_CheckType(inputs[1], inputs[1] == CV_64S || inputs[1] == CV_32S, "");
         outputs.assign(1, inputs[0]);
     }
@@ -159,8 +159,14 @@ public:
     {
         switch (type)
         {
+            case CV_Bool:
+                forward_impl<bool, T_INDEX>(std::forward<Args>(args)...);
+                break;
             case CV_8U:
                 forward_impl<uint8_t, T_INDEX>(std::forward<Args>(args)...);
+                break;
+            case CV_8S:
+                forward_impl<int8_t, T_INDEX>(std::forward<Args>(args)...);
                 break;
             case CV_16F:
                 forward_impl<int16_t, T_INDEX>(std::forward<Args>(args)...);
