@@ -79,7 +79,7 @@ int main(int argc, char **argv)
     // Open file with classes names.
     if (parser.has("classes"))
     {
-        string file = parser.get<String>("classes");
+        string file = findFile(parser.get<String>("classes"));
         ifstream ifs(file.c_str());
         if (!ifs.is_open())
             CV_Error(Error::StsError, "File " + file + " not found");
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
     // Open file with colors.
     if (parser.has("colors"))
     {
-        string file = parser.get<String>("colors");
+        string file = findFile(parser.get<String>("colors"));
         ifstream ifs(file.c_str());
         if (!ifs.is_open())
             CV_Error(Error::StsError, "File " + file + " not found");
@@ -146,29 +146,22 @@ int main(int argc, char **argv)
         blobFromImage(frame, blob, scale, Size(inpWidth, inpHeight), mean, swapRB, false);
         //! [Set input blob]
         net.setInput(blob);
-        //! [Make forward pass]
-        Mat score = net.forward();
+        //! [Set input blob]
+
+        Mat mask, saliency_map, foreground_overlay, background_overlay, foreground_segmented;
         if (modelName == "u2netp")
         {
-            Mat mask, thresholded_mask, foreground_overlay, background_overlay, foreground_segmented;
-            mask = cv::Mat(score.size[2], score.size[3], CV_32F, score.ptr<float>(0, 0));
-            mask.convertTo(mask, CV_8U, 255);
-            threshold(mask, thresholded_mask, 0, 255, THRESH_BINARY + THRESH_OTSU);
-            resize(thresholded_mask, thresholded_mask, Size(frame.cols, frame.rows), 0, 0, INTER_AREA);
-            // Create overlays for foreground and background
-            foreground_overlay = Mat::zeros(frame.size(), frame.type());
-            background_overlay = Mat::zeros(frame.size(), frame.type());
-            // Set foreground (object) to red and background to blue
-            foreground_overlay.setTo(Scalar(0, 0, 255), thresholded_mask);
-            Mat inverted_mask;
-            bitwise_not(thresholded_mask, inverted_mask);
-            background_overlay.setTo(Scalar(255, 0, 0), inverted_mask);
-            // Blend the overlays with the original frame
-            addWeighted(frame, 1, foreground_overlay, 0.5, 0, foreground_segmented);
-            addWeighted(foreground_segmented, 1, background_overlay, 0.5, 0, frame);
+            vector<Mat> output;
+            net.forward(output, net.getUnconnectedOutLayersNames());
+
+            Mat pred = output[0].reshape(1, output[0].size[2]);
+            pred.convertTo(frame, CV_8U, 255.0);
         }
         else
         {
+            //! [Make forward pass]
+            Mat score = net.forward();
+            //! [Make forward pass]
             Mat segm;
             colorizeSegmentation(score, segm);
             resize(segm, segm, frame.size(), 0, 0, INTER_NEAREST);

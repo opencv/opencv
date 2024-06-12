@@ -256,9 +256,9 @@ u2netp:
     url: "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx"
     sha1: "0a99236f0d5c1916a99a8c401b23e5ef32038606"
   model: "u2netp.onnx"
-  mean: [123.6, 116.2, 103.5]
+  mean: [0.485, 0.456, 0.406]
   scale: 0.019
   width: 320
   height: 320
-  rgb: true
+  rgb: false
   sample: "segmentation"
