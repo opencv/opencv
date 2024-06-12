@@ -11,4 +11,12 @@ if (cv instanceof Promise) {
             done();
         });
     });
+} else {
+    QUnit.test("init_cv", (assert) => {
+        const done = assert.async();
+        cv['onRuntimeInitialized'] = () => {
+            done();
+        }
+        assert.ok(true);
+    });
 }
