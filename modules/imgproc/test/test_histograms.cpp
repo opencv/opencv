@@ -2030,11 +2030,38 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
 
 void equalizeHistReference(const Mat& src, Mat& dst)
 {
-    //TODO: calcHist
+    std::vector<int> hist(256, 0);
+    for (int y = 0; y < src.rows; y++)
+    {
+        const uchar* srow = src.ptr(y);
+        for (int x = 0; x < src.cols; x++)
+        {
+            hist[srow[x]]++;
+        }
+    }
 
-
-    //TODO: make LUT
     std::vector<uchar> lut(256);
+
+    //TODO: check this code
+
+    int i = 0;
+    while (!hist[i]) ++i;
+
+    int total = (int)src.total();
+    if (hist[i] == total)
+    {
+        dst.setTo(i);
+        return;
+    }
+
+    float scale = (256 - 1.f)/(total - hist[i]);
+    int sum = 0;
+
+    for (lut[i++] = 0; i < 256; ++i)
+    {
+        sum += hist[i];
+        lut[i] = saturate_cast<uchar>(sum * scale);
+    }
     
     cv::LUT(src, lut, dst);
 }
