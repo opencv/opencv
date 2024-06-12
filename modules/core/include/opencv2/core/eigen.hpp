@@ -287,6 +287,16 @@ void cv2eigen( const Mat& src,
     }
 }
 
+template<typename _Tp>  static inline
+void cv2eigen( const Mat& src,
+               Eigen::Matrix<_Tp, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& dst )
+{
+    dst.resize(src.rows, src.cols);
+    const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
+             dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
+    src.convertTo(_dst, _dst.type());
+}
+
 // Matx case
 template<typename _Tp, int _rows, int _cols> static inline
 void cv2eigen( const Matx<_Tp, _rows, _cols>& src,
@@ -305,6 +315,16 @@ void cv2eigen( const Matx<_Tp, _rows, _cols>& src,
                  dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
         Mat(src).copyTo(_dst);
     }
+}
+
+template<typename _Tp, int _rows, int _cols> static inline
+void cv2eigen( const Matx<_Tp, _rows, _cols>& src,
+               Eigen::Matrix<_Tp, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& dst )
+{
+    dst.resize(_rows, _cols);
+    const Mat _dst(_rows, _cols, traits::Type<_Tp>::value,
+                   dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
+    Mat(src).copyTo(_dst);
 }
 
 template<typename _Tp> static inline
