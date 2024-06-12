@@ -282,7 +282,7 @@ void FramebufferWindow::resize(int width, int height)
         windowRect.width = width;
         windowRect.height = height;
 
-        if ((currentImg.cols > 0) && (currentImg.rows > 0))
+        if (!currentImg.empty())
         {
             imshow(currentImg);
         }
@@ -296,7 +296,7 @@ void FramebufferWindow::move(int x, int y)
     windowRect.x = x;
     windowRect.y = y;
 
-    if ((currentImg.cols > 0) && (currentImg.rows > 0))
+    if (!currentImg.empty())
     {
         imshow(currentImg);
     }
