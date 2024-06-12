@@ -2026,5 +2026,54 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
     ASSERT_EQ(histogram_u.at<float>(2), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(2);
 }
 
+////////////////////////////////////////// equalizeHist() /////////////////////////////////////////
+
+void equalizeHistReference(const Mat& src, Mat& dst)
+{
+    //TODO: calcHist
+
+
+    //TODO: make LUT
+    std::vector<uchar> lut(256);
+    
+    cv::LUT(src, lut, dst);
+}
+
+typedef ::testing::TestWithParam<std::tuple<cv::Size, int>> Imgproc_Equalize_Hist;
+
+TEST_P(Imgproc_Equalize_Hist, accuracy)
+{
+    auto p = GetParam();
+    cv::Size size = std::get<0>(p);
+    int idx = std::get<1>(p);
+
+    RNG &rng = cvtest::TS::ptr()->get_rng();
+    rng.state += idx;
+
+    cv::Mat src(size, CV_8U);
+    cvtest::randUni( rng, src, Scalar::all(0), Scalar::all(255) );
+
+    cv::Mat dst, gold;
+
+    equalizeHistReference(src, gold);
+
+    cv::equalizeHist(src, dst);
+
+    ASSERT_EQ(CV_8UC1, dst.type());
+    ASSERT_EQ(gold.size(), dst.size());
+
+    const double normInfThreshold = 0;
+    const double normL2Threshold  = 0;
+
+    double normInf = cv::norm(dst, gold, cv::NORM_INF);
+    EXPECT_LE(normInf, normInfThreshold);
+    double normL2  = cv::norm(dst, gold, cv::NORM_L2);
+    EXPECT_LE(normL2, normL2Threshold);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc_Hist, Imgproc_Equalize_Hist, ::testing::Combine(
+                        ::testing::Values(cv::Size(123, 321), cv::Size(256, 256), cv::Size(1024, 768)),
+                        ::testing::Range(0, 10)));
+
 }} // namespace
 /* End Of File */
