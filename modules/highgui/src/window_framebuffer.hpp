@@ -1,7 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #ifndef OPENCV_HIGHGUI_WINDOWS_FRAMEBUFFER_HPP
 #define OPENCV_HIGHGUI_WINDOWS_FRAMEBUFFER_HPP
 
-#include "precomp.hpp"
 #include "backend.hpp"
 
 #include <linux/fb.h>
@@ -9,7 +11,8 @@
 
 #include <termios.h>
 
-namespace cv { namespace highgui_backend {
+namespace cv {
+namespace highgui_backend {
 
 enum OpenCVFBMode{
     FB_MODE_EMU,
@@ -18,7 +21,7 @@ enum OpenCVFBMode{
 };
 
 class FramebufferBackend;
-class CV_EXPORTS FramebufferWindow : public UIWindow
+class FramebufferWindow : public UIWindow
 {
     FramebufferBackend &backend;
     std::string FB_ID;
@@ -126,9 +129,7 @@ public:
     virtual const std::string getName() const override;
 };
 
-}
-
-}
+}} // cv::highgui_backend::
 
 
 #endif
