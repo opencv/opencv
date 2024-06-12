@@ -1,3 +1,4 @@
 #!/bin/bash
-./bin/opencv_test_imgproc --gtest_filter=Imgproc_GaussianBlur*:Imgproc_Filter2D*
-./bin/opencv_perf_imgproc --gtest_filter=Imgproc_GaussianBlur*:Imgproc_Filter2D*
+cd build
+./bin/opencv_test_imgproc --gtest_filter=*_GaussianBlur*:*_Filter2D*
+./bin/opencv_perf_imgproc --gtest_filter=*_Filter2D*:*_GaussianBlur*
