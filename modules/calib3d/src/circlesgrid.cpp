@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
 #include <limits>
+#include "opencv2/highgui.hpp"
 
  // Requires CMake flag: DEBUG_opencv_calib3d=ON
 //#define DEBUG_CIRCLES
@@ -627,16 +628,45 @@ bool CirclesGridFinder::findHoles()
     {
       std::vector<Point2f> vectors, tmpVectors, filteredVectors, basis;
       Graph rng(0);
-      computeRNG(rng, tmpVectors);
+
+      Mat tmp = img.clone();
+      computeRNG(rng, tmpVectors, &tmp);
+
+      cv::imshow("computeRNG", tmp);
+      //cv::waitKey(0);
+
       rng2gridGraph(rng, vectors);
       filterOutliersByDensity(vectors, filteredVectors);
       std::vector<Graph> basisGraphs;
-      findBasis(filteredVectors, basis, basisGraphs);
+      findBasis(filteredVectors, basis, basisGraphs); // filteredVectors, basis, basisGraphs
+
+      tmp = img.clone();
+      drawBasisGraphs(basisGraphs, tmp, true, true);
+      cv::imshow("drawBasisGraphs", tmp);
+      //cv::waitKey(0);
+
       findMCS(basis, basisGraphs);
+
+      tmp = img.clone();
+      drawBasisGraphs(basisGraphs, tmp, true, true);
+      cv::imshow("findMCS", tmp);
+      //cv::waitKey(0);
+
       eraseUsedGraph(basisGraphs);
+
+      tmp = img.clone();
+      drawBasisGraphs(basisGraphs, tmp, true, true);
+      cv::imshow("eraseUsedGraph", tmp);
+      //cv::waitKey(0);
+
       holes2 = holes;
       holes.clear();
       findMCS(basis, basisGraphs);
+
+      tmp = img.clone();
+      drawBasisGraphs(basisGraphs, tmp, true, true);
+      cv::imshow("findMCS2", tmp);
+      //cv::waitKey(0);
       break;
     }
 

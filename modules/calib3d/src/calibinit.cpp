@@ -2124,6 +2124,7 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
     {
         centers.clear();
         CirclesGridFinder boxFinder(patternSize, points, parameters);
+        boxFinder.img = _image.getMat().clone();
         try
         {
             bool isFound = boxFinder.findHoles();
