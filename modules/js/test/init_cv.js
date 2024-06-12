@@ -2,21 +2,20 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-if (cv instanceof Promise) {
+if (cv.getBuildInformation === undefined) {
+    // WASM
     QUnit.test("init_cv", (assert) => {
         const done = assert.async();
         assert.ok(true);
-        cv.then((ready_cv) => {
-            cv = ready_cv;
-            done();
-        });
-    });
-} else {
-    QUnit.test("init_cv", (assert) => {
-        const done = assert.async();
-        cv['onRuntimeInitialized'] = () => {
-            done();
+        if (cv instanceof Promise) {
+            cv.then((ready_cv) => {
+                cv = ready_cv;
+                done();
+            });
+        } else {
+            cv['onRuntimeInitialized'] = () => {
+                done();
+            }
         }
-        assert.ok(true);
     });
 }
