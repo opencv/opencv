@@ -41,7 +41,6 @@ bool GifDecoder::readHeader() {
     }
 
     try {
-//        m_strm.skip(6);// Skip the signature: GIF87a or GIF89a
         String signature(6, ' ');
         m_strm.getBytes((uchar*)signature.data(), 6);
         CV_Assert(signature == R"(GIF87a)" || signature == R"(GIF89a)");
@@ -95,7 +94,7 @@ bool GifDecoder::readData(Mat &img) {
     switch (opMode) {
         case GifOpMode::GRFMT_GIF_PreviousImage:
             if (lastImage.empty()){
-                img_ = Mat(m_height, m_width, CV_8UC3, Scalar(0, 0, 0));
+                img_ = Mat::zeros(m_height, m_width, CV_8UC3);
             } else {
                 img_ = lastImage;
             }
@@ -111,7 +110,7 @@ bool GifDecoder::readData(Mat &img) {
         case GifOpMode::GRFMT_GIF_Nothing:
         case GifOpMode::GRFMT_GIF_Cover:
             // default value
-            img_ = Mat(m_height, m_width, CV_8UC3, Scalar(0, 0, 0));
+            img_ = Mat::zeros(m_height, m_width, CV_8UC3);
             break;
         default:
             CV_Assert(false);
