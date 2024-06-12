@@ -48,6 +48,52 @@ ngraphWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
     return wrappers;
 }
 
+ov::element::Type cvTypeToOvType(MatType cvType)
+{
+    switch (cvType) {
+        case CV_32F:
+            return ov::element::f32;
+        case CV_8U:
+            return ov::element::u8;
+        case CV_8S:
+            return ov::element::i8;
+        case CV_32S:
+            return ov::element::i32;
+        case CV_64S:
+            return ov::element::i64;
+        case CV_Bool:
+            return ov::element::boolean;
+        default:
+            CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(cvType).c_str()));
+    }
+}
+
+ov::element::Type cvTypeToOvType(const cv::Mat& mat)
+{
+    return cvTypeToOvType(mat.depth());
+}
+
+MatType ovTypeToCvType(ov::element::Type ovType)
+{
+    switch (ovType) {
+        case ov::element::f32:
+            return CV_32F;
+        case ov::element::u8:
+            return CV_8U;
+        case ov::element::i8:
+            return CV_8S;
+        case ov::element::i32:
+            return CV_32S;
+        case ov::element::i64:
+            return CV_64S;
+        case ov::element::boolean:
+            return CV_Bool;
+        default:
+            CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", ovType.get_type_name().c_str()));
+    }
+}
+
+
 class NgraphCustomOp: public ov::op::Op {
 public:
     OPENVINO_OP(kOpenCVLayersType);
@@ -60,6 +106,19 @@ public:
 
     void validate_and_infer_types() override
     {
+        std::vector<MatType> inputTypes(get_input_size());
+        std::vector<MatType> internalTypes;
+        std::vector<MatType> outputTypes;
+        for (int i = 0; i < get_input_size(); ++i)
+        {
+            inputTypes[i] = ovTypeToCvType(get_input_element_type(i));
+        }
+        cvLayer->getTypes(inputTypes, outputs.size(), internals.size(), outputTypes, internalTypes);
+        for (int i = 0; i < internals.size(); ++i) {
+            if (internals[i].depth() != internalTypes[i])
+                internals[i] = cv::Mat(shape(internals[i]), internalTypes[i]);
+        }
+
         set_output_size(outputs.size());
         for (int i = 0; i < outputs.size(); ++i)
         {
@@ -67,7 +126,7 @@ public:
             for (int j = 0; j < outputs[i].dims; ++j) {
                 shape.push_back(outputs[i].size[j]);
             }
-            set_output_type(i, get_input_element_type(0), shape);
+            set_output_type(i, cvTypeToOvType(outputTypes[i]), shape);
         }
     }
 
@@ -270,7 +329,7 @@ ov::ParameterVector InfEngineNgraphNet::setInputs(const std::vector<cv::Mat>& in
     for (size_t i = 0; i < inputs.size(); i++)
     {
         std::vector<size_t> shape = getShape<size_t>(inputs[i]);
-        auto inp = std::make_shared<ov::op::v0::Parameter>(ov::element::f32, ov::Shape(shape));
+        auto inp = std::make_shared<ov::op::v0::Parameter>(cvTypeToOvType(inputs[i]), ov::Shape(shape));
         inp->set_friendly_name(names[i]);
 
         auto it = std::find_if(inputs_vec.begin(), inputs_vec.end(),
@@ -427,16 +486,7 @@ void NgraphBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays 
 
 ov::Tensor wrapToNgraphBlob(const Mat& m) {
     std::vector<size_t> shape = getShape<size_t>(m);
-    if (m.type() == CV_32F)
-        return ov::Tensor(ov::element::f32, shape, m.data);
-    else if (m.type() == CV_8U)
-        return ov::Tensor(ov::element::u8, shape, m.data);
-    else if (m.type() == CV_8SC1)
-        return ov::Tensor(ov::element::i8, shape, m.data);
-    else if (m.type() == CV_32SC1)
-        return ov::Tensor(ov::element::i32, shape, m.data);
-    else
-        CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
+    return ov::Tensor(cvTypeToOvType(m), shape, m.data);
 }
 
 
@@ -445,6 +495,7 @@ NgraphBackendWrapper::NgraphBackendWrapper(int targetId, const cv::Mat& m)
     , host((Mat*)&m)
 {
     blob = wrapToNgraphBlob(m);
+    hostMatDepth = m.depth();
 }
 
 NgraphBackendWrapper::NgraphBackendWrapper(Ptr<BackendWrapper> wrapper)

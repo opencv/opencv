@@ -191,6 +191,10 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() >= 2);
+        if (inputs[0].size() == 0){
+            outputs.assign(1, inputs[0]);
+            return false;
+        }
         CV_Assert(inputs[0].size() >= 1);
         CV_Assert(coeffs.size() == 0 || coeffs.size() == inputs.size());
         CV_Assert(op == SUM || coeffs.size() == 0);
@@ -310,13 +314,13 @@ public:
                         int nstripes)
         {
             const EltwiseOp op = self.op;
-            CV_Check(dst.dims, 1 <= dst.dims && dst.dims <= 5, "");
+            CV_Check(dst.dims, 0 <= dst.dims && dst.dims <= 5, "");
             CV_CheckTypeEQ(dst.type(), CV_32FC1, "");
             CV_Assert(dst.isContinuous());
             CV_Assert(self.coeffs.empty() || self.coeffs.size() == (size_t)nsrcs);
             CV_CheckGE(nsrcs, 2, "");
 
-            if (dst.dims != 1)
+            if (dst.dims > 1)
                 CV_Assert(self.outputChannels == dst.size[1]);
 
             EltwiseInvoker p(self);

@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 
 #include <algorithm> // for std::max & std::min
@@ -42,7 +44,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && reduction == REDUCTION::NONE);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -240,6 +243,18 @@ public:
                 CV_Error(Error::StsBadArg, "Unsupported reduction.");
         };
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto scatterND = std::make_shared<ov::op::v3::ScatterNDUpdate>(
+            nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+            nodes[1].dynamicCast<InfEngineNgraphNode>()->node,
+            nodes[2].dynamicCast<InfEngineNgraphNode>()->node);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(scatterND));
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 Ptr<ScatterNDLayer> ScatterNDLayer::create(const LayerParams& params)

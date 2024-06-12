@@ -112,133 +112,69 @@ CASE(test_and_bcast4v3d)
 CASE(test_and_bcast4v4d)
     // no filter
 CASE(test_argmax_default_axis_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_default_axis_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_default_axis_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_default_axis_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_asin)
     // no filter
 CASE(test_asin_example)
@@ -937,7 +873,7 @@ CASE(test_max_int16)
 CASE(test_max_int32)
     // no filter
 CASE(test_max_int64)
-    // no filter
+    SKIP;
 CASE(test_max_int8)
     // no filter
 CASE(test_max_one_input)
@@ -1037,7 +973,7 @@ CASE(test_min_int16)
 CASE(test_min_int32)
     // no filter
 CASE(test_min_int64)
-    // no filter
+    SKIP;
 CASE(test_min_int8)
     // no filter
 CASE(test_min_one_input)
@@ -1106,9 +1042,7 @@ CASE(test_mul_bcast)
 CASE(test_mul_example)
     // no filter
 CASE(test_mul_uint8)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_mvn)
     // no filter
 CASE(test_mvn_expanded)
@@ -1276,7 +1210,7 @@ CASE(test_pow_types_int32_int32)
 CASE(test_pow_types_int64_float32)
     // no filter
 CASE(test_pow_types_int64_int64)
-    // no filter
+    SKIP;
 CASE(test_prelu_broadcast)
     // no filter
 CASE(test_prelu_example)

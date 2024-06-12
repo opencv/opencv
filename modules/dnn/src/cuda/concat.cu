@@ -152,6 +152,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void concat<__half>(const Stream&, TensorSpan<__half>, std::size_t, TensorView<__half>, std::size_t);
 #endif
     template void concat<float>(const Stream&, TensorSpan<float>, std::size_t, TensorView<float>,  std::size_t);
+    template void concat<int8_t>(const Stream&, TensorSpan<int8_t>, std::size_t, TensorView<int8_t>,  std::size_t);
+    template void concat<uint8_t>(const Stream&, TensorSpan<uint8_t>, std::size_t, TensorView<uint8_t>,  std::size_t);
     template void concat<int32_t>(const Stream&, TensorSpan<int32_t>, std::size_t, TensorView<int32_t>,  std::size_t);
     template void concat<int64_t>(const Stream&, TensorSpan<int64_t>, std::size_t, TensorView<int64_t>,  std::size_t);
 
@@ -277,6 +279,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void concat_with_offsets(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
 #endif
     template void concat_with_offsets(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
+    template void concat_with_offsets(const Stream&, TensorSpan<int8_t>, TensorView<int8_t>, std::vector<std::size_t>);
+    template void concat_with_offsets(const Stream&, TensorSpan<uint8_t>, TensorView<uint8_t>, std::vector<std::size_t>);
     template void concat_with_offsets(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, std::vector<std::size_t>);
     template void concat_with_offsets(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, std::vector<std::size_t>);
 

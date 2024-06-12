@@ -58,7 +58,13 @@ public:
     {
         CV_Assert(inputs.size() == 1);
         const MatShape& inpShape = inputs[0];
+        if (inpShape.empty()){
+            CV_Assert(paddings.size() == 1);
+            outputs.resize(1, MatShape(1, paddings[0].first + paddings[0].second + 1));
+            return false;
+        }
         CV_Assert(inpShape.size() >= paddings.size());
+
         CV_Assert(inputDims == -1 || inpShape.size() == inputDims || inpShape.size() > paddings.size());
 
         outputs.resize(1, inpShape);
@@ -265,8 +271,29 @@ public:
         auto padding_below = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{begins.size()}, begins.data());
         auto padding_above = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{ends.size()}, ends.data());
         auto pad_mode = paddingType == "constant" ? ov::op::PadMode::CONSTANT : ov::op::PadMode::REFLECT; // SYMMETRIC
+
+        std::shared_ptr<ov::op::v0::Constant> arg_pad_value;
         float paddingValueFloat = paddingValue;
-        auto arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{}, &paddingValueFloat);
+        int8_t paddingValueInt8 = paddingValue;
+        int32_t paddingValueInt32 = paddingValue;
+        int64_t paddingValueInt64 = paddingValue;
+        switch(ieInpNode.get_element_type())
+        {
+            case ov::element::f32:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{}, &paddingValueFloat);
+                break;
+            case ov::element::i8:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::i8, ov::Shape{}, &paddingValueInt8);
+                break;
+            case ov::element::i32:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &paddingValueInt32);
+                break;
+            case ov::element::i64:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{}, &paddingValueInt64);
+                break;
+            default:
+                CV_Error(Error::BadDepth, "");
+        };
 
         auto pad = paddingType == "constant" ?
              std::make_shared<ov::op::v1::Pad>(ieInpNode, padding_below, padding_above, arg_pad_value, pad_mode) :
