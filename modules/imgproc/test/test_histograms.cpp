@@ -2040,29 +2040,27 @@ void equalizeHistReference(const Mat& src, Mat& dst)
         }
     }
 
-    std::vector<uchar> lut(256);
-
-    //TODO: check this code
-
-    int i = 0;
-    while (!hist[i]) ++i;
+    int first = 0;
+    while (!hist[first]) ++first;
 
     int total = (int)src.total();
-    if (hist[i] == total)
+    if (hist[first] == total)
     {
-        dst.setTo(i);
+        dst.setTo(first);
         return;
     }
 
-    float scale = (256 - 1.f)/(total - hist[i]);
-    int sum = 0;
+    std::vector<uchar> lut(256);
+    lut[first] = 0;
+    float scale = (255.f)/(total - hist[first]);
 
-    for (lut[i++] = 0; i < 256; ++i)
+    int sum = 0;
+    for (int i = first + 1; i < 256; ++i)
     {
         sum += hist[i];
         lut[i] = saturate_cast<uchar>(sum * scale);
     }
-    
+
     cv::LUT(src, lut, dst);
 }
 
@@ -2078,7 +2076,7 @@ TEST_P(Imgproc_Equalize_Hist, accuracy)
     rng.state += idx;
 
     cv::Mat src(size, CV_8U);
-    cvtest::randUni( rng, src, Scalar::all(0), Scalar::all(255) );
+    cvtest::randUni(rng, src, Scalar::all(0), Scalar::all(255));
 
     cv::Mat dst, gold;
 
@@ -2089,13 +2087,8 @@ TEST_P(Imgproc_Equalize_Hist, accuracy)
     ASSERT_EQ(CV_8UC1, dst.type());
     ASSERT_EQ(gold.size(), dst.size());
 
-    const double normInfThreshold = 0;
-    const double normL2Threshold  = 0;
-
-    double normInf = cv::norm(dst, gold, cv::NORM_INF);
-    EXPECT_LE(normInf, normInfThreshold);
-    double normL2  = cv::norm(dst, gold, cv::NORM_L2);
-    EXPECT_LE(normL2, normL2Threshold);
+    int nz = cv::countNonZero(dst != gold);
+    ASSERT_EQ(nz, 0);
 }
 
 INSTANTIATE_TEST_CASE_P(Imgproc_Hist, Imgproc_Equalize_Hist, ::testing::Combine(
