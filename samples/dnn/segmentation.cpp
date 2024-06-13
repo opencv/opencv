@@ -148,7 +148,6 @@ int main(int argc, char **argv)
         net.setInput(blob);
         //! [Set input blob]
 
-        Mat mask, saliency_map, foreground_overlay, background_overlay, foreground_segmented;
         if (modelName == "u2netp")
         {
             vector<Mat> output;
