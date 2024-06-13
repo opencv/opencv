@@ -151,9 +151,6 @@
 "test_max_uint16", // Issue:: Unsupported data type
 "test_max_uint32", // Issue:: Unsupported data type
 "test_max_uint64", // Issue:: Unsupported data type
-"test_mean_example", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!result" of type "Mean" in function 'getLayerInstance'
-"test_mean_one_input",  // ---- same as above ---
-"test_mean_two_inputs",  // ---- same as above ---
 "test_min_int16",  // Issue:: Unsupported data type
 "test_min_uint16", // Issue:: Unsupported data type
 "test_min_uint32", // Issue:: Unkonwn error

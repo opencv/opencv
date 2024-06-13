@@ -709,8 +709,16 @@ public:
             }
             case OPERATION::MEAN:
             {
-                auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
-                nary_forward<T>(mean, T{1} / ninputs, std::forward<Args>(args)...);
+                if (ninputs == 2){
+                    auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
+                    binary_forward<T, T>(mean, std::forward<Args>(args)...);
+                }  else if (ninputs == 3) {
+                    auto mean = [](const T &a, const T &b, const T &c) { return (a + b + c) / T{3}; };
+                    trinary_forward<T, T, T, T>(mean, std::forward<Args>(args)...);
+                } else {
+                    auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
+                    nary_forward<T>(mean, T{1} / ninputs, std::forward<Args>(args)...);
+                }
                 break;
             }
             case OPERATION::MIN:
