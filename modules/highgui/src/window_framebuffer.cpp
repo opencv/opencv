@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+
 #include "precomp.hpp"
 
 #include "window_framebuffer.hpp"
@@ -26,7 +27,14 @@
 
 #include "opencv2/imgproc.hpp"
 
-#include "XWDFile.h"
+#ifdef HAVE_FRAMEBUFFER_XVFB
+#include <X11/XWDFile.h>
+#include <X11/X.h>
+
+#define C32INT(ptr) ((((unsigned char*)ptr)[0] << 24) | (((unsigned char*)ptr)[1] << 16) | \
+  (((unsigned char*)ptr)[2] << 8) | (((unsigned char*)ptr)[3] << 0))
+#endif
+
 
 namespace cv {
 namespace highgui_backend {
@@ -419,11 +427,14 @@ int FramebufferBackend::fbOpenAndGetInfo()
 
 int FramebufferBackend::XvfbOpenAndGetInfo()
 {
+    int fb_fd = -1;
+
+#ifdef HAVE_FRAMEBUFFER_XVFB
     std::string fbFileName = getFBFileName();
     CV_LOG_INFO(NULL, "UI: FramebufferWindow::The following is used as a framebuffer file: \n"
     << fbFileName);
 
-    int fb_fd = open(fbFileName.c_str(), O_RDWR);
+    fb_fd = open(fbFileName.c_str(), O_RDWR);
     if (fb_fd == -1)
     {
         CV_LOG_ERROR(NULL, "UI: can't open framebuffer");
@@ -491,6 +502,11 @@ int FramebufferBackend::XvfbOpenAndGetInfo()
 
     fbPointer = (unsigned char*)xwd_header;
     fbPointer_dist = xvfb_len_header + xvfb_len_colors;
+
+#else
+    CV_LOG_WARNING(NULL, "UI: To use virtual framebuffer, "
+    << "compile OpenCV with the WITH_FRAMEBUFFER_XVFB=ON");
+#endif
 
     return fb_fd;
 }
