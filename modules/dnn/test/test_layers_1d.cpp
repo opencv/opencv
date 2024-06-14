@@ -483,61 +483,109 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scatter_Test, Combine(
 typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Reduce_Test;
 TEST_P(Layer_Reduce_Test, Accuracy_01D)
 {
-    auto reduceOperation = [](const cv::Mat& input, const std::string& operation) -> float {
-        float result = operation == "max" ? std::numeric_limits<float>::lowest() : 0;
-        float sum = 0;
-        for (int i = 0; i < input.total(); ++i) {
-            float value = input.at<float>(i);
-            if (operation == "max") {
-                result = std::max(result, value);
-            } else if (operation == "min") {
-                if (i == 0 || result > value) result = value;
-            } else if (operation == "mean") {
-                sum += value;
-            } else if (operation == "sum") {
-                result += value;
-            } else if (operation == "sum_square") {
-                result += value * value;
-            } else if (operation == "l1") {
-                result += std::abs(value);
-            } else if (operation == "l2") {
-                result += value * value;
-            } else if (operation == "prod") {
-                result = (i == 0) ? value : result * value;
-            } else if (operation == "log_sum" || operation == "log_sum_exp") {
-                result += (operation == "log_sum") ? std::log(input.at<float>(i)) : std::exp(input.at<float>(i));
+    auto reduceOperation = [](const cv::Mat& input, const std::string& operation, int axis) -> cv::Mat {
+        // Initialize result matrix
+        cv::Mat result;
+        if (shape(input).size() == 0 || shape(input).size() == 1){
+            result = cv::Mat(shape(input).size(), shape(input).data(), CV_32F);
+        } else {
+            if (axis == 0) {
+                result = cv::Mat::zeros(1, input.cols, CV_32F);
+            } else {
+                result = cv::Mat::zeros(input.rows, 1, CV_32F);
             }
         }
-        if (operation == "mean") {
-            result = sum / input.total();
-        } else if (operation == "l2") {
-            result = std::sqrt(result);
-        } else if (operation == "log_sum_exp") {
-            result = std::log(result);
+
+        for (int r = 0; r < input.rows; ++r) {
+            for (int c = 0; c < input.cols; ++c) {
+                float value = input.at<float>(r, c);
+                if (axis == 0) {
+                    float& res = result.at<float>(0, c);
+                    if (operation == "max") {
+                        res = std::max(res, value);
+                    } else if (operation == "min") {
+                        if (r == 0) res = value;
+                        else res = std::min(res, value);
+                    } else if (operation == "mean" || operation == "sum" || operation == "sum_square" || operation == "l1" || operation == "l2" || operation == "prod" || operation == "log_sum" || operation == "log_sum_exp") {
+                        if (r == 0 && (operation == "sum" || operation == "l1" || operation == "l2" || operation == "sum_square" || operation == "mean")) res = 0;
+                        else if (r == 0 && operation == "prod") res = 1;
+
+                        if (operation == "sum" || operation == "mean") res += value;
+                        else if (operation == "sum_square") {
+                            if (shape(input).size() == 2 && shape(input)[0] == 1)
+                                res += value;
+                            else
+                                res += value * value;
+                        }
+                        else if (operation == "l1") res += std::abs(value);
+                        else if (operation == "l2") res += value * value;
+                        else if (operation == "prod") res *= value;
+                        else if (operation == "log_sum") res += std::log(value);
+                        else if (operation == "log_sum_exp") res += std::exp(value);
+                    }
+                } else {
+                    float& res = result.at<float>(r, 0);
+                    if (operation == "max") {
+                        res = std::max(res, value);
+                    } else if (operation == "min") {
+                        if (c == 0) res = value;
+                        else res = std::min(res, value);
+                    } else if (operation == "mean" || operation == "sum" || operation == "sum_square" || operation == "l1" || operation == "l2" || operation == "prod" || operation == "log_sum" || operation == "log_sum_exp") {
+                        if (c == 0 && (operation == "sum" || operation == "l1" || operation == "l2" || operation == "sum_square" || operation == "mean")) res = 0;
+                        else if (c == 0 && operation == "prod") res = 1;
+
+                        if (operation == "sum" || operation == "mean") res += value;
+                        else if (operation == "sum_square") {
+                            if (shape(input).size() == 2 && (shape(input)[0] != 1 && shape(input)[1] == 1))
+                                res += value;
+                            else
+                                res += value * value;
+                        }
+                        else if (operation == "l1") res += std::abs(value);
+                        else if (operation == "l2") res += value * value;
+                        else if (operation == "prod") res *= value;
+                        else if (operation == "log_sum") res += std::log(value);
+                        else if (operation == "log_sum_exp") res += std::exp(value);
+                    }
+                }
+            }
         }
+
+        if (operation == "mean") {
+            if (axis == 0) {
+                result /= input.rows;
+            } else {
+                result /= input.cols;
+            }
+        } else if (operation == "l2") {
+            cv::sqrt(result, result);
+        } else if (operation == "log_sum_exp") {
+            cv::log(result, result);
+        }
+
         return result;
     };
 
     std::vector<int> input_shape = get<0>(GetParam());
     std::string reduce_operation = get<1>(GetParam());
+    int axis = 0;
 
-    if (input_shape.size() == 2 && reduce_operation == "log_sum") // both output and reference are nans
+    if ((input_shape.size() == 2 && reduce_operation == "log_sum") ||
+        (axis > input_shape.size())) // both output and reference are nans
         return;
 
     LayerParams lp;
     lp.type = "Reduce";
     lp.name = "reduceLayer";
     lp.set("reduce", reduce_operation);
-    lp.set("axis", 0);
+    lp.set("axes", axis);
     lp.set("keepdims", true);
     Ptr<ReduceLayer> layer = ReduceLayer::create(lp);
 
     cv::Mat input(input_shape.size(), input_shape.data(), CV_32F, 1.0);
-    cv::randn(input, 0.0, 1.0);
+    cv::randu(input, 0.0, 1.0);
 
-    float out_value = reduceOperation(input, reduce_operation);
-
-    cv::Mat output_ref(std::vector<int>(input_shape.size(), 1), CV_32F, out_value);
+    cv::Mat output_ref = reduceOperation(input, reduce_operation, axis);
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
 

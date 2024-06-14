@@ -71,6 +71,8 @@ public:
             auto norm_axis = normalize_axis(axes[i], shape_input);
             axes[i] = norm_axis;
         }
+        if (shape_input.empty())
+            return;
 
         bool do_nothing = true;
         for (auto axis : axes) {
@@ -89,6 +91,10 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        if (inputs[0].empty()){
+            outputs.assign(1, MatShape());
+            return false;
+        }
         // empty axes
         if (axes.empty()) {
             if (noop_with_empty_axes) {
@@ -406,6 +412,13 @@ public:
         static void run(const Mat& src, Mat& dst, std::vector<int> axes, bool noop_with_empty_axes) {
             CV_Assert(src.isContinuous());
             CV_Assert(dst.isContinuous());
+            if (shape(src).empty() || (shape(src).size() == 1 && shape(src)[0] == 1)){
+                // since there is only one element no need for parallel compute
+                // axis does not matter either (one element)
+                ReduceAllInvoker<Op> p(src, dst);
+                p(Range(0, p.total));
+                return;
+            }
 
             if (axes.empty()) {
                 if (noop_with_empty_axes) {
