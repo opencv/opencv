@@ -53,7 +53,7 @@ if(WITH_FRAMEBUFFER OR WITH_FRAMEBUFFER_XVFB)
   set(OPENCV_HIGHGUI_BUILTIN_BACKEND "FB")
   if(WITH_FRAMEBUFFER_XVFB)
     include(CheckCXXSourceCompiles)
-    check_cxx_source_compiles( 
+    check_cxx_source_compiles(
     "#include <X11/XWDFile.h>
     #include <X11/X.h>
 
@@ -62,8 +62,7 @@ if(WITH_FRAMEBUFFER OR WITH_FRAMEBUFFER_XVFB)
       XWDFileHeader *xwd_header;
       XWDColor *xwd_colors;
       return 0;
-    }"
-    HAVE_XWD_STRUCT)
+    }" HAVE_XWD_STRUCT)
     if(HAVE_XWD_STRUCT)
       add_definitions(-DHAVE_FRAMEBUFFER_XVFB)
     else()
