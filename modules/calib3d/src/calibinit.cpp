@@ -72,6 +72,7 @@
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
 #include "opencv2/flann.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <stack>
 
@@ -2071,6 +2072,101 @@ void drawChessboardCorners( InputOutputArray image, Size patternSize,
             }
         }
     }
+}
+
+bool findCirclesGridNew(InputArray _image, Size patternSize,
+                        OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
+                        const CirclesGridFinderParameters& parameters_) {
+    CV_INSTRUMENT_REGION();
+
+    CirclesGridFinderParameters parameters = parameters_; // parameters.gridType is amended below
+
+    bool isAsymmetricGrid = (flags & CALIB_CB_ASYMMETRIC_GRID) ? true : false;
+    bool isSymmetricGrid  = (flags & CALIB_CB_SYMMETRIC_GRID ) ? true : false;
+    CV_Assert(isAsymmetricGrid ^ isSymmetricGrid);
+
+    std::vector<Point2f> centers;
+
+    std::vector<Point2f> points;
+    const size_t minHomographyPoints = 4ull;
+    if (blobDetector)
+    {
+        std::vector<KeyPoint> keypoints;
+        blobDetector->detect(_image, keypoints);
+
+        if (keypoints.size() < minHomographyPoints || keypoints.size() < (size_t)patternSize.area())
+            return false;
+
+        points.resize(keypoints.size());
+        for (size_t i = 0; i < keypoints.size(); i++)
+            points[i] = keypoints[i].pt;
+    }
+    else
+    {
+        CV_CheckTypeEQ(_image.type(), CV_32FC2, "blobDetector must be provided or image must contains Point2f array (std::vector<Point2f>) with candidates");
+        _image.copyTo(points);
+    }
+
+    // TODO: add sort of points by size and remove the outliers
+
+    const cvflann::KDTreeSingleIndexParams index_params;
+    flann::GenericIndex<flann::L2_Simple<float>> all_points_index(Mat(points).reshape(1, (int)points.size()), index_params);
+    const cvflann::SearchParams search_params(-1);
+
+    int knn = min(8, patternSize.area() - 1);
+    Mat indices((int)points.size(), knn + 1, CV_32S);
+    Mat dists((int)points.size(), knn + 1, CV_32F);
+    std::vector<float> scores(points.size());
+    std::vector<Point2f> neighbors(knn);
+    std::vector<Point2f> hull;
+    for (int i = 0; i < (int)points.size(); i++) {
+        Point2f& cur_point2f = points[i];
+        Mat cur_point(1, 2, CV_32F, &cur_point2f);
+        Mat neighborIndices = indices.row(i);
+        all_points_index.knnSearch(cur_point, neighborIndices, dists.row(i), knn + 1, search_params);
+        for (int i = 0; i < knn; i++)
+            neighbors[i] = points[neighborIndices.at<int>(i+1)];
+        convexHull(neighbors, hull);
+        const float nearest_neighbor_dist = sqrt(dists.at<float>(i, 1));
+        double dist_to_border = pointPolygonTest(hull, cur_point2f, true);
+        //if (cur_point2f.x > 650 && cur_point2f.x < 700 && cur_point2f.y > 440 && cur_point2f.y < 480) {
+        //    std::cout << "1";
+        //}
+        if (dist_to_border > 0.1*nearest_neighbor_dist) {
+            scores[i] = 0.f;
+            continue;
+        }
+        float score = 0.f;
+        for (int j = 2; j < knn + 1; j++) {
+            score += sqrt(dists.at<float>(i, j));
+        }
+        scores[i] = score / nearest_neighbor_dist;
+    }
+
+    // TODO: add sort of points by nearest_neighbor_dist and remove the outliers
+
+    std::vector<int> ids((int)points.size());
+    std::iota(ids.begin(), ids.end(), 0);
+
+    std::sort(ids.begin(), ids.end(),  [&scores](const int &id1, const int &id2)
+    {
+        return scores[id1] > scores[id2];
+    });
+    const int point_border_count = isSymmetricGrid ? (2*(patternSize.height+patternSize.width)-4) :
+                                                     (2*(patternSize.height/2+patternSize.height%2+
+                                                      patternSize.width)-2-patternSize.height%2);
+    Mat image = _image.getMat();
+    for (int i = 0; i < point_border_count; i++) {
+        int id = ids[i];
+        cv::circle(image, points[id], 5, Scalar(255, 255, 255), -1);
+    }
+    for (int i = 0; i < 2; i++) {
+        int id = ids[i];
+        cv::circle(image, points[id], 10, Scalar(150, 150, 150), 5);
+    }
+    imshow("image", image);
+    waitKey(0);
+    return false;
 }
 
 bool findCirclesGrid( InputArray _image, Size patternSize,
