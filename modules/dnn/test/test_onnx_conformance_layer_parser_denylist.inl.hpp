@@ -438,11 +438,3 @@
 "test_unsqueeze_three_axes",  // ---- same as above ---
 "test_unsqueeze_two_axes",   // ---- same as above ---)
 "test_unsqueeze_unsorted_axes",  // ---- same as above ---)
-// // Cumsum related issue: https://github.com/opencv/opencv/issues/24437
-"test_cumsum_1d", //Issue:: output shape creation mismatch
-"test_cumsum_1d_exclusive",  // ---- same as above ---
-"test_cumsum_1d_reverse",  // ---- same as above ---
-"test_cumsum_1d_reverse_exclusive",  // ---- same as above ---
-"test_cumsum_2d_axis_0",  // ---- same as above ---
-"test_cumsum_2d_axis_1",  // ---- same as above ---
-"test_cumsum_2d_negative_axis",  // ---- same as above ---
