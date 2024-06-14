@@ -496,57 +496,38 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
             }
         }
 
+        auto process_value = [&](float& res, float value, bool is_first) {
+            if (operation == "max") {
+                res = is_first ? value : std::max(res, value);
+            } else if (operation == "min") {
+                res = is_first ? value : std::min(res, value);
+            } else {
+                if (is_first) {
+                    if (operation == "sum" || operation == "l1" || operation == "l2" || operation == "sum_square" || operation == "mean") res = 0;
+                    else if (operation == "prod") res = 1;
+                }
+
+                if (operation == "sum" || operation == "mean") res += value;
+                else if (operation == "sum_square") {
+                    if (shape(input).size() == 2 && shape(input)[0] == 1)
+                        res += value;
+                    else
+                        res += value * value;
+                } else if (operation == "l1") res += std::abs(value);
+                else if (operation == "l2") res += value * value;
+                else if (operation == "prod") res *= value;
+                else if (operation == "log_sum") res += std::log(value);
+                else if (operation == "log_sum_exp") res += std::exp(value);
+            }
+        };
+
         for (int r = 0; r < input.rows; ++r) {
             for (int c = 0; c < input.cols; ++c) {
                 float value = input.at<float>(r, c);
                 if (axis == 0) {
-                    float& res = result.at<float>(0, c);
-                    if (operation == "max") {
-                        res = std::max(res, value);
-                    } else if (operation == "min") {
-                        if (r == 0) res = value;
-                        else res = std::min(res, value);
-                    } else if (operation == "mean" || operation == "sum" || operation == "sum_square" || operation == "l1" || operation == "l2" || operation == "prod" || operation == "log_sum" || operation == "log_sum_exp") {
-                        if (r == 0 && (operation == "sum" || operation == "l1" || operation == "l2" || operation == "sum_square" || operation == "mean")) res = 0;
-                        else if (r == 0 && operation == "prod") res = 1;
-
-                        if (operation == "sum" || operation == "mean") res += value;
-                        else if (operation == "sum_square") {
-                            if (shape(input).size() == 2 && shape(input)[0] == 1)
-                                res += value;
-                            else
-                                res += value * value;
-                        }
-                        else if (operation == "l1") res += std::abs(value);
-                        else if (operation == "l2") res += value * value;
-                        else if (operation == "prod") res *= value;
-                        else if (operation == "log_sum") res += std::log(value);
-                        else if (operation == "log_sum_exp") res += std::exp(value);
-                    }
+                    process_value(result.at<float>(0, c), value, r == 0);
                 } else {
-                    float& res = result.at<float>(r, 0);
-                    if (operation == "max") {
-                        res = std::max(res, value);
-                    } else if (operation == "min") {
-                        if (c == 0) res = value;
-                        else res = std::min(res, value);
-                    } else if (operation == "mean" || operation == "sum" || operation == "sum_square" || operation == "l1" || operation == "l2" || operation == "prod" || operation == "log_sum" || operation == "log_sum_exp") {
-                        if (c == 0 && (operation == "sum" || operation == "l1" || operation == "l2" || operation == "sum_square" || operation == "mean")) res = 0;
-                        else if (c == 0 && operation == "prod") res = 1;
-
-                        if (operation == "sum" || operation == "mean") res += value;
-                        else if (operation == "sum_square") {
-                            if (shape(input).size() == 2 && (shape(input)[0] != 1 && shape(input)[1] == 1))
-                                res += value;
-                            else
-                                res += value * value;
-                        }
-                        else if (operation == "l1") res += std::abs(value);
-                        else if (operation == "l2") res += value * value;
-                        else if (operation == "prod") res *= value;
-                        else if (operation == "log_sum") res += std::log(value);
-                        else if (operation == "log_sum_exp") res += std::exp(value);
-                    }
+                    process_value(result.at<float>(r, 0), value, c == 0);
                 }
             }
         }
