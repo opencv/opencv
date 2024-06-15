@@ -3205,6 +3205,14 @@ inline void saturate_store(const float* src, uchar* dst) {
     v_store(dst, v_pack(v_pack_u(tmp0, tmp1), v_pack_u(tmp2, tmp3)));
 }
 
+inline void saturate_store(const float* src, schar* dst) {
+    const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp2 = v_round(vx_load(src + 2 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp3 = v_round(vx_load(src + 3 * VTraits<v_float32>::vlanes()));
+    v_store(dst, v_pack(v_pack(tmp0, tmp1), v_pack(tmp2, tmp3)));
+}
+
 inline void saturate_store(const float* src, ushort* dst) {
     const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
     const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
@@ -3236,6 +3244,18 @@ struct VArea<double> {
     typedef v_float64 vWT;
 };
 
+inline void saturate_store(const double* sum, int width, int* D) {
+    const int step = VTraits<v_float64>::vlanes() * sizeof(double) / sizeof(int);
+    int dx = 0, limit = width - step;
+    for (; dx <= limit; dx += step)
+    {
+        v_store(D + dx, v_round(
+            vx_load(sum + dx + 0 * VTraits<v_float64>::vlanes()),
+            vx_load(sum + dx + 1 * VTraits<v_float64>::vlanes())));
+    }
+    for (; dx < width; ++dx)
+        D[dx] = saturate_cast<int>(sum[dx]);
+}
 #else
 inline void mul(const double* buf, int width, double beta, double* sum) {
     for (int dx = 0; dx < width; ++dx) {
@@ -3247,6 +3267,11 @@ inline void muladd(const double* buf, int width, double beta, double* sum) {
     for (int dx = 0; dx < width; ++dx) {
         sum[dx] += beta * buf[dx];
     }
+}
+
+inline void saturate_store(const double* sum, int width, int* D) {
+    for (int dx = 0; dx < width; ++dx)
+        D[dx] = saturate_cast<int>(sum[dx]);
 }
 #endif
 
@@ -3275,8 +3300,10 @@ inline void mul(const WT* buf, int width, WT beta, WT* sum) {
     int dx = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int step = VTraits<typename VArea<WT>::vWT>::vlanes();
-    for (; dx + step < width; dx += step) {
-        vx_store(sum + dx, v_mul(vx_setall(beta), vx_load(buf + dx)));
+    const typename VArea<WT>::vWT vbeta = vx_setall(beta);
+    int limit = width - step;
+    for (; dx <= limit; dx += step) {
+        vx_store(sum + dx, v_mul(vbeta, vx_load(buf + dx)));
     }
 #endif
     for (; dx < width; ++dx) {
@@ -3289,8 +3316,10 @@ inline void muladd(const WT* buf, int width, WT beta, WT* sum) {
     int dx = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int step = VTraits<typename VArea<WT>::vWT>::vlanes();
-    for (; dx + step < width; dx += step) {
-        vx_store(sum + dx, v_add(vx_load(sum + dx), v_mul(vx_setall(beta), vx_load(buf + dx))));
+    const typename VArea<WT>::vWT vbeta = vx_setall(beta);
+    int limit = width - step;
+    for (; dx <= limit; dx += step) {
+        vx_store(sum + dx, v_add(vx_load(sum + dx), v_mul(vbeta, vx_load(buf + dx))));
     }
 #endif
     for (; dx < width; ++dx) {
@@ -3721,7 +3750,7 @@ public:
             CV_Check(sizeof(T) * 10 + sizeof(WT),
                 (std::is_same<WT, int>::value
                     && (std::is_same<T, uchar>::value || std::is_same<T, schar>::value)),
-                "something wrong");
+                "fixpt works when T is uchar or schar");
         }
         else if (ctrl.is_double)
         {
@@ -3730,7 +3759,7 @@ public:
             CV_Check(sizeof(T) * 10 + sizeof(WT),
                 (std::is_same<WT, double>::value &&
                     (std::is_same<T, int>::value || std::is_same<T, double>::value)),
-                "something wrong");
+                "double WT works when T is int or double");
          }
         else
         {
@@ -3740,13 +3769,13 @@ public:
                 (std::is_same<WT, float>::value
                     && (std::is_same<T, short>::value || std::is_same<T, ushort>::value
                         || std::is_same<T, float>::value)),
-                "something wrong");
+                "float WT works for other types");
         }
         // check antialias resize
         if (ctrl.is_double)
         {
             CV_Check(ctrl.is_double, (std::is_same<IdxT, double>::value),
-                "when use double coeffs, AT is expected to be double");
+                "when use double coeffs, IdxT is expected to be double");
         }
         else
         {
@@ -3827,18 +3856,21 @@ public:
             horiAntialiasAccumulate(S, L);
             if (!same_wt_idxt)
             {
-                WT* D = dstptr[i];
-                if (ctrl.is_fixpt)
-                {
-                    float const alpha = INTER_RESIZE_COEF_SCALE;
-                    for (int k = 0; k < dwidth; ++k)
-                        D[k] = saturate_cast<WT>(L[k] * alpha);
-                }
-                else
-                {
-                    for (int k = 0; k < dwidth; ++k)
-                        D[k] = saturate_cast<WT>(L[k]);
-                }
+                // only when is_fixpt, wt (int) and idxt (float) can be different
+                CV_Check(ctrl.is_fixpt, ctrl.is_fixpt && (std::is_same<IdxT, float>::value)
+                    && (std::is_same<WT, int>::value), "");
+                float* Lf = reinterpret_cast<float*>(L);
+                int* D = reinterpret_cast<int*>(dstptr[i]);
+                float const alpha = INTER_RESIZE_COEF_SCALE;
+                int k = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                v_float32 valpha = vx_setall_f32(alpha);
+                int limit = dwidth - VTraits<v_float32>::vlanes();
+                for (; k <= limit; k += VTraits<v_float32>::vlanes())
+                    v_store(D + k, v_round(v_mul(vx_load(Lf + k), valpha)));
+#endif
+                for (; k < dwidth; ++k)
+                    D[k] = cvRound(Lf[k] * alpha);
             }
         }
     }
@@ -3866,7 +3898,6 @@ public:
         for (int dy = range.start; dy < range.end; ++dy)
         {
             int tstart = dy * ctrl.ykanti, tend = tstart + ctrl.ykanti;
-            memset(A, 0, dwidth * sizeof(IdxT));
             for (int t = tstart; t < tend; ++t)
             {
                 CV_DbgCheckEQ(dy, ctrl.ytab[t].di, "something wrong");
@@ -3878,21 +3909,28 @@ public:
                 {
                     memset(L, 0, dwidth * sizeof(IdxT));
                     horiAntialiasAccumulate(S, L);
-                    for (int w = 0; w < dwidth; ++w)
-                        A[w] += L[w] * beta;
+                    if (t == tstart)
+                        inter_area::mul(L, dwidth, beta, A);
+                    else
+                        inter_area::muladd(L, dwidth, beta, A);
                 }
                 else
                 {
+                    // A & Lw maybe different type, can not use inter_area
+                    // A double : Lw double
+                    // A float  : Lw float / int
                     horiGenericLines(&S, &Lw, 1);
                     if (ctrl.is_fixpt)
                         beta /= INTER_RESIZE_COEF_SCALE;
-                    for (int w = 0; w < dwidth; ++w)
-                        A[w] += Lw[w] * beta;
+                    if (t == tstart)
+                        for (int w = 0; w < dwidth; ++w)
+                            A[w] = saturate_cast<IdxT>(Lw[w] * beta);
+                    else
+                        for (int w = 0; w < dwidth; ++w)
+                            A[w] += Lw[w] * beta;
                 }
             }
-            T* D = dst.template ptr<T>(dy);
-            for (int w = 0; w < dwidth; ++w)
-                D[w] = saturate_cast<T>(A[w]);
+            inter_area::saturate_store(A, dwidth, dst.template ptr<T>(dy));
         }
     }
 
@@ -5317,7 +5355,6 @@ void cv::resizeOnnx(InputArray _src, OutputArray _dst,
         func = cubic_tab[depth];
     else
         CV_Error(CV_StsBadArg, format("Unknown sampler %d", sampler));
-    CV_Check(0, func, "empty implementation in area fast");
 
     func(src, dst, ctrl);
 }
