@@ -131,6 +131,12 @@ namespace cv { namespace dnn {
             copyMatToTensorImpl(srcMat, destTensor, stream);
         }
 
+        template <> inline
+        void copyMatToTensor(const Mat& srcMat, const TensorSpan<bool> destTensor, const Stream& stream) {
+            CV_CheckTypeEQ(srcMat.type(), CV_Bool, "");
+            copyMatToTensorImpl(srcMat, destTensor, stream);
+        }
+
         /** @brief copies data from a TensorType to a cv::Mat
          *
          * \tparam  T   the type of the elements contained in TensorType object
