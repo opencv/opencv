@@ -5,17 +5,18 @@
 if (cv.getBuildInformation === undefined) {
     // WASM
     QUnit.test("init_cv", (assert) => {
-        const done = assert.async();
-        assert.ok(true);
         if (cv instanceof Promise) {
+            const done = assert.async();
             cv.then((ready_cv) => {
                 cv = ready_cv;
                 done();
             });
         } else {
+            const done = assert.async();
             cv['onRuntimeInitialized'] = () => {
                 done();
             }
         }
+        assert.ok(true);
     });
 }
