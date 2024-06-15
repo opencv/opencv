@@ -195,7 +195,7 @@ OCL_PERF_TEST_P(ResizeLinearExactFixture, Resize,
 typedef tuple<Size, MatType, double> ResizeOnnxParams;
 typedef TestBaseWithParam<ResizeOnnxParams> ResizeOnnxFixture;
 
-OCL_PERF_TEST_P(ResizeOnnxFixture, ResizeAntialias,
+OCL_PERF_TEST_P(ResizeOnnxFixture, LinearAntialias,
     Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, Values(0.3, 0.5, 0.6)))
 {
     const ResizeOnnxParams params = GetParam();

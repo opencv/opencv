@@ -282,10 +282,10 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNNExact,
 
 // The complexity of non-antialias and NN resize is same as that in cv::resize
 // The complexity of antialias resize is ralated to dst size and ceil(1.0 / scale)
-PERF_TEST_P(MatInfo_Size_Size, ResizeOnnxDownLinearAntialias, Combine(
-    Values(CV_8UC1, CV_16UC1, CV_16UC4, CV_32SC1, CV_32FC1, CV_32FC3),
-    Values(sz1440p),
-    Values(szVGA, szqHD, sz720p, sz1080p)
+PERF_TEST_P(MatInfo_Size_Size, ResizeOnnxLinearAntialias, Combine(
+    Values(CV_8UC1, CV_8UC3, CV_8UC4),
+    Values(sz1080p),
+    Values(szVGA, szqHD, sz720p)
 ))
 {
     int matType = get<0>(GetParam());
