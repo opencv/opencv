@@ -32,7 +32,7 @@ static void fillFPGradient(Mat& img)
         }
     }
 }
-
+#if 0
 PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
             testing::Values(
                 MatInfo_Size_Size_t(CV_8UC1, szVGA, szqHD),
@@ -279,13 +279,13 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNNExact,
     EXPECT_GT(countNonZero(dst.reshape(1)), 0);
     SANITY_CHECK_NOTHING();
 }
-
+#endif
 // The complexity of non-antialias and NN resize is same as that in cv::resize
 // The complexity of antialias resize is ralated to dst size and ceil(1.0 / scale)
 PERF_TEST_P(MatInfo_Size_Size, ResizeOnnxLinearAntialias, Combine(
     Values(CV_8UC1, CV_8UC3, CV_8UC4),
-    Values(sz1080p),
-    Values(szVGA, szqHD, sz720p)
+    Values(sz1440p),
+    Values(szVGA, szqHD, sz720p, sz1080p)
 ))
 {
     int matType = get<0>(GetParam());

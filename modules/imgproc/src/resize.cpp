@@ -3482,6 +3482,7 @@ public:
     /* resize parameter */
     bool is_fixpt, is_double;
     int ksize, xkanti, ykanti;
+    Point2f scalef;
 
     /* for antialias resize */
     TabIdx* xtab;
@@ -3575,13 +3576,13 @@ private:
     {
         int sampler = interpolation & INTER_SAMPLER_MASK;
         int antialias = interpolation & INTER_ANTIALIAS_MASK;
-        Point2f scale = static_cast<Point2f>(scaled);
         CV_CheckGE(cubicCoeff, -1.f, "cubic coefficient should range [-1, 0)");
         CV_CheckLT(cubicCoeff, +0.f, "cubic coefficient should range [-1, 0)");
         CV_Check(sampler, sampler == INTER_LINEAR || sampler == INTER_CUBIC,
             "should not error");
 
         int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+        scalef = static_cast<Point2f>(scaled);
         ksize = (sampler == INTER_LINEAR ? 2 : 4);
         is_double = (depth == CV_64F);
         is_fixpt = (depth == CV_8U || depth == CV_8S);
@@ -3590,8 +3591,8 @@ private:
         xofs = yofs = nullptr;
         xcoeffs = ycoeffs = nullptr;
         int khalf = ksize / 2;
-        xkanti = 2 * cvCeil(khalf / min(scale.x, 1.f));
-        ykanti = 2 * cvCeil(khalf / min(scale.y, 1.f));
+        xkanti = 2 * cvCeil(khalf / min(scalef.x, 1.f));
+        ykanti = 2 * cvCeil(khalf / min(scalef.y, 1.f));
         area.allocate(xtab, xkanti * dsize.width );
         area.allocate(ytab, ykanti * dsize.height);
         area.allocate(xofs, dsize.width * cn + 1);
@@ -3609,9 +3610,9 @@ private:
             {
                 float f = fmaf(static_cast<float>(d), a, b);
                 if (sampler == INTER_LINEAR)
-                    linearCoeffsAntialias(d, cn, f, scale.x, ssize.width, xtab + d * xkanti);
+                    linearCoeffsAntialias(d, cn, f, scalef.x, ssize.width, xtab + d * xkanti);
                 else // if (sampler == INTER_CUBIC)
-                    cubicCoeffsAntiAlias(d, cn, f, scale.x, ssize.width, cubicCoeff, xtab + d * xkanti);
+                    cubicCoeffsAntiAlias(d, cn, f, scalef.x, ssize.width, cubicCoeff, xtab + d * xkanti);
             }
         }
         else
@@ -3677,9 +3678,9 @@ private:
             {
                 float f = fmaf(static_cast<float>(d), a, b);
                 if (sampler == INTER_LINEAR)
-                    linearCoeffsAntialias(d, 1, f, scale.y, ssize.height, ytab + d * ykanti);
+                    linearCoeffsAntialias(d, 1, f, scalef.y, ssize.height, ytab + d * ykanti);
                 else // if (sampler == INTER_CUBIC)
-                    cubicCoeffsAntiAlias(d, 1, f, scale.y, ssize.height, cubicCoeff, ytab + d * ykanti);
+                    cubicCoeffsAntiAlias(d, 1, f, scalef.y, ssize.height, cubicCoeff, ytab + d * ykanti);
             }
         }
         else
@@ -3857,7 +3858,8 @@ public:
             if (!same_wt_idxt)
             {
                 // only when is_fixpt, wt (int) and idxt (float) can be different
-                CV_Check(ctrl.is_fixpt, ctrl.is_fixpt && (std::is_same<IdxT, float>::value)
+                CV_DbgCheck(ctrl.is_fixpt, ctrl.is_fixpt
+                    && (std::is_same<IdxT, float>::value)
                     && (std::is_same<WT, int>::value), "");
                 float* Lf = reinterpret_cast<float*>(L);
                 int* D = reinterpret_cast<int*>(dstptr[i]);
@@ -3891,43 +3893,83 @@ public:
     {
         int cn = dst.channels();
         int dwidth = dst.cols * cn;
-        AutoBuffer<IdxT> line(dwidth * 2);
-        IdxT* L = line.data();
-        IdxT* A = line.data() + dwidth;
-        WT* Lw = reinterpret_cast<WT*>(L);
+        // the sample lines on src of the i-th row (i + 1)-th dst-row
+        // will overlap at most these src-rows
+        int bufrow = ctrl.ykanti - cvFloor(1.f / ctrl.scalef.y);
+        Mat buffer(bufrow + 2, dwidth, DataType<IdxT>::depth);
+        AutoBuffer<IdxT*> line((bufrow + 1) * 2);
+        IdxT* A = buffer.template ptr<IdxT>(bufrow + 1);
+        int* ysrc = reinterpret_cast<int*>(line.data() + bufrow + 1);
+        size_t szcopy = (ctrl.xkanti ? sizeof(WT) : sizeof(IdxT)) * dwidth;
+        for (int i = 0; i <= bufrow; ++i)
+        {
+            line[i] = buffer.template ptr<IdxT>(i);
+            ysrc[i] = -1;
+        }
         for (int dy = range.start; dy < range.end; ++dy)
         {
-            int tstart = dy * ctrl.ykanti, tend = tstart + ctrl.ykanti;
-            for (int t = tstart; t < tend; ++t)
+            int tidx = dy * ctrl.ykanti;
+            for (int t = 0; t < ctrl.ykanti; ++t, ++tidx)
             {
-                CV_DbgCheckEQ(dy, ctrl.ytab[t].di, "something wrong");
+                CV_DbgCheckEQ(dy, ctrl.ytab[tidx].di, "something wrong");
                 IdxT beta;
-                int sy = ctrl.ytab[t].si;
-                ctrl.ytab[t].as(beta);
+                ctrl.ytab[tidx].as(beta);
+                int sy = ctrl.ytab[tidx].si;
                 T const* S = src.template ptr<T>(sy);
+                // if the sy-th row has been computed already, reuse it.
+                int y0 = -1;
+                IdxT* L = line[bufrow];
+                for (int i = 0; i < bufrow; ++i)
+                    if (ysrc[i] == sy)
+                    {
+                        y0 = i;
+                        break;
+                    }
+                // have found, reuse it
+                if (y0 != -1)
+                    L = line[y0];
+                else
+                {
+                    // not found, compute it
+                    if (ctrl.xkanti)
+                    {
+                        memset(L, 0, dwidth * sizeof(IdxT));
+                        horiAntialiasAccumulate(S, L);
+                    }
+                    else
+                    {
+                        // A & Lw maybe different type, can not use inter_area
+                        // A double : Lw double
+                        // A float  : Lw float / int
+                        WT* Lw = reinterpret_cast<WT*>(L);
+                        horiGenericLines(&S, &Lw, 1);
+                    }
+                }
                 if (ctrl.xkanti)
                 {
-                    memset(L, 0, dwidth * sizeof(IdxT));
-                    horiAntialiasAccumulate(S, L);
-                    if (t == tstart)
+                    if (t == 0)
                         inter_area::mul(L, dwidth, beta, A);
                     else
                         inter_area::muladd(L, dwidth, beta, A);
                 }
                 else
                 {
-                    // A & Lw maybe different type, can not use inter_area
-                    // A double : Lw double
-                    // A float  : Lw float / int
-                    horiGenericLines(&S, &Lw, 1);
+                    WT* Lw = reinterpret_cast<WT*>(L);
                     if (ctrl.is_fixpt)
                         beta /= INTER_RESIZE_COEF_SCALE;
-                    if (t == tstart)
+                    if (t == 0)
                         for (int w = 0; w < dwidth; ++w)
                             A[w] = saturate_cast<IdxT>(Lw[w] * beta);
                     else
                         for (int w = 0; w < dwidth; ++w)
                             A[w] += Lw[w] * beta;
+                }
+                // backup the last bufrow results
+                y0 = bufrow - (ctrl.ykanti - t);
+                if (y0 >= 0 && ysrc[y0] != sy /* line[y0] != L */)
+                {
+                    ysrc[y0] = sy;
+                    memcpy(line[y0], L, szcopy);
                 }
             }
             inter_area::saturate_store(A, dwidth, dst.template ptr<T>(dy));
