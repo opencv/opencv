@@ -182,7 +182,6 @@
 "test_max_uint32", // output type (uint32) mismatched
 "test_max_uint64", // output type (uint64) mismatched
 "test_max_uint8",  // output type (uint8) mismatched
-"test_mean_example", // accuracy
 "test_min_int16", // output type (int16) mismatched
 "test_min_int32", // output type (int32) mismatched
 "test_min_int64", // output type (int64) mismatched

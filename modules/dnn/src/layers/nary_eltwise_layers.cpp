@@ -532,32 +532,32 @@ public:
                     T* ptr = (T*)(ptrs[0]);
                     if (dp == 1 && dp1 == 1 && dp2 == 1) {
                         for (int i = 0; i < plane_size; i++) {
-                            ptr[i] = op(ptr1[i], ptr2[i]);
+                            ptr[i] = saturate_cast<T>(op(ptr1[i], ptr2[i]) * scale);
                         }
                         for (int j = 2; j < ninputs; j++) {
                             int dpj = steps[j + 1].back();
                             const T* ptrj = (const T*)(ptrs[j + 1]);
                             if (dpj == 1) {
                                 for (int i = 0; i < plane_size; i++) {
-                                    ptr[i] = saturate_cast<T>(op(ptr[i], ptrj[i]) * scale);
+                                    ptr[i] = op(ptr[i], saturate_cast<T>(ptrj[i] * scale));
                                 }
                             } else {
                                 for (int i = 0; i < plane_size; i++, ptrj += dpj) {
-                                    ptr[i] = saturate_cast<T>(op(ptr[i], *ptrj) * scale);
+                                    ptr[i] = op(ptr[i], saturate_cast<T>(*ptrj * scale));
                                 }
                             }
                         }
                     } else {
                         auto *tmp = ptr;
                         for (int i = 0; i < plane_size; i++, ptr += dp, ptr1 += dp1, ptr2 += dp2) {
-                            *ptr = op(*ptr1, *ptr2);
+                            *ptr = saturate_cast<T>(op(*ptr1, *ptr2) * scale);
                         }
                         ptr = tmp;
                         for (int j = 2; j < ninputs; j++) {
                             int dpj = steps[j + 1].back();
                             const T* ptrj = (const T*)(ptrs[j + 1]);
                             for (int i = 0; i < plane_size; i++, ptr += dp, ptrj += dpj) {
-                                *ptr = saturate_cast<T>(op(*ptr, *ptrj) * scale);
+                                *ptr = op(*ptr, saturate_cast<T>(*ptrj * scale));
                             }
                         }
                     }
@@ -846,8 +846,9 @@ public:
                     break;
                 }
                 case OPERATION::MEAN: {
-                    auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
-                    nary_forward<T>(mean, T{1} / ninputs, std::forward<Args>(args)...);
+                    // Sum up inputs and then calculate mean by scale = 1 / ninputs
+                    auto sum = [](const T &a, const T &b) { return a + b; };
+                    nary_forward<T>(sum, T{1} / ninputs, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::MIN: {
