@@ -2273,12 +2273,12 @@ TEST(Core_Eigen, cv2eigen_check_RowMajor)
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> eigen_A;
     EXPECT_NO_THROW(cv2eigen(A, eigen_A));
 
-    ASSERT_EQ(eigen_A(0, 0), 1.0);
-    ASSERT_EQ(eigen_A(0, 1), 2.0);
-    ASSERT_EQ(eigen_A(1, 0), 3.0);
-    ASSERT_EQ(eigen_A(1, 1), 4.0);
-    ASSERT_EQ(eigen_A(2, 0), 5.0);
-    ASSERT_EQ(eigen_A(2, 1), 6.0);
+    ASSERT_EQ(1.0, eigen_A(0, 0));
+    ASSERT_EQ(2.0, eigen_A(0, 1));
+    ASSERT_EQ(3.0, eigen_A(1, 0));
+    ASSERT_EQ(4.0, eigen_A(1, 1));
+    ASSERT_EQ(5.0, eigen_A(2, 0));
+    ASSERT_EQ(6.0, eigen_A(2, 1));
 }
 #endif // HAVE_EIGEN
 
