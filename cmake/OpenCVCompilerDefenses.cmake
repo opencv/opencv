@@ -4,6 +4,7 @@
 # - https://www.owasp.org/index.php/C-Based_Toolchain_Hardening
 # - https://wiki.debian.org/Hardening
 # - https://wiki.gentoo.org/wiki/Hardened/Toolchain
+# - https://docs.microsoft.com/en-us/cpp/build/reference/qspectre
 # - https://docs.microsoft.com/en-us/cpp/build/reference/sdl-enable-additional-security-checks
 # - https://developer.apple.com/library/archive/documentation/Security/Conceptual/SecureCodingGuide/Articles/BufferOverflows.html
 
@@ -39,6 +40,7 @@ if(MSVC)
   ocv_add_defense_compiler_flag("/GS")
   ocv_add_defense_compiler_flag("/sdl")
   ocv_add_defense_compiler_flag("/guard:cf")
+  ocv_add_defense_compiler_flag("/Qspectre")
   ocv_add_defense_compiler_flag("/w34018 /w34146 /w34244 /w34267 /w34302 /w34308 /w34509 /w34532 /w34533 /w34700 /w34789 /w34995 /w34996")
   set(OPENCV_LINKER_DEFENSES_FLAGS_COMMON "${OPENCV_LINKER_DEFENSES_FLAGS_COMMON} /guard:cf /dynamicbase" )
   if(NOT X86_64)
