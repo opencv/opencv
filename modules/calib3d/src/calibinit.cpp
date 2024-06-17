@@ -2116,9 +2116,17 @@ bool findCirclesGridNew(InputArray _image, Size patternSize,
     int knn = min(8, patternSize.area() - 1);
     Mat indices((int)points.size(), knn + 1, CV_32S);
     Mat dists((int)points.size(), knn + 1, CV_32F);
-    std::vector<float> scores(points.size());
     std::vector<Point2f> neighbors(knn);
     std::vector<Point2f> hull;
+    const int pointBorderCount = isSymmetricGrid ? (2*(patternSize.height+patternSize.width)-4) :
+                                                   (2*(patternSize.height/2+patternSize.height%2+
+                                                    patternSize.width)-2-patternSize.height%2);
+    std::vector<int> borderPointsIds;
+    borderPointsIds.reserve(pointBorderCount);
+    std::vector<bool> isBorder(points.size());
+
+    // TODO: add sort of points by nearest_neighbor_dist and remove the outliers
+
     for (int i = 0; i < (int)points.size(); i++) {
         Point2f& cur_point2f = points[i];
         Mat cur_point(1, 2, CV_32F, &cur_point2f);
@@ -2128,42 +2136,25 @@ bool findCirclesGridNew(InputArray _image, Size patternSize,
             neighbors[i] = points[neighborIndices.at<int>(i+1)];
         convexHull(neighbors, hull);
         const float nearest_neighbor_dist = sqrt(dists.at<float>(i, 1));
-        double dist_to_border = pointPolygonTest(hull, cur_point2f, true);
-        //if (cur_point2f.x > 650 && cur_point2f.x < 700 && cur_point2f.y > 440 && cur_point2f.y < 480) {
-        //    std::cout << "1";
-        //}
-        if (dist_to_border > 0.1*nearest_neighbor_dist) {
-            scores[i] = 0.f;
-            continue;
+        const double dist_to_border = pointPolygonTest(hull, cur_point2f, true);
+        if (dist_to_border < 0.1*nearest_neighbor_dist) {
+            borderPointsIds.push_back(i);
+            isBorder[i] = true;
         }
-        float score = 0.f;
-        for (int j = 2; j < knn + 1; j++) {
-            score += sqrt(dists.at<float>(i, j));
-        }
-        scores[i] = score / nearest_neighbor_dist;
     }
 
-    // TODO: add sort of points by nearest_neighbor_dist and remove the outliers
+    if ((int)borderPointsIds.size() != pointBorderCount)
+        return false;
 
-    std::vector<int> ids((int)points.size());
-    std::iota(ids.begin(), ids.end(), 0);
-
-    std::sort(ids.begin(), ids.end(),  [&scores](const int &id1, const int &id2)
-    {
-        return scores[id1] > scores[id2];
-    });
-    const int point_border_count = isSymmetricGrid ? (2*(patternSize.height+patternSize.width)-4) :
-                                                     (2*(patternSize.height/2+patternSize.height%2+
-                                                      patternSize.width)-2-patternSize.height%2);
     Mat image = _image.getMat();
-    for (int i = 0; i < point_border_count; i++) {
-        int id = ids[i];
+    for (int i = 0; i < borderPointsIds.size(); i++) {
+        int id = borderPointsIds[i];
         cv::circle(image, points[id], 5, Scalar(255, 255, 255), -1);
     }
-    for (int i = 0; i < 2; i++) {
-        int id = ids[i];
-        cv::circle(image, points[id], 10, Scalar(150, 150, 150), 5);
-    }
+    //for (int i = 0; i < 2; i++) {
+    //    int id = ids[i];
+    //    cv::circle(image, points[id], 10, Scalar(150, 150, 150), 5);
+    //}
     imshow("image", image);
     waitKey(0);
     return false;
