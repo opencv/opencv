@@ -24,8 +24,8 @@ TrackerVit::~TrackerVit()
 TrackerVit::Params::Params()
 {
     net = "vitTracker.onnx";
-    meanvalue = Scalar{0.485, 0.456, 0.406};
-    stdvalue = Scalar{0.229, 0.224, 0.225};
+    meanvalue = Scalar{0.485, 0.456, 0.406}; // normalized mean (already divided by 255)
+    stdvalue = Scalar{0.229, 0.224, 0.225};  // normalized std (already divided by 255)
 #ifdef HAVE_OPENCV_DNN
     backend = dnn::DNN_BACKEND_DEFAULT;
     target = dnn::DNN_TARGET_CPU;
@@ -49,6 +49,9 @@ public:
 
         net.setPreferableBackend(params.backend);
         net.setPreferableTarget(params.target);
+
+        i2bp.mean = params.meanvalue * 255.0;
+        i2bp.scalefactor = (1.0 / params.stdvalue) * (1 / 255.0);
     }
 
     void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
@@ -59,6 +62,7 @@ public:
     float tracking_score;
 
     TrackerVit::Params params;
+    dnn::Image2BlobParams i2bp;
 
 
 protected:
@@ -99,17 +103,7 @@ void TrackerVitImpl::preprocess(const Mat& src, Mat& dst, Size size)
     Mat img;
     resize(src, img, size);
 
-    dst = dnn::blobFromImage(img, 1.0, Size(), Scalar(), false);
-    dst /= 255;
-    int inner_size = size.width * size.height;
-    for (int i = 0; i < 3; i++) {
-        float _mean = params.meanvalue[i],
-              _std = params.stdvalue[i];
-        auto *dst_ptr = dst.ptr<float>() + i * inner_size;
-        for (int j = 0; j < inner_size; j++) {
-            dst_ptr[j] = (dst_ptr[j] - _mean) / _std;
-        }
-    }
+    dst = dnn::blobFromImageWithParams(img, i2bp);
 }
 
 static Mat hann1d(int sz, bool centered = true) {
