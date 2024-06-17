@@ -503,7 +503,9 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
                 res = is_first ? value : std::min(res, value);
             } else {
                 if (is_first) {
-                    if (operation == "sum" || operation == "l1" || operation == "l2" || operation == "sum_square" || operation == "mean") res = 0;
+                    if (operation == "sum" || operation == "l1" || operation == "l2"
+                        || operation == "sum_square" || operation == "mean" || operation == "log_sum"
+                        || operation == "log_sum_exp") res = 0;
                     else if (operation == "prod") res = 1;
                 }
 
