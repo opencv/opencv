@@ -593,10 +593,10 @@ class Bayer2Gray_Invoker :
     public ParallelLoopBody
 {
 public:
-    Bayer2Gray_Invoker(const Mat& _srcmat, Mat& _dstmat, int _start_with_green, bool _brow,
+    Bayer2Gray_Invoker(const Mat& _srcmat, Mat& _dstmat, int _start_with_green,
         const Size& _size, int _bcoeff, int _rcoeff) :
         ParallelLoopBody(), srcmat(_srcmat), dstmat(_dstmat), Start_with_green(_start_with_green),
-        Brow(_brow), size(_size), Bcoeff(_bcoeff), Rcoeff(_rcoeff)
+        size(_size), Bcoeff(_bcoeff), Rcoeff(_rcoeff)
     {
     }
 
@@ -612,13 +612,11 @@ public:
         int dst_step = (int)(dstmat.step/sizeof(T));
         int bcoeff = Bcoeff, rcoeff = Rcoeff;
         int start_with_green = Start_with_green;
-        bool brow = Brow;
 
         dst0 += dst_step + 1;
 
         if (range.start % 2)
         {
-            brow = !brow;
             std::swap(bcoeff, rcoeff);
             start_with_green = !start_with_green;
         }
@@ -680,7 +678,6 @@ public:
             dst0[-1] = dst0[0];
             dst0[size.width] = dst0[size.width-1];
 
-            brow = !brow;
             std::swap(bcoeff, rcoeff);
             start_with_green = !start_with_green;
         }
@@ -690,7 +687,6 @@ private:
     Mat srcmat;
     Mat dstmat;
     int Start_with_green;
-    bool Brow;
     Size size;
     int Bcoeff, Rcoeff;
 };
@@ -704,11 +700,9 @@ static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
     Size size = srcmat.size();
     int bcoeff = B2Y, rcoeff = R2Y;
     int start_with_green = code == COLOR_BayerGB2GRAY || code == COLOR_BayerGR2GRAY;
-    bool brow = true;
 
     if( code != COLOR_BayerBG2GRAY && code != COLOR_BayerGB2GRAY )
     {
-        brow = false;
         std::swap(bcoeff, rcoeff);
     }
     size.height -= 2;
@@ -718,7 +712,7 @@ static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
     {
         Range range(0, size.height);
         Bayer2Gray_Invoker<T, SIMDInterpolator> invoker(srcmat, dstmat,
-            start_with_green, brow, size, bcoeff, rcoeff);
+            start_with_green, size, bcoeff, rcoeff);
         parallel_for_(range, invoker, dstmat.total()/static_cast<double>(1<<16));
     }
 
