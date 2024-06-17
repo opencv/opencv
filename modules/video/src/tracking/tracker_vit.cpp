@@ -33,7 +33,7 @@ TrackerVit::Params::Params()
     backend = -1;  // invalid value
     target = -1;  // invalid value
 #endif
-    tracking_score_threshold = 0.20f; // save threshold to filter out black frames
+    tracking_score_threshold = 0.20f; // safe threshold to filter out black frames
 }
 
 #ifdef HAVE_OPENCV_DNN
