@@ -267,9 +267,10 @@ class Builder:
             cmake_vars['WITH_ANDROID_MEDIANDK'] = "OFF"
 
         if self.hwasan and "arm64" in abi.name:
+            cmake_vars['OPENCV_ENABLE_MEMORY_SANITIZER'] = "ON"
             hwasan_flags = "-fno-omit-frame-pointer -fsanitize=hwaddress"
-            for s in ['CMAKE_CXX_FLAGS_DEBUG',   'CMAKE_C_FLAGS_DEBUG',   'CMAKE_LINKER_FLAGS_DEBUG',
-                      'CMAKE_CXX_FLAGS_RELEASE', 'CMAKE_C_FLAGS_RELEASE', 'CMAKE_LINKER_FLAGS_RELEASE']:
+            for s in ['OPENCV_EXTRA_C_FLAGS', 'OPENCV_EXTRA_CXX_FLAGS', 'OPENCV_EXTRA_EXE_LINKER_FLAGS',
+                      'OPENCV_EXTRA_SHARED_LINKER_FLAGS', 'OPENCV_EXTRA_MODULE_LINKER_FLAGS']:
                 cmake_vars[s] = hwasan_flags
 
         cmake_vars.update(abi.cmake_vars)
