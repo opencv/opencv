@@ -16,6 +16,7 @@ const char *keys =
         "{ help     h  |   | Print help message }"
         "{ input    i  |   | Full path to input video folder, the specific camera index. (empty for camera 0) }"
         "{ net    | vitTracker.onnx | Path to onnx model of vitTracker.onnx}"
+        "{ tracking_score_threshold t | 0.3 | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }"
         "{ backend     | 0 | Choose one of computation backends: "
                             "0: automatically (by default), "
                             "1: Halide language (http://halide-lang.org/), "
@@ -49,6 +50,7 @@ int run(int argc, char** argv)
     std::string net = parser.get<String>("net");
     int backend = parser.get<int>("backend");
     int target = parser.get<int>("target");
+    float tracking_score_threshold = parser.get<float>("tracking_score_threshold");
 
     Ptr<TrackerVit> tracker;
     try
@@ -57,6 +59,7 @@ int run(int argc, char** argv)
         params.net = samples::findFile(net);
         params.backend = backend;
         params.target = target;
+        params.tracking_score_threshold = tracking_score_threshold;
         tracker = TrackerVit::create(params);
     }
     catch (const cv::Exception& ee)
@@ -108,6 +111,11 @@ int run(int argc, char** argv)
 
     Rect selectRect = selectROI(winName, image_select);
     std::cout << "ROI=" << selectRect << std::endl;
+    if (selectRect.empty())
+    {
+        std::cerr << "Invalid ROI!" << std::endl;
+        return 2;
+    }
 
     tracker->init(image, selectRect);
 
@@ -130,30 +138,29 @@ int run(int argc, char** argv)
 
         float score = tracker->getTrackingScore();
 
-        std::cout << "frame " << count <<
-            ": predicted score=" << score <<
-            "  rect=" << rect <<
-            "  time=" << tickMeter.getTimeMilli() << "ms" <<
-            std::endl;
+        std::cout << "frame " << count;
+        if (ok) {
+            std::cout << ": predicted score=" << score <<
+                         "\trect=" << rect <<
+                         "\ttime=" << tickMeter.getTimeMilli() << "ms" << std::endl;
 
-        Mat render_image = image.clone();
-
-        if (ok)
-        {
-            rectangle(render_image, rect, Scalar(0, 255, 0), 2);
+            rectangle(image, rect, Scalar(0, 255, 0), 2);
 
             std::string timeLabel = format("Inference time: %.2f ms", tickMeter.getTimeMilli());
             std::string scoreLabel = format("Score: %f", score);
-            putText(render_image, timeLabel, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-            putText(render_image, scoreLabel, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+            putText(image, timeLabel, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+            putText(image, scoreLabel, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        } else {
+            std::cout << ": target lost" << std::endl;
+            putText(image, "Target lost", Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 255));
         }
 
-        imshow(winName, render_image);
+        imshow(winName, image);
 
         tickMeter.reset();
 
         int c = waitKey(1);
-        if (c == 27 /*ESC*/)
+        if (c == 27 /*ESC*/ || c == 'q' || c == 'Q')
             break;
     }
 
