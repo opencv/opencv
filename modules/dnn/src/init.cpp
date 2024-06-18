@@ -164,6 +164,8 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(InstanceNormalization, InstanceNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Attention,      AttentionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GroupNormalization, GroupNormLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(DepthToSpace,   DepthSpaceLayer)
+    CV_DNN_REGISTER_LAYER_CLASS(SpaceToDepth,   DepthSpaceLayer)
 
     CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);

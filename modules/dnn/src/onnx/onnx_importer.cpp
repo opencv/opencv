@@ -2916,82 +2916,11 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     // We parse "DepthToSpace" and "SpaceToDepth" in this function.
-    opencv_onnx::NodeProto node_proto = node_proto_;
-    const std::string& layer_type = node_proto.op_type();
-    CV_Assert(layer_type == "DepthToSpace" || layer_type == "SpaceToDepth");
+    layerParams.set("op_type", node_proto.op_type());
 
-    // Get blocksize
-    CV_Assert(layerParams.has("blocksize"));
-    int blocksize = layerParams.get<int>("blocksize");
-    CV_Assert(blocksize > 0);
-
-    // Get mode, only for "DepthToSpace"
-    std::string modeType = layerParams.get<std::string>("mode", "DCR");
-
-    MatShape inpShape = outShapes[node_proto.input(0)];
-    CV_Assert(inpShape.size() == 4);
-    int N = inpShape[0], C = inpShape[1], H = inpShape[2], W = inpShape[3];
-
-    // Implement DepthToSpace and SpaceToDepth by the Reshape and Permute layer.
-    std::array<int, 6> shape0, perm;
-    std::array<int, 4> shape1;
-
-    if (layer_type == "DepthToSpace")
-    {
-        if (modeType == "DCR")
-        {
-            shape0 = {N, blocksize, blocksize, C/(blocksize * blocksize), H, W};
-            perm = {0, 3, 4, 1, 5, 2};
-            shape1 = {N, C/(blocksize * blocksize), H * blocksize, W * blocksize};
-        }
-        else if (modeType == "CRD")
-        {
-            shape0 = {N, C/(blocksize * blocksize), blocksize, blocksize, H, W};
-            perm = {0, 1, 4, 2, 5, 3};
-            shape1 = {N, C/(blocksize * blocksize), H * blocksize, W * blocksize};
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "The mode of " + modeType + " in " + layer_type + " Layer is not supported");
-    }
-    else // SpaceToDepth
-    {
-        shape0 = {N, C, H/blocksize, blocksize, W/blocksize, blocksize};
-        perm = {0, 3, 5, 1, 2, 4};
-        shape1 = {N, C * blocksize * blocksize, H/blocksize, W/blocksize};
-    }
-
-    // Step1: Reshape
-    LayerParams reshapeLp;
-    reshapeLp.name = layerParams.name + "/reshape";
-    reshapeLp.type = "Reshape";
-    CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
-    reshapeLp.set("dim", DictValue::arrayInt(shape0.data(), shape0.size()));
-
-    opencv_onnx::NodeProto protoReshape;
-    protoReshape.add_input(node_proto.input(0));
-    protoReshape.add_output(reshapeLp.name);
-    addLayer(reshapeLp, protoReshape);
-
-    // Step2: Transpose
-    LayerParams permuteLp;
-    permuteLp.name = layerParams.name + "/permute";
-    permuteLp.type = "Permute";
-    CV_Assert(layer_id.find(permuteLp.name) == layer_id.end());
-    permuteLp.set("order", DictValue::arrayInt(perm.data(), perm.size()));
-
-    opencv_onnx::NodeProto protoPermute;
-    protoPermute.add_input(reshapeLp.name);
-    protoPermute.add_output(permuteLp.name);
-    addLayer(permuteLp, protoPermute);
-
-    // Step3: Reshape
-    layerParams.type = "Reshape";
-    layerParams.set("dim", DictValue::arrayInt(shape1.data(), shape1.size()));
-
-    node_proto.set_input(0, permuteLp.name);
     addLayer(layerParams, node_proto);
 }
 
@@ -4021,7 +3950,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
                                           "Identity", "Log", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh",
                                           "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "Gelu",
-                                          "GeluApproximation"};
+                                          "GeluApproximation"}; //, "SpaceToDepth", "DepthToSpace"
     for (const auto& name : simpleLayers)
     {
         dispatch[name] = &ONNXImporter::parseSimpleLayers;
