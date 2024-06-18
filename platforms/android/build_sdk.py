@@ -271,7 +271,10 @@ class Builder:
             hwasan_flags = "-fno-omit-frame-pointer -fsanitize=hwaddress"
             for s in ['OPENCV_EXTRA_C_FLAGS', 'OPENCV_EXTRA_CXX_FLAGS', 'OPENCV_EXTRA_EXE_LINKER_FLAGS',
                       'OPENCV_EXTRA_SHARED_LINKER_FLAGS', 'OPENCV_EXTRA_MODULE_LINKER_FLAGS']:
-                cmake_vars[s] = hwasan_flags
+                if s in cmake_vars.keys():
+                    cmake_vars[s] = cmake_vars[s] + ' ' + hwasan_flags
+                else:
+                    cmake_vars[s] = hwasan_flags
 
         cmake_vars.update(abi.cmake_vars)
 
