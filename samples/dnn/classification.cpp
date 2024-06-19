@@ -13,19 +13,21 @@ using namespace std;
 using namespace dnn;
 
 const string about =
-        "Use this script to run a classification model on a camera stream, video, image or in a directory\n\n"
+        "Use this script to run a classification model on a camera stream, video, image or image list (i.e. .xml or .yaml containing image lists)\n\n"
         "Firstly, download required models using `download_models.py` (if not already done).\n"
         "To run:\n"
         "\t ./example_dnn_classification model_name --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)\n"
         "Sample command:\n"
         "\t ./example_dnn_classification googlenet --input=path/to/image \n"
-        "Model path can also be specified using --model argument";
+        "Model path can also be specified using --model argument"
+        "use imagelist_creator to create the xml or yaml list";
 
 const string param_keys =
     "{ help  h         |            | Print help message. }"
     "{ @alias          |            | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo             | models.yml | An optional path to file with preprocessing parameters }"
     "{ input i         |            | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+    "{ imglist         |            | Pass this flag if image list (i.e. .xml or .yaml) file is passed}"
     "{ crop            |   false    | Preprocess input image by center cropping.}";
 
 const string backend_keys = format(
@@ -50,7 +52,39 @@ const string target_keys = format(
 string keys = param_keys + backend_keys + target_keys;
 
 vector<string> classes;
-static vector<string> listImageFilesInDirectory(const string& directoryPath);
+static bool readStringList( const string& filename, vector<string>& l )
+{
+    l.resize(0);
+    FileStorage fs(filename, FileStorage::READ);
+    if( !fs.isOpened() )
+        return false;
+    size_t dir_pos = filename.rfind('/');
+    if (dir_pos == string::npos)
+        dir_pos = filename.rfind('\\');
+    FileNode n = fs.getFirstTopLevelNode();
+    if( n.type() != FileNode::SEQ )
+        return false;
+    FileNodeIterator it = n.begin(), it_end = n.end();
+    for( ; it != it_end; ++it )
+    {
+        string fname = (string)*it;
+        if (dir_pos != string::npos)
+        {
+            string fpath = samples::findFile(filename.substr(0, dir_pos + 1) + fname, false);
+            if (fpath.empty())
+            {
+                fpath = samples::findFile(fname);
+            }
+            fname = fpath;
+        }
+        else
+        {
+            fname = samples::findFile(fname);
+        }
+        l.push_back(fname);
+    }
+    return true;
+}
 
 int main(int argc, char** argv)
 {
@@ -78,6 +112,7 @@ int main(int argc, char** argv)
     String model = findFile(parser.get<String>("model"));
     String backend = parser.get<String>("backend");
     String target = parser.get<String>("target");
+    bool isImgList = parser.has("imglist");
 
     // Open file with classes names.
     string file = findFile(parser.get<String>("classes"));
@@ -107,17 +142,16 @@ int main(int argc, char** argv)
 
     //! [Open a video file or an image file or a camera stream]
     VideoCapture cap;
-    vector<string> imageFiles;
+    vector<string> imageList;
     size_t currentImageIndex = 0;
 
     if (parser.has("input")) {
         string input = parser.get<String>("input");
 
-        if (input.find('.')==string::npos) {
-            // Input is a directory, list all image files
-            imageFiles = listImageFilesInDirectory(input);
-            if (imageFiles.empty()) {
-                cout << "No images found in the directory." << endl;
+        if (isImgList) {
+            bool check = readStringList(samples::findFile(input), imageList);
+            if (imageList.empty() || !check) {
+                cout << "Error: No images found or the provided file is not a valid .yaml or .xml file." << endl;
                 return -1;
             }
         } else {
@@ -136,13 +170,13 @@ int main(int argc, char** argv)
     Mat frame, blob;
     for(;;)
     {
-        if (!imageFiles.empty()) {
+        if (!imageList.empty()) {
             // Handling directory of images
-            if (currentImageIndex >= imageFiles.size()) {
+            if (currentImageIndex >= imageList.size()) {
                 waitKey();
                 break; // Exit if all images are processed
             }
-            frame = imread(imageFiles[currentImageIndex++]);
+            frame = imread(imageList[currentImageIndex++]);
             if(frame.empty()){
                 cout<<"Cannot open file"<<endl;
                 continue;
@@ -199,20 +233,4 @@ int main(int argc, char** argv)
             break;
     }
     return 0;
-}
-
-vector<std::string> listImageFilesInDirectory(const string& folder_path) {
-    vector<string> image_paths;
-    // OpenCV object for reading the directory
-    Ptr<String> image_paths_cv = new String();
-    vector<String> fn;
-    *image_paths_cv = folder_path + "/*.jpg"; // Change the extension according to the image types you want to read
-    // Read the images from the directory
-    glob(*image_paths_cv, fn, true); // true to search in subdirectories
-
-    // Loop through the images
-    for (size_t i = 0; i < fn.size(); i++) {
-        image_paths.push_back(fn[i]);
-    }
-    return image_paths;
 }
