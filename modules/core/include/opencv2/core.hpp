@@ -858,10 +858,11 @@ The function cv::minMaxLoc finds the minimum and maximum element values and thei
 extremums are searched across the whole array or, if mask is not an empty array, in the specified
 array region.
 
-The function do not work with multi-channel arrays. If you need to find minimum or maximum
-elements across all the channels, use Mat::reshape first to reinterpret the array as
-single-channel. Or you may extract the particular channel using either extractImageCOI, or
-mixChannels, or split.
+Multi-channel input is supported under the same conditions as cv::minMaxIdx. If you need the
+indices of the minimum and maximum elements across a multi-channel array, then use Mat::reshape
+first to reinterpret the array as single-channel. Or you may extract the particular channel
+using either extractImageCOI, or mixChannels, or split.
+
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
