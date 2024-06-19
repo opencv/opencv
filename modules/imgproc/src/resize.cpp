@@ -3893,7 +3893,7 @@ public:
     {
         int cn = dst.channels();
         int dwidth = dst.cols * cn;
-        // the sample lines on src of the i-th row (i + 1)-th dst-row
+        // the sample lines on src of the i-th and (i + 1)-th dst-row
         // will overlap at most these src-rows
         int bufrow = ctrl.ykanti - cvFloor(1.f / ctrl.scalef.y);
         Mat buffer(bufrow + 2, dwidth, DataType<IdxT>::depth);
@@ -3938,9 +3938,6 @@ public:
                     }
                     else
                     {
-                        // A & Lw maybe different type, can not use inter_area
-                        // A double : Lw double
-                        // A float  : Lw float / int
                         WT* Lw = reinterpret_cast<WT*>(L);
                         horiGenericLines(&S, &Lw, 1);
                     }
@@ -3954,6 +3951,8 @@ public:
                 }
                 else
                 {
+                    // A & Lw maybe different type, can not use inter_area
+                    // A double : Lw double | A float : Lw float / int
                     WT* Lw = reinterpret_cast<WT*>(L);
                     if (ctrl.is_fixpt)
                         beta /= INTER_RESIZE_COEF_SCALE;
