@@ -103,7 +103,14 @@ while cv.waitKey(1) < 0:
     if args.alias == 'u2netp':
         output = net.forward(net.getUnconnectedOutLayersNames())
         pred = output[0][0, 0, :, :]
-        frame = (pred * 255).astype(np.uint8)
+        mask = (pred * 255).astype(np.uint8)
+        mask = cv.resize(mask, (frame.shape[1], frame.shape[0]), interpolation=cv.INTER_AREA)
+        # Create overlays for foreground and background
+        foreground_overlay = np.zeros_like(frame, dtype=np.uint8)
+        # Set foreground (object) to red and background to blue
+        foreground_overlay[:, :, 2] = mask  # Red foreground
+        # Blend the overlays with the original frame
+        frame = cv.addWeighted(frame, 0.25, foreground_overlay, 0.75, 0)
     else:
         score = net.forward()
 
