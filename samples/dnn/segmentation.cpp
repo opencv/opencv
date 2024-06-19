@@ -154,7 +154,22 @@ int main(int argc, char **argv)
             net.forward(output, net.getUnconnectedOutLayersNames());
 
             Mat pred = output[0].reshape(1, output[0].size[2]);
-            pred.convertTo(frame, CV_8U, 255.0);
+            pred.convertTo(pred, CV_8U, 255.0);
+            Mat mask;
+            resize(pred, mask, Size(frame.cols, frame.rows), 0, 0, INTER_AREA);
+
+            // Create overlays for foreground and background
+            Mat foreground_overlay = Mat::zeros(frame.size(), frame.type());
+
+            // Set foreground (object) to red and background to blue
+            std::vector<Mat> channels;
+            split(foreground_overlay, channels);
+            channels[2] = mask;  // Red foreground
+            merge(channels, foreground_overlay);
+
+            // Blend the overlays with the original frame
+            Mat foreground_segmented;
+            addWeighted(frame, 0.25, foreground_overlay, 0.75, 0, frame);
         }
         else
         {
