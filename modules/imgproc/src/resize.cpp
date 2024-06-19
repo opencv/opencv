@@ -3740,6 +3740,10 @@ public:
     ResizeOnnxInvoker(const Mat& _src, Mat& _dst, ResizeOnnxCtrl const& _ctrl) :
         src(_src), dst(_dst), ctrl(_ctrl)
     {
+        static_assert(sizeof(WT) == sizeof(IdxT), "expected");
+        static_assert(std::is_same<IdxT, typename std::common_type<IdxT, WT>::type>::value,
+            "IdxT double : WT double | IdxT float : WT float / int");
+
         CV_CheckLE(ctrl.ksize, MAX_ESIZE, "resampler kernel's size is too larger");
         CV_Check(ctrl.is_fixpt, !(ctrl.is_fixpt && ctrl.is_double), "can not be both types");
         // prefer static_assert, but how ?
@@ -3783,9 +3787,6 @@ public:
             CV_Check(ctrl.is_double, (std::is_same<IdxT, float>::value),
                 "when use float coeffs, IdxT is expected to be float");
         }
-        CV_Check(sizeof(IdxT) * 10 + sizeof(WT),
-            (std::is_same<IdxT, typename std::common_type<IdxT, WT>::type>::value),
-            "we need that IdxT is same or more accurate than WT");
     }
 
     void horiAntialiasAccumulate(T const* S, IdxT* L) const
@@ -3894,18 +3895,14 @@ public:
         int cn = dst.channels();
         int dwidth = dst.cols * cn;
         // the sample lines on src of the i-th and (i + 1)-th dst-row
-        // will overlap at most these src-rows
-        int bufrow = ctrl.ykanti - cvFloor(1.f / ctrl.scalef.y);
-        Mat buffer(bufrow + 2, dwidth, DataType<IdxT>::depth);
-        AutoBuffer<IdxT*> line((bufrow + 1) * 2);
-        IdxT* A = buffer.template ptr<IdxT>(bufrow + 1);
-        int* ysrc = reinterpret_cast<int*>(line.data() + bufrow + 1);
-        size_t szcopy = (ctrl.xkanti ? sizeof(WT) : sizeof(IdxT)) * dwidth;
-        for (int i = 0; i <= bufrow; ++i)
-        {
-            line[i] = buffer.template ptr<IdxT>(i);
+        // will overlap at most bufrow src-rows
+        int bstart = 0, bufrow = ctrl.ykanti - cvFloor(1.f / ctrl.scalef.y);
+        // a ring buffer, have bufrow lines, begin with bstart
+        Mat buffer(bufrow + 1, dwidth * sizeof(IdxT), CV_8U);
+        AutoBuffer<int> ysrc(bufrow);
+        IdxT* A = buffer.template ptr<IdxT>(bufrow);
+        for (int i = 0; i < bufrow; ++i)
             ysrc[i] = -1;
-        }
         for (int dy = range.start; dy < range.end; ++dy)
         {
             int tidx = dy * ctrl.ykanti;
@@ -3915,25 +3912,24 @@ public:
                 IdxT beta;
                 ctrl.ytab[tidx].as(beta);
                 int sy = ctrl.ytab[tidx].si;
-                T const* S = src.template ptr<T>(sy);
+                IdxT* L = nullptr;
                 // if the sy-th row has been computed already, reuse it.
-                int y0 = -1;
-                IdxT* L = line[bufrow];
                 for (int i = 0; i < bufrow; ++i)
                     if (ysrc[i] == sy)
                     {
-                        y0 = i;
+                        L = buffer.template ptr<IdxT>(i);
                         break;
                     }
-                // have found, reuse it
-                if (y0 != -1)
-                    L = line[y0];
-                else
+                // else, compute and save to the buffer line with the minimum ysrc
+                if (!L)
                 {
-                    // not found, compute it
+                    T const* S = src.template ptr<T>(sy);
+                    L = buffer.template ptr<IdxT>(bstart);
+                    ysrc[bstart] = sy;
+                    bstart = (bstart + 1) % bufrow;
                     if (ctrl.xkanti)
                     {
-                        memset(L, 0, dwidth * sizeof(IdxT));
+                        memset(L, 0, buffer.cols * sizeof(uchar));
                         horiAntialiasAccumulate(S, L);
                     }
                     else
@@ -3951,8 +3947,7 @@ public:
                 }
                 else
                 {
-                    // A & Lw maybe different type, can not use inter_area
-                    // A double : Lw double | A float : Lw float / int
+                    // A & Lw (IdxT / WT) maybe different type, can not use inter_area
                     WT* Lw = reinterpret_cast<WT*>(L);
                     if (ctrl.is_fixpt)
                         beta /= INTER_RESIZE_COEF_SCALE;
@@ -3962,13 +3957,6 @@ public:
                     else
                         for (int w = 0; w < dwidth; ++w)
                             A[w] += Lw[w] * beta;
-                }
-                // backup the last bufrow results
-                y0 = bufrow - (ctrl.ykanti - t);
-                if (y0 >= 0 && ysrc[y0] != sy /* line[y0] != L */)
-                {
-                    ysrc[y0] = sy;
-                    memcpy(line[y0], L, szcopy);
                 }
             }
             inter_area::saturate_store(A, dwidth, dst.template ptr<T>(dy));
@@ -4038,9 +4026,17 @@ public:
 template <typename HResize, typename VResize, typename IdxT>
 static void resizeOnnx_(Mat const& src, Mat& dst, ResizeOnnxCtrl const& ctrl)
 {
+    /* The complexity of resize is relate to ksize and:
+    - non-antialias and NN: dstsize, same as that in cv::resize.
+    - antialias: dstsize and ceil(1.0 / scale). */
+    double nstripes = static_cast<double>(dst.rows) * dst.cols / (1 << 16);
+    // only parallel by rows
+    if (ctrl.ykanti)
+        nstripes *= ceil(1.0 / ctrl.scalef.y);
+    // do not wake too many threads, really use the cache lines
+    nstripes = min(nstripes, 2.0 * getNumberOfCPUs());
     parallel_for_(Range(0, dst.rows),
-        ResizeOnnxInvoker<HResize, VResize, IdxT>(src, dst, ctrl),
-        static_cast<double>(dst.rows) * dst.cols / (1 << 16));
+        ResizeOnnxInvoker<HResize, VResize, IdxT>(src, dst, ctrl), nstripes);
 }
 
 

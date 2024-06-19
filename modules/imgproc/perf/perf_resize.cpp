@@ -280,8 +280,6 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNNExact,
     SANITY_CHECK_NOTHING();
 }
 
-// The complexity of non-antialias and NN resize is same as that in cv::resize
-// The complexity of antialias resize is ralated to dst size and ceil(1.0 / scale)
 PERF_TEST_P(MatInfo_Size_Size, ResizeOnnxLinearAntialias, Combine(
     Values(CV_8UC1, CV_8UC3, CV_8UC4),
     Values(sz1440p),
@@ -293,18 +291,12 @@ PERF_TEST_P(MatInfo_Size_Size, ResizeOnnxLinearAntialias, Combine(
     Size to = get<2>(GetParam());
 
     cv::Mat src(from, matType), dst(to, matType);
-    switch(src.depth())
-    {
-        case CV_8U: cvtest::fillGradient(src); break;
-        case CV_16U: fillFPGradient<ushort>(src); break;
-        case CV_32S: fillFPGradient<int>(src); break;
-        case CV_32F: fillFPGradient<float>(src); break;
-    }
     declare.in(src).out(dst);
+    declare.time(100);
 
-    TEST_CYCLE_MULTIRUN(10) resizeOnnx(src, dst, to, Point2d(), INTER_LINEAR | INTER_ANTIALIAS);
+    TEST_CYCLE() resizeOnnx(src, dst, to, Point2d(), INTER_LINEAR | INTER_ANTIALIAS);
 
     SANITY_CHECK_NOTHING();
 }
 
-} // namespace
+}
