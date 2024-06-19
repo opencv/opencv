@@ -10,6 +10,12 @@
 #include "opencl_kernels_dnn.hpp"
 #endif
 
+// OpenVINO backend
+#ifdef HAVE_DNN_NGRAPH
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+#endif
+
 namespace cv { namespace dnn {
 
 class DepthSpaceLayerImpl CV_FINAL : public DepthSpaceLayer {
@@ -44,6 +50,11 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
         // TODO: support other backends
+#ifdef HAVE_DNN_NGRAPH
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+            return true;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -167,6 +178,23 @@ public:
 
         transposed_tmp.reshape(1, static_cast<int>(output_shape.size()), output_shape.data()).copyTo(outputs.front());
         return true;
+    }
+#endif
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
+        using namespace ov::op;
+        auto input_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        std::shared_ptr<ov::Node> output_node;
+        if (op == OPERATION::DEPTH_TO_SPACE_DCR) {
+            output_node = std::make_shared<v0::DepthToSpace>(input_node, v0::DepthToSpace::DepthToSpaceMode::BLOCKS_FIRST, static_cast<size_t>(blocksize));
+        } else if (op == OPERATION::DEPTH_TO_SPACE_CRD) {
+            output_node = std::make_shared<v0::DepthToSpace>(input_node, v0::DepthToSpace::DepthToSpaceMode::DEPTH_FIRST, static_cast<size_t>(blocksize));
+        } else {
+            output_node = std::make_shared<v0::SpaceToDepth>(input_node, v0::SpaceToDepth::SpaceToDepthMode::BLOCKS_FIRST, static_cast<size_t>(blocksize));
+        }
+        return Ptr<BackendNode>(new InfEngineNgraphNode(output_node));
     }
 #endif
 
