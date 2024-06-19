@@ -2918,9 +2918,8 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
 
 void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    // We parse "DepthToSpace" and "SpaceToDepth" in this function.
+    // "DepthToSpace" and "SpaceToDepth" are parsed in this function
     layerParams.set("op_type", node_proto.op_type());
-
     addLayer(layerParams, node_proto);
 }
 
@@ -3950,7 +3949,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
                                           "Identity", "Log", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh",
                                           "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "Gelu",
-                                          "GeluApproximation"}; //, "SpaceToDepth", "DepthToSpace"
+                                          "GeluApproximation"};
     for (const auto& name : simpleLayers)
     {
         dispatch[name] = &ONNXImporter::parseSimpleLayers;
