@@ -1519,6 +1519,11 @@ CV_8U, CV_16U, or CV_32F, for larger aperture sizes, it can only be CV_8U.
  */
 CV_EXPORTS_W void medianBlur( InputArray src, OutputArray dst, int ksize );
 
+enum GaussianBlurFlags
+{
+    GAUSS_ALLOW_APPROXIMATIONS = 128 //! Use faster, but not bit-exact branches of the function first. The result may slightly different on different hardware platforms. Disabled by default.
+};
+
 /** @brief Blurs an image using a Gaussian filter.
 
 The function convolves the source image with the specified Gaussian kernel. In-place filtering is
@@ -1535,13 +1540,14 @@ equal to sigmaX, if both sigmas are zeros, they are computed from ksize.width an
 respectively (see #getGaussianKernel for details); to fully control the result regardless of
 possible future modifications of all this semantics, it is recommended to specify all of ksize,
 sigmaX, and sigmaY.
-@param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@param flags function behaviour flags that allow to defile pixel extrapolation method,
+and optimization variants. See #BorderTypes (#BORDER_WRAP is not supported) and #GaussianBlurFlags.
 
 @sa  sepFilter2D, filter2D, blur, boxFilter, bilateralFilter, medianBlur
  */
 CV_EXPORTS_W void GaussianBlur( InputArray src, OutputArray dst, Size ksize,
                                 double sigmaX, double sigmaY = 0,
-                                int borderType = BORDER_DEFAULT );
+                                int flags = BORDER_DEFAULT );
 
 /** @brief Applies the bilateral filter to an image.
 
