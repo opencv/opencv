@@ -166,6 +166,9 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(GroupNormalization, GroupNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(DepthToSpace,   DepthSpaceLayer)
     CV_DNN_REGISTER_LAYER_CLASS(SpaceToDepth,   DepthSpaceLayer)
+    // SpaceToDepthInt8
+    CV_DNN_REGISTER_LAYER_CLASS(SpaceToDepthInt8, DepthSpaceLayer)
+    CV_DNN_REGISTER_LAYER_CLASS(DepthToSpaceInt8, DepthSpaceLayer)
 
     CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);

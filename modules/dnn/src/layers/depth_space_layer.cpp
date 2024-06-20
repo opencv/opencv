@@ -27,6 +27,11 @@
 #include "../op_cann.hpp"
 #endif
 
+// TIM-VX backend
+#ifdef HAVE_TIMVX
+#include "../op_timvx.hpp"
+#endif
+
 namespace cv { namespace dnn {
 
 class DepthSpaceLayerImpl CV_FINAL : public DepthSpaceLayer {
@@ -66,6 +71,10 @@ public:
             return true;
         }
 #endif
+        if (backendId == DNN_BACKEND_TIMVX && haveTimVX() && op != OPERATION::DEPTH_TO_SPACE_DCR) {
+            // dcr mode is not supported by the current integrated timvx-backend
+            return true;
+        }
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA   ||
                backendId == DNN_BACKEND_CANN;
@@ -268,6 +277,61 @@ public:
         }
     }
 #endif
+
+#ifdef HAVE_TIMVX
+    virtual Ptr<BackendNode> initTimVX(void* timvx_info_,
+                                       const std::vector<Ptr<BackendWrapper> > &inputs,
+                                       const std::vector<Ptr<BackendWrapper> > &outputs,
+                                       bool isLast) CV_OVERRIDE {
+        auto info = reinterpret_cast<TimVXInfo*>(timvx_info_);
+        CV_Assert(info);
+        auto timvx_graph = info->getGraph();
+        CV_Assert(timvx_graph);
+        auto graph = timvx_graph->graph;
+
+        auto input_wrapper = inputs.front().dynamicCast<TimVXBackendWrapper>();
+        int input_wrapper_index = -1;
+        if (input_wrapper->isTensor()) {
+            input_wrapper_index = timvx_graph->getTensorIndex(input_wrapper->getTensor());
+            if (input_wrapper_index == -1) {
+                auto tmp = input_wrapper->getMat();
+                input_wrapper = std::make_shared<TimVXBackendWrapper>(tmp);
+            }
+        }
+        if (!input_wrapper->isTensor() || input_wrapper_index == 1) {
+            auto input_node_quant = Ptr<tim::vx::Quantization>(new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, 1.0f, 0));
+            input_wrapper->createTensor(graph, tim::vx::TensorAttribute::INPUT, input_node_quant);
+            input_wrapper_index = timvx_graph->addWrapper(input_wrapper);
+        }
+
+        auto output_wrapper = outputs.front().dynamicCast<TimVXBackendWrapper>();
+        auto output_node_quant = input_wrapper->getTensorQuantization();
+        if (isLast) {
+            auto shape_type = getShapeTypeFromMat(output_wrapper->getMat());
+            output_wrapper->setTensorShape(shape_type);
+            output_wrapper->createTensor(graph, tim::vx::TensorAttribute::OUTPUT, output_node_quant);
+        } else {
+            output_wrapper->createTensor(graph, tim::vx::TensorAttribute::TRANSIENT, output_node_quant);
+        }
+        int output_wrapper_index = timvx_graph->addWrapper(output_wrapper);
+
+        std::shared_ptr<tim::vx::Operation> timvx_node;
+        if (op == OPERATION::DEPTH_TO_SPACE_DCR) {
+            CV_Error(Error::StsBadArg, "DepthSpace/TIMVX: DCR mode is not supported");
+        } else if (op == OPERATION::DEPTH_TO_SPACE_CRD) {
+            timvx_node = graph->CreateOperation<tim::vx::ops::DepthToSpace>(blocksize);
+        } else {
+            timvx_node = graph->CreateOperation<tim::vx::ops::SpaceToDepth>(std::vector<int>{blocksize, blocksize});
+        }
+        std::vector<int> input_wrapper_indices{input_wrapper_index}, output_wrapper_indices{output_wrapper_index};
+        return Ptr<BackendNode>(new TimVXBackendNode(timvx_graph, timvx_node, input_wrapper_indices, output_wrapper_indices));
+    }
+#endif
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE {
+        return true;
+    }
 
 private:
     enum class OPERATION {
