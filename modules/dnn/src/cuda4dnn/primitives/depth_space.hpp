@@ -34,6 +34,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             size_t num_elements = std::accumulate(internal_shape.begin(), internal_shape.end(), 1, std::multiplies<size_t>());
             csl::WorkspaceBuilder builder;
             builder.require<T>(num_elements);
+            scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
         void forward(const std::vector<cv::Ptr<BackendWrapper>> &inputs,
@@ -54,11 +55,16 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             transposed_internal.reshape_as(output);
             csl::tensor_ops::copy(stream, output, csl::TensorView<T>(transposed_internal));
         }
+
+        std::size_t get_workspace_memory_in_bytes() const noexcept override { return scratch_mem_in_bytes; }
+
     private:
         csl::Stream stream;
         std::vector<int> internal_shape;
         std::vector<size_t> permutation;
         std::vector<int> transposed_internal_shape;
+
+        std::size_t scratch_mem_in_bytes;
     };
 
 }}} // namespace cv::dnn::cuda4dnn
