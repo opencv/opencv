@@ -56,6 +56,11 @@ static void LUT8u_32s( const uchar* src, const int* lut, int* dst, int len, int 
     LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
+static void LUT8u_16f( const uchar* src, const hfloat* lut, hfloat* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
 static void LUT8u_32f( const uchar* src, const float* lut, float* dst, int len, int cn, int lutcn )
 {
     LUT8u_( src, lut, dst, len, cn, lutcn );
@@ -71,7 +76,7 @@ typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len
 static LUTFunc lutTab[CV_DEPTH_MAX] =
 {
     (LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_8s, (LUTFunc)LUT8u_16u, (LUTFunc)LUT8u_16s,
-    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, 0
+    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, (LUTFunc)LUT8u_16f
 };
 
 #ifdef HAVE_OPENCL
