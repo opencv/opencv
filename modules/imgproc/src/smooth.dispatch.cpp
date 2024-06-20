@@ -65,6 +65,7 @@ namespace cv {
 
 #include "smooth.simd.hpp"
 #include "smooth.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
+#include "smooth_kelefouras.hpp" // defines kelefouras-implemented work
 
 namespace cv {
 
@@ -616,7 +617,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     CV_Assert(!_src.empty());
 
-    int type = _src.type();
+    int type = _src.type(); 
     Size size = _src.size();
     _dst.create( size, type );
 
@@ -645,6 +646,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
+    // This is separable.
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
 
@@ -653,6 +655,99 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
             (ksize.width == 5 && ksize.height == 5)),
             ocl_GaussianBlur_8UC1(_src, _dst, ksize, CV_MAT_DEPTH(type), kx, ky, borderType)
     );
+
+#ifdef HAVE_VK_SMOOTH
+    bool is_vk_compatible = sdepth == CV_8U && // if the source depth consists of unsigned chars.
+                             (borderType == BORDER_CONSTANT) && // if the border type is all zeros.
+                             ksize.height == ksize.width && // if it's a square kernel.
+                             sigma1 == sigma2 && // if it's a SYMMETRICAL kernel
+                             ksize.width % 2 == 1 && // if it's an odd-width kernel (3x3, 5x5 etc.).
+                             ksize.width < 11; // if it's less than 11x11 (use DFT for that).
+    if (is_vk_compatible) 
+    {
+        CV_LOG_INFO(NULL, "GaussianBlur: running Kelefouras-optimised version...");
+
+        // Initialise kernels, both unified and separable.
+        Mat _filter = getGaussianKernel(ksize.width, sigma1, CV_8S);
+        Mat _kernel_x, _kernel_y;
+        
+        // Get the divisor (should be the sum of the divisor)
+        signed char** filter = reinterpret_cast<signed char**>(_filter.ptr(0));
+        const unsigned short int divisor = sum(_filter)[0];
+        
+        createGaussianKernels(_kernel_x, _kernel_y, CV_8S, ksize, sigma1, sigma2);
+        const unsigned short int divisor_xy = sum(_kernel_x)[0];
+            
+        signed char* kernel_y = reinterpret_cast<signed char*>(_kernel_y.ptr(0));
+        signed char* kernel_x = reinterpret_cast<signed char*>(_kernel_x.ptr(0));
+        
+        // Get the raw data pointer for the destination and input sprites
+        unsigned char** input = reinterpret_cast<unsigned char**>(_src.getMat().ptr(0));
+        unsigned char** output = reinterpret_cast<unsigned char**>(_dst.getMat().ptr(0));
+        
+        // Use a bitwise trick to get the powers of 2.
+        bool is_power_of_2 = (divisor != 0) && ((divisor & (divisor - 1)) == 0);
+        
+        // Depending on the kernel size, switch out the following:
+        switch (ksize.width)
+        {
+            case 3:
+                Gaussian_Blur_optimized_3x3_16_reg_blocking(
+                    input, 
+                    output, 
+                    size.height, 
+                    size.width,
+                    divisor,
+                    filter);
+                break;
+            case 5:
+                // Check if it's a power of 2.
+                if (is_power_of_2)
+                    Gaussian_Blur_optimized_5x5_16_seperable(
+                        input,
+                        output,
+                        size.height,
+                        size.width,
+                        kernel_y,
+                        kernel_x,
+                        divisor_xy);
+                else
+                    Gaussian_Blur_optimized_5x5_16_reg_blocking(
+                        input, 
+                        output, 
+                        size.height, 
+                        size.width,
+                        divisor,
+                        filter);
+                break;
+            case 7:
+                Gaussian_Blur_7x7_16_separable(
+                    input,
+                    output,
+                    size.height,
+                    size.width,
+                    kernel_y,
+                    kernel_x,
+                    divisor_xy);
+                break;
+            case 9:
+                Gaussian_Blur_9x9_16_separable(
+                    input,
+                    output,
+                    size.height,
+                    size.width,
+                    kernel_y,
+                    kernel_x,
+                    divisor_xy);
+                break;
+            // It shouldn't reach here.
+            default:
+                break;
+        }
+        
+        return;
+    }
+#endif
 
     if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.isSubmatrix()))
     {
