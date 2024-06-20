@@ -2259,6 +2259,27 @@ TEST(Core_Eigen, eigen2cv_check_Mat_type)
     EXPECT_ANY_THROW(eigen2cv(eigen_A, d_mat));
     //EXPECT_EQ(CV_64FC1, d_mat.type());
 }
+
+TEST(Core_Eigen, cv2eigen_check_RowMajor)
+{
+    Mat A(3, 2, CV_32FC1, Scalar::all(0));
+    A.at<float>(0,0) = 1.0;
+    A.at<float>(0,1) = 2.0;
+    A.at<float>(1,0) = 3.0;
+    A.at<float>(1,1) = 4.0;
+    A.at<float>(2,0) = 5.0;
+    A.at<float>(2,1) = 6.0;
+
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> eigen_A;
+    EXPECT_NO_THROW(cv2eigen(A, eigen_A));
+
+    ASSERT_EQ(1.0, eigen_A(0, 0));
+    ASSERT_EQ(2.0, eigen_A(0, 1));
+    ASSERT_EQ(3.0, eigen_A(1, 0));
+    ASSERT_EQ(4.0, eigen_A(1, 1));
+    ASSERT_EQ(5.0, eigen_A(2, 0));
+    ASSERT_EQ(6.0, eigen_A(2, 1));
+}
 #endif // HAVE_EIGEN
 
 #ifdef OPENCV_EIGEN_TENSOR_SUPPORT
