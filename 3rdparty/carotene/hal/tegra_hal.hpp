@@ -1286,7 +1286,6 @@ inline int TEGRA_SEPFILTERFREE(cvhalFilter2D *context)
 #undef cv_hal_sepFilterFree
 #define cv_hal_sepFilterFree TEGRA_SEPFILTERFREE
 
-
 struct MorphCtx
 {
     int operation;
@@ -1856,6 +1855,80 @@ TegraCvtColor_Invoker(bgrx2hsvf, bgrx2hsv, src_data + static_cast<size_t>(range.
 #undef cv_hal_cvtTwoPlaneYUVtoBGREx
 #define cv_hal_cvtTwoPlaneYUVtoBGREx TEGRA_CVT2PYUVTOBGR_EX
 #endif
+
+// The optimized branch was developed for old armv7 processors and leads to perf degradation on armv8
+#if defined(DCAROTENE_NEON_ARCH) && (DCAROTENE_NEON_ARCH == 7)
+inline CAROTENE_NS::BORDER_MODE borderCV2Carotene(int borderType)
+{
+    switch(borderType)
+    {
+    case CV_HAL_BORDER_CONSTANT:
+        return CAROTENE_NS::BORDER_MODE_CONSTANT;
+    case CV_HAL_BORDER_REPLICATE:
+        return CAROTENE_NS::BORDER_MODE_REPLICATE;
+    case CV_HAL_BORDER_REFLECT:
+        return CAROTENE_NS::BORDER_MODE_REFLECT;
+    case CV_HAL_BORDER_WRAP:
+        return CAROTENE_NS::BORDER_MODE_WRAP;
+    case CV_HAL_BORDER_REFLECT_101:
+        return CAROTENE_NS::BORDER_MODE_REFLECT101;
+    }
+
+    return CAROTENE_NS::BORDER_MODE_UNDEFINED;
+}
+
+inline int TEGRA_GaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                         int width, int height, int depth, int cn, size_t margin_left, size_t margin_top,
+                         size_t margin_right, size_t margin_bottom, size_t ksize, int border_type)
+{
+    CAROTENE_NS::Size2D sz(width, height);
+    CAROTENE_NS::BORDER_MODE border = borderCV2Carotene(border_type);
+    CAROTENE_NS::Margin mg(margin_left, margin_right, margin_top, margin_bottom);
+
+    if (ksize == 3)
+    {
+        if ((depth != CV_8U) || (cn != 1))
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        if (CAROTENE_NS::isGaussianBlur3x3MarginSupported(sz, border, mg))
+        {
+            CAROTENE_NS::gaussianBlur3x3Margin(sz, src_data, src_step, dst_data, dst_step,
+                                  border, 0, mg);
+            return CV_HAL_ERROR_OK;
+        }
+    }
+    else if (ksize == 5)
+    {
+        if (!CAROTENE_NS::isGaussianBlur5x5Supported(sz, cn, border))
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        if (depth == CV_8U)
+        {
+            CAROTENE_NS::gaussianBlur5x5(sz, cn, (uint8_t*)src_data, src_step,
+                                         (uint8_t*)dst_data, dst_step, border, 0, mg);
+            return CV_HAL_ERROR_OK;
+        }
+        else if (depth == CV_16U)
+        {
+            CAROTENE_NS::gaussianBlur5x5(sz, cn, (uint16_t*)src_data, src_step,
+                                         (uint16_t*)dst_data, dst_step, border, 0, mg);
+            return CV_HAL_ERROR_OK;
+        }
+        else if (depth == CV_16S)
+        {
+            CAROTENE_NS::gaussianBlur5x5(sz, cn, (int16_t*)src_data, src_step,
+                                         (int16_t*)dst_data, dst_step, border, 0, mg);
+           return CV_HAL_ERROR_OK;
+        }
+    }
+
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+
+#undef cv_hal_gaussianBlurBinomial
+#define cv_hal_gaussianBlurBinomial TEGRA_GaussianBlurBinomial
+
+#endif // DCAROTENE_NEON_ARCH=7
 
 #endif // OPENCV_IMGPROC_HAL_INTERFACE_H
 
