@@ -45,7 +45,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto input_wrapper = inputs.front().dynamicCast<wrapper_type>();
             auto input = input_wrapper->getView();
-            CV_CheckEQ(input.rank(), size_t(1), "DepthSpaceOps: input needs to be 4-dimensional [N, C, H, W]");
+            CV_CheckEQ(input.rank(), size_t(4), "DepthSpaceOps: input needs to be 4-dimensional [N, C, H, W]");
             auto output_wrapper = outputs.front().dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
             auto ws_allocator = csl::WorkspaceAllocator(workspace);
