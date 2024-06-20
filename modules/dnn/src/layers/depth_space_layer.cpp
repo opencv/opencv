@@ -22,6 +22,11 @@
 #include "../cuda4dnn/primitives/depth_space.hpp"
 #endif
 
+// CANN backend
+#ifdef HAVE_CANN
+#include "../op_cann.hpp"
+#endif
+
 namespace cv { namespace dnn {
 
 class DepthSpaceLayerImpl CV_FINAL : public DepthSpaceLayer {
@@ -61,7 +66,9 @@ public:
             return true;
         }
 #endif
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA   ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -215,6 +222,52 @@ public:
         return make_cuda_node<cuda4dnn::DepthSpaceOp>(preferableTarget, std::move(context->stream), internal_shape, perm);
     }
 #endif // HAVE_CUDA
+
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
+        CV_CheckEQ(inputs.size(), static_cast<size_t>(1), "DepthToSpace/CANN: only accepts one input wrapper");
+        CV_CheckEQ(nodes.size(), static_cast<size_t>(1), "DepthToSpace/CANN: only accepts one input node");
+
+        auto input_tensor_wrapper = inputs.front().dynamicCast<CannBackendWrapper>();
+        auto input_tensor_desc = input_tensor_wrapper->getTensorDesc();
+        auto input_node = nodes.front().dynamicCast<CannBackendNode>()->getOp();
+
+        if (op == OPERATION::DEPTH_TO_SPACE_DCR || op == OPERATION::DEPTH_TO_SPACE_CRD) {
+            auto node = std::make_shared<ge::op::DepthToSpace>(name);
+
+            node->set_attr_block_size(blocksize);
+            if (op == OPERATION::DEPTH_TO_SPACE_DCR) {
+                node->set_attr_mode("DCR");
+            } else {
+                node->set_attr_mode("CRD");
+            }
+            node->set_attr_data_format("NCHW");
+
+            node->set_input_x_by_name(*input_node, input_tensor_wrapper->name.c_str());
+            node->update_input_desc_x(*input_tensor_desc);
+
+            auto output_tensor_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+            node->update_output_desc_y(*output_tensor_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(node));
+        } else {
+            auto node = std::make_shared<ge::op::SpaceToDepth>(name);
+
+            node->set_attr_block_size(blocksize);
+            node->set_attr_data_format("NCHW");
+
+            node->set_input_x_by_name(*input_node, input_tensor_wrapper->name.c_str());
+            node->update_input_desc_x(*input_tensor_desc);
+
+            auto output_tensor_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+            node->update_output_desc_y(*output_tensor_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(node));
+        }
+    }
+#endif
 
 private:
     enum class OPERATION {
