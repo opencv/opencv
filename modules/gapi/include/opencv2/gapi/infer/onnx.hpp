@@ -351,6 +351,7 @@ struct ParamDesc {
     std::unordered_map<std::string, std::pair<cv::Scalar, cv::Scalar> > generic_mstd;
     std::unordered_map<std::string, bool> generic_norm;
 
+    std::unordered_map<std::string, std::string> session_options_map;
     std::vector<cv::gapi::onnx::ep::EP> execution_providers;
     bool disable_mem_pattern;
 };
@@ -631,6 +632,19 @@ public:
     */
     Params<Net>& cfgDisableMemPattern() {
         desc.disable_mem_pattern = true;
+        return *this;
+    }
+
+    /** @brief Configures session options for ONNX Runtime.
+
+    This function allows setting various session options for the ONNX Runtime
+    session by accepting a map of key-value pairs.
+
+    @param options A map of session options to be applied to the ONNX Runtime session.
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgSessionOptions(const std::unordered_map<std::string, std::string>& options) {
+        desc.session_options_map.insert(options.begin(), options.end());
         return *this;
     }
 
