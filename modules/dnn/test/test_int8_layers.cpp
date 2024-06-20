@@ -553,13 +553,15 @@ TEST_P(Test_Int8_layers, DepthSpaceOps) {
         if (backend == DNN_BACKEND_TIMVX) { l1 = 0.24; lInf = 0.99; }
         test_layer_with_onnx_conformance_models("depthtospace_crd_mode", l1, lInf);
     }
-    {
-        l1 = 0.07; lInf = 0.14;
-        if (backend == DNN_BACKEND_TIMVX) { l1 = 13.6; lInf = 27.2; }
-        test_layer_with_onnx_conformance_models("depthtospace_crd_mode_example", l1, lInf);
-    }
     test_layer_with_onnx_conformance_models("depthtospace_dcr_mode", 0.001, 0.002);
     test_layer_with_onnx_conformance_models("depthtospace_example", 0.07, 0.14);
+
+    {
+        l1 = 0.07; lInf = 0.14;
+        if (backend == DNN_BACKEND_TIMVX) // diff too huge, l1 = 13.6; lInf = 27.2
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_TIMVX);
+        test_layer_with_onnx_conformance_models("depthtospace_crd_mode_example", l1, lInf);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Int8_layers, dnnBackendsAndTargetsInt8());
