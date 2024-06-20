@@ -637,7 +637,7 @@ public:
 
     /** @brief Configures session options for ONNX Runtime.
 
-    This function is used for setting various session options for the ONNX Runtime
+    This function is used to set various session options for the ONNX Runtime
     session by accepting a map of key-value pairs.
 
     @param options A map of session option to be applied to the ONNX Runtime session.
