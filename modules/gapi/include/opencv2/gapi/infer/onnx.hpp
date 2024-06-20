@@ -719,6 +719,11 @@ public:
         desc.disable_mem_pattern = true;
     }
 
+    /** @see onnx::Params::cfgSessionOptions. */
+    void cfgSessionOptions(const std::map<std::string, std::string>& options) {
+        desc.session_options.insert(options.begin(), options.end());
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::onnx::backend(); }
     std::string   tag()     const { return m_tag; }
