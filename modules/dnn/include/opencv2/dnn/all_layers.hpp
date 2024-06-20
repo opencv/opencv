@@ -1188,9 +1188,14 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GroupNormLayer> create(const LayerParams &params);
     };
 
-    class CV_EXPORTS DepthSpaceLayer : public Layer {
+    class CV_EXPORTS DepthToSpaceLayer : public Layer {
     public:
-        static Ptr<DepthSpaceLayer> create(const LayerParams &params);
+        static Ptr<DepthToSpaceLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SpaceToDepthLayer : public Layer {
+    public:
+        static Ptr<SpaceToDepthLayer> create(const LayerParams &params);
     };
 
 //! @}

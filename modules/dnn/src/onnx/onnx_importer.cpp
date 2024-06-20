@@ -189,7 +189,7 @@ private:
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseDepthToSpace         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDepthSpaceOps        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTile                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2916,10 +2916,8 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
-{
-    // "DepthToSpace" and "SpaceToDepth" are parsed in this function
-    layerParams.set("op_type", node_proto.op_type());
+void ONNXImporter::parseDepthSpaceOps(LayerParams &layerParams, const opencv_onnx::NodeProto& node_proto) {
+    CV_CheckTrue(layerParams.has("blocksize"), "blocksize is required but not found");
     addLayer(layerParams, node_proto);
 }
 
@@ -3930,7 +3928,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter::parseCumSum;
-    dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter::parseDepthToSpace;
+    dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter::parseDepthSpaceOps;
     dispatch["ScatterElements"] = dispatch["Scatter"] = dispatch["ScatterND"] = &ONNXImporter::parseScatter;
     dispatch["Tile"] = &ONNXImporter::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter::parseLayerNorm;
