@@ -71,10 +71,12 @@ public:
             return true;
         }
 #endif
+#ifdef HAVE_TIMVX
         if (backendId == DNN_BACKEND_TIMVX && haveTimVX() && op != OPERATION::DEPTH_TO_SPACE_DCR) {
-            // dcr mode is not supported by the current integrated timvx-backend
+            // dcr mode is not supported by the current integrated version of the timvx backend
             return true;
         }
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA   ||
                backendId == DNN_BACKEND_CANN;
