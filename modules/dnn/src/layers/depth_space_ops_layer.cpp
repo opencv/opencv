@@ -19,7 +19,7 @@
 // CUDA backend
 #ifdef HAVE_CUDA
 #include "../op_cuda.hpp"
-#include "../cuda4dnn/primitives/depth_space.hpp"
+#include "../cuda4dnn/primitives/depth_space_ops.hpp"
 #endif
 
 // CANN backend
@@ -220,7 +220,7 @@ public:
         using namespace cv::dnn::cuda4dnn;
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         std::vector<size_t> perm(permutation.begin(), permutation.end());
-        return make_cuda_node<cuda4dnn::DepthSpaceOp>(preferableTarget, std::move(context->stream), internal_shape, perm);
+        return make_cuda_node<cuda4dnn::DepthSpaceOps>(preferableTarget, std::move(context->stream), internal_shape, perm);
     }
 #endif // HAVE_CUDA
 
@@ -402,7 +402,7 @@ public:
         using namespace cv::dnn::cuda4dnn;
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         std::vector<size_t> perm(permutation.begin(), permutation.end());
-        return make_cuda_node<cuda4dnn::DepthSpaceOp>(preferableTarget, std::move(context->stream), internal_shape, perm);
+        return make_cuda_node<cuda4dnn::DepthSpaceOps>(preferableTarget, std::move(context->stream), internal_shape, perm);
     }
 #endif // HAVE_CUDA
 
