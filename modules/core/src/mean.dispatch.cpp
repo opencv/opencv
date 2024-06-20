@@ -557,22 +557,49 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
                    (stddev_mat.cols == 1 || stddev_mat.rows == 1) && dcn >= cn );
     }
 
+    int hal_status = CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (src.isContinuous() && mask.isContinuous())
     {
-        CALL_HAL(meanStdDev, cv_hal_meanStdDev, src.data, 0, (int)src.total(), 1, src.type(),
-                 _mean.needed() ? mean_mat.ptr<double>() : nullptr,
-                 _sdv.needed() ? stddev_mat.ptr<double>() : nullptr,
-                 mask.data, 0);
+        hal_status = cv_hal_meanStdDev(src.data, 0, (int)src.total(), 1, src.type(),
+                        _mean.needed() ? mean_mat.ptr<double>() : nullptr,
+                        _sdv.needed() ? stddev_mat.ptr<double>() : nullptr,
+                        mask.data, 0);
     }
     else
     {
         if (src.dims <= 2)
         {
-            CALL_HAL(meanStdDev, cv_hal_meanStdDev, src.data, src.step, src.cols, src.rows, src.type(),
-                     _mean.needed() ? mean_mat.ptr<double>() : nullptr,
-                     _sdv.needed() ? stddev_mat.ptr<double>() : nullptr,
-                     mask.data, mask.step);
+            hal_status = cv_hal_meanStdDev(src.data, src.step, src.cols, src.rows, src.type(),
+                            _mean.needed() ? mean_mat.ptr<double>() : nullptr,
+                            _sdv.needed() ? stddev_mat.ptr<double>() : nullptr,
+                            mask.data, mask.step);
         }
+    }
+
+    if( hal_status == CV_HAL_ERROR_OK)
+    {
+        if (_mean.needed())
+        {
+            int dcn = (int)mean_mat.total();
+            double* dptr = mean_mat.ptr<double>();
+            for( k = cn; k < dcn; k++ )
+                dptr[k] = 0;
+        }
+
+        if (_sdv.needed())
+        {
+            int dcn = (int)stddev_mat.total();
+            double* dptr = stddev_mat.ptr<double>();
+            for( k = cn; k < dcn; k++ )
+                dptr[k] = 0;
+        }
+
+        return;
+    }
+    else if (hal_status != CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        CV_Error_(cv::Error::StsInternal,
+            ("HAL implementation hal_meanStdDev ==> " CVAUX_STR(cv_hal_meanStdDev) " returned %d (0x%08x)", hal_status, hal_status));
     }
 
     SumSqrFunc func = getSumSqrFunc(depth);
