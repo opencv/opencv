@@ -675,26 +675,7 @@ public:
     @param model_path path to model file (.onnx file).
     */
     Params(const std::string& tag, const std::string& model_path)
-        : desc{
-            model_path, // model_path
-            0u,         // num_in
-            0u,         // num_out
-            {},         // input_names
-            {},         // output_names
-            {},         // const_inputs
-            {},         // mean
-            {},         // stdev
-            {},         // out_metas
-            {},         // custom_post_proc
-            {},         // normalize
-            {},         // names_to_remap
-            true,       // is_generic
-            {},         // generic_mstd
-            {},         // generic_norm
-            {},         // session_options
-            {},         // execution_providers
-            false       // disable_mem_pattern
-        }, m_tag(tag) {}
+        : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {}, {}, {}, false}, m_tag(tag) {}
 
     /** @see onnx::Params::cfgMeanStdDev. */
     void cfgMeanStdDev(const std::string &layer,
