@@ -24,7 +24,7 @@ model, but the methodology applies to other supported models.
 
 @note Currently, OpenCV supports the following YOLO models:
 - [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main),
-- [YoloNas](https://github.com/Deci-AI/super-gradients/tree/master),
+- [YOLONas](https://github.com/Deci-AI/super-gradients/tree/master),
 - [YOLOv10](https://github.com/THU-MIG/yolov10/tree/main),
 - [YOLOv8](https://github.com/ultralytics/ultralytics/tree/main),
 - [YOLOv7](https://github.com/WongKinYiu/yolov7/tree/main),
