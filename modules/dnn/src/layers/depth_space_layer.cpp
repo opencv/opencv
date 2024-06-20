@@ -16,6 +16,12 @@
 #include "../ie_ngraph.hpp"
 #endif
 
+// CUDA backend
+#ifdef HAVE_CUDA
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/depth_space.hpp"
+#endif
+
 namespace cv { namespace dnn {
 
 class DepthSpaceLayerImpl CV_FINAL : public DepthSpaceLayer {
@@ -179,7 +185,7 @@ public:
         transposed_tmp.reshape(1, static_cast<int>(output_shape.size()), output_shape.data()).copyTo(outputs.front());
         return true;
     }
-#endif
+#endif // HAVE_OPENCL
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -196,7 +202,19 @@ public:
         }
         return Ptr<BackendNode>(new InfEngineNgraphNode(output_node));
     }
-#endif
+#endif // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void *context_,
+                              const std::vector<Ptr<BackendWrapper>>& inputs,
+                              const std::vector<Ptr<BackendWrapper>>& outputs) override {
+        using namespace cv::dnn::cuda4dnn;
+
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        std::vector<size_t> perm(permutation.begin(), permutation.end());
+        return make_cuda_node<cuda4dnn::DepthSpaceOp>(preferableTarget, std::move(context->stream), internal_shape, perm);
+    }
+#endif // HAVE_CUDA
 
 private:
     enum class OPERATION {
