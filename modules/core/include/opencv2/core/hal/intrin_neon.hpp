@@ -298,9 +298,9 @@ struct v_float16x8
 {
     v_float16x8() {}
     explicit v_float16x8(float16x8_t v) : val(v) {}
-    v_float16x8(__fp16 v0, __fp16 v1, __fp16 v2, __fp16 v3, __fp16 v4, __fp16 v5, __fp16 v6, __fp16 v7)
+    v_float16x8(hfloat v0, hfloat v1, hfloat v2, hfloat v3, hfloat v4, hfloat v5, hfloat v6, hfloat v7)
     {
-        __fp16 v[] = {v0, v1, v2, v3, v4, v5, v6, v7};
+        __fp16 v[] = {(__fp16)v0, (__fp16)v1, (__fp16)v2, (__fp16)v3, (__fp16)v4, (__fp16)v5, (__fp16)v6, (__fp16)v7};
         val = vld1q_f16(v);
     }
     float16x8_t val;
@@ -308,12 +308,12 @@ struct v_float16x8
 private:
     friend struct VTraits<v_float16x8>;
     enum { nlanes = 8 };
-    typedef __fp16 lane_type;
+    typedef hfloat lane_type;
 
     friend typename VTraits<v_float16x8>::lane_type v_get0<v_float16x8>(const v_float16x8& v);
-    __fp16 get0() const
+    hfloat get0() const
     {
-        return vgetq_lane_f16(val, 0);
+        return (hfloat)vgetq_lane_f16(val, 0);
     }
 };
 #endif
@@ -411,9 +411,9 @@ private:
 };
 #endif
 
-#define OPENCV_HAL_IMPL_NEON_INIT(_Tpv, _Tp, suffix) \
-inline v_##_Tpv v_setzero_##suffix() { return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
-inline v_##_Tpv v_setall_##suffix(_Tp v) { return v_##_Tpv(vdupq_n_##suffix(v)); } \
+#define OPENCV_HAL_IMPL_NEON_INIT(_Tpv, _Tp, _TpCast, suffix) \
+inline v_##_Tpv v_setzero_##suffix() { return v_##_Tpv(vdupq_n_##suffix((_TpCast)0)); } \
+inline v_##_Tpv v_setall_##suffix(_Tp v) { return v_##_Tpv(vdupq_n_##suffix((_TpCast)v)); } \
 inline _Tpv##_t vreinterpretq_##suffix##_##suffix(_Tpv##_t v) { return v; } \
 inline v_uint8x16 v_reinterpret_as_u8(const v_##_Tpv& v) { return v_uint8x16(vreinterpretq_u8_##suffix(v.val)); } \
 inline v_int8x16 v_reinterpret_as_s8(const v_##_Tpv& v) { return v_int8x16(vreinterpretq_s8_##suffix(v.val)); } \
@@ -425,16 +425,16 @@ inline v_uint64x2 v_reinterpret_as_u64(const v_##_Tpv& v) { return v_uint64x2(vr
 inline v_int64x2 v_reinterpret_as_s64(const v_##_Tpv& v) { return v_int64x2(vreinterpretq_s64_##suffix(v.val)); } \
 inline v_float32x4 v_reinterpret_as_f32(const v_##_Tpv& v) { return v_float32x4(vreinterpretq_f32_##suffix(v.val)); }
 
-OPENCV_HAL_IMPL_NEON_INIT(uint8x16, uchar, u8)
-OPENCV_HAL_IMPL_NEON_INIT(int8x16, schar, s8)
-OPENCV_HAL_IMPL_NEON_INIT(uint16x8, ushort, u16)
-OPENCV_HAL_IMPL_NEON_INIT(int16x8, short, s16)
-OPENCV_HAL_IMPL_NEON_INIT(uint32x4, unsigned, u32)
-OPENCV_HAL_IMPL_NEON_INIT(int32x4, int, s32)
-OPENCV_HAL_IMPL_NEON_INIT(uint64x2, uint64, u64)
-OPENCV_HAL_IMPL_NEON_INIT(int64x2, int64, s64)
+OPENCV_HAL_IMPL_NEON_INIT(uint8x16, uchar, uchar, u8)
+OPENCV_HAL_IMPL_NEON_INIT(int8x16, schar, schar, s8)
+OPENCV_HAL_IMPL_NEON_INIT(uint16x8, ushort, ushort, u16)
+OPENCV_HAL_IMPL_NEON_INIT(int16x8, short, short, s16)
+OPENCV_HAL_IMPL_NEON_INIT(uint32x4, unsigned, unsigned, u32)
+OPENCV_HAL_IMPL_NEON_INIT(int32x4, int, int, s32)
+OPENCV_HAL_IMPL_NEON_INIT(uint64x2, uint64, uint64, u64)
+OPENCV_HAL_IMPL_NEON_INIT(int64x2, int64, int64, s64)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_INIT(float16x8, __fp16, f16);
+OPENCV_HAL_IMPL_NEON_INIT(float16x8, hfloat, __fp16,  f16);
 #define OPENCV_HAL_IMPL_NEON_INIT_FP16(_Tpv, suffix) \
 inline v_float16x8 v_reinterpret_as_f16(const v_##_Tpv& v) { return v_float16x8(vreinterpretq_f16_##suffix(v.val)); }
 OPENCV_HAL_IMPL_NEON_INIT_FP16(uint8x16, u8)
@@ -450,11 +450,11 @@ OPENCV_HAL_IMPL_NEON_INIT_FP16(float32x4, f32)
 OPENCV_HAL_IMPL_NEON_INIT_FP16(float64x2, f64)
 #endif
 #endif
-OPENCV_HAL_IMPL_NEON_INIT(float32x4, float, f32)
+OPENCV_HAL_IMPL_NEON_INIT(float32x4, float, float, f32)
 #if CV_SIMD128_64F
 #define OPENCV_HAL_IMPL_NEON_INIT_64(_Tpv, suffix) \
 inline v_float64x2 v_reinterpret_as_f64(const v_##_Tpv& v) { return v_float64x2(vreinterpretq_f64_##suffix(v.val)); }
-OPENCV_HAL_IMPL_NEON_INIT(float64x2, double, f64)
+OPENCV_HAL_IMPL_NEON_INIT(float64x2, double, double, f64)
 OPENCV_HAL_IMPL_NEON_INIT_64(uint8x16, u8)
 OPENCV_HAL_IMPL_NEON_INIT_64(int8x16, s8)
 OPENCV_HAL_IMPL_NEON_INIT_64(uint16x8, u16)
@@ -1082,7 +1082,7 @@ inline v_float16x8 v_sqrt(const v_float16x8& x)
 
 inline v_float16x8 v_invsqrt(const v_float16x8& x)
 {
-    v_float16x8 one = v_setall_f16(1.0f);
+    v_float16x8 one = v_setall_f16((hfloat)1.0f);
     return v_div(one, v_sqrt(x));
 }
 #endif
@@ -1467,7 +1467,7 @@ OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float64x2, f64)
 
 #if defined(__clang__) && defined(__aarch64__)
 // avoid LD2 instruction. details: https://github.com/opencv/opencv/issues/14863
-#define OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
+#define OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, _TpCast, suffix) \
 inline _Tpvec v_load_low(const _Tp* ptr) \
 { \
 typedef uint64 CV_DECL_ALIGNED(1) unaligned_uint64; \
@@ -1475,46 +1475,46 @@ uint64 v = *(unaligned_uint64*)ptr; \
 return _Tpvec(v_reinterpret_as_##suffix(v_uint64x2(v, (uint64)123456))); \
 }
 #else
-#define OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
+#define OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, _TpCast, suffix) \
 inline _Tpvec v_load_low(const _Tp* ptr) \
-{ return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr), vdup_n_##suffix((_Tp)0))); }
+{ return _Tpvec(vcombine_##suffix(vld1_##suffix((const _TpCast *)ptr), vdup_n_##suffix((_Tp)0))); }
 #endif
 
-#define OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(_Tpvec, _Tp, suffix) \
+#define OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(_Tpvec, _Tp, _TpCast, suffix) \
 inline _Tpvec v_load(const _Tp* ptr) \
-{ return _Tpvec(vld1q_##suffix(ptr)); } \
+{ return _Tpvec(vld1q_##suffix((const _TpCast *)ptr)); } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
-{ return _Tpvec(vld1q_##suffix(ptr)); } \
-OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
+{ return _Tpvec(vld1q_##suffix((const _TpCast *)ptr)); } \
+OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, _TpCast, suffix) \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
-{ return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr0), vld1_##suffix(ptr1))); } \
+{ return _Tpvec(vcombine_##suffix(vld1_##suffix((const _TpCast *)ptr0), vld1_##suffix((const _TpCast *)ptr1))); } \
 inline void v_store(_Tp* ptr, const _Tpvec& a) \
-{ vst1q_##suffix(ptr, a.val); } \
+{ vst1q_##suffix((_TpCast *)ptr, a.val); } \
 inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
-{ vst1q_##suffix(ptr, a.val); } \
+{ vst1q_##suffix((_TpCast *)ptr, a.val); } \
 inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a) \
-{ vst1q_##suffix(ptr, a.val); } \
+{ vst1q_##suffix((_TpCast *)ptr, a.val); } \
 inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode /*mode*/) \
-{ vst1q_##suffix(ptr, a.val); } \
+{ vst1q_##suffix((_TpCast *)ptr, a.val); } \
 inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
-{ vst1_##suffix(ptr, vget_low_##suffix(a.val)); } \
+{ vst1_##suffix((_TpCast *)ptr, vget_low_##suffix(a.val)); } \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
-{ vst1_##suffix(ptr, vget_high_##suffix(a.val)); }
+{ vst1_##suffix((_TpCast *)ptr, vget_high_##suffix(a.val)); }
 
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint8x16, uchar, u8)
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int8x16, schar, s8)
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint16x8, ushort, u16)
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int16x8, short, s16)
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint32x4, unsigned, u32)
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int32x4, int, s32)
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint64x2, uint64, u64)
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, s64)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint8x16, uchar, uchar, u8)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int8x16, schar, schar, s8)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint16x8, ushort, ushort, u16)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int16x8, short, short, s16)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint32x4, unsigned, unsigned, u32)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int32x4, int, int, s32)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint64x2, uint64, uint64, u64)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, int64, s64)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float16x8, __fp16, f16)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float16x8, hfloat, __fp16, f16)
 #endif
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float32x4, float, f32)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float32x4, float, float, f32)
 #if CV_SIMD128_64F
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, f64)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, double, f64)
 #endif
 
 inline unsigned v_reduce_sum(const v_uint8x16& a)
@@ -1588,7 +1588,7 @@ OPENCV_HAL_IMPL_NEON_REDUCE_OP_16(v_int8x16, int8x8, schar, min, min, s8)
 #define OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
 inline scalartype v_reduce_##func(const _Tpvec& a) \
 { \
-    return v##vectorfunc##vq_##suffix(a.val); \
+    return (scalartype)v##vectorfunc##vq_##suffix(a.val); \
 }
 #else // #if CV_NEON_AARCH64
 #define OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
@@ -1605,8 +1605,8 @@ OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, ushort, min, min, u16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, max, max, s16)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, min, min, s16)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, max, max, f16)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, __fp16, min, min, f16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, hfloat, max, max, f16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_float16x8, float16x4, hfloat, min, min, f16)
 #endif
 
 #if CV_NEON_AARCH64
@@ -2183,14 +2183,14 @@ OPENCV_HAL_IMPL_NEON_EXTRACT(float64x2, f64)
 #endif
 
 #define OPENCV_HAL_IMPL_NEON_EXTRACT_N(_Tpvec, _Tp, suffix) \
-template<int i> inline _Tp v_extract_n(_Tpvec v) { return vgetq_lane_##suffix(v.val, i); }
+template<int i> inline _Tp v_extract_n(_Tpvec v) { return (_Tp)vgetq_lane_##suffix(v.val, i); }
 
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int16x8, short, s16)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float16x8, __fp16, f16)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float16x8, hfloat, f16)
 #endif
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint32x4, uint, u32)
 OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int32x4, int, s32)
@@ -2209,7 +2209,7 @@ OPENCV_HAL_IMPL_NEON_BROADCAST(v_int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_int16x8, short, s16)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_BROADCAST(v_float16x8, __fp16, f16)
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_float16x8, hfloat, f16)
 #endif
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint32x4, uint, u32)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_int32x4, int, s32)
@@ -2422,16 +2422,16 @@ inline void v_transpose8x8(const v_float16x8 &a0, const v_float16x8 &a1,
 }
 #endif
 
-#define OPENCV_HAL_IMPL_NEON_INTERLEAVED(_Tpvec, _Tp, suffix) \
+#define OPENCV_HAL_IMPL_NEON_INTERLEAVED(_Tpvec, _Tp, _TpCast, suffix) \
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b) \
 { \
-    _Tpvec##x2_t v = vld2q_##suffix(ptr); \
+    _Tpvec##x2_t v = vld2q_##suffix((const _TpCast *)ptr); \
     a.val = v.val[0]; \
     b.val = v.val[1]; \
 } \
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, v_##_Tpvec& c) \
 { \
-    _Tpvec##x3_t v = vld3q_##suffix(ptr); \
+    _Tpvec##x3_t v = vld3q_##suffix((const _TpCast *)ptr); \
     a.val = v.val[0]; \
     b.val = v.val[1]; \
     c.val = v.val[2]; \
@@ -2439,7 +2439,7 @@ inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, v_
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, \
                                 v_##_Tpvec& c, v_##_Tpvec& d) \
 { \
-    _Tpvec##x4_t v = vld4q_##suffix(ptr); \
+    _Tpvec##x4_t v = vld4q_##suffix((const _TpCast *)ptr); \
     a.val = v.val[0]; \
     b.val = v.val[1]; \
     c.val = v.val[2]; \
@@ -2451,7 +2451,7 @@ inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec&
     _Tpvec##x2_t v; \
     v.val[0] = a.val; \
     v.val[1] = b.val; \
-    vst2q_##suffix(ptr, v); \
+    vst2q_##suffix((_TpCast *)ptr, v); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
                                 const v_##_Tpvec& c, hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
@@ -2460,7 +2460,7 @@ inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec&
     v.val[0] = a.val; \
     v.val[1] = b.val; \
     v.val[2] = c.val; \
-    vst3q_##suffix(ptr, v); \
+    vst3q_##suffix((_TpCast *)ptr, v); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
                                 const v_##_Tpvec& c, const v_##_Tpvec& d, \
@@ -2471,7 +2471,7 @@ inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec&
     v.val[1] = b.val; \
     v.val[2] = c.val; \
     v.val[3] = d.val; \
-    vst4q_##suffix(ptr, v); \
+    vst4q_##suffix((_TpCast *)ptr, v); \
 }
 
 #define OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(tp, suffix) \
@@ -2551,18 +2551,18 @@ inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& 
     vst1_##suffix(ptr + 7, vget_high_##suffix(d.val)); \
 }
 
-OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint8x16, uchar, u8)
-OPENCV_HAL_IMPL_NEON_INTERLEAVED(int8x16, schar, s8)
-OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint16x8, ushort, u16)
-OPENCV_HAL_IMPL_NEON_INTERLEAVED(int16x8, short, s16)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint8x16, uchar, uchar, u8)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(int8x16, schar, schar, s8)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint16x8, ushort, ushort, u16)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(int16x8, short, short, s16)
 #if CV_SIMD128_FP16
-OPENCV_HAL_IMPL_NEON_INTERLEAVED(float16x8, __fp16, f16)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(float16x8, hfloat, __fp16, f16)
 #endif
-OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint32x4, unsigned, u32)
-OPENCV_HAL_IMPL_NEON_INTERLEAVED(int32x4, int, s32)
-OPENCV_HAL_IMPL_NEON_INTERLEAVED(float32x4, float, f32)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint32x4, unsigned, unsigned, u32)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(int32x4, int, int, s32)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(float32x4, float, float, f32)
 #if CV_SIMD128_64F
-OPENCV_HAL_IMPL_NEON_INTERLEAVED(float64x2, double, f64)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED(float64x2, double, double, f64)
 #endif
 
 OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(int64, s64)
@@ -2748,7 +2748,7 @@ inline v_uint16x8 v_lut_pairs(const ushort* tab, const int* idx) { return v_rein
 inline v_uint16x8 v_lut_quads(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_quads((short*)tab, idx)); }
 
 #if CV_SIMD128_FP16
-inline v_float16x8 v_lut(const float16_t *tab, const int *idx)
+inline v_float16x8 v_lut(const hfloat *tab, const int *idx)
 {
     const __fp16 *t = (const __fp16*)tab;
     __fp16 CV_DECL_ALIGNED(32) elems[8] =
@@ -2764,7 +2764,7 @@ inline v_float16x8 v_lut(const float16_t *tab, const int *idx)
     };
     return v_float16x8(vld1q_f16(elems));
 }
-inline v_float16x8 v_lut_pairs(const float16_t *tab, const int *idx)
+inline v_float16x8 v_lut_pairs(const hfloat *tab, const int *idx)
 {
     const __fp16 *t = (const __fp16*)tab;
     __fp16 CV_DECL_ALIGNED(32) elems[8] =
@@ -2780,7 +2780,7 @@ inline v_float16x8 v_lut_pairs(const float16_t *tab, const int *idx)
     };
     return v_float16x8(vld1q_f16(elems));
 }
-inline v_float16x8 v_lut_quads(const float16_t *tab, const int *idx)
+inline v_float16x8 v_lut_quads(const hfloat *tab, const int *idx)
 {
     const __fp16 *t = (const __fp16*)tab;
     return v_float16x8(vcombine_f16(vld1_f16(t + idx[0]), vld1_f16(t + idx[1])));
