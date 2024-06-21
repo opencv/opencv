@@ -116,7 +116,8 @@ void yoloPostProcessing(
     std::vector<float> confidences;
     std::vector<Rect2d> boxes;
 
-    if (model_name == "yolov8" || model_name == "yolov10")
+    if (model_name == "yolov8" || model_name == "yolov10" ||
+        model_name == "yolov9")
     {
         cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
     }
@@ -145,16 +146,17 @@ void yoloPostProcessing(
         for (int i = 0; i < preds.rows; ++i)
         {
             // filter out non object
-            float obj_conf = (model_name == "yolov8" || model_name == "yolonas" || model_name == "yolov10") ? 1.0f : preds.at<float>(i, 4) ;
+            float obj_conf = (model_name == "yolov8" || model_name == "yolonas" ||
+                              model_name == "yolov9" || model_name == "yolov10") ? 1.0f : preds.at<float>(i, 4) ;
             if (obj_conf < conf_threshold)
                 continue;
 
-            Mat scores = preds.row(i).colRange((model_name == "yolov8" || model_name == "yolonas" || model_name == "yolov10") ? 4 : 5, preds.cols);
+            Mat scores = preds.row(i).colRange((model_name == "yolov8" || model_name == "yolonas" || model_name == "yolov9" || model_name == "yolov10") ? 4 : 5, preds.cols);
             double conf;
             Point maxLoc;
             minMaxLoc(scores, 0, &conf, 0, &maxLoc);
 
-            conf = (model_name == "yolov8" || model_name == "yolonas" || model_name == "yolov10") ? conf : conf * obj_conf;
+            conf = (model_name == "yolov8" || model_name == "yolonas" || model_name == "yolov9" || model_name == "yolov10") ? conf : conf * obj_conf;
             if (conf < conf_threshold)
                 continue;
 
@@ -224,8 +226,8 @@ int main(int argc, char** argv)
     // check if yolo model is valid
     if (yolo_model != "yolov5" && yolo_model != "yolov6"
         && yolo_model != "yolov7" && yolo_model != "yolov8"
-        && yolo_model != "yolov10"&& yolo_model != "yolox"
-        && yolo_model != "yolonas")
+        && yolo_model != "yolov10" && yolo_model !="yolov9"
+        && yolo_model != "yolox" && yolo_model != "yolonas")
         CV_Error(Error::StsError, "Invalid yolo model: " + yolo_model);
 
     // get classes

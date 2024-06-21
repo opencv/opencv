@@ -26,6 +26,7 @@ model, but the methodology applies to other supported models.
 - [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX/blob/main),
 - [YOLONas](https://github.com/Deci-AI/super-gradients/tree/master),
 - [YOLOv10](https://github.com/THU-MIG/yolov10/tree/main),
+- [YOLOv9](https://github.com/WongKinYiu/yolov9),
 - [YOLOv8](https://github.com/ultralytics/ultralytics/tree/main),
 - [YOLOv7](https://github.com/WongKinYiu/yolov7/tree/main),
 - [YOLOv6](https://github.com/meituan/YOLOv6/blob/main),
