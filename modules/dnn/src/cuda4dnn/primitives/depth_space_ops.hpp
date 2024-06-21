@@ -10,6 +10,7 @@
 #include "../csl/stream.hpp"
 #include "../csl/tensor.hpp"
 #include "../csl/tensor_ops.hpp"
+#include "../csl/memory.hpp"
 #include "../kernels/permute.hpp"
 
 #include <utility>
@@ -51,13 +52,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto ws_allocator = csl::WorkspaceAllocator(workspace);
             auto transposed_internal = ws_allocator.get_tensor_span<T>(transposed_internal_shape.begin(), transposed_internal_shape.end());
 
-            // Append extra dimension to make it from 4-dimensional to 6-dimensional
-            input.unsqueeze();
-            input.unsqueeze();
+            // Call reshape on input so that it has the correct shape for permutation
             input.reshape(internal_shape.begin(), internal_shape.end());
             kernels::permute(stream, transposed_internal, input, permutation);
-            transposed_internal.reshape_as(output);
-            csl::tensor_ops::copy(stream, output, csl::TensorView<T>(transposed_internal));
+            // Only copying is needed as output already has the expected shape
+            auto t = csl::TensorView<T>(transposed_internal);
+            csl::memcpy(output.get(), t.get(), output.size(), stream);
         }
 
         std::size_t get_workspace_memory_in_bytes() const noexcept override { return scratch_mem_in_bytes; }
