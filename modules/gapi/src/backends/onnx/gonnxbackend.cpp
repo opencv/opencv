@@ -702,6 +702,10 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
         cv::gimpl::onnx::addExecutionProvider(&session_options, ep);
     }
 
+    for (const auto &option : pp.session_options) {
+        session_options.AddConfigEntry(option.first.c_str(), option.second.c_str());
+    }
+
     if (pp.disable_mem_pattern) {
         session_options.DisableMemPattern();
     }
