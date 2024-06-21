@@ -41,6 +41,7 @@ std::string keys =
     "{ yolo        | yolox | yolo model version. }"
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
     "{ classes     | | Optional path to a text file with names of classes to label detected objects. }"
+    "{ nc          | 80 | Number of classes. Default is 80 (coming from COCO dataset). }"
     "{ thr         | .5 | Confidence threshold. }"
     "{ nms         | .4 | Non-maximum suppression threshold. }"
     "{ mean        | 0.0 | Normalization constant. }"
@@ -138,6 +139,7 @@ void yoloPostProcessing(
     }
 
     // assert if last dim is 85 or 84
+    CV_CheckEQ(outs[0].dims, 3, "Invalid output shape. The shape should be [1, #anchors, 85 or 84]");
     CV_CheckEQ((outs[0].size[2] == nc + 5 || outs[0].size[2] == 80 + 4), true, "Invalid output shape: ");
 
     for (auto preds : outs)
@@ -210,6 +212,7 @@ int main(int argc, char** argv)
     // if model is default, use findFile to get the full path otherwise use the given path
     std::string weightPath = findFile(parser.get<String>("model"));
     std::string yolo_model = parser.get<String>("yolo");
+    int nc = parser.get<int>("nc");
 
     float confThreshold = parser.get<float>("thr");
     float nmsThreshold = parser.get<float>("nms");
@@ -339,7 +342,8 @@ int main(int argc, char** argv)
         yoloPostProcessing(
             outs, keep_classIds, keep_confidences, keep_boxes,
             confThreshold, nmsThreshold,
-            yolo_model);
+            yolo_model,
+            nc);
         //![postprocess]
 
         // covert Rect2d to Rect
