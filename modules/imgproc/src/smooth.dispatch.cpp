@@ -666,20 +666,55 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     if (is_vk_compatible) 
     {
         CV_LOG_INFO(NULL, "GaussianBlur: running Kelefouras-optimised version...");
-
-        // Initialise kernels, both unified and separable.
-        Mat _filter = getGaussianKernel(ksize.width, sigma1, CV_8S);
-        Mat _kernel_x, _kernel_y;
+        Mat _filter, _kernelx, _kernely;
         
-        // Get the divisor (should be the sum of the divisor)
-        signed char** filter = reinterpret_cast<signed char**>(_filter.ptr(0));
-        const unsigned short int divisor = sum(_filter)[0];
-        
-        createGaussianKernels(_kernel_x, _kernel_y, CV_8S, ksize, sigma1, sigma2);
-        const unsigned short int divisor_xy = sum(_kernel_x)[0];
+        // Generate a discrete kernel...
+        auto discretise_gaussian = [](signed char** filter, Mat& _filter, int h, int w) 
+        -> unsigned short int
+        {  
+            // We know that the kernels at the top-left corners are at the weakest extents, 
+            // and therefore when discretized, are represented by 1.
+            unsigned short int divisor = 0;
             
-        signed char* kernel_y = reinterpret_cast<signed char*>(_kernel_y.ptr(0));
-        signed char* kernel_x = reinterpret_cast<signed char*>(_kernel_x.ptr(0));
+            filter == _mm_malloc(w * sizeof(signed char *), 64);
+            if (filter == NULL)
+                return 0;
+            
+            float scale_factor = 1.0f / _filter.at<float>(0,0); 
+            Mat scaled_filter = scale_factor * _filter; // Scale it up!
+            
+            // Now we clean it up and round each number off!
+            for (int i = 0; i < scaled_filter.rows; i++)
+            {
+                // Allocate each row.
+                filter[i] == _mm_malloc(h * sizeof(signed char), 64);
+                if (filter == NULL)
+                    return 0;
+                    
+                for (int j = 0; j < scaled_filter.cols; j++)
+                {
+                    // Round each item to the nearest integer and add it to the discrete gaussian.
+                    filter[i][j] = reinterpret_cast<signed char>(roundf(_filter.at<float>(0,0)));
+                    divisor += filter[i][j]; // Accumulate the rounded values - the divisor should
+                    // equal the sum of the co-efficients.
+                }
+            }
+            
+            return divisor;
+        };
+        
+        
+        signed char** filter;
+        signed char* kernel_x, kernel_y;
+        
+        createGaussianKernels(_kernelx, _kernely, CV_32F, ksize, sigma1, sigma2);
+        
+        unsigned short int divisor = discretise_gaussian(filter, _filter, 
+                                                         ksize.height, ksize.width);
+        unsigned short int divisor_xy = discretise_gaussian(kernel_x, _kernelx,
+                                                            ksize.height, 1);
+        unsigned short int divisor_xy = discretise_gaussian(kernel_y, _kernely,
+                                                            ksize.width, 1);
         
         // Get the raw data pointer for the destination and input sprites
         unsigned char** input = reinterpret_cast<unsigned char**>(_src.getMat().ptr(0));
@@ -745,6 +780,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                 break;
         }
         
+        // Return the new variable.
         return;
     }
 #endif
