@@ -455,10 +455,6 @@ class dnn_test(NewOpenCVTests):
                                     "Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
         input = np.load(input_file)
-        # we have to expand the shape of input tensor because Python bindings cut 3D tensors to 2D
-        # it should be fixed in future. see : https://github.com/opencv/opencv/issues/19091
-        # please remove `expand_dims` after that
-        input = np.expand_dims(input, axis=3)
         gold_output = np.load(output_file)
 
         for backend, target in self.dnnBackendsAndTargets:
