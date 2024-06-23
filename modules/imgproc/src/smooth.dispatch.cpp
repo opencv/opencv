@@ -658,11 +658,9 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
 #ifdef HAVE_VK_SMOOTH
     bool is_vk_compatible = sdepth == CV_8U && // if the source depth consists of unsigned chars.
-                             (borderType == BORDER_CONSTANT) && // if the border type is all zeros.
+                             (borderType & BORDER_CONSTANT) == 0 && // if the border type is zeros.
                              ksize.height == ksize.width && // if it's a square kernel.
-                             sigma1 == sigma2 && // if it's a SYMMETRICAL kernel
-                             ksize.width % 2 == 1 && // if it's an odd-width kernel (3x3, 5x5 etc.).
-                             ksize.width < 11; // if it's less than 11x11 (use DFT for that).
+                             ksize.width < 11; // if it's an odd-width kernel (3x3, 5x5 etc.).
     if (is_vk_compatible) 
     {
         CV_LOG_INFO(NULL, "GaussianBlur: running Kelefouras-optimised version...");

@@ -8,7 +8,7 @@
 #include "precomp.hpp" // defined here.
 
 // If we have AVX intrinsics, and we can use OPENMP, then build vk_gaussian.hpp
-#if defined HAVE_OPENMP && defined CV_AVX
+#if defined HAVE_OPENMP
 #define HAVE_VK_SMOOTH
 #endif
 
