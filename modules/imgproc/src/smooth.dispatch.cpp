@@ -692,7 +692,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                 for (int j = 0; j < scaled_filter.cols; j++)
                 {
                     // Round each item to the nearest integer and add it to the discrete gaussian.
-                    filter[i][j] = reinterpret_cast<signed char>(roundf(_filter.at<float>(0,0)));
+                    filter[i][j] = reinterpret_cast<signed char>(roundf(scaled_filter.at<float>(0,0)));
                     divisor += filter[i][j]; // Accumulate the rounded values - the divisor should
                     // equal the sum of the co-efficients.
                 }
@@ -778,6 +778,25 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                 break;
         }
         
+        // Free all resources.
+        if (filter != NULL)
+        {
+            for (int i = 0; i < _filter.rows; i++)
+            {
+                _mm_free(filter[i]);
+            }
+            _mm_free(filter);
+        }
+        
+        if (kernel_x != NULL)
+        {
+            _mm_free(kernel_x);
+        }
+        
+        if (kernel_y != NULL)
+        {
+            _mm_free(kernel_y);
+        }
         // Return the new variable.
         return;
     }
