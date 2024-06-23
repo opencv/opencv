@@ -439,11 +439,11 @@ bool  JpegDecoder::readData( Mat& img )
 #ifdef JCS_EXTENSIONS
                     cinfo->out_color_space = JCS_EXT_BGR;
                     cinfo->out_color_components = 3;
-                    doDirectRead = true; // BGR -> BGR
+                    doDirectRead = m_use_rgb ? false : true; // BGR -> BGR
 #else
                     cinfo->out_color_space = JCS_RGB;
                     cinfo->out_color_components = 3;
-                    doDirectRead = false; // RGB -> BGR
+                    doDirectRead = m_use_rgb ? true : false; // RGB -> BGR
 #endif
                 }
                 else
@@ -514,10 +514,20 @@ bool  JpegDecoder::readData( Mat& img )
 
                     if( color )
                     {
-                        if( cinfo->out_color_components == 3 )
-                            icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        if (m_use_rgb)
+                        {
+                            if( cinfo->out_color_components == 3 )
+                                icvCvt_BGR2RGB_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                            else
+                                icvCvt_CMYK2RGB_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        }
                         else
-                            icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        {
+                            if( cinfo->out_color_components == 3 )
+                                icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                            else
+                                icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        }
                     }
                     else
                     {

@@ -94,6 +94,11 @@ int BaseImageDecoder::setScale( const int& scale_denom )
     return temp;
 }
 
+void BaseImageDecoder::setRGB(bool useRGB)
+{
+    m_use_rgb = useRGB;
+}
+
 ImageDecoder BaseImageDecoder::newDecoder() const
 {
     return ImageDecoder();

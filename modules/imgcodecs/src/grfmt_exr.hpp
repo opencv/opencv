@@ -83,6 +83,7 @@ protected:
     void  UpSampleX( float *data, int xstep, int xsample );
     void  UpSampleY( uchar *data, int xstep, int ystep, int ysample );
     void  ChromaToBGR( float *data, int numlines, int xstep, int ystep );
+    void  ChromaToRGB( float *data, int numlines, int xstep, int ystep );
     void  RGBToGray( float *in, float *out );
 
     InputFile      *m_file;
