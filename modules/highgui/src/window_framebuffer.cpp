@@ -129,9 +129,7 @@ void FramebufferWindow::imshow(InputArray image)
             }
             break;
         default:
-            CV_LOG_ERROR(NULL, "UI: imshow can't convert image to show");
-            CV_Assert(img.channels() < 1);
-            CV_Assert(img.channels() > 4);
+            CV_Error(cv::Error::StsBadArg, "Bad image: wrong number of channels");
     }
     {
         Mat bgra(img.rows, img.cols, CV_8UC4);
