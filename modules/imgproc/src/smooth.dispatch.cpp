@@ -65,6 +65,7 @@ namespace cv {
 
 #include "smooth.simd.hpp"
 #include "smooth.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
+#include "smooth_kelefouras.hpp" // defines kelefouras-implemented work
 
 namespace cv {
 
@@ -645,6 +646,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
+    // This is separable.
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
 
@@ -653,6 +655,151 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
             (ksize.width == 5 && ksize.height == 5)),
             ocl_GaussianBlur_8UC1(_src, _dst, ksize, CV_MAT_DEPTH(type), kx, ky, borderType)
     );
+
+#ifdef HAVE_VK_SMOOTH
+    bool is_vk_compatible = sdepth == CV_8U && // if the source depth consists of unsigned chars.
+                             (borderType & BORDER_CONSTANT) == 0 && // if the border type is zeros.
+                             ksize.height == ksize.width && // if it's a square kernel.
+                             ksize.width < 11; // if it's an odd-width kernel (3x3, 5x5 etc.).
+    if (is_vk_compatible)
+    {
+        CV_LOG_INFO(NULL, "GaussianBlur: running Kelefouras-optimised version...");
+        Mat _filter, _kernelx, _kernely;
+
+        // Generate a discrete kernel...
+        auto discretise_gaussian = [](signed char** filter, Mat& _filter, int h, int w)
+        -> unsigned short int
+        {
+            // We know that the kernels at the top-left corners are at the weakest extents,
+            // and therefore when discretized, are represented by 1.
+            unsigned short int divisor = 0;
+
+            filter == _mm_malloc(w * sizeof(signed char *), 64);
+            if (filter == NULL)
+                return 0;
+
+            float scale_factor = 1.0f / _filter.at<float>(0,0);
+            Mat scaled_filter = scale_factor * _filter; // Scale it up!
+
+            // Now we clean it up and round each number off!
+            for (int i = 0; i < scaled_filter.rows; i++)
+            {
+                // Allocate each row.
+                filter[i] == _mm_malloc(h * sizeof(signed char), 64);
+                if (filter == NULL)
+                    return 0;
+
+                for (int j = 0; j < scaled_filter.cols; j++)
+                {
+                    // Round each item to the nearest integer and add it to the discrete gaussian.
+                    filter[i][j] = reinterpret_cast<signed char>(roundf(scaled_filter.at<float>(0,0)));
+                    divisor += filter[i][j]; // Accumulate the rounded values - the divisor should
+                    // equal the sum of the co-efficients.
+                }
+            }
+
+            return divisor;
+        };
+
+
+        signed char** filter;
+        signed char* kernel_x, kernel_y;
+
+        createGaussianKernels(_kernelx, _kernely, CV_32F, ksize, sigma1, sigma2);
+        unsigned short int divisor = discretise_gaussian(filter, _filter,
+                                                         ksize.height, ksize.width);
+        unsigned short int divisor_xy = discretise_gaussian(kernel_x, _kernelx,
+                                                            ksize.height, 1);
+        unsigned short int divisor_xy = discretise_gaussian(kernel_y, _kernely,
+                                                            ksize.width, 1);
+
+        // Get the raw data pointer for the destination and input sprites
+        unsigned char** input = reinterpret_cast<unsigned char**>(_src.getMat().ptr(0));
+        unsigned char** output = reinterpret_cast<unsigned char**>(_dst.getMat().ptr(0));
+
+        // Use a bitwise trick to get the powers of 2.
+        bool is_power_of_2 = (divisor != 0) && ((divisor & (divisor - 1)) == 0);
+
+        // Depending on the kernel size, switch out the following:
+        switch (ksize.width)
+        {
+            case 3:
+                Gaussian_Blur_optimized_3x3_16_reg_blocking(
+                    input,
+                    output,
+                    size.height,
+                    size.width,
+                    divisor,
+                    filter);
+                break;
+            case 5:
+                // Check if it's a power of 2.
+                if (is_power_of_2)
+                    Gaussian_Blur_optimized_5x5_16_seperable(
+                        input,
+                        output,
+                        size.height,
+                        size.width,
+                        kernel_y,
+                        kernel_x,
+                        divisor_xy);
+                else
+                    Gaussian_Blur_optimized_5x5_16_reg_blocking(
+                        input,
+                        output,
+                        size.height,
+                        size.width,
+                        divisor,
+                        filter);
+                break;
+            case 7:
+                Gaussian_Blur_7x7_16_separable(
+                    input,
+                    output,
+                    size.height,
+                    size.width,
+                    kernel_y,
+                    kernel_x,
+                    divisor_xy);
+                break;
+            case 9:
+                Gaussian_Blur_9x9_16_separable(
+                    input,
+                    output,
+                    size.height,
+                    size.width,
+                    kernel_y,
+                    kernel_x,
+                    divisor_xy);
+                break;
+            // It shouldn't reach here.
+            default:
+                break;
+        }
+
+        // Free all resources.
+        if (filter != NULL)
+        {
+            for (int i = 0; i < _filter.rows; i++)
+            {
+                _mm_free(filter[i]);
+            }
+            _mm_free(filter);
+        }
+
+        if (kernel_x != NULL)
+        {
+            _mm_free(kernel_x);
+        }
+
+        if (kernel_y != NULL)
+        {
+            _mm_free(kernel_y);
+        }
+        // Return the new variable.
+        return;
+    }
+#endif
 
     if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.isSubmatrix()))
     {
