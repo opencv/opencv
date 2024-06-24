@@ -1618,7 +1618,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
     {
         //do not emit signals: all calls will be synchronous and blocking
         gst_app_sink_set_emit_signals (GST_APP_SINK(sink.get()), FALSE);
-        caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg"));
+        caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR}; video/x-raw, format=(string){BGRx, BGRA}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; video/x-raw, format=(string){GRAY8}; image/jpeg"));
     }
     if (audioStream >= 0)
     {
