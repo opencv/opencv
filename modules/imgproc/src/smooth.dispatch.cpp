@@ -679,6 +679,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                 return 0;
 
             float scale_factor = 1.0f / _filter.at<float>(0,0);
+
             Mat scaled_filter = scale_factor * _filter; // Scale it up!
 
             // Now we clean it up and round each number off!
