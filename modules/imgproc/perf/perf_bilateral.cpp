@@ -7,23 +7,25 @@ namespace opencv_test {
 
 CV_ENUM(Mat_Type, CV_8UC1, CV_8UC3, CV_32FC1, CV_32FC3)
 
-typedef TestBaseWithParam< tuple<Size, int, Mat_Type> > TestBilateralFilter;
+typedef TestBaseWithParam< tuple<Size, int, Mat_Type, double> > TestBilateralFilter;
 
 PERF_TEST_P( TestBilateralFilter, BilateralFilter,
              Combine(
                 Values( szVGA, sz1080p ), // image size
                 Values( 3, 5 ), // d
-                Mat_Type::all() // image type
+                Mat_Type::all(), // image type
+                Values(1., 5.)
              )
 )
 {
     Size sz;
     int d, type;
-    const double sigmaColor = 1., sigmaSpace = 1.;
+    double sigmaColor, sigmaSpace;
 
     sz         = get<0>(GetParam());
     d          = get<1>(GetParam());
     type       = get<2>(GetParam());
+    sigmaColor = sigmaSpace = get<3>(GetParam());
 
     Mat src(sz, type);
     Mat dst(sz, type);

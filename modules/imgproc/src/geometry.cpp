@@ -377,9 +377,12 @@ static void addSharedSeg( Point2f p, Point2f q, Point2f*& result )
         *result++ = q;
 }
 
-
+// Note: The function and subroutings use direct pointer arithmetics instead of arrays indexing.
+// Each loop iteration may push to result array up to 3 times.
+// It means that we need +3 spare result elements against result_size
+// to catch agorithmic overflow and prevent actual result array overflow.
 static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, int m,
-                                   Point2f* result, float* _area )
+                                   Point2f* result, int result_size, float* _area )
 {
     Point2f* result0 = result;
     // P has n vertices, Q has m vertices.
@@ -457,7 +460,7 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         }
         // Quit when both adv. indices have cycled, or one has cycled twice.
     }
-    while ( ((aa < n) || (ba < m)) && (aa < 2*n) && (ba < 2*m) );
+    while ( ((aa < n) || (ba < m)) && (aa < 2*n) && (ba < 2*m) && ((int)(result - result0) <= result_size) );
 
     // Deal with special cases: not implemented.
     if( inflag == Unknown )
@@ -466,10 +469,16 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         // ...
     }
 
-    int i, nr = (int)(result - result0);
+    int nr = (int)(result - result0);
+    if (nr > result_size)
+    {
+        *_area = -1.f;
+        return -1;
+    }
+
     double area = 0;
     Point2f prev = result0[nr-1];
-    for( i = 1; i < nr; i++ )
+    for(int i = 1; i < nr; i++ )
     {
         result0[i-1] = result0[i];
         area += (double)prev.x*result0[i].y - (double)prev.y*result0[i].x;
@@ -504,9 +513,11 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
         return 0.f;
     }
 
-    AutoBuffer<Point2f> _result(n*2 + m*2 + 1);
-    Point2f *fp1 = _result.data(), *fp2 = fp1 + n;
+    AutoBuffer<Point2f> _result(n + m + n+m+1+3);
+    Point2f* fp1 = _result.data();
+    Point2f* fp2 = fp1 + n;
     Point2f* result = fp2 + m;
+
     int orientation = 0;
 
     for( int k = 1; k <= 2; k++ )
@@ -535,7 +546,15 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
     }
 
     float area = 0.f;
-    int nr = intersectConvexConvex_(fp1, n, fp2, m, result, &area);
+    int nr = intersectConvexConvex_(fp1, n, fp2, m, result, n+m+1, &area);
+
+    if (nr < 0)
+    {
+        // The algorithm did not converge, e.g. some of inputs is not convex
+        _p12.release();
+        return -1.f;
+    }
+
     if( nr == 0 )
     {
         if( !handleNested )

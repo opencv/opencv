@@ -2915,7 +2915,7 @@ CV_ALWAYS_INLINE
 typename std::enable_if<DST_SHORT_OR_USHORT, void>::type
 convertto_simd_nocoeff_impl(const uchar* inx, DST* outx)
 {
-    v_uint8 a = vx_load(inx);
+    v_uint8 a = vx_load_low(inx);
     v_uint16 res = v_expand_low(a);
 
     store_i16(outx, res);

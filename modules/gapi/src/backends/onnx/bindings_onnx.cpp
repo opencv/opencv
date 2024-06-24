@@ -57,6 +57,12 @@ cv::gapi::onnx::PyParams::cfgDisableMemPattern() {
     return *this;
 }
 
+cv::gapi::onnx::PyParams&
+cv::gapi::onnx::PyParams::cfgSessionOptions(const std::map<std::string, std::string>& options) {
+    m_priv->cfgSessionOptions(options);
+    return *this;
+}
+
 cv::gapi::GBackend cv::gapi::onnx::PyParams::backend() const {
     return m_priv->backend();
 }
