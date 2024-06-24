@@ -23,7 +23,7 @@
 #include <string.h>
 
 namespace cv {
-    
+
 /**
  * DEPENDENT ROUTINES
  * for sub-functions called by the optimised routines.
@@ -168,7 +168,7 @@ int loop_reminder_last_less_div_special_case(
     const __m256i c1_sh1, const __m256i c2_sh1, const __m256i c0_sh2,
     const __m256i c1_sh2, const __m256i c2_sh2, const __m256i f,
     const unsigned short int divisor, signed char **filter5x5);
-    
+
 void prelude_5x5_16_Ymask_1_new(const int row, const unsigned int M,
                                 unsigned char **frame1, unsigned char *temp,
                                 const signed char mask_vector_y[][32],
@@ -203,7 +203,7 @@ void loop_reminder_5x5_16_blur_X(
     const unsigned int division_case, const signed char mask_vector_x[][32],
     const __m256i f, const unsigned short int divisor_xy,
     signed char *kernel_x);
-    
+
 int loop_reminder_3x3(unsigned char **frame1, unsigned char **filt,
                       const unsigned int M, const unsigned int N,
                       const unsigned int row, const unsigned int col,
@@ -238,7 +238,6 @@ int loop_reminder_3x3_last_row_only(
     const __m256i c1, const __m256i c0_sh1, const __m256i c1_sh1,
     const __m256i c0_sh2, const __m256i c1_sh2, const __m256i c0_sh3,
     const __m256i c1_sh3, const __m256i f);
-    
 
 int loop_reminder_3x3_new(unsigned char **frame1, unsigned char **filt,
                           const unsigned int M, const unsigned int N,
@@ -255,7 +254,7 @@ int loop_reminder_3x3_new_first_last_rows(
     const unsigned short int divisor, signed char **filter, const __m256i c0,
     const __m256i c1, const __m256i f);
 
-    
+
 /**
  * OPTIMISED ROUTINES
  * the optimised routines themselves.
@@ -266,8 +265,6 @@ void Gaussian_Blur_3x3_16_more_load(unsigned char **frame1,
                                     const unsigned int N,
                                     const unsigned short int divisor,
                                     signed char **filter);
-
-
 void Gaussian_Blur_optimized_3x3_16_reg_blocking(
     unsigned char **frame1, unsigned char **filt, const unsigned int M,
     const unsigned int N, const unsigned short int divisor,
@@ -294,6 +291,4 @@ void Gaussian_Blur_9x9_16_separable(unsigned char **frame1,
                                     const unsigned int N, signed char *kernel_y,
                                     signed char *kernel_x,
                                     const unsigned short int divisor_xy);
-
 }
-
