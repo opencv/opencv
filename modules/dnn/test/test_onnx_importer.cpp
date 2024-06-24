@@ -2790,6 +2790,40 @@ TEST_P(Test_ONNX_nets, YOLOv10)
         1.0e-4, 1.0e-4, "yolov10");
 }
 
+TEST_P(Test_ONNX_nets, YOLOv9)
+{
+
+    std::string weightPath = _tf("models/yolov9t.onnx", false);
+
+    Size targetSize{640, 480};
+    float conf_threshold = 0.50;
+    float iou_threshold = 0.50;
+
+    std::vector<int> refClassIds{1, 16, 2}; // wrong class mapping for yolov9
+    std::vector<float> refScores{0.959274f, 0.901125, 0.559396f};
+
+    std::vector<Rect2d> refBoxes{
+        Rect2d(106.255, 107.927, 472.497, 350.309),
+        Rect2d(108.633, 185.256, 259.287, 450.672),
+        Rect2d(390.701, 62.1454, 576.928, 141.795)
+        };
+
+    Image2BlobParams imgParams(
+        Scalar::all(1 / 255.0),
+        targetSize,
+        Scalar::all(0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NCHW,
+        DNN_PMODE_LETTERBOX,
+        Scalar::all(114)
+        );
+
+    testYOLO(
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, conf_threshold, iou_threshold,
+        1.0e-4, 1.0e-4, "yolov9");
+}
 TEST_P(Test_ONNX_nets, YOLOX)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
