@@ -596,7 +596,6 @@ inline __m256i division(const unsigned int division_case, __m256i m2,
     return m2;
 }
 
-
 void Gaussian_Blur_optimized_5x5_16_reg_blocking(
     unsigned char **frame1, unsigned char **filt, const unsigned int M,
     const unsigned int N, const unsigned short int divisor,
@@ -20645,7 +20644,7 @@ void Gaussian_Blur_7x7_16_separable(unsigned char **frame1,
   //	const unsigned int division_case_x=prepare_for_division_32(divisor_x);
   ////determine which is the division case (A, B or C) 	const __m256i f_x =
   //_mm256_load_si256( (__m256i *) &f_vector_x[0]);// initialize the division
-  //vector printf("\n%d %d",division_case,b);
+  // vector printf("\n%d %d",division_case,b);
 
 #pragma omp parallel
   {
@@ -21306,7 +21305,7 @@ void Gaussian_Blur_9x9_16_separable(unsigned char **frame1,
   //	const unsigned int division_case_x=prepare_for_division_32(divisor_x);
   ////determine which is the division case (A, B or C) 	const __m256i f_x =
   //_mm256_load_si256( (__m256i *) &f_vector_x[0]);// initialize the division
-  //vector printf("\n%d ",division_case);
+  // vector printf("\n%d ",division_case);
 
 #pragma omp parallel
   {
@@ -22262,7 +22261,6 @@ void Gaussian_Blur_9x9_16_separable(unsigned char **frame1,
 
   } // end of parallel
 }
-
 
 int loop_reminder_3x3_new(unsigned char **frame1, unsigned char **filt,
                           const unsigned int M, const unsigned int N,
@@ -23382,26 +23380,28 @@ int loop_reminder_3x3_new_first_last_rows(
   return 0;
 }
 
-inline __m256i insert_two_zeros_front(__m256i input, __m256i mask_prelude){
+inline __m256i insert_two_zeros_front(__m256i input, __m256i mask_prelude) {
 
-			__m256i m0=_mm256_slli_si256(input,2);//shift 3 elements left - equivalent to filling with two zeros inthe beginning
+  __m256i m0 =
+      _mm256_slli_si256(input, 2); // shift 3 elements left - equivalent to
+                                   // filling with two zeros inthe beginning
 
-			__m256i r0=_mm256_and_si256(input,mask_prelude);
-			r0=_mm256_permute2f128_si256(r0,r0,1);
-			r0=_mm256_srli_si256(r0,14);
-			return _mm256_add_epi16(m0,r0);
-
+  __m256i r0 = _mm256_and_si256(input, mask_prelude);
+  r0 = _mm256_permute2f128_si256(r0, r0, 1);
+  r0 = _mm256_srli_si256(r0, 14);
+  return _mm256_add_epi16(m0, r0);
 }
 
-inline __m256i insert_one_zeros_front(__m256i input, __m256i mask_prelude){
+inline __m256i insert_one_zeros_front(__m256i input, __m256i mask_prelude) {
 
-			__m256i m0=_mm256_slli_si256(input,1);//shift 3 elements left - equivalent to filling with two zeros inthe beginning
+  __m256i m0 =
+      _mm256_slli_si256(input, 1); // shift 3 elements left - equivalent to
+                                   // filling with two zeros inthe beginning
 
-			__m256i r0=_mm256_and_si256(input,mask_prelude);
-			r0=_mm256_permute2f128_si256(r0,r0,1);
-			r0=_mm256_srli_si256(r0,15);
-			return _mm256_add_epi16(m0,r0);
-
+  __m256i r0 = _mm256_and_si256(input, mask_prelude);
+  r0 = _mm256_permute2f128_si256(r0, r0, 1);
+  r0 = _mm256_srli_si256(r0, 15);
+  return _mm256_add_epi16(m0, r0);
 }
 
 } // namespace cv
