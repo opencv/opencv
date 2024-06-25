@@ -608,7 +608,7 @@ static bool validateGaussianBlurKernel(std::vector<T>& kernel)
 
 void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                   double sigma1, double sigma2,
-                  int flags)
+                  int borderType, int hint)
 {
     CV_INSTRUMENT_REGION();
 
@@ -618,8 +618,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     Size size = _src.size();
     _dst.create( size, type );
 
-    bool allow_approximations = (flags & GAUSS_ALLOW_APPROXIMATIONS) != 0;
-    int borderType = flags & ~GAUSS_ALLOW_APPROXIMATIONS;
+    bool allow_approximations = (hint & IMPL_ALLOW_APPROXIMATION) != 0;
 
     if( (borderType & ~BORDER_ISOLATED) != BORDER_CONSTANT &&
         ((borderType & BORDER_ISOLATED) != 0 || !_src.getMat().isSubmatrix()) )
