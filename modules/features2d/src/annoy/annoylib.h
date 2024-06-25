@@ -62,7 +62,6 @@ typedef signed __int64    int64_t;
 #include <type_traits>
 #endif
 
-#define ANNOYLIB_MULTITHREADED_BUILD
 #ifdef ANNOYLIB_MULTITHREADED_BUILD
 #include <thread>
 #include <mutex>

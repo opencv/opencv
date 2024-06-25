@@ -3,9 +3,12 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "precomp.hpp"
+
 #include "annoy/annoylib.h"
 #include "annoy/kissrandom.h"
-#include <iostream>
+
+#include <opencv2/core/utils/logger.hpp>
+
 
 namespace cv
 {
@@ -14,34 +17,58 @@ template <typename DataType, typename DistanceType>
 class AnnoyIndexImpl : public AnnoyIndex
 {
 public:
-    AnnoyIndexImpl(int dim)
-        : dim(dim)
-        , index(makePtr<Annoy::AnnoyIndex<int, DataType, DistanceType, Annoy::Kiss32Random, Annoy::AnnoyIndexMultiThreadedBuildPolicy>>(dim))
-    {}
-
-    void addItems(InputArray _dataset) CV_OVERRIDE
+    AnnoyIndexImpl(int dim) : dim(dim)
     {
+        index = makePtr<Annoy::AnnoyIndex<int, DataType, DistanceType, Annoy::Kiss32Random, Annoy::AnnoyIndexSingleThreadedBuildPolicy>>(dim);
+    }
+
+    bool addItems(InputArray _dataset) CV_OVERRIDE
+    {
+        CV_Assert(!_dataset.empty());
+
         Mat features = _dataset.getMat();
-        if (features.cols != dim)
-            CV_Error(Error::StsBadArg, "Wrong data dimension.");
+        CV_Assert(features.cols == dim);
+        CV_Assert(features.type() == cv::DataType<DataType>::type);
 
         int num = features.rows;
-        for (int i = 0; i < num; ++i)
+        String errorMsg;
+        char* msg = const_cast<char*>(errorMsg.c_str());
+        if(!index->add_item(0, features.ptr<DataType>(0), &msg))
         {
-            index->add_item(i, features.ptr<DataType>(i));
+            CV_LOG_ERROR(NULL, errorMsg);
+            return false;
         }
+        for (int i = 1; i < num; ++i)
+            index->add_item(i, features.ptr<DataType>(i));
+
+        return true;
     }
 
     bool build(int trees) CV_OVERRIDE
     {
-        return index->build(trees);
+        if (trees <= 0)
+            trees = -1;
+
+        String errorMsg;
+        char* msg = const_cast<char*>(errorMsg.c_str());
+        if (index->build(trees, -1, &msg))
+            return true;
+        else
+        {
+            CV_LOG_ERROR(NULL, errorMsg);
+            return false;
+        }
     }
 
     void knnSearch(InputArray _query, OutputArray _indices, OutputArray _dists, int knn, int search_k) CV_OVERRIDE
     {
-        Mat query = _query.getMat(), indices, dists;
-        int numQuery = query.rows;
+        CV_Assert(!_query.empty() && _query.isContinuous());
+        CV_Assert(knn <= index->get_n_items());
 
+        Mat query = _query.getMat(), indices, dists;
+        CV_Assert(query.type() == cv::DataType<DataType>::type);
+
+        int numQuery = query.rows;
         if (_indices.needed())
         {
             indices = _indices.getMat();
@@ -95,17 +122,61 @@ public:
 
     bool save(const String &filename, bool prefault) CV_OVERRIDE
     {
-        return index->save(filename.c_str(), prefault);
+        String errorMsg;
+        char* msg = const_cast<char*>(errorMsg.c_str());
+        if (index->save(filename.c_str(), prefault, &msg))
+            return true;
+        else
+        {
+            CV_LOG_ERROR(NULL, errorMsg);
+            return false;
+        }
     }
 
     bool load(const String &filename, bool prefault) CV_OVERRIDE
     {
-        return index->load(filename.c_str(), prefault);
+        String errorMsg;
+        char* msg = const_cast<char*>(errorMsg.c_str());
+        if (index->load(filename.c_str(), prefault, &msg))
+            return true;
+        else
+        {
+            CV_LOG_ERROR(NULL, errorMsg);
+            return false;
+        }
+    }
+
+    int getTreeNumber() CV_OVERRIDE
+    {
+        return index->get_n_trees();
+    }
+
+    int getItemNumber() CV_OVERRIDE
+    {
+        return index->get_n_items();
+    }
+
+    bool setOnDiskBuild(const String &filename) CV_OVERRIDE
+    {
+        String errorMsg;
+        char* msg = const_cast<char*>(errorMsg.c_str());
+        if (index->on_disk_build(filename.c_str(), &msg))
+            return true;
+        else
+        {
+            CV_LOG_ERROR(NULL, errorMsg);
+            return false;
+        }
+    }
+
+    void setSeed(uint32_t seed) CV_OVERRIDE
+    {
+        index->set_seed(seed);
     }
 
 private:
     int dim;
-    Ptr<Annoy::AnnoyIndex<int, DataType, DistanceType, Annoy::Kiss32Random, Annoy::AnnoyIndexMultiThreadedBuildPolicy>> index;
+    Ptr<Annoy::AnnoyIndex<int, DataType, DistanceType, Annoy::Kiss32Random, Annoy::AnnoyIndexSingleThreadedBuildPolicy>> index;
 };
 
 Ptr<AnnoyIndex> AnnoyIndex::create(int dim, AnnoyIndex::Distance distType)

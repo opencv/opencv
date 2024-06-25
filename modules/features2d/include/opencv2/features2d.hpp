@@ -991,8 +991,7 @@ public:
         BRUTEFORCE_L1         = 3,
         BRUTEFORCE_HAMMING    = 4,
         BRUTEFORCE_HAMMINGLUT = 5,
-        BRUTEFORCE_SL2        = 6,
-        ANNOYBASED            = 7
+        BRUTEFORCE_SL2        = 6
     };
 
     virtual ~DescriptorMatcher();
@@ -1270,14 +1269,6 @@ protected:
 
     int normType;
     bool crossCheck;
-};
-
-/** @brief Annoy-based descriptor mathcer.
-
-*/
-class CV_EXPORTS_W AnnoyBasedMatcher : public DescriptorMatcher
-{
-
 };
 
 #if defined(HAVE_OPENCV_FLANN) || defined(CV_DOXYGEN)
@@ -1624,15 +1615,14 @@ public:
      * @param features Matrix containing the feature vectors to index. The size of the matrix is
         num_features x feature_dimension.
      */
-    CV_WRAP virtual void addItems(InputArray features) = 0;
+    CV_WRAP virtual bool addItems(InputArray features) = 0;
 
     /** @brief Build the index.
      *
-     *  @param trees Number of trees in the index.
+     *  @param trees Number of trees in the index. If not provided, the number is determined automatically
+     *  in a way that at most 2x as much memory as the features vectors take is used.
      */
-    CV_WRAP virtual bool build(int trees) = 0;
-
-    // CV_WRAP virtual void knnSearchSingle(InputArray query, OutputArray indices, OutputArray dists, int knn, int search_k) = 0;
+    CV_WRAP virtual bool build(int trees=-1) = 0;
 
     /** @brief Performs a K-nearest neighbor search for given query vector(s) using the index.
      *
@@ -1654,7 +1644,7 @@ public:
      */
     CV_WRAP virtual bool save(const String &filename, bool prefault=false) = 0;
 
-    /** @brief loads (mmaps) an index from disk.
+    /** @brief Loads (mmaps) an index from disk.
      *
      *  @param filename Filename of the index to be loaded.
      *  @param prefault If prefault is set to true, it will pre-read the entire file into memory (using mmap
@@ -1662,13 +1652,32 @@ public:
      */
     CV_WRAP virtual bool load(const String &filename, bool prefault=false) = 0;
 
+    /** @brief Return the number of trees in the index.
+     */
+    CV_WRAP virtual int getTreeNumber() = 0;
+
+    /** @brief Return the number of feature vectors in the index.
+     */
+    CV_WRAP virtual int getItemNumber() = 0;
+
+    /** @brief  Prepare to build the index in the specified file instead of RAM (execute before adding
+     * items, no need to save after build)
+     *  @param filename Filename of the index to be built.
+     */
+    CV_WRAP virtual bool setOnDiskBuild(const String &filename) = 0;
+
+    /** @brief Initialize the random number generator with the given seed. Only necessary to pass this
+     *  before adding the items. Will have no effect after calling build() or load().
+     */
+    CV_WRAP virtual void setSeed(uint32_t seed) = 0;
+
     /** @brief Creates an instance of annoy index class with given parameters
      *
      *  @param dim The dimension of the feature vector.
      *  @param distType Metric to calculate the distance between two feature vectors, can be ANNOY_DIST_EUCLIDEAN,
         ANNOY_DIST_MANHATTAN, ANNOY_DIST_ANGULAR, ANNOY_DIST_HAMMING, or ANNOY_DIST_DOTPRODUCT.
      */
-    CV_WRAP static Ptr<AnnoyIndex> create(int dim, AnnoyIndex::Distance distType);
+    CV_WRAP static Ptr<AnnoyIndex> create(int dim, AnnoyIndex::Distance distType=AnnoyIndex::ANNOY_DIST_EUCLIDEAN);
 };
 
 //! @} features2d_annoy
