@@ -25,7 +25,7 @@ enum GifOpMode
 struct lzwNodeD
 {
     int length;
-    uchar* prefix;
+    std::vector<uchar> prefix;
     uchar suffix;
 };
 
@@ -67,8 +67,6 @@ protected:
     void readExtensions();
     void code2pixel(Mat& img, int start, int k);
     bool lzwDecode();
-    void deleteLzwExtraTablePrefix(lzwNodeD* lzwExtraTable, int lzwTableSize) const;
-
 };
 } // namespace cv
 

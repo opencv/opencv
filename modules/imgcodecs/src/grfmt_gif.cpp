@@ -197,7 +197,7 @@ bool GifDecoder::nextPage() {
 void GifDecoder::readExtensions() {
     uchar len;
     while (!(m_strm.getByte() ^ 0x21)) {
-        uchar extensionType = (uchar)m_strm.getByte();
+        auto extensionType = (uchar)m_strm.getByte();
 
         // read graphic control extension
         // the scope of this extension is the next image or plain text extension
@@ -206,7 +206,7 @@ void GifDecoder::readExtensions() {
         if (!(extensionType ^ 0xF9)) {
             len = (uchar)m_strm.getByte();
             CV_Assert(len == 4);
-            uchar flags = (uchar)m_strm.getByte();
+            auto flags = (uchar)m_strm.getByte();
             m_strm.getWord(); // delay time, not used
             opMode = (GifOpMode)((flags & 0x1C) >> 2);
             hasTransparentColor = flags & 0x01;
@@ -247,15 +247,6 @@ void GifDecoder::code2pixel(Mat& img, int start, int k){
     }
 }
 
-void GifDecoder::deleteLzwExtraTablePrefix(lzwNodeD* lzwExtraTable, int lzwTableSize) const{
-    for (int i = (1 << lzwMinCodeSize) + 2; i <= lzwTableSize; i++) {
-        if (lzwExtraTable[i].prefix) {
-            delete[] lzwExtraTable[i].prefix;
-            lzwExtraTable[i].prefix = nullptr;
-        }
-    }
-}
-
 bool GifDecoder::lzwDecode() {
     // initialization
     lzwMinCodeSize = m_strm.getByte();
@@ -263,14 +254,14 @@ bool GifDecoder::lzwDecode() {
     int clearCode = 1 << lzwMinCodeSize;
     int exitCode = clearCode + 1;
     CV_Assert(lzwCodeSize > 2 && lzwCodeSize <= 12);
-    auto* lzwExtraTable = new lzwNodeD[(1 << 12) + 1];
+    std::vector<lzwNodeD> lzwExtraTable((1 << 12) + 1);
     int colorTableSize = localColorTableSize ? localColorTableSize : globalColorTableSize;
     int lzwTableSize = exitCode;
 
     int idx = 0;
     int leftBits = 0;
     uint32_t src = 0;
-    uchar blockLen = (uchar)m_strm.getByte();
+    auto blockLen = (uchar)m_strm.getByte();
     while (blockLen) {
         if (leftBits < lzwCodeSize) {
             src |= m_strm.getByte() << leftBits;
@@ -286,7 +277,7 @@ bool GifDecoder::lzwDecode() {
 
             // clear code
             if (!(code ^ clearCode)) {
-                deleteLzwExtraTablePrefix(lzwExtraTable, lzwTableSize);
+                lzwExtraTable.clear();
                 // reset the code size, the same as that in the initialization part
                 lzwCodeSize  = lzwMinCodeSize + 1;
                 lzwTableSize = exitCode;
@@ -294,7 +285,7 @@ bool GifDecoder::lzwDecode() {
             }
             // end of information
             if (!(code ^ exitCode)) {
-                deleteLzwExtraTablePrefix(lzwExtraTable, lzwTableSize);
+                lzwExtraTable.clear();
                 lzwCodeSize  = lzwMinCodeSize + 1;
                 lzwTableSize = exitCode;
                 break;
@@ -302,8 +293,7 @@ bool GifDecoder::lzwDecode() {
 
             // check if the code stream is full
             if (idx == width * height) {
-                deleteLzwExtraTablePrefix(lzwExtraTable, lzwTableSize);
-                delete[] lzwExtraTable;
+                lzwExtraTable.clear();
                 return false;
             }
 
@@ -312,20 +302,15 @@ bool GifDecoder::lzwDecode() {
             if (code < colorTableSize) {
                 lzwExtraTable[lzwTableSize].suffix = (uchar)code;
                 lzwTableSize ++;
-                lzwExtraTable[lzwTableSize].prefix = new uchar[1];
-                * lzwExtraTable[lzwTableSize].prefix = (uchar)code;
+                lzwExtraTable[lzwTableSize].prefix.push_back((uchar)code);
                 lzwExtraTable[lzwTableSize].length = 2;
-            } else if (code <= lzwTableSize && lzwExtraTable[code].prefix) {
+            } else if (code <= lzwTableSize && !lzwExtraTable[code].prefix.empty()) {
                 lzwExtraTable[lzwTableSize].suffix = lzwExtraTable[code].prefix[0];
                 lzwTableSize ++;
-                lzwExtraTable[lzwTableSize].prefix = new uchar[lzwExtraTable[code].length];
-                memcpy(lzwExtraTable[lzwTableSize].prefix, lzwExtraTable[code].prefix,
-                       lzwExtraTable[code].length - 1);
-                lzwExtraTable[lzwTableSize].prefix[lzwExtraTable[code].length - 1] = lzwExtraTable[code].suffix;
+                lzwExtraTable[lzwTableSize].prefix = lzwExtraTable[code].prefix;
+                lzwExtraTable[lzwTableSize].prefix.push_back(lzwExtraTable[code].suffix);
                 lzwExtraTable[lzwTableSize].length = lzwExtraTable[code].length + 1;
             } else {
-                deleteLzwExtraTablePrefix(lzwExtraTable, lzwTableSize);
-                delete[] lzwExtraTable;
                 return false;
             }
 
@@ -341,8 +326,7 @@ bool GifDecoder::lzwDecode() {
 
             // check if the code size is full
             if (lzwTableSize > (1 << 12)) {
-                deleteLzwExtraTablePrefix(lzwExtraTable, lzwTableSize);
-                delete[] lzwExtraTable;
+                lzwExtraTable.clear();
                 return false;
             }
 
@@ -357,9 +341,6 @@ bool GifDecoder::lzwDecode() {
             blockLen = (uchar)m_strm.getByte();
         }
     }
-
-    deleteLzwExtraTablePrefix(lzwExtraTable, lzwTableSize);
-    delete[] lzwExtraTable;
 
     return idx == width * height;
 }
