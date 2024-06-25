@@ -57,10 +57,7 @@ void fillRandom(Mat& m, int matType, Backend backend)
     else if (matType == CV_8U)
         cv::randu(m, 0, 100);
     else if (matType == CV_Bool)
-    {
-        for (int i = 0; i < m.total(); ++i)
-            m.ptr<bool>()[i] = rand() % 2;
-    }
+        cv::randu(m, 0, 2);
     else
         CV_Error(Error::BadDepth, "Unsupported type");
 }
