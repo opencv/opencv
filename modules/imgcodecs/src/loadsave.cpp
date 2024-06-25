@@ -433,7 +433,7 @@ imread_( const String& filename, int flags, OutputArray mat )
     }
 
     // Try to decode image by RGB instead of BGR.
-    if (flags & IMREAD_COLOR_RGB)
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
     {
         decoder->setRGB(true);
     }
@@ -548,7 +548,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
         count = std::numeric_limits<int>::max();
     }
 
-    if (flags & IMREAD_COLOR_RGB)
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
         decoder->setRGB(true);
 
     /// set the filename in the driver
@@ -838,6 +838,12 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
             scale_denom = 8;
     }
 
+    // Try to decode image by RGB instead of BGR.
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+    {
+        decoder->setRGB(true);
+    }
+
     /// set the scale_denom in the driver
     decoder->setScale( scale_denom );
 
@@ -973,6 +979,12 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
     ImageDecoder decoder = findDecoder(buf_row);
     if (!decoder)
         return 0;
+
+    // Try to decode image by RGB instead of BGR.
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+    {
+        decoder->setRGB(true);
+    }
 
     if (count < 0) {
         count = std::numeric_limits<int>::max();

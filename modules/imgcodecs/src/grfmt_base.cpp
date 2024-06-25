@@ -53,6 +53,7 @@ BaseImageDecoder::BaseImageDecoder()
     m_type = -1;
     m_buf_supported = false;
     m_scale_denom = 1;
+    m_use_rgb = false;
 }
 
 

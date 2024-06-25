@@ -341,7 +341,7 @@ bool PxMDecoder::readData( Mat& img )
                     if( color )
                     {
                         if (m_use_rgb)
-                            memcpy(data, src, m_width * CV_ELEM_SIZE1(img.depth()));
+                            memcpy(data, src, m_width * CV_ELEM_SIZE(img.type()));
                         else if( img.depth() == CV_8U )
                             icvCvt_RGB2BGR_8u_C3R( src, 0, data, 0, Size(m_width,1) );
                         else
