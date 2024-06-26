@@ -740,11 +740,15 @@ OPENCV_HAL_IMPL_MATH_FUNC(v_sqrt, std::sqrt, _Tp)
  * @note The precision of the calculation depends on the implementation and the data type of the input vector.
  */
 OPENCV_HAL_IMPL_MATH_FUNC(v_exp, std::exp, _Tp)
+#define OPENCV_HAL_MATH_HAVE_EXP 1
 
 //! @cond IGNORED
 OPENCV_HAL_IMPL_MATH_FUNC(v_sin, std::sin, _Tp)
+#define OPENCV_HAL_MATH_HAVE_SIN 1
 OPENCV_HAL_IMPL_MATH_FUNC(v_cos, std::cos, _Tp)
+#define OPENCV_HAL_MATH_HAVE_COS 1
 OPENCV_HAL_IMPL_MATH_FUNC(v_log, std::log, _Tp)
+#define OPENCV_HAL_MATH_HAVE_LOG 1
 //! @endcond
 
 /** @brief Absolute value of elements
