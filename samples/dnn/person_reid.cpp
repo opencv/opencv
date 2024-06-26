@@ -46,24 +46,23 @@ const string param_keys =
     "{resize_w   |    128    | resize input to specific width}";
 
 const string backend_keys = format(
-    "{ backend   | 0 | Choose one of computation backends: "
-    "%d: automatically (by default), "
-    "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-    "%d: OpenCV implementation, "
-    "%d: VKCOM, "
-    "%d: CUDA }",
-    DNN_BACKEND_DEFAULT, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV, DNN_BACKEND_VKCOM, DNN_BACKEND_CUDA);
+    "{ backend | default | Choose one of computation backends: "
+    "default: automatically (by default), "
+    "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+    "opencv: OpenCV implementation, "
+    "vkcom: VKCOM, "
+    "cuda: CUDA, "
+    "webnn: WebNN }");
 
 const string target_keys = format(
-    "{ target    | 0 | Choose one of target computation devices: "
-    "%d: CPU target (by default), "
-    "%d: OpenCL, "
-    "%d: OpenCL fp16 (half-float precision), "
-    "%d: VPU, "
-    "%d: Vulkan, "
-    "%d: CUDA, "
-    "%d: CUDA fp16 (half-float preprocess) }",
-    DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16, DNN_TARGET_MYRIAD, DNN_TARGET_VULKAN, DNN_TARGET_CUDA, DNN_TARGET_CUDA_FP16);
+    "{ target | cpu | Choose one of target computation devices: "
+    "cpu: CPU target (by default), "
+    "opencl: OpenCL, "
+    "opencl_fp16: OpenCL fp16 (half-float precision), "
+    "vpu: VPU, "
+    "vulkan: Vulkan, "
+    "cuda: CUDA, "
+    "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
 string keys = param_keys + backend_keys + target_keys;
 
@@ -101,14 +100,14 @@ int main(int argc, char **argv)
     const string videoPath = findFile(parser.get<String>("video"));
     const string yoloPath = parser.get<String>("yolo");
     const int batch_size = parser.get<int>("batch_size");
-    const int backend = parser.get<int>("backend");
-    const int target = parser.get<int>("target");
+    const string backend = parser.get<String>("backend");
+    const string target = parser.get<String>("target");
     const int resize_h = parser.get<int>("resize_h");
     const int resize_w = parser.get<int>("resize_w");
 
     Net net = readNetFromONNX(modelPath);
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
+    net.setPreferableBackend(getBackendID(backend));
+    net.setPreferableTarget(getTargetID(target));
 
     extractFrames(queryImagePath, videoPath, &net, yoloPath, resize_h, resize_w, batch_size);
     return 0;

@@ -25,6 +25,7 @@ import argparse
 import os.path
 import numpy as np
 import cv2 as cv
+from common import *
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT,
     cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
@@ -223,8 +224,8 @@ def run_net(inputs, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn
     :param target: name of computation target
     """
     net = cv.dnn.readNet(model_path)
-    net.setPreferableBackend(backend)
-    net.setPreferableTarget(target)
+    net.setPreferableBackend(get_backend_id(backend))
+    net.setPreferableTarget(get_target_id(target))
     net.setInput(inputs)
     out = net.forward()
     out = np.reshape(out, (out.shape[0], out.shape[1]))
@@ -272,24 +273,24 @@ if __name__ == '__main__':
     parser.add_argument('--resize_h', default = 256, help='The height of the input for model inference.')
     parser.add_argument('--resize_w', default = 128, help='The width of the input for model inference')
     parser.add_argument('--model', '-m', default='reid.onnx', help='Path to pb model.')
-    parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
-                        help="Choose one of computation backends: "
-                             "%d: automatically (by default), "
-                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                             "%d: OpenCV implementation, "
-                             "%d: VKCOM, "
-                             "%d: CUDA backend"% backends)
-    parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
-                        help='Choose one of target computation devices: '
-                             '%d: CPU target (by default), '
-                             '%d: OpenCL, '
-                             '%d: OpenCL fp16 (half-float precision), '
-                             '%d: NCS2 VPU, '
-                             '%d: HDDL VPU, '
-                             '%d: Vulkan, '
-                             '%d: CUDA, '
-                             '%d: CUDA FP16'
-                             % targets)
+    parser.add_argument('--backend', default="default", type=str, choices=backends,
+            help="Choose one of computation backends: "
+            "default: automatically (by default), "
+            "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+            "opencv: OpenCV implementation, "
+            "vkcom: VKCOM, "
+            "cuda: CUDA, "
+            "webnn: WebNN")
+    parser.add_argument('--target', default="cpu", type=str, choices=targets,
+            help="Choose one of target computation devices: "
+            "cpu: CPU target (by default), "
+            "opencl: OpenCL, "
+            "opencl_fp16: OpenCL fp16 (half-float precision), "
+            "ncs2_vpu: NCS2 VPU, "
+            "hddl_vpu: HDDL VPU, "
+            "vulkan: Vulkan, "
+            "cuda: CUDA, "
+            "cuda_fp16: CUDA fp16 (half-float preprocess)")
     args, _ = parser.parse_known_args()
 
     if not os.path.isfile(args.model):
