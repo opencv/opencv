@@ -405,19 +405,19 @@ inline void two_means(const vector<Node*>& nodes, int f, Random& random, bool co
 
 struct Base {
   template<typename T, typename S, typename Node>
-  static inline void preprocess(void* nodes, size_t _s, const S node_count, const int f) {
+  static inline void preprocess(void* /*nodes*/, size_t /*_s*/, const S /*node_count*/, const int /*f*/) {
     // Override this in specific metric structs below if you need to do any pre-processing
     // on the entire set of nodes passed into this index.
   }
 
   template<typename T, typename S, typename Node>
-  static inline void postprocess(void* nodes, size_t _s, const S node_count, const int f) {
+  static inline void postprocess(void* /*nodes*/, size_t /*_s*/, const S /*node_count*/, const int /*f*/) {
     // Override this in specific metric structs below if you need to do any post-processing
     // on the entire set of nodes passed into this index.
   }
 
   template<typename Node>
-  static inline void zero_value(Node* dest) {
+  static inline void zero_value(Node* /*dest*/) {
     // Initialize any fields that require sane defaults within this node.
   }
 
@@ -694,7 +694,7 @@ struct DotProduct : Angular {
   }
 
   template<typename T, typename S, typename Node>
-  static inline void postprocess(void* nodes, size_t _s, const S node_count, const int f) {
+  static inline void postprocess(void* nodes, size_t _s, const S node_count, const int /*f*/) {
     for (S i = 0; i < node_count; i++) {
       Node* node = get_node_ptr<S, Node>(nodes, _s, i);
       // When an index is built, we will remember it in index item nodes to compute distances differently
@@ -742,13 +742,13 @@ struct Hamming : Base {
     return dist;
   }
   template<typename S, typename T>
-  static inline bool margin(const Node<S, T>* n, const T* y, int f) {
+  static inline bool margin(const Node<S, T>* n, const T* y, int /*f*/) {
     static const size_t n_bits = sizeof(T) * 8;
     T chunk = n->v[0] / n_bits;
     return (y[chunk] & (static_cast<T>(1) << (n_bits - 1 - (n->v[0] % n_bits)))) != 0;
   }
   template<typename S, typename T, typename Random>
-  static inline bool side(const Node<S, T>* n, const T* y, int f, Random& random) {
+  static inline bool side(const Node<S, T>* n, const T* y, int f, Random& /*random*/) {
     return margin(n, y, f);
   }
   template<typename S, typename T, typename Random>
@@ -756,7 +756,7 @@ struct Hamming : Base {
     return side(n, y->v, f, random);
   }
   template<typename S, typename T, typename Random>
-  static inline void create_split(const vector<Node<S, T>*>& nodes, int f, size_t s, Random& random, Node<S, T>* n) {
+  static inline void create_split(const vector<Node<S, T>*>& nodes, int f, size_t /*s*/, Random& random, Node<S, T>* n) {
     size_t cur_size = 0;
     size_t i = 0;
     int dim = f * 8 * sizeof(T);
@@ -795,7 +795,7 @@ struct Hamming : Base {
     return distance;
   }
   template<typename S, typename T>
-  static inline void init_node(Node<S, T>* n, int f) {
+  static inline void init_node(Node<S, T>* /*n*/, int /*f*/) {
   }
   static const char* name() {
     return "hamming";
@@ -863,7 +863,7 @@ struct Euclidean : Minkowski {
     return sqrt(std::max(distance, T(0)));
   }
   template<typename S, typename T>
-  static inline void init_node(Node<S, T>* n, int f) {
+  static inline void init_node(Node<S, T>* /*n*/, int /*f*/) {
   }
   static const char* name() {
     return "euclidean";
@@ -894,7 +894,7 @@ struct Manhattan : Minkowski {
     return std::max(distance, T(0));
   }
   template<typename S, typename T>
-  static inline void init_node(Node<S, T>* n, int f) {
+  static inline void init_node(Node<S, T>* /*n*/, int /*f*/) {
   }
   static const char* name() {
     return "manhattan";
@@ -979,7 +979,7 @@ public:
     return _f;
   }
 
-  bool add_item(S item, const T* w, char** error=NULL) {
+  bool add_item(S item, const T* w, char** error=NULL) override {
     return add_item_impl(item, w, error);
   }
 
@@ -1009,7 +1009,7 @@ public:
     return true;
   }
 
-  bool on_disk_build(const char* file, char** error=NULL) {
+  bool on_disk_build(const char* file, char** error=NULL) override {
     _on_disk = true;
 #ifndef _MSC_VER
     _fd = open(file, O_RDWR | O_CREAT | O_TRUNC, (int) 0600);
@@ -1034,7 +1034,7 @@ public:
     return true;
   }
 
-  bool build(int q, int n_threads=-1, char** error=NULL) {
+  bool build(int q, int n_threads=-1, char** error=NULL) override {
     if (_loaded) {
       set_error_from_string(error, "You can't build a loaded index");
       return false;
@@ -1077,7 +1077,7 @@ public:
     return true;
   }
 
-  bool unbuild(char** error=NULL) {
+  bool unbuild(char** error=NULL) override {
     if (_loaded) {
       set_error_from_string(error, "You can't unbuild a loaded index");
       return false;
@@ -1090,7 +1090,7 @@ public:
     return true;
   }
 
-  bool save(const char* filename, bool prefault=false, char** error=NULL) {
+  bool save(const char* filename, bool prefault=false, char** error=NULL) override {
     if (!_built) {
       set_error_from_string(error, "You can't save an index that hasn't been built");
       return false;
@@ -1138,7 +1138,7 @@ public:
     _roots.clear();
   }
 
-  void unload() {
+  void unload() override {
     if (_on_disk && _fd) {
 #ifndef _MSC_VER
       close(_fd);
@@ -1164,11 +1164,11 @@ public:
     if (_verbose) annoylib_showUpdate("unloaded\n");
   }
 
-  bool load(const char* filename, bool prefault=false, char** error=NULL) {
+  bool load(const char* filename, bool prefault=false, char** error=NULL) override {
 #ifndef _MSC_VER
-    _fd = open(filename, O_RDONLY, (int)0400);
+    _fd = open(filename, O_RDONLY);
 #else
-    _fd = _open(filename, _O_RDONLY, (int)0400);
+    _fd = _open(filename, _O_RDONLY);
 #endif
     if (_fd == -1) {
       set_error_from_errno(error, "Unable to open");
@@ -1221,39 +1221,39 @@ public:
     return true;
   }
 
-  T get_distance(S i, S j) const {
+  T get_distance(S i, S j) const override {
     return D::normalized_distance(D::distance(_get(i), _get(j), _f));
   }
 
-  void get_nns_by_item(S item, size_t n, int search_k, vector<S>* result, vector<T>* distances) const {
+  void get_nns_by_item(S item, size_t n, int search_k, vector<S>* result, vector<T>* distances) const override {
     // TODO: handle OOB
     const Node* m = _get(item);
     _get_all_nns(m->v, n, search_k, result, distances);
   }
 
-  void get_nns_by_vector(const T* w, size_t n, int search_k, vector<S>* result, vector<T>* distances) const {
+  void get_nns_by_vector(const T* w, size_t n, int search_k, vector<S>* result, vector<T>* distances) const override {
     _get_all_nns(w, n, search_k, result, distances);
   }
 
-  S get_n_items() const {
+  S get_n_items() const override {
     return _n_items;
   }
 
-  S get_n_trees() const {
+  S get_n_trees() const override {
     return (S)_roots.size();
   }
 
-  void verbose(bool v) {
+  void verbose(bool v) override {
     _verbose = v;
   }
 
-  void get_item(S item, T* v) const {
+  void get_item(S item, T* v) const override {
     // TODO: handle OOB
     Node* m = _get(item);
     memcpy(v, m->v, (_f) * sizeof(T));
   }
 
-  void set_seed(R seed) {
+  void set_seed(R seed) override {
     _seed = seed;
   }
 
@@ -1507,7 +1507,7 @@ protected:
 class AnnoyIndexSingleThreadedBuildPolicy {
 public:
   template<typename S, typename T, typename D, typename Random>
-  static void build(AnnoyIndex<S, T, D, Random, AnnoyIndexSingleThreadedBuildPolicy>* annoy, int q, int n_threads) {
+  static void build(AnnoyIndex<S, T, D, Random, AnnoyIndexSingleThreadedBuildPolicy>* annoy, int q, int /*n_threads*/) {
     AnnoyIndexSingleThreadedBuildPolicy threaded_build_policy;
     annoy->thread_build(q, 0, threaded_build_policy);
   }

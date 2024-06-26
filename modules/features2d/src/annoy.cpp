@@ -17,9 +17,9 @@ template <typename DataType, typename DistanceType>
 class AnnoyIndexImpl : public AnnoyIndex
 {
 public:
-    AnnoyIndexImpl(int dim) : dim(dim)
+    AnnoyIndexImpl(int dimension) : dim(dimension)
     {
-        index = makePtr<Annoy::AnnoyIndex<int, DataType, DistanceType, Annoy::Kiss32Random, Annoy::AnnoyIndexSingleThreadedBuildPolicy>>(dim);
+        index = makePtr<Annoy::AnnoyIndex<int, DataType, DistanceType, Annoy::Kiss32Random, Annoy::AnnoyIndexSingleThreadedBuildPolicy>>(dimension);
     }
 
     bool addItems(InputArray _dataset) CV_OVERRIDE
@@ -169,9 +169,11 @@ public:
         }
     }
 
-    void setSeed(uint32_t seed) CV_OVERRIDE
+    void setSeed(int seed) CV_OVERRIDE
     {
-        index->set_seed(seed);
+        CV_Assert(seed >= 0 && seed <= 4294967295);
+
+        index->set_seed(static_cast<uint32_t>(seed));
     }
 
 private:

@@ -1662,14 +1662,17 @@ public:
 
     /** @brief  Prepare to build the index in the specified file instead of RAM (execute before adding
      * items, no need to save after build)
+     *
      *  @param filename Filename of the index to be built.
      */
     CV_WRAP virtual bool setOnDiskBuild(const String &filename) = 0;
 
     /** @brief Initialize the random number generator with the given seed. Only necessary to pass this
      *  before adding the items. Will have no effect after calling build() or load().
+     *
+     *  @param seed The given seed of the random number generator. Its value should be within the range of uint32_t.
      */
-    CV_WRAP virtual void setSeed(uint32_t seed) = 0;
+    CV_WRAP virtual void setSeed(int seed) = 0;
 
     /** @brief Creates an instance of annoy index class with given parameters
      *
