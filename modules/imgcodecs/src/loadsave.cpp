@@ -1242,6 +1242,13 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     m_decoder->setSource(filename);
     CV_Assert(m_decoder->readHeader());
 
+    m_size = m_decoder->getFrameCount();
+
+    if (m_size > 0) {
+        m_pages.resize(m_size);
+        return;
+    }
+
     // count the pages of the image collection
     size_t count = 1;
     while(m_decoder->nextPage()) count++;

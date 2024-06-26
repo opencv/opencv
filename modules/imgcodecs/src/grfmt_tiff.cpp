@@ -277,6 +277,7 @@ bool TiffDecoder::readHeader()
             }
             CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
 
+            m_frame_count = TIFFNumberOfDirectories(tif);
             m_width = wdth;
             m_height = hght;
             if (ncn == 3 && photometric == PHOTOMETRIC_LOGLUV)
