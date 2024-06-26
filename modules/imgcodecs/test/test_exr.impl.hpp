@@ -192,6 +192,15 @@ TEST(Imgcodecs_EXR, read_YC_changeDepth)
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
 
+    const Mat img_rgb = cv::imread(filenameInput, IMREAD_COLOR_RGB);
+
+    ASSERT_FALSE(img_rgb.empty());
+    ASSERT_EQ(CV_8UC3, img_rgb.type());
+
+    cvtColor(img_rgb, img_rgb, COLOR_RGB2BGR);
+
+    EXPECT_TRUE(cvtest::norm(img, img_rgb, NORM_INF) == 0);
+
     // Cannot test writing, EXR encoder doesn't support 8U depth
 }
 
