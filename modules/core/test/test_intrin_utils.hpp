@@ -1716,7 +1716,12 @@ template<typename R> struct TheTest
             for (int j = 0; j < n; ++j) {
                 SCOPED_TRACE(cv::format("Overflow/Underflow test value: %f", i));
                 EXPECT_TRUE(resOverflow[j] > 0 && std::isinf(resOverflow[j]));
-                EXPECT_EQ(0, resUnderflow[j]);
+                if(resUnderflow[j] != 0)
+                    // standard implementation
+                    EXPECT_EQ(std::exp(dataLowerBound[j]), resUnderflow[j]);
+                else
+                    // universal intrinsics implementation
+                    EXPECT_EQ(0, resUnderflow[j]);
             }
         }
 
