@@ -7,8 +7,6 @@
 
 namespace CV__SIMD_NAMESPACE {
 
-#ifndef OPENCV_HAL_MATH_HAVE_EXP
-
 /* Universal Intrinsics implementation of sin, cos, exp and log
 
    Inspired by Intel Approximate Math library, and based on the
@@ -37,6 +35,7 @@ namespace CV__SIMD_NAMESPACE {
   (this is the zlib license)
 */
 
+#ifndef OPENCV_HAL_MATH_HAVE_EXP
 
 //! @name Exponential
 //! @{
