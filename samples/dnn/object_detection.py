@@ -30,23 +30,24 @@ parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'darknet', 'd
                          'Detect it automatically if it does not set.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
 parser.add_argument('--nms', type=float, default=0.4, help='Non-maximum suppression threshold')
-parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
+parser.add_argument('--backend', default="default", type=str, choices=backends,
                     help="Choose one of computation backends: "
-                         "%d: automatically (by default), "
-                         "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                         "%d: OpenCV implementation, "
-                         "%d: VKCOM, "
-                         "%d: CUDA" % backends)
-parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
-                    help='Choose one of target computation devices: '
-                         '%d: CPU target (by default), '
-                         '%d: OpenCL, '
-                         '%d: OpenCL fp16 (half-float precision), '
-                         '%d: NCS2 VPU, '
-                         '%d: HDDL VPU, '
-                         '%d: Vulkan, '
-                         '%d: CUDA, '
-                         '%d: CUDA fp16 (half-float preprocess)' % targets)
+                    "default: automatically (by default), "
+                    "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                    "opencv: OpenCV implementation, "
+                    "vkcom: VKCOM, "
+                    "cuda: CUDA, "
+                    "webnn: WebNN")
+parser.add_argument('--target', default="cpu", type=str, choices=targets,
+                    help="Choose one of target computation devices: "
+                    "cpu: CPU target (by default), "
+                    "opencl: OpenCL, "
+                    "opencl_fp16: OpenCL fp16 (half-float precision), "
+                    "ncs2_vpu: NCS2 VPU, "
+                    "hddl_vpu: HDDL VPU, "
+                    "vulkan: Vulkan, "
+                    "cuda: CUDA, "
+                    "cuda_fp16: CUDA fp16 (half-float preprocess)")
 parser.add_argument('--async', type=int, default=0,
                     dest='asyncN',
                     help='Number of asynchronous forwards at the same time. '
@@ -84,8 +85,8 @@ if args.classes:
 
 # Load a network
 net = cv.dnn.readNet(args.model, args.config, args.framework)
-net.setPreferableBackend(args.backend)
-net.setPreferableTarget(args.target)
+net.setPreferableBackend(get_backend_id(args.backend))
+net.setPreferableTarget(get_target_id(args.target))
 outNames = net.getUnconnectedOutLayersNames()
 
 confThreshold = args.thr

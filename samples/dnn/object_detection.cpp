@@ -43,21 +43,24 @@ const string param_keys =
                          "2: Resize image to the desired size while preserving the aspect ratio of original image }";
 
 const string backend_keys = format(
-    "{ backend     | 0 | Choose one of computation backends: "
-                         "%d: automatically (by default), "
-                         "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                         "%d: OpenCV implementation, "
-                         "%d: VKCOM, "
-                         "%d: CUDA }", DNN_BACKEND_DEFAULT, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV, DNN_BACKEND_VKCOM, DNN_BACKEND_CUDA);
+    "{ backend | default | Choose one of computation backends: "
+                        "default: automatically (by default), "
+                        "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                        "opencv: OpenCV implementation, "
+                        "vkcom: VKCOM, "
+                        "cuda: CUDA, "
+                        "webnn: WebNN }");
+
 const string target_keys = format(
-    "{ target      | 0 | Choose one of target computation devices: "
-                         "%d: CPU target (by default), "
-                         "%d: OpenCL, "
-                         "%d: OpenCL fp16 (half-float precision), "
-                         "%d: VPU, "
-                         "%d: Vulkan, "
-                         "%d: CUDA, "
-                         "%d: CUDA fp16 (half-float preprocess) }", DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16, DNN_TARGET_MYRIAD, DNN_TARGET_VULKAN, DNN_TARGET_CUDA, DNN_TARGET_CUDA_FP16);
+    "{ target | cpu | Choose one of target computation devices: "
+                    "cpu: CPU target (by default), "
+                    "opencl: OpenCL, "
+                    "opencl_fp16: OpenCL fp16 (half-float precision), "
+                    "vpu: VPU, "
+                    "vulkan: Vulkan, "
+                    "cuda: CUDA, "
+                    "cuda_fp16: CUDA fp16 (half-float preprocess) }");
+
 string keys = param_keys + backend_keys + target_keys;
 
 float confThreshold, nmsThreshold, scale, paddingValue;
@@ -188,9 +191,9 @@ int main(int argc, char** argv)
     }
     //![read_net]
     Net net = readNet(modelPath, configPath);
-    int backend = parser.get<int>("backend");
+    int backend = getBackendID(parser.get<String>("backend"));
     net.setPreferableBackend(backend);
-    net.setPreferableTarget(parser.get<int>("target"));
+    net.setPreferableTarget(getTargetID(parser.get<String>("target")));
     //![read_net]
 
     // Create a window
