@@ -322,14 +322,14 @@ inline std::vector<int64_t> toORT(const cv::MatSize &sz) {
 inline void preprocess(const cv::Mat& src,
                        const cv::gimpl::onnx::TensorInfo& ti,
                              cv::Mat& dst) {
-    GAPI_Assert(src.depth() == CV_32F || src.depth() == CV_8U);
+    GAPI_Assert(src.depth() == CV_32F || src.depth() == CV_8U || src.depth() == CV_32S);
     // CNN input type
     const auto type = toCV(ti.type);
-    if (src.depth() == CV_32F) {
+    if (src.depth() == CV_32F || src.depth() == CV_32S) {
         // Just pass the tensor as-is.
         // No layout or dimension transformations done here!
         // TODO: This needs to be aligned across all NN backends.
-        GAPI_Assert(type == CV_32F && "Only 32F model input is supported for 32F input data");
+        GAPI_Assert((type == CV_32F || type == CV_32S) && "Only 32F model input is supported for 32F input data");
         const auto tensor_dims = toORT(src.size);
         if (tensor_dims.size() == ti.dims.size()) {
             for (size_t i = 0; i < ti.dims.size(); ++i) {
@@ -743,13 +743,13 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     }
 
     // Validate what is supported currently
-    GAPI_Assert(std::all_of(in_tensor_info.begin(),
-                            in_tensor_info.end(),
-                            [](const cv::gimpl::onnx::TensorInfo &p) {
-                                return p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT
-                                    || p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8;
-                            })
-                && "Only FP32 and U8 inputs for NN are supported");
+    // GAPI_Assert(std::all_of(in_tensor_info.begin(),
+    //                         in_tensor_info.end(),
+    //                         [](const cv::gimpl::onnx::TensorInfo &p) {
+    //                             return p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT
+    //                                 || p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8;
+    //                         })
+    //             && "Only FP32 and U8 inputs for NN are supported");
 
     // Put mean and std in appropriate tensor params
     if (!params.mean.empty() || !params.stdev.empty()) {
