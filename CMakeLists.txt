@@ -265,7 +265,7 @@ OCV_OPTION(WITH_KLEIDICV "Use KleidiCV library for ARM platforms" OFF
   VISIBLE_IF (AARCH64 AND (ANDROID OR UNIX AND NOT IOS AND NOT XROS)))
 OCV_OPTION(WITH_NDSRVP "Use Andes RVP extension" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF RISCV)
-OCV_OPTION(WITH_HAL_RVV "Use HAL RVV optimizations" OFF
+OCV_OPTION(WITH_HAL_RVV "Use HAL RVV optimizations" ON
   VISIBLE_IF RISCV)
 OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
   VISIBLE_IF ANDROID
@@ -1033,9 +1033,13 @@ foreach(hal ${OpenCV_HAL})
       message(STATUS "NDSRVP: Andes GNU Toolchain DSP extension is not open, disabling ndsrvp...")
     endif()
   elseif(hal STREQUAL "halrvv")
+    if(";${CPU_BASELINE_FINAL};" MATCHES ";RVV;")
       add_subdirectory(3rdparty/hal_rvv/)
       ocv_hal_register(RVV_HAL_LIBRARIES RVV_HAL_HEADERS RVV_HAL_INCLUDE_DIRS)
       list(APPEND OpenCV_USED_HAL "HAL RVV (ver ${RVV_HAL_VERSION})")
+    else()
+      message(STATUS "HAL RVV: RVV is not available, disabling halrvv...")
+    endif()
   elseif(hal STREQUAL "openvx")
     add_subdirectory(3rdparty/openvx)
     ocv_hal_register(OPENVX_HAL_LIBRARIES OPENVX_HAL_HEADERS OPENVX_HAL_INCLUDE_DIRS)
