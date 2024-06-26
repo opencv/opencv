@@ -130,7 +130,7 @@ struct RGB2HSV_b
 
             // sdiv = sdiv_table[v]
             v_int32 sdiv0, sdiv1, sdiv2, sdiv3;;
-            v_uint16 vd0, vd1, vd2;
+            v_uint16 vd0, vd1;
             v_expand(v, vd0, vd1);
             v_int32 vq0, vq1, vq2, vq3;
             v_expand(v_reinterpret_as_s16(vd0), vq0, vq1);
@@ -150,7 +150,7 @@ struct RGB2HSV_b
 
             // hdiv = hdiv_table[diff]
             v_int32 hdiv0, hdiv1, hdiv2, hdiv3;
-            v_uint16 diffd0, diffd1, diffd2;
+            v_uint16 diffd0, diffd1;
             v_expand(diff, diffd0, diffd1);
             v_int32 diffq0, diffq1, diffq2, diffq3;
             v_expand(v_reinterpret_as_s16(diffd0), diffq0, diffq1);
