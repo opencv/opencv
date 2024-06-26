@@ -383,7 +383,7 @@ static int camOrbbec()
     return 0;
 }
 
-const char* keys = "{camType | | Camera Type: OpenNI, OpenNI-Orbbec, RealSense, Orbbec}";
+const char* keys = "{camType | | Camera Type: OpenNI, OpenNI-Ob, RealSense, Orbbec}";
 
 const char* about =
             "\nThis example demostrates how to get data from 3D cameras via OpenCV.\n"
@@ -410,7 +410,7 @@ int main(int argc, char *argv[])
     {
         camOpenni();
     }
-    else if (camType == "OpenNI-Orbbec")
+    else if (camType == "OpenNI-Ob")
     {
 #ifdef USE_THREADS
         camOpenniOrbbec();
