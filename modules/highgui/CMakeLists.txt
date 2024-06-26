@@ -49,6 +49,16 @@ list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${n
 
 set(OPENCV_HIGHGUI_BUILTIN_BACKEND "")
 
+if(WITH_FRAMEBUFFER AND HAVE_FRAMEBUFFER)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "FB")
+  add_definitions(-DHAVE_FRAMEBUFFER)
+  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.cpp)
+  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.hpp)
+  if(HAVE_FRAMEBUFFER_XVFB)
+    add_definitions(-DHAVE_FRAMEBUFFER_XVFB)
+  endif()
+endif()
+
 if(WITH_WAYLAND AND HAVE_WAYLAND)
   set(OPENCV_HIGHGUI_BUILTIN_BACKEND "Wayland")
   add_definitions(-DHAVE_WAYLAND)
