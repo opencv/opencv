@@ -53,7 +53,6 @@ void PrintTo(const ImreadModes& val, std::ostream* os)
     }
     if ((v & IMREAD_COLOR_RGB) != 0)
     {
-        CV_Assert(IMREAD_COLOR_RGB == 256);
         v &= ~IMREAD_COLOR_RGB;
         *os << "IMREAD_COLOR_RGB" << (v == 0 ? "" : " | ");
     }
