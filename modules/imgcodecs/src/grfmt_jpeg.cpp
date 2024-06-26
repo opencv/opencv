@@ -437,9 +437,9 @@ bool  JpegDecoder::readData( Mat& img )
                 if( cinfo->num_components != 4 )
                 {
 #ifdef JCS_EXTENSIONS
-                    cinfo->out_color_space = JCS_EXT_BGR;
+                    cinfo->out_color_space = m_use_rgb ? JCS_EXT_RGB : JCS_EXT_BGR;
                     cinfo->out_color_components = 3;
-                    doDirectRead = m_use_rgb ? false : true; // BGR -> BGR
+                    doDirectRead = true; // BGR -> BGR
 #else
                     cinfo->out_color_space = JCS_RGB;
                     cinfo->out_color_components = 3;
