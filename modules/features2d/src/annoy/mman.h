@@ -85,7 +85,7 @@ static DWORD __map_mmap_prot_file(const int prot)
     return desiredAccess;
 }
 
-inline void* mmap(void */*addr*/, size_t len, int prot, int flags, int fildes, off_t off)
+inline void* mmap(void * /*addr*/, size_t len, int prot, int flags, int fildes, off_t off)
 {
     HANDLE fm, h;
 

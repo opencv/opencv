@@ -493,7 +493,7 @@ struct Angular : Base {
     if (dot != 0)
       return (dot > 0);
     else
-      return bool(random.flip());
+      return random.flip() != 0? true : false;
   }
   template<typename S, typename T, typename Random>
   static inline bool side(const Node<S, T>* n, const Node<S, T>* y, int f, Random& random) {
@@ -641,7 +641,7 @@ struct DotProduct : Angular {
     if (dot != 0)
       return (dot > 0);
     else
-      return bool(random.flip());
+      return random.flip() != 0? true : false;
   }
 
   template<typename S, typename T, typename Random>
@@ -821,7 +821,7 @@ struct Minkowski : Base {
     if (dot != 0)
       return (dot > 0);
     else
-      return bool(random.flip());
+      return random.flip() != 0? true : false;
   }
   template<typename S, typename T, typename Random>
   static inline bool side(const Node<S, T>* n, const Node<S, T>* y, int f, Random& random) {
