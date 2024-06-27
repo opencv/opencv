@@ -743,13 +743,14 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     }
 
     // Validate what is supported currently
-    // GAPI_Assert(std::all_of(in_tensor_info.begin(),
-    //                         in_tensor_info.end(),
-    //                         [](const cv::gimpl::onnx::TensorInfo &p) {
-    //                             return p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT
-    //                                 || p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8;
-    //                         })
-    //             && "Only FP32 and U8 inputs for NN are supported");
+    GAPI_Assert(std::all_of(in_tensor_info.begin(),
+                            in_tensor_info.end(),
+                            [](const cv::gimpl::onnx::TensorInfo &p) {
+                                return p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT
+                                    || p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8
+                                    || p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32;
+                            })
+                && "Only FP32 and U8 inputs for NN are supported");
 
     // Put mean and std in appropriate tensor params
     if (!params.mean.empty() || !params.stdev.empty()) {
