@@ -66,8 +66,11 @@ def load_images(directory):
     return files
 
 def main(func_args=None):
-    help()
     args = get_args_parser(func_args)
+    if args.alias is None or hasattr(args, 'help'):
+        help()
+        exit(1)
+
     args.model = findFile(args.model)
     args.classes = findFile(args.classes)
 

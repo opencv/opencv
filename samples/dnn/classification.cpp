@@ -90,6 +90,11 @@ int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
+    if (!parser.has("@alias"))
+    {
+        parser.printMessage();
+        return -1;
+    }
     const string modelName = parser.get<String>("@alias");
     const string zooFile = findFile(parser.get<String>("zoo"));
 
