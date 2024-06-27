@@ -479,6 +479,28 @@ inline int hal_ni_merge64s(const int64 **src_data, int64 *dst_data, int len, int
 //! @endcond
 
 /**
+@param dst_data Output data pointer
+@param dst_step Output array stride between rows
+@param dst_cols Output array X size
+@param dst_rows Output array Y size
+@param mask_data Mask data pointer
+@param mask_step Mask data stride between rows
+@param value_data Pointer to value to fill
+@param value_size Value size in bytes; should be below 32
+ */
+//! @addtogroup core_hal_interface_setto Fill with value
+//! @{
+inline int hal_ni_setto_mask(uchar *dst_data, int dst_step, int dst_cols, int dst_rows,
+                             const uchar* mask_data, int mask_step,
+                             uchar *value_data, int value_size) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_setto_mask hal_ni_setto_mask
+//! @endcond
+
+
+/**
 @param x source X arrays
 @param y source Y arrays
 @param mag destination magnitude array
