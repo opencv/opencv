@@ -92,6 +92,7 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         if (inputs[0].empty()){
+            CV_CheckEQ(axes[0], 0, "Axis must be 0 when input is empty.");
             outputs.assign(1, MatShape());
             return false;
         }
@@ -412,7 +413,7 @@ public:
         static void run(const Mat& src, Mat& dst, std::vector<int> axes, bool noop_with_empty_axes) {
             CV_Assert(src.isContinuous());
             CV_Assert(dst.isContinuous());
-            if (shape(src).empty() || (shape(src).size() == 1 && shape(src)[0] == 1)){
+            if (shape(src).empty() || (shape(src).size() == 1)){
                 // since there is only one element no need for parallel compute
                 // axis does not matter either (one element)
                 ReduceAllInvoker<Op> p(src, dst);

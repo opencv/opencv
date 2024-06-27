@@ -480,7 +480,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scatter_Test, Combine(
 
 
 
-typedef testing::TestWithParam<tuple<std::vector<int>, std::string>> Layer_Reduce_Test;
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string, int>> Layer_Reduce_Test;
 TEST_P(Layer_Reduce_Test, Accuracy_01D)
 {
     auto reduceOperation = [](const cv::Mat& input, const std::string& operation, int axis) -> cv::Mat {
@@ -488,6 +488,11 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
         cv::Mat result;
         if (shape(input).size() == 0 || shape(input).size() == 1){
             result = cv::Mat(shape(input).size(), shape(input).data(), CV_32F);
+            if (!shape(input).empty() && shape(input)[0] != 1){
+                result = cv::Mat(1, 1, CV_32F);
+                int sz[1];
+                result = result.reshape(1, 1, sz);
+            }
         } else {
             if (axis == 0) {
                 result = cv::Mat::zeros(1, input.cols, CV_32F);
@@ -511,14 +516,16 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
 
                 if (operation == "sum" || operation == "mean") res += value;
                 else if (operation == "sum_square") {
-                    if (shape(input).size() == 2 && shape(input)[0] == 1)
+                    if (shape(input).size() == 2 && shape(input)[0] == 1 && axis==0)
+                        res += value;
+                    else if (shape(input).size() == 2 && shape(input)[1] == 1 && axis==1)
                         res += value;
                     else
                         res += value * value;
                 } else if (operation == "l1") res += std::abs(value);
                 else if (operation == "l2") res += value * value;
                 else if (operation == "prod") res *= value;
-                else if (operation == "log_sum") res += std::log(value);
+                else if (operation == "log_sum") res += value;
                 else if (operation == "log_sum_exp") res += std::exp(value);
             }
         };
@@ -526,23 +533,31 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
         for (int r = 0; r < input.rows; ++r) {
             for (int c = 0; c < input.cols; ++c) {
                 float value = input.at<float>(r, c);
-                if (axis == 0) {
-                    process_value(result.at<float>(0, c), value, r == 0);
+                if (shape(input).size() == 1 && shape(input)[0] != 1 && axis == 0){
+                        process_value(result.at<float>(0, 0), value, c == 0);
                 } else {
-                    process_value(result.at<float>(r, 0), value, c == 0);
+                    if (axis == 0) {
+                        process_value(result.at<float>(0, c), value, r == 0);
+                    } else {
+                        process_value(result.at<float>(r, 0), value, c == 0);
+                    }
                 }
             }
         }
 
         if (operation == "mean") {
-            if (axis == 0) {
-                result /= input.rows;
+            if (shape(input).size() == 1 && shape(input)[0] != 1 && axis == 0){
+                result.at<float>(0, 0) /= input.cols;
             } else {
-                result /= input.cols;
+            if (axis == 0) {
+                    result /= input.rows;
+                } else {
+                    result /= input.cols;
+                }
             }
         } else if (operation == "l2") {
             cv::sqrt(result, result);
-        } else if (operation == "log_sum_exp") {
+        } else if (operation == "log_sum_exp" || operation == "log_sum") {
             cv::log(result, result);
         }
 
@@ -551,7 +566,7 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
 
     std::vector<int> input_shape = get<0>(GetParam());
     std::string reduce_operation = get<1>(GetParam());
-    int axis = 0;
+    int axis = get<2>(GetParam());
 
     if ((input_shape.size() == 2 && reduce_operation == "log_sum") ||
         (axis > input_shape.size())) // both output and reference are nans
@@ -581,12 +596,14 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Reduce_Test, Combine(
 /*input blob shape*/    Values(
     std::vector<int>({}),
     std::vector<int>({1}),
+    std::vector<int>({4}),
     std::vector<int>({1, 4}),
     std::vector<int>({4, 1}),
     std::vector<int>({4, 4})
     ),
 /*reduce operation type*/
-    Values("max", "min", "mean", "sum", "sum_square", "l1", "l2", "prod", "log_sum", "log_sum_exp"))
+    Values("max", "min", "mean", "sum", "sum_square", "l1", "l2", "prod", "log_sum", "log_sum_exp"),
+    Values(0, 1))
 );
 
 
