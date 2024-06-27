@@ -896,6 +896,7 @@ _Tp& Mat::at(int i0, int i1)
     CV_DbgAssert(dims <= 2);
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     CV_DbgAssert((unsigned)(i1 * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
     CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
     return ((_Tp*)(data + step.p[0] * i0))[i1];
@@ -907,6 +908,7 @@ const _Tp& Mat::at(int i0, int i1) const
     CV_DbgAssert(dims <= 2);
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     CV_DbgAssert((unsigned)(i1 * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
     CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
     return ((const _Tp*)(data + step.p[0] * i0))[i1];
@@ -918,6 +920,7 @@ _Tp& Mat::at(Point pt)
     CV_DbgAssert(dims <= 2);
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)pt.y < (unsigned)size.p[0]);
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     CV_DbgAssert((unsigned)(pt.x * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
     CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
     return ((_Tp*)(data + step.p[0] * pt.y))[pt.x];
@@ -929,6 +932,7 @@ const _Tp& Mat::at(Point pt) const
     CV_DbgAssert(dims <= 2);
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)pt.y < (unsigned)size.p[0]);
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     CV_DbgAssert((unsigned)(pt.x * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
     CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
     return ((const _Tp*)(data + step.p[0] * pt.y))[pt.x];
@@ -939,6 +943,7 @@ _Tp& Mat::at(int i0)
 {
     CV_DbgAssert(dims <= 2);
     CV_DbgAssert(data);
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     CV_DbgAssert((unsigned)i0 < (unsigned)(size.p[0] * size.p[1]));
     CV_DbgAssert(elemSize() == sizeof(_Tp));
     if( isContinuous() || size.p[0] == 1 )
@@ -954,6 +959,7 @@ const _Tp& Mat::at(int i0) const
 {
     CV_DbgAssert(dims <= 2);
     CV_DbgAssert(data);
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     CV_DbgAssert((unsigned)i0 < (unsigned)(size.p[0] * size.p[1]));
     CV_DbgAssert(elemSize() == sizeof(_Tp));
     if( isContinuous() || size.p[0] == 1 )
@@ -968,6 +974,7 @@ template<typename _Tp> inline
 _Tp& Mat::at(int i0, int i1, int i2)
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     return *(_Tp*)ptr(i0, i1, i2);
 }
 
@@ -975,6 +982,7 @@ template<typename _Tp> inline
 const _Tp& Mat::at(int i0, int i1, int i2) const
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     return *(const _Tp*)ptr(i0, i1, i2);
 }
 
@@ -982,6 +990,7 @@ template<typename _Tp> inline
 _Tp& Mat::at(const int* idx)
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     return *(_Tp*)ptr(idx);
 }
 
@@ -989,6 +998,7 @@ template<typename _Tp> inline
 const _Tp& Mat::at(const int* idx) const
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     return *(const _Tp*)ptr(idx);
 }
 
@@ -996,6 +1006,7 @@ template<typename _Tp, int n> inline
 _Tp& Mat::at(const Vec<int, n>& idx)
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     return *(_Tp*)ptr(idx.val);
 }
 
@@ -1003,6 +1014,7 @@ template<typename _Tp, int n> inline
 const _Tp& Mat::at(const Vec<int, n>& idx) const
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    CV_DbgAssert((unsigned)DataType<_Tp>::channels == (unsigned)channels());
     return *(const _Tp*)ptr(idx.val);
 }
 

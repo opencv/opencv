@@ -116,7 +116,7 @@ namespace cv { namespace gapi { namespace own {
         : MatHeader (std::move(_dims), _type, _data)
         {}
 
-        Mat(Mat const& src, const Rect& roi )
+        Mat(Mat const& src, const Rect& roi)
         : Mat(src)
         {
            rows = roi.height;
