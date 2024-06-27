@@ -666,8 +666,6 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
         double* dptr = stddev_mat.ptr<double>();
         for( k = 0; k < cn; k++ )
             dptr[k] = sptr[k];
-        for( ; k < dcn; k++ )
-            dptr[k] = 0;
     }
 }
 
