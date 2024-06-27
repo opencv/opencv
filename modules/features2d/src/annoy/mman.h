@@ -39,7 +39,7 @@
 #define FILE_MAP_EXECUTE    0x0020
 #endif
 
-static int __map_mman_error(const DWORD err, const int deferr)
+static int __map_mman_error(const DWORD err, const int /*deferr*/)
 {
     if (err == 0)
         return 0;
@@ -85,7 +85,7 @@ static DWORD __map_mmap_prot_file(const int prot)
     return desiredAccess;
 }
 
-inline void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
+inline void* mmap(void */*addr*/, size_t len, int prot, int flags, int fildes, off_t off)
 {
     HANDLE fm, h;
 
@@ -156,7 +156,7 @@ inline void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t
     return map;
 }
 
-inline int munmap(void *addr, size_t len)
+inline int munmap(void *addr, size_t /*len*/)
 {
     if (UnmapViewOfFile(addr))
         return 0;
@@ -179,7 +179,7 @@ inline int mprotect(void *addr, size_t len, int prot)
     return -1;
 }
 
-inline int msync(void *addr, size_t len, int flags)
+inline int msync(void *addr, size_t len, int /*flags*/)
 {
     if (FlushViewOfFile(addr, len))
         return 0;

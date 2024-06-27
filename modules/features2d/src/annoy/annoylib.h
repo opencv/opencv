@@ -480,8 +480,8 @@ struct Angular : Base {
     T qq = y->norm ? y->norm : dot(y->v, y->v, f);
     T pq = dot(x->v, y->v, f);
     T ppqq = pp * qq;
-    if (ppqq > 0) return 2.0 - 2.0 * pq / sqrt(ppqq);
-    else return 2.0; // cos is 0
+    if (ppqq > 0) return T(2.0 - 2.0 * pq / sqrt(ppqq));
+    else return T(2.0); // cos is 0
   }
   template<typename S, typename T>
   static inline T margin(const Node<S, T>* n, const T* y, int f) {
@@ -493,7 +493,7 @@ struct Angular : Base {
     if (dot != 0)
       return (dot > 0);
     else
-      return (bool)random.flip();
+      return bool(random.flip());
   }
   template<typename S, typename T, typename Random>
   static inline bool side(const Node<S, T>* n, const Node<S, T>* y, int f, Random& random) {
@@ -581,8 +581,8 @@ struct DotProduct : Angular {
     T pq = dot(x->v, y->v, f) + x->dot_factor * y->dot_factor;
     T ppqq = pp * qq;
 
-    if (ppqq > 0) return 2.0 - 2.0 * pq / sqrt(ppqq);
-    else return 2.0;
+    if (ppqq > 0) return T(2.0 - 2.0 * pq / sqrt(ppqq));
+    else return T(2.0);
   }
 
   template<typename Node>
@@ -617,7 +617,7 @@ struct DotProduct : Angular {
 
   template<typename T, typename Node>
   static inline void normalize(Node* node, int f) {
-    T norm = sqrt(dot(node->v, node->v, f) + pow(node->dot_factor, 2));
+    T norm = T(sqrt(dot(node->v, node->v, f) + pow(node->dot_factor, 2)));
     if (norm > 0) {
       for (int z = 0; z < f; z++)
         node->v[z] /= norm;
@@ -641,7 +641,7 @@ struct DotProduct : Angular {
     if (dot != 0)
       return (dot > 0);
     else
-      return (bool)random.flip();
+      return bool(random.flip());
   }
 
   template<typename S, typename T, typename Random>
@@ -739,7 +739,7 @@ struct Hamming : Base {
     for (int i = 0; i < f; i++) {
       dist += annoylib_popcount(x->v[i] ^ y->v[i]);
     }
-    return dist;
+    return T(dist);
   }
   template<typename S, typename T>
   static inline bool margin(const Node<S, T>* n, const T* y, int /*f*/) {
@@ -762,7 +762,7 @@ struct Hamming : Base {
     int dim = f * 8 * sizeof(T);
     for (; i < max_iterations; i++) {
       // choose random position to split at
-      n->v[0] = random.index(dim);
+      n->v[0] = T(random.index(dim));
       cur_size = 0;
       for (typename vector<Node<S, T>*>::const_iterator it = nodes.begin(); it != nodes.end(); ++it) {
         if (margin(n, (*it)->v, f)) {
@@ -777,7 +777,7 @@ struct Hamming : Base {
     if (i == max_iterations) {
       int j = 0;
       for (; j < dim; j++) {
-        n->v[0] = j;
+        n->v[0] = T(j);
         cur_size = 0;
         for (typename vector<Node<S, T>*>::const_iterator it = nodes.begin(); it != nodes.end(); ++it) {
           if (margin(n, (*it)->v, f)) {
@@ -821,7 +821,7 @@ struct Minkowski : Base {
     if (dot != 0)
       return (dot > 0);
     else
-      return (bool)random.flip();
+      return bool(random.flip());
   }
   template<typename S, typename T, typename Random>
   static inline bool side(const Node<S, T>* n, const Node<S, T>* y, int f, Random& random) {
@@ -1056,7 +1056,7 @@ public:
     _allocate_size(_n_nodes + (S)_roots.size());
     for (size_t i = 0; i < _roots.size(); i++)
       memcpy(_get(_n_nodes + (S)i), _get(_roots[i]), _s);
-    _n_nodes += _roots.size();
+    _n_nodes += S(_roots.size());
 
     if (_verbose) annoylib_showUpdate("has %d nodes\n", _n_nodes);
 
@@ -1337,7 +1337,7 @@ protected:
   double _split_imbalance(const vector<S>& left_indices, const vector<S>& right_indices) {
     double ls = (float)left_indices.size();
     double rs = (float)right_indices.size();
-    float f = ls / (ls + rs + 1e-9);  // Avoid 0/0
+    double f = ls / (ls + rs + 1e-9);  // Avoid 0/0
     return std::max(f, 1-f);
   }
 
@@ -1453,7 +1453,7 @@ protected:
     std::priority_queue<pair<T, S> > q;
 
     if (search_k == -1) {
-      search_k = n * _roots.size();
+      search_k = int(n * _roots.size());
     }
 
     for (size_t i = 0; i < _roots.size(); i++) {

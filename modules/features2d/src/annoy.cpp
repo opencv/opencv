@@ -108,7 +108,7 @@ public:
             {
                 index->get_nns_by_vector(query.ptr<DataType>(i), knn, search_k, &nns, &distances);
 
-                int num = nns.size();
+                int num = int(nns.size());
                 memcpy(indices.ptr<int>(i), nns.data(), num*sizeof(int));
                 memcpy(dists.ptr<DataType>(i), distances.data(), num*sizeof(DataType));
 
