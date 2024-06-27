@@ -628,6 +628,20 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 
+    if ( dims <= 2 && channels() <= 4 && mcn == 1)
+    {
+        uchar valueBuf[sizeof(double) * 4];
+        convertAndUnrollScalar( value, type(), valueBuf, sizeof(valueBuf) );
+
+        int esz = this->elemSize();
+        int res = cv_hal_setto_mask(this->data, this->step, this->cols, this->rows,
+                                    mask.data, mask.step, valueBuf, esz);
+        if (res == CV_HAL_ERROR_OK)
+            return *this;
+        else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+            CV_Error_(cv::Error::StsInternal, ("HAL implementation setTo ==> " CVAUX_STR(cv_hal_setto_mask) " returned %d (0x%08x)", res, res));
+    }
+
     size_t esz = mcn > 1 ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
 
@@ -653,6 +667,7 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
                 ptrs[1] += sz.width;
             }
             else
+                //TODO: std::fill_n
                 memcpy(ptrs[0], scbuf, blockSize);
             ptrs[0] += blockSize;
         }

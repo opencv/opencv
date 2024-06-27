@@ -261,6 +261,9 @@ class Builder:
             cmake_vars['NDK_CCACHE'] = 'ccache'
         if do_install:
             cmake_vars['BUILD_TESTS'] = "ON"
+            #debug
+            cmake_vars['BUILD_PERF_TESTS'] = "ON"
+
             cmake_vars['INSTALL_TESTS'] = "ON"
 
         if no_media_ndk:
