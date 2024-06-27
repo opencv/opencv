@@ -36,7 +36,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
+        outputs.assign(1, inputs[0]);
         return exclusive_raw == 0;
     }
 
