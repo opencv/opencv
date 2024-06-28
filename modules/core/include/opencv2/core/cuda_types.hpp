@@ -120,10 +120,11 @@ namespace cv
                 : PtrStep<T>(data_, step_), cols(cols_), rows(rows_) {}
 
             template <typename U>
-            explicit PtrStepSz(const PtrStepSz<U>& d) : PtrStep<T>((T*)d.data, d.step), cols(d.cols), rows(d.rows){}
+            explicit PtrStepSz(const PtrStepSz<U>& d) : PtrStep<T>((T*)d.data, d.step), cols(d.cols), rows(d.rows), size(d.cols,d.rows) {}
 
             int cols;
             int rows;
+            Size size;
         };
 
         typedef PtrStepSz<unsigned char> PtrStepSzb;
