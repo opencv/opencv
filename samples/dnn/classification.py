@@ -8,7 +8,7 @@ from common import *
 def help():
     print(
         '''
-        Firstly, download required models using `download_models.py` (if not already done). \n
+        Firstly, download required models using `download_models.py` (if not already done) and then set environment variable OPENCV_DNN_TEST_DATA_PATH pointing to the directory where model is downloaded\n
 
         To run:
             python classification.py model_name --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)

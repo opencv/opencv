@@ -14,7 +14,7 @@ using namespace dnn;
 
 const string about =
         "Use this script to run a classification model on a camera stream, video, image or image list (i.e. .xml or .yaml containing image lists)\n\n"
-        "Firstly, download required models using `download_models.py` (if not already done).\n"
+        "Firstly, download required models using `download_models.py` (if not already done) and then set environment variable OPENCV_DNN_TEST_DATA_PATH pointing to the directory where model is downloaded\n"
         "To run:\n"
         "\t ./example_dnn_classification model_name --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)\n"
         "Sample command:\n"
