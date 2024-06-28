@@ -129,6 +129,10 @@ if(OPENCV_WORKAROUND_CMAKE_20989)
   set(CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR_BACKUP})
 endif()
 
+if(${CMAKE_SYSTEM_NAME} MATCHES QNX)
+  set(OPENCV_PYTHON_INSTALL_PATH ${QNX_PYTHON_INSTALL_PATH})
+endif()
+
 ocv_cmake_hook(POST_CMAKE_BOOTSTRAP)
 
 if(NOT OPENCV_SKIP_CMAKE_SYSTEM_FILE)
@@ -767,7 +771,7 @@ if(UNIX OR MINGW)
     elseif(EMSCRIPTEN)
       # no need to link to system libs with emscripten
     elseif(QNXNTO)
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m)
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m regex)
     elseif(MINGW)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} pthread)
     else()
@@ -1159,6 +1163,10 @@ if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH)
     install(PROGRAMS "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
             DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
   endif()
+endif()
+
+if(${CMAKE_SYSTEM_NAME} MATCHES QNX)
+  install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/ DESTINATION bin/opencv_tests)
 endif()
 
 if(NOT OPENCV_README_FILE)
