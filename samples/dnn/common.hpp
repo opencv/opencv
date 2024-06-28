@@ -10,6 +10,39 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
 
 std::string findFile(const std::string& filename);
 
+inline int getBackendID(const String& backend) {
+    std::map<String, int> backendIDs = {
+        {"default", cv::dnn::DNN_BACKEND_DEFAULT},
+        {"openvino", cv::dnn::DNN_BACKEND_INFERENCE_ENGINE},
+        {"opencv", cv::dnn::DNN_BACKEND_OPENCV},
+        {"vkcom", cv::dnn::DNN_BACKEND_VKCOM},
+        {"cuda", cv::dnn::DNN_BACKEND_CUDA},
+        {"webnn", cv::dnn::DNN_BACKEND_WEBNN}
+    };
+    if(backendIDs.find(backend) != backendIDs.end()){
+        return backendIDs[backend];
+    }else {
+        throw std::invalid_argument("Invalid backend name: " + backend);
+    }
+}
+
+inline int getTargetID(const String& target) {
+    std::map<String, int> targetIDs = {
+        {"cpu", cv::dnn::DNN_TARGET_CPU},
+        {"opencl", cv::dnn::DNN_TARGET_OPENCL},
+        {"opencl_fp16", cv::dnn::DNN_TARGET_OPENCL_FP16},
+        {"vpu", cv::dnn::DNN_TARGET_MYRIAD},
+        {"vulkan", cv::dnn::DNN_TARGET_VULKAN},
+        {"cuda", cv::dnn::DNN_TARGET_CUDA},
+        {"cuda_fp16", cv::dnn::DNN_TARGET_CUDA_FP16}
+    };
+    if(targetIDs.find(target) != targetIDs.end()){
+        return targetIDs[target];
+    }else {
+        throw std::invalid_argument("Invalid target name: " + target);
+    }
+}
+
 std::string genArgument(const std::string& argName, const std::string& help,
                         const std::string& modelName, const std::string& zooFile,
                         char key, std::string defaultVal)
@@ -84,6 +117,8 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
                        modelName, zooFile, 'c') +
            genArgument("mean", "Preprocess input image by subtracting mean values. Mean values should be in BGR order and delimited by spaces.",
                        modelName, zooFile) +
+           genArgument("std", "Preprocess input image by dividing on a standard deviation.",
+                       modelName, zooFile) +
            genArgument("scale", "Preprocess input image by multiplying on a scale factor.",
                        modelName, zooFile, ' ', "1.0") +
            genArgument("width", "Preprocess input image by resizing to a specific width.",
@@ -91,5 +126,7 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
            genArgument("height", "Preprocess input image by resizing to a specific height.",
                        modelName, zooFile, ' ', "-1") +
            genArgument("rgb", "Indicate that model works with RGB input images instead BGR ones.",
+                       modelName, zooFile)+
+           genArgument("classes", "Optional path to a text file with names of classes to label detected objects.",
                        modelName, zooFile);
 }

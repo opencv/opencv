@@ -69,6 +69,8 @@ def add_preproc_args(zoo, parser, sample):
     add_argument(zoo, parser, 'mean', nargs='+', type=float, default=[0, 0, 0],
                  help='Preprocess input image by subtracting mean values. '
                       'Mean values should be in BGR order.')
+    add_argument(zoo, parser, 'std', nargs='+', type=float, default=[0, 0, 0],
+                 help='Preprocess input image by dividing on a standard deviation.')
     add_argument(zoo, parser, 'scale', type=float, default=1.0,
                  help='Preprocess input image by multiplying on a scale factor.')
     add_argument(zoo, parser, 'width', type=int,
@@ -114,3 +116,33 @@ def findFile(filename):
               '/opencv_extra/testdata in OPENCV_DNN_TEST_DATA_PATH environment '
               'variable or pass a full path to model.')
         exit(0)
+
+def get_backend_id(backend_name):
+    backend_ids = {
+        "default": cv.dnn.DNN_BACKEND_DEFAULT,
+        "openvino": cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
+        "opencv": cv.dnn.DNN_BACKEND_OPENCV,
+        "vkcom": cv.dnn.DNN_BACKEND_VKCOM,
+        "cuda": cv.dnn.DNN_BACKEND_CUDA
+    }
+
+    if backend_name not in backend_ids:
+        raise ValueError(f"Invalid backend name: {backend_name}")
+
+    return backend_ids[backend_name]
+
+def get_target_id(target_name):
+    target_ids = {
+        "cpu": cv.dnn.DNN_TARGET_CPU,
+        "opencl": cv.dnn.DNN_TARGET_OPENCL,
+        "opencl_fp16": cv.dnn.DNN_TARGET_OPENCL_FP16,
+        "ncs2_vpu": cv.dnn.DNN_TARGET_MYRIAD,
+        "hddl_vpu": cv.dnn.DNN_TARGET_HDDL,
+        "vulkan": cv.dnn.DNN_TARGET_VULKAN,
+        "cuda": cv.dnn.DNN_TARGET_CUDA,
+        "cuda_fp16": cv.dnn.DNN_TARGET_CUDA_FP16
+    }
+    if target_name not in target_ids:
+        raise ValueError(f"Invalid target name: {target_name}")
+
+    return target_ids[target_name]
