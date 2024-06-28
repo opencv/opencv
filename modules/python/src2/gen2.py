@@ -452,7 +452,7 @@ def handle_ptr(tp):
 
 class ArgInfo(object):
     def __init__(self, atype, name, default_value, modifiers=(),
-                 enclosing_arg=None, mat_single_channel=False):
+                 enclosing_arg=None):
         # type: (ArgInfo, str, str, str, tuple[str, ...], ArgInfo | None) -> None
         self.tp = handle_ptr(atype)
         self.name = name
@@ -472,7 +472,6 @@ class ArgInfo(object):
         self.py_inputarg = False
         self.py_outputarg = False
         self.enclosing_arg = enclosing_arg
-        self.mat_single_channel = mat_single_channel
 
     def __str__(self):
         return 'ArgInfo("{}", tp="{}", default="{}", in={}, out={})'.format(
@@ -488,6 +487,10 @@ class ArgInfo(object):
         if self.name in python_reserved_keywords:
             return self.name + '_'
         return self.name
+
+    @property
+    def nd_mat(self):
+        return '/ND' in self._modifiers
 
     @property
     def inputarg(self):
@@ -529,7 +532,7 @@ class ArgInfo(object):
         arg  = 0x01 if self.outputarg else 0x0
         arg += 0x02 if self.arithm_op_src_arg else 0x0
         arg += 0x04 if self.pathlike else 0x0
-        arg += 0x08 if self.mat_single_channel and self.tp == "Mat" else 0x0
+        arg += 0x08 if self.nd_mat else 0x0
         return "ArgInfo(\"%s\", %d)" % (self.name, arg)
 
 
@@ -600,7 +603,6 @@ class FuncVariant(object):
             self.rettype = ""
         self.args = []
         self.array_counters = {}
-        self.mat_single_channel = (namespace == "cv.dnn" and classname == "dnn_Net")
         for arg_decl in decl[3]:
             assert len(arg_decl) == 4, \
                 'ArgInfo contract is violated. Arg declaration should contain:' \
@@ -608,7 +610,7 @@ class FuncVariant(object):
                 'Got tuple: {}'.format(arg_decl)
 
             ainfo = ArgInfo(atype=arg_decl[0], name=arg_decl[1],
-                            default_value=arg_decl[2], modifiers=arg_decl[3], mat_single_channel=self.mat_single_channel)
+                            default_value=arg_decl[2], modifiers=arg_decl[3])
             if ainfo.isarray and not ainfo.arraycvt:
                 c = ainfo.arraylen
                 c_arrlist = self.array_counters.get(c, [])
