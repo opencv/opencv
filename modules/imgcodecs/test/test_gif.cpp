@@ -5,7 +5,8 @@
 
 #ifdef HAVE_IMGCODEC_GIF
 
-namespace opencv_test { namespace {
+namespace opencv_test {
+namespace {
 const string gifsuite_files_multi[]={
         "basi3p01",
         "basi3p02",
@@ -131,7 +132,8 @@ TEST_P(Imgcodecs_Gif_GifSuite_SingleFrame,read_gif_single)
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Gif_GifSuite_SingleFrame,
                         testing::ValuesIn(gifsuite_files_single));
-}//opencv_test
+
 }//namespace
+}// opencv_test
 
 #endif //HAVE_IMGCODEC_GIF
