@@ -470,6 +470,31 @@ class dnn_test(NewOpenCVTests):
 
             normAssert(self, real_output, gold_output, "", getDefaultThreshold(target))
 
+    def test_set_param_3d(self):
+        model_path = self.find_dnn_file('dnn/onnx/models/matmul_3d_init.onnx')
+        input_file = self.find_dnn_file('dnn/onnx/data/input_matmul_3d_init.npy')
+        output_file = self.find_dnn_file('dnn/onnx/data/output_matmul_3d_init.npy')
+
+        input = np.load(input_file)
+        output = np.load(output_file)
+
+        for backend, target in self.dnnBackendsAndTargets:
+            printParams(backend, target)
+
+            net = cv.dnn.readNet(model_path)
+
+            node_name = net.getLayerNames()[0]
+            w = net.getParam(node_name, 0) # returns the original tensor of three-dimensional shape
+            net.setParam(node_name, 0, w)  # set param once again to see whether tensor is converted with correct shape
+
+            net.setPreferableBackend(backend)
+            net.setPreferableTarget(target)
+
+            net.setInput(input)
+            res_output = net.forward()
+
+            normAssert(self, output, res_output, "", getDefaultThreshold(target))
+
     def test_scalefactor_assign(self):
         params = cv.dnn.Image2BlobParams()
         self.assertEqual(params.scalefactor, (1.0, 1.0, 1.0, 1.0))
