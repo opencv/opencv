@@ -340,7 +340,10 @@ public:
 
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto concat_axis = normalize_axis(axis, input_wrapper->getRank());
-        return make_cuda_node_with_type<cuda4dnn::ConcatOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), concat_axis, padding);
+        if (inputs[0]->getHostMatDepth() == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::ConcatOp>(std::move(context->stream), concat_axis, padding);
+        else
+            return make_cuda_node_with_type<cuda4dnn::ConcatOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), concat_axis, padding);
     }
 #endif
 
