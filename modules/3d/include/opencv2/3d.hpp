@@ -3022,6 +3022,53 @@ CV_EXPORTS_W void triangleRasterizeColor(InputArray vertices, InputArray indices
                                          InputArray world2cam, double fovY, double zNear, double zFar,
                                          const TriangleRasterizeSettings& settings = TriangleRasterizeSettings());
 
+/** @brief Mesh Spectral Cluster
+*/
+class CV_EXPORTS SpectralCluster {
+public:
+    /** @brief Mesh Spectral Cluster
+
+    @param delta A float number between 0 and 1 controlling the relative importance of geodesic distance and angle distance.
+    Usually, 0 < delta < 0.2
+    @param eta A float number between 0 and 1, which gives weight to concavity in clustering. Usually, 0 < eta < 0.1
+    */
+    SpectralCluster(float delta=0.1, float eta=0.05);
+
+    /** @brief Cluster the input mesh into k segments
+    @param vertices vertices coordinates array, should contain values of Point3f
+    @param indices triangle vertices index array, 3 per triangle. Each index indicates a vertex in a vertices array.
+    @param k integer, indicates number of segments
+    @param result output labels
+    */
+    void cluster(std::vector<cv::Point3f> &vertices, std::vector<std::vector<int32_t>> &indices, int k, OutputArray result);
+
+private:
+    float delta;
+    float eta;
+
+    /* Compute the degree matrix and normalize the affinity matrix */
+    static void getLaplacianMat(Mat &in, Mat &out);
+
+    /* Compute distance of all pairs of adjacent faces */
+    void getAdjacentDistanceMat(Mat &out, std::vector<Point3f> &vertices, std::vector<std::vector<int32_t>> &indices) const;
+
+    /* Compute distance of all pairs of non-adjacent faces */
+    static void getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<int32_t>> &indices);
+
+    /* Calculate the geodesic distance of two triangular faces */
+    static float getGeodesicDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2,
+                                     const std::pair<Point3f, Point3f> &edge);
+
+    /* Calculate the angle distance of two triangular faces */
+    float getAngleDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2) const;
+
+    /* Calculate the centroid coordinate of a face */
+    static Point3f calculateFaceCentroid(const std::vector<Point3f>& face);
+
+    /* Calculate the normal vector of a face */
+    static Point3f calculateFaceNormal(const std::vector<Point3f>& face);
+};
+
 //! @} _3d
 } //end namespace cv
 
