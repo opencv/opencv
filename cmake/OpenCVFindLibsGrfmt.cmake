@@ -353,6 +353,23 @@ if(WITH_GDCM)
   endif()
 endif()
 
+# --- qoi.h (optional) ---
+# This is single header file only.
+if(WITH_QOI)
+  ocv_clear_internal_cache_vars(QOI_INCLUDE_DIR)
+
+  find_path(QOI_INCLUDE_DIR qoi.h) # External(System) QOI
+
+  if(QOI_INCLUDE_DIR AND NOT BUILD_QOI)
+    message(STATUS "QOI: Use External QOI library(${QOI_INCLUDE_DIR}/qoi.h)")
+  else()
+    set(QOI_INCLUDE_DIR "${OpenCV_SOURCE_DIR}/3rdparty/qoi") # Internal(OpenCV) QOI
+    message(STATUS "QOI: Use Internal QOI library(${QOI_INCLUDE_DIR}/qoi.h, BUILD_QOI=${BUILD_QOI})")
+  endif()
+
+  set(HAVE_QOI ON)
+endif()
+
 if(WITH_IMGCODEC_HDR)
   set(HAVE_IMGCODEC_HDR ON)
 elseif(DEFINED WITH_IMGCODEC_HDR)

@@ -232,6 +232,7 @@ Currently, the following file formats are supported:
 -   Portable Network Graphics - \*.png (see the *Note* section)
 -   WebP - \*.webp (see the *Note* section)
 -   AVIF - \*.avif (see the *Note* section)
+-   QOI - \*.qoi (see the *Note* section)
 -   Portable image format - \*.pbm, \*.pgm, \*.ppm \*.pxm, \*.pnm (always supported)
 -   PFM files - \*.pfm (see the *Note* section)
 -   Sun rasters - \*.sr, \*.ras (always supported)
@@ -334,6 +335,12 @@ can be saved using this function, with these exceptions:
   - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
   - 32-bit float 3-channel (CV_32FC3) TIFF images will be saved
     using the LogLuv high dynamic range encoding (4 bytes per pixel)
+- With QOI encoder, 8-bit unsigned (CV_8U) images can be saved.
+  - QOI images with an alpha channel can be saved using this function.
+    To do this, create 8-bit 4-channel image BGRA, where the alpha channel goes last.
+    Fully transparent pixels should have alpha set to 0, fully opaque pixels should have alpha set to 255.
+  - QOI images supports only 3 or 4 channel images, not 1 channel images.
+    QOI encoder/decoder will convert between GRAY and BGR/BGRA automatically.
 
 If the image format is not supported, the image will be converted to 8-bit unsigned (CV_8U) and saved that way.
 

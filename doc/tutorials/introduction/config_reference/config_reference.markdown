@@ -309,11 +309,12 @@ Following formats can be read by OpenCV without help of any third-party library:
 | [JPEG2000 with OpenJPEG](https://en.wikipedia.org/wiki/OpenJPEG) | `WITH_OPENJPEG` | _ON_ | `BUILD_OPENJPEG` |
 | [JPEG2000 with JasPer](https://en.wikipedia.org/wiki/JasPer) | `WITH_JASPER` | _ON_ (see note) | `BUILD_JASPER` |
 | [EXR](https://en.wikipedia.org/wiki/OpenEXR) | `WITH_OPENEXR` | _ON_ | `BUILD_OPENEXR` |
+| [QOI](https://en.wikipedia.org/wiki/QOI_(image_format)) | `WITH_QOI` | _OFF_ | `BUILD_QOI` |
 
 All libraries required to read images in these formats are included into OpenCV and will be built automatically if not found at the configuration stage. Corresponding `BUILD_*` options will force building and using own libraries, they are enabled by default on some platforms, e.g. Windows.
 
 @note OpenJPEG have higher priority than JasPer which is deprecated. In order to use JasPer, OpenJPEG must be disabled.
-
+@note Quite OK Image(QOI) is special case, because it is constructed with a single header file. `BUILD_QOI=ON` means to use embedded qoi.h in OpenCV's 3rdparty is used. `BUILD_QOI=OFF` means to use embedded qoi.h in System(e.g. /usr/include/qoi.h) is used.
 
 ### GDAL integration
 

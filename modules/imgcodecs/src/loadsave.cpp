@@ -217,6 +217,11 @@ struct ImageCodecInitializer
         /// Attach the GDAL Decoder
         decoders.push_back( makePtr<GdalDecoder>() );
     #endif/*HAVE_GDAL*/
+
+    #ifdef HAVE_QOI
+        decoders.push_back( makePtr<QoiDecoder>() );
+        encoders.push_back( makePtr<QoiEncoder>() );
+    #endif
     }
 
     std::vector<ImageDecoder> decoders;

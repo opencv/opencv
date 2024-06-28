@@ -95,3 +95,10 @@ ffmpeg                FFmpeg is a complete, cross-platform solution to record,
                       * On Windows we use pre-built ffmpeg binaries,
                         see opencv/3rdparty/ffmpeg/readme.txt for details and licensing information
 ------------------------------------------------------------------------------------
+QOI                   The Quite OK Image Format for Fast, Lossless Compression.
+
+                      Copyright (c) 2022 Dominic Szablewski
+
+                      https://qoiformat.org/
+                      https://github.com/phoboslab/qoi/tree/master
+------------------------------------------------------------------------------------
