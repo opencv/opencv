@@ -488,9 +488,9 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
         cv::Mat result;
         if (shape(input).size() == 0 || shape(input).size() == 1){
             result = cv::Mat(shape(input).size(), shape(input).data(), CV_32F);
+            int sz[1] = {1};
             if (!shape(input).empty() && shape(input)[0] != 1){
                 result = cv::Mat(1, 1, CV_32F);
-                int sz[1];
                 result = result.reshape(1, 1, sz);
             }
         } else {
