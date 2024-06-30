@@ -210,7 +210,10 @@ calib3d = {
     ],
 }
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, calib3d])
+ximgproc = { '': ['createEdgeDrawing'], 'ximgproc_EdgeDrawing': ["setParams", "detectEdges", "getEdgeImage"], 'ximgproc_EdgeDrawing_Params': ["Params", "PFmode"] }
 
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, calib3d, ximgproc])
+
+namespace_prefix_override['ximgproc'] = ''
 # namespace_prefix_override['dnn'] = ''  # compatibility stuff (enabled by default)
 # namespace_prefix_override['aruco'] = ''  # compatibility stuff (enabled by default)
