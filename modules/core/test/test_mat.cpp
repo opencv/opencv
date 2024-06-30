@@ -1189,6 +1189,25 @@ protected:
     }
 };
 
+template<typename T>
+static bool isEqualElement(const cv::Mat& m, const cv::Scalar& s) {
+    CV_Assert(!m.empty());
+    int rows = m.rows;
+    int cols = m.cols;
+    int cn = m.channels();
+    for (int i = 0; i < rows; ++i) {
+        const T* p = m.ptr<T>(i);
+        for (int j = 0; j < cols; ++j, p += cn) {
+            for (int k = 0; k < cn; ++k) {
+                if ((p[k] - s[k]) > 1e-5) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 TEST(Core_Reduce, accuracy) { Core_ReduceTest test; test.safe_run(); }
 TEST(Core_Array, basic_operations) { Core_ArrayOpTest test; test.safe_run(); }
 
@@ -1246,6 +1265,109 @@ static void check_ndim_shape(const cv::Mat &mat, int cn, int ndims, const int *s
 
     for (int i = 0; i < ndims; i++)
         EXPECT_EQ(mat.size[i], sizes[i]);
+}
+
+TEST(Core_Mat, convertTo_inplace_8UC3_8SC3)
+{
+    cv::Mat A(8, 16, CV_8UC3, cv::Scalar(1, 2, 3));
+    void* p = A.data;
+    int cn = A.channels();
+    int depth = CV_8S;
+    int dtype = CV_MAKE_TYPE(depth, cn);
+    A.convertTo(A, depth);
+    EXPECT_EQ(p, A.data);
+    EXPECT_EQ(A.type(), dtype);
+    EXPECT_EQ(true, isEqualElement<int8_t>(A, cv::Scalar(1, 2, 3)));
+}
+
+TEST(Core_Mat, convertTo_inplace_8UC3_8SC3_refdata)
+{
+    cv::Mat A(8, 16, CV_8UC3, cv::Scalar(1, 2, 3));
+    cv::Mat B(3, 5, CV_8UC3, A.data);
+    void* p = A.data;
+    int cn = A.channels();
+    int depth = CV_8S;
+    int dtype = CV_MAKE_TYPE(depth, cn);
+    A.convertTo(B, depth);
+    EXPECT_EQ(p, A.data);
+    EXPECT_NE(p, B.data);
+    EXPECT_EQ(B.type(), dtype);
+    EXPECT_EQ(true, isEqualElement<int8_t>(B, cv::Scalar(1, 2, 3)));
+}
+
+TEST(Core_Mat, convertTo_inplace_8UC3_8SC3_refdata_error)
+{
+    cv::Mat A(8, 16, CV_8UC3, cv::Scalar(1, 2, 3));
+    cv::Mat B(3, 5, CV_8UC3, A.data);
+    void* p = A.data;
+    int cn = A.channels();
+    int depth = CV_8S;
+    int dtype = CV_MAKE_TYPE(depth, cn);
+    A.convertTo(A, depth);
+    EXPECT_EQ(p, A.data);
+    EXPECT_EQ(A.type(), dtype);
+    A *= 2;
+    EXPECT_EQ(true, isEqualElement<int8_t>(B, cv::Scalar(2, 4, 6)));
+}
+
+TEST(Core_Mat, convertTo_inplace_8UC3_8SC3_refcount)
+{
+    cv::Mat A(8, 16, CV_8UC3, cv::Scalar(1, 2, 3));
+    void* p = A.data;
+    int cn = A.channels();
+    int depth = CV_8S;
+    int stype = A.type();
+    int dtype = CV_MAKE_TYPE(depth, cn);
+    cv::Mat B = A;
+    A.convertTo(A, depth);
+    EXPECT_EQ(A.type(), dtype);
+    EXPECT_EQ(B.type(), stype);
+    EXPECT_NE(p, A.data);
+    EXPECT_EQ(p, B.data);
+    EXPECT_EQ(true, isEqualElement<int8_t>(A, cv::Scalar(1, 2, 3)));
+}
+
+TEST(Core_Mat, convertTo_inplace_8UC3_8SC3_submatrix)
+{
+    cv::Mat A(8, 16, CV_8UC3, cv::Scalar(1, 2, 3));
+    void* p = A.data;
+    int cn = A.channels();
+    int depth = CV_8S;
+    int stype = A.type();
+    int dtype = CV_MAKE_TYPE(depth, cn);
+    cv::Mat B = A.rowRange(2, 5);
+    A.convertTo(B, depth);
+    EXPECT_EQ(A.type(), stype);
+    EXPECT_EQ(B.type(), dtype);
+    EXPECT_EQ(p, A.data);
+    EXPECT_NE(p, B.data);
+    EXPECT_EQ(true, isEqualElement<int8_t>(B, cv::Scalar(1, 2, 3)));
+}
+
+TEST(Core_Mat, convertTo_inplace_8UC3_32FC3)
+{
+    cv::Mat A(8, 16, CV_8UC3, cv::Scalar(1, 2, 3));
+    void* p = A.data;
+    int cn = A.channels();
+    int depth = CV_32F;
+    int dtype = CV_MAKE_TYPE(depth, cn);
+    A.convertTo(A, depth);
+    EXPECT_NE(p, A.data);
+    EXPECT_EQ(A.type(), dtype);
+    EXPECT_EQ(true, isEqualElement<float>(A, cv::Scalar(1, 2, 3)));
+}
+
+TEST(Core_Mat, convertTo_inplace_8UC4_32FC1)
+{
+    cv::Mat A(8, 16, CV_8UC4, cv::Scalar(1, 2, 3, 4));
+    void* p = A.data;
+    int cn = A.channels();
+    int depth = CV_32F;
+    int dtype = CV_MAKE_TYPE(depth, cn);
+    A.convertTo(A, CV_32FC1);
+    EXPECT_NE(p, A.data);
+    EXPECT_EQ(A.type(), dtype);
+    EXPECT_EQ(true, isEqualElement<float>(A, cv::Scalar(1, 2, 3, 4)));
 }
 
 TEST(Core_Mat, reshape_ndims_2)

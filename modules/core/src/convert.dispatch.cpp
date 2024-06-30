@@ -277,9 +277,20 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
     int cn = channels();
     int dtype = CV_MAKETYPE(ddepth, cn);
 
+    // refcount add 1
     Mat src = *this;
-    dst.create(dims, size, dtype);
-    Mat dstMat = dst.getMat();
+    Mat dstMat;
+    int refcount = this->u->refcount;
+    const int max_refcount = 2;
+    if (this->data == dst.getMat().data && dst.getMat().u != NULL && this->elemSize() == CV_ELEM_SIZE(dtype) && refcount == max_refcount) {
+        dstMat = dst.getMat();
+        dstMat.flags = dtype;
+        dst.assign(dstMat);
+    }
+    else {
+        dst.create(dims, size, dtype);
+        dstMat = dst.getMat();
+    }
 
     BinaryFunc func = noScale ? getConvertFunc(sdepth, ddepth) : getConvertScaleFunc(sdepth, ddepth);
     double scale[] = {alpha, beta};
