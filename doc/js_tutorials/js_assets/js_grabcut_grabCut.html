@@ -45,7 +45,7 @@ cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
 let mask = new cv.Mat();
 let bgdModel = new cv.Mat();
 let fgdModel = new cv.Mat();
-let rect = new cv.Rect(50, 50, 260, 280);
+let rect = new cv.Rect(10, 40, 255, 350);
 cv.grabCut(src, mask, rect, bgdModel, fgdModel, 1, cv.GC_INIT_WITH_RECT);
 // draw foreground
 for (let i = 0; i < src.rows; i++) {
@@ -69,7 +69,7 @@ src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete();
 let utils = new Utils('errorMessage');
 
 utils.loadCode('codeSnippet', 'codeEditor');
-utils.loadImageToCanvas('lena.jpg', 'canvasInput');
+utils.loadImageToCanvas('couple_on_beach.jpg', 'canvasInput');
 utils.addFileInputHandler('fileInput', 'canvasInput');
 
 let tryIt = document.getElementById('tryIt');

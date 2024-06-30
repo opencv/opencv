@@ -33,7 +33,7 @@
 let src = cv.imread('canvasInput');
 let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
+cv.threshold(src, src, 100, 200, cv.THRESH_BINARY);
 let contours = new cv.MatVector();
 let hierarchy = new cv.Mat();
 cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
@@ -47,7 +47,7 @@ src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); cnt.delete();
 let utils = new Utils('errorMessage');
 
 utils.loadCode('codeSnippet', 'codeEditor');
-utils.loadImageToCanvas('lena.jpg', 'canvasInput');
+utils.loadImageToCanvas('red_barn.jpg', 'canvasInput');
 utils.addFileInputHandler('fileInput', 'canvasInput');
 
 let tryIt = document.getElementById('tryIt');
