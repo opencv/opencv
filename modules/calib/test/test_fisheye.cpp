@@ -580,7 +580,7 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
     EXPECT_NEAR(rmsErrorStereoCalib, rmsErrorFromReprojectedImgPts, 1e-4);
 }
 
-TEST_F(fisheyeTest, multiview_calibration)
+TEST_F(fisheyeTest, multiviewCalibration)
 {
     const int n_images = 34;
 
@@ -642,10 +642,8 @@ TEST_F(fisheyeTest, multiview_calibration)
     cv::Vec4d D1_correct (-7.44253716539556e-05, -0.00702662033932424, 0.00737569823650885, -0.00342230256441771);
     cv::Vec4d D2_correct (-0.0130785435677431, 0.0284434505383497, -0.0360333869900506, 0.0144724062347222);
 
-    cv::Mat theR;
-    cv::Rodrigues(Rs[1], theR);
 
-    EXPECT_MAT_NEAR(theR, R_correct, 1e-2);
+    EXPECT_MAT_NEAR(Rs[1], R_correct, 1e-2);
     EXPECT_MAT_NEAR(Ts[1], T_correct, 5e-3);
 
     EXPECT_MAT_NEAR(Ks[0], K1_correct, 4);
