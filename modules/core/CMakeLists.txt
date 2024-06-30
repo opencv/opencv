@@ -83,6 +83,9 @@ file(GLOB lib_cuda_hdrs_detail
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.h")
 file(GLOB_RECURSE module_opencl_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/opencl/*")
+file(GLOB stl_forward_hdrs
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/stl/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/stl/*.h")
 
 source_group("Include\\Cuda Headers"         FILES ${lib_cuda_hdrs})
 source_group("Include\\Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
@@ -95,7 +98,7 @@ ocv_source_group("Include" DIRBASE "${CMAKE_CURRENT_LIST_DIR}/include" FILES ${c
 source_group("Src" FILES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc")
 
 ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
-                        HEADERS ${core_parallel_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
+                        HEADERS ${core_parallel_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail} ${stl_forward_hdrs})
 
 ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
 if(ANDROID AND HAVE_CPUFEATURES)
