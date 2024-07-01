@@ -69,7 +69,11 @@ In order to use the Astra camera's depth sensor with OpenCV you should do the fo
     chmod a+r $OUT_FILE
     echo "exit"
     @endcode
-    If you want to use the older SDK version 2.3.0.63, it can still be accessed from here <https://3dclub.orbbec3d.com/t/universal-download-thread-for-astra-series-cameras/622>.
+
+    @note The last tried version `2.3.0.86_202210111154_4c8f5aa4_beta6` does not work correctly with modern Linux,
+    even after libusb rebuild as recommended by instruction. The Last know good configure is version 2.3.0.63.
+    It's not provided officialy with downloading page, but published by Orbbec Technical suport on 3dclub forum
+    here <https://3dclub.orbbec3d.com/t/universal-download-thread-for-astra-series-cameras/622>.
 
 -#  Now you can configure OpenCV with OpenNI support enabled by setting the `WITH_OPENNI2` flag in CMake.
     You may also like to enable the `BUILD_EXAMPLES` flag to get a code sample working with your Astra camera.
