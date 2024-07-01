@@ -5,8 +5,6 @@
 #ifndef OPENCV_HAL_RVV_HPP_INCLUDED
 #define OPENCV_HAL_RVV_HPP_INCLUDED
 
-#include <riscv_vector.h>
-
 #include "opencv2/core/hal/interface.h"
 
 #ifndef CV_HAL_RVV_071_ENABLED

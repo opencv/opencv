@@ -148,7 +148,8 @@ static void Foo(int, void* counter)
         && !defined HAVE_WIN32UI \
         && !defined HAVE_WAYLAND \
     ) \
-    || defined(__APPLE__)  // test fails on Mac (cocoa)
+    || defined(__APPLE__)  /* test fails on Mac (cocoa) */ \
+    || defined HAVE_FRAMEBUFFER /* trackbar is not supported */
 TEST(Highgui_GUI, DISABLED_trackbar_unsafe)
 #else
 TEST(Highgui_GUI, trackbar_unsafe)
@@ -188,7 +189,8 @@ void testTrackbarCallback(int pos, void* param)
         && !defined HAVE_WIN32UI \
         && !defined HAVE_WAYLAND \
     ) \
-    || defined(__APPLE__)  // test fails on Mac (cocoa)
+    || defined(__APPLE__) /* test fails on Mac (cocoa) */ \
+    || defined HAVE_FRAMEBUFFER /* trackbar is not supported */
 TEST(Highgui_GUI, DISABLED_trackbar)
 #else
 TEST(Highgui_GUI, trackbar)
