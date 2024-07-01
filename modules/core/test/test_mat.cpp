@@ -1680,6 +1680,50 @@ TEST(Mat, regression_10507_mat_setTo)
     }
 }
 
+typedef testing::TestWithParam<std::tuple<int, Scalar> > Optimization_mat_setToScalar;
+
+TEST_P(Optimization_mat_setToScalar, optimization_mat_setToScalar)
+{
+    Size sz(4, 4);
+    const int type = std::get<0>(GetParam());
+    const Scalar scalar = std::get<1>(GetParam());
+
+    Mat dst1 = Mat::zeros(sz, type);
+    Mat dst2 = Mat::zeros(sz, type);
+    dst1 = scalar;
+    dst2.setTo(scalar);
+    EXPECT_MAT_NEAR(dst1, dst2, 0);
+}
+
+INSTANTIATE_TEST_CASE_P(Core, Optimization_mat_setToScalar,
+    testing::Combine(
+        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC3, CV_64FC4),
+        testing::Values(Scalar(1), Scalar(1, 2), Scalar(1, 2, 3), Scalar(1, 2, 3, 4))
+    )
+);
+
+typedef testing::TestWithParam<std::tuple<int, double> > Optimization_mat_setToValue;
+
+TEST_P(Optimization_mat_setToValue, optimization_mat_setToValue)
+{
+    Size sz(4, 4);
+    const int type = std::get<0>(GetParam());
+    const double value = std::get<1>(GetParam());
+
+    Mat dst1 = Mat::zeros(sz, type);
+    Mat dst2 = Mat::zeros(sz, type);
+    dst1 = cv::Scalar::all(value);
+    dst2.setTo(value);
+    EXPECT_MAT_NEAR(dst1, dst2, 0);
+}
+
+INSTANTIATE_TEST_CASE_P(Core, Optimization_mat_setToValue,
+    testing::Combine(
+        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC3, CV_64FC4),
+        testing::Values(1.)
+    )
+);
+
 TEST(Core_Mat_array, outputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
