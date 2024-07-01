@@ -681,7 +681,7 @@ void cvSetPropTopmost_W32(const char* name, const bool topmost)
 
 static bool setPropTopmost_(CvWindow& window, bool topmost)
 {
-    HWND flag    = topmost ? HWND_TOPMOST : HWND_TOP;
+    HWND flag    = topmost ? HWND_TOPMOST : HWND_NOTOPMOST;
     BOOL success = SetWindowPos(window.frame, flag, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
     if (!success)
