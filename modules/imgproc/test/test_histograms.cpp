@@ -2087,8 +2087,8 @@ TEST_P(Imgproc_Equalize_Hist, accuracy)
     ASSERT_EQ(CV_8UC1, dst.type());
     ASSERT_EQ(gold.size(), dst.size());
 
-    int nz = cv::countNonZero(dst != gold);
-    ASSERT_EQ(nz, 0);
+    EXPECT_MAT_NEAR(dst, gold, 1);
+    EXPECT_MAT_N_DIFF(dst, gold, 0.05 * size.area()); // The 5% range could be accomodated to HAL
 }
 
 INSTANTIATE_TEST_CASE_P(Imgproc_Hist, Imgproc_Equalize_Hist, ::testing::Combine(
