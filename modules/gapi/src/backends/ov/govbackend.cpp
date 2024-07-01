@@ -226,8 +226,8 @@ void cv::gapi::ov::util::to_ocv(const ::ov::Tensor &tensor, cv::Mat &mat) {
 struct OVUnit {
     static const char *name() { return "OVUnit"; }
 
-    explicit OVUnit(const ParamDesc &pd)
-        : params(pd) {
+    explicit OVUnit(const std::string& _tag, const ParamDesc &_params)
+        : tag(_tag), params(_params) {
 
         // FIXME: Can this logic be encapsulated to prevent checking every time?
         if (cv::util::holds_alternative<ParamDesc::Model>(params.kind)) {
@@ -269,6 +269,8 @@ struct OVUnit {
     }
 
     cv::gapi::ov::detail::ParamDesc params;
+    std::string tag;
+
     std::shared_ptr<ov::Model> model;
     ov::CompiledModel compiled_model;
 };
@@ -315,6 +317,8 @@ public:
     const cv::GRunArg::Meta& getMeta() { return m_meta; };
 
     const cv::gimpl::ov::Options& getOptions() const { return m_options; };
+
+    const std::string name() const { return uu.tag; }
 
 private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
@@ -480,6 +484,7 @@ public:
     // SetInputDataF - function which set input data.
     // ReadOutputDataF - function which read output data.
     struct Task {
+        std::string name;
         SetInputDataF   set_input_data;
         ReadOutputDataF read_output_data;
     };
@@ -504,9 +509,27 @@ class SyncInferExecutor : public IInferExecutor {
 
 void SyncInferExecutor::execute(const IInferExecutor::Task &task) {
     try {
-        task.set_input_data(m_request);
-        m_request.infer();
-        task.read_output_data(m_request, nullptr);
+
+        {
+            const std::string handle_name = "set inputs";
+            GAPI_ITT_DYNAMIC_LOCAL_HANDLE(sync_set_inputs_hndl, handle_name.c_str());
+            GAPI_ITT_AUTO_TRACE_GUARD(sync_set_inputs_hndl);
+            task.set_input_data(m_request);
+        }
+
+        {
+            const std::string handle_name = task.name;
+            GAPI_ITT_DYNAMIC_LOCAL_HANDLE(sync_infer_hndl, handle_name.c_str());
+            GAPI_ITT_AUTO_TRACE_GUARD(sync_infer_hndl);
+            m_request.infer();
+        }
+
+        {
+            const std::string handle_name = "get outputs";
+            GAPI_ITT_DYNAMIC_LOCAL_HANDLE(sync_get_outputs_hndl, handle_name.c_str());
+            GAPI_ITT_AUTO_TRACE_GUARD(sync_get_outputs_hndl);
+            task.read_output_data(m_request, nullptr);
+        }
     } catch (...) {
         m_notify();
         throw;
@@ -1115,6 +1138,7 @@ struct Infer: public cv::detail::KernelTag {
         using namespace std::placeholders;
         reqPool.getIdleRequest()->execute(
                 IInferExecutor::Task {
+                    ctx->name(),
                     [ctx](::ov::InferRequest &infer_request) {
                         // NB: No need to populate model inputs with data
                         // if it's inference only mode.
@@ -1206,6 +1230,7 @@ struct InferROI: public cv::detail::KernelTag {
         }
         reqPool.getIdleRequest()->execute(
             IInferExecutor::Task {
+                ctx->name(),
                 [ctx](::ov::InferRequest &infer_request) {
                     GAPI_Assert(ctx->uu.params.num_in == 1);
                     const auto &input_name = ctx->uu.params.input_names[0];
@@ -1304,6 +1329,7 @@ struct InferList: public cv::detail::KernelTag {
             const auto &rc = ade::util::value(it);
             reqPool.getIdleRequest()->execute(
                 IInferExecutor::Task {
+                    ctx->name(),
                     [ctx, rc](::ov::InferRequest &infer_request) {
                         const auto &input_name = ctx->uu.params.input_names[0];
                         auto input_tensor = infer_request.get_tensor(input_name);
@@ -1430,6 +1456,7 @@ struct InferList2: public cv::detail::KernelTag {
         for (const auto &list_idx : ade::util::iota(list_size)) {
             reqPool.getIdleRequest()->execute(
                 IInferExecutor::Task {
+                    ctx->name(),
                     [ctx, list_idx, list_size](::ov::InferRequest &infer_request) {
                         for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
                             const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
@@ -1489,7 +1516,7 @@ class GOVBackendImpl final: public cv::gapi::GBackend::Priv {
             pp.num_out      = info.out_names.size();
         }
 
-        gm.metadata(nh).set(OVUnit{pp});
+        gm.metadata(nh).set(OVUnit{op.k.tag, pp});
         gm.metadata(nh).set(OVCallable{ki.run});
         gm.metadata(nh).set(CustomMetaFunction{ki.customMetaFunc});
     }
@@ -1580,6 +1607,9 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
 
 void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                        cv::gimpl::GIslandExecutable::IOutput &out) {
+    GAPI_ITT_STATIC_LOCAL_HANDLE(ov_exec_run_hndl, "cv::gimpl::ov::GOVExecutable::run()");
+    GAPI_ITT_AUTO_TRACE_GUARD(ov_exec_run_hndl);
+
     std::vector<InObj>  input_objs;
     std::vector<OutObj> output_objs;
 

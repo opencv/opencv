@@ -284,7 +284,8 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
         }
 
         {
-            GAPI_ITT_DYNAMIC_LOCAL_HANDLE(op_hndl, op.k.name.c_str());
+            const std::string name = op.k.tag.empty() ? op.k.name : op.k.tag;
+            GAPI_ITT_DYNAMIC_LOCAL_HANDLE(op_hndl, name.c_str());
             GAPI_ITT_AUTO_TRACE_GUARD(op_hndl);
 
             // Now trigger the executable unit
