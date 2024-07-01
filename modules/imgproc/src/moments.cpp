@@ -575,7 +575,18 @@ static int moments(const cv::Mat& src, bool binary, cv::Moments& m)
     if( src.checkVector(2) >= 0 && (depth == CV_32F || depth == CV_32S))
         status = cv_hal_polygonMoments(src.data, src.total()/2, src.type(), m_data);
     else
-        status = cv_hal_imageMoments(src.data, src.step, src.type(), src.cols, src.rows, binary, m_data);
+    {
+        Mat in;
+        if( binary )
+        {
+            cv::compare(src, 0, in, cv::CMP_NE);
+        }
+        else
+        {
+            in = src;
+        }
+        status = cv_hal_imageMoments(in.data, in.step, in.type(), in.cols, in.rows, binary, m_data);
+    }
 
     if (status == CV_HAL_ERROR_OK)
     {
