@@ -5,6 +5,9 @@
 #include <opencv2/3d.hpp>
 #include <iostream>
 #include <iomanip>
+#ifdef HAVE_OPENCV_XFEATURES2D
+#include "opencv2/xfeatures2d.hpp"
+#endif
 
 using namespace std;
 using namespace cv;
@@ -86,14 +89,16 @@ int main(int argc, char** argv)
         else
             matcher = DescriptorMatcher::create("BruteForce-Hamming");
     }
+#ifdef HAVE_OPENCV_XFEATURES2D
     else if (feature == "brisk")
     {
-        backend = BRISK::create();
+        backend = xfeatures2d::BRISK::create();
         if (useFlann)
             matcher = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(6, 12, 1));
         else
             matcher = DescriptorMatcher::create("BruteForce-Hamming");
     }
+#endif
     else
     {
         cerr << feature << " is not supported. See --help" << endl;

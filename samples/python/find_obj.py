@@ -38,10 +38,10 @@ def init_feature(name):
         detector = cv.ORB_create(400)
         norm = cv.NORM_HAMMING
     elif chunks[0] == 'akaze':
-        detector = cv.AKAZE_create()
+        detector = cv.xfeatures2d.AKAZE_create()
         norm = cv.NORM_HAMMING
     elif chunks[0] == 'brisk':
-        detector = cv.BRISK_create()
+        detector = cv.xfeatures2d.BRISK_create()
         norm = cv.NORM_HAMMING
     else:
         return None, None

@@ -29,7 +29,7 @@ OCL_PERF_TEST_P(feature2d, detect, testing::Combine(Feature2DType::all(), TEST_I
 
 OCL_PERF_TEST_P(feature2d, extract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
 {
-    Ptr<Feature2D> detector = AKAZE::create();
+    Ptr<Feature2D> detector = ORB::create();
     Ptr<Feature2D> extractor = getFeature2D(get<0>(GetParam()));
     std::string filename = getDataPath(get<1>(GetParam()));
     Mat mimg = imread(filename, IMREAD_GRAYSCALE);

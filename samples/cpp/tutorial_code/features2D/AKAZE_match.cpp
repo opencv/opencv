@@ -1,7 +1,9 @@
+#include <iostream>
+#ifdef HAVE_OPENCV_XFEATURES2D
 #include <opencv2/features2d.hpp>
+#include "opencv2/xfeatures2d.hpp"
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-#include <iostream>
 
 using namespace std;
 using namespace cv;
@@ -28,7 +30,7 @@ int main(int argc, char* argv[])
     vector<KeyPoint> kpts1, kpts2;
     Mat desc1, desc2;
 
-    Ptr<AKAZE> akaze = AKAZE::create();
+    Ptr<xfeatures2d::AKAZE> akaze = xfeatures2d::AKAZE::create();
     akaze->detectAndCompute(img1, noArray(), kpts1, desc1);
     akaze->detectAndCompute(img2, noArray(), kpts2, desc2);
     //! [AKAZE]
@@ -96,3 +98,10 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+#else
+int main()
+{
+    std::cout << "This tutorial code needs the xfeatures2d contrib module to be run." << std::endl;
+    return 0;
+}
+#endif
