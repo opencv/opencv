@@ -6,6 +6,7 @@
 #include <cmath>
 #include <vector>
 
+#include "common.hpp"
 // Define namespace to simplify code
 using namespace cv;
 using namespace cv::dnn;
@@ -16,28 +17,44 @@ struct UserData
     Mat gray;
     int thrs1 = 100;
     int thrs2 = 200;
+    int blur = 1;
 };
 // Function to apply sigmoid activation
 static void sigmoid(Mat& input) {
     exp(-input, input);          // e^-input
     input = 1.0 / (1.0 + input); // 1 / (1 + e^-input)
 }
+
+// Function to apply Canny edge detection with Gaussian blur
+static void applyCanny(UserData* data) {
+    Mat blurred;
+    int kernelSize = 2 * data->blur + 1;
+    GaussianBlur(data->gray, blurred, Size(kernelSize, kernelSize), 0);
+    Mat output;
+    Canny(blurred, output, data->thrs1, data->thrs2);
+    imshow("Output", output);
+}
 // Callback for the first threshold adjustment
 static void cannyDetectionThresh1(int position, void* userdata) {
     UserData* data = reinterpret_cast<UserData*>(userdata);
-    Mat output;
-    Canny(data->gray, output, position, data->thrs2);
     data->thrs1 = position;
-    imshow("Output", output);
+    applyCanny(data);
 }
+
 // Callback for the second threshold adjustment
 static void cannyDetectionThresh2(int position, void* userdata) {
     UserData* data = reinterpret_cast<UserData*>(userdata);
-    Mat output;
-    Canny(data->gray, output, data->thrs1, position);
     data->thrs2 = position;
-    imshow("Output", output);
+    applyCanny(data);
 }
+
+// Callback for the Gaussian blur adjustment
+static void blurChange(int position, void* userdata) {
+    UserData* data = reinterpret_cast<UserData*>(userdata);
+    data->blur = position;
+    applyCanny(data);
+}
+
 
 // Load Model
 static void loadModel(const string modelPath, int backend, int target, Net &net){
@@ -56,10 +73,12 @@ static void setupCannyWindow(const Mat &image, UserData &user_data){
     // Create trackbars
     createTrackbar("thrs1", "Output", 0, 255, cannyDetectionThresh1, &user_data);
     createTrackbar("thrs2", "Output", 0, 255, cannyDetectionThresh2, &user_data);
+    createTrackbar("blur", "Output", &user_data.blur, 20, blurChange, &user_data);
 
     // Set initial positions of trackbars
     setTrackbarPos("thrs1", "Output", 100);
     setTrackbarPos("thrs2", "Output", 200);
+    setTrackbarPos("blur", "Output", 1);
 
 }
 static pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width);
@@ -68,18 +87,14 @@ int main(int argc, char** argv) {
 
     const string about =
         "This sample demonstrates edge detection with dexined and canny edge detection techniques.\n\n"
-        "For switching between deep learning based model(dexined) and canny edge detector, press 'd' (for dexined) or 'c' (for canny) respectively.\n\n"
-        "Script is based on https://github.com/axinc-ai/ailia-models/blob/master/line_segment_detection/dexined/dexined.py\n"
-        "To download the onnx model, see: https://storage.googleapis.com/ailia-models/dexined/model.onnx"
-        "\n\nOpenCV onnx importer does not process dynamic shape. These need to be substituted with values using:\n\n"
-        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param w --dim_value 512 model.onnx model.sim1.onnx\n"
-        "python3 -m onnxruntime.tools.make_dynamic_shape_fixed --dim_param h --dim_value 512 model.sim1.onnx model.sim.onnx\n";
+        "For switching between deep learning based model(dexined) and canny edge detector, press 'd' (for dexined) or 'c' (for canny) respectively in case of video. For image pass the argument --method for switching between dexined and canny.\n\n";
 
     const string param_keys =
-        "{ help h          |        | Print help message. }"
-        "{ input i         |        | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-        "{ model           |        | Path to the ONNX model. Required. }"
-        "{ imageSize       |   512  | Image Size}";
+        "{ help h          |            | Print help message. }"
+        "{ @alias          |            | An alias name of model to extract preprocessing parameters from models.yml file. }"
+        "{ zoo             | models.yml | An optional path to file with preprocessing parameters }"
+        "{ input i         |            | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+        "{ method          |   canny    | Choose method: dexined or canny. }";
 
     const string backend_keys = format(
         "{ backend         | 0 | Choose one of computation backends: "
@@ -105,15 +120,26 @@ int main(int argc, char** argv) {
         DNN_TARGET_MYRIAD, DNN_TARGET_VULKAN, DNN_TARGET_CUDA,
         DNN_TARGET_CUDA_FP16);
 
-    const string keys = param_keys + backend_keys + target_keys;
+    string keys = param_keys + backend_keys + target_keys;
 
     CommandLineParser parser(argc, argv, keys);
-    parser.about(about);
 
-    const string modelPath = parser.get<string>("model");
+    const string modelName = parser.get<String>("@alias");
+    const string zooFile = parser.get<String>("zoo");
+
+    keys += genPreprocArguments(modelName, zooFile);
+
+    parser = CommandLineParser(argc, argv, keys);
+    int width = parser.get<int>("width");
+    int height = parser.get<int>("height");
+    float scale = parser.get<float>("scale");
+    Scalar mean = parser.get<Scalar>("mean");
+    bool swapRB = parser.get<bool>("rgb");
     int backend = parser.get<int>("backend");
     int target = parser.get<int>("target");
-    int imageSize = parser.get<int>("imageSize");
+    string method = parser.get<String>("method");
+    string model = findFile(parser.get<String>("model"));
+    parser.about(about);
 
     if (parser.has("help")) {
         parser.printMessage();
@@ -126,24 +152,22 @@ int main(int argc, char** argv) {
     else
         cap.open(0);
 
-    string method = "canny";
     namedWindow("Input", WINDOW_NORMAL);
     namedWindow("Output", WINDOW_NORMAL);
     moveWindow("Output", 200, 0);
-    // Check if the 'modelPath' string is empty and set the 'method' accordingly
-    string method;
     Net net;
     Mat image, gray;
     UserData user_data;
+    cout<<"Model: "<<model<<endl;
 
-    if (modelPath.empty()) {
+    if (model.empty()) {
         cout << "[WARN] Model file not provided, cannot use dexined." << endl;
         method = "canny";
-        Mat dummy = Mat::zeros(imageSize, imageSize, CV_8UC3);
+        Mat dummy = Mat::zeros(512, 512, CV_8UC3);
         setupCannyWindow(dummy, user_data);
-    } else {
-        method = "dexined";
-        loadModel(modelPath, backend, target, net);
+    }
+    if (method == "dexined") {
+        loadModel(model, backend, target, net);
     }
     for (;;){
         cap >> image;
@@ -155,10 +179,10 @@ int main(int argc, char** argv) {
         }
         if (method == "dexined")
         {
-            Mat blob = blobFromImage(image, 1.0, Size(imageSize, imageSize), Scalar(103.939, 116.779, 123.68), false, false, CV_32F);
+            Mat blob = blobFromImage(image, scale, Size(width, height), mean, swapRB, false, CV_32F);
             net.setInput(blob);
             vector<Mat> outputs;
-            net.forward(outputs); // Get all output layers
+            net.forward(outputs);
             int originalWidth = image.cols;
             int originalHeight = image.rows;
             pair<Mat, Mat> res = postProcess(outputs, originalHeight, originalWidth);
@@ -177,13 +201,16 @@ int main(int argc, char** argv) {
 
         if (key == 'd' || key == 'D')
         {
-            if (!modelPath.empty())
+            if (!model.empty()){
                 method = "dexined";
-            if (net.empty())
-                loadModel(modelPath, backend, target, net);
-            namedWindow("Input", WINDOW_NORMAL);
-            namedWindow("Output", WINDOW_NORMAL);
-            moveWindow("Output", 200, 0);
+                if (net.empty())
+                    loadModel(model, backend, target, net);
+                namedWindow("Input", WINDOW_NORMAL);
+                namedWindow("Output", WINDOW_NORMAL);
+                moveWindow("Output", 200, 0);
+            }else{
+                cout << "[ERROR] Model file not provided, cannot use dexined." << endl;
+            }
         }
         else if (key == 'c' || key == 'C')
         {
