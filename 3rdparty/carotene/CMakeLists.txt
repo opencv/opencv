@@ -52,5 +52,9 @@ if(WITH_NEON)
     endif()
 endif()
 
+ if(MINGW) 
+    target_compile_definitions(carotene_objs PRIVATE "-D_USE_MATH_DEFINES=1")
+ endif()
+
 # we add dummy file to fix XCode build
 add_library(carotene STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} "$<TARGET_OBJECTS:carotene_objs>" "${CAROTENE_SOURCE_DIR}/dummy.cpp")
