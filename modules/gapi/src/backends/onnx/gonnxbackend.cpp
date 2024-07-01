@@ -332,10 +332,10 @@ inline void preprocess(const cv::Mat& src,
         if (tensor_dims.size() == ti.dims.size()) {
             for (size_t i = 0; i < ti.dims.size(); ++i) {
                 GAPI_Assert((ti.dims[i] == -1 || ti.dims[i] == tensor_dims[i]) &&
-                            "32F tensor dimensions should match with all non-dynamic NN input dimensions");
+                            "Non-U8 tensor dimensions should match with all non-dynamic NN input dimensions");
             }
         } else {
-            GAPI_Error("32F tensor size should match with NN input");
+            GAPI_Error("Non-U8 tensor size should match with NN input");
         }
 
         dst = src;
@@ -470,6 +470,7 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
         return createTensor<int32_t>(memory_info, tensor_params, data);
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:
+    // Conversion to i32 is carried out later
         return createTensor<int64_t>(memory_info, tensor_params, data);
     default:
         GAPI_Error("ONNX. Unsupported data type");
