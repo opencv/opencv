@@ -400,7 +400,6 @@ public:
         {
             quantParamExternal = false;
             scalesMat = inputs[1];
-            std::cout << "EXTERNAL STUFF" << std::endl;
 
             copyMatToVec(scalesMat, scales);
 
