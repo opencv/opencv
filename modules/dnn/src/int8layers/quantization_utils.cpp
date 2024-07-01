@@ -15,7 +15,10 @@ namespace dnn
 static void broadcast1D2TargetMat(Mat& data, const MatShape& targetShape, int axis)
 {
     // The data is the 1-D scales or zeropoints.
-    CV_Assert(axis >= 0 && targetShape.size() > axis && data.total() == targetShape[axis]);
+    CV_CheckGE(axis, 0, "Quantization axis must be non-negative.");
+    CV_CheckGT((int)targetShape.size(),axis,"Quantization axis must be within the valid range of target shape dimensions.");
+    CV_CheckEQ((int)data.total(), (int)targetShape[axis], "Data total size must match the size of the specified target dimension.");
+
     std::vector<int> broadcast_axes;
     for (int i = 0; i < targetShape.size(); i++)
     {
@@ -38,8 +41,8 @@ static void broadcast1D2TargetMat(Mat& data, const MatShape& targetShape, int ax
 static void block_repeat(InputArray src, int axis, int repetitions, OutputArray dst)
 {
     CV_Assert(src.getObj() != dst.getObj());
-    CV_Assert(axis >= 0 && axis < src.dims());
-    CV_Assert(repetitions > 1);
+    CV_Check(axis, axis >= 0 && axis < src.dims(), "Axis out of range");
+    CV_CheckGT(repetitions, 1, "More than one repetition expected");
 
     Mat src_mat = src.getMat();
     Mat dst_mat;
@@ -95,7 +98,7 @@ static void copyMatToVec(const Mat& mat, std::vector<T>& data){
 
 template <typename T>
 static void broadcastBlockedMatrix(Mat& mat, const std::vector<T>& data, const MatShape& targetShape, int axis, int block_size){
-    CV_Assert(targetShape[axis] % block_size == 0 && block_size <= targetShape[axis]);
+    CV_Check(block_size, targetShape[axis] % block_size == 0 && block_size <= targetShape[axis], "Block size must be a divisor of the target dimension size and not exceed it.");
 
     MatShape subTargetShape(targetShape);
     subTargetShape[axis] = static_cast<int>(subTargetShape[axis] / block_size);
@@ -144,6 +147,7 @@ public:
     int block_size;
     bool is1D;
     Mat scalesMat, zeropointsMat; // Saving the broadcasetd scales data.
+    bool quantParamExternal = true;
 
     QuantizeLayerImpl(const LayerParams& params)
     {
@@ -161,7 +165,7 @@ public:
             DictValue paramScales = params.get("scales");
             int i, n = paramScales.size();
 
-            CV_Assert(n > 0);
+            CV_CheckGT(n, 0, "Scale missing.");
             scales.resize(n, 0.);
             for (i = 0; i < n; i++)
                 scales[i] = paramScales.get<float>(i);
@@ -187,7 +191,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1 || inputs.size() == 2 || inputs.size() == 3);
+        CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3, "Number of inputs must be between 1 and 3 inclusive.");
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return false;
     }
@@ -227,11 +231,13 @@ public:
 #endif
     void processInputOutput(std::vector<Mat>& inputs, std::vector<Mat>& outputs)
     {
-        CV_Assert(inputs.size() == 1 || inputs.size() == 2 || inputs.size() == 3);
+        CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3, "Number of inputs must be between 1 and 3 inclusive.");
+        quantParamExternal &= inputs.size() > 1;
 
         // Scale and zeropoint taken as input
-        if (inputs.size() > 1)
+        if (quantParamExternal)
         {
+            quantParamExternal = false;
             scalesMat = inputs[1];
 
             copyMatToVec(scalesMat, scales);
@@ -242,7 +248,7 @@ public:
             if (inputs.size() > 2)
             {
                 zeropointsMat = inputs[2];
-                CV_Assert(zeropointsMat.total() ==  scalesMat.total());
+                CV_CheckEQ((int)zeropointsMat.total(), (int)scalesMat.total(), "Scale and zero point elements number must match.");
                 copyMatToVec(zeropointsMat, zeropoints);
             }
 
@@ -272,7 +278,7 @@ public:
         processInputOutput(inputs, outputs);
 
         // not is1D -> block_size = 0
-        CV_Assert(is1D || block_size == 0);
+        CV_Check(block_size, is1D || block_size == 0, "Blockwise quantization requires non-scalar quantization parameters");
 
         if (is1D)
         {
@@ -305,6 +311,7 @@ public:
     int block_size;
     bool is1D;
     Mat scalesMat, zeropointsMat; // Saving the broadcasetd scales data.
+    bool quantParamExternal = true;
 
     DequantizeLayerImpl(const LayerParams& params)
     {
@@ -322,7 +329,7 @@ public:
             DictValue paramScales = params.get("scales");
             int i, n = paramScales.size();
 
-            CV_Assert(n > 0);
+            CV_CheckGT(n, 0, "Scale missing.");
             scales.resize(n);
             for (i = 0; i < n; i++)
                 scales[i] = paramScales.get<float>(i);
@@ -348,7 +355,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1 || inputs.size() == 2 || inputs.size() == 3);
+        CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3, "Number of inputs must be between 1 and 3 inclusive.");
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return false;
     }
@@ -385,12 +392,15 @@ public:
 
     void processInputOutput(std::vector<Mat>& inputs, std::vector<Mat>& outputs)
     {
-        CV_Assert(inputs.size() == 1 || inputs.size() == 2 || inputs.size() == 3);
+        CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3, "Number of inputs must be between 1 and 3 inclusive.");
 
+        quantParamExternal &= inputs.size() > 1;
         // Scale and zeropoint taken as input
-        if (inputs.size() > 1)
+        if (quantParamExternal)
         {
+            quantParamExternal = false;
             scalesMat = inputs[1];
+            std::cout << "EXTERNAL STUFF" << std::endl;
 
             copyMatToVec(scalesMat, scales);
 
@@ -399,7 +409,7 @@ public:
             if (inputs.size() > 2)
             {
                 zeropointsMat = inputs[2];
-                CV_Assert(zeropointsMat.total() ==  scalesMat.total());
+                CV_CheckEQ((int)zeropointsMat.total(), (int)scalesMat.total(), "Scale and zero point elements number must match.");
                 copyMatToVec(zeropointsMat, zeropoints);
             }
 
@@ -429,7 +439,7 @@ public:
         processInputOutput(inputs, outputs);
 
         // not is1D -> block_size = 0
-        CV_Assert(is1D || block_size == 0);
+        CV_Check(block_size, is1D || block_size == 0, "Blockwise quantization requires non-scalar quantization parameters");
 
         if (is1D)
         {
