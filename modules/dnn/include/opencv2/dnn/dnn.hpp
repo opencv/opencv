@@ -642,13 +642,13 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param outputName name for layer which output is needed to get
          *  @details If @p outputName is empty, runs forward pass for the whole network.
          */
-        CV_WRAP void forward(OutputArrayOfArrays outputBlobs, const String& outputName = String());
+        CV_WRAP void forward(CV_ND OutputArrayOfArrays outputBlobs, const String& outputName = String());
 
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
          *  @param outputBlobs contains blobs for first outputs of specified layers.
          *  @param outBlobNames names for layers which outputs are needed to get
          */
-        CV_WRAP void forward(OutputArrayOfArrays outputBlobs,
+        CV_WRAP void forward(CV_ND OutputArrayOfArrays outputBlobs,
                              const std::vector<String>& outBlobNames);
 
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.

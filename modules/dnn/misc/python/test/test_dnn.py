@@ -465,10 +465,38 @@ class dnn_test(NewOpenCVTests):
             net.setPreferableBackend(backend)
             net.setPreferableTarget(target)
 
+            # Check whether 3d shape is parsed correctly for setInput
             net.setInput(input)
-            real_output = net.forward()
 
-            normAssert(self, real_output, gold_output, "", getDefaultThreshold(target))
+            # Case 0: test API `forward(const String& outputName = String()`
+            real_output = net.forward() # Retval is a np.array of shape [2, 5, 3]
+            normAssert(self, real_output, gold_output, "Case 1", getDefaultThreshold(target))
+
+            '''
+            Pre-allocate output memory with correct shape.
+            Normally Python users do not use in this way,
+            but we have to test it since we design API in this way
+            '''
+            # Case 1: a np.array with a string of output name.
+            #         It tests API `forward(OutputArrayOfArrays outputBlobs, const String& outputName = String()`
+            #         when outputBlobs is a np.array and we expect it to be the only output.
+            real_output = np.empty([2, 5, 3], dtype=np.float32)
+            real_output = net.forward(real_output, "237") # Retval is a tuple with a np.array of shape [2, 5, 3]
+            normAssert(self, real_output, gold_output, "Case 1", getDefaultThreshold(target))
+
+            # Case 2: a tuple of np.array with a string of output name.
+            #         It tests API `forward(OutputArrayOfArrays outputBlobs, const String& outputName = String()`
+            #         when outputBlobs is a container of several np.array and we expect to save all outputs accordingly.
+            real_output = tuple(np.empty([2, 5, 3], dtype=np.float32))
+            real_output = net.forward(real_output, "237") # Retval is a tuple with a np.array of shape [2, 5, 3]
+            normAssert(self, real_output, gold_output, "Case 2", getDefaultThreshold(target))
+
+            # Case 3: a tuple of np.array with a string of output name.
+            #         It tests API `forward(OutputArrayOfArrays outputBlobs, const std::vector<String>& outBlobNames)`
+            real_output = tuple(np.empty([2, 5, 3], dtype=np.float32))
+            # Note that it does not support parsing a list , e.g. ["237"]
+            real_output = net.forward(real_output, ("237")) # Retval is a tuple with a np.array of shape [2, 5, 3]
+            normAssert(self, real_output, gold_output, "Case 3", getDefaultThreshold(target))
 
     def test_set_param_3d(self):
         model_path = self.find_dnn_file('dnn/onnx/models/matmul_3d_init.onnx')
