@@ -118,8 +118,10 @@ PERF_TEST_P(Size_MatType, Mat_CopyToWithMask,
 }
 
 PERF_TEST_P(Size_MatType, Mat_SetToWithMask,
-            testing::Combine(testing::Values(TYPICAL_MAT_SIZES),
-                             testing::Values(CV_8UC1, CV_8UC2))
+            testing::Combine(testing::Values(TYPICAL_MAT_SIZES, cv::Size(641, 480)),
+                             testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
+                                             CV_32SC1, CV_32SC3, CV_32SC4,
+                                             CV_32FC1, CV_32FC3, CV_32FC4))
             )
 {
     const Size_MatType_t params = GetParam();
@@ -133,6 +135,29 @@ PERF_TEST_P(Size_MatType, Mat_SetToWithMask,
     TEST_CYCLE()
     {
         src.setTo(sc, mask);
+    }
+
+    SANITY_CHECK(src);
+}
+
+PERF_TEST_P(Size_MatType, Mat_SetToNoMask,
+            testing::Combine(testing::Values(TYPICAL_MAT_SIZES, cv::Size(641, 480)),
+                             testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
+                                             CV_32SC1, CV_32SC3, CV_32SC4,
+                                             CV_32FC1, CV_32FC3, CV_32FC4))
+            )
+{
+    const Size_MatType_t params = GetParam();
+    const Size size = get<0>(params);
+    const int type = get<1>(params);
+    const Scalar sc = Scalar::all(27);
+
+    Mat src(size, type);
+    declare.in(src, WARMUP_RNG).out(src);
+
+    TEST_CYCLE()
+    {
+        src.setTo(sc);
     }
 
     SANITY_CHECK(src);
