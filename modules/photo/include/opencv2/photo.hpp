@@ -209,7 +209,7 @@ size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
-imgToDenoiseIndex - temporalWindowSize / 2 from srcImgs will be used to denoise
+imgToDenoiseIndex + temporalWindowSize / 2 from srcImgs will be used to denoise
 srcImgs[imgToDenoiseIndex] image.
 @param dst Output image with the same size and type as srcImgs images.
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.
@@ -236,7 +236,7 @@ have the same type and size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
-imgToDenoiseIndex - temporalWindowSize / 2 from srcImgs will be used to denoise
+imgToDenoiseIndex + temporalWindowSize / 2 from srcImgs will be used to denoise
 srcImgs[imgToDenoiseIndex] image.
 @param dst Output image with the same size and type as srcImgs images.
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.
@@ -263,7 +263,7 @@ size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
-imgToDenoiseIndex - temporalWindowSize / 2 from srcImgs will be used to denoise
+imgToDenoiseIndex + temporalWindowSize / 2 from srcImgs will be used to denoise
 srcImgs[imgToDenoiseIndex] image.
 @param dst Output image with the same size and type as srcImgs images.
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.
