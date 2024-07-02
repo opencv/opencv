@@ -381,14 +381,14 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
-                            if (ihdr.interlace_method == 0)
+                            if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
                                 icvCvt_RGBA2BGRA_16u_C4R(reinterpret_cast<const ushort *>(buffer[row_info.row_num]), 0,
                                                          reinterpret_cast<ushort *>(buffer[row_info.row_num]), 0,
                                                          Size(m_width, 1));
                             }
                         } while (ret == SPNG_OK);
-                        if (ihdr.interlace_method)
+                        if (ihdr.interlace_method && !m_use_rgb)
                         {
                             icvCvt_RGBA2BGRA_16u_C4R(reinterpret_cast<const ushort *>(img.data), step * 2, reinterpret_cast<ushort *>(img.data), step * 2, Size(m_width, m_height));
                         }
@@ -402,12 +402,12 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
-                            if (ihdr.interlace_method == 0)
+                            if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
                                 icvCvt_RGBA2BGRA_8u_C4R(buffer[row_info.row_num], 0, buffer[row_info.row_num], 0, Size(m_width, 1));
                             }
                         } while (ret == SPNG_OK);
-                        if (ihdr.interlace_method)
+                        if (ihdr.interlace_method && !m_use_rgb)
                         {
                             icvCvt_RGBA2BGRA_8u_C4R(img.data, step, img.data, step, Size(m_width, m_height));
                         }
@@ -421,13 +421,13 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
-                            if (ihdr.interlace_method == 0)
+                            if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
                                 icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort *>(buffer[row_info.row_num]), 0,
                                                        reinterpret_cast<ushort *>(buffer[row_info.row_num]), 0, Size(m_width, 1));
                             }
                         } while (ret == SPNG_OK);
-                        if (ihdr.interlace_method)
+                        if (ihdr.interlace_method && !m_use_rgb)
                         {
                             icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort *>(img.data), step,
                                                    reinterpret_cast<ushort *>(img.data), step, Size(m_width, m_height));
@@ -442,12 +442,12 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
-                            if (ihdr.interlace_method == 0)
+                            if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
                                 icvCvt_RGB2BGR_8u_C3R(buffer[row_info.row_num], 0, buffer[row_info.row_num], 0, Size(m_width, 1));
                             }
                         } while (ret == SPNG_OK);
-                        if (ihdr.interlace_method)
+                        if (ihdr.interlace_method && !m_use_rgb)
                         {
                             icvCvt_RGB2BGR_8u_C3R(img.data, step, img.data, step, Size(m_width, m_height));
                         }

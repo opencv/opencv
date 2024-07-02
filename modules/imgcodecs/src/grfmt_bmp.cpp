@@ -544,6 +544,11 @@ decode_rle8_bad: ;
         throw;
     }
 
+    if (m_use_rgb && color && img.channels() == 3)
+    {
+        cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+    }
+
     return result;
 }
 

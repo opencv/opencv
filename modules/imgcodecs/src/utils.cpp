@@ -352,6 +352,25 @@ void icvCvt_CMYK2BGR_8u_C4C3R( const uchar* cmyk, int cmyk_step,
     }
 }
 
+void icvCvt_CMYK2RGB_8u_C4C3R( const uchar* cmyk, int cmyk_step,
+                               uchar* rgb, int rgb_step, Size size )
+{
+    int i;
+    for( ; size.height--; )
+    {
+        for( i = 0; i < size.width; i++, rgb += 3, cmyk += 4 )
+        {
+            int c = cmyk[0], m = cmyk[1], y = cmyk[2], k = cmyk[3];
+            c = k - ((255 - c)*k>>8);
+            m = k - ((255 - m)*k>>8);
+            y = k - ((255 - y)*k>>8);
+            rgb[0] = (uchar)c; rgb[1] = (uchar)m; rgb[2] = (uchar)y;
+        }
+        rgb += rgb_step - size.width*3;
+        cmyk += cmyk_step - size.width*4;
+    }
+}
+
 
 void icvCvt_CMYK2Gray_8u_C4C1R( const uchar* cmyk, int cmyk_step,
                                 uchar* gray, int gray_step, Size size )

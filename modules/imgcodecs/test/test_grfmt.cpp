@@ -108,6 +108,7 @@ const int basic_modes[] =
     IMREAD_UNCHANGED,
     IMREAD_GRAYSCALE,
     IMREAD_COLOR,
+    IMREAD_COLOR_RGB,
     IMREAD_ANYDEPTH,
     IMREAD_ANYCOLOR
 };
@@ -353,6 +354,10 @@ TEST(Imgcodecs_Bmp, rgba_scale)
     ASSERT_EQ(data[3], 255);
 
     img = cv::imread(filenameInput, IMREAD_COLOR);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    img = cv::imread(filenameInput, IMREAD_COLOR_RGB);
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
 
