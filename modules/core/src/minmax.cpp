@@ -849,9 +849,8 @@ static MinMaxIdxFunc getMinmaxTab(int depth)
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {
     int i, d = a.dims;
-    if( ofs > 0 )
+    if( ofs != SIZE_MAX )
     {
-        ofs--;
         for( i = d-1; i >= 0; i-- )
         {
             int sz = a.size[i];
@@ -1510,29 +1509,41 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
-    if (src.dims <= 2)
+    // HAL call
+    if (src.dims <= 2 || (src.isContinuous() && (mask.empty() || mask.isContinuous())))
     {
-        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows,
-                 src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data);
-    }
-    else if (src.isContinuous())
-    {
-        int res = cv_hal_minMaxIdx(src.data, 0, (int)src.total()*cn, 1, src.depth(),
-                                   minVal, maxVal, minIdx, maxIdx, mask.data);
+        int srcHalStep, srcHalWidth, srcHalHeight, maskHalStep;
+        if (src.dims <= 2)
+        {
+            srcHalStep   = (int)src.step;
+            srcHalWidth  = src.cols * cn;
+            srcHalHeight = src.rows;
+            maskHalStep  = (int)mask.step;
+        }
+        else // pass it like one continuous row
+        {
+            srcHalStep   = 0;
+            srcHalWidth  = (int)src.total()*cn;
+            srcHalHeight = 1;
+            maskHalStep  = 0;
+        }
+
+        size_t minOffset = SIZE_MAX, maxOffset = SIZE_MAX;
+        int res = cv_hal_minMaxOffset(src.data, srcHalStep, srcHalWidth, srcHalHeight, src.depth(),
+                                      minVal, maxVal, &minOffset, &maxOffset, mask.data, maskHalStep);
 
         if (res == CV_HAL_ERROR_OK)
         {
-            // minIdx[0] and minIdx[0] are always 0 for "flatten" version
             if (minIdx)
-                ofs2idx(src, minIdx[1], minIdx);
+                ofs2idx(src, minOffset, minIdx);
             if (maxIdx)
-                ofs2idx(src, maxIdx[1], maxIdx);
+                ofs2idx(src, maxOffset, maxIdx);
             return;
         }
         else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
         {
             CV_Error_(cv::Error::StsInternal,
-            ("HAL implementation minMaxIdx ==> " CVAUX_STR(cv_hal_minMaxIdx) " returned %d (0x%08x)", res, res));
+            ("HAL implementation minMaxOffset ==> " CVAUX_STR(cv_hal_minMaxOffset) " returned %d (0x%08x)", res, res));
         }
     }
 
@@ -1548,11 +1559,11 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
 
-    size_t minidx = 0, maxidx = 0;
+    size_t minidx = SIZE_MAX, maxidx = SIZE_MAX;
     int iminval = INT_MAX, imaxval = INT_MIN;
     float  fminval = std::numeric_limits<float>::infinity(),  fmaxval = -fminval;
     double dminval = std::numeric_limits<double>::infinity(), dmaxval = -dminval;
-    size_t startidx = 1;
+    size_t startidx = 0;
     int *minval = &iminval, *maxval = &imaxval;
     int planeSize = (int)it.size*cn;
 
@@ -1564,20 +1575,31 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     for( size_t i = 0; i < it.nplanes; i++, ++it, startidx += planeSize )
         func( ptrs[0], ptrs[1], minval, maxval, &minidx, &maxidx, planeSize, startidx );
 
+    // When there's no mask, min/max offset can be unset if all values are NaN or max/min
+    // => set offset to first element
+    // When mask is present, tracking first enabled element in it is too hard
+    // => leave offset unset as is
     if (!src.empty() && mask.empty())
     {
-        if( minidx == 0 )
-            minidx = 1;
-        if( maxidx == 0 )
-            maxidx = 1;
+        if( minidx == SIZE_MAX )
+            minidx = 0;
+        if( maxidx == SIZE_MAX )
+            maxidx = 0;
     }
 
-    if( minidx == 0 )
-        dminval = dmaxval = 0;
+    if( minidx == SIZE_MAX)
+        dminval = 0;
     else if( depth == CV_32F )
-        dminval = fminval, dmaxval = fmaxval;
+        dminval = fminval;
     else if( depth <= CV_32S )
-        dminval = iminval, dmaxval = imaxval;
+        dminval = iminval;
+
+    if( maxidx == SIZE_MAX)
+        dmaxval = 0;
+    else if( depth == CV_32F )
+        dmaxval = fmaxval;
+    else if( depth <= CV_32S )
+        dmaxval = imaxval;
 
     if( minVal )
         *minVal = dminval;

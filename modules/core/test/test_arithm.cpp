@@ -3007,6 +3007,28 @@ TEST(Core_MinMaxIdx, rows_overflow)
     }
 }
 
+TEST(Core_MinMaxIdx, non_continuous)
+{
+    Mat big(32, 32, CV_32FC1, Scalar(15));
+    Mat small = big(Range(8, 8+16), Range(8, 8+16));
+
+    small = 50;
+    small.at<float>(6, 7) = 100;
+    small.at<float>(8, 9) = 25;
+
+    double minVal = 0, maxVal = 0;
+    int minIdx[CV_MAX_DIM] = { 0 }, maxIdx[CV_MAX_DIM] = { 0 };
+    cv::minMaxIdx(small, &minVal, &maxVal, minIdx, maxIdx);
+
+    ASSERT_DOUBLE_EQ(minVal, 25);
+    ASSERT_DOUBLE_EQ(maxVal, 100);
+
+    ASSERT_EQ(minIdx[0], 8);
+    ASSERT_EQ(minIdx[1], 9);
+    ASSERT_EQ(maxIdx[0], 6);
+    ASSERT_EQ(maxIdx[1], 7);
+}
+
 TEST(Core_Magnitude, regression_19506)
 {
     for (int N = 1; N <= 64; ++N)

@@ -859,23 +859,42 @@ inline int hal_ni_gemm64fc(const double* src1, size_t src1_step, const double* s
 //! @endcond
 
 /**
-   @brief Finds the global minimum and maximum in an array.
-   @param src_data Source image
-   @param src_step Source image
-   @param width Source image dimensions
-   @param height Source image dimensions
+   @brief Finds the global minimum and maximum in an array, returns indices of min/max elements in source image
+   @param src_data Source image data
+   @param src_step Source image step between rows
+   @param width Source image width
+   @param height Source image height
    @param depth Depth of source image
-   @param minVal Pointer to the returned global minimum and maximum in an array.
-   @param maxVal Pointer to the returned global minimum and maximum in an array.
-   @param minIdx Pointer to the returned minimum and maximum location.
-   @param maxIdx Pointer to the returned minimum and maximum location.
-   @param mask Specified array region.
+   @param minVal Pointer to the returned global minimum value in the array
+   @param maxVal Pointer to the returned global maximum value in the array
+   @param minOffset Pointer to the returned minimum element index in the array, should point to a buffer with at least 2 elements
+   @param maxOffset Pointer to the returned maximum element index in the array, should point to a buffer with at least 2 elements
+   @param mask_data Mask data pointer
 */
 inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, int height, int depth, double* minVal, double* maxVal,
-                            int* minIdx, int* maxIdx, uchar* mask) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                            int* minIdx, int* maxIdx, uchar* mask_data) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Finds the global minimum and maximum in an array, returns offsets to min/max elements in source image
+   @param src_data Source image data
+   @param src_step Source image step between rows
+   @param width Source image width
+   @param height Source image height
+   @param depth Depth of source image
+   @param minVal Pointer to the returned global minimum value in the array
+   @param maxVal Pointer to the returned global maximum value in the array
+   @param minOffset Pointer to the returned minimum element offset in the array
+   @param maxOffset Pointer to the returned maximum element offset in the array
+   @param mask_data Mask data pointer
+   @param mask_step Mask step between rows
+*/
+inline int hal_ni_minMaxOffset(const uchar* src_data, size_t src_step, int width, int height, int depth, double* minVal, double* maxVal,
+                               size_t* minOffset, size_t* maxOffset, const uchar* mask_data, size_t mask_step)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_minMaxIdx hal_ni_minMaxIdx
+#define cv_hal_minMaxOffset hal_ni_minMaxOffset
 //! @endcond
 
 /**
