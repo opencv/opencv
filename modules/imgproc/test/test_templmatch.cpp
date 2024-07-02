@@ -147,8 +147,8 @@ static void matchTemplate_reference(Mat & img, Mat & templ, Mat & result, const 
     const int area = templ.size().area();
     const int width_n = templ.cols * cn;
     const int height = templ.rows;
-    int a_step = img.step / img.elemSize1();
-    int b_step = templ.step / templ.elemSize1();
+    int a_step = (int)(img.step / img.elemSize1());
+    int b_step = (int)(templ.step / templ.elemSize1());
 
     Scalar b_mean = Scalar::all(0);
     Scalar b_sdv = Scalar::all(0);

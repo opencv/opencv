@@ -632,7 +632,7 @@ inline float normAngle(float angle_deg)
 
 inline float angleToDeg(float angle_rad)
 {
-    return angle_rad * 180 / M_PI;
+    return angle_rad * 180.f / (float)M_PI;
 }
 
 inline float angleDiff(float a, float b)
@@ -667,7 +667,9 @@ TEST_P(fitEllipse_Modes, accuracy)
         f2 = rot * f1 * cvtest::randomDouble(0.01, 3);
 
         const Point2f ref_center(f0.at<float>(0), f0.at<float>(1));
-        const Size2f ref_size(cvtest::norm(f1, NORM_L2) * 2, cvtest::norm(f2, NORM_L2) * 2);
+        const Size2f ref_size(
+            (float)cvtest::norm(f1, NORM_L2) * 2.f,
+            (float)cvtest::norm(f2, NORM_L2) * 2.f);
         const float ref_angle1 = angleToDeg(atan(f1.at<float>(1) / f1.at<float>(0)));
         const float ref_angle2 = angleToDeg(atan(f2.at<float>(1) / f2.at<float>(0)));
 
@@ -703,7 +705,7 @@ TEST_P(fitEllipse_Modes, accuracy)
         }
         EXPECT_FALSE(res.size.empty());
         EXPECT_POINT2_NEAR(res.center, ref_center, 0.01);
-        const float sizeDiff = (data_type == CV_32FC2) ? 0.1 : 1;
+        const float sizeDiff = (data_type == CV_32FC2) ? 0.1f : 1.f;
         EXPECT_NEAR(min(res.size.width, res.size.height), min(ref_size.width, ref_size.height), sizeDiff);
         EXPECT_NEAR(max(res.size.width, res.size.height), max(ref_size.width, ref_size.height), sizeDiff);
         if (sizeSwap)
@@ -800,7 +802,7 @@ TEST_P(convexHull_Modes, accuracy)
         const int c_diff = findPointInMat(hull, c_hull.row(0));
         ASSERT_NE(c_diff, -1);
 
-        const int sz = hull.total();
+        const int sz = (int)hull.total();
         for (int i = 0; i < sz; ++i)
         {
             SCOPED_TRACE(cv::format("vertex %d", i));
