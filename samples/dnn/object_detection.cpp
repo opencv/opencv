@@ -1,8 +1,10 @@
+//![includes]
 #include <fstream>
 #include <sstream>
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 
 #if defined(HAVE_THREADS)
@@ -15,28 +17,39 @@
 #include <queue>
 #endif
 
+#include "iostream"
 #include "common.hpp"
+//![includes]
 
-std::string param_keys =
-    "{ help  h     | | Print help message. }"
-    "{ @alias      | | An alias name of model to extract preprocessing parameters from models.yml file. }"
+using namespace cv;
+using namespace dnn;
+using namespace std;
+
+const string param_keys =
+    "{ help  h     |            | Print help message. }"
+    "{ @alias      |            | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
-    "{ device      |  0 | camera device number. }"
-    "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
-    "{ framework f | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
-    "{ classes     | | Optional path to a text file with names of classes to label detected objects. }"
-    "{ thr         | .5 | Confidence threshold. }"
-    "{ nms         | .4 | Non-maximum suppression threshold. }"
-    "{ async       | 0 | Number of asynchronous forwards at the same time. "
-                        "Choose 0 for synchronous mode }";
-std::string backend_keys = cv::format(
+    "{ device      |  0         | camera device number. }"
+    "{ input i     |            | Path to input image or video file. Skip this argument to capture frames from a camera. }"
+    "{ classes     |            | Optional path to a text file with names of classes to label detected objects. }"
+    "{ thr         | .5         | Confidence threshold. }"
+    "{ nms         | .4         | Non-maximum suppression threshold. }"
+    "{ async       | 0          | Number of asynchronous forwards at the same time. "
+                        "Choose 0 for synchronous mode }"
+    "{ padvalue    | 114.0      | padding value. }"
+    "{ paddingmode | 2          | Choose one of computation backends: "
+                         "0: resize to required input size without extra processing, "
+                         "1: Image will be cropped after resize, "
+                         "2: Resize image to the desired size while preserving the aspect ratio of original image }";
+
+const string backend_keys = format(
     "{ backend     | 0 | Choose one of computation backends: "
                          "%d: automatically (by default), "
                          "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
                          "%d: OpenCV implementation, "
                          "%d: VKCOM, "
-                         "%d: CUDA }", cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA);
-std::string target_keys = cv::format(
+                         "%d: CUDA }", DNN_BACKEND_DEFAULT, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV, DNN_BACKEND_VKCOM, DNN_BACKEND_CUDA);
+const string target_keys = format(
     "{ target      | 0 | Choose one of target computation devices: "
                          "%d: CPU target (by default), "
                          "%d: OpenCL, "
@@ -44,23 +57,36 @@ std::string target_keys = cv::format(
                          "%d: VPU, "
                          "%d: Vulkan, "
                          "%d: CUDA, "
-                         "%d: CUDA fp16 (half-float preprocess) }", cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
-std::string keys = param_keys + backend_keys + target_keys;
+                         "%d: CUDA fp16 (half-float preprocess) }", DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16, DNN_TARGET_MYRIAD, DNN_TARGET_VULKAN, DNN_TARGET_CUDA, DNN_TARGET_CUDA_FP16);
+string keys = param_keys + backend_keys + target_keys;
 
-using namespace cv;
-using namespace dnn;
+float confThreshold, nmsThreshold, scale, paddingValue;
+vector<string> classes;
+Scalar meanv;
+bool swapRB;
+int inpWidth, inpHeight;
+size_t asyncNumReq;
+ImagePaddingMode paddingMode;
+string modelName, framework;
 
-float confThreshold, nmsThreshold;
-std::vector<std::string> classes;
+static void preprocess(const Mat& frame, Net& net, Size inpSize);
 
-inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
-                       const Scalar& mean, bool swapRB);
+static void postprocess(Mat& frame, const vector<Mat>& out, Net& net, int backend);
 
-void postprocess(Mat& frame, const std::vector<Mat>& out, Net& net, int backend);
+static void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
 
-void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
+static void callback(int pos, void* userdata);
 
-void callback(int pos, void* userdata);
+static Scalar getColor(int classId);
+
+static void yoloPostProcessing(
+    const vector<Mat>& outs,
+    vector<int>& keep_classIds,
+    vector<float>& keep_confidences,
+    vector<Rect2d>& keep_boxes,
+    float conf_threshold,
+    float iou_threshold,
+    const string& test_name);
 
 #ifdef USE_THREADS
 template <typename T>
@@ -118,8 +144,8 @@ int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
-    const std::string modelName = parser.get<String>("@alias");
-    const std::string zooFile = parser.get<String>("zoo");
+    modelName = parser.get<String>("@alias");
+    const string zooFile = parser.get<String>("zoo");
 
     keys += genPreprocArguments(modelName, zooFile);
 
@@ -133,42 +159,45 @@ int main(int argc, char** argv)
 
     confThreshold = parser.get<float>("thr");
     nmsThreshold = parser.get<float>("nms");
-    float scale = parser.get<float>("scale");
-    Scalar mean = parser.get<Scalar>("mean");
-    bool swapRB = parser.get<bool>("rgb");
-    int inpWidth = parser.get<int>("width");
-    int inpHeight = parser.get<int>("height");
-    size_t asyncNumReq = parser.get<int>("async");
+    //![preprocess_params]
+    scale = parser.get<float>("scale");
+    meanv = parser.get<Scalar>("mean");
+    swapRB = parser.get<bool>("rgb");
+    inpWidth = parser.get<int>("width");
+    inpHeight = parser.get<int>("height");
+    asyncNumReq = parser.get<int>("async");
+    paddingValue = parser.get<float>("padvalue");
+    paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
+    //![preprocess_params]
     CV_Assert(parser.has("model"));
-    std::string modelPath = findFile(parser.get<String>("model"));
-    std::string configPath = findFile(parser.get<String>("config"));
+    const string modelPath = findFile(parser.get<String>("model"));
+    const string configPath = findFile(parser.get<String>("config"));
+    framework = modelPath.substr(modelPath.rfind('.') + 1);
 
-    // Open file with classes names.
     if (parser.has("classes"))
     {
-        std::string file = parser.get<String>("classes");
-        std::ifstream ifs(file.c_str());
+        const string file = findFile(parser.get<String>("classes"));
+        ifstream ifs(file.c_str());
         if (!ifs.is_open())
             CV_Error(Error::StsError, "File " + file + " not found");
-        std::string line;
-        while (std::getline(ifs, line))
+        string line;
+        while (getline(ifs, line))
         {
             classes.push_back(line);
         }
     }
-
-    // Load a model.
-    Net net = readNet(modelPath, configPath, parser.get<String>("framework"));
+    //![read_net]
+    Net net = readNet(modelPath, configPath);
     int backend = parser.get<int>("backend");
     net.setPreferableBackend(backend);
     net.setPreferableTarget(parser.get<int>("target"));
-    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    //![read_net]
 
     // Create a window
-    static const std::string kWinName = "Deep learning object detection in OpenCV";
-    namedWindow(kWinName, WINDOW_NORMAL);
+    static const string kWinName = "Deep learning object detection in OpenCV";
+    namedWindow(kWinName, WINDOW_AUTOSIZE);
     int initialConf = (int)(confThreshold * 100);
-    createTrackbar("Confidence threshold, %", kWinName, &initialConf, 99, callback);
+    createTrackbar("Confidence threshold, %", kWinName, &initialConf, 99, callback, &net);
 
     // Open a video file or an image file or a camera stream.
     VideoCapture cap;
@@ -213,15 +242,13 @@ int main(int argc, char** argv)
                         if (futureOutputs.size() == asyncNumReq)
                             frame = Mat();
                     }
-                    else
-                        framesQueue.clear();  // Skip the rest of frames
                 }
             }
 
             // Process the frame
             if (!frame.empty())
             {
-                preprocess(frame, net, Size(inpWidth, inpHeight), scale, mean, swapRB);
+                preprocess(frame, net, Size(inpWidth, inpHeight));
                 processedFramesQueue.push(frame);
 
                 if (asyncNumReq)
@@ -230,8 +257,8 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    std::vector<Mat> outs;
-                    net.forward(outs, outNames);
+                    vector<Mat> outs;
+                    net.forward(outs, net.getUnconnectedOutLayersNames());
                     predictionsQueue.push(outs);
                 }
             }
@@ -249,26 +276,27 @@ int main(int argc, char** argv)
     });
 
     // Postprocessing and rendering loop
-    while (waitKey(1) < 0)
+    while (waitKey(100) < 0)
     {
         if (predictionsQueue.empty())
             continue;
 
-        std::vector<Mat> outs = predictionsQueue.get();
+        vector<Mat> outs = predictionsQueue.get();
         Mat frame = processedFramesQueue.get();
 
         postprocess(frame, outs, net, backend);
 
         if (predictionsQueue.counter > 1)
         {
-            std::string label = format("Camera: %.2f FPS", framesQueue.getFPS());
-            putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+            string label = format("Camera: %.2f FPS", framesQueue.getFPS());
+            rectangle(frame, Point(0, 0), Point(150, 50), Scalar::all(255), FILLED);
+            putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar::all(0));
 
             label = format("Network: %.2f FPS", predictionsQueue.getFPS());
-            putText(frame, label, Point(0, 30), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+            putText(frame, label, Point(0, 30), FONT_HERSHEY_SIMPLEX, 0.5, Scalar::all(0));
 
             label = format("Skipped frames: %d", framesQueue.counter - predictionsQueue.counter);
-            putText(frame, label, Point(0, 45), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+            putText(frame, label, Point(0, 45), FONT_HERSHEY_SIMPLEX, 0.5, Scalar::all(0));
         }
         imshow(kWinName, frame);
     }
@@ -283,7 +311,7 @@ int main(int argc, char** argv)
 
     // Process frames.
     Mat frame, blob;
-    while (waitKey(1) < 0)
+    while (waitKey(100) < 0)
     {
         cap >> frame;
         if (frame.empty())
@@ -291,19 +319,22 @@ int main(int argc, char** argv)
             waitKey();
             break;
         }
+        //![preprocess_call_func]
+        preprocess(frame, net, Size(inpWidth, inpHeight));
+        //![preprocess_call_func]
 
-        preprocess(frame, net, Size(inpWidth, inpHeight), scale, mean, swapRB);
-
-        std::vector<Mat> outs;
-        net.forward(outs, outNames);
+        //![forward]
+        vector<Mat> outs;
+        net.forward(outs, net.getUnconnectedOutLayersNames());
+        //![forward]
 
         postprocess(frame, outs, net, backend);
 
         // Put efficiency information.
-        std::vector<double> layersTimes;
+        vector<double> layersTimes;
         double freq = getTickFrequency() / 1000;
         double t = net.getPerfProfile(layersTimes) / freq;
-        std::string label = format("Inference time: %.2f ms", t);
+        string label = format("Inference time: %.2f ms", t);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         imshow(kWinName, frame);
@@ -312,33 +343,139 @@ int main(int argc, char** argv)
     return 0;
 }
 
-inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
-                       const Scalar& mean, bool swapRB)
+void preprocess(const Mat& frame, Net& net, Size inpSize)
 {
-    static Mat blob;
-    // Create a 4D blob from a frame.
-    if (inpSize.width <= 0) inpSize.width = frame.cols;
-    if (inpSize.height <= 0) inpSize.height = frame.rows;
-    blobFromImage(frame, blob, 1.0, inpSize, Scalar(), swapRB, false, CV_8U);
+    Size size(inpSize.width <= 0 ? frame.cols : inpSize.width, inpSize.height <= 0 ? frame.rows : inpSize.height);
 
-    // Run a model.
-    net.setInput(blob, "", scale, mean);
-    if (net.getLayer(0)->outputNameToIndex("im_info") != -1)  // Faster-RCNN or R-FCN
+    // Prepare the blob from the image
+    Mat inp;
+    if(framework == "weights"){ // checks whether model is darknet
+        blobFromImage(frame, inp, scale, size, meanv, swapRB, false, CV_32F);
+    }
+    else{
+        //![preprocess_call]
+        Image2BlobParams imgParams(
+            scale,
+            size,
+            meanv,
+            swapRB,
+            CV_32F,
+            DNN_LAYOUT_NCHW,
+            paddingMode,
+            paddingValue);
+
+        inp = blobFromImageWithParams(frame, imgParams);
+        //![preprocess_call]
+    }
+
+    // Set the blob as the network input
+    net.setInput(inp);
+
+    // Check if the model is Faster-RCNN or R-FCN
+    if (net.getLayer(0)->outputNameToIndex("im_info") != -1)
     {
-        resize(frame, frame, inpSize);
-        Mat imInfo = (Mat_<float>(1, 3) << inpSize.height, inpSize.width, 1.6f);
+        // Resize the frame and prepare imInfo
+        resize(frame, frame, size);
+        Mat imInfo = (Mat_<float>(1, 3) << size.height, size.width, 1.6f);
         net.setInput(imInfo, "im_info");
     }
 }
 
-void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend)
+void yoloPostProcessing(
+    const vector<Mat>& outs,
+    vector<int>& keep_classIds,
+    vector<float>& keep_confidences,
+    vector<Rect2d>& keep_boxes,
+    float conf_threshold,
+    float iou_threshold,
+    const string& test_name)
 {
-    static std::vector<int> outLayers = net.getUnconnectedOutLayers();
-    static std::string outLayerType = net.getLayer(outLayers[0])->type;
+    // Retrieve
+    vector<int> classIds;
+    vector<float> confidences;
+    vector<Rect2d> boxes;
 
-    std::vector<int> classIds;
-    std::vector<float> confidences;
-    std::vector<Rect> boxes;
+    vector<Mat> outs_copy = outs;
+
+    if (test_name == "yolov8")
+    {
+        transposeND(outs_copy[0], {0, 2, 1}, outs_copy[0]);
+    }
+
+    if (test_name == "yolonas")
+    {
+        // outs contains 2 elements of shape [1, 8400, 80] and [1, 8400, 4]. Concat them to get [1, 8400, 84]
+        Mat concat_out;
+        // squeeze the first dimension
+        outs_copy[0] = outs_copy[0].reshape(1, outs_copy[0].size[1]);
+        outs_copy[1] = outs_copy[1].reshape(1, outs_copy[1].size[1]);
+        hconcat(outs_copy[1], outs_copy[0], concat_out);
+        outs_copy[0] = concat_out;
+        // remove the second element
+        outs_copy.pop_back();
+        // unsqueeze the first dimension
+        outs_copy[0] = outs_copy[0].reshape(0, std::vector<int>{1, 8400, 84});
+    }
+
+    for (auto preds : outs_copy)
+    {
+        preds = preds.reshape(1, preds.size[1]); // [1, 8400, 85] -> [8400, 85]
+        for (int i = 0; i < preds.rows; ++i)
+        {
+            // filter out non-object
+            float obj_conf = (test_name == "yolov8" || test_name == "yolonas") ? 1.0f : preds.at<float>(i, 4);
+            if (obj_conf < conf_threshold)
+                continue;
+
+            Mat scores = preds.row(i).colRange((test_name == "yolov8" || test_name == "yolonas") ? 4 : 5, preds.cols);
+            double conf;
+            Point maxLoc;
+            minMaxLoc(scores, 0, &conf, 0, &maxLoc);
+
+            conf = (test_name == "yolov8" || test_name == "yolonas") ? conf : conf * obj_conf;
+            if (conf < conf_threshold)
+                continue;
+
+            // get bbox coords
+            float* det = preds.ptr<float>(i);
+            double cx = det[0];
+            double cy = det[1];
+            double w = det[2];
+            double h = det[3];
+
+            // [x1, y1, x2, y2]
+            if (test_name == "yolonas") {
+                boxes.push_back(Rect2d(cx, cy, w, h));
+            } else {
+                boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
+                                        cx + 0.5 * w, cy + 0.5 * h));
+            }
+            classIds.push_back(maxLoc.x);
+            confidences.push_back(static_cast<float>(conf));
+        }
+    }
+
+    // NMS
+    vector<int> keep_idx;
+    NMSBoxes(boxes, confidences, conf_threshold, iou_threshold, keep_idx);
+
+    for (auto i : keep_idx)
+    {
+        keep_classIds.push_back(classIds[i]);
+        keep_confidences.push_back(confidences[i]);
+        keep_boxes.push_back(boxes[i]);
+    }
+}
+
+void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend)
+{
+    static vector<int> outLayers = net.getUnconnectedOutLayers();
+    static string outLayerType = net.getLayer(outLayers[0])->type;
+
+    vector<int> classIds;
+    vector<float> confidences;
+    vector<Rect> boxes;
+
     if (outLayerType == "DetectionOutput")
     {
         // Network produces output blob with a shape 1x1xNx7 where N is a number of
@@ -405,14 +542,46 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend
             }
         }
     }
-    else
-        CV_Error(Error::StsNotImplemented, "Unknown output layer type: " + outLayerType);
+    else if (outLayerType == "Identity")
+    {
+        //![forward_buffers]
+        vector<int> keep_classIds;
+        vector<float> keep_confidences;
+        vector<Rect2d> keep_boxes;
+        //![forward_buffers]
 
-    // NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
-    // or NMS is required if number of outputs > 1
+        //![postprocess]
+        yoloPostProcessing(outs, keep_classIds, keep_confidences, keep_boxes, confThreshold, nmsThreshold, "yolov8");
+        //![postprocess]
+
+        for (size_t i = 0; i < keep_classIds.size(); ++i)
+        {
+            classIds.push_back(keep_classIds[i]);
+            confidences.push_back(keep_confidences[i]);
+            Rect2d box = keep_boxes[i];
+            boxes.push_back(Rect(cvFloor(box.x), cvFloor(box.y), cvFloor(box.width-box.x), cvFloor(box.height-box.y)));
+        }
+        if (framework == "onnx"){
+            Image2BlobParams paramNet;
+                paramNet.scalefactor = scale;
+                paramNet.size = Size(inpWidth, inpHeight);
+                paramNet.mean = meanv;
+                paramNet.swapRB = swapRB;
+                paramNet.paddingmode = paddingMode;
+
+            paramNet.blobRectsToImageRects(boxes, boxes, frame.size());
+        }
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "Unknown output layer type: " + outLayerType);
+    }
+
+    // NMS is used inside Region layer only on DNN_BACKEND_OPENCV for other backends we need NMS in sample
+    // or NMS is required if the number of outputs > 1
     if (outLayers.size() > 1 || (outLayerType == "Region" && backend != DNN_BACKEND_OPENCV))
     {
-        std::map<int, std::vector<size_t> > class2indices;
+        map<int, vector<size_t> > class2indices;
         for (size_t i = 0; i < classIds.size(); i++)
         {
             if (confidences[i] >= confThreshold)
@@ -420,14 +589,14 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend
                 class2indices[classIds[i]].push_back(i);
             }
         }
-        std::vector<Rect> nmsBoxes;
-        std::vector<float> nmsConfidences;
-        std::vector<int> nmsClassIds;
-        for (std::map<int, std::vector<size_t> >::iterator it = class2indices.begin(); it != class2indices.end(); ++it)
+        vector<Rect> nmsBoxes;
+        vector<float> nmsConfidences;
+        vector<int> nmsClassIds;
+        for (map<int, vector<size_t> >::iterator it = class2indices.begin(); it != class2indices.end(); ++it)
         {
-            std::vector<Rect> localBoxes;
-            std::vector<float> localConfidences;
-            std::vector<size_t> classIndices = it->second;
+            vector<Rect> localBoxes;
+            vector<float> localConfidences;
+            vector<size_t> classIndices = it->second;
             for (size_t i = 0; i < classIndices.size(); i++)
             {
                 localBoxes.push_back(boxes[classIndices[i]]);
@@ -447,20 +616,21 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend
         classIds = nmsClassIds;
         confidences = nmsConfidences;
     }
-
+    //![draw_boxes]
     for (size_t idx = 0; idx < boxes.size(); ++idx)
     {
         Rect box = boxes[idx];
-        drawPred(classIds[idx], confidences[idx], box.x, box.y,
-                 box.x + box.width, box.y + box.height, frame);
+        drawPred(classIds[idx], confidences[idx], box.x, box.y, box.x + box.width, box.y + box.height, frame);
     }
+    //![draw_boxes]
 }
+
 
 void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame)
 {
-    rectangle(frame, Point(left, top), Point(right, bottom), Scalar(0, 255, 0));
+    rectangle(frame, Point(left, top), Point(right, bottom), getColor(classId));
 
-    std::string label = format("%.2f", conf);
+    string label = format("%.2f", conf);
     if (!classes.empty())
     {
         CV_Assert(classId < (int)classes.size());
@@ -479,4 +649,11 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
 void callback(int pos, void*)
 {
     confThreshold = pos * 0.01f;
+}
+
+Scalar getColor(int classId) {
+    int r = min((classId >> 0 & 1) * 128 + (classId >> 3 & 1) * 64 + (classId >> 6 & 1) * 32 + 80, 255);
+    int g = min((classId >> 1 & 1) * 128 + (classId >> 4 & 1) * 64 + (classId >> 7 & 1) * 32 + 40, 255);
+    int b = min((classId >> 2 & 1) * 128 + (classId >> 5 & 1) * 64 + (classId >> 8 & 1) * 32 + 40, 255);
+    return Scalar(b, g, r);
 }
