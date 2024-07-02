@@ -126,6 +126,8 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     Mat rvecs_cpp;
     Mat tvecs_cpp;
     Mat newObjPts_cpp;
+    std::vector<Mat> badRvecs;
+    std::vector<Mat> badTvecs;
 
     std::vector<Point3f> objPts_cpp;
     for(int y = 0; y < corSize.height; ++y)
@@ -140,8 +142,13 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     }
     caller.cameraMatrix.create(3, 3, CV_32F);
     caller.distCoeffs.create(5, 1, CV_32F);
-    caller.rvecs.clear();
-    caller.tvecs.clear();
+    caller.rvecs.resize(M);
+    caller.tvecs.resize(M);
+    for (int i = 0; i < M; ++i)
+    {
+        caller.rvecs[i] = Mat::eye(3, 3, CV_64F);
+        caller.tvecs[i] = Mat::zeros(3, 1, CV_64F);
+    }
     caller.newObjPts.clear();
 
     /* /*//*/ */
@@ -192,6 +199,56 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     caller.distCoeffs_arg = badDC;
     caller.flags = CALIB_USE_INTRINSIC_GUESS;
     errors += run_test_case( cv::Error::StsBadArg, "Bad camearaMatrix header", caller );
+
+    caller.initArgs();
+    caller.rvecs_arg = noArray();
+    caller.flags = CALIB_FIX_EXTRINSIC;
+    errors += run_test_case( Error::StsBadArg, "None passed in rvecs", caller );
+
+    caller.initArgs();
+    badRvecs = {Mat::eye(3, 3, CV_64F)};
+    caller.rvecs_arg = badRvecs;
+    caller.flags = CALIB_FIX_EXTRINSIC;
+    errors += run_test_case( Error::StsBadArg, "Incorrect num of rvecs", caller );
+
+    caller.initArgs();
+    badRvecs = caller.rvecs;
+    badRvecs[0] = Mat::eye(4, 4, CV_64F);
+    caller.rvecs_arg = badRvecs;
+    caller.flags = CALIB_FIX_EXTRINSIC;
+    errors += run_test_case( Error::StsBadSize, "Bad rvecs[0]", caller );
+
+    caller.initArgs();
+    badRvecs = caller.rvecs;
+    badRvecs[1] = Mat::eye(4, 4, CV_64F);
+    caller.rvecs_arg = badRvecs;
+    caller.flags = CALIB_FIX_EXTRINSIC;
+    errors += run_test_case( Error::StsBadSize, "Bad rvecs[1]", caller );
+
+    caller.initArgs();
+    caller.tvecs_arg = noArray();
+    caller.flags = CALIB_FIX_EXTRINSIC;
+    errors += run_test_case( Error::StsBadArg, "None passed in tvecs", caller );
+
+    caller.initArgs();
+    badTvecs = {Mat::eye(3, 1, CV_64F)};
+    caller.tvecs_arg = badTvecs;
+    caller.flags = CALIB_FIX_EXTRINSIC;
+    errors += run_test_case( Error::StsBadArg, "Incorrect num of tvecs", caller );
+
+    caller.initArgs();
+    badTvecs = caller.tvecs;
+    badTvecs[0] = Mat::eye(4, 1, CV_64F);
+    caller.tvecs_arg = badTvecs;
+    caller.flags = CALIB_FIX_EXTRINSIC;
+    errors += run_test_case( Error::StsBadSize, "Bad tvecs[0]", caller );
+
+    caller.initArgs();
+    badTvecs = caller.tvecs;
+    badTvecs[1] = Mat::eye(4, 1, CV_64F);
+    caller.tvecs_arg = badTvecs;
+    caller.flags = CALIB_FIX_EXTRINSIC;
+    errors += run_test_case( Error::StsBadSize, "Bad tvecs[1]", caller );
 
     if (errors)
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
