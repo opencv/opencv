@@ -538,11 +538,11 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
     int calc_derivatives;
     const CvPoint3D64f* M;
     CvPoint2D64f* m;
-    double r[3], R[9], dRdr[27], t[3], a[9], k[14] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0}, fx, fy, cx, cy;
+    double r[3], R[9], R_vec[9], dRdr[27], t[3], a[9], k[14] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0}, fx, fy, cx, cy;
     Matx33d matTilt = Matx33d::eye();
     Matx33d dMatTiltdTauX(0,0,0,0,0,0,0,-1,0);
     Matx33d dMatTiltdTauY(0,0,0,0,0,0,1,0,0);
-    CvMat _r, _t, _a = cvMat( 3, 3, CV_64F, a ), _k;
+    CvMat _r, _r_vec, _t, _a = cvMat( 3, 3, CV_64F, a ), _k;
     CvMat matR = cvMat( 3, 3, CV_64F, R ), _dRdr = cvMat( 3, 9, CV_64F, dRdr );
     double *dpdr_p = 0, *dpdt_p = 0, *dpdk_p = 0, *dpdf_p = 0, *dpdc_p = 0;
     double* dpdo_p = 0;
@@ -593,9 +593,11 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
     if( r_vec->rows == 3 && r_vec->cols == 3 )
     {
         _r = cvMat( 3, 1, CV_64FC1, r );
-        cvRodrigues2( r_vec, &_r );
+        _r_vec = cvMat( r_vec->rows, r_vec->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(r_vec->type)), R_vec );
+        cvConvert( r_vec, &_r_vec );
+        cvRodrigues2( &_r_vec, &_r );
         cvRodrigues2( &_r, &matR, &_dRdr );
-        cvCopy( r_vec, &matR );
+        cvCopy( &_r_vec, &matR );
     }
     else
     {
