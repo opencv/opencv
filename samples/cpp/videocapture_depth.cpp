@@ -5,8 +5,6 @@
 #include <iostream>
 
 using namespace cv;
-using namespace std;
-
 
 static void colorizeDisparity(const Mat& gray, Mat& rgb, double maxDisp=-1.f)
 {
@@ -37,150 +35,16 @@ static float getMaxDisparity(VideoCapture& capture)
     return b * F / minDistance;
 }
 
-static void openni_cam()
+static void colorizeDepth(const Mat& depth, Mat& rgb)
 {
-    VideoCapture capture(CAP_OPENNI2);
-   if (!capture.isOpened())
-   {
-        cerr << "Failed to open a capture object." << endl;
-        return;
-   }
+    CV_Assert(!depth.empty());
 
-    capture.set(CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_VGA_30HZ);
-    capture.set(CAP_OPENNI_DEPTH_GENERATOR_PRESENT, true);
-    capture.set(CAP_OPENNI_IMAGE_GENERATOR_PRESENT, true);
-    capture.set(CAP_OPENNI_IR_GENERATOR_PRESENT, true);
-
-    Mat depthMap;
-    Mat bgrImage;
-    Mat irImage;
-    Mat disparityMap;
-
-    for(;;)
-    {
-        if (!capture.grab())
-        {
-            cerr << "Can not grab images." << endl;
-            return;
-        }
-        else
-        {
-            if(capture.retrieve(depthMap, CAP_OPENNI_DEPTH_MAP))
-            {
-                const float scaleFactor = 0.05f;
-                Mat show;
-                depthMap.convertTo(show, CV_8UC1, scaleFactor);
-                imshow("DEPTH", show);
-            }
-
-            if(capture.retrieve(bgrImage, CAP_OPENNI_BGR_IMAGE))
-                imshow("RGB", bgrImage);
-
-            if(capture.retrieve(irImage, CAP_OPENNI_IR_IMAGE))
-            {
-                const float scaleFactor = 256.0f / 3500;
-                Mat ir8;
-                irImage.convertTo(ir8, CV_8U, scaleFactor);
-                imshow("IR", ir8);
-            }
-
-            if(capture.retrieve(disparityMap, CAP_OPENNI_DISPARITY_MAP))
-            {
-                Mat colorDisparityMap;
-                colorizeDisparity(disparityMap, colorDisparityMap, getMaxDisparity(capture));
-                Mat validColorDisparityMap;
-                colorDisparityMap.copyTo(validColorDisparityMap, disparityMap != 0);
-                imshow("Colorized Disparity Map", validColorDisparityMap);
-            }
-        }
-
-        if(waitKey(30) >= 0)
-            break;
-    }
+    normalize(depth, rgb, 0, 255, NORM_MINMAX, CV_8UC1);
+    applyColorMap(rgb, rgb, COLORMAP_JET);
 }
 
-static void realsense_cam()
-{
-   VideoCapture capture(CAP_INTELPERC);
-   if (!capture.isOpened())
-   {
-        cerr << "Failed to open RealSense camera." << endl;
-        return;
-   }
-
-    Mat depthMap;
-    Mat bgrImage;
-    Mat irImage;
-
-    for(;;)
-    {
-        if(capture.grab())
-        {
-            if(capture.retrieve(depthMap,CAP_INTELPERC_DEPTH_MAP))
-            {
-                Mat adjMap;
-                normalize(depthMap, adjMap, 0, 255, NORM_MINMAX, CV_8UC1);
-                applyColorMap(adjMap, adjMap, COLORMAP_JET);
-                imshow("DEPTH", adjMap);
-            }
-
-            if(capture.retrieve(bgrImage,CAP_INTELPERC_IMAGE))
-                imshow("RGB", bgrImage);
-
-            if(capture.retrieve(irImage,CAP_INTELPERC_IR_MAP))
-                imshow("IR", irImage);
-        }
-
-        if(waitKey(30) >= 0)
-            break;
-    }
-}
-
-static void orbbec_cam()
-{
-    VideoCapture capture(0, CAP_OBSENSOR);
-    if(!capture.isOpened())
-    {
-        cerr << "Failed to open Orbbec camera."  << endl;
-        return;
-    }
-
-    // get the intrinsic parameters of Orbbec camera
-    double fx = capture.get(CAP_PROP_OBSENSOR_INTRINSIC_FX);
-    double fy = capture.get(CAP_PROP_OBSENSOR_INTRINSIC_FY);
-    double cx = capture.get(CAP_PROP_OBSENSOR_INTRINSIC_CX);
-    double cy = capture.get(CAP_PROP_OBSENSOR_INTRINSIC_CY);
-    cout << "Camera intrinsic params: fx=" << fx << ", fy=" << fy << ", cx=" << cx << ", cy=" << cy << endl;
-
-    Mat depthMap;
-    Mat bgrImage;
-
-    for(;;)
-    {
-        // Get the depth map:
-        // obsensorCapture >> depthMap;
-
-        // Another way to get the depth map:
-        if (capture.grab())
-        {
-            if (capture.retrieve(depthMap, CAP_OBSENSOR_DEPTH_MAP))
-            {
-                Mat adjMap;
-                normalize(depthMap, adjMap, 0, 255, NORM_MINMAX, CV_8UC1);
-                applyColorMap(adjMap, adjMap, COLORMAP_JET);
-                imshow("DEPTH", adjMap);
-            }
-
-            if (capture.retrieve(bgrImage, CAP_OBSENSOR_BGR_IMAGE))
-                imshow("RGB", bgrImage);
-        }
-
-        if(waitKey(30) >= 0)
-            break;
-    }
-}
-
-const char* keys = "{camType | | Camera Type: OpenNI, RealSense, Orbbec}";
+const char* keys = "{type t | | Camera Type: OpenNI, RealSense, Orbbec}"
+                   "{help h | | Help}";
 
 const char* about =
             "\nThis example demostrates how to get data from 3D cameras via OpenCV.\n"
@@ -189,35 +53,130 @@ const char* about =
             "Users must install OpenNI library and PrimeSensorModule for OpenNI and configure OpenCV with WITH_OPENNI flag ON in CMake.\n"
             "2. Depth sensors compatible with Intel® RealSense SDK (RealSense). "
             "Users must install Intel RealSense SDK 2.0 and configure OpenCV with WITH_LIBREALSENSE flag ON in CMake.\n"
-            "3. Orbbec depth sensors.\n";
+            "3. Orbbec UVC depth sensors. "
+            "(For the use of OpenNI based Orbbec cameras, please refer to the example openni_orbbec_astra.cpp)\n";
 
 int main(int argc, char *argv[])
 {
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
-    if(argc < 2)
+
+    if(parser.has("help"))
     {
         parser.printMessage();
         return 0;
     }
 
-    String camType = parser.get<String>("camType");
-    if (camType == "OpenNI")
+    if (parser.has("type"))
     {
-        openni_cam();
-    }
-    else if (camType == "RealSense")
-    {
-        realsense_cam();
-    }
-    else if (camType == "Orbbec")
-    {
-        orbbec_cam();
+        int backend;
+        int flagDepth, flagBGR, flagIR, flagDisparity;
+        bool hasIR, hasDisparity;
+
+        String camType = parser.get<String>("type");
+        if (camType == "OpenNI")
+        {
+            backend = CAP_OPENNI2;
+            flagDepth = CAP_OPENNI_DEPTH_MAP;
+            flagBGR = CAP_OPENNI_BGR_IMAGE;
+            flagIR = CAP_OPENNI_IR_IMAGE;
+            flagDisparity = CAP_OPENNI_DISPARITY_MAP;
+            hasIR = true;
+            hasDisparity = true;
+        }
+        else if (camType == "RealSense")
+        {
+            backend = CAP_INTELPERC;
+            flagDepth = CAP_INTELPERC_DEPTH_MAP;
+            flagBGR = CAP_INTELPERC_IMAGE;
+            flagIR = CAP_INTELPERC_IR_MAP;
+            hasIR = true;
+            hasDisparity = false;
+        }
+        else if (camType == "Orbbec")
+        {
+            backend = CAP_OBSENSOR;
+            flagDepth = CAP_OBSENSOR_DEPTH_MAP;
+            flagBGR = CAP_OBSENSOR_BGR_IMAGE;
+            hasIR = false;
+            hasDisparity = false;
+        }
+        else
+        {
+            std::cerr << "Invalid input of camera type." << std::endl;
+            return -1;
+        }
+
+        VideoCapture capture(backend);
+        if(!capture.isOpened())
+        {
+            std::cerr << "Fail to open depth camera." << std::endl;
+            return -1;
+        }
+
+        if (camType == "OpenNI")
+        {
+            capture.set(CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_VGA_30HZ);
+            capture.set(CAP_OPENNI_DEPTH_GENERATOR_PRESENT, true);
+            capture.set(CAP_OPENNI_IMAGE_GENERATOR_PRESENT, true);
+            capture.set(CAP_OPENNI_IR_GENERATOR_PRESENT, true);
+        }
+
+        Mat depthMap;
+        Mat bgrImage;
+        Mat irImage;
+        Mat disparityMap;
+
+        for(;;)
+        {
+            if(capture.grab())
+            {
+                if(capture.retrieve(depthMap, flagDepth))
+                {
+                    Mat colorDepthMap;
+                    colorizeDepth(depthMap, colorDepthMap);
+                    imshow("Colorized Depth Map", colorDepthMap);
+                }
+
+                if(capture.retrieve(bgrImage, flagBGR))
+                    imshow("RGB Image", bgrImage);
+
+                if (hasIR)
+                {
+                    if(capture.retrieve(irImage, flagIR))
+                    {
+                        if (camType == "OpenNI")
+                        {
+                            Mat ir8;
+                            irImage.convertTo(ir8, CV_8U, 256.0 / 3500, 0.0);
+                            imshow("Infrared Image", ir8);
+                        }
+                        else if (camType == "RealSense")
+                            imshow("Infrared Image", irImage);
+                    }
+                }
+
+                if (hasDisparity)
+                {
+                    if(capture.retrieve(disparityMap, flagDisparity))
+                    {
+                        Mat colorDisparityMap;
+                        colorizeDisparity(disparityMap, colorDisparityMap, getMaxDisparity(capture));
+                        Mat validColorDisparityMap;
+                        colorDisparityMap.copyTo(validColorDisparityMap, disparityMap != 0);
+                        imshow("Colorized Disparity Map", validColorDisparityMap);
+                    }
+                }
+            }
+
+            if(waitKey(30) >= 0)
+                break;
+        }
     }
     else
     {
-        cerr << "Invalid input." << endl;
-        return -1;
+        parser.printMessage();
+        return 0;
     }
 
     return 0;
