@@ -4,6 +4,7 @@
 
 #include "ndsrvp_hal.hpp"
 #include "opencv2/imgproc/hal/interface.h"
+#include "opencv2/core.hpp"
 
 namespace cv {
 

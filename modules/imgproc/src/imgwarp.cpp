@@ -2307,6 +2307,7 @@ public:
                             opt_SSE4_1::WarpAffineInvoker_Blockline_SSE41(adelta + x, bdelta + x, xy, X0, Y0, bw);
                         else
                         #endif
+                        if( cv_hal_warpAffineBlocklineNN(adelta + x, bdelta + x, xy, X0, Y0, bw) != CV_HAL_ERROR_OK )
                         {
                             #if CV_SIMD128
                             {
@@ -2345,37 +2346,40 @@ public:
                         if ( useLASX )
                             x1 = opt_LASX::warpAffineBlockline(adelta + x, bdelta + x, xy, alpha, X0, Y0, bw);
                         #endif
-                        #if CV_SIMD128
+                        if( cv_hal_warpAffineBlockline(adelta + x, bdelta + x, xy, alpha, X0, Y0, bw) != CV_HAL_ERROR_OK )
                         {
-                            v_int32x4 v__X0 = v_setall_s32(X0), v__Y0 = v_setall_s32(Y0);
-                            v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
-                            int span = VTraits<v_float32x4>::vlanes();
-                            for( ; x1 <= bw - span * 2; x1 += span * 2 )
+                            #if CV_SIMD128
                             {
-                                v_int32x4 v_X0 = v_shr<AB_BITS - INTER_BITS>(v_add(v__X0, v_load(this->adelta + x + x1)));
-                                v_int32x4 v_Y0 = v_shr<AB_BITS - INTER_BITS>(v_add(v__Y0, v_load(this->bdelta + x + x1)));
-                                v_int32x4 v_X1 = v_shr<AB_BITS - INTER_BITS>(v_add(v__X0, v_load(this->adelta + x + x1 + span)));
-                                v_int32x4 v_Y1 = v_shr<AB_BITS - INTER_BITS>(v_add(v__Y0, v_load(this->bdelta + x + x1 + span)));
+                                v_int32x4 v__X0 = v_setall_s32(X0), v__Y0 = v_setall_s32(Y0);
+                                v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
+                                int span = VTraits<v_float32x4>::vlanes();
+                                for( ; x1 <= bw - span * 2; x1 += span * 2 )
+                                {
+                                    v_int32x4 v_X0 = v_shr<AB_BITS - INTER_BITS>(v_add(v__X0, v_load(this->adelta + x + x1)));
+                                    v_int32x4 v_Y0 = v_shr<AB_BITS - INTER_BITS>(v_add(v__Y0, v_load(this->bdelta + x + x1)));
+                                    v_int32x4 v_X1 = v_shr<AB_BITS - INTER_BITS>(v_add(v__X0, v_load(this->adelta + x + x1 + span)));
+                                    v_int32x4 v_Y1 = v_shr<AB_BITS - INTER_BITS>(v_add(v__Y0, v_load(this->bdelta + x + x1 + span)));
 
-                                v_int16x8 v_xy[2];
-                                v_xy[0] = v_pack(v_shr<INTER_BITS>(v_X0), v_shr<INTER_BITS>(v_X1));
-                                v_xy[1] = v_pack(v_shr<INTER_BITS>(v_Y0), v_shr<INTER_BITS>(v_Y1));
-                                v_store_interleave(xy + (x1 << 1), v_xy[0], v_xy[1]);
+                                    v_int16x8 v_xy[2];
+                                    v_xy[0] = v_pack(v_shr<INTER_BITS>(v_X0), v_shr<INTER_BITS>(v_X1));
+                                    v_xy[1] = v_pack(v_shr<INTER_BITS>(v_Y0), v_shr<INTER_BITS>(v_Y1));
+                                    v_store_interleave(xy + (x1 << 1), v_xy[0], v_xy[1]);
 
-                                v_int32x4 v_alpha0 = v_or(v_shl<INTER_BITS>(v_and(v_Y0, v_mask)), v_and(v_X0, v_mask));
-                                v_int32x4 v_alpha1 = v_or(v_shl<INTER_BITS>(v_and(v_Y1, v_mask)), v_and(v_X1, v_mask));
-                                v_store(alpha + x1, v_pack(v_alpha0, v_alpha1));
+                                    v_int32x4 v_alpha0 = v_or(v_shl<INTER_BITS>(v_and(v_Y0, v_mask)), v_and(v_X0, v_mask));
+                                    v_int32x4 v_alpha1 = v_or(v_shl<INTER_BITS>(v_and(v_Y1, v_mask)), v_and(v_X1, v_mask));
+                                    v_store(alpha + x1, v_pack(v_alpha0, v_alpha1));
+                                }
                             }
-                        }
-                        #endif
-                        for( ; x1 < bw; x1++ )
-                        {
-                            int X = (X0 + adelta[x+x1]) >> (AB_BITS - INTER_BITS);
-                            int Y = (Y0 + bdelta[x+x1]) >> (AB_BITS - INTER_BITS);
-                            xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
-                            xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
-                            alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
-                                    (X & (INTER_TAB_SIZE-1)));
+                            #endif
+                            for( ; x1 < bw; x1++ )
+                            {
+                                int X = (X0 + adelta[x+x1]) >> (AB_BITS - INTER_BITS);
+                                int Y = (Y0 + bdelta[x+x1]) >> (AB_BITS - INTER_BITS);
+                                xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
+                                xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
+                                alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
+                                        (X & (INTER_TAB_SIZE-1)));
+                            }
                         }
                     }
                 }
@@ -3228,22 +3232,25 @@ public:
                             pwarp_impl_sse4->processNN(M, xy, X0, Y0, W0, bw);
                         else
                         #endif
-                        #if CV_SIMD128_64F
-                        WarpPerspectiveLine_ProcessNN_CV_SIMD(M, xy, X0, Y0, W0, bw);
-                        #else
-                        for( int x1 = 0; x1 < bw; x1++ )
+                        if( cv_hal_warpPerspectiveBlocklineNN(M, xy, X0, Y0, W0, bw) != CV_HAL_ERROR_OK )
                         {
-                            double W = W0 + M[6]*x1;
-                            W = W ? 1./W : 0;
-                            double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
-                            double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
-                            int X = saturate_cast<int>(fX);
-                            int Y = saturate_cast<int>(fY);
+                            #if CV_SIMD128_64F
+                            WarpPerspectiveLine_ProcessNN_CV_SIMD(M, xy, X0, Y0, W0, bw);
+                            #else
+                            for( int x1 = 0; x1 < bw; x1++ )
+                            {
+                                double W = W0 + M[6]*x1;
+                                W = W ? 1./W : 0;
+                                double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
+                                double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
+                                int X = saturate_cast<int>(fX);
+                                int Y = saturate_cast<int>(fY);
 
-                            xy[x1*2] = saturate_cast<short>(X);
-                            xy[x1*2+1] = saturate_cast<short>(Y);
+                                xy[x1*2] = saturate_cast<short>(X);
+                                xy[x1*2+1] = saturate_cast<short>(Y);
+                            }
+                            #endif
                         }
-                        #endif
                     }
                     else
                     {
@@ -3254,24 +3261,27 @@ public:
                             pwarp_impl_sse4->process(M, xy, alpha, X0, Y0, W0, bw);
                         else
                         #endif
-                        #if CV_SIMD128_64F
-                        WarpPerspectiveLine_Process_CV_SIMD(M, xy, alpha, X0, Y0, W0, bw);
-                        #else
-                        for( int x1 = 0; x1 < bw; x1++ )
+                        if( cv_hal_warpPerspectiveBlockline(M, xy, alpha, X0, Y0, W0, bw) != CV_HAL_ERROR_OK )
                         {
-                            double W = W0 + M[6]*x1;
-                            W = W ? INTER_TAB_SIZE/W : 0;
-                            double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
-                            double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
-                            int X = saturate_cast<int>(fX);
-                            int Y = saturate_cast<int>(fY);
+                            #if CV_SIMD128_64F
+                            WarpPerspectiveLine_Process_CV_SIMD(M, xy, alpha, X0, Y0, W0, bw);
+                            #else
+                            for( int x1 = 0; x1 < bw; x1++ )
+                            {
+                                double W = W0 + M[6]*x1;
+                                W = W ? INTER_TAB_SIZE/W : 0;
+                                double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
+                                double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
+                                int X = saturate_cast<int>(fX);
+                                int Y = saturate_cast<int>(fY);
 
-                            xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
-                            xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
-                            alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
-                                                (X & (INTER_TAB_SIZE-1)));
+                                xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
+                                xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
+                                alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
+                                                    (X & (INTER_TAB_SIZE-1)));
+                            }
+                            #endif
                         }
-                        #endif
                     }
                 }
 
