@@ -1795,6 +1795,75 @@ template<typename R> struct TheTest
 #endif
         return *this;
     }
+
+    void __test_log(LaneType expBound, LaneType diff_thr, LaneType flt_min) {
+        int n = VTraits<R>::vlanes();
+        // Test special values
+        std::vector<LaneType> specialValues = {0, 1, (LaneType) M_E, INFINITY, -INFINITY, NAN};
+        const int testRandNum = 10000;
+        const double specialValueProbability = 0.1; // 10% chance to insert a special value
+        cv::RNG_MT19937 rng;
+
+        for (int i = 0; i < testRandNum; i++) {
+            Data<R> dataRand, resRand;
+            for (int j = 0; j < n; ++j) {
+                if (rng.uniform(0.f, 1.f) <= specialValueProbability) {
+                    // Insert a special value
+                    int specialValueIndex = rng.uniform(0, (int) specialValues.size());
+                    dataRand[j] = specialValues[specialValueIndex];
+                } else {
+                    // Generate uniform random data in [-expBound, expBound]
+                    dataRand[j] = (LaneType) std::exp(rng.uniform(-expBound, expBound));
+                }
+            }
+
+            // Compare with std::log
+            R x = dataRand;
+            resRand = v_log(x);
+            for (int j = 0; j < n; ++j) {
+                SCOPED_TRACE(cv::format("Random test value: %f", dataRand[j]));
+                LaneType std_log = std::log(dataRand[j]);
+                if (dataRand[j] == 0) {
+                    // input 0 -> output -INF
+                    EXPECT_TRUE(std::isinf(resRand[j]) && resRand[j] < 0);
+                } else if (dataRand[j] < 0 || std::isnan(dataRand[j])) {
+                    // input less than 0 -> output NAN
+                    // input NaN -> output NaN
+                    EXPECT_TRUE(std::isnan(resRand[j]));
+                } else if (dataRand[j] == 1) {
+                    // input 1 -> output 0
+                    EXPECT_EQ((LaneType) 0, resRand[j]);
+                } else if (std::isinf(dataRand[j]) && dataRand[j] > 0) {
+                    // input INF -> output INF
+                    EXPECT_TRUE(std::isinf(resRand[j]) && resRand[j] > 0);
+                } else {
+                    EXPECT_LT(std::abs(resRand[j] - std_log), diff_thr * (std::abs(std_log) + flt_min * 100));
+                }
+            }
+        }
+    }
+
+    TheTest &test_log_fp16() {
+#if CV_SIMD_FP16
+        float16_t flt16_min;
+        uint16_t flt16_min_hex = 0x0400;
+        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(float16_t));
+        __test_log((float16_t) 9, (float16_t) 1e-3, flt16_min);
+#endif
+        return *this;
+    }
+
+    TheTest &test_log_fp32() {
+        __test_log(25.f, 1e-6f, FLT_MIN);
+        return *this;
+    }
+
+    TheTest &test_log_fp64() {
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+        __test_log(200., 1e-15, DBL_MIN);
+#endif
+        return *this;
+    }
 };
 
 #define DUMP_ENTRY(type) printf("SIMD%d: %s\n", 8*VTraits<v_uint8>::vlanes(), CV__TRACE_FUNCTION);
@@ -2109,6 +2178,7 @@ void test_hal_intrin_float32()
         .test_broadcast_highest()
         .test_pack_triplets()
         .test_exp_fp32()
+        .test_log_fp32()
 #if CV_SIMD_WIDTH == 32
         .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
         .test_rotate<4>().test_rotate<5>().test_rotate<6>().test_rotate<7>()
@@ -2140,6 +2210,7 @@ void test_hal_intrin_float64()
         .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
         .test_exp_fp64()
+        .test_log_fp64()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
 #if CV_SIMD_WIDTH == 32
         .test_extract<2>().test_extract<3>()
@@ -2161,6 +2232,7 @@ void test_hal_intrin_float16()
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
         .test_exp_fp16()
+        .test_log_fp16()
 #endif
         ;
 #else
