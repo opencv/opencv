@@ -43,299 +43,6 @@
 
 namespace opencv_test { namespace {
 
-class CV_TemplMatchTest : public cvtest::ArrayTest
-{
-public:
-    CV_TemplMatchTest();
-
-protected:
-    int read_params( const cv::FileStorage& fs );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
-    void prepare_to_validation( int );
-
-    int max_template_size;
-    int method;
-    bool test_cpp;
-};
-
-
-CV_TemplMatchTest::CV_TemplMatchTest()
-{
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    element_wise_relative_error = false;
-    max_template_size = 100;
-    method = 0;
-    test_cpp = false;
-}
-
-
-int CV_TemplMatchTest::read_params( const cv::FileStorage& fs )
-{
-    int code = cvtest::ArrayTest::read_params( fs );
-    if( code < 0 )
-        return code;
-
-    read( find_param( fs, "max_template_size" ), max_template_size, max_template_size );
-    max_template_size = cvtest::clipInt( max_template_size, 1, 100 );
-
-    return code;
-}
-
-
-void CV_TemplMatchTest::get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high )
-{
-    cvtest::ArrayTest::get_minmax_bounds( i, j, type, low, high );
-    int depth = CV_MAT_DEPTH(type);
-    if( depth == CV_32F )
-    {
-        low = Scalar::all(-10.);
-        high = Scalar::all(10.);
-    }
-}
-
-
-void CV_TemplMatchTest::get_test_array_types_and_sizes( int test_case_idx,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
-{
-    RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng) % 2, cn = cvtest::randInt(rng) & 1 ? 3 : 1;
-    cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    depth = depth == 0 ? CV_8U : CV_32F;
-
-    types[INPUT][0] = types[INPUT][1] = CV_MAKETYPE(depth,cn);
-    types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_32FC1;
-
-    sizes[INPUT][1].width = cvtest::randInt(rng)%MIN(sizes[INPUT][1].width,max_template_size) + 1;
-    sizes[INPUT][1].height = cvtest::randInt(rng)%MIN(sizes[INPUT][1].height,max_template_size) + 1;
-    sizes[OUTPUT][0].width = sizes[INPUT][0].width - sizes[INPUT][1].width + 1;
-    sizes[OUTPUT][0].height = sizes[INPUT][0].height - sizes[INPUT][1].height + 1;
-    sizes[REF_OUTPUT][0] = sizes[OUTPUT][0];
-
-    method = cvtest::randInt(rng)%6;
-    test_cpp = (cvtest::randInt(rng) & 256) == 0;
-}
-
-
-double CV_TemplMatchTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
-{
-    if( test_mat[INPUT][1].depth() == CV_8U ||
-        (method >= cv::TM_CCOEFF && test_mat[INPUT][1].cols*test_mat[INPUT][1].rows <= 2) )
-        return 1e-2;
-    else
-        return 1e-3;
-}
-
-
-void CV_TemplMatchTest::run_func()
-{
-    if(!test_cpp)
-        cvMatchTemplate( test_array[INPUT][0], test_array[INPUT][1], test_array[OUTPUT][0], method );
-    else
-    {
-        cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
-        cv::matchTemplate(cv::cvarrToMat(test_array[INPUT][0]), cv::cvarrToMat(test_array[INPUT][1]), _out, method);
-    }
-}
-
-
-static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* result, int method )
-{
-    int i, j, k, l;
-    int depth = CV_MAT_DEPTH(img->type), cn = CV_MAT_CN(img->type);
-    int width_n = templ->cols*cn, height = templ->rows;
-    int a_step = img->step / CV_ELEM_SIZE(img->type & CV_MAT_DEPTH_MASK);
-    int b_step = templ->step / CV_ELEM_SIZE(templ->type & CV_MAT_DEPTH_MASK);
-    CvScalar b_mean = CV_STRUCT_INITIALIZER, b_sdv = CV_STRUCT_INITIALIZER;
-    double b_denom = 1., b_sum2 = 0;
-    int area = templ->rows*templ->cols;
-
-    cvAvgSdv(templ, &b_mean, &b_sdv);
-
-    for( i = 0; i < cn; i++ )
-        b_sum2 += (b_sdv.val[i]*b_sdv.val[i] + b_mean.val[i]*b_mean.val[i])*area;
-
-    if( b_sdv.val[0]*b_sdv.val[0] + b_sdv.val[1]*b_sdv.val[1] +
-        b_sdv.val[2]*b_sdv.val[2] + b_sdv.val[3]*b_sdv.val[3] < DBL_EPSILON &&
-        method == cv::TM_CCOEFF_NORMED )
-    {
-        cvSet( result, cvScalarAll(1.) );
-        return;
-    }
-
-    if( method & 1 )
-    {
-        b_denom = 0;
-        if( method != cv::TM_CCOEFF_NORMED )
-        {
-            b_denom = b_sum2;
-        }
-        else
-        {
-            for( i = 0; i < cn; i++ )
-                b_denom += b_sdv.val[i]*b_sdv.val[i]*area;
-        }
-        b_denom = sqrt(b_denom);
-        if( b_denom == 0 )
-            b_denom = 1.;
-    }
-
-    CV_Assert( cv::TM_SQDIFF <= method && method <= cv::TM_CCOEFF_NORMED );
-
-    for( i = 0; i < result->rows; i++ )
-    {
-        for( j = 0; j < result->cols; j++ )
-        {
-            Scalar a_sum(0), a_sum2(0);
-            Scalar ccorr(0);
-            double value = 0.;
-
-            if( depth == CV_8U )
-            {
-                const uchar* a = img->data.ptr + i*img->step + j*cn;
-                const uchar* b = templ->data.ptr;
-
-                if( cn == 1 || method < cv::TM_CCOEFF )
-                {
-                    for( k = 0; k < height; k++, a += a_step, b += b_step )
-                        for( l = 0; l < width_n; l++ )
-                        {
-                            ccorr.val[0] += a[l]*b[l];
-                            a_sum.val[0] += a[l];
-                            a_sum2.val[0] += a[l]*a[l];
-                        }
-                }
-                else
-                {
-                    for( k = 0; k < height; k++, a += a_step, b += b_step )
-                        for( l = 0; l < width_n; l += 3 )
-                        {
-                            ccorr.val[0] += a[l]*b[l];
-                            ccorr.val[1] += a[l+1]*b[l+1];
-                            ccorr.val[2] += a[l+2]*b[l+2];
-                            a_sum.val[0] += a[l];
-                            a_sum.val[1] += a[l+1];
-                            a_sum.val[2] += a[l+2];
-                            a_sum2.val[0] += a[l]*a[l];
-                            a_sum2.val[1] += a[l+1]*a[l+1];
-                            a_sum2.val[2] += a[l+2]*a[l+2];
-                        }
-                }
-            }
-            else
-            {
-                const float* a = (const float*)(img->data.ptr + i*img->step) + j*cn;
-                const float* b = (const float*)templ->data.ptr;
-
-                if( cn == 1 || method < cv::TM_CCOEFF )
-                {
-                    for( k = 0; k < height; k++, a += a_step, b += b_step )
-                        for( l = 0; l < width_n; l++ )
-                        {
-                            ccorr.val[0] += a[l]*b[l];
-                            a_sum.val[0] += a[l];
-                            a_sum2.val[0] += a[l]*a[l];
-                        }
-                }
-                else
-                {
-                    for( k = 0; k < height; k++, a += a_step, b += b_step )
-                        for( l = 0; l < width_n; l += 3 )
-                        {
-                            ccorr.val[0] += a[l]*b[l];
-                            ccorr.val[1] += a[l+1]*b[l+1];
-                            ccorr.val[2] += a[l+2]*b[l+2];
-                            a_sum.val[0] += a[l];
-                            a_sum.val[1] += a[l+1];
-                            a_sum.val[2] += a[l+2];
-                            a_sum2.val[0] += a[l]*a[l];
-                            a_sum2.val[1] += a[l+1]*a[l+1];
-                            a_sum2.val[2] += a[l+2]*a[l+2];
-                        }
-                }
-            }
-
-            switch( method )
-            {
-            case cv::TM_CCORR:
-            case cv::TM_CCORR_NORMED:
-                value = ccorr.val[0];
-                break;
-            case cv::TM_SQDIFF:
-            case cv::TM_SQDIFF_NORMED:
-                value = (a_sum2.val[0] + b_sum2 - 2*ccorr.val[0]);
-                break;
-            default:
-                value = (ccorr.val[0] - a_sum.val[0]*b_mean.val[0]+
-                         ccorr.val[1] - a_sum.val[1]*b_mean.val[1]+
-                         ccorr.val[2] - a_sum.val[2]*b_mean.val[2]);
-            }
-
-            if( method & 1 )
-            {
-                double denom;
-
-                // calc denominator
-                if( method != cv::TM_CCOEFF_NORMED )
-                {
-                    denom = a_sum2.val[0] + a_sum2.val[1] + a_sum2.val[2];
-                }
-                else
-                {
-                    denom = a_sum2.val[0] - (a_sum.val[0]*a_sum.val[0])/area;
-                    denom += a_sum2.val[1] - (a_sum.val[1]*a_sum.val[1])/area;
-                    denom += a_sum2.val[2] - (a_sum.val[2]*a_sum.val[2])/area;
-                }
-                denom = sqrt(MAX(denom,0))*b_denom;
-                if( fabs(value) < denom )
-                    value /= denom;
-                else if( fabs(value) < denom*1.125 )
-                    value = value > 0 ? 1 : -1;
-                else
-                    value = method != cv::TM_SQDIFF_NORMED ? 0 : 1;
-            }
-
-            ((float*)(result->data.ptr + result->step*i))[j] = (float)value;
-        }
-    }
-}
-
-
-void CV_TemplMatchTest::prepare_to_validation( int /*test_case_idx*/ )
-{
-    CvMat _input = cvMat(test_mat[INPUT][0]), _templ = cvMat(test_mat[INPUT][1]);
-    CvMat _output = cvMat(test_mat[REF_OUTPUT][0]);
-    cvTsMatchTemplate( &_input, &_templ, &_output, method );
-
-    //if( ts->get_current_test_info()->test_case_idx == 0 )
-    /*{
-        CvFileStorage* fs = cvOpenFileStorage( "_match_template.yml", 0, CV_STORAGE_WRITE );
-        cvWrite( fs, "image", &test_mat[INPUT][0] );
-        cvWrite( fs, "template", &test_mat[INPUT][1] );
-        cvWrite( fs, "ref", &test_mat[REF_OUTPUT][0] );
-        cvWrite( fs, "opencv", &test_mat[OUTPUT][0] );
-        cvWriteInt( fs, "method", method );
-        cvReleaseFileStorage( &fs );
-    }*/
-
-    if( method >= cv::TM_CCOEFF )
-    {
-        // avoid numerical stability problems in singular cases (when the results are near to 0)
-        const double delta = 10.;
-        test_mat[REF_OUTPUT][0] += Scalar::all(delta);
-        test_mat[OUTPUT][0] += Scalar::all(delta);
-    }
-}
-
-TEST(Imgproc_MatchTemplate, accuracy) { CV_TemplMatchTest test; test.safe_run(); }
-
-}
-
 TEST(Imgproc_MatchTemplate, bug_9597) {
         const uint8_t img[] = {
                 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245, 245,
@@ -425,4 +132,214 @@ TEST(Imgproc_MatchTemplate, bug_9597) {
         cv::minMaxLoc(result, &minValue, NULL, NULL, NULL);
         ASSERT_GE(minValue, 0);
 }
-} // namespace
+
+//==============================================================================
+
+static void matchTemplate_reference(Mat & img, Mat & templ, Mat & result, const int method)
+{
+    CV_Assert(cv::TM_SQDIFF <= method && method <= cv::TM_CCOEFF_NORMED);
+
+    const Size res_sz(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
+    result.create(res_sz, CV_32FC1);
+
+    const int depth = img.depth();
+    const int cn = img.channels();
+    const int area = templ.size().area();
+    const int width_n = templ.cols * cn;
+    const int height = templ.rows;
+    int a_step = (int)(img.step / img.elemSize1());
+    int b_step = (int)(templ.step / templ.elemSize1());
+
+    Scalar b_mean = Scalar::all(0);
+    Scalar b_sdv = Scalar::all(0);
+    cv::meanStdDev(templ, b_mean, b_sdv);
+
+    double b_sum2 = 0.;
+    for (int i = 0; i < cn; i++ )
+        b_sum2 += (b_sdv.val[i] * b_sdv.val[i] + b_mean.val[i] * b_mean.val[i]) * area;
+
+    if (b_sdv.val[0] * b_sdv.val[0] + b_sdv.val[1] * b_sdv.val[1] +
+        b_sdv.val[2] * b_sdv.val[2] + b_sdv.val[3] * b_sdv.val[3] < DBL_EPSILON &&
+        method == cv::TM_CCOEFF_NORMED)
+    {
+        result = Scalar::all(1.);
+        return;
+    }
+
+    double b_denom = 1.;
+    if (method & 1) // _NORMED
+    {
+        b_denom = 0;
+        if (method != cv::TM_CCOEFF_NORMED)
+        {
+            b_denom = b_sum2;
+        }
+        else
+        {
+            for (int i = 0; i < cn; i++)
+                b_denom += b_sdv.val[i] * b_sdv.val[i] * area;
+        }
+        b_denom = sqrt(b_denom);
+        if (b_denom == 0)
+            b_denom = 1.;
+    }
+
+    for (int i = 0; i < result.rows; i++)
+    {
+        for (int j = 0; j < result.cols; j++)
+        {
+            Scalar a_sum(0), a_sum2(0);
+            Scalar ccorr(0);
+            double value = 0.;
+
+            if (depth == CV_8U)
+            {
+                const uchar* a = img.ptr<uchar>(i, j); // ??? ->data.ptr + i*img->step + j*cn;
+                const uchar* b = templ.ptr<uchar>();
+
+                if( cn == 1 || method < cv::TM_CCOEFF )
+                {
+                    for (int k = 0; k < height; k++, a += a_step, b += b_step)
+                        for (int l = 0; l < width_n; l++)
+                        {
+                            ccorr.val[0] += a[l]*b[l];
+                            a_sum.val[0] += a[l];
+                            a_sum2.val[0] += a[l]*a[l];
+                        }
+                }
+                else
+                {
+                    for (int k = 0; k < height; k++, a += a_step, b += b_step)
+                        for (int l = 0; l < width_n; l += 3)
+                        {
+                            ccorr.val[0] += a[l]*b[l];
+                            ccorr.val[1] += a[l+1]*b[l+1];
+                            ccorr.val[2] += a[l+2]*b[l+2];
+                            a_sum.val[0] += a[l];
+                            a_sum.val[1] += a[l+1];
+                            a_sum.val[2] += a[l+2];
+                            a_sum2.val[0] += a[l]*a[l];
+                            a_sum2.val[1] += a[l+1]*a[l+1];
+                            a_sum2.val[2] += a[l+2]*a[l+2];
+                        }
+                }
+            }
+            else // CV_32F
+            {
+                const float* a = img.ptr<float>(i, j); // ???? (const float*)(img->data.ptr + i*img->step) + j*cn;
+                const float* b = templ.ptr<float>();
+
+                if( cn == 1 || method < cv::TM_CCOEFF )
+                {
+                    for (int k = 0; k < height; k++, a += a_step, b += b_step)
+                        for (int l = 0; l < width_n; l++)
+                        {
+                            ccorr.val[0] += a[l]*b[l];
+                            a_sum.val[0] += a[l];
+                            a_sum2.val[0] += a[l]*a[l];
+                        }
+                }
+                else
+                {
+                    for (int k = 0; k < height; k++, a += a_step, b += b_step)
+                        for (int l = 0; l < width_n; l += 3)
+                        {
+                            ccorr.val[0] += a[l]*b[l];
+                            ccorr.val[1] += a[l+1]*b[l+1];
+                            ccorr.val[2] += a[l+2]*b[l+2];
+                            a_sum.val[0] += a[l];
+                            a_sum.val[1] += a[l+1];
+                            a_sum.val[2] += a[l+2];
+                            a_sum2.val[0] += a[l]*a[l];
+                            a_sum2.val[1] += a[l+1]*a[l+1];
+                            a_sum2.val[2] += a[l+2]*a[l+2];
+                        }
+                }
+            }
+
+            switch( method )
+            {
+            case cv::TM_CCORR:
+            case cv::TM_CCORR_NORMED:
+                value = ccorr.val[0];
+                break;
+            case cv::TM_SQDIFF:
+            case cv::TM_SQDIFF_NORMED:
+                value = (a_sum2.val[0] + b_sum2 - 2*ccorr.val[0]);
+                break;
+            default:
+                value = (ccorr.val[0] - a_sum.val[0]*b_mean.val[0]+
+                         ccorr.val[1] - a_sum.val[1]*b_mean.val[1]+
+                         ccorr.val[2] - a_sum.val[2]*b_mean.val[2]);
+            }
+
+            if( method & 1 )
+            {
+                double denom;
+
+                // calc denominator
+                if( method != cv::TM_CCOEFF_NORMED )
+                {
+                    denom = a_sum2.val[0] + a_sum2.val[1] + a_sum2.val[2];
+                }
+                else
+                {
+                    denom = a_sum2.val[0] - (a_sum.val[0]*a_sum.val[0])/area;
+                    denom += a_sum2.val[1] - (a_sum.val[1]*a_sum.val[1])/area;
+                    denom += a_sum2.val[2] - (a_sum.val[2]*a_sum.val[2])/area;
+                }
+                denom = sqrt(MAX(denom,0))*b_denom;
+                if( fabs(value) < denom )
+                    value /= denom;
+                else if( fabs(value) < denom*1.125 )
+                    value = value > 0 ? 1 : -1;
+                else
+                    value = method != cv::TM_SQDIFF_NORMED ? 0 : 1;
+            }
+            result.at<float>(i, j) = (float)value;
+        }
+    }
+}
+
+//==============================================================================
+
+CV_ENUM(MatchModes, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED);
+
+typedef testing::TestWithParam<testing::tuple<perf::MatDepth, int, MatchModes>> matchTemplate_Modes;
+
+TEST_P(matchTemplate_Modes, accuracy)
+{
+    const int data_type = CV_MAKE_TYPE(get<0>(GetParam()), get<1>(GetParam()));
+    const int method = get<2>(GetParam());
+    RNG & rng = TS::ptr()->get_rng();
+
+    for (int ITER = 0; ITER < 20; ++ITER)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", ITER));
+
+        const Size imgSize(rng.uniform(128, 320), rng.uniform(128, 240));
+        const Size templSize(rng.uniform(1, 100), rng.uniform(1, 100));
+        Mat img(imgSize, data_type, Scalar::all(0));
+        Mat templ(templSize, data_type, Scalar::all(0));
+        cvtest::randUni(rng, img, Scalar::all(0), Scalar::all(255));
+        cvtest::randUni(rng, templ, Scalar::all(0), Scalar::all(255));
+
+        Mat result;
+        cv::matchTemplate(img, templ, result, method);
+
+        Mat reference;
+        matchTemplate_reference(img, templ, reference, method);
+
+        EXPECT_MAT_NEAR_RELATIVE(result, reference, 1e-3);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    matchTemplate_Modes,
+        testing::Combine(
+            testing::Values(CV_8U, CV_32F),
+            testing::Values(1, 3),
+            testing::Values(TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)));
+
+
+}} // namespace
