@@ -377,4 +377,46 @@ TEST(Imgproc_ApproxPoly, bad_epsilon)
     ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
 }
 
+TEST(Imgproc_ApproxPoly, boundingPolygon)
+{
+    string imgPath = cvtest::findDataFile("imgproc/approxBoundingPoly.png");
+    Mat img = imread(imgPath, IMREAD_GRAYSCALE);
+    Mat thresh;
+    vector<vector<Point>> contours;
+    vector<vector<Point>> out, right_out;
+    right_out = {
+        { {132, 30}, {87, 135}, {30, 121}, {70, 30} },
+        { {262, 29}, {209, 165}, {115, 142}, {162, 29} },
+        { {420, 216}, {247, 174}, {303, 28}, {483, 26} },
+        { {140, 25}, {91, 141}, {22, 126}, {66, 25} },
+        { {270, 23}, {212, 172}, {107, 145}, {158, 23} },
+        { {492, 20}, {424, 223}, {240, 178}, {299, 22} },
+        { {475, 256}, {10, 131}, {61, 16}, {556, 0} },
+        { {559, 0}, {559, 261}, {0, 261}, {0, 0} }
+    };
+    cv::adaptiveThreshold(img, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 11, 2);
+    cv::findContours(thresh, contours, 1, 1);
+    for (auto contour : contours)
+    {
+        vector<Point> corners;
+        Mat contour1;
+        cv::convexHull(contour, contour1);
+        if (contour1.rows < 4) continue;
+        approxBoundingPoly(contour1, corners, 4, -1, false);
+        out.push_back(corners);
+    };
+
+    ASSERT_EQ(out, right_out);
+}
+
+TEST(Imgproc_ApproxPoly, bad_args)
+{
+    Mat contour(10, 1, CV_32FC2);
+    vector<vector<Point>> contours;
+    vector<Point> corners;
+    ASSERT_ANY_THROW(approxBoundingPoly(contour, corners, 0));
+    ASSERT_ANY_THROW(approxBoundingPoly(contour, corners, 3, 0));
+    ASSERT_ANY_THROW(approxBoundingPoly(contours, corners, 4));
+}
+
 }} // namespace
