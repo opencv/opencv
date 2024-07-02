@@ -135,5 +135,5 @@ Additional Resources
 Exercises
 ---------
 
--#  OpenCV comes with a Python [sample](https://github.com/opencv/opencv/blob/5.x/samples/python/camshift.py) for an interactive demo of camshift. Use it, hack it, understand
+-#  OpenCV comes with a Python [sample](https://github.com/opencv/opencv/blob/5.x/samples/python/snippets/camshift.py) for an interactive demo of camshift. Use it, hack it, understand
     it.
