@@ -434,6 +434,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX512_ICL] = "AVX512-ICL";
 
         g_hwFeatureNames[CPU_RVV] = "RVV";
+        g_hwFeatureNames[CPU_RVV_ZVFH] = "RVV_ZVFH";
 
         g_hwFeatureNames[CPU_LSX]  = "LSX";
         g_hwFeatureNames[CPU_LASX] = "LASX";
@@ -712,6 +713,12 @@ struct HWFeatures
 
     #if defined __riscv && defined __riscv_vector
         have[CV_CPU_RVV] = true;
+        #if (defined __riscv_zvfh && __riscv_zvfh) || (defined __riscv_zvfhmin && __riscv_zvfhmin)
+            have[CV_CPU_FP16] = true;
+        #endif
+        #if defined __riscv_zvfh && __riscv_zvfh
+            have[CV_CPU_RVV_ZVFH] = true;
+        #endif
     #endif
 
     #if defined __loongarch64 && defined __linux__

@@ -159,8 +159,8 @@ template <typename R> std::ostream & operator<<(std::ostream & out, const Data<R
     out << "{ ";
     for (int i = 0; i < VTraits<R>::vlanes(); ++i)
     {
-        // out << std::hex << +V_TypeTraits<typename VTraits<R>::lane_type>::reinterpret_int(d.d[i]);
-        out << +d.d[i];
+        out << std::hex << +V_TypeTraits<typename VTraits<R>::lane_type>::reinterpret_int(d.d[i]);
+        // out << +d.d[i]; // Note: No  operator '<<' for _Float16
         if (i + 1 < VTraits<R>::vlanes())
             out << ", ";
     }
@@ -182,7 +182,7 @@ template<> inline void EXPECT_COMPARE_EQ_<double>(const double a, const double b
     EXPECT_DOUBLE_EQ( a, b );
 }
 
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
 template<> inline void EXPECT_COMPARE_EQ_<__fp16>(const __fp16 a, const __fp16 b)
 {
     EXPECT_LT(std::abs(float(a - b)), 0.126);
@@ -564,7 +564,7 @@ template<typename R> struct TheTest
     // Handle accuracy for fp16
     TheTest & test_div_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         Data<R> dataA, dataB;
         dataB.reverse();
         R a = dataA, b = dataB;
@@ -660,7 +660,7 @@ template<typename R> struct TheTest
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             R_type ssub = (dataA[i] - dataB[i]) < R_type_lowest ? R_type_lowest : dataA[i] - dataB[i];
-            EXPECT_EQ((u_type)std::abs(ssub), resC[i]);
+            EXPECT_EQ((u_type)std::abs((double)ssub), resC[i]);
         }
 
         return *this;
@@ -854,9 +854,9 @@ template<typename R> struct TheTest
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_COMPARE_EQ((float)std::sqrt(dataA[i]), (float)resB[i]);
-            EXPECT_COMPARE_EQ((float)(1/std::sqrt(dataA[i])), (float)resC[i]);
-            EXPECT_COMPARE_EQ((float)abs(dataA[i]), (float)resE[i]);
+            EXPECT_COMPARE_EQ((float)std::sqrt((double)dataA[i]), (float)resB[i]);
+            EXPECT_COMPARE_EQ((float)(1/std::sqrt((double)dataA[i])), (float)resC[i]);
+            EXPECT_COMPARE_EQ((float)abs((double)dataA[i]), (float)resE[i]);
         }
 
         return *this;
@@ -1423,13 +1423,13 @@ template<typename R> struct TheTest
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ(cvRound(data1[i]), resB[i]);
-            EXPECT_EQ(cvRound(data1_border[i]), resB_border[i]);
+            EXPECT_EQ(cvRound((double)data1[i]), resB[i]);
+            EXPECT_EQ(cvRound((double)data1_border[i]), resB_border[i]);
             EXPECT_EQ((typename VTraits<Ri>::lane_type)data1[i], resC[i]);
-            EXPECT_EQ(cvFloor(data1[i]), resD[i]);
-            EXPECT_EQ(cvCeil(data1[i]), resE[i]);
+            EXPECT_EQ(cvFloor((double)data1[i]), resD[i]);
+            EXPECT_EQ(cvCeil((double)data1[i]), resE[i]);
 
-            EXPECT_COMPARE_EQ(std::sqrt(data1[i]*data1[i] + data2[i]*data2[i]), resF[i]);
+            EXPECT_COMPARE_EQ(std::sqrt((double)data1[i]*data1[i] + data2[i]*data2[i]), resF[i]);
             EXPECT_COMPARE_EQ(data1[i]*data1[i] + data2[i]*data2[i], resG[i]);
             EXPECT_COMPARE_EQ(data1[i]*data2[i] + data3[i], resH[i]);
         }
@@ -1572,7 +1572,7 @@ template<typename R> struct TheTest
 
     TheTest & test_matmul_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         Data<R> dataV, data0, data1, data2, data3, data4, data5, data6, data7;
         data1.reverse();
         data2 += 2;
@@ -1655,7 +1655,7 @@ template<typename R> struct TheTest
 
     TheTest & test_transpose8x8_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 /*|| CV_SIMD_SCALABLE_FP16*/)
         Data<R> dataA0, dataA1, dataA2, dataA3, dataA4, dataA5, dataA6, dataA7;
         dataA1 *= 2;
         dataA2 *= 4;
@@ -1711,7 +1711,7 @@ template<typename R> struct TheTest
 
     TheTest & test_reduce_sum8()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 /*|| CV_SIMD_SCALABLE_FP16*/)
         Data<R> dataA, dataB, dataC, dataD, dataW, dataX, dataY, dataZ;
         dataB *= 0.01f;
         dataC *= 0.001f;
@@ -1770,7 +1770,7 @@ template<typename R> struct TheTest
 
     TheTest & test_loadstore_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         AlignedData<R> data;
         AlignedData<R> out;
 
@@ -1801,7 +1801,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_cvt_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         AlignedData<v_float32> data;
 
         // check conversion
@@ -2231,7 +2231,7 @@ void test_hal_intrin_float16()
     DUMP_ENTRY(v_float16);
 #if CV_FP16
     TheTest<v_float32>().test_loadstore_fp16_f32();
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     TheTest<v_float16>()
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
@@ -2256,6 +2256,8 @@ void test_hal_intrin_float16()
         .test_extract_highest()
         .test_broadcast_element<0>().test_broadcast_element<1>()
         .test_extract_n<0>().test_extract_n<1>()
+#else
+    std::cout << "SKIP: CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16 is not available" << std::endl;
 #endif
         ;
 #else

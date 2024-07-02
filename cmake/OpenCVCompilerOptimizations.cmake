@@ -52,7 +52,7 @@ list(APPEND CPU_ALL_OPTIMIZATIONS "AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SK
 list(APPEND CPU_ALL_OPTIMIZATIONS NEON VFPV3 FP16 NEON_DOTPROD NEON_FP16 NEON_BF16)
 list(APPEND CPU_ALL_OPTIMIZATIONS MSA)
 list(APPEND CPU_ALL_OPTIMIZATIONS VSX VSX3)
-list(APPEND CPU_ALL_OPTIMIZATIONS RVV)
+list(APPEND CPU_ALL_OPTIMIZATIONS RVV FP16 RVV_ZVFH)
 list(APPEND CPU_ALL_OPTIMIZATIONS LSX)
 list(APPEND CPU_ALL_OPTIMIZATIONS LASX)
 list(REMOVE_DUPLICATES CPU_ALL_OPTIMIZATIONS)
@@ -392,15 +392,25 @@ elseif(PPC64LE)
 elseif(RISCV)
   option(RISCV_RVV_SCALABLE "Use scalable RVV API on RISC-V" ON)
 
+  ocv_update(CPU_KNOWN_OPTIMIZATIONS "RVV;FP16;RVV_ZVFH")
   ocv_update(CPU_RVV_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_rvv.cpp")
-  ocv_update(CPU_KNOWN_OPTIMIZATIONS "RVV")
-  ocv_update(CPU_RVV_FLAGS_ON "-march=rv64gcv")
-  if(RISCV_RVV_SCALABLE)
-    set(CPU_RVV_FLAGS_ON "${CPU_RVV_FLAGS_ON} -DCV_RVV_SCALABLE")
-  endif()
+  ocv_update(CPU_FP16_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_fp16.cpp")
+  ocv_update(CPU_RVV_ZVFH_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_rvv_fp16.cpp")
+  ocv_update(CPU_RVV_ZVFH_IMPLIES "RVV;FP16")
+  ocv_update(CPU_FP16_IMPLIES "RVV")
+  ocv_update(CPU_RVV_FLAGS_ON "-march=rv64gc_v")
+  ocv_update(CPU_FP16_FLAGS_ON "-march=rv64gc_zvfhmin")
+  ocv_update(CPU_RVV_ZVFH_FLAGS_ON "-march=rv64gc_zvfh")
+
   ocv_update(CPU_RVV_FLAGS_CONFLICT "-march=[^ ]*")
 
-  set(CPU_DISPATCH "" CACHE STRING "${HELP_CPU_DISPATCH}")
+  if(RISCV_RVV_SCALABLE)
+    add_extra_compiler_option("-DCV_RVV_SCALABLE")
+  endif()
+  if(NOT ${BUILD_SHARED_LIBS}) # static build for k230
+    add_extra_compiler_option("-static -static-libgcc -static-libstdc++")
+  endif()
+  set(CPU_DISPATCH "FP16;RVV_ZVFH" CACHE STRING "${HELP_CPU_DISPATCH}")
   set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
 
 elseif(LOONGARCH64)
@@ -497,6 +507,53 @@ macro(ocv_cpu_aarch64_baseline_merge_feature_options FEATURE_NAME_LIST FLAG_STRI
   # If more than one option found, merge them
   if(NOT "x${_POSTFIX}" STREQUAL "x")
     set(${FLAG_STRING} "${${FLAG_STRING}} ${COMMON_OPTION}${_POSTFIX}")
+  endif()
+endmacro()
+
+# This macro traverses all the dependent (IMPLIES) backends of the dispatch OPT and merges all dependent options.
+macro(ocv_cpu_riscv_update_flag FEATURE_NAME_LIST COMMON_OPTION)
+  foreach(OPT IN LISTS ${FEATURE_NAME_LIST})
+    if(DEFINED CPU_${OPT}_IMPLIES)
+      unset(APPEND_TRAILING)
+      unset(TRAILING_LIST)
+      # traverse all dependency
+      foreach(IMPLIE IN LISTS CPU_${OPT}_IMPLIES)
+        # Match all extensions to "parts" list
+        # e.g. "parts" will be "_v,_zvfhmin" when the string is "rv64gc_v_zvfhmin"
+        string(REGEX MATCHALL "_[^_]+" parts "${CPU_${IMPLIE}_FLAGS_ON}")
+        # Add all extensions to TRAILING_LIST
+        foreach(part ${parts})
+          list(APPEND TRAILING_LIST "${part}")
+        endforeach()
+      endforeach()
+      # Remove the duplicate extensions. (e.g. _v, _v, ...)
+      list(REMOVE_DUPLICATES TRAILING_LIST)
+      # merge extensions to a flag.
+      foreach(TRAILING IN LISTS TRAILING_LIST)
+        string(APPEND APPEND_TRAILING "${TRAILING}")
+      endforeach()
+      # Combined with OPT_FLAG
+      string(REPLACE "${COMMON_OPTION}" "" OPT_TRAILING_PART "${CPU_${OPT}_FLAGS_ON}")
+      set(CPU_${OPT}_FLAGS_ON "${COMMON_OPTION}${APPEND_TRAILING}${OPT_TRAILING_PART}")
+    endif()
+  endforeach()
+endmacro()
+
+
+macro(ocv_cpu_riscv_baseline_merge_feature_options FEATURE_NAME_LIST FLAG_STRING COMMON_OPTION)
+  unset(_POSTFIX)
+  # Check each feature option.
+  foreach(OPT IN LISTS ${FEATURE_NAME_LIST})
+    string(FIND "${${FLAG_STRING}}" "${CPU_${OPT}_FLAGS_ON}" OPT_FOUND)
+    if(NOT ${OPT_FOUND} EQUAL -1)
+      string(REPLACE "${COMMON_OPTION}" "" TRAILING_PART "${CPU_${OPT}_FLAGS_ON}")
+      string(APPEND _POSTFIX "${TRAILING_PART}")
+      string(REPLACE "${CPU_${OPT}_FLAGS_ON}" "" ${FLAG_STRING} ${${FLAG_STRING}})
+    endif()
+  endforeach()
+  # If more than one option found, merge them
+  if(NOT "x${_POSTFIX}" STREQUAL "x")
+    set(${FLAG_STRING} "${COMMON_OPTION}${_POSTFIX}")
   endif()
 endmacro()
 
@@ -600,6 +657,15 @@ if(AARCH64)
     set(BASE_ARCHITECTURE "-march=armv8.2-a")
     ocv_cpu_aarch64_baseline_merge_feature_options(NEON_OPTIONS_LIST CPU_BASELINE_FLAGS ${BASE_ARCHITECTURE})
   endif()
+endif()
+
+if(RISCV)
+    # Define the list of RISC-V options to check
+    set(RV_OPTIONS_LIST RVV FP16 RVV_ZVFH)
+    string(STRIP "${CPU_BASELINE_FLAGS}" CPU_BASELINE_FLAGS)
+    set(BASE_ARCHITECTURE "-march=rv64gc")
+    ocv_cpu_riscv_baseline_merge_feature_options(RV_OPTIONS_LIST CPU_BASELINE_FLAGS ${BASE_ARCHITECTURE})
+    ocv_cpu_riscv_update_flag(RV_OPTIONS_LIST ${BASE_ARCHITECTURE})
 endif()
 
 foreach(OPT ${CPU_BASELINE_REQUIRE})

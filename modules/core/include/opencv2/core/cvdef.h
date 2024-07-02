@@ -288,6 +288,7 @@ namespace cv {
 #define CV_CPU_VSX3             201
 
 #define CV_CPU_RVV              210
+#define CV_CPU_RVV_ZVFH         211
 
 #define CV_CPU_LSX              230
 #define CV_CPU_LASX             231
@@ -350,6 +351,7 @@ enum CpuFeatures {
     CPU_VSX3            = 201,
 
     CPU_RVV             = 210,
+    CPU_RVV_ZVFH        = 211,
 
     CPU_LSX             = 230,
     CPU_LASX            = 231,
@@ -383,6 +385,10 @@ enum CpuFeatures {
 
 #if defined __ARM_FP16_FORMAT_IEEE \
     && !defined __CUDACC__
+#  define CV_FP16_TYPE 1
+#elif (defined(__riscv_zvfh) && __riscv_zvfh) || (defined(__riscv_zvfhmin) && __riscv_zvfhmin)
+// _Float16 for RISC-V
+#  define __fp16 _Float16
 #  define CV_FP16_TYPE 1
 #else
 #  define CV_FP16_TYPE 0

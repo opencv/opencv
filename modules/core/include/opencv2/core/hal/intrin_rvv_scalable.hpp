@@ -42,6 +42,12 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD_SCALABLE 1
 #define CV_SIMD_SCALABLE_64F 1
+#if defined(__riscv_zvfh) && __riscv_zvfh
+    #define CV_SIMD_SCALABLE_FP16 1
+#else
+    #define CV_SIMD_SCALABLE_FP16 0
+#endif
+
 
 using v_uint8 = vuint8m1_t;
 using v_int8 = vint8m1_t;
@@ -52,6 +58,9 @@ using v_int32 = vint32m1_t;
 using v_uint64 = vuint64m1_t;
 using v_int64 = vint64m1_t;
 
+#if CV_SIMD_SCALABLE_FP16
+using v_float16 = vfloat16m1_t;
+#endif
 using v_float32 = vfloat32m1_t;
 #if CV_SIMD_SCALABLE_64F
 using v_float64 = vfloat64m1_t;
@@ -129,6 +138,13 @@ OPENCV_HAL_IMPL_RVV_TRAITS(vuint64m2_t, uint64_t, e64m2, 64)
 OPENCV_HAL_IMPL_RVV_TRAITS(vuint64m4_t, uint64_t, e64m4, 64)
 OPENCV_HAL_IMPL_RVV_TRAITS(vuint64m8_t, uint64_t, e64m8, 64)
 
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat16m1_t, _Float16, e16m1, 16)
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat16m2_t, _Float16, e16m2, 16)
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat16m4_t, _Float16, e16m4, 16)
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat16m8_t, _Float16, e16m8, 16)
+#endif
+
 OPENCV_HAL_IMPL_RVV_TRAITS(vfloat32m1_t, float, e32m1, 32)
 OPENCV_HAL_IMPL_RVV_TRAITS(vfloat32m2_t, float, e32m2, 32)
 OPENCV_HAL_IMPL_RVV_TRAITS(vfloat32m4_t, float, e32m4, 32)
@@ -167,6 +183,12 @@ OPENCV_HAL_IMPL_RVV_GRT0_INT(int32, int)
 OPENCV_HAL_IMPL_RVV_GRT0_INT(uint64, uint64)
 OPENCV_HAL_IMPL_RVV_GRT0_INT(int64, int64)
 
+#if CV_SIMD_SCALABLE_FP16
+inline _Float16 v_get0(const v_float16& v) \
+{ \
+    return vfmv_f(v); \
+}
+#endif
 inline float v_get0(const v_float32& v) \
 { \
     return vfmv_f(v); \
@@ -209,6 +231,9 @@ inline v_##_Tpv v_setall_##suffix(_Tp v) \
     return vfmv_v_f_##suffix##m1(v, vl); \
 }
 
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_INIT_FP(float16, _Float16, f16, VTraits<v_float16>::vlanes())
+#endif
 OPENCV_HAL_IMPL_RVV_INIT_FP(float32, float, f32, VTraits<v_float32>::vlanes())
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_INIT_FP(float64, double, f64, VTraits<v_float64>::vlanes())
@@ -228,6 +253,9 @@ OPENCV_HAL_IMPL_RVV_NOTHING_REINTERPRET(int8, s8)
 OPENCV_HAL_IMPL_RVV_NOTHING_REINTERPRET(int16, s16)
 OPENCV_HAL_IMPL_RVV_NOTHING_REINTERPRET(int32, s32)
 OPENCV_HAL_IMPL_RVV_NOTHING_REINTERPRET(int64, s64)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_NOTHING_REINTERPRET(float16, f16)
+#endif
 OPENCV_HAL_IMPL_RVV_NOTHING_REINTERPRET(float32, f32)
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_NOTHING_REINTERPRET(float64, f64)
@@ -246,6 +274,10 @@ inline v_##_Tpvec2 v_reinterpret_as_##suffix2(const v_##_Tpvec1& v) \
 OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint8, int8, u8, s8, u8, i8)
 OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint16, int16, u16, s16, u16, i16)
 OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint32, int32, u32, s32, u32, i32)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint16, float16, u16, f16, u16, f16)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(int16, float16, s16, f16, i16, f16)
+#endif
 OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint32, float32, u32, f32, u32, f32)
 OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(int32, float32, s32, f32, i32, f32)
 OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint64, int64, u64, s64, u64, i64)
@@ -289,6 +321,14 @@ OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint32, int64, u32, s64, u, i, 32, 64)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint64, int8, u64, s8, u, i, 64, 8)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint64, int16, u64, s16, u, i, 64, 16)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint64, int32, u64, s32, u, i, 64, 32)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint8, float16, u8, f16, u, f, 8, 16)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint32, float16, u32, f16, u, f, 32, 16)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint64, float16, u64, f16, u, f, 64, 16)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int8, float16, s8, f16, i, f, 8, 16)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int32, float16, s32, f16, i, f, 32, 16)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int64, float16, s64, f16, i, f, 64, 16)
+#endif
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint8, float32, u8, f32, u, f, 8, 32)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint16, float32, u16, f32, u, f, 16, 32)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint64, float32, u64, f32, u, f, 64, 32)
@@ -303,6 +343,17 @@ OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int8, float64, s8, f64, i, f, 8, 64)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int16, float64, s16, f64, i, f, 16, 64)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int32, float64, s32, f64, i, f, 32, 64)
 // Three times reinterpret
+#if CV_SIMD_SCALABLE_FP16
+inline v_float16 v_reinterpret_as_f16(const v_float64& v) \
+{ \
+    return vreinterpret_v_u16m1_f16m1(vreinterpret_v_u64m1_u16m1(vreinterpret_v_f64m1_u64m1(v)));\
+}
+
+inline v_float64 v_reinterpret_as_f64(const v_float16& v) \
+{ \
+    return vreinterpret_v_u64m1_f64m1(vreinterpret_v_u16m1_u64m1(vreinterpret_v_f16m1_u16m1(v)));\
+}
+#endif
 inline v_float32 v_reinterpret_as_f32(const v_float64& v) \
 { \
     return vreinterpret_v_u32m1_f32m1(vreinterpret_v_u64m1_u32m1(vreinterpret_v_f64m1_u64m1(v)));\
@@ -348,6 +399,9 @@ template<int s = 0> inline _Tp v_extract_n(_Tpvec v, int i = s) \
     return vfmv_f(vslidedown(v_setzero_##suffix(), v, i, vl)); \
 }
 
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_EXTRACT_FP(v_float16, _Float16, f16, VTraits<v_float16>::vlanes())
+#endif
 OPENCV_HAL_IMPL_RVV_EXTRACT_FP(v_float32, float, f32, VTraits<v_float32>::vlanes())
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_EXTRACT_FP(v_float64, double, f64, VTraits<v_float64>::vlanes())
@@ -367,6 +421,9 @@ OPENCV_HAL_IMPL_RVV_EXTRACT(v_uint32, unsigned int, VTraits<v_uint32>::vlanes())
 OPENCV_HAL_IMPL_RVV_EXTRACT(v_int32, int, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_EXTRACT(v_uint64, uint64, VTraits<v_uint64>::vlanes())
 OPENCV_HAL_IMPL_RVV_EXTRACT(v_int64, int64, VTraits<v_int64>::vlanes())
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_EXTRACT(v_float16, _Float16, VTraits<v_float16>::vlanes())
+#endif
 OPENCV_HAL_IMPL_RVV_EXTRACT(v_float32, float, VTraits<v_float32>::vlanes())
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_EXTRACT(v_float64, double, VTraits<v_float64>::vlanes())
@@ -430,6 +487,9 @@ OPENCV_HAL_IMPL_RVV_LOADSTORE_OP(v_uint32, vuint32m1_t, unsigned int, VTraits<v_
 OPENCV_HAL_IMPL_RVV_LOADSTORE_OP(v_int32, vint32m1_t, int, VTraits<v_int32>::vlanes() / 2, VTraits<v_int32>::vlanes(), 32, i32, vmv_v_x_i32m1)
 OPENCV_HAL_IMPL_RVV_LOADSTORE_OP(v_uint64, vuint64m1_t, uint64, VTraits<v_uint64>::vlanes() / 2, VTraits<v_uint64>::vlanes(), 64, u64, vmv_v_x_u64m1)
 OPENCV_HAL_IMPL_RVV_LOADSTORE_OP(v_int64, vint64m1_t, int64, VTraits<v_int64>::vlanes() / 2, VTraits<v_int64>::vlanes(), 64, i64, vmv_v_x_i64m1)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_LOADSTORE_OP(v_float16, vfloat16m1_t, _Float16, VTraits<v_float16>::vlanes() /2 , VTraits<v_float16>::vlanes(), 16, f16, vfmv_v_f_f16m1)
+#endif
 OPENCV_HAL_IMPL_RVV_LOADSTORE_OP(v_float32, vfloat32m1_t, float, VTraits<v_float32>::vlanes() /2 , VTraits<v_float32>::vlanes(), 32, f32, vfmv_v_f_f32m1)
 
 #if CV_SIMD_SCALABLE_64F
@@ -447,6 +507,9 @@ OPENCV_HAL_IMPL_RVV_LUT(v_int8, schar, m4)
 OPENCV_HAL_IMPL_RVV_LUT(v_int16, short, m2)
 OPENCV_HAL_IMPL_RVV_LUT(v_int32, int, m1)
 OPENCV_HAL_IMPL_RVV_LUT(v_int64, int64_t, mf2)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_LUT(v_float16, _Float16, m2)
+#endif
 OPENCV_HAL_IMPL_RVV_LUT(v_float32, float, m1)
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_LUT(v_float64, double, mf2)
@@ -466,6 +529,9 @@ inline _Tpvec v_lut_pairs(const _Tp* tab, const int* idx) \
 }
 OPENCV_HAL_IMPL_RVV_LUT_PAIRS(v_int8, schar, m2, m4, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_RVV_LUT_PAIRS(v_int16, short, m1, m2, OPENCV_HAL_NOP)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_LUT_PAIRS(v_float16, _Float16, m1, m2, OPENCV_HAL_NOP)
+#endif
 OPENCV_HAL_IMPL_RVV_LUT_PAIRS(v_int32, int, mf2, m1, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_RVV_LUT_PAIRS(v_float32, float, mf2, m1, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_RVV_LUT_PAIRS(v_int64, int64_t, mf2, m1, vlmul_trunc_u32mf2)
@@ -499,6 +565,9 @@ inline _Tpvec v_lut_quads(const _Tp* tab, const int* idx) \
 OPENCV_HAL_IMPL_RVV_LUT_QUADS(v_int8, schar, m1, m2, m4, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_RVV_LUT_QUADS(v_int16, short, mf2 , m1, m2, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_RVV_LUT_QUADS(v_int32, int, mf2, m1, m1, vlmul_trunc_u32mf2)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_LUT_QUADS(v_float16, _Float16, mf2 , m1, m2, OPENCV_HAL_NOP)
+#endif
 OPENCV_HAL_IMPL_RVV_LUT_QUADS(v_float32, float, mf2, m1, m1, vlmul_trunc_u32mf2)
 
 #define OPENCV_HAL_IMPL_RVV_LUT_VEC(_Tpvec, _Tp) \
@@ -570,6 +639,12 @@ OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint16, add, vsaddu)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint16, sub, vssubu)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int16, add, vsadd)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int16, sub, vssub)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_BIN_OP(v_float16, add, vfadd)
+OPENCV_HAL_IMPL_RVV_BIN_OP(v_float16, sub, vfsub)
+OPENCV_HAL_IMPL_RVV_BIN_OP(v_float16, mul, vfmul)
+OPENCV_HAL_IMPL_RVV_BIN_OP(v_float16, div, vfdiv)
+#endif
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint32, add, vadd)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint32, sub, vsub)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint32, mul, vmul)
@@ -615,6 +690,10 @@ OPENCV_HAL_IMPL_RVV_BIN_MADD(v_int64, vadd)
 OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_uint32, vmul)
 OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_int32, vmul)
 OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_float32, vfmul)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_BIN_MADD(v_float16, vfadd)
+OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_float16, vfmul)
+#endif
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_BIN_MADD(v_float64, vfadd)
 OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_float64, vfmul)
@@ -702,14 +781,30 @@ OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_int32, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_uint64, VTraits<v_uint64>::vlanes())
 OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_int64, VTraits<v_int64>::vlanes())
 
-#define OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(intrin) \
+#if CV_SIMD_SCALABLE_FP16
+#define OPENCV_HAL_IMPL_RVV_FLT16_BIT_OP(intrin) \
+inline v_float16 intrin (const v_float16& a, const v_float16& b) \
+{ \
+    return vreinterpret_f16m1(intrin(vreinterpret_i16m1(a), vreinterpret_i16m1(b))); \
+}
+OPENCV_HAL_IMPL_RVV_FLT16_BIT_OP(v_and)
+OPENCV_HAL_IMPL_RVV_FLT16_BIT_OP(v_or)
+OPENCV_HAL_IMPL_RVV_FLT16_BIT_OP(v_xor)
+
+inline v_float16 v_not (const v_float16& a) \
+{ \
+    return vreinterpret_f16m1(v_not(vreinterpret_i16m1(a))); \
+}
+#endif
+
+#define OPENCV_HAL_IMPL_RVV_FLT32_BIT_OP(intrin) \
 inline v_float32 intrin (const v_float32& a, const v_float32& b) \
 { \
     return vreinterpret_f32m1(intrin(vreinterpret_i32m1(a), vreinterpret_i32m1(b))); \
 }
-OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(v_and)
-OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(v_or)
-OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(v_xor)
+OPENCV_HAL_IMPL_RVV_FLT32_BIT_OP(v_and)
+OPENCV_HAL_IMPL_RVV_FLT32_BIT_OP(v_or)
+OPENCV_HAL_IMPL_RVV_FLT32_BIT_OP(v_xor)
 
 inline v_float32 v_not (const v_float32& a) \
 { \
@@ -820,9 +915,17 @@ OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int8, i8)
 OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int16, i16)
 OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int32, i32)
 OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int64, i64)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP(v_float16, f16)
+#endif
 OPENCV_HAL_IMPL_RVV_FLOAT_CMP(v_float32, f32)
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_FLOAT_CMP(v_float64, f64)
+#endif
+
+#if CV_SIMD_SCALABLE_FP16
+inline v_float16 v_not_nan(const v_float16& a)
+{ return v_eq(a, a); }
 #endif
 
 inline v_float32 v_not_nan(const v_float32& a)
@@ -853,6 +956,10 @@ OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_uint32, v_min, vminu, VTraits<v_uint32>::vlanes()
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_uint32, v_max, vmaxu, VTraits<v_uint32>::vlanes())
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_int32, v_min, vmin, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_int32, v_max, vmax, VTraits<v_int32>::vlanes())
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_float16, v_min, vfmin, VTraits<v_float16>::vlanes())
+OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_float16, v_max, vfmax, VTraits<v_float16>::vlanes())
+#endif
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_float32, v_min, vfmin, VTraits<v_float32>::vlanes())
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_float32, v_max, vfmax, VTraits<v_float32>::vlanes())
 #if CV_SIMD_SCALABLE_64F
@@ -1003,6 +1110,10 @@ OPENCV_HAL_IMPL_RVV_REDUCE(v_int16, max, short, i16, VTraits<v_int16>::vlanes(),
 OPENCV_HAL_IMPL_RVV_REDUCE(v_uint32, max, unsigned, u32, VTraits<v_uint32>::vlanes(), redmaxu)
 OPENCV_HAL_IMPL_RVV_REDUCE(v_int32, max, int, i32, VTraits<v_int32>::vlanes(), redmax)
 OPENCV_HAL_IMPL_RVV_REDUCE(v_float32, max, float, f32, VTraits<v_float32>::vlanes(), fredmax)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_REDUCE(v_float16, max, _Float16, f16, VTraits<v_float16>::vlanes(), fredmax)
+OPENCV_HAL_IMPL_RVV_REDUCE(v_float16, min, _Float16, f16, VTraits<v_float16>::vlanes(), fredmin)
+#endif
 
 inline v_float32 v_reduce_sum4(const v_float32& a, const v_float32& b,
                                  const v_float32& c, const v_float32& d)
@@ -1056,53 +1167,31 @@ inline v_float32 v_reduce_sum4(const v_float32& a, const v_float32& b,
 }
 
 ////////////// Square-Root //////////////
-
-inline v_float32 v_sqrt(const v_float32& x)
-{
-    return vfsqrt(x, VTraits<v_float32>::vlanes());
+#define OPENCV_HAL_IMPL_RVV_SQR_FP(_Tpvec, _setAllFunc) \
+inline _Tpvec v_sqrt(const _Tpvec& x) \
+{ \
+    return vfsqrt(x, VTraits<_Tpvec>::vlanes()); \
+} \
+inline _Tpvec v_invsqrt(const _Tpvec& x) \
+{ \
+    return v_div(_setAllFunc(1.0f), v_sqrt(x)); \
+} \
+inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    _Tpvec x = vfmacc(vfmul(a, a, VTraits<_Tpvec>::vlanes()), b, b, VTraits<_Tpvec>::vlanes()); \
+    return v_sqrt(x); \
+} \
+inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    return vfmacc(vfmul(a, a, VTraits<_Tpvec>::vlanes()), b, b, VTraits<_Tpvec>::vlanes()); \
 }
 
-inline v_float32 v_invsqrt(const v_float32& x)
-{
-    v_float32 one = v_setall_f32(1.0f);
-    return v_div(one, v_sqrt(x));
-}
-
-#if CV_SIMD_SCALABLE_64F
-inline v_float64 v_sqrt(const v_float64& x)
-{
-    return vfsqrt(x, VTraits<v_float64>::vlanes());
-}
-
-inline v_float64 v_invsqrt(const v_float64& x)
-{
-    v_float64 one = v_setall_f64(1.0f);
-    return v_div(one, v_sqrt(x));
-}
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_SQR_FP(v_float16, v_setall_f16)
 #endif
-
-inline v_float32 v_magnitude(const v_float32& a, const v_float32& b)
-{
-    v_float32 x = vfmacc(vfmul(a, a, VTraits<v_float32>::vlanes()), b, b, VTraits<v_float32>::vlanes());
-    return v_sqrt(x);
-}
-
-inline v_float32 v_sqr_magnitude(const v_float32& a, const v_float32& b)
-{
-    return v_float32(vfmacc(vfmul(a, a, VTraits<v_float32>::vlanes()), b, b, VTraits<v_float32>::vlanes()));
-}
-
+OPENCV_HAL_IMPL_RVV_SQR_FP(v_float32, v_setall_f32)
 #if CV_SIMD_SCALABLE_64F
-inline v_float64 v_magnitude(const v_float64& a, const v_float64& b)
-{
-    v_float64 x = vfmacc(vfmul(a, a, VTraits<v_float64>::vlanes()), b, b, VTraits<v_float64>::vlanes());
-    return v_sqrt(x);
-}
-
-inline v_float64 v_sqr_magnitude(const v_float64& a, const v_float64& b)
-{
-    return vfmacc(vfmul(a, a, VTraits<v_float64>::vlanes()), b, b, VTraits<v_float64>::vlanes());
-}
+OPENCV_HAL_IMPL_RVV_SQR_FP(v_float64, v_setall_f64)
 #endif
 
 ////////////// Multiply-Add //////////////
@@ -1125,6 +1214,18 @@ inline v_int32 v_muladd(const v_int32& a, const v_int32& b, const v_int32& c)
 {
     return v_fma(a, b, c);
 }
+
+#if CV_SIMD_SCALABLE_FP16
+inline v_float16 v_fma(const v_float16& a, const v_float16& b, const v_float16& c)
+{
+    return vfmacc(c, a, b, VTraits<v_float16>::vlanes());
+}
+
+inline v_float16 v_muladd(const v_float16& a, const v_float16& b, const v_float16& c)
+{
+    return v_fma(a, b, c);
+}
+#endif
 
 #if CV_SIMD_SCALABLE_64F
 inline v_float64 v_fma(const v_float64& a, const v_float64& b, const v_float64& c)
@@ -1166,6 +1267,13 @@ inline bool v_check_all(const v_uint16& a)
 inline bool v_check_any(const v_uint16& a)
 { return v_check_any(v_reinterpret_as_s16(a)); }
 
+#if CV_SIMD_SCALABLE_FP16
+inline bool v_check_all(const v_float16& a)
+{ return v_check_all(v_reinterpret_as_s16(a)); }
+inline bool v_check_any(const v_float16& a)
+{ return v_check_any(v_reinterpret_as_s16(a)); }
+#endif
+
 inline bool v_check_all(const v_uint32& a)
 { return v_check_all(v_reinterpret_as_s32(a)); }
 inline bool v_check_any(const v_uint32& a)
@@ -1199,6 +1307,9 @@ inline _Tpvec v_##abs(const _Tpvec& a, const _Tpvec& b) \
 OPENCV_HAL_IMPL_RVV_ABSDIFF(v_uint8, absdiff)
 OPENCV_HAL_IMPL_RVV_ABSDIFF(v_uint16, absdiff)
 OPENCV_HAL_IMPL_RVV_ABSDIFF(v_uint32, absdiff)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_ABSDIFF(v_float16, absdiff)
+#endif
 OPENCV_HAL_IMPL_RVV_ABSDIFF(v_float32, absdiff)
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_ABSDIFF(v_float64, absdiff)
@@ -1225,6 +1336,9 @@ inline _Tprvec v_abs(const _Tpvec& a) \
 OPENCV_HAL_IMPL_RVV_ABS(v_uint8, v_int8, s8)
 OPENCV_HAL_IMPL_RVV_ABS(v_uint16, v_int16, s16)
 OPENCV_HAL_IMPL_RVV_ABS(v_uint32, v_int32, s32)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_ABS(v_float16, v_float16, f16)
+#endif
 OPENCV_HAL_IMPL_RVV_ABS(v_float32, v_float32, f32)
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_ABS(v_float64, v_float64, f64)
@@ -1259,6 +1373,12 @@ OPENCV_HAL_IMPL_RVV_SELECT(v_uint32, VTraits<v_uint32>::vlanes())
 OPENCV_HAL_IMPL_RVV_SELECT(v_int8, VTraits<v_int8>::vlanes())
 OPENCV_HAL_IMPL_RVV_SELECT(v_int16, VTraits<v_int16>::vlanes())
 OPENCV_HAL_IMPL_RVV_SELECT(v_int32, VTraits<v_int32>::vlanes())
+#if CV_SIMD_SCALABLE_FP16
+inline v_float16 v_select(const v_float16& mask, const v_float16& a, const v_float16& b) \
+{ \
+    return vmerge(vmfne(mask, 0, VTraits<v_float16>::vlanes()), b, a, VTraits<v_float16>::vlanes()); \
+}
+#endif
 
 inline v_float32 v_select(const v_float32& mask, const v_float32& a, const v_float32& b) \
 { \
@@ -1327,12 +1447,39 @@ template<int n> inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b) \
 template<> inline _Tpvec v_rotate_left<0>(const _Tpvec& a, const _Tpvec& b) \
 { CV_UNUSED(b); return a; }
 
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_ROTATE_FP(v_float16, f16, VTraits<v_float16>::vlanes())
+#endif
 OPENCV_HAL_IMPL_RVV_ROTATE_FP(v_float32, f32, VTraits<v_float32>::vlanes())
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_ROTATE_FP(v_float64, f64,  VTraits<v_float64>::vlanes())
 #endif
 
 ////////////// Convert to float //////////////
+
+#if CV_SIMD_SCALABLE_FP16
+inline v_float16 v_cvt_f16(const v_float32 &a)
+{
+    return vfncvt_f(vlmul_ext_f32m2(a), VTraits<v_float32>::vlanes());
+}
+inline v_float16 v_cvt_f16(const v_float32 &a, const v_float32 &b)
+{
+    return vfncvt_f(vset(vlmul_ext_f32m2(a),1,b), VTraits<v_float16>::vlanes());
+}
+inline v_float16 v_cvt_f16(const v_int16 &a)
+{
+    return vfcvt_f(a, VTraits<v_float16>::vlanes());
+}
+inline v_float32 v_cvt_f32(const v_float16 &a)
+{
+    return vget_f32m1(vfwcvt_f(a, VTraits<v_float16>::vlanes()), 0);
+}
+inline v_float32 v_cvt_f32_high(const v_float16 &a)
+{
+    return vget_f32m1(vfwcvt_f(a, VTraits<v_float16>::vlanes()), 1);
+}
+#endif
+
 inline v_float32 v_cvt_f32(const v_int32& a)
 {
     return vfcvt_f_x_v_f32m1(a, VTraits<v_float32>::vlanes());
@@ -1387,6 +1534,9 @@ inline _Tpvec v_broadcast_highest(_Tpvec v) \
     return v_setall_##suffix(v_extract_n(v, VTraits<_Tpvec>::vlanes()-1)); \
 }
 
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_BROADCAST(v_float16, f16)
+#endif
 OPENCV_HAL_IMPL_RVV_BROADCAST(v_uint32, u32)
 OPENCV_HAL_IMPL_RVV_BROADCAST(v_int32, s32)
 OPENCV_HAL_IMPL_RVV_BROADCAST(v_float32, f32)
@@ -1403,6 +1553,9 @@ OPENCV_HAL_IMPL_RVV_REVERSE(v_uint8, 8)
 OPENCV_HAL_IMPL_RVV_REVERSE(v_int8, 8)
 OPENCV_HAL_IMPL_RVV_REVERSE(v_uint16, 16)
 OPENCV_HAL_IMPL_RVV_REVERSE(v_int16, 16)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_REVERSE(v_float16, 16)
+#endif
 OPENCV_HAL_IMPL_RVV_REVERSE(v_uint32, 32)
 OPENCV_HAL_IMPL_RVV_REVERSE(v_int32, 32)
 OPENCV_HAL_IMPL_RVV_REVERSE(v_float32, 32)
@@ -1524,6 +1677,9 @@ OPENCV_HAL_IMPL_RVV_ZIP(v_uint8, vuint8m2_t, u8, 8, 16, OPENCV_HAL_NOP, OPENCV_H
 OPENCV_HAL_IMPL_RVV_ZIP(v_int8, vint8m2_t, i8, 8, 16, vreinterpret_u8m2, vreinterpret_u8m1)
 OPENCV_HAL_IMPL_RVV_ZIP(v_uint16, vuint16m2_t, u16, 16, 32, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_RVV_ZIP(v_int16, vint16m2_t, i16, 16, 32, vreinterpret_u16m2, vreinterpret_u16m1)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_ZIP(v_float16, vfloat16m2_t, f16, 16, 32, vreinterpret_u16m2, vreinterpret_u16m1)
+#endif
 OPENCV_HAL_IMPL_RVV_ZIP(v_uint32, vuint32m2_t, u32, 32, 64, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_RVV_ZIP(v_int32, vint32m2_t, i32, 32, 64, vreinterpret_u32m2, vreinterpret_u32m1)
 OPENCV_HAL_IMPL_RVV_ZIP(v_float32, vfloat32m2_t, f32, 32, 64, vreinterpret_u32m2, vreinterpret_u32m1)
@@ -1573,6 +1729,9 @@ OPENCV_HAL_IMPL_RVV_UNPACKS(v_uint16, 16)
 OPENCV_HAL_IMPL_RVV_UNPACKS(v_int16, 16)
 OPENCV_HAL_IMPL_RVV_UNPACKS(v_uint32, 32)
 OPENCV_HAL_IMPL_RVV_UNPACKS(v_int32, 32)
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_UNPACKS(v_float16, 16)
+#endif
 OPENCV_HAL_IMPL_RVV_UNPACKS(v_float32, 32)
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_UNPACKS(v_float64, 64)
@@ -1626,6 +1785,9 @@ OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint8, uchar, u8, 8, 4, VTraits<v_uint8>::vlanes
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(int8, schar, i8, 8, 4, VTraits<v_int8>::vlanes())
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint16, ushort, u16, 16, 8, VTraits<v_uint16>::vlanes())
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(int16, short, i16, 16, 8, VTraits<v_int16>::vlanes())
+#if CV_SIMD_SCALABLE_FP16
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(float16, _Float16, f16, 16, 8, VTraits<v_float16>::vlanes())
+#endif
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint32, unsigned, u32, 32, 16, VTraits<v_uint32>::vlanes())
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(int32, int, i32, 32, 16, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(float32, float, f32, 32, 16, VTraits<v_float32>::vlanes())
@@ -1774,6 +1936,10 @@ inline int64 v_signmask(const v_uint8& a)
 { return v_signmask(v_reinterpret_as_s8(a)); }
 inline int64 v_signmask(const v_uint16& a)
 { return v_signmask(v_reinterpret_as_s16(a)); }
+#if CV_SIMD_SCALABLE_FP16
+inline int v_signmask(const v_float16& a)
+{ return v_signmask(v_reinterpret_as_s16(a)); }
+#endif
 inline int v_signmask(const v_uint32& a)
 { return v_signmask(v_reinterpret_as_s32(a)); }
 inline int v_signmask(const v_float32& a)
@@ -1790,6 +1956,10 @@ inline int v_scan_forward(const v_uint8& a)
 { return v_scan_forward(v_reinterpret_as_s8(a)); }
 inline int v_scan_forward(const v_uint16& a)
 { return v_scan_forward(v_reinterpret_as_s16(a)); }
+#if CV_SIMD_SCALABLE_FP16
+inline int v_scan_forward(const v_float16& a)
+{ return v_scan_forward(v_reinterpret_as_s16(a)); }
+#endif
 inline int v_scan_forward(const v_uint32& a)
 { return v_scan_forward(v_reinterpret_as_s32(a)); }
 inline int v_scan_forward(const v_float32& a)
@@ -1829,7 +1999,7 @@ OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_float64, vlmul_trunc_u8mf8)
 
 ////// FP16 support ///////
 
-#if defined(__riscv_zfh) && __riscv_zfh
+#if CV_FP16
 inline v_float32 v_load_expand(const hfloat* ptr)
 {
     return vfwcvt_f(vle16_v_f16mf2((_Float16*)ptr, VTraits<v_float32>::vlanes()) ,VTraits<v_float32>::vlanes());;
@@ -1855,6 +2025,35 @@ inline void v_pack_store(hfloat* ptr, const v_float32& v)
 }
 #endif
 ////////////// Rounding //////////////
+#if CV_SIMD_SCALABLE_FP16
+inline v_int16 v_round(const v_float16& a)
+{
+    return vfcvt_x(a, VTraits<v_float16>::vlanes());
+}
+
+inline v_int16 v_floor(const v_float16& a)
+{
+#if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>11999
+    return __riscv_vfcvt_x_f_v_i16m1_rm(a, 1 /*RNE, round-to-nearest-even*/, VTraits<v_float16>::vlanes());
+#else
+    return vfcvt_x(vfsub(a, 0.5f - 1e-5, VTraits<v_float16>::vlanes()), VTraits<v_float16>::vlanes());
+#endif
+}
+
+inline v_int16 v_ceil(const v_float16& a)
+{
+#if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>11999
+    return __riscv_vfcvt_x_f_v_i16m1_rm(a, 3 /*ROD, round-to-odd*/, VTraits<v_float16>::vlanes());
+#else
+    return vfcvt_x(vfadd(a, 0.5f - 1e-5, VTraits<v_float16>::vlanes()), VTraits<v_float16>::vlanes());
+#endif
+}
+
+inline v_int16 v_trunc(const v_float16& a)
+{
+    return vfcvt_rtz_x(a, VTraits<v_float16>::vlanes());
+}
+#endif
 inline v_int32 v_round(const v_float32& a)
 {
     // return vfcvt_x(vfadd(a, 1e-6, VTraits<v_float32>::vlanes()), VTraits<v_float32>::vlanes());
@@ -2148,6 +2347,41 @@ inline v_float64 v_dotprod_expand_fast(const v_int32& a, const v_int32& b, const
 #endif
 
 // TODO: only 128 bit now.
+#if CV_SIMD_SCALABLE_FP16
+inline v_float16 v_matmul(  const v_float16 &v,
+                            const v_float16 &m0, const v_float16 &m1,
+                            const v_float16 &m2, const v_float16 &m3,
+                            const v_float16 &m4, const v_float16 &m5,
+                            const v_float16 &m6, const v_float16 &m7) {
+    vfloat16m1_t res;
+    res = vfmul_vf_f16m1(m0, v_extract_n(v, 0), VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 1), m1, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 2), m2, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 3), m3, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 4), m4, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 5), m5, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 6), m6, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 7), m7, VTraits<v_float16>::vlanes());
+    return res;
+}
+inline v_float16 v_matmuladd(  const v_float16 &v,
+                               const v_float16 &m0, const v_float16 &m1,
+                               const v_float16 &m2, const v_float16 &m3,
+                               const v_float16 &m4, const v_float16 &m5,
+                               const v_float16 &m6,
+                               const v_float16 &a) {
+    vfloat16m1_t res;
+    res = vfmul_vf_f16m1(m0, v_extract_n(v, 0), VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 1), m1, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 2), m2, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 3), m3, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 4), m4, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 5), m5, VTraits<v_float16>::vlanes());
+    res = vfmacc_vf_f16m1(res, v_extract_n(v, 6), m6, VTraits<v_float16>::vlanes());
+    return  vfadd(res, a, VTraits<v_float16>::vlanes());
+}
+#endif
+
 inline v_float32 v_matmul(const v_float32& v, const v_float32& m0,
                             const v_float32& m1, const v_float32& m2,
                             const v_float32& m3)

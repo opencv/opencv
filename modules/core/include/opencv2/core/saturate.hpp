@@ -85,6 +85,10 @@ template<typename _Tp> static inline _Tp saturate_cast(schar v)    { return _Tp(
 template<typename _Tp> static inline _Tp saturate_cast(ushort v)   { return _Tp(v); }
 /** @overload */
 template<typename _Tp> static inline _Tp saturate_cast(short v)    { return _Tp(v); }
+#if CV_FP16 && (defined(__riscv) && __riscv)
+/** @overload */
+template<typename _Tp> static inline _Tp saturate_cast(_Float16 v)    { return _Tp(v); }
+#endif
 /** @overload */
 template<typename _Tp> static inline _Tp saturate_cast(unsigned v) { return _Tp(v); }
 /** @overload */
