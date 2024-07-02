@@ -2,6 +2,7 @@ from __future__ import print_function
 import sys
 import argparse
 import cv2 as cv
+assert cv.__version__ < "5.0", "Caffe importer is deprecated and removed from OpenCV 5.0"
 import tensorflow as tf
 import numpy as np
 import struct

@@ -12,27 +12,40 @@ var persons = {};
 
 //! [Run face detection model]
 function detectFaces(img) {
-  var blob = cv.blobFromImage(img, 1, {width: 192, height: 144}, [104, 117, 123, 0], false, false);
-  netDet.setInput(blob);
-  var out = netDet.forward();
-
+  netDet.setInputSize(new cv.Size(img.cols, img.rows));
+  var out = new cv.Mat();
+  netDet.detect(img, out);
   var faces = [];
-  for (var i = 0, n = out.data32F.length; i < n; i += 7) {
-    var confidence = out.data32F[i + 2];
-    var left = out.data32F[i + 3] * img.cols;
-    var top = out.data32F[i + 4] * img.rows;
-    var right = out.data32F[i + 5] * img.cols;
-    var bottom = out.data32F[i + 6] * img.rows;
+  for (var i = 0, n = out.data32F.length; i < n; i += 15) {
+    var left = out.data32F[i];
+    var top = out.data32F[i + 1];
+    var right = (out.data32F[i] + out.data32F[i + 2]);
+    var bottom = (out.data32F[i + 1] + out.data32F[i + 3]);
     left = Math.min(Math.max(0, left), img.cols - 1);
+    top = Math.min(Math.max(0, top), img.rows - 1);
     right = Math.min(Math.max(0, right), img.cols - 1);
     bottom = Math.min(Math.max(0, bottom), img.rows - 1);
-    top = Math.min(Math.max(0, top), img.rows - 1);
 
-    if (confidence > 0.5 && left < right && top < bottom) {
-      faces.push({x: left, y: top, width: right - left, height: bottom - top})
+    if (left < right && top < bottom) {
+      faces.push({
+        x: left,
+        y: top,
+        width: right - left,
+        height: bottom - top,
+        x1: out.data32F[i + 4] < 0 || out.data32F[i + 4] > img.cols - 1 ? -1 : out.data32F[i + 4],
+        y1: out.data32F[i + 5] < 0 || out.data32F[i + 5] > img.rows - 1 ? -1 : out.data32F[i + 5],
+        x2: out.data32F[i + 6] < 0 || out.data32F[i + 6] > img.cols - 1 ? -1 : out.data32F[i + 6],
+        y2: out.data32F[i + 7] < 0 || out.data32F[i + 7] > img.rows - 1 ? -1 : out.data32F[i + 7],
+        x3: out.data32F[i + 8] < 0 || out.data32F[i + 8] > img.cols - 1 ? -1 : out.data32F[i + 8],
+        y3: out.data32F[i + 9] < 0 || out.data32F[i + 9] > img.rows - 1 ? -1 : out.data32F[i + 9],
+        x4: out.data32F[i + 10] < 0 || out.data32F[i + 10] > img.cols - 1 ? -1 : out.data32F[i + 10],
+        y4: out.data32F[i + 11] < 0 || out.data32F[i + 11] > img.rows - 1 ? -1 : out.data32F[i + 11],
+        x5: out.data32F[i + 12] < 0 || out.data32F[i + 12] > img.cols - 1 ? -1 : out.data32F[i + 12],
+        y5: out.data32F[i + 13] < 0 || out.data32F[i + 13] > img.rows - 1 ? -1 : out.data32F[i + 13],
+        confidence: out.data32F[i + 14]
+      })
     }
   }
-  blob.delete();
   out.delete();
   return faces;
 };
@@ -53,7 +66,7 @@ function recognize(face) {
   var vec = face2vec(face);
 
   var bestMatchName = 'unknown';
-  var bestMatchScore = 0.5;  // Actually, the minimum is -1 but we use it as a threshold.
+  var bestMatchScore = 30;  // Threshold for face recognition.
   for (name in persons) {
     var personVec = persons[name];
     var score = vec.dot(personVec);
@@ -69,24 +82,25 @@ function recognize(face) {
 
 function loadModels(callback) {
   var utils = new Utils('');
-  var proto = 'https://raw.githubusercontent.com/opencv/opencv/5.x/samples/dnn/face_detector/deploy_lowres.prototxt';
-  var weights = 'https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20180205_fp16/res10_300x300_ssd_iter_140000_fp16.caffemodel';
+  var detectModel = 'https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx';
   var recognModel =  'https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx';
-  utils.createFileFromUrl('face_detector.prototxt', proto, () => {
-    document.getElementById('status').innerHTML = 'Downloading face_detector.caffemodel';
-    utils.createFileFromUrl('face_detector.caffemodel', weights, () => {
-      document.getElementById('status').innerHTML = 'Downloading OpenFace model';
-      utils.createFileFromUrl('face_recognition_sface_2021dec.onnx', recognModel, () => {
-        document.getElementById('status').innerHTML = '';
-        netDet = cv.readNetFromCaffe('face_detector.prototxt', 'face_detector.caffemodel');
-        netRecogn = cv.readNet('face_recognition_sface_2021dec.onnx');
-        callback();
-      });
+  document.getElementById('status').innerHTML = 'Downloading YuNet model';
+  utils.createFileFromUrl('face_detection_yunet_2023mar.onnx', detectModel, () => {
+    document.getElementById('status').innerHTML = 'Downloading OpenFace model';
+    utils.createFileFromUrl('face_recognition_sface_2021dec.onnx', recognModel, () => {
+      document.getElementById('status').innerHTML = '';
+      netDet = new cv.FaceDetectorYN("face_detection_yunet_2023mar.onnx", "", new cv.Size(320, 320), 0.9, 0.3, 5000);
+      netRecogn = cv.readNet('face_recognition_sface_2021dec.onnx');
+      callback();
     });
   });
 };
 
 function main() {
+  if(!cv.FaceDetectorYN){
+    alert(`Error: This sample require OpenCV.js built with FaceDetectorYN. Please rebuild it with FaceDetectorYN or use the latest version of OpenCV.js.`);
+    return;
+  }
   // Create a camera object.
   var output = document.getElementById('output');
   var camera = document.createElement("video");
@@ -146,6 +160,16 @@ function main() {
     var faces = detectFaces(frameBGR);
     faces.forEach(function(rect) {
       cv.rectangle(frame, {x: rect.x, y: rect.y}, {x: rect.x + rect.width, y: rect.y + rect.height}, [0, 255, 0, 255]);
+      if(rect.x1>0 && rect.y1>0)
+        cv.circle(frame, {x: rect.x1, y: rect.y1}, 2, [255, 0, 0, 255], 2)
+      if(rect.x2>0 && rect.y2>0)
+        cv.circle(frame, {x: rect.x2, y: rect.y2}, 2, [0, 0, 255, 255], 2)
+      if(rect.x3>0 && rect.y3>0)
+        cv.circle(frame, {x: rect.x3, y: rect.y3}, 2, [0, 255, 0, 255], 2)
+      if(rect.x4>0 && rect.y4>0)
+        cv.circle(frame, {x: rect.x4, y: rect.y4}, 2, [255, 0, 255, 255], 2)
+      if(rect.x5>0 && rect.y5>0)
+        cv.circle(frame, {x: rect.x5, y: rect.y5}, 2, [0, 255, 255, 255], 2)
 
       var face = frameBGR.roi(rect);
       var name = recognize(face);

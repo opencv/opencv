@@ -210,6 +210,9 @@ TEST_P(Test_TFLite, max_unpooling)
 }
 
 TEST_P(Test_TFLite, EfficientDet_int8) {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
+
     if (target != DNN_TARGET_CPU || (backend != DNN_BACKEND_OPENCV &&
         backend != DNN_BACKEND_TIMVX && backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) {
         throw SkipTestException("Only OpenCV, TimVX and OpenVINO targets support INT8 on CPU");
@@ -249,6 +252,23 @@ TEST_P(Test_TFLite, fully_connected) {
     if (backend == DNN_BACKEND_VKCOM)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
     testLayer("fully_connected");
+}
+
+TEST_P(Test_TFLite, permute) {
+    testLayer("permutation_3d");
+    // Temporarily disabled as TFLiteConverter produces a incorrect graph in this case
+    //testLayer("permutation_4d_0123");
+    testLayer("permutation_4d_0132");
+    testLayer("permutation_4d_0213");
+    testLayer("permutation_4d_0231");
+}
+
+TEST_P(Test_TFLite, global_average_pooling_2d) {
+    testLayer("global_average_pooling_2d");
+}
+
+TEST_P(Test_TFLite, global_max_pooling_2d) {
+    testLayer("global_max_pooling_2d");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());

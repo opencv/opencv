@@ -619,11 +619,6 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
     std::vector<uchar> out_buf(1 << 12);
 
-#ifndef JCS_EXTENSIONS
-    AutoBuffer<uchar> _buffer;
-    uchar* buffer;
-#endif
-
     struct jpeg_compress_struct cinfo;
     JpegErrorMgr jerr;
     JpegDestination dest;
@@ -658,14 +653,40 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         int _channels = img.channels();
         int channels = _channels > 1 ? 3 : 1;
 
+        bool doDirectWrite = false;
+        switch( _channels )
+        {
+            case 1:
+                cinfo.input_components = 1;
+                cinfo.in_color_space = JCS_GRAYSCALE;
+                doDirectWrite = true; // GRAY -> GRAY
+                break;
+            case 3:
 #ifdef JCS_EXTENSIONS
-        cinfo.input_components = _channels;
-        cinfo.in_color_space = _channels == 3 ? JCS_EXT_BGR
-            : _channels == 4 ? JCS_EXT_BGRX : JCS_GRAYSCALE;
+                cinfo.input_components = 3;
+                cinfo.in_color_space = JCS_EXT_BGR;
+                doDirectWrite = true; // BGR -> BGR
 #else
-        cinfo.input_components = channels;
-        cinfo.in_color_space = channels > 1 ? JCS_RGB : JCS_GRAYSCALE;
+                cinfo.input_components = 3;
+                cinfo.in_color_space = JCS_RGB;
+                doDirectWrite = false; // BGR -> RGB
 #endif
+                break;
+            case 4:
+#ifdef JCS_EXTENSIONS
+                cinfo.input_components = 4;
+                cinfo.in_color_space = JCS_EXT_BGRX;
+                doDirectWrite = true; // BGRX -> BGRX
+#else
+                cinfo.input_components = 3;
+                cinfo.in_color_space = JCS_RGB;
+                doDirectWrite = false; // BGRA -> RGB
+#endif
+                break;
+            default:
+                CV_Error(cv::Error::StsError, cv::format("Unsupported number of _channels: %06d", _channels) );
+                break;
+        }
 
         int quality = 95;
         int progressive = 0;
@@ -762,9 +783,9 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             cinfo.comp_info[1].h_samp_factor = 1;
         }
 
-#if JPEG_LIB_VERSION >= 70
         if (luma_quality >= 0 && chroma_quality >= 0)
         {
+#if JPEG_LIB_VERSION >= 70
             cinfo.q_scale_factor[0] = jpeg_quality_scaling(luma_quality);
             cinfo.q_scale_factor[1] = jpeg_quality_scaling(chroma_quality);
             if ( luma_quality != chroma_quality )
@@ -776,35 +797,43 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 cinfo.comp_info[1].h_samp_factor = 1;
             }
             jpeg_default_qtables( &cinfo, TRUE );
-        }
+#else
+            // See https://github.com/opencv/opencv/issues/25646
+            CV_LOG_ONCE_WARNING(NULL, cv::format("IMWRITE_JPEG_LUMA/CHROMA_QUALITY are not supported bacause JPEG_LIB_VERSION < 70."));
 #endif // #if JPEG_LIB_VERSION >= 70
+        }
 
         jpeg_start_compress( &cinfo, TRUE );
 
-#ifndef JCS_EXTENSIONS
-        if( channels > 1 )
-            _buffer.allocate(width*channels);
-        buffer = _buffer.data();
-#endif
-
-        for( int y = 0; y < height; y++ )
+        if( doDirectWrite )
         {
-            uchar *data = img.data + img.step*y, *ptr = data;
-
-#ifndef JCS_EXTENSIONS
-            if( _channels == 3 )
+            for( int y = 0; y < height; y++ )
             {
-                icvCvt_BGR2RGB_8u_C3R( data, 0, buffer, 0, Size(width,1) );
-                ptr = buffer;
+                uchar *data = const_cast<uchar*>(img.ptr<uchar>(y));
+                jpeg_write_scanlines( &cinfo, &data, 1 );
             }
-            else if( _channels == 4 )
-            {
-                icvCvt_BGRA2BGR_8u_C4C3R( data, 0, buffer, 0, Size(width,1), 2 );
-                ptr = buffer;
-            }
-#endif
+        }
+        else
+        {
+            CV_Check(_channels, (_channels == 3) || (_channels == 4), "Unsupported number of channels(indirect write)");
 
-            jpeg_write_scanlines( &cinfo, &ptr, 1 );
+            AutoBuffer<uchar> _buffer;
+            _buffer.allocate(width*channels);
+            uchar *buffer = _buffer.data();
+
+            for( int y = 0; y < height; y++ )
+            {
+                uchar *data = const_cast<uchar*>(img.ptr<uchar>(y));
+                if( _channels == 3 )
+                {
+                    icvCvt_BGR2RGB_8u_C3R( data, 0, buffer, 0, Size(width,1) );
+                }
+                else // if( _channels == 4 )
+                {
+                    icvCvt_BGRA2BGR_8u_C4C3R( data, 0, buffer, 0, Size(width,1), 2 );
+                }
+                jpeg_write_scanlines( &cinfo, &buffer, 1 );
+            }
         }
 
         jpeg_finish_compress( &cinfo );

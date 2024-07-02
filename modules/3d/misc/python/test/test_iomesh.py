@@ -32,7 +32,7 @@ class raster_test(NewOpenCVTests):
             if a.shape not in goodShapes:
                 self.fail(errorMsg % s)
 
-        if texCoords.shape not in [(1, 18, 2), (18, 1, 2)]:
+        if texCoords.shape not in [(1, 18, 2), (18, 1, 2), (18, 2)]:
             self.fail('texture coordinates array should be 1x18x2 or 18x1x2')
         if isinstance(indices, numpy.ndarray):
             if indices.shape not in [(1, 6, 3), (6, 1, 3)]:

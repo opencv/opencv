@@ -32,6 +32,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     };
 
     template <>
+    struct numeric_limits<signed char> {
+        __device__ static signed char min() { return 1; }
+        __device__ static signed char max() { return SCHAR_MAX; }
+        __device__ static signed char lowest() { return SCHAR_MIN; }
+    };
+
+    template <>
+    struct numeric_limits<unsigned char> {
+        __device__ static unsigned char min() { return 1; }
+        __device__ static unsigned char max() { return UCHAR_MAX; }
+        __device__ static unsigned char lowest() { return 0; }
+    };
+
+    template <>
     struct numeric_limits<int32_t> {
         __device__ static int32_t min() { return 1; }
         __device__ static int32_t max() { return INT_MAX; }

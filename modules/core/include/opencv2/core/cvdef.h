@@ -201,6 +201,14 @@ namespace cv {
 #  define CV_ICC   __INTEL_COMPILER
 #endif
 
+#if defined _WIN32
+#  define CV_CDECL __cdecl
+#  define CV_STDCALL __stdcall
+#else
+#  define CV_CDECL
+#  define CV_STDCALL
+#endif
+
 #ifndef CV_INLINE
 #  if defined __cplusplus
 #    define CV_INLINE static inline
@@ -483,6 +491,7 @@ Cv64suf;
 *                                  Matrix type (Mat)                                     *
 \****************************************************************************************/
 
+#define CV_MAX_DIM              32
 #define CV_MAT_CN_MASK          ((CV_CN_MAX - 1) << CV_CN_SHIFT)
 #define CV_MAT_CN(flags)        ((((flags) & CV_MAT_CN_MASK) >> CV_CN_SHIFT) + 1)
 #define CV_MAT_TYPE_MASK        (CV_DEPTH_MAX*CV_CN_MAX - 1)
@@ -512,6 +521,13 @@ Cv64suf;
 #ifndef MAX
 #  define MAX(a,b)  ((a) < (b) ? (b) : (a))
 #endif
+
+/** min & max without jumps */
+#define CV_IMIN(a, b)  ((a) ^ (((a)^(b)) & (((a) < (b)) - 1)))
+#define CV_IMAX(a, b)  ((a) ^ (((a)^(b)) & (((a) > (b)) - 1)))
+#define CV_SWAP(a,b,t) ((t) = (a), (a) = (b), (b) = (t))
+#define CV_CMP(a,b)    (((a) > (b)) - ((a) < (b)))
+#define CV_SIGN(a)     CV_CMP((a),0)
 
 ///////////////////////////////////////// Enum operators ///////////////////////////////////////
 
@@ -822,26 +838,6 @@ public:
     hfloat() : h(0) {}
     explicit hfloat(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
-    static hfloat fromBits(ushort w)
-    {
-        Cv16suf u;
-        u.u = w;
-        hfloat result;
-        result.h = u.h;
-        return result;
-    }
-    static hfloat zero()
-    {
-        hfloat result;
-        result.h = (__fp16)0;
-        return result;
-    }
-    ushort bits() const
-    {
-        Cv16suf u;
-        u.h = h;
-        return u.u;
-    }
 protected:
     __fp16 h;
 
@@ -898,14 +894,6 @@ protected:
     #endif
     }
 
-    static hfloat zero()
-    {
-        hfloat result;
-        result.w = (ushort)0;
-        return result;
-    }
-
-    ushort bits() const { return w; }
 protected:
     ushort w;
 
@@ -932,8 +920,6 @@ inline hfloat hfloatFromBits(ushort w) {
     return res;
 #endif
 }
-
-typedef hfloat float16_t;
 
 class bfloat
 {

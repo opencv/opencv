@@ -178,16 +178,26 @@ static void addTensorRTExecutionProvider(Ort::SessionOptions *session_options,
 
 static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
                                          const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
-     OrtOpenVINOProviderOptions options{};
-     options.device_type = ov_ep.device_type.c_str();
-     options.cache_dir = ov_ep.cache_dir.c_str();
-     options.num_of_threads = ov_ep.num_of_threads;
-     options.enable_opencl_throttling = ov_ep.enable_opencl_throttling;
-     options.enable_dynamic_shapes = ov_ep.enable_dynamic_shapes;
-     options.context = nullptr;
+     std::unordered_map<std::string, std::string> options;
 
      try {
-        session_options->AppendExecutionProvider_OpenVINO(options);
+        // If the OpenVINO Execution Provider object was initialized with a parameters map,
+        // those parameters are used directly.
+        // Otherwise, the function constructs the options map from the individual member
+        // variables of the OpenVINO object.
+        if (ov_ep.params_map.empty()) {
+            options = {
+                {"device_type", ov_ep.device_type},
+                {"cache_dir", ov_ep.cache_dir},
+                {"num_of_threads", ov_ep.num_of_threads > 0 ? std::to_string(ov_ep.num_of_threads) : ""},
+                {"enable_opencl_throttling", ov_ep.enable_opencl_throttling ? "True" : "False"},
+                {"enable_dynamic_shapes", ov_ep.enable_dynamic_shapes ? "True" : "False"},
+            };
+        } else {
+            options.insert(ov_ep.params_map.begin(), ov_ep.params_map.end());
+        }
+        //  AppendExecutionProvider function expects a const std::unordered_map as its second argument
+        session_options->AppendExecutionProvider("OpenVINO", options);
      } catch (const std::exception &e) {
          std::stringstream ss;
          ss << "ONNX Backend: Failed to enable OpenVINO"

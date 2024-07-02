@@ -729,7 +729,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
     Mat exrMat;
     if( type == HALF )
     {
-        convertFp16(img, exrMat);
+        img.convertTo(exrMat, CV_16F);
         buffer = (char *)const_cast<uchar *>( exrMat.ptr() );
         bufferstep = exrMat.step;
         size = 2;

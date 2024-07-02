@@ -30,46 +30,6 @@ const char* keys  =
 }
 //! [aruco_detect_board_keys]
 
-static void readDetectorParamsFromCommandLine(CommandLineParser &parser, aruco::DetectorParameters& detectorParams) {
-    if(parser.has("dp")) {
-        FileStorage fs(parser.get<string>("dp"), FileStorage::READ);
-        bool readOk = detectorParams.readDetectorParameters(fs.root());
-        if(!readOk) {
-            cerr << "Invalid detector parameters file" << endl;
-            throw -1;
-        }
-    }
-}
-
-static void readCameraParamsFromCommandLine(CommandLineParser &parser, Mat& camMatrix, Mat& distCoeffs) {
-    if(parser.has("c")) {
-        bool readOk = readCameraParameters(parser.get<string>("c"), camMatrix, distCoeffs);
-        if(!readOk) {
-            cerr << "Invalid camera file" << endl;
-            throw -1;
-        }
-    }
-}
-
-static void readDictionatyFromCommandLine(CommandLineParser &parser, aruco::Dictionary& dictionary) {
-    if (parser.has("d")) {
-        int dictionaryId = parser.get<int>("d");
-        dictionary = aruco::getPredefinedDictionary(aruco::PredefinedDictionaryType(dictionaryId));
-    }
-    else if (parser.has("cd")) {
-        FileStorage fs(parser.get<string>("cd"), FileStorage::READ);
-        bool readOk = dictionary.readDictionary(fs.root());
-        if(!readOk) {
-            cerr << "Invalid dictionary file" << endl;
-            throw -1;
-        }
-    }
-    else {
-        cerr << "Dictionary not specified" << endl;
-        throw -1;
-    }
-}
-
 int main(int argc, char *argv[]) {
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
@@ -91,10 +51,8 @@ int main(int argc, char *argv[]) {
 
     Mat camMatrix, distCoeffs;
     readCameraParamsFromCommandLine(parser, camMatrix, distCoeffs);
-
-    aruco::DetectorParameters detectorParams;
-    detectorParams.cornerRefinementMethod = aruco::CORNER_REFINE_SUBPIX; // do corner refinement in markers
-    readDetectorParamsFromCommandLine(parser, detectorParams);
+    aruco::Dictionary dictionary = readDictionatyFromCommandLine(parser);
+    aruco::DetectorParameters detectorParams = readDetectorParamsFromCommandLine(parser);
 
     String video;
     if(parser.has("v")) {
@@ -105,9 +63,6 @@ int main(int argc, char *argv[]) {
         parser.printErrors();
         return 0;
     }
-
-    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
-    readDictionatyFromCommandLine(parser, dictionary);
 
     aruco::ArucoDetector detector(dictionary, detectorParams);
     VideoCapture inputVideo;
@@ -181,9 +136,8 @@ int main(int argc, char *argv[]) {
 
         // Draw results
         image.copyTo(imageCopy);
-        if(!ids.empty()) {
+        if(!ids.empty())
             aruco::drawDetectedMarkers(imageCopy, corners, ids);
-        }
 
         if(showRejected && !rejected.empty())
             aruco::drawDetectedMarkers(imageCopy, rejected, noArray(), Scalar(100, 0, 255));

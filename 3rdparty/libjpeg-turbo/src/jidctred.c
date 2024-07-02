@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1998, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015, D. R. Commander.
+ * Copyright (C) 2015, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -118,17 +118,17 @@
  */
 
 GLOBAL(void)
-jpeg_idct_4x4(j_decompress_ptr cinfo, jpeg_component_info *compptr,
-              JCOEFPTR coef_block, JSAMPARRAY output_buf,
-              JDIMENSION output_col)
+_jpeg_idct_4x4(j_decompress_ptr cinfo, jpeg_component_info *compptr,
+               JCOEFPTR coef_block, _JSAMPARRAY output_buf,
+               JDIMENSION output_col)
 {
   JLONG tmp0, tmp2, tmp10, tmp12;
   JLONG z1, z2, z3, z4;
   JCOEFPTR inptr;
   ISLOW_MULT_TYPE *quantptr;
   int *wsptr;
-  JSAMPROW outptr;
-  JSAMPLE *range_limit = IDCT_range_limit(cinfo);
+  _JSAMPROW outptr;
+  _JSAMPLE *range_limit = IDCT_range_limit(cinfo);
   int ctr;
   int workspace[DCTSIZE * 4];   /* buffers data between passes */
   SHIFT_TEMPS
@@ -210,8 +210,8 @@ jpeg_idct_4x4(j_decompress_ptr cinfo, jpeg_component_info *compptr,
     if (wsptr[1] == 0 && wsptr[2] == 0 && wsptr[3] == 0 &&
         wsptr[5] == 0 && wsptr[6] == 0 && wsptr[7] == 0) {
       /* AC terms all zero */
-      JSAMPLE dcval = range_limit[(int)DESCALE((JLONG)wsptr[0],
-                                               PASS1_BITS + 3) & RANGE_MASK];
+      _JSAMPLE dcval = range_limit[(int)DESCALE((JLONG)wsptr[0],
+                                                PASS1_BITS + 3) & RANGE_MASK];
 
       outptr[0] = dcval;
       outptr[1] = dcval;
@@ -276,16 +276,16 @@ jpeg_idct_4x4(j_decompress_ptr cinfo, jpeg_component_info *compptr,
  */
 
 GLOBAL(void)
-jpeg_idct_2x2(j_decompress_ptr cinfo, jpeg_component_info *compptr,
-              JCOEFPTR coef_block, JSAMPARRAY output_buf,
-              JDIMENSION output_col)
+_jpeg_idct_2x2(j_decompress_ptr cinfo, jpeg_component_info *compptr,
+               JCOEFPTR coef_block, _JSAMPARRAY output_buf,
+               JDIMENSION output_col)
 {
   JLONG tmp0, tmp10, z1;
   JCOEFPTR inptr;
   ISLOW_MULT_TYPE *quantptr;
   int *wsptr;
-  JSAMPROW outptr;
-  JSAMPLE *range_limit = IDCT_range_limit(cinfo);
+  _JSAMPROW outptr;
+  _JSAMPLE *range_limit = IDCT_range_limit(cinfo);
   int ctr;
   int workspace[DCTSIZE * 2];   /* buffers data between passes */
   SHIFT_TEMPS
@@ -345,8 +345,8 @@ jpeg_idct_2x2(j_decompress_ptr cinfo, jpeg_component_info *compptr,
 #ifndef NO_ZERO_ROW_TEST
     if (wsptr[1] == 0 && wsptr[3] == 0 && wsptr[5] == 0 && wsptr[7] == 0) {
       /* AC terms all zero */
-      JSAMPLE dcval = range_limit[(int)DESCALE((JLONG)wsptr[0],
-                                               PASS1_BITS + 3) & RANGE_MASK];
+      _JSAMPLE dcval = range_limit[(int)DESCALE((JLONG)wsptr[0],
+                                                PASS1_BITS + 3) & RANGE_MASK];
 
       outptr[0] = dcval;
       outptr[1] = dcval;
@@ -387,13 +387,13 @@ jpeg_idct_2x2(j_decompress_ptr cinfo, jpeg_component_info *compptr,
  */
 
 GLOBAL(void)
-jpeg_idct_1x1(j_decompress_ptr cinfo, jpeg_component_info *compptr,
-              JCOEFPTR coef_block, JSAMPARRAY output_buf,
-              JDIMENSION output_col)
+_jpeg_idct_1x1(j_decompress_ptr cinfo, jpeg_component_info *compptr,
+               JCOEFPTR coef_block, _JSAMPARRAY output_buf,
+               JDIMENSION output_col)
 {
   int dcval;
   ISLOW_MULT_TYPE *quantptr;
-  JSAMPLE *range_limit = IDCT_range_limit(cinfo);
+  _JSAMPLE *range_limit = IDCT_range_limit(cinfo);
   SHIFT_TEMPS
 
   /* We hardly need an inverse DCT routine for this: just take the

@@ -17,7 +17,12 @@ const int ARITHM_MAX_SIZE_LOG = 10;
 
 struct BaseElemWiseOp
 {
-    enum { FIX_ALPHA=1, FIX_BETA=2, FIX_GAMMA=4, REAL_GAMMA=8, SUPPORT_MASK=16, SCALAR_OUTPUT=32, SUPPORT_MULTICHANNELMASK=64 };
+    enum
+    {
+        FIX_ALPHA=1, FIX_BETA=2, FIX_GAMMA=4, REAL_GAMMA=8,
+        SUPPORT_MASK=16, SCALAR_OUTPUT=32, SUPPORT_MULTICHANNELMASK=64,
+        MIXED_TYPE=128
+   };
     BaseElemWiseOp(int _ninputs, int _flags, double _alpha, double _beta,
                    Scalar _gamma=Scalar::all(0), int _context=1)
     : ninputs(_ninputs), flags(_flags), alpha(_alpha), beta(_beta), gamma(_gamma), context(_context) {}
@@ -132,14 +137,15 @@ struct BaseAddOp : public BaseArithmOp
 
     void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
-        Mat temp;
+        int dstType = (flags & MIXED_TYPE) ? dst.type() : src[0].type();
         if( !mask.empty() )
         {
-            cvtest::add(src[0], alpha, src.size() > 1 ? src[1] : Mat(), beta, gamma, temp, src[0].type());
+            Mat temp;
+            cvtest::add(src[0], alpha, src.size() > 1 ? src[1] : Mat(), beta, gamma, temp, dstType);
             cvtest::copy(temp, dst, mask);
         }
         else
-            cvtest::add(src[0], alpha, src.size() > 1 ? src[1] : Mat(), beta, gamma, dst, src[0].type());
+            cvtest::add(src[0], alpha, src.size() > 1 ? src[1] : Mat(), beta, gamma, dst, dstType);
     }
 
     double getMaxErr(int depth)
@@ -154,10 +160,8 @@ struct AddOp : public BaseAddOp
     AddOp() : BaseAddOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
-        if( mask.empty() )
-            cv::add(src[0], src[1], dst);
-        else
-            cv::add(src[0], src[1], dst, mask);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::add(src[0], src[1], dst, mask, dtype);
     }
 };
 
@@ -167,10 +171,8 @@ struct SubOp : public BaseAddOp
     SubOp() : BaseAddOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK, 1, -1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
-        if( mask.empty() )
-            cv::subtract(src[0], src[1], dst);
-        else
-            cv::subtract(src[0], src[1], dst, mask);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::subtract(src[0], src[1], dst, mask, dtype);
     }
 };
 
@@ -180,10 +182,8 @@ struct AddSOp : public BaseAddOp
     AddSOp() : BaseAddOp(1, FIX_ALPHA+FIX_BETA+SUPPORT_MASK, 1, 0, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
-        if( mask.empty() )
-            cv::add(src[0], gamma, dst);
-        else
-            cv::add(src[0], gamma, dst, mask);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::add(src[0], gamma, dst, mask, dtype);
     }
 };
 
@@ -193,10 +193,8 @@ struct SubRSOp : public BaseAddOp
     SubRSOp() : BaseAddOp(1, FIX_ALPHA+FIX_BETA+SUPPORT_MASK, -1, 0, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
-        if( mask.empty() )
-            cv::subtract(gamma, src[0], dst);
-        else
-            cv::subtract(gamma, src[0], dst, mask);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::subtract(gamma, src[0], dst, mask, dtype);
     }
 };
 
@@ -210,7 +208,7 @@ struct ScaleAddOp : public BaseAddOp
     }
     double getMaxErr(int depth)
     {
-        return depth == CV_16BF ? 1e-2 : depth == CV_16F ? 1e-3 : depth == CV_32F ? 1e-4 : depth == CV_64F ? 1e-12 : 2;
+        return depth == CV_16BF ? 1e-2 : depth == CV_16F ? 1e-3 : depth == CV_32F ? 3e-5 : depth == CV_64F ? 1e-12 : 2;
     }
 };
 
@@ -220,11 +218,8 @@ struct AddWeightedOp : public BaseAddOp
     AddWeightedOp() : BaseAddOp(2, REAL_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cv::addWeighted(src[0], alpha, src[1], beta, gamma[0], dst);
-    }
-    double getMaxErr(int depth)
-    {
-        return depth == CV_64F ? 1e-9 : BaseAddOp::getMaxErr(depth);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::addWeighted(src[0], alpha, src[1], beta, gamma[0], dst, dtype);
     }
 };
 
@@ -240,11 +235,35 @@ struct MulOp : public BaseArithmOp
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cv::multiply(src[0], src[1], dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::multiply(src[0], src[1], dst, alpha, dtype);
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cvtest::multiply(src[0], src[1], dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cvtest::multiply(src[0], src[1], dst, alpha, dtype);
+    }
+};
+
+struct MulSOp : public BaseArithmOp
+{
+    MulSOp() : BaseArithmOp(1, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    void getValueRange(int depth, double& minval, double& maxval)
+    {
+        minval = depth < CV_32S ? cvtest::getMinVal(depth) : depth == CV_32S ? -1000000 : -1000.;
+        maxval = depth < CV_32S ? cvtest::getMaxVal(depth) : depth == CV_32S ? 1000000 : 1000.;
+        minval = std::max(minval, -30000.);
+        maxval = std::min(maxval, 30000.);
+    }
+    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::multiply(src[0], alpha, dst, /* scale */ 1.0, dtype);
+    }
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cvtest::multiply(Mat(), src[0], dst, alpha, dtype);
     }
 };
 
@@ -253,11 +272,20 @@ struct DivOp : public BaseArithmOp
     DivOp() : BaseArithmOp(2, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cv::divide(src[0], src[1], dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::divide(src[0], src[1], dst, alpha, dtype);
+        if (flags & MIXED_TYPE)
+        {
+            // div by zero result is implementation-defined
+            // since it may involve conversions to/from intermediate format
+            Mat zeroMask = src[1] == 0;
+            dst.setTo(0, zeroMask);
+        }
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cvtest::divide(src[0], src[1], dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cvtest::divide(src[0], src[1], dst, alpha, dtype);
     }
 };
 
@@ -266,11 +294,20 @@ struct RecipOp : public BaseArithmOp
     RecipOp() : BaseArithmOp(1, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cv::divide(alpha, src[0], dst);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cv::divide(alpha, src[0], dst, dtype);
+        if (flags & MIXED_TYPE)
+        {
+            // div by zero result is implementation-defined
+            // since it may involve conversions to/from intermediate format
+            Mat zeroMask = src[0] == 0;
+            dst.setTo(0, zeroMask);
+        }
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cvtest::divide(Mat(), src[0], dst, alpha);
+        int dtype = (flags & MIXED_TYPE) ? dst.type() : -1;
+        cvtest::divide(Mat(), src[0], dst, alpha, dtype);
     }
 };
 
@@ -972,6 +1009,7 @@ struct ConvertScaleAbsOp : public BaseElemWiseOp
 
 namespace reference {
 
+// does not support inplace operation
 static void flip(const Mat& src, Mat& dst, int flipcode)
 {
     CV_Assert(src.dims <= 2);
@@ -993,6 +1031,26 @@ static void flip(const Mat& src, Mat& dst, int flipcode)
     }
 }
 
+static void rotate(const Mat& src, Mat& dst, int rotateMode)
+{
+    Mat tmp;
+    switch (rotateMode)
+    {
+    case ROTATE_90_CLOCKWISE:
+        cvtest::transpose(src, tmp);
+        reference::flip(tmp, dst, 1);
+        break;
+    case ROTATE_180:
+        reference::flip(src, dst, -1);
+        break;
+    case ROTATE_90_COUNTERCLOCKWISE:
+        cvtest::transpose(src, tmp);
+        reference::flip(tmp, dst, 0);
+        break;
+    default:
+        break;
+    }
+}
 
 static void setIdentity(Mat& dst, const Scalar& s)
 {
@@ -1037,6 +1095,32 @@ struct FlipOp : public BaseElemWiseOp
         return 0;
     }
     int flipcode;
+};
+
+struct RotateOp : public BaseElemWiseOp
+{
+    RotateOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) { rotatecode = 0; }
+    void getRandomSize(RNG& rng, vector<int>& size)
+    {
+        cvtest::randomSize(rng, 2, 2, ARITHM_MAX_SIZE_LOG, size);
+    }
+    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        cv::rotate(src[0], dst, rotatecode);
+    }
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        reference::rotate(src[0], dst, rotatecode);
+    }
+    void generateScalars(int, RNG& rng)
+    {
+        rotatecode = rng.uniform(0, 3);
+    }
+    double getMaxErr(int)
+    {
+        return 0;
+    }
+    int rotatecode;
 };
 
 struct TransposeOp : public BaseElemWiseOp
@@ -1699,6 +1783,7 @@ INSTANTIATE_TEST_CASE_P(Core_InRange, ElemWiseTest, ::testing::Values(ElemWiseOp
 INSTANTIATE_TEST_CASE_P(Core_FiniteMask, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new FiniteMaskOp)));
 
 INSTANTIATE_TEST_CASE_P(Core_Flip, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new FlipOp)));
+INSTANTIATE_TEST_CASE_P(Core_Rotate, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new RotateOp)));
 INSTANTIATE_TEST_CASE_P(Core_Transpose, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new TransposeOp)));
 INSTANTIATE_TEST_CASE_P(Core_SetIdentity, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new SetIdentityOp)));
 
@@ -1714,6 +1799,107 @@ INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWise
 INSTANTIATE_TEST_CASE_P(Core_reduceArgMinMax, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new reduceArgMinMaxOp)));
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new CartToPolarToCartOp)));
 
+// Mixed Type Arithmetic Operations
+
+typedef std::tuple<ElemWiseOpPtr, std::tuple<cvtest::MatDepth, cvtest::MatDepth>> SomeType;
+class ArithmMixedTest : public ::testing::TestWithParam<SomeType> {};
+
+TEST_P(ArithmMixedTest, accuracy)
+{
+    auto p = GetParam();
+    ElemWiseOpPtr op = std::get<0>(p);
+    int srcDepth = std::get<0>(std::get<1>(p));
+    int dstDepth = std::get<1>(std::get<1>(p));
+
+    op->flags |= BaseElemWiseOp::MIXED_TYPE;
+    int testIdx = 0;
+    RNG rng((uint64)ARITHM_RNG_SEED);
+    for( testIdx = 0; testIdx < ARITHM_NTESTS; testIdx++ )
+    {
+        vector<int> size;
+        op->getRandomSize(rng, size);
+        bool haveMask = ((op->flags & BaseElemWiseOp::SUPPORT_MASK) != 0) && rng.uniform(0, 4) == 0;
+
+        double minval=0, maxval=0;
+        op->getValueRange(srcDepth, minval, maxval);
+        int ninputs = op->ninputs;
+        vector<Mat> src(ninputs);
+        for(int i = 0; i < ninputs; i++ )
+            src[i] = cvtest::randomMat(rng, size, srcDepth, minval, maxval, true);
+        Mat dst0, dst, mask;
+        if( haveMask )
+        {
+            mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, true);
+        }
+
+        dst0 = cvtest::randomMat(rng, size, dstDepth, minval, maxval, false);
+        dst = cvtest::randomMat(rng, size, dstDepth, minval, maxval, true);
+        cvtest::copy(dst, dst0);
+
+        op->generateScalars(dstDepth, rng);
+
+        op->refop(src, dst0, mask);
+        op->op(src, dst, mask);
+
+        double maxErr = op->getMaxErr(dstDepth);
+        ASSERT_PRED_FORMAT2(cvtest::MatComparator(maxErr, op->context), dst0, dst) << "\nsrc[0] ~ " <<
+            cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << "\ntestCase #" << testIdx << "\n";
+    }
+}
+
+
+INSTANTIATE_TEST_CASE_P(Core_AddMixed, ArithmMixedTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddOp)),
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_AddScalarMixed, ArithmMixedTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddSOp)),
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_AddWeightedMixed, ArithmMixedTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddWeightedOp)),
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_SubMixed, ArithmMixedTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new SubOp)),
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_SubScalarMinusArgMixed, ArithmMixedTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new SubRSOp)),
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_MulMixed, ArithmMixedTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new MulOp)),
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_MulScalarMixed, ArithmMixedTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new MulSOp)),
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_DivMixed, ArithmMixedTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new DivOp)),
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+INSTANTIATE_TEST_CASE_P(Core_RecipMixed, ArithmMixedTest,
+                        ::testing::Combine(::testing::Values(ElemWiseOpPtr(new RecipOp)),
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
 
 TEST(Core_ArithmMask, uninitialized)
 {
@@ -2622,6 +2808,32 @@ TEST(Core_minMaxIdx, regression_9207_2)
     EXPECT_EQ(14, maxIdx[1]);
 }
 
+TEST(Core_MinMaxIdx, MatND)
+{
+    const int shape[3] = {5,5,3};
+    cv::Mat src = cv::Mat(3, shape, CV_8UC1);
+    src.setTo(1);
+    src.data[1] = 0;
+    src.data[5*5*3-2] = 2;
+
+    int minIdx[3];
+    int maxIdx[3];
+    double minVal, maxVal;
+
+    cv::minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx);
+
+    EXPECT_EQ(0, minVal);
+    EXPECT_EQ(2, maxVal);
+
+    EXPECT_EQ(0, minIdx[0]);
+    EXPECT_EQ(0, minIdx[1]);
+    EXPECT_EQ(1, minIdx[2]);
+
+    EXPECT_EQ(4, maxIdx[0]);
+    EXPECT_EQ(4, maxIdx[1]);
+    EXPECT_EQ(1, maxIdx[2]);
+}
+
 TEST(Core_Set, regression_11044)
 {
     Mat testFloat(Size(3, 3), CV_32FC1);
@@ -2982,7 +3194,6 @@ TEST(Core_MinMaxIdx, rows_overflow)
             "    max=" << maxVal0 << " vs " << maxVal;
     }
 }
-
 
 TEST(Core_Magnitude, regression_19506)
 {

@@ -34,7 +34,10 @@ _PREDEFINED_TYPES = (
     PrimitiveTypeNode.str_("char"),
     PrimitiveTypeNode.str_("String"),
     PrimitiveTypeNode.str_("c_string"),
-    ConditionalAliasTypeNode.numpy_array_("NumPyArrayGeneric"),
+    ConditionalAliasTypeNode.numpy_array_(
+        "NumPyArrayNumeric",
+        dtype="numpy.integer[_typing.Any] | numpy.floating[_typing.Any]"
+    ),
     ConditionalAliasTypeNode.numpy_array_("NumPyArrayFloat32", dtype="numpy.float32"),
     ConditionalAliasTypeNode.numpy_array_("NumPyArrayFloat64", dtype="numpy.float64"),
     NoneTypeNode("void"),
@@ -42,7 +45,7 @@ _PREDEFINED_TYPES = (
     AliasTypeNode.union_(
         "Mat",
         items=(ASTNodeTypeNode("Mat", module_name="cv2.mat_wrapper"),
-               AliasRefTypeNode("NumPyArrayGeneric")),
+               AliasRefTypeNode("NumPyArrayNumeric")),
         export_name="MatLike"
     ),
     AliasTypeNode.sequence_("MatShape", PrimitiveTypeNode.int_()),
@@ -191,6 +194,13 @@ _PREDEFINED_TYPES = (
         export_name="ExtractMetaCallback"
     ),
     AliasTypeNode.class_("LayerId", "DictValue"),
+    AliasTypeNode.dict_("LayerParams",
+                        key_type=PrimitiveTypeNode.str_(),
+                        value_type=UnionTypeNode("DictValue", items=(
+                            PrimitiveTypeNode.int_(),
+                            PrimitiveTypeNode.float_(),
+                            PrimitiveTypeNode.str_())
+                        )),
     PrimitiveTypeNode.int_("cvflann_flann_distance_t"),
     PrimitiveTypeNode.int_("flann_flann_distance_t"),
     PrimitiveTypeNode.int_("cvflann_flann_algorithm_t"),

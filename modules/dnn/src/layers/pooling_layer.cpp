@@ -1276,12 +1276,10 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size());
-        if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-            CV_CheckTypeEQ(inputs[0], CV_32F, "Unsupported type");
-        else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-            CV_CheckType(inputs[0], inputs[0] == CV_16F || inputs[0] == CV_8S, "");
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+            CV_CheckType(inputs[0], inputs[0] == CV_16F, "");
         else
-            CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_8S, "");
+            CV_CheckType(inputs[0], inputs[0] == CV_32F, "");
 
         outputs.push_back(inputs[0]);
         if (type == MAX && requiredOutputs == 2) {

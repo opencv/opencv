@@ -296,7 +296,7 @@ public:
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
-        CV_DbgAssert(*ok);
+        CV_Assert(*ok);
 
         const int row0 = range.start;
         const int row1 = range.end;
@@ -340,6 +340,9 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     _dst.createSameSize(_src, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
+
+    CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,
+             lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
 
 #if !IPP_DISABLE_PERF_LUT
     CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));

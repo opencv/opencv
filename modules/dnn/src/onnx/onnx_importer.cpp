@@ -1217,7 +1217,12 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
 
 void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    MatShape inpShape = outShapes[node_proto.input(0)];
+    MatShape inpShape;
+    if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+        inpShape = shape(getBlob(node_proto, 0));
+    else {
+        inpShape = outShapes[node_proto.input(0)];
+    }
     int dims = inpShape.size();
     std::vector<int> begin(dims, 0);
     std::vector<int> end(dims, INT_MAX);
@@ -2839,7 +2844,7 @@ void ONNXImporter::parseCumSum(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
-// "Equal" "Greater" "Less" "Pow" "Add" "Sub" "Mul" "Div" "Sum" "Min" "Max" "GreaterOrEqual" "LessOrEqual"
+// "Equal" "Greater" "Less" "Pow" "Add" "Sub" "Mul" "Div" "Sum" "Min" "Max" "GreaterOrEqual" "LessOrEqual" "And" "Or" "Xor"
 void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
@@ -2997,6 +3002,34 @@ void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx
     addLayer(layerParams, node_proto);
 }
 
+template<typename T>
+Mat runRangeLayer(const Mat& startMat, const Mat& limitMat, const Mat& deltaMat)
+{
+    T start = startMat.at<T>(0);
+    T limit = limitMat.at<T>(0);
+    T delta = deltaMat.at<T>(0);
+
+    int numberOfElements;
+    if (startMat.depth() == CV_32S || startMat.depth() == CV_64S) {
+        if (delta > 0)
+            numberOfElements = (limit - start + delta - 1) / delta;
+        else
+            numberOfElements = (start - limit - delta - 1) / -delta;
+    }
+    else
+    {
+        numberOfElements = std::ceil((limit - start) / delta);
+    }
+    numberOfElements = std::max(numberOfElements, 0);
+
+    Mat r(std::vector<int>{numberOfElements}, startMat.type());
+    for (int i = 0; i < numberOfElements; i++)
+    {
+        r.at<T>(i) = start + (i * delta);
+    }
+    return r;
+}
+
 // Currently we only support range with all constant inputs
 void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
@@ -3011,25 +3044,27 @@ void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeP
     // only supports the case which all inputs are constant
     CV_Assert(const_id.size() == 3);
 
-    Mat startMat = getIntBlob(node_proto, 0);
-    CV_Assert(startMat.type() == CV_32SC1);
-    int start = startMat.at<int>(0);
+    Mat startMat = getBlob(node_proto, 0);
+    Mat limitMat = getBlob(node_proto, 1);
+    Mat deltaMat = getBlob(node_proto, 2);
 
-    Mat limitMat = getIntBlob(node_proto, 1);
-    CV_Assert(limitMat.type() == CV_32SC1);
-    int limit = limitMat.at<int>(0);
-
-    Mat deltaMat = getIntBlob(node_proto, 2);
-    CV_Assert(deltaMat.type() == CV_32SC1);
-    int delta = deltaMat.at<int>(0);
-
-    int number_of_elements = std::max(int(std::ceil((limit - start) / delta)), 0);
-    Mat r(number_of_elements, 1, CV_32SC1);
-    for (int i = 0; i < number_of_elements; i++)
+    Mat result;
+    switch (startMat.depth())
     {
-        r.at<int>(i) = start + (i * delta);
-    }
-    addConstant(node_proto.output(0), r);
+    case CV_32F:
+        result = runRangeLayer<float>(startMat, limitMat, deltaMat);
+        break;
+    case CV_32S:
+        result = runRangeLayer<int32_t>(startMat, limitMat, deltaMat);
+        break;
+    case CV_64S:
+        result = runRangeLayer<int64_t>(startMat, limitMat, deltaMat);
+        break;
+    default:
+        CV_Error(cv::Error::BadDepth, "Unsupported type.");
+    };
+
+    addConstant(node_proto.output(0), result);
     constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(1)));
 }
 
@@ -4008,7 +4043,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
-            dispatch["LessOrEqual"] = dispatch["Mod"] = &ONNXImporter::parseElementWise;
+            dispatch["LessOrEqual"] = dispatch["Mod"] = dispatch["And"] = dispatch["Or"] = dispatch["Xor"] = &ONNXImporter::parseElementWise;
 
     dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
     dispatch["Where"] = &ONNXImporter::parseElementWise;
@@ -4086,7 +4121,7 @@ Mat readTensorFromONNX(const String& path)
     {
         CV_Error(Error::StsUnsupportedFormat, cv::format("Failed to parse ONNX data: %s", path.c_str()));
     }
-    Mat mat = getMatFromTensor(tensor_proto);
+    Mat mat = getMatFromTensor(tensor_proto, false);
     releaseONNXTensor(tensor_proto);
     return mat;
 }

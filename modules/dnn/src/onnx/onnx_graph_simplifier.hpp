@@ -32,7 +32,11 @@ void convertInt64ToInt32(const T1& src, T2& dst, int size)
     }
 }
 
-Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto);
+/** @brief converts tensor to Mat, preserving the tensor data type
+ *  @param uint8ToInt8 if true, handles uint8 tensor as quantized weight. So output Mat = int8(int32(uint8_tensor) - 128)).
+ *  if false, just returns uint8 Mat.
+*/
+Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8 = true);
 
 CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv

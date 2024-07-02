@@ -3,7 +3,7 @@ Barcode Recognition    {#tutorial_barcode_detect_and_decode}
 
 @tableofcontents
 
-@prev_tutorial{tutorial_aruco_board_detection}
+@prev_tutorial{tutorial_aruco_faq}
 
 |    |    |
 | -: | :- |

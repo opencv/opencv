@@ -276,6 +276,11 @@ TEST_P(Test_Caffe_layers, Dropout)
 
 TEST_P(Test_Caffe_layers, Concat)
 {
+    if (cvtest::skipUnstableTests && (backend == DNN_BACKEND_VKCOM))
+    {
+        throw SkipTestException("Test_Caffe_layers.Concat test produces unstable result with Vulkan");
+    }
+
 #if defined(INF_ENGINE_RELEASE)
 #if INF_ENGINE_VER_MAJOR_GE(2019010000) && INF_ENGINE_VER_MAJOR_LT(2019020000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
@@ -362,6 +367,9 @@ TEST_P(Test_Caffe_layers, PReLU)
 // TODO: fix an unstable test case
 TEST_P(Test_Caffe_layers, layer_prelu_fc)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
+
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     // Reference output values are in range [-0.0001, 10.3906]
@@ -1290,39 +1298,6 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
         ASSERT_EQ(net.getLayer(outLayers[0])->type, "Convolution");
     else
         ASSERT_EQ(net.getLayer(outLayers[0])->type, "Result");
-}
-
-TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
-{
-    const Backend backendId = get<0>(GetParam());
-    const Target targetId = get<1>(GetParam());
-
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        throw SkipTestException("No support for async forward");
-
-    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
-
-    int blobSize[] = {2, 6, 75, 113};
-    Mat inputs[] = {Mat(4, &blobSize[0], CV_8U), Mat()};
-
-    randu(inputs[0], 0, 255);
-    inputs[0].convertTo(inputs[1], CV_32F);
-
-    Mat outs[2];
-    for (int i = 0; i < 2; ++i)
-    {
-        Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
-        net.setPreferableBackend(backendId);
-        net.setPreferableTarget(targetId);
-        net.setInput(inputs[i]);
-        outs[i] = net.forward();
-        ASSERT_EQ(outs[i].type(), CV_32F);
-    }
-    if (targetId != DNN_TARGET_MYRIAD)
-        normAssert(outs[0], outs[1]);
 }
 
 TEST_P(Layer_Test_Convolution_DLDT, multithreading)

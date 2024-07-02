@@ -1704,7 +1704,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
 
-Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
+Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8)
 {
     if (tensor_proto.raw_data().empty() && tensor_proto.float_data().empty() &&
         tensor_proto.double_data().empty() && tensor_proto.int64_data().empty() &&
@@ -1745,12 +1745,12 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
 #endif
             const ::google::protobuf::RepeatedField<int32_t> field = tensor_proto.int32_data();
 
-            AutoBuffer<float16_t, 16> aligned_val;
+            AutoBuffer<hfloat, 16> aligned_val;
             size_t sz = tensor_proto.int32_data().size();
             aligned_val.allocate(sz);
-            float16_t* bufPtr = aligned_val.data();
+            hfloat* bufPtr = aligned_val.data();
 
-            float16_t *fp16Ptr = (float16_t *)field.data();
+            hfloat *fp16Ptr = (hfloat *)field.data();
             for (int i = 0; i < sz; i++)
             {
                 bufPtr[i] = fp16Ptr[i*2 + offset];
@@ -1762,11 +1762,11 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
             char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
 #if CV_STRONG_ALIGNMENT
             // Aligned pointer is required.
-            AutoBuffer<float16_t, 16> aligned_val;
-            if (!isAligned<sizeof(float16_t)>(val))
+            AutoBuffer<hfloat, 16> aligned_val;
+            if (!isAligned<sizeof(hfloat)>(val))
             {
                 size_t sz = tensor_proto.raw_data().size();
-                aligned_val.allocate(divUp(sz, sizeof(float16_t)));
+                aligned_val.allocate(divUp(sz, sizeof(hfloat)));
                 memcpy(aligned_val.data(), val, sz);
                 val = (char*)aligned_val.data();
             }
@@ -1834,23 +1834,44 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
             Mat(sizes, CV_64SC1, (void*)src).copyTo(blob);
         }
     }
-    else if (datatype == opencv_onnx::TensorProto_DataType_INT8 ||
-             datatype == opencv_onnx::TensorProto_DataType_UINT8)
+    else if (datatype == opencv_onnx::TensorProto_DataType_INT8)
     {
-        // TODO : Add support for uint8 weights and acitvations. For now, converting uint8 tensors to int8.
-        int offset = datatype == opencv_onnx::TensorProto_DataType_INT8 ? 0 : -128;
-        int depth = datatype == opencv_onnx::TensorProto_DataType_INT8 ? CV_8S : CV_8U;
-
         if (!tensor_proto.int32_data().empty())
         {
             const ::google::protobuf::RepeatedField<int32_t> field = tensor_proto.int32_data();
-            Mat(sizes, CV_32SC1, (void*)field.data()).convertTo(blob, CV_8S, 1.0, offset);
+            Mat(sizes, CV_32SC1, (void*)field.data()).convertTo(blob, CV_8S);
         }
         else
         {
             char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
-            Mat(sizes, depth, val).convertTo(blob, CV_8S, 1.0, offset);
+            Mat(sizes, CV_8S, val).copyTo(blob);
         }
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_UINT8)
+    {
+        // TODO : Add support for uint8 weights and acitvations. For now, converting uint8 tensors to int8.
+
+        if (!tensor_proto.int32_data().empty())
+        {
+            const ::google::protobuf::RepeatedField<int32_t> field = tensor_proto.int32_data();
+            if (uint8ToInt8)
+                Mat(sizes, CV_32SC1, (void*)field.data()).convertTo(blob, CV_8S, 1, -128); // handle as ONNX quantized weight
+            else
+                Mat(sizes, CV_32SC1, (void*)field.data()).convertTo(blob, CV_8U);
+        }
+        else
+        {
+            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+            if (uint8ToInt8)
+                Mat(sizes, CV_8U, val).convertTo(blob, CV_8S, 1, -128);  // handle as ONNX quantized weight
+            else
+                Mat(sizes, CV_8U, val).copyTo(blob);
+        }
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_BOOL)
+    {
+        char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+        Mat(sizes, CV_Bool, val).copyTo(blob);
     }
     else
     {

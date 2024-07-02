@@ -7,6 +7,10 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_JPEG
 
+extern "C" {
+#include "jpeglib.h"
+}
+
 /**
  * Test for check whether reading exif orientation tag was processed successfully or not
  * The test info is the set of 8 images named testExifRotate_{1 to 8}.jpg
@@ -307,6 +311,64 @@ TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_invalid)
         EXPECT_EQ( default_sampling_factor, test_jpeg_subsampling(src, param) );
     }
 }
+
+//==================================================================================================
+// See https://github.com/opencv/opencv/issues/25646
+typedef testing::TestWithParam<std::tuple<int, int>> Imgcodecs_Jpeg_encode_withLumaChromaQuality;
+
+TEST_P(Imgcodecs_Jpeg_encode_withLumaChromaQuality, basic)
+{
+    const int luma   = get<0>(GetParam());
+    const int chroma = get<1>(GetParam());
+
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string fname = string(ts.get_data_path()) + "../cv/shared/lena.png";
+
+    cv::Mat src = imread(fname, cv::IMREAD_COLOR);
+    ASSERT_FALSE(src.empty());
+
+    std::vector<uint8_t> jpegNormal;
+    ASSERT_NO_THROW(cv::imencode(".jpg", src, jpegNormal));
+
+    std::vector<int> param;
+    param.push_back(IMWRITE_JPEG_LUMA_QUALITY);
+    param.push_back(luma);
+    param.push_back(IMWRITE_JPEG_CHROMA_QUALITY);
+    param.push_back(chroma);
+
+    std::vector<uint8_t> jpegCustom;
+    ASSERT_NO_THROW(cv::imencode(".jpg", src, jpegCustom, param));
+
+#if JPEG_LIB_VERSION >= 70
+    // For jpeg7+, we can support IMWRITE_JPEG_LUMA_QUALITY and IMWRITE_JPEG_CHROMA_QUALITY.
+    if( (luma == 95 /* Default Luma Quality */ ) && ( chroma == 95 /* Default Chroma Quality */))
+    {
+        EXPECT_EQ(jpegNormal, jpegCustom);
+    }
+    else
+    {
+        EXPECT_NE(jpegNormal, jpegCustom);
+    }
+#else
+    // For jpeg6-, we cannot support IMWRITE_JPEG_LUMA/CHROMA_QUALITY because jpeg_default_qtables() is missing.
+    // - IMWRITE_JPEG_LUMA_QUALITY updates internal parameter of IMWRITE_JPEG_QUALITY.
+    // - IMWRITE_JPEG_CHROMA_QUALITY updates nothing.
+    if( luma == 95 /* Default Jpeg Quality */ )
+    {
+        EXPECT_EQ(jpegNormal, jpegCustom);
+    }
+    else
+    {
+        EXPECT_NE(jpegNormal, jpegCustom);
+    }
+#endif
+}
+
+INSTANTIATE_TEST_CASE_P( /* nothing */,
+                        Imgcodecs_Jpeg_encode_withLumaChromaQuality,
+                        testing::Combine(
+                            testing::Values(70, 95, 100),    // IMWRITE_JPEG_LUMA_QUALITY
+                            testing::Values(70, 95, 100) )); // IMWRITE_JPEG_CHROMA_QUALITY
 
 #endif // HAVE_JPEG
 

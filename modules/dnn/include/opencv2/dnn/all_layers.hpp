@@ -723,7 +723,7 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SqrtLayer> create(const LayerParams &params);
     };
 
-    class CV_EXPORTS NotLayer : public ActivationLayer
+    class CV_EXPORTS NotLayer : public Layer
     {
     public:
         static Ptr<NotLayer> create(const LayerParams &params);

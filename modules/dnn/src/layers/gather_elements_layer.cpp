@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv { namespace dnn {
@@ -30,7 +32,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -64,7 +67,7 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_CheckEQ(inputs.size(), (size_t)2, "");
-        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U, "");
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U || inputs[0] == CV_8S || inputs[0] == CV_Bool, "");
         CV_CheckType(inputs[1], inputs[1] == CV_64S || inputs[1] == CV_32S, "");
         outputs.assign(1, inputs[0]);
     }
@@ -156,8 +159,14 @@ public:
     {
         switch (type)
         {
+            case CV_Bool:
+                forward_impl<bool, T_INDEX>(std::forward<Args>(args)...);
+                break;
             case CV_8U:
                 forward_impl<uint8_t, T_INDEX>(std::forward<Args>(args)...);
+                break;
+            case CV_8S:
+                forward_impl<int8_t, T_INDEX>(std::forward<Args>(args)...);
                 break;
             case CV_16F:
                 forward_impl<int16_t, T_INDEX>(std::forward<Args>(args)...);
@@ -175,6 +184,31 @@ public:
                 CV_Error(cv::Error::BadDepth, "DNN/GatherElements: Unsupported type.");
         };
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        int64_t indicesBoundInt64 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node.get_shape()[axis];
+        int32_t indicesBoundInt32 = indicesBoundInt64;
+        std::shared_ptr<ov::op::v0::Constant> indicesBound;
+        if (nodes[1].dynamicCast<InfEngineNgraphNode>()->node.get_element_type() == ov::element::i32)
+            indicesBound = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &indicesBoundInt32);
+        else if (nodes[1].dynamicCast<InfEngineNgraphNode>()->node.get_element_type() == ov::element::i64)
+            indicesBound = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{}, &indicesBoundInt64);
+        else
+            CV_Error(Error::StsNotImplemented, "");
+
+        auto indicesNonNegative = std::make_shared<ov::op::v1::Mod>(
+            std::make_shared<ov::op::v1::Add>(nodes[1].dynamicCast<InfEngineNgraphNode>()->node, indicesBound),
+            indicesBound);
+        auto gatherElements = std::make_shared<ov::op::v6::GatherElements>(
+            nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+            indicesNonNegative,
+            axis);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(gatherElements));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     int axis;

@@ -917,11 +917,8 @@ CV_EXPORTS_W void reduceArgMax(InputArray src, OutputArray dst, int axis, bool l
 
 The function cv::minMaxIdx finds the minimum and maximum element values and their positions. The
 extremums are searched across the whole array or, if mask is not an empty array, in the specified
-array region. The function does not work with multi-channel arrays. If you need to find minimum or
-maximum elements across all the channels, use Mat::reshape first to reinterpret the array as
-single-channel. Or you may extract the particular channel using either extractImageCOI, or
-mixChannels, or split. In case of a sparse matrix, the minimum is found among non-zero elements
-only.
+array region. In case of a sparse matrix, the minimum is found among non-zero elements
+only. Multi-channel input is supported without mask and extremums indexes (should be nullptr).
 @note When minIdx is not NULL, it must have at least 2 elements (as well as maxIdx), even if src is
 a single-row or single-column matrix. In OpenCV (following MATLAB) each array has at least 2
 dimensions, i.e. single-column matrix is Mx1 matrix (and therefore minIdx/maxIdx will be
@@ -1825,7 +1822,7 @@ CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
  * @note Input should be continuous single-channel matrix.
  * @param src input array.
  * @param order a permutation of [0,1,..,N-1] where N is the number of axes of src.
- * The i’th axis of dst will correspond to the axis numbered order[i] of the input.
+ * The i'th axis of dst will correspond to the axis numbered order[i] of the input.
  * @param dst output array of the same type as src.
  */
 CV_EXPORTS_W void transposeND(InputArray src, const std::vector<int>& order, OutputArray dst);
