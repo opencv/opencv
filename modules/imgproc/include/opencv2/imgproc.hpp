@@ -3500,7 +3500,7 @@ mode==GC_EVAL .
  */
 CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
                            InputOutputArray bgdModel, InputOutputArray fgdModel,
-                           int iterCount, int mode = GC_EVAL );
+                           int iterCount, int mode = GC_EVAL, int componentCount = 5 );
 
 //! @} imgproc_segmentation
 

@@ -60,12 +60,16 @@ Carsten Rother, Vladimir Kolmogorov, Andrew Blake.
 class GMM
 {
 public:
-    static const int componentsCount = 5;
+    static const int defaultComponentsCount = 5;
 
-    GMM( Mat& _model );
+    GMM( Mat& _model, int compCount = defaultComponentsCount);
+    ~GMM();
     double operator()( const Vec3d color ) const;
     double operator()( int ci, const Vec3d color ) const;
     int whichComponent( const Vec3d color ) const;
+    inline int GetComponentsCount() const {
+        return componentsCount;
+    }
 
     void initLearning();
     void addSample( int ci, const Vec3d color );
@@ -78,17 +82,20 @@ private:
     double* mean;
     double* cov;
 
-    double inverseCovs[componentsCount][3][3];
-    double covDeterms[componentsCount];
+    double*** inverseCovs;
+    double* covDeterms;
 
-    double sums[componentsCount][3];
-    double prods[componentsCount][3][3];
-    int sampleCounts[componentsCount];
+    double** sums;
+    double*** prods;
+    int* sampleCounts;
     int totalSampleCount;
+
+    int componentsCount;
 };
 
-GMM::GMM( Mat& _model )
+GMM::GMM( Mat& _model, int compCount)
 {
+    componentsCount = compCount;
     const int modelSize = 3/*mean*/ + 9/*covariance*/ + 1/*component weight*/;
     if( _model.empty() )
     {
@@ -104,10 +111,49 @@ GMM::GMM( Mat& _model )
     mean = coefs + componentsCount;
     cov = mean + 3*componentsCount;
 
+    /* init memory for:
+     * double inverseCovs[componentsCount][3][3];
+     * double covDeterms[componentsCount];
+     * double sums[componentsCount][3];
+     * double prods[componentsCount][3][3];
+     * int sampleCounts[componentsCount];
+     */
+    inverseCovs = new double**[componentsCount];
+    prods = new double**[componentsCount];
+    sums = new double*[componentsCount];
+    sampleCounts = new int[componentsCount];
+    covDeterms = new double[componentsCount];
+    for( int ci = 0; ci < componentsCount; ci++ ) {
+        inverseCovs[ci] = new double*[3];
+        prods[ci] = new double*[3];
+        sums[ci] = new double[3];
+        for( int j = 0; j < 3; ++j ) {
+            inverseCovs[ci][j] = new double[3];
+            prods[ci][j] = new double[3];
+        }
+    }
+
     for( int ci = 0; ci < componentsCount; ci++ )
         if( coefs[ci] > 0 )
              calcInverseCovAndDeterm(ci, 0.0);
     totalSampleCount = 0;
+}
+
+GMM::~GMM() {
+    for( int ci = 0; ci < componentsCount; ci++ ) {
+        for( int j = 0; j < 3; ++j ) {
+            delete[] inverseCovs[ci][j];
+            delete[] prods[ci][j];
+        }
+        delete[] inverseCovs[ci];
+        delete[] prods[ci];
+        delete[] sums[ci];
+    }
+    delete[] inverseCovs;
+    delete[] prods;
+    delete[] sums;
+    delete[] sampleCounts;
+    delete[] covDeterms;
 }
 
 double GMM::operator()( const Vec3d color ) const
@@ -386,16 +432,12 @@ static void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM 
     CV_Assert( !bgdSamples.empty() && !fgdSamples.empty() );
     {
         Mat _bgdSamples( (int)bgdSamples.size(), 3, CV_32FC1, &bgdSamples[0][0] );
-        int num_clusters = GMM::componentsCount;
-        num_clusters = std::min(num_clusters, (int)bgdSamples.size());
-        kmeans( _bgdSamples, num_clusters, bgdLabels,
+        kmeans( _bgdSamples, bgdGMM.GetComponentsCount(), bgdLabels,
                 TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
     }
     {
         Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_32FC1, &fgdSamples[0][0] );
-        int num_clusters = GMM::componentsCount;
-        num_clusters = std::min(num_clusters, (int)fgdSamples.size());
-        kmeans( _fgdSamples, num_clusters, fgdLabels,
+        kmeans( _fgdSamples, bgdGMM.GetComponentsCount(), fgdLabels,
                 TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
     }
 
@@ -435,7 +477,7 @@ static void learnGMMs( const Mat& img, const Mat& mask, const Mat& compIdxs, GMM
     bgdGMM.initLearning();
     fgdGMM.initLearning();
     Point p;
-    for( int ci = 0; ci < GMM::componentsCount; ci++ )
+    for( int ci = 0; ci < bgdGMM.GetComponentsCount(); ci++ )
     {
         for( p.y = 0; p.y < img.rows; p.y++ )
         {
@@ -542,7 +584,7 @@ static void estimateSegmentation( GCGraph<double>& graph, Mat& mask )
 
 void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
                   InputOutputArray _bgdModel, InputOutputArray _fgdModel,
-                  int iterCount, int mode )
+                  int iterCount, int mode, int componentCount)
 {
     CV_INSTRUMENT_REGION();
 
@@ -556,7 +598,7 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
     if( img.type() != CV_8UC3 )
         CV_Error( cv::Error::StsBadArg, "image must have CV_8UC3 type" );
 
-    GMM bgdGMM( bgdModel ), fgdGMM( fgdModel );
+    GMM bgdGMM( bgdModel, componentCount), fgdGMM( fgdModel, componentCount);
     Mat compIdxs( img.size(), CV_32SC1 );
 
     if( mode == GC_INIT_WITH_RECT || mode == GC_INIT_WITH_MASK )
