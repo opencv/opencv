@@ -1796,7 +1796,7 @@ template<typename R> struct TheTest
         return *this;
     }
 
-    void __test_log(LaneType expBound, LaneType diff_thr) {
+    void __test_log(LaneType expBound, LaneType diff_thr, LaneType flt_min) {
         int n = VTraits<R>::vlanes();
         // Test special values
         std::vector<LaneType> specialValues = {0, 1, (LaneType) M_E, INFINITY, -INFINITY, NAN};
@@ -1837,7 +1837,7 @@ template<typename R> struct TheTest
                     // input INF -> output INF
                     EXPECT_TRUE(std::isinf(resRand[j]) && resRand[j] > 0);
                 } else {
-                    EXPECT_NEAR(std_log, resRand[j], diff_thr);
+                    EXPECT_LT(std::abs(resRand[j] - std_log), diff_thr * (std::abs(std_log) + flt_min * 100));
                 }
             }
         }
@@ -1845,19 +1845,22 @@ template<typename R> struct TheTest
 
     TheTest &test_log_fp16() {
 #if CV_SIMD_FP16
-        __test_log((float16_t) 9, (float16_t) 1e-2);
+        float16_t flt16_min;
+        uint16_t flt16_min_hex = 0x0400;
+        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(float16_t));
+        __test_log((float16_t) 9, (float16_t) 1e-3, flt16_min);
 #endif
         return *this;
     }
 
     TheTest &test_log_fp32() {
-        __test_log(25.f, 1e-6f);
+        __test_log(25.f, 1e-6f, FLT_MIN);
         return *this;
     }
 
     TheTest &test_log_fp64() {
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
-        __test_log(200., 1e-15);
+        __test_log(200., 1e-15, DBL_MIN);
 #endif
         return *this;
     }
