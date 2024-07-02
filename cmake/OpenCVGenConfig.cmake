@@ -43,14 +43,16 @@ endif()
 #  Part 1/3: ${BIN_DIR}/OpenCVConfig.cmake              -> For use *without* "make install"
 # -------------------------------------------------------------------------------------------
 set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"${OpenCV_SOURCE_DIR}/include\"")
-
 foreach(m ${OPENCV_MODULES_BUILD})
   if(EXISTS "${OPENCV_MODULE_${m}_LOCATION}/include")
     set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "${OpenCV_INCLUDE_DIRS_CONFIGCMAKE} \"${OPENCV_MODULE_${m}_LOCATION}/include\"")
   endif()
 endforeach()
 
-export(EXPORT OpenCVModules FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake")
+
+export(EXPORT OpenCVModules NAMESPACE "${OPENCV_TARGET_NAMESPACE}" FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake")
+# Preserve legacy target names without namespaces
+export(EXPORT OpenCVModules FILE "${CMAKE_BINARY_DIR}/OpenCVModulesNoNamespace.cmake")
 
 if(TARGET ippicv AND NOT BUILD_SHARED_LIBS)
   set(USE_IPPICV TRUE)
@@ -69,9 +71,13 @@ else()
 endif()
 
 ocv_cmake_hook(PRE_CMAKE_CONFIG_BUILD)
-configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" @ONLY)
-#support for version checking when finding opencv. find_package(OpenCV 2.3.1 EXACT) should now work.
-configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig-version.cmake" @ONLY)
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+configure_package_config_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in"
+                              "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake"
+                              INSTALL_DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}")
+# This adds standard support for version checking when finding OpenCV.
+write_basic_package_version_file(OpenCVConfig-version.cmake COMPATIBILITY SameMajorVersion)
 
 # --------------------------------------------------------------------------------------------
 #  Part 2/3: ${BIN_DIR}/unix-install/OpenCVConfig.cmake -> For use *with* "make install"
@@ -99,17 +105,24 @@ function(ocv_gen_config TMP_DIR NESTED_PATH ROOT_NAME)
   file(RELATIVE_PATH OpenCV_INSTALL_PATH_RELATIVE_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/${__install_nested}" "${CMAKE_INSTALL_PREFIX}/")
 
   ocv_cmake_hook(PRE_CMAKE_CONFIG_INSTALL)
-  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${TMP_DIR}/OpenCVConfig-version.cmake" @ONLY)
+  # configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${TMP_DIR}/OpenCVConfig-version.cmake" @ONLY)
 
-  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${__tmp_nested}/OpenCVConfig.cmake" @ONLY)
-  install(EXPORT OpenCVModules DESTINATION "${__install_nested}" FILE OpenCVModules.cmake COMPONENT dev)
+  # configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${__tmp_nested}/OpenCVConfig.cmake" @ONLY)
+  install(EXPORT OpenCVModules DESTINATION "${__install_nested}" FILE OpenCVModules.cmake NAMESPACE "${OPENCV_TARGET_NAMESPACE}" COMPONENT dev)
+
+  # Preserve legacy target names without namespaces.
+  # https://discourse.cmake.org/t/transitioning-to-namespace-in-cmakelists-txt/2744
+  install(EXPORT OpenCVModules DESTINATION "${__install_nested}" FILE OpenCVModulesNoNamespace.cmake COMPONENT dev)
+
   install(FILES
-      "${TMP_DIR}/OpenCVConfig-version.cmake"
-      "${__tmp_nested}/OpenCVConfig.cmake"
-      DESTINATION "${__install_nested}" COMPONENT dev)
+      ${CMAKE_CURRENT_BINARY_DIR}/OpenCVConfig.cmake
+      ${CMAKE_CURRENT_BINARY_DIR}/OpenCVConfig-version.cmake
+    DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}"
+    COMPONENT dev)
 
   if(ROOT_NAME)
     # Root config file
+    message(FATAL_ERROR ${ROOT_NAME}) # TODO use standard GNUInstallDirs variables instead of ROOT_NAME
     configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/${ROOT_NAME}" "${TMP_DIR}/OpenCVConfig.cmake" @ONLY)
     install(FILES
         "${TMP_DIR}/OpenCVConfig-version.cmake"
