@@ -3485,23 +3485,6 @@ INSTANTIATE_TEST_CASE_P(
 );
 
 ///////////////////////////////////////////////////////////////////////////////////
-typedef testing::TestWithParam<perf::MatDepth> LutNotSupportedMatDepth;
-
-TEST_P(LutNotSupportedMatDepth, lut)
-{
-    cv::Mat src = cv::Mat::zeros(16,16, CV_8UC1);
-    cv::Mat lut = cv::Mat(1, 256, CV_MAKETYPE(GetParam(), 1));
-    cv::Mat dst;
-    EXPECT_THROW( cv::LUT(src,lut,dst), cv::Exception);
-}
-
-INSTANTIATE_TEST_CASE_P(
-    Lut,
-    LutNotSupportedMatDepth,
-    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
-);
-
-///////////////////////////////////////////////////////////////////////////////////
 typedef testing::TestWithParam<perf::MatDepth> MinMaxSupportedMatDepth;
 
 TEST_P(MinMaxSupportedMatDepth, minMaxLoc)
@@ -3526,9 +3509,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
 );
 
-CV_ENUM(LutMatType, CV_8U, CV_16U, CV_16F, CV_32S, CV_32F, CV_64F)
-
-struct Core_LUT: public testing::TestWithParam<LutMatType>
+struct Core_LUT: public testing::TestWithParam<perf::MatDepth>
 {
     template<typename T, int ch>
     cv::Mat referenceWithType(cv::Mat input, cv::Mat table)
@@ -3559,21 +3540,25 @@ struct Core_LUT: public testing::TestWithParam<LutMatType>
     template<int ch = 1>
     cv::Mat reference(cv::Mat input, cv::Mat table)
     {
-        if (table.type() == CV_8U)
+        if ((table.type() == CV_8U) || (table.type() == CV_8S) || (table.type() == CV_Bool))
         {
             return referenceWithType<uchar, ch>(input, table);
         }
-        else if (table.type() == CV_16U)
+        else if ((table.type() == CV_16U) || (table.type() == CV_16S))
         {
             return referenceWithType<ushort, ch>(input, table);
         }
-        else if (table.type() == CV_16F)
+        else if ((table.type() == CV_16F) || (table.type() == CV_16BF))
         {
             return referenceWithType<ushort, ch>(input, table);
         }
-        else if (table.type() == CV_32S)
+        else if ((table.type() == CV_32S) || (table.type() == CV_32U))
         {
-            return referenceWithType<int, ch>(input, table);
+            return referenceWithType<uint, ch>(input, table);
+        }
+        else if ((table.type() == CV_64S) || (table.type() == CV_64U))
+        {
+            return referenceWithType<uint64_t, ch>(input, table);
         }
         else if (table.type() == CV_32F)
         {
@@ -3602,6 +3587,13 @@ TEST_P(Core_LUT, accuracy)
 
     cv::Mat gt = reference(input, table);
 
+    // Force convert to 8U as CV_Bool is not supported in cv::norm for now
+    // TODO: Remove conversion after cv::norm fix
+    if (type == CV_Bool)
+    {
+        output.convertTo(output, CV_8U);
+        gt.convertTo(gt, CV_8U);
+    }
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
 
@@ -3619,10 +3611,18 @@ TEST_P(Core_LUT, accuracy_multi)
 
     cv::Mat gt = reference<3>(input, table);
 
+    // Force convert to 8U as CV_Bool is not supported in cv::norm for now
+    // TODO: Remove conversion after cv::norm fix
+    if (type == CV_Bool)
+    {
+        output.convertTo(output, CV_8U);
+        gt.convertTo(gt, CV_8U);
+    }
+
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
 
 
-INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, LutMatType::all());
+INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, perf::MatDepth::all());
 
 }} // namespace
