@@ -253,6 +253,40 @@ TEST(Highgui_GUI, currentUIFramework)
     EXPECT_GT(framework.size(), 0);  // builtin backends
 #endif
 }
+#if (!defined(ENABLE_PLUGINS) \
+        && !defined HAVE_GTK \
+        && !defined HAVE_QT \
+        && !defined HAVE_WIN32UI \
+        && !defined HAVE_COCOA \
+        && !defined HAVE_WAYLAND \
+    ) || !defined(HAVE_OPENGL)
+TEST(Highgui_GUI, DISABLED_gl)
+#else
+#include<GL/gl.h>
+TEST(Highgui_GUI, gl)
+#endif
+{
+    const std::string window_name("gl_test_window");
+    const Size image_size(800, 600);
 
-
+    EXPECT_NO_THROW(destroyAllWindows());
+    ASSERT_NO_THROW(namedWindow(window_name, WINDOW_OPENGL));
+    Mat m = Mat(image_size, CV_8UC3, Scalar(255, 0, 0));
+    ASSERT_NO_THROW(resizeWindow(window_name, image_size));
+    ASSERT_NO_THROW(setOpenGlContext(window_name));
+    ASSERT_NO_THROW(setOpenGlDrawCallback(window_name, [](void*){
+        glClear(GL_COLOR_BUFFER_BIT);
+        glColor3f(1.0f, 0.0f, 0.0f);
+        glBegin(GL_QUADS);
+        glVertex2f(-0.5f, -0.5f);
+        glVertex2f( 0.5f, -0.5f);
+        glVertex2f( 0.5f,  0.5f);
+        glVertex2f(-0.5f,  0.5f);
+        glEnd();
+    }));
+    ASSERT_NO_THROW(imshow(window_name, m));
+    EXPECT_NO_THROW(waitKey(10000));
+    EXPECT_NO_THROW(setOpenGlDrawCallback(window_name, 0));
+    EXPECT_NO_THROW(destroyAllWindows());
+}
 }} // namespace

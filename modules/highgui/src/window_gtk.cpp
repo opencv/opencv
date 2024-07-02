@@ -46,10 +46,7 @@
 
 #include <gtk/gtk.h>
 
-#if (GTK_MAJOR_VERSION == 3) && defined(HAVE_OPENGL)
-  #undef HAVE_OPENGL  // no support with GTK3
-#endif
-#if defined(HAVE_OPENGL) && !defined(HAVE_GTKGLEXT)
+#if (GTK_MAJOR_VERSION == 2) && defined(HAVE_OPENGL) && !defined(HAVE_GTKGLEXT)
   #undef HAVE_OPENGL  // gtkglext is required
 #endif
 
@@ -68,9 +65,14 @@
 #endif
 
 #ifdef HAVE_OPENGL
+  #ifdef GTK_VERSION3
+    #include <gtk/gtkglarea.h>
+    #include <epoxy/gl.h>
+  #else
     #include <gtk/gtkgl.h>
-    #include <GL/gl.h>
     #include <GL/glu.h>
+  #endif
+  #include <GL/gl.h>
 #endif
 
 #include <opencv2/core/utils/logger.hpp>
@@ -570,7 +572,7 @@ struct CvWindow : CvUIBase
         last_key(0), flags(0), status(0),
         on_mouse(NULL), on_mouse_param(NULL)
 #ifdef HAVE_OPENGL
-        ,useGl(false), glDrawCallback(NULL), glDrawData(NULL)
+        ,useGl(false), glDrawCallback(NULL), glDrawData(NULL), glArea(NULL), glProgram(NULL)
 #endif
     {
         CV_LOG_INFO(NULL, "OpenCV/UI: creating GTK window: " << window_name);
@@ -597,6 +599,8 @@ struct CvWindow : CvUIBase
 
     CvOpenGlDrawCallback glDrawCallback;
     void* glDrawData;
+    GtkWidget* glArea;
+    GLuint glProgram;
 #endif
 };
 
@@ -640,7 +644,7 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
 
         setlocale(LC_NUMERIC,"C");
 
-        #ifdef HAVE_OPENGL
+        #if defined(HAVE_OPENGL) && not defined(GTK_VERSION3) // GTK3+ uses GtkGLArea so no need to check for GtkGLExt
             if (!gtk_gl_init_check(&argc, &argv))
             {
                 hasError = true;
@@ -907,11 +911,72 @@ double cvGetOpenGlProp_GTK(const char* name)
 // OpenGL support
 
 #ifdef HAVE_OPENGL
-
+#include <cmath>
 namespace
 {
+
+#ifdef GTK_VERSION3
+
+    static GLuint createShader(const char* source, GLenum type){
+        GLuint shader = glCreateShader(type);
+        glShaderSource(shader, 1, &source, NULL);
+        glCompileShader(shader);
+        return shader;
+    }
+
+    gboolean glRealizeCallback(GtkGLArea* area, GdkGLContext* context, gpointer user_data){
+        CvWindow* window = (CvWindow*)user_data;
+        gtk_gl_area_make_current(area);
+        if (gtk_gl_area_get_error(area) != NULL)
+            g_warning("Failed to create OpenGL context");
+        glEnable(GL_DEPTH_TEST);
+        const char *vertex_shader_source =
+                "#version 330 core\n"
+                "layout (location = 0) in vec3 position;\n"
+                "void main() {\n"
+                "   gl_Position = vec4(position, 1.0);\n"
+                "}\n";
+        const char *fragment_shader_source =
+                "#version 330 core\n"
+                "out vec4 color;\n"
+                "void main() {\n"
+                "   color = vec4(1.0, 1.0, 1.0, 1.0); // white\n"
+                "}\n";
+        window->glProgram = glCreateProgram();
+        GLuint vertex_shader = createShader(vertex_shader_source, GL_VERTEX_SHADER);
+        GLuint fragment_shader = createShader(fragment_shader_source, GL_FRAGMENT_SHADER);
+        glAttachShader(window->glProgram, vertex_shader);
+        glAttachShader(window->glProgram, fragment_shader);
+        glLinkProgram(window->glProgram);
+        glUseProgram(window->glProgram);
+
+    }
+
+    gboolean glRenderCallback(GtkGLArea* area, GdkGLContext* context, gpointer user_data){
+        CvWindow* window = (CvWindow*)user_data;
+        glClearColor(0.0, 0.0, 0.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glViewport(0, 0, gtk_widget_get_allocated_width(window->widget), gtk_widget_get_allocated_height(window->glArea));
+        if(window->glProgram == NULL)
+            CV_Error( cv::Error::OpenGlApiCallError, "OpenGL context is not initialized" );
+        glUseProgram(window->glProgram);
+        gtk_gl_area_queue_render(area);
+//        if(window->glDrawCallback)
+//            window->glDrawCallback(window->glDrawData);
+//        gtk_gl_area_queue_render(area);
+        return TRUE;
+    }
+
+#endif
+
     void createGlContext(CvWindow* window)
     {
+        #ifdef GTK_VERSION3
+
+        g_signal_connect(window->glArea, "realize", G_CALLBACK(glRealizeCallback), window);
+        g_signal_connect(window->glArea, "render", G_CALLBACK(glRenderCallback), window);
+        #else
+
         GdkGLConfig* glconfig;
 
         // Try double-buffered visual
@@ -923,11 +988,25 @@ namespace
         if (!gtk_widget_set_gl_capability(window->widget, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE))
             CV_Error( cv::Error::OpenGlApiCallError, "Can't Create A GL Device Context" );
 
+        #endif
+
         window->useGl = true;
     }
 
     void drawGl(CvWindow* window)
     {
+        #ifdef GTK_VERSION3
+        g_signal_connect(window->glArea, "render", G_CALLBACK(glRenderCallback), window);
+
+        GtkGLArea* gtkGlArea = GTK_GL_AREA(window->glArea);
+        if (gtk_gl_area_get_error(gtkGlArea) != NULL)
+            CV_Error(cv::Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
+
+        if (window->glDrawCallback)
+            window->glDrawCallback(window->glDrawData);
+
+        #else
+
         GdkGLContext* glcontext = gtk_widget_get_gl_context(window->widget);
         GdkGLDrawable* gldrawable = gtk_widget_get_gl_drawable(window->widget);
 
@@ -947,6 +1026,8 @@ namespace
             glFlush();
 
         gdk_gl_drawable_gl_end(gldrawable);
+
+        #endif
     }
 }
 
@@ -1041,12 +1122,26 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
     window->frame = gtk_window_new( GTK_WINDOW_TOPLEVEL );
 
-    window->paned = gtk_vbox_new( FALSE, 0 );
     window->widget = cvImageWidgetNew( flags );
+
+#if defined(HAVE_OPENGL) && defined(GTK_VERSION3)
+    if (flags & cv::WINDOW_OPENGL) {
+        window->glArea = gtk_gl_area_new();
+        gtk_container_add(GTK_CONTAINER(window->frame), window->glArea);
+    } else {
+        window->paned = gtk_vbox_new( FALSE, 0 );
+        gtk_box_pack_end( GTK_BOX(window->paned), window->widget, TRUE, TRUE, 0 );
+        gtk_widget_show( window->widget );
+        gtk_container_add( GTK_CONTAINER(window->frame), window->paned );
+        gtk_widget_show( window->paned );
+    }
+#else
+    window->paned = gtk_vbox_new( FALSE, 0 );
     gtk_box_pack_end( GTK_BOX(window->paned), window->widget, TRUE, TRUE, 0 );
     gtk_widget_show( window->widget );
     gtk_container_add( GTK_CONTAINER(window->frame), window->paned );
     gtk_widget_show( window->paned );
+#endif
 
 #ifndef HAVE_OPENGL
     if (flags & cv::WINDOW_OPENGL)
@@ -1122,9 +1217,6 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 CV_IMPL void cvSetOpenGlContext(const char* name)
 {
-    GdkGLContext* glcontext;
-    GdkGLDrawable* gldrawable;
-
     CV_Assert(name && "NULL name string");
 
     CV_LOCK_MUTEX();
@@ -1136,11 +1228,24 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
     if (!window->useGl)
         CV_Error( cv::Error::OpenGlNotSupported, "Window doesn't support OpenGL" );
 
+#ifdef GTK_VERSION3
+
+    if(gtk_gl_area_get_error(GTK_GL_AREA(window->glArea)) != NULL)
+        CV_Error( cv::Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
+
+#else
+
+    GdkGLContext* glcontext;
+    GdkGLDrawable* gldrawable;
+
     glcontext = gtk_widget_get_gl_context(window->widget);
     gldrawable = gtk_widget_get_gl_drawable(window->widget);
 
     if (!gdk_gl_drawable_make_current(gldrawable, glcontext))
         CV_Error( cv::Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
+
+#endif
+
 }
 
 CV_IMPL void cvUpdateWindow(const char* name)
@@ -1154,7 +1259,20 @@ CV_IMPL void cvUpdateWindow(const char* name)
         return;
 
     // window does not refresh without this
+#ifdef GTK_VERSION3
+
+    if ( GTK_IS_GL_AREA(window->glArea) ){
+        gtk_gl_area_queue_render(GTK_GL_AREA(window->glArea));
+    } else {
+        gtk_widget_queue_draw( GTK_WIDGET(window->widget) );
+    }
+
+#else
+
     gtk_widget_queue_draw( GTK_WIDGET(window->widget) );
+
+#endif
+
 }
 
 CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback callback, void* userdata)
