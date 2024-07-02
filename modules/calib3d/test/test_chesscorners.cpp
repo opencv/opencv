@@ -679,6 +679,26 @@ TEST(Calib3d_AsymmetricCirclesPatternDetector, accuracy) { CV_ChessboardDetector
 TEST(Calib3d_AsymmetricCirclesPatternDetectorWithClustering, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID, CALIB_CB_CLUSTERING ); test.safe_run(); }
 #endif
 
+TEST(Calib3d_ChessboardWithMarkers, regression_25806_white)
+{
+    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/";
+    const cv::Mat image = cv::imread(dataDir + "checkerboard_marker_white.png");
+
+    std::vector<Point2f> corners;
+    const bool success = cv::findChessboardCornersSB(image, Size(9, 14), corners, CALIB_CB_MARKER);
+    ASSERT_TRUE(success);
+}
+
+TEST(Calib3d_ChessboardWithMarkers, regression_25806_black)
+{
+    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/";
+    const cv::Mat image = cv::imread(dataDir + "checkerboard_marker_black.png");
+
+    std::vector<Point2f> corners;
+    const bool success = cv::findChessboardCornersSB(image, Size(9, 14), corners, CALIB_CB_MARKER);
+    ASSERT_TRUE(success);
+}
+
 TEST(Calib3d_CirclesPatternDetectorWithClustering, accuracy)
 {
     cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/circles/";
