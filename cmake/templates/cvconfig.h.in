@@ -19,6 +19,9 @@
 /* Compile for 'virtual' NVIDIA PTX architectures */
 #define CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX}"
 
+/* CLBlast: The tuned OpenCL BLAS library https://github.com/CNugteren/CLBlast */
+#cmakedefine HAVE_CLBLAST
+
 /* AMD's Basic Linear Algebra Subprograms Library*/
 #cmakedefine HAVE_CLAMDBLAS
 
