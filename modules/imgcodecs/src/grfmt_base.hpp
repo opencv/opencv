@@ -64,6 +64,7 @@ public:
 
     int width() const { return m_width; }
     int height() const { return m_height; }
+    size_t getFrameCount() const { return m_frame_count; }
     virtual int type() const { return m_type; }
 
     ExifEntry_t getExifTag(const ExifTagName tag) const;
@@ -90,6 +91,7 @@ protected:
     Mat m_buf;
     bool m_buf_supported;
     ExifReader m_exif;
+    size_t  m_frame_count;
 };
 
 

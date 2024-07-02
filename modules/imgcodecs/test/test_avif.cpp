@@ -303,6 +303,7 @@ TEST_P(Imgcodecs_Avif_Animation_WriteReadSuite, encode_decode) {
 
   ValidateRead(anim_original, anim);
 
+  EXPECT_EQ(anim_original.size(), imcount(output));
   EXPECT_EQ(0, remove(output.c_str()));
 }
 
