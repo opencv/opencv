@@ -244,7 +244,7 @@ static void checkGaussianBlur_8Uvs32F(const Mat& src8u, const Mat& src32f, int N
 TEST(GaussianBlur_Bitexact, regression_9863)
 {
     Mat src8u = imread(cvtest::findDataFile("shared/lena.png"));
-     Mat src32f; src8u.convertTo(src32f, CV_32F);
+    Mat src32f; src8u.convertTo(src32f, CV_32F);
 
     checkGaussianBlur_8Uvs32F(src8u, src32f, 151, 30);
 }
@@ -259,5 +259,59 @@ TEST(GaussianBlur_Bitexact, overflow_20792)
     int nintyPercent = (int)(src.rows*src.cols * 0.9);
     EXPECT_GT(count, nintyPercent);
 }
+
+CV_ENUM(GaussInputType, CV_8U, CV_16S);
+CV_ENUM(GaussBorder, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101);
+
+struct GaussianBlurVsBitexact: public testing::TestWithParam<tuple<GaussInputType, int, double, GaussBorder>>
+{
+    virtual void SetUp()
+    {
+        orig = imread(findDataFile("shared/lena.png"));
+        EXPECT_FALSE(orig.empty()) << "Cannot find test image shared/lena.png";
+    }
+
+    Mat orig;
+};
+
+// NOTE: The test was designed for IPP (-DOPENCV_IPP_GAUSSIAN_BLUR=ON)
+// Should be extended after new HAL integration
+TEST_P(GaussianBlurVsBitexact, approx)
+{
+    auto testParams = GetParam();
+    int dtype = get<0>(testParams);
+    int ksize = get<1>(testParams);
+    double sigma = get<2>(testParams);
+    int border = get<3>(testParams);
+
+    Mat src;
+    orig.convertTo(src, dtype);
+
+    cv::Mat gt;
+    GaussianBlur(src, gt, Size(ksize, ksize), sigma, sigma, border, IMPL_DEFAULT);
+
+    cv::Mat dst;
+    GaussianBlur(src, dst, Size(ksize, ksize), sigma, sigma, border, IMPL_ALLOW_APPROXIMATION);
+
+    cv::Mat diff;
+    cv::absdiff(dst, gt, diff);
+    cv::Mat flatten_diff = diff.reshape(1, diff.rows);
+
+    int nz = countNonZero(flatten_diff);
+    EXPECT_LE(nz, 0.06*src.total()); // Less 6% of different pixels
+
+    double min_val, max_val;
+    minMaxLoc(flatten_diff, &min_val, &max_val);
+    EXPECT_LE(max_val, 2); // expectes results floating +-1
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, GaussianBlurVsBitexact,
+    testing::Combine(
+        GaussInputType::all(),
+        testing::Values(3, 5, 7),
+        testing::Values(0.75, 1.25),
+        GaussBorder::all()
+    )
+);
 
 }} // namespace
