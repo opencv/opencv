@@ -469,9 +469,20 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
         return createTensor<float>(memory_info, tensor_params, data);
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
         return createTensor<int32_t>(memory_info, tensor_params, data);
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:
-    // Conversion to i32 is carried out later
-        return createTensor<int64_t>(memory_info, tensor_params, data);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:{
+        std::vector<int64_t> temp(data.total()); // allocating temp with size equal to data
+        //Converting from int32 to int64 and storing in temp
+        cv::gimpl::convertInt32ToInt64(data.ptr<int>(),
+                                       temp.data(),
+                                       data.total());
+        auto ort_dims = toORT(data.size); //allocating ort_dims size equal to data
+        //creating tensor using temp
+        return Ort::Value::CreateTensor<int64_t>(memory_info,
+                                                 temp.data(),
+                                                 temp.size(),
+                                                 ort_dims.data(),
+                                                 ort_dims.size());
+    }
     default:
         GAPI_Error("ONNX. Unsupported data type");
     }
