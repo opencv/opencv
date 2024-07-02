@@ -307,6 +307,10 @@ OCV_OPTION(WITH_GTK "Include GTK support" ON
 OCV_OPTION(WITH_GTK_2_X "Use GTK version 2" OFF
   VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
   VERIFY HAVE_GTK AND NOT HAVE_GTK3)
+OCV_OPTION(WITH_FRAMEBUFFER "Include framebuffer support" OFF
+  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID)
+OCV_OPTION(WITH_FRAMEBUFFER_XVFB "Include virtual framebuffer support" OFF
+  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID)
 OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
         VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
         VERIFY HAVE_WAYLAND)
@@ -1019,9 +1023,13 @@ foreach(hal ${OpenCV_HAL})
       message(STATUS "NDSRVP: Andes GNU Toolchain DSP extension is not open, disabling ndsrvp...")
     endif()
   elseif(hal STREQUAL "halrvv")
+    if(";${CPU_BASELINE_FINAL};" MATCHES ";RVV;")
       add_subdirectory(3rdparty/hal_rvv/)
       ocv_hal_register(RVV_HAL_LIBRARIES RVV_HAL_HEADERS RVV_HAL_INCLUDE_DIRS)
       list(APPEND OpenCV_USED_HAL "HAL RVV (ver ${RVV_HAL_VERSION})")
+    else()
+      message(STATUS "HAL RVV: RVV is not available, disabling halrvv...")
+    endif()
   else()
     ocv_debug_message(STATUS "OpenCV HAL: ${hal} ...")
     ocv_clear_vars(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
@@ -1441,6 +1449,13 @@ if(WITH_GTK OR HAVE_GTK)
   if(HAVE_GTK)
     status(  "      GThread :" HAVE_GTHREAD THEN "YES (ver ${GTHREAD_VERSION})" ELSE NO)
     status(  "      GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${GTKGLEXT_VERSION})" ELSE NO)
+  endif()
+endif()
+
+if(WITH_FRAMEBUFFER OR HAVE_FRAMEBUFFER)
+  status("    Framebuffer UI:" HAVE_FRAMEBUFFER THEN YES ELSE NO)
+  if(WITH_FRAMEBUFFER_XVFB OR HAVE_FRAMEBUFFER_XVFB)
+    status("    Virtual framebuffer UI:" HAVE_FRAMEBUFFER_XVFB THEN YES ELSE NO)
   endif()
 endif()
 

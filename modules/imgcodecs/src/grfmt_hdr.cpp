@@ -59,6 +59,9 @@ HdrDecoder::HdrDecoder()
 
 HdrDecoder::~HdrDecoder()
 {
+    if(file) {
+        fclose(file);
+    }
 }
 
 size_t HdrDecoder::signatureLength() const

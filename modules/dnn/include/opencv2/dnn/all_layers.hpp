@@ -1193,6 +1193,16 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<CastLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS DepthToSpaceLayer : public Layer {
+    public:
+        static Ptr<DepthToSpaceLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SpaceToDepthLayer : public Layer {
+    public:
+        static Ptr<SpaceToDepthLayer> create(const LayerParams &params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END

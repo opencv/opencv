@@ -49,6 +49,9 @@ endif()
 # Removing WinRT API headers by default
 list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")
 
+# Remove iOS API header by default
+list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_ios.h")
+
 if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
@@ -221,6 +224,7 @@ if(TARGET ocv.3rdparty.cap_ios)
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_photo_camera.mm
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_video_camera.mm)
   list(APPEND tgts ocv.3rdparty.cap_ios)
+  list(APPEND videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_ios.h")
 endif()
 
 if(TARGET ocv.3rdparty.android_mediandk)

@@ -4269,7 +4269,7 @@ Examples of how intersectConvexConvex works
 When false, no intersection is found. If the polygons share a side or the vertex of one polygon lies on an edge
 of the other, they are not considered nested and an intersection will be found regardless of the value of handleNested.
 
-@returns Absolute value of area of intersecting polygon
+@returns Area of intersecting polygon. May be negative, if algorithm has not converged, e.g. non-convex input.
 
 @note intersectConvexConvex doesn't confirm that both polygons are convex and will return invalid results if they aren't.
  */
