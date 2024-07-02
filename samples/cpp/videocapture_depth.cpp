@@ -54,7 +54,7 @@ const char* about =
             "2. Depth sensors compatible with Intel® RealSense SDK (RealSense). "
             "Users must install Intel RealSense SDK 2.0 and configure OpenCV with WITH_LIBREALSENSE flag ON in CMake.\n"
             "3. Orbbec UVC depth sensors. "
-            "(For the use of OpenNI based Orbbec cameras, please refer to the example openni_orbbec_astra.cpp)\n";
+            "For the use of OpenNI based Orbbec cameras, please refer to the example openni_orbbec_astra.cpp\n";
 
 int main(int argc, char *argv[])
 {
@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
     if (parser.has("type"))
     {
         int backend;
-        int flagDepth, flagBGR, flagIR, flagDisparity;
-        bool hasIR, hasDisparity;
+        int flagDepth, flagBGR, flagIR;
+        bool hasDisparity = false;
 
         String camType = parser.get<String>("type");
         if (camType == "OpenNI")
@@ -80,8 +80,6 @@ int main(int argc, char *argv[])
             flagDepth = CAP_OPENNI_DEPTH_MAP;
             flagBGR = CAP_OPENNI_BGR_IMAGE;
             flagIR = CAP_OPENNI_IR_IMAGE;
-            flagDisparity = CAP_OPENNI_DISPARITY_MAP;
-            hasIR = true;
             hasDisparity = true;
         }
         else if (camType == "RealSense")
@@ -90,16 +88,13 @@ int main(int argc, char *argv[])
             flagDepth = CAP_INTELPERC_DEPTH_MAP;
             flagBGR = CAP_INTELPERC_IMAGE;
             flagIR = CAP_INTELPERC_IR_MAP;
-            hasIR = true;
-            hasDisparity = false;
         }
         else if (camType == "Orbbec")
         {
             backend = CAP_OBSENSOR;
             flagDepth = CAP_OBSENSOR_DEPTH_MAP;
             flagBGR = CAP_OBSENSOR_BGR_IMAGE;
-            hasIR = false;
-            hasDisparity = false;
+            flagIR = CAP_OBSENSOR_IR_IMAGE;  // Note output IR stream is not implemented for now.
         }
         else
         {
@@ -141,24 +136,21 @@ int main(int argc, char *argv[])
                 if(capture.retrieve(bgrImage, flagBGR))
                     imshow("RGB Image", bgrImage);
 
-                if (hasIR)
+                if(capture.retrieve(irImage, flagIR))
                 {
-                    if(capture.retrieve(irImage, flagIR))
+                    if (camType == "OpenNI")
                     {
-                        if (camType == "OpenNI")
-                        {
-                            Mat ir8;
-                            irImage.convertTo(ir8, CV_8U, 256.0 / 3500, 0.0);
-                            imshow("Infrared Image", ir8);
-                        }
-                        else if (camType == "RealSense")
-                            imshow("Infrared Image", irImage);
+                        Mat ir8;
+                        irImage.convertTo(ir8, CV_8U, 256.0 / 3500, 0.0);
+                        imshow("Infrared Image", ir8);
                     }
+                    else
+                        imshow("Infrared Image", irImage);
                 }
 
                 if (hasDisparity)
                 {
-                    if(capture.retrieve(disparityMap, flagDisparity))
+                    if(capture.retrieve(disparityMap, CAP_OPENNI_DISPARITY_MAP))
                     {
                         Mat colorDisparityMap;
                         colorizeDisparity(disparityMap, colorDisparityMap, getMaxDisparity(capture));
