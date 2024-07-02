@@ -23,8 +23,19 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         //     Any patch release x.y.z is forward or backward-compatible with applications built against another cuDNN patch release x.y.w (meaning, of the same major and minor version number, but having w!=z).
         //     cuDNN minor releases beginning with cuDNN 7 are binary backward-compatible with applications built against the same or earlier patch release (meaning, an application built against cuDNN 7.x is binary compatible with cuDNN library 7.y, where y>=x).
         //     Applications compiled with a cuDNN version 7.y are not guaranteed to work with 7.x release when y > x.
-        auto cudnn_bversion = cudnnGetVersion();
-        auto cudnn_major_bversion = cudnn_bversion / 1000, cudnn_minor_bversion = cudnn_bversion % 1000 / 100;
+        int cudnn_bversion = cudnnGetVersion();
+        int cudnn_major_bversion = 0, cudnn_minor_bversion = 0;
+        // CuDNN changed major version multiplier in 9.0
+        if (cudnn_bversion >= 9*10000)
+        {
+            cudnn_major_bversion = cudnn_bversion / 10000;
+            cudnn_minor_bversion = cudnn_bversion % 10000 / 100;
+        }
+        else
+        {
+            cudnn_major_bversion = cudnn_bversion / 1000;
+            cudnn_minor_bversion = cudnn_bversion % 1000 / 100;
+        }
         if (cudnn_major_bversion != CUDNN_MAJOR || cudnn_minor_bversion < CUDNN_MINOR)
         {
             std::ostringstream oss;
