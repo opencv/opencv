@@ -67,10 +67,6 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-if (typeof module !== 'undefined' && module.exports) {
-    // The environment is Node.js
-    var cv = require('./opencv.js'); // eslint-disable-line no-var
-}
 QUnit.module('Utils', {});
 QUnit.test('Test vectors', function(assert) {
     {
