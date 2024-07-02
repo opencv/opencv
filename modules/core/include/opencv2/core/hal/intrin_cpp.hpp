@@ -263,7 +263,7 @@ Most of these operations return only one value.
 
 ### Other math
 
-- Some frequent operations: @ref v_sqrt, @ref v_invsqrt, @ref v_magnitude, @ref v_sqr_magnitude
+- Some frequent operations: @ref v_sqrt, @ref v_invsqrt, @ref v_magnitude, @ref v_sqr_magnitude, @ref v_exp
 - Absolute values: @ref v_abs, @ref v_absdiff, @ref v_absdiffs
 
 ### Conversions
@@ -363,6 +363,7 @@ Floating point:
 |reverse            | x | x |
 |extract_n          | x | x |
 |broadcast_element  | x |   |
+|exp                | x | x |
 
  @{ */
 
@@ -721,11 +722,33 @@ template<typename _Tp, int n> inline v_reg<_Tp2, n> func(const v_reg<_Tp, n>& a)
 Only for floating point types.*/
 OPENCV_HAL_IMPL_MATH_FUNC(v_sqrt, std::sqrt, _Tp)
 
+/**
+ * @brief Exponential \f$ e^x \f$ of elements
+ *
+ * Only for floating point types. Core implementation steps:
+ * 1. Decompose Input: Convert the input to \f$ 2^{x \cdot \log_2e} \f$ and split its exponential into integer and fractional parts:
+ *    \f$ x \cdot \log_2e = n + f \f$, where \f$ n \f$ is the integer part and \f$ f \f$ is the fractional part.
+ * 2. Compute \f$ 2^n \f$: Calculated by shifting the bits.
+ * 3. Adjust Fractional Part: Compute \f$ f \cdot \ln2 \f$ to convert the fractional part to base \f$ e \f$.
+ *    \f$ C1 \f$ and \f$ C2 \f$ are used to adjust the fractional part.
+ * 4. Polynomial Approximation for \f$ e^{f \cdot \ln2} \f$: The closer the fractional part is to 0, the more accurate the result.
+ *    - For float16 and float32, use a Taylor Series with 6 terms.
+ *    - For float64, use Pade Polynomials Approximation with 4 terms.
+ * 5. Combine Results: Multiply the two parts together to get the final result:
+ *    \f$ e^x = 2^n \cdot e^{f \cdot \ln2} \f$.
+ *
+ * @note The precision of the calculation depends on the implementation and the data type of the input vector.
+ */
+OPENCV_HAL_IMPL_MATH_FUNC(v_exp, std::exp, _Tp)
+#define OPENCV_HAL_MATH_HAVE_EXP 1
+
 //! @cond IGNORED
 OPENCV_HAL_IMPL_MATH_FUNC(v_sin, std::sin, _Tp)
+#define OPENCV_HAL_MATH_HAVE_SIN 1
 OPENCV_HAL_IMPL_MATH_FUNC(v_cos, std::cos, _Tp)
-OPENCV_HAL_IMPL_MATH_FUNC(v_exp, std::exp, _Tp)
+#define OPENCV_HAL_MATH_HAVE_COS 1
 OPENCV_HAL_IMPL_MATH_FUNC(v_log, std::log, _Tp)
+#define OPENCV_HAL_MATH_HAVE_LOG 1
 //! @endcond
 
 /** @brief Absolute value of elements
