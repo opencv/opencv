@@ -145,9 +145,7 @@ uint64 param_seed = 0x12345678; // real value is passed via parseCustomOptions f
 
 static std::string path_join(const std::string& prefix, const std::string& subpath)
 {
-#ifndef __QNX__
     CV_Assert(subpath.empty() || subpath[0] != '/');
-#endif
     if (prefix.empty())
         return subpath;
     bool skipSlash = prefix.size() > 0 ? (prefix[prefix.size()-1] == '/' || prefix[prefix.size()-1] == '\\') : false;
@@ -1037,11 +1035,7 @@ static std::string findData(const std::string& relative_path, bool required, boo
         }
     }
 #ifdef OPENCV_TEST_DATA_INSTALL_PATH
-#ifdef __QNX__
     datapath = OPENCV_TEST_DATA_INSTALL_PATH;
-#else
-    datapath = path_join("./", OPENCV_TEST_DATA_INSTALL_PATH);
-#endif
 
     if (isDirectory(datapath))
     {
