@@ -51,6 +51,11 @@ void PrintTo(const ImreadModes& val, std::ostream* os)
         v &= ~IMREAD_IGNORE_ORIENTATION;
         *os << "IMREAD_IGNORE_ORIENTATION" << (v == 0 ? "" : " | ");
     }
+    if ((v & IMREAD_COLOR_RGB) != 0)
+    {
+        v &= ~IMREAD_COLOR_RGB;
+        *os << "IMREAD_COLOR_RGB" << (v == 0 ? "" : " | ");
+    }
     switch (v)
     {
         case IMREAD_UNCHANGED: return;
@@ -66,6 +71,7 @@ void PrintTo(const ImreadModes& val, std::ostream* os)
         case IMREAD_REDUCED_GRAYSCALE_8: // fallthru
         case IMREAD_REDUCED_COLOR_8: *os << "REDUCED_8"; return;
         case IMREAD_IGNORE_ORIENTATION: return;
+        case IMREAD_COLOR_RGB: return;
     } // don't use "default:" to emit compiler warnings
     *os << "IMREAD_UNKNOWN(" << (int)v << ")";
 }

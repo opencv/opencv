@@ -217,6 +217,7 @@ TEST_P(Imgcodecs_Jpeg_decode_cmyk, regression25274)
 INSTANTIATE_TEST_CASE_P( /* nothing */,
                         Imgcodecs_Jpeg_decode_cmyk,
                         testing::Values(cv::IMREAD_COLOR,
+                                        cv::IMREAD_COLOR_RGB,
                                         cv::IMREAD_GRAYSCALE,
                                         cv::IMREAD_ANYCOLOR));
 
@@ -326,6 +327,13 @@ TEST_P(Imgcodecs_Jpeg_encode_withLumaChromaQuality, basic)
 
     cv::Mat src = imread(fname, cv::IMREAD_COLOR);
     ASSERT_FALSE(src.empty());
+
+    // Add imread RGB test
+    cv::Mat src_rgb = imread(fname, cv::IMREAD_COLOR_RGB);
+    ASSERT_FALSE(src_rgb.empty());
+
+    cvtColor(src_rgb, src_rgb, COLOR_RGB2BGR);
+    EXPECT_TRUE(cvtest::norm(src, src_rgb, NORM_INF) == 0);
 
     std::vector<uint8_t> jpegNormal;
     ASSERT_NO_THROW(cv::imencode(".jpg", src, jpegNormal));

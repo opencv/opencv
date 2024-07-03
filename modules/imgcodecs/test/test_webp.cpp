@@ -51,6 +51,12 @@ TEST(Imgcodecs_WebP, encode_decode_lossless_webp)
     ASSERT_FALSE(decode.empty());
     EXPECT_TRUE(cvtest::norm(decode, img_webp, NORM_INF) == 0);
 
+    cv::Mat decode_rgb = cv::imdecode(buf, IMREAD_COLOR_RGB);
+    ASSERT_FALSE(decode_rgb.empty());
+
+    cvtColor(decode_rgb, decode_rgb, COLOR_RGB2BGR);
+    EXPECT_TRUE(cvtest::norm(decode_rgb, img_webp, NORM_INF) == 0);
+
     ASSERT_FALSE(img_webp.empty());
 
     EXPECT_TRUE(cvtest::norm(img, img_webp, NORM_INF) == 0);

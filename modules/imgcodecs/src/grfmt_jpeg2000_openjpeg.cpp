@@ -350,7 +350,7 @@ opj_cparameters setupEncoderParameters(const std::vector<int>& params)
     return parameters;
 }
 
-bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
+bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift, bool use_rgb)
 {
     using ImageComponents = std::vector<const OPJ_INT32*>;
 
@@ -377,8 +377,9 @@ bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
 
     if (inChannels >= 3)
     {
+        int swap_rb = use_rgb ? 0 : 2;
         // Assume RGB (+ alpha) for 3 channels -> BGR
-        ImageComponents incomps { inImg.comps[2].data, inImg.comps[1].data, inImg.comps[0].data };
+        ImageComponents incomps { inImg.comps[swap_rb].data, inImg.comps[1].data, inImg.comps[swap_rb^2].data };
         // Assume RGBA for 4 channels -> BGRA
         if (outChannels > 3)
         {
@@ -393,7 +394,7 @@ bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
     return false;
 }
 
-bool decodeGrayscaleData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
+bool decodeGrayscaleData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift, bool)
 {
     using ImageComponents = std::vector<const OPJ_INT32*>;
 
@@ -411,7 +412,7 @@ bool decodeGrayscaleData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shif
     return false;
 }
 
-bool decodeSYCCData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
+bool decodeSYCCData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift, bool use_rgb)
 {
     using ImageComponents = std::vector<const OPJ_INT32*>;
 
@@ -426,7 +427,10 @@ bool decodeSYCCData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
     if (outChannels == 3 && inChannels >= 3) {
         copyToMat(ImageComponents { inImg.comps[0].data, inImg.comps[1].data, inImg.comps[2].data },
                   outImg, shift);
-        cvtColor(outImg, outImg, COLOR_YUV2BGR);
+        if (use_rgb)
+            cvtColor(outImg, outImg, COLOR_YUV2RGB);
+        else
+            cvtColor(outImg, outImg, COLOR_YUV2BGR);
         return true;
     }
 
@@ -585,7 +589,7 @@ bool Jpeg2KOpjDecoderBase::readHeader()
 
 bool Jpeg2KOpjDecoderBase::readData( Mat& img )
 {
-    using DecodeFunc = bool(*)(const opj_image_t&, cv::Mat&, uint8_t shift);
+    using DecodeFunc = bool(*)(const opj_image_t&, cv::Mat&, uint8_t shift, bool use_rgb);
 
     if (!opj_decode(codec_.get(), stream_.get(), image_.get()))
     {
@@ -647,7 +651,7 @@ bool Jpeg2KOpjDecoderBase::readData( Mat& img )
         CV_Assert(comp.data && "OpenJPEG2000: missing component data (unsupported / broken input)");
     }
 
-    return decode(*image_, img, shift);
+    return decode(*image_, img, shift, m_use_rgb);
 }
 
 } // namespace detail

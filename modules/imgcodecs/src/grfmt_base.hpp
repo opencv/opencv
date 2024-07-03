@@ -73,6 +73,8 @@ public:
     virtual bool readHeader() = 0;
     virtual bool readData( Mat& img ) = 0;
 
+    virtual void setRGB(bool useRGB);
+
     /// Called after readData to advance to the next page, if any.
     virtual bool nextPage() { return false; }
 
@@ -89,6 +91,7 @@ protected:
     String m_signature;
     Mat m_buf;
     bool m_buf_supported;
+    bool m_use_rgb;       // flag of decode image as RGB order instead of BGR.
     ExifReader m_exif;
 };
 
