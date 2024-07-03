@@ -75,14 +75,14 @@ def showLegend(classes):
         classes = None
 
 # Load a network
-net = cv.dnn.readNet(args.model)
+net = cv.dnn.readNetFromONNX(args.model)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 
 winName = 'Deep learning semantic segmentation in OpenCV'
 cv.namedWindow(winName, cv.WINDOW_NORMAL)
 
-cap = cv.VideoCapture(args.input if args.input else 0)
+cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
 legend = None
 while cv.waitKey(1) < 0:
     hasFrame, frame = cap.read()
@@ -96,26 +96,24 @@ while cv.waitKey(1) < 0:
     # Create a 4D blob from a frame.
     inpWidth = args.width if args.width else frameWidth
     inpHeight = args.height if args.height else frameHeight
-    blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
 
+    blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
     net.setInput(blob)
-    score = net.forward()
 
     if args.alias == 'u2netp':
-        mask = score[0][0]
-        mask = mask.astype(np.uint8)
-        _, mask = cv.threshold(mask, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+        output = net.forward(net.getUnconnectedOutLayersNames())
+        pred = output[0][0, 0, :, :]
+        mask = (pred * 255).astype(np.uint8)
         mask = cv.resize(mask, (frame.shape[1], frame.shape[0]), interpolation=cv.INTER_AREA)
         # Create overlays for foreground and background
         foreground_overlay = np.zeros_like(frame, dtype=np.uint8)
-        background_overlay = np.zeros_like(frame, dtype=np.uint8)
         # Set foreground (object) to red and background to blue
-        foreground_overlay[mask == 255] = [0, 0, 255]  # Red foreground
-        background_overlay[mask == 0] = [255, 0, 0]    # Blue background
+        foreground_overlay[:, :, 2] = mask  # Red foreground
         # Blend the overlays with the original frame
-        foreground_segmented = cv.addWeighted(frame, 1, foreground_overlay, 0.5, 0)
-        frame = cv.addWeighted(foreground_segmented, 1, background_overlay, 0.5, 0)
+        frame = cv.addWeighted(frame, 0.25, foreground_overlay, 0.75, 0)
     else:
+        score = net.forward()
+
         numClasses = score.shape[1]
         height = score.shape[2]
         width = score.shape[3]
