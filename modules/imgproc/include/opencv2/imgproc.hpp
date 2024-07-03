@@ -2162,6 +2162,9 @@ CV_EXPORTS CV_WRAP_AS(goodFeaturesToTrackWithQuality) void goodFeaturesToTrack(
 An example using the Hough line detector
 ![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
 */
+/** @example samples/python/snippets/houghlines.py
+An example using the Hough line detector in python
+*/
 
 /** @brief Finds lines in a binary image using the standard Hough transform.
 
@@ -2251,6 +2254,9 @@ CV_EXPORTS_W void HoughLinesPointSet( InputArray point, OutputArray lines, int l
 
 /** @example samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp
 An example using the Hough circle detector
+*/
+/** @example samples/python/snippets/houghcircles.py
+An example using the Hough circle detector in python
 */
 
 /** @brief Finds circles in a grayscale image using the Hough transform.
@@ -3421,6 +3427,9 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 /** @example samples/cpp/watershed.cpp
 An example using the watershed algorithm
 */
+/** @example samples/python/snippets/watershed.py
+An example using the watershed algorithm using python
+*/
 
 /** @brief Performs a marker-based image segmentation using the watershed algorithm.
 
@@ -3532,6 +3541,9 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
 
 /** @example samples/cpp/distrans.cpp
 An example on using the distance transform
+*/
+/** @example samples/python/snippets/distrans.py
+An example on using the distance transform in python
 */
 
 /** @brief Calculates the distance to the closest zero pixel for each pixel of the source image.
@@ -4375,6 +4387,10 @@ CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
  @param points Input 2D point set, stored in std::vector\<\> or Mat
  */
 CV_EXPORTS_W RotatedRect fitEllipseDirect( InputArray points );
+
+/** @example samples/python/snippets/fitline.py
+An example for fitting line in python
+*/
 
 /** @brief Fits a line to a 2D or 3D point set.
 

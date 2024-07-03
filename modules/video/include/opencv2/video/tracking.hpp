@@ -349,6 +349,11 @@ double findTransformECC(InputArray templateImage, InputArray inputImage,
 An example using the standard Kalman filter
 */
 
+
+/** @example samples/python/snippets/kalman.py
+An example using the standard Kalman filter in Python.
+ */
+
 /** @brief Kalman filter class.
 
 The class implements a standard Kalman filter <http://en.wikipedia.org/wiki/Kalman_filter>,

@@ -3068,6 +3068,9 @@ private:
 /** @example samples/cpp/kmeans.cpp
 An example on K-means clustering
 */
+/** @example samples/python/snippets/kmeans.py
+An example on K-means clustering in python
+*/
 
 /** @brief Finds centers of clusters and groups input samples around the clusters.
 
