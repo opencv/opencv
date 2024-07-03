@@ -302,6 +302,8 @@ public:
             ranges[cAxis].start = 0;
             for (size_t i = 0; i < inputs.size(); i++)
             {
+                if (inputs[i].empty())
+                    continue;
                 ranges[cAxis].end = ranges[cAxis].start + inputs[i].size[cAxis];
                 for (int j = 0; j < outMat.dims; ++j)
                 {

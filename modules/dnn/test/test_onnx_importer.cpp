@@ -3034,6 +3034,13 @@ TEST_P(Test_ONNX_layers, Attention) {
 TEST_P(Test_ONNX_layers, AttentionSingleHead) {
     testONNXModels("attention_single_head");
 }
+TEST_P(Test_ONNX_layers, TorchAttentionSingleHead){
+    testONNXModels("torch_attention_single_head");
+}
+
+TEST_P(Test_ONNX_layers, TorchUnflatten){
+    testONNXModels("unflatten");
+}
 
 TEST_P(Test_ONNX_nets, ViT_B_32) {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_LONG);
