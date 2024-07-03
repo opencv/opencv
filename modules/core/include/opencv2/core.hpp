@@ -3180,6 +3180,10 @@ etc.).
 
 Here is example of SimpleBlobDetector use in your application via Algorithm interface:
 @snippet snippets/core_various.cpp Algorithm
+
+@example samples/cpp/snippets/detect_blob.cpp
+An example using the BLOB to detect and filter region.
+
 */
 class CV_EXPORTS_W Algorithm
 {

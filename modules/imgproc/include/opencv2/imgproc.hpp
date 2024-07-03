@@ -3900,6 +3900,9 @@ enum TemplateMatchModes {
 /** @example samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
 An example using Template Matching algorithm
 */
+/** @example samples/cpp/snippets/mask_tmpl.cpp
+An example using Template Matching algorithm with mask
+*/
 
 /** @brief Compares a template against overlapped image regions.
 
