@@ -296,6 +296,7 @@ TEST_P(Imgcodecs_Avif_Animation_WriteReadSuite, encode_decode) {
     return;
   }
   EXPECT_NO_THROW(cv::imwritemulti(output, anim_original, encoding_params_));
+  EXPECT_EQ(anim_original.size(), imcount(output));
 
   // Read from file.
   std::vector<cv::Mat> anim;
