@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "hal_replacement.hpp"
 #include "distortion_model.hpp"
 #include <stdio.h>
 #include <iterator>
@@ -539,20 +540,15 @@ void cv::projectPoints( InputArray _objectPoints,
               (objectPoints.rows == count && objpt_cn*objectPoints.cols == 3) ||
               (objectPoints.rows == 3 && objpt_cn == 1 && objectPoints.cols == count));
 
-    Mat matM(objectPoints.size(), CV_64FC(objpt_cn));
-    objectPoints.convertTo(matM, CV_64F);
     if (objectPoints.rows == 3 && objectPoints.cols == count) {
         Mat temp;
-        transpose(matM, temp);
-        matM = temp;
+        transpose(objectPoints, temp);
+        objectPoints = temp;
     }
 
     CV_Assert( _imagePoints.needed() );
     _imagePoints.create(count, 1, CV_MAKETYPE(objpt_depth, 2), -1, true);
     Mat ipoints = _imagePoints.getMat();
-    ipoints.convertTo(_m, CV_64F);
-    const Point3d* M = matM.ptr<Point3d>();
-    Point2d* m = _m.ptr<Point2d>();
 
     Mat rvec = _rvec.getMat(), tvec = _tvec.getMat();
     if(!((rvec.depth() == CV_32F || rvec.depth() == CV_64F) &&
@@ -655,6 +651,127 @@ void cv::projectPoints( InputArray _objectPoints,
 
     bool calc_derivatives = dpdr.data || dpdt.data || dpdf.data ||
                             dpdc.data || dpdk.data || dpdo.data;
+
+    if (!calc_derivatives)
+    {
+        if (objpt_depth == CV_32F && ipoints.type() == CV_32F)
+        {
+            float rtMatrix[12] = { (float)R[0], (float)R[1], (float)R[2], (float)t[0],
+                                (float)R[3], (float)R[4], (float)R[5], (float)t[1],
+                                (float)R[6], (float)R[7], (float)R[8], (float)t[2] };
+
+            cv_camera_intrinsics_pinhole_32f intr;
+            intr.fx = (float)fx; intr.fy = (float)fy;
+            intr.cx = (float)cx; intr.cy = (float)cy;
+            intr.amt_k = 0; intr.amt_p = 0; intr.amt_s = 0; intr.use_tau = false;
+
+            switch (ktotal)
+            {
+            case  0: break;
+            case  4: // [k_1, k_2, p_1, p_2]
+                intr.amt_k = 2; intr.amt_p = 2;
+                break;
+            case  5: // [k_1, k_2, p_1, p_2, k_3]
+                intr.amt_k = 3; intr.amt_p = 2;
+                break;
+            case  8: // [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6]
+                intr.amt_k = 6; intr.amt_p = 2;
+                break;
+            case 12: // [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4]
+                intr.amt_k = 6; intr.amt_p = 2; intr.amt_s = 4;
+                break;
+            case 14: // [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4, tau_x, tau_y]
+                intr.amt_k = 6; intr.amt_p = 2; intr.amt_s = 4; intr.use_tau = true;
+                break;
+            default:
+                CV_Error(cv::Error::StsInternal, "Wrong number of distortion coefficients");
+            }
+
+            intr.k[0] = (float)k[0];
+            intr.k[1] = (float)k[1];
+            intr.k[2] = (float)k[4];
+            intr.k[3] = (float)k[5];
+            intr.k[4] = (float)k[6];
+            intr.k[5] = (float)k[7];
+
+            intr.p[0] = (float)k[2];
+            intr.p[1] = (float)k[3];
+
+            for (int ctr = 0; ctr < 4; ctr++)
+            {
+                intr.s[ctr] = (float)k[8+ctr];
+            }
+
+            intr.tau_x = (float)k[12];
+            intr.tau_y = (float)k[13];
+
+            CALL_HAL(projectPoints, cv_hal_project_points_pinhole32f,
+                     (float*)objectPoints.data, objectPoints.step, count,
+                     (float*)ipoints.data, ipoints.step, rtMatrix, &intr);
+        }
+
+        if (objpt_depth == CV_64F && ipoints.type() == CV_64F)
+        {
+            double rtMatrix[12] = { R[0], R[1], R[2], t[0],
+                                    R[3], R[4], R[5], t[1],
+                                    R[6], R[7], R[8], t[2] };
+
+            cv_camera_intrinsics_pinhole_64f intr;
+            intr.fx = fx; intr.fy = fy;
+            intr.cx = cx; intr.cy = cy;
+            intr.amt_k = 0; intr.amt_p = 0; intr.amt_s = 0; intr.use_tau = false;
+
+            switch (ktotal)
+            {
+            case  0: break;
+            case  4: // [k_1, k_2, p_1, p_2]
+                intr.amt_k = 2; intr.amt_p = 2;
+                break;
+            case  5: // [k_1, k_2, p_1, p_2, k_3]
+                intr.amt_k = 3; intr.amt_p = 2;
+                break;
+            case  8: // [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6]
+                intr.amt_k = 6; intr.amt_p = 2;
+                break;
+            case 12: // [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4]
+                intr.amt_k = 6; intr.amt_p = 2; intr.amt_s = 4;
+                break;
+            case 14: // [k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, s_1, s_2, s_3, s_4, tau_x, tau_y]
+                intr.amt_k = 6; intr.amt_p = 2; intr.amt_s = 4; intr.use_tau = true;
+                break;
+            default:
+                CV_Error(cv::Error::StsInternal, "Wrong number of distortion coefficients");
+            }
+
+            intr.k[0] = k[0];
+            intr.k[1] = k[1];
+            intr.k[2] = k[4];
+            intr.k[3] = k[5];
+            intr.k[4] = k[6];
+            intr.k[5] = k[7];
+
+            intr.p[0] = k[2];
+            intr.p[1] = k[3];
+
+            for (int ctr = 0; ctr < 4; ctr++)
+            {
+                intr.s[ctr] = k[8+ctr];
+            }
+
+            intr.tau_x = k[12];
+            intr.tau_y = k[13];
+
+            CALL_HAL(projectPoints, cv_hal_project_points_pinhole64f,
+                     (double*)objectPoints.data, objectPoints.step, count,
+                     (double*)ipoints.data, ipoints.step, rtMatrix, &intr);
+        }
+    }
+
+    Mat matM(objectPoints.size(), CV_64FC(objpt_cn));
+    objectPoints.convertTo(matM, CV_64F);
+    ipoints.convertTo(_m, CV_64F);
+    const Point3d* M = matM.ptr<Point3d>();
+    Point2d* m = _m.ptr<Point2d>();
 
     for( i = 0; i < count; i++ )
     {

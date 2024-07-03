@@ -4,14 +4,6 @@
 "test_adagrad_multiple", // ---- same as above ---
 "test_adam",  // Issues::Layer::Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Adam" in function 'getLayerInstance'
 "test_adam_multiple", // ---- same as above ---
-"test_and2d", // Issue:: Unsupported data type BOOL
-"test_and3d", // Issue:: Unsupported data type BOOL
-"test_and4d", // Issue:: Unsupported data type BOOL
-"test_and_bcast3v1d", // Issue:: Unsupported data type BOOL
-"test_and_bcast3v2d", // Issue:: Unsupported data type BOOL
-"test_and_bcast4v2d", // Issue:: Unsupported data type BOOL
-"test_and_bcast4v3d", // Issue:: Unsupported data type BOOL
-"test_and_bcast4v4d", // Issue:: Unsupported data type BOOL
 "test_basic_convinteger", // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_batchnorm_epsilon", // Issue:: Unkonwn error::Blob mean not found in const blobs in function 'getBlob'
 "test_batchnorm_epsilon_training_mode",  // ---- same as above ---
@@ -32,7 +24,6 @@
 "test_bitshift_right_uint64", // Issue::Unsuppoted data type
 "test_bitshift_right_uint8", // Issues::Layer::Can't create layer "onnx_node_output_0!z" of type "BitShift" in function 'getLayerInstance'
 "test_cast_BFLOAT16_to_FLOAT",  // Issue::Unsuppoted data type
-// "test_cast_DOUBLE_to_FLOAT",
 "test_cast_DOUBLE_to_FLOAT16", // Issue::Unsuppoted data type
 "test_cast_FLOAT16_to_DOUBLE", // Issue::Unsuppoted data type
 "test_cast_FLOAT16_to_FLOAT", // Issue::Unsuppoted data type
@@ -68,10 +59,10 @@
 "test_clip_inbounds",  // ---- same as above ---
 "test_clip_outbounds",  // ---- same as above ---
 "test_clip_splitbounds",  // ---- same as above ---
-"test_compress_0", // Issue:: Unsupported data type BOOL
-"test_compress_1", /// Issue:: Unsupported data type BOOL
-"test_compress_default_axis", // Issue:: Unsupported data type BOOL
-"test_compress_negative_axis", // Issue:: Unsupported data type BOOL
+"test_compress_0", // Issue::Can't create layer "onnx_node_output_0!output" of type "Compress" in function 'getLayerInstance'
+"test_compress_1", // ---- same as above ---
+"test_compress_default_axis", // ---- same as above ---
+"test_compress_negative_axis", // ---- same as above ---
 "test_constant",  // Issue::Wrong output
 "test_constant_pad",  // Issue:: Unkonwn error
 "test_constantofshape_float_ones", // Issue::Parser::Weights are required as inputs
@@ -93,9 +84,8 @@
 "test_dequantizelinear_axis", // Issue::Parser::Weights are required as inputs
 "test_det_2d", // Issue:: Unkonwn error
 "test_det_nd", // Issue:: Unkonwn error
-// "test_div_example",
-"test_dropout_default_mask", // Issue:: Unsupported data type BOOL
-"test_dropout_default_mask_ratio", // Issue:: Unsupported data type BOOL
+"test_dropout_default_mask", // Issue::cvtest::norm::wrong data type
+"test_dropout_default_mask_ratio", // ---- same as above ---
 "test_dynamicquantizelinear", // Issue:: Unkonwn error
 "test_dynamicquantizelinear_expanded", // ---- same as above ---
 "test_dynamicquantizelinear_max_adjusted",  // ---- same as above ---
@@ -104,8 +94,6 @@
 "test_dynamicquantizelinear_min_adjusted_expanded",  // ---- same as above ---
 "test_edge_pad", // Issue::Parser::Weights are required as inputs
 "test_einsum_inner_prod", // Issue::Output shape does not match with reference
-"test_equal", // Issue:: Unsupported data type BOOL
-"test_equal_bcast", // ---- same as above ---
 "test_expand_dim_changed", // Issue:: Unkonwn error
 "test_expand_dim_unchanged", // Issue:: Unkonwn error
 "test_eyelike_populate_off_main_diagonal", // Issues::Layer::Can't create layer::Can't create layer "onnx_node_output_0!y" of type "EyeLike" in function 'getLayerInstance'
@@ -117,20 +105,12 @@
 "test_gemm_all_attributes",  // Issue::Wrong output
 "test_gemm_alpha",  // Issue::Wrong output
 "test_gemm_beta",  // Issue::Wrong output
-// "test_gemm_default_matrix_bias",
-// "test_gemm_default_no_bias",
 "test_gemm_default_scalar_bias",  // Issue::Wrong output
 "test_gemm_default_single_elem_vector_bias",  // Issue::Wrong output
 "test_gemm_default_vector_bias",  // Issue::Wrong output
 "test_gemm_default_zero_bias",  // Issue::Wrong output
 "test_gemm_transposeA", // Issue::Wrong output
 "test_gemm_transposeB",  // Issue::Wrong output
-"test_greater", // Issue:: Unsupported data type BOOL
-"test_greater_bcast", // ---- same as above ---
-"test_greater_equal", // ---- same as above ---
-"test_greater_equal_bcast", // ---- same as above ---
-"test_greater_equal_bcast_expanded", // ---- same as above ---
-"test_greater_equal_expanded", // ---- same as above ---
 "test_gridsample", // Issues::Layer::Can't create layer "onnx_node_output_0!Y" of type "GridSample" in function 'getLayerInstance'
 "test_gridsample_aligncorners_true", // ---- same as above ---
 "test_gridsample_bicubic", // ---- same as above ---
@@ -152,88 +132,51 @@
 "test_hardmax_one_hot",  // ---- same as above ---
 "test_identity_opt", //  23221 illegal hardware instruction
 "test_identity_sequence",  // Issue:: Unkonwn error
-"test_if", // Issue:: Unsupported data type BOOL
-"test_if_opt", // Issue:: Unsupported data type BOOL
-"test_if_seq", // Issue:: Unsupported data type BOOL
-"test_isinf", // Issue:: Unsupported data type BOOL
-"test_isinf_negative", // Issue:: Unsupported data type BOOL
-"test_isinf_positive", // Issue:: Unsupported data type BOOL
-"test_isnan", // Issue:: Unsupported data type BOOL
-"test_less", // Issue:: Unsupported data type BOOL
-"test_less_bcast", // Issue:: Unsupported data type BOOL
-"test_less_equal", // Issue:: Unsupported data type BOOL
-"test_less_equal_bcast", // Issue:: Unsupported data type BOOL
-"test_less_equal_bcast_expanded", // Issue:: Unsupported data type BOOL
-"test_less_equal_expanded", // Issue:: Unsupported data type BOOL
-"test_loop11", // Issue:: Unsupported data type BOOL
-"test_loop13_seq", // Issue:: Unsupported data type BOOL
-"test_loop16_seq_none", // Issue:: Unsupported data type BOOL
+"test_if", // Issue::'Graph' is not supported in function 'getLayerParams'
+"test_if_opt", // Issue::Failed to allocate 17059022683624350 bytes in function 'OutOfMemoryError'
+"test_if_seq", // Issue::typeProto.has_tensor_type() in function 'dumpValueInfoProto'
+"test_isinf", // Issue::Can't create layer "onnx_node_output_0!y" of type "IsInf" in function 'getLayerInstance'
+"test_isinf_negative", //-- same as above ---
+"test_isinf_positive", //-- same as above ---
+"test_isnan", // -- same as above ---
+"test_loop11", // Issue::'Graph' is not supported in function 'getLayerParams'
+"test_loop13_seq", // Issue::typeProto.has_tensor_type() in function 'populateNet'
+"test_loop16_seq_none", // Issue::Failed to allocate 179812654996800 bytes in function 'OutOfMemoryError'
 "test_lstm_batchwise", // Issues::Parser:: !name.empty() && constBlobs.count(name) == 1 in function 'parseLSTM'
 "test_lstm_defaults", // ---- same as above ---
 "test_lstm_with_initial_bias", // ---- same as above ---
 "test_lstm_with_peepholes", // ---- same as above ---
 "test_matmulinteger", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
-// "test_max_example",
-// "test_max_float16",
-// "test_max_float32",
-// "test_max_float64",
 "test_max_int16", // Issue:: Unsupported data type
-// "test_max_int32",
-// "test_max_int64",
-"test_max_int8", // Issue:: Unkonwn error
-// "test_max_one_input",
-// "test_max_two_inputs",
 "test_max_uint16", // Issue:: Unsupported data type
 "test_max_uint32", // Issue:: Unsupported data type
 "test_max_uint64", // Issue:: Unsupported data type
-"test_max_uint8", // Issue:: Unkonwn error
 "test_mean_example", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!result" of type "Mean" in function 'getLayerInstance'
 "test_mean_one_input",  // ---- same as above ---
 "test_mean_two_inputs",  // ---- same as above ---
-// "test_min_example",
-// "test_min_float16",
-// "test_min_float32",
-// "test_min_float64",
 "test_min_int16",  // Issue:: Unsupported data type
-// "test_min_int32",
-// "test_min_int64",
-"test_min_int8", // Issue:: Unkonwn error
-// "test_min_one_input",
-// "test_min_two_inputs",
 "test_min_uint16", // Issue:: Unsupported data type
 "test_min_uint32", // Issue:: Unkonwn error
 "test_min_uint64", // Issue:: Unsupported data type
-"test_min_uint8", // Issue:: Unkonwn error
-// "test_mod_broadcast",
-// "test_mod_int64_fmod",
 "test_mod_mixed_sign_int16", // Issue:: Unkonwn error
-// "test_mod_mixed_sign_int32",
-// "test_mod_mixed_sign_int64",
-"test_mod_mixed_sign_int8", // Issue:: Unkonwn error
 "test_mod_uint16", // Issue:: Unkonwn error
 "test_mod_uint32", // ---- same as above ---
 "test_mod_uint64", // ---- same as above ---
-"test_mod_uint8", // ---- same as above ---
 "test_momentum", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple", // ---- same as above ---
-// "test_mul_example",
 "test_mvn", // Issues::Wrong answer
 "test_mvn_expanded", // Issues::Wrong answer
 "test_nesterov_momentum", // Issues::Layer does not exist (NesterovsAcceleratedGradient) Can't create layer "onnx_node_output_0!X_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_nllloss_NC",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-// "test_nllloss_NC_expanded",
 "test_nllloss_NCd1", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-// "test_nllloss_NCd1_expanded",
 "test_nllloss_NCd1_ii",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
 "test_nllloss_NCd1_ii_expanded",  // Issue:: Unsupported data type
 "test_nllloss_NCd1_mean_weight_negative_ii", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
 "test_nllloss_NCd1_mean_weight_negative_ii_expanded", // Issue:: Unsupported data type
 "test_nllloss_NCd1_weight", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-// "test_nllloss_NCd1_weight_expanded",
 "test_nllloss_NCd1_weight_ii", // Issue:: Unsupported data type
 "test_nllloss_NCd1_weight_ii_expanded", // Issue:: Unsupported data type
 "test_nllloss_NCd1d2", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-// "test_nllloss_NCd1d2_expanded",
 "test_nllloss_NCd1d2_no_weight_reduction_mean_ii", // Issue:: Unsupported data type
 "test_nllloss_NCd1d2_no_weight_reduction_mean_ii_expanded", // Issue:: Unsupported data type
 "test_nllloss_NCd1d2_reduction_mean", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
@@ -241,9 +184,7 @@
 "test_nllloss_NCd1d2_reduction_sum", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
 "test_nllloss_NCd1d2_reduction_sum_expanded", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
 "test_nllloss_NCd1d2_with_weight", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-// "test_nllloss_NCd1d2_with_weight_expanded",
 "test_nllloss_NCd1d2_with_weight_reduction_mean",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-// "test_nllloss_NCd1d2_with_weight_reduction_mean_expanded",
 "test_nllloss_NCd1d2_with_weight_reduction_sum", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
 "test_nllloss_NCd1d2_with_weight_reduction_sum_expanded", // Issue::Wrong output on CUDA
 "test_nllloss_NCd1d2_with_weight_reduction_sum_ii", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
@@ -255,7 +196,6 @@
 "test_nllloss_NCd1d2d3d4d5_mean_weight", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
 "test_nllloss_NCd1d2d3d4d5_mean_weight_expanded", // Issue::Wrong output
 "test_nllloss_NCd1d2d3d4d5_none_no_weight", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-// "test_nllloss_NCd1d2d3d4d5_none_no_weight_expanded",
 "test_nonmaxsuppression_center_point_box_format", // Issue:: Layer does not exist (NonMaxSuppression)::Can't create layer "onnx_node_output_0!selected_indices" of type "NonMaxSuppression" in function 'getLayerInstance'
 "test_nonmaxsuppression_flipped_coordinates", // ---- same as above ---
 "test_nonmaxsuppression_identical_boxes", // ---- same as above ---
@@ -265,30 +205,15 @@
 "test_nonmaxsuppression_suppress_by_IOU_and_scores", // ---- same as above ---
 "test_nonmaxsuppression_two_batches", // ---- same as above ---
 "test_nonmaxsuppression_two_classes", // ---- same as above ---
-"test_nonzero_example", // Issue:: Unsupported data type: BOOL
-"test_not_2d",  // ---- same as above ---
-"test_not_3d", // ---- same as above ---
-"test_not_4d", // ---- same as above ---
+"test_nonzero_example", // Issue::Can't create layer "onnx_node_output_0!result" of type "NonZero" in function 'getLayerInstance'
 "test_onehot_negative_indices", // Issue:: Layer does not exist (OneHot) :: Can't create layer "onnx_node_output_0!y" of type "OneHot" in function 'getLayerInstance'
 "test_onehot_with_axis", // ---- same as above ---
 "test_onehot_with_negative_axis", // ---- same as above ---
 "test_onehot_without_axis", // ---- same as above ---
 "test_optional_get_element", // Issue::out of memory :: Failed to allocate 1044051907127083008 bytes in function 'OutOfMemoryError'
 "test_optional_get_element_sequence", // ---- same as above ---
-"test_optional_has_element", // Issue:: Unsupported data type BOOL
+"test_optional_has_element", // Issue::typeProto.has_tensor_type() in function 'populateNet'
 "test_optional_has_element_empty", // ---- same as above ---
-"test_or2d",
-"test_or3d", // ---- same as above ---
-"test_or4d", // ---- same as above ---
-"test_or_bcast3v1d",
-"test_or_bcast3v2d", // ---- same as above ---
-"test_or_bcast4v2d", // ---- same as above ---
-"test_or_bcast4v3d", // ---- same as above ---
-"test_or_bcast4v4d", // ---- same as above ---
-// "test_pow",
-// "test_pow_bcast_array",
-// "test_pow_bcast_scalar",
-// "test_pow_example",
 "test_pow_types_float", // Issue:: Unsupported data type
 "test_pow_types_float32_int32", // ---- same as above ---
 "test_pow_types_float32_int64", // ---- same as above ---
@@ -298,7 +223,6 @@
 "test_pow_types_int32_float32", // ---- same as above ---
 "test_pow_types_int32_int32", // ---- same as above ---
 "test_pow_types_int64_float32", // ---- same as above ---
-// "test_pow_types_int64_int64",
 "test_prelu_broadcast", // Issue::Parser:Blob slope not found in const blobs in function 'getBlob' (weights are required as inputs)
 "test_prelu_example", // ---- same as above ---
 "test_qlinearconv", // Issue::Parser:  Blob x_scale not found in const blobs in function 'getBlob' (weights are required as inputs)
@@ -466,9 +390,6 @@
 "test_strnormalizer_export_monday_empty_output", // ---- same as above ---
 "test_strnormalizer_export_monday_insensintive_upper_twodim", // ---- same as above ---
 "test_strnormalizer_nostopwords_nochangecase", // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "StringNormalizer" in function 'getLayerInstance'
-// "test_sub_example",
-// "test_sum_example",
-// "test_sum_two_inputs",
 "test_tfidfvectorizer_tf_batch_onlybigrams_skip0", // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "TfIdfVectorizer" in function 'getLayerInstance'
 "test_tfidfvectorizer_tf_batch_onlybigrams_skip5",  // ---- same as above ---
 "test_tfidfvectorizer_tf_batch_uniandbigrams_skip5",  // ---- same as above ---
@@ -481,7 +402,7 @@
 "test_top_k", // Issue:: Parser: Can't create layer "onnx_node_output_0!values" of type "TopK" in function 'getLayerInstance'
 "test_top_k_negative_axis",  // ---- same as above ---
 "test_top_k_smallest",  // ---- same as above ---
-"test_training_dropout", // Issue:: Parser: Unsupported data type: BOOL in function 'getMatFromTensor'
+"test_training_dropout", // Issue::cvtest::norm::wrong data type
 "test_training_dropout_default",  // ---- same as above ---
 "test_training_dropout_default_mask",  // ---- same as above ---
 "test_training_dropout_mask",  // ---- same as above ---
@@ -517,21 +438,3 @@
 "test_unsqueeze_three_axes",  // ---- same as above ---
 "test_unsqueeze_two_axes",   // ---- same as above ---)
 "test_unsqueeze_unsorted_axes",  // ---- same as above ---)
-"test_where_example", // Issue:: Parser: Unsupported data type: BOOL in function 'getMatFromTensor'
-"test_where_long_example",  // ---- same as above ---
-"test_xor2d", // Issue:: Parser: Unsupported data type: BOOL in function 'getMatFromTensor'
-"test_xor3d",  // ---- same as above ---
-"test_xor4d",  // ---- same as above ---
-"test_xor_bcast3v1d",  // ---- same as above ---
-"test_xor_bcast3v2d",  // ---- same as above ---
-"test_xor_bcast4v2d",  // ---- same as above ---
-"test_xor_bcast4v3d",  // ---- same as above ---
-"test_xor_bcast4v4d",  // ---- same as above ---
-// // Cumsum related issue: https://github.com/opencv/opencv/issues/24437
-"test_cumsum_1d", //Issue:: output shape creation mismatch
-"test_cumsum_1d_exclusive",  // ---- same as above ---
-"test_cumsum_1d_reverse",  // ---- same as above ---
-"test_cumsum_1d_reverse_exclusive",  // ---- same as above ---
-"test_cumsum_2d_axis_0",  // ---- same as above ---
-"test_cumsum_2d_axis_1",  // ---- same as above ---
-"test_cumsum_2d_negative_axis",  // ---- same as above ---

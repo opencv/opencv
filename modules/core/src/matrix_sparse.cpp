@@ -37,7 +37,7 @@ typedef void (*ConvertScaleData)(const void* from, void* to, int cn, double alph
 
 static ConvertData getConvertElem(int fromType, int toType)
 {
-    static ConvertData tab[][8] =
+    static ConvertData tab[CV_DEPTH_MAX][CV_DEPTH_MAX] =
     {{ convertData_<uchar, uchar>, convertData_<uchar, schar>,
       convertData_<uchar, ushort>, convertData_<uchar, short>,
       convertData_<uchar, int>, convertData_<uchar, float>,
@@ -82,7 +82,7 @@ static ConvertData getConvertElem(int fromType, int toType)
 
 static ConvertScaleData getConvertScaleElem(int fromType, int toType)
 {
-    static ConvertScaleData tab[][8] =
+    static ConvertScaleData tab[CV_DEPTH_MAX][CV_DEPTH_MAX] =
     {{ convertScaleData_<uchar, uchar>, convertScaleData_<uchar, schar>,
       convertScaleData_<uchar, ushort>, convertScaleData_<uchar, short>,
       convertScaleData_<uchar, int>, convertScaleData_<uchar, float>,
@@ -389,6 +389,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     if( alpha == 1 )
     {
         ConvertData cvtfunc = getConvertElem(type(), rtype);
+        CV_Assert(cvtfunc);
         for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -399,6 +400,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     else
     {
         ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
+        CV_Assert(cvtfunc);
         for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();

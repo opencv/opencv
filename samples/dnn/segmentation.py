@@ -14,9 +14,6 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                     help='An optional path to file with preprocessing parameters.')
 parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'darknet', 'onnx'],
-                    help='Optional name of an origin framework of the model. '
-                         'Detect it automatically if it does not set.')
 parser.add_argument('--colors', help='Optional path to a text file with colors for an every class. '
                                      'An every color is represented with three values from 0 to 255 in BGR channels order.')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
@@ -44,7 +41,6 @@ parser = argparse.ArgumentParser(parents=[parser],
 args = parser.parse_args()
 
 args.model = findFile(args.model)
-args.config = findFile(args.config)
 args.classes = findFile(args.classes)
 
 np.random.seed(324)
@@ -79,14 +75,14 @@ def showLegend(classes):
         classes = None
 
 # Load a network
-net = cv.dnn.readNet(args.model, args.config, args.framework)
+net = cv.dnn.readNetFromONNX(args.model)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 
 winName = 'Deep learning semantic segmentation in OpenCV'
 cv.namedWindow(winName, cv.WINDOW_NORMAL)
 
-cap = cv.VideoCapture(args.input if args.input else 0)
+cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
 legend = None
 while cv.waitKey(1) < 0:
     hasFrame, frame = cap.read()
@@ -94,41 +90,51 @@ while cv.waitKey(1) < 0:
         cv.waitKey()
         break
 
+    cv.imshow("Original Image", frame)
     frameHeight = frame.shape[0]
     frameWidth = frame.shape[1]
-
     # Create a 4D blob from a frame.
     inpWidth = args.width if args.width else frameWidth
     inpHeight = args.height if args.height else frameHeight
+
     blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
-
-    # Run a model
     net.setInput(blob)
-    score = net.forward()
 
-    numClasses = score.shape[1]
-    height = score.shape[2]
-    width = score.shape[3]
+    if args.alias == 'u2netp':
+        output = net.forward(net.getUnconnectedOutLayersNames())
+        pred = output[0][0, 0, :, :]
+        mask = (pred * 255).astype(np.uint8)
+        mask = cv.resize(mask, (frame.shape[1], frame.shape[0]), interpolation=cv.INTER_AREA)
+        # Create overlays for foreground and background
+        foreground_overlay = np.zeros_like(frame, dtype=np.uint8)
+        # Set foreground (object) to red and background to blue
+        foreground_overlay[:, :, 2] = mask  # Red foreground
+        # Blend the overlays with the original frame
+        frame = cv.addWeighted(frame, 0.25, foreground_overlay, 0.75, 0)
+    else:
+        score = net.forward()
 
-    # Draw segmentation
-    if not colors:
-        # Generate colors
-        colors = [np.array([0, 0, 0], np.uint8)]
-        for i in range(1, numClasses):
-            colors.append((colors[i - 1] + np.random.randint(0, 256, [3], np.uint8)) / 2)
+        numClasses = score.shape[1]
+        height = score.shape[2]
+        width = score.shape[3]
+        # Draw segmentation
+        if not colors:
+            # Generate colors
+            colors = [np.array([0, 0, 0], np.uint8)]
+            for i in range(1, numClasses):
+                colors.append((colors[i - 1] + np.random.randint(0, 256, [3], np.uint8)) / 2)
+        classIds = np.argmax(score[0], axis=0)
+        segm = np.stack([colors[idx] for idx in classIds.flatten()])
+        segm = segm.reshape(height, width, 3)
 
-    classIds = np.argmax(score[0], axis=0)
-    segm = np.stack([colors[idx] for idx in classIds.flatten()])
-    segm = segm.reshape(height, width, 3)
+        segm = cv.resize(segm, (frameWidth, frameHeight), interpolation=cv.INTER_NEAREST)
+        frame = (0.1 * frame + 0.9 * segm).astype(np.uint8)
 
-    segm = cv.resize(segm, (frameWidth, frameHeight), interpolation=cv.INTER_NEAREST)
-    frame = (0.1 * frame + 0.9 * segm).astype(np.uint8)
+        showLegend(classes)
 
     # Put efficiency information.
     t, _ = net.getPerfProfile()
     label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
     cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-
-    showLegend(classes)
 
     cv.imshow(winName, frame)

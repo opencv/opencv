@@ -125,6 +125,7 @@ void cvSetModeWindow_WinRT(const char* name, double prop_value);
 CvRect cvGetWindowRect_W32(const char* name);
 CvRect cvGetWindowRect_GTK(const char* name);
 CvRect cvGetWindowRect_COCOA(const char* name);
+CvRect cvGetWindowRect_WAYLAND(const char* name);
 
 double cvGetModeWindow_W32(const char* name);
 double cvGetModeWindow_GTK(const char* name);

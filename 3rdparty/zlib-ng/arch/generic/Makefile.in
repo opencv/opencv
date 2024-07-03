@@ -1,0 +1,24 @@
+# Makefile for zlib
+# Copyright (C) 1995-2013 Jean-loup Gailly, Mark Adler
+# For conditions of distribution and use, see copyright notice in zlib.h
+
+CC=
+CFLAGS=
+SFLAGS=
+INCLUDES=
+
+SRCDIR=.
+SRCTOP=../..
+TOPDIR=$(SRCTOP)
+
+all:
+
+
+mostlyclean: clean
+clean:
+	rm -f *.o *.lo *~ \
+	rm -rf objs
+	rm -f *.gcda *.gcno *.gcov
+
+distclean: clean
+	rm -f Makefile

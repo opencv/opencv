@@ -90,15 +90,4 @@ PERF_TEST_P(Tracking, MIL, testing::ValuesIn(getTrackingParams()))
     runTrackingTest<Rect>(tracker, GetParam());
 }
 
-PERF_TEST_P(Tracking, GOTURN, testing::ValuesIn(getTrackingParams()))
-{
-    std::string model = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.prototxt");
-    std::string weights = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.caffemodel", false);
-    TrackerGOTURN::Params params;
-    params.modelTxt = model;
-    params.modelBin = weights;
-    auto tracker = TrackerGOTURN::create(params);
-    runTrackingTest<Rect>(tracker, GetParam());
-}
-
 }} // namespace

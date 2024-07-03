@@ -111,8 +111,18 @@ set_value(fptype *dst, size_t dst_ld, fptype value, size_t m, size_t n)
 template <typename fptype> static inline int
 lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int* info)
 {
-    int lda = (int)(a_step / sizeof(fptype)), sign = 0;
-    std::vector<int> piv(m+1);
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+    cv::AutoBuffer<long> piv_buff(m);
+    long lda = (long)(a_step / sizeof(fptype));
+    long _m = static_cast<long>(m), _n = static_cast<long>(n);
+    long _info[1];
+#else
+    cv::AutoBuffer<int> piv_buff(m);
+    int lda = (int)(a_step / sizeof(fptype));
+    int _m = m, _n = n;
+    int* _info = info;
+#endif
+    auto piv = piv_buff.data();
 
     transpose_square_inplace(a, lda, m);
 
@@ -121,9 +131,9 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
         if(n == 1 && b_step == sizeof(fptype))
         {
             if(typeid(fptype) == typeid(float))
-                sgesv_(&m, &n, (float*)a, &lda, &piv[0], (float*)b, &m, info);
+                sgesv_(&_m, &_n, (float*)a, &lda, piv, (float*)b, &_m, _info);
             else if(typeid(fptype) == typeid(double))
-                dgesv_(&m, &n, (double*)a, &lda, &piv[0], (double*)b, &m, info);
+                dgesv_(&_m, &_n, (double*)a, &lda, piv, (double*)b, &_m, _info);
         }
         else
         {
@@ -133,9 +143,9 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
             transpose(b, ldb, &tmpB[0], m, m, n);
 
             if(typeid(fptype) == typeid(float))
-                sgesv_(&m, &n, (float*)a, &lda, &piv[0], (float*)&tmpB[0], &m, info);
+                sgesv_(&_m, &_n, (float*)a, &lda, piv, (float*)&tmpB[0], &_m, _info);
             else if(typeid(fptype) == typeid(double))
-                dgesv_(&m, &n, (double*)a, &lda, &piv[0], (double*)&tmpB[0], &m, info);
+                dgesv_(&_m, &_n, (double*)a, &lda, piv, (double*)&tmpB[0], &_m, _info);
 
             transpose(&tmpB[0], m, b, ldb, n, m);
         }
@@ -143,13 +153,17 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
     else
     {
         if(typeid(fptype) == typeid(float))
-            sgetrf_(&m, &m, (float*)a, &lda, &piv[0], info);
+            sgetrf_(&_m, &_m, (float*)a, &lda, piv, _info);
         else if(typeid(fptype) == typeid(double))
-            dgetrf_(&m, &m, (double*)a, &lda, &piv[0], info);
+            dgetrf_(&_m, &_m, (double*)a, &lda, piv, _info);
     }
 
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+    *info = static_cast<int>(_info[0]);
+#endif
     int retcode = *info >= 0 ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
 
+    int sign = 0;
     if(*info == 0)
     {
         for(int i = 0; i < m; i++)
@@ -165,8 +179,15 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
 template <typename fptype> static inline int
 lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, bool* info)
 {
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+    long _m = static_cast<long>(m), _n = static_cast<long>(n);
+    long lapackStatus = 0;
+    long lda = (long)(a_step / sizeof(fptype));
+#else
+    int _m = m, _n = n;
     int lapackStatus = 0;
     int lda = (int)(a_step / sizeof(fptype));
+#endif
     char L[] = {'L', '\0'};
 
     if(b)
@@ -174,9 +195,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
         if(n == 1 && b_step == sizeof(fptype))
         {
             if(typeid(fptype) == typeid(float))
-                OCV_LAPACK_FUNC(sposv)(L, &m, &n, (float*)a, &lda, (float*)b, &m, &lapackStatus);
+                OCV_LAPACK_FUNC(sposv)(L, &_m, &_n, (float*)a, &lda, (float*)b, &_m, &lapackStatus);
             else if(typeid(fptype) == typeid(double))
-                OCV_LAPACK_FUNC(dposv)(L, &m, &n, (double*)a, &lda, (double*)b, &m, &lapackStatus);
+                OCV_LAPACK_FUNC(dposv)(L, &_m, &_n, (double*)a, &lda, (double*)b, &_m, &lapackStatus);
         }
         else
         {
@@ -185,9 +206,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
             transpose(b, ldb, tmpB, m, m, n);
 
             if(typeid(fptype) == typeid(float))
-                OCV_LAPACK_FUNC(sposv)(L, &m, &n, (float*)a, &lda, (float*)tmpB, &m, &lapackStatus);
+                OCV_LAPACK_FUNC(sposv)(L, &_m, &_n, (float*)a, &lda, (float*)tmpB, &_m, &lapackStatus);
             else if(typeid(fptype) == typeid(double))
-                OCV_LAPACK_FUNC(dposv)(L, &m, &n, (double*)a, &lda, (double*)tmpB, &m, &lapackStatus);
+                OCV_LAPACK_FUNC(dposv)(L, &_m, &_n, (double*)a, &lda, (double*)tmpB, &_m, &lapackStatus);
 
             transpose(tmpB, m, b, ldb, n, m);
             delete[] tmpB;
@@ -196,9 +217,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
     else
     {
         if(typeid(fptype) == typeid(float))
-            OCV_LAPACK_FUNC(spotrf)(L, &m, (float*)a, &lda, &lapackStatus);
+            OCV_LAPACK_FUNC(spotrf)(L, &_m, (float*)a, &lda, &lapackStatus);
         else if(typeid(fptype) == typeid(double))
-            OCV_LAPACK_FUNC(dpotrf)(L, &m, (double*)a, &lda, &lapackStatus);
+            OCV_LAPACK_FUNC(dpotrf)(L, &_m, (double*)a, &lda, &lapackStatus);
     }
 
     if(lapackStatus == 0) *info = true;
@@ -210,11 +231,24 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
 template <typename fptype> static inline int
 lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype* vt, size_t v_step, int m, int n, int flags, int* info)
 {
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+    long _m = static_cast<long>(m), _n = static_cast<long>(n);
+    long _info[1];
+    long lda = (long)(a_step / sizeof(fptype));
+    long ldv = (long)(v_step / sizeof(fptype));
+    long ldu = (long)(u_step / sizeof(fptype));
+    long lwork = -1;
+    cv::AutoBuffer<long> iworkBuf_(8 * std::min(m, n));
+#else
+    int _m = m, _n = n;
+    int* _info = info;
     int lda = (int)(a_step / sizeof(fptype));
     int ldv = (int)(v_step / sizeof(fptype));
     int ldu = (int)(u_step / sizeof(fptype));
     int lwork = -1;
-    std::vector<int> iworkBuf(8*std::min(m, n));
+    cv::AutoBuffer<int> iworkBuf_(8 * std::min(m, n));
+#endif
+    auto iworkBuf = iworkBuf_.data();
     std::vector<fptype> ubuf;
     fptype work1 = 0;
 
@@ -240,11 +274,9 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     }
 
     if(typeid(fptype) == typeid(float))
-        OCV_LAPACK_FUNC(sgesdd)(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu,
-                (float*)vt, &ldv, (float*)&work1, &lwork, &iworkBuf[0], info);
+        OCV_LAPACK_FUNC(sgesdd)(mode, &_m, &_n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)&work1, &lwork, iworkBuf, _info);
     else if(typeid(fptype) == typeid(double))
-        OCV_LAPACK_FUNC(dgesdd)(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu,
-                (double*)vt, &ldv, (double*)&work1, &lwork, &iworkBuf[0], info);
+        OCV_LAPACK_FUNC(dgesdd)(mode, &_m, &_n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)&work1, &lwork, iworkBuf, _info);
 
     if(*info < 0)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -258,11 +290,13 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     CV_ANNOTATE_MEMORY_IS_INITIALIZED(buffer.data(), sizeof(fptype) * (lwork + 1));
 
     if(typeid(fptype) == typeid(float))
-        OCV_LAPACK_FUNC(sgesdd)(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu,
-                (float*)vt, &ldv, (float*)&buffer[0], &lwork, &iworkBuf[0], info);
+        OCV_LAPACK_FUNC(sgesdd)(mode, &_m, &_n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)&buffer[0], &lwork, iworkBuf, _info);
     else if(typeid(fptype) == typeid(double))
-        OCV_LAPACK_FUNC(dgesdd)(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu,
-                (double*)vt, &ldv, (double*)&buffer[0], &lwork, &iworkBuf[0], info);
+        OCV_LAPACK_FUNC(dgesdd)(mode, &_m, &_n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)&buffer[0], &lwork, iworkBuf, _info);
+
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+    *info = static_cast<int>(_info[0]);
+#endif
 
     // Make sure MSAN sees the memory as having been written.
     // MSAN does not think it has been written because a different language was called.
@@ -292,14 +326,27 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
 template <typename fptype> static inline int
 lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_step, fptype* dst, int* info)
 {
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+    long _m = static_cast<long>(m), _n = static_cast<long>(n), _k = static_cast<long>(k);
+    long _info[1];
+    long lda = (long)(a_step / sizeof(fptype));
+    long lwork = -1;
+    long ldtmpA;
+#else
+    int _m = m, _n = n, _k = k;
+    int* _info = info;
     int lda = (int)(a_step / sizeof(fptype));
+    int lwork = -1;
+    int ldtmpA;
+#endif
+
     char mode[] = { 'N', '\0' };
     if(m < n)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     std::vector<fptype> tmpAMemHolder;
     fptype* tmpA;
-    int ldtmpA;
+
     if (m == n)
     {
         transpose_square_inplace(a, lda, m);
@@ -314,7 +361,6 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
         transpose(a, lda, tmpA, m, m, n);
     }
 
-    int lwork = -1;
     fptype work1 = 0.;
 
     if (b)
@@ -322,9 +368,9 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
         if (k == 1 && b_step == sizeof(fptype))
         {
             if (typeid(fptype) == typeid(float))
-                OCV_LAPACK_FUNC(sgels)(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)&work1, &lwork, info);
+                OCV_LAPACK_FUNC(sgels)(mode, &_m, &_n, &_k, (float*)tmpA, &ldtmpA, (float*)b, &_m, (float*)&work1, &lwork, _info);
             else if (typeid(fptype) == typeid(double))
-                OCV_LAPACK_FUNC(dgels)(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)&work1, &lwork, info);
+                OCV_LAPACK_FUNC(dgels)(mode, &_m, &_n, &_k, (double*)tmpA, &ldtmpA, (double*)b, &_m, (double*)&work1, &lwork, _info);
 
             if (*info < 0)
                 return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -334,9 +380,9 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             fptype* buffer = &workBufMemHolder.front();
 
             if (typeid(fptype) == typeid(float))
-                OCV_LAPACK_FUNC(sgels)(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)buffer, &lwork, info);
+                OCV_LAPACK_FUNC(sgels)(mode, &_m, &_n, &_k, (float*)tmpA, &ldtmpA, (float*)b, &_m, (float*)buffer, &lwork, _info);
             else if (typeid(fptype) == typeid(double))
-                OCV_LAPACK_FUNC(dgels)(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)buffer, &lwork, info);
+                OCV_LAPACK_FUNC(dgels)(mode, &_m, &_n, &_k, (double*)tmpA, &ldtmpA, (double*)b, &_m, (double*)buffer, &lwork, _info);
         }
         else
         {
@@ -346,9 +392,9 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             transpose(b, ldb, tmpB, m, m, k);
 
             if (typeid(fptype) == typeid(float))
-                OCV_LAPACK_FUNC(sgels)(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)&work1, &lwork, info);
+                OCV_LAPACK_FUNC(sgels)(mode, &_m, &_n, &_k, (float*)tmpA, &ldtmpA, (float*)tmpB, &_m, (float*)&work1, &lwork, _info);
             else if (typeid(fptype) == typeid(double))
-                OCV_LAPACK_FUNC(dgels)(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)&work1, &lwork, info);
+                OCV_LAPACK_FUNC(dgels)(mode, &_m, &_n, &_k, (double*)tmpA, &ldtmpA, (double*)tmpB, &_m, (double*)&work1, &lwork, _info);
 
             if (*info < 0)
                 return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -358,9 +404,9 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             fptype* buffer = &workBufMemHolder.front();
 
             if (typeid(fptype) == typeid(float))
-                OCV_LAPACK_FUNC(sgels)(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)buffer, &lwork, info);
+                OCV_LAPACK_FUNC(sgels)(mode, &_m, &_n, &_k, (float*)tmpA, &ldtmpA, (float*)tmpB, &_m, (float*)buffer, &lwork, _info);
             else if (typeid(fptype) == typeid(double))
-                OCV_LAPACK_FUNC(dgels)(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)buffer, &lwork, info);
+                OCV_LAPACK_FUNC(dgels)(mode, &_m, &_n, &_k, (double*)tmpA, &ldtmpA, (double*)tmpB, &_m, (double*)buffer, &lwork, _info);
 
             transpose(tmpB, m, b, ldb, k, m);
         }
@@ -368,9 +414,9 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
     else
     {
         if (typeid(fptype) == typeid(float))
-            sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)&work1, &lwork, info);
+            sgeqrf_(&_m, &_n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)&work1, &lwork, _info);
         else if (typeid(fptype) == typeid(double))
-            dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)&work1, &lwork, info);
+            dgeqrf_(&_m, &_n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)&work1, &lwork, _info);
 
         if (*info < 0)
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -380,9 +426,9 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
         fptype* buffer = &workBufMemHolder.front();
 
         if (typeid(fptype) == typeid(float))
-            sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)buffer, &lwork, info);
+            sgeqrf_(&_m, &_n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)buffer, &lwork, _info);
         else if (typeid(fptype) == typeid(double))
-            dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)buffer, &lwork, info);
+            dgeqrf_(&_m, &_n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)buffer, &lwork, _info);
     }
 
     CV_ANNOTATE_MEMORY_IS_INITIALIZED(info, sizeof(int));
@@ -390,6 +436,10 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
         transpose_square_inplace(a, lda, m);
     else
         transpose(tmpA, m, a, lda, n, m);
+
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+    *info = static_cast<int>(_info[0]);
+#endif
 
     if (*info != 0)
         *info = 0;
@@ -475,7 +525,6 @@ lapack_gemm(const fptype *src1, size_t src1_step, const fptype *src2, size_t src
     return CV_HAL_ERROR_OK;
 }
 
-
 template <typename fptype> static inline int
 lapack_gemm_c(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
             const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step, int a_m, int a_n, int d_n, int flags)
@@ -546,10 +595,29 @@ lapack_gemm_c(const fptype *src1, size_t src1_step, const fptype *src2, size_t s
     else if(src3_step == 0 && beta != 0.0)
         set_value((std::complex<fptype>*)dst, lddst, std::complex<fptype>(0.0, 0.0), d_m, d_n);
 
+    // FIXME: this is a workaround. Support ILP64 in HAL API.
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+    int M = a_m, N = d_n, K = a_n;
+    if(typeid(fptype) == typeid(float)) {
+        auto src1_cast = (std::complex<float>*)(src1);
+        auto src2_cast = (std::complex<float>*)(src2);
+        auto dst_cast = (std::complex<float>*)(dst);
+        long lda = ldsrc1, ldb = ldsrc2, ldc = lddst;
+        cblas_cgemm(CblasRowMajor, transA, transB, M, N, K, (std::complex<float>*)&cAlpha, src1_cast, lda, src2_cast, ldb, (std::complex<float>*)&cBeta, dst_cast, ldc);
+    }
+    else if(typeid(fptype) == typeid(double)) {
+        auto src1_cast = (std::complex<double>*)(src1);
+        auto src2_cast = (std::complex<double>*)(src2);
+        auto dst_cast = (std::complex<double>*)(dst);
+        long lda = ldsrc1, ldb = ldsrc2, ldc = lddst;
+        cblas_zgemm(CblasRowMajor, transA, transB, M, N, K, (std::complex<double>*)&cAlpha, src1_cast, lda, src2_cast, ldb, (std::complex<double>*)&cBeta, dst_cast, ldc);
+    }
+#else
     if(typeid(fptype) == typeid(float))
         cblas_cgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, (float*)reinterpret_cast<fptype(&)[2]>(cAlpha), (float*)src1, ldsrc1, (float*)src2, ldsrc2, (float*)reinterpret_cast<fptype(&)[2]>(cBeta), (float*)dst, lddst);
     else if(typeid(fptype) == typeid(double))
         cblas_zgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, (double*)reinterpret_cast<fptype(&)[2]>(cAlpha), (double*)src1, ldsrc1, (double*)src2, ldsrc2, (double*)reinterpret_cast<fptype(&)[2]>(cBeta), (double*)dst, lddst);
+#endif
 
     return CV_HAL_ERROR_OK;
 }

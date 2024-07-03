@@ -69,7 +69,7 @@ if(COMPILE_FLAGS)
     set_target_properties(${the_module} PROPERTIES COMPILE_FLAGS ${COMPILE_FLAGS})
 endif()
 
-set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} --memory-init-file 0 -s TOTAL_MEMORY=128MB -s WASM_MEM_MAX=1GB -s ALLOW_MEMORY_GROWTH=1")
+set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s TOTAL_MEMORY=128MB -s WASM_MEM_MAX=1GB -s ALLOW_MEMORY_GROWTH=1")
 set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s MODULARIZE=1")
 set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s EXPORT_NAME=\"'cv'\" -s DEMANGLE_SUPPORT=1")
 set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s FORCE_FILESYSTEM=1 --use-preload-plugins --bind --post-js ${JS_HELPER} ${COMPILE_FLAGS}")
@@ -111,17 +111,6 @@ foreach(f ${test_files})
                     )
   list(APPEND opencv_test_js_file_deps "${test_dir}/${f}" "${opencv_test_js_bin_dir}/${f}")
 endforeach()
-
-# copy test data
-set(test_data "haarcascade_frontalface_default.xml")
-set(test_data_path "${PROJECT_SOURCE_DIR}/../../data/haarcascades/${test_data}")
-
-add_custom_command(OUTPUT "${opencv_test_js_bin_dir}/${test_data}"
-                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_data_path}" "${opencv_test_js_bin_dir}/${test_data}"
-                   DEPENDS "${test_data_path}"
-                   COMMENT "Copying ${test_data}"
-                  )
-list(APPEND opencv_test_js_file_deps "${test_data_path}" "${opencv_test_js_bin_dir}/${test_data}")
 
 add_custom_target(${PROJECT_NAME}_test
                   DEPENDS ${OCV_JS_PATH} ${opencv_test_js_file_deps})

@@ -49,7 +49,11 @@ Mat infEngineBlobToMat(const ov::Tensor& blob)
     switch (precision)
     {
         case ov::element::f32: type = CV_32F; break;
+        case ov::element::i8: type = CV_8S; break;
+        case ov::element::i32: type = CV_32S; break;
+        case ov::element::i64: type = CV_64S; break;
         case ov::element::u8: type = CV_8U; break;
+        case ov::element::boolean: type = CV_Bool; break;
         default:
             CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
     }
