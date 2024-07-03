@@ -677,17 +677,19 @@ TEST_P(fitEllipse_Modes, accuracy)
         Mat points(NUM, 1, data_type, Scalar::all(0));
         for (int i = 0; i < NUM; ++i)
         {
+            Mat pt = f0 + f1 * sin(i) + f2 * cos(i);
+            pt = pt.reshape(2);
             if (data_type == CV_32SC2)
             {
-                Mat pt = f0 + f1 * sin(i) + f2 * cos(i);
-                pt = pt.reshape(2);
                 pt.convertTo(points.row(i), CV_32SC2, int_scale);
             }
             else if (data_type == CV_32FC2)
             {
-                Mat pt = f0 + f1 * sin(i) + f2 * cos(i);
-                pt = pt.reshape(2);
                 pt.copyTo(points.row(i));
+            }
+            else
+            {
+                FAIL() << "unsupported data type: " << data_type;
             }
         }
 

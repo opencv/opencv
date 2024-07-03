@@ -76,7 +76,6 @@ protected:
     bool inplace;
     bool custom_inv_transform;
     int fwd_code, inv_code;
-    bool test_cpp;
     int hue_range;
     bool srgb;
 };
@@ -97,7 +96,6 @@ CV_ColorCvtBaseTest::CV_ColorCvtBaseTest( bool _custom_inv_transform, bool _allo
 
     fwd_code_str = inv_code_str = 0;
 
-    test_cpp = false;
     hue_range = 0;
     blue_idx = 0;
     srgb = false;
@@ -147,7 +145,6 @@ void CV_ColorCvtBaseTest::get_test_array_types_and_sizes( int test_case_idx,
         types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_MAKETYPE(depth, cn);
 
     inplace = cn == 3 && cvtest::randInt(rng) % 2 != 0;
-    test_cpp = (cvtest::randInt(rng) & 256) == 0;
 }
 
 
