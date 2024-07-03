@@ -818,6 +818,24 @@ TEST(Imgcodecs_Tiff, read_palette_color_image)
     ASSERT_EQ(CV_8UC3, img.type());
 }
 
+TEST(Imgcodecs_Tiff, read_palette_color_image_rgb_and_bgr)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_palette_color_image.tif";
+
+    Mat img_rgb, img_bgr;
+    ASSERT_NO_THROW(img_rgb = cv::imread(filenameInput, IMREAD_COLOR_RGB));
+    ASSERT_NO_THROW(img_bgr = cv::imread(filenameInput, IMREAD_COLOR_BGR));
+    ASSERT_FALSE(img_rgb.empty());
+    ASSERT_EQ(CV_8UC3, img_rgb.type());
+
+    ASSERT_FALSE(img_bgr.empty());
+    ASSERT_EQ(CV_8UC3, img_bgr.type());
+
+    EXPECT_EQ(img_rgb.at<Vec3b>(32, 24), Vec3b(255, 0, 0));
+    EXPECT_EQ(img_bgr.at<Vec3b>(32, 24), Vec3b(0, 0, 255));
+}
+
 TEST(Imgcodecs_Tiff, read_4_bit_palette_color_image)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
