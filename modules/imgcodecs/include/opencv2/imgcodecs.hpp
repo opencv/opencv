@@ -305,11 +305,13 @@ The function imreadmulti loads a specified range from a multi-page image from th
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
 
-/** @brief Returns the number of images inside the give file
+/** @brief Returns the number of images inside the given file
 
-The function imcount will return the number of pages in a multi-page image, or 1 for single-page images
+The function imcount returns the number of pages in a multi-page image (e.g. TIFF), the number of frames in an animation (e.g. AVIF), and 1 otherwise.
+If the image cannot be decoded, 0 is returned.
 @param filename Name of file to be loaded.
 @param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+@todo when cv::IMREAD_LOAD_GDAL flag used the return value will be 0 or 1 because OpenCV's GDAL decoder doesn't support multi-page reading yet.
 */
 CV_EXPORTS_W size_t imcount(const String& filename, int flags = IMREAD_ANYCOLOR);
 
