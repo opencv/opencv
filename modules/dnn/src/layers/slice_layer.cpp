@@ -69,7 +69,7 @@ Range normalizeRange(const Range& input_range, int n)
 {
     Range range = input_range;
 
-    if (!(range.start == n)){
+    if (range.start != n){
         range.start = std::min(std::max(range.start, -n), n - 1);
         if (range.start < 0)
         {
