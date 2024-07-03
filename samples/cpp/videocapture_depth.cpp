@@ -14,11 +14,10 @@ static void colorizeDisparity(const Mat& gray, Mat& rgb, double maxDisp=-1.f)
     if(maxDisp <= 0)
     {
         maxDisp = 0;
-        minMaxLoc(gray, 0, &maxDisp);
+        minMaxLoc(gray, nullptr, &maxDisp);
     }
 
-    rgb.create(gray.size(), CV_8UC3);
-    rgb = Scalar::all(0);
+    rgb = Mat::zeros(gray.size(), CV_8UC3);
     if(maxDisp < 1)
         return;
 
@@ -27,9 +26,8 @@ static void colorizeDisparity(const Mat& gray, Mat& rgb, double maxDisp=-1.f)
     applyColorMap(tmp, rgb, COLORMAP_JET);
 }
 
-static float getMaxDisparity(VideoCapture& capture)
+static float getMaxDisparity(VideoCapture& capture, int minDistance)
 {
-    const int minDistance = 400; // mm
     float b = (float)capture.get(CAP_OPENNI_DEPTH_GENERATOR_BASELINE); // mm
     float F = (float)capture.get(CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH); // pixels
     return b * F / minDistance;
@@ -44,6 +42,7 @@ static void colorizeDepth(const Mat& depth, Mat& rgb)
 }
 
 const char* keys = "{type t | | Camera Type: OpenNI, RealSense, Orbbec}"
+                   "{dist d | 400 | The minimum measurable distance in milimeter between the camera and the object}"
                    "{help h | | Help}";
 
 const char* about =
@@ -150,10 +149,11 @@ int main(int argc, char *argv[])
 
                 if (hasDisparity)
                 {
+                    int minDist = parser.get<int>("dist"); // mm
                     if(capture.retrieve(disparityMap, CAP_OPENNI_DISPARITY_MAP))
                     {
                         Mat colorDisparityMap;
-                        colorizeDisparity(disparityMap, colorDisparityMap, getMaxDisparity(capture));
+                        colorizeDisparity(disparityMap, colorDisparityMap, getMaxDisparity(capture, minDist));
                         colorDisparityMap.setTo(Scalar(0, 0, 0), disparityMap == 0);
                         imshow("Colorized Disparity Map", colorDisparityMap);
                     }
