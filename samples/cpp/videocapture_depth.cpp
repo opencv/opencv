@@ -154,9 +154,8 @@ int main(int argc, char *argv[])
                     {
                         Mat colorDisparityMap;
                         colorizeDisparity(disparityMap, colorDisparityMap, getMaxDisparity(capture));
-                        Mat validColorDisparityMap;
-                        colorDisparityMap.copyTo(validColorDisparityMap, disparityMap != 0);
-                        imshow("Colorized Disparity Map", validColorDisparityMap);
+                        colorDisparityMap.setTo(Scalar(0, 0, 0), disparityMap == 0);
+                        imshow("Colorized Disparity Map", colorDisparityMap);
                     }
                 }
             }
