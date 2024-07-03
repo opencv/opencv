@@ -2800,7 +2800,7 @@ TEST_P(Test_ONNX_nets, YOLOv9)
     float iou_threshold = 0.50;
 
     std::vector<int> refClassIds{1, 16, 2}; // wrong class mapping for yolov9
-    std::vector<float> refScores{0.959274f, 0.901125, 0.559396f};
+    std::vector<float> refScores{0.959274f, 0.901125f, 0.559396f};
 
     std::vector<Rect2d> refBoxes{
         Rect2d(106.255, 107.927, 472.497, 350.309),
