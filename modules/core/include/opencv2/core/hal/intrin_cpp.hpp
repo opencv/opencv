@@ -364,6 +364,7 @@ Floating point:
 |extract_n          | x | x |
 |broadcast_element  | x |   |
 |exp                | x | x |
+|log                | x | x |
 
  @{ */
 
@@ -742,13 +743,29 @@ OPENCV_HAL_IMPL_MATH_FUNC(v_sqrt, std::sqrt, _Tp)
 OPENCV_HAL_IMPL_MATH_FUNC(v_exp, std::exp, _Tp)
 #define OPENCV_HAL_MATH_HAVE_EXP 1
 
+/**
+ * @brief Natural logarithm \f$ \log(x) \f$ of elements
+ *
+ * Only for floating point types. Core implementation steps:
+ * 1. Decompose Input: Use binary representation to decompose the input into mantissa part \f$ m \f$ and exponent part \f$ e \f$. Such that \f$ \log(x) = \log(m \cdot 2^e) = \log(m) + e \cdot \ln(2) \f$.
+ * 2. Adjust Mantissa and Exponent Parts: If the mantissa is less than \f$ \sqrt{0.5} \f$, adjust the exponent and mantissa to ensure the mantissa is in the range \f$ (\sqrt{0.5}, \sqrt{2}) \f$ for better approximation.
+ * 3. Polynomial Approximation for \f$ \log(m) \f$: The closer the \f$ m \f$ is to 1, the more accurate the result.
+ *    - For float16 and float32, use a Taylor Series with 9 terms.
+ *    - For float64, use Pade Polynomials Approximation with 6 terms.
+ * 4. Combine Results: Add the two parts together to get the final result.
+ *
+ * @note The precision of the calculation depends on the implementation and the data type of the input.
+ *
+ * @note Similar to the behavior of std::log(), \f$ \ln(0) = -\infty \f$.
+ */
+OPENCV_HAL_IMPL_MATH_FUNC(v_log, std::log, _Tp)
+#define OPENCV_HAL_MATH_HAVE_LOG 1
+
 //! @cond IGNORED
 OPENCV_HAL_IMPL_MATH_FUNC(v_sin, std::sin, _Tp)
 #define OPENCV_HAL_MATH_HAVE_SIN 1
 OPENCV_HAL_IMPL_MATH_FUNC(v_cos, std::cos, _Tp)
 #define OPENCV_HAL_MATH_HAVE_COS 1
-OPENCV_HAL_IMPL_MATH_FUNC(v_log, std::log, _Tp)
-#define OPENCV_HAL_MATH_HAVE_LOG 1
 //! @endcond
 
 /** @brief Absolute value of elements
