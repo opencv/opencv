@@ -342,7 +342,7 @@ bad_decoding_end:
 
                 if( color )
                 {
-                    if( m_type == RAS_FORMAT_RGB )
+                    if( m_type == RAS_FORMAT_RGB || m_use_rgb)
                         icvCvt_RGB2BGR_8u_C3R(src, 0, data, 0, Size(m_width,1) );
                     else
                         memcpy(data, src, std::min(step, (size_t)src_pitch));
@@ -365,7 +365,7 @@ bad_decoding_end:
 
                 if( color )
                     icvCvt_BGRA2BGR_8u_C4C3R( src + 4, 0, data, 0, Size(m_width,1),
-                                              m_type == RAS_FORMAT_RGB ? 2 : 0 );
+                                              (m_type == RAS_FORMAT_RGB || m_use_rgb) ? 2 : 0 );
                 else
                     icvCvt_BGRA2Gray_8u_C4C1R( src + 4, 0, data, 0, Size(m_width,1),
                                                m_type == RAS_FORMAT_RGB ? 2 : 0 );
