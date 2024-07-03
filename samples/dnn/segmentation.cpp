@@ -159,12 +159,11 @@ int main(int argc, char **argv)
             resize(pred, mask, Size(frame.cols, frame.rows), 0, 0, INTER_AREA);
 
             // Create overlays for foreground and background
-            Mat foreground_overlay = Mat::zeros(frame.size(), frame.type());
+            Mat foreground_overlay;
 
-            // Set foreground (object) to red and background to blue
-            std::vector<Mat> channels;
-            split(foreground_overlay, channels);
-            channels[2] = mask;  // Red foreground
+            // Set foreground (object) to red
+            Mat all_zeros = Mat::zeros(frame.size(), CV_8UC1);
+            vector<Mat> channels = {all_zeros, all_zeros, mask};
             merge(channels, foreground_overlay);
 
             // Blend the overlays with the original frame
