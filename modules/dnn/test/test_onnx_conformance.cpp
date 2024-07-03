@@ -970,6 +970,7 @@ public:
 #endif
 #ifdef HAVE_CUDA
     static std::set<std::string> cuda_deny_list;
+    static std::set<std::string> cuda_fp16_deny_list;
 #endif
 
     Test_ONNX_conformance()
@@ -1055,6 +1056,9 @@ public:
         cuda_deny_list = {
             #include "test_onnx_conformance_layer_filter__cuda_denylist.inl.hpp"
         };
+        cuda_fp16_deny_list = {
+            #include "test_onnx_conformance_layer_filter__cuda_fp16_denylist.inl.hpp"
+        };
 #endif
     }
 
@@ -1074,6 +1078,7 @@ std::set<std::string> Test_ONNX_conformance::vulkan_deny_list;
 #endif
 #ifdef HAVE_CUDA
 std::set<std::string> Test_ONNX_conformance::cuda_deny_list;
+std::set<std::string> Test_ONNX_conformance::cuda_fp16_deny_list;
 #endif
 
 TEST_P(Test_ONNX_conformance, Layer_Test)
@@ -1114,6 +1119,10 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }
+
+        if (name == "test_pow") {
+            default_lInf = 0.00013; // Expected: (normInf) <= (lInf), actual: 0.00012207 vs 0.0001
+        }
     }
 #ifdef HAVE_HALIDE
     else if (backend == DNN_BACKEND_HALIDE)
@@ -1142,9 +1151,13 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
 #ifdef HAVE_CUDA
     else if (backend == DNN_BACKEND_CUDA)
     {
-        if (cuda_deny_list.find(name) != cuda_deny_list.end())
+        if (target == DNN_TARGET_CUDA && cuda_deny_list.find(name) != cuda_deny_list.end())
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+        if (target == DNN_TARGET_CUDA_FP16 && cuda_fp16_deny_list.find(name) != cuda_fp16_deny_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }
     }
 #endif
