@@ -3034,11 +3034,11 @@ TEST_P(Test_ONNX_layers, Attention) {
 TEST_P(Test_ONNX_layers, AttentionSingleHead) {
     testONNXModels("attention_single_head");
 }
-TEST_P(Test_ONNX_layers, TorchAttentionSingleHead){
-    testONNXModels("torch_attention_single_head");
+TEST_P(Test_ONNX_layers, PyTorchAttentionSingleHead){
+    testONNXModels("pytorch_attention_single_head");
 }
 
-TEST_P(Test_ONNX_layers, TorchUnflatten){
+TEST_P(Test_ONNX_layers, PyTorchUnflatten){
     testONNXModels("unflatten");
 }
 
