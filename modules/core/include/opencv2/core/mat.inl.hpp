@@ -1384,7 +1384,7 @@ CV_REQUIRES_CONST_DEFINE_POST
 
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(int _rows, int _cols, const _Tp& value)
-    : Mat(_rows, _cols, traits::Type<_Tp>::value, value)
+    : Mat(_rows, _cols, traits::Type<_Tp>::value, Scalar((const typename DataType<_Tp>::vec_type&)value))
 {}
 
 template<typename _Tp>
@@ -1396,7 +1396,7 @@ CV_REQUIRES_CONST_DEFINE_POST
 
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(Size _sz, const _Tp& value)
-    : Mat(_sz.height, _sz.width, traits::Type<_Tp>::value, value)
+    : Mat(_sz.height, _sz.width, traits::Type<_Tp>::value, Scalar((const typename DataType<_Tp>::vec_type&)value))
 {}
 
 template<typename _Tp>
@@ -1411,7 +1411,7 @@ Mat_<_Tp>::Mat_(int _dims, const int* _sz, const _Tp& _s)
     : Mat(_dims, _sz, traits::Type<_Tp>::value, Scalar(_s))
 {}
 
-template<typename _Tp>
+template<typename _Tp> inline
 Mat_<_Tp>::Mat_(int _dims, const int* _sz, _Tp* _data, const size_t* _steps)
     : Mat(_dims, _sz, traits::Type<_Tp>::value, _data, _steps)
 {}
