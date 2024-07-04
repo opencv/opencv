@@ -1,14 +1,14 @@
 '''
 This is a sample script to run GPT-2 inference in OpenCV using ONNX model.
 The script loads the GPT-2 model and runs inference on a given prompt.
-Curently script only works with fixed size window, that means
-you will have to specify promt of the same lenth as when model was exported to ONNX.
+Currently script only works with fixed size window, that means
+you will have to specify prompt of the same length as when model was exported to ONNX.
 
 
 Exporting GPT-2 model to ONNX.
-To expoert GPT-2 model to ONNX, you can use the following preocedure:
+To export GPT-2 model to ONNX, you can use the following procedure:
 
-1. Clone fork of Adjrew Karpathy's GPT-2 repository:
+1. Clone fork of Andrej Karpathy's GPT-2 repository:
 
     git clone https://github.com/Abdurrahheem/build-nanogpt/tree/ash/export-gpt2-onnx
 
