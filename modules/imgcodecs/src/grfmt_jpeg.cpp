@@ -494,12 +494,13 @@ bool  JpegDecoder::readData( Mat& img )
 
             jpeg_start_decompress( cinfo );
 
+            int num_read_lines = 0;
             if( doDirectRead)
             {
                 for( int iy = 0 ; iy < m_height; iy ++ )
                 {
                     uchar* data = img.ptr<uchar>(iy);
-                    jpeg_read_scanlines( cinfo, &data, 1 );
+                    num_read_lines += jpeg_read_scanlines( cinfo, &data, 1 );
                 }
             }
             else
@@ -510,7 +511,7 @@ bool  JpegDecoder::readData( Mat& img )
                 for( int iy = 0 ; iy < m_height; iy ++ )
                 {
                     uchar* data = img.ptr<uchar>(iy);
-                    jpeg_read_scanlines( cinfo, buffer, 1 );
+                    num_read_lines += jpeg_read_scanlines( cinfo, buffer, 1 );
 
                     if( color )
                     {
@@ -539,7 +540,7 @@ bool  JpegDecoder::readData( Mat& img )
                 }
             }
 
-            result = true;
+            result = num_read_lines >= m_height;
             jpeg_finish_decompress( cinfo );
         }
     }
