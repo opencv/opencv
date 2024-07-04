@@ -1,3 +1,33 @@
+'''
+This is a sample script to run GPT-2 inference in OpenCV using ONNX model.
+The script loads the GPT-2 model and runs inference on a given prompt.
+Curently script only works with fixed size window, that means
+you will have to specify promt of the same lenth as when model was exported to ONNX.
+
+
+Exporting GPT-2 model to ONNX.
+To expoert GPT-2 model to ONNX, you can use the following preocedure:
+
+1. Clone fork of Adjrew Karpathy's GPT-2 repository:
+
+    git clone https://github.com/Abdurrahheem/build-nanogpt/tree/ash/export-gpt2-onnx
+
+2. Install the required dependencies:
+
+    pip install -r requirements.txt
+
+3  Export the model to ONNX:
+
+    python export2onnx.py --promt=<Any-promt-you-want> --batch_size=<batch-size>
+
+
+Run the script:
+
+    python gpt2_inference.py --model=<path-to-onnx-model> --max_seq_len=<max-output-lenght> --batch_size=<use-one-used-while-exportinh> --prompt=<use-promt-of-the-same-length-used-while-exporting>
+'''
+
+
+
 from copy import deepcopy
 import numpy as np
 import tiktoken
@@ -7,10 +37,7 @@ import cv2
 def parse_args():
     parser = argparse.ArgumentParser(description='Use this script to run GPT-2 inference in OpenCV',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--model', type=str,
-                        default="/Users/abd/projects/build-nanogpt/gpt22.onnx", # TODO: remove default
-                        # required=True,
-                        help='Path to GPT-2 model ONNX model file.')
+    parser.add_argument('--model', type=str, required=True, help='Path to GPT-2 model ONNX model file.')
     parser.add_argument("--max_seq_len", type=int, default=30, help="Number of tokens to continue.")
     parser.add_argument("--batch_size", type=int, default=5, help="Number of batches.")
     parser.add_argument("--prompt", type=str, default="Hello, I'm a language model,", help="Prompt to start with.")
@@ -23,13 +50,14 @@ def stable_softmax(logits):
 
 def gpt2_inference(net, tokens, max_length, num_return_sequences=5):
 
+    print("Inferencing GPT-2 model...")
     x = np.array(tokens)
     x = np.tile(x, (num_return_sequences, 1))
 
     output_buffer = deepcopy(x)
     counter = x.shape[1]
-    while counter < max_length: ## could be replace with buffer shape
-        # Convert x to the required format for your neural network
+    while counter < max_length:
+
         net.setInput(x)
         logits = net.forward()
 
@@ -56,7 +84,7 @@ def gpt2_inference(net, tokens, max_length, num_return_sequences=5):
 
         output_buffer = np.concatenate((output_buffer, sampled_indices), axis=1)
         counter += 1
-
+    print("Inference done!")
     return output_buffer
 
 if __name__ == '__main__':
