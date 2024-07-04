@@ -2244,13 +2244,26 @@ void applyTable(Mat_<uchar>& I, const uchar* const table)
 }
 @endcode
  */
+#if __cplusplus < 202002L
+#define CV_REQUIRES_CONST_DECLARE_PRE template<bool C = std::is_const<_Tp>::value, typename = typename std::enable_if<!C>::type>
+#else
+#define CV_REQUIRES_CONST_DECLARE_PRE
+#endif
+
+#if __cplusplus < 202002L
+#define CV_REQUIRES_CONST_DECLARE_POST
+#else
+#define CV_REQUIRES_CONST_DECLARE_POST requires(!std::is_const_v<_Tp>)
+#endif
+
 template<typename _Tp> class Mat_ : public Mat
 {
 public:
     typedef _Tp value_type;
-    typedef typename DataType<_Tp>::channel_type channel_type;
-    typedef MatIterator_<_Tp> iterator;
-    typedef MatConstIterator_<_Tp> const_iterator;
+    typedef typename std::remove_const<_Tp>::type non_const_value_type;
+    typedef typename DataType<non_const_value_type>::channel_type channel_type;
+    typedef MatIterator_<non_const_value_type> iterator;
+    typedef MatConstIterator_<non_const_value_type> const_iterator;
 
     //! default constructor
     Mat_() CV_NOEXCEPT;
@@ -2300,25 +2313,35 @@ public:
     Mat_& operator = (const Mat& m);
     Mat_& operator = (const Mat_& m);
     //! set all the elements to s.
-    Mat_& operator = (const _Tp& s);
+    CV_REQUIRES_CONST_DECLARE_PRE
+    Mat_& operator = (const _Tp& s) CV_REQUIRES_CONST_DECLARE_POST;
     //! assign a matrix expression
     Mat_& operator = (const MatExpr& e);
 
     //! iterators; they are smart enough to skip gaps in the end of rows
-    iterator begin();
-    iterator end();
+    CV_REQUIRES_CONST_DECLARE_PRE
+    iterator begin() CV_REQUIRES_CONST_DECLARE_POST;
+    CV_REQUIRES_CONST_DECLARE_PRE
+    iterator end() CV_REQUIRES_CONST_DECLARE_POST;
     const_iterator begin() const;
     const_iterator end() const;
 
     //reverse iterators
-    std::reverse_iterator<iterator> rbegin();
-    std::reverse_iterator<iterator> rend();
+    CV_REQUIRES_CONST_DECLARE_PRE
+    std::reverse_iterator<iterator> rbegin() CV_REQUIRES_CONST_DECLARE_POST;
+    CV_REQUIRES_CONST_DECLARE_PRE
+    std::reverse_iterator<iterator> rend() CV_REQUIRES_CONST_DECLARE_POST;
     std::reverse_iterator<const_iterator> rbegin() const;
     std::reverse_iterator<const_iterator> rend() const;
 
     //! template methods for operation over all matrix elements.
     // the operations take care of skipping gaps in the end of rows (if any)
-    template<typename Functor> void forEach(const Functor& operation);
+#if __cplusplus < 202002L
+    template<typename Functor, bool C = std::is_const<_Tp>::value, typename = typename std::enable_if<!C>::type>
+#else
+    template<typename Functor>
+#endif
+    void forEach(const Functor& operation) CV_REQUIRES_CONST_DECLARE_POST;
     template<typename Functor> void forEach(const Functor& operation) const;
 
     //! equivalent to Mat::create(_rows, _cols, DataType<_Tp>::type)
@@ -2416,6 +2439,17 @@ public:
     Mat_& operator = (Mat&& m);
 
     Mat_(MatExpr&& e);
+
+    // Inherited.
+#if __cplusplus < 202002L
+    CV_REQUIRES_CONST_DECLARE_PRE
+    Mat& setTo(InputArray value, InputArray mask=noArray()) {
+      return Mat::setTo(value, mask);
+    }
+#else
+    using Mat::setTo;
+    Mat& setTo(InputArray value, InputArray mask=noArray()) requires(std::is_const_v<_Tp>) = delete;
+#endif
 };
 
 typedef Mat_<uchar> Mat1b;

@@ -1427,7 +1427,7 @@ Mat_<_Tp>::Mat_(const Mat_& m)
 
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(int _rows, int _cols, _Tp* _data, size_t steps)
-    : Mat(_rows, _cols, traits::Type<_Tp>::value, _data, steps)
+    : Mat(_rows, _cols, traits::Type<non_const_value_type>::value, (non_const_value_type*)_data, steps)
 {}
 
 template<typename _Tp> inline
@@ -1530,8 +1530,22 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (const Mat_& m)
     return *this;
 }
 
-template<typename _Tp> inline
+#if __cplusplus < 202002L
+#define CV_REQUIRES_CONST_DEFINE_PRE template <bool, typename> inline
+#else
+#define CV_REQUIRES_CONST_DEFINE_PRE inline
+#endif
+
+#if __cplusplus < 202002L
+#define CV_REQUIRES_CONST_DEFINE_POST
+#else
+#define CV_REQUIRES_CONST_DEFINE_POST requires(!std::is_const_v<_Tp>)
+#endif
+
+template<typename _Tp>
+CV_REQUIRES_CONST_DEFINE_PRE
 Mat_<_Tp>& Mat_<_Tp>::operator = (const _Tp& s)
+CV_REQUIRES_CONST_DEFINE_POST
 {
     typedef typename DataType<_Tp>::vec_type VT;
     Mat::operator=(Scalar((const VT&)s));
@@ -1853,55 +1867,70 @@ Mat_<_Tp>::operator Matx<typename DataType<_Tp>::channel_type, m, n>() const
 }
 
 template<typename _Tp> inline
-MatConstIterator_<_Tp> Mat_<_Tp>::begin() const
+typename Mat_<_Tp>::const_iterator Mat_<_Tp>::begin() const
 {
     return Mat::begin<_Tp>();
 }
 
 template<typename _Tp> inline
-std::reverse_iterator<MatConstIterator_<_Tp>> Mat_<_Tp>::rbegin() const
+std::reverse_iterator<typename Mat_<_Tp>::const_iterator> Mat_<_Tp>::rbegin() const
 {
     return Mat::rbegin<_Tp>();
 }
 
 template<typename _Tp> inline
-MatConstIterator_<_Tp> Mat_<_Tp>::end() const
+typename Mat_<_Tp>::const_iterator Mat_<_Tp>::end() const
 {
     return Mat::end<_Tp>();
 }
 
 template<typename _Tp> inline
-std::reverse_iterator<MatConstIterator_<_Tp>> Mat_<_Tp>::rend() const
+std::reverse_iterator<typename Mat_<_Tp>::const_iterator> Mat_<_Tp>::rend() const
 {
     return Mat::rend<_Tp>();
 }
 
-template<typename _Tp> inline
-MatIterator_<_Tp> Mat_<_Tp>::begin()
+template<typename _Tp>
+CV_REQUIRES_CONST_DEFINE_PRE
+typename Mat_<_Tp>::iterator Mat_<_Tp>::begin()
+CV_REQUIRES_CONST_DEFINE_POST
 {
     return Mat::begin<_Tp>();
 }
 
-template<typename _Tp> inline
-std::reverse_iterator<MatIterator_<_Tp>> Mat_<_Tp>::rbegin()
+template<typename _Tp>
+CV_REQUIRES_CONST_DEFINE_PRE
+std::reverse_iterator<typename Mat_<_Tp>::iterator> Mat_<_Tp>::rbegin()
+CV_REQUIRES_CONST_DEFINE_POST
 {
     return Mat::rbegin<_Tp>();
 }
 
-template<typename _Tp> inline
-MatIterator_<_Tp> Mat_<_Tp>::end()
+template<typename _Tp>
+CV_REQUIRES_CONST_DEFINE_PRE
+typename Mat_<_Tp>::iterator Mat_<_Tp>::end()
+CV_REQUIRES_CONST_DEFINE_POST
 {
     return Mat::end<_Tp>();
 }
 
-template<typename _Tp> inline
-std::reverse_iterator<MatIterator_<_Tp>> Mat_<_Tp>::rend()
+template<typename _Tp>
+CV_REQUIRES_CONST_DEFINE_PRE
+std::reverse_iterator<typename Mat_<_Tp>::iterator> Mat_<_Tp>::rend()
+CV_REQUIRES_CONST_DEFINE_POST
 {
     return Mat::rend<_Tp>();
 }
 
-template<typename _Tp> template<typename Functor> inline
+template<typename _Tp>
+#if __cplusplus < 202002L
+template<typename Functor, bool, typename> inline
 void Mat_<_Tp>::forEach(const Functor& operation) {
+#else
+template<typename Functor> inline
+void Mat_<_Tp>::forEach(const Functor& operation)
+CV_REQUIRES_CONST_DEFINE_POST {
+#endif
     Mat::forEach<_Tp, Functor>(operation);
 }
 
