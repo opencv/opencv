@@ -20,7 +20,7 @@ const string about =
         "Sample command:\n"
         "\t ./example_dnn_classification googlenet --input=path/to/image \n"
         "Model path can also be specified using --model argument"
-        "use imagelist_creator to create the xml or yaml list";
+        "use imagelist_creator to create the xml or yaml list\n";
 
 const string param_keys =
     "{ help  h         |            | Print help message. }"
@@ -92,6 +92,7 @@ int main(int argc, char** argv)
 
     if (!parser.has("@alias"))
     {
+        cout << about << endl;
         parser.printMessage();
         return -1;
     }
@@ -144,6 +145,9 @@ int main(int argc, char** argv)
     // Create a window
     static const std::string kWinName = "Deep learning image classification in OpenCV";
     namedWindow(kWinName, WINDOW_NORMAL);
+
+    //Create FontFace for putText
+    FontFace sans("sans");
 
     //! [Open a video file or an image file or a camera stream]
     VideoCapture cap;
@@ -227,11 +231,12 @@ int main(int argc, char** argv)
         t1 = timeRecorder.getTimeMilli();
         timeRecorder.reset();
         string label = format("Inference time of 1 round: %.2f ms", t1);
-        putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+
+        putText(frame, label, Point(0, 15), Scalar(0, 255, 0), sans, 10);
         // Print predicted class.
         label = format("%s: %.4f", (classes.empty() ? format("Class #%d", classId).c_str() :
                         classes[classId].c_str()),confidence);
-        putText(frame, label, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        putText(frame, label, Point(0, 35), Scalar(0, 255, 0), sans, 10);
         imshow(kWinName, frame);
         int key = waitKey(1000); // Wait for 1 second
         if (key == 'q' || key == 27) // Check if 'q' or 'ESC' is pressed
