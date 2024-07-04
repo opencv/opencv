@@ -340,20 +340,36 @@ static bool pyopencv_to_generic_vec(PyObject* obj, std::vector<Tp>& value, const
     {
         return true;
     }
-    if (!PySequence_Check(obj))
+    if (info.nd_mat && PyArray_Check(obj))
     {
-        failmsg("Can't parse '%s'. Input argument doesn't provide sequence protocol", info.name);
-        return false;
-    }
-    const size_t n = static_cast<size_t>(PySequence_Size(obj));
-    value.resize(n);
-    for (size_t i = 0; i < n; i++)
-    {
-        SafeSeqItem item_wrap(obj, i);
-        if (!pyopencv_to(item_wrap.item, value[i], info))
+        /*
+            If obj is marked as nd mat and of array type, it is parsed to a single
+            mat in the target vector to avoid being split into multiple mats
+        */
+        value.resize(1);
+        if (!pyopencv_to(obj, value.front(), info))
         {
-            failmsg("Can't parse '%s'. Sequence item with index %lu has a wrong type", info.name, i);
+            failmsg("Can't parse '%s'. Array item has a wrong type", info.name);
             return false;
+        }
+    }
+    else // parse as sequence
+    {
+        if (!PySequence_Check(obj))
+        {
+            failmsg("Can't parse '%s'. Input argument doesn't provide sequence protocol", info.name);
+            return false;
+        }
+        const size_t n = static_cast<size_t>(PySequence_Size(obj));
+        value.resize(n);
+        for (size_t i = 0; i < n; i++)
+        {
+            SafeSeqItem item_wrap(obj, i);
+            if (!pyopencv_to(item_wrap.item, value[i], info))
+            {
+                failmsg("Can't parse '%s'. Sequence item with index %lu has a wrong type", info.name, i);
+                return false;
+            }
         }
     }
     return true;
