@@ -489,6 +489,10 @@ class ArgInfo(object):
         return self.name
 
     @property
+    def nd_mat(self):
+        return '/ND' in self._modifiers
+
+    @property
     def inputarg(self):
         return '/O' not in self._modifiers
 
@@ -528,6 +532,7 @@ class ArgInfo(object):
         arg  = 0x01 if self.outputarg else 0x0
         arg += 0x02 if self.arithm_op_src_arg else 0x0
         arg += 0x04 if self.pathlike else 0x0
+        arg += 0x08 if self.nd_mat else 0x0
         return "ArgInfo(\"%s\", %d)" % (self.name, arg)
 
 
