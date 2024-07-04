@@ -2268,15 +2268,18 @@ public:
     //! default constructor
     Mat_() CV_NOEXCEPT;
     //! equivalent to Mat(_rows, _cols, DataType<_Tp>::type)
-    Mat_(int _rows, int _cols);
+    CV_REQUIRES_CONST_DECLARE_PRE
+    Mat_(int _rows, int _cols) CV_REQUIRES_CONST_DECLARE_POST;
     //! constructor that sets each matrix element to specified value
     Mat_(int _rows, int _cols, const _Tp& value);
     //! equivalent to Mat(_size, DataType<_Tp>::type)
-    explicit Mat_(Size _size);
+    CV_REQUIRES_CONST_DECLARE_PRE
+    explicit Mat_(Size _size) CV_REQUIRES_CONST_DECLARE_POST;
     //! constructor that sets each matrix element to specified value
     Mat_(Size _size, const _Tp& value);
     //! n-dim array constructor
-    Mat_(int _ndims, const int* _sizes);
+    CV_REQUIRES_CONST_DECLARE_PRE
+    Mat_(int _ndims, const int* _sizes) CV_REQUIRES_CONST_DECLARE_POST;
     //! n-dim array constructor that sets each matrix element to specified value
     Mat_(int _ndims, const int* _sizes, const _Tp& value);
     //! copy/conversion constructor. If m is of different type, it's converted

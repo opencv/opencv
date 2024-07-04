@@ -1355,6 +1355,18 @@ inline MatStep& MatStep::operator = (size_t s)
 
 ////////////////////////////// Mat_<_Tp> ////////////////////////////
 
+#if __cplusplus < 202002L
+#define CV_REQUIRES_CONST_DEFINE_PRE template <bool, typename> inline
+#else
+#define CV_REQUIRES_CONST_DEFINE_PRE inline
+#endif
+
+#if __cplusplus < 202002L
+#define CV_REQUIRES_CONST_DEFINE_POST
+#else
+#define CV_REQUIRES_CONST_DEFINE_POST requires(!std::is_const_v<_Tp>)
+#endif
+
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_() CV_NOEXCEPT
     : Mat()
@@ -1362,34 +1374,36 @@ Mat_<_Tp>::Mat_() CV_NOEXCEPT
     flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
 }
 
-template<typename _Tp> inline
+template<typename _Tp>
+CV_REQUIRES_CONST_DEFINE_PRE
 Mat_<_Tp>::Mat_(int _rows, int _cols)
     : Mat(_rows, _cols, traits::Type<_Tp>::value)
+CV_REQUIRES_CONST_DEFINE_POST
 {
 }
 
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(int _rows, int _cols, const _Tp& value)
-    : Mat(_rows, _cols, traits::Type<_Tp>::value)
-{
-    *this = value;
-}
+    : Mat(_rows, _cols, traits::Type<_Tp>::value, value)
+{}
 
-template<typename _Tp> inline
+template<typename _Tp>
+CV_REQUIRES_CONST_DEFINE_PRE
 Mat_<_Tp>::Mat_(Size _sz)
     : Mat(_sz.height, _sz.width, traits::Type<_Tp>::value)
+CV_REQUIRES_CONST_DEFINE_POST
 {}
 
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(Size _sz, const _Tp& value)
-    : Mat(_sz.height, _sz.width, traits::Type<_Tp>::value)
-{
-    *this = value;
-}
+    : Mat(_sz.height, _sz.width, traits::Type<_Tp>::value, value)
+{}
 
-template<typename _Tp> inline
+template<typename _Tp>
+CV_REQUIRES_CONST_DEFINE_PRE
 Mat_<_Tp>::Mat_(int _dims, const int* _sz)
     : Mat(_dims, _sz, traits::Type<_Tp>::value)
+CV_REQUIRES_CONST_DEFINE_POST
 {}
 
 template<typename _Tp> inline
@@ -1397,7 +1411,7 @@ Mat_<_Tp>::Mat_(int _dims, const int* _sz, const _Tp& _s)
     : Mat(_dims, _sz, traits::Type<_Tp>::value, Scalar(_s))
 {}
 
-template<typename _Tp> inline
+template<typename _Tp>
 Mat_<_Tp>::Mat_(int _dims, const int* _sz, _Tp* _data, const size_t* _steps)
     : Mat(_dims, _sz, traits::Type<_Tp>::value, _data, _steps)
 {}
@@ -1529,18 +1543,6 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (const Mat_& m)
     Mat::operator=(m);
     return *this;
 }
-
-#if __cplusplus < 202002L
-#define CV_REQUIRES_CONST_DEFINE_PRE template <bool, typename> inline
-#else
-#define CV_REQUIRES_CONST_DEFINE_PRE inline
-#endif
-
-#if __cplusplus < 202002L
-#define CV_REQUIRES_CONST_DEFINE_POST
-#else
-#define CV_REQUIRES_CONST_DEFINE_POST requires(!std::is_const_v<_Tp>)
-#endif
 
 template<typename _Tp>
 CV_REQUIRES_CONST_DEFINE_PRE
