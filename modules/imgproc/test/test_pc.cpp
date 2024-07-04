@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+#define CV_DXT_MUL_CONJ 8
+
 namespace opencv_test { namespace {
 
 /// phase correlation
@@ -181,7 +183,7 @@ void CV_DivSpectrumsTest::get_test_array_types_and_sizes( int test_case_idx, vec
 
     // Get the flag of the input.
     const int rand_int_flags = cvtest::randInt(rng);
-    flags = rand_int_flags & (CV_DXT_MUL_CONJ | CV_DXT_ROWS);
+    flags = rand_int_flags & (CV_DXT_MUL_CONJ | DFT_ROWS);
 
     // Get input type.
     const int rand_int_type = cvtest::randInt(rng);
