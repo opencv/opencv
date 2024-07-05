@@ -418,5 +418,50 @@ namespace CV__SIMD_NAMESPACE {
 #define OPENCV_HAL_MATH_HAVE_LOG 1
 //! @}
 #endif
+
+/* This implementation is derived from the approximation approach of Error Function (Erf) from PyTorch
+   https://github.com/pytorch/pytorch/blob/9c50ecc84b9a6e699a7f058891b889aafbf976c7/aten/src/ATen/cpu/vec/vec512/vec512_float.h#L189-L220
+*/
+
+#ifndef OPENCV_HAL_MATH_HAVE_ERF
+
+//! @name Error Function
+//! @{
+
+    inline v_float32 v_erf(v_float32 v) {
+        const v_float32 coef0 = vx_setall_f32(0.3275911f),
+                        coef1 = vx_setall_f32(1.061405429f),
+                        coef2 = vx_setall_f32(-1.453152027f),
+                        coef3 = vx_setall_f32(1.421413741f),
+                        coef4 = vx_setall_f32(-0.284496736f),
+                        coef5 = vx_setall_f32(0.254829592f),
+                        ones = vx_setall_f32(1.0f),
+                        neg_zeros = vx_setall_f32(-0.f);
+        v_float32 t = v_abs(v);
+        // sign(v)
+        v_float32 sign_mask = v_and(neg_zeros, v);
+
+        t = v_div(ones, v_fma(coef0, t, ones));
+        v_float32 r = v_fma(coef1, t, coef2);
+        r = v_fma(r, t, coef3);
+        r = v_fma(r, t, coef4);
+        r = v_fma(r, t, coef5);
+        // - v * v
+        v_float32 pow_2 = v_mul(v, v);
+        v_float32 neg_pow_2 = v_xor(neg_zeros, pow_2);
+        // - exp(- v * v)
+        v_float32 exp = v_exp(neg_pow_2);
+        v_float32 neg_exp = v_xor(neg_zeros, exp);
+        v_float32 res = v_mul(t, neg_exp);
+        res = v_fma(r, res, ones);
+        return v_xor(sign_mask, res);
+    }
+
+#define OPENCV_HAL_MATH_HAVE_ERF 1
+//! @}
+
+#endif // OPENCV_HAL_MATH_HAVE_ERF
+
+
 }
 #endif  // OPENCV_HAL_INTRIN_HPP
