@@ -1864,6 +1864,48 @@ template<typename R> struct TheTest
 #endif
         return *this;
     }
+
+    TheTest &test_erf_fp32() {
+        int n = VTraits<R>::vlanes();
+
+        constexpr int num_loops = 10000;
+        const std::vector<LaneType> singular_inputs{INFINITY, -INFINITY, NAN};
+        constexpr double insert_singular_input_probability = 0.1;
+        cv::RNG_MT19937 rng;
+
+        for (int i = 0; i < num_loops; i++) {
+            Data<R> inputs;
+            for (int j = 0; j < n; j++) {
+                if (rng.uniform(0.f, 1.f) <= insert_singular_input_probability) {
+                    int singular_input_index = rng.uniform(0, int(singular_inputs.size()));
+                    inputs[j] = singular_inputs[singular_input_index];
+                } else {
+                    // std::exp(float) overflows at about 88.0f.
+                    // In v_erf, exp is called on input*input. So test range is [-sqrt(88.0f), sqrt(88.0f)]
+                    inputs[j] = (LaneType) rng.uniform(-9.4f, 9.4f);
+                }
+            }
+
+            Data<R> outputs = v_erf(R(inputs));
+            for (int j = 0; j < n; j++) {
+                SCOPED_TRACE(cv::format("Random test value: %f", inputs[j]));
+                if (std::isinf(inputs[j])) {
+                    if (inputs[j] < 0) {
+                        EXPECT_EQ(-1, outputs[j]);
+                    } else {
+                        EXPECT_EQ(1, outputs[j]);
+                    }
+                } else if (std::isnan(inputs[j])) {
+                    EXPECT_TRUE(std::isnan(outputs[j]));
+                } else {
+                    LaneType ref_output = std::erf(inputs[j]);
+                    EXPECT_LT(std::abs(outputs[j] - ref_output), 1e-3f * (std::abs(ref_output) + FLT_MIN * 1e4f));
+                }
+            }
+        }
+
+        return *this;
+    }
 };
 
 #define DUMP_ENTRY(type) printf("SIMD%d: %s\n", 8*VTraits<v_uint8>::vlanes(), CV__TRACE_FUNCTION);
@@ -2179,6 +2221,7 @@ void test_hal_intrin_float32()
         .test_pack_triplets()
         .test_exp_fp32()
         .test_log_fp32()
+        .test_erf_fp32()
 #if CV_SIMD_WIDTH == 32
         .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
         .test_rotate<4>().test_rotate<5>().test_rotate<6>().test_rotate<7>()

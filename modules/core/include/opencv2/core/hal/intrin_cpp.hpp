@@ -263,7 +263,8 @@ Most of these operations return only one value.
 
 ### Other math
 
-- Some frequent operations: @ref v_sqrt, @ref v_invsqrt, @ref v_magnitude, @ref v_sqr_magnitude, @ref v_exp
+- Some frequent operations: @ref v_sqrt, @ref v_invsqrt, @ref v_magnitude, @ref v_sqr_magnitude, @ref v_exp,
+                            @ref v_erf
 - Absolute values: @ref v_abs, @ref v_absdiff, @ref v_absdiffs
 
 ### Conversions
@@ -760,6 +761,13 @@ OPENCV_HAL_IMPL_MATH_FUNC(v_exp, std::exp, _Tp)
  */
 OPENCV_HAL_IMPL_MATH_FUNC(v_log, std::log, _Tp)
 #define OPENCV_HAL_MATH_HAVE_LOG 1
+
+/**
+ * @brief Error function.
+ *
+ * @note Support FP32 precision for now.
+ */
+OPENCV_HAL_IMPL_MATH_FUNC(v_erf, std::erf, _Tp)
 
 //! @cond IGNORED
 OPENCV_HAL_IMPL_MATH_FUNC(v_sin, std::sin, _Tp)
