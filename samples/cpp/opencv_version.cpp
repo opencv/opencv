@@ -47,14 +47,8 @@ int main(int argc, const char* argv[])
         unsigned int nThreads = std::thread::hardware_concurrency();
         std::cout << "Number of concurrent threads supported: " << nThreads << std::endl;
 
-        #ifdef _WIN32
-        SYSTEM_INFO sysInfo;
-        GetSystemInfo(&sysInfo);
-        std::cout << "Number of logical processors: " << sysInfo.dwNumberOfProcessors << std::endl;
-        #elif defined(__linux__) || defined(__unix__)
-        long nProcessors = sysconf(_SC_NPROCESSORS_ONLN);
+        int nProcessors = cv::getNumThreads();
         std::cout << "Number of logical processors: " << nProcessors << std::endl;
-        #endif
 
         #ifdef HAVE_OPENCV_CUDAARITHM
         std::cout << "Environment: GPU" << std::endl;

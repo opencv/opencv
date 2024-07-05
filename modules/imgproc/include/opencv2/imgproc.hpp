@@ -3000,6 +3000,9 @@ floating-point.
 CV_EXPORTS_W void accumulateWeighted( InputArray src, InputOutputArray dst,
                                       double alpha, InputArray mask = noArray() );
 
+/** @example samples/cpp/snippets/phase_corr.cpp
+An example using the phaseCorrelate function
+*/
 /** @brief The function is used to detect translational shifts that occur between two images.
 
 The operation takes advantage of the Fourier shift theorem for detecting the translational shift in

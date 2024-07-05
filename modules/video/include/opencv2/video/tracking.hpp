@@ -431,6 +431,9 @@ CV_EXPORTS_W Mat readOpticalFlow( const String& path );
  */
 CV_EXPORTS_W bool writeOpticalFlow( const String& path, InputArray flow );
 
+/** @example samples/cpp/snippets/dis_opticalflow.cpp
+An example using the dense optical flow and DIS optical flow algorithms
+*/
 /**
    Base class for dense optical flow algorithms
 */
