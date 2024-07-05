@@ -6,6 +6,10 @@ if(UNIX)
   find_package(X11 QUIET)
 endif()
 
+find_package(PkgConfig QUIET)
+find_package(glm QUIET)
+pkg_search_module(EPOXY REQUIRED epoxy)
+
 SET(OPENCV_OPENGL_SAMPLES_REQUIRED_DEPS
   opencv_core
   opencv_imgproc
@@ -27,6 +31,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     if(sample_filename STREQUAL "opengl_interop.cpp")
       ocv_target_link_libraries(${tgt} PRIVATE ${X11_LIBRARIES})
       ocv_target_include_directories(${tgt} ${X11_INCLUDE_DIR})
+    endif()
+    if(sample_filename STREQUAL "opengl3_2.cpp")
+      ocv_target_link_libraries(${tgt} PRIVATE ${EPOXY_LIBRARIES} glm::glm)
+      ocv_target_include_directories(${tgt} PRIVATE ${EPOXY_INCLUDE_DIRS})
     endif()
   endforeach()
 endif()
