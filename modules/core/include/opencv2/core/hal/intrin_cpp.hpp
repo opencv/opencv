@@ -764,7 +764,7 @@ OPENCV_HAL_IMPL_MATH_FUNC(v_log, std::log, _Tp)
 
 /**
  * @brief Error function.
- * 
+ *
  * @note Support FP32 precision for now.
  */
 OPENCV_HAL_IMPL_MATH_FUNC(v_erf, std::erf, _Tp)
