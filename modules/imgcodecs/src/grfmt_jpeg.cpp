@@ -499,7 +499,7 @@ bool  JpegDecoder::readData( Mat& img )
                 for( int iy = 0 ; iy < m_height; iy ++ )
                 {
                     uchar* data = img.ptr<uchar>(iy);
-                    jpeg_read_scanlines( cinfo, &data, 1 );
+                    if (jpeg_read_scanlines( cinfo, &data, 1 ) != 1) return false;
                 }
             }
             else
@@ -510,7 +510,7 @@ bool  JpegDecoder::readData( Mat& img )
                 for( int iy = 0 ; iy < m_height; iy ++ )
                 {
                     uchar* data = img.ptr<uchar>(iy);
-                    jpeg_read_scanlines( cinfo, buffer, 1 );
+                    if (jpeg_read_scanlines( cinfo, buffer, 1 ) != 1) return false;
 
                     if( color )
                     {
