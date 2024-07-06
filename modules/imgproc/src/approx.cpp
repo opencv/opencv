@@ -963,9 +963,11 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
 
     CV_Assert(epsilon_percentage > 0 || epsilon_percentage == -1);
     CV_Assert(side > 2);
-    CV_Assert(_approxCurve.type() == CV_32FC2
-        || _approxCurve.type() == CV_32SC2
-        || _approxCurve.type() == 0);
+
+    if (_approxCurve.fixedType())
+    {
+        CV_Assert(_approxCurve.type() == CV_32FC2 || _approxCurve.type() == CV_32SC2);
+    }
 
     Mat curve;
     int depth = _curve.depth();
@@ -974,7 +976,6 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
 
     if (make_hull)
     {
-
         cv::convexHull(_curve, curve);
     }
     else
@@ -1060,7 +1061,7 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
             update(hull, vertex_id);
         }
     }
-    if (_approxCurve.type() != 0) depth = _approxCurve.depth();
+    if (_approxCurve.fixedType()) depth = _approxCurve.depth();
     Mat buf(1, size, CV_MAKETYPE(depth, 2));
     int last_free = 0;
 

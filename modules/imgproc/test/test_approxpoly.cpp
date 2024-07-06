@@ -379,34 +379,38 @@ TEST(Imgproc_ApproxPoly, bad_epsilon)
 
 TEST(Imgproc_ApproxPoly, boundingPolygon)
 {
-    string imgPath = cvtest::findDataFile("imgproc/approxBoundingPoly.png");
-    Mat img = imread(imgPath, IMREAD_GRAYSCALE);
-    Mat thresh;
-    vector<vector<Point>> contours;
-    vector<vector<Point>> out, right_out;
-    right_out = {
-        { {132, 30}, {87, 135}, {30, 121}, {70, 30} },
-        { {262, 29}, {209, 165}, {115, 142}, {162, 29} },
-        { {420, 216}, {247, 174}, {303, 28}, {483, 26} },
-        { {140, 25}, {91, 141}, {22, 126}, {66, 25} },
-        { {270, 23}, {212, 172}, {107, 145}, {158, 23} },
-        { {492, 20}, {424, 223}, {240, 178}, {299, 22} },
-        { {475, 256}, {10, 131}, {61, 16}, {556, 0} },
-        { {559, 0}, {559, 261}, {0, 261}, {0, 0} }
+    vector<vector<Point>> inputPoints = {
+        {  {87, 103}, {100, 112}, {96, 138}, {80, 169}, {60, 183}, {38, 176}, {41, 145}, {56, 118}, {76, 104} },
+        {  {196, 102}, {205, 118}, {174, 196}, {152, 207}, {102, 194}, {100, 175}, {131, 109} },
+        {  {372, 101}, {377, 119}, {337, 238}, {324, 248}, {240, 229}, {199, 214}, {232, 123}, {245, 103} },
+        {  {463, 86}, {563, 112}, {574, 135}, {596, 221}, {518, 298}, {412, 266}, {385, 164}, {462, 86} }
     };
-    cv::adaptiveThreshold(img, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 11, 2);
-    cv::findContours(thresh, contours, 1, 1);
-    for (auto contour : contours)
-    {
-        vector<Point> corners;
-        Mat contour1;
-        cv::convexHull(contour, contour1);
-        if (contour1.rows < 4) continue;
-        approxBoundingPoly(contour1, corners, 4, -1, false);
-        out.push_back(corners);
+    vector<vector<Point>> rightCorners = {
+        { {72, 187}, {37, 176}, {42, 127}, {133, 64} },
+        { {168, 212}, {92, 192}, {131, 109}, {213, 100} },
+        { {72, 187}, {37, 176}, {42, 127}, {133, 64} },
+        { {384, 100}, {333, 251}, {197, 220}, {239, 103} },
+        { {168, 212}, {92, 192}, {131, 109}, {213, 100} },
+        { {333, 251}, {197, 220}, {239, 103}, {384, 100} },
+        { {542, 6}, {596, 221}, {518, 299}, {312, 236} },
+        { {596, 221}, {518, 299}, {312, 236}, {542, 6} }
     };
+    vector<vector<Point>> contours, detectedCorners;
+    Mat image(600, 600, CV_8UC1, Scalar(0));
 
-    ASSERT_EQ(out, right_out);
+    for (vector<Point>& polygon : inputPoints) {
+        polylines(image, { polygon }, true, Scalar(255), 1);
+    }
+
+    findContours(image, contours, 1, 1);
+
+    for (size_t i = 0; i < contours.size(); ++i) {
+        vector<Point> corners;
+        approxBoundingPoly(contours[i], corners, 4, -1, true);
+        detectedCorners.push_back(corners);
+    }
+
+    ASSERT_EQ(detectedCorners, rightCorners);
 }
 
 TEST(Imgproc_ApproxPoly, bad_args)
