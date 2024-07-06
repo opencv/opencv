@@ -814,9 +814,7 @@ private:
 };
 
 namespace {
-    /* Reference from PyTorch
-        https://github.com/pytorch/pytorch/blob/9c50ecc84b9a6e699a7f058891b889aafbf976c7/aten/src/ATen/cpu/vec/vec512/vec512_float.h#L189-L220
-    */
+    // Refer to v_erf in modules/core/include/opencv2/core/hal/intrin_math.hpp
     constexpr float c_erf_coef0 = 0.3275911f;
     constexpr float c_erf_coef1 = 1.061405429f;
     constexpr float c_erf_coef2 = -1.453152027f;
@@ -833,37 +831,6 @@ namespace {
         r = 1.f - r * t * expf(-v * v);
         return std::copysignf(r, v);
     }
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    inline v_float32 v_erf_approx(v_float32 v) {
-        v_float32 coef0 = vx_setall_f32(c_erf_coef0),
-                  coef1 = vx_setall_f32(c_erf_coef1),
-                  coef2 = vx_setall_f32(c_erf_coef2),
-                  coef3 = vx_setall_f32(c_erf_coef3),
-                  coef4 = vx_setall_f32(c_erf_coef4),
-                  coef5 = vx_setall_f32(c_erf_coef5);
-        v_float32 ones = vx_setall_f32(1.0f),
-                  neg_zeros = vx_setall_f32(-0.f),
-                  t = v_abs(v);
-        // sign(v)
-        v_float32 sign_mask = v_and(neg_zeros, v);
-
-        t = v_div(ones, v_fma(coef0, t, ones));
-        v_float32 r = v_fma(coef1, t, coef2);
-        r = v_fma(r, t, coef3);
-        r = v_fma(r, t, coef4);
-        r = v_fma(r, t, coef5);
-        // - v * v
-        v_float32 pow_2 = v_mul(v, v);
-        v_float32 neg_pow_2 = v_xor(neg_zeros, pow_2);
-        // - exp(- v * v)
-        v_float32 exp = v_exp(neg_pow_2);
-        v_float32 neg_exp = v_xor(neg_zeros, exp);
-        v_float32 res = v_mul(t, neg_exp);
-        res = v_fma(r, res, ones);
-        return v_xor(sign_mask, res);
-    }
-#endif
 }
 
 struct GeluFunctor : public BaseFunctor {
@@ -904,7 +871,7 @@ struct GeluFunctor : public BaseFunctor {
                 v_float32 t0 = v_mul(reciprocal_sqrt2, x0);
 
                 // t = 1.0f + t
-                t0 = v_add(one, v_erf_approx(t0));
+                t0 = v_add(one, v_erf(t0));
 
                 // x = 0.5 * x
                 x0 = v_mul(half, x0);
