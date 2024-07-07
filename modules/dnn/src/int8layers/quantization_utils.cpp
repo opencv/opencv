@@ -277,9 +277,6 @@ public:
 
         processInputOutput(inputs, outputs);
 
-        // not is1D -> block_size = 0
-        CV_Check(block_size, is1D || block_size == 0, "Blockwise quantization requires non-scalar quantization parameters");
-
         if (is1D)
         {
             Mat inputTmp;
@@ -436,9 +433,6 @@ public:
         outputs_arr.getMatVector(outputs);
 
         processInputOutput(inputs, outputs);
-
-        // not is1D -> block_size = 0
-        CV_Check(block_size, is1D || block_size == 0, "Blockwise quantization requires non-scalar quantization parameters");
 
         if (is1D)
         {
