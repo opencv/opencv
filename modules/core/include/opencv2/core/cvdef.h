@@ -392,8 +392,10 @@ typedef union Cv16suf
 {
     short i;
     ushort u;
-#if CV_FP16_TYPE
+#if CV_FP16_TYPE && defined __ARM_FP16_FORMAT_IEEE
     __fp16 h;
+#elif CV_FP16_TYPE // Other platforms suggested to use _Float16
+    _Float16 h;
 #endif
 }
 Cv16suf;
@@ -834,12 +836,16 @@ class hfloat
 {
 public:
 #if CV_FP16_TYPE
-
-    hfloat() : h(0) {}
+    hfloat() = default;
     explicit hfloat(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
+#if defined __ARM_FP16_FORMAT_IEEE
 protected:
     __fp16 h;
+#else
+protected:
+    _Float16 h;
+#endif
 
 #else
     hfloat() : w(0) {}
