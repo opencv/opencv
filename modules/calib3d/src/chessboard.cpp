@@ -1625,36 +1625,30 @@ bool Chessboard::Board::normalizeMarkerOrientation()
             if(!current_cell->marker || !current_cell->right || !current_cell->right->marker)
                 continue;
 
-            if(current_cell->black)
+            if(current_cell->right->top && current_cell->right->top->marker)
             {
-                if(current_cell->right->top && current_cell->right->top->marker)
-                {
-                    rotateLeft();
-                    rotateLeft();
-                    pcell = current_cell->right;
-                    break;
-                }
-                if(current_cell->right->bottom && current_cell->right->bottom->marker)
-                {
-                    rotateLeft();
-                    pcell = current_cell->right;
-                    break;
-                }
+                rotateLeft();
+                rotateLeft();
+                pcell = current_cell->right;
+                break;
             }
-            else
+            if(current_cell->right->bottom && current_cell->right->bottom->marker)
             {
-                if(current_cell->top && current_cell->top->marker)
-                {
-                    rotateRight();
-                    pcell = current_cell;
-                    break;
-                }
-                if(current_cell->bottom && current_cell->bottom->marker)
-                {
-                    // correct orientation
-                    pcell = current_cell;
-                    break;
-                }
+                rotateLeft();
+                pcell = current_cell->right;
+                break;
+            }
+            if(current_cell->top && current_cell->top->marker)
+            {
+                rotateRight();
+                pcell = current_cell;
+                break;
+            }
+            if(current_cell->bottom && current_cell->bottom->marker)
+            {
+                // correct orientation
+                pcell = current_cell;
+                break;
             }
         }
     }
