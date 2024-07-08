@@ -71,7 +71,7 @@ def main(func_args=None):
         help()
         exit(1)
 
-    args.model = findFile(args.model)
+    args.model = findModel(args.model, args.sha1)
     args.classes = findFile(args.classes)
 
     # Load names of classes
@@ -103,6 +103,7 @@ def main(func_args=None):
                 exit(-1)
             current_image_index = 0
         else:
+            input_path = findFile(input_path)
             cap = cv.VideoCapture(input_path)
             if not cap.isOpened():
                 print("Failed to open the input video")

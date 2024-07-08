@@ -14,6 +14,9 @@ def add_argument(zoo, parser, name, help, required=False, default=None, type=Non
         node = fs.getNode(modelName)
         if not node.empty():
             value = node.getNode(name)
+            if name=="sha1":
+                value = node.getNode("load_info")
+                value = value.getNode(name)
             if not value.empty():
                 if value.isReal():
                     default = value.real()
@@ -85,7 +88,29 @@ def add_preproc_args(zoo, parser, sample):
                  help='Post-processing kind depends on model topology.')
     add_argument(zoo, parser, 'background_label_id', type=int, default=-1,
                  help='An index of background class in predictions. If not negative, exclude such class from list of classes.')
+    add_argument(zoo, parser, 'sha1', type=str,
+                 help='Optional path to hashsum of downloaded model to be loaded from models.yml')
 
+def findModel(filename, sha1):
+    if filename:
+        if os.path.exists(filename):
+            return filename
+
+        fpath = cv.samples.findFile(filename, False)
+        if fpath:
+            return fpath
+
+        if os.getenv('OPENCV_DOWNLOAD_CACHE_DIR') is None:
+            print('[ERROR] Please specify a path to model directory in OPENCV_DOWNLOAD_CACHE_DIR environment variable.')
+            return findFile(filename)
+
+        if os.path.exists(os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], sha1, filename)):
+            return os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], sha1, filename)
+
+        print('File ' + filename + ' not found! Please specify a path to  environment variable '
+             'model directory in OPENCV_DOWNLOAD_CACHE_DIR '
+             'environment variable or pass a full path to ' + filename)
+        exit(0)
 
 def findFile(filename):
     if filename:
@@ -96,14 +121,14 @@ def findFile(filename):
         if fpath:
             return fpath
 
-        samplesDataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                      '..',
-                                      'data',
-                                      'dnn')
-        if os.path.exists(os.path.join(samplesDataDir, filename)):
-            return os.path.join(samplesDataDir, filename)
+        if os.getenv('OPENCV_SAMPLES_DATA_PATH') is None:
+            print('[ERROR] Please specify a path to `/samples/data` in OPENCV_SAMPLES_DATA_PATH environment variable.')
+            exit(0)
 
-        for path in ['OPENCV_DNN_TEST_DATA_PATH', 'OPENCV_TEST_DATA_PATH']:
+        if os.path.exists(os.path.join(os.environ['OPENCV_SAMPLES_DATA_PATH'], filename)):
+            return os.path.join(os.environ['OPENCV_SAMPLES_DATA_PATH'], filename)
+
+        for path in ['OPENCV_DNN_TEST_DATA_PATH', 'OPENCV_TEST_DATA_PATH', 'OPENCV_SAMPLES_DATA_PATH']:
             try:
                 extraPath = os.environ[path]
                 absPath = os.path.join(extraPath, 'dnn', filename)
@@ -112,9 +137,11 @@ def findFile(filename):
             except KeyError:
                 pass
 
-        print('File ' + filename + ' not found! Please specify a path to '
-              '/opencv_extra/testdata in OPENCV_DNN_TEST_DATA_PATH environment '
-              'variable or pass a full path to model.')
+        print('File ' + filename + ' not found! Please specify the path to '
+            '/opencv/samples/data in the OPENCV_SAMPLES_DATA_PATH environment variable, '
+            'or specify the path to opencv_extra/testdata in the OPENCV_DNN_TEST_DATA_PATH environment variable, '
+            'or specify the path to the download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, '
+            'or pass the full path to ' + filename + '.')
         exit(0)
 
 def get_backend_id(backend_name):

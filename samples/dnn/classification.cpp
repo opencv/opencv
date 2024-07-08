@@ -23,12 +23,12 @@ const string about =
         "use imagelist_creator to create the xml or yaml list";
 
 const string param_keys =
-    "{ help  h         |            | Print help message. }"
-    "{ @alias          |            | An alias name of model to extract preprocessing parameters from models.yml file. }"
-    "{ zoo             | models.yml | An optional path to file with preprocessing parameters }"
-    "{ input i         |            | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-    "{ imglist         |            | Pass this flag if image list (i.e. .xml or .yaml) file is passed}"
-    "{ crop            |   false    | Preprocess input image by center cropping.}";
+    "{ help  h         |                   | Print help message. }"
+    "{ @alias          |                   | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ zoo             | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
+    "{ input i         |                   | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+    "{ imglist         |                   | Pass this flag if image list (i.e. .xml or .yaml) file is passed}"
+    "{ crop            |       false       | Preprocess input image by center cropping.}";
 
 const string backend_keys = format(
     "{ backend          | default | Choose one of computation backends: "
@@ -92,6 +92,7 @@ int main(int argc, char** argv)
 
     if (!parser.has("@alias"))
     {
+        cout << about << endl;
         parser.printMessage();
         return -1;
     }
@@ -106,7 +107,7 @@ int main(int argc, char** argv)
         parser.printMessage();
         return 0;
     }
-
+    String sha1 = parser.get<String>("sha1");
     float scale = parser.get<float>("scale");
     Scalar mean = parser.get<Scalar>("mean");
     Scalar std = parser.get<Scalar>("std");
@@ -114,7 +115,7 @@ int main(int argc, char** argv)
     bool crop = parser.get<bool>("crop");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
-    String model = findFile(parser.get<String>("model"));
+    String model = findModel(parser.get<String>("model"), sha1);
     String backend = parser.get<String>("backend");
     String target = parser.get<String>("target");
     bool isImgList = parser.has("imglist");
@@ -151,7 +152,7 @@ int main(int argc, char** argv)
     size_t currentImageIndex = 0;
 
     if (parser.has("input")) {
-        string input = parser.get<String>("input");
+        string input = findFile(parser.get<String>("input"));
 
         if (isImgList) {
             bool check = readStringList(samples::findFile(input), imageList);
