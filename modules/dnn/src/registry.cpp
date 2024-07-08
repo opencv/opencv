@@ -18,6 +18,10 @@
 #include "backend.hpp"
 #include "factory.hpp"
 
+#ifdef HAVE_CUDA
+#include "cuda4dnn/init.hpp"
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -121,7 +125,8 @@ private:
         if (haveCUDA())
         {
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
-            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
+            if (cuda4dnn::doesDeviceSupportFP16())
+                backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
         }
 #endif
 
