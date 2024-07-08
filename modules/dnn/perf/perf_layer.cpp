@@ -1010,12 +1010,12 @@ PERF_TEST_P_(Layer_Elementwise, elementwise) {
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Elementwise, testing::Combine(
     testing::Values(std::vector<int>{1, 50, 3072}),
     testing::Values(std::string{"Gelu"}),
-    dnnBackendsAndTargets(/* withInferenceEngine= */ false,
+    dnnBackendsAndTargets(/* withInferenceEngine= */ true,
                           /* withHalide= */          false,
                           /* withCpuOCV= */          true,
                           /* withVkCom= */           false,
-                          /* withCUDA= */            false,
-                          /* withNgraph= */          false,
+                          /* withCUDA= */            true,
+                          /* withNgraph= */          true,
                           /* withWebnn= */           false,
                           /* withCann= */            false) // only test on CPU
 ));
