@@ -282,6 +282,14 @@ static const TestCase testConformanceConfig[] = {
     {"test_gathernd_example_float32", 2, 1},
     {"test_gathernd_example_int32", 2, 1},
     {"test_gathernd_example_int32_batch_dim1", 2, 1},
+    {"test_gelu_default_1", 1, 1},
+    {"test_gelu_default_1_expanded", 1, 1},
+    {"test_gelu_default_2", 1, 1},
+    {"test_gelu_default_2_expanded", 1, 1},
+    {"test_gelu_tanh_1", 1, 1},
+    {"test_gelu_tanh_1_expanded", 1, 1},
+    {"test_gelu_tanh_2", 1, 1},
+    {"test_gelu_tanh_2_expanded", 1, 1},
     {"test_gemm_all_attributes", 3, 1},
     {"test_gemm_alpha", 3, 1},
     {"test_gemm_beta", 3, 1},
@@ -1123,6 +1131,19 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if (name == "test_pow") {
             default_lInf = 0.00013; // Expected: (normInf) <= (lInf), actual: 0.00012207 vs 0.0001
         }
+        if (name == "test_gelu_tanh_1") {
+            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+        }
+        if (name == "test_gelu_tanh_2") {
+            if (target == DNN_TARGET_OPENCL_FP16) {
+                default_l1 = 0.00016; // Expected: (normL1) <= (l1), actual: 0.000157223 vs 9e-05
+                default_lInf = 0.0016; // Expected: (normInf) <= (lInf), actual: 0.00153041 vs 0.0005
+            } else {
+                default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80073e-05 vs 1e-05
+                default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+            }
+        }
     }
 #ifdef HAVE_HALIDE
     else if (backend == DNN_BACKEND_HALIDE)
@@ -1146,6 +1167,15 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }
+
+        if (name == "test_gelu_tanh_1") {
+            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+        }
+        if (name == "test_gelu_tanh_2") {
+            default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80073e-05 vs 1e-05
+            default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+        }
     }
 #endif
 #ifdef HAVE_CUDA
@@ -1158,6 +1188,20 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if (target == DNN_TARGET_CUDA_FP16 && cuda_fp16_deny_list.find(name) != cuda_fp16_deny_list.end())
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+
+        if (name == "test_gelu_tanh_1") {
+            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
+            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+        }
+        if (name == "test_gelu_tanh_2") {
+            if (target == DNN_TARGET_CUDA_FP16) {
+                default_l1 = 0.00023; // Expected: (normL1) <= (l1), actual: 0.000220591 vs 9e-05
+                default_lInf = 0.0023; // Expected: (normInf) <= (lInf), actual: 0.00220466 vs 0.0005
+            } else {
+                default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80127e-05 vs 1e-05
+                default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
+            }
         }
     }
 #endif

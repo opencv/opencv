@@ -813,20 +813,82 @@ private:
     static const char* const ocl_kernel_name;
 };
 
-struct GeluFunctor : public BaseDefaultFunctor<GeluFunctor>
-{
-    typedef GeluLayer Layer;
+namespace {
+    // Refer to v_erf in modules/core/include/opencv2/core/hal/intrin_math.hpp
+    constexpr float c_erf_coef0 = 0.3275911f;
+    constexpr float c_erf_coef1 = 1.061405429f;
+    constexpr float c_erf_coef2 = -1.453152027f;
+    constexpr float c_erf_coef3 = 1.421413741f;
+    constexpr float c_erf_coef4 = -0.284496736f;
+    constexpr float c_erf_coef5 = 0.254829592f;
 
-    explicit GeluFunctor() {}
+    inline float erf_approx(float v) {
+        float t = 1.f / fmaf(fabsf(v), c_erf_coef0, 1.f);
+        float r = fmaf(c_erf_coef1, t, c_erf_coef2);
+        r = fmaf(r, t, c_erf_coef3);
+        r = fmaf(r, t, c_erf_coef4);
+        r = fmaf(r, t, c_erf_coef5);
+        r = 1.f - r * t * expf(-v * v);
+        return std::copysignf(r, v);
+    }
+}
 
-    bool supportBackend(int backendId, int)
-    {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+struct GeluFunctor : public BaseFunctor {
+    using Layer = GeluLayer;
+    int vlanes;
+
+    explicit GeluFunctor() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
     }
 
-    inline float calculate(float x) const
-    {
-        return 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
+    bool supportBackend(int backendId, int) {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            // 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
+            v_float32 half = vx_setall_f32(0.5f),
+                      one = vx_setall_f32(1.0f),
+                      reciprocal_sqrt2 = vx_setall_f32(M_SQRT1_2);
+            for (; i <= len - vlanes; i += vlanes) {
+                if (i + vlanes > len) {
+                    if (i == 0 || i == len) {
+                        break;
+                    }
+                    i = len - vlanes;
+                }
+                v_float32 x0 = vx_load(srcptr + i);
+
+                // t = x * M_SQRT1_2
+                v_float32 t0 = v_mul(reciprocal_sqrt2, x0);
+
+                // t = 1.0f + t
+                t0 = v_add(one, v_erf(t0));
+
+                // x = 0.5 * x
+                x0 = v_mul(half, x0);
+
+                // x = x * t
+                x0 = v_mul(x0, t0);
+
+                vx_store(dstptr + i, x0);
+            }
+#endif
+            // 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
+            for( ; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = 0.5f * x * (1.0f + erf_approx(x * M_SQRT1_2));
+            }
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -836,11 +898,54 @@ struct GeluFunctor : public BaseDefaultFunctor<GeluFunctor>
     }
 #endif
 
+#ifdef HAVE_OPENCL
+    bool initKernel(ocl::Kernel &ker, const UMat &src) const
+    {
+        String buildopt = oclGetTMacro(src);
+
+        if (!ker.create("GeluForward", ocl::dnn::activations_oclsrc, buildopt))
+            return false;
+
+        return true;
+    }
+
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+            CV_Assert(src.isContinuous() && dst.isContinuous() && !src.offset && !dst.offset);
+
+            ocl::Kernel kernel;
+            CV_Assert(initKernel(kernel, src));
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    {
+        return std::make_shared<ov::op::v0::Gelu>(node);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
     int64 getFLOPSPerElement() const { return 100; }
 };
-
-template<>
-const char* const BaseDefaultFunctor<GeluFunctor>::ocl_kernel_name = "GeluForward";
 
 namespace GeluApproximationConstants
 {
