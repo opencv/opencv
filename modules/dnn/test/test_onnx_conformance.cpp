@@ -454,6 +454,8 @@ static const TestCase testConformanceConfig[] = {
     {"test_min_uint32", 2, 1},
     {"test_min_uint64", 2, 1},
     {"test_min_uint8", 2, 1},
+    {"test_mish", 1, 1},
+    {"test_mish_expanded", 1, 1},
     {"test_mod_broadcast", 2, 1},
     {"test_mod_int64_fmod", 2, 1},
     {"test_mod_mixed_sign_float16", 2, 1},

@@ -1098,6 +1098,10 @@ CASE(test_min_uint64)
     // no filter
 CASE(test_min_uint8)
     // no filter
+CASE(test_mish)
+    // no filter
+CASE(test_mish_expanded)
+    // no filter
 CASE(test_mod_broadcast)
     // no filter
 CASE(test_mod_int64_fmod)

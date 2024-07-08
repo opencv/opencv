@@ -1165,7 +1165,16 @@ const char* const SwishFunctor::BaseDefaultFunctor<SwishFunctor>::ocl_kernel_nam
 
 struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 {
-    typedef MishLayer Layer;
+    using Layer = MishLayer;
+    int vlanes;
+
+    explicit MishFunctor() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -1176,17 +1185,48 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
                backendId == DNN_BACKEND_CANN;
     }
 
+    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
-        // Use fast approximation introduced in https://github.com/opencv/opencv/pull/17200
-        if (x >= 8.f)
-        {
-            return x;
-        }
+        x *= (x > -36.73f ? 1.f : 0.f);
+        float y = std::exp(-x);
+        return x * (1 + 2 * y) / (1 + 2 * y + 2 * y * y);
+    }
 
-        float eX = exp(x);
-        float n = (eX + 2.f) * eX;
-        return (x * n) / (n + 2.f);
+    // failed at Test_Darknet_nets.YOLOv4/0, Test_Darknet_nets.YOLOv4/1, Test_Int8_nets.YOLOv4/0
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 threshold = vx_setall_f32(-36.73f), one = vx_setall_f32(1.f), z = vx_setzero_f32();
+            for (; i <= len - vlanes; i += vlanes) {
+                if (i + vlanes > len) {
+                    if (i == 0 || i == len) {
+                        break;
+                    }
+                    i = len - vlanes;
+                }
+
+                v_float32 x = vx_load(srcptr + i);
+
+                x = v_select(v_le(x, threshold), z, x);
+                v_float32 y = v_exp(v_sub(z, x));
+                v_float32 yy = v_add(y, y),
+                        yy1 = v_add(yy, one);
+                x = v_div(v_mul(x, yy1), v_add(yy1, v_mul(yy, y)));
+
+                vx_store(dstptr + i, x);
+            }
+#endif
+            // Process tail if any
+            for (; i < len; i++) {
+                float x = srcptr[i];
+                x *= (x > -36.73f ? 1.f : 0.f);
+                float y = std::exp(-x);
+                dstptr[i] = x * (1 + 2 * y) / (1 + 2 * y + 2 * y * y);
+            }
+        }
     }
 
 #ifdef HAVE_CUDA
