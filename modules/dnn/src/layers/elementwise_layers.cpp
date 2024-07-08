@@ -1048,7 +1048,16 @@ const char* const TanHFunctor::BaseDefaultFunctor<TanHFunctor>::ocl_kernel_name 
 
 struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 {
-    typedef SwishLayer Layer;
+    using Layer = SwishLayer;
+    int vlanes;
+
+    explicit SwishFunctor() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -1059,9 +1068,47 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
                backendId == DNN_BACKEND_CANN;
     }
 
+    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
         return x / (1.f + exp(-x));
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            // x / (1.f + exp(-x));
+            v_float32 one = vx_setall_f32(1.0f),
+                      minus_one = vx_setall_f32(-1.0f);
+            for (; i <= len - vlanes; i += vlanes) {
+                if (i + vlanes > len) {
+                    if (i == 0 || i == len) {
+                        break;
+                    }
+                    i = len - vlanes;
+                }
+                v_float32 x = vx_load(srcptr + i);
+
+                // -x
+                v_float32 t = v_mul(minus_one, x);
+                // exp(-x)
+                t = v_exp(t);
+                // 1.f + exp(-x)
+                t = v_add(one, t);
+                // x / (1.f + exp(-x))
+                t = v_div(x, t);
+
+                vx_store(dstptr + i, t);
+            }
+#endif
+            // Process tail if any
+            for (; i < len; i++) {
+                float x = srcptr[i];
+                dstptr[i] = x / (1.f + std::exp(-x));
+            }
+        }
     }
 
 #ifdef HAVE_CUDA
