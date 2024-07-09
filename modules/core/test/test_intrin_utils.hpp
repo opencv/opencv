@@ -1864,6 +1864,19 @@ template<typename R> struct TheTest
 #endif
         return *this;
     }
+
+    TheTest &test_sin_fp32() {
+        int n = VTraits<R>::vlanes();
+        // Test special values
+        Data<R> dataSpecial, resSpecial;
+        for (int j = 0; j < n; ++j) {
+            dataSpecial[j] = 20;
+        }
+        R x = dataSpecial;
+        resSpecial = v_sin(x);
+
+        return *this;
+    }
 };
 
 #define DUMP_ENTRY(type) printf("SIMD%d: %s\n", 8*VTraits<v_uint8>::vlanes(), CV__TRACE_FUNCTION);
@@ -2179,6 +2192,7 @@ void test_hal_intrin_float32()
         .test_pack_triplets()
         .test_exp_fp32()
         .test_log_fp32()
+        .test_sin_fp32()
 #if CV_SIMD_WIDTH == 32
         .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
         .test_rotate<4>().test_rotate<5>().test_rotate<6>().test_rotate<7>()

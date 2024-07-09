@@ -365,6 +365,7 @@ Floating point:
 |broadcast_element  | x |   |
 |exp                | x | x |
 |log                | x | x |
+|sin, cos           | x | x |
 
  @{ */
 
@@ -761,12 +762,11 @@ OPENCV_HAL_IMPL_MATH_FUNC(v_exp, std::exp, _Tp)
 OPENCV_HAL_IMPL_MATH_FUNC(v_log, std::log, _Tp)
 #define OPENCV_HAL_MATH_HAVE_LOG 1
 
-//! @cond IGNORED
+// TODO: add implementation detail and documents
 OPENCV_HAL_IMPL_MATH_FUNC(v_sin, std::sin, _Tp)
 #define OPENCV_HAL_MATH_HAVE_SIN 1
 OPENCV_HAL_IMPL_MATH_FUNC(v_cos, std::cos, _Tp)
 #define OPENCV_HAL_MATH_HAVE_COS 1
-//! @endcond
 
 /** @brief Absolute value of elements
 
