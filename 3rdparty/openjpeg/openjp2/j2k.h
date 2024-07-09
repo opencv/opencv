@@ -113,6 +113,9 @@ The functions in J2K.C have for goal to read/write the several parts of the code
 
 #define J2K_MAX_POCS    32      /**< Maximum number of POCs */
 
+#define J2K_TCD_MATRIX_MAX_LAYER_COUNT 10
+#define J2K_TCD_MATRIX_MAX_RESOLUTION_COUNT 10
+
 /* ----------------------------------------------------------------------- */
 
 /**
@@ -272,7 +275,7 @@ typedef struct opj_tcp {
     OPJ_UINT32 ppt_data_size;
     /** size of ppt_data*/
     OPJ_UINT32 ppt_len;
-    /** add fixed_quality */
+    /** PSNR values */
     OPJ_FLOAT32 distoratio[100];
     /** tile-component coding parameters */
     opj_tccp_t *tccps;
@@ -314,6 +317,14 @@ typedef struct opj_tcp {
 } opj_tcp_t;
 
 
+/**
+Rate allocation strategy
+*/
+typedef enum {
+    RATE_DISTORTION_RATIO = 0,    /** allocation by rate/distortion */
+    FIXED_DISTORTION_RATIO = 1,   /** allocation by fixed distortion ratio (PSNR) (fixed quality) */
+    FIXED_LAYER = 2,              /** allocation by fixed layer (number of passes per layer / resolution / subband) */
+} J2K_QUALITY_LAYER_ALLOCATION_STRATEGY;
 
 
 typedef struct opj_encoding_param {
@@ -325,12 +336,8 @@ typedef struct opj_encoding_param {
     OPJ_INT32 *m_matrice;
     /** Flag determining tile part generation*/
     OPJ_BYTE m_tp_flag;
-    /** allocation by rate/distortion */
-    OPJ_BITFIELD m_disto_alloc : 1;
-    /** allocation by fixed layer */
-    OPJ_BITFIELD m_fixed_alloc : 1;
-    /** add fixed_quality */
-    OPJ_BITFIELD m_fixed_quality : 1;
+    /** Quality layer allocation strategy */
+    J2K_QUALITY_LAYER_ALLOCATION_STRATEGY m_quality_layer_alloc_strategy;
     /** Enabling Tile part generation*/
     OPJ_BITFIELD m_tp_on : 1;
 }

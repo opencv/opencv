@@ -100,7 +100,7 @@ public:
     void testSegmentationModel(const std::string& weights_file, const std::string& config_file,
                                const std::string& inImgPath, const std::string& outImgPath,
                                float norm, const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                               double scale = 1.0, bool swapRB = false, bool crop = false)
+                               double scale = 1.0, bool swapRB = false, bool crop = false, const std::string outname = "")
     {
         checkBackend();
 
@@ -114,6 +114,9 @@ public:
 
         model.setPreferableBackend(backend);
         model.setPreferableTarget(target);
+
+        if(!outname.empty())
+            model.setOutputNames({outname});
 
         model.segment(frame, mask);
         normAssert(mask, exp, "", norm, norm);
@@ -669,20 +672,19 @@ TEST_P(Test_Model, Segmentation)
     if ((backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16))
         || (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16))
     {
-        norm = 2.0f;  // l1 = 0.01 lInf = 2
+        norm = 7.0f;  // l1 = 0.01 lInf = 7
     }
 
     std::string inp = _tf("dog416.png");
-    std::string weights_file = _tf("fcn8s-heavy-pascal.prototxt");
-    std::string config_file = _tf("fcn8s-heavy-pascal.caffemodel", false);
+    std::string weights_file = _tf("onnx/models/fcn-resnet50-12.onnx", false);
     std::string exp = _tf("segmentation_exp.png");
 
     Size size{128, 128};
-    double scale = 1.0;
-    Scalar mean = Scalar();
-    bool swapRB = false;
+    double scale = 0.019;
+    Scalar mean = Scalar(0.485*255, 0.456*255, 0.406*255);
+    bool swapRB = true;
 
-    testSegmentationModel(weights_file, config_file, inp, exp, norm, size, mean, scale, swapRB);
+    testSegmentationModel(weights_file, "", inp, exp, norm, size, mean, scale, swapRB, false, "out");
 }
 
 TEST_P(Test_Model, TextRecognition)

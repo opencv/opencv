@@ -515,9 +515,9 @@ class CppHeaderParser(object):
             if rettype == classname or rettype == "~" + classname:
                 rettype, funcname = "", rettype
             else:
-                if bool(re.match('\w+\s+\(\*\w+\)\s*\(.*\)', decl_str)):
+                if bool(re.match(r'\w+\s+\(\*\w+\)\s*\(.*\)', decl_str)):
                     return [] # function typedef
-                elif bool(re.match('\w+\s+\(\w+::\*\w+\)\s*\(.*\)', decl_str)):
+                elif bool(re.match(r'\w+\s+\(\w+::\*\w+\)\s*\(.*\)', decl_str)):
                     return [] # class method typedef
                 elif bool(re.match('[A-Z_]+', decl_start)):
                     return [] # it seems to be a macro instantiation

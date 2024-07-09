@@ -158,11 +158,6 @@ PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt", cv::Size(368, 368));
 }
 
-PERF_TEST_P_(DNNTestNetwork, opencv_face_detector)
-{
-    processNet("dnn/opencv_face_detector.caffemodel", "dnn/opencv_face_detector.prototxt", cv::Size(300, 300));
-}
-
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
