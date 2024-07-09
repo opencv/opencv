@@ -1061,8 +1061,13 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
             update(hull, vertex_id);
         }
     }
-    if (_approxCurve.fixedType()) depth = _approxCurve.depth();
-    Mat buf(1, size, CV_MAKETYPE(depth, 2));
+
+    if (_approxCurve.fixedType())
+    {
+        depth = _approxCurve.depth();
+    }
+    _approxCurve.create(1, size, CV_MAKETYPE(depth, 2));
+    Mat buf = _approxCurve.getMat();
     int last_free = 0;
 
     if (depth == CV_32S)
@@ -1090,8 +1095,6 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
             }
         }
     }
-
-    buf.copyTo(_approxCurve);
 }
 
 /* End of file. */
