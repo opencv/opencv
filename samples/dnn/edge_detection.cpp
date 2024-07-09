@@ -12,13 +12,11 @@ using namespace cv;
 using namespace cv::dnn;
 using namespace std;
 
-struct UserData
-{
-    Mat gray;
-    int thrs1 = 100;
-    int thrs2 = 200;
-    int blur = 1;
-};
+Mat gray;
+int threshold1 = 20;
+int threshold2 = 50;
+int blurAmount = 5;
+
 // Function to apply sigmoid activation
 static void sigmoid(Mat& input) {
     exp(-input, input);          // e^-input
@@ -26,35 +24,14 @@ static void sigmoid(Mat& input) {
 }
 
 // Function to apply Canny edge detection with Gaussian blur
-static void applyCanny(UserData* data) {
+static void applyCanny(int, void*){
+    int kernelSize = 2 * blurAmount + 1;
     Mat blurred;
-    int kernelSize = 2 * data->blur + 1;
-    GaussianBlur(data->gray, blurred, Size(kernelSize, kernelSize), 0);
+    GaussianBlur(gray, blurred, Size(kernelSize, kernelSize), 0);
     Mat output;
-    Canny(blurred, output, data->thrs1, data->thrs2);
+    Canny(blurred, output, threshold1, threshold2);
     imshow("Output", output);
 }
-// Callback for the first threshold adjustment
-static void cannyDetectionThresh1(int position, void* userdata) {
-    UserData* data = reinterpret_cast<UserData*>(userdata);
-    data->thrs1 = position;
-    applyCanny(data);
-}
-
-// Callback for the second threshold adjustment
-static void cannyDetectionThresh2(int position, void* userdata) {
-    UserData* data = reinterpret_cast<UserData*>(userdata);
-    data->thrs2 = position;
-    applyCanny(data);
-}
-
-// Callback for the Gaussian blur adjustment
-static void blurChange(int position, void* userdata) {
-    UserData* data = reinterpret_cast<UserData*>(userdata);
-    data->blur = position;
-    applyCanny(data);
-}
-
 
 // Load Model
 static void loadModel(const string modelPath, int backend, int target, Net &net){
@@ -63,28 +40,50 @@ static void loadModel(const string modelPath, int backend, int target, Net &net)
     net.setPreferableTarget(target);
 }
 
-static void setupCannyWindow(const Mat &image, UserData &user_data){
+static void setupCannyWindow(const Mat &image){
     destroyWindow("Output");
-    namedWindow("Output", WINDOW_NORMAL);
+    namedWindow("Output", WINDOW_AUTOSIZE);
     moveWindow("Output", 200, 50);
-    Mat gray;
     cvtColor(image, gray, COLOR_BGR2GRAY);
-    user_data.gray = gray;
-    // Create trackbars
-    createTrackbar("thrs1", "Output", 0, 255, cannyDetectionThresh1, &user_data);
-    createTrackbar("thrs2", "Output", 0, 255, cannyDetectionThresh2, &user_data);
-    createTrackbar("blur", "Output", &user_data.blur, 20, blurChange, &user_data);
 
-    // Set initial positions of trackbars
-    setTrackbarPos("thrs1", "Output", 100);
-    setTrackbarPos("thrs2", "Output", 200);
-    setTrackbarPos("blur", "Output", 1);
-
+    createTrackbar("thrs1", "Output", &threshold1, 255, applyCanny);
+    createTrackbar("thrs2", "Output", &threshold2, 255, applyCanny);
+    createTrackbar("blur", "Output", &blurAmount, 20, applyCanny);
 }
-static pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width);
+
+// Function to process the neural network output to generate edge maps
+static pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
+    vector<Mat> preds;
+    preds.reserve(output.size());
+    for (const Mat &p : output) {
+        Mat img;
+        // Correctly handle 4D tensor assuming it's always in the format [1, 1, height, width]
+        Mat processed;
+        if (p.dims == 4 && p.size[0] == 1 && p.size[1] == 1) {
+            // Use only the spatial dimensions
+            processed = p.reshape(0, {p.size[2], p.size[3]});
+        } else {
+            processed = p.clone();
+        }
+        sigmoid(processed);
+        normalize(processed, img, 0, 255, NORM_MINMAX, CV_8U);
+        resize(img, img, Size(width, height)); // Resize to the original size
+        preds.push_back(img);
+    }
+    Mat fuse = preds.back(); // Last element as the fused result
+    // Calculate the average of the predictions
+    Mat ave = Mat::zeros(height, width, CV_32F);
+    for (Mat &pred : preds) {
+        Mat temp;
+        pred.convertTo(temp, CV_32F);
+        ave += temp;
+    }
+    ave /= static_cast<float>(preds.size());
+    ave.convertTo(ave, CV_8U);
+    return {fuse, ave}; // Return both fused and average edge maps
+}
 
 int main(int argc, char** argv) {
-
     const string about =
         "This sample demonstrates edge detection with dexined and canny edge detection techniques.\n\n"
         "For switching between deep learning based model(dexined) and canny edge detector, press 'd' (for dexined) or 'c' (for canny) respectively in case of video. For image pass the argument --method for switching between dexined and canny.\n\n";
@@ -152,23 +151,25 @@ int main(int argc, char** argv) {
     else
         cap.open(0);
 
-    namedWindow("Input", WINDOW_NORMAL);
-    namedWindow("Output", WINDOW_NORMAL);
+    namedWindow("Input", WINDOW_AUTOSIZE);
+    namedWindow("Output", WINDOW_AUTOSIZE);
     moveWindow("Output", 200, 0);
     Net net;
-    Mat image, gray;
-    UserData user_data;
-    cout<<"Model: "<<model<<endl;
+    Mat image;
 
     if (model.empty()) {
         cout << "[WARN] Model file not provided, cannot use dexined." << endl;
         method = "canny";
-        Mat dummy = Mat::zeros(512, 512, CV_8UC3);
-        setupCannyWindow(dummy, user_data);
     }
+
     if (method == "dexined") {
         loadModel(model, backend, target, net);
     }
+    else{
+        Mat dummy = Mat::zeros(512, 512, CV_8UC3);
+        setupCannyWindow(dummy);
+    }
+
     for (;;){
         cap >> image;
         if (image.empty())
@@ -193,8 +194,7 @@ int main(int argc, char** argv) {
         else if (method == "canny")
         {
             cvtColor(image, gray, COLOR_BGR2GRAY);
-            user_data.gray = gray;
-            cannyDetectionThresh1(user_data.thrs1, &user_data);
+            applyCanny(0, 0);
         }
         imshow("Input", image);
         int key = waitKey(30);
@@ -205,17 +205,17 @@ int main(int argc, char** argv) {
                 method = "dexined";
                 if (net.empty())
                     loadModel(model, backend, target, net);
-                namedWindow("Input", WINDOW_NORMAL);
-                namedWindow("Output", WINDOW_NORMAL);
+                namedWindow("Input", WINDOW_AUTOSIZE);
+                namedWindow("Output", WINDOW_AUTOSIZE);
                 moveWindow("Output", 200, 0);
-            }else{
+            } else {
                 cout << "[ERROR] Model file not provided, cannot use dexined." << endl;
             }
         }
         else if (key == 'c' || key == 'C')
         {
             method = "canny";
-            setupCannyWindow(image, user_data);
+            setupCannyWindow(image);
         }
         else if (key == 27 || key == 'q')
         { // Escape key to exit
@@ -224,36 +224,4 @@ int main(int argc, char** argv) {
     }
     destroyAllWindows();
     return 0;
-}
-
-// Function to process the neural network output to generate edge maps
-static pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int width) {
-    vector<Mat> preds;
-    preds.reserve(output.size());
-    for (const Mat &p : output) {
-        Mat img;
-        // Correctly handle 4D tensor assuming it's always in the format [1, 1, height, width]
-        Mat processed;
-        if (p.dims == 4 && p.size[0] == 1 && p.size[1] == 1) {
-            // Use only the spatial dimensions
-            processed = p.reshape(0, {p.size[2], p.size[3]});
-        } else {
-            processed = p.clone();
-        }
-        sigmoid(processed);
-        normalize(processed, img, 0, 255, NORM_MINMAX, CV_8U);
-        resize(img, img, Size(width, height)); // Resize to the original size
-        preds.push_back(img);
-    }
-    Mat fuse = preds.back(); // Last element as the fused result
-    // Calculate the average of the predictions
-    Mat ave = Mat::zeros(height, width, CV_32F);
-    for (Mat &pred : preds) {
-        Mat temp;
-        pred.convertTo(temp, CV_32F);
-        ave += temp;
-    }
-    ave /= static_cast<float>(preds.size());
-    ave.convertTo(ave, CV_8U);
-    return {fuse, ave}; // Return both fused and average edge maps
 }

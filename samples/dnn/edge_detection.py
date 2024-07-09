@@ -49,6 +49,11 @@ def get_args_parser(func_args):
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     return parser.parse_args(func_args)
 
+threshold1 = 20
+threshold2 = 50
+blur_amount = 5
+gray = None
+
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
@@ -66,35 +71,23 @@ def post_processing(output, shape):
     ave = np.uint8(np.mean(ave, axis=0))
     return fuse, ave
 
-def canny_detection_thresh1(position, user_data):
-    user_data["thrs1"] = position
-    apply_canny(user_data)
+def apply_canny():
+    global threshold1, threshold2, blur_amount, gray
+    kernel_size = 2 * blur_amount + 1
+    blurred = cv.GaussianBlur(gray, (kernel_size, kernel_size), 0)
+    output = cv.Canny(blurred, threshold1, threshold2)
+    cv.imshow('Output', output)
 
-def canny_detection_thresh2(position, user_data):
-    user_data["thrs2"] = position
-    apply_canny(user_data)
-
-def apply_canny(user_data):
-    blurred = cv.GaussianBlur(user_data["gray"], (user_data["blur"] * 2 + 1, user_data["blur"] * 2 + 1), 0)
-    out = cv.Canny(blurred, user_data["thrs1"], user_data["thrs2"])
-    cv.imshow('Output', out)
-
-def blur_change(position, user_data):
-    user_data["blur"] = position
-    apply_canny(user_data)
-
-def setupCannyWindow(image, user_data):
+def setupCannyWindow(image):
+    global gray
     cv.destroyWindow('Output')
-    cv.namedWindow('Output', cv.WINDOW_NORMAL)
+    cv.namedWindow('Output', cv.WINDOW_AUTOSIZE)
     cv.moveWindow('Output', 200, 50)
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    user_data["gray"] = gray
-    cv.createTrackbar('thrs1', 'Output', 0, 255, lambda value: canny_detection_thresh1(value, user_data))
-    cv.setTrackbarPos('thrs1', 'Output', 100)
-    cv.createTrackbar('thrs2', 'Output', 0, 255, lambda value: canny_detection_thresh2(value, user_data))
-    cv.setTrackbarPos('thrs2', 'Output', 200)
-    cv.createTrackbar('blur', 'Output', 1, 20, lambda value: blur_change(value, user_data))
-    cv.setTrackbarPos('blur', 'Output', 1)
+
+    cv.createTrackbar('thrs1', 'Output', threshold1, 255, lambda value: [globals().__setitem__('threshold1', value), apply_canny()])
+    cv.createTrackbar('thrs2', 'Output', threshold2, 255, lambda value: [globals().__setitem__('threshold2', value), apply_canny()])
+    cv.createTrackbar('blur', 'Output', blur_amount, 20, lambda value: [globals().__setitem__('blur_amount', value), apply_canny()])
 
 def loadModel(args):
     net = cv.dnn.readNetFromONNX(args.model)
@@ -105,12 +98,11 @@ def loadModel(args):
 def main(func_args=None):
     args = get_args_parser(func_args)
 
-    user_data = {"gray": None, "thrs1": 100, "thrs2": 200, "blur": 1}
     cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
     if not cap.isOpened():
         print("Failed to open the input video")
         exit(-1)
-    cv.namedWindow('Input', cv.WINDOW_NORMAL)
+    cv.namedWindow('Input', cv.WINDOW_AUTOSIZE)
     cv.namedWindow('Output', cv.WINDOW_AUTOSIZE)
     cv.moveWindow('Output', 200, 50)
 
@@ -123,7 +115,7 @@ def main(func_args=None):
         args.model = findFile(args.model)
     if method == 'canny':
         dummy = np.zeros((512, 512, 3), dtype="uint8")
-        setupCannyWindow(dummy, user_data)
+        setupCannyWindow(dummy)
 
     net = None
     if method == "dexined":
@@ -135,9 +127,9 @@ def main(func_args=None):
             cv.waitKey(0)
             break
         if method == "canny":
+            global gray
             gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-            user_data["gray"] = gray
-            canny_detection_thresh1(user_data["thrs1"], user_data)
+            apply_canny()
         elif method == "dexined":
             inp = cv.dnn.blobFromImage(image, args.scale, (args.width, args.height), args.mean, swapRB=args.rgb, crop=False)
             net.setInput(inp)
@@ -162,7 +154,7 @@ def main(func_args=None):
                 print("[ERROR] Provide model file using --model to use dexined")
         elif key == ord('c') or key == ord('C'):
             method = "canny"
-            setupCannyWindow(image, user_data)
+            setupCannyWindow(image)
         elif key == 27 or key == ord('q'):
             break
     cv.destroyAllWindows()
