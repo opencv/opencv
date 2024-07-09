@@ -956,13 +956,13 @@ static void update(std::vector<neighbours>& hull, int vertex_id)
 /*
     A greedy algorithm based on contraction of vertices for approximating a convex contour by a bounding polygon
 */
-void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
-    int side, float epsilon_percentage, bool make_hull)
+void cv::approxPolyN(InputArray _curve, OutputArray _approxCurve,
+    int nsides, float epsilon_percentage, bool ensure_convex)
 {
     CV_INSTRUMENT_REGION();
 
     CV_Assert(epsilon_percentage > 0 || epsilon_percentage == -1);
-    CV_Assert(side > 2);
+    CV_Assert(nsides > 2);
 
     if (_approxCurve.fixedType())
     {
@@ -974,7 +974,7 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
 
     CV_Assert(depth == CV_32F || depth == CV_32S);
 
-    if (make_hull)
+    if (ensure_convex)
     {
         cv::convexHull(_curve, curve);
     }
@@ -984,8 +984,8 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
         curve = _curve.getMat();
     }
 
-    CV_Assert((curve.cols == 1 && curve.rows >= side)
-        || (curve.rows == 1 && curve.cols >= side));
+    CV_Assert((curve.cols == 1 && curve.rows >= nsides)
+        || (curve.rows == 1 && curve.cols >= nsides));
 
     if (curve.rows == 1)
     {
@@ -1016,7 +1016,7 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
     hull[0].prev = size - 1;
     hull[size - 1].next = 0;
 
-    if (size > side)
+    if (size > nsides)
     {
         for (int vertex_id = 0; vertex_id < size; ++vertex_id)
         {
@@ -1027,7 +1027,7 @@ void cv::approxBoundingPoly(InputArray _curve, OutputArray _approxCurve,
         }
     }
 
-    while (size > side)
+    while (size > nsides)
     {
         changes base = areas.top();
         int vertex_id = base.vertex;

@@ -4062,7 +4062,7 @@ CV_EXPORTS_W void approxPolyDP( InputArray curve,
 
 /** @brief Approximates a polygon with a convex hull with a specified accuracy and number of sides.
 
-The cv::approxBoundingPoly function approximates a polygon with a convex hull
+The cv::approxPolyN function approximates a polygon with a convex hull
 so that the difference between the contour area of the original contour and the new polygon is minimal.
 It uses a greedy algorithm for contracting two vertices into one in such a way that the additional area is minimal.
 Straight lines formed by each edge of the convex contour are drawn and the areas of the resulting triangles are considered.
@@ -4072,15 +4072,15 @@ The algorithm based on the paper @cite LowIlie2003 .
 
 @param curve Input vector of a 2D points stored in std::vector or Mat, points must be float or integer.
 @param approxCurve Result of the approximation. The type is vector of a 2D point (Point2f or Point) in std::vector or Mat.
-@param side The parameter defines the number of sides of the result polygon.
+@param nsides The parameter defines the number of sides of the result polygon.
 @param epsilon_percentage defines the percentage of the maximum of additional area.
 If it equals -1, it is not used. Otherwise algorighm stops if additional area is greater than contourArea(_curve) * percentage.
 If additional area exceeds the limit, algorithm returns as many vertices as there were at the moment the limit was exceeded.
-@param make_hull If it is true, algorithm creates a convex hull of input contour. Otherwise input vector should be convex.
+@param ensure_convex If it is true, algorithm creates a convex hull of input contour. Otherwise input vector should be convex.
  */
-CV_EXPORTS_W void approxBoundingPoly(InputArray curve, OutputArray approxCurve,
-                                    int side, float epsilon_percentage = -1.0,
-                                    bool make_hull = true);
+CV_EXPORTS_W void approxPolyN(InputArray curve, OutputArray approxCurve,
+                              int nsides, float epsilon_percentage = -1.0,
+                              bool ensure_convex = true);
 
 /** @brief Calculates a contour perimeter or a curve length.
 

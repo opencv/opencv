@@ -377,7 +377,7 @@ TEST(Imgproc_ApproxPoly, bad_epsilon)
     ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
 }
 
-struct ApproxBoundingPolyTest: public testing::Test
+struct ApproxPolyN: public testing::Test
 {
     void SetUp()
     {
@@ -400,7 +400,7 @@ struct ApproxBoundingPolyTest: public testing::Test
     vector<vector<Point>> contours;
 };
 
-TEST_F(ApproxBoundingPolyTest, accuracyInt)
+TEST_F(ApproxPolyN, accuracyInt)
 {
     vector<vector<Point>> rightCorners = {
         { {72, 187}, {37, 176}, {42, 127}, {133, 64} },
@@ -416,12 +416,12 @@ TEST_F(ApproxBoundingPolyTest, accuracyInt)
 
     for (size_t i = 0; i < contours.size(); ++i) {
         std::vector<Point> corners;
-        approxBoundingPoly(contours[i], corners, 4, -1, true);
+        approxPolyN(contours[i], corners, 4, -1, true);
         ASSERT_EQ(rightCorners[i], corners );
     }
 }
 
-TEST_F(ApproxBoundingPolyTest, accuracyFloat)
+TEST_F(ApproxPolyN, accuracyFloat)
 {
     vector<vector<Point2f>> rightCorners = {
         { {72.f, 187.f}, {37.f, 176.f}, {42.f, 127.f}, {133.f, 64.f} },
@@ -437,19 +437,19 @@ TEST_F(ApproxBoundingPolyTest, accuracyFloat)
 
     for (size_t i = 0; i < contours.size(); ++i) {
         std::vector<Point2f> corners;
-        approxBoundingPoly(contours[i], corners, 4, -1, true);
+        approxPolyN(contours[i], corners, 4, -1, true);
         EXPECT_LT(cvtest::norm(rightCorners[i], corners, NORM_INF), .5f);
     }
 }
 
-TEST_F(ApproxBoundingPolyTest, bad_args)
+TEST_F(ApproxPolyN, bad_args)
 {
     Mat contour(10, 1, CV_32FC2);
     vector<vector<Point>> bad_contours;
     vector<Point> corners;
-    ASSERT_ANY_THROW(approxBoundingPoly(contour, corners, 0));
-    ASSERT_ANY_THROW(approxBoundingPoly(contour, corners, 3, 0));
-    ASSERT_ANY_THROW(approxBoundingPoly(bad_contours, corners, 4));
+    ASSERT_ANY_THROW(approxPolyN(contour, corners, 0));
+    ASSERT_ANY_THROW(approxPolyN(contour, corners, 3, 0));
+    ASSERT_ANY_THROW(approxPolyN(bad_contours, corners, 4));
 }
 
 }} // namespace
