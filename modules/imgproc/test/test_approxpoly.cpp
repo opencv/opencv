@@ -377,14 +377,31 @@ TEST(Imgproc_ApproxPoly, bad_epsilon)
     ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
 }
 
-TEST(ApproxBoundingPolyTest, accuracyInt)
+struct ApproxBoundingPolyTest: public testing::Test
 {
-    vector<vector<Point>> inputPoints = {
-        {  {87, 103}, {100, 112}, {96, 138}, {80, 169}, {60, 183}, {38, 176}, {41, 145}, {56, 118}, {76, 104} },
-        {  {196, 102}, {205, 118}, {174, 196}, {152, 207}, {102, 194}, {100, 175}, {131, 109} },
-        {  {372, 101}, {377, 119}, {337, 238}, {324, 248}, {240, 229}, {199, 214}, {232, 123}, {245, 103} },
-        {  {463, 86}, {563, 112}, {574, 135}, {596, 221}, {518, 298}, {412, 266}, {385, 164}, {462, 86} }
-    };
+    void SetUp()
+    {
+        vector<vector<Point>> inputPoints = {
+            {  {87, 103}, {100, 112}, {96, 138}, {80, 169}, {60, 183}, {38, 176}, {41, 145}, {56, 118}, {76, 104} },
+            {  {196, 102}, {205, 118}, {174, 196}, {152, 207}, {102, 194}, {100, 175}, {131, 109} },
+            {  {372, 101}, {377, 119}, {337, 238}, {324, 248}, {240, 229}, {199, 214}, {232, 123}, {245, 103} },
+            {  {463, 86}, {563, 112}, {574, 135}, {596, 221}, {518, 298}, {412, 266}, {385, 164}, {462, 86} }
+        };
+
+        Mat image(600, 600, CV_8UC1, Scalar(0));
+
+        for (vector<Point>& polygon : inputPoints) {
+            polylines(image, { polygon }, true, Scalar(255), 1);
+        }
+
+        findContours(image, contours, RETR_LIST, CHAIN_APPROX_NONE);
+    }
+
+    vector<vector<Point>> contours;
+};
+
+TEST_F(ApproxBoundingPolyTest, accuracyInt)
+{
     vector<vector<Point>> rightCorners = {
         { {72, 187}, {37, 176}, {42, 127}, {133, 64} },
         { {168, 212}, {92, 192}, {131, 109}, {213, 100} },
@@ -395,33 +412,17 @@ TEST(ApproxBoundingPolyTest, accuracyInt)
         { {542, 6}, {596, 221}, {518, 299}, {312, 236} },
         { {596, 221}, {518, 299}, {312, 236}, {542, 6} }
     };
-    vector<vector<Point>> contours, detectedCorners;
-    Mat image(600, 600, CV_8UC1, Scalar(0));
-
-    for (vector<Point>& polygon : inputPoints) {
-        polylines(image, { polygon }, true, Scalar(255), 1);
-    }
-
-    findContours(image, contours, RETR_LIST, CHAIN_APPROX_NONE);
     EXPECT_EQ(rightCorners.size(), contours.size());
 
     for (size_t i = 0; i < contours.size(); ++i) {
         std::vector<Point> corners;
         approxBoundingPoly(contours[i], corners, 4, -1, true);
-        detectedCorners.push_back(corners);
+        ASSERT_EQ(rightCorners[i], corners );
     }
-
-    ASSERT_EQ(detectedCorners, rightCorners);
 }
 
-TEST(ApproxBoundingPolyTest, accuracyFloat)
+TEST_F(ApproxBoundingPolyTest, accuracyFloat)
 {
-    vector<vector<Point>> inputPoints = {
-        {  {87, 103}, {100, 112}, {96, 138}, {80, 169}, {60, 183}, {38, 176}, {41, 145}, {56, 118}, {76, 104} },
-        {  {196, 102}, {205, 118}, {174, 196}, {152, 207}, {102, 194}, {100, 175}, {131, 109} },
-        {  {372, 101}, {377, 119}, {337, 238}, {324, 248}, {240, 229}, {199, 214}, {232, 123}, {245, 103} },
-        {  {463, 86}, {563, 112}, {574, 135}, {596, 221}, {518, 298}, {412, 266}, {385, 164}, {462, 86} }
-    };
     vector<vector<Point2f>> rightCorners = {
         { {72.f, 187.f}, {37.f, 176.f}, {42.f, 127.f}, {133.f, 64.f} },
         { {168.f, 212.f}, {92.f, 192.f}, {131.f, 109.f}, {213.f, 100.f} },
@@ -432,16 +433,6 @@ TEST(ApproxBoundingPolyTest, accuracyFloat)
         { {542.f, 6.f}, {596.f, 221.f}, {518.f, 299.f}, {312.f, 236.f} },
         { {596.f, 221.f}, {518.f, 299.f}, {312.f, 236.f}, {542.f, 6.f} }
     };
-
-    vector<vector<Point>> contours;
-    vector<vector<Point2f>> detectedCorners;
-    Mat image(600, 600, CV_8UC1, Scalar(0));
-
-    for (vector<Point>& polygon : inputPoints) {
-        polylines(image, { polygon }, true, Scalar(255), 1);
-    }
-
-    findContours(image, contours, RETR_LIST, CHAIN_APPROX_NONE);
     EXPECT_EQ(rightCorners.size(), contours.size());
 
     for (size_t i = 0; i < contours.size(); ++i) {
@@ -451,14 +442,14 @@ TEST(ApproxBoundingPolyTest, accuracyFloat)
     }
 }
 
-TEST(Imgproc_ApproxPoly, bad_args)
+TEST_F(ApproxBoundingPolyTest, bad_args)
 {
     Mat contour(10, 1, CV_32FC2);
-    vector<vector<Point>> contours;
+    vector<vector<Point>> bad_contours;
     vector<Point> corners;
     ASSERT_ANY_THROW(approxBoundingPoly(contour, corners, 0));
     ASSERT_ANY_THROW(approxBoundingPoly(contour, corners, 3, 0));
-    ASSERT_ANY_THROW(approxBoundingPoly(contours, corners, 4));
+    ASSERT_ANY_THROW(approxBoundingPoly(bad_contours, corners, 4));
 }
 
 }} // namespace
