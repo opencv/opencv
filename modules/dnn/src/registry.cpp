@@ -122,10 +122,24 @@ private:
 #endif
 
 #ifdef HAVE_CUDA
-        if (haveCUDA())
+        cuda4dnn::checkVersions();
+
+        bool hasCudaCompatible = false;
+        bool hasCudaFP16 = false;
+        for (int i = 0; i < cuda4dnn::getDeviceCount(); i++)
+        {
+            if (cuda4dnn::isDeviceCompatible(i))
+            {
+                hasCudaCompatible = true;
+                if (cuda4dnn::doesDeviceSupportFP16(i))
+                    hasCudaFP16 = true;
+            }
+        }
+
+        if (hasCudaCompatible)
         {
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
-            if (cuda4dnn::doesDeviceSupportFP16())
+            if (hasCudaFP16)
                 backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
         }
 #endif
