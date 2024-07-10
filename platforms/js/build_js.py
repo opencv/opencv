@@ -177,25 +177,21 @@ class Builder:
 
     def get_build_flags(self):
         flags = ""
-        if self.options.build_wasm:
-            flags += "-s WASM=1 "
-        elif self.options.disable_wasm:
-            flags += "-s WASM=0 "
+        if self.options.disable_wasm:
+            flags += "-sWASM=0 "
         if not self.options.disable_single_file:
-            flags += "-s SINGLE_FILE=1 "
+            flags += "-sSINGLE_FILE "
         if self.options.threads:
-            flags += "-s USE_PTHREADS=1 -s PTHREAD_POOL_SIZE=4 "
-        else:
-            flags += "-s USE_PTHREADS=0 "
+            flags += "-pthread -sPTHREAD_POOL_SIZE=4 "
         if self.options.enable_exception:
-            flags += "-s DISABLE_EXCEPTION_CATCHING=0 "
+            flags += "-sDISABLE_EXCEPTION_CATCHING=0 "
         if self.options.simd:
             flags += "-msimd128 "
         if self.options.build_flags:
             flags += self.options.build_flags + " "
         if self.options.webnn:
-            flags += "-s USE_WEBNN=1 "
-        flags += "-s EXPORTED_FUNCTIONS=\"['_malloc', '_free']\""
+            flags += "-sUSE_WEBNN "
+        flags += "-sEXPORTED_FUNCTIONS=_malloc,_free"
         return flags
 
     def config(self):
@@ -237,7 +233,6 @@ if __name__ == "__main__":
     parser.add_argument("build_dir", help="Building directory (and output)")
     parser.add_argument('--opencv_dir', default=opencv_dir, help='Opencv source directory (default is "../.." relative to script location)')
     parser.add_argument('--emscripten_dir', default=emscripten_dir, help="Path to Emscripten to use for build (deprecated in favor of 'emcmake' launcher)")
-    parser.add_argument('--build_wasm', action="store_true", help="Build OpenCV.js in WebAssembly format")
     parser.add_argument('--disable_wasm', action="store_true", help="Build OpenCV.js in Asm.js format")
     parser.add_argument('--disable_single_file', action="store_true", help="Do not merge JavaScript and WebAssembly into one single file")
     parser.add_argument('--threads', action="store_true", help="Build OpenCV.js with threads optimization")
