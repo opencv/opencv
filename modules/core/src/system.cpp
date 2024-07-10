@@ -46,6 +46,7 @@
 #include <iostream>
 #include <ostream>
 
+#include <opencv2/core.hpp>
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
@@ -2882,6 +2883,14 @@ bool restoreFPDenormalsState(const FPDenormalsModeState& state)
 
 }  // namespace details
 
+int getImplementationHintDefault()
+{
+#ifdef OPENCV_IMPL_BUILD_DEFAULT
+    return OPENCV_IMPL_BUILD_DEFAULT;
+#else
+    return IMPL_ACCURATE;
+#endif
+};
 
 } // namespace cv
 

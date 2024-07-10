@@ -153,10 +153,14 @@ CV_EXPORTS CV_NORETURN void error(const Exception& exc);
 /*! @brief Flags that allow to midify some functions behavior. Used as set of flags.
 */
 enum ImplementationHint {
-    IMPL_DEFAULT = 0, //!< Use generic portable implementation
+    IMPL_ACCURATE = 0, //!< Use generic portable implementation
     IMPL_ALLOW_APPROXIMATION = 1, //!< Allow alternative approximations to get faster implementation. Behaviour and result depends on a platform
-    IMPL_INHERIT = 1 << 31, //!< Promote the hints to internal subroutines
+    IMPL_INHERIT = 1 << 31 //!< Promote the hints to internal subroutines
 };
+
+/*! @brief Returns ImplementationHint selected by default, a.k.a. `IMPL_DEFAULT` defined during OpenCV compilation.
+ */
+CV_EXPORTS_W int getImplementationHintDefault();
 
 enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independently
                  SORT_EVERY_COLUMN = 1, //!< each matrix column is sorted
