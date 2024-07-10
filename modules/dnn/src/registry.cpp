@@ -132,7 +132,10 @@ private:
             {
                 hasCudaCompatible = true;
                 if (cuda4dnn::doesDeviceSupportFP16(i))
+                {
                     hasCudaFP16 = true;
+                    break; // we already have all we need here
+                }
             }
         }
 
