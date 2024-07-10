@@ -154,12 +154,12 @@ CV_EXPORTS CV_NORETURN void error(const Exception& exc);
 */
 enum AlgorithmHint {
     ALGO_ACCURATE = 0, //!< Use generic portable implementation
-    ALGO_ALLOW_APPROXIMATION = 1, //!< Allow alternative approximations to get faster implementation. Behaviour and result depends on a platform
+    ALGO_APPROX = 1, //!< Allow alternative approximations to get faster implementation. Behaviour and result depends on a platform
 };
 
 /*! @brief Returns ImplementationHint selected by default, a.k.a. `IMPL_DEFAULT` defined during OpenCV compilation.
  */
-CV_EXPORTS_W AlgorithmHint getImplementationHintDefault();
+CV_EXPORTS_W AlgorithmHint getDefaultAlgoHint();
 
 enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independently
                  SORT_EVERY_COLUMN = 1, //!< each matrix column is sorted

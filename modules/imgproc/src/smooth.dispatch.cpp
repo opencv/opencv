@@ -695,7 +695,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                          borderType & ~BORDER_ISOLATED);
             }
 
-            if (hint == ALGO_ALLOW_APPROXIMATION)
+            if (hint == ALGO_APPROX)
             {
                 Point ofs;
                 Size wsz(src.cols, src.rows);
@@ -765,7 +765,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                          ofs.x, ofs.y, wsz.width - src2.cols - ofs.x,  wsz.height - src2.rows - ofs.y, ksize.width, borderType&~BORDER_ISOLATED);
             }
 
-            if (hint == ALGO_ALLOW_APPROXIMATION)
+            if (hint == ALGO_APPROX)
             {
                 Point ofs;
                 Size wsz(src.cols, src.rows);
