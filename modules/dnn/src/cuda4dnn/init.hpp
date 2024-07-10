@@ -15,7 +15,7 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
-    void checkVersions()
+    inline void checkVersions()
     {
         // https://docs.nvidia.com/deeplearning/cudnn/developer-guide/index.html#programming-model
         // cuDNN API Compatibility
@@ -44,21 +44,23 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
     }
 
-    int getDeviceCount()
+    inline int getDeviceCount()
     {
         return cuda::getCudaEnabledDeviceCount();
     }
 
-    int getDevice()
+    inline int getDevice()
     {
         int device_id = -1;
         CUDA4DNN_CHECK_CUDA(cudaGetDevice(&device_id));
         return device_id;
     }
 
-    bool isDeviceCompatible()
+    inline bool isDeviceCompatible(int device_id = -1)
     {
-        int device_id = getDevice();
+        if (device_id < 0)
+            device_id = getDevice();
+
         if (device_id < 0)
             return false;
 
@@ -76,9 +78,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         return false;
     }
 
-    bool doesDeviceSupportFP16()
+    inline bool doesDeviceSupportFP16(int device_id = -1)
     {
-        int device_id = getDevice();
+        if (device_id < 0)
+            device_id = getDevice();
+
         if (device_id < 0)
             return false;
 
@@ -87,9 +91,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         CUDA4DNN_CHECK_CUDA(cudaDeviceGetAttribute(&minor, cudaDevAttrComputeCapabilityMinor, device_id));
 
         int version = major * 10 + minor;
-        if (version < 53)
-            return false;
-        return true;
+        return (version >= 53);
     }
 
 }}} /* namespace cv::dnn::cuda4dnn */
