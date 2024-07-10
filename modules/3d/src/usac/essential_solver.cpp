@@ -259,7 +259,11 @@ public:
             action_mat_data[83] = -1.0; // 8 row, 3 col
             action_mat_data[96] = -1.0; // 9 row, 6 col
 
+#if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
+            long mat_order = 10, info, lda = 10, ldvl = 10, ldvr = 1, lwork = 100;
+#else
             int mat_order = 10, info, lda = 10, ldvl = 10, ldvr = 1, lwork = 100;
+#endif
             double wr[10], wi[10] = {0}, eig_vecs[100], work[100]; // 10 = mat_order, 100 = lwork
             char jobvl = 'V', jobvr = 'N'; // only left eigen vectors are computed
             OCV_LAPACK_FUNC(dgeev)(&jobvl, &jobvr, &mat_order, action_mat_data, &lda, wr, wi, eig_vecs, &ldvl,

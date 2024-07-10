@@ -3415,7 +3415,7 @@ inline v_float32x4 v_broadcast_element(const v_float32x4& v)
 
 ////////////// FP16 support ///////////////////////////
 
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
 #if CV_FP16
     return v_float32x4(_mm_cvtph_ps(_mm_loadu_si128((const __m128i*)ptr)));
@@ -3435,7 +3435,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
 #endif
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
 #if CV_FP16
     __m128i fp16_value = _mm_cvtps_ph(v.val, 0);

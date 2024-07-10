@@ -2,7 +2,7 @@
 ; jdcolext.asm - colorspace conversion (AVX2)
 ;
 ; Copyright 2009, 2012 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2012, 2016, D. R. Commander.
+; Copyright (C) 2012, 2016, 2024, D. R. Commander.
 ; Copyright (C) 2015, Intel Corporation.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
@@ -50,15 +50,15 @@ EXTN(jsimd_ycc_rgb_convert_avx2):
     mov         [esp], eax
     mov         ebp, esp                     ; ebp = aligned ebp
     lea         esp, [wk(0)]
-    pushpic     eax                     ; make a room for GOT address
+    PUSHPIC     eax                     ; make a room for GOT address
     push        ebx
 ;   push        ecx                     ; need not be preserved
 ;   push        edx                     ; need not be preserved
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
-    movpic      POINTER [gotptr], ebx   ; save GOT address
+    GET_GOT     ebx                     ; get GOT address
+    MOVPIC      POINTER [gotptr], ebx   ; save GOT address
 
     mov         ecx, JDIMENSION [out_width(eax)]  ; num_cols
     test        ecx, ecx
@@ -81,7 +81,7 @@ EXTN(jsimd_ycc_rgb_convert_avx2):
     mov         eax, INT [num_rows(eax)]
     test        eax, eax
     jle         near .return
-    alignx      16, 7
+    ALIGNX      16, 7
 .rowloop:
     push        eax
     push        edi
@@ -94,8 +94,8 @@ EXTN(jsimd_ycc_rgb_convert_avx2):
     mov         ebx, JSAMPROW [ebx]     ; inptr1
     mov         edx, JSAMPROW [edx]     ; inptr2
     mov         edi, JSAMPROW [edi]     ; outptr
-    movpic      eax, POINTER [gotptr]   ; load GOT address (eax)
-    alignx      16, 7
+    MOVPIC      eax, POINTER [gotptr]   ; load GOT address (eax)
+    ALIGNX      16, 7
 .columnloop:
 
     vmovdqu     ymm5, YMMWORD [ebx]     ; ymm5=Cb(0123456789ABCDEFGHIJKLMNOPQRSTUV)
@@ -295,7 +295,7 @@ EXTN(jsimd_ycc_rgb_convert_avx2):
     add         ebx, byte SIZEOF_YMMWORD  ; inptr1
     add         edx, byte SIZEOF_YMMWORD  ; inptr2
     jmp         near .columnloop
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .column_st64:
     lea         ecx, [ecx+ecx*2]            ; imul ecx, RGB_PIXELSIZE
@@ -436,7 +436,7 @@ EXTN(jsimd_ycc_rgb_convert_avx2):
     add         ebx, byte SIZEOF_YMMWORD  ; inptr1
     add         edx, byte SIZEOF_YMMWORD  ; inptr2
     jmp         near .columnloop
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .column_st64:
     cmp         ecx, byte SIZEOF_YMMWORD/2
@@ -479,7 +479,7 @@ EXTN(jsimd_ycc_rgb_convert_avx2):
 
 %endif  ; RGB_PIXELSIZE ; ---------------
 
-    alignx      16, 7
+    ALIGNX      16, 7
 
 .nextrow:
     pop         ecx

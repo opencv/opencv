@@ -48,6 +48,16 @@ inline void verify_size(const std::string &nm, const cv::Mat &img)
 {
     EXPECT_NO_THROW(imshow(nm, img));
     EXPECT_EQ(-1, waitKey(200));
+
+    // see https://github.com/opencv/opencv/issues/25550
+    // Wayland backend is not supported getWindowImageRect().
+    string framework;
+    EXPECT_NO_THROW(framework = currentUIFramework());
+    if(framework == "WAYLAND")
+    {
+       return;
+    }
+
     Rect rc;
     EXPECT_NO_THROW(rc = getWindowImageRect(nm));
     EXPECT_EQ(rc.size(), img.size());
@@ -138,7 +148,8 @@ static void Foo(int, void* counter)
         && !defined HAVE_WIN32UI \
         && !defined HAVE_WAYLAND \
     ) \
-    || defined(__APPLE__)  // test fails on Mac (cocoa)
+    || defined(__APPLE__)  /* test fails on Mac (cocoa) */ \
+    || defined HAVE_FRAMEBUFFER /* trackbar is not supported */
 TEST(Highgui_GUI, DISABLED_trackbar_unsafe)
 #else
 TEST(Highgui_GUI, trackbar_unsafe)
@@ -178,7 +189,8 @@ void testTrackbarCallback(int pos, void* param)
         && !defined HAVE_WIN32UI \
         && !defined HAVE_WAYLAND \
     ) \
-    || defined(__APPLE__)  // test fails on Mac (cocoa)
+    || defined(__APPLE__) /* test fails on Mac (cocoa) */ \
+    || defined HAVE_FRAMEBUFFER /* trackbar is not supported */
 TEST(Highgui_GUI, DISABLED_trackbar)
 #else
 TEST(Highgui_GUI, trackbar)
@@ -204,5 +216,43 @@ TEST(Highgui_GUI, trackbar)
     EXPECT_EQ(90, getTrackbarPos(trackbar_name, window_name));
     EXPECT_NO_THROW(destroyAllWindows());
 }
+
+// See https://github.com/opencv/opencv/issues/25560
+#if (!defined(ENABLE_PLUGINS) \
+        && !defined HAVE_GTK \
+        && !defined HAVE_QT \
+        && !defined HAVE_WIN32UI \
+        && !defined HAVE_WAYLAND)
+TEST(Highgui_GUI, DISABLED_small_width_image)
+#else
+TEST(Highgui_GUI, small_width_image)
+#endif
+{
+    const std::string window_name("trackbar_test_window");
+    cv::Mat src(1,1,CV_8UC3,cv::Scalar(0));
+    EXPECT_NO_THROW(destroyAllWindows());
+    ASSERT_NO_THROW(namedWindow(window_name));
+    ASSERT_NO_THROW(imshow(window_name, src));
+    EXPECT_NO_THROW(waitKey(10));
+    EXPECT_NO_THROW(destroyAllWindows());
+}
+
+TEST(Highgui_GUI, currentUIFramework)
+{
+    auto framework = currentUIFramework();
+    std::cout << "UI framework: \"" << framework << "\"" << std::endl;
+#if (!defined(ENABLE_PLUGINS) \
+        && !defined HAVE_GTK \
+        && !defined HAVE_QT \
+        && !defined HAVE_WIN32UI \
+        && !defined HAVE_COCOA \
+        && !defined HAVE_WAYLAND \
+    )
+    EXPECT_TRUE(framework.empty());
+#elif !defined(ENABLE_PLUGINS)
+    EXPECT_GT(framework.size(), 0);  // builtin backends
+#endif
+}
+
 
 }} // namespace

@@ -2754,7 +2754,7 @@ inline v_float32x4 v_broadcast_element(const v_float32x4& a)
 
 ////////////// FP16 support ///////////////////////////
 
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     float a[4];
     for (int i = 0; i < 4; i++)
@@ -2762,14 +2762,14 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_float32x4(wasm_v128_load(a));
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     double v_[4];
     wasm_v128_store(v_, v.val);
-    ptr[0] = float16_t(v_[0]);
-    ptr[1] = float16_t(v_[1]);
-    ptr[2] = float16_t(v_[2]);
-    ptr[3] = float16_t(v_[3]);
+    ptr[0] = hfloat(v_[0]);
+    ptr[1] = hfloat(v_[1]);
+    ptr[2] = hfloat(v_[2]);
+    ptr[3] = hfloat(v_[3]);
 }
 
 inline void v_cleanup() {}

@@ -58,7 +58,6 @@
 #include "../cuda4dnn/primitives/concat.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
-
 namespace cv
 {
 namespace dnn
@@ -109,7 +108,10 @@ public:
                 }
             }
 
-            axisSum += curShape[cAxis];
+            axisSum += (!curShape.empty()) ? curShape[cAxis] : 1;
+        }
+        if (inputs[0].empty()){
+            outputs[0] = MatShape(1);
         }
         outputs[0][cAxis] = axisSum;
         return false;
@@ -338,7 +340,10 @@ public:
 
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto concat_axis = normalize_axis(axis, input_wrapper->getRank());
-        return make_cuda_node_with_type<cuda4dnn::ConcatOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), concat_axis, padding);
+        if (inputs[0]->getHostMatDepth() == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::ConcatOp>(std::move(context->stream), concat_axis, padding);
+        else
+            return make_cuda_node_with_type<cuda4dnn::ConcatOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), concat_axis, padding);
     }
 #endif
 
@@ -385,7 +390,7 @@ public:
         std::vector<size_t> maxDims(numDims, 0);
 
         CV_Assert(inputs.size() == nodes.size());
-        ngraph::OutputVector inp_nodes;
+        ov::OutputVector inp_nodes;
         for (int i = 0; i < nodes.size(); ++i)
         {
             auto inp = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
@@ -411,14 +416,14 @@ public:
             }
             if (needPadding)
             {
-                inp_nodes[i] = std::make_shared<ngraph::op::v1::Pad>(
+                inp_nodes[i] = std::make_shared<ov::op::v1::Pad>(
                     inp_nodes[i],
-                    std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{begins.size()}, begins.data()),
-                    std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{ends.size()}, ends.data()),
-                    ngraph::op::PadMode::CONSTANT);
+                    std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{begins.size()}, begins.data()),
+                    std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{ends.size()}, ends.data()),
+                    ov::op::PadMode::CONSTANT);
             }
         }
-        auto concat = std::make_shared<ngraph::op::Concat>(inp_nodes, cAxis);
+        auto concat = std::make_shared<ov::op::v0::Concat>(inp_nodes, cAxis);
         return Ptr<BackendNode>(new InfEngineNgraphNode(concat));
     }
 #endif  // HAVE_DNN_NGRAPH

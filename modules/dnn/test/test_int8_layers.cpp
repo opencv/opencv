@@ -517,6 +517,61 @@ TEST_P(Test_Int8_layers, Eltwise)
     testLayer("split_max", "ONNX", 0.004, 0.012);
 }
 
+TEST_P(Test_Int8_layers, DepthSpaceOps) {
+    auto test_layer_with_onnx_conformance_models = [&](const std::string &model_name, double l1, double lInf) {
+        std::string model_path = _tf("onnx/conformance/node/test_" + model_name + "/model.onnx");
+        auto net = readNet(model_path);
+
+        // load reference inputs and outputs
+        std::string data_base_path = _tf("onnx/conformance/node/test_" + model_name + "/test_data_set_0");
+        Mat input = readTensorFromONNX(data_base_path + "/input_0.pb");
+        Mat ref_output = readTensorFromONNX(data_base_path + "/output_0.pb");
+
+        std::vector<float> input_scales, output_scales;
+        std::vector<int> input_zeropoints, output_zeropoints;
+        auto qnet = net.quantize(std::vector<Mat>{input}, CV_8S, CV_8S, false);
+        qnet.getInputDetails(input_scales, input_zeropoints);
+        qnet.getOutputDetails(output_scales, output_zeropoints);
+        qnet.setPreferableBackend(backend);
+        qnet.setPreferableTarget(target);
+
+        Mat quantized_input, quantized_output;
+        input.convertTo(quantized_input, CV_8S, 1.f / input_scales.front(), input_zeropoints.front());
+        qnet.setInput(quantized_input);
+        quantized_output = qnet.forward();
+
+        Mat output;
+        quantized_output.convertTo(output, CV_32F, output_scales.front(), -(output_scales.front() * output_zeropoints.front()));
+        normAssert(ref_output, output, model_name.c_str(), l1, lInf);
+    };
+
+    double l1 = default_l1, lInf = default_lInf;
+    {
+        l1 = 0.001; lInf = 0.002;
+        if (backend == DNN_BACKEND_TIMVX) { l1 = 0.001; lInf = 0.002; }
+        test_layer_with_onnx_conformance_models("spacetodepth", l1, lInf);
+    }
+    {
+        l1 = 0.022; lInf = 0.044;
+        if (backend == DNN_BACKEND_TIMVX) { l1 = 0.022; lInf = 0.044; }
+        test_layer_with_onnx_conformance_models("spacetodepth_example", l1, lInf);
+    }
+    {
+        l1 = 0.001; lInf = 0.002;
+        if (backend == DNN_BACKEND_TIMVX) { l1 = 0.24; lInf = 0.99; }
+        test_layer_with_onnx_conformance_models("depthtospace_crd_mode", l1, lInf);
+    }
+    test_layer_with_onnx_conformance_models("depthtospace_dcr_mode", 0.001, 0.002);
+    test_layer_with_onnx_conformance_models("depthtospace_example", 0.07, 0.14);
+
+    {
+        l1 = 0.07; lInf = 0.14;
+        if (backend == DNN_BACKEND_TIMVX) // diff too huge, l1 = 13.6; lInf = 27.2
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_TIMVX);
+        test_layer_with_onnx_conformance_models("depthtospace_crd_mode_example", l1, lInf);
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_Int8_layers, dnnBackendsAndTargetsInt8());
 
 class Test_Int8_nets : public DNNTestLayer

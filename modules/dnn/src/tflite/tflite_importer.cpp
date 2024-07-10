@@ -66,6 +66,12 @@ private:
     void parseDequantize(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseSplit(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseSoftmax(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseTranspose(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseGlobalPooling(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
     void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
@@ -73,6 +79,8 @@ private:
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId, int dtype);
     int addReshapeLayer(const std::vector<int>& shape, int axis, int num_axes,
                         const std::string& name, const std::pair<int, int>& inpId, int dtype);
+    int addFlattenLayer(int axis, int end_axis, const std::string& name, const std::pair<int, int>& inpId, int dtype);
+
     inline bool isInt8(const Operator& op);
     inline void getQuantParams(const Operator& op, float& inpScale, int& inpZero, float& outScale, int& outZero);
 };
@@ -109,7 +117,7 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
     default:
         CV_Error(Error::StsNotImplemented, format("Parse tensor with type %s", EnumNameTensorType(tensor.type())));
     }
-    return Mat(shape, dtype, const_cast<void*>(data));
+    return shape.empty() ? Mat() : Mat(shape, dtype, const_cast<void*>(data));
 }
 
 TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufSize)
@@ -275,7 +283,13 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["Convolution2DTransposeBias"] = &TFLiteImporter::parseDeconvolution;
     dispatch["QUANTIZE"] = &TFLiteImporter::parseQuantize;
     dispatch["DEQUANTIZE"] = &TFLiteImporter::parseDequantize;
+    dispatch["SPLIT"] = &TFLiteImporter::parseSplit;
+    dispatch["FULLY_CONNECTED"] = &TFLiteImporter::parseFullyConnected;
+    dispatch["SOFTMAX"] = &TFLiteImporter::parseSoftmax;
+    dispatch["CAST"] = &TFLiteImporter::parseCast;
     dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
+    dispatch["TRANSPOSE"] = &TFLiteImporter::parseTranspose;
+    dispatch["MEAN"] = dispatch["REDUCE_MAX"] = &TFLiteImporter::parseGlobalPooling;
     return dispatch;
 }
 
@@ -291,6 +305,10 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op) {
             }
             Mat blob = allTensors[idx];
             layerParams.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
+        }
+    } else {
+        for (auto& blob : layerParams.blobs) {
+            CV_Assert(blob.u);
         }
     }
 
@@ -707,6 +725,80 @@ void TFLiteImporter::parseResize(const Operator& op, const std::string& opcode, 
     addLayer(layerParams, op);
 }
 
+void TFLiteImporter::parseTranspose(const Operator& op, const std::string& opcode, LayerParams& layerParams)
+{
+    layerParams.type = "Permute";
+    std::vector<int> perm = allTensors[op.inputs()->Get(1)];
+
+    DataLayout inpLayout = layouts[op.inputs()->Get(0)];
+    if (inpLayout == DNN_LAYOUT_NHWC && perm.size() == 4) {
+
+        // OpenCV operates under the assumption that NCHW format, whereas TFLite defaults to NHWC.
+        // Therfore, to align these layouts, the axes of the permutation vector should be adjusted accordingly.
+        // For implementation details, please refer to the disscusion:
+        // https://github.com/opencv/opencv/pull/25297#issuecomment-2049762298
+
+        if (perm[0] != 0) {
+            CV_Error(Error::StsParseError, "The first axis should not be permuted.");
+        }
+        if (perm[1] == 1 && perm[2] == 2 && perm[3] == 3) {
+            std::vector<int> orderLP = {0, 1, 2, 3};
+            layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+            layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NCHW;
+        }
+        else if (perm[1] == 1 && perm[2] == 3 && perm[3] == 2) {
+            std::vector<int> orderLP = {0, 3, 2, 1};
+            layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+        }
+        else if (perm[1] == 2 && perm[2] == 1 && perm[3] == 3) {
+            std::vector<int> orderLP = {0, 1, 3, 2};
+            layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+            layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NCHW;
+        }
+        else if (perm[1] == 2 && perm[2] == 3 && perm[3] == 1) {
+            std::vector<int> orderLP = {0, 2, 3, 1};
+            layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+        }
+
+    }
+    else {
+        layerParams.set("order", DictValue::arrayInt<int*>(perm.data(), perm.size()));
+    }
+
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseGlobalPooling(const Operator& op, const std::string& opcode, LayerParams& layerParams)
+{
+    layerParams.type = "Pooling";
+    if(opcode == "MEAN") {
+        layerParams.set("pool", "ave");
+    }
+    else if (opcode == "REDUCE_MAX") {
+        layerParams.set("pool", "max");
+    }
+    else {
+        CV_Error(Error::StsNotImplemented, "Unsupported pooling " + opcode);
+    }
+    layerParams.set("global_pooling", true);
+    auto options = op.builtin_options_as_ReducerOptions();
+    bool keep_dims = options->keep_dims();
+
+    if (!keep_dims) {
+        const auto name = layerParams.name;
+        layerParams.name += "/global_pooling";
+        addLayer(layerParams, op);
+
+        int out = op.outputs()->Get(0);
+        auto outId = layerIds[out];
+        int flattenId = addFlattenLayer(1, -1, name, outId, isInt8(op) ? CV_8S : CV_32F);
+        layerIds[out] = std::make_pair(flattenId, 0);
+    }
+    else {
+        addLayer(layerParams, op);
+    }
+}
+
 int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::string& permName,
                                     const std::pair<int, int>& inpId, int dtype)
 {
@@ -725,6 +817,16 @@ int TFLiteImporter::addReshapeLayer(const std::vector<int>& shape, int axis, int
     lp.set("dim", DictValue::arrayInt<const int*>(shape.data(), shape.size()));
     lp.set("num_axes", num_axes);
     int id = dstNet.addLayer(name, "Reshape", dtype, lp);
+    dstNet.connect(inpId.first, inpId.second, id, 0);
+    return id;
+}
+
+int TFLiteImporter::addFlattenLayer(int axis, int end_axis, const std::string& name, const std::pair<int, int>& inpId, int dtype)
+{
+    LayerParams lp;
+    lp.set("axis", axis);
+    lp.set("end_axis", end_axis);
+    int id = dstNet.addLayer(name, "Flatten", dtype, lp);
     dstNet.connect(inpId.first, inpId.second, id, 0);
     return id;
 }
@@ -806,6 +908,35 @@ void TFLiteImporter::parseDequantize(const Operator& op, const std::string& opco
     getQuantParams(op, inpScale, inpZero, outScale, outZero);
     layerParams.set("scales", inpScale);
     layerParams.set("zeropoints", inpZero);
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseSplit(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Slice";
+    auto options = op.builtin_options_as_SplitOptions();
+    CV_Assert(options);
+    layerParams.set("num_split", options->num_splits());
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Gemm";
+    auto options = op.builtin_options_as_FullyConnectedOptions();
+    CV_Assert(options);
+
+    layerParams.set("transB", true);
+    layerParams.set("constB", true);
+    addLayer(layerParams, op);
+    parseFusedActivation(op, options->fused_activation_function());
+}
+
+void TFLiteImporter::parseSoftmax(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Softmax";
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Identity";
     addLayer(layerParams, op);
 }
 

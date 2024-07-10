@@ -1105,4 +1105,176 @@ TEST(Imgproc, morphologyEx_small_input_22893)
     ASSERT_EQ(0, cvtest::norm(result, gold, NORM_INF));
 }
 
+TEST(Imgproc_sepFilter2D, identity)
+{
+    std::vector<uint8_t> kernelX{0, 0, 0, 1, 0, 0, 0};
+    std::vector<uint8_t> kernelY{0, 0, 1, 0, 0};
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, input.depth(), kernelX, kernelY);
+
+    EXPECT_EQ(0, cv::norm(result, input, NORM_INF));
+}
+
+TEST(Imgproc_sepFilter2D, shift)
+{
+    std::vector<float> kernelX{1, 0, 0};
+    std::vector<float> kernelY{0, 0, 1};
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, input.depth(), kernelX, kernelY);
+
+    int W = input.cols;
+    int H = input.rows;
+    Mat inputCrop = input(Range(1, H), Range(0, W - 1));
+    Mat resultCrop = result(Range(0, H - 1), Range(1, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    // Checking borders. Should be BORDER_REFLECT_101
+
+    inputCrop = input(Range(H - 2, H - 1), Range(0, W - 1));
+    resultCrop = result(Range(H - 1, H), Range(1, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    inputCrop = input(Range(1, H), Range(1, 2));
+    resultCrop = result(Range(0, H - 1), Range(0, 1));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    inputCrop = input(Range(H - 2, H - 1), Range(1, 2));
+    resultCrop = result(Range(H - 1, H), Range(0, 1));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+}
+
+TEST(Imgproc_sepFilter2D, zeroPadding)
+{
+    std::vector<int> kernelX{1, 0, 0};
+    std::vector<int> kernelY{0, 0, 1};
+    Point anchor(-1, -1);
+    double delta = 0;
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, input.depth(), kernelX, kernelY, anchor, delta, BORDER_CONSTANT);
+
+    int W = input.cols;
+    int H = input.rows;
+    Mat inputCrop = input(Range(1, H), Range(0, W - 1));
+    Mat resultCrop = result(Range(0, H - 1), Range(1, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    // Checking borders
+
+    resultCrop = result(Range(H - 1, H), Range(0, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, NORM_INF));
+
+    resultCrop = result(Range(0, H), Range(0, 1));
+    EXPECT_EQ(0, cv::norm(resultCrop, NORM_INF));
+}
+
+TEST(Imgproc_sepFilter2D, anchor)
+{
+    std::vector<float> kernelX{0, 1, 0};
+    std::vector<float> kernelY{0, 1, 0};
+    Point anchor(2, 0);
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, input.depth(), kernelX, kernelY, anchor);
+
+    int W = input.cols;
+    int H = input.rows;
+    Mat inputCrop = input(Range(1, H), Range(0, W - 1));
+    Mat resultCrop = result(Range(0, H - 1), Range(1, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    // Checking borders. Should be BORDER_REFLECT_101
+
+    inputCrop = input(Range(H - 2, H - 1), Range(0, W - 1));
+    resultCrop = result(Range(H - 1, H), Range(1, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    inputCrop = input(Range(1, H), Range(1, 2));
+    resultCrop = result(Range(0, H - 1), Range(0, 1));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    inputCrop = input(Range(H - 2, H - 1), Range(1, 2));
+    resultCrop = result(Range(H - 1, H), Range(0, 1));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+}
+
+TEST(Imgproc_sepFilter2D, delta)
+{
+    std::vector<float> kernelX{0, 0.5, 0};
+    std::vector<float> kernelY{0, 1, 0};
+    Point anchor(1, 1);
+    double delta = 5;
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, input.depth(), kernelX, kernelY, anchor, delta);
+
+    Mat gt = input / 2 + delta;
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+typedef testing::TestWithParam<int> Imgproc_sepFilter2D_outTypes;
+TEST_P(Imgproc_sepFilter2D_outTypes, simple)
+{
+    int outputType = GetParam();
+    std::vector<float> kernelX{0, 0.5, 0};
+    std::vector<float> kernelY{0, 0.5, 0};
+    Point anchor(1, 1);
+    double delta = 5;
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, outputType, kernelX, kernelY, anchor, delta);
+
+    input.convertTo(input, outputType);
+    Mat gt = input / 4 + delta;
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_sepFilter2D_outTypes,
+    testing::Values(CV_16S, CV_32F, CV_64F),
+);
+
+typedef testing::TestWithParam<int> Imgproc_sepFilter2D_types;
+TEST_P(Imgproc_sepFilter2D_types, simple)
+{
+    int outputType = GetParam();
+    std::vector<float> kernelX{0, 0.5, 0};
+    std::vector<float> kernelY{0, 0.5, 0};
+    Point anchor(1, 1);
+    double delta = 5;
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    input.convertTo(input, outputType);
+    Mat result;
+
+    cv::sepFilter2D(input, result, outputType, kernelX, kernelY, anchor, delta);
+
+    Mat gt = input / 4 + delta;
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_sepFilter2D_types,
+    testing::Values(CV_16S, CV_32F, CV_64F),
+);
+
 }} // namespace

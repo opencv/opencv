@@ -927,7 +927,6 @@ public:
         if(!threadSafe)
             lock.lock();
         static InternalFFMpegRegister instance;
-        initLogger_();  // update logger setup unconditionally (GStreamer's libav plugin may override these settings)
     }
     static void initLogger_()
     {
@@ -965,6 +964,7 @@ public:
         /* register a callback function for synchronization */
         av_lockmgr_register(&LockCallBack);
 #endif
+        initLogger_();
     }
     ~InternalFFMpegRegister()
     {

@@ -2858,14 +2858,14 @@ inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b,
 #endif
 ////// FP16 support ///////
 #if __riscv_v == 7000
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     vfloat16m1_t v = vle16_v_f16m1((__fp16*)ptr, 4);
     vfloat32m2_t v32 = vfwcvt_f_f_v_f32m2(v, 4);
     return v_float32x4(vget_v_f32m2_f32m1(v32, 0));
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     vfloat32m2_t v32 = vundefined_f32m2();
     v32 = vset_v_f32m1_f32m2(v32, 0, v.val);
@@ -2873,14 +2873,14 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
     vse16_v_f16m1((__fp16*)ptr, hv, 4);
 }
 #else
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     vfloat16mf2_t v = vle16_v_f16mf2((__fp16*)ptr, 4);
     vfloat32m1_t v32 = vfwcvt_f_f_v_f32m1(v, 4);
     return v_float32x4(v32);
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     //vfloat32m2_t v32 = vundefined_f32m2();
     //v32 = vset_f32m2(v32, 0, v.val);

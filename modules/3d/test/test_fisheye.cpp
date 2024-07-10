@@ -170,7 +170,7 @@ TEST_F(fisheyeTest, undistortImage)
 
     cv::Matx33d theK = this->K;
     cv::Mat theD = cv::Mat(this->D);
-    std::string file = combine(datasets_repository_path, "/calib-3_stereo_from_JY/left/stereo_pair_014.jpg");
+    std::string file = combine(datasets_repository_path, "stereo_pair_014.png");
     cv::Matx33d newK = theK;
     cv::Mat distorted = cv::imread(file), undistorted;
     {

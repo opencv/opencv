@@ -43,7 +43,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     void handleKeepDims(MatShape& shape, const int axis_) const
@@ -64,9 +64,15 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         MatShape inpShape = inputs[0];
+        // no axis for scalar
+        if (inpShape.empty()){
+            CV_Assert(axis == 0);
+        }
 
         const int axis_ = normalize_axis(axis, inpShape);
-        handleKeepDims(inpShape, axis_);
+        // handle dims = 0 situation
+        if (!inpShape.empty())
+            handleKeepDims(inpShape, axis_);
         outputs.assign(1, inpShape);
 
         return false;

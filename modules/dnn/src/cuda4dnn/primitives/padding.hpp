@@ -34,7 +34,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
         /* `ranges` is indexed by axis and contains the range in the output where the input is copied to */
-        PaddingOp(csl::Stream stream_, PaddingType type_, T value_, std::vector<cv::Range> ranges)
+        PaddingOp(csl::Stream stream_, PaddingType type_, T value_, const std::vector<cv::Range>& ranges)
             : stream(std::move(stream_)),  type{ type_ }, value{ value_ }, dstRanges(std::move(ranges))
         {
         }

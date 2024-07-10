@@ -4,20 +4,6 @@
 # Object detection models.
 ################################################################################
 
-# OpenCV's face detection network
-opencv_fd:
-  load_info:
-    url: "https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel"
-    sha1: "15aa726b4d46d9f023526d85537db81cbc8dd566"
-  model: "opencv_face_detector.caffemodel"
-  config: "opencv_face_detector.prototxt"
-  mean: [104, 177, 123]
-  scale: 1.0
-  width: 300
-  height: 300
-  rgb: false
-  sample: "object_detection"
-
 # YOLOv8 object detection family from ultralytics (https://github.com/ultralytics/ultralytics)
 # Might be used for all YOLOv8n YOLOv8s YOLOv8m YOLOv8l and YOLOv8x
 yolov8x:
@@ -25,6 +11,62 @@ yolov8x:
     url: "https://huggingface.co/cabelo/yolov8/resolve/main/yolov8x.onnx?download=true"
     sha1: "462f15d668c046d38e27d3df01fe8142dd004cb4"
   model: "yolov8x.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8s:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8s.onnx"
+    sha1: "82cd83984396fe929909ecb58212b0e86d0904b1"
+  model: "yolov8s.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8n:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
+    sha1: "68f864475d06e2ec4037181052739f268eeac38d"
+  model: "yolov8n.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8m:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8m.onnx"
+    sha1: "656ffeb4f3b067bc30df956728b5f9c61a4cb090"
+  model: "yolov8m.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8l:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8l.onnx"
+    sha1: "462df53ca3a85d110bf6be7fc2e2bb1277124395"
+  model: "yolov8l.onnx"
   mean: 0.0
   scale: 0.00392
   width: 640
@@ -199,14 +241,13 @@ googlenet:
 # Semantic segmentation models.
 ################################################################################
 
-fcn8s:
+fcnresnet50:
   load_info:
-    url: "http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel"
-    sha1: "c449ea74dd7d83751d1357d6a8c323fcf4038962"
-  model: "fcn8s-heavy-pascal.caffemodel"
-  config: "fcn8s-heavy-pascal.prototxt"
-  mean: [0, 0, 0]
-  scale: 1.0
+    url: "https://github.com/onnx/models/raw/491ce05590abb7551d7fae43c067c060eeb575a6/validated/vision/object_detection_segmentation/fcn/model/fcn-resnet50-12.onnx"
+    sha1: "1bb0c7e0034038969aecc6251166f1612a139230"
+  model: "fcn-resnet50-12.onnx"
+  mean: [103.5, 116.2, 123.6]
+  scale: 0.019
   width: 500
   height: 500
   rgb: false
@@ -222,4 +263,16 @@ fcnresnet101:
   width: 500
   height: 500
   rgb: false
+  sample: "segmentation"
+
+u2netp:
+  load_info:
+    url: "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx"
+    sha1: "0a99236f0d5c1916a99a8c401b23e5ef32038606"
+  model: "u2netp.onnx"
+  mean: [123.6, 116.2, 103.5]
+  scale: 0.019
+  width: 320
+  height: 320
+  rgb: true
   sample: "segmentation"

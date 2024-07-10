@@ -9,7 +9,25 @@
 
 namespace cv { namespace hal {
 
-///////////////////////////////////// ATAN2 ////////////////////////////////////
+void cartToPolar32f(const float* x, const float* y, float* mag, float* angle, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(cartToPolar32f, cv_hal_cartToPolar32f, x, y, mag, angle, len, angleInDegrees);
+
+    CV_CPU_DISPATCH(cartToPolar32f, (x, y, mag, angle, len, angleInDegrees),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void cartToPolar64f(const double* x, const double* y, double* mag, double* angle, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(cartToPolar64f, cv_hal_cartToPolar64f, x, y, mag, angle, len, angleInDegrees);
+
+    CV_CPU_DISPATCH(cartToPolar64f, (x, y, mag, angle, len, angleInDegrees),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
 
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {

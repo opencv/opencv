@@ -6,8 +6,8 @@ See cv::cvtColor and cv::ColorConversionCodes
 @todo document other conversion modes
 
 @anchor color_convert_rgb_gray
-RGB \emoji arrow_right GRAY
-------------------------------
+RGB <-> GRAY
+------------
 Transformations within RGB space like adding/removing the alpha channel, reversing the channel
 order, conversion to/from 16-bit RGB color (R5:G6:B5 or R5:G5:B5), as well as conversion
 to/from grayscale using:
@@ -22,8 +22,8 @@ More advanced channel reordering can also be done with cv::mixChannels.
 @see cv::COLOR_BGR2GRAY, cv::COLOR_RGB2GRAY, cv::COLOR_GRAY2BGR, cv::COLOR_GRAY2RGB
 
 @anchor color_convert_rgb_xyz
-RGB \emoji arrow_right CIE XYZ.Rec 709 with D65 white point
---------------------------------------------------------------
+RGB <-> CIE XYZ.Rec 709 with D65 white point
+--------------------------------------------
 \f[\begin{bmatrix} X  \\ Y  \\ Z
   \end{bmatrix} \leftarrow \begin{bmatrix} 0.412453 & 0.357580 & 0.180423 \\ 0.212671 & 0.715160 & 0.072169 \\ 0.019334 & 0.119193 & 0.950227
   \end{bmatrix} \cdot \begin{bmatrix} R  \\ G  \\ B
@@ -37,8 +37,8 @@ RGB \emoji arrow_right CIE XYZ.Rec 709 with D65 white point
 @see cv::COLOR_BGR2XYZ, cv::COLOR_RGB2XYZ, cv::COLOR_XYZ2BGR, cv::COLOR_XYZ2RGB
 
 @anchor color_convert_rgb_ycrcb
-RGB \emoji arrow_right YCrCb JPEG (or YCC)
----------------------------------------------
+RGB <-> YCrCb JPEG (or YCC)
+---------------------------
 \f[Y  \leftarrow 0.299  \cdot R + 0.587  \cdot G + 0.114  \cdot B\f]
 \f[Cr  \leftarrow (R-Y)  \cdot 0.713 + delta\f]
 \f[Cb  \leftarrow (B-Y)  \cdot 0.564 + delta\f]
@@ -50,9 +50,40 @@ where
 Y, Cr, and Cb cover the whole value range.
 @see cv::COLOR_BGR2YCrCb, cv::COLOR_RGB2YCrCb, cv::COLOR_YCrCb2BGR, cv::COLOR_YCrCb2RGB
 
+@anchor color_convert_rgb_yuv_42x
+RGB <-> YUV with subsampling
+------------------------------
+Only 8-bit values are supported.
+The coefficients correspond to BT.601 standard with resulting values Y [16, 235], U and V [16, 240] centered at 128.
+
+Two subsampling schemes are supported: 4:2:0 (Fourcc codes NV12, NV21, YV12, I420 and synonimic)
+and 4:2:2 (Fourcc codes UYVY, YUY2, YVYU and synonimic).
+
+In both subsampling schemes Y values are written for each pixel so that Y plane is in fact a scaled and biased gray version
+of a source image.
+
+In 4:2:0 scheme U and V values are averaged over 2x2 squares, i.e. only 1 U and 1 V value is saved per each 4 pixels.
+U and V values are saved interleaved into a separate plane (NV12, NV21) or into two separate semi-planes (YV12, I420).
+
+In 4:2:2 scheme U and V values are averaged horizontally over each pair of pixels, i.e. only 1 U and 1 V value is saved
+per each 2 pixels. U and V values are saved interleaved with Y values for both pixels according to its Fourcc code.
+
+Note that different conversions are perfomed with different precision for speed or compatibility purposes. For example,
+RGB to YUV 4:2:2 is converted using 14-bit fixed-point arithmetics while other conversions use 20 bits.
+
+\f[R \leftarrow 1.164 \cdot (Y - 16) + 1.596 \cdot (V - 128)\f]
+\f[G \leftarrow 1.164 \cdot (Y - 16) - 0.813 \cdot (V - 128) - 0.391 \cdot (U - 128)\f]
+\f[B \leftarrow 1.164 \cdot (Y - 16) + 2.018 \cdot (U - 128)\f]
+
+\f[Y \leftarrow (R \cdot 0.299 + G \cdot 0.587 + B \cdot 0.114) \cdot \frac{236 - 16}{256} + 16 \f]
+\f[U \leftarrow -0.148 \cdot R_{avg} - 0.291 \cdot G_{avg} + 0.439 \cdot B_{avg} + 128 \f]
+\f[V \leftarrow  0.439 \cdot R_{avg} - 0.368 \cdot G_{avg} - 0.071 \cdot B_{avg} + 128 \f]
+
+@see cv::COLOR_YUV2RGB_NV12, cv::COLOR_YUV2RGBA_YUY2, cv::COLOR_BGR2YUV_YV12 and similar ones
+
 @anchor color_convert_rgb_hsv
-RGB \emoji arrow_right HSV
------------------------------
+RGB <-> HSV
+-----------
 In case of 8-bit and 16-bit images, R, G, and B are converted to the floating-point format and
 scaled to fit the 0 to 1 range.
 
@@ -67,14 +98,14 @@ If \f$H<0\f$ then \f$H \leftarrow H+360\f$ . On output \f$0 \leq V \leq 1\f$, \f
 
 The values are then converted to the destination data type:
 - 8-bit images: \f$V  \leftarrow 255 V, S  \leftarrow 255 S, H  \leftarrow H/2  \text{(to fit to 0 to 255)}\f$
-- 16-bit images: (currently not supported) \f$V <- 65535 V, S <- 65535 S, H <- H\f$
+- 16-bit images: (currently not supported) \f$V \leftarrow 65535 V, S \leftarrow 65535 S, H \leftarrow H\f$
 - 32-bit images: H, S, and V are left as is
 
 @see cv::COLOR_BGR2HSV, cv::COLOR_RGB2HSV, cv::COLOR_HSV2BGR, cv::COLOR_HSV2RGB
 
 @anchor color_convert_rgb_hls
-RGB \emoji arrow_right HLS
------------------------------
+RGB <-> HLS
+-----------
 In case of 8-bit and 16-bit images, R, G, and B are converted to the floating-point format and
 scaled to fit the 0 to 1 range.
 
@@ -92,14 +123,14 @@ If \f$H<0\f$ then \f$H \leftarrow H+360\f$ . On output \f$0 \leq L \leq 1\f$, \f
 
 The values are then converted to the destination data type:
 - 8-bit images:  \f$V  \leftarrow 255 \cdot V, S  \leftarrow 255 \cdot S, H  \leftarrow H/2 \; \text{(to fit to 0 to 255)}\f$
-- 16-bit images: (currently not supported)  \f$V <- 65535 \cdot V, S <- 65535 \cdot S, H <- H\f$
+- 16-bit images: (currently not supported)  \f$V \leftarrow 65535 \cdot V, S \leftarrow 65535 \cdot S, H \leftarrow H\f$
 - 32-bit images: H, S, V are left as is
 
 @see cv::COLOR_BGR2HLS, cv::COLOR_RGB2HLS, cv::COLOR_HLS2BGR, cv::COLOR_HLS2RGB
 
 @anchor color_convert_rgb_lab
-RGB \emoji arrow_right CIE L\*a\*b\*
----------------------------------------
+RGB <-> CIE L\*a\*b\*
+---------------------
 In case of 8-bit and 16-bit images, R, G, and B are converted to the floating-point format and
 scaled to fit the 0 to 1 range.
 
@@ -123,8 +154,8 @@ are then converted to the destination data type:
 @see cv::COLOR_BGR2Lab, cv::COLOR_RGB2Lab, cv::COLOR_Lab2BGR, cv::COLOR_Lab2RGB
 
 @anchor color_convert_rgb_luv
-RGB \emoji arrow_right CIE L\*u\*v\*
----------------------------------------
+RGB <-> CIE L\*u\*v\*
+---------------------
 In case of 8-bit and 16-bit images, R, G, and B are converted to the floating-point format and
 scaled to fit 0 to 1 range.
 
@@ -150,8 +181,8 @@ sources on the web, primarily from the Charles Poynton site <http://www.poynton.
 @see cv::COLOR_BGR2Luv, cv::COLOR_RGB2Luv, cv::COLOR_Luv2BGR, cv::COLOR_Luv2RGB
 
 @anchor color_convert_bayer
-Bayer \emoji arrow_right RGB
----------------------------
+Bayer -> RGB
+------------
 The Bayer pattern is widely used in CCD and CMOS cameras. It enables you to get color pictures
 from a single plane where R, G, and B pixels (sensors of a particular component) are interleaved
 as follows:

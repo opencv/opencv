@@ -19,14 +19,16 @@
 //------------------------------------------------------------------------------
 // Helpful macro.
 
-# define SANITY_CHECK(in, out)                                                 \
-  assert((in) != NULL);                                                        \
-  assert((out) != NULL);                                                       \
-  assert(width > 0);                                                           \
-  assert(height > 0);                                                          \
-  assert(stride >= width);                                                     \
-  assert(row >= 0 && num_rows > 0 && row + num_rows <= height);                \
-  (void)height;  // Silence unused warning.
+#define DCHECK(in, out)                                                        \
+  do {                                                                         \
+    assert((in) != NULL);                                                      \
+    assert((out) != NULL);                                                     \
+    assert(width > 0);                                                         \
+    assert(height > 0);                                                        \
+    assert(stride >= width);                                                   \
+    assert(row >= 0 && num_rows > 0 && row + num_rows <= height);              \
+    (void)height;  /* Silence unused warning. */                               \
+  } while (0)
 
 #if !WEBP_NEON_OMIT_C_CODE
 static WEBP_INLINE void PredictLine_C(const uint8_t* src, const uint8_t* pred,
@@ -49,7 +51,7 @@ static WEBP_INLINE void DoHorizontalFilter_C(const uint8_t* in,
   const uint8_t* preds;
   const size_t start_offset = row * stride;
   const int last_row = row + num_rows;
-  SANITY_CHECK(in, out);
+  DCHECK(in, out);
   in += start_offset;
   out += start_offset;
   preds = inverse ? out : in;
@@ -86,7 +88,7 @@ static WEBP_INLINE void DoVerticalFilter_C(const uint8_t* in,
   const uint8_t* preds;
   const size_t start_offset = row * stride;
   const int last_row = row + num_rows;
-  SANITY_CHECK(in, out);
+  DCHECK(in, out);
   in += start_offset;
   out += start_offset;
   preds = inverse ? out : in;
@@ -131,7 +133,7 @@ static WEBP_INLINE void DoGradientFilter_C(const uint8_t* in,
   const uint8_t* preds;
   const size_t start_offset = row * stride;
   const int last_row = row + num_rows;
-  SANITY_CHECK(in, out);
+  DCHECK(in, out);
   in += start_offset;
   out += start_offset;
   preds = inverse ? out : in;
@@ -165,7 +167,7 @@ static WEBP_INLINE void DoGradientFilter_C(const uint8_t* in,
 }
 #endif  // !WEBP_NEON_OMIT_C_CODE
 
-#undef SANITY_CHECK
+#undef DCHECK
 
 //------------------------------------------------------------------------------
 

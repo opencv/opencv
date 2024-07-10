@@ -52,6 +52,9 @@ static const uchar popCountTable4[] =
 
 int normHamming(const uchar* a, int n, int cellSize)
 {
+    int output;
+    CALL_HAL_RET(normHamming8u, cv_hal_normHamming8u, output, a, n, cellSize);
+
     if( cellSize == 1 )
         return normHamming(a, n);
     const uchar* tab = 0;
@@ -98,6 +101,9 @@ int normHamming(const uchar* a, int n, int cellSize)
 
 int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
 {
+    int output;
+    CALL_HAL_RET(normHammingDiff8u, cv_hal_normHammingDiff8u, output, a, b, n, cellSize);
+
     if( cellSize == 1 )
         return normHamming(a, b, n);
     const uchar* tab = 0;
@@ -363,7 +369,7 @@ CV_DEF_NORM_ALL(32f, float, float, double, double)
 CV_DEF_NORM_ALL(64f, double, double, double, double)
 CV_DEF_NORM_ALL(64u, uint64, uint64, double, double)
 CV_DEF_NORM_ALL(64s, int64, uint64, double, double)
-CV_DEF_NORM_ALL(16f, float16_t, float, float, float)
+CV_DEF_NORM_ALL(16f, hfloat, float, float, float)
 CV_DEF_NORM_ALL(16bf, bfloat, float, float, float)
 
 typedef int (*NormFunc)(const uchar*, const uchar*, void*, int, int);

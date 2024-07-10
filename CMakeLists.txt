@@ -13,7 +13,6 @@ FATAL: In-source builds are not allowed.
 ")
 endif()
 
-
 include(cmake/OpenCVMinDepVersions.cmake)
 
 if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
@@ -83,6 +82,10 @@ endif()
 
 if(POLICY CMP0146)
   cmake_policy(SET CMP0146 OLD)  # CMake 3.27+: use CMake FindCUDA if available.
+endif()
+
+if(POLICY CMP0148)
+  cmake_policy(SET CMP0148 OLD)  # CMake 3.27+: use CMake FindPythonInterp and FindPythonLib if available.
 endif()
 
 #
@@ -259,6 +262,12 @@ OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VERIFY HAVE_CAP_IOS)
 OCV_OPTION(WITH_CAROTENE "Use NVidia carotene acceleration library for ARM platform" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (ARM OR AARCH64) AND NOT IOS AND NOT XROS)
+OCV_OPTION(WITH_KLEIDICV "Use KleidiCV library for ARM platforms" OFF
+  VISIBLE_IF (AARCH64 AND (ANDROID OR UNIX AND NOT IOS AND NOT XROS)))
+OCV_OPTION(WITH_NDSRVP "Use Andes RVP extension" (NOT CV_DISABLE_OPTIMIZATION)
+  VISIBLE_IF RISCV)
+OCV_OPTION(WITH_HAL_RVV "Use HAL RVV optimizations" (NOT CV_DISABLE_OPTIMIZATION)
+  VISIBLE_IF RISCV)
 OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
   VISIBLE_IF ANDROID
   VERIFY HAVE_CPUFEATURES)
@@ -298,6 +307,10 @@ OCV_OPTION(WITH_GTK "Include GTK support" ON
 OCV_OPTION(WITH_GTK_2_X "Use GTK version 2" OFF
   VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
   VERIFY HAVE_GTK AND NOT HAVE_GTK3)
+OCV_OPTION(WITH_FRAMEBUFFER "Include framebuffer support" OFF
+  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID)
+OCV_OPTION(WITH_FRAMEBUFFER_XVFB "Include virtual framebuffer support" OFF
+  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID)
 OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
         VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
         VERIFY HAVE_WAYLAND)
@@ -332,9 +345,6 @@ OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" ((WIN32 OR ANDROID OR 
 OCV_OPTION(WITH_OPENGL "Include OpenGL support" OFF
   VISIBLE_IF NOT ANDROID AND NOT WINRT
   VERIFY HAVE_OPENGL)
-OCV_OPTION(WITH_OPENVX "Include OpenVX support" OFF
-  VISIBLE_IF TRUE
-  VERIFY HAVE_OPENVX)
 OCV_OPTION(WITH_OPENNI "Include OpenNI support" OFF
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_OPENNI)
@@ -476,9 +486,11 @@ OCV_OPTION(WITH_ONNX "Include Microsoft ONNX Runtime support" OFF
 OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_TIMVX)
-# attention: Astra2, Gemini2, and Gemini2L cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
-OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+/Femto)" ON
-  VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT AND NOT MINGW) OR ( UNIX AND NOT APPLE AND NOT ANDROID)
+# Attention when OBSENSOR_USE_ORBBEC_SDK set to off:
+#   Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
+OCV_OPTION(OBSENSOR_USE_ORBBEC_SDK "Use Orbbec SDK as backend to support more camera models and platforms (force to ON on MacOS)" OFF)
+OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec 3D Cameras)" ON
+  VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT AND NOT MINGW) OR ( UNIX AND NOT APPLE AND NOT ANDROID) OR (APPLE AND AARCH64 AND NOT IOS)
   VERIFY HAVE_OBSENSOR)
 OCV_OPTION(WITH_CANN "Include CANN support" OFF
   VISIBLE_IF TRUE
@@ -486,6 +498,9 @@ OCV_OPTION(WITH_CANN "Include CANN support" OFF
 OCV_OPTION(WITH_FLATBUFFERS "Include Flatbuffers support (required by DNN/TFLite importer)" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_FLATBUFFERS)
+OCV_OPTION(WITH_ZLIB_NG "Use zlib-ng instead of zlib" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_ZLIB_NG)
 
 # OpenCV build components
 # ===================================================
@@ -572,6 +587,10 @@ endif()
 if(OPENCV_DISABLE_FILESYSTEM_SUPPORT)
   add_definitions(-DOPENCV_HAVE_FILESYSTEM_SUPPORT=0)
 endif()
+
+# MathJax is used for math rendering by both Doxygen HTML and JavaDoc, so
+# this var have to be defined before "modules" AND "doc" are processed
+set(OPENCV_MATHJAX_RELPATH "https://cdn.jsdelivr.net/npm/mathjax@3.0.1" CACHE STRING "URI to a MathJax installation")
 
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
@@ -913,10 +932,6 @@ if(WITH_VTK)
   include(cmake/OpenCVDetectVTK.cmake)
 endif()
 
-if(WITH_OPENVX)
-  include(cmake/FindOpenVX.cmake)
-endif()
-
 if(WITH_QUIRC)
   add_subdirectory(3rdparty/quirc)
   set(HAVE_QUIRC TRUE)
@@ -950,9 +965,10 @@ if(NOT DEFINED OpenCV_HAL)
   set(OpenCV_HAL "OpenCV_HAL")
 endif()
 
-if(HAVE_OPENVX)
-  if(NOT ";${OpenCV_HAL};" MATCHES ";openvx;")
-    set(OpenCV_HAL "openvx;${OpenCV_HAL}")
+if(WITH_KLEIDICV)
+  ocv_debug_message(STATUS "Enable KleidiCV acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";kleidicv;")
+    set(OpenCV_HAL "kleidicv;${OpenCV_HAL}")
   endif()
 endif()
 
@@ -960,6 +976,20 @@ if(WITH_CAROTENE)
   ocv_debug_message(STATUS "Enable carotene acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";carotene;")
     set(OpenCV_HAL "carotene;${OpenCV_HAL}")
+  endif()
+endif()
+
+if(WITH_NDSRVP)
+  ocv_debug_message(STATUS "Andes RVP 3rdparty NDSRVP enabled")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";ndsrvp;")
+    set(OpenCV_HAL "ndsrvp;${OpenCV_HAL}")
+  endif()
+endif()
+
+if(WITH_HAL_RVV)
+  ocv_debug_message(STATUS "Enable HAL RVV acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";halrvv;")
+    set(OpenCV_HAL "halrvv;${OpenCV_HAL}")
   endif()
 endif()
 
@@ -980,10 +1010,26 @@ foreach(hal ${OpenCV_HAL})
     else()
       message(STATUS "Carotene: NEON is not available, disabling carotene...")
     endif()
-  elseif(hal STREQUAL "openvx")
-    add_subdirectory(3rdparty/openvx)
-    ocv_hal_register(OPENVX_HAL_LIBRARIES OPENVX_HAL_HEADERS OPENVX_HAL_INCLUDE_DIRS)
-    list(APPEND OpenCV_USED_HAL "openvx (ver ${OPENVX_HAL_VERSION})")
+  elseif(hal STREQUAL "kleidicv")
+    add_subdirectory(3rdparty/kleidicv)
+    ocv_hal_register(KLEIDICV_HAL_LIBRARIES KLEIDICV_HAL_HEADERS KLEIDICV_HAL_INCLUDE_DIRS)
+    list(APPEND OpenCV_USED_HAL "KleidiCV (ver ${KLEIDICV_HAL_VERSION})")
+  elseif(hal STREQUAL "ndsrvp")
+    if(CMAKE_C_FLAGS MATCHES "-mext-dsp" AND CMAKE_CXX_FLAGS MATCHES "-mext-dsp" AND NOT ";${CPU_BASELINE_FINAL};" MATCHES ";RVV;")
+      add_subdirectory(3rdparty/ndsrvp)
+      ocv_hal_register(NDSRVP_HAL_LIBRARIES NDSRVP_HAL_HEADERS NDSRVP_HAL_INCLUDE_DIRS)
+      list(APPEND OpenCV_USED_HAL "ndsrvp (ver ${NDSRVP_HAL_VERSION})")
+    else()
+      message(STATUS "NDSRVP: Andes GNU Toolchain DSP extension is not open, disabling ndsrvp...")
+    endif()
+  elseif(hal STREQUAL "halrvv")
+    if(";${CPU_BASELINE_FINAL};" MATCHES ";RVV;")
+      add_subdirectory(3rdparty/hal_rvv/)
+      ocv_hal_register(RVV_HAL_LIBRARIES RVV_HAL_HEADERS RVV_HAL_INCLUDE_DIRS)
+      list(APPEND OpenCV_USED_HAL "HAL RVV (ver ${RVV_HAL_VERSION})")
+    else()
+      message(STATUS "HAL RVV: RVV is not available, disabling halrvv...")
+    endif()
   else()
     ocv_debug_message(STATUS "OpenCV HAL: ${hal} ...")
     ocv_clear_vars(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
@@ -1359,21 +1405,12 @@ status("")
 status("  GUI: " "${OPENCV_HIGHGUI_BUILTIN_BACKEND}")
 
 if(WITH_WAYLAND OR HAVE_WAYLAND)
-  if(HAVE_WAYLAND_CLIENT)
-    status("    Wayland Client:" "YES (ver ${WAYLAND_CLIENT_VERSION})")
-  endif()
-  if(HAVE_WAYLAND_CURSOR)
-    status("    Wayland Cursor:" "YES (ver ${WAYLAND_CURSOR_VERSION})")
-  endif()
-  if(HAVE_WAYLAND_PROTOCOL)
-    status("    Wayland Protocol:" "YES (ver ${WAYLAND_PROTOCOL_VERSION})")
-  endif()
-  if(HAVE_WAYLAND_EGL)
-    status("    Wayland EGL:" "YES (ver ${WAYLAND_EGL_VERSION})")
-  endif()
-  if(HAVE_XKBCOMMON)
-    status("    Xkbcommon:" "YES (ver ${XKBCOMMON_VERSION})")
-  endif()
+  status("    Wayland:" HAVE_WAYLAND THEN "(Experimental) YES" ELSE "NO")
+  status("      Wayland Client:" HAVE_WAYLAND_CLIENT THEN "YES (ver ${WAYLAND_CLIENT_VERSION})" ELSE "NO")
+  status("      Wayland Cursor:" HAVE_WAYLAND_CURSOR THEN "YES (ver ${WAYLAND_CURSOR_VERSION})" ELSE "NO")
+  status("      Wayland Protocols:" HAVE_WAYLAND_PROTOCOLS THEN "YES (ver ${WAYLAND_PROTOCOLS_VERSION})" ELSE "NO")
+  status("      Xkbcommon:" HAVE_XKBCOMMON THEN "YES (ver ${XKBCOMMON_VERSION})" ELSE "NO")
+  status("      Wayland EGL(Option):" HAVE_WAYLAND_EGL THEN "YES (ver ${WAYLAND_EGL_VERSION})" ELSE "NO")
 endif()
 
 if(WITH_QT OR HAVE_QT)
@@ -1415,6 +1452,13 @@ if(WITH_GTK OR HAVE_GTK)
   endif()
 endif()
 
+if(WITH_FRAMEBUFFER OR HAVE_FRAMEBUFFER)
+  status("    Framebuffer UI:" HAVE_FRAMEBUFFER THEN YES ELSE NO)
+  if(WITH_FRAMEBUFFER_XVFB OR HAVE_FRAMEBUFFER_XVFB)
+    status("    Virtual framebuffer UI:" HAVE_FRAMEBUFFER_XVFB THEN YES ELSE NO)
+  endif()
+endif()
+
 if(WITH_OPENGL OR HAVE_OPENGL)
   status("    OpenGL support:" HAVE_OPENGL THEN "YES (${OPENGL_LIBRARIES})" ELSE NO)
 endif()
@@ -1430,12 +1474,16 @@ endif()
 # ========================== MEDIA IO ==========================
 status("")
 status("  Media I/O: ")
-status("    ZLib:"   ZLIB_FOUND THEN "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})" ELSE "build (ver ${ZLIB_VERSION_STRING})")
+if(WITH_ZLIB_NG OR HAVE_ZLIB_NG)
+  status("    ZLib-Ng:" "build (zlib ver ${ZLIB_VERSION_STRING}, zlib-ng ver ${ZLIBNG_VERSION_STRING})")
+else()
+  status("    ZLib:"   ZLIB_FOUND THEN "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})" ELSE "build (ver ${ZLIB_VERSION_STRING})")
+endif()
 
 if(WITH_JPEG OR HAVE_JPEG)
   if(NOT HAVE_JPEG)
     status("    JPEG:" NO)
-  elseif(BUILD_JPEG)
+  elseif(BUILD_JPEG OR NOT JPEG_FOUND)
     status("    JPEG:" "build-${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
     if(ENABLE_LIBJPEG_TURBO_SIMD)
       status("      SIMD Support Request:" "YES")
@@ -1472,6 +1520,30 @@ if(WITH_SPNG)
   endif()
 elseif(WITH_PNG OR HAVE_PNG)
   status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION_STRING})" ELSE "build (ver ${PNG_VERSION_STRING})")
+  if(BUILD_PNG AND PNG_HARDWARE_OPTIMIZATIONS)
+    status("      SIMD Support Request:" "YES")
+    if(PNG_INTEL_SSE)
+    status("      SIMD Support:" "YES (Intel SSE)")
+  elseif(PNG_POWERPC_VSX)
+    status("      SIMD Support:" "YES (PowerPC VSX)")
+  elseif(PNG_ARM_NEON)
+    status("      SIMD Support:" "YES (Arm NEON)")
+  elseif(PNG_MIPS_MSA OR PNG_MIPS_MMI)
+    if(PNG_MIPS_MSA AND PNG_MIPS_MMI)
+      status("      SIMD Support:" "YES (Mips MSA & MMI)")
+    elseif(PNG_MIPS_MSA AND NOT PNG_MIPS_MMI)
+      status("      SIMD Support:" "YES (Mips MSA)")
+    else()
+      status("      SIMD Support:" "YES (Mips MMI)")
+    endif()
+  elseif(PNG_LOONGARCH_LSX)
+    status("      SIMD Support:" "YES (LoongArch LSX)")
+  else()
+    status("      SIMD Support:" "NO")
+  endif()
+  elseif(BUILD_PNG)
+    status("      SIMD Support Request:" "NO")
+  endif()
 endif()
 
 if(WITH_TIFF OR HAVE_TIFF)
@@ -1749,10 +1821,6 @@ endif()
 
 if(WITH_EIGEN OR HAVE_EIGEN)
   status("    Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
-endif()
-
-if(WITH_OPENVX OR HAVE_OPENVX)
-  status("    OpenVX:"     HAVE_OPENVX      THEN "YES (${OPENVX_LIBRARIES})" ELSE "NO")
 endif()
 
 status("    Custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")

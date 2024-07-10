@@ -27,7 +27,7 @@ bool is_byte_order_swapped(double scale)
   #endif
 }
 
-void swap_endianess(uint32_t& ui)
+void swap_endianness(uint32_t& ui)
 {
   static const uint32_t A(0x000000ffU);
   static const uint32_t B(0x0000ff00U);
@@ -137,7 +137,7 @@ bool PFMDecoder::readData(Mat& mat)
       for (int i = 0; i < m_width * buffer.channels(); ++i) {
         static_assert( sizeof(uint32_t) == sizeof(float),
                        "uint32_t and float must have same size." );
-        swap_endianess(buffer.ptr<uint32_t>(y)[i]);
+        swap_endianness(buffer.ptr<uint32_t>(y)[i]);
       }
     }
   }

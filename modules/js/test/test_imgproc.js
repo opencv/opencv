@@ -68,11 +68,6 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-if (typeof module !== 'undefined' && module.exports) {
-    // The environment is Node.js
-    var cv = require('./opencv.js'); // eslint-disable-line no-var
-}
-
 QUnit.module('Image Processing', {});
 
 QUnit.test('test_imgProc', function(assert) {
@@ -94,14 +89,14 @@ QUnit.test('test_imgProc', function(assert) {
 
         // hist should contains a N X 1 array.
         let size = hist.size();
-        assert.equal(size.height, 256);
-        assert.equal(size.width, 1);
+        assert.equal(size.height, 1);
+        assert.equal(size.width, 256);
 
         // default parameters
         cv.calcHist(source, channels, mask, hist, histSize, ranges);
         size = hist.size();
-        assert.equal(size.height, 256);
-        assert.equal(size.width, 1);
+        assert.equal(size.height, 1);
+        assert.equal(size.width, 256);
 
         // Do we need to verify data in histogram?
         // let dataView = hist.data;

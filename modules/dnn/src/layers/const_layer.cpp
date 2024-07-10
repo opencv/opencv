@@ -142,23 +142,10 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        ngraph::element::Type dType;
-        if (blobs[0].depth() == CV_32F) {
-            dType = ngraph::element::f32;
-        } else if (blobs[0].depth() == CV_32S) {
-            dType = ngraph::element::i32;
-        } else if (blobs[0].depth() == CV_8S) {
-            dType = ngraph::element::i8;
-        } else {
-            CV_Error(Error::StsNotImplemented, format("Unexpected Const data depth: %d", blobs[0].depth()));
-        }
-        std::shared_ptr<ngraph::Node> node =
-                    std::make_shared<ngraph::op::Constant>(dType,
+        std::shared_ptr<ov::Node> node =
+                    std::make_shared<ov::op::v0::Constant>(cvTypeToOvType(blobs[0]),
                                                            getShape<size_t>(blobs[0]),
                                                            blobs[0].data);
-        if (node->get_element_type() != ngraph::element::f32) {
-            node = std::make_shared<ngraph::op::Convert>(node, ngraph::element::f32);
-        }
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -185,7 +172,10 @@ public:
 
         CV_Assert(blobs.size() == 1);
         Mat blob = blobs[0];
-        return make_cuda_node_with_type<cuda4dnn::ConstOp>(preferableTarget, blob.type(), std::move(context->stream), blob);
+        if (blob.type() == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::ConstOp>(std::move(context->stream), blob);
+        else
+            return make_cuda_node_with_type<cuda4dnn::ConstOp>(preferableTarget, blob.type(), std::move(context->stream), blob);
     }
 #endif
 };

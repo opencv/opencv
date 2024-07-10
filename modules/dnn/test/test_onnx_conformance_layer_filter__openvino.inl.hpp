@@ -112,133 +112,69 @@ CASE(test_and_bcast4v3d)
 CASE(test_and_bcast4v4d)
     // no filter
 CASE(test_argmax_default_axis_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_default_axis_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_default_axis_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_default_axis_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_asin)
     // no filter
 CASE(test_asin_example)
@@ -544,10 +480,20 @@ CASE(test_cumsum_2d_negative_axis)
     // no filter
 CASE(test_depthtospace_crd_mode)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 1e-4;  // Expected: (normL1) <= (l1), actual: 9.33057e-05 vs 1e-05
+        default_lInf = 2.5e-4;  // Expected: (normInf) <= (lInf), actual: 0.000243843 vs 0.0001
+    }
 CASE(test_depthtospace_crd_mode_example)
     // no filter
 CASE(test_depthtospace_dcr_mode)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 1e-4;  // Expected: (normL1) <= (l1), actual: 9.33057e-05 vs 1e-05
+        default_lInf = 2.5e-4;  // Expected: (normInf) <= (lInf), actual: 0.000243843 vs 0.0001
+    }
 CASE(test_depthtospace_example)
     // no filter
 CASE(test_dequantizelinear)
@@ -597,7 +543,7 @@ CASE(test_dynamicquantizelinear_min_adjusted_expanded)
 CASE(test_edge_pad)
     // no filter
 CASE(test_einsum_batch_diagonal)
-    // no filter
+    SKIP;
 CASE(test_einsum_batch_matmul)
     // no filter
 CASE(test_einsum_inner_prod)
@@ -681,7 +627,7 @@ CASE(test_gemm_alpha)
 CASE(test_gemm_beta)
     // no filter
 CASE(test_gemm_default_matrix_bias)
-    // no filter
+    SKIP; // https://github.com/opencv/opencv/issues/25472
 CASE(test_gemm_default_no_bias)
     // no filter
 CASE(test_gemm_default_scalar_bias)
@@ -937,7 +883,7 @@ CASE(test_max_int16)
 CASE(test_max_int32)
     // no filter
 CASE(test_max_int64)
-    // no filter
+    SKIP;
 CASE(test_max_int8)
     // no filter
 CASE(test_max_one_input)
@@ -1005,9 +951,7 @@ CASE(test_maxpool_3d_default)
     SKIP_NON_CPU;
 #endif
 CASE(test_maxpool_with_argmax_2d_precomputed_pads)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_maxpool_with_argmax_2d_precomputed_strides)
 #if SKIP_SET_1
     SKIP;
@@ -1039,7 +983,7 @@ CASE(test_min_int16)
 CASE(test_min_int32)
     // no filter
 CASE(test_min_int64)
-    // no filter
+    SKIP;
 CASE(test_min_int8)
     // no filter
 CASE(test_min_one_input)
@@ -1108,9 +1052,7 @@ CASE(test_mul_bcast)
 CASE(test_mul_example)
     // no filter
 CASE(test_mul_uint8)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_mvn)
     // no filter
 CASE(test_mvn_expanded)
@@ -1278,7 +1220,7 @@ CASE(test_pow_types_int32_int32)
 CASE(test_pow_types_int64_float32)
     // no filter
 CASE(test_pow_types_int64_int64)
-    // no filter
+    SKIP;
 CASE(test_prelu_broadcast)
     // no filter
 CASE(test_prelu_example)

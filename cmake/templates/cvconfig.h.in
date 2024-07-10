@@ -137,9 +137,6 @@
 /* Library was compiled with functions instrumentation */
 #cmakedefine ENABLE_INSTRUMENTATION
 
-/* OpenVX */
-#cmakedefine HAVE_OPENVX
-
 /* OpenCV trace utilities */
 #cmakedefine OPENCV_TRACE
 

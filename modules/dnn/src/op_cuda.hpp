@@ -108,6 +108,18 @@ namespace cv { namespace dnn {
         }
 
         template <> inline
+        void copyMatToTensor(const Mat& srcMat, const TensorSpan<int8_t> destTensor, const Stream& stream) {
+            CV_CheckTypeEQ(srcMat.type(), CV_8S, "");
+            copyMatToTensorImpl(srcMat, destTensor, stream);
+        }
+
+        template <> inline
+        void copyMatToTensor(const Mat& srcMat, const TensorSpan<uint8_t> destTensor, const Stream& stream) {
+            CV_CheckTypeEQ(srcMat.type(), CV_8U, "");
+            copyMatToTensorImpl(srcMat, destTensor, stream);
+        }
+
+        template <> inline
         void copyMatToTensor(const Mat& srcMat, const TensorSpan<int32_t> destTensor, const Stream& stream) {
             CV_CheckTypeEQ(srcMat.type(), CV_32S, "");
             copyMatToTensorImpl(srcMat, destTensor, stream);
@@ -116,6 +128,12 @@ namespace cv { namespace dnn {
         template <> inline
         void copyMatToTensor(const Mat& srcMat, const TensorSpan<int64_t> destTensor, const Stream& stream) {
             CV_CheckTypeEQ(srcMat.type(), CV_64S, "");
+            copyMatToTensorImpl(srcMat, destTensor, stream);
+        }
+
+        template <> inline
+        void copyMatToTensor(const Mat& srcMat, const TensorSpan<bool> destTensor, const Stream& stream) {
+            CV_CheckTypeEQ(srcMat.type(), CV_Bool, "");
             copyMatToTensorImpl(srcMat, destTensor, stream);
         }
 
@@ -217,9 +235,13 @@ namespace cv { namespace dnn {
 
     template <template <class> class NodeType, class ...Args>
     cv::Ptr<BackendNode> make_cuda_node_with_type(int targetId, int hostMatType, Args&& ...args) {
-        CV_CheckType(hostMatType, hostMatType == CV_32F || hostMatType == CV_32S || hostMatType == CV_64S, "");
+        CV_CheckType(hostMatType, hostMatType == CV_32F || hostMatType == CV_8S || hostMatType == CV_8U || hostMatType == CV_32S || hostMatType == CV_64S, "");
 
-        if (hostMatType == CV_32S)
+        if (hostMatType == CV_8S)
+            return Ptr<BackendNode>(new NodeType<int8_t>(std::forward<Args>(args)...));
+        else if (hostMatType == CV_8U)
+            return Ptr<BackendNode>(new NodeType<uint8_t>(std::forward<Args>(args)...));
+        else if (hostMatType == CV_32S)
             return Ptr<BackendNode>(new NodeType<int32_t>(std::forward<Args>(args)...));
         else if (hostMatType == CV_64S)
             return Ptr<BackendNode>(new NodeType<int64_t>(std::forward<Args>(args)...));
@@ -236,9 +258,13 @@ namespace cv { namespace dnn {
 
     template <template <class, class> class NodeType, class T_INDEX, class ...Args>
     cv::Ptr<BackendNode> make_cuda_node_with_indices(int targetId, int hostMatType, Args&& ...args) {
-        CV_CheckType(hostMatType, hostMatType == CV_32F || hostMatType == CV_32S || hostMatType == CV_64S, "");
+        CV_CheckType(hostMatType, hostMatType == CV_32F || hostMatType == CV_8S || hostMatType == CV_8U || hostMatType == CV_32S || hostMatType == CV_64S, "");
 
-        if (hostMatType == CV_32S)
+        if (hostMatType == CV_8S)
+            return Ptr<BackendNode>(new NodeType<int8_t, T_INDEX>(std::forward<Args>(args)...));
+        else if (hostMatType == CV_8U)
+            return Ptr<BackendNode>(new NodeType<uint8_t, T_INDEX>(std::forward<Args>(args)...));
+        else if (hostMatType == CV_32S)
             return Ptr<BackendNode>(new NodeType<int32_t, T_INDEX>(std::forward<Args>(args)...));
         else if (hostMatType == CV_64S)
             return Ptr<BackendNode>(new NodeType<int64_t, T_INDEX>(std::forward<Args>(args)...));
@@ -251,6 +277,11 @@ namespace cv { namespace dnn {
         }
         CV_Error(Error::BadDepth, "Unsupported mat type");
         return Ptr<BackendNode>();
+    }
+
+    template <template <class> class NodeType, class ...Args>
+    cv::Ptr<BackendNode> make_cuda_node_bool(Args&& ...args) {
+        return Ptr<BackendNode>(new NodeType<bool>(std::forward<Args>(args)...));
     }
 
     /* base class for all CUDA backend/target wrappers */
@@ -296,6 +327,16 @@ namespace cv { namespace dnn {
         }
 
         template <> inline
+        void convert_D2H<int8_t, int8_t>(const cv::Mat& mat, cuda4dnn::csl::View<int8_t> view, cuda4dnn::csl::ManagedPtr<int8_t>& device_temp, const cuda4dnn::csl::Stream& stream) {
+            cuda4dnn::csl::memcpy<int8_t>(reinterpret_cast<int8_t*>(mat.data), view.data(), view.size(), stream);
+        }
+
+        template <> inline
+        void convert_D2H<uint8_t, uint8_t>(const cv::Mat& mat, cuda4dnn::csl::View<uint8_t> view, cuda4dnn::csl::ManagedPtr<uint8_t>& device_temp, const cuda4dnn::csl::Stream& stream) {
+            cuda4dnn::csl::memcpy<uint8_t>(reinterpret_cast<uint8_t*>(mat.data), view.data(), view.size(), stream);
+        }
+
+        template <> inline
         void convert_D2H<int32_t, int32_t>(const cv::Mat& mat, cuda4dnn::csl::View<int32_t> view, cuda4dnn::csl::ManagedPtr<int32_t>& device_temp, const cuda4dnn::csl::Stream& stream) {
             cuda4dnn::csl::memcpy<int32_t>(reinterpret_cast<int32_t*>(mat.data), view.data(), view.size(), stream);
         }
@@ -303,6 +344,11 @@ namespace cv { namespace dnn {
         template <> inline
         void convert_D2H<int64_t, int64_t>(const cv::Mat& mat, cuda4dnn::csl::View<int64_t> view, cuda4dnn::csl::ManagedPtr<int64_t>& device_temp, const cuda4dnn::csl::Stream& stream) {
             cuda4dnn::csl::memcpy<int64_t>(reinterpret_cast<int64_t*>(mat.data), view.data(), view.size(), stream);
+        }
+
+        template <> inline
+        void convert_D2H<bool, bool>(const cv::Mat& mat, cuda4dnn::csl::View<bool> view, cuda4dnn::csl::ManagedPtr<bool>& device_temp, const cuda4dnn::csl::Stream& stream) {
+            cuda4dnn::csl::memcpy<bool>(reinterpret_cast<bool*>(mat.data), view.data(), view.size(), stream);
         }
 
         template <class DEVICE_T, class HOST_T>
@@ -336,6 +382,20 @@ namespace cv { namespace dnn {
         }
 
         template <> inline
+        void convert_D2H_background<int8_t, int8_t>(const cv::Mat& mat, cuda4dnn::csl::View<int8_t> view, cuda4dnn::csl::ManagedPtr<int8_t>& device_temp, const cuda4dnn::csl::Stream& stream, const cuda4dnn::csl::Stream& d2h_stream, cuda4dnn::csl::Event& d2h_event) {
+            d2h_event.record(stream);
+            cuda4dnn::csl::StreamWaitOnEvent(d2h_stream, d2h_event);
+            cuda4dnn::csl::memcpy<int8_t>(reinterpret_cast<int8_t*>(mat.data), view.data(), view.size(), d2h_stream);
+        }
+
+        template <> inline
+        void convert_D2H_background<uint8_t, uint8_t>(const cv::Mat& mat, cuda4dnn::csl::View<uint8_t> view, cuda4dnn::csl::ManagedPtr<uint8_t>& device_temp, const cuda4dnn::csl::Stream& stream, const cuda4dnn::csl::Stream& d2h_stream, cuda4dnn::csl::Event& d2h_event) {
+            d2h_event.record(stream);
+            cuda4dnn::csl::StreamWaitOnEvent(d2h_stream, d2h_event);
+            cuda4dnn::csl::memcpy<uint8_t>(reinterpret_cast<uint8_t*>(mat.data), view.data(), view.size(), d2h_stream);
+        }
+
+        template <> inline
         void convert_D2H_background<int32_t, int32_t>(const cv::Mat& mat, cuda4dnn::csl::View<int32_t> view, cuda4dnn::csl::ManagedPtr<int32_t>& device_temp, const cuda4dnn::csl::Stream& stream, const cuda4dnn::csl::Stream& d2h_stream, cuda4dnn::csl::Event& d2h_event) {
             d2h_event.record(stream);
             cuda4dnn::csl::StreamWaitOnEvent(d2h_stream, d2h_event);
@@ -347,6 +407,13 @@ namespace cv { namespace dnn {
             d2h_event.record(stream);
             cuda4dnn::csl::StreamWaitOnEvent(d2h_stream, d2h_event);
             cuda4dnn::csl::memcpy<int64_t>(reinterpret_cast<int64_t*>(mat.data), view.data(), view.size(), d2h_stream);
+        }
+
+        template <> inline
+        void convert_D2H_background<bool, bool>(const cv::Mat& mat, cuda4dnn::csl::View<bool> view, cuda4dnn::csl::ManagedPtr<bool>& device_temp, const cuda4dnn::csl::Stream& stream, const cuda4dnn::csl::Stream& d2h_stream, cuda4dnn::csl::Event& d2h_event) {
+            d2h_event.record(stream);
+            cuda4dnn::csl::StreamWaitOnEvent(d2h_stream, d2h_event);
+            cuda4dnn::csl::memcpy<bool>(reinterpret_cast<bool*>(mat.data), view.data(), view.size(), d2h_stream);
         }
 
         template <class DEVICE_T, class HOST_T>
@@ -368,6 +435,16 @@ namespace cv { namespace dnn {
         }
 
         template <> inline
+        void convert_H2D<int8_t, int8_t>(cuda4dnn::csl::Span<int8_t> span, const cv::Mat& mat, cuda4dnn::csl::ManagedPtr<int8_t>& device_temp, const cuda4dnn::csl::Stream& stream) {
+            cuda4dnn::csl::memcpy<int8_t>(span.data(), reinterpret_cast<int8_t*>(mat.data), span.size(), stream);
+        }
+
+        template <> inline
+        void convert_H2D<uint8_t, uint8_t>(cuda4dnn::csl::Span<uint8_t> span, const cv::Mat& mat, cuda4dnn::csl::ManagedPtr<uint8_t>& device_temp, const cuda4dnn::csl::Stream& stream) {
+            cuda4dnn::csl::memcpy<uint8_t>(span.data(), reinterpret_cast<uint8_t*>(mat.data), span.size(), stream);
+        }
+
+        template <> inline
         void convert_H2D<int32_t, int32_t>(cuda4dnn::csl::Span<int32_t> span, const cv::Mat& mat, cuda4dnn::csl::ManagedPtr<int32_t>& device_temp, const cuda4dnn::csl::Stream& stream) {
             cuda4dnn::csl::memcpy<int32_t>(span.data(), reinterpret_cast<int32_t*>(mat.data), span.size(), stream);
         }
@@ -375,6 +452,11 @@ namespace cv { namespace dnn {
         template <> inline
         void convert_H2D<int64_t, int64_t>(cuda4dnn::csl::Span<int64_t> span, const cv::Mat& mat, cuda4dnn::csl::ManagedPtr<int64_t>& device_temp, const cuda4dnn::csl::Stream& stream) {
             cuda4dnn::csl::memcpy<int64_t>(span.data(), reinterpret_cast<int64_t*>(mat.data), span.size(), stream);
+        }
+
+        template <> inline
+        void convert_H2D<bool, bool>(cuda4dnn::csl::Span<bool> span, const cv::Mat& mat, cuda4dnn::csl::ManagedPtr<bool>& device_temp, const cuda4dnn::csl::Stream& stream) {
+            cuda4dnn::csl::memcpy<bool>(span.data(), reinterpret_cast<bool*>(mat.data), span.size(), stream);
         }
     }} /* namespace cuda4dnn::detail */
 
@@ -604,14 +686,20 @@ namespace cv { namespace dnn {
 
     using CUDABackendWrapperFP16 = GenericCUDABackendWrapper<half, float, DNN_TARGET_CUDA_FP16>;
     using CUDABackendWrapperFP32 = GenericCUDABackendWrapper<float, float, DNN_TARGET_CUDA>;
+    using CUDABackendWrapperINT8 = GenericCUDABackendWrapper<int8_t, int8_t, DNN_TARGET_CUDA>;
+    using CUDABackendWrapperUINT8 = GenericCUDABackendWrapper<uint8_t, uint8_t, DNN_TARGET_CUDA>;
     using CUDABackendWrapperINT32 = GenericCUDABackendWrapper<int32_t, int32_t, DNN_TARGET_CUDA>;
     using CUDABackendWrapperINT64 = GenericCUDABackendWrapper<int64_t, int64_t, DNN_TARGET_CUDA>;
+    using CUDABackendWrapperBOOL = GenericCUDABackendWrapper<bool, bool, DNN_TARGET_CUDA>;
 
     template <class T> struct GetCUDABackendWrapperType_ { };
     template <> struct GetCUDABackendWrapperType_<half> { typedef CUDABackendWrapperFP16 type; };
     template <> struct GetCUDABackendWrapperType_<float> { typedef CUDABackendWrapperFP32 type; };
+    template <> struct GetCUDABackendWrapperType_<int8_t> { typedef CUDABackendWrapperINT8 type; };
+    template <> struct GetCUDABackendWrapperType_<uint8_t> { typedef CUDABackendWrapperUINT8 type; };
     template <> struct GetCUDABackendWrapperType_<int32_t> { typedef CUDABackendWrapperINT32 type; };
     template <> struct GetCUDABackendWrapperType_<int64_t> { typedef CUDABackendWrapperINT64 type; };
+    template <> struct GetCUDABackendWrapperType_<bool> { typedef CUDABackendWrapperBOOL type; };
 
     template <class T>
     using GetCUDABackendWrapperType = typename GetCUDABackendWrapperType_<T>::type;

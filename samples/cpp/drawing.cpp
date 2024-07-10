@@ -1,189 +1,208 @@
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
-#include <stdio.h>
+#include <iostream>
+#include <string>
 
 using namespace cv;
+using namespace std;
 
-static void help(char** argv)
-{
-    printf("\nThis program demonstrates OpenCV drawing and text output functions.\n"
-    "Usage:\n"
-    "   %s\n", argv[0]);
+void drawRandomLines(Mat& image, RNG& rng, int width, int height, int lineType);
+void drawRandomRectangles(Mat& image, RNG& rng, int width, int height, int lineType);
+void drawRandomEllipses(Mat& image, RNG& rng, int width, int height, int lineType);
+void drawRandomPolylines(Mat& image, RNG& rng, int width, int height, int lineType);
+void drawRandomFilledPolygons(Mat& image, RNG& rng, int width, int height, int lineType);
+void drawRandomCircles(Mat& image, RNG& rng, int width, int height, int lineType);
+void drawRandomText(Mat& image, RNG& rng, int width, int height, int lineType);
+void drawAll(Mat& image, RNG& rng, int width, int height, int lineType);
+
+// Display help message to the user
+static void help() {
+    cout << "\nThis program demonstrates OpenCV drawing and text output functions by drawing random shapes and texts\n"
+            "You can change the drawing mode by pressing keys while the program is running:\n"
+            "   'l' : lines\n"
+            "   'r' : rectangles\n"
+            "   'e' : ellipses\n"
+            "   'p' : polylines\n"
+            "   'f' : filled polygons\n"
+            "   'c' : circles\n"
+            "   't' : text\n"
+            "   'a' : all shapes\n"
+            "Press 'ESC' to exit the program.\n";
 }
-static Scalar randomColor(RNG& rng)
-{
+
+static Scalar randomColor(RNG& rng) {
     int icolor = (unsigned)rng;
     return Scalar(icolor&255, (icolor>>8)&255, (icolor>>16)&255);
 }
 
-int main(int /* argc */, char** argv)
-{
-    help(argv);
-    char wndname[] = "Drawing Demo";
-    const int NUMBER = 100;
-    const int DELAY = 5;
-    int lineType = LINE_AA; // change it to LINE_8 to see non-antialiased graphics
-    int i, width = 1000, height = 700;
-    int x1 = -width/2, x2 = width*3/2, y1 = -height/2, y2 = height*3/2;
+int main(int argc, char** argv) {
+    if (argc == 2) {
+        string arg = argv[1];
+        if (arg == "-h" || arg == "--help") {
+            help();
+            return 0;
+        }
+    }
+    help();
+
+    // Initialize random number generator, image dimensions, and type
     RNG rng(0xFFFFFFFF);
-
+    int width = 1000, height = 700;
+    int lineType = LINE_AA;
     Mat image = Mat::zeros(height, width, CV_8UC3);
-    imshow(wndname, image);
-    waitKey(DELAY);
 
-    for (i = 0; i < NUMBER * 2; i++)
-    {
-        Point pt1, pt2;
-        pt1.x = rng.uniform(x1, x2);
-        pt1.y = rng.uniform(y1, y2);
-        pt2.x = rng.uniform(x1, x2);
-        pt2.y = rng.uniform(y1, y2);
+    // Draw all shapes by default
+    drawAll(image, rng, width, height, lineType);
+    imshow("Drawing Demo", image);
+    int key = waitKey(0);
 
-        int arrowed = rng.uniform(0, 6);
-
-        if( arrowed < 3 )
-            line( image, pt1, pt2, randomColor(rng), rng.uniform(1,10), lineType );
-        else
-            arrowedLine(image, pt1, pt2, randomColor(rng), rng.uniform(1, 10), lineType);
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+    while (key != 27) { // 27 is the ASCII code for 'ESC'
+        switch (key) {
+            case 'l':
+                image = Mat::zeros(height, width, CV_8UC3);
+                drawRandomLines(image, rng, width, height, lineType);
+                break;
+            case 'r':
+                image = Mat::zeros(height, width, CV_8UC3);
+                drawRandomRectangles(image, rng, width, height, lineType);
+                break;
+            case 'e':
+                image = Mat::zeros(height, width, CV_8UC3);
+                drawRandomEllipses(image, rng, width, height, lineType);
+                break;
+            case 'p':
+                image = Mat::zeros(height, width, CV_8UC3);
+                drawRandomPolylines(image, rng, width, height, lineType);
+                break;
+            case 'f':
+                image = Mat::zeros(height, width, CV_8UC3);
+                drawRandomFilledPolygons(image, rng, width, height, lineType);
+                break;
+            case 'c':
+                image = Mat::zeros(height, width, CV_8UC3);
+                drawRandomCircles(image, rng, width, height, lineType);
+                break;
+            case 't':
+                image = Mat::zeros(height, width, CV_8UC3);
+                drawRandomText(image, rng, width, height, lineType);
+                break;
+            case 'a':
+                image = Mat::zeros(height, width, CV_8UC3);
+                drawAll(image, rng, width, height, lineType);
+                break;
+        }
+        imshow("Drawing Demo", image);
+        key = waitKey(0);
     }
+    return 0;
+}
 
-    for (i = 0; i < NUMBER * 2; i++)
-    {
-        Point pt1, pt2;
-        pt1.x = rng.uniform(x1, x2);
-        pt1.y = rng.uniform(y1, y2);
-        pt2.x = rng.uniform(x1, x2);
-        pt2.y = rng.uniform(y1, y2);
-        int thickness = rng.uniform(-3, 10);
-        int marker = rng.uniform(0, 10);
-        int marker_size = rng.uniform(30, 80);
-
-        if (marker > 5)
-            rectangle(image, pt1, pt2, randomColor(rng), MAX(thickness, -1), lineType);
-        else
-            drawMarker(image, pt1, randomColor(rng), marker, marker_size );
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+// Function implementations to draw each type of shape
+// Each function follows a similar pattern
+void drawRandomLines(Mat& image, RNG& rng, int width, int height, int lineType) {
+    Point pt1, pt2;
+    // Draw 100 random lines
+    for (int i = 0; i < 100; ++i) {
+        pt1.x = rng.uniform(0, width);
+        pt1.y = rng.uniform(0, height);
+        pt2.x = rng.uniform(0, width);
+        pt2.y = rng.uniform(0, height);
+        // Draw a line between the random points with a random color and thickness
+        line(image, pt1, pt2, randomColor(rng), rng.uniform(1, 10), lineType);
     }
+}
 
-    for (i = 0; i < NUMBER; i++)
-    {
-        Point center;
-        center.x = rng.uniform(x1, x2);
-        center.y = rng.uniform(y1, y2);
-        Size axes;
+void drawRandomRectangles(Mat& image, RNG& rng, int width, int height, int lineType) {
+    Point pt1, pt2;
+    // Generate random corner points
+    for (int i = 0; i < 100; ++i) {
+        pt1.x = rng.uniform(0, width);
+        pt1.y = rng.uniform(0, height);
+        pt2.x = rng.uniform(0, width);
+        pt2.y = rng.uniform(0, height);
+        // Draw a rectangle with random colors and thickness (or filled if thickness is -1). MAX changes any negative number by rng.uniform to -1
+        rectangle(image, pt1, pt2, randomColor(rng), MAX(rng.uniform(-1, 10), -1), lineType);
+    }
+}
+
+void drawRandomEllipses(Mat& image, RNG& rng, int width, int height, int lineType) {
+    Point center;
+    Size axes;
+    for (int i = 0; i < 50; ++i) {
+        center.x = rng.uniform(0, width);
+        center.y = rng.uniform(0, height);
         axes.width = rng.uniform(0, 200);
         axes.height = rng.uniform(0, 200);
-        double angle = rng.uniform(0, 180);
-
-        ellipse( image, center, axes, angle, angle - 100, angle + 200,
-                 randomColor(rng), rng.uniform(-1,9), lineType );
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+        double angle = rng.uniform(0.0, 360.0);
+        // Draw an ellipse with a random color and thickness
+        ellipse(image, center, axes, angle, 0, 360, randomColor(rng), rng.uniform(-1, 9), lineType);
     }
+}
 
-    for (i = 0; i< NUMBER; i++)
-    {
-        Point pt[2][3];
-        pt[0][0].x = rng.uniform(x1, x2);
-        pt[0][0].y = rng.uniform(y1, y2);
-        pt[0][1].x = rng.uniform(x1, x2);
-        pt[0][1].y = rng.uniform(y1, y2);
-        pt[0][2].x = rng.uniform(x1, x2);
-        pt[0][2].y = rng.uniform(y1, y2);
-        pt[1][0].x = rng.uniform(x1, x2);
-        pt[1][0].y = rng.uniform(y1, y2);
-        pt[1][1].x = rng.uniform(x1, x2);
-        pt[1][1].y = rng.uniform(y1, y2);
-        pt[1][2].x = rng.uniform(x1, x2);
-        pt[1][2].y = rng.uniform(y1, y2);
-        const Point* ppt[2] = {pt[0], pt[1]};
-        int npt[] = {3, 3};
+void drawRandomPolylines(Mat& image, RNG& rng, int width, int height, int lineType) {
+    for (int i = 0; i < 10; ++i) {
+        Point points[1][5];
+        points[0][0] = Point(rng.uniform(0, width), rng.uniform(0, height));
+        points[0][1] = Point(rng.uniform(0, width), rng.uniform(0, height));
+        points[0][2] = Point(rng.uniform(0, width), rng.uniform(0, height));
+        points[0][3] = Point(rng.uniform(0, width), rng.uniform(0, height));
+        points[0][4] = Point(rng.uniform(0, width), rng.uniform(0, height));
 
-        polylines(image, ppt, npt, 2, true, randomColor(rng), rng.uniform(1,10), lineType);
+        const Point* ppt[1] = {points[0]};
+        int npt[] = {5};
 
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+        polylines(image, ppt, npt, 1, true, randomColor(rng), rng.uniform(1, 10), lineType);
     }
+}
 
-    for (i = 0; i< NUMBER; i++)
-    {
-        Point pt[2][3];
-        pt[0][0].x = rng.uniform(x1, x2);
-        pt[0][0].y = rng.uniform(y1, y2);
-        pt[0][1].x = rng.uniform(x1, x2);
-        pt[0][1].y = rng.uniform(y1, y2);
-        pt[0][2].x = rng.uniform(x1, x2);
-        pt[0][2].y = rng.uniform(y1, y2);
-        pt[1][0].x = rng.uniform(x1, x2);
-        pt[1][0].y = rng.uniform(y1, y2);
-        pt[1][1].x = rng.uniform(x1, x2);
-        pt[1][1].y = rng.uniform(y1, y2);
-        pt[1][2].x = rng.uniform(x1, x2);
-        pt[1][2].y = rng.uniform(y1, y2);
-        const Point* ppt[2] = {pt[0], pt[1]};
-        int npt[] = {3, 3};
+void drawRandomFilledPolygons(Mat& image, RNG& rng, int width, int height, int lineType) {
+    for (int i = 0; i < 10; ++i) {
+        Point points[1][5];
+        // Generate 5 random points for each polyline
+        points[0][0] = Point(rng.uniform(0, width), rng.uniform(0, height));
+        points[0][1] = Point(rng.uniform(0, width), rng.uniform(0, height));
+        points[0][2] = Point(rng.uniform(0, width), rng.uniform(0, height));
+        points[0][3] = Point(rng.uniform(0, width), rng.uniform(0, height));
+        points[0][4] = Point(rng.uniform(0, width), rng.uniform(0, height));
 
-        fillPoly(image, ppt, npt, 2, randomColor(rng), lineType);
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+        const Point* ppt[1] = {points[0]};
+        int npt[] = {5};
+        // Draw the polyline with a random color and thickness
+        fillPoly(image, ppt, npt, 1, randomColor(rng), lineType);
     }
+}
 
-    for (i = 0; i < NUMBER; i++)
-    {
-        Point center;
-        center.x = rng.uniform(x1, x2);
-        center.y = rng.uniform(y1, y2);
-
-        circle(image, center, rng.uniform(0, 300), randomColor(rng),
-               rng.uniform(-1, 9), lineType);
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+void drawRandomCircles(Mat& image, RNG& rng, int width, int height, int lineType) {
+    Point center;
+    for (int i = 0; i < 100; ++i) {
+        // Generate a random center and radius
+        center.x = rng.uniform(0, width);
+        center.y = rng.uniform(0, height);
+        circle(image, center, rng.uniform(0, 300), randomColor(rng), rng.uniform(-1, 9), lineType);
     }
+}
 
-    for (i = 1; i < NUMBER; i++)
-    {
-        Point org;
-        org.x = rng.uniform(x1, x2);
-        org.y = rng.uniform(y1, y2);
-
-        putText(image, "Testing text rendering", org, rng.uniform(0,8),
-                rng.uniform(0,100)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), lineType);
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+void drawRandomText(Mat& image, RNG& rng, int width, int height, int lineType) {
+    Point org;
+    for (int i = 0; i < 50; ++i) {
+        // Generate a random position for the text
+        org.x = rng.uniform(0, width);
+        org.y = rng.uniform(0, height);
+        // Randomize font face, scale, and thickness
+        int fontFace = rng.uniform(0, 3);
+        double fontScale = rng.uniform(0.5, 2.0);
+        int thickness = rng.uniform(1, 3);
+        putText(image, "This is OpenCV drawing demo sample", org, fontFace, fontScale, randomColor(rng), thickness, lineType);
     }
+}
 
-    Size textsize = getTextSize("OpenCV forever!", FONT_HERSHEY_COMPLEX, 3, 5, 0);
-    Point org((width - textsize.width)/2, (height - textsize.height)/2);
-
-    Mat image2;
-    for( i = 0; i < 255; i += 2 )
-    {
-        image2 = image - Scalar::all(i);
-        putText(image2, "OpenCV forever!", org, FONT_HERSHEY_COMPLEX, 3,
-                Scalar(i, i, 255), 5, lineType);
-
-        imshow(wndname, image2);
-        if(waitKey(DELAY) >= 0)
-            return 0;
-    }
-
-    waitKey();
-    return 0;
+void drawAll(Mat& image, RNG& rng, int width, int height, int lineType) {
+    drawRandomLines(image, rng, width, height, lineType);
+    drawRandomRectangles(image, rng, width, height, lineType);
+    drawRandomEllipses(image, rng, width, height, lineType);
+    drawRandomPolylines(image, rng, width, height, lineType);
+    drawRandomFilledPolygons(image, rng, width, height, lineType);
+    drawRandomCircles(image, rng, width, height, lineType);
+    drawRandomText(image, rng, width, height, lineType);
 }

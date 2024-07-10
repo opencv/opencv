@@ -274,8 +274,8 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
                     if (v == 0) {
                         continue;
                     }
-                    int _u = projected.x;
-                    int _v = projected.y;
+                    int _u = (int)projected.x;
+                    int _v = (int)projected.y;
 
                     if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows))
                         continue;
@@ -309,7 +309,7 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
 
                         // update TSDF
                         value = floatToTsdf((tsdfToFloat(value) * weight + tsdfToFloat(tsdf)) / (weight + 1));
-                        weight = min(int(weight + 1), int(maxWeight));
+                        weight = (WeightType)min(weight + 1, maxWeight);
                     }
                 }
             }

@@ -268,12 +268,10 @@ public:
         CV_Assert(inputs.size());
         for (auto input : inputs)
         {
-            if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S, "");
-            else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S, "");
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
             else
-                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S, "");
+                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
         }
 
         outputs.assign(requiredOutputs, inputs[0]);
@@ -390,9 +388,9 @@ public:
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
         std::vector<int64_t> out(outShapes[0].begin(), outShapes[0].end());
-        auto shape   = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                       ngraph::Shape{out.size()}, out.data());
-        auto reshape = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, shape, true);
+        auto shape   = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                       ov::Shape{out.size()}, out.data());
+        auto reshape = std::make_shared<ov::op::v1::Reshape>(ieInpNode, shape, true);
         return Ptr<BackendNode>(new InfEngineNgraphNode(reshape));
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -417,7 +415,10 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        return make_cuda_node_with_type<cuda4dnn::ReshapeOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream));
+        if (inputs[0]->getHostMatDepth() == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::ReshapeOp>(std::move(context->stream));
+        else
+            return make_cuda_node_with_type<cuda4dnn::ReshapeOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream));
     }
 #endif
 
