@@ -494,7 +494,7 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
         return i64_tensor;
     }
     default:
-    GAPI_Error("ONNX. Unsupported data type");
+        GAPI_Error("ONNX. Unsupported data type");
     }
     return Ort::Value{nullptr};
 }
@@ -944,9 +944,9 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
         // Easy path - just run the session which is bound to G-API's
         // internal data
         for (auto i : ade::util::iota(params.output_names.size())) {
-            out_tensors.emplace_back(createTensor(this_memory_info,
-                                                out_tensor_info[i],
-                                                outs[i]));
+        out_tensors.emplace_back(createTensor(this_memory_info,
+                                              out_tensor_info[i],
+                                              outs[i]));
         }
         auto out_run_names = getCharNames(params.output_names);
         this_session.Run(Ort::RunOptions{nullptr},
