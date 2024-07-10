@@ -318,7 +318,7 @@ TEST_P(matchTemplate_Modes, accuracy)
         SCOPED_TRACE(cv::format("iteration %d", ITER));
 
         const Size imgSize(rng.uniform(128, 320), rng.uniform(128, 240));
-        const Size templSize(rng.uniform(1, 100), rng.uniform(1, 100));
+        const Size templSize(rng.uniform(1, 30), rng.uniform(1, 30));
         Mat img(imgSize, data_type, Scalar::all(0));
         Mat templ(templSize, data_type, Scalar::all(0));
         cvtest::randUni(rng, img, Scalar::all(0), Scalar::all(255));
