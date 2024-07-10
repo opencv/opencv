@@ -428,7 +428,7 @@ namespace CV__SIMD_NAMESPACE {
 //! @name Error Function
 //! @{
 
-    inline v_float32 v_erf(v_float32 v) {
+    inline v_float32 v_erf(const v_float32 &v) {
         const v_float32 coef0 = vx_setall_f32(0.3275911f),
                         coef1 = vx_setall_f32(1.061405429f),
                         coef2 = vx_setall_f32(-1.453152027f),
