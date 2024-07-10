@@ -2133,6 +2133,10 @@ the invert function (preferably using the #DECOMP_SVD method, as the most accura
 */
 CV_EXPORTS_W double Mahalanobis(InputArray v1, InputArray v2, InputArray icovar);
 
+/** @example samples/python/snippets/dft.py
+An example on discrete fourier transform (dft) in python
+*/
+
 /** @brief Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-point array.
 
 The function cv::dft performs one of the following:
