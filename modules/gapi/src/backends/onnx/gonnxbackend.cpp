@@ -471,73 +471,33 @@ const cv::gimpl::onnx::TensorInfo& tensor_params, const cv::Mat& data) {
         case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:{
             // creating int64 vector to store the converted data. This jhas the same size as data.
             std::vector<int64_t> temp(data.total());
-            
             // convert the data into int64 type and copy this data into temp
             cv::gimpl::convertInt32ToInt64  (data.ptr<int>(),
                                             temp.data(),
                                             data.total());
 
-            // ****************************** PRINTING ********************************* //
-            std::cout << "Data (INT64):" << std::endl;
-            for (int i = 0; i < data.rows; ++i) {
-                for (int j = 0; j < data.cols; ++j) {
-                    std::cout << data.at<int32_t>(i, j) << " ";
-                }
-                std::cout << std::endl;
-            }
-            std::cout << "TEMP Data (INT64):" << std::endl;
-            for (size_t i = 0; i < temp.size(); ++i) {
-                std::cout << temp[i] << " ";
-                if ((i + 1) % data.cols == 0) {
-                    std::cout << std::endl; 
-                }
-            }
-
             // creating temp tensor a top of exisiting memory (this will not last)
             auto ort_dims = toORT(data.size);
-            // Ort::Value::CreateTensor<int64_t>(  memory_info,
-            //                                     temp.data(),
-            //                                     temp.size(),
-            //                                     ort_dims.data(),
-            //                                     ort_dims.size());
-
-            // ****************************** PRINTING ********************************* //
-            std::cout << "TEMP Data (AFTER TENSOR CREATION):" << std::endl;
-            for (size_t i = 0; i < temp.size(); ++i) {
-                std::cout << temp[i] << " ";
-                if ((i + 1) % data.cols == 0) {
-                    std::cout << std::endl; 
-                }
-            }
-
+           
             // create an empty tensor
             Ort::AllocatorWithDefaultOptions allocator;
-            Ort::Value empty_tensor = Ort::Value::CreateTensor<int64_t>(  allocator,
+            Ort::Value i64_tensor = Ort::Value::CreateTensor<int64_t>(  allocator,
                                                 ort_dims.data(),
                                                 ort_dims.size());
 
             // copying this data to empty tensor (ort::Value)
-            int64_t* tensor_data = empty_tensor.GetTensorMutableData<int64_t>();
+            int64_t* tensor_data = i64_tensor.GetTensorMutableData<int64_t>();
             for (size_t i = 0; i < temp.size(); ++i) {
                 tensor_data[i] = temp[i];
             }
-
-            std::cout << "Tensor Data (AFTER MEMCPY):" << std::endl;
-            // int64_t* tensor_data = empty_tensor.GetTensorMutableData<int64_t>();
-            for (size_t i = 0; i < temp.size(); ++i) {
-                std::cout << tensor_data[i] << " ";
-                if ((i + 1) % data.cols == 0) {
-                    std::cout << std::endl; 
-                }
-            }
-            // Return the tensor with the copied data
-            return empty_tensor; 
-        }
-        default:
-        GAPI_Error("ONNX. Unsupported data type");
+            return i64_tensor;
+    }
+    default:
+    GAPI_Error("ONNX. Unsupported data type");
     }
     return Ort::Value{nullptr};
 }
+
 struct ONNXUnit {
     static const char *name() { return "ONNXModelConfig"; }
 
@@ -928,7 +888,7 @@ cv::Mat ONNXCompiled::allocOutput(int i) const {
 
 void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                        const std::vector<cv::Mat>& outs) {
-    std::vector<Ort::Value> in_tensors, out_tensors;
+    std::vector<Ort::Value> in_tensors, out_tensors, temp_tensors;
 
     // Layer names order for run
     auto input_names = (in_names_without_const.empty() && params.const_inputs.empty())
@@ -956,13 +916,71 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
     GAPI_Assert(input_names.size() == this_session.GetInputCount());
 
     auto in_run_names  = getCharNames(input_names);
-    if (!is_dynamic && !is_postproc) {
+    if (out_tensor_info[0].type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) {
+        // creating out_tensors a top of cv::Mat outs
+        for (auto i : ade::util::iota(params.output_names.size())) {
+            out_tensors.emplace_back(createTensor(this_memory_info,
+                                                out_tensor_info[i],
+                                                outs[i]));
+        } 
+        auto out_run_names = getCharNames(params.output_names);
+        // running the model
+        auto outputs = this_session.Run(Ort::RunOptions{nullptr},
+                                        in_run_names.data(),
+                                        &in_tensors.front(),
+                                        input_names.size(),
+                                        out_run_names.data(),
+                                        out_run_names.size());
+        std::unordered_map<std::string, cv::Mat> onnx_outputs;
+        // carrying out copyFromONNX function where the converted data is stored in onnx_outputs
+        for (auto &&iter : ade::util::zip(ade::util::toRange(out_run_names),
+                                          ade::util::toRange(outputs))) {
+            const auto &out_name   = std::get<0>(iter);
+                  auto &out_tensor = std::get<1>(iter);
+            copyFromONNX(out_tensor, onnx_outputs[out_name]);
+        }
+
+        //creating temp tenosrs to store the onnx_outputs into a tensor
+        for (const auto &it : onnx_outputs) {
+            const auto &name = it.first;
+            const auto &mat = it.second;
+            const auto idx = getIdxByName(out_tensor_info, name);
+            temp_tensors.emplace_back(createTensor(this_memory_info, out_tensor_info[idx], mat));
+        }
+        // copying temp_tenosrs into out_tensors
+        out_tensors = std::move(temp_tensors);
+
+        // ************************************ DEBUG PRINT ***************************************
+        std::cout << "ONNX Outputs:" << std::endl;
+        for (const auto& pair : onnx_outputs) {
+            const auto& name = pair.first;
+            const auto& mat = pair.second;
+            std::cout << "Output Name: " << name << std::endl;
+            std::cout << "Output Mat: " << mat << std::endl;
+        }
+        for (size_t i = 0; i < out_tensors.size(); ++i) {
+            const auto &tensor = out_tensors[i];
+            const auto info = tensor.GetTensorTypeAndShapeInfo();
+            const auto type = info.GetElementType();
+            const auto shape = info.GetShape();
+            std::cout << "Tensors " << i << ":" << std::endl;
+            std::cout << std::endl;
+
+            const int64_t* data = tensor.GetTensorData<int64_t>();
+            for (int64_t i = 0; i < 21; ++i) {
+                std::cout << data[i] << " ";
+                if ((i + 1) % shape.back() == 0) {
+                    std::cout << std::endl;
+                }
+            }
+        }
+    } else if (!is_dynamic && !is_postproc) {
         // Easy path - just run the session which is bound to G-API's
         // internal data
         for (auto i : ade::util::iota(params.output_names.size())) {
-        out_tensors.emplace_back(createTensor(this_memory_info,
-                                              out_tensor_info[i],
-                                              outs[i]));
+            out_tensors.emplace_back(createTensor(this_memory_info,
+                                                out_tensor_info[i],
+                                                outs[i]));
         }
         auto out_run_names = getCharNames(params.output_names);
         this_session.Run(Ort::RunOptions{nullptr},
@@ -1021,6 +1039,16 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
             }
         }
     }
+    std::cout<<"TESTING IDEA"<<std::endl;
+    for (const auto& in_mat : outs) {
+        for (int i = 0; i < in_mat.rows; ++i) {
+            for (int j = 0; j < in_mat.cols; ++j) {
+                std::cout << in_mat.at<int32_t>(i, j) << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
+
 }
 
 void ONNXCompiled::run() {
