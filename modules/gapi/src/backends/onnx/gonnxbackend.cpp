@@ -459,38 +459,39 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
 }
 
 inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
-const cv::gimpl::onnx::TensorInfo& tensor_params, const cv::Mat& data) {
+                               const cv::gimpl::onnx::TensorInfo& tensor_params,
+                               const cv::Mat& data) {
     GAPI_Assert(data.isContinuous ());
     switch (tensor_params.type) {
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8:
-            return createTensor<uint8_t>(memory_info, tensor_params, data);
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:
-            return createTensor<float>(memory_info, tensor_params, data);
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
-            return createTensor<int32_t>(memory_info, tensor_params, data);
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:{
-            // creating int64 vector to store the converted data. This jhas the same size as data.
-            std::vector<int64_t> temp(data.total());
-            // convert the data into int64 type and copy this data into temp
-            cv::gimpl::convertInt32ToInt64  (data.ptr<int>(),
-                                            temp.data(),
-                                            data.total());
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8:
+        return createTensor<uint8_t>(memory_info, tensor_params, data);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:
+        return createTensor<float>(memory_info, tensor_params, data);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
+        return createTensor<int32_t>(memory_info, tensor_params, data);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:{
+        // creating int64 vector to store the converted data. This jhas the same size as data.
+        std::vector<int64_t> temp(data.total());
+        // convert the data into int64 type and copy this data into temp
+        cv::gimpl::convertInt32ToInt64(data.ptr<int>(),
+                                       temp.data(),
+                                       data.total());
 
-            // creating temp tensor a top of exisiting memory (this will not last)
-            auto ort_dims = toORT(data.size);
-           
-            // create an empty tensor
-            Ort::AllocatorWithDefaultOptions allocator;
-            Ort::Value i64_tensor = Ort::Value::CreateTensor<int64_t>(  allocator,
-                                                ort_dims.data(),
-                                                ort_dims.size());
+        // creating temp tensor a top of exisiting memory (this will not last)
+        auto ort_dims = toORT(data.size);
+       
+        // create an empty tensor
+        Ort::AllocatorWithDefaultOptions allocator;
+        Ort::Value i64_tensor = Ort::Value::CreateTensor<int64_t>(allocator,
+                                                                  ort_dims.data(),
+                                                                  ort_dims.size());
 
-            // copying this data to empty tensor (ort::Value)
-            int64_t* tensor_data = i64_tensor.GetTensorMutableData<int64_t>();
-            for (size_t i = 0; i < temp.size(); ++i) {
-                tensor_data[i] = temp[i];
-            }
-            return i64_tensor;
+        // copying this data to empty tensor (ort::Value)
+        int64_t* tensor_data = i64_tensor.GetTensorMutableData<int64_t>();
+        for (size_t i = 0; i < temp.size(); ++i) {
+            tensor_data[i] = temp[i];
+        }
+        return i64_tensor;
     }
     default:
     GAPI_Error("ONNX. Unsupported data type");
