@@ -1193,7 +1193,6 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
         return x * (1 + 2 * y) / (1 + 2 * y + 2 * y * y);
     }
 
-    // failed at Test_Darknet_nets.YOLOv4/0, Test_Darknet_nets.YOLOv4/1, Test_Int8_nets.YOLOv4/0
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
         CV_UNUSED(stripeStart);
         for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
@@ -1357,10 +1356,17 @@ const char* const SigmoidFunctor::BaseDefaultFunctor<SigmoidFunctor>::ocl_kernel
 
 struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 {
-    typedef ELULayer Layer;
+    using Layer = ELULayer;
+    int vlanes;
     float alpha;
 
-    explicit ELUFunctor(float alpha_ = 1.f) : alpha(alpha_) {}
+    explicit ELUFunctor(float alpha_ = 1.f) : alpha(alpha_) {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -1374,9 +1380,39 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
                backendId == DNN_BACKEND_CANN;
     }
 
+    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
         return x >= 0.f ? x : alpha * (exp(x) - 1.f);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 z = vx_setzero_f32(), v_alpha = vx_setall_f32(alpha), one = vx_setall_f32(1.0f);
+            for (; i <= len - vlanes; i += vlanes) {
+                if (i + vlanes > len) {
+                    if (i == 0 || i == len) {
+                        break;
+                    }
+                    i = len - vlanes;
+                }
+                v_float32 x = vx_load(srcptr + i);
+
+                v_float32 t = v_add(v_alpha, v_sub(v_exp(x), one));
+                x = v_select(v_ge(x, z), x, t);
+
+                vx_store(dstptr + i, x);
+            }
+#endif
+            // In case SIMD is not available or process tail if any
+            for (; i < len; i++) {
+                float x = srcptr[i];
+                dstptr[i] = x >= 0.f ? x : alpha * (std::exp(x) - 1.f);
+            }
+        }
     }
 
     inline void setKernelParams(ocl::Kernel& kernel) const
