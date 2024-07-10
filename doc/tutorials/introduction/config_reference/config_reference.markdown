@@ -217,6 +217,7 @@ Following options can be used to produce special builds with instrumentation or 
 | `ENABLE_BUILD_HARDENING` | GCC, Clang, MSVC | Enable compiler options which reduce possibility of code exploitation.  |
 | `ENABLE_LTO` | GCC, Clang, MSVC | Enable Link Time Optimization (LTO). |
 | `ENABLE_THIN_LTO` | Clang | Enable thin LTO which incorporates intermediate bitcode to binaries allowing consumers optimize their applications later. |
+| `OPENCV_IMPL_HINT_DEFAULT` | Any | Dangerous! Set default OpenCV implementation hint value: `IMPL_ACCURATE` or `IMPL_ALLOW_APPROXIMATION` |
 
 @see [GCC instrumentation](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html)
 @see [Build hardening](https://en.wikipedia.org/wiki/Hardening_(computing))

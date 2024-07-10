@@ -155,7 +155,6 @@ CV_EXPORTS CV_NORETURN void error(const Exception& exc);
 enum ImplementationHint {
     IMPL_ACCURATE = 0, //!< Use generic portable implementation
     IMPL_ALLOW_APPROXIMATION = 1, //!< Allow alternative approximations to get faster implementation. Behaviour and result depends on a platform
-    IMPL_INHERIT = 1 << 31 //!< Promote the hints to internal subroutines
 };
 
 /*! @brief Returns ImplementationHint selected by default, a.k.a. `IMPL_DEFAULT` defined during OpenCV compilation.

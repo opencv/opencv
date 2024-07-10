@@ -2885,8 +2885,8 @@ bool restoreFPDenormalsState(const FPDenormalsModeState& state)
 
 int getImplementationHintDefault()
 {
-#ifdef OPENCV_IMPL_BUILD_DEFAULT
-    return OPENCV_IMPL_BUILD_DEFAULT;
+#ifdef OPENCV_IMPL_HINT_DEFAULT
+    return OPENCV_IMPL_HINT_DEFAULT;
 #else
     return IMPL_ACCURATE;
 #endif
