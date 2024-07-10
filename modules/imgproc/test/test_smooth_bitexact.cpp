@@ -288,10 +288,10 @@ TEST_P(GaussianBlurVsBitexact, approx)
     orig.convertTo(src, dtype);
 
     cv::Mat gt;
-    GaussianBlur(src, gt, Size(ksize, ksize), sigma, sigma, border, IMPL_ACCURATE);
+    GaussianBlur(src, gt, Size(ksize, ksize), sigma, sigma, border, ALGO_ACCURATE);
 
     cv::Mat dst;
-    GaussianBlur(src, dst, Size(ksize, ksize), sigma, sigma, border, IMPL_ALLOW_APPROXIMATION);
+    GaussianBlur(src, dst, Size(ksize, ksize), sigma, sigma, border, ALGO_ALLOW_APPROXIMATION);
 
     cv::Mat diff;
     cv::absdiff(dst, gt, diff);

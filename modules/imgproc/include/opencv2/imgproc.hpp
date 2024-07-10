@@ -1543,7 +1543,7 @@ sigmaX, and sigmaY.
 CV_EXPORTS_W void GaussianBlur( InputArray src, OutputArray dst, Size ksize,
                                 double sigmaX, double sigmaY = 0,
                                 int borderType = BORDER_DEFAULT,
-                                int hint = getImplementationHintDefault() );
+                                AlgorithmHint hint = getImplementationHintDefault() );
 
 /** @brief Applies the bilateral filter to an image.
 

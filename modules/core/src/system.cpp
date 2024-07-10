@@ -2883,12 +2883,12 @@ bool restoreFPDenormalsState(const FPDenormalsModeState& state)
 
 }  // namespace details
 
-int getImplementationHintDefault()
+AlgorithmHint getImplementationHintDefault()
 {
-#ifdef OPENCV_IMPL_HINT_DEFAULT
-    return OPENCV_IMPL_HINT_DEFAULT;
+#ifdef OPENCV_ALGO_HINT_DEFAULT
+    return OPENCV_ALGO_HINT_DEFAULT;
 #else
-    return IMPL_ACCURATE;
+    return ALGO_ACCURATE;
 #endif
 };
 
