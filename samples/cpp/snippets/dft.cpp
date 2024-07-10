@@ -86,7 +86,7 @@ int main(int argc, const char** argv) {
     Mat img_32f;
     img.convertTo(img_32f, CV_32F);
 
-    float kernelData[9] = { 1.0/9, 1.0/9, 1.0/9, 1.0/9, 1.0/9, 1.0/9, 1.0/9, 1.0/9, 1.0/9 }; // example of blur filter, can be changed to other filter as well.
+    float kernelData[9] = { 1.0f/9, 1.0f/9, 1.0f/9, 1.0f/9, 1.0f/9, 1.0f/9, 1.0f/9, 1.0f/9, 1.0f/9 }; // example of blur filter, can be changed to other filter as well.
     Mat kernel(3, 3, CV_32F, kernelData);
 
     // Perform convolution of the image with the sharpening kernel
