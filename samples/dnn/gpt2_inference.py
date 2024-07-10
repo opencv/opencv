@@ -22,6 +22,11 @@ To export GPT-2 model to ONNX, you can use the following procedure:
 
 
 Run the script:
+1. Install the required dependencies:
+
+    pip install tiktoken==0.7.0 numpy==1.23.0
+
+2. Run the script:
 
     python gpt2_inference.py --model=<path-to-onnx-model> --max_seq_len=<max-output-lenght> --batch_size=<use-one-used-while-exportinh> --prompt=<use-promt-of-the-same-length-used-while-exporting>
 '''
@@ -32,7 +37,7 @@ from copy import deepcopy
 import numpy as np
 import tiktoken
 import argparse
-import cv2
+import cv2 as cv
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Use this script to run GPT-2 inference in OpenCV',
@@ -99,7 +104,7 @@ if __name__ == '__main__':
     enc = tiktoken.get_encoding('gpt2')
     tokens = enc.encode(prompt)
 
-    net = cv2.dnn.readNetFromONNX(args.model)
+    net = cv.dnn.readNet(args.model)
     output_buffer = gpt2_inference(net, tokens, max_length, num_return_sequences)
 
     for i in range(num_return_sequences):
