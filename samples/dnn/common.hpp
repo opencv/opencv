@@ -97,17 +97,17 @@ std::string findModel(const std::string& filename, const std::string& sha1)
         return filename;
 
     if(!getenv("OPENCV_DOWNLOAD_CACHE_DIR")){
-        std::cout<< "[WARN] Please specify a path to model directory in OPENCV_DOWNLOAD_CACHE_DIR environment variable"<<std::endl;
+        std::cout<< "[WARN] Please specify a path to model download directory in OPENCV_DOWNLOAD_CACHE_DIR environment variable"<<std::endl;
         return findFile(filename);
     }
     else{
-        std::string samplePath = utils::fs::join(getenv("OPENCV_DOWNLOAD_CACHE_DIR"), utils::fs::join(sha1, filename));
-        if (utils::fs::exists(samplePath))
-            return samplePath;
+        std::string modelPath = utils::fs::join(getenv("OPENCV_DOWNLOAD_CACHE_DIR"), utils::fs::join(sha1, filename));
+        if (utils::fs::exists(modelPath))
+            return modelPath;
     }
 
     CV_Error(Error::StsObjectNotFound, "File " + filename + " not found! "
-             "Please specify a path to model directory in OPENCV_DOWNLOAD_CACHE_DIR environment variable "
+             "Please specify a path to model download directory in OPENCV_DOWNLOAD_CACHE_DIR "
              "environment variable or pass a full path to " + filename);
 }
 
@@ -138,7 +138,7 @@ std::string findFile(const std::string& filename)
     CV_Error(Error::StsObjectNotFound, "File " + filename + " not found! "
              "Please specify the path to /opencv/samples/data in the OPENCV_SAMPLES_DATA_PATH environment variable, "
              "or specify the path to opencv_extra/testdata in the OPENCV_DNN_TEST_DATA_PATH environment variable, "
-             "or specify the path to the download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, "
+             "or specify the path to the model download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, "
              "or pass the full path to " + filename + ".");
 }
 

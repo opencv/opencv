@@ -101,14 +101,14 @@ def findModel(filename, sha1):
             return fpath
 
         if os.getenv('OPENCV_DOWNLOAD_CACHE_DIR') is None:
-            print('[ERROR] Please specify a path to model directory in OPENCV_DOWNLOAD_CACHE_DIR environment variable.')
+            print('[WARN] Please specify a path to model download directory in OPENCV_DOWNLOAD_CACHE_DIR environment variable.')
             return findFile(filename)
 
         if os.path.exists(os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], sha1, filename)):
             return os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], sha1, filename)
 
-        print('File ' + filename + ' not found! Please specify a path to  environment variable '
-             'model directory in OPENCV_DOWNLOAD_CACHE_DIR '
+        print('File ' + filename + ' not found! Please specify a path to '
+             'model download directory in OPENCV_DOWNLOAD_CACHE_DIR '
              'environment variable or pass a full path to ' + filename)
         exit(0)
 
@@ -122,7 +122,7 @@ def findFile(filename):
             return fpath
 
         if os.getenv('OPENCV_SAMPLES_DATA_PATH') is None:
-            print('[ERROR] Please specify a path to `/samples/data` in OPENCV_SAMPLES_DATA_PATH environment variable.')
+            print('[WARN] Please specify a path to `/samples/data` in OPENCV_SAMPLES_DATA_PATH environment variable.')
             exit(0)
 
         if os.path.exists(os.path.join(os.environ['OPENCV_SAMPLES_DATA_PATH'], filename)):
@@ -140,7 +140,7 @@ def findFile(filename):
         print('File ' + filename + ' not found! Please specify the path to '
             '/opencv/samples/data in the OPENCV_SAMPLES_DATA_PATH environment variable, '
             'or specify the path to opencv_extra/testdata in the OPENCV_DNN_TEST_DATA_PATH environment variable, '
-            'or specify the path to the download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, '
+            'or specify the path to the model download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, '
             'or pass the full path to ' + filename + '.')
         exit(0)
 

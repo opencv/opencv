@@ -90,7 +90,7 @@ int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
-    if (!parser.has("@alias"))
+    if (!parser.has("@alias") || parser.has("help"))
     {
         cout << about << endl;
         parser.printMessage();
