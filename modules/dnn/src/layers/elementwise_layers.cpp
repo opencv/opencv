@@ -1401,7 +1401,7 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
                 }
                 v_float32 x = vx_load(srcptr + i);
 
-                v_float32 t = v_add(v_alpha, v_sub(v_exp(x), one));
+                v_float32 t = v_mul(v_alpha, v_sub(v_exp(x), one));
                 x = v_select(v_ge(x, z), x, t);
 
                 vx_store(dstptr + i, x);
