@@ -123,7 +123,7 @@ class ONNXCompiled {
     std::vector<cv::Mat> out_data;
 
     void Run(const std::vector<cv::Mat>& ins,
-             const std::vector<cv::Mat>& outs);
+             std::vector<cv::Mat>& outs);
 
     std::vector<std::string> in_names_without_const;
 public:
@@ -887,8 +887,8 @@ cv::Mat ONNXCompiled::allocOutput(int i) const {
 }
 
 void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
-                       const std::vector<cv::Mat>& outs) {
-    std::vector<Ort::Value> in_tensors, out_tensors, temp_tensors;
+                       std::vector<cv::Mat>& outs) {
+    std::vector<Ort::Value> in_tensors, out_tensors;
 
     // Layer names order for run
     auto input_names = (in_names_without_const.empty() && params.const_inputs.empty())
@@ -925,54 +925,19 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
         } 
         auto out_run_names = getCharNames(params.output_names);
         // running the model
-        auto outputs = this_session.Run(Ort::RunOptions{nullptr},
-                                        in_run_names.data(),
-                                        &in_tensors.front(),
-                                        input_names.size(),
-                                        out_run_names.data(),
-                                        out_run_names.size());
-        std::unordered_map<std::string, cv::Mat> onnx_outputs;
-        // carrying out copyFromONNX function where the converted data is stored in onnx_outputs
-        for (auto &&iter : ade::util::zip(ade::util::toRange(out_run_names),
-                                          ade::util::toRange(outputs))) {
-            const auto &out_name   = std::get<0>(iter);
-                  auto &out_tensor = std::get<1>(iter);
-            copyFromONNX(out_tensor, onnx_outputs[out_name]);
-        }
-
-        //creating temp tenosrs to store the onnx_outputs into a tensor
-        for (const auto &it : onnx_outputs) {
-            const auto &name = it.first;
-            const auto &mat = it.second;
-            const auto idx = getIdxByName(out_tensor_info, name);
-            temp_tensors.emplace_back(createTensor(this_memory_info, out_tensor_info[idx], mat));
-        }
-        // copying temp_tenosrs into out_tensors
-        out_tensors = std::move(temp_tensors);
-
-        // ************************************ DEBUG PRINT ***************************************
-        std::cout << "ONNX Outputs:" << std::endl;
-        for (const auto& pair : onnx_outputs) {
-            const auto& name = pair.first;
-            const auto& mat = pair.second;
-            std::cout << "Output Name: " << name << std::endl;
-            std::cout << "Output Mat: " << mat << std::endl;
-        }
-        for (size_t i = 0; i < out_tensors.size(); ++i) {
-            const auto &tensor = out_tensors[i];
-            const auto info = tensor.GetTensorTypeAndShapeInfo();
-            const auto type = info.GetElementType();
-            const auto shape = info.GetShape();
-            std::cout << "Tensors " << i << ":" << std::endl;
-            std::cout << std::endl;
-
-            const int64_t* data = tensor.GetTensorData<int64_t>();
-            for (int64_t i = 0; i < 21; ++i) {
-                std::cout << data[i] << " ";
-                if ((i + 1) % shape.back() == 0) {
-                    std::cout << std::endl;
-                }
-            }
+        this_session.Run(Ort::RunOptions{nullptr},
+                         in_run_names.data(),
+                         &in_tensors.front(),
+                         input_names.size(),
+                         out_run_names.data(),
+                         &out_tensors.front(),
+                         params.output_names.size());
+        
+        for (auto &&iter : ade::util::zip(ade::util::toRange(out_tensors),
+                                          ade::util::toRange(outs))) {
+            auto &out_tensor = std::get<0>(iter);
+            auto &out_mat = std::get<1>(iter);
+            copyFromONNX(out_tensor, out_mat);
         }
     } else if (!is_dynamic && !is_postproc) {
         // Easy path - just run the session which is bound to G-API's
@@ -1039,16 +1004,6 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
             }
         }
     }
-    std::cout<<"TESTING IDEA"<<std::endl;
-    for (const auto& in_mat : outs) {
-        for (int i = 0; i < in_mat.rows; ++i) {
-            for (int j = 0; j < in_mat.cols; ++j) {
-                std::cout << in_mat.at<int32_t>(i, j) << " ";
-            }
-            std::cout << std::endl;
-        }
-    }
-
 }
 
 void ONNXCompiled::run() {
