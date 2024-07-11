@@ -1069,7 +1069,6 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
                backendId == DNN_BACKEND_CANN;
     }
 
-    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
         return x / (1.f + exp(-x));
@@ -1106,8 +1105,7 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 #endif
             // In case SIMD is not available or process tail if any
             for (; i < len; i++) {
-                float x = srcptr[i];
-                dstptr[i] = x / (1.f + std::exp(-x));
+                dstptr[i] = calculate(srcptr[i]);
             }
         }
     }
@@ -1164,6 +1162,14 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 template<>
 const char* const SwishFunctor::BaseDefaultFunctor<SwishFunctor>::ocl_kernel_name = "SwishForward";
 
+namespace {
+    constexpr float MISH_THRESHOLD = -36.73f;
+}
+
+/*
+    This implementation is derived from
+    https://github.com/vpisarev/ficus/blob/3c9a8b78f49e17489c5e1fd6dd5dd487348c99c2/lib/NN/OpElemwise.fx#L110
+*/
 struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 {
     using Layer = MishLayer;
@@ -1187,11 +1193,9 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
                backendId == DNN_BACKEND_CANN;
     }
 
-    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
-        x *= (x > -36.73f ? 1.f : 0.f);
-        float y = std::exp(-x);
+        float y = x > MISH_THRESHOLD ? std::exp(-x) : 1.f;
         return x * (1 + 2 * y) / (1 + 2 * y + 2 * y * y);
     }
 
@@ -1200,7 +1204,7 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
         for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
             int i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 threshold = vx_setall_f32(-36.73f), one = vx_setall_f32(1.f), z = vx_setzero_f32();
+            v_float32 v_threshold = vx_setall_f32(MISH_THRESHOLD), one = vx_setall_f32(1.f), z = vx_setzero_f32();
             for (; i <= len - vlanes; i += vlanes) {
                 if (i + vlanes > len) {
                     if (i == 0 || i == len) {
@@ -1211,7 +1215,7 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 
                 v_float32 x = vx_load(srcptr + i);
 
-                x = v_select(v_le(x, threshold), z, x);
+                x = v_select(v_le(x, v_threshold), z, x);
                 v_float32 y = v_exp(v_sub(z, x));
                 v_float32 yy = v_add(y, y),
                         yy1 = v_add(yy, one);
@@ -1222,10 +1226,7 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 #endif
             // In case SIMD is not available or process tail if any
             for (; i < len; i++) {
-                float x = srcptr[i];
-                x *= (x > -36.73f ? 1.f : 0.f);
-                float y = std::exp(-x);
-                dstptr[i] = x * (1 + 2 * y) / (1 + 2 * y + 2 * y * y);
+                dstptr[i] = calculate(srcptr[i]);
             }
         }
     }
@@ -1383,7 +1384,6 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
                backendId == DNN_BACKEND_CANN;
     }
 
-    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
         return x >= 0.f ? x : alpha * (exp(x) - 1.f);
@@ -1412,8 +1412,7 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 #endif
             // In case SIMD is not available or process tail if any
             for (; i < len; i++) {
-                float x = srcptr[i];
-                dstptr[i] = x >= 0.f ? x : alpha * (std::exp(x) - 1.f);
+                dstptr[i] = calculate(srcptr[i]);
             }
         }
     }
@@ -2135,7 +2134,6 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
                backendId == DNN_BACKEND_CANN;
     }
 
-    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
         return x * std::max(0.f, std::min(1.f, x / 6.f + 0.5f));
@@ -2167,8 +2165,7 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
 #endif
             // In case SIMD is not available or process tail if any
             for (; i < len; i++) {
-                float x = srcptr[i];
-                dstptr[i] = x * std::max(0.f, std::min(1.f, x / 6.f + 0.5f));
+                dstptr[i] = calculate(srcptr[i]);
             }
         }
     }
@@ -2362,7 +2359,6 @@ struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
-    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
         return std::max(0.f, x) + std::min(0.f, alpha * expm1(x / alpha));
@@ -2391,8 +2387,7 @@ struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
             }
 #endif
             for (; i < len; i++) {
-                float x = srcptr[i];
-                dstptr[i] = std::max(0.f, x) + std::min(0.f, alpha * expm1(x / alpha));
+                dstptr[i] = calculate(srcptr[i]);
             }
         }
     }
@@ -2475,7 +2470,6 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
-    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
         return gamma * (x > 0.f ? x : alpha * expm1(x));
@@ -2506,8 +2500,7 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
 #endif
             // In case SIMD is not available or process tail if any
             for (; i < len; i++) {
-                float x = srcptr[i];
-                dstptr[i] = gamma * (x > 0.f ? x : alpha * expm1(x));
+                dstptr[i] = calculate(srcptr[i]);
             }
         }
     }
