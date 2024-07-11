@@ -412,27 +412,47 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
 
-/** @brief Returns true if the specified image can be decoded by OpenCV
+/** @brief Checks if the specified image file can be decoded by OpenCV.
 
-@param filename File name of the image
+The function haveImageReader checks if OpenCV is capable of reading the specified file.
+This can be useful for verifying support for a given image format before attempting to load an image.
+
+@param filename The name of the file to be checked.
+@return true if an image reader for the specified file is available and the file can be opened, false otherwise.
+
+@note The function checks the availability of image codecs that are either built into OpenCV or dynamically loaded.
+It does not check for the actual existence of the file but rather the ability to read the specified file type.
+If the file cannot be opened or the format is unsupported, the function will return false.
+
+@sa cv::haveImageWriter, cv::imread, cv::imdecode
 */
 CV_EXPORTS_W bool haveImageReader( const String& filename );
 
-/** @brief Returns true if an image with the specified filename can be encoded by OpenCV
+/** @brief Checks if the specified image file or specified file extension can be encoded by OpenCV.
 
- @param filename File name of the image
- */
+The function haveImageWriter checks if OpenCV is capable of writing images with the specified file extension.
+This can be useful for verifying support for a given image format before attempting to save an image.
+
+@param filename The name of the file or the file extension (e.g., ".jpg", ".png").
+It is recommended to provide the file extension rather than the full file name.
+@return true if an image writer for the specified extension is available, false otherwise.
+
+@note The function checks the availability of image codecs that are either built into OpenCV or dynamically loaded.
+It does not check for the actual existence of the file but rather the ability to write files of the given type.
+
+@sa cv::haveImageReader, cv::imwrite, cv::imencode
+*/
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
-/** @brief To read Multi Page images on demand
+/** @brief To read multi-page images on demand
 
-The ImageCollection class provides iterator API to read multi page images on demand. Create iterator
+The ImageCollection class provides iterator API to read multi-page images on demand. Create iterator
 to the collection of the images and iterate over the collection. Decode the necessary page with operator*.
 
 The performance of page decoding is O(1) if collection is increment sequentially. If the user wants to access random page,
 then the time Complexity is O(n) because the collection has to be reinitialized every time in order to go to the correct page.
 However, the intermediate pages are not decoded during the process, so typically it's quite fast.
-This is required because multipage codecs does not support going backwards.
+This is required because multi-page codecs does not support going backwards.
 After decoding the one page, it is stored inside the collection cache. Hence, trying to get Mat object from already decoded page is O(1).
 If you need memory, you can use .releaseCache() method to release cached index.
 The space complexity is O(n) if all pages are decoded into memory. The user is able to decode and release images on demand.
