@@ -975,49 +975,72 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Softmax, Combine(
                           /* withCann= */            false) // only test on CPU
 ));
 
-using Layer_Elementwise = TestBaseWithParam<tuple<std::vector<int>, std::string, tuple<Backend, Target>>>;
-PERF_TEST_P_(Layer_Elementwise, elementwise) {
-    std::vector<int> input_shape = get<0>(GetParam());
-    std::string op = get<1>(GetParam());
-    int backend_id = get<0>(get<2>(GetParam()));
-    int target_id = get<1>(get<2>(GetParam()));
+struct Layer_Elementwise : public TestBaseWithParam<tuple<Backend, Target>> {
+    void test_layer(const std::string &op_type, const std::vector<int> &input_shape) {
+        int backend_id = get<0>(GetParam());
+        int target_id = get<1>(GetParam());
 
-    Mat input(input_shape, CV_32F);
-    randn(input, 0.f, 1.f);
+        Mat input(input_shape, CV_32F);
+        randu(input, 0.f, 1.f);
 
-    LayerParams lp;
-    lp.type = op;
-    lp.name = "TestLayer";
+        LayerParams lp;
+        lp.type = op_type;
+        lp.name = cv::format("PerfLayer/%s", op_type.c_str());
 
-    Net net;
-    net.addLayerToPrev(lp.name, lp.type, lp);
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
 
-    // Warmup
-    {
-        net.setInput(input);
-        net.setPreferableBackend(backend_id);
-        net.setPreferableTarget(target_id);
-        Mat out = net.forward();
+        // Warmup
+        {
+            net.setInput(input);
+            net.setPreferableBackend(backend_id);
+            net.setPreferableTarget(target_id);
+            net.forward();
+        }
+
+        TEST_CYCLE() {
+            net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
     }
 
-    TEST_CYCLE() {
-        net.forward();
-    }
+    int N = 2;
+    int C = 32;
+    int H = 416;
+    int W = 416;
+};
 
-    SANITY_CHECK_NOTHING();
+PERF_TEST_P_(Layer_Elementwise, Gelu) {
+    test_layer("Gelu", std::vector<int>{1, 50, 3072});
+}
+PERF_TEST_P_(Layer_Elementwise, Swish) {
+    test_layer("Swish", std::vector<int>{N, C, H, W});
+}
+PERF_TEST_P_(Layer_Elementwise, Mish) {
+    test_layer("Mish", std::vector<int>{N, C, H, W});
+}
+PERF_TEST_P_(Layer_Elementwise, Elu) {
+    test_layer("ELU", std::vector<int>{N, C, H, W});
+}
+PERF_TEST_P_(Layer_Elementwise, Celu) {
+    test_layer("Celu", std::vector<int>{N, C, H, W});
+}
+PERF_TEST_P_(Layer_Elementwise, Selu) {
+    test_layer("Selu", std::vector<int>{N, C, H, W});
+}
+PERF_TEST_P_(Layer_Elementwise, HardSwish) {
+    test_layer("HardSwish", std::vector<int>{N, C, H, W});
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Layer_Elementwise, testing::Combine(
-    testing::Values(std::vector<int>{1, 50, 3072}),
-    testing::Values(std::string{"Gelu"}),
-    dnnBackendsAndTargets(/* withInferenceEngine= */ true,
-                          /* withHalide= */          false,
-                          /* withCpuOCV= */          true,
-                          /* withVkCom= */           false,
-                          /* withCUDA= */            true,
-                          /* withNgraph= */          true,
-                          /* withWebnn= */           false,
-                          /* withCann= */            false) // only test on CPU
-));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Elementwise,
+                        dnnBackendsAndTargets(/* withInferenceEngine= */ true,
+                                              /* withHalide= */          false,
+                                              /* withCpuOCV= */          true,
+                                              /* withVkCom= */           false,
+                                              /* withCUDA= */            true,
+                                              /* withNgraph= */          true,
+                                              /* withWebnn= */           false,
+                                              /* withCann= */            false));
 
 } // namespace
