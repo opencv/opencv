@@ -222,7 +222,7 @@ cd ..
 export OPENCV_TEST_DATA_PATH=$(pwd)
 cd <build directory of OpenCV>
 
-./bin/example_dnn_yolo_detector --model=onnx/models/yolov8n.onnx --yolo=yolov10 --width=640 --height=480  --scale=0.003921568627 --padvalue=114
+./bin/example_dnn_yolo_detector --model=onnx/models/yolov10s.onnx --yolo=yolov10 --width=640 --height=480  --scale=0.003921568627 --padvalue=114
 @endcode
 
 This will run `YOLOv10` detector on first camera found on your system. If you want to run it on a image/video file, you can use `--input` option to specify the path to the file.
