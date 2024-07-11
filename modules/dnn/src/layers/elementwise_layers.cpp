@@ -2114,7 +2114,16 @@ const char* const BaseDefaultFunctor<ErfFunctor>::ocl_kernel_name = "ErfForward"
 
 struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
 {
-    typedef HardSwishLayer Layer;
+    using Layer = HardSwishLayer;
+    int vlanes;
+
+    explicit HardSwishFunctor() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -2123,9 +2132,42 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
                backendId == DNN_BACKEND_CANN;
     }
 
+    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
-        return x * max(0.f, min(1.f, x / 6.f + 0.5f));
+        return x * std::max(0.f, std::min(1.f, x / 6.f + 0.5f));
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 zero = vx_setzero_f32(), one = vx_setall_f32(1.0f),
+                      half = vx_setall_f32(0.5f), sixth = vx_setall_f32(1 / 6.0f);
+            for (; i <= len - vlanes; i += vlanes) {
+                if (i + vlanes > len) {
+                    if (i == 0 || i == len) {
+                        break;
+                    }
+                    i = len - vlanes;
+                }
+                v_float32 x = vx_load(srcptr + i);
+
+                v_float32 t = v_add(v_mul(x, sixth), half);
+                t = v_min(one, t);
+                t = v_max(zero, t);
+                t = v_mul(x, t);
+
+                vx_store(dstptr + i, t);
+            }
+#endif
+            // In case SIMD is not available or process tail if any
+            for (; i < len; i++) {
+                float x = srcptr[i];
+                dstptr[i] = x * std::max(0.f, std::min(1.f, x / 6.f + 0.5f));
+            }
+        }
     }
 
 #ifdef HAVE_CUDA
