@@ -470,14 +470,6 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
         return createTensor<int32_t>(memory_info, tensor_params, data);
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:{
-        // creating int64 vector to store the converted data. This jhas the same size as data.
-        std::vector<int64_t> temp(data.total());
-        // convert the data into int64 type and copy this data into temp
-        cv::gimpl::convertInt32ToInt64(data.ptr<int>(),
-                                       temp.data(),
-                                       data.total());
-
-        // creating temp tensor a top of exisiting memory (this will not last)
         auto ort_dims = toORT(data.size);
 
         // create an empty tensor
@@ -485,12 +477,10 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
         Ort::Value i64_tensor = Ort::Value::CreateTensor<int64_t>(allocator,
                                                                   ort_dims.data(),
                                                                   ort_dims.size());
-
-        // copying this data to empty tensor (ort::Value)
         int64_t* tensor_data = i64_tensor.GetTensorMutableData<int64_t>();
-        for (size_t i = 0; i < temp.size(); ++i) {
-            tensor_data[i] = temp[i];
-        }
+        cv::gimpl::convertInt32ToInt64(data.ptr<int>(),
+                                       tensor_data,
+                                       data.total());
         return i64_tensor;
     }
     default:
@@ -917,30 +907,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
     GAPI_Assert(input_names.size() == this_session.GetInputCount());
 
     auto in_run_names  = getCharNames(input_names);
-    if (out_tensor_info[0].type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) {
-        // creating out_tensors a top of cv::Mat outs
-        for (auto i : ade::util::iota(params.output_names.size())) {
-            out_tensors.emplace_back(createTensor(this_memory_info,
-                                                out_tensor_info[i],
-                                                outs[i]));
-        }
-        auto out_run_names = getCharNames(params.output_names);
-        // running the model
-        this_session.Run(Ort::RunOptions{nullptr},
-                         in_run_names.data(),
-                         &in_tensors.front(),
-                         input_names.size(),
-                         out_run_names.data(),
-                         &out_tensors.front(),
-                         params.output_names.size());
-
-        for (auto &&iter : ade::util::zip(ade::util::toRange(out_tensors),
-                                          ade::util::toRange(outs))) {
-            auto &out_tensor = std::get<0>(iter);
-            auto &out_mat = std::get<1>(iter);
-            copyFromONNX(out_tensor, out_mat);
-        }
-    } else if (!is_dynamic && !is_postproc) {
+    if (!is_dynamic && !is_postproc) {
         // Easy path - just run the session which is bound to G-API's
         // internal data
         for (auto i : ade::util::iota(params.output_names.size())) {
@@ -956,6 +923,14 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                          out_run_names.data(),
                          &out_tensors.front(),
                          params.output_names.size());
+        if (out_tensor_info[0].type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) { 
+            for (auto &&iter : ade::util::zip(ade::util::toRange(out_tensors),
+                                          ade::util::toRange(outs))) {
+                auto &out_tensor = std::get<0>(iter);
+                auto &out_mat = std::get<1>(iter);
+                copyFromONNX(out_tensor, out_mat);
+            }
+        }
     } else {
         // Hard path - run session & user-defined post-processing
         // NOTE: use another list of output names here
