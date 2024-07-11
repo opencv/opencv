@@ -1049,6 +1049,7 @@ const char* const TanHFunctor::BaseDefaultFunctor<TanHFunctor>::ocl_kernel_name 
 struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 {
     using Layer = SwishLayer;
+
     int vlanes;
 
     explicit SwishFunctor() {
@@ -1166,6 +1167,7 @@ const char* const SwishFunctor::BaseDefaultFunctor<SwishFunctor>::ocl_kernel_nam
 struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 {
     using Layer = MishLayer;
+
     int vlanes;
 
     explicit MishFunctor() {
@@ -1357,8 +1359,9 @@ const char* const SigmoidFunctor::BaseDefaultFunctor<SigmoidFunctor>::ocl_kernel
 struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 {
     using Layer = ELULayer;
-    int vlanes;
+
     float alpha;
+    int vlanes;
 
     explicit ELUFunctor(float alpha_ = 1.f) : alpha(alpha_) {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -2341,20 +2344,57 @@ const char* const BaseDefaultFunctor<TanFunctor>::ocl_kernel_name = "TanForward"
 
 struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
 {
-    typedef CeluLayer Layer;
+    using Layer = CeluLayer;
 
     float alpha;
+    int vlanes;
 
-    explicit CeluFunctor(float alpha_ = 1.f) : alpha(alpha_) {}
+    explicit CeluFunctor(float alpha_ = 1.f) : alpha(alpha_) {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
+    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
-        return max(0.f, x) + min(0.f, alpha * expm1(x / alpha));
+        return std::max(0.f, x) + std::min(0.f, alpha * expm1(x / alpha));
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 zero = vx_setzero_f32(), v_alpha = vx_setall_f32(alpha),
+                      one = vx_setall_f32(1.0f), v_ralpha = vx_setall_f32(1.0f / alpha);
+            for (; i <= len - vlanes; i += vlanes) {
+                if (i + vlanes > len) {
+                    if (i == 0 || i == len) {
+                        break;
+                    }
+                    i = len - vlanes;
+                }
+                v_float32 x = vx_load(srcptr + i);
+
+                v_float32 t = v_min(zero, v_mul(v_alpha, v_sub(v_exp(v_mul(x, v_ralpha)), one)));
+                t = v_add(v_max(zero, x), t);
+
+                vx_store(dstptr + i, t);
+            }
+#endif
+            for (; i < len; i++) {
+                float x = srcptr[i];
+                dstptr[i] = std::max(0.f, x) + std::min(0.f, alpha * expm1(x / alpha));
+            }
+        }
     }
 
     inline void setKernelParams(ocl::Kernel& kernel) const
