@@ -470,14 +470,19 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
         return createTensor<int32_t>(memory_info, tensor_params, data);
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:{
+        // cv::Mat does not support int64 data directly.
+        // Following steps are applied to create an ONNX tensor from cv::Mat data:
+        // - First create a new ONNX tensor 'i64_tensor' with data type int64_t using the default allocator
+        // - Next retrieve a pointer to the mutable data buffer of 'i64_tensor'
+        // - Convert the data from int32 (see toCV function) to int64 and deep copy it into 'i64_tensor'
         auto ort_dims = toORT(data.size);
 
-        // create an empty tensor
         Ort::AllocatorWithDefaultOptions allocator;
         Ort::Value i64_tensor = Ort::Value::CreateTensor<int64_t>(allocator,
                                                                   ort_dims.data(),
                                                                   ort_dims.size());
         int64_t* tensor_data = i64_tensor.GetTensorMutableData<int64_t>();
+
         cv::gimpl::convertInt32ToInt64(data.ptr<int>(),
                                        tensor_data,
                                        data.total());
@@ -924,8 +929,11 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                          &out_tensors.front(),
                          params.output_names.size());
         if (out_tensor_info[0].type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) { 
+            // cv::Mat does not support int64 output data.
+            // Conversion from int 64 to int 32 is carried in the copyFromONNX function
+            // The output is written to out_mat
             for (auto &&iter : ade::util::zip(ade::util::toRange(out_tensors),
-                                          ade::util::toRange(outs))) {
+                                              ade::util::toRange(outs))) {
                 auto &out_tensor = std::get<0>(iter);
                 auto &out_mat = std::get<1>(iter);
                 copyFromONNX(out_tensor, out_mat);
