@@ -128,6 +128,10 @@ CV_EXPORTS_W int buildOpticalFlowPyramid( InputArray img, OutputArrayOfArrays py
 An example using the Lucas-Kanade optical flow algorithm
 */
 
+/** @example samples/python/snippets/lk_track.py
+An example using the Lucas-Kanade optical flow algorithm in python
+*/
+
 /** @brief Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade method with
 pyramids.
 
@@ -181,6 +185,10 @@ CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
                                         Size winSize = Size(21,21), int maxLevel = 3,
                                         TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),
                                         int flags = 0, double minEigThreshold = 1e-4 );
+
+/** @example samples/python/snippets/opt_flow.py
+An example to show optical flow in python
+*/
 
 /** @brief Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
@@ -434,6 +442,10 @@ CV_EXPORTS_W Mat readOpticalFlow( const String& path );
  to the flow in the horizontal direction (u), second - vertical (v).
  */
 CV_EXPORTS_W bool writeOpticalFlow( const String& path, InputArray flow );
+
+/** @example samples/python/snippets/dis_opt_flow.py
+An example using the dense optical flow and DIS optical flow algorithms in python
+*/
 
 /**
    Base class for dense optical flow algorithms

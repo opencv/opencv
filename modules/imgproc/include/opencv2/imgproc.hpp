@@ -1853,6 +1853,9 @@ CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
 /** @example samples/cpp/laplace.cpp
 An example using Laplace transformations for edge detection
 */
+/** @example samples/python/snippets/laplace.py
+An example using Laplace transformations for edge detection in python
+*/
 
 /** @brief Calculates the Laplacian of an image.
 
@@ -2695,6 +2698,9 @@ CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
 
 /** @example samples/cpp/polar_transforms.cpp
 An example using the cv::linearPolar and cv::logPolar operations
+*/
+/** @example samples/python/snippets/logpolar.py
+An example using the linearPolar and logPolar operations in python
 */
 
 /** @brief Remaps an image to semilog-polar coordinates space.
@@ -4756,6 +4762,9 @@ CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const i
 /** @example samples/cpp/contours2.cpp
 An example program illustrates the use of cv::findContours and cv::drawContours
 \image html WindowsQtContoursOutput.png "Screenshot of the program"
+*/
+/** @example samples/python/snippets/contours.py
+An example program illustrates the use of findContours and drawContours in python
 */
 
 /** @example samples/cpp/segment_objects.cpp

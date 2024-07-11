@@ -482,6 +482,10 @@ public:
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
+/** @example samples/python/snippets/mser.py
+An example using Maximally stable extremal region(MSER) extractor in python
+*/
+
 /** @brief Maximally stable extremal region extractor
 
 The class encapsulates all the parameters of the %MSER extraction algorithm (see [wiki
