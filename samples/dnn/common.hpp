@@ -106,9 +106,11 @@ std::string findModel(const std::string& filename, const std::string& sha1)
             return modelPath;
     }
 
-    CV_Error(Error::StsObjectNotFound, "File " + filename + " not found! "
-             "Please specify a path to model download directory in OPENCV_DOWNLOAD_CACHE_DIR "
-             "environment variable or pass a full path to " + filename);
+    std::cout << "File " + filename + " not found! "
+              << "Please specify a path to model download directory in OPENCV_DOWNLOAD_CACHE_DIR "
+              << "environment variable or pass a full path to " + filename
+              << std::endl;
+    std::exit(1);
 }
 
 std::string findFile(const std::string& filename)
@@ -135,11 +137,13 @@ std::string findFile(const std::string& filename)
         if (utils::fs::exists(absPath))
             return absPath;
     }
-    CV_Error(Error::StsObjectNotFound, "File " + filename + " not found! "
-             "Please specify the path to /opencv/samples/data in the OPENCV_SAMPLES_DATA_PATH environment variable, "
-             "or specify the path to opencv_extra/testdata in the OPENCV_DNN_TEST_DATA_PATH environment variable, "
-             "or specify the path to the model download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, "
-             "or pass the full path to " + filename + ".");
+    std::cout << "File " + filename + " not found! "
+              << "Please specify the path to /opencv/samples/data in the OPENCV_SAMPLES_DATA_PATH environment variable, "
+              << "or specify the path to opencv_extra/testdata in the OPENCV_DNN_TEST_DATA_PATH environment variable, "
+              << "or specify the path to the model download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, "
+              << "or pass the full path to " + filename + "."
+              << std::endl;
+    std::exit(1);
 }
 
 std::string genPreprocArguments(const std::string& modelName, const std::string& zooFile)
