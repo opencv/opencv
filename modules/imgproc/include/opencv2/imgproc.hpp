@@ -1341,7 +1341,7 @@ protected:
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example samples/cpp/lsd_lines.cpp
+/** @example samples/cpp/snippets/lsd_lines.cpp
 An example using the LineSegmentDetector
 \image html building_lsd.png "Sample output image" width=434 height=300
 */
@@ -1844,7 +1844,7 @@ CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
                           int dx, int dy, double scale = 1, double delta = 0,
                           int borderType = BORDER_DEFAULT );
 
-/** @example samples/cpp/laplace.cpp
+/** @example samples/cpp/snippets/laplace.cpp
 An example using Laplace transformations for edge detection
 */
 
@@ -2468,7 +2468,7 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               int borderMode = BORDER_CONSTANT,
                               const Scalar& borderValue = Scalar());
 
-/** @example samples/cpp/warpPerspective_demo.cpp
+/** @example samples/cpp/snippets/warpPerspective_demo.cpp
 An example program shows using cv::getPerspectiveTransform and cv::warpPerspective for image warping
 */
 
@@ -2684,7 +2684,7 @@ source image. The center must be inside the image.
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
 
-/** @example samples/cpp/polar_transforms.cpp
+/** @example samples/cpp/snippets/polar_transforms.cpp
 An example using the cv::linearPolar and cv::logPolar operations
 */
 
@@ -2840,7 +2840,7 @@ the destination image will have the given size therefore the area of the boundin
 You can get reverse mapping adding #WARP_INVERSE_MAP to `flags`
 \snippet polar_transforms.cpp InverseMap
 
-In addiction, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
+In addition, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
 \snippet polar_transforms.cpp InverseCoordinate
 
 @param src Source image.
@@ -2997,6 +2997,9 @@ floating-point.
 CV_EXPORTS_W void accumulateWeighted( InputArray src, InputOutputArray dst,
                                       double alpha, InputArray mask = noArray() );
 
+/** @example samples/cpp/snippets/phase_corr.cpp
+An example using the phaseCorrelate function
+*/
 /** @brief The function is used to detect translational shifts that occur between two images.
 
 The operation takes advantage of the Fourier shift theorem for detecting the translational shift in
@@ -3415,7 +3418,7 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 //! @addtogroup imgproc_segmentation
 //! @{
 
-/** @example samples/cpp/watershed.cpp
+/** @example samples/cpp/snippets/watershed.cpp
 An example using the watershed algorithm
 */
 
@@ -3527,7 +3530,7 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
 //! @addtogroup imgproc_misc
 //! @{
 
-/** @example samples/cpp/distrans.cpp
+/** @example samples/cpp/snippets/distrans.cpp
 An example on using the distance transform
 */
 
@@ -3679,7 +3682,7 @@ CV_EXPORTS_W int floodFill( InputOutputArray image, InputOutputArray mask,
                             Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
                             int flags = 4 );
 
-/** @example samples/cpp/ffilldemo.cpp
+/** @example samples/cpp/floodfill.cpp
 An example using the FloodFill technique
 */
 
@@ -3896,6 +3899,9 @@ enum TemplateMatchModes {
 
 /** @example samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
 An example using Template Matching algorithm
+*/
+/** @example samples/cpp/snippets/mask_tmpl.cpp
+An example using Template Matching algorithm with mask
 */
 
 /** @brief Compares a template against overlapped image regions.
@@ -4256,7 +4262,7 @@ without self-intersections. Otherwise, the function output is undefined.
  */
 CV_EXPORTS_W bool isContourConvex( InputArray contour );
 
-/** @example samples/cpp/intersectExample.cpp
+/** @example samples/cpp/snippets/intersectExample.cpp
 Examples of how intersectConvexConvex works
 */
 
@@ -4483,7 +4489,7 @@ enum ColormapTypes
     COLORMAP_DEEPGREEN = 21  //!< ![deepgreen](pics/colormaps/colorscale_deepgreen.jpg)
 };
 
-/** @example samples/cpp/falsecolor.cpp
+/** @example samples/cpp/snippets/falsecolor.cpp
 An example using applyColorMap function
 */
 
@@ -4733,7 +4739,7 @@ CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const i
                           int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
 
-/** @example samples/cpp/segment_objects.cpp
+/** @example samples/cpp/snippets/segment_objects.cpp
 An example using drawContours to clean up a background segmentation result
 */
 

@@ -447,9 +447,10 @@ The function getWindowImageRect returns the client screen coordinates, width and
  */
 CV_EXPORTS_W Rect getWindowImageRect(const String& winname);
 
-/** @example samples/cpp/create_mask.cpp
+/** @example samples/cpp/snippets/create_mask.cpp
 This program demonstrates using mouse events and how to make and use a mask image (black and white) .
 */
+
 /** @brief Sets mouse handler for the specified window
 
 @param winname Name of the window.
