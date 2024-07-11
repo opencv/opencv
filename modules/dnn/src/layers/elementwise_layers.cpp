@@ -1104,7 +1104,7 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
                 vx_store(dstptr + i, t);
             }
 #endif
-            // Process tail if any
+            // In case SIMD is not available or process tail if any
             for (; i < len; i++) {
                 float x = srcptr[i];
                 dstptr[i] = x / (1.f + std::exp(-x));
@@ -1220,7 +1220,7 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
                 vx_store(dstptr + i, x);
             }
 #endif
-            // Process tail if any
+            // In case SIMD is not available or process tail if any
             for (; i < len; i++) {
                 float x = srcptr[i];
                 x *= (x > -36.73f ? 1.f : 0.f);
@@ -2455,22 +2455,61 @@ const char* const BaseDefaultFunctor<HardSigmoidFunctor>::ocl_kernel_name = "Har
 
 struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
 {
-    typedef SeluLayer Layer;
+    using Layer = SeluLayer;
 
     float alpha;
     float gamma;
+    int vlanes;
 
     explicit SeluFunctor(float alpha_ = 1.67326319217681884765625f,
-                         float gamma_ = 1.05070102214813232421875f) : alpha(alpha_), gamma(gamma_) {}
+                         float gamma_ = 1.05070102214813232421875f) : alpha(alpha_), gamma(gamma_) {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
+    // It is needed by tryQuantize. We can remove this in 5.x.
     inline float calculate(float x) const
     {
         return gamma * (x > 0.f ? x : alpha * expm1(x));
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 z = vx_setzero_f32(), one = vx_setall_f32(1.0f),
+                      v_alpha = vx_setall_f32(alpha), v_gamma = vx_setall_f32(gamma);
+            for (; i <= len - vlanes; i += vlanes) {
+                if (i + vlanes > len) {
+                    if (i == 0 || i == len) {
+                        break;
+                    }
+                    i = len - vlanes;
+                }
+                v_float32 x = vx_load(srcptr + i);
+
+                v_float32 t = v_mul(v_alpha, v_sub(v_exp(x), one));
+                x = v_select(v_le(x, z), t, x);
+                x = v_mul(v_gamma, x);
+
+                vx_store(dstptr + i, x);
+            }
+#endif
+            // In case SIMD is not available or process tail if any
+            for (; i < len; i++) {
+                float x = srcptr[i];
+                dstptr[i] = gamma * (x > 0.f ? x : alpha * expm1(x));
+            }
+        }
     }
 
     inline void setKernelParams(ocl::Kernel& kernel) const
