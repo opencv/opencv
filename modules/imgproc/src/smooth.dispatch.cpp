@@ -612,6 +612,9 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 {
     CV_INSTRUMENT_REGION();
 
+    if (hint == cv::ALGO_DEFAULT)
+        hint = cv::getDefaultAlgorithmHint();
+
     CV_Assert(!_src.empty());
 
     int type = _src.type();

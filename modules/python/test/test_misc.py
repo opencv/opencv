@@ -989,7 +989,7 @@ class SamplesFindFile(NewOpenCVTests):
 
 class AlgorithmImplHit(NewOpenCVTests):
     def test_callable(self):
-        res = cv.getDefaultAlgoHint()
+        res = cv.getDefaultAlgorithmHint()
         self.assertTrue(res is not None)
 
 if __name__ == '__main__':
