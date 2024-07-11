@@ -479,7 +479,7 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
 
         // creating temp tensor a top of exisiting memory (this will not last)
         auto ort_dims = toORT(data.size);
-       
+
         // create an empty tensor
         Ort::AllocatorWithDefaultOptions allocator;
         Ort::Value i64_tensor = Ort::Value::CreateTensor<int64_t>(allocator,
@@ -923,7 +923,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
             out_tensors.emplace_back(createTensor(this_memory_info,
                                                 out_tensor_info[i],
                                                 outs[i]));
-        } 
+        }
         auto out_run_names = getCharNames(params.output_names);
         // running the model
         this_session.Run(Ort::RunOptions{nullptr},
@@ -933,7 +933,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                          out_run_names.data(),
                          &out_tensors.front(),
                          params.output_names.size());
-        
+
         for (auto &&iter : ade::util::zip(ade::util::toRange(out_tensors),
                                           ade::util::toRange(outs))) {
             auto &out_tensor = std::get<0>(iter);
