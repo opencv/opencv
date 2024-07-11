@@ -928,7 +928,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                          out_run_names.data(),
                          &out_tensors.front(),
                          params.output_names.size());
-        if (out_tensor_info[0].type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) { 
+        if (out_tensor_info[0].type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) {
             // cv::Mat does not support int64 output data.
             // Conversion from int 64 to int 32 is carried in the copyFromONNX function
             // The output is written to out_mat
