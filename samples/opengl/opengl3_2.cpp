@@ -16,10 +16,6 @@
     #include <GL/glu.h>
 #endif
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include "opencv2/core.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/cuda.hpp"
@@ -37,6 +33,17 @@ struct DrawData
     GLuint vao, vbo, program, textureID;
 };
 
+cv::Mat rot(float angle)
+{
+    cv::Mat R_y = (cv::Mat_<float>(4,4) <<
+        cos(angle), 0, sin(angle), 0,
+        0, 1, 0, 0,
+        -sin(angle), 0, cos(angle), 0,
+        0, 0, 0, 1);
+
+    return R_y;
+}
+
 static GLuint create_shader(const char* source, GLenum type) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, NULL);
@@ -49,14 +56,13 @@ void draw(void* userdata){
     static float angle = 0.0f;
     angle += 1.f;
 
-    glm::mat4 trans = glm::mat4(1.0f);
-    trans = glm::rotate(trans, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f)); // Y軸周りに回転
+    cv::Mat trans = rot(CV_PI * angle / 360.f);
 
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(data->program);
-    glUniformMatrix4fv(glGetUniformLocation(data->program, "transform"), 1, GL_FALSE, glm::value_ptr(trans));
+    glUniformMatrix4fv(glGetUniformLocation(data->program, "transform"), 1, GL_FALSE, trans.ptr<float>());
     glBindTexture(GL_TEXTURE_2D, data->textureID);
     glBindVertexArray(data->vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
