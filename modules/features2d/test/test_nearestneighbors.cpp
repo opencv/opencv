@@ -338,7 +338,7 @@ public:
 protected:
     void createModel(const Mat& data) CV_OVERRIDE
     {
-        index = AnnoyIndex::create(data.cols);
+        index = ANNIndex::create(data.cols);
         index->addItems(data);
         index->build();
     }
@@ -372,9 +372,9 @@ protected:
 
     void releaseModel() CV_OVERRIDE {}
 
-    Ptr<AnnoyIndex> index;
+    Ptr<ANNIndex> index;
 };
 
-TEST(Features2d_AnnoyIndex, regression) {CV_AnnoyTest test; test.safe_run();}
+TEST(Features2d_ANNIndex, regression) {CV_AnnoyTest test; test.safe_run();}
 
 }} // namespace

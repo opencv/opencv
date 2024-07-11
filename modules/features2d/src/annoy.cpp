@@ -14,10 +14,10 @@ namespace cv
 {
 
 template <typename DataType, typename DistanceType>
-class AnnoyIndexImpl : public AnnoyIndex
+class ANNIndexImpl : public ANNIndex
 {
 public:
-    AnnoyIndexImpl(int dimension) : dim(dimension)
+    ANNIndexImpl(int dimension) : dim(dimension)
     {
         index = makePtr<Annoy::AnnoyIndex<int, DataType, DistanceType, Annoy::Kiss32Random, Annoy::AnnoyIndexSingleThreadedBuildPolicy>>(dimension);
     }
@@ -181,24 +181,24 @@ private:
     Ptr<Annoy::AnnoyIndex<int, DataType, DistanceType, Annoy::Kiss32Random, Annoy::AnnoyIndexSingleThreadedBuildPolicy>> index;
 };
 
-Ptr<AnnoyIndex> AnnoyIndex::create(int dim, AnnoyIndex::Distance distType)
+Ptr<ANNIndex> ANNIndex::create(int dim, ANNIndex::Distance distType)
 {
     switch (distType)
     {
-        case AnnoyIndex::ANNOY_DIST_EUCLIDEAN:
-            return makePtr<AnnoyIndexImpl<float, Annoy::Euclidean>>(dim);
+        case ANNIndex::DIST_EUCLIDEAN:
+            return makePtr<ANNIndexImpl<float, Annoy::Euclidean>>(dim);
             break;
-        case AnnoyIndex::ANNOY_DIST_MANHATTAN:
-            return makePtr<AnnoyIndexImpl<float, Annoy::Manhattan>>(dim);
+        case ANNIndex::DIST_MANHATTAN:
+            return makePtr<ANNIndexImpl<float, Annoy::Manhattan>>(dim);
             break;
-        case AnnoyIndex::ANNOY_DIST_ANGULAR:
-            return makePtr<AnnoyIndexImpl<float, Annoy::Angular>>(dim);
+        case ANNIndex::DIST_ANGULAR:
+            return makePtr<ANNIndexImpl<float, Annoy::Angular>>(dim);
             break;
-        case AnnoyIndex::ANNOY_DIST_HAMMING:
-            return makePtr<AnnoyIndexImpl<uchar, Annoy::Hamming>>(dim);
+        case ANNIndex::DIST_HAMMING:
+            return makePtr<ANNIndexImpl<uchar, Annoy::Hamming>>(dim);
             break;
-        case AnnoyIndex::ANNOY_DIST_DOTPRODUCT:
-            return makePtr<AnnoyIndexImpl<float, Annoy::DotProduct>>(dim);
+        case ANNIndex::DIST_DOTPRODUCT:
+            return makePtr<ANNIndexImpl<float, Annoy::DotProduct>>(dim);
             break;
         default:
             CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");

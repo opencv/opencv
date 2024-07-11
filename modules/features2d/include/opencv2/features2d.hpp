@@ -1594,21 +1594,21 @@ protected:
 //! @addtogroup features2d_annoy
 //! @{
 
-class CV_EXPORTS_W AnnoyIndex
+class CV_EXPORTS_W ANNIndex
 {
 public:
     /** @brief Metrics used to calculate the distance between two feature vectors.
      */
     enum Distance
     {
-        ANNOY_DIST_EUCLIDEAN,
-        ANNOY_DIST_MANHATTAN,
-        ANNOY_DIST_ANGULAR,
-        ANNOY_DIST_HAMMING,
-        ANNOY_DIST_DOTPRODUCT
+        DIST_EUCLIDEAN,
+        DIST_MANHATTAN,
+        DIST_ANGULAR,
+        DIST_HAMMING,
+        DIST_DOTPRODUCT
     };
 
-    virtual ~AnnoyIndex() = default;
+    virtual ~ANNIndex() = default;
 
     /** @brief Add feature vectors to index.
      *
@@ -1677,10 +1677,10 @@ public:
     /** @brief Creates an instance of annoy index class with given parameters
      *
      *  @param dim The dimension of the feature vector.
-     *  @param distType Metric to calculate the distance between two feature vectors, can be ANNOY_DIST_EUCLIDEAN,
-        ANNOY_DIST_MANHATTAN, ANNOY_DIST_ANGULAR, ANNOY_DIST_HAMMING, or ANNOY_DIST_DOTPRODUCT.
+     *  @param distType Metric to calculate the distance between two feature vectors, can be DIST_EUCLIDEAN,
+        DIST_MANHATTAN, DIST_ANGULAR, DIST_HAMMING, or DIST_DOTPRODUCT.
      */
-    CV_WRAP static Ptr<AnnoyIndex> create(int dim, AnnoyIndex::Distance distType=AnnoyIndex::ANNOY_DIST_EUCLIDEAN);
+    CV_WRAP static Ptr<ANNIndex> create(int dim, ANNIndex::Distance distType=ANNIndex::DIST_EUCLIDEAN);
 };
 
 //! @} features2d_annoy
