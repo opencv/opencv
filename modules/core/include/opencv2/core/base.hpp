@@ -307,7 +307,7 @@ noexcept attribute.
 @param _func - function name. Available only when the compiler supports getting it
 @param _file - source file name where the error has occurred
 @param _line - line number in the source file where the error has occurred
-@see CV_Error, CV_Error_, CV_Assert, CV_DbgAssert
+@see CV_AssertTerminate
  */
 CV_EXPORTS CV_NORETURN void terminate(int _code, const String& _err, const char* _func, const char* _file, int _line) CV_NOEXCEPT;
 
