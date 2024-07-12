@@ -884,6 +884,9 @@ public:
             case OPERATION::FMOD:
                 op_ = cuda4dnn::EltwiseOpType::FMOD;
                 break;
+            case OPERATION::POW:
+                op_ = cuda4dnn::EltwiseOpType::POW;
+                break;
             default: return Ptr<BackendNode>(); // return empty cuda_node if the EltwiseOpType is unsupported type.
         };
 
