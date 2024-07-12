@@ -1316,6 +1316,12 @@ redirectError( ErrorCallback errCallback, void* userdata, void** prevUserdata)
     return prevCallback;
 }
 
+void terminate(int _code, const String& _err, const char* _func, const char* _file, int _line) CV_NOEXCEPT
+{
+    dumpException(cv::Exception(_code, _err, _func, _file, _line));
+    std::terminate();
+}
+
 }
 
 CV_IMPL int cvCheckHardwareSupport(int feature)
