@@ -1261,7 +1261,7 @@ static BinaryFuncC getCmpFunc(int depth)
         (BinaryFuncC)cv::hal::cmp64f,
         (BinaryFuncC)cv::hal::cmp16f,
         (BinaryFuncC)cv::hal::cmp16bf,
-        0,
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8u),
         (BinaryFuncC)cv::hal::cmp64u,
         (BinaryFuncC)cv::hal::cmp64s,
         (BinaryFuncC)cv::hal::cmp32u,
