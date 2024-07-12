@@ -1126,6 +1126,7 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
     recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
     recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
     recordPropertyVerbose("cv_compiler", "Compiler", getSnippetFromConfig("C++ Compiler:", "\n"));
+    recordPropertyVerbose("implementation_hint", "Algorithm hint", getSnippetFromConfig("Algorithm Hint:", "\n"));
     const char* parallelFramework = cv::currentParallelFramework();
     if (parallelFramework)
     {

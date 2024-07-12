@@ -186,6 +186,10 @@ if(OPENCV_SEMIHOSTING)
   ocv_target_compile_definitions(${the_module} PRIVATE "-DOPENCV_SEMIHOSTING")
 endif(OPENCV_SEMIHOSTING)
 
+if(DEFINED OPENCV_ALGO_HINT_DEFAULT)
+  ocv_target_compile_definitions(${the_module} PRIVATE "-DOPENCV_ALGO_HINT_DEFAULT=${OPENCV_ALGO_HINT_DEFAULT}")
+endif(DEFINED OPENCV_ALGO_HINT_DEFAULT)
+
 if(HAVE_HPX)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")
 endif()
