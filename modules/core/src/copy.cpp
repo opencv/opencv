@@ -454,7 +454,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
     }
 
     int cn = channels(), mcn = mask.channels();
-    CV_Assert( mask.depth() == CV_8U || mask.depth() == CV_Bool && (mcn == 1 || mcn == cn) );
+    CV_Assert( (mask.depth() == CV_8U || mask.depth() == CV_Bool) && (mcn == 1 || mcn == cn) );
     bool colorMask = mcn > 1;
     if( dims <= 2 )
     {
@@ -643,7 +643,7 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
     int cn = channels(), mcn = mask.channels();
-    CV_Assert( mask.empty() || (mask.depth() == CV_8U || mask.depth() == CV_Bool && (mcn == 1 || mcn == cn) && size == mask.size) );
+    CV_Assert( mask.empty() || ((mask.depth() == CV_8U || mask.depth() == CV_Bool) && (mcn == 1 || mcn == cn) && size == mask.size) );
 
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 
