@@ -309,6 +309,33 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
+
+    if (src.dims <= 2)
+    {
+        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows,
+                 src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data);
+    }
+    else if (src.isContinuous())
+    {
+        int res = cv_hal_minMaxIdx(src.data, 0, (int)src.total()*cn, 1, src.depth(),
+                                   minVal, maxVal, minIdx, maxIdx, mask.data);
+
+        if (res == CV_HAL_ERROR_OK)
+        {
+            // minIdx[0] and minIdx[0] are always 0 for "flatten" version
+            if (minIdx)
+                ofs2idx(src, minIdx[1], minIdx);
+            if (maxIdx)
+                ofs2idx(src, maxIdx[1], maxIdx);
+            return;
+        }
+        else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+        {
+            CV_Error_(cv::Error::StsInternal,
+            ("HAL implementation minMaxIdx ==> " CVAUX_STR(cv_hal_minMaxIdx) " returned %d (0x%08x)", res, res));
+        }
+    }
+
     MinMaxIdxFunc func = getMinMaxIdxFunc(depth);
     CV_Assert( func != 0 );
 

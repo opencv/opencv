@@ -685,15 +685,22 @@ TEST(Imgcodecs_Tiff, readWrite_unsigned)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/gray_8u.tif";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC1, img.type());
 
     Mat matS8;
     img.convertTo(matS8, CV_8SC1);
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, matS8));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, matS8));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), matS8.type());
     ASSERT_EQ(img2.size(), matS8.size());
     EXPECT_LE(cvtest::norm(matS8, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -705,12 +712,19 @@ TEST(Imgcodecs_Tiff, readWrite_32FC1)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC1.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC1,img.type());
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -722,12 +736,19 @@ TEST(Imgcodecs_Tiff, readWrite_64FC1)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test64FC1.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_64FC1, img.type());
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -739,12 +760,19 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_SGILOG)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC3_sgilog.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC3, img.type());
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 0.01);
@@ -756,7 +784,9 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_RAW)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC3_raw.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC3, img.type());
 
@@ -764,8 +794,13 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_RAW)
     params.push_back(IMWRITE_TIFF_COMPRESSION);
     params.push_back(IMWRITE_TIFF_COMPRESSION_NONE);
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img, params));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -777,7 +812,8 @@ TEST(Imgcodecs_Tiff, read_palette_color_image)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test_palette_color_image.tif";
 
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
 }
@@ -787,7 +823,8 @@ TEST(Imgcodecs_Tiff, read_4_bit_palette_color_image)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/4-bit_palette_color.tif";
 
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
 }
@@ -825,9 +862,12 @@ TEST(Imgcodecs_Tiff, readWrite_predictor)
         params.push_back(IMWRITE_TIFF_PREDICTOR);
         params.push_back(IMWRITE_TIFF_PREDICTOR_HORIZONTAL);
 
-        EXPECT_NO_THROW(cv::imwrite(out, mat, params));
+        bool ret_imwrite = false;
+        ASSERT_NO_THROW(ret_imwrite = cv::imwrite(out, mat, params));
+        ASSERT_TRUE(ret_imwrite);
 
-        const Mat img = cv::imread(out, IMREAD_UNCHANGED);
+        Mat img;
+        ASSERT_NO_THROW(img = cv::imread(out, IMREAD_UNCHANGED));
         ASSERT_FALSE(img.empty());
 
         ASSERT_EQ(0, cv::norm(mat, img, cv::NORM_INF));

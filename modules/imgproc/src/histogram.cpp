@@ -2559,6 +2559,8 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
 
+    CALL_HAL(equalizeHist, cv_hal_equalize_hist, src.data, src.step, dst.data, dst.step, src.cols, src.rows);
+
     Mutex histogramLockInstance;
 
     const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;

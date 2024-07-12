@@ -268,12 +268,10 @@ public:
         CV_Assert(inputs.size());
         for (auto input : inputs)
         {
-            if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S, "");
-            else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S, "");
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
             else
-                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S, "");
+                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
         }
 
         outputs.assign(requiredOutputs, inputs[0]);

@@ -222,7 +222,7 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief This interface class allows to build new Layers - are building blocks of networks.
      *
-     * Each class, derived from Layer, must implement allocate() methods to declare own outputs and forward() to compute outputs.
+     * Each class, derived from Layer, must implement forward() method to compute outputs.
      * Also before using the new layer into networks you must register your layer by using one of @ref dnnLayerFactory "LayerFactory" macros.
      */
     class CV_EXPORTS_W Layer : public Algorithm
@@ -237,7 +237,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param[in]  input  vector of already allocated input blobs
          *  @param[out] output vector of already allocated output blobs
          *
-         * If this method is called after network has allocated all memory for input and output blobs
+         * This method is called after network has allocated all memory for input and output blobs
          * and before inferencing.
          */
         CV_DEPRECATED_EXTERNAL
@@ -247,7 +247,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param[in]  inputs  vector of already allocated input blobs
          *  @param[out] outputs vector of already allocated output blobs
          *
-         * If this method is called after network has allocated all memory for input and output blobs
+         * This method is called after network has allocated all memory for input and output blobs
          * and before inferencing.
          */
         CV_WRAP virtual void finalize(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
@@ -484,6 +484,14 @@ CV__DNN_INLINE_NS_BEGIN
          *  @see dump()
          */
         CV_WRAP void dumpToFile(CV_WRAP_FILE_PATH const String& path);
+        /** @brief Dump net structure, hyperparameters, backend, target and fusion to pbtxt file
+         *  @param path   path to output file with .pbtxt extension
+         *
+         *  Use Netron (https://netron.app) to open the target file to visualize the model.
+         *  Call method after setInput(). To see correct backend, target and fusion run after forward().
+        */
+        CV_WRAP void dumpToPbtxt(CV_WRAP_FILE_PATH const String& path);
+
         /** @brief Adds new layer to the net.
          *  @param name   unique name of the adding layer.
          *  @param type   typename of the adding layer (type must be registered in LayerRegister).
@@ -491,7 +499,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param params parameters which will be used to initialize the creating layer.
          *  @returns unique identifier of created layer, or -1 if a failure will happen.
          */
-        int addLayer(const String &name, const String &type, const int &dtype, LayerParams &params);
+        CV_WRAP int addLayer(const String &name, const String &type, const int &dtype, LayerParams &params);
 
         /** @overload Datatype of output blobs set to default CV_32F */
         int addLayer(const String &name, const String &type, LayerParams &params);
@@ -499,7 +507,7 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Adds new layer and connects its first input to the first output of previously added layer.
          *  @see addLayer()
          */
-        int addLayerToPrev(const String &name, const String &type, const int &dtype, LayerParams &params);
+        CV_WRAP int addLayerToPrev(const String &name, const String &type, const int &dtype, LayerParams &params);
 
         /** @overload */
         int addLayerToPrev(const String &name, const String &type, LayerParams &params);
@@ -1362,6 +1370,11 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[in] swapRB Flag which indicates that swap first and last channels.
          */
          CV_WRAP Model& setInputSwapRB(bool swapRB);
+
+         /** @brief Set output names for frame.
+          *  @param[in] outNames Names for output layers.
+         */
+         CV_WRAP Model& setOutputNames(const std::vector<String>& outNames);
 
          /** @brief Set preprocessing parameters for frame.
          *  @param[in] size New input size.
