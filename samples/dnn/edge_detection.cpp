@@ -13,7 +13,7 @@ using namespace cv::dnn;
 using namespace std;
 
 Mat gray;
-int threshold1 = 20;
+int threshold1 = 0;
 int threshold2 = 50;
 int blurAmount = 5;
 
@@ -23,14 +23,11 @@ static void sigmoid(Mat& input) {
     input = 1.0 / (1.0 + input); // 1 / (1 + e^-input)
 }
 
-// Function to apply Canny edge detection with Gaussian blur
-static void applyCanny(int, void*){
+static void applyCanny(const Mat& image, Mat& result) {
     int kernelSize = 2 * blurAmount + 1;
     Mat blurred;
-    GaussianBlur(gray, blurred, Size(kernelSize, kernelSize), 0);
-    Mat output;
-    Canny(blurred, output, threshold1, threshold2);
-    imshow("Output", output);
+    GaussianBlur(image, blurred, Size(kernelSize, kernelSize), 0);
+    Canny(blurred, result, threshold1, threshold2);
 }
 
 // Load Model
@@ -46,9 +43,9 @@ static void setupCannyWindow(const Mat &image){
     moveWindow("Output", 200, 50);
     cvtColor(image, gray, COLOR_BGR2GRAY);
 
-    createTrackbar("thrs1", "Output", &threshold1, 255, applyCanny);
-    createTrackbar("thrs2", "Output", &threshold2, 255, applyCanny);
-    createTrackbar("blur", "Output", &blurAmount, 20, applyCanny);
+    createTrackbar("thrs1", "Output", &threshold1, 255, nullptr);
+    createTrackbar("thrs2", "Output", &threshold2, 255, nullptr);
+    createTrackbar("blur", "Output", &blurAmount, 20, nullptr);
 }
 
 // Function to process the neural network output to generate edge maps
@@ -83,10 +80,20 @@ static pair<Mat, Mat> postProcess(const vector<Mat>& output, int height, int wid
     return {fuse, ave}; // Return both fused and average edge maps
 }
 
+static void applyDexined(Net &net, const Mat &image, Mat &result) {
+    int originalWidth = image.cols;
+    int originalHeight = image.rows;
+    vector<Mat> outputs;
+    net.forward(outputs);
+    pair<Mat, Mat> res = postProcess(outputs, originalHeight, originalWidth);
+    result = res.first; // or res.second for average edge map
+}
+
 int main(int argc, char** argv) {
     const string about =
         "This sample demonstrates edge detection with dexined and canny edge detection techniques.\n\n"
-        "For switching between deep learning based model(dexined) and canny edge detector, press 'd' (for dexined) or 'c' (for canny) respectively in case of video. For image pass the argument --method for switching between dexined and canny.\n\n";
+        "For switching between deep learning based model(dexined) and canny edge detector, press 'd' (for dexined) or 'c' (for canny) respectively in case of video. For image pass the argument --method for switching between dexined and canny.\n"
+        "Model path can also be specified using --model argument\n\n";
 
     const string param_keys =
         "{ help h          |            | Print help message. }"
@@ -178,25 +185,21 @@ int main(int argc, char** argv) {
             waitKey();
             break;
         }
+
+        Mat result;
         if (method == "dexined")
         {
             Mat blob = blobFromImage(image, scale, Size(width, height), mean, swapRB, false, CV_32F);
             net.setInput(blob);
-            vector<Mat> outputs;
-            net.forward(outputs);
-            int originalWidth = image.cols;
-            int originalHeight = image.rows;
-            pair<Mat, Mat> res = postProcess(outputs, originalHeight, originalWidth);
-            Mat fusedOutput = res.first;
-            Mat averageOutput = res.second;
-            imshow("Output", fusedOutput);
+            applyDexined(net, image, result);
         }
         else if (method == "canny")
         {
             cvtColor(image, gray, COLOR_BGR2GRAY);
-            applyCanny(0, 0);
+            applyCanny(gray, result);
         }
         imshow("Input", image);
+        imshow("Output", result);
         int key = waitKey(30);
 
         if (key == 'd' || key == 'D')
@@ -205,6 +208,7 @@ int main(int argc, char** argv) {
                 method = "dexined";
                 if (net.empty())
                     loadModel(model, backend, target, net);
+                destroyWindow("Output");
                 namedWindow("Input", WINDOW_AUTOSIZE);
                 namedWindow("Output", WINDOW_AUTOSIZE);
                 moveWindow("Output", 200, 0);

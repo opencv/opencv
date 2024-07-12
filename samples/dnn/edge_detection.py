@@ -45,11 +45,12 @@ def get_args_parser(func_args):
     parser = argparse.ArgumentParser(parents=[parser],
                                      description='Use this script to run edge detection using OpenCV. '
                                      "This sample demonstrates edge detection with Dexined and Canny edge detection techniques. "
-                                        "In case of video input, for switching between deep learning based model (Dexined) and Canny edge detector, press 'd' (for Dexined) or 'c' (for Canny) respectively. Pass as argument in case of image input.",
+                                        "In case of video input, for switching between deep learning based model (Dexined) and Canny edge detector, press 'd' (for Dexined) or 'c' (for Canny) respectively. Pass as argument in case of image input."
+                                        "Model path can also be specified using --model argument",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     return parser.parse_args(func_args)
 
-threshold1 = 20
+threshold1 = 0
 threshold2 = 50
 blur_amount = 5
 gray = None
@@ -71,12 +72,12 @@ def post_processing(output, shape):
     ave = np.uint8(np.mean(ave, axis=0))
     return fuse, ave
 
-def apply_canny():
-    global threshold1, threshold2, blur_amount, gray
+def apply_canny(image):
+    global threshold1, threshold2, blur_amount
     kernel_size = 2 * blur_amount + 1
-    blurred = cv.GaussianBlur(gray, (kernel_size, kernel_size), 0)
-    output = cv.Canny(blurred, threshold1, threshold2)
-    cv.imshow('Output', output)
+    blurred = cv.GaussianBlur(image, (kernel_size, kernel_size), 0)
+    result = cv.Canny(blurred, threshold1, threshold2)
+    cv.imshow('Output', result)
 
 def setupCannyWindow(image):
     global gray
@@ -85,15 +86,24 @@ def setupCannyWindow(image):
     cv.moveWindow('Output', 200, 50)
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
-    cv.createTrackbar('thrs1', 'Output', threshold1, 255, lambda value: [globals().__setitem__('threshold1', value), apply_canny()])
-    cv.createTrackbar('thrs2', 'Output', threshold2, 255, lambda value: [globals().__setitem__('threshold2', value), apply_canny()])
-    cv.createTrackbar('blur', 'Output', blur_amount, 20, lambda value: [globals().__setitem__('blur_amount', value), apply_canny()])
+    cv.createTrackbar('thrs1', 'Output', threshold1, 255, lambda value: [globals().__setitem__('threshold1', value), apply_canny(gray)])
+    cv.createTrackbar('thrs2', 'Output', threshold2, 255, lambda value: [globals().__setitem__('threshold2', value), apply_canny(gray)])
+    cv.createTrackbar('blur', 'Output', blur_amount, 20, lambda value: [globals().__setitem__('blur_amount', value), apply_canny(gray)])
 
 def loadModel(args):
     net = cv.dnn.readNetFromONNX(args.model)
     net.setPreferableBackend(args.backend)
     net.setPreferableTarget(args.target)
     return net
+
+def apply_dexined(model, image):
+    out = model.forward()
+    result,_ = post_processing(out, image.shape[:2])
+    t, _ = model.getPerfProfile()
+    label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
+    cv.putText(image, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+    cv.putText(result, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
+    cv.imshow("Output", result)
 
 def main(func_args=None):
     args = get_args_parser(func_args)
@@ -129,17 +139,12 @@ def main(func_args=None):
         if method == "canny":
             global gray
             gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-            apply_canny()
+            apply_canny(gray)
         elif method == "dexined":
             inp = cv.dnn.blobFromImage(image, args.scale, (args.width, args.height), args.mean, swapRB=args.rgb, crop=False)
             net.setInput(inp)
-            out = net.forward()
-            out = post_processing(out, image.shape[:2])
-            t, _ = net.getPerfProfile()
-            label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
-            cv.putText(image, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
-            cv.putText(out[1], label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
-            cv.imshow("Output", out[1])
+            apply_dexined(net, image)
+
         cv.imshow("Input", image)
         key = cv.waitKey(30)
         if key == ord('d') or key == ord('D'):
