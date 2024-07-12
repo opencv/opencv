@@ -122,7 +122,7 @@ enum VideoCaptureAPIs {
        CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
        CAP_UEYE         = 2500,         //!< uEye Camera API
-       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto, Astra2, Gemini2, Gemini2L, Gemini2XL, Femto Mega) attention: Astra2, Gemini2, and Gemini2L cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
+       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto, Astra2, Gemini2, Gemini2L, Gemini2XL, Femto Mega) attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
      };
 
 
@@ -707,9 +707,6 @@ namespace internal { class VideoCapturePrivateAccessor; }
 
 The class provides C++ API for capturing video from cameras or for reading video files and image sequences.
 
-Here is how the class can be used:
-@include samples/cpp/videocapture_basic.cpp
-
 @note In @ref videoio_c "C API" the black-box structure `CvCapture` is used instead of %VideoCapture.
 @note
 -   (C++) A basic sample on using the %VideoCapture interface can be found at
@@ -992,7 +989,7 @@ Check @ref tutorial_video_write "the corresponding tutorial" for more details
 */
 
 /** @example samples/cpp/videowriter_basic.cpp
-An example using VideoCapture and VideoWriter class
+An example using VideoWriter class
 */
 
 /** @brief Video writer class.

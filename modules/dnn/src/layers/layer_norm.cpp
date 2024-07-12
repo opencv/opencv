@@ -31,6 +31,10 @@ namespace cv { namespace dnn {
 // https://github.com/onnx/onnx/blob/main/docs/Operators.md#LayerNormalization
 class LayerNormLayerImpl CV_FINAL : public LayerNormLayer
 {
+#ifdef HAVE_OPENCL
+    UMat weight_umat, bias_umat;
+#endif
+
 public:
     LayerNormLayerImpl(const LayerParams& params)
     {
@@ -58,22 +62,24 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         // check shapes of weight and bias if existed
-        // inputs >= 2 (X and Weight are requested, bias is optional)
-        CV_Check(inputs.size(), inputs.size() >= 2 && inputs.size() <= 3, "LayerNorm: require two (x, weight) or three (x, weight, bias) inputs");
+        // inputs >= 2 (X and Weight are required, bias is optional)
+        int num_inputs = inputs.size() + blobs.size();
+        CV_Check(num_inputs, num_inputs >= 2 && num_inputs <= 3, "LayerNorm: require two (x, weight) or three (x, weight, bias) inputs");
 
         auto x_shape = inputs[0];
         int x_ndims = static_cast<int>(x_shape.size());
 
-        auto w_shape = inputs[1];
+        // Weight and bias are either constants or variable
+        auto w_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
         // if axis == last_dim, scale and b are both 1d tensor (represented as 2d mat nx1)
         int w_ndims = static_cast<int>(w_shape.size());
         w_ndims = (axis == x_ndims - 1 && w_ndims == 2) ? w_ndims - 1 : w_ndims;
         CV_CheckEQ(x_ndims - axis, w_ndims, "LayerNorm: shape of weight does not match with given axis and shape of input");
         for (int i = 0; i < w_ndims; ++i)
             CV_CheckEQ(x_shape[axis+i], w_shape[i], "LayerNorm: weight dimensions does not match with input dimensions");
-        if (inputs.size() == static_cast<int>(3))
+        if (num_inputs >= 3)
         {
-            auto b_shape = inputs[2];
+            auto b_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
             CV_CheckEQ(w_shape.size(), b_shape.size(), "LayerNorm: shape of weight does not match with shape of bias");
             for (size_t i = 0; i < w_shape.size(); ++i)
                 CV_CheckEQ(w_shape[i], b_shape[i], "LayerNorm: bias dimensions does not match with weight dimensions");
@@ -89,6 +95,11 @@ public:
 
         const auto input_shape = shape(inputs[0]);
         axis = normalize_axis(axis, static_cast<int>(input_shape.size()));
+
+#ifdef HAVE_OPENCL
+        weight_umat.release();
+        bias_umat.release();
+#endif
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -110,11 +121,11 @@ public:
         outputs_arr.getMatVector(outputs);
 
         const auto &input = inputs[0];
-        const auto &scale = inputs[1];
+        const auto &scale = blobs.empty() ? inputs[1] : blobs.front();
         auto &output = outputs[0];
 
-        if (inputs.size() == 3) {
-            const auto &bias = inputs[2];
+        if ((inputs.size() + blobs.size()) >= 3) {
+            const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
             fastNorm(input, scale, bias, output, epsilon, static_cast<size_t>(axis));
         } else {
             fastNorm(input, scale, output, epsilon, static_cast<size_t>(axis));
@@ -129,7 +140,13 @@ public:
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
-        const auto &input = inputs[0], &scale = inputs[1]; // &bias = inputs[2]; // bias is optional
+        const auto &input = inputs[0];
+
+        // no fp16 support
+        if (input.depth() == CV_16F) {
+            return false;
+        }
+
         auto &output = outputs[0];
 
         const auto input_shape = shape(input);
@@ -137,11 +154,23 @@ public:
                norm_size = static_cast<size_t>(total(input_shape, axis));
         float inv_norm_size = 1.f / norm_size;
 
-        const auto &bias = inputs.size() == 3 ? inputs[2] : UMat::zeros(norm_size, 1, CV_32F);
-
-        // no fp16 support
-        if (input.depth() == CV_16F) {
-            return false;
+        if (weight_umat.empty()) {
+            if (blobs.empty()) {
+                weight_umat = inputs[1];
+            } else {
+                blobs.front().copyTo(weight_umat);
+            }
+        }
+        if (bias_umat.empty()) {
+            if ((inputs.size() + blobs.size()) == 3) {
+                if (blobs.empty()) {
+                    bias_umat = inputs[2];
+                } else {
+                    blobs.back().copyTo(bias_umat);
+                }
+            } else {
+                bias_umat = UMat::zeros(norm_size, 1, CV_32F);
+            }
         }
 
         String base_opts = format(" -DT=float -DT4=float4 -Dconvert_T=convert_float4");
@@ -179,7 +208,7 @@ public:
         if (!ret) {
             return false;
         }
-        // Calculate instance norm: output = scale * (x - mean) / sqrt(var + eps) + bias
+        // Calculate instance norm: output = weight * (x - mean) / sqrt(var + eps) + bias
         String mvn_kernel_name = format("mvn%d", num_vector);
         build_opt += " -DNORM_VARIANCE -DLAYER_NORM -DKERNEL_MVN";
         ocl::Kernel mvn_kernel(mvn_kernel_name.c_str(), ocl::dnn::mvn_oclsrc, build_opt);
@@ -192,8 +221,8 @@ public:
         mvn_kernel.set(3, (float)epsilon);
         mvn_kernel.set(4, ocl::KernelArg::PtrReadOnly(mean));
         mvn_kernel.set(5, ocl::KernelArg::PtrReadOnly(mean_square));
-        mvn_kernel.set(6, ocl::KernelArg::PtrReadOnly(scale));
-        mvn_kernel.set(7, ocl::KernelArg::PtrReadOnly(bias));
+        mvn_kernel.set(6, ocl::KernelArg::PtrReadOnly(weight_umat));
+        mvn_kernel.set(7, ocl::KernelArg::PtrReadOnly(bias_umat));
         mvn_kernel.set(8, (int)1);
         mvn_kernel.set(9, (float)0.f);
         mvn_kernel.set(10, ocl::KernelArg::PtrWriteOnly(output));
@@ -218,15 +247,7 @@ public:
 
         CV_CheckNE(axis, static_cast<int>(input_tensor_desc->GetShape().GetDimNum() - 1), "LayerNorm: CANN does not support axis set as last axis due to 1D mat compatibility issue");
 
-        auto scale_tensor_wrapper = inputs[1].dynamicCast<CannBackendWrapper>();
-        auto scale_tensor_desc = scale_tensor_wrapper->getTensorDesc();
-
-        auto bias_tensor_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
-        auto bias_tensor_desc = bias_tensor_wrapper->getTensorDesc();
-
         auto last_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        auto scale_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
-        auto bias_node = nodes[2].dynamicCast<CannBackendNode>()->getOp();
 
         auto op = std::make_shared<ge::op::LayerNorm>(name);
 
@@ -239,12 +260,34 @@ public:
         // set inputs : x
         op->set_input_x_by_name(*last_node, input_tensor_wrapper->name.c_str());
         op->update_input_desc_x(*input_tensor_desc);
-        // set inputs : gamma
-        op->set_input_gamma_by_name(*scale_node, scale_tensor_wrapper->name.c_str());
-        op->update_input_desc_gamma(*scale_tensor_desc);
-        // set inputs : beta
-        op->set_input_beta_by_name(*bias_node, bias_tensor_wrapper->name.c_str());
-        op->update_input_desc_beta(*bias_tensor_desc);
+        // set inputs : gamma & beta
+        if (blobs.empty()) {
+            auto scale_tensor_wrapper = inputs[1].dynamicCast<CannBackendWrapper>();
+            auto scale_tensor_desc = scale_tensor_wrapper->getTensorDesc();
+            auto scale_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
+            op->set_input_gamma_by_name(*scale_node, scale_tensor_wrapper->name.c_str());
+            op->update_input_desc_gamma(*scale_tensor_desc);
+
+            if (inputs.size() == 3) {
+                auto bias_tensor_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
+                auto bias_tensor_desc = bias_tensor_wrapper->getTensorDesc();
+                auto bias_node = nodes[2].dynamicCast<CannBackendNode>()->getOp();
+                op->set_input_beta_by_name(*bias_node, bias_tensor_wrapper->name.c_str());
+                op->update_input_desc_beta(*bias_tensor_desc);
+            }
+        } else {
+            const auto &scale_mat = blobs.front();
+            const auto op_const_scale = std::make_shared<CannConstOp>(scale_mat.data, scale_mat.type(), shape(scale_mat), cv::format("%s_w", name.c_str()));
+            op->set_input_gamma(*(op_const_scale->getOp()));
+            op->update_input_desc_gamma(*(op_const_scale->getTensorDesc()));
+
+            if ((inputs.size() + blobs.size()) >= 3) {
+                const auto &bias_mat = blobs.back();
+                const auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), shape(bias_mat), cv::format("%s_b", name.c_str()));
+                op->set_input_beta(*(op_const_bias->getOp()));
+                op->update_input_desc_beta(*(op_const_bias->getTensorDesc()));
+            }
+        }
 
         // set outputs
         auto output_desc_y = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
@@ -263,42 +306,46 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
         auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         const auto &input_shape = ieInpNode.get_shape();
-        std::shared_ptr<ngraph::Node> mvn, result;
+        std::shared_ptr<ov::Node> mvn, result;
+        ov::Output<ov::Node> scale, bias;
 
         // mvn
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2021_2)
-        // https://docs.openvino.ai/2021.4/api/ngraph_python_api/_autosummary/ngraph.opset3.mvn.html?highlight=mvn#ngraph.opset3.mvn
-        bool across_channels = false;
-        bool normalize_variance = true;
-        mvn = std::make_shared<ngraph::op::MVN>(ieInpNode, across_channels, normalize_variance, epsilon);
-#else
         // https://docs.openvino.ai/2023.1/openvino_docs_ops_normalization_MVN_6.html
         std::vector<int64_t> axes_v(input_shape.size() - axis);
         std::iota(axes_v.begin(), axes_v.end(), axis);
-        auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_v.size()}, axes_v.data());
+        auto axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{axes_v.size()}, axes_v.data());
         bool normalize_variance = true;
-        mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normalize_variance, epsilon, ngraph::op::MVNEpsMode::INSIDE_SQRT);
-#endif
+        mvn = std::make_shared<ov::op::v6::MVN>(ieInpNode, axes, normalize_variance, epsilon, ov::op::MVNEpsMode::INSIDE_SQRT);
 
         // layer norm = scale * mvn + bias
-        auto scale = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-        ngraph::Output<ngraph::Node> bias;
-        if (nodes.size() == 3) {
-            bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+        if (blobs.empty()) {
+            scale = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+            if (nodes.size() == 3) {
+                bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+            }
+        } else {
+            auto scale_mat = blobs.front();
+            const auto scale_shape = shape(scale_mat);
+            scale = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(scale_shape.begin(), scale_shape.end()), scale_mat.data);
+            if ((nodes.size() + blobs.size()) == 3) {
+                auto bias_mat = blobs.back();
+                const auto bias_shape = shape(bias_mat);
+                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(bias_shape.begin(), bias_shape.end()), bias_mat.data);
+            }
         }
         if (axis == -1 || axis == input_shape.size() - 1) { // special case for 1D tensor (2D mat)
             std::vector<int64_t> shared_shape_v(input_shape.size(), 1);
             shared_shape_v.back() = -1;
-            auto shared_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{shared_shape_v.size()}, shared_shape_v.data());
-            scale  = std::make_shared<ngraph::op::v1::Reshape>(scale, shared_shape, true);
-            if (nodes.size() == 3) {
-                bias  = std::make_shared<ngraph::op::v1::Reshape>(bias, shared_shape, true);
+            auto shared_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{shared_shape_v.size()}, shared_shape_v.data());
+            scale = std::make_shared<ov::op::v1::Reshape>(scale, shared_shape, true);
+            if ((nodes.size() + blobs.size()) == 3) {
+                bias = std::make_shared<ov::op::v1::Reshape>(bias, shared_shape, true);
             }
         }
 
-        result = std::make_shared<ngraph::op::v1::Multiply>(mvn, scale);
-        if (nodes.size() == 3) {
-            result = std::make_shared<ngraph::op::v1::Add>(result, bias);
+        result = std::make_shared<ov::op::v1::Multiply>(mvn, scale);
+        if ((nodes.size() + blobs.size()) == 3) {
+            result = std::make_shared<ov::op::v1::Add>(result, bias);
         }
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(result));
@@ -315,10 +362,12 @@ public:
         auto input_shape = input_wrapper->getShape();
         size_t loops = static_cast<size_t>(total(input_shape, 0, axis));
 
-        return make_cuda_node<cuda4dnn::LayerNormOp>(preferableTarget, std::move(context->stream), axis, epsilon, loops);
+        const auto scale = blobs.empty() ? Mat() : blobs.front(),
+                   bias = blobs.empty() ? Mat() : blobs.back();
+
+        return make_cuda_node<cuda4dnn::LayerNormOp>(preferableTarget, std::move(context->stream), scale, bias, axis, epsilon, loops);
     }
 #endif // HAVE_CUDA
-
 };
 
 Ptr<LayerNormLayer> LayerNormLayer::create(const LayerParams& params)

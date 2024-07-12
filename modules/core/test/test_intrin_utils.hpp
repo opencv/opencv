@@ -22,130 +22,6 @@ void test_hal_intrin_float16();
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-template <typename R> struct Data;
-template <int N> struct initializer;
-
-#if CV_SIMD_SCALABLE
-template <> struct initializer<128>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31],
-        d[32], d[33], d[34], d[35], d[36], d[37], d[38], d[39], d[40], d[41], d[42], d[43], d[44], d[45], d[46], d[47],
-        d[48], d[49], d[50], d[51], d[52], d[53], d[54], d[55], d[56], d[57], d[58], d[59], d[60], d[61], d[62], d[63],
-        d[64], d[65], d[66], d[67], d[68], d[69], d[70], d[71], d[72], d[73], d[74], d[75], d[76], d[77], d[78], d[79],
-        d[80], d[81], d[82], d[83], d[84], d[85], d[86], d[87], d[88], d[89], d[90], d[91], d[92], d[93], d[94], d[95],
-        d[96], d[97], d[98], d[99], d[100], d[101], d[102], d[103], d[104], d[105], d[106], d[107], d[108], d[109], d[110], d[111],
-        d[112], d[113], d[114], d[115], d[116], d[117], d[118], d[119], d[120], d[121], d[122], d[123], d[124], d[125], d[126], d[127]});
-    }
-};
-
-template <> struct initializer<64>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31],
-        d[32], d[33], d[34], d[35], d[36], d[37], d[38], d[39], d[40], d[41], d[42], d[43], d[44], d[45], d[46], d[47],
-        d[48], d[49], d[50], d[51], d[52], d[53], d[54], d[55], d[56], d[57], d[58], d[59], d[60], d[61], d[62], d[63]});
-    }
-};
-
-template <> struct initializer<32>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31]});
-    }
-};
-
-template <> struct initializer<16>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]});
-    }
-};
-
-template <> struct initializer<8>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]});
-    }
-};
-
-template <> struct initializer<4>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1], d[2], d[3]});
-    }
-};
-
-template <> struct initializer<2>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return v_load({d[0], d[1]});
-    }
-};
-
-#else
-template <> struct initializer<64>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31],
-        d[32], d[33], d[34], d[35], d[36], d[37], d[38], d[39], d[40], d[41], d[42], d[43], d[44], d[45], d[46], d[47],
-        d[48], d[49], d[50], d[51], d[52], d[53], d[54], d[55], d[56], d[57], d[58], d[59], d[60], d[61], d[62], d[63]);
-    }
-};
-
-template <> struct initializer<32>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31]);
-    }
-};
-
-template <> struct initializer<16>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
-    }
-};
-
-template <> struct initializer<8>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
-    }
-};
-
-template <> struct initializer<4>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3]);
-    }
-};
-
-template <> struct initializer<2>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1]);
-    }
-};
-#endif
 //==================================================================================================
 
 template <typename R> struct Data
@@ -168,7 +44,8 @@ template <typename R> struct Data
     }
     operator R () const
     {
-        return initializer<VTraits<R>::max_nlanes>().init(*this);
+        CV_Assert(VTraits<R>::vlanes() <= VTraits<R>::max_nlanes);
+        return vx_load(d);
     }
     Data<R> & operator=(const R & r)
     {
@@ -178,13 +55,13 @@ template <typename R> struct Data
     template <typename T> Data<R> & operator*=(T m)
     {
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
-            d[i] *= (LaneType)m;
+            d[i] = (LaneType)(d[i] * m);
         return *this;
     }
     template <typename T> Data<R> & operator+=(T m)
     {
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
-            d[i] += (LaneType)m;
+            d[i] = (LaneType)(d[i] + m);
         return *this;
     }
     void fill(LaneType val, int s, int c = VTraits<R>::vlanes())
@@ -236,9 +113,9 @@ template <typename R> struct Data
     }
     LaneType sum(int s, int c)
     {
-        LaneType res = 0;
+        LaneType res = (LaneType)0;
         for (int i = s; i < s + c; ++i)
-            res += d[i];
+            res = (LaneType)(res + d[i]);
         return res;
     }
     LaneType sum()
@@ -254,7 +131,7 @@ template <typename R> struct Data
     }
     void clear()
     {
-        fill(0);
+        fill((LaneType)0);
     }
     bool isZero() const
     {
@@ -304,6 +181,13 @@ template<> inline void EXPECT_COMPARE_EQ_<double>(const double a, const double b
 {
     EXPECT_DOUBLE_EQ( a, b );
 }
+
+#if CV_SIMD_FP16
+template<> inline void EXPECT_COMPARE_EQ_<hfloat>(const hfloat a, const hfloat b)
+{
+    EXPECT_LT(std::abs(float(a - b)), 0.126);
+}
+#endif
 
 // pack functions do not do saturation when converting from 64-bit types
 template<typename T, typename W>
@@ -404,7 +288,7 @@ template<typename R> struct TheTest
         v_uint64 vu64 = v_reinterpret_as_u64(r1); out.a.clear(); v_store((uint64*)out.a.d, vu64); EXPECT_EQ(data.a, out.a);
         v_int64 vs64 = v_reinterpret_as_s64(r1); out.a.clear(); v_store((int64*)out.a.d, vs64); EXPECT_EQ(data.a, out.a);
         v_float32 vf32 = v_reinterpret_as_f32(r1); out.a.clear(); v_store((float*)out.a.d, vf32); EXPECT_EQ(data.a, out.a);
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         v_float64 vf64 = v_reinterpret_as_f64(r1); out.a.clear(); v_store((double*)out.a.d, vf64); EXPECT_EQ(data.a, out.a);
 #endif
 
@@ -468,9 +352,9 @@ template<typename R> struct TheTest
     TheTest & test_interleave()
     {
         Data<R> data1, data2, data3, data4;
-        data2 += 20;
-        data3 += 40;
-        data4 += 60;
+        data2 += (LaneType)20;
+        data3 += (LaneType)40;
+        data4 += (LaneType)60;
 
 
         R a = data1, b = data2, c = data3;
@@ -482,7 +366,7 @@ template<typename R> struct TheTest
         v_store_interleave(buf3, a, b, c);
         v_store_interleave(buf4, d, e, f, g);
 
-        Data<R> z(0);
+        Data<R> z((LaneType)0);
         a = b = c = d = e = f = g = z;
 
         v_load_deinterleave(buf3, a, b, c);
@@ -677,6 +561,27 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    // Handle accuracy for fp16
+    TheTest & test_div_fp16()
+    {
+#if CV_SIMD_FP16
+        Data<R> dataA, dataB;
+        dataB.reverse();
+        R a = dataA, b = dataB;
+
+        Data<R> resC = v_div(a, b);
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_LT(std::abs(float((dataA[i] / dataB[i]) - resC[i])), 2e-4);
+        }
+#else
+        std::cout << "SKIP: test_div_fp16, CV_SIMD_FP16 is not available" << std::endl;
+#endif
+
+        return *this;
+    }
+
     TheTest & test_mul_expand()
     {
         typedef typename V_RegTraits<R>::w_reg Rx2;
@@ -727,11 +632,34 @@ template<typename R> struct TheTest
         a = v_sub(a, b);
 
         Data<Ru> resC = v_abs(a);
+        auto R_type_lowest = std::numeric_limits<R_type>::lowest();
 
         for (int i = 0; i < VTraits<Ru>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            R_type ssub = dataA[i] - dataB[i] < std::numeric_limits<R_type>::lowest() ? std::numeric_limits<R_type>::lowest() : dataA[i] - dataB[i];
+            R_type ssub = (dataA[i] - dataB[i]) < R_type_lowest ? R_type_lowest : dataA[i] - dataB[i];
+            EXPECT_EQ((u_type)std::abs(ssub), resC[i]);
+        }
+
+        return *this;
+    }
+
+    TheTest & test_abs_fp16()
+    {
+        typedef typename V_RegTraits<R>::u_reg Ru; // v_float16x8
+        typedef typename VTraits<Ru>::lane_type u_type; // hfloat
+        typedef typename VTraits<R>::lane_type R_type; // hfloat
+        Data<R> dataA, dataB((LaneType)10);
+        R a = dataA, b = dataB;
+        a = v_sub(a, b);
+
+        Data<Ru> resC = v_abs(a);
+        R_type R_type_lowest = R_type(-65504); // 0 11110 1111111111
+
+        for (int i = 0; i < VTraits<Ru>::vlanes(); ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            R_type ssub = (R_type)((dataA[i] - dataB[i]) < R_type_lowest ? R_type_lowest : dataA[i] - dataB[i]);
             EXPECT_EQ((u_type)std::abs(ssub), resC[i]);
         }
 
@@ -870,7 +798,7 @@ template<typename R> struct TheTest
 
     TheTest & test_dotprod_expand_f64()
     {
-    #if CV_SIMD_64F
+    #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         Data<R> dataA, dataB;
         dataA += std::numeric_limits<LaneType>::max() - VTraits<R>::vlanes();
         dataB += std::numeric_limits<LaneType>::min();
@@ -1002,10 +930,10 @@ template<typename R> struct TheTest
     {
         Data<R> dataA(std::numeric_limits<LaneType>::max()),
                 dataB(std::numeric_limits<LaneType>::min());
-        dataA[0] = -1;
-        dataB[0] = 1;
-        dataA[1] = 2;
-        dataB[1] = -2;
+        dataA[0] = (LaneType)-1;
+        dataB[0] = (LaneType)1;
+        dataA[1] = (LaneType)2;
+        dataB[1] = (LaneType)-2;
         R a = dataA, b = dataB;
         Data<R> resC = v_absdiff(a, b);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
@@ -1080,9 +1008,9 @@ template<typename R> struct TheTest
         typedef typename VTraits<int_reg>::lane_type int_type;
         typedef typename VTraits<uint_reg>::lane_type uint_type;
 
-        Data<R> dataA, dataB(0), dataC, dataD(1), dataE(2);
+        Data<R> dataA, dataB((LaneType)0), dataC, dataD((LaneType)1), dataE((LaneType)2);
         dataA[0] = (LaneType)std::numeric_limits<int_type>::max();
-        dataA[1] *= (LaneType)-1;
+        dataA[1] = (LaneType)(dataA[1] * (LaneType)-1);
         union
         {
             LaneType l;
@@ -1097,7 +1025,7 @@ template<typename R> struct TheTest
         dataB[VTraits<R>::vlanes() / 2] = mask_one;
         dataC *= (LaneType)-1;
         R a = dataA, b = dataB, c = dataC, d = dataD, e = dataE;
-        dataC[VTraits<R>::vlanes() - 1] = 0;
+        dataC[VTraits<R>::vlanes() - 1] = (LaneType)0;
         R nl = dataC;
 
         EXPECT_EQ(2, v_signmask(a));
@@ -1508,6 +1436,33 @@ template<typename R> struct TheTest
 
         return *this;
     }
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    TheTest & test_round_pair_f64()
+    {
+        typedef typename V_RegTraits<R>::round_reg Ri;
+        Data<R> data1, data1_border, data2;
+        // See https://github.com/opencv/opencv/issues/24213
+        // https://github.com/opencv/opencv/issues/24163
+        // https://github.com/opencv/opencv/pull/24271
+        data1_border *= 0.5;
+        data1 *= 1.1;
+        data2 += 10;
+        R a1 = data1, a1_border = data1_border, a2 = data2;
+
+        Data<Ri> resA = v_round(a1, a1),
+                 resB = v_round(a1_border, a1_border),
+                 resC = v_round(a2, a2);
+
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+        {
+            EXPECT_EQ(cvRound(data1[i]), resA[i]);
+            EXPECT_EQ(cvRound(data1_border[i]), resB[i]);
+            EXPECT_EQ(cvRound(data2[i]), resC[i]);
+        }
+
+        return *this;
+    }
+#endif
 
     TheTest & test_float_cvt32()
     {
@@ -1528,7 +1483,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_cvt64()
     {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         typedef v_float64 Rt;
         Data<R> dataA;
         dataA *= 1.1;
@@ -1554,7 +1509,7 @@ template<typename R> struct TheTest
 
     TheTest & test_cvt64_double()
     {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         Data<R> dataA(std::numeric_limits<LaneType>::max()),
                 dataB(std::numeric_limits<LaneType>::min());
         dataB += VTraits<R>::vlanes();
@@ -1615,6 +1570,56 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_matmul_fp16()
+    {
+#if CV_SIMD_FP16
+        Data<R> dataV, data0, data1, data2, data3, data4, data5, data6, data7;
+        data1.reverse();
+        data2 += 2;
+        data3 *= 0.3;
+        data5.reverse();
+        data6 += 1;
+        data7 *= 0.4;
+        R v = dataV, m0 = data0, m1 = data1, m2 = data2, m3 = data3, m4 = data4, m5 = data5, m6 = data6, m7 = data7;
+
+        Data<R> res = v_matmul(v, m0, m1, m2, m3, m4, m5, m6, m7);
+        int i = 0;
+        for (int j = i; j < i + 8; ++j) {
+            SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
+            LaneType val = (LaneType)(
+                           dataV[i]     * data0[j] +
+                           dataV[i + 1] * data1[j] +
+                           dataV[i + 2] * data2[j] +
+                           dataV[i + 3] * data3[j] +
+                           dataV[i + 4] * data4[j] +
+                           dataV[i + 5] * data5[j] +
+                           dataV[i + 6] * data6[j] +
+                           dataV[i + 7] * data7[j]);
+            EXPECT_COMPARE_EQ(val, res[j]);
+        }
+
+        Data<R> resAdd = v_matmuladd(v, m0, m1, m2, m3, m4, m5, m6, m7);
+        i = 0;
+        for (int j = i; j < i + 8; ++j) {
+            SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
+            LaneType val = (LaneType)(
+                           dataV[i]     * data0[j] +
+                           dataV[i + 1] * data1[j] +
+                           dataV[i + 2] * data2[j] +
+                           dataV[i + 3] * data3[j] +
+                           dataV[i + 4] * data4[j] +
+                           dataV[i + 5] * data5[j] +
+                           dataV[i + 6] * data6[j] +
+                           data7[j]);
+            EXPECT_COMPARE_EQ(val, resAdd[j]);
+        }
+#else
+        std::cout << "SKIP: test_matmul_fp16, CV_SIMD_FP16 is not available" << std::endl;
+#endif
+
+        return *this;
+    }
+
     TheTest & test_transpose()
     {
         Data<R> dataA, dataB, dataC, dataD;
@@ -1650,6 +1655,41 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_transpose8x8_fp16()
+    {
+#if CV_SIMD_FP16
+        Data<R> dataA0, dataA1, dataA2, dataA3, dataA4, dataA5, dataA6, dataA7;
+        dataA1 *= 2;
+        dataA2 *= 4;
+        dataA3 *= 6;
+        dataA4 *= 8;
+        dataA5 *= 10;
+        dataA6 *= 12;
+        dataA7 *= 14;
+
+        R a0 = dataA0, a1 = dataA1, a2 = dataA2, a3 = dataA3,
+          a4 = dataA4, a5 = dataA5, a6 = dataA6, a7 = dataA7;
+        R b0, b1, b2, b3, b4, b5, b6, b7;
+
+        v_transpose8x8(a0, a1, a2, a3, a4, a5, a6, a7,
+                       b0, b1, b2, b3, b4, b5, b6, b7);
+        Data<R> res0 = b0, res1 = b1, res2 = b2, res3 = b3, res4 = b4, res5 = b5, res6 = b6, res7 = b7;
+
+        const Data<R> ref[] = {dataA0, dataA1, dataA2, dataA3, dataA4, dataA5, dataA6, dataA7};
+        const Data<R> res[] = {  res0,   res1,   res2,   res3,   res4,   res5,   res6,   res7};
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
+                EXPECT_EQ(ref[i][j], res[j][i]);
+            }
+        }
+#else
+        std::cout << "SKIP: test_transpose8x8_fp16, CV_SIMD_FP16 is not available" << std::endl;
+#endif
+
+        return *this;
+    }
+
     TheTest & test_reduce_sum4()
     {
         Data<R> dataA, dataB, dataC, dataD;
@@ -1671,23 +1711,57 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_reduce_sum8()
+    {
+#if CV_SIMD_FP16
+        Data<R> dataA, dataB, dataC, dataD, dataW, dataX, dataY, dataZ;
+        dataB *= 0.01f;
+        dataC *= 0.001f;
+        dataD *= 0.002f;
+        dataW += 0.1f;
+        dataX *= 0.2f;
+        dataY += 1;
+        dataZ *= 2;
+
+        R a = dataA, b = dataB, c = dataC, d = dataD,
+          w = dataW, x = dataX, y = dataY, z = dataZ;
+        Data<R> res = v_reduce_sum8(a, b, c, d, w, x, y, z);
+
+        for (int i = 0; i < VTraits<R>::vlanes(); i += 8)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_COMPARE_EQ(dataA.sum(i, 8), res[i]);
+            EXPECT_COMPARE_EQ(dataB.sum(i, 8), res[i + 1]);
+            EXPECT_COMPARE_EQ(dataC.sum(i, 8), res[i + 2]);
+            EXPECT_COMPARE_EQ(dataD.sum(i, 8), res[i + 3]);
+            EXPECT_COMPARE_EQ(dataW.sum(i, 8), res[i + 4]);
+            EXPECT_COMPARE_EQ(dataX.sum(i, 8), res[i + 5]);
+            EXPECT_COMPARE_EQ(dataY.sum(i, 8), res[i + 6]);
+            EXPECT_COMPARE_EQ(dataZ.sum(i, 8), res[i + 7]);
+        }
+#else
+        std::cout << "SKIP: test_reduce_sum8, CV_SIMD_FP16 is not available" << std::endl;
+#endif
+
+        return *this;
+    }
+
     TheTest & test_loadstore_fp16_f32()
     {
-        printf("test_loadstore_fp16_f32 ...\n");
         AlignedData<v_uint16> data; data.a.clear();
         data.a.d[0] = 0x3c00; // 1.0
         data.a.d[VTraits<R>::vlanes() - 1] = (unsigned short)0xc000; // -2.0
         AlignedData<v_float32> data_f32; data_f32.a.clear();
         AlignedData<v_uint16> out;
 
-        R r1 = vx_load_expand((const cv::float16_t*)data.a.d);
+        R r1 = vx_load_expand((const cv::hfloat*)data.a.d);
         R r2(r1);
         EXPECT_EQ(1.0f, v_get0(r1));
         v_store(data_f32.a.d, r2);
         EXPECT_EQ(-2.0f, data_f32.a.d[VTraits<R>::vlanes() - 1]);
 
         out.a.clear();
-        v_pack_store((cv::float16_t*)out.a.d, r2);
+        v_pack_store((cv::hfloat*)out.a.d, r2);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             EXPECT_EQ(data.a[i], out.a[i]) << "i=" << i;
@@ -1696,22 +1770,21 @@ template<typename R> struct TheTest
         return *this;
     }
 
-#if 0
     TheTest & test_loadstore_fp16()
     {
-        printf("test_loadstore_fp16 ...\n");
+#if CV_SIMD_FP16
         AlignedData<R> data;
         AlignedData<R> out;
 
         // check if addresses are aligned and unaligned respectively
-        EXPECT_EQ((size_t)0, (size_t)&data.a.d % VTraits<R>::max_nlanes);
-        EXPECT_NE((size_t)0, (size_t)&data.u.d % VTraits<R>::max_nlanes);
-        EXPECT_EQ((size_t)0, (size_t)&out.a.d % VTraits<R>::max_nlanes);
-        EXPECT_NE((size_t)0, (size_t)&out.u.d % VTraits<R>::max_nlanes);
+        EXPECT_EQ((size_t)0, (size_t)&data.a.d % (sizeof(typename VTraits<R>::lane_type) * VTraits<R>::vlanes()));
+        EXPECT_NE((size_t)0, (size_t)&data.u.d % (sizeof(typename VTraits<R>::lane_type) * VTraits<R>::vlanes()));
+        EXPECT_EQ((size_t)0, (size_t)&out.a.d % (sizeof(typename VTraits<R>::lane_type) * VTraits<R>::vlanes()));
+        EXPECT_NE((size_t)0, (size_t)&out.u.d % (sizeof(typename VTraits<R>::lane_type) * VTraits<R>::vlanes()));
 
         // check some initialization methods
         R r1 = data.u;
-        R r2 = vx_load_expand((const float16_t*)data.a.d);
+        R r2 = vx_load(data.a.d);
         R r3(r2);
         EXPECT_EQ(data.u[0], v_get0(r1));
         EXPECT_EQ(data.a[0], v_get0(r2));
@@ -1721,24 +1794,30 @@ template<typename R> struct TheTest
         out.a.clear();
         v_store(out.a.d, r1);
         EXPECT_EQ(data.a, out.a);
+#else
+        std::cout << "SKIP: test_loadstore_fp16, CV_SIMD_FP16 is not available" << std::endl;
+#endif
 
         return *this;
     }
+
     TheTest & test_float_cvt_fp16()
     {
-        printf("test_float_cvt_fp16 ...\n");
+#if CV_SIMD_FP16
         AlignedData<v_float32> data;
 
         // check conversion
         v_float32 r1 = vx_load(data.a.d);
         v_float16 r2 = v_cvt_f16(r1, vx_setzero_f32());
         v_float32 r3 = v_cvt_f32(r2);
-        EXPECT_EQ(0x3c00, v_get0(r2));
+        EXPECT_EQ(1, v_get0(r2));
         EXPECT_EQ(v_get0(r3), v_get0(r1));
+#else
+        std::cout << "SKIP: test_float_cvt_fp16, CV_SIMD_FP16 is not available" << std::endl;
+#endif
 
         return *this;
     }
-#endif
 
     void do_check_cmp64(const Data<R>& dataA, const Data<R>& dataB)
     {
@@ -2117,7 +2196,7 @@ void test_hal_intrin_float32()
 void test_hal_intrin_float64()
 {
     DUMP_ENTRY(v_float64);
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     TheTest<v_float64>()
         .test_loadstore()
         .test_addsub()
@@ -2131,6 +2210,7 @@ void test_hal_intrin_float64()
         .test_mask()
         .test_unpack()
         .test_float_math()
+        .test_round_pair_f64()
         .test_float_cvt32()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
@@ -2152,28 +2232,38 @@ void test_hal_intrin_float16()
 {
     DUMP_ENTRY(v_float16);
 #if CV_FP16
-    TheTest<v_float32>()
-        .test_loadstore_fp16_f32()
+    TheTest<v_float32>().test_loadstore_fp16_f32();
 #if CV_SIMD_FP16
+    TheTest<v_float16>()
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
+        .test_interleave()
+        .test_addsub()
+        .test_mul()
+        .test_div_fp16()
+        .test_abs_fp16()
+        .test_cmp()
+        .test_sqrt_abs()
+        .test_min_max()
+        .test_float_absdiff()
+        .test_mask()
+        .test_unpack()
+        .test_float_math()
+        .test_matmul_fp16()
+        .test_transpose8x8_fp16()
+        .test_reduce_sum8()
+        .test_reverse()
+        .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
+        .test_extract_highest()
+        .test_broadcast_element<0>().test_broadcast_element<1>()
+        .test_extract_n<0>().test_extract_n<1>()
 #endif
         ;
 #else
     std::cout << "SKIP: CV_FP16 is not available" << std::endl;
 #endif
 }
-
-
-/*#if defined(CV_CPU_DISPATCH_MODE_FP16) && CV_CPU_DISPATCH_MODE == FP16
-void test_hal_intrin_float16()
-{
-    TheTest<v_float16>()
-        .test_loadstore_fp16()
-        .test_float_cvt_fp16()
-        ;
-}
-#endif*/
 
 #endif //CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 

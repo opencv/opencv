@@ -48,8 +48,6 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#include "opencv2/core/openvx/ovx_defs.hpp"
-
 #include "box_filter.simd.hpp"
 #include "box_filter.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
@@ -315,79 +313,6 @@ Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-#ifdef HAVE_OPENVX
-    namespace ovx {
-        template <> inline bool skipSmallImages<VX_KERNEL_BOX_3x3>(int w, int h) { return w*h < 640 * 480; }
-    }
-    static bool openvx_boxfilter(InputArray _src, OutputArray _dst, int ddepth,
-                                 Size ksize, Point anchor,
-                                 bool normalize, int borderType)
-    {
-        if (ddepth < 0)
-            ddepth = CV_8UC1;
-        if (_src.type() != CV_8UC1 || ddepth != CV_8U || !normalize ||
-            _src.cols() < 3 || _src.rows() < 3 ||
-            ksize.width != 3 || ksize.height != 3 ||
-            (anchor.x >= 0 && anchor.x != 1) ||
-            (anchor.y >= 0 && anchor.y != 1) ||
-            ovx::skipSmallImages<VX_KERNEL_BOX_3x3>(_src.cols(), _src.rows()))
-            return false;
-
-        Mat src = _src.getMat();
-
-        if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
-            return false; //Process isolated borders only
-        vx_enum border;
-        switch (borderType & ~BORDER_ISOLATED)
-        {
-        case BORDER_CONSTANT:
-            border = VX_BORDER_CONSTANT;
-            break;
-        case BORDER_REPLICATE:
-            border = VX_BORDER_REPLICATE;
-            break;
-        default:
-            return false;
-        }
-
-        _dst.create(src.size(), CV_8UC1);
-        Mat dst = _dst.getMat();
-
-        try
-        {
-            ivx::Context ctx = ovx::getOpenVXContext();
-
-            Mat a;
-            if (dst.data != src.data)
-                a = src;
-            else
-                src.copyTo(a);
-
-            ivx::Image
-                ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                                                  ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
-                ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                                                  ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
-
-            //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-            //since OpenVX standard says nothing about thread-safety for now
-            ivx::border_t prevBorder = ctx.immediateBorder();
-            ctx.setImmediateBorder(border, (vx_uint8)(0));
-            ivx::IVX_CHECK_STATUS(vxuBox3x3(ctx, ia, ib));
-            ctx.setImmediateBorder(prevBorder);
-        }
-        catch (const ivx::RuntimeError & e)
-        {
-            VX_DbgThrow(e.what());
-        }
-        catch (const ivx::WrapperError & e)
-        {
-            VX_DbgThrow(e.what());
-        }
-
-        return true;
-    }
-#endif
 
 #if 0 //defined(HAVE_IPP)
 static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool normalize, int borderType)
@@ -474,9 +399,6 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
     CALL_HAL(boxFilter, cv_hal_boxFilter, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
              anchor.x, anchor.y, normalize, borderType&~BORDER_ISOLATED);
-
-    CV_OVX_RUN(true,
-               openvx_boxfilter(src, dst, ddepth, ksize, anchor, normalize, borderType))
 
     //CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
 

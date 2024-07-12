@@ -28,7 +28,8 @@
 
 #include "cap_obsensor/obsensor_stream_channel_interface.hpp"
 
-#ifdef HAVE_OBSENSOR
+#if defined(HAVE_OBSENSOR) && !defined(HAVE_OBSENSOR_ORBBEC_SDK)
+
 namespace cv {
 class VideoCapture_obsensor : public IVideoCapture
 {

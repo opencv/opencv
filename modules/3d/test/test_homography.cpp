@@ -705,4 +705,63 @@ TEST(Calib3d_Homography, minPoints)
     EXPECT_THROW(findHomography(p1, p2, RANSAC, 0.01, mask), cv::Exception);
 }
 
+TEST(Calib3d_Homography, not_normalized)
+{
+    Mat_<double> p1({5, 2}, {-1, -1, -2, -2, -1, 1, -2, 2, -1, 0});
+    Mat_<double> p2({5, 2}, {0, -1, -1, -1, 0, 0, -1, 0, 0, -0.5});
+    Mat_<double> ref({3, 3}, {
+        0.74276086, 0., 0.74276086,
+        0.18569022, 0.18569022, 0.,
+        -0.37138043, 0., 0.
+    });
+
+    for (int method : std::vector<int>({0, RANSAC, LMEDS}))
+    {
+        Mat h = findHomography(p1, p2, method);
+        for (auto it = h.begin<double>(); it != h.end<double>(); ++it) {
+            ASSERT_FALSE(cvIsNaN(*it)) << cv::format("method %d\nResult:\n", method) << h;
+        }
+        if (h.at<double>(0, 0) * ref.at<double>(0, 0) < 0) {
+            h *= -1;
+        }
+        ASSERT_LE(cv::norm(h, ref, NORM_INF), 1e-8) << cv::format("method %d\nResult:\n", method) << h;
+    }
+}
+
+TEST(Calib3d_Homography, Refine)
+{
+    Mat_<double> p1({10, 2}, {41, -86, -87, 99, 66, -96, -86, -8, -67, 24,
+                              -87, -76, -19, 89, 37, -4, -86, -86, -66, -53});
+    Mat_<double> p2({10, 2}, {
+        0.007723226608700208, -1.177541410622515,
+        -0.1909072353027552, -0.4247610181930323,
+        -0.134992319993638, -0.6469949816560389,
+        -0.3570627451405215, 0.1811469436293486,
+        -0.3005671881038939, -0.02325733734262935,
+        -0.4404509481789249, 0.4851526464158342,
+        0.6343346428859541, -3.396187657072353,
+        -0.3539383967092603, 0.1469447227353143,
+        -0.4526924606856586, 0.5296757109061794,
+        -0.4309974583614644, 0.4522732662733471
+    });
+    hconcat(p1, Mat::ones(p1.rows, 1, CV_64F), p1);
+    hconcat(p2, Mat::ones(p2.rows, 1, CV_64F), p2);
+
+    for(int method : std::vector<int>({0, RANSAC, LMEDS}))
+    {
+        Mat h = findHomography(p1, p2, method);
+        EXPECT_NEAR(h.at<double>(2, 2), 1.0, 1e-7);
+
+        Mat proj = p1 * h.t();
+        proj.col(0) /= proj.col(2);
+        proj.col(1) /= proj.col(2);
+
+        Mat error;
+        cv::pow(p2.colRange(0, 2) - proj.colRange(0, 2), 2, error);
+        cv::reduce(error, error, 1, REDUCE_SUM);
+        cv::reduce(error, error, 0, REDUCE_AVG);
+        EXPECT_LE(sqrt(error.at<double>(0, 0)), method == LMEDS ? 7e-2 : 7e-5);
+    }
+}
+
 }} // namespace

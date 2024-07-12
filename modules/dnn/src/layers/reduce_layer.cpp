@@ -131,6 +131,16 @@ public:
         return false;
     }
 
+    virtual void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U || inputs[0] == CV_8S, "");
+        outputs.assign(1, inputs[0]);
+    }
+
     template <typename T>
     class ReduceBase {
     public:
@@ -380,9 +390,10 @@ public:
                         if (unprojected_indices[j] < shape_src[unreduced_axes[j]]) {
                             break;
                         }
-                        unprojected_indices[j] = 0;
+                        unprojected_indices[j] -= shape_src[unreduced_axes[j]];
+                        current_step -= shape_src[unreduced_axes[j]] * steps_src[unreduced_axes[j]];
                         ++unprojected_indices[j - 1];
-                        current_step = steps_src[unreduced_axes[j - 1]];
+                        current_step += steps_src[unreduced_axes[j - 1]];
                     }
                 }
             }
@@ -490,7 +501,9 @@ public:
     inline void typeDispatch(const int type, Args&&... args) {
         switch (type) {
             case CV_8U: opDispatch<uint8_t>(std::forward<Args>(args)...); break;
+            case CV_8S: opDispatch<int8_t>(std::forward<Args>(args)...); break;
             case CV_32S: opDispatch<int32_t>(std::forward<Args>(args)...); break;
+            case CV_64S: opDispatch<int64_t>(std::forward<Args>(args)...); break;
             case CV_32F: opDispatch<float>(std::forward<Args>(args)...); break;
             default: CV_Error(cv::Error::BadDepth, "DNN/Reduce: Unsupported type.");
         }

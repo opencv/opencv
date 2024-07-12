@@ -53,8 +53,6 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#include "opencv2/core/openvx/ovx_defs.hpp"
-
 #include "filter.hpp"
 
 #include "opencv2/core/softfloat.hpp"
@@ -386,88 +384,6 @@ static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize,
 
 #endif
 
-#ifdef HAVE_OPENVX
-
-namespace ovx {
-    template <> inline bool skipSmallImages<VX_KERNEL_GAUSSIAN_3x3>(int w, int h) { return w*h < 320 * 240; }
-}
-static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
-                                double sigma1, double sigma2, int borderType)
-{
-    if (sigma2 <= 0)
-        sigma2 = sigma1;
-    // automatic detection of kernel size from sigma
-    if (ksize.width <= 0 && sigma1 > 0)
-        ksize.width = cvRound(sigma1*6 + 1) | 1;
-    if (ksize.height <= 0 && sigma2 > 0)
-        ksize.height = cvRound(sigma2*6 + 1) | 1;
-
-    if (_src.type() != CV_8UC1 ||
-        _src.cols() < 3 || _src.rows() < 3 ||
-        ksize.width != 3 || ksize.height != 3)
-        return false;
-
-    sigma1 = std::max(sigma1, 0.);
-    sigma2 = std::max(sigma2, 0.);
-
-    if (!(sigma1 == 0.0 || (sigma1 - 0.8) < DBL_EPSILON) || !(sigma2 == 0.0 || (sigma2 - 0.8) < DBL_EPSILON) ||
-        ovx::skipSmallImages<VX_KERNEL_GAUSSIAN_3x3>(_src.cols(), _src.rows()))
-        return false;
-
-    Mat src = _src.getMat();
-    Mat dst = _dst.getMat();
-
-    if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
-        return false; //Process isolated borders only
-    vx_enum border;
-    switch (borderType & ~BORDER_ISOLATED)
-    {
-    case BORDER_CONSTANT:
-        border = VX_BORDER_CONSTANT;
-        break;
-    case BORDER_REPLICATE:
-        border = VX_BORDER_REPLICATE;
-        break;
-    default:
-        return false;
-    }
-
-    try
-    {
-        ivx::Context ctx = ovx::getOpenVXContext();
-
-        Mat a;
-        if (dst.data != src.data)
-            a = src;
-        else
-            src.copyTo(a);
-
-        ivx::Image
-            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
-            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
-
-        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-        //since OpenVX standard says nothing about thread-safety for now
-        ivx::border_t prevBorder = ctx.immediateBorder();
-        ctx.setImmediateBorder(border, (vx_uint8)(0));
-        ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
-        ctx.setImmediateBorder(prevBorder);
-    }
-    catch (const ivx::RuntimeError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-    catch (const ivx::WrapperError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-    return true;
-}
-
-#endif
-
 #if defined ENABLE_IPP_GAUSSIAN_BLUR  // see CMake's OPENCV_IPP_GAUSSIAN_BLUR option
 
 #define IPP_DISABLE_GAUSSIAN_BLUR_LARGE_KERNELS_1TH 1
@@ -683,8 +599,22 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
             if (src.data == dst.data)
                 src = src.clone();
+
+            if ((sigma1 == 0.0) && (sigma2 == 0.0) && (ksize.height == ksize.width))
+            {
+                Point ofs;
+                Size wsz(src.cols, src.rows);
+                Mat src2 = src;
+                if(!(borderType & BORDER_ISOLATED))
+                    src2.locateROI( wsz, ofs );
+
+                CALL_HAL(gaussianBlurBinomial, cv_hal_gaussianBlurBinomial, src2.ptr(), src2.step, dst.ptr(), dst.step, src2.cols, src2.rows, sdepth, cn,
+                         ofs.x, ofs.y, wsz.width - src2.cols - ofs.x,  wsz.height - src2.rows - ofs.y, ksize.width, borderType&~BORDER_ISOLATED);
+            }
+
             CV_CPU_DISPATCH(GaussianBlurFixedPoint, (src, dst, (const uint16_t*)&fkx[0], (int)fkx.size(), (const uint16_t*)&fky[0], (int)fky.size(), borderType),
                 CV_CPU_DISPATCH_MODES_ALL);
+
             return;
         }
     }
@@ -720,8 +650,22 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
             if (src.data == dst.data)
                 src = src.clone();
+
+            if ((sigma1 == 0.0) && (sigma2 == 0.0) && (ksize.height == ksize.width))
+            {
+                Point ofs;
+                Size wsz(src.cols, src.rows);
+                Mat src2 = src;
+                if(!(borderType & BORDER_ISOLATED))
+                    src2.locateROI( wsz, ofs );
+
+                CALL_HAL(gaussianBlurBinomial, cv_hal_gaussianBlurBinomial, src2.ptr(), src2.step, dst.ptr(), dst.step, src2.cols, src2.rows, sdepth, cn,
+                         ofs.x, ofs.y, wsz.width - src2.cols - ofs.x,  wsz.height - src2.rows - ofs.y, ksize.width, borderType&~BORDER_ISOLATED);
+            }
+
             CV_CPU_DISPATCH(GaussianBlurFixedPoint, (src, dst, (const uint32_t*)&fkx[0], (int)fkx.size(), (const uint32_t*)&fky[0], (int)fky.size(), borderType),
                 CV_CPU_DISPATCH_MODES_ALL);
+
             return;
         }
     }
@@ -745,9 +689,6 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     CALL_HAL(gaussianBlur, cv_hal_gaussianBlur, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
              sigma1, sigma2, borderType&~BORDER_ISOLATED);
-
-    CV_OVX_RUN(true,
-               openvx_gaussianBlur(src, dst, ksize, sigma1, sigma2, borderType))
 
 #if defined ENABLE_IPP_GAUSSIAN_BLUR
     // IPP is not bit-exact to OpenCV implementation

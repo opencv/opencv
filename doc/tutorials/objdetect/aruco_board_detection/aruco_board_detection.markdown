@@ -2,8 +2,7 @@ Detection of ArUco boards {#tutorial_aruco_board_detection}
 =========================
 
 @prev_tutorial{tutorial_aruco_detection}
-@next_tutorial{tutorial_barcode_detect_and_decode}
-
+@next_tutorial{tutorial_charuco_detection}
 
 |    |    |
 | -: | :- |

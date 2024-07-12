@@ -2937,7 +2937,8 @@ QRDecode::QRDecode(bool _useAlignmentMarkers):
     useAlignmentMarkers(_useAlignmentMarkers),
     version(0),
     version_size(0),
-    test_perspective_size(0.f)
+    test_perspective_size(0.f),
+    mode(QRCodeEncoder::EncodeMode::MODE_AUTO)
     {}
 
 std::string ImplContour::decode(InputArray in, InputArray points, OutputArray straight_qrcode) const {

@@ -253,26 +253,26 @@ public:
 
         input = ngraphDequantize(input, input_sc, input_zp);
 
-        ngraph::Output<ngraph::Node> res;
+        ov::Output<ov::Node> res;
         if (type == "ReLU6Int8") {
-            res = std::make_shared<ngraph::op::Clamp>(input, 0.0f, 6.0f);
+            res = std::make_shared<ov::op::v0::Clamp>(input, 0.0f, 6.0f);
         } else if (type == "ReLUInt8") {
             if (slope) {
-                auto param = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &slope);
-                res = std::make_shared<ngraph::op::PRelu>(input, param);
+                auto param = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &slope);
+                res = std::make_shared<ov::op::v0::PRelu>(input, param);
             } else {
-                res = std::make_shared<ngraph::op::Relu>(input);
+                res = std::make_shared<ov::op::v0::Relu>(input);
             }
         } else if (type == "ELUInt8") {
-            res = std::make_shared<ngraph::op::Elu>(input, 1.0f);
+            res = std::make_shared<ov::op::v0::Elu>(input, 1.0f);
         } else if (type == "MishInt8") {
-            res = std::make_shared<ngraph::op::v4::Mish>(input);
+            res = std::make_shared<ov::op::v4::Mish>(input);
         } else if (type == "HardSwishInt8") {
-            res = std::make_shared<ngraph::op::v4::HSwish>(input);
+            res = std::make_shared<ov::op::v4::HSwish>(input);
         } else if (type == "AbsValInt8") {
-            res = std::make_shared<ngraph::op::Abs>(input);
+            res = std::make_shared<ov::op::v0::Abs>(input);
         } else if (type == "SigmoidInt8") {
-            res = std::make_shared<ngraph::op::Sigmoid>(input);
+            res = std::make_shared<ov::op::v0::Sigmoid>(input);
         } else {
             CV_Error(Error::StsNotImplemented, type + " activation with OpenVINO");
         }

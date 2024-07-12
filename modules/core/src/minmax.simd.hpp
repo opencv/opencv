@@ -353,13 +353,13 @@ DEFINE_MINMAXIDX_SMALLINT_FUNC(minMaxIdx16s, s16, u16, short, ushort, v_int16, v
 
 DEFINE_MINMAXIDX_FUNC(minMaxIdx32s, s32, u32, int, unsigned, v_int32, v_uint32, int, vx_load)
 DEFINE_MINMAXIDX_FUNC(minMaxIdx32f, f32, u32, float, unsigned, v_float32, v_uint32, float, vx_load)
-DEFINE_MINMAXIDX_FUNC(minMaxIdx16f, f32, u32, float16_t, unsigned, v_float32, v_uint32, float, vx_load_expand)
+DEFINE_MINMAXIDX_FUNC(minMaxIdx16f, f32, u32, hfloat, unsigned, v_float32, v_uint32, float, vx_load_expand)
 DEFINE_MINMAXIDX_FUNC(minMaxIdx16bf, f32, u32, bfloat, unsigned, v_float32, v_uint32, float, vx_load_expand)
 
 //DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx32s, int, int)
 //DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx32f, float, float)
 DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx64f, double, double)
-//DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx16f, float16_t, float)
+//DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx16f, hfloat, float)
 //DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx16bf, bfloat, float)
 DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx64u, uint64, uint64)
 DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx64s, int64, int64)

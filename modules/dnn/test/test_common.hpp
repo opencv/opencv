@@ -231,6 +231,8 @@ public:
             expectNoFallbacks(net);
     }
 
+    size_t getTopMemoryUsageMB();
+
 protected:
     void checkBackend(Mat* inp = 0, Mat* ref = 0)
     {

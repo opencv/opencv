@@ -46,6 +46,9 @@ from cv_build_utils import execute, print_error, get_xcode_major, get_xcode_sett
 
 IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
 
+CURRENT_FILE_DIR = os.path.dirname(__file__)
+
+
 class Builder:
     def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, disable, enablenonfree, targets, debug, debug_info, framework_name, run_tests, build_docs, swiftdisabled):
         self.opencv = os.path.abspath(opencv)
@@ -477,6 +480,9 @@ class Builder:
                 s = os.path.join(*l[0])
                 d = os.path.join(framework_dir, *l[1])
                 os.symlink(s, d)
+        # Copy Apple privacy manifest
+        shutil.copyfile(os.path.join(CURRENT_FILE_DIR, "PrivacyInfo.xcprivacy"),
+                        os.path.join(resdir, "PrivacyInfo.xcprivacy"))
 
     def copy_samples(self, outdir):
         return

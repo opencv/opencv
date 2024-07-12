@@ -109,7 +109,7 @@ namespace cv {
 //! @addtogroup stitching
 //! @{
 
-/** @example samples/cpp/stitching.cpp
+/** @example samples/cpp/snippets/stitching.cpp
 A basic example on image stitching
 */
 

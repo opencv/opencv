@@ -34,7 +34,7 @@ public:
     PaddingLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        paddingValue = params.get<float>("value", 0);
+        paddingValue = params.get<double>("value", 0);
         inputDims = params.get<int>("input_dims", -1);
         paddingType = params.get<String>("type", "constant");
 
@@ -58,7 +58,13 @@ public:
     {
         CV_Assert(inputs.size() == 1);
         const MatShape& inpShape = inputs[0];
+        if (inpShape.empty()){
+            CV_Assert(paddings.size() == 1);
+            outputs.resize(1, MatShape(1, paddings[0].first + paddings[0].second + 1));
+            return false;
+        }
         CV_Assert(inpShape.size() >= paddings.size());
+
         CV_Assert(inputDims == -1 || inpShape.size() == inputDims || inpShape.size() > paddings.size());
 
         outputs.resize(1, inpShape);
@@ -68,6 +74,21 @@ public:
             outputs[0][offset + i] = inpShape[offset + i] + paddings[i].first + paddings[i].second;
         }
         return false;
+    }
+
+    void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_CheckEQ(inputs.size(), 1u, "");
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+            CV_CheckType(inputs[0], inputs[0] == CV_16F || inputs[0] == CV_8S || inputs[0] == CV_8U || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_Bool, "");
+        else
+            CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_8S || inputs[0] == CV_8U || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_Bool, "");
+
+        outputs.assign(requiredOutputs, inputs[0]);
     }
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
@@ -184,7 +205,10 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
 
-        return make_cuda_node<cuda4dnn::PaddingOp>(preferableTarget, std::move(context->stream), ptype, paddingValue, dstRanges);
+        if (inputs[0]->getHostMatDepth() == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::PaddingOp>(std::move(context->stream), ptype, paddingValue, dstRanges);
+        else
+            return make_cuda_node_with_type<cuda4dnn::PaddingOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), ptype, paddingValue, dstRanges);
     }
 #endif
 
@@ -245,14 +269,44 @@ public:
             begins[i] = static_cast<int64_t>(paddings[i].first);
             ends[i]   = static_cast<int64_t>(paddings[i].second);
         }
-        auto padding_below = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{begins.size()}, begins.data());
-        auto padding_above = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{ends.size()}, ends.data());
-        auto pad_mode = paddingType == "constant" ? ngraph::op::PadMode::CONSTANT : ngraph::op::PadMode::REFLECT; // SYMMETRIC
-        auto arg_pad_value = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{}, &paddingValue);;
+        auto padding_below = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{begins.size()}, begins.data());
+        auto padding_above = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{ends.size()}, ends.data());
+        auto pad_mode = paddingType == "constant" ? ov::op::PadMode::CONSTANT : ov::op::PadMode::REFLECT; // SYMMETRIC
+
+        std::shared_ptr<ov::op::v0::Constant> arg_pad_value;
+        float paddingValueFloat = paddingValue;
+        int8_t paddingValueInt8 = paddingValue;
+        uint8_t paddingValueUInt8 = paddingValue;
+        int32_t paddingValueInt32 = paddingValue;
+        int64_t paddingValueInt64 = paddingValue;
+        bool paddingValueBool = paddingValue;
+        switch(ieInpNode.get_element_type())
+        {
+            case ov::element::f32:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{}, &paddingValueFloat);
+                break;
+            case ov::element::i8:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::i8, ov::Shape{}, &paddingValueInt8);
+                break;
+            case ov::element::u8:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::u8, ov::Shape{}, &paddingValueUInt8);
+                break;
+            case ov::element::i32:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &paddingValueInt32);
+                break;
+            case ov::element::i64:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{}, &paddingValueInt64);
+                break;
+            case ov::element::boolean:
+                arg_pad_value = std::make_shared<ov::op::v0::Constant>(ov::element::boolean, ov::Shape{}, &paddingValueBool);
+                break;
+            default:
+                CV_Error(Error::BadDepth, "");
+        };
 
         auto pad = paddingType == "constant" ?
-             std::make_shared<ngraph::op::v1::Pad>(ieInpNode, padding_below, padding_above, arg_pad_value, pad_mode) :
-             std::make_shared<ngraph::op::v1::Pad>(ieInpNode, padding_below, padding_above, pad_mode);
+             std::make_shared<ov::op::v1::Pad>(ieInpNode, padding_below, padding_above, arg_pad_value, pad_mode) :
+             std::make_shared<ov::op::v1::Pad>(ieInpNode, padding_below, padding_above, pad_mode);
         return Ptr<BackendNode>(new InfEngineNgraphNode(pad));
     }
 #endif
@@ -261,7 +315,7 @@ private:
     std::vector<std::pair<int, int> > paddings;  // Pairs pad before, pad after.
     std::vector<Range> dstRanges;
     int inputDims;
-    float paddingValue;
+    double paddingValue;
     std::string paddingType;
 };
 

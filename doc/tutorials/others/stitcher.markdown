@@ -27,14 +27,14 @@ Code
 This tutorial code's is shown lines below. You can also download it from
 [here](https://github.com/opencv/opencv/tree/5.x/samples/cpp/stitching.cpp).
 
-@include samples/cpp/stitching.cpp
+@include samples/cpp/snippets/stitching.cpp
 
 Explanation
 -----------
 
 The most important code part is:
 
-@snippet cpp/stitching.cpp stitching
+@snippet cpp/snippets/stitching.cpp stitching
 
 A new instance of stitcher is created and the @ref cv::Stitcher::stitch will
 do all the hard work.

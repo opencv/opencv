@@ -434,7 +434,7 @@ Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const TrackerDaSiamRPN::Params& p
 Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const TrackerDaSiamRPN::Params& parameters)
 {
     (void)(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use GOTURN, the tracking module needs to be built with opencv_dnn !");
+    CV_Error(cv::Error::StsNotImplemented, "to use DaSimRPN, the tracking module needs to be built with opencv_dnn !");
 }
 #endif  // OPENCV_HAVE_DNN
 }

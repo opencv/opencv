@@ -1576,11 +1576,7 @@ TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/is
 typedef tuple<perf::MatDepth,int,int,int> Arith_Regression24163Param;
 typedef testing::TestWithParam<Arith_Regression24163Param> Core_Arith_Regression24163;
 
-#if defined __riscv
-TEST_P(Core_Arith_Regression24163, DISABLED_test_for_ties_to_even)
-#else
 TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
-#endif
 {
     const int matDepth = get<0>(GetParam());
     const int matHeight= get<1>(GetParam());

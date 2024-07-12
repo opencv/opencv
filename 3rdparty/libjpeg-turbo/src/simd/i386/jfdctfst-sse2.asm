@@ -2,7 +2,7 @@
 ; jfdctfst.asm - fast integer FDCT (SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2016, D. R. Commander.
+; Copyright (C) 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -49,7 +49,7 @@ F_1_306 equ DESCALE(1402911301, 30 - CONST_BITS)  ; FIX(1.306562965)
 %define PRE_MULTIPLY_SCALE_BITS  2
 %define CONST_SHIFT              (16 - PRE_MULTIPLY_SCALE_BITS - CONST_BITS)
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_fdct_ifast_sse2)
 
 EXTN(jconst_fdct_ifast_sse2):
@@ -59,7 +59,7 @@ PW_F0382 times 8 dw F_0_382 << CONST_SHIFT
 PW_F0541 times 8 dw F_0_541 << CONST_SHIFT
 PW_F1306 times 8 dw F_1_306 << CONST_SHIFT
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -89,13 +89,13 @@ EXTN(jsimd_fdct_ifast_sse2):
     mov         [esp], eax
     mov         ebp, esp                     ; ebp = aligned ebp
     lea         esp, [wk(0)]
-    pushpic     ebx
+    PUSHPIC     ebx
 ;   push        ecx                     ; unused
 ;   push        edx                     ; need not be preserved
 ;   push        esi                     ; unused
 ;   push        edi                     ; unused
 
-    get_GOT     ebx                     ; get GOT address
+    GET_GOT     ebx                     ; get GOT address
 
     ; ---- Pass 1: process rows.
 
@@ -392,7 +392,7 @@ EXTN(jsimd_fdct_ifast_sse2):
 ;   pop         esi                     ; unused
 ;   pop         edx                     ; need not be preserved
 ;   pop         ecx                     ; unused
-    poppic      ebx
+    POPPIC      ebx
     mov         esp, ebp                ; esp <- aligned ebp
     pop         esp                     ; esp <- original ebp
     pop         ebp

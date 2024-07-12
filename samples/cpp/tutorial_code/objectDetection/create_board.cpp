@@ -23,7 +23,6 @@ const char* keys  =
         "{si       | false | show generated image }";
 }
 
-
 int main(int argc, char *argv[]) {
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
@@ -57,25 +56,7 @@ int main(int argc, char *argv[]) {
     imageSize.height =
         markersY * (markerLength + markerSeparation) - markerSeparation + 2 * margins;
 
-    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
-    if (parser.has("d")) {
-        int dictionaryId = parser.get<int>("d");
-        dictionary = aruco::getPredefinedDictionary(aruco::PredefinedDictionaryType(dictionaryId));
-    }
-    else if (parser.has("cd")) {
-        FileStorage fs(parser.get<std::string>("cd"), FileStorage::READ);
-        bool readOk = dictionary.readDictionary(fs.root());
-        if(!readOk)
-        {
-            std::cerr << "Invalid dictionary file" << std::endl;
-            return 0;
-        }
-    }
-    else {
-        std::cerr << "Dictionary not specified" << std::endl;
-        return 0;
-    }
-
+    aruco::Dictionary dictionary = readDictionatyFromCommandLine(parser);
     aruco::GridBoard board(Size(markersX, markersY), float(markerLength), float(markerSeparation), dictionary);
 
     // show created board
@@ -90,6 +71,5 @@ int main(int argc, char *argv[]) {
     }
 
     imwrite(out, boardImage);
-
     return 0;
 }

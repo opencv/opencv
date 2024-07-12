@@ -284,8 +284,8 @@ public:
             axes_data.resize(ieInpNode.get_shape().size() - 1);
             std::iota(axes_data.begin(), axes_data.end(), 1);
         }
-        auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_data.size()}, axes_data);
-        auto norm = std::make_shared<ngraph::op::v0::NormalizeL2>(ieInpNode, axes, epsilon, ngraph::op::EpsMode::ADD);
+        auto axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{axes_data.size()}, axes_data);
+        auto norm = std::make_shared<ov::op::v0::NormalizeL2>(ieInpNode, axes, epsilon, ov::op::EpsMode::ADD);
 
         CV_Assert(blobs.empty() || numChannels == blobs[0].total());
         std::vector<size_t> shape(ieInpNode.get_shape().size(), 1);
@@ -293,13 +293,9 @@ public:
         shape[1] = numChannels;
         if (!blobs.empty())
         {
-            auto weight = std::make_shared<ngraph::op::Constant>(
-                                      ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
-            auto mul = std::make_shared<ngraph::op::v1::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
-#else
-            auto mul = std::make_shared<ngraph::op::v0::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
-#endif
+            auto weight = std::make_shared<ov::op::v0::Constant>(
+                                      ov::element::f32, ov::Shape(shape), blobs[0].data);
+            auto mul = std::make_shared<ov::op::v1::Multiply>(norm, weight, ov::op::AutoBroadcastType::NUMPY);
             return Ptr<BackendNode>(new InfEngineNgraphNode(mul));
         }
         return Ptr<BackendNode>(new InfEngineNgraphNode(norm));

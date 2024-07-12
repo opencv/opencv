@@ -87,8 +87,8 @@ enum ImwriteFlags {
        IMWRITE_JPEG_PROGRESSIVE    = 2,  //!< Enable JPEG features, 0 or 1, default is False.
        IMWRITE_JPEG_OPTIMIZE       = 3,  //!< Enable JPEG features, 0 or 1, default is False.
        IMWRITE_JPEG_RST_INTERVAL   = 4,  //!< JPEG restart interval, 0 - 65535, default is 0 - no restart.
-       IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is -1 - don't use.
-       IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is -1 - don't use.
+       IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is -1 - don't use. If JPEG_LIB_VERSION < 70, Not supported.
+       IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is -1 - don't use. If JPEG_LIB_VERSION < 70, Not supported.
        IMWRITE_JPEG_SAMPLING_FACTOR = 7, //!< For JPEG, set sampling factor. See cv::ImwriteJPEGSamplingFactorParams.
        IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
        IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
@@ -103,7 +103,9 @@ enum ImwriteFlags {
        IMWRITE_TIFF_RESUNIT        = 256,//!< For TIFF, use to specify which DPI resolution unit to set; see libtiff documentation for valid values
        IMWRITE_TIFF_XDPI           = 257,//!< For TIFF, use to specify the X direction DPI
        IMWRITE_TIFF_YDPI           = 258,//!< For TIFF, use to specify the Y direction DPI
-       IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
+       IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See cv::ImwriteTiffCompressionFlags. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
+       IMWRITE_TIFF_ROWSPERSTRIP   = 278,//!< For TIFF, use to specify the number of rows per strip.
+       IMWRITE_TIFF_PREDICTOR      = 317,//!< For TIFF, use to specify predictor. See cv::ImwriteTiffPredictorFlags.
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272,//!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
        IMWRITE_AVIF_QUALITY        = 512,//!< For AVIF, it can be a quality between 0 and 100 (the higher the better). Default is 95.
        IMWRITE_AVIF_DEPTH          = 513,//!< For AVIF, it can be 8, 10 or 12. If >8, it is stored/read as CV_32F. Default is 8.
@@ -118,6 +120,48 @@ enum ImwriteJPEGSamplingFactorParams {
        IMWRITE_JPEG_SAMPLING_FACTOR_444 = 0x111111  //!< 1x1,1x1,1x1(No subsampling)
      };
 
+enum ImwriteTiffCompressionFlags {
+        IMWRITE_TIFF_COMPRESSION_NONE = 1,            //!< dump mode
+        IMWRITE_TIFF_COMPRESSION_CCITTRLE = 2,        //!< CCITT modified Huffman RLE
+        IMWRITE_TIFF_COMPRESSION_CCITTFAX3 = 3,       //!< CCITT Group 3 fax encoding
+        IMWRITE_TIFF_COMPRESSION_CCITT_T4 = 3,        //!< CCITT T.4 (TIFF 6 name)
+        IMWRITE_TIFF_COMPRESSION_CCITTFAX4 = 4,       //!< CCITT Group 4 fax encoding
+        IMWRITE_TIFF_COMPRESSION_CCITT_T6 = 4,        //!< CCITT T.6 (TIFF 6 name)
+        IMWRITE_TIFF_COMPRESSION_LZW = 5,             //!< Lempel-Ziv  & Welch
+        IMWRITE_TIFF_COMPRESSION_OJPEG = 6,           //!< !6.0 JPEG
+        IMWRITE_TIFF_COMPRESSION_JPEG = 7,            //!< %JPEG DCT compression
+        IMWRITE_TIFF_COMPRESSION_T85 = 9,             //!< !TIFF/FX T.85 JBIG compression
+        IMWRITE_TIFF_COMPRESSION_T43 = 10,            //!< !TIFF/FX T.43 colour by layered JBIG compression
+        IMWRITE_TIFF_COMPRESSION_NEXT = 32766,        //!< NeXT 2-bit RLE
+        IMWRITE_TIFF_COMPRESSION_CCITTRLEW = 32771,   //!< #1 w/ word alignment
+        IMWRITE_TIFF_COMPRESSION_PACKBITS = 32773,    //!< Macintosh RLE
+        IMWRITE_TIFF_COMPRESSION_THUNDERSCAN = 32809, //!< ThunderScan RLE
+        IMWRITE_TIFF_COMPRESSION_IT8CTPAD = 32895,    //!< IT8 CT w/padding
+        IMWRITE_TIFF_COMPRESSION_IT8LW = 32896,       //!< IT8 Linework RLE
+        IMWRITE_TIFF_COMPRESSION_IT8MP = 32897,       //!< IT8 Monochrome picture
+        IMWRITE_TIFF_COMPRESSION_IT8BL = 32898,       //!< IT8 Binary line art
+        IMWRITE_TIFF_COMPRESSION_PIXARFILM = 32908,   //!< Pixar companded 10bit LZW
+        IMWRITE_TIFF_COMPRESSION_PIXARLOG = 32909,    //!< Pixar companded 11bit ZIP
+        IMWRITE_TIFF_COMPRESSION_DEFLATE = 32946,     //!< Deflate compression, legacy tag
+        IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE = 8,   //!< Deflate compression, as recognized by Adobe
+        IMWRITE_TIFF_COMPRESSION_DCS = 32947,         //!< Kodak DCS encoding
+        IMWRITE_TIFF_COMPRESSION_JBIG = 34661,        //!< ISO JBIG
+        IMWRITE_TIFF_COMPRESSION_SGILOG = 34676,      //!< SGI Log Luminance RLE
+        IMWRITE_TIFF_COMPRESSION_SGILOG24 = 34677,    //!< SGI Log 24-bit packed
+        IMWRITE_TIFF_COMPRESSION_JP2000 = 34712,      //!< Leadtools JPEG2000
+        IMWRITE_TIFF_COMPRESSION_LERC = 34887,        //!< ESRI Lerc codec: https://github.com/Esri/lerc
+        IMWRITE_TIFF_COMPRESSION_LZMA = 34925,        //!< LZMA2
+        IMWRITE_TIFF_COMPRESSION_ZSTD = 50000,        //!< ZSTD: WARNING not registered in Adobe-maintained registry
+        IMWRITE_TIFF_COMPRESSION_WEBP = 50001,        //!< WEBP: WARNING not registered in Adobe-maintained registry
+        IMWRITE_TIFF_COMPRESSION_JXL = 50002          //!< JPEGXL: WARNING not registered in Adobe-maintained registry
+};
+
+enum ImwriteTiffPredictorFlags {
+        IMWRITE_TIFF_PREDICTOR_NONE = 1,              //!< no prediction scheme used
+        IMWRITE_TIFF_PREDICTOR_HORIZONTAL = 2,        //!< horizontal differencing
+        IMWRITE_TIFF_PREDICTOR_FLOATINGPOINT = 3      //!< floating point predictor
+
+};
 
 enum ImwriteEXRTypeFlags {
        /*IMWRITE_EXR_TYPE_UNIT = 0, //!< not supported */
@@ -225,6 +269,17 @@ Currently, the following file formats are supported:
 @param flags Flag that can take values of cv::ImreadModes
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
+
+/** @brief Loads an image from a file.
+
+This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts and the return value.
+@param filename Name of file to be loaded.
+@param dst object in which the image will be loaded.
+@param flags Flag that can take values of cv::ImreadModes
+@note
+The image passing through the img parameter can be pre-allocated. The memory is reused if the shape and the type match with the load image.
+ */
+CV_EXPORTS_W void imread( const String& filename, OutputArray dst, int flags = IMREAD_COLOR );
 
 /** @brief Loads a multi-page image from a file.
 

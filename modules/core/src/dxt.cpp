@@ -4363,7 +4363,7 @@ struct ReplacementDCT2D : public hal::DCT2D
     ReplacementDCT2D() : context(0), isInitialized(false) {}
     bool init(int width, int height, int depth, int flags)
     {
-        int res = hal_ni_dctInit2D(&context, width, height, depth, flags);
+        int res = cv_hal_dctInit2D(&context, width, height, depth, flags);
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
     }

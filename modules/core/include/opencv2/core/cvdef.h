@@ -201,6 +201,14 @@ namespace cv {
 #  define CV_ICC   __INTEL_COMPILER
 #endif
 
+#if defined _WIN32
+#  define CV_CDECL __cdecl
+#  define CV_STDCALL __stdcall
+#else
+#  define CV_CDECL
+#  define CV_STDCALL
+#endif
+
 #ifndef CV_INLINE
 #  if defined __cplusplus
 #    define CV_INLINE static inline
@@ -384,8 +392,10 @@ typedef union Cv16suf
 {
     short i;
     ushort u;
-#if CV_FP16_TYPE
+#if CV_FP16_TYPE && defined __ARM_FP16_FORMAT_IEEE
     __fp16 h;
+#elif CV_FP16_TYPE // Other platforms suggested to use _Float16
+    _Float16 h;
 #endif
 }
 Cv16suf;
@@ -483,6 +493,7 @@ Cv64suf;
 *                                  Matrix type (Mat)                                     *
 \****************************************************************************************/
 
+#define CV_MAX_DIM              32
 #define CV_MAT_CN_MASK          ((CV_CN_MAX - 1) << CV_CN_SHIFT)
 #define CV_MAT_CN(flags)        ((((flags) & CV_MAT_CN_MASK) >> CV_CN_SHIFT) + 1)
 #define CV_MAT_TYPE_MASK        (CV_DEPTH_MAX*CV_CN_MAX - 1)
@@ -512,6 +523,13 @@ Cv64suf;
 #ifndef MAX
 #  define MAX(a,b)  ((a) < (b) ? (b) : (a))
 #endif
+
+/** min & max without jumps */
+#define CV_IMIN(a, b)  ((a) ^ (((a)^(b)) & (((a) < (b)) - 1)))
+#define CV_IMAX(a, b)  ((a) ^ (((a)^(b)) & (((a) > (b)) - 1)))
+#define CV_SWAP(a,b,t) ((t) = (a), (a) = (b), (b) = (t))
+#define CV_CMP(a,b)    (((a) > (b)) - ((a) < (b)))
+#define CV_SIGN(a)     CV_CMP((a),0)
 
 ///////////////////////////////////////// Enum operators ///////////////////////////////////////
 
@@ -814,40 +832,24 @@ using std::uint64_t;
 namespace cv
 {
 
-class float16_t
+class hfloat
 {
 public:
 #if CV_FP16_TYPE
-
-    float16_t() : h(0) {}
-    explicit float16_t(float x) { h = (__fp16)x; }
+    hfloat() = default;
+    explicit hfloat(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
-    static float16_t fromBits(ushort w)
-    {
-        Cv16suf u;
-        u.u = w;
-        float16_t result;
-        result.h = u.h;
-        return result;
-    }
-    static float16_t zero()
-    {
-        float16_t result;
-        result.h = (__fp16)0;
-        return result;
-    }
-    ushort bits() const
-    {
-        Cv16suf u;
-        u.h = h;
-        return u.u;
-    }
+#if defined __ARM_FP16_FORMAT_IEEE
 protected:
     __fp16 h;
+#else
+protected:
+    _Float16 h;
+#endif
 
 #else
-    float16_t() : w(0) {}
-    explicit float16_t(float x)
+    hfloat() : w(0) {}
+    explicit hfloat(float x)
     {
     #if CV_FP16 && CV_AVX2
         __m128 v = _mm_load_ss(&x);
@@ -898,24 +900,32 @@ protected:
     #endif
     }
 
-    static float16_t fromBits(ushort b)
-    {
-        float16_t result;
-        result.w = b;
-        return result;
-    }
-    static float16_t zero()
-    {
-        float16_t result;
-        result.w = (ushort)0;
-        return result;
-    }
-    ushort bits() const { return w; }
 protected:
     ushort w;
 
 #endif
 };
+
+inline hfloat hfloatFromBits(ushort w) {
+#if CV_FP16_TYPE
+    Cv16suf u;
+    u.u = w;
+    hfloat res(float(u.h));
+    return res;
+#else
+    Cv32suf out;
+
+    unsigned t = ((w & 0x7fff) << 13) + 0x38000000;
+    unsigned sign = (w & 0x8000) << 16;
+    unsigned e = w & 0x7c00;
+
+    out.u = t + (1 << 23);
+    out.u = (e >= 0x7c00 ? t + 0x38000000 :
+            e == 0 ? (static_cast<void>(out.f -= 6.103515625e-05f), out.u) : t) | sign;
+    hfloat res(out.f);
+    return res;
+#endif
+}
 
 class bfloat
 {

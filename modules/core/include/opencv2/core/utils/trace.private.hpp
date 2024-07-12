@@ -79,9 +79,6 @@ struct RegionStatistics
 #ifdef HAVE_OPENCL
     int64 durationImplOpenCL;
 #endif
-#ifdef HAVE_OPENVX
-    int64 durationImplOpenVX;
-#endif
 
     RegionStatistics() :
         currentSkippedRegions(0),
@@ -91,9 +88,6 @@ struct RegionStatistics
 #endif
 #ifdef HAVE_OPENCL
         ,durationImplOpenCL(0)
-#endif
-#ifdef HAVE_OPENVX
-        ,durationImplOpenVX(0)
 #endif
     {}
 
@@ -107,9 +101,6 @@ struct RegionStatistics
 #ifdef HAVE_OPENCL
         result.durationImplOpenCL = durationImplOpenCL; durationImplOpenCL = 0;
 #endif
-#ifdef HAVE_OPENVX
-        result.durationImplOpenVX = durationImplOpenVX; durationImplOpenVX = 0;
-#endif
     }
 
     void append(RegionStatistics& stat)
@@ -122,9 +113,6 @@ struct RegionStatistics
 #ifdef HAVE_OPENCL
         durationImplOpenCL += stat.durationImplOpenCL;
 #endif
-#ifdef HAVE_OPENVX
-        durationImplOpenVX += stat.durationImplOpenVX;
-#endif
     }
 
     void multiply(const float c)
@@ -135,9 +123,6 @@ struct RegionStatistics
 #endif
 #ifdef HAVE_OPENCL
         durationImplOpenCL = (int64)(durationImplOpenCL * c);
-#endif
-#ifdef HAVE_OPENVX
-        durationImplOpenVX = (int64)(durationImplOpenVX * c);
 #endif
     }
 };
@@ -153,9 +138,6 @@ std::ostream& operator<<(std::ostream& out, const RegionStatistics& stat)
 #ifdef HAVE_OPENCL
         << " durationImplOpenCL=" << stat.durationImplOpenCL
 #endif
-#ifdef HAVE_OPENVX
-        << " durationImplOpenVX=" << stat.durationImplOpenVX
-#endif
     ;
     return out;
 }
@@ -169,9 +151,6 @@ struct RegionStatisticsStatus
 #ifdef HAVE_OPENCL
     int ignoreDepthImplOpenCL;
 #endif
-#ifdef HAVE_OPENVX
-    int ignoreDepthImplOpenVX;
-#endif
 
     RegionStatisticsStatus() { reset(); }
 
@@ -183,9 +162,6 @@ struct RegionStatisticsStatus
 #endif
 #ifdef HAVE_OPENCL
         ignoreDepthImplOpenCL = 0;
-#endif
-#ifdef HAVE_OPENVX
-        ignoreDepthImplOpenVX = 0;
 #endif
     }
 
@@ -199,9 +175,6 @@ struct RegionStatisticsStatus
 #endif
 #ifdef HAVE_OPENCL
         ignoreDepthImplOpenCL = src.ignoreDepthImplOpenCL ? 1 : 0;
-#endif
-#ifdef HAVE_OPENVX
-        ignoreDepthImplOpenVX = src.ignoreDepthImplOpenVX ? 1 : 0;
 #endif
     }
 
@@ -222,10 +195,6 @@ std::ostream& operator<<(std::ostream& out, const RegionStatisticsStatus& s)
 #ifdef HAVE_OPENCL
     if (s.ignoreDepthImplOpenCL)
         out << " OpenCL=" << s.ignoreDepthImplOpenCL;
-#endif
-#ifdef HAVE_OPENVX
-    if (s.ignoreDepthImplOpenVX)
-        out << " OpenVX=" << s.ignoreDepthImplOpenVX;
 #endif
     out << "}";
     return out;
@@ -389,8 +358,7 @@ public:
     enum OptimizationPath {
         CODE_PATH_PLAIN = 0,
         CODE_PATH_IPP,
-        CODE_PATH_OPENCL,
-        CODE_PATH_OPENVX
+        CODE_PATH_OPENCL
     };
 
 #ifdef OPENCV_WITH_ITT

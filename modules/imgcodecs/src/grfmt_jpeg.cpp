@@ -402,16 +402,12 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
 bool  JpegDecoder::readData( Mat& img )
 {
     volatile bool result = false;
-    size_t step = img.step;
-    bool color = img.channels() > 1;
+    const bool color = img.channels() > 1;
 
     if( m_state && m_width && m_height )
     {
         jpeg_decompress_struct* cinfo = &((JpegState*)m_state)->cinfo;
         JpegErrorMgr* jerr = &((JpegState*)m_state)->jerr;
-#ifndef JCS_EXTENSIONS
-        JSAMPARRAY buffer = 0;
-#endif
 
         if( setjmp( jerr->setjmp_buffer ) == 0 )
         {
@@ -431,29 +427,30 @@ bool  JpegDecoder::readData( Mat& img )
             }
 #endif
 
-#ifdef JCS_EXTENSIONS
-            if( color )
-            {
-                cinfo->out_color_space = JCS_EXT_BGR;
-                cinfo->out_color_components = 3;
-            }
-            else
-            {
-                cinfo->out_color_space = JCS_GRAYSCALE;
-                cinfo->out_color_components = 1;
-            }
-#else
+            // See https://github.com/opencv/opencv/issues/25274
+            // Conversion CMYK->BGR is not supported in libjpeg-turbo.
+            // So supporting both directly and indirectly is necessary.
+            bool doDirectRead = false;
+
             if( color )
             {
                 if( cinfo->num_components != 4 )
                 {
+#ifdef JCS_EXTENSIONS
+                    cinfo->out_color_space = JCS_EXT_BGR;
+                    cinfo->out_color_components = 3;
+                    doDirectRead = true; // BGR -> BGR
+#else
                     cinfo->out_color_space = JCS_RGB;
                     cinfo->out_color_components = 3;
+                    doDirectRead = false; // RGB -> BGR
+#endif
                 }
                 else
                 {
                     cinfo->out_color_space = JCS_CMYK;
                     cinfo->out_color_components = 4;
+                    doDirectRead = false; // CMYK -> BGR
                 }
             }
             else
@@ -462,14 +459,15 @@ bool  JpegDecoder::readData( Mat& img )
                 {
                     cinfo->out_color_space = JCS_GRAYSCALE;
                     cinfo->out_color_components = 1;
+                    doDirectRead = true; // GRAY -> GRAY
                 }
                 else
                 {
                     cinfo->out_color_space = JCS_CMYK;
                     cinfo->out_color_components = 4;
+                    doDirectRead = false; // CMYK -> GRAY
                 }
             }
-#endif
 
             // Check for Exif marker APP1
             jpeg_saved_marker_ptr exif_marker = NULL;
@@ -496,33 +494,39 @@ bool  JpegDecoder::readData( Mat& img )
 
             jpeg_start_decompress( cinfo );
 
-#ifndef JCS_EXTENSIONS
-            buffer = (*cinfo->mem->alloc_sarray)((j_common_ptr)cinfo,
-                                              JPOOL_IMAGE, m_width*4, 1 );
-#endif
-
-            uchar* data = img.ptr();
-            for( ; m_height--; data += step )
+            if( doDirectRead)
             {
-#ifdef JCS_EXTENSIONS
-                jpeg_read_scanlines( cinfo, &data, 1 );
-#else
-                jpeg_read_scanlines( cinfo, buffer, 1 );
-                if( color )
+                for( int iy = 0 ; iy < m_height; iy ++ )
                 {
-                    if( cinfo->out_color_components == 3 )
-                        icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
-                    else
-                        icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    uchar* data = img.ptr<uchar>(iy);
+                    jpeg_read_scanlines( cinfo, &data, 1 );
                 }
-                else
+            }
+            else
+            {
+                JSAMPARRAY buffer = (*cinfo->mem->alloc_sarray)((j_common_ptr)cinfo,
+                                                                 JPOOL_IMAGE, m_width*4, 1 );
+
+                for( int iy = 0 ; iy < m_height; iy ++ )
                 {
-                    if( cinfo->out_color_components == 1 )
-                        memcpy( data, buffer[0], m_width );
+                    uchar* data = img.ptr<uchar>(iy);
+                    jpeg_read_scanlines( cinfo, buffer, 1 );
+
+                    if( color )
+                    {
+                        if( cinfo->out_color_components == 3 )
+                            icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        else
+                            icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    }
                     else
-                        icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    {
+                        if( cinfo->out_color_components == 1 )
+                            memcpy( data, buffer[0], m_width );
+                        else
+                            icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    }
                 }
-#endif
             }
 
             result = true;
@@ -615,11 +619,6 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
     std::vector<uchar> out_buf(1 << 12);
 
-#ifndef JCS_EXTENSIONS
-    AutoBuffer<uchar> _buffer;
-    uchar* buffer;
-#endif
-
     struct jpeg_compress_struct cinfo;
     JpegErrorMgr jerr;
     JpegDestination dest;
@@ -654,14 +653,40 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         int _channels = img.channels();
         int channels = _channels > 1 ? 3 : 1;
 
+        bool doDirectWrite = false;
+        switch( _channels )
+        {
+            case 1:
+                cinfo.input_components = 1;
+                cinfo.in_color_space = JCS_GRAYSCALE;
+                doDirectWrite = true; // GRAY -> GRAY
+                break;
+            case 3:
 #ifdef JCS_EXTENSIONS
-        cinfo.input_components = _channels;
-        cinfo.in_color_space = _channels == 3 ? JCS_EXT_BGR
-            : _channels == 4 ? JCS_EXT_BGRX : JCS_GRAYSCALE;
+                cinfo.input_components = 3;
+                cinfo.in_color_space = JCS_EXT_BGR;
+                doDirectWrite = true; // BGR -> BGR
 #else
-        cinfo.input_components = channels;
-        cinfo.in_color_space = channels > 1 ? JCS_RGB : JCS_GRAYSCALE;
+                cinfo.input_components = 3;
+                cinfo.in_color_space = JCS_RGB;
+                doDirectWrite = false; // BGR -> RGB
 #endif
+                break;
+            case 4:
+#ifdef JCS_EXTENSIONS
+                cinfo.input_components = 4;
+                cinfo.in_color_space = JCS_EXT_BGRX;
+                doDirectWrite = true; // BGRX -> BGRX
+#else
+                cinfo.input_components = 3;
+                cinfo.in_color_space = JCS_RGB;
+                doDirectWrite = false; // BGRA -> RGB
+#endif
+                break;
+            default:
+                CV_Error(cv::Error::StsError, cv::format("Unsupported number of _channels: %06d", _channels) );
+                break;
+        }
 
         int quality = 95;
         int progressive = 0;
@@ -758,9 +783,9 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             cinfo.comp_info[1].h_samp_factor = 1;
         }
 
-#if JPEG_LIB_VERSION >= 70
         if (luma_quality >= 0 && chroma_quality >= 0)
         {
+#if JPEG_LIB_VERSION >= 70
             cinfo.q_scale_factor[0] = jpeg_quality_scaling(luma_quality);
             cinfo.q_scale_factor[1] = jpeg_quality_scaling(chroma_quality);
             if ( luma_quality != chroma_quality )
@@ -772,35 +797,43 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 cinfo.comp_info[1].h_samp_factor = 1;
             }
             jpeg_default_qtables( &cinfo, TRUE );
-        }
+#else
+            // See https://github.com/opencv/opencv/issues/25646
+            CV_LOG_ONCE_WARNING(NULL, cv::format("IMWRITE_JPEG_LUMA/CHROMA_QUALITY are not supported bacause JPEG_LIB_VERSION < 70."));
 #endif // #if JPEG_LIB_VERSION >= 70
+        }
 
         jpeg_start_compress( &cinfo, TRUE );
 
-#ifndef JCS_EXTENSIONS
-        if( channels > 1 )
-            _buffer.allocate(width*channels);
-        buffer = _buffer.data();
-#endif
-
-        for( int y = 0; y < height; y++ )
+        if( doDirectWrite )
         {
-            uchar *data = img.data + img.step*y, *ptr = data;
-
-#ifndef JCS_EXTENSIONS
-            if( _channels == 3 )
+            for( int y = 0; y < height; y++ )
             {
-                icvCvt_BGR2RGB_8u_C3R( data, 0, buffer, 0, Size(width,1) );
-                ptr = buffer;
+                uchar *data = const_cast<uchar*>(img.ptr<uchar>(y));
+                jpeg_write_scanlines( &cinfo, &data, 1 );
             }
-            else if( _channels == 4 )
-            {
-                icvCvt_BGRA2BGR_8u_C4C3R( data, 0, buffer, 0, Size(width,1), 2 );
-                ptr = buffer;
-            }
-#endif
+        }
+        else
+        {
+            CV_Check(_channels, (_channels == 3) || (_channels == 4), "Unsupported number of channels(indirect write)");
 
-            jpeg_write_scanlines( &cinfo, &ptr, 1 );
+            AutoBuffer<uchar> _buffer;
+            _buffer.allocate(width*channels);
+            uchar *buffer = _buffer.data();
+
+            for( int y = 0; y < height; y++ )
+            {
+                uchar *data = const_cast<uchar*>(img.ptr<uchar>(y));
+                if( _channels == 3 )
+                {
+                    icvCvt_BGR2RGB_8u_C3R( data, 0, buffer, 0, Size(width,1) );
+                }
+                else // if( _channels == 4 )
+                {
+                    icvCvt_BGRA2BGR_8u_C4C3R( data, 0, buffer, 0, Size(width,1), 2 );
+                }
+                jpeg_write_scanlines( &cinfo, &buffer, 1 );
+            }
         }
 
         jpeg_finish_compress( &cinfo );

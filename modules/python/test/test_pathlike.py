@@ -28,7 +28,7 @@ class CanPassPathLike(NewOpenCVTests):
     def test_type_mismatch(self):
         import_path() # checks python version
 
-        with self.assertRaises(TypeError) as context:
+        with self.assertRaises(cv.error) as context:
             cv.imread(123)
 
         self.assertTrue('str or path-like' in str(context.exception))

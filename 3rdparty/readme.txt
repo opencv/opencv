@@ -6,20 +6,13 @@ In order to use these versions of libraries instead of system ones on UNIX syste
 should use BUILD_<library_name> CMake flags (for example, BUILD_PNG for the libpng library).
 
 ------------------------------------------------------------------------------------
-libjpeg (deprecated)  The Independent JPEG Group's JPEG software.
-                      Copyright (C) 1991-2012, Thomas G. Lane, Guido Vollbeding.
-                      See IGJ home page http://www.ijg.org
-                      for details and links to the source code
-
 libjpeg-turbo         libjpeg-turbo is covered by three compatible BSD-style open source licenses.
                       Refer to [LICENSE.md](libjpeg-turbo/LICENSE.md) for a roll-up of license terms.
 
                       Site: https://github.com/libjpeg-turbo/libjpeg-turbo
                       API is compatible with original libjpeg.
 
-                      WITH_JPEG CMake option must be ON to add libjpeg or libjpeg-turbo support to imgcodecs.
-                      BUILD_JPEG=ON selects libjpeg-turbo by default (since OpenCV 3.4.2).
-                      Enable BUILD_JPEG_TURBO_DISABLE=ON to force using of libjpeg (this option is removed in OpenCV 4.0).
+                      WITH_JPEG CMake option must be ON to add libjpeg-turbo support to imgcodecs.
                       SIMD instructions are enabled by default. Use ENABLE_LIBJPEG_TURBO_SIMD to control SIMD instructions.
 ------------------------------------------------------------------------------------
 libpng                Portable Network Graphics library.
@@ -49,6 +42,14 @@ zlib                  General purpose LZ77 compression library
                       Copyright (C) 1995-2022 Jean-loup Gailly and Mark Adler.
                       See zlib home page http://www.zlib.net
                       for details and links to the source code
+
+zlib-ng               zlib data compression library for the next generation systems
+                      (C) 1995-2013 Jean-loup Gailly and Mark Adler
+                      See zlib-ng official GitHub repository
+                      https://github.com/zlib-ng/zlib-ng.git
+                      for details and links to source code
+
+                      WITH_ZLIB_NG CMake option must be ON to use zlib-ng as the zlib implementation.
 ------------------------------------------------------------------------------------
 jasper                JasPer is a collection of software
                       (i.e., a library and application programs) for the coding

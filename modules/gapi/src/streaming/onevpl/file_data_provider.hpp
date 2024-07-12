@@ -21,7 +21,7 @@ namespace onevpl {
 
 // With gcc13, std::unique_ptr(FILE, decltype(&fclose)> causes ignored-attributes warning.
 // See https://stackoverflow.com/questions/76849365/can-we-add-attributes-to-standard-function-declarations-without-breaking-standar
-#if defined(__GNUC__) && (__GNUC__ == 13)
+#if defined(__GNUC__) && (__GNUC__ >= 13)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif

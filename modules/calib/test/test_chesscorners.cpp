@@ -792,5 +792,42 @@ TEST(Calib3d_AsymmetricCirclesPatternDetector, regression_19498)
     EXPECT_FALSE(res);
 }
 
+TEST(Calib3d_RotatedCirclesPatternDetector, issue_24964)
+{
+    string path = cvtest::findDataFile("cv/cameracalibration/circles/circles_24964.png");
+    Mat image = cv::imread(path);
+    ASSERT_FALSE(image.empty()) << "Can't read image: " << path;
+
+    vector<Point2f> centers;
+    Size parrernSize(7, 6);
+    Mat goldCenters(parrernSize.height, parrernSize.width, CV_32FC2);
+    Point2f firstGoldCenter(380.f, 430.f);
+    for (int i = 0; i < parrernSize.height; i++)
+    {
+        for (int j = 0; j < parrernSize.width; j++)
+        {
+            goldCenters.at<Point2f>(i, j) = Point2f(firstGoldCenter.x + j * 100.f, firstGoldCenter.y + i * 100.f);
+        }
+    }
+
+    bool found = false;
+    found = findCirclesGrid(image, parrernSize, centers, CALIB_CB_SYMMETRIC_GRID);
+
+    EXPECT_TRUE(found);
+    ASSERT_EQ(centers.size(), (size_t)parrernSize.area());
+    double error = calcError(centers, goldCenters);
+    EXPECT_LE(error, precise_success_error_level);
+
+    // "rotate" the circle grid by 90 degrees
+    swap(parrernSize.height, parrernSize.width);
+
+    found = findCirclesGrid(image, parrernSize, centers, CALIB_CB_SYMMETRIC_GRID);
+    error = calcError(centers, goldCenters.t());
+
+    EXPECT_TRUE(found);
+    ASSERT_EQ(centers.size(), (size_t)parrernSize.area());
+    EXPECT_LE(error, precise_success_error_level);
+}
+
 }} // namespace
 /* End of file. */

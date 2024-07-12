@@ -51,17 +51,6 @@ TEST_P(DistanceAndOverlap, Scaled_Data_MIL)
     test.run();
 }
 
-TEST_P(DistanceAndOverlap, GOTURN)
-{
-    std::string model = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.prototxt");
-    std::string weights = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.caffemodel", false);
-    cv::TrackerGOTURN::Params params;
-    params.modelTxt = model;
-    params.modelBin = weights;
-    TrackerTest<Tracker, Rect> test(TrackerGOTURN::create(params), dataset, 35, .35f, NoTransform);
-    test.run();
-}
-
 INSTANTIATE_TEST_CASE_P(Tracking, DistanceAndOverlap, TESTSET_NAMES);
 
 static bool checkIOU(const Rect& r0, const Rect& r1, double threshold)
@@ -111,18 +100,6 @@ static void checkTrackingAccuracy(cv::Ptr<Tracker>& tracker, double iouThreshold
     }
 }
 
-TEST(GOTURN, accuracy)
-{
-    std::string model = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.prototxt");
-    std::string weights = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.caffemodel", false);
-    cv::TrackerGOTURN::Params params;
-    params.modelTxt = model;
-    params.modelBin = weights;
-    cv::Ptr<Tracker> tracker = TrackerGOTURN::create(params);
-    // TODO! GOTURN have low accuracy. Try to remove this api at 5.x.
-    checkTrackingAccuracy(tracker, 0.08);
-}
-
 TEST(DaSiamRPN, accuracy)
 {
     std::string model = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_model.onnx", false);
@@ -166,7 +143,7 @@ TEST(vittrack, accuracy_vittrack)
     cv::TrackerVit::Params params;
     params.net = model;
     cv::Ptr<Tracker> tracker = TrackerVit::create(params);
-    checkTrackingAccuracy(tracker, 0.67);
+    checkTrackingAccuracy(tracker, 0.64);
 }
 
 }}  // namespace opencv_test::

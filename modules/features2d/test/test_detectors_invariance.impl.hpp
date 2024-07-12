@@ -3,12 +3,16 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "test_invariance_utils.hpp"
+#include <functional>
 
 namespace opencv_test { namespace {
 
 #define SHOW_DEBUG_LOG 1
 
-typedef tuple<std::string, Ptr<FeatureDetector>, float, float> String_FeatureDetector_Float_Float_t;
+// NOTE: using factory function (function<Ptr<Type>()>) instead of object instance (Ptr<Type>) as a
+// test parameter, because parameters exist during whole test program run and consume a lot of memory
+typedef std::function<cv::Ptr<cv::FeatureDetector>()> DetectorFactory;
+typedef tuple<std::string, DetectorFactory, float, float> String_FeatureDetector_Float_Float_t;
 
 
 static
@@ -56,7 +60,7 @@ protected:
         image0 = imread(filename);
         ASSERT_FALSE(image0.empty()) << "couldn't read input image";
 
-        featureDetector = get<1>(GetParam());
+        featureDetector = get<1>(GetParam())();
         minKeyPointMatchesRatio = get<2>(GetParam());
         minInliersRatio = get<3>(GetParam());
     }

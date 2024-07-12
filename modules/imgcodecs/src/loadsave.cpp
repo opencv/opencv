@@ -81,6 +81,22 @@ static Size validateInputImageSize(const Size& size)
 }
 
 
+static inline int calcType(int type, int flags)
+{
+    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
+    {
+        if( (flags & IMREAD_ANYDEPTH) == 0 )
+            type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
+
+        if( (flags & IMREAD_COLOR) != 0 ||
+           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
+            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
+        else
+            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
+    }
+    return type;
+}
+
 namespace {
 
 class ByteStreamBuffer: public std::streambuf
@@ -328,7 +344,7 @@ static ImageEncoder findEncoder( const String& _ext )
 }
 
 
-static void ExifTransform(int orientation, Mat& img)
+static void ExifTransform(int orientation, OutputArray img)
 {
     switch( orientation )
     {
@@ -365,7 +381,7 @@ static void ExifTransform(int orientation, Mat& img)
     }
 }
 
-static void ApplyExifOrientation(ExifEntry_t orientationTag, Mat& img)
+static void ApplyExifOrientation(ExifEntry_t orientationTag, OutputArray img)
 {
     int orientation = IMAGE_ORIENTATION_TL;
 
@@ -385,7 +401,7 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, Mat& img)
  *
 */
 static bool
-imread_( const String& filename, int flags, Mat& mat )
+imread_( const String& filename, int flags, OutputArray mat )
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
@@ -444,27 +460,30 @@ imread_( const String& filename, int flags, Mat& mat )
     Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
 
     // grab the decoded type
-    int type = decoder->type();
-    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
-    {
-        if( (flags & IMREAD_ANYDEPTH) == 0 )
-            type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
+    const int type = calcType(decoder->type(), flags);
 
-        if( (flags & IMREAD_COLOR) != 0 ||
-           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-        else
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
+    if (mat.empty())
+    {
+        mat.create( size.height, size.width, type );
+    }
+    else
+    {
+        CV_CheckEQ(size, mat.size(), "");
+        CV_CheckTypeEQ(type, mat.type(), "");
+        CV_Assert(mat.isContinuous());
     }
 
-    mat.create( size.height, size.width, type );
-
     // read the image data
+    Mat real_mat = mat.getMat();
+    const void * original_ptr = real_mat.data;
     bool success = false;
     try
     {
-        if (decoder->readData(mat))
+        if (decoder->readData(real_mat))
+        {
+            CV_CheckTrue(original_ptr == real_mat.data, "Internal imread issue");
             success = true;
+        }
     }
     catch (const cv::Exception& e)
     {
@@ -558,18 +577,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
     while (current < count)
     {
         // grab the decoded type
-        int type = decoder->type();
-        if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED)
-        {
-            if ((flags & IMREAD_ANYDEPTH) == 0)
-                type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
-
-            if ((flags & IMREAD_COLOR) != 0 ||
-                ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
-                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-            else
-                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
-        }
+        const int type = calcType(decoder->type(), flags);
 
         // established the required input image size
         Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
@@ -630,6 +638,14 @@ Mat imread( const String& filename, int flags )
 
     /// return a reference to the data
     return img;
+}
+
+void imread( const String& filename, OutputArray dst, int flags )
+{
+    CV_TRACE_FUNCTION();
+
+    /// load the data
+    imread_(filename, flags, dst);
 }
 
 /**
@@ -847,18 +863,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
     // established the required input image size
     Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
 
-    int type = decoder->type();
-    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
-    {
-        if( (flags & IMREAD_ANYDEPTH) == 0 )
-            type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
-
-        if( (flags & IMREAD_COLOR) != 0 ||
-           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-        else
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
-    }
+    const int type = calcType(decoder->type(), flags);
 
     mat.create( size.height, size.width, type );
 
@@ -1009,18 +1014,7 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
     while (current < count)
     {
         // grab the decoded type
-        int type = decoder->type();
-        if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED)
-        {
-            if ((flags & IMREAD_ANYDEPTH) == 0)
-                type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
-
-            if ((flags & IMREAD_COLOR) != 0 ||
-                ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
-                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-            else
-                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
-        }
+        const int type = calcType(decoder->type(), flags);
 
         // established the required input image size
         Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
@@ -1260,17 +1254,7 @@ bool ImageCollection::Impl::readHeader() {
 
 // readHeader must be called before calling this method
 Mat ImageCollection::Impl::readData() {
-    int type = m_decoder->type();
-    if ((m_flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && m_flags != IMREAD_UNCHANGED) {
-        if ((m_flags & IMREAD_ANYDEPTH) == 0)
-            type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
-
-        if ((m_flags & IMREAD_COLOR) != 0 ||
-            ((m_flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-        else
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
-    }
+    const int type = calcType(m_decoder->type(), m_flags);
 
     // established the required input image size
     Size size = validateInputImageSize(Size(m_width, m_height));

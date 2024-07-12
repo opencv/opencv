@@ -103,7 +103,6 @@ class Builder:
                "-DWITH_WEBP=OFF",
                "-DWITH_OPENEXR=OFF",
                "-DWITH_OPENGL=OFF",
-               "-DWITH_OPENVX=OFF",
                "-DWITH_OPENNI=OFF",
                "-DWITH_OPENNI2=OFF",
                "-DWITH_PNG=OFF",
@@ -191,7 +190,7 @@ class Builder:
         if self.options.simd:
             flags += "-msimd128 "
         if self.options.build_flags:
-            flags += self.options.build_flags
+            flags += self.options.build_flags + " "
         if self.options.webnn:
             flags += "-s USE_WEBNN=1 "
         flags += "-s EXPORTED_FUNCTIONS=\"['_malloc', '_free']\""

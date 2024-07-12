@@ -258,6 +258,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         const std::vector<std::size_t>&);
 
     template void max_pooling_with_indices(const Stream&,
+        TensorSpan<int8_t>, TensorSpan<int32_t>, TensorView<int8_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_pooling_with_indices(const Stream&,
+        TensorSpan<int8_t>, TensorSpan<int64_t>, TensorView<int8_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_pooling_with_indices(const Stream&,
+        TensorSpan<uint8_t>, TensorSpan<int32_t>, TensorView<uint8_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_pooling_with_indices(const Stream&,
+        TensorSpan<uint8_t>, TensorSpan<int64_t>, TensorView<uint8_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_pooling_with_indices(const Stream&,
         TensorSpan<int32_t>, TensorSpan<int32_t>, TensorView<int32_t>,
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
@@ -362,6 +382,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void max_unpooling(const Stream&,
         TensorSpan<float>, TensorView<float>, TensorView<int64_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_unpooling(const Stream&,
+        TensorSpan<int8_t>, TensorView<int8_t>, TensorView<int32_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_unpooling(const Stream&,
+        TensorSpan<int8_t>, TensorView<int8_t>, TensorView<int64_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_unpooling(const Stream&,
+        TensorSpan<uint8_t>, TensorView<uint8_t>, TensorView<int32_t>,
+        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
+        const std::vector<std::size_t>&);
+
+    template void max_unpooling(const Stream&,
+        TensorSpan<uint8_t>, TensorView<uint8_t>, TensorView<int64_t>,
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
 
