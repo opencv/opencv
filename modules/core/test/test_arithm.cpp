@@ -1923,7 +1923,7 @@ TEST(Core_ArithmMask, uninitialized)
 
         Mat a(dims, sizes, type), a1;
         Mat b(dims, sizes, type), b1;
-        Mat mask(dims, sizes, CV_8U);
+        Mat mask(dims, sizes, CV_Bool);
         Mat mask1;
         Mat c, d;
 
@@ -2479,7 +2479,7 @@ TEST(Core_minMaxIdx, regression_9207_1)
    2,   1,   1,
    2,   2,   1
 };
-    Mat mask(Size(cols, rows), CV_8UC1, mask_);
+    Mat mask(Size(cols, rows), CV_BoolC1, mask_);
     Mat src(Size(cols, rows), CV_8UC1, src_);
     double minVal = -0.0, maxVal = -0.0;
     int minIdx[2] = { -2, -2 }, maxIdx[2] = { -2, -2 };
@@ -2891,7 +2891,7 @@ TEST(Core_Norm, IPP_regression_NORM_L1_16UC3_small)
    0,   0,   0, 255,   0, 255,   0, 255, 255,
    0,   0, 255,   0, 255, 255, 255,   0, 255
 };
-    Mat mask(sz, CV_8UC1, mask_);
+    Mat mask(sz, CV_BoolC1, mask_);
 
     EXPECT_EQ((double)9*4*cn, cv::norm(a, b, NORM_L1)); // without mask, IPP works well
     EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
