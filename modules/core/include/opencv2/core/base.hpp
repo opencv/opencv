@@ -297,6 +297,21 @@ It is possible to alternate error processing by using redirectError().
  */
 CV_EXPORTS CV_NORETURN void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
+/*! @brief Signals an error and terminate application.
+
+By default the function prints information about the error to stderr, then it terminates application
+with std::terminate. The function is designed for invariants check in functions and methods with
+noexcept attribute.
+@param _code - error code (Error::Code)
+@param _err - error description
+@param _func - function name. Available only when the compiler supports getting it
+@param _file - source file name where the error has occurred
+@param _line - line number in the source file where the error has occurred
+@see CV_Error, CV_Error_, CV_Assert, CV_DbgAssert
+ */
+CV_EXPORTS CV_NORETURN void terminate(int _code, const String& _err, const char* _func, const char* _file, int _line) CV_NOEXCEPT;
+
+
 #ifdef CV_STATIC_ANALYSIS
 
 // In practice, some macro are not processed correctly (noreturn is not detected).
@@ -338,8 +353,11 @@ for example:
 The macros CV_Assert (and CV_DbgAssert(expr)) evaluate the specified expression. If it is 0, the macros
 raise an error (see cv::error). The macro CV_Assert checks the condition in both Debug and Release
 configurations while CV_DbgAssert is only retained in the Debug configuration.
+CV_AssertTerminate is analog of CV_Assert for invariants check in functions with noexcept attribute.
+It does not throw exception, but terminates the application.
 */
 #define CV_Assert( expr ) do { if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ ); } while(0)
+#define CV_AssertTerminate( expr ) do { if(!!(expr)) ; else cv::terminate( #expr, CV_Func, __FILE__, __LINE__ ); } while(0)
 
 #endif // CV_STATIC_ANALYSIS
 
