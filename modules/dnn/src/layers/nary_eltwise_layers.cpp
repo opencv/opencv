@@ -663,7 +663,8 @@ public:
             return;
         }
 
-        typeDispatch(inputs.front().type(), inputs.size(), inputs, outputs);
+        int type_for_dispatch = op == OPERATION::WHERE ? outputs.front().type() : inputs.front().type();
+        typeDispatch(type_for_dispatch, inputs.size(), inputs, outputs);
     }
 
     template<typename T, typename... Args>
@@ -671,11 +672,6 @@ public:
     {
         if (ninputs == 2) { // Operators that take two operands
             switch (op) {
-                case OPERATION::AND: {
-                    auto op_and = [](const uint8_t &a, const uint8_t &b) { return a & b; };
-                    binary_forward<T, bool>(op_and, std::forward<Args>(args)...);
-                    break;
-                }
                 case OPERATION::EQUAL: {
                     auto equal = [](const T &a, const T &b) { return a == b; };
                     binary_forward<T, bool>(equal, std::forward<Args>(args)...);
@@ -701,19 +697,9 @@ public:
                     binary_forward<T, bool>(less_equal, std::forward<Args>(args)...);
                     break;
                 }
-                case OPERATION::OR: {
-                    auto op_or = [](const uint8_t &a, const uint8_t &b) { return a | b; };
-                    binary_forward<T, bool>(op_or, std::forward<Args>(args)...);
-                    break;
-                }
                 case OPERATION::POW: {
                     auto pow = [] (const T& a, const T& b) { return std::pow(a, b); };
                     binary_forward<T, T>(pow, std::forward<Args>(args)..., 1e5);
-                    break;
-                }
-                case OPERATION::XOR: {
-                    auto op_xor = [](const uint8_t &a, const uint8_t &b) { return a ^ b; };
-                    binary_forward<T, bool>(op_xor, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::BITSHIFT: {
