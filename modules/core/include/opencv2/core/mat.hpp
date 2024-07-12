@@ -1232,7 +1232,8 @@ public:
     @param m Destination matrix. If it does not have a proper size or type before the operation, it is
     reallocated.
     @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
-    elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels.
+    elements need to be copied. The mask has to be of type CV_8U or CV_Bool and can have 1 or multiple
+    channels.
     */
     void copyTo( OutputArray m, InputArray mask ) const;
 
@@ -1269,7 +1270,8 @@ public:
     This is an advanced variant of the Mat::operator=(const Scalar& s) operator.
     @param value Assigned scalar converted to the actual array type.
     @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
-    elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels
+    elements need to be copied. The mask has to be of type CV_8U or CV_Bool and can have 1 or multiple
+    channels.
      */
     Mat& setTo(InputArray value, InputArray mask=noArray());
 
