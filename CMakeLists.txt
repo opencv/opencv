@@ -1193,7 +1193,11 @@ if(CMAKE_GENERATOR MATCHES "Xcode|Visual Studio|Multi-Config")
 else()
   status("    Configuration:"  ${CMAKE_BUILD_TYPE})
 endif()
-
+if(DEFINED OPENCV_ALGO_HINT_DEFAULT)
+  status("    Algorithm Hint:"  ${OPENCV_ALGO_HINT_DEFAULT})
+else()
+  status("    Algorithm Hint:" " ALGO_ACCURATE")
+endif()
 
 # ========================= CPU code generation mode =========================
 status("")
