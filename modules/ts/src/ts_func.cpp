@@ -431,7 +431,7 @@ void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
     }
 
     int mcn = mask.channels();
-    CV_Assert( src.size == mask.size && mask.depth() == CV_8U
+    CV_Assert( src.size == mask.size && (mask.depth() == CV_8U || mask.depth() == CV_Bool)
                && (mcn == 1 || mcn == src.channels()) );
 
     const Mat *arrays[]={&src, &dst, &mask, 0};
@@ -1397,7 +1397,7 @@ double norm(InputArray _src, int normType, InputArray _mask)
     int normType0 = normType;
     normType = normType == NORM_L2SQR ? NORM_L2 : normType;
 
-    CV_Assert( mask.empty() || (src.size == mask.size && mask.type() == CV_8U) );
+    CV_Assert( mask.empty() || (src.size == mask.size && (mask.type() == CV_8U || mask.type() == CV_Bool) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
 
     const Mat *arrays[]={&src, &mask, 0};
@@ -1506,7 +1506,7 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 
     CV_CheckTypeEQ(src1.type(), src2.type(), "");
     CV_Assert(src1.size == src2.size);
-    CV_Assert( mask.empty() || (src1.size == mask.size && mask.type() == CV_8U) );
+    CV_Assert( mask.empty() || (src1.size == mask.size && (mask.type() == CV_8U || mask.type() == CV_Bool)) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     const Mat *arrays[]={&src1, &src2, &mask, 0};
     Mat planes[3];
@@ -2937,7 +2937,7 @@ mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int&
 
 Scalar mean(const Mat& src, const Mat& mask)
 {
-    CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.size == src.size));
+    CV_Assert(mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_Bool) && mask.size == src.size));
     Scalar sum;
     int nz = 0;
 
