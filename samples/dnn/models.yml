@@ -218,7 +218,7 @@ squeezenet:
   width: 224
   height: 224
   rgb: true
-  classes: "classification_classes_ILSVRC2012.txt"
+  labels: "classification_classes_ILSVRC2012.txt"
   sample: "classification"
 
 googlenet:
@@ -232,7 +232,7 @@ googlenet:
   width: 224
   height: 224
   rgb: false
-  classes: "classification_classes_ILSVRC2012.txt"
+  labels: "classification_classes_ILSVRC2012.txt"
   sample: "classification"
 
 resnet:
@@ -246,7 +246,7 @@ resnet:
   width: 256
   height: 256
   rgb: true
-  classes: "classification_classes_ILSVRC2012.txt"
+  labels: "classification_classes_ILSVRC2012.txt"
   sample: "classification"
 
 ################################################################################

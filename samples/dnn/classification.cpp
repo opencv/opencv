@@ -28,7 +28,9 @@ const string param_keys =
     "{ zoo             | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
     "{ input i         |                   | Path to input image or video file. Skip this argument to capture frames from a camera.}"
     "{ imglist         |                   | Pass this flag if image list (i.e. .xml or .yaml) file is passed}"
-    "{ crop            |       false       | Preprocess input image by center cropping.}";
+    "{ crop            |       false       | Preprocess input image by center cropping.}"
+    "{ labels          |                   | Path to the text file with labels for detected objects.}"
+    "{ model           |                   | Path to the model file.}";
 
 const string backend_keys = format(
     "{ backend          | default | Choose one of computation backends: "
@@ -120,11 +122,13 @@ int main(int argc, char** argv)
     String target = parser.get<String>("target");
     bool isImgList = parser.has("imglist");
 
-    // Open file with classes names.
-    string file = findFile(parser.get<String>("classes"));
+    // Open file with labels.
+    string file = findFile(parser.get<String>("labels"));
     ifstream ifs(file.c_str());
-    if (!ifs.is_open())
-        CV_Error(Error::StsError, "File " + file + " not found");
+    if (!ifs.is_open()){
+        cout<<"File " << file << " not found";
+        exit(1);
+    }
     string line;
     while (getline(ifs, line))
     {

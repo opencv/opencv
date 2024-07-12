@@ -167,7 +167,7 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
                        modelName, zooFile, ' ', "-1") +
            genArgument("rgb", "Indicate that model works with RGB input images instead BGR ones.",
                        modelName, zooFile)+
-           genArgument("classes", "Optional path to a text file with names of classes to label detected objects.",
+           genArgument("labels", "Path to a text file with names of classes to label detected objects.",
                        modelName, zooFile)+
            genArgument("sha1", "Optional path to hashsum of downloaded model to be loaded from models.yml",
                        modelName, zooFile);
