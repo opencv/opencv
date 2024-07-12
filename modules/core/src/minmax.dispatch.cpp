@@ -171,7 +171,7 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
     if ((haveMask || type == CV_32FC1) && dev.isAMD())
         return false;
 
-    CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U)) ||
+    CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U)) || _mask.type() == CV_Bool))
               (cn >= 1 && !minLoc && !maxLoc) );
 
     if (ddepth < 0)
@@ -302,7 +302,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_INSTRUMENT_REGION();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
+    CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U) || _mask.type() == CV_Bool)) ||
         (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
 
     CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
