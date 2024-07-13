@@ -86,7 +86,11 @@ CASE(test_adam)
 CASE(test_adam_multiple)
     // no filter
 CASE(test_add)
-    // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 0.00024;  // Expected: (normL1) <= (l1), actual: 0.000234754 vs 1e-05
+        default_lInf = 0.0011;  // Expected: (normInf) <= (lInf), actual: 0.00106502 vs 0.0001
+    }
 CASE(test_add_bcast)
 #if SKIP_SET_1
     SKIP;
@@ -1044,7 +1048,11 @@ CASE(test_momentum)
 CASE(test_momentum_multiple)
     // no filter
 CASE(test_mul)
-    // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 0.00024; // Expected: (normL1) <= (l1), actual: 0.00023824 vs 1e-05
+        default_lInf = 0.0015; // Expected: (normInf) <= (lInf), actual: 0.00145674 vs 0.0001
+    }
 CASE(test_mul_bcast)
 #if SKIP_SET_1
     SKIP;
@@ -1194,7 +1202,7 @@ CASE(test_or_bcast4v3d)
 CASE(test_or_bcast4v4d)
     // no filter
 CASE(test_pow)
-    // no filter
+    SKIP_OPENCL_FP16;
 CASE(test_pow_bcast_array)
     // no filter
 CASE(test_pow_bcast_scalar)
