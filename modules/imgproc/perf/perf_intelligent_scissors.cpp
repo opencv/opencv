@@ -12,10 +12,10 @@ PERF_TEST_P(TestIntelligentScissorsMB, buildMap, testing::Values( IMREAD_GRAYSCA
 {
     const int flags = GetParam();
 
-    const Mat image = imread(findDataFile("cv/shared/lena.png"), flags);
+    const Mat image = imread(samples::findFile("HappyFish.jpg"), flags);
     ASSERT_TRUE(!image.empty());
 
-    const Point source_point(275, 63);
+    const Point source_point(140, 20);
 
     segmentation::IntelligentScissorsMB tool;
     tool.applyImage(image);
