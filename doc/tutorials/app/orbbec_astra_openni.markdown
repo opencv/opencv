@@ -1,4 +1,4 @@
-Using Orbbec Astra 3D cameras {#tutorial_orbbec_astra}
+Using Orbbec Astra 3D cameras {#tutorial_orbbec_astra_openni}
 ======================================================
 
 @tableofcontents
@@ -9,7 +9,7 @@ Using Orbbec Astra 3D cameras {#tutorial_orbbec_astra}
 
 ### Introduction
 
-This tutorial is devoted to the Astra Series of Orbbec 3D cameras (https://orbbec3d.com/index/Product/info.html?cate=38&id=36).
+This tutorial is devoted to the Astra Series of Orbbec 3D cameras (https://www.orbbec.com/products/structured-light-camera/astra-series/).
 That cameras have a depth sensor in addition to a common color sensor. The depth sensors can be read using
 the open source OpenNI API with @ref cv::VideoCapture class. The video stream is provided through the regular
 camera interface.
@@ -18,7 +18,7 @@ camera interface.
 
 In order to use the Astra camera's depth sensor with OpenCV you should do the following steps:
 
--#  Download the latest version of Orbbec OpenNI SDK (from here <https://orbbec3d.com/index/download.html>).
+-#  Download the latest version of Orbbec OpenNI SDK (from here <https://www.orbbec.com/developers/openni-sdk/>).
     Unzip the archive, choose the build according to your operating system and follow installation
     steps provided in the Readme file.
 
@@ -70,6 +70,12 @@ In order to use the Astra camera's depth sensor with OpenCV you should do the fo
     echo "exit"
     @endcode
 
+    @note The last tried version `2.3.0.86_202210111154_4c8f5aa4_beta6` does not work correctly with
+    modern Linux, even after libusb rebuild as recommended by the instruction. The last know good
+    configuration is version 2.3.0.63 (tested with Ubuntu 18.04 amd64). It's not provided officialy
+    with the downloading page, but published by Orbbec technical suport on Orbbec community forum
+    [here](https://3dclub.orbbec3d.com/t/universal-download-thread-for-astra-series-cameras/622).
+
 -#  Now you can configure OpenCV with OpenNI support enabled by setting the `WITH_OPENNI2` flag in CMake.
     You may also like to enable the `BUILD_EXAMPLES` flag to get a code sample working with your Astra camera.
     Run the following commands in the directory containing OpenCV source code to enable OpenNI support:
@@ -106,7 +112,7 @@ can be read using the OpenNI interface with @ref cv::VideoCapture class. The vid
 not available through OpenNI API and is only provided via the regular camera interface.
 So, to get both depth and color frames, two @ref cv::VideoCapture objects should be created:
 
-@snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Open streams
+@snippetlineno samples/cpp/tutorial_code/videoio/openni_orbbec_astra/openni_orbbec_astra.cpp Open streams
 
 The first object will use the OpenNI2 API to retrieve depth data. The second one uses the
 Video4Linux2 interface to access the color sensor. Note that the example above assumes that
@@ -119,12 +125,12 @@ For this example, we’ll configure width and height of both streams to VGA reso
 the maximum resolution available for both sensors, and we’d like both stream parameters to be the
 same for easier color-to-depth data registration:
 
-@snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Setup streams
+@snippetlineno samples/cpp/tutorial_code/videoio/openni_orbbec_astra/openni_orbbec_astra.cpp Setup streams
 
 For setting and retrieving some property of sensor data generators use @ref cv::VideoCapture::set and
 @ref cv::VideoCapture::get methods respectively, e.g. :
 
-@snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Get properties
+@snippetlineno samples/cpp/tutorial_code/videoio/openni_orbbec_astra/openni_orbbec_astra.cpp Get properties
 
 The following properties of cameras available through OpenNI interface are supported for the depth
 generator:
@@ -156,7 +162,7 @@ As there are two video sources that should be read simultaneously, it’s necess
 threads to avoid blocking. Example implementation that gets frames from each sensor in a new thread
 and stores them in a list along with their timestamps:
 
-@snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Read streams
+@snippetlineno samples/cpp/tutorial_code/videoio/openni_orbbec_astra/openni_orbbec_astra.cpp Read streams
 
 VideoCapture can retrieve the following data:
 
@@ -177,7 +183,7 @@ two video streams may become out of sync even when both streams are set up for t
 A post-synchronization procedure can be applied to the streams to combine depth and color frames into
 pairs. The sample code below demonstrates this procedure:
 
-@snippetlineno samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp Pair frames
+@snippetlineno samples/cpp/tutorial_code/videoio/openni_orbbec_astra/openni_orbbec_astra.cpp Pair frames
 
 In the code snippet above the execution is blocked until there are some frames in both frame lists.
 When there are new frames, their timestamps are being checked -- if they differ more than a half of
@@ -194,5 +200,5 @@ but the depth data makes it easy.
 ![Depth frame](images/astra_depth.png)
 
 The complete implementation can be found in
-[orbbec_astra.cpp](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/videoio/orbbec_astra/orbbec_astra.cpp)
+[openni_orbbec_astra.cpp](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/videoio/openni_orbbec_astra/openni_orbbec_astra.cpp)
 in `samples/cpp/tutorial_code/videoio` directory.

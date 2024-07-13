@@ -260,6 +260,14 @@ TEST_P(Test_TFLite, permute) {
     testLayer("permutation_4d_0231");
 }
 
+TEST_P(Test_TFLite, global_average_pooling_2d) {
+    testLayer("global_average_pooling_2d");
+}
+
+TEST_P(Test_TFLite, global_max_pooling_2d) {
+    testLayer("global_max_pooling_2d");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace

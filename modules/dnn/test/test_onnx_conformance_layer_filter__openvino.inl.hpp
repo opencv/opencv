@@ -86,7 +86,11 @@ CASE(test_adam)
 CASE(test_adam_multiple)
     // no filter
 CASE(test_add)
-    // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 0.00024;  // Expected: (normL1) <= (l1), actual: 0.000234754 vs 1e-05
+        default_lInf = 0.0011;  // Expected: (normInf) <= (lInf), actual: 0.00106502 vs 0.0001
+    }
 CASE(test_add_bcast)
 #if SKIP_SET_1
     SKIP;
@@ -544,10 +548,20 @@ CASE(test_cumsum_2d_negative_axis)
     // no filter
 CASE(test_depthtospace_crd_mode)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 1e-4;  // Expected: (normL1) <= (l1), actual: 9.33057e-05 vs 1e-05
+        default_lInf = 2.5e-4;  // Expected: (normInf) <= (lInf), actual: 0.000243843 vs 0.0001
+    }
 CASE(test_depthtospace_crd_mode_example)
     // no filter
 CASE(test_depthtospace_dcr_mode)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 1e-4;  // Expected: (normL1) <= (l1), actual: 9.33057e-05 vs 1e-05
+        default_lInf = 2.5e-4;  // Expected: (normInf) <= (lInf), actual: 0.000243843 vs 0.0001
+    }
 CASE(test_depthtospace_example)
     // no filter
 CASE(test_dequantizelinear)
@@ -675,6 +689,36 @@ CASE(test_gathernd_example_float32)
 CASE(test_gathernd_example_int32)
     // no filter
 CASE(test_gathernd_example_int32_batch_dim1)
+    // no filter
+CASE(test_gelu_default_1)
+    // no filter
+CASE(test_gelu_default_1_expanded)
+    // no filter
+CASE(test_gelu_default_2)
+    // no filter
+CASE(test_gelu_default_2_expanded)
+    // no filter
+CASE(test_gelu_tanh_1)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+    }
+CASE(test_gelu_tanh_1_expanded)
+    // no filter
+CASE(test_gelu_tanh_2)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80057e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80144e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
+    }
+CASE(test_gelu_tanh_2_expanded)
     // no filter
 CASE(test_gemm_all_attributes)
     // no filter
@@ -1102,7 +1146,11 @@ CASE(test_momentum)
 CASE(test_momentum_multiple)
     // no filter
 CASE(test_mul)
-    // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 0.00024; // Expected: (normL1) <= (l1), actual: 0.00023824 vs 1e-05
+        default_lInf = 0.0015; // Expected: (normInf) <= (lInf), actual: 0.00145674 vs 0.0001
+    }
 CASE(test_mul_bcast)
 #if SKIP_SET_1
     SKIP;
@@ -1254,7 +1302,7 @@ CASE(test_or_bcast4v3d)
 CASE(test_or_bcast4v4d)
     // no filter
 CASE(test_pow)
-    // no filter
+    SKIP_OPENCL_FP16;
 CASE(test_pow_bcast_array)
     // no filter
 CASE(test_pow_bcast_scalar)

@@ -1884,7 +1884,7 @@ void cv::findContours_legacy( InputArray _image, OutputArrayOfArrays _contours,
 {
     CV_INSTRUMENT_REGION();
 
-    findContours(_image, _contours, noArray(), mode, method, offset);
+    findContours_legacy(_image, _contours, noArray(), mode, method, offset);
 }
 
 /* End of file. */

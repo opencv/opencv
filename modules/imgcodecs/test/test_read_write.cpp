@@ -196,8 +196,18 @@ void test_image_io(const Mat& image, const std::string& fname, const std::string
     Mat buf_loaded = imdecode(Mat(buf), imreadFlag);
     EXPECT_FALSE(buf_loaded.empty());
 
+    if (imreadFlag & IMREAD_COLOR_RGB && imreadFlag != -1)
+    {
+        cvtColor(buf_loaded, buf_loaded, COLOR_RGB2BGR);
+    }
+
     Mat loaded = imread(fname, imreadFlag);
     EXPECT_FALSE(loaded.empty());
+
+    if (imreadFlag & IMREAD_COLOR_RGB && imreadFlag != -1)
+    {
+        cvtColor(loaded, loaded, COLOR_RGB2BGR);
+    }
 
     EXPECT_EQ(0, cv::norm(loaded, buf_loaded, NORM_INF)) << "imread() and imdecode() calls must provide the same result (bit-exact)";
 
@@ -238,6 +248,7 @@ TEST_P(Imgcodecs_Image, read_write_BGR)
 
     Mat image = generateTestImageBGR();
     EXPECT_NO_THROW(test_image_io(image, fname, ext, IMREAD_COLOR, psnrThreshold));
+    EXPECT_NO_THROW(test_image_io(image, fname, ext, IMREAD_COLOR_RGB, psnrThreshold));
 
     EXPECT_EQ(0, remove(fname.c_str()));
 }
@@ -280,6 +291,35 @@ TEST(Imgcodecs_Image, regression_9376)
     ASSERT_FALSE(m.empty());
     EXPECT_EQ(32, m.cols);
     EXPECT_EQ(32, m.rows);
+}
+
+TEST(Imgcodecs_Image, imread_overload)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string imgName = findDataFile("../highgui/readwrite/ordinary.bmp");
+
+    Mat ref = imread(imgName);
+    ASSERT_FALSE(ref.empty());
+    {
+        Mat img(ref.size(), ref.type(), Scalar::all(0)); // existing image
+        void * ptr = img.data;
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+        EXPECT_EQ(img.data, ptr); // no reallocation
+    }
+    {
+        Mat img; // empty image
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+    }
+    {
+        UMat img; // empty UMat
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+    }
 }
 
 //==================================================================================================

@@ -68,7 +68,8 @@ namespace cv
 enum ImreadModes {
        IMREAD_UNCHANGED            = -1, //!< If set, return the loaded image as is (with alpha channel, otherwise it gets cropped). Ignore EXIF orientation.
        IMREAD_GRAYSCALE            = 0,  //!< If set, always convert image to the single channel grayscale image (codec internal conversion).
-       IMREAD_COLOR                = 1,  //!< If set, always convert image to the 3 channel BGR color image.
+       IMREAD_COLOR_BGR            = 1,  //!< If set, always convert image to the 3 channel BGR color image.
+       IMREAD_COLOR                = 1,  //!< Same as IMREAD_COLOR_BGR.
        IMREAD_ANYDEPTH             = 2,  //!< If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
        IMREAD_ANYCOLOR             = 4,  //!< If set, the image is read in any possible color format.
        IMREAD_LOAD_GDAL            = 8,  //!< If set, use the gdal driver for loading the image.
@@ -78,7 +79,8 @@ enum ImreadModes {
        IMREAD_REDUCED_COLOR_4      = 33, //!< If set, always convert image to the 3 channel BGR color image and the image size reduced 1/4.
        IMREAD_REDUCED_GRAYSCALE_8  = 64, //!< If set, always convert image to the single channel grayscale image and the image size reduced 1/8.
        IMREAD_REDUCED_COLOR_8      = 65, //!< If set, always convert image to the 3 channel BGR color image and the image size reduced 1/8.
-       IMREAD_IGNORE_ORIENTATION   = 128 //!< If set, do not rotate the image according to EXIF's orientation flag.
+       IMREAD_IGNORE_ORIENTATION   = 128, //!< If set, do not rotate the image according to EXIF's orientation flag.
+       IMREAD_COLOR_RGB            = 256, //!< If set, always convert image to the 3 channel RGB color image.
      };
 
 //! Imwrite flags
@@ -87,8 +89,8 @@ enum ImwriteFlags {
        IMWRITE_JPEG_PROGRESSIVE    = 2,  //!< Enable JPEG features, 0 or 1, default is False.
        IMWRITE_JPEG_OPTIMIZE       = 3,  //!< Enable JPEG features, 0 or 1, default is False.
        IMWRITE_JPEG_RST_INTERVAL   = 4,  //!< JPEG restart interval, 0 - 65535, default is 0 - no restart.
-       IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is -1 - don't use.
-       IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is -1 - don't use.
+       IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is -1 - don't use. If JPEG_LIB_VERSION < 70, Not supported.
+       IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is -1 - don't use. If JPEG_LIB_VERSION < 70, Not supported.
        IMWRITE_JPEG_SAMPLING_FACTOR = 7, //!< For JPEG, set sampling factor. See cv::ImwriteJPEGSamplingFactorParams.
        IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
        IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
@@ -268,7 +270,7 @@ Currently, the following file formats are supported:
 @param filename Name of file to be loaded.
 @param flags Flag that can take values of cv::ImreadModes
 */
-CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
+CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR_BGR );
 
 /** @brief Loads an image from a file.
 
@@ -279,7 +281,7 @@ This is an overloaded member function, provided for convenience. It differs from
 @note
 The image passing through the img parameter can be pre-allocated. The memory is reused if the shape and the type match with the load image.
  */
-CV_EXPORTS_W void imread( const String& filename, OutputArray dst, int flags = IMREAD_COLOR );
+CV_EXPORTS_W void imread( const String& filename, OutputArray dst, int flags = IMREAD_COLOR_BGR );
 
 /** @brief Loads a multi-page image from a file.
 
@@ -291,7 +293,7 @@ The function imreadmulti loads a multi-page image from the specified file into a
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
 
-/** @brief Loads a of images of a multi-page image from a file.
+/** @brief Loads images of a multi-page image from a file.
 
 The function imreadmulti loads a specified range from a multi-page image from the specified file into a vector of Mat objects.
 @param filename Name of file to be loaded.
@@ -303,7 +305,7 @@ The function imreadmulti loads a specified range from a multi-page image from th
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
 
-/** @brief Returns the number of images inside the give file
+/** @brief Returns the number of images inside the given file
 
 The function imcount will return the number of pages in a multi-page image, or 1 for single-page images
 @param filename Name of file to be loaded.
@@ -410,27 +412,47 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
 
-/** @brief Returns true if the specified image can be decoded by OpenCV
+/** @brief Checks if the specified image file can be decoded by OpenCV.
 
-@param filename File name of the image
+The function haveImageReader checks if OpenCV is capable of reading the specified file.
+This can be useful for verifying support for a given image format before attempting to load an image.
+
+@param filename The name of the file to be checked.
+@return true if an image reader for the specified file is available and the file can be opened, false otherwise.
+
+@note The function checks the availability of image codecs that are either built into OpenCV or dynamically loaded.
+It does not check for the actual existence of the file but rather the ability to read the specified file type.
+If the file cannot be opened or the format is unsupported, the function will return false.
+
+@sa cv::haveImageWriter, cv::imread, cv::imdecode
 */
 CV_EXPORTS_W bool haveImageReader( const String& filename );
 
-/** @brief Returns true if an image with the specified filename can be encoded by OpenCV
+/** @brief Checks if the specified image file or specified file extension can be encoded by OpenCV.
 
- @param filename File name of the image
- */
+The function haveImageWriter checks if OpenCV is capable of writing images with the specified file extension.
+This can be useful for verifying support for a given image format before attempting to save an image.
+
+@param filename The name of the file or the file extension (e.g., ".jpg", ".png").
+It is recommended to provide the file extension rather than the full file name.
+@return true if an image writer for the specified extension is available, false otherwise.
+
+@note The function checks the availability of image codecs that are either built into OpenCV or dynamically loaded.
+It does not check for the actual existence of the file but rather the ability to write files of the given type.
+
+@sa cv::haveImageReader, cv::imwrite, cv::imencode
+*/
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
-/** @brief To read Multi Page images on demand
+/** @brief To read multi-page images on demand
 
-The ImageCollection class provides iterator API to read multi page images on demand. Create iterator
+The ImageCollection class provides iterator API to read multi-page images on demand. Create iterator
 to the collection of the images and iterate over the collection. Decode the necessary page with operator*.
 
 The performance of page decoding is O(1) if collection is increment sequentially. If the user wants to access random page,
 then the time Complexity is O(n) because the collection has to be reinitialized every time in order to go to the correct page.
 However, the intermediate pages are not decoded during the process, so typically it's quite fast.
-This is required because multipage codecs does not support going backwards.
+This is required because multi-page codecs does not support going backwards.
 After decoding the one page, it is stored inside the collection cache. Hence, trying to get Mat object from already decoded page is O(1).
 If you need memory, you can use .releaseCache() method to release cached index.
 The space complexity is O(n) if all pages are decoded into memory. The user is able to decode and release images on demand.

@@ -134,7 +134,7 @@ if(WITH_ARITH_DEC)
   set(D_ARITH_CODING_SUPPORTED 1)
 endif()
 
-set(JPEG_LIB_VERSION 62)
+set(JPEG_LIB_VERSION 70)
 
 # OpenCV
 set(JPEG_LIB_VERSION "${VERSION}-${JPEG_LIB_VERSION}" PARENT_SCOPE)
@@ -249,7 +249,9 @@ set_target_properties(${JPEG_LIBRARY}
   )
 
 if(ENABLE_SOLUTION_FOLDERS)
-  set_target_properties(${JPEG_LIBRARY} PROPERTIES FOLDER "3rdparty")
+  set_target_properties(${JPEG_LIBRARY} PROPERTIES FOLDER "3rdparty/jpeg")
+  set_target_properties(jpeg12-static PROPERTIES FOLDER "3rdparty/jpeg")
+  set_target_properties(jpeg16-static PROPERTIES FOLDER "3rdparty/jpeg")
 endif()
 
 if(NOT BUILD_SHARED_LIBS)

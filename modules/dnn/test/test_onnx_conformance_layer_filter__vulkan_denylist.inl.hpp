@@ -71,6 +71,9 @@
 "test_maxunpool_export_with_output_shape",
 "test_maxunpool_export_without_output_shape",
 "test_mul_uint8",
+"test_pow_types_float32_int32", // vulkan backend does not take tensor other than float32 data type
+"test_pow_types_float32_int64", // vulkan backend does not take tensor other than float32 data type
+"test_pow_types_int", // vulkan backend does not take tensor other than float32 data type
 "test_quantizelinear",
 "test_quantizelinear_axis",
 "test_quantizelinear_blocked",

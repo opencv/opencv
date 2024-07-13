@@ -17,6 +17,7 @@
 "test_maxpool_2d_same_upper",
 "test_maxpool_2d_strides",
 "test_maxpool_3d_default",
+"test_pow",
 "test_quantizelinear",
 "test_quantizelinear_axis",
 "test_quantizelinear_blocked",

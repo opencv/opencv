@@ -902,7 +902,7 @@ struct TorchImporter
             {
                 readTorchTable(scalarParams, tensorParams);
 
-                float power;
+                float power = 1.0f;
                 if (nnName == "Square") power = 2.0f;
                 else if (nnName == "Sqrt") power = 0.5f;
                 else if (nnName == "Power") power = scalarParams.get<float>("pow", 1.0f);

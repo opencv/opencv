@@ -1485,10 +1485,6 @@ bool CvCapture_FFMPEG::grabFrame()
 
     if( !ic || !video_st || (!rawMode && !context) )  return false;
 
-    if( ic->streams[video_stream]->nb_frames > 0 &&
-        frame_number > ic->streams[video_stream]->nb_frames )
-        return false;
-
     picture_pts = AV_NOPTS_VALUE_;
 
 #if USE_AV_INTERRUPT_CALLBACK

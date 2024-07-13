@@ -1522,10 +1522,11 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
         if (res == CV_HAL_ERROR_OK)
         {
+            // minIdx[0] and minIdx[0] are always 0 for "flatten" version
             if (minIdx)
-                ofs2idx(src, minIdx[0], minIdx);
+                ofs2idx(src, minIdx[1], minIdx);
             if (maxIdx)
-                ofs2idx(src, maxIdx[0], maxIdx);
+                ofs2idx(src, maxIdx[1], maxIdx);
             return;
         }
         else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
