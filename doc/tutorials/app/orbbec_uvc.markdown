@@ -6,15 +6,17 @@ Using Orbbec 3D cameras (UVC) {#tutorial_orbbec_uvc}
 @prev_tutorial{tutorial_orbbec_astra_openni}
 @next_tutorial{tutorial_intelperc}
 
+|    |    |
+| -: | :- |
+| Original author | Andy-SAKN |
+| Compatibility | OpenCV >= 4.10 |
+
 
 ### Introduction
 
 This tutorial is devoted to the Orbbec 3D cameras based on UVC protocol. For the use of the older Orbbec 3D which depends on OpenNI, please refer to the [previous tutorial](https://github.com/opencv/opencv/blob/4.x/doc/tutorials/app/orbbec_astra_openni.markdown).
 
 Unlike working with the OpenNI based Astra 3D cameras which requires OpenCV built with OpenNI2 SDK, Orbbec SDK is not required to be installed for accessing Orbbec UVC 3D cameras via OpenCV. By using `cv::VideoCapture` class, users get the stream data from 3D cameras, similar to working with USB cameras. The calibration and alignment of the depth map and color image are done internally.
-
-
-
 ### Instructions
 
 In order to use the 3D cameras with OpenCV. You can refer to [Get Started](https://opencv.org/get-started/) to install OpenCV.
