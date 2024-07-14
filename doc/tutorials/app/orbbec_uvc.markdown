@@ -11,9 +11,7 @@ Using Orbbec 3D cameras (UVC) {#tutorial_orbbec_uvc}
 | Original author | Andy-SAKN |
 | Compatibility | OpenCV >= 4.10 |
 
-
 ### Introduction
-
 This tutorial is devoted to the Orbbec 3D cameras based on UVC protocol. For the use of the older Orbbec 3D which depends on OpenNI, please refer to the [previous tutorial](https://github.com/opencv/opencv/blob/4.x/doc/tutorials/app/orbbec_astra_openni.markdown).
 
 Unlike working with the OpenNI based Astra 3D cameras which requires OpenCV built with OpenNI2 SDK, Orbbec SDK is not required to be installed for accessing Orbbec UVC 3D cameras via OpenCV. By using `cv::VideoCapture` class, users get the stream data from 3D cameras, similar to working with USB cameras. The calibration and alignment of the depth map and color image are done internally.
@@ -22,16 +20,11 @@ Unlike working with the OpenNI based Astra 3D cameras which requires OpenCV buil
 In order to use the 3D cameras with OpenCV. You can refer to [Get Started](https://opencv.org/get-started/) to install OpenCV.
 
 Note from 4.11 on, macOS users need to compile OpenCV from source with flag `-DOBSENSOR_USE_ORBBEC_SDK=ON` in order to use the cameras:
-
-
-
 ```bash
 cmake -DOBSENSOR_USE_ORBBEC_SDK=ON ..
 make
 sudo make install
 ```
-
-
 - For Mac users: 
   - **Python**:
     ```shell
@@ -57,16 +50,13 @@ This tutorial code's is shown lines below. You can also download it from
 @include samples/python/videocapture_obsensor.py
 @end_toggle
 
-
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
 [here](https://github.com/opencv/opencv/blob/4.x/samples/cpp/videocapture_obsensor.cpp)
 @include samples/cpp/videocapture_obsensor.cpp
 @end_toggle
 
-
 ### Code Explanation
-
 #### Python
 
 - **Open Orbbec Depth Sensor**:
@@ -86,9 +76,6 @@ This tutorial code's is shown lines below. You can also download it from
 
 - **Release Resources**:
   After exiting the loop, the camera resources are released using `orbbec_cap.release()`.
-
-
-
 #### C++
 
 - **Open Orbbec Depth Sensor**:
@@ -115,26 +102,15 @@ This tutorial code's is shown lines below. You can also download it from
 
 - **Release Resources**:
   After exiting the loop, the camera resources are released.
-  
-
-
 ### Results
 
 #### Python
 
-
 ![RGB And DEPTH frame](images/orbbec_uvc_python.jpg)
-
-
 
 #### C++
 
-
 ![RGB And DEPTH And DepthToColor frame](images/orbbec_uvc_cpp.jpg)
-
-
-
-
 
 ### Note
 
@@ -143,7 +119,3 @@ This tutorial code's is shown lines below. You can also download it from
 3. If the code does not run successfully, try restarting your device.
 4. OpenCV version 4.10 or newer is required.
 5. Mac users need sudo privileges to execute the code.
-
-
-
-
