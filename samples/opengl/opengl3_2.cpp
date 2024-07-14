@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
     if (argc < 2)
     {
         cout << "Usage: " << argv[0] << " image" << endl;
-        filename = "lena.jpg";
+        filename = "HappyFish.jpg";
     }
     else
         filename = argv[1];
