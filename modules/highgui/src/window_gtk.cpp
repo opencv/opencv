@@ -67,7 +67,6 @@
 #ifdef HAVE_OPENGL
   #ifdef GTK_VERSION3
     #include <gtk/gtkglarea.h>
-    #include <epoxy/gl.h>
   #else
     #include <gtk/gtkgl.h>
     #include <GL/glu.h>
