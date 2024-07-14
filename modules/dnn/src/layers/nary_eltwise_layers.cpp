@@ -393,62 +393,90 @@ public:
                              const char* data2, const std::vector<size_t>& step2,
                              char* data, const std::vector<size_t>& step, size_t block_size) {
         size_t dp1 = 0, dp2 = 0, dp = 0;
-        int k, n1 = 1, n2 = 1;
-        size_t inplane_step1 = 0, inplane_step2 = 0, inplane_step = 0;
-        size_t plane_idx, nplanes = 1;
+        int plane_size = 1;
+        size_t nplanes = 1;
 
         if (ndims >= 1) {
-            dp1 = step1[ndims-1]/sizeof(T);
-            dp2 = step2[ndims-1]/sizeof(T);
-            dp = step[ndims-1]/sizeof(RESULT_T);
-            n1 = shape[ndims-1];
+            dp1 = step1.back() / sizeof(T);
+            dp2 = step2.back() / sizeof(T);
+            dp = step.back() / sizeof(RESULT_T);
+            plane_size = shape.back();
 
             if (ndims >= 2) {
-                inplane_step1 = step1[ndims-2];
-                inplane_step2 = step2[ndims-2];
-                inplane_step = step[ndims-2];
-                n2 = shape[ndims-2];
-
-                for (k = 0; k < ndims-2; k++) nplanes *= shape[k];
+                nplanes = std::accumulate(shape.begin(), shape.end() - 1, 1, std::multiplies<size_t>());
             }
         }
 
-        for (plane_idx = 0; plane_idx < nplanes; plane_idx++) {
-            const char* ptr1_ = data1;
-            const char* ptr2_ = data2;
-            char* ptr_ = data;
-            size_t idx = plane_idx;
-            for (k = ndims-3; k >= 0; k--) {
-                size_t next_idx = idx/shape[k];
-                int i_k = (int)(idx - next_idx*shape[k]);
-                ptr1_ += i_k*step1[k];
-                ptr2_ += i_k*step2[k];
-                ptr_ += i_k*step[k];
-                idx = next_idx;
-            }
-            for (int i2 = 0; i2 < n2; i2++, ptr1_ += inplane_step1,
-                                            ptr2_ += inplane_step2,
-                                            ptr_ += inplane_step)
-            {
-                const T* ptr1 = (const T*)ptr1_;
-                const T* ptr2 = (const T*)ptr2_;
-                RESULT_T* ptr = (RESULT_T*)ptr_;
+        if (nplanes == 1) { // parallelize within the plane
+            const T* ptr1 = (const T*)data1;
+            const T* ptr2 = (const T*)data2;
+            RESULT_T* ptr = (RESULT_T*)data;
+            auto worker = [&](const Range &r) {
                 if (dp1 == 1 && dp2 == 1 && dp == 1) {
-                    for(int i1 = 0; i1 < n1; i1++)
-                        ptr[i1] = op(ptr1[i1], ptr2[i1]);
+                    for(int i = r.start; i < r.end; i++) {
+                        ptr[i] = op(ptr1[i], ptr2[i]);
+                    }
                 } else if (dp1 == 1 && dp2 == 0 && dp == 1){
                     T x2 = *ptr2;
-                    for(int i1 = 0; i1 < n1; i1++)
-                        ptr[i1] = op(ptr1[i1], x2);
+                    for(int i = r.start; i < r.end; i++) {
+                        ptr[i] = op(ptr1[i], x2);
+                    }
                 } else if (dp1 == 0 && dp2 == 1 && dp == 1){
                     T x1 = *ptr1;
-                    for(int i1 = 0; i1 < n1; i1++)
-                        ptr[i1] = op(x1, ptr2[i1]);
+                    for(int i = r.start; i < r.end; i++) {
+                        ptr[i] = op(x1, ptr2[i]);
+                    }
                 } else {
-                    for(int i1 = 0; i1 < n1; i1++, ptr1 += dp1, ptr2 += dp2, ptr += dp)
+                    for(int i = r.start; i < r.end; i++, ptr1 += dp1, ptr2 += dp2, ptr += dp) {
                         *ptr = op(*ptr1, *ptr2);
+                    }
                 }
-            }
+            };
+
+            double nstripes = plane_size * (1.0 / double(block_size));
+            parallel_for_(Range(0, plane_size), worker, nstripes);
+        } else { // parallelize across planes
+            auto worker = [&](const Range &r) {
+                for (int plane_idx = r.start; plane_idx < r.end; plane_idx++) {
+                    const char* ptr1_ = data1;
+                    const char* ptr2_ = data2;
+                    char* ptr_ = data;
+                    size_t idx = plane_idx;
+                    for (int k = ndims - 2; k >= 0; k--) {
+                        size_t next_idx = idx / shape[k];
+                        size_t i_k = (int)(idx - next_idx * shape[k]);
+                        ptr1_ += i_k * step1[k];
+                        ptr2_ += i_k * step2[k];
+                        ptr_ += i_k * step[k];
+                        idx = next_idx;
+                    }
+
+                    const T* ptr1 = (const T*)ptr1_;
+                    const T* ptr2 = (const T*)ptr2_;
+                    RESULT_T* ptr = (RESULT_T*)ptr_;
+                    if (dp1 == 1 && dp2 == 1 && dp == 1) {
+                        for(int i = 0; i < plane_size; i++) {
+                            ptr[i] = op(ptr1[i], ptr2[i]);
+                        }
+                    } else if (dp1 == 1 && dp2 == 0 && dp == 1){
+                        T x2 = *ptr2;
+                        for(int i = 0; i < plane_size; i++) {
+                            ptr[i] = op(ptr1[i], x2);
+                        }
+                    } else if (dp1 == 0 && dp2 == 1 && dp == 1){
+                        T x1 = *ptr1;
+                        for(int i = 0; i < plane_size; i++) {
+                            ptr[i] = op(x1, ptr2[i]);
+                        }
+                    } else {
+                        for(int i = 0; i < plane_size; i++, ptr1 += dp1, ptr2 += dp2, ptr += dp) {
+                            *ptr = op(*ptr1, *ptr2);
+                        }
+                    }
+                }
+            };
+            double nstripes = nplanes * (1.0 / double(block_size));
+            parallel_for_(Range(0, nplanes), worker, nstripes);
         }
     }
 
