@@ -11,6 +11,10 @@
 #include <emscripten/version.h>
 #include "opencv2/core/saturate.hpp"
 
+#ifndef __EMSCRIPTEN_major__
+#include <emscripten/version.h>
+#endif
+
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 0 // Now all implementation of f64 use fallback, so disable it.
 #define CV_SIMD128_FP16 0
