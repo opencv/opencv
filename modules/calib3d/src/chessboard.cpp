@@ -3373,7 +3373,7 @@ cv::Scalar Chessboard::Board::calcEdgeSharpness(cv::InputArray _img,float rise_d
     }
     if(count == 0)
     {
-        std::cout  <<"calcEdgeSharpness: checkerboard too small for calculation." << std::endl;
+        // std::cout  <<"calcEdgeSharpness: checkerboard too small for calculation." << std::endl;
         return cv::Scalar::all(9999);
     }
     sharpness = sharpness/float(count);
