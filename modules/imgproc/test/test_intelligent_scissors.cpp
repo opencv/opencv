@@ -291,7 +291,7 @@ TEST(Imgproc_IntelligentScissorsMB, grayscale)
     Mat image = getTestImageGray();
     tool.applyImage(image);
 
-    Point source_point(140, 20);
+    Point source_point(165, 45);
     tool.buildMap(source_point);
 
     Point target_point(258, 10);
@@ -310,7 +310,7 @@ TEST(Imgproc_IntelligentScissorsMB, check_features_grayscale_1_0_0_zerro_crossin
     Mat image = getTestImageGray();
     tool.applyImage(image);
 
-    Point source_point(140, 20);
+    Point source_point(165, 45);
     tool.buildMap(source_point);
 
     Point target_point(258, 10);
@@ -329,7 +329,7 @@ TEST(Imgproc_IntelligentScissorsMB, check_features_grayscale_1_0_0_canny)
     Mat image = getTestImageGray();
     tool.applyImage(image);
 
-    Point source_point(140, 20);
+    Point source_point(165, 45);
     tool.buildMap(source_point);
 
     Point target_point(258, 10);
@@ -347,7 +347,7 @@ TEST(Imgproc_IntelligentScissorsMB, check_features_grayscale_0_1_0)
     Mat image = getTestImageGray();
     tool.applyImage(image);
 
-    Point source_point(140, 20);
+    Point source_point(165, 45);
     tool.buildMap(source_point);
 
     Point target_point(258, 10);
@@ -365,7 +365,7 @@ TEST(Imgproc_IntelligentScissorsMB, check_features_grayscale_0_0_1)
     Mat image = getTestImageGray();
     tool.applyImage(image);
 
-    Point source_point(140, 20);
+    Point source_point(165, 45);
     tool.buildMap(source_point);
 
     Point target_point(258, 10);
@@ -382,7 +382,7 @@ TEST(Imgproc_IntelligentScissorsMB, color)
     Mat image = getTestImageColor();
     tool.applyImage(image);
 
-    Point source_point(140, 20);
+    Point source_point(165, 45);
     tool.buildMap(source_point);
 
     Point target_point(258, 10);
@@ -400,7 +400,7 @@ TEST(Imgproc_IntelligentScissorsMB, color_canny)
     Mat image = getTestImageColor();
     tool.applyImage(image);
 
-    Point source_point(140, 20);
+    Point source_point(165, 45);
     tool.buildMap(source_point);
 
     Point target_point(258, 10);
@@ -429,7 +429,7 @@ TEST(Imgproc_IntelligentScissorsMB, color_custom_features_edge)
     cv::threshold(canny_edges, binary_edge_feature, 254, 1, THRESH_BINARY_INV);
     tool.applyImageFeatures(binary_edge_feature, noArray(), noArray(), image);
 
-    Point source_point(140, 20);
+    Point source_point(165, 45);
     tool.buildMap(source_point);
 
     Point target_point(258, 10);
@@ -456,7 +456,7 @@ TEST(Imgproc_IntelligentScissorsMB, color_custom_features_all)
     Mat_<float> gradient_magnitude(image.size(), 0);  // cost function
     tool.applyImageFeatures(binary_edge_feature, gradient_direction, gradient_magnitude);
 
-    Point source_point(140, 20);
+    Point source_point(165, 45);
     tool.buildMap(source_point);
 
     Point target_point(258, 10);
@@ -482,7 +482,7 @@ TEST(Imgproc_IntelligentScissorsMB, color_custom_features_edge_magnitude)
     Mat_<float> gradient_magnitude(image.size(), 0);  // cost function
     tool.applyImageFeatures(binary_edge_feature, noArray(), gradient_magnitude);
 
-    Point source_point(140, 20);
+    Point source_point(165, 45);
     tool.buildMap(source_point);
 
     Point target_point(258, 10);

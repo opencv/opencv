@@ -15,7 +15,7 @@ PERF_TEST_P(TestIntelligentScissorsMB, buildMap, testing::Values( IMREAD_GRAYSCA
     const Mat image = imread(samples::findFile("HappyFish.jpg"), flags);
     ASSERT_TRUE(!image.empty());
 
-    const Point source_point(140, 20);
+    const Point source_point(165, 45);
 
     segmentation::IntelligentScissorsMB tool;
     tool.applyImage(image);
