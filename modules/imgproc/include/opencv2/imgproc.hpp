@@ -1969,6 +1969,10 @@ CV_EXPORTS_W void cornerHarris( InputArray src, OutputArray dst, int blockSize,
                                 int ksize, double k,
                                 int borderType = BORDER_DEFAULT );
 
+/** @example samples/python/snippets/texture_flow.py
+An example using cornerEigenValsAndVecs in python
+*/
+
 /** @brief Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
 For every pixel \f$p\f$ , the function cornerEigenValsAndVecs considers a blockSize \f$\times\f$ blockSize
@@ -4084,6 +4088,10 @@ CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays con
 
 //! @overload
 CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
+
+/** @example samples/python/snippets/squares.py
+An example using approxPolyDP function in python.
+*/
 
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
