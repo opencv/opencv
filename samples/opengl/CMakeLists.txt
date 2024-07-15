@@ -7,7 +7,7 @@ if(UNIX)
 endif()
 
 find_package(PkgConfig QUIET)
-pkg_search_module(EPOXY REQUIRED epoxy)
+pkg_search_module(EPOXY QUIET epoxy)
 
 SET(OPENCV_OPENGL_SAMPLES_REQUIRED_DEPS
   opencv_core
@@ -23,6 +23,9 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   file(GLOB all_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
   if(NOT X11_FOUND)
     ocv_list_filterout(all_samples "opengl_interop")
+  endif()
+  if(NOT EPOXY_FOUND)
+    ocv_list_filterout(all_samples "opengl3_2")
   endif()
   foreach(sample_filename ${all_samples})
     ocv_define_sample(tgt ${sample_filename} opengl)
