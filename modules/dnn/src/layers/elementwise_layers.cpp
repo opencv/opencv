@@ -1074,38 +1074,6 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
         return x / (1.f + exp(-x));
     }
 
-    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
-        CV_UNUSED(stripeStart);
-        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
-            int i = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-            // x / (1.f + exp(-x));
-            v_float32 one = vx_setall_f32(1.0f),
-                      zero = vx_setzero_f32();
-            for (; i < len; i += vlanes) {
-                if (i + vlanes > len) {
-                    if (i == 0 || i == len) {
-                        break;
-                    }
-                    i = len - vlanes;
-                }
-                v_float32 x = vx_load(srcptr + i);
-
-                v_float32 t = v_sub(zero, x);
-                t = v_exp(t);
-                t = v_add(one, t);
-                t = v_div(x, t);
-
-                vx_store(dstptr + i, t);
-            }
-#endif
-            // In case SIMD is not available or len < vlanes
-            for (; i < len; i++) {
-                dstptr[i] = calculate(srcptr[i]);
-            }
-        }
-    }
-
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
