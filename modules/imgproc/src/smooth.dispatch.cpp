@@ -612,7 +612,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 {
     CV_INSTRUMENT_REGION();
 
-    if (hint == cv::ALGO_DEFAULT)
+    if (hint == cv::ALGO_HINT_DEFAULT)
         hint = cv::getDefaultAlgorithmHint();
 
     CV_Assert(!_src.empty());
@@ -698,7 +698,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                          borderType & ~BORDER_ISOLATED);
             }
 
-            if (hint == ALGO_APPROX)
+            if (hint == ALGO_HINT_APPROX)
             {
                 Point ofs;
                 Size wsz(src.cols, src.rows);
@@ -768,7 +768,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                          ofs.x, ofs.y, wsz.width - src2.cols - ofs.x,  wsz.height - src2.rows - ofs.y, ksize.width, borderType&~BORDER_ISOLATED);
             }
 
-            if (hint == ALGO_APPROX)
+            if (hint == ALGO_HINT_APPROX)
             {
                 Point ofs;
                 Size wsz(src.cols, src.rows);
