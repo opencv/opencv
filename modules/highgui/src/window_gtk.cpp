@@ -914,13 +914,15 @@ namespace
 
 #ifdef GTK_VERSION3
 
-    void glRealizeCallback(GtkGLArea* area, gpointer user_data){
+    void glRealizeCallback(GtkGLArea* area, gpointer user_data) {
+        CV_UNUSED(user_data);
         gtk_gl_area_make_current(area);
         if (gtk_gl_area_get_error(area) != NULL)
             CV_Error(cv::Error::OpenGlApiCallError, "OpenGL context is not initialized");
     }
 
-    gboolean glRenderCallback(GtkGLArea* area, GdkGLContext* context, gpointer user_data){
+    gboolean glRenderCallback(GtkGLArea* area, GdkGLContext* context, gpointer user_data) {
+        CV_UNUSED(context);
         CvWindow* window = (CvWindow*)user_data;
         gtk_gl_area_make_current(area);
         if (gtk_gl_area_get_error(area) != NULL) {

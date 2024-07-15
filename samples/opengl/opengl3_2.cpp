@@ -33,7 +33,7 @@ struct DrawData
     GLuint vao, vbo, program, textureID;
 };
 
-cv::Mat rot(float angle)
+static cv::Mat rot(float angle)
 {
     cv::Mat R_y = (cv::Mat_<float>(4,4) <<
         cos(angle), 0, sin(angle), 0,
@@ -51,7 +51,7 @@ static GLuint create_shader(const char* source, GLenum type) {
     return shader;
 }
 
-void draw(void* userdata){
+static void draw(void* userdata) {
     DrawData* data = static_cast<DrawData*>(userdata);
     static float angle = 0.0f;
     angle += 1.f;
@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
     if (argc < 2)
     {
         cout << "Usage: " << argv[0] << " image" << endl;
-        filename = "HappyFish.jpg";
+        filename = "baboon.jpg";
     }
     else
         filename = argv[1];
