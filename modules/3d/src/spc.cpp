@@ -6,63 +6,46 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/3d.hpp"
-#include <opencv2/core/utils/logger.hpp>
 #include "queue"
 #include "unordered_map"
 
 namespace cv{
+SpectralCluster::SpectralCluster() {
+    pImpl = makePtr<Impl>(0.1, 0.05);
+}
 
 SpectralCluster::SpectralCluster(float delta_val, float eta_val) {
-    if (delta_val < 0 || delta_val > 1)
-        CV_LOG_ERROR(NULL, "delta must be between 0 and 1.")
-    if (eta < 0 || eta > 1)
-        CV_LOG_ERROR(NULL, "eta must be between 0 and 1.")
-    this->delta = delta_val;
-    this->eta = eta_val;
+    CV_Assert(delta_val >= 0.f && delta_val <= 1.f);
+    CV_Assert(eta_val >= 0.f && eta_val <= 1.f);
+    pImpl = makePtr<Impl>(delta_val, eta_val);
 }
 
+class SpectralCluster::Impl {
+public:
+    float delta;
+    float eta;
 
-void SpectralCluster::cluster(std::vector<cv::Point3f> &vertices, std::vector<std::vector<int32_t>> &indices, int k,
-                              OutputArray result) {
-    CV_Assert(k > 1);
-    for (const auto & index : indices)
-        if (index.size() != 3)
-            CV_LOG_ERROR(NULL, "Face element has more/less than 3 vertices")
+    Impl(float delta_val, float eta_val) : delta(delta_val), eta(eta_val) {}
+    ~Impl() = default;
 
-    Mat distance_mat;
-    getAdjacentDistanceMat(distance_mat, vertices, indices);
+    static void getLaplacianMat(cv::Mat& in, cv::Mat& out);
 
-    Mat affinity_mat;
-    getAffinityMat(distance_mat, affinity_mat, indices);
+    void getAdjacentDistanceMat(cv::Mat& out, const std::vector<cv::Point3f>& vertices,
+                                const std::vector<std::vector<int32_t>>& indices) const;
 
-    Mat laplacian_mat;
-    getLaplacianMat(affinity_mat, laplacian_mat);
+    static void getAffinityMat(cv::Mat& in, cv::Mat& out, const std::vector<std::vector<int32_t>>& indices);
 
-    // eigen decomposition
-    Mat eigen_values, eigen_vectors;
-    eigen(laplacian_mat, eigen_values, eigen_vectors);
-    eigen_vectors = eigen_vectors.rowRange(0, k);
-    Mat eigen_vectors_t;
-    eigen_vectors_t = eigen_vectors.t();
+    static float getGeodesicDistance(const std::vector<cv::Point3f>& face1, const std::vector<cv::Point3f>& face2,
+                                     const std::pair<cv::Point3f, cv::Point3f>& edge);
 
-    // normalize each row
-    float norm_val;
-    for (int i = 0; i < eigen_vectors_t.rows; ++i) {
-        norm_val = static_cast<float>(norm(eigen_vectors_t.row(i)));
-        norm_val = norm_val > std::numeric_limits<float>::epsilon() ? norm_val : std::numeric_limits<float>::epsilon();
-        eigen_vectors_t.row(i) /= norm_val;
-    }
+    float getAngleDistance(const std::vector<cv::Point3f>& face1, const std::vector<cv::Point3f>& face2) const;
 
-    Mat label_result;
-    cv::kmeans(eigen_vectors_t, k, label_result,
-               TermCriteria(TermCriteria::EPS + TermCriteria::MAX_ITER, 10, 1.0),
-               5, KMEANS_PP_CENTERS);
+    static cv::Point3f calculateFaceCentroid(const std::vector<cv::Point3f>& face);
 
-    if (result.needed())
-        label_result.copyTo(result);
-}
+    static cv::Point3f calculateFaceNormal(const std::vector<cv::Point3f>& face);
+};
 
-void SpectralCluster::getLaplacianMat(Mat &in, Mat &out) {
+void SpectralCluster::Impl::getLaplacianMat(Mat &in, Mat &out) {
     Mat degree_mat;
     reduce(in, degree_mat, 1, REDUCE_SUM);
     degree_mat = 1.0f / degree_mat;
@@ -72,7 +55,7 @@ void SpectralCluster::getLaplacianMat(Mat &in, Mat &out) {
     out = ((in.mul(degree_mat_sqrt).t()).mul(degree_mat_sqrt)).t();
 }
 
-void SpectralCluster::getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<int32_t>> &indices) {
+void SpectralCluster::Impl::getAffinityMat(Mat &in, Mat &out, const std::vector<std::vector<int32_t>> &indices) {
     int num_faces = int(indices.size());
 
     // using dijkstra algorithm to get the affinity matrix
@@ -127,13 +110,12 @@ void SpectralCluster::getAffinityMat(Mat &in, Mat &out, std::vector<std::vector<
     });
 
     // set diagonal elements to 1
-    cv::parallel_for_(cv::Range(0, num_faces), [&](const cv::Range& range) {
-        for (int i = range.start; i < range.end; ++i)
-            out.at<float>(i, i) = 1.f;
-    });
+    for (int i = 0; i < num_faces; ++i)
+        out.at<float>(i, i) = 1.f;
 }
 
-void SpectralCluster::getAdjacentDistanceMat(Mat &out, std::vector<Point3f> &vertices, std::vector<std::vector<int32_t>> &indices) const {
+void SpectralCluster::Impl::getAdjacentDistanceMat(Mat &out, const std::vector<Point3f> &vertices,
+                                             const std::vector<std::vector<int32_t>> &indices) const {
     int num_faces = int(indices.size());
     int num_adjacency = 0;
     struct PairHash {
@@ -187,7 +169,7 @@ void SpectralCluster::getAdjacentDistanceMat(Mat &out, std::vector<Point3f> &ver
     out = this->delta * g_dist_mat + (1.f - this->delta) * a_dist_mat;
 }
 
-float SpectralCluster::getGeodesicDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2,
+float SpectralCluster::Impl::getGeodesicDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2,
                                            const std::pair<Point3f, Point3f> &edge) {
     cv::Point3f centroid1 = calculateFaceCentroid(face1);
     cv::Point3f centroid2 = calculateFaceCentroid(face2);
@@ -195,14 +177,14 @@ float SpectralCluster::getGeodesicDistance(const std::vector<Point3f>& face1, co
     return float(norm(centroid1 - edge_center)) + float(norm(centroid2 - edge_center));
 }
 
-Point3f SpectralCluster::calculateFaceCentroid(const std::vector<cv::Point3f>& face) {
+Point3f SpectralCluster::Impl::calculateFaceCentroid(const std::vector<cv::Point3f>& face) {
     cv::Point3f centroid(0.0f, 0.0f, 0.0f);
     for(const cv::Point3f& p : face)
         centroid += p;
     return centroid / 3.f;
 }
 
-float SpectralCluster::getAngleDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2) const {
+float SpectralCluster::Impl::getAngleDistance(const std::vector<Point3f>& face1, const std::vector<Point3f> &face2) const {
     cv::Vec3f normal1 = calculateFaceNormal(face1);
     cv::Vec3f normal2 = calculateFaceNormal(face2);
     float cos_angle = normal1.dot(normal2);
@@ -213,9 +195,50 @@ float SpectralCluster::getAngleDistance(const std::vector<Point3f>& face1, const
     return angular_distance;
 }
 
-Point3f SpectralCluster::calculateFaceNormal(const std::vector<Point3f>& face) {
+Point3f SpectralCluster::Impl::calculateFaceNormal(const std::vector<Point3f>& face) {
     Vec3f normal = Vec3f(face[1] - face[0]).cross(Vec3f(face[2] - face[0]));
     normal /= cv::norm(normal);
     return normal;
 }
+
+void SpectralCluster::cluster(const std::vector<cv::Point3f> &vertices, const std::vector<std::vector<int32_t>> &indices,
+                              int k, OutputArray result) {
+    CV_Assert(k > 1);
+    for (const auto & index : indices)
+        CV_Assert(index.size() == 3);
+
+    Mat distance_mat;
+
+    pImpl->getAdjacentDistanceMat(distance_mat, vertices, indices);
+
+    Mat affinity_mat;
+    pImpl->getAffinityMat(distance_mat, affinity_mat, indices);
+
+    Mat laplacian_mat;
+    pImpl->getLaplacianMat(affinity_mat, laplacian_mat);
+
+    // eigen decomposition
+    Mat eigen_values, eigen_vectors;
+    eigen(laplacian_mat, eigen_values, eigen_vectors);
+    eigen_vectors = eigen_vectors.rowRange(0, k);
+    Mat eigen_vectors_t;
+    eigen_vectors_t = eigen_vectors.t();
+
+    // normalize each row
+    float norm_val;
+    for (int i = 0; i < eigen_vectors_t.rows; ++i) {
+        norm_val = static_cast<float>(norm(eigen_vectors_t.row(i)));
+        norm_val = norm_val > std::numeric_limits<float>::epsilon() ? norm_val : std::numeric_limits<float>::epsilon();
+        eigen_vectors_t.row(i) /= norm_val;
+    }
+
+    Mat label_result;
+    cv::kmeans(eigen_vectors_t, k, label_result,
+               TermCriteria(TermCriteria::EPS + TermCriteria::MAX_ITER, 10, 1.0),
+               5, KMEANS_PP_CENTERS);
+
+    if (result.needed())
+        label_result.copyTo(result);
+}
+
 }
