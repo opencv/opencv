@@ -119,10 +119,11 @@ def main(func_args=None):
     method = args.method
 
     if not hasattr(args, 'model'):
-        print("[WARN] Model file not provided, cannot use dexined")
+        print("[WARN] Model file not provided, using canny instead. Pass model using --model=/path/to/dexined.onnx to use dexined model.")
         method = 'canny'
     else:
         args.model = findFile(args.model)
+        method = 'dexined'
     if method == 'canny':
         dummy = np.zeros((512, 512, 3), dtype="uint8")
         setupCannyWindow(dummy)

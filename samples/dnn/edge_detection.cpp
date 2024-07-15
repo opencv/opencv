@@ -100,7 +100,8 @@ int main(int argc, char** argv) {
         "{ @alias          |            | An alias name of model to extract preprocessing parameters from models.yml file. }"
         "{ zoo             | models.yml | An optional path to file with preprocessing parameters }"
         "{ input i         |            | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-        "{ method          |   canny    | Choose method: dexined or canny. }";
+        "{ method          |   canny    | Choose method: dexined or canny. }"
+        "{ model           |            | Path to the model file for using dexined. }";
 
     const string backend_keys = format(
         "{ backend         | 0 | Choose one of computation backends: "
@@ -129,9 +130,18 @@ int main(int argc, char** argv) {
     string keys = param_keys + backend_keys + target_keys;
 
     CommandLineParser parser(argc, argv, keys);
+    if (parser.has("help"))
+    {
+        cout << about << endl;
+        parser.printMessage();
+        return -1;
+    }
 
     const string modelName = parser.get<String>("@alias");
-    const string zooFile = parser.get<String>("zoo");
+    string zooFile = parser.get<String>("zoo");
+    if(parser.has("@alias")){
+        zooFile = findFile(zooFile);
+    }
 
     keys += genPreprocArguments(modelName, zooFile);
 
@@ -165,8 +175,11 @@ int main(int argc, char** argv) {
     Mat image;
 
     if (model.empty()) {
-        cout << "[WARN] Model file not provided, cannot use dexined." << endl;
+        cout << "[WARN] Model file not provided, using canny instead. Pass model using --model=/path/to/dexined.onnx to use dexined model." << endl;
         method = "canny";
+    }
+    else{
+        method = "dexined";
     }
 
     if (method == "dexined") {
@@ -213,7 +226,7 @@ int main(int argc, char** argv) {
                 namedWindow("Output", WINDOW_AUTOSIZE);
                 moveWindow("Output", 200, 0);
             } else {
-                cout << "[ERROR] Model file not provided, cannot use dexined." << endl;
+                cout << "[ERROR] Provide model file using --model to use dexined" << endl;
             }
         }
         else if (key == 'c' || key == 'C')
