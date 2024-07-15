@@ -1209,6 +1209,15 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         for (int i = 0; i < num_axes; ++i)
             axes[i] = mat_axes.at<int>(i);
         layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
+        if (constBlobs.find(node_proto.input(0)) != constBlobs.end()){
+            std::vector<Mat> inputs, output;
+            inputs.push_back(getBlob(node_proto, 0));
+            layerParams.type = "Reduce";
+            runLayer(layerParams, inputs, output);
+            CV_Assert(output.size() == 1);
+            addConstant(node_proto.output(0), output[0]);
+            return;
+        }
     }
 
     layerParams.type = "Reduce";
