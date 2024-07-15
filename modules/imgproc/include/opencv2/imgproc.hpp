@@ -1845,10 +1845,10 @@ CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
                           int borderType = BORDER_DEFAULT );
 
 /** @example samples/cpp/snippets/laplace.cpp
-An example using Laplace transformations for edge detection
+An example using Laplace filter for edge detection
 */
 /** @example samples/python/snippets/laplace.py
-An example using Laplace transformations for edge detection in python
+An example using Laplace filter for edge detection in python
 */
 
 /** @brief Calculates the Laplacian of an image.
