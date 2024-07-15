@@ -288,21 +288,13 @@ TEST_P(GaussianBlurVsBitexact, approx)
     orig.convertTo(src, dtype);
 
     cv::Mat gt;
-    GaussianBlur(src, gt, Size(ksize, ksize), sigma, sigma, border, ALGO_ACCURATE);
+    GaussianBlur(src, gt, Size(ksize, ksize), sigma, sigma, border, ALGO_HINT_ACCURATE);
 
     cv::Mat dst;
-    GaussianBlur(src, dst, Size(ksize, ksize), sigma, sigma, border, ALGO_APPROX);
+    GaussianBlur(src, dst, Size(ksize, ksize), sigma, sigma, border, ALGO_HINT_APPROX);
 
-    cv::Mat diff;
-    cv::absdiff(dst, gt, diff);
-    cv::Mat flatten_diff = diff.reshape(1, diff.rows);
-
-    int nz = countNonZero(flatten_diff);
-    EXPECT_LE(nz, 0.06*src.total()); // Less 6% of different pixels
-
-    double min_val, max_val;
-    minMaxLoc(flatten_diff, &min_val, &max_val);
-    EXPECT_LE(max_val, 2); // expectes results floating +-1
+    EXPECT_LE(cvtest::norm(dst, gt, NORM_INF), 1);
+    EXPECT_LE(cvtest::norm(dst, gt, NORM_L1 | NORM_RELATIVE), 0.06); // Less 6% of different pixels
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, GaussianBlurVsBitexact,
