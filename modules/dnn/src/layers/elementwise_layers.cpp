@@ -1081,8 +1081,8 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             // x / (1.f + exp(-x));
             v_float32 one = vx_setall_f32(1.0f),
-                      minus_one = vx_setall_f32(-1.0f);
-            for (; i <= len - vlanes; i += vlanes) {
+                      zero = vx_setzero_f32();
+            for (; i < len; i += vlanes) {
                 if (i + vlanes > len) {
                     if (i == 0 || i == len) {
                         break;
@@ -1091,19 +1091,15 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
                 }
                 v_float32 x = vx_load(srcptr + i);
 
-                // -x
-                v_float32 t = v_mul(minus_one, x);
-                // exp(-x)
+                v_float32 t = v_sub(zero, x);
                 t = v_exp(t);
-                // 1.f + exp(-x)
                 t = v_add(one, t);
-                // x / (1.f + exp(-x))
                 t = v_div(x, t);
 
                 vx_store(dstptr + i, t);
             }
 #endif
-            // In case SIMD is not available or process tail if any
+            // In case SIMD is not available or len < vlanes
             for (; i < len; i++) {
                 dstptr[i] = calculate(srcptr[i]);
             }
@@ -1196,6 +1192,7 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
     inline float calculate(float x) const
     {
         float y = x > MISH_THRESHOLD ? std::exp(-x) : 1.f;
+        x *= x > MISH_THRESHOLD ? 1.f : 0.f;
         return x * (1 + 2 * y) / (1 + 2 * y + 2 * y * y);
     }
 
@@ -1205,26 +1202,25 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
             int i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             v_float32 v_threshold = vx_setall_f32(MISH_THRESHOLD), one = vx_setall_f32(1.f), z = vx_setzero_f32();
-            for (; i <= len - vlanes; i += vlanes) {
+            for (; i < len; i += vlanes) {
                 if (i + vlanes > len) {
                     if (i == 0 || i == len) {
                         break;
                     }
                     i = len - vlanes;
                 }
-
                 v_float32 x = vx_load(srcptr + i);
 
                 x = v_select(v_le(x, v_threshold), z, x);
                 v_float32 y = v_exp(v_sub(z, x));
-                v_float32 yy = v_add(y, y),
-                        yy1 = v_add(yy, one);
-                x = v_div(v_mul(x, yy1), v_add(yy1, v_mul(yy, y)));
+                v_float32 _2y = v_add(y, y),
+                          _2ya1 = v_add(_2y, one);
+                x = v_div(v_mul(x, _2ya1), v_add(_2ya1, v_mul(_2y, y)));
 
                 vx_store(dstptr + i, x);
             }
 #endif
-            // In case SIMD is not available or process tail if any
+            // In case SIMD is not available or len < vlanes
             for (; i < len; i++) {
                 dstptr[i] = calculate(srcptr[i]);
             }
@@ -1395,7 +1391,7 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
             int i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             v_float32 z = vx_setzero_f32(), v_alpha = vx_setall_f32(alpha), one = vx_setall_f32(1.0f);
-            for (; i <= len - vlanes; i += vlanes) {
+            for (; i < len; i += vlanes) {
                 if (i + vlanes > len) {
                     if (i == 0 || i == len) {
                         break;
@@ -1410,7 +1406,7 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
                 vx_store(dstptr + i, x);
             }
 #endif
-            // In case SIMD is not available or process tail if any
+            // In case SIMD is not available or len < vlanes
             for (; i < len; i++) {
                 dstptr[i] = calculate(srcptr[i]);
             }
@@ -2146,7 +2142,7 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             v_float32 zero = vx_setzero_f32(), one = vx_setall_f32(1.0f),
                       half = vx_setall_f32(0.5f), sixth = vx_setall_f32(1 / 6.0f);
-            for (; i <= len - vlanes; i += vlanes) {
+            for (; i < len; i += vlanes) {
                 if (i + vlanes > len) {
                     if (i == 0 || i == len) {
                         break;
@@ -2163,7 +2159,7 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
                 vx_store(dstptr + i, t);
             }
 #endif
-            // In case SIMD is not available or process tail if any
+            // In case SIMD is not available or len > vlanes
             for (; i < len; i++) {
                 dstptr[i] = calculate(srcptr[i]);
             }
@@ -2371,7 +2367,7 @@ struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             v_float32 zero = vx_setzero_f32(), v_alpha = vx_setall_f32(alpha),
                       one = vx_setall_f32(1.0f), v_ralpha = vx_setall_f32(1.0f / alpha);
-            for (; i <= len - vlanes; i += vlanes) {
+            for (; i < len; i += vlanes) {
                 if (i + vlanes > len) {
                     if (i == 0 || i == len) {
                         break;
@@ -2386,6 +2382,7 @@ struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
                 vx_store(dstptr + i, t);
             }
 #endif
+            // In case SIMD is not available or len < vlanes
             for (; i < len; i++) {
                 dstptr[i] = calculate(srcptr[i]);
             }
@@ -2482,7 +2479,7 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             v_float32 z = vx_setzero_f32(), one = vx_setall_f32(1.0f),
                       v_alpha = vx_setall_f32(alpha), v_gamma = vx_setall_f32(gamma);
-            for (; i <= len - vlanes; i += vlanes) {
+            for (; i < len; i += vlanes) {
                 if (i + vlanes > len) {
                     if (i == 0 || i == len) {
                         break;
@@ -2498,7 +2495,7 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
                 vx_store(dstptr + i, x);
             }
 #endif
-            // In case SIMD is not available or process tail if any
+            // In case SIMD is not available or len > vlanes
             for (; i < len; i++) {
                 dstptr[i] = calculate(srcptr[i]);
             }
