@@ -46,7 +46,6 @@
 #include <iostream>
 #include <ostream>
 
-#include <opencv2/core.hpp>
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
@@ -2894,7 +2893,7 @@ AlgorithmHint getDefaultAlgorithmHint()
 #ifdef OPENCV_ALGO_HINT_DEFAULT
     return OPENCV_ALGO_HINT_DEFAULT;
 #else
-    return ALGO_ACCURATE;
+    return ALGO_HINT_ACCURATE;
 #endif
 };
 
