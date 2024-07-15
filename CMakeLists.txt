@@ -1468,9 +1468,12 @@ if(WITH_GTK OR HAVE_GTK)
   else()
     status("    GTK+:" "NO")
   endif()
+
   if(HAVE_GTK)
     status(  "      GThread :" HAVE_GTHREAD THEN "YES (ver ${GTHREAD_VERSION})" ELSE NO)
-    status(  "      GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${GTKGLEXT_VERSION})" ELSE NO)
+    if(NOT HAVE_GTK3)
+      status(  "    GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${GTKGLEXT_VERSION})" ELSE NO)
+    endif()
   endif()
 endif()
 
