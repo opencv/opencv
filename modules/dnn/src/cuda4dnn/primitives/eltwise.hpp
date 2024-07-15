@@ -30,6 +30,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         SUB,
         MOD,
         FMOD,
+        POW,
     };
 
     class EltwiseOpBase : public CUDABackendNode {
@@ -62,7 +63,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() >= 2);
             CV_Assert(outputs.size() == 1);
 
             CV_Assert(coeffs.size() == 0 || op == EltwiseOpType::SUM);
@@ -94,10 +94,13 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 case EltwiseOpType::SUB: kernels::eltwise_sub_2<T>(stream, output, input_x, input_y); break;
                 case EltwiseOpType::MOD: kernels::eltwise_mod_2<T>(stream, output, input_x, input_y); break;
                 case EltwiseOpType::FMOD: kernels::eltwise_fmod_2<T>(stream, output, input_x, input_y); break;
+                case EltwiseOpType::POW: kernels::eltwise_pow_2<T>(stream, output, input_x, input_y); break;
                 }
-            }
-            else
-            {
+            } else if (inputs.size() == 1) {
+                auto input_wrapper_0 = inputs[0].dynamicCast<wrapper_type>();
+                auto input_0 = input_wrapper_0->getView();
+                csl::tensor_ops::copy(stream, output, input_0);
+            } else {
                 auto input_wrapper_0 = inputs[0].dynamicCast<wrapper_type>();
                 auto input_0 = input_wrapper_0->getView();
 
@@ -128,6 +131,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     case EltwiseOpType::SUB: kernels::eltwise_sub_2<T>(stream, output, output, input); break;
                     case EltwiseOpType::MOD: kernels::eltwise_mod_2<T>(stream, output, output, input); break;
                     case EltwiseOpType::FMOD: kernels::eltwise_fmod_2<T>(stream, output, output, input); break;
+                    case EltwiseOpType::POW: kernels::eltwise_pow_2<T>(stream, output, output, input); break;
                     }
                 }
             }
