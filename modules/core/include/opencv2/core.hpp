@@ -123,12 +123,12 @@ public:
      Instead, the macros CV_Error(), CV_Error_() and CV_Assert() are used.
     */
     Exception(int _code, const String& _err, const String& _func, const String& _file, int _line);
-    virtual ~Exception() throw();
+    virtual ~Exception() CV_NOEXCEPT;
 
     /*!
      \return the error description and the context as a text string.
     */
-    virtual const char *what() const throw() CV_OVERRIDE;
+    virtual const char *what() const CV_NOEXCEPT CV_OVERRIDE;
     void formatMessage();
 
     String msg; ///< the formatted error message
