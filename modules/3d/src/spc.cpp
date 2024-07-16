@@ -11,7 +11,7 @@
 
 namespace cv{
 SpectralCluster::SpectralCluster() {
-    pImpl = makePtr<Impl>(0.1, 0.05);
+    pImpl = makePtr<Impl>(0.1f, 0.05f);
 }
 
 SpectralCluster::SpectralCluster(float delta_val, float eta_val) {
