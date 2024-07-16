@@ -1316,6 +1316,12 @@ redirectError( ErrorCallback errCallback, void* userdata, void** prevUserdata)
     return prevCallback;
 }
 
+void terminate(int _code, const String& _err, const char* _func, const char* _file, int _line) CV_NOEXCEPT
+{
+    dumpException(cv::Exception(_code, _err, _func, _file, _line));
+    std::terminate();
+}
+
 }
 
 
@@ -2834,6 +2840,14 @@ bool restoreFPDenormalsState(const FPDenormalsModeState& state)
 
 }  // namespace details
 
+AlgorithmHint getDefaultAlgorithmHint()
+{
+#ifdef OPENCV_ALGO_HINT_DEFAULT
+    return OPENCV_ALGO_HINT_DEFAULT;
+#else
+    return ALGO_HINT_ACCURATE;
+#endif
+};
 
 } // namespace cv
 

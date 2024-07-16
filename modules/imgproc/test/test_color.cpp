@@ -159,17 +159,17 @@ int CV_ColorCvtBaseTest::prepare_test_case( int test_case_idx )
 
 void CV_ColorCvtBaseTest::run_func()
 {
-    CvArr* out0 = test_array[OUTPUT][0];
-    cv::Mat _out0 = cv::cvarrToMat(out0), _out1 = cv::cvarrToMat(test_array[OUTPUT][1]);
+    cv::Mat out0 = test_mat[OUTPUT][0];
+    cv::Mat _out0 = out0, _out1 = test_mat[OUTPUT][1];
 
-    cv::cvtColor( cv::cvarrToMat(inplace ? out0 : test_array[INPUT][0]), _out0, fwd_code, _out0.channels());
+    cv::cvtColor( inplace ? out0 : test_mat[INPUT][0], _out0, fwd_code, _out0.channels());
 
     if( inplace )
     {
-        cvCopy( out0, test_array[OUTPUT][1] );
-        out0 = test_array[OUTPUT][1];
+        out0.copyTo(test_mat[OUTPUT][1]);
+        out0 = test_mat[OUTPUT][1];
     }
-    cv::cvtColor(cv::cvarrToMat(out0), _out1, inv_code, _out1.channels());
+    cv::cvtColor(out0, _out1, inv_code, _out1.channels());
 }
 
 
@@ -1722,8 +1722,8 @@ double CV_ColorBayerTest::get_success_error_level( int /*test_case_idx*/, int /*
 
 void CV_ColorBayerTest::run_func()
 {
-    cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
-    cv::cvtColor(cv::cvarrToMat(test_array[INPUT][0]), _out, fwd_code, _out.channels());
+    cv::Mat _out = test_mat[OUTPUT][0];
+    cv::cvtColor(test_mat[INPUT][0], _out, fwd_code, _out.channels());
 }
 
 

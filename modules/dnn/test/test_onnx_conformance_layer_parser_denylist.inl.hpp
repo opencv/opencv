@@ -102,6 +102,10 @@
 "test_gathernd_example_float32", // Issues::Layer::Can't create layer
 "test_gathernd_example_int32", // ---- same as above ---
 "test_gathernd_example_int32_batch_dim1", // ---- same as above ---
+"test_gelu_default_1_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_default_2_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_tanh_1_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_tanh_2_expanded", // parser: no corresponding layer for CastLike
 "test_gemm_all_attributes",  // Issue::Wrong output
 "test_gemm_alpha",  // Issue::Wrong output
 "test_gemm_beta",  // Issue::Wrong output
