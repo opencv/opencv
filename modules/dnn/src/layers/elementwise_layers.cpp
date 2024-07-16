@@ -875,27 +875,6 @@ struct GeluFunctor : public BaseFunctor {
 
                 vx_store(dstptr + i, x0);
             }
-            if (i + vlanes > len && i != 0 && i != len) {
-                i = len - vlanes;
-
-                v_float32 x0 = vx_load(srcptr + i);
-
-                // t = x * M_SQRT1_2
-                v_float32 t0 = v_mul(reciprocal_sqrt2, x0);
-
-                // t = 1.0f + t
-                t0 = v_add(one, v_erf(t0));
-
-                // x = 0.5 * x
-                x0 = v_mul(half, x0);
-
-                // x = x * t
-                x0 = v_mul(x0, t0);
-
-                vx_store(dstptr + i, x0);
-
-                i += vlanes;
-            }
 #endif
             // 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
             for( ; i < len; i++ )
@@ -1196,21 +1175,6 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 
                 vx_store(dstptr + i, x);
             }
-            if (i + vlanes > len && i != 0 && i != len) {
-                i = len - vlanes;
-
-                v_float32 x = vx_load(srcptr + i);
-
-                x = v_select(v_le(x, v_threshold), z, x);
-                v_float32 y = v_exp(v_sub(z, x));
-                v_float32 _2y = v_add(y, y),
-                          _2ya1 = v_add(_2y, one);
-                x = v_div(v_mul(x, _2ya1), v_add(_2ya1, v_mul(_2y, y)));
-
-                vx_store(dstptr + i, x);
-
-                i += vlanes;
-            }
 #endif
             // In case SIMD is not available or len < vlanes
             for (; i < len; i++) {
@@ -1390,18 +1354,6 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
                 x = v_select(v_ge(x, z), x, t);
 
                 vx_store(dstptr + i, x);
-            }
-            if (i + vlanes > len && i != 0 && i != len) {
-                i = len - vlanes;
-
-                v_float32 x = vx_load(srcptr + i);
-
-                v_float32 t = v_mul(v_alpha, v_sub(v_exp(x), one));
-                x = v_select(v_ge(x, z), x, t);
-
-                vx_store(dstptr + i, x);
-
-                i += vlanes;
             }
 #endif
             // In case SIMD is not available or len < vlanes
@@ -2150,20 +2102,6 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
 
                 vx_store(dstptr + i, t);
             }
-            if (i + vlanes > len && i != 0 && i != len) {
-                i = len - vlanes;
-
-                v_float32 x = vx_load(srcptr + i);
-
-                v_float32 t = v_add(v_mul(x, sixth), half);
-                t = v_min(one, t);
-                t = v_max(zero, t);
-                t = v_mul(x, t);
-
-                vx_store(dstptr + i, t);
-
-                i += vlanes;
-            }
 #endif
             // In case SIMD is not available or len > vlanes
             for (; i < len; i++) {
@@ -2381,18 +2319,6 @@ struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
 
                 vx_store(dstptr + i, t);
             }
-            if (i + vlanes > len && i != 0 && i != len) {
-                i = len - vlanes;
-
-                v_float32 x = vx_load(srcptr + i);
-
-                v_float32 t = v_min(zero, v_mul(v_alpha, v_sub(v_exp(v_mul(x, v_ralpha)), one)));
-                t = v_add(v_max(zero, x), t);
-
-                vx_store(dstptr + i, t);
-
-                i += vlanes;
-            }
 #endif
             // In case SIMD is not available or len < vlanes
             for (; i < len; i++) {
@@ -2499,19 +2425,6 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
                 x = v_mul(v_gamma, x);
 
                 vx_store(dstptr + i, x);
-            }
-            if (i + vlanes > len && i != 0 && i != len) {
-                i = len - vlanes;
-
-                v_float32 x = vx_load(srcptr + i);
-
-                v_float32 t = v_mul(v_alpha, v_sub(v_exp(x), one));
-                x = v_select(v_le(x, z), t, x);
-                x = v_mul(v_gamma, x);
-
-                vx_store(dstptr + i, x);
-
-                i += vlanes;
             }
 #endif
             // In case SIMD is not available or len > vlanes
