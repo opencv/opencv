@@ -1530,6 +1530,11 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     nimages = npoints->rows*npoints->cols;
     npstep = npoints->rows == 1 ? 1 : npoints->step/CV_ELEM_SIZE(npoints->type);
 
+    if ( (flags & CALIB_FIX_EXTRINSIC) && (!rvecs || !tvecs) )
+    {
+        CV_Error( Error::StsBadArg, "Rotation and translation vectors must be nonempty" );
+    }
+
     if( rvecs )
     {
         cn = CV_MAT_CN(rvecs->type);
@@ -1789,15 +1794,50 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     for( i = 0, pos = 0; i < nimages; i++, pos += ni )
     {
         CvMat _ri, _ti;
-        ni = npoints->data.i[i*npstep];
-
         cvGetRows( solver.param, &_ri, NINTRINSIC + i*6, NINTRINSIC + i*6 + 3 );
         cvGetRows( solver.param, &_ti, NINTRINSIC + i*6 + 3, NINTRINSIC + i*6 + 6 );
 
-        CvMat _Mi = cvMat(matM.colRange(pos, pos + ni));
-        CvMat _mi = cvMat(_m.colRange(pos, pos + ni));
+        if ( flags & CALIB_FIX_EXTRINSIC )
+        {
+            uchar* mask = solver.mask->data.ptr;
 
-        cvFindExtrinsicCameraParams2( &_Mi, &_mi, &matA, &_k, &_ri, &_ti );
+            // use input rotation for initial guess
+            if ( rvecs->rows == nimages && rvecs->cols*CV_MAT_CN(rvecs->type) == 9 )
+            {
+                CvMat rmat = cvMat( 3, 3, CV_MAT_DEPTH(rvecs->type), rvecs->data.ptr + rvecs->step*i );
+                cvRodrigues2( &rmat, &_ri );
+            }
+            else
+            {
+                CvMat rvec = cvMat( 3, 1, CV_MAT_DEPTH(rvecs->type), rvecs->rows == 1 ?
+                                    rvecs->data.ptr + i*CV_ELEM_SIZE(rvecs->type) :
+                                    rvecs->data.ptr + rvecs->step*i );
+                cvConvert( &rvec, &_ri );
+            }
+
+            // fix rotation during optimization
+            mask[NINTRINSIC + i*6] = 0;
+            mask[NINTRINSIC + i*6 + 1] = 0;
+            mask[NINTRINSIC + i*6 + 2] = 0;
+
+            // use input translation for initial guess
+            CvMat tvec = cvMat( 3, 1, CV_MAT_DEPTH(tvecs->type), tvecs->rows == 1 ?
+                                tvecs->data.ptr + i*CV_ELEM_SIZE(tvecs->type) :
+                                tvecs->data.ptr + tvecs->step*i );
+            cvConvert( &tvec, &_ti );
+
+            // fix translation during optimization
+            mask[NINTRINSIC + i*6 + 3] = 0;
+            mask[NINTRINSIC + i*6 + 4] = 0;
+            mask[NINTRINSIC + i*6 + 5] = 0;
+        }
+        else
+        {
+            ni = npoints->data.i[i*npstep];
+            CvMat _Mi = cvMat(matM.colRange(pos, pos + ni));
+            CvMat _mi = cvMat(_m.colRange(pos, pos + ni));
+            cvFindExtrinsicCameraParams2( &_Mi, &_mi, &matA, &_k, &_ri, &_ti );
+        }
     }
 
     // 3. run the optimization
@@ -1831,7 +1871,13 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
             CvMat _ri, _ti;
             ni = npoints->data.i[i*npstep];
 
-            cvGetRows( solver.param, &_ri, NINTRINSIC + i*6, NINTRINSIC + i*6 + 3 );
+            // Use the input 3x3 rotation matrices to compute the projection if possible.
+            // It avoids floating point error from the conversion to and from the Rodrigues vector.
+            if ( (flags & CALIB_FIX_EXTRINSIC) && rvecs->cols*CV_MAT_CN(rvecs->type) == 9 )
+                _ri = cvMat( 3, 3, CV_MAT_DEPTH(rvecs->type), rvecs->data.ptr + rvecs->step*i );
+            else
+                cvGetRows( solver.param, &_ri, NINTRINSIC + i*6, NINTRINSIC + i*6 + 3 );
+
             cvGetRows( solver.param, &_ti, NINTRINSIC + i*6 + 3, NINTRINSIC + i*6 + 6 );
 
             CvMat _Mi = cvMat(matM.colRange(pos, pos + ni));
@@ -1945,36 +1991,39 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
         cvConvert( &_Mi, newObjPoints );
     }
 
-    for( i = 0, pos = 0; i < nimages; i++ )
+    if ( !(flags & CALIB_FIX_EXTRINSIC) )
     {
-        CvMat src, dst;
-
-        if( rvecs )
+        for( i = 0, pos = 0; i < nimages; i++ )
         {
-            src = cvMat( 3, 1, CV_64F, solver.param->data.db + NINTRINSIC + i*6 );
-            if( rvecs->rows == nimages && rvecs->cols*CV_MAT_CN(rvecs->type) == 9 )
+            CvMat src, dst;
+
+            if( rvecs )
             {
-                dst = cvMat( 3, 3, CV_MAT_DEPTH(rvecs->type),
-                    rvecs->data.ptr + rvecs->step*i );
-                cvRodrigues2( &src, &matA );
-                cvConvert( &matA, &dst );
+                src = cvMat( 3, 1, CV_64F, solver.param->data.db + NINTRINSIC + i*6 );
+                if( rvecs->rows == nimages && rvecs->cols*CV_MAT_CN(rvecs->type) == 9 )
+                {
+                    dst = cvMat( 3, 3, CV_MAT_DEPTH(rvecs->type),
+                        rvecs->data.ptr + rvecs->step*i );
+                    cvRodrigues2( &src, &matA );
+                    cvConvert( &matA, &dst );
+                }
+                else
+                {
+                    dst = cvMat( 3, 1, CV_MAT_DEPTH(rvecs->type), rvecs->rows == 1 ?
+                        rvecs->data.ptr + i*CV_ELEM_SIZE(rvecs->type) :
+                        rvecs->data.ptr + rvecs->step*i );
+                    cvConvert( &src, &dst );
+                }
             }
-            else
+            if( tvecs )
             {
-                dst = cvMat( 3, 1, CV_MAT_DEPTH(rvecs->type), rvecs->rows == 1 ?
-                    rvecs->data.ptr + i*CV_ELEM_SIZE(rvecs->type) :
-                    rvecs->data.ptr + rvecs->step*i );
+                src = cvMat( 3, 1, CV_64F, solver.param->data.db + NINTRINSIC + i*6 + 3 );
+                dst = cvMat( 3, 1, CV_MAT_DEPTH(tvecs->type), tvecs->rows == 1 ?
+                        tvecs->data.ptr + i*CV_ELEM_SIZE(tvecs->type) :
+                        tvecs->data.ptr + tvecs->step*i );
                 cvConvert( &src, &dst );
             }
         }
-        if( tvecs )
-        {
-            src = cvMat( 3, 1, CV_64F, solver.param->data.db + NINTRINSIC + i*6 + 3 );
-            dst = cvMat( 3, 1, CV_MAT_DEPTH(tvecs->type), tvecs->rows == 1 ?
-                    tvecs->data.ptr + i*CV_ELEM_SIZE(tvecs->type) :
-                    tvecs->data.ptr + tvecs->step*i );
-            cvConvert( &src, &dst );
-         }
     }
 
     return std::sqrt(reprojErr/total);
@@ -3600,6 +3649,64 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
                             imgPtMat2, npoints );
 }
 
+static void collectRotationMatrices( InputArrayOfArrays &rvecs, const int nimages, Mat& rvecM )
+{
+    if( rvecs.isMatVector() )
+    {
+        CV_Assert( nimages > 0 );
+
+        if ( (int)rvecs.total() != nimages )
+            CV_Error( Error::StsBadArg, "Rotation matrix vector size must be the same as number of images" );
+
+        int rsize = rvecs.getMat(0).rows * rvecs.getMat(0).cols;
+
+        if ( rsize != 3 && rsize != 9 )
+            CV_Error( Error::StsBadSize, "Rotation matrix must be a 3x3, 3x1 or 1x3" );
+
+        rvecM.create(nimages, rsize, CV_64F);
+
+        for ( int i = 0; i < nimages; i++ )
+        {
+            if ( rvecs.getMat(i).rows * rvecs.getMat(i).cols != rsize )
+                CV_Error( Error::StsBadSize, "All rotation matrices must be the same size" );
+
+            memcpy( rvecM.ptr(i), rvecs.getMat(i).ptr(), rsize*sizeof(double) );
+        }
+    }
+    else
+    {
+        rvecM = rvecs.getMat();
+    }
+}
+
+static void collectTranslationMatrices( InputArrayOfArrays &tvecs, const int nimages, Mat& tvecM )
+{
+    if( tvecs.isMatVector() )
+    {
+        CV_Assert( nimages > 0 );
+
+        if ( (int)tvecs.total() != nimages )
+            CV_Error( Error::StsBadArg, "Translation matrix vector size must be the same as number of images" );
+
+        if ( tvecs.getMat(0).rows * tvecs.getMat(0).cols != 3)
+            CV_Error( Error::StsBadSize, "Translation matrix must be 3x1 or 1x3" );
+
+        tvecM.create(nimages, 3, CV_64F);
+
+        for ( int i = 0; i < nimages; i++ )
+        {
+            if ( tvecs.getMat(i).rows * tvecs.getMat(i).cols != 3)
+                CV_Error( Error::StsBadSize, "Translation matrix must be 3x1 or 1x3" );
+
+            memcpy( tvecM.ptr(i), tvecs.getMat(i).ptr(), 3*sizeof(double) );
+        }
+    }
+    else
+    {
+        tvecM = tvecs.getMat();
+    }
+}
+
 static Mat prepareCameraMatrix(Mat& cameraMatrix0, int rtype, int flags)
 {
     Mat cameraMatrix = Mat::eye(3, 3, rtype);
@@ -3814,6 +3921,34 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
                              noArray(), _perViewErrors, flags, criteria);
 }
 
+double cv::calibrateCameraWithExtrinsics( InputArrayOfArrays _objectPoints,
+                                     InputArrayOfArrays _imagePoints, Size _imageSize,
+                                     InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
+                                     InputOutputArrayOfArrays _rvecs, InputOutputArrayOfArrays _tvecs,
+                                     int flags, TermCriteria criteria )
+{
+    CV_INSTRUMENT_REGION();
+
+    return calibrateCameraWithExtrinsics(_objectPoints, _imagePoints, _imageSize, _cameraMatrix, _distCoeffs,
+                             _rvecs, _tvecs, noArray(), noArray(), noArray(), flags, criteria);
+}
+
+double cv::calibrateCameraWithExtrinsics( InputArrayOfArrays _objectPoints,
+                                     InputArrayOfArrays _imagePoints, Size _imageSize,
+                                     InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
+                                     InputOutputArrayOfArrays _rvecs, InputOutputArrayOfArrays _tvecs,
+                                     OutputArray stdDeviationsIntrinsics,
+                                     OutputArray stdDeviationsExtrinsics,
+                                     OutputArray _perViewErrors,
+                                     int flags, TermCriteria criteria )
+{
+    CV_INSTRUMENT_REGION();
+
+    return calibrateCameraRO(_objectPoints, _imagePoints, _imageSize, -1, _cameraMatrix, _distCoeffs,
+                             _rvecs, _tvecs, noArray(), stdDeviationsIntrinsics, stdDeviationsExtrinsics,
+                             noArray(), _perViewErrors, flags, criteria);
+}
+
 double cv::calibrateCameraRO(InputArrayOfArrays _objectPoints,
                              InputArrayOfArrays _imagePoints,
                              Size imageSize, int iFixedPoint, InputOutputArray _cameraMatrix,
@@ -3872,22 +4007,36 @@ double cv::calibrateCameraRO(InputArrayOfArrays _objectPoints,
 
     if( rvecs_needed )
     {
-        _rvecs.create(nimages, 1, CV_64FC3);
-
-        if(rvecs_mat_vec)
-            rvecM.create(nimages, 3, CV_64F);
+        if ( flags & CALIB_FIX_EXTRINSIC )
+        {
+            collectRotationMatrices( _rvecs, nimages, rvecM );
+        }
         else
-            rvecM = _rvecs.getMat();
+        {
+            _rvecs.create(nimages, 1, CV_64FC3);
+
+            if( _rvecs.isMatVector() )
+                rvecM.create(nimages, 3, CV_64F);
+            else
+                rvecM = _rvecs.getMat();
+        }
     }
 
     if( tvecs_needed )
     {
-        _tvecs.create(nimages, 1, CV_64FC3);
-
-        if(tvecs_mat_vec)
-            tvecM.create(nimages, 3, CV_64F);
+        if ( flags & CALIB_FIX_EXTRINSIC )
+        {
+            collectTranslationMatrices( _tvecs, nimages, tvecM );
+        }
         else
-            tvecM = _tvecs.getMat();
+        {
+            _tvecs.create(nimages, 1, CV_64FC3);
+
+            if( _tvecs.isMatVector() )
+                tvecM.create(nimages, 3, CV_64F);
+            else
+                tvecM = _tvecs.getMat();
+        }
     }
 
     collectCalibrationData( _objectPoints, _imagePoints, noArray(), iFixedPoint,
@@ -3961,20 +4110,23 @@ double cv::calibrateCameraRO(InputArrayOfArrays _objectPoints,
                      np * 3 * sizeof( double ) );
     }
 
-    // overly complicated and inefficient rvec/ tvec handling to support vector<Mat>
-    for(int i = 0; i < nimages; i++ )
+    if ( !(flags & CALIB_FIX_EXTRINSIC) )
     {
-        if( rvecs_needed && rvecs_mat_vec)
+        // overly complicated and inefficient rvec/ tvec handling to support vector<Mat>
+        for( int i = 0; i < nimages; i++ )
         {
-            _rvecs.create(3, 1, CV_64F, i, true);
-            Mat rv = _rvecs.getMat(i);
-            memcpy(rv.ptr(), rvecM.ptr(i), 3*sizeof(double));
-        }
-        if( tvecs_needed && tvecs_mat_vec)
-        {
-            _tvecs.create(3, 1, CV_64F, i, true);
-            Mat tv = _tvecs.getMat(i);
-            memcpy(tv.ptr(), tvecM.ptr(i), 3*sizeof(double));
+            if( rvecs_needed && rvecs_mat_vec )
+            {
+                _rvecs.create(3, 1, CV_64F, i, true);
+                Mat rv = _rvecs.getMat(i);
+                memcpy(rv.ptr(), rvecM.ptr(i), 3*sizeof(double));
+            }
+            if( tvecs_needed && tvecs_mat_vec )
+            {
+                _tvecs.create(3, 1, CV_64F, i, true);
+                Mat tv = _tvecs.getMat(i);
+                memcpy(tv.ptr(), tvecM.ptr(i), 3*sizeof(double));
+            }
         }
     }
 

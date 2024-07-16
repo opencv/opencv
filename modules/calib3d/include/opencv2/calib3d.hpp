@@ -517,6 +517,7 @@ enum { CALIB_NINTRINSIC          = 18,
        CALIB_FIX_TAUX_TAUY       = 0x80000,
        CALIB_USE_QR              = 0x100000, //!< use QR instead of SVD decomposition for solving. Faster but potentially less precise
        CALIB_FIX_TANGENT_DIST    = 0x200000,
+       CALIB_FIX_EXTRINSIC       = (1 << 23),
        // only for stereo
        CALIB_FIX_INTRINSIC       = 0x00100,
        CALIB_SAME_FOCAL_LENGTH   = 0x00200,
@@ -1624,6 +1625,58 @@ CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
                                         TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+
+/** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration
+pattern.
+
+This function is an extension of #calibrateCamera but allows the user to pass in and fix extrinsic
+parameters.
+
+@param objectPoints Vector of vectors of calibration pattern points in the calibration pattern
+coordinate space. See #calibrateCamera for details.
+@param imagePoints Vector of vectors of the projections of calibration pattern points. See
+#calibrateCamera for details.
+@param imageSize Size of the image used only to initialize the intrinsic camera matrix.
+@param cameraMatrix Output 3x3 floating-point camera matrix. See #calibrateCamera for details.
+@param distCoeffs Output vector of distortion coefficients. See #calibrateCamera for details.
+@param rvecs Input-output vector of rotation vectors estimated for each pattern view. If @ref
+CALIB_FIX_EXTRINSIC is specified, rotation matrices and translation vectors equal in size to
+the number of images must be initialized and will be used for calibration.  See #calibrateCamera
+for details.
+@param tvecs Input-output vector of translation vectors estimated for each pattern view.
+@param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic parameters.
+See #calibrateCamera for details.
+@param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic parameters.
+See #calibrateCamera for details.
+parameter is ignored with standard calibration method.
+ @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
+@param flags Different flags that may be zero or a combination of some predefined values. See
+#calibrateCamera for details.
+@param criteria Termination criteria for the iterative optimization algorithm.
+
+-   @ref CALIB_FIX_EXTRINSIC The input rotation matrices and translation vectors are used for
+calibration and are not changed during optimization.
+
+@return the overall RMS re-projection error.
+ */
+CV_EXPORTS_AS(calibrateCameraWithExtrinsicsExtended) double calibrateCameraWithExtrinsics( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints, Size imageSize,
+                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
+                                     InputOutputArrayOfArrays rvecs, InputOutputArrayOfArrays tvecs,
+                                     OutputArray stdDeviationsIntrinsics,
+                                     OutputArray stdDeviationsExtrinsics,
+                                     OutputArray perViewErrors,
+                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+
+/** @overload */
+CV_EXPORTS_W double calibrateCameraWithExtrinsics( InputArrayOfArrays _objectPoints,
+                                     InputArrayOfArrays imagePoints, Size imageSize,
+                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
+                                     InputOutputArrayOfArrays rvecs, InputOutputArrayOfArrays tvecs,
+                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+
 
 /** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
