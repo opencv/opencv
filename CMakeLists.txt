@@ -1165,10 +1165,6 @@ if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH)
   endif()
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES QNX)
-  install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/ DESTINATION bin/opencv_tests)
-endif()
-
 if(NOT OPENCV_README_FILE)
   if(ANDROID)
     set(OPENCV_README_FILE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/android/README.android)
