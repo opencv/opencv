@@ -516,11 +516,6 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
 
                 if (operation == "sum" || operation == "mean") res += value;
                 else if (operation == "sum_square") {
-                    if (shape(input).size() == 2 && shape(input)[0] == 1 && axis==0)
-                        res += value;
-                    else if (shape(input).size() == 2 && shape(input)[1] == 1 && axis==1)
-                        res += value;
-                    else
                         res += value * value;
                 } else if (operation == "l1") res += std::abs(value);
                 else if (operation == "l2") res += value * value;
@@ -586,8 +581,12 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
     cv::Mat output_ref = reduceOperation(input, reduce_operation, axis);
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
+    std::cout << "input: " << input << std::endl;
 
     runLayer(layer, inputs, outputs);
+    std::cout << "shape of output: " << shape(outputs[0]) << std::endl;
+    std::cout << "output: " << outputs[0] << std::endl;
+    std::cout << "ref: " << output_ref << std::endl;
     ASSERT_EQ(outputs.size(), 1);
     ASSERT_EQ(shape(output_ref), shape(outputs[0]));
     normAssert(output_ref, outputs[0]);

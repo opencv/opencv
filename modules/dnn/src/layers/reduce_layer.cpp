@@ -76,7 +76,7 @@ public:
 
         bool do_nothing = true;
         for (auto axis : axes) {
-            if (shape_input[axis] != 1) {
+            if (shape_input[axis] != 1 || keepdims) {
                 do_nothing = false;
             }
         }
