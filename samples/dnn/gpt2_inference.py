@@ -101,10 +101,22 @@ if __name__ == '__main__':
     num_return_sequences = args.batch_size
     prompt = args.prompt
 
+    net = cv.dnn.readNet(args.model)
+    input_token_size = net.getLayerShapes([], 0, 0)[0][0][1]
+
     enc = tiktoken.get_encoding('gpt2')
     tokens = enc.encode(prompt)
 
-    net = cv.dnn.readNet(args.model)
+    # Check if the prompt is of the same length as the input tokens
+    # if not, pad the tokens else truncate the tokens
+    if len(tokens) > input_token_size:
+        tokens = tokens[:input_token_size]
+    elif len(tokens) < input_token_size:
+        tokens2pad = input_token_size - len(tokens)
+        # append <space> token to the prompt
+        tokens += [220] * tokens2pad
+
+
     output_buffer = gpt2_inference(net, tokens, max_length, num_return_sequences)
 
     for i in range(num_return_sequences):
