@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "precomp.hpp"
+#include "../precomp.hpp"
 
 #include <mutex>
 #include <map>
@@ -11,7 +11,7 @@
 #include "opencv2/dnn/dnn.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/utils/logger.hpp>
-#include "net_impl.hpp"
+#include "../net_impl.hpp"
 
 #ifdef HAVE_TRT
 #include <cuda_runtime_api.h>
