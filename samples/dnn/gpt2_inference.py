@@ -24,7 +24,7 @@ To export GPT-2 model to ONNX, you can use the following procedure:
 Run the script:
 1. Install the required dependencies:
 
-    pip install tiktoken==0.7.0 numpy==1.23.0
+    pip install tiktoken==0.7.0
 
 2. Run the script:
 
@@ -46,6 +46,7 @@ def parse_args():
     parser.add_argument("--max_seq_len", type=int, default=30, help="Number of tokens to continue.")
     parser.add_argument("--batch_size", type=int, default=5, help="Number of batches.")
     parser.add_argument("--prompt", type=str, default="Hello, I'm a language model,", help="Prompt to start with.")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed")
     return parser.parse_args()
 
 def stable_softmax(logits):
@@ -94,9 +95,8 @@ def gpt2_inference(net, tokens, max_length, num_return_sequences=5):
 
 if __name__ == '__main__':
 
-    np.random.seed(0)
-
     args = parse_args()
+    np.random.seed(args.seed)
     max_length = args.max_seq_len
     num_return_sequences = args.batch_size
     prompt = args.prompt
