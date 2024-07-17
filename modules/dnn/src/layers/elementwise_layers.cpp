@@ -1314,15 +1314,8 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
     using Layer = ELULayer;
 
     float alpha;
-    int vlanes;
 
-    explicit ELUFunctor(float alpha_ = 1.f) : alpha(alpha_) {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        vlanes = VTraits<v_float32>::vlanes();
-#else
-        vlanes = 1;
-#endif
-    }
+    explicit ELUFunctor(float alpha_ = 1.f) : alpha(alpha_) {}
 
     bool supportBackend(int backendId, int)
     {
@@ -1339,28 +1332,6 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
     inline float calculate(float x) const
     {
         return x >= 0.f ? x : alpha * (exp(x) - 1.f);
-    }
-
-    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
-        CV_UNUSED(stripeStart);
-        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
-            int i = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 z = vx_setzero_f32(), v_alpha = vx_setall_f32(alpha), one = vx_setall_f32(1.0f);
-            for (; i <= len - vlanes; i += vlanes) {
-                v_float32 x = vx_load(srcptr + i);
-
-                v_float32 t = v_mul(v_alpha, v_sub(v_exp(x), one));
-                x = v_select(v_ge(x, z), x, t);
-
-                vx_store(dstptr + i, x);
-            }
-#endif
-            // In case SIMD is not available or len < vlanes
-            for (; i < len; i++) {
-                dstptr[i] = calculate(srcptr[i]);
-            }
-        }
     }
 
     inline void setKernelParams(ocl::Kernel& kernel) const
@@ -2389,16 +2360,10 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
 
     float alpha;
     float gamma;
-    int vlanes;
 
     explicit SeluFunctor(float alpha_ = 1.67326319217681884765625f,
-                         float gamma_ = 1.05070102214813232421875f) : alpha(alpha_), gamma(gamma_) {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        vlanes = VTraits<v_float32>::vlanes();
-#else
-        vlanes = 1;
-#endif
-    }
+                         float gamma_ = 1.05070102214813232421875f)
+        : alpha(alpha_), gamma(gamma_) {}
 
     bool supportBackend(int backendId, int)
     {
@@ -2408,30 +2373,6 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
     inline float calculate(float x) const
     {
         return gamma * (x > 0.f ? x : alpha * expm1(x));
-    }
-
-    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
-        CV_UNUSED(stripeStart);
-        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
-            int i = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 z = vx_setzero_f32(), one = vx_setall_f32(1.0f),
-                      v_alpha = vx_setall_f32(alpha), v_gamma = vx_setall_f32(gamma);
-            for (; i <= len - vlanes; i += vlanes) {
-                v_float32 x = vx_load(srcptr + i);
-
-                v_float32 t = v_mul(v_alpha, v_sub(v_exp(x), one));
-                x = v_select(v_le(x, z), t, x);
-                x = v_mul(v_gamma, x);
-
-                vx_store(dstptr + i, x);
-            }
-#endif
-            // In case SIMD is not available or len > vlanes
-            for (; i < len; i++) {
-                dstptr[i] = calculate(srcptr[i]);
-            }
-        }
     }
 
     inline void setKernelParams(ocl::Kernel& kernel) const
