@@ -8,10 +8,17 @@
 #include <limits>
 #include <cstring>
 #include <algorithm>
-#ifndef __EMSCRIPTEN_major__
-#error v2.0.13 of emscripten necessitates CLI define of major, minor, tiny
-#endif
 #include "opencv2/core/saturate.hpp"
+
+
+// Emscripten v2.0.13 (latest supported): 
+// __EMSCRIPTEN_major__, __EMSCRIPTEN_minor__ and __EMSCRIPTEN_tiny__ are defined via commandline in 
+// https://github.com/emscripten-core/emscripten/blob/1690a5802cd1241adc9714fb7fa2f633d38860dc/tools/shared.py#L506-L515
+//
+// Uncomment this section for experimental builds, in emscripten >= 3.X:
+// #ifndef __EMSCRIPTEN_major__
+// #include <emscripten/version.h>
+// #endif 
 
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 0 // Now all implementation of f64 use fallback, so disable it.
