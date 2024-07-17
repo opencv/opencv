@@ -1,4 +1,4 @@
-Using Orbbec 3D cameras (UVC) {#tutorial_orbbec_uvc} 
+Using Orbbec 3D cameras (UVC) {#tutorial_orbbec_uvc}
 ======================================================
 
 @tableofcontents
@@ -26,7 +26,7 @@ make
 sudo make install
 ```
 Code
----- 
+----
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
