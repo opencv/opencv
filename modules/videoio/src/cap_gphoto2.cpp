@@ -65,7 +65,7 @@ public:
         result = gPhoto2Result;
         method = methodStr;
     }
-    virtual const char * what() const throw() CV_OVERRIDE
+    virtual const char * what() const CV_NOEXCEPT CV_OVERRIDE
     {
         return gp_result_as_string(result);
     }
