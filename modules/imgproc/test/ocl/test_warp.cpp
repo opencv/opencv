@@ -271,7 +271,7 @@ OCL_TEST_P(WarpPerspective, Mat)
     }
 }
 
-OCL_TEST_P(WarpPerspective, inplace_25853)
+OCL_TEST_P(WarpPerspective, inplace_25853) // when src and dst are the same variable, ocl on/off should produce consistent and correct results
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -322,7 +322,7 @@ OCL_TEST_P(WarpPerspective_cols4, Mat)
     }
 }
 
-OCL_TEST_P(WarpPerspective_cols4, inplace_25853)
+OCL_TEST_P(WarpPerspective_cols4, inplace_25853) // when src and dst are the same variable, ocl on/off should produce consistent and correct results
 {
     for (int j = 0; j < test_loop_times; j++)
     {
