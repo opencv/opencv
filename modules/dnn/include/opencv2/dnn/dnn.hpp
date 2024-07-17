@@ -1137,9 +1137,9 @@ CV__DNN_INLINE_NS_BEGIN
         TrtConfig();
 
         // create Trt config by default config.
-        TrtConfig(TrtConfig& config);
+        TrtConfig(const TrtConfig& config);
 
-        TrtConfig& operator=(const TrtConfig config);
+        TrtConfig& operator=(const TrtConfig& config);
     };
 
     /** @brief Reads a trt model directly or <a href="https://onnx.ai/">ONNX</a>.
@@ -1150,7 +1150,7 @@ CV__DNN_INLINE_NS_BEGIN
      *  @note
      *  When the input is ONNX, it will take few mins to convert the ONNX model to trt first than to read it.
      */
-    CV_EXPORTS_W Net readNetFromTensorRT(CV_WRAP_FILE_PATH const String &trtFile, const TrtConfig config = TrtConfig());
+    CV_EXPORTS_W Net readNetFromTensorRT(CV_WRAP_FILE_PATH const String &trtFile, const TrtConfig& config = TrtConfig());
 
     /** @brief Creates blob from .pb file.
      *  @param path to the .pb file with input tensor.

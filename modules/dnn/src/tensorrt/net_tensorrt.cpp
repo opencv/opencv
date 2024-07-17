@@ -29,7 +29,7 @@ CV__DNN_INLINE_NS_BEGIN
 
 using namespace dnn_trt;
 
-TrtConfig::TrtConfig(TrtConfig& config)
+TrtConfig::TrtConfig(const TrtConfig& config)
 {
     deviceId = config.deviceId;
     useCache = config.useCache;
@@ -43,7 +43,7 @@ TrtConfig::TrtConfig(TrtConfig& config)
 TrtConfig::TrtConfig() :deviceId(0), useCache(false), cachePath(nullptr), useFP16(false), useTimeCache(false), inputName(nullptr)
 {}
 
-TrtConfig& TrtConfig::operator=(const TrtConfig config)
+TrtConfig& TrtConfig::operator=(const TrtConfig& config)
 {
     TrtConfig trtConfig;
     trtConfig.deviceId = config.deviceId;
