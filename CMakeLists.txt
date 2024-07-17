@@ -1258,7 +1258,11 @@ if(CMAKE_GENERATOR MATCHES "Xcode|Visual Studio|Multi-Config")
 else()
   status("    Configuration:"  ${CMAKE_BUILD_TYPE})
 endif()
-
+if(DEFINED OPENCV_ALGO_HINT_DEFAULT)
+  status("    Algorithm Hint:"  ${OPENCV_ALGO_HINT_DEFAULT})
+else()
+  status("    Algorithm Hint:" " ALGO_HINT_ACCURATE")
+endif()
 
 # ========================= CPU code generation mode =========================
 status("")
@@ -1464,9 +1468,12 @@ if(WITH_GTK OR HAVE_GTK)
   else()
     status("    GTK+:" "NO")
   endif()
+
   if(HAVE_GTK)
     status(  "      GThread :" HAVE_GTHREAD THEN "YES (ver ${GTHREAD_VERSION})" ELSE NO)
-    status(  "      GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${GTKGLEXT_VERSION})" ELSE NO)
+    if(NOT HAVE_GTK3)
+      status(  "    GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${GTKGLEXT_VERSION})" ELSE NO)
+    endif()
   endif()
 endif()
 

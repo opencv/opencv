@@ -1536,12 +1536,14 @@ respectively (see #getGaussianKernel for details); to fully control the result r
 possible future modifications of all this semantics, it is recommended to specify all of ksize,
 sigmaX, and sigmaY.
 @param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @sa  sepFilter2D, filter2D, blur, boxFilter, bilateralFilter, medianBlur
  */
 CV_EXPORTS_W void GaussianBlur( InputArray src, OutputArray dst, Size ksize,
                                 double sigmaX, double sigmaY = 0,
-                                int borderType = BORDER_DEFAULT );
+                                int borderType = BORDER_DEFAULT,
+                                AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief Applies the bilateral filter to an image.
 
