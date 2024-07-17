@@ -9,7 +9,7 @@
 #include <cstring>
 #include <algorithm>
 #ifndef __EMSCRIPTEN_major__
-#include <emscripten/version.h>
+#error v2.0.13 of emscripten necessitates CLI define of major, minor, tiny
 #endif
 #include "opencv2/core/saturate.hpp"
 
