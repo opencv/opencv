@@ -24,11 +24,6 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-#ifdef HAVE_TRT
-#define DNN_TENSORRT_UNSUPPORTED() CV_Error(Error::StsError, "DNN/TenosrRT Backend: unsupported function!")
-
-using namespace dnn_trt;
-
 TrtConfig::TrtConfig(const TrtConfig& config)
 {
     deviceId = config.deviceId;
@@ -43,18 +38,23 @@ TrtConfig::TrtConfig(const TrtConfig& config)
 TrtConfig::TrtConfig() :deviceId(0), useCache(false), cachePath(nullptr), useFP16(false), useTimeCache(false), inputName(nullptr)
 {}
 
-TrtConfig& TrtConfig::operator=(const TrtConfig& config)
-{
-    TrtConfig trtConfig;
-    trtConfig.deviceId = config.deviceId;
-    trtConfig.useCache = config.useCache;
-    trtConfig.cachePath = config.cachePath;
-    trtConfig.useFP16 = config.useFP16;
-    trtConfig.useTimeCache = config.useTimeCache;
-    trtConfig.inputName = config.inputName;
-    trtConfig.inputShape = config.inputShape;
-    return trtConfig;
-}
+// TrtConfig& TrtConfig::operator=(const TrtConfig& config)
+// {
+//     TrtConfig trtConfig;
+//     trtConfig.deviceId = config.deviceId;
+//     trtConfig.useCache = config.useCache;
+//     trtConfig.cachePath = config.cachePath;
+//     trtConfig.useFP16 = config.useFP16;
+//     trtConfig.useTimeCache = config.useTimeCache;
+//     trtConfig.inputName = config.inputName;
+//     trtConfig.inputShape = config.inputShape;
+//     return trtConfig;
+// }
+
+#ifdef HAVE_TRT
+#define DNN_TENSORRT_UNSUPPORTED() CV_Error(Error::StsError, "DNN/TenosrRT Backend: unsupported function!")
+
+using namespace dnn_trt;
 
 #define OPT_MAX_WORK_SPACE_SIZE ((size_t)1 << 30)
 
@@ -91,16 +91,16 @@ inline int convertTrt2CVType(const ::nvinfer1::DataType type)
 }
 
 // Per TensorRT documentation, logger needs to be a singleton.
-TensorrtLogger& getTensorrtLogger(bool verbose_log = false) 
+TensorrtLogger& getTensorrtLogger(bool verbose_log = false)
 {
     const auto log_level = verbose_log ? nvinfer1::ILogger::Severity::kVERBOSE : nvinfer1::ILogger::Severity::kWARNING;
     static TensorrtLogger trt_logger(log_level);
-    
-    if (log_level != trt_logger.get_level()) 
+
+    if (log_level != trt_logger.get_level())
     {
         trt_logger.set_level(verbose_log ? nvinfer1::ILogger::Severity::kVERBOSE : nvinfer1::ILogger::Severity::kWARNING);
     }
-    
+
     return trt_logger;
 }
 
@@ -225,7 +225,7 @@ private:
     // Allocate Host memory and binding to the engine.
     void allocMem();
     void tensors2Mats(const std::vector<int>& outputIdxs, std::vector<Mat>& outputMat);
-    
+
     int getOutputIndex(const String &name);
     int getInputIndex(const String& name);
 
@@ -422,17 +422,17 @@ void NetImplTrt::forward(OutputArrayOfArrays outputBlobs,
         outputIdx[i] = res;
     }
 
-    for (int i = 0; i < inputCount; i++) 
+    for (int i = 0; i < inputCount; i++)
     {
-        cudaMemcpyAsync(bufferListDevice[input_idxs[i]], bufferListHost[input_idxs[i]].first.data(), 
+        cudaMemcpyAsync(bufferListDevice[input_idxs[i]], bufferListHost[input_idxs[i]].first.data(),
             bufferListHost[input_idxs[i]].second, cudaMemcpyHostToDevice, stream_);
     }
 
     context_->enqueueV3(stream_);
 
-    for (int i = 0; i < outputCount; i++) 
+    for (int i = 0; i < outputCount; i++)
     {
-        cudaMemcpyAsync(bufferListHost[output_idxs[i]].first.data(), bufferListDevice[output_idxs[i]], 
+        cudaMemcpyAsync(bufferListHost[output_idxs[i]].first.data(), bufferListDevice[output_idxs[i]],
             bufferListHost[output_idxs[i]].second, cudaMemcpyDeviceToHost, stream_);
     }
 
@@ -546,7 +546,7 @@ static inline std::string removeFileSuffix(const std::string& filePath)
     }
     else
     {
-        return filePath;    
+        return filePath;
     }
 }
 
@@ -568,37 +568,37 @@ static inline ::nvinfer1::Dims convertShape2Dim(const MatShape& shape)
 }
 
 
-static std::vector<char> loadTimingCacheFile(const std::string inFileName) 
+static std::vector<char> loadTimingCacheFile(const std::string inFileName)
 {
     std::ifstream iFile(inFileName, std::ios::in | std::ios::binary);
-    
-    if (!iFile) 
+
+    if (!iFile)
     {
         CV_LOG_INFO(NULL, cv::String("[TensorRT EP] Could not read timing cache from: "+inFileName
                             +". A new timing cache will be generated and written."));
         return std::vector<char>();
     }
-    
+
     iFile.seekg(0, std::ifstream::end);
     size_t fsize = iFile.tellg();
     iFile.seekg(0, std::ifstream::beg);
     std::vector<char> content(fsize);
     iFile.read(content.data(), fsize);
     iFile.close();
-    
+
     return content;
 }
 
-static void saveTimingCacheFile(const std::string outFileName, const nvinfer1::IHostMemory* blob) 
+static void saveTimingCacheFile(const std::string outFileName, const nvinfer1::IHostMemory* blob)
 {
     std::ofstream oFile(outFileName, std::ios::out | std::ios::binary);
-    
-    if (!oFile) 
+
+    if (!oFile)
     {
         CV_LOG_INFO(NULL, cv::String("[TensorRT EP] Could not write timing cache to: "+outFileName));
         return;
     }
-    
+
     oFile.write((char*)blob->data(), blob->size());
     oFile.close();
 }
@@ -628,7 +628,7 @@ void NetImplTrt::readNet(const String& model, const TrtConfig& configTRT)
 
     const std::string modelExt = model.substr(model.rfind('.') + 1);
     bool is_trt_model = false;
-    
+
     if (configTRT.useCache)
     {
         if (configTRT.cachePath)
@@ -672,8 +672,8 @@ void NetImplTrt::readNet(const String& model, const TrtConfig& configTRT)
         AutoLock lock(mutex);
         runtime_ = Ptr<::nvinfer1::IRuntime>(::nvinfer1::createInferRuntime(getTensorrtLogger()));
     }
-    
-    if (!runtime_) 
+
+    if (!runtime_)
     {
         CV_Error(Error::StsError, "DNN TensorRT backend: Failed to create runtime!");
         return;
@@ -695,7 +695,7 @@ void NetImplTrt::readNet(const String& model, const TrtConfig& configTRT)
             AutoLock lock(mutex);
             engine_ = Ptr<::nvinfer1::ICudaEngine>(runtime_->deserializeCudaEngine(engine_buf.get(), engine_size));
         }
-        
+
         engine_file.close();
         if (!engine_)
         {
@@ -709,11 +709,11 @@ void NetImplTrt::readNet(const String& model, const TrtConfig& configTRT)
         {
             timeCachingPath = getTimingCachePath(path_to_write, this->compute_capability_);
         }
-        
+
         /* Create a TensorRT model from another format */
         AutoLock lock(mutex);
         builder_ = Ptr<::nvinfer1::IBuilder>(::nvinfer1::createInferBuilder(getTensorrtLogger()));
-        
+
         const auto explicitBatch = 1U << static_cast<uint32_t>(::nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
         network_ = Ptr<::nvinfer1::INetworkDefinition>(builder_->createNetworkV2(explicitBatch));
         config_ = Ptr<::nvinfer1::IBuilderConfig>(builder_->createBuilderConfig());
@@ -769,7 +769,7 @@ void NetImplTrt::readNet(const String& model, const TrtConfig& configTRT)
 
         engine_ = Ptr<::nvinfer1::ICudaEngine>(runtime_->deserializeCudaEngine(plan->data(), plan->size()));
 
-        if (!engine_) 
+        if (!engine_)
         {
             CV_Error(Error::StsError, "TensorRT backend: Failed to create engine!");
             return;
@@ -788,8 +788,8 @@ void NetImplTrt::readNet(const String& model, const TrtConfig& configTRT)
         {
             auto timing_cache = config_->getTimingCache();
             std::unique_ptr<nvinfer1::IHostMemory> timingCacheHostData{timing_cache->serialize()};
-            
-            if (timingCacheHostData == nullptr) 
+
+            if (timingCacheHostData == nullptr)
             {
                 CV_Error(Error::StsError, cv::String("TensorRT backend: could not serialize timing cache:"+trt_model_filename));
                 return;
@@ -846,7 +846,7 @@ void NetImplTrt::readNet(const char* buffer, size_t sizeBuffer, const String &ex
 }
 
 // TensorRT read Net function.
-Net readNetFromTensorRT(const String& trtFile, const TrtConfig config)
+Net readNetFromTensorRT(const String& trtFile, const TrtConfig& config)
 {
     Net net;
 
@@ -860,7 +860,7 @@ Net readNetFromTensorRT(const String& trtFile, const TrtConfig config)
 
 #else
 
-Net readNetFromTensorRT(const String& trtFile, const TrtConfig config)
+Net readNetFromTensorRT(const String& trtFile, const TrtConfig& config)
 {
     CV_Error(Error::StsError, "TenosrRT Backend: unsupport TensorRT, please recompile OpenCV with TensorRT!");
     Net net;

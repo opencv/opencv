@@ -1133,20 +1133,20 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW bool useTimeCache; //!< To speed up the ONNX -> trt converting processing, it will write the time cache file to cachePath.
         CV_PROP_RW char* inputName;            //!< Setting the input name and shape to convert dynamic shape ONNX to trt. Current only support single input.
         CV_PROP_RW std::vector<int> inputShape;//!< Setting the specific input shape.
-        
+
         TrtConfig();
 
         // create Trt config by default config.
         TrtConfig(const TrtConfig& config);
 
-        TrtConfig& operator=(const TrtConfig& config);
+        // TrtConfig& operator=(const TrtConfig& config);
     };
 
     /** @brief Reads a trt model directly or <a href="https://onnx.ai/">ONNX</a>.
      *  @param trtFile path to the original .onnx file or converted .trt file.
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
      *  @param config model runing config
-     * 
+     *
      *  @note
      *  When the input is ONNX, it will take few mins to convert the ONNX model to trt first than to read it.
      */
