@@ -728,7 +728,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param outLayerShapes output parameter for output layers shapes;
          * order is the same as in layersIds
          */
-        void getLayerShapes(const MatShape& netInputShape,
+        CV_WRAP void getLayerShapes(const MatShape& netInputShape,
                                     const int& netInputType,
                                     const int layerId,
                                     CV_OUT std::vector<MatShape>& inLayerShapes,
