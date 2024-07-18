@@ -362,10 +362,10 @@ int RGBE_WritePixels_RLE(FILE *fp, float *data, int scanline_width,
 
     /* write out each of the four channels separately run length encoded */
     /* first red, then green, then blue, then exponent */
-    for(i=0;i<4;i++) 
+    for(i=0;i<4;i++)
     {
       if ((err = RGBE_WriteBytes_RLE(fp,&buffer[i*scanline_width],
-             scanline_width)) != RGBE_RETURN_SUCCESS) 
+             scanline_width)) != RGBE_RETURN_SUCCESS)
       {
         free(buffer);
         return err;
