@@ -182,8 +182,19 @@ OCL_TEST_P(WarpAffine, Mat)
         OCL_ON(cv::warpAffine(usrc_roi, udst_roi, M, dsize, interpolation));
 
         Near(eps);
+    }
+}
 
-        // when src and dst are the same variable, ocl on/off should produce consistent and correct results
+OCL_TEST_P(WarpAffine, inplace_25853) // when src and dst are the same variable, ocl on/off should produce consistent and correct results
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        double eps = depth < CV_32F ? 0.04 : 0.06;
+        random_roi();
+
+        Mat M = getRotationMatrix2D(Point2f(src_roi.cols / 2.0f, src_roi.rows / 2.0f),
+            rng.uniform(-180.f, 180.f), rng.uniform(0.4f, 2.0f));
+
         OCL_OFF(cv::warpAffine(src_roi, src_roi, M, dsize, interpolation));
         OCL_ON(cv::warpAffine(usrc_roi, usrc_roi, M, dsize, interpolation));
 
@@ -208,15 +219,6 @@ OCL_TEST_P(WarpAffine_cols4, Mat)
 
         OCL_OFF(cv::warpAffine(src_roi, dst_roi, M, dsize, interpolation));
         OCL_ON(cv::warpAffine(usrc_roi, udst_roi, M, dsize, interpolation));
-
-        Near(eps);
-
-        // when src and dst are the same variable, ocl on/off should produce consistent and correct results
-        OCL_OFF(cv::warpAffine(src_roi, src_roi, M, dsize, interpolation));
-        OCL_ON(cv::warpAffine(usrc_roi, usrc_roi, M, dsize, interpolation));
-
-        dst_roi = src_roi.clone();
-        udst_roi = usrc_roi.clone();
 
         Near(eps);
     }
@@ -246,15 +248,6 @@ OCL_TEST_P(WarpPerspective, Mat)
         OCL_ON(cv::warpPerspective(usrc_roi, udst_roi, M, dsize, interpolation));
 
         Near(eps);
-
-        // when src and dst are the same variable, ocl on/off should produce consistent and correct results
-        OCL_OFF(cv::warpPerspective(src_roi, src_roi, M, dsize, interpolation));
-        OCL_ON(cv::warpPerspective(usrc_roi, usrc_roi, M, dsize, interpolation));
-
-        dst_roi = src_roi.clone();
-        udst_roi = usrc_roi.clone();
-
-        Near(eps);
     }
 }
 
@@ -278,15 +271,6 @@ OCL_TEST_P(WarpPerspective_cols4, Mat)
 
         OCL_OFF(cv::warpPerspective(src_roi, dst_roi, M, dsize, interpolation));
         OCL_ON(cv::warpPerspective(usrc_roi, udst_roi, M, dsize, interpolation));
-
-        Near(eps);
-
-        // when src and dst are the same variable, ocl on/off should produce consistent and correct results
-        OCL_OFF(cv::warpPerspective(src_roi, src_roi, M, dsize, interpolation));
-        OCL_ON(cv::warpPerspective(usrc_roi, usrc_roi, M, dsize, interpolation));
-
-        dst_roi = src_roi.clone();
-        udst_roi = usrc_roi.clone();
 
         Near(eps);
     }
