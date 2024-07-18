@@ -213,7 +213,7 @@ file(GLOB_RECURSE dnn_int_hdrs
 )
 set(dnn_plugin_srcs ${dnn_srcs} ${dnn_int_hdrs})
 ocv_list_filterout_ex(dnn_plugin_srcs
-    "/src/dnn.cpp$|/src/dnn_utils.cpp$|/src/dnn_utils.cpp$|/src/dnn_read.cpp$|/src/registry.cpp$|/src/backend.cpp$"
+    "/src/dnn.cpp$|/src/dnn_utils.cpp$|/src/dnn_read.cpp$|/src/registry.cpp$|/src/backend.cpp$"
     # importers
     "/src/(caffe|darknet|onnx|tensorflow|torch)/"
     # executors
