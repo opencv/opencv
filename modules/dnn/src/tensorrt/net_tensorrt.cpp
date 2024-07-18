@@ -722,9 +722,9 @@ void NetImplTrt::readNet(const String& model, const TrtConfig& configTRT)
         {
             ::nvinfer1::IOptimizationProfile* profile = builder_->createOptimizationProfile();
             ::nvinfer1::Dims dim = convertShape2Dim(configTRT.inputShape);
-            profile->setDimensions(configTRT.inputName, ::nvinfer1::OptProfileSelector::kMIN, dim);
-            profile->setDimensions(configTRT.inputName, ::nvinfer1::OptProfileSelector::kOPT, dim);
-            profile->setDimensions(configTRT.inputName, ::nvinfer1::OptProfileSelector::kMAX, dim);
+            profile->setDimensions(configTRT.inputName.c_str(), ::nvinfer1::OptProfileSelector::kMIN, dim);
+            profile->setDimensions(configTRT.inputName.c_str(), ::nvinfer1::OptProfileSelector::kOPT, dim);
+            profile->setDimensions(configTRT.inputName.c_str(), ::nvinfer1::OptProfileSelector::kMAX, dim);
 
             config_->addOptimizationProfile(profile);
         }
@@ -867,7 +867,7 @@ Net readNetFromTensorRT(const String& trtFile, const TrtConfig& config)
     return net;
 }
 
-CV__DNN_INLINE_NS_END
 #endif // HAVE_TRT
 
+CV__DNN_INLINE_NS_END
 }} // namespace cv::dnn
