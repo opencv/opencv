@@ -18,7 +18,7 @@ namespace cv {
 namespace hal {
 
 // 8u, 16u, 32f
-void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
+static void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue, bool isCbCr, AlgorithmHint hint)
@@ -71,7 +71,7 @@ void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
+static void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
                  int depth, int dcn, bool swapBlue, bool isCbCr, AlgorithmHint hint)
@@ -128,7 +128,7 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
 // 4:2:0, two planes: Y, UV interleaved
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 20-bit fixed-point arithmetics
-void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
+static void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
                          uchar * dst_data, size_t dst_step,
                          int dst_width, int dst_height,
                          int dcn, bool swapBlue, int uIdx, AlgorithmHint hint)
@@ -151,7 +151,7 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_d
 // 4:2:0, two planes in one array: Y, UV interleaved
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 20-bit fixed-point arithmetics
-void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
+static void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int dst_width, int dst_height,
                          int dcn, bool swapBlue, int uIdx, AlgorithmHint hint)
@@ -173,7 +173,7 @@ void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
 // 4:2:0, two planes: Y, UV interleaved
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 20-bit fixed-point arithmetics
-void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
+static void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int dst_width, int dst_height,
                          int dcn, bool swapBlue, int uIdx, AlgorithmHint hint)
@@ -186,7 +186,7 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src
 // 4:2:0, three planes in one array: Y, U, V
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 20-bit fixed-point arithmetics
-void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
+static void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                            uchar * dst_data, size_t dst_step,
                            int dst_width, int dst_height,
                            int dcn, bool swapBlue, int uIdx, AlgorithmHint hint)
@@ -207,7 +207,7 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
 // 4:2:0, three planes in one array: Y, U, V
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 20-bit fixed-point arithmetics
-void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
+static void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
                            uchar * dst_data, size_t dst_step,
                            int width, int height,
                            int scn, bool swapBlue, int uIdx, AlgorithmHint hint)
@@ -228,7 +228,7 @@ void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
 // 4:2:0, two planes: Y, UV interleaved
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 20-bit fixed-point arithmetics
-void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
+static void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
                          uchar * y_data, uchar * uv_data, size_t dst_step,
                          int width, int height,
                          int scn, bool swapBlue, int uIdx, AlgorithmHint hint)
@@ -252,7 +252,7 @@ void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
 // 4:2:2 interleaved
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 20-bit fixed-point arithmetics
-void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
+static void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int width, int height,
                          int dcn, bool swapBlue, int uIdx, int ycn, AlgorithmHint hint)
@@ -273,7 +273,7 @@ void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
 // 4:2:2 interleaved
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 14-bit fixed-point arithmetics is used
-void cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step,
+static void cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int width, int height,
                          int scn, bool swapBlue, int uIdx, int ycn, AlgorithmHint hint)
