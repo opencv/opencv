@@ -981,7 +981,7 @@ struct Layer_Elementwise : public TestBaseWithParam<tuple<Backend, Target>> {
         int target_id = get<1>(GetParam());
 
         Mat input(input_shape, CV_32F);
-        randu(input, 0.f, 1.f);
+        randu(input, -10.0f, 10.f);
 
         LayerParams lp;
         lp.type = op_type;
