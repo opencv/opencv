@@ -117,10 +117,10 @@ void Copy_vector_MatShape_to_List(JNIEnv* env, std::vector<cv::dnn::MatShape>& v
     jmethodID m_add       = LIST_ADD(env, juArrayList);
 
     env->CallVoidMethod(list, m_clear);
-    for (std::vector<cv::dnn::MatShape>::iterator it = vs.begin(); it != vs.end(); ++it)
+    for (size_t i = 0; i < vs.size(); i++)
     {
-        jintArray element = env->NewIntArray((int)it->size());
-        env->SetIntArrayRegion(element, 0, (int)it->size(), &(*it)[0]);
+        jintArray element = env->NewIntArray((jint)vs[i].size());
+        env->SetIntArrayRegion(element, 0, (jint)vs[i].size(), (const jint*)&vs[i][0]);
         env->CallBooleanMethod(list, m_add, element);
         env->DeleteLocalRef(element);
     }
