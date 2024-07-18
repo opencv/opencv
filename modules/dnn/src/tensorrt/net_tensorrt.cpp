@@ -38,6 +38,19 @@ TrtConfig::TrtConfig(const TrtConfig& config)
 TrtConfig::TrtConfig() :deviceId(0), useCache(false), cachePath(""), useFP16(false), useTimeCache(false), inputName("")
 {}
 
+TrtConfig& TrtConfig::operator=(const TrtConfig& config)
+{
+    deviceId = config.deviceId;
+    useCache = config.useCache;
+    cachePath = config.cachePath;
+    useFP16 = config.useFP16;
+    useTimeCache = config.useTimeCache;
+    inputShape = config.inputShape;
+    inputName = config.inputName;
+
+    return *this;
+}
+
 #ifdef HAVE_TRT
 #define DNN_TENSORRT_UNSUPPORTED() CV_Error(Error::StsError, "DNN/TenosrRT Backend: unsupported function!")
 

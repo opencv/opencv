@@ -1138,6 +1138,8 @@ CV__DNN_INLINE_NS_BEGIN
 
         // create Trt config by default config.
         TrtConfig(const TrtConfig& config);
+
+        TrtConfig& operator=(const TrtConfig& config);
     };
 
     /** @brief Reads a trt model directly or <a href="https://onnx.ai/">ONNX</a>.
