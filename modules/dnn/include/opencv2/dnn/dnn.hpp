@@ -1128,18 +1128,16 @@ CV__DNN_INLINE_NS_BEGIN
     {
         CV_PROP_RW int deviceId;      //!< Running TensorRT with specific GPU
         CV_PROP_RW bool useCache;     //!< It will speed up the ONNX model initialization. Write back the converted trt file to where the input model is located.
-        CV_PROP_RW char* cachePath;   //!< Setting the path to write back the converted .trt file to specific path instead of the input file location.
+        CV_PROP_RW String cachePath;   //!< Setting the path to write back the converted .trt file to specific path instead of the input file location.
         CV_PROP_RW bool useFP16;      //!< Inference model with FP16, need hardware supports FP16, it may affect the accuracy.
         CV_PROP_RW bool useTimeCache; //!< To speed up the ONNX -> trt converting processing, it will write the time cache file to cachePath.
-        CV_PROP_RW char* inputName;            //!< Setting the input name and shape to convert dynamic shape ONNX to trt. Current only support single input.
+        CV_PROP_RW String inputName;            //!< Setting the input name and shape to convert dynamic shape ONNX to trt. Current only support single input.
         CV_PROP_RW std::vector<int> inputShape;//!< Setting the specific input shape.
 
         TrtConfig();
 
         // create Trt config by default config.
         TrtConfig(const TrtConfig& config);
-
-        // TrtConfig& operator=(const TrtConfig& config);
     };
 
     /** @brief Reads a trt model directly or <a href="https://onnx.ai/">ONNX</a>.

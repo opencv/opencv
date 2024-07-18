@@ -35,21 +35,8 @@ TrtConfig::TrtConfig(const TrtConfig& config)
     inputName = config.inputName;
 }
 
-TrtConfig::TrtConfig() :deviceId(0), useCache(false), cachePath(nullptr), useFP16(false), useTimeCache(false), inputName(nullptr)
+TrtConfig::TrtConfig() :deviceId(0), useCache(false), cachePath(""), useFP16(false), useTimeCache(false), inputName("")
 {}
-
-// TrtConfig& TrtConfig::operator=(const TrtConfig& config)
-// {
-//     TrtConfig trtConfig;
-//     trtConfig.deviceId = config.deviceId;
-//     trtConfig.useCache = config.useCache;
-//     trtConfig.cachePath = config.cachePath;
-//     trtConfig.useFP16 = config.useFP16;
-//     trtConfig.useTimeCache = config.useTimeCache;
-//     trtConfig.inputName = config.inputName;
-//     trtConfig.inputShape = config.inputShape;
-//     return trtConfig;
-// }
 
 #ifdef HAVE_TRT
 #define DNN_TENSORRT_UNSUPPORTED() CV_Error(Error::StsError, "DNN/TenosrRT Backend: unsupported function!")
@@ -631,9 +618,9 @@ void NetImplTrt::readNet(const String& model, const TrtConfig& configTRT)
 
     if (configTRT.useCache)
     {
-        if (configTRT.cachePath)
+        if (!configTRT.cachePath.empty())
         {
-            path_to_write = std::string(configTRT.cachePath) + "/";
+            path_to_write = configTRT.cachePath + "/";
         }
         else
         {
@@ -718,7 +705,7 @@ void NetImplTrt::readNet(const String& model, const TrtConfig& configTRT)
         network_ = Ptr<::nvinfer1::INetworkDefinition>(builder_->createNetworkV2(explicitBatch));
         config_ = Ptr<::nvinfer1::IBuilderConfig>(builder_->createBuilderConfig());
 
-        if (configTRT.inputName && !configTRT.inputShape.empty())
+        if (!configTRT.inputName.empty() && !configTRT.inputShape.empty())
         {
             ::nvinfer1::IOptimizationProfile* profile = builder_->createOptimizationProfile();
             ::nvinfer1::Dims dim = convertShape2Dim(configTRT.inputShape);
@@ -776,7 +763,7 @@ void NetImplTrt::readNet(const String& model, const TrtConfig& configTRT)
         }
 
         /* save serialized model to cache folder */
-        if (configTRT.useCache && !configTRT.cachePath)
+        if (configTRT.useCache && !configTRT.cachePath.empty())
         {
             std::ofstream ofs(std::string(trt_model_filename), std::ios::out | std::ios::binary);
             ofs.write((char*)(plan->data()), plan->size());
