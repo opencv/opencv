@@ -901,7 +901,7 @@ inline int hal_ni_meanStdDev(const uchar* src_data, size_t src_step, int width, 
 
 /**
  * @brief calculates dot product of two vectors (represented as 2d images)
- * 
+ *
  * @param a_data Pointer to 1st 2nd image data
  * @param a_step Stride of 1st 2nd image
  * @param b_data Pointer to 1st 2nd image data
@@ -910,7 +910,7 @@ inline int hal_ni_meanStdDev(const uchar* src_data, size_t src_step, int width, 
  * @param height Height of both images
  * @param type Data type of both images, for example CV_8U or CV_32F
  * @param dot_val Pointer to resulting dot product value
- * @return int 
+ * @return int
  */
 inline int hal_ni_dotProduct(const uchar* a_data, size_t a_step, const uchar* b_data, size_t b_step, int width, int height,
                              int type, double *dot_val)
