@@ -236,11 +236,7 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #include "opencv2/core/hal/intrin_wasm.hpp"
 
 #elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP)
-#if defined(CV_RVV_SCALABLE)
 #include "opencv2/core/hal/intrin_rvv_scalable.hpp"
-#else
-#include "opencv2/core/hal/intrin_rvv.hpp"
-#endif
 
 #elif CV_LSX && !defined(CV_FORCE_SIMD128_CPP)
 

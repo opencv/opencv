@@ -277,7 +277,7 @@ public:
                     opt_AVX::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize_aligned);
                 else
             #endif
-            #if CV_TRY_RVV
+            #if CV_TRY_RVV && CV_RVV
                 if( useRVV )
                     opt_RVV::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
                 else

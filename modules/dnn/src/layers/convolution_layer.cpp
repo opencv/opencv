@@ -1667,7 +1667,7 @@ public:
                 opt_AVX::fastGEMM( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
             else
         #endif
-        #if CV_TRY_RVV
+        #if CV_TRY_RVV && CV_RVV
             if( useRVV ) {
                 opt_RVV::fastGEMM( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
             }

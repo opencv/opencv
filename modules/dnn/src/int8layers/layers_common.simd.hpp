@@ -1257,7 +1257,7 @@ void fastGEMM1T( const int8_t* vec, const int8_t* weights,
 }
 #endif // CV_LASX
 
-#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_RVV && defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>=11000
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_RVV
 
 static const size_t __cv_rvv_e8m1_max = __riscv_vsetvlmax_e8m1();
 static const size_t __cv_rvv_e16m1_max = __riscv_vsetvlmax_e16m1();
