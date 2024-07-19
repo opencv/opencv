@@ -122,7 +122,7 @@ typedef signed __int64    int64_t;
 #define ANNOYLIB_FTRUNCATE_SIZE(x) (x)
 #endif
 
-namespace Annoy {
+namespace cvannoy {
 
 inline void set_error_from_errno(char **error, const char* msg) {
   annoylib_showUpdate("%s: %s (%d)\n", msg, strerror(errno), errno);

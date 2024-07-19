@@ -8,7 +8,7 @@ typedef unsigned __int64    uint64_t;
 #include <stdint.h>
 #endif
 
-namespace Annoy {
+namespace cvannoy {
 
 // KISS = "keep it simple, stupid", but high quality random number generator
 // http://www0.cs.ucl.ac.uk/staff/d.jones/GoodPracticeRNG.pdf -> "Use a good RNG and build it into your code"
