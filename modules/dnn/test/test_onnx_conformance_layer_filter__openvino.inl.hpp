@@ -624,7 +624,13 @@ CASE(test_elu)
     // no filter
 CASE(test_elu_default)
     // no filter
+CASE(test_elu_default_expanded_ver18)
+    // no filter
 CASE(test_elu_example)
+    // no filter
+CASE(test_elu_example_expanded_ver18)
+    // no filter
+CASE(test_elu_expanded_ver18)
     // no filter
 CASE(test_equal)
     // no filter
@@ -1097,6 +1103,10 @@ CASE(test_min_uint32)
 CASE(test_min_uint64)
     // no filter
 CASE(test_min_uint8)
+    // no filter
+CASE(test_mish)
+    // no filter
+CASE(test_mish_expanded)
     // no filter
 CASE(test_mod_broadcast)
     // no filter
@@ -1851,7 +1861,13 @@ CASE(test_selu)
     // no filter
 CASE(test_selu_default)
     // no filter
+CASE(test_selu_default_expanded_ver18)
+    // no filter
 CASE(test_selu_example)
+    // no filter
+CASE(test_selu_example_expanded_ver18)
+    // no filter
+CASE(test_selu_expanded_ver18)
     // no filter
 CASE(test_sequence_insert_at_back)
     // no filter
