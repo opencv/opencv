@@ -146,6 +146,16 @@
 #  define CV_NEON 1
 #endif
 
+/* RVV-related macro states with different compiler
+// +--------------------+----------+----------+
+// | Macro              | Upstream | XuanTie  |
+// +--------------------+----------+----------+
+// | CV_CPU_COMPILE_RVV | defined  | defined  |
+// | CV_RVV             | 1        | 0        |
+// | CV_RVV071          | 0        | 1        |
+// | CV_TRY_RVV         | 1        | 1        |
+// +--------------------+----------+----------+
+*/
 #ifdef CV_CPU_COMPILE_RVV
 #  ifdef __riscv_vector_071
 #    define CV_RVV071 1
