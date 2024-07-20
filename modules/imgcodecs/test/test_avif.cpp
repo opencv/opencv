@@ -150,7 +150,7 @@ INSTANTIATE_TEST_CASE_P(
                        ::testing::ValuesIn({1, 3, 4}),
                        ::testing::ValuesIn({0, 50, 100}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
-                                            IMREAD_COLOR})));
+                                            IMREAD_COLOR, IMREAD_COLOR_RGB})));
 
 class Imgcodecs_Avif_Image_EncodeDecodeSuite
     : public Imgcodecs_Avif_Image_RoundTripSuite {};
@@ -183,7 +183,7 @@ INSTANTIATE_TEST_CASE_P(
                        ::testing::ValuesIn({1, 3, 4}),
                        ::testing::ValuesIn({0, 50, 100}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
-                                            IMREAD_COLOR})));
+                                            IMREAD_COLOR, IMREAD_COLOR_RGB})));
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -311,7 +311,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(::testing::ValuesIn({8, 10, 12}),
                        ::testing::ValuesIn({1, 3}), ::testing::ValuesIn({50}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
-                                            IMREAD_COLOR})));
+                                            IMREAD_COLOR, IMREAD_COLOR_RGB})));
 class Imgcodecs_Avif_Animation_WriteDecodeSuite
     : public Imgcodecs_Avif_Animation_RoundTripSuite {};
 
@@ -347,7 +347,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(::testing::ValuesIn({8, 10, 12}),
                        ::testing::ValuesIn({1, 3}), ::testing::ValuesIn({50}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
-                                            IMREAD_COLOR})));
+                                            IMREAD_COLOR, IMREAD_COLOR_RGB})));
 
 }  // namespace
 }  // namespace opencv_test

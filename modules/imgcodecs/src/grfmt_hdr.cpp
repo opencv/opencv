@@ -59,6 +59,9 @@ HdrDecoder::HdrDecoder()
 
 HdrDecoder::~HdrDecoder()
 {
+    if(file) {
+        fclose(file);
+    }
 }
 
 size_t HdrDecoder::signatureLength() const
@@ -103,7 +106,13 @@ bool HdrDecoder::readData(Mat& _img)
     switch (_img.channels())
     {
         case 1: cvtColor(img, _img, COLOR_BGR2GRAY); break;
-        case 3: img.copyTo(_img); break;
+        case 3:
+        // TODO, try to modify RGBE_ReadPixels_RLE to load rgb data directly.
+        if (m_use_rgb)
+            cv::cvtColor(img, _img, cv::COLOR_BGR2RGB);
+        else
+            img.copyTo(_img);
+        break;
         default: CV_Error(Error::StsError, "Wrong expected image channels, allowed: 1 and 3");
     }
     return true;
