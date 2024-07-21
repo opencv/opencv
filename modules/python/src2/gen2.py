@@ -854,7 +854,22 @@ class FuncInfo(object):
 
         all_code_variants = []
 
+        # See https://github.com/opencv/opencv/issues/25928
+        # Conversion to UMat is expensive more than conversion to Mat.
+        # To reduce this cost, conversion to Mat is prefer than to UMat.
+        variants = []
+        variants_umat = []
         for v in self.variants:
+            hasUMat = False
+            for a in v.args:
+                hasUMat = hasUMat or "UMat" in a.tp
+            if hasUMat :
+                variants_umat.append(v)
+            else:
+                variants.append(v)
+        variants.extend(variants_umat)
+
+        for v in variants:
             code_decl = ""
             code_ret = ""
             code_cvt_list = []
