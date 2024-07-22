@@ -6,13 +6,35 @@ from tqdm import tqdm
 from functools import partial
 from einops import rearrange, repeat
 
+backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
+            cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD,
+            cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
+
 parser = argparse.ArgumentParser(description='Use this script to run inpainting using Latent Diffusion Model',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--encoder', '-e', type=str, help='Path to encoder network.', default="/Users/abd/Desktop/InpaintEncoder.onnx")
-parser.add_argument('--decoder', '-d', type=str, help='Path to decoder network.', default="/Users/abd/Desktop/InpaintDecoder.onnx")
-parser.add_argument('--diffusor', '-df', type=str, help='Path to diffusion network.', default="/Users/abd/Desktop/LatentDiffusion.onnx")
-parser.add_argument('--image', '-i', type=str, help='Path to input image.', default="/Users/abd/Desktop/overture-creations-5sI6fQgYIuo.png")
-parser.add_argument('--mask', '-m', type=str, help='Path to mask image.', default="/Users/abd/Desktop/overture-creations-5sI6fQgYIuo_mask.png")
+parser.add_argument('--encoder', '-e', type=str, help='Path to encoder network.', default="/home/abduragim/tmp/InpaintEncoder.onnx")
+parser.add_argument('--decoder', '-d', type=str, help='Path to decoder network.', default="/home/abduragim/tmp/InpaintDecoder.onnx")
+parser.add_argument('--diffusor', '-df', type=str, help='Path to diffusion network.', default="/home/abduragim/tmp/LatentDiffusion.onnx")
+parser.add_argument('--image', '-i', type=str, help='Path to input image.', default="/home/abduragim/projects/diffusors/latent-diffusion/data/inpainting_examples/overture-creations-5sI6fQgYIuo.png")
+parser.add_argument('--mask', '-m', type=str, help='Path to mask image.', default="/home/abduragim/projects/diffusors/latent-diffusion/data/inpainting_examples/overture-creations-5sI6fQgYIuo_mask.png")
+parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_CUDA, type=int,
+                        help="Choose one of computation backends: "
+                             "%d: automatically (by default), "
+                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                             "%d: OpenCV implementation, "
+                             "%d: VKCOM, "
+                             "%d: CUDA" % backends)
+parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CUDA, type=int,
+                        help='Choose one of target computation devices: '
+                             '%d: CPU target (by default), '
+                             '%d: OpenCL, '
+                             '%d: OpenCL fp16 (half-float precision), '
+                             '%d: NCS2 VPU, '
+                             '%d: HDDL VPU, '
+                             '%d: Vulkan, '
+                             '%d: CUDA, '
+                             '%d: CUDA fp16 (half-float preprocess)'% targets)
 
 def make_batch(image, mask):
     # image = np.array(Image.open(image).convert("RGB"))
@@ -93,16 +115,6 @@ def make_beta_schedule(schedule, n_timestep, linear_start=1e-4, linear_end=2e-2,
         raise ValueError(f"schedule '{schedule}' unknown.")
     return betas.numpy()
 
-# class DDIMSampler(object):
-#     def __init__(self, args, schedule="linear", **kwargs):
-#         super().__init__()
-#         self.ddpm_num_timesteps = 1000 #get from confing
-
-#         pass
-
-#     def sample(self, S, conditioning, batch_size, shape, verbose=False):
-#         return None, None
-
 class DDIMSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
         super().__init__()
@@ -112,9 +124,6 @@ class DDIMSampler(object):
         self.schedule = schedule
 
     def register_buffer(self, name, attr):
-        # if type(attr) == torch.Tensor:
-        #     if attr.device != torch.device("cuda"):
-        #         attr = attr.to(torch.device("cuda"))
         setattr(self, name, attr)
 
     def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True):
@@ -317,7 +326,20 @@ class DDIMInpainter(object):
         self.decoder = cv.dnn.readNet(args.decoder)
         self.diffusor = cv.dnn.readNet(args.diffusor)
         self.sampler = DDIMSampler(self)
-        pass
+        self.set_backend(backend=args.backend, target=args.target)
+
+    def set_backend(self, backend=cv.dnn.DNN_BACKEND_DEFAULT, target=cv.dnn.DNN_TARGET_CPU):
+        print("set backend")
+        print("backend: ", backend)
+        print("target: ", target)
+        self.encoder.setPreferableBackend(backend)
+        self.encoder.setPreferableTarget(target)
+
+        self.decoder.setPreferableBackend(backend)
+        self.decoder.setPreferableTarget(target)
+
+        self.diffusor.setPreferableBackend(backend)
+        self.diffusor.setPreferableTarget(target)
 
     def apply_diffusor(self, x, timestep, cond):
 
@@ -345,9 +367,6 @@ class DDIMInpainter(object):
         return output
 
     def register_buffer(self, name, attr):
-        # if type(attr) == torch.Tensor:
-        #     if attr.device != torch.device("cuda"):
-        #         attr = attr.to(torch.device("cuda"))
         setattr(self, name, attr)
 
     def register_schedule(self, given_betas=None, beta_schedule="linear", timesteps=1000,
@@ -577,7 +596,7 @@ class DDIMInpainter(object):
 
         # Sample from the model
         samples_ddim, _ = self.sampler.sample(
-            S=2, # TODO: move to args later
+            S=50, # TODO: move to args later
             conditioning=c,
             batch_size=c.shape[0],
             shape=shape,
@@ -616,9 +635,12 @@ def main(args):
 
     model = DDIMInpainter(args)
     result = model(masked_image, mask)
+    result = np.squeeze(result)
+    print("result shape: ", result.shape)
+
 
     # save the result in the directore of args.image
-    cv.imwrite(args.image.replace(".png", "_inpainted.png"), result)
+    cv.imwrite(args.image.replace(".png", "_inpainted.png"), result[..., ::-1])
 
 
 if __name__ == '__main__':
