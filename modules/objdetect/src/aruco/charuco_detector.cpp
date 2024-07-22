@@ -305,23 +305,27 @@ struct CharucoDetector::CharucoDetectorImpl {
     void detectBoard(InputArray image, OutputArray charucoCorners, OutputArray charucoIds,
                      InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds) {
         CV_Assert((markerCorners.empty() && markerIds.empty() && !image.empty()) || (markerCorners.total() == markerIds.total()));
+        vector<vector<Point2f>> tmpMarkerCorners;
+        vector<int> tmpMarkerIds;
+        InputOutputArrayOfArrays _markerCorners = markerCorners.needed() ? markerCorners : tmpMarkerCorners;
+        InputOutputArray _markerIds = markerIds.needed() ? markerIds : tmpMarkerIds;
 
         if (markerCorners.empty() && markerIds.empty()) {
             vector<vector<Point2f> > rejectedMarkers;
-            arucoDetector.detectMarkers(image, markerCorners, markerIds, rejectedMarkers);
+            arucoDetector.detectMarkers(image, _markerCorners, _markerIds, rejectedMarkers);
             if (charucoParameters.tryRefineMarkers)
-                arucoDetector.refineDetectedMarkers(image, board, markerCorners, markerIds, rejectedMarkers);
-            if (markerCorners.empty() && markerIds.empty())
+                arucoDetector.refineDetectedMarkers(image, board, _markerCorners, _markerIds, rejectedMarkers);
+            if (_markerCorners.empty() && _markerIds.empty())
                 return;
         }
         // if camera parameters are avaible, use approximated calibration
         if(!charucoParameters.cameraMatrix.empty())
-            interpolateCornersCharucoApproxCalib(markerCorners, markerIds, image, charucoCorners, charucoIds);
+            interpolateCornersCharucoApproxCalib(_markerCorners, _markerIds, image, charucoCorners, charucoIds);
         // else use local homography
         else
-            interpolateCornersCharucoLocalHom(markerCorners, markerIds, image, charucoCorners, charucoIds);
+            interpolateCornersCharucoLocalHom(_markerCorners, _markerIds, image, charucoCorners, charucoIds);
         // to return a charuco corner, its closest aruco markers should have been detected
-        filterCornersWithoutMinMarkers(charucoCorners, charucoIds, markerIds, charucoCorners, charucoIds);
+        filterCornersWithoutMinMarkers(charucoCorners, charucoIds, _markerIds, charucoCorners, charucoIds);
 }
 
 };
