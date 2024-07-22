@@ -3753,6 +3753,27 @@ This function only supports YUV420 to RGB conversion as of now.
 */
 CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
+/** @brief Converts an image from one color space to another where the destination image is
+stored in two planes.
+
+Complementary to #cvtColorTwoPlane. The function only supports RGB to YUV420 conversion as of now.
+
+@param src1 8-bit image (#CV_8U) of the Y plane.
+@param src2 image containing interleaved U/V plane.
+@param dst output image.
+@param code Specifies the type of conversion. It can take any of the following values:
+- #COLOR_BGR2YUV_NV12
+- #COLOR_RGB2YUV_NV12
+- #COLOR_BGRA2YUV_NV12
+- #COLOR_RGBA2YUV_NV12
+- #COLOR_BGR2YUV_NV21
+- #COLOR_RGB2YUV_NV21
+- #COLOR_BGRA2YUV_NV21
+- #COLOR_RGBA2YUV_NV21
+@param hint Implementation modfication flags. See #AlgorithmHint
+*/
+CV_EXPORTS_W void cvtColorTwoPlaneOuput( InputArray src, OutputArray dst1, OutputArray dst2, int code, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
+
 /** @brief main function for all demosaicing processes
 
 @param src input image: 8-bit unsigned or 16-bit unsigned.
