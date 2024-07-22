@@ -352,8 +352,8 @@ result of an incorrect sign in the case of overflow.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and number of channels as the input array(s); the
 depth is defined by dtype or src1/src2.
-@param mask optional operation mask - CV_8U or CV_Bool single channel array, that specifies elements of the
-output array to be changed.
+@param mask optional operation mask - CV_8U, CV_8S or CV_Bool single channel array, that specifies elements
+of the output array to be changed.
 @param dtype optional depth of the output array (see the discussion below).
 @sa subtract, addWeighted, scaleAdd, Mat::convertTo
 */
@@ -395,7 +395,7 @@ result of an incorrect sign in the case of overflow.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array of the same size and the same number of channels as the input array.
-@param mask optional operation mask; this is CV_8U or CV_Bool single channel array that specifies elements
+@param mask optional operation mask; this is CV_8U, CV8S or CV_Bool single channel array that specifies elements
 of the output array to be changed.
 @param dtype optional depth of the output array
 @sa  add, addWeighted, scaleAdd, Mat::convertTo
@@ -669,7 +669,7 @@ independently for each channel, and return it:
 When all the mask elements are 0's, the function returns Scalar::all(0)
 @param src input array that should have from 1 to 4 channels so that the result can be stored in
 Scalar_ .
-@param mask optional operation mask ot type CV_8U or CV_Bool.
+@param mask optional operation mask ot type CV_8U, CV_8S or CV_Bool.
 @sa  countNonZero, meanStdDev, norm, minMaxLoc
 */
 CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask = noArray());
@@ -691,7 +691,7 @@ then pass the matrix to calcCovarMatrix .
 Scalar_ 's.
 @param mean output parameter: calculated mean value.
 @param stddev output parameter: calculated standard deviation.
-@param mask optional operation mask of type CV_8U or CV_Bool.
+@param mask optional operation mask of type CV_8U, CV_8S or CV_Bool.
 @sa  countNonZero, mean, norm, minMaxLoc, calcCovarMatrix
 */
 CV_EXPORTS_W void meanStdDev(InputArray src, OutputArray mean, OutputArray stddev,
@@ -731,7 +731,7 @@ Hamming norms can only be calculated with CV_8U depth arrays.
 
 @param src1 first input array.
 @param normType type of the norm (see #NormTypes).
-@param mask optional operation mask; it must have the same size as src1 and type CV_8UC1 or CV_BoolC1.
+@param mask optional operation mask; it must have the same size as src1 and type CV_8UC1, CV_8SC1 or CV_BoolC1.
 */
 CV_EXPORTS_W double norm(InputArray src1, int normType = NORM_L2, InputArray mask = noArray());
 
@@ -744,7 +744,7 @@ The type of norm to calculate is specified using #NormTypes.
 @param src1 first input array.
 @param src2 second input array of the same size and the same type as src1.
 @param normType type of the norm (see #NormTypes).
-@param mask optional operation mask; it must have the same size as src1 and type CV_8UC1 or CV_BoolC1.
+@param mask optional operation mask; it must have the same size as src1 and type CV_8UC1, CV_8S1 or CV_BoolC1.
 */
 CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
                          int normType = NORM_L2, InputArray mask = noArray());
@@ -841,7 +841,7 @@ normalization.
 @param norm_type normalization type (see cv::NormTypes).
 @param dtype when negative, the output array has the same type as src; otherwise, it has the same
 number of channels as src and the depth =CV_MAT_DEPTH(dtype).
-@param mask optional operation mask of type CV_8U or CV_Bool.
+@param mask optional operation mask of type CV_8U, CV_8S or CV_Bool.
 @sa norm, Mat::convertTo, SparseMat::convertTo
 */
 CV_EXPORTS_W void normalize( InputArray src, InputOutputArray dst, double alpha = 1, double beta = 0,
@@ -872,7 +872,7 @@ mixChannels, or split.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
 @param minLoc pointer to the returned minimum location (in 2D case); NULL is used if not required.
 @param maxLoc pointer to the returned maximum location (in 2D case); NULL is used if not required.
-@param mask optional mask used to select a sub-array of type CV_8U or CV_Bool.
+@param mask optional mask used to select a sub-array of type CV_8U, CV_8S or CV_Bool.
 @sa max, min, reduceArgMin, reduceArgMax, compare, inRange, extractImageCOI, mixChannels, split, Mat::reshape
 */
 CV_EXPORTS_W void minMaxLoc(InputArray src, CV_OUT double* minVal,
@@ -1359,7 +1359,7 @@ converted to the array type.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and type as the input
 arrays.
-@param mask optional operation mask, CV_8U or CV_Bool single channel array, that
+@param mask optional operation mask, CV_8U, CV_8S or CV_Bool single channel array, that
 specifies elements of the output array to be changed.
 */
 CV_EXPORTS_W void bitwise_and(InputArray src1, InputArray src2,
@@ -1386,7 +1386,7 @@ converted to the array type.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and type as the input
 arrays.
-@param mask optional operation mask, CV_8U or CV_Bool single channel array, that
+@param mask optional operation mask, CV_8U, CV_8S or CV_Bool single channel array, that
 specifies elements of the output array to be changed.
 */
 CV_EXPORTS_W void bitwise_or(InputArray src1, InputArray src2,
@@ -1414,7 +1414,7 @@ converted to the array type.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and type as the input
 arrays.
-@param mask optional operation mask, CV_8U or CV_Bool single channel array, that
+@param mask optional operation mask, CV_8U, CV_8S or CV_Bool single channel array, that
 specifies elements of the output array to be changed.
 */
 CV_EXPORTS_W void bitwise_xor(InputArray src1, InputArray src2,
@@ -1431,7 +1431,7 @@ case of multi-channel arrays, each channel is processed independently.
 @param src input array.
 @param dst output array that has the same size and type as the input
 array.
-@param mask optional operation mask, CV_8U or CV_Bool single channel array, that
+@param mask optional operation mask, CV_8U, CV_8S or CV_Bool single channel array, that
 specifies elements of the output array to be changed.
 */
 CV_EXPORTS_W void bitwise_not(InputArray src, OutputArray dst,
@@ -1472,7 +1472,7 @@ When the operation mask is specified, if the Mat::create call shown above reallo
 @param dst Destination matrix. If it does not have a proper size or type before the operation, it is
 reallocated.
 @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
-elements need to be copied. The mask has to be of type CV_8U or CV_Bool and can have 1 or multiple channels.
+elements need to be copied. The mask has to be of type CV_8U, CV_8S or CV_Bool and can have 1 or multiple channels.
 */
 
 void CV_EXPORTS_W copyTo(InputArray src, OutputArray dst, InputArray mask);

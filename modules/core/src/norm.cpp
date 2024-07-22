@@ -744,7 +744,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
         }
     }
 
-    CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_Bool );
+    CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool );
 
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
     {
@@ -1197,7 +1197,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         }
     }
 
-    CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_Bool );
+    CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool );
 
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
     {

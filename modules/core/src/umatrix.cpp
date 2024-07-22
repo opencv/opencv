@@ -1230,7 +1230,7 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
     }
 #ifdef HAVE_OPENCL
     int cn = channels(), mtype = _mask.type(), mdepth = CV_MAT_DEPTH(mtype), mcn = CV_MAT_CN(mtype);
-    CV_Assert( (mdepth == CV_8U || mdepth == CV_Bool) && (mcn == 1 || mcn == cn) );
+    CV_Assert( (mdepth == CV_8U || mdepth == CV_8S || mdepth == CV_Bool) && (mcn == 1 || mcn == cn) );
 
     if (ocl::useOpenCL() && _dst.isUMat() && dims <= 2)
     {
@@ -1307,7 +1307,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
             if( haveMask )
             {
                 mask = _mask.getUMat();
-                CV_Assert( mask.size() == size() && (mask.type() == CV_8UC1 || mask.type() == CV_Bool) );
+                CV_Assert( mask.size() == size() && (mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool) );
                 ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
                         dstarg = ocl::KernelArg::ReadWrite(*this);
                 setK.args(maskarg, dstarg, scalararg);
