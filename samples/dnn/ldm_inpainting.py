@@ -4,7 +4,7 @@ import argparse
 import torch
 from tqdm import tqdm
 from functools import partial
-from einops import rearrange, repeat
+from einops import rearrange
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
             cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
@@ -57,9 +57,9 @@ def make_batch(image, mask):
         batch[k] = batch[k]*2.0-1.0
     return batch
 
-def noise_like(shape, device, repeat=False):
-    repeat_noise = lambda: torch.randn((1, *shape[1:]), device=device).repeat(shape[0], *((1,) * (len(shape) - 1)))
-    noise = lambda: torch.randn(shape, device=device)
+def noise_like(shape, repeat=False):
+    repeat_noise = lambda: np.random.randn((1, *shape[1:])).repeat(shape[0], *((1,) * (len(shape) - 1)))
+    noise = lambda: np.random.randn(*shape)
     return repeat_noise() if repeat else noise()
 
 def make_ddim_timesteps(ddim_discr_method, num_ddim_timesteps, num_ddpm_timesteps, verbose=True):
@@ -94,26 +94,26 @@ def make_ddim_sampling_parameters(alphacums, ddim_timesteps, eta, verbose=True):
 def make_beta_schedule(schedule, n_timestep, linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
     if schedule == "linear":
         betas = (
-                torch.linspace(linear_start ** 0.5, linear_end ** 0.5, n_timestep, dtype=torch.float64) ** 2
+                np.linspace(linear_start ** 0.5, linear_end ** 0.5, n_timestep).astype(np.float64) ** 2
         )
 
     elif schedule == "cosine":
         timesteps = (
-                torch.arange(n_timestep + 1, dtype=torch.float64) / n_timestep + cosine_s
+                np.arange(n_timestep + 1).astype(np.float64) / n_timestep + cosine_s
         )
         alphas = timesteps / (1 + cosine_s) * np.pi / 2
-        alphas = torch.cos(alphas).pow(2)
+        alphas = np.cos(alphas).pow(2)
         alphas = alphas / alphas[0]
         betas = 1 - alphas[1:] / alphas[:-1]
         betas = np.clip(betas, a_min=0, a_max=0.999)
 
     elif schedule == "sqrt_linear":
-        betas = torch.linspace(linear_start, linear_end, n_timestep, dtype=torch.float64)
+        betas = np.linspace(linear_start, linear_end, n_timestep).astype(np.float64)
     elif schedule == "sqrt":
-        betas = torch.linspace(linear_start, linear_end, n_timestep, dtype=torch.float64) ** 0.5
+        betas = np.linspace(linear_start, linear_end, n_timestep).astype(np.float64) ** 0.5
     else:
         raise ValueError(f"schedule '{schedule}' unknown.")
-    return betas.numpy()
+    return betas
 
 class DDIMSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
@@ -131,28 +131,28 @@ class DDIMSampler(object):
                                                   num_ddpm_timesteps=self.ddpm_num_timesteps,verbose=verbose)
         alphas_cumprod = self.model.alphas_cumprod
         assert alphas_cumprod.shape[0] == self.ddpm_num_timesteps, 'alphas have to be defined for each timestep'
-        to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)
+        to_numpy = partial(np.array, copy=True, dtype=np.float32)
 
-        self.register_buffer('betas', to_torch(self.model.betas))
-        self.register_buffer('alphas_cumprod', to_torch(alphas_cumprod))
-        self.register_buffer('alphas_cumprod_prev', to_torch(self.model.alphas_cumprod_prev))
+        self.register_buffer('betas', to_numpy(self.model.betas))
+        self.register_buffer('alphas_cumprod', to_numpy(alphas_cumprod))
+        self.register_buffer('alphas_cumprod_prev', to_numpy(self.model.alphas_cumprod_prev))
 
         # calculations for diffusion q(x_t | x_{t-1}) and others
-        self.register_buffer('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod.cpu())))
-        self.register_buffer('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod.cpu())))
-        self.register_buffer('log_one_minus_alphas_cumprod', to_torch(np.log(1. - alphas_cumprod.cpu())))
-        self.register_buffer('sqrt_recip_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod.cpu())))
-        self.register_buffer('sqrt_recipm1_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod.cpu() - 1)))
+        self.register_buffer('sqrt_alphas_cumprod', to_numpy(np.sqrt(alphas_cumprod)))
+        self.register_buffer('sqrt_one_minus_alphas_cumprod', to_numpy(np.sqrt(1. - alphas_cumprod)))
+        self.register_buffer('log_one_minus_alphas_cumprod', to_numpy(np.log(1. - alphas_cumprod)))
+        self.register_buffer('sqrt_recip_alphas_cumprod', to_numpy(np.sqrt(1. / alphas_cumprod)))
+        self.register_buffer('sqrt_recipm1_alphas_cumprod', to_numpy(np.sqrt(1. / alphas_cumprod - 1)))
 
         # ddim sampling parameters
-        ddim_sigmas, ddim_alphas, ddim_alphas_prev = make_ddim_sampling_parameters(alphacums=alphas_cumprod.cpu(),
+        ddim_sigmas, ddim_alphas, ddim_alphas_prev = make_ddim_sampling_parameters(alphacums=alphas_cumprod,
                                                                                    ddim_timesteps=self.ddim_timesteps,
                                                                                    eta=ddim_eta,verbose=verbose)
         self.register_buffer('ddim_sigmas', ddim_sigmas)
         self.register_buffer('ddim_alphas', ddim_alphas)
         self.register_buffer('ddim_alphas_prev', ddim_alphas_prev)
         self.register_buffer('ddim_sqrt_one_minus_alphas', np.sqrt(1. - ddim_alphas))
-        sigmas_for_original_sampling_steps = ddim_eta * torch.sqrt(
+        sigmas_for_original_sampling_steps = ddim_eta * np.sqrt(
             (1 - self.alphas_cumprod_prev) / (1 - self.alphas_cumprod) * (
                         1 - self.alphas_cumprod / self.alphas_cumprod_prev))
         self.register_buffer('ddim_sigmas_for_original_num_steps', sigmas_for_original_sampling_steps)
@@ -221,10 +221,9 @@ class DDIMSampler(object):
                       mask=None, x0=None, img_callback=None, log_every_t=100,
                       temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
                       unconditional_guidance_scale=1., unconditional_conditioning=None,):
-        device = self.model.betas.device
         b = shape[0]
         if x_T is None:
-            img = torch.randn(shape, device=device)
+            img = np.random.randn(*shape)
         else:
             img = x_T
 
@@ -243,7 +242,7 @@ class DDIMSampler(object):
 
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
-            ts = torch.full((b,), step, device=device, dtype=torch.long)
+            ts = np.full((b, ), step, dtype=np.int64)
 
             if mask is not None:
                 assert x0 is not None
@@ -270,8 +269,7 @@ class DDIMSampler(object):
     def p_sample_ddim(self, x, c, t, index, repeat_noise=False, use_original_steps=False, quantize_denoised=False,
                       temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
                       unconditional_guidance_scale=1., unconditional_conditioning=None):
-        b, *_, device = *x.shape, x.device
-
+        b = x.shape[0]
         if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
             e_t = self.model.apply_model(x, t, c)
         else:
@@ -290,21 +288,21 @@ class DDIMSampler(object):
         sqrt_one_minus_alphas = self.model.sqrt_one_minus_alphas_cumprod if use_original_steps else self.ddim_sqrt_one_minus_alphas
         sigmas = self.model.ddim_sigmas_for_original_num_steps if use_original_steps else self.ddim_sigmas
         # select parameters corresponding to the currently considered timestep
-        a_t = torch.full((b, 1, 1, 1), alphas[index], device=device)
-        a_prev = torch.full((b, 1, 1, 1), alphas_prev[index], device=device)
-        sigma_t = torch.full((b, 1, 1, 1), sigmas[index], device=device)
-        sqrt_one_minus_at = torch.full((b, 1, 1, 1), sqrt_one_minus_alphas[index],device=device)
+        a_t = np.full((b, 1, 1, 1), alphas[index])
+        a_prev = np.full((b, 1, 1, 1), alphas_prev[index])
+        sigma_t = np.full((b, 1, 1, 1), sigmas[index])
+        sqrt_one_minus_at = np.full((b, 1, 1, 1), sqrt_one_minus_alphas[index])
 
         # current prediction for x_0
-        pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
+        pred_x0 = (x - sqrt_one_minus_at * e_t) / np.sqrt(a_t)
         if quantize_denoised:
             pred_x0, _, *_ = self.model.first_stage_model.quantize(pred_x0)
         # direction pointing to x_t
-        dir_xt = (1. - a_prev - sigma_t**2).sqrt() * e_t
-        noise = sigma_t * noise_like(x.shape, device, repeat_noise) * temperature
+        dir_xt = np.sqrt(1. - a_prev - sigma_t**2) * e_t
+        noise = sigma_t * noise_like(x.shape, repeat_noise) * temperature
         if noise_dropout > 0.:
             noise = torch.nn.functional.dropout(noise, p=noise_dropout)
-        x_prev = a_prev.sqrt() * pred_x0 + dir_xt + noise
+        x_prev = np.sqrt(a_prev) * pred_x0 + dir_xt + noise
         return x_prev, pred_x0
 
 
@@ -348,8 +346,6 @@ class DDIMInpainter(object):
         print("x: ", x.shape)
         print("t: ", timestep.shape)
 
-        x = x.detach().cpu().numpy()
-        timestep = timestep.detach().cpu().numpy()
         cond = cond[0]
 
         x = np.concatenate([x, cond], axis=1)
@@ -361,8 +357,6 @@ class DDIMInpainter(object):
         self.diffusor.setInput(x, names[0])
         self.diffusor.setInput(timestep, names[1])
         output = self.diffusor.forward()
-
-        output = torch.from_numpy(output)
 
         return output
 
@@ -386,34 +380,34 @@ class DDIMInpainter(object):
         self.linear_end = linear_end
         assert alphas_cumprod.shape[0] == self.num_timesteps, 'alphas have to be defined for each timestep'
 
-        to_torch = partial(torch.tensor, dtype=torch.float32)
+        to_numpy = partial(np.array, dtype=np.float32)
 
-        self.register_buffer('betas', to_torch(betas))
-        self.register_buffer('alphas_cumprod', to_torch(alphas_cumprod))
-        self.register_buffer('alphas_cumprod_prev', to_torch(alphas_cumprod_prev))
+        self.register_buffer('betas', to_numpy(betas))
+        self.register_buffer('alphas_cumprod', to_numpy(alphas_cumprod))
+        self.register_buffer('alphas_cumprod_prev', to_numpy(alphas_cumprod_prev))
 
         # calculations for diffusion q(x_t | x_{t-1}) and others
-        self.register_buffer('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod)))
-        self.register_buffer('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod)))
-        self.register_buffer('log_one_minus_alphas_cumprod', to_torch(np.log(1. - alphas_cumprod)))
-        self.register_buffer('sqrt_recip_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod)))
-        self.register_buffer('sqrt_recipm1_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod - 1)))
+        self.register_buffer('sqrt_alphas_cumprod', to_numpy(np.sqrt(alphas_cumprod)))
+        self.register_buffer('sqrt_one_minus_alphas_cumprod', to_numpy(np.sqrt(1. - alphas_cumprod)))
+        self.register_buffer('log_one_minus_alphas_cumprod', to_numpy(np.log(1. - alphas_cumprod)))
+        self.register_buffer('sqrt_recip_alphas_cumprod', to_numpy(np.sqrt(1. / alphas_cumprod)))
+        self.register_buffer('sqrt_recipm1_alphas_cumprod', to_numpy(np.sqrt(1. / alphas_cumprod - 1)))
 
         # calculations for posterior q(x_{t-1} | x_t, x_0)
         posterior_variance = (1 - self.v_posterior) * betas * (1. - alphas_cumprod_prev) / (
                     1. - alphas_cumprod) + self.v_posterior * betas
         # above: equal to 1. / (1. / (1. - alpha_cumprod_tm1) + alpha_t / beta_t)
-        self.register_buffer('posterior_variance', to_torch(posterior_variance))
+        self.register_buffer('posterior_variance', to_numpy(posterior_variance))
         # below: log calculation clipped because the posterior variance is 0 at the beginning of the diffusion chain
-        self.register_buffer('posterior_log_variance_clipped', to_torch(np.log(np.maximum(posterior_variance, 1e-20))))
-        self.register_buffer('posterior_mean_coef1', to_torch(
+        self.register_buffer('posterior_log_variance_clipped', to_numpy(np.log(np.maximum(posterior_variance, 1e-20))))
+        self.register_buffer('posterior_mean_coef1', to_numpy(
             betas * np.sqrt(alphas_cumprod_prev) / (1. - alphas_cumprod)))
-        self.register_buffer('posterior_mean_coef2', to_torch(
+        self.register_buffer('posterior_mean_coef2', to_numpy(
             (1. - alphas_cumprod_prev) * np.sqrt(alphas) / (1. - alphas_cumprod)))
 
         if self.parameterization == "eps":
             lvlb_weights = self.betas ** 2 / (
-                        2 * self.posterior_variance * to_torch(alphas) * (1 - self.alphas_cumprod))
+                        2 * self.posterior_variance * to_numpy(alphas) * (1 - self.alphas_cumprod))
         elif self.parameterization == "x0":
             lvlb_weights = 0.5 * np.sqrt(torch.Tensor(alphas_cumprod)) / (2. * 1 - torch.Tensor(alphas_cumprod))
         else:
@@ -421,7 +415,7 @@ class DDIMInpainter(object):
         # TODO how to choose this term
         lvlb_weights[0] = lvlb_weights[1]
         self.register_buffer('lvlb_weights', lvlb_weights)
-        assert not torch.isnan(self.lvlb_weights).all()
+        assert not np.isnan(self.lvlb_weights).all()
 
     def apply_model(self, x_noisy, t, cond, return_ids=False):
 
@@ -519,8 +513,6 @@ class DDIMInpainter(object):
             x_recon = fold(o) / normalization
 
         else:
-            # x_recon = self.model(x_noisy, t, **cond)
-            # import code; code.interact(local=locals())
             x_recon = self.apply_diffusor(x_noisy, t, cond['c_concat'])
 
         if isinstance(x_recon, tuple) and not return_ids:
@@ -603,15 +595,11 @@ class DDIMInpainter(object):
             verbose=False)
 
         ## Decode the sample
-        samples_ddim = samples_ddim.detach().cpu().numpy()
+        samples_ddim = samples_ddim.astype(np.float32)
         samples_ddim = cv.Mat(samples_ddim)
         self.decoder.setInput(samples_ddim)
         x_samples_ddim = self.decoder.forward()
 
-        # image = torch.clamp((image + 1.0) / 2.0, min=0.0, max=1.0)
-        # mask = torch.clamp((mask + 1.0) / 2.0, min=0.0, max=1.0)
-        # predicted_image = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-        # inpainted = inpainted.cpu().numpy().transpose(0,2,3,1)[0] * 255
         image = np.clip((image + 1.0) / 2.0, a_min=0.0, a_max=1.0)
         mask = np.clip((mask + 1.0) / 2.0, a_min=0.0, a_max=1.0)
         predicted_image = np.clip((x_samples_ddim + 1.0) / 2.0, a_min=0.0, a_max=1.0)
