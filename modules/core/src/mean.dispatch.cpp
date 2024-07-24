@@ -126,7 +126,7 @@ Scalar mean(InputArray _src, InputArray _mask)
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    CV_Assert( mask.empty() || mask.type() == CV_8U );
+    CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool);
 
     int k, cn = src.channels(), depth = src.depth();
     Scalar s;
@@ -227,7 +227,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         int ddepth = std::max(CV_32S, depth), sqddepth = std::max(CV_32F, depth),
                 dtype = CV_MAKE_TYPE(ddepth, cn),
                 sqdtype = CV_MAKETYPE(sqddepth, cn);
-        CV_Assert(!haveMask || _mask.type() == CV_8UC1);
+        CV_Assert(!haveMask || _mask.type() == CV_8U || _mask.type() == CV_8S || _mask.type() == CV_Bool);
 
         int wgs2_aligned = 1;
         while (wgs2_aligned < (int)wgs)
@@ -461,14 +461,14 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
     CV_INSTRUMENT_REGION();
 
     CV_Assert(!_src.empty());
-    CV_Assert( _mask.empty() || _mask.type() == CV_8UC1 );
+    CV_Assert( _mask.empty() || _mask.type() == CV_8U || _mask.type() == CV_8S || _mask.type() == CV_Bool );
 
     CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                ocl_meanStdDev(_src, _mean, _sdv, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
-    CV_Assert(mask.empty() || src.size == mask.size);
+    CV_Assert(mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool) && src.size == mask.size));
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
