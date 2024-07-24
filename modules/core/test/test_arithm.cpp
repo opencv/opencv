@@ -1981,76 +1981,6 @@ TEST(Core_ArithmMask, uninitialized)
     tmpSrc.copyTo(tmpDst,tmpMask);
 }
 
-TEST(Core_ArithmMask, BoolMask)
-{
-    RNG& rng = theRNG();
-    const int MAX_DIM=3;
-    int sizes[MAX_DIM];
-    for( int iter = 0; iter < 100; iter++ )
-    {
-        int dims = rng.uniform(1, MAX_DIM+1);
-        int depth = rng.uniform(CV_8U, CV_64F+1);
-        int cn = rng.uniform(1, 6);
-        int type = CV_MAKETYPE(depth, cn);
-        int op = rng.uniform(0, depth < CV_32F ? 5 : 2); // don't run binary operations between floating-point values
-        int depth1 = op <= 1 ? CV_64F : depth;
-        for (int k = 0; k < MAX_DIM; k++)
-        {
-            sizes[k] = k < dims ? rng.uniform(1, 30) : 0;
-        }
-
-        Mat a(dims, sizes, type), a1;
-        Mat b(dims, sizes, type), b1;
-        Mat mask(dims, sizes, CV_Bool);
-        Mat mask1;
-        Mat c, d;
-
-        rng.fill(a, RNG::UNIFORM, 0, 100);
-        rng.fill(b, RNG::UNIFORM, 0, 100);
-
-        // [-2,2) range means that the each generated random number
-        // will be one of -2, -1, 0, 1. Saturated to [0,255], it will become
-        // 0, 0, 0, 1 => the mask will be filled by ~25%.
-        rng.fill(mask, RNG::UNIFORM, -2, 2);
-
-        a.convertTo(a1, depth1);
-        b.convertTo(b1, depth1);
-        // invert the mask
-        cv::compare(mask, 0, mask1, CMP_EQ);
-        a1.setTo(0, mask1);
-        b1.setTo(0, mask1);
-
-        if( op == 0 )
-        {
-            cv::add(a, b, c, mask);
-            cv::add(a1, b1, d);
-        }
-        else if( op == 1 )
-        {
-            cv::subtract(a, b, c, mask);
-            cv::subtract(a1, b1, d);
-        }
-        else if( op == 2 )
-        {
-            cv::bitwise_and(a, b, c, mask);
-            cv::bitwise_and(a1, b1, d);
-        }
-        else if( op == 3 )
-        {
-            cv::bitwise_or(a, b, c, mask);
-            cv::bitwise_or(a1, b1, d);
-        }
-        else if( op == 4 )
-        {
-            cv::bitwise_xor(a, b, c, mask);
-            cv::bitwise_xor(a1, b1, d);
-        }
-        Mat d1;
-        d.convertTo(d1, depth);
-        EXPECT_LE(cvtest::norm(c, d1, NORM_INF), DBL_EPSILON);
-    }
-}
-
 TEST(Multiply, FloatingPointRounding)
 {
     cv::Mat src(1, 1, CV_8UC1, cv::Scalar::all(110)), dst;
@@ -2559,33 +2489,6 @@ TEST(Core_minMaxIdx, regression_9207_1)
     EXPECT_EQ(0, maxIdx[1]);
 }
 
-TEST(Core_minMaxIdx, BoolMasl)
-{
-    const int rows = 4;
-    const int cols = 3;
-    uchar mask_[rows*cols] = {
-        255, 255, 255,
-        255,   0, 255,
-        0, 255, 255,
-        0,   0, 255
-    };
-    uchar src_[rows*cols] = {
-        1,   1,   1,
-        1,   1,   1,
-        2,   1,   1,
-        2,   2,   1
-    };
-    Mat mask(Size(cols, rows), CV_BoolC1, mask_);
-    Mat src(Size(cols, rows), CV_8UC1, src_);
-    double minVal = -0.0, maxVal = -0.0;
-    int minIdx[2] = { -2, -2 }, maxIdx[2] = { -2, -2 };
-    cv::minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx, mask);
-    EXPECT_EQ(0, minIdx[0]);
-    EXPECT_EQ(0, minIdx[1]);
-    EXPECT_EQ(0, maxIdx[0]);
-    EXPECT_EQ(0, maxIdx[1]);
-}
-
 class TransposeND : public testing::TestWithParam< tuple<std::vector<int>, perf::MatType> >
 {
 public:
@@ -2981,12 +2884,12 @@ TEST(Core_Norm, IPP_regression_NORM_L1_16UC3_small)
     Mat a(sz, CV_MAKE_TYPE(CV_16U, cn), Scalar::all(1));
     Mat b(sz, CV_MAKE_TYPE(CV_16U, cn), Scalar::all(2));
     uchar mask_[9*4] = {
- 255, 255, 255,   0, 255, 255,   0, 255,   0,
-   0, 255,   0,   0, 255, 255, 255, 255,   0,
-   0,   0,   0, 255,   0, 255,   0, 255, 255,
-   0,   0, 255,   0, 255, 255, 255,   0, 255
-};
-    Mat mask(sz, CV_BoolC1, mask_);
+        255, 255, 255,   0, 255, 255,   0, 255,   0,
+        0, 255,   0,   0, 255, 255, 255, 255,   0,
+        0,   0,   0, 255,   0, 255,   0, 255, 255,
+        0,   0, 255,   0, 255, 255, 255,   0, 255
+    };
+    Mat mask(sz, CV_8UC1, mask_);
 
     EXPECT_EQ((double)9*4*cn, cv::norm(a, b, NORM_L1)); // without mask, IPP works well
     EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
@@ -3717,7 +3620,169 @@ TEST_P(Core_LUT, accuracy_multi)
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
 
-
 INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, perf::MatDepth::all());
+
+CV_ENUM(MaskType, CV_8U, CV_8S, CV_Bool)
+typedef testing::TestWithParam<MaskType> Core_MaskTypeTest;
+
+TEST_P(Core_MaskTypeTest, BasicArithm)
+{
+    int mask_type = GetParam();
+    RNG& rng = theRNG();
+    const int MAX_DIM=3;
+    int sizes[MAX_DIM];
+    for( int iter = 0; iter < 100; iter++ )
+    {
+        int dims = rng.uniform(1, MAX_DIM+1);
+        int depth = rng.uniform(CV_8U, CV_64F+1);
+        int cn = rng.uniform(1, 6);
+        int type = CV_MAKETYPE(depth, cn);
+        int op = rng.uniform(0, depth < CV_32F ? 5 : 2); // don't run binary operations between floating-point values
+        int depth1 = op <= 1 ? CV_64F : depth;
+        for (int k = 0; k < MAX_DIM; k++)
+        {
+            sizes[k] = k < dims ? rng.uniform(1, 30) : 0;
+        }
+
+        Mat a(dims, sizes, type), a1;
+        Mat b(dims, sizes, type), b1;
+        Mat mask(dims, sizes, mask_type);
+        Mat mask1;
+        Mat c, d;
+
+        rng.fill(a, RNG::UNIFORM, 0, 100);
+        rng.fill(b, RNG::UNIFORM, 0, 100);
+
+        // [-2,2) range means that the each generated random number
+        // will be one of -2, -1, 0, 1. Saturated to [0,255], it will become
+        // 0, 0, 0, 1 => the mask will be filled by ~25%.
+        rng.fill(mask, RNG::UNIFORM, -2, 2);
+
+        a.convertTo(a1, depth1);
+        b.convertTo(b1, depth1);
+        // invert the mask
+        cv::compare(mask, 0, mask1, CMP_EQ);
+        a1.setTo(0, mask1);
+        b1.setTo(0, mask1);
+
+        if( op == 0 )
+        {
+            cv::add(a, b, c, mask);
+            cv::add(a1, b1, d);
+        }
+        else if( op == 1 )
+        {
+            cv::subtract(a, b, c, mask);
+            cv::subtract(a1, b1, d);
+        }
+        else if( op == 2 )
+        {
+            cv::bitwise_and(a, b, c, mask);
+            cv::bitwise_and(a1, b1, d);
+        }
+        else if( op == 3 )
+        {
+            cv::bitwise_or(a, b, c, mask);
+            cv::bitwise_or(a1, b1, d);
+        }
+        else if( op == 4 )
+        {
+            cv::bitwise_xor(a, b, c, mask);
+            cv::bitwise_xor(a1, b1, d);
+        }
+        Mat d1;
+        d.convertTo(d1, depth);
+        EXPECT_LE(cvtest::norm(c, d1, NORM_INF), DBL_EPSILON);
+    }
+}
+
+TEST_P(Core_MaskTypeTest, MinMaxIdx)
+{
+    int mask_type = GetParam();
+    const int rows = 4;
+    const int cols = 3;
+    uchar mask_[rows*cols] = {
+        255, 255, 1,
+        255,   0, 255,
+        0, 1, 255,
+        0,   0, 255
+    };
+    uchar src_[rows*cols] = {
+        1,   1,   1,
+        1,   1,   1,
+        2,   1,   1,
+        2,   2,   1
+    };
+    Mat mask(Size(cols, rows), mask_type, mask_);
+    Mat src(Size(cols, rows), CV_8UC1, src_);
+    double minVal = -0.0, maxVal = -0.0;
+    int minIdx[2] = { -2, -2 }, maxIdx[2] = { -2, -2 };
+    cv::minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx, mask);
+    EXPECT_EQ(0, minIdx[0]);
+    EXPECT_EQ(0, minIdx[1]);
+    EXPECT_EQ(0, maxIdx[0]);
+    EXPECT_EQ(0, maxIdx[1]);
+}
+
+TEST_P(Core_MaskTypeTest, Norm)
+{
+    int mask_type = GetParam();
+    int cn = 3;
+    Size sz(9, 4);  // width < 16
+    Mat a(sz, CV_MAKE_TYPE(CV_16U, cn), Scalar::all(1));
+    Mat b(sz, CV_MAKE_TYPE(CV_16U, cn), Scalar::all(2));
+    uchar mask_[9*4] = {
+        255, 255, 255,   0, 1, 255,   0, 255,   0,
+        0, 255,   0,   0, 255, 255, 255, 255,   0,
+        0,   0,   0, 255,   0, 1,   0, 255, 255,
+        0,   0, 255,   0, 255, 255, 1,   0, 255
+    };
+    Mat mask(sz, mask_type, mask_);
+
+    EXPECT_EQ((double)9*4*cn, cv::norm(a, b, NORM_L1)); // without mask, IPP works well
+    EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
+}
+
+TEST_P(Core_MaskTypeTest, Mean)
+{
+    int mask_type = GetParam();
+    Size sz(9, 4);
+    Mat a(sz, CV_16UC1, Scalar::all(1));
+    uchar mask_[9*4] = {
+        255, 255, 255,   0, 1, 255,   0, 255,   0,
+        0, 255,   0,   0, 255, 255, 255, 255,   0,
+        0,   0,   0, 1,   0, 255,   0, 1, 255,
+        0,   0, 255,   0, 255, 255, 255,   0, 255
+    };
+    Mat mask(sz, mask_type, mask_);
+    a.setTo(2, mask);
+
+    Scalar result = cv::mean(a, mask);
+    EXPECT_NEAR(result[0], 2, 1e-6);
+}
+
+TEST_P(Core_MaskTypeTest, MeanStdDev)
+{
+    int mask_type = GetParam();
+    Size sz(9, 4);
+    Mat a(sz, CV_16UC1, Scalar::all(1));
+    uchar mask_[9*4] = {
+        255, 255, 255,   0, 1, 255,   0, 255,   0,
+        0, 255,   0,   0, 255, 255, 255, 255,   0,
+        0,   0,   0, 1,   0, 255,   0, 1, 255,
+        0,   0, 255,   0, 255, 255, 255,   0, 255
+    };
+    Mat mask(sz, mask_type, mask_);
+    a.setTo(2, mask);
+
+    Scalar m, stddev;
+    cv::meanStdDev(a, m, stddev, mask);
+
+    EXPECT_NEAR(m[0], 2, 1e-6);
+    EXPECT_NEAR(stddev[0], 0, 1e-6);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MaskTypeTest, MaskType::all());
+
 
 }} // namespace
