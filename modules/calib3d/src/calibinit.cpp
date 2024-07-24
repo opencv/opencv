@@ -1152,22 +1152,40 @@ int ChessBoardDetector::addOuterQuad(ChessBoardQuad& quad, std::vector<ChessBoar
             // have to set exact corner
             q.corners[j] = quad.corners[i];
 
-            // now find other neighbor and add it, if possible
-            int next_i = (i + 1) & 3;
-            int prev_i = (i + 3) & 3; // equal to (j + 1) & 3
-            ChessBoardQuad* quad_prev = quad.neighbors[prev_i];
-            if (quad_prev &&
-                quad_prev->ordered &&
-                quad_prev->neighbors[i] &&
-                quad_prev->neighbors[i]->ordered )
+            // set row and col for next step check
+            switch (i)
             {
-                ChessBoardQuad* qn = quad_prev->neighbors[i];
-                q.count = 2;
-                q.neighbors[prev_i] = qn;
-                qn->neighbors[next_i] = &q;
-                qn->count += 1;
-                // have to set exact corner
-                q.corners[prev_i] = qn->corners[next_i];
+            case 0:
+                q.col = quad.col - 1; q.row = quad.row - 1; break;
+            case 1:
+                q.col = quad.col + 1; q.row = quad.row - 1; break;
+            case 2:
+                q.col = quad.col + 1; q.row = quad.row - 1; break;
+            case 3:
+                q.col = quad.col - 1; q.row = quad.row + 1; break;
+            }
+
+            // now find other neighbor and add it, if possible
+            for (int k = 1; k <= 3; k += 2)
+            {
+                int next_i = (i + k) % 4;
+                int prev_i = (i + k + 2) % 4;
+                ChessBoardQuad* quad_prev = quad.neighbors[prev_i];
+                if (quad_prev &&
+                    quad_prev->ordered &&
+                    quad_prev->neighbors[i] &&
+                    quad_prev->neighbors[i]->ordered &&
+                    std::abs(quad_prev->neighbors[i]->col - q.col) == 1 &&
+                    std::abs(quad_prev->neighbors[i]->row - q.row) == 1)
+                {
+                    ChessBoardQuad* qn = quad_prev->neighbors[i];
+                    q.count = 2;
+                    q.neighbors[prev_i] = qn;
+                    qn->neighbors[next_i] = &q;
+                    qn->count += 1;
+                    // have to set exact corner
+                    q.corners[prev_i] = qn->corners[next_i];
+                }
             }
         }
     }
