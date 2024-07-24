@@ -54,6 +54,7 @@ BaseImageDecoder::BaseImageDecoder()
     m_buf_supported = false;
     m_scale_denom = 1;
     m_use_rgb = false;
+    m_frame_count = 1;
 }
 
 
