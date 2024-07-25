@@ -168,4 +168,75 @@ BIGDATA_TEST(Features2D_ORB, regression_opencv_python_537)  // memory usage: ~3 
     ASSERT_NO_THROW(orbPtr->detectAndCompute(img, noArray(), kps, fv));
 }
 
+CV_ENUM(MaskType, CV_8U, CV_Bool);
+typedef testing::TestWithParam<MaskType> ORBMask;
+
+static bool checkPointinRect(const cv::Point& pt, const cv::Rect& rect)
+{
+    return (pt.x >= rect.x) && (pt.x <= rect.x+rect.width) && (pt.y >= rect.y) && (pt.y <= rect.y+rect.height);
+}
+
+TEST(Features2D_ORB, MaskType)
+{
+    Mat gray = imread(cvtest::findDataFile("features2d/tsukuba.png"), IMREAD_GRAYSCALE);
+    ASSERT_FALSE(gray.empty());
+
+    cv::Rect roi(gray.cols/4, gray.rows/4, gray.cols/2, gray.rows/2);
+    Mat mask = Mat::zeros(gray.size(), CV_8UC1);
+    mask(roi).setTo(255);
+
+    int nz_mask = countNonZero(mask);
+    std::cout << "nz_mask: " << nz_mask << std::endl;
+
+    Mat mask_bool = Mat::zeros(gray.size(), CV_BoolC1);
+    mask_bool(roi).setTo(255);
+
+    int nz_mask_bool = countNonZero(mask_bool);
+    std::cout << "nz_mask_bool: " << nz_mask_bool << std::endl;
+
+    Ptr<ORB> orb = cv::ORB::create();
+
+    std::cout << "Old mask" << std::endl;
+    vector<KeyPoint> keypoints_mask;
+    Mat descriptors_mask;
+    orb->detectAndCompute(gray, mask, keypoints_mask, descriptors_mask, false);
+
+    std::cout << "Bool mask" << std::endl;
+    vector<KeyPoint> keypoints_mask_bool;
+    Mat descriptors_mask_bool;
+    orb->detectAndCompute(gray, mask_bool, keypoints_mask_bool, descriptors_mask_bool, false);
+
+    std::cout << "keypoints_mask_bool: " << keypoints_mask_bool.size() << std::endl;
+    std::cout << "descriptors_mask_bool: " << descriptors_mask_bool.size() << std::endl;
+    std::cout << "descriptors_bool: " << descriptors_mask.size() << std::endl;
+
+    Mat diff = descriptors_mask_bool != descriptors_mask;
+    ASSERT_EQ(countNonZero(diff), 0) << "descriptors are not identical";
+}
+
+TEST_P(ORBMask, inRect)
+{
+    int mask_type = GetParam();
+
+    Mat gray = imread(cvtest::findDataFile("features2d/tsukuba.png"), IMREAD_GRAYSCALE);
+    ASSERT_FALSE(gray.empty());
+
+    cv::Rect roi(gray.cols/4, gray.rows/4, gray.cols/2, gray.rows/2);
+    Mat mask = Mat::zeros(gray.size(), mask_type);
+    mask(roi).setTo(255);
+
+    Ptr<ORB> orb = cv::ORB::create();
+
+    vector<KeyPoint> keypoints_mask;
+    Mat descriptors_mask;
+    orb->detectAndCompute(gray, mask, keypoints_mask, descriptors_mask, false);
+
+    for (size_t i = 0; i < keypoints_mask.size(); i++)
+    {
+        ASSERT_TRUE(checkPointinRect(keypoints_mask[i].pt, roi));
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, ORBMask, MaskType::all());
+
 }} // namespace

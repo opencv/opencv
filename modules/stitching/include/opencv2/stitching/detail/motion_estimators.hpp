@@ -136,7 +136,7 @@ public:
     CV_WRAP Mat refinementMask() const { return refinement_mask_.clone(); }
     CV_WRAP void setRefinementMask(const Mat &mask)
     {
-        CV_Assert(mask.type() == CV_8U && mask.size() == Size(3, 3));
+        CV_Assert((mask.type() == CV_8U || mask.type() == CV_Bool) && mask.size() == Size(3, 3));
         refinement_mask_ = mask.clone();
     }
 

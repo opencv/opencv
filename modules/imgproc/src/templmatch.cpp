@@ -761,7 +761,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
 static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
 {
-    CV_Assert(_mask.depth() == CV_8U || _mask.depth() == CV_32F);
+    CV_Assert(_mask.depth() == CV_8U || _mask.depth() == CV_Bool || _mask.depth() == CV_32F);
     CV_Assert(_mask.channels() == _templ.channels() || _mask.channels() == 1);
     CV_Assert(_templ.size() == _mask.size());
     CV_Assert(_img.size().height >= _templ.size().height &&
@@ -782,6 +782,12 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
         Mat maskBin;
         threshold(mask, maskBin, 0/*threshold*/, 1.0/*maxVal*/, THRESH_BINARY);
         maskBin.convertTo(mask, CV_32F);
+    }
+    if (mask.depth() == CV_Bool)
+    {
+        cv::Mat maskConverted;
+        mask.convertTo(maskConverted, CV_32F);
+        mask = maskConverted;
     }
 
     Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
