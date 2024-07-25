@@ -243,8 +243,8 @@ resnet:
   mean: [123.675, 116.28, 103.53]
   std: [58.395, 57.12, 57.375]
   scale: 1.0
-  width: 256
-  height: 256
+  width: 224
+  height: 224
   rgb: true
   labels: "classification_classes_ILSVRC2012.txt"
   sample: "classification"

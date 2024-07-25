@@ -14,13 +14,14 @@ using namespace dnn;
 
 const string about =
         "Use this script to run a classification model on a camera stream, video, image or image list (i.e. .xml or .yaml containing image lists)\n\n"
-        "Firstly, download required models using `download_models.py` (if not already done) and then set environment variable OPENCV_DNN_TEST_DATA_PATH pointing to the directory where model is downloaded\n"
+        "Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"
         "To run:\n"
         "\t ./example_dnn_classification model_name --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)\n"
         "Sample command:\n"
-        "\t ./example_dnn_classification googlenet --input=path/to/image \n"
-        "Model path can also be specified using --model argument"
-        "use imagelist_creator to create the xml or yaml list\n";
+        "\t ./example_dnn_classification resnet --input=$OPENCV_SAMPLES_DATA_PATH/baboon.jpg\n"
+        "\t ./example_dnn_classification squeezenet\n"
+        "Model path can also be specified using --model argument. "
+        "Use imagelist_creator to create the xml or yaml list\n";
 
 const string param_keys =
     "{ help  h         |                   | Print help message. }"
@@ -29,7 +30,7 @@ const string param_keys =
     "{ input i         |                   | Path to input image or video file. Skip this argument to capture frames from a camera.}"
     "{ imglist         |                   | Pass this flag if image list (i.e. .xml or .yaml) file is passed}"
     "{ crop            |       false       | Preprocess input image by center cropping.}"
-    "{ labels          |                   | Path to the text file with labels for detected objects.}"
+    //"{ labels          |                   | Path to the text file with labels for detected objects.}"
     "{ model           |                   | Path to the model file.}";
 
 const string backend_keys = format(
@@ -123,7 +124,8 @@ int main(int argc, char** argv)
     bool isImgList = parser.has("imglist");
 
     // Open file with labels.
-    string file = findFile(parser.get<String>("labels"));
+    string labels_filename = parser.get<String>("labels");
+    string file = findFile(labels_filename);
     ifstream ifs(file.c_str());
     if (!ifs.is_open()){
         cout<<"File " << file << " not found";
@@ -215,8 +217,6 @@ int main(int argc, char** argv)
         net.setInput(blob);
         //! [Set input blob]
 
-        int classId;
-        double confidence;
         TickMeter timeRecorder;
         timeRecorder.reset();
         Mat prob = net.forward();
@@ -227,24 +227,33 @@ int main(int argc, char** argv)
         timeRecorder.stop();
         //! [Make forward pass]
 
-        //! [Get a class with a highest score]
-        Point classIdPoint;
-        minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
-        classId = classIdPoint.x;
+        //! [Get 5 classes with a highest score]
+        int N = (int)prob.total(), K = std::min(5, N);
+        std::vector<std::pair<float, int> > prob_vec;
+        for (int i = 0; i < N; i++) {
+            prob_vec.push_back(std::make_pair(-prob.at<float>(i), i));
+        }
+        std::sort(prob_vec.begin(), prob_vec.end());
+
         //! [Get a class with a highest score]
         t1 = timeRecorder.getTimeMilli();
         timeRecorder.reset();
-        string label = format("Inference time of 1 round: %.2f ms", t1);
+        string label = format("Inference time of 1 round: %.1f ms", t1);
+        putText(frame, label, Point(5, 30), Scalar(0, 255, 0), sans, 17, 400);
 
-        putText(frame, label, Point(0, 15), Scalar(0, 255, 0), sans, 10);
         // Print predicted class.
-        label = format("%s: %.4f", (classes.empty() ? format("Class #%d", classId).c_str() :
-                        classes[classId].c_str()),confidence);
-        putText(frame, label, Point(0, 35), Scalar(0, 255, 0), sans, 10);
+        for (int i = 0; i < K; i++) {
+            int classId = prob_vec[i].second;
+            float confidence = -prob_vec[i].first;
+            label = format("%s: %.2f", (classes.empty() ? format("Class #%d", classId).c_str() :
+                                        classes[classId].c_str()), confidence);
+            putText(frame, label, Point(5, 60 + i*20), Scalar(0, 255, 0), sans, 17, 400);
+        }
         imshow(kWinName, frame);
-        int key = waitKey(1000); // Wait for 1 second
+        int key = waitKey(isImgList ? 1000 : 100);
         if (key == 'q' || key == 27) // Check if 'q' or 'ESC' is pressed
-            break;
+            return 0;
     }
+    waitKey();
     return 0;
 }
