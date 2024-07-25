@@ -147,7 +147,7 @@ public:
     int block_size;
     bool is1D;
     Mat scalesMat, zeropointsMat; // Saving the broadcasetd scales data.
-    bool quantParamExternal = true;
+    bool quantParamExternal = true;  // Indicates if the quantization parameters (scale and zero point) are provided as inputs to the node.
 
     QuantizeLayerImpl(const LayerParams& params)
     {
