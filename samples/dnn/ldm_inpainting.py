@@ -350,8 +350,8 @@ class DDIMInpainter(object):
 
         x = np.concatenate([x, cond], axis=1)
 
-        x = cv.Mat(x)
-        timestep = cv.Mat(timestep)
+        x = cv.Mat(x.astype(np.float32))
+        timestep = cv.Mat(timestep.astype(np.int64))
         names = ["xc", "t"]
         self.diffusor.setInputsNames(names)
         self.diffusor.setInput(x, names[0])
