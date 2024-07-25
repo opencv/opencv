@@ -696,28 +696,6 @@ inline int hal_ni_cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
                                       int scn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /**
-   @brief Analog of hal_cvtBGRtoTwoPlaneYUV that allows approximations (not bit-exact)
-   @param src_data source image data
-   @param src_step source image step
-   @param y_data destination image data (Y-plane)
-   @param y_step destination image step (Y-plane)
-   @param uv_data destination image data (UV-plane)
-   @param uv_step destination image step (UV-plane)
-   @param width image width
-   @param height image height
-   @param scn source image channels (3 or 4)
-   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
-   @param uIdx U-channel plane index (0 or 1)
-   Convert from BGR, RGB, BGRA or RGBA to YUV (YUV420sp (or NV12/NV21) - Y plane followed by interleaved U/V plane).
-   Only for CV_8U.
-   Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
- */
-inline int hal_ni_cvtBGRtoTwoPlaneYUVApprox(const uchar * src_data, size_t src_step,
-                                      uchar * y_data, size_t y_step, uchar * uv_data, size_t uv_step,
-                                      int width, int height,
-                                      int scn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-
-/**
    @brief hal_cvtThreePlaneYUVtoBGR
    @param src_data source image data
    @param src_step source image step
@@ -901,7 +879,6 @@ inline int hal_ni_cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_ste
 #define cv_hal_cvtTwoPlaneYUVtoBGREx hal_ni_cvtTwoPlaneYUVtoBGREx
 #define cv_hal_cvtTwoPlaneYUVtoBGRExApprox hal_ni_cvtTwoPlaneYUVtoBGRExApprox
 #define cv_hal_cvtBGRtoTwoPlaneYUV hal_ni_cvtBGRtoTwoPlaneYUV
-#define cv_hal_cvtBGRtoTwoPlaneYUVApprox hal_ni_cvtBGRtoTwoPlaneYUVApprox
 #define cv_hal_cvtThreePlaneYUVtoBGR hal_ni_cvtThreePlaneYUVtoBGR
 #define cv_hal_cvtThreePlaneYUVtoBGRApprox hal_ni_cvtThreePlaneYUVtoBGRApprox
 #define cv_hal_cvtBGRtoThreePlaneYUV hal_ni_cvtBGRtoThreePlaneYUV

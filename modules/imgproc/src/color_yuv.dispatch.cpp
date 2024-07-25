@@ -225,30 +225,6 @@ static void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-// 4:2:0, two planes: Y, UV interleaved
-// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
-// 20-bit fixed-point arithmetics
-static void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
-                         uchar * y_data, uchar * uv_data, size_t dst_step,
-                         int width, int height,
-                         int scn, bool swapBlue, int uIdx, AlgorithmHint hint)
-{
-    CV_INSTRUMENT_REGION();
-
-    if (hint == ALGO_HINT_APPROX)
-    {
-        CALL_HAL(cvtBGRtoTwoPlaneYUV, cv_hal_cvtBGRtoTwoPlaneYUVApprox,
-             src_data, src_step, y_data, dst_step, uv_data, dst_step, width, height, scn, swapBlue, uIdx);
-    }
-
-
-    CALL_HAL(cvtBGRtoTwoPlaneYUV, cv_hal_cvtBGRtoTwoPlaneYUV,
-             src_data, src_step, y_data, dst_step, uv_data, dst_step, width, height, scn, swapBlue, uIdx);
-
-    CV_CPU_DISPATCH(cvtBGRtoTwoPlaneYUV, (src_data, src_step, y_data, uv_data, dst_step, width, height, scn, swapBlue, uIdx),
-        CV_CPU_DISPATCH_MODES_ALL);
-}
-
 // 4:2:2 interleaved
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 20-bit fixed-point arithmetics
