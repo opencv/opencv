@@ -82,8 +82,8 @@ def add_preproc_args(zoo, parser, sample):
                  help='Preprocess input image by resizing to a specific height.')
     add_argument(zoo, parser, 'rgb', action='store_true',
                  help='Indicate that model works with RGB input images instead BGR ones.')
-    add_argument(zoo, parser, 'classes',
-                 help='Optional path to a text file with names of classes to label detected objects.')
+    add_argument(zoo, parser, 'labels',
+                 help='Optional path to a text file with names of labels to label detected objects.')
     add_argument(zoo, parser, 'postprocessing', type=str,
                  help='Post-processing kind depends on model topology.')
     add_argument(zoo, parser, 'background_label_id', type=int, default=-1,

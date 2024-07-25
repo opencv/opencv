@@ -8,7 +8,7 @@ from common import *
 def help():
     print(
         '''
-        Firstly, download required models using `download_models.py` (if not already done) and then set environment variable OPENCV_DNN_TEST_DATA_PATH pointing to the directory where model is downloaded\n
+        Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"\n
 
         To run:
             python classification.py model_name --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)
@@ -72,13 +72,13 @@ def main(func_args=None):
         exit(1)
 
     args.model = findModel(args.model, args.sha1)
-    args.classes = findFile(args.classes)
+    args.labels = findFile(args.labels)
 
     # Load names of classes
-    classes = None
-    if args.classes:
-        with open(args.classes, 'rt') as f:
-            classes = f.read().rstrip('\n').split('\n')
+    labels = None
+    if args.labels:
+        with open(args.labels, 'rt') as f:
+            labels = f.read().rstrip('\n').split('\n')
 
     # Load a network
 
@@ -133,27 +133,30 @@ def main(func_args=None):
 
         # Run a model
         net.setInput(blob)
-        out = net.forward()
-
-        # Get a class with a highest score.
-        out = out.flatten()
-        classId = np.argmax(out)
-        confidence = out[classId]
+        out = net.forward()        
 
         # Put efficiency information.
         t, _ = net.getPerfProfile()
-        label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
-        cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+        label = 'Inference time: %.1f ms' % (t * 1000.0 / cv.getTickFrequency())
+        cv.putText(frame, label, (5, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
 
-        # Print predicted class.
-        label = '%s: %.4f' % (classes[classId] if classes else 'Class #%d' % classId, confidence)
-        cv.putText(frame, label, (0, 40), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+        # Print predicted classes.
+        out = out.flatten()
+        K = 5
+        topKidx = np.argpartition(out, -K)[-K:]
+        for i in range(K):
+            classId = topKidx[i]
+            confidence = out[classId]
+            label = '%s: %.2f' % (labels[classId] if labels else 'Class #%d' % classId, confidence)
+            cv.putText(frame, label, (5, 60 + i*20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
 
-        cv.imshow(winName, frame)
-
-        if cv.waitKey(1000) & 0xFF == ord('q'):  # Wait for 1 second on each image, press 'q' to exit
-            break
-
+        cv.imshow(winName, frame)        
+        key = cv.waitKey(1000 if isdir else 100)
+        
+        if key >= 0:
+            key &= 255
+            if key == ord('q') or key == 27:  # Wait for 1 second on each image, press 'q' to exit
+                break
 
 
 if __name__ == "__main__":
