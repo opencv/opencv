@@ -327,9 +327,6 @@ class DDIMInpainter(object):
         self.set_backend(backend=args.backend, target=args.target)
 
     def set_backend(self, backend=cv.dnn.DNN_BACKEND_DEFAULT, target=cv.dnn.DNN_TARGET_CPU):
-        print("set backend")
-        print("backend: ", backend)
-        print("target: ", target)
         self.encoder.setPreferableBackend(backend)
         self.encoder.setPreferableTarget(target)
 
@@ -341,15 +338,9 @@ class DDIMInpainter(object):
 
     def apply_diffusor(self, x, timestep, cond):
 
-        ## convert to numpy
-        print("\n\t\t Applying Diffusor")
-        print("x: ", x.shape)
-        print("t: ", timestep.shape)
-
+        #TODO: hande correctly
         cond = cond[0]
-
         x = np.concatenate([x, cond], axis=1)
-
         x = cv.Mat(x.astype(np.float32))
         timestep = cv.Mat(timestep.astype(np.int64))
         names = ["xc", "t"]
@@ -357,7 +348,6 @@ class DDIMInpainter(object):
         self.diffusor.setInput(x, names[0])
         self.diffusor.setInput(timestep, names[1])
         output = self.diffusor.forward()
-
         return output
 
     def register_buffer(self, name, attr):
@@ -577,14 +567,11 @@ class DDIMInpainter(object):
         # Encode the image and mask
         self.encoder.setInput(image)
         c = self.encoder.forward()
-        print(c.shape, mask.shape)
         cc = cv.resize(np.squeeze(mask), dsize=(c.shape[3], c.shape[2]), interpolation=cv.INTER_NEAREST)
         cc = cc[None,None]
-        print(cc.shape)
         c = np.concatenate([c, cc], axis=1)
 
         shape = (c.shape[1] - 1,) + c.shape[2:]
-        print(c.shape)
 
         # Sample from the model
         samples_ddim, _ = self.sampler.sample(
@@ -624,7 +611,6 @@ def main(args):
     model = DDIMInpainter(args)
     result = model(masked_image, mask)
     result = np.squeeze(result)
-    print("result shape: ", result.shape)
 
 
     # save the result in the directore of args.image
