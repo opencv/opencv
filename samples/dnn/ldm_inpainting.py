@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 from functools import partial
+from copy import deepcopy
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
             cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
@@ -14,8 +15,7 @@ parser = argparse.ArgumentParser(description='Use this script to run inpainting 
 parser.add_argument('--encoder', '-e', type=str, help='Path to encoder network.', default="/home/abduragim/tmp/InpaintEncoder.onnx")
 parser.add_argument('--decoder', '-d', type=str, help='Path to decoder network.', default="/home/abduragim/tmp/InpaintDecoder.onnx")
 parser.add_argument('--diffusor', '-df', type=str, help='Path to diffusion network.', default="/home/abduragim/tmp/LatentDiffusion.onnx")
-parser.add_argument('--image', '-i', type=str, help='Path to input image.', default="/home/abduragim/projects/opencv_proj/opencv/samples/dnn/overture-creations-5sI6fQgYIuo.png")
-parser.add_argument('--mask', '-m', type=str, help='Path to mask image.', default="/home/abduragim/projects/opencv_proj/opencv/samples/dnn/overture-creations-5sI6fQgYIuo_mask.png")
+parser.add_argument('--image', '-i', type=str, help='Path to input image.', default="/Users/abd/Desktop/overture-creations-5sI6fQgYIuo.png")
 parser.add_argument('--samples', '-s', type=int, help='Number of times to sample the model.', default=50)
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_CUDA, type=int,
                         help="Choose one of computation backends: "
@@ -433,14 +433,44 @@ class DDIMInpainter(object):
 
         return inpainted
 
+def create_mask(img, radius=20):
+    drawing = False  # True if the mouse is pressed
+    ix, iy = -1, -1  # Coordinates of the mouse
+    counter = 0
+
+    # Mouse callback function
+    def draw_circle(event, x, y, flags, param):
+        nonlocal ix, iy, drawing, counter, radius
+
+        if event == cv.EVENT_LBUTTONDOWN:
+            ix, iy = x, y
+            drawing = True if counter % 2 == 0 else False
+            counter += 1
+            cv.circle(img, (x, y), radius, (255, 255, 255), -1)
+            cv.circle(mask, (x, y), radius, 255, -1)
+
+        elif event == cv.EVENT_MOUSEMOVE:
+            if drawing:
+                cv.circle(img, (x, y), radius, (255, 255, 255), -1)
+                cv.circle(mask, (x, y), radius, 255, -1)
+
+    mask = np.zeros((img.shape[0], img.shape[1]), np.uint8)
+    cv.namedWindow('image')
+    cv.setMouseCallback('image', draw_circle)
+    while True:
+        cv.imshow('image', img)
+        if cv.waitKey(1) & 0xFF == 27:  # Press 'ESC' to exit
+            break
+
+    cv.destroyAllWindows()
+    return mask
 
 
 def main(args):
 
     image = cv.imread(args.image)
-    mask = cv.imread(args.mask)
+    mask = create_mask(deepcopy(image))
     image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
-    mask = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
 
     batch = make_batch(image, mask)
     image, mask, masked_image = batch["image"], batch["mask"], batch["masked_image"]
@@ -448,8 +478,6 @@ def main(args):
     model = DDIMInpainter(args)
     result = model(masked_image, mask, S=args.samples)
     result = np.squeeze(result)
-
-
     # save the result in the directore of args.image
     cv.imwrite(args.image.replace(".png", "_inpainted.png"), result[..., ::-1])
 
