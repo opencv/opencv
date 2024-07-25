@@ -555,9 +555,33 @@ void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArr
     else
     {
         hal::cvtTwoPlaneYUVtoBGR(ysrc.data, ysrc.step, uvsrc.data, uvsrc.step,
-                                dst.data, dst.step, dst.cols, dst.rows,
-                                dcn, swapb, uidx, hint);
+                                 dst.data, dst.step, dst.cols, dst.rows,
+                                 dcn, swapb, uidx, hint);
     }
+}
+
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+void cvtColorTwoPlaneBGR2YUVpair( InputArray _src, OutputArray _ydst, OutputArray _uvdst, AlgorithmHint hint, bool swapb, int uidx )
+{
+    int stype = _src.type();
+    int depth = CV_MAT_DEPTH(stype);
+    Size ysz = _src.size();
+    int scn = _src.channels();
+    CV_Assert( scn == 3 || scn == 4 );
+    CV_Assert( depth == CV_8U );
+
+    Mat src = _src.getMat();
+
+    _ydst.create( ysz, CV_8UC1);
+    _uvdst.create( ysz / 2, CV_8UC1);
+
+    Mat ydst = _ydst.getMat();
+    Mat uvdst = _uvdst.getMat();
+
+    hal::cvtBGRtoTwoPlaneYUV(src.data, src.step, ydst.data, ydst.step, uvdst.data, uvdst.step,
+                             src.cols, src.rows, scn, swapb, uidx, hint);
 }
 
 } // namespace cv

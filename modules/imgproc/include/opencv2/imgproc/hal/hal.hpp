@@ -219,6 +219,12 @@ CV_EXPORTS void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
                                     int width, int height,
                                     int scn, bool swapBlue, int uIdx);
 
+//! Separate Y and UV planes
+CV_EXPORTS void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
+                                    uchar * y_data, size_t y_step, uchar * uv_data, size_t uv_step,
+                                    int width, int height,
+                                    int scn, bool swapBlue, int uIdx);
+
 CV_EXPORTS void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                     uchar * dst_data, size_t dst_step,
                                     int width, int height,

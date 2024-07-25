@@ -170,6 +170,11 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
 void cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int code, AlgorithmHint hint )
 {
+    CV_INSTRUMENT_REGION();
+
+    if (hint == cv::ALGO_HINT_DEFAULT)
+        hint = cv::getDefaultAlgorithmHint();
+
     // only YUV420 is currently supported
     switch (code)
     {
@@ -184,25 +189,25 @@ void cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, in
     cvtColorTwoPlaneYUV2BGRpair(_ysrc, _uvsrc, _dst, hint, dstChannels(code), swapBlue(code), uIndex(code));
 }
 
-void cvtColorTwoPlaneOuput( InputArray _src, OutputArray _dst1, OutputArray _dst2, int code, AlgorithmHint hint )
+void cvtColorTwoPlaneOuput( InputArray _src, OutputArray _ydst, OutputArray _uvdst, int code, AlgorithmHint hint )
 {
     CV_INSTRUMENT_REGION();
 
     if (hint == cv::ALGO_HINT_DEFAULT)
         hint = cv::getDefaultAlgorithmHint();
 
-    int stype = _src.type();
-    CV_Assert( stype == CV_8UC3 || stype == CV_8UC4 );
-    Mat src = _src.getMat();
+    // only YUV420 is currently supported
+    switch (code)
+    {
+        case COLOR_BGR2YUV_NV21:  case COLOR_RGB2YUV_NV21:  case COLOR_BGR2YUV_NV12:  case COLOR_RGB2YUV_NV12:
+        case COLOR_BGRA2YUV_NV21: case COLOR_RGBA2YUV_NV21: case COLOR_BGRA2YUV_NV12: case COLOR_RGBA2YUV_NV12:
+            break;
+        default:
+            CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
+            return;
+    }
 
-    _dst1.create( src.size(), CV_8UC1);
-    _dst2.create( src.size() / 2, CV_8UC1);
-
-    Mat dst_y = _dst1.getMat();
-    Mat dst_uv = _dst2.getMat();
-
-    hal::cvtBGRtoTwoPlaneYUV(src.data, src.step, dst_y.data, dst_y.step, dst_uv.data, dst_uv.step, src.cols,
-                             src.rows, src.channels(), swapBlue(code), uIndex(code), hint);
+    cvtColorTwoPlaneBGR2YUVpair(_src, _ydst, _uvdst, hint, swapBlue(code), uIndex(code));
 }
 
 

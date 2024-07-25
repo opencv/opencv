@@ -1579,10 +1579,10 @@ static inline void rgbToUV42x(const v_uint8& r0, const v_uint8& r1, const v_uint
 struct RGB8toYUV420pInvoker: public ParallelLoopBody
 {
     RGB8toYUV420pInvoker(const uchar * _srcData, size_t _srcStep,
-                           uchar * _yData, uchar * _uvData, size_t _dstStep,
+                           uchar * _yData, size_t _yStep, uchar * _uvData, size_t _uvStep,
                            int _srcWidth, int _srcHeight, int _scn, bool _swapBlue, bool _swapUV, bool _interleave)
         : srcData(_srcData), srcStep(_srcStep),
-          yData(_yData), uvData(_uvData), dstStep(_dstStep),
+          yData(_yData), uvData(_uvData), yStep(_yStep), uvStep(_uvStep),
           srcWidth(_srcWidth), srcHeight(_srcHeight),
           srcCn(_scn), swapBlue(_swapBlue), swapUV(_swapUV), interleave(_interleave) { }
 
@@ -1596,18 +1596,18 @@ struct RGB8toYUV420pInvoker: public ParallelLoopBody
         for( int sRow = rowRange.start*2; sRow < rowRange.end*2; sRow++)
         {
             srcRow = srcData + srcStep*sRow;
-            yRow = yData + dstStep * sRow;
+            yRow = yData + yStep * sRow;
             bool evenRow = (sRow % 2) == 0;
             if(evenRow)
             {
                 if (interleave)
                 {
-                    uvRow = uvData + dstStep*(sRow/2);
+                    uvRow = uvData + uvStep*(sRow/2);
                 }
                 else
                 {
-                    uRow = uvData + dstStep * (sRow/4) + ((sRow/2) % 2) * (w/2);
-                    vRow = uvData + dstStep * ((sRow + h)/4) + (((sRow + h)/2) % 2) * (w/2);
+                    uRow = uvData + uvStep * (sRow/4) + ((sRow/2) % 2) * (w/2);
+                    vRow = uvData + uvStep * ((sRow + h)/4) + (((sRow + h)/2) % 2) * (w/2);
                 }
             }
             int i = 0;
@@ -1716,7 +1716,7 @@ struct RGB8toYUV420pInvoker: public ParallelLoopBody
     const uchar * srcData;
     size_t srcStep;
     uchar *yData, *uvData;
-    size_t dstStep;
+    size_t yStep, uvStep;
     int srcWidth;
     int srcHeight;
     const int srcCn;
@@ -2098,7 +2098,7 @@ void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
 
     uchar * uv_data = dst_data + dst_step * height;
 
-    RGB8toYUV420pInvoker cvt(src_data, src_step, dst_data, uv_data, dst_step, width, height,
+    RGB8toYUV420pInvoker cvt(src_data, src_step, dst_data, dst_step, uv_data, dst_step, width, height,
                              scn, swapBlue, uIdx == 2, false);
 
     if( width * height >= 320*240 )
@@ -2111,13 +2111,13 @@ void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 20-bit fixed-point arithmetics
 void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
-                         uchar * y_data, uchar * uv_data, size_t dst_step,
+                         uchar * y_data, size_t y_step, uchar * uv_data, size_t uv_step,
                          int width, int height,
                          int scn, bool swapBlue, int uIdx)
 {
     CV_INSTRUMENT_REGION();
 
-    RGB8toYUV420pInvoker cvt(src_data, src_step, y_data, uv_data, dst_step, width, height,
+    RGB8toYUV420pInvoker cvt(src_data, src_step, y_data, y_step, uv_data, uv_step, width, height,
                              scn, swapBlue, uIdx == 2, true);
 
     if( width * height >= 320*240 )
