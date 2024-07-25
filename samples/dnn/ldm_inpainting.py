@@ -16,6 +16,7 @@ parser.add_argument('--decoder', '-d', type=str, help='Path to decoder network.'
 parser.add_argument('--diffusor', '-df', type=str, help='Path to diffusion network.', default="/home/abduragim/tmp/LatentDiffusion.onnx")
 parser.add_argument('--image', '-i', type=str, help='Path to input image.', default="/home/abduragim/projects/opencv_proj/opencv/samples/dnn/overture-creations-5sI6fQgYIuo.png")
 parser.add_argument('--mask', '-m', type=str, help='Path to mask image.', default="/home/abduragim/projects/opencv_proj/opencv/samples/dnn/overture-creations-5sI6fQgYIuo_mask.png")
+parser.add_argument('--samples', '-s', type=int, help='Number of times to sample the model.', default=50)
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_CUDA, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
@@ -282,14 +283,16 @@ class DDIMInpainter(object):
                  args,
                  v_posterior=0., # weight for choosing posterior variance as sigma = (1-v) * beta_tilde + v * beta
                  parameterization="eps",  # all assuming fixed variance schedules
+                 linear_start=0.0015,
+                 linear_end=0.0205,
+                 conditioning_key="concat",
                  ):
         super().__init__()
 
         self.v_posterior = v_posterior
         self.parameterization = parameterization
-        self.register_schedule(linear_start=0.0015, linear_end=0.0205) # TODO: see where to put this
-        self.device = "cpu" # TODO: tobe removed
-        self.conditioning_key = "concat" # TODO: maybe remove to arg
+        self.conditioning_key = conditioning_key
+        self.register_schedule(linear_start=linear_start, linear_end=linear_end)
 
         self.encoder = cv.dnn.readNet(args.encoder)
         self.decoder = cv.dnn.readNet(args.decoder)
@@ -309,8 +312,8 @@ class DDIMInpainter(object):
 
     def apply_diffusor(self, x, timestep, cond):
 
-        #TODO: hande correctly
-        cond = cond[0]
+        # TODO: hande correctly
+        # cond = cond[0]
         x = np.concatenate([x, cond], axis=1)
         x = cv.Mat(x.astype(np.float32))
         timestep = cv.Mat(timestep.astype(np.int64))
@@ -384,8 +387,8 @@ class DDIMInpainter(object):
             # hybrid case, cond is exptected to be a dict
             pass
         else:
-            if not isinstance(cond, list):
-                cond = [cond]
+            # if not isinstance(cond, list):
+            #     cond = [cond]
             key = 'c_concat' if self.conditioning_key == 'concat' else 'c_crossattn'
             cond = {key: cond}
 
@@ -396,7 +399,7 @@ class DDIMInpainter(object):
         else:
             return x_recon
 
-    def __call__(self, image : np.ndarray, mask : np.ndarray) -> np.ndarray:
+    def __call__(self, image : np.ndarray, mask : np.ndarray, S : int = 50) -> np.ndarray:
 
         # Encode the image and mask
         self.encoder.setInput(image)
@@ -409,7 +412,7 @@ class DDIMInpainter(object):
 
         # Sample from the model
         samples_ddim, _ = self.sampler.sample(
-            S=50, # TODO: move to args later
+            S=S,
             conditioning=c,
             batch_size=c.shape[0],
             shape=shape,
@@ -443,7 +446,7 @@ def main(args):
     image, mask, masked_image = batch["image"], batch["mask"], batch["masked_image"]
 
     model = DDIMInpainter(args)
-    result = model(masked_image, mask)
+    result = model(masked_image, mask, S=args.samples)
     result = np.squeeze(result)
 
 
