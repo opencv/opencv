@@ -2228,9 +2228,7 @@ inline v_int16x8 v_round(const v_float16x8 &a)
 
 inline v_int16x8 v_floor(const v_float16x8 &a)
 {
-    int16x8_t a1 = vcvtq_s16_f16(a.val);
-    uint16x8_t mask = vcgtq_f16(vcvtq_f16_s16(a1), a.val);
-    return v_int16x8(vaddq_s16(a1, vreinterpretq_s16_u16(mask)));
+    return v_int16x8(vcvtmq_s16_f16(a.val));
 }
 
 inline v_int16x8 v_ceil(const v_float16x8 &a)
@@ -2271,9 +2269,13 @@ inline v_int32x4 v_round(const v_float32x4& a)
 #endif
 inline v_int32x4 v_floor(const v_float32x4& a)
 {
+#if CV_NEON_AARCH64
+    return v_int32x4(vcvtmq_s32_f32(a.val));
+#else
     int32x4_t a1 = vcvtq_s32_f32(a.val);
     uint32x4_t mask = vcgtq_f32(vcvtq_f32_s32(a1), a.val);
     return v_int32x4(vaddq_s32(a1, vreinterpretq_s32_u32(mask)));
+#endif
 }
 
 inline v_int32x4 v_ceil(const v_float32x4& a)
