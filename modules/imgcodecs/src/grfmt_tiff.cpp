@@ -279,6 +279,7 @@ bool TiffDecoder::readHeader()
 
             m_width = wdth;
             m_height = hght;
+            m_frame_count = TIFFNumberOfDirectories(tif);
             if (ncn == 3 && photometric == PHOTOMETRIC_LOGLUV)
             {
                 m_type = CV_32FC3;

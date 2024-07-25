@@ -613,13 +613,11 @@ static gboolean icvOnKeyPress( GtkWidget* widget, GdkEventKey* event, gpointer u
 static void icvOnTrackbar( GtkWidget* widget, gpointer user_data );
 static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_data );
 
-#ifdef HAVE_GTHREAD
 int thread_started=0;
 static gpointer icvWindowThreadLoop(gpointer data);
 GMutex*				   last_key_mutex = NULL;
 GCond*				   cond_have_key = NULL;
 GThread*			   window_thread = NULL;
-#endif
 
 static int             last_key = -1;
 
@@ -666,7 +664,6 @@ static int gtk_InitSystem( int argc, char** argv )
 
 int cv::startWindowThread(){
     CV_TRACE_FUNCTION();
-#ifdef HAVE_GTHREAD
     gtk_InitSystem(0,NULL);
     if (!thread_started)
     {
@@ -682,12 +679,8 @@ int cv::startWindowThread(){
     }
     thread_started = window_thread!=NULL;
     return thread_started;
-#else
-    return 0;
-#endif
 }
 
-#ifdef HAVE_GTHREAD
 gpointer icvWindowThreadLoop(gpointer /*data*/)
 {
     while(1){
@@ -703,8 +696,6 @@ gpointer icvWindowThreadLoop(gpointer /*data*/)
     }
     return NULL;
 }
-
-#endif
 
 #define CV_LOCK_MUTEX() cv::AutoLock lock(getWindowMutex())
 
@@ -1276,7 +1267,6 @@ static void checkLastWindow()
     // if last window...
     if (getGTKWindows().empty())
     {
-#ifdef HAVE_GTHREAD
         if( thread_started )
         {
             // send key press signal to jump out of any waiting waitKeyImpl's
@@ -1284,7 +1274,6 @@ static void checkLastWindow()
         }
         else
         {
-#endif
             // Some GTK+ modules (like the Unity module) use GDBusConnection,
             // which has a habit of postponing cleanup by performing it via
             // idle sources added to the main loop. Since this was the last window,
@@ -1295,9 +1284,7 @@ static void checkLastWindow()
             // thread will process events continuously.
             while( gtk_events_pending() )
                 gtk_main_iteration();
-#ifdef HAVE_GTHREAD
         }
-#endif
     }
 }
 
@@ -1806,7 +1793,6 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer us
 
     code |= event->state << 16;
 
-#ifdef HAVE_GTHREAD
     if(thread_started)
     {
         g_mutex_lock(last_key_mutex);
@@ -1816,7 +1802,6 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer us
         g_mutex_unlock(last_key_mutex);
     }
     else
-#endif
     {
         last_key = code;
     }
@@ -2007,7 +1992,6 @@ static gboolean icvAlarm( gpointer user_data )
 
 int waitKeyImpl( int delay )
 {
-#ifdef HAVE_GTHREAD
     if (thread_started && g_thread_self() != window_thread)
     {
         gboolean expired = true;
@@ -2041,7 +2025,6 @@ int waitKeyImpl( int delay )
         return my_last_key;
     }
     else
-#endif
     {
         int expired = 0;
         guint timer = 0;
