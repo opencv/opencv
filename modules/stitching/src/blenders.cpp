@@ -101,7 +101,7 @@ void Blender::feed(InputArray _img, InputArray _mask, Point tl)
     Mat dst_mask = dst_mask_.getMat(ACCESS_RW);
 
     CV_Assert(img.type() == CV_16SC3);
-    CV_Assert(mask.type() == CV_8U);
+    CV_Assert(mask.type() == CV_8U || mask.type() == CV_Bool);
     int dx = tl.x - dst_roi_.x;
     int dy = tl.y - dst_roi_.y;
 
@@ -147,7 +147,7 @@ void FeatherBlender::feed(InputArray _img, InputArray mask, Point tl)
     Mat dst = dst_.getMat(ACCESS_RW);
 
     CV_Assert(img.type() == CV_16SC3);
-    CV_Assert(mask.type() == CV_8U);
+    CV_Assert(mask.type() == CV_8U || mask.type() == CV_Bool);
 
     createWeightMap(mask, sharpness_, weight_map_);
     Mat weight_map = weight_map_.getMat(ACCESS_READ);
@@ -360,7 +360,7 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
 #endif
 
     CV_Assert(img.type() == CV_16SC3 || img.type() == CV_8UC3);
-    CV_Assert(mask.type() == CV_8U);
+    CV_Assert(mask.type() == CV_8U || mask.type() == CV_Bool);
 
     // Keep source image in memory with small border
     int gap = 3 * (1 << num_bands_);
@@ -774,7 +774,7 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 
 void createWeightMap(InputArray mask, float sharpness, InputOutputArray weight)
 {
-    CV_Assert(mask.type() == CV_8U);
+    CV_Assert(mask.type() == CV_8U || mask.type() == CV_Bool);
     distanceTransform(mask, weight, DIST_L1, 3);
     UMat tmp;
     multiply(weight, sharpness, tmp);

@@ -217,7 +217,7 @@ public:
     const cv::UMat& matchingMask() const { return matching_mask_; }
     void setMatchingMask(const cv::UMat &mask)
     {
-        CV_Assert(mask.type() == CV_8U && mask.cols == mask.rows);
+        CV_Assert((mask.type() == CV_8U || mask.type() == CV_Bool) && mask.cols == mask.rows);
         matching_mask_ = mask.clone();
     }
 
