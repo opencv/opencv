@@ -1,10 +1,8 @@
 import cv2 as cv
 import numpy as np
 import argparse
-import torch
 from tqdm import tqdm
 from functools import partial
-from einops import rearrange
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
             cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
@@ -16,8 +14,8 @@ parser = argparse.ArgumentParser(description='Use this script to run inpainting 
 parser.add_argument('--encoder', '-e', type=str, help='Path to encoder network.', default="/home/abduragim/tmp/InpaintEncoder.onnx")
 parser.add_argument('--decoder', '-d', type=str, help='Path to decoder network.', default="/home/abduragim/tmp/InpaintDecoder.onnx")
 parser.add_argument('--diffusor', '-df', type=str, help='Path to diffusion network.', default="/home/abduragim/tmp/LatentDiffusion.onnx")
-parser.add_argument('--image', '-i', type=str, help='Path to input image.', default="/home/abduragim/projects/diffusors/latent-diffusion/data/inpainting_examples/overture-creations-5sI6fQgYIuo.png")
-parser.add_argument('--mask', '-m', type=str, help='Path to mask image.', default="/home/abduragim/projects/diffusors/latent-diffusion/data/inpainting_examples/overture-creations-5sI6fQgYIuo_mask.png")
+parser.add_argument('--image', '-i', type=str, help='Path to input image.', default="/home/abduragim/projects/opencv_proj/opencv/samples/dnn/overture-creations-5sI6fQgYIuo.png")
+parser.add_argument('--mask', '-m', type=str, help='Path to mask image.', default="/home/abduragim/projects/opencv_proj/opencv/samples/dnn/overture-creations-5sI6fQgYIuo_mask.png")
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_CUDA, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
@@ -37,23 +35,18 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CUDA,
                              '%d: CUDA fp16 (half-float preprocess)'% targets)
 
 def make_batch(image, mask):
-    # image = np.array(Image.open(image).convert("RGB"))
     image = image.astype(np.float32)/255.0
     image = image[None].transpose(0,3,1,2)
-    # image = torch.from_numpy(image)
 
-    # mask = np.array(Image.open(mask).convert("L"))
     mask = mask.astype(np.float32)/255.0
     mask = mask[None,None]
     mask[mask < 0.5] = 0
     mask[mask >= 0.5] = 1
-    # mask = torch.from_numpy(mask)
 
     masked_image = (1-mask)*image
 
     batch = {"image": image, "mask": mask, "masked_image": masked_image}
     for k in batch:
-        # batch[k] = batch[k].to(device=device)
         batch[k] = batch[k]*2.0-1.0
     return batch
 
@@ -157,7 +150,6 @@ class DDIMSampler(object):
                         1 - self.alphas_cumprod / self.alphas_cumprod_prev))
         self.register_buffer('ddim_sigmas_for_original_num_steps', sigmas_for_original_sampling_steps)
 
-    @torch.no_grad()
     def sample(self,
                S,
                batch_size,
@@ -214,7 +206,6 @@ class DDIMSampler(object):
                                                     )
         return samples, intermediates
 
-    @torch.no_grad()
     def ddim_sampling(self, cond, shape,
                       x_T=None, ddim_use_original_steps=False,
                       callback=None, timesteps=None, quantize_denoised=False,
@@ -244,11 +235,6 @@ class DDIMSampler(object):
             index = total_steps - i - 1
             ts = np.full((b, ), step, dtype=np.int64)
 
-            if mask is not None:
-                assert x0 is not None
-                img_orig = self.model.q_sample(x0, ts)  # TODO: deterministic forward pass?
-                img = img_orig * mask + (1. - mask) * img
-
             outs = self.p_sample_ddim(img, cond, ts, index=index, use_original_steps=ddim_use_original_steps,
                                       quantize_denoised=quantize_denoised, temperature=temperature,
                                       noise_dropout=noise_dropout, score_corrector=score_corrector,
@@ -265,23 +251,12 @@ class DDIMSampler(object):
 
         return img, intermediates
 
-    @torch.no_grad()
     def p_sample_ddim(self, x, c, t, index, repeat_noise=False, use_original_steps=False, quantize_denoised=False,
                       temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
                       unconditional_guidance_scale=1., unconditional_conditioning=None):
         b = x.shape[0]
         if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
             e_t = self.model.apply_model(x, t, c)
-        else:
-            x_in = torch.cat([x] * 2)
-            t_in = torch.cat([t] * 2)
-            c_in = torch.cat([unconditional_conditioning, c])
-            e_t_uncond, e_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
-            e_t = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
-
-        if score_corrector is not None:
-            assert self.model.parameterization == "eps"
-            e_t = score_corrector.modify_score(self.model, e_t, x, t, c, **corrector_kwargs)
 
         alphas = self.model.alphas_cumprod if use_original_steps else self.ddim_alphas
         alphas_prev = self.model.alphas_cumprod_prev if use_original_steps else self.ddim_alphas_prev
@@ -295,13 +270,9 @@ class DDIMSampler(object):
 
         # current prediction for x_0
         pred_x0 = (x - sqrt_one_minus_at * e_t) / np.sqrt(a_t)
-        if quantize_denoised:
-            pred_x0, _, *_ = self.model.first_stage_model.quantize(pred_x0)
         # direction pointing to x_t
         dir_xt = np.sqrt(1. - a_prev - sigma_t**2) * e_t
         noise = sigma_t * noise_like(x.shape, repeat_noise) * temperature
-        if noise_dropout > 0.:
-            noise = torch.nn.functional.dropout(noise, p=noise_dropout)
         x_prev = np.sqrt(a_prev) * pred_x0 + dir_xt + noise
         return x_prev, pred_x0
 
@@ -399,7 +370,7 @@ class DDIMInpainter(object):
             lvlb_weights = self.betas ** 2 / (
                         2 * self.posterior_variance * to_numpy(alphas) * (1 - self.alphas_cumprod))
         elif self.parameterization == "x0":
-            lvlb_weights = 0.5 * np.sqrt(torch.Tensor(alphas_cumprod)) / (2. * 1 - torch.Tensor(alphas_cumprod))
+            lvlb_weights = 0.5 * np.sqrt(alphas_cumprod) / (2. * 1 - alphas_cumprod)
         else:
             raise NotImplementedError("mu not supported")
         # TODO how to choose this term
@@ -418,156 +389,19 @@ class DDIMInpainter(object):
             key = 'c_concat' if self.conditioning_key == 'concat' else 'c_crossattn'
             cond = {key: cond}
 
-        if hasattr(self, "split_input_params"):
-            assert len(cond) == 1  # todo can only deal with one conditioning atm
-            assert not return_ids
-            ks = self.split_input_params["ks"]  # eg. (128, 128)
-            stride = self.split_input_params["stride"]  # eg. (64, 64)
-
-            h, w = x_noisy.shape[-2:]
-
-            fold, unfold, normalization, weighting = self.get_fold_unfold(x_noisy, ks, stride)
-
-            z = unfold(x_noisy)  # (bn, nc * prod(**ks), L)
-            # Reshape to img shape
-            z = z.view((z.shape[0], -1, ks[0], ks[1], z.shape[-1]))  # (bn, nc, ks[0], ks[1], L )
-            z_list = [z[:, :, :, :, i] for i in range(z.shape[-1])]
-
-            if self.cond_stage_key in ["image", "LR_image", "segmentation",
-                                       'bbox_img'] and self.model.conditioning_key:  # todo check for completeness
-                c_key = next(iter(cond.keys()))  # get key
-                c = next(iter(cond.values()))  # get value
-                assert (len(c) == 1)  # todo extend to list with more than one elem
-                c = c[0]  # get element
-
-                c = unfold(c)
-                c = c.view((c.shape[0], -1, ks[0], ks[1], c.shape[-1]))  # (bn, nc, ks[0], ks[1], L )
-
-                cond_list = [{c_key: [c[:, :, :, :, i]]} for i in range(c.shape[-1])]
-
-            elif self.cond_stage_key == 'coordinates_bbox':
-                assert 'original_image_size' in self.split_input_params, 'BoudingBoxRescaling is missing original_image_size'
-
-                # assuming padding of unfold is always 0 and its dilation is always 1
-                n_patches_per_row = int((w - ks[0]) / stride[0] + 1)
-                full_img_h, full_img_w = self.split_input_params['original_image_size']
-                # as we are operating on latents, we need the factor from the original image size to the
-                # spatial latent size to properly rescale the crops for regenerating the bbox annotations
-                num_downs = self.first_stage_model.encoder.num_resolutions - 1
-                rescale_latent = 2 ** (num_downs)
-
-                # get top left postions of patches as conforming for the bbbox tokenizer, therefore we
-                # need to rescale the tl patch coordinates to be in between (0,1)
-                tl_patch_coordinates = [(rescale_latent * stride[0] * (patch_nr % n_patches_per_row) / full_img_w,
-                                         rescale_latent * stride[1] * (patch_nr // n_patches_per_row) / full_img_h)
-                                        for patch_nr in range(z.shape[-1])]
-
-                # patch_limits are tl_coord, width and height coordinates as (x_tl, y_tl, h, w)
-                patch_limits = [(x_tl, y_tl,
-                                 rescale_latent * ks[0] / full_img_w,
-                                 rescale_latent * ks[1] / full_img_h) for x_tl, y_tl in tl_patch_coordinates]
-                # patch_values = [(np.arange(x_tl,min(x_tl+ks, 1.)),np.arange(y_tl,min(y_tl+ks, 1.))) for x_tl, y_tl in tl_patch_coordinates]
-
-                # tokenize crop coordinates for the bounding boxes of the respective patches
-                patch_limits_tknzd = [torch.LongTensor(self.bbox_tokenizer._crop_encoder(bbox))[None].to(self.device)
-                                      for bbox in patch_limits]  # list of length l with tensors of shape (1, 2)
-                print(patch_limits_tknzd[0].shape)
-                # cut tknzd crop position from conditioning
-                assert isinstance(cond, dict), 'cond must be dict to be fed into model'
-                cut_cond = cond['c_crossattn'][0][..., :-2].to(self.device)
-                print(cut_cond.shape)
-
-                adapted_cond = torch.stack([torch.cat([cut_cond, p], dim=1) for p in patch_limits_tknzd])
-                adapted_cond = rearrange(adapted_cond, 'l b n -> (l b) n')
-                print(adapted_cond.shape)
-                adapted_cond = self.get_learned_conditioning(adapted_cond)
-                print(adapted_cond.shape)
-                adapted_cond = rearrange(adapted_cond, '(l b) n d -> l b n d', l=z.shape[-1])
-                print(adapted_cond.shape)
-
-                cond_list = [{'c_crossattn': [e]} for e in adapted_cond]
-
-            else:
-                cond_list = [cond for i in range(z.shape[-1])]  # Todo make this more efficient
-
-            # apply model by loop over crops
-            output_list = [self.model(z_list[i], t, **cond_list[i]) for i in range(z.shape[-1])]
-            assert not isinstance(output_list[0],
-                                  tuple)  # todo cant deal with multiple model outputs check this never happens
-
-            o = torch.stack(output_list, axis=-1)
-            o = o * weighting
-            # Reverse reshape to img shape
-            o = o.view((o.shape[0], -1, o.shape[-1]))  # (bn, nc * ks[0] * ks[1], L)
-            # stitch crops together
-            x_recon = fold(o) / normalization
-
-        else:
-            x_recon = self.apply_diffusor(x_noisy, t, cond['c_concat'])
+        x_recon = self.apply_diffusor(x_noisy, t, cond['c_concat'])
 
         if isinstance(x_recon, tuple) and not return_ids:
             return x_recon[0]
         else:
             return x_recon
 
-    def get_fold_unfold(self, x, kernel_size, stride, uf=1, df=1):  # todo load once not every time, shorten code
-        """
-        :param x: img of size (bs, c, h, w)
-        :return: n img crops of size (n, bs, c, kernel_size[0], kernel_size[1])
-        """
-        bs, nc, h, w = x.shape
-
-        # number of crops in image
-        Ly = (h - kernel_size[0]) // stride[0] + 1
-        Lx = (w - kernel_size[1]) // stride[1] + 1
-
-        if uf == 1 and df == 1:
-            fold_params = dict(kernel_size=kernel_size, dilation=1, padding=0, stride=stride)
-            unfold = torch.nn.Unfold(**fold_params)
-
-            fold = torch.nn.Fold(output_size=x.shape[2:], **fold_params)
-
-            weighting = self.get_weighting(kernel_size[0], kernel_size[1], Ly, Lx, x.device).to(x.dtype)
-            normalization = fold(weighting).view(1, 1, h, w)  # normalizes the overlap
-            weighting = weighting.view((1, 1, kernel_size[0], kernel_size[1], Ly * Lx))
-
-        elif uf > 1 and df == 1:
-            fold_params = dict(kernel_size=kernel_size, dilation=1, padding=0, stride=stride)
-            unfold = torch.nn.Unfold(**fold_params)
-
-            fold_params2 = dict(kernel_size=(kernel_size[0] * uf, kernel_size[0] * uf),
-                                dilation=1, padding=0,
-                                stride=(stride[0] * uf, stride[1] * uf))
-            fold = torch.nn.Fold(output_size=(x.shape[2] * uf, x.shape[3] * uf), **fold_params2)
-
-            weighting = self.get_weighting(kernel_size[0] * uf, kernel_size[1] * uf, Ly, Lx, x.device).to(x.dtype)
-            normalization = fold(weighting).view(1, 1, h * uf, w * uf)  # normalizes the overlap
-            weighting = weighting.view((1, 1, kernel_size[0] * uf, kernel_size[1] * uf, Ly * Lx))
-
-        elif df > 1 and uf == 1:
-            fold_params = dict(kernel_size=kernel_size, dilation=1, padding=0, stride=stride)
-            unfold = torch.nn.Unfold(**fold_params)
-
-            fold_params2 = dict(kernel_size=(kernel_size[0] // df, kernel_size[0] // df),
-                                dilation=1, padding=0,
-                                stride=(stride[0] // df, stride[1] // df))
-            fold = torch.nn.Fold(output_size=(x.shape[2] // df, x.shape[3] // df), **fold_params2)
-
-            weighting = self.get_weighting(kernel_size[0] // df, kernel_size[1] // df, Ly, Lx, x.device).to(x.dtype)
-            normalization = fold(weighting).view(1, 1, h // df, w // df)  # normalizes the overlap
-            weighting = weighting.view((1, 1, kernel_size[0] // df, kernel_size[1] // df, Ly * Lx))
-
-        else:
-            raise NotImplementedError
-
-        return fold, unfold, normalization, weighting
-
     def __call__(self, image : np.ndarray, mask : np.ndarray) -> np.ndarray:
 
         # Encode the image and mask
         self.encoder.setInput(image)
         c = self.encoder.forward()
-        cc = cv.resize(np.squeeze(mask), dsize=(c.shape[3], c.shape[2]), interpolation=cv.INTER_NEAREST)
+        cc = cv.resize(np.squeeze(mask), dsize=(c.shape[3], c.shape[2]), interpolation=cv.INTER_NEAREST) #TODO:check for correcteness of intepolation
         cc = cc[None,None]
         c = np.concatenate([c, cc], axis=1)
 
