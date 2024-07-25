@@ -12,19 +12,19 @@ targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OP
 
 parser = argparse.ArgumentParser(description='Use this script to run inpainting using Latent Diffusion Model',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--encoder', '-e', type=str, help='Path to encoder network.', default="/home/abduragim/tmp/InpaintEncoder.onnx")
-parser.add_argument('--decoder', '-d', type=str, help='Path to decoder network.', default="/home/abduragim/tmp/InpaintDecoder.onnx")
-parser.add_argument('--diffusor', '-df', type=str, help='Path to diffusion network.', default="/home/abduragim/tmp/LatentDiffusion.onnx")
-parser.add_argument('--image', '-i', type=str, help='Path to input image.', default="/Users/abd/Desktop/overture-creations-5sI6fQgYIuo.png")
+parser.add_argument('--encoder', '-e', type=str, help='Path to encoder network.', default=None)
+parser.add_argument('--decoder', '-d', type=str, help='Path to decoder network.', default=None)
+parser.add_argument('--diffusor', '-df', type=str, help='Path to diffusion network.', default=None)
+parser.add_argument('--image', '-i', type=str, help='Path to input image.', default=None)
 parser.add_argument('--samples', '-s', type=int, help='Number of times to sample the model.', default=50)
-parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_CUDA, type=int,
+parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
                              "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
                              "%d: OpenCV implementation, "
                              "%d: VKCOM, "
                              "%d: CUDA" % backends)
-parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CUDA, type=int,
+parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
                         help='Choose one of target computation devices: '
                              '%d: CPU target (by default), '
                              '%d: OpenCL, '
