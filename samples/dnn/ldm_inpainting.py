@@ -6,9 +6,9 @@ from functools import partial
 from copy import deepcopy
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
-            cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
+            cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_CUDA)
 targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD,
-            cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
+            cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
 
 parser = argparse.ArgumentParser(description='Use this script to run inpainting using Latent Diffusion Model',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -22,7 +22,6 @@ parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DE
                              "%d: automatically (by default), "
                              "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
                              "%d: OpenCV implementation, "
-                             "%d: VKCOM, "
                              "%d: CUDA" % backends)
 parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
                         help='Choose one of target computation devices: '
@@ -31,7 +30,6 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                              '%d: OpenCL fp16 (half-float precision), '
                              '%d: NCS2 VPU, '
                              '%d: HDDL VPU, '
-                             '%d: Vulkan, '
                              '%d: CUDA, '
                              '%d: CUDA fp16 (half-float preprocess)'% targets)
 
@@ -110,11 +108,10 @@ def make_beta_schedule(schedule, n_timestep, linear_start=1e-4, linear_end=2e-2,
     return betas
 
 class DDIMSampler(object):
-    def __init__(self, model, schedule="linear", **kwargs):
+    def __init__(self, model, schedule="linear", ddpm_num_timesteps=1000, **kwargs):
         super().__init__()
         self.model = model
-        # self.ddpm_num_timesteps = model.ddpm_num_timesteps
-        self.ddpm_num_timesteps = 1000
+        self.ddpm_num_timesteps = ddpm_num_timesteps
         self.schedule = schedule
 
     def register_buffer(self, name, attr):
@@ -156,17 +153,8 @@ class DDIMSampler(object):
                batch_size,
                shape,
                conditioning=None,
-               callback=None,
-               normals_sequence=None,
-               img_callback=None,
-               quantize_x0=False,
                eta=0.,
-               mask=None,
-               x0=None,
                temperature=1.,
-               noise_dropout=0.,
-               score_corrector=None,
-               corrector_kwargs=None,
                verbose=True,
                x_T=None,
                log_every_t=100,
@@ -191,15 +179,8 @@ class DDIMSampler(object):
         print(f'Data shape for DDIM sampling is {size}, eta {eta}')
 
         samples, intermediates = self.ddim_sampling(conditioning, size,
-                                                    callback=callback,
-                                                    img_callback=img_callback,
-                                                    quantize_denoised=quantize_x0,
-                                                    mask=mask, x0=x0,
                                                     ddim_use_original_steps=False,
-                                                    noise_dropout=noise_dropout,
                                                     temperature=temperature,
-                                                    score_corrector=score_corrector,
-                                                    corrector_kwargs=corrector_kwargs,
                                                     x_T=x_T,
                                                     log_every_t=log_every_t,
                                                     unconditional_guidance_scale=unconditional_guidance_scale,
@@ -209,9 +190,7 @@ class DDIMSampler(object):
 
     def ddim_sampling(self, cond, shape,
                       x_T=None, ddim_use_original_steps=False,
-                      callback=None, timesteps=None, quantize_denoised=False,
-                      mask=None, x0=None, img_callback=None, log_every_t=100,
-                      temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
+                      timesteps=None,log_every_t=100, temperature=1.,
                       unconditional_guidance_scale=1., unconditional_conditioning=None,):
         b = shape[0]
         if x_T is None:
@@ -237,24 +216,17 @@ class DDIMSampler(object):
             ts = np.full((b, ), step, dtype=np.int64)
 
             outs = self.p_sample_ddim(img, cond, ts, index=index, use_original_steps=ddim_use_original_steps,
-                                      quantize_denoised=quantize_denoised, temperature=temperature,
-                                      noise_dropout=noise_dropout, score_corrector=score_corrector,
-                                      corrector_kwargs=corrector_kwargs,
-                                      unconditional_guidance_scale=unconditional_guidance_scale,
+                                      temperature=temperature, unconditional_guidance_scale=unconditional_guidance_scale,
                                       unconditional_conditioning=unconditional_conditioning)
             img, pred_x0 = outs
-            if callback: callback(i)
-            if img_callback: img_callback(pred_x0, i)
-
             if index % log_every_t == 0 or index == total_steps - 1:
                 intermediates['x_inter'].append(img)
                 intermediates['pred_x0'].append(pred_x0)
 
         return img, intermediates
 
-    def p_sample_ddim(self, x, c, t, index, repeat_noise=False, use_original_steps=False, quantize_denoised=False,
-                      temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
-                      unconditional_guidance_scale=1., unconditional_conditioning=None):
+    def p_sample_ddim(self, x, c, t, index, repeat_noise=False, use_original_steps=False,
+                      temperature=1., unconditional_guidance_scale=1., unconditional_conditioning=None):
         b = x.shape[0]
         if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
             e_t = self.model.apply_model(x, t, c)
@@ -297,7 +269,7 @@ class DDIMInpainter(object):
         self.encoder = cv.dnn.readNet(args.encoder)
         self.decoder = cv.dnn.readNet(args.decoder)
         self.diffusor = cv.dnn.readNet(args.diffusor)
-        self.sampler = DDIMSampler(self)
+        self.sampler = DDIMSampler(self, ddpm_num_timesteps=self.num_timesteps)
         self.set_backend(backend=args.backend, target=args.target)
 
     def set_backend(self, backend=cv.dnn.DNN_BACKEND_DEFAULT, target=cv.dnn.DNN_TARGET_CPU):
@@ -312,8 +284,6 @@ class DDIMInpainter(object):
 
     def apply_diffusor(self, x, timestep, cond):
 
-        # TODO: hande correctly
-        # cond = cond[0]
         x = np.concatenate([x, cond], axis=1)
         x = cv.Mat(x.astype(np.float32))
         timestep = cv.Mat(timestep.astype(np.int64))
