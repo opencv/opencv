@@ -513,7 +513,10 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
     {
         mask.getUMat().convertTo(weight_map, CV_16S);
         UMat add_mask;
-        compare(mask, 0, add_mask, CMP_NE);
+        if(mask.type() == CV_Bool)
+            add_mask = mask.getUMat();
+        else
+            compare(mask, 0, add_mask, CMP_NE);
         add(weight_map, Scalar::all(1), weight_map, add_mask);
     }
 
