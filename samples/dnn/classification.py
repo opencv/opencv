@@ -3,6 +3,7 @@ import glob
 import argparse
 import cv2 as cv
 import numpy as np
+import sys
 from common import *
 
 def help():
@@ -133,12 +134,17 @@ def main(func_args=None):
 
         # Run a model
         net.setInput(blob)
-        out = net.forward()        
+        out = net.forward()
+
+        (h, w, c) = frame.shape
+        roi_rows = min(300, h)
+        roi_cols = min(1000, w)
+        frame[:roi_rows,:roi_cols,:] >>= 1;
 
         # Put efficiency information.
         t, _ = net.getPerfProfile()
         label = 'Inference time: %.1f ms' % (t * 1000.0 / cv.getTickFrequency())
-        cv.putText(frame, label, (5, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+        cv.putText(frame, label, (15, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0))
 
         # Print predicted classes.
         out = out.flatten()
@@ -148,16 +154,18 @@ def main(func_args=None):
             classId = topKidx[i]
             confidence = out[classId]
             label = '%s: %.2f' % (labels[classId] if labels else 'Class #%d' % classId, confidence)
-            cv.putText(frame, label, (5, 60 + i*20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv.putText(frame, label, (15, 90 + i*30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0))
 
-        cv.imshow(winName, frame)        
+        cv.imshow(winName, frame)
         key = cv.waitKey(1000 if isdir else 100)
-        
+
         if key >= 0:
             key &= 255
+            if key == ord(' '):
+                key = cv.waitKey() & 255
             if key == ord('q') or key == 27:  # Wait for 1 second on each image, press 'q' to exit
-                break
-
+                sys.exit(0)
+    cv.waitKey()
 
 if __name__ == "__main__":
     main()
