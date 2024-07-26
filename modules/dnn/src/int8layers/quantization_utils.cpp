@@ -88,15 +88,6 @@ static void copyVecToMat(Mat& mat, const std::vector<T>& data){
 }
 
 template <typename T>
-static void copyMatToVec(const Mat& mat, std::vector<T>& data){
-    const float * matPtr = mat.ptr<float>(0);
-    const int len = mat.total();
-    data.clear();
-    for (int i = 0; i < len; i++)
-        data.push_back(matPtr[i]);
-}
-
-template <typename T>
 static void broadcastBlockedMatrix(Mat& mat, const std::vector<T>& data, const MatShape& targetShape, int axis, int block_size){
     CV_Check(block_size, targetShape[axis] % block_size == 0 && block_size <= targetShape[axis], "Block size must be a divisor of the target dimension size and not exceed it.");
 
@@ -104,7 +95,7 @@ static void broadcastBlockedMatrix(Mat& mat, const std::vector<T>& data, const M
     subTargetShape[axis] = static_cast<int>(subTargetShape[axis] / block_size);
     Mat tmpMat(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
 
-    copyVecToMat(tmpMat,data);
+    copyVecToMat(tmpMat, data);
 
     block_repeat(tmpMat, axis, block_size, mat);
 }
@@ -146,7 +137,7 @@ public:
     int axis;
     int block_size;
     bool is1D;
-    Mat scalesMat, zeropointsMat; // Saving the broadcasetd scales data.
+    Mat scalesMat, zeropointsMat; // Saving the broadcasted scales data.
     bool quantParamExternal = true;  // Indicates if the quantization parameters (scale and zero point) are provided as inputs to the node.
 
     QuantizeLayerImpl(const LayerParams& params)
@@ -240,7 +231,7 @@ public:
             quantParamExternal = false;
             scalesMat = inputs[1];
 
-            copyMatToVec(scalesMat, scales);
+            scalesMat.reshape(1, 1).copyTo(scales);
 
             if(scalesMat.total() > 1) is1D = true;
 
@@ -249,7 +240,7 @@ public:
             {
                 zeropointsMat = inputs[2];
                 CV_CheckEQ((int)zeropointsMat.total(), (int)scalesMat.total(), "Scale and zero point elements number must match.");
-                copyMatToVec(zeropointsMat, zeropoints);
+                zeropointsMat.reshape(1, 1).copyTo(zeropoints);
             }
 
             if (is1D)
@@ -398,7 +389,7 @@ public:
             quantParamExternal = false;
             scalesMat = inputs[1];
 
-            copyMatToVec(scalesMat, scales);
+            scalesMat.reshape(1, 1).copyTo(scales);
 
             if(scalesMat.total() > 1) is1D = true;
 
@@ -406,7 +397,7 @@ public:
             {
                 zeropointsMat = inputs[2];
                 CV_CheckEQ((int)zeropointsMat.total(), (int)scalesMat.total(), "Scale and zero point elements number must match.");
-                copyMatToVec(zeropointsMat, zeropoints);
+                zeropointsMat.reshape(1, 1).copyTo(zeropoints);
             }
 
             if (is1D)
