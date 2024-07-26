@@ -238,19 +238,23 @@ int main(int argc, char** argv)
         //! [Get a class with a highest score]
         t1 = timeRecorder.getTimeMilli();
         timeRecorder.reset();
-        string label = format("Inference time of 1 round: %.1f ms", t1);
-        putText(frame, label, Point(5, 30), Scalar(0, 255, 0), sans, 17, 400);
+        string label = format("Inference time: %.1f ms", t1);
+        Mat subframe = frame(Rect(0, 0, std::min(1000, frame.cols), std::min(300, frame.rows)));
+        subframe *= 0.3f;
+        putText(frame, label, Point(20, 50), Scalar(0, 255, 0), sans, 25, 800);
 
         // Print predicted class.
         for (int i = 0; i < K; i++) {
             int classId = prob_vec[i].second;
             float confidence = -prob_vec[i].first;
-            label = format("%s: %.2f", (classes.empty() ? format("Class #%d", classId).c_str() :
+            label = format("%d. %s: %.2f", i+1, (classes.empty() ? format("Class #%d", classId).c_str() :
                                         classes[classId].c_str()), confidence);
-            putText(frame, label, Point(5, 60 + i*20), Scalar(0, 255, 0), sans, 17, 400);
+            putText(frame, label, Point(20, 110 + i*35), Scalar(0, 255, 0), sans, 25, 500);
         }
         imshow(kWinName, frame);
         int key = waitKey(isImgList ? 1000 : 100);
+        if (key == ' ')
+            key = waitKey();
         if (key == 'q' || key == 27) // Check if 'q' or 'ESC' is pressed
             return 0;
     }
