@@ -737,6 +737,8 @@ public:
                 if( c != '\"' && c != '\'' )
                 {
                     ptr = skipSpaces( ptr, CV_XML_INSIDE_TAG );
+                    if(!ptr)
+                        CV_PARSE_ERROR_CPP("Invalid attribute value");
                     if( *ptr != '\"' && *ptr != '\'' )
                         CV_PARSE_ERROR_CPP( "Attribute value should be put into single or double quotes" );
                 }
