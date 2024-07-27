@@ -716,7 +716,7 @@ struct CvWindow : CvUIBase
 
 static gboolean icvOnClose( GtkWidget* widget, GdkEvent* event, gpointer user_data );
 #ifdef GTK_VERSION4
-static gboolean icvOnKeyPress( GtkWidget* widget, GdkEvent* event, gpointer user_data);
+static gboolean icvOnKeyPress( GtkWidget* widget, GdkEvent* gdk_event, gpointer user_data);
 #else
 static gboolean icvOnKeyPress( GtkWidget* widget, GdkEventKey* event, gpointer user_data );
 #endif
@@ -1186,6 +1186,19 @@ static gboolean cvImageWidget_draw(GtkWidget* widget, cairo_t *cr, gpointer data
   return TRUE;
 }
 
+#ifdef GTK_VERSION4
+static void cvImageWidget_response(GtkNativeDialog* dialog, gint response, gpointer user_data) {
+    cv::String* filename = static_cast<cv::String*>(user_data);
+    if(response == GTK_RESPONSE_ACCEPT) {
+        GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
+        GFile *file = gtk_file_chooser_get_file(chooser);
+        *filename = g_file_get_path(file);
+        g_free(file);
+    }
+    gtk_native_dialog_destroy(GTK_NATIVE_DIALOG(dialog));
+}
+#endif
+
 static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags);
 CV_IMPL int cvNamedWindow( const char* name, int flags )
 {
@@ -1282,7 +1295,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 #else
     g_signal_connect( window->widget, "expose-event",
                         G_CALLBACK(cvImageWidget_expose), window );
-#endif //GTK_VERSION3
+#endif
 
 
 #if defined(GTK_VERSION3_4)
@@ -1933,10 +1946,18 @@ static void icvShowSaveAsDialog(GtkWidget* widget, CvWindow* window)
     GtkWidget* dialog = gtk_file_chooser_dialog_new("Save As...",
                       GTK_WINDOW(widget),
                       GTK_FILE_CHOOSER_ACTION_SAVE,
+#ifndef GTK_VERSION4
                       GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
                       GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT,
-                      NULL);
+                      NULL
+#else
+                      "_Save",
+                      "_Cancel"
+#endif
+                      );
+#ifndef GTK_VERSION4
     gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
+#endif
 
     cv::String sname = gtk_window_get_title(GTK_WINDOW(window->frame));
     sname = sname.substr(sname.find_last_of("\\/") + 1) + ".png";
@@ -1969,6 +1990,8 @@ static void icvShowSaveAsDialog(GtkWidget* widget, CvWindow* window)
     gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filter_images);
 
     cv::String filename;
+
+#ifndef GTK_VERSION4
     if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
     {
         char* fname = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
@@ -1976,6 +1999,10 @@ static void icvShowSaveAsDialog(GtkWidget* widget, CvWindow* window)
         g_free(fname);
     }
     gtk_widget_destroy(dialog);
+#else
+    g_signal_connect(dialog, "response", G_CALLBACK(cvImageWidget_response), &filename);
+    gtk_native_dialog_show(GTK_NATIVE_DIALOG(dialog));
+#endif
 
     if (!filename.empty())
     {
@@ -1994,11 +2021,24 @@ static void icvShowSaveAsDialog(GtkWidget* widget, CvWindow* window)
 #define GDK_KEY_S GDK_S
 #endif //GDK_KEY_Escape
 
+#ifndef GTK_VERSION4
 static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer user_data)
+#else
+static gboolean icvOnKeyPress(GtkWidget* widget, GdkEvent* gdk_event, gpointer user_data)
+#endif
 {
     int code = 0;
+    guint keyval;
+    GdkModifierType state;
+#ifndef GTK_VERSION4
+    keyval = event->keyval;
+    state = event->state;
+#else
+    keyval = gdk_key_event_get_keyval(gdk_event);
+    state = gdk_event_get_modifier_state(gdk_event);
+#endif
 
-    if ( BIT_ALLIN(event->state, GDK_CONTROL_MASK) && (event->keyval == GDK_KEY_s || event->keyval == GDK_KEY_S))
+    if ( BIT_ALLIN(state, GDK_CONTROL_MASK) && (keyval == GDK_KEY_s || keyval == GDK_KEY_S))
     {
         try
         {
@@ -2010,7 +2050,7 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer us
         }
     }
 
-    switch( event->keyval )
+    switch( keyval )
     {
     case GDK_KEY_Escape:
         code = 27;
@@ -2023,10 +2063,10 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer us
         code = '\t';
     break;
     default:
-        code = event->keyval;
+        code = keyval;
     }
 
-    code |= event->state << 16;
+    code |= state << 16;
 
     if(thread_started)
     {
