@@ -591,8 +591,6 @@ void TS::init( const string& modulename )
 
     if( params.use_optimized == 0 )
         cv::setUseOptimized(false);
-
-    rng = RNG(params.rng_seed);
 }
 
 
@@ -635,9 +633,6 @@ void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_conte
     {
         current_test_info.rng_seed = param_seed + test_case_idx;
         current_test_info.rng_seed0 = current_test_info.rng_seed;
-
-        rng = RNG(current_test_info.rng_seed);
-        cv::theRNG() = rng;
     }
 
     current_test_info.test = test;
@@ -1131,6 +1126,8 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
     recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
     recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
     recordPropertyVerbose("cv_compiler", "Compiler", getSnippetFromConfig("C++ Compiler:", "\n"));
+    recordPropertyVerbose("implementation_hint", "Algorithm hint", getSnippetFromConfig("Algorithm Hint:", "\n"));
+    recordPropertyVerbose("hal", "HAL", getSnippetFromConfig("Custom HAL:", "\n"));
     const char* parallelFramework = cv::currentParallelFramework();
     if (parallelFramework)
     {

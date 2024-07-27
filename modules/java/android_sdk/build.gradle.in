@@ -90,7 +90,12 @@
 
 apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
-@KOTLIN_PLUGIN_DECLARATION@
+try {
+    @KOTLIN_PLUGIN_DECLARATION@
+    println "Configure OpenCV with Kotlin"
+} catch (Exception e) {
+    println "Configure OpenCV without Kotlin"
+}
 
 def openCVersionName = "@OPENCV_VERSION@"
 def openCVersionCode = ((@OPENCV_VERSION_MAJOR@ * 100 + @OPENCV_VERSION_MINOR@) * 100 + @OPENCV_VERSION_PATCH@) * 10 + 0

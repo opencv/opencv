@@ -3196,5 +3196,103 @@ INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_PolarToCart_inplace,
     )
 );
 
+CV_ENUM(LutMatType, CV_8U, CV_16U, CV_16F, CV_32S, CV_32F, CV_64F)
+
+struct Core_LUT: public testing::TestWithParam<LutMatType>
+{
+    template<typename T, int ch>
+    cv::Mat referenceWithType(cv::Mat input, cv::Mat table)
+    {
+        cv::Mat ref(input.size(), CV_MAKE_TYPE(table.type(), ch));
+        for (int i = 0; i < input.rows; i++)
+        {
+            for (int j = 0; j < input.cols; j++)
+            {
+                if(ch == 1)
+                {
+                    ref.at<T>(i, j) = table.at<T>(input.at<uchar>(i, j));
+                }
+                else
+                {
+                    Vec<T, ch> val;
+                    for (int k = 0; k < ch; k++)
+                    {
+                       val[k] = table.at<T>(input.at<Vec<uchar, ch>>(i, j)[k]);
+                    }
+                    ref.at<Vec<T, ch>>(i, j) = val;
+                }
+            }
+        }
+        return ref;
+    }
+
+    template<int ch = 1>
+    cv::Mat reference(cv::Mat input, cv::Mat table)
+    {
+        if (table.type() == CV_8U)
+        {
+            return referenceWithType<uchar, ch>(input, table);
+        }
+        else if (table.type() == CV_16U)
+        {
+            return referenceWithType<ushort, ch>(input, table);
+        }
+        else if (table.type() == CV_16F)
+        {
+            return referenceWithType<ushort, ch>(input, table);
+        }
+        else if (table.type() == CV_32S)
+        {
+            return referenceWithType<int, ch>(input, table);
+        }
+        else if (table.type() == CV_32F)
+        {
+            return referenceWithType<float, ch>(input, table);
+        }
+        else if (table.type() == CV_64F)
+        {
+            return referenceWithType<double, ch>(input, table);
+        }
+
+        return cv::Mat();
+    }
+};
+
+TEST_P(Core_LUT, accuracy)
+{
+    int type = GetParam();
+    cv::Mat input(117, 113, CV_8UC1);
+    randu(input, 0, 256);
+
+    cv::Mat table(1, 256, CV_MAKE_TYPE(type, 1));
+    randu(table, 0, 127);
+
+    cv::Mat output;
+    cv::LUT(input, table, output);
+
+    cv::Mat gt = reference(input, table);
+
+    ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
+}
+
+TEST_P(Core_LUT, accuracy_multi)
+{
+    int type = (int)GetParam();
+    cv::Mat input(117, 113, CV_8UC3);
+    randu(input, 0, 256);
+
+    cv::Mat table(1, 256, CV_MAKE_TYPE(type, 1));
+    randu(table, 0, 127);
+
+    cv::Mat output;
+    cv::LUT(input, table, output);
+
+    cv::Mat gt = reference<3>(input, table);
+
+    ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
+}
+
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, LutMatType::all());
 
 }} // namespace

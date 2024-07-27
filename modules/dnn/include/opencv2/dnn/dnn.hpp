@@ -533,7 +533,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param params parameters which will be used to initialize the creating layer.
          *  @returns unique identifier of created layer, or -1 if a failure will happen.
          */
-        int addLayer(const String &name, const String &type, const int &dtype, LayerParams &params);
+        CV_WRAP int addLayer(const String &name, const String &type, const int &dtype, LayerParams &params);
 
         /** @overload Datatype of output blobs set to default CV_32F */
         int addLayer(const String &name, const String &type, LayerParams &params);
@@ -541,7 +541,7 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Adds new layer and connects its first input to the first output of previously added layer.
          *  @see addLayer()
          */
-        int addLayerToPrev(const String &name, const String &type, const int &dtype, LayerParams &params);
+        CV_WRAP int addLayerToPrev(const String &name, const String &type, const int &dtype, LayerParams &params);
 
         /** @overload */
         int addLayerToPrev(const String &name, const String &type, LayerParams &params);
@@ -642,13 +642,13 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param outputName name for layer which output is needed to get
          *  @details If @p outputName is empty, runs forward pass for the whole network.
          */
-        CV_WRAP void forward(OutputArrayOfArrays outputBlobs, const String& outputName = String());
+        CV_WRAP void forward(CV_ND OutputArrayOfArrays outputBlobs, const String& outputName = String());
 
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
          *  @param outputBlobs contains blobs for first outputs of specified layers.
          *  @param outBlobNames names for layers which outputs are needed to get
          */
-        CV_WRAP void forward(OutputArrayOfArrays outputBlobs,
+        CV_WRAP void forward(CV_ND OutputArrayOfArrays outputBlobs,
                              const std::vector<String>& outBlobNames);
 
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
@@ -727,7 +727,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  as:
          * \f[input(n,c,h,w) = scalefactor \times (blob(n,c,h,w) - mean_c)\f]
          */
-        CV_WRAP void setInput(InputArray blob, const String& name = "",
+        CV_WRAP void setInput(CV_ND InputArray blob, const String& name = "",
                               double scalefactor = 1.0, const Scalar& mean = Scalar());
 
         /** @brief Sets the new value for the learned param of the layer.
@@ -738,8 +738,8 @@ CV__DNN_INLINE_NS_BEGIN
          *  @note If shape of the new blob differs from the previous shape,
          *  then the following forward pass may fail.
         */
-        CV_WRAP void setParam(int layer, int numParam, const Mat &blob);
-        CV_WRAP inline void setParam(const String& layerName, int numParam, const Mat &blob) { return setParam(getLayerId(layerName), numParam, blob); }
+        CV_WRAP void setParam(int layer, int numParam, CV_ND const Mat &blob);
+        CV_WRAP inline void setParam(const String& layerName, int numParam, CV_ND const Mat &blob) { return setParam(getLayerId(layerName), numParam, blob); }
 
         /** @brief Returns parameter blob of the layer.
          *  @param layer name or id of the layer.

@@ -2501,6 +2501,9 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
     _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     UMat dst = _dst.getUMat();
 
+    if (src.u == dst.u)
+        src = src.clone();
+
     float M[9] = {0};
     int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
     Mat matM(matRows, 3, CV_32F, M), M1 = _M0.getMat();
@@ -2604,6 +2607,9 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     UMat src = _src.getUMat(), M0;
     _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     UMat dst = _dst.getUMat();
+
+    if (src.u == dst.u)
+        src = src.clone();
 
     double M[9] = {0};
     int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);

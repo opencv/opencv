@@ -390,14 +390,9 @@ elseif(PPC64LE)
   set(CPU_BASELINE "VSX" CACHE STRING "${HELP_CPU_BASELINE}")
 
 elseif(RISCV)
-  option(RISCV_RVV_SCALABLE "Use scalable RVV API on RISC-V" ON)
-
   ocv_update(CPU_RVV_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_rvv.cpp")
   ocv_update(CPU_KNOWN_OPTIMIZATIONS "RVV")
   ocv_update(CPU_RVV_FLAGS_ON "-march=rv64gcv")
-  if(RISCV_RVV_SCALABLE)
-    set(CPU_RVV_FLAGS_ON "${CPU_RVV_FLAGS_ON} -DCV_RVV_SCALABLE")
-  endif()
   ocv_update(CPU_RVV_FLAGS_CONFLICT "-march=[^ ]*")
 
   set(CPU_DISPATCH "" CACHE STRING "${HELP_CPU_DISPATCH}")

@@ -762,23 +762,29 @@ TEST_P(CharucoBoard, testWrongSizeDetection)
     ASSERT_FALSE(boardSize.width == boardSize.height);
     aruco::CharucoBoard board(boardSize, 1.f, 0.5f, aruco::getPredefinedDictionary(aruco::DICT_4X4_50));
 
-    vector<int> detectedCharucoIds, detectedArucoIds;
-    vector<Point2f> detectedCharucoCorners;
-    vector<vector<Point2f>> detectedArucoCorners;
     Mat boardImage;
     board.generateImage(boardSize*40, boardImage);
 
     swap(boardSize.width, boardSize.height);
     aruco::CharucoDetector detector(aruco::CharucoBoard(boardSize, 1.f, 0.5f, aruco::getPredefinedDictionary(aruco::DICT_4X4_50)));
     // try detect board with wrong size
-    detector.detectBoard(boardImage, detectedCharucoCorners, detectedCharucoIds, detectedArucoCorners, detectedArucoIds);
+    for(int i: {0, 1}) {
+        vector<int> detectedCharucoIds, detectedArucoIds;
+        vector<Point2f> detectedCharucoCorners;
+        vector<vector<Point2f>> detectedArucoCorners;
+        if (i == 0) {
+            detector.detectBoard(boardImage, detectedCharucoCorners, detectedCharucoIds, detectedArucoCorners, detectedArucoIds);
+            // aruco markers must be found
+            ASSERT_EQ(detectedArucoIds.size(), board.getIds().size());
+            ASSERT_EQ(detectedArucoCorners.size(), board.getIds().size());
+        } else {
+            detector.detectBoard(boardImage, detectedCharucoCorners, detectedCharucoIds);
+        }
 
-    // aruco markers must be found
-    ASSERT_EQ(detectedArucoIds.size(), board.getIds().size());
-    ASSERT_EQ(detectedArucoCorners.size(), board.getIds().size());
-    // charuco corners should not be found in board with wrong size
-    ASSERT_TRUE(detectedCharucoCorners.empty());
-    ASSERT_TRUE(detectedCharucoIds.empty());
+        // charuco corners should not be found in board with wrong size
+        ASSERT_TRUE(detectedCharucoCorners.empty());
+        ASSERT_TRUE(detectedCharucoIds.empty());
+    }
 }
 
 
@@ -932,12 +938,14 @@ TEST(Charuco, testSeveralBoardsWithCustomIds)
     detector2.detectBoard(gray, c_corners2, c_ids2, corners, ids);
 
     ASSERT_EQ(ids.size(), size_t(16));
-    ASSERT_EQ(c_corners1.rows, expected_corners.rows);
-    EXPECT_NEAR(0, cvtest::norm(expected_corners, c_corners1.reshape(1), NORM_INF), 3e-1);
+    // In 4.x detectBoard() returns the charuco corners in a 2D Mat with shape (N_corners, 1)
+    // In 5.x, after PR #23473, detectBoard() returns the charuco corners in a 1D Mat with shape (1, N_corners)
+    ASSERT_EQ(expected_corners.total(), c_corners1.total()*c_corners1.channels());
+    EXPECT_NEAR(0., cvtest::norm(expected_corners.reshape(1, 1), c_corners1.reshape(1, 1), NORM_INF), 3e-1);
 
-    ASSERT_EQ(c_corners2.rows, expected_corners.rows);
+    ASSERT_EQ(expected_corners.total(), c_corners2.total()*c_corners2.channels());
     expected_corners.col(0) += 500;
-    EXPECT_NEAR(0, cvtest::norm(expected_corners, c_corners2.reshape(1), NORM_INF), 3e-1);
+    EXPECT_NEAR(0., cvtest::norm(expected_corners.reshape(1, 1), c_corners2.reshape(1, 1), NORM_INF), 3e-1);
 }
 
 }} // namespace

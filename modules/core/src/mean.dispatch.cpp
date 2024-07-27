@@ -544,6 +544,10 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
         int dcn = (int)mean_mat.total();
         CV_Assert( mean_mat.type() == CV_64F && mean_mat.isContinuous() &&
                    (mean_mat.cols == 1 || mean_mat.rows == 1) && dcn >= cn );
+
+        double* dptr = mean_mat.ptr<double>();
+        for(k = cn ; k < dcn; k++ )
+            dptr[k] = 0;
     }
 
     if (_sdv.needed())
@@ -555,6 +559,11 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
         int dcn = (int)stddev_mat.total();
         CV_Assert( stddev_mat.type() == CV_64F && stddev_mat.isContinuous() &&
                    (stddev_mat.cols == 1 || stddev_mat.rows == 1) && dcn >= cn );
+
+        double* dptr = stddev_mat.ptr<double>();
+        for(k = cn ; k < dcn; k++ )
+            dptr[k] = 0;
+
     }
 
     if (src.isContinuous() && mask.isContinuous())
@@ -646,23 +655,17 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
     if (_mean.needed())
     {
         const double* sptr = s;
-        int dcn = (int)mean_mat.total();
         double* dptr = mean_mat.ptr<double>();
         for( k = 0; k < cn; k++ )
             dptr[k] = sptr[k];
-        for( ; k < dcn; k++ )
-            dptr[k] = 0;
     }
 
     if (_sdv.needed())
     {
         const double* sptr = sq;
-        int dcn = (int)stddev_mat.total();
         double* dptr = stddev_mat.ptr<double>();
         for( k = 0; k < cn; k++ )
             dptr[k] = sptr[k];
-        for( ; k < dcn; k++ )
-            dptr[k] = 0;
     }
 }
 

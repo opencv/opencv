@@ -243,7 +243,7 @@ namespace opencv_test { namespace {
 
         rng.fill(_src, RNG::UNIFORM, 0, 256);
 
-        _sigma_color = _sigma_space = 1.;
+        _sigma_color = _sigma_space = rng.uniform(0., 10.);
 
         return 1;
     }

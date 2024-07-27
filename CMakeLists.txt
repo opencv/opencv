@@ -261,9 +261,11 @@ OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VERIFY HAVE_CAP_IOS)
 OCV_OPTION(WITH_CAROTENE "Use NVidia carotene acceleration library for ARM platform" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (ARM OR AARCH64) AND NOT IOS AND NOT XROS)
-OCV_OPTION(WITH_KLEIDICV "Use KleidiCV library for ARM platforms" OFF
+OCV_OPTION(WITH_KLEIDICV "Use KleidiCV library for ARM platforms" (ANDROID AND AARCH64 AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (AARCH64 AND (ANDROID OR UNIX AND NOT IOS AND NOT XROS)))
 OCV_OPTION(WITH_NDSRVP "Use Andes RVP extension" (NOT CV_DISABLE_OPTIMIZATION)
+  VISIBLE_IF RISCV)
+OCV_OPTION(WITH_HAL_RVV "Use HAL RVV optimizations" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF RISCV)
 OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
   VISIBLE_IF ANDROID
@@ -304,6 +306,10 @@ OCV_OPTION(WITH_GTK "Include GTK support" ON
 OCV_OPTION(WITH_GTK_2_X "Use GTK version 2" OFF
   VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
   VERIFY HAVE_GTK AND NOT HAVE_GTK3)
+OCV_OPTION(WITH_FRAMEBUFFER "Include framebuffer support" OFF
+  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID)
+OCV_OPTION(WITH_FRAMEBUFFER_XVFB "Include virtual framebuffer support" OFF
+  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID)
 OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
         VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
         VERIFY HAVE_WAYLAND)
@@ -723,7 +729,13 @@ if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
 
     cmake_policy(SET CMP0092 NEW) # CMake 3.15+: leave warning flags out of default CMAKE_<LANG>_FLAGS flags.
     if(CMAKE_CUDA_COMPILER)
+      if(CMAKE_CUDA_ARCHITECTURES)
+        set(USER_DEFINED_CMAKE_CUDA_ARCHITECTURES TRUE)
+      endif()
       enable_language(CUDA)
+      if(NOT USER_DEFINED_CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES "")
+      endif()
     elseif(UNIX)
       message(WARNING "CUDA: Not detected!  If you are not using the default host compiler (g++) then you need to specify both CMAKE_CUDA_HOST_COMPILER and CMAKE_CUDA_COMPILER. e.g. -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/clang++ -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc.")
     endif()
@@ -997,6 +1009,13 @@ if(WITH_NDSRVP)
   endif()
 endif()
 
+if(WITH_HAL_RVV)
+  ocv_debug_message(STATUS "Enable HAL RVV acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";halrvv;")
+    set(OpenCV_HAL "halrvv;${OpenCV_HAL}")
+  endif()
+endif()
+
 foreach(hal ${OpenCV_HAL})
   if(hal STREQUAL "carotene")
     if(";${CPU_BASELINE_FINAL};" MATCHES ";NEON;")
@@ -1025,6 +1044,14 @@ foreach(hal ${OpenCV_HAL})
       list(APPEND OpenCV_USED_HAL "ndsrvp (ver ${NDSRVP_HAL_VERSION})")
     else()
       message(STATUS "NDSRVP: Andes GNU Toolchain DSP extension is not open, disabling ndsrvp...")
+    endif()
+  elseif(hal STREQUAL "halrvv")
+    if(";${CPU_BASELINE_FINAL};" MATCHES ";RVV;")
+      add_subdirectory(3rdparty/hal_rvv/)
+      ocv_hal_register(RVV_HAL_LIBRARIES RVV_HAL_HEADERS RVV_HAL_INCLUDE_DIRS)
+      list(APPEND OpenCV_USED_HAL "HAL RVV (ver ${RVV_HAL_VERSION})")
+    else()
+      message(STATUS "HAL RVV: RVV is not available, disabling halrvv...")
     endif()
   elseif(hal STREQUAL "openvx")
     add_subdirectory(3rdparty/openvx)
@@ -1240,7 +1267,11 @@ if(CMAKE_GENERATOR MATCHES "Xcode|Visual Studio|Multi-Config")
 else()
   status("    Configuration:"  ${CMAKE_BUILD_TYPE})
 endif()
-
+if(DEFINED OPENCV_ALGO_HINT_DEFAULT)
+  status("    Algorithm Hint:"  ${OPENCV_ALGO_HINT_DEFAULT})
+else()
+  status("    Algorithm Hint:" " ALGO_HINT_ACCURATE")
+endif()
 
 # ========================= CPU code generation mode =========================
 status("")
@@ -1443,12 +1474,16 @@ if(WITH_GTK OR HAVE_GTK)
     status("    GTK+:" "YES (ver ${GTK3_VERSION})")
   elseif(HAVE_GTK)
     status("    GTK+:" "YES (ver ${GTK2_VERSION})")
+    status("      GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${GTKGLEXT_VERSION})" ELSE NO)
   else()
     status("    GTK+:" "NO")
   endif()
-  if(HAVE_GTK)
-    status(  "      GThread :" HAVE_GTHREAD THEN "YES (ver ${GTHREAD_VERSION})" ELSE NO)
-    status(  "      GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${GTKGLEXT_VERSION})" ELSE NO)
+endif()
+
+if(WITH_FRAMEBUFFER OR HAVE_FRAMEBUFFER)
+  status("    Framebuffer UI:" HAVE_FRAMEBUFFER THEN YES ELSE NO)
+  if(WITH_FRAMEBUFFER_XVFB OR HAVE_FRAMEBUFFER_XVFB)
+    status("    Virtual framebuffer UI:" HAVE_FRAMEBUFFER_XVFB THEN YES ELSE NO)
   endif()
 endif()
 
