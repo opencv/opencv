@@ -231,6 +231,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                         {
                             if( ++count > K )
                             {
+                                CV_Error(Error::StsInternal,"\nTest!! for issue :25867\n");
                                 cornerpos[ncorners++] = j;
                                 if(nonmax_suppression)
                                     curr[j] = (uchar)cornerScore<patternSize>(ptr, pixel, threshold);
