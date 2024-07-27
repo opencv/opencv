@@ -3600,9 +3600,11 @@ private:
         area.allocate(xcoeffs, ksize * dsize.width * cn);
         area.allocate(ycoeffs, ksize * dsize.height * 1);
         area.commit();
+        float cbuf[MAX_ESIZE] = { 0 };
         CV_CheckLE(ksize, MAX_ESIZE, "resampler kernel's size is too larger");
 
-        // when upsampling, `antialias` is same to `generic`, so use `generic` to speed up
+        // when upsampling, `antialias` is same as `generic`
+        // so use `generic` to speed up
         if (antialias && scaled.x < 1.0)
         {
             float a = M(0, 0), b = M(0, 1);
@@ -3620,7 +3622,6 @@ private:
             xkanti = 0;
             xmin = 0;
             xmax = dsize.width;
-            float cbuf[MAX_ESIZE];
             float a = M(0, 0), b = M(0, 1);
             for (int d = 0; d < dsize.width; ++d)
             {
@@ -3686,7 +3687,6 @@ private:
         else
         {
             ykanti = 0;
-            float cbuf[MAX_ESIZE];
             float a = M(1, 0), b = M(1, 1);
             for (int d = 0; d < dsize.height; ++d)
             {
@@ -4599,8 +4599,6 @@ static bool ocl_resizeOnnx(InputArray _src, OutputArray _dst,
     else
         CV_Error(cv::Error::StsError, "should not got here");
 
-    if (errmsg.size())
-        fputs(errmsg.data(), stderr);
     return k.run(2, globalsize, 0, false);
 }
 

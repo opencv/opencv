@@ -376,22 +376,22 @@ CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(atanh, ::atanh, double, double)
 
 // a += b
 
-#define CV_CUDEV_IMPLEMENT_VEC_BINARY_ASSIGN(op, input_type, output_type) \
+#define CV_CUDEV_IMPLEMENT_VEC_BINARY_OP_ASSIGN(op, input_type, output_type) \
     __device__ __forceinline__ output_type ## 1 & operator op ## = (output_type ## 1 & a, const input_type ## 1 & b) \
     { \
-    return a = VecTraits<output_type ## 1>::make(a.x op b.x); \
+        return a = VecTraits<output_type ## 1>::make(a.x op b.x); \
     } \
     __device__ __forceinline__ output_type ## 2 & operator op ## = (output_type ## 2 & a, const input_type ## 2 & b) \
     { \
-    return a = VecTraits<output_type ## 2>::make(a.x op b.x, a.y op b.y); \
+        return a = VecTraits<output_type ## 2>::make(a.x op b.x, a.y op b.y); \
     } \
     __device__ __forceinline__ output_type ## 3 & operator op ## = (output_type ## 3 & a, const input_type ## 3 & b) \
     { \
-    return a = VecTraits<output_type ## 3>::make(a.x op b.x, a.y op b.y, a.z op b.z); \
+        return a = VecTraits<output_type ## 3>::make(a.x op b.x, a.y op b.y, a.z op b.z); \
     } \
     __device__ __forceinline__ output_type ## 4 & operator op ## = (output_type ## 4 & a, const input_type ## 4 & b) \
     { \
-    return a = VecTraits<output_type ## 4>::make(a.x op b.x, a.y op b.y, a.z op b.z, a.w op b.w); \
+        return a = VecTraits<output_type ## 4>::make(a.x op b.x, a.y op b.y, a.z op b.z, a.w op b.w); \
     }
 
 // binary operators (vec & vec)
@@ -413,7 +413,7 @@ CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(atanh, ::atanh, double, double)
     { \
         return VecTraits<output_type ## 4>::make(a.x op b.x, a.y op b.y, a.z op b.z, a.w op b.w); \
     } \
-    CV_CUDEV_IMPLEMENT_VEC_BINARY_ASSIGN(op, input_type, output_type)
+    CV_CUDEV_IMPLEMENT_VEC_BINARY_OP_ASSIGN(op, input_type, output_type)
 
 CV_CUDEV_IMPLEMENT_VEC_BINARY_OP(+, uchar, int)
 CV_CUDEV_IMPLEMENT_VEC_BINARY_OP(+, char, int)
@@ -472,8 +472,8 @@ CV_CUDEV_IMPLEMENT_VEC_BINARY_OP(^, short, short)
 CV_CUDEV_IMPLEMENT_VEC_BINARY_OP(^, int, int)
 CV_CUDEV_IMPLEMENT_VEC_BINARY_OP(^, uint, uint)
 
-#undef CV_CUDEV_IMPLEMENT_VEC_BINARY_ASSIGN
-#define CV_CUDEV_IMPLEMENT_VEC_BINARY_ASSIGN(op, input_type, output_type)
+#undef CV_CUDEV_IMPLEMENT_VEC_BINARY_OP_ASSIGN
+#define CV_CUDEV_IMPLEMENT_VEC_BINARY_OP_ASSIGN(op, input_type, output_type)
 
 CV_CUDEV_IMPLEMENT_VEC_BINARY_OP(==, uchar, uchar)
 CV_CUDEV_IMPLEMENT_VEC_BINARY_OP(==, char, uchar)
@@ -548,7 +548,7 @@ CV_CUDEV_IMPLEMENT_VEC_BINARY_OP(||, float, uchar)
 CV_CUDEV_IMPLEMENT_VEC_BINARY_OP(||, double, uchar)
 
 #undef CV_CUDEV_IMPLEMENT_VEC_BINARY_OP
-#undef CV_CUDEV_IMPLEMENT_VEC_BINARY_ASSIGN
+#undef CV_CUDEV_IMPLEMENT_VEC_BINARY_OP_ASSIGN
 
 // binary operators (vec & scalar)
 
