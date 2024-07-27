@@ -136,10 +136,10 @@ def main(func_args=None):
         net.setInput(blob)
         out = net.forward()
 
-        (h, w, c) = frame.shape
+        (h, w, _) = frame.shape
         roi_rows = min(300, h)
         roi_cols = min(1000, w)
-        frame[:roi_rows,:roi_cols,:] >>= 1;
+        frame[:roi_rows,:roi_cols,:] >>= 1
 
         # Put efficiency information.
         t, _ = net.getPerfProfile()
