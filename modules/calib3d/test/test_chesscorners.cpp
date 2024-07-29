@@ -848,7 +848,7 @@ TEST(Calib3d_AsymmetricCirclesPatternDetector, issue_x1)
     }
 
     bool found = false;
-    found = findCirclesGrid(image, parrernSize, centers, CALIB_CB_ASYMMETRIC_GRID | CALIB_CB_CLUSTERING);
+    found = findCirclesGrid(image, parrernSize, centers, CALIB_CB_ASYMMETRIC_GRID);
 
     drawChessboardCorners(image, parrernSize, centers,found);
     imshow("image", image);
@@ -862,7 +862,7 @@ TEST(Calib3d_AsymmetricCirclesPatternDetector, issue_x1)
 
 TEST(Calib3d_AsymmetricCirclesPatternDetector, issue_x2)
 {
-    string path = cvtest::findDataFile("cv/cameracalibration/asymmetric_circles/test1.png");
+    string path = cvtest::findDataFile("cv/cameracalibration/asymmetric_circles/test7.png");
     Mat image = cv::imread(path);
     ASSERT_FALSE(image.empty()) << "Can't read image: " << path;
 

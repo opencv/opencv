@@ -72,7 +72,6 @@
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
 #include "opencv2/flann.hpp"
-#include "opencv2/highgui.hpp"
 
 #include <stack>
 
@@ -2243,8 +2242,9 @@ bool findCirclesGridNew(InputArray _image, Size patternSize,
     }
 
     int mainCornerId = getMainCorner(cornerIds, points, pointTypes, patternSize, isSymmetricGrid);
-    imshow("image", image);
-    waitKey(0);
+    cv::circle(image, points[mainCornerId], 25, Scalar(100, 100, 100), 5);
+    //imshow("image", image);
+    //waitKey(0);
 
     return false;
 }
