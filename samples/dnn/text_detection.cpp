@@ -22,7 +22,7 @@
     dummy_input = torch.randn(1, 1, 32, 100)
     torch.onnx.export(model, dummy_input, "crnn.onnx", verbose=True)
 
-    Usage: ./example_dnn_text_detection DB -ocr=<path to recognition model>
+    Usage: ./example_dnn_text_detection DB --ocr=<path to recognition model>
 */
 #include <iostream>
 #include <fstream>
@@ -34,22 +34,30 @@
 #include "common.hpp"
 
 using namespace cv;
+using namespace std;
 using namespace cv::dnn;
 
+const string about = "Use this script for Text Detection and Recognition using OpenCV. \n\n"
+        "Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"
+        "To run:\n"
+        "\t Example: ./example_dnn_text_detection modelName(i.e. DB or East) --ocr=<path to ResNet_CTC.onnx>\n\n"
+        "Model path can also be specified using --model argument. \n\n";
+
 // Command-line keys to parse the input arguments
-std::string keys =
-    "{ help  h                        |     | Print help message. }"
-    "{ input i                        | box_in_scene.png | Path to an input image. }"
-    "{ @alias                         |     | An alias name of model to extract preprocessing parameters from models.yml file. }"
-    "{ zoo                            | models.yml | An optional path to file with preprocessing parameters }"
-    "{ recModelPath ocr               |     | Path to a binary .onnx model for recognition. }"
-    "{ thr                            | 0.5 | Confidence threshold for EAST detector. }"
-    "{ nms                            | 0.4 | Non-maximum suppression threshold for EAST detector. }"
-    "{ binaryThreshold bt             | 0.3 | Confidence threshold for the binary map in DB detector. }"
-    "{ polygonThreshold pt            | 0.5 | Confidence threshold for polygons in DB detector. }"
-    "{ maxCandidate max               | 200 | Max candidates for polygons in DB detector. }"
-    "{ unclipRatio ratio              | 2.0 | Unclip ratio for DB detector. }"
-    "{ vocabularyPath vp              | alphabet_36.txt | Path to vocabulary file. }";
+string keys =
+    "{ help  h                        |                     | Print help message. }"
+    "{ input i                        |      right.jpg      | Path to an input image. }"
+    "{ @alias                         |                     | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ zoo                            |  ../dnn/models.yml  | An optional path to file with preprocessing parameters }"
+    "{ ocr                            |                     | Path to a binary .onnx model for recognition. }"
+    "{ model                          |                     | Path to detection model file. }"
+    "{ thr                            |        0.5          | Confidence threshold for EAST detector. }"
+    "{ nms                            |        0.4          | Non-maximum suppression threshold for EAST detector. }"
+    "{ binaryThreshold bt             |        0.3          | Confidence threshold for the binary map in DB detector. }"
+    "{ polygonThreshold pt            |        0.5          | Confidence threshold for polygons in DB detector. }"
+    "{ maxCandidate max               |        200          | Max candidates for polygons in DB detector. }"
+    "{ unclipRatio ratio              |        2.0          | Unclip ratio for DB detector. }"
+    "{ vocabularyPath vp              |   alphabet_36.txt   | Path to vocabulary file. }";
 
 // Function prototype for the four-point perspective transform
 static void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);
@@ -57,24 +65,24 @@ static void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat&
 int main(int argc, char** argv) {
     // Setting up command-line parser with the specified keys
     CommandLineParser parser(argc, argv, keys);
-    const std::string modelName = parser.get<String>("@alias");
-    const std::string zooFile = parser.get<String>("zoo");
+
+    if (!parser.has("@alias") || parser.has("help"))
+    {
+        cout << about << endl;
+        parser.printMessage();
+        return -1;
+    }
+    const string modelName = parser.get<String>("@alias");
+    const string zooFile = findFile(parser.get<String>("zoo"));
 
     keys += genPreprocArguments(modelName, zooFile);
-
     parser = CommandLineParser(argc, argv, keys);
-    parser.about("Text Detection and Recognition using OpenCV"
-                 "Example: ./example_dnn_text_detection modelName(i.e. DB or East) -ocr=<path to ResNet_CTC.onnx>" );
-
-    // Display help message if no arguments are provided or 'help' is requested
-    if (argc == 1 || parser.has("help")) {
-        parser.printMessage();
-        return 0;
-    }
+    parser.about(about);
 
     // Parsing command-line arguments
-    String detModelPath = findFile(parser.get<String>("model"));
-    String recModelPath = parser.get<String>("recModelPath");
+    String sha1 = parser.get<String>("sha1");
+    String detModelPath = findModel(parser.get<String>("model"), sha1);
+    String ocr = findFile(parser.get<String>("ocr"));
     int height = parser.get<int>("height");
     int width = parser.get<int>("width");
     bool imreadRGB = parser.get<bool>("rgb");
@@ -96,7 +104,7 @@ int main(int argc, char** argv) {
     // Asserting detection model path is provided
     CV_Assert(!detModelPath.empty());
 
-    std::vector<std::vector<Point>> detResults;
+    vector<vector<Point>> detResults;
     // Reading the input image
     Mat frame = imread(samples::findFile(parser.get<String>("input")));
 
@@ -124,24 +132,27 @@ int main(int argc, char** argv) {
         detector.detect(frame, detResults);
     }
     else {
-        std::cerr << "Unsupported file config for the detector model. Valid values: east/db" << std::endl;
+        cout << "[ERROR]: Unsupported file config for the detector model. Valid values: east/db" << endl;
         return 1;
     }
 
     // Reading and storing vocabulary for text recognition
     CV_Assert(!vocPath.empty());
-    std::ifstream vocFile;
+    ifstream vocFile;
     vocFile.open(samples::findFile(vocPath));
     CV_Assert(vocFile.is_open());
     String vocLine;
-    std::vector<String> vocabulary;
-    while (std::getline(vocFile, vocLine)) {
+    vector<String> vocabulary;
+    while (getline(vocFile, vocLine)) {
         vocabulary.push_back(vocLine);
     }
 
     // Initializing text recognition model with the provided model path
-    CV_Assert(!recModelPath.empty());
-    TextRecognitionModel recognizer(recModelPath);
+    if (ocr.empty()) {
+        cout << "[ERROR] Please pass recognition model --ocr to run the sample" << endl;
+        return -1;
+    }
+    TextRecognitionModel recognizer(ocr);
     recognizer.setVocabulary(vocabulary);
     recognizer.setDecodeType("CTC-greedy");
 
@@ -160,14 +171,14 @@ int main(int argc, char** argv) {
         } else {
             recInput = frame;
         }
-        std::vector< std::vector<Point> > contours;
+        vector< vector<Point> > contours;
         for (uint i = 0; i < detResults.size(); i++) {
             const auto& quadrangle = detResults[i];
             CV_CheckEQ(quadrangle.size(), (size_t)4, "");
 
             contours.emplace_back(quadrangle);
 
-            std::vector<Point2f> quadrangle_2f;
+            vector<Point2f> quadrangle_2f;
             for (int j = 0; j < 4; j++)
                 quadrangle_2f.emplace_back(detResults[i][j]);
 
@@ -176,8 +187,8 @@ int main(int argc, char** argv) {
             fourPointsTransform(recInput, &quadrangle_2f[0], cropped);
 
             // Recognizing text from the cropped image
-            std::string recognitionResult = recognizer.recognize(cropped);
-            std::cout << i << ": '" << recognitionResult << "'" << std::endl;
+            string recognitionResult = recognizer.recognize(cropped);
+            cout << i << ": '" << recognitionResult << "'" << endl;
 
             // Displaying the recognized text on the image
             putText(frame, recognitionResult, detResults[i][3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
@@ -185,7 +196,7 @@ int main(int argc, char** argv) {
         // Drawing detected text regions on the image
         polylines(frame, contours, true, Scalar(0, 255, 0), 2);
     } else {
-        std::cout << "No Text Detected." << std::endl;
+        cout << "No Text Detected." << endl;
     }
 
     // Displaying the final image with detected and recognized text

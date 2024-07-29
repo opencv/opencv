@@ -31,6 +31,19 @@ import argparse
 import numpy as np
 from common import *
 
+def help():
+    print(
+        '''
+        Use this script for Text Detection and Recognition using OpenCV.
+
+        Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
+        To run:
+        Example: ./example_dnn_text_detection modelName(i.e. DB or East) --ocr=<path to ResNet_CTC.onnx>\
+
+        Model path can also be specified using --model argument.
+        '''
+    )
+
 ############ Add argument parser for command line arguments ############
 def get_args_parser():
     parser = argparse.ArgumentParser(add_help=False)
@@ -76,7 +89,13 @@ def fourPointsTransform(frame, vertices):
 
 def main():
     args = get_args_parser()
-    args.model = findFile(args.model)
+    print(args.alias)
+
+    if args.alias is None or hasattr(args, 'help'):
+        help()
+        exit(1)
+
+    args.model = findModel(args.model, args.sha1)
     args.input = findFile(args.input)
     args.vocabulary_path = findFile(args.vocabulary_path)
 
