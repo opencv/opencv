@@ -38,7 +38,7 @@ static void broadcast1D2TargetMat(Mat& data, const MatShape& targetShape, int ax
     }
 }
 
-static void block_repeat(InputArray src, int axis, int repetitions, OutputArray dst)
+static void block_repeat(InputArray src, MatShape srcShape, int axis, int repetitions, OutputArray dst)
 {
     CV_Assert(src.getObj() != dst.getObj());
     CV_Check(axis, axis >= 0 && axis < src.dims(), "Axis out of range");
@@ -47,8 +47,11 @@ static void block_repeat(InputArray src, int axis, int repetitions, OutputArray 
     Mat src_mat = src.getMat();
     Mat dst_mat;
 
-    MatShape sshape = shape(src_mat);
-    MatShape dshape = sshape;
+    if (src_mat.depth() != CV_32F)
+        src_mat.convertTo(src_mat, CV_32F);
+
+    MatShape sshape = srcShape;
+    MatShape dshape = srcShape;
 
     size_t dtype_bytes = src_mat.elemSize();
     int chunk_size = dtype_bytes;
@@ -56,13 +59,13 @@ static void block_repeat(InputArray src, int axis, int repetitions, OutputArray 
 
     dshape[axis] *= repetitions;
 
-    for (int i = axis+1; i < src.dims(); ++i)
+    for (int i = axis+1; i < sshape.size(); ++i)
         chunk_size*=sshape[i];
 
     for (int i = 0; i <= axis; ++i)
         num_chunks*=sshape[i];
 
-    dst.create(src.dims(), dshape.data(), src.type());
+    dst.create(dshape.size(), dshape.data(), src_mat.type());
     dst_mat = dst.getMat();
 
 
@@ -93,11 +96,8 @@ static void broadcastBlockedMatrix(Mat& mat, const std::vector<T>& data, const M
 
     MatShape subTargetShape(targetShape);
     subTargetShape[axis] = static_cast<int>(subTargetShape[axis] / block_size);
-    Mat tmpMat(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
 
-    copyVecToMat(tmpMat, data);
-
-    block_repeat(tmpMat, axis, block_size, mat);
+    block_repeat(data, subTargetShape, axis, block_size, mat);
 }
 
 template <typename T>
