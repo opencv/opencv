@@ -186,7 +186,7 @@ TEST(Features2D_ORB, MaskType)
     mask(roi).setTo(255);
 
     Mat mask_bool = Mat::zeros(gray.size(), CV_BoolC1);
-    mask(roi).setTo(255);
+    mask_bool(roi).setTo(255);
 
     Ptr<ORB> orb = cv::ORB::create();
 
