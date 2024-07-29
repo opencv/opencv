@@ -507,7 +507,15 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
 
     if (weight_type_ == CV_32F)
     {
-        mask.getUMat().convertTo(weight_map, CV_32F, 1./255.);
+        if (mask.type() == CV_Bool)
+        {
+            weight_map = cv::UMat::zeros(mask.getUMat().size(), CV_32F);
+            weight_map.setTo(1, mask.getUMat());
+        }
+        else
+        {
+            mask.getUMat().convertTo(weight_map, CV_32F, 1./255.);
+        }
     }
     else // weight_type_ == CV_16S
     {
