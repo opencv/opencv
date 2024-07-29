@@ -12,10 +12,22 @@ from tf_text_graph_common import readTextMessage
 from tf_text_graph_ssd import createSSDGraph
 from tf_text_graph_faster_rcnn import createFasterRCNNGraph
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV,
-            cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL,
-           cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
+def help():
+    print(
+        '''
+        Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"\n
+
+        To run:
+            python object_detection.py model_name --input=path/to/your/input/image/or/video (don't pass --input to use device camera)
+
+        Sample command:
+            python object_detection.py yolov8 --input=path/to/image
+        Model path can also be specified using --model argument
+        '''
+    )
+
+backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
@@ -58,10 +70,13 @@ parser = argparse.ArgumentParser(parents=[parser],
                                  description='Use this script to run object detection deep learning networks using OpenCV.',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 args = parser.parse_args()
+if args.alias is None or hasattr(args, 'help'):
+    help()
+    exit(1)
 
-args.model = findFile(args.model)
+args.model = findModel(args.model, args.sha1)
 args.config = findFile(args.config)
-args.classes = findFile(args.classes)
+args.labels = findFile(args.labels)
 
 # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
 config = readTextMessage(args.config)
@@ -78,10 +93,10 @@ if 'model' in config:
 
 
 # Load names of classes
-classes = None
-if args.classes:
-    with open(args.classes, 'rt') as f:
-        classes = f.read().rstrip('\n').split('\n')
+labels = None
+if args.labels:
+    with open(args.labels, 'rt') as f:
+        labels = f.read().rstrip('\n').split('\n')
 
 # Load a network
 net = cv.dnn.readNet(args.model, args.config, args.framework)
@@ -109,9 +124,9 @@ def postprocess(frame, outs):
         label = '%.2f' % conf
 
         # Print a label of class.
-        if classes:
-            assert(classId < len(classes))
-            label = '%s: %s' % (classes[classId], label)
+        if labels:
+            assert(classId < len(labels))
+            label = '%s: %s' % (labels[classId], label)
 
         labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)
         top = max(top, labelSize[1])

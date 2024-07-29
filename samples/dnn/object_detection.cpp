@@ -25,13 +25,22 @@ using namespace cv;
 using namespace dnn;
 using namespace std;
 
+const string about =
+        "Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"
+        "To run:\n"
+        "\t ./example_dnn_object_detection model_name --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)\n"
+        "Sample command:\n"
+        "\t ./example_dnn_object_detection yolov8 --input=$OPENCV_SAMPLES_DATA_PATH/baboon.jpg\n"
+
+        "Model path can also be specified using --model argument. ";
+
 const string param_keys =
     "{ help  h     |            | Print help message. }"
     "{ @alias      |            | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
     "{ device      |  0         | camera device number. }"
     "{ input i     |            | Path to input image or video file. Skip this argument to capture frames from a camera. }"
-    "{ classes     |            | Optional path to a text file with names of classes to label detected objects. }"
+    "{ labels      |            | Optional path to a text file with labels to detected objects. }"
     "{ thr         | .5         | Confidence threshold. }"
     "{ nms         | .4         | Non-maximum suppression threshold. }"
     "{ async       | 0          | Number of asynchronous forwards at the same time. "
@@ -64,7 +73,7 @@ const string target_keys = format(
 string keys = param_keys + backend_keys + target_keys;
 
 float confThreshold, nmsThreshold, scale, paddingValue;
-vector<string> classes;
+vector<string> labels;
 Scalar meanv;
 bool swapRB;
 int inpWidth, inpHeight;
@@ -147,18 +156,19 @@ int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
+    if (!parser.has("@alias") || parser.has("help"))
+    {
+        cout << about << endl;
+        parser.printMessage();
+        return -1;
+    }
+
     modelName = parser.get<String>("@alias");
-    const string zooFile = parser.get<String>("zoo");
+    const string zooFile = findFile(parser.get<String>("zoo"));
 
     keys += genPreprocArguments(modelName, zooFile);
 
     parser = CommandLineParser(argc, argv, keys);
-    parser.about("Use this script to run object detection deep learning networks using OpenCV.");
-    if (argc == 1 || parser.has("help"))
-    {
-        parser.printMessage();
-        return 0;
-    }
 
     confThreshold = parser.get<float>("thr");
     nmsThreshold = parser.get<float>("nms");
@@ -172,21 +182,22 @@ int main(int argc, char** argv)
     paddingValue = parser.get<float>("padvalue");
     paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
     //![preprocess_params]
+    String sha1 = parser.get<String>("sha1");
     CV_Assert(parser.has("model"));
-    const string modelPath = findFile(parser.get<String>("model"));
+    const string modelPath = findModel(parser.get<String>("model"), sha1);
     const string configPath = findFile(parser.get<String>("config"));
     framework = modelPath.substr(modelPath.rfind('.') + 1);
 
-    if (parser.has("classes"))
+    if (parser.has("labels"))
     {
-        const string file = findFile(parser.get<String>("classes"));
+        const string file = findFile(parser.get<String>("labels"));
         ifstream ifs(file.c_str());
         if (!ifs.is_open())
             CV_Error(Error::StsError, "File " + file + " not found");
         string line;
         while (getline(ifs, line))
         {
-            classes.push_back(line);
+            labels.push_back(line);
         }
     }
     //![read_net]
@@ -634,10 +645,10 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
     rectangle(frame, Point(left, top), Point(right, bottom), getColor(classId));
 
     string label = format("%.2f", conf);
-    if (!classes.empty())
+    if (!labels.empty())
     {
-        CV_Assert(classId < (int)classes.size());
-        label = classes[classId] + ": " + label;
+        CV_Assert(classId < (int)labels.size());
+        label = labels[classId] + ": " + label;
     }
 
     int baseLine;
