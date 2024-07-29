@@ -41,7 +41,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/core_c.h"
 
 #define CV_DXT_MUL_CONJ 8
 
