@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
 
 namespace cv
 {
@@ -163,6 +164,8 @@ void KeyPointsFilter::runByPixelsMask( std::vector<KeyPoint>& keypoints, const M
     if( mask.empty() )
         return;
 
+    int nz_mask = countNonZero(mask);
+    std::cout << "nz_mask: " << nz_mask << std::endl;
     keypoints.erase(std::remove_if(keypoints.begin(), keypoints.end(), MaskPredicate(mask)), keypoints.end());
 }
 /*

@@ -185,18 +185,30 @@ TEST(Features2D_ORB, MaskType)
     Mat mask = Mat::zeros(gray.size(), CV_8UC1);
     mask(roi).setTo(255);
 
+    int nz_mask = countNonZero(mask);
+    std::cout << "nz_mask: " << nz_mask << std::endl;
+
     Mat mask_bool = Mat::zeros(gray.size(), CV_BoolC1);
     mask_bool(roi).setTo(255);
 
+    int nz_mask_bool = countNonZero(mask_bool);
+    std::cout << "nz_mask_bool: " << nz_mask_bool << std::endl;
+
     Ptr<ORB> orb = cv::ORB::create();
 
+    std::cout << "Old mask" << std::endl;
     vector<KeyPoint> keypoints_mask;
     Mat descriptors_mask;
     orb->detectAndCompute(gray, mask, keypoints_mask, descriptors_mask, false);
 
+    std::cout << "Bool mask" << std::endl;
     vector<KeyPoint> keypoints_mask_bool;
     Mat descriptors_mask_bool;
     orb->detectAndCompute(gray, mask_bool, keypoints_mask_bool, descriptors_mask_bool, false);
+
+    std::cout << "keypoints_mask_bool: " << keypoints_mask_bool.size() << std::endl;
+    std::cout << "descriptors_mask_bool: " << descriptors_mask_bool.size() << std::endl;
+    std::cout << "descriptors_bool: " << descriptors_mask.size() << std::endl;
 
     Mat diff = descriptors_mask_bool != descriptors_mask;
     ASSERT_EQ(countNonZero(diff), 0) << "descriptors are not identical";
