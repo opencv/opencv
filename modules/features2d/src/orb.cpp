@@ -1129,7 +1129,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             if( !mask.empty() )
             {
                 resize(prevMask, currMask, sz, 0, 0, INTER_LINEAR_EXACT);
-                if( level > firstLevel )
+                if( (level > firstLevel) && (currMask.type() == CV_8U) )
                     threshold(currMask, currMask, 254, 0, THRESH_TOZERO);
             }
 

@@ -3902,6 +3902,9 @@ void resize(int src_type,
         resize_bitExact<int, interpolationLinear<int> >,
         0,
         0,
+        0,
+        0,
+        resize_bitExact<uchar, interpolationLinear<uchar> >, /* resize bool as uchar */
         0
     };
 
