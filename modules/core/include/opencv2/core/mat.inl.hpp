@@ -1672,7 +1672,7 @@ template<typename _Tp> inline
 const _Tp* Mat_<_Tp>::operator [](int y) const
 {
     CV_DbgAssert( 0 <= y && y < size.p[0] );
-    _Tp* p = (const _Tp*)((void*)(data + y*step.p[0]));
+    const _Tp* p = (const _Tp*)((const void*)(data + y*step.p[0]));
     CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
     return p;
 }
