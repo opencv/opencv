@@ -38,7 +38,7 @@ static void broadcast1D2TargetMat(Mat& data, const MatShape& targetShape, int ax
     }
 }
 
-static void block_repeat(InputArray src, MatShape srcShape, int axis, int repetitions, OutputArray dst)
+static void block_repeat(InputArray src, const MatShape& srcShape, int axis, int repetitions, OutputArray dst)
 {
     CV_Assert(src.getObj() != dst.getObj());
     CV_Check(axis, axis >= 0 && axis < src.dims(), "Axis out of range");
@@ -68,6 +68,7 @@ static void block_repeat(InputArray src, MatShape srcShape, int axis, int repeti
     dst.create(dshape.size(), dshape.data(), src_mat.type());
     dst_mat = dst.getMat();
 
+    CV_Assert(dst_mat.isContinuous());
 
     for (int i = 0; i < repetitions; ++i) {
         size_t src_offset = 0;
