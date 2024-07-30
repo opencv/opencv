@@ -69,6 +69,7 @@ static void block_repeat(InputArray src, const MatShape& srcShape, int axis, int
     dst_mat = dst.getMat();
 
     CV_Assert(dst_mat.isContinuous());
+    CV_Assert(src_mat.isContinuous());
 
     for (int i = 0; i < repetitions; ++i) {
         size_t src_offset = 0;
