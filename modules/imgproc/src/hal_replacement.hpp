@@ -1050,6 +1050,33 @@ inline int hal_ni_pyrdown(const uchar* src_data, size_t src_step, int src_width,
 //! @endcond
 
 /**
+   @brief Perform Gaussian Blur and downsampling for input tile with optional margins for submatrix
+   @param src_data Source image data
+   @param src_step Source image step
+   @param src_width Source image width
+   @param src_height Source image height
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param dst_width Destination image width
+   @param dst_height Destination image height
+   @param depth Depths of source and destination image
+   @param cn Number of channels
+   @param margin_left Left margins for source image
+   @param margin_top Top margins for source image
+   @param margin_right Right margins for source image
+   @param margin_bottom Bottom margins for source image
+   @param border_type Border type
+*/
+inline int hal_ni_pyrdown_offset(const uchar* src_data, size_t src_step, int src_width, int src_height,
+                                 uchar* dst_data, size_t dst_step, int dst_width, int dst_height,
+                                 int depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int border_type)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_pyrdown_offset hal_ni_pyrdown_offset
+//! @endcond
+
+/**
    @brief Canny edge detector
    @param src_data Source image data
    @param src_step Source image step
