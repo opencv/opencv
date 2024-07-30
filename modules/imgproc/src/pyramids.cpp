@@ -1266,6 +1266,8 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 
 }
 
+// TODO: enable it when the corresponding IPP code is fixed
+#if 0
 #if defined(HAVE_IPP)
 namespace cv
 {
@@ -1282,7 +1284,6 @@ static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
-
 
     {
         bool isolated = (borderType & BORDER_ISOLATED) != 0;
@@ -1328,6 +1329,8 @@ static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, in
 }
 }
 #endif
+// TODO: enable it when the corresponding IPP code is fixed
+#endif // #if 0
 
 #ifdef HAVE_OPENVX
 namespace cv
@@ -1440,12 +1443,15 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
         CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
     }
 
+// TODO: enable it when the corresponding IPP code is fixed
+#if 0
 #ifdef HAVE_IPP
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
 #endif
     CV_IPP_RUN(borderTypeNI == BORDER_DEFAULT && (!_src.isSubmatrix() || isolated) && dsz == Size((_src.cols() + 1)/2, (_src.rows() + 1)/2),
         ipp_pyrdown( _src,  _dst,  _dsz,  borderType));
+#endif // #if 0
 
 
     PyrFunc func = 0;
