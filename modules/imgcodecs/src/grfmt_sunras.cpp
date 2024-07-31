@@ -410,17 +410,17 @@ bool  SunRasterEncoder::write( const Mat& img, const std::vector<int>& )
 
     if( strm.open(m_filename) )
     {
-        strm.putBytes( fmtSignSunRas, (int)strlen(fmtSignSunRas) );
-        strm.putDWord( width );
-        strm.putDWord( height );
-        strm.putDWord( channels*8 );
-        strm.putDWord( fileStep*height );
-        strm.putDWord( RAS_STANDARD );
-        strm.putDWord( RMT_NONE );
-        strm.putDWord( 0 );
+        CHECK_WRITE(strm.putBytes( fmtSignSunRas, (int)strlen(fmtSignSunRas) ));
+        CHECK_WRITE(strm.putDWord( width ));
+        CHECK_WRITE(strm.putDWord( height ));
+        CHECK_WRITE(strm.putDWord( channels*8 ));
+        CHECK_WRITE(strm.putDWord( fileStep*height ));
+        CHECK_WRITE(strm.putDWord( RAS_STANDARD ));
+        CHECK_WRITE(strm.putDWord( RMT_NONE ));
+        CHECK_WRITE(strm.putDWord( 0 ));
 
         for( y = 0; y < height; y++ )
-            strm.putBytes( img.ptr(y), fileStep );
+            CHECK_WRITE(strm.putBytes( img.ptr(y), fileStep ));
 
         strm.close();
         result = true;
