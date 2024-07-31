@@ -13,15 +13,10 @@ namespace opencv_test
     FAST_DEFAULT, FAST_20_TRUE_TYPE5_8, FAST_20_TRUE_TYPE7_12, FAST_20_TRUE_TYPE9_16,   \
     FAST_20_FALSE_TYPE5_8, FAST_20_FALSE_TYPE7_12, FAST_20_FALSE_TYPE9_16,              \
                                                                                         \
-    AGAST_DEFAULT, AGAST_5_8, AGAST_7_12d, AGAST_7_12s, AGAST_OAST_9_16,                \
-                                                                                        \
     MSER_DEFAULT
 
 #define DETECTORS_EXTRACTORS                                                            \
     ORB_DEFAULT, ORB_1500_13_1,                                                         \
-    AKAZE_DEFAULT, AKAZE_DESCRIPTOR_KAZE,                                               \
-    BRISK_DEFAULT,                                                                      \
-    KAZE_DEFAULT,                                                                       \
     SIFT_DEFAULT
 
 #define CV_ENUM_EXPAND(name, ...) CV_ENUM(name, __VA_ARGS__)
@@ -58,24 +53,6 @@ static inline Ptr<Feature2D> getFeature2D(Feature2DType type)
         return FastFeatureDetector::create(20, false, FastFeatureDetector::TYPE_7_12);
     case FAST_20_FALSE_TYPE9_16:
         return FastFeatureDetector::create(20, false, FastFeatureDetector::TYPE_9_16);
-    case AGAST_DEFAULT:
-        return AgastFeatureDetector::create();
-    case AGAST_5_8:
-        return AgastFeatureDetector::create(70, true, AgastFeatureDetector::AGAST_5_8);
-    case AGAST_7_12d:
-        return AgastFeatureDetector::create(70, true, AgastFeatureDetector::AGAST_7_12d);
-    case AGAST_7_12s:
-        return AgastFeatureDetector::create(70, true, AgastFeatureDetector::AGAST_7_12s);
-    case AGAST_OAST_9_16:
-        return AgastFeatureDetector::create(70, true, AgastFeatureDetector::OAST_9_16);
-    case AKAZE_DEFAULT:
-        return AKAZE::create();
-    case AKAZE_DESCRIPTOR_KAZE:
-        return AKAZE::create(AKAZE::DESCRIPTOR_KAZE);
-    case BRISK_DEFAULT:
-        return BRISK::create();
-    case KAZE_DEFAULT:
-        return KAZE::create();
     case MSER_DEFAULT:
         return MSER::create();
     case SIFT_DEFAULT:

@@ -25,14 +25,6 @@ TEST( Features2d_DescriptorExtractor_SIFT, regression )
     test.safe_run();
 }
 
-TEST( Features2d_DescriptorExtractor_BRISK, regression )
-{
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-brisk",
-                                             (CV_DescriptorExtractorTest<Hamming>::DistanceType)2.f,
-                                            BRISK::create() );
-    test.safe_run();
-}
-
 TEST( Features2d_DescriptorExtractor_ORB, regression )
 {
     // TODO adjust the parameters below
@@ -43,31 +35,6 @@ TEST( Features2d_DescriptorExtractor_ORB, regression )
                                               (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
 #endif
                                              ORB::create() );
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_KAZE, regression )
-{
-    CV_DescriptorExtractorTest< L2<float> > test( "descriptor-kaze",  0.03f,
-                                                 KAZE::create(),
-                                                 L2<float>(), KAZE::create() );
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_AKAZE, regression )
-{
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-akaze",
-                                              (CV_DescriptorExtractorTest<Hamming>::DistanceType)(486*0.05f),
-                                              AKAZE::create(),
-                                              Hamming(), AKAZE::create());
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_AKAZE_DESCRIPTOR_KAZE, regression )
-{
-    CV_DescriptorExtractorTest< L2<float> > test( "descriptor-akaze-with-kaze-desc", 0.03f,
-                                              AKAZE::create(AKAZE::DESCRIPTOR_KAZE),
-                                              L2<float>(), AKAZE::create(AKAZE::DESCRIPTOR_KAZE));
     test.safe_run();
 }
 
@@ -144,15 +111,7 @@ TEST_P(DescriptorImage, no_crash)
     glob(cvtest::TS::ptr()->get_data_path() + pattern, fnames, false);
     std::sort(fnames.begin(), fnames.end());
 
-    Ptr<AKAZE> akaze_mldb = AKAZE::create(AKAZE::DESCRIPTOR_MLDB);
-    Ptr<AKAZE> akaze_mldb_upright = AKAZE::create(AKAZE::DESCRIPTOR_MLDB_UPRIGHT);
-    Ptr<AKAZE> akaze_mldb_256 = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 256);
-    Ptr<AKAZE> akaze_mldb_upright_256 = AKAZE::create(AKAZE::DESCRIPTOR_MLDB_UPRIGHT, 256);
-    Ptr<AKAZE> akaze_kaze = AKAZE::create(AKAZE::DESCRIPTOR_KAZE);
-    Ptr<AKAZE> akaze_kaze_upright = AKAZE::create(AKAZE::DESCRIPTOR_KAZE_UPRIGHT);
     Ptr<ORB> orb = ORB::create();
-    Ptr<KAZE> kaze = KAZE::create();
-    Ptr<BRISK> brisk = BRISK::create();
     size_t n = fnames.size();
     vector<KeyPoint> keypoints;
     Mat descriptors;
@@ -183,15 +142,7 @@ TEST_P(DescriptorImage, no_crash)
         } \
         ASSERT_EQ(descriptors.rows, (int)keypoints.size());
 
-        TEST_DETECTOR("AKAZE:MLDB", akaze_mldb);
-        TEST_DETECTOR("AKAZE:MLDB_UPRIGHT", akaze_mldb_upright);
-        TEST_DETECTOR("AKAZE:MLDB_256", akaze_mldb_256);
-        TEST_DETECTOR("AKAZE:MLDB_UPRIGHT_256", akaze_mldb_upright_256);
-        TEST_DETECTOR("AKAZE:KAZE", akaze_kaze);
-        TEST_DETECTOR("AKAZE:KAZE_UPRIGHT", akaze_kaze_upright);
-        TEST_DETECTOR("KAZE", kaze);
         TEST_DETECTOR("ORB", orb);
-        TEST_DETECTOR("BRISK", brisk);
     }
 }
 

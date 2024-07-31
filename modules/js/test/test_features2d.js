@@ -35,29 +35,13 @@ QUnit.test('Detectors', function(assert) {
   assert.equal(kp.size(), 7, 'MSER');
   */
 
-  let brisk = new cv.BRISK();
-  brisk.detect(image, kp);
-  assert.equal(kp.size(), 191, 'BRISK');
-
   let ffd = new cv.FastFeatureDetector();
   ffd.detect(image, kp);
   assert.equal(kp.size(), 12, 'FastFeatureDetector');
 
-  let afd = new cv.AgastFeatureDetector();
-  afd.detect(image, kp);
-  assert.equal(kp.size(), 67, 'AgastFeatureDetector');
-
   let gftt = new cv.GFTTDetector();
   gftt.detect(image, kp);
   assert.equal(kp.size(), 168, 'GFTTDetector');
-
-  let kaze = new cv.KAZE();
-  kaze.detect(image, kp);
-  assert.equal(kp.size(), 159, 'KAZE');
-
-  let akaze = new cv.AKAZE();
-  akaze.detect(image, kp);
-  assert.equal(kp.size(), 53, 'AKAZE');
 });
 
 QUnit.test('SimpleBlobDetector', function(assert) {

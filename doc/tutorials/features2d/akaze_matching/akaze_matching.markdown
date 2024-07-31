@@ -22,6 +22,8 @@ number of inliers (i.e. matches that fit in the given homography).
 You can find expanded version of this example here:
 <https://github.com/pablofdezalc/test_kaze_akaze_opencv>
 
+\warning You need the [OpenCV contrib module *xfeatures2d*](https://github.com/opencv/opencv_contrib/tree/5.x/modules/xfeatures2d) to be able to use the AKAZE features.
+
 Data
 ----
 
@@ -42,7 +44,7 @@ You can find the images (*graf1.png*, *graf3.png*) and homography (*H1to3p.xml*)
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/5.x/samples/cpp/tutorial_code/features2D/AKAZE_match.cpp)
+    [here](https://github.com/opencv/opencv/5.x/samples/cpp/tutorial_code/features2D/AKAZE_match.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/features2D/AKAZE_match.cpp
@@ -50,7 +52,7 @@ You can find the images (*graf1.png*, *graf3.png*) and homography (*H1to3p.xml*)
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/5.x/samples/java/tutorial_code/features2D/akaze_matching/AKAZEMatchDemo.java)
+    [here](https://github.com/opencv/opencv/5.x/samples/java/tutorial_code/features2D/akaze_matching/AKAZEMatchDemo.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/features2D/akaze_matching/AKAZEMatchDemo.java
@@ -58,7 +60,7 @@ You can find the images (*graf1.png*, *graf3.png*) and homography (*H1to3p.xml*)
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/5.x/samples/python/tutorial_code/features2D/akaze_matching/AKAZE_match.py)
+    [here](https://github.com/opencv/opencv/5.x/samples/python/tutorial_code/features2D/akaze_matching/AKAZE_match.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/features2D/akaze_matching/AKAZE_match.py

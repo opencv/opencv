@@ -422,11 +422,11 @@ int main(int argc, char* argv[])
     {
         finder = ORB::create();
     }
+#ifdef HAVE_OPENCV_XFEATURES2D
     else if (features_type == "akaze")
     {
-        finder = AKAZE::create();
+        finder = xfeatures2d::AKAZE::create();
     }
-#ifdef HAVE_OPENCV_XFEATURES2D
     else if (features_type == "surf")
     {
         finder = xfeatures2d::SURF::create();
