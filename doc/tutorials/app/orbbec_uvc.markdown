@@ -39,14 +39,14 @@ Code
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/blob/5.x/samples/python/videocapture_obsensor.py)
-@include samples/python/videocapture_obsensor.py
+[here](https://github.com/opencv/opencv/blob/5.x/samples/python/tutorial_code/videoio/videocapture_obsensor.py)
+@include samples/python/tutorial_code/videoio/videocapture_obsensor.py
 @end_toggle
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/blob/5.x/samples/cpp/videocapture_obsensor.cpp)
-@include samples/cpp/videocapture_obsensor.cpp
+[here](https://github.com/opencv/opencv/blob/5.x/samples/cpp/tutorial_code/videoio/uvc_orbbec/videocapture_obsensor.cpp)
+@include samples/cpp/tutorial_code/videoio/uvc_orbbec/videocapture_obsensor.cpp
 @end_toggle
 
 ### Code Explanation
@@ -123,4 +123,4 @@ This tutorial code's is shown lines below. You can also download it from
 ![BGR And DEPTH And DepthToColor frame](images/orbbec_uvc_cpp.jpg)
 
 ### Note
-Mac users need sudo privileges to execute the code.
+Mac users need `sudo` privileges to execute the code.
