@@ -377,26 +377,30 @@ void  WBaseStream::allocate()
 }
 
 
-void  WBaseStream::writeBlock()
+bool  WBaseStream::writeBlock()
 {
     int size = (int)(m_current - m_start);
 
     CV_Assert(isOpened());
     if( size == 0 )
-        return;
+        return true;
 
     if( m_buf )
     {
         size_t sz = m_buf->size();
         m_buf->resize( sz + size );
         memcpy( &(*m_buf)[sz], m_start, size );
+        m_current = m_start;
+        m_block_pos += size;
+        return true;
     }
     else
     {
-        fwrite( m_start, 1, size, m_file );
+        size_t written = fwrite( m_start, 1, size, m_file );
+        m_current = m_start;
+        m_block_pos += size;
+        return written == (size_t)size;
     }
-    m_current = m_start;
-    m_block_pos += size;
 }
 
 
@@ -463,15 +467,17 @@ WLByteStream::~WLByteStream()
 {
 }
 
-void WLByteStream::putByte( int val )
+bool  WLByteStream::putByte( int val )
 {
     *m_current++ = (uchar)val;
     if( m_current >= m_end )
-        writeBlock();
+        return writeBlock();
+
+    return true;
 }
 
 
-void WLByteStream::putBytes( const void* buffer, int count )
+bool  WLByteStream::putBytes( const void* buffer, int count )
 {
     uchar* data = (uchar*)buffer;
 
@@ -492,12 +498,18 @@ void WLByteStream::putBytes( const void* buffer, int count )
             count -= l;
         }
         if( m_current == m_end )
-            writeBlock();
+        {
+            bool written = writeBlock();
+            if (!written)
+                return false;
+        }
     }
+
+    return true;
 }
 
 
-void WLByteStream::putWord( int val )
+bool  WLByteStream::putWord( int val )
 {
     uchar *current = m_current;
 
@@ -507,17 +519,19 @@ void WLByteStream::putWord( int val )
         current[1] = (uchar)(val >> 8);
         m_current = current + 2;
         if( m_current == m_end )
-            writeBlock();
+            return writeBlock();
     }
     else
     {
         putByte(val);
         putByte(val >> 8);
     }
+
+    return true;
 }
 
 
-void WLByteStream::putDWord( int val )
+bool  WLByteStream::putDWord( int val )
 {
     uchar *current = m_current;
 
@@ -529,7 +543,7 @@ void WLByteStream::putDWord( int val )
         current[3] = (uchar)(val >> 24);
         m_current = current + 4;
         if( m_current == m_end )
-            writeBlock();
+            return writeBlock();
     }
     else
     {
@@ -538,6 +552,8 @@ void WLByteStream::putDWord( int val )
         putByte(val >> 16);
         putByte(val >> 24);
     }
+
+    return true;
 }
 
 
@@ -548,7 +564,7 @@ WMByteStream::~WMByteStream()
 }
 
 
-void WMByteStream::putWord( int val )
+bool  WMByteStream::putWord( int val )
 {
     uchar *current = m_current;
 
@@ -558,17 +574,19 @@ void WMByteStream::putWord( int val )
         current[1] = (uchar)val;
         m_current = current + 2;
         if( m_current == m_end )
-            writeBlock();
+            return writeBlock();
     }
     else
     {
         putByte(val >> 8);
         putByte(val);
     }
+
+    return true;
 }
 
 
-void WMByteStream::putDWord( int val )
+bool  WMByteStream::putDWord( int val )
 {
     uchar *current = m_current;
 
@@ -580,7 +598,7 @@ void WMByteStream::putDWord( int val )
         current[3] = (uchar)val;
         m_current = current + 4;
         if( m_current == m_end )
-            writeBlock();
+            return writeBlock();
     }
     else
     {
@@ -589,6 +607,8 @@ void WMByteStream::putDWord( int val )
         putByte(val >> 8);
         putByte(val);
     }
+
+    return true;
 }
 
 }
