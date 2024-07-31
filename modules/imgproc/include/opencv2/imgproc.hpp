@@ -1847,7 +1847,10 @@ CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
                           int borderType = BORDER_DEFAULT );
 
 /** @example samples/cpp/snippets/laplace.cpp
-An example using Laplace transformations for edge detection
+An example using Laplace filter for edge detection
+*/
+/** @example samples/python/snippets/laplace.py
+An example using Laplace filter for edge detection in python
 */
 
 /** @brief Calculates the Laplacian of an image.
@@ -1967,6 +1970,10 @@ size as src .
 CV_EXPORTS_W void cornerHarris( InputArray src, OutputArray dst, int blockSize,
                                 int ksize, double k,
                                 int borderType = BORDER_DEFAULT );
+
+/** @example samples/python/snippets/texture_flow.py
+An example using cornerEigenValsAndVecs in python
+*/
 
 /** @brief Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
@@ -2158,6 +2165,9 @@ CV_EXPORTS CV_WRAP_AS(goodFeaturesToTrackWithQuality) void goodFeaturesToTrack(
 An example using the Hough line detector
 ![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
 */
+/** @example samples/python/snippets/houghlines.py
+An example using the Hough line detector in python
+*/
 
 /** @brief Finds lines in a binary image using the standard Hough transform.
 
@@ -2247,6 +2257,9 @@ CV_EXPORTS_W void HoughLinesPointSet( InputArray point, OutputArray lines, int l
 
 /** @example samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp
 An example using the Hough circle detector
+*/
+/** @example samples/python/snippets/houghcircles.py
+An example using the Hough circle detector in python
 */
 
 /** @brief Finds circles in a grayscale image using the Hough transform.
@@ -2688,6 +2701,9 @@ CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
 
 /** @example samples/cpp/snippets/polar_transforms.cpp
 An example using the cv::linearPolar and cv::logPolar operations
+*/
+/** @example samples/python/snippets/logpolar.py
+An example using the linearPolar and logPolar operations in python
 */
 
 /** @brief Remaps an image to semilog-polar coordinates space.
@@ -3423,6 +3439,9 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 /** @example samples/cpp/snippets/watershed.cpp
 An example using the watershed algorithm
 */
+/** @example samples/python/snippets/watershed.py
+An example using the watershed algorithm using python
+*/
 
 /** @brief Performs a marker-based image segmentation using the watershed algorithm.
 
@@ -3534,6 +3553,9 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
 
 /** @example samples/cpp/snippets/distrans.cpp
 An example on using the distance transform
+*/
+/** @example samples/python/snippets/distrans.py
+An example on using the distance transform in python
 */
 
 /** @brief Calculates the distance to the closest zero pixel for each pixel of the source image.
@@ -4069,6 +4091,10 @@ CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays con
 //! @overload
 CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
 
+/** @example samples/python/snippets/squares.py
+An example using approxPolyDP function in python.
+*/
+
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
 The function cv::approxPolyDP approximates a curve or a polygon with another curve/polygon with less
@@ -4400,6 +4426,10 @@ CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
  @param points Input 2D point set, stored in std::vector\<\> or Mat
  */
 CV_EXPORTS_W RotatedRect fitEllipseDirect( InputArray points );
+
+/** @example samples/python/snippets/fitline.py
+An example for fitting line in python
+*/
 
 /** @brief Fits a line to a 2D or 3D point set.
 
@@ -4762,6 +4792,9 @@ CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const i
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
+/** @example samples/python/snippets/contours.py
+An example program illustrates the use of findContours and drawContours in python
+*/
 
 /** @example samples/cpp/snippets/segment_objects.cpp
 An example using drawContours to clean up a background segmentation result
