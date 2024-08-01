@@ -692,16 +692,13 @@ void Mat::create(int d, const int* _sizes, int _type)
     if( total() > 0 )
     {
         MatAllocator *a = allocator, *a0 = getDefaultAllocator();
-#ifdef HAVE_TGPU
-        if( !a || a == tegra::getAllocator() )
-            a = tegra::getAllocator(d, _sizes, _type);
-#endif
         if(!a)
             a = a0;
         try
         {
             u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
+            allocator = a;
         }
         catch (...)
         {
@@ -709,6 +706,7 @@ void Mat::create(int d, const int* _sizes, int _type)
                 throw;
             u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
+            allocator = a0;
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
     }
