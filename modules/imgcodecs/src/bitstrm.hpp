@@ -63,6 +63,12 @@ DECLARE_RBS_EXCEPTION(THROW_FORB)
 DECLARE_RBS_EXCEPTION(BAD_HEADER)
 #define RBS_BAD_HEADER RBS_BAD_HEADER_Exception(cv::Error::StsError, "Invalid header", CV_Func, __FILE__, __LINE__)
 
+#define CHECK_WRITE(action) \
+if (!action) \
+{ \
+    return false; \
+}
+
 typedef unsigned long ulong;
 
 // class RBaseStream - base class for other reading streams.
@@ -147,7 +153,7 @@ protected:
     bool    m_is_opened;
     std::vector<uchar>* m_buf;
 
-    virtual void  writeBlock();
+    virtual bool  writeBlock();
     virtual void  release();
     virtual void  allocate();
 };
@@ -160,10 +166,10 @@ class WLByteStream : public WBaseStream
 public:
     virtual ~WLByteStream();
 
-    void  putByte( int val );
-    void  putBytes( const void* buffer, int count );
-    void  putWord( int val );
-    void  putDWord( int val );
+    bool putByte( int val );
+    bool putBytes( const void* buffer, int count );
+    bool putWord( int val );
+    bool putDWord( int val );
 };
 
 
@@ -173,8 +179,8 @@ class WMByteStream : public WLByteStream
 {
 public:
     virtual ~WMByteStream();
-    void  putWord( int val );
-    void  putDWord( int val );
+    bool putWord( int val );
+    bool putDWord( int val );
 };
 
 inline unsigned BSWAP(unsigned v)
