@@ -55,6 +55,9 @@
 #include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
 
+#include "warp_kernels.simd.hpp"
+#include "warp_kernels.simd_declarations.hpp"
+
 using namespace cv;
 
 namespace cv
@@ -2580,6 +2583,12 @@ void warpAffine(int src_type,
 
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
     Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
+
+    if (interpolation == INTER_LINEAR &&
+        (dst.channels() == 1 || dst.channels() == 3 || dst.channels() == 4) &&
+        (dst.depth() == CV_8U || dst.depth() == CV_16U || dst.depth() == CV_32F)) {
+        CV_CPU_DISPATCH(warpAffineSimdInvoker, (dst, src, M, interpolation, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+    }
 
     int x;
     AutoBuffer<int> _abdelta(dst.cols*2);

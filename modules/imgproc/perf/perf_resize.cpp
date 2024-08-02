@@ -15,24 +15,6 @@ typedef TestBaseWithParam<MatInfo_SizePair_t> MatInfo_SizePair;
                           CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4, \
                           CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4
 
-// For gradient-ish testing of the other matrix formats
-template<typename T>
-static void fillFPGradient(Mat& img)
-{
-    const int ch = img.channels();
-
-    int r, c, i;
-    for(r=0; r<img.rows; r++)
-    {
-        for(c=0; c<img.cols; c++)
-        {
-            T vals[] = {(T)r, (T)c, (T)(r*c), (T)(r*c/(r+c+1))};
-            T *p = (T*)img.ptr(r, c);
-            for(i=0; i<ch; i++) p[i] = (T)vals[i];
-        }
-    }
-}
-
 PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
             testing::Values(
                 MatInfo_Size_Size_t(CV_8UC1, szVGA, szqHD),
@@ -51,7 +33,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
     Size to = get<2>(GetParam());
 
     cv::Mat src(from, matType), dst(to, matType);
-    cvtest::fillGradient(src);
+    cvtest::fillGradient<uint8_t>(src);
     declare.in(src).out(dst);
 
     TEST_CYCLE_MULTIRUN(10) resize(src, dst, to, 0, 0, INTER_LINEAR_EXACT);
@@ -79,9 +61,9 @@ PERF_TEST_P(MatInfo_SizePair, resizeUpLinearNonExact,
     cv::Mat src(from, matType), dst(to, matType);
     switch(src.depth())
     {
-        case CV_8U: cvtest::fillGradient(src); break;
-        case CV_16U: fillFPGradient<ushort>(src); break;
-        case CV_32F: fillFPGradient<float>(src); break;
+        case CV_8U: cvtest::fillGradient<uint8_t>(src); break;
+        case CV_16U: cvtest::fillGradient<ushort>(src); break;
+        case CV_32F: cvtest::fillGradient<float>(src); break;
     }
     declare.in(src).out(dst);
 
@@ -120,7 +102,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
     Size to = get<2>(GetParam());
 
     cv::Mat src(from, matType), dst(to, matType);
-    cvtest::fillGradient(src);
+    cvtest::fillGradient<uint8_t>(src);
     declare.in(src).out(dst);
 
     TEST_CYCLE_MULTIRUN(10) resize(src, dst, to, 0, 0, INTER_LINEAR_EXACT);
@@ -155,9 +137,9 @@ PERF_TEST_P(MatInfo_SizePair, resizeDownLinearNonExact,
     cv::Mat src(from, matType), dst(to, matType);
     switch(src.depth())
     {
-        case CV_8U: cvtest::fillGradient(src); break;
-        case CV_16U: fillFPGradient<ushort>(src); break;
-        case CV_32F: fillFPGradient<float>(src); break;
+        case CV_8U: cvtest::fillGradient<uint8_t>(src); break;
+        case CV_16U: cvtest::fillGradient<ushort>(src); break;
+        case CV_32F: cvtest::fillGradient<float>(src); break;
     }
     declare.in(src).out(dst);
 

@@ -150,7 +150,7 @@ void CV_ImageWarpBaseTest::generate_test_data()
     while (depth == CV_8S || depth == CV_32S)
         depth = rng.uniform(0, CV_64F);
 
-    int cn = rng.uniform(1, 4);
+    int cn = rng.uniform(1, 5);
 
     src.create(ssize, CV_MAKE_TYPE(depth, cn));
 
@@ -1045,6 +1045,13 @@ protected:
     Mat M;
 private:
     void warpAffine(const Mat&, Mat&);
+
+    template<typename T>
+    void newWarpAffine(const Mat&, Mat&, const Mat&);
+
+    template<int channels, typename T>
+    void newLinear(int x, float sx, float sy, const T *srcptr_, T *dstptr, int srccols, int srcrows, size_t srcstep,
+                   const T *bval, int borderType_x, int borderType_y);
 };
 
 CV_WarpAffine_Test::CV_WarpAffine_Test() :
@@ -1088,7 +1095,7 @@ void CV_WarpAffine_Test::run_func()
 
 float CV_WarpAffine_Test::get_success_error_level(int _interpolation, int _depth) const
 {
-    return _depth == CV_8U ? 0 : CV_ImageWarpBaseTest::get_success_error_level(_interpolation, _depth);
+    return _depth == CV_8U ? 1.f : CV_ImageWarpBaseTest::get_success_error_level(_interpolation, _depth);
 }
 
 void CV_WarpAffine_Test::run_reference_func()
@@ -1096,6 +1103,152 @@ void CV_WarpAffine_Test::run_reference_func()
     Mat tmp = Mat::zeros(dst.size(), dst.type());
     warpAffine(src, tmp);
     tmp.convertTo(reference_dst, reference_dst.depth());
+}
+
+#define FETCH_PIXEL_SCALAR(cn, dy, dx) \
+    if ((((unsigned)(ix + dx) < (unsigned)srccols) & ((unsigned)(iy + dy) < (unsigned)srcrows)) != 0) { \
+        size_t ofs = dy*srcstep + dx*cn; \
+        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = srcptr[ofs+ci];} \
+    } else if (borderType == BORDER_CONSTANT) { \
+        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = bval[ci];} \
+    } else if (borderType == BORDER_TRANSPARENT) { \
+        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = dstptr[x*cn+ci];} \
+    } else { \
+        int ix_ = borderInterpolate(ix + dx, srccols, borderType_x); \
+        int iy_ = borderInterpolate(iy + dy, srcrows, borderType_y); \
+        size_t glob_ofs = iy_*srcstep + ix_*cn; \
+        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = srcptr_[glob_ofs+ci];} \
+    }
+
+#define WARPAFFINE_SHUFFLE(cn) \
+    if ((((unsigned)ix < (unsigned)(srccols-1)) & \
+        ((unsigned)iy < (unsigned)(srcrows-1))) != 0) { \
+        for (int ci = 0; ci < cn; ci++) { \
+            pxy[ci] = srcptr[ci]; \
+            pxy[ci+cn] = srcptr[ci+cn]; \
+            pxy[ci+cn*2] = srcptr[srcstep+ci]; \
+            pxy[ci+cn*3] = srcptr[srcstep+ci+cn]; \
+        } \
+    } else { \
+        if ((borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT) && \
+            (((unsigned)(ix+1) >= (unsigned)(srccols+1))| \
+            ((unsigned)(iy+1) >= (unsigned)(srcrows+1))) != 0) { \
+            if (borderType == BORDER_CONSTANT) { \
+                for (int ci = 0; ci < cn; ci++) { dstptr[x*cn+ci] = bval[ci]; } \
+            } \
+            return; \
+        } \
+        FETCH_PIXEL_SCALAR(cn, 0, 0); \
+        FETCH_PIXEL_SCALAR(cn, 0, 1); \
+        FETCH_PIXEL_SCALAR(cn, 1, 0); \
+        FETCH_PIXEL_SCALAR(cn, 1, 1); \
+    }
+
+template<typename T>
+static inline void warpaffine_linear_calc(int cn, const T *pxy, T *dst, float sx, float sy)
+{
+    for (int ci = 0; ci < cn; ci++) {
+        float p00 = pxy[ci];
+        float p01 = pxy[ci+cn];
+        float p10 = pxy[ci+cn*2];
+        float p11 = pxy[ci+cn*3];
+        float v0 = p00 + sx*(p01 - p00);
+        float v1 = p10 + sx*(p11 - p10);
+        v0 += sy*(v1 - v0);
+        dst[ci] = saturate_cast<T>(v0);
+    }
+}
+template<>
+inline void warpaffine_linear_calc<float>(int cn, const float *pxy, float *dst, float sx, float sy)
+{
+    for (int ci = 0; ci < cn; ci++) {
+        float p00 = pxy[ci];
+        float p01 = pxy[ci+cn];
+        float p10 = pxy[ci+cn*2];
+        float p11 = pxy[ci+cn*3];
+        float v0 = p00 + sx*(p01 - p00);
+        float v1 = p10 + sx*(p11 - p10);
+        v0 += sy*(v1 - v0);
+        dst[ci] = v0;
+    }
+}
+
+template<int channels, typename T>
+void CV_WarpAffine_Test::newLinear(int x, float sx, float sy, const T *srcptr_, T *dstptr,
+                                   int srccols, int srcrows, size_t srcstep,
+                                   const T *bval, int borderType_x, int borderType_y)
+{
+    int ix = (int)floorf(sx), iy = (int)floorf(sy);
+    sx -= ix; sy -= iy;
+
+    T pxy[channels*4];
+    const T *srcptr = srcptr_ + srcstep*iy + ix*channels;
+
+    WARPAFFINE_SHUFFLE(channels);
+
+    warpaffine_linear_calc(channels, pxy, dstptr+x*channels, sx, sy);
+}
+template<>
+void CV_WarpAffine_Test::newLinear<3, float>(int x, float sx, float sy, const float *srcptr_, float *dstptr,
+                                          int srccols, int srcrows, size_t srcstep,
+                                          const float *bval, int borderType_x, int borderType_y)
+{
+    int ix = (int)floorf(sx), iy = (int)floorf(sy);
+    sx -= ix; sy -= iy;
+
+    float pxy[12];
+    const float *srcptr = srcptr_ + srcstep*iy + ix*3;
+
+    WARPAFFINE_SHUFFLE(3);
+
+    warpaffine_linear_calc(3, pxy, dstptr+x*3, sx, sy);
+}
+
+template<typename T>
+void CV_WarpAffine_Test::newWarpAffine(const Mat &_src, Mat &_dst, const Mat &tM)
+{
+    int num_channels = _dst.channels();
+    CV_CheckTrue(num_channels == 1 || num_channels == 3 || num_channels == 4, "");
+
+    auto *srcptr_ = _src.ptr<const T>();
+    auto *dstptr_ = _dst.ptr<T>();
+    size_t srcstep = _src.step/sizeof(T), dststep = _dst.step/sizeof(T);
+    int srccols = _src.cols, srcrows = _src.rows;
+    int dstcols = _dst.cols, dstrows = _dst.rows;
+
+    Mat ttM;
+    tM.convertTo(ttM, CV_32F);
+    auto *_M = ttM.ptr<const float>();
+
+    T bval[] = {
+        saturate_cast<T>(borderValue[0]),
+        saturate_cast<T>(borderValue[1]),
+        saturate_cast<T>(borderValue[2]),
+        saturate_cast<T>(borderValue[3]),
+    };
+
+    int borderType_x = borderType != BORDER_CONSTANT &&
+                       borderType != BORDER_TRANSPARENT &&
+                       srccols <= 1 ? BORDER_REPLICATE : borderType;
+    int borderType_y = borderType != BORDER_CONSTANT &&
+                       borderType != BORDER_TRANSPARENT &&
+                       srcrows <= 1 ? BORDER_REPLICATE : borderType;
+
+    for (int y = 0; y < dstrows; y++) {
+        T* dstptr = dstptr_ + y*dststep;
+        for (int x = 0; x < dstcols; x++) {
+            float sx = x*_M[0] + y*_M[1] + _M[2];
+            float sy = x*_M[3] + y*_M[4] + _M[5];
+
+            if (num_channels == 3) {
+                newLinear<3>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+            } else if (num_channels == 4) {
+                newLinear<4>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+            } else {
+                newLinear<1>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+            }
+        }
+    }
 }
 
 void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
@@ -1122,6 +1275,17 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
     if (!(interpolation & cv::WARP_INVERSE_MAP))
         invertAffineTransform(tM.clone(), tM);
 
+    if (inter == INTER_LINEAR) {
+        int dst_depth = _dst.depth(), dst_channels = _dst.channels();
+        if (dst_depth == CV_8U && (dst_channels == 1 || dst_channels == 3 || dst_channels == 4)) {
+            return newWarpAffine<uint8_t>(_src, _dst, tM);
+        } else if (dst_depth == CV_16U && (dst_channels == 1 || dst_channels == 3 || dst_channels == 4)) {
+            return newWarpAffine<uint16_t>(_src, _dst, tM);
+        } else if (dst_depth == CV_32F && (dst_channels == 1 || dst_channels == 3 || dst_channels == 4)) {
+            return newWarpAffine<float>(_src, _dst, tM);
+        }
+    }
+
     const int AB_BITS = MAX(10, (int)INTER_BITS);
     const int AB_SCALE = 1 << AB_BITS;
     int round_delta = (inter == INTER_NEAREST) ? AB_SCALE / 2 : (AB_SCALE / INTER_TAB_SIZE / 2);
@@ -1134,7 +1298,7 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
         {
             int v1 = saturate_cast<int>(saturate_cast<int>(data_tM[0] * dx * AB_SCALE) +
                     saturate_cast<int>((data_tM[1] * dy + data_tM[2]) * AB_SCALE) + round_delta),
-                   v2 = saturate_cast<int>(saturate_cast<int>(data_tM[3] * dx * AB_SCALE) +
+                v2 = saturate_cast<int>(saturate_cast<int>(data_tM[3] * dx * AB_SCALE) +
                     saturate_cast<int>((data_tM[4] * dy + data_tM[5]) * AB_SCALE) + round_delta);
             v1 >>= AB_BITS - INTER_BITS;
             v2 >>= AB_BITS - INTER_BITS;
