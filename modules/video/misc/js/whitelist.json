@@ -1,0 +1,14 @@
+{
+    "": [
+        "CamShift",
+        "calcOpticalFlowFarneback",
+        "calcOpticalFlowPyrLK",
+        "createBackgroundSubtractorMOG2",
+        "findTransformECC",
+        "meanShift"
+    ],
+    "BackgroundSubtractorMOG2": ["BackgroundSubtractorMOG2", "apply"],
+    "BackgroundSubtractor": ["apply", "getBackgroundImage"],
+    "TrackerMIL": ["create"],
+    "TrackerMIL_Params": []
+}
