@@ -15,7 +15,7 @@
 // __EMSCRIPTEN_major__, __EMSCRIPTEN_minor__ and __EMSCRIPTEN_tiny__ are defined via commandline in
 // https://github.com/emscripten-core/emscripten/blob/1690a5802cd1241adc9714fb7fa2f633d38860dc/tools/shared.py#L506-L515
 //
-// See https://github.com/opencv/opencv/pull/25909 
+// See https://github.com/opencv/opencv/pull/25909
 #ifndef __EMSCRIPTEN_major__
 #include <emscripten/version.h>
 #endif
