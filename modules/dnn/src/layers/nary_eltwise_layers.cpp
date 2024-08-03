@@ -1006,7 +1006,7 @@ public:
         // In case only one input
         if (inputs.size() == 1) {
             auto &ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-            ngraph::OutputVector inp{ieInpNode};
+            ov::OutputVector inp{ieInpNode};
             auto blank = std::make_shared<ov::op::v0::Concat>(inp, 0);
             return Ptr<BackendNode>(new InfEngineNgraphNode(blank));
         }
