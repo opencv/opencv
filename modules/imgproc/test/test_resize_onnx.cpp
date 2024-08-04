@@ -12,7 +12,6 @@ struct ResizeOnnx
     Size szsrc, szref, szdst;
     Point2d scale;
     float cubic;
-    Rect2d roi;
     /* make sure insrc is:
      *   (1) integer
      *   (2) range [-127, 127]
@@ -44,7 +43,7 @@ struct ResizeOnnx
         Mat iR(szref, CV_64F, inref.data());
         Mat S = iS, R = iR, nS, nR;
         double alpha[8] = {1, -1, 5, 5, 0, -3, -2, +4};
-        double  beta[8] = {0, -0, 0, 7, 7, -7, -6, +6};
+        double  beta[8] = {0, -0, 0, 7, 7, +7, -6, -6};
         RNG& rng = TS::ptr()->get_rng();
         for (int cn = 1; cn <= 8; ++cn)
         {
@@ -59,21 +58,19 @@ struct ResizeOnnx
             {
                 double eps = (depth <= CV_32S) ? 1.0 : 1e-3;
                 int type = CV_MAKETYPE(depth, cn);
-                string errinfo = "fail on type " + typeToString(type);
                 Mat src, ref, dst;
                 rand_roi(rng, src, szsrc, type);
                 if (szdst.area())
                     rand_roi(rng, dst, szdst, type);
                 S.convertTo(src, type);
                 R.convertTo(ref, type);
-                resizeOnnx(src, dst, szdst, scale, interpolate, cubic, roi);
-                EXPECT_EQ(ref.size(), dst.size()) << errinfo;
+                resizeOnnx(src, dst, szdst, scale, interpolate, cubic);
                 // nearest must give bit-same result
                 if ((interpolate & INTER_SAMPLER_MASK) == INTER_NEAREST)
-                    EXPECT_EQ(cv::norm(ref, dst, NORM_INF), 0.0) << errinfo;
+                    EXPECT_MAT_NEAR(ref, dst, 0.0);
                 // cvRound(4.5) = 4, but when doing resize with int, we may get 5
                 else
-                    EXPECT_LE(cv::norm(ref, dst, NORM_INF), eps) << errinfo;
+                    EXPECT_MAT_NEAR(ref, dst, eps);
             }
         }
     }
@@ -85,8 +82,7 @@ TEST(ResizeOnnx, downsample_scales_cubic)
 {
     ResizeOnnx{
         INTER_CUBIC,
-        Size(4, 4), Size(3, 3), Size(), Point2d(0.8, 0.8),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(3, 3), Size(), Point2d(0.8, 0.8), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
              1.47119141, 2.78125   ,  4.08251953,
@@ -96,12 +92,25 @@ TEST(ResizeOnnx, downsample_scales_cubic)
     }.run();
 }
 
+TEST(ResizeOnnx, downsample_scales_cubic_A_n0p5_exclude_outside)
+{
+    ResizeOnnx{
+        INTER_CUBIC | INTER_EXCLUDE_OUTSIDE,
+        Size(4, 4), Size(3, 3), Size(), Point2d(0.8, 0.8), -0.5f,
+        {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+        {
+             1.36812675,  2.6695014 ,  4.0133367 ,
+             6.57362535,  7.875     ,  9.2188353 ,
+            11.94896657, 13.25034122, 14.59417652,
+        }
+    }.run();
+}
+
 TEST(ResizeOnnx, downsample_scales_cubic_align_corners)
 {
     ResizeOnnx{
         INTER_CUBIC | INTER_ALIGN_CORNERS,
-        Size(4, 4), Size(3, 3), Size(), Point2d(0.8, 0.8),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(3, 3), Size(), Point2d(0.8, 0.8), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
              1.0       ,  2.39519159,  3.79038317,
@@ -115,8 +124,7 @@ TEST(ResizeOnnx, downsample_scales_cubic_antialias)
 {
     ResizeOnnx{
         INTER_CUBIC | INTER_ANTIALIAS,
-        Size(4, 4), Size(2, 2), Size(), Point2d(0.6, 0.6),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(2, 2), Size(), Point2d(0.6, 0.6), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
             2.5180721,  4.2858863,
@@ -129,8 +137,7 @@ TEST(ResizeOnnx, downsample_scales_linear)
 {
     ResizeOnnx{
         INTER_LINEAR,
-        Size(4, 2), Size(2, 1), Size(), Point2d(0.6, 0.6),
-        -0.75f, Rect2d(),
+        Size(4, 2), Size(2, 1), Size(), Point2d(0.6, 0.6), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8},
         {2.6666665, 4.3333331}
     }.run();
@@ -140,8 +147,7 @@ TEST(ResizeOnnx, downsample_scales_linear_align_corners)
 {
     ResizeOnnx{
         INTER_LINEAR | INTER_ALIGN_CORNERS,
-        Size(4, 2), Size(2, 1), Size(), Point2d(0.6, 0.6),
-        -0.75f, Rect2d(),
+        Size(4, 2), Size(2, 1), Size(), Point2d(0.6, 0.6), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8},
         {1.0, 3.142857}
     }.run();
@@ -151,8 +157,7 @@ TEST(ResizeOnnx, downsample_scales_linear_antialias)
 {
     ResizeOnnx{
         INTER_LINEAR | INTER_ANTIALIAS,
-        Size(4, 4), Size(2, 2), Size(), Point2d(0.6, 0.6),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(2, 2), Size(), Point2d(0.6, 0.6), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
             2.875,  4.5,
@@ -165,8 +170,7 @@ TEST(ResizeOnnx, downsample_scales_linear_half_pixel_symmetric)
 {
     ResizeOnnx{
         INTER_LINEAR | INTER_HALF_PIXEL_SYMMETRIC,
-        Size(4, 1), Size(2, 1), Size(), Point2d(0.6, 1.0),
-        -0.75f, Rect2d(),
+        Size(4, 1), Size(2, 1), Size(), Point2d(0.6, 1.0), -0.75f,
         {1, 2, 3, 4},
         {1.6666667, 3.3333333}
     }.run();
@@ -176,8 +180,7 @@ TEST(ResizeOnnx, downsample_scales_nearest)
 {
     ResizeOnnx{
         INTER_NEAREST,
-        Size(4, 2), Size(2, 1), Size(), Point2d(0.6, 0.6),
-        -0.75f, Rect2d(),
+        Size(4, 2), Size(2, 1), Size(), Point2d(0.6, 0.6), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8},
         {1, 3}
     }.run();
@@ -187,8 +190,7 @@ TEST(ResizeOnnx, downsample_sizes_cubic)
 {
     ResizeOnnx{
         INTER_CUBIC,
-        Size(4, 4), Size(3, 3), Size(3, 3), Point2d(),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(3, 3), Size(3, 3), Point2d(), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
              1.63078704,  3.00462963,  4.37847222,
@@ -202,8 +204,7 @@ TEST(ResizeOnnx, downsample_sizes_cubic_antialias)
 {
     ResizeOnnx{
         INTER_CUBIC | INTER_ANTIALIAS,
-        Size(4, 4), Size(3, 3), Size(3, 3), Point2d(),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(3, 3), Size(3, 3), Point2d(), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
              1.7750092,   3.1200073,  4.4650054,
@@ -217,8 +218,7 @@ TEST(ResizeOnnx, downsample_sizes_linear_antialias)
 {
     ResizeOnnx{
         INTER_LINEAR | INTER_ANTIALIAS,
-        Size(4, 4), Size(3, 3), Size(3, 3), Point2d(),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(3, 3), Size(3, 3), Point2d(), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
              2.3636363,  3.590909,   4.818182,
@@ -232,8 +232,7 @@ TEST(ResizeOnnx, downsample_sizes_linear_pytorch_half_pixel)
 {
     ResizeOnnx{
         INTER_LINEAR | INTER_HALF_PIXEL_PYTORCH,
-        Size(4, 4), Size(1, 3), Size(1, 3), Point2d(),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(1, 3), Size(1, 3), Point2d(), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
              1.6666666,
@@ -247,26 +246,9 @@ TEST(ResizeOnnx, downsample_sizes_nearest)
 {
     ResizeOnnx{
         INTER_NEAREST,
-        Size(4, 2), Size(3, 1), Size(3, 1), Point2d(),
-        -0.75f, Rect2d(),
+        Size(4, 2), Size(3, 1), Size(3, 1), Point2d(), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8},
         {1, 2, 4}
-    }.run();
-}
-
-TEST(ResizeOnnx, tf_crop_and_resize)
-{
-    // Note: for some rois, the result may be different with that of TF for inaccurate floating point
-    ResizeOnnx{
-        INTER_LINEAR | INTER_TF_CROP_RESIZE,
-        Size(4, 4), Size(3, 3), Size(3, 3), Point2d(),
-        -0.75f, Rect2d(0.6, 0.4, 0.2, 0.2),
-        {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-        {
-             7.6000004,  7.9,  8.2     ,
-             8.8      ,  9.1,  9.400001,
-            10.0      , 10.3, 10.6     ,
-        }
     }.run();
 }
 
@@ -274,8 +256,7 @@ TEST(ResizeOnnx, upsample_scales_cubic)
 {
     ResizeOnnx{
         INTER_CUBIC,
-        Size(4, 4), Size(8, 8), Size(), Point2d(2.0, 2.0),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(8, 8), Size(), Point2d(2.0, 2.0), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
             0.47265625, 0.76953125, 1.24609375, 1.875, 2.28125, 2.91015625, 3.38671875, 3.68359375,
@@ -290,12 +271,30 @@ TEST(ResizeOnnx, upsample_scales_cubic)
     }.run();
 }
 
+TEST(ResizeOnnx, upsample_scales_cubic_A_n0p5_exclude_outside)
+{
+    ResizeOnnx{
+        INTER_CUBIC | INTER_EXCLUDE_OUTSIDE,
+        Size(4, 4), Size(8, 8), Size(), Point2d(2.0, 2.0), -0.5f,
+        {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+        {
+            0.55882353, 0.81494204, 1.35698249, 1.89705882, 2.39705882, 2.93713516, 3.47917561, 3.73529412,
+            1.58329755, 1.83941606, 2.38145651, 2.92153285, 3.42153285, 3.96160918, 4.50364964, 4.75976814,
+            3.75145936, 4.00757787, 4.54961832, 5.08969466, 5.58969466, 6.12977099, 6.67181144, 6.92792995,
+            5.91176471, 6.16788321, 6.70992366, 7.25, 7.75, 8.29007634, 8.83211679, 9.08823529,
+            7.91176471, 8.16788321, 8.70992366, 9.25, 9.75, 10.29007634, 10.83211679, 11.08823529,
+            10.07207005, 10.32818856, 10.87022901, 11.41030534, 11.91030534, 12.45038168, 12.99242213, 13.24854064,
+            12.24023186, 12.49635036, 13.03839082, 13.57846715, 14.07846715, 14.61854349, 15.16058394, 15.41670245,
+            13.26470588, 13.52082439, 14.06286484, 14.60294118, 15.10294118, 15.64301751, 16.18505796, 16.44117647,
+        }
+    }.run();
+}
+
 TEST(ResizeOnnx, upsample_scales_cubic_align_corners)
 {
     ResizeOnnx{
         INTER_CUBIC | INTER_ALIGN_CORNERS,
-        Size(4, 4), Size(8, 8), Size(), Point2d(2.0, 2.0),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(8, 8), Size(), Point2d(2.0, 2.0), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
             1.0, 1.34110787, 1.80029155, 2.32944606, 2.67055394, 3.19970845, 3.65889213, 4.0,
@@ -314,8 +313,7 @@ TEST(ResizeOnnx, upsample_scales_cubic_asymmetric)
 {
     ResizeOnnx{
         INTER_CUBIC | INTER_ASYMMETRIC,
-        Size(4, 4), Size(8, 8), Size(), Point2d(2.0, 2.0),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(8, 8), Size(), Point2d(2.0, 2.0), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
             1.0, 1.40625, 2.0, 2.5, 3.0, 3.59375, 4.0, 4.09375,
@@ -334,8 +332,7 @@ TEST(ResizeOnnx, upsample_scales_linear)
 {
     ResizeOnnx{
         INTER_LINEAR,
-        Size(2, 2), Size(4, 4), Size(), Point2d(2.0, 2.0),
-        -0.75f, Rect2d(),
+        Size(2, 2), Size(4, 4), Size(), Point2d(2.0, 2.0), -0.75f,
         {1, 2, 3, 4},
         {
             1.0, 1.25, 1.75, 2.0,
@@ -350,8 +347,7 @@ TEST(ResizeOnnx, upsample_scales_linear_align_corners)
 {
     ResizeOnnx{
         INTER_LINEAR | INTER_ALIGN_CORNERS,
-        Size(2, 2), Size(4, 4), Size(), Point2d(2.0, 2.0),
-        -0.75f, Rect2d(),
+        Size(2, 2), Size(4, 4), Size(), Point2d(2.0, 2.0), -0.75f,
         {1, 2, 3, 4},
         {
             1.0, 1.33333333, 1.66666667, 2.0,
@@ -366,8 +362,7 @@ TEST(ResizeOnnx, upsample_scales_linear_half_pixel_symmetric)
 {
     ResizeOnnx{
         INTER_LINEAR | INTER_HALF_PIXEL_SYMMETRIC,
-        Size(2, 2), Size(5, 4), Size(), Point2d(2.94, 2.3),
-        -0.75f, Rect2d(),
+        Size(2, 2), Size(5, 4), Size(), Point2d(2.94, 2.3), -0.75f,
         {1, 2, 3, 4},
         {
             1.0       , 1.15986395, 1.5       , 1.84013605, 2.0       ,
@@ -382,8 +377,7 @@ TEST(ResizeOnnx, upsample_scales_nearest)
 {
     ResizeOnnx{
         INTER_NEAREST,
-        Size(2, 2), Size(6, 4), Size(), Point2d(3.0, 2.0),
-        -0.75f, Rect2d(),
+        Size(2, 2), Size(6, 4), Size(), Point2d(3.0, 2.0), -0.75f,
         {1, 2, 3, 4},
         {
             1, 1, 1, 2, 2, 2,
@@ -398,8 +392,7 @@ TEST(ResizeOnnx, upsample_sizes_cubic)
 {
     ResizeOnnx{
         INTER_CUBIC,
-        Size(4, 4), Size(10, 9), Size(10, 9), Point2d(),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(10, 9), Size(10, 9), Point2d(), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
             0.45507922, 0.64057922, 0.97157922, 1.42257922, 1.90732922, 2.22332922, 2.70807922, 3.15907922, 3.49007922, 3.67557922,
@@ -419,8 +412,7 @@ TEST(ResizeOnnx, upsample_sizes_nearest)
 {
     ResizeOnnx{
         INTER_NEAREST,
-        Size(2, 2), Size(8, 7), Size(8, 7), Point2d(),
-        -0.75f, Rect2d(),
+        Size(2, 2), Size(8, 7), Size(8, 7), Point2d(), -0.75f,
         {1, 2, 3, 4},
         {
             1, 1, 1, 1, 2, 2, 2, 2,
@@ -438,8 +430,7 @@ TEST(ResizeOnnx, upsample_sizes_nearest_ceil_half_pixel)
 {
     ResizeOnnx{
         INTER_NEAREST | INTER_NEAREST_CEIL,
-        Size(4, 4), Size(8, 8), Size(8, 8), Point2d(),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(8, 8), Size(8, 8), Point2d(), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
             1, 2, 2, 3, 3, 4, 4, 4,
@@ -458,8 +449,7 @@ TEST(ResizeOnnx, upsample_sizes_nearest_floor_align_corners)
 {
     ResizeOnnx{
         INTER_NEAREST | INTER_NEAREST_FLOOR | INTER_ALIGN_CORNERS,
-        Size(4, 4), Size(8, 8), Size(8, 8), Point2d(),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(8, 8), Size(8, 8), Point2d(), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
             1, 1, 1, 2, 2, 3, 3, 4,
@@ -478,8 +468,7 @@ TEST(ResizeOnnx, upsample_sizes_nearest_round_prefer_ceil_asymmetric)
 {
     ResizeOnnx{
         INTER_NEAREST | INTER_NEAREST_PREFER_CEIL | INTER_ASYMMETRIC,
-        Size(4, 4), Size(8, 8), Size(8, 8), Point2d(),
-        -0.75f, Rect2d(),
+        Size(4, 4), Size(8, 8), Size(8, 8), Point2d(), -0.75f,
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
         {
             1, 2, 2, 3, 3, 4, 4, 4,
@@ -490,6 +479,62 @@ TEST(ResizeOnnx, upsample_sizes_nearest_round_prefer_ceil_asymmetric)
             13, 14, 14, 15, 15, 16, 16, 16,
             13, 14, 14, 15, 15, 16, 16, 16,
             13, 14, 14, 15, 15, 16, 16, 16,
+        }
+    }.run();
+}
+
+/*
+import numpy as np
+import onnx
+from onnx.reference.ops.op_resize import (
+    _interpolate_nd,
+    _cubic_coeffs, _cubic_coeffs_antialias,
+    _linear_coeffs, _linear_coeffs_antialias
+)
+data = np.arange(1, 17, dtype=np.float64).reshape(4, 4)
+scales = np.array([0.8, 0.8], dtype=np.float64)
+*/
+
+/*
+output = _interpolate_nd(
+    data,
+    lambda x, s: _cubic_coeffs_antialias(x, s, A=-0.5),
+    scale_factors=scales,
+    exclude_outside=True,
+)
+*/
+TEST(ResizeOnnx, downsample_scales_cubic_antialias_A_n0p5_exclude_outside)
+{
+    ResizeOnnx{
+        INTER_CUBIC | INTER_ANTIALIAS | INTER_EXCLUDE_OUTSIDE,
+        Size(4, 4), Size(3, 3), Size(), Point2d(0.8, 0.8), -0.5f,
+        {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+        {
+             1.68342335,  2.90749817,  4.22822584,
+             6.57972264,  7.80379747,  9.12452513,
+            11.86263331, 13.08670813, 14.4074358 ,
+        }
+    }.run();
+}
+
+/*
+output = _interpolate_nd(
+    data,
+    _linear_coeffs_antialias,
+    scale_factors=scales,
+    exclude_outside=True,
+)
+*/
+TEST(ResizeOnnx, downsample_scales_linear_antialias_exclude_outside)
+{
+    ResizeOnnx{
+        INTER_LINEAR | INTER_ANTIALIAS | INTER_EXCLUDE_OUTSIDE,
+        Size(4, 4), Size(3, 3), Size(), Point2d(0.8, 0.8), -0.75f,
+        {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+        {
+             2.25      ,  3.41666667,  4.58333333,
+             6.91666667,  8.08333333,  9.25      ,
+            11.58333333, 12.75      , 13.91666667,
         }
     }.run();
 }

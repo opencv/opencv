@@ -12,11 +12,13 @@
 
 #define noconvert(x) (x)
 
+// for debug and intellisense
 #ifndef T
 #   define INTER_NEAREST1
 #   define INTER_LINEAR1
 #   define INTER_CUBIC
 #   define INTER_ANTIALIAS1
+#   define EXCLUDE_OUTSIDE 1
 #   define T int
 #   define W double
 #   define CN 3
@@ -155,12 +157,22 @@ __kernel void resizeOnnx_linear_antialias(
         {
             VW sline = (VW)(0);
             float wline = 0;
-            int sy = clamp(iy + h, 0, src_rows - 1);
+            int sy = iy + h;
+#if EXCLUDE_OUTSIDE
+            if ((unsigned)(sy) >= (unsigned)(src_rows))
+                continue;
+#endif
+            sy = clamp(sy, 0, src_rows - 1);
             __global uchar const* S = srcptr + sy * src_step + src_offset;
             for (int w = xstart; w < xend; ++w)
             {
+                int sx = ix + w;
+#if EXCLUDE_OUTSIDE
+                if ((unsigned)(sx) >= (unsigned)(src_cols))
+                    continue;
+#endif
+                sx = clamp(sx, 0, src_cols - 1);
                 // the computation of linear's weights is trival, so do it in kernel
-                int sx = clamp(ix + w, 0, src_cols - 1);
                 float t = fabs(w - rx) * xscale;
                 t = clamp(1.f - t, 0.f, 1.f);
                 wline += t;
@@ -171,8 +183,7 @@ __kernel void resizeOnnx_linear_antialias(
             weight += u * wline;
             sumval += u * sline;
         }
-        VT d0 = TO_VEC_TYPE(sumval / weight);
-        storepix(d0, D);
+        storepix(TO_VEC_TYPE(sumval / weight), D);
 #else
         W sumval = 0;
         float weight = 0;
@@ -180,11 +191,21 @@ __kernel void resizeOnnx_linear_antialias(
         {
             W sline = 0;
             float wline = 0;
-            int sy = clamp(iy + h, 0, src_rows - 1);
+            int sy = iy + h;
+#if EXCLUDE_OUTSIDE
+            if ((unsigned)(sy) >= (unsigned)(src_rows))
+                continue;
+#endif
+            sy = clamp(sy, 0, src_rows - 1);
             __global uchar const* S = srcptr + sy * src_step + src_offset;
             for (int w = xstart; w < xend; ++w)
             {
-                int sx = clamp(ix + w, 0, src_cols - 1);
+                int sx = ix + w;
+#if EXCLUDE_OUTSIDE
+                if ((unsigned)(sx) >= (unsigned)(src_cols))
+                    continue;
+#endif
+                sx = clamp(sx, 0, src_cols - 1);
                 float t = fabs(w - rx) * xscale;
                 t = clamp(1.f - t, 0.f, 1.f);
                 wline += t;
@@ -203,11 +224,21 @@ __kernel void resizeOnnx_linear_antialias(
             for (int h = ystart; h < yend; ++h)
             {
                 W sline = 0;
-                int sy = clamp(iy + h, 0, src_rows - 1);
+                int sy = iy + h;
+#if EXCLUDE_OUTSIDE
+                if ((unsigned)(sy) >= (unsigned)(src_rows))
+                    continue;
+#endif
+                sy = clamp(sy, 0, src_rows - 1);
                __global uchar const* S = srcptr + sy * src_step + src_offset;
                 for (int w = xstart; w < xend; ++w)
                 {
-                    int sx = clamp(ix + w, 0, src_cols - 1);
+                    int sx = ix + w;
+#if EXCLUDE_OUTSIDE
+                    if ((unsigned)(sx) >= (unsigned)(src_cols))
+                       continue;
+#endif
+                    sx = clamp(sx, 0, src_cols - 1);
                     float t = fabs(w - rx) * xscale;
                     t = clamp(1.f - t, 0.f, 1.f);
                     sline += t * TO_WORK(((__global T const*)(S + sx * pixel_size))[i]);
@@ -221,7 +252,6 @@ __kernel void resizeOnnx_linear_antialias(
 #endif
     }
 }
-
 
 #elif defined(INTER_CUBIC) && !defined(INTER_ANTIALIAS)
 
@@ -253,31 +283,56 @@ __kernel void resizeOnnx_cubic(
         int xlimit = xstart + 3;
         int ylimit = ystart + 3;
         int xoffset[4];
-        float xcoeff[4];
+        float xcoeff[4], xcoeffsum = 0;
         for (int x = xstart; x <= xlimit; ++x)
         {
             xoffset[x - xstart] = clamp(x, 0, src_cols - 1) * pixel_size;
             xcoeff [x - xstart] = cubicCoeff(A, A2, A3, x - fx);
+#if EXCLUDE_OUTSIDE
+            if ((unsigned)(x) >= (unsigned)(src_cols))
+                xcoeff[x - xstart] = 0;
+            xcoeffsum += xcoeff[x - xstart];
+#endif
         }
         __global uchar* D = dstptr + (dy * dst_step + mad24(dx, pixel_size, dst_offset));
 #if CN == 1 || CN == 2 || CN == 3 || CN == 4
         VW sum = (VW)(0);
+#if EXCLUDE_OUTSIDE
+        float ycoeffsum = 0;
+#endif
         for (int y = ystart; y <= ylimit; ++y)
         {
+#if EXCLUDE_OUTSIDE
+            if ((unsigned)(y) >= (unsigned)(src_rows))
+                continue;
+#endif
             int yoffset = clamp(y, 0, src_rows - 1) * src_step + src_offset;
             VW sline = (VW)(0);
             for (int x = 0; x < 4; ++x)
                 sline += (VW)(xcoeff[x]) * TO_VEC_WORK(loadpix(srcptr + yoffset + xoffset[x]));
-            sum += sline * (VW)(cubicCoeff(A, A2, A3, y - fy));
+            float u = cubicCoeff(A, A2, A3, y - fy);
+#if EXCLUDE_OUTSIDE
+            ycoeffsum += u;
+#endif
+            sum += sline * u;
         }
+#if EXCLUDE_OUTSIDE
+        storepix(TO_VEC_TYPE(sum / (ycoeffsum * xcoeffsum)), D);
+#else
         storepix(TO_VEC_TYPE(sum), D);
+#endif
 #else
         int yoffset[4];
-        float ycoeff[4];
+        float ycoeff[4], weight = 0;
         for (int y = ystart; y <= ylimit; ++y)
         {
             yoffset[y - ystart] = clamp(y, 0, src_rows - 1) * src_step + src_offset;
             ycoeff [y - ystart] = cubicCoeff(A, A2, A3, y - fy);
+#if EXCLUDE_OUTSIDE
+            if ((unsigned)(y) >= (unsigned)(src_rows))
+                ycoeff[y - ystart] = 0;
+            weight += ycoeff[y - ystart] * xcoeffsum;
+#endif
         }
         for (int i = 0; i < channel; ++i)
         {
@@ -290,7 +345,11 @@ __kernel void resizeOnnx_cubic(
                                                 (srcptr + yoffset[y] + xoffset[x]))[i]);
                 sum += sline * ycoeff[y];
             }
+#if EXCLUDE_OUTSIDE
+            ((__global T*)(D))[i] = TO_TYPE(sum / weight);
+#else
             ((__global T*)(D))[i] = TO_TYPE(sum);
+#endif
         }
 #endif
     }

@@ -281,47 +281,51 @@ enum InterpolationFlags {
 //! ONNX Resize Flags
 enum ResizeONNXFlags
 {
-    INTER_SAMPLER_SHIFT        = 0,
-    INTER_SAMPLER_BIT          = 3,
-    INTER_SAMPLER_MASK         = ((1 << INTER_SAMPLER_BIT) - 1) << INTER_SAMPLER_SHIFT,
+    INTER_SAMPLER_SHIFT         = 0,
+    INTER_SAMPLER_BIT           = 3,
+    INTER_SAMPLER_MASK          = ((1 << INTER_SAMPLER_BIT) - 1) << INTER_SAMPLER_SHIFT,
 
-    INTER_COORDINATE_SHIFT     = INTER_SAMPLER_SHIFT + INTER_SAMPLER_BIT,
-    INTER_COORDINATE_BIT       = 3,
-    INTER_COORDINATE_MASK      = ((1 << INTER_COORDINATE_BIT) - 1) << INTER_COORDINATE_SHIFT,
+    INTER_COORDINATE_SHIFT      = INTER_SAMPLER_SHIFT + INTER_SAMPLER_BIT,
+    INTER_COORDINATE_BIT        = 3,
+    INTER_COORDINATE_MASK       = ((1 << INTER_COORDINATE_BIT) - 1) << INTER_COORDINATE_SHIFT,
     /** x_original = (x_resized + 0.5) / scale - 0.5 */
-    INTER_HALF_PIXEL           = 0 << INTER_COORDINATE_SHIFT,
+    INTER_HALF_PIXEL            = 0 << INTER_COORDINATE_SHIFT,
     /** adjustment = output_width_int / output_width
         center = input_width / 2
         offset = center * (1 - adjustment)
         x_ori = offset + (x + 0.5) / scale - 0.5 */
-    INTER_HALF_PIXEL_SYMMETRIC = 1 << INTER_COORDINATE_SHIFT,
+    INTER_HALF_PIXEL_SYMMETRIC  = 1 << INTER_COORDINATE_SHIFT,
     /** x_original = length_resized > 1 ? (x_resized + 0.5) / scale - 0.5 : 0 */
-    INTER_HALF_PIXEL_PYTORCH   = 2 << INTER_COORDINATE_SHIFT,
+    INTER_HALF_PIXEL_PYTORCH    = 2 << INTER_COORDINATE_SHIFT,
     /** x_original = x_resized * (length_original - 1) / (length_resized - 1) */
-    INTER_ALIGN_CORNERS        = 3 << INTER_COORDINATE_SHIFT,
+    INTER_ALIGN_CORNERS         = 3 << INTER_COORDINATE_SHIFT,
     /** x_original = x_resized / scale */
-    INTER_ASYMMETRIC           = 4 << INTER_COORDINATE_SHIFT,
-    /** x_original = length_resized > 1
-            ? start_x * (length_original - 1) + x_resized * (end_x - start_x) * (length_original - 1) / (length_resized - 1)
-            : 0.5 * (start_x + end_x) * (length_original - 1) */
-    INTER_TF_CROP_RESIZE       = 5 << INTER_COORDINATE_SHIFT,
+    INTER_ASYMMETRIC            = 4 << INTER_COORDINATE_SHIFT,
 
-    INTER_NEAREST_MODE_SHIFT   = INTER_COORDINATE_SHIFT + INTER_COORDINATE_BIT,
-    INTER_NEAREST_MODE_BIT     = 2,
-    INTER_NEAREST_MODE_MASK    = ((1 << INTER_NEAREST_MODE_BIT) - 1) << INTER_NEAREST_MODE_SHIFT,
+    INTER_NEAREST_MODE_SHIFT    = INTER_COORDINATE_SHIFT + INTER_COORDINATE_BIT,
+    INTER_NEAREST_MODE_BIT      = 2,
+    INTER_NEAREST_MODE_MASK     = ((1 << INTER_NEAREST_MODE_BIT) - 1) << INTER_NEAREST_MODE_SHIFT,
     /** round half down: x =  ceil(x - 0.5) */
-    INTER_NEAREST_PREFER_FLOOR = 0 << INTER_NEAREST_MODE_SHIFT,
+    INTER_NEAREST_PREFER_FLOOR  = 0 << INTER_NEAREST_MODE_SHIFT,
     /** round half up  : x = floor(x + 0.5) */
-    INTER_NEAREST_PREFER_CEIL  = 1 << INTER_NEAREST_MODE_SHIFT,
+    INTER_NEAREST_PREFER_CEIL   = 1 << INTER_NEAREST_MODE_SHIFT,
     /** x = floor(x) */
-    INTER_NEAREST_FLOOR        = 2 << INTER_NEAREST_MODE_SHIFT,
+    INTER_NEAREST_FLOOR         = 2 << INTER_NEAREST_MODE_SHIFT,
     /** x =  ceil(x) */
-    INTER_NEAREST_CEIL         = 3 << INTER_NEAREST_MODE_SHIFT,
+    INTER_NEAREST_CEIL          = 3 << INTER_NEAREST_MODE_SHIFT,
 
-    INTER_ANTIALIAS_SHIFT      = INTER_NEAREST_MODE_SHIFT + INTER_NEAREST_MODE_BIT,
-    INTER_ANTIALIAS_BIT        = 1,
-    INTER_ANTIALIAS_MASK       = ((1 << INTER_ANTIALIAS_BIT) - 1) << INTER_ANTIALIAS_SHIFT,
-    INTER_ANTIALIAS            = 1 << INTER_ANTIALIAS_SHIFT,
+    INTER_ANTIALIAS_SHIFT       = INTER_NEAREST_MODE_SHIFT + INTER_NEAREST_MODE_BIT,
+    INTER_ANTIALIAS_BIT         = 1,
+    INTER_ANTIALIAS_MASK        = ((1 << INTER_ANTIALIAS_BIT) - 1) << INTER_ANTIALIAS_SHIFT,
+    INTER_ANTIALIAS             = 1 << INTER_ANTIALIAS_SHIFT,
+
+    INTER_EXCLUDE_OUTSIDE_SHIFT = INTER_ANTIALIAS_SHIFT + INTER_ANTIALIAS_BIT,
+    INTER_EXCLUDE_OUTSIDE_BIT   = 1,
+    INTER_EXCLUDE_OUTSIDE_MASK  = ((1 << INTER_EXCLUDE_OUTSIDE_BIT) - 1) << INTER_EXCLUDE_OUTSIDE_SHIFT,
+    /** If set, the weight of sampling locations outside the image
+        will be set to 0 and the weight will be renormalized so that their sum is 1.0.
+        Only available for antialias or bi-cubic resampling. */
+    INTER_EXCLUDE_OUTSIDE       = 1 << INTER_EXCLUDE_OUTSIDE_SHIFT,
 };
 
 /** \brief Specify the polar mapping mode
@@ -2452,8 +2456,8 @@ enlarge an image, it will generally look best with #INTER_CUBIC (slow) or #INTER
 @param dst output image; it has the size dsize (when it is non-zero) or the size computed from
 src.size(), fx, and fy; the type of dst is the same as of src.
 @param dsize output image size; if it equals zero (`None` in Python), it is computed as:
- \f[\texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))}\f]
- Either dsize or both fx and fy must be non-zero.
+\f[\texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))}\f]
+Either dsize or both fx and fy must be non-zero.
 @param fx scale factor along the horizontal axis; when it equals 0, it is computed as
 \f[\texttt{(double)dsize.width/src.cols}\f]
 @param fy scale factor along the vertical axis; when it equals 0, it is computed as
@@ -2470,7 +2474,7 @@ CV_EXPORTS_W void resize( InputArray src, OutputArray dst,
 
 https://github.com/onnx/onnx/blob/main/docs/Operators.md#Resize
 https://github.com/onnx/onnx/blob/main/onnx/reference/ops/op_resize.py
-Not support `exclude_outside` and `extrapolation_value` yet.
+Not support `tf_crop_resize` yet.
 
 To get a similar result to `cv::resize`, give dsize and:
     INTER_NEAREST : ASYMMETRIC + NEAREST_FLOOR
@@ -2480,18 +2484,17 @@ To get a similar result to `cv::resize`, give dsize and:
 @param src input image.
 @param dst output image; it has the size dsize (when it is non-zero) or the size computed from src.size(), scale; the type of dst is the same as of src.
 @param dsize output image size; if it equals to zero, it is computed as:
- \f[\texttt{dsize = Size(int(scale.x * src.cols), int(scale.y * src.rows))}\f]
- Either dsize or scale must be non-zero.
+\f[\texttt{dsize = Size((int)(scale.x * src.cols), (int)(scale.y * src.rows))}\f]
+Either dsize or scale must be non-zero.
 @param scale scale factor; use same definition as ONNX, if scale > 1, it's upsampling.
-@param interpolation interpolation / coordiante, see #InterpolationFlags and #ResizeONNXFlags
+@param interpolation interpolation flags, see #InterpolationFlags and #ResizeONNXFlags
 @param cubicCoeff cubic sampling coeff; range \f[[-1.0, 0)\f]
-@param roi crop region; if provided, the rois' coordinates are normalized in the coordinate system of the input image; it only takes effect with INTER_TF_CROP_RESIZE (ONNX tf_crop_and_resize)
 
 @sa  resize
  */
-CV_EXPORTS_W void resizeOnnx(InputArray src, OutputArray dst, Size dsize,
-    Point2d scale = Point2d(), int interpolation = INTER_LINEAR | INTER_HALF_PIXEL,
-    float cubicCoeff = -0.75f, Rect2d const& roi = Rect2d());
+CV_EXPORTS_W void resizeOnnx(
+    InputArray src, OutputArray dst, Size dsize, Point2d scale = Point2d(),
+    int interpolation = INTER_LINEAR, float cubicCoeff = -0.75f);
 
 /** @brief Applies an affine transformation to an image.
 

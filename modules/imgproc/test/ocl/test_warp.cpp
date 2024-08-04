@@ -701,6 +701,17 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpAntiAlias, ResizeOnnx, Combine(
                             Bool(),
                             Values(1, 16)));
 
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpExcludeOutside, ResizeOnnx, Combine(
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32F),
+                            Values(0.4, 0.27, 1.6),
+                            Values(0.5, 0.71, 2.7),
+                            Values(
+                                (int)(                  INTER_CUBIC  | INTER_EXCLUDE_OUTSIDE),
+                                (int)(INTER_ANTIALIAS | INTER_CUBIC  | INTER_EXCLUDE_OUTSIDE),
+                                (int)(INTER_ANTIALIAS | INTER_LINEAR | INTER_EXCLUDE_OUTSIDE)),
+                            Bool(),
+                            Values(1, 16)));
+
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpNearest, ResizeOnnx, Combine(
                             Values(CV_8S, CV_16S, CV_32F, CV_64F),
                             Values(0.4, 0.27, 1.6),

@@ -952,7 +952,7 @@ static inline void interpolateLanczos4( float x, float* coeffs )
  * note: scale may be user input and not equal to (src / dst).
  * ref to onnx, length_resized is src * scale (float), not dst (int).
  */
-static Vec2f interCoordinate(int coordinate, int dst, int src, double scale, double start, double end)
+static Vec2f interCoordinate(int coordinate, int dst, int src, double scale)
 {
     float a, b;
     if (coordinate == INTER_HALF_PIXEL
@@ -978,22 +978,6 @@ static Vec2f interCoordinate(int coordinate, int dst, int src, double scale, dou
     {
         a = static_cast<float>(1.0 / scale);
         b = 0.f;
-    }
-    else if (coordinate == INTER_TF_CROP_RESIZE)
-    {
-        CV_CheckGE(start, 0.0, "roi's start is out of image");
-        CV_CheckLE(end  , 1.0, "roi's end   is out of image");
-        CV_CheckLT(start, end, "roi's start must be less than its end");
-        if (dst <= 1)
-        {
-            a = 0.f;
-            b = static_cast<float>(0.5 * (start + end) * (src - 1.0));
-        }
-        else
-        {
-            a = static_cast<float>((end - start) * (src - 1.0) / (src * scale - 1.0));
-            b = static_cast<float>(start * (src - 1.0));
-        }
     }
     else
         CV_Error(Error::StsBadArg, format("Unknown coordinate transformation mode %d", coordinate));
@@ -3481,6 +3465,14 @@ public:
 
     /* resize parameter */
     bool is_fixpt, is_double;
+    int sampler, antialias;
+    /* only meaningful when do bi-cubic or antialias resampling.
+        For nearest neighbor, it will have no pixel to select.
+        For linear without antialias,
+            the two sample pixels are at least one inside and at most one outside.
+            So exclude_outside is simply equivalent to clamp.
+    */
+    int exclude_outside;
     int ksize, xkanti, ykanti;
     Point2f scalef;
 
@@ -3504,6 +3496,8 @@ private:
         int start = cvFloor(-2.f / scale) + 1;
         int end = 2 - start;
         int len = end - start;
+        // no need to add FLT_EPSILON.
+        // in antialias cubic resize, we will have at least ceil(2 / scale) pixels inside
         float sum = 0;
         for (int i = start; i < end; ++i)
         {
@@ -3514,8 +3508,11 @@ private:
                 x = A * (((x - 5) * x + 8) * x - 4);
             else
                 x = 0;
+            int sx = index + i;
+            if (exclude_outside && static_cast<unsigned>(sx) >= static_cast<unsigned>(srclen))
+                x = 0;
             elem[i - start].di = cn * dstlen;
-            elem[i - start].si = cn * min(max(index + i, 0), srclen - 1);
+            elem[i - start].si = cn * min(max(sx, 0), srclen - 1);
             elem[i - start].f = x;
             sum += x;
         }
@@ -3550,8 +3547,11 @@ private:
         {
             float x = fabsf(i - ratio) * scale;
             x = min(max(1.f - x, 0.f), 1.f);
+            int sx = index + i;
+            if (exclude_outside && static_cast<unsigned>(sx) >= static_cast<unsigned>(srclen))
+                x = 0;
             elem[i - start].di = cn * dstlen;
-            elem[i - start].si = cn * min(max(index + i, 0), srclen - 1);
+            elem[i - start].si = cn * min(max(sx, 0), srclen - 1);
             elem[i - start].f = x;
             sum += x;
         }
@@ -3574,8 +3574,9 @@ private:
     ResizeOnnxCtrl(int interpolation, int type, float cubicCoeff,
         Size ssize, Size dsize, Point2d const& scaled, Matx22f const& M)
     {
-        int sampler = interpolation & INTER_SAMPLER_MASK;
-        int antialias = interpolation & INTER_ANTIALIAS_MASK;
+        sampler = interpolation & INTER_SAMPLER_MASK;
+        antialias = interpolation & INTER_ANTIALIAS_MASK;
+        exclude_outside = interpolation & INTER_EXCLUDE_OUTSIDE_MASK;
         CV_CheckGE(cubicCoeff, -1.f, "cubic coefficient should range [-1, 0)");
         CV_CheckLT(cubicCoeff, +0.f, "cubic coefficient should range [-1, 0)");
         CV_Check(sampler, sampler == INTER_LINEAR || sampler == INTER_CUBIC,
@@ -3603,8 +3604,7 @@ private:
         float cbuf[MAX_ESIZE] = { 0 };
         CV_CheckLE(ksize, MAX_ESIZE, "resampler kernel's size is too larger");
 
-        // when upsampling, `antialias` is same as `generic`
-        // so use `generic` to speed up
+        // when upsampling, `antialias` is same as `generic`, use `generic` to speed up
         if (antialias && scaled.x < 1.0)
         {
             float a = M(0, 0), b = M(0, 1);
@@ -3644,7 +3644,23 @@ private:
                 if (sampler == INTER_LINEAR)
                     linearCoeffs(f, cbuf);
                 else // if (sampler == INTER_CUBIC)
+                {
                     cubicCoeffs(f, cubicCoeff, cbuf);
+                    if (exclude_outside && (s < 1 || s + 2 >= ssize.width))
+                    {
+                        // no need to add FLT_EPSILON.
+                        // in cubic without antialias, we will have at least 2 pixels inside
+                        float sum = 0;
+                        for (int k = 0; k < 4; ++k)
+                        {
+                            if (static_cast<unsigned>(s + k - 1) >= static_cast<unsigned>(ssize.width))
+                                cbuf[k] = 0;
+                            sum += cbuf[k];
+                        }
+                        for (int k = 0; k < 4; ++k)
+                            cbuf[k] /= sum;
+                    }
+                }
                 if (is_fixpt)
                 {
                     short* coeffs = reinterpret_cast<short*>(xcoeffs) + cn * ksize * d;
@@ -3697,7 +3713,21 @@ private:
                 if (sampler == INTER_LINEAR)
                     linearCoeffs(f, cbuf);
                 else // if (sampler == INTER_CUBIC)
+                {
                     cubicCoeffs(f, cubicCoeff, cbuf);
+                    if (exclude_outside && (s < 1 || s + 2 >= ssize.height))
+                    {
+                        float sum = 0;
+                        for (int k = 0; k < 4; ++k)
+                        {
+                            if (static_cast<unsigned>(s + k - 1) >= static_cast<unsigned>(ssize.height))
+                                cbuf[k] = 0;
+                            sum += cbuf[k];
+                        }
+                        for (int k = 0; k < 4; ++k)
+                            cbuf[k] /= sum;
+                    }
+                }
                 if (is_fixpt)
                 {
                     short* coeffs = reinterpret_cast<short*>(ycoeffs) + 1 * ksize * d;
@@ -4353,7 +4383,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     return k.run(2, globalsize, 0, false);
 }
 
-static void ocl_resizeOnnxTable(int srclen, int dstlen, int esz,
+static void ocl_resizeOnnxTable(int srclen, int dstlen, int esz, int exclude_outside,
     int sampler, float a, float b, float A, float scale, int* offset, float* coeff)
 {
     // maybe want do linear resize in this way?
@@ -4382,13 +4412,16 @@ static void ocl_resizeOnnxTable(int srclen, int dstlen, int esz,
                 else
                     x = 0;
             }
+            int sx = index + i;
+            if (exclude_outside && static_cast<unsigned>(sx) >= static_cast<unsigned>(srclen))
+                x = 0;
             // make work-item(s) in a work-group load offset / coeff in one / fewer memory transaction
             // offsets & coeffs are arranged like
             //      00     10     20     ... n0
             //      01     11     21     ... n1     ...
             //      0(k-1) 1(k-1) 2(k-1) ... n(k-1)
             int to = d + (i - start) * dstlen;
-            offset[to] = min(max(index + i, 0), srclen - 1) * esz;
+            offset[to] = min(max(sx, 0), srclen - 1) * esz;
             coeff [to] = x;
             sum += x;
         }
@@ -4428,7 +4461,6 @@ static char const* ocl_resizeOnnx_convertTypeString(int sdepth, int ddepth, int 
     return buf;
 }
 
-
 static bool ocl_resizeOnnx(InputArray _src, OutputArray _dst,
     Matx22f const& M, Point2d const& scaled, int interpolation, float cubicCoeff)
 {
@@ -4436,6 +4468,7 @@ static bool ocl_resizeOnnx(InputArray _src, OutputArray _dst,
     int sampler = interpolation & INTER_SAMPLER_MASK;
     int nearest = interpolation & INTER_NEAREST_MODE_MASK;
     int antialias = interpolation & INTER_ANTIALIAS_MASK;
+    int exclude_outside = interpolation & INTER_EXCLUDE_OUTSIDE_MASK;
     Point2f scale = static_cast<Point2f>(scaled);
     int khalf = (sampler == INTER_LINEAR ? 2 : 4) / 2;
     float xscale = min(scale.x, 1.f), yscale = min(scale.y, 1.f);
@@ -4512,9 +4545,10 @@ static bool ocl_resizeOnnx(InputArray _src, OutputArray _dst,
     {
         int W = (T < CV_32S || T == CV_32F) ? CV_32F : CV_64F, VW = CV_MAKETYPE(W, cn);
         buildopts = format(
-            "-D INTER_LINEAR -D INTER_ANTIALIAS "
+            "-D INTER_LINEAR -D INTER_ANTIALIAS -D EXCLUDE_OUTSIDE=%d "
             "-D T=%s -D W=%s -D CN=%d -D PIXEL_SIZE=%d -D VT=%s -D VW=%s "
             "-D TO_WORK=%s -D TO_VEC_WORK=%s -D TO_TYPE=%s -D TO_VEC_TYPE=%s ",
+            exclude_outside,
             ocl_resizeOnnx_typeToString(T, nullptr, 0),
             ocl_resizeOnnx_typeToString(W, nullptr, 0),
             cn, pixel_size,
@@ -4537,9 +4571,10 @@ static bool ocl_resizeOnnx(InputArray _src, OutputArray _dst,
     {
         int W = (T < CV_32S || T == CV_32F) ? CV_32F : CV_64F, VW = CV_MAKETYPE(W, cn);
         buildopts = format(
-            "-D INTER_CUBIC "
+            "-D INTER_CUBIC -D EXCLUDE_OUTSIDE=%d "
             "-D T=%s -D W=%s -D CN=%d -D PIXEL_SIZE=%d -D VT=%s -D VW=%s "
             "-D TO_WORK=%s -D TO_VEC_WORK=%s -D TO_TYPE=%s -D TO_VEC_TYPE=%s ",
+            exclude_outside,
             ocl_resizeOnnx_typeToString(T, nullptr, 0),
             ocl_resizeOnnx_typeToString(W, nullptr, 0),
             cn, pixel_size,
@@ -4567,10 +4602,11 @@ static bool ocl_resizeOnnx(InputArray _src, OutputArray _dst,
         int* yoffset = xoffset + xstride;
         float* xcoeff = reinterpret_cast<float*>(yoffset + ystride);
         float* ycoeff = reinterpret_cast<float*>(xcoeff + xstride);
+        // use table coeffs, no need to define `-D EXCLUDE_OUTSIDE=%d`
         ocl_resizeOnnxTable(src.cols, dst.cols, pixel_size,
-            sampler, M(0, 0), M(0, 1), cubicCoeff, scale.x, xoffset, xcoeff);
+            exclude_outside, sampler, M(0, 0), M(0, 1), cubicCoeff, scale.x, xoffset, xcoeff);
         ocl_resizeOnnxTable(src.rows, dst.rows, static_cast<int>(src.step[0]),
-            sampler, M(1, 0), M(1, 1), cubicCoeff, scale.y, yoffset, ycoeff);
+            exclude_outside, sampler, M(1, 0), M(1, 1), cubicCoeff, scale.y, yoffset, ycoeff);
         UMat utable;
         Mat(1, tabsize, CV_32S, table.data()).copyTo(utable);
         int W = (T < CV_32S || T == CV_32F) ? CV_32F : CV_64F, VW = CV_MAKETYPE(W, cn);
@@ -5224,7 +5260,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
 
 void cv::resizeOnnx(InputArray _src, OutputArray _dst,
-    Size dsize, Point2d scale, int interpolation, float cubicCoeff, Rect2d const& roi)
+    Size dsize, Point2d scale, int interpolation, float cubicCoeff)
 {
     static_assert((1 << INTER_SAMPLER_BIT) >= INTER_MAX, "");
     CV_INSTRUMENT_REGION();
@@ -5268,22 +5304,19 @@ void cv::resizeOnnx(InputArray _src, OutputArray _dst,
         coordinate == INTER_HALF_PIXEL_PYTORCH ||
         coordinate == INTER_HALF_PIXEL_SYMMETRIC ||
         coordinate == INTER_ALIGN_CORNERS ||
-        coordinate == INTER_ASYMMETRIC ||
-        coordinate == INTER_TF_CROP_RESIZE);
+        coordinate == INTER_ASYMMETRIC);
 
     // x_org = x * a + b
     Matx22f M;
-    Vec2f xcoef = interCoordinate(
-        coordinate, dsize.width, ssize.width, scale.x, roi.x, roi.x + roi.width);
-    Vec2f ycoef = interCoordinate(
-        coordinate, dsize.height, ssize.height, scale.y, roi.y, roi.y + roi.height);
+    Vec2f xcoef = interCoordinate(coordinate, dsize.width, ssize.width, scale.x);
+    Vec2f ycoef = interCoordinate(coordinate, dsize.height, ssize.height, scale.y);
     M(0, 0) = xcoef[0];
     M(0, 1) = xcoef[1];
     M(1, 0) = ycoef[0];
     M(1, 1) = ycoef[1];
 
     _dst.create(dsize, _src.type());
-    if (dsize == ssize && coordinate != INTER_TF_CROP_RESIZE)
+    if (dsize == ssize)
     {
         // Source and destination are of same size. Use simple copy.
         _src.copyTo(_dst);
@@ -5300,6 +5333,8 @@ void cv::resizeOnnx(InputArray _src, OutputArray _dst,
 
     CV_OCL_RUN(_src.isUMat() && _dst.isUMat(),
         ocl_resizeOnnx(_src, _dst, M, scale, interpolation, cubicCoeff))
+    // if (cv::ocl::isOpenCLActivated() && _src.isUMat() && _dst.isUMat())
+        // CV_Assert(ocl_resizeOnnx(_src, _dst, M, scale, interpolation, cubicCoeff));
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
