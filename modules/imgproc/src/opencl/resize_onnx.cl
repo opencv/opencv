@@ -161,8 +161,9 @@ __kernel void resizeOnnx_linear_antialias(
 #if EXCLUDE_OUTSIDE
             if ((unsigned)(sy) >= (unsigned)(src_rows))
                 continue;
-#endif
+#else
             sy = clamp(sy, 0, src_rows - 1);
+#endif
             __global uchar const* S = srcptr + sy * src_step + src_offset;
             for (int w = xstart; w < xend; ++w)
             {
@@ -170,8 +171,9 @@ __kernel void resizeOnnx_linear_antialias(
 #if EXCLUDE_OUTSIDE
                 if ((unsigned)(sx) >= (unsigned)(src_cols))
                     continue;
-#endif
+#else
                 sx = clamp(sx, 0, src_cols - 1);
+#endif
                 // the computation of linear's weights is trival, so do it in kernel
                 float t = fabs(w - rx) * xscale;
                 t = clamp(1.f - t, 0.f, 1.f);
@@ -195,8 +197,9 @@ __kernel void resizeOnnx_linear_antialias(
 #if EXCLUDE_OUTSIDE
             if ((unsigned)(sy) >= (unsigned)(src_rows))
                 continue;
-#endif
+#else
             sy = clamp(sy, 0, src_rows - 1);
+#endif
             __global uchar const* S = srcptr + sy * src_step + src_offset;
             for (int w = xstart; w < xend; ++w)
             {
@@ -204,8 +207,9 @@ __kernel void resizeOnnx_linear_antialias(
 #if EXCLUDE_OUTSIDE
                 if ((unsigned)(sx) >= (unsigned)(src_cols))
                     continue;
-#endif
+#else
                 sx = clamp(sx, 0, src_cols - 1);
+#endif
                 float t = fabs(w - rx) * xscale;
                 t = clamp(1.f - t, 0.f, 1.f);
                 wline += t;
@@ -228,8 +232,9 @@ __kernel void resizeOnnx_linear_antialias(
 #if EXCLUDE_OUTSIDE
                 if ((unsigned)(sy) >= (unsigned)(src_rows))
                     continue;
-#endif
+#else
                 sy = clamp(sy, 0, src_rows - 1);
+#endif
                __global uchar const* S = srcptr + sy * src_step + src_offset;
                 for (int w = xstart; w < xend; ++w)
                 {
@@ -237,8 +242,9 @@ __kernel void resizeOnnx_linear_antialias(
 #if EXCLUDE_OUTSIDE
                     if ((unsigned)(sx) >= (unsigned)(src_cols))
                        continue;
-#endif
+#else
                     sx = clamp(sx, 0, src_cols - 1);
+#endif
                     float t = fabs(w - rx) * xscale;
                     t = clamp(1.f - t, 0.f, 1.f);
                     sline += t * TO_WORK(((__global T const*)(S + sx * pixel_size))[i]);
@@ -305,8 +311,10 @@ __kernel void resizeOnnx_cubic(
 #if EXCLUDE_OUTSIDE
             if ((unsigned)(y) >= (unsigned)(src_rows))
                 continue;
-#endif
+            int yoffset = y * src_step + src_offset;
+#else
             int yoffset = clamp(y, 0, src_rows - 1) * src_step + src_offset;
+#endif
             VW sline = (VW)(0);
             for (int x = 0; x < 4; ++x)
                 sline += (VW)(xcoeff[x]) * TO_VEC_WORK(loadpix(srcptr + yoffset + xoffset[x]));

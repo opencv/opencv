@@ -2488,7 +2488,7 @@ To get a similar result to `cv::resize`, give dsize and:
 Either dsize or scale must be non-zero.
 @param scale scale factor; use same definition as ONNX, if scale > 1, it's upsampling.
 @param interpolation interpolation flags, see #InterpolationFlags and #ResizeONNXFlags
-@param cubicCoeff cubic sampling coeff; range \f[[-1.0, 0)\f]
+@param cubicCoeff cubic sampling coefficient, range \f[[-1.0, 0)\f]
 
 @sa  resize
  */

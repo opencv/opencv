@@ -42,8 +42,9 @@ struct ResizeOnnx
         Mat iS(szsrc, CV_64F, insrc.data());
         Mat iR(szref, CV_64F, inref.data());
         Mat S = iS, R = iR, nS, nR;
-        double alpha[8] = {1, -1, 5, 5, 0, -3, -2, +4};
-        double  beta[8] = {0, -0, 0, 7, 7, +7, -6, -6};
+        // values after convertTo need to be all positive or all negative
+        double alpha[8] = {1, -1, 5, 5, 0, -3, -2, 4};
+        double  beta[8] = {0, -0, 0, 2, 7, -1, -6, 9};
         RNG& rng = TS::ptr()->get_rng();
         for (int cn = 1; cn <= 8; ++cn)
         {
