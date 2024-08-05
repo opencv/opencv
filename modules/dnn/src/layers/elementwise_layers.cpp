@@ -932,7 +932,7 @@ struct GeluFunctor : public BaseFunctor {
 #endif
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
         return std::make_shared<ov::op::v0::Gelu>(node);
     }
