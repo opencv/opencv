@@ -345,7 +345,7 @@ TEST(Samples, findFile)
 {
     cv::utils::logging::LogLevel prev = cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_VERBOSE);
     cv::String path;
-    ASSERT_NO_THROW(path = samples::findFile("lena.jpg", false));
+    ASSERT_NO_THROW(path = samples::findFile("HappyFish.jpg", false));
     EXPECT_NE(std::string(), path.c_str());
     cv::utils::logging::setLogLevel(prev);
 }
