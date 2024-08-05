@@ -274,6 +274,29 @@ inline int hal_ni_resize(int src_type, const uchar *src_data, size_t src_step, i
  */
 inline int hal_ni_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
+   @brief hal_warpAffineBlocklineNN doing a row of affine transformation
+   @param adelta input M0 * x array
+   @param bdelta input M3 * x array
+   @param xy output (x', y') coordinates
+   @param X0 input M1 * y + M2 value
+   @param Y0 input M4 * y + M5 value
+   @param bw length of the row
+   @sa cv::warpAffineBlocklineNN, cv::hal::warpAffineBlocklineNN
+ */
+inline int hal_ni_warpAffineBlocklineNN(int *adelta, int *bdelta, short* xy, int X0, int Y0, int bw) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+   @brief hal_warpAffineBlockline doing a row of affine transformation
+   @param adelta input M0 * x array
+   @param bdelta input M3 * x array
+   @param xy output (x', y') coordinates
+   @param alpha output least significant bits of the (x', y') coordinates for interpolation
+   @param X0 input M1 * y + M2 value
+   @param Y0 input M4 * y + M5 value
+   @param bw length of the row
+   @sa cv::warpAffineBlockline, cv::hal::warpAffineBlockline
+ */
+inline int hal_ni_warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X0, int Y0, int bw) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
    @brief hal_warpPerspective
    @param src_type source and destination image type
    @param src_data source image data
@@ -291,11 +314,38 @@ inline int hal_ni_warpAffine(int src_type, const uchar *src_data, size_t src_ste
    @sa cv::warpPerspective, cv::hal::warpPerspective
  */
 inline int hal_ni_warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4]) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+   @brief hal_warpPerspectiveBlocklineNN doing a row of perspective transformation
+   @param M 3x3 matrix with transform coefficients
+   @param xy output (x', y') coordinates
+   @param X0 input M0 * x0 + M1 * y + M2 value
+   @param Y0 input M3 * x0 + M4 * y + M5 value
+   @param W0 input M6 * x0 + M7 * y + M8 value
+   @param bw length of the row
+   @sa cv::warpPerspectiveBlocklineNN, cv::hal::warpPerspectiveBlocklineNN
+ */
+inline int hal_ni_warpPerspectiveBlocklineNN(const double *M, short* xy, double X0, double Y0, double W0, int bw) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+   @brief hal_warpPerspectiveBlockline doing a row of perspective transformation
+   @param M 3x3 matrix with transform coefficients
+   @param xy output (x', y') coordinates
+   @param alpha output least significant bits of the (x', y') coordinates for interpolation
+   @param X0 input M0 * x0 + M1 * y + M2 value
+   @param Y0 input M3 * x0 + M4 * y + M5 value
+   @param W0 input M6 * x0 + M7 * y + M8 value
+   @param bw length of the row
+   @sa cv::warpPerspectiveBlockline, cv::hal::warpPerspectiveBlockline
+ */
+inline int hal_ni_warpPerspectiveBlockline(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_resize hal_ni_resize
 #define cv_hal_warpAffine hal_ni_warpAffine
+#define cv_hal_warpAffineBlocklineNN hal_ni_warpAffineBlocklineNN
+#define cv_hal_warpAffineBlockline hal_ni_warpAffineBlockline
 #define cv_hal_warpPerspective hal_ni_warpPerspective
+#define cv_hal_warpPerspectiveBlocklineNN hal_ni_warpPerspectiveBlocklineNN
+#define cv_hal_warpPerspectiveBlockline hal_ni_warpPerspectiveBlockline
 //! @endcond
 
 /**

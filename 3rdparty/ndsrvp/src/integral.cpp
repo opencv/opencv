@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.	
 
 #include "ndsrvp_hal.hpp"
+#include "opencv2/imgproc/hal/interface.h"
+#include "cvutils.hpp"
 
 namespace cv {
 

@@ -1,17 +1,11 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html.	
+// of this distribution and at http://opencv.org/license.html.
 
 #ifndef OPENCV_NDSRVP_IMGPROC_HPP
 #define OPENCV_NDSRVP_IMGPROC_HPP
 
 namespace cv {
-
-// ################ remap ################
-
-void remap(InputArray _src, OutputArray _dst,
-    InputArray _map1, InputArray _map2,
-    int interpolation, int borderType, const Scalar& borderValue);
 
 namespace ndsrvp {
 
@@ -36,23 +30,36 @@ int integral(int depth, int sdepth, int sqdepth,
 
 // ################ warpAffine ################
 
-int warpAffine(int src_type,
-    const uchar* src_data, size_t src_step, int src_width, int src_height,
-    uchar* dst_data, size_t dst_step, int dst_width, int dst_height,
-    const double M[6], int interpolation, int borderType, const double borderValue[4]);
+int warpAffineBlocklineNN(int *adelta, int *bdelta, short* xy, int X0, int Y0, int bw);
 
-#undef cv_hal_warpAffine
-#define cv_hal_warpAffine (cv::ndsrvp::warpAffine)
+#undef cv_hal_warpAffineBlocklineNN
+#define cv_hal_warpAffineBlocklineNN (cv::ndsrvp::warpAffineBlocklineNN)
+
+int warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X0, int Y0, int bw);
+
+#undef cv_hal_warpAffineBlockline
+#define cv_hal_warpAffineBlockline (cv::ndsrvp::warpAffineBlockline)
 
 // ################ warpPerspective ################
 
-int warpPerspective(int src_type,
-    const uchar* src_data, size_t src_step, int src_width, int src_height,
-    uchar* dst_data, size_t dst_step, int dst_width, int dst_height,
-    const double M[9], int interpolation, int borderType, const double borderValue[4]);
+int warpPerspectiveBlocklineNN(const double *M, short* xy, double X0, double Y0, double W0, int bw);
 
-#undef cv_hal_warpPerspective
-#define cv_hal_warpPerspective (cv::ndsrvp::warpPerspective)
+#undef cv_hal_warpPerspectiveBlocklineNN
+#define cv_hal_warpPerspectiveBlocklineNN (cv::ndsrvp::warpPerspectiveBlocklineNN)
+
+int warpPerspectiveBlockline(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw);
+
+#undef cv_hal_warpPerspectiveBlockline
+#define cv_hal_warpPerspectiveBlockline (cv::ndsrvp::warpPerspectiveBlockline)
+
+// ################ remap ################
+
+int remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+    uchar *dst_data, size_t dst_step, int dst_width, int dst_height, float* mapx, size_t mapx_step,
+    float* mapy, size_t mapy_step, int interpolation, int border_type, const double border_value[4]);
+
+#undef cv_hal_remap32f
+#define cv_hal_remap32f (cv::ndsrvp::remap32f)
 
 // ################ threshold ################
 

@@ -108,10 +108,18 @@ CV_EXPORTS void warpAffine(int src_type,
                            uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
                            const double M[6], int interpolation, int borderType, const double borderValue[4]);
 
+CV_EXPORTS void warpAffineBlocklineNN(int *adelta, int *bdelta, short* xy, int X0, int Y0, int bw);
+
+CV_EXPORTS void warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X0, int Y0, int bw);
+
 CV_EXPORTS void warpPerspective(int src_type,
                                const uchar * src_data, size_t src_step, int src_width, int src_height,
                                uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
                                const double M[9], int interpolation, int borderType, const double borderValue[4]);
+
+CV_EXPORTS void warpPerspectiveBlocklineNN(const double *M, short* xy, double X0, double Y0, double W0, int bw);
+
+CV_EXPORTS void warpPerspectiveBlockline(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw);
 
 CV_EXPORTS void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
                             uchar * dst_data, size_t dst_step,
