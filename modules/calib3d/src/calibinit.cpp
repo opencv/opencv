@@ -222,7 +222,7 @@ public:
     int all_quads_count;
 
     struct NeighborsFinder {
-        const float thresh_scale = 1.f;
+        const float thresh_scale = sqrt(2.f);
         ChessBoardDetector& detector;
         std::vector<int> neighbors_indices;
         std::vector<float> neighbors_dists;
@@ -233,6 +233,7 @@ public:
 
         bool findCornerNeighbor(
             const int idx,
+            const int i,
             const cv::Point2f& pt,
             float& min_dist,
             const float radius,
@@ -514,8 +515,20 @@ ChessBoardDetector::NeighborsFinder::NeighborsFinder(ChessBoardDetector& _detect
     neighbors_dists.resize(all_corners_count);
 }
 
+static double pointSideFromLine(const Point2f& line_direction_vector, const Point2f& vector) {
+    return line_direction_vector.cross(vector);
+}
+
+static bool arePointsOnSameSideFromLine(const Point2f& line_pt1, const Point2f& line_pt2, const Point2f& pt1, const Point2f& pt2) {
+    const Point2f line_direction_vector = line_pt2 - line_pt1;
+    const Point2f vector1 = pt1 - line_pt1;
+    const Point2f vector2 = pt2 - line_pt1;
+    return pointSideFromLine(line_direction_vector, vector1) * pointSideFromLine(line_direction_vector, vector2) > 0.;
+}
+
 bool ChessBoardDetector::NeighborsFinder::findCornerNeighbor(
     const int idx,
+    const int i,
     const cv::Point2f& pt,
     float& min_dist,
     const float radius,
@@ -546,7 +559,8 @@ bool ChessBoardDetector::NeighborsFinder::findCornerNeighbor(
         if (q_k.neighbors[j])
             continue;
 
-        const float dist = normL2Sqr<float>(pt - all_quads_pts[neighbor_idx]);
+        const Point2f neighbor_pt = all_quads_pts[neighbor_idx];
+        const float dist = normL2Sqr<float>(pt - neighbor_pt);
         if (dist <= cur_quad.edge_len * thresh_scale &&
             dist <= q_k.edge_len * thresh_scale)
         {
@@ -560,6 +574,24 @@ bool ChessBoardDetector::NeighborsFinder::findCornerNeighbor(
                 DPRINTF("Incompatible edge lengths");
                 continue;
             }
+
+            const Point2f mid_pt1 = (cur_quad.corners[i]->pt + cur_quad.corners[(i + 1) & 3]->pt) / 2.f;
+            const Point2f mid_pt2 = (cur_quad.corners[(i + 2) & 3]->pt + cur_quad.corners[(i + 3) & 3]->pt) / 2.f;
+            if (!arePointsOnSameSideFromLine(mid_pt1, mid_pt2, pt, neighbor_pt))
+                continue;
+
+            const Point2f mid_pt3 = (cur_quad.corners[(i + 1) & 3]->pt + cur_quad.corners[(i + 2) & 3]->pt) / 2.f;
+            const Point2f mid_pt4 = (cur_quad.corners[(i + 3) & 3]->pt + cur_quad.corners[i]->pt) / 2.f;
+            if (!arePointsOnSameSideFromLine(mid_pt3, mid_pt4, pt, neighbor_pt))
+                continue;
+
+            const Point2f neighbor_pt_diagonal = q_k.corners[(j + 2) & 3]->pt;
+            if (!arePointsOnSameSideFromLine(mid_pt1, mid_pt2, pt, neighbor_pt_diagonal))
+                continue;
+
+            if (!arePointsOnSameSideFromLine(mid_pt3, mid_pt4, neighbor_pt, neighbor_pt_diagonal))
+                continue;
+
             closest_neighbor_idx = neighbor_idx;
             closest_quad_idx = k;
             closest_corner_idx = j;
@@ -1793,6 +1825,7 @@ void ChessBoardDetector::findQuadNeighbors()
 
             bool found = neighborsFinder.findCornerNeighbor(
                 idx,
+                i,
                 pt,
                 min_dist,
                 radius,
@@ -1813,6 +1846,7 @@ void ChessBoardDetector::findQuadNeighbors()
 
             found = neighborsFinder.findCornerNeighbor(
                 closest_quad_idx,
+                closest_corner_idx,
                 closest_corner_pt,
                 min_dist,
                 radius,
