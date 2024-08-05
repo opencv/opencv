@@ -227,7 +227,7 @@ int main(int argc, char** argv)
         timeRecorder.stop();
         //! [Make forward pass]
 
-        //! [Get 5 classes with a highest score]
+        //! [Get a class with a highest score]
         int N = (int)prob.total(), K = std::min(5, N);
         std::vector<std::pair<float, int> > prob_vec;
         for (int i = 0; i < N; i++) {
