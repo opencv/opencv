@@ -1365,7 +1365,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
     Point ofs;
     Size wsz(src.cols, src.rows);
-    if(!(borderType & BORDER_ISOLATED))
+    if(src.isSubmatrix() && !(borderType & BORDER_ISOLATED))
     {
         src.locateROI( wsz, ofs );
         CALL_HAL(pyrDown, cv_hal_pyrdown_offset, src.data, src.step, src.cols, src.rows,
