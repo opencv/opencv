@@ -515,11 +515,13 @@ ChessBoardDetector::NeighborsFinder::NeighborsFinder(ChessBoardDetector& _detect
     neighbors_dists.resize(all_corners_count);
 }
 
-static double pointSideFromLine(const Point2f& line_direction_vector, const Point2f& vector) {
+static double pointSideFromLine(const Point2f& line_direction_vector, const Point2f& vector)
+{
     return line_direction_vector.cross(vector);
 }
 
-static bool arePointsOnSameSideFromLine(const Point2f& line_pt1, const Point2f& line_pt2, const Point2f& pt1, const Point2f& pt2) {
+static bool arePointsOnSameSideFromLine(const Point2f& line_pt1, const Point2f& line_pt2, const Point2f& pt1, const Point2f& pt2)
+{
     const Point2f line_direction_vector = line_pt2 - line_pt1;
     const Point2f vector1 = pt1 - line_pt1;
     const Point2f vector2 = pt2 - line_pt1;
