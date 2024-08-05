@@ -330,10 +330,10 @@ void cv::fisheye::distortPoints(InputArray _undistorted, OutputArray distorted, 
     double cx, cy, fx, fy;
     if (Knew.depth() == CV_32F)
     {
-        fx = (double)Knew.at<float>(0, 0);
-        fy = (double)Knew.at<float>(1, 1);
-        cx = (double)Knew.at<float>(0, 2);
-        cy = (double)Knew.at<float>(1, 2);
+        fx = static_cast<double>(Knew.at<float>(0, 0));
+        fy = static_cast<double>(Knew.at<float>(1, 1));
+        cx = static_cast<double>(Knew.at<float>(0, 2));
+        cy = static_cast<double>(Knew.at<float>(1, 2));
     }
     else
     {
@@ -685,8 +685,8 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
 
     if (!new_size.empty())
     {
-        double rx = new_size.width /(double)image_size.width;
-        double ry = new_size.height/(double)image_size.height;
+        double rx = new_size.width /static_cast<double>(image_size.width);
+        double ry = new_size.height/static_cast<double>(image_size.height);
 
         new_f[0] *= rx;  new_f[1] *= ry;
         new_c[0] *= rx;  new_c[1] *= ry;
@@ -1145,7 +1145,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
         rms += ptr_e[i][0] * ptr_e[i][0] + ptr_e[i][1] * ptr_e[i][1];
     }
 
-    rms /= ((double)e.total() / 2.0);
+    rms /= (static_cast<double>(e.total()) / 2.0);
     rms = sqrt(rms);
 
     _K1 = Matx33d(intrinsicLeft.f[0], intrinsicLeft.f[0] * intrinsicLeft.alpha, intrinsicLeft.c[0],
@@ -1646,7 +1646,7 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     }
 
     meanStdDev(ex, noArray(), std_err);
-    std_err *= sqrt((double)ex.total()/((double)ex.total() - 1.0));
+    std_err *= sqrt(static_cast<double>(ex.total())/(static_cast<double>(ex.total()) - 1.0));
 
     Vec<double, 1> sigma_x;
     meanStdDev(ex.reshape(1, 1), noArray(), sigma_x);
@@ -1660,7 +1660,7 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     // an explanation of that denominator correction can be found here:
     // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
     // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
-    sigma_x  *= sqrt(2.0 * (double)ex.total()/(2.0 * (double)ex.total() - nParams));
+    sigma_x  *= sqrt(2.0 * static_cast<double>(ex.total())/(2.0 * static_cast<double>(ex.total()) - nParams));
 
     errors = 3 * sigma_x(0) * JJ2.diag();
     rms = sqrt(norm(ex, NORM_L2SQR)/ex.total());
