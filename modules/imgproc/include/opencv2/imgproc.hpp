@@ -871,7 +871,17 @@ enum ColorConversionCodes {
     COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
     COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
 
-    COLOR_COLORCVT_MAX  = 155
+    COLOR_BGR2YUV_NV12 = 155,
+    COLOR_RGB2YUV_NV12 = 156,
+    COLOR_BGRA2YUV_NV12 = 157,
+    COLOR_RGBA2YUV_NV12 = 158,
+
+    COLOR_BGR2YUV_NV21 = 159,
+    COLOR_RGB2YUV_NV21 = 160,
+    COLOR_BGRA2YUV_NV21 = 161,
+    COLOR_RGBA2YUV_NV21 = 162,
+
+    COLOR_COLORCVT_MAX  = 163
 };
 
 //! @addtogroup imgproc_shape
@@ -3726,10 +3736,11 @@ floating-point.
 @param code color space conversion code (see #ColorConversionCodes).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
 channels is derived automatically from src and code.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @see @ref imgproc_color_conversions
  */
-CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0 );
+CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief Converts an image from one color space to another where the source image is
 stored in two planes.
@@ -3748,8 +3759,30 @@ This function only supports YUV420 to RGB conversion as of now.
 - #COLOR_YUV2RGB_NV21
 - #COLOR_YUV2BGRA_NV21
 - #COLOR_YUV2RGBA_NV21
+@param hint Implementation modfication flags. See #AlgorithmHint
 */
-CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code );
+CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
+
+/** @brief Converts an image from one color space to another where the destination image is
+stored in two planes.
+
+Complementary to #cvtColorTwoPlane. The function only supports RGB to YUV420 conversion as of now.
+
+@param src1 8-bit image (#CV_8U) of the Y plane.
+@param src2 image containing interleaved U/V plane.
+@param dst output image.
+@param code Specifies the type of conversion. It can take any of the following values:
+- #COLOR_BGR2YUV_NV12
+- #COLOR_RGB2YUV_NV12
+- #COLOR_BGRA2YUV_NV12
+- #COLOR_RGBA2YUV_NV12
+- #COLOR_BGR2YUV_NV21
+- #COLOR_RGB2YUV_NV21
+- #COLOR_BGRA2YUV_NV21
+- #COLOR_RGBA2YUV_NV21
+@param hint Implementation modfication flags. See #AlgorithmHint
+*/
+CV_EXPORTS_W void cvtColorTwoPlaneOuput( InputArray src, OutputArray dst1, OutputArray dst2, int code, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief main function for all demosaicing processes
 

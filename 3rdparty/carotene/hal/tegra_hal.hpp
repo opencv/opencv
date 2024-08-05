@@ -1843,18 +1843,14 @@ TegraCvtColor_Invoker(bgrx2hsvf, bgrx2hsv, src_data + static_cast<size_t>(range.
 #define cv_hal_cvtBGRtoGray TEGRA_CVTBGRTOGRAY
 #undef cv_hal_cvtGraytoBGR
 #define cv_hal_cvtGraytoBGR TEGRA_CVTGRAYTOBGR
-#if 0  // bit-exact tests are failed
-#undef cv_hal_cvtBGRtoYUV
-#define cv_hal_cvtBGRtoYUV TEGRA_CVTBGRTOYUV
-#endif
+#undef cv_hal_cvtBGRtoYUVApprox
+#define cv_hal_cvtBGRtoYUVApprox TEGRA_CVTBGRTOYUV
 #undef cv_hal_cvtBGRtoHSV
 #define cv_hal_cvtBGRtoHSV TEGRA_CVTBGRTOHSV
-#if 0  // bit-exact tests are failed
-#undef cv_hal_cvtTwoPlaneYUVtoBGR
-#define cv_hal_cvtTwoPlaneYUVtoBGR TEGRA_CVT2PYUVTOBGR
-#undef cv_hal_cvtTwoPlaneYUVtoBGREx
-#define cv_hal_cvtTwoPlaneYUVtoBGREx TEGRA_CVT2PYUVTOBGR_EX
-#endif
+#undef cv_hal_cvtTwoPlaneYUVtoBGRApprox
+#define cv_hal_cvtTwoPlaneYUVtoBGRApprox TEGRA_CVT2PYUVTOBGR
+#undef cv_hal_cvtTwoPlaneYUVtoBGRExApprox
+#define cv_hal_cvtTwoPlaneYUVtoBGRExApprox TEGRA_CVT2PYUVTOBGR_EX
 
 // The optimized branch was developed for old armv7 processors and leads to perf degradation on armv8
 #if defined(DCAROTENE_NEON_ARCH) && (DCAROTENE_NEON_ARCH == 7)
