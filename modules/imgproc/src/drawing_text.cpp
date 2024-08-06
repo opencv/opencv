@@ -1404,10 +1404,11 @@ Point FontRenderEngine::putText_(
     if (weight != 0)
         for(j = 0; j <= BUILTIN_FONTS_NUM; j++)
         {
-            int params[] = {STBTT_FOURCC('w', 'g', 'h', 't'), saved_weights[j]};
             font_t* ttface = (j < BUILTIN_FONTS_NUM ? builtin_ffaces[j] : fontface)->ttface;
-            if (ttface)
-                stbtt_SetInstance(ttface, params, 1, 0);
+            if (!ttface || stbtt_GetWeight(ttface) == saved_weights[j])
+                continue;
+            int params[] = {STBTT_FOURCC('w', 'g', 'h', 't'), saved_weights[j]};
+            stbtt_SetInstance(ttface, params, 1, 0);
         }
 
     return pen;
