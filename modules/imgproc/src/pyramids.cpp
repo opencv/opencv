@@ -1363,10 +1363,10 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     Mat dst = _dst.getMat();
     int depth = src.depth();
 
-    Point ofs;
-    Size wsz(src.cols, src.rows);
     if(src.isSubmatrix() && !(borderType & BORDER_ISOLATED))
     {
+        Point ofs;
+        Size wsz(src.cols, src.rows);
         src.locateROI( wsz, ofs );
         CALL_HAL(pyrDown, cv_hal_pyrdown_offset, src.data, src.step, src.cols, src.rows,
                  dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(),
