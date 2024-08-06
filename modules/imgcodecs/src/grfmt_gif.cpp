@@ -13,11 +13,12 @@ namespace cv
 //////////////////////////////////////////////////////////////////////
 GifDecoder::GifDecoder() {
     m_signature = R"(GIF)";
-    m_type = CV_8UC3;
+    m_type = CV_8UC4;
     bgColor = -1;
     m_buf_supported = true;
     globalColorTableSize = 0;
     localColorTableSize = 0;
+    localColorTable.allocate(3 * 256); // maximum size of a color table
     lzwMinCodeSize = 0;
     hasRead = false;
     hasTransparentColor = false;
@@ -25,6 +26,7 @@ GifDecoder::GifDecoder() {
     opMode = GRFMT_GIF_Nothing;
     top = 0, left = 0, width = 0, height = 0;
     depth = 8;
+    idx = 0;
 }
 
 GifDecoder::~GifDecoder() {
@@ -40,37 +42,36 @@ bool GifDecoder::readHeader() {
         return false;
     }
 
-    try {
-        String signature(6, ' ');
-        m_strm.getBytes((uchar*)signature.data(), 6);
-        CV_Assert(signature == R"(GIF87a)" || signature == R"(GIF89a)");
+    String signature(6, ' ');
+    m_strm.getBytes((uchar*)signature.data(), 6);
+    CV_Assert(signature == R"(GIF87a)" || signature == R"(GIF89a)");
 
-        // #1: read logical screen descriptor
-        m_width = m_strm.getWord();
-        m_height = m_strm.getWord();
-        CV_Assert(m_width > 0 && m_height > 0);
+    // #1: read logical screen descriptor
+    m_width = m_strm.getWord();
+    m_height = m_strm.getWord();
+    CV_Assert(m_width > 0 && m_height > 0);
 
-        char flags = (char)m_strm.getByte();
+    char flags = (char)m_strm.getByte();
 
-        // the background color -> index in the global color table, valid only if the global color table is present
-        bgColor = m_strm.getByte();
-        m_strm.skip(1); // Skip the aspect ratio
+    // the background color -> index in the global color table, valid only if the global color table is present
+    bgColor = m_strm.getByte();
+    m_strm.skip(1); // Skip the aspect ratio
 
-        // #2: read global color table
-        depth = ((flags & 0x70) >> 4) + 1;
-        if (flags & 0x80) {
-            globalColorTableSize = 1 << ((flags & 0x07) + 1);
-            globalColorTable.allocate(3 * globalColorTableSize);
-            for (int i = 0; i < 3 * globalColorTableSize; i++) {
-                globalColorTable[i] = (uchar)m_strm.getByte();
-            }
+    // #2: read global color table
+    depth = ((flags & 0x70) >> 4) + 1;
+    if (flags & 0x80) {
+        globalColorTableSize = 1 << ((flags & 0x07) + 1);
+        globalColorTable.allocate(3 * globalColorTableSize);
+        for (int i = 0; i < 3 * globalColorTableSize; i++) {
+            globalColorTable[i] = (uchar)m_strm.getByte();
         }
-    } catch (...) {
-        throw;
     }
 
+    // get the frame count
+    bool success = getFrameCount_();
+
     hasRead = false;
-    return true;
+    return success;
 }
 
 bool GifDecoder::readData(Mat &img) {
@@ -88,13 +89,13 @@ bool GifDecoder::readData(Mat &img) {
     height = m_strm.getWord();
     CV_Assert(width > 0 && height > 0 && left + width <= m_width && top + height <= m_height);
 
-    currentImageCodeStream.allocate(width * height);
+    imgCodeStream.allocate(width * height);
     Mat img_;
 
     switch (opMode) {
         case GifOpMode::GRFMT_GIF_PreviousImage:
             if (lastImage.empty()){
-                img_ = Mat::zeros(m_height, m_width, CV_8UC3);
+                img_ = Mat::zeros(m_height, m_width, CV_8UC4);
             } else {
                 img_ = lastImage;
             }
@@ -102,15 +103,22 @@ bool GifDecoder::readData(Mat &img) {
         case GifOpMode::GRFMT_GIF_Background:
             // background color is valid iff global color table exists
             CV_Assert(globalColorTableSize > 0);
-            img_ = Mat(m_height, m_width, CV_8UC3,
-                       Scalar(globalColorTable[bgColor * 3 + 2],
-                              globalColorTable[bgColor * 3 + 1],
-                              globalColorTable[bgColor * 3]));
+            if (hasTransparentColor && transparentColor == bgColor) {
+                img_ = Mat(m_height, m_width, CV_8UC4,
+                           Scalar(globalColorTable[bgColor * 3 + 2],
+                                  globalColorTable[bgColor * 3 + 1],
+                                  globalColorTable[bgColor * 3], 0));
+            } else {
+                img_ = Mat(m_height, m_width, CV_8UC4,
+                           Scalar(globalColorTable[bgColor * 3 + 2],
+                                  globalColorTable[bgColor * 3 + 1],
+                                  globalColorTable[bgColor * 3], 255));
+            }
             break;
         case GifOpMode::GRFMT_GIF_Nothing:
         case GifOpMode::GRFMT_GIF_Cover:
             // default value
-            img_ = Mat::zeros(m_height, m_width, CV_8UC3);
+            img_ = Mat::zeros(m_height, m_width, CV_8UC4);
             break;
         default:
             CV_Assert(false);
@@ -118,33 +126,23 @@ bool GifDecoder::readData(Mat &img) {
     lastImage.release();
 
     auto flags = (uchar)m_strm.getByte();
-    localColorTableSize = 0;
     if (flags & 0x80) {
         // local color table
         localColorTableSize = 1 << ((flags & 0x07) + 1);
-        localColorTable.allocate(3 * localColorTableSize);
         for (int i = 0; i < 3 * localColorTableSize; i++) {
             localColorTable[i] = (uchar)m_strm.getByte();
         }
-    }
-
-    // the case that neither global nor local color table exists is not defined in the GIF standard (but allowed)
-    if (!(globalColorTableSize || localColorTableSize)) {
-        // go through the length of unused data.
-        m_strm.skip(1);
-        int len = m_strm.getByte();
-        while (len) {
-            m_strm.skip(len);
-            len = m_strm.getByte();
-        }
-
-        lastImage = img_;
-        if (!img.empty())
-            img_.copyTo(img);
-
-        // release the memory
-        img_.release();
-        return true;
+    } else if (globalColorTableSize) {
+        /*
+         * According to the GIF Specification at https://www.w3.org/Graphics/GIF/spec-gif89a.txt:
+         *   "Both types of color tables are optional, making it possible for a Data Stream to contain
+         * numerous graphics without a color table at all."
+         *   The specification recommended that the decoder save the last Global Color Table used
+         * until another Global Color Table is encountered, here we also save the last Local Color Table used
+         * in case of there is no such thing as "last Global Color Table used". Thus, we only refresh the
+         * Local Color Table when a Global Color Table or last Global Color Table used is present.
+         */
+        localColorTableSize = 0;
     }
 
     // lzw decompression to get the code stream
@@ -152,6 +150,7 @@ bool GifDecoder::readData(Mat &img) {
 
     // convert code stream into pixels on the image
     if (hasRead) {
+        idx = 0;
         if (!(flags & 0x40)) {
             // no interlace, simply convert the code stream into pixels from top to down
             code2pixel(img_, 0, 1);
@@ -170,6 +169,10 @@ bool GifDecoder::readData(Mat &img) {
 
     // release the memory
     img_.release();
+
+    if (m_use_rgb) {
+        cvtColor(img, img, COLOR_BGRA2RGBA);
+    }
 
     return hasRead;
 }
@@ -201,9 +204,9 @@ void GifDecoder::readExtensions() {
 
         // read graphic control extension
         // the scope of this extension is the next image or plain text extension
-        hasTransparentColor = false;
-        opMode = GifOpMode::GRFMT_GIF_Nothing;// default value
         if (!(extensionType ^ 0xF9)) {
+            hasTransparentColor = false;
+            opMode = GifOpMode::GRFMT_GIF_Nothing;// default value
             len = (uchar)m_strm.getByte();
             CV_Assert(len == 4);
             auto flags = (uchar)m_strm.getByte();
@@ -225,21 +228,52 @@ void GifDecoder::readExtensions() {
 }
 
 void GifDecoder::code2pixel(Mat& img, int start, int k){
-    for (int i = start; i < height; i+=k) {
+    for (int i = start; i < height; i += k) {
         for (int j = 0; j < width; j++) {
-            int idx = i * width + j;
-            int colorIdx = currentImageCodeStream[idx];
+            uchar colorIdx = imgCodeStream[idx++];
             if (hasTransparentColor && colorIdx == transparentColor) {
+                if (opMode != GifOpMode::GRFMT_GIF_PreviousImage) {
+                    if (colorIdx < localColorTableSize) {
+                        img.at<Vec4b>(top + i, left + j) =
+                                Vec4b(localColorTable[colorIdx * 3 + 2], // B
+                                      localColorTable[colorIdx * 3 + 1], // G
+                                      localColorTable[colorIdx * 3],     // R
+                                      0);                                // A
+                    } else if (colorIdx < globalColorTableSize) {
+                        img.at<Vec4b>(top + i, left + j) =
+                                Vec4b(globalColorTable[colorIdx * 3 + 2], // B
+                                      globalColorTable[colorIdx * 3 + 1], // G
+                                      globalColorTable[colorIdx * 3],     // R
+                                      0);                                 // A
+                    } else {
+                        img.at<Vec4b>(top + i, left + j) = Vec4b(0, 0, 0, 0);
+                    }
+                }
                 continue;
             }
             if (colorIdx < localColorTableSize) {
-                img.at<Vec3b>(top + i, left + j)[0] = localColorTable[colorIdx * 3 + 2]; //B
-                img.at<Vec3b>(top + i, left + j)[1] = localColorTable[colorIdx * 3 + 1]; //G
-                img.at<Vec3b>(top + i, left + j)[2] = localColorTable[colorIdx * 3];     //R
+                img.at<Vec4b>(top + i, left + j) =
+                        Vec4b(localColorTable[colorIdx * 3 + 2], // B
+                              localColorTable[colorIdx * 3 + 1], // G
+                              localColorTable[colorIdx * 3],     // R
+                              255);                              // A
             } else if (colorIdx < globalColorTableSize) {
-                img.at<Vec3b>(top + i, left + j)[0] = globalColorTable[colorIdx * 3 + 2]; //B
-                img.at<Vec3b>(top + i, left + j)[1] = globalColorTable[colorIdx * 3 + 1]; //G
-                img.at<Vec3b>(top + i, left + j)[2] = globalColorTable[colorIdx * 3];     //R
+                img.at<Vec4b>(top + i, left + j) =
+                        Vec4b(globalColorTable[colorIdx * 3 + 2], // B
+                              globalColorTable[colorIdx * 3 + 1], // G
+                              globalColorTable[colorIdx * 3],     // R
+                              255);                               // A
+            } else if (!(localColorTableSize || globalColorTableSize)) {
+                /*
+                 * According to the GIF Specification at https://www.w3.org/Graphics/GIF/spec-gif89a.txt:
+                 *   "If no color table is available at all, the decoder is free to use a system color table
+                 * or a table of its own. In that case, the decoder may use a color table with as many colors
+                 * as its hardware is able to support; it is recommended that such a table have black and
+                 * white as its first two entries, so that monochrome images can be rendered adequately."
+                 */
+                uchar intensity = colorIdx ^ 1 ? colorIdx : 255;
+                img.at<Vec4b>(top + i, left + j) =
+                        Vec4b(intensity, intensity, intensity, 255);
             } else {
                 CV_Assert(false);
             }
@@ -255,10 +289,10 @@ bool GifDecoder::lzwDecode() {
     int exitCode = clearCode + 1;
     CV_Assert(lzwCodeSize > 2 && lzwCodeSize <= 12);
     std::vector<lzwNodeD> lzwExtraTable((1 << 12) + 1);
-    int colorTableSize = localColorTableSize ? localColorTableSize : globalColorTableSize;
+    int colorTableSize = clearCode;
     int lzwTableSize = exitCode;
 
-    int idx = 0;
+    idx = 0;
     int leftBits = 0;
     uint32_t src = 0;
     auto blockLen = (uchar)m_strm.getByte();
@@ -293,7 +327,6 @@ bool GifDecoder::lzwDecode() {
 
             // check if the code stream is full
             if (idx == width * height) {
-                lzwExtraTable.clear();
                 return false;
             }
 
@@ -302,9 +335,10 @@ bool GifDecoder::lzwDecode() {
             if (code < colorTableSize) {
                 lzwExtraTable[lzwTableSize].suffix = (uchar)code;
                 lzwTableSize ++;
+                lzwExtraTable[lzwTableSize].prefix.clear();
                 lzwExtraTable[lzwTableSize].prefix.push_back((uchar)code);
                 lzwExtraTable[lzwTableSize].length = 2;
-            } else if (code <= lzwTableSize && !lzwExtraTable[code].prefix.empty()) {
+            } else if (code <= lzwTableSize) {
                 lzwExtraTable[lzwTableSize].suffix = lzwExtraTable[code].prefix[0];
                 lzwTableSize ++;
                 lzwExtraTable[lzwTableSize].prefix = lzwExtraTable[code].prefix;
@@ -316,17 +350,16 @@ bool GifDecoder::lzwDecode() {
 
             // 2. output to the code stream
             if (code < colorTableSize) {
-                currentImageCodeStream[idx++] = (uchar)code;
+                imgCodeStream[idx++] = (uchar)code;
             } else {
                 for (int i = 0; i < lzwExtraTable[code].length - 1; i++) {
-                    currentImageCodeStream[idx++] = lzwExtraTable[code].prefix[i];
+                    imgCodeStream[idx++] = lzwExtraTable[code].prefix[i];
                 }
-                currentImageCodeStream[idx++] = lzwExtraTable[code].suffix;
+                imgCodeStream[idx++] = lzwExtraTable[code].suffix;
             }
 
             // check if the code size is full
             if (lzwTableSize > (1 << 12)) {
-                lzwExtraTable.clear();
                 return false;
             }
 
@@ -353,6 +386,61 @@ void GifDecoder::close() {
     while (!lastImage.empty()) lastImage.release();
     m_strm.close();
 }
+
+bool GifDecoder::getFrameCount_() {
+    m_frame_count = 0;
+    auto type = (uchar)m_strm.getByte();
+    while (type != 0x3B) {
+        if (!(type ^ 0x21)) {
+            // skip all kinds of the extensions
+            m_strm.skip(1);
+            int len = m_strm.getByte();
+            while (len) {
+                m_strm.skip(len);
+                len = m_strm.getByte();
+            }
+        } else if (!(type ^ 0x2C)) {
+            // skip image data
+            m_frame_count ++;
+            // skip left, top, width, height
+            m_strm.skip(8);
+            int flags = m_strm.getByte();
+            // skip local color table
+            if (flags & 0x80) {
+                m_strm.skip(3 * (1 << ((flags & 0x07) + 1)));
+            }
+            // skip lzw min code size
+            m_strm.skip(1);
+            int len = m_strm.getByte();
+            while (len) {
+                m_strm.skip(len);
+                len = m_strm.getByte();
+            }
+        } else {
+            CV_Assert(false);
+        }
+        type = (uchar)m_strm.getByte();
+    }
+    // roll back to the block identifier
+    m_strm.setPos(0);
+    return skipHeader();
 }
+
+bool GifDecoder::skipHeader() {
+    String signature(6, ' ');
+    m_strm.getBytes((uchar *) signature.data(), 6);
+    // skip height and width
+    m_strm.skip(4);
+    char flags = (char) m_strm.getByte();
+    // skip the background color and the aspect ratio
+    m_strm.skip(2);
+    // skip the global color table
+    if (flags & 0x80) {
+        m_strm.skip(3 * (1 << ((flags & 0x07) + 1)));
+    }
+    return signature == R"(GIF87a)" || signature == R"(GIF89a)";
+}
+
+} // namespace cv
 
 #endif

@@ -22,12 +22,6 @@ enum GifOpMode
 //////////////////////////////////////////////////////////////////////
 ////                        GIF Decoder                           ////
 //////////////////////////////////////////////////////////////////////
-struct lzwNodeD
-{
-    int length;
-    std::vector<uchar> prefix;
-    uchar suffix;
-};
 
 class GifDecoder CV_FINAL : public BaseImageDecoder
 {
@@ -47,6 +41,7 @@ protected:
 
     int                 bgColor;
     int                 depth;
+    int                 idx;
 
     GifOpMode           opMode;
     bool                hasTransparentColor;
@@ -62,11 +57,20 @@ protected:
     int                 localColorTableSize;
 
     Mat                 lastImage;
-    AutoBuffer<uchar>   currentImageCodeStream;
+    AutoBuffer<uchar>   imgCodeStream;
+
+    struct lzwNodeD
+    {
+        int   length;
+        uchar suffix;
+        std::vector<uchar> prefix;
+    };
 
     void readExtensions();
     void code2pixel(Mat& img, int start, int k);
     bool lzwDecode();
+    bool getFrameCount_();
+    bool skipHeader();
 };
 } // namespace cv
 
