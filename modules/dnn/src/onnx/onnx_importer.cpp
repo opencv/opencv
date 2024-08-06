@@ -3280,6 +3280,17 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     // or 1-D tensor (per-channel quantized).
     bool is1D = false;
 
+    if (layerParams.type == "Quantize")
+        layerParams.set("depth", CV_8S);
+    else // Dequantize
+        layerParams.set("depth", CV_32F);
+
+    // If scale is not defined as a constant blob, it is considered an external input.
+    if(constBlobs.find(node_proto.input(1)) == constBlobs.end()){
+        addLayer(layerParams, node_proto);
+        return;
+    }
+
     Mat scaleMat = getBlob(node_proto, 1);
     if(scaleMat.total() > 1) is1D = true;
 
@@ -3320,11 +3331,6 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
         layerParams.set("scales", scale);
         layerParams.set("zeropoints", zeropoint);
     }
-
-    if (layerParams.type == "Quantize")
-        layerParams.set("depth", CV_8S);
-    else // Dequantize
-        layerParams.set("depth", CV_32F);
 
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end()) // Variable input.
     {

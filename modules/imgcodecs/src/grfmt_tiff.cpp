@@ -1100,16 +1100,6 @@ bool TiffEncoder::isFormatSupported( int depth ) const
     return depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F;
 }
 
-void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
-                             TiffFieldType fieldType,
-                             int count, int value )
-{
-    strm.putWord( tag );
-    strm.putWord( fieldType );
-    strm.putDWord( count );
-    strm.putDWord( value );
-}
-
 class TiffEncoderBufHelper
 {
 public:
