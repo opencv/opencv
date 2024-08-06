@@ -1168,6 +1168,7 @@ void ONNXImporter::parseGlobalPool(LayerParams &layerParams, const opencv_onnx::
 
 void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    layerParams.type = "Reduce";
     const auto& op_type = node_proto.op_type();
     String reduce_type;
     if (op_type == "ReduceMax")
@@ -1209,9 +1210,16 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         for (int i = 0; i < num_axes; ++i)
             axes[i] = mat_axes.at<int>(i);
         layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
+        if (constBlobs.find(node_proto.input(0)) != constBlobs.end()){
+            std::vector<Mat> inputs, output;
+            inputs.push_back(getBlob(node_proto, 0));
+            runLayer(layerParams, inputs, output);
+            CV_Assert(output.size() == 1);
+            addConstant(node_proto.output(0), output[0]);
+            return;
+        }
     }
 
-    layerParams.type = "Reduce";
     addLayer(layerParams, node_proto);
 }
 
@@ -2858,14 +2866,6 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         };
     }
 
-    // element-wise layers that can have >=1 inputs but actually have one input
-    if (node_proto.input_size() == 1 && (op_type == "max" || op_type == "min" || op_type == "mean" || op_type == "sum"))
-    {
-        layerParams.type = "Identity";
-        addLayer(layerParams, node_proto);
-        return;
-    }
-
     auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
         if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
             transpose(t, t);
@@ -3971,7 +3971,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
             dispatch["LessOrEqual"] = dispatch["Mod"] = dispatch["And"] = dispatch["Or"] = dispatch["Xor"] = &ONNXImporter::parseElementWise;
 
-    dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
+    dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = dispatch["Mean"] = &ONNXImporter::parseElementWise;
     dispatch["Where"] = &ONNXImporter::parseElementWise;
     dispatch["Range"] = &ONNXImporter::parseRange;
     dispatch["Einsum"] = &ONNXImporter::parseEinsum;

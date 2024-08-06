@@ -119,7 +119,7 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
                                             pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);
             else
 #endif
-#if CV_TRY_RVV
+#if CV_TRY_RVV && CV_RVV
             if(canRunOpt && conv->useRVV)
                 opt_RVV::fastDepthwiseConv(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
                                             pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);

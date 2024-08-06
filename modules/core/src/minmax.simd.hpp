@@ -194,7 +194,7 @@ static void funcname(const T* src, const uchar* mask, WT* _minVal, WT* _maxVal, 
             } \
             /* for both minimum and maximum we check whether global extremum */ \
             /* and its index need to be updated. If yes, we compute */ \
-            /* the smallest index within the block where the new global \
+            /* the smallest index within the block where the new global */ \
             /* extremum value occurs */ \
             UVT idxmask = v_ne(v_minidx, v_invalid_idx); \
             if (v_check_any(idxmask)) { \
@@ -304,7 +304,7 @@ static void funcname(const T* src, const uchar* mask, WT* _minVal, WT* _maxVal, 
     } \
     /* for both minimum and maximum we check whether global extremum */ \
     /* and its index need to be updated. If yes, we compute */ \
-    /* the smallest index within the block where the new global \
+    /* the smallest index within the block where the new global */ \
     /* extremum value occurs */ \
     UVT idxmask = v_ne(v_minidx, v_invalid_idx); \
     if (v_check_any(idxmask)) { \

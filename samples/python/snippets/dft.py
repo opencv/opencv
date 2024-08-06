@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-sample for disctrete fourier transform (dft)
+sample for discrete fourier transform (dft)
 
 USAGE:
     dft.py <image_file>

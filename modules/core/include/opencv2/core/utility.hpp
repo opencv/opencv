@@ -544,6 +544,18 @@ bool isAligned(const void* p1, const void* p2, const void* p3, const void* p4)
     return isAligned<N>(((size_t)p1)|((size_t)p2)|((size_t)p3)|((size_t)p4));
 }
 
+/*! @brief Flags that allow to midify some functions behavior. Used as set of flags.
+*/
+enum AlgorithmHint {
+    ALGO_HINT_DEFAULT = 0, //!< Default algorithm behaviour defined during OpenCV build
+    ALGO_HINT_ACCURATE = 1, //!< Use generic portable implementation
+    ALGO_HINT_APPROX = 2, //!< Allow alternative approximations to get faster implementation. Behaviour and result depends on a platform
+};
+
+/*! @brief Returns AlgorithmHint defined during OpenCV compilation. Defines #ALGO_HINT_DEFAULT behavior.
+ */
+CV_EXPORTS_W AlgorithmHint getDefaultAlgorithmHint();
+
 /** @brief Enables or disables the optimized code.
 
 The function can be used to dynamically turn on and off optimized dispatched code (code that uses SSE4.2, AVX/AVX2,

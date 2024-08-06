@@ -88,7 +88,7 @@ static inline int calcType(int type, int flags)
         if( (flags & IMREAD_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
 
-        if( (flags & IMREAD_COLOR) != 0 ||
+        if( (flags & IMREAD_COLOR) != 0 || (flags & IMREAD_COLOR_RGB) != 0 ||
            ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
         else
@@ -432,6 +432,12 @@ imread_( const String& filename, int flags, OutputArray mat )
             scale_denom = 8;
     }
 
+    // Try to decode image by RGB instead of BGR.
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+    {
+        decoder->setRGB(true);
+    }
+
     /// set the scale_denom in the driver
     decoder->setScale( scale_denom );
 
@@ -541,6 +547,9 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
     if (count < 0) {
         count = std::numeric_limits<int>::max();
     }
+
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+        decoder->setRGB(true);
 
     /// set the filename in the driver
     decoder->setSource(filename);
@@ -811,6 +820,12 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
             scale_denom = 8;
     }
 
+    // Try to decode image by RGB instead of BGR.
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+    {
+        decoder->setRGB(true);
+    }
+
     /// set the scale_denom in the driver
     decoder->setScale( scale_denom );
 
@@ -946,6 +961,12 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
     ImageDecoder decoder = findDecoder(buf_row);
     if (!decoder)
         return 0;
+
+    // Try to decode image by RGB instead of BGR.
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+    {
+        decoder->setRGB(true);
+    }
 
     if (count < 0) {
         count = std::numeric_limits<int>::max();
@@ -1205,26 +1226,8 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     m_decoder->setSource(filename);
     CV_Assert(m_decoder->readHeader());
 
-    // count the pages of the image collection
-    size_t count = 1;
-    while(m_decoder->nextPage()) count++;
-
-    m_size = count;
+    m_size = m_decoder->getFrameCount();
     m_pages.resize(m_size);
-    // Reinitialize the decoder because we advanced to the last page while counting the pages of the image
-#ifdef HAVE_GDAL
-    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
-        m_decoder = GdalDecoder().newDecoder();
-    }
-    else {
-#endif
-    m_decoder = findDecoder(m_filename);
-#ifdef HAVE_GDAL
-    }
-#endif
-
-    m_decoder->setSource(m_filename);
-    m_decoder->readHeader();
 }
 
 size_t ImageCollection::Impl::size() const { return m_size; }
