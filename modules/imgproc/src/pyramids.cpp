@@ -1377,8 +1377,6 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
         CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
     }
 
-    // IPP code was incorrect, removed
-
     PyrFunc func = 0;
     if( depth == CV_8U )
         func = pyrDown_< FixPtCast<uchar, 8> >;
