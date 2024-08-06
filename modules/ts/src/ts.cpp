@@ -1035,7 +1035,8 @@ static std::string findData(const std::string& relative_path, bool required, boo
         }
     }
 #ifdef OPENCV_TEST_DATA_INSTALL_PATH
-    datapath = path_join("./", OPENCV_TEST_DATA_INSTALL_PATH);
+    datapath = OPENCV_TEST_DATA_INSTALL_PATH;
+
     if (isDirectory(datapath))
     {
         for(size_t i = search_subdir.size(); i > 0; i--)

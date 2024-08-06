@@ -72,6 +72,10 @@
     #endif
 #endif
 
+#if defined (__QNX__)
+    #include <sys/syspage.h>
+#endif
+
 #ifndef OPENCV_DISABLE_THREAD_SUPPORT
     #include <thread>
 #endif
@@ -1011,7 +1015,9 @@ int getNumberOfCPUs_()
 
     static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
     ncpus = minNonZero(ncpus, cpu_count_sysconf);
-
+#elif defined (__QNX__)
+    static unsigned cpu_count_sysconf = _syspage_ptr->num_cpu;
+    ncpus = minNonZero(ncpus, cpu_count_sysconf);
 #endif
 
     return ncpus != 0 ? ncpus : 1;

@@ -773,7 +773,7 @@ if(UNIX OR MINGW)
     elseif(EMSCRIPTEN)
       # no need to link to system libs with emscripten
     elseif(QNXNTO)
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m)
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m regex)
     elseif(MINGW)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} pthread)
     else()
