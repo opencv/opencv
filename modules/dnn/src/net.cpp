@@ -189,6 +189,16 @@ void Net::dumpToFile(const String& path)
     file.close();
 }
 
+void Net::dumpToPbtxt(const String& path)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    CV_Assert(!empty());
+    std::ofstream file(path.c_str());
+    file << impl->dumpToPbtxt(true);
+    file.close();
+}
+
 Ptr<Layer> Net::getLayer(int layerId) const
 {
     CV_Assert(impl);

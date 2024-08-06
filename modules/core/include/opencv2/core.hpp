@@ -917,11 +917,8 @@ CV_EXPORTS_W void reduceArgMax(InputArray src, OutputArray dst, int axis, bool l
 
 The function cv::minMaxIdx finds the minimum and maximum element values and their positions. The
 extremums are searched across the whole array or, if mask is not an empty array, in the specified
-array region. The function does not work with multi-channel arrays. If you need to find minimum or
-maximum elements across all the channels, use Mat::reshape first to reinterpret the array as
-single-channel. Or you may extract the particular channel using either extractImageCOI, or
-mixChannels, or split. In case of a sparse matrix, the minimum is found among non-zero elements
-only.
+array region. In case of a sparse matrix, the minimum is found among non-zero elements
+only. Multi-channel input is supported without mask and extremums indexes (should be nullptr).
 @note When minIdx is not NULL, it must have at least 2 elements (as well as maxIdx), even if src is
 a single-row or single-column matrix. In OpenCV (following MATLAB) each array has at least 2
 dimensions, i.e. single-column matrix is Mx1 matrix (and therefore minIdx/maxIdx will be
@@ -1825,7 +1822,7 @@ CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
  * @note Input should be continuous single-channel matrix.
  * @param src input array.
  * @param order a permutation of [0,1,..,N-1] where N is the number of axes of src.
- * The i’th axis of dst will correspond to the axis numbered order[i] of the input.
+ * The i'th axis of dst will correspond to the axis numbered order[i] of the input.
  * @param dst output array of the same type as src.
  */
 CV_EXPORTS_W void transposeND(InputArray src, const std::vector<int>& order, OutputArray dst);
@@ -2215,47 +2212,9 @@ current implementation). Such an efficient DFT size can be calculated using the 
 method.
 
 The sample below illustrates how to calculate a DFT-based convolution of two 2D real arrays:
-@code
-    void convolveDFT(InputArray A, InputArray B, OutputArray C)
-    {
-        // reallocate the output array if needed
-        C.create(abs(A.rows - B.rows)+1, abs(A.cols - B.cols)+1, A.type());
-        Size dftSize;
-        // calculate the size of DFT transform
-        dftSize.width = getOptimalDFTSize(A.cols + B.cols - 1);
-        dftSize.height = getOptimalDFTSize(A.rows + B.rows - 1);
+ @include samples/cpp/snippets/dft.cpp
+ An example on DFT-based convolution
 
-        // allocate temporary buffers and initialize them with 0's
-        Mat tempA(dftSize, A.type(), Scalar::all(0));
-        Mat tempB(dftSize, B.type(), Scalar::all(0));
-
-        // copy A and B to the top-left corners of tempA and tempB, respectively
-        Mat roiA(tempA, Rect(0,0,A.cols,A.rows));
-        A.copyTo(roiA);
-        Mat roiB(tempB, Rect(0,0,B.cols,B.rows));
-        B.copyTo(roiB);
-
-        // now transform the padded A & B in-place;
-        // use "nonzeroRows" hint for faster processing
-        dft(tempA, tempA, 0, A.rows);
-        dft(tempB, tempB, 0, B.rows);
-
-        // multiply the spectrums;
-        // the function handles packed spectrum representations well
-        mulSpectrums(tempA, tempB, tempA);
-
-        // transform the product back from the frequency domain.
-        // Even though all the result rows will be non-zero,
-        // you need only the first C.rows of them, and thus you
-        // pass nonzeroRows == C.rows
-        dft(tempA, tempA, DFT_INVERSE + DFT_SCALE, C.rows);
-
-        // now copy the result back to C.
-        tempA(Rect(0, 0, C.cols, C.rows)).copyTo(C);
-
-        // all the temporary buffers will be deallocated automatically
-    }
-@endcode
 To optimize this sample, consider the following approaches:
 -   Since nonzeroRows != 0 is passed to the forward transform calls and since A and B are copied to
     the top-left corners of tempA and tempB, respectively, it is not necessary to clear the whole
@@ -3095,7 +3054,7 @@ private:
 //! @addtogroup core_cluster
 //!  @{
 
-/** @example samples/cpp/kmeans.cpp
+/** @example samples/cpp/snippets/kmeans.cpp
 An example on K-means clustering
 */
 
@@ -3210,6 +3169,10 @@ etc.).
 
 Here is example of SimpleBlobDetector use in your application via Algorithm interface:
 @snippet snippets/core_various.cpp Algorithm
+
+@example samples/cpp/snippets/detect_blob.cpp
+An example using the BLOB to detect and filter region.
+
 */
 class CV_EXPORTS_W Algorithm
 {

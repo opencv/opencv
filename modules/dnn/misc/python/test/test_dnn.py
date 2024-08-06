@@ -481,5 +481,21 @@ class dnn_test(NewOpenCVTests):
         params.scalefactor = 2.0
         self.assertEqual(params.scalefactor, (2.0, 0.0, 0.0, 0.0))
 
+    def test_net_builder(self):
+        net = cv.dnn.Net()
+        params = {
+            "kernel_w": 3,
+            "kernel_h": 3,
+            "stride_w": 3,
+            "stride_h": 3,
+            "pool": "max",
+        }
+        net.addLayerToPrev("pool", "Pooling", cv.CV_32F, params)
+
+        inp = np.random.standard_normal([1, 2, 9, 12]).astype(np.float32)
+        net.setInput(inp)
+        out = net.forward()
+        self.assertEqual(out.shape, (1, 2, 3, 4))
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

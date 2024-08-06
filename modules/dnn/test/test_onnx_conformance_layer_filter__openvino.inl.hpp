@@ -480,10 +480,20 @@ CASE(test_cumsum_2d_negative_axis)
     // no filter
 CASE(test_depthtospace_crd_mode)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 1e-4;  // Expected: (normL1) <= (l1), actual: 9.33057e-05 vs 1e-05
+        default_lInf = 2.5e-4;  // Expected: (normInf) <= (lInf), actual: 0.000243843 vs 0.0001
+    }
 CASE(test_depthtospace_crd_mode_example)
     // no filter
 CASE(test_depthtospace_dcr_mode)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 1e-4;  // Expected: (normL1) <= (l1), actual: 9.33057e-05 vs 1e-05
+        default_lInf = 2.5e-4;  // Expected: (normInf) <= (lInf), actual: 0.000243843 vs 0.0001
+    }
 CASE(test_depthtospace_example)
     // no filter
 CASE(test_dequantizelinear)

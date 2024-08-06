@@ -1,12 +1,43 @@
 project(${JPEG_LIBRARY} C)
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-64-to-32 -Wimplicit-fallthrough)
+macro(boolean_number var)
+  if(${var})
+    set(${var} 1 ${ARGN})
+  else()
+    set(${var} 0 ${ARGN})
+  endif()
+endmacro()
 
-set(VERSION_MAJOR 2)
-set(VERSION_MINOR 1)
-set(VERSION_REVISION 3)
-set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION})
-set(LIBJPEG_TURBO_VERSION_NUMBER 2001003)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-64-to-32 -Wimplicit-fallthrough)
+if(APPLE)
+  ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable) # NEON flags are not used on Mac
+endif()
+
+if(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
+  # src/jchuff.c:1042:22: warning: writing 1 byte into a region of size 0 [-Wstringop-overflow=]
+  ocv_warnings_disable(CMAKE_C_FLAGS -Wstringop-overflow)
+endif()
+
+set(VERSION 3.0.3)
+set(COPYRIGHT_YEAR "1991-2024")
+string(REPLACE "." ";" VERSION_TRIPLET ${VERSION})
+list(GET VERSION_TRIPLET 0 VERSION_MAJOR)
+list(GET VERSION_TRIPLET 1 VERSION_MINOR)
+list(GET VERSION_TRIPLET 2 VERSION_REVISION)
+function(pad_number NUMBER OUTPUT_LEN)
+  string(LENGTH "${${NUMBER}}" INPUT_LEN)
+  if(INPUT_LEN LESS OUTPUT_LEN)
+    math(EXPR ZEROES "${OUTPUT_LEN} - ${INPUT_LEN} - 1")
+    set(NUM ${${NUMBER}})
+    foreach(C RANGE ${ZEROES})
+      set(NUM "0${NUM}")
+    endforeach()
+    set(${NUMBER} ${NUM} PARENT_SCOPE)
+  endif()
+endfunction()
+pad_number(VERSION_MINOR 3)
+pad_number(VERSION_REVISION 3)
+set(LIBJPEG_TURBO_VERSION_NUMBER ${VERSION_MAJOR}${VERSION_MINOR}${VERSION_REVISION})
 
 string(TIMESTAMP BUILD "opencv-${OPENCV_VERSION}-libjpeg-turbo")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -66,8 +97,8 @@ include(CheckCSourceCompiles)
 include(CheckIncludeFiles)
 include(CheckTypeSize)
 
-check_type_size("size_t" SIZEOF_SIZE_T)
-check_type_size("unsigned long" SIZEOF_UNSIGNED_LONG)
+check_type_size("size_t" SIZE_T)
+check_type_size("unsigned long" UNSIGNED_LONG)
 
 if(SIZEOF_SIZE_T EQUAL SIZEOF_UNSIGNED_LONG)
   check_c_source_compiles("int main(int argc, char **argv) { unsigned long a = argc;  return __builtin_ctzl(a); }"
@@ -103,33 +134,34 @@ if(WITH_ARITH_DEC)
   set(D_ARITH_CODING_SUPPORTED 1)
 endif()
 
-set(JPEG_LIB_VERSION 62)
+set(JPEG_LIB_VERSION 70)
 
 # OpenCV
 set(JPEG_LIB_VERSION "${VERSION}-${JPEG_LIB_VERSION}" PARENT_SCOPE)
 
 set(THREAD_LOCAL "")  # WITH_TURBOJPEG is not used
 
+add_definitions(-DNO_GETENV -DNO_PUTENV)
+
 if(MSVC)
   add_definitions(-W3 -wd4996 -wd4018)
 endif()
 
-if(WIN32)
-  configure_file(jconfig.h.win.in jconfig.h)
-else()
-  configure_file(jconfig.h.in jconfig.h)
-endif()
-configure_file(jconfigint.h.in jconfigint.h)
-
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-set(JPEG_SOURCES jcapimin.c jcapistd.c jccoefct.c jccolor.c jcdctmgr.c jchuff.c
-        jcicc.c jcinit.c jcmainct.c jcmarker.c jcmaster.c jcomapi.c jcparam.c
-        jcphuff.c jcprepct.c jcsample.c jctrans.c jdapimin.c jdapistd.c jdatadst.c
-        jdatasrc.c jdcoefct.c jdcolor.c jddctmgr.c jdhuff.c jdicc.c jdinput.c
-        jdmainct.c jdmarker.c jdmaster.c jdmerge.c jdphuff.c jdpostct.c jdsample.c
-        jdtrans.c jerror.c jfdctflt.c jfdctfst.c jfdctint.c jidctflt.c jidctfst.c
-        jidctint.c jidctred.c jquant1.c jquant2.c jutils.c jmemmgr.c jmemnobs.c)
+set(JPEG16_SOURCES jcapistd.c jccolor.c jcdiffct.c jclossls.c jcmainct.c
+    jcprepct.c jcsample.c jdapistd.c jdcolor.c jddiffct.c jdlossls.c jdmainct.c
+    jdpostct.c jdsample.c jutils.c)
+
+set(JPEG12_SOURCES ${JPEG16_SOURCES} jccoefct.c jcdctmgr.c jdcoefct.c
+    jddctmgr.c jdmerge.c jfdctfst.c jfdctint.c jidctflt.c jidctfst.c jidctint.c
+    jidctred.c jquant1.c jquant2.c)
+
+set(JPEG_SOURCES ${JPEG12_SOURCES} jcapimin.c jchuff.c jcicc.c jcinit.c
+    jclhuff.c jcmarker.c jcmaster.c jcomapi.c jcparam.c jcphuff.c jctrans.c
+    jdapimin.c jdatadst.c jdatasrc.c jdhuff.c jdicc.c jdinput.c jdlhuff.c
+    jdmarker.c jdmaster.c jdphuff.c jdtrans.c jerror.c jfdctflt.c jmemmgr.c
+    jmemnobs.c jpeg_nbits.c)
 
 if(WITH_ARITH_ENC OR WITH_ARITH_DEC)
   set(JPEG_SOURCES ${JPEG_SOURCES} jaricom.c)
@@ -143,7 +175,7 @@ if(WITH_ARITH_DEC)
   set(JPEG_SOURCES ${JPEG_SOURCES} jdarith.c)
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
   # Use the maximum optimization level for release builds
   foreach(var CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_RELWITHDEBINFO)
     if(${var} MATCHES "-O2")
@@ -166,6 +198,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
   endif()
 endif()
 
+include(CheckTypeSize)
+check_type_size("size_t" SIZE_T)
+check_type_size("unsigned long" UNSIGNED_LONG)
+
 if(ENABLE_LIBJPEG_TURBO_SIMD)
   add_subdirectory(src/simd)
   if(NEON_INTRINSICS)
@@ -181,19 +217,28 @@ if(WITH_SIMD)
   if(MSVC_IDE OR XCODE)
     set_source_files_properties(${SIMD_OBJS} PROPERTIES GENERATED 1)
   endif()
-else()
-  add_library(jsimd OBJECT src/jsimd_none.c)
-  set_target_properties(jsimd PROPERTIES FOLDER "3rdparty")
-  if(NOT WIN32 AND (CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED))
-    set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
-  endif()
+  set(SIMD_TARGET_OBJECTS $<TARGET_OBJECTS:simd>)
 endif()
 
+configure_file(jversion.h.in jversion.h)
+configure_file(jconfig.h.in jconfig.h)
+configure_file(jconfigint.h.in jconfigint.h)
+
+ocv_list_add_prefix(JPEG16_SOURCES src/)
+ocv_list_add_prefix(JPEG12_SOURCES src/)
 ocv_list_add_prefix(JPEG_SOURCES src/)
 
 set(JPEG_SOURCES ${JPEG_SOURCES} ${SIMD_OBJS})
 
-add_library(${JPEG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${JPEG_SOURCES} $<TARGET_OBJECTS:jsimd> ${SIMD_OBJS})
+add_library(jpeg12-static OBJECT ${JPEG12_SOURCES})
+set_property(TARGET jpeg12-static PROPERTY COMPILE_FLAGS
+  "-DBITS_IN_JSAMPLE=12")
+add_library(jpeg16-static OBJECT ${JPEG16_SOURCES})
+set_property(TARGET jpeg16-static PROPERTY COMPILE_FLAGS
+  "-DBITS_IN_JSAMPLE=16")
+add_library(${JPEG_LIBRARY} STATIC ${JPEG_SOURCES} ${SIMD_TARGET_OBJECTS}
+  ${SIMD_OBJS} $<TARGET_OBJECTS:jpeg12-static>
+  $<TARGET_OBJECTS:jpeg16-static>)
 
 set_target_properties(${JPEG_LIBRARY}
   PROPERTIES OUTPUT_NAME ${JPEG_LIBRARY}
@@ -204,7 +249,9 @@ set_target_properties(${JPEG_LIBRARY}
   )
 
 if(ENABLE_SOLUTION_FOLDERS)
-  set_target_properties(${JPEG_LIBRARY} PROPERTIES FOLDER "3rdparty")
+  set_target_properties(${JPEG_LIBRARY} PROPERTIES FOLDER "3rdparty/jpeg")
+  set_target_properties(jpeg12-static PROPERTIES FOLDER "3rdparty/jpeg")
+  set_target_properties(jpeg16-static PROPERTIES FOLDER "3rdparty/jpeg")
 endif()
 
 if(NOT BUILD_SHARED_LIBS)

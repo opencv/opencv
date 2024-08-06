@@ -587,6 +587,7 @@ public:
             LOGE("ERROR: AMediaCodec_createInputSurface (%d)", status);
             goto error;
         }
+        ANativeWindow_setBuffersGeometry(surface, width, height, AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
         #endif
 
         AMediaCodec_start(encoder);

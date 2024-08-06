@@ -121,6 +121,35 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy_1d_odd_fft) {
     ASSERT_NEAR(phaseShift.x, (double)xShift, 1.);
 }
 
+TEST(Imgproc_PhaseCorrelatorTest, float32_overflow) {
+    // load
+    Mat im = imread(cvtest::TS::ptr()->get_data_path() + "shared/baboon.png", IMREAD_GRAYSCALE);
+    ASSERT_EQ(im.type(), CV_8UC1);
+
+    // convert to 32F, scale values as if original image was 16U
+    constexpr auto u8Max = std::numeric_limits<std::uint8_t>::max();
+    constexpr auto u16Max = std::numeric_limits<std::uint16_t>::max();
+    im.convertTo(im, CV_32FC1, double(u16Max) / double(u8Max));
+
+    // enlarge and create ROIs
+    const auto w = im.cols * 5;
+    const auto h = im.rows * 5;
+    const auto roiW = (w * 2) / 3; // 50% overlap
+    Mat imLarge;
+    resize(im, imLarge, { w, h });
+    const auto roiLeft = imLarge(Rect(0, 0, roiW, h));
+    const auto roiRight = imLarge(Rect(w - roiW, 0, roiW, h));
+
+    // correlate
+    double response = 0.0;
+    Point2d phaseShift = phaseCorrelate(roiLeft, roiRight, cv::noArray(), &response);
+    ASSERT_TRUE(std::isnormal(phaseShift.x) || 0.0 == phaseShift.x);
+    ASSERT_TRUE(std::isnormal(phaseShift.y) || 0.0 == phaseShift.y);
+    ASSERT_TRUE(std::isnormal(response) || 0.0 == response);
+    EXPECT_NEAR(std::abs(phaseShift.x), w / 3.0, 1.0);
+    EXPECT_NEAR(std::abs(phaseShift.y), 0.0, 1.0);
+}
+
 ////////////////////// DivSpectrums ////////////////////////
 class CV_DivSpectrumsTest : public cvtest::ArrayTest
 {

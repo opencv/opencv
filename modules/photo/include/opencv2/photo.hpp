@@ -723,6 +723,9 @@ enum
 /** @example samples/cpp/tutorial_code/photo/seamless_cloning/cloning_demo.cpp
 An example using seamlessClone function
 */
+/** @example samples/cpp/snippets/cloning_demo.cpp
+An example using illuminationChange, colorChange, seamlessClone, textureFlattening functions
+*/
 /** @brief Image editing tasks concern either global changes (color/intensity corrections, filters,
 deformations) or local changes concerned to a selection. Here we are interested in achieving local
 changes, ones that are restricted to a region manually selected (ROI), in a seamless and effortless

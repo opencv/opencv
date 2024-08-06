@@ -131,6 +131,12 @@ namespace cv { namespace dnn {
             copyMatToTensorImpl(srcMat, destTensor, stream);
         }
 
+        template <> inline
+        void copyMatToTensor(const Mat& srcMat, const TensorSpan<bool> destTensor, const Stream& stream) {
+            CV_CheckTypeEQ(srcMat.type(), CV_Bool, "");
+            copyMatToTensorImpl(srcMat, destTensor, stream);
+        }
+
         /** @brief copies data from a TensorType to a cv::Mat
          *
          * \tparam  T   the type of the elements contained in TensorType object
@@ -273,6 +279,11 @@ namespace cv { namespace dnn {
         return Ptr<BackendNode>();
     }
 
+    template <template <class> class NodeType, class ...Args>
+    cv::Ptr<BackendNode> make_cuda_node_bool(Args&& ...args) {
+        return Ptr<BackendNode>(new NodeType<bool>(std::forward<Args>(args)...));
+    }
+
     /* base class for all CUDA backend/target wrappers */
     class CUDABackendWrapper : public BackendWrapper {
     public:
@@ -335,6 +346,11 @@ namespace cv { namespace dnn {
             cuda4dnn::csl::memcpy<int64_t>(reinterpret_cast<int64_t*>(mat.data), view.data(), view.size(), stream);
         }
 
+        template <> inline
+        void convert_D2H<bool, bool>(const cv::Mat& mat, cuda4dnn::csl::View<bool> view, cuda4dnn::csl::ManagedPtr<bool>& device_temp, const cuda4dnn::csl::Stream& stream) {
+            cuda4dnn::csl::memcpy<bool>(reinterpret_cast<bool*>(mat.data), view.data(), view.size(), stream);
+        }
+
         template <class DEVICE_T, class HOST_T>
         void convert_D2H_background(const cv::Mat& mat, cuda4dnn::csl::View<DEVICE_T> view, cuda4dnn::csl::ManagedPtr<HOST_T>& device_temp, const cuda4dnn::csl::Stream& stream, const cuda4dnn::csl::Stream& d2h_stream, cuda4dnn::csl::Event& d2h_event);
 
@@ -393,6 +409,13 @@ namespace cv { namespace dnn {
             cuda4dnn::csl::memcpy<int64_t>(reinterpret_cast<int64_t*>(mat.data), view.data(), view.size(), d2h_stream);
         }
 
+        template <> inline
+        void convert_D2H_background<bool, bool>(const cv::Mat& mat, cuda4dnn::csl::View<bool> view, cuda4dnn::csl::ManagedPtr<bool>& device_temp, const cuda4dnn::csl::Stream& stream, const cuda4dnn::csl::Stream& d2h_stream, cuda4dnn::csl::Event& d2h_event) {
+            d2h_event.record(stream);
+            cuda4dnn::csl::StreamWaitOnEvent(d2h_stream, d2h_event);
+            cuda4dnn::csl::memcpy<bool>(reinterpret_cast<bool*>(mat.data), view.data(), view.size(), d2h_stream);
+        }
+
         template <class DEVICE_T, class HOST_T>
         void convert_H2D(cuda4dnn::csl::Span<DEVICE_T> span, const cv::Mat& mat, cuda4dnn::csl::ManagedPtr<HOST_T>& device_temp, const cuda4dnn::csl::Stream& stream);
 
@@ -429,6 +452,11 @@ namespace cv { namespace dnn {
         template <> inline
         void convert_H2D<int64_t, int64_t>(cuda4dnn::csl::Span<int64_t> span, const cv::Mat& mat, cuda4dnn::csl::ManagedPtr<int64_t>& device_temp, const cuda4dnn::csl::Stream& stream) {
             cuda4dnn::csl::memcpy<int64_t>(span.data(), reinterpret_cast<int64_t*>(mat.data), span.size(), stream);
+        }
+
+        template <> inline
+        void convert_H2D<bool, bool>(cuda4dnn::csl::Span<bool> span, const cv::Mat& mat, cuda4dnn::csl::ManagedPtr<bool>& device_temp, const cuda4dnn::csl::Stream& stream) {
+            cuda4dnn::csl::memcpy<bool>(span.data(), reinterpret_cast<bool*>(mat.data), span.size(), stream);
         }
     }} /* namespace cuda4dnn::detail */
 
@@ -662,6 +690,7 @@ namespace cv { namespace dnn {
     using CUDABackendWrapperUINT8 = GenericCUDABackendWrapper<uint8_t, uint8_t, DNN_TARGET_CUDA>;
     using CUDABackendWrapperINT32 = GenericCUDABackendWrapper<int32_t, int32_t, DNN_TARGET_CUDA>;
     using CUDABackendWrapperINT64 = GenericCUDABackendWrapper<int64_t, int64_t, DNN_TARGET_CUDA>;
+    using CUDABackendWrapperBOOL = GenericCUDABackendWrapper<bool, bool, DNN_TARGET_CUDA>;
 
     template <class T> struct GetCUDABackendWrapperType_ { };
     template <> struct GetCUDABackendWrapperType_<half> { typedef CUDABackendWrapperFP16 type; };
@@ -670,6 +699,7 @@ namespace cv { namespace dnn {
     template <> struct GetCUDABackendWrapperType_<uint8_t> { typedef CUDABackendWrapperUINT8 type; };
     template <> struct GetCUDABackendWrapperType_<int32_t> { typedef CUDABackendWrapperINT32 type; };
     template <> struct GetCUDABackendWrapperType_<int64_t> { typedef CUDABackendWrapperINT64 type; };
+    template <> struct GetCUDABackendWrapperType_<bool> { typedef CUDABackendWrapperBOOL type; };
 
     template <class T>
     using GetCUDABackendWrapperType = typename GetCUDABackendWrapperType_<T>::type;
