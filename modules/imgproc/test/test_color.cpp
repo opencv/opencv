@@ -2657,7 +2657,7 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
             Mat probe(256, 256, CV_8UC3), result;
             rng.fill(probe, RNG::UNIFORM, 0, 255, true);
 
-            cvtColor(probe, result, codes[c]);
+            cvtColor(probe, result, codes[c], 0, ALGO_HINT_ACCURATE);
 
             uint32_t h = adler32(result);
             uint32_t goodHash = hashes[c*nIterations + iter];
@@ -2749,7 +2749,7 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
             Mat probe(256, 256, CV_8UC3), result;
             rng.fill(probe, RNG::UNIFORM, 0, 255, true);
 
-            cvtColor(probe, result, codes[c]);
+            cvtColor(probe, result, codes[c], 0, ALGO_HINT_ACCURATE);
 
             uint32_t h = adler32(result);
             uint32_t goodHash = hashes[c*nIterations + iter];
@@ -2808,7 +2808,7 @@ void runCvtColorBitExactCheck(ColorConversionCodes code, int inputType, uint32_t
     Mat dst;
     rng.fill(src, RNG::UNIFORM, 0, 255, true);
 
-    cv::cvtColor(src, dst, code);
+    cv::cvtColor(src, dst, code, 0, ALGO_HINT_ACCURATE);
 
     uint32_t dst_hash = adler32(dst);
 
