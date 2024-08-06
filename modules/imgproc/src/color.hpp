@@ -556,15 +556,15 @@ void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
 void cvtColorBGR2XYZ( InputArray _src, OutputArray _dst, bool swapb );
 void cvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb );
 
-void cvtColorBGR2YUV( InputArray _src, OutputArray _dst, bool swapb, bool crcb);
-void cvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool crcb);
+void cvtColorBGR2YUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, bool crcb);
+void cvtColorYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, bool crcb);
 
-void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx, int ycn);
-void cvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, bool swapb, int uidx, int ycn);
-void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx );
-void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int dcn, bool swapb, int uidx );
-void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx );
-void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, bool swapb, int uidx);
+void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx, int ycn );
+void cvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, int uidx, int ycn );
+void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx );
+void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx );
+void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx );
+void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, int uidx );
 void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst );
 void cvtColorYUV2Gray_ch( InputArray _src, OutputArray _dst, int coi );
 
