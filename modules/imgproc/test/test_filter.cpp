@@ -1193,7 +1193,7 @@ CV_PyramidDownTest::CV_PyramidDownTest() : CV_PyramidBaseTest( true )
 
 void CV_PyramidDownTest::run_func()
 {
-    cvPyrDown( test_array[INPUT][0], test_array[OUTPUT][0], CV_GAUSSIAN_5x5 );
+    cv::pyrDown(test_mat[INPUT][0], test_mat[OUTPUT][0]);
 }
 
 
