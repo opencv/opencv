@@ -29,7 +29,8 @@ static PyObject* pycvMakeTypeCh(PyObject*, PyObject *value) {
   {"CV_32SC", (PyCFunction)(pycvMakeTypeCh<CV_32S>), METH_O, "CV_32SC(channels) -> retval"}, \
   {"CV_32FC", (PyCFunction)(pycvMakeTypeCh<CV_32F>), METH_O, "CV_32FC(channels) -> retval"}, \
   {"CV_64FC", (PyCFunction)(pycvMakeTypeCh<CV_64F>), METH_O, "CV_64FC(channels) -> retval"}, \
-  {"CV_16FC", (PyCFunction)(pycvMakeTypeCh<CV_16F>), METH_O, "CV_16FC(channels) -> retval"},
+  {"CV_16FC", (PyCFunction)(pycvMakeTypeCh<CV_16F>), METH_O, "CV_16FC(channels) -> retval"}, \
+  {"CV_BoolC", (PyCFunction)(pycvMakeTypeCh<CV_Bool>), METH_O, "CV_BoolC(channels) -> retval"},
 
 #endif  // HAVE_OPENCV_CORE
 #endif  // OPENCV_CORE_PYOPENCV_CORE_HPP

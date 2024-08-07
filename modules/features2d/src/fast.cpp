@@ -48,6 +48,7 @@ The references are:
 #include "hal_replacement.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/utils/buffer_area.private.hpp"
+#include <iostream>
 
 namespace cv
 {
@@ -503,7 +504,9 @@ public:
             gray = ogray;
         }
         FAST( gray, keypoints, threshold, nonmaxSuppression, type );
+        std::cout << "FAST keypoints size: " << keypoints.size() << std::endl;
         KeyPointsFilter::runByPixelsMask( keypoints, mask );
+        std::cout << "FAST keypoints after filter size: " << keypoints.size() << std::endl;
     }
 
     void set(int prop, double value)

@@ -2109,7 +2109,8 @@ quality measure = 1500, and the qualityLevel=0.01 , then all the corners with th
 less than 15 are rejected.
 @param minDistance Minimum possible Euclidean distance between the returned corners.
 @param mask Optional region of interest. If the image is not empty (it needs to have the type
-CV_8UC1 and the same size as image ), it specifies the region in which the corners are detected.
+CV_8UC1 or CV_BoolC1 and the same size as image , it specifies the region in which the corners
+are detected.
 @param blockSize Size of an average block for computing a derivative covariation matrix over each
 pixel neighborhood. See cornerEigenValsAndVecs .
 @param useHarrisDetector Parameter indicating whether to use a Harris detector (see #cornerHarris)
@@ -2144,8 +2145,8 @@ quality measure less than the product are rejected. For example, if the best cor
 quality measure = 1500, and the qualityLevel=0.01 , then all the corners with the quality measure
 less than 15 are rejected.
 @param minDistance Minimum possible Euclidean distance between the returned corners.
-@param mask Region of interest. If the image is not empty (it needs to have the type
-CV_8UC1 and the same size as image ), it specifies the region in which the corners are detected.
+@param mask Region of interest. If the image is not empty (it needs to have the type CV_8UC1 or
+CV_BoolC1 and the same size as image), it specifies the region in which the corners are detected.
 @param cornersQuality Output vector of quality measure of the detected corners.
 @param blockSize Size of an average block for computing a derivative covariation matrix over each
 pixel neighborhood. See cornerEigenValsAndVecs .
@@ -2949,7 +2950,7 @@ viewed by a still camera and for the further foreground-background segmentation.
 
 @param src Input image of type CV_8UC(n), CV_16UC(n), CV_32FC(n) or CV_64FC(n), where n is a positive integer.
 @param dst %Accumulator image with the same number of channels as input image, and a depth of CV_32F or CV_64F.
-@param mask Optional operation mask.
+@param mask Optional operation mask of type CV_8U or CV_Bool.
 
 @sa  accumulateSquare, accumulateProduct, accumulateWeighted
  */
@@ -2968,7 +2969,7 @@ The function supports multi-channel images. Each channel is processed independen
 @param src Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 @param dst %Accumulator image with the same number of channels as input image, 32-bit or 64-bit
 floating-point.
-@param mask Optional operation mask.
+@param mask Optional operation mask of type CV_8U or CV_Bool.
 
 @sa  accumulateSquare, accumulateProduct, accumulateWeighted
  */
@@ -2987,7 +2988,7 @@ The function supports multi-channel images. Each channel is processed independen
 @param src2 Second input image of the same type and the same size as src1 .
 @param dst %Accumulator image with the same number of channels as input images, 32-bit or 64-bit
 floating-point.
-@param mask Optional operation mask.
+@param mask Optional operation mask of type CV_8U or CV_Bool.
 
 @sa  accumulate, accumulateSquare, accumulateWeighted
  */
@@ -3008,7 +3009,7 @@ The function supports multi-channel images. Each channel is processed independen
 @param dst %Accumulator image with the same number of channels as input image, 32-bit or 64-bit
 floating-point.
 @param alpha Weight of the input image.
-@param mask Optional operation mask.
+@param mask Optional operation mask of type CV_8U or CV_Bool.
 
 @sa  accumulate, accumulateSquare, accumulateProduct
  */
@@ -3953,10 +3954,11 @@ is \f$W \times H\f$ and templ is \f$w \times h\f$ , then result is \f$(W-w+1) \t
 @param method Parameter specifying the comparison method, see #TemplateMatchModes
 @param mask Optional mask. It must have the same size as templ. It must either have the same number
             of channels as template or only one channel, which is then used for all template and
-            image channels. If the data type is #CV_8U, the mask is interpreted as a binary mask,
-            meaning only elements where mask is nonzero are used and are kept unchanged independent
-            of the actual mask value (weight equals 1). For data tpye #CV_32F, the mask values are
-            used as weights. The exact formulas are documented in #TemplateMatchModes.
+            image channels. If the data type is #CV_8U or CV_Bool, the mask is interpreted as
+            a binary mask, meaning only elements where mask is nonzero are used and are kept
+            unchanged independent of the actual mask value (weight equals 1). For data tpye
+            #CV_32F, the mask values are used as weights. The exact formulas are documented
+            in #TemplateMatchModes.
  */
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
                                  OutputArray result, int method, InputArray mask = noArray() );

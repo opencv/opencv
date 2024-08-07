@@ -56,7 +56,7 @@ def export_matrix_type_constants(root: NamespaceNode) -> None:
     MAX_PREDEFINED_CHANNELS = 4
 
     depth_names = ("CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S",
-                   "CV_32F", "CV_64F", "CV_16F")
+                   "CV_32F", "CV_64F", "CV_16F", "CV_Bool")
     for depth_value, depth_name in enumerate(depth_names):
         # Export depth constants
         root.add_constant(depth_name, str(depth_value))

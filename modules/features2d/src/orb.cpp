@@ -37,6 +37,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_features2d.hpp"
 #include <iterator>
+#include <iostream>
 
 #ifndef CV_IMPL_ADD
 #define CV_IMPL_ADD(x)
@@ -892,6 +893,8 @@ static void computeKeyPoints(const Mat& imagePyramid,
         fd->detect(img, keypoints, mask);
         }
 
+        std::cout << "keypoints in detect: " << keypoints.size() << std::endl;
+
         // Remove keypoints very close to the border
         KeyPointsFilter::runByImageBorder(keypoints, img.size(), edgeThreshold);
 
@@ -1129,7 +1132,8 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             if( !mask.empty() )
             {
                 resize(prevMask, currMask, sz, 0, 0, INTER_LINEAR_EXACT);
-                if( level > firstLevel )
+
+                if( (level > firstLevel) && (currMask.type() == CV_8U) )
                     threshold(currMask, currMask, 254, 0, THRESH_TOZERO);
             }
 
@@ -1147,12 +1151,16 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
                 copyMakeBorder(mask, extMask, border, border, border, border,
                                BORDER_CONSTANT+BORDER_ISOLATED);
         }
+
         if (level > firstLevel)
         {
             prevImg = currImg;
             prevMask = currMask;
         }
     }
+
+    int nz_mask = countNonZero(maskPyramid);
+    std::cout << "maskPyramid nz: " << nz_mask << std::endl;
 
     if( useOCL )
         copyVectorToUMat(layerOfs, ulayerInfo);

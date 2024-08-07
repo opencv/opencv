@@ -923,7 +923,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     std::vector<double> uniranges;
     Size imsize;
 
-    CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
+    CV_Assert( mask.empty() || mask.type() == CV_8UC1 || mask.type() == CV_BoolC1 );
     histPrepareImages( images, nimages, channels, mask, dims, hist.size, ranges,
                        uniform, ptrs, deltas, imsize, uniranges );
     const double* _uniranges = uniform ? &uniranges[0] : 0;
@@ -1101,7 +1101,7 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
     std::vector<double> uniranges;
     Size imsize;
 
-    CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
+    CV_Assert( mask.empty() || mask.type() == CV_8UC1 || mask.type() == CV_BoolC1 );
     histPrepareImages( images, nimages, channels, mask, dims, hist.hdr->size, ranges,
                        uniform, ptrs, deltas, imsize, uniranges );
     const double* _uniranges = uniform ? &uniranges[0] : 0;

@@ -234,6 +234,7 @@ class Bindings(NewOpenCVTests):
             cv.CV_16UC2: [cv.CV_16U, 2, cv.CV_16UC],
             cv.CV_32SC1: [cv.CV_32S, 1, cv.CV_32SC],
             cv.CV_16FC3: [cv.CV_16F, 3, cv.CV_16FC],
+            cv.CV_BoolC1: [cv.CV_Bool, 1, cv.CV_BoolC],
         }
         for ref, (depth, channels, func) in data.items():
             self.assertEqual(ref, cv.CV_MAKETYPE(depth, channels))
@@ -277,6 +278,9 @@ class Arguments(NewOpenCVTests):
         a = np.zeros((2,3,4,5), dtype='f')
         res7 = cv.utils.dumpInputArray(a)
         self.assertEqual(res7, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=120 dims(-1)=4 size(-1)=[2 3 4 5] type(-1)=CV_32FC1")
+        a = np.array([0, 1, 0, 1], dtype=bool)
+        res8 = cv.utils.dumpInputArray(a)
+        self.assertEqual(res8, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=4 dims(-1)=1 size(-1)=4x1 type(-1)=CV_BoolC1")
 
     def test_InputArrayOfArrays(self):
         res1 = cv.utils.dumpInputArrayOfArrays(None)
@@ -339,7 +343,7 @@ class Arguments(NewOpenCVTests):
 
     def test_parse_to_bool_not_convertible(self):
         for not_convertible in (1.2, np.float32(2.3), 's', 'str', (1, 2), [1, 2], complex(1, 1),
-                                complex(imag=2), complex(1.1), np.array([1, 0], dtype=bool)):
+                                complex(imag=2), complex(1.1)):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpBool(not_convertible)

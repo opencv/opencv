@@ -141,7 +141,7 @@ public:
     @param image Image.
     @param keypoints The detected keypoints. In the second variant of the method keypoints[i] is a set
     of keypoints detected in images[i] .
-    @param mask Mask specifying where to look for keypoints (optional). It must be a 8-bit integer
+    @param mask Mask specifying where to look for keypoints (optional). It must be CV_8U or CV_Bool
     matrix with non-zero values in the region of interest.
      */
     CV_WRAP virtual void detect( InputArray image,
