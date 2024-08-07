@@ -39,8 +39,9 @@
 //
 //M*/
 
+#include "opencv2/ts/ocl_test.hpp"
+#include "opencv2/ts/ts_gtest.h"
 #include "test_precomp.hpp"
-#include "opencv2/core/core_c.h"
 
 namespace opencv_test { namespace {
 
@@ -360,8 +361,8 @@ void CV_RemapTest::fill_array( int test_case_idx, int i, int j, Mat& arr )
 
 void CV_RemapTest::run_func()
 {
-    remap( cvarrToMat( test_array[INPUT][0] ), cvarrToMat( test_array[INPUT_OUTPUT][0] ),
-             cvarrToMat( test_array[INPUT][1] ), cvarrToMat( test_array[INPUT][2] ), interpolation );
+    cv::remap(test_mat[INPUT][0], test_mat[INPUT_OUTPUT][0],
+              test_mat[INPUT][1], test_mat[INPUT][2], interpolation );
 }
 
 
@@ -465,7 +466,7 @@ protected:
     double get_success_error_level( int test_case_idx, int i, int j );
     void fill_array( int test_case_idx, int i, int j, Mat& arr );
 
-    CvPoint2D32f center;
+    Point2f center;
     bool test_cpp;
 };
 
@@ -517,8 +518,8 @@ void CV_GetRectSubPixTest::fill_array( int test_case_idx, int i, int j, Mat& arr
 
 void CV_GetRectSubPixTest::run_func()
 {
-    cv::Mat _out = cv::cvarrToMat(test_array[INPUT_OUTPUT][0]);
-    cv::getRectSubPix( cv::cvarrToMat(test_array[INPUT][0]), _out.size(), center, _out, _out.type());
+    cv::Mat _out = test_mat[INPUT_OUTPUT][0];
+    cv::getRectSubPix(test_mat[INPUT][0], _out.size(), center, _out, _out.type());
 }
 
 
