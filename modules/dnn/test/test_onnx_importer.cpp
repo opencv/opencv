@@ -1551,7 +1551,7 @@ TEST_P(Test_ONNX_layers, Einsum_const_inputs) {
 }
 
 TEST_P(Test_ONNX_layers, Conv2DPadding) {
-    testONNXModels("conv2dPadding", npy, 0, 0, false, false, 1);
+    testONNXModels("conv2dPadding", npy, 1e-08, 1e-08, false, false, 1);
 }
 
 TEST_P(Test_ONNX_layers, ReduceSum_Consts){
