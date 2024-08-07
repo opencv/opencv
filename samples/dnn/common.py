@@ -107,6 +107,9 @@ def findModel(filename, sha1):
         if os.path.exists(os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], sha1, filename)):
             return os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], sha1, filename)
 
+        if os.path.exists(os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], filename)):
+            return os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], filename)
+
         print('File ' + filename + ' not found! Please specify a path to '
              'model download directory in OPENCV_DOWNLOAD_CACHE_DIR '
              'environment variable or pass a full path to ' + filename)

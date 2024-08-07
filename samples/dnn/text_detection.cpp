@@ -41,7 +41,8 @@ const string about = "Use this script for Text Detection and Recognition using O
         "Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"
         "To run:\n"
         "\t Example: ./example_dnn_text_detection modelName(i.e. DB or East) --ocr=<path to ResNet_CTC.onnx>\n\n"
-        "Model path can also be specified using --model argument. \n\n";
+        "Model path can also be specified using --model argument. \n\n"
+        "Download link for recognition model: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing \n\n";
 
 // Command-line keys to parse the input arguments
 string keys =

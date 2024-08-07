@@ -37,10 +37,12 @@ def help():
         Use this script for Text Detection and Recognition using OpenCV.
 
         Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
+
         To run:
-        Example: ./example_dnn_text_detection modelName(i.e. DB or East) --ocr=<path to ResNet_CTC.onnx>\
+        Example: python text_detection.py modelName(i.e. DB or East) --ocr=<path to ResNet_CTC.onnx>
 
         Model path can also be specified using --model argument.
+        Download link for recognition model: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing
         '''
     )
 
@@ -52,7 +54,7 @@ def get_args_parser():
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument('--ocr',
-                        help="Path to a .onnx file contains trained recognition network", required=True)
+                        help="Path to a .onnx file contains trained recognition network")
     parser.add_argument('--thr', type=float, default=0.5,
                         help='Confidence threshold.')
     parser.add_argument('--nms', type=float, default=0.4,
@@ -126,6 +128,9 @@ def main():
     with open(args.vocabulary_path, 'r') as voc_file:
         vocabulary = [line.strip() for line in voc_file]
 
+    if args.ocr is None:
+        print("[ERROR] Please pass recognition model --ocr to run the sample")
+        exit(1)
     # Initialize the text recognition model with the specified model path
     recognizer = cv2.dnn_TextRecognitionModel(args.ocr)
 
