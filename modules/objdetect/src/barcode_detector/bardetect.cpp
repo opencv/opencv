@@ -136,13 +136,13 @@ static void NMSBoxes(const std::vector<RotatedRect>& bboxes, const std::vector<f
 
 //==============================================================================
 
-void Detect::init(const Mat &src)
+void Detect::init(const Mat &src, double detectorThreshDownSamplingLimit)
 {
     const double min_side = std::min(src.size().width, src.size().height);
-    if (min_side > 512.0)
+    if (min_side > detectorThreshDownSamplingLimit)
     {
         purpose = SHRINKING;
-        coeff_expansion = min_side / 512.0;
+        coeff_expansion = min_side / detectorThreshDownSamplingLimit;
         width = cvRound(src.size().width / coeff_expansion);
         height = cvRound(src.size().height / coeff_expansion);
         Size new_size(width, height);
@@ -171,19 +171,19 @@ void Detect::init(const Mat &src)
 }
 
 
-void Detect::localization()
+void Detect::localization(const std::vector<float>& detectorWindowSizes, double detectorThreshGradientMagnitude)
 {
 
     localization_bbox.clear();
     bbox_scores.clear();
 
     // get integral image
-    preprocess();
+    preprocess(detectorThreshGradientMagnitude);
     // empirical setting
-    static constexpr float SCALE_LIST[] = {0.01f, 0.03f, 0.06f, 0.08f};
+    //static constexpr float SCALE_LIST[] = {0.01f, 0.03f, 0.06f, 0.08f};
     const auto min_side = static_cast<float>(std::min(width, height));
     int window_size;
-    for (const float scale:SCALE_LIST)
+    for (const float scale: detectorWindowSizes)
     {
         window_size = cvRound(min_side * scale);
         if(window_size == 0) {
@@ -205,7 +205,20 @@ bool Detect::computeTransformationPoints()
     transformation_points.reserve(bbox_indices.size());
     RotatedRect rect;
     Point2f temp[4];
-    const float THRESHOLD_SCORE = float(width * height) / 300.f;
+
+    /**
+     * #24902 resolution invariant barcode detector
+     *
+     * refactor of THRESHOLD_SCORE = float(width * height) / 300.f
+     * wrt to rescaled input size - 300 value needs factorization
+     * only one factor pair matches a common aspect ratio of 4:3 ~ 20x15
+     * decomposing this yields THRESHOLD_SCORE = (width / 20) * (height / 15)
+     * therefore each factor was rescaled based by purpose (refsize was 512)
+     */
+    const float THRESHOLD_WSCALE = (purpose != UNCHANGED) ? 20 : (20 * width / 512.f);
+    const float THRESHOLD_HSCALE = (purpose != UNCHANGED) ? 15 : (15 * height / 512.f);
+    const float THRESHOLD_SCORE = (width / THRESHOLD_WSCALE) * (height / THRESHOLD_HSCALE);
+
     NMSBoxes(localization_bbox, bbox_scores, THRESHOLD_SCORE, 0.1f, bbox_indices);
 
     for (const auto &bbox_index : bbox_indices)
@@ -231,15 +244,14 @@ bool Detect::computeTransformationPoints()
 }
 
 
-void Detect::preprocess()
+void Detect::preprocess(double detectorGradientMagnitudeThresh)
 {
     Mat scharr_x, scharr_y, temp;
-    static constexpr double THRESHOLD_MAGNITUDE = 64.;
     Scharr(resized_barcode, scharr_x, CV_32F, 1, 0);
     Scharr(resized_barcode, scharr_y, CV_32F, 0, 1);
     // calculate magnitude of gradient and truncate
     magnitude(scharr_x, scharr_y, temp);
-    threshold(temp, temp, THRESHOLD_MAGNITUDE, 1, THRESH_BINARY);
+    threshold(temp, temp, detectorGradientMagnitudeThresh, 1, THRESH_BINARY);
     temp.convertTo(gradient_magnitude, CV_8U);
     integral(gradient_magnitude, integral_edges, CV_32F);
 

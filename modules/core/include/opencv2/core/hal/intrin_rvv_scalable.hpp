@@ -1528,6 +1528,26 @@ OPENCV_HAL_IMPL_RVV_ZIP(v_uint32, vuint32m2_t, u32, 32, 64, OPENCV_HAL_NOP, OPEN
 OPENCV_HAL_IMPL_RVV_ZIP(v_int32, vint32m2_t, i32, 32, 64, vreinterpret_u32m2, vreinterpret_u32m1)
 OPENCV_HAL_IMPL_RVV_ZIP(v_float32, vfloat32m2_t, f32, 32, 64, vreinterpret_u32m2, vreinterpret_u32m1)
 
+#if CV_SIMD_SCALABLE_64F
+inline void v_zip(const v_float64& a0, const v_float64& a1, v_float64& b0, v_float64& b1) { \
+    vuint16mf4_t idx0 = vid_v_u16mf4(VTraits<v_float64>::vlanes());
+    vuint16mf4_t idx1 = vadd(idx0, VTraits<v_float64>::vlanes(), VTraits<v_float64>::vlanes());
+    vuint16mf2_t idx = vreinterpret_u16mf2(( \
+        vor(vzext_vf2(idx0, VTraits<v_float64>::vlanes()), \
+            vreinterpret_u32mf2(vslide1up(vreinterpret_u16mf2(vzext_vf2(idx1, VTraits<v_float64>::vlanes())), 0, VTraits<v_uint32>::vlanes())), \
+            VTraits<v_uint32>::vlanes())));
+#if 0
+    vfloat64m2_t temp = __riscv_vcreate_v_f64m1_f64m2(a0, a1);
+#else // TODO: clean up when RVV Intrinsic is frozen.
+    vfloat64m2_t temp = vlmul_ext_f64m2(a0);
+    temp = vset(temp, 1, a1);
+#endif
+    temp = vrgatherei16(temp, idx, VTraits<v_float64>::vlanes()*2);
+    b0 = vget_f64m1(temp, 0); \
+    b1 = vget_f64m1(temp, 1); \
+}
+#endif
+
 #define OPENCV_HAL_IMPL_RVV_UNPACKS(_Tpvec, width) \
 inline _Tpvec v_combine_low(const _Tpvec& a, const _Tpvec& b) \
 { \
@@ -1859,12 +1879,14 @@ inline v_int32 v_trunc(const v_float32& a)
 #if CV_SIMD_SCALABLE_64F
 inline v_int32 v_round(const v_float64& a)
 {
-    return vfncvt_x(vlmul_ext_f64m2(vfadd(a, 1e-6, VTraits<v_float64>::vlanes())), VTraits<v_float32>::vlanes());
+    return vfncvt_x(vlmul_ext_f64m2(a), VTraits<v_float32>::vlanes());
 }
 
 inline v_int32 v_round(const v_float64& a, const v_float64& b)
 {
-    return vfncvt_x(vset(vlmul_ext_f64m2(vfadd(a, 1e-6, VTraits<v_float64>::vlanes())), 1, b), VTraits<v_float32>::vlanes());
+    // return vfncvt_x(vset(vlmul_ext_f64m2(vfadd(a, 1e-6, VTraits<v_float64>::vlanes())), 1, b), VTraits<v_float32>::vlanes());
+    // Fix https://github.com/opencv/opencv/issues/24746
+    return vfncvt_x(vset(vlmul_ext_f64m2(a), 1, b), VTraits<v_float32>::vlanes());
 }
 
 inline v_int32 v_floor(const v_float64& a)

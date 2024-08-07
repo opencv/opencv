@@ -2,11 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-if (typeof module !== 'undefined' && module.exports) {
-  // The environment is Node.js
-  var cv = require('./opencv.js'); // eslint-disable-line no-var
-}
-
 QUnit.module('Camera Calibration and 3D Reconstruction', {});
 
 QUnit.test('constants', function(assert) {
@@ -84,8 +79,8 @@ QUnit.test('estimateAffine2D', function(assert) {
   assert.deepEqual(Array.from(M.data), [
      23,  55,  97, 126,  87, 139, 227,  63,   0,   0,
       0,   0,   0,   0, 232, 191,  71, 246,  12,  68,
-    165,  35,  53,  64,  99,  56,  27,  66,  14, 254,
+    165,  35,  53,  64,  101,  56,  27,  66,  14, 254,
     212,  63, 103, 102, 102, 102, 102, 102, 182, 191,
-    195, 252, 174,  22,  55,  97,  73,  64
+    194, 252, 174,  22,  55,  97,  73,  64
   ]);
 });

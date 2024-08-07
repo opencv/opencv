@@ -290,22 +290,22 @@ void stereoRectify( InputArray _cameraMatrix1, InputArray _distCoeffs1,
 
     if(roi1)
     {
-        *roi1 = cvRect(
+        *roi1 =
             cv::Rect(cvCeil((inner1.x - cx1_0)*s + cx1),
                      cvCeil((inner1.y - cy1_0)*s + cy1),
                      cvFloor(inner1.width*s), cvFloor(inner1.height*s))
             & cv::Rect(0, 0, newImgSize.width, newImgSize.height)
-        );
+        ;
     }
 
     if(roi2)
     {
-        *roi2 = cvRect(
+        *roi2 =
             cv::Rect(cvCeil((inner2.x - cx2_0)*s + cx2),
                      cvCeil((inner2.y - cy2_0)*s + cy2),
                      cvFloor(inner2.width*s), cvFloor(inner2.height*s))
             & cv::Rect(0, 0, newImgSize.width, newImgSize.height)
-        );
+        ;
     }
     }
 

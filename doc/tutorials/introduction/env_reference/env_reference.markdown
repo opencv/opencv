@@ -46,9 +46,15 @@ MY_ENV_VARIABLE=true ./my_app
 
 ```.py
 import os
-os.environ["MY_ENV_VARIABLE"] = True
+os.environ["MY_ENV_VARIABLE"] = "True" # value must be a string
 import cv2 # variables set after this may not have effect
 ```
+
+@note This method may not work on all operating systems and/or Python distributions. For example, it works on Ubuntu Linux with system Python interpreter, but doesn't work on Windows 10 with the official Python package. It depends on the ability of a process to change its own environment (OpenCV uses `getenv` from C++ runtime to read variables).
+
+@note See also:
+- https://docs.python.org/3.12/library/os.html#os.environ
+- https://stackoverflow.com/questions/69199708/setenvironmentvariable-does-not-seem-to-set-values-that-can-be-retrieved-by-ge
 
 
 ## Types

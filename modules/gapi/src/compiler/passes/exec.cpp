@@ -158,7 +158,7 @@ namespace
         std::unordered_set<CycleCausers, CycleHasher> cycle_causers;
     };
 
-#if defined(__GNUC__) && (__GNUC__ == 13)
+#if defined(__GNUC__) && (__GNUC__ >= 13)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdangling-reference"
 #endif

@@ -137,7 +137,7 @@ elseif(MSVC)
         set(OpenCV_RUNTIME vc14) # selecting previous compatible runtime version
       endif()
     endif()
-  elseif(MSVC_VERSION MATCHES "^193[0-9]$")
+  elseif(MSVC_VERSION MATCHES "^19[34][0-9]$")
     set(OpenCV_RUNTIME vc17)
     check_one_config(has_VS2022)
     if(NOT has_VS2022)

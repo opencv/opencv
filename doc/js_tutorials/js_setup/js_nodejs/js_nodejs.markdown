@@ -227,52 +227,128 @@ In the browser, this filesystem is emulated in memory while in Node.js there's a
 
 ### The example ###
 
-The following is an adaptation of @ref tutorial_js_face_detection.
-
 @code{.js}
 const { Canvas, createCanvas, Image, ImageData, loadImage } = require('canvas');
 const { JSDOM } = require('jsdom');
 const { writeFileSync, existsSync, mkdirSync } = require('fs');
+const https = require('https');
 
 (async () => {
-  await loadOpenCV();
+const createFileFromUrl = function (path, url, maxRedirects = 10) {
+  console.log('Downloading ' + url + '...');
+  return new Promise((resolve, reject) => {
+    const download = (url, redirectCount) => {
+      if (redirectCount > maxRedirects) {
+        reject(new Error('Too many redirects'));
+      } else {
+        let connection = https.get(url, (response) => {
+          if (response.statusCode === 200) {
+            let data = [];
+            response.on('data', (chunk) => {
+              data.push(chunk);
+            });
 
-  const image = await loadImage('lena.jpg');
-  const src = cv.imread(image);
-  let gray = new cv.Mat();
-  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-  let faces = new cv.RectVector();
-  let eyes = new cv.RectVector();
-  let faceCascade = new cv.CascadeClassifier();
-  let eyeCascade = new cv.CascadeClassifier();
+            response.on('end', () => {
+              try {
+                writeFileSync(path, Buffer.concat(data));
+                resolve();
+              } catch (err) {
+                reject(new Error('Failed to write file ' + path));
+              }
+            });
+          } else if (response.statusCode === 302 || response.statusCode === 301) {
+            connection.abort();
+            download(response.headers.location, redirectCount + 1);
+          } else {
+            reject(new Error('Failed to load ' + url + ' status: ' + response.statusCode));
+          }
+        }).on('error', (err) => {
+          reject(new Error('Network Error: ' + err.message));
+        });
+      }
+    };
+    download(url, 0);
+  });
+};
 
-  // Load pre-trained classifier files. Notice how we reference local files using relative paths just
-  // like we normally would do
-  faceCascade.load('./haarcascade_frontalface_default.xml');
-  eyeCascade.load('./haarcascade_eye.xml');
+if (!existsSync('./face_detection_yunet_2023mar.onnx')) {
+  await createFileFromUrl('./face_detection_yunet_2023mar.onnx', 'https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx')
+}
 
-  let mSize = new cv.Size(0, 0);
-  faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, mSize, mSize);
-  for (let i = 0; i < faces.size(); ++i) {
-    let roiGray = gray.roi(faces.get(i));
-    let roiSrc = src.roi(faces.get(i));
-    let point1 = new cv.Point(faces.get(i).x, faces.get(i).y);
-    let point2 = new cv.Point(faces.get(i).x + faces.get(i).width, faces.get(i).y + faces.get(i).height);
-    cv.rectangle(src, point1, point2, [255, 0, 0, 255]);
-    eyeCascade.detectMultiScale(roiGray, eyes);
-    for (let j = 0; j < eyes.size(); ++j) {
-      let point1 = new cv.Point(eyes.get(j).x, eyes.get(j).y);
-      let point2 = new cv.Point(eyes.get(j).x + eyes.get(j).width, eyes.get(j).y + eyes.get(j).height);
-      cv.rectangle(roiSrc, point1, point2, [0, 0, 255, 255]);
-    }
-    roiGray.delete();
-    roiSrc.delete();
+if (!existsSync('./opencv.js')) {
+  await createFileFromUrl('./opencv.js', 'https://docs.opencv.org/5.x/opencv.js')
+}
+
+if (!existsSync('./lena.jpg')) {
+  await createFileFromUrl('./lena.jpg', 'https://docs.opencv.org/5.x/lena.jpg')
+}
+
+await loadOpenCV();
+
+const image = await loadImage('./lena.jpg');
+const src = cv.imread(image);
+let srcBGR = new cv.Mat();
+cv.cvtColor(src, srcBGR, cv.COLOR_RGBA2BGR);
+
+// Load the deep learning model file. Notice how we reference local files using relative paths just
+// like we normally would do
+let netDet = new cv.FaceDetectorYN("./face_detection_yunet_2023mar.onnx", "", new cv.Size(320, 320), 0.9, 0.3, 5000);
+netDet.setInputSize(new cv.Size(src.cols, src.rows));
+let out = new cv.Mat();
+netDet.detect(srcBGR, out);
+
+let faces = [];
+for (let i = 0, n = out.data32F.length; i < n; i += 15) {
+  let left = out.data32F[i];
+  let top = out.data32F[i + 1];
+  let right = (out.data32F[i] + out.data32F[i + 2]);
+  let bottom = (out.data32F[i + 1] + out.data32F[i + 3]);
+  left = Math.min(Math.max(0, left), src.cols - 1);
+  top = Math.min(Math.max(0, top), src.rows - 1);
+  right = Math.min(Math.max(0, right), src.cols - 1);
+  bottom = Math.min(Math.max(0, bottom), src.rows - 1);
+
+  if (left < right && top < bottom) {
+    faces.push({
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top,
+      x1: out.data32F[i + 4] < 0 || out.data32F[i + 4] > src.cols - 1 ? -1 : out.data32F[i + 4],
+      y1: out.data32F[i + 5] < 0 || out.data32F[i + 5] > src.rows - 1 ? -1 : out.data32F[i + 5],
+      x2: out.data32F[i + 6] < 0 || out.data32F[i + 6] > src.cols - 1 ? -1 : out.data32F[i + 6],
+      y2: out.data32F[i + 7] < 0 || out.data32F[i + 7] > src.rows - 1 ? -1 : out.data32F[i + 7],
+      x3: out.data32F[i + 8] < 0 || out.data32F[i + 8] > src.cols - 1 ? -1 : out.data32F[i + 8],
+      y3: out.data32F[i + 9] < 0 || out.data32F[i + 9] > src.rows - 1 ? -1 : out.data32F[i + 9],
+      x4: out.data32F[i + 10] < 0 || out.data32F[i + 10] > src.cols - 1 ? -1 : out.data32F[i + 10],
+      y4: out.data32F[i + 11] < 0 || out.data32F[i + 11] > src.rows - 1 ? -1 : out.data32F[i + 11],
+      x5: out.data32F[i + 12] < 0 || out.data32F[i + 12] > src.cols - 1 ? -1 : out.data32F[i + 12],
+      y5: out.data32F[i + 13] < 0 || out.data32F[i + 13] > src.rows - 1 ? -1 : out.data32F[i + 13],
+      confidence: out.data32F[i + 14]
+    })
   }
+}
+out.delete();
 
-  const canvas = createCanvas(image.width, image.height);
-  cv.imshow(canvas, src);
-  writeFileSync('output3.jpg', canvas.toBuffer('image/jpeg'));
-  src.delete(); gray.delete(); faceCascade.delete(); eyeCascade.delete(); faces.delete(); eyes.delete()
+faces.forEach(function(rect) {
+  cv.rectangle(src, {x: rect.x, y: rect.y}, {x: rect.x + rect.width, y: rect.y + rect.height}, [0, 255, 0, 255]);
+  if(rect.x1>0 && rect.y1>0)
+    cv.circle(src, {x: rect.x1, y: rect.y1}, 2, [255, 0, 0, 255], 2)
+  if(rect.x2>0 && rect.y2>0)
+    cv.circle(src, {x: rect.x2, y: rect.y2}, 2, [0, 0, 255, 255], 2)
+  if(rect.x3>0 && rect.y3>0)
+    cv.circle(src, {x: rect.x3, y: rect.y3}, 2, [0, 255, 0, 255], 2)
+  if(rect.x4>0 && rect.y4>0)
+    cv.circle(src, {x: rect.x4, y: rect.y4}, 2, [255, 0, 255, 255], 2)
+  if(rect.x5>0 && rect.y5>0)
+    cv.circle(src, {x: rect.x5, y: rect.y5}, 2, [0, 255, 255, 255], 2)
+});
+
+const canvas = createCanvas(image.width, image.height);
+cv.imshow(canvas, src);
+writeFileSync('output3.jpg', canvas.toBuffer('image/jpeg'));
+console.log('The result is saved.')
+src.delete(); srcBGR.delete();
 })();
 
 /**
@@ -287,7 +363,7 @@ const { writeFileSync, existsSync, mkdirSync } = require('fs');
  */
 function loadOpenCV(rootDir = '/work', localRootDir = process.cwd()) {
   if(global.Module && global.Module.onRuntimeInitialized && global.cv && global.cv.imread) {
-    return Promise.resolve()
+   Promise.resolve()
   }
   return new Promise(resolve => {
     installDOM()
@@ -333,13 +409,12 @@ function installDOM(){
 ### Execute it ###
 
 -   Save the file as `exampleNodeCanvasData.js`.
--   Make sure the files `aarcascade_frontalface_default.xml` and `haarcascade_eye.xml` are present in project's directory. They can be obtained from [OpenCV sources](https://github.com/opencv/opencv/tree/5.x/data/haarcascades).
--   Make sure a sample image file `lena.jpg` exists in project's directory. It should display people's faces for this example to make sense. The following image is known to work:
+-   The files `face_detection_yunet_2023mar.onnx`, `lena.jpg` and `opencv.js` will be downloaded if they not present in project's directory.
 
-![image](js_assets/lena.jpg)
-
-The following command should generate the file `output3.jpg`:
+The following command should generate the file `output3.jpg` look the image below:
 
 @code{.bash}
 node exampleNodeCanvasData.js
 @endcode
+
+![image](js_assets/lena_yunet.jpg)
