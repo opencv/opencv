@@ -18,7 +18,7 @@ def help():
         Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"\n
 
         To run:
-            python object_detection.py model_name --input=path/to/your/input/image/or/video (don't pass --input to use device camera)
+            python object_detection.py model_name(e.g yolov8) --input=path/to/your/input/image/or/video (don't pass --input to use device camera)
 
         Sample command:
             python object_detection.py yolov8 --input=path/to/image
