@@ -55,8 +55,8 @@
 #include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
 
-#include "warp_affine.simd.hpp"
-#include "warp_affine.simd_declarations.hpp"
+#include "imgwarp.simd.hpp"
+#include "imgwarp.simd_declarations.hpp"
 
 using namespace cv;
 
@@ -3273,6 +3273,10 @@ void warpPerspective(int src_type,
     CALL_HAL(warpPerspective, cv_hal_warpPerspective, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
     Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
+
+    if (interpolation == INTER_LINEAR && src_type == CV_8UC3) {
+        CV_CPU_DISPATCH(warpPerspectiveSimdInvoker, (dst, src, M, interpolation, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+    }
 
     Range range(0, dst.rows);
     WarpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3]));
