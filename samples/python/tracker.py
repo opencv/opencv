@@ -14,14 +14,15 @@ For NanoTrack:
     nanotrack_headneck: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx
 
 USAGE:
-    tracker.py [-h] [--input INPUT] [--tracker_algo TRACKER_ALGO]
-                    [--goturn GOTURN] [--goturn_model GOTURN_MODEL]
+    tracker.py [-h] [--input INPUT_VIDEO]
+                    [--tracker_algo TRACKER_ALGO (mil, goturn, dasiamrpn, nanotrack, vittrack)]
+                    [--goturn GOTURN_PROTOTXT]
+                    [--goturn_model GOTURN_MODEL]
                     [--dasiamrpn_net DASIAMRPN_NET]
                     [--dasiamrpn_kernel_r1 DASIAMRPN_KERNEL_R1]
                     [--dasiamrpn_kernel_cls1 DASIAMRPN_KERNEL_CLS1]
-                    [--dasiamrpn_backend DASIAMRPN_BACKEND]
-                    [--dasiamrpn_target DASIAMRPN_TARGET]
-                    [--nanotrack_backbone NANOTRACK_BACKEND] [--nanotrack_headneck NANOTRACK_TARGET]
+                    [--nanotrack_backbone NANOTRACK_BACKBONE]
+                    [--nanotrack_headneck NANOTRACK_TARGET]
                     [--vittrack_net VITTRACK_MODEL]
 '''
 
