@@ -12,10 +12,22 @@ from tf_text_graph_common import readTextMessage
 from tf_text_graph_ssd import createSSDGraph
 from tf_text_graph_faster_rcnn import createFasterRCNNGraph
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV,
-            cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL,
-           cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
+def help():
+    print(
+        '''
+        Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"\n
+
+        To run:
+            python object_detection.py model_name(e.g yolov8) --input=path/to/your/input/image/or/video (don't pass --input to use device camera)
+
+        Sample command:
+            python object_detection.py yolov8 --input=path/to/image
+        Model path can also be specified using --model argument
+        '''
+    )
+
+backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
@@ -30,23 +42,24 @@ parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'darknet', 'd
                          'Detect it automatically if it does not set.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
 parser.add_argument('--nms', type=float, default=0.4, help='Non-maximum suppression threshold')
-parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
+parser.add_argument('--backend', default="default", type=str, choices=backends,
                     help="Choose one of computation backends: "
-                         "%d: automatically (by default), "
-                         "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                         "%d: OpenCV implementation, "
-                         "%d: VKCOM, "
-                         "%d: CUDA" % backends)
-parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
-                    help='Choose one of target computation devices: '
-                         '%d: CPU target (by default), '
-                         '%d: OpenCL, '
-                         '%d: OpenCL fp16 (half-float precision), '
-                         '%d: NCS2 VPU, '
-                         '%d: HDDL VPU, '
-                         '%d: Vulkan, '
-                         '%d: CUDA, '
-                         '%d: CUDA fp16 (half-float preprocess)' % targets)
+                    "default: automatically (by default), "
+                    "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                    "opencv: OpenCV implementation, "
+                    "vkcom: VKCOM, "
+                    "cuda: CUDA, "
+                    "webnn: WebNN")
+parser.add_argument('--target', default="cpu", type=str, choices=targets,
+                    help="Choose one of target computation devices: "
+                    "cpu: CPU target (by default), "
+                    "opencl: OpenCL, "
+                    "opencl_fp16: OpenCL fp16 (half-float precision), "
+                    "ncs2_vpu: NCS2 VPU, "
+                    "hddl_vpu: HDDL VPU, "
+                    "vulkan: Vulkan, "
+                    "cuda: CUDA, "
+                    "cuda_fp16: CUDA fp16 (half-float preprocess)")
 parser.add_argument('--async', type=int, default=0,
                     dest='asyncN',
                     help='Number of asynchronous forwards at the same time. '
@@ -57,10 +70,13 @@ parser = argparse.ArgumentParser(parents=[parser],
                                  description='Use this script to run object detection deep learning networks using OpenCV.',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 args = parser.parse_args()
+if args.alias is None or hasattr(args, 'help'):
+    help()
+    exit(1)
 
-args.model = findFile(args.model)
+args.model = findModel(args.model, args.sha1)
 args.config = findFile(args.config)
-args.classes = findFile(args.classes)
+args.labels = findFile(args.labels)
 
 # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
 config = readTextMessage(args.config)
@@ -77,19 +93,25 @@ if 'model' in config:
 
 
 # Load names of classes
-classes = None
-if args.classes:
-    with open(args.classes, 'rt') as f:
-        classes = f.read().rstrip('\n').split('\n')
+labels = None
+if args.labels:
+    with open(args.labels, 'rt') as f:
+        labels = f.read().rstrip('\n').split('\n')
 
 # Load a network
 net = cv.dnn.readNet(args.model, args.config, args.framework)
-net.setPreferableBackend(args.backend)
-net.setPreferableTarget(args.target)
+net.setPreferableBackend(get_backend_id(args.backend))
+net.setPreferableTarget(get_target_id(args.target))
 outNames = net.getUnconnectedOutLayersNames()
 
 confThreshold = args.thr
 nmsThreshold = args.nms
+
+def get_color(class_id):
+    r = min((class_id >> 0 & 1) * 128 + (class_id >> 3 & 1) * 64 + (class_id >> 6 & 1) * 32 + 80, 255)
+    g = min((class_id >> 1 & 1) * 128 + (class_id >> 4 & 1) * 64 + (class_id >> 7 & 1) * 32 + 40, 255)
+    b = min((class_id >> 2 & 1) * 128 + (class_id >> 5 & 1) * 64 + (class_id >> 8 & 1) * 32 + 40, 255)
+    return (int(b), int(g), int(r))
 
 def postprocess(frame, outs):
     frameHeight = frame.shape[0]
@@ -97,14 +119,14 @@ def postprocess(frame, outs):
 
     def drawPred(classId, conf, left, top, right, bottom):
         # Draw a bounding box.
-        cv.rectangle(frame, (left, top), (right, bottom), (0, 255, 0))
+        cv.rectangle(frame, (left, top), (right, bottom), get_color(classId))
 
         label = '%.2f' % conf
 
         # Print a label of class.
-        if classes:
-            assert(classId < len(classes))
-            label = '%s: %s' % (classes[classId], label)
+        if labels:
+            assert(classId < len(labels))
+            label = '%s: %s' % (labels[classId], label)
 
         labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)
         top = max(top, labelSize[1])
@@ -204,7 +226,7 @@ def postprocess(frame, outs):
 
 # Process inputs
 winName = 'Deep learning object detection in OpenCV'
-cv.namedWindow(winName, cv.WINDOW_NORMAL)
+cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)
 
 def callback(pos):
     global confThreshold
@@ -319,13 +341,14 @@ while cv.waitKey(1) < 0:
         # Put efficiency information.
         if predictionsQueue.counter > 1:
             label = 'Camera: %.2f FPS' % (framesQueue.getFPS())
-            cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv.rectangle(frame, (0, 0), (150, 50), (255,255,255), cv.FILLED)
+            cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
             label = 'Network: %.2f FPS' % (predictionsQueue.getFPS())
-            cv.putText(frame, label, (0, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv.putText(frame, label, (0, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
             label = 'Skipped frames: %d' % (framesQueue.counter - predictionsQueue.counter)
-            cv.putText(frame, label, (0, 45), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv.putText(frame, label, (0, 45), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
         cv.imshow(winName, frame)
     except queue.Empty:
