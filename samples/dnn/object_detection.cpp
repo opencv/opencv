@@ -305,13 +305,13 @@ int main(int argc, char** argv)
         {
             string label = format("Camera: %.2f FPS", framesQueue.getFPS());
             rectangle(frame, Point(0, 0), Point(150, 50), Scalar::all(255), FILLED);
-            putText(frame, label, Point(0, 15), Scalar::all(0), sans, 25, 500);
+            putText(frame, label, Point(0, 15), Scalar::all(0), sans, 12, 400);
 
             label = format("Network: %.2f FPS", predictionsQueue.getFPS());
-            putText(frame, label, Point(0, 30), Scalar::all(0), sans, 25, 500);
+            putText(frame, label, Point(0, 30), Scalar::all(0), sans, 12, 400);
 
             label = format("Skipped frames: %d", framesQueue.counter - predictionsQueue.counter);
-            putText(frame, label, Point(0, 45), Scalar::all(0), sans, 25, 500);
+            putText(frame, label, Point(0, 45), Scalar::all(0), sans, 12, 400);
         }
         imshow(kWinName, frame);
     }
@@ -350,7 +350,7 @@ int main(int argc, char** argv)
         double freq = getTickFrequency() / 1000;
         double t = net.getPerfProfile(layersTimes) / freq;
         string label = format("Inference time: %.2f ms", t);
-        putText(frame, label, Point(0, 15), Scalar(0, 255, 0), sans, 25, 500);
+        putText(frame, label, Point(0, 15), Scalar(0, 255, 0), sans, 12, 400);
 
         imshow(kWinName, frame);
     }
@@ -660,7 +660,7 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
     top = max(top, labelSize.height);
     rectangle(frame, Point(left, top - labelSize.height),
               Point(left + labelSize.width, top + baseLine), Scalar::all(255), FILLED);
-    putText(frame, label, Point(left, top), Scalar(), sans, 25, 500);
+    putText(frame, label, Point(left, top), Scalar(), sans, 12, 400);
 }
 
 void callback(int pos, void*)

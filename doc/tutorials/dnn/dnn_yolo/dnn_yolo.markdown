@@ -150,8 +150,8 @@ Once we have our ONNX graph of the model, we just simply can run with OpenCV's s
 3. Run the following command:
 
 @code{.cpp}
-./bin/example_dnn_object_detection --input=<path_to_your_input_file> \
-                                --classes=<path_to_class_names_file> \
+./bin/example_dnn_object_detection <model_name> --input=<path_to_your_input_file> \
+                                --labels=<path_to_class_names_file> \
                                 --thr=<confidence_threshold> \
                                 --nms=<non_maximum_suppression_threshold> \
                                 --mean=<mean_normalization_value> \
@@ -165,7 +165,7 @@ Once we have our ONNX graph of the model, we just simply can run with OpenCV's s
 @endcode
 
 - --input: File path to your input image or video. If omitted, it will capture frames from a camera.
-- --classes: File path to a text file containing class names for object detection.
+- --labels: File path to a text file containing class names for object detection.
 - --thr: Confidence threshold for detection (e.g., 0.5).
 - --nms: Non-maximum suppression threshold (e.g., 0.4).
 - --mean: Mean normalization value (e.g., 0.0 for no mean normalization).
@@ -190,42 +190,27 @@ To demonstrate how to run OpenCV YOLO samples without your own pretrained model,
 Run the YOLOX detector(with default values):
 
 @code{.sh}
-git clone https://github.com/opencv/opencv_extra.git
-cd opencv_extra/testdata/dnn
-python download_models.py yolox_s_inf_decoder
-cd ..
-export OPENCV_TEST_DATA_PATH=$(pwd)
+cd opencv/samples/dnn
+export OPENCV_DOWNLOAD_CACHE_DIR=<path to download the model>
+cd ../data
+export OPENCV_SAMPLES_DATA_PATH=$(pwd)
+python download_models.py yolov8x --save_dir=$OPENCV_DOWNLOAD_CACHE_DIR
 cd <build directory of OpenCV>
-./bin/example_dnn_yolo_detector
+./bin/example_dnn_yolo_detector yolov8x
 @endcode
 
 This will execute the YOLOX detector with your camera.
 For YOLOv8 (for instance), follow these additional steps:
 
 @code{.sh}
-cd opencv_extra/testdata/dnn
-python download_models.py yolov8
-cd ..
-export OPENCV_TEST_DATA_PATH=$(pwd)
+cd opencv/samples/dnn
+export OPENCV_DOWNLOAD_CACHE_DIR=<path to download the model>
+cd ../data
+export OPENCV_SAMPLES_DATA_PATH=$(pwd)
+python download_models.py yolov8n --save_dir=$OPENCV_DOWNLOAD_CACHE_DIR
 cd <build directory of OpenCV>
-
-./bin/example_dnn_object_detection --model=onnx/models/yolov8n.onnx --yolo=yolov8 --mean=0.0 --scale=0.003921568627 --paddingmode=2 --padvalue=144.0 --thr=0.5 --nms=0.4 --rgb=0
+./bin/example_dnn_object_detection yolov8n --model=onnx/models/yolov8n.onnx --mean=0.0 --scale=0.003921568627 --paddingmode=2 --padvalue=144.0 --thr=0.5 --nms=0.4 --rgb=0
 @endcode
-
-For YOLOv10, follow these steps:
-
-@code{.sh}
-cd opencv_extra/testdata/dnn
-python download_models.py yolov10
-cd ..
-export OPENCV_TEST_DATA_PATH=$(pwd)
-cd <build directory of OpenCV>
-
-./bin/example_dnn_yolo_detector --model=onnx/models/yolov10s.onnx --yolo=yolov10 --width=640 --height=480  --scale=0.003921568627 --padvalue=114
-@endcode
-
-This will run `YOLOv10` detector on first camera found on your system. If you want to run it on a image/video file, you can use `--input` option to specify the path to the file.
-
 
 VIDEO DEMO:
 @youtube{NHtRlndE2cg}
