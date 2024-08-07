@@ -55,8 +55,8 @@
 #include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
 
-#include "imgwarp.simd.hpp"
-#include "imgwarp.simd_declarations.hpp"
+#include "warp_kernels.simd.hpp"
+#include "warp_kernels.simd_declarations.hpp"
 
 using namespace cv;
 
