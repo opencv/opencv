@@ -62,7 +62,7 @@ def add_preproc_args(zoo, parser, sample):
 
     parser.add_argument('alias', nargs='?', choices=aliases,
                         help='An alias name of model to extract preprocessing parameters from models.yml file.')
-    add_argument(zoo, parser, 'model', required=True,
+    add_argument(zoo, parser, 'model',
                  help='Path to a binary file of model contains trained weights. '
                       'It could be a file with extensions .caffemodel (Caffe), '
                       '.pb (TensorFlow), .weights (Darknet), .bin (OpenVINO)')
@@ -106,6 +106,9 @@ def findModel(filename, sha1):
 
         if os.path.exists(os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], sha1, filename)):
             return os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], sha1, filename)
+
+        if os.path.exists(os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], filename)):
+            return os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], filename)
 
         print('File ' + filename + ' not found! Please specify a path to '
              'model download directory in OPENCV_DOWNLOAD_CACHE_DIR '
