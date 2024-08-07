@@ -159,8 +159,8 @@ template <typename R> std::ostream & operator<<(std::ostream & out, const Data<R
     out << "{ ";
     for (int i = 0; i < VTraits<R>::vlanes(); ++i)
     {
-        // out << std::hex << +V_TypeTraits<typename VTraits<R>::lane_type>::reinterpret_int(d.d[i]);
-        out << +d.d[i];
+        out << std::hex << +V_TypeTraits<typename VTraits<R>::lane_type>::reinterpret_int(d.d[i]);
+        // out << +d.d[i]; // Note: No  operator '<<' for _Float16
         if (i + 1 < VTraits<R>::vlanes())
             out << ", ";
     }
@@ -182,7 +182,7 @@ template<> inline void EXPECT_COMPARE_EQ_<double>(const double a, const double b
     EXPECT_DOUBLE_EQ( a, b );
 }
 
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
 template<> inline void EXPECT_COMPARE_EQ_<hfloat>(const hfloat a, const hfloat b)
 {
     EXPECT_LT(std::abs(float(a - b)), 0.126);
@@ -564,7 +564,7 @@ template<typename R> struct TheTest
     // Handle accuracy for fp16
     TheTest & test_div_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         Data<R> dataA, dataB;
         dataB.reverse();
         R a = dataA, b = dataB;
@@ -1572,7 +1572,7 @@ template<typename R> struct TheTest
 
     TheTest & test_matmul_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         Data<R> dataV, data0, data1, data2, data3, data4, data5, data6, data7;
         data1.reverse();
         data2 += 2;
@@ -1657,7 +1657,8 @@ template<typename R> struct TheTest
 
     TheTest & test_transpose8x8_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 /*|| CV_SIMD_SCALABLE_FP16*/)
+// Note: The scalable backend does not yet implement fixed-length functions
         Data<R> dataA0, dataA1, dataA2, dataA3, dataA4, dataA5, dataA6, dataA7;
         dataA1 *= 2;
         dataA2 *= 4;
@@ -1713,7 +1714,8 @@ template<typename R> struct TheTest
 
     TheTest & test_reduce_sum8()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 /*|| CV_SIMD_SCALABLE_FP16*/)
+// Note: The scalable backend does not yet implement fixed-length functions
         Data<R> dataA, dataB, dataC, dataD, dataW, dataX, dataY, dataZ;
         dataB *= 0.01f;
         dataC *= 0.001f;
@@ -1773,7 +1775,7 @@ template<typename R> struct TheTest
 
     TheTest & test_loadstore_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         AlignedData<R> data;
         AlignedData<R> out;
 
@@ -1804,7 +1806,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_cvt_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         AlignedData<v_float32> data;
 
         // check conversion
@@ -2449,7 +2451,7 @@ void test_hal_intrin_float16()
     DUMP_ENTRY(v_float16);
 #if CV_FP16
     TheTest<v_float32>().test_loadstore_fp16_f32();
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     TheTest<v_float16>()
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
@@ -2476,6 +2478,8 @@ void test_hal_intrin_float16()
         .test_extract_n<0>().test_extract_n<1>()
         .test_exp_fp16()
         .test_log_fp16()
+#else
+    std::cout << "SKIP: CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16 is not available" << std::endl;
 #endif
         ;
 #else

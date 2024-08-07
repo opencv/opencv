@@ -23,6 +23,27 @@ int test()
     *(float16x4_t*)dst = v_dst;
     return (int)dst[0];
 }
+#elif (defined __riscv_zvfhmin && __riscv_zvfhmin) || (defined __riscv_zvfh && __riscv_zvfh)
+#include <riscv_vector.h>
+
+int test()
+{
+    const _Float16 input1[] = {0.5f, 1.5f, 2.5f, 3.5f};
+    const float input2[] = {-0.5f, -1.5f, -2.5f, -3.5f};
+    short dst[4];
+
+    size_t vl =  __riscv_vsetvl_e16m1(4);
+
+    vfloat16m1_t in_f16 = __riscv_vle16_v_f16m1(input1, vl);
+    vfloat32m2_t in_f32 = __riscv_vle32_v_f32m2(input2, vl);
+
+    vfloat32m2_t cvt_f32 = __riscv_vfwcvt_f_f_v_f32m2(in_f16, vl);
+    vfloat32m2_t res_f32 = __riscv_vfadd(in_f32, cvt_f32, vl);
+    vfloat16m1_t res_f16 = __riscv_vfncvt_f_f_w_f16m1(res_f32, vl);
+
+    __riscv_vse16_v_f16m1((_Float16*)dst, res_f16, vl);
+    return (int)dst[0];
+}
 #else
 #error "FP16 is not supported"
 #endif

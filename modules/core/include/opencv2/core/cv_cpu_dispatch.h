@@ -74,6 +74,8 @@
 #ifdef CV_CPU_COMPILE_FP16
 #  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
 #    include <arm_neon.h>
+#  elif defined(__riscv_vector)
+#    include <riscv_vector.h>
 #  else
 #    include <immintrin.h>
 #  endif
@@ -247,6 +249,11 @@ struct VZeroUpperGuard {
 
 #ifdef __F16C__
 #  include <immintrin.h>
+#  define CV_FP16 1
+#endif
+
+#if defined(__riscv_zvfhmin) && __riscv_zvfhmin || (defined(__riscv_zvfh) && __riscv_zvfh)
+#  include <riscv_vector.h>
 #  define CV_FP16 1
 #endif
 
