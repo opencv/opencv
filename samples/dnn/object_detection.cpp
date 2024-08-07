@@ -40,13 +40,12 @@ const string param_keys =
     "{ zoo         | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
     "{ device      |         0         | camera device number. }"
     "{ input i     |                   | Path to input image or video file. Skip this argument to capture frames from a camera. }"
-    "{ labels      |                   | Optional path to a text file with labels to detected objects. }"
     "{ thr         |        .5         | Confidence threshold. }"
     "{ nms         |        .4         | Non-maximum suppression threshold. }"
     "{ async       |         0         | Number of asynchronous forwards at the same time. "
                         "Choose 0 for synchronous mode }"
     "{ padvalue    |       114.0       | padding value. }"
-    "{ paddingmode |         2         | Choose one of computation backends: "
+    "{ paddingmode |         2         | Choose one of padding modes: "
                          "0: resize to required input size without extra processing, "
                          "1: Image will be cropped after resize, "
                          "2: Resize image to the desired size while preserving the aspect ratio of original image }";
@@ -306,13 +305,13 @@ int main(int argc, char** argv)
         {
             string label = format("Camera: %.2f FPS", framesQueue.getFPS());
             rectangle(frame, Point(0, 0), Point(150, 50), Scalar::all(255), FILLED);
-            putText(frame, label, Point(0, 15), Scalar::all(0), sans, 10);
+            putText(frame, label, Point(0, 15), Scalar::all(0), sans, 25, 500);
 
             label = format("Network: %.2f FPS", predictionsQueue.getFPS());
-            putText(frame, label, Point(0, 30), Scalar::all(0), sans, 10);
+            putText(frame, label, Point(0, 30), Scalar::all(0), sans, 25, 500);
 
             label = format("Skipped frames: %d", framesQueue.counter - predictionsQueue.counter);
-            putText(frame, label, Point(0, 45), Scalar::all(0), sans, 10);
+            putText(frame, label, Point(0, 45), Scalar::all(0), sans, 25, 500);
         }
         imshow(kWinName, frame);
     }
@@ -351,7 +350,7 @@ int main(int argc, char** argv)
         double freq = getTickFrequency() / 1000;
         double t = net.getPerfProfile(layersTimes) / freq;
         string label = format("Inference time: %.2f ms", t);
-        putText(frame, label, Point(0, 15), Scalar(0, 255, 0), sans, 10);
+        putText(frame, label, Point(0, 15), Scalar(0, 255, 0), sans, 25, 500);
 
         imshow(kWinName, frame);
     }
@@ -661,7 +660,7 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
     top = max(top, labelSize.height);
     rectangle(frame, Point(left, top - labelSize.height),
               Point(left + labelSize.width, top + baseLine), Scalar::all(255), FILLED);
-    putText(frame, label, Point(left, top), Scalar(), sans, 10);
+    putText(frame, label, Point(left, top), Scalar(), sans, 25, 500);
 }
 
 void callback(int pos, void*)

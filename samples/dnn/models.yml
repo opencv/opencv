@@ -72,7 +72,7 @@ yolov8l:
   width: 640
   height: 640
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
+  labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
   sample: "yolo_detector"
 
