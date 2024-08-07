@@ -141,29 +141,12 @@ android {
         }
     }
 
-    buildFeatures {
-        prefabPublishing true
-        buildConfig true
-    }
-    prefab {
-        opencv_jni_shared {
-            headers "native/jni/include"
-        }
-    }
-
     sourceSets {
         main {
-            jniLibs.srcDirs = ['native/libs']
-            java.srcDirs = ['java/src']
-            res.srcDirs = ['java/res']
-            manifest.srcFile 'java/AndroidManifest.xml'
-        }
-    }
-
-    publishing {
-        singleVariant('release') {
-            withSourcesJar()
-            withJavadocJar()
+            jniLibs.srcDirs = [@SOURSE_SETS_JNI_LIBS_SRC_DIRS@]
+            java.srcDirs = [@SOURSE_SETS_JAVA_SRC_DIRS@]
+            res.srcDirs = [@SOURSE_SETS_RES_SRC_DIRS@]
+            manifest.srcFile @SOURSE_SETS_MANIFEST_SRC_FILE@
         }
     }
 
@@ -172,6 +155,7 @@ android {
             path (project.projectDir.toString() + '/libcxx_helper/CMakeLists.txt')
         }
     }
+    @BUILD_GRADLE_PUBLISHING_CONFIG@
 }
 
 publishing {

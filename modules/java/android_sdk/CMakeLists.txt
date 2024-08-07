@@ -15,6 +15,26 @@ file(MAKE_DIRECTORY "${java_src_dir}")
 
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/java" "${java_src_dir}")
 
+set(BUILD_GRADLE_ENABLE_PUBLISH "
+    buildFeatures {
+        prefabPublishing true
+        buildConfig true
+    }
+
+    prefab {
+        opencv_jni_shared {
+            headers 'native/jni/include'
+        }
+    }
+
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+")
+
 if(ANDROID_EXECUTABLE)
 
 ocv_assert(ANDROID_TOOLS_Pkg_Revision GREATER 13)
@@ -108,6 +128,12 @@ if(ANDROID_NATIVE_API_LEVEL GREATER 21)
 else()
   ocv_update(ANDROID_TARGET_SDK_VERSION "21")
 endif()
+
+set(SOURSE_SETS_JNI_LIBS_SRC_DIRS "'native/libs'")
+set(SOURSE_SETS_JAVA_SRC_DIRS "'java/src'")
+set(SOURSE_SETS_RES_SRC_DIRS "'java/res'")
+set(SOURSE_SETS_MANIFEST_SRC_FILE "'java/AndroidManifest.xml'")
+set(BUILD_GRADLE_PUBLISHING_CONFIG "${BUILD_GRADLE_ENABLE_PUBLISH}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${CMAKE_CURRENT_BINARY_DIR}/build.gradle" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/build.gradle" DESTINATION ${JAVA_INSTALL_ROOT}/.. COMPONENT java)
 
@@ -123,6 +149,12 @@ ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-24/java" "${java_src_dir}")
 
 # copy boilerplate
+set(SOURSE_SETS_JNI_LIBS_SRC_DIRS "'../../jni'")
+set(SOURSE_SETS_JAVA_SRC_DIRS "'src'")
+set(SOURSE_SETS_RES_SRC_DIRS "'${OpenCV_SOURCE_DIR}/modules/java/android_sdk/android_gradle_lib/res'")
+set(SOURSE_SETS_MANIFEST_SRC_FILE "'AndroidManifest.xml'")
+set(BUILD_GRADLE_PUBLISHING_CONFIG "")
+
 set(__base_dir "${CMAKE_CURRENT_SOURCE_DIR}/android_gradle_lib/")
 file(GLOB_RECURSE seed_project_files_rel RELATIVE "${__base_dir}/" "${__base_dir}/*")
 list(REMOVE_ITEM seed_project_files_rel "${ANDROID_MANIFEST_FILE}")
@@ -134,6 +166,7 @@ foreach(file ${seed_project_files_rel})
     install(FILES "${OPENCV_JAVA_DIR}/${file}" DESTINATION "${JAVA_INSTALL_ROOT}/${install_subdir}" COMPONENT java)
   endif()
 endforeach()
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${OPENCV_JAVA_DIR}/build.gradle" @ONLY)
 
 # copy libcxx_helper
 set(__base_dir "${CMAKE_CURRENT_SOURCE_DIR}/")
@@ -165,6 +198,11 @@ file(REMOVE "${OPENCV_DEPHELPER}/${the_module}_android")  # force rebuild after 
 
 add_custom_target(${the_module}_android ALL DEPENDS "${OPENCV_DEPHELPER}/${the_module}_android" SOURCES "${__base_dir}/${ANDROID_MANIFEST_FILE}")
 
+set(SOURSE_SETS_JNI_LIBS_SRC_DIRS "'native/libs'")
+set(SOURSE_SETS_JAVA_SRC_DIRS "'java/src'")
+set(SOURSE_SETS_RES_SRC_DIRS "'java/res'")
+set(SOURSE_SETS_MANIFEST_SRC_FILE "'java/AndroidManifest.xml'")
+set(BUILD_GRADLE_PUBLISHING_CONFIG "${BUILD_GRADLE_ENABLE_PUBLISH}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/opencv/build.gradle" @ONLY)
 install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/opencv/build.gradle" DESTINATION ${JAVA_INSTALL_ROOT}/.. COMPONENT java)
 
