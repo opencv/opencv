@@ -38,11 +38,11 @@ using namespace std;
 using namespace cv::dnn;
 
 const string about = "Use this script for Text Detection and Recognition using OpenCV. \n\n"
-        "Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"
+        "Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to point to the directory where models are downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"
         "To run:\n"
         "\t Example: ./example_dnn_text_detection modelName(i.e. DB or East) --ocr=<path to ResNet_CTC.onnx>\n\n"
-        "Model path can also be specified using --model argument. \n\n"
-        "Download link for recognition model: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing \n\n";
+        "Detection model path can also be specified using --model argument. \n\n"
+        "Download link for ocr model: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing \n\n";
 
 // Command-line keys to parse the input arguments
 string keys =
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     // Parsing command-line arguments
     String sha1 = parser.get<String>("sha1");
     String detModelPath = findModel(parser.get<String>("model"), sha1);
-    String ocr = findFile(parser.get<String>("ocr"));
+    String ocr = findModel(parser.get<String>("ocr"), "");
     int height = parser.get<int>("height");
     int width = parser.get<int>("width");
     bool imreadRGB = parser.get<bool>("rgb");
@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
 
     // Initializing text recognition model with the provided model path
     if (ocr.empty()) {
-        cout << "[ERROR] Please pass recognition model --ocr to run the sample" << endl;
+        cout << "[ERROR] Please pass the path to the ocr model using --ocr to run the sample" << endl;
         return -1;
     }
     TextRecognitionModel recognizer(ocr);
@@ -191,8 +191,10 @@ int main(int argc, char** argv) {
             string recognitionResult = recognizer.recognize(cropped);
             cout << i << ": '" << recognitionResult << "'" << endl;
 
+            //Create FontFace for putText
+            FontFace sans("sans");
             // Displaying the recognized text on the image
-            putText(frame, recognitionResult, detResults[i][3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
+            putText(frame, recognitionResult, detResults[i][3], Scalar(0, 0, 255), sans, 25, 500);
         }
         // Drawing detected text regions on the image
         polylines(frame, contours, true, Scalar(0, 255, 0), 2);

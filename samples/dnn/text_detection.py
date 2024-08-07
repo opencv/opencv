@@ -41,8 +41,8 @@ def help():
         To run:
         Example: python text_detection.py modelName(i.e. DB or East) --ocr=<path to ResNet_CTC.onnx>
 
-        Model path can also be specified using --model argument.
-        Download link for recognition model: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing
+        Detection model path can also be specified using --model argument.
+        Download link for ocr model: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing
         '''
     )
 
@@ -91,7 +91,6 @@ def fourPointsTransform(frame, vertices):
 
 def main():
     args = get_args_parser()
-    print(args.alias)
 
     if args.alias is None or hasattr(args, 'help'):
         help()
@@ -129,7 +128,7 @@ def main():
         vocabulary = [line.strip() for line in voc_file]
 
     if args.ocr is None:
-        print("[ERROR] Please pass recognition model --ocr to run the sample")
+        print("[ERROR] Please pass the path to the ocr model using --ocr to run the sample")
         exit(1)
     # Initialize the text recognition model with the specified model path
     recognizer = cv2.dnn_TextRecognitionModel(args.ocr)
