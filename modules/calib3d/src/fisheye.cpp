@@ -253,7 +253,11 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::distortPoints
-
+// Note:
+//   The input is normalized points and the output is raw points.
+//   The inputs must have the optical center subtracted
+//   and then divided by focal length.
+//   While the output is multiplied by focal length with optical center added.
 void cv::fisheye::distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha)
 {
     CV_INSTRUMENT_REGION();
