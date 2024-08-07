@@ -833,6 +833,21 @@ struct FModFunctor {
     }
 };
 
+template <class T>
+struct PowFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() {}
+    };
+
+    CUDA4DNN_DEVICE PowFunctor() { }
+    CUDA4DNN_DEVICE PowFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) {
+        using csl::device::pow;
+        return pow(x, y);
+    }
+};
+
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 
 #endif /* OPENCV_DNN_SRC_CUDA_FUNCTORS_HPP */
