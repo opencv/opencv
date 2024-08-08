@@ -31,10 +31,10 @@ static void applyCanny(const Mat& image, Mat& result) {
 }
 
 // Load Model
-static void loadModel(const string modelPath, int backend, int target, Net &net){
+static void loadModel(const string modelPath, String backend, String target, Net &net){
     net = readNetFromONNX(modelPath);
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
+    net.setPreferableBackend(getBackendID(backend));
+    net.setPreferableTarget(getTargetID(target));
 }
 
 static void setupCannyWindow(const Mat &image){
@@ -92,40 +92,40 @@ static void applyDexined(Net &net, const Mat &image, Mat &result) {
 int main(int argc, char** argv) {
     const string about =
         "This sample demonstrates edge detection with dexined and canny edge detection techniques.\n\n"
+        "To run with canny:\n"
+        "\t ./example_dnn_edge_detection --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)\n"
+        "With Dexined:\n"
+        "\t ./example_dnn_edge_detection dexined --input=path/to/your/input/image/or/video\n\n"
         "For switching between deep learning based model(dexined) and canny edge detector, press 'd' (for dexined) or 'c' (for canny) respectively in case of video. For image pass the argument --method for switching between dexined and canny.\n"
         "Model path can also be specified using --model argument\n\n";
 
     const string param_keys =
-        "{ help h          |            | Print help message. }"
-        "{ @alias          |            | An alias name of model to extract preprocessing parameters from models.yml file. }"
-        "{ zoo             | models.yml | An optional path to file with preprocessing parameters }"
-        "{ input i         |            | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-        "{ method          |   canny    | Choose method: dexined or canny. }"
-        "{ model           |            | Path to the model file for using dexined. }";
+        "{ help h          |                   | Print help message. }"
+        "{ @alias          |                   | An alias name of model to extract preprocessing parameters from models.yml file. }"
+        "{ zoo             | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
+        "{ input i         |                   | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+        "{ method          |       canny       | Choose method: dexined or canny. }"
+        "{ model           |                   | Path to the model file for using dexined. }";
 
     const string backend_keys = format(
-        "{ backend         | 0 | Choose one of computation backends: "
-        "%d: automatically (by default), "
-        "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-        "%d: OpenCV implementation, "
-        "%d: VKCOM, "
-        "%d: CUDA, "
-        "%d: WebNN }",
-        DNN_BACKEND_DEFAULT, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV,
-        DNN_BACKEND_VKCOM, DNN_BACKEND_CUDA, DNN_BACKEND_WEBNN);
+        "{ backend          | default | Choose one of computation backends: "
+                              "default: automatically (by default), "
+                              "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                              "opencv: OpenCV implementation, "
+                              "vkcom: VKCOM, "
+                              "cuda: CUDA, "
+                              "webnn: WebNN }");
 
     const string target_keys = format(
-        "{ target          | 0 | Choose one of target computation devices: "
-        "%d: CPU target (by default), "
-        "%d: OpenCL, "
-        "%d: OpenCL fp16 (half-float precision), "
-        "%d: VPU, "
-        "%d: Vulkan, "
-        "%d: CUDA, "
-        "%d: CUDA fp16 (half-float preprocess) }",
-        DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16,
-        DNN_TARGET_MYRIAD, DNN_TARGET_VULKAN, DNN_TARGET_CUDA,
-        DNN_TARGET_CUDA_FP16);
+        "{ target           | cpu | Choose one of target computation devices: "
+                              "cpu: CPU target (by default), "
+                              "opencl: OpenCL, "
+                              "opencl_fp16: OpenCL fp16 (half-float precision), "
+                              "vpu: VPU, "
+                              "vulkan: Vulkan, "
+                              "cuda: CUDA, "
+                              "cuda_fp16: CUDA fp16 (half-float preprocess) }");
+
 
     string keys = param_keys + backend_keys + target_keys;
 
@@ -151,10 +151,11 @@ int main(int argc, char** argv) {
     float scale = parser.get<float>("scale");
     Scalar mean = parser.get<Scalar>("mean");
     bool swapRB = parser.get<bool>("rgb");
-    int backend = parser.get<int>("backend");
-    int target = parser.get<int>("target");
+    String backend = parser.get<String>("backend");
+    String target = parser.get<String>("target");
     string method = parser.get<String>("method");
-    string model = findFile(parser.get<String>("model"));
+    String sha1 = parser.get<String>("sha1");
+    string model = findModel(parser.get<String>("model"), sha1);
     parser.about(about);
 
     if (parser.has("help")) {

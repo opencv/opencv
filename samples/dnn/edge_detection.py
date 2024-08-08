@@ -9,45 +9,47 @@ import numpy as np
 from common import *
 
 def get_args_parser(func_args):
-    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
-                cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
-
-    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16,
-               cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_VULKAN,
-               cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.', default=0, required=False)
     parser.add_argument('--method', help='choose method: dexined or canny', default='canny', required=False)
-    parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
-                        help="Choose one of computation backends: "
-                             "%d: automatically (by default), "
-                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                             "%d: OpenCV implementation, "
-                             "%d: VKCOM, "
-                             "%d: CUDA" % backends)
-
-    parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
-                        help='Choose one of target computation devices: '
-                             '%d: CPU target (by default), '
-                             '%d: OpenCL, '
-                             '%d: OpenCL fp16 (half-float precision), '
-                             '%d: NCS2 VPU, '
-                             '%d: HDDL VPU, '
-                             '%d: Vulkan, '
-                             '%d: CUDA, '
-                             '%d: CUDA fp16 (half-float preprocess)' % targets)
+    parser.add_argument('--backend', default="default", type=str, choices=backends,
+                    help="Choose one of computation backends: "
+                         "default: automatically (by default), "
+                         "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                         "opencv: OpenCV implementation, "
+                         "vkcom: VKCOM, "
+                         "cuda: CUDA, "
+                         "webnn: WebNN")
+    parser.add_argument('--target', default="cpu", type=str, choices=targets,
+                    help="Choose one of target computation devices: "
+                         "cpu: CPU target (by default), "
+                         "opencl: OpenCL, "
+                         "opencl_fp16: OpenCL fp16 (half-float precision), "
+                         "ncs2_vpu: NCS2 VPU, "
+                         "hddl_vpu: HDDL VPU, "
+                         "vulkan: Vulkan, "
+                         "cuda: CUDA, "
+                         "cuda_fp16: CUDA fp16 (half-float preprocess)")
 
     args, _ = parser.parse_known_args()
     add_preproc_args(args.zoo, parser, 'edge_detection')
     parser = argparse.ArgumentParser(parents=[parser],
-                                     description='Use this script to run edge detection using OpenCV. '
-                                     "This sample demonstrates edge detection with Dexined and Canny edge detection techniques. "
-                                        "In case of video input, for switching between deep learning based model (Dexined) and Canny edge detector, press 'd' (for Dexined) or 'c' (for Canny) respectively. Pass as argument in case of image input."
-                                        "Model path can also be specified using --model argument",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                     description='''
+        To run:
+            Canny:
+                python edge_detection.py --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)
+            Dexined:
+                python edge_detection.py dexined --input=path/to/your/input/image/or/video
+
+        "In case of video input, for switching between deep learning based model (Dexined) and Canny edge detector, press 'd' (for Dexined) or 'c' (for Canny) respectively. Pass as argument in case of image input."
+
+        Model path can also be specified using --model argument
+        ''', formatter_class=argparse.RawTextHelpFormatter)
     return parser.parse_args(func_args)
 
 threshold1 = 0
@@ -92,8 +94,8 @@ def setupCannyWindow(image):
 
 def loadModel(args):
     net = cv.dnn.readNetFromONNX(args.model)
-    net.setPreferableBackend(args.backend)
-    net.setPreferableTarget(args.target)
+    net.setPreferableBackend(get_backend_id(args.backend))
+    net.setPreferableTarget(get_target_id(args.target))
     return net
 
 def apply_dexined(model, image):
@@ -122,7 +124,7 @@ def main(func_args=None):
         print("[WARN] Model file not provided, using canny instead. Pass model using --model=/path/to/dexined.onnx to use dexined model.")
         method = 'canny'
     else:
-        args.model = findFile(args.model)
+        args.model = findModel(args.model, args.sha1)
         method = 'dexined'
     if method == 'canny':
         dummy = np.zeros((512, 512, 3), dtype="uint8")
