@@ -220,7 +220,7 @@ public:
     int all_quads_count;
 
     struct NeighborsFinder {
-        const float thresh_sqr_scale = sqrt(2.f);
+        const float thresh_sqr_scale = 2.f;
         ChessBoardDetector& detector;
         std::vector<int> neighbors_indices;
         std::vector<float> neighbors_dists;
