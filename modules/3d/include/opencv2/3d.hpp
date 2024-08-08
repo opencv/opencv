@@ -1333,6 +1333,9 @@ The function converts 2D or 3D points from/to homogeneous coordinates by calling
  */
 CV_EXPORTS void convertPointsHomogeneous( InputArray src, OutputArray dst );
 
+/** @example samples/cpp/snippets/epipolar_lines.cpp
+An example using the findFundamentalMat function
+*/
 /** @brief Calculates a fundamental matrix from the corresponding points in two images.
 
 @param points1 Array of N points from the first image. The point coordinates should be
