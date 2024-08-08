@@ -280,11 +280,10 @@ if __name__ == "__main__":
         builder.clean_build_dir()
 
     if not args.skip_config:
-        target = "default target"
-        if args.build_wasm:
-            target = "wasm"
-        elif args.disable_wasm:
+        if args.disable_wasm:
             target = "asm.js"
+        else:
+            target = "wasm"
         log.info("=====")
         log.info("===== Config OpenCV.js build for %s" % target)
         log.info("=====")
