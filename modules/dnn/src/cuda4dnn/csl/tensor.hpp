@@ -271,7 +271,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         typename std::enable_if<cxx_utils::is_forward_iterator<ForwardItr>::value, void>
         ::type reshape_(ForwardItr start, ForwardItr end) {
             CV_Assert(start != end);
-            CV_Assert(std::distance(start, end) <= rank());
 
             using ItrValueType = typename std::iterator_traits<ForwardItr>::value_type;
 
@@ -290,6 +289,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             auto total = std::accumulate(start, end, 1, std::multiplies<ItrValueType>());
             if (total < 0) {
                 /* there is an unknown size */
+                CV_CheckEQ(size() % std::abs(total), static_cast<size_type>(0), "cannot be reshaped"); // must be divisible
                 if (std::abs(total) <= size()) {
                     unknown_size = size() / std::abs(total);
                     total = size();
@@ -304,11 +304,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                 CV_Error(Error::StsBadArg, "new axes do not preserve the tensor element count");
             }
 
-            /* we assume the size of the unspecified axes to be one */
-            std::fill(std::begin(shape), std::end(shape), 1);
-            std::copy_backward(start, end, std::end(shape));
-
-            /* replace the unknown axis with the correct value */
+            /* copy shape from given iterator and reshape -1 with deduced value */
+            shape.resize(std::distance(start, end));
+            std::copy(start, end, shape.begin());
             std::replace(std::begin(shape), std::end(shape), size_type(-1), unknown_size);
         }
 
@@ -622,6 +620,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             auto total = std::accumulate(start, end, 1, std::multiplies<ItrValueType>());
             if (total < 0) {
                 /* there is an unknown size */
+                CV_CheckEQ(size() % std::abs(total), static_cast<size_type>(0), "cannot be reshaped"); // must be divisible
                 if (std::abs(total) <= size()) {
                     unknown_size = size() / std::abs(total);
                     total = size();
@@ -636,11 +635,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                CV_Error(Error::StsBadArg, "new axes do not preserve the tensor element count");
             }
 
-            /* we assume the size of the unspecified axes to be one */
-            std::fill(std::begin(shape), std::end(shape), 1);
-            std::copy_backward(start, end, std::end(shape));
-
-            /* replace the unknown axis with the correct value */
+            /* copy shape from given iterator and reshape -1 with deduced value */
+            shape.resize(std::distance(start, end));
+            std::copy(start, end, shape.begin());
             std::replace(std::begin(shape), std::end(shape), size_type(-1), unknown_size);
         }
 
@@ -997,7 +994,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         typename std::enable_if<!std::is_integral<ForwardItr>::value, void>
         ::type reshape_(ForwardItr start, ForwardItr end) {
             CV_Assert(start != end);
-            CV_Assert(std::distance(start, end) <= rank());
 
             using ItrValueType = typename std::iterator_traits<ForwardItr>::value_type;
 
@@ -1016,6 +1012,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             auto total = std::accumulate(start, end, 1, std::multiplies<ItrValueType>());
             if (total < 0) {
                 /* there is an unknown size */
+                CV_CheckEQ(size() % std::abs(total), static_cast<size_type>(0), "cannot be reshaped"); // must be divisible
                 if (std::abs(total) <= size()) {
                     unknown_size = size() / std::abs(total);
                     total = size();
@@ -1030,11 +1027,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                 CV_Error(Error::StsBadArg, "new axes do not preserve the tensor element count");
             }
 
-            /* we assume the size of the unspecified axes to be one */
-            std::fill(std::begin(shape), std::end(shape), 1);
-            std::copy_backward(start, end, std::end(shape));
-
-            /* replace the unknown axis with the correct value */
+            /* copy shape from given iterator and reshape -1 with deduced value */
+            shape.resize(std::distance(start, end));
+            std::copy(start, end, shape.begin());
             std::replace(std::begin(shape), std::end(shape), size_type(-1), unknown_size);
         }
 

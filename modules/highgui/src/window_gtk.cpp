@@ -46,10 +46,7 @@
 
 #include <gtk/gtk.h>
 
-#if (GTK_MAJOR_VERSION == 3) && defined(HAVE_OPENGL)
-  #undef HAVE_OPENGL  // no support with GTK3
-#endif
-#if defined(HAVE_OPENGL) && !defined(HAVE_GTKGLEXT)
+#if (GTK_MAJOR_VERSION == 2) && defined(HAVE_OPENGL) && !defined(HAVE_GTKGLEXT)
   #undef HAVE_OPENGL  // gtkglext is required
 #endif
 
@@ -68,9 +65,13 @@
 #endif
 
 #ifdef HAVE_OPENGL
+  #ifdef GTK_VERSION3
+    #include <gtk/gtkglarea.h>
+  #else
     #include <gtk/gtkgl.h>
-    #include <GL/gl.h>
     #include <GL/glu.h>
+  #endif
+  #include <GL/gl.h>
 #endif
 
 #include <opencv2/core/utils/logger.hpp>
@@ -575,7 +576,7 @@ struct CvWindow : CvUIBase
         last_key(0), flags(0), status(0),
         on_mouse(NULL), on_mouse_param(NULL)
 #ifdef HAVE_OPENGL
-        ,useGl(false), glDrawCallback(NULL), glDrawData(NULL)
+        ,useGl(false), glDrawCallback(NULL), glDrawData(NULL), glArea(NULL)
 #endif
     {
         CV_LOG_INFO(NULL, "OpenCV/UI: creating GTK window: " << window_name);
@@ -602,6 +603,7 @@ struct CvWindow : CvUIBase
 
     CvOpenGlDrawCallback glDrawCallback;
     void* glDrawData;
+    GtkWidget* glArea;
 #endif
 };
 
@@ -611,13 +613,11 @@ static gboolean icvOnKeyPress( GtkWidget* widget, GdkEventKey* event, gpointer u
 static void icvOnTrackbar( GtkWidget* widget, gpointer user_data );
 static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_data );
 
-#ifdef HAVE_GTHREAD
 int thread_started=0;
 static gpointer icvWindowThreadLoop(gpointer data);
 GMutex*				   last_key_mutex = NULL;
 GCond*				   cond_have_key = NULL;
 GThread*			   window_thread = NULL;
-#endif
 
 static int             last_key = -1;
 
@@ -645,7 +645,7 @@ static int gtk_InitSystem( int argc, char** argv )
 
         setlocale(LC_NUMERIC,"C");
 
-        #ifdef HAVE_OPENGL
+        #if defined(HAVE_OPENGL) && not defined(GTK_VERSION3) // GTK3+ uses GtkGLArea so no need to check for GtkGLExt
             if (!gtk_gl_init_check(&argc, &argv))
             {
                 hasError = true;
@@ -664,7 +664,6 @@ static int gtk_InitSystem( int argc, char** argv )
 
 int cv::startWindowThread(){
     CV_TRACE_FUNCTION();
-#ifdef HAVE_GTHREAD
     gtk_InitSystem(0,NULL);
     if (!thread_started)
     {
@@ -680,12 +679,8 @@ int cv::startWindowThread(){
     }
     thread_started = window_thread!=NULL;
     return thread_started;
-#else
-    return 0;
-#endif
 }
 
-#ifdef HAVE_GTHREAD
 gpointer icvWindowThreadLoop(gpointer /*data*/)
 {
     while(1){
@@ -701,8 +696,6 @@ gpointer icvWindowThreadLoop(gpointer /*data*/)
     }
     return NULL;
 }
-
-#endif
 
 #define CV_LOCK_MUTEX() cv::AutoLock lock(getWindowMutex())
 
@@ -900,11 +893,42 @@ double cvGetOpenGlProp_GTK(const char* name)
 // OpenGL support
 
 #ifdef HAVE_OPENGL
-
 namespace
 {
+
+#ifdef GTK_VERSION3
+
+    void glRealizeCallback(GtkGLArea* area, gpointer user_data) {
+        CV_UNUSED(user_data);
+        gtk_gl_area_make_current(area);
+        if (gtk_gl_area_get_error(area) != NULL)
+            CV_Error(cv::Error::OpenGlApiCallError, "OpenGL context is not initialized");
+    }
+
+    gboolean glRenderCallback(GtkGLArea* area, GdkGLContext* context, gpointer user_data) {
+        CV_UNUSED(context);
+        CvWindow* window = (CvWindow*)user_data;
+        gtk_gl_area_make_current(area);
+        if (gtk_gl_area_get_error(area) != NULL) {
+            CV_Error(cv::Error::OpenGlApiCallError, "OpenGL context is not initialized");
+            return FALSE;
+        }
+        if(window->glDrawCallback) {
+            window->glDrawCallback(window->glDrawData);
+        }
+//        gtk_gl_area_queue_render(area);
+        return TRUE;
+    }
+
+#endif
+
     void createGlContext(CvWindow* window)
     {
+        #ifdef GTK_VERSION3
+        g_signal_connect(window->glArea, "realize", G_CALLBACK(glRealizeCallback), window);
+        g_signal_connect(window->glArea, "render", G_CALLBACK(glRenderCallback), window);
+        #else
+
         GdkGLConfig* glconfig;
 
         // Try double-buffered visual
@@ -916,11 +940,24 @@ namespace
         if (!gtk_widget_set_gl_capability(window->widget, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE))
             CV_Error( cv::Error::OpenGlApiCallError, "Can't Create A GL Device Context" );
 
+        #endif
+
         window->useGl = true;
     }
 
     void drawGl(CvWindow* window)
     {
+        #ifdef GTK_VERSION3
+
+        GtkGLArea* gtkGlArea = GTK_GL_AREA(window->glArea);
+        if (gtk_gl_area_get_error(gtkGlArea) != NULL)
+            CV_Error(cv::Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
+
+        if (window->glDrawCallback)
+            window->glDrawCallback(window->glDrawData);
+
+        #else
+
         GdkGLContext* glcontext = gtk_widget_get_gl_context(window->widget);
         GdkGLDrawable* gldrawable = gtk_widget_get_gl_drawable(window->widget);
 
@@ -940,6 +977,8 @@ namespace
             glFlush();
 
         gdk_gl_drawable_gl_end(gldrawable);
+
+        #endif
     }
 }
 
@@ -1035,12 +1074,27 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
     window->frame = gtk_window_new( GTK_WINDOW_TOPLEVEL );
 
-    window->paned = gtk_vbox_new( FALSE, 0 );
     window->widget = cvImageWidgetNew( flags );
+
+#if defined(HAVE_OPENGL) && defined(GTK_VERSION3)
+    if (flags & cv::WINDOW_OPENGL) {
+        window->glArea = gtk_gl_area_new();
+        gtk_container_add(GTK_CONTAINER(window->frame), window->glArea);
+        gtk_widget_show(window->glArea);
+    } else {
+        window->paned = gtk_vbox_new( FALSE, 0 );
+        gtk_box_pack_end( GTK_BOX(window->paned), window->widget, TRUE, TRUE, 0 );
+        gtk_widget_show( window->widget );
+        gtk_container_add( GTK_CONTAINER(window->frame), window->paned );
+        gtk_widget_show( window->paned );
+    }
+#else
+    window->paned = gtk_vbox_new( FALSE, 0 );
     gtk_box_pack_end( GTK_BOX(window->paned), window->widget, TRUE, TRUE, 0 );
     gtk_widget_show( window->widget );
     gtk_container_add( GTK_CONTAINER(window->frame), window->paned );
     gtk_widget_show( window->paned );
+#endif
 
 #ifndef HAVE_OPENGL
     if (flags & cv::WINDOW_OPENGL)
@@ -1116,9 +1170,6 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 void setOpenGLContextImpl(const char* name)
 {
-    GdkGLContext* glcontext;
-    GdkGLDrawable* gldrawable;
-
     CV_Assert(name && "NULL name string");
 
     CV_LOCK_MUTEX();
@@ -1130,11 +1181,24 @@ void setOpenGLContextImpl(const char* name)
     if (!window->useGl)
         CV_Error( cv::Error::OpenGlNotSupported, "Window doesn't support OpenGL" );
 
+#ifdef GTK_VERSION3
+
+    if(gtk_gl_area_get_error(GTK_GL_AREA(window->glArea)) != NULL)
+        CV_Error( cv::Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
+
+#else
+
+    GdkGLContext* glcontext;
+    GdkGLDrawable* gldrawable;
+
     glcontext = gtk_widget_get_gl_context(window->widget);
     gldrawable = gtk_widget_get_gl_drawable(window->widget);
 
     if (!gdk_gl_drawable_make_current(gldrawable, glcontext))
         CV_Error( cv::Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
+
+#endif
+
 }
 
 void updateWindowImpl(const char* name)
@@ -1148,7 +1212,20 @@ void updateWindowImpl(const char* name)
         return;
 
     // window does not refresh without this
+#ifdef GTK_VERSION3
+
+    if ( GTK_IS_GL_AREA(window->glArea) ){
+        gtk_gl_area_queue_render(GTK_GL_AREA(window->glArea));
+    } else {
+        gtk_widget_queue_draw( GTK_WIDGET(window->widget));
+    }
+
+#else
+
     gtk_widget_queue_draw( GTK_WIDGET(window->widget) );
+
+#endif
+
 }
 
 void setOpenGLDrawCallbackImpl(const char* name, CvOpenGlDrawCallback callback, void* userdata)
@@ -1190,7 +1267,6 @@ static void checkLastWindow()
     // if last window...
     if (getGTKWindows().empty())
     {
-#ifdef HAVE_GTHREAD
         if( thread_started )
         {
             // send key press signal to jump out of any waiting waitKeyImpl's
@@ -1198,7 +1274,6 @@ static void checkLastWindow()
         }
         else
         {
-#endif
             // Some GTK+ modules (like the Unity module) use GDBusConnection,
             // which has a habit of postponing cleanup by performing it via
             // idle sources added to the main loop. Since this was the last window,
@@ -1209,9 +1284,7 @@ static void checkLastWindow()
             // thread will process events continuously.
             while( gtk_events_pending() )
                 gtk_main_iteration();
-#ifdef HAVE_GTHREAD
         }
-#endif
     }
 }
 
@@ -1720,7 +1793,6 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer us
 
     code |= event->state << 16;
 
-#ifdef HAVE_GTHREAD
     if(thread_started)
     {
         g_mutex_lock(last_key_mutex);
@@ -1730,7 +1802,6 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer us
         g_mutex_unlock(last_key_mutex);
     }
     else
-#endif
     {
         last_key = code;
     }
@@ -1921,7 +1992,6 @@ static gboolean icvAlarm( gpointer user_data )
 
 int waitKeyImpl( int delay )
 {
-#ifdef HAVE_GTHREAD
     if (thread_started && g_thread_self() != window_thread)
     {
         gboolean expired = true;
@@ -1955,7 +2025,6 @@ int waitKeyImpl( int delay )
         return my_last_key;
     }
     else
-#endif
     {
         int expired = 0;
         guint timer = 0;

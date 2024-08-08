@@ -126,7 +126,7 @@ Scalar mean(InputArray _src, InputArray _mask)
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    CV_Assert( mask.empty() || mask.type() == CV_8U );
+    CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool);
 
     int k, cn = src.channels(), depth = src.depth();
     Scalar s;
@@ -227,7 +227,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         int ddepth = std::max(CV_32S, depth), sqddepth = std::max(CV_32F, depth),
                 dtype = CV_MAKE_TYPE(ddepth, cn),
                 sqdtype = CV_MAKETYPE(sqddepth, cn);
-        CV_Assert(!haveMask || _mask.type() == CV_8UC1);
+        CV_Assert(!haveMask || _mask.type() == CV_8U || _mask.type() == CV_8S || _mask.type() == CV_Bool);
 
         int wgs2_aligned = 1;
         while (wgs2_aligned < (int)wgs)
@@ -461,16 +461,68 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
     CV_INSTRUMENT_REGION();
 
     CV_Assert(!_src.empty());
-    CV_Assert( _mask.empty() || _mask.type() == CV_8UC1 );
+    CV_Assert( _mask.empty() || _mask.type() == CV_8U || _mask.type() == CV_8S || _mask.type() == CV_Bool );
 
     CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                ocl_meanStdDev(_src, _mean, _sdv, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
+    CV_Assert(mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool) && src.size == mask.size));
+
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
     int k, cn = src.channels(), depth = src.depth();
+    Mat mean_mat, stddev_mat;
+
+    if(_mean.needed())
+    {
+        if( !_mean.fixedSize() )
+            _mean.create(cn, 1, CV_64F, -1, true);
+
+        mean_mat = _mean.getMat();
+        int dcn = (int)mean_mat.total();
+        CV_Assert( mean_mat.type() == CV_64F && mean_mat.isContinuous() &&
+                   (mean_mat.cols == 1 || mean_mat.rows == 1) && dcn >= cn );
+
+        double* dptr = mean_mat.ptr<double>();
+        for(k = cn ; k < dcn; k++ )
+            dptr[k] = 0;
+    }
+
+    if (_sdv.needed())
+    {
+        if( !_sdv.fixedSize() )
+            _sdv.create(cn, 1, CV_64F, -1, true);
+
+        stddev_mat = _sdv.getMat();
+        int dcn = (int)stddev_mat.total();
+        CV_Assert( stddev_mat.type() == CV_64F && stddev_mat.isContinuous() &&
+                   (stddev_mat.cols == 1 || stddev_mat.rows == 1) && dcn >= cn );
+
+        double* dptr = stddev_mat.ptr<double>();
+        for(k = cn ; k < dcn; k++ )
+            dptr[k] = 0;
+
+    }
+
+    if (src.isContinuous() && mask.isContinuous())
+    {
+        CALL_HAL(meanStdDev, cv_hal_meanStdDev, src.data, 0, (int)src.total(), 1, src.type(),
+                 _mean.needed() ? mean_mat.ptr<double>() : nullptr,
+                 _sdv.needed() ? stddev_mat.ptr<double>() : nullptr,
+                 mask.data, 0);
+    }
+    else
+    {
+        if (src.dims <= 2)
+        {
+            CALL_HAL(meanStdDev, cv_hal_meanStdDev, src.data, src.step, src.cols, src.rows, src.type(),
+                     _mean.needed() ? mean_mat.ptr<double>() : nullptr,
+                     _sdv.needed() ? stddev_mat.ptr<double>() : nullptr,
+                     mask.data, mask.step);
+        }
+    }
 
     SumSqrFunc func = getSumSqrFunc(depth);
 
@@ -550,24 +602,20 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
         sq[k] = std::sqrt(std::max(sq[k]*scale - s[k]*s[k], 0.));
     }
 
-    for( j = 0; j < 2; j++ )
+    if (_mean.needed())
     {
-        const double* sptr = j == 0 ? s : sq;
-        _OutputArray _dst = j == 0 ? _mean : _sdv;
-        if( !_dst.needed() )
-            continue;
-
-        if( !_dst.fixedSize() )
-            _dst.create(cn, 1, CV_64F, -1, true);
-        Mat dst = _dst.getMat();
-        int dcn = (int)dst.total();
-        CV_Assert( dst.type() == CV_64F && dst.isContinuous() &&
-                   (dst.cols == 1 || dst.rows == 1) && dcn >= cn );
-        double* dptr = dst.ptr<double>();
+        const double* sptr = s;
+        double* dptr = mean_mat.ptr<double>();
         for( k = 0; k < cn; k++ )
             dptr[k] = sptr[k];
-        for( ; k < dcn; k++ )
-            dptr[k] = 0;
+    }
+
+    if (_sdv.needed())
+    {
+        const double* sptr = sq;
+        double* dptr = stddev_mat.ptr<double>();
+        for( k = 0; k < cn; k++ )
+            dptr[k] = sptr[k];
     }
 }
 

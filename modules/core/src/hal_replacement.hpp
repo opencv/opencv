@@ -106,6 +106,10 @@ inline int hal_ni_sub64s(const int64 *src1_data, size_t src1_step, const int64 *
 inline int hal_ni_sub16f(const cv_hal_f16 *src1_data, size_t src1_step, const cv_hal_f16 *src2_data, size_t src2_step, cv_hal_f16 *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_sub16bf(const cv_hal_bf16 *src1_data, size_t src1_step, const cv_hal_bf16 *src2_data, size_t src2_step, cv_hal_bf16 *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
+inline int hal_ni_sub8u32f(const uchar *src1_data, size_t src1_step, const uchar *src2_data, size_t src2_step, float *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_sub8s32f(const schar *src1_data, size_t src1_step, const schar *src2_data, size_t src2_step, float *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+
 //! @}
 
 /**
@@ -221,6 +225,8 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 #define cv_hal_sub64s hal_ni_sub64s
 #define cv_hal_sub32f hal_ni_sub32f
 #define cv_hal_sub64f hal_ni_sub64f
+#define cv_hal_sub8u32f hal_ni_sub8u32f
+#define cv_hal_sub8s32f hal_ni_sub8s32f
 #define cv_hal_sub16f hal_ni_sub16f
 #define cv_hal_sub16bf hal_ni_sub16bf
 #define cv_hal_max8u hal_ni_max8u
@@ -263,6 +269,62 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 #define cv_hal_or8u hal_ni_or8u
 #define cv_hal_xor8u hal_ni_xor8u
 #define cv_hal_not8u hal_ni_not8u
+//! @endcond
+
+/**
+Lookup table replacement
+Table consists of 256 elements of a size from 1 to 8 bytes having 1 channel or src_channels
+For 8s input type 128 is added to LUT index
+Destination should have the same element type and number of channels as lookup table elements
+@param src_data Source image data
+@param src_step Source image step
+@param src_type Sorce image type
+@param lut_data Pointer to lookup table
+@param lut_channel_size Size of each channel in bytes
+@param lut_channels Number of channels in lookup table
+@param dst_data Destination data
+@param dst_step Destination step
+@param width Width of images
+@param height Height of images
+@sa LUT
+*/
+//! @addtogroup core_hal_interface_lut Lookup table
+//! @{
+inline int hal_ni_lut(const uchar *src_data, size_t src_step, size_t src_type, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_lut hal_ni_lut
+//! @endcond
+
+/**
+Hamming norm of a vector
+@param a pointer to vector data
+@param n length of a vector
+@param cellSize how many bits of the vector will be added and treated as a single bit, can be 1 (standard Hamming distance), 2 or 4
+@param result pointer to result output
+*/
+//! @addtogroup core_hal_interface_hamming Hamming distance
+//! @{
+inline int hal_ni_normHamming8u(const uchar* a, int n, int cellSize, int* result) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+/**
+Hamming distance between two vectors
+@param a pointer to first vector data
+@param b pointer to second vector data
+@param n length of vectors
+@param cellSize how many bits of the vectors will be added and treated as a single bit, can be 1 (standard Hamming distance), 2 or 4
+@param result pointer to result output
+*/
+//! @addtogroup core_hal_interface_hamming Hamming distance
+//! @{
+inline int hal_ni_normHammingDiff8u(const uchar* a, const uchar* b, int n, int cellSize, int* result) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_normHamming8u hal_ni_normHamming8u
+#define cv_hal_normHammingDiff8u hal_ni_normHammingDiff8u
 //! @endcond
 
 /**
@@ -330,6 +392,8 @@ inline int hal_ni_mul32u(const unsigned *src1_data, size_t src1_step, const unsi
 inline int hal_ni_mul32s(const int *src1_data, size_t src1_step, const int *src2_data, size_t src2_step, int *dst_data, size_t dst_step, int width, int height, double scale) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_mul32f(const float *src1_data, size_t src1_step, const float *src2_data, size_t src2_step, float *dst_data, size_t dst_step, int width, int height, double scale) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_mul64f(const double *src1_data, size_t src1_step, const double *src2_data, size_t src2_step, double *dst_data, size_t dst_step, int width, int height, double scale) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_mul8u16u(const uchar* src1_data, size_t src1_step, const uchar* src2_data, size_t src2_step, ushort* dst_data, size_t dst_step, int width, int height, double scale) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_mul8s16s(const schar* src1_data, size_t src1_step, const schar* src2_data, size_t src2_step, short* dst_data, size_t dst_step, int width, int height, double scale) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_mul64u(const uint64 *src1_data, size_t src1_step, const uint64 *src2_data, size_t src2_step, uint64 *dst_data, size_t dst_step, int width, int height, double scale) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_mul64s(const int64 *src1_data, size_t src1_step, const int64 *src2_data, size_t src2_step, int64 *dst_data, size_t dst_step, int width, int height, double scale) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_mul16f(const cv_hal_f16 *src1_data, size_t src1_step, const cv_hal_f16 *src2_data, size_t src2_step, cv_hal_f16 *dst_data, size_t dst_step, int width, int height, double scale) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
@@ -401,6 +465,8 @@ inline int hal_ni_recip16bf(const cv_hal_bf16 *src_data, size_t src_step, cv_hal
 #define cv_hal_mul64s hal_ni_mul64s
 #define cv_hal_mul32f hal_ni_mul32f
 #define cv_hal_mul64f hal_ni_mul64f
+#define cv_hal_mul8u16u hal_ni_mul8u16u
+#define cv_hal_mul8s16s hal_ni_mul8s16s
 #define cv_hal_mul16f hal_ni_mul16f
 #define cv_hal_mul16bf hal_ni_mul16bf
 #define cv_hal_div8u hal_ni_div8u
@@ -912,6 +978,48 @@ inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, i
 
 //! @cond IGNORED
 #define cv_hal_minMaxIdx hal_ni_minMaxIdx
+//! @endcond
+
+/**
+   @brief calculates the mean and the standard deviation of array elements independently for each channel
+   @param src_data Source image
+   @param src_step Source image
+   @param width Source image dimensions
+   @param height Source image dimensions
+   @param src_type Type of source image
+   @param mean_val Array of per-channel mean values. May be nullptr, if mean value is not required.
+   @param stddev_val Array of per-channel standard deviation values. May be nullptr, if stddev value is not required.
+   @param mask Specified array region.
+   @param mask_step Mask array step.
+   @sa meanStdDev
+*/
+inline int hal_ni_meanStdDev(const uchar* src_data, size_t src_step, int width, int height,
+                             int src_type, double* mean_val, double* stddev_val, uchar* mask, size_t mask_step)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_meanStdDev hal_ni_meanStdDev
+//! @endcond
+
+/**
+ * @brief calculates dot product of two vectors (represented as 2d images)
+ *
+ * @param a_data Pointer to 1st 2nd image data
+ * @param a_step Stride of 1st 2nd image
+ * @param b_data Pointer to 1st 2nd image data
+ * @param b_step Stride of 1st 2nd image
+ * @param width Width of both images
+ * @param height Height of both images
+ * @param type Data type of both images, for example CV_8U or CV_32F
+ * @param dot_val Pointer to resulting dot product value
+ * @return int
+ */
+inline int hal_ni_dotProduct(const uchar* a_data, size_t a_step, const uchar* b_data, size_t b_step, int width, int height,
+                             int type, double *dot_val)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_dotProduct hal_ni_dotProduct
 //! @endcond
 
 /**

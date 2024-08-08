@@ -71,10 +71,12 @@ public:
             auto norm_axis = normalize_axis(axes[i], shape_input);
             axes[i] = norm_axis;
         }
+        if (shape_input.empty())
+            return;
 
         bool do_nothing = true;
         for (auto axis : axes) {
-            if (shape_input[axis] != 1) {
+            if (shape_input[axis] != 1 || keepdims) {
                 do_nothing = false;
             }
         }
@@ -89,6 +91,11 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        if (inputs[0].empty()){
+            CV_CheckEQ(axes[0], 0, "Axis must be 0 when input is empty.");
+            outputs.assign(1, MatShape());
+            return false;
+        }
         // empty axes
         if (axes.empty()) {
             if (noop_with_empty_axes) {
@@ -137,7 +144,7 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U, "");
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U || inputs[0] == CV_8S, "");
         outputs.assign(1, inputs[0]);
     }
 
@@ -406,6 +413,13 @@ public:
         static void run(const Mat& src, Mat& dst, std::vector<int> axes, bool noop_with_empty_axes) {
             CV_Assert(src.isContinuous());
             CV_Assert(dst.isContinuous());
+            if (shape(src).empty() || (shape(src).size() == 1)){
+                // since there is only one element no need for parallel compute
+                // axis does not matter either (one element)
+                ReduceAllInvoker<Op> p(src, dst);
+                p(Range(0, p.total));
+                return;
+            }
 
             if (axes.empty()) {
                 if (noop_with_empty_axes) {
@@ -501,6 +515,7 @@ public:
     inline void typeDispatch(const int type, Args&&... args) {
         switch (type) {
             case CV_8U: opDispatch<uint8_t>(std::forward<Args>(args)...); break;
+            case CV_8S: opDispatch<int8_t>(std::forward<Args>(args)...); break;
             case CV_32S: opDispatch<int32_t>(std::forward<Args>(args)...); break;
             case CV_64S: opDispatch<int64_t>(std::forward<Args>(args)...); break;
             case CV_32F: opDispatch<float>(std::forward<Args>(args)...); break;

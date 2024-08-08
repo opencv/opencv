@@ -45,8 +45,6 @@
 
 #include "opencv2/core/utils/tls.hpp"
 
-void cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform );
-
 namespace cv
 {
 
@@ -2304,70 +2302,6 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
 }
 
 
-// Sets a value range for every histogram bin
-void cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform )
-{
-    int dims, size[CV_MAX_DIM], total = 0;
-    int i, j;
-
-    if( !ranges )
-        CV_Error( cv::Error::StsNullPtr, "NULL ranges pointer" );
-
-    if( !CV_IS_HIST(hist) )
-        CV_Error( cv::Error::StsBadArg, "Invalid histogram header" );
-
-    dims = cvGetDims( hist->bins, size );
-    for( i = 0; i < dims; i++ )
-        total += size[i]+1;
-
-    if( uniform )
-    {
-        for( i = 0; i < dims; i++ )
-        {
-            if( !ranges[i] )
-                CV_Error( cv::Error::StsNullPtr, "One of <ranges> elements is NULL" );
-            hist->thresh[i][0] = ranges[i][0];
-            hist->thresh[i][1] = ranges[i][1];
-        }
-
-        hist->type |= CV_HIST_UNIFORM_FLAG + CV_HIST_RANGES_FLAG;
-    }
-    else
-    {
-        float* dim_ranges;
-
-        if( !hist->thresh2 )
-        {
-            hist->thresh2 = (float**)cvAlloc(
-                        dims*sizeof(hist->thresh2[0])+
-                        total*sizeof(hist->thresh2[0][0]));
-        }
-        dim_ranges = (float*)(hist->thresh2 + dims);
-
-        for( i = 0; i < dims; i++ )
-        {
-            float val0 = -FLT_MAX;
-
-            if( !ranges[i] )
-                CV_Error( cv::Error::StsNullPtr, "One of <ranges> elements is NULL" );
-
-            for( j = 0; j <= size[i]; j++ )
-            {
-                float val = ranges[i][j];
-                if( val <= val0 )
-                    CV_Error(cv::Error::StsOutOfRange, "Bin ranges should go in ascenting order");
-                val0 = dim_ranges[j] = val;
-            }
-
-            hist->thresh2[i] = dim_ranges;
-            dim_ranges += size[i] + 1;
-        }
-
-        hist->type |= CV_HIST_RANGES_FLAG;
-        hist->type &= ~CV_HIST_UNIFORM_FLAG;
-    }
-}
-
 
 class EqualizeHistCalcHist_Invoker : public cv::ParallelLoopBody
 {
@@ -2558,6 +2492,8 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
+
+    CALL_HAL(equalizeHist, cv_hal_equalize_hist, src.data, src.step, dst.data, dst.step, src.cols, src.rows);
 
     Mutex histogramLockInstance;
 

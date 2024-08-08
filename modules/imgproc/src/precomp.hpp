@@ -49,6 +49,8 @@
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/hal/hal.hpp"
+#include "opencv2/core/check.hpp"
+#include "opencv2/core/utils/buffer_area.private.hpp"
 #include "opencv2/imgproc/hal/hal.hpp"
 #include "hal_replacement.hpp"
 
@@ -58,6 +60,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <float.h>
+#include <stack>
 
 #define GET_OPTIMIZED(func) (func)
 
@@ -100,8 +103,6 @@ static inline IppiInterpolationType ippiGetInterpolation(int inter)
 }
 #endif
 
-#include "opencv2/core/types_c.h"
-#include "opencv2/core/core_c.h"
 #include "filterengine.hpp"
 
 #include "opencv2/core/sse_utils.hpp"

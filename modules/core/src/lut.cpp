@@ -50,7 +50,27 @@ static void LUT8u_16s( const uchar* src, const short* lut, short* dst, int len, 
     LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
+static void LUT8u_32u( const uchar* src, const uint* lut, uint* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
 static void LUT8u_32s( const uchar* src, const int* lut, int* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT8u_64u( const uchar* src, const uint64_t* lut, uint64_t* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT8u_64s( const uchar* src, const int64_t* lut, int64_t* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT8u_16f( const uchar* src, const hfloat* lut, hfloat* dst, int len, int cn, int lutcn )
 {
     LUT8u_( src, lut, dst, len, cn, lutcn );
 }
@@ -70,7 +90,10 @@ typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len
 static LUTFunc lutTab[CV_DEPTH_MAX] =
 {
     (LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_8s, (LUTFunc)LUT8u_16u, (LUTFunc)LUT8u_16s,
-    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, 0
+    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, (LUTFunc)LUT8u_16f,
+    // new data types in 5.x
+    /*bf16*/ (LUTFunc)LUT8u_16f, /*bool*/(LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_64u,
+    (LUTFunc)LUT8u_64s, (LUTFunc)LUT8u_32u
 };
 
 #ifdef HAVE_OPENCL
@@ -296,7 +319,7 @@ public:
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
-        CV_DbgAssert(*ok);
+        CV_Assert(*ok);
 
         const int row0 = range.start;
         const int row1 = range.end;
@@ -340,6 +363,9 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     _dst.createSameSize(_src, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
+
+    CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,
+             lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
 
 #if !IPP_DISABLE_PERF_LUT
     CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));

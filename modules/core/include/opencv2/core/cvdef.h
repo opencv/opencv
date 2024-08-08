@@ -201,6 +201,14 @@ namespace cv {
 #  define CV_ICC   __INTEL_COMPILER
 #endif
 
+#if defined _WIN32
+#  define CV_CDECL __cdecl
+#  define CV_STDCALL __stdcall
+#else
+#  define CV_CDECL
+#  define CV_STDCALL
+#endif
+
 #ifndef CV_INLINE
 #  if defined __cplusplus
 #    define CV_INLINE static inline
@@ -384,8 +392,10 @@ typedef union Cv16suf
 {
     short i;
     ushort u;
-#if CV_FP16_TYPE
+#if CV_FP16_TYPE && defined __ARM_FP16_FORMAT_IEEE
     __fp16 h;
+#elif CV_FP16_TYPE // Other platforms suggested to use _Float16
+    _Float16 h;
 #endif
 }
 Cv16suf;
@@ -471,6 +481,7 @@ Cv64suf;
 #define CV_OUT
 #define CV_PROP
 #define CV_PROP_RW
+#define CV_ND // Indicates that input data should be parsed into Mat without channels
 #define CV_WRAP
 #define CV_WRAP_AS(synonym)
 #define CV_WRAP_MAPPABLE(mappable)
@@ -483,6 +494,7 @@ Cv64suf;
 *                                  Matrix type (Mat)                                     *
 \****************************************************************************************/
 
+#define CV_MAX_DIM              32
 #define CV_MAT_CN_MASK          ((CV_CN_MAX - 1) << CV_CN_SHIFT)
 #define CV_MAT_CN(flags)        ((((flags) & CV_MAT_CN_MASK) >> CV_CN_SHIFT) + 1)
 #define CV_MAT_TYPE_MASK        (CV_DEPTH_MAX*CV_CN_MAX - 1)
@@ -512,6 +524,13 @@ Cv64suf;
 #ifndef MAX
 #  define MAX(a,b)  ((a) < (b) ? (b) : (a))
 #endif
+
+/** min & max without jumps */
+#define CV_IMIN(a, b)  ((a) ^ (((a)^(b)) & (((a) < (b)) - 1)))
+#define CV_IMAX(a, b)  ((a) ^ (((a)^(b)) & (((a) > (b)) - 1)))
+#define CV_SWAP(a,b,t) ((t) = (a), (a) = (b), (b) = (t))
+#define CV_CMP(a,b)    (((a) > (b)) - ((a) < (b)))
+#define CV_SIGN(a)     CV_CMP((a),0)
 
 ///////////////////////////////////////// Enum operators ///////////////////////////////////////
 
@@ -818,12 +837,16 @@ class hfloat
 {
 public:
 #if CV_FP16_TYPE
-
-    hfloat() : h(0) {}
+    hfloat() = default;
     explicit hfloat(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
+#if defined __ARM_FP16_FORMAT_IEEE
 protected:
     __fp16 h;
+#else
+protected:
+    _Float16 h;
+#endif
 
 #else
     hfloat() : w(0) {}

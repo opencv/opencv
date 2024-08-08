@@ -39,6 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
+using namespace cv;
 
 namespace cv
 {
@@ -2143,41 +2144,7 @@ void cv::polylines(InputOutputArray img, InputArrayOfArrays pts,
     polylines(img, (const Point**)ptsptr, npts, (int)ncontours, isClosed, color, thickness, lineType, shift);
 }
 
-namespace
-{
-using namespace cv;
 
-static void addChildContour(InputArrayOfArrays contours,
-                            size_t ncontours,
-                            const Vec4i* hierarchy,
-                            int i, std::vector<CvSeq>& seq,
-                            std::vector<CvSeqBlock>& block)
-{
-    for( ; i >= 0; i = hierarchy[i][0] )
-    {
-        Mat ci = contours.getMat(i);
-        cvMakeSeqHeaderForArray(CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(Point),
-                                !ci.empty() ? (void*)ci.ptr() : 0, (int)ci.total(),
-                                &seq[i], &block[i] );
-
-        int h_next = hierarchy[i][0], h_prev = hierarchy[i][1],
-            v_next = hierarchy[i][2], v_prev = hierarchy[i][3];
-        seq[i].h_next = (0 <= h_next && h_next < (int)ncontours) ? &seq[h_next] : 0;
-        seq[i].h_prev = (0 <= h_prev && h_prev < (int)ncontours) ? &seq[h_prev] : 0;
-        seq[i].v_next = (0 <= v_next && v_next < (int)ncontours) ? &seq[v_next] : 0;
-        seq[i].v_prev = (0 <= v_prev && v_prev < (int)ncontours) ? &seq[v_prev] : 0;
-
-        if( v_next >= 0 )
-            addChildContour(contours, ncontours, hierarchy, v_next, seq, block);
-    }
-}
-}
-
-void
-cvDrawContours( void* _img, CvSeq* contour,
-                CvScalar _externalColor, CvScalar _holeColor,
-                int  maxLevel, int thickness,
-                int line_type, CvPoint _offset );
 
 void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
                    int contourIdx, const Scalar& color, int thickness,
@@ -2185,203 +2152,94 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
                    int maxLevel, Point offset )
 {
     CV_INSTRUMENT_REGION();
-
-    Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
-    CvMat _cimage = cvMat(image);
-
-    size_t ncontours = _contours.total();
-    size_t i = 0, first = 0, last = ncontours;
-    std::vector<CvSeq> seq;
-    std::vector<CvSeqBlock> block;
-
-    if( !last )
+    CV_Assert( thickness <= MAX_THICKNESS );
+    const size_t ncontours = _contours.total();
+    if (!ncontours)
         return;
+    CV_Assert(ncontours <= (size_t)std::numeric_limits<int>::max());
+    if (lineType == cv::LINE_AA && _image.depth() != CV_8U)
+        lineType = 8;
+    Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
 
-    seq.resize(last);
-    block.resize(last);
-
-    for( i = first; i < last; i++ )
-        seq[i].first = 0;
-
-    if( contourIdx >= 0 )
+    if (thickness >= 0) // contour lines
     {
-        CV_Assert( 0 <= contourIdx && contourIdx < (int)last );
-        first = contourIdx;
-        last = contourIdx + 1;
-    }
-
-    for( i = first; i < last; i++ )
-    {
-        Mat ci = _contours.getMat((int)i);
-        if( ci.empty() )
-            continue;
-        int npoints = ci.checkVector(2, CV_32S);
-        CV_Assert( npoints > 0 );
-        cvMakeSeqHeaderForArray( CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(Point),
-                                 ci.ptr(), npoints, &seq[i], &block[i] );
-    }
-
-    if( hierarchy.empty() || maxLevel == 0 )
-        for( i = first; i < last; i++ )
+        double color_buf[4] {};
+        scalarToRawData(color, color_buf, _image.type(), 0 );
+        int i = 0, end = (int)ncontours;
+        if (contourIdx >= 0)
         {
-            seq[i].h_next = i < last-1 ? &seq[i+1] : 0;
-            seq[i].h_prev = i > first ? &seq[i-1] : 0;
+            i = contourIdx;
+            end = i + 1;
         }
-    else
-    {
-        size_t count = last - first;
-        CV_Assert(hierarchy.total() == ncontours && hierarchy.type() == CV_32SC4 );
-        const Vec4i* h = hierarchy.ptr<Vec4i>();
-
-        if( count == ncontours )
+        for (; i < end; ++i)
         {
-            for( i = first; i < last; i++ )
+            Mat cnt = _contours.getMat(i);
+            if (cnt.empty())
+                continue;
+            const int npoints = cnt.checkVector(2, CV_32S);
+            CV_Assert(npoints > 0);
+            for (int j = 0; j < npoints; ++j)
             {
-                int h_next = h[i][0], h_prev = h[i][1],
-                    v_next = h[i][2], v_prev = h[i][3];
-                seq[i].h_next = (size_t)h_next < count ? &seq[h_next] : 0;
-                seq[i].h_prev = (size_t)h_prev < count ? &seq[h_prev] : 0;
-                seq[i].v_next = (size_t)v_next < count ? &seq[v_next] : 0;
-                seq[i].v_prev = (size_t)v_prev < count ? &seq[v_prev] : 0;
+                const bool isLastIter = j == npoints - 1;
+                const Point pt1 = cnt.at<Point>(j);
+                const Point pt2 = cnt.at<Point>(isLastIter ? 0 : j + 1);
+                cv::ThickLine(image, pt1 + offset, pt2 + offset, color_buf, thickness, lineType, 2, 0);
             }
+        }
+    }
+    else // filled polygons
+    {
+        int i = 0, end = (int)ncontours;
+        if (contourIdx >= 0)
+        {
+            i = contourIdx;
+            end = i + 1;
+        }
+        std::vector<int> indexesToFill;
+        if (hierarchy.empty() || maxLevel == 0)
+        {
+            for (; i != end; ++i)
+                indexesToFill.push_back(i);
         }
         else
         {
-            int child = h[first][2];
-            if( child >= 0 )
+            std::stack<int> indexes;
+            for (; i != end; ++i)
             {
-                addChildContour(_contours, ncontours, h, child, seq, block);
-                seq[first].v_next = &seq[child];
+                // either all from the top level or a single contour
+                if (hierarchy.at<Vec4i>(i)[3] < 0 || contourIdx >= 0)
+                    indexes.push(i);
             }
-        }
-    }
-
-    cvDrawContours( &_cimage, &seq[first], cvScalar(color), cvScalar(color), contourIdx >= 0 ?
-                   -maxLevel : maxLevel, thickness, lineType, cvPoint(offset) );
-}
-
-
-
-static const int CodeDeltas[8][2] =
-{ {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
-
-void
-cvDrawContours( void* _img, CvSeq* contour,
-                CvScalar _externalColor, CvScalar _holeColor,
-                int  maxLevel, int thickness,
-                int line_type, CvPoint _offset )
-{
-    CvSeq *contour0 = contour, *h_next = 0;
-    CvTreeNodeIterator iterator;
-    std::vector<cv::PolyEdge> edges;
-    std::vector<cv::Point2l> pts;
-    cv::Scalar externalColor = _externalColor, holeColor = _holeColor;
-    cv::Mat img = cv::cvarrToMat(_img);
-    cv::Point offset = _offset;
-    double ext_buf[4], hole_buf[4];
-
-    if( line_type == cv::LINE_AA && img.depth() != CV_8U )
-        line_type = 8;
-
-    if( !contour )
-        return;
-
-    CV_Assert( thickness <= MAX_THICKNESS );
-
-    scalarToRawData( externalColor, ext_buf, img.type(), 0 );
-    scalarToRawData( holeColor, hole_buf, img.type(), 0 );
-
-    maxLevel = MAX(maxLevel, INT_MIN+2);
-    maxLevel = MIN(maxLevel, INT_MAX-1);
-
-    if( maxLevel < 0 )
-    {
-        h_next = contour->h_next;
-        contour->h_next = 0;
-        maxLevel = -maxLevel+1;
-    }
-
-    cvInitTreeNodeIterator( &iterator, contour, maxLevel );
-    while( (contour = (CvSeq*)cvNextTreeNode( &iterator )) != 0 )
-    {
-        CvSeqReader reader;
-        int i, count = contour->total;
-        int elem_type = CV_MAT_TYPE(contour->flags);
-        void* clr = (contour->flags & CV_SEQ_FLAG_HOLE) == 0 ? ext_buf : hole_buf;
-
-        cvStartReadSeq( contour, &reader, 0 );
-        CV_Assert(reader.ptr != NULL);
-        if( thickness < 0 )
-            pts.resize(0);
-
-        if( CV_IS_SEQ_CHAIN_CONTOUR( contour ))
-        {
-            cv::Point pt = ((CvChain*)contour)->origin;
-            cv::Point prev_pt = pt;
-            char prev_code = reader.ptr ? reader.ptr[0] : '\0';
-
-            prev_pt += offset;
-
-            for( i = 0; i < count; i++ )
+            while (!indexes.empty())
             {
-                char code;
-                CV_READ_SEQ_ELEM( code, reader );
+                // get current element
+                const int cur = indexes.top();
+                indexes.pop();
 
-                CV_Assert( (code & ~7) == 0 );
-
-                if( code != prev_code )
+                //  check current element depth
+                int curLevel = -1;
+                int par = cur;
+                while (par >= 0)
                 {
-                    prev_code = code;
-                    if( thickness >= 0 )
-                        cv::ThickLine( img, prev_pt, pt, clr, thickness, line_type, 2, 0 );
-                    else
-                        pts.push_back(pt);
-                    prev_pt = pt;
+                    par = hierarchy.at<Vec4i>(par)[3]; // parent
+                    ++curLevel;
+                }
+                if (curLevel <= maxLevel)
+                {
+                    indexesToFill.push_back(cur);
                 }
 
-                pt.x += CodeDeltas[(int)code][0];
-                pt.y += CodeDeltas[(int)code][1];
+                int next = hierarchy.at<Vec4i>(cur)[2]; // first child
+                while (next > 0)
+                {
+                    indexes.push(next);
+                    next = hierarchy.at<Vec4i>(next)[0]; // next sibling
+                }
             }
-
-            if( thickness >= 0 )
-                cv::ThickLine( img, prev_pt,
-                    cv::Point(((CvChain*)contour)->origin) + offset,
-                    clr, thickness, line_type, 2, 0 );
-            else
-                cv::CollectPolyEdges(img, &pts[0], (int)pts.size(),
-                                     edges, ext_buf, line_type, 0, offset);
         }
-        else if( CV_IS_SEQ_POLYLINE( contour ))
-        {
-            CV_Assert( elem_type == CV_32SC2 );
-            cv::Point pt1, pt2;
-            int shift = 0;
-
-            count -= !CV_IS_SEQ_CLOSED(contour);
-            { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, reader); pt1 = pt_; }
-            pt1 += offset;
-            if( thickness < 0 )
-                pts.push_back(pt1);
-
-            for( i = 0; i < count; i++ )
-            {
-                { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, reader); pt2 = pt_; }
-                pt2 += offset;
-                if( thickness >= 0 )
-                    cv::ThickLine( img, pt1, pt2, clr, thickness, line_type, 2, shift );
-                else
-                    pts.push_back(pt2);
-                pt1 = pt2;
-            }
-            if( thickness < 0 )
-                cv::CollectPolyEdges( img, &pts[0], (int)pts.size(),
-                                      edges, ext_buf, line_type, 0, cv::Point() );
-        }
+        std::vector<Mat> contoursToFill;
+        for (const int & idx : indexesToFill)
+            contoursToFill.push_back(_contours.getMat(idx));
+        fillPoly(image, contoursToFill, color, lineType, 0, offset);
     }
-
-    if( thickness < 0 )
-        cv::FillEdgeCollection( img, edges, ext_buf, line_type);
-
-    if( h_next && contour0 )
-        contour0->h_next = h_next;
 }

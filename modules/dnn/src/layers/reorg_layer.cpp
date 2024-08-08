@@ -106,12 +106,10 @@ public:
         CV_Assert(inputs.size());
         for (auto input : inputs)
         {
-            if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-                CV_CheckTypeEQ(input, CV_32F, "Unsupported type for CUDA");
-            else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S, "");
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
             else
-                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S, "");
+                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
         }
 
         outputs.assign(requiredOutputs, inputs[0]);
@@ -235,7 +233,7 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        return make_cuda_node<cuda4dnn::ReorgOp>(preferableTarget, std::move(context->stream), reorgStride);
+        return make_cuda_node_with_type<cuda4dnn::ReorgOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), reorgStride);
     }
 #endif
 

@@ -4,20 +4,6 @@
 # Object detection models.
 ################################################################################
 
-# OpenCV's face detection network
-opencv_fd:
-  load_info:
-    url: "https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel"
-    sha1: "15aa726b4d46d9f023526d85537db81cbc8dd566"
-  model: "opencv_face_detector.caffemodel"
-  config: "opencv_face_detector.prototxt"
-  mean: [104, 177, 123]
-  scale: 1.0
-  width: 300
-  height: 300
-  rgb: false
-  sample: "object_detection"
-
 # YOLOv8 object detection family from ultralytics (https://github.com/ultralytics/ultralytics)
 # Might be used for all YOLOv8n YOLOv8s YOLOv8m YOLOv8l and YOLOv8x
 yolov8x:
@@ -67,6 +53,20 @@ yolov8m:
     url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8m.onnx"
     sha1: "656ffeb4f3b067bc30df956728b5f9c61a4cb090"
   model: "yolov8m.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8l:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8l.onnx"
+    sha1: "462df53ca3a85d110bf6be7fc2e2bb1277124395"
+  model: "yolov8l.onnx"
   mean: 0.0
   scale: 0.00392
   width: 640
@@ -207,48 +207,59 @@ faster_rcnn_tf:
 # Image classification models.
 ################################################################################
 
-# SqueezeNet v1.1 from https://github.com/DeepScale/SqueezeNet
 squeezenet:
   load_info:
-    url: "https://raw.githubusercontent.com/DeepScale/SqueezeNet/b5c3f1a23713c8b3fd7b801d229f6b04c64374a5/SqueezeNet_v1.1/squeezenet_v1.1.caffemodel"
-    sha1: "3397f026368a45ae236403ccc81cfcbe8ebe1bd0"
-  model: "squeezenet_v1.1.caffemodel"
-  config: "squeezenet_v1.1.prototxt"
-  mean: [0, 0, 0]
-  scale: 1.0
-  width: 227
-  height: 227
-  rgb: false
-  classes: "classification_classes_ILSVRC2012.txt"
+    url: "https://github.com/onnx/models/raw/main/validated/vision/classification/squeezenet/model/squeezenet1.1-7.onnx?download="
+    sha1: "ec31942d17715941bb9b81f3a91dc59def9236be"
+  model: "squeezenet1.1-7.onnx"
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  scale: 0.003921
+  width: 224
+  height: 224
+  rgb: true
+  labels: "classification_classes_ILSVRC2012.txt"
   sample: "classification"
 
-# Googlenet from https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet
 googlenet:
   load_info:
-    url: "http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel"
-    sha1: "405fc5acd08a3bb12de8ee5e23a96bec22f08204"
-  model: "bvlc_googlenet.caffemodel"
-  config: "bvlc_googlenet.prototxt"
-  mean: [104, 117, 123]
+    url: "https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/inception_and_googlenet/googlenet/model/googlenet-8.onnx"
+    sha1: "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+  model: "googlenet-8.onnx"
+  mean: [103.939, 116.779, 123.675]
+  std: [1, 1, 1]
   scale: 1.0
   width: 224
   height: 224
   rgb: false
-  classes: "classification_classes_ILSVRC2012.txt"
+  labels: "classification_classes_ILSVRC2012.txt"
+  sample: "classification"
+
+resnet:
+  load_info:
+    url: "https://github.com/onnx/models/raw/main/validated/vision/classification/resnet/model/resnet50-v2-7.onnx"
+    sha1: "c3a67b3cb2f0a61a7eb75eb8bd9139c89557cbe0"
+  model: "resnet50-v2-7.onnx"
+  mean: [123.675, 116.28, 103.53]
+  std: [58.395, 57.12, 57.375]
+  scale: 1.0
+  width: 224
+  height: 224
+  rgb: true
+  labels: "classification_classes_ILSVRC2012.txt"
   sample: "classification"
 
 ################################################################################
 # Semantic segmentation models.
 ################################################################################
 
-fcn8s:
+fcnresnet50:
   load_info:
-    url: "http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel"
-    sha1: "c449ea74dd7d83751d1357d6a8c323fcf4038962"
-  model: "fcn8s-heavy-pascal.caffemodel"
-  config: "fcn8s-heavy-pascal.prototxt"
-  mean: [0, 0, 0]
-  scale: 1.0
+    url: "https://github.com/onnx/models/raw/491ce05590abb7551d7fae43c067c060eeb575a6/validated/vision/object_detection_segmentation/fcn/model/fcn-resnet50-12.onnx"
+    sha1: "1bb0c7e0034038969aecc6251166f1612a139230"
+  model: "fcn-resnet50-12.onnx"
+  mean: [103.5, 116.2, 123.6]
+  scale: 0.019
   width: 500
   height: 500
   rgb: false
@@ -264,4 +275,16 @@ fcnresnet101:
   width: 500
   height: 500
   rgb: false
+  sample: "segmentation"
+
+u2netp:
+  load_info:
+    url: "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx"
+    sha1: "0a99236f0d5c1916a99a8c401b23e5ef32038606"
+  model: "u2netp.onnx"
+  mean: [123.6, 116.2, 103.5]
+  scale: 0.019
+  width: 320
+  height: 320
+  rgb: true
   sample: "segmentation"

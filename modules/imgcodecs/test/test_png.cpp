@@ -7,19 +7,6 @@ namespace opencv_test { namespace {
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
 
-TEST(Imgcodecs_Png, imread_passing_mat)
-{
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string imgName = root + "../cv/shared/lena.png";
-
-    Mat ref = imread(imgName);
-    Mat img(ref.size(), ref.type());
-    void* ptr = img.data;
-    imread(imgName, img);
-    EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
-    EXPECT_EQ(img.data, ptr);
-}
-
 TEST(Imgcodecs_Png, write_big)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -96,6 +83,14 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(0, 0, 255));
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(0, 0, 255));
 
+    img = imread(root + "readwrite/color_palette_alpha.png", IMREAD_COLOR_RGB);
+    ASSERT_FALSE(img.empty());
+    ASSERT_TRUE(img.channels() == 3);
+
+    // pixel is red in RGB
+    EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(255, 0, 0));
+    EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(255, 0, 0));
+
     // Fourth Test : Read PNG without alpha, imread flag 1
     img = imread(root + "readwrite/color_palette_no_alpha.png", IMREAD_COLOR);
     ASSERT_FALSE(img.empty());
@@ -104,6 +99,14 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     // pixel is red in BGR
     EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(0, 0, 255));
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(0, 0, 255));
+
+    img = imread(root + "readwrite/color_palette_no_alpha.png", IMREAD_COLOR_RGB);
+    ASSERT_FALSE(img.empty());
+    ASSERT_TRUE(img.channels() == 3);
+
+    // pixel is red in RGB
+    EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(255, 0, 0));
+    EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(255, 0, 0));
 }
 
 /**

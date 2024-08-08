@@ -251,12 +251,6 @@ if(DOXYGEN_FOUND)
     list(APPEND js_assets "${OPENCV_JS_LOCATION}")
   endif()
 
-  # copy haar cascade files
-  # set(haar_cascade_files "")
-  # set(data_harrcascades_path "${OpenCV_SOURCE_DIR}/data/haarcascades/")
-  # list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
-  # list(APPEND js_assets "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
-
   foreach(f ${js_assets})
     get_filename_component(fname "${f}" NAME)
     add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${fname}"

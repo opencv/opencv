@@ -431,7 +431,7 @@ void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
     }
 
     int mcn = mask.channels();
-    CV_Assert( src.size == mask.size && mask.depth() == CV_8U
+    CV_Assert( src.size == mask.size && (mask.depth() == CV_8U || mask.depth() == CV_Bool)
                && (mcn == 1 || mcn == src.channels()) );
 
     const Mat *arrays[]={&src, &dst, &mask, 0};
@@ -1397,7 +1397,7 @@ double norm(InputArray _src, int normType, InputArray _mask)
     int normType0 = normType;
     normType = normType == NORM_L2SQR ? NORM_L2 : normType;
 
-    CV_Assert( mask.empty() || (src.size == mask.size && mask.type() == CV_8U) );
+    CV_Assert( mask.empty() || (src.size == mask.size && (mask.type() == CV_8U || mask.type() == CV_Bool)) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
 
     const Mat *arrays[]={&src, &mask, 0};
@@ -1416,6 +1416,9 @@ double norm(InputArray _src, int normType, InputArray _mask)
 
         switch( depth )
         {
+        case CV_Bool:
+            result = norm_((const bool*)sptr, total, cn, normType, result, mptr);
+            break;
         case CV_8U:
             result = norm_((const uchar*)sptr, total, cn, normType, result, mptr);
             break;
@@ -1503,7 +1506,7 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 
     CV_CheckTypeEQ(src1.type(), src2.type(), "");
     CV_Assert(src1.size == src2.size);
-    CV_Assert( mask.empty() || (src1.size == mask.size && mask.type() == CV_8U) );
+    CV_Assert( mask.empty() || (src1.size == mask.size && (mask.type() == CV_8U || mask.type() == CV_Bool)) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     const Mat *arrays[]={&src1, &src2, &mask, 0};
     Mat planes[3];
@@ -1522,6 +1525,9 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 
         switch( depth )
         {
+        case CV_Bool:
+            result = norm_((const bool*)sptr1, (const bool*)sptr2, total, cn, normType, result, mptr);
+            break;
         case CV_8U:
             result = norm_((const uchar*)sptr1, (const uchar*)sptr2, total, cn, normType, result, mptr);
             break;
@@ -2776,18 +2782,19 @@ void max(const Mat& src1, double val, Mat& dst)
 }
 
 
-template<typename _Tp> static void
-muldiv_(const _Tp* src1, const _Tp* src2, _Tp* dst, size_t total, double scale, char op)
+template<typename SrcType, typename DstType> static void
+muldiv_(const SrcType* src1, const SrcType* src2, DstType* dst, size_t total, double scale, char op)
 {
-    if( op == '*' )
-        for( size_t i = 0; i < total; i++ )
-            dst[i] = saturate_cast<_Tp>((scale*src1[i])*src2[i]);
-    else if( src1 )
-        for( size_t i = 0; i < total; i++ )
-            dst[i] = src2[i] ? saturate_cast<_Tp>((scale*src1[i])/src2[i]) : 0;
-    else
-        for( size_t i = 0; i < total; i++ )
-            dst[i] = src2[i] ? saturate_cast<_Tp>(scale/src2[i]) : 0;
+    for( size_t i = 0; i < total; i++ )
+    {
+        double m1 = src1 ? (double)src1[i] : 1.0;
+        double m2 = src2 ? (double)src2[i] : 1.0;
+        if (op == '/')
+        {
+            m2 = abs(m2) > FLT_EPSILON ? (1.0 / m2) : 0;
+        }
+        dst[i] = saturate_cast<DstType>(scale * m1 * m2);
+    }
 }
 
 template<typename _Tp> static void
@@ -2804,16 +2811,16 @@ muldiv_16f(const _Tp* src1, const _Tp* src2, _Tp* dst, size_t total, double scal
             dst[i] = saturate_cast<_Tp>(scale/(float)src2[i]);
 }
 
-static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, char op)
+static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, int ctype, double scale, char op)
 {
-    dst.create(src2.dims, src2.size, src2.type());
+    dst.create(src2.dims, src2.size, (ctype >= 0 ? ctype : src2.type()));
     CV_Assert( src1.empty() || (src1.type() == src2.type() && src1.size == src2.size) );
     const Mat *arrays[]={&src1, &src2, &dst, 0};
     Mat planes[3];
 
     NAryMatIterator it(arrays, planes);
     size_t total = planes[1].total()*planes[1].channels();
-    size_t i, nplanes = it.nplanes, depth = src2.depth();
+    size_t i, nplanes = it.nplanes, srcDepth = src2.depth(), dstDepth = dst.depth();
 
     for( i = 0; i < nplanes; i++, ++it )
     {
@@ -2821,59 +2828,85 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
         const uchar* sptr2 = planes[1].ptr();
         uchar* dptr = planes[2].ptr();
 
-        switch( depth )
+        if (srcDepth == dstDepth)
         {
-        case CV_8U:
-            muldiv_((const uchar*)sptr1, (const uchar*)sptr2, (uchar*)dptr, total, scale, op);
-            break;
-        case CV_8S:
-            muldiv_((const schar*)sptr1, (const schar*)sptr2, (schar*)dptr, total, scale, op);
-            break;
-        case CV_16U:
-            muldiv_((const ushort*)sptr1, (const ushort*)sptr2, (ushort*)dptr, total, scale, op);
-            break;
-        case CV_16S:
-            muldiv_((const short*)sptr1, (const short*)sptr2, (short*)dptr, total, scale, op);
-            break;
-        case CV_32U:
-            muldiv_((const unsigned*)sptr1, (const unsigned*)sptr2, (unsigned*)dptr, total, scale, op);
-            break;
-        case CV_32S:
-            muldiv_((const int*)sptr1, (const int*)sptr2, (int*)dptr, total, scale, op);
-            break;
-        case CV_64U:
-            muldiv_((const uint64*)sptr1, (const uint64*)sptr2, (uint64*)dptr, total, scale, op);
-            break;
-        case CV_64S:
-            muldiv_((const int64*)sptr1, (const int64*)sptr2, (int64*)dptr, total, scale, op);
-            break;
-        case CV_32F:
-            muldiv_((const float*)sptr1, (const float*)sptr2, (float*)dptr, total, scale, op);
-            break;
-        case CV_64F:
-            muldiv_((const double*)sptr1, (const double*)sptr2, (double*)dptr, total, scale, op);
-            break;
-        case CV_16F:
-            muldiv_16f((const cv::hfloat*)sptr1, (const cv::hfloat*)sptr2, (cv::hfloat*)dptr, total, scale, op);
-            break;
-        case CV_16BF:
-            muldiv_16f((const cv::bfloat*)sptr1, (const cv::bfloat*)sptr2, (cv::bfloat*)dptr, total, scale, op);
-            break;
-        default:
-            CV_Error(Error::StsUnsupportedFormat, "");
+            switch( srcDepth )
+            {
+            case CV_8U:
+                muldiv_((const uchar*)sptr1, (const uchar*)sptr2, (uchar*)dptr, total, scale, op);
+                break;
+            case CV_8S:
+                muldiv_((const schar*)sptr1, (const schar*)sptr2, (schar*)dptr, total, scale, op);
+                break;
+            case CV_16U:
+                muldiv_((const ushort*)sptr1, (const ushort*)sptr2, (ushort*)dptr, total, scale, op);
+                break;
+            case CV_16S:
+                muldiv_((const short*)sptr1, (const short*)sptr2, (short*)dptr, total, scale, op);
+                break;
+            case CV_32U:
+                muldiv_((const unsigned*)sptr1, (const unsigned*)sptr2, (unsigned*)dptr, total, scale, op);
+                break;
+            case CV_32S:
+                muldiv_((const int*)sptr1, (const int*)sptr2, (int*)dptr, total, scale, op);
+                break;
+            case CV_64U:
+                muldiv_((const uint64*)sptr1, (const uint64*)sptr2, (uint64*)dptr, total, scale, op);
+                break;
+            case CV_64S:
+                muldiv_((const int64*)sptr1, (const int64*)sptr2, (int64*)dptr, total, scale, op);
+                break;
+            case CV_32F:
+                muldiv_((const float*)sptr1, (const float*)sptr2, (float*)dptr, total, scale, op);
+                break;
+            case CV_64F:
+                muldiv_((const double*)sptr1, (const double*)sptr2, (double*)dptr, total, scale, op);
+                break;
+            case CV_16F:
+                muldiv_16f((const cv::hfloat*)sptr1, (const cv::hfloat*)sptr2, (cv::hfloat*)dptr, total, scale, op);
+                break;
+            case CV_16BF:
+                muldiv_16f((const cv::bfloat*)sptr1, (const cv::bfloat*)sptr2, (cv::bfloat*)dptr, total, scale, op);
+                break;
+            default:
+                CV_Error(Error::StsUnsupportedFormat, "");
+            }
+        }
+        else
+        {
+            if (srcDepth == CV_8U && dstDepth == CV_16U)
+            {
+                muldiv_((const uchar*)sptr1, (const uchar*)sptr2, (ushort*)dptr, total, scale, op);
+            }
+            else if (srcDepth == CV_8S && dstDepth == CV_16S)
+            {
+                muldiv_((const schar*)sptr1, (const schar*)sptr2, (short*)dptr, total, scale, op);
+            }
+            else if (srcDepth == CV_8U && dstDepth == CV_32F)
+            {
+                muldiv_((const uchar*)sptr1, (const uchar*)sptr2, (float*)dptr, total, scale, op);
+            }
+            else if (srcDepth == CV_8S && dstDepth == CV_32F)
+            {
+                muldiv_((const schar*)sptr1, (const schar*)sptr2, (float*)dptr, total, scale, op);
+            }
+            else
+            {
+                CV_Error(Error::StsUnsupportedFormat, "This format combination is not supported yet");
+            }
         }
     }
 }
 
 
-void multiply(const Mat& src1, const Mat& src2, Mat& dst, double scale)
+void multiply(const Mat& src1, const Mat& src2, Mat& dst, double scale, int ctype)
 {
-    muldiv( src1, src2, dst, scale, '*' );
+    muldiv( src1, src2, dst, ctype, scale, '*' );
 }
 
-void divide(const Mat& src1, const Mat& src2, Mat& dst, double scale)
+void divide(const Mat& src1, const Mat& src2, Mat& dst, double scale, int ctype)
 {
-    muldiv( src1, src2, dst, scale, '/' );
+    muldiv( src1, src2, dst, ctype, scale, '/' );
 }
 
 
@@ -2904,7 +2937,7 @@ mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int&
 
 Scalar mean(const Mat& src, const Mat& mask)
 {
-    CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.size == src.size));
+    CV_Assert(mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_Bool) && mask.size == src.size));
     Scalar sum;
     int nz = 0;
 

@@ -29,6 +29,10 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_DNN_NGRAPH
 
+ov::element::Type cvTypeToOvType(MatType cvType);
+ov::element::Type cvTypeToOvType(const cv::Mat& mat);
+MatType ovTypeToCvType(ov::element::Type ovType);
+
 class InfEngineNgraphNode;
 
 class InfEngineNgraphNet

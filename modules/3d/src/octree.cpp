@@ -410,8 +410,9 @@ void Octree::getPointCloudByOctree(OutputArray restorePointCloud, OutputArray re
     double resolution = p->resolution;
     std::vector<Point3f> outPts, outColors;
 
-    std::stack<std::tuple<Ptr<OctreeNode>, size_t, size_t, size_t>> toCheck;
-    toCheck.push({root, 0, 0, 0});
+    typedef std::tuple<Ptr<OctreeNode>, size_t, size_t, size_t> stack_element;
+    std::stack<stack_element> toCheck;
+    toCheck.push(stack_element(root, 0, 0, 0));
     while (!toCheck.empty())
     {
         auto top = toCheck.top();
@@ -456,7 +457,7 @@ void Octree::getPointCloudByOctree(OutputArray restorePointCloud, OutputArray re
                     x_copy = (x_copy << 1) | x_offSet;
                     y_copy = (y_copy << 1) | y_offSet;
                     z_copy = (z_copy << 1) | z_offSet;
-                    toCheck.push({node->children[i], x_copy, y_copy, z_copy});
+                    toCheck.push(stack_element(node->children[i], x_copy, y_copy, z_copy));
                 }
             }
         }
