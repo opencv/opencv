@@ -1134,6 +1134,128 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Scatter_Test, Combine(
 
 
 
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string, int>> Layer_Reduce_Test;
+TEST_P(Layer_Reduce_Test, Accuracy_01D)
+{
+    auto reduceOperation = [](const cv::Mat& input, const std::string& operation, int axis) -> cv::Mat {
+        // Initialize result matrix
+        cv::Mat result;
+        if (shape(input).size() == 0 || shape(input).size() == 1){
+            result = cv::Mat(shape(input).size(), shape(input).data(), CV_32F);
+            int sz[1] = {1};
+            if (!shape(input).empty() && shape(input)[0] != 1){
+                result = cv::Mat(1, 1, CV_32F);
+                result = result.reshape(1, 1, sz);
+            }
+        } else {
+            if (axis == 0) {
+                result = cv::Mat::zeros(1, input.cols, CV_32F);
+            } else {
+                result = cv::Mat::zeros(input.rows, 1, CV_32F);
+            }
+        }
+
+        auto process_value = [&](float& res, float value, bool is_first) {
+            if (operation == "max") {
+                res = is_first ? value : std::max(res, value);
+            } else if (operation == "min") {
+                res = is_first ? value : std::min(res, value);
+            } else {
+                if (is_first) {
+                    if (operation == "sum" || operation == "l1" || operation == "l2"
+                        || operation == "sum_square" || operation == "mean" || operation == "log_sum"
+                        || operation == "log_sum_exp") res = 0;
+                    else if (operation == "prod") res = 1;
+                }
+
+                if (operation == "sum" || operation == "mean") res += value;
+                else if (operation == "sum_square") {
+                        res += value * value;
+                } else if (operation == "l1") res += std::abs(value);
+                else if (operation == "l2") res += value * value;
+                else if (operation == "prod") res *= value;
+                else if (operation == "log_sum") res += value;
+                else if (operation == "log_sum_exp") res += std::exp(value);
+            }
+        };
+
+        for (int r = 0; r < input.rows; ++r) {
+            for (int c = 0; c < input.cols; ++c) {
+                float value = input.at<float>(r, c);
+                if (shape(input).size() == 1 && shape(input)[0] != 1 && axis == 0){
+                        process_value(result.at<float>(0, 0), value, c == 0);
+                } else {
+                    if (axis == 0) {
+                        process_value(result.at<float>(0, c), value, r == 0);
+                    } else {
+                        process_value(result.at<float>(r, 0), value, c == 0);
+                    }
+                }
+            }
+        }
+
+        if (operation == "mean") {
+            if (shape(input).size() == 1 && shape(input)[0] != 1 && axis == 0){
+                result.at<float>(0, 0) /= input.cols;
+            } else {
+            if (axis == 0) {
+                    result /= input.rows;
+                } else {
+                    result /= input.cols;
+                }
+            }
+        } else if (operation == "l2") {
+            cv::sqrt(result, result);
+        } else if (operation == "log_sum_exp" || operation == "log_sum") {
+            cv::log(result, result);
+        }
+
+        return result;
+    };
+
+    std::vector<int> input_shape = get<0>(GetParam());
+    std::string reduce_operation = get<1>(GetParam());
+    int axis = get<2>(GetParam());
+
+    if ((input_shape.size() == 2 && reduce_operation == "log_sum") ||
+        (axis > input_shape.size())) // both output and reference are nans
+        return;
+
+    LayerParams lp;
+    lp.type = "Reduce";
+    lp.name = "reduceLayer";
+    lp.set("reduce", reduce_operation);
+    lp.set("axes", axis);
+    lp.set("keepdims", true);
+    Ptr<ReduceLayer> layer = ReduceLayer::create(lp);
+
+    cv::Mat input(input_shape.size(), input_shape.data(), CV_32F, 1.0);
+    cv::randu(input, 0.0, 1.0);
+
+    cv::Mat output_ref = reduceOperation(input, reduce_operation, axis);
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 1);
+    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    normAssert(output_ref, outputs[0]);
+}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Reduce_Test, Combine(
+/*input blob shape*/    Values(
+    std::vector<int>({}),
+    std::vector<int>({1}),
+    std::vector<int>({4}),
+    std::vector<int>({1, 4}),
+    std::vector<int>({4, 1}),
+    std::vector<int>({4, 4})
+    ),
+/*reduce operation type*/
+    Values("max", "min", "mean", "sum", "sum_square", "l1", "l2", "prod", "log_sum", "log_sum_exp"),
+    Values(0, 1))
+);
+
+
 typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Permute_Test;
 TEST_P(Layer_Permute_Test, Accuracy_01D)
 {

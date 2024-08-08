@@ -27,7 +27,8 @@ void yoloPostProcessing(
     std::vector<Rect2d>& keep_boxes,
     float conf_threshold,
     float iou_threshold,
-    const std::string& test_name
+    const std::string& model_name,
+    const int nc
 );
 
 std::vector<std::string> classes;
@@ -40,6 +41,7 @@ std::string keys =
     "{ yolo        | yolox | yolo model version. }"
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
     "{ classes     | | Optional path to a text file with names of classes to label detected objects. }"
+    "{ nc          | 80 | Number of classes. Default is 80 (coming from COCO dataset). }"
     "{ thr         | .5 | Confidence threshold. }"
     "{ nms         | .4 | Non-maximum suppression threshold. }"
     "{ mean        | 0.0 | Normalization constant. }"
@@ -107,19 +109,21 @@ void yoloPostProcessing(
     std::vector<Rect2d>& keep_boxes,
     float conf_threshold,
     float iou_threshold,
-    const std::string& test_name)
+    const std::string& model_name,
+    const int nc=80)
 {
     // Retrieve
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<Rect2d> boxes;
 
-    if (test_name == "yolov8")
+    if (model_name == "yolov8" || model_name == "yolov10" ||
+        model_name == "yolov9")
     {
         cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
     }
 
-    if (test_name == "yolonas")
+    if (model_name == "yolonas")
     {
         // outs contains 2 elemets of shape [1, 8400, 80] and [1, 8400, 4]. Concat them to get [1, 8400, 84]
         Mat concat_out;
@@ -131,8 +135,12 @@ void yoloPostProcessing(
         // remove the second element
         outs.pop_back();
         // unsqueeze the first dimension
-        outs[0] = outs[0].reshape(0, std::vector<int>{1, 8400, 84});
+        outs[0] = outs[0].reshape(0, std::vector<int>{1, 8400, nc + 4});
     }
+
+    // assert if last dim is 85 or 84
+    CV_CheckEQ(outs[0].dims, 3, "Invalid output shape. The shape should be [1, #anchors, 85 or 84]");
+    CV_CheckEQ((outs[0].size[2] == nc + 5 || outs[0].size[2] == 80 + 4), true, "Invalid output shape: ");
 
     for (auto preds : outs)
     {
@@ -140,16 +148,17 @@ void yoloPostProcessing(
         for (int i = 0; i < preds.rows; ++i)
         {
             // filter out non object
-            float obj_conf = (test_name == "yolov8" || test_name == "yolonas") ? 1.0f : preds.at<float>(i, 4) ;
+            float obj_conf = (model_name == "yolov8" || model_name == "yolonas" ||
+                              model_name == "yolov9" || model_name == "yolov10") ? 1.0f : preds.at<float>(i, 4) ;
             if (obj_conf < conf_threshold)
                 continue;
 
-            Mat scores = preds.row(i).colRange((test_name == "yolov8" || test_name == "yolonas") ? 4 : 5, preds.cols);
+            Mat scores = preds.row(i).colRange((model_name == "yolov8" || model_name == "yolonas" || model_name == "yolov9" || model_name == "yolov10") ? 4 : 5, preds.cols);
             double conf;
             Point maxLoc;
             minMaxLoc(scores, 0, &conf, 0, &maxLoc);
 
-            conf = (test_name == "yolov8" || test_name == "yolonas") ? conf : conf * obj_conf;
+            conf = (model_name == "yolov8" || model_name == "yolonas" || model_name == "yolov9" || model_name == "yolov10") ? conf : conf * obj_conf;
             if (conf < conf_threshold)
                 continue;
 
@@ -161,7 +170,7 @@ void yoloPostProcessing(
             double h = det[3];
 
             // [x1, y1, x2, y2]
-            if (test_name == "yolonas"){
+            if (model_name == "yolonas" || model_name == "yolov10"){
                 boxes.push_back(Rect2d(cx, cy, w, h));
             } else {
                 boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
@@ -203,6 +212,7 @@ int main(int argc, char** argv)
     // if model is default, use findFile to get the full path otherwise use the given path
     std::string weightPath = findFile(parser.get<String>("model"));
     std::string yolo_model = parser.get<String>("yolo");
+    int nc = parser.get<int>("nc");
 
     float confThreshold = parser.get<float>("thr");
     float nmsThreshold = parser.get<float>("nms");
@@ -219,6 +229,7 @@ int main(int argc, char** argv)
     // check if yolo model is valid
     if (yolo_model != "yolov5" && yolo_model != "yolov6"
         && yolo_model != "yolov7" && yolo_model != "yolov8"
+        && yolo_model != "yolov10" && yolo_model !="yolov9"
         && yolo_model != "yolox" && yolo_model != "yolonas")
         CV_Error(Error::StsError, "Invalid yolo model: " + yolo_model);
 
@@ -331,7 +342,8 @@ int main(int argc, char** argv)
         yoloPostProcessing(
             outs, keep_classIds, keep_confidences, keep_boxes,
             confThreshold, nmsThreshold,
-            yolo_model);
+            yolo_model,
+            nc);
         //![postprocess]
 
         // covert Rect2d to Rect

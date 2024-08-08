@@ -94,6 +94,9 @@
 "test_dynamicquantizelinear_min_adjusted_expanded",  // ---- same as above ---
 "test_edge_pad", // Issue::Parser::Weights are required as inputs
 "test_einsum_inner_prod", // Issue::Output shape does not match with reference
+"test_elu_default_expanded_ver18",
+"test_elu_example_expanded_ver18",
+"test_elu_expanded_ver18",
 "test_expand_dim_changed", // Issue:: Unkonwn error
 "test_expand_dim_unchanged", // Issue:: Unkonwn error
 "test_eyelike_populate_off_main_diagonal", // Issues::Layer::Can't create layer::Can't create layer "onnx_node_output_0!y" of type "EyeLike" in function 'getLayerInstance'
@@ -102,6 +105,10 @@
 "test_gathernd_example_float32", // Issues::Layer::Can't create layer
 "test_gathernd_example_int32", // ---- same as above ---
 "test_gathernd_example_int32_batch_dim1", // ---- same as above ---
+"test_gelu_default_1_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_default_2_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_tanh_1_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_tanh_2_expanded", // parser: no corresponding layer for CastLike
 "test_gemm_all_attributes",  // Issue::Wrong output
 "test_gemm_alpha",  // Issue::Wrong output
 "test_gemm_beta",  // Issue::Wrong output
@@ -353,6 +360,9 @@
 "test_sce_sum_expanded", // ---- same as above ---
 "test_sce_sum_log_prob", // ---- same as above ---
 "test_sce_sum_log_prob_expanded", // ---- same as above ---
+"test_selu_default_expanded_ver18",
+"test_selu_example_expanded_ver18",
+"test_selu_expanded_ver18",
 "test_sequence_insert_at_back", // Issue:: Parser:  typeProto.has_tensor_type() in function 'populateNet'
 "test_sequence_insert_at_front", // ---- same as above ---
 "test_shape", // Issue:: Parser: DNN/ONNX: can't find layer for output name: 'y'. Does model imported properly?

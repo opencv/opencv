@@ -972,6 +972,10 @@ class SamplesFindFile(NewOpenCVTests):
         except cv.error as _e:
             pass
 
+class AlgorithmImplHit(NewOpenCVTests):
+    def test_callable(self):
+        res = cv.getDefaultAlgorithmHint()
+        self.assertTrue(res is not None)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

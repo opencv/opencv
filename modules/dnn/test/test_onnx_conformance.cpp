@@ -250,7 +250,10 @@ static const TestCase testConformanceConfig[] = {
     {"test_einsum_transpose", 1, 1},
     {"test_elu", 1, 1},
     {"test_elu_default", 1, 1},
+    {"test_elu_default_expanded_ver18", 1, 1},
     {"test_elu_example", 1, 1},
+    {"test_elu_example_expanded_ver18", 1, 1},
+    {"test_elu_expanded_ver18", 1, 1},
     {"test_equal", 2, 1},
     {"test_equal_bcast", 2, 1},
     {"test_erf", 1, 1},
@@ -282,6 +285,14 @@ static const TestCase testConformanceConfig[] = {
     {"test_gathernd_example_float32", 2, 1},
     {"test_gathernd_example_int32", 2, 1},
     {"test_gathernd_example_int32_batch_dim1", 2, 1},
+    {"test_gelu_default_1", 1, 1},
+    {"test_gelu_default_1_expanded", 1, 1},
+    {"test_gelu_default_2", 1, 1},
+    {"test_gelu_default_2_expanded", 1, 1},
+    {"test_gelu_tanh_1", 1, 1},
+    {"test_gelu_tanh_1_expanded", 1, 1},
+    {"test_gelu_tanh_2", 1, 1},
+    {"test_gelu_tanh_2_expanded", 1, 1},
     {"test_gemm_all_attributes", 3, 1},
     {"test_gemm_alpha", 3, 1},
     {"test_gemm_beta", 3, 1},
@@ -446,6 +457,8 @@ static const TestCase testConformanceConfig[] = {
     {"test_min_uint32", 2, 1},
     {"test_min_uint64", 2, 1},
     {"test_min_uint8", 2, 1},
+    {"test_mish", 1, 1},
+    {"test_mish_expanded", 1, 1},
     {"test_mod_broadcast", 2, 1},
     {"test_mod_int64_fmod", 2, 1},
     {"test_mod_mixed_sign_float16", 2, 1},
@@ -767,7 +780,10 @@ static const TestCase testConformanceConfig[] = {
     {"test_sce_sum_log_prob_expanded", 2, 2},
     {"test_selu", 1, 1},
     {"test_selu_default", 1, 1},
+    {"test_selu_default_expanded_ver18", 1, 1},
     {"test_selu_example", 1, 1},
+    {"test_selu_example_expanded_ver18", 1, 1},
+    {"test_selu_expanded_ver18", 1, 1},
     {"test_sequence_insert_at_back", 2, 1},
     {"test_sequence_insert_at_front", 3, 1},
     {"test_shape", 1, 1},
@@ -962,11 +978,15 @@ public:
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
     static std::set<std::string> cpu_deny_list;
+#ifdef HAVE_HALIDE
+    static std::set<std::string> halide_deny_list;
+#endif
 #ifdef HAVE_VULKAN
     static std::set<std::string> vulkan_deny_list;
 #endif
 #ifdef HAVE_CUDA
     static std::set<std::string> cuda_deny_list;
+    static std::set<std::string> cuda_fp16_deny_list;
 #endif
 
     Test_ONNX_conformance()
@@ -1004,7 +1024,7 @@ public:
             if ((!l->supportBackend(backend) || l->preferableTarget != target) && !fused)
             {
                 hasFallbacks = true;
-                std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to has backend implementation" << endl;
+                std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to have backend implementation" << endl;
             }
         }
         return hasFallbacks;
@@ -1036,6 +1056,12 @@ public:
             #include "test_onnx_conformance_layer_filter_opencv_cpu_denylist.inl.hpp"
         };
 
+#ifdef HAVE_HALIDE
+        halide_deny_list = {
+            #include "test_onnx_conformance_layer_filter__halide_denylist.inl.hpp"
+        };
+#endif
+
 #ifdef HAVE_VULKAN
         vulkan_deny_list = {
             #include "test_onnx_conformance_layer_filter__vulkan_denylist.inl.hpp"
@@ -1045,6 +1071,9 @@ public:
 #ifdef HAVE_CUDA
         cuda_deny_list = {
             #include "test_onnx_conformance_layer_filter__cuda_denylist.inl.hpp"
+        };
+        cuda_fp16_deny_list = {
+            #include "test_onnx_conformance_layer_filter__cuda_fp16_denylist.inl.hpp"
         };
 #endif
     }
@@ -1057,11 +1086,15 @@ std::set<std::string> Test_ONNX_conformance::opencv_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
+#ifdef HAVE_HALIDE
+std::set<std::string> Test_ONNX_conformance::halide_deny_list;
+#endif
 #ifdef HAVE_VULKAN
 std::set<std::string> Test_ONNX_conformance::vulkan_deny_list;
 #endif
 #ifdef HAVE_CUDA
 std::set<std::string> Test_ONNX_conformance::cuda_deny_list;
+std::set<std::string> Test_ONNX_conformance::cuda_fp16_deny_list;
 #endif
 
 TEST_P(Test_ONNX_conformance, Layer_Test)
@@ -1102,7 +1135,29 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }
+        if (name == "test_gelu_tanh_1") {
+            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+        }
+        if (name == "test_gelu_tanh_2") {
+            if (target == DNN_TARGET_OPENCL_FP16) {
+                default_l1 = 0.00016; // Expected: (normL1) <= (l1), actual: 0.000157223 vs 9e-05
+                default_lInf = 0.0016; // Expected: (normInf) <= (lInf), actual: 0.00153041 vs 0.0005
+            } else {
+                default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80073e-05 vs 1e-05
+                default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+            }
+        }
     }
+#ifdef HAVE_HALIDE
+    else if (backend == DNN_BACKEND_HALIDE)
+    {
+        if (halide_deny_list.find(name) != halide_deny_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+    }
+#endif
 #ifdef HAVE_INF_ENGINE
     else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
@@ -1116,14 +1171,41 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }
+
+        if (name == "test_gelu_tanh_1") {
+            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+        }
+        if (name == "test_gelu_tanh_2") {
+            default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80073e-05 vs 1e-05
+            default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+        }
     }
 #endif
 #ifdef HAVE_CUDA
     else if (backend == DNN_BACKEND_CUDA)
     {
-        if (cuda_deny_list.find(name) != cuda_deny_list.end())
+        if (target == DNN_TARGET_CUDA && cuda_deny_list.find(name) != cuda_deny_list.end())
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+        if (target == DNN_TARGET_CUDA_FP16 && cuda_fp16_deny_list.find(name) != cuda_fp16_deny_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+
+        if (name == "test_gelu_tanh_1") {
+            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
+            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+        }
+        if (name == "test_gelu_tanh_2") {
+            if (target == DNN_TARGET_CUDA_FP16) {
+                default_l1 = 0.00023; // Expected: (normL1) <= (l1), actual: 0.000220591 vs 9e-05
+                default_lInf = 0.0023; // Expected: (normInf) <= (lInf), actual: 0.00220466 vs 0.0005
+            } else {
+                default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80127e-05 vs 1e-05
+                default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
+            }
         }
     }
 #endif

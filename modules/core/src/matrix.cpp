@@ -614,7 +614,7 @@ size_t Mat::total(int startDim, int endDim) const
 }
 
 
-Mat::Mat(Mat&& m)
+Mat::Mat(Mat&& m) CV_NOEXCEPT
     : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
       datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
       u(m.u), size(&rows)

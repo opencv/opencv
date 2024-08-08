@@ -320,9 +320,12 @@ struct Type< Point3_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 3) }
 
 /** @brief Template class for specifying the size of an image or rectangle.
 
-The class includes two members called width and height. The structure can be converted to and from
-the old OpenCV structures CvSize and CvSize2D32f . The same set of arithmetic and comparison
+The class includes two members called width and height. The same set of arithmetic and comparison
 operations as for Point_ is available.
+
+For a 1d matrix, the size is (width, 1) and for a 0d matrix, it is (1, 1).
+
+For an empty matrix, it is (0, 0).
 
 OpenCV defines the following Size_\<\> aliases:
 @code

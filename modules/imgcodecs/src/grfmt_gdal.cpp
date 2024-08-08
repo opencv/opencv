@@ -397,13 +397,13 @@ bool GdalDecoder::readData( Mat& img ){
         case GCI_PaletteIndex:
         case GCI_GrayIndex:
         case GCI_BlueBand:
-            color = 0;
+            color = m_use_rgb ? 2 : 0;
             break;
         case GCI_GreenBand:
             color = 1;
             break;
         case GCI_RedBand:
-            color = 2;
+            color = m_use_rgb ? 0 : 2;
             break;
         case GCI_AlphaBand:
             color = 3;
