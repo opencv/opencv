@@ -20,6 +20,8 @@ How to use:
     You can download a baseline ReID model from:
         https://github.com/ReID-Team/ReID_extra_testdata
 
+    Drive Link: https://drive.google.com/drive/folders/1wFGcuolSzX3_PqNKb4BAV3DNac7tYpc2
+
 '''
 import argparse
 import os.path
@@ -268,11 +270,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Use this script to run human parsing using JPPNet',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--query', '-q', help='Path to target image. Skip this argument to select target in the video frame.')
-    parser.add_argument('--video', '-g', required=True, help='Path to video file.')
-    parser.add_argument('--yolo', required=True, help='Path to yolov8.onnx.')
+    parser.add_argument('--video', '-v', default='vtest.avi', help='Path to video file.')
+    parser.add_argument('--yolo', help='Path to yolov8.onnx.')
     parser.add_argument('--resize_h', default = 256, help='The height of the input for model inference.')
     parser.add_argument('--resize_w', default = 128, help='The width of the input for model inference')
-    parser.add_argument('--model', '-m', default='reid.onnx', help='Path to pb model.')
+    parser.add_argument('--model', '-m', default='youtu_reid_baseline_medium.onnx', help='Path to pb model.')
     parser.add_argument('--backend', default="default", type=str, choices=backends,
             help="Choose one of computation backends: "
             "default: automatically (by default), "
@@ -293,7 +295,14 @@ if __name__ == '__main__':
             "cuda_fp16: CUDA fp16 (half-float preprocess)")
     args, _ = parser.parse_known_args()
 
+    args.model = findModel(args.model, "")
     if not os.path.isfile(args.model):
         raise OSError("Model not exist")
 
+    if args.yolo is None:
+        print("[ERROR] Please pass path to yolov8.onnx model file using --yolo.")
+        exit(1)
+    else:
+        args.yolo = findModel(args.yolo, "")
+    args.video = findFile(args.video)
     extract_frames(args.query, args.video, args.model, args.yolo, args.resize_h, args.resize_w, args.backend, args.target)

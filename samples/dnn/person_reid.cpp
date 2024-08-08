@@ -19,7 +19,7 @@ How to use:
 
     You can download a baseline ReID model from:
         https://github.com/ReID-Team/ReID_extra_testdata
-
+    Drive Link: https://drive.google.com/drive/folders/1wFGcuolSzX3_PqNKb4BAV3DNac7tYpc2
 */
 
 #include <iostream>
@@ -37,7 +37,7 @@ using namespace std;
 
 const string param_keys =
     "{help    h  |           | show help message}"
-    "{model   m  |           | network model}"
+    "{model   m  | youtu_reid_baseline_medium.onnx | network model}"
     "{query   q  |           | Path to target image. Skip this argument to select target in the video frame.}"
     "{batch_size |    1      | batch size of each inference}"
     "{video   v  | vtest.avi | video file path}"
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
-    if (argc == 1 || parser.has("help"))
+    if (parser.has("help"))
     {
         parser.printMessage();
         return 0;
@@ -95,10 +95,10 @@ int main(int argc, char **argv)
     parser = CommandLineParser(argc, argv, keys);
     parser.about("Use this script to run ReID networks using OpenCV.");
 
-    const string modelPath = parser.get<String>("model");
+    String modelPath = findModel(parser.get<String>("model"), "");
     const string queryImagePath = parser.get<String>("query");
     const string videoPath = findFile(parser.get<String>("video"));
-    const string yoloPath = parser.get<String>("yolo");
+    const string yoloPath = findModel(parser.get<String>("yolo"), "");
     const int batch_size = parser.get<int>("batch_size");
     const string backend = parser.get<String>("backend");
     const string target = parser.get<String>("target");
@@ -108,6 +108,11 @@ int main(int argc, char **argv)
     Net net = readNetFromONNX(modelPath);
     net.setPreferableBackend(getBackendID(backend));
     net.setPreferableTarget(getTargetID(target));
+
+    if(yoloPath.empty()){
+        cout<<"[ERROR] Please pass path to yolov8.onnx model file using --yolo."<<endl;
+        return -1;
+    }
 
     extractFrames(queryImagePath, videoPath, &net, yoloPath, resize_h, resize_w, batch_size);
     return 0;
