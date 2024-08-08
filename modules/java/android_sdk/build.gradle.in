@@ -89,7 +89,7 @@
 //
 
 apply plugin: 'com.android.library'
-apply plugin: 'maven-publish'
+@MAVEN_PUBLISH_PLUGIN_DECLARATION@
 try {
     @KOTLIN_PLUGIN_DECLARATION@
     println "Configure OpenCV with Kotlin"
@@ -155,28 +155,8 @@ android {
             path (project.projectDir.toString() + '/libcxx_helper/CMakeLists.txt')
         }
     }
-    @BUILD_GRADLE_PUBLISHING_CONFIG@
+    @BUILD_GRADLE_ANDROID_PUBLISHING_CONFIG@
 }
-
-publishing {
-    publications {
-        release(MavenPublication) {
-            groupId = 'org.opencv'
-            artifactId = 'opencv'
-            version = '@OPENCV_VERSION_PLAIN@'
-
-            afterEvaluate {
-               from components.release
-           }
-        }
-    }
-    repositories {
-        maven {
-            name = 'myrepo'
-            url = "${project.buildDir}/repo"
-        }
-    }
-}
-
+@BUILD_GRADLE_PUBLISHING_CONFIG@
 dependencies {
 }

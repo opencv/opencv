@@ -15,7 +15,12 @@ file(MAKE_DIRECTORY "${java_src_dir}")
 
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/java" "${java_src_dir}")
 
-set(BUILD_GRADLE_ENABLE_PUBLISH "
+set(SOURSE_SETS_JNI_LIBS_SRC_DIRS "'native/libs'")
+set(SOURSE_SETS_JAVA_SRC_DIRS "'java/src'")
+set(SOURSE_SETS_RES_SRC_DIRS "'java/res'")
+set(SOURSE_SETS_MANIFEST_SRC_FILE "'java/AndroidManifest.xml'")
+set(MAVEN_PUBLISH_PLUGIN_DECLARATION "apply plugin: 'maven-publish'")
+set(BUILD_GRADLE_ANDROID_PUBLISHING_CONFIG "
     buildFeatures {
         prefabPublishing true
         buildConfig true
@@ -33,6 +38,28 @@ set(BUILD_GRADLE_ENABLE_PUBLISH "
             withJavadocJar()
         }
     }
+")
+
+set(BUILD_GRADLE_PUBLISHING_CONFIG "
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'org.opencv'
+            artifactId = 'opencv'
+            version = '${OPENCV_VERSION_PLAIN}'
+
+            afterEvaluate {
+               from components.release
+           }
+        }
+    }
+    repositories {
+        maven {
+            name = 'myrepo'
+            url = '\$\{project.buildDir\}/repo'
+        }
+    }
+}
 ")
 
 if(ANDROID_EXECUTABLE)
@@ -129,11 +156,6 @@ else()
   ocv_update(ANDROID_TARGET_SDK_VERSION "21")
 endif()
 
-set(SOURSE_SETS_JNI_LIBS_SRC_DIRS "'native/libs'")
-set(SOURSE_SETS_JAVA_SRC_DIRS "'java/src'")
-set(SOURSE_SETS_RES_SRC_DIRS "'java/res'")
-set(SOURSE_SETS_MANIFEST_SRC_FILE "'java/AndroidManifest.xml'")
-set(BUILD_GRADLE_PUBLISHING_CONFIG "${BUILD_GRADLE_ENABLE_PUBLISH}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${CMAKE_CURRENT_BINARY_DIR}/build.gradle" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/build.gradle" DESTINATION ${JAVA_INSTALL_ROOT}/.. COMPONENT java)
 
@@ -142,6 +164,8 @@ else()  # gradle build
 #
 # Android Gradle-based project
 #
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/opencv/build.gradle" @ONLY)
 
 #TODO: INSTALL ONLY
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android/java" "${java_src_dir}")
@@ -153,6 +177,8 @@ set(SOURSE_SETS_JNI_LIBS_SRC_DIRS "'../../jni'")
 set(SOURSE_SETS_JAVA_SRC_DIRS "'src'")
 set(SOURSE_SETS_RES_SRC_DIRS "'${OpenCV_SOURCE_DIR}/modules/java/android_sdk/android_gradle_lib/res'")
 set(SOURSE_SETS_MANIFEST_SRC_FILE "'AndroidManifest.xml'")
+set(MAVEN_PUBLISH_PLUGIN_DECLARATION "")
+set(BUILD_GRADLE_ANDROID_PUBLISHING_CONFIG "")
 set(BUILD_GRADLE_PUBLISHING_CONFIG "")
 
 set(__base_dir "${CMAKE_CURRENT_SOURCE_DIR}/android_gradle_lib/")
@@ -198,12 +224,6 @@ file(REMOVE "${OPENCV_DEPHELPER}/${the_module}_android")  # force rebuild after 
 
 add_custom_target(${the_module}_android ALL DEPENDS "${OPENCV_DEPHELPER}/${the_module}_android" SOURCES "${__base_dir}/${ANDROID_MANIFEST_FILE}")
 
-set(SOURSE_SETS_JNI_LIBS_SRC_DIRS "'native/libs'")
-set(SOURSE_SETS_JAVA_SRC_DIRS "'java/src'")
-set(SOURSE_SETS_RES_SRC_DIRS "'java/res'")
-set(SOURSE_SETS_MANIFEST_SRC_FILE "'java/AndroidManifest.xml'")
-set(BUILD_GRADLE_PUBLISHING_CONFIG "${BUILD_GRADLE_ENABLE_PUBLISH}")
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/opencv/build.gradle" @ONLY)
 install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/opencv/build.gradle" DESTINATION ${JAVA_INSTALL_ROOT}/.. COMPONENT java)
 
 install(DIRECTORY "${java_src_dir}" DESTINATION "${JAVA_INSTALL_ROOT}" COMPONENT java)
