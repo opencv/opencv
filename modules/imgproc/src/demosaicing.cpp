@@ -226,10 +226,10 @@ public:
             // b1 g1 r1 0 b3 g3 r3 0 ...
             v_zip(b1, r1, r0, r1);
             // b17 g17 r17 0 b19 g19 r19 0 ...
-            
+
             v_uint32x8 pack32_lo, pack32_hi;
             v_zip(v_reinterpret_as_u32(g0), v_reinterpret_as_u32(r0), pack32_lo, pack32_hi);
-            
+
             // 0 b0 g0 r0 b1 g1 r1 0 ...
             b0 = v_reinterpret_as_u16(v_rotate_left<1>(v_reinterpret_as_u8(pack32_lo)));
             b1 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_lo)));
@@ -426,7 +426,7 @@ public:
 
             v_uint32x8 pack32_lo, pack32_hi;
             v_zip(v_reinterpret_as_u32(g0), v_reinterpret_as_u32(r0), pack32_lo, pack32_hi);
-            
+
             // 0 b0 g0 r0 b1 g1 r1 0 ...
             b0 = v_reinterpret_as_u16(v_rotate_left<1>(v_reinterpret_as_u8(pack32_lo)));
             b1 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_lo)));
@@ -1474,7 +1474,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
         bool greenCell = greenCell0;
 
         i = 2;
-#if CV_SIMD256 || CV_SIMD128 
+#if CV_SIMD256 || CV_SIMD128
         int limit = greenCell ? std::min(3, N-2) : 2;
 #else
         int limit = N - 2;
