@@ -208,6 +208,8 @@ static void SHOW_QUADS(const std::string & name, const Mat & img_, ChessBoardQua
 #define SHOW_QUADS(...)
 #endif
 
+
+
 class ChessBoardDetector
 {
 public:
