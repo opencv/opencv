@@ -46,6 +46,7 @@ class AvifEncoder CV_FINAL : public BaseImageEncoder {
 
   bool writemulti(const std::vector<Mat>& img_vec,
                   const std::vector<int>& params) CV_OVERRIDE;
+  bool writeanimation(const Animation& animinfo, const std::vector<int>& params) CV_OVERRIDE;
 
   ImageEncoder newEncoder() const CV_OVERRIDE;
 

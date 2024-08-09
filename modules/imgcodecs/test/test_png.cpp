@@ -218,6 +218,14 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
     fs.getFirstTopLevelNode() >> gt;
 
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, gt);
+
+    string output = cv::tempfile(".webp");
+    EXPECT_NO_THROW(cv::imwrite(output, src));
+    src = imread(output, IMREAD_UNCHANGED);
+
+    EXPECT_EQ(gt.cols, src.cols);
+    EXPECT_EQ(gt.channels() == 1 || gt.channels() == 3, src.channels() == 3);
+    EXPECT_EQ(0, remove(output.c_str()));
 }
 
 const string pngsuite_files[] =

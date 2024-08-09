@@ -216,6 +216,27 @@ enum ImwriteHDRCompressionFlags {
     IMWRITE_HDR_COMPRESSION_RLE = 1
 };
 
+struct CV_EXPORTS_W_SIMPLE Animation
+{
+    CV_PROP_RW int loop_count;               // Number of times the animation should loop. 0 means infinite looping.
+    CV_PROP_RW uint32_t bgcolor;             // Background color of the animation in RGBA format.
+    CV_PROP_RW std::vector<int> timestamps;  // Timestamps for each frame in milliseconds.
+    CV_PROP_RW std::vector<Mat> frames;      // Vector of frames, where each Mat represents a single frame.
+
+    // Default constructor
+    Animation()
+    {
+        loop_count = 0;
+        bgcolor = 0;
+    }
+
+    // Returns total number of frames in the animation.
+    CV_WRAP int getFrameCount()
+    {
+        return (int)frames.size();
+    }
+};
+
 //! @} imgcodecs_flags
 
 /** @brief Loads an image from a file.
@@ -304,6 +325,23 @@ The function imreadmulti loads a specified range from a multi-page image from th
 @sa cv::imread
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
+
+/** @brief Loads images of a animation image from a file.
+
+The function imreadanimation ...
+@param filename Name of file to be loaded.
+@param animation
+*/
+CV_EXPORTS_W bool imreadanimation(const String& filename, CV_OUT Animation& animation);
+
+/** @brief Saves an animation image to a specified file.
+
+The function imwriteanimation ...
+@param filename Name of file to be loaded.
+@param animation
+@param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
+*/
+CV_EXPORTS_W bool imwriteanimation(const String& filename, Animation& animation, const std::vector<int>& params = std::vector<int>());
 
 /** @brief Returns the number of images inside the given file
 

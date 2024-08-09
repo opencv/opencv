@@ -171,6 +171,9 @@ const string exts[] = {
 #ifdef HAVE_IMGCODEC_SUNRASTER
     "ras",
 #endif
+#ifdef HAVE_WEBP
+    "webp",
+#endif
 };
 
 static
