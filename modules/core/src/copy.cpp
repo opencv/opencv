@@ -119,6 +119,23 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
         scbuf[i] = scbuf[i - esz];
 }
 
+static inline void copy_repeat(const unsigned char* pattern, size_t patternSize, unsigned char* dst, size_t dstSize)
+{
+  unsigned char* dstEnd = dst+dstSize;
+  size_t sizeToCopy = std::min(patternSize, dstSize);
+  memcpy(dst, pattern, sizeToCopy);
+  constexpr size_t hot_cache_size = 1U*32*1024;
+  const size_t sizeToCopyLimit = (patternSize > hot_cache_size) ? patternSize : (patternSize*(hot_cache_size/patternSize));//we limit sizeToCopy to stick to hot data in cache
+  unsigned char* dstCur = dst+sizeToCopy;
+  while(dstCur<dstEnd)
+  {
+    sizeToCopy = std::min({static_cast<size_t>(dstCur-dst), static_cast<size_t>(dstEnd-dstCur), sizeToCopyLimit});
+    memcpy(dstCur, dst, sizeToCopy);
+    dstCur += sizeToCopy;
+  }//end while(dstCur<dstEnd)
+}
+//end copy_repeat()
+
 template<typename T> static void
 copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
@@ -533,16 +550,10 @@ Mat& Mat::operator = (const Scalar& s)
 
         if( it.nplanes > 0 )
         {
-            double scalar[12];
-            scalarToRawData(s, scalar, type(), 12);
-            size_t blockSize = 12*elemSize1();
-
-            for( size_t j = 0; j < elsize; j += blockSize )
-            {
-                size_t sz = MIN(blockSize, elsize - j);
-                CV_Assert(sz <= sizeof(scalar));
-                memcpy( dptr + j, scalar, sz );
-            }
+            constexpr size_t unrolledElementsCount = 4;
+            double scalar[unrolledElementsCount];
+            scalarToRawData(s, scalar, type(), unrolledElementsCount);
+            copy_repeat(reinterpret_cast<const unsigned char*>(&scalar[0]), elemSize(), dptr, elsize);
         }
 
         for( size_t i = 1; i < it.nplanes; i++ )
@@ -625,6 +636,31 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
     int cn = channels(), mcn = mask.channels();
     CV_Assert( mask.empty() || (mask.depth() == CV_8U && (mcn == 1 || mcn == cn) && size == mask.size) );
+
+    if (mask.empty())
+    {
+        const bool isSingleValue = (value.size() == Size(1, 1));
+        const bool canBeDispatchedAsScalar = isSingleValue || (channels() <= 4);
+        if (canBeDispatchedAsScalar)
+        {
+            Scalar _scalar;
+            //checkScalar ensures that value is continuous
+            if (value.depth() == CV_64F)//fast path
+                memcpy(&_scalar[0], value.data, value.total()*value.channels()*sizeof(double));
+            else
+            {
+                Mat _scalarWrapper(static_cast<int>(value.total()), 1, traits::Type<Scalar::value_type>::value, &_scalar[0]);
+                value.reshape(1).convertTo(_scalarWrapper, _scalarWrapper.type());
+            }
+            if (!isSingleValue)
+                *this = _scalar;
+            else if (cn == 1)
+                *this = Scalar::all(_scalar[0]);
+            else
+                this->reshape(1) = Scalar::all(_scalar[0]);
+            return *this;
+        }
+    }
 
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 
