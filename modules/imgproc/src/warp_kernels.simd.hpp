@@ -554,9 +554,20 @@ public:
     warpPerspectiveLinearInvoker(Mat &output_, const Mat &input_, const double M_[9],
                                  int borderType_, const double borderValue_[4])
         : output(&output_), input(&input_), borderType(borderType_) {
-        for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(M_[i]);
+        double M_max = std::abs(M_[0]);
+        for (int i = 1; i < 9; i++) {
+            if (M_max < std::abs(M_[i])) {
+                M_max = std::abs(M_[i]);
+            }
         }
+        for (int i = 0; i < 9; i++) {
+            M[i] = static_cast<float>(M_[i] / M_max);
+        }
+        // printf("res, M=[");
+        // for (int i = 0; i < 9; i++) {
+        //     printf("%f ", M[i]);
+        // }
+        // printf("], M_max=%f\n", M_max);
         for (int i = 0; i < 4; i++) {
             bval[i] = saturate_cast<uint8_t>(borderValue_[i]);
         }
@@ -569,6 +580,8 @@ public:
                 input->rows <= 1 ? BORDER_REPLICATE : borderType;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        double longer_side = static_cast<double>(std::max(output->rows, output->cols));
+        scale = static_cast<float>(1.f / longer_side);
     #if CV_SIMD_SCALABLE
         vlanes_32 = VTraits<v_float32>::vlanes();
         vlanes_16 = VTraits<v_uint16>::vlanes();
@@ -618,6 +631,7 @@ public:
                 src_ix[max_unrolling_factor],
                 src_iy[max_unrolling_factor];
         uint8_t pixbuf[max_unrolling_factor*4*3];
+        v_float32 v_scale = vx_setall_f32(scale);
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
         uint8x8_t reds = {0, 8, 16, 24, 3, 11, 19, 27},
                   greens = {1, 9, 17, 25, 4, 12, 20, 28},
@@ -628,6 +642,7 @@ public:
         for (int y = r.start; y < r.end; y++) {
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
+            float scaled_y = y * scale;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             v_float32 dst_x0 = vx_load(start_indices.data());
@@ -639,19 +654,22 @@ public:
             v_float32 M00 = vx_setall_f32(M[0]),
                       M10 = vx_setall_f32(M[3]),
                       M20 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_d = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            v_float32 M_x = vx_setall_f32(static_cast<float>(scaled_y * M[1] + M[2] * scale)),
+                      M_y = vx_setall_f32(static_cast<float>(scaled_y * M[4] + M[5] * scale)),
+                      M_d = vx_setall_f32(static_cast<float>(scaled_y * M[7] + M[8] * scale));
 
             for (; x < dstcols - unrolling_factor; x += unrolling_factor) {
                 // [TODO] apply halide trick
 
-                v_float32 src_x0 = v_fma(M00, dst_x0, M_x), // M00 * x + M01 * y + M02
-                          src_y0 = v_fma(M10, dst_x0, M_y), // M10 * x + M11 * y + M12
-                          src_x1 = v_fma(M00, dst_x1, M_x),
-                          src_y1 = v_fma(M10, dst_x1, M_y);
-                v_float32 src_d0 = v_fma(M20, dst_x0, M_d), // M20 * x + M21 * y + M22
-                          src_d1 = v_fma(M20, dst_x1, M_d);
+                v_float32 scaled_dst_x0 = v_mul(v_scale, dst_x0),
+                          scaled_dst_x1 = v_mul(v_scale, dst_x1);
+
+                v_float32 src_x0 = v_fma(M00, scaled_dst_x0, M_x), // M00 * x + M01 * y + M02
+                          src_y0 = v_fma(M10, scaled_dst_x0, M_y), // M10 * x + M11 * y + M12
+                          src_x1 = v_fma(M00, scaled_dst_x1, M_x),
+                          src_y1 = v_fma(M10, scaled_dst_x1, M_y);
+                v_float32 src_d0 = v_fma(M20, scaled_dst_x0, M_d), // M20 * x + M21 * y + M22
+                          src_d1 = v_fma(M20, scaled_dst_x1, M_d);
 
                 src_d0 = v_select(v_ne(src_d0, zero_f32), v_div(one_f32, src_d0), zero_f32);
                 src_d1 = v_select(v_ne(src_d1, zero_f32), v_div(one_f32, src_d1), zero_f32);
@@ -971,8 +989,9 @@ public:
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float sx = (x*M[0] + y*M[1] + M[2]) / (x*M[6] + y*M[7] + M[8]);
-                float sy = (x*M[3] + y*M[4] + M[5]) / (x*M[6] + y*M[7] + M[8]);
+                float scaled_x = x * scale;
+                float sx = (scaled_x*M[0] + scaled_y*M[1] + M[2]*scale) / (scaled_x*M[6] + scaled_y*M[7] + M[8]*scale);
+                float sy = (scaled_x*M[3] + scaled_y*M[4] + M[5]*scale) / (scaled_x*M[6] + scaled_y*M[7] + M[8]*scale);
                 int ix = (int)floorf(sx), iy = (int)floorf(sy);
                 sx -= ix; sy -= iy;
                 int p00r, p00g, p00b, p01r, p01g, p01b;
@@ -1054,6 +1073,7 @@ private:
     int borderType_y;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+    float scale;
     static constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
     static constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
     static constexpr int max_unrolling_factor{max_vlanes_32*2};

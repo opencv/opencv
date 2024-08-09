@@ -251,6 +251,7 @@ void CV_ImageWarpBaseTest::validate_results() const
     int cn = _dst.channels();
     dsize.width *= cn;
     float t = get_success_error_level(interpolation & INTER_MAX, dst.depth());
+    // printf("threshold t = %f\n", t);
 
     for (int dy = 0; dy < dsize.height; ++dy)
     {
@@ -1358,14 +1359,29 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
         mapy = Mat();
 
     if (inter == INTER_LINEAR && _src.type() == CV_8UC3) {
-        Mat tM;
-        M.convertTo(tM, CV_32F);
         auto *srcptr_ = _src.ptr<const uint8_t>();
         auto *dstptr_ = _dst.ptr<uint8_t>();
+        double longer_side = static_cast<double>(std::max(_dst.rows, _dst.cols));
+        float scale = static_cast<float>(1.f / longer_side);
         size_t srcstep = _src.step, dststep = _dst.step;
         int srccols = _src.cols, srcrows = _src.rows;
         int dstcols = _dst.cols, dstrows = _dst.rows;
-        auto *_M = tM.ptr<const float>();
+        auto *M_ptr = M.ptr<const double>();
+        double M_max = std::abs(M_ptr[0]);
+        for (int i = 1; i < 9; i++) {
+            if (M_max < std::abs(M_ptr[i])) {
+                M_max = std::abs(M_ptr[i]);
+            }
+        }
+        float _M[9];
+        for (int i = 0; i < 9; i++) {
+            _M[i] = static_cast<float>(M_ptr[i] / M_max);
+        }
+        // printf("ref, M=[");
+        // for (int i = 0; i < 9; i++) {
+        //     printf("%f ", _M[i]);
+        // }
+        // printf("]\n");
         int borderType_x = borderType != BORDER_CONSTANT &&
                 borderType != BORDER_TRANSPARENT &&
                 srccols <= 1 ? BORDER_REPLICATE : borderType;
@@ -1380,9 +1396,11 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
         };
         for (int y = 0; y < dstrows; y++) {
             uint8_t* dstptr = dstptr_ + y*dststep;
+            float scaled_y = y * scale;
             for (int x = 0; x < dstcols; x++) {
-                float sx = (x*_M[0] + y*_M[1] + _M[2]) / (x*_M[6] + y*_M[7] + _M[8]);
-                float sy = (x*_M[3] + y*_M[4] + _M[5]) / (x*_M[6] + y*_M[7] + _M[8]);
+                float scaled_x = x * scale;
+                float sx = (scaled_x*_M[0] + scaled_y*_M[1] + _M[2]*scale) / (scaled_x*_M[6] + scaled_y*_M[7] + _M[8]*scale);
+                float sy = (scaled_x*_M[3] + scaled_y*_M[4] + _M[5]*scale) / (scaled_x*_M[6] + scaled_y*_M[7] + _M[8]*scale);
                 int ix = (int)floorf(sx), iy = (int)floorf(sy);
                 sx -= ix; sy -= iy;
 
