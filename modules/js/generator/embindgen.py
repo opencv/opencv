@@ -76,6 +76,7 @@ if sys.version_info[0] >= 3:
 else:
     from cStringIO import StringIO
 
+import json
 
 func_table = {}
 
@@ -95,7 +96,7 @@ ignore_list = ['locate',  #int&
 
 def makeWhiteList(module_list):
     wl = {}
-    for m in module_list:
+    for n, m in module_list.items():
         for k in m.keys():
             if k in wl:
                 wl[k] += m[k]
@@ -834,6 +835,7 @@ class JSWrapperGenerator(object):
                 if method.cname in ignore_list:
                     continue
                 if not method.name in white_list[method.class_name]:
+                    #print('Not in whitelist: "{}"'.format(method.name))
                     continue
                 if method.is_constructor:
                     for variant in method.variants:
@@ -953,8 +955,11 @@ if __name__ == "__main__":
     headers = open(sys.argv[3], 'r').read().split(';')
     coreBindings = sys.argv[4]
     whiteListFile = sys.argv[5]
-    exec(open(whiteListFile).read())
-    assert(white_list)
+    with open(whiteListFile) as f:
+        white_list = json.load(f)
+        f.close()
+
+    white_list = makeWhiteList(white_list)
 
     generator = JSWrapperGenerator()
     generator.gen(bindingsCpp, headers, coreBindings)
