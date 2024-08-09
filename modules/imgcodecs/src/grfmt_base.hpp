@@ -67,6 +67,7 @@ public:
     size_t getFrameCount() const { return m_frame_count; }
     virtual int type() const { return m_type; }
 
+    Animation animation() const { return m_animation; };
     ExifEntry_t getExifTag(const ExifTagName tag) const;
     virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );
@@ -95,6 +96,7 @@ protected:
     bool m_use_rgb;       // flag of decode image as RGB order instead of BGR.
     ExifReader m_exif;
     size_t  m_frame_count;
+    Animation m_animation;
 };
 
 
@@ -110,6 +112,7 @@ public:
     virtual bool setDestination( std::vector<uchar>& buf );
     virtual bool write( const Mat& img, const std::vector<int>& params ) = 0;
     virtual bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params);
+    virtual bool writeanimation(const Animation& animation, const std::vector<int>& params);
 
     virtual String getDescription() const;
     virtual ImageEncoder newEncoder() const;

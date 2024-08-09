@@ -627,6 +627,109 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
     return !mats.empty();
 }
 
+static bool
+imreadanimation_(const String& filename, int flags, int start, int count, Animation& animation)
+{
+    /// Search for the relevant decoder to handle the imagery
+    ImageDecoder decoder;
+
+    CV_CheckGE(start, 0, "Start index cannont be < 0");
+
+#ifdef HAVE_GDAL
+    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
+        decoder = GdalDecoder().newDecoder();
+    }
+    else {
+#endif
+        decoder = findDecoder(filename);
+#ifdef HAVE_GDAL
+    }
+#endif
+
+    /// if no decoder was found, return nothing.
+    if (!decoder) {
+        return 0;
+    }
+
+    if (count < 0) {
+        count = std::numeric_limits<int>::max();
+    }
+
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+        decoder->setRGB(true);
+
+    /// set the filename in the driver
+    decoder->setSource(filename);
+    // read the header to make sure it succeeds
+    try
+    {
+        // read the header to make sure it succeeds
+        if (!decoder->readHeader())
+            return 0;
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read header: " << e.what());
+        return 0;
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read header: unknown exception");
+        return 0;
+    }
+
+    int current = start;
+
+    while (current > 0)
+    {
+        if (!decoder->nextPage())
+        {
+            return false;
+        }
+        --current;
+    }
+
+    while (current < count)
+    {
+        // grab the decoded type
+        const int type = calcType(decoder->type(), flags);
+
+        // established the required input image size
+        Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
+
+        // read the image data
+        Mat mat(size.height, size.width, type);
+        bool success = false;
+        try
+        {
+            if (decoder->readData(mat))
+                success = true;
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read data: " << e.what());
+        }
+        catch (...)
+        {
+            CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read data: unknown exception");
+        }
+        if (!success)
+            break;
+
+        if (!decoder->nextPage())
+        {
+            break;
+        }
+        ++current;
+    }
+    animation.bgcolor = decoder->animation().bgcolor;
+    animation.loop_count = decoder->animation().loop_count;
+    animation.timestamps = decoder->animation().timestamps;
+    animation.frames = decoder->animation().frames;
+
+    return !animation.frames.empty();
+}
+
 /**
  * Read an image
  *
@@ -680,6 +783,13 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int 
     CV_TRACE_FUNCTION();
 
     return imreadmulti_(filename, flags, mats, start, count);
+}
+
+bool imreadanimation(const String& filename, CV_OUT Animation& animation)
+{
+    CV_TRACE_FUNCTION();
+
+    return imreadanimation_(filename, IMREAD_UNCHANGED, 0, -1, animation);
 }
 
 static
@@ -811,6 +921,56 @@ bool imwrite( const String& filename, InputArray _img,
 
     CV_Assert(!img_vec.empty());
     return imwrite_(filename, img_vec, params, false);
+}
+
+
+static bool imwriteanimation_(const String& filename, Animation& animation, const std::vector<int>& params)
+{
+    ImageEncoder encoder = findEncoder(filename);
+    if (!encoder)
+        CV_Error(Error::StsError, "could not find a writer for the specified extension");
+
+    encoder->setDestination(filename);
+
+    bool code = false;
+    try
+    {
+        code = encoder->writeanimation(animation, params);
+
+        if (!code)
+        {
+            FILE* f = fopen(filename.c_str(), "wb");
+            if (!f)
+            {
+                if (errno == EACCES)
+                {
+                    CV_LOG_WARNING(NULL, "imwrite_('" << filename << "'): can't open file for writing: permission denied");
+                }
+            }
+            else
+            {
+                fclose(f);
+                remove(filename.c_str());
+            }
+        }
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: unknown exception");
+    }
+
+    return code;
+}
+
+bool imwriteanimation(const String& filename, Animation& animation, const std::vector<int>& params)
+{
+    CV_Assert(!animation.frames.empty());
+    CV_Assert(animation.frames.size() == animation.timestamps.size());
+    return imwriteanimation_(filename, animation, params);
 }
 
 static bool
