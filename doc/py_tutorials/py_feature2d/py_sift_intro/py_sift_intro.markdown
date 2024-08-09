@@ -160,9 +160,3 @@ Here kp will be a list of keypoints and des is a numpy array of shape
 
 So we got keypoints, descriptors etc. Now we want to see how to match keypoints in different images.
 That we will learn in coming chapters.
-
-Additional Resources
---------------------
-
-Exercises
----------

@@ -119,9 +119,3 @@ And look at the result below:
 
 If you are interested in graphics, augmented reality etc, you can use OpenGL to render more
 complicated figures.
-
-Additional Resources
---------------------
-
-Exercises
----------

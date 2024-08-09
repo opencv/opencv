@@ -195,9 +195,3 @@ See the result below. (Image is displayed with matplotlib. So RED and BLUE chann
 interchanged):
 
 ![image](images/border.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

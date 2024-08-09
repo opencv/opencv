@@ -81,9 +81,3 @@ or do whatever you want.
 
 So in this module, we are looking to different algorithms in OpenCV to find features, describe them,
 match them etc.
-
-Additional Resources
---------------------
-
-Exercises
----------

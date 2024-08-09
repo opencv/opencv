@@ -138,6 +138,3 @@ Additional Resources
 2.  Edward Rosten, Reid Porter, and Tom Drummond, "Faster and better: a machine learning approach to
     corner detection" in IEEE Trans. Pattern Analysis and Machine Intelligence, 2010, vol 32, pp.
     105-119.
-
-Exercises
----------

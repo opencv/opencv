@@ -152,9 +152,3 @@ cap.release()
 out.release()
 cv.destroyAllWindows()
 @endcode
-
-Additional Resources
---------------------
-
-Exercises
----------

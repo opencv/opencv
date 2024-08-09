@@ -155,9 +155,3 @@ Finally we check the descriptor size and change it to 128 if it is only 64-dim.
 (47, 128)
 @endcode
 Remaining part is matching which we will do in another chapter.
-
-Additional Resources
---------------------
-
-Exercises
----------

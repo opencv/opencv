@@ -146,9 +146,6 @@ mark the rectangle area in mask image with 2-pixel or 3-pixel (probable backgrou
 mark our sure_foreground with 1-pixel as we did in second example. Then directly apply the grabCut
 function with mask mode.
 
-Additional Resources
---------------------
-
 Exercises
 ---------
 

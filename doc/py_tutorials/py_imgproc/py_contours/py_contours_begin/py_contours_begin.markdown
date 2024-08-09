@@ -88,9 +88,3 @@ the contour array (drawn in blue color). First image shows points I got with cv.
 much memory it saves!!!
 
 ![image](images/none.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------
