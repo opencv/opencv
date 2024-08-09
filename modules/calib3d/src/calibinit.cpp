@@ -2188,6 +2188,182 @@ void drawChessboardCorners( InputOutputArray image, Size patternSize,
     }
 }
 
+static bool less(Point2f a, Point2f b, Point2f center)
+{
+    if (a.x - center.x >= 0 && b.x - center.x < 0)
+        return true;
+    if (a.x - center.x < 0 && b.x - center.x >= 0)
+        return false;
+    if (a.x - center.x == 0 && b.x - center.x == 0) {
+        if (a.y - center.y >= 0 || b.y - center.y >= 0)
+            return a.y > b.y;
+        return b.y > a.y;
+    }
+
+    // compute the cross product of vectors (center -> a) x (center -> b)
+    float det = (a.x - center.x) * (b.y - center.y) - (b.x - center.x) * (a.y - center.y);
+    if (det < 0)
+        return true;
+    if (det > 0)
+        return false;
+
+    // points a and b are on the same line from the center
+    // check which point is closer to the center
+    float d1 = (a.x - center.x) * (a.x - center.x) + (a.y - center.y) * (a.y - center.y);
+    float d2 = (b.x - center.x) * (b.x - center.x) + (b.y - center.y) * (b.y - center.y);
+    return d1 > d2;
+}
+
+// The points must be in CW order
+static float getCosAngle(Point2f p0, Point2f p1, Point2f p2) {
+    Point2f vecA = p0 - p1;
+    Point2f vecB = p2 - p1;
+    return (vecA.dot(vecB))/sqrt(normL2Sqr<float>(vecA)*(normL2Sqr<float>(vecB)));
+}
+
+enum class PointType{
+    InnerPoint,
+    BorderPoint,
+    CornerPoint,
+    MainCorner
+};
+
+static int getMainCorner(const std::vector<int>& cornerIds, const std::vector<Point2f>& points, std::vector<PointType>& pointTypes,
+                         Size patternSize, bool isSymmetricGrid) {
+    // TODO: update alg
+    float minDistToOrigin = FLT_MAX;
+    int minId = -1;
+    const int numIds = isSymmetricGrid ? cornerIds.size() :
+                       patternSize.height == 2 ? 2 :
+                       cornerIds.size();
+    for (int i = 0; i < cornerIds.size(); i++) {
+        int id = cornerIds[i];
+        float dist = normL2Sqr<float>(points[id]);
+        if (dist < minDistToOrigin) {
+            minDistToOrigin = dist;
+            minId = id;
+        }
+    }
+    pointTypes[minId] = PointType::MainCorner;
+    return minId;
+}
+
+bool findCirclesGridNew(InputArray _image, Size patternSize,
+                        OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
+                        const CirclesGridFinderParameters& parameters_) {
+    CV_INSTRUMENT_REGION();
+
+    CirclesGridFinderParameters parameters = parameters_; // parameters.gridType is amended below
+
+    bool isAsymmetricGrid = (flags & CALIB_CB_ASYMMETRIC_GRID) ? true : false;
+    bool isSymmetricGrid  = (flags & CALIB_CB_SYMMETRIC_GRID ) ? true : false;
+    CV_Assert(isAsymmetricGrid ^ isSymmetricGrid);
+
+    std::vector<Point2f> centers;
+
+    std::vector<Point2f> points;
+    const size_t minHomographyPoints = 4ull;
+    if (blobDetector)
+    {
+        std::vector<KeyPoint> keypoints;
+        blobDetector->detect(_image, keypoints);
+
+        if (keypoints.size() < minHomographyPoints || keypoints.size() < (size_t)patternSize.area())
+            return false;
+
+        points.resize(keypoints.size());
+        for (size_t i = 0; i < keypoints.size(); i++)
+            points[i] = keypoints[i].pt;
+    }
+    else
+    {
+        CV_CheckTypeEQ(_image.type(), CV_32FC2, "blobDetector must be provided or image must contains Point2f array (std::vector<Point2f>) with candidates");
+        _image.copyTo(points);
+    }
+
+    // TODO: add sort of points by size and remove the outliers
+
+    const cvflann::KDTreeSingleIndexParams index_params;
+    flann::GenericIndex<flann::L2_Simple<float>> all_points_index(Mat(points).reshape(1, (int)points.size()), index_params);
+    const cvflann::SearchParams search_params(-1);
+
+    int knn = min(8, patternSize.area() - 1);
+    Mat indices((int)points.size(), knn + 1, CV_32S);
+    Mat dists((int)points.size(), knn + 1, CV_32F);
+    std::vector<Point2f> neighbors(knn);
+    std::vector<Point2f> hull;
+    const int pointBorderCount = isSymmetricGrid ? (2*(patternSize.height+patternSize.width)-4) :
+                                                   (2*(patternSize.height/2+patternSize.height%2+
+                                                    patternSize.width)-2-patternSize.height%2);
+    std::vector<int> borderPointsIds;
+    borderPointsIds.reserve(pointBorderCount);
+    std::vector<PointType> pointTypes(points.size(), PointType::InnerPoint);
+
+    // TODO: add sort of points by nearest_neighbor_dist and remove the outliers
+
+    Point2f center;
+    for (int i = 0; i < (int)points.size(); i++) {
+        Point2f& cur_point2f = points[i];
+        Mat cur_point(1, 2, CV_32F, &cur_point2f);
+        Mat neighborIndices = indices.row(i);
+        all_points_index.knnSearch(cur_point, neighborIndices, dists.row(i), knn + 1, search_params);
+        for (int i = 0; i < knn; i++)
+            neighbors[i] = points[neighborIndices.at<int>(i+1)];
+        convexHull(neighbors, hull);
+        const float nearest_neighbor_dist = sqrt(dists.at<float>(i, 1));
+        const double dist_to_border = pointPolygonTest(hull, cur_point2f, true);
+        if (dist_to_border < 0.1*nearest_neighbor_dist) {
+            borderPointsIds.push_back(i);
+            pointTypes[i] = PointType::BorderPoint;
+            center += cur_point2f;
+        }
+    }
+
+    if ((int)borderPointsIds.size() != pointBorderCount)
+        return false;
+
+    center /= pointBorderCount;
+
+    std::sort(borderPointsIds.begin(), borderPointsIds.end(),  [&borderPointsIds, &points, &center](const int &id1, const int &id2)
+    {
+        return !less(points[id1], points[id2], center);
+    });
+
+    // TODO: make local vars
+    std::vector<std::pair<float, int>> borderCosAngles(pointBorderCount, {-1.f, -1});
+
+    std::cout << std::endl << std::endl;
+    Mat image = _image.getMat();
+    for (int i = 0; i < (int)borderPointsIds.size(); i++) {
+        Point2f p0 = points[borderPointsIds[(i + pointBorderCount - 1) % pointBorderCount]];
+        Point2f p1 = points[borderPointsIds[i]];
+        Point2f p2 = points[borderPointsIds[(i + 1) % pointBorderCount]];
+        borderCosAngles[i].first = getCosAngle(p0, p1, p2);
+        borderCosAngles[i].second = borderPointsIds[i];
+        std::cout << borderCosAngles[i].first << std::endl;
+
+        cv::circle(image, p1, 5, Scalar(255, 255, 255), -1);
+        //imshow("image", image);
+        //waitKey(0);
+    }
+    std::sort(borderCosAngles.begin(), borderCosAngles.end());
+    const int numCorners = isSymmetricGrid || patternSize.height == 2 ? 4 :
+                           std::min(pointBorderCount, 6);
+    std::vector<int> cornerIds(numCorners);
+    for (int i = 0; i < numCorners; i++) {
+        int id = borderCosAngles[borderCosAngles.size() - 1 - i].second;
+        cornerIds[i] = id;
+        cv::circle(image, points[id], 10, Scalar(150, 150, 150), 5);
+    }
+
+    int mainCornerId = getMainCorner(cornerIds, points, pointTypes, patternSize, isSymmetricGrid);
+    cv::circle(image, points[mainCornerId], 25, Scalar(100, 100, 100), 5);
+    //imshow("image", image);
+    //waitKey(0);
+
+    return false;
+}
+
 bool findCirclesGrid( InputArray _image, Size patternSize,
                           OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
                           const CirclesGridFinderParameters& parameters_)
@@ -2239,6 +2415,7 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
     {
         centers.clear();
         CirclesGridFinder boxFinder(patternSize, points, parameters);
+        boxFinder.img = _image.getMat().clone();
         try
         {
             bool isFound = boxFinder.findHoles();
