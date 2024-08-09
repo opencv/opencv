@@ -251,6 +251,7 @@ void CV_ImageWarpBaseTest::validate_results() const
     int cn = _dst.channels();
     dsize.width *= cn;
     float t = get_success_error_level(interpolation & INTER_MAX, dst.depth());
+    // printf("threshold t = %f\n", t);
 
     for (int dy = 0; dy < dsize.height; ++dy)
     {
@@ -703,6 +704,9 @@ protected:
     virtual void run_func();
     virtual void run_reference_func();
 
+    void new_linear(int x, float sx, float sy, int ix, int iy, const uint8_t *srcptr_, uint8_t *dstptr,
+                    int srccols, int srcrows, size_t srcstep, const uint8_t *bval, int borderType_x, int borderType_y);
+
     Mat mapx, mapy;
     int borderType;
     Scalar borderValue;
@@ -872,6 +876,74 @@ void CV_Remap_Test::run_reference_func()
 
     int index = interpolation == INTER_NEAREST ? 0 : 1;
     (this->*funcs[index])(src, reference_dst);
+}
+
+void CV_Remap_Test::new_linear(int x, float sx, float sy, int ix, int iy, const uint8_t *srcptr_, uint8_t *dstptr,
+                               int srccols, int srcrows, size_t srcstep, const uint8_t *bval, int borderType_x, int borderType_y) {
+    int p00r, p00g, p00b, p01r, p01g, p01b;
+    int p10r, p10g, p10b, p11r, p11g, p11b;
+    const uint8_t* srcptr = srcptr_ + srcstep*iy + ix*3;
+
+    if ((((unsigned)ix < (unsigned)(srccols-1)) &
+            ((unsigned)iy < (unsigned)(srcrows-1))) != 0) {
+        p00r = srcptr[0]; p00g = srcptr[1]; p00b = srcptr[2];
+        p01r = srcptr[3]; p01g = srcptr[4]; p01b = srcptr[5];
+        p10r = srcptr[srcstep + 0]; p10g = srcptr[srcstep + 1]; p10b = srcptr[srcstep + 2];
+        p11r = srcptr[srcstep + 3]; p11g = srcptr[srcstep + 4]; p11b = srcptr[srcstep + 5];
+    } else {
+        if ((borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT) &&
+            (((unsigned)(ix+1) >= (unsigned)(srccols+1))|
+                ((unsigned)(iy+1) >= (unsigned)(srcrows+1))) != 0) {
+            if (borderType == BORDER_CONSTANT) {
+                dstptr[x*3] = bval[0];
+                dstptr[x*3+1] = bval[1];
+                dstptr[x*3+2] = bval[2];
+            }
+            return;
+        }
+
+        #define FETCH_PIXEL_SCALAR_C3(dy, dx, pxy) \
+            if ((((unsigned)(ix + dx) < (unsigned)srccols) & ((unsigned)(iy + dy) < (unsigned)srcrows)) != 0) { \
+                size_t ofs = dy*srcstep + dx*3; \
+                pxy##r = srcptr[ofs]; \
+                pxy##g = srcptr[ofs+1]; \
+                pxy##b = srcptr[ofs+2]; \
+            } else if (borderType == BORDER_CONSTANT) { \
+                pxy##r = bval[0]; \
+                pxy##g = bval[1]; \
+                pxy##b = bval[2]; \
+            } else if (borderType == BORDER_TRANSPARENT) { \
+                pxy##r = dstptr[x*3]; \
+                pxy##g = dstptr[x*3+1]; \
+                pxy##b = dstptr[x*3+2]; \
+            } else { \
+                int ix_ = borderInterpolate(ix + dx, srccols, borderType_x); \
+                int iy_ = borderInterpolate(iy + dy, srcrows, borderType_y); \
+                size_t glob_ofs = iy_*srcstep + ix_*3; \
+                pxy##r = srcptr_[glob_ofs]; \
+                pxy##g = srcptr_[glob_ofs+1]; \
+                pxy##b = srcptr_[glob_ofs+2]; \
+            }
+        FETCH_PIXEL_SCALAR_C3(0, 0, p00);
+        FETCH_PIXEL_SCALAR_C3(0, 1, p01);
+        FETCH_PIXEL_SCALAR_C3(1, 0, p10);
+        FETCH_PIXEL_SCALAR_C3(1, 1, p11);
+    }
+    float v0r = p00r + sx*(p01r - p00r);
+    float v0g = p00g + sx*(p01g - p00g);
+    float v0b = p00b + sx*(p01b - p00b);
+
+    float v1r = p10r + sx*(p11r - p10r);
+    float v1g = p10g + sx*(p11g - p10g);
+    float v1b = p10b + sx*(p11b - p10b);
+
+    v0r += sy*(v1r - v0r);
+    v0g += sy*(v1g - v0g);
+    v0b += sy*(v1b - v0b);
+
+    dstptr[x*3] = (uint8_t)(v0r + 0.5f);
+    dstptr[x*3+1] = (uint8_t)(v0g + 0.5f);
+    dstptr[x*3+2] = (uint8_t)(v0b + 0.5f);
 }
 
 void CV_Remap_Test::remap_nearest(const Mat& _src, Mat& _dst)
@@ -1122,33 +1194,67 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
     if (!(interpolation & cv::WARP_INVERSE_MAP))
         invertAffineTransform(tM.clone(), tM);
 
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
-    const int AB_SCALE = 1 << AB_BITS;
-    int round_delta = (inter == INTER_NEAREST) ? AB_SCALE / 2 : (AB_SCALE / INTER_TAB_SIZE / 2);
+    if (inter == INTER_LINEAR && _src.type() == CV_8UC3) {
+        tM.convertTo(tM, CV_32F);
+        auto *srcptr_ = _src.ptr<const uint8_t>();
+        auto *dstptr_ = _dst.ptr<uint8_t>();
+        size_t srcstep = _src.step, dststep = _dst.step;
+        int srccols = _src.cols, srcrows = _src.rows;
+        int dstcols = _dst.cols, dstrows = _dst.rows;
+        auto *_M = tM.ptr<const float>();
+        int borderType_x = borderType != BORDER_CONSTANT &&
+                borderType != BORDER_TRANSPARENT &&
+                srccols <= 1 ? BORDER_REPLICATE : borderType;
+        int borderType_y = borderType != BORDER_CONSTANT &&
+                borderType != BORDER_TRANSPARENT &&
+                srcrows <= 1 ? BORDER_REPLICATE : borderType;
+        std::array<uint8_t, 4> bval = {
+            saturate_cast<uint8_t>(borderValue[0]),
+            saturate_cast<uint8_t>(borderValue[1]),
+            saturate_cast<uint8_t>(borderValue[2]),
+            saturate_cast<uint8_t>(borderValue[3]),
+        };
+        for (int y = 0; y < dstrows; y++) {
+            uint8_t* dstptr = dstptr_ + y*dststep;
+            for (int x = 0; x < dstcols; x++) {
+                float sx = x*_M[0] + y*_M[1] + _M[2];
+                float sy = x*_M[3] + y*_M[4] + _M[5];
+                int ix = (int)floorf(sx), iy = (int)floorf(sy);
+                sx -= ix; sy -= iy;
 
-    const softdouble* data_tM = tM.ptr<softdouble>(0);
-    for (int dy = 0; dy < dsize.height; ++dy)
-    {
-        short* yM = mapx.ptr<short>(dy);
-        for (int dx = 0; dx < dsize.width; ++dx, yM += 2)
-        {
-            int v1 = saturate_cast<int>(saturate_cast<int>(data_tM[0] * dx * AB_SCALE) +
-                    saturate_cast<int>((data_tM[1] * dy + data_tM[2]) * AB_SCALE) + round_delta),
-                   v2 = saturate_cast<int>(saturate_cast<int>(data_tM[3] * dx * AB_SCALE) +
-                    saturate_cast<int>((data_tM[4] * dy + data_tM[5]) * AB_SCALE) + round_delta);
-            v1 >>= AB_BITS - INTER_BITS;
-            v2 >>= AB_BITS - INTER_BITS;
-
-            yM[0] = saturate_cast<short>(v1 >> INTER_BITS);
-            yM[1] = saturate_cast<short>(v2 >> INTER_BITS);
-
-            if (inter != INTER_NEAREST)
-                mapy.ptr<short>(dy)[dx] = ((v2 & (INTER_TAB_SIZE - 1)) * INTER_TAB_SIZE + (v1 & (INTER_TAB_SIZE - 1)));
+                new_linear(x, sx, sy, ix, iy, srcptr_, dstptr,
+                           srccols, srcrows, srcstep, bval.data(), borderType_x, borderType_y);
+            }
         }
-    }
+    } else {
+        const int AB_BITS = MAX(10, (int)INTER_BITS);
+        const int AB_SCALE = 1 << AB_BITS;
+        int round_delta = (inter == INTER_NEAREST) ? AB_SCALE / 2 : (AB_SCALE / INTER_TAB_SIZE / 2);
 
-    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
-    cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
+        const softdouble* data_tM = tM.ptr<softdouble>(0);
+        for (int dy = 0; dy < dsize.height; ++dy)
+        {
+            short* yM = mapx.ptr<short>(dy);
+            for (int dx = 0; dx < dsize.width; ++dx, yM += 2)
+            {
+                int v1 = saturate_cast<int>(saturate_cast<int>(data_tM[0] * dx * AB_SCALE) +
+                        saturate_cast<int>((data_tM[1] * dy + data_tM[2]) * AB_SCALE) + round_delta),
+                    v2 = saturate_cast<int>(saturate_cast<int>(data_tM[3] * dx * AB_SCALE) +
+                        saturate_cast<int>((data_tM[4] * dy + data_tM[5]) * AB_SCALE) + round_delta);
+                v1 >>= AB_BITS - INTER_BITS;
+                v2 >>= AB_BITS - INTER_BITS;
+
+                yM[0] = saturate_cast<short>(v1 >> INTER_BITS);
+                yM[1] = saturate_cast<short>(v2 >> INTER_BITS);
+
+                if (inter != INTER_NEAREST)
+                    mapy.ptr<short>(dy)[dx] = ((v2 & (INTER_TAB_SIZE - 1)) * INTER_TAB_SIZE + (v1 & (INTER_TAB_SIZE - 1)));
+            }
+        }
+
+        CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
+        cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1252,36 +1358,88 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
     else
         mapy = Mat();
 
-    double* tM = M.ptr<double>(0);
-    for (int dy = 0; dy < dsize.height; ++dy)
-    {
-        short* yMx = mapx.ptr<short>(dy);
-
-        for (int dx = 0; dx < dsize.width; ++dx, yMx += 2)
-        {
-            double den = tM[6] * dx + tM[7] * dy + tM[8];
-            den = den ? 1.0 / den : 0.0;
-
-            if (inter == INTER_NEAREST)
-            {
-                yMx[0] = saturate_cast<short>((tM[0] * dx + tM[1] * dy + tM[2]) * den);
-                yMx[1] = saturate_cast<short>((tM[3] * dx + tM[4] * dy + tM[5]) * den);
-                continue;
+    if (inter == INTER_LINEAR && _src.type() == CV_8UC3) {
+        auto *srcptr_ = _src.ptr<const uint8_t>();
+        auto *dstptr_ = _dst.ptr<uint8_t>();
+        double longer_side = static_cast<double>(std::max(_dst.rows, _dst.cols));
+        float scale = static_cast<float>(1.f / longer_side);
+        size_t srcstep = _src.step, dststep = _dst.step;
+        int srccols = _src.cols, srcrows = _src.rows;
+        int dstcols = _dst.cols, dstrows = _dst.rows;
+        auto *M_ptr = M.ptr<const double>();
+        double M_max = std::abs(M_ptr[0]);
+        for (int i = 1; i < 9; i++) {
+            if (M_max < std::abs(M_ptr[i])) {
+                M_max = std::abs(M_ptr[i]);
             }
-
-            den *= INTER_TAB_SIZE;
-            int v0 = saturate_cast<int>((tM[0] * dx + tM[1] * dy + tM[2]) * den);
-            int v1 = saturate_cast<int>((tM[3] * dx + tM[4] * dy + tM[5]) * den);
-
-            yMx[0] = saturate_cast<short>(v0 >> INTER_BITS);
-            yMx[1] = saturate_cast<short>(v1 >> INTER_BITS);
-            mapy.ptr<short>(dy)[dx] = saturate_cast<short>((v1 & (INTER_TAB_SIZE - 1)) *
-                    INTER_TAB_SIZE + (v0 & (INTER_TAB_SIZE - 1)));
         }
-    }
+        float _M[9];
+        for (int i = 0; i < 9; i++) {
+            _M[i] = static_cast<float>(M_ptr[i] / M_max);
+        }
+        // printf("ref, M=[");
+        // for (int i = 0; i < 9; i++) {
+        //     printf("%f ", _M[i]);
+        // }
+        // printf("]\n");
+        int borderType_x = borderType != BORDER_CONSTANT &&
+                borderType != BORDER_TRANSPARENT &&
+                srccols <= 1 ? BORDER_REPLICATE : borderType;
+        int borderType_y = borderType != BORDER_CONSTANT &&
+                borderType != BORDER_TRANSPARENT &&
+                srcrows <= 1 ? BORDER_REPLICATE : borderType;
+        std::array<uint8_t, 4> bval = {
+            saturate_cast<uint8_t>(borderValue[0]),
+            saturate_cast<uint8_t>(borderValue[1]),
+            saturate_cast<uint8_t>(borderValue[2]),
+            saturate_cast<uint8_t>(borderValue[3]),
+        };
+        for (int y = 0; y < dstrows; y++) {
+            uint8_t* dstptr = dstptr_ + y*dststep;
+            float scaled_y = y * scale;
+            for (int x = 0; x < dstcols; x++) {
+                float scaled_x = x * scale;
+                float sx = (scaled_x*_M[0] + scaled_y*_M[1] + _M[2]*scale) / (scaled_x*_M[6] + scaled_y*_M[7] + _M[8]*scale);
+                float sy = (scaled_x*_M[3] + scaled_y*_M[4] + _M[5]*scale) / (scaled_x*_M[6] + scaled_y*_M[7] + _M[8]*scale);
+                int ix = (int)floorf(sx), iy = (int)floorf(sy);
+                sx -= ix; sy -= iy;
 
-    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
-    cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
+                new_linear(x, sx, sy, ix, iy, srcptr_, dstptr,
+                           srccols, srcrows, srcstep, bval.data(), borderType_x, borderType_y);
+            }
+        }
+    } else {
+        double* tM = M.ptr<double>(0);
+        for (int dy = 0; dy < dsize.height; ++dy)
+        {
+            short* yMx = mapx.ptr<short>(dy);
+
+            for (int dx = 0; dx < dsize.width; ++dx, yMx += 2)
+            {
+                double den = tM[6] * dx + tM[7] * dy + tM[8];
+                den = den ? 1.0 / den : 0.0;
+
+                if (inter == INTER_NEAREST)
+                {
+                    yMx[0] = saturate_cast<short>((tM[0] * dx + tM[1] * dy + tM[2]) * den);
+                    yMx[1] = saturate_cast<short>((tM[3] * dx + tM[4] * dy + tM[5]) * den);
+                    continue;
+                }
+
+                den *= INTER_TAB_SIZE;
+                int v0 = saturate_cast<int>((tM[0] * dx + tM[1] * dy + tM[2]) * den);
+                int v1 = saturate_cast<int>((tM[3] * dx + tM[4] * dy + tM[5]) * den);
+
+                yMx[0] = saturate_cast<short>(v0 >> INTER_BITS);
+                yMx[1] = saturate_cast<short>(v1 >> INTER_BITS);
+                mapy.ptr<short>(dy)[dx] = saturate_cast<short>((v1 & (INTER_TAB_SIZE - 1)) *
+                        INTER_TAB_SIZE + (v0 & (INTER_TAB_SIZE - 1)));
+            }
+        }
+
+        CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
+        cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////

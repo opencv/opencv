@@ -10,6 +10,7 @@ ocv_add_dispatched_file(median_blur SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(morph SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(smooth SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(sumpixels SSE2 AVX2 AVX512_SKX)
+ocv_add_dispatched_file(warp_kernels SSE2 SSE4_1 AVX2 NEON NEON_FP16 RVV LASX)
 ocv_define_module(imgproc opencv_core WRAP java objc python js)
 
 ocv_module_include_directories(opencv_imgproc ${ZLIB_INCLUDE_DIRS})
