@@ -589,7 +589,7 @@ bool ChessBoardDetector::NeighborsFinder::findCornerNeighbor(
             if (!arePointsOnSameSideFromLine(mid_pt1, mid_pt2, corner_pt, neighbor_pt_diagonal))
                 continue;
 
-            if (!arePointsOnSameSideFromLine(mid_pt3, mid_pt4, neighbor_pt, neighbor_pt_diagonal))
+            if (!arePointsOnSameSideFromLine(mid_pt3, mid_pt4, corner_pt, neighbor_pt_diagonal))
                 continue;
 
             closest_neighbor_idx = neighbor_idx;
