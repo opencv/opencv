@@ -126,6 +126,21 @@ public:
 #endif
 };
 
+template<typename _Tp> class DataType<const _Tp>
+{
+public:
+    typedef const typename DataType<_Tp>::value_type       value_type;
+    typedef const typename DataType<_Tp>::work_type        work_type;
+    typedef const typename DataType<_Tp>::channel_type     channel_type;
+    typedef const typename DataType<_Tp>::vec_type         vec_type;
+    enum { generic_type = DataType<_Tp>::generic_type,
+           depth        = DataType<_Tp>::depth,
+           channels     = DataType<_Tp>::channels,
+           fmt          = DataType<_Tp>::fmt,
+           type         = DataType<_Tp>::type
+         };
+};
+
 template<> class DataType<bool>
 {
 public:
