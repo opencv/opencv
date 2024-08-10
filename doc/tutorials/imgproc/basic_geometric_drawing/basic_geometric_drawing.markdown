@@ -21,15 +21,14 @@ In this tutorial you will learn how to:
 -   Draw a **circle** by using the OpenCV function **circle()**
 -   Draw a **filled polygon** by using the OpenCV function **fillPoly()**
 
-@add_toggle_cpp
 OpenCV Theory
 -------------
 
 For this tutorial, we will heavily use two structures: @ref cv::Point and @ref cv::Scalar :
 
 ### Point
-
 It represents a 2D point, specified by its image coordinates \f$x\f$ and \f$y\f$. We can define it as:
+@add_toggle_cpp
 @code{.cpp}
 Point pt;
 pt.x = 10;
@@ -39,28 +38,8 @@ or
 @code{.cpp}
 Point pt =  Point(10, 8);
 @endcode
-### Scalar
-
--   Represents a 4-element vector. The type Scalar is widely used in OpenCV for passing pixel
-    values.
--   In this tutorial, we will use it extensively to represent BGR color values (3 parameters). It is
-    not necessary to define the last argument if it is not going to be used.
--   Let's see an example, if we are asked for a color argument and we give:
-    @code{.cpp}
-    Scalar( a, b, c )
-    @endcode
-    We would be defining a BGR color such as: *Blue = a*, *Green = b* and *Red = c*
 @end_toggle
-
 @add_toggle_java
-OpenCV Theory
--------------
-
-For this tutorial, we will heavily use two structures: @ref cv::Point and @ref cv::Scalar :
-
-### Point
-
-It represents a 2D point, specified by its image coordinates \f$x\f$ and \f$y\f$. We can define it as:
 @code{.java}
 Point pt = new Point();
 pt.x = 10;
@@ -70,6 +49,7 @@ or
 @code{.java}
 Point pt = new Point(10, 8);
 @endcode
+@end_toggle
 ### Scalar
 
 -   Represents a 4-element vector. The type Scalar is widely used in OpenCV for passing pixel
@@ -77,11 +57,17 @@ Point pt = new Point(10, 8);
 -   In this tutorial, we will use it extensively to represent BGR color values (3 parameters). It is
     not necessary to define the last argument if it is not going to be used.
 -   Let's see an example, if we are asked for a color argument and we give:
+@add_toggle_cpp
+    @code{.cpp}
+    Scalar( a, b, c )
+    @endcode
+@end_toggle
+@add_toggle_java
     @code{.java}
     Scalar( a, b, c )
     @endcode
-    We would be defining a BGR color such as: *Blue = a*, *Green = b* and *Red = c*
 @end_toggle
+    We would be defining a BGR color such as: *Blue = a*, *Green = b* and *Red = c*
 
 Code
 ----
