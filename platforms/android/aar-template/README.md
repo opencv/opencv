@@ -1,7 +1,7 @@
 ## Scripts for creating an AAR package and a local Maven repository with OpenCV libraries for Android
 
 ### How to run the scripts
-1. Set JAVA_HOME and ANDROID_HOME enviroment variables. For example:
+1. Set JAVA_HOME and ANDROID_HOME environment variables. For example:
 ```
 export JAVA_HOME=~/Android Studio/jbr
 export ANDROID_HOME=~/Android/SDK
