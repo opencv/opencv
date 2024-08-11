@@ -2142,49 +2142,92 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
     int cv_event = -1, state = 0, flags = 0;
     CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 
-    if( event->type == GDK_MOTION_NOTIFY )
+    GdkEventType event_type;
+#ifdef GTK_VERSION4
+    event_type = gdk_event_get_event_type(event);
+#else
+    event_type = event->type
+#endif
+
+    if( event_type == GDK_MOTION_NOTIFY )
     {
-        GdkEventMotion* event_motion = (GdkEventMotion*)event;
 
         cv_event = CV_EVENT_MOUSEMOVE;
+#ifdef GTK_VERSION4
+        GdkMotionEvent* event_motion = (GdkMotionEvent*)event;
+        double x, y;
+        gdk_event_get_position((GdkEvent*)event_motion, &x, &y);
+        pt32f.x = cvFloor(x);
+        pt32f.y = cvFloor(y);
+        state = gdk_event_get_modifier_state((GdkEvent*)event_motion);
+#else
+        GdkEventMotion* event_motion = (GdkEventMotion*)event;
         pt32f.x = cvFloor(event_motion->x);
         pt32f.y = cvFloor(event_motion->y);
         state = event_motion->state;
+#endif
     }
-    else if( event->type == GDK_BUTTON_PRESS ||
-             event->type == GDK_BUTTON_RELEASE ||
-             event->type == GDK_2BUTTON_PRESS )
+    else if( event_type == GDK_BUTTON_PRESS ||
+             event_type == GDK_BUTTON_RELEASE
+#ifndef GTK_VERSION4
+             || event_type == GDK_2BUTTON_PRESS
+#endif
+             )
     {
+#ifdef GTK_VERSION4
+        GdkButtonEvent* event_button = (GdkButtonEvent*)event;
+        double x, y;
+        gdk_event_get_position((GdkEvent*)event_button, &x, &y);
+        pt32f.x = cvFloor(x);
+        pt32f.y = cvFloor(y);
+        guint button = gdk_button_event_get_button((GdkEvent*)event_button);
+        GdkEventType event_type = gdk_event_get_event_type((GdkEvent*)event_button);
+#else
         GdkEventButton* event_button = (GdkEventButton*)event;
         pt32f.x = cvFloor(event_button->x);
         pt32f.y = cvFloor(event_button->y);
-
-
-        if( event_button->type == GDK_BUTTON_PRESS )
+        guint button = event_button->button;
+        GdkEventType event_type = event_button->type;
+#endif
+        if( event_type == GDK_BUTTON_PRESS )
         {
-            cv_event = event_button->button == 1 ? CV_EVENT_LBUTTONDOWN :
-                       event_button->button == 2 ? CV_EVENT_MBUTTONDOWN :
-                       event_button->button == 3 ? CV_EVENT_RBUTTONDOWN : 0;
+            cv_event = button == 1 ? CV_EVENT_LBUTTONDOWN :
+                       button == 2 ? CV_EVENT_MBUTTONDOWN :
+                       button == 3 ? CV_EVENT_RBUTTONDOWN : 0;
         }
-        else if( event_button->type == GDK_BUTTON_RELEASE )
+        else if( event_type == GDK_BUTTON_RELEASE )
         {
-            cv_event = event_button->button == 1 ? CV_EVENT_LBUTTONUP :
-                       event_button->button == 2 ? CV_EVENT_MBUTTONUP :
-                       event_button->button == 3 ? CV_EVENT_RBUTTONUP : 0;
+            cv_event = button == 1 ? CV_EVENT_LBUTTONUP :
+                       button == 2 ? CV_EVENT_MBUTTONUP :
+                       button == 3 ? CV_EVENT_RBUTTONUP : 0;
         }
+#ifndef GTK_VERSION4
         else if( event_button->type == GDK_2BUTTON_PRESS )
         {
             cv_event = event_button->button == 1 ? CV_EVENT_LBUTTONDBLCLK :
                        event_button->button == 2 ? CV_EVENT_MBUTTONDBLCLK :
                        event_button->button == 3 ? CV_EVENT_RBUTTONDBLCLK : 0;
         }
+#endif
+#ifdef GTK_VERSION4
+        state = gdk_event_get_modifier_state((GdkEvent*)event_button);
+#else
         state = event_button->state;
+#endif
     }
-    else if( event->type == GDK_SCROLL )
+    else if( event_type == GDK_SCROLL )
     {
+#if GTK_VERSION4
+        GdkScrollEvent* event_scroll = (GdkScrollEvent*)event;
+        double x, y;
+        gdk_event_get_position((GdkEvent*)event_scroll, &x, &y);
+        pt32f.x = cvFloor(x);
+        pt32f.y = cvFloor(y);
+#else
         GdkEventScroll* event_scroll = (GdkEventScroll*)event;
         pt32f.x = cvFloor(event_scroll->x);
         pt32f.y = cvFloor(event_scroll->y);
+#endif
 
 #if defined(GTK_VERSION3_4)
         // NOTE: in current implementation doesn't possible to put into callback function delta_x and delta_y separately
@@ -2194,9 +2237,15 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
         cv_event = CV_EVENT_MOUSEWHEEL;
 #endif //GTK_VERSION3_4
 
+#ifdef GTK_VERSION4
+        state = gdk_event_get_modifier_state((GdkEvent*)event_scroll);
+
+        switch(gdk_scroll_event_get_direction((GdkEvent*)event_scroll)) {
+#else
         state    = event->scroll.state;
 
         switch(event->scroll.direction) {
+#endif
 #if defined(GTK_VERSION3_4)
         case GDK_SCROLL_SMOOTH: flags |= (((int)delta << 16));
             break;
@@ -2248,7 +2297,12 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
             flags |=
                 BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
                 BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
-                BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY)   |
+#ifndef GTK_VERSION4
+                BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY)
+#else
+                BIT_MAP(state, GDK_ALT_MASK,    CV_EVENT_FLAG_ALTKEY)
+#endif
+            |
                 BIT_MAP(state, GDK_MOD2_MASK,    CV_EVENT_FLAG_ALTKEY);
             window->on_mouse( cv_event, pt.x, pt.y, flags, window->on_mouse_param );
         }
