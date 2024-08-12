@@ -120,12 +120,7 @@ android {
             }
         }
     }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_@ANDROID_GRADLE_JAVA_VERSION_INIT@
-        targetCompatibility JavaVersion.VERSION_@ANDROID_GRADLE_JAVA_VERSION_INIT@
-    }
-
+    @BUILD_GRADLE_COMPILE_OPTIONS@
     buildTypes {
         debug {
             packagingOptions {
