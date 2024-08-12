@@ -405,251 +405,250 @@ inline _TpVec64F v_log_default_64f(const _TpVec64F &x) {
 }
 //! @}
 
-#if !defined(OPENCV_HAL_MATH_HAVE_SINCOS) || (defined(CV_FORCE_SIMD128_CPP) && CV_SIMD_WIDTH != 16)
-
 //! @name Sine and Cosine
 //! @{
-#if defined(CV_SIMD_FP16) && CV_SIMD_FP16
-    inline void v_sincos(const v_float16 &x, v_float16 &ysin, v_float16 &ycos) {
-        const v_float16 v_cephes_FOPI = vx_setall_f16(hfloat(1.27323954473516f)); // 4 / M_PI
-        const v_float16 v_minus_DP1 = vx_setall_f16(hfloat(-0.78515625f));
-        const v_float16 v_minus_DP2 = vx_setall_f16(hfloat(-2.4187564849853515625E-4f));
-        const v_float16 v_minus_DP3 = vx_setall_f16(hfloat(-3.77489497744594108E-8f));
-        const v_float16 v_sincof_p0 = vx_setall_f16(hfloat(-1.9515295891E-4f));
-        const v_float16 v_sincof_p1 = vx_setall_f16(hfloat(8.3321608736E-3f));
-        const v_float16 v_sincof_p2 = vx_setall_f16(hfloat(-1.6666654611E-1f));
-        const v_float16 v_coscof_p0 = vx_setall_f16(hfloat(2.443315711809948E-5f));
-        const v_float16 v_coscof_p1 = vx_setall_f16(hfloat(-1.388731625493765E-3f));
-        const v_float16 v_coscof_p2 = vx_setall_f16(hfloat(4.166664568298827E-2f));
-        const v_float16 v_nan = v_reinterpret_as_f16(vx_setall_s16(0x7e00));
-        const v_float16 v_neg_zero = vx_setall_f16(hfloat(-0.f));
+template<typename _TpVec16F, typename _TpVec16S>
+inline void v_sincos_default_16f(const _TpVec16F &x, _TpVec16F &ysin, _TpVec16F &ycos) {
+    const _TpVec16F v_cephes_FOPI = v_setall_<_TpVec16F>(hfloat(1.27323954473516f)); // 4 / M_PI
+    const _TpVec16F v_minus_DP1 = v_setall_<_TpVec16F>(hfloat(-0.78515625f));
+    const _TpVec16F v_minus_DP2 = v_setall_<_TpVec16F>(hfloat(-2.4187564849853515625E-4f));
+    const _TpVec16F v_minus_DP3 = v_setall_<_TpVec16F>(hfloat(-3.77489497744594108E-8f));
+    const _TpVec16F v_sincof_p0 = v_setall_<_TpVec16F>(hfloat(-1.9515295891E-4f));
+    const _TpVec16F v_sincof_p1 = v_setall_<_TpVec16F>(hfloat(8.3321608736E-3f));
+    const _TpVec16F v_sincof_p2 = v_setall_<_TpVec16F>(hfloat(-1.6666654611E-1f));
+    const _TpVec16F v_coscof_p0 = v_setall_<_TpVec16F>(hfloat(2.443315711809948E-5f));
+    const _TpVec16F v_coscof_p1 = v_setall_<_TpVec16F>(hfloat(-1.388731625493765E-3f));
+    const _TpVec16F v_coscof_p2 = v_setall_<_TpVec16F>(hfloat(4.166664568298827E-2f));
+    const _TpVec16F v_nan = v_reinterpret_as_f16(v_setall_<_TpVec16S>((short)0x7e00));
+    const _TpVec16F v_neg_zero = v_setall_<_TpVec16F>(hfloat(-0.f));
 
-        v_float16 _vx, _vy, sign_mask_sin, sign_mask_cos;
-        v_int16 emm2;
+    _TpVec16F _vx, _vy, sign_mask_sin, sign_mask_cos;
+    _TpVec16S emm2;
 
-        sign_mask_sin = v_lt(x, vx_setzero_f16());
-        _vx = v_abs(x);
-        _vy = v_mul(_vx, v_cephes_FOPI);
+    sign_mask_sin = v_lt(x, v_setzero_<_TpVec16F>());
+    _vx = v_abs(x);
+    _vy = v_mul(_vx, v_cephes_FOPI);
 
-        emm2 = v_trunc(_vy);
-        emm2 = v_add(emm2, vx_setall_s16(1));
-        emm2 = v_and(emm2, vx_setall_s16(~1));
-        _vy = v_cvt_f16(emm2);
+    emm2 = v_trunc(_vy);
+    emm2 = v_add(emm2, v_setall_<_TpVec16S>((short)1));
+    emm2 = v_and(emm2, v_setall_<_TpVec16S>((short)~1));
+    _vy = v_cvt_f16(emm2);
 
-        v_float16 poly_mask = v_reinterpret_as_f16(v_eq(v_and(emm2, vx_setall_s16(2)), vx_setall_s16(0)));
+    _TpVec16F poly_mask = v_reinterpret_as_f16(v_eq(v_and(emm2, v_setall_<_TpVec16S>((short)2)), v_setall_<_TpVec16S>((short)0)));
 
-        _vx = v_fma(_vy, v_minus_DP1, _vx);
-        _vx = v_fma(_vy, v_minus_DP2, _vx);
-        _vx = v_fma(_vy, v_minus_DP3, _vx);
+    _vx = v_fma(_vy, v_minus_DP1, _vx);
+    _vx = v_fma(_vy, v_minus_DP2, _vx);
+    _vx = v_fma(_vy, v_minus_DP3, _vx);
 
-        sign_mask_sin = v_xor(sign_mask_sin, v_reinterpret_as_f16(v_eq(v_and(emm2, vx_setall_s16(4)), vx_setall_s16(0))));
-        sign_mask_cos = v_reinterpret_as_f16(v_eq(v_and(v_sub(emm2, vx_setall_s16(2)), vx_setall_s16(4)), vx_setall_s16(0)));
+    sign_mask_sin = v_xor(sign_mask_sin,
+                          v_reinterpret_as_f16(v_eq(v_and(emm2, v_setall_<_TpVec16S>((short)4)), v_setall_<_TpVec16S>((short)0))));
+    sign_mask_cos = v_reinterpret_as_f16(
+            v_eq(v_and(v_sub(emm2, v_setall_<_TpVec16S>((short)2)), v_setall_<_TpVec16S>((short)4)), v_setall_<_TpVec16S>((short)0)));
 
-        v_float16 _vxx = v_mul(_vx, _vx);
-        v_float16 y1, y2;
+    _TpVec16F _vxx = v_mul(_vx, _vx);
+    _TpVec16F y1, y2;
 
-        y1 = v_fma(v_coscof_p0, _vxx, v_coscof_p1);
-        y1 = v_fma(y1, _vxx, v_coscof_p2);
-        y1 = v_fma(y1, _vxx, vx_setall_f16(hfloat(-0.5f)));
-        y1 = v_fma(y1, _vxx, vx_setall_f16(hfloat(1)));
+    y1 = v_fma(v_coscof_p0, _vxx, v_coscof_p1);
+    y1 = v_fma(y1, _vxx, v_coscof_p2);
+    y1 = v_fma(y1, _vxx, v_setall_<_TpVec16F>(hfloat(-0.5f)));
+    y1 = v_fma(y1, _vxx, v_setall_<_TpVec16F>(hfloat(1)));
 
-        y2 = v_fma(v_sincof_p0, _vxx, v_sincof_p1);
-        y2 = v_fma(y2, _vxx, v_sincof_p2);
-        y2 = v_mul(y2, _vxx);
-        y2 = v_fma(y2, _vx, _vx);
+    y2 = v_fma(v_sincof_p0, _vxx, v_sincof_p1);
+    y2 = v_fma(y2, _vxx, v_sincof_p2);
+    y2 = v_mul(y2, _vxx);
+    y2 = v_fma(y2, _vx, _vx);
 
-        ysin = v_select(poly_mask, y2, y1);
-        ycos = v_select(poly_mask, y1, y2);
-        ysin = v_select(sign_mask_sin, ysin, v_xor(v_neg_zero, ysin));
-        ycos = v_select(sign_mask_cos, v_xor(v_neg_zero, ycos), ycos);
+    ysin = v_select(poly_mask, y2, y1);
+    ycos = v_select(poly_mask, y1, y2);
+    ysin = v_select(sign_mask_sin, ysin, v_xor(v_neg_zero, ysin));
+    ycos = v_select(sign_mask_cos, v_xor(v_neg_zero, ycos), ycos);
 
-        // sincos(NAN) -> NAN, sincos(±INF) -> NAN
-        v_float16 mask_inf = v_eq(_vx, v_reinterpret_as_f16(vx_setall_s16(0x7c00)));
-        v_float16 mask_nan = v_or(mask_inf, v_ne(x, x));
-        ysin = v_select(mask_nan, v_nan, ysin);
-        ycos = v_select(mask_nan, v_nan, ycos);
-    }
+    // sincos(NAN) -> NAN, sincos(±INF) -> NAN
+    _TpVec16F mask_inf = v_eq(_vx, v_reinterpret_as_f16(v_setall_<_TpVec16S>((short)0x7c00)));
+    _TpVec16F mask_nan = v_or(mask_inf, v_ne(x, x));
+    ysin = v_select(mask_nan, v_nan, ysin);
+    ycos = v_select(mask_nan, v_nan, ycos);
+}
 
-    inline v_float16 v_sin(const v_float16 &x)
-    {
-        v_float16 ysin, ycos;
-        v_sincos(x, ysin, ycos);
-        return ysin;
-    }
+template<typename _TpVec16F, typename _TpVec16S>
+inline _TpVec16F v_sin_default_16f(const _TpVec16F &x) {
+    _TpVec16F ysin, ycos;
+    v_sincos_default_16f<_TpVec16F, _TpVec16S>()(x, ysin, ycos);
+    return ysin;
+}
 
-    inline v_float16 v_cos(const v_float16 &x)
-    {
-        v_float16 ysin, ycos;
-        v_sincos(x, ysin, ycos);
-        return ycos;
-    }
-#endif // CV_SIMD_FP16
+template<typename _TpVec16F, typename _TpVec16S>
+inline _TpVec16F v_cos_default_16f(const _TpVec16F &x) {
+    _TpVec16F ysin, ycos;
+    v_sincos_default_16f<_TpVec16F, _TpVec16S>(x, ysin, ycos);
+    return ycos;
+}
 
-    inline void v_sincos(const v_float32 &x, v_float32 &ysin, v_float32 &ycos)
-    {
-        const v_float32 v_cephes_FOPI = vx_setall_f32(1.27323954473516f); // 4 / M_PI
-        const v_float32 v_minus_DP1 = vx_setall_f32(-0.78515625f);
-        const v_float32 v_minus_DP2 = vx_setall_f32(-2.4187564849853515625E-4f);
-        const v_float32 v_minus_DP3 = vx_setall_f32(-3.77489497744594108E-8f);
-        const v_float32 v_sincof_p0 = vx_setall_f32(-1.9515295891E-4f);
-        const v_float32 v_sincof_p1 = vx_setall_f32(8.3321608736E-3f);
-        const v_float32 v_sincof_p2 = vx_setall_f32(-1.6666654611E-1f);
-        const v_float32 v_coscof_p0 = vx_setall_f32(2.443315711809948E-5f);
-        const v_float32 v_coscof_p1 = vx_setall_f32(-1.388731625493765E-3f);
-        const v_float32 v_coscof_p2 = vx_setall_f32(4.166664568298827E-2f);
-        const v_float32 v_nan = v_reinterpret_as_f32(vx_setall_s32(0x7fc00000));
-        const v_float32 v_neg_zero = vx_setall_f32(-0.f);
 
-        v_float32 _vx, _vy, sign_mask_sin, sign_mask_cos;
-        v_int32 emm2;
+template<typename _TpVec32F, typename _TpVec32S>
+inline void v_sincos_default_32f(const _TpVec32F &x, _TpVec32F &ysin, _TpVec32F &ycos) {
+    const _TpVec32F v_cephes_FOPI = v_setall_<_TpVec32F>(1.27323954473516f); // 4 / M_PI
+    const _TpVec32F v_minus_DP1 = v_setall_<_TpVec32F>(-0.78515625f);
+    const _TpVec32F v_minus_DP2 = v_setall_<_TpVec32F>(-2.4187564849853515625E-4f);
+    const _TpVec32F v_minus_DP3 = v_setall_<_TpVec32F>(-3.77489497744594108E-8f);
+    const _TpVec32F v_sincof_p0 = v_setall_<_TpVec32F>(-1.9515295891E-4f);
+    const _TpVec32F v_sincof_p1 = v_setall_<_TpVec32F>(8.3321608736E-3f);
+    const _TpVec32F v_sincof_p2 = v_setall_<_TpVec32F>(-1.6666654611E-1f);
+    const _TpVec32F v_coscof_p0 = v_setall_<_TpVec32F>(2.443315711809948E-5f);
+    const _TpVec32F v_coscof_p1 = v_setall_<_TpVec32F>(-1.388731625493765E-3f);
+    const _TpVec32F v_coscof_p2 = v_setall_<_TpVec32F>(4.166664568298827E-2f);
+    const _TpVec32F v_nan = v_reinterpret_as_f32(v_setall_<_TpVec32S>((int)0x7fc00000));
+    const _TpVec32F v_neg_zero = v_setall_<_TpVec32F>(-0.f);
 
-        sign_mask_sin = v_lt(x, vx_setzero_f32());
-        _vx = v_abs(x);
-        _vy = v_mul(_vx, v_cephes_FOPI);
+    _TpVec32F _vx, _vy, sign_mask_sin, sign_mask_cos;
+    _TpVec32S emm2;
 
-        emm2 = v_trunc(_vy);
-        emm2 = v_add(emm2, vx_setall_s32(1));
-        emm2 = v_and(emm2, vx_setall_s32(~1));
-        _vy = v_cvt_f32(emm2);
+    sign_mask_sin = v_lt(x, v_setzero_<_TpVec32F>());
+    _vx = v_abs(x);
+    _vy = v_mul(_vx, v_cephes_FOPI);
 
-        v_float32 poly_mask = v_reinterpret_as_f32(v_eq(v_and(emm2, vx_setall_s32(2)), vx_setall_s32(0)));
+    emm2 = v_trunc(_vy);
+    emm2 = v_add(emm2, v_setall_<_TpVec32S>(1));
+    emm2 = v_and(emm2, v_setall_<_TpVec32S>(~1));
+    _vy = v_cvt_f32(emm2);
 
-        _vx = v_fma(_vy, v_minus_DP1, _vx);
-        _vx = v_fma(_vy, v_minus_DP2, _vx);
-        _vx = v_fma(_vy, v_minus_DP3, _vx);
+    _TpVec32F poly_mask = v_reinterpret_as_f32(v_eq(v_and(emm2, v_setall_<_TpVec32S>(2)), v_setall_<_TpVec32S>(0)));
 
-        sign_mask_sin = v_xor(sign_mask_sin, v_reinterpret_as_f32(v_eq(v_and(emm2, vx_setall_s32(4)), vx_setall_s32(0))));
-        sign_mask_cos = v_reinterpret_as_f32(v_eq(v_and(v_sub(emm2, vx_setall_s32(2)), vx_setall_s32(4)), vx_setall_s32(0)));
+    _vx = v_fma(_vy, v_minus_DP1, _vx);
+    _vx = v_fma(_vy, v_minus_DP2, _vx);
+    _vx = v_fma(_vy, v_minus_DP3, _vx);
 
-        v_float32 _vxx = v_mul(_vx, _vx);
-        v_float32 y1, y2;
+    sign_mask_sin = v_xor(sign_mask_sin, v_reinterpret_as_f32(v_eq(v_and(emm2, v_setall_<_TpVec32S>(4)), v_setall_<_TpVec32S>(0))));
+    sign_mask_cos = v_reinterpret_as_f32(v_eq(v_and(v_sub(emm2, v_setall_<_TpVec32S>(2)), v_setall_<_TpVec32S>(4)), v_setall_<_TpVec32S>(0)));
 
-        y1 = v_fma(v_coscof_p0, _vxx, v_coscof_p1);
-        y1 = v_fma(y1, _vxx, v_coscof_p2);
-        y1 = v_fma(y1, _vxx, vx_setall_f32(-0.5f));
-        y1 = v_fma(y1, _vxx, vx_setall_f32(1));
+    _TpVec32F _vxx = v_mul(_vx, _vx);
+    _TpVec32F y1, y2;
 
-        y2 = v_fma(v_sincof_p0, _vxx, v_sincof_p1);
-        y2 = v_fma(y2, _vxx, v_sincof_p2);
-        y2 = v_mul(y2, _vxx);
-        y2 = v_fma(y2, _vx, _vx);
+    y1 = v_fma(v_coscof_p0, _vxx, v_coscof_p1);
+    y1 = v_fma(y1, _vxx, v_coscof_p2);
+    y1 = v_fma(y1, _vxx, v_setall_<_TpVec32F>(-0.5f));
+    y1 = v_fma(y1, _vxx, v_setall_<_TpVec32F>(1.f));
 
-        ysin = v_select(poly_mask, y2, y1);
-        ycos = v_select(poly_mask, y1, y2);
-        ysin = v_select(sign_mask_sin, ysin, v_xor(v_neg_zero, ysin));
-        ycos = v_select(sign_mask_cos, v_xor(v_neg_zero, ycos), ycos);
+    y2 = v_fma(v_sincof_p0, _vxx, v_sincof_p1);
+    y2 = v_fma(y2, _vxx, v_sincof_p2);
+    y2 = v_mul(y2, _vxx);
+    y2 = v_fma(y2, _vx, _vx);
 
-        // sincos(NAN) -> NAN, sincos(±INF) -> NAN
-        v_float32 mask_inf = v_eq(_vx, v_reinterpret_as_f32(vx_setall_s32(0x7f800000)));
-        v_float32 mask_nan = v_or(mask_inf, v_ne(x, x));
-        ysin = v_select(mask_nan, v_nan, ysin);
-        ycos = v_select(mask_nan, v_nan, ycos);
-    }
+    ysin = v_select(poly_mask, y2, y1);
+    ycos = v_select(poly_mask, y1, y2);
+    ysin = v_select(sign_mask_sin, ysin, v_xor(v_neg_zero, ysin));
+    ycos = v_select(sign_mask_cos, v_xor(v_neg_zero, ycos), ycos);
 
-    inline v_float32 v_sin(const v_float32 &x)
-    {
-        v_float32 ysin, ycos;
-        v_sincos(x, ysin, ycos);
-        return ysin;
-    }
+    // sincos(NAN) -> NAN, sincos(±INF) -> NAN
+    _TpVec32F mask_inf = v_eq(_vx, v_reinterpret_as_f32(v_setall_<_TpVec32S>((int)0x7f800000)));
+    _TpVec32F mask_nan = v_or(mask_inf, v_ne(x, x));
+    ysin = v_select(mask_nan, v_nan, ysin);
+    ycos = v_select(mask_nan, v_nan, ycos);
+}
 
-    inline v_float32 v_cos(const v_float32 &x)
-    {
-        v_float32 ysin, ycos;
-        v_sincos(x, ysin, ycos);
-        return ycos;
-    }
+template<typename _TpVec32F, typename _TpVec32S>
+inline _TpVec32F v_sin_default_32f(const _TpVec32F &x) {
+    _TpVec32F ysin, ycos;
+    v_sincos_default_32f<_TpVec32F, _TpVec32S>(x, ysin, ycos);
+    return ysin;
+}
 
-#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
-    inline void v_sincos(const v_float64 &x, v_float64 &ysin, v_float64 &ycos) {
-        const v_float64 v_cephes_FOPI = vx_setall_f64(1.2732395447351626861510701069801148); // 4 / M_PI
-        const v_float64 v_minus_DP1 = vx_setall_f64(-7.853981554508209228515625E-1);
-        const v_float64 v_minus_DP2 = vx_setall_f64(-7.94662735614792836714E-9);
-        const v_float64 v_minus_DP3 = vx_setall_f64(-3.06161699786838294307E-17);
-        const v_float64 v_sin_C1 = vx_setall_f64(1.58962301576546568060E-10);
-        const v_float64 v_sin_C2 = vx_setall_f64(-2.50507477628578072866E-8);
-        const v_float64 v_sin_C3 = vx_setall_f64(2.75573136213857245213E-6);
-        const v_float64 v_sin_C4 = vx_setall_f64(-1.98412698295895385996E-4);
-        const v_float64 v_sin_C5 = vx_setall_f64(8.33333333332211858878E-3);
-        const v_float64 v_sin_C6 = vx_setall_f64(-1.66666666666666307295E-1);
-        const v_float64 v_cos_C1 = vx_setall_f64(-1.13585365213876817300E-11);
-        const v_float64 v_cos_C2 = vx_setall_f64(2.08757008419747316778E-9);
-        const v_float64 v_cos_C3 = vx_setall_f64(-2.75573141792967388112E-7);
-        const v_float64 v_cos_C4 = vx_setall_f64(2.48015872888517045348E-5);
-        const v_float64 v_cos_C5 = vx_setall_f64(-1.38888888888730564116E-3);
-        const v_float64 v_cos_C6 = vx_setall_f64(4.16666666666665929218E-2);
-        const v_float64 v_nan = v_reinterpret_as_f64(vx_setall_s64(0x7ff8000000000000));
-        const v_float64 v_neg_zero = vx_setall_f64(-0.0);
+template<typename _TpVec32F, typename _TpVec32S>
+inline _TpVec32F v_cos_default_32f(const _TpVec32F &x) {
+    _TpVec32F ysin, ycos;
+    v_sincos_default_32f<_TpVec32F, _TpVec32S>(x, ysin, ycos);
+    return ycos;
+}
 
-        v_float64 _vx, _vy, sign_mask_sin, sign_mask_cos;
-        v_int64 emm2;
+template<typename _TpVec64F, typename _TpVec64S>
+inline void v_sincos_default_64f(const _TpVec64F &x, _TpVec64F &ysin, _TpVec64F &ycos) {
+    const _TpVec64F v_cephes_FOPI = v_setall_<_TpVec64F>(1.2732395447351626861510701069801148); // 4 / M_PI
+    const _TpVec64F v_minus_DP1 = v_setall_<_TpVec64F>(-7.853981554508209228515625E-1);
+    const _TpVec64F v_minus_DP2 = v_setall_<_TpVec64F>(-7.94662735614792836714E-9);
+    const _TpVec64F v_minus_DP3 = v_setall_<_TpVec64F>(-3.06161699786838294307E-17);
+    const _TpVec64F v_sin_C1 = v_setall_<_TpVec64F>(1.58962301576546568060E-10);
+    const _TpVec64F v_sin_C2 = v_setall_<_TpVec64F>(-2.50507477628578072866E-8);
+    const _TpVec64F v_sin_C3 = v_setall_<_TpVec64F>(2.75573136213857245213E-6);
+    const _TpVec64F v_sin_C4 = v_setall_<_TpVec64F>(-1.98412698295895385996E-4);
+    const _TpVec64F v_sin_C5 = v_setall_<_TpVec64F>(8.33333333332211858878E-3);
+    const _TpVec64F v_sin_C6 = v_setall_<_TpVec64F>(-1.66666666666666307295E-1);
+    const _TpVec64F v_cos_C1 = v_setall_<_TpVec64F>(-1.13585365213876817300E-11);
+    const _TpVec64F v_cos_C2 = v_setall_<_TpVec64F>(2.08757008419747316778E-9);
+    const _TpVec64F v_cos_C3 = v_setall_<_TpVec64F>(-2.75573141792967388112E-7);
+    const _TpVec64F v_cos_C4 = v_setall_<_TpVec64F>(2.48015872888517045348E-5);
+    const _TpVec64F v_cos_C5 = v_setall_<_TpVec64F>(-1.38888888888730564116E-3);
+    const _TpVec64F v_cos_C6 = v_setall_<_TpVec64F>(4.16666666666665929218E-2);
+    const _TpVec64F v_nan = v_reinterpret_as_f64(v_setall_<_TpVec64S>((int64)0x7ff8000000000000));
+    const _TpVec64F v_neg_zero = v_setall_<_TpVec64F>(-0.0);
 
-        sign_mask_sin = v_lt(x, vx_setzero_f64());
-        _vx = v_abs(x);
-        _vy = v_mul(_vx, v_cephes_FOPI);
+    _TpVec64F _vx, _vy, sign_mask_sin, sign_mask_cos;
+    _TpVec64S emm2;
 
-        emm2 = v_expand_low(v_trunc(_vy));
-        emm2 = v_add(emm2, vx_setall_s64(1));
-        emm2 = v_and(emm2, vx_setall_s64(~1));
-        _vy = v_cvt_f64(emm2);
+    sign_mask_sin = v_lt(x, v_setzero_<_TpVec64F>());
+    _vx = v_abs(x);
+    _vy = v_mul(_vx, v_cephes_FOPI);
 
-        v_float64 poly_mask = v_reinterpret_as_f64(v_eq(v_and(emm2, vx_setall_s64(2)), vx_setall_s64(0)));
+    emm2 = v_expand_low(v_trunc(_vy));
+    emm2 = v_add(emm2, v_setall_<_TpVec64S>((int64)1));
+    emm2 = v_and(emm2, v_setall_<_TpVec64S>((int64)~1));
+    _vy = v_cvt_f64(emm2);
 
-        _vx = v_fma(_vy, v_minus_DP1, _vx);
-        _vx = v_fma(_vy, v_minus_DP2, _vx);
-        _vx = v_fma(_vy, v_minus_DP3, _vx);
+    _TpVec64F poly_mask = v_reinterpret_as_f64(v_eq(v_and(emm2, v_setall_<_TpVec64S>((int64)2)), v_setall_<_TpVec64S>((int64)0)));
 
-        sign_mask_sin = v_xor(sign_mask_sin, v_reinterpret_as_f64(v_eq(v_and(emm2, vx_setall_s64(4)), vx_setall_s64(0))));
-        sign_mask_cos = v_reinterpret_as_f64(v_eq(v_and(v_sub(emm2, vx_setall_s64(2)), vx_setall_s64(4)), vx_setall_s64(0)));
+    _vx = v_fma(_vy, v_minus_DP1, _vx);
+    _vx = v_fma(_vy, v_minus_DP2, _vx);
+    _vx = v_fma(_vy, v_minus_DP3, _vx);
 
-        v_float64 _vxx = v_mul(_vx, _vx);
-        v_float64 y1, y2;
+    sign_mask_sin = v_xor(sign_mask_sin, v_reinterpret_as_f64(v_eq(v_and(emm2, v_setall_<_TpVec64S>((int64)4)), v_setall_<_TpVec64S>((int64)0))));
+    sign_mask_cos = v_reinterpret_as_f64(v_eq(v_and(v_sub(emm2, v_setall_<_TpVec64S>((int64)2)), v_setall_<_TpVec64S>((int64)4)), v_setall_<_TpVec64S>((int64)0)));
 
-        y1 = v_fma(v_cos_C1, _vxx, v_cos_C2);
-        y1 = v_fma(y1, _vxx, v_cos_C3);
-        y1 = v_fma(y1, _vxx, v_cos_C4);
-        y1 = v_fma(y1, _vxx, v_cos_C5);
-        y1 = v_fma(y1, _vxx, v_cos_C6);
-        y1 = v_fma(y1, _vxx, vx_setall_f64(-0.5));
-        y1 = v_fma(y1, _vxx, vx_setall_f64(1.0));
+    _TpVec64F _vxx = v_mul(_vx, _vx);
+    _TpVec64F y1, y2;
 
-        y2 = v_fma(v_sin_C1, _vxx, v_sin_C2);
-        y2 = v_fma(y2, _vxx, v_sin_C3);
-        y2 = v_fma(y2, _vxx, v_sin_C4);
-        y2 = v_fma(y2, _vxx, v_sin_C5);
-        y2 = v_fma(y2, _vxx, v_sin_C6);
-        y2 = v_mul(y2, _vxx);
-        y2 = v_fma(y2, _vx, _vx);
+    y1 = v_fma(v_cos_C1, _vxx, v_cos_C2);
+    y1 = v_fma(y1, _vxx, v_cos_C3);
+    y1 = v_fma(y1, _vxx, v_cos_C4);
+    y1 = v_fma(y1, _vxx, v_cos_C5);
+    y1 = v_fma(y1, _vxx, v_cos_C6);
+    y1 = v_fma(y1, _vxx, v_setall_<_TpVec64F>(-0.5));
+    y1 = v_fma(y1, _vxx, v_setall_<_TpVec64F>(1.0));
 
-        ysin = v_select(poly_mask, y2, y1);
-        ycos = v_select(poly_mask, y1, y2);
-        ysin = v_select(sign_mask_sin, ysin, v_xor(v_neg_zero, ysin));
-        ycos = v_select(sign_mask_cos, v_xor(v_neg_zero, ycos), ycos);
+    y2 = v_fma(v_sin_C1, _vxx, v_sin_C2);
+    y2 = v_fma(y2, _vxx, v_sin_C3);
+    y2 = v_fma(y2, _vxx, v_sin_C4);
+    y2 = v_fma(y2, _vxx, v_sin_C5);
+    y2 = v_fma(y2, _vxx, v_sin_C6);
+    y2 = v_mul(y2, _vxx);
+    y2 = v_fma(y2, _vx, _vx);
 
-        // sincos(NAN) -> NAN, sincos(±INF) -> NAN
-        v_float64 mask_inf = v_eq(_vx, v_reinterpret_as_f64(vx_setall_s64(0x7ff0000000000000)));
-        v_float64 mask_nan = v_or(mask_inf, v_ne(x, x));
-        ysin = v_select(mask_nan, v_nan, ysin);
-        ycos = v_select(mask_nan, v_nan, ycos);
-    }
+    ysin = v_select(poly_mask, y2, y1);
+    ycos = v_select(poly_mask, y1, y2);
+    ysin = v_select(sign_mask_sin, ysin, v_xor(v_neg_zero, ysin));
+    ycos = v_select(sign_mask_cos, v_xor(v_neg_zero, ycos), ycos);
 
-    inline v_float64 v_sin(const v_float64 &x)
-    {
-        v_float64 ysin, ycos;
-        v_sincos(x, ysin, ycos);
-        return ysin;
-    }
+    // sincos(NAN) -> NAN, sincos(±INF) -> NAN
+    _TpVec64F mask_inf = v_eq(_vx, v_reinterpret_as_f64(v_setall_<_TpVec64S>((int64)0x7ff0000000000000)));
+    _TpVec64F mask_nan = v_or(mask_inf, v_ne(x, x));
+    ysin = v_select(mask_nan, v_nan, ysin);
+    ycos = v_select(mask_nan, v_nan, ycos);
+}
 
-    inline v_float64 v_cos(const v_float64 &x)
-    {
-        v_float64 ysin, ycos;
-        v_sincos(x, ysin, ycos);
-        return ycos;
-    }
-#endif // CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+template<typename _TpVec64F, typename _TpVec64S>
+inline _TpVec64F v_sin_default_64f(const _TpVec64F &x) {
+    _TpVec64F ysin, ycos;
+    v_sincos_default_64f<_TpVec64F, _TpVec64S>(x, ysin, ycos);
+    return ysin;
+}
+
+template<typename _TpVec64F, typename _TpVec64S>
+inline _TpVec64F v_cos_default_64f(const _TpVec64F &x) {
+    _TpVec64F ysin, ycos;
+    v_sincos_default_64f<_TpVec64F, _TpVec64S>(x, ysin, ycos);
+    return ycos;
+}
+
 //! @}
-#define OPENCV_HAL_MATH_HAVE_SINCOS 1
-#endif // OPENCV_HAL_MATH_HAVE_SINCOS
+
 
 /* This implementation is derived from the approximation approach of Error Function (Erf) from PyTorch
    https://github.com/pytorch/pytorch/blob/9c50ecc84b9a6e699a7f058891b889aafbf976c7/aten/src/ATen/cpu/vec/vec512/vec512_float.h#L189-L220
