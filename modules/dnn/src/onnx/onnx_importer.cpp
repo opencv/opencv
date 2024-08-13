@@ -3126,7 +3126,7 @@ void ONNXImporter::parseTopK(LayerParams& layerParams, const opencv_onnx::NodePr
 {
     // K needs to be constant in case of being input (since opset 10)
     if (node_proto.input_size() == 2) {
-        bool K_const = constBlobs.find(node_proto.input(1)) == constBlobs.end();
+        bool K_const = constBlobs.find(node_proto.input(1)) != constBlobs.end();
         CV_CheckTrue(K_const, "OnnxImporter/TopK: K being non-constant is not supported");
 
         Mat input_K = getBlob(node_proto, 1);

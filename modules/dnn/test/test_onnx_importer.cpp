@@ -3198,6 +3198,32 @@ TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
     testONNXModels("clip_div_shared_constant");
 }
 
+TEST_P(Test_ONNX_layers, TopK) {
+    auto test = [&](const std::string &basename, double l1 = 0, double lInf = 0) {
+        std::string onnxmodel = _tf("models/" + basename + ".onnx", true);
+        Mat input = readTensorFromONNX(_tf("data/input_" + basename + ".pb"));
+        Mat output_ref_val = readTensorFromONNX(_tf("data/output_" + basename + "_0.pb")),
+            output_ref_ind = readTensorFromONNX(_tf("data/output_" + basename + "_1.pb"));
+
+        Net net = readNetFromONNX(onnxmodel);
+
+        net.setInput(input);
+        std::vector<Mat> outputs;
+        net.forward(outputs, std::vector<std::string>{"values", "indices"});
+
+        Mat output_res_val = outputs.front(),
+            output_res_ind = outputs.back();
+        output_res_ind.convertTo(output_res_ind, CV_32S); // TODO: remove this conversion on 5.x
+
+        normAssert(output_ref_val, output_res_val, (basename + " values").c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        normAssert(output_ref_ind, output_res_ind, (basename + " indices").c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+    };
+
+    test("top_k");
+    test("top_k_negative_axis");
+    test("top_k_smallest");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

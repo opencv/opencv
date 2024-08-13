@@ -19,7 +19,7 @@ public:
         axis = params.get<int>("axis", -1);
         largest = params.get<int>("largest", 1) == 1;
         sorted = params.get<int>("sorted", 1) == 1;
-        CV_CheckTrue(sorted, "TopK: sorted == false is not supported");
+        CV_CheckTrue(sorted, "TopK: sorted == false is not supported"); // TODO: support sorted
 
         CV_CheckTrue(params.has("k"), "TopK: parameter k is required but missing");
         K = params.get<int>("k");
@@ -52,7 +52,7 @@ public:
         auto output_shape = input_shape;
         output_shape[axis_normalized] = K;
         outputs.assign(1, output_shape);
-        outputs.assign(2, output_shape);
+        outputs.assign(2, output_shape); // TODO: support indices of type CV_32S on 5.x
 
         return false;
     }
@@ -91,9 +91,9 @@ public:
         int dim_axis = input_shape[axis];
         if (loops == 1) {
             auto worker = [&](const Range &r) {
-                const auto *input_ptr = input.ptr<const float>();
+                const auto *input_ptr = input.ptr<const float>();   // TODO: support other input type
                 auto *output_value_ptr = output_value.ptr<float>();
-                auto *output_index_ptr = output_index.ptr<float>();
+                auto *output_index_ptr = output_index.ptr<float>(); // TODO: use CV_32S on 5.x
 
                 AutoBuffer<int> buffer_index(dim_axis);
                 auto *buffer_index_ptr = buffer_index.data();
@@ -102,9 +102,9 @@ public:
 
                     std::iota(buffer_index_ptr, buffer_index_ptr + dim_axis, 0);
                     std::function<bool(int, int)> cmp;
-                    if (largest) {
+                    if (largest) { // TODO: replace func ptr with template
                         cmp = [&](int i1, int i2) {
-                            return *(input_offset_ptr + i1 * step) < *(input_offset_ptr + i2 * step);
+                            return *(input_offset_ptr + i1 * step) > *(input_offset_ptr + i2 * step);
                         };
                     } else {
                         cmp = [&](int i1, int i2) {
@@ -137,7 +137,7 @@ public:
                         std::function<bool(int, int)> cmp;
                         if (largest) {
                             cmp = [&](int i1, int i2) {
-                                return *(input_offset_ptr + i1 * step) < *(input_offset_ptr + i2 * step);
+                                return *(input_offset_ptr + i1 * step) > *(input_offset_ptr + i2 * step);
                             };
                         } else {
                             cmp = [&](int i1, int i2) {
@@ -148,8 +148,8 @@ public:
 
                         for (int i = 0; i < K; i++) {
                             int source_index = buffer_index_ptr[i];
-                            output_value_ptr[i * step + offset] = *(input_offset_ptr + source_index * step);
-                            output_index_ptr[i * step + offset] = source_index;
+                            output_value_ptr[batch_index * K * step + i * step + offset] = *(input_offset_ptr + source_index * step);
+                            output_index_ptr[batch_index * K * step + i * step + offset] = source_index;
                         }
                     }
                 }
